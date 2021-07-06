@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>测试websocket</title>
+</head>
+
+<script src="encoding-indexes.js"></script>
+<script src="encoding.js"></script>
+<script src="snowflake-id.js"></script>
+<script src="ouyu-message.js"></script>
+<script src="ouyu-socket.js"></script>
+<script src="md5.min.js"></script>
+
+<script>
+
+
+    let socketConfig = {
+        // 客户端唯一标识，可以是手机号，身份证号，邮箱等
+        identity: '123456',
+        // 服务端分配的key
+        appKey: '123456',
+        // 服务端分配的秘钥
+        appSecret: '123456',
+        // 是否开启心跳，默认开启
+        isOpenHeartBeat: true,
+        // 客户端读超时时间，单位毫秒，连接超时时间需要大于心跳读超时时间，
+        // 客户端在8秒内没有收到服务端发来的任何消息就是读超时，
+        // 原则上客户端发送心跳后服务端一定会立即回复一个pong给客户端
+        clientReadTimeout: 15 * 1000,
+        // 服务端读超时时间，单位毫秒，如果在开启心跳的情况下，该属性起作用，
+        // 该属性设置服务端对该链接的的读超时进行设置
+        serverReadTimeout: 15 * 1000,
+        // 客户端发送心跳间隔时间，单位毫秒，
+        // 使用大白话就是客户端每个10秒发送一条心跳ping消息
+        heartBeatPeriodTime: 10 * 1000,
+        onopen: function (e) {
+            //获取原来的值
+            const element = document.getElementById("responseMessage");
+            //追加
+            element.value += "\n" + "连接开启了";
+            console.log("外部onopen")
+        },
+        // 接收消息
+        onmessage: function (message, messageType) {
+            console.log("外部onmessage", message, messageType)
+
+            if (message) {
+                if (messageType !== 6) {
+
+
+                    // 文本类型
+                    let messageContent;
+                    if (message.getContentType() == 1) {
+                        // 默认也是utf-8, 转成string
+                        messageContent = new TextDecoder('utf-8').decode(message.getContent());
+                    }else {
+                        // 字节类型,音视频，文件等 arrayBuffer
+                        messageContent = message.getContent();
+                    }
+                    //
+                    const element = document.getElementById("responseMessage");
+                    //追加
+                    element.value += "\n" + messageContent;
+
+                }
+            }
+
+
+
+        },
+        // 连接关闭
+        onclose: function (e) {
+            console.log("外部onclose")
+        },
+        // 连接异常
+        onerror: function (e) {
+            console.log("外部onerror")
+        },
+    }
+    const socket = new Socket("ws://192.168.10.169:6002/", socketConfig);
+
+
+    // 发送消息
+    function send(msg) {
+        let pChatMessage = new proto.com.ouyu.im.PChatMessage();
+        pChatMessage.setFrom(socketConfig.identity)
+        pChatMessage.setTo("654321")
+        let msgUint8array = new TextEncoder('utf-8').encode(msg);
+        pChatMessage.setContent(msgUint8array);
+        pChatMessage.setContentType(1);
+        // 时间戳毫秒
+        pChatMessage.setCreateTime(new Date().getTime());
+        socket.send(pChatMessage, 7);
+
+        // 清空发送框
+        document.getElementById('sendMessage').value = '';;
+    }
+    // 添加好友
+    function addFriend(msg) {
+        let pushMessage = new proto.com.ouyu.im.PushMessage();
+        pushMessage.setFrom(socketConfig.identity)
+        pushMessage.setTo(msg)
+        let msgUint8array = new TextEncoder('utf-8').encode('REQ');
+        pushMessage.setContent('REQ');
+        pushMessage.setContentType(1);
+        // 时间戳毫秒
+        pushMessage.setCreateTime(new Date().getTime());
+        socket.send(pushMessage, 11);
+    }
+
+</script>
+<body>
+
+    <form onsubmit="return false">
+
+        <textarea  id="responseMessage" style="height: 300px; width: 100px"></textarea>
+        <input type="button" onclick="document.getElementById('responseMessage').value = ''" value="清空内容"/>
+        <textarea id="sendMessage" name="sendMessage" style="height: 300px; width: 100px"></textarea>
+        <input type="button" onclick="send(this.form.sendMessage.value)" value="发送消息" />
+
+
+        <input type="text" name="add" />
+        <input type="button" onclick="addFriend(this.form.add.value)" value="添加好友" />
+    </form>
+
+
+</body>
+</html>

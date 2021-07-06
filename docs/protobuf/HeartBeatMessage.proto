@@ -1,0 +1,16 @@
+syntax = "proto3";
+package com.ouyu.im;
+option optimize_for  = SPEED;
+
+// other
+message HeartBeatMessage {
+  // 发送方
+  string from = 1;
+
+  // 接收方
+  string to  = 2;
+
+  // 发送的内容 syn/ack
+  string content = 3;
+}
+

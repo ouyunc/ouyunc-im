@@ -1,0 +1,22 @@
+
+/**
+ ack 应答消息，针对外部端与服务器端的消息回执应答
+ **/
+syntax = "proto3";
+package com.ouyu.im;
+option optimize_for  = SPEED;
+message AcknowledgeMessage {
+
+    //发送方
+    string from = 1;
+
+    //接受方
+    string to = 2;
+
+    //返回体信息, 这里存放packet id
+    string content = 3;
+
+    //时间戳,毫秒
+    int64 create_time = 4;
+
+}

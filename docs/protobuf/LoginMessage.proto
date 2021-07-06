@@ -1,0 +1,30 @@
+syntax = "proto3";
+package com.ouyu.im;
+option optimize_for  = SPEED;
+
+// 登录消息, 签名生成规则，identity,app_key,create_time, 按照首字母排序（正序），得到字符串rawStr再按照签名算法生成签名
+message LoginMessage {
+
+  // 用户唯一标识，不为空
+  string identity = 1;
+
+  // 签发的appKey,每个平台唯一标识，不为空
+  string app_key  = 2;
+
+  // 签名，通过一定算法与AppSecret一起计算得到的签名
+  string signature = 3;
+
+  // 签名，通过一定算法与AppSecret一起计算得到的签名 byte,0-NONE, 1-MD5
+  int32 signature_algorithm = 4;
+
+  //是否开启外部客户端与服务器的心跳，true-开启，false-关闭
+  bool is_open_heart_beat = 5;
+
+   //心跳读超时时间，也就是服务端多久读不到来自客户端的消息的超时时间，单位秒；如果没有开启心跳则该字段不起作用
+  int32 heart_beat_read_timeout = 6;
+
+  // 创建时间戳（毫秒）
+  int64 create_time = 7;
+
+}
+
