@@ -3,6 +3,7 @@
   <component name="ChangeListManager">
     <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -325,7 +326,8 @@
       <workItem from="1625210265781" duration="1339000" />
       <workItem from="1625446718842" duration="9000" />
       <workItem from="1625451175290" duration="3943000" />
-      <workItem from="1625529062769" duration="9090000" />
+      <workItem from="1625529062769" duration="9878000" />
+      <workItem from="1625641174875" duration="170000" />
     </task>
     <task id="LOCAL-00055" summary="IM服务端消息可靠性&amp;优化">
       <created>1624197828255</created>
@@ -880,10 +882,10 @@
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state x="93" y="93" width="1350" height="638" key="com.intellij.history.integration.ui.views.FileHistoryDialog/0.0.1536.824@0.0.1536.824" timestamp="1624937107505" />
-    <state x="449" y="236" key="com.intellij.ide.util.TipDialog" timestamp="1625529063145">
+    <state x="449" y="236" key="com.intellij.ide.util.TipDialog" timestamp="1625641180382">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state x="449" y="236" key="com.intellij.ide.util.TipDialog/0.0.1536.824@0.0.1536.824" timestamp="1625529063145" />
+    <state x="449" y="236" key="com.intellij.ide.util.TipDialog/0.0.1536.824@0.0.1536.824" timestamp="1625641180382" />
     <state x="540" y="115" key="com.intellij.testIntegration.createTest.CreateTestDialog" timestamp="1624414988876">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
