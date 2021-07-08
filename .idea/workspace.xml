@@ -1,9 +1,138 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="">
+    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="IM 群组消息">
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/thread/IMClientRegisterThread.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/thread/IMClientRegisterThread.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/META-INF/ouyu-server.kotlin_module" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/AbstractIMServer$1.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/AbstractIMServer$2.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/AbstractIMServer.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/IMServer.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/StandardIMServer.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/StartIMServer.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/banner/IMBanner.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/channel/DefaultServerChannelInitializer.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/channel/DefaultSocketChannelInitializer$1.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/channel/DefaultSocketChannelInitializer.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/channel/ServerChannelInitializer.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/channel/SocketChannelInitializer.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/codec/PacketCodec.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/config/IMServerConfig$Builder.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/config/IMServerConfig.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/config/PropertiesConfig.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/constant/ImConstant.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/constant/enums/DeviceEnum.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/constant/enums/FriendEnum.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/constant/enums/LoginEnum.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/constant/enums/MessageContentEnum.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/constant/enums/MessageEnum.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/constant/enums/OnlineEnum.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/constant/enums/RouterStrategyEnum.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/context/IMContext$1.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/context/IMContext$2.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/context/IMContext$3.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/context/IMContext$4.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/context/IMContext$5.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/context/IMContext$6.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/context/IMContext$7.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/context/IMContext.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/designpattern/strategy/dispatcher/DispatcherProcessorContext.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/designpattern/strategy/dispatcher/DispatcherProcessorStrategy.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/designpattern/strategy/dispatcher/HttpDispatcherProcessorStrategy.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/designpattern/strategy/dispatcher/PacketDispatcherProcessorStrategy.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/designpattern/strategy/router/BacktrackRouterStrategy.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/designpattern/strategy/router/RandomRouterStrategy.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/designpattern/strategy/router/RouterStrategy.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/dispatcher/ProtocolDispatcher.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/encrypt/Encrypt$AsymmetricEncrypt$1.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/encrypt/Encrypt$AsymmetricEncrypt$2.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/encrypt/Encrypt$AsymmetricEncrypt.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/encrypt/Encrypt$SymmetryEncrypt$1.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/encrypt/Encrypt$SymmetryEncrypt$10.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/encrypt/Encrypt$SymmetryEncrypt$2.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/encrypt/Encrypt$SymmetryEncrypt$3.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/encrypt/Encrypt$SymmetryEncrypt$4.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/encrypt/Encrypt$SymmetryEncrypt$5.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/encrypt/Encrypt$SymmetryEncrypt$6.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/encrypt/Encrypt$SymmetryEncrypt$7.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/encrypt/Encrypt$SymmetryEncrypt$8.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/encrypt/Encrypt$SymmetryEncrypt$9.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/encrypt/Encrypt$SymmetryEncrypt.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/encrypt/Encrypt.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/entity/BaseUserInfo.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/entity/ChannelUserInfo.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/entity/LoginUserInfo.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/entity/RoutingTable.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/exception/IMException.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/handler/AuthenticationHandler.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/handler/Convert2PacketHandler.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/handler/HeartBeatHandler.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/handler/HttpProtocolDispatcherHandler.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/handler/OuYuImServerHandler.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/handler/PacketProtocolDispatcherHandler.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/handler/WsServerHandler.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/helper/MessageHelper$1.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/helper/MessageHelper.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/helper/RouterHelper.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/helper/UserHelper.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/innerclient/AbstractIMClient.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/innerclient/DefaultIMClient.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/innerclient/IMClient.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/innerclient/handler/IMClientChannelPoolHandler$1.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/innerclient/handler/IMClientChannelPoolHandler.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/innerclient/handler/IMClientHeartBeatHandler.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/innerclient/pool/IMClientPool$1.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/innerclient/pool/IMClientPool.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/packet/Packet.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/packet/message/AcknowledgeMessage.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/packet/message/HeartBeatMessage.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/packet/message/LoginMessage.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/packet/message/Message.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/packet/message/PChatMessage.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/packet/message/PushMessage.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/packet/message/ResponseMessage.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/processor/innerclient/AbstractIMClientChannelProcessor.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/processor/innerclient/AbstractIMClientRouteProcessor.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/processor/innerclient/IMClientChannelProcessor.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/processor/innerclient/IMClientRouteProcessor.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/processor/message/AbstractMessageProcessor.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/processor/message/AcknowledgeMessageProcessor.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/processor/message/FriendMessageProcessor.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/processor/message/LoginMessageProcessor.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/processor/message/MessageProcessor.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/processor/message/PChatMessageProcessor.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/processor/message/PingPongMessageProcessor.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/processor/message/SynAckMessageProcessor.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/protocol/Protocol$1.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/protocol/Protocol$2.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/protocol/Protocol$3.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/protocol/Protocol$4.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/protocol/Protocol$5.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/protocol/Protocol.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/serialize/Serializer$1.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/serialize/Serializer$2.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/serialize/Serializer$3.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/serialize/Serializer$4.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/serialize/Serializer$5.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/serialize/Serializer$6.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/serialize/Serializer$7.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/serialize/Serializer$8.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/serialize/Serializer.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/thread/IMClientChannelFailureProcessorThread.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/thread/IMClientRegisterThread$1.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/thread/IMClientRegisterThread.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/thread/IMClientRouteFailureProcessorThread.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/utils/IpUtil.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/utils/MapUtil.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/utils/ReaderWriterUtil.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/utils/SnowflakeUtil.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/utils/SocketAddressUtil.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/utils/ThreadPoolUtil$1.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/com/ouyu/im/utils/ThreadPoolUtil.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/log4j2.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/target/classes/ouyu-im.properties" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -92,9 +221,8 @@
     <option name="notificationShown" value="true" />
   </component>
   <component name="RecentsManager">
-    <key name="MoveFile.RECENT_KEYS">
-      <recent name="D:\workspace\ouyu-im\docs\picture" />
-      <recent name="D:\workspace\ouyu-im\ouyu-core\src\main\java\com\ouyu\im\packet\message\proto" />
+    <key name="CreateClassDialog.RecentsKey">
+      <recent name="com.ouyu.im.innerclient" />
     </key>
     <key name="CopyFile.RECENT_KEYS">
       <recent name="D:\workspace\ouyu-im\docs\webrtc" />
@@ -110,8 +238,9 @@
       <recent name="com.ouyu.im.processor.dispatcher" />
       <recent name="com.ouyu.im.server.dispatcher" />
     </key>
-    <key name="CreateClassDialog.RecentsKey">
-      <recent name="com.ouyu.im.innerclient" />
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="D:\workspace\ouyu-im\docs\picture" />
+      <recent name="D:\workspace\ouyu-im\ouyu-core\src\main\java\com\ouyu\im\packet\message\proto" />
     </key>
   </component>
   <component name="RunManager" selected="Application.StartIMServer">
@@ -798,10 +927,10 @@
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state x="584" y="425" width="693" height="399" key="#xdebugger.evaluate/0.0.1536.824@0.0.1536.824" timestamp="1624931077075" />
-    <state x="53" y="9" key="CommitChangelistDialog2" timestamp="1625641423874">
+    <state x="53" y="9" key="CommitChangelistDialog2" timestamp="1625737217620">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state x="53" y="9" key="CommitChangelistDialog2/0.0.1536.824@0.0.1536.824" timestamp="1625641423874" />
+    <state x="53" y="9" key="CommitChangelistDialog2/0.0.1536.824@0.0.1536.824" timestamp="1625737217620" />
     <state width="791" height="322" key="DebuggerActiveHint" timestamp="1624949875661">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
@@ -818,22 +947,22 @@
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state x="0" y="0" key="FileDocumentManager.FileCacheConflict/0.0.1536.824@0.0.1536.824" timestamp="1620888527102" />
-    <state width="1493" height="257" key="GridCell.Tab.0.bottom" timestamp="1624952597340">
+    <state width="1478" height="175" key="GridCell.Tab.0.bottom" timestamp="1625737009944">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="257" key="GridCell.Tab.0.bottom/0.0.1536.824@0.0.1536.824" timestamp="1624952597340" />
-    <state width="1493" height="257" key="GridCell.Tab.0.center" timestamp="1624952597340">
+    <state width="1478" height="175" key="GridCell.Tab.0.bottom/0.0.1536.824@0.0.1536.824" timestamp="1625737009944" />
+    <state width="1478" height="175" key="GridCell.Tab.0.center" timestamp="1625737009944">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="257" key="GridCell.Tab.0.center/0.0.1536.824@0.0.1536.824" timestamp="1624952597340" />
-    <state width="1493" height="257" key="GridCell.Tab.0.left" timestamp="1624952597340">
+    <state width="1478" height="175" key="GridCell.Tab.0.center/0.0.1536.824@0.0.1536.824" timestamp="1625737009944" />
+    <state width="1478" height="175" key="GridCell.Tab.0.left" timestamp="1625737009944">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="257" key="GridCell.Tab.0.left/0.0.1536.824@0.0.1536.824" timestamp="1624952597340" />
-    <state width="1493" height="257" key="GridCell.Tab.0.right" timestamp="1624952597340">
+    <state width="1478" height="175" key="GridCell.Tab.0.left/0.0.1536.824@0.0.1536.824" timestamp="1625737009944" />
+    <state width="1478" height="175" key="GridCell.Tab.0.right" timestamp="1625737009944">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="257" key="GridCell.Tab.0.right/0.0.1536.824@0.0.1536.824" timestamp="1624952597340" />
+    <state width="1478" height="175" key="GridCell.Tab.0.right/0.0.1536.824@0.0.1536.824" timestamp="1625737009944" />
     <state width="1493" height="257" key="GridCell.Tab.1.bottom" timestamp="1624952597340">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
@@ -862,10 +991,10 @@
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state x="280" y="109" key="SettingsEditor/0.0.1536.824@0.0.1536.824" timestamp="1625112111248" />
-    <state x="490" y="154" width="543" height="524" key="StructurePopup" timestamp="1624499249446">
+    <state x="490" y="154" width="543" height="524" key="StructurePopup" timestamp="1625734697597">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state x="490" y="154" width="543" height="524" key="StructurePopup/0.0.1536.824@0.0.1536.824" timestamp="1624499249446" />
+    <state x="490" y="154" width="543" height="524" key="StructurePopup/0.0.1536.824@0.0.1536.824" timestamp="1625734697597" />
     <state x="361" y="145" key="Vcs.Push.Dialog.v2" timestamp="1625641426193">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
@@ -914,10 +1043,10 @@
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state x="425" y="187" key="run.anything.popup/0.0.1536.824@0.0.1536.824" timestamp="1625099011969" />
-    <state x="459" y="267" width="672" height="678" key="search.everywhere.popup" timestamp="1625111624583">
+    <state x="510" y="358" width="672" height="678" key="search.everywhere.popup" timestamp="1625734608851">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state x="459" y="267" width="672" height="678" key="search.everywhere.popup/0.0.1536.824@0.0.1536.824" timestamp="1625111624583" />
+    <state x="510" y="358" width="672" height="678" key="search.everywhere.popup/0.0.1536.824@0.0.1536.824" timestamp="1625734608851" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

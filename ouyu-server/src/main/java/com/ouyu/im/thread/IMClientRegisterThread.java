@@ -94,22 +94,24 @@ public class IMClientRegisterThread implements Runnable {
                         } else {
                             final Throwable cause = future.cause();
                             log.error("更新服务注册表有异常,原因：{}", cause.getMessage());
+
+                            // 下线服务
+                            AtomicInteger missAckTimes = IMContext.MISS_ACK_TIMES_CACHE.get(inetSocketAddress);
+                            // 3次没回应，服务下线
+                            if (IMContext.CLUSTER_SERVER_REGISTRY_TABLE.asMap().containsKey(inetSocketAddress) && missAckTimes.incrementAndGet() >= 3) {
+                                IMContext.CLUSTER_SERVER_REGISTRY_TABLE.invalidate(inetSocketAddress);
+                                // 检测到socketAddress服务下线，进行处理,@todo 这里可以异步
+                                handlerServerOffline(inetSocketAddress);
+                            }
+                            // 判断该服务所在的集群个数是否小于服务列表的半数（用于解决脑裂）
+                            if (IMContext.CLUSTER_SERVER_REGISTRY_TABLE.asMap().size() < (int)Math.ceil(availableGlobalServer.size()/2.0) && ChronoUnit.MINUTES.between(beginTime, Instant.now()) >= 30) {
+                                // 启动服务注销,30分钟后进行检测是否脑裂,系统退出
+                                log.error("系统启动自毁程序...");
+                                System.exit(0);
+                                return;
+                            }
                         }
-                        // 下线服务
-                        AtomicInteger missAckTimes = IMContext.MISS_ACK_TIMES_CACHE.get(inetSocketAddress);
-                        // 3次没回应，服务下线
-                        if (IMContext.CLUSTER_SERVER_REGISTRY_TABLE.asMap().containsKey(inetSocketAddress) && missAckTimes.incrementAndGet() >= 3) {
-                            IMContext.CLUSTER_SERVER_REGISTRY_TABLE.invalidate(inetSocketAddress);
-                            // 检测到socketAddress服务下线，进行处理,@todo 这里可以异步
-                            handlerServerOffline(inetSocketAddress);
-                        }
-                        // 判断该服务所在的集群个数是否小于服务列表的半数（用于解决脑裂）
-                        if (IMContext.CLUSTER_SERVER_REGISTRY_TABLE.asMap().size() < (int)Math.ceil(availableGlobalServer.size()/2.0) && ChronoUnit.MINUTES.between(beginTime, Instant.now()) >= 30) {
-                            // 启动服务注销,30分钟后进行检测是否脑裂,系统退出
-                            log.error("系统启动自毁程序...");
-                            System.exit(0);
-                            return;
-                        }
+
                     }
                 }
             });
