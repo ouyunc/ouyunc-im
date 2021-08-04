@@ -140,6 +140,10 @@ public class ImConstant {
      */
     public static final String CONVERT_2_PACKET = "CONVERT_2_PACKET";
 
+    /**
+     * SSL/TLS 处理器
+     */
+    public static final String SSL = "SSL";
 
     /**
      * 协议调度分发器

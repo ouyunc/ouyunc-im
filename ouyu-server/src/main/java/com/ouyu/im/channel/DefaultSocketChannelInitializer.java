@@ -4,12 +4,19 @@ import com.ouyu.im.constant.ImConstant;
 import com.ouyu.im.context.IMContext;
 import com.ouyu.im.dispatcher.ProtocolDispatcher;
 import com.ouyu.im.entity.ChannelUserInfo;
+import com.ouyu.im.utils.SslUtil;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslHandler;
 import io.netty.util.AttributeKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLSession;
 
 /**
  * @Author fangzhenxun
@@ -19,6 +26,7 @@ import org.slf4j.LoggerFactory;
 public class DefaultSocketChannelInitializer extends SocketChannelInitializer{
     private static Logger log = LoggerFactory.getLogger(DefaultSocketChannelInitializer.class);
 
+
     /**
      * @Author fangzhenxun
      * @Description 初始化 socket channel
@@ -27,11 +35,24 @@ public class DefaultSocketChannelInitializer extends SocketChannelInitializer{
      */
     void initSocketChannel(SocketChannel socketChannel) {
         // 这里只设置协议分发器，具体可参照netty 的源码例子
-        socketChannel.pipeline()
-                // 这里为了解决粘包拆包的问题，当第一次数据到达协议分发器时应该是一个完成的包packet
-                // 也可以让ProtocolDispatcher继承LengthFieldBasedFrameDecoder来实现半包粘包，考虑到其他协议这里使用继承的方式 @todo （暂时不知道会不会有问题）
-                //.addLast(new LengthFieldBasedFrameDecoder())
-                .addLast(ImConstant.PROTOCOL_DISPATCHER, new ProtocolDispatcher());
+        ChannelPipeline pipeline = socketChannel.pipeline();
+        // 是否开启SSL/TLS
+        if (IMContext.SERVER_CONFIG.isSslEnable()) {
+            // 这个处理器需要放到第一位
+            SslUtil.configSSL(ch -> {
+                SSLEngine sslEngine = SslUtil.buildServerSslContext().newEngine(socketChannel.alloc());
+                // 服务器端模式，客户端模式设置为true
+                sslEngine.setUseClientMode(false);
+                // 不需要验证客户端，客户端不设置该项；  SSL/TLS 开启后有多种认证方式：1-不需要认证，2-单向认证（一般是客户端认证），3-双向认证
+                sslEngine.setNeedClientAuth(false);
+                socketChannel.pipeline().addFirst(ImConstant.SSL, new SslHandler(sslEngine));
+            }, socketChannel);
+
+        }
+        // 这里为了解决粘包拆包的问题，当第一次数据到达协议分发器时应该是一个完成的包packet
+        // 也可以让ProtocolDispatcher继承LengthFieldBasedFrameDecoder来实现半包粘包，考虑到其他协议这里使用继承的方式 @todo （暂时不知道会不会有问题）
+        //.addLast(new LengthFieldBasedFrameDecoder())
+        pipeline.addLast(ImConstant.PROTOCOL_DISPATCHER, new ProtocolDispatcher());
 
 
 
@@ -54,4 +75,6 @@ public class DefaultSocketChannelInitializer extends SocketChannelInitializer{
             }
         });
     }
+
+
 }

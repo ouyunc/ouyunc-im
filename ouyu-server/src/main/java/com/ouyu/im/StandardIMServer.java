@@ -34,7 +34,7 @@ public class StandardIMServer extends AbstractIMServer{
      */
     IMServerConfig loadConfigProperties() {
         // 获取配置文件中的封装类IMServerConfig.newBuilder()
-        PropertiesConfig propertiesHelper = ConfigFactory.create(PropertiesConfig.class);
+        PropertiesConfig propertiesHelper = ConfigFactory.create(PropertiesConfig.class, System.getProperties());
         // 通过构建者模式进行封装返回数据，需要哪些数据然后去
         return IMServerConfig.newBuilder()
                 .port(propertiesHelper.port())
@@ -50,6 +50,9 @@ public class StandardIMServer extends AbstractIMServer{
                 .clusterServerIdleReadWriteTimeOut(propertiesHelper.clusterServerIdleReadWriteTimeOut())
                 .clusterChannelPoolCoreConnection(propertiesHelper.clusterChannelPoolCoreConnection())
                 .clusterChannelPoolMaxConnection(propertiesHelper.clusterChannelPoolMaxConnection())
+                .sslEnable(propertiesHelper.sslEnable())
+                .sslCertificate(propertiesHelper.sslCertificate())
+                .sslPrivateKey(propertiesHelper.sslPrivateKey())
                 .acknowledgeModeEnable(propertiesHelper.acknowledgeModeEnable())
                 .bossOptionSoBacklog(propertiesHelper.bossOptionSoBacklog())
                 .bossOptionSoReuseaddr(propertiesHelper.bossOptionSoReuseaddr())

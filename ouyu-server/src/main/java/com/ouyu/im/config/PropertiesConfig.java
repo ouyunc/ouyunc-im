@@ -3,6 +3,7 @@ package com.ouyu.im.config;
 import com.ouyu.im.constant.enums.RouterStrategyEnum;
 import org.aeonbits.owner.Config;
 
+import java.io.File;
 import java.util.Set;
 
 /**
@@ -114,6 +115,26 @@ public interface PropertiesConfig extends Config {
     @DefaultValue("5")
     int heartBeatTimeout();
 
+    /**
+     *  全局是否开启SSL/TLS, 默认否
+     */
+    @Key("im.server.ssl.enable")
+    @DefaultValue("false")
+    boolean sslEnable();
+
+    /**
+     *  SSL/TLS 证书文件路径
+     */
+    @Key("im.server.ssl.certificate")
+    @DefaultValue("ssl/ouyunc.com.pem")
+    String sslCertificate();
+
+    /**
+     *  SSL/TLS 私钥文件路劲
+     */
+    @Key("im.server.ssl.private-key")
+    @DefaultValue("ssl/ouyunc.com_pkcs8.key")
+    String sslPrivateKey();
 
     /**
      *  集群中当前全部的服务存储方式 默认内存存储

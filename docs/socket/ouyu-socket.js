@@ -1,5 +1,5 @@
 // 导入外部js
-window.document.write("<script type = 'text/javascript' src='http://pv.sohu.com/cityjson?ie=utf-8'></script>");
+window.document.write("<script type = 'text/javascript' src='https://pv.sohu.com/cityjson?ie=utf-8'></script>");
 // window.document.write("<script type = 'text/javascript' src='./md5.min.js'></script>");
 
 /**

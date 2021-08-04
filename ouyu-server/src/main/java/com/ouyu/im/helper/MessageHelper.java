@@ -57,9 +57,17 @@ public class MessageHelper {
          *  该方法可以单独开线程处理
          */
     public static void deliveryMessage(InetSocketAddress toSocketAddress, Packet packet) {
+        Message message = (Message) packet.getMessage();
         // 先从注册表中查找（防止有新添加集群中的服务），然后再从全局中找到最近的服务;
         ChannelPool channelPool = IMContext.CLUSTER_SERVER_REGISTRY_TABLE.get(toSocketAddress);
         if (channelPool == null) {
+            List<RoutingTable> routingTables = message.routingTables();
+            if (CollectionUtil.isEmpty(routingTables)) {
+                List<String> routedServerAddresses = new ArrayList<>();
+                routedServerAddresses.add(message.getTargetServerAddress());
+                // 找到上个服务
+                routingTables.add(new RoutingTable(IMContext.LOCAL_ADDRESS, null, routedServerAddresses));
+            }
             // 找不到有以下两种情况：
             // 1,消息接收端是不在集群中的服务（非法的服务地址）,不予考虑;
             // 2,消息接收端是后来加入的集群中的服务，在旧的集群中可能由于部分服务之间网络不通导致没有该服务记录保存; 此时的处理方式是路由到其他可用服务上处理
@@ -76,8 +84,10 @@ public class MessageHelper {
             public void operationComplete(Future<Channel> future) throws Exception {
                 // 判断是否已经处理完
                 if (future.isDone()) {
-                    Message message = (Message) packet.getMessage();
                     List<RoutingTable> routingTables = message.routingTables();
+                    if (routingTables == null) {
+                        routingTables = new ArrayList<>();
+                    }
                     String toSocketAddressStr = SocketAddressUtil.convert2HostPort(toSocketAddress);
 
                     // 判断是否成功连接，获取channel
@@ -98,7 +108,7 @@ public class MessageHelper {
                             // 当targetServerAddress不是toSocketAddress的时候成功了就需要添加进入
                             if (!toSocketAddressStr.equals(message.getTargetServerAddress())) {
                                 boolean isExist = false;
-                                List<String> currentRoutedServerAddresses = null;
+                                List<String> currentRoutedServerAddresses = new ArrayList<>();
                                 List<String> routedServerAddresses = new ArrayList<>();
                                 Iterator<RoutingTable> routingTableIterator = routingTables.iterator();
                                 while (routingTableIterator.hasNext()) {

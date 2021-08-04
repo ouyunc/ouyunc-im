@@ -5,6 +5,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.util.NettyRuntime;
 import org.aeonbits.owner.Config;
 
+import java.io.File;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -94,6 +95,22 @@ public class IMServerConfig extends IMConfig{
 
 
     /**
+     *  全局是否开启SSL/TLS, 默认否
+     */
+    private boolean sslEnable;
+
+    /**
+     *  SSL/TLS 证书文件路径
+     */
+
+    private String sslCertificate;
+
+    /**
+     *  SSL/TLS 私钥文件路劲
+     */
+    private String sslPrivateKey;
+
+    /**
      * 集群中服务的路由策略
      */
     RouterStrategyEnum clusterServerRouteStrategy;
@@ -179,6 +196,18 @@ public class IMServerConfig extends IMConfig{
 
     public boolean isAcknowledgeModeEnable() {
         return acknowledgeModeEnable;
+    }
+
+    public boolean isSslEnable() {
+        return sslEnable;
+    }
+
+    public String getSslCertificate() {
+        return sslCertificate;
+    }
+
+    public String getSslPrivateKey() {
+        return sslPrivateKey;
     }
 
     /**
@@ -267,6 +296,22 @@ public class IMServerConfig extends IMConfig{
          * 单位秒 ， 外部客户端与服务端的心跳超时时间，如果服务端未收到客户端的心跳包在一定策略下会进行重试等待，最后如果如果没有连接上则将该客户端下线处理
          */
         private  int heartBeatTimeout;
+
+        /**
+         *  全局是否开启SSL/TLS, 默认否
+         */
+        private boolean sslEnable;
+
+        /**
+         *  SSL/TLS 证书文件路径
+         */
+
+        private String sslCertificate;
+
+        /**
+         *  SSL/TLS 私钥文件路劲
+         */
+        private String sslPrivateKey;
 
         /**
          * 集群中服务的路由策略
@@ -422,6 +467,22 @@ public class IMServerConfig extends IMConfig{
             return this;
         }
 
+        public Builder sslEnable(boolean sslEnable) {
+            this.sslEnable = sslEnable;
+            return this;
+        }
+
+        public Builder sslCertificate(String sslCertificate) {
+            this.sslCertificate = sslCertificate;
+            return this;
+        }
+
+        public Builder sslPrivateKey(String sslPrivateKey) {
+            this.sslPrivateKey = sslPrivateKey;
+            return this;
+
+        }
+
         /**
          * @Author fangzhenxun
          * @Description 通过builder来组装返回数据
@@ -444,6 +505,9 @@ public class IMServerConfig extends IMConfig{
             imServerConfig.clusterChannelPoolMaxConnection = this.clusterChannelPoolMaxConnection;
             imServerConfig.acknowledgeModeEnable = this.acknowledgeModeEnable;
             imServerConfig.heartBeatTimeout = this.heartBeatTimeout;
+            imServerConfig.sslEnable = this.sslEnable;
+            imServerConfig.sslCertificate = this.sslCertificate;
+            imServerConfig.sslPrivateKey = this.sslPrivateKey;
             imServerConfig.clusterServerRouteStrategy = this.clusterServerRouteStrategy;
             // 封装响应的map
             imServerConfig.channelOptionMap = this.channelOptionMap;
