@@ -7,21 +7,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="IM 群组消息">
-      <change afterPath="$PROJECT_DIR$/ouyu-cache/ouyu-cache.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyu-client/ouyu-client.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyu-core/ouyu-core.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyu-db/ouyu-db.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyu-im.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyu-server/ouyu-server.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyu-client/target/maven-archiver/pom.properties" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyu-client/target/maven-status/maven-compiler-plugin/compile/default-compile/inputFiles.lst" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyu-client/target/ouyu-client-v1.0-SNAPSHOT.jar" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyu-core/target/maven-archiver/pom.properties" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyu-core/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyu-core/target/maven-status/maven-compiler-plugin/compile/default-compile/inputFiles.lst" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyu-core/target/ouyu-core-v1.0-SNAPSHOT.jar" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/utils/SslUtil.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/utils/SslUtil.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/target/classes/com/ouyu/cache/l1/distributed/redis/redisson/lock/RedissonDistributedLockAspect.class" beforeDir="false" afterPath="$PROJECT_DIR$/ouyu-cache/target/classes/com/ouyu/cache/l1/distributed/redis/redisson/lock/RedissonDistributedLockAspect.class" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -346,7 +333,7 @@
       <workItem from="1630145085706" duration="2385000" />
       <workItem from="1630231564357" duration="587000" />
       <workItem from="1632366676602" duration="831000" />
-      <workItem from="1632367534883" duration="1822000" />
+      <workItem from="1632367534883" duration="3059000" />
     </task>
     <task id="LOCAL-00055" summary="IM服务端消息可靠性&amp;优化">
       <created>1624197828255</created>
@@ -817,46 +804,46 @@
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state width="791" height="322" key="DebuggerActiveHint/0.0.1536.824@0.0.1536.824" timestamp="1628068447138" />
-    <state x="93" y="93" width="1350" height="638" key="DiffContextDialog" timestamp="1628067133664">
+    <state x="93" y="93" width="1350" height="638" key="DiffContextDialog" timestamp="1632376043594">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state x="93" y="93" width="1350" height="638" key="DiffContextDialog/0.0.1536.824@0.0.1536.824" timestamp="1628067133664" />
+    <state x="93" y="93" width="1350" height="638" key="DiffContextDialog/0.0.1536.824@0.0.1536.824" timestamp="1632376043594" />
     <state x="549" y="167" key="FileChooserDialogImpl" timestamp="1630022896233">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state x="549" y="167" key="FileChooserDialogImpl/0.0.1536.824@0.0.1536.824" timestamp="1630022896233" />
-    <state width="1493" height="138" key="GridCell.Tab.0.bottom" timestamp="1632369386539">
+    <state width="1493" height="138" key="GridCell.Tab.0.bottom" timestamp="1632375673622">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="138" key="GridCell.Tab.0.bottom/0.0.1536.824@0.0.1536.824" timestamp="1632369386539" />
-    <state width="1493" height="138" key="GridCell.Tab.0.center" timestamp="1632369386538">
+    <state width="1493" height="138" key="GridCell.Tab.0.bottom/0.0.1536.824@0.0.1536.824" timestamp="1632375673622" />
+    <state width="1493" height="138" key="GridCell.Tab.0.center" timestamp="1632375673622">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="138" key="GridCell.Tab.0.center/0.0.1536.824@0.0.1536.824" timestamp="1632369386538" />
-    <state width="1493" height="138" key="GridCell.Tab.0.left" timestamp="1632369386537">
+    <state width="1493" height="138" key="GridCell.Tab.0.center/0.0.1536.824@0.0.1536.824" timestamp="1632375673622" />
+    <state width="1493" height="138" key="GridCell.Tab.0.left" timestamp="1632375673622">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="138" key="GridCell.Tab.0.left/0.0.1536.824@0.0.1536.824" timestamp="1632369386537" />
-    <state width="1493" height="138" key="GridCell.Tab.0.right" timestamp="1632369386539">
+    <state width="1493" height="138" key="GridCell.Tab.0.left/0.0.1536.824@0.0.1536.824" timestamp="1632375673622" />
+    <state width="1493" height="138" key="GridCell.Tab.0.right" timestamp="1632375673622">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="138" key="GridCell.Tab.0.right/0.0.1536.824@0.0.1536.824" timestamp="1632369386539" />
-    <state width="1493" height="138" key="GridCell.Tab.1.bottom" timestamp="1632369386540">
+    <state width="1493" height="138" key="GridCell.Tab.0.right/0.0.1536.824@0.0.1536.824" timestamp="1632375673622" />
+    <state width="1493" height="138" key="GridCell.Tab.1.bottom" timestamp="1632375673622">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="138" key="GridCell.Tab.1.bottom/0.0.1536.824@0.0.1536.824" timestamp="1632369386540" />
-    <state width="1493" height="138" key="GridCell.Tab.1.center" timestamp="1632369386540">
+    <state width="1493" height="138" key="GridCell.Tab.1.bottom/0.0.1536.824@0.0.1536.824" timestamp="1632375673622" />
+    <state width="1493" height="138" key="GridCell.Tab.1.center" timestamp="1632375673622">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="138" key="GridCell.Tab.1.center/0.0.1536.824@0.0.1536.824" timestamp="1632369386540" />
-    <state width="1493" height="138" key="GridCell.Tab.1.left" timestamp="1632369386539">
+    <state width="1493" height="138" key="GridCell.Tab.1.center/0.0.1536.824@0.0.1536.824" timestamp="1632375673622" />
+    <state width="1493" height="138" key="GridCell.Tab.1.left" timestamp="1632375673622">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="138" key="GridCell.Tab.1.left/0.0.1536.824@0.0.1536.824" timestamp="1632369386539" />
-    <state width="1493" height="138" key="GridCell.Tab.1.right" timestamp="1632369386540">
+    <state width="1493" height="138" key="GridCell.Tab.1.left/0.0.1536.824@0.0.1536.824" timestamp="1632375673622" />
+    <state width="1493" height="138" key="GridCell.Tab.1.right" timestamp="1632375673622">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="138" key="GridCell.Tab.1.right/0.0.1536.824@0.0.1536.824" timestamp="1632369386540" />
+    <state width="1493" height="138" key="GridCell.Tab.1.right/0.0.1536.824@0.0.1536.824" timestamp="1632375673622" />
     <state width="1493" height="192" key="GridCell.Tab.2.bottom" timestamp="1627957294742">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
@@ -885,10 +872,10 @@
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state x="490" y="154" width="543" height="524" key="StructurePopup/0.0.1536.824@0.0.1536.824" timestamp="1628043803740" />
-    <state x="361" y="145" key="Vcs.Push.Dialog.v2" timestamp="1625737327702">
+    <state x="361" y="145" key="Vcs.Push.Dialog.v2" timestamp="1632376039194">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state x="361" y="145" key="Vcs.Push.Dialog.v2/0.0.1536.824@0.0.1536.824" timestamp="1625737327702" />
+    <state x="361" y="145" key="Vcs.Push.Dialog.v2/0.0.1536.824@0.0.1536.824" timestamp="1632376039194" />
     <state width="775" height="419" key="XDebugger.FullValuePopup" timestamp="1628046324374">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
@@ -913,14 +900,14 @@
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state x="540" y="115" key="com.intellij.testIntegration.createTest.CreateTestDialog/0.0.1536.824@0.0.1536.824" timestamp="1624414988876" />
-    <state x="432" y="121" width="842" height="534" key="find.popup" timestamp="1627983570407">
+    <state x="432" y="121" width="842" height="534" key="find.popup" timestamp="1632375859791">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state x="432" y="121" width="842" height="534" key="find.popup/0.0.1536.824@0.0.1536.824" timestamp="1627983570407" />
-    <state x="489" y="203" key="git4idea.merge.GitPullDialog" timestamp="1625108687602">
+    <state x="432" y="121" width="842" height="534" key="find.popup/0.0.1536.824@0.0.1536.824" timestamp="1632375859791" />
+    <state x="489" y="203" key="git4idea.merge.GitPullDialog" timestamp="1632375972806">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state x="489" y="203" key="git4idea.merge.GitPullDialog/0.0.1536.824@0.0.1536.824" timestamp="1625108687602" />
+    <state x="489" y="203" key="git4idea.merge.GitPullDialog/0.0.1536.824@0.0.1536.824" timestamp="1632375972806" />
     <state x="356" y="124" key="new project wizard" timestamp="1624603182762">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
