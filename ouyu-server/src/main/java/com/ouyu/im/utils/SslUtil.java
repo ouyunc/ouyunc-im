@@ -1,22 +1,15 @@
 package com.ouyu.im.utils;
 
-import com.ouyu.im.config.PropertiesConfig;
 import com.ouyu.im.context.IMContext;
 import com.ouyu.im.exception.IMException;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.Channel;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.SslProvider;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
-import org.aeonbits.owner.ConfigFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.net.URL;
-import java.security.cert.CertificateException;
 import java.util.function.Consumer;
 
 /**
