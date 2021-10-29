@@ -2,7 +2,7 @@ package com.ouyu.im.innerclient.pool;
 
 import com.ouyu.im.config.IMServerConfig;
 import com.ouyu.im.constant.ImConstant;
-import com.ouyu.im.context.IMContext;
+import com.ouyu.im.context.IMServerContext;
 import com.ouyu.im.innerclient.handler.IMClientChannelPoolHandler;
 import com.ouyu.im.utils.SocketAddressUtil;
 import io.netty.bootstrap.Bootstrap;
@@ -38,7 +38,7 @@ public class IMClientPool {
             //                            int maxPendingAcquires, 等待连接相关
             //                            boolean releaseHealthCheck, 释放检查
             //                            boolean lastRecentUsed) 获取连接的规则 FIFO/LIFO
-            return new FixedChannelPool(bootstrap.remoteAddress(key), new IMClientChannelPoolHandler(), ChannelHealthChecker.ACTIVE, null, -1, IMContext.SERVER_CONFIG.getClusterChannelPoolCoreConnection(), Integer.MAX_VALUE, true, false);
+            return new FixedChannelPool(bootstrap.remoteAddress(key), new IMClientChannelPoolHandler(), ChannelHealthChecker.ACTIVE, null, -1, IMServerContext.SERVER_CONFIG.getClusterChannelPoolCoreConnection(), Integer.MAX_VALUE, true, false);
         }
     };
 
@@ -65,16 +65,17 @@ public class IMClientPool {
         Set<String> clusterAddress = serverConfig.getClusterAddress();
         for (String serverAddress : clusterAddress) {
             // 如果将本机的ip+port写在配置文件中，则排除本身
-            int port = IMContext.SERVER_CONFIG.getPort();
+            int port = IMServerContext.SERVER_CONFIG.getPort();
             // 获取本机ip与端口号
             String localServerAddress0 = ImConstant.LOCAL_HOST + ImConstant.COLON_SPLIT + port;
-            if  (!localServerAddress0.equals(serverAddress) && !IMContext.LOCAL_ADDRESS.equals(serverAddress)) {
+            // 排除本机
+            if  (!localServerAddress0.equals(serverAddress) && !IMServerContext.LOCAL_ADDRESS.equals(serverAddress)) {
                 final InetSocketAddress inetSocketAddress = SocketAddressUtil.convert2SocketAddress(serverAddress);
                 // 获取对应的缓存类型来进行判断存储
                 SimpleChannelPool simpleChannelPool = singleClientChannelPoolMap.get(inetSocketAddress);
                 // 默认一开始所有的连接都是存活的, 并且缓存所有连接
-                IMContext.CLUSTER_GLOBAL_SERVER_CONNECTS_CACHE.put(inetSocketAddress, simpleChannelPool);
-                IMContext.CLUSTER_SERVER_REGISTRY_TABLE.put(inetSocketAddress, simpleChannelPool);
+                IMServerContext.CLUSTER_GLOBAL_SERVER_CONNECTS_CACHE.put(inetSocketAddress, simpleChannelPool);
+                IMServerContext.CLUSTER_SERVER_REGISTRY_TABLE.put(inetSocketAddress, simpleChannelPool);
             }
         }
         log.info("IM内置客户端初始化完成");

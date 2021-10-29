@@ -5,6 +5,7 @@ import com.ouyu.cache.l1.local.AbstractLocalL1Cache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
@@ -68,8 +69,12 @@ public class CaffeineLocalL1Cache<K , V > extends AbstractLocalL1Cache<K, V> {
      * @return void
      */
     @Override
-    public void putIfAbsent(K key, V value) {
-        loadingCache.get(key, k -> value);
+    public Boolean putIfAbsent(K key, V value) {
+        V v = loadingCache.get(key, k -> value);
+        if (v != null) {
+            return true;
+        }
+        return false;
     }
 
 
@@ -95,6 +100,41 @@ public class CaffeineLocalL1Cache<K , V > extends AbstractLocalL1Cache<K, V> {
     @Override
     public void delete(K key) {
         loadingCache.invalidate(key);
+    }
+
+    @Override
+    public Boolean putHash(K key, K hashKey, V value) {
+        return null;
+    }
+
+    @Override
+    public Boolean putHashIfAbsent(K key, K hashKey, V value) {
+        return null;
+    }
+
+    @Override
+    public void putHashAll(K key, Map<? extends K, ? extends V> value) {
+
+    }
+
+    @Override
+    public V getHash(K key, K hashKey) {
+        return null;
+    }
+
+    @Override
+    public Map<K, V> getHashAll(K key) {
+        return null;
+    }
+
+    @Override
+    public Long deleteHashAll(K key) {
+        return null;
+    }
+
+    @Override
+    public Long deleteHash(K key, K... hashKeys) {
+        return null;
     }
 
     /**

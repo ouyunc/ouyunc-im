@@ -1,17 +1,12 @@
 package com.ouyu.im.helper;
 
-import com.ouyu.im.constant.enums.RouterStrategyEnum;
-import com.ouyu.im.context.IMContext;
+import com.ouyu.im.context.IMServerContext;
 import com.ouyu.im.designpattern.strategy.router.BacktrackRouterStrategy;
 import com.ouyu.im.designpattern.strategy.router.RandomRouterStrategy;
 import com.ouyu.im.designpattern.strategy.router.RouterStrategy;
 import com.ouyu.im.packet.Packet;
-import io.netty.channel.pool.ChannelPool;
 
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * @Author fangzhenxun
@@ -29,7 +24,7 @@ public class RouterHelper {
      * 静态代码块初始化具体策略实现
      */
     static {
-        switch (IMContext.SERVER_CONFIG.getClusterServerRouteStrategy()) {
+        switch (IMServerContext.SERVER_CONFIG.getClusterServerRouteStrategy()) {
             case RANDOM:
                 routerStrategy = new RandomRouterStrategy();
                 break;

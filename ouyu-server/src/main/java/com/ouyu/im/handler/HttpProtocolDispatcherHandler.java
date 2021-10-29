@@ -34,7 +34,6 @@ public class HttpProtocolDispatcherHandler extends SimpleChannelInboundHandler<O
             FullHttpRequest request = (FullHttpRequest) msg;
             // 判断是否是websocket 的101 升级请求，如果是则升级为websocket协议
             if (isUpgradeToWebSocket(request)) {
-                // @todo 或者wss
                 Protocol.prototype(Protocol.WS.getProtocol(), Protocol.WS.getVersion()).doDispatcher(ctx);
                 //如果请求是一次升级了的 WebSocket 请求，则递增引用计数器（retain）并且将它传递给在 ChannelPipeline 中的下个 ChannelInboundHandler
                 ctx.fireChannelRead(request.retain());

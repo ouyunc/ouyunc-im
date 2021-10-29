@@ -1,12 +1,11 @@
 package com.ouyu.im.innerclient;
 
 import com.ouyu.im.config.IMServerConfig;
-import com.ouyu.im.context.IMContext;
+import com.ouyu.im.context.IMServerContext;
 import com.ouyu.im.innerclient.pool.IMClientPool;
 import com.ouyu.im.thread.IMClientRegisterThread;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
-import io.netty.util.concurrent.ScheduledFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +40,7 @@ public class DefaultIMClient extends AbstractIMClient{
     @Override
     void afterPropertiesSet() {
         // 初始化客户端之后做的事情
-        eventExecutors.scheduleWithFixedDelay(new IMClientRegisterThread(), 0, IMContext.SERVER_CONFIG.getClusterServerInitRegisterPeriod(), TimeUnit.SECONDS);
+        eventExecutors.scheduleWithFixedDelay(new IMClientRegisterThread(), 0, IMServerContext.SERVER_CONFIG.getClusterServerInitRegisterPeriod(), TimeUnit.SECONDS);
     }
 
     /**

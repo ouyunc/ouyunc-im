@@ -9,7 +9,7 @@ import java.util.concurrent.ConcurrentMap;
  * @Description: 抽象本地L1 cache
  * @Version V1.0
  **/
-public abstract class AbstractLocalL1Cache<K,V> implements L1Cache<K, V> {
+public abstract class AbstractLocalL1Cache<K, V> implements L1Cache<K, V> {
 
     /**
      * 将本地缓存转成Map

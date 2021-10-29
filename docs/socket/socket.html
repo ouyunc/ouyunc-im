@@ -22,18 +22,6 @@
         appKey: '123456',
         // 服务端分配的秘钥
         appSecret: '123456',
-        // 是否开启心跳，默认开启
-        isOpenHeartBeat: true,
-        // 客户端读超时时间，单位毫秒，连接超时时间需要大于心跳读超时时间，
-        // 客户端在8秒内没有收到服务端发来的任何消息就是读超时，
-        // 原则上客户端发送心跳后服务端一定会立即回复一个pong给客户端
-        clientReadTimeout: 15 * 1000,
-        // 服务端读超时时间，单位毫秒，如果在开启心跳的情况下，该属性起作用，
-        // 该属性设置服务端对该链接的的读超时进行设置
-        serverReadTimeout: 15 * 1000,
-        // 客户端发送心跳间隔时间，单位毫秒，
-        // 使用大白话就是客户端每个10秒发送一条心跳ping消息
-        heartBeatPeriodTime: 10 * 1000,
         onopen: function (e) {
             //获取原来的值
             const element = document.getElementById("responseMessage");
@@ -82,6 +70,7 @@
 
     // 发送消息
     function send(msg) {
+
         let pChatMessage = new proto.com.ouyu.im.PChatMessage();
         pChatMessage.setFrom(socketConfig.identity)
         pChatMessage.setTo("123456")

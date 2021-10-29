@@ -8,7 +8,7 @@ import com.ouyu.im.channel.ServerChannelInitializer;
 import com.ouyu.im.channel.SocketChannelInitializer;
 import com.ouyu.im.config.IMServerConfig;
 import com.ouyu.im.constant.ImConstant;
-import com.ouyu.im.context.IMContext;
+import com.ouyu.im.context.IMServerContext;
 import com.ouyu.im.innerclient.DefaultIMClient;
 import com.ouyu.im.innerclient.IMClient;
 import io.netty.bootstrap.ServerBootstrap;
@@ -162,9 +162,9 @@ public abstract class AbstractIMServer implements IMServer{
     public void start() {
         IMServerConfig imServerConfig = loadConfigProperties();
         // 给IM 设置配置文件的属性
-        IMContext.SERVER_CONFIG = imServerConfig;
+        IMServerContext.SERVER_CONFIG = imServerConfig;
         try {
-            IMContext.LOCAL_ADDRESS = InetAddress.getLocalHost().getHostAddress() + ImConstant.COLON_SPLIT + imServerConfig.getPort();
+            IMServerContext.LOCAL_ADDRESS = InetAddress.getLocalHost().getHostAddress() + ImConstant.COLON_SPLIT + imServerConfig.getPort();
         } catch (UnknownHostException e) {
             log.error("start获取本地地址失败！");
             e.printStackTrace();

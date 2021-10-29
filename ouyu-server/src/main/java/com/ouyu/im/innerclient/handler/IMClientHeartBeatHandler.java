@@ -2,7 +2,7 @@ package com.ouyu.im.innerclient.handler;
 
 import cn.hutool.core.collection.ConcurrentHashSet;
 import com.ouyu.im.constant.ImConstant;
-import com.ouyu.im.context.IMContext;
+import com.ouyu.im.context.IMServerContext;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -58,9 +58,9 @@ public class IMClientHeartBeatHandler extends ChannelInboundHandlerAdapter {
                     // 获取锁
                     lock.lock();
                     // 获取当前管道所属的channel pool 的hashcode
-                    ConcurrentHashSet<Channel> coreChannelSet = IMContext.CLUSTER_CORE_CHANNEL_CACHE.get(channelPoolHashCode, key -> new ConcurrentHashSet<>(6));
+                    ConcurrentHashSet<Channel> coreChannelSet = IMServerContext.CLUSTER_CORE_CHANNEL_CACHE.get(channelPoolHashCode, key -> new ConcurrentHashSet<>(6));
                     // 判断当前核心coreChannelSet中是否已经满了，有可能这里的核心线程一个都没有，但是总的channel已经达到最大值,该channel 不正在写
-                    if (coreChannelSet.stream().filter(ch -> ch.isActive()).count() >= IMContext.SERVER_CONFIG.getClusterChannelPoolCoreConnection()) {
+                    if (coreChannelSet.stream().filter(ch -> ch.isActive()).count() >= IMServerContext.SERVER_CONFIG.getClusterChannelPoolCoreConnection()) {
                         // 直接关闭该通道，应该移除通道
                         log.error("===============我要关闭通道了：{}===================", channel.id().asShortText());
                         channel.close();

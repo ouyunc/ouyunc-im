@@ -1,16 +1,12 @@
 package com.ouyu.im.designpattern.strategy.router;
 
 import cn.hutool.core.collection.CollectionUtil;
-import com.ouyu.im.context.IMContext;
+import com.ouyu.im.context.IMServerContext;
 import com.ouyu.im.entity.RoutingTable;
-import com.ouyu.im.exception.IMException;
 import com.ouyu.im.helper.MessageHelper;
 import com.ouyu.im.packet.Packet;
-import com.ouyu.im.thread.IMClientChannelFailureProcessorThread;
 import com.ouyu.im.thread.IMClientRouteFailureProcessorThread;
 import com.ouyu.im.utils.SocketAddressUtil;
-import io.netty.util.concurrent.DefaultEventExecutorGroup;
-import io.netty.util.concurrent.EventExecutorGroup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +37,7 @@ public class RandomRouterStrategy implements RouterStrategy{
         // 1,  再次解析与封装msg,在扩展字段中取出并添加这个消息目前路由到的不可用的服务，防止下次路由策略的再次路由到该服务上,并且返回该消息经历过部分服务连接中的不可用服务列表(已经路由过的包括toSocketAddress)
         List<RoutingTable> routedUnavailableSocketAddresses = MessageHelper.wrapperMessage(toSocketAddress, packet);
         // 2，通过得到的列表解析路由策略进行服务路由（寻找一个可用的服务连接）, 从路由表中取出服务地址
-        for (InetSocketAddress inetSocketAddress : IMContext.CLUSTER_SERVER_REGISTRY_TABLE.asMap().keySet()) {
+        for (InetSocketAddress inetSocketAddress : IMServerContext.CLUSTER_SERVER_REGISTRY_TABLE.asMap().keySet()) {
             if (CollectionUtil.isNotEmpty(routedUnavailableSocketAddresses)) {
                 boolean isContain = false;
                 for (RoutingTable routedUnavailableSocketAddress : routedUnavailableSocketAddresses) {
@@ -58,7 +54,7 @@ public class RandomRouterStrategy implements RouterStrategy{
         // 如果走到下面就证明就该服务可能掉线，需要进行重试
         log.warn("获取不到可用的服务连接！开始进行重试...");
         // 将需要处理的重试消息，放到任务队列中, 使用netty中的线程池以及队列，在第一次调用execute时会启动java线程，其实是个死循环来循环处理任务
-        IMContext.EVENT_EXECUTORS.execute(new IMClientRouteFailureProcessorThread(packet));
+        IMServerContext.EVENT_EXECUTORS.execute(new IMClientRouteFailureProcessorThread(packet));
         // 抛出一个异常信息
         return null;
     }

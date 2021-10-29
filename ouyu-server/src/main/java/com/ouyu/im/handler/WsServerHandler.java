@@ -1,6 +1,6 @@
 package com.ouyu.im.handler;
 
-import com.ouyu.im.context.IMContext;
+import com.ouyu.im.context.IMServerContext;
 import com.ouyu.im.packet.Packet;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -18,7 +18,7 @@ public class WsServerHandler  extends SimpleChannelInboundHandler<Packet> {
 
     /**
      * @Author fangzhenxun
-     * @Description 通过这里处理,@todo 这里面需要释放引用
+     * @Description 通过这里处理
      * @param ctx
      * @param packet
      * @return void
@@ -26,7 +26,7 @@ public class WsServerHandler  extends SimpleChannelInboundHandler<Packet> {
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Packet packet) throws Exception {
         // 需要判断消息类型，转到对应的去处理
-        IMContext.MESSAGE_PROCESSOR_CACHE.get(packet.getMessageType()).doProcess(ctx, packet);
+        IMServerContext.MESSAGE_PROCESSOR_CACHE.get(packet.getMessageType()).doProcess(ctx, packet);
     }
 
 

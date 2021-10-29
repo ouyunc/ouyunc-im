@@ -34,7 +34,7 @@
         <fst.version>2.57</fst.version>
         <protostuff.version>1.7.2</protostuff.version>
         <protobuf.version>3.12.2</protobuf.version>
-        <aspectj.version>1.9.6</aspectj.version>
+        <aspectj.version>1.8.13</aspectj.version>
         <druid.version>1.2.6</druid.version>
         <mysql-connector.version>8.0.25</mysql-connector.version>
         <mybatis.version>3.5.6</mybatis.version>

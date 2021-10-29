@@ -1,6 +1,6 @@
 package com.ouyu.im.handler;
 
-import com.ouyu.im.context.IMContext;
+import com.ouyu.im.context.IMServerContext;
 import com.ouyu.im.packet.Packet;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -23,6 +23,6 @@ public class OuYuImServerHandler  extends SimpleChannelInboundHandler<Packet> {
      */
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Packet packet) throws Exception {
-        IMContext.MESSAGE_PROCESSOR_CACHE.get(packet.getMessageType()).doProcess(ctx, packet);
+        IMServerContext.MESSAGE_PROCESSOR_CACHE.get(packet.getMessageType()).doProcess(ctx, packet);
     }
 }

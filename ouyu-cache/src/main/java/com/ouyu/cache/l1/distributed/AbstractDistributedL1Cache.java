@@ -9,6 +9,6 @@ import java.io.Serializable;
  * @Description: 抽象分布式 L1 cache
  * @Version V1.0
  **/
-public abstract class AbstractDistributedL1Cache<K , V > implements L1Cache<K,V> {
+public abstract class AbstractDistributedL1Cache<K, V> implements L1Cache<K, V> {
 
 }

@@ -1,17 +1,16 @@
 package com.ouyu.im.helper;
 
-import cn.hutool.json.JSONUtil;
+import com.ouyu.im.constant.CacheConstant;
 import com.ouyu.im.constant.ImConstant;
-import com.ouyu.im.constant.enums.DeviceEnum;
-import com.ouyu.im.constant.enums.LoginEnum;
-import com.ouyu.im.constant.enums.OnlineEnum;
-import com.ouyu.im.context.IMContext;
+import com.ouyu.im.constant.enums.*;
+import com.ouyu.im.context.IMServerContext;
 import com.ouyu.im.entity.ChannelUserInfo;
 import com.ouyu.im.entity.LoginUserInfo;
 import com.ouyu.im.exception.IMException;
 import com.ouyu.im.packet.Packet;
-import com.ouyu.im.packet.message.AcknowledgeMessage;
-import com.ouyu.im.packet.message.ResponseMessage;
+
+import com.ouyu.im.packet.message.Message;
+import com.ouyu.im.utils.TimeUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.AttributeKey;
 import org.slf4j.Logger;
@@ -19,8 +18,9 @@ import org.slf4j.LoggerFactory;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.charset.Charset;
 
-import static com.ouyu.im.constant.enums.MessageEnum.IM_ACKNOWLEDGE;
+import static com.ouyu.im.constant.enums.MessageEnum.IM_ACK;
 
 
 /**
@@ -44,10 +44,10 @@ public class UserHelper {
         ChannelUserInfo authenticationUserInfo = new ChannelUserInfo(LoginEnum.LOGIN_STATUS_SIGNED_IN);
         authenticationUserInfo.setIdentity(identity);
         ctx.channel().attr(channelTagLoginKey).set(authenticationUserInfo);
-        LoginUserInfo loginUserInfo = new LoginUserInfo(IMContext.LOCAL_ADDRESS, OnlineEnum.ONLINE);
+        LoginUserInfo loginUserInfo = new LoginUserInfo(IMServerContext.LOCAL_ADDRESS, OnlineEnum.ONLINE);
         loginUserInfo.setIdentity(identity);
-        IMContext.LOGIN_USER_INFO_CACHE.put(identity, loginUserInfo);
-        IMContext.LOCAL_USER_CHANNEL_CACHE.put(identity, ctx);
+        IMServerContext.LOGIN_USER_INFO_CACHE.opsForValue().set(CacheConstant.USER_COMMON_CACHE_PREFIX + CacheConstant.LOGIN_CACHE_PREFIX + identity, loginUserInfo);
+        IMServerContext.LOCAL_USER_CHANNEL_CACHE.put(identity, ctx);
     }
 
     /**
@@ -57,8 +57,8 @@ public class UserHelper {
      * @return void
      */
     public static void unbind(String identity) {
-        IMContext.LOGIN_USER_INFO_CACHE.delete(identity);
-        IMContext.LOCAL_USER_CHANNEL_CACHE.invalidate(identity);
+        IMServerContext.LOGIN_USER_INFO_CACHE.delete(CacheConstant.USER_COMMON_CACHE_PREFIX + CacheConstant.LOGIN_CACHE_PREFIX + identity);
+        IMServerContext.LOCAL_USER_CHANNEL_CACHE.invalidate(identity);
     }
 
     /**
@@ -70,11 +70,11 @@ public class UserHelper {
      * @return void
      */
     public static void doAck(String from, String to,  Packet packet) {
-        if (IMContext.SERVER_CONFIG.isAcknowledgeModeEnable()) {
+        if (IMServerContext.SERVER_CONFIG.isAcknowledgeModeEnable()) {
             // 3, 回执ack(AcknowledgeMessage)给发送方；
             try {
-                AcknowledgeMessage acknowledgeMessage = new AcknowledgeMessage(to, from, Long.toString(packet.getPacketId()));
-                Packet<AcknowledgeMessage> ackPacket  = new Packet(packet.getProtocol(), packet.getProtocolVersion(), packet.getPacketId(), DeviceEnum.PC_LINUX.getValue(), InetAddress.getLocalHost().getHostAddress(), IM_ACKNOWLEDGE.getValue(), packet.getEncryptType(), packet.getSerializeAlgorithm(),  acknowledgeMessage);
+                Message acknowledgeMessage = new Message(to, from, MessageContentEnum.TEXT_CONTENT.code(), String.valueOf(packet.getPacketId()), TimeUtil.currentTimestamp());
+                Packet<Message> ackPacket  = new Packet(packet.getProtocol(), packet.getProtocolVersion(), packet.getPacketId(), DeviceEnum.PC_LINUX.getValue(), NetworkEnum.OTHER.getValue(), InetAddress.getLocalHost().getHostAddress(), IM_ACK.getValue(), packet.getEncryptType(), packet.getSerializeAlgorithm(),  acknowledgeMessage);
                 MessageHelper.sendMessage(ackPacket, from.split(ImConstant.COMMA));
             } catch (UnknownHostException e) {
                 log.error("服务端回执消息ack失败！请查明原因");
@@ -99,13 +99,9 @@ public class UserHelper {
         // 否则判断是否登录并且有权限
         //8.1,判断该用户在分布式缓存中是否存在，不存在则判断该用户是否在本地缓存中存在，存在则关闭该通道,不存在则不做处理，结束
         //1,从分布式缓存取出该用户 @todo 需要处理优化缓存的数据
-        Object obj = IMContext.LOGIN_USER_INFO_CACHE.get(identity);
-        LoginUserInfo loginUserInfo = null;
-        if (obj != null) {
-            loginUserInfo = JSONUtil.toBean(JSONUtil.toJsonStr(obj), LoginUserInfo.class);
-        }      //2,从本地连接中取出该用户的channel
-        final ChannelHandlerContext bindCtx = IMContext.LOCAL_USER_CHANNEL_CACHE.get(identity);
-
+        LoginUserInfo loginUserInfo = IMServerContext.LOGIN_USER_INFO_CACHE.opsForValue().get(CacheConstant.USER_COMMON_CACHE_PREFIX + CacheConstant.LOGIN_CACHE_PREFIX + identity);
+          //2,从本地连接中取出该用户的channel
+        final ChannelHandlerContext bindCtx = IMServerContext.LOCAL_USER_CHANNEL_CACHE.get(identity);
         if (loginUserInfo != null && bindCtx != null) {
             // 如果都不为空，接着继续判断
             //3,从channel中的attrMap取出相关属性
@@ -116,14 +112,13 @@ public class UserHelper {
                 // 已经登录，交给下个处理器去处理
                 ctx.fireChannelRead(packet);
                 return;
+            }else {
+                log.error("认证失败！");
             }
         }
         // 没有登录以及出现异常后走的逻辑 @todo 后去优化逻辑
-        IMContext.LOGIN_USER_INFO_CACHE.delete(identity);
-        IMContext.LOCAL_USER_CHANNEL_CACHE.invalidate(identity);
-        //6,该通道没有绑定任何信息
-        packet.setMessage(ResponseMessage.fail("该通道异常！现将关闭该通道"));
-        ctx.writeAndFlush(packet);
+        IMServerContext.LOGIN_USER_INFO_CACHE.delete(CacheConstant.USER_COMMON_CACHE_PREFIX + CacheConstant.LOGIN_CACHE_PREFIX + identity);
+        IMServerContext.LOCAL_USER_CHANNEL_CACHE.invalidate(identity);
         // 关闭channel
         ctx.close();
     }

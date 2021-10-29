@@ -1,7 +1,8 @@
 package com.ouyu.im.handler;
 
+import com.ouyu.im.constant.CacheConstant;
 import com.ouyu.im.constant.ImConstant;
-import com.ouyu.im.context.IMContext;
+import com.ouyu.im.context.IMServerContext;
 import com.ouyu.im.entity.ChannelUserInfo;
 import com.ouyu.im.innerclient.handler.IMClientHeartBeatHandler;
 import com.ouyu.im.packet.Packet;
@@ -33,14 +34,14 @@ public class HeartBeatHandler extends SimpleChannelInboundHandler<Packet> {
      */
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Packet packet) throws Exception {
-        // 心跳处理器中不需要进行的登录的业务处理
+        // 由于所有消息都会经过心跳处理器，所以这里对真正需要心跳处理的数据进行拦截处理，其他的数据直接放行不做处理
         // 需要判断是否是心跳的消息类型
         if (MessageEnum.IM_PING_PONG.getValue() != packet.getMessageType()) {
             // 交给下面处理
             ctx.fireChannelRead(packet);
             return;
         }
-        IMContext.MESSAGE_PROCESSOR_CACHE.get(MessageEnum.IM_PING_PONG.getValue()).doProcess(ctx, packet);
+        IMServerContext.MESSAGE_PROCESSOR_CACHE.get(MessageEnum.IM_PING_PONG.getValue()).doProcess(ctx, packet);
     }
 
     /**
@@ -57,7 +58,7 @@ public class HeartBeatHandler extends SimpleChannelInboundHandler<Packet> {
         if (event instanceof IdleStateEvent) {
             // 判断该通道是否是存活
             if(channel.isActive()) {
-                // 在这里面写在线状态的逻辑，偶然事件需要排除重试（一定的策略）
+                // @todo 在这里面写在线状态的逻辑，偶然事件需要排除重试（一定的策略）
                 IdleStateEvent idleStateEvent = (IdleStateEvent)event;
                 if (IdleState.READER_IDLE.equals(idleStateEvent.state())) {
                     // 记录该channel 是第几次连续触发读超时，如果超过三次，则标注该客户端离线，并尝试通知客户端进行重试连接
@@ -68,15 +69,15 @@ public class HeartBeatHandler extends SimpleChannelInboundHandler<Packet> {
                         readTimeoutTimes = 0;
                     }
                     // 如果连续超过三次
-                    if (readTimeoutTimes >= 3) {
+                    if (readTimeoutTimes >= 2) {
                         // 没有收到心跳断开连接
                         AttributeKey<ChannelUserInfo> channelTagLoginKey = AttributeKey.valueOf(ImConstant.CHANNEL_TAG_LOGIN);
                         final ChannelUserInfo channelUserInfo = channel.attr(channelTagLoginKey).get();
                         if (channelUserInfo != null) {
-                            // 移除缓存中的数据
-                            IMContext.LOGIN_USER_INFO_CACHE.delete(channelUserInfo.getIdentity());
-                            IMContext.LOCAL_USER_CHANNEL_CACHE.invalidate(channelUserInfo.getIdentity());
+                            IMServerContext.LOCAL_USER_CHANNEL_CACHE.invalidate(channelUserInfo.getIdentity());
                         }
+                        // 移除缓存中的数据
+                        IMServerContext.LOGIN_USER_INFO_CACHE.delete(CacheConstant.USER_COMMON_CACHE_PREFIX + CacheConstant.LOGIN_CACHE_PREFIX + channelUserInfo.getIdentity());
                         // 关闭channel
                         ctx.close();
                         return;

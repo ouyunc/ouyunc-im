@@ -1,6 +1,6 @@
 package com.ouyu.im.designpattern.strategy.router;
 
-import com.ouyu.im.context.IMContext;
+import com.ouyu.im.context.IMServerContext;
 import com.ouyu.im.entity.RoutingTable;
 import com.ouyu.im.packet.Packet;
 import com.ouyu.im.packet.message.Message;
@@ -38,7 +38,7 @@ public class BacktrackRouterStrategy implements RouterStrategy{
         List<RoutingTable> routingTables = message.routingTables();
         String preServerAddress = null;
         // 循环服务注册表与全局的合并（服务在线列表）
-        Iterator<Map.Entry<InetSocketAddress, ChannelPool>> socketAddressIterator = MapUtil.mergerMaps(IMContext.CLUSTER_SERVER_REGISTRY_TABLE.asMap(), IMContext.CLUSTER_GLOBAL_SERVER_CONNECTS_CACHE.asMap()).entrySet().iterator();
+        Iterator<Map.Entry<InetSocketAddress, ChannelPool>> socketAddressIterator = MapUtil.mergerMaps(IMServerContext.CLUSTER_SERVER_REGISTRY_TABLE.asMap(), IMServerContext.CLUSTER_GLOBAL_SERVER_CONNECTS_CACHE.asMap()).entrySet().iterator();
         while (socketAddressIterator.hasNext()) {
             boolean isContain = false;
             Map.Entry<InetSocketAddress, ChannelPool> socketAddressChannelPoolEntry = socketAddressIterator.next();
@@ -50,7 +50,7 @@ public class BacktrackRouterStrategy implements RouterStrategy{
                 while (routingTableIterator.hasNext()) {
                     RoutingTable routingTable = routingTableIterator.next();
                     // 找到路由表中的当前服务,有可能第n次才走到这里（满足条件）
-                    if (IMContext.LOCAL_ADDRESS.equals(routingTable.getServerAddress())) {
+                    if (IMServerContext.LOCAL_ADDRESS.equals(routingTable.getServerAddress())) {
                         preServerAddress = routingTable.getPreServerAddress();
                     }
                     if (routingTable.getServerAddress().equals(socketAddressStr) || routingTable.getRoutedServerAddresses().contains(socketAddressStr)) {
@@ -74,7 +74,7 @@ public class BacktrackRouterStrategy implements RouterStrategy{
 
         log.warn("获取不到可用的服务连接！开始进行重试...");
         // 将需要处理的重试消息，放到任务队列中, 使用netty中的线程池以及队列，在第一次调用execute时会启动java线程，其实是个死循环来循环处理任务
-        IMContext.EVENT_EXECUTORS.execute(new IMClientRouteFailureProcessorThread(packet));
+        IMServerContext.EVENT_EXECUTORS.execute(new IMClientRouteFailureProcessorThread(packet));
         // 抛出一个异常信息
         return null;
     }

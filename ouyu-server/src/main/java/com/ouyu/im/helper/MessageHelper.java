@@ -3,7 +3,7 @@ package com.ouyu.im.helper;
 import cn.hutool.core.collection.CollectionUtil;
 import com.ouyu.im.constant.ImConstant;
 import com.ouyu.im.constant.enums.RouterStrategyEnum;
-import com.ouyu.im.context.IMContext;
+import com.ouyu.im.context.IMServerContext;
 import com.ouyu.im.entity.RoutingTable;
 import com.ouyu.im.exception.IMException;
 import com.ouyu.im.packet.Packet;
@@ -59,14 +59,14 @@ public class MessageHelper {
     public static void deliveryMessage(InetSocketAddress toSocketAddress, Packet packet) {
         Message message = (Message) packet.getMessage();
         // 先从注册表中查找（防止有新添加集群中的服务），然后再从全局中找到最近的服务;
-        ChannelPool channelPool = IMContext.CLUSTER_SERVER_REGISTRY_TABLE.get(toSocketAddress);
+        ChannelPool channelPool = IMServerContext.CLUSTER_SERVER_REGISTRY_TABLE.get(toSocketAddress);
         if (channelPool == null) {
             List<RoutingTable> routingTables = message.routingTables();
             if (CollectionUtil.isEmpty(routingTables)) {
                 List<String> routedServerAddresses = new ArrayList<>();
-                routedServerAddresses.add(message.getTargetServerAddress());
+                routedServerAddresses.add(message.getToServerAddress());
                 // 找到上个服务
-                routingTables.add(new RoutingTable(IMContext.LOCAL_ADDRESS, null, routedServerAddresses));
+                routingTables.add(new RoutingTable(IMServerContext.LOCAL_ADDRESS, null, routedServerAddresses));
             }
             // 找不到有以下两种情况：
             // 1,消息接收端是不在集群中的服务（非法的服务地址）,不予考虑;
@@ -103,10 +103,10 @@ public class MessageHelper {
                         // 每次调用都会走这一步进行设置为true
                         message.setDelivery(true);
                         // 判断是哪种策略
-                        if (RouterStrategyEnum.BACKTRACK.equals(IMContext.SERVER_CONFIG.getClusterServerRouteStrategy())) {
+                        if (RouterStrategyEnum.BACKTRACK.equals(IMServerContext.SERVER_CONFIG.getClusterServerRouteStrategy())) {
                             // 发送成功
                             // 当targetServerAddress不是toSocketAddress的时候成功了就需要添加进入
-                            if (!toSocketAddressStr.equals(message.getTargetServerAddress())) {
+                            if (!toSocketAddressStr.equals(message.getToServerAddress())) {
                                 boolean isExist = false;
                                 List<String> currentRoutedServerAddresses = new ArrayList<>();
                                 List<String> routedServerAddresses = new ArrayList<>();
@@ -121,14 +121,14 @@ public class MessageHelper {
                                         break;
                                     }
                                     // 先找到当前服务追加数据
-                                    if (IMContext.LOCAL_ADDRESS.equals(serverAddress)) {
+                                    if (IMServerContext.LOCAL_ADDRESS.equals(serverAddress)) {
                                         currentRoutedServerAddresses = routedTable.getRoutedServerAddresses();
                                     }
                                 }
                                 if (!isExist) {
                                     currentRoutedServerAddresses.add(toSocketAddressStr);
                                     // 找到下个服务
-                                    routingTables.add(new RoutingTable(toSocketAddressStr, IMContext.LOCAL_ADDRESS, routedServerAddresses));
+                                    routingTables.add(new RoutingTable(toSocketAddressStr, IMServerContext.LOCAL_ADDRESS, routedServerAddresses));
                                 }
                             }
                         }
@@ -142,19 +142,19 @@ public class MessageHelper {
                         Throwable cause = future.cause();
                         log.warn("客户端获取channel异常！原因: {}", cause.getMessage());
                         // 这里使用线程，会发生线程嵌套，不太合理, 在获取消息时可以考虑下使用线程来处理这个
-                        if (RouterStrategyEnum.BACKTRACK.equals(IMContext.SERVER_CONFIG.getClusterServerRouteStrategy())) {
+                        if (RouterStrategyEnum.BACKTRACK.equals(IMServerContext.SERVER_CONFIG.getClusterServerRouteStrategy())) {
                             if (CollectionUtil.isEmpty(routingTables)) {
                                 List<String> routedServerAddresses = new ArrayList<>();
-                                routedServerAddresses.add(message.getTargetServerAddress());
+                                routedServerAddresses.add(message.getToServerAddress());
                                 // 找到上个服务
-                                routingTables.add(new RoutingTable(IMContext.LOCAL_ADDRESS, null, routedServerAddresses));
+                                routingTables.add(new RoutingTable(IMServerContext.LOCAL_ADDRESS, null, routedServerAddresses));
                             }else {
                                 // 循环装填
                                 Iterator<RoutingTable> routingTableIterator = routingTables.iterator();
                                 while (routingTableIterator.hasNext()) {
                                     RoutingTable routedTable = routingTableIterator.next();
                                     // 找到当前服务器
-                                    if (IMContext.LOCAL_ADDRESS.equals(routedTable.getServerAddress())) {
+                                    if (IMServerContext.LOCAL_ADDRESS.equals(routedTable.getServerAddress())) {
                                         boolean isExist = false;
                                         List<String> currentRoutedServerAddresses = routedTable.getRoutedServerAddresses();
                                         Iterator<String> currentRoutedServerAddressesIterator = currentRoutedServerAddresses.iterator();
@@ -199,8 +199,8 @@ public class MessageHelper {
         String toServerAddress = SocketAddressUtil.convert2HostPort(toSocketAddress);
         // 目标地址,这个方法是通用的
         // 如果目标机地址与下一个路由服务的地址相同则添加本地socketAddress 到消息中，否则添加toSocketAddress
-        if (toServerAddress.equals(message.getTargetServerAddress())) {
-            routingTables.add(new RoutingTable(IMContext.LOCAL_ADDRESS));
+        if (toServerAddress.equals(message.getToServerAddress())) {
+            routingTables.add(new RoutingTable(IMServerContext.LOCAL_ADDRESS));
         } else {
             routingTables.add(new RoutingTable(toServerAddress));
         }

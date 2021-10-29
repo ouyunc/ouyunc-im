@@ -1,5 +1,6 @@
 package com.ouyu.im.processor;
 
+import com.ouyu.im.constant.enums.MessageEnum;
 import com.ouyu.im.packet.Packet;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
@@ -13,6 +14,10 @@ import org.slf4j.LoggerFactory;
 public class GChatMessageProcessor extends AbstractMessageProcessor{
     private static Logger log = LoggerFactory.getLogger(GChatMessageProcessor.class);
 
+    @Override
+    public MessageEnum messageType() {
+        return MessageEnum.IM_G_CHAT;
+    }
 
     @Override
     public void preProcess(ChannelHandlerContext ctx, Packet packet) {

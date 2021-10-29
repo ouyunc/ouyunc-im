@@ -2,20 +2,16 @@ package com.ouyu.im.innerclient.handler;
 
 import com.ouyu.im.codec.PacketCodec;
 import com.ouyu.im.constant.ImConstant;
-import com.ouyu.im.context.IMContext;
+import com.ouyu.im.context.IMServerContext;
 import com.ouyu.im.utils.SslUtil;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.pool.ChannelPoolHandler;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.AttributeKey;
 import org.slf4j.Logger;
@@ -58,7 +54,7 @@ public class IMClientChannelPoolHandler implements ChannelPoolHandler {
         log.info("创建通道channel: {}", channel.id().asShortText());
 
         ChannelPipeline pipeline = channel.pipeline();
-        if (IMContext.SERVER_CONFIG.isSslEnable()) {
+        if (IMServerContext.SERVER_CONFIG.isSslEnable()) {
             // 这个处理器需要放到第一位
             SslUtil.configSSL(ch -> {
                 //@todo 内置客户端SSL/TLS
@@ -74,7 +70,7 @@ public class IMClientChannelPoolHandler implements ChannelPoolHandler {
 
         pipeline.addLast(ImConstant.LOG, new LoggingHandler(LogLevel.INFO))
                 // 开启Netty自带的心跳处理器，每5秒发送一次心跳，用来做动态channel池处理 @todo ,时间需要调整，以及handler 的顺序
-                .addLast(ImConstant.INNER_CLIENT_IDLE, new IdleStateHandler(IMContext.SERVER_CONFIG.getClusterServerIdleReadTimeOut(), IMContext.SERVER_CONFIG.getClusterServerIdleWriteTimeOut(), IMContext.SERVER_CONFIG.getClusterServerIdleReadWriteTimeOut(), TimeUnit.SECONDS))
+                .addLast(ImConstant.INNER_CLIENT_IDLE, new IdleStateHandler(IMServerContext.SERVER_CONFIG.getClusterServerIdleReadTimeOut(), IMServerContext.SERVER_CONFIG.getClusterServerIdleWriteTimeOut(), IMServerContext.SERVER_CONFIG.getClusterServerIdleReadWriteTimeOut(), TimeUnit.SECONDS))
                 // 编解码
                 .addLast(ImConstant.INNER_CLIENT_PACKET_CODEC, new PacketCodec())
                 // 心跳检测（动态channel）
@@ -89,12 +85,11 @@ public class IMClientChannelPoolHandler implements ChannelPoolHandler {
             public void operationComplete(ChannelFuture future) throws Exception {
                 if (future.isDone()) {
                     if (future.isSuccess()) {
-                        log.info("================关闭客户端:{}==================", channel.id().asShortText());
                         // 从该channel中取出标签
                         AttributeKey<Integer> channelPoolHashCodeKey = AttributeKey.valueOf(ImConstant.CHANNEL_TAG_POOL);
                         final Integer channelPoolHashCode = channel.attr(channelPoolHashCodeKey).get();
                         if (channelPoolHashCode != null) {
-                            IMContext.CLUSTER_CORE_CHANNEL_CACHE.get(channelPoolHashCode).remove(channel);
+                            IMServerContext.CLUSTER_CORE_CHANNEL_CACHE.get(channelPoolHashCode).remove(channel);
                         }
                     }
                 }

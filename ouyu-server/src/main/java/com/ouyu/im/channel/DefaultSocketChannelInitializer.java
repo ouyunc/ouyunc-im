@@ -1,7 +1,8 @@
 package com.ouyu.im.channel;
 
+import com.ouyu.im.constant.CacheConstant;
 import com.ouyu.im.constant.ImConstant;
-import com.ouyu.im.context.IMContext;
+import com.ouyu.im.context.IMServerContext;
 import com.ouyu.im.dispatcher.ProtocolDispatcher;
 import com.ouyu.im.entity.ChannelUserInfo;
 import com.ouyu.im.utils.SslUtil;
@@ -9,14 +10,12 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.AttributeKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLSession;
 
 /**
  * @Author fangzhenxun
@@ -37,7 +36,7 @@ public class DefaultSocketChannelInitializer extends SocketChannelInitializer{
         // 这里只设置协议分发器，具体可参照netty 的源码例子
         ChannelPipeline pipeline = socketChannel.pipeline();
         // 是否开启SSL/TLS
-        if (IMContext.SERVER_CONFIG.isSslEnable()) {
+        if (IMServerContext.SERVER_CONFIG.isSslEnable()) {
             // 这个处理器需要放到第一位
             SslUtil.configSSL(ch -> {
                 SSLEngine sslEngine = SslUtil.buildServerSslContext().newEngine(socketChannel.alloc());
@@ -67,8 +66,8 @@ public class DefaultSocketChannelInitializer extends SocketChannelInitializer{
                         AttributeKey<ChannelUserInfo> channelTagLoginKey = AttributeKey.valueOf(ImConstant.CHANNEL_TAG_LOGIN);
                         final ChannelUserInfo authenticationUserInfo = socketChannel.attr(channelTagLoginKey).get();
                         if (authenticationUserInfo != null) {
-                            IMContext.LOGIN_USER_INFO_CACHE.delete(authenticationUserInfo.getIdentity());
-                            IMContext.LOCAL_USER_CHANNEL_CACHE.invalidate(authenticationUserInfo.getIdentity());
+                            IMServerContext.LOGIN_USER_INFO_CACHE.delete(CacheConstant.USER_COMMON_CACHE_PREFIX + CacheConstant.LOGIN_CACHE_PREFIX + authenticationUserInfo.getIdentity());
+                            IMServerContext.LOCAL_USER_CHANNEL_CACHE.invalidate(authenticationUserInfo.getIdentity());
                         }
                     }
                 }
