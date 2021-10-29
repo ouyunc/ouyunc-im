@@ -61,7 +61,6 @@
    qq群:664955628
    如果感觉对你有帮助请点个star支持一下
    
-   ![avatar](docs/picture/wx_pay.jpg)
 
 
 #### 下个版本
