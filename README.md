@@ -56,11 +56,10 @@
     https://www.cnblogs.com/samits/articles/11807100.html
 
 #### 联系方式
-   个人Email:664936598@qq.com
 
    qq群:664955628
 
-   基于该项目的一个即时通讯IM demo地址: https://m.ouyunc.com
+   基于该项目的一个即时通讯IM demo地址: https://m.ouyunc.com（服务器到期）
    
    注意：IM涉及到的视频会议由于服务器配置低以及带宽（2M）较小，会出现卡顿延迟现象
 
