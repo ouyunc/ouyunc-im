@@ -1,0 +1,227 @@
+package com.ouyunc.im.helper;
+
+import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.map.MapUtil;
+import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONUtil;
+import com.im.cache.l1.distributed.redis.RedisDistributedL1Cache;
+import com.ouyunc.im.constant.CacheConstant;
+import com.ouyunc.im.constant.DbSqlConstant;
+import com.ouyunc.im.context.IMServerContext;
+import com.ouyunc.im.db.operator.DbOperator;
+import com.ouyunc.im.db.operator.MysqlDbOperator;
+import com.ouyunc.im.domain.ImFriend;
+import com.ouyunc.im.domain.ImSendMessage;
+import com.ouyunc.im.domain.ImUser;
+import com.ouyunc.im.lock.DistributedLock;
+import com.ouyunc.im.packet.Packet;
+import com.ouyunc.im.packet.message.Message;
+import com.ouyunc.im.packet.message.content.OfflineContent;
+import com.ouyunc.im.utils.SnowflakeUtil;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+
+/**
+ * 数据库操作
+ */
+public class DbHelper {
+
+    /**
+     * redis 缓存操作类
+     */
+    private static RedisDistributedL1Cache<String, Object> cacheOperator = new RedisDistributedL1Cache<>();
+
+    /**
+     * 数据库操作类
+     */
+    private static DbOperator dbOperator = new MysqlDbOperator();
+
+
+    /**
+     * 批量更新历史消息已读回执状态，开线程处理
+     * @param from 发送者唯一标识
+     * @param to 代表用户或群的唯一标识
+     * @param packetIdList
+     * @return
+     */
+    @DistributedLock
+    public static Set<ImSendMessage> batchUpdateMessageReadReceiptStatus(String from, String to, Set<Long> packetIdList) {
+        // 记录已经修改的历史消息
+        Set<ImSendMessage> sendMessageList = new HashSet<>();
+        String toHistoryTimelineIdentity = CacheConstant.COMMON_PREFIX + CacheConstant.MESSAGE_COMMON_CACHE_PREFIX + CacheConstant.SEND_PREFIX + to;
+        // 根据消息id查询服务器上的消息，然后进行更新
+        for (Long packetId : packetIdList) {
+            // 先异步更新db
+            if (IMServerContext.SERVER_CONFIG.isMessageDbEnable()) {
+                // 更新历史信息表（更新发件箱信息数据）
+                ImSendMessage imSendMessage = dbOperator.selectOne(DbSqlConstant.MYSQL.SELECT_READ_RECEIPT.sql(), ImSendMessage.class, packetId);
+                // set集合json
+                Set<String> readList = JSONUtil.toBean(imSendMessage.getReadList(), Set.class);
+                readList.add(from);
+                // 更改信息，并存入数据库
+                dbOperator.update(DbSqlConstant.MYSQL.UPDATE_READ_RECEIPT.sql(), JSONUtil.toJsonStr(readList) ,packetId);
+                // 以数据库为准
+                sendMessageList.add(imSendMessage);
+            }
+            // 更新缓存，从信箱中取出相关消息
+            Set<Object> objects = cacheOperator.rangeByScore(toHistoryTimelineIdentity, packetId, packetId, 0, 1);
+            if (CollectionUtil.isNotEmpty(objects)) {
+                ImSendMessage sendMessage = (ImSendMessage) objects.iterator().next();
+                String readListStr = sendMessage.getReadList();
+                Set<String> readList = JSONUtil.toBean(readListStr, Set.class);
+                readList.add(from);
+                ImSendMessage newSendMessage = new ImSendMessage();
+                BeanUtil.copyProperties(sendMessage, newSendMessage);
+                newSendMessage.setReadList(JSONUtil.toJsonStr(readList));
+                // 先添加，后删除
+                cacheOperator.addZset(toHistoryTimelineIdentity, newSendMessage, packetId);
+                cacheOperator.removeZset(toHistoryTimelineIdentity, sendMessage);
+
+                // 如果未开启数据库
+                if (!IMServerContext.SERVER_CONFIG.isMessageDbEnable()) {
+                    sendMessageList.add(sendMessage);
+                }
+            }
+        }
+        return sendMessageList;
+
+    }
+
+    /**
+     * 存入离线消息
+     * @param to 消息发送者
+     * @param packet
+     */
+    public static void addOfflineMessage(String to, Packet packet) {
+        cacheOperator.addZset(CacheConstant.COMMON_PREFIX + CacheConstant.MESSAGE_COMMON_CACHE_PREFIX + CacheConstant.OFFLINE_CACHE_PREFIX + CacheConstant.COLON + to, packet, packet.getPacketId());
+    }
+
+
+    /**
+     * 添加原始消息到数据库
+     * @param packet
+     */
+    public static void addMessage(Packet packet) {
+        Message message = (Message) packet.getMessage();
+        String nowDateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        dbOperator.insert(DbSqlConstant.MYSQL.INSERT_MESSAGE.sql(), packet.getPacketId(), packet.getProtocol(), packet.getProtocolVersion(), packet.getDeviceType(), packet.getNetworkType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), packet.getIp(), message.getFrom(), message.getTo(), packet.getMessageType(), message.getContentType(), JSONUtil.toJsonStr(message.getContent()), message.getCreateTime(), nowDateTime, nowDateTime);
+    }
+
+    /**
+     * 根据群组id，返回群组中，当前所有成员
+     * @param to
+     * @return
+     */
+    public static List<ImUser> getGroupMembers(String to) {
+        List<ImUser> imUserList = new ArrayList<>();
+        Map<String, Object> usersMap = cacheOperator.getHashAll(CacheConstant.COMMON_PREFIX + CacheConstant.USER_COMMON_CACHE_PREFIX + CacheConstant.GROUP_CACHE_PREFIX + to + CacheConstant.MEMBERS);
+        if (MapUtil.isNotEmpty(usersMap)) {
+            for (Map.Entry<String, Object> entry : usersMap.entrySet()) {
+                String userId = entry.getKey();
+                Object imUser = entry.getValue();
+                imUserList.add((ImUser) imUser);
+            }
+            return imUserList;
+        }
+        // 从数据库中查询
+        imUserList = dbOperator.batchSelect(DbSqlConstant.MYSQL.SELECT_GROUP_USER.sql(), ImUser.class, to);
+        if (CollectionUtil.isNotEmpty(imUserList)) {
+            Map<Long, ImUser> imUserMap = new HashMap<>();
+            imUserList.forEach(imUser ->{
+                imUserMap.put(imUser.getId(), imUser);
+            });
+            cacheOperator.putHashAll(CacheConstant.COMMON_PREFIX + CacheConstant.USER_COMMON_CACHE_PREFIX + CacheConstant.GROUP_CACHE_PREFIX + to + CacheConstant.MEMBERS, null);
+        }
+        return imUserList;
+    }
+
+    /**
+     * 获取离线消息
+     * @param message
+     * @return
+     */
+    public static List<Packet> pullOfflineMessage(Message message) {
+        List<Packet> packetList = new ArrayList<>();
+        // 判断是按需来取还是全量拉取
+        String to = message.getTo();
+        OfflineContent offlineContent = JSONUtil.toBean(message.getContent(), OfflineContent.class);
+        List<Long> packetIdList = offlineContent.getPacketList();
+        // 如果传过来的消息id不为空，则可能是第N次拉取，从离线消息中删除消息
+        if (CollectionUtil.isNotEmpty(packetIdList)) {
+            for (Long packetId : packetIdList) {
+                Set<Object> objects = cacheOperator.rangeByScore(CacheConstant.COMMON_PREFIX + CacheConstant.MESSAGE_COMMON_CACHE_PREFIX + CacheConstant.OFFLINE_CACHE_PREFIX + CacheConstant.COLON + message.getFrom(), packetId, packetId);
+                if (CollectionUtil.isNotEmpty(objects)) {
+                    Packet packet = (Packet) objects.iterator().next();
+                    cacheOperator.removeZset(CacheConstant.OFFLINE_CACHE_PREFIX + message.getFrom(), packet);
+                }
+            }
+        }
+
+
+        // 全量顺序拉取
+        if (StrUtil.isBlank(to)) {
+            Set<Object> packetSet = cacheOperator.rangeByScore(CacheConstant.COMMON_PREFIX + CacheConstant.MESSAGE_COMMON_CACHE_PREFIX + CacheConstant.OFFLINE_CACHE_PREFIX + CacheConstant.COLON + message.getFrom(), offlineContent.getPullPacketId(), offlineContent.getPullPacketId(), 0, 1);
+            if (CollectionUtil.isNotEmpty(packetSet)) {
+                Packet packet = (Packet) packetSet.iterator().next();
+                Long rank = cacheOperator.reverseRank(CacheConstant.COMMON_PREFIX + CacheConstant.MESSAGE_COMMON_CACHE_PREFIX + CacheConstant.OFFLINE_CACHE_PREFIX + CacheConstant.COLON + message.getFrom(), packet);
+                Set<Object> packetSetResult = cacheOperator.reverseRangeZset(CacheConstant.COMMON_PREFIX + CacheConstant.MESSAGE_COMMON_CACHE_PREFIX + CacheConstant.OFFLINE_CACHE_PREFIX + CacheConstant.COLON + message.getFrom(), rank, rank + offlineContent.getPullSize());
+                Iterator<Object> iterator = packetSetResult.iterator();
+                while (iterator.hasNext()) {
+                    Packet packet0 = (Packet) iterator.next();
+                    packetList.add(packet0);
+                }
+            }
+            return packetList;
+        }
+        // 按需拉取,先查出所有，然后过滤前几条给客户端
+        Set<Object> packetAllSet = cacheOperator.reverseRangeZset(CacheConstant.COMMON_PREFIX + CacheConstant.MESSAGE_COMMON_CACHE_PREFIX + CacheConstant.OFFLINE_CACHE_PREFIX + CacheConstant.COLON + message.getFrom(), 0, -1);
+        if (CollectionUtil.isNotEmpty(packetAllSet)) {
+            Iterator<Object> iterator = packetAllSet.iterator();
+            while (iterator.hasNext()) {
+                Packet packet0 = (Packet) iterator.next();
+                Message message0 = (Message) packet0.getMessage();
+                if (packetList.size() > offlineContent.getPullSize()) {
+                    break;
+                }
+                if (message0.getFrom().equals(message.getTo())) {
+                    packetList.add(packet0);
+                }
+            }
+        }
+        return packetList;
+    }
+
+    /**
+     * 绑定好友关系,只要一方删除好友，双方的联系人列表都会删除
+     * @param from
+     * @param to
+     */
+    @DistributedLock
+    public static void bindFriend(String from, String to) {
+        // 首先查询两个人是否是好友，如果不是好友则添加，如果是好友则不做处理
+        ImFriend imFriend = (ImFriend) cacheOperator.getHash(CacheConstant.COMMON_PREFIX + CacheConstant.USER_COMMON_CACHE_PREFIX + CacheConstant.CONTACT_CACHE_PREFIX + CacheConstant.FRIEND + from, to);
+        // 已经是好友了
+        if (imFriend != null) {
+            return;
+        }
+        // 从缓存获取用户信息
+        ImUser fromUser = (ImUser) cacheOperator.get(CacheConstant.COMMON_PREFIX + CacheConstant.USER_COMMON_CACHE_PREFIX + from);
+        ImUser toUser = (ImUser) cacheOperator.get(CacheConstant.COMMON_PREFIX + CacheConstant.USER_COMMON_CACHE_PREFIX + to);
+        // 绑定关系
+        if (fromUser != null && toUser != null) {
+            String nowDateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            List<Object[]> argsList = new ArrayList<>();
+            //id, user_id, friend_user_id, friend_nick_name, create_time
+            argsList.add(new Object[]{SnowflakeUtil.nextId(), fromUser.getId(), toUser.getId(), toUser.getNickName(), nowDateTime});
+            argsList.add(new Object[]{SnowflakeUtil.nextId(), toUser.getId(), fromUser.getId(), fromUser.getNickName(), nowDateTime});
+            dbOperator.batchInsert(DbSqlConstant.MYSQL.INSERT_FRIEND.sql(),argsList);
+            // 添加到缓存，好友联系人
+            cacheOperator.putHash(CacheConstant.COMMON_PREFIX + CacheConstant.USER_COMMON_CACHE_PREFIX + CacheConstant.CONTACT_CACHE_PREFIX + CacheConstant.FRIEND + from, to, null);
+            cacheOperator.putHash(CacheConstant.COMMON_PREFIX + CacheConstant.USER_COMMON_CACHE_PREFIX + CacheConstant.CONTACT_CACHE_PREFIX + CacheConstant.FRIEND + to, from, null);
+        }
+
+    }
+}
