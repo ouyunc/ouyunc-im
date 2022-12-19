@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="AjcSettings">
-    <option name="ajcPath" value="D:/repository/org/aspectj/aspectjtools/1.8.13/aspectjtools-1.8.13.jar" />
+    <option name="ajcPath" value="D:/repository/org/aspectj/aspectjtools/1.9.7/aspectjtools-1.9.7.jar" />
     <option name="delegateToJavac" value="true" />
   </component>
   <component name="CompilerConfiguration">
@@ -11,11 +11,17 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="ouyu-cache" />
-        <module name="ouyu-core" />
-        <module name="ouyu-client" />
         <module name="ouyu-db" />
+        <module name="ouyunc-im-cache" />
+        <module name="ouyu-client" />
+        <module name="ouyunc-im-db" />
+        <module name="ouyu-cache" />
+        <module name="ouyunc-im-client" />
         <module name="ouyu-server" />
+        <module name="ouyunc-im-core" />
+        <module name="ouyu-core" />
+        <module name="ouyunc-im-server" />
+        <module name="ouyunc-im-domain" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel target="8" />

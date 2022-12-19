@@ -1,28 +1,22 @@
 syntax = "proto3";
-package com.ouyu.im;
+package com.ouyunc.im;
 option optimize_for  = SPEED;
 /**
  * @Author fangzhenxun
  * @Description: message 消息实体
- * @Version V1.0
+ * @Version V3.0
  **/
 message Message {
-
-
   //发送方
   string from = 1;
-  // 发送方所在服务器地址
-  string from_server_address = 2;
   //接受方
-  string to = 3;
-  // 发送方所在服务器地址
-  string to_server_address = 4;
+  string to = 2;
    //内容类型，根据不同的内容类型，可以序列化不同的json,如登录，聊天，信令服务，等
-  int32 content_type = 5;
+  int32 content_type = 3;
   //具体内容
-  string content = 6;
+  string content = 4;
   // 扩展字段
-  string extra = 7;
+  string extra = 5;
   //时间戳,毫秒
-  int64 create_time = 8;
+  int64 create_time = 6;
 }

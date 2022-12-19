@@ -3,27 +3,26 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-
-    <groupId>com.ouyu</groupId>
-    <artifactId>ouyu-im</artifactId>
+    <groupId>com.ouyunc</groupId>
+    <artifactId>ouyunc-im</artifactId>
     <packaging>pom</packaging>
-    <version>v1.0-SNAPSHOT</version>
+    <version>v3.0</version>
     <description>偶遇im是一款基于netty的即时通讯项目</description>
-
-    <!--属性配置-->
+    <modules>
+        <module>ouyunc-im-commons</module>
+        <module>ouyunc-im-client</module>
+        <module>ouyunc-im-server</module>
+    </modules>
     <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <java.version>1.8</java.version>
         <java.encoding>UTF-8</java.encoding>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
         <netty-all.version>4.1.63.Final</netty-all.version>
         <hutool.version>5.6.3</hutool.version>
         <log4j2.version>2.14.1</log4j2.version>
-        <ouyu-core.version>v1.0-SNAPSHOT</ouyu-core.version>
         <aeonbits-owner.version>1.0.12</aeonbits-owner.version>
-        <jedis.version>3.5.2</jedis.version>
-        <lettuce.version>6.1.1.RELEASE</lettuce.version>
-        <redisson.version>3.15.4</redisson.version>
-        <commons-pool2.version>2.9.0</commons-pool2.version>
         <!--注意这里的版本与jdk的版本要匹配-->
         <caffeine.version>2.9.0</caffeine.version>
         <gson.version>2.8.6</gson.version>
@@ -34,25 +33,26 @@
         <fst.version>2.57</fst.version>
         <protostuff.version>1.7.2</protostuff.version>
         <protobuf.version>3.12.2</protobuf.version>
-        <aspectj.version>1.8.13</aspectj.version>
-        <druid.version>1.2.6</druid.version>
-        <mysql-connector.version>8.0.25</mysql-connector.version>
-        <mybatis.version>3.5.6</mybatis.version>
+        <!--jackson-->
+        <jackson.version>2.14.0</jackson.version>
+        <jackson-datatype-jsr310.version>2.13.4</jackson-datatype-jsr310.version>
+        <!--缓存-->
+        <spring-redis.version>2.7.6</spring-redis.version>
+        <commons-pool2.version>2.11.1</commons-pool2.version>
+        <lettuce.version>6.1.10.RELEASE</lettuce.version>
+        <redisson.version>3.18.0</redisson.version>
+        <!--mysql8数据库连接-->
+        <mysql-connector-java.version>8.0.30</mysql-connector-java.version>
+        <HikariCP.version>4.0.3</HikariCP.version>
+        <spring-jdbc.version>5.3.24</spring-jdbc.version>
+        <!--aop-->
+        <aspectjweaver.version>1.9.9.1</aspectjweaver.version>
     </properties>
 
-
-
-    <modules>
-        <module>ouyu-db</module>
-        <module>ouyu-cache</module>
-        <module>ouyu-core</module>
-        <module>ouyu-server</module>
-        <module>ouyu-client</module>
-    </modules>
-
-
-    <!--不需要指定版本号-->
+    <!--添加公共依赖-->
     <dependencies>
+
+
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-all</artifactId>
@@ -61,7 +61,6 @@
             <groupId>cn.hutool</groupId>
             <artifactId>hutool-all</artifactId>
         </dependency>
-
         <!--==========================================log4j2===============================-->
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
@@ -79,41 +78,15 @@
             <groupId>org.aeonbits.owner</groupId>
             <artifactId>owner-java8</artifactId>
         </dependency>
-
-
-        <dependency>
-            <groupId>redis.clients</groupId>
-            <artifactId>jedis</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.redisson</groupId>
-            <artifactId>redisson</artifactId>
-        </dependency>
-
-        <!-- https://mvnrepository.com/artifact/io.lettuce/lettuce-core  如果配置连接池需要使用commons-pool2-->
-        <dependency>
-            <groupId>io.lettuce</groupId>
-            <artifactId>lettuce-core</artifactId>
-        </dependency>
-
-        <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-pool2 -->
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-pool2</artifactId>
-        </dependency>
-
         <!-- https://mvnrepository.com/artifact/com.github.ben-manes.caffeine/caffeine 本地缓存之王用于替代concurrentHanshMap-->
         <dependency>
             <groupId>com.github.ben-manes.caffeine</groupId>
             <artifactId>caffeine</artifactId>
         </dependency>
-
         <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
         </dependency>
-
         <dependency>
             <groupId>com.esotericsoftware</groupId>
             <artifactId>kryo</artifactId>
@@ -123,17 +96,14 @@
             <groupId>com.esotericsoftware</groupId>
             <artifactId>kryo-shaded</artifactId>
         </dependency>
-
         <dependency>
             <groupId>com.caucho</groupId>
             <artifactId>hessian</artifactId>
         </dependency>
-
         <dependency>
             <groupId>de.ruedigermoeller</groupId>
             <artifactId>fst</artifactId>
         </dependency>
-
         <dependency>
             <groupId>io.protostuff</groupId>
             <artifactId>protostuff-core</artifactId>
@@ -142,24 +112,23 @@
             <groupId>io.protostuff</groupId>
             <artifactId>protostuff-runtime</artifactId>
         </dependency>
-
         <!-- https://mvnrepository.com/artifact/com.google.protobuf/protobuf-java -->
         <dependency>
             <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java</artifactId>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.aspectj/aspectjweaver -->
+        <!--​aspectjweaver包含aspectjrt，所以我们只需要引入aspectjweaver依赖包就可以了-->
+        <dependency>
+            <groupId>org.aspectj</groupId>
+            <artifactId>aspectjweaver</artifactId>
         </dependency>
     </dependencies>
 
     <!--全局管理包-->
     <dependencyManagement>
         <dependencies>
-
-            <!--管理公共的im核心包版本-->
-            <dependency>
-                <groupId>com.ouyu</groupId>
-                <artifactId>ouyu-core</artifactId>
-                <version>${ouyu-core.version}</version>
-            </dependency>
 
             <!--netty 全家桶-->
             <!-- https://mvnrepository.com/artifact/io.netty/netty-all -->
@@ -209,32 +178,6 @@
                 <groupId>org.aeonbits.owner</groupId>
                 <artifactId>owner-java8</artifactId>
                 <version>${aeonbits-owner.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>redis.clients</groupId>
-                <artifactId>jedis</artifactId>
-                <version>${jedis.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.redisson</groupId>
-                <artifactId>redisson</artifactId>
-                <version>${redisson.version}</version>
-            </dependency>
-
-            <!-- https://mvnrepository.com/artifact/io.lettuce/lettuce-core  如果配置连接池需要使用commons-pool2-->
-            <dependency>
-                <groupId>io.lettuce</groupId>
-                <artifactId>lettuce-core</artifactId>
-                <version>${lettuce.version}</version>
-            </dependency>
-
-            <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-pool2 -->
-            <dependency>
-                <groupId>org.apache.commons</groupId>
-                <artifactId>commons-pool2</artifactId>
-                <version>${commons-pool2.version}</version>
             </dependency>
 
             <!-- https://mvnrepository.com/artifact/com.github.ben-manes.caffeine/caffeine 本地缓存之王用于替代concurrentHanshMap-->
@@ -291,45 +234,80 @@
                 <version>${protobuf.version}</version>
             </dependency>
 
-            <!-- https://mvnrepository.com/artifact/org.aspectj/aspectjweaver -->
-
             <dependency>
-                <groupId>org.aspectj</groupId>
-                <artifactId>aspectjweaver</artifactId>
-                <version>${aspectj.version}</version>
-
-            </dependency>
-            <!-- https://mvnrepository.com/artifact/org.aspectj/aspectjrt -->
-            <dependency>
-                <groupId>org.aspectj</groupId>
-                <artifactId>aspectjrt</artifactId>
-                <version>${aspectj.version}</version>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${jackson.version}</version>
             </dependency>
 
-            <!-- https://mvnrepository.com/artifact/com.alibaba/druid -->
             <dependency>
-                <groupId>com.alibaba</groupId>
-                <artifactId>druid</artifactId>
-                <version>${druid.version}</version>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-core</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-annotations</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.fasterxml.jackson.datatype</groupId>
+                <artifactId>jackson-datatype-jsr310</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+
+            <!-- https://mvnrepository.com/artifact/org.springframework.data/spring-data-redis -->
+            <dependency>
+                <groupId>org.springframework.data</groupId>
+                <artifactId>spring-data-redis</artifactId>
+                <version>${spring-redis.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-pool2</artifactId>
+                <version>${commons-pool2.version}</version>
+            </dependency>
+
+            <!-- https://mvnrepository.com/artifact/io.lettuce/lettuce-core  如果配置连接池需要使用commons-pool2-->
+            <dependency>
+                <groupId>io.lettuce</groupId>
+                <artifactId>lettuce-core</artifactId>
+                <version>${lettuce.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.redisson</groupId>
+                <artifactId>redisson</artifactId>
+                <version>${redisson.version}</version>
             </dependency>
 
             <!-- https://mvnrepository.com/artifact/mysql/mysql-connector-java -->
             <dependency>
                 <groupId>mysql</groupId>
                 <artifactId>mysql-connector-java</artifactId>
-                <version>${mysql-connector.version}</version>
+                <version>${mysql-connector-java.version}</version>
             </dependency>
 
-            <!-- https://mvnrepository.com/artifact/org.mybatis/mybatis -->
             <dependency>
-                <groupId>org.mybatis</groupId>
-                <artifactId>mybatis</artifactId>
-                <version>${mybatis.version}</version>
+                <groupId>com.zaxxer</groupId>
+                <artifactId>HikariCP</artifactId>
+                <version>${HikariCP.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-jdbc</artifactId>
+                <version>${spring-jdbc.version}</version>
+            </dependency>
+            <!-- https://mvnrepository.com/artifact/org.aspectj/aspectjweaver -->
+            <dependency>
+                <groupId>org.aspectj</groupId>
+                <artifactId>aspectjweaver</artifactId>
+                <version>${aspectjweaver.version}</version>
             </dependency>
 
         </dependencies>
-
-
     </dependencyManagement>
 
     <build>
@@ -338,7 +316,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>aspectj-maven-plugin</artifactId>
-                <version>1.11</version>
+                <version>1.14.0</version>
                 <configuration>
                     <source>1.8</source>
                     <target>1.8</target>
@@ -355,7 +333,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.8.1</version>
+                <version>3.10.1</version>
                 <configuration>
                     <source>8</source>
                     <target>8</target>

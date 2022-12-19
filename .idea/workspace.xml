@@ -5,10 +5,194 @@
       <artifact name="ouyu-server:jar" />
     </artifacts-to-build>
   </component>
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="ALL" />
+  </component>
   <component name="ChangeListManager">
     <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="IM 群组消息">
+      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/encodings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/encodings.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyu-cache/target/classes/com/ouyu/cache/l1/distributed/redis/redisson/lock/RedissonDistributedLockAspect.class" beforeDir="false" afterPath="$PROJECT_DIR$/ouyu-cache/target/classes/com/ouyu/cache/l1/distributed/redis/redisson/lock/RedissonDistributedLockAspect.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.en.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/picture/clients_dir.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/picture/project_dir.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/picture/server_start.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/picture/server_start_code.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/picture/wx_pay.jpg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/protobuf/Message.proto" beforeDir="false" afterPath="$PROJECT_DIR$/docs/protobuf/Message.proto" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/socket/md5.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/socket/ouyu-message.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/socket/ouyu-socket.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/socket/snowflake-id.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/socket/socket-util.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/socket/socket.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/socket/socket1.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/webrtc/client.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/webrtc/test.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/word/introduction.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/pom.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/src/main/java/com/ouyu/cache/ICache.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/src/main/java/com/ouyu/cache/l1/L1Cache.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/src/main/java/com/ouyu/cache/l1/distributed/AbstractDistributedL1Cache.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/src/main/java/com/ouyu/cache/l1/distributed/redis/lettuce/RedisFactory.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/src/main/java/com/ouyu/cache/l1/distributed/redis/lettuce/builder/RedisBuilder.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/src/main/java/com/ouyu/cache/l1/distributed/redis/lettuce/builder/impl/RedisTemplateBuilder.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/src/main/java/com/ouyu/cache/l1/distributed/redis/lettuce/builder/impl/StringRedisTemplateBuilder.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/src/main/java/com/ouyu/cache/l1/distributed/redis/lettuce/enums/RedisEnum.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/src/main/java/com/ouyu/cache/l1/distributed/redis/lettuce/lock/DistributedLock.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/src/main/java/com/ouyu/cache/l1/distributed/redis/lettuce/lock/RedissonDistributedLockAspect.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/src/main/java/com/ouyu/cache/l1/distributed/redis/lettuce/properties/ClusterRedisProperties.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/src/main/java/com/ouyu/cache/l1/distributed/redis/lettuce/properties/RedisPrimaryProperties.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/src/main/java/com/ouyu/cache/l1/distributed/redis/lettuce/properties/SentinelRedisProperties.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/src/main/java/com/ouyu/cache/l1/distributed/redis/lettuce/properties/StandaloneRedisProperties.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/src/main/java/com/ouyu/cache/l1/distributed/redis/lettuce/strategy/RedisStrategy.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/src/main/java/com/ouyu/cache/l1/distributed/redis/lettuce/strategy/impl/ClusterRedisStrategy.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/src/main/java/com/ouyu/cache/l1/distributed/redis/lettuce/strategy/impl/SentinelRedisStrategy.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/src/main/java/com/ouyu/cache/l1/distributed/redis/lettuce/strategy/impl/StandaloneRedisStrategy.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/src/main/java/com/ouyu/cache/l1/distributed/redis/redisson/RedissonFactory.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/src/main/java/com/ouyu/cache/l1/distributed/redis/redisson/builder/RedissonBuilder.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/src/main/java/com/ouyu/cache/l1/distributed/redis/redisson/builder/impl/RedissonClientBuilder.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/src/main/java/com/ouyu/cache/l1/distributed/redis/redisson/enums/RedisEnum.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/src/main/java/com/ouyu/cache/l1/distributed/redis/redisson/properties/ClusterRedissonProperties.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/src/main/java/com/ouyu/cache/l1/distributed/redis/redisson/properties/RedisPrimaryProperties.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/src/main/java/com/ouyu/cache/l1/distributed/redis/redisson/properties/SentinelRedissonProperties.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/src/main/java/com/ouyu/cache/l1/distributed/redis/redisson/properties/StandaloneRedissonProperties.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/src/main/java/com/ouyu/cache/l1/distributed/redis/redisson/strategy/RedissonStrategy.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/src/main/java/com/ouyu/cache/l1/distributed/redis/redisson/strategy/impl/ClusterRedissonStrategy.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/src/main/java/com/ouyu/cache/l1/distributed/redis/redisson/strategy/impl/SentinelRedissonStrategy.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/src/main/java/com/ouyu/cache/l1/distributed/redis/redisson/strategy/impl/StandaloneRedissonStrategy.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/src/main/java/com/ouyu/cache/l1/local/AbstractLocalL1Cache.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/src/main/java/com/ouyu/cache/l1/local/caffeine/CaffeineLocalL1Cache.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/src/main/java/com/ouyu/cache/l1/local/map/MapLocalL1Cache.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/src/main/resources/ouyu-cache.properties" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/target/classes/com/ouyu/cache/ICache.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/target/classes/com/ouyu/cache/l1/L1Cache.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/target/classes/com/ouyu/cache/l1/distributed/AbstractDistributedL1Cache.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/target/classes/com/ouyu/cache/l1/local/AbstractLocalL1Cache.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/target/classes/com/ouyu/cache/l1/local/caffeine/CaffeineLocalL1Cache.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/target/classes/com/ouyu/cache/l1/local/map/MapLocalL1Cache.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-cache/target/classes/ouyu-cache.properties" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-client/pom.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/pom.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/src/main/java/com/ouyu/im/codec/PacketCodec.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/src/main/java/com/ouyu/im/config/IMConfig.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/src/main/java/com/ouyu/im/config/IMServerConfig.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/src/main/java/com/ouyu/im/config/PropertiesConfig.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/src/main/java/com/ouyu/im/constant/CacheConstant.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/src/main/java/com/ouyu/im/constant/ImConstant.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/src/main/java/com/ouyu/im/constant/enums/BroadcastTypeEnum.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/src/main/java/com/ouyu/im/constant/enums/DeviceEnum.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/src/main/java/com/ouyu/im/constant/enums/LoginEnum.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/src/main/java/com/ouyu/im/constant/enums/MessageContentEnum.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/src/main/java/com/ouyu/im/constant/enums/MessageEnum.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/src/main/java/com/ouyu/im/constant/enums/NetworkEnum.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/src/main/java/com/ouyu/im/constant/enums/OnlineEnum.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/src/main/java/com/ouyu/im/constant/enums/RouterStrategyEnum.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/src/main/java/com/ouyu/im/context/IMContext.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/src/main/java/com/ouyu/im/encrypt/Encrypt.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/src/main/java/com/ouyu/im/entity/BaseUserInfo.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/src/main/java/com/ouyu/im/entity/ChannelUserInfo.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/src/main/java/com/ouyu/im/entity/HistoryPacket.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/src/main/java/com/ouyu/im/entity/LoginUserInfo.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/src/main/java/com/ouyu/im/entity/NewFriendPacket.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/src/main/java/com/ouyu/im/entity/RoutingTable.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/src/main/java/com/ouyu/im/exception/IMException.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/src/main/java/com/ouyu/im/packet/Packet.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/src/main/java/com/ouyu/im/packet/message/BaseMessage.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/src/main/java/com/ouyu/im/packet/message/Message.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/src/main/java/com/ouyu/im/packet/message/content/ChatContent.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/src/main/java/com/ouyu/im/packet/message/content/LoginContent.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/src/main/java/com/ouyu/im/serialize/Serializer.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/src/main/java/com/ouyu/im/utils/ClassUtil.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/src/main/java/com/ouyu/im/utils/IpUtil.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/src/main/java/com/ouyu/im/utils/MapUtil.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/src/main/java/com/ouyu/im/utils/ReaderWriterUtil.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/src/main/java/com/ouyu/im/utils/SnowflakeUtil.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/src/main/java/com/ouyu/im/utils/SocketAddressUtil.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/src/main/java/com/ouyu/im/utils/SslUtil.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/src/main/java/com/ouyu/im/utils/ThreadPoolUtil.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/src/main/java/com/ouyu/im/utils/TimeUtil.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-core/target/classes/com/ouyu/im/config/IMConfig.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-db/pom.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-db/src/main/java/com/ouyu/db/Test.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-db/src/main/java/com/ouyu/db/config/DruidDataSourceFactory.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-db/src/main/java/com/ouyu/db/mapper/ImMapper.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-db/src/main/java/com/ouyu/db/pojo/Im.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-db/src/main/java/com/ouyu/db/utils/MybatisUtils.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-db/src/main/resources/mapper/ImMapper.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-db/src/main/resources/mybatis-config.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-db/src/main/resources/ouyu-db.properties" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-db/target/classes/com/ouyu/db/Test.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-db/target/classes/com/ouyu/db/config/DruidDataSourceFactory.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-db/target/classes/com/ouyu/db/mapper/ImMapper.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-db/target/classes/com/ouyu/db/pojo/Im.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-db/target/classes/com/ouyu/db/utils/MybatisUtils.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-db/target/classes/mapper/ImMapper.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-db/target/classes/mybatis-config.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-db/target/classes/ouyu-db.properties" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/pom.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/AbstractIMServer.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/IMServer.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/StandardIMServer.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/StartIMServer.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/banner/IMBanner.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/channel/DefaultServerChannelInitializer.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/channel/DefaultSocketChannelInitializer.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/channel/ServerChannelInitializer.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/channel/SocketChannelInitializer.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/context/IMServerContext.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/designpattern/strategy/dispatcher/DispatcherProcessorContext.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/designpattern/strategy/dispatcher/DispatcherProcessorStrategy.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/designpattern/strategy/dispatcher/HttpDispatcherProcessorStrategy.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/designpattern/strategy/dispatcher/PacketDispatcherProcessorStrategy.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/designpattern/strategy/router/BacktrackRouterStrategy.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/designpattern/strategy/router/RandomRouterStrategy.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/designpattern/strategy/router/RouterStrategy.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/dispatcher/ProtocolDispatcher.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/handler/AuthenticationHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/handler/Convert2PacketHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/handler/HeartBeatHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/handler/HttpProtocolDispatcherHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/handler/OuYuImServerHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/handler/PacketProtocolDispatcherHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/handler/WsServerHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/helper/MessageHelper.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/helper/RouterHelper.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/helper/UserHelper.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/innerclient/AbstractIMClient.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/innerclient/DefaultIMClient.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/innerclient/IMClient.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/innerclient/handler/IMClientChannelPoolHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/innerclient/handler/IMClientHeartBeatHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/innerclient/pool/IMClientPool.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/innerclient/processor/AbstractIMClientChannelProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/innerclient/processor/AbstractIMClientRouteProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/innerclient/processor/IMClientChannelProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/innerclient/processor/IMClientRouteProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/processor/AbstractMessageProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/processor/AckMessageProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/processor/BroadcastMessageProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/processor/FriendAddReqMessageProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/processor/FriendAddResolveMessageProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/processor/GChatMessageProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/processor/LoginMessageProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/processor/MessageProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/processor/PChatMessageProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/processor/PingPongMessageProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/processor/SynAckMessageProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/protocol/Protocol.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/thread/IMClientChannelFailureProcessorThread.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/thread/IMClientRegisterThread.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/thread/IMClientRouteFailureProcessorThread.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/resources/log4j2.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/resources/ouyu-im.properties" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/resources/ssl/ouyunc.com.key" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/resources/ssl/ouyunc.com.pem" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyu-server/src/main/resources/ssl/ouyunc.com_pkcs8.key" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -60,13 +244,12 @@
     <option name="generalSettings">
       <MavenGeneralSettings>
         <option name="localRepository" value="D:\repository" />
-        <option name="mavenHome" value="D:/工具/java/maven/apache-maven-3.6.3" />
-        <option name="userSettingsFile" value="D:\工具\java\maven\apache-maven-3.6.3\conf\settings.xml" />
+        <option name="mavenHome" value="C:/Program Files/apache-maven-3.8.4" />
+        <option name="userSettingsFile" value="C:\Program Files\apache-maven-3.8.4\conf\ali-settings.xml" />
       </MavenGeneralSettings>
     </option>
     <option name="importingSettings">
       <MavenImportingSettings>
-        <option name="importAutomatically" value="true" />
         <option name="vmOptionsForImporter" value="-Xmx768m" />
       </MavenImportingSettings>
     </option>
@@ -77,12 +260,12 @@
   </component>
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
-    <option name="showExcludedFiles" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
   <component name="PropertiesComponent">
     <property name="ASKED_ADD_EXTERNAL_FILES" value="true" />
     <property name="DefaultHtmlFileTemplate" value="HTML File" />
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
@@ -92,7 +275,7 @@
     <property name="project.structure.last.edited" value="Modules" />
     <property name="project.structure.proportion" value="0.15" />
     <property name="project.structure.side.proportion" value="0.47011495" />
-    <property name="settings.editor.selected.configurable" value="reference.projectsettings.compiler.javacompiler" />
+    <property name="settings.editor.selected.configurable" value="MavenSettings" />
   </component>
   <component name="ReactorSettings">
     <option name="notificationShown" value="true" />
@@ -122,48 +305,18 @@
     </key>
   </component>
   <component name="RunManager" selected="Application.StartIMServer">
-    <configuration name="SslUtil" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
-      <option name="MAIN_CLASS_NAME" value="com.ouyu.im.utils.SslUtil" />
-      <module name="ouyu-server" />
+    <configuration name="StartIMServer" type="Application" factoryName="Application" temporary="true">
+      <option name="MAIN_CLASS_NAME" value="com.ouyunc.im.StartIMServer" />
+      <module name="ouyunc-im-server" />
       <extension name="coverage">
         <pattern>
-          <option name="PATTERN" value="com.ouyu.im.utils.*" />
+          <option name="PATTERN" value="com.ouyunc.im.*" />
           <option name="ENABLED" value="true" />
         </pattern>
       </extension>
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
-    </configuration>
-    <configuration name="StartIMServer" type="Application" factoryName="Application" singleton="false" temporary="true" nameIsGenerated="true">
-      <option name="MAIN_CLASS_NAME" value="com.ouyu.im.StartIMServer" />
-      <module name="ouyu-server" />
-      <option name="VM_PARAMETERS" value="-Dlog4j.skipJansi=false" />
-      <extension name="coverage">
-        <pattern>
-          <option name="PATTERN" value="com.ouyu.im.*" />
-          <option name="ENABLED" value="true" />
-        </pattern>
-      </extension>
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
-    <configuration name="Test" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
-      <option name="MAIN_CLASS_NAME" value="com.ouyu.im.config.Test" />
-      <module name="ouyu-server" />
-      <extension name="coverage">
-        <pattern>
-          <option name="PATTERN" value="com.ouyu.im.config.*" />
-          <option name="ENABLED" value="true" />
-        </pattern>
-      </extension>
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
-    <configuration name="socket.html (1)" type="JavascriptDebugType" temporary="true" nameIsGenerated="true" uri="http://localhost:63342/ouyu-im/ouyu-server/templates/socket.html" useBuiltInWebServerPort="true">
-      <method v="2" />
     </configuration>
     <configuration name="socket.html" type="JavascriptDebugType" temporary="true" nameIsGenerated="true" uri="http://localhost:63342/ouyu-im/docs/socket/socket.html" useBuiltInWebServerPort="true">
       <method v="2" />
@@ -177,22 +330,18 @@
     </configuration>
     <list>
       <item itemvalue="Application.StartIMServer" />
-      <item itemvalue="Application.SslUtil" />
-      <item itemvalue="Application.Test" />
       <item itemvalue="JavaScript Debug.socket.html" />
-      <item itemvalue="JavaScript Debug.socket.html (1)" />
       <item itemvalue="Spring Boot.OuyuCacheApplication" />
     </list>
     <recent_temporary>
       <list>
         <item itemvalue="Application.StartIMServer" />
-        <item itemvalue="Application.SslUtil" />
-        <item itemvalue="Application.Test" />
+        <item itemvalue="Application.StartIMServer" />
         <item itemvalue="JavaScript Debug.socket.html" />
-        <item itemvalue="JavaScript Debug.socket.html (1)" />
       </list>
     </recent_temporary>
   </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="StructureViewFactory">
     <option name="ACTIVE_ACTIONS" value=",SHOW_INTERFACES,SHOW_FIELDS,SHOW_INHERITED" />
   </component>
@@ -334,6 +483,7 @@
       <workItem from="1630231564357" duration="587000" />
       <workItem from="1632366676602" duration="831000" />
       <workItem from="1632367534883" duration="3059000" />
+      <workItem from="1671441382583" duration="316000" />
     </task>
     <task id="LOCAL-00055" summary="IM服务端消息可靠性&amp;优化">
       <created>1624197828255</created>
@@ -682,7 +832,7 @@
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
-    <option name="version" value="1" />
+    <option name="version" value="3" />
   </component>
   <component name="Vcs.Log.History.Properties">
     <option name="COLUMN_ORDER">
@@ -729,18 +879,12 @@
         </entry>
         <entry key="MAIN">
           <value>
-            <State>
-              <option name="COLUMN_ORDER" />
-            </State>
+            <State />
           </value>
         </entry>
       </map>
     </option>
-    <option name="OPEN_TABS">
-      <set>
-        <option value="1" />
-      </set>
-    </option>
+    <option name="oldMeFiltersMigrated" value="true" />
   </component>
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
@@ -758,168 +902,6 @@
     <MESSAGE value="IM 包结构整理" />
     <MESSAGE value="IM 群组消息" />
     <option name="LAST_COMMIT_MESSAGE" value="IM 群组消息" />
-  </component>
-  <component name="WindowStateProjectService">
-    <state x="361" y="71" key="#Customize_Threads_View" timestamp="1624527379424">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="361" y="71" key="#Customize_Threads_View/0.0.1536.824@0.0.1536.824" timestamp="1624527379424" />
-    <state x="496" y="215" key="#com.intellij.fileTypes.FileTypeChooser" timestamp="1628042186301">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="496" y="215" key="#com.intellij.fileTypes.FileTypeChooser/0.0.1536.824@0.0.1536.824" timestamp="1628042186301" />
-    <state x="399" y="99" key="#com.intellij.ide.fileTemplates.ui.ConfigureTemplatesDialog" timestamp="1627892890996">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="399" y="99" key="#com.intellij.ide.fileTemplates.ui.ConfigureTemplatesDialog/0.0.1536.824@0.0.1536.824" timestamp="1627892890996" />
-    <state x="574" y="122" key="#com.intellij.ide.util.MemberChooser" timestamp="1628063900933">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="574" y="122" key="#com.intellij.ide.util.MemberChooser/0.0.1536.824@0.0.1536.824" timestamp="1628063900933" />
-    <state x="530" y="196" key="#com.intellij.ide.util.TreeClassChooserDialog" timestamp="1627293348288">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="530" y="196" key="#com.intellij.ide.util.TreeClassChooserDialog/0.0.1536.824@0.0.1536.824" timestamp="1627293348288" />
-    <state x="573" y="337" key="#com.intellij.refactoring.move.MoveHandler.SelectRefactoringDialog" timestamp="1624932515750">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="573" y="337" key="#com.intellij.refactoring.move.MoveHandler.SelectRefactoringDialog/0.0.1536.824@0.0.1536.824" timestamp="1624932515750" />
-    <state x="0" y="0" key="#com.intellij.refactoring.rename.AutomaticRenamingDialog" timestamp="1624930796218">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="0" y="0" key="#com.intellij.refactoring.rename.AutomaticRenamingDialog/0.0.1536.824@0.0.1536.824" timestamp="1624930796218" />
-    <state x="499" y="159" key="#com.intellij.refactoring.safeDelete.UnsafeUsagesDialog" timestamp="1627979125028">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="499" y="159" key="#com.intellij.refactoring.safeDelete.UnsafeUsagesDialog/0.0.1536.824@0.0.1536.824" timestamp="1627979125028" />
-    <state x="584" y="425" width="693" height="399" key="#xdebugger.evaluate" timestamp="1632369404312">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="584" y="425" width="693" height="399" key="#xdebugger.evaluate/0.0.1536.824@0.0.1536.824" timestamp="1632369404312" />
-    <state x="53" y="9" key="CommitChangelistDialog2" timestamp="1625737321157">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="53" y="9" key="CommitChangelistDialog2/0.0.1536.824@0.0.1536.824" timestamp="1625737321157" />
-    <state width="791" height="322" key="DebuggerActiveHint" timestamp="1628068447138">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="791" height="322" key="DebuggerActiveHint/0.0.1536.824@0.0.1536.824" timestamp="1628068447138" />
-    <state x="93" y="93" width="1350" height="638" key="DiffContextDialog" timestamp="1632376043594">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="93" y="93" width="1350" height="638" key="DiffContextDialog/0.0.1536.824@0.0.1536.824" timestamp="1632376043594" />
-    <state x="549" y="167" key="FileChooserDialogImpl" timestamp="1630022896233">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="549" y="167" key="FileChooserDialogImpl/0.0.1536.824@0.0.1536.824" timestamp="1630022896233" />
-    <state width="1493" height="138" key="GridCell.Tab.0.bottom" timestamp="1632375673622">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="1493" height="138" key="GridCell.Tab.0.bottom/0.0.1536.824@0.0.1536.824" timestamp="1632375673622" />
-    <state width="1493" height="138" key="GridCell.Tab.0.center" timestamp="1632375673622">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="1493" height="138" key="GridCell.Tab.0.center/0.0.1536.824@0.0.1536.824" timestamp="1632375673622" />
-    <state width="1493" height="138" key="GridCell.Tab.0.left" timestamp="1632375673622">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="1493" height="138" key="GridCell.Tab.0.left/0.0.1536.824@0.0.1536.824" timestamp="1632375673622" />
-    <state width="1493" height="138" key="GridCell.Tab.0.right" timestamp="1632375673622">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="1493" height="138" key="GridCell.Tab.0.right/0.0.1536.824@0.0.1536.824" timestamp="1632375673622" />
-    <state width="1493" height="138" key="GridCell.Tab.1.bottom" timestamp="1632375673622">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="1493" height="138" key="GridCell.Tab.1.bottom/0.0.1536.824@0.0.1536.824" timestamp="1632375673622" />
-    <state width="1493" height="138" key="GridCell.Tab.1.center" timestamp="1632375673622">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="1493" height="138" key="GridCell.Tab.1.center/0.0.1536.824@0.0.1536.824" timestamp="1632375673622" />
-    <state width="1493" height="138" key="GridCell.Tab.1.left" timestamp="1632375673622">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="1493" height="138" key="GridCell.Tab.1.left/0.0.1536.824@0.0.1536.824" timestamp="1632375673622" />
-    <state width="1493" height="138" key="GridCell.Tab.1.right" timestamp="1632375673622">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="1493" height="138" key="GridCell.Tab.1.right/0.0.1536.824@0.0.1536.824" timestamp="1632375673622" />
-    <state width="1493" height="192" key="GridCell.Tab.2.bottom" timestamp="1627957294742">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="1493" height="192" key="GridCell.Tab.2.bottom/0.0.1536.824@0.0.1536.824" timestamp="1627957294742" />
-    <state width="1493" height="192" key="GridCell.Tab.2.center" timestamp="1627957294742">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="1493" height="192" key="GridCell.Tab.2.center/0.0.1536.824@0.0.1536.824" timestamp="1627957294742" />
-    <state width="1493" height="192" key="GridCell.Tab.2.left" timestamp="1627957294742">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="1493" height="192" key="GridCell.Tab.2.left/0.0.1536.824@0.0.1536.824" timestamp="1627957294742" />
-    <state width="1493" height="192" key="GridCell.Tab.2.right" timestamp="1627957294742">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="1493" height="192" key="GridCell.Tab.2.right/0.0.1536.824@0.0.1536.824" timestamp="1627957294742" />
-    <state x="329" y="123" key="RollbackChangesDialog" timestamp="1628067134806">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="329" y="123" key="RollbackChangesDialog/0.0.1536.824@0.0.1536.824" timestamp="1628067134806" />
-    <state x="180" y="0" key="SettingsEditor" timestamp="1632368584383">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="180" y="0" key="SettingsEditor/0.0.1536.824@0.0.1536.824" timestamp="1632368584383" />
-    <state x="490" y="154" width="543" height="524" key="StructurePopup" timestamp="1628043803740">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="490" y="154" width="543" height="524" key="StructurePopup/0.0.1536.824@0.0.1536.824" timestamp="1628043803740" />
-    <state x="361" y="145" key="Vcs.Push.Dialog.v2" timestamp="1632376039194">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="361" y="145" key="Vcs.Push.Dialog.v2/0.0.1536.824@0.0.1536.824" timestamp="1632376039194" />
-    <state width="775" height="419" key="XDebugger.FullValuePopup" timestamp="1628046324374">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="775" height="419" key="XDebugger.FullValuePopup/0.0.1536.824@0.0.1536.824" timestamp="1628046324374" />
-    <state x="93" y="93" width="1350" height="638" key="com.intellij.history.integration.ui.views.DirectoryHistoryDialog" timestamp="1624588770060">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="93" y="93" width="1350" height="638" key="com.intellij.history.integration.ui.views.DirectoryHistoryDialog/0.0.1536.824@0.0.1536.824" timestamp="1624588770060" />
-    <state x="93" y="93" width="1350" height="638" key="com.intellij.history.integration.ui.views.FileHistoryDialog" timestamp="1628060899211">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="93" y="93" width="1350" height="638" key="com.intellij.history.integration.ui.views.FileHistoryDialog/0.0.1536.824@0.0.1536.824" timestamp="1628060899211" />
-    <state x="449" y="236" key="com.intellij.ide.util.TipDialog" timestamp="1630147561892">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="449" y="236" key="com.intellij.ide.util.TipDialog/0.0.1536.824@0.0.1536.824" timestamp="1630147561892" />
-    <state x="562" y="329" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2" timestamp="1632369590679">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="562" y="329" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2/0.0.1536.824@0.0.1536.824" timestamp="1632369590679" />
-    <state x="540" y="115" key="com.intellij.testIntegration.createTest.CreateTestDialog" timestamp="1624414988876">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="540" y="115" key="com.intellij.testIntegration.createTest.CreateTestDialog/0.0.1536.824@0.0.1536.824" timestamp="1624414988876" />
-    <state x="432" y="121" width="842" height="534" key="find.popup" timestamp="1632375859791">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="432" y="121" width="842" height="534" key="find.popup/0.0.1536.824@0.0.1536.824" timestamp="1632375859791" />
-    <state x="489" y="203" key="git4idea.merge.GitPullDialog" timestamp="1632375972806">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="489" y="203" key="git4idea.merge.GitPullDialog/0.0.1536.824@0.0.1536.824" timestamp="1632375972806" />
-    <state x="356" y="124" key="new project wizard" timestamp="1624603182762">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="356" y="124" key="new project wizard/0.0.1536.824@0.0.1536.824" timestamp="1624603182762" />
-    <state x="425" y="187" key="run.anything.popup" timestamp="1625099011969">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="425" y="187" key="run.anything.popup/0.0.1536.824@0.0.1536.824" timestamp="1625099011969" />
-    <state x="510" y="358" width="672" height="678" key="search.everywhere.popup" timestamp="1628045295563">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="510" y="358" width="672" height="678" key="search.everywhere.popup/0.0.1536.824@0.0.1536.824" timestamp="1628045295563" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
