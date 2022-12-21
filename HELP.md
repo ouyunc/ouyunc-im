@@ -11,7 +11,7 @@
 (1) hash 好友黑名单:    ouyunc:im:back-list:user:${好友唯一标识}              ${用户唯一标识}    ImUser
 
 (1) opsvalue群信息:     ouyunc:im:user:group:${群唯一标识}                   ImGroup
-(1) hash群（好友）:       ouyunc:im:user:group:${群组唯一标识}:members        ${群成员唯一标识}    ImGroupUser
+(1) hash群（成员）:       ouyunc:im:user:group:${群组唯一标识}:members        ${群成员唯一标识}    ImGroupUser
 
 
 (2) zset发件箱消息:   ouyunc:im:message:send:${用户唯一标识}                historyPacket     packetId

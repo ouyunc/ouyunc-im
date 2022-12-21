@@ -3,7 +3,6 @@ package com.ouyunc.im.thread;
 import cn.hutool.core.date.SystemClock;
 import cn.hutool.json.JSONUtil;
 import com.ouyunc.im.constant.CacheConstant;
-import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.constant.enums.MessageEnum;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.entity.MissingPacket;
@@ -70,7 +69,7 @@ public class IMRouteFailureProcessorThread implements Runnable {
         // 存入丢失消息到缓存中
         if (packet.getMessageType() == MessageEnum.IM_PRIVATE_CHAT.getValue() || packet.getMessageType() == MessageEnum.IM_GROUP_CHAT.getValue()) {
             // 对于多端的情况，如果已经有
-            IMServerContext.MISSING_MESSAGES_CACHE.addZset(CacheConstant.COMMON_PREFIX + CacheConstant.MESSAGE_COMMON_CACHE_PREFIX  + CacheConstant.FAIL_CACHE_PREFIX + CacheConstant.FROM_CACHE_PREFIX + message.getFrom() + CacheConstant.COLON + CacheConstant.TO_CACHE_PREFIX + IdentityUtil.generalComboIdentity(message.getTo(), extraMessage.getDeviceEnum().getName()), new MissingPacket(packet, IMServerContext.SERVER_CONFIG.getLocalServerAddress(), SystemClock.now()), packet.getPacketId());
+            IMServerContext.MISSING_MESSAGES_CACHE.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.FAIL + CacheConstant.FROM + message.getFrom() + CacheConstant.COLON + CacheConstant.TO + IdentityUtil.generalComboIdentity(message.getTo(), extraMessage.getDeviceEnum().getName()), new MissingPacket(packet, IMServerContext.SERVER_CONFIG.getLocalServerAddress(), SystemClock.now()), packet.getPacketId());
         }
         log.error("已经重试{}次,也没解决问题，该消息将被抛弃！", IMServerContext.SERVER_CONFIG.getClusterMessageRetry());
     }

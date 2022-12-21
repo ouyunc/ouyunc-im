@@ -7,6 +7,12 @@ package com.ouyunc.im.constant;
  **/
 public class IMConstant {
 
+
+    /**
+     *urf-8
+     */
+    public static final String UTF_8 = "UTF-8";
+
     /**
      * 自定义协议的魔数,十进制102
      */
@@ -28,94 +34,6 @@ public class IMConstant {
      */
     public static final String CHANNEL_TAG_READ_TIMEOUT = "CHANNEL_TAG_READ_TIMEOUT";
 
-    /**
-     * SYN内部使用
-     */
-    public static final String SYN = "SYN";
-
-
-    /**
-     * ACK内部使用
-     */
-    public static final String ACK = "ACK";
-
-
-    /**
-     * PING外部使用
-     */
-    public static final String PING = "PING";
-
-    /**
-     * PONG外部使用
-     */
-    public static final String PONG = "PONG";
-
-    /**
-     * 添加好友请求
-     */
-    public static final String FRIEND_REQUEST = "FRIEND_REQUEST";
-
-    /**
-     * 拒绝好友请求
-     */
-    public static final String FRIEND_REFUSE = "FRIEND_REFUSE";
-
-    /**
-     * 同意好友请求
-     */
-    public static final String FRIEND_AGREE = "FRIEND_AGREE";
-
-    /**
-     * 删除好友
-     */
-    public static final String FRIEND_DELETE = "FRIEND_DELETE";
-
-    /**
-     * 将好友加入黑名单
-     */
-    public static final String FRIEND_JOIN_BLACKLIST = "FRIEND_JOIN_BLACKLIST";
-
-    /**
-     * 将好友退出黑名单
-     */
-    public static final String FRIEND_EXIT_BLACKLIST = "FRIEND_EXIT_BLACKLIST";
-
-    /**
-     * 加群请求
-     */
-    public static final String GROUP_REQUEST = "GROUP_REQUEST";
-
-    /**
-     * 管理员/群主 拒绝加群申请
-     */
-    public static final String GROUP_REFUSE = "GROUP_REFUSE";
-
-    /**
-     * 管理员/群主 同意加群申请
-     */
-    public static final String GROUP_AGREE = "GROUP_AGREE";
-
-    /**
-     * 删除/解散群
-     */
-    public static final String GROUP_DELETE = "GROUP_DELETE";
-
-    /**
-     * 踢出群
-     */
-    public static final String GROUP_KICK = "GROUP_KICK";
-
-    /**
-     * 退出群
-     */
-    public static final String GROUP_EXIT = "GROUP_EXIT";
-
-    /**
-     * 发布群公告
-     */
-    public static final String GROUP_PUBLISH_ANNOUNCEMENT = "GROUP_PUBLISH_ANNOUNCEMENT";
-
-
 
     /**
      * 冒号分割符
@@ -135,12 +53,6 @@ public class IMConstant {
      * 下划线
      */
     public static final String COMMA = ",";
-
-    /**
-     *urf-8
-     */
-    public static final String UTF_8 = "UTF-8";
-
 
 
     /**
@@ -304,11 +216,6 @@ public class IMConstant {
      * 自定义偶遇im 处理器
      */
     public static final String OU_YU_IM_HANDLER = "OU_YU_IM_HANDLER";
-
-    /**
-     * 自定义偶遇im 处理器
-     */
-    public static final int ZERO = 0;
 
 
     /**

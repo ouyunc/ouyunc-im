@@ -66,14 +66,14 @@ public class LoginMessageProcessor extends AbstractMessageProcessor{
         final String comboIdentity = IdentityUtil.generalComboIdentity(loginContent.getIdentity(), packet.getDeviceType());
         //如果之前已经登录（重复登录请求），这里判断是否已经登录过
         //1,从分布式缓存取出该登录用户
-        LoginUserInfo loginUserInfo = IMServerContext.LOGIN_USER_INFO_CACHE.get(CacheConstant.COMMON_PREFIX + CacheConstant.USER_COMMON_CACHE_PREFIX + CacheConstant.LOGIN_CACHE_PREFIX + comboIdentity);
+        LoginUserInfo loginUserInfo = IMServerContext.LOGIN_USER_INFO_CACHE.get(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + comboIdentity);
         //2,从本地用户注册表中取出该用户的channel
         final ChannelHandlerContext bindCtx = IMServerContext.USER_REGISTER_TABLE.get(comboIdentity);
         // 如果是重复登录则不做处理
         // 下面处理登录消息的一下情况，某一个为空或都为空，无论那种情况都将之前的数据进行清除，重新添加登录信息
         if (loginUserInfo == null || bindCtx == null) {
             // 如果有，清空登录数据信息,解绑用户
-            IMServerContext.LOGIN_USER_INFO_CACHE.delete(CacheConstant.COMMON_PREFIX + CacheConstant.USER_COMMON_CACHE_PREFIX + CacheConstant.LOGIN_CACHE_PREFIX + comboIdentity);
+            IMServerContext.LOGIN_USER_INFO_CACHE.delete(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + comboIdentity);
             ChannelHandlerContext ctx0 = IMServerContext.USER_REGISTER_TABLE.get(comboIdentity);
             if (ctx0 != null) {
                 IMServerContext.USER_REGISTER_TABLE.delete(comboIdentity);

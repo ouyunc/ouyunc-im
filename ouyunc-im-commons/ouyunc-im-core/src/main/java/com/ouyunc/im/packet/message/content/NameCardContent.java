@@ -6,7 +6,7 @@ import java.io.Serializable;
  * 名片内容
  */
 public class NameCardContent implements Serializable {
-    private static final long serialVersionUID = 100003L;
+    private static final long serialVersionUID = 100002L;
 
     /**
      * 个人或群唯一标识

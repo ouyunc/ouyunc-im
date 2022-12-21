@@ -31,12 +31,12 @@ public enum MessageContentEnum {
     FRIEND_JOIN_BLACKLIST(15, String.class, "将好友加入黑名单"),
     FRIEND_EXIT_BLACKLIST(16, String.class, "将好友退出黑名单"),
 
-    GROUP_JOIN(21, String.class, "加群请求"),
-    GROUP_REFUSE(22, String.class, "管理员/群主 拒绝加群申请"),
-    GROUP_AGREE(23, String.class, "管理员/群主 同意加群申请"),
+    GROUP_JOIN(21, GroupRequestContent.class, "加群请求"),
+    GROUP_REFUSE(22, GroupRequestContent.class, "管理员/群主 拒绝加群申请"),
+    GROUP_AGREE(23, GroupRequestContent.class, "管理员/群主 同意加群申请"),
     GROUP_DISBAND(24, String.class, "群主 解散群"),
     GROUP_KICK(25, String.class, "踢出群"),
-    GROUP_EXIT(26, String.class, "退出群"),
+    GROUP_EXIT(26, GroupRequestContent.class, "退出群"),
     GROUP_SHIELD(27, String.class, "屏蔽群"),
     GROUP_PUBLISH_ANNOUNCEMENT(28, String.class, "发布群公告"),
 

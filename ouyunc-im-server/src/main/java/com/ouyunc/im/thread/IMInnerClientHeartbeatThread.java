@@ -67,7 +67,7 @@ public class IMInnerClientHeartbeatThread implements Runnable {
             InetSocketAddress toInetSocketAddress = socketAddressChannelPoolEntry.getKey();
             // 给暂未连接的的服务（不在注册表中）进行重试连接发送syn去握手，需要回复ack
             String targetServerAddressStr = SocketAddressUtil.convert2HostPort(toInetSocketAddress);
-            Message message = new Message(IMServerContext.SERVER_CONFIG.getLocalServerAddress(),targetServerAddressStr , MessageContentEnum.SYN_CONTENT.type(),  IMConstant.SYN, SystemClock.now());
+            Message message = new Message(IMServerContext.SERVER_CONFIG.getLocalServerAddress(),targetServerAddressStr , MessageContentEnum.SYN_CONTENT.type(), SystemClock.now());
             //  ==============针对以上packet 几种序列化对比: string = SYN=========
             //     packet            message
             // protoStuff 150b         80b  内部心跳只用protoStuff序列化/反序列化
@@ -110,12 +110,12 @@ public class IMInnerClientHeartbeatThread implements Runnable {
         String toServerAddress = SocketAddressUtil.convert2HostPort(inetSocketAddress);
         log.warn("正在处理下线服务：{}",toServerAddress);
         // 先上报异常
-        ConcurrentHashSet hashSet = IMServerContext.CLUSTER_SERVER_OFFLINE_CACHE.getHash(CacheConstant.COMMON_PREFIX + CacheConstant.IM_PREFIX +  CacheConstant.CLUSTER_SERVER_OFFLINE + CacheConstant.OFFLINE_CACHE_PREFIX, toServerAddress);
+        ConcurrentHashSet hashSet = IMServerContext.CLUSTER_SERVER_OFFLINE_CACHE.getHash(CacheConstant.OUYUNC + CacheConstant.IM +  CacheConstant.CLUSTER_SERVER + CacheConstant.OFFLINE, toServerAddress);
         hashSet.add(IMServerContext.SERVER_CONFIG.getLocalServerAddress());
-        IMServerContext.CLUSTER_SERVER_OFFLINE_CACHE.putHash(CacheConstant.COMMON_PREFIX + CacheConstant.IM_PREFIX +  CacheConstant.CLUSTER_SERVER_OFFLINE + CacheConstant.OFFLINE_CACHE_PREFIX, toServerAddress, hashSet);
+        IMServerContext.CLUSTER_SERVER_OFFLINE_CACHE.putHash(CacheConstant.OUYUNC + CacheConstant.IM +  CacheConstant.CLUSTER_SERVER + CacheConstant.OFFLINE, toServerAddress, hashSet);
         // 在分布式缓存中记录该服务下线，如果超过一半的服务都认为该服务不可达，则进行下线处理
         // 每个服务都会去处理下线但未交接任务的服务
-        Map<String, ConcurrentHashSet> offlineServerMap = IMServerContext.CLUSTER_SERVER_OFFLINE_CACHE.getHashAll(CacheConstant.COMMON_PREFIX + CacheConstant.IM_PREFIX +  CacheConstant.CLUSTER_SERVER_OFFLINE + CacheConstant.OFFLINE_CACHE_PREFIX);
+        Map<String, ConcurrentHashSet> offlineServerMap = IMServerContext.CLUSTER_SERVER_OFFLINE_CACHE.getHashAll(CacheConstant.OUYUNC + CacheConstant.IM +  CacheConstant.CLUSTER_SERVER + CacheConstant.OFFLINE);
         if (MapUtil.isNotEmpty(offlineServerMap)) {
             // 每个服务都去处理所有的下线服务，这样避免，当某个服务处理是突然下线，造成当前处理异常
             offlineServerMap.forEach((offlineServerAddress, witnessServerAddressSet)->{
@@ -125,7 +125,7 @@ public class IMInnerClientHeartbeatThread implements Runnable {
                     // do something
 
                     // 最后打上标记已经处理接管任务了,这里才是最终下线了，任务也移交给其他服务处理
-                    IMServerContext.CLUSTER_SERVER_OFFLINE_CACHE.deleteHash(CacheConstant.COMMON_PREFIX + CacheConstant.IM_PREFIX +  CacheConstant.CLUSTER_SERVER_OFFLINE + CacheConstant.OFFLINE_CACHE_PREFIX, offlineServerAddress);
+                    IMServerContext.CLUSTER_SERVER_OFFLINE_CACHE.deleteHash(CacheConstant.OUYUNC + CacheConstant.IM +  CacheConstant.CLUSTER_SERVER + CacheConstant.OFFLINE, offlineServerAddress);
                 }
             });
 

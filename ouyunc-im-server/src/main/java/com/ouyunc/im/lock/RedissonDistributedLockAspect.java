@@ -7,6 +7,7 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.Signature;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.reflect.MethodSignature;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.slf4j.Logger;
@@ -51,8 +52,13 @@ public class RedissonDistributedLockAspect {
         //判断锁是否有值
         if (StrUtil.isBlank(lockName)) {
             //生成锁键名称 lock key name
-            Signature signature = proceedingJoinPoint.getSignature();
-            lockName = signature.toLongString();
+            MethodSignature signature = (MethodSignature) proceedingJoinPoint.getSignature();
+            String[] parameterNames = signature.getParameterNames();
+            Object[] args = proceedingJoinPoint.getArgs();
+            lockName ="lock:"+ signature.toLongString();
+            for (int i = 0; i < parameterNames.length; i++) {
+                lockName = lockName + "&" + parameterNames[i]+"=" + args[0].hashCode();
+            }
         }
         log.info("线程：" + currentThreadName + "开始获取分布式锁");
         //获取锁

@@ -6,6 +6,7 @@ import com.ouyunc.im.constant.enums.MessageEnum;
 import com.ouyunc.im.context.IMProcessContext;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.helper.MessageHelper;
+import com.ouyunc.im.lock.DistributedLock;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.ExtraMessage;
 import com.ouyunc.im.packet.message.Message;
@@ -39,8 +40,6 @@ public class GroupRequestMessageProcessor extends AbstractMessageProcessor{
         if (extraMessage == null) {
             extraMessage = new ExtraMessage();
         }
-        // 下面是对集群以及qos消息可靠进行处理
-        String from = message.getFrom();
         // 根据to 群唯一标识，或客户端唯一标识
         String to = message.getTo();
         // 判断是否从其他服务路由过来的消息

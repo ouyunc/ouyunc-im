@@ -104,7 +104,7 @@ public class RedisDistributedL1Cache <K , V > extends AbstractDistributedL1Cache
      * @param value
      */
     @Override
-    public void putHashAll(K key, Map<? extends K, ? extends V> value) {
+    public void putHashAll(K key, Map<Object, ? extends V> value) {
         redisTemplate.opsForHash().putAll(key, value);
     }
 

@@ -83,7 +83,7 @@ public enum Protocol {
                 // 消息丢失
                 if (packet.getMessageType() == MessageEnum.IM_PRIVATE_CHAT.getValue() || packet.getMessageType() == MessageEnum.IM_GROUP_CHAT.getValue()) {
                     // 对于多端的情况，如果已经有
-                    IMServerContext.MISSING_MESSAGES_CACHE.addZset(CacheConstant.COMMON_PREFIX + CacheConstant.MESSAGE_COMMON_CACHE_PREFIX  + CacheConstant.FAIL_CACHE_PREFIX + CacheConstant.FROM_CACHE_PREFIX + message.getFrom() + CacheConstant.COLON + CacheConstant.TO_CACHE_PREFIX + to , new MissingPacket(packet, IMServerContext.SERVER_CONFIG.getLocalServerAddress(), SystemClock.now()), packet.getPacketId());
+                    IMServerContext.MISSING_MESSAGES_CACHE.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.FAIL + CacheConstant.FROM + message.getFrom() + CacheConstant.COLON + CacheConstant.TO + to , new MissingPacket(packet, IMServerContext.SERVER_CONFIG.getLocalServerAddress(), SystemClock.now()), packet.getPacketId());
                 }
             }
         }

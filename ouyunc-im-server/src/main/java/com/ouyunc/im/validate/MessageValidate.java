@@ -43,13 +43,13 @@ public class MessageValidate {
         //2,判断用户权限是否授权
         // 组合成新的唯一标识
         String comboIdentity = IdentityUtil.generalComboIdentity(identity, packet.getDeviceType());
-        LoginUserInfo loginUserInfo = IMServerContext.LOGIN_USER_INFO_CACHE.get(CacheConstant.COMMON_PREFIX +   CacheConstant.USER_COMMON_CACHE_PREFIX + CacheConstant.LOGIN_CACHE_PREFIX + comboIdentity);
+        LoginUserInfo loginUserInfo = IMServerContext.LOGIN_USER_INFO_CACHE.get(CacheConstant.OUYUNC +   CacheConstant.IM_USER + CacheConstant.LOGIN + comboIdentity);
         //3,从本地连接中取出该用户的channel
         final ChannelHandlerContext bindCtx = IMServerContext.USER_REGISTER_TABLE.get(comboIdentity);
         // 判断是否合法
         if (loginUserInfo == null || bindCtx == null) {
             // 没有登录以及出现异常后走的逻辑
-            IMServerContext.LOGIN_USER_INFO_CACHE.delete(CacheConstant.COMMON_PREFIX +   CacheConstant.USER_COMMON_CACHE_PREFIX + CacheConstant.LOGIN_CACHE_PREFIX + comboIdentity);
+            IMServerContext.LOGIN_USER_INFO_CACHE.delete(CacheConstant.OUYUNC +   CacheConstant.IM_USER + CacheConstant.LOGIN + comboIdentity);
             IMServerContext.USER_REGISTER_TABLE.delete(comboIdentity);
             // 关闭channel
             ctx.close();
@@ -124,7 +124,7 @@ public class MessageValidate {
 
 
     /**
-     * 是否被在群中
+     * 是否已经在群中
      * @param from  消息发送方唯一标识
      * @param groupIdentity  消息接收方(群)唯一标识
      * @return

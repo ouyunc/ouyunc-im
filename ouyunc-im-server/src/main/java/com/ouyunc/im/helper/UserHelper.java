@@ -8,8 +8,6 @@ import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.constant.enums.*;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.base.LoginUserInfo;
-import com.ouyunc.im.db.operator.DbOperator;
-import com.ouyunc.im.domain.ImUser;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.packet.message.content.LoginContent;
@@ -50,7 +48,7 @@ public class UserHelper {
         LoginUserInfo loginUserInfo = new LoginUserInfo(loginContent.getIdentity(), IMServerContext.SERVER_CONFIG.getLocalServerAddress(), OnlineEnum.ONLINE, DeviceEnum.getDeviceEnumByValue(deviceType));
         ctx.channel().attr(channelTagLoginKey).set(loginUserInfo);
         // 存入用户登录信息
-        IMServerContext.LOGIN_USER_INFO_CACHE.put(CacheConstant.COMMON_PREFIX + CacheConstant.USER_COMMON_CACHE_PREFIX + CacheConstant.LOGIN_CACHE_PREFIX + identity, loginUserInfo);
+        IMServerContext.LOGIN_USER_INFO_CACHE.put(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + identity, loginUserInfo);
         // 存入本地用户注册表
         IMServerContext.USER_REGISTER_TABLE.put(comboIdentity, ctx);
     }
@@ -63,7 +61,7 @@ public class UserHelper {
      * @return void
      */
     public static void unbind(String comboIdentity, ChannelHandlerContext ctx) {
-        IMServerContext.LOGIN_USER_INFO_CACHE.delete(CacheConstant.COMMON_PREFIX + CacheConstant.USER_COMMON_CACHE_PREFIX + CacheConstant.LOGIN_CACHE_PREFIX + comboIdentity);
+        IMServerContext.LOGIN_USER_INFO_CACHE.delete(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + comboIdentity);
         ChannelHandlerContext ctx0 = IMServerContext.USER_REGISTER_TABLE.get(comboIdentity);
         IMServerContext.USER_REGISTER_TABLE.delete(comboIdentity);
         if (ctx == ctx0) {
@@ -106,7 +104,7 @@ public class UserHelper {
         List<LoginUserInfo> loginServerAddressList = new ArrayList<>();
         for (String supportOnlineDeviceName : IdentityUtil.supportOnlineLoginDevice()) {
             String comboIdentity = IdentityUtil.generalComboIdentity(identity, supportOnlineDeviceName);
-            LoginUserInfo loginUserInfo = IMServerContext.LOGIN_USER_INFO_CACHE.get(CacheConstant.COMMON_PREFIX + CacheConstant.USER_COMMON_CACHE_PREFIX + CacheConstant.LOGIN_CACHE_PREFIX + comboIdentity);
+            LoginUserInfo loginUserInfo = IMServerContext.LOGIN_USER_INFO_CACHE.get(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + comboIdentity);
             ChannelHandlerContext ctx = IMServerContext.USER_REGISTER_TABLE.get(comboIdentity);
             if (loginUserInfo != null && OnlineEnum.ONLINE.equals(loginUserInfo.getOnlineStatus()) && ctx != null) {
                 loginServerAddressList.add(loginUserInfo);
@@ -121,7 +119,7 @@ public class UserHelper {
      * @return
      */
     public static LoginUserInfo online(String comboIdentity) {
-        LoginUserInfo loginUserInfo = IMServerContext.LOGIN_USER_INFO_CACHE.get(CacheConstant.COMMON_PREFIX + CacheConstant.USER_COMMON_CACHE_PREFIX + CacheConstant.LOGIN_CACHE_PREFIX + comboIdentity);
+        LoginUserInfo loginUserInfo = IMServerContext.LOGIN_USER_INFO_CACHE.get(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + comboIdentity);
         ChannelHandlerContext ctx = IMServerContext.USER_REGISTER_TABLE.get(comboIdentity);
         if (loginUserInfo != null && OnlineEnum.ONLINE.equals(loginUserInfo.getOnlineStatus()) && ctx != null) {
             return loginUserInfo;

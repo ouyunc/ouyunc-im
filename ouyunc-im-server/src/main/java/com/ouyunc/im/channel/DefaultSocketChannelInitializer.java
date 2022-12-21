@@ -67,7 +67,7 @@ public class DefaultSocketChannelInitializer extends SocketChannelInitializer{
                         AttributeKey<LoginUserInfo> channelTagLoginKey = AttributeKey.valueOf(IMConstant.CHANNEL_TAG_LOGIN);
                         final LoginUserInfo loginUserInfo = socketChannel.attr(channelTagLoginKey).get();
                         if (loginUserInfo != null) {
-                            IMServerContext.LOGIN_USER_INFO_CACHE.delete(CacheConstant.USER_COMMON_CACHE_PREFIX + CacheConstant.LOGIN_CACHE_PREFIX + loginUserInfo.getIdentity());
+                            IMServerContext.LOGIN_USER_INFO_CACHE.delete(CacheConstant.IM_USER + CacheConstant.LOGIN + loginUserInfo.getIdentity());
                             IMServerContext.USER_REGISTER_TABLE.delete(loginUserInfo.getIdentity());
                         }
                     }

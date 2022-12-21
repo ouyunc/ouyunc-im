@@ -96,21 +96,6 @@ public class Message implements Serializable {
         this.createTime = createTime;
     }
 
-  /*  public String getFromServerAddress() {
-        return fromServerAddress;
-    }
-
-    public void setFromServerAddress(String fromServerAddress) {
-        this.fromServerAddress = fromServerAddress;
-    }
-
-    public String getToServerAddress() {
-        return toServerAddress;
-    }
-
-    public void setToServerAddress(String toServerAddress) {
-        this.toServerAddress = toServerAddress;
-    }*/
 
     public String getExtra() {
         return extra;
@@ -122,22 +107,19 @@ public class Message implements Serializable {
 
     public Message() {
     }
-/*
-    public Message(String from, String fromServerAddress, String to, String toServerAddress, int contentType, String content, long createTime) {
-        this.from = from;
-        this.fromServerAddress = fromServerAddress;
-        this.to = to;
-        this.toServerAddress = toServerAddress;
-        this.contentType = contentType;
-        this.content = content;
-        this.createTime = createTime;
-    }*/
 
     public Message(String from, String to, int contentType, String content, long createTime) {
         this.from = from;
         this.to = to;
         this.contentType = contentType;
         this.content = content;
+        this.createTime = createTime;
+    }
+
+    public Message(String from, String to, int contentType, long createTime) {
+        this.from = from;
+        this.to = to;
+        this.contentType = contentType;
         this.createTime = createTime;
     }
 }

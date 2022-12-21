@@ -5,6 +5,7 @@ import cn.hutool.json.JSONUtil;
 import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.enums.MessageEnum;
 import com.ouyunc.im.context.IMServerContext;
+import com.ouyunc.im.domain.ImGroupUser;
 import com.ouyunc.im.domain.ImUser;
 import com.ouyunc.im.helper.DbHelper;
 import com.ouyunc.im.helper.MessageHelper;
@@ -60,16 +61,16 @@ public class GroupChatMessageProcessor extends AbstractMessageProcessor {
             }
             // 根据群唯一标识to,获取当前群中所有群成员
             // 首先从缓存中获取群成员(包括自身)，如果没有在从数据库获取
-            List<ImUser> groupMembers = DbHelper.getGroupMembers(to);
+            List<ImGroupUser> groupMembers = DbHelper.getGroupMembers(to);
             // 循环遍历
             if (CollectionUtil.isEmpty(groupMembers)) {
                 // 解散了
                 return;
             }
             // 遍历所有的群成员
-            for (ImUser groupMember : groupMembers) {
+            for (ImGroupUser groupMember : groupMembers) {
                 // 目前使用id号来作为唯一标识
-                if (from.equals(groupMember.getId())) {
+                if (from.equals(groupMember.getUserId())) {
                     // 如果是自己找到自己的所有登录端去发送信息
                     List<LoginUserInfo> fromLoginUserInfos = UserHelper.onlineAll(from);
                     // 排除自己，发给其他端
@@ -86,7 +87,7 @@ public class GroupChatMessageProcessor extends AbstractMessageProcessor {
                     });
                 } else {
                     // 群里其它人员的其他端
-                    List<LoginUserInfo> toLoginUserInfos = UserHelper.onlineAll(groupMember.getId().toString());
+                    List<LoginUserInfo> toLoginUserInfos = UserHelper.onlineAll(groupMember.getUserId().toString());
                     if (CollectionUtil.isEmpty(toLoginUserInfos)) {
                         // 存入离线消息
                         DbHelper.addOfflineMessage(to, packet);

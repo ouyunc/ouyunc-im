@@ -38,7 +38,7 @@ public abstract class AbstractDistributedL1Cache<K, V> implements L1Cache<K, V> 
     /**
      * 存放设置 key 指定的哈希集中指定字段的值。该命令将重写所有在哈希集中存在的字段。如果 key 指定的哈希集不存在，会创建一个新的哈希集并与 key 关联
      */
-    public abstract void putHashAll(K key, Map<? extends K, ? extends V> value);
+    public abstract void putHashAll(K key, Map<Object, ? extends V> value);
 
     /**
      * 获取hash值
