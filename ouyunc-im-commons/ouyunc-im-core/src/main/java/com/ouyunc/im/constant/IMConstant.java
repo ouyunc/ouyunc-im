@@ -313,9 +313,4 @@ public class IMConstant {
     public static final Integer NOT_MUSHIN = 0;
 
 
-
-    /**
-     * 分布式锁服务下线处理锁名称
-     */
-    public static final String LOCK_NAME_SERVER_OFFLINE = "lock:server-offline";
 }

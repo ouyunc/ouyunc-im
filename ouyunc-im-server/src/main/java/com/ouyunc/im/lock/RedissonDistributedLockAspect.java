@@ -3,6 +3,9 @@ package com.ouyunc.im.lock;
 
 import cn.hutool.core.util.StrUtil;
 import com.im.cache.l1.distributed.redis.redisson.RedissonFactory;
+import com.ouyunc.im.constant.CacheConstant;
+import com.ouyunc.im.constant.IMConstant;
+import jodd.cache.Cache;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.Signature;
 import org.aspectj.lang.annotation.Around;
@@ -55,10 +58,21 @@ public class RedissonDistributedLockAspect {
             MethodSignature signature = (MethodSignature) proceedingJoinPoint.getSignature();
             String[] parameterNames = signature.getParameterNames();
             Object[] args = proceedingJoinPoint.getArgs();
-            lockName ="lock:"+ signature.toLongString();
-            for (int i = 0; i < parameterNames.length; i++) {
-                lockName = lockName + "&" + parameterNames[i]+"=" + args[0].hashCode();
+            lockName = CacheConstant.OUYUNC + CacheConstant.LOCK + signature.toLongString();
+            String[] lockNameSplit = lockName.split("[(|)]");
+            if (lockNameSplit != null && lockNameSplit.length > 1 ) {
+                lockName = lockNameSplit[0] + "(";
+                String[] argsType = lockNameSplit[1].split(",");
+                for (int i = 0; i < parameterNames.length; i++) {
+                    lockName = lockName + argsType[i] + " " + parameterNames[i] + "=" + args[i].hashCode();
+                    if (i < parameterNames.length - 1) {
+                        lockName = lockName + ",";
+                    }else {
+                        lockName = lockName + ")";
+                    }
+                }
             }
+
         }
         log.info("线程：" + currentThreadName + "开始获取分布式锁");
         //获取锁

@@ -1,10 +1,11 @@
 package com.ouyunc.im.channel;
 
+import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.CacheConstant;
 import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.dispatcher.ProtocolDispatcher;
-import com.ouyunc.im.base.LoginUserInfo;
+import com.ouyunc.im.utils.IdentityUtil;
 import com.ouyunc.im.utils.SslUtil;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -67,8 +68,9 @@ public class DefaultSocketChannelInitializer extends SocketChannelInitializer{
                         AttributeKey<LoginUserInfo> channelTagLoginKey = AttributeKey.valueOf(IMConstant.CHANNEL_TAG_LOGIN);
                         final LoginUserInfo loginUserInfo = socketChannel.attr(channelTagLoginKey).get();
                         if (loginUserInfo != null) {
-                            IMServerContext.LOGIN_USER_INFO_CACHE.delete(CacheConstant.IM_USER + CacheConstant.LOGIN + loginUserInfo.getIdentity());
-                            IMServerContext.USER_REGISTER_TABLE.delete(loginUserInfo.getIdentity());
+                            String comboIdentity = IdentityUtil.generalComboIdentity(loginUserInfo.getIdentity(), loginUserInfo.getDeviceEnum().getName());
+                            IMServerContext.LOGIN_USER_INFO_CACHE.delete(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + comboIdentity);
+                            IMServerContext.USER_REGISTER_TABLE.delete(comboIdentity);
                         }
                     }
                 }

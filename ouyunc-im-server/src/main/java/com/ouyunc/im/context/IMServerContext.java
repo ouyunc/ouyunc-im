@@ -29,7 +29,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @Version V3.0
  **/
 public class IMServerContext extends IMContext{
-    private static Logger log = LoggerFactory.getLogger(IMServerContext.class);
 
     /**
      * ttl Thread local

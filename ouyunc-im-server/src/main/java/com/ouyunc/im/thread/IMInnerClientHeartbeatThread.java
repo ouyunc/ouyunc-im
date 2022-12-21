@@ -105,7 +105,7 @@ public class IMInnerClientHeartbeatThread implements Runnable {
      * @param inetSocketAddress
      * @return void
      */
-    @DistributedLock(lockName = IMConstant.LOCK_NAME_SERVER_OFFLINE)
+    @DistributedLock(lockName = CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.CLUSTER_SERVER + CacheConstant.OFFLINE)
     public void handlerServerOffline(InetSocketAddress inetSocketAddress, Set<Map.Entry<InetSocketAddress, ChannelPool>> availableGlobalServer){
         String toServerAddress = SocketAddressUtil.convert2HostPort(inetSocketAddress);
         log.warn("正在处理下线服务：{}",toServerAddress);

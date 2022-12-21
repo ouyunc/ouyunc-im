@@ -10,6 +10,8 @@ public class CacheConstant {
     public static final String COLON  = ":";
     // 横杠
     public static final String CROSSBAR  = "-";
+    // 锁前缀
+    public static final String LOCK = "lock:";
     // ouyunc 公共前缀
     public static final String OUYUNC = "ouyunc:";
     //  im公共前缀
