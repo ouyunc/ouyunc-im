@@ -8,7 +8,7 @@ import org.aeonbits.owner.Config;
  * @Description: redis 核心配置
  * @Version V3.0
  **/
-@Config.Sources({"classpath:ouyunc-im-server.properties","classpath:ouyunc-im-cache.properties"})
+@Config.Sources({"classpath:ouyunc-im-cache.properties"})
 public interface RedisPrimaryProperties extends Config {
 
     /**

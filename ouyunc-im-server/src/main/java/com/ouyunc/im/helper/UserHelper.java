@@ -3,14 +3,13 @@ package com.ouyunc.im.helper;
 
 import cn.hutool.core.date.SystemClock;
 import cn.hutool.json.JSONUtil;
+import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.CacheConstant;
 import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.constant.enums.*;
 import com.ouyunc.im.context.IMServerContext;
-import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.Message;
-import com.ouyunc.im.packet.message.content.LoginContent;
 import com.ouyunc.im.utils.IdentityUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.AttributeKey;
@@ -34,21 +33,19 @@ public class UserHelper {
      * @Author fangzhenxun
      * @Description 绑定用户
      * @param ctx
-     * @param packet
+     * @param identity
+     * @param loginDeviceType
      * @return void
      */
-    public static void bind(ChannelHandlerContext ctx, Packet packet) {
-        final Message loginMessage = (Message) packet.getMessage();
-        LoginContent loginContent = JSONUtil.toBean(loginMessage.getContent(), LoginContent.class);
-        String identity = loginContent.getIdentity();
-        byte deviceType = packet.getDeviceType();
-        String comboIdentity = IdentityUtil.generalComboIdentity(identity, deviceType);
+    public static void bind(String identity, byte loginDeviceType, ChannelHandlerContext ctx) {
+        log.info("正在绑定登录用户：{} 在设备: {} 上登录", identity, loginDeviceType);
+        String comboIdentity = IdentityUtil.generalComboIdentity(identity, loginDeviceType);
         AttributeKey<LoginUserInfo> channelTagLoginKey = AttributeKey.valueOf(IMConstant.CHANNEL_TAG_LOGIN);
         // 将用户绑定到channel中并打上tag标签
-        LoginUserInfo loginUserInfo = new LoginUserInfo(loginContent.getIdentity(), IMServerContext.SERVER_CONFIG.getLocalServerAddress(), OnlineEnum.ONLINE, DeviceEnum.getDeviceEnumByValue(deviceType));
+        LoginUserInfo loginUserInfo = new LoginUserInfo(identity, IMServerContext.SERVER_CONFIG.getLocalServerAddress(), OnlineEnum.ONLINE, DeviceEnum.getDeviceEnumByValue(loginDeviceType));
         ctx.channel().attr(channelTagLoginKey).set(loginUserInfo);
         // 存入用户登录信息
-        IMServerContext.LOGIN_USER_INFO_CACHE.put(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + identity, loginUserInfo);
+        IMServerContext.LOGIN_USER_INFO_CACHE.put(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + comboIdentity, loginUserInfo);
         // 存入本地用户注册表
         IMServerContext.USER_REGISTER_TABLE.put(comboIdentity, ctx);
     }
@@ -56,11 +53,14 @@ public class UserHelper {
     /**
      * @Author fangzhenxun
      * @Description 用户解绑
-     * @param comboIdentity
+     * @param identity
+     * @param loginDeviceType
      * @param ctx
      * @return void
      */
-    public static void unbind(String comboIdentity, ChannelHandlerContext ctx) {
+    public static void unbind(String identity, byte loginDeviceType, ChannelHandlerContext ctx) {
+        log.info("正在解绑在设备: {} 上的用户: {}", loginDeviceType, identity);
+        String comboIdentity = IdentityUtil.generalComboIdentity(identity, loginDeviceType);
         IMServerContext.LOGIN_USER_INFO_CACHE.delete(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + comboIdentity);
         ChannelHandlerContext ctx0 = IMServerContext.USER_REGISTER_TABLE.get(comboIdentity);
         IMServerContext.USER_REGISTER_TABLE.delete(comboIdentity);
@@ -79,17 +79,14 @@ public class UserHelper {
     /**
      * @Author fangzhenxun
      * @Description 客户端做等待ack的队列处理 ，如果在一定时间内没有收到接收方返回的信息则重试发送信息（可能会导致重复接收，客户端需作去重处理）
-     * @param from
-     * @param to
-     * @param packet
+     * @param from 消息接收方,不会转发发到多登录设备上
+     * @param packet 原始消息packet
      * @return void
      */
-    public static void doAck(String from, String to,  Packet packet) {
-        // 3, 回执ack(AcknowledgeMessage)给发送方；
-        Message acknowledgeMessage = new Message(to, from, MessageContentEnum.SERVER_REPLY_ACK_CONTENT.type(), JSONUtil.toJsonStr(packet), SystemClock.now());
-        Packet<Message> ackPacket  = new Packet(packet.getProtocol(), packet.getProtocolVersion(), packet.getPacketId(), DeviceEnum.PC_OTHER.getValue(), NetworkEnum.OTHER.getValue(), IMServerContext.SERVER_CONFIG.getLocalHost(), MessageEnum.IM_REPLY_ACK.getValue(), packet.getEncryptType(), packet.getSerializeAlgorithm(),  acknowledgeMessage);
+    public static void doReplyAck(String from, Packet packet) {
+        log.info("服务端正在回复from: {} ackPacket: {}", from, packet);
         // 异步直接发送
-        MessageHelper.sendMessage(ackPacket, IdentityUtil.generalComboIdentity(from, packet.getDeviceType()));
+        MessageHelper.sendMessage(new Packet(packet.getProtocol(), packet.getProtocolVersion(), packet.getPacketId(), DeviceEnum.PC_OTHER.getValue(), NetworkEnum.OTHER.getValue(), IMServerContext.SERVER_CONFIG.getLocalHost(), MessageEnum.IM_REPLY_ACK.getValue(), packet.getEncryptType(), packet.getSerializeAlgorithm(),  new Message(IMServerContext.SERVER_CONFIG.getLocalServerAddress(), from, MessageContentEnum.SERVER_REPLY_ACK_CONTENT.type(), JSONUtil.toJsonStr(packet), SystemClock.now())), IdentityUtil.generalComboIdentity(from, packet.getDeviceType()));
     }
 
 
@@ -115,10 +112,12 @@ public class UserHelper {
 
     /**
      * 获取某个端的登录信息
-     * @param comboIdentity
+     * @param identity 客户端唯一标识
+     * @param loginDeviceType 客户端登录的设备类型
      * @return
      */
-    public static LoginUserInfo online(String comboIdentity) {
+    public static LoginUserInfo online(String identity, byte loginDeviceType) {
+        String comboIdentity = IdentityUtil.generalComboIdentity(identity, loginDeviceType);
         LoginUserInfo loginUserInfo = IMServerContext.LOGIN_USER_INFO_CACHE.get(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + comboIdentity);
         ChannelHandlerContext ctx = IMServerContext.USER_REGISTER_TABLE.get(comboIdentity);
         if (loginUserInfo != null && OnlineEnum.ONLINE.equals(loginUserInfo.getOnlineStatus()) && ctx != null) {

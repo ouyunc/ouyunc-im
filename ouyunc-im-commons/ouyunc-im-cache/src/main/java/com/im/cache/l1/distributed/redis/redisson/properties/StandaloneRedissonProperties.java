@@ -7,7 +7,7 @@ import org.aeonbits.owner.Config;
  * @date 2020/1/13 13:33
  * @description redisson 的单例配置信息实体类
  */
-@Config.Sources({"classpath:ouyunc-im-server.properties","classpath:ouyunc-im-cache.properties"})
+@Config.Sources({"classpath:ouyunc-im-cache.properties"})
 public interface StandaloneRedissonProperties extends Config{
 
     /**

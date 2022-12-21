@@ -7,7 +7,7 @@ import org.aeonbits.owner.Config;
  * @date 2020/1/9 13:09
  * @description redis 集群模式的配置
  */
-@Config.Sources({"classpath:ouyunc-im-server.properties","classpath:ouyunc-im-cache.properties"})
+@Config.Sources({"classpath:ouyunc-im-cache.properties"})
 public interface ClusterRedissonProperties extends Config{
 
     /**

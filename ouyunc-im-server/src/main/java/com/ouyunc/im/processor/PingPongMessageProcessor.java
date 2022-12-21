@@ -42,7 +42,9 @@ public class PingPongMessageProcessor extends AbstractMessageProcessor{
         }
         // 处理心跳消息
         Message heartBeatMessage = (Message) packet.getMessage();
-        final String comboIdentity = IdentityUtil.generalComboIdentity(heartBeatMessage.getFrom(), packet.getDeviceType());
+        String from = heartBeatMessage.getFrom();
+        byte loginDeviceType = packet.getDeviceType();
+        final String comboIdentity = IdentityUtil.generalComboIdentity(from, loginDeviceType);
         if (MessageContentEnum.PING_CONTENT.type() == heartBeatMessage.getContentType()) {
             // 可能在三次之内再次发起心跳，此时需要清除 之前心跳超时次数的历史记录
             AttributeKey<Integer> channelTagReadTimeoutKey = AttributeKey.valueOf(IMConstant.CHANNEL_TAG_READ_TIMEOUT);
@@ -59,7 +61,7 @@ public class PingPongMessageProcessor extends AbstractMessageProcessor{
         }else {
             // 非法心跳类型,解绑用户
             log.error("非法心跳内容类型: {},正在解绑用户channel: {}", heartBeatMessage.getContentType(), ctx.channel().id().asShortText());
-            UserHelper.unbind(comboIdentity, ctx);
+            UserHelper.unbind(from, loginDeviceType, ctx);
         }
     }
 }

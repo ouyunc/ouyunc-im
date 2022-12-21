@@ -10,7 +10,7 @@ import java.util.Set;
  * @date 2020/1/9 13:09
  * @description redis 哨兵模式的配置
  */
-@Config.Sources({"classpath:ouyunc-im-server.properties","classpath:ouyunc-im-cache.properties"})
+@Config.Sources({"classpath:ouyunc-im-cache.properties"})
 public interface SentinelRedisProperties extends Config{
 
     /**

@@ -63,13 +63,24 @@ public class LoginMessageProcessor extends AbstractMessageProcessor{
         }
         //将消息内容转成message
         LoginContent loginContent = JSONUtil.toBean(loginMessage.getContent(), LoginContent.class);
+        // 做登录参数校验
+        //1,进行参数合法校验，校验失败，结束 ；2,进行签名的校验，校验失败，结束
+        // 根据appKey 获取appSecret 然后拼接
+        // @todo 注意这里先写死 appKey 获取appSecret
+        String rawStr = loginContent.getAppKey() + IMConstant.AND + loginContent.getIdentity() + IMConstant.AND + loginContent.getCreateTime() + IMConstant.UNDERLINE + "ouyunc";
+        if (!validate(loginContent) || !Encrypt.AsymmetricEncrypt.prototype(loginContent.getSignatureAlgorithm()).validate(rawStr, loginContent.getSignature())) {
+            // 这个关闭会在writeAndFlush结束后执行，很重要
+            ctx.close();
+            return;
+        }
+
         final String comboIdentity = IdentityUtil.generalComboIdentity(loginContent.getIdentity(), packet.getDeviceType());
-        //如果之前已经登录（重复登录请求），这里判断是否已经登录过
+        //如果之前已经登录（重复登录请求），这里判断是否已经登录过,同一个账号在同一个设备不能同时登录
         //1,从分布式缓存取出该登录用户
         LoginUserInfo loginUserInfo = IMServerContext.LOGIN_USER_INFO_CACHE.get(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + comboIdentity);
         //2,从本地用户注册表中取出该用户的channel
         final ChannelHandlerContext bindCtx = IMServerContext.USER_REGISTER_TABLE.get(comboIdentity);
-        // 如果是重复登录则不做处理
+        // 如果是都不为空是重复登录请求，则不做处理，否则重新做登录
         // 下面处理登录消息的一下情况，某一个为空或都为空，无论那种情况都将之前的数据进行清除，重新添加登录信息
         if (loginUserInfo == null || bindCtx == null) {
             // 如果有，清空登录数据信息,解绑用户
@@ -79,18 +90,8 @@ public class LoginMessageProcessor extends AbstractMessageProcessor{
                 IMServerContext.USER_REGISTER_TABLE.delete(comboIdentity);
                 ctx0.close();
             }
-            // 做登录参数校验
-            //1,进行参数合法校验，校验失败，结束 ；2,进行签名的校验，校验失败，结束
-            // 根据appKey 获取appSecret 然后拼接
-            // @todo 注意这里先写死 appKey 获取appSecret
-            String rawStr = loginContent.getAppKey() + IMConstant.AND + loginContent.getIdentity() + IMConstant.AND + loginContent.getCreateTime() + IMConstant.UNDERLINE + "ouyunc";
-            if (!validate(loginContent) || !Encrypt.AsymmetricEncrypt.prototype(loginContent.getSignatureAlgorithm()).validate(rawStr, loginContent.getSignature())) {
-                // 这个关闭会在writeAndFlush结束后执行，很重要
-                ctx.close();
-            }else {
-                // 注意：其实可以直接在这里调用登录的逻辑不需要往下面传递了，这里我继续往下面传递各尽职责
-                ctx.fireChannelRead(packet);
-            }
+            // 注意：其实可以直接在这里调用登录的逻辑不需要往下面传递了，这里我继续往下面传递各尽职责
+            ctx.fireChannelRead(packet);
         }
     }
 
@@ -104,7 +105,9 @@ public class LoginMessageProcessor extends AbstractMessageProcessor{
         log.info("正在处理登录消息...");
         // 注意：消息务必携带登录设备类型; 这里使用客户端唯一标识+登录设备类型作为新的唯一标识进行绑定，支持多设备端登录及同步消息,
         // 用户登录成功后，用户绑定
-        UserHelper.bind(ctx, packet);
+        Message message = (Message) packet.getMessage();
+        LoginContent loginContent = JSONUtil.toBean(message.getContent(), LoginContent.class);
+        UserHelper.bind(loginContent.getIdentity(), packet.getDeviceType(), ctx);
     }
 
 }

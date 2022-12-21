@@ -1,10 +1,12 @@
 package com.ouyunc.im.processor;
 
+import cn.hutool.json.JSONUtil;
 import com.ouyunc.im.constant.enums.MessageEnum;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.helper.DbHelper;
 import com.ouyunc.im.helper.UserHelper;
 import com.ouyunc.im.packet.Packet;
+import com.ouyunc.im.packet.message.ExtraMessage;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.validate.MessageValidate;
 import io.netty.channel.ChannelHandlerContext;
@@ -46,7 +48,7 @@ public abstract class AbstractMessageProcessor implements MessageProcessor {
         // 存储packet到数据库中（目前只是保存相关信息，不做扩展，以后可以做数据分析使用）
         EVENT_EXECUTORS.execute(() -> DbHelper.addMessage(packet));
         Message message = (Message) packet.getMessage();
-        if (!MessageValidate.isAuth(message.getFrom(), ctx, packet)) {
+        if (!MessageValidate.isAuth(message.getFrom(), packet.getDeviceType(), ctx)) {
             return;
         }
         // 交给下个处理
@@ -77,9 +79,11 @@ public abstract class AbstractMessageProcessor implements MessageProcessor {
     @Override
     public void postProcess(ChannelHandlerContext ctx, Packet packet) {
         log.info("现在处理默认的后置处理 packet: {} ...", packet);
-        if (IMServerContext.SERVER_CONFIG.isAcknowledgeModeEnable()) {
-            Message message = (Message) packet.getMessage();
-            UserHelper.doAck(message.getFrom(), message.getTo(), packet);
+        Message message = (Message) packet.getMessage();
+        ExtraMessage extraMessage = JSONUtil.toBean(message.getExtra(), ExtraMessage.class);
+        // 只在消息首次到达服务的地方发送ack给外部客户端
+        if (IMServerContext.SERVER_CONFIG.isAcknowledgeModeEnable() && !extraMessage.isDelivery()) {
+            UserHelper.doReplyAck(message.getFrom(), packet);
         }
     }
 }

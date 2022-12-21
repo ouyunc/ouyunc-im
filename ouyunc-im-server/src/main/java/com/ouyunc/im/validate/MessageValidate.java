@@ -35,19 +35,20 @@ public class MessageValidate {
      * @param identity  消息发送方唯一标识
      * @return
      */
-    public static boolean isAuth(String identity, ChannelHandlerContext ctx, Packet packet) {
+    public static boolean isAuth(String identity, byte loginDeviceType,  ChannelHandlerContext ctx) {
         if (log.isDebugEnabled()) {
             log.debug("正在校验identity {} 是否登录认证", identity);
         }
         //1,判断用户是否登录
         //2,判断用户权限是否授权
         // 组合成新的唯一标识
-        String comboIdentity = IdentityUtil.generalComboIdentity(identity, packet.getDeviceType());
+        String comboIdentity = IdentityUtil.generalComboIdentity(identity, loginDeviceType);
         LoginUserInfo loginUserInfo = IMServerContext.LOGIN_USER_INFO_CACHE.get(CacheConstant.OUYUNC +   CacheConstant.IM_USER + CacheConstant.LOGIN + comboIdentity);
         //3,从本地连接中取出该用户的channel
         final ChannelHandlerContext bindCtx = IMServerContext.USER_REGISTER_TABLE.get(comboIdentity);
         // 判断是否合法
         if (loginUserInfo == null || bindCtx == null) {
+            log.error("该客户端: {} 没有通过认证，现将其关闭", identity);
             // 没有登录以及出现异常后走的逻辑
             IMServerContext.LOGIN_USER_INFO_CACHE.delete(CacheConstant.OUYUNC +   CacheConstant.IM_USER + CacheConstant.LOGIN + comboIdentity);
             IMServerContext.USER_REGISTER_TABLE.delete(comboIdentity);
@@ -58,11 +59,10 @@ public class MessageValidate {
         AttributeKey<LoginUserInfo> channelTagLoginKey = AttributeKey.valueOf(IMConstant.CHANNEL_TAG_LOGIN);
         final LoginUserInfo authenticationUserInfo = bindCtx.channel().attr(channelTagLoginKey).get();
         //4,判断是否已经登录，如果已经登录则提示已经登录，不做处理，如果未登录则走下面的登录逻辑
-        // @TODO 在这里后期如果有需要可以加上权限的校验，这里目前没有涉及到
         if (authenticationUserInfo != null && ctx.channel().id().asLongText().equals(bindCtx.channel().id().asLongText())) {
             return true;
         }
-        log.error("该客户端channel id: {} 发送的packet: {} 没有通过认证！", ctx.channel().id(), packet);
+        log.error("该客户端channel id: {} 没有通过认证！", ctx.channel().id());
         return false;
     }
 

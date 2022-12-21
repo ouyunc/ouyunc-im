@@ -66,7 +66,7 @@ public class ReplyAckMessageProcessor extends AbstractMessageProcessor{
                 byte deviceType = clientReplyAckContent.getDeviceType();
                 comboIdentity = IdentityUtil.generalComboIdentity(message.getTo(), deviceType);
                 // 首先判断消息在线还是离线,多端设备
-                LoginUserInfo onlineUserInfo = UserHelper.online(comboIdentity);
+                LoginUserInfo onlineUserInfo = UserHelper.online(message.getTo(), deviceType);
                 // 不在线,直接结束
                 if (onlineUserInfo == null) {
                     return;

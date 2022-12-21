@@ -49,7 +49,7 @@ public class PrivateChatMessageProcessor extends AbstractMessageProcessor{
         // 消息接收方
         String to = message.getTo();
         // ===================================做权限校验=========================================
-        if (!MessageValidate.isAuth(from, ctx, packet)) {
+        if (!MessageValidate.isAuth(from, packet.getDeviceType(), ctx)) {
             return;
         }
         // 是否被平台封禁

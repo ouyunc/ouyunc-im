@@ -215,7 +215,7 @@ public class IMConstant {
     /**
      * 自定义偶遇im 处理器
      */
-    public static final String OU_YU_IM_HANDLER = "OU_YU_IM_HANDLER";
+    public static final String OUYUNC_IM_HANDLER = "OUYUNC_IM_HANDLER";
 
 
     /**

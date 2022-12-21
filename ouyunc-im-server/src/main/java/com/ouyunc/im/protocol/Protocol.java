@@ -111,7 +111,7 @@ public enum Protocol {
                     // 转换成包packet，这里为了做兼容客户端心跳
                     .addLast(IMConstant.CONVERT_2_PACKET, new Convert2PacketHandler())
                     // 集群内部/外部业务处理
-                    .addLast(IMConstant.OU_YU_IM_HANDLER, new OuyuncServerHandler())
+                    .addLast(IMConstant.OUYUNC_IM_HANDLER, new OuyuncServerHandler())
                     // 移除协议分发器
                     .remove(IMConstant.PACKET_DISPATCHER_HANDLER);
             // 调用下一个handle的active

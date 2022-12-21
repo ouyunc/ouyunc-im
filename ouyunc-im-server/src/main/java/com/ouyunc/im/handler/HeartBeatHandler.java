@@ -65,6 +65,7 @@ public class HeartBeatHandler extends SimpleChannelInboundHandler<Packet> {
             if(channel.isActive()) {
                 // @todo 在这里面写在线状态的逻辑，偶然事件需要排除,重试（一定的策略）
                 IdleStateEvent idleStateEvent = (IdleStateEvent)event;
+                // 一定时间没有收到外部客户端发来的消息，出触发这里
                 if (IdleState.READER_IDLE.equals(idleStateEvent.state())) {
                     // 记录该channel 是第几次连续触发读超时，如果超过三次，则标注该客户端离线，并尝试通知客户端进行重试连接
                     AttributeKey<Integer> channelTagReadTimeoutKey = AttributeKey.valueOf(IMConstant.CHANNEL_TAG_READ_TIMEOUT);
@@ -73,7 +74,7 @@ public class HeartBeatHandler extends SimpleChannelInboundHandler<Packet> {
                     if (readTimeoutTimes == null) {
                         readTimeoutTimes = 1;
                     }
-                    log.info("外部客户端channel: {} 的 idle: {} 第 {} 触发了",channel.id().asShortText(), ((IdleStateEvent)event).state(), readTimeoutTimes);
+                    log.info("外部客户端channel: {} 的 read_idle: {} 第 {} 触发了",channel.id().asShortText(), ((IdleStateEvent)event).state(), readTimeoutTimes);
 
                     // 如果连续超过三次
                     if (readTimeoutTimes > IMServerContext.SERVER_CONFIG.getHeartBeatWaitRetry()-1) {
@@ -81,7 +82,7 @@ public class HeartBeatHandler extends SimpleChannelInboundHandler<Packet> {
                         AttributeKey<LoginUserInfo> channelTagLoginKey = AttributeKey.valueOf(IMConstant.CHANNEL_TAG_LOGIN);
                         final LoginUserInfo loginUserInfo = channel.attr(channelTagLoginKey).get();
                         // 这里的ctx 与注册表中的ctx 是同一个应用,
-                        UserHelper.unbind(IdentityUtil.generalComboIdentity(loginUserInfo.getIdentity(), loginUserInfo.getDeviceEnum().getName()), ctx);
+                        UserHelper.unbind(loginUserInfo.getIdentity(), loginUserInfo.getDeviceEnum().getValue(), ctx);
                         return;
                     }
                     // 设置连续超时次数

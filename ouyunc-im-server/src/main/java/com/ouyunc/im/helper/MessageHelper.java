@@ -37,7 +37,7 @@ public class MessageHelper {
      * @Author fangzhenxun
      * @Description 异步发送消息
      * @param packet
-     * @param to 接收者,唯一用户表示，手机号，身份证号码，token，邮箱
+     * @param to 组合后的接收者,唯一用户表示，手机号，身份证号码，token，邮箱
      * @return void
      */
     public static void sendMessage(Packet packet, String to) {
