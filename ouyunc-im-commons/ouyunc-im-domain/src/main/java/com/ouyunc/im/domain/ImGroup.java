@@ -46,7 +46,7 @@ public class ImGroup implements Serializable {
     private Integer mushin;
 
     /**
-     * 群状态，0-正常，1-群禁言
+     * 群状态，0-正常，1-异常（被平台封禁）
      */
     private Integer status;
 

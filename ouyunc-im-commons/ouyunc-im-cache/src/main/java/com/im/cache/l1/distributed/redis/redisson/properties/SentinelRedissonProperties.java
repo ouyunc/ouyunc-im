@@ -8,7 +8,7 @@ import org.aeonbits.owner.Config;
  * @date 2020/1/9 13:09
  * @description redisson 哨兵模式的配置
  */
-@Config.Sources({"classpath:ouyunc-im-cache.properties"})
+@Config.Sources({"classpath:ouyunc-im-server.properties","classpath:ouyunc-im-cache.properties"})
 public interface SentinelRedissonProperties extends Config{
 
     /**
