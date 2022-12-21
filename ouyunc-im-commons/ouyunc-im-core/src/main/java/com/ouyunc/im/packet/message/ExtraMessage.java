@@ -21,12 +21,12 @@ public class ExtraMessage implements Serializable {
     private boolean isDelivery;
 
     /**
-     * 当前重试次数,默认0
+     * 当前消息投递重试次数,默认0
      */
     private int currentRetry;
 
      /**
-      * 消息发送者所在服务器地址,如果是消息在服务之间转发，则改地址是上个消息所经过的服务地址：ip:port
+      * 消息发送者所在服务器地址,如果是消息在服务之间转发，则该地址是上个消息所经过的服务地址：ip:port
       */
     private String fromServerAddress;
 

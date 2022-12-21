@@ -6,7 +6,7 @@ import com.ouyunc.im.constant.CacheConstant;
 import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.constant.enums.MessageEnum;
 import com.ouyunc.im.context.IMServerContext;
-import com.ouyunc.im.entity.MissingPacket;
+import com.ouyunc.im.base.MissingPacket;
 import com.ouyunc.im.handler.*;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.Message;
@@ -82,7 +82,7 @@ public enum Protocol {
                 Message message = (Message) packet.getMessage();
                 // 消息丢失
                 if (packet.getMessageType() == MessageEnum.IM_PRIVATE_CHAT.getValue() || packet.getMessageType() == MessageEnum.IM_GROUP_CHAT.getValue()) {
-                    // 对于多端的情况，如果已经有
+                    // 对于多端的情况
                     IMServerContext.MISSING_MESSAGES_CACHE.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.FAIL + CacheConstant.FROM + message.getFrom() + CacheConstant.COLON + CacheConstant.TO + to , new MissingPacket(packet, IMServerContext.SERVER_CONFIG.getLocalServerAddress(), SystemClock.now()), packet.getPacketId());
                 }
             }

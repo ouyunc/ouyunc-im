@@ -3,7 +3,6 @@ package com.ouyunc.im.helper;
 import cn.hutool.json.JSONUtil;
 import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.context.IMServerContext;
-import com.ouyunc.im.base.RoutingTable;
 import com.ouyunc.im.exception.IMException;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.ExtraMessage;
@@ -21,9 +20,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * @Author fangzhenxun
@@ -32,7 +28,7 @@ import java.util.stream.Collectors;
  **/
 public class MessageHelper {
 
-    private static Logger log = LoggerFactory.getLogger(MessageHelper.class);
+    private static final Logger log = LoggerFactory.getLogger(MessageHelper.class);
 
     private static final EventExecutorGroup eventExecutors= new DefaultEventExecutorGroup(16);
 
@@ -85,11 +81,11 @@ public class MessageHelper {
      * @Description 同步传递消息，根据服务端的ip包装成InetSocketAddress
      */
     public static void deliveryMessageSync(Packet packet,InetSocketAddress toSocketAddress) {
-        log.info("正在传递消息packet: {} ...",packet);
+        log.info("正在投递消息packet: {} 到服务: {} 上 ...",packet, toSocketAddress);
         // 将本机地址作为上一个路由服务地址传递过去
         // 先从存活的注册表中查找（防止有新添加集群中的服务），然后再从全局中找到最近的服务;
         ChannelPool channelPool = IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.get(toSocketAddress);
-        // 如果从激活的服务注册表中获取不到channelPool 则进行路由其他服务去达到消息目的
+        // 如果从存活的服务注册表中获取不到channelPool 则进行路由其他服务去达到消息目的
         if (channelPool == null) {
             // do something
             // 找不到有以下两种情况：
@@ -97,7 +93,7 @@ public class MessageHelper {
             // 2,消息接收端是后来加入的集群中的服务，在旧的集群中可能由于部分服务之间网络不通导致没有该服务记录保存; 此时的处理方式是路由到其他可用服务上处理
             // 3,两个服务不直接连通，须通过中间服务做中转
             log.warn("获取不到消息需要到达的服务: {}",SocketAddressUtil.convert2HostPort(toSocketAddress));
-            exceptionHandle(toSocketAddress, packet);
+            exceptionHandle(packet, toSocketAddress);
             return;
         }
         // 异步获取 channel
@@ -115,14 +111,12 @@ public class MessageHelper {
                         if (extraMessage == null) {
                             extraMessage = new ExtraMessage();
                         }
-                        // 每次调用都会走这一步进行设置为true
+                        // 每次成功都会走这一步进行设置为true
                         if (!extraMessage.isDelivery()) {
                             extraMessage.setDelivery(true);
                         }
                         extraMessage.setFromServerAddress(IMServerContext.SERVER_CONFIG.getLocalServerAddress());
-                        //@todo 检测是否自动设置到packet
                         message.setExtra(JSONUtil.toJsonStr(extraMessage));
-
                         Channel channel = future.getNow();
                         // 给该通道打上标签(如果该通道channel 上有标签则不需要再打标签),打上标签的目的，是为了以后动态回收该channel,保证核心channel数
                         AttributeKey<Integer> channelTagPoolKey = AttributeKey.valueOf(IMConstant.CHANNEL_TAG_POOL);
@@ -141,7 +135,7 @@ public class MessageHelper {
                         // 重新封装路由表信息
                         // do something
                         // 重新选择一个新的集群中的服务去路由，直到找到通的或没有任何一个连通的结束
-                        exceptionHandle(toSocketAddress, packet);
+                        exceptionHandle(packet, toSocketAddress);
                     }
 
                 }
@@ -150,42 +144,18 @@ public class MessageHelper {
     }
 
 
-    /**
-     * @Author fangzhenxun
-     * @Description 解析后再包装消息,也就是在消息中添加相关数据, 返回包装后的消息已经路由不通的服务列表
-     * // 需要根据序列化方式取出对应的服务地址
-     * @param toSocketAddress
-     * @param extraMessage
-     * @return void
-     */
-    public static Set<String> wrapperMessage(InetSocketAddress toSocketAddress,ExtraMessage extraMessage) {
-        List<RoutingTable> routingTables = extraMessage.routingTables();
-        // 本地地址
-        String toServerAddress = SocketAddressUtil.convert2HostPort(toSocketAddress);
-        // 目标地址,这个方法是通用的
-        // 如果目标机地址与下一个路由服务的地址相同则添加本地socketAddress 到消息中，否则添加toSocketAddress
-        if (toServerAddress.equals(extraMessage.getTargetServerAddress())) {
-            routingTables.add(new RoutingTable(IMServerContext.SERVER_CONFIG.getLocalServerAddress()));
-        } else {
-            routingTables.add(new RoutingTable(toServerAddress));
-        }
-        extraMessage.setRoutingTables(routingTables);
-
-        // 转换set返回
-        return routingTables.stream().map(routingTable -> routingTable.getServerAddress()).collect(Collectors.toSet());
-    }
 
 
     /**
      * @Author fangzhenxun
      * @Description 异常数据的处理
-     * @param toSocketAddress
      * @param packet
+     * @param toSocketAddress
      * @return void
      */
-    private static void exceptionHandle(InetSocketAddress toSocketAddress, Packet packet) {
+    private static void exceptionHandle(Packet packet, InetSocketAddress toSocketAddress) {
         // 通过路由助手，找到一个可用的服务连接，如果找不到最后会这里处理，重试，下线，等操作
-        InetSocketAddress availableSocketAddress = RouterHelper.route(toSocketAddress, packet);
+        InetSocketAddress availableSocketAddress = RouterHelper.route(packet, toSocketAddress);
         if (availableSocketAddress == null) {
             return;
         }

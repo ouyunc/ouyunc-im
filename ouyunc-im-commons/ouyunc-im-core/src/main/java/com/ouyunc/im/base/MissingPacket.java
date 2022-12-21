@@ -1,4 +1,4 @@
-package com.ouyunc.im.entity;
+package com.ouyunc.im.base;
 
 import com.ouyunc.im.packet.Packet;
 

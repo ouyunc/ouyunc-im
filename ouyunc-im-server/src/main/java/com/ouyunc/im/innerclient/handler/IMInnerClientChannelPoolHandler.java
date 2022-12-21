@@ -31,12 +31,12 @@ public class IMInnerClientChannelPoolHandler implements ChannelPoolHandler {
 
     @Override
     public void channelReleased(Channel ch) throws Exception {
-        log.info("channelId: {} 释放",ch.id().asShortText());
+        log.info("客户端释放channel Id: {}",ch.id().asShortText());
     }
 
     @Override
     public void channelAcquired(Channel ch) throws Exception {
-        log.info("channelId: {} 获取",ch.id().asShortText());
+        log.info("从客户端连接池中 获取channel Id: {}",ch.id().asShortText());
     }
 
 
@@ -84,7 +84,7 @@ public class IMInnerClientChannelPoolHandler implements ChannelPoolHandler {
                         AttributeKey<Integer> channelPoolHashCodeKey = AttributeKey.valueOf(IMConstant.CHANNEL_TAG_POOL);
                         final Integer channelPoolHashCode = channel.attr(channelPoolHashCodeKey).get();
                         if (channelPoolHashCode != null) {
-                            // 从关闭channel 并移除内部客户端核心channel
+                            // 关闭channel 并尝试并移除内部客户端核心channel
                             IMServerContext.CLUSTER_INNER_CLIENT_CORE_CHANNEL_POOL.get(channelPoolHashCode).remove(channel);
                         }
                     }

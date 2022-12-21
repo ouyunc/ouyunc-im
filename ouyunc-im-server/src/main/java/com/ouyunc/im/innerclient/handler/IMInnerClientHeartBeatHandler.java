@@ -67,7 +67,7 @@ public class IMInnerClientHeartBeatHandler extends ChannelInboundHandlerAdapter 
                         channel.close();
                         return;
                     }
-                    // 先将当前存活的channel 存入集合中
+                    // 先将当前存活的channel 存入集合中，本地内存会自动变化
                     coreChannelSet.add(channel);
                 } finally {
                     // 释放锁

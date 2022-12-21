@@ -32,7 +32,7 @@ public class BacktrackRouterStrategy implements RouterStrategy{
      * @return java.net.InetSocketAddress
      */
     @Override
-    public InetSocketAddress route(InetSocketAddress toSocketAddress, Packet packet) {
+    public InetSocketAddress route(Packet packet, InetSocketAddress toSocketAddress) {
         // 获得消息
         Message message = (Message) packet.getMessage();
         ExtraMessage extraMessage = JSONUtil.toBean(message.getExtra(), ExtraMessage.class);
@@ -66,7 +66,7 @@ public class BacktrackRouterStrategy implements RouterStrategy{
             if (!isContain) {
                 Set<String> routedServerAddresses = new HashSet<>();
                 routedServerAddresses.add(toSocketAddressStr);
-                // 如何找到上一个传递消息的服务地址
+                // 如何找到上一个传递消息的服务地址， extraMessage.getFromServerAddress()可能为空，在第一个节点上
                 localRoutingTable = new RoutingTable(IMServerContext.SERVER_CONFIG.getLocalServerAddress(), extraMessage.getFromServerAddress(), routedServerAddresses);
                 routingTables.add(localRoutingTable);
             }

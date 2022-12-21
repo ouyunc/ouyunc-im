@@ -23,5 +23,5 @@ public interface RouterStrategy {
      * @param
      * @return io.netty.channel.pool.ChannelPool
      */
-    InetSocketAddress route(InetSocketAddress toSocketAddress, Packet packet);
+    InetSocketAddress route(Packet packet, InetSocketAddress toSocketAddress);
 }

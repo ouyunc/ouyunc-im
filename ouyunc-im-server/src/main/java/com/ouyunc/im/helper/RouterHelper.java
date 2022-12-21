@@ -41,8 +41,8 @@ public class RouterHelper {
      * @param
      * @return io.netty.channel.pool.ChannelPool
      */
-    public static InetSocketAddress route(InetSocketAddress toSocketAddress, Packet packet) {
-        return routerStrategy.route(toSocketAddress, packet);
+    public static InetSocketAddress route(Packet packet, InetSocketAddress toSocketAddress) {
+        return routerStrategy.route(packet, toSocketAddress);
     }
 
 }

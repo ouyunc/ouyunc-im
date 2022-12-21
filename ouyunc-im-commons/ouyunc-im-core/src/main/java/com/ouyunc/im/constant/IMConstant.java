@@ -272,12 +272,12 @@ public class IMConstant {
     /**
      * 用户状态：0-正常
      */
-    public static Integer USER_STATUS_0 = 0;
+    public static final Integer USER_STATUS_0 = 0;
 
     /**
      * 用户状态：1-异常（平台封禁）
      */
-    public static Integer USER_STATUS_1 = 1;
+    public static final Integer USER_STATUS_1 = 1;
 
 
 
@@ -285,33 +285,37 @@ public class IMConstant {
     /**
      * 屏蔽
      */
-    public static Integer SHIELD = 1;
+    public static final Integer SHIELD = 1;
 
     /**
      * 未屏蔽
      */
-    public static Integer NOT_SHIELD = 0;
+    public static final Integer NOT_SHIELD = 0;
 
     /**
      * 1-客户端唯一标识（用户）
      */
-    public static Integer IDENTITY_TYPE_1 = 1;
+    public static final Integer IDENTITY_TYPE_1 = 1;
 
     /**
      * 2-群唯一标识
      */
-    public static Integer IDENTITY_TYPE_2 = 2;
+    public static final Integer IDENTITY_TYPE_2 = 2;
 
     /**
      * 禁言 0
      */
-    public static Integer MUSHIN = 1;
+    public static final Integer MUSHIN = 1;
 
     /**
      * 未禁言1
      */
-    public static Integer NOT_MUSHIN = 0;
+    public static final Integer NOT_MUSHIN = 0;
 
 
 
+    /**
+     * 分布式锁服务下线处理锁名称
+     */
+    public static final String LOCK_NAME_SERVER_OFFLINE = "lock:server-offline";
 }
