@@ -30,7 +30,6 @@ public class SynAckMessageProcessor extends AbstractMessageProcessor{
         return MessageEnum.SYN_ACK;
     }
 
-
     /**
      * 内部客户端 syn-ack的逻辑处理, 注意：记住from 和 to 代表的什么含义以及所存储的值是什么
      * @param ctx
@@ -43,7 +42,7 @@ public class SynAckMessageProcessor extends AbstractMessageProcessor{
         Message synAckMessage = (Message) packet.getMessage();
         // 需要判断收到的消息是目的地是否是本服务器，如果不是在次将消息包传递出去，如果是则处理
         int contentType = synAckMessage.getContentType();
-        // 本地服务器地址：ip:port
+        // 发送端服务器地址：ip:port
         final String remoteServerAddressStr = synAckMessage.getFrom();
         log.info("接收到远端IM服务：{}的 {} 请求", remoteServerAddressStr, contentType);
         final InetSocketAddress remoteServerAddress = SocketAddressUtil.convert2SocketAddress(remoteServerAddressStr);

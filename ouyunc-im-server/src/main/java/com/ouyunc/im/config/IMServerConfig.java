@@ -70,7 +70,7 @@ public class IMServerConfig extends IMConfig{
     private int clusterMessageRetry;
 
     /**
-     *  集群中，服务启动时，服务注册表的增量更新时间，单位秒，默认10秒
+     *  集群中，服务启动时，服务注册表的增量更新时间，单位秒，默认5秒
      */
     private int clusterInnerClientHeartbeatInterval;
 

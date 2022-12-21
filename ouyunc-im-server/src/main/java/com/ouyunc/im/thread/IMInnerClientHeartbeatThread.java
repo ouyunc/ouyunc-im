@@ -4,6 +4,7 @@ package com.ouyunc.im.thread;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.collection.ConcurrentHashSet;
 import cn.hutool.core.date.SystemClock;
+import com.ouyunc.im.IMServer;
 import com.ouyunc.im.constant.CacheConstant;
 import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.constant.enums.DeviceEnum;
@@ -79,7 +80,7 @@ public class IMInnerClientHeartbeatThread implements Runnable {
             // fst        650b         315b
             // jdk        500b         346b
             Packet packet = new Packet(Protocol.OUYUC.getProtocol(), Protocol.OUYUC.getVersion(), SnowflakeUtil.nextId(), DeviceEnum.OTHER.getValue(), NetworkEnum.OTHER.getValue(), IMServerContext.SERVER_CONFIG.getLocalHost(), MessageEnum.SYN_ACK.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(),  message);
-            // 内部客户端连接池异步传递消息 syn ,尝试所有的路径去保持连通
+            // 内部客户端连接池异步传递消息syn ,尝试所有的路径去保持连通
             MessageHelper.deliveryMessage(packet, toInetSocketAddress);
             // 先获取给目标服务toInetSocketAddress 发送syn,没有回复ack的次数，默认从0开始
             AtomicInteger missAckTimes = IMServerContext.CLUSTER_INNER_CLIENT_MISS_ACK_TIMES_CACHE.get(toInetSocketAddress);
@@ -91,8 +92,7 @@ public class IMInnerClientHeartbeatThread implements Runnable {
             }
             // 判断该服务所在的集群个数是否小于服务列表的半数（用于解决脑裂）, 启动服务30分钟后进行检测是否脑裂,如果满足则系统退出
             if (IMServerContext.SERVER_CONFIG.isClusterSplitBrainDetectionEnable() && IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.size() < (int)Math.ceil(availableGlobalServer.size()/2.0) && ChronoUnit.MINUTES.between(beginTime, Instant.now()) >= IMServerContext.SERVER_CONFIG.getClusterSplitBrainDetectionDelay()) {
-                log.error("系统启动自毁程序...");
-                System.exit(0);
+                IMServerContext.TTL_THREAD_LOCAL.get().stop();
                 return;
             }
         }

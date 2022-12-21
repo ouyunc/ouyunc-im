@@ -1,11 +1,13 @@
 package com.ouyunc.im.context;
 
 import cn.hutool.core.collection.ConcurrentHashSet;
+import com.alibaba.ttl.TransmittableThreadLocal;
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.im.cache.ICache;
 import com.im.cache.l1.distributed.redis.RedisDistributedL1Cache;
 import com.im.cache.l1.local.caffeine.CaffeineLocalL1Cache;
+import com.ouyunc.im.IMServer;
 import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.config.IMServerConfig;
 import com.ouyunc.im.entity.MissingPacket;
@@ -28,6 +30,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class IMServerContext extends IMContext{
     private static Logger log = LoggerFactory.getLogger(IMServerContext.class);
 
+    /**
+     * ttl Thread local
+     */
+    public static final ThreadLocal<IMServer> TTL_THREAD_LOCAL = new TransmittableThreadLocal<>();
 
     /**
      * IM 服务配置文件

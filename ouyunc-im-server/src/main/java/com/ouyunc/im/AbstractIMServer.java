@@ -10,6 +10,7 @@ import com.ouyunc.im.config.IMServerConfig;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.innerclient.DefaultIMInnerClient;
 import com.ouyunc.im.innerclient.IMInnerClient;
+import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -28,6 +29,11 @@ import java.util.Map;
  **/
 public abstract class AbstractIMServer implements IMServer{
     private static Logger log = LoggerFactory.getLogger(AbstractIMServer.class);
+
+    /**
+     * 服务启动对象
+     */
+    private final static ServerBootstrap bootstrap = new ServerBootstrap();;
 
     /**
      * boss 线程组
@@ -80,12 +86,12 @@ public abstract class AbstractIMServer implements IMServer{
     @Override
     public void start() {
         log.info("IM开始启动,正在初始化........");
-        // 加载配置文件中的相关信息，并将配置信息放入到全局上下文中
-        IMServerContext.SERVER_CONFIG = loadProperties();
         // 注册关闭钩子
         registerShutdownHook();
         // 初始化IM服务
-        initServer(IMServerContext.SERVER_CONFIG);
+        initServer(IMServerContext.SERVER_CONFIG = loadProperties());
+        // 设置实现类到本地线程中
+        IMServerContext.TTL_THREAD_LOCAL.set(this);
     }
 
     /**
@@ -97,8 +103,6 @@ public abstract class AbstractIMServer implements IMServer{
         final long startTimeStamp = SystemClock.now();
         // 集成log4j2
         InternalLoggerFactory.setDefaultFactory(Log4J2LoggerFactory.INSTANCE);
-        // 创建启动服务对象
-        ServerBootstrap bootstrap = new ServerBootstrap();
         // 配置boss 线程组&工作线程组
         bossGroup = new NioEventLoopGroup(imServerConfig.getBossThreads());
         workerGroup = new NioEventLoopGroup(imServerConfig.getWorkThreads());
@@ -132,17 +136,17 @@ public abstract class AbstractIMServer implements IMServer{
             ChannelFuture channelFuture = bootstrap.bind(imServerConfig.getPort());
             // 添加监听器来监听是否启动成功,做额外工作
             channelFuture.addListener(new ChannelFutureListener() {
-                public void operationComplete(ChannelFuture startFuture) throws Exception {
-                    if (startFuture.isDone()) {
-                        if (startFuture.isSuccess()) {
+                public void operationComplete(ChannelFuture bindFuture) throws Exception {
+                    if (bindFuture.isDone()) {
+                        if (bindFuture.isSuccess()) {
                             // =====================开始处理内置客户端用于做集群=================
                             if (imServerConfig.isClusterEnable()) {
                                 innerIMClient.configure(imServerConfig);
                             }
                             log.info("IM server启动成功，其绑定地址:{} 端口号:{} 共花费:{} ms.",imServerConfig.getLocalHost(), imServerConfig.getPort(), (SystemClock.now()-startTimeStamp));
                         }else {
-                            log.error("IM server 启动失败！原因: {}", startFuture.cause().getMessage());
-                            throw new Exception(startFuture.cause().getMessage());
+                            log.error("IM server 启动失败！原因: {}", bindFuture.cause().getMessage());
+                            throw new Exception(bindFuture.cause().getMessage());
                         }
                     }
                 }
@@ -164,12 +168,12 @@ public abstract class AbstractIMServer implements IMServer{
 
     /**
      * @Author fangzhenxun
-     * @Description 注册服务关闭钩子
+     * @Description 主动注销服务
      * @return void
      */
     @Override
     public void stop() {
-        log.info("IM server 开始结束程序...");
+        log.error("IM server 开始注销程序...");
         System.exit(0);
     }
 
@@ -186,7 +190,7 @@ public abstract class AbstractIMServer implements IMServer{
 
     /**
      * @Author fangzhenxun
-     * @Description 注册服务关闭钩子
+     * @Description 监听注销服务钩子
      * @return void
      */
     private void registerShutdownHook() {

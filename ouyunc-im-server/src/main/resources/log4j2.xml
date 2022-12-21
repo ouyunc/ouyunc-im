@@ -7,7 +7,7 @@
     <Properties>
         <!-- ==============================================公共配置============================================== -->
         <!-- 设置日志文件的目录名称 -->
-        <property name="logFileName">ouyu-im</property>
+        <property name="logFileName">ouyunc-im</property>
 
         <!-- 日志默认存放的位置,可以设置为项目根路径下,也可指定绝对路径 -->
         <!-- 存放路径一:通用路径,window平台 -->
@@ -171,18 +171,7 @@
         <logger name="java.sql" level="DEBUG" additivity="false">
             <appender-ref ref="Console"/>
         </logger>
-        <!-- 设置org.mybatis.spring包下的日志只打印WARN及以上级别的日志 -->
-        <logger name="org.mybatis.spring" level="WARN" additivity="false">
-            <appender-ref ref="Console"/>
-        </logger>
-        <!-- 设置org.mybatis.spring包下的日志只打印WARN及以上级别的日志 -->
-        <logger name="org.springframework" level="WARN" additivity="false">
-            <appender-ref ref="Console"/>
-        </logger>
-        <!-- 设置org.mybatis.spring包下的日志只打印WARN及以上级别的日志 -->
-        <logger name="com.qfx.workflow.service" level="WARN" additivity="false">
-            <appender-ref ref="Console"/>
-        </logger>
+
         <!-- 设置打印sql语句配置结束 -->
 
         <!--建立一个默认的root的logger-->

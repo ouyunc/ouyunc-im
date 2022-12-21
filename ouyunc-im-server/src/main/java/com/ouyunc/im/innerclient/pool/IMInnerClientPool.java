@@ -66,9 +66,8 @@ public class IMInnerClientPool {
         Set<String> clusterAddress = serverConfig.getClusterAddress();
         for (String serverAddress : clusterAddress) {
             // 如果将本机的ip+port写在配置文件中，则排除本身
-            int port = IMServerContext.SERVER_CONFIG.getPort();
             // 获取本机ip与端口号
-            String localServerAddress0 = IMConstant.LOCAL_HOST + IMConstant.COLON_SPLIT + port;
+            String localServerAddress0 = IMConstant.LOCAL_HOST + IMConstant.COLON_SPLIT + serverConfig.getPort();
             // 排除本机,将集群服务存放到服务注册表中
             if  (!localServerAddress0.equals(serverAddress) && !IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(serverAddress)) {
                 final InetSocketAddress inetSocketAddress = SocketAddressUtil.convert2SocketAddress(serverAddress);
@@ -89,6 +88,8 @@ public class IMInnerClientPool {
      * @return void
      */
     public static void stop(){
-        workGroup.shutdownGracefully();
+        if (workGroup != null) {
+            workGroup.shutdownGracefully();
+        }
     }
 }

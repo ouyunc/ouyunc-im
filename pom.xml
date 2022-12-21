@@ -47,6 +47,9 @@
         <spring-jdbc.version>5.3.24</spring-jdbc.version>
         <!--aop-->
         <aspectjweaver.version>1.9.9.1</aspectjweaver.version>
+        <!--ttl threadlocal-->
+        <transmittable-thread-local.version>2.14.0</transmittable-thread-local.version>
+
     </properties>
 
     <!--添加公共依赖-->
@@ -306,7 +309,13 @@
                 <artifactId>aspectjweaver</artifactId>
                 <version>${aspectjweaver.version}</version>
             </dependency>
-
+            <!--用作父子线程之间的变量传递-->
+            <!-- https://mvnrepository.com/artifact/com.alibaba/transmittable-thread-local -->
+            <dependency>
+                <groupId>com.alibaba</groupId>
+                <artifactId>transmittable-thread-local</artifactId>
+                <version>${transmittable-thread-local.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
