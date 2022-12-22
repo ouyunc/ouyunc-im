@@ -20,6 +20,8 @@ public class CacheConstant {
     public static final String CLUSTER_SERVER = "cluster:server:";
     // 群组
     public static final String GROUP = "group:";
+    // 用户
+    public static final String USER = "user:";
     // 发送失败消息
     public static final String FAIL = "fail:";
     // 离线消息
@@ -30,6 +32,8 @@ public class CacheConstant {
     public static final String TO = "to:";
     // 联系人
     public static final String CONTACT = "contact:";
+    // 黑名单
+    public static final String BLACK_LIST = "black-list:";
     // 登录
     public static final String LOGIN = "login:";
     // 发送
@@ -41,5 +45,5 @@ public class CacheConstant {
     // 用户联系人（好友）相关前缀
     public static final String FRIEND = "friend:";
     // 群成员相关前缀
-    public static final String MEMBERS = "members:";
+    public static final String MEMBERS = ":members";
 }

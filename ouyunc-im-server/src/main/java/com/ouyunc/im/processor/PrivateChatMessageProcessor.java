@@ -3,6 +3,7 @@ package com.ouyunc.im.processor;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.json.JSONUtil;
 import com.ouyunc.im.base.LoginUserInfo;
+import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.constant.enums.MessageEnum;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.helper.DbHelper;
@@ -49,30 +50,9 @@ public class PrivateChatMessageProcessor extends AbstractMessageProcessor{
         // 消息接收方
         String to = message.getTo();
         // ===================================做权限校验=========================================
-        if (!MessageValidate.isAuth(from, packet.getDeviceType(), ctx)) {
+        if (!MessageValidate.isAuth(from, packet.getDeviceType(), ctx) || MessageValidate.isBanned(from, IMConstant.USER_TYPE_1) || !MessageValidate.isFriend(from, to) || MessageValidate.isBackList(from, to, IMConstant.USER_TYPE_1) || MessageValidate.isShield(from, to, IMConstant.USER_TYPE_1)) {
             return;
         }
-        // 是否被平台封禁
-//        if (VerifyUtil.isBanned(from, IMConstant.IDENTITY_TYPE_1)) {
-//            return;
-//        }
-//        // 如果开启认证校验，认证不通过则不做处理
-//        if (!VerifyUtil.hasPermission(from, IMConstant.IDENTITY_TYPE_1, null)) {
-//            return;
-//        }
-//        // 如果开启认证校验，认证不通过则不做处理
-//        if (!VerifyUtil.isFriend(from, to)) {
-//            return;
-//        }
-//        // 如果开启认证校验，认证不通过则不做处理
-//        if (VerifyUtil.isBackList(from, to, IMConstant.IDENTITY_TYPE_1)) {
-//            return;
-//        }
-//        // 如果开启认证校验，认证不通过则不做处理
-//        if (VerifyUtil.isShield(from, to, IMConstant.IDENTITY_TYPE_1)) {
-//            return;
-//        }
-
         // 交给下个处理
         ctx.fireChannelRead(packet);
     }

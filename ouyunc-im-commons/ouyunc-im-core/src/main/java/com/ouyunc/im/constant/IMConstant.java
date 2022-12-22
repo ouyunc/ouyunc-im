@@ -248,6 +248,18 @@ public class IMConstant {
      */
     public static final Integer MESSAGE_UNREAD_STATUS = 0;
 
+
+
+    /**
+     * 群状态：0-正常
+     */
+    public static final Integer GROUP_STATUS_0 = 0;
+
+    /**
+     * 群状态：1-异常（平台封禁）
+     */
+    public static final Integer GROUP_STATUS_1 = 1;
+
     /**
      * 1-是群主
      */
@@ -295,12 +307,12 @@ public class IMConstant {
     /**
      * 1-客户端唯一标识（用户）
      */
-    public static final Integer IDENTITY_TYPE_1 = 1;
+    public static final Integer USER_TYPE_1 = 1;
 
     /**
      * 2-群唯一标识
      */
-    public static final Integer IDENTITY_TYPE_2 = 2;
+    public static final Integer GROUP_TYPE_2 = 2;
 
     /**
      * 禁言 0

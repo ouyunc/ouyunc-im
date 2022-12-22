@@ -12,10 +12,10 @@ import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.db.operator.DbOperator;
 import com.ouyunc.im.db.operator.MysqlDbOperator;
-import com.ouyunc.im.domain.ImFriend;
-import com.ouyunc.im.domain.ImGroupUser;
-import com.ouyunc.im.domain.ImSendMessage;
-import com.ouyunc.im.domain.ImUser;
+import com.ouyunc.im.domain.*;
+import com.ouyunc.im.domain.bo.ImBlacklistBO;
+import com.ouyunc.im.domain.bo.ImFriendBO;
+import com.ouyunc.im.domain.bo.ImGroupUserBO;
 import com.ouyunc.im.lock.DistributedLock;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.Message;
@@ -250,5 +250,101 @@ public class DbHelper {
     public static void joinGroup(String from, String to) {
 
 
+    }
+
+    /**
+     * 根据用户唯一标识获取，用户信息
+     * @param identity
+     * @return
+     */
+    public static ImUser getUser(String identity) {
+        ImUser imUser = (ImUser) cacheOperator.get(CacheConstant.OUYUNC + CacheConstant.IM_USER + identity);
+        if (imUser == null){
+            // 查询数据库
+            imUser = dbOperator.selectOne(DbSqlConstant.MYSQL.SELECT_USER.sql(), ImUser.class, identity);
+        }
+        return imUser;
+    }
+
+    /**
+     * 根据唯一标识获取群信息
+     * @param identity
+     * @return
+     */
+    public static ImGroup getGroup(String identity) {
+        ImGroup imGroup = (ImGroup) cacheOperator.get(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + identity);
+        if (imGroup == null) {
+            imGroup = dbOperator.selectOne(DbSqlConstant.MYSQL.SELECT_GROUP.sql(), ImGroup.class, identity);
+        }
+        return imGroup;
+    }
+
+    /**
+     * 获取from的好友to的关系
+     * @param from
+     * @param to
+     * @return
+     */
+    public static ImFriendBO getFriend(String from, String to) {
+        ImFriendBO imFriendBO = (ImFriendBO) cacheOperator.getHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.CONTACT + CacheConstant.FRIEND + from, to);
+        if (imFriendBO == null) {
+            imFriendBO = dbOperator.selectOne(DbSqlConstant.MYSQL.SELECT_FRIEND_USER.sql(), ImFriendBO.class, from, to);
+        }
+        return imFriendBO;
+    }
+
+
+    /**
+     * 获取from在to中的用户信息,该用户在群中的信息
+     * @param from 发送者
+     * @param to 群唯一标识
+     * @return
+     */
+    public static ImGroupUserBO getGroupMember(String from, String to) {
+        ImGroupUserBO imGroupUserBO = (ImGroupUserBO) cacheOperator.getHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + to + CacheConstant.MEMBERS, from);
+        if (imGroupUserBO == null) {
+            imGroupUserBO = dbOperator.selectOne(DbSqlConstant.MYSQL.SELECT_GROUP_USER.sql(), ImGroupUserBO.class, from, to);
+        }
+        return imGroupUserBO;
+    }
+
+    /**
+     * 获取from 在to 中的黑名单信息
+     * @param from
+     * @param to
+     * @param type 1-用户的黑名单，2-群组的黑名单
+     * @return
+     */
+    public static ImBlacklistBO getBackList(String from, String to, Integer type) {
+        if (IMConstant.USER_TYPE_1.equals(type)) {
+            ImBlacklistBO imBlacklistBO = (ImBlacklistBO) cacheOperator.getHash(CacheConstant.OUYUNC + CacheConstant.IM + CacheConstant.BLACK_LIST +  CacheConstant.USER + to, from);
+            if (imBlacklistBO == null) {
+                // 判断是否是好友
+                ImFriendBO friend = getFriend(from, to);
+                imBlacklistBO = dbOperator.selectOne(DbSqlConstant.MYSQL.SELECT_BLACK_LIST.sql(), ImBlacklistBO.class, to, type, from);
+                if (imBlacklistBO != null && friend != null) {
+                    // 是好友
+                    imBlacklistBO.setNickName(friend.getFriendNickName());
+                }
+                // 不是好友
+                return imBlacklistBO;
+            }
+            return imBlacklistBO;
+        }
+        // 群组黑名单
+        if (IMConstant.GROUP_TYPE_2.equals(type)) {
+            ImBlacklistBO imBlacklistBO = (ImBlacklistBO) cacheOperator.getHash(CacheConstant.OUYUNC + CacheConstant.IM + CacheConstant.BLACK_LIST +  CacheConstant.GROUP + to, from);
+            if (imBlacklistBO == null) {
+                // 判断该用户是否在群组中
+                ImGroupUserBO groupMember = getGroupMember(from, to);
+                imBlacklistBO = dbOperator.selectOne(DbSqlConstant.MYSQL.SELECT_BLACK_LIST.sql(), ImBlacklistBO.class, to, type, from);
+                if (imBlacklistBO != null && groupMember != null) {
+                    // 是好友
+                    imBlacklistBO.setNickName(groupMember.getUserNickName());
+                }
+            }
+            return imBlacklistBO;
+        }
+        return null;
     }
 }

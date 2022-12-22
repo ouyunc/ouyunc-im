@@ -69,7 +69,6 @@ public class LoginMessageProcessor extends AbstractMessageProcessor{
         // @todo 注意这里先写死 appKey 获取appSecret
         String rawStr = loginContent.getAppKey() + IMConstant.AND + loginContent.getIdentity() + IMConstant.AND + loginContent.getCreateTime() + IMConstant.UNDERLINE + "ouyunc";
         if (!validate(loginContent) || !Encrypt.AsymmetricEncrypt.prototype(loginContent.getSignatureAlgorithm()).validate(rawStr, loginContent.getSignature())) {
-            // 这个关闭会在writeAndFlush结束后执行，很重要
             ctx.close();
             return;
         }
