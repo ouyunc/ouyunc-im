@@ -7,9 +7,11 @@ import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.constant.enums.MessageContentEnum;
 import com.ouyunc.im.constant.enums.MessageEnum;
 import com.ouyunc.im.context.IMServerContext;
+import com.ouyunc.im.domain.ImUser;
 import com.ouyunc.im.helper.DbHelper;
 import com.ouyunc.im.helper.MessageHelper;
 import com.ouyunc.im.helper.UserHelper;
+import com.ouyunc.im.lock.DistributedLock;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.ExtraMessage;
 import com.ouyunc.im.packet.message.Message;
@@ -22,9 +24,10 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 
 /**
- * 好友申请/拒绝/同意处理器，删除好友/黑名单
+ * 好友申请/拒绝/同意处理器；
+ * 删除好友和黑名单通过http服务器来实现，这里不做处理
  */
-public class FriendRequestMessageProcessor extends AbstractMessageProcessor{
+public class  FriendRequestMessageProcessor extends AbstractMessageProcessor{
     private static Logger log = LoggerFactory.getLogger(FriendRequestMessageProcessor.class);
 
 
@@ -60,8 +63,8 @@ public class FriendRequestMessageProcessor extends AbstractMessageProcessor{
             MessageHelper.deliveryMessage(packet, SocketAddressUtil.convert2SocketAddress(extraMessage.getTargetServerAddress()));
             return;
         }
-        // 添加好友请求， 拒绝好友请求直接转发消息，只有统一好友请求才会绑定好友关系
-        // 如果是好友申请，直接转发给对方各个端，不做消息保存,如果A和B同时添加好友，同时同意，则只会保留一份关系
+        // 添加好友请求， 拒绝好友请求直接转发消息，只有同意好友请求才会绑定好友关系
+        // 如果是好友申请，直接转发给对方各个端，不做消息保存；如果A和B同时添加好友，同时同意，则只会保留一份关系
         if (MessageContentEnum.FRIEND_AGREE.type() == message.getContentType()) {
             // 绑定好友关系
             DbHelper.bindFriend(from, to);
@@ -71,18 +74,9 @@ public class FriendRequestMessageProcessor extends AbstractMessageProcessor{
         List<LoginUserInfo> toLoginUserInfos = UserHelper.onlineAll(to);
         if (CollectionUtil.isEmpty(toLoginUserInfos)) {
             // 存入离线消息
-            DbHelper.addOfflineMessage(to,packet);
+            DbHelper.addOfflineMessage(to, packet);
             return;
         }
-        // 转发给某个客户端的各个设备端
-        for (LoginUserInfo loginUserInfo : toLoginUserInfos) {
-            // 走消息传递,设置登录设备类型
-            if (IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(loginUserInfo.getLoginServerAddress()) || !IMServerContext.SERVER_CONFIG.isClusterEnable()) {
-                MessageHelper.sendMessage(packet, IdentityUtil.generalComboIdentity(from, loginUserInfo.getDeviceEnum().getName()));
-            } else {
-                MessageHelper.deliveryMessage(packet, SocketAddressUtil.convert2SocketAddress(loginUserInfo.getLoginServerAddress()));
-            }
-        }
-
+        MessageHelper.send2MultiDevices(packet, toLoginUserInfos);
     }
 }

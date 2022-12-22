@@ -168,7 +168,8 @@ public class DbSqlConstant {
                 "\tdeleted = 0 AND\n" +
                 "\tid = ? ","查询群组信息"),
 
-        INSERT_FRIEND("INSERT INTO ouyunc_im_friend (id, user_id, friend_user_id, friend_nick_name, create_time) VALUES (?, ?, ?, ?, ?)","添加好友"),
+
+        INSERT_FRIEND("INSERT INTO ouyunc_im_friend (id, user_id, friend_user_id, friend_nick_name, is_shield, create_time, update_time) VALUES (?, ?, ?, ?, ?, ?, ?)","添加好友关系"),
 
 
 

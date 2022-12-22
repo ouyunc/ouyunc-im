@@ -192,4 +192,24 @@ public class ImFriendBO {
     public void setUpdateTime(String updateTime) {
         this.updateTime = updateTime;
     }
+
+    public ImFriendBO() {
+    }
+
+    public ImFriendBO(Long userId, Long friendUserId, String friendNickName, String friendUsername, String friendEmail, String friendPhoneNum, String friendIdCardNum, String friendAvatar, String friendMotto, Integer friendAge, Integer friendSex, Integer friendIsShield, String createTime, String updateTime) {
+        this.userId = userId;
+        this.friendUserId = friendUserId;
+        this.friendNickName = friendNickName;
+        this.friendUsername = friendUsername;
+        this.friendEmail = friendEmail;
+        this.friendPhoneNum = friendPhoneNum;
+        this.friendIdCardNum = friendIdCardNum;
+        this.friendAvatar = friendAvatar;
+        this.friendMotto = friendMotto;
+        this.friendAge = friendAge;
+        this.friendSex = friendSex;
+        this.friendIsShield = friendIsShield;
+        this.createTime = createTime;
+        this.updateTime = updateTime;
+    }
 }

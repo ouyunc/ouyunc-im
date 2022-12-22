@@ -4,10 +4,7 @@ package com.ouyunc.im.lock;
 import cn.hutool.core.util.StrUtil;
 import com.im.cache.l1.distributed.redis.redisson.RedissonFactory;
 import com.ouyunc.im.constant.CacheConstant;
-import com.ouyunc.im.constant.IMConstant;
-import jodd.cache.Cache;
 import org.aspectj.lang.ProceedingJoinPoint;
-import org.aspectj.lang.Signature;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
@@ -16,6 +13,9 @@ import org.redisson.api.RedissonClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 
@@ -38,15 +38,18 @@ public class RedissonDistributedLockAspect {
         redissonClient = RedissonFactory.redissonClient();
     }
 
+
+
     /**
      * @param proceedingJoinPoint
      * @param distributedLock
      * @return java.lang.Object
      * @author fangzhenxun
      * @description 环绕通知，定义redis切面,不定义切点
+     * 注意：由于aspectj maven编译器有bug 在调用方也织入了，所以 使用execution(* *(..)) 和 @annotation(distributedLock)两个配合使用
      * @date 2020/1/13 19:41
      **/
-    @Around(value = "@annotation(distributedLock)")
+    @Around(value = "execution(* *(..)) && @annotation(distributedLock)")
     public Object aroundMethod(ProceedingJoinPoint proceedingJoinPoint, DistributedLock distributedLock) throws Throwable {
         //获得当前线程名称
         String currentThreadName = Thread.currentThread().getName();
@@ -59,22 +62,26 @@ public class RedissonDistributedLockAspect {
             String[] parameterNames = signature.getParameterNames();
             Object[] args = proceedingJoinPoint.getArgs();
             lockName = CacheConstant.OUYUNC + CacheConstant.LOCK + signature.toLongString();
+            List<Integer> argsHashCode = new ArrayList<>();
+            for (int i = 0; i < args.length; i++) {
+                argsHashCode.add(args[i].hashCode());
+            }
+            Collections.sort(argsHashCode);
+            // 将有序参数map进行拼接处理
             String[] lockNameSplit = lockName.split("[(|)]");
-            if (lockNameSplit != null && lockNameSplit.length > 1 ) {
+            if (lockNameSplit != null && lockNameSplit.length > 1) {
                 lockName = lockNameSplit[0] + "(";
-                String[] argsType = lockNameSplit[1].split(",");
-                for (int i = 0; i < parameterNames.length; i++) {
-                    lockName = lockName + argsType[i] + " " + parameterNames[i] + "=" + args[i].hashCode();
-                    if (i < parameterNames.length - 1) {
+                for (int i = 0; i < argsHashCode.size(); i++) {
+                    lockName = lockName + argsHashCode.get(i);
+                    if (i < argsHashCode.size() - 1) {
                         lockName = lockName + ",";
-                    }else {
+                    } else {
                         lockName = lockName + ")";
                     }
                 }
             }
-
         }
-        log.info("线程：" + currentThreadName + "开始获取分布式锁");
+        log.info("线程：{} 开始获取分布式锁lockName: {}", currentThreadName, lockName);
         //获取锁
         RLock lock = redissonClient.getLock(lockName);
         try {

@@ -2,6 +2,7 @@
 <project version="4">
   <component name="AjcSettings">
     <option name="ajcPath" value="D:/repository/org/aspectj/aspectjtools/1.9.7/aspectjtools-1.9.7.jar" />
+    <option name="cmdLineParams" value="-Xlint:ignore -showWeaveInfo" />
     <option name="delegateToJavac" value="true" />
   </component>
   <component name="CompilerConfiguration">

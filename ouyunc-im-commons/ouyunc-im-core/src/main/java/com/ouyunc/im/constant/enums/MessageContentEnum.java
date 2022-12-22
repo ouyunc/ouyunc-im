@@ -27,9 +27,13 @@ public enum MessageContentEnum {
     FRIEND_JOIN(11, String.class, "添加好友请求"),
     FRIEND_REFUSE(12, String.class, "拒绝好友请求"),
     FRIEND_AGREE(13, String.class, "同意好友请求"),
-    FRIEND_DELETE(14, String.class, "删除好友"),
-    FRIEND_JOIN_BLACKLIST(15, String.class, "将好友加入黑名单"),
-    FRIEND_EXIT_BLACKLIST(16, String.class, "将好友退出黑名单"),
+
+
+//    FRIEND_DELETE(14, String.class, "删除好友"),
+//
+//    FRIEND_JOIN_BLACKLIST(15, String.class, "将好友加入黑名单"),
+//
+//    FRIEND_EXIT_BLACKLIST(16, String.class, "将好友退出黑名单"),
 
     GROUP_JOIN(21, GroupRequestContent.class, "加群请求"),
     GROUP_REFUSE(22, GroupRequestContent.class, "管理员/群主 拒绝加群申请"),
