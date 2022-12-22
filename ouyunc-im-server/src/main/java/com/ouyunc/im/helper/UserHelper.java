@@ -98,13 +98,26 @@ public class UserHelper {
      * @return String
      */
     public static List<LoginUserInfo> onlineAll(String identity) {
+        return onlineAll(identity, null);
+    }
+
+    /**
+     * @Author fangzhenxun
+     * @Description 判断用户是否在线,如果在线返回所有在线连接的服务器地址，支持多端登录
+     * @param identity 用户登录唯一标识，手机号，邮箱，身份证号码等
+     * @param excludeDeviceType 需要排除的设备类型
+     * @return String
+     */
+    public static List<LoginUserInfo> onlineAll(String identity, Byte excludeDeviceType) {
         List<LoginUserInfo> loginServerAddressList = new ArrayList<>();
         for (String supportOnlineDeviceName : IdentityUtil.supportOnlineLoginDevice()) {
-            String comboIdentity = IdentityUtil.generalComboIdentity(identity, supportOnlineDeviceName);
-            LoginUserInfo loginUserInfo = IMServerContext.LOGIN_USER_INFO_CACHE.get(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + comboIdentity);
-            ChannelHandlerContext ctx = IMServerContext.USER_REGISTER_TABLE.get(comboIdentity);
-            if (loginUserInfo != null && OnlineEnum.ONLINE.equals(loginUserInfo.getOnlineStatus()) && ctx != null) {
-                loginServerAddressList.add(loginUserInfo);
+            if (excludeDeviceType == null || !supportOnlineDeviceName.equals(DeviceEnum.getDeviceNameByValue(excludeDeviceType))) {
+                String comboIdentity = IdentityUtil.generalComboIdentity(identity, supportOnlineDeviceName);
+                LoginUserInfo loginUserInfo = IMServerContext.LOGIN_USER_INFO_CACHE.get(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + comboIdentity);
+                ChannelHandlerContext ctx = IMServerContext.USER_REGISTER_TABLE.get(comboIdentity);
+                if (loginUserInfo != null && OnlineEnum.ONLINE.equals(loginUserInfo.getOnlineStatus()) && ctx != null) {
+                    loginServerAddressList.add(loginUserInfo);
+                }
             }
         }
         return loginServerAddressList;

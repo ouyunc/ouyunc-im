@@ -36,9 +36,6 @@ public class BacktrackRouterStrategy implements RouterStrategy{
         // 获得消息
         Message message = (Message) packet.getMessage();
         ExtraMessage extraMessage = JSONUtil.toBean(message.getExtra(), ExtraMessage.class);
-        if (extraMessage == null) {
-            extraMessage = new ExtraMessage();
-        }
         // 获取消息中的路由表
         List<RoutingTable> routingTables = extraMessage.routingTables();
         String toSocketAddressStr = SocketAddressUtil.convert2HostPort(toSocketAddress);

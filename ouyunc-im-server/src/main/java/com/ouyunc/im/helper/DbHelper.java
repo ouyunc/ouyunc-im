@@ -98,7 +98,7 @@ public class DbHelper {
      * @param packet
      */
     public static void addOfflineMessage(String to, Packet packet) {
-        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + CacheConstant.COLON + to, packet, packet.getPacketId());
+        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + to, packet, packet.getPacketId());
     }
 
 

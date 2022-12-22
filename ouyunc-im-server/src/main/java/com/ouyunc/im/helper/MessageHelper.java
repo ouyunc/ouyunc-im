@@ -1,13 +1,16 @@
 package com.ouyunc.im.helper;
 
 import cn.hutool.json.JSONUtil;
+import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.IMConstant;
+import com.ouyunc.im.constant.enums.DeviceEnum;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.exception.IMException;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.ExtraMessage;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.protocol.Protocol;
+import com.ouyunc.im.utils.IdentityUtil;
 import com.ouyunc.im.utils.SocketAddressUtil;
 import io.netty.channel.Channel;
 import io.netty.channel.pool.ChannelPool;
@@ -20,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
+import java.util.List;
 
 /**
  * @Author fangzhenxun
@@ -31,6 +35,23 @@ public class MessageHelper {
     private static final Logger log = LoggerFactory.getLogger(MessageHelper.class);
 
     private static final EventExecutorGroup eventExecutors= new DefaultEventExecutorGroup(16);
+
+
+    /**
+     * 发送消息给多个用户
+     * @param loginUserInfos
+     */
+    public static void send2MultiDevices(Packet packet, List<LoginUserInfo> loginUserInfos) {
+        // 转发给某个客户端的各个在线设备端
+        for (LoginUserInfo loginUserInfo : loginUserInfos) {
+            // 走消息传递,设置登录设备类型
+            if (IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(loginUserInfo.getLoginServerAddress()) || !IMServerContext.SERVER_CONFIG.isClusterEnable()) {
+                MessageHelper.sendMessage(packet, IdentityUtil.generalComboIdentity(loginUserInfo.getIdentity(), loginUserInfo.getDeviceEnum().getName()));
+            } else {
+                MessageHelper.deliveryMessage(packet, SocketAddressUtil.convert2SocketAddress(loginUserInfo.getLoginServerAddress()));
+            }
+        }
+    }
 
 
     /**
@@ -81,6 +102,22 @@ public class MessageHelper {
      * @Description 同步传递消息，根据服务端的ip包装成InetSocketAddress
      */
     public static void deliveryMessageSync(Packet packet,InetSocketAddress toSocketAddress) {
+        // 成功才将上个路由地址改成本地，异常会在异常处理中获取上个路由服务地址及设置
+        // 获取消息扩展消息
+        Message message = (Message) packet.getMessage();
+        ExtraMessage extraMessage = JSONUtil.toBean(message.getExtra(), ExtraMessage.class);
+        if (extraMessage == null) {
+            extraMessage = new ExtraMessage();
+        }
+        // 每次成功都会走这一步进行设置为true
+        if (!extraMessage.isDelivery()) {
+            // 首次进行传递时，将目标主机和所登录的设备进行设置
+            extraMessage.setDeviceEnum(DeviceEnum.getDeviceEnumByValue(packet.getDeviceType()));
+            LoginUserInfo loginUserInfo = UserHelper.online(message.getTo(), packet.getDeviceType());
+            extraMessage.setTargetServerAddress(loginUserInfo.getLoginServerAddress());
+            extraMessage.setDelivery(true);
+        }
+
         log.info("正在投递消息packet: {} 到服务: {} 上 ...",packet, toSocketAddress);
         // 将本机地址作为上一个路由服务地址传递过去
         // 先从存活的注册表中查找（防止有新添加集群中的服务），然后再从全局中找到最近的服务;
@@ -98,25 +135,13 @@ public class MessageHelper {
         }
         // 异步获取 channel
         Future<Channel> channelFuture = channelPool.acquire();
+        ExtraMessage finalExtraMessage = extraMessage;
         channelFuture.addListener(new FutureListener<Channel>(){
             @Override
             public void operationComplete(Future<Channel> future) throws Exception {
                 if (future.isDone()) {
                     // 判断是否连接成功
                     if (future.isSuccess()) {
-                        // 成功才将上个路由地址改成本地，异常会在异常处理中获取上个路由服务地址及设置
-                        // 获取消息扩展消息
-                        Message message = (Message) packet.getMessage();
-                        ExtraMessage extraMessage = JSONUtil.toBean(message.getExtra(), ExtraMessage.class);
-                        if (extraMessage == null) {
-                            extraMessage = new ExtraMessage();
-                        }
-                        // 每次成功都会走这一步进行设置为true
-                        if (!extraMessage.isDelivery()) {
-                            extraMessage.setDelivery(true);
-                        }
-                        extraMessage.setFromServerAddress(IMServerContext.SERVER_CONFIG.getLocalServerAddress());
-                        message.setExtra(JSONUtil.toJsonStr(extraMessage));
                         Channel channel = future.getNow();
                         // 给该通道打上标签(如果该通道channel 上有标签则不需要再打标签),打上标签的目的，是为了以后动态回收该channel,保证核心channel数
                         AttributeKey<Integer> channelTagPoolKey = AttributeKey.valueOf(IMConstant.CHANNEL_TAG_POOL);
@@ -124,6 +149,9 @@ public class MessageHelper {
                         if (channelPoolHashCode == null) {
                             channel.attr(channelTagPoolKey).set(channelPool.hashCode());
                         }
+                        // 当获取channel 成功的时候才将from进行设置进去
+                        finalExtraMessage.setFromServerAddress(IMServerContext.SERVER_CONFIG.getLocalServerAddress());
+                        message.setExtra(JSONUtil.toJsonStr(finalExtraMessage));
                         // 客户端将数据写出到中介管道中
                         channel.writeAndFlush(packet);
                         // 用完后进行释放掉

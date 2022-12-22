@@ -86,34 +86,18 @@ public class PrivateChatMessageProcessor extends AbstractMessageProcessor{
             return;
         }
         // 发送给自己的其他端
-        List<LoginUserInfo> fromLoginUserInfos = UserHelper.onlineAll(from);
+        List<LoginUserInfo> fromLoginUserInfos = UserHelper.onlineAll(from, packet.getDeviceType());
         // 排除自己，发给其他端
-        for (LoginUserInfo fromLoginUserInfo : fromLoginUserInfos) {// 排除自己发给其他端
-            if (!IdentityUtil.generalComboIdentity(from, packet.getDeviceType()).equals(IdentityUtil.generalComboIdentity(fromLoginUserInfo.getIdentity(), fromLoginUserInfo.getDeviceEnum().getName()))) {
-                // 走消息传递,设置登录设备类型
-                if (IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(fromLoginUserInfo.getLoginServerAddress()) || !IMServerContext.SERVER_CONFIG.isClusterEnable()) {
-                    MessageHelper.sendMessage(packet, IdentityUtil.generalComboIdentity(from, fromLoginUserInfo.getDeviceEnum().getName()));
-                } else {
-                    MessageHelper.deliveryMessage(packet, SocketAddressUtil.convert2SocketAddress(fromLoginUserInfo.getLoginServerAddress()));
-                }
-            }
-        }
+        // 转发给自己客户端的各个设备端
+        MessageHelper.send2MultiDevices(packet, fromLoginUserInfos);
         // 获取该客户端在线的所有客户端，进行推送消息已读
         List<LoginUserInfo> toLoginUserInfos = UserHelper.onlineAll(to);
         if (CollectionUtil.isEmpty(toLoginUserInfos)) {
-            // 存入离线消息
-            DbHelper.addOfflineMessage(to,packet);
+            // 存入离线消息，不以设备来区分
+            DbHelper.addOfflineMessage(to, packet);
             return;
         }
         // 转发给某个客户端的各个设备端
-        for (LoginUserInfo loginUserInfo : toLoginUserInfos) {
-            // 走消息传递,设置登录设备类型
-            if (IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(loginUserInfo.getLoginServerAddress()) || !IMServerContext.SERVER_CONFIG.isClusterEnable()) {
-                MessageHelper.sendMessage(packet, IdentityUtil.generalComboIdentity(from, loginUserInfo.getDeviceEnum().getName()));
-            } else {
-                MessageHelper.deliveryMessage(packet, SocketAddressUtil.convert2SocketAddress(loginUserInfo.getLoginServerAddress()));
-            }
-        }
-
+        MessageHelper.send2MultiDevices(packet, toLoginUserInfos);
     }
 }

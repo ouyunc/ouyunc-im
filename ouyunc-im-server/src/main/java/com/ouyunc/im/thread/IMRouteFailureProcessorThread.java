@@ -53,7 +53,6 @@ public class IMRouteFailureProcessorThread implements Runnable {
         extraMessage.setCurrentRetry(currentRetry);
         extraMessage.setFromServerAddress(null);
         extraMessage.setRoutingTables(null);
-        extraMessage.setDelivery(false);
         message.setExtra(JSONUtil.toJsonStr(extraMessage));
         // targetSocketAddress 不改变
         if (log.isDebugEnabled()) {
