@@ -3,8 +3,10 @@ package com.ouyunc.im.processor.content;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.json.JSONUtil;
 import com.ouyunc.im.base.LoginUserInfo;
+import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.constant.enums.MessageContentEnum;
 import com.ouyunc.im.context.IMServerContext;
+import com.ouyunc.im.domain.bo.ImGroupUserBO;
 import com.ouyunc.im.helper.DbHelper;
 import com.ouyunc.im.helper.MessageHelper;
 import com.ouyunc.im.helper.UserHelper;
@@ -31,28 +33,29 @@ public class GroupKickMessageContentProcessor extends AbstractMessageContentProc
         return MessageContentEnum.GROUP_KICK;
     }
 
+    /**
+     * @Author fangzhenxun
+     * @Description 踢出群
+     * @param ctx
+     * @param packet
+     * @return void
+     */
     @Override
     public void doProcess(ChannelHandlerContext ctx, Packet packet) {
         log.info("GroupKickMessageContentProcessor 正在处理踢出群请求 packet: {}...", packet);
         Message message = (Message) packet.getMessage();
-        ExtraMessage extraMessage = JSONUtil.toBean(message.getExtra(), ExtraMessage.class);
-        if (extraMessage == null) {
-            extraMessage = new ExtraMessage();
-        }
+        GroupRequestContent groupRequestContent = JSONUtil.toBean(message.getContent(), GroupRequestContent.class);
+
         // 下面是对集群以及qos消息可靠进行处理
         String from = message.getFrom();
-        // 根据to从分布式缓存中取出targetServerAddress目标地址
-        String to = message.getTo();
-        // 判断是否从其他服务路由过来的额消息
-        if (extraMessage.isDelivery()) {
-            if (IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(extraMessage.getTargetServerAddress()) || !IMServerContext.SERVER_CONFIG.isClusterEnable()) {
-                MessageHelper.sendMessage(packet, IdentityUtil.generalComboIdentity(to, extraMessage.getDeviceEnum().getName()));
-                return;
-            }
-            MessageHelper.deliveryMessage(packet, SocketAddressUtil.convert2SocketAddress(extraMessage.getTargetServerAddress()));
+        // 判断from 发起者是否有事群主或管理员
+        ImGroupUserBO groupMember = DbHelper.getGroupMember(from, groupRequestContent.getGroupId());
+        if (!IMConstant.GROUP_MANAGER.equals(groupMember.getIsLeader()) && !IMConstant.GROUP_LEADER.equals(groupMember.getIsLeader())) {
             return;
         }
-
+        // 根据to从分布式缓存中取出targetServerAddress目标地址
+        String to = message.getTo();
+        DbHelper.removeOutGroup(to, groupRequestContent.getGroupId());
         // 判断该管理员是否在线，如果不在线放入离线消息
         List<LoginUserInfo> toLoginUserInfos = UserHelper.onlineAll(to);
         if (CollectionUtil.isEmpty(toLoginUserInfos)) {
@@ -60,15 +63,6 @@ public class GroupKickMessageContentProcessor extends AbstractMessageContentProc
             DbHelper.addOfflineMessage(to, packet);
             return;
         }
-        // 转发给客户端的各个设备端
-        for (LoginUserInfo loginUserInfo : toLoginUserInfos) {
-            // 走消息传递,设置登录设备类型
-            if (IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(loginUserInfo.getLoginServerAddress()) || !IMServerContext.SERVER_CONFIG.isClusterEnable()) {
-                MessageHelper.sendMessage(packet, IdentityUtil.generalComboIdentity(to, loginUserInfo.getDeviceEnum().getName()));
-            } else {
-                MessageHelper.deliveryMessage(packet, SocketAddressUtil.convert2SocketAddress(loginUserInfo.getLoginServerAddress()));
-            }
-        }
-
+        MessageHelper.send2MultiDevices(packet, toLoginUserInfos);
     }
 }

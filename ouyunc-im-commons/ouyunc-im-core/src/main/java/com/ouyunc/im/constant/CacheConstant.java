@@ -46,5 +46,6 @@ public class CacheConstant {
     public static final String FRIEND = "friend:";
     // 群成员相关前缀
     public static final String MEMBERS = ":members";
-
+    // 分布式做的同意加入群或拒绝加入群
+    public static final String REFUSE_AGREE = "refuse_agree";
 }

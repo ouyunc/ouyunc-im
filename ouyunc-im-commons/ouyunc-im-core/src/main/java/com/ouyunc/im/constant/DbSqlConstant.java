@@ -31,21 +31,6 @@ public class DbSqlConstant {
                 "\tupdate_time as updateTime, \n" +
                 "\tdeleted  FROM OUYUNC_IM_SEND_MESSAGE WHERE DELETED = 0 AND ID = ? LIMIT 1","查询已读列表"),
 
-        SELECT_GROUP_LEADER_USER("SELECT\n" +
-                "\touyunc_im_group_user.id, \n" +
-                "\touyunc_im_group_user.group_id, \n" +
-                "\touyunc_im_group_user.user_id, \n" +
-                "\touyunc_im_group_user.is_leader, \n" +
-                "\touyunc_im_group_user.is_manager, \n" +
-                "\touyunc_im_group_user.user_nick_name, \n" +
-                "\touyunc_im_group_user.is_shield, \n" +
-                "\touyunc_im_group_user.mushin, \n" +
-                "\touyunc_im_group_user.create_time\n" +
-                "FROM\n" +
-                "\touyunc_im_group_user\n" +
-                "WHERE\n" +
-                "\tgroup_id = ? and (is_leader  = 1 or is_manager = 1)","查询群管理员或群主列表"),
-
         UPDATE_READ_RECEIPT("UPDATE OUYUNC_IM_SEND_MESSAGE SET READ_LIST = ? WHERE DELETED = 0 AND ID = ? ","读已回执，更新已读列表"),
 
 
@@ -129,7 +114,88 @@ public class DbSqlConstant {
                 "\touyunc_im_user.deleted = 0 AND\n" +
                 "\touyunc_im_group_user.group_id = ? and ouyunc_im_group_user.user_id = ? ","查询单个群成员"),
 
+        SELECT_GROUP_LEADER_USER("SELECT\n" +
+                "\touyunc_im_group_user.group_id as groupId, \n" +
+                "\touyunc_im_group_user.user_id as userId, \n" +
+                "\touyunc_im_user.username, \n" +
+                "\touyunc_im_group_user.user_nick_name as userNickName, \n" +
+                "\touyunc_im_user.avatar, \n" +
+                "\touyunc_im_user.motto, \n" +
+                "\touyunc_im_user.age, \n" +
+                "\touyunc_im_user.sex, \n" +
+                "\touyunc_im_user.email, \n" +
+                "\touyunc_im_user.phone_num as phoneNum, \n" +
+                "\touyunc_im_user.id_card_num as idCardNum, \n" +
+                "\touyunc_im_group_user.is_leader as isLeader, \n" +
+                "\touyunc_im_group_user.is_manager as isManager, \n" +
+                "\touyunc_im_group_user.is_shield as isShield, \n" +
+                "\touyunc_im_group_user.mushin, \n" +
+                "\touyunc_im_group_user.create_time as createTime\n" +
+                "FROM\n" +
+                "\touyunc_im_user\n" +
+                "\tLEFT JOIN\n" +
+                "\touyunc_im_group_user\n" +
+                "\tON \n" +
+                "\t\touyunc_im_user.id = ouyunc_im_group_user.user_id\n" +
+                "WHERE\n" +
+                "\touyunc_im_user.deleted = 0 AND\n" +
+                "\touyunc_im_group_user.group_id = ? and ouyunc_im_group_user.is_leader  = 1 ","查询单个群成员"),
 
+
+        SELECT_GROUP_USERS("SELECT\n" +
+                "\touyunc_im_group_user.group_id as groupId, \n" +
+                "\touyunc_im_group_user.user_id as userId, \n" +
+                "\touyunc_im_user.username, \n" +
+                "\touyunc_im_group_user.user_nick_name as userNickName, \n" +
+                "\touyunc_im_user.avatar, \n" +
+                "\touyunc_im_user.motto, \n" +
+                "\touyunc_im_user.age, \n" +
+                "\touyunc_im_user.sex, \n" +
+                "\touyunc_im_user.email, \n" +
+                "\touyunc_im_user.phone_num as phoneNum, \n" +
+                "\touyunc_im_user.id_card_num as idCardNum, \n" +
+                "\touyunc_im_group_user.is_leader as isLeader, \n" +
+                "\touyunc_im_group_user.is_manager as isManager, \n" +
+                "\touyunc_im_group_user.is_shield as isShield, \n" +
+                "\touyunc_im_group_user.mushin, \n" +
+                "\touyunc_im_group_user.create_time as createTime\n" +
+                "FROM\n" +
+                "\touyunc_im_user\n" +
+                "\tLEFT JOIN\n" +
+                "\touyunc_im_group_user\n" +
+                "\tON \n" +
+                "\t\touyunc_im_user.id = ouyunc_im_group_user.user_id\n" +
+                "WHERE\n" +
+                "\touyunc_im_user.deleted = 0 AND\n" +
+                "\touyunc_im_group_user.group_id = ?  ","查询群所有成员"),
+
+
+        SELECT_GROUP_LEADER_USERS("SELECT\n" +
+                "\touyunc_im_group_user.group_id as groupId, \n" +
+                "\touyunc_im_group_user.user_id as userId, \n" +
+                "\touyunc_im_user.username, \n" +
+                "\touyunc_im_group_user.user_nick_name as userNickName, \n" +
+                "\touyunc_im_user.avatar, \n" +
+                "\touyunc_im_user.motto, \n" +
+                "\touyunc_im_user.age, \n" +
+                "\touyunc_im_user.sex, \n" +
+                "\touyunc_im_user.email, \n" +
+                "\touyunc_im_user.phone_num as phoneNum, \n" +
+                "\touyunc_im_user.id_card_num as idCardNum, \n" +
+                "\touyunc_im_group_user.is_leader as isLeader, \n" +
+                "\touyunc_im_group_user.is_manager as isManager, \n" +
+                "\touyunc_im_group_user.is_shield as isShield, \n" +
+                "\touyunc_im_group_user.mushin, \n" +
+                "\touyunc_im_group_user.create_time as createTime\n" +
+                "FROM\n" +
+                "\touyunc_im_user\n" +
+                "\tLEFT JOIN\n" +
+                "\touyunc_im_group_user\n" +
+                "\tON \n" +
+                "\t\touyunc_im_user.id = ouyunc_im_group_user.user_id\n" +
+                "WHERE\n" +
+                "\touyunc_im_user.deleted = 0 AND\n" +
+                "\touyunc_im_group_user.group_id = ?  and (ouyunc_im_group_user.is_leader  = 1 or ouyunc_im_group_user.is_manager = 1) ","查询群管理员或群主列表"),
 
         SELECT_USER(" SELECT\n" +
                 "\touyunc_im_user.id, \n" +

@@ -1,12 +1,10 @@
 package com.ouyunc.im.processor;
 
 import cn.hutool.json.JSONUtil;
-import com.ouyunc.im.constant.enums.MessageContentEnum;
 import com.ouyunc.im.constant.enums.MessageEnum;
 import com.ouyunc.im.context.IMProcessContext;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.helper.MessageHelper;
-import com.ouyunc.im.lock.DistributedLock;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.ExtraMessage;
 import com.ouyunc.im.packet.message.Message;
@@ -44,14 +42,14 @@ public class GroupRequestMessageProcessor extends AbstractMessageProcessor{
         String to = message.getTo();
         // 判断是否从其他服务路由过来的消息
         if (extraMessage.isDelivery()) {
-            if (!IMServerContext.SERVER_CONFIG.isClusterEnable() || IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(extraMessage.getTargetServerAddress())) {
+            if (IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(extraMessage.getTargetServerAddress()) || !IMServerContext.SERVER_CONFIG.isClusterEnable()) {
                 MessageHelper.sendMessage(packet, IdentityUtil.generalComboIdentity(to, extraMessage.getDeviceEnum().getName()));
                 return;
             }
             MessageHelper.deliveryMessage(packet, SocketAddressUtil.convert2SocketAddress(extraMessage.getTargetServerAddress()));
             return;
         }
-        // 判断是什么类型的消息，好友申请，好友拒绝，好友同意
+        // 判断是什么类型的消息，好友申请，好友拒绝，好友同意等
         IMProcessContext.MESSAGE_CONTENT_PROCESSOR.get(message.getContentType()).doProcess(ctx, packet);
     }
 }

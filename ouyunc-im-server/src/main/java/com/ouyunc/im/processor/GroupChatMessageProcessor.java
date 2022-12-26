@@ -3,10 +3,10 @@ package com.ouyunc.im.processor;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.json.JSONUtil;
 import com.ouyunc.im.base.LoginUserInfo;
+import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.constant.enums.MessageEnum;
 import com.ouyunc.im.context.IMServerContext;
-import com.ouyunc.im.domain.ImGroupUser;
-import com.ouyunc.im.domain.ImUser;
+import com.ouyunc.im.domain.bo.ImGroupUserBO;
 import com.ouyunc.im.helper.DbHelper;
 import com.ouyunc.im.helper.MessageHelper;
 import com.ouyunc.im.helper.UserHelper;
@@ -15,6 +15,7 @@ import com.ouyunc.im.packet.message.ExtraMessage;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.utils.IdentityUtil;
 import com.ouyunc.im.utils.SocketAddressUtil;
+import com.ouyunc.im.validate.MessageValidate;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,6 +31,30 @@ public class GroupChatMessageProcessor extends AbstractMessageProcessor {
     @Override
     public MessageEnum messageType() {
         return MessageEnum.IM_GROUP_CHAT;
+    }
+
+
+    /**
+     * @Author fangzhenxun
+     * @Description 群聊做权限的过滤
+     * @param ctx
+     * @param packet
+     * @return void
+     */
+    @Override
+    public void preProcess(ChannelHandlerContext ctx, Packet packet) {
+        EVENT_EXECUTORS.execute(() -> DbHelper.addMessage(packet));
+        Message message = (Message) packet.getMessage();
+        // 消息发送方
+        String from = message.getFrom();
+        // 消息接收方
+        String to = message.getTo();
+        // ===================================做权限校验=========================================
+        if (!MessageValidate.isAuth(from, packet.getDeviceType(), ctx) || MessageValidate.isBanned(from, IMConstant.GROUP_TYPE_2) || !MessageValidate.isGroup(from, to) || MessageValidate.isBackList(from, to, IMConstant.GROUP_TYPE_2)) {
+            return;
+        }
+        // 交给下个处理
+        ctx.fireChannelRead(packet);
     }
 
     /**
@@ -61,46 +86,33 @@ public class GroupChatMessageProcessor extends AbstractMessageProcessor {
             }
             // 根据群唯一标识to,获取当前群中所有群成员
             // 首先从缓存中获取群成员(包括自身)，如果没有在从数据库获取
-            List<ImGroupUser> groupMembers = DbHelper.getGroupMembers(to);
+            List<ImGroupUserBO> groupMembers = DbHelper.getGroupMembers(to);
             // 循环遍历
             if (CollectionUtil.isEmpty(groupMembers)) {
                 // 解散了
                 return;
             }
             // 遍历所有的群成员
-            for (ImGroupUser groupMember : groupMembers) {
+            for (ImGroupUserBO groupMember : groupMembers) {
                 // 目前使用id号来作为唯一标识
                 if (from.equals(groupMember.getUserId())) {
                     // 如果是自己找到自己的所有登录端去发送信息
-                    List<LoginUserInfo> fromLoginUserInfos = UserHelper.onlineAll(from);
+                    List<LoginUserInfo> fromLoginUserInfos = UserHelper.onlineAll(from, packet.getDeviceType());
                     // 排除自己，发给其他端
-                    fromLoginUserInfos.forEach(fromLoginUserInfo -> {
-                        // 排除自己发给其他端
-                        if (!IdentityUtil.generalComboIdentity(from, packet.getDeviceType()).equals(IdentityUtil.generalComboIdentity(fromLoginUserInfo.getIdentity(), fromLoginUserInfo.getDeviceEnum().getName()))) {
-                            // 走消息传递,设置登录设备类型
-                            if (IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(fromLoginUserInfo.getLoginServerAddress()) || !IMServerContext.SERVER_CONFIG.isClusterEnable()) {
-                                MessageHelper.sendMessage(packet, IdentityUtil.generalComboIdentity(from, fromLoginUserInfo.getDeviceEnum().getName()));
-                            } else {
-                                MessageHelper.deliveryMessage(packet, SocketAddressUtil.convert2SocketAddress(fromLoginUserInfo.getLoginServerAddress()));
-                            }
-                        }
-                    });
+                    // 转发给自己客户端的各个设备端
+                    MessageHelper.send2MultiDevices(packet, fromLoginUserInfos);
                 } else {
                     // 群里其它人员的其他端
-                    List<LoginUserInfo> toLoginUserInfos = UserHelper.onlineAll(groupMember.getUserId().toString());
-                    if (CollectionUtil.isEmpty(toLoginUserInfos)) {
-                        // 存入离线消息
-                        DbHelper.addOfflineMessage(to, packet);
-                        return;
-                    }
-                    // 转发给某个客户端的各个设备端
-                    for (LoginUserInfo loginUserInfo : toLoginUserInfos) {
-                        // 走消息传递,设置登录设备类型
-                        if (!IMServerContext.SERVER_CONFIG.isClusterEnable() || IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(loginUserInfo.getLoginServerAddress())) {
-                            MessageHelper.sendMessage(packet, IdentityUtil.generalComboIdentity(from, loginUserInfo.getDeviceEnum().getName()));
-                        } else {
-                            MessageHelper.deliveryMessage(packet, SocketAddressUtil.convert2SocketAddress(loginUserInfo.getLoginServerAddress()));
+                    // 判断，群成员是否屏蔽了该群，如果屏蔽则不能接受到该消息
+                    if (IMConstant.NOT_SHIELD.equals(groupMember.getIsShield())) {
+                        List<LoginUserInfo> othersMembersLoginUserInfos = UserHelper.onlineAll(groupMember.getUserId().toString());
+                        if (CollectionUtil.isEmpty(othersMembersLoginUserInfos)) {
+                            // 存入离线消息
+                            DbHelper.addOfflineMessage(groupMember.getUserId().toString(), packet);
+                            return;
                         }
+                        // 转发给某个客户端的各个设备端
+                        MessageHelper.send2MultiDevices(packet, othersMembersLoginUserInfos);
                     }
                 }
             }

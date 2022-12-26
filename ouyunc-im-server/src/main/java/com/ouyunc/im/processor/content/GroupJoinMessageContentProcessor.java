@@ -7,6 +7,7 @@ import com.ouyunc.im.constant.enums.MessageContentEnum;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.domain.ImGroupUser;
 import com.ouyunc.im.domain.ImUser;
+import com.ouyunc.im.domain.bo.ImGroupUserBO;
 import com.ouyunc.im.helper.DbHelper;
 import com.ouyunc.im.helper.MessageHelper;
 import com.ouyunc.im.helper.UserHelper;
@@ -37,47 +38,23 @@ public class GroupJoinMessageContentProcessor extends AbstractMessageContentProc
     public void doProcess(ChannelHandlerContext ctx, Packet packet) {
         log.info("GroupJoinMessageContentProcessor 正在处理加群请求 packet: {}...", packet);
         Message message = (Message) packet.getMessage();
-        ExtraMessage extraMessage = JSONUtil.toBean(message.getExtra(), ExtraMessage.class);
-        if (extraMessage == null) {
-            extraMessage = new ExtraMessage();
-        }
-        // 下面是对集群以及qos消息可靠进行处理
-        String from = message.getFrom();
         // 根据to从分布式缓存中取出targetServerAddress目标地址
         String to = message.getTo();
-        // 判断是否从其他服务路由过来的额消息
-        if (extraMessage.isDelivery()) {
-            if (IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(extraMessage.getTargetServerAddress()) || !IMServerContext.SERVER_CONFIG.isClusterEnable()) {
-                MessageHelper.sendMessage(packet, IdentityUtil.generalComboIdentity(to, extraMessage.getDeviceEnum().getName()));
-                return;
-            }
-            MessageHelper.deliveryMessage(packet, SocketAddressUtil.convert2SocketAddress(extraMessage.getTargetServerAddress()));
+        // 查找群中的管理员以及群主，向其投递加群的请求
+        List<ImGroupUserBO> groupManagerMembers = DbHelper.getGroupMembers(to, true);
+        if (CollectionUtil.isEmpty(groupManagerMembers)) {
             return;
         }
-        // 查找群中的管理员以及群主，向其投递加群的请求
-        List<ImGroupUser> groupMembers = DbHelper.getGroupMembers(to, true);
-        if (CollectionUtil.isNotEmpty(groupMembers)) {
-            for (ImGroupUser groupMember : groupMembers) {
-                // 判断该管理员是否在线，如果不在线放入离线消息
-                List<LoginUserInfo> toLoginUserInfos = UserHelper.onlineAll(groupMember.getUserId().toString());
-                if (CollectionUtil.isEmpty(toLoginUserInfos)) {
-                    // 存入离线消息
-                    DbHelper.addOfflineMessage(to, packet);
-                    return;
-                }
-                // 转发给客户端的各个设备端
-                for (LoginUserInfo loginUserInfo : toLoginUserInfos) {
-                    // 走消息传递,设置登录设备类型
-                    if (IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(loginUserInfo.getLoginServerAddress()) || !IMServerContext.SERVER_CONFIG.isClusterEnable()) {
-                        MessageHelper.sendMessage(packet, IdentityUtil.generalComboIdentity(from, loginUserInfo.getDeviceEnum().getName()));
-                    } else {
-                        MessageHelper.deliveryMessage(packet, SocketAddressUtil.convert2SocketAddress(loginUserInfo.getLoginServerAddress()));
-                    }
-                }
+        for (ImGroupUserBO groupManagerMember : groupManagerMembers) {
+            // 判断该管理员是否在线，如果不在线放入离线消息
+            List<LoginUserInfo> managersLoginUserInfos = UserHelper.onlineAll(groupManagerMember.getUserId().toString());
+            if (CollectionUtil.isEmpty(managersLoginUserInfos)) {
+                // 存入离线消息
+                DbHelper.addOfflineMessage(groupManagerMember.getUserId().toString(), packet);
+                return;
             }
+            // 转发给某个客户端的各个设备端
+            MessageHelper.send2MultiDevices(packet, managersLoginUserInfos);
         }
-
-
-
     }
 }

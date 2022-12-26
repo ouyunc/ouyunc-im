@@ -118,12 +118,12 @@ public class DbHelper {
      * @param isGroupManager  是群管理员（包括群主）
      * @return
      */
-    public static List<ImGroupUser> getGroupMembers(String to, boolean isGroupManager) {
-        List<ImGroupUser> imUserList = new ArrayList<>();
-        Map<String, Object> usersMap = cacheOperator.getHashAll(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + to + CacheConstant.MEMBERS);
-        if (MapUtil.isNotEmpty(usersMap)) {
-            for (Map.Entry<String, Object> entry : usersMap.entrySet()) {
-                ImGroupUser imGroupUser = (ImGroupUser) entry.getValue();
+    public static List<ImGroupUserBO> getGroupMembers(String to, boolean isGroupManager) {
+        List<ImGroupUserBO> imUserList = new ArrayList<>();
+        Map<String, Object> groupUserBOMap = cacheOperator.getHashAll(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + to + CacheConstant.MEMBERS);
+        if (MapUtil.isNotEmpty(groupUserBOMap)) {
+            for (Map.Entry<String, Object> entry : groupUserBOMap.entrySet()) {
+                ImGroupUserBO imGroupUser = (ImGroupUserBO) entry.getValue();
                 if (isGroupManager) {
                     if ((IMConstant.GROUP_MANAGER.equals(imGroupUser.getIsManager()) || IMConstant.GROUP_MANAGER.equals(imGroupUser.getIsLeader()))) {
                         imUserList.add(imGroupUser);
@@ -134,10 +134,10 @@ public class DbHelper {
             }
             return imUserList;
         }
-        // 从数据库中查询
-        imUserList = dbOperator.batchSelect(isGroupManager?DbSqlConstant.MYSQL.SELECT_GROUP_LEADER_USER.sql():DbSqlConstant.MYSQL.SELECT_GROUP_USER.sql(), ImGroupUser.class, to);
+        // 从数据库中查询,群成员
+        imUserList = dbOperator.batchSelect(isGroupManager ? DbSqlConstant.MYSQL.SELECT_GROUP_LEADER_USERS.sql():DbSqlConstant.MYSQL.SELECT_GROUP_USERS.sql(), ImGroupUserBO.class, to);
         if (CollectionUtil.isNotEmpty(imUserList)) {
-            Map<Object, ImGroupUser> groupUserMap = new HashMap<>();
+            Map<Object, ImGroupUserBO> groupUserMap = new HashMap<>();
             imUserList.forEach(groupUser ->{
                 groupUserMap.put(groupUser.getUserId(), groupUser);
             });
@@ -148,10 +148,10 @@ public class DbHelper {
 
     /**
      * 根据群组id，返回群组中，当前所有成员
-     * @param to
+     * @param to 群组唯一标识
      * @return
      */
-    public static List<ImGroupUser> getGroupMembers(String to) {
+    public static List<ImGroupUserBO> getGroupMembers(String to) {
         return getGroupMembers(to, false);
     }
 
@@ -249,11 +249,32 @@ public class DbHelper {
 
     /**
      * 加群
-     * @param from
-     * @param to
+     * @param from 客户端唯一标识
+     * @param to  群唯一标识
      */
     public static void joinGroup(String from, String to) {
 
+
+    }
+
+    /**
+     * @Author fangzhenxun
+     * @Description 将to 移除群（剔除群）
+     * @param to
+     * @param groupId
+     * @return void
+     */
+    public static void removeOutGroup(String to, String groupId) {
+
+
+    }
+
+
+    /**
+     * 解散群
+     * @param groupId
+     */
+    public static void disbandGroup(String groupId) {
 
     }
 
@@ -313,6 +334,26 @@ public class DbHelper {
         return imGroupUserBO;
     }
 
+
+    /**
+     * @Author fangzhenxun
+     * @Description 获取该群的群主信息
+     * @param groupId
+     * @return com.ouyunc.im.domain.bo.ImGroupUserBO
+     */
+    public static ImGroupUserBO getGroupLeader(String groupId) {
+        Map<String, Object> groupUserBOMap = cacheOperator.getHashAll(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + groupId + CacheConstant.MEMBERS);
+        if (MapUtil.isNotEmpty(groupUserBOMap)) {
+            for (Map.Entry<String, Object> entry : groupUserBOMap.entrySet()) {
+                ImGroupUserBO imGroupUser = (ImGroupUserBO) entry.getValue();
+                if (IMConstant.GROUP_LEADER.equals(imGroupUser.getIsLeader())) {
+                    return imGroupUser;
+                }
+            }
+        }
+        return dbOperator.selectOne(DbSqlConstant.MYSQL.SELECT_GROUP_LEADER_USER.sql(), ImGroupUserBO.class, groupId);
+    }
+
     /**
      * 获取from 在to 中的黑名单信息
      * @param from
@@ -352,4 +393,6 @@ public class DbHelper {
         }
         return null;
     }
+
+
 }
