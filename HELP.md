@@ -5,8 +5,6 @@
 (1) opsvalue群信息:     ouyunc:im:user:group:${群唯一标识}                   ImGroup
 
 (1) hash联系人（好友）:    ouyunc:im:user:contact:friend:${用户唯一标识}              ${联系人唯一标识}    ImFriendBO           
-
-(1) hash群联系人（群）:    ouyunc:im:user:contact:group:${用户唯一标识}              ${群唯一标识}    ImGroup
 (1) hash群（成员）:       ouyunc:im:user:group:${群组唯一标识}:members        ${群成员唯一标识}    ImGroupUserBO
 
 (1) hash 群组黑名单:    ouyunc:im:black-list:group:${群组唯一标识}              ${用户唯一标识}    ImBlacklistBO

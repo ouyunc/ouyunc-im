@@ -220,4 +220,26 @@ public class ImGroupUserBO {
     public void setCreateTime(String createTime) {
         this.createTime = createTime;
     }
+
+    public ImGroupUserBO() {
+    }
+
+    public ImGroupUserBO(Long groupId, Long userId, String username, String userNickName, String email, String phoneNum, String idCardNum, String avatar, String motto, Integer age, Integer sex, Integer isLeader, Integer isManager, Integer isShield, Integer mushin, String createTime) {
+        this.groupId = groupId;
+        this.userId = userId;
+        this.username = username;
+        this.userNickName = userNickName;
+        this.email = email;
+        this.phoneNum = phoneNum;
+        this.idCardNum = idCardNum;
+        this.avatar = avatar;
+        this.motto = motto;
+        this.age = age;
+        this.sex = sex;
+        this.isLeader = isLeader;
+        this.isManager = isManager;
+        this.isShield = isShield;
+        this.mushin = mushin;
+        this.createTime = createTime;
+    }
 }

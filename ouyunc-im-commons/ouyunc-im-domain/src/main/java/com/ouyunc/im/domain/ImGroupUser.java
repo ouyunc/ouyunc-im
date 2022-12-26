@@ -132,4 +132,20 @@ public class ImGroupUser implements Serializable {
     public void setCreateTime(String createTime) {
         this.createTime = createTime;
     }
+
+
+    public ImGroupUser() {
+    }
+
+    public ImGroupUser(Long id, Long groupId, Long userId, String userNickName, Integer isLeader, Integer isManager, Integer isShield, Integer mushin, String createTime) {
+        this.id = id;
+        this.groupId = groupId;
+        this.userId = userId;
+        this.userNickName = userNickName;
+        this.isLeader = isLeader;
+        this.isManager = isManager;
+        this.isShield = isShield;
+        this.mushin = mushin;
+        this.createTime = createTime;
+    }
 }

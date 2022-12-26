@@ -46,13 +46,14 @@ public class GroupExitMessageContentProcessor extends AbstractMessageContentProc
         log.info("GroupExitMessageContentProcessor 正在处理退群请求 packet: {}...", packet);
         Message message = (Message) packet.getMessage();
         GroupRequestContent groupRequestContent = JSONUtil.toBean(message.getContent(), GroupRequestContent.class);
-        // 下面是对集群以及qos消息可靠进行处理
         String from = message.getFrom();
         ImGroupUserBO groupMember = DbHelper.getGroupMember(from, groupRequestContent.getGroupId());
         // 群主只能解散和转让群主
         if (IMConstant.GROUP_LEADER.equals(groupMember.getIsLeader())) {
             return;
         }
+        // 退出群
+        DbHelper.exitGroup(from, groupRequestContent.getGroupId());
         // 查找群中的群主
         ImGroupUserBO groupLeader = DbHelper.getGroupLeader(groupRequestContent.getGroupId());
         // 判断该管理员是否在线，如果不在线放入离线消息

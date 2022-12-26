@@ -234,9 +234,14 @@ public class DbSqlConstant {
                 "\tdeleted = 0 AND\n" +
                 "\tid = ? ","查询群组信息"),
 
+        DELETE_GROUP("delete  from  ouyunc_im_group  where id = ? ","删除群"),
+        DELETE_GROUP_USER("delete  from  ouyunc_im_group_user  where group_id = ? and user_id= ?","删除群某个成员关系"),
+        DELETE_GROUP_ALL_USER("delete  from  ouyunc_im_group_user  where group_id = ?","删除群所有成员关系"),
+
 
         INSERT_FRIEND("INSERT INTO ouyunc_im_friend (id, user_id, friend_user_id, friend_nick_name, is_shield, create_time, update_time) VALUES (?, ?, ?, ?, ?, ?, ?)","添加好友关系"),
 
+        INSERT_GROUP_USER("INSERT INTO ouyunc_im_group_user (id, group_id, user_id, user_nick_name, is_leader, is_manager, is_shield, mushin, create_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)","添加群成员关系"),
 
 
 

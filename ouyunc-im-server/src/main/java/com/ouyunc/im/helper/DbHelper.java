@@ -253,7 +253,24 @@ public class DbHelper {
      * @param to  群唯一标识
      */
     public static void joinGroup(String from, String to) {
-
+        ImGroupUserBO imGroupUserBO = (ImGroupUserBO) cacheOperator.getHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + to + CacheConstant.MEMBERS, from);
+        // 已经存在群成员中
+        if (imGroupUserBO != null) {
+            return;
+        }
+        // 从缓存获取用户信息
+        ImUser fromUser = (ImUser) cacheOperator.get(CacheConstant.OUYUNC + CacheConstant.IM_USER + from);
+        if (fromUser == null) {
+            fromUser = dbOperator.selectOne(DbSqlConstant.MYSQL.SELECT_USER.sql(), ImUser.class, from);
+        }
+        if (fromUser != null) {
+            String nowDateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            // 存入数据库    public ImGroupUser(Long id, Long groupId, Long userId, String userNickName, Integer isLeader, Integer isManager, Integer isShield, Integer mushin, String createTime) {
+            dbOperator.insert(DbSqlConstant.MYSQL.INSERT_GROUP_USER.sql(), SnowflakeUtil.nextId(), to, fromUser.getNickName(), IMConstant.NOT_GROUP_LEADER, IMConstant.NOT_GROUP_MANAGER, IMConstant.NOT_SHIELD, IMConstant.NOT_MUSHIN, nowDateTime);
+            // 放入缓存
+            imGroupUserBO = new ImGroupUserBO(Long.valueOf(to), fromUser.getId(), fromUser.getUsername(), fromUser.getNickName(),fromUser.getEmail(),fromUser.getPhoneNum(),fromUser.getIdCardNum(),fromUser.getAvatar(),fromUser.getMotto(),fromUser.getAge(),fromUser.getSex(), IMConstant.NOT_GROUP_LEADER, IMConstant.NOT_GROUP_MANAGER, IMConstant.NOT_SHIELD, IMConstant.NOT_MUSHIN, nowDateTime);
+            cacheOperator.putHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + to + CacheConstant.MEMBERS, from, imGroupUserBO);
+        }
 
     }
 
@@ -265,8 +282,8 @@ public class DbHelper {
      * @return void
      */
     public static void removeOutGroup(String to, String groupId) {
-
-
+        dbOperator.delete(DbSqlConstant.MYSQL.DELETE_GROUP_USER.sql(), groupId, to);
+        cacheOperator.deleteHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + groupId + CacheConstant.MEMBERS, to);
     }
 
 
@@ -275,7 +292,22 @@ public class DbHelper {
      * @param groupId
      */
     public static void disbandGroup(String groupId) {
+        dbOperator.delete(DbSqlConstant.MYSQL.DELETE_GROUP.sql(), groupId);
+        dbOperator.delete(DbSqlConstant.MYSQL.DELETE_GROUP_ALL_USER.sql(), groupId);
+        cacheOperator.deleteHashAll(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + groupId + CacheConstant.MEMBERS);
+    }
 
+
+    /**
+     * @Author fangzhenxun
+     * @Description 退出群
+     * @param from
+     * @param groupId
+     * @return void
+     */
+    public static void exitGroup(String from, String groupId) {
+        dbOperator.delete(DbSqlConstant.MYSQL.DELETE_GROUP_USER.sql(), groupId, from);
+        cacheOperator.deleteHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + groupId + CacheConstant.MEMBERS, from);
     }
 
     /**
