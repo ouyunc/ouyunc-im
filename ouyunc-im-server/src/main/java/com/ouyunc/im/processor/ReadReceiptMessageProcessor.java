@@ -48,7 +48,6 @@ public class ReadReceiptMessageProcessor extends AbstractMessageProcessor {
         fireProcess(ctx, packet, (ctx0, packet0) -> {
             // 获取需要回执的消息id
             Message message = (Message) packet.getMessage();
-
             // 未开启db
             ExtraMessage extraMessage = JSONUtil.toBean(message.getExtra(), ExtraMessage.class);
             if (extraMessage == null) {
@@ -58,7 +57,7 @@ public class ReadReceiptMessageProcessor extends AbstractMessageProcessor {
             String to = message.getTo();
             // 是传递过来的,判断该消息最终服务地址是否是本机
             if (extraMessage.isDelivery()) {
-                if (!IMServerContext.SERVER_CONFIG.isClusterEnable() || IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(extraMessage.getTargetServerAddress())) {
+                if (IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(extraMessage.getTargetServerAddress()) || !IMServerContext.SERVER_CONFIG.isClusterEnable()) {
                     MessageHelper.sendMessage(packet, IdentityUtil.generalComboIdentity(to, extraMessage.getDeviceEnum().getName()));
                     return;
                 }
@@ -76,18 +75,18 @@ public class ReadReceiptMessageProcessor extends AbstractMessageProcessor {
                 return;
             }
             // 异步处理
-            ExtraMessage finalExtraMessage = extraMessage;
-            EVENT_EXECUTORS.submit(() -> DbHelper.batchUpdateMessageReadReceiptStatus(message.getFrom(), to, packetIdList)).addListener(future -> {
+            EVENT_EXECUTORS.submit(() -> DbHelper.messageReadReceipt(message.getFrom(), to, packetIdList)).addListener(future -> {
                 if (future.isDone()) {
                     if (future.isSuccess()) {
                         List<ImSendMessage> sendMessageList = (List<ImSendMessage>) future.getNow();
-                        // 无论私聊还是群聊，根据所有消息的to进行分组，传递分批传递消息
+                        // 无论私聊还是群聊，根据所有消息的发送者进行分组，传递分批传递消息
                         sendMessageList.stream().collect(Collectors.groupingBy(ImSendMessage::getFrom)).forEach((from, sendMessages) -> {
                             // 判断from是否在线,如果不在线，则将该批次回执消息存到对应客户端的离线信箱中，稍后发布,注意这里涉及接受者多设备端，不考虑发送者多设备端（影响不大）
                             Set<Long> readPacketId = sendMessages.stream().map(ImSendMessage::getId).collect(Collectors.toSet());
                             // 重新封装packet消息,进行发送
                             message.setTo(from);
                             readReceiptContent.setPacketIdList(readPacketId);
+                            message.setContent(JSONUtil.toJsonStr(readReceiptContent));
                             // 获取该客户端在线的所有客户端，进行推送消息已读
                             List<LoginUserInfo> loginUserInfos = UserHelper.onlineAll(from);
                             if (CollectionUtil.isEmpty(loginUserInfos)) {
@@ -95,16 +94,7 @@ public class ReadReceiptMessageProcessor extends AbstractMessageProcessor {
                                 DbHelper.write2OfflineTimeline(packet, from);
                             } else {
                                 // 转发给某个客户端的各个设备端
-                                for (LoginUserInfo loginUserInfo : loginUserInfos) {
-                                    // 走消息传递,设置登录设备类型
-                                    finalExtraMessage.setDeviceEnum(loginUserInfo.getDeviceEnum());
-                                    message.setExtra(JSONUtil.toJsonStr(finalExtraMessage));
-                                    if (IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(loginUserInfo.getLoginServerAddress()) || !IMServerContext.SERVER_CONFIG.isClusterEnable()) {
-                                        MessageHelper.sendMessage(packet, IdentityUtil.generalComboIdentity(from, loginUserInfo.getDeviceEnum().getName()));
-                                    } else {
-                                        MessageHelper.deliveryMessage(packet, SocketAddressUtil.convert2SocketAddress(loginUserInfo.getLoginServerAddress()));
-                                    }
-                                }
+                                MessageHelper.send2MultiDevices(packet, loginUserInfos);
                             }
 
                         });

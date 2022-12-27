@@ -11,7 +11,7 @@ public class DbSqlConstant {
     public enum MYSQL{
 
 
-        SELECT_READ_RECEIPT("SELECT read_list AS readList, \n" +
+        SELECT_MESSAGE_READ_RECEIPT("SELECT read_list as readList, \n" +
                 "\tid, \n" +
                 "\tprotocol, \n" +
                 "\tprotocol_version as protocolVersion, \n" +
@@ -25,13 +25,12 @@ public class DbSqlConstant {
                 "\ttype, \n" +
                 "\tcontent_type as contentType, \n" +
                 "\tcontent, \n" +
-                "\tread_list as readList, \n" +
                 "\tsend_time as sendTime, \n" +
                 "\tcreate_time as createTime, \n" +
-                "\tupdate_time as updateTime, \n" +
-                "\tdeleted  FROM OUYUNC_IM_SEND_MESSAGE WHERE DELETED = 0 AND ID = ? LIMIT 1","查询已读列表"),
+                "\tupdate_time as updateTime \n" +
+                "\t FROM OUYUNC_IM_SEND_MESSAGE WHERE DELETED = 0 AND ID = ? LIMIT 1","查询已读列表"),
 
-        UPDATE_READ_RECEIPT("UPDATE OUYUNC_IM_SEND_MESSAGE SET READ_LIST = ? WHERE DELETED = 0 AND ID = ? ","读已回执，更新已读列表"),
+        UPDATE_MESSAGE_READ_RECEIPT("UPDATE OUYUNC_IM_SEND_MESSAGE SET READ_LIST = ? WHERE DELETED = 0 AND ID = ? ","读已回执，更新已读列表"),
 
 
 

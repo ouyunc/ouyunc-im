@@ -121,9 +121,9 @@ public class IMServerConfig extends IMConfig{
 
 
     /**
-     * 是否开启消息数据库存储，默认true
+     * 是否开启数据库存储，默认true
      */
-    private boolean messageDbEnable;
+    private boolean dbEnable;
 
     /**
      * 是否开启好友在线状态的实施推送，默认false，只推送反向好友，不推送群（群成员状态可以按需拉取或定时拉取）
@@ -221,8 +221,8 @@ public class IMServerConfig extends IMConfig{
         return heartBeatEnable;
     }
 
-    public boolean isMessageDbEnable() {
-        return messageDbEnable;
+    public boolean isDbEnable() {
+        return dbEnable;
     }
 
     public int getHeartBeatTimeout() {
@@ -420,9 +420,9 @@ public class IMServerConfig extends IMConfig{
 
 
         /**
-         * 是否开启消息数据库存储，默认true
+         * 是否开启数据库存储，默认true
          */
-        private boolean messageDbEnable;
+        private boolean dbEnable;
 
         /**
          * 是否开启好友在线状态的实施推送，默认false，只推送反向好友，不推送群（群成员状态可以按需拉取或定时拉取）
@@ -540,8 +540,8 @@ public class IMServerConfig extends IMConfig{
             return this;
         }
 
-        public Builder messageDbEnable(boolean messageDbEnable) {
-            this.messageDbEnable = messageDbEnable;
+        public Builder dbEnable(boolean dbEnable) {
+            this.dbEnable = dbEnable;
             return this;
         }
 
@@ -738,7 +738,7 @@ public class IMServerConfig extends IMConfig{
             imServerConfig.clusterInnerClientHeartbeatWaitRetry = this.clusterInnerClientHeartbeatWaitRetry;
 
             imServerConfig.authEnable = this.authEnable;
-            imServerConfig.messageDbEnable = this.messageDbEnable;
+            imServerConfig.dbEnable = this.dbEnable;
             imServerConfig.friendOnlinePushEnable = this.friendOnlinePushEnable;
             imServerConfig.acknowledgeModeEnable = this.acknowledgeModeEnable;
             imServerConfig.readReceiptEnable = this.readReceiptEnable;
@@ -777,7 +777,7 @@ public class IMServerConfig extends IMConfig{
                 "\n, clusterInnerClientChannelPoolMaxPendingAcquires=" + clusterInnerClientChannelPoolMaxPendingAcquires +
                 "\n, clusterInnerClientHeartbeatWaitRetry=" + clusterInnerClientHeartbeatWaitRetry +
                 "\n, authEnable=" + authEnable +
-                "\n, messageDbEnable=" + messageDbEnable +
+                "\n, messageDbEnable=" + dbEnable +
                 "\n, friendOnlinePushEnable=" + friendOnlinePushEnable +
                 "\n, acknowledgeModeEnable=" + acknowledgeModeEnable +
                 "\n, readReceiptEnable=" + readReceiptEnable +

@@ -161,9 +161,9 @@ public interface IMServerProperties extends Config {
     /**
      * 是否开启消息数据库存储，默认true
      */
-    @Key("im.server.message.db.enable")
+    @Key("im.server.db.enable")
     @DefaultValue("true")
-    boolean messageDbEnable();
+    boolean dbEnable();
 
     /**
      * 是否开启好友在线状态的实施推送，默认false，只推送反向好友，不推送群（群成员状态可以按需拉取或定时拉取）

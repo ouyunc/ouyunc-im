@@ -73,7 +73,7 @@ public class StandardIMServer extends AbstractIMServer{
                 .clusterInnerClientChannelPoolAcquireTimeoutMillis(propertiesHelper.clusterInnerClientChannelPoolAcquireTimeoutMillis())
                 .clusterInnerClientHeartbeatWaitRetry(propertiesHelper.clusterInnerClientHeartbeatWaitRetry())
                 .authEnable(propertiesHelper.authEnable())
-                .messageDbEnable(propertiesHelper.messageDbEnable())
+                .dbEnable(propertiesHelper.dbEnable())
                 .friendOnlinePushEnable(propertiesHelper.friendOnlinePushEnable())
                 .sslEnable(propertiesHelper.sslEnable())
                 .sslCertificate(propertiesHelper.sslCertificate())

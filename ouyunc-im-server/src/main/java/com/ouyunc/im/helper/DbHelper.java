@@ -9,7 +9,6 @@ import com.im.cache.l1.distributed.redis.RedisDistributedL1Cache;
 import com.ouyunc.im.constant.CacheConstant;
 import com.ouyunc.im.constant.DbSqlConstant;
 import com.ouyunc.im.constant.IMConstant;
-import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.db.operator.DbOperator;
 import com.ouyunc.im.db.operator.MysqlDbOperator;
 import com.ouyunc.im.domain.ImGroup;
@@ -45,33 +44,20 @@ public class DbHelper {
 
 
     /**
-     * 批量更新历史消息已读回执状态，开线程处理
+     * 处理消息已读回执，开线程处理
      * @param from 发送者唯一标识
      * @param to 代表用户或群的唯一标识
      * @param packetIdList
      * @return
      */
     @DistributedLock
-    public static Set<ImSendMessage> batchUpdateMessageReadReceiptStatus(String from, String to, Set<Long> packetIdList) {
+    public static Set<ImSendMessage> messageReadReceipt(String from, String to, Set<Long> packetIdList) {
         // 记录已经修改的历史消息
         Set<ImSendMessage> sendMessageList = new HashSet<>();
-        String toHistoryTimelineIdentity = CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.SEND + to;
         // 根据消息id查询服务器上的消息，然后进行更新
         for (Long packetId : packetIdList) {
-            // 先异步更新db
-            if (IMServerContext.SERVER_CONFIG.isMessageDbEnable()) {
-                // 更新历史信息表（更新发件箱信息数据）
-                ImSendMessage imSendMessage = dbOperator.selectOne(DbSqlConstant.MYSQL.SELECT_READ_RECEIPT.sql(), ImSendMessage.class, packetId);
-                // set集合json
-                Set<String> readList = JSONUtil.toBean(imSendMessage.getReadList(), Set.class);
-                readList.add(from);
-                // 更改信息，并存入数据库
-                dbOperator.update(DbSqlConstant.MYSQL.UPDATE_READ_RECEIPT.sql(), JSONUtil.toJsonStr(readList) ,packetId);
-                // 以数据库为准
-                sendMessageList.add(imSendMessage);
-            }
             // 更新缓存，从信箱中取出相关消息
-            Set<Object> objects = cacheOperator.rangeByScore(toHistoryTimelineIdentity, packetId, packetId, 0, 1);
+            Set<Object> objects = cacheOperator.rangeByScore(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.SEND + to, packetId, packetId, 0, 1);
             if (CollectionUtil.isNotEmpty(objects)) {
                 ImSendMessage sendMessage = (ImSendMessage) objects.iterator().next();
                 String readListStr = sendMessage.getReadList();
@@ -81,13 +67,9 @@ public class DbHelper {
                 BeanUtil.copyProperties(sendMessage, newSendMessage);
                 newSendMessage.setReadList(JSONUtil.toJsonStr(readList));
                 // 先添加，后删除
-                cacheOperator.addZset(toHistoryTimelineIdentity, newSendMessage, packetId);
-                cacheOperator.removeZset(toHistoryTimelineIdentity, sendMessage);
-
-                // 如果未开启数据库
-                if (!IMServerContext.SERVER_CONFIG.isMessageDbEnable()) {
-                    sendMessageList.add(sendMessage);
-                }
+                cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.SEND + to, newSendMessage, packetId);
+                cacheOperator.removeZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.SEND + to, sendMessage);
+                sendMessageList.add(sendMessage);
             }
         }
         return sendMessageList;
@@ -108,49 +90,6 @@ public class DbHelper {
     }
 
     /**
-     * 根据群组id，返回群组中，当前所有成员
-     * @param to
-     * @param isGroupManager  是群管理员（包括群主）
-     * @return
-     */
-    public static List<ImGroupUserBO> getGroupMembers(String to, boolean isGroupManager) {
-        List<ImGroupUserBO> imUserList = new ArrayList<>();
-        Map<String, Object> groupUserBOMap = cacheOperator.getHashAll(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + to + CacheConstant.MEMBERS);
-        if (MapUtil.isNotEmpty(groupUserBOMap)) {
-            for (Map.Entry<String, Object> entry : groupUserBOMap.entrySet()) {
-                ImGroupUserBO imGroupUser = (ImGroupUserBO) entry.getValue();
-                if (isGroupManager) {
-                    if ((IMConstant.GROUP_MANAGER.equals(imGroupUser.getIsManager()) || IMConstant.GROUP_MANAGER.equals(imGroupUser.getIsLeader()))) {
-                        imUserList.add(imGroupUser);
-                    }
-                }else {
-                    imUserList.add(imGroupUser);
-                }
-            }
-            return imUserList;
-        }
-        // 从数据库中查询,群成员
-        imUserList = dbOperator.batchSelect(isGroupManager ? DbSqlConstant.MYSQL.SELECT_GROUP_LEADER_USERS.sql():DbSqlConstant.MYSQL.SELECT_GROUP_USERS.sql(), ImGroupUserBO.class, to);
-        if (CollectionUtil.isNotEmpty(imUserList)) {
-            Map<Object, ImGroupUserBO> groupUserMap = new HashMap<>();
-            imUserList.forEach(groupUser ->{
-                groupUserMap.put(groupUser.getUserId(), groupUser);
-            });
-            cacheOperator.putHashAll(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + to + CacheConstant.MEMBERS, groupUserMap);
-        }
-        return imUserList;
-    }
-
-    /**
-     * 根据群组id，返回群组中，当前所有成员
-     * @param to 群组唯一标识
-     * @return
-     */
-    public static List<ImGroupUserBO> getGroupMembers(String to) {
-        return getGroupMembers(to, false);
-    }
-
-    /**
      * 获取离线消息
      * @param message
      * @return
@@ -164,7 +103,7 @@ public class DbHelper {
         // 如果传过来的消息id不为空，则可能是第N次拉取，从离线消息中删除消息
         if (CollectionUtil.isNotEmpty(packetIdList)) {
             for (Long packetId : packetIdList) {
-                Set<Object> objects = cacheOperator.rangeByScore(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + CacheConstant.COLON + message.getFrom(), packetId, packetId);
+                Set<Object> objects = cacheOperator.rangeByScore(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + message.getFrom(), packetId, packetId);
                 if (CollectionUtil.isNotEmpty(objects)) {
                     Packet packet = (Packet) objects.iterator().next();
                     cacheOperator.removeZset(CacheConstant.OFFLINE + message.getFrom(), packet);
@@ -172,14 +111,13 @@ public class DbHelper {
             }
         }
 
-
         // 全量顺序拉取
         if (StrUtil.isBlank(to)) {
-            Set<Object> packetSet = cacheOperator.rangeByScore(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + CacheConstant.COLON + message.getFrom(), offlineContent.getPullPacketId(), offlineContent.getPullPacketId(), 0, 1);
+            Set<Object> packetSet = cacheOperator.rangeByScore(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + message.getFrom(), offlineContent.getPullPacketId(), offlineContent.getPullPacketId(), 0, 1);
             if (CollectionUtil.isNotEmpty(packetSet)) {
                 Packet packet = (Packet) packetSet.iterator().next();
                 Long rank = cacheOperator.reverseRank(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + CacheConstant.COLON + message.getFrom(), packet);
-                Set<Object> packetSetResult = cacheOperator.reverseRangeZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + CacheConstant.COLON + message.getFrom(), rank, rank + offlineContent.getPullSize());
+                Set<Object> packetSetResult = cacheOperator.reverseRangeZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + message.getFrom(), rank, rank + offlineContent.getPullSize());
                 Iterator<Object> iterator = packetSetResult.iterator();
                 while (iterator.hasNext()) {
                     Packet packet0 = (Packet) iterator.next();
@@ -189,7 +127,7 @@ public class DbHelper {
             return packetList;
         }
         // 按需拉取,先查出所有，然后过滤前几条给客户端
-        Set<Object> packetAllSet = cacheOperator.reverseRangeZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + CacheConstant.COLON + message.getFrom(), 0, -1);
+        Set<Object> packetAllSet = cacheOperator.reverseRangeZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + message.getFrom(), 0, -1);
         if (CollectionUtil.isNotEmpty(packetAllSet)) {
             Iterator<Object> iterator = packetAllSet.iterator();
             while (iterator.hasNext()) {
@@ -361,6 +299,49 @@ public class DbHelper {
         return imGroupUserBO;
     }
 
+
+    /**
+     * 根据群组id，返回群组中，当前所有成员
+     * @param to
+     * @param isGroupManager  是群管理员（包括群主）
+     * @return
+     */
+    public static List<ImGroupUserBO> getGroupMembers(String to, boolean isGroupManager) {
+        List<ImGroupUserBO> imUserList = new ArrayList<>();
+        Map<String, Object> groupUserBOMap = cacheOperator.getHashAll(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + to + CacheConstant.MEMBERS);
+        if (MapUtil.isNotEmpty(groupUserBOMap)) {
+            for (Map.Entry<String, Object> entry : groupUserBOMap.entrySet()) {
+                ImGroupUserBO imGroupUser = (ImGroupUserBO) entry.getValue();
+                if (isGroupManager) {
+                    if ((IMConstant.GROUP_MANAGER.equals(imGroupUser.getIsManager()) || IMConstant.GROUP_MANAGER.equals(imGroupUser.getIsLeader()))) {
+                        imUserList.add(imGroupUser);
+                    }
+                }else {
+                    imUserList.add(imGroupUser);
+                }
+            }
+            return imUserList;
+        }
+        // 从数据库中查询,群成员
+        imUserList = dbOperator.batchSelect(isGroupManager ? DbSqlConstant.MYSQL.SELECT_GROUP_LEADER_USERS.sql():DbSqlConstant.MYSQL.SELECT_GROUP_USERS.sql(), ImGroupUserBO.class, to);
+        if (CollectionUtil.isNotEmpty(imUserList)) {
+            Map<Object, ImGroupUserBO> groupUserMap = new HashMap<>();
+            imUserList.forEach(groupUser ->{
+                groupUserMap.put(groupUser.getUserId(), groupUser);
+            });
+            cacheOperator.putHashAll(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + to + CacheConstant.MEMBERS, groupUserMap);
+        }
+        return imUserList;
+    }
+
+    /**
+     * 根据群组id，返回群组中，当前所有成员
+     * @param to 群组唯一标识
+     * @return
+     */
+    public static List<ImGroupUserBO> getGroupMembers(String to) {
+        return getGroupMembers(to, false);
+    }
 
     /**
      * @Author fangzhenxun
