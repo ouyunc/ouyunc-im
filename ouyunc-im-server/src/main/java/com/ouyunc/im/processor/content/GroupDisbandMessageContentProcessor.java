@@ -61,7 +61,7 @@ public class GroupDisbandMessageContentProcessor extends AbstractMessageContentP
                 List<LoginUserInfo> managersLoginUserInfos = UserHelper.onlineAll(member.getUserId().toString());
                 if (CollectionUtil.isEmpty(managersLoginUserInfos)) {
                     // 存入离线消息
-                    DbHelper.addOfflineMessage(member.getUserId().toString(), packet);
+                    DbHelper.write2OfflineTimeline(packet,member.getUserId().toString());
                     return;
                 }
                 // 转发给某个客户端的各个设备端

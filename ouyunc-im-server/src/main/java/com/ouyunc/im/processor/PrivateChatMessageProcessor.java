@@ -86,6 +86,9 @@ public class PrivateChatMessageProcessor extends AbstractMessageProcessor{
                 MessageHelper.deliveryMessage(packet, SocketAddressUtil.convert2SocketAddress(extraMessage.getTargetServerAddress()));
                 return;
             }
+            // 将消息写到发件箱和及接收方的收件箱
+            DbHelper.write2SendTimeline(packet, from);
+            DbHelper.write2ReceiveTimeline(packet, to);
             // 发送给自己的其他端
             List<LoginUserInfo> fromLoginUserInfos = UserHelper.onlineAll(from, packet.getDeviceType());
             // 排除自己，发给其他端
@@ -95,7 +98,7 @@ public class PrivateChatMessageProcessor extends AbstractMessageProcessor{
             List<LoginUserInfo> toLoginUserInfos = UserHelper.onlineAll(to);
             if (CollectionUtil.isEmpty(toLoginUserInfos)) {
                 // 存入离线消息，不以设备来区分
-                DbHelper.addOfflineMessage(to, packet);
+                DbHelper.write2OfflineTimeline(packet,to);
                 return;
             }
             // 转发给某个客户端的各个设备端

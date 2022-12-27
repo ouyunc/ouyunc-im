@@ -64,7 +64,7 @@ public class GroupRefuseMessageContentProcessor extends AbstractMessageContentPr
                 List<LoginUserInfo> managersLoginUserInfos = UserHelper.onlineAll(groupManagerMember.getUserId().toString());
                 if (CollectionUtil.isEmpty(managersLoginUserInfos)) {
                     // 存入离线消息
-                    DbHelper.addOfflineMessage(groupManagerMember.getUserId().toString(), packet);
+                    DbHelper.write2OfflineTimeline(packet, groupManagerMember.getUserId().toString());
                     return;
                 }
                 // 转发给某个客户端的各个设备端

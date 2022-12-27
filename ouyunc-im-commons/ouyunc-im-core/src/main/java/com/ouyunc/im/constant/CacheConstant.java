@@ -38,6 +38,8 @@ public class CacheConstant {
     public static final String LOGIN = "login:";
     // 发送
     public static final String SEND = "send:";
+    // 接收
+    public static final String RECEIVE = "receive:";
     // 消息相关公共前缀
     public static final String IM_MESSAGE = "im:message:";
     // 用户相关公共前缀

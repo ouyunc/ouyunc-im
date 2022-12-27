@@ -94,14 +94,7 @@ public class DbHelper {
 
     }
 
-    /**
-     * 存入离线消息
-     * @param to 消息发送者
-     * @param packet
-     */
-    public static void addOfflineMessage(String to, Packet packet) {
-        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + to, packet, packet.getPacketId());
-    }
+
 
 
     /**
@@ -429,4 +422,34 @@ public class DbHelper {
     }
 
 
+    /**
+     * @Author fangzhenxun
+     * @Description 将消息写到from的 发件箱
+     * @param packet
+     * @param from
+     * @return void
+     */
+    public static void write2SendTimeline(Packet packet, String from) {
+        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.SEND + from, packet, packet.getPacketId());
+    }
+
+    /**
+     * @Author fangzhenxun
+     * @Description 将消息写到to 的收件箱
+     * @param packet
+     * @param to
+     * @return void
+     */
+    public static void write2ReceiveTimeline(Packet packet, String to) {
+        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.RECEIVE + to, packet, packet.getPacketId());
+    }
+
+    /**
+     * 存入离线消息
+     * @param to 消息发送者
+     * @param packet
+     */
+    public static void write2OfflineTimeline(Packet packet, String to) {
+        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + to, packet, packet.getPacketId());
+    }
 }

@@ -72,7 +72,7 @@ public class  FriendRequestMessageProcessor extends AbstractMessageProcessor{
             List<LoginUserInfo> toLoginUserInfos = UserHelper.onlineAll(to);
             if (CollectionUtil.isEmpty(toLoginUserInfos)) {
                 // 存入离线消息
-                DbHelper.addOfflineMessage(to, packet);
+                DbHelper.write2OfflineTimeline(packet, to);
                 return;
             }
             MessageHelper.send2MultiDevices(packet, toLoginUserInfos);
