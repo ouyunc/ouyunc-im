@@ -6,7 +6,6 @@ import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.handler.PacketProtocolDispatcherHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
-import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 
 import java.nio.ByteOrder;

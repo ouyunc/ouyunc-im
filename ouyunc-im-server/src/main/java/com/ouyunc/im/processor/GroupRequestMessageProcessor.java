@@ -33,23 +33,26 @@ public class GroupRequestMessageProcessor extends AbstractMessageProcessor{
     @Override
     public void doProcess(ChannelHandlerContext ctx, Packet packet) {
         log.info("GroupRequestMessageProcessor 正在处理好友请求消息packet: {}", packet);
-        Message message = (Message) packet.getMessage();
-        ExtraMessage extraMessage = JSONUtil.toBean(message.getExtra(), ExtraMessage.class);
-        if (extraMessage == null) {
-            extraMessage = new ExtraMessage();
-        }
-        // 根据to 群唯一标识，或客户端唯一标识
-        String to = message.getTo();
-        // 判断是否从其他服务路由过来的消息
-        if (extraMessage.isDelivery()) {
-            if (IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(extraMessage.getTargetServerAddress()) || !IMServerContext.SERVER_CONFIG.isClusterEnable()) {
-                MessageHelper.sendMessage(packet, IdentityUtil.generalComboIdentity(to, extraMessage.getDeviceEnum().getName()));
+        fireProcess(ctx, packet, (ctx0, packet0)->{
+            Message message = (Message) packet.getMessage();
+            ExtraMessage extraMessage = JSONUtil.toBean(message.getExtra(), ExtraMessage.class);
+            if (extraMessage == null) {
+                extraMessage = new ExtraMessage();
+            }
+            // 根据to 群唯一标识，或客户端唯一标识
+            String to = message.getTo();
+            // 判断是否从其他服务路由过来的消息
+            if (extraMessage.isDelivery()) {
+                if (IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(extraMessage.getTargetServerAddress()) || !IMServerContext.SERVER_CONFIG.isClusterEnable()) {
+                    MessageHelper.sendMessage(packet, IdentityUtil.generalComboIdentity(to, extraMessage.getDeviceEnum().getName()));
+                    return;
+                }
+                MessageHelper.deliveryMessage(packet, SocketAddressUtil.convert2SocketAddress(extraMessage.getTargetServerAddress()));
                 return;
             }
-            MessageHelper.deliveryMessage(packet, SocketAddressUtil.convert2SocketAddress(extraMessage.getTargetServerAddress()));
-            return;
-        }
-        // 判断是什么类型的消息，好友申请，好友拒绝，好友同意等
-        IMProcessContext.MESSAGE_CONTENT_PROCESSOR.get(message.getContentType()).doProcess(ctx, packet);
+            // 判断是什么类型的消息，好友申请，好友拒绝，好友同意等
+            IMProcessContext.MESSAGE_CONTENT_PROCESSOR.get(message.getContentType()).doProcess(ctx, packet);
+        });
+
     }
 }

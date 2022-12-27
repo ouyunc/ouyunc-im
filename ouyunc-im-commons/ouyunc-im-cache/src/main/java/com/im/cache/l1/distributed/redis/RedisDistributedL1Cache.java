@@ -1,11 +1,12 @@
 package com.im.cache.l1.distributed.redis;
 
-import cn.hutool.core.collection.CollectionUtil;
 import com.im.cache.l1.distributed.AbstractDistributedL1Cache;
 import com.im.cache.l1.distributed.redis.lettuce.RedisFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 public class RedisDistributedL1Cache <K , V > extends AbstractDistributedL1Cache<K, V> {

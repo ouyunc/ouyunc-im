@@ -3,7 +3,6 @@ package com.ouyunc.im.router;
 import cn.hutool.json.JSONUtil;
 import com.ouyunc.im.base.RoutingTable;
 import com.ouyunc.im.context.IMServerContext;
-import com.ouyunc.im.helper.MessageHelper;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.ExtraMessage;
 import com.ouyunc.im.packet.message.Message;

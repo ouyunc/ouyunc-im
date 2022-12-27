@@ -1,7 +1,6 @@
 package com.ouyunc.im.processor;
 
 import cn.hutool.core.date.SystemClock;
-import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.constant.enums.MessageContentEnum;
 import com.ouyunc.im.constant.enums.MessageEnum;
 import com.ouyunc.im.context.IMServerContext;

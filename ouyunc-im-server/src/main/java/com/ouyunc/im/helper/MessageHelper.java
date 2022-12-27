@@ -79,6 +79,7 @@ public class MessageHelper {
             throw new IMException("消息接收者不能为空！");
         }
         // 判断是什么类型的协议packet,然后交给具体的协议去处理
+        ((Message) packet.getMessage()).setExtra(null);
         Protocol.prototype(packet.getProtocol(), packet.getProtocolVersion()).doSendMessage(packet, to);
     }
 

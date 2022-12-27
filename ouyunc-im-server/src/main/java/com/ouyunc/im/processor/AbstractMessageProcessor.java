@@ -82,7 +82,7 @@ public abstract class AbstractMessageProcessor implements MessageProcessor {
         Message message = (Message) packet.getMessage();
         ExtraMessage extraMessage = JSONUtil.toBean(message.getExtra(), ExtraMessage.class);
         // 只在消息首次到达服务的地方发送ack给外部客户端
-        if (IMServerContext.SERVER_CONFIG.isAcknowledgeModeEnable() && !extraMessage.isDelivery()) {
+        if (IMServerContext.SERVER_CONFIG.isAcknowledgeModeEnable() && (extraMessage == null || !extraMessage.isDelivery())) {
             UserHelper.doReplyAck(message.getFrom(), packet);
         }
     }

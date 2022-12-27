@@ -1,7 +1,7 @@
 package com.ouyunc.im.packet.message;
 
-import com.ouyunc.im.constant.enums.DeviceEnum;
 import com.ouyunc.im.base.RoutingTable;
+import com.ouyunc.im.constant.enums.DeviceEnum;
 
 import java.io.Serializable;
 import java.util.ArrayList;

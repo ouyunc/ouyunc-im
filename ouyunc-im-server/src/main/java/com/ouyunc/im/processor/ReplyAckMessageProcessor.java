@@ -2,11 +2,10 @@ package com.ouyunc.im.processor;
 
 
 import cn.hutool.json.JSONUtil;
-import com.ouyunc.im.constant.enums.DeviceEnum;
+import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.enums.MessageContentEnum;
 import com.ouyunc.im.constant.enums.MessageEnum;
 import com.ouyunc.im.context.IMServerContext;
-import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.helper.MessageHelper;
 import com.ouyunc.im.helper.UserHelper;
 import com.ouyunc.im.packet.Packet;
@@ -21,7 +20,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * @Author fangzhenxun
- * @Description: 应答消息处理器（qos 保障，客户端收到消息后会发给另外一端收到消息的应答）
+ * @Description: 客户端应答消息处理器（qos 保障，客户端收到消息后会发给另外一端收到消息的应答）
  * @Version V3.0
  **/
 public class ReplyAckMessageProcessor extends AbstractMessageProcessor{
@@ -50,6 +49,8 @@ public class ReplyAckMessageProcessor extends AbstractMessageProcessor{
             if (extraMessage == null) {
                 extraMessage = new ExtraMessage();
             }
+            // 根据to从分布式缓存中取出targetServerAddress目标地址
+            String to = message.getTo();
             String comboIdentity = null;
             String targetServerAddress = null;
             // 如果该消息是从其他服务传递过来的，则直接进行判断就行了，否则进行多端的转发或发送
@@ -61,25 +62,21 @@ public class ReplyAckMessageProcessor extends AbstractMessageProcessor{
                 if (MessageContentEnum.CLIENT_REPLY_ACK_CONTENT.type() != message.getContentType()) {
                     return;
                 }
-                // 这里需要前端传递两个值一个消息id一个消息目标的服务器地址
+                // 这里需要前端传递两个值一个消息id一个消息目标的服务器登录设备类型（客户端可以从哪接收的消息获取）
                 ClientReplyAckContent clientReplyAckContent = JSONUtil.toBean(message.getContent(), ClientReplyAckContent.class);
                 byte deviceType = clientReplyAckContent.getDeviceType();
-                comboIdentity = IdentityUtil.generalComboIdentity(message.getTo(), deviceType);
-                // 首先判断消息在线还是离线,多端设备
-                LoginUserInfo onlineUserInfo = UserHelper.online(message.getTo(), deviceType);
+                comboIdentity = IdentityUtil.generalComboIdentity(to, deviceType);
+                // 首先判断消息在线还是离线,只回复发送者设备
+                LoginUserInfo loginUserInfo = UserHelper.online(to, deviceType);
                 // 不在线,直接结束
-                if (onlineUserInfo == null) {
+                if (loginUserInfo == null) {
                     return;
                 }
                 // 获取目标服务对应的服务地址
-                targetServerAddress = onlineUserInfo.getLoginServerAddress();
-                // 设置设备类型
-                extraMessage.setDeviceEnum(DeviceEnum.getDeviceEnumByValue(clientReplyAckContent.getDeviceType()));
+                targetServerAddress = loginUserInfo.getLoginServerAddress();
             }
             // 判断该消息是否是开启集群,或者目标服务是本机
             if (IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(targetServerAddress) || !IMServerContext.SERVER_CONFIG.isClusterEnable()) {
-                // 清除扩展信息
-                message.setExtra(null);
                 MessageHelper.sendMessage(packet, comboIdentity);
                 return;
             }

@@ -2,8 +2,8 @@ package com.im.cache.l1.distributed.redis.lettuce.strategy.impl;
 
 
 import com.im.cache.l1.distributed.redis.lettuce.enums.RedisEnum;
-import com.im.cache.l1.distributed.redis.lettuce.strategy.RedisStrategy;
 import com.im.cache.l1.distributed.redis.lettuce.properties.SentinelRedisProperties;
+import com.im.cache.l1.distributed.redis.lettuce.strategy.RedisStrategy;
 import org.aeonbits.owner.ConfigFactory;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.springframework.data.redis.connection.RedisConnectionFactory;

@@ -4,7 +4,6 @@ import com.ouyunc.im.constant.enums.RouterStrategyEnum;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.logging.LogLevel;
 import io.netty.util.NettyRuntime;
-import org.aeonbits.owner.Config;
 
 import java.util.HashMap;
 import java.util.HashSet;

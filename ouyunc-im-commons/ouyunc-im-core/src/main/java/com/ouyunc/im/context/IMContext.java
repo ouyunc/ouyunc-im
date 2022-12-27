@@ -1,8 +1,6 @@
 package com.ouyunc.im.context;
 
 import com.ouyunc.im.config.IMConfig;
-import io.netty.util.concurrent.DefaultEventExecutorGroup;
-import io.netty.util.concurrent.EventExecutorGroup;
 
 /**
  * @Author fangzhenxun
