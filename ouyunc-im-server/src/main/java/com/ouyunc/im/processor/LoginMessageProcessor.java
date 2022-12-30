@@ -67,11 +67,11 @@ public class LoginMessageProcessor extends AbstractMessageProcessor{
         //1,进行参数合法校验，校验失败，结束 ；2,进行签名的校验，校验失败，结束
         // 根据appKey 获取appSecret 然后拼接
         // @todo 注意这里先写死 appKey 获取appSecret
-        String rawStr = loginContent.getAppKey() + IMConstant.AND + loginContent.getIdentity() + IMConstant.AND + loginContent.getCreateTime() + IMConstant.UNDERLINE + "ouyunc";
-        if (!validate(loginContent) || !Encrypt.AsymmetricEncrypt.prototype(loginContent.getSignatureAlgorithm()).validate(rawStr, loginContent.getSignature())) {
-            ctx.close();
-            return;
-        }
+//        String rawStr = loginContent.getAppKey() + IMConstant.AND + loginContent.getIdentity() + IMConstant.AND + loginContent.getCreateTime() + IMConstant.UNDERLINE + "ouyunc";
+//        if (!validate(loginContent) || !Encrypt.AsymmetricEncrypt.prototype(loginContent.getSignatureAlgorithm()).validate(rawStr, loginContent.getSignature())) {
+//            ctx.close();
+//            return;
+//        }
 
         final String comboIdentity = IdentityUtil.generalComboIdentity(loginContent.getIdentity(), packet.getDeviceType());
         //如果之前已经登录（重复登录请求），这里判断是否已经登录过,同一个账号在同一个设备不能同时登录

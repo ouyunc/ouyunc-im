@@ -81,6 +81,10 @@ public class HeartBeatHandler extends SimpleChannelInboundHandler<Packet> {
                         AttributeKey<LoginUserInfo> channelTagLoginKey = AttributeKey.valueOf(IMConstant.CHANNEL_TAG_LOGIN);
                         final LoginUserInfo loginUserInfo = channel.attr(channelTagLoginKey).get();
                         // 这里的ctx 与注册表中的ctx 是同一个应用,
+                        if (loginUserInfo == null) {
+                            ctx.close();
+                            return;
+                        }
                         UserHelper.unbind(loginUserInfo.getIdentity(), loginUserInfo.getDeviceEnum().getValue(), ctx);
                         return;
                     }

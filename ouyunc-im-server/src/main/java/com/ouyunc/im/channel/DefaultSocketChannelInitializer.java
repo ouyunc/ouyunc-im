@@ -62,7 +62,7 @@ public class DefaultSocketChannelInitializer extends SocketChannelInitializer{
             public void operationComplete(ChannelFuture future) throws Exception {
                 if (future.isDone()) {
                     if (future.isSuccess()) {
-                        log.info("================外部客户端关闭了,正在解绑客户端...:{}==================", socketChannel.id().asShortText());
+                        log.info("================外部客户端关闭了,正在解绑客户端channel id:  {}==================", socketChannel.id().asShortText());
                         // 解绑外部用户
                         //1,从channel中的attrMap取出相关属性
                         AttributeKey<LoginUserInfo> channelTagLoginKey = AttributeKey.valueOf(IMConstant.CHANNEL_TAG_LOGIN);
