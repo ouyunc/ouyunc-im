@@ -12,6 +12,7 @@
 <script>
 
 	let identity;
+	let currentChatIdentity;
 	let websocket = null;
 	let heartbeart_timeout = null;
 	let serverTimeoutObj = null;
@@ -38,7 +39,15 @@
 				}else if (packet.messageType === 8 && packet.message.getContentType() === 13){
 					// 将发送者添加到联系人
 					let elementcontact = document.getElementById("contact");
-					elementcontact.insertAdjacentHTML('beforeend','<div style="border-bottom:1px solid black;margin-top:10px"><a href="#">'+packet.message.getFrom() +'(个人)</a><button style="margin-left:10px">屏蔽</button><button style="margin-left:10px">拉黑</button><button style="margin-left:10px">按需拉取离线消息</button></div>');
+					elementcontact.insertAdjacentHTML('beforeend','<div onclick="selectChat(\''+packet.message.getFrom()+'\')" style="border-bottom:1px solid black;margin-top:10px"><a href="#">'+packet.message.getFrom() +'(个人)</a><button style="margin-left:10px">屏蔽</button><button style="margin-left:10px">拉黑</button><button style="margin-left:10px">按需拉取离线消息</button></div>');
+				}else if (packet.messageType === 3 && packet.message.getContentType() === 7) {
+					console.log(packet.message.getContent())
+					element.insertAdjacentHTML('beforeend',"收到服务端:"+ packet.message.getFrom() + "的响应心跳relay ack")
+				}else if (packet.messageType === 5 && packet.message.getContentType() === 50) {
+					element.insertAdjacentHTML('beforeend',"收到客户端:"+ packet.message.getFrom() + "的私聊消息："+ packet.message.getContent())
+				}else if (packet.messageType === 9 && packet.message.getContentType() === 21) {
+					element.insertAdjacentHTML('beforeend','收到客户端:'+packet.message.getFrom() + '的加群申请' + '<button onclick="agreeJoinGroup(\''+packet.message.getFrom() +'\',\''+JSON.parse(packet.message.getContent()).groupId+'\')">同意</button><button onclick="refuseJoinGroup(\''+packet.message.getFrom()+'\',\''+JSON.parse(packet.message.getContent()).groupId+'\')">拒绝</button>');
+
 				}
 			});
 
@@ -156,10 +165,80 @@
 		websocket.send(packetDataView.buffer);
 
 		let element = document.getElementById("contact");
-		element.insertAdjacentHTML('beforeend','<div style="border-bottom:1px solid black;margin-top:10px"><a href="#">'+to+'(个人)</a><button style="margin-left:10px">屏蔽</button><button style="margin-left:10px">拉黑</button><button style="margin-left:10px">按需拉取离线消息</button></div>');
+		element.insertAdjacentHTML('beforeend','<div onclick="selectChat(\''+to+'\')" style="border-bottom:1px solid black;margin-top:10px"><a href="#">'+to+'(个人)</a><button style="margin-left:10px">屏蔽</button><button style="margin-left:10px">拉黑</button><button style="margin-left:10px">按需拉取离线消息</button></div>');
 
 	}
 
+	// 加入群组
+	function joinGroup() {
+		let element = document.getElementById("joinGroup");
+		let message = new proto.com.ouyunc.im.Message();
+		message.setFrom(identity);
+		message.setTo(element.value)
+		message.setContentType(21);
+		message.setContent(JSON.stringify({
+			"groupId": element.value,
+			"identity": identity
+		}))
+		message.setCreateTime(new Date().getTime());
+		let messageDataBinary = message.serializeBinary();
+		let packetDataView = wrapMessage(messageDataBinary, 9);
+		// 发送心跳信息
+		websocket.send(packetDataView.buffer);
+	}
+	// 同意加群
+	 function agreeJoinGroup(to, groupId) {
+		 let message = new proto.com.ouyunc.im.Message();
+		 message.setFrom(identity);
+		 message.setTo(to)
+		 message.setContentType(23);
+		 message.setContent(JSON.stringify({
+			 "groupId": groupId,
+			 "identity": to
+		 }))
+		 message.setCreateTime(new Date().getTime());
+		 let messageDataBinary = message.serializeBinary();
+		 let packetDataView = wrapMessage(messageDataBinary, 9);
+		 // 发送心跳信息
+		 websocket.send(packetDataView.buffer);
+	 }
+
+	 // 拒绝加群
+	 function refuseJoinGroup(to,groupId) {
+		 let message = new proto.com.ouyunc.im.Message();
+		 message.setFrom(identity);
+		 message.setTo(to)
+		 message.setContentType(22);
+		 message.setContent(JSON.stringify({
+			 "groupId": groupId,
+			 "identity": to
+		 }))
+		 message.setCreateTime(new Date().getTime());
+		 let messageDataBinary = message.serializeBinary();
+		 let packetDataView = wrapMessage(messageDataBinary, 9);
+		 // 发送心跳信息
+		 websocket.send(packetDataView.buffer);
+	 }
+	// 私聊
+	function chat() {
+		let element = document.getElementById("chatContent");
+
+		let message = new proto.com.ouyunc.im.Message();
+		message.setFrom(identity);
+		message.setTo(currentChatIdentity)
+		message.setContentType(50);
+		message.setContent(element.value);
+		message.setCreateTime(new Date().getTime());
+		let messageDataBinary = message.serializeBinary();
+		let packetDataView = wrapMessage(messageDataBinary, 5);
+		// 发送心跳信息
+		websocket.send(packetDataView.buffer);
+	}
+
+	// 选中聊天人
+	function selectChat(to) {
+		currentChatIdentity = to;
+	}
 	// 屏蔽好友
 	function shield(to) {
 
@@ -369,13 +448,13 @@
 					
 					<div style="margin-top:10px"><button onclick="startHeartbeat()" style="margin-left:10px">开始发送心跳</button><button onclick="stopHeartbeat()" style="margin-left:10px">停止心跳</button><button style="margin-left:10px">全量拉取离线消息</button></div>
 					<div style="margin-top:20px"><span>好友ID:</span> <input id="addFriend" style="width:200px"/><button style="margin-left:10px" onclick="addFriend()">加好友</button></div>
-					<div style="margin-top:10px"><span>群ID   :</span> <input style="width:200px"/><button style="margin-left:10px">加入群</button></div>
+					<div style="margin-top:10px"><span>群ID   :</span> <input id="joinGroup" style="width:200px"/><button style="margin-left:10px" onclick="joinGroup()">加入群</button></div>
 					</div>
 				</div>
 			</div>
 			<div style="height:80px;display:flex;align-items: center;margin-left: 10px;">
-				<textarea rows="1" cols="60" style="height:30px"></textarea>
-				<button style="margin-left:20px;height:35px;width:200px">点击发送</button>
+				<textarea id="chatContent" rows="1" cols="60" style="height:30px"></textarea>
+				<button onclick="chat()" style="margin-left:20px;height:35px;width:200px">点击发送</button>
 			</div>
 		</div>
 	</div>

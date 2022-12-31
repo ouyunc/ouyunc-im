@@ -45,11 +45,11 @@ public class GroupAgreeMessageContentProcessor extends AbstractMessageContentPro
         String to = message.getTo();
         // 检查是否已经处理该条消息，如果处理了则不做消息的转发
         // 判断是否已经是好友
-        if (MessageValidate.isGroup(to, groupRequestContent.getGroupId())) {
+        if (MessageValidate.isGroup(groupRequestContent.getIdentity(), groupRequestContent.getGroupId())) {
             return;
         }
         // 绑定群成员关系
-        DbHelper.joinGroup(from, to);
+        DbHelper.joinGroup(groupRequestContent.getIdentity(), groupRequestContent.getGroupId());
 
         // 查找群中的管理员以及群主，向其投递加群的请求
         List<ImGroupUserBO> groupManagerMembers = DbHelper.getGroupMembers(groupRequestContent.getGroupId(), true);
