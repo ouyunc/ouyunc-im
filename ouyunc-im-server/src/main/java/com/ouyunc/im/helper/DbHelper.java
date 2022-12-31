@@ -174,8 +174,8 @@ public class DbHelper {
             argsList.add(new Object[]{SnowflakeUtil.nextId(), toUser.getId(), fromUser.getId(), fromUser.getNickName(), IMConstant.NOT_SHIELD, nowDateTime,nowDateTime});
             dbOperator.batchInsert(DbSqlConstant.MYSQL.INSERT_FRIEND.sql(),argsList);
             // 添加到缓存，好友联系人
-            cacheOperator.putHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.CONTACT + CacheConstant.FRIEND + from, to, new ImFriendBO(fromUser.getId(), toUser.getId(), toUser.getNickName(), toUser.getUsername(), toUser.getEmail(), toUser.getPhoneNum(), toUser.getIdCardNum(), toUser.getAvatar(), toUser.getMotto(), toUser.getAge(), toUser.getSex(), IMConstant.NOT_SHIELD, nowDateTime, nowDateTime));
-            cacheOperator.putHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.CONTACT + CacheConstant.FRIEND + to, from, new ImFriendBO(toUser.getId(), fromUser.getId(), fromUser.getNickName(), fromUser.getUsername(), fromUser.getEmail(), fromUser.getPhoneNum(), fromUser.getIdCardNum(), fromUser.getAvatar(), fromUser.getMotto(), fromUser.getAge(), fromUser.getSex(), IMConstant.NOT_SHIELD, nowDateTime, nowDateTime));
+            cacheOperator.putHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.CONTACT + CacheConstant.FRIEND + from, to, new ImFriendBO(fromUser.getId().toString(), toUser.getId().toString(), toUser.getNickName(), toUser.getUsername(), toUser.getEmail(), toUser.getPhoneNum(), toUser.getIdCardNum(), toUser.getAvatar(), toUser.getMotto(), toUser.getAge(), toUser.getSex(), IMConstant.NOT_SHIELD, nowDateTime, nowDateTime));
+            cacheOperator.putHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.CONTACT + CacheConstant.FRIEND + to, from, new ImFriendBO(toUser.getId().toString(), fromUser.getId().toString(), fromUser.getNickName(), fromUser.getUsername(), fromUser.getEmail(), fromUser.getPhoneNum(), fromUser.getIdCardNum(), fromUser.getAvatar(), fromUser.getMotto(), fromUser.getAge(), fromUser.getSex(), IMConstant.NOT_SHIELD, nowDateTime, nowDateTime));
         }
 
     }
@@ -201,7 +201,7 @@ public class DbHelper {
             // 存入数据库
             dbOperator.insert(DbSqlConstant.MYSQL.INSERT_GROUP_USER.sql(), SnowflakeUtil.nextId(), groupId, from, fromUser.getNickName(), IMConstant.NOT_GROUP_LEADER, IMConstant.NOT_GROUP_MANAGER, IMConstant.NOT_SHIELD, IMConstant.NOT_MUSHIN, nowDateTime);
             // 放入缓存
-            imGroupUserBO = new ImGroupUserBO(Long.valueOf(groupId), fromUser.getId(), fromUser.getUsername(), fromUser.getNickName(),fromUser.getEmail(),fromUser.getPhoneNum(),fromUser.getIdCardNum(),fromUser.getAvatar(),fromUser.getMotto(),fromUser.getAge(),fromUser.getSex(), IMConstant.NOT_GROUP_LEADER, IMConstant.NOT_GROUP_MANAGER, IMConstant.NOT_SHIELD, IMConstant.NOT_MUSHIN, nowDateTime);
+            imGroupUserBO = new ImGroupUserBO(groupId, fromUser.getId().toString(), fromUser.getUsername(), fromUser.getNickName(),fromUser.getEmail(),fromUser.getPhoneNum(),fromUser.getIdCardNum(),fromUser.getAvatar(),fromUser.getMotto(),fromUser.getAge(),fromUser.getSex(), IMConstant.NOT_GROUP_LEADER, IMConstant.NOT_GROUP_MANAGER, IMConstant.NOT_SHIELD, IMConstant.NOT_MUSHIN, nowDateTime);
             cacheOperator.putHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + groupId + CacheConstant.MEMBERS, from, imGroupUserBO);
         }
 
@@ -288,13 +288,13 @@ public class DbHelper {
     /**
      * 获取from在to中的用户信息,该用户在群中的信息
      * @param from 发送者
-     * @param to 群唯一标识
+     * @param groupId 群唯一标识
      * @return
      */
-    public static ImGroupUserBO getGroupMember(String from, String to) {
-        ImGroupUserBO imGroupUserBO = (ImGroupUserBO) cacheOperator.getHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + to + CacheConstant.MEMBERS, from);
+    public static ImGroupUserBO getGroupMember(String from, String groupId) {
+        ImGroupUserBO imGroupUserBO = (ImGroupUserBO) cacheOperator.getHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + groupId + CacheConstant.MEMBERS, from);
         if (imGroupUserBO == null) {
-            imGroupUserBO = dbOperator.selectOne(DbSqlConstant.MYSQL.SELECT_GROUP_USER.sql(), ImGroupUserBO.class, from, to);
+            imGroupUserBO = dbOperator.selectOne(DbSqlConstant.MYSQL.SELECT_GROUP_USER.sql(), ImGroupUserBO.class, from, groupId);
         }
         return imGroupUserBO;
     }
@@ -336,11 +336,11 @@ public class DbHelper {
 
     /**
      * 根据群组id，返回群组中，当前所有成员
-     * @param to 群组唯一标识
+     * @param groupId 群组唯一标识
      * @return
      */
-    public static List<ImGroupUserBO> getGroupMembers(String to) {
-        return getGroupMembers(to, false);
+    public static List<ImGroupUserBO> getGroupMembers(String groupId) {
+        return getGroupMembers(groupId, false);
     }
 
     /**

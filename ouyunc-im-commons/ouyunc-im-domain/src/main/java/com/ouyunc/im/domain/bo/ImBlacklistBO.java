@@ -7,7 +7,7 @@ public class ImBlacklistBO {
     /**
      * 群或客户端唯一标识
      */
-    private Long identity;
+    private String identity;
 
     /**
      * 唯一标识类型，1-客户端唯一标识（用户），2-群唯一标识
@@ -17,7 +17,7 @@ public class ImBlacklistBO {
     /**
      * 被拉黑的客户端id
      */
-    private Long userId;
+    private String userId;
 
     /**
      * 被拉黑的客户端用户名称（对应于身份证）
@@ -70,11 +70,11 @@ public class ImBlacklistBO {
      */
     private String createTime;
 
-    public Long getIdentity() {
+    public String getIdentity() {
         return identity;
     }
 
-    public void setIdentity(Long identity) {
+    public void setIdentity(String identity) {
         this.identity = identity;
     }
 
@@ -86,11 +86,11 @@ public class ImBlacklistBO {
         this.identityType = identityType;
     }
 
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 

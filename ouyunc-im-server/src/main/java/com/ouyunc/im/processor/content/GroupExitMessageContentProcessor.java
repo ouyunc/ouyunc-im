@@ -55,7 +55,7 @@ public class GroupExitMessageContentProcessor extends AbstractMessageContentProc
         List<LoginUserInfo> leaderLoginUserInfos = UserHelper.onlineAll(groupLeader.getUserId().toString());
         if (CollectionUtil.isEmpty(leaderLoginUserInfos)) {
             // 存入离线消息
-            DbHelper.write2OfflineTimeline(packet, groupLeader.getUserId().toString());
+            DbHelper.write2OfflineTimeline(packet, groupLeader.getUserId());
             return;
         }
         // 转发给某个客户端的各个设备端

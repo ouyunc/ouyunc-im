@@ -43,10 +43,11 @@ public class GroupJoinMessageContentProcessor extends AbstractMessageContentProc
             if (CollectionUtil.isEmpty(managersLoginUserInfos)) {
                 // 存入离线消息
                 DbHelper.write2OfflineTimeline(packet, groupManagerMember.getUserId().toString());
-                return;
+            }else {
+                // 转发给某个客户端的各个设备端
+                MessageHelper.send2MultiDevices(packet, managersLoginUserInfos);
             }
-            // 转发给某个客户端的各个设备端
-            MessageHelper.send2MultiDevices(packet, managersLoginUserInfos);
+
         }
     }
 }

@@ -30,6 +30,7 @@
 			startHeartbeat();
 			parseMessage(e.data).then(function (packet) {
 				console.log(packet.message + "====" + packet.messageType + "====" + packet.messageId)
+				let elementcontact = document.getElementById("contact");
 
 				console.log(packet.message.getFrom())
 				if (packet.messageType === 1 && packet.message.getContentType() === 4) {
@@ -38,7 +39,6 @@
 					element.insertAdjacentHTML('beforeend','收到客户端:'+packet.message.getFrom() + '的添加好友申请' + '<button onclick="agreeFriend(\''+packet.message.getFrom() +'\')">同意</button><button onclick="refuseFriend(\''+packet.message.getFrom()+'\')">拒绝</button>');
 				}else if (packet.messageType === 8 && packet.message.getContentType() === 13){
 					// 将发送者添加到联系人
-					let elementcontact = document.getElementById("contact");
 					elementcontact.insertAdjacentHTML('beforeend','<div onclick="selectChat(\''+packet.message.getFrom()+'\')" style="border-bottom:1px solid black;margin-top:10px"><a href="#">'+packet.message.getFrom() +'(个人)</a><button style="margin-left:10px">屏蔽</button><button style="margin-left:10px">拉黑</button><button style="margin-left:10px">按需拉取离线消息</button></div>');
 				}else if (packet.messageType === 3 && packet.message.getContentType() === 7) {
 					console.log(packet.message.getContent())
@@ -47,8 +47,14 @@
 					element.insertAdjacentHTML('beforeend',"收到客户端:"+ packet.message.getFrom() + "的私聊消息："+ packet.message.getContent())
 				}else if (packet.messageType === 9 && packet.message.getContentType() === 21) {
 					element.insertAdjacentHTML('beforeend','收到客户端:'+packet.message.getFrom() + '的加群申请' + '<button onclick="agreeJoinGroup(\''+packet.message.getFrom() +'\',\''+JSON.parse(packet.message.getContent()).groupId+'\')">同意</button><button onclick="refuseJoinGroup(\''+packet.message.getFrom()+'\',\''+JSON.parse(packet.message.getContent()).groupId+'\')">拒绝</button>');
+				}else if (packet.messageType === 9 && packet.message.getContentType() === 23) {
+					elementcontact.insertAdjacentHTML('beforeend','<div onclick="selectChat(\''+JSON.parse(packet.message.getContent()).groupId+'\')" style="border-bottom:1px solid black;margin-top:10px"><a href="#">'+JSON.parse(packet.message.getContent()).groupId+'（群组）</a><button style="margin-left:10px">屏蔽</button><button style="margin-left:10px">退群</button><button style="margin-left:10px">解散群</button><button style="margin-left:10px">按需拉取离线消息</button></div>');
+
+				}else if (packet.messageType === 6 && packet.message.getContentType() === 50) {
+					elementcontact.insertAdjacentHTML('beforeend','收到群的聊天信息：' + JSON.parse(packet.message.getContent()));
 
 				}
+
 			});
 
 		};
@@ -201,6 +207,10 @@
 		 let packetDataView = wrapMessage(messageDataBinary, 9);
 		 // 发送心跳信息
 		 websocket.send(packetDataView.buffer);
+		 let elementcontact = document.getElementById("contact");
+
+		 elementcontact.insertAdjacentHTML('beforeend','<div onclick="selectChat(\''+groupId+'\')" style="border-bottom:1px solid black;margin-top:10px"><a href="#">'+groupId+'（群组）</a><button style="margin-left:10px">屏蔽</button><button style="margin-left:10px">退群</button><button style="margin-left:10px">解散群</button><button style="margin-left:10px">按需拉取离线消息</button></div>');
+
 	 }
 
 	 // 拒绝加群
@@ -230,7 +240,7 @@
 		message.setContent(element.value);
 		message.setCreateTime(new Date().getTime());
 		let messageDataBinary = message.serializeBinary();
-		let packetDataView = wrapMessage(messageDataBinary, 5);
+		let packetDataView = wrapMessage(messageDataBinary, 6);
 		// 发送心跳信息
 		websocket.send(packetDataView.buffer);
 	}

@@ -226,7 +226,7 @@ public class DbSqlConstant {
                 "\touyunc_im_group.status, \n" +
                 "\touyunc_im_group.mushin, \n" +
                 "\touyunc_im_group.create_time as createTime, \n" +
-                "\touyunc_im_group.update_time as updateTime, \n" +
+                "\touyunc_im_group.update_time as updateTime \n" +
                 "FROM\n" +
                 "\touyunc_im_group\n" +
                 "WHERE\n" +

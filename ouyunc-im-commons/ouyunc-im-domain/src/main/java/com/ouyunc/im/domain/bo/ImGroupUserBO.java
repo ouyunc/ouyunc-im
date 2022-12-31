@@ -8,12 +8,12 @@ public class ImGroupUserBO {
     /**
      * 群组id
      */
-    private Long groupId;
+    private String groupId;
 
     /**
      * 群成员id
      */
-    private Long userId;
+    private String userId;
 
 
     /**
@@ -93,19 +93,19 @@ public class ImGroupUserBO {
     private String createTime;
 
 
-    public Long getGroupId() {
+    public String getGroupId() {
         return groupId;
     }
 
-    public void setGroupId(Long groupId) {
+    public void setGroupId(String groupId) {
         this.groupId = groupId;
     }
 
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 
@@ -224,7 +224,7 @@ public class ImGroupUserBO {
     public ImGroupUserBO() {
     }
 
-    public ImGroupUserBO(Long groupId, Long userId, String username, String userNickName, String email, String phoneNum, String idCardNum, String avatar, String motto, Integer age, Integer sex, Integer isLeader, Integer isManager, Integer isShield, Integer mushin, String createTime) {
+    public ImGroupUserBO(String groupId, String userId, String username, String userNickName, String email, String phoneNum, String idCardNum, String avatar, String motto, Integer age, Integer sex, Integer isLeader, Integer isManager, Integer isShield, Integer mushin, String createTime) {
         this.groupId = groupId;
         this.userId = userId;
         this.username = username;

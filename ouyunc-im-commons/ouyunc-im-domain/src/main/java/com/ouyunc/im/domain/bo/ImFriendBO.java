@@ -8,12 +8,12 @@ public class ImFriendBO {
     /**
      * 用户id
      */
-    private Long userId;
+    private String userId;
 
     /**
      * 好友用户id
      */
-    private Long friendUserId;
+    private String friendUserId;
 
     /**
      * 好友备注昵称
@@ -80,19 +80,19 @@ public class ImFriendBO {
     private String updateTime;
 
 
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 
-    public Long getFriendUserId() {
+    public String getFriendUserId() {
         return friendUserId;
     }
 
-    public void setFriendUserId(Long friendUserId) {
+    public void setFriendUserId(String friendUserId) {
         this.friendUserId = friendUserId;
     }
 
@@ -196,7 +196,7 @@ public class ImFriendBO {
     public ImFriendBO() {
     }
 
-    public ImFriendBO(Long userId, Long friendUserId, String friendNickName, String friendUsername, String friendEmail, String friendPhoneNum, String friendIdCardNum, String friendAvatar, String friendMotto, Integer friendAge, Integer friendSex, Integer friendIsShield, String createTime, String updateTime) {
+    public ImFriendBO(String userId, String friendUserId, String friendNickName, String friendUsername, String friendEmail, String friendPhoneNum, String friendIdCardNum, String friendAvatar, String friendMotto, Integer friendAge, Integer friendSex, Integer friendIsShield, String createTime, String updateTime) {
         this.userId = userId;
         this.friendUserId = friendUserId;
         this.friendNickName = friendNickName;

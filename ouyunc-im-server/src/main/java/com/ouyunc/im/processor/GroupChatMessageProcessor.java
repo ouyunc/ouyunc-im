@@ -50,7 +50,7 @@ public class GroupChatMessageProcessor extends AbstractMessageProcessor {
         // 消息接收方
         String to = message.getTo();
         // ===================================做权限校验=========================================
-        if (!MessageValidate.isAuth(from, packet.getDeviceType(), ctx) || MessageValidate.isBanned(from, IMConstant.GROUP_TYPE_2) || !MessageValidate.isGroup(from, to) || MessageValidate.isBackList(from, to, IMConstant.GROUP_TYPE_2)) {
+        if (!MessageValidate.isAuth(from, packet.getDeviceType(), ctx) || MessageValidate.isBanned(from, IMConstant.USER_TYPE_1) || MessageValidate.isBanned(to, IMConstant.GROUP_TYPE_2) || !MessageValidate.isGroup(from, to) || MessageValidate.isBackList(from, to, IMConstant.GROUP_TYPE_2)) {
             return;
         }
         // 交给下个处理
@@ -113,10 +113,10 @@ public class GroupChatMessageProcessor extends AbstractMessageProcessor {
                         if (CollectionUtil.isEmpty(othersMembersLoginUserInfos)) {
                             // 存入离线消息
                             DbHelper.write2OfflineTimeline(packet,groupMember.getUserId().toString());
-                            return;
+                        }else {
+                            // 转发给某个客户端的各个设备端
+                            MessageHelper.send2MultiDevices(packet, othersMembersLoginUserInfos);
                         }
-                        // 转发给某个客户端的各个设备端
-                        MessageHelper.send2MultiDevices(packet, othersMembersLoginUserInfos);
                     }
                 }
             }
