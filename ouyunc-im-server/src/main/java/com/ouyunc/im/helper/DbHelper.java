@@ -227,6 +227,7 @@ public class DbHelper {
     public static void disbandGroup(String groupId) {
         dbOperator.delete(DbSqlConstant.MYSQL.DELETE_GROUP.sql(), groupId);
         dbOperator.delete(DbSqlConstant.MYSQL.DELETE_GROUP_ALL_USER.sql(), groupId);
+        cacheOperator.delete(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + groupId);
         cacheOperator.deleteHashAll(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + groupId + CacheConstant.MEMBERS);
     }
 

@@ -58,10 +58,10 @@ public class GroupDisbandMessageContentProcessor extends AbstractMessageContentP
             // 排除群主自身
             if (!from.equals(member.getUserId())) {
                 // 判断该管理员是否在线，如果不在线放入离线消息
-                List<LoginUserInfo> managersLoginUserInfos = UserHelper.onlineAll(member.getUserId().toString());
+                List<LoginUserInfo> managersLoginUserInfos = UserHelper.onlineAll(member.getUserId());
                 if (CollectionUtil.isEmpty(managersLoginUserInfos)) {
                     // 存入离线消息
-                    DbHelper.write2OfflineTimeline(packet,member.getUserId().toString());
+                    DbHelper.write2OfflineTimeline(packet,member.getUserId());
                 }else {
                     // 转发给某个客户端的各个设备端
                     MessageHelper.send2MultiDevices(packet, managersLoginUserInfos);

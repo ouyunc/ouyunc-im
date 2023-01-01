@@ -136,8 +136,8 @@ public class RedisDistributedL1Cache <K , V > extends AbstractDistributedL1Cache
      * @return
      */
     @Override
-    public Long deleteHashAll(K key) {
-        return redisTemplate.opsForHash().delete(key);
+    public boolean deleteHashAll(K key) {
+        return redisTemplate.delete(key);
     }
 
     /**

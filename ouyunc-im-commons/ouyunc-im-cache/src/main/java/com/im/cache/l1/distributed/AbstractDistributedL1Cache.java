@@ -53,7 +53,7 @@ public abstract class AbstractDistributedL1Cache<K, V> implements L1Cache<K, V> 
     /**
      * 删除hash中的键
      */
-    public abstract Long deleteHashAll(K key);
+    public abstract boolean deleteHashAll(K key);
 
     /**
      * 删除hash中的某几个值

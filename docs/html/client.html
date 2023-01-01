@@ -48,10 +48,10 @@
 				}else if (packet.messageType === 9 && packet.message.getContentType() === 21) {
 					element.insertAdjacentHTML('beforeend','收到客户端:'+packet.message.getFrom() + '的加群申请' + '<button onclick="agreeJoinGroup(\''+packet.message.getFrom() +'\',\''+JSON.parse(packet.message.getContent()).groupId+'\')">同意</button><button onclick="refuseJoinGroup(\''+packet.message.getFrom()+'\',\''+JSON.parse(packet.message.getContent()).groupId+'\')">拒绝</button>');
 				}else if (packet.messageType === 9 && packet.message.getContentType() === 23) {
-					elementcontact.insertAdjacentHTML('beforeend','<div onclick="selectChat(\''+JSON.parse(packet.message.getContent()).groupId+'\')" style="border-bottom:1px solid black;margin-top:10px"><a href="#">'+JSON.parse(packet.message.getContent()).groupId+'（群组）</a><button style="margin-left:10px">屏蔽</button><button style="margin-left:10px">退群</button><button style="margin-left:10px">解散群</button><button style="margin-left:10px">按需拉取离线消息</button></div>');
+					elementcontact.insertAdjacentHTML('beforeend','<div onclick="selectChat(\''+JSON.parse(packet.message.getContent()).groupId+'\')" style="border-bottom:1px solid black;margin-top:10px"><a href="#">'+JSON.parse(packet.message.getContent()).groupId+'（群组）</a><button style="margin-left:10px" onclick="shieldGroup(\''+JSON.parse(packet.message.getContent()).groupId+'\')">屏蔽</button><button onclick="exitGroup(\''+JSON.parse(packet.message.getContent()).groupId+'\')" style="margin-left:10px">退群</button><button onclick="disbandGroup(\''+JSON.parse(packet.message.getContent()).groupId+'\')" style="margin-left:10px">解散群</button><button style="margin-left:10px">按需拉取离线消息</button></div>');
 
 				}else if (packet.messageType === 6 && packet.message.getContentType() === 50) {
-					elementcontact.insertAdjacentHTML('beforeend','收到群的聊天信息：' + JSON.parse(packet.message.getContent()));
+					element.insertAdjacentHTML('beforeend','收到群的聊天信息：' + packet.message.getContent());
 
 				}
 
@@ -209,7 +209,7 @@
 		 websocket.send(packetDataView.buffer);
 		 let elementcontact = document.getElementById("contact");
 
-		 elementcontact.insertAdjacentHTML('beforeend','<div onclick="selectChat(\''+groupId+'\')" style="border-bottom:1px solid black;margin-top:10px"><a href="#">'+groupId+'（群组）</a><button style="margin-left:10px">屏蔽</button><button style="margin-left:10px">退群</button><button style="margin-left:10px">解散群</button><button style="margin-left:10px">按需拉取离线消息</button></div>');
+		 elementcontact.insertAdjacentHTML('beforeend','<div onclick="selectChat(\''+groupId+'\')" style="border-bottom:1px solid black;margin-top:10px"><a href="#">'+groupId+'（群组）</a><button style="margin-left:10px">屏蔽</button><button style="margin-left:10px">退群</button><button style="margin-left:10px" onclick="disbandGroup(\'1609083738557259778\')">解散群</button><button style="margin-left:10px">按需拉取离线消息</button></div>');
 
 	 }
 
@@ -222,6 +222,56 @@
 		 message.setContent(JSON.stringify({
 			 "groupId": groupId,
 			 "identity": to
+		 }))
+		 message.setCreateTime(new Date().getTime());
+		 let messageDataBinary = message.serializeBinary();
+		 let packetDataView = wrapMessage(messageDataBinary, 9);
+		 // 发送心跳信息
+		 websocket.send(packetDataView.buffer);
+	 }
+
+	 // 退出群
+	 function exitGroup(groupId) {
+		 let message = new proto.com.ouyunc.im.Message();
+		 message.setFrom(identity);
+		 message.setTo(groupId)
+		 message.setContentType(26);
+		 message.setContent(JSON.stringify({
+			 "groupId": groupId,
+			 "identity": identity
+		 }))
+		 message.setCreateTime(new Date().getTime());
+		 let messageDataBinary = message.serializeBinary();
+		 let packetDataView = wrapMessage(messageDataBinary, 9);
+		 // 发送心跳信息
+		 websocket.send(packetDataView.buffer);
+
+	 }
+	 // 解散群
+	 function disbandGroup(groupId) {
+		 let message = new proto.com.ouyunc.im.Message();
+		 message.setFrom(identity);
+		 message.setTo('1609083738557259778')
+		 message.setContentType(24);
+		 message.setContent(JSON.stringify({
+			 "groupId": '1609083738557259778',
+			 "identity": identity
+		 }))
+		 message.setCreateTime(new Date().getTime());
+		 let messageDataBinary = message.serializeBinary();
+		 let packetDataView = wrapMessage(messageDataBinary, 9);
+		 // 发送心跳信息
+		 websocket.send(packetDataView.buffer);
+	 }
+	 // 屏蔽群
+	 function shieldGroup(groupId) {
+		 let message = new proto.com.ouyunc.im.Message();
+		 message.setFrom(identity);
+		 message.setTo(groupId)
+		 message.setContentType(27);
+		 message.setContent(JSON.stringify({
+			 "groupId": groupId,
+			 "identity": identity
 		 }))
 		 message.setCreateTime(new Date().getTime());
 		 let messageDataBinary = message.serializeBinary();
