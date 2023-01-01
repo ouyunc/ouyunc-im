@@ -12,7 +12,6 @@
     <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/html/client.html" beforeDir="false" afterPath="$PROJECT_DIR$/docs/html/client.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupDisbandMessageContentProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupDisbandMessageContentProcessor.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -312,14 +311,7 @@
       <workItem from="1672104344576" duration="4062000" />
       <workItem from="1672120025574" duration="19809000" />
       <workItem from="1672380467337" duration="23863000" />
-      <workItem from="1672537421820" duration="3923000" />
-    </task>
-    <task id="LOCAL-00074" summary="IM缓存优化">
-      <created>1624589443838</created>
-      <option name="number" value="00074" />
-      <option name="presentableId" value="LOCAL-00074" />
-      <option name="project" value="LOCAL" />
-      <updated>1624589443838</updated>
+      <workItem from="1672537421820" duration="6278000" />
     </task>
     <task id="LOCAL-00075" summary="IM缓存优化">
       <created>1624591357398</created>
@@ -657,7 +649,14 @@
       <option name="project" value="LOCAL" />
       <updated>1672479046269</updated>
     </task>
-    <option name="localTasksCounter" value="123" />
+    <task id="LOCAL-00123" summary="v3.0-beta  优化群聊">
+      <created>1672542104116</created>
+      <option name="number" value="00123" />
+      <option name="presentableId" value="LOCAL-00123" />
+      <option name="project" value="LOCAL" />
+      <updated>1672542104116</updated>
+    </task>
+    <option name="localTasksCounter" value="124" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -755,14 +754,14 @@
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state x="479" y="117" key="#xdebugger.evaluate/0.0.1536.824@0.0.1536.824" timestamp="1672541939570" />
-    <state x="295" y="4" key="CommitChangelistDialog2" timestamp="1672479045134">
+    <state x="295" y="4" key="CommitChangelistDialog2" timestamp="1672542103169">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state x="295" y="4" key="CommitChangelistDialog2/0.0.1536.824@0.0.1536.824" timestamp="1672479045134" />
-    <state width="526" height="466" key="DebuggerActiveHint" timestamp="1672541700318">
+    <state x="295" y="4" key="CommitChangelistDialog2/0.0.1536.824@0.0.1536.824" timestamp="1672542103169" />
+    <state width="526" height="466" key="DebuggerActiveHint" timestamp="1672544800859">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="526" height="466" key="DebuggerActiveHint/0.0.1536.824@0.0.1536.824" timestamp="1672541700318" />
+    <state width="526" height="466" key="DebuggerActiveHint/0.0.1536.824@0.0.1536.824" timestamp="1672544800859" />
     <state x="147" y="65" key="DiffContextDialog" timestamp="1672305738763">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
@@ -811,10 +810,10 @@
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state x="270" y="54" key="SettingsEditor/0.0.1536.824@0.0.1536.824" timestamp="1672106660521" />
-    <state x="361" y="145" key="Vcs.Push.Dialog.v2" timestamp="1672479049985">
+    <state x="361" y="145" key="Vcs.Push.Dialog.v2" timestamp="1672542109825">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state x="361" y="145" key="Vcs.Push.Dialog.v2/0.0.1536.824@0.0.1536.824" timestamp="1672479049985" />
+    <state x="361" y="145" key="Vcs.Push.Dialog.v2/0.0.1536.824@0.0.1536.824" timestamp="1672542109825" />
     <state x="449" y="236" key="com.intellij.ide.util.TipDialog" timestamp="1672120026926">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
@@ -883,19 +882,25 @@
           <option name="timeStamp" value="200" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/DbHelper.java</url>
-          <line>229</line>
-          <option name="timeStamp" value="201" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupDisbandMessageContentProcessor.java</url>
           <line>51</line>
           <option name="timeStamp" value="202" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/ReplyAckMessageProcessor.java</url>
+          <line>45</line>
+          <option name="timeStamp" value="203" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="javascript">
           <url>file://$PROJECT_DIR$/docs/socket/ouyu-socket.js</url>
           <line>328</line>
           <option name="timeStamp" value="111" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="javascript">
+          <url>file://$PROJECT_DIR$/docs/html/client.html</url>
+          <line>321</line>
+          <properties lambdaOrdinal="-1" />
+          <option name="timeStamp" value="204" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>

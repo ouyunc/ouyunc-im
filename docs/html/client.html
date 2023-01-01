@@ -290,7 +290,7 @@
 		message.setContent(element.value);
 		message.setCreateTime(new Date().getTime());
 		let messageDataBinary = message.serializeBinary();
-		let packetDataView = wrapMessage(messageDataBinary, 6);
+		let packetDataView = wrapMessage(messageDataBinary, 5);
 		// 发送心跳信息
 		websocket.send(packetDataView.buffer);
 	}
@@ -313,6 +313,23 @@
 		message.setCreateTime(new Date().getTime());
 		let messageDataBinary = message.serializeBinary();
 		let packetDataView = wrapMessage(messageDataBinary, 8);
+		// 发送心跳信息
+		websocket.send(packetDataView.buffer);
+	}
+
+	// 回应收到的ack
+	function replyAck(to,packetId,deviceType) {
+		let message = new proto.com.ouyunc.im.Message();
+		message.setFrom(identity);
+		message.setTo(to)
+		message.setContentType(6);
+		message.setContent(JSON.stringify({
+			"packetId": packetId.toString(),
+			"deviceType":deviceType
+		}))
+		message.setCreateTime(new Date().getTime());
+		let messageDataBinary = message.serializeBinary();
+		let packetDataView = wrapMessage(messageDataBinary, 3);
 		// 发送心跳信息
 		websocket.send(packetDataView.buffer);
 	}
@@ -406,16 +423,11 @@
 				// 定义客户端需要处理的消息
 				let messageObj = proto.com.ouyunc.im.Message.deserializeBinary(message);
 				// 判断是什么消息类型就转成什么消息返回给前端
-				// switch (messageType) {
-				// 	case 0:
-				// 		break;
-				// 	case 1:
-				// 		break;
-				// 	case 2:
-				// 		break;
-				// 	default:
-				// 		throw "暂不支持该消息类型！";
-				// }
+				switch (messageType) {
+					case 5:
+						replyAck(messageObj.getFrom(), packetId, deviceType);
+						break;
+				}
 				// 将message result 返回
 				resolve({
 					message: messageObj,
