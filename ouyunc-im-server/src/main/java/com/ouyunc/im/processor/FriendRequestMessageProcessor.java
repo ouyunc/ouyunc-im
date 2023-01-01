@@ -1,6 +1,7 @@
 package com.ouyunc.im.processor;
 
 import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.date.SystemClock;
 import cn.hutool.json.JSONUtil;
 import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.enums.MessageContentEnum;
@@ -72,7 +73,7 @@ public class  FriendRequestMessageProcessor extends AbstractMessageProcessor{
             List<LoginUserInfo> toLoginUserInfos = UserHelper.onlineAll(to);
             if (CollectionUtil.isEmpty(toLoginUserInfos)) {
                 // 存入离线消息
-                DbHelper.write2OfflineTimeline(packet, to);
+                DbHelper.write2OfflineTimeline(packet, to, SystemClock.now());
                 return;
             }
             MessageHelper.send2MultiDevices(packet, toLoginUserInfos);

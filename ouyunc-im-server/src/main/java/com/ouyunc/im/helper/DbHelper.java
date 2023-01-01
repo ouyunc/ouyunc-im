@@ -2,6 +2,8 @@ package com.ouyunc.im.helper;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.date.SystemClock;
+import cn.hutool.core.lang.Snowflake;
 import cn.hutool.core.map.MapUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
@@ -412,9 +414,9 @@ public class DbHelper {
      * @param from
      * @return void
      */
-    public static void write2SendTimeline(Packet packet, String from) {
+    public static void write2SendTimeline(Packet packet, String from, long timestamp) {
         Message message = (Message) packet.getMessage();
-        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.SEND + from, new ImSendMessage(packet.getPacketId(), packet.getProtocol(), packet.getProtocolVersion(), packet.getDeviceType(), packet.getNetworkType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), packet.getIp(), message.getFrom(), message.getTo(), packet.getMessageType(), message.getContentType(), message.getContent(), null, message.getCreateTime()), packet.getPacketId());
+        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.SEND + from, new ImSendMessage(packet.getPacketId(), packet.getProtocol(), packet.getProtocolVersion(), packet.getDeviceType(), packet.getNetworkType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), packet.getIp(), message.getFrom(), message.getTo(), packet.getMessageType(), message.getContentType(), message.getContent(), null, message.getCreateTime()), timestamp);
     }
 
     /**
@@ -424,9 +426,9 @@ public class DbHelper {
      * @param to
      * @return void
      */
-    public static void write2ReceiveTimeline(Packet packet, String to) {
+    public static void write2ReceiveTimeline(Packet packet, String to, long timestamp) {
         Message message = (Message) packet.getMessage();
-        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.RECEIVE + to, new ImReceiveMessage(packet.getPacketId(), packet.getProtocol(), packet.getProtocolVersion(), packet.getDeviceType(), packet.getNetworkType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), packet.getIp(), message.getFrom(), message.getTo(), packet.getMessageType(), message.getContentType(), message.getContent(), message.getCreateTime()), packet.getPacketId());
+        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.RECEIVE + to, new ImReceiveMessage(packet.getPacketId(), packet.getProtocol(), packet.getProtocolVersion(), packet.getDeviceType(), packet.getNetworkType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), packet.getIp(), message.getFrom(), message.getTo(), packet.getMessageType(), message.getContentType(), message.getContent(), message.getCreateTime()), timestamp);
     }
 
     /**
@@ -434,7 +436,7 @@ public class DbHelper {
      * @param to 消息发送者
      * @param packet
      */
-    public static void write2OfflineTimeline(Packet packet, String to) {
-        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + to, packet, packet.getPacketId());
+    public static void write2OfflineTimeline(Packet packet, String to, long timestamp) {
+        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + to, packet, timestamp);
     }
 }

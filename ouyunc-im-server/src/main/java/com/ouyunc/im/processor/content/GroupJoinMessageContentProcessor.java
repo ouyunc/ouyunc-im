@@ -1,6 +1,7 @@
 package com.ouyunc.im.processor.content;
 
 import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.date.SystemClock;
 import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.enums.MessageContentEnum;
 import com.ouyunc.im.domain.bo.ImGroupUserBO;
@@ -39,10 +40,10 @@ public class GroupJoinMessageContentProcessor extends AbstractMessageContentProc
         }
         for (ImGroupUserBO groupManagerMember : groupManagerMembers) {
             // 判断该管理员是否在线，如果不在线放入离线消息
-            List<LoginUserInfo> managersLoginUserInfos = UserHelper.onlineAll(groupManagerMember.getUserId().toString());
+            List<LoginUserInfo> managersLoginUserInfos = UserHelper.onlineAll(groupManagerMember.getUserId());
             if (CollectionUtil.isEmpty(managersLoginUserInfos)) {
                 // 存入离线消息
-                DbHelper.write2OfflineTimeline(packet, groupManagerMember.getUserId().toString());
+                DbHelper.write2OfflineTimeline(packet, groupManagerMember.getUserId(), SystemClock.now());
             }else {
                 // 转发给某个客户端的各个设备端
                 MessageHelper.send2MultiDevices(packet, managersLoginUserInfos);

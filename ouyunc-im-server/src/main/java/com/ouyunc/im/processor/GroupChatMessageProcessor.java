@@ -1,6 +1,7 @@
 package com.ouyunc.im.processor;
 
 import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.date.SystemClock;
 import cn.hutool.json.JSONUtil;
 import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.IMConstant;
@@ -93,9 +94,10 @@ public class GroupChatMessageProcessor extends AbstractMessageProcessor {
                 return;
             }
             // 写入发件箱
-            DbHelper.write2SendTimeline(packet, from);
+            long timestamp = SystemClock.now();
+            DbHelper.write2SendTimeline(packet, from, timestamp);
             // 将消息存一份到群消息中
-            DbHelper.write2ReceiveTimeline(packet, to);
+            DbHelper.write2ReceiveTimeline(packet, to, timestamp);
             // 遍历所有的群成员
             for (ImGroupUserBO groupMember : groupMembers) {
                 // 目前使用id号来作为唯一标识
@@ -112,7 +114,7 @@ public class GroupChatMessageProcessor extends AbstractMessageProcessor {
                         List<LoginUserInfo> othersMembersLoginUserInfos = UserHelper.onlineAll(groupMember.getUserId().toString());
                         if (CollectionUtil.isEmpty(othersMembersLoginUserInfos)) {
                             // 存入离线消息
-                            DbHelper.write2OfflineTimeline(packet,groupMember.getUserId().toString());
+                            DbHelper.write2OfflineTimeline(packet,groupMember.getUserId(), timestamp);
                         }else {
                             // 转发给某个客户端的各个设备端
                             MessageHelper.send2MultiDevices(packet, othersMembersLoginUserInfos);

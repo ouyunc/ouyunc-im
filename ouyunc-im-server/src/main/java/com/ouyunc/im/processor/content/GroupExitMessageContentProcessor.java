@@ -1,6 +1,7 @@
 package com.ouyunc.im.processor.content;
 
 import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.date.SystemClock;
 import cn.hutool.json.JSONUtil;
 import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.IMConstant;
@@ -52,10 +53,10 @@ public class GroupExitMessageContentProcessor extends AbstractMessageContentProc
         // 查找群中的群主
         ImGroupUserBO groupLeader = DbHelper.getGroupLeader(groupRequestContent.getGroupId());
         // 判断该管理员是否在线，如果不在线放入离线消息
-        List<LoginUserInfo> leaderLoginUserInfos = UserHelper.onlineAll(groupLeader.getUserId().toString());
+        List<LoginUserInfo> leaderLoginUserInfos = UserHelper.onlineAll(groupLeader.getUserId());
         if (CollectionUtil.isEmpty(leaderLoginUserInfos)) {
             // 存入离线消息
-            DbHelper.write2OfflineTimeline(packet, groupLeader.getUserId());
+            DbHelper.write2OfflineTimeline(packet, groupLeader.getUserId(), SystemClock.now());
             return;
         }
         // 转发给某个客户端的各个设备端

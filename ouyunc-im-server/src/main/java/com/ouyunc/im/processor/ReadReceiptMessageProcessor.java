@@ -1,6 +1,7 @@
 package com.ouyunc.im.processor;
 
 import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.date.SystemClock;
 import cn.hutool.json.JSONUtil;
 import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.enums.MessageContentEnum;
@@ -91,7 +92,7 @@ public class ReadReceiptMessageProcessor extends AbstractMessageProcessor {
                             List<LoginUserInfo> loginUserInfos = UserHelper.onlineAll(from);
                             if (CollectionUtil.isEmpty(loginUserInfos)) {
                                 // 存入离线信箱
-                                DbHelper.write2OfflineTimeline(packet, from);
+                                DbHelper.write2OfflineTimeline(packet, from, SystemClock.now());
                             } else {
                                 // 转发给某个客户端的各个设备端
                                 MessageHelper.send2MultiDevices(packet, loginUserInfos);
