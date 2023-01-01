@@ -39,7 +39,7 @@
 					element.insertAdjacentHTML('beforeend','收到客户端:'+packet.message.getFrom() + '的添加好友申请' + '<button onclick="agreeFriend(\''+packet.message.getFrom() +'\')">同意</button><button onclick="refuseFriend(\''+packet.message.getFrom()+'\')">拒绝</button>');
 				}else if (packet.messageType === 8 && packet.message.getContentType() === 13){
 					// 将发送者添加到联系人
-					elementcontact.insertAdjacentHTML('beforeend','<div onclick="selectChat(\''+packet.message.getFrom()+'\')" style="border-bottom:1px solid black;margin-top:10px"><a href="#">'+packet.message.getFrom() +'(个人)</a><button style="margin-left:10px">屏蔽</button><button style="margin-left:10px">拉黑</button><button style="margin-left:10px">按需拉取离线消息</button></div>');
+					elementcontact.insertAdjacentHTML('beforeend','<div onclick="selectChat(\''+packet.message.getFrom()+'\')" style="border-bottom:1px solid black;margin-top:10px"><a href="#">'+packet.message.getFrom() +'(个人)</a><button style="margin-left:10px">屏蔽</button><button style="margin-left:10px">拉黑</button><button onclick="readReceipt()" style="margin-left:10px">按需拉取离线消息</button></div>');
 				}else if (packet.messageType === 3 && packet.message.getContentType() === 7) {
 					console.log(packet.message.getContent())
 					element.insertAdjacentHTML('beforeend',"收到服务端:"+ packet.message.getFrom() + "的响应心跳relay ack")
@@ -330,6 +330,22 @@
 		message.setCreateTime(new Date().getTime());
 		let messageDataBinary = message.serializeBinary();
 		let packetDataView = wrapMessage(messageDataBinary, 3);
+		// 发送心跳信息
+		websocket.send(packetDataView.buffer);
+	}
+	// 读回执
+	function readReceipt(to, packetIdList) {
+		let message = new proto.com.ouyunc.im.Message();
+		message.setFrom(identity);
+		message.setTo(to)
+		message.setContentType(9);
+		message.setContent(JSON.stringify({
+			"messageType": 5,
+			"packetIdList": ['1609035518157394000','1609372604668448800']
+		}))
+		message.setCreateTime(new Date().getTime());
+		let messageDataBinary = message.serializeBinary();
+		let packetDataView = wrapMessage(messageDataBinary, 4);
 		// 发送心跳信息
 		websocket.send(packetDataView.buffer);
 	}

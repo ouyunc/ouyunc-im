@@ -12,6 +12,7 @@ import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.db.operator.DbOperator;
 import com.ouyunc.im.db.operator.MysqlDbOperator;
 import com.ouyunc.im.domain.ImGroup;
+import com.ouyunc.im.domain.ImReceiveMessage;
 import com.ouyunc.im.domain.ImSendMessage;
 import com.ouyunc.im.domain.ImUser;
 import com.ouyunc.im.domain.bo.ImBlacklistBO;
@@ -412,7 +413,8 @@ public class DbHelper {
      * @return void
      */
     public static void write2SendTimeline(Packet packet, String from) {
-        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.SEND + from, packet, packet.getPacketId());
+        Message message = (Message) packet.getMessage();
+        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.SEND + from, new ImSendMessage(packet.getPacketId(), packet.getProtocol(), packet.getProtocolVersion(), packet.getDeviceType(), packet.getNetworkType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), packet.getIp(), message.getFrom(), message.getTo(), packet.getMessageType(), message.getContentType(), message.getContent(), null, message.getCreateTime()), packet.getPacketId());
     }
 
     /**
@@ -423,7 +425,8 @@ public class DbHelper {
      * @return void
      */
     public static void write2ReceiveTimeline(Packet packet, String to) {
-        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.RECEIVE + to, packet, packet.getPacketId());
+        Message message = (Message) packet.getMessage();
+        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.RECEIVE + to, new ImReceiveMessage(packet.getPacketId(), packet.getProtocol(), packet.getProtocolVersion(), packet.getDeviceType(), packet.getNetworkType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), packet.getIp(), message.getFrom(), message.getTo(), packet.getMessageType(), message.getContentType(), message.getContent(), message.getCreateTime()), packet.getPacketId());
     }
 
     /**

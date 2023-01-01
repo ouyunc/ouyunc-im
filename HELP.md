@@ -12,8 +12,8 @@
 
 
 
-(2) zset发件箱消息:   ouyunc:im:message:send:${用户唯一标识}                historyPacket     packetId
-(3) zset收件箱消息:   ouyunc:im:message:receive:${用户/群唯一标识}             packet            packetId
+(2) zset发件箱消息:   ouyunc:im:message:send:${用户唯一标识}                ImSendMessage     packetId
+(3) zset收件箱消息:   ouyunc:im:message:receive:${用户/群唯一标识}             ImReceiveMessage            packetId
 (4) zset离线消息:   ouyunc:im:message:offline:${用户唯一标识}               packet            packetId
 
 (5) zset全局失败消息:     ouyunc:im:message:fail:from:${from}:to:${to}            missPacket            packetId

@@ -78,7 +78,7 @@ public class ReadReceiptMessageProcessor extends AbstractMessageProcessor {
             EVENT_EXECUTORS.submit(() -> DbHelper.messageReadReceipt(message.getFrom(), to, packetIdList)).addListener(future -> {
                 if (future.isDone()) {
                     if (future.isSuccess()) {
-                        List<ImSendMessage> sendMessageList = (List<ImSendMessage>) future.getNow();
+                        Set<ImSendMessage> sendMessageList = (Set<ImSendMessage>) future.getNow();
                         // 无论私聊还是群聊，根据所有消息的发送者进行分组，传递分批传递消息
                         sendMessageList.stream().collect(Collectors.groupingBy(ImSendMessage::getFrom)).forEach((from, sendMessages) -> {
                             // 判断from是否在线,如果不在线，则将该批次回执消息存到对应客户端的离线信箱中，稍后发布,注意这里涉及接受者多设备端，不考虑发送者多设备端（影响不大）

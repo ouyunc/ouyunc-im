@@ -140,6 +140,24 @@ public class ImSendMessage implements Serializable {
         this.deleted = deleted;
     }
 
+    public ImSendMessage(Long id, byte protocol, byte protocolVersion, byte deviceType, byte networkType, byte encryptType, byte serializeAlgorithm, String ip, String from, String to, byte type, Integer contentType, Object content, String readList, Long sendTime) {
+        this.id = id;
+        this.protocol = protocol;
+        this.protocolVersion = protocolVersion;
+        this.deviceType = deviceType;
+        this.networkType = networkType;
+        this.encryptType = encryptType;
+        this.serializeAlgorithm = serializeAlgorithm;
+        this.ip = ip;
+        this.from = from;
+        this.to = to;
+        this.type = type;
+        this.contentType = contentType;
+        this.content = content;
+        this.readList = readList;
+        this.sendTime = sendTime;
+    }
+
     public Long getId() {
         return id;
     }

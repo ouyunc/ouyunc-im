@@ -246,4 +246,24 @@ public class ImReceiveMessage implements Serializable {
     public void setDeleted(Integer deleted) {
         this.deleted = deleted;
     }
+
+    public ImReceiveMessage() {
+    }
+
+    public ImReceiveMessage(Long id, byte protocol, byte protocolVersion, byte deviceType, byte networkType, byte encryptType, byte serializeAlgorithm, String ip, String from, String to, byte type, Integer contentType, Object content, Long receiveTime) {
+        this.id = id;
+        this.protocol = protocol;
+        this.protocolVersion = protocolVersion;
+        this.deviceType = deviceType;
+        this.networkType = networkType;
+        this.encryptType = encryptType;
+        this.serializeAlgorithm = serializeAlgorithm;
+        this.ip = ip;
+        this.from = from;
+        this.to = to;
+        this.type = type;
+        this.contentType = contentType;
+        this.content = content;
+        this.receiveTime = receiveTime;
+    }
 }
