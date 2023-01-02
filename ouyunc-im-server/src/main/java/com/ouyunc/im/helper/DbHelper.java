@@ -140,11 +140,11 @@ public class DbHelper {
     }
 
     /**
-     * 加群
+     * 加群/绑定群
      * @param from 客户端唯一标识
      * @param groupId  群唯一标识
      */
-    public static void joinGroup(String from, String groupId) {
+    public static void bindGroup(String from, String groupId) {
         ImGroupUserBO imGroupUserBO = (ImGroupUserBO) cacheOperator.getHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + groupId + CacheConstant.MEMBERS, from);
         // 已经存在群成员中
         if (imGroupUserBO != null) {
@@ -369,6 +369,9 @@ public class DbHelper {
      * @return
      */
     public static void writeMessageReadReceipt(String from, List<ReadReceiptContent> readReceiptList) {
+        if (CollectionUtil.isEmpty(readReceiptList)) {
+            return;
+        }
         ImUser user = getUser(from);
         List<Object[]> batchArgs = new ArrayList<>();
         for (ReadReceiptContent readReceiptContent : readReceiptList) {

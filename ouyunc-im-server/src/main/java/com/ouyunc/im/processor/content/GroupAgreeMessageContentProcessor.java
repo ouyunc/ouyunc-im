@@ -50,7 +50,7 @@ public class GroupAgreeMessageContentProcessor extends AbstractMessageContentPro
             return;
         }
         // 绑定群成员关系
-        DbHelper.joinGroup(groupRequestContent.getIdentity(), groupRequestContent.getGroupId());
+        DbHelper.bindGroup(groupRequestContent.getIdentity(), groupRequestContent.getGroupId());
 
         // 查找群中的管理员以及群主，向其投递加群的请求
         List<ImGroupUserBO> groupManagerMembers = DbHelper.getGroupMembers(groupRequestContent.getGroupId(), true);

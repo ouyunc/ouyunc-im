@@ -67,36 +67,28 @@ public class ReadReceiptMessageProcessor extends AbstractMessageProcessor {
             if (MessageContentEnum.READ_RECEIPT_CONTENT.type() != message.getContentType()) {
                 return;
             }
-            List<ReadReceiptContent> readReceiptList = JSONUtil.toBean(message.getContent(), List.class);
+            List<ReadReceiptContent> readReceiptList = JSONUtil.toList(message.getContent(), ReadReceiptContent.class);
             // 不做处理
             if (CollectionUtil.isEmpty(readReceiptList)) {
                 return;
             }
-            // 异步处理
-            EVENT_EXECUTORS.submit(() -> DbHelper.writeMessageReadReceipt(message.getFrom(), readReceiptList)).addListener(future -> {
-                if (future.isDone()) {
-                    if (future.isSuccess()) {
-                        // 无论私聊还是群聊，根据所有消息的发送者进行分组，传递分批传递消息
-                        readReceiptList.stream().collect(Collectors.groupingBy(ReadReceiptContent::getIdentity)).forEach((identity, readReceiptContents) -> {
-                            // 判断from是否在线,如果不在线，则将该批次回执消息存到对应客户端的离线信箱中，稍后发布,注意这里涉及接受者多设备端，不考虑发送者多设备端（影响不大）
-                            // 重新封装packet消息,进行发送
-                            message.setTo(identity);
-                            message.setContent(JSONUtil.toJsonStr(readReceiptContents));
-                            // 获取该客户端在线的所有客户端，进行推送消息已读
-                            List<LoginUserInfo> loginUserInfos = UserHelper.onlineAll(identity);
-                            if (CollectionUtil.isEmpty(loginUserInfos)) {
-                                // 存入离线信箱
-                                DbHelper.write2OfflineTimeline(packet, identity, SystemClock.now());
-                            } else {
-                                // 转发给某个客户端的各个设备端
-                                MessageHelper.send2MultiDevices(packet, loginUserInfos);
-                            }
-
-                        });
-                    }else {
-                        log.error("已读回执处理失败！");
-                    }
+            DbHelper.writeMessageReadReceipt(message.getFrom(), readReceiptList);
+            // 无论私聊还是群聊，根据所有消息的发送者进行分组，传递分批传递消息
+            readReceiptList.stream().collect(Collectors.groupingBy(ReadReceiptContent::getIdentity)).forEach((identity, readReceiptContents) -> {
+                // 判断from是否在线,如果不在线，则将该批次回执消息存到对应客户端的离线信箱中，稍后发布,注意这里涉及接受者多设备端，不考虑发送者多设备端（影响不大）
+                // 重新封装packet消息,进行发送
+                message.setTo(identity);
+                message.setContent(JSONUtil.toJsonStr(readReceiptContents));
+                // 获取该客户端在线的所有客户端，进行推送消息已读
+                List<LoginUserInfo> loginUserInfos = UserHelper.onlineAll(identity);
+                if (CollectionUtil.isEmpty(loginUserInfos)) {
+                    // 存入离线信箱
+                    DbHelper.write2OfflineTimeline(packet, identity, SystemClock.now());
+                } else {
+                    // 转发给某个客户端的各个设备端
+                    MessageHelper.send2MultiDevices(packet, loginUserInfos);
                 }
+
             });
         });
     }
