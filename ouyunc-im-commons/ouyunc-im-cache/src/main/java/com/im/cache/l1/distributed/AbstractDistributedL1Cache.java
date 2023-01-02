@@ -77,17 +77,17 @@ public abstract class AbstractDistributedL1Cache<K, V> implements L1Cache<K, V> 
     /**
      *  随机获取指定key，指定个数
      */
-    public abstract List<Object> getRandomMembersZset(K key, long count);
+    public abstract<T> List<T> getRandomMembersZset(K key, long count);
 
     /**
      * 随机获取单个值
      */
-    public abstract Object getRandomMemberZset(K key);
+    public abstract<T> T getRandomMemberZset(K key);
 
 
-    public abstract Set<Object> rangeZset(K key, long start, long end);
+    public abstract<T> Set<T> rangeZset(K key, long start, long end);
 
-    public abstract Set<Object> reverseRangeZset(K key, long start, long end);
+    public abstract<T> Set<T> reverseRangeZset(K key, long start, long end);
 
     /**
      * zset  根据key和value移除指定元素，未查询到对应的key和value，返回0，否则返回1
@@ -102,20 +102,20 @@ public abstract class AbstractDistributedL1Cache<K, V> implements L1Cache<K, V> 
     /**
      * zset  指定范围内元素排序
      */
-    public abstract Set<Object> rangeByScore(K key, double min, double max);
+    public abstract<T> Set<T> rangeByScore(K key, double min, double max);
     /**
      * zset  指定范围内元素排序
      */
-    public abstract Set<Object> reverseRangeByScore(K key, double min, double max);
+    public abstract<T> Set<T> reverseRangeByScore(K key, double min, double max);
 
     /**
      * zset  指定范围内元素排序, 从哪里开始要多少
      */
-    public abstract Set<Object>  rangeByScore(K key, double min, double max, long offset, long count);
+    public abstract<T> Set<T>  rangeByScore(K key, double min, double max, long offset, long count);
     /**
      * zset  指定范围内元素排序, 从哪里开始要多少
      */
-    public abstract Set<Object>  reverseRangeByScore(K key, double min, double max, long offset, long count);
+    public abstract<T> Set<T>  reverseRangeByScore(K key, double min, double max, long offset, long count);
 
     /**
      * zset  元素在集合内对应的排名

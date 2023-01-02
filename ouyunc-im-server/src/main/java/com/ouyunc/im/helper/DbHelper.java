@@ -54,53 +54,43 @@ public class DbHelper {
      * @return
      */
     public static List<Packet> pullOfflineMessage(Message message) {
-        List<Packet> packetList = new ArrayList<>();
+        List<Packet> result = new ArrayList<>();
         // 判断是按需来取还是全量拉取
-        String to = message.getTo();
         OfflineContent offlineContent = JSONUtil.toBean(message.getContent(), OfflineContent.class);
-        List<Long> packetIdList = offlineContent.getPacketList();
+        List<Packet> packetList = offlineContent.getPacketList();
         // 如果传过来的消息id不为空，则可能是第N次拉取，从离线消息中删除消息
-        if (CollectionUtil.isNotEmpty(packetIdList)) {
-            for (Long packetId : packetIdList) {
-                Set<Object> objects = cacheOperator.rangeByScore(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + message.getFrom(), packetId, packetId);
-                if (CollectionUtil.isNotEmpty(objects)) {
-                    Packet packet = (Packet) objects.iterator().next();
-                    cacheOperator.removeZset(CacheConstant.OFFLINE + message.getFrom(), packet);
-                }
+        if (CollectionUtil.isNotEmpty(packetList)) {
+            for (Packet packet : packetList) {
+                cacheOperator.removeZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + message.getFrom(), packet);
             }
         }
-
-        // 全量顺序拉取
-        if (StrUtil.isBlank(to)) {
-            Set<Object> packetSet = cacheOperator.rangeByScore(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + message.getFrom(), offlineContent.getPullPacketId(), offlineContent.getPullPacketId(), 0, 1);
-            if (CollectionUtil.isNotEmpty(packetSet)) {
-                Packet packet = (Packet) packetSet.iterator().next();
-                Long rank = cacheOperator.reverseRank(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + CacheConstant.COLON + message.getFrom(), packet);
-                Set<Object> packetSetResult = cacheOperator.reverseRangeZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + message.getFrom(), rank, rank + offlineContent.getPullSize());
-                Iterator<Object> iterator = packetSetResult.iterator();
+        // 全量顺序拉取，一次拉取pullSize 大小的消息
+        if (StrUtil.isBlank(message.getTo())) {
+            Set<Packet> packetSetResult = cacheOperator.reverseRangeZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + message.getFrom(), 0, offlineContent.getPullSize());
+            if (CollectionUtil.isNotEmpty(packetSetResult)) {
+                Iterator<Packet> iterator = packetSetResult.iterator();
                 while (iterator.hasNext()) {
-                    Packet packet0 = (Packet) iterator.next();
-                    packetList.add(packet0);
+                    result.add(iterator.next());
                 }
             }
-            return packetList;
+            return result;
         }
         // 按需拉取,先查出所有，然后过滤前几条给客户端
-        Set<Object> packetAllSet = cacheOperator.reverseRangeZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + message.getFrom(), 0, -1);
+        Set<Packet> packetAllSet = cacheOperator.reverseRangeZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + message.getFrom(), 0, -1);
         if (CollectionUtil.isNotEmpty(packetAllSet)) {
-            Iterator<Object> iterator = packetAllSet.iterator();
+            Iterator<Packet> iterator = packetAllSet.iterator();
             while (iterator.hasNext()) {
-                Packet packet0 = (Packet) iterator.next();
+                Packet packet0 = iterator.next();
                 Message message0 = (Message) packet0.getMessage();
-                if (packetList.size() > offlineContent.getPullSize()) {
+                if (result.size() > offlineContent.getPullSize()) {
                     break;
                 }
                 if (message0.getFrom().equals(message.getTo())) {
-                    packetList.add(packet0);
+                    result.add(packet0);
                 }
             }
         }
-        return packetList;
+        return result;
     }
 
     /**

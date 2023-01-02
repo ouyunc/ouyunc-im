@@ -45,7 +45,6 @@ public class OfflineMessageProcessor extends AbstractMessageProcessor{
         OfflineContent offlineContent = JSONUtil.toBean(message.getContent(), OfflineContent.class);
         // 拉取离线消息（根据最近消息顺序拉取）,按需拉取或全量按顺序拉取
         List<Packet> offlineMessageList = DbHelper.pullOfflineMessage(message);
-        offlineContent.setPullPacketId(offlineMessageList.get(offlineMessageList.size()-1).getPacketId());
         offlineContent.setPacketList(offlineMessageList);
         message.setContent(JSONUtil.toJsonStr(offlineContent));
         MessageHelper.sendMessage(packet, IdentityUtil.generalComboIdentity(message.getFrom(), packet.getDeviceType()));

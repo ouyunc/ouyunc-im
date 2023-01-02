@@ -324,5 +324,4 @@ public class IMConstant {
      */
     public static final Integer NOT_MUSHIN = 0;
 
-
 }

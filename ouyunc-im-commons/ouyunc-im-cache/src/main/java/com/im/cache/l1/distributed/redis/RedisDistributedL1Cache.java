@@ -165,23 +165,23 @@ public class RedisDistributedL1Cache <K , V > extends AbstractDistributedL1Cache
     }
 
     @Override
-    public List<Object> getRandomMembersZset(K key, long count) {
+    public<T> List<T> getRandomMembersZset(K key, long count) {
         return redisTemplate.opsForZSet().randomMembers(key, count);
     }
 
     @Override
-    public Object getRandomMemberZset(K key) {
-        return redisTemplate.opsForZSet().randomMember(key);
+    public<T> T getRandomMemberZset(K key) {
+        return (T) redisTemplate.opsForZSet().randomMember(key);
     }
 
 
     @Override
-    public Set<Object> rangeZset(K key, long start, long end) {
+    public<T> Set<T> rangeZset(K key, long start, long end) {
         return redisTemplate.opsForZSet().range(key, start, end);
     }
 
     @Override
-    public Set<Object> reverseRangeZset(K key, long start, long end) {
+    public<T> Set<T> reverseRangeZset(K key, long start, long end) {
         return redisTemplate.opsForZSet().reverseRange(key, start, end);
     }
 
@@ -196,22 +196,22 @@ public class RedisDistributedL1Cache <K , V > extends AbstractDistributedL1Cache
     }
 
     @Override
-    public Set<Object> rangeByScore(K key, double min, double max) {
+    public<T> Set<T> rangeByScore(K key, double min, double max) {
         return redisTemplate.opsForZSet().rangeByScore(key, min, max);
     }
 
     @Override
-    public Set<Object> reverseRangeByScore(K key, double min, double max) {
+    public<T> Set<T> reverseRangeByScore(K key, double min, double max) {
         return redisTemplate.opsForZSet().reverseRangeByScore(key, min, max);
     }
 
     @Override
-    public Set<Object> rangeByScore(K key, double min, double max, long offset, long count) {
+    public<T> Set<T> rangeByScore(K key, double min, double max, long offset, long count) {
         return redisTemplate.opsForZSet().rangeByScore(key, min, max, offset, count);
     }
 
     @Override
-    public Set<Object> reverseRangeByScore(K key, double min, double max, long offset, long count) {
+    public<T> Set<T> reverseRangeByScore(K key, double min, double max, long offset, long count) {
         return redisTemplate.opsForZSet().reverseRangeByScore(key, min, max, offset, count);
     }
 
