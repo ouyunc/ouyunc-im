@@ -88,11 +88,6 @@ public class ImSendMessage implements Serializable {
 
 
     /**
-     * 已读列表，如何是群消息，则是数组的json字符串，存放群成员id
-     */
-    private String readList;
-
-    /**
      * 发送时间，毫秒
      */
     private Long sendTime;
@@ -119,7 +114,7 @@ public class ImSendMessage implements Serializable {
     public ImSendMessage() {
     }
 
-    public ImSendMessage(Long id, byte protocol, byte protocolVersion, byte deviceType, byte networkType, byte encryptType, byte serializeAlgorithm, String ip, String from, String to, byte type, Integer contentType, Object content, String readList, Long sendTime, String createTime, String updateTime, Integer deleted) {
+    public ImSendMessage(Long id, byte protocol, byte protocolVersion, byte deviceType, byte networkType, byte encryptType, byte serializeAlgorithm, String ip, String from, String to, byte type, Integer contentType, Object content, Long sendTime, String createTime, String updateTime, Integer deleted) {
         this.id = id;
         this.protocol = protocol;
         this.protocolVersion = protocolVersion;
@@ -133,14 +128,13 @@ public class ImSendMessage implements Serializable {
         this.type = type;
         this.contentType = contentType;
         this.content = content;
-        this.readList = readList;
         this.sendTime = sendTime;
         this.createTime = createTime;
         this.updateTime = updateTime;
         this.deleted = deleted;
     }
 
-    public ImSendMessage(Long id, byte protocol, byte protocolVersion, byte deviceType, byte networkType, byte encryptType, byte serializeAlgorithm, String ip, String from, String to, byte type, Integer contentType, Object content, String readList, Long sendTime) {
+    public ImSendMessage(Long id, byte protocol, byte protocolVersion, byte deviceType, byte networkType, byte encryptType, byte serializeAlgorithm, String ip, String from, String to, byte type, Integer contentType, Object content, Long sendTime) {
         this.id = id;
         this.protocol = protocol;
         this.protocolVersion = protocolVersion;
@@ -154,7 +148,6 @@ public class ImSendMessage implements Serializable {
         this.type = type;
         this.contentType = contentType;
         this.content = content;
-        this.readList = readList;
         this.sendTime = sendTime;
     }
 
@@ -262,13 +255,6 @@ public class ImSendMessage implements Serializable {
         this.content = content;
     }
 
-    public String getReadList() {
-        return readList;
-    }
-
-    public void setReadList(String readList) {
-        this.readList = readList;
-    }
 
     public Long getSendTime() {
         return sendTime;

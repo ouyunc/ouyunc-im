@@ -1,9 +1,6 @@
 package com.ouyunc.im.helper;
 
-import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollectionUtil;
-import cn.hutool.core.date.SystemClock;
-import cn.hutool.core.lang.Snowflake;
 import cn.hutool.core.map.MapUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
@@ -14,8 +11,6 @@ import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.db.operator.DbOperator;
 import com.ouyunc.im.db.operator.MysqlDbOperator;
 import com.ouyunc.im.domain.ImGroup;
-import com.ouyunc.im.domain.ImReceiveMessage;
-import com.ouyunc.im.domain.ImSendMessage;
 import com.ouyunc.im.domain.ImUser;
 import com.ouyunc.im.domain.bo.ImBlacklistBO;
 import com.ouyunc.im.domain.bo.ImFriendBO;
@@ -24,6 +19,7 @@ import com.ouyunc.im.lock.DistributedLock;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.packet.message.content.OfflineContent;
+import com.ouyunc.im.packet.message.content.ReadReceiptContent;
 import com.ouyunc.im.utils.SnowflakeUtil;
 
 import java.time.LocalDateTime;
@@ -46,51 +42,11 @@ public class DbHelper {
     private static DbOperator dbOperator = new MysqlDbOperator();
 
 
-    /**
-     * 处理消息已读回执，开线程处理
-     * @param from 发送者唯一标识
-     * @param to 代表用户或群的唯一标识
-     * @param packetIdList
-     * @return
-     */
-    @DistributedLock
-    public static Set<ImSendMessage> messageReadReceipt(String from, String to, Set<Long> packetIdList) {
-        // 记录已经修改的历史消息
-        Set<ImSendMessage> sendMessageList = new HashSet<>();
-        // 根据消息id查询服务器上的消息，然后进行更新
-        for (Long packetId : packetIdList) {
-            // 更新缓存，从信箱中取出相关消息
-            Set<Object> objects = cacheOperator.rangeByScore(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.SEND + to, packetId, packetId, 0, 1);
-            if (CollectionUtil.isNotEmpty(objects)) {
-                ImSendMessage sendMessage = (ImSendMessage) objects.iterator().next();
-                String readListStr = sendMessage.getReadList();
-                Set<String> readList = JSONUtil.toBean(readListStr, Set.class);
-                readList.add(from);
-                ImSendMessage newSendMessage = new ImSendMessage();
-                BeanUtil.copyProperties(sendMessage, newSendMessage);
-                newSendMessage.setReadList(JSONUtil.toJsonStr(readList));
-                // 先添加，后删除
-                cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.SEND + to, newSendMessage, packetId);
-                cacheOperator.removeZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.SEND + to, sendMessage);
-                sendMessageList.add(sendMessage);
-            }
-        }
-        return sendMessageList;
-
-    }
 
 
 
 
-    /**
-     * 添加原始消息到数据库
-     * @param packet
-     */
-    public static void addMessage(Packet packet) {
-        Message message = (Message) packet.getMessage();
-        String nowDateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-        dbOperator.insert(DbSqlConstant.MYSQL.INSERT_MESSAGE.sql(), packet.getPacketId(), packet.getProtocol(), packet.getProtocolVersion(), packet.getDeviceType(), packet.getNetworkType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), packet.getIp(), message.getFrom(), message.getTo(), packet.getMessageType(), message.getContentType(), JSONUtil.toJsonStr(message.getContent()), message.getCreateTime(), nowDateTime, nowDateTime);
-    }
+
 
     /**
      * 获取离线消息
@@ -406,6 +362,31 @@ public class DbHelper {
         return null;
     }
 
+    /**
+     * 处理消息已读回执，开线程处理
+     * @param from 发送者唯一标识
+     * @param readReceiptList
+     * @return
+     */
+    public static void writeMessageReadReceipt(String from, List<ReadReceiptContent> readReceiptList) {
+        ImUser user = getUser(from);
+        List<Object[]> batchArgs = new ArrayList<>();
+        for (ReadReceiptContent readReceiptContent : readReceiptList) {
+            batchArgs.add(new Object[] {SnowflakeUtil.nextId(), readReceiptContent.getPacketId(), from});
+            cacheOperator.putHash(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.READ_RECEIPT + readReceiptContent.getPacketId(), from, user);
+        }
+        dbOperator.batchInsert(DbSqlConstant.MYSQL.INSERT_READ_RECEIPT.sql(), batchArgs);
+    }
+
+    /**
+     * 添加原始消息到数据库
+     * @param packet
+     */
+    public static void writeMessage(Packet packet) {
+        Message message = (Message) packet.getMessage();
+        String nowDateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        dbOperator.insert(DbSqlConstant.MYSQL.INSERT_MESSAGE.sql(), packet.getPacketId(), packet.getProtocol(), packet.getProtocolVersion(), packet.getDeviceType(), packet.getNetworkType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), packet.getIp(), message.getFrom(), message.getTo(), packet.getMessageType(), message.getContentType(), JSONUtil.toJsonStr(message.getContent()), message.getCreateTime(), nowDateTime, nowDateTime);
+    }
 
     /**
      * @Author fangzhenxun
@@ -415,8 +396,10 @@ public class DbHelper {
      * @return void
      */
     public static void write2SendTimeline(Packet packet, String from, long timestamp) {
+        String nowDateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
         Message message = (Message) packet.getMessage();
-        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.SEND + from, new ImSendMessage(packet.getPacketId(), packet.getProtocol(), packet.getProtocolVersion(), packet.getDeviceType(), packet.getNetworkType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), packet.getIp(), message.getFrom(), message.getTo(), packet.getMessageType(), message.getContentType(), message.getContent(), null, message.getCreateTime()), timestamp);
+        dbOperator.insert(DbSqlConstant.MYSQL.INSERT_SEND_MESSAGE.sql(), packet.getPacketId(), packet.getProtocol(), packet.getProtocolVersion(), packet.getDeviceType(), packet.getNetworkType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), packet.getIp(), message.getFrom(), message.getTo(), packet.getMessageType(), message.getContentType(), message.getContent(), message.getCreateTime(), nowDateTime, nowDateTime);
+        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.SEND + from, packet, timestamp);
     }
 
     /**
@@ -427,16 +410,18 @@ public class DbHelper {
      * @return void
      */
     public static void write2ReceiveTimeline(Packet packet, String to, long timestamp) {
+        String nowDateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
         Message message = (Message) packet.getMessage();
-        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.RECEIVE + to, new ImReceiveMessage(packet.getPacketId(), packet.getProtocol(), packet.getProtocolVersion(), packet.getDeviceType(), packet.getNetworkType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), packet.getIp(), message.getFrom(), message.getTo(), packet.getMessageType(), message.getContentType(), message.getContent(), message.getCreateTime()), timestamp);
+        dbOperator.insert(DbSqlConstant.MYSQL.INSERT_RECEIVE_MESSAGE.sql(), packet.getPacketId(), packet.getProtocol(), packet.getProtocolVersion(), packet.getDeviceType(), packet.getNetworkType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), packet.getIp(), message.getFrom(), message.getTo(), packet.getMessageType(), message.getContentType(), message.getContent(), message.getCreateTime(), nowDateTime, nowDateTime);
+        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.RECEIVE + to, packet, timestamp);
     }
 
     /**
      * 存入离线消息
-     * @param to 消息发送者
+     * @param identity 消息发送者
      * @param packet
      */
-    public static void write2OfflineTimeline(Packet packet, String to, long timestamp) {
-        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + to, packet, timestamp);
+    public static void write2OfflineTimeline(Packet packet, String identity, long timestamp) {
+        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + identity, packet, timestamp);
     }
 }

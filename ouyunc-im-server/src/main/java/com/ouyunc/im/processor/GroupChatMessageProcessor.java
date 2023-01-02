@@ -44,7 +44,7 @@ public class GroupChatMessageProcessor extends AbstractMessageProcessor {
      */
     @Override
     public void preProcess(ChannelHandlerContext ctx, Packet packet) {
-        EVENT_EXECUTORS.execute(() -> DbHelper.addMessage(packet));
+        EVENT_EXECUTORS.execute(() -> DbHelper.writeMessage(packet));
         Message message = (Message) packet.getMessage();
         // 消息发送方
         String from = message.getFrom();

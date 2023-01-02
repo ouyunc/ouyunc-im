@@ -3,6 +3,8 @@ package com.ouyunc.im.constant.enums;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.content.*;
 
+import java.util.List;
+
 /**
  * @Author fangzhenxun
  * @Description: 消息内容类型枚举
@@ -19,7 +21,7 @@ public enum MessageContentEnum {
     CLIENT_REPLY_ACK_CONTENT(6, ClientReplyAckContent.class, "外部客户端收到消息后的回信内容"),
     SERVER_REPLY_ACK_CONTENT(7, Packet.class, "服务端收到消息后给客户端的回信内容"),
     SERVER_WARNING_CONTENT(8, ServerWarningContent.class, "服务端发出的警告内容"),
-    READ_RECEIPT_CONTENT(9, ReadReceiptContent.class, "已读回执消息内容"),
+    READ_RECEIPT_CONTENT(9, ReadReceiptContent.class, "已读回执消息内容, 集合中的对象"),
     OFFLINE_CONTENT(10, OfflineContent.class, "离线消息内容"),
 
 

@@ -46,7 +46,7 @@ public abstract class AbstractMessageProcessor implements MessageProcessor {
     public void preProcess(ChannelHandlerContext ctx, Packet packet) {
         log.info("现在处理默认的前置处理 packet: {} ...", packet);
         // 存储packet到数据库中（目前只是保存相关信息，不做扩展，以后可以做数据分析使用）
-        EVENT_EXECUTORS.execute(() -> DbHelper.addMessage(packet));
+        EVENT_EXECUTORS.execute(() -> DbHelper.writeMessage(packet));
         Message message = (Message) packet.getMessage();
         if (!MessageValidate.isAuth(message.getFrom(), packet.getDeviceType(), ctx)) {
             return;

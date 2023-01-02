@@ -242,7 +242,11 @@ public class DbSqlConstant {
 
         INSERT_GROUP_USER("INSERT INTO ouyunc_im_group_user (id, group_id, user_id, user_nick_name, is_leader, is_manager, is_shield, mushin, create_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)","添加群成员关系"),
 
+        INSERT_READ_RECEIPT("INSERT INTO OUYUNC_IM_READ_RECEIPT(ID, MSG_ID, USER_ID) VALUES (?, ?, ?)", "插入已读消息关系"),
 
+        INSERT_SEND_MESSAGE("INSERT INTO OUYUNC_IM_SEND_MESSAGE (ID, PROTOCOL, PROTOCOL_VERSION, DEVICE_TYPE, NETWORK_TYPE, ENCRYPT_TYPE, SERIALIZE_ALGORITHM, IP, `FROM`, `TO`, TYPE, CONTENT_TYPE, CONTENT, SEND_TIME, CREATE_TIME, UPDATE_TIME, DELETED) VALUES ( ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , 0)", "插入发件箱消息"),
+
+        INSERT_RECEIVE_MESSAGE("INSERT INTO OUYUNC_IM_RECEIVE_MESSAGE (ID, PROTOCOL, PROTOCOL_VERSION, DEVICE_TYPE, NETWORK_TYPE, ENCRYPT_TYPE, SERIALIZE_ALGORITHM, IP, `FROM`, `TO`, TYPE, CONTENT_TYPE, CONTENT, RECEIVE_TIME, CREATE_TIME, UPDATE_TIME, DELETED) VALUES ( ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , 0)", "插入收件箱消息"),
 
         INSERT_MESSAGE("INSERT INTO OUYUNC_IM_MESSAGE (ID, PROTOCOL, PROTOCOL_VERSION, DEVICE_TYPE, NETWORK_TYPE, ENCRYPT_TYPE, SERIALIZE_ALGORITHM, IP, `FROM`, `TO`, TYPE, CONTENT_TYPE, CONTENT, SEND_TIME, CREATE_TIME, UPDATE_TIME, DELETED) VALUES ( ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , 0)", "插入消息");
 

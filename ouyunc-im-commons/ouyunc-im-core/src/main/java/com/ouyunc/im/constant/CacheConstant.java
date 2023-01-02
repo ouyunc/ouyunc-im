@@ -34,6 +34,8 @@ public class CacheConstant {
     public static final String CONTACT = "contact:";
     // 黑名单
     public static final String BLACK_LIST = "black-list:";
+    // 已读回执
+    public static final String READ_RECEIPT = "read-receipt:";
     // 登录
     public static final String LOGIN = "login:";
     // 发送
@@ -49,5 +51,5 @@ public class CacheConstant {
     // 群成员相关前缀
     public static final String MEMBERS = ":members";
     // 分布式做的同意加入群或拒绝加入群
-    public static final String REFUSE_AGREE = "refuse_agree";
+    public static final String REFUSE_AGREE = "refuse-agree";
 }

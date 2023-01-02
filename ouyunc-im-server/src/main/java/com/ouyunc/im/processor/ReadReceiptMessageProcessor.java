@@ -7,7 +7,6 @@ import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.enums.MessageContentEnum;
 import com.ouyunc.im.constant.enums.MessageEnum;
 import com.ouyunc.im.context.IMServerContext;
-import com.ouyunc.im.domain.ImSendMessage;
 import com.ouyunc.im.helper.DbHelper;
 import com.ouyunc.im.helper.MessageHelper;
 import com.ouyunc.im.helper.UserHelper;
@@ -22,7 +21,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -69,30 +67,26 @@ public class ReadReceiptMessageProcessor extends AbstractMessageProcessor {
             if (MessageContentEnum.READ_RECEIPT_CONTENT.type() != message.getContentType()) {
                 return;
             }
-            ReadReceiptContent readReceiptContent = JSONUtil.toBean(message.getContent(), ReadReceiptContent.class);
-            Set<Long> packetIdList = readReceiptContent.getPacketIdList();
+            List<ReadReceiptContent> readReceiptList = JSONUtil.toBean(message.getContent(), List.class);
             // 不做处理
-            if (CollectionUtil.isEmpty(packetIdList)) {
+            if (CollectionUtil.isEmpty(readReceiptList)) {
                 return;
             }
             // 异步处理
-            EVENT_EXECUTORS.submit(() -> DbHelper.messageReadReceipt(message.getFrom(), to, packetIdList)).addListener(future -> {
+            EVENT_EXECUTORS.submit(() -> DbHelper.writeMessageReadReceipt(message.getFrom(), readReceiptList)).addListener(future -> {
                 if (future.isDone()) {
                     if (future.isSuccess()) {
-                        Set<ImSendMessage> sendMessageList = (Set<ImSendMessage>) future.getNow();
                         // 无论私聊还是群聊，根据所有消息的发送者进行分组，传递分批传递消息
-                        sendMessageList.stream().collect(Collectors.groupingBy(ImSendMessage::getFrom)).forEach((from, sendMessages) -> {
+                        readReceiptList.stream().collect(Collectors.groupingBy(ReadReceiptContent::getIdentity)).forEach((identity, readReceiptContents) -> {
                             // 判断from是否在线,如果不在线，则将该批次回执消息存到对应客户端的离线信箱中，稍后发布,注意这里涉及接受者多设备端，不考虑发送者多设备端（影响不大）
-                            Set<Long> readPacketId = sendMessages.stream().map(ImSendMessage::getId).collect(Collectors.toSet());
                             // 重新封装packet消息,进行发送
-                            message.setTo(from);
-                            readReceiptContent.setPacketIdList(readPacketId);
-                            message.setContent(JSONUtil.toJsonStr(readReceiptContent));
+                            message.setTo(identity);
+                            message.setContent(JSONUtil.toJsonStr(readReceiptContents));
                             // 获取该客户端在线的所有客户端，进行推送消息已读
-                            List<LoginUserInfo> loginUserInfos = UserHelper.onlineAll(from);
+                            List<LoginUserInfo> loginUserInfos = UserHelper.onlineAll(identity);
                             if (CollectionUtil.isEmpty(loginUserInfos)) {
                                 // 存入离线信箱
-                                DbHelper.write2OfflineTimeline(packet, from, SystemClock.now());
+                                DbHelper.write2OfflineTimeline(packet, identity, SystemClock.now());
                             } else {
                                 // 转发给某个客户端的各个设备端
                                 MessageHelper.send2MultiDevices(packet, loginUserInfos);

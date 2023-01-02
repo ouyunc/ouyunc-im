@@ -10,28 +10,28 @@ public class ReadReceiptContent implements Serializable {
     private static final long serialVersionUID = 100007L;
 
     /**
-     * 回执类型的消息：私聊/群聊
+     * 消息发送者
      */
-    private byte messageType;
+    private String identity;
 
     /**
-     * 批量回执的消息packet 的id集合
+     * 消息回执id
      */
-    private Set<Long> packetIdList;
+    private Long packetId;
 
-    public byte getMessageType() {
-        return messageType;
+    public String getIdentity() {
+        return identity;
     }
 
-    public void setMessageType(byte messageType) {
-        this.messageType = messageType;
+    public void setIdentity(String identity) {
+        this.identity = identity;
     }
 
-    public Set<Long> getPacketIdList() {
-        return packetIdList;
+    public Long getPacketId() {
+        return packetId;
     }
 
-    public void setPacketIdList(Set<Long> packetIdList) {
-        this.packetIdList = packetIdList;
+    public void setPacketId(Long packetId) {
+        this.packetId = packetId;
     }
 }

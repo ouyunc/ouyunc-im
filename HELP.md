@@ -12,11 +12,12 @@
 
 
 
-(2) zset发件箱消息:   ouyunc:im:message:send:${用户唯一标识}                ImSendMessage     packetId
-(3) zset收件箱消息:   ouyunc:im:message:receive:${用户/群唯一标识}             ImReceiveMessage            packetId
+(2) zset发件箱消息:   ouyunc:im:message:send:${用户唯一标识}                packet     
+(3) zset收件箱消息:   ouyunc:im:message:receive:${用户/群唯一标识}             packet            packetId
 (4) zset离线消息:   ouyunc:im:message:offline:${用户唯一标识}               packet            packetId
 
 (5) zset全局失败消息:     ouyunc:im:message:fail:from:${from}:to:${to}            missPacket            packetId
+(1) hash 已读消息:    ouyunc:im:message:read-receipt:${消息id}              ${用户唯一标识}    ImUser
 
 
 (4) hash服务离线:   ouyunc:im:cluster:server:offline                  ${服务唯一标识}     set<String>
