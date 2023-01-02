@@ -73,23 +73,25 @@ public class DbHelper {
                     result.add(iterator.next());
                 }
             }
-            return result;
-        }
-        // 按需拉取,先查出所有，然后过滤前几条给客户端
-        Set<Packet> packetAllSet = cacheOperator.reverseRangeZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + message.getFrom(), 0, -1);
-        if (CollectionUtil.isNotEmpty(packetAllSet)) {
-            Iterator<Packet> iterator = packetAllSet.iterator();
-            while (iterator.hasNext()) {
-                Packet packet0 = iterator.next();
-                Message message0 = (Message) packet0.getMessage();
-                if (result.size() > offlineContent.getPullSize()) {
-                    break;
-                }
-                if (message0.getFrom().equals(message.getTo())) {
-                    result.add(packet0);
+        }else {
+            // 按需拉取,先查出所有，然后过滤前几条给客户端
+            Set<Packet> packetAllSet = cacheOperator.reverseRangeZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + message.getFrom(), 0, -1);
+            if (CollectionUtil.isNotEmpty(packetAllSet)) {
+                Iterator<Packet> iterator = packetAllSet.iterator();
+                while (iterator.hasNext()) {
+                    Packet packet0 = iterator.next();
+                    Message message0 = (Message) packet0.getMessage();
+                    if (result.size() > offlineContent.getPullSize()) {
+                        break;
+                    }
+                    if (message0.getFrom().equals(message.getTo())) {
+                        result.add(packet0);
+                    }
                 }
             }
         }
+        offlineContent.setPacketList(result);
+        message.setContent(JSONUtil.toJsonStr(offlineContent));
         return result;
     }
 

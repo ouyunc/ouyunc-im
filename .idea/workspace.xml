@@ -11,10 +11,7 @@
   <component name="ChangeListManager">
     <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/im/cache/l1/distributed/AbstractDistributedL1Cache.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/im/cache/l1/distributed/AbstractDistributedL1Cache.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/im/cache/l1/distributed/redis/RedisDistributedL1Cache.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/im/cache/l1/distributed/redis/RedisDistributedL1Cache.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/IMConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/IMConstant.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/OfflineContent.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/OfflineContent.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/html/client.html" beforeDir="false" afterPath="$PROJECT_DIR$/docs/html/client.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/DbHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/DbHelper.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/OfflineMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/OfflineMessageProcessor.java" afterDir="false" />
     </list>
@@ -346,14 +343,7 @@
       <workItem from="1672104344576" duration="4062000" />
       <workItem from="1672120025574" duration="19809000" />
       <workItem from="1672380467337" duration="23863000" />
-      <workItem from="1672537421820" duration="40023000" />
-    </task>
-    <task id="LOCAL-00080" summary="IM缓存优化">
-      <created>1624840616738</created>
-      <option name="number" value="00080" />
-      <option name="presentableId" value="LOCAL-00080" />
-      <option name="project" value="LOCAL" />
-      <updated>1624840616738</updated>
+      <workItem from="1672537421820" duration="40663000" />
     </task>
     <task id="LOCAL-00081" summary="IM缓存优化">
       <created>1624848258021</created>
@@ -691,7 +681,14 @@
       <option name="project" value="LOCAL" />
       <updated>1672647917937</updated>
     </task>
-    <option name="localTasksCounter" value="129" />
+    <task id="LOCAL-00129" summary="v3.0-beta  优化离线消息">
+      <created>1672654019535</created>
+      <option name="number" value="00129" />
+      <option name="presentableId" value="LOCAL-00129" />
+      <option name="project" value="LOCAL" />
+      <updated>1672654019535</updated>
+    </task>
+    <option name="localTasksCounter" value="130" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -775,7 +772,8 @@
     <MESSAGE value="v3.0-beta  优化客户端" />
     <MESSAGE value="v3.0-beta  优化群聊" />
     <MESSAGE value="v3.0-beta  优化消息已读" />
-    <option name="LAST_COMMIT_MESSAGE" value="v3.0-beta  优化消息已读" />
+    <MESSAGE value="v3.0-beta  优化离线消息" />
+    <option name="LAST_COMMIT_MESSAGE" value="v3.0-beta  优化离线消息" />
   </component>
   <component name="WindowStateProjectService">
     <state x="574" y="122" key="#com.intellij.ide.util.MemberChooser" timestamp="1672652553193">
@@ -790,14 +788,14 @@
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state x="675" y="166" key="#xdebugger.evaluate/0.0.1536.824@0.0.1536.824" timestamp="1672647526436" />
-    <state x="295" y="4" key="CommitChangelistDialog2" timestamp="1672647917131">
+    <state x="295" y="4" key="CommitChangelistDialog2" timestamp="1672654018565">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state x="295" y="4" key="CommitChangelistDialog2/0.0.1536.824@0.0.1536.824" timestamp="1672647917131" />
-    <state width="526" height="466" key="DebuggerActiveHint" timestamp="1672647890448">
+    <state x="295" y="4" key="CommitChangelistDialog2/0.0.1536.824@0.0.1536.824" timestamp="1672654018565" />
+    <state width="526" height="466" key="DebuggerActiveHint" timestamp="1672654776740">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="526" height="466" key="DebuggerActiveHint/0.0.1536.824@0.0.1536.824" timestamp="1672647890448" />
+    <state width="526" height="466" key="DebuggerActiveHint/0.0.1536.824@0.0.1536.824" timestamp="1672654776740" />
     <state x="147" y="65" key="DiffContextDialog" timestamp="1672305738763">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
@@ -806,38 +804,38 @@
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state x="549" y="167" key="FileChooserDialogImpl/0.0.1536.824@0.0.1536.824" timestamp="1672033403352" />
-    <state width="1493" height="241" key="GridCell.Tab.0.bottom" timestamp="1672648350040">
+    <state width="1493" height="328" key="GridCell.Tab.0.bottom" timestamp="1672654751811">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="241" key="GridCell.Tab.0.bottom/0.0.1536.824@0.0.1536.824" timestamp="1672648350040" />
-    <state width="1493" height="241" key="GridCell.Tab.0.center" timestamp="1672648350039">
+    <state width="1493" height="328" key="GridCell.Tab.0.bottom/0.0.1536.824@0.0.1536.824" timestamp="1672654751811" />
+    <state width="1493" height="328" key="GridCell.Tab.0.center" timestamp="1672654751811">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="241" key="GridCell.Tab.0.center/0.0.1536.824@0.0.1536.824" timestamp="1672648350039" />
-    <state width="1493" height="241" key="GridCell.Tab.0.left" timestamp="1672648350038">
+    <state width="1493" height="328" key="GridCell.Tab.0.center/0.0.1536.824@0.0.1536.824" timestamp="1672654751811" />
+    <state width="1493" height="328" key="GridCell.Tab.0.left" timestamp="1672654751811">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="241" key="GridCell.Tab.0.left/0.0.1536.824@0.0.1536.824" timestamp="1672648350038" />
-    <state width="1493" height="241" key="GridCell.Tab.0.right" timestamp="1672648350040">
+    <state width="1493" height="328" key="GridCell.Tab.0.left/0.0.1536.824@0.0.1536.824" timestamp="1672654751811" />
+    <state width="1493" height="328" key="GridCell.Tab.0.right" timestamp="1672654751811">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="241" key="GridCell.Tab.0.right/0.0.1536.824@0.0.1536.824" timestamp="1672648350040" />
-    <state width="1493" height="241" key="GridCell.Tab.1.bottom" timestamp="1672648350041">
+    <state width="1493" height="328" key="GridCell.Tab.0.right/0.0.1536.824@0.0.1536.824" timestamp="1672654751811" />
+    <state width="1493" height="328" key="GridCell.Tab.1.bottom" timestamp="1672654744711">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="241" key="GridCell.Tab.1.bottom/0.0.1536.824@0.0.1536.824" timestamp="1672648350041" />
-    <state width="1493" height="241" key="GridCell.Tab.1.center" timestamp="1672648350041">
+    <state width="1493" height="328" key="GridCell.Tab.1.bottom/0.0.1536.824@0.0.1536.824" timestamp="1672654744711" />
+    <state width="1493" height="328" key="GridCell.Tab.1.center" timestamp="1672654744711">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="241" key="GridCell.Tab.1.center/0.0.1536.824@0.0.1536.824" timestamp="1672648350041" />
-    <state width="1493" height="241" key="GridCell.Tab.1.left" timestamp="1672648350041">
+    <state width="1493" height="328" key="GridCell.Tab.1.center/0.0.1536.824@0.0.1536.824" timestamp="1672654744711" />
+    <state width="1493" height="328" key="GridCell.Tab.1.left" timestamp="1672654744711">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="241" key="GridCell.Tab.1.left/0.0.1536.824@0.0.1536.824" timestamp="1672648350041" />
-    <state width="1493" height="241" key="GridCell.Tab.1.right" timestamp="1672648350041">
+    <state width="1493" height="328" key="GridCell.Tab.1.left/0.0.1536.824@0.0.1536.824" timestamp="1672654744711" />
+    <state width="1493" height="328" key="GridCell.Tab.1.right" timestamp="1672654744711">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="241" key="GridCell.Tab.1.right/0.0.1536.824@0.0.1536.824" timestamp="1672648350041" />
+    <state width="1493" height="328" key="GridCell.Tab.1.right/0.0.1536.824@0.0.1536.824" timestamp="1672654744711" />
     <state x="508" y="123" key="RollbackChangesDialog" timestamp="1672571258556">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
@@ -846,10 +844,10 @@
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state x="270" y="54" key="SettingsEditor/0.0.1536.824@0.0.1536.824" timestamp="1672106660521" />
-    <state x="361" y="145" key="Vcs.Push.Dialog.v2" timestamp="1672647921786">
+    <state x="361" y="145" key="Vcs.Push.Dialog.v2" timestamp="1672654024369">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state x="361" y="145" key="Vcs.Push.Dialog.v2/0.0.1536.824@0.0.1536.824" timestamp="1672647921786" />
+    <state x="361" y="145" key="Vcs.Push.Dialog.v2/0.0.1536.824@0.0.1536.824" timestamp="1672654024369" />
     <state width="775" height="419" key="XDebugger.FullValuePopup" timestamp="1672647388905">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
@@ -931,19 +929,6 @@
           <option name="timeStamp" value="202" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/AbstractMessageProcessor.java</url>
-          <line>48</line>
-          <properties>
-            <option name="lambda-ordinal" value="-1" />
-          </properties>
-          <option name="timeStamp" value="224" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-db/src/main/java/com/ouyunc/im/db/operator/MysqlDbOperator.java</url>
-          <line>60</line>
-          <option name="timeStamp" value="225" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-db/src/main/java/com/ouyunc/im/db/operator/MysqlDbOperator.java</url>
           <line>28</line>
           <option name="timeStamp" value="228" />
@@ -977,6 +962,21 @@
           <url>file://$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-db/src/main/java/com/ouyunc/im/db/operator/MysqlDbOperator.java</url>
           <line>115</line>
           <option name="timeStamp" value="234" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/OfflineMessageProcessor.java</url>
+          <line>45</line>
+          <option name="timeStamp" value="238" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/OfflineMessageProcessor.java</url>
+          <line>46</line>
+          <option name="timeStamp" value="239" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/DbHelper.java</url>
+          <line>56</line>
+          <option name="timeStamp" value="240" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="javascript">
           <url>file://$PROJECT_DIR$/docs/socket/ouyu-socket.js</url>

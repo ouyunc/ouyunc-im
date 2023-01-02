@@ -354,6 +354,22 @@
 		websocket.send(packetDataView.buffer);
 	}
 
+	function pullOfflineMessage() {
+		let message = new proto.com.ouyunc.im.Message();
+		message.setFrom(identity);
+		//message.setTo('1608716568920965121')
+		message.setContentType(10);
+		message.setContent(JSON.stringify({
+			"pullSize": 50,
+			"packetList":[]
+		}))
+		message.setCreateTime(new Date().getTime());
+		let messageDataBinary = message.serializeBinary();
+		let packetDataView = wrapMessage(messageDataBinary, 7);
+		// 发送心跳信息
+		websocket.send(packetDataView.buffer);
+	}
+
 	// 包装消息
 	function wrapMessage(dataBinary, messageType) {
 		let snowflake = new Snowflake(1n, 1n, 0n);
@@ -489,7 +505,7 @@
 
 					<div style="border-bottom:1px solid black;margin-top:10px"><a href="#">张三（个人）</a><button style="margin-left:10px">同意</button><button style="margin-left:10px">拒绝</button><button style="margin-left:10px">屏蔽</button><button style="margin-left:10px">拉黑</button><button onclick="readReceipt()" style="margin-left:10px">按需拉取离线消息</button></div>
 				  	<div style="border-bottom:1px solid black;margin-top:10px">
-						<a href="#">偶云客（群组）</a><button style="margin-left:10px">同意</button><button style="margin-left:10px">拒绝</button><button style="margin-left:10px">屏蔽</button><button style="margin-left:10px">退群</button><button style="margin-left:10px">解散群</button><button style="margin-left:10px">按需拉取离线消息</button>
+						<a href="#">偶云客（群组）</a><button style="margin-left:10px">同意</button><button style="margin-left:10px">拒绝</button><button style="margin-left:10px">屏蔽</button><button style="margin-left:10px">退群</button><button style="margin-left:10px">解散群</button><button onclick="pullOfflineMessage()" style="margin-left:10px">按需拉取离线消息</button>
 						<div style="margin-left:20px;font-size:12px"><a href="#">李四（群成员）</a><button style="margin-left:10px">踢出群</button><button style="margin-left:10px">拉黑</button></div>
 					</div>
 
