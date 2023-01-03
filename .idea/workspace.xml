@@ -10,6 +10,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v3.0.1 文档">
+      <change afterPath="$PROJECT_DIR$/sdk/js/ouyunc-im-client-sdk.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
     </list>
@@ -348,13 +349,6 @@
       <workItem from="1672537421820" duration="40663000" />
       <workItem from="1672706923042" duration="4278000" />
     </task>
-    <task id="LOCAL-00086" summary="IM 包结构整理">
-      <created>1624933671633</created>
-      <option name="number" value="00086" />
-      <option name="presentableId" value="LOCAL-00086" />
-      <option name="project" value="LOCAL" />
-      <updated>1624933671633</updated>
-    </task>
     <task id="LOCAL-00087" summary="IM 包结构整理">
       <created>1624952433531</created>
       <option name="number" value="00087" />
@@ -691,7 +685,14 @@
       <option name="project" value="LOCAL" />
       <updated>1672728290628</updated>
     </task>
-    <option name="localTasksCounter" value="135" />
+    <task id="LOCAL-00135" summary="v3.0.1 文档">
+      <created>1672733664973</created>
+      <option name="number" value="00135" />
+      <option name="presentableId" value="LOCAL-00135" />
+      <option name="project" value="LOCAL" />
+      <updated>1672733664973</updated>
+    </task>
+    <option name="localTasksCounter" value="136" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
