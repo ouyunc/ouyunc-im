@@ -39,7 +39,7 @@
 ##### 软件架构图：
     
 ```
-
+![输入图片说明](docs/picture/project_struct.png)
 ```
 ##### 代码目录结构：
 
