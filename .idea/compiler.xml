@@ -13,16 +13,16 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <module name="ouyunc-im-cache" />
-        <module name="ouyu-server" />
-        <module name="ouyu-client" />
-        <module name="ouyu-cache" />
-        <module name="ouyunc-im-server" />
-        <module name="ouyunc-im-core" />
         <module name="ouyu-db" />
+        <module name="ouyu-client" />
         <module name="ouyunc-im-db" />
-        <module name="ouyu-core" />
-        <module name="ouyunc-im-domain" />
+        <module name="ouyu-cache" />
         <module name="ouyunc-im-client" />
+        <module name="ouyu-server" />
+        <module name="ouyunc-im-core" />
+        <module name="ouyu-core" />
+        <module name="ouyunc-im-server" />
+        <module name="ouyunc-im-domain" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel target="8" />
