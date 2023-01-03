@@ -1,4 +1,4 @@
-![输入图片说明](docs/html/project-struct.png)# OUYUNC-IM
+# OUYUNC-IM
 
 #### 介绍
 ```
