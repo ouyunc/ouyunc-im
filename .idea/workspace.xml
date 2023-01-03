@@ -9,11 +9,7 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v3.0.1 文档">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/project-struct.png" beforeDir="false" afterPath="$PROJECT_DIR$/project_struct.png" afterDir="false" />
-    </list>
+    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v3.0.1 文档" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -103,7 +99,7 @@
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="aspect.path.notification.shown" value="true" />
     <property name="jdk.selected.JAVA_MODULE" value="1.8" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/docs/picture/project-struct.png" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/docs/picture/qrcode-302.png" />
     <property name="project.structure.last.edited" value="Modules" />
     <property name="project.structure.proportion" value="0.15" />
     <property name="project.structure.side.proportion" value="0.47011495" />
@@ -117,11 +113,11 @@
       <recent name="com.ouyu.im.innerclient" />
     </key>
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="F:\workspace\ouyunc-im\docs\picture" />
       <recent name="D:\workspace\ouyunc-im\docs\html" />
       <recent name="D:\workspace\ouyu-im\ouyu-server\src\main\resources\ssl" />
       <recent name="D:\workspace\ouyu-im\ouyu-server\src\main\resources\templates" />
       <recent name="D:\workspace\ouyu-im\docs\webrtc" />
-      <recent name="D:\workspace\ouyu-im\docs\socket" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="F:\workspace\ouyunc-im\docs\picture" />
@@ -348,13 +344,6 @@
       <workItem from="1672380467337" duration="23863000" />
       <workItem from="1672537421820" duration="40663000" />
       <workItem from="1672706923042" duration="4278000" />
-    </task>
-    <task id="LOCAL-00083" summary="IM缓存优化">
-      <created>1624872154223</created>
-      <option name="number" value="00083" />
-      <option name="presentableId" value="LOCAL-00083" />
-      <option name="project" value="LOCAL" />
-      <updated>1624872154224</updated>
     </task>
     <task id="LOCAL-00084" summary="IM缓存优化">
       <created>1624926895543</created>
@@ -692,7 +681,14 @@
       <option name="project" value="LOCAL" />
       <updated>1672718014545</updated>
     </task>
-    <option name="localTasksCounter" value="132" />
+    <task id="LOCAL-00132" summary="v3.0.1 文档">
+      <created>1672727888961</created>
+      <option name="number" value="00132" />
+      <option name="presentableId" value="LOCAL-00132" />
+      <option name="project" value="LOCAL" />
+      <updated>1672727888961</updated>
+    </task>
+    <option name="localTasksCounter" value="133" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
