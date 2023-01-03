@@ -1,5 +1,7 @@
-# OUYUNC-IM
-
+# OUYUNC-IM [![version](https://img.shields.io/badge/version-3.0.1-blue)](https://gitee.com/etxync/ouyunc-im)  
+[![license](https://img.shields.io/badge/license-MIT-brightgreen)](https://www.mit-license.org/)
+<a href='https://gitee.com/etxync/ouyunc-im/stargazers'><img src='https://gitee.com/etxync/ouyunc-im/badge/star.svg?theme=dark' alt='star'></img></a>
+<a href='https://gitee.com/etxync/ouyunc-im/members'><img src='https://gitee.com/etxync/ouyunc-im/badge/fork.svg?theme=dark' alt='fork'></img></a>
 #### 介绍
 ```
  (1)偶云客IM是一款基于netty的即时通讯框架，去中心化集群部署方案（简单解决脑裂问题）；
@@ -33,7 +35,13 @@
 默认消息处理器包括：登录，鉴权，私聊，群聊，已读消息，添加好友，删除好友，屏蔽好友，加群，踢出群，屏蔽群，解散群，拉黑(好友/群主拉黑某个客户端)，全量或按需拉取离线消息，历史消息，ack应答，广播，心跳等；
 
 ```
+#### 官网地址
+```
+http://www.ouyunc.com
+```
+
 #### 软件架构
+
 ##### 开发环境：jdk1.8 + netty4.1.x
 
 ##### 软件架构图：
@@ -47,40 +55,25 @@
 ![项目目录结构](docs/picture/project_struct.png)
 
 
-##### 消息读写设计：
-考虑到业务初期，群成员不是很多（小于500），私聊和群聊都采用写扩散的方式来进行读写操作，如果后期群成员很多，比如万人群，在进行优化使用混合模式来进行读写处理；
 
-##### 存储设计
-存储使用分布式缓存redis(通过插件的方式可以使用其他缓存实现) + mysql数据库（数据库可以启用/不启用，可以配置其他数据库如oracle,hbase等）
-
-（I）redis 缓存key的设计如下：
-    
-```
-
-```
-（II）数据库表的设计如下：
-  
-```
-
-```
 
  **注意** ：如果不做特别说明,全部以大端序读写《https://www.cnblogs.com/iathanasy/p/12617793.html》
 
 #### 快速开始
 
 ```
-
+https://gitee.com/etxync/ouyunc-im/wikis/%E5%81%B6%E4%BA%91%E5%AE%A2-IM%20v3.x/%E5%BF%AB%E9%80%9F%E5%BC%80%E5%A7%8B
 ```
 
 #### 安装部署
 
 ```
-
+https://gitee.com/etxync/ouyunc-im/wikis/%E5%81%B6%E4%BA%91%E5%AE%A2-IM%20v3.x/%E5%AE%89%E8%A3%85%E9%83%A8%E7%BD%B2
 ```
 
 #### 联系方式
 
-   qq群:664955628
+   qq群:664955628 <a target="_blank" href="https://qm.qq.com/cgi-bin/qm/qr?k=FFFe8sCs4e11KOD89XK6vVrK14NCBb5x&jump_from=webapi&authKey=Y1JeElm7/HUi4cESA9FJgyl51JhCwQ2bDv1uOydLvMvo25+cqe93GUMxPEyB8xND"><img border="0" src="https://pub.idqqimg.com/wpa/images/group.png" alt="偶遇-IM" title="偶遇-IM"></a>  
 
    基于该项目的一个即时通讯IM demo地址: https://m.ouyunc.com（服务器到期）
    
