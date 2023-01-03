@@ -9,7 +9,10 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v3.0.1 文档" />
+    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v3.0.1 文档">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -345,20 +348,6 @@
       <workItem from="1672537421820" duration="40663000" />
       <workItem from="1672706923042" duration="4278000" />
     </task>
-    <task id="LOCAL-00084" summary="IM缓存优化">
-      <created>1624926895543</created>
-      <option name="number" value="00084" />
-      <option name="presentableId" value="LOCAL-00084" />
-      <option name="project" value="LOCAL" />
-      <updated>1624926895543</updated>
-    </task>
-    <task id="LOCAL-00085" summary="IM 包结构整理">
-      <created>1624933419520</created>
-      <option name="number" value="00085" />
-      <option name="presentableId" value="LOCAL-00085" />
-      <option name="project" value="LOCAL" />
-      <updated>1624933419521</updated>
-    </task>
     <task id="LOCAL-00086" summary="IM 包结构整理">
       <created>1624933671633</created>
       <option name="number" value="00086" />
@@ -688,7 +677,21 @@
       <option name="project" value="LOCAL" />
       <updated>1672727888961</updated>
     </task>
-    <option name="localTasksCounter" value="133" />
+    <task id="LOCAL-00133" summary="v3.0.1 文档">
+      <created>1672728244939</created>
+      <option name="number" value="00133" />
+      <option name="presentableId" value="LOCAL-00133" />
+      <option name="project" value="LOCAL" />
+      <updated>1672728244939</updated>
+    </task>
+    <task id="LOCAL-00134" summary="v3.0.1 文档">
+      <created>1672728290628</created>
+      <option name="number" value="00134" />
+      <option name="presentableId" value="LOCAL-00134" />
+      <option name="project" value="LOCAL" />
+      <updated>1672728290628</updated>
+    </task>
+    <option name="localTasksCounter" value="135" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
