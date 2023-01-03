@@ -23,12 +23,13 @@ public enum MessageContentEnum {
     SERVER_WARNING_CONTENT(8, ServerWarningContent.class, "服务端发出的警告内容"),
     READ_RECEIPT_CONTENT(9, ReadReceiptContent.class, "已读回执消息内容, 集合中的对象"),
     OFFLINE_CONTENT(10, OfflineContent.class, "离线消息内容"),
+    UNREAD_CONTENT(11, UnreadContent.class, "未读离线消息内容"),
 
 
 
-    FRIEND_JOIN(11, String.class, "添加好友请求"),
-    FRIEND_REFUSE(12, String.class, "拒绝好友请求"),
-    FRIEND_AGREE(13, String.class, "同意好友请求"),
+    FRIEND_JOIN(21, String.class, "添加好友请求"),
+    FRIEND_REFUSE(22, String.class, "拒绝好友请求"),
+    FRIEND_AGREE(23, String.class, "同意好友请求"),
 
 
 //    FRIEND_DELETE(14, String.class, "删除好友"),
@@ -37,19 +38,19 @@ public enum MessageContentEnum {
 //
 //    FRIEND_EXIT_BLACKLIST(16, String.class, "将好友退出黑名单"),
 
-    GROUP_JOIN(21, GroupRequestContent.class, "加群请求"),
-    GROUP_REFUSE(22, GroupRequestContent.class, "管理员/群主 拒绝加群申请"),
-    GROUP_AGREE(23, GroupRequestContent.class, "管理员/群主 同意加群申请"),
-    GROUP_DISBAND(24, String.class, "群主 解散群"),
-    GROUP_KICK(25, String.class, "踢出群"),
-    GROUP_EXIT(26, GroupRequestContent.class, "退出群"),
-    GROUP_SHIELD(27, String.class, "屏蔽群"),
-    GROUP_PUBLISH_ANNOUNCEMENT(28, String.class, "发布群公告"),
+    GROUP_JOIN(31, GroupRequestContent.class, "加群请求"),
+    GROUP_REFUSE(32, GroupRequestContent.class, "管理员/群主 拒绝加群申请"),
+    GROUP_AGREE(33, GroupRequestContent.class, "管理员/群主 同意加群申请"),
+    GROUP_DISBAND(34, String.class, "群主 解散群"),
+    GROUP_KICK(35, String.class, "踢出群"),
+    GROUP_EXIT(36, GroupRequestContent.class, "退出群"),
+    GROUP_SHIELD(37, String.class, "屏蔽群"),
+    GROUP_PUBLISH_ANNOUNCEMENT(38, String.class, "发布群公告"),
 
 
-    CHAT_TEXT_CONTENT(50, String.class, "聊天文本内容类型"),
-    CHAT_ATTACHMENT_CONTENT(51, AttachmentContent.class, "聊天附件(图片，音频，视频，文件等)"),
-    CHAT_NAME_CARD(52, NameCardContent.class, "名片"),
+    CHAT_TEXT_CONTENT(51, String.class, "聊天文本内容类型"),
+    CHAT_ATTACHMENT_CONTENT(52, AttachmentContent.class, "聊天附件(图片，音频，视频，文件等)"),
+    CHAT_NAME_CARD(53, NameCardContent.class, "名片"),
 
 
 

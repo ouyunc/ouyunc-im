@@ -39,7 +39,7 @@ public class OfflineMessageProcessor extends AbstractMessageProcessor{
     public void doProcess(ChannelHandlerContext ctx, Packet packet) {
         log.info("OfflineMessageProcessor 正在处理离线消息packet: {}", packet);
         Message message = (Message) packet.getMessage();
-        if (MessageContentEnum.OFFLINE_CONTENT.type() != message.getContentType()) {
+        if (MessageContentEnum.OFFLINE_CONTENT.type() != message.getContentType() || MessageContentEnum.UNREAD_CONTENT.type() != message.getContentType()) {
             return;
         }
         // 拉取离线消息（根据最近消息顺序拉取）,按需拉取或全量按顺序拉取

@@ -10,8 +10,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/UnreadContent.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/html/client.html" beforeDir="false" afterPath="$PROJECT_DIR$/docs/html/client.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/enums/MessageContentEnum.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/enums/MessageContentEnum.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/DbHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/DbHelper.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/OfflineMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/OfflineMessageProcessor.java" afterDir="false" />
     </list>
@@ -73,13 +74,12 @@
     <option name="generalSettings">
       <MavenGeneralSettings>
         <option name="localRepository" value="D:\repository" />
-        <option name="mavenHome" value="D:/工具/java/maven/apache-maven-3.6.3" />
-        <option name="userSettingsFile" value="D:\工具\java\maven\apache-maven-3.6.3\conf\ali-settings.xml" />
+        <option name="mavenHome" value="C:/Program Files/apache-maven-3.8.4" />
+        <option name="userSettingsFile" value="C:\Program Files\apache-maven-3.8.4\conf\ali-settings.xml" />
       </MavenGeneralSettings>
     </option>
     <option name="importingSettings">
       <MavenImportingSettings>
-        <option name="importAutomatically" value="true" />
         <option name="vmOptionsForImporter" value="-Xmx768m" />
       </MavenImportingSettings>
     </option>
@@ -101,11 +101,11 @@
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="aspect.path.notification.shown" value="true" />
     <property name="jdk.selected.JAVA_MODULE" value="1.8" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/docs/html" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="project.structure.last.edited" value="Modules" />
     <property name="project.structure.proportion" value="0.15" />
     <property name="project.structure.side.proportion" value="0.47011495" />
-    <property name="settings.editor.selected.configurable" value="preferences.editor" />
+    <property name="settings.editor.selected.configurable" value="MavenSettings" />
   </component>
   <component name="ReactorSettings">
     <option name="notificationShown" value="true" />
@@ -183,9 +183,9 @@
     </configuration>
     <list>
       <item itemvalue="Application.StartIMServer" />
-      <item itemvalue="Spring Boot.OuyuCacheApplication" />
       <item itemvalue="Application.SnowflakeUtil" />
       <item itemvalue="Application.SequenceUtils" />
+      <item itemvalue="Spring Boot.OuyuCacheApplication" />
     </list>
     <recent_temporary>
       <list>
@@ -195,7 +195,7 @@
       </list>
     </recent_temporary>
   </component>
-  <component name="SpellCheckerSettings" BundledDictionaries="0" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" Dictionaries="0" CorrectionsLimit="5" DefaultDictionary="application-level" UseSingleDictionary="true" />
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="StructureViewFactory">
     <option name="ACTIVE_ACTIONS" value=",SHOW_INTERFACES,SHOW_FIELDS,SHOW_INHERITED" />
   </component>
@@ -344,6 +344,7 @@
       <workItem from="1672120025574" duration="19809000" />
       <workItem from="1672380467337" duration="23863000" />
       <workItem from="1672537421820" duration="40663000" />
+      <workItem from="1672706923042" duration="4278000" />
     </task>
     <task id="LOCAL-00081" summary="IM缓存优化">
       <created>1624848258021</created>
@@ -692,7 +693,7 @@
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
-    <option name="version" value="1" />
+    <option name="version" value="3" />
   </component>
   <component name="Vcs.Log.History.Properties">
     <option name="COLUMN_ORDER">
@@ -739,13 +740,12 @@
         </entry>
         <entry key="MAIN">
           <value>
-            <State>
-              <option name="COLUMN_ORDER" />
-            </State>
+            <State />
           </value>
         </entry>
       </map>
     </option>
+    <option name="oldMeFiltersMigrated" value="true" />
   </component>
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
@@ -774,96 +774,6 @@
     <MESSAGE value="v3.0-beta  优化消息已读" />
     <MESSAGE value="v3.0-beta  优化离线消息" />
     <option name="LAST_COMMIT_MESSAGE" value="v3.0-beta  优化离线消息" />
-  </component>
-  <component name="WindowStateProjectService">
-    <state x="574" y="122" key="#com.intellij.ide.util.MemberChooser" timestamp="1672652553193">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="574" y="122" key="#com.intellij.ide.util.MemberChooser/0.0.1536.824@0.0.1536.824" timestamp="1672652553193" />
-    <state x="477" y="114" key="#com.intellij.refactoring.move.moveMembers.MoveMembersDialog" timestamp="1672108127835">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="477" y="114" key="#com.intellij.refactoring.move.moveMembers.MoveMembersDialog/0.0.1536.824@0.0.1536.824" timestamp="1672108127835" />
-    <state x="675" y="166" key="#xdebugger.evaluate" timestamp="1672647526436">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="675" y="166" key="#xdebugger.evaluate/0.0.1536.824@0.0.1536.824" timestamp="1672647526436" />
-    <state x="295" y="4" key="CommitChangelistDialog2" timestamp="1672654018565">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="295" y="4" key="CommitChangelistDialog2/0.0.1536.824@0.0.1536.824" timestamp="1672654018565" />
-    <state width="526" height="466" key="DebuggerActiveHint" timestamp="1672654776740">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="526" height="466" key="DebuggerActiveHint/0.0.1536.824@0.0.1536.824" timestamp="1672654776740" />
-    <state x="147" y="65" key="DiffContextDialog" timestamp="1672305738763">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="147" y="65" key="DiffContextDialog/0.0.1536.824@0.0.1536.824" timestamp="1672305738763" />
-    <state x="549" y="167" key="FileChooserDialogImpl" timestamp="1672033403352">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="549" y="167" key="FileChooserDialogImpl/0.0.1536.824@0.0.1536.824" timestamp="1672033403352" />
-    <state width="1493" height="328" key="GridCell.Tab.0.bottom" timestamp="1672654751811">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="1493" height="328" key="GridCell.Tab.0.bottom/0.0.1536.824@0.0.1536.824" timestamp="1672654751811" />
-    <state width="1493" height="328" key="GridCell.Tab.0.center" timestamp="1672654751811">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="1493" height="328" key="GridCell.Tab.0.center/0.0.1536.824@0.0.1536.824" timestamp="1672654751811" />
-    <state width="1493" height="328" key="GridCell.Tab.0.left" timestamp="1672654751811">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="1493" height="328" key="GridCell.Tab.0.left/0.0.1536.824@0.0.1536.824" timestamp="1672654751811" />
-    <state width="1493" height="328" key="GridCell.Tab.0.right" timestamp="1672654751811">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="1493" height="328" key="GridCell.Tab.0.right/0.0.1536.824@0.0.1536.824" timestamp="1672654751811" />
-    <state width="1493" height="328" key="GridCell.Tab.1.bottom" timestamp="1672654744711">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="1493" height="328" key="GridCell.Tab.1.bottom/0.0.1536.824@0.0.1536.824" timestamp="1672654744711" />
-    <state width="1493" height="328" key="GridCell.Tab.1.center" timestamp="1672654744711">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="1493" height="328" key="GridCell.Tab.1.center/0.0.1536.824@0.0.1536.824" timestamp="1672654744711" />
-    <state width="1493" height="328" key="GridCell.Tab.1.left" timestamp="1672654744711">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="1493" height="328" key="GridCell.Tab.1.left/0.0.1536.824@0.0.1536.824" timestamp="1672654744711" />
-    <state width="1493" height="328" key="GridCell.Tab.1.right" timestamp="1672654744711">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="1493" height="328" key="GridCell.Tab.1.right/0.0.1536.824@0.0.1536.824" timestamp="1672654744711" />
-    <state x="508" y="123" key="RollbackChangesDialog" timestamp="1672571258556">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="508" y="123" key="RollbackChangesDialog/0.0.1536.824@0.0.1536.824" timestamp="1672571258556" />
-    <state x="270" y="54" key="SettingsEditor" timestamp="1672106660521">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="270" y="54" key="SettingsEditor/0.0.1536.824@0.0.1536.824" timestamp="1672106660521" />
-    <state x="361" y="145" key="Vcs.Push.Dialog.v2" timestamp="1672654024369">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="361" y="145" key="Vcs.Push.Dialog.v2/0.0.1536.824@0.0.1536.824" timestamp="1672654024369" />
-    <state width="775" height="419" key="XDebugger.FullValuePopup" timestamp="1672647388905">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="775" height="419" key="XDebugger.FullValuePopup/0.0.1536.824@0.0.1536.824" timestamp="1672647388905" />
-    <state x="93" y="93" width="1350" height="638" key="com.intellij.history.integration.ui.views.FileHistoryDialog" timestamp="1672634980939">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="93" y="93" width="1350" height="638" key="com.intellij.history.integration.ui.views.FileHistoryDialog/0.0.1536.824@0.0.1536.824" timestamp="1672634980939" />
-    <state x="449" y="236" key="com.intellij.ide.util.TipDialog" timestamp="1672120026926">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="449" y="236" key="com.intellij.ide.util.TipDialog/0.0.1536.824@0.0.1536.824" timestamp="1672120026926" />
-    <state x="447" y="145" width="700" height="534" key="find.popup" timestamp="1672630017507">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="447" y="145" width="700" height="534" key="find.popup/0.0.1536.824@0.0.1536.824" timestamp="1672630017507" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -962,21 +872,6 @@
           <url>file://$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-db/src/main/java/com/ouyunc/im/db/operator/MysqlDbOperator.java</url>
           <line>115</line>
           <option name="timeStamp" value="234" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/OfflineMessageProcessor.java</url>
-          <line>45</line>
-          <option name="timeStamp" value="238" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/OfflineMessageProcessor.java</url>
-          <line>46</line>
-          <option name="timeStamp" value="239" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/DbHelper.java</url>
-          <line>56</line>
-          <option name="timeStamp" value="240" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="javascript">
           <url>file://$PROJECT_DIR$/docs/socket/ouyu-socket.js</url>

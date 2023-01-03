@@ -8,6 +8,8 @@ import com.im.cache.l1.distributed.redis.RedisDistributedL1Cache;
 import com.ouyunc.im.constant.CacheConstant;
 import com.ouyunc.im.constant.DbSqlConstant;
 import com.ouyunc.im.constant.IMConstant;
+import com.ouyunc.im.constant.enums.MessageContentEnum;
+import com.ouyunc.im.constant.enums.MessageEnum;
 import com.ouyunc.im.db.operator.DbOperator;
 import com.ouyunc.im.db.operator.MysqlDbOperator;
 import com.ouyunc.im.domain.ImGroup;
@@ -20,11 +22,13 @@ import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.packet.message.content.OfflineContent;
 import com.ouyunc.im.packet.message.content.ReadReceiptContent;
+import com.ouyunc.im.packet.message.content.UnreadContent;
 import com.ouyunc.im.utils.SnowflakeUtil;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 数据库操作
@@ -55,6 +59,31 @@ public class DbHelper {
      */
     public static List<Packet> pullOfflineMessage(Message message) {
         List<Packet> result = new ArrayList<>();
+        if (MessageContentEnum.UNREAD_CONTENT.type() == message.getContentType()) {
+            List<UnreadContent> unreadContentList = new ArrayList<>();
+            Set<Packet> packetSetResult = cacheOperator.reverseRangeZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + message.getFrom(), 0, -1);
+            if (CollectionUtil.isNotEmpty(packetSetResult)) {
+                packetSetResult.stream().collect(Collectors.groupingBy(packet -> {
+                    Message message0 = (Message) packet.getMessage();
+                    return message0.getFrom();
+                })).forEach((from, packetList)->{
+                    List<Packet> packets = new ArrayList<>();
+                    Packet packet = packetList.get(0);
+                    MessageEnum prototype = MessageEnum.prototype(packet.getMessageType());
+                    Integer identityType = null;
+                    if (MessageEnum.IM_PRIVATE_CHAT.equals(prototype)) {
+                        identityType = IMConstant.USER_TYPE_1;
+                    }
+                    if (MessageEnum.IM_GROUP_CHAT.equals(prototype)) {
+                        identityType = IMConstant.GROUP_TYPE_2;
+                    }
+                    packets.add(packet);
+                    unreadContentList.add(new UnreadContent(from, identityType, packetList.size(), packets));
+                });
+                message.setContent(JSONUtil.toJsonStr(unreadContentList));
+            }
+            return result;
+        }
         // 判断是按需来取还是全量拉取
         OfflineContent offlineContent = JSONUtil.toBean(message.getContent(), OfflineContent.class);
         List<Packet> packetList = offlineContent.getPacketList();
