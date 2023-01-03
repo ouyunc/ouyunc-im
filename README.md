@@ -44,7 +44,7 @@
 ##### 代码目录结构：
 
 ```
-![项目目录结构说明](docs/project-struct.png)
+![输入图片说明](docs/project-struct.png)
 ```
 
 ##### 消息读写设计：
