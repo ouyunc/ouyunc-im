@@ -11,7 +11,8 @@ import org.aeonbits.owner.Config;
  * @ConfigurationProperties 的 POJO类的命名比较严格,因为它必须和prefix的后缀名要一致, 不然值会绑定不上, 特殊的后缀名是“driver-class-name”这种带横杠的情况,在POJO里面的命名规则是 下划线转驼峰 就可以绑定成功，所以就是 “driverClassName”
  * 注意：这里使用属性RedisProperties.Lettuce 是为了接受从配置文件读取lettuce的pool连接池的配置属性，其实自己写也是可以的
  */
-@Config.Sources({"classpath:ouyunc-im-cache.properties"})
+@Config.LoadPolicy(Config.LoadType.FIRST)
+@Config.Sources({"classpath:ouyunc-im-cache.properties","classpath:ouyunc-im-server.properties","classpath:ouyunc-im-client.properties","classpath:ouyunc-im.properties"})
 public interface StandaloneRedisProperties extends Config{
 
     /**

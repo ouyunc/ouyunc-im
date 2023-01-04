@@ -2,7 +2,8 @@ package com.ouyunc.im.db.properties;
 
 import org.aeonbits.owner.Config;
 
-@Config.Sources({"classpath:ouyunc-im-db.properties"})
+@Config.LoadPolicy(Config.LoadType.FIRST)
+@Config.Sources({"classpath:ouyunc-im-db.properties","classpath:ouyunc-im-server.properties","classpath:ouyunc-im-client.properties","classpath:ouyunc-im.properties"})
 public interface DbProperties extends Config{
 
     /**
