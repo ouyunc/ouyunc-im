@@ -12,7 +12,7 @@ public enum MessageEnum {
 
     // ====================================im使用的消息类型===========================================
     IM_PING_PONG((byte) 1, "im_ping_pong",  "外部客户端心跳消息"),
-    IM_LOGIN((byte) 2, "im_login",  "外部客户端中录消息") ,
+    IM_LOGIN((byte) 2, "im_login",  "外部客户端等录消息") ,
     IM_REPLY_ACK((byte) 3, "im_reply_ack",  "外部客户端的reply ack消息"),
     IM_READ_RECEIPT((byte) 4, "im_read_receipt",  "已读回执消息"),
     IM_PRIVATE_CHAT((byte) 5, "im_private_chat",  "私聊消息"),
@@ -21,13 +21,16 @@ public enum MessageEnum {
     IM_FRIEND_REQUEST((byte) 8, "im_friend_request",  "好友请求相关消息"),
     IM_GROUP_REQUEST((byte) 9, "im_group_request",  "群请求相关消息"),
 
+    BROADCAST((byte) 50, "broadcast",  "广播消息"),
 
     // =======================================http使用的消息类型================================
     RPC_REQUEST((byte) 101,  "rpc_request", "RPC中有请求消息"),
     RPC_RESPONSE((byte) 102, "rpc_response", "RPC中有响应消息"),
     RPC_HEART_BEAT((byte) 103,  "rpc_heart_beat", "RPC中心跳消息"),
 
-    IM_SERVER_WARNING((byte) 500,  "im_server_warning", "im 服务端的警告消息");
+
+
+    IM_SERVER_WARNING((byte) 125,  "im_server_warning", "im 服务端的警告消息");
 
     private byte value;
     private String name;

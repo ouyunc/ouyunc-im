@@ -41,10 +41,10 @@ public enum MessageContentEnum {
     GROUP_JOIN(31, GroupRequestContent.class, "加群请求"),
     GROUP_REFUSE(32, GroupRequestContent.class, "管理员/群主 拒绝加群申请"),
     GROUP_AGREE(33, GroupRequestContent.class, "管理员/群主 同意加群申请"),
-    GROUP_DISBAND(34, String.class, "群主 解散群"),
-    GROUP_KICK(35, String.class, "踢出群"),
+    GROUP_DISBAND(34, GroupRequestContent.class, "群主 解散群"),
+    GROUP_KICK(35, GroupRequestContent.class, "踢出群"),
     GROUP_EXIT(36, GroupRequestContent.class, "退出群"),
-    GROUP_SHIELD(37, String.class, "屏蔽群"),
+    GROUP_SHIELD(37, GroupRequestContent.class, "屏蔽群"),
     GROUP_PUBLISH_ANNOUNCEMENT(38, String.class, "发布群公告"),
 
 

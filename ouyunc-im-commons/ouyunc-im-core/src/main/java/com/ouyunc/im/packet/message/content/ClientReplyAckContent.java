@@ -14,7 +14,7 @@ public class ClientReplyAckContent implements Serializable {
     private String packetId;
 
     /**
-     * 原消息登录设备类型
+     * 原发消息方登录设备类型
      */
     private byte deviceType;
 

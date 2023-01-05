@@ -19,7 +19,7 @@ public class OfflineContent implements Serializable {
 
 
     /**
-     * 请求/响应的集合,如果是请求可以为空集合，存放消息id，如果是响应，存放离线的packet列表
+     * 请求/响应的集合,如果是请求可以为空集合,存放离线的packet列表
      */
     private List<Packet> packetList;
 
