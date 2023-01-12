@@ -9,9 +9,11 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v3.0.1 文档">
+    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v3.0.1 js sdk">
+      <change afterPath="$PROJECT_DIR$/docs/html/ouyunc-im-client-sdk.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/UserHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/UserHelper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/PingPongMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/PingPongMessageProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sdk/js/ouyunc-im-sdk.js" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -99,10 +101,11 @@
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
+    <property name="SONARLINT_PRECOMMIT_ANALYSIS" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="aspect.path.notification.shown" value="true" />
     <property name="jdk.selected.JAVA_MODULE" value="1.8" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/../university_back" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/docs/html" />
     <property name="project.structure.last.edited" value="Modules" />
     <property name="project.structure.proportion" value="0.15" />
     <property name="project.structure.side.proportion" value="0.47011495" />
@@ -116,11 +119,11 @@
       <recent name="com.ouyu.im.innerclient" />
     </key>
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="F:\workspace\ouyunc-im\docs\html" />
+      <recent name="F:\workspace\ouyunc-im\sdk\js" />
       <recent name="F:\workspace\ouyunc-im\docs\picture" />
       <recent name="F:\workspace\ouyunc-im\ouyunc-im-server\src\main\resources" />
       <recent name="D:\workspace\ouyunc-im\docs\html" />
-      <recent name="D:\workspace\ouyu-im\ouyu-server\src\main\resources\ssl" />
-      <recent name="D:\workspace\ouyu-im\ouyu-server\src\main\resources\templates" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="F:\workspace\ouyunc-im\docs\picture" />
@@ -370,14 +373,7 @@
       <workItem from="1673256605626" duration="637000" />
       <workItem from="1673407429527" duration="7094000" />
       <workItem from="1673420027207" duration="8550000" />
-      <workItem from="1673484766430" duration="8611000" />
-    </task>
-    <task id="LOCAL-00092" summary="IM 包结构整理">
-      <created>1625108774029</created>
-      <option name="number" value="00092" />
-      <option name="presentableId" value="LOCAL-00092" />
-      <option name="project" value="LOCAL" />
-      <updated>1625108774029</updated>
+      <workItem from="1673484766430" duration="13102000" />
     </task>
     <task id="LOCAL-00093" summary="IM 包结构整理">
       <created>1625111947335</created>
@@ -715,7 +711,14 @@
       <option name="project" value="LOCAL" />
       <updated>1672888950558</updated>
     </task>
-    <option name="localTasksCounter" value="141" />
+    <task id="LOCAL-00141" summary="v3.0.1 js sdk">
+      <created>1673494533323</created>
+      <option name="number" value="00141" />
+      <option name="presentableId" value="LOCAL-00141" />
+      <option name="project" value="LOCAL" />
+      <updated>1673494533323</updated>
+    </task>
+    <option name="localTasksCounter" value="142" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -775,7 +778,6 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
-    <MESSAGE value="init" />
     <MESSAGE value="im服务端的基本搭建" />
     <MESSAGE value="IM服务端集群雏形" />
     <MESSAGE value="IM服务端集群重试&amp;上下线" />
@@ -800,7 +802,8 @@
     <MESSAGE value="v3.0-beta  优化消息已读" />
     <MESSAGE value="v3.0-beta  优化离线消息" />
     <MESSAGE value="v3.0.1 文档" />
-    <option name="LAST_COMMIT_MESSAGE" value="v3.0.1 文档" />
+    <MESSAGE value="v3.0.1 js sdk" />
+    <option name="LAST_COMMIT_MESSAGE" value="v3.0.1 js sdk" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

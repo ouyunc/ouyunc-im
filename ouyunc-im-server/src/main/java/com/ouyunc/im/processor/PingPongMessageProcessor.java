@@ -51,7 +51,7 @@ public class PingPongMessageProcessor extends AbstractMessageProcessor{
             ctx.channel().attr(channelTagReadTimeoutKey).set(null);
             // 发送pong
             heartBeatMessage.setFrom(IMServerContext.SERVER_CONFIG.getLocalServerAddress());
-            heartBeatMessage.setTo(comboIdentity);
+            heartBeatMessage.setTo(from);
             heartBeatMessage.setContentType(MessageContentEnum.PONG_CONTENT.type());
             heartBeatMessage.setCreateTime(SystemClock.now());
             packet.setPacketId(SnowflakeUtil.nextId());
