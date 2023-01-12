@@ -10,15 +10,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v3.0.1 文档">
-      <change afterPath="$PROJECT_DIR$/docs/picture/162fade1a940b95e5a231b98ab8bb2b.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/picture/cf0cf9c61d5b7f41dbbf7a129c40f39.png" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/enums/MessageContentEnum.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/enums/MessageContentEnum.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/enums/MessageEnum.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/enums/MessageEnum.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/ClientReplyAckContent.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/ClientReplyAckContent.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/OfflineContent.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/OfflineContent.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/StartIMServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/StartIMServer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/DbHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/DbHelper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/UserHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/UserHelper.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -113,7 +106,7 @@
     <property name="project.structure.last.edited" value="Modules" />
     <property name="project.structure.proportion" value="0.15" />
     <property name="project.structure.side.proportion" value="0.47011495" />
-    <property name="settings.editor.selected.configurable" value="preferences.pluginManager" />
+    <property name="settings.editor.selected.configurable" value="reference.projectsettings.compiler.javacompiler" />
   </component>
   <component name="ReactorSettings">
     <option name="notificationShown" value="true" />
@@ -371,21 +364,13 @@
       <workItem from="1672706923042" duration="4278000" />
       <workItem from="1672736349671" duration="1753000" />
       <workItem from="1672793461181" duration="9398000" />
-      <workItem from="1672822293826" duration="12139000" />
-    </task>
-    <task id="LOCAL-00090" summary="IM 包结构整理">
-      <created>1625108105732</created>
-      <option name="number" value="00090" />
-      <option name="presentableId" value="LOCAL-00090" />
-      <option name="project" value="LOCAL" />
-      <updated>1625108105733</updated>
-    </task>
-    <task id="LOCAL-00091" summary="IM 包结构整理">
-      <created>1625108514129</created>
-      <option name="number" value="00091" />
-      <option name="presentableId" value="LOCAL-00091" />
-      <option name="project" value="LOCAL" />
-      <updated>1625108514129</updated>
+      <workItem from="1672822293826" duration="15138000" />
+      <workItem from="1672908457794" duration="2843000" />
+      <workItem from="1672971675305" duration="111000" />
+      <workItem from="1673256605626" duration="637000" />
+      <workItem from="1673407429527" duration="7094000" />
+      <workItem from="1673420027207" duration="8550000" />
+      <workItem from="1673484766430" duration="8611000" />
     </task>
     <task id="LOCAL-00092" summary="IM 包结构整理">
       <created>1625108774029</created>
@@ -716,7 +701,21 @@
       <option name="project" value="LOCAL" />
       <updated>1672797894512</updated>
     </task>
-    <option name="localTasksCounter" value="139" />
+    <task id="LOCAL-00139" summary="v3.0.1 文档">
+      <created>1672888914035</created>
+      <option name="number" value="00139" />
+      <option name="presentableId" value="LOCAL-00139" />
+      <option name="project" value="LOCAL" />
+      <updated>1672888914035</updated>
+    </task>
+    <task id="LOCAL-00140" summary="v3.0.1 文档">
+      <created>1672888950558</created>
+      <option name="number" value="00140" />
+      <option name="presentableId" value="LOCAL-00140" />
+      <option name="project" value="LOCAL" />
+      <updated>1672888950558</updated>
+    </task>
+    <option name="localTasksCounter" value="141" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -897,11 +896,6 @@
           <option name="timeStamp" value="234" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-db/src/main/java/com/ouyunc/im/db/config/JdbcPool.java</url>
-          <line>51</line>
-          <option name="timeStamp" value="242" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/im/cache/l1/distributed/redis/redisson/strategy/impl/StandaloneRedissonStrategy.java</url>
           <line>22</line>
           <option name="timeStamp" value="244" />
@@ -920,11 +914,6 @@
           <url>file://$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/im/cache/l1/distributed/redis/redisson/strategy/impl/ClusterRedissonStrategy.java</url>
           <line>22</line>
           <option name="timeStamp" value="248" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/StartIMServer.java</url>
-          <line>21</line>
-          <option name="timeStamp" value="249" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="javascript">
           <url>file://$PROJECT_DIR$/docs/socket/ouyu-socket.js</url>

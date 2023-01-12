@@ -38,7 +38,7 @@ public class UserHelper {
      * @return void
      */
     public static void bind(String identity, byte loginDeviceType, ChannelHandlerContext ctx) {
-        log.info("正在绑定登录用户：{} 在设备: {} 上登录", identity, loginDeviceType);
+        log.info("正在绑定登录用户: {} 在设备: {} 上登录", identity, DeviceEnum.getDeviceNameByValue(loginDeviceType));
         String comboIdentity = IdentityUtil.generalComboIdentity(identity, loginDeviceType);
         AttributeKey<LoginUserInfo> channelTagLoginKey = AttributeKey.valueOf(IMConstant.CHANNEL_TAG_LOGIN);
         // 将用户绑定到channel中并打上tag标签
