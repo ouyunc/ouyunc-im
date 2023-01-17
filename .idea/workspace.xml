@@ -10,7 +10,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v3.0.1 uniapp sdk">
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/jmetter/apache-jmeter-5.5.zip" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/jmetter/img.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/jmetter/ouyunc-im websocket 压测计划.jmx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/jmetter/read.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/jmetter/websocket 压测计划.jmx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/LoginMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/LoginMessageProcessor.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -102,7 +108,7 @@
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="aspect.path.notification.shown" value="true" />
     <property name="jdk.selected.JAVA_MODULE" value="1.8" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/sdk/uniapp" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/docs/jmetter" />
     <property name="project.structure.last.edited" value="Modules" />
     <property name="project.structure.proportion" value="0.15" />
     <property name="project.structure.side.proportion" value="0.47011495" />
@@ -116,11 +122,11 @@
       <recent name="com.ouyu.im.innerclient" />
     </key>
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="F:\workspace\ouyunc-im\docs\jmetter" />
       <recent name="F:\workspace\ouyunc-im\sdk\uniapp" />
       <recent name="F:\workspace\ouyunc-im\docs\sql" />
       <recent name="F:\workspace\ouyunc-im\sdk\js" />
       <recent name="F:\workspace\ouyunc-im\docs\html" />
-      <recent name="F:\workspace\ouyunc-im\docs\picture" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="F:\workspace\ouyunc-im\docs\picture" />
@@ -378,14 +384,7 @@
       <workItem from="1673601332237" duration="14890000" />
       <workItem from="1673842201992" duration="1036000" />
       <workItem from="1673843285934" duration="207000" />
-      <workItem from="1673843640660" duration="11823000" />
-    </task>
-    <task id="LOCAL-00095" summary="IM 包结构整理">
-      <created>1625122501442</created>
-      <option name="number" value="00095" />
-      <option name="presentableId" value="LOCAL-00095" />
-      <option name="project" value="LOCAL" />
-      <updated>1625122501442</updated>
+      <workItem from="1673843640660" duration="19446000" />
     </task>
     <task id="LOCAL-00096" summary="IM 包结构整理">
       <created>1625122663374</created>
@@ -723,19 +722,27 @@
       <option name="project" value="LOCAL" />
       <updated>1673917955191</updated>
     </task>
-    <option name="localTasksCounter" value="144" />
+    <task id="LOCAL-00144" summary="v3.0.1 uniapp sdk">
+      <created>1673918133217</created>
+      <option name="number" value="00144" />
+      <option name="presentableId" value="LOCAL-00144" />
+      <option name="project" value="LOCAL" />
+      <updated>1673918133217</updated>
+    </task>
+    <option name="localTasksCounter" value="145" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
   </component>
   <component name="Vcs.Log.History.Properties">
-    <option name="COLUMN_ORDER">
+    <option name="COLUMN_ID_ORDER">
       <list>
-        <option value="0" />
-        <option value="2" />
-        <option value="3" />
-        <option value="1" />
+        <option value="Default.Root" />
+        <option value="Default.Author" />
+        <option value="Default.Date" />
+        <option value="Default.Subject" />
+        <option value="Space.CommitStatus" />
       </list>
     </option>
   </component>
