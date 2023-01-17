@@ -9,14 +9,10 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v3.0.1 uniapp sdk">
-      <change afterPath="$PROJECT_DIR$/docs/jmetter/apache-jmeter-5.5.zip" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/jmetter/img.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/jmetter/ouyunc-im websocket 压测计划.jmx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/jmetter/read.md" afterDir="false" />
+    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v3.0.1 压测脚本">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/jmetter/websocket 压测计划.jmx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/LoginMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/LoginMessageProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/Packet.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/Packet.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/Message.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/Message.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -384,14 +380,9 @@
       <workItem from="1673601332237" duration="14890000" />
       <workItem from="1673842201992" duration="1036000" />
       <workItem from="1673843285934" duration="207000" />
-      <workItem from="1673843640660" duration="19446000" />
-    </task>
-    <task id="LOCAL-00096" summary="IM 包结构整理">
-      <created>1625122663374</created>
-      <option name="number" value="00096" />
-      <option name="presentableId" value="LOCAL-00096" />
-      <option name="project" value="LOCAL" />
-      <updated>1625122663374</updated>
+      <workItem from="1673843640660" duration="19959000" />
+      <workItem from="1673939906803" duration="1926000" />
+      <workItem from="1673942588813" duration="893000" />
     </task>
     <task id="LOCAL-00097" summary="IM 包结构整理">
       <created>1625123550302</created>
@@ -729,7 +720,14 @@
       <option name="project" value="LOCAL" />
       <updated>1673918133217</updated>
     </task>
-    <option name="localTasksCounter" value="145" />
+    <task id="LOCAL-00145" summary="v3.0.1 压测脚本">
+      <created>1673939446940</created>
+      <option name="number" value="00145" />
+      <option name="presentableId" value="LOCAL-00145" />
+      <option name="project" value="LOCAL" />
+      <updated>1673939446940</updated>
+    </task>
+    <option name="localTasksCounter" value="146" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -790,7 +788,6 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
-    <MESSAGE value="IM服务端集群雏形" />
     <MESSAGE value="IM服务端集群重试&amp;上下线" />
     <MESSAGE value="IM服务端集群" />
     <MESSAGE value="IM服务端序列化" />
@@ -815,7 +812,8 @@
     <MESSAGE value="v3.0.1 文档" />
     <MESSAGE value="v3.0.1 js sdk" />
     <MESSAGE value="v3.0.1 uniapp sdk" />
-    <option name="LAST_COMMIT_MESSAGE" value="v3.0.1 uniapp sdk" />
+    <MESSAGE value="v3.0.1 压测脚本" />
+    <option name="LAST_COMMIT_MESSAGE" value="v3.0.1 压测脚本" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

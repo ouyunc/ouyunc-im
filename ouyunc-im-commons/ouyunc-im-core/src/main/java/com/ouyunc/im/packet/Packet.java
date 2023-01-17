@@ -240,7 +240,7 @@ public class Packet<T> implements Serializable {
                 ", serializeAlgorithm=" + serializeAlgorithm +
                 ", messageType=" + messageType +
                 ", messageLength=" + messageLength +
-                ", message=" + message +
+                ", message=" + message.toString() +
                 '}';
     }
 }

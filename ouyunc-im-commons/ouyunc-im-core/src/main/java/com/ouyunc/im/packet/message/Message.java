@@ -122,4 +122,16 @@ public class Message implements Serializable {
         this.contentType = contentType;
         this.createTime = createTime;
     }
+
+    @Override
+    public String toString() {
+        return "Message{" +
+                "from='" + from + '\'' +
+                ", to='" + to + '\'' +
+                ", contentType=" + contentType +
+                ", content='" + content + '\'' +
+                ", extra='" + extra + '\'' +
+                ", createTime=" + createTime +
+                '}';
+    }
 }
