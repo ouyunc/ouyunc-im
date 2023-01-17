@@ -68,7 +68,7 @@ const Snowflake = /** @class */ (function () {
 /**
  * 封装通用websocket
  */
-const Socket = /** @class */ (function (window, Snowflake) {
+const Socket = /** @class */ (function (Snowflake) {
 	// =========================================定义全局变量===========================================
 
     /**
@@ -120,12 +120,7 @@ const Socket = /** @class */ (function (window, Snowflake) {
      * @constructor
      */
     function Socket(webSocketUrl, config) {
-        console.log("欢迎使用偶云客-IM v3.0.1 客户端sdk.")
-        window.WebSocket = window.WebSocket || window.MozWebSocket;
-        if (!window.WebSocket || !window.WebSocket.prototype.send) {
-            throw "当前浏览器或版本不支持WebSocket！请更换其他浏览器或版本";
-            return;
-        }
+        console.log("欢迎使用偶云客-IM v3.0.1 uniapp客户端sdk.")
         if (!webSocketUrl) {
             throw "非法参数 '"+ url +"',请正确设置url,如: ws://127.0.0.1:8000/";
             return;
@@ -143,19 +138,22 @@ const Socket = /** @class */ (function (window, Snowflake) {
     function init() {
         // 初始化
         // 创建原生websocket
-        webSocket = new WebSocket(url);
+        webSocket = uni.connectSocket({
+            url: url,
+            success: ()=> {
+                console.log('websocket 连接成功！');
+            }
+        });
 
-
-        webSocket.onopen = function (e) {
+        webSocket.onOpen(function (e) {
             if (socket.onopen instanceof Function){
                 socket.onopen(e);
             }else {
                 console.log('ws 连接打开了');
             }
-        };
+        });
 
-
-        webSocket.onmessage = function (e) {
+        webSocket.onMessage(function (e) {
             // 如果开启心跳，则进行重置心跳
             if (defaultConfig.heartbeatEnable) {
                 // 1当收到是登录成功的回复信息或其他消息后，进行清除延时数据，重新计时发送心跳
@@ -186,10 +184,11 @@ const Socket = /** @class */ (function (window, Snowflake) {
             }else {
                 console.log('接收到消息了');
             }
-        };
+        });
 
 
-        webSocket.onclose = function (e) {
+
+        webSocket.onClose(function (e) {
             if (socket.onclose instanceof Function){
                 socket.onclose(e);
             }else {
@@ -206,10 +205,9 @@ const Socket = /** @class */ (function (window, Snowflake) {
                     reconnect.start();
                 }
             }
-        };
+        })
 
-
-        webSocket.onerror = function (e) {
+        webSocket.onError(function (e) {
             if (socket.onerror instanceof Function){
                 socket.onerror(e);
             }else {
@@ -226,7 +224,7 @@ const Socket = /** @class */ (function (window, Snowflake) {
                 }
             }
 
-        }
+        });
     };
 
     /**
@@ -299,7 +297,7 @@ const Socket = /** @class */ (function (window, Snowflake) {
             return this;
         },
         // 开始发起心跳
-        start: function () {
+         start: function () {
             let _self = this;
             // 超时3次才关闭
             let _retry = defaultConfig.heartbeartMaxWait;
@@ -315,8 +313,9 @@ const Socket = /** @class */ (function (window, Snowflake) {
                 heartBeatMessage.setCreateTime(new Date().getTime());
                 let {packetDataView} = wrapMessage(heartBeatMessage, 1, '127.0.0.1', 0, 0, 0, 6);
                 // 发送心跳信息
-                console.debug(new Date() + " 客户端: " + loginIdentity + ' 正在发送心跳...')
-                webSocket.send(packetDataView.buffer);
+                webSocket.send({
+                    data:packetDataView.buffer
+                });
                 // 次数减一
                 _retry--;
                 // 如果超过一定时间还没重置，说明后端主动断开了
@@ -521,7 +520,7 @@ const Socket = /** @class */ (function (window, Snowflake) {
      * @param packet
      * @param callback 发送完成回调函数
      */
-    Socket.prototype.send = function (packet, successCallback) {
+    Socket.prototype.send = function (packet, callback) {
         let {message, messageType, ip, deviceType, networkType, encryptType, serializeAlgorithm} = packet;
         let messageProto = new proto.com.ouyunc.im.Message();
         messageProto.setFrom(message.from);
@@ -537,19 +536,22 @@ const Socket = /** @class */ (function (window, Snowflake) {
             }
             throw 'webSocket实例不能为空！';
         }
-        webSocket.send(packetDataView.buffer);
-        // 如果发送登录消息
-        if (messageType === 2) {
-            // 将该登录值存储起来
-            loginIdentity = JSON.parse(message.content).identity;
-            // 开始启动心跳检测
-            heartCheck.reset().start();
-            console.log(loginIdentity + ' login success')
-        }
-        // 回调出去
-        if (successCallback instanceof Function) {
-            successCallback(packetJson);
-        }
+        webSocket.send({
+            data: packetDataView.buffer,
+            success: function() {
+                // 如果发送登录消息
+                if (messageType === 2) {
+                    // 将该登录值存储起来
+                    loginIdentity = JSON.parse(message.content).identity;
+                    // 开始启动心跳检测
+                    heartCheck.reset().start();
+                }
+                callback(packetJson);
+            },
+            fail: function () {
+                callback(packetJson);
+            }
+        });
     }
 
 
@@ -562,19 +564,9 @@ const Socket = /** @class */ (function (window, Snowflake) {
             webSocket.close();
         }
     }
-
-    // =========================================window监听窗口关闭==============================================
-    /**
-     * 监听窗口关闭事件，当窗口关闭时，主动去关闭websocket连接，防止连接还没断开就关闭窗口，server端会抛异常
-     */
-    window.onbeforeunload = function () {
-        console.log("关闭窗口,触发 webSocket关闭...")
-        if (webSocket) {
-            webSocket.close();
-            clear();
-        }
-    };
     return Socket;
-})(window, Snowflake);
+})(Snowflake);
+
+export default Socket;
 
 

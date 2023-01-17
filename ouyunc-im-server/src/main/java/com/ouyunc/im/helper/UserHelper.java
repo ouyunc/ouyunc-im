@@ -59,7 +59,7 @@ public class UserHelper {
      * @return void
      */
     public static void unbind(String identity, byte loginDeviceType, ChannelHandlerContext ctx) {
-        log.info("正在解绑在设备: {} 上的用户: {}", loginDeviceType, identity);
+        log.info("正在解绑在设备: {} 上的用户: {}", DeviceEnum.getDeviceNameByValue(loginDeviceType), identity);
         String comboIdentity = IdentityUtil.generalComboIdentity(identity, loginDeviceType);
         IMServerContext.LOGIN_USER_INFO_CACHE.delete(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + comboIdentity);
         ChannelHandlerContext ctx0 = IMServerContext.USER_REGISTER_TABLE.get(comboIdentity);
