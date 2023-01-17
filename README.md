@@ -35,7 +35,7 @@
 默认消息处理器包括：登录，鉴权，私聊，群聊，已读消息，添加好友，删除好友，屏蔽好友，加群，踢出群，屏蔽群，解散群，拉黑(好友/群主拉黑某个客户端)，全量或按需拉取离线消息，历史消息，ack应答，广播，心跳等；
 
 ```
-#### 官网地址
+#### [官网地址](http://www.ouyunc.com) (服务器到期)
 ```
 http://www.ouyunc.com
 ```
@@ -67,7 +67,7 @@ http://www.ouyunc.com
 ```
 https://gitee.com/etxync/ouyunc-im/wikis/%E5%81%B6%E4%BA%91%E5%AE%A2-IM%20v3.x/%E5%BF%AB%E9%80%9F%E5%BC%80%E5%A7%8B
 ```
-#### [SDK使用文档](https://gitee.com/etxync/ouyunc-im/wikis/OUYUNC-IM%20v3.x/%E5%AE%A2%E6%88%B7%E7%AB%AFsdk%E4%BD%BF%E7%94%A8%E6%96%87%E6%A1%A3)
+#### [SDK接入指南](https://gitee.com/etxync/ouyunc-im/wikis/OUYUNC-IM%20v3.x/%E5%AE%A2%E6%88%B7%E7%AB%AFsdk%E4%BD%BF%E7%94%A8%E6%96%87%E6%A1%A3)
 
 ```
 https://gitee.com/etxync/ouyunc-im/wikis/OUYUNC-IM%20v3.x/%E5%AE%A2%E6%88%B7%E7%AB%AFsdk%E4%BD%BF%E7%94%A8%E6%96%87%E6%A1%A3
