@@ -11,8 +11,9 @@
   <component name="ChangeListManager">
     <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v3.0.1 压测脚本">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/Packet.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/Packet.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/Message.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/Message.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/jmetter/apache-jmeter-5.5.zip" beforeDir="false" afterPath="$PROJECT_DIR$/docs/jmetter/jmeter-5.5.zip" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/jmetter/read.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/jmetter/read.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/DbHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/DbHelper.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -109,6 +110,7 @@
     <property name="project.structure.proportion" value="0.15" />
     <property name="project.structure.side.proportion" value="0.47011495" />
     <property name="settings.editor.selected.configurable" value="reference.projectsettings.compiler.javacompiler" />
+    <property name="vue.rearranger.settings.migration" value="true" />
   </component>
   <component name="ReactorSettings">
     <option name="notificationShown" value="true" />
@@ -382,14 +384,9 @@
       <workItem from="1673843285934" duration="207000" />
       <workItem from="1673843640660" duration="19959000" />
       <workItem from="1673939906803" duration="1926000" />
-      <workItem from="1673942588813" duration="893000" />
-    </task>
-    <task id="LOCAL-00097" summary="IM 包结构整理">
-      <created>1625123550302</created>
-      <option name="number" value="00097" />
-      <option name="presentableId" value="LOCAL-00097" />
-      <option name="project" value="LOCAL" />
-      <updated>1625123550302</updated>
+      <workItem from="1673942588813" duration="6945000" />
+      <workItem from="1675039552293" duration="2742000" />
+      <workItem from="1675046123981" duration="7324000" />
     </task>
     <task id="LOCAL-00098" summary="IM 群组消息">
       <created>1625188331186</created>
@@ -727,7 +724,14 @@
       <option name="project" value="LOCAL" />
       <updated>1673939446940</updated>
     </task>
-    <option name="localTasksCounter" value="146" />
+    <task id="LOCAL-00146" summary="v3.0.1 压测脚本">
+      <created>1673943509605</created>
+      <option name="number" value="00146" />
+      <option name="presentableId" value="LOCAL-00146" />
+      <option name="project" value="LOCAL" />
+      <updated>1673943509605</updated>
+    </task>
+    <option name="localTasksCounter" value="147" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

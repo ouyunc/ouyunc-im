@@ -142,10 +142,17 @@ public class DbHelper {
         ImUser fromUser = (ImUser) cacheOperator.get(CacheConstant.OUYUNC + CacheConstant.IM_USER + from);
         if (fromUser == null && IMServerContext.SERVER_CONFIG.isDbEnable()) {
             fromUser = dbOperator.selectOne(DbSqlConstant.MYSQL.SELECT_USER.sql(), ImUser.class, from);
+            if (fromUser != null) {
+                // 放到缓存中
+                cacheOperator.put(CacheConstant.OUYUNC + CacheConstant.IM_USER + from, fromUser);
+            }
         }
         ImUser toUser = (ImUser) cacheOperator.get(CacheConstant.OUYUNC + CacheConstant.IM_USER + to);
         if (toUser == null && IMServerContext.SERVER_CONFIG.isDbEnable()) {
             toUser = dbOperator.selectOne(DbSqlConstant.MYSQL.SELECT_USER.sql(), ImUser.class, to);
+            if (toUser != null) {
+                cacheOperator.put(CacheConstant.OUYUNC + CacheConstant.IM_USER + to, toUser);
+            }
         }
         // 绑定关系
         if (fromUser != null && toUser != null) {
@@ -178,6 +185,9 @@ public class DbHelper {
         ImUser fromUser = (ImUser) cacheOperator.get(CacheConstant.OUYUNC + CacheConstant.IM_USER + from);
         if (fromUser == null && IMServerContext.SERVER_CONFIG.isDbEnable()) {
             fromUser = dbOperator.selectOne(DbSqlConstant.MYSQL.SELECT_USER.sql(), ImUser.class, from);
+            if (fromUser != null) {
+                cacheOperator.put(CacheConstant.OUYUNC + CacheConstant.IM_USER + from, fromUser);
+            }
         }
         if (fromUser != null) {
             String nowDateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
@@ -245,6 +255,10 @@ public class DbHelper {
         if (imUser == null && IMServerContext.SERVER_CONFIG.isDbEnable()){
             // 查询数据库
             imUser = dbOperator.selectOne(DbSqlConstant.MYSQL.SELECT_USER.sql(), ImUser.class, identity);
+            if (imUser != null) {
+                // 放入缓存
+                cacheOperator.put(CacheConstant.OUYUNC + CacheConstant.IM_USER + identity, imUser);
+            }
         }
         return imUser;
     }
