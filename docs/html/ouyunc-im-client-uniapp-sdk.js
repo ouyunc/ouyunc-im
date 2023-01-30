@@ -453,52 +453,45 @@ const Socket = /** @class */ (function (Snowflake) {
         // 注意：这里只要new Promise 就会执行，不需要手动调用
         return new Promise(function (resolve, reject) {
             //做一些异步操作
-            // 定义文件读取类
-            let reader = new FileReader();
-            // 将blob 二进制数据转file
-            reader.readAsArrayBuffer(packetDataBinary);
-            // 由于reader 是异步所以使用promise 包装
-            reader.onload = function () {
-                //定制协议前部固定长度
-                let header = 24;
-                let packetBuffer = new DataView(reader.result);
-                //跳过魔数 1个字节
-                let magic = packetBuffer.getInt8(0);// 0
-                //包协议， 1个字节
-                let protocol = packetBuffer.getInt8(1);// 0+1
-                //协议版本号，1个字节
-                let protocolVersion = packetBuffer.getInt8(2);// 0+1+1
-                //协议包id 8个字节
-                let packetId = packetBuffer.getBigInt64(3);// 0+1+1+1
-                //设备类型 1个字节，m-android/m-ios/pc-windows/pc-mac/pad...
-                let deviceType = packetBuffer.getInt8(11);// 0+1+1+1+8
-                //网络类型 1个字节 wifi,5g,4g,3g,2g...
-                let networkType = packetBuffer.getInt8(12);// 0+1+1+1+8+1
-                // 发送端ip 4个字节
-                let ip = packetBuffer.getInt32(13);// 0+1+1+1+8+1+1
-                //消息加密，1个字节，加密方式，不加密/AES/...对称加密，防止消息泄密
-                let encryptType = packetBuffer.getInt8(17);// 0+1+1+1+8+1+1+4
-                //序列化算法 1 个字节，json/jdk/hessian/kryo/protoStuff(protoBUf)
-                let serializeAlgorithm = packetBuffer.getInt8(18);// 0+1+1+1+8+1+1+4+1
-                //消息类型,1个字节
-                let messageType = packetBuffer.getInt8(19);// 0+1+1+1+8+1+1+4+1+1
-                //加密后的消息长度.4个字节
-                let messageLength = packetBuffer.getInt32(20);// 0+1+1+1+8+1+1+4+1+1+1
+            //定制协议前部固定长度
+            let header = 24;
+            let packetBuffer = new DataView(packetDataBinary);
+            //跳过魔数 1个字节
+            let magic = packetBuffer.getInt8(0);// 0
+            //包协议， 1个字节
+            let protocol = packetBuffer.getInt8(1);// 0+1
+            //协议版本号，1个字节
+            let protocolVersion = packetBuffer.getInt8(2);// 0+1+1
+            //协议包id 8个字节
+            let packetId = packetBuffer.getBigInt64(3);// 0+1+1+1
+            //设备类型 1个字节，m-android/m-ios/pc-windows/pc-mac/pad...
+            let deviceType = packetBuffer.getInt8(11);// 0+1+1+1+8
+            //网络类型 1个字节 wifi,5g,4g,3g,2g...
+            let networkType = packetBuffer.getInt8(12);// 0+1+1+1+8+1
+            // 发送端ip 4个字节
+            let ip = packetBuffer.getInt32(13);// 0+1+1+1+8+1+1
+            //消息加密，1个字节，加密方式，不加密/AES/...对称加密，防止消息泄密
+            let encryptType = packetBuffer.getInt8(17);// 0+1+1+1+8+1+1+4
+            //序列化算法 1 个字节，json/jdk/hessian/kryo/protoStuff(protoBUf)
+            let serializeAlgorithm = packetBuffer.getInt8(18);// 0+1+1+1+8+1+1+4+1
+            //消息类型,1个字节
+            let messageType = packetBuffer.getInt8(19);// 0+1+1+1+8+1+1+4+1+1
+            //加密后的消息长度.4个字节
+            let messageLength = packetBuffer.getInt32(20);// 0+1+1+1+8+1+1+4+1+1+1
 
-                let message = new ArrayBuffer(messageLength);
-                let messageDV = new DataView(message);
-                for (let i = 0; i < messageLength; i++) {
-                    messageDV.setInt8(i, packetBuffer.getInt8(header + i));
-                }
-                // 定义客户端需要处理的消息
-                let messageProto = proto.com.ouyunc.im.Message.deserializeBinary(message);
-                // 将message result 返回
-                resolve({
-                    message: messageProto,
-                    messageType: messageType,
-                    messageId: packetId
-                })
+            let message = new ArrayBuffer(messageLength);
+            let messageDV = new DataView(message);
+            for (let i = 0; i < messageLength; i++) {
+                messageDV.setInt8(i, packetBuffer.getInt8(header + i));
             }
+            // 定义客户端需要处理的消息
+            let messageProto = proto.com.ouyunc.im.Message.deserializeBinary(message);
+            // 将message result 返回
+            resolve({
+                message: messageProto,
+                messageType: messageType,
+                messageId: packetId
+            })
 
         });
     }
@@ -542,7 +535,7 @@ const Socket = /** @class */ (function (Snowflake) {
                 // 如果发送登录消息
                 if (messageType === 2) {
                     // 将该登录值存储起来
-                    loginIdentity = JSON.parse(message.content).identity;
+                    loginIdentity = '' + JSON.parse(message.content).identity;
                     // 开始启动心跳检测
                     heartCheck.reset().start();
                 }

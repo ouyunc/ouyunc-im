@@ -541,7 +541,7 @@ const Socket = /** @class */ (function (Snowflake) {
         // 如果发送登录消息
         if (messageType === 2) {
             // 将该登录值存储起来
-            loginIdentity = JSON.parse(message.content).identity;
+            loginIdentity = '' + JSON.parse(message.content).identity;
             // 开始启动心跳检测
             heartCheck.reset().start();
         }
