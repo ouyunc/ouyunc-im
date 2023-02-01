@@ -93,6 +93,8 @@ const Socket = /** @class */ (function (Snowflake) {
      * 默认配置参数,注意这里的超时等参数要与服务端相匹配
      */
     let defaultConfig = {
+        // 默认登录的设备类型:other
+        deviceType: 0,
         // 是否开启心跳，默认true，开启心跳
         heartbeatEnable: true,
         // 心跳最大等待次数（等待3个心跳时间，如果没有收到消息，则关闭客户端）
@@ -313,7 +315,7 @@ const Socket = /** @class */ (function (Snowflake) {
                 heartBeatMessage.setFrom(loginIdentity);
                 heartBeatMessage.setContentType(3);
                 heartBeatMessage.setCreateTime(new Date().getTime());
-                let {packetDataView} = wrapMessage(heartBeatMessage, 1, '127.0.0.1', 0, 0, 0, 6);
+                let {packetDataView} = wrapMessage(heartBeatMessage, 1, '127.0.0.1', defaultConfig.deviceType, 0, 0, 6);
                 // 发送心跳信息
                 console.debug(new Date() + " 客户端: " + loginIdentity + ' 正在发送心跳...')
                 webSocket.send(packetDataView.buffer);
