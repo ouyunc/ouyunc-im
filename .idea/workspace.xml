@@ -10,11 +10,25 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v3.0.1 sdk">
+      <change afterPath="$PROJECT_DIR$/docs/picture/1.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/picture/10.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/picture/11.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/picture/12.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/picture/13.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/picture/14.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/picture/15.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/picture/16.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/picture/17.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/picture/2.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/picture/3.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/picture/4.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/picture/5.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/picture/6.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/picture/7.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/picture/8.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/picture/9.jpg" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/html/ouyunc-im-client-uniapp-sdk.js" beforeDir="false" afterPath="$PROJECT_DIR$/docs/html/ouyunc-im-client-uniapp-sdk.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/html/ouyunc-im-client-web-sdk.js" beforeDir="false" afterPath="$PROJECT_DIR$/docs/html/ouyunc-im-client-web-sdk.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/sdk/js/ouyunc-im-sdk.js" beforeDir="false" afterPath="$PROJECT_DIR$/sdk/js/ouyunc-im-sdk.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/sdk/uniapp/ouyunc-im-sdk.js" beforeDir="false" afterPath="$PROJECT_DIR$/sdk/uniapp/ouyunc-im-sdk.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -106,7 +120,7 @@
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="aspect.path.notification.shown" value="true" />
     <property name="jdk.selected.JAVA_MODULE" value="1.8" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/sdk/js" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/docs/picture/1.jpg" />
     <property name="project.structure.last.edited" value="Modules" />
     <property name="project.structure.proportion" value="0.15" />
     <property name="project.structure.side.proportion" value="0.47011495" />
@@ -121,11 +135,11 @@
       <recent name="com.ouyu.im.innerclient" />
     </key>
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="F:\workspace\ouyunc-im\docs\picture" />
       <recent name="F:\workspace\ouyunc-im\sdk\js" />
       <recent name="F:\workspace\ouyunc-im\sdk\uniapp" />
       <recent name="F:\workspace\ouyunc-im\docs\jmetter" />
       <recent name="F:\workspace\ouyunc-im\docs\sql" />
-      <recent name="F:\workspace\ouyunc-im\docs\html" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="F:\workspace\ouyunc-im\docs\picture" />
@@ -387,14 +401,7 @@
       <workItem from="1673939906803" duration="1926000" />
       <workItem from="1673942588813" duration="6945000" />
       <workItem from="1675039552293" duration="2742000" />
-      <workItem from="1675046123981" duration="26600000" />
-    </task>
-    <task id="LOCAL-00100" summary="IM 群组消息">
-      <created>1625454391325</created>
-      <option name="number" value="00100" />
-      <option name="presentableId" value="LOCAL-00100" />
-      <option name="project" value="LOCAL" />
-      <updated>1625454391325</updated>
+      <workItem from="1675046123981" duration="31554000" />
     </task>
     <task id="LOCAL-00101" summary="IM 群组消息">
       <created>1625478273300</created>
@@ -732,7 +739,14 @@
       <option name="project" value="LOCAL" />
       <updated>1675087308907</updated>
     </task>
-    <option name="localTasksCounter" value="149" />
+    <task id="LOCAL-00149" summary="v3.0.1 sdk">
+      <created>1675242587436</created>
+      <option name="number" value="00149" />
+      <option name="presentableId" value="LOCAL-00149" />
+      <option name="project" value="LOCAL" />
+      <updated>1675242587436</updated>
+    </task>
+    <option name="localTasksCounter" value="150" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

@@ -55,9 +55,28 @@ http://www.ouyunc.com
 
 #### 演示地址和示例截图
 
-```
-稍后发布...
-```
+演示地址，暂不提供
+
+示例截图: 
+<img alt="示例截图" src="https://gitee.com/etxync/ouyunc-im/raw/v3.0.1/docs/picture/1.png" width="200" height="350" />
+<img alt="示例截图" src="https://gitee.com/etxync/ouyunc-im/raw/v3.0.1/docs/picture/2.jpg" width="200" height="350" />
+<img alt="示例截图" src="https://gitee.com/etxync/ouyunc-im/raw/v3.0.1/docs/picture/3.jpg" width="200" height="350" />
+<img alt="示例截图" src="https://gitee.com/etxync/ouyunc-im/raw/v3.0.1/docs/picture/4.jpg" width="200" height="350" />
+<img alt="示例截图" src="https://gitee.com/etxync/ouyunc-im/raw/v3.0.1/docs/picture/5.jpg" width="200" height="350" />
+<img alt="示例截图" src="https://gitee.com/etxync/ouyunc-im/raw/v3.0.1/docs/picture/6.jpg" width="200" height="350" />
+<img alt="示例截图" src="https://gitee.com/etxync/ouyunc-im/raw/v3.0.1/docs/picture/7.jpg" width="200" height="350" />
+<img alt="示例截图" src="https://gitee.com/etxync/ouyunc-im/raw/v3.0.1/docs/picture/8.jpg" width="200" height="350" />
+<img alt="示例截图" src="https://gitee.com/etxync/ouyunc-im/raw/v3.0.1/docs/picture/9.jpg" width="200" height="350" />
+<img alt="示例截图" src="https://gitee.com/etxync/ouyunc-im/raw/v3.0.1/docs/picture/10.jpg" width="200" height="350" />
+<img alt="示例截图" src="https://gitee.com/etxync/ouyunc-im/raw/v3.0.1/docs/picture/11.jpg" width="200" height="350" />
+<img alt="示例截图" src="https://gitee.com/etxync/ouyunc-im/raw/v3.0.1/docs/picture/12.jpg" width="200" height="350" />
+<img alt="示例截图" src="https://gitee.com/etxync/ouyunc-im/raw/v3.0.1/docs/picture/13.jpg" width="200" height="350" />
+<img alt="示例截图" src="https://gitee.com/etxync/ouyunc-im/raw/v3.0.1/docs/picture/14.jpg" width="200" height="350" />
+<img alt="示例截图" src="https://gitee.com/etxync/ouyunc-im/raw/v3.0.1/docs/picture/15.jpg" width="200" height="350" />
+<img alt="示例截图" src="https://gitee.com/etxync/ouyunc-im/raw/v3.0.1/docs/picture/16.jpg" width="200" height="350" />
+<img alt="示例截图" src="https://gitee.com/etxync/ouyunc-im/raw/v3.0.1/docs/picture/17.jpg" width="200" height="350" />
+
+
 #### jmeter压测报告
 
 ```
@@ -107,7 +126,6 @@ https://gitee.com/etxync/ouyunc-im/wikis/OUYUNC-IM%20v3.x/%E5%AE%A2%E6%88%B7%E7%
 #### 最后说明
 由于本人技术有限，项目中可能会有bug或代码不规范的地方，如果对你带来了困扰请跳过本项目。
 并且如果有任何想说的欢迎私信或提issue，咱们一起共同探讨交流。
-另外如果商用请告知，否则带来的一些后果自负。
 
 #### 参与贡献
 
