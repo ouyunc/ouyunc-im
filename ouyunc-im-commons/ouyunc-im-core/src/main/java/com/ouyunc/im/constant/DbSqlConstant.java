@@ -207,6 +207,7 @@ public class DbSqlConstant {
                 "\touyunc_im_user.age, \n" +
                 "\touyunc_im_user.sex, \n" +
                 "\touyunc_im_user.email, \n" +
+                "\touyunc_im_user.status, \n" +
                 "\touyunc_im_user.phone_num as phoneNum, \n" +
                 "\touyunc_im_user.id_card_num as idCardNum, \n" +
                 "\touyunc_im_user.create_time as createTime, \n" +
