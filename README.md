@@ -74,11 +74,6 @@ http://www.ouyunc.com
 <img alt="示例截图" src="https://gitee.com/etxync/ouyunc-im/raw/v3.0.1/docs/picture/17.jpg" width="200" height="350" />
 
 
-#### jmeter压测报告
-
-```
-补充中...
-```
 
  **注意** ：如果不做特别说明,全部以大端序读写《https://www.cnblogs.com/iathanasy/p/12617793.html》
 
