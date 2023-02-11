@@ -2,7 +2,7 @@
 [![license](https://img.shields.io/badge/license-MIT-brightgreen)](https://www.mit-license.org/)
 <a href='https://gitee.com/etxync/ouyunc-im/stargazers'><img src='https://gitee.com/etxync/ouyunc-im/badge/star.svg?theme=dark' alt='star'></img></a>
 <a href='https://gitee.com/etxync/ouyunc-im/members'><img src='https://gitee.com/etxync/ouyunc-im/badge/fork.svg?theme=dark' alt='fork'></img></a>
-#### 偶云客-IM介绍
+#### 偶云客-IM介绍 (免费！免费！免费！，点个star :star: )
 ```
  (1)偶云客IM是一款基于netty的即时通讯框架，去中心化集群部署方案（简单解决脑裂问题）；
  (2)支持多协议传输（ws,wss,http,https）以及自定义协议，可自行扩展；
@@ -57,7 +57,7 @@ http://www.ouyunc.com
 
 <img alt="示例截图" src="https://gitee.com/etxync/ouyunc-im/raw/v3.0.1/docs/picture/1.jpg" width="200" height="350" />
 <img alt="示例截图" src="https://gitee.com/etxync/ouyunc-im/raw/v3.0.1/docs/picture/2.jpg" width="200" height="350" />
-<img alt="示例截图" src="https://gitee.com/etxync/ouyunc-im/raw/v3.0.1/docs/picture/3.jpg" width="200" height="350" />
+
 <img alt="示例截图" src="https://gitee.com/etxync/ouyunc-im/raw/v3.0.1/docs/picture/4.jpg" width="200" height="350" />
 <img alt="示例截图" src="https://gitee.com/etxync/ouyunc-im/raw/v3.0.1/docs/picture/5.jpg" width="200" height="350" />
 <img alt="示例截图" src="https://gitee.com/etxync/ouyunc-im/raw/v3.0.1/docs/picture/6.jpg" width="200" height="350" />
@@ -74,11 +74,6 @@ http://www.ouyunc.com
 <img alt="示例截图" src="https://gitee.com/etxync/ouyunc-im/raw/v3.0.1/docs/picture/17.jpg" width="200" height="350" />
 
 
-#### jmeter压测报告
-
-```
-补充中...
-```
 
  **注意** ：如果不做特别说明,全部以大端序读写《https://www.cnblogs.com/iathanasy/p/12617793.html》
 
