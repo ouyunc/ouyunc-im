@@ -79,7 +79,7 @@ public class IMInnerClientHeartbeatThread implements Runnable {
             // jdk        500b         346b
             Packet packet = new Packet(Protocol.OUYUC.getProtocol(), Protocol.OUYUC.getVersion(), SnowflakeUtil.nextId(), DeviceEnum.OTHER.getValue(), NetworkEnum.OTHER.getValue(), IMServerContext.SERVER_CONFIG.getLocalHost(), MessageEnum.SYN_ACK.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(),  message);
             // 内部客户端连接池异步传递消息syn ,尝试所有的路径去保持连通
-            MessageHelper.deliveryMessage(packet, toInetSocketAddress);
+            MessageHelper.sendMessage(packet, targetServerAddressStr);
             // 先获取给目标服务toInetSocketAddress 发送syn,没有回复ack的次数，默认从0开始
             AtomicInteger missAckTimes = IMServerContext.CLUSTER_INNER_CLIENT_MISS_ACK_TIMES_CACHE.get(toInetSocketAddress);
             // 判断次数是否到达规定的次数，默认3次（也就是说给目标服务器连续发送3次syn,没有一次得到响应ack）则进行服务下线处理，从活着的服务注册表移除该服务
@@ -108,7 +108,10 @@ public class IMInnerClientHeartbeatThread implements Runnable {
         String toServerAddress = SocketAddressUtil.convert2HostPort(inetSocketAddress);
         log.warn("正在处理下线服务：{}",toServerAddress);
         // 先上报异常
-        ConcurrentHashSet hashSet = IMServerContext.CLUSTER_SERVER_OFFLINE_CACHE.getHash(CacheConstant.OUYUNC + CacheConstant.IM +  CacheConstant.CLUSTER_SERVER + CacheConstant.OFFLINE, toServerAddress);
+        ConcurrentHashSet<String> hashSet = IMServerContext.CLUSTER_SERVER_OFFLINE_CACHE.getHash(CacheConstant.OUYUNC + CacheConstant.IM +  CacheConstant.CLUSTER_SERVER + CacheConstant.OFFLINE, toServerAddress);
+        if (hashSet == null) {
+            hashSet = new ConcurrentHashSet<>();
+        }
         hashSet.add(IMServerContext.SERVER_CONFIG.getLocalServerAddress());
         IMServerContext.CLUSTER_SERVER_OFFLINE_CACHE.putHash(CacheConstant.OUYUNC + CacheConstant.IM +  CacheConstant.CLUSTER_SERVER + CacheConstant.OFFLINE, toServerAddress, hashSet);
         // 在分布式缓存中记录该服务下线，如果超过一半的服务都认为该服务不可达，则进行下线处理
@@ -121,7 +124,7 @@ public class IMInnerClientHeartbeatThread implements Runnable {
                     // @TODO 该offlineServerAddress下线服务的举证服务已经过半,现进行任务的移交处理
                     // 根据策略选举某个服务来接管下线的服务
                     // do something
-
+                    log.error("服务: {} 下线了！", offlineServerAddress);
                     // 最后打上标记已经处理接管任务了,这里才是最终下线了，任务也移交给其他服务处理
                     IMServerContext.CLUSTER_SERVER_OFFLINE_CACHE.deleteHash(CacheConstant.OUYUNC + CacheConstant.IM +  CacheConstant.CLUSTER_SERVER + CacheConstant.OFFLINE, offlineServerAddress);
                 }

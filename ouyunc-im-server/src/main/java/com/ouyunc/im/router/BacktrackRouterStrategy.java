@@ -104,7 +104,6 @@ public class BacktrackRouterStrategy implements RouterStrategy{
                 return SocketAddressUtil.convert2SocketAddress(localRoutingTable.getPreServerAddress());
             }
         }
-        log.warn("获取不到可用的服务连接！开始进行重试...");
         // 将需要处理的重试消息，放到任务队列中, 使用netty中的线程池以及队列，在第一次调用execute时会启动java线程，其实是个死循环来循环处理任务
         EVENT_EXECUTORS.execute(new IMRouteFailureProcessorThread(packet));
         // 抛出一个异常信息

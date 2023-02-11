@@ -48,6 +48,7 @@ public class IMInnerClientChannelPoolHandler implements ChannelPoolHandler {
      * @param channel
      * @return void
      */
+    @Override
     public void channelCreated(Channel channel) throws Exception {
         log.info("创建通道channel: {}", channel.id().asShortText());
 

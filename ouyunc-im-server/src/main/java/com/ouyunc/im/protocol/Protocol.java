@@ -10,14 +10,21 @@ import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.handler.*;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.Message;
+import com.ouyunc.im.utils.MapUtil;
 import com.ouyunc.im.utils.ReaderWriterUtil;
+import com.ouyunc.im.utils.SocketAddressUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.pool.ChannelPool;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrameAggregator;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import io.netty.handler.timeout.IdleStateHandler;
+import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -120,13 +127,44 @@ public enum Protocol {
         }
 
         /**
-         * 直接获取对应的channel然后写出去
+         * 直接获取对应的channel然后写出去,主要用于集群中心跳
          * @param packet
          * @param to
          */
         @Override
         public void doSendMessage(Packet packet, String to) {
-            IMServerContext.USER_REGISTER_TABLE.get(to).writeAndFlush(packet);
+            ChannelPool channelPool = MapUtil.mergerMaps(IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.asMap(), IMServerContext.CLUSTER_GLOBAL_SERVER_REGISTRY_TABLE.asMap()).get(SocketAddressUtil.convert2SocketAddress(to));;
+            if (channelPool == null) {
+                log.error("获取不到消息需要到达的服务: {}",to);
+                return;
+            }
+            Future<Channel> channelFuture = channelPool.acquire();
+            channelFuture.addListener(new FutureListener<Channel>(){
+                @Override
+                public void operationComplete(Future<Channel> future) throws Exception {
+                    if (future.isDone()) {
+                        // 判断是否连接成功
+                        if (future.isSuccess()) {
+                            Channel channel = future.getNow();
+                            // 给该通道打上标签(如果该通道channel 上有标签则不需要再打标签),打上标签的目的，是为了以后动态回收该channel,保证核心channel数
+                            AttributeKey<Integer> channelTagPoolKey = AttributeKey.valueOf(IMConstant.CHANNEL_TAG_POOL);
+                            final Integer channelPoolHashCode = channel.attr(channelTagPoolKey).get();
+                            if (channelPoolHashCode == null) {
+                                channel.attr(channelTagPoolKey).set(channelPool.hashCode());
+                            }
+                            // 客户端将数据写出到中介管道中
+                            channel.writeAndFlush(packet);
+                            // 用完后进行释放掉
+                            channelPool.release(channel);
+                        }else {
+                            // 获取失败
+                            Throwable cause = future.cause();
+                            log.warn("客户端获取channel异常！原因: {}", cause.getMessage());
+                        }
+
+                    }
+                }
+            });
         }
     };
 

@@ -41,6 +41,7 @@ public class IMRouteFailureProcessorThread implements Runnable {
      */
     @Override
     public void run() {
+        log.warn("获取不到可用的服务连接！packetId: {},开始进行重试...",packet.getPacketId());
         final Message message = (Message) packet.getMessage();
         ExtraMessage extraMessage = JSONUtil.toBean(message.getExtra(), ExtraMessage.class);
         if (extraMessage == null) {
@@ -56,7 +57,7 @@ public class IMRouteFailureProcessorThread implements Runnable {
         message.setExtra(JSONUtil.toJsonStr(extraMessage));
         // targetSocketAddress 不改变
         if (log.isDebugEnabled()) {
-            log.debug("消息包packet: {}, 正在进行第 {} 次重试 ",packet,  currentRetry);
+            log.debug("正在进行第 {} 次重试消息 packetId:{} ",  currentRetry, packet.getPacketId());
         }
         if (currentRetry < IMServerContext.SERVER_CONFIG.getClusterMessageRetry()) {
             // 重试次数+1，清空消息中的曾经路由过的服务，封装消息，找到目标主机
@@ -72,6 +73,6 @@ public class IMRouteFailureProcessorThread implements Runnable {
             long now = SystemClock.now();
             IMServerContext.MISSING_MESSAGES_CACHE.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.FAIL + CacheConstant.FROM + message.getFrom() + CacheConstant.COLON + CacheConstant.TO + IdentityUtil.generalComboIdentity(message.getTo(), extraMessage.getDeviceEnum().getName()), new MissingPacket(packet, IMServerContext.SERVER_CONFIG.getLocalServerAddress(), now), now);
         }
-        log.error("消息包packet: {} ,已经重试{}次,也没解决问题,该消息将被抛弃！",packet,  IMServerContext.SERVER_CONFIG.getClusterMessageRetry());
+        log.error("已经重试 {} 次,也没解决问题,该消息packetId : {}将被丢弃！",IMServerContext.SERVER_CONFIG.getClusterMessageRetry(), packet.getPacketId());
     }
 }

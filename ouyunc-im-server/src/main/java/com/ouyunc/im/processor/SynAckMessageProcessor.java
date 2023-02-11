@@ -45,14 +45,7 @@ public class SynAckMessageProcessor extends AbstractMessageProcessor{
         final String remoteServerAddressStr = synAckMessage.getFrom();
         log.info("接收到远端IM服务：{}的 {} 请求", remoteServerAddressStr, contentType);
         final InetSocketAddress remoteServerAddress = SocketAddressUtil.convert2SocketAddress(remoteServerAddressStr);
-        // 如果收到syn或ack,需要判断是本服务是否是目标服务
-        final String targetServerAddressStr = synAckMessage.getTo();
-        final InetSocketAddress targetServerAddress = SocketAddressUtil.convert2SocketAddress(targetServerAddressStr);
-        // 不相等则继续传递，直达没有可用的服务进行路由异步传递，
-        if (!IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(targetServerAddressStr)) {
-            MessageHelper.deliveryMessage(packet,targetServerAddress);
-            return;
-        }
+
         // syn 可能是经过其他服务转发的，回去的ack可能是经过其他服务转发的
         if (MessageContentEnum.SYN_CONTENT.type() == contentType) {
             synAckMessage.setContentType(MessageContentEnum.ACK_CONTENT.type());
@@ -62,7 +55,7 @@ public class SynAckMessageProcessor extends AbstractMessageProcessor{
             packet.setPacketId(SnowflakeUtil.nextId());
             packet.setIp(IMServerContext.SERVER_CONFIG.getLocalHost());
             // 这里需要使用客户端连接池来操作，因为可能ctx已经关闭了,使用异步传递
-            MessageHelper.deliveryMessage(packet,remoteServerAddress);
+            MessageHelper.sendMessage(packet, remoteServerAddressStr);
             // 下面是解决集群中原有服务是如何发现新加入集群的服务的
             // 判断发到syn的服务是否在 全局服务注册表中，如果不在判断该服务的合法性，如果合法，尝试发送给对方syn进行探测，如果成功则将新加入集群中的服务添加到激活的路由表中
             if (IMServerContext.CLUSTER_GLOBAL_SERVER_REGISTRY_TABLE.get(remoteServerAddress) == null) {
@@ -72,7 +65,7 @@ public class SynAckMessageProcessor extends AbstractMessageProcessor{
                 synAckMessage.setContentType(MessageContentEnum.SYN_CONTENT.type());
                 packet.setPacketId(SnowflakeUtil.nextId());
                 // 内部客户端连接池异步传递消息 syn ,尝试所有的路径去保持连通
-                MessageHelper.deliveryMessage(packet,remoteServerAddress);
+                MessageHelper.sendMessage(packet, remoteServerAddressStr);
             }
         }
         if (MessageContentEnum.ACK_CONTENT.type() == contentType) {

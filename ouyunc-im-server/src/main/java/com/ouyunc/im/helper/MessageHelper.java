@@ -110,7 +110,7 @@ public class MessageHelper {
         if (extraMessage == null) {
             extraMessage = new ExtraMessage();
         }
-        // 每次成功都会走这一步进行设置为true
+        // 判断是否是首次在集群间传递消息
         if (!extraMessage.isDelivery()) {
             // 首次进行传递时，将目标主机和所登录的设备进行设置
             extraMessage.setDeviceEnum(DeviceEnum.getDeviceEnumByValue(packet.getDeviceType()));
@@ -118,7 +118,7 @@ public class MessageHelper {
             extraMessage.setTargetServerAddress(loginUserInfo.getLoginServerAddress());
             extraMessage.setDelivery(true);
         }
-
+        message.setExtra(JSONUtil.toJsonStr(extraMessage));
         log.info("正在投递消息packet: {} 到服务: {} 上 ...",packet, toSocketAddress);
         // 将本机地址作为上一个路由服务地址传递过去
         // 先从存活的注册表中查找（防止有新添加集群中的服务），然后再从全局中找到最近的服务;
