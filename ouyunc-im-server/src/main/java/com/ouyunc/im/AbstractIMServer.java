@@ -90,10 +90,10 @@ public abstract class AbstractIMServer implements IMServer{
         log.info("IM开始启动,正在初始化........");
         // 注册关闭钩子
         registerShutdownHook();
-        // 初始化IM服务
-        initServer(IMServerContext.SERVER_CONFIG = loadProperties());
         // 设置实现类到本地线程中
         IMServerContext.TTL_THREAD_LOCAL.set(this);
+        // 初始化IM服务
+        initServer(IMServerContext.SERVER_CONFIG = loadProperties());
     }
 
     /**

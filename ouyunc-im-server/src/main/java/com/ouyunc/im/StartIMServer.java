@@ -1,6 +1,8 @@
 package com.ouyunc.im;
 
 
+import com.ouyunc.im.context.IMServerContext;
+
 /**
  * @Author fangzhenxun
  * @Description: 偶遇im的启动类总入口
