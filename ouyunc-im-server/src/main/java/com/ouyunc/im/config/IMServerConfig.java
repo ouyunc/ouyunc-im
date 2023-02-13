@@ -1,9 +1,13 @@
 package com.ouyunc.im.config;
 
+import cn.hutool.core.collection.CollectionUtil;
 import com.ouyunc.im.constant.enums.RouterStrategyEnum;
+import com.ouyunc.im.innerclient.DefaultIMInnerClient;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.logging.LogLevel;
 import io.netty.util.NettyRuntime;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -303,6 +307,7 @@ public class IMServerConfig extends IMConfig{
      * 多属性赋值使用建造者模式 https://www.cnblogs.com/scuwangjun/p/9699895.html
      */
     public static class Builder {
+        private static Logger log = LoggerFactory.getLogger(DefaultIMInnerClient.class);
 
         /**
          * 默认server 端的绑定端口为6001
@@ -557,6 +562,9 @@ public class IMServerConfig extends IMConfig{
 
         public Builder clusterAddress(Set<String> clusterAddress) {
             this.clusterAddress = clusterAddress;
+            if (clusterAddress != null && clusterAddress.size() % 2 == 0) {
+                log.warn("集群服务数量尽量使用奇数个!");
+            }
             return this;
         }
 

@@ -90,7 +90,7 @@ public class IMInnerClientHeartbeatThread implements Runnable {
             }
         }
         // 判断该服务所在的集群个数是否小于服务列表的半数（用于解决脑裂）, 启动服务30分钟后进行检测是否脑裂,如果满足则系统退出
-        if (IMServerContext.SERVER_CONFIG.isClusterSplitBrainDetectionEnable() && IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.size() < (int)Math.ceil(availableGlobalServer.size()/2.0) && ChronoUnit.MINUTES.between(beginTime, Instant.now()) >= IMServerContext.SERVER_CONFIG.getClusterSplitBrainDetectionDelay()) {
+        if (IMServerContext.SERVER_CONFIG.isClusterSplitBrainDetectionEnable() && (IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.size() + 1) <= (int)Math.ceil(availableGlobalServer.size()/2.0) && ChronoUnit.MINUTES.between(beginTime, Instant.now()) >= IMServerContext.SERVER_CONFIG.getClusterSplitBrainDetectionDelay()) {
             log.error("集群服务脑裂检测中，服务 {} 异常，开始注销...", IMServerContext.SERVER_CONFIG.getLocalServerAddress());
             IMServerContext.TTL_THREAD_LOCAL.get().stop();
         }
