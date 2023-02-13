@@ -114,8 +114,7 @@ public class UserHelper {
             if (excludeDeviceType == null || !supportOnlineDeviceName.equals(DeviceEnum.getDeviceNameByValue(excludeDeviceType))) {
                 String comboIdentity = IdentityUtil.generalComboIdentity(identity, supportOnlineDeviceName);
                 LoginUserInfo loginUserInfo = IMServerContext.LOGIN_USER_INFO_CACHE.get(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + comboIdentity);
-                ChannelHandlerContext ctx = IMServerContext.USER_REGISTER_TABLE.get(comboIdentity);
-                if (loginUserInfo != null && OnlineEnum.ONLINE.equals(loginUserInfo.getOnlineStatus()) && ctx != null) {
+                if (loginUserInfo != null && OnlineEnum.ONLINE.equals(loginUserInfo.getOnlineStatus())) {
                     loginServerAddressList.add(loginUserInfo);
                 }
             }
@@ -132,8 +131,7 @@ public class UserHelper {
     public static LoginUserInfo online(String identity, byte loginDeviceType) {
         String comboIdentity = IdentityUtil.generalComboIdentity(identity, loginDeviceType);
         LoginUserInfo loginUserInfo = IMServerContext.LOGIN_USER_INFO_CACHE.get(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + comboIdentity);
-        ChannelHandlerContext ctx = IMServerContext.USER_REGISTER_TABLE.get(comboIdentity);
-        if (loginUserInfo != null && OnlineEnum.ONLINE.equals(loginUserInfo.getOnlineStatus()) && ctx != null) {
+        if (loginUserInfo != null && OnlineEnum.ONLINE.equals(loginUserInfo.getOnlineStatus())) {
             return loginUserInfo;
         }
         return null;
