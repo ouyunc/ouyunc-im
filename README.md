@@ -2,7 +2,8 @@
 [![license](https://img.shields.io/badge/license-MIT-brightgreen)](https://www.mit-license.org/)
 <a href='https://gitee.com/etxync/ouyunc-im/stargazers'><img src='https://gitee.com/etxync/ouyunc-im/badge/star.svg?theme=dark' alt='star'></img></a>
 <a href='https://gitee.com/etxync/ouyunc-im/members'><img src='https://gitee.com/etxync/ouyunc-im/badge/fork.svg?theme=dark' alt='fork'></img></a>
-#### 偶云客-IM介绍 (免费！免费！免费！，点个star :star: )
+#### 偶云客-IM介绍 (免费！免费！免费！，代码注释及其丰富，请点个star:star:鼓励下)
+
 ```
  (1)偶云客IM是一款基于netty的即时通讯框架，去中心化集群部署方案（简单解决脑裂问题）；
  (2)支持多协议传输（ws,wss,http,https）以及自定义协议，可自行扩展；
