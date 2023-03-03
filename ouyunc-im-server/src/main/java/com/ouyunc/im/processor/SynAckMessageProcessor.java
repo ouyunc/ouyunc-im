@@ -58,7 +58,7 @@ public class SynAckMessageProcessor extends AbstractMessageProcessor{
             MessageHelper.sendMessage(packet, remoteServerAddressStr);
             // 下面是解决集群中原有服务是如何发现新加入集群的服务的
             // 判断发到syn的服务是否在 全局服务注册表中，如果不在判断该服务的合法性，如果合法，尝试发送给对方syn进行探测，如果成功则将新加入集群中的服务添加到激活的路由表中
-            if (IMServerContext.CLUSTER_GLOBAL_SERVER_REGISTRY_TABLE.get(remoteServerAddress) == null) {
+            if (IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.get(remoteServerAddress) == null && IMServerContext.CLUSTER_GLOBAL_SERVER_REGISTRY_TABLE.get(remoteServerAddress) == null) {
                 // 1,不在全局服务注册表中
                 // 2,判断服务的合法性， 这里不做太多的验证，认为只要加入集群中的服务都是合法的，如果后期需要，在加入校验规则
                 // 3,给对方发送syn心跳，去探测是否连通

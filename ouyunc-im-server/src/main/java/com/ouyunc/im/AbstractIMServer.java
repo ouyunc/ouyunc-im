@@ -18,7 +18,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import io.netty.util.internal.logging.Log4J2LoggerFactory;
+import io.netty.util.internal.logging.Slf4JLoggerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -104,7 +104,7 @@ public abstract class AbstractIMServer implements IMServer{
     private void initServer(IMServerConfig imServerConfig) {
         final long startTimeStamp = SystemClock.now();
         // 集成log4j2
-        InternalLoggerFactory.setDefaultFactory(Log4J2LoggerFactory.INSTANCE);
+        InternalLoggerFactory.setDefaultFactory(Slf4JLoggerFactory.INSTANCE);
         // 配置boss 线程组&工作线程组
         bossGroup = new NioEventLoopGroup(imServerConfig.getBossThreads());
         workerGroup = new NioEventLoopGroup(imServerConfig.getWorkThreads());
@@ -138,6 +138,7 @@ public abstract class AbstractIMServer implements IMServer{
             ChannelFuture channelFuture = bootstrap.bind(imServerConfig.getPort());
             // 添加监听器来监听是否启动成功,做额外工作
             channelFuture.addListener(new ChannelFutureListener() {
+                @Override
                 public void operationComplete(ChannelFuture bindFuture) throws Exception {
                     if (bindFuture.isDone()) {
                         if (bindFuture.isSuccess()) {

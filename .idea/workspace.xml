@@ -9,9 +9,26 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v3.0.1 集群下获取不到登录用户">
+    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v3.0.1 修复集群下客户收到消息后回复确认bug">
+      <change afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/echo/EchoClient.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/echo/EchoClientHandler.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/echo/EchoServer.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/echo/EchoServerHandler.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/echo/Packet.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/echo/PacketCodec.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/encodings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/encodings.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/ReplyAckMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/ReplyAckMessageProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.run/StartIMServer.run.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/IMConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/IMConstant.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/SnowflakeUtil.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/SnowflakeUtil.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/AbstractIMServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/AbstractIMServer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/StandardIMServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/StandardIMServer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/StartIMServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/StartIMServer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/lock/RedissonDistributedLockAspect.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/lock/RedissonDistributedLockAspect.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/SynAckMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/SynAckMessageProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/protocol/Protocol.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/protocol/Protocol.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/log4j2.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/log4j2.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/ouyunc-im-server.properties" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/ouyunc-im-server.properties" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -104,7 +121,7 @@
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="aspect.path.notification.shown" value="true" />
     <property name="jdk.selected.JAVA_MODULE" value="1.8" />
-    <property name="last_opened_file_path" value="$USER_HOME$/Desktop/aa" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/ouyunc-im-server" />
     <property name="project.structure.last.edited" value="Modules" />
     <property name="project.structure.proportion" value="0.15" />
     <property name="project.structure.side.proportion" value="0.47011495" />
@@ -139,82 +156,16 @@
       <recent name="com.ouyu.im.server.handler" />
     </key>
   </component>
-  <component name="RunManager" selected="Maven.im-start">
-    <configuration name="SnowflakeUtil" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
-      <option name="MAIN_CLASS_NAME" value="com.ouyunc.im.utils.SnowflakeUtil" />
-      <module name="ouyunc-im-core" />
-      <extension name="coverage">
-        <pattern>
-          <option name="PATTERN" value="com.ouyunc.im.utils.*" />
-          <option name="ENABLED" value="true" />
-        </pattern>
-      </extension>
+  <component name="RunManager">
+    <configuration name="StartIMServer" type="Application" factoryName="Application" singleton="false">
+      <option name="ALTERNATIVE_JRE_PATH" value="1.8" />
+      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
+      <option name="MAIN_CLASS_NAME" value="com.ouyunc.im.StartIMServer" />
+      <module name="ouyunc-im-server" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="im-start" type="MavenRunConfiguration" factoryName="Maven" singleton="false">
-      <MavenSettings>
-        <option name="myGeneralSettings" />
-        <option name="myRunnerSettings">
-          <MavenRunnerSettings>
-            <option name="delegateBuildToMaven" value="false" />
-            <option name="environmentProperties">
-              <map />
-            </option>
-            <option name="jreName" value="1.8" />
-            <option name="mavenProperties">
-              <map />
-            </option>
-            <option name="passParentEnv" value="true" />
-            <option name="runMavenInBackground" value="true" />
-            <option name="skipTests" value="false" />
-            <option name="vmOptions" value="" />
-          </MavenRunnerSettings>
-        </option>
-        <option name="myRunnerParameters">
-          <MavenRunnerParameters>
-            <option name="profiles">
-              <set />
-            </option>
-            <option name="goals">
-              <list />
-            </option>
-            <option name="pomFileName" />
-            <option name="profilesMap">
-              <map>
-                <entry key="sta" value="true" />
-              </map>
-            </option>
-            <option name="resolveToWorkspace" value="false" />
-            <option name="workingDirPath" value="$PROJECT_DIR$/ouyunc-im-server" />
-          </MavenRunnerParameters>
-        </option>
-      </MavenSettings>
-      <method v="2">
-        <option name="RunConfigurationTask" enabled="true" run_configuration_name="StartIMServer" run_configuration_type="Application" />
-      </method>
-    </configuration>
-    <configuration name="OuyuCacheApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
-      <option name="SPRING_BOOT_MAIN_CLASS" value="com.ouyu.cache.OuyuCacheApplication" />
-      <option name="ALTERNATIVE_JRE_PATH" />
-      <option name="SHORTEN_COMMAND_LINE" value="NONE" />
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
-    <list>
-      <item itemvalue="Application.StartIMServer" />
-      <item itemvalue="Application.SnowflakeUtil" />
-      <item itemvalue="Maven.im-start" />
-      <item itemvalue="Spring Boot.OuyuCacheApplication" />
-    </list>
-    <recent_temporary>
-      <list>
-        <item itemvalue="Application.StartIMServer" />
-        <item itemvalue="Application.SnowflakeUtil" />
-      </list>
-    </recent_temporary>
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="StructureViewFactory">
@@ -388,6 +339,7 @@
       <workItem from="1675039552293" duration="2742000" />
       <workItem from="1675046123981" duration="31554000" />
       <workItem from="1675913501205" duration="34413000" />
+      <workItem from="1677820363214" duration="7185000" />
     </task>
     <task id="LOCAL-00105" summary="偶遇-IM v3.0-beta">
       <created>1671442134391</created>
@@ -895,17 +847,12 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/lock/RedissonDistributedLockAspect.java</url>
-          <line>58</line>
-          <option name="timeStamp" value="301" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/lock/RedissonDistributedLockAspect.java</url>
-          <line>83</line>
+          <line>82</line>
           <option name="timeStamp" value="302" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/lock/RedissonDistributedLockAspect.java</url>
-          <line>111</line>
+          <line>110</line>
           <option name="timeStamp" value="303" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
@@ -930,5 +877,11 @@
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
+    <pin-to-top-manager>
+      <pinned-members>
+        <PinnedItemInfo parentTag="com.im.cache.l1.local.caffeine.CaffeineLocalL1Cache" memberName="loadingCache" />
+        <PinnedItemInfo parentTag="com.im.cache.l1.local.caffeine.CaffeineLocalL1Cache" memberName="cacheName" />
+      </pinned-members>
+    </pin-to-top-manager>
   </component>
 </project>

@@ -62,7 +62,10 @@ public class SnowflakeUtil {
         long now = SystemClock.now();
         //如果当前时间小于上一次ID生成的时间戳，说明系统时钟回退过这个时候应当抛出异常
         if (now < LAST_TIME_STAMP) {
-            throw new RuntimeException(String.format("系统时间错误！ %d 毫秒内拒绝生成雪花ID！", START_TIME - now));
+            if (LAST_TIME_STAMP - now >= 2000L) {
+                throw new IllegalStateException(String.format("系统时钟回拨错误！ %d 毫秒内拒绝生成雪花ID！", START_TIME - now));
+            }
+            now = LAST_TIME_STAMP;
         }
         if (now == LAST_TIME_STAMP) {
             LAST_SEQ = (LAST_SEQ + 1) & SEQ_MAX_NUM;

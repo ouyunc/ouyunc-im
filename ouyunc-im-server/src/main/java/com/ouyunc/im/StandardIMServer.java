@@ -43,7 +43,7 @@ public class StandardIMServer extends AbstractIMServer{
     IMServerConfig loadProperties() {
         String host = null;
         try {
-            host = InetAddress.getLocalHost().getHostAddress();
+            System.setProperty(IMConstant.LOCAL_IP_KEY, host = InetAddress.getLocalHost().getHostAddress());
         } catch (UnknownHostException e) {
             log.error("获取本地host失败！{}", e.getMessage());
             e.printStackTrace();

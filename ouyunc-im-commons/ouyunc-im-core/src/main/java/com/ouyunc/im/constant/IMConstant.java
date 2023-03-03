@@ -54,6 +54,10 @@ public class IMConstant {
      */
     public static final String COMMA = ",";
 
+    /**
+     * 本地ip 可以
+     */
+    public static final String LOCAL_IP_KEY = "local-ip";
 
     /**
      * 本地ip

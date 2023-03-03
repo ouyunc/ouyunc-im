@@ -8,6 +8,7 @@ import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.constant.enums.MessageEnum;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.handler.*;
+import com.ouyunc.im.innerclient.pool.IMInnerClientPool;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.utils.MapUtil;
@@ -27,6 +28,8 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.net.InetSocketAddress;
 
 /**
  * @Author fangzhenxun
@@ -133,12 +136,14 @@ public enum Protocol {
          */
         @Override
         public void doSendMessage(Packet packet, String to) {
-            ChannelPool channelPool = MapUtil.mergerMaps(IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.asMap(), IMServerContext.CLUSTER_GLOBAL_SERVER_REGISTRY_TABLE.asMap()).get(SocketAddressUtil.convert2SocketAddress(to));;
+            InetSocketAddress remoteInetSocketAddress = SocketAddressUtil.convert2SocketAddress(to);
+            ChannelPool channelPool = MapUtil.mergerMaps(IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.asMap(), IMServerContext.CLUSTER_GLOBAL_SERVER_REGISTRY_TABLE.asMap()).get(remoteInetSocketAddress);;
             if (channelPool == null) {
-                log.error("获取不到消息需要到达的服务: {}",to);
-                return;
+                log.warn("有新的服务加入集群，正在尝试与其确认ack,: {}",to);
+                channelPool = IMInnerClientPool.singleClientChannelPoolMap.get(remoteInetSocketAddress);
             }
-            Future<Channel> channelFuture = channelPool.acquire();
+            ChannelPool finalChannelPool = channelPool;
+            Future<Channel> channelFuture = finalChannelPool.acquire();
             channelFuture.addListener(new FutureListener<Channel>(){
                 @Override
                 public void operationComplete(Future<Channel> future) throws Exception {
@@ -150,12 +155,12 @@ public enum Protocol {
                             AttributeKey<Integer> channelTagPoolKey = AttributeKey.valueOf(IMConstant.CHANNEL_TAG_POOL);
                             final Integer channelPoolHashCode = channel.attr(channelTagPoolKey).get();
                             if (channelPoolHashCode == null) {
-                                channel.attr(channelTagPoolKey).set(channelPool.hashCode());
+                                channel.attr(channelTagPoolKey).set(finalChannelPool.hashCode());
                             }
                             // 客户端将数据写出到中介管道中
                             channel.writeAndFlush(packet);
                             // 用完后进行释放掉
-                            channelPool.release(channel);
+                            finalChannelPool.release(channel);
                         }else {
                             // 获取失败
                             Throwable cause = future.cause();

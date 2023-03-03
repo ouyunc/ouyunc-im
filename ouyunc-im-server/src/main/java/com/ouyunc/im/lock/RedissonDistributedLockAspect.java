@@ -59,7 +59,6 @@ public class RedissonDistributedLockAspect {
         if (StrUtil.isBlank(lockName)) {
             //生成锁键名称 lock key name
             MethodSignature signature = (MethodSignature) proceedingJoinPoint.getSignature();
-            String[] parameterNames = signature.getParameterNames();
             Object[] args = proceedingJoinPoint.getArgs();
             lockName = CacheConstant.OUYUNC + CacheConstant.LOCK + signature.toLongString();
             List<Integer> argsHashCode = new ArrayList<>();
