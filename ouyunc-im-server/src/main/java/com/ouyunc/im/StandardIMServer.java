@@ -43,7 +43,7 @@ public class StandardIMServer extends AbstractIMServer{
     IMServerConfig loadProperties() {
         String host = null;
         try {
-            System.setProperty(IMConstant.LOCAL_IP_KEY, host = InetAddress.getLocalHost().getHostAddress());
+            host = InetAddress.getLocalHost().getHostAddress();
         } catch (UnknownHostException e) {
             log.error("获取本地host失败！{}", e.getMessage());
             e.printStackTrace();
@@ -89,8 +89,10 @@ public class StandardIMServer extends AbstractIMServer{
                 .heartBeatTimeout(propertiesHelper.heartBeatTimeout())
                 .heartBeatWaitRetry(propertiesHelper.heartBeatWaitRetry())
                 .build();
+
+        System.setProperty(IMConstant.LOCAL_ADDRESS_KEY, config.getLocalServerAddress());
         // 打印相关生效的配置参数
-        log.info("当前配置参数:\r\n {} ",config.toString());
+        log.info("当前配置参数:\r\n {} ", config);
         return config;
     }
 }

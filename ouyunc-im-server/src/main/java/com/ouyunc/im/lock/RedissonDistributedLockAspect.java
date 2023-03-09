@@ -80,7 +80,7 @@ public class RedissonDistributedLockAspect {
                 }
             }
         }
-        log.info("线程：{} 开始获取分布式锁lockName: {}", currentThreadName, lockName);
+        log.info("线程：{} 开始获取分布式锁,lockName: {}", currentThreadName, lockName);
         //获取锁
         RLock lock = redissonClient.getLock(lockName);
         try {
@@ -108,14 +108,15 @@ public class RedissonDistributedLockAspect {
             if (waitTime != 0 && leaseTime == 0) {
                 lock.tryLock(waitTime, TimeUnit.SECONDS);
             }
-            log.info("线程：" + currentThreadName + "获取分布式锁完成");
+            log.info("线程：{} 获取分布式锁 {} 完成,开始处理业务...", currentThreadName , lockName);
             //执行目标方法
             return proceedingJoinPoint.proceed();
         } catch (Exception e) {
-            log.error("线程" + currentThreadName + "获取redis锁失败！");
+            log.error("线程 {} 获取分布式锁 {} 失败！",currentThreadName, lockName);
             throw e;
         } finally {
             //释放锁
+            log.info("线程：{} 正在释放分布式锁 {} ", currentThreadName , lockName);
             lock.unlock();
         }
     }

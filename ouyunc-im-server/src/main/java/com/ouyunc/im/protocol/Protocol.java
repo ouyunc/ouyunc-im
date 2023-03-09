@@ -164,7 +164,7 @@ public enum Protocol {
                         }else {
                             // 获取失败
                             Throwable cause = future.cause();
-                            log.warn("客户端获取channel异常！原因: {}", cause.getMessage());
+                            log.error("客户端获取channel异常！原因: {}", cause.getMessage());
                         }
 
                     }

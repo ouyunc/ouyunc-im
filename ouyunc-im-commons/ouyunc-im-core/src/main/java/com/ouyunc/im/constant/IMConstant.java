@@ -57,7 +57,7 @@ public class IMConstant {
     /**
      * 本地ip 可以
      */
-    public static final String LOCAL_IP_KEY = "local-ip";
+    public static final String LOCAL_ADDRESS_KEY = "local-address";
 
     /**
      * 本地ip

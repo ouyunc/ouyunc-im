@@ -4,6 +4,7 @@ import cn.hutool.core.date.SystemClock;
 import com.ouyunc.im.constant.enums.MessageContentEnum;
 import com.ouyunc.im.constant.enums.MessageEnum;
 import com.ouyunc.im.context.IMServerContext;
+import com.ouyunc.im.helper.ClusterHelper;
 import com.ouyunc.im.helper.MessageHelper;
 import com.ouyunc.im.innerclient.pool.IMInnerClientPool;
 import com.ouyunc.im.packet.Packet;
@@ -43,7 +44,7 @@ public class SynAckMessageProcessor extends AbstractMessageProcessor{
         int contentType = synAckMessage.getContentType();
         // 发送端服务器地址：ip:port
         final String remoteServerAddressStr = synAckMessage.getFrom();
-        log.info("接收到远端IM服务：{}的 {} 请求", remoteServerAddressStr, contentType);
+        log.info("接收到远端IM服务：{}的 {} 请求", remoteServerAddressStr, MessageContentEnum.prototype(contentType).name());
         final InetSocketAddress remoteServerAddress = SocketAddressUtil.convert2SocketAddress(remoteServerAddressStr);
 
         // syn 可能是经过其他服务转发的，回去的ack可能是经过其他服务转发的
@@ -55,7 +56,7 @@ public class SynAckMessageProcessor extends AbstractMessageProcessor{
             packet.setPacketId(SnowflakeUtil.nextId());
             packet.setIp(IMServerContext.SERVER_CONFIG.getLocalHost());
             // 这里需要使用客户端连接池来操作，因为可能ctx已经关闭了,使用异步传递
-            MessageHelper.sendMessage(packet, remoteServerAddressStr);
+            MessageHelper.sendMessageSync(packet, remoteServerAddressStr);
             // 下面是解决集群中原有服务是如何发现新加入集群的服务的
             // 判断发到syn的服务是否在 全局服务注册表中，如果不在判断该服务的合法性，如果合法，尝试发送给对方syn进行探测，如果成功则将新加入集群中的服务添加到激活的路由表中
             if (IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.get(remoteServerAddress) == null && IMServerContext.CLUSTER_GLOBAL_SERVER_REGISTRY_TABLE.get(remoteServerAddress) == null) {
@@ -76,6 +77,8 @@ public class SynAckMessageProcessor extends AbstractMessageProcessor{
             // 1，将remoteServerAddress 获取channel pool,
             // 2，如果之前存在该remoteServerAddress 则不进行存储操作，否则存储该channelpool
             IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.putIfAbsent(remoteServerAddress, IMInnerClientPool.singleClientChannelPoolMap.get(remoteServerAddress));
+            // 异步撤销远端服务的下线举证，FAQ 如果一个服务下线又上线，在举证列表中会有举证列表的存在，这个新上线的如果一开始和某几个服务通了又不通就会从举证服务列表中重新判断该服务不可用进而再次强制下线（因为原来举证里列表中就有值，已经认为你不存在）
+            EVENT_EXECUTORS.execute(() -> ClusterHelper.withdrawal(remoteServerAddressStr));
         }
     }
 

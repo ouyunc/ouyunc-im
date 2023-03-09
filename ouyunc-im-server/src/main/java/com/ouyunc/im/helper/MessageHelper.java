@@ -74,7 +74,7 @@ public class MessageHelper {
      * @return void
      */
     public static void sendMessageSync(Packet packet, String to) {
-        log.info("开始发送消息packet: {} ,to: {}", packet, to);
+        log.info("开始给 {} 发送消息packet: {} ", to, packet);
         if (to == null) {
             throw new IMException("消息接收者不能为空！");
         }

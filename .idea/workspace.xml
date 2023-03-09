@@ -9,24 +9,18 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v3.0.1 修复集群下客户收到消息后回复确认bug">
-      <change afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/echo/EchoClient.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/echo/EchoClientHandler.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/echo/EchoServer.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/echo/EchoServerHandler.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/echo/Packet.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/echo/PacketCodec.java" afterDir="false" />
+    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v3.0.1 优化日志记录添加ip">
+      <change afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/ClusterHelper.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/encodings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/encodings.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.run/StartIMServer.run.xml" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/IMConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/IMConstant.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/SnowflakeUtil.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/SnowflakeUtil.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/AbstractIMServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/AbstractIMServer.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/StandardIMServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/StandardIMServer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/StartIMServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/StartIMServer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/MessageHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/MessageHelper.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/lock/RedissonDistributedLockAspect.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/lock/RedissonDistributedLockAspect.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/SynAckMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/SynAckMessageProcessor.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/protocol/Protocol.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/protocol/Protocol.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/thread/IMInnerClientHeartbeatThread.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/thread/IMInnerClientHeartbeatThread.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/log4j2.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/log4j2.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/ouyunc-im-server.properties" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/ouyunc-im-server.properties" afterDir="false" />
     </list>
@@ -121,7 +115,8 @@
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="aspect.path.notification.shown" value="true" />
     <property name="jdk.selected.JAVA_MODULE" value="1.8" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/ouyunc-im-server" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../2.2.1/avalon/product_university_frontend" />
+    <property name="nodejs_package_manager_path" value="npm" />
     <property name="project.structure.last.edited" value="Modules" />
     <property name="project.structure.proportion" value="0.15" />
     <property name="project.structure.side.proportion" value="0.47011495" />
@@ -162,6 +157,7 @@
       <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
       <option name="MAIN_CLASS_NAME" value="com.ouyunc.im.StartIMServer" />
       <module name="ouyunc-im-server" />
+      <option name="VM_PARAMETERS" value="-Dlog4j.skipJansi=false" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
@@ -339,14 +335,10 @@
       <workItem from="1675039552293" duration="2742000" />
       <workItem from="1675046123981" duration="31554000" />
       <workItem from="1675913501205" duration="34413000" />
-      <workItem from="1677820363214" duration="7185000" />
-    </task>
-    <task id="LOCAL-00105" summary="偶遇-IM v3.0-beta">
-      <created>1671442134391</created>
-      <option name="number" value="00105" />
-      <option name="presentableId" value="LOCAL-00105" />
-      <option name="project" value="LOCAL" />
-      <updated>1671442134391</updated>
+      <workItem from="1677820363214" duration="38397000" />
+      <workItem from="1678181364615" duration="10606000" />
+      <workItem from="1678267972284" duration="14922000" />
+      <workItem from="1678345402636" duration="623000" />
     </task>
     <task id="LOCAL-00106" summary="v3.0-beta  群组请求功能完善">
       <created>1671586135552</created>
@@ -684,7 +676,14 @@
       <option name="project" value="LOCAL" />
       <updated>1676280322949</updated>
     </task>
-    <option name="localTasksCounter" value="154" />
+    <task id="LOCAL-00154" summary="v3.0.1 优化日志记录添加ip">
+      <created>1677827762674</created>
+      <option name="number" value="00154" />
+      <option name="presentableId" value="LOCAL-00154" />
+      <option name="project" value="LOCAL" />
+      <updated>1677827762674</updated>
+    </task>
+    <option name="localTasksCounter" value="155" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -745,7 +744,6 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
-    <MESSAGE value="IM服务端集群逻辑处理" />
     <MESSAGE value="IM服务端消息可靠性" />
     <MESSAGE value="IM服务端消息可靠性&amp;优化" />
     <MESSAGE value="IM缓存优化" />
@@ -770,7 +768,8 @@
     <MESSAGE value="v3.0.1 集群bug修复" />
     <MESSAGE value="v3.0.1 集群脑裂检测优化" />
     <MESSAGE value="v3.0.1 集群下获取不到登录用户" />
-    <option name="LAST_COMMIT_MESSAGE" value="v3.0.1 集群下获取不到登录用户" />
+    <MESSAGE value="v3.0.1 优化日志记录添加ip" />
+    <option name="LAST_COMMIT_MESSAGE" value="v3.0.1 优化日志记录添加ip" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -846,24 +845,14 @@
           <option name="timeStamp" value="234" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/lock/RedissonDistributedLockAspect.java</url>
-          <line>82</line>
-          <option name="timeStamp" value="302" />
+          <url>file://$PROJECT_DIR$/ouyunc-im-server/target/classes/com/ouyunc/im/lock/RedissonDistributedLockAspect.class</url>
+          <line>43</line>
+          <option name="timeStamp" value="334" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/lock/RedissonDistributedLockAspect.java</url>
-          <line>110</line>
-          <option name="timeStamp" value="303" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-im-server/target/classes/com/ouyunc/im/thread/IMInnerClientHeartbeatThread.class</url>
-          <line>97</line>
-          <option name="timeStamp" value="308" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-im-server/target/classes/com/ouyunc/im/thread/IMInnerClientHeartbeatThread.class</url>
-          <line>77</line>
-          <option name="timeStamp" value="311" />
+          <url>file://$PROJECT_DIR$/ouyunc-im-server/target/classes/com/ouyunc/im/lock/RedissonDistributedLockAspect.class</url>
+          <line>70</line>
+          <option name="timeStamp" value="335" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="javascript">
           <url>file://$PROJECT_DIR$/docs/socket/ouyu-socket.js</url>
@@ -881,6 +870,7 @@
       <pinned-members>
         <PinnedItemInfo parentTag="com.im.cache.l1.local.caffeine.CaffeineLocalL1Cache" memberName="loadingCache" />
         <PinnedItemInfo parentTag="com.im.cache.l1.local.caffeine.CaffeineLocalL1Cache" memberName="cacheName" />
+        <PinnedItemInfo parentTag="com.github.benmanes.caffeine.cache.UnboundedLocalCache$UnboundedLocalLoadingCache" memberName="cache" />
       </pinned-members>
     </pin-to-top-manager>
   </component>
