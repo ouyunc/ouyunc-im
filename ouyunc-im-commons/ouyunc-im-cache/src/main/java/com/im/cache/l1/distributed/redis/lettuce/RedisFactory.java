@@ -7,53 +7,37 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * @Author fangzhenxun
  * @Description: 单例模式
  * @Version V3.0
  **/
-public class RedisFactory {
+public enum RedisFactory {
+    INSTANCE;
 
+    private final Lock lock = new ReentrantLock();
 
-    //每一个数据库只有一个redisTemplate 实例
     private static volatile ConcurrentHashMap<Integer, RedisTemplate> redisTemplateMap = new ConcurrentHashMap<>();
-    private static volatile ConcurrentHashMap<Integer, StringRedisTemplate> stringRedisTemplateMap = new ConcurrentHashMap<>();
-    private RedisFactory() {
-    }
 
-
-    public static RedisTemplate redisTemplate() {
+    public RedisTemplate redisTemplate() {
         return redisTemplate(0);
     }
 
-    public static RedisTemplate redisTemplate(int database) {
+    public RedisTemplate redisTemplate(int database) {
         if (redisTemplateMap.get(database) == null) {
-            synchronized (ConcurrentHashMap.class) {
+            lock.lock();
+            try{
                 if (redisTemplateMap.get(database) == null){
                     RedisBuilder<RedisTemplate> redisBuilder = new RedisTemplateBuilder();
                     redisTemplateMap.put(database, redisBuilder.build(database));
                 }
+            }finally {
+                lock.unlock();
             }
         }
         return redisTemplateMap.get(database);
     }
-
-
-    public static StringRedisTemplate stringRedisTemplate() {
-        return stringRedisTemplate(0);
-    }
-
-    public static StringRedisTemplate stringRedisTemplate(int database) {
-        if (stringRedisTemplateMap.get(database) == null) {
-            synchronized (ConcurrentHashMap.class) {
-                if (stringRedisTemplateMap.get(database) == null){
-                    RedisBuilder<StringRedisTemplate> redisBuilder = new StringRedisTemplateBuilder();
-                    stringRedisTemplateMap.put(database, redisBuilder.build(database));
-                }
-            }
-        }
-        return stringRedisTemplateMap.get(database);
-    }
-
 }

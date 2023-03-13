@@ -3,7 +3,9 @@ package com.ouyunc.im.processor;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.date.SystemClock;
 import cn.hutool.json.JSONUtil;
+import com.im.cache.l1.distributed.redis.redisson.RedissonFactory;
 import com.ouyunc.im.base.LoginUserInfo;
+import com.ouyunc.im.constant.CacheConstant;
 import com.ouyunc.im.constant.enums.MessageContentEnum;
 import com.ouyunc.im.constant.enums.MessageEnum;
 import com.ouyunc.im.context.IMServerContext;
@@ -16,6 +18,7 @@ import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.utils.IdentityUtil;
 import com.ouyunc.im.utils.SocketAddressUtil;
 import io.netty.channel.ChannelHandlerContext;
+import org.redisson.api.RLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,7 +69,12 @@ public class  FriendRequestMessageProcessor extends AbstractMessageProcessor{
             // 如果是好友申请，直接转发给对方各个端，不做消息保存；如果A和B同时添加好友，同时同意，则只会保留一份关系
             if (MessageContentEnum.FRIEND_AGREE.type() == message.getContentType()) {
                 // 绑定好友关系
-                DbHelper.bindFriend(from, to);
+                RLock lock = RedissonFactory.INSTANCE.redissonClient().getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.GROUP + CacheConstant.REFUSE_AGREE + IdentityUtil.sortComboIdentity(from, to));
+                try{
+                    DbHelper.bindFriend(from, to);
+                }finally {
+                    lock.unlock();
+                }
             }
             // 转发给该好友的各个设备端
             // 获取该客户端在线的所有客户端，进行推送消息已读

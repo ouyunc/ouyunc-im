@@ -2,6 +2,7 @@ package com.ouyunc.im.utils;
 
 import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.constant.enums.DeviceEnum;
+import com.ouyunc.im.exception.IMException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -9,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 登录唯一标识相关工具类
+ * 唯一标识相关工具类
  */
 public class IdentityUtil {
     private static Logger log = LoggerFactory.getLogger(IdentityUtil.class);
@@ -71,4 +72,20 @@ public class IdentityUtil {
         supportOnlineLoginDeviceList.add(DeviceEnum.PC_OTHER.getName());
         return supportOnlineLoginDeviceList;
     }
+
+
+    /**
+     * 比较str1 和str2 的大小，进行从高到底顺序输出；格式如 高字符串:低字符串
+     * @param str1
+     * @param str2
+     * @return
+     */
+    public static String sortComboIdentity(String str1, String str2) {
+        if (str1 != null && str2 != null) {
+            return str1.compareTo(str2) >= 0?  str1 + IMConstant.COLON_SPLIT + str2 : str2 + IMConstant.COLON_SPLIT + str1;
+        }
+        log.error("组合有序的字符串{} , {} 失败！", str1, str2);
+        throw new IMException("组合有序的字符串失败！");
+    }
+
 }

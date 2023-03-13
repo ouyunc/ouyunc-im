@@ -1,19 +1,14 @@
 package com.ouyunc.im.thread;
 
 
-import cn.hutool.core.collection.CollectionUtil;
-import cn.hutool.core.collection.ConcurrentHashSet;
 import cn.hutool.core.date.SystemClock;
-import com.ouyunc.im.constant.CacheConstant;
 import com.ouyunc.im.constant.enums.DeviceEnum;
 import com.ouyunc.im.constant.enums.MessageContentEnum;
 import com.ouyunc.im.constant.enums.MessageEnum;
 import com.ouyunc.im.constant.enums.NetworkEnum;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.encrypt.Encrypt;
-import com.ouyunc.im.helper.ClusterHelper;
 import com.ouyunc.im.helper.MessageHelper;
-import com.ouyunc.im.lock.DistributedLock;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.protocol.Protocol;
@@ -59,7 +54,7 @@ public class IMInnerClientHeartbeatThread implements Runnable {
      */
     @Override
     public void run() {
-        log.debug("集群服务总当前存活的服务：{}",IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.asMap().keySet());
+        log.debug("集群服务中当前存活的服务：{}",IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.asMap().keySet());
         // 获取所有注册表中的key,每次更新注册表都会重新获取注册表信息
         Set<Map.Entry<InetSocketAddress, ChannelPool>> availableGlobalServer = MapUtil.mergerMaps(IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.asMap(), IMServerContext.CLUSTER_GLOBAL_SERVER_REGISTRY_TABLE.asMap()).entrySet();
         Iterator<Map.Entry<InetSocketAddress, ChannelPool>> socketAddressChannelIterator = availableGlobalServer.iterator();
@@ -87,8 +82,7 @@ public class IMInnerClientHeartbeatThread implements Runnable {
             // 判断次数是否到达规定的次数，默认3次（也就是说给目标服务器连续发送3次syn,没有一次得到响应ack）则进行服务下线处理，从活着的服务注册表移除该服务
             if (IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.asMap().containsKey(toInetSocketAddress) && missAckTimes.incrementAndGet() > IMServerContext.SERVER_CONFIG.getClusterInnerClientHeartbeatWaitRetry()) {
                 IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.delete(toInetSocketAddress);
-                // 检测到socketAddress服务下线，进行异步任务处理
-                EVENT_EXECUTORS.execute(() -> ClusterHelper.handlerServerOffline(targetServerAddressStr, availableGlobalServer));
+                // 去除3.0.1 的服务下线相关逻辑，目前不做服务下线处理
             }
         }
         // 判断该服务所在的集群个数是否小于服务列表的半数（用于解决脑裂）, 启动服务30分钟后进行检测是否脑裂,如果满足则系统退出

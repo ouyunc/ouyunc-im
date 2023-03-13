@@ -9,13 +9,9 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.redisson.api.RLock;
-import org.redisson.api.RedissonClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 
@@ -28,15 +24,6 @@ import java.util.concurrent.TimeUnit;
 @Aspect
 public class RedissonDistributedLockAspect {
     private static Logger log = LoggerFactory.getLogger(RedissonDistributedLockAspect.class);
-
-    /**
-     * redisson 客户端
-     **/
-    private static final RedissonClient redissonClient;
-
-    static {
-        redissonClient = RedissonFactory.redissonClient();
-    }
 
 
 
@@ -59,30 +46,11 @@ public class RedissonDistributedLockAspect {
         if (StrUtil.isBlank(lockName)) {
             //生成锁键名称 lock key name
             MethodSignature signature = (MethodSignature) proceedingJoinPoint.getSignature();
-            Object[] args = proceedingJoinPoint.getArgs();
             lockName = CacheConstant.OUYUNC + CacheConstant.LOCK + signature.toLongString();
-            List<Integer> argsHashCode = new ArrayList<>();
-            for (int i = 0; i < args.length; i++) {
-                argsHashCode.add(args[i].hashCode());
-            }
-            Collections.sort(argsHashCode);
-            // 将有序参数map进行拼接处理
-            String[] lockNameSplit = lockName.split("[(|)]");
-            if (lockNameSplit != null && lockNameSplit.length > 1) {
-                lockName = lockNameSplit[0] + "(";
-                for (int i = 0; i < argsHashCode.size(); i++) {
-                    lockName = lockName + argsHashCode.get(i);
-                    if (i < argsHashCode.size() - 1) {
-                        lockName = lockName + ",";
-                    } else {
-                        lockName = lockName + ")";
-                    }
-                }
-            }
         }
         log.info("线程：{} 开始获取分布式锁,lockName: {}", currentThreadName, lockName);
         //获取锁
-        RLock lock = redissonClient.getLock(lockName);
+        RLock lock = RedissonFactory.INSTANCE.redissonClient().getLock(lockName);
         try {
             //获取锁的最长等待时间，以秒为单位
             long waitTime = distributedLock.waitTime();

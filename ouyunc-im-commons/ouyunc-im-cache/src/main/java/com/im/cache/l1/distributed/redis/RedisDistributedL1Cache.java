@@ -14,13 +14,13 @@ public class RedisDistributedL1Cache <K , V > extends AbstractDistributedL1Cache
     /**
      * redis 缓存模板
      */
-    private RedisTemplate redisTemplate = RedisFactory.redisTemplate(0);
+    private static RedisTemplate redisTemplate = RedisFactory.INSTANCE.redisTemplate();
 
     public RedisDistributedL1Cache() {
     }
 
     public RedisDistributedL1Cache(RedisTemplate<K, V> redisTemplate) {
-        this.redisTemplate = redisTemplate;
+        RedisDistributedL1Cache.redisTemplate = redisTemplate;
     }
 
     /**

@@ -18,7 +18,6 @@ import com.ouyunc.im.domain.ImUser;
 import com.ouyunc.im.domain.bo.ImBlacklistBO;
 import com.ouyunc.im.domain.bo.ImFriendBO;
 import com.ouyunc.im.domain.bo.ImGroupUserBO;
-import com.ouyunc.im.lock.DistributedLock;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.packet.message.content.OfflineContent;
@@ -130,7 +129,6 @@ public class DbHelper {
      * @param from
      * @param to
      */
-    @DistributedLock
     public static void bindFriend(String from, String to) {
         // 首先查询两个人是否是好友，如果不是好友则添加，如果是好友则不做处理
         ImFriendBO imFriendBO = (ImFriendBO) cacheOperator.getHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.CONTACT + CacheConstant.FRIEND + from, to);

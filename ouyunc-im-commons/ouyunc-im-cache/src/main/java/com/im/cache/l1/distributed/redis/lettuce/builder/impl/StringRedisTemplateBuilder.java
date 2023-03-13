@@ -87,8 +87,6 @@ public class StringRedisTemplateBuilder implements RedisBuilder<StringRedisTempl
                 //这里使用lettuceConnectionFactory连接工厂
                 RedisConnectionFactory lettuceConnectionFactory = redisStrategy.buildConnectionFactory(database);
                 stringRedisTemplate = new StringRedisTemplate();
-                //设置开启事务,会跟着数据库事务一起回滚（但是在该事务中不能获取set的值）
-                stringRedisTemplate.setEnableTransactionSupport(true);
                 //设置redis连接工厂
                 stringRedisTemplate.setConnectionFactory(lettuceConnectionFactory);
                 //使用jackson序列化

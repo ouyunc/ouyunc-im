@@ -4,7 +4,6 @@ import cn.hutool.core.date.SystemClock;
 import com.ouyunc.im.constant.enums.MessageContentEnum;
 import com.ouyunc.im.constant.enums.MessageEnum;
 import com.ouyunc.im.context.IMServerContext;
-import com.ouyunc.im.helper.ClusterHelper;
 import com.ouyunc.im.helper.MessageHelper;
 import com.ouyunc.im.innerclient.pool.IMInnerClientPool;
 import com.ouyunc.im.packet.Packet;
@@ -77,8 +76,6 @@ public class SynAckMessageProcessor extends AbstractMessageProcessor{
             // 1，将remoteServerAddress 获取channel pool,
             // 2，如果之前存在该remoteServerAddress 则不进行存储操作，否则存储该channelpool
             IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.putIfAbsent(remoteServerAddress, IMInnerClientPool.singleClientChannelPoolMap.get(remoteServerAddress));
-            // 异步撤销远端服务的下线举证，FAQ 如果一个服务下线又上线，在举证列表中会有举证列表的存在，这个新上线的如果一开始和某几个服务通了又不通就会从举证服务列表中重新判断该服务不可用进而再次强制下线（因为原来举证里列表中就有值，已经认为你不存在）
-            EVENT_EXECUTORS.execute(() -> ClusterHelper.withdrawal(remoteServerAddressStr));
         }
     }
 

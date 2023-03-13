@@ -4,7 +4,6 @@ import com.ouyunc.im.db.config.JdbcPool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.EmptyResultDataAccessException;
-import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 
 import java.util.List;
@@ -26,7 +25,7 @@ public class MysqlDbOperator extends AbstractDbOperator{
     @Override
     public <T> T selectOne(String sql, Class<T> tClass, Object... args) {
         try{
-            return JdbcPool.jdbcTemplate().queryForObject(sql, new BeanPropertyRowMapper<>(tClass), args);
+            return JdbcPool.INSTANCE.jdbcTemplate().queryForObject(sql, new BeanPropertyRowMapper<>(tClass), args);
         }catch (EmptyResultDataAccessException e ){
             log.error("未查询到数据，返回null");
             return null;
@@ -43,7 +42,7 @@ public class MysqlDbOperator extends AbstractDbOperator{
     @Override
     public <T> List<T> batchSelect(String sql, Class<T> tClass, Object... args) {
         try {
-            return JdbcPool.jdbcTemplate().query(sql, new BeanPropertyRowMapper<>(tClass), args);
+            return JdbcPool.INSTANCE.jdbcTemplate().query(sql, new BeanPropertyRowMapper<>(tClass), args);
         }catch (IllegalStateException e) {
             log.error("未查询到数据集合，返回null");
             return null;
@@ -58,7 +57,7 @@ public class MysqlDbOperator extends AbstractDbOperator{
      */
     @Override
     public int insert(String sql, Object... args) {
-        return JdbcPool.jdbcTemplate().update(sql, args);
+        return JdbcPool.INSTANCE.jdbcTemplate().update(sql, args);
     }
 
     /**
@@ -69,7 +68,7 @@ public class MysqlDbOperator extends AbstractDbOperator{
      */
     @Override
     public int[] batchInsert(String sql, List<Object[]> batchArgs) {
-        return JdbcPool.jdbcTemplate().batchUpdate(sql, batchArgs);
+        return JdbcPool.INSTANCE.jdbcTemplate().batchUpdate(sql, batchArgs);
     }
 
     /**
@@ -80,7 +79,7 @@ public class MysqlDbOperator extends AbstractDbOperator{
      */
     @Override
     public int update(String sql, Object... args) {
-        return JdbcPool.jdbcTemplate().update(sql, args);
+        return JdbcPool.INSTANCE.jdbcTemplate().update(sql, args);
     }
 
     /**
@@ -91,7 +90,7 @@ public class MysqlDbOperator extends AbstractDbOperator{
      */
     @Override
     public int[] batchUpdate(String sql, List<Object[]> batchArgs) {
-        return JdbcPool.jdbcTemplate().batchUpdate(sql, batchArgs);
+        return JdbcPool.INSTANCE.jdbcTemplate().batchUpdate(sql, batchArgs);
     }
 
     /**
@@ -102,7 +101,7 @@ public class MysqlDbOperator extends AbstractDbOperator{
      */
     @Override
     public int delete(String sql, Object... args) {
-        return JdbcPool.jdbcTemplate().update(sql, args);
+        return JdbcPool.INSTANCE.jdbcTemplate().update(sql, args);
     }
 
     /**
@@ -113,6 +112,6 @@ public class MysqlDbOperator extends AbstractDbOperator{
      */
     @Override
     public int[] batchDelete(String sql, List<Object[]> batchArgs) {
-        return JdbcPool.jdbcTemplate().batchUpdate(sql, batchArgs);
+        return JdbcPool.INSTANCE.jdbcTemplate().batchUpdate(sql, batchArgs);
     }
 }
