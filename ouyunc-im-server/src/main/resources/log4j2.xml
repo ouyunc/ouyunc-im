@@ -171,7 +171,9 @@
         <logger name="java.sql" level="DEBUG" additivity="false">
             <appender-ref ref="Console"/>
         </logger>
-
+        <logger name="org.springframework" level="INFO" additivity="false">
+            <appender-ref ref="Console" />
+        </logger>
         <!-- 设置打印sql语句配置结束 -->
 
         <!--建立一个默认的root的logger-->
