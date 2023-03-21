@@ -3,6 +3,7 @@ package com.ouyunc.im.validate;
 import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.CacheConstant;
 import com.ouyunc.im.constant.IMConstant;
+import com.ouyunc.im.constant.enums.DeviceEnum;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.domain.ImGroup;
 import com.ouyunc.im.domain.ImUser;
@@ -58,7 +59,7 @@ public class MessageValidate {
      */
     public static boolean isAuth(String identity, byte loginDeviceType,  ChannelHandlerContext ctx) {
         if (log.isDebugEnabled()) {
-            log.debug("正在校验identity {} 是否在设备: {} 登录认证", identity, loginDeviceType);
+            log.debug("正在校验identity {} 是否在设备: {} 登录认证", identity, DeviceEnum.getDeviceNameByValue(loginDeviceType));
         }
         //1,判断用户是否登录
         //2,判断用户权限是否授权

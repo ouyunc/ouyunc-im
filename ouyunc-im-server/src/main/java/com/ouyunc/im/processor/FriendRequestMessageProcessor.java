@@ -70,6 +70,7 @@ public class  FriendRequestMessageProcessor extends AbstractMessageProcessor{
             if (MessageContentEnum.FRIEND_AGREE.type() == message.getContentType()) {
                 // 绑定好友关系
                 RLock lock = RedissonFactory.INSTANCE.redissonClient().getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.GROUP + CacheConstant.REFUSE_AGREE + IdentityUtil.sortComboIdentity(from, to));
+                lock.lock();
                 try{
                     DbHelper.bindFriend(from, to);
                 }finally {

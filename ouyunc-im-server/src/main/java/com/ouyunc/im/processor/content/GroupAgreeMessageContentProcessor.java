@@ -48,6 +48,7 @@ public class GroupAgreeMessageContentProcessor extends AbstractMessageContentPro
         String to = message.getTo();
         //获取锁
         RLock lock = RedissonFactory.INSTANCE.redissonClient().getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.GROUP + CacheConstant.REFUSE_AGREE + IdentityUtil.sortComboIdentity(from, to));
+        lock.lock();
         try{
             // 检查是否已经处理该条消息，如果处理了则不做消息的转发
             // 判断是否已经是好友
