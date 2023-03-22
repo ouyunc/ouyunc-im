@@ -165,7 +165,7 @@
                     </div>
                 </el-header>
 
-                <el-tree :data="contactList" :props="defaultProps" accordion @node-click="handleNodeClick">
+                <el-tree  :data="contactList" :props="defaultProps" accordion @node-click="handleNodeClick">
                     <div class="custom-tree-node" slot-scope="{ node, data }">
                         <div>
                             <el-badge :value="data.unreadContent" :max="99" class="item">
@@ -174,11 +174,23 @@
                         </div>
                         <div class="c11">
                             <div class="c12">
-                                <div><span style="font-size: 16px;color: #303133">{{ data.username }}</span></div>
+                                <div>
+                                    <span style="font-size: 16px;color: #303133">{{ data.username }}</span>
+                                    <el-tag size="mini" v-if="data.id == currentLoginUser.id">
+                                        我
+                                    </el-tag>
+                                </div>
                                 <div style="width:12vw;display: flex;"><span
                                         class="last-msg">{{data.lastMsgContent}}</span></div>
                             </div>
                             <div class="c13">
+                                <el-tag size="mini" v-if="data.isLeader">
+                                    群主
+                                </el-tag>
+
+                                <el-tag size="mini" v-if="data.isManager">
+                                    管理员
+                                </el-tag>
                                 <el-tag v-if="data.type == 1 && data.parentId == 0" :type="data.online == 1 ? 'success':'info'" size="mini">
                                     {{data.online == 1 ? '在线' : '离线'}}
                                 </el-tag>
@@ -980,20 +992,6 @@
                     // 1，修改通知状态
                     item.handleNotify = true;
                     item.handleStatus = 1;
-                    // 将该用户追加到联系人列表中/重新拉取联系人
-                    that.contactList = [{
-                        id: item.id,
-                        username: item.username,
-                        avatar: item.avatar,
-                        lastMsgContent: '',
-                        parentId: '0',
-                        online: 1,
-                        // 1-个人，2-群组
-                        type: 1,
-                        unreadContent: '',
-                        groupUsers: []
-                    }, ...that.contactList];
-
                     let groupId = JSON.parse(item.chatContent).groupId;
                     that.contactList.forEach(contact =>{
                         if (contact.id == groupId) {
@@ -1004,6 +1002,8 @@
                                 lastMsgContent: '',
                                 parentId: groupId,
                                 online: 1,
+                                isLeader: 0,
+                                isManager: 0,
                                 // 1-个人，2-群组
                                 type: 1,
                                 unreadContent: '',
@@ -1218,6 +1218,8 @@
                         lastMsgContent: '',
                         parentId: '0',
                         online: 1,
+                        isLeader: 0,
+                        isManager: 0,
                         // 1-个人，2-群组
                         type: 1,
                         unreadContent: '',
