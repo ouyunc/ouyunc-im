@@ -21,6 +21,13 @@ public class GroupRequestContent implements Serializable {
     private String identity;
 
 
+
+    /**
+     * 申请人发送的信息数据
+     */
+    private String data;
+
+
     public String getGroupId() {
         return groupId;
     }
@@ -35,5 +42,13 @@ public class GroupRequestContent implements Serializable {
 
     public void setIdentity(String identity) {
         this.identity = identity;
+    }
+
+    public String getData() {
+        return data;
+    }
+
+    public void setData(String data) {
+        this.data = data;
     }
 }

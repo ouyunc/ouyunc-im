@@ -104,6 +104,7 @@
             <div class="c1">
                 <div class="c2">
                     <div><span class="c3">{{item.username || item.nickName}}</span></div>
+                    <div v-if="item.type == 2"><span class="last-msg">申请加入{{item.groupName}}群</span></div>
                     <div class="c4"><span class="last-msg">{{item.lastMsg}}</span></div>
                 </div>
                 <div class="c5">
@@ -116,9 +117,14 @@
                     <el-button v-if="item.handleNotify && item.handleStatus == 5" type="primary" disabled>对方同意
                     </el-button>
 
-                    <el-button v-if="!item.handleNotify" type="primary" @click="agreeFriend(item)">同意</el-button>
-                    <el-button v-if="!item.handleNotify" type="danger" @click="refuseFriend(item)">拒绝</el-button>
+
+                    <el-button v-if="!item.handleNotify && item.type == 1" type="primary" @click="agreeFriend(item)">同意</el-button>
+                    <el-button v-if="!item.handleNotify && item.type == 1" type="danger" @click="refuseFriend(item)">拒绝</el-button>
+
+                    <el-button v-if="!item.handleNotify && item.type == 2" type="primary" @click="agreeGroup(item)">同意</el-button>
+                    <el-button v-if="!item.handleNotify && item.type == 2" type="danger" @click="refuseGroup(item)">拒绝</el-button>
                 </div>
+
             </div>
 
         </div>
@@ -131,10 +137,10 @@
             <div><span class="header">偶云客(ouyunc)-IM客户端 v3.0.1</span></div>
             <div class="header-login">
                 <el-badge :is-dot="notify" class="item-dot">
-                    <div @click="popDraw" style="width:40px;height: 40px"><i style="font-size: 30px"
-                                                                             class="el-icon-bell"></i></div>
+                    <div @click="popDraw" style="width:40px;height: 40px"><i style="font-size: 30px" class="el-icon-bell"></i></div>
                 </el-badge>
-                <el-avatar :size="45" icon="el-icon-user-solid"></el-avatar>
+                <el-avatar :size="45" icon="el-icon-user-solid" :src="currentLoginUser.avatar"></el-avatar>
+                <span>{{currentLoginUser.username}}</span>
                 <i style="font-size: 20px" class="el-icon-caret-bottom"></i>
             </div>
         </el-header>
@@ -173,7 +179,7 @@
                                         class="last-msg">{{data.lastMsgContent}}</span></div>
                             </div>
                             <div class="c13">
-                                <el-tag v-if="data.type == 1" type='success' size="mini">
+                                <el-tag v-if="data.type == 1 && data.parentId == 0" :type="data.online == 1 ? 'success':'info'" size="mini">
                                     {{data.online == 1 ? '在线' : '离线'}}
                                 </el-tag>
                             </div>
@@ -185,7 +191,7 @@
             <el-container class="main-chat-container">
                 <el-header class="chat-header">
                     <span>{{selectedChatUserInfo.type == 1? `正在和`+selectedChatUserInfo.username+`聊天` : selectedChatUserInfo.username}}</span>
-                    <el-tag type='success' size="mini">{{selectedChatUserInfo.type == 1? selectedChatUserInfo.online == 1? '在线':'离线' : ''}}</el-tag>
+                    <el-tag :type="selectedChatUserInfo.online == 1 ? 'success':'info'" v-if="selectedChatUserInfo.type == 1" size="mini">{{selectedChatUserInfo.online == 1? '在线':'离线'}}</el-tag>
                 </el-header>
 
                 <!--聊天区-->
@@ -261,7 +267,7 @@
     </el-container>
 
 
-    <el-dialog :close-on-click-modal="false" :destroy-on-close="true" :show-close="true" center
+    <el-dialog @closed="searchFriendDialogClose" :close-on-click-modal="false" :destroy-on-close="true" :show-close="true" center
                :visible.sync="addFriendDialogVisible">
         <el-dialog v-if="addFriendInnerVisible"
                    title="请输入想说的话"
@@ -310,7 +316,7 @@
 
         </div>
     </el-dialog>
-    <el-dialog :close-on-click-modal="false" :destroy-on-close="true" :show-close="true" center
+    <el-dialog @closed="searchFriendDialogClose" :close-on-click-modal="false" :destroy-on-close="true" :show-close="true" center
                :visible.sync="addGroupDialogVisible">
         <el-dialog
                 title="请输入想说的话"
@@ -326,50 +332,39 @@
                     maxlength="10"
                     show-word-limit></el-input>
 
-            <el-button style="margin-top: 20px;margin-left: 70%" type="primary">确定</el-button>
+            <el-button style="margin-top: 20px;margin-left: 70%" @click="joinGroup" type="primary">确定</el-button>
         </el-dialog>
         <div class="add-friend-container">
             <div style="padding: 10px 20px 10px 20px;">
                 <el-input placeholder="请输入群id/名称" v-model="searchContent" class="input-with-select">
-                    <el-button slot="append" icon="el-icon-search"></el-button>
+                    <el-button slot="append" @click="searchGroupClick" icon="el-icon-search"></el-button>
                 </el-input>
             </div>
             <el-divider>搜索结果</el-divider>
             <div class="search-container">
-                <el-empty v-if="searchFriendContent.length !== 0" description="暂无数据"></el-empty>
-                <div v-else>
-                    <div class="notice">
-                        <div>
-                            <el-avatar :size="35" icon="el-icon-user-solid"></el-avatar>
-                        </div>
-                        <div class="c1">
-                            <div class="c2">
-                                <span class="c3">2222</span>
-                            </div>
-                            <div class="c5">
-                                <el-button size="small" type="primary" @click="addGroupInnerVisible = true">加入群
-                                </el-button>
-                            </div>
-                        </div>
+                <el-empty v-if="searchFriendContent.length == 0" description="暂无数据"></el-empty>
+                <div v-else >
+                    <el-radio-group v-model="checkedRadioGroupId">
 
-                    </div>
-
-
-                    <div class="notice">
-                        <div>
-                            <el-avatar :size="35" icon="el-icon-user-solid"></el-avatar>
-                        </div>
-                        <div class="c1">
-                            <div class="c2">
-                                <span class="c3">2222</span>
+                        <el-radio  v-for="(item, index) in searchFriendContent" :key="index"  :label="item.id" style="margin-right: 5px">
+                            <div class="notice" @click="addGroupInnerVisible = true">
+                                <div>
+                                    <el-avatar :size="35" icon="el-icon-user-solid" :src="item.groupAvatar"></el-avatar>
+                                </div>
+                                <div class="c1">
+                                    <div class="c2">
+                                        <span class="c3">{{item.groupName}}</span>
+                                    </div>
+                                    <div class="c5">
+                                        <el-button size="small" type="primary" >加群
+                                        </el-button>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="c5">
-                                <el-button size="small" type="primary" @click="addGroupInnerVisible = true">加入群
-                                </el-button>
-                            </div>
-                        </div>
+                        </el-radio>
 
-                    </div>
+                    </el-radio-group>
+
                 </div>
             </div>
 
@@ -551,6 +546,8 @@
                     {pattern: /^1[3|5|7|8|9]\d{9}$/, message: '请输入正确的号码格式', trigger: 'blur'}
                 ],
             },
+            // 选中的要加入群的id
+            checkedRadioGroupId: '',
             // 即将加入群的成员
             checkedGroupUserIds:[],
             // 是否是注册页
@@ -620,7 +617,7 @@
                 let sessionId;
                 if (this.selectedChatUserInfo.type == 1) {
                     // 将消息追加到会话历史列表中，并更新当前聊天列表内容
-                    sessionId = this.selectedChatUserInfo.id > that.currentLoginUser.id ? that.selectedChatUserInfo.id + "_" + that.currentLoginUser.id : that.currentLoginUser.id + "_" + that.selectedChatUserInfo.id;
+                    sessionId = this.selectedChatUserInfo.id > this.currentLoginUser.id ? this.selectedChatUserInfo.id + "_" + this.currentLoginUser.id : this.currentLoginUser.id + "_" + this.selectedChatUserInfo.id;
                 }
                 if (this.selectedChatUserInfo.type == 2) {
                     sessionId = this.selectedChatUserInfo.id;
@@ -701,6 +698,7 @@
                                             username: response.data.data.username,
                                             nickName: response.data.data.nickName,
                                             avatar: response.data.data.avatar,
+                                            type: 1,
                                             // 是否处理通知
                                             handleNotify: false,
                                             // 处理后的结果， false-拒绝， true-同意
@@ -796,6 +794,83 @@
                                 that.$message.error('获取好友列表失败！');
                             });
                     }
+                    // 收到加群的消息通知
+                    if (e.messageType == 9 && e.message.contentType == 31) {
+                        // 显示通知
+                        this.notify = true;
+                        let flag = false;
+                        that.notifyInfoList.forEach(item => {
+                            if (item.id == e.message.from) {
+                                item.lastMsg = JSON.parse(e.message.content).data
+                                flag = true;
+                            }
+                        });
+                        if (!flag) {
+                            // 根据发送方查询 发送方的信息
+                            axios.get(BASE_URL + `/im-user/` + e.message.from)
+                                .then(function (response) {
+                                    if (response.data.code == 200) {
+                                        // 获取群信息
+                                        axios.get(BASE_URL + `/im-group/search-group?condition=` + e.message.to)
+                                            .then(function (res) {
+                                                if (res.data.code == 200) {
+                                                    let group = res.data.data;
+                                                    that.notifyInfoList = [{
+                                                        id: e.message.from,
+                                                        username: response.data.data.username,
+                                                        nickName: response.data.data.nickName,
+                                                        avatar: response.data.data.avatar,
+                                                        // type = 1 个人， typ-2 群
+                                                        type: 2,
+                                                        groupName: group[0].groupName,
+                                                        // 聊天内容数据
+                                                        chatContent: e.message.content,
+                                                        // 是否处理通知
+                                                        handleNotify: false,
+                                                        // 处理后的结果， false-拒绝， true-同意
+                                                        handleStatus: false,
+                                                        lastMsg: JSON.parse(e.message.content).data
+                                                    }, ...that.notifyInfoList]
+                                                } else {
+                                                    that.$message.error(res.data.message);
+                                                }
+                                            })
+                                            .catch(function (error) {
+                                                that.$message.error('获取群列表失败！');
+
+                                            });
+
+
+
+                                    } else {
+                                        that.$message.error(response.data.message);
+                                    }
+                                })
+                                .catch(function (error) {
+                                    that.$message.error('获取好友信息失败！');
+                                });
+                        }
+                    }
+                    // 收到加群被拒绝的消息通知
+                    if (e.messageType == 9 && e.message.contentType == 32) {
+                        console.log('加群被拒绝了')
+                    }
+                    // 收到加群被同意的消息通知
+                    if (e.messageType == 9 && e.message.contentType == 33) {
+                        console.log('加群被同意了')
+                        // 更新联系人列表
+                        axios.get(BASE_URL + `/im-user/${this.currentLoginUser.id}/contact`)
+                            .then(function (response) {
+                                if (response.data.code == 200) {
+                                    that.contactList = response.data.data;
+                                } else {
+                                    that.$message.error(response.data.message);
+                                }
+                            })
+                            .catch(function (error) {
+                                that.$message.error('获取好友列表失败！');
+                            });
+                    }
                     // 收到群聊消息
                     if (e.messageType == 6 && e.message.contentType == 51) {
                         // 更新联系人列表，如果不存在，这里直接调用接口更新，只是为了简单实现功能，后面根据自己业务开发优化
@@ -810,6 +885,7 @@
                         });
                         if (!flag1) {
                             that.getContactList();
+                            that.scheduleUpdateOnlineStatus();
                             that.contactList.forEach(item => {
                                 if (e.message.to == item.id) {
                                     item.lastMsgContent = e.message.content;
@@ -872,6 +948,172 @@
 
 
             //========================im 业务逻辑处理=========================
+            agreeGroup(item){
+                console.log(item)
+                let that = this;
+                this.socket.send({
+                    // 加入群组请求
+                    messageType: 9,
+                    // 消息
+                    message: {
+                        // 消息发送方唯一标识，建议使用用户id
+                        from: that.currentLoginUser.id,
+                        // 消息接收方唯一标识，这里是登录，接受者是服务器，值可以为空串
+                        to: item.id,
+                        // 消息内容类型,
+                        contentType: 33,
+                        // 消息内容content 是string 类型
+                        content: item.chatContent
+                    },
+                    // 消息发送方ip(也就是客户端ip)
+                    ip: '10.30.1.49',
+                    // 消息发送方设备类型
+                    deviceType: 13,
+                    // 网络类型
+                    networkType: 0,
+                    // 消息加密算法类型
+                    encryptType: 0,
+                    // 序列化算法类型
+                    serializeAlgorithm: 6
+                }, function (packet) {
+                    // 追加用户到列表中
+                    // 1，修改通知状态
+                    item.handleNotify = true;
+                    item.handleStatus = 1;
+                    // 将该用户追加到联系人列表中/重新拉取联系人
+                    that.contactList = [{
+                        id: item.id,
+                        username: item.username,
+                        avatar: item.avatar,
+                        lastMsgContent: '',
+                        parentId: '0',
+                        online: 1,
+                        // 1-个人，2-群组
+                        type: 1,
+                        unreadContent: '',
+                        groupUsers: []
+                    }, ...that.contactList];
+
+                    let groupId = JSON.parse(item.chatContent).groupId;
+                    that.contactList.forEach(contact =>{
+                        if (contact.id == groupId) {
+                            contact.groupUsers.push({
+                                id: item.id,
+                                username: item.username,
+                                avatar: item.avatar,
+                                lastMsgContent: '',
+                                parentId: groupId,
+                                online: 1,
+                                // 1-个人，2-群组
+                                type: 1,
+                                unreadContent: '',
+                                groupUsers: []
+                            });
+                        }
+                    })
+
+
+                    // 已经发送的消息packet
+                    console.log(packet)
+                });
+            },
+            // 拒绝加入群
+            refuseGroup(item){
+                console.log(item)
+                let that = this;
+                this.socket.send({
+                    // 加入群组请求
+                    messageType: 9,
+                    // 消息
+                    message: {
+                        // 消息发送方唯一标识，建议使用用户id
+                        from: that.currentLoginUser.id,
+                        // 消息接收方唯一标识，这里是登录，接受者是服务器，值可以为空串
+                        to: item.id,
+                        // 消息内容类型,
+                        contentType: 32,
+                        // 消息内容content 是string 类型
+                        content: item.chatContent
+                    },
+                    // 消息发送方ip(也就是客户端ip)
+                    ip: '10.30.1.49',
+                    // 消息发送方设备类型
+                    deviceType: 13,
+                    // 网络类型
+                    networkType: 0,
+                    // 消息加密算法类型
+                    encryptType: 0,
+                    // 序列化算法类型
+                    serializeAlgorithm: 6
+                }, function (packet) {
+
+                    // 已经发送的消息packet
+                    console.log(packet)
+                });
+            },
+            // 加入群组
+            joinGroup(){
+                let that = this;
+                this.socket.send({
+                    // 加入群组请求
+                    messageType: 9,
+                    // 消息
+                    message: {
+                        // 消息发送方唯一标识，建议使用用户id
+                        from: that.currentLoginUser.id,
+                        // 消息接收方唯一标识，这里是登录，接受者是服务器，值可以为空串
+                        to: that.checkedRadioGroupId,
+                        // 消息内容类型,
+                        contentType: 31,
+                        // 消息内容content 是string 类型
+                        content: JSON.stringify({
+                            // 群id
+                            groupId: that.checkedRadioGroupId,
+                            // 申请人唯一标识
+                            identity: that.currentLoginUser.id,
+                            // 聊天数据
+                            data: that.tempChatContent
+                        })
+                    },
+                    // 消息发送方ip(也就是客户端ip)
+                    ip: '10.30.1.49',
+                    // 消息发送方设备类型
+                    deviceType: 13,
+                    // 网络类型
+                    networkType: 0,
+                    // 消息加密算法类型
+                    encryptType: 0,
+                    // 序列化算法类型
+                    serializeAlgorithm: 6
+                }, function (packet) {
+
+                    // 已经发送的消息packet
+                    console.log(packet)
+                });
+            },
+            // 定时更新好友状态
+            scheduleUpdateOnlineStatus() {
+                let that = this;
+                // 获取好友在线状态，之后每个5秒钟获取一次，目前采用拉的方式获取在线状态
+                axios.get(BASE_URL + `/im-user/${that.currentLoginUser.id}/all-online-status`)
+                    .then(function (response) {
+                        if (response.data.code == 200) {
+                            // 遍历当前联系人列表，更新状态
+                            that.contactList.forEach(item =>{
+                                response.data.data.forEach(item1 =>{
+                                    if (item.id == item1.id) {
+                                        item.online = item1.online;
+                                    }
+                                });
+                            });
+                        } else {
+                            that.$message.error(response.data.message);
+                        }
+                    })
+                    .catch(function (error) {
+                        that.$message.error('获取好友列表失败！');
+                    });
+            },
             // 创建群
             doCreateGroup() {
                 let that = this;
@@ -907,7 +1149,7 @@
                                             // 消息内容类型,
                                             contentType: 51,
                                             // 消息内容content 是string 类型
-                                            content: 'a,b,c 加入群'
+                                            content: '大家好，我是群主'
                                         },
                                         // 消息发送方ip(也就是客户端ip)
                                         ip: '10.30.1.49',
@@ -974,10 +1216,11 @@
                         username: item.username,
                         avatar: item.avatar,
                         lastMsgContent: '',
+                        parentId: '0',
                         online: 1,
                         // 1-个人，2-群组
                         type: 1,
-                        unreadContent: 0,
+                        unreadContent: '',
                         groupUsers: []
                     }, ...that.contactList];
                     //that.getContactList();
@@ -1074,6 +1317,7 @@
                             username: that.selectedTempChatUserInfo.username,
                             nickName: that.selectedTempChatUserInfo.nickName,
                             avatar: that.selectedTempChatUserInfo.avatar,
+                            type: 1,
                             // 是否处理通知
                             handleNotify: true,
                             // 处理后的结果， false-拒绝， true-同意
@@ -1086,7 +1330,30 @@
                     console.log(packet)
                 });
             },
+            // 搜索好友弹框关闭时的回调
+            searchFriendDialogClose(){
+                this.searchContent = '';
+                this.searchFriendContent = [];
+                this.tempChatContent = '';
+                this.checkedGroupUserIds = [];
+                this.checkedRadioGroupId = '';
+            },
+            // 搜索群列表
+            searchGroupClick() {
+                let that = this;
+                axios.get(BASE_URL + `/im-group/search-group?condition=` + this.searchContent)
+                    .then(function (response) {
+                        if (response.data.code == 200) {
+                            that.searchFriendContent = response.data.data;
+                        } else {
+                            that.$message.error(response.data.message);
+                        }
+                    })
+                    .catch(function (error) {
+                        that.$message.error('获取群列表失败！');
 
+                    });
+            },
             // 搜索好友列表
             searchFriendClick() {
                 let that = this;
@@ -1104,6 +1371,7 @@
                     })
                     .catch(function (error) {
                         that.$message.error('获取好友列表失败！');
+
                     });
             },
             // 获取在线好友列表
@@ -1113,6 +1381,11 @@
                     .then(function (response) {
                         if (response.data.code == 200) {
                             that.contactList = response.data.data;
+
+                            var timer = setInterval(function() {
+                                that.scheduleUpdateOnlineStatus();
+                            }, 3000);
+
                             // that.contactList = [{
                             //     id: 1,
                             //     username: '张三',
@@ -1803,6 +2076,18 @@
     .el-dropdown {
         height: 40px;
     }
+    .el-radio {
+        display: flex;
+        color: #606266;
+        font-weight: 500;
+        line-height: 1;
+        cursor: pointer;
+        white-space: nowrap;
+        outline: 0;
+        margin-right: 30px;
+        flex-direction: row;
+        align-items: center;
+    }
     .el-checkbox {
         display: flex;
         color: #606266;
@@ -1817,6 +2102,17 @@
         align-items: center;
     }
     .el-checkbox__label {
+        flex: 1;
+        display: inline-block;
+        padding-left: 10px;
+        line-height: 19px;
+        font-size: 14px;
+    }
+    .el-radio-group {
+        width: 100%;
+        font-size: 0;
+    }
+    .el-radio__label {
         flex: 1;
         display: inline-block;
         padding-left: 10px;
