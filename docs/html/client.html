@@ -695,7 +695,7 @@
                         // 追加信息到通知列表中并放到第一位
                         let flag = false;
                         that.notifyInfoList.forEach(item => {
-                            if (item.id == e.message.from) {
+                            if (item.id == e.message.from && item.type == 1) {
                                 item.lastMsg = e.message.content
                                 flag = true;
                             }
@@ -733,7 +733,7 @@
                     if (e.messageType == 8 && e.message.contentType == 22) {
                         // 更新通知列表，将状态改为对方已拒绝
                         that.notifyInfoList.forEach(item => {
-                            if (item.id == e.message.from) {
+                            if (item.id == e.message.from && item.type == 1) {
                                 item.handleNotify = true;
                                 item.handleStatus = 4
                             }
@@ -746,7 +746,7 @@
                         console.log('对方同意了')
                         // 更新通知列表，然后更新或追加好友列表
                         that.notifyInfoList.forEach(item => {
-                            if (item.id == e.message.from) {
+                            if (item.id == e.message.from && item.type ==1) {
                                 item.handleNotify = true;
                                 item.handleStatus = 5
                             }
@@ -812,7 +812,7 @@
                         this.notify = true;
                         let flag = false;
                         that.notifyInfoList.forEach(item => {
-                            if (item.id == e.message.from) {
+                            if (item.id == e.message.from && item.type == 2) {
                                 item.lastMsg = JSON.parse(e.message.content).data
                                 flag = true;
                             }
@@ -897,7 +897,7 @@
                         });
                         if (!flag1) {
                             that.getContactList();
-                            that.scheduleUpdateOnlineStatus();
+                            //that.scheduleUpdateOnlineStatus();
                             that.contactList.forEach(item => {
                                 if (e.message.to == item.id) {
                                     item.lastMsgContent = e.message.content;
@@ -1092,28 +1092,28 @@
                 });
             },
             // 定时更新好友状态
-            scheduleUpdateOnlineStatus() {
-                let that = this;
-                // 获取好友在线状态，之后每个5秒钟获取一次，目前采用拉的方式获取在线状态
-                axios.get(BASE_URL + `/im-user/${that.currentLoginUser.id}/all-online-status`)
-                    .then(function (response) {
-                        if (response.data.code == 200) {
-                            // 遍历当前联系人列表，更新状态
-                            that.contactList.forEach(item =>{
-                                response.data.data.forEach(item1 =>{
-                                    if (item.id == item1.id) {
-                                        item.online = item1.online;
-                                    }
-                                });
-                            });
-                        } else {
-                            that.$message.error(response.data.message);
-                        }
-                    })
-                    .catch(function (error) {
-                        that.$message.error('获取好友列表失败！');
-                    });
-            },
+            // scheduleUpdateOnlineStatus() {
+            //     let that = this;
+            //     // 获取好友在线状态，之后每个5秒钟获取一次，目前采用拉的方式获取在线状态
+            //     axios.get(BASE_URL + `/im-user/${that.currentLoginUser.id}/all-online-status`)
+            //         .then(function (response) {
+            //             if (response.data.code == 200) {
+            //                 // 遍历当前联系人列表，更新状态
+            //                 that.contactList.forEach(item =>{
+            //                     response.data.data.forEach(item1 =>{
+            //                         if (item.id == item1.id) {
+            //                             item.online = item1.online;
+            //                         }
+            //                     });
+            //                 });
+            //             } else {
+            //                 that.$message.error(response.data.message);
+            //             }
+            //         })
+            //         .catch(function (error) {
+            //             that.$message.error('获取好友列表失败！');
+            //         });
+            // },
             // 创建群
             doCreateGroup() {
                 let that = this;
@@ -1382,47 +1382,46 @@
                 axios.get(BASE_URL + `/im-user/${this.currentLoginUser.id}/contact`)
                     .then(function (response) {
                         if (response.data.code == 200) {
-                            that.contactList = response.data.data;
 
-                            var timer = setInterval(function() {
-                                that.scheduleUpdateOnlineStatus();
-                            }, 3000);
+                            let arr1 = that.contactList;
+                            let arr2 = response.data.data;
+                            const diff = arr1.filter(item1 => !arr2.some(item2 => item1.id === item2.id));
+                            const add = arr2.filter(item1 => !arr1.some(item2 => item1.id === item2.id));
+                            const common = arr1.filter(item1 => arr2.some(item2 => {
+                                if (item1.id === item2.id) {
+                                    item1.online = item2.online;
+                                    item1.groupUsers = item2.groupUsers;
+                                }
+                                return item1.id === item2.id;
+                            }));
+                            // 将值从列表总删除
+                            diff.forEach(e=>{
+                                // 找到对应的索引值
+                                that.contactList.splice(that.contactList.findIndex(item=>item.id == e.id),1);
+                            })
+                            // 循环公共数据，更新群组联系人
+                            common.forEach(e=>{
 
-                            // that.contactList = [{
-                            //     id: 1,
-                            //     username: '张三',
-                            //     avatar: 'https://fuss10.elemecdn.com/e/5d/4a731a90594a4af544c0c25941171jpeg.jpeg',
-                            //     lastMsgContent: '今不',
-                            //     online: 1,
-                            //     // 1-个人，2-群组
-                            //     type: 1,
-                            //     unreadContent: 10,
-                            //     groupUsers: []
-                            // }, {
-                            //     id: 2,
-                            //     username: 'IM交流群',
-                            //     avatar: 'https://fuss10.elemecdn.com/e/5d/4a731a90594a4af544c0c25941171jpeg.jpeg',
-                            //     lastMsgContent: '今天去今今今天去玩不今天去玩不天去玩不天去玩不玩不',
-                            //     unreadContent: 10,
-                            //     type: 2,
-                            //     groupUsers: [{
-                            //         id: 3,
-                            //         username: '王二',
-                            //         avatar: 'https://fuss10.elemecdn.com/e/5d/4a731a90594a4af544c0c25941171jpeg.jpeg',
-                            //         lastMsgContent: '呵呵呵打',
-                            //         unreadContent: 10,
-                            //         type: 1,
-                            //         online: 1,
-                            //     }, {
-                            //         id: 4,
-                            //         username: '麻子',
-                            //         avatar: 'https://fuss10.elemecdn.com/e/5d/4a731a90594a4af544c0c25941171jpeg.jpeg',
-                            //         lastMsgContent: '呵呵呵打',
-                            //         unreadContent: 10,
-                            //         type: 1,
-                            //         online: 0,
-                            //     }]
-                            // }];
+                                let index = that.contactList.findIndex(item=> item.type == 2 && item.id == e.id);
+                                if (index > -1) {
+                                    // 获取原来群组成员
+                                    let groupUsers = that.contactList[index].groupUsers;
+                                    // 获取现在群成员
+                                    let nowGroupUsers = e.groupUsers;
+                                    // 对比这两个进行增减
+                                    let diff1 = groupUsers.filter(item1 => !nowGroupUsers.some(item2 => item1.id === item2.id));
+                                    let add1 = nowGroupUsers.filter(item1 => !groupUsers.some(item2 => item1.id === item2.id));
+                                    diff1.forEach(e=>{
+                                        // 找到对应的索引值
+                                        that.contactList[index].groupUsers.splice(that.contactList[index].groupUsers.findIndex(item=>item.id == e.id),1);
+                                    })
+                                    that.contactList[index].groupUsers.push(...add1)
+                                }
+
+                            })
+                            // push 新的数据
+                            that.contactList.push(...add)
+
                         } else {
                             that.$message.error(response.data.message);
                         }
@@ -1476,6 +1475,9 @@
 
                                     // 拉取 在线好友列表
                                     that.getContactList();
+                                    var timer = setInterval(function() {
+                                        that.getContactList();
+                                    }, 3000);
                                     that.dialogFormLoginVisible = false;
                                 } else {
                                     that.$message.error(response.data.message);
