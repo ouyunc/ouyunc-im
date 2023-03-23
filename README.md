@@ -54,7 +54,19 @@ http://www.ouyunc.com
 
 ![项目目录结构](docs/picture/project_struct.png)
 
-#### 演示地址和示例截图
+#### 演示地址 
+- web端demo 演示地址：
+```
+http://www.ouyunc.com
+```
+- 移动端demo 演示地址：
+```
+略
+```
+#### 演示示例
+- web端演示示例
+
+- 移动端示例截图
 
 <img alt="示例截图" src="https://gitee.com/etxync/ouyunc-im/raw/v3.0.1/docs/picture/1.jpg" width="200" height="350" />
 <img alt="示例截图" src="https://gitee.com/etxync/ouyunc-im/raw/v3.0.1/docs/picture/2.jpg" width="200" height="350" />
