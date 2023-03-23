@@ -9,9 +9,12 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v3.0.2&#10;1，web 客户端简单demo,增加群主标识">
+    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v3.0.2&#10;1，web 客户端简单demo">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/html/client.html" beforeDir="false" afterPath="$PROJECT_DIR$/docs/html/client.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/OfflineContent.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/OfflineContent.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/DbHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/DbHelper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/LoginMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/LoginMessageProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/OfflineMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/OfflineMessageProcessor.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -332,14 +335,7 @@
       <workItem from="1678346939187" duration="5950000" />
       <workItem from="1678411629435" duration="25836000" />
       <workItem from="1678770487222" duration="23000" />
-      <workItem from="1678953987106" duration="75288000" />
-    </task>
-    <task id="LOCAL-00113" summary="v3.0-beta  优化私聊消息">
-      <created>1671689396626</created>
-      <option name="number" value="00113" />
-      <option name="presentableId" value="LOCAL-00113" />
-      <option name="project" value="LOCAL" />
-      <updated>1671689396626</updated>
+      <workItem from="1678953987106" duration="89540000" />
     </task>
     <task id="LOCAL-00114" summary="v3.0-beta  优化私聊消息">
       <created>1671700290302</created>
@@ -677,7 +673,14 @@
       <option name="project" value="LOCAL" />
       <updated>1679473814157</updated>
     </task>
-    <option name="localTasksCounter" value="162" />
+    <task id="LOCAL-00162" summary="v3.0.2&#10;1，web 客户端简单demo">
+      <created>1679541633022</created>
+      <option name="number" value="00162" />
+      <option name="presentableId" value="LOCAL-00162" />
+      <option name="project" value="LOCAL" />
+      <updated>1679541633022</updated>
+    </task>
+    <option name="localTasksCounter" value="163" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -761,9 +764,9 @@
     <MESSAGE value="v3.0.1 优化集群服务下线撤销举证人" />
     <MESSAGE value="v3.0.2&#10;优化日志级别" />
     <MESSAGE value="v3.0.2&#10;1，简单web 客户端demo&#10;2，优化代码" />
-    <MESSAGE value="v3.0.2&#10;1，web 客户端简单demo" />
     <MESSAGE value="v3.0.2&#10;1，web 客户端简单demo,增加群主标识" />
-    <option name="LAST_COMMIT_MESSAGE" value="v3.0.2&#10;1，web 客户端简单demo,增加群主标识" />
+    <MESSAGE value="v3.0.2&#10;1，web 客户端简单demo" />
+    <option name="LAST_COMMIT_MESSAGE" value="v3.0.2&#10;1，web 客户端简单demo" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

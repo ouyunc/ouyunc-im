@@ -67,18 +67,23 @@ public class DbHelper {
                     Message message0 = (Message) packet.getMessage();
                     return message0.getFrom();
                 })).forEach((from, packetList)->{
-                    List<Packet> packets = new ArrayList<>();
-                    Packet packet = packetList.get(0);
-                    MessageEnum prototype = MessageEnum.prototype(packet.getMessageType());
-                    Integer identityType = null;
-                    if (MessageEnum.IM_PRIVATE_CHAT.equals(prototype)) {
-                        identityType = IMConstant.USER_TYPE_1;
+                    if (CollectionUtil.isNotEmpty(packetList)) {
+                        packetList.stream().collect(Collectors.groupingBy(Packet::getMessageType)).forEach((messageType, messageTypePackets) ->{
+                            MessageEnum prototype = MessageEnum.prototype(messageType);
+                            if (MessageEnum.IM_PRIVATE_CHAT.equals(prototype)) {
+                                List<Packet> lastPackets = new ArrayList<>();
+                                lastPackets.add(messageTypePackets.get(0));
+                                unreadContentList.add(new UnreadContent(from, IMConstant.USER_TYPE_1, messageTypePackets.size(), lastPackets));
+                            }
+                            if (MessageEnum.IM_GROUP_CHAT.equals(prototype) && CollectionUtil.isNotEmpty(messageTypePackets)) {
+                                messageTypePackets.stream().collect(Collectors.groupingBy(packet -> ((Message) packet.getMessage()).getTo())).forEach((to, groupMessagePackets)->{
+                                    List<Packet> lastPackets = new ArrayList<>();
+                                    lastPackets.add(groupMessagePackets.get(0));
+                                    unreadContentList.add(new UnreadContent(to, IMConstant.GROUP_TYPE_2, groupMessagePackets.size(), lastPackets));
+                                });
+                            }
+                        });
                     }
-                    if (MessageEnum.IM_GROUP_CHAT.equals(prototype)) {
-                        identityType = IMConstant.GROUP_TYPE_2;
-                    }
-                    packets.add(packet);
-                    unreadContentList.add(new UnreadContent(from, identityType, packetList.size(), packets));
                 });
                 message.setContent(JSONUtil.toJsonStr(unreadContentList));
             }
@@ -94,28 +99,43 @@ public class DbHelper {
             }
         }
         // 全量顺序拉取，一次拉取pullSize 大小的消息
-        if (StrUtil.isBlank(message.getTo())) {
-            Set<Packet> packetSetResult = cacheOperator.reverseRangeZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + message.getFrom(), 0, offlineContent.getPullSize());
-            if (CollectionUtil.isNotEmpty(packetSetResult)) {
-                Iterator<Packet> iterator = packetSetResult.iterator();
-                while (iterator.hasNext()) {
-                    result.add(iterator.next());
-                }
-            }
-        }else {
+        if (StrUtil.isNotBlank(offlineContent.getIdentity()) && (IMConstant.USER_TYPE_1.equals(offlineContent.getIdentityType()) || IMConstant.GROUP_TYPE_2.equals(offlineContent.getIdentityType()))) {
             // 按需拉取,先查出所有，然后过滤前几条给客户端
             Set<Packet> packetAllSet = cacheOperator.reverseRangeZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + message.getFrom(), 0, -1);
             if (CollectionUtil.isNotEmpty(packetAllSet)) {
                 Iterator<Packet> iterator = packetAllSet.iterator();
+                if (IMConstant.USER_TYPE_1.equals(offlineContent.getIdentityType())) {
+                    while (iterator.hasNext()) {
+                        Packet packet0 = iterator.next();
+                        Message message0 = (Message) packet0.getMessage();
+                        if (result.size() >= offlineContent.getPullSize()) {
+                            break;
+                        }
+                        if (offlineContent.getIdentity().equals(message0.getFrom()) && MessageEnum.IM_PRIVATE_CHAT.getValue() == packet0.getMessageType()) {
+                            result.add(packet0);
+                        }
+                    }
+                }
+                if (IMConstant.GROUP_TYPE_2.equals(offlineContent.getIdentityType())) {
+                    while (iterator.hasNext()) {
+                        Packet packet0 = iterator.next();
+                        Message message0 = (Message) packet0.getMessage();
+                        if (result.size() >= offlineContent.getPullSize()) {
+                            break;
+                        }
+                        if (offlineContent.getIdentity().equals(message0.getTo()) && MessageEnum.IM_GROUP_CHAT.getValue() == packet0.getMessageType()) {
+                            result.add(packet0);
+                        }
+                    }
+                }
+            }
+        }else {
+            // 全量分页拉取
+            Set<Packet> packetSetResult = cacheOperator.reverseRangeZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + message.getFrom(), 0, offlineContent.getPullSize()-1);
+            if (CollectionUtil.isNotEmpty(packetSetResult)) {
+                Iterator<Packet> iterator = packetSetResult.iterator();
                 while (iterator.hasNext()) {
-                    Packet packet0 = iterator.next();
-                    Message message0 = (Message) packet0.getMessage();
-                    if (result.size() > offlineContent.getPullSize()) {
-                        break;
-                    }
-                    if (message0.getFrom().equals(message.getTo())) {
-                        result.add(packet0);
-                    }
+                    result.add(iterator.next());
                 }
             }
         }

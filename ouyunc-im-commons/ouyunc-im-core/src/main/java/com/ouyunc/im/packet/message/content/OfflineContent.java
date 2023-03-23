@@ -13,6 +13,17 @@ public class OfflineContent implements Serializable {
 
 
     /**
+     * 联系人/群组唯一标识 (可选，不选则拉取全量数据)
+     */
+    private String identity;
+
+
+    /**
+     * 类型 identityType， 1-个人，2-群组 （可选，不选则拉取全量数据）
+     */
+    private Integer identityType;
+
+    /**
      * 本次拉取消息数量
      */
     private Long pullSize;
@@ -37,6 +48,23 @@ public class OfflineContent implements Serializable {
     }
 
     public void setPacketList(List<Packet> packetList) {
+
         this.packetList = packetList;
+    }
+
+    public String getIdentity() {
+        return identity;
+    }
+
+    public void setIdentity(String identity) {
+        this.identity = identity;
+    }
+
+    public Integer getIdentityType() {
+        return identityType;
+    }
+
+    public void setIdentityType(Integer identityType) {
+        this.identityType = identityType;
     }
 }
