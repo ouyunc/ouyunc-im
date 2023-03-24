@@ -66,6 +66,10 @@ http://www.ouyunc.com
 #### 演示示例
 - web端演示示例
 
+<video width="320" height="240" controls>
+  <source src="https://gitee.com/etxync/ouyunc-im/raw/v3.0.1/docs/picture/偶云客web客户端演示.mp4">
+</video>
+
 - 移动端示例截图
 
 <img alt="示例截图" src="https://gitee.com/etxync/ouyunc-im/raw/v3.0.1/docs/picture/1.jpg" width="200" height="350" />
