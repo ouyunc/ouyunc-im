@@ -57,7 +57,7 @@ http://www.ouyunc.com
 #### 演示地址 
 - web端demo 演示地址：
 ```
-http://www.ouyunc.com
+略
 ```
 - 移动端demo 演示地址：
 ```
@@ -67,7 +67,7 @@ http://www.ouyunc.com
 - web端演示示例
 
 <video width="320" height="240" controls>
-  <source src="https://gitee.com/etxync/ouyunc-im/raw/v3.0.1/docs/picture/偶云客web客户端演示.mp4">
+  <source src="https://gitee.com/etxync/ouyunc-im/raw/v3.0.2/docs/picture/%E5%81%B6%E4%BA%91%E5%AE%A2web%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%BC%94%E7%A4%BA.mp4">
 </video>
 
 - 移动端示例截图
