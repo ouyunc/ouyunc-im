@@ -3,6 +3,7 @@ package com.ouyunc.im.helper;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.map.MapUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.im.cache.l1.distributed.redis.RedisDistributedL1Cache;
 import com.ouyunc.im.constant.CacheConstant;
@@ -95,6 +96,7 @@ public class DbHelper {
         // 如果传过来的消息id不为空，则可能是第N次拉取，从离线消息中删除消息
         if (CollectionUtil.isNotEmpty(packetList)) {
             for (Packet packet : packetList) {
+                packet.setMessage(JSONUtil.toBean((JSONObject) packet.getMessage(), Message.class));
                 cacheOperator.removeZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + message.getFrom(), packet);
             }
         }

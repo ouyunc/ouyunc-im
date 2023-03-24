@@ -9,12 +9,9 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v3.0.2&#10;1，web 客户端简单demo">
+    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v3.0.2&#10;1，优化拉取离线消息的方式">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/OfflineContent.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/OfflineContent.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/DbHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/DbHelper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/LoginMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/LoginMessageProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/OfflineMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/OfflineMessageProcessor.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -335,21 +332,7 @@
       <workItem from="1678346939187" duration="5950000" />
       <workItem from="1678411629435" duration="25836000" />
       <workItem from="1678770487222" duration="23000" />
-      <workItem from="1678953987106" duration="89540000" />
-    </task>
-    <task id="LOCAL-00114" summary="v3.0-beta  优化私聊消息">
-      <created>1671700290302</created>
-      <option name="number" value="00114" />
-      <option name="presentableId" value="LOCAL-00114" />
-      <option name="project" value="LOCAL" />
-      <updated>1671700290302</updated>
-    </task>
-    <task id="LOCAL-00115" summary="v3.0-beta  优化群聊消息">
-      <created>1672041098213</created>
-      <option name="number" value="00115" />
-      <option name="presentableId" value="LOCAL-00115" />
-      <option name="project" value="LOCAL" />
-      <updated>1672041098213</updated>
+      <workItem from="1678953987106" duration="93823000" />
     </task>
     <task id="LOCAL-00116" summary="v3.0-beta  优化群聊消息">
       <created>1672043785201</created>
@@ -680,7 +663,21 @@
       <option name="project" value="LOCAL" />
       <updated>1679541633022</updated>
     </task>
-    <option name="localTasksCounter" value="163" />
+    <task id="LOCAL-00163" summary="v3.0.2&#10;1，优化拉取离线消息的方式">
+      <created>1679562989054</created>
+      <option name="number" value="00163" />
+      <option name="presentableId" value="LOCAL-00163" />
+      <option name="project" value="LOCAL" />
+      <updated>1679562989054</updated>
+    </task>
+    <task id="LOCAL-00164" summary="v3.0.2&#10;1，优化拉取离线消息的方式">
+      <created>1679563065429</created>
+      <option name="number" value="00164" />
+      <option name="presentableId" value="LOCAL-00164" />
+      <option name="project" value="LOCAL" />
+      <updated>1679563065429</updated>
+    </task>
+    <option name="localTasksCounter" value="165" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -741,7 +738,6 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
-    <MESSAGE value="偶遇-IM v3.0-beta" />
     <MESSAGE value="v3.0-beta  群组请求功能完善" />
     <MESSAGE value="v3.0-beta  优化代码" />
     <MESSAGE value="v3.0-beta  增加关系校验" />
@@ -766,7 +762,8 @@
     <MESSAGE value="v3.0.2&#10;1，简单web 客户端demo&#10;2，优化代码" />
     <MESSAGE value="v3.0.2&#10;1，web 客户端简单demo,增加群主标识" />
     <MESSAGE value="v3.0.2&#10;1，web 客户端简单demo" />
-    <option name="LAST_COMMIT_MESSAGE" value="v3.0.2&#10;1，web 客户端简单demo" />
+    <MESSAGE value="v3.0.2&#10;1，优化拉取离线消息的方式" />
+    <option name="LAST_COMMIT_MESSAGE" value="v3.0.2&#10;1，优化拉取离线消息的方式" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
