@@ -70,6 +70,7 @@ http://www.ouyunc.com
   <source src="https://gitee.com/etxync/ouyunc-im/raw/v3.0.2/docs/picture/%E5%81%B6%E4%BA%91%E5%AE%A2web%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%BC%94%E7%A4%BA.mp4">
 </video>
 
+
 - 移动端示例截图
 
 <img alt="示例截图" src="https://gitee.com/etxync/ouyunc-im/raw/v3.0.1/docs/picture/1.jpg" width="200" height="350" />
