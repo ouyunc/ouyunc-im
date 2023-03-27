@@ -216,8 +216,8 @@ public class Packet<T> implements Serializable {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof Packet)) return false;
+        if (this == o) {return true;}
+        if (!(o instanceof Packet)) {return false;}
         Packet<?> packet = (Packet<?>) o;
         return packetId == packet.packetId;
     }

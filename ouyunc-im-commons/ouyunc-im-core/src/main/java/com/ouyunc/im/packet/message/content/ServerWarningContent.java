@@ -11,18 +11,18 @@ public class ServerWarningContent  implements Serializable {
     /**
      * 有问题的消息包id
      */
-    private Long packetId;
+    private long packetId;
 
     /**
      * 警告消息
      */
     private String warningMsg;
 
-    public Long getPacketId() {
+    public long getPacketId() {
         return packetId;
     }
 
-    public void setPacketId(Long packetId) {
+    public void setPacketId(long packetId) {
         this.packetId = packetId;
     }
 

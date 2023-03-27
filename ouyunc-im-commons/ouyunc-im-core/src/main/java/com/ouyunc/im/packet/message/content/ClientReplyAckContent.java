@@ -11,18 +11,18 @@ public class ClientReplyAckContent implements Serializable {
     /**
      * 原消息包packet id
      */
-    private String packetId;
+    private long packetId;
 
     /**
      * 原发消息方登录设备类型
      */
     private byte deviceType;
 
-    public String getPacketId() {
+    public long getPacketId() {
         return packetId;
     }
 
-    public void setPacketId(String packetId) {
+    public void setPacketId(long packetId) {
         this.packetId = packetId;
     }
 

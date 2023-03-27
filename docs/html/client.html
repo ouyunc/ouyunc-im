@@ -250,7 +250,7 @@
 
 
                 <el-footer class="footer-container">
-                    <el-input placeholder="请输入内容" type="textarea" :autosize="{ minRows: 1, maxRows: 2 }"
+                    <el-input placeholder="请输入内容" type="textarea" @keyup.enter.native="doSend()" :autosize="{ minRows: 1, maxRows: 2 }"
                               v-model="chatContent"></el-input>
                     <el-button type="primary" @click="doSend">发送</el-button>
                 </el-footer>

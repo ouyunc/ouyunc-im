@@ -1,7 +1,6 @@
 package com.ouyunc.im.packet.message.content;
 
 import java.io.Serializable;
-import java.util.Set;
 
 /**
  * 已读回执内容
@@ -17,7 +16,7 @@ public class ReadReceiptContent implements Serializable {
     /**
      * 消息回执id
      */
-    private Long packetId;
+    private long packetId;
 
     public String getIdentity() {
         return identity;
@@ -27,11 +26,11 @@ public class ReadReceiptContent implements Serializable {
         this.identity = identity;
     }
 
-    public Long getPacketId() {
+    public long getPacketId() {
         return packetId;
     }
 
-    public void setPacketId(Long packetId) {
+    public void setPacketId(long packetId) {
         this.packetId = packetId;
     }
 }
