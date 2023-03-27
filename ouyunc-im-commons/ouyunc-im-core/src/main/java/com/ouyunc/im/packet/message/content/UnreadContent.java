@@ -1,6 +1,7 @@
 package com.ouyunc.im.packet.message.content;
 
 import com.ouyunc.im.packet.Packet;
+import com.ouyunc.im.packet.message.Message;
 
 import java.io.Serializable;
 import java.util.List;
@@ -32,7 +33,7 @@ public class UnreadContent implements Serializable {
     /**
      * 最后几条未读消息，默认一条
      */
-    private List<Packet> packetList;
+    private List<Packet<Message>> packetList;
 
     public String getIdentity() {
         return identity;
@@ -58,18 +59,18 @@ public class UnreadContent implements Serializable {
         this.count = count;
     }
 
-    public List<Packet> getPacketList() {
+    public List<Packet<Message>> getPacketList() {
         return packetList;
     }
 
-    public void setPacketList(List<Packet> packetList) {
+    public void setPacketList(List<Packet<Message>> packetList) {
         this.packetList = packetList;
     }
 
     public UnreadContent() {
     }
 
-    public UnreadContent(String identity, Integer identityType, Integer count, List<Packet> packetList) {
+    public UnreadContent(String identity, Integer identityType, Integer count, List<Packet<Message>> packetList) {
         this.identity = identity;
         this.identityType = identityType;
         this.count = count;

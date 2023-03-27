@@ -1,6 +1,7 @@
 package com.ouyunc.im.packet.message.content;
 
 import com.ouyunc.im.packet.Packet;
+import com.ouyunc.im.packet.message.Message;
 
 import java.io.Serializable;
 import java.util.List;
@@ -32,7 +33,7 @@ public class OfflineContent implements Serializable {
     /**
      * 请求/响应的集合,如果是请求可以为空集合,存放离线的packet列表
      */
-    private List<Packet> packetList;
+    private List<Packet<Message>> packetList;
 
 
     public Long getPullSize() {
@@ -43,11 +44,11 @@ public class OfflineContent implements Serializable {
         this.pullSize = pullSize;
     }
 
-    public List<Packet> getPacketList() {
+    public List<Packet<Message>> getPacketList() {
         return packetList;
     }
 
-    public void setPacketList(List<Packet> packetList) {
+    public void setPacketList(List<Packet<Message>> packetList) {
 
         this.packetList = packetList;
     }
