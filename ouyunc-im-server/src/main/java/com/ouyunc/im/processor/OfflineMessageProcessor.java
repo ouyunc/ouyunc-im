@@ -15,7 +15,9 @@ import org.slf4j.LoggerFactory;
  * @Author fangzhenxun
  * @Description: 处理客户端拉取离线消息, 建议离线消息拉取走 http 服务
  * @Version V3.0
+ * 为最大简单优化IM（只做消息的高效转发）服务系统，在v4.0版本将去除，建议使用http接口的形式来获取离线消息
  **/
+@Deprecated
 public class OfflineMessageProcessor extends AbstractMessageProcessor{
     private static Logger log = LoggerFactory.getLogger(OfflineMessageProcessor.class);
 

@@ -56,7 +56,9 @@ public class DbHelper {
      * 获取离线消息
      * @param message
      * @return
+     * 将在4.0版本去除
      */
+    @Deprecated
     public static List<Packet<Message>> pullOfflineMessage(Message message) {
         List<Packet<Message>> result = new ArrayList<>();
         if (MessageContentEnum.UNREAD_CONTENT.type() == message.getContentType()) {
@@ -209,8 +211,7 @@ public class DbHelper {
                 dbOperator.insert(DbSqlConstant.MYSQL.INSERT_GROUP_USER.sql(), SnowflakeUtil.nextId(), groupId, from, fromUser.getNickName(), IMConstant.NOT_GROUP_LEADER, IMConstant.NOT_GROUP_MANAGER, IMConstant.NOT_SHIELD, IMConstant.NOT_MUSHIN, nowDateTime);
             }
             // 放入缓存
-            imGroupUserBO = new ImGroupUserBO(groupId, fromUser.getId().toString(), fromUser.getUsername(), fromUser.getNickName(),fromUser.getEmail(),fromUser.getPhoneNum(),fromUser.getIdCardNum(),fromUser.getAvatar(),fromUser.getMotto(),fromUser.getAge(),fromUser.getSex(), IMConstant.NOT_GROUP_LEADER, IMConstant.NOT_GROUP_MANAGER, IMConstant.NOT_SHIELD, IMConstant.NOT_MUSHIN, nowDateTime);
-            cacheOperator.putHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + groupId + CacheConstant.MEMBERS, from, imGroupUserBO);
+            cacheOperator.putHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + groupId + CacheConstant.MEMBERS, from, new ImGroupUserBO(groupId, fromUser.getId().toString(), fromUser.getUsername(), fromUser.getNickName(),fromUser.getEmail(),fromUser.getPhoneNum(),fromUser.getIdCardNum(),fromUser.getAvatar(),fromUser.getMotto(),fromUser.getAge(),fromUser.getSex(), IMConstant.NOT_GROUP_LEADER, IMConstant.NOT_GROUP_MANAGER, IMConstant.NOT_SHIELD, IMConstant.NOT_MUSHIN, nowDateTime));
         }
 
     }

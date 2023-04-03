@@ -1,5 +1,5 @@
 syntax = "proto3";
-package com.ouyunc.im;
+package com.ouyunc.im.packet.message;
 option optimize_for  = SPEED;
 /**
  * @Author fangzhenxun
@@ -12,11 +12,11 @@ message Message {
   //接受方
   string to = 2;
    //内容类型，根据不同的内容类型，可以序列化不同的json,如登录，聊天，信令服务，等
-  int32 content_type = 3;
+  uint32 content_type = 3;
   //具体内容
   string content = 4;
   // 扩展字段
   string extra = 5;
   //时间戳,毫秒
-  int64 create_time = 6;
+  uint64 create_time = 6;
 }

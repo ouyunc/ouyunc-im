@@ -1,0 +1,69 @@
+syntax = "proto3";
+package com.ouyunc.im.packet;
+import "Message.proto";
+option optimize_for  = SPEED;
+/**
+ * @Author fangzhenxun
+ * @Description: packet 消息实体
+ * @Version V3.0
+ **/
+message Packet {
+  //发送方
+  uint32 magic = 1;
+
+  /**
+   * 1个字节  协议类型,ws,http,自定义,默认为内部协议OUYUNC
+   */
+  uint32 protocol = 2;
+
+  /**
+   * 1个字节  协议版本，1,2,3
+   */
+  uint32 protocolVersion = 3;
+
+  /**
+   * 协议包id 8个字节 使用雪花id
+   */
+  uint64 packetId = 4;
+
+  /**
+   * 发送端设备类型 1个字节，m-android/m-ios/pc-windows/pc-mac/pad...
+   */
+  uint32 deviceType = 5;
+
+  /**
+   * 发送端设网络类型，1个字节：0-其他，1-有线， 2-wifi，3-5g, 4-4g, 5-3g, 6-2g
+   */
+  uint32 networkType = 6;
+
+  /**
+   * 发送端ip4地址 4个字节，（目前如果需要支持ip6,则需要扩充存储字节数）
+   */
+  string ip = 7;
+
+  /**
+   * 消息加密，1个字节，加密方式，不加密/AES/...对称加密，防止消息泄密, 默认没有加密
+   */
+  uint32 encryptType = 8;
+
+  /**
+   * 序列化算法 1 个字节，json/jdk/hessian/kryo/protoStuff(protoBUf),默认是protobuf
+   */
+  uint32 serializeAlgorithm = 9;
+
+
+  /**
+   * 消息类型 1 个字节，如 RPC 框架中有请求、响应、心跳类型。IM 通讯场景中有登陆、创建群聊、发送消息、接收消息、退出群聊等类型。
+   */
+  uint32 messageType = 10;
+
+  /**
+   * 加密后的消息长度.4个字节
+   */
+  uint32 messageLength = 11;
+
+  /**
+   * 消息内容，n个字节, 不同的消息类型有可能是不同的数据内容
+   */
+  com.ouyunc.im.packet.message.Message message = 12;
+}
