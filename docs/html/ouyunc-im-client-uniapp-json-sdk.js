@@ -93,7 +93,7 @@ const Socket = /** @class */ (function (Snowflake) {
      * 默认配置参数,注意这里的超时等参数要与服务端相匹配
      */
     let defaultConfig = {
-        // 默认登录的设备类型:other
+        // 默认设备类型: other
         deviceType: 0,
         // 是否开启心跳，默认true，开启心跳
         heartbeatEnable: true,
@@ -122,12 +122,7 @@ const Socket = /** @class */ (function (Snowflake) {
      * @constructor
      */
     function Socket(webSocketUrl, config) {
-        console.log("欢迎使用偶云客-IM v3.0.1 js客户端sdk.")
-        window.WebSocket = window.WebSocket || window.MozWebSocket;
-        if (!window.WebSocket || !window.WebSocket.prototype.send) {
-            throw "当前浏览器或版本不支持WebSocket！请更换其他浏览器或版本";
-            return;
-        }
+        console.log("欢迎使用偶云客-IM v3.0.1 uniapp客户端sdk.")
         if (!webSocketUrl) {
             throw "非法参数 '"+ url +"',请正确设置url,如: ws://127.0.0.1:8000/";
             return;
@@ -145,19 +140,22 @@ const Socket = /** @class */ (function (Snowflake) {
     function init() {
         // 初始化
         // 创建原生websocket
-        webSocket = new WebSocket(url);
+        webSocket = uni.connectSocket({
+            url: url,
+            success: ()=> {
+                console.log('websocket 连接成功！');
+            }
+        });
 
-
-        webSocket.onopen = function (e) {
+        webSocket.onOpen(function (e) {
             if (socket.onopen instanceof Function){
                 socket.onopen(e);
             }else {
                 console.log('ws 连接打开了');
             }
-        };
+        });
 
-
-        webSocket.onmessage = function (e) {
+        webSocket.onMessage(function (e) {
             // 如果开启心跳，则进行重置心跳
             if (defaultConfig.heartbeatEnable) {
                 // 1当收到是登录成功的回复信息或其他消息后，进行清除延时数据，重新计时发送心跳
@@ -166,32 +164,33 @@ const Socket = /** @class */ (function (Snowflake) {
             // 处理好的消息在传递出去
             if (socket.onmessage instanceof Function){
                 parseMessage(e.data).then(function (packet) {
-                    // messageId是long类型，messageType是byte类型，message 是proto.com.ouyunc.Message 类型
+                    // messageId是long类型，messageType是byte类型，
 
                     socket.onmessage({
                         messageId: packet.messageId,
                         messageType: packet.messageType,
                         message:{
                             // string 类型
-                            "from": packet.message.getFrom(),
+                            "from": packet.message.from,
                             // string 类型
-                            "to": packet.message.getTo(),
+                            "to": packet.message.to,
                             // byte 类型
-                            "contentType": packet.message.getContentType(),
+                            "contentType": packet.message.contentType,
                             // json string 类型
-                            "content": packet.message.getContent(),
+                            "content": packet.message.content,
                             // 消息发送时间， long 类型
-                            "createTime": packet.message.getCreateTime()
+                            "createTime": packet.message.createTime
                         }
                     });
                 })
             }else {
                 console.log('接收到消息了');
             }
-        };
+        });
 
 
-        webSocket.onclose = function (e) {
+
+        webSocket.onClose(function (e) {
             if (socket.onclose instanceof Function){
                 socket.onclose(e);
             }else {
@@ -208,10 +207,9 @@ const Socket = /** @class */ (function (Snowflake) {
                     reconnect.start();
                 }
             }
-        };
+        })
 
-
-        webSocket.onerror = function (e) {
+        webSocket.onError(function (e) {
             if (socket.onerror instanceof Function){
                 socket.onerror(e);
             }else {
@@ -228,8 +226,7 @@ const Socket = /** @class */ (function (Snowflake) {
                 }
             }
 
-        }
-
+        });
     };
 
     /**
@@ -302,7 +299,7 @@ const Socket = /** @class */ (function (Snowflake) {
             return this;
         },
         // 开始发起心跳
-        start: function () {
+         start: function () {
             let _self = this;
             // 超时3次才关闭
             let _retry = defaultConfig.heartbeartMaxWait;
@@ -312,14 +309,20 @@ const Socket = /** @class */ (function (Snowflake) {
             // 定时间隔发送心跳消息
             this.intervalObj = setInterval(function () {
                 // onmessage拿到返回的心跳就说明连接正常，就要清除定时器
-                let heartBeatMessage = new proto.com.ouyunc.im.Message();
-                heartBeatMessage.setFrom(loginIdentity);
-                heartBeatMessage.setContentType(3);
-                heartBeatMessage.setCreateTime(new Date().getTime());
-                let {packetDataView} = wrapMessage(heartBeatMessage, 1, '127.0.0.1', defaultConfig.deviceType, 0, 0, 6);
+                let heartBeatMessage = {
+                    from: loginIdentity,
+                    to: '',
+                    contentType: 3,
+                    content: '',
+                    createTime: new Date().getTime(),
+                    extra: ''
+                }
+
+                let {packetDataView} = wrapMessage(heartBeatMessage, 1, '127.0.0.1', defaultConfig.deviceType, 0, 0, 2);
                 // 发送心跳信息
-                console.debug(new Date() + " 客户端: " + loginIdentity + ' 正在发送心跳...')
-                webSocket.send(packetDataView.buffer);
+                webSocket.send({
+                    data:packetDataView.buffer
+                });
                 // 次数减一
                 _retry--;
                 // 如果超过一定时间还没重置，说明后端主动断开了
@@ -383,9 +386,9 @@ const Socket = /** @class */ (function (Snowflake) {
         return (dataView.getInt8(3) & 0xFF) | ((dataView.getInt8(2) << 8) & 0xFF00) | ((dataView.getInt8(1) << 16) & 0xFF0000) | ((dataView.getInt8(0) << 24) & 0xFF000000);
     }
 
-    // 包装消息 dataBinary 指的是Message.proto文件经过protobuf转成 ouyunc-message.js (在下面给出)后得到的消息序列化后的数据binary
     function wrapMessage(messageProto, messageType, ip, deviceType, networkType, encryptType, serializeAlgorithm) {
-        let messageDataBinary = messageProto.serializeBinary();
+        const encoder = new TextEncoder();
+        const messageDataBinary = encoder.encode(JSON.stringify(messageProto)).buffer;
         // 消息id
         let snowflake = new Snowflake(1n, 1n, 0n);
         let packetId = snowflake.nextId();
@@ -424,8 +427,9 @@ const Socket = /** @class */ (function (Snowflake) {
         //加密后的消息长度.4个字节
         dataView.setInt32(20, byteLength); //0+1+1+1+8+1+1+4+1+1+1
         //加密后的消息内容，n个字节, 不同的消息类型有可能是不同的数据内容
+		let view =  new Int8Array(messageDataBinary)
         for (let i = 0; i < byteLength; i++) {
-            dataView.setInt8(header + i, messageDataBinary[i]);
+            dataView.setInt8(header + i, view[i]);
         }
         return {
             packetDataView: dataView,
@@ -441,13 +445,7 @@ const Socket = /** @class */ (function (Snowflake) {
                 "serializeAlgorithm": serializeAlgorithm || 6,
                 "messageType": messageType,
                 "messageLength": byteLength,
-                "message": {
-                    "from": messageProto.getFrom(),
-                    "to": messageProto.getTo(),
-                    "contentType": messageProto.getContentType(),
-                    "content" : messageProto.getContent(),
-                    "createTime": messageProto.getCreateTime()
-                }
+                "message": messageProto
             }
         };
     }
@@ -457,52 +455,46 @@ const Socket = /** @class */ (function (Snowflake) {
         // 注意：这里只要new Promise 就会执行，不需要手动调用
         return new Promise(function (resolve, reject) {
             //做一些异步操作
-            // 定义文件读取类
-            let reader = new FileReader();
-            // 将blob 二进制数据转file
-            reader.readAsArrayBuffer(packetDataBinary);
-            // 由于reader 是异步所以使用promise 包装
-            reader.onload = function () {
-                //定制协议前部固定长度
-                let header = 24;
-                let packetBuffer = new DataView(reader.result);
-                //跳过魔数 1个字节
-                let magic = packetBuffer.getInt8(0);// 0
-                //包协议， 1个字节
-                let protocol = packetBuffer.getInt8(1);// 0+1
-                //协议版本号，1个字节
-                let protocolVersion = packetBuffer.getInt8(2);// 0+1+1
-                //协议包id 8个字节
-                let packetId = packetBuffer.getBigInt64(3);// 0+1+1+1
-                //设备类型 1个字节，m-android/m-ios/pc-windows/pc-mac/pad...
-                let deviceType = packetBuffer.getInt8(11);// 0+1+1+1+8
-                //网络类型 1个字节 wifi,5g,4g,3g,2g...
-                let networkType = packetBuffer.getInt8(12);// 0+1+1+1+8+1
-                // 发送端ip 4个字节
-                let ip = packetBuffer.getInt32(13);// 0+1+1+1+8+1+1
-                //消息加密，1个字节，加密方式，不加密/AES/...对称加密，防止消息泄密
-                let encryptType = packetBuffer.getInt8(17);// 0+1+1+1+8+1+1+4
-                //序列化算法 1 个字节，json/jdk/hessian/kryo/protoStuff(protoBUf)
-                let serializeAlgorithm = packetBuffer.getInt8(18);// 0+1+1+1+8+1+1+4+1
-                //消息类型,1个字节
-                let messageType = packetBuffer.getInt8(19);// 0+1+1+1+8+1+1+4+1+1
-                //加密后的消息长度.4个字节
-                let messageLength = packetBuffer.getInt32(20);// 0+1+1+1+8+1+1+4+1+1+1
+            //定制协议前部固定长度
+            let header = 24;
+            let packetBuffer = new DataView(packetDataBinary);
+            //跳过魔数 1个字节
+            let magic = packetBuffer.getInt8(0);// 0
+            //包协议， 1个字节
+            let protocol = packetBuffer.getInt8(1);// 0+1
+            //协议版本号，1个字节
+            let protocolVersion = packetBuffer.getInt8(2);// 0+1+1
+            //协议包id 8个字节
+            let packetId = packetBuffer.getBigInt64(3);// 0+1+1+1
+            //设备类型 1个字节，m-android/m-ios/pc-windows/pc-mac/pad...
+            let deviceType = packetBuffer.getInt8(11);// 0+1+1+1+8
+            //网络类型 1个字节 wifi,5g,4g,3g,2g...
+            let networkType = packetBuffer.getInt8(12);// 0+1+1+1+8+1
+            // 发送端ip 4个字节
+            let ip = packetBuffer.getInt32(13);// 0+1+1+1+8+1+1
+            //消息加密，1个字节，加密方式，不加密/AES/...对称加密，防止消息泄密
+            let encryptType = packetBuffer.getInt8(17);// 0+1+1+1+8+1+1+4
+            //序列化算法 1 个字节，json/jdk/hessian/kryo/protoStuff(protoBUf)
+            let serializeAlgorithm = packetBuffer.getInt8(18);// 0+1+1+1+8+1+1+4+1
+            //消息类型,1个字节
+            let messageType = packetBuffer.getInt8(19);// 0+1+1+1+8+1+1+4+1+1
+            //加密后的消息长度.4个字节
+            let messageLength = packetBuffer.getInt32(20);// 0+1+1+1+8+1+1+4+1+1+1
 
-                let message = new ArrayBuffer(messageLength);
-                let messageDV = new DataView(message);
-                for (let i = 0; i < messageLength; i++) {
-                    messageDV.setInt8(i, packetBuffer.getInt8(header + i));
-                }
-                // 定义客户端需要处理的消息
-                let messageProto = proto.com.ouyunc.im.Message.deserializeBinary(message);
-                // 将message result 返回
-                resolve({
-                    message: messageProto,
-                    messageType: messageType,
-                    messageId: packetId
-                })
+            let message = new ArrayBuffer(messageLength);
+            let messageDV = new DataView(message);
+            for (let i = 0; i < messageLength; i++) {
+                messageDV.setInt8(i, packetBuffer.getInt8(header + i));
             }
+            // 定义客户端需要处理的消息
+            const encoder = new TextDecoder();
+            let messageProto = JSON.parse(encoder.decode(message));
+            // 将message result 返回
+            resolve({
+                message: messageProto,
+                messageType: messageType,
+                messageId: packetId
+            })
 
         });
     }
@@ -524,34 +516,30 @@ const Socket = /** @class */ (function (Snowflake) {
      * @param packet
      * @param callback 发送完成回调函数
      */
-    Socket.prototype.send = function (packet, callback) {
+    Socket.prototype.send = function (packet, callback = ()=>{}) {
         let {message, messageType, ip, deviceType, networkType, encryptType, serializeAlgorithm} = packet;
-        let messageProto = new proto.com.ouyunc.im.Message();
-        messageProto.setFrom(message.from);
-        messageProto.setTo(message.to);
-        messageProto.setContentType(message.contentType);
-        messageProto.setContent(message.content);
-        messageProto.setCreateTime(new Date().getTime())
+
         // 组装message
-        let {packetDataView, packetJson} = wrapMessage(messageProto, messageType, ip, deviceType, networkType, encryptType, serializeAlgorithm);
+        let {packetDataView, packetJson} = wrapMessage(message, messageType, ip, deviceType, networkType, encryptType, serializeAlgorithm);
         if (!webSocket) {
             if (this.onerror instanceof Function) {
                 this.onerror(packetJson);
             }
             throw 'webSocket实例不能为空！';
         }
-        webSocket.send(packetDataView.buffer);
-        // 如果发送登录消息
-        if (messageType === 2) {
-            // 将该登录值存储起来
-            loginIdentity = '' + JSON.parse(message.content).identity;
-            // 开始启动心跳检测
-            heartCheck.reset().start();
-        }
-        // 回调出去
-        if (callback instanceof Function) {
-            callback(packetJson);
-        }
+        webSocket.send({
+            data: packetDataView.buffer,
+            success: function() {
+                // 如果发送登录消息
+                if (messageType === 2) {
+                    // 将该登录值存储起来
+                    loginIdentity = '' + JSON.parse(message.content).identity;
+                    // 开始启动心跳检测
+                    heartCheck.reset().start();
+                }
+                callback(packetJson);
+            }
+        });
     }
 
 
@@ -566,5 +554,7 @@ const Socket = /** @class */ (function (Snowflake) {
     }
     return Socket;
 })(Snowflake);
+
+export default Socket;
 
 

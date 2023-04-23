@@ -24,6 +24,7 @@ public enum MessageContentEnum {
     READ_RECEIPT_CONTENT(9, ReadReceiptContent.class, "已读回执消息内容, 集合中的对象"),
     OFFLINE_CONTENT(10, OfflineContent.class, "离线消息内容"),
     UNREAD_CONTENT(11, UnreadContent.class, "未读离线消息内容"),
+    SERVER_NOTIFY_CONTENT(8, ServerNotifyContent.class, "服务端发给客户端的通知内容"),
 
 
 

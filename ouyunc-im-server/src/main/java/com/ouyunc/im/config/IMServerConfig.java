@@ -6,6 +6,7 @@ import com.ouyunc.im.innerclient.DefaultIMInnerClient;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.logging.LogLevel;
 import io.netty.util.NettyRuntime;
+import org.aeonbits.owner.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -146,6 +147,16 @@ public class IMServerConfig extends IMConfig{
 
 
     /**
+     * im 是否开启登录校验，默认是
+     */
+    private boolean loginValidateEnable;
+
+    /**
+     * im 是否开启登录最大连接数校验，开启登录校验后才会生效
+     */
+    private boolean loginMaxConnectionValidateEnable;
+
+    /**
      * 全局是否开启客户端心跳，默认开启
      */
     private boolean heartBeatEnable;
@@ -176,6 +187,13 @@ public class IMServerConfig extends IMConfig{
      */
     private Map<ChannelOption, Object> childChannelOptionMap;
 
+    public boolean isLoginValidateEnable() {
+        return loginValidateEnable;
+    }
+
+    public boolean isLoginMaxConnectionValidateEnable() {
+        return loginMaxConnectionValidateEnable;
+    }
 
     public boolean isFriendOnlinePushEnable() {
         return friendOnlinePushEnable;
@@ -444,6 +462,17 @@ public class IMServerConfig extends IMConfig{
          */
         private boolean readReceiptEnable;
 
+
+        /**
+         * im 是否开启登录校验，默认是
+         */
+        private boolean loginValidateEnable;
+
+        /**
+         * im 是否开启登录最大连接数校验，开启登录校验后才会生效
+         */
+        private boolean loginMaxConnectionValidateEnable;
+
         /**
          * 全局是否开启客户端心跳，默认开启
          */
@@ -699,6 +728,16 @@ public class IMServerConfig extends IMConfig{
             return this;
         }
 
+        public Builder loginValidateEnable(boolean loginValidateEnable) {
+            this.loginValidateEnable = loginValidateEnable;
+            return this;
+        }
+
+        public Builder loginMaxConnectionValidateEnable(boolean loginMaxConnectionValidateEnable) {
+            this.loginMaxConnectionValidateEnable = loginMaxConnectionValidateEnable;
+            return this;
+        }
+
         public Builder sslEnable(boolean sslEnable) {
             this.sslEnable = sslEnable;
             return this;
@@ -750,6 +789,9 @@ public class IMServerConfig extends IMConfig{
             imServerConfig.friendOnlinePushEnable = this.friendOnlinePushEnable;
             imServerConfig.acknowledgeModeEnable = this.acknowledgeModeEnable;
             imServerConfig.readReceiptEnable = this.readReceiptEnable;
+            imServerConfig.loginValidateEnable = this.loginValidateEnable;
+            imServerConfig.loginMaxConnectionValidateEnable = this.loginMaxConnectionValidateEnable;
+
             imServerConfig.heartBeatEnable = this.heartBeatEnable;
             imServerConfig.heartBeatTimeout = this.heartBeatTimeout;
             imServerConfig.heartBeatWaitRetry = this.heartBeatWaitRetry;
@@ -766,35 +808,43 @@ public class IMServerConfig extends IMConfig{
 
     @Override
     public String toString() {
-        return  "\n{" +
-                "\n,  port=" + port +
-                "\n, bossThreads=" + bossThreads +
-                "\n, workThreads=" + workThreads +
-                "\n, clusterEnable=" + clusterEnable +
-                "\n, clusterAddress=" + clusterAddress +
-                "\n, clusterSplitBrainDetectionEnable=" + clusterSplitBrainDetectionEnable +
-                "\n, clusterSplitBrainDetectionDelay=" + clusterSplitBrainDetectionDelay +
-                "\n, clusterMessageRetry=" + clusterMessageRetry +
-                "\n, clusterInnerClientHeartbeatInterval=" + clusterInnerClientHeartbeatInterval +
-                "\n, clusterInnerClientIdleReadTimeOut=" + clusterInnerClientIdleReadTimeOut +
-                "\n, clusterInnerClientIdleWriteTimeOut=" + clusterInnerClientIdleWriteTimeOut +
-                "\n, clusterInnerClientIdleReadWriteTimeOut=" + clusterInnerClientIdleReadWriteTimeOut +
-                "\n, clusterInnerClientChannelPoolCoreConnection=" + clusterInnerClientChannelPoolCoreConnection +
-                "\n, clusterInnerClientChannelPoolMaxConnection=" + clusterInnerClientChannelPoolMaxConnection +
-                "\n, clusterInnerClientChannelPoolAcquireTimeoutMillis=" + clusterInnerClientChannelPoolAcquireTimeoutMillis +
-                "\n, clusterInnerClientChannelPoolMaxPendingAcquires=" + clusterInnerClientChannelPoolMaxPendingAcquires +
-                "\n, clusterInnerClientHeartbeatWaitRetry=" + clusterInnerClientHeartbeatWaitRetry +
-                "\n, authEnable=" + authEnable +
-                "\n, messageDbEnable=" + dbEnable +
-                "\n, friendOnlinePushEnable=" + friendOnlinePushEnable +
-                "\n, acknowledgeModeEnable=" + acknowledgeModeEnable +
-                "\n, readReceiptEnable=" + readReceiptEnable +
-                "\n, heartBeatEnable=" + heartBeatEnable +
-                "\n, heartBeatTimeout=" + heartBeatTimeout +
-                "\n, heartBeatWaitRetry=" + heartBeatWaitRetry +
-                "\n, clusterServerRouteStrategy=" + clusterServerRouteStrategy +
-                "\n, channelOptionMap=" + channelOptionMap +
-                "\n, childChannelOptionMap=" + childChannelOptionMap +
+        return "IMServerConfig{" +
+                "\n  localHost='" + localHost + '\'' +
+                "\n , localServerAddress='" + localServerAddress + '\'' +
+                "\n , sslEnable=" + sslEnable +
+                "\n , sslCertificate='" + sslCertificate + '\'' +
+                "\n , sslPrivateKey='" + sslPrivateKey + '\'' +
+                "\n , port=" + port +
+                "\n , logLevel=" + logLevel +
+                "\n , bossThreads=" + bossThreads +
+                "\n , workThreads=" + workThreads +
+                "\n , clusterEnable=" + clusterEnable +
+                "\n , clusterAddress=" + clusterAddress +
+                "\n , clusterSplitBrainDetectionEnable=" + clusterSplitBrainDetectionEnable +
+                "\n , clusterSplitBrainDetectionDelay=" + clusterSplitBrainDetectionDelay +
+                "\n , clusterMessageRetry=" + clusterMessageRetry +
+                "\n , clusterInnerClientHeartbeatInterval=" + clusterInnerClientHeartbeatInterval +
+                "\n , clusterInnerClientIdleReadTimeOut=" + clusterInnerClientIdleReadTimeOut +
+                "\n , clusterInnerClientIdleWriteTimeOut=" + clusterInnerClientIdleWriteTimeOut +
+                "\n , clusterInnerClientIdleReadWriteTimeOut=" + clusterInnerClientIdleReadWriteTimeOut +
+                "\n , clusterInnerClientChannelPoolCoreConnection=" + clusterInnerClientChannelPoolCoreConnection +
+                "\n , clusterInnerClientChannelPoolMaxConnection=" + clusterInnerClientChannelPoolMaxConnection +
+                "\n , clusterInnerClientChannelPoolAcquireTimeoutMillis=" + clusterInnerClientChannelPoolAcquireTimeoutMillis +
+                "\n , clusterInnerClientChannelPoolMaxPendingAcquires=" + clusterInnerClientChannelPoolMaxPendingAcquires +
+                "\n , clusterInnerClientHeartbeatWaitRetry=" + clusterInnerClientHeartbeatWaitRetry +
+                "\n , authEnable=" + authEnable +
+                "\n , dbEnable=" + dbEnable +
+                "\n , friendOnlinePushEnable=" + friendOnlinePushEnable +
+                "\n , acknowledgeModeEnable=" + acknowledgeModeEnable +
+                "\n , readReceiptEnable=" + readReceiptEnable +
+                "\n , loginValidateEnable=" + loginValidateEnable +
+                "\n , loginMaxConnectionValidateEnable=" + loginMaxConnectionValidateEnable +
+                "\n , heartBeatEnable=" + heartBeatEnable +
+                "\n , heartBeatTimeout=" + heartBeatTimeout +
+                "\n , heartBeatWaitRetry=" + heartBeatWaitRetry +
+                "\n , clusterServerRouteStrategy=" + clusterServerRouteStrategy +
+                "\n , channelOptionMap=" + channelOptionMap +
+                "\n , childChannelOptionMap=" + childChannelOptionMap +
                 '}';
     }
 }

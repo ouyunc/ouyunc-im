@@ -118,17 +118,17 @@ public class IMServerContext extends IMContext{
 
 
     //=======================================下面的redis实例可以抽离出，使用不同的redis  key前缀来替代，@todo 后期优化===========================
-    /**
-     * IM 标识服务下线的缓存，使用hash结构存储， key-下线的服务地址：ip:port, value-认为该服务地址下线的集群中的服务地址：ip:port,当认为某个服务超过一半服务认为不可用时，会选举出来一个新的active 服务来接管下线服务的相关任务
-     */
-    public static RedisDistributedL1Cache<String, ConcurrentHashSet> CLUSTER_SERVER_OFFLINE_CACHE = new RedisDistributedL1Cache<>();
-
 
     /**
      * IM 分布式集群中登录的用户信息， 这个可以使用二级缓存来提高效率？使用二级缓存
      */
     public static ICache<String, LoginUserInfo> LOGIN_USER_INFO_CACHE = new RedisDistributedL1Cache<>();
 
+
+    /**
+     * IM 分布式集群中的im App 连接
+     */
+    public static RedisDistributedL1Cache<String, LoginUserInfo> LOGIN_IM_APP_CONNECTIONS_CACHE = new RedisDistributedL1Cache<>();
 
     /**
      * IM 服务中丢失的消息 packet

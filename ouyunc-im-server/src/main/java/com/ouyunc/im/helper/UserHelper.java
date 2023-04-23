@@ -33,21 +33,25 @@ public class UserHelper {
      * @Author fangzhenxun
      * @Description 绑定用户
      * @param ctx
+     * @param appKey 登录appKey
      * @param identity
      * @param loginDeviceType
      * @return void
      */
-    public static void bind(String identity, byte loginDeviceType, ChannelHandlerContext ctx) {
+    public static void bind(String appKey, String identity, byte loginDeviceType, ChannelHandlerContext ctx) {
         log.info("正在绑定登录用户: {} 在设备: {} 上登录", identity, DeviceEnum.getDeviceNameByValue(loginDeviceType));
         String comboIdentity = IdentityUtil.generalComboIdentity(identity, loginDeviceType);
         AttributeKey<LoginUserInfo> channelTagLoginKey = AttributeKey.valueOf(IMConstant.CHANNEL_TAG_LOGIN);
         // 将用户绑定到channel中并打上tag标签
-        LoginUserInfo loginUserInfo = new LoginUserInfo(identity, IMServerContext.SERVER_CONFIG.getLocalServerAddress(), OnlineEnum.ONLINE, DeviceEnum.getDeviceEnumByValue(loginDeviceType));
+        LoginUserInfo loginUserInfo = new LoginUserInfo(appKey, identity, IMServerContext.SERVER_CONFIG.getLocalServerAddress(), OnlineEnum.ONLINE, DeviceEnum.getDeviceEnumByValue(loginDeviceType));
         ctx.channel().attr(channelTagLoginKey).set(loginUserInfo);
+        // 记录IM App 下的连接信息，多个设备，多个连接，后期有需求在改造
+        IMServerContext.LOGIN_IM_APP_CONNECTIONS_CACHE.putHash(CacheConstant.OUYUNC + CacheConstant.IM + CacheConstant.APP + appKey + CacheConstant.CONNECTION, comboIdentity, loginUserInfo);
         // 存入用户登录信息
         IMServerContext.LOGIN_USER_INFO_CACHE.put(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + comboIdentity, loginUserInfo);
         // 存入本地用户注册表
         IMServerContext.USER_REGISTER_TABLE.put(comboIdentity, ctx);
+
     }
 
     /**
@@ -62,11 +66,12 @@ public class UserHelper {
         log.info("正在解绑在设备: {} 上的用户: {}", DeviceEnum.getDeviceNameByValue(loginDeviceType), identity);
         String comboIdentity = IdentityUtil.generalComboIdentity(identity, loginDeviceType);
         IMServerContext.LOGIN_USER_INFO_CACHE.delete(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + comboIdentity);
-        ChannelHandlerContext ctx0 = IMServerContext.USER_REGISTER_TABLE.get(comboIdentity);
         IMServerContext.USER_REGISTER_TABLE.delete(comboIdentity);
-        if (ctx == ctx0) {
-            ctx0.close();
-        }
+        AttributeKey<LoginUserInfo> channelTagLoginKey = AttributeKey.valueOf(IMConstant.CHANNEL_TAG_LOGIN);
+        LoginUserInfo loginUserInfo = ctx.channel().attr(channelTagLoginKey).get();
+        // 记录IM App 下的连接信息，多个设备，只算一个连接
+        IMServerContext.LOGIN_IM_APP_CONNECTIONS_CACHE.deleteHash(CacheConstant.OUYUNC + CacheConstant.IM + CacheConstant.APP + loginUserInfo.getAppKey() + CacheConstant.CONNECTION, comboIdentity);
+        ChannelHandlerContext ctx0 = IMServerContext.USER_REGISTER_TABLE.get(comboIdentity);
         if (ctx != null) {
             ctx.close();
         }

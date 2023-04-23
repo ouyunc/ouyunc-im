@@ -13,6 +13,10 @@ import java.io.Serializable;
 public class LoginUserInfo implements Serializable {
     private static final long serialVersionUID = 101;
 
+    /**
+     * 登录所属平台AppKey
+     */
+    private String appKey;
 
     /**
      * 登录唯一标识，用户id，手机号，身份证号码等
@@ -41,6 +45,14 @@ public class LoginUserInfo implements Serializable {
 //     */
 //    private String authorizationScope;
 
+
+    public String getAppKey() {
+        return appKey;
+    }
+
+    public void setAppKey(String appKey) {
+        this.appKey = appKey;
+    }
 
     public String getIdentity() {
         return identity;
@@ -77,7 +89,9 @@ public class LoginUserInfo implements Serializable {
     public LoginUserInfo() {
     }
 
-    public LoginUserInfo(String identity, String loginServerAddress, OnlineEnum onlineStatus, DeviceEnum deviceEnum) {
+
+    public LoginUserInfo(String appKey, String identity, String loginServerAddress, OnlineEnum onlineStatus, DeviceEnum deviceEnum) {
+        this.appKey = appKey;
         this.identity = identity;
         this.loginServerAddress = loginServerAddress;
         this.onlineStatus = onlineStatus;

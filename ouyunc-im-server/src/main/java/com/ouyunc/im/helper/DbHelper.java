@@ -5,6 +5,7 @@ import cn.hutool.core.map.MapUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import com.im.cache.l1.distributed.redis.RedisDistributedL1Cache;
+import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.CacheConstant;
 import com.ouyunc.im.constant.DbSqlConstant;
 import com.ouyunc.im.constant.IMConstant;
@@ -13,6 +14,7 @@ import com.ouyunc.im.constant.enums.MessageEnum;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.db.operator.DbOperator;
 import com.ouyunc.im.db.operator.MysqlDbOperator;
+import com.ouyunc.im.domain.ImAppDetail;
 import com.ouyunc.im.domain.ImGroup;
 import com.ouyunc.im.domain.ImUser;
 import com.ouyunc.im.domain.bo.ImBlacklistBO;
@@ -33,7 +35,7 @@ import java.util.stream.Collectors;
 /**
  * 数据库操作
  */
-public class DbHelper {
+public class  DbHelper {
 
     /**
      * redis 缓存操作类
@@ -139,6 +141,34 @@ public class DbHelper {
         offlineContent.setPacketList(result);
         message.setContent(JSONUtil.toJsonStr(offlineContent));
         return result;
+    }
+
+
+    /**
+     * 根据appKey 获取app 详情
+     */
+    public static ImAppDetail getAppDetail(String appKey) {
+        ImAppDetail appDetail = (ImAppDetail) cacheOperator.get(CacheConstant.OUYUNC + CacheConstant.IM + CacheConstant.APP + appKey);
+        if (appDetail == null && IMServerContext.SERVER_CONFIG.isDbEnable()) {
+            // 从数据库查询
+            appDetail = dbOperator.selectOne(DbSqlConstant.MYSQL.SELECT_IM_APP_DETAIL.sql(), ImAppDetail.class, appKey);
+            if (appDetail != null) {
+                cacheOperator.put(CacheConstant.OUYUNC + CacheConstant.IM + CacheConstant.APP + appKey, appDetail);
+            }
+        }
+        return appDetail;
+    }
+
+    /**
+     * 获取当前已经连im 连接数
+     * @return
+     */
+    public static Integer getCurrentAppImConnections(String appKey) {
+        Map<String, Object> currentImAppConnectionMap = cacheOperator.getHashAll(CacheConstant.OUYUNC + CacheConstant.IM + CacheConstant.APP + appKey + CacheConstant.CONNECTION );
+        if (CollectionUtil.isNotEmpty(currentImAppConnectionMap)) {
+            return currentImAppConnectionMap.size();
+        }
+        return IMConstant.ZERO;
     }
 
     /**

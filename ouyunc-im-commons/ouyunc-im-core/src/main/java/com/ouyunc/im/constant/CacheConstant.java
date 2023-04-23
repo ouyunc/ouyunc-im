@@ -52,4 +52,8 @@ public class CacheConstant {
     public static final String MEMBERS = ":members";
     // 分布式做的同意加入群或拒绝加入群
     public static final String REFUSE_AGREE = "refuse-agree:";
+    // im app detail 信息数据
+    public static final String APP = "app:";
+    // im app 连接
+    public static final String CONNECTION = ":connection";
 }

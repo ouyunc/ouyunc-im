@@ -80,6 +80,8 @@ public class StandardIMServer extends AbstractIMServer{
                 .sslPrivateKey(propertiesHelper.sslPrivateKey())
                 .acknowledgeModeEnable(propertiesHelper.acknowledgeModeEnable())
                 .readReceiptEnable(propertiesHelper.readReceiptEnable())
+                .loginValidateEnable(propertiesHelper.loginValidateEnable())
+                .loginMaxConnectionValidateEnable(propertiesHelper.loginMaxConnectionValidateEnable())
                 .bossOptionSoBacklog(propertiesHelper.bossOptionSoBacklog())
                 .bossOptionSoReuseaddr(propertiesHelper.bossOptionSoReuseaddr())
                 .workerChildOptionSoKeepalive(propertiesHelper.workerChildOptionSoKeepalive())

@@ -1,19 +1,31 @@
 package com.ouyunc.im.processor;
 
+import cn.hutool.core.date.SystemClock;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
+import com.im.cache.l1.distributed.redis.redisson.RedissonFactory;
 import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.CacheConstant;
+import com.ouyunc.im.constant.IMConstant;
+import com.ouyunc.im.constant.enums.DeviceEnum;
 import com.ouyunc.im.constant.enums.MessageContentEnum;
 import com.ouyunc.im.constant.enums.MessageEnum;
+import com.ouyunc.im.constant.enums.NetworkEnum;
 import com.ouyunc.im.context.IMServerContext;
+import com.ouyunc.im.domain.ImAppDetail;
 import com.ouyunc.im.encrypt.Encrypt;
+import com.ouyunc.im.helper.DbHelper;
+import com.ouyunc.im.helper.MessageHelper;
 import com.ouyunc.im.helper.UserHelper;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.packet.message.content.LoginContent;
+import com.ouyunc.im.packet.message.content.ServerNotifyContent;
+import com.ouyunc.im.protocol.Protocol;
 import com.ouyunc.im.utils.IdentityUtil;
+import com.ouyunc.im.utils.SnowflakeUtil;
 import io.netty.channel.ChannelHandlerContext;
+import org.redisson.api.RLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,9 +50,29 @@ public class LoginMessageProcessor extends AbstractMessageProcessor{
      * @return boolean
      */
     public boolean validate(LoginContent loginContent) {
-        if (StrUtil.isEmpty(loginContent.getIdentity()) || StrUtil.isEmpty(loginContent.getAppKey()) || StrUtil.isEmpty(loginContent.getSignature())  || loginContent.getCreateTime() == 0 || Encrypt.AsymmetricEncrypt.prototype(loginContent.getSignatureAlgorithm()) == null) {
+        if (StrUtil.isEmpty(loginContent.getIdentity()) || StrUtil.isEmpty(loginContent.getAppKey()) || StrUtil.isEmpty(loginContent.getSignature())  || loginContent.getCreateTime() <= 0 || Encrypt.AsymmetricEncrypt.prototype(loginContent.getSignatureAlgorithm()) == null) {
             return false;
         }
+        // raw = appkey&identity&createtime_appSecret
+        // 通过 appKey 在缓存或数据库中获取账户及权限信息，然后进行计算校验
+        ImAppDetail imAppDetail = DbHelper.getAppDetail(loginContent.getAppKey());
+        if (imAppDetail == null) {
+            return false;
+        }
+        String rawStr = loginContent.getAppKey() + IMConstant.AND + loginContent.getIdentity() + IMConstant.AND + loginContent.getCreateTime() + IMConstant.UNDERLINE + imAppDetail.getAppSecret();
+        if (!Encrypt.AsymmetricEncrypt.prototype(loginContent.getSignatureAlgorithm()).validate(rawStr, loginContent.getSignature())) {
+            return false;
+        }
+        // 是否开启
+        if (IMServerContext.SERVER_CONFIG.isLoginMaxConnectionValidateEnable()) {
+            // 做权限校验，比如，同一个appKey 只允许在线10个连接
+            Integer connections = DbHelper.getCurrentAppImConnections(loginContent.getAppKey());
+            // 计数从0开始,不能超过最大连接数
+            if (++connections >= imAppDetail.getImMaxConnections()) {
+                return false;
+            }
+        }
+
         return true;
     }
 
@@ -63,49 +95,47 @@ public class LoginMessageProcessor extends AbstractMessageProcessor{
         //将消息内容转成message
         LoginContent loginContent = JSONUtil.toBean(loginMessage.getContent(), LoginContent.class);
         // 做登录参数校验
-        //1,进行参数合法校验，校验失败，结束 ；2,进行签名的校验，校验失败，结束
+        //1,进行参数合法校验，校验失败，结束 ；2,进行签名的校验，校验失败，结束，3，进行权限校验，校验失败，结束
         // 根据appKey 获取appSecret 然后拼接
-        // @todo 注意这里先写死 appKey 获取appSecret
-//        String rawStr = loginContent.getAppKey() + IMConstant.AND + loginContent.getIdentity() + IMConstant.AND + loginContent.getCreateTime() + IMConstant.UNDERLINE + "ouyunc";
-//        if (!validate(loginContent) || !Encrypt.AsymmetricEncrypt.prototype(loginContent.getSignatureAlgorithm()).validate(rawStr, loginContent.getSignature())) {
-//            ctx.close();
-//            return;
-//        }
-
-        final String comboIdentity = IdentityUtil.generalComboIdentity(loginContent.getIdentity(), packet.getDeviceType());
-        //如果之前已经登录（重复登录请求），这里判断是否已经登录过,同一个账号在同一个设备不能同时登录
-        //1,从分布式缓存取出该登录用户
-        LoginUserInfo loginUserInfo = IMServerContext.LOGIN_USER_INFO_CACHE.get(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + comboIdentity);
-        //2,从本地用户注册表中取出该用户的channel
-        final ChannelHandlerContext bindCtx = IMServerContext.USER_REGISTER_TABLE.get(comboIdentity);
-        // 如果是都不为空是重复登录请求，则不做处理，否则重新做登录
-        // 下面处理登录消息的一下情况，某一个为空或都为空，无论那种情况都将之前的数据进行清除，重新添加登录信息
-        if (loginUserInfo == null || bindCtx == null) {
-            // 如果有，清空登录数据信息,解绑用户
-            IMServerContext.LOGIN_USER_INFO_CACHE.delete(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + comboIdentity);
-            ChannelHandlerContext ctx0 = IMServerContext.USER_REGISTER_TABLE.get(comboIdentity);
-            if (ctx0 != null) {
-                IMServerContext.USER_REGISTER_TABLE.delete(comboIdentity);
-                ctx0.close();
+        RLock lock = RedissonFactory.INSTANCE.redissonClient().getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP + loginContent.getAppKey());
+        lock.lock();
+        try{
+            if (IMServerContext.SERVER_CONFIG.isLoginValidateEnable() && !validate(loginContent)) {
+                log.warn("客户端id: {} 登录参数: {}，校验未通过！", ctx.channel().id().asShortText(), JSONUtil.toJsonStr(loginContent));
+                ctx.close();
+                return;
             }
-            // 注意：其实可以直接在这里调用登录的逻辑不需要往下面传递了，这里我继续往下面传递各尽职责
-            ctx.fireChannelRead(packet);
+            final String comboIdentity = IdentityUtil.generalComboIdentity(loginContent.getIdentity(), packet.getDeviceType());
+            //如果之前已经登录（重复登录请求），这里判断是否已经登录过,同一个账号在同一个设备不能同时登录
+            //1,从分布式缓存取出该登录用户
+            LoginUserInfo loginUserInfo = IMServerContext.LOGIN_USER_INFO_CACHE.get(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + comboIdentity);
+            //2,从本地用户注册表中取出该用户的channel
+            final ChannelHandlerContext bindCtx = IMServerContext.USER_REGISTER_TABLE.get(comboIdentity);
+            // 如果是都不为空是重复登录请求(1，不同的设备远程登录，2，同一设备重复发送登录请求)，向原有的连接发送通知，有其他客户端登录，并将其连接下线
+            if (bindCtx != null) {
+                // 给原有连接发送通知消息，并将其下线，添加新的连接登录
+                Message message = new Message(IMServerContext.SERVER_CONFIG.getLocalHost(), loginContent.getIdentity(), MessageContentEnum.SERVER_NOTIFY_CONTENT.type(), JSONUtil.toJsonStr(new ServerNotifyContent(String.format(IMConstant.REMOTE_LOGIN_NOTIFICATIONS, packet.getIp()))), SystemClock.now());
+                // 注意： 这里的原来的连接使用的序列化方式，应该是和新连接上的序列化方式一致，这里当成一致，当然不一致也可以做，后面遇到再改造
+                Packet notifyPacket = new Packet(packet.getProtocol(), packet.getProtocolVersion(), SnowflakeUtil.nextId(), DeviceEnum.PC_LINUX.getValue(), NetworkEnum.OTHER.getValue(), IMServerContext.SERVER_CONFIG.getLocalHost(), MessageEnum.IM_SERVER_NOTIFY.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), packet.getSerializeAlgorithm(),  message);
+                MessageHelper.sendMessageSync(notifyPacket, comboIdentity);
+                IMServerContext.USER_REGISTER_TABLE.delete(comboIdentity);
+                bindCtx.close();
+            }
+            if (loginUserInfo != null) {
+                IMServerContext.LOGIN_USER_INFO_CACHE.delete(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + comboIdentity);
+            }
+            // 绑定信息,不在往下传递
+            UserHelper.bind(loginContent.getAppKey(), loginContent.getIdentity(), packet.getDeviceType(), ctx);
+        }finally {
+            lock.unlock();
         }
+        // 注意：其实可以直接在这里调用登录的逻辑不需要往下面传递了，这里我继续往下面传递各尽职责,最大优化，这里不再往下传递，
+        // ctx.fireChannelRead(packet);
     }
 
-    /**
-     *  登录消息的处理；未开启登录认证，在接收到登录消息后不会走这里了，也就是没有往下面传递
-     * @param ctx
-     * @param packet
-     */
+
     @Override
     public void doProcess(ChannelHandlerContext ctx, Packet packet) {
-        log.info("正在处理登录消息...");
-        // 注意：消息务必携带登录设备类型; 这里使用客户端唯一标识+登录设备类型作为新的唯一标识进行绑定，支持多设备端登录及同步消息,
-        // 用户登录成功后，用户绑定
-        Message message = (Message) packet.getMessage();
-        LoginContent loginContent = JSONUtil.toBean(message.getContent(), LoginContent.class);
-        UserHelper.bind(loginContent.getIdentity(), packet.getDeviceType(), ctx);
+        // do nothing
     }
-
 }

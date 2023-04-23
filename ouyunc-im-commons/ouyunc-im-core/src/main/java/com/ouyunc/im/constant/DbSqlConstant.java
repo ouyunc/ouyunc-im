@@ -234,6 +234,21 @@ public class DbSqlConstant {
                 "\tdeleted = 0 AND\n" +
                 "\tid = ? ","查询群组信息"),
 
+        SELECT_IM_APP_DETAIL("SELECT \n" +
+                "\touyunc_im_app_detail.id, \n" +
+                "\touyunc_im_app_detail.app_key, \n" +
+                "\touyunc_im_app_detail.app_secret, \n" +
+                "\touyunc_im_app_detail.app_name, \n" +
+                "\touyunc_im_app_detail.im_max_connections, \n" +
+                "\touyunc_im_app_detail.create_time, \n" +
+                "\touyunc_im_app_detail.update_time, \n" +
+                "\touyunc_im_app_detail.deleted\n" +
+                "FROM\n" +
+                "\touyunc_im_app_detail\n" +
+                "WHERE\n" +
+                "\touyunc_im_app_detail.deleted = 0 AND\n" +
+                "\touyunc_im_app_detail.app_key = ? ","查询im app detail 详情信息"),
+
         DELETE_GROUP("delete  from  ouyunc_im_group  where id = ? ","删除群"),
         DELETE_GROUP_USER("delete  from  ouyunc_im_group_user  where group_id = ? and user_id= ?","删除群某个成员关系"),
         DELETE_GROUP_ALL_USER("delete  from  ouyunc_im_group_user  where group_id = ?","删除群所有成员关系"),

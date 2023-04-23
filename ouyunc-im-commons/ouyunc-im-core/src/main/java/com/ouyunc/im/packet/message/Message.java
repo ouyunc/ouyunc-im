@@ -108,6 +108,15 @@ public class Message implements Serializable {
     public Message() {
     }
 
+    public Message(String from, String to, int contentType, String content, String extra, long createTime) {
+        this.from = from;
+        this.to = to;
+        this.contentType = contentType;
+        this.content = content;
+        this.extra = extra;
+        this.createTime = createTime;
+    }
+
     public Message(String from, String to, int contentType, String content, long createTime) {
         this.from = from;
         this.to = to;

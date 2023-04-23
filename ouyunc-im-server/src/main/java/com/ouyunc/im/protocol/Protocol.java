@@ -82,7 +82,7 @@ public enum Protocol {
         public void doSendMessage(Packet packet, String to) {
             try{
                 // 这里可以处理具体发送多设备的在线消息，离线以及在线
-                // 需要考虑多设备登录？离线消息如何嵌入？，多种消息类型进行统一处理@todo 这里暂时只考虑一个接受者
+                // 需要考虑多设备登录？离线消息如何嵌入？，多种消息类型进行统一处理
                 final ByteBuf byteBuf = ByteBufAllocator.DEFAULT.buffer();
                 ReaderWriterUtil.writePacketInByteBuf(packet, byteBuf);
                 //从用户注册表中，获取用户对应的channel然后将消息写出去

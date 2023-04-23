@@ -33,6 +33,7 @@ public class DefaultSocketChannelInitializer extends SocketChannelInitializer{
      * @param socketChannel
      * @return void
      */
+    @Override
     void initSocketChannel(SocketChannel socketChannel) {
         // 这里只设置协议分发器，具体可参照netty 的源码例子
         ChannelPipeline pipeline = socketChannel.pipeline();
@@ -71,6 +72,7 @@ public class DefaultSocketChannelInitializer extends SocketChannelInitializer{
                             String comboIdentity = IdentityUtil.generalComboIdentity(loginUserInfo.getIdentity(), loginUserInfo.getDeviceEnum().getName());
                             IMServerContext.LOGIN_USER_INFO_CACHE.delete(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + comboIdentity);
                             IMServerContext.USER_REGISTER_TABLE.delete(comboIdentity);
+                            IMServerContext.LOGIN_IM_APP_CONNECTIONS_CACHE.deleteHash(CacheConstant.OUYUNC + CacheConstant.IM + CacheConstant.APP + loginUserInfo.getAppKey() + CacheConstant.CONNECTION, comboIdentity);
                         }
                     }
                 }

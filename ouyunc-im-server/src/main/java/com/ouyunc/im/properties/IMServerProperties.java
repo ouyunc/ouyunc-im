@@ -186,7 +186,19 @@ public interface IMServerProperties extends Config {
     @DefaultValue("false")
     boolean readReceiptEnable();
 
+    /**
+     * im 是否开启登录校验，默认是
+     */
+    @Key("im.server.login-validate.enable")
+    @DefaultValue("true")
+    boolean loginValidateEnable();
 
+    /**
+     * im 是否开启登录最大连接数校验，开启登录校验后才会生效
+     */
+    @Key("im.server.login-max-connection-validate.enable")
+    @DefaultValue("true")
+    boolean loginMaxConnectionValidateEnable();
 
     /**
      * 全局是否开启客户端心跳，默认开启

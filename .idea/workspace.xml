@@ -2,22 +2,39 @@
 <project version="4">
   <component name="ArtifactsWorkspaceSettings">
     <artifacts-to-build>
-      <artifact name="ouyu-server:jar" />
+      <artifact name="ouyunc-im-server:jar" />
     </artifacts-to-build>
   </component>
   <component name="AutoImportSettings">
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v3.0.2&#10;1，优化客户端发送按钮，改为键盘提交">
-      <change afterPath="$PROJECT_DIR$/docs/html/readme.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/protobuf/Packet.proto" afterDir="false" />
+    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v3.1.0&#10;1，对比v3.0.2 过期离线消息的处理&#10;2，优化数据库处理逻辑&#10;3，定义消息格式处理，暂定在v4.0将packet数据也升级为protobuf">
+      <change afterPath="$PROJECT_DIR$/docs/html/ouyunc-im-client-uniapp-json-sdk.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/protobuf/Message_pb.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/ServerNotifyContent.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-domain/src/main/java/com/ouyunc/im/domain/ImAppDetail.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/META-INF/MANIFEST.MF" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/html/ouyunc-im-client-uniapp-sdk.js" beforeDir="false" afterPath="$PROJECT_DIR$/docs/html/ouyunc-im-client-uniapp-raw-sdk.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/html/ouyunc-im-client-web-sdk.js" beforeDir="false" afterPath="$PROJECT_DIR$/docs/html/ouyunc-im-client-web-raw-sdk.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/protobuf/Message.proto" beforeDir="false" afterPath="$PROJECT_DIR$/docs/protobuf/Message.proto" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/HELP.md" beforeDir="false" afterPath="$PROJECT_DIR$/HELP.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/html/ouyunc-im-client-web-raw-sdk.js" beforeDir="false" afterPath="$PROJECT_DIR$/docs/html/ouyunc-im-client-web-raw-sdk.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/base/LoginUserInfo.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/base/LoginUserInfo.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/CacheConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/CacheConstant.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/DbSqlConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/DbSqlConstant.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/IMConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/IMConstant.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/enums/MessageContentEnum.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/enums/MessageContentEnum.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/enums/MessageEnum.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/enums/MessageEnum.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/Message.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/Message.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/StandardIMServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/StandardIMServer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/channel/DefaultSocketChannelInitializer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/channel/DefaultSocketChannelInitializer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/config/IMServerConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/config/IMServerConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/context/IMServerContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/context/IMServerContext.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/DbHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/DbHelper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/OfflineMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/OfflineMessageProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/UserHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/UserHelper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/LoginMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/LoginMessageProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/properties/IMServerProperties.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/properties/IMServerProperties.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/protocol/Protocol.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/protocol/Protocol.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/ouyunc-im-server.properties" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/ouyunc-im-server.properties" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -110,9 +127,9 @@
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="aspect.path.notification.shown" value="true" />
     <property name="jdk.selected.JAVA_MODULE" value="1.8" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/docs/html" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/docs/protobuf" />
     <property name="nodejs_package_manager_path" value="npm" />
-    <property name="project.structure.last.edited" value="Modules" />
+    <property name="project.structure.last.edited" value="Artifacts" />
     <property name="project.structure.proportion" value="0.15" />
     <property name="project.structure.side.proportion" value="0.47011495" />
     <property name="settings.editor.selected.configurable" value="reference.projectsettings.compiler.javacompiler" />
@@ -126,8 +143,8 @@
       <recent name="com.ouyu.im.innerclient" />
     </key>
     <key name="CopyFile.RECENT_KEYS">
-      <recent name="F:\workspace\ouyunc-im\docs\html" />
       <recent name="F:\workspace\ouyunc-im\docs\protobuf" />
+      <recent name="F:\workspace\ouyunc-im\docs\html" />
       <recent name="F:\workspace\ouyunc-im\docs\picture" />
       <recent name="F:\workspace\ouyunc-im\sdk\js" />
       <recent name="F:\workspace\ouyunc-im\sdk\uniapp" />
@@ -339,14 +356,15 @@
       <workItem from="1678411629435" duration="25836000" />
       <workItem from="1678770487222" duration="23000" />
       <workItem from="1678953987106" duration="95178000" />
-      <workItem from="1679634443752" duration="21429000" />
-    </task>
-    <task id="LOCAL-00120" summary="v3.0-beta  优化客户端">
-      <created>1672392472347</created>
-      <option name="number" value="00120" />
-      <option name="presentableId" value="LOCAL-00120" />
-      <option name="project" value="LOCAL" />
-      <updated>1672392472348</updated>
+      <workItem from="1679634443752" duration="25054000" />
+      <workItem from="1680590642671" duration="679000" />
+      <workItem from="1680746440839" duration="1130000" />
+      <workItem from="1681113956702" duration="648000" />
+      <workItem from="1681883427418" duration="7451000" />
+      <workItem from="1681981554192" duration="5173000" />
+      <workItem from="1682062661335" duration="6451000" />
+      <workItem from="1682221509916" duration="25000" />
+      <workItem from="1682223372768" duration="21276000" />
     </task>
     <task id="LOCAL-00121" summary="v3.0-beta  优化群聊">
       <created>1672474725146</created>
@@ -684,7 +702,14 @@
       <option name="project" value="LOCAL" />
       <updated>1679878388507</updated>
     </task>
-    <option name="localTasksCounter" value="169" />
+    <task id="LOCAL-00169" summary="v3.1.0&#10;1，对比v3.0.2 过期离线消息的处理&#10;2，优化数据库处理逻辑&#10;3，定义消息格式处理，暂定在v4.0将packet数据也升级为protobuf">
+      <created>1680513213281</created>
+      <option name="number" value="00169" />
+      <option name="presentableId" value="LOCAL-00169" />
+      <option name="project" value="LOCAL" />
+      <updated>1680513213281</updated>
+    </task>
+    <option name="localTasksCounter" value="170" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -745,7 +770,6 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
-    <MESSAGE value="v3.0-beta  增加关系校验" />
     <MESSAGE value="v3.0-beta  优化私聊消息" />
     <MESSAGE value="v3.0-beta  优化群聊消息" />
     <MESSAGE value="v3.0-beta  优化消息投递ack" />
@@ -770,7 +794,8 @@
     <MESSAGE value="v3.0.2&#10;1，优化拉取离线消息的方式" />
     <MESSAGE value="v3.0.2&#10;1，优化拉取离线消息" />
     <MESSAGE value="v3.0.2&#10;1，优化客户端发送按钮，改为键盘提交" />
-    <option name="LAST_COMMIT_MESSAGE" value="v3.0.2&#10;1，优化客户端发送按钮，改为键盘提交" />
+    <MESSAGE value="v3.1.0&#10;1，对比v3.0.2 过期离线消息的处理&#10;2，优化数据库处理逻辑&#10;3，定义消息格式处理，暂定在v4.0将packet数据也升级为protobuf" />
+    <option name="LAST_COMMIT_MESSAGE" value="v3.1.0&#10;1，对比v3.0.2 过期离线消息的处理&#10;2，优化数据库处理逻辑&#10;3，定义消息格式处理，暂定在v4.0将packet数据也升级为protobuf" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -834,6 +859,11 @@
           <url>file://$PROJECT_DIR$/ouyunc-im-server/target/classes/com/ouyunc/im/lock/RedissonDistributedLockAspect.class</url>
           <line>70</line>
           <option name="timeStamp" value="335" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/LoginMessageProcessor.java</url>
+          <line>121</line>
+          <option name="timeStamp" value="349" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="javascript">
           <url>file://$PROJECT_DIR$/docs/socket/ouyu-socket.js</url>

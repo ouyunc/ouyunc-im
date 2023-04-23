@@ -29,6 +29,7 @@ public enum MessageEnum {
     RPC_HEART_BEAT((byte) 103,  "rpc_heart_beat", "RPC中心跳消息"),
 
 
+    IM_SERVER_NOTIFY((byte) 124,  "im_server_notify", "im 服务端的通知消息"),
 
     IM_SERVER_WARNING((byte) 125,  "im_server_warning", "im 服务端的警告消息");
 

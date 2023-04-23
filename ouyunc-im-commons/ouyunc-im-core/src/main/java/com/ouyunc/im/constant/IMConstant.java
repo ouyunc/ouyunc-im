@@ -6,8 +6,10 @@ package com.ouyunc.im.constant;
  * @Version V3.0
  **/
 public class IMConstant {
-
-
+    /**
+     * 0
+     */
+    public static final Integer ZERO = 0;
     /**
      *urf-8
      */
@@ -327,5 +329,10 @@ public class IMConstant {
      * 未禁言1
      */
     public static final Integer NOT_MUSHIN = 0;
+
+    /**
+     * 同一设备类型，重复登录获远程登录通知
+     */
+    public static final String REMOTE_LOGIN_NOTIFICATIONS = "你的ouyunc账号在另一台设备(ip: %s)上登录，你已被迫下线。如果本人不知晓，请立即冻结账号，并及时修改相关密码。";
 
 }
