@@ -10,6 +10,11 @@ public class IMConstant {
      * 0
      */
     public static final Integer ZERO = 0;
+
+    /**
+     * -1
+     */
+    public static final Integer MINUS_ONE = -1;
     /**
      *urf-8
      */

@@ -64,7 +64,7 @@ public class LoginMessageProcessor extends AbstractMessageProcessor{
             return false;
         }
         // 是否开启
-        if (IMServerContext.SERVER_CONFIG.isLoginMaxConnectionValidateEnable()) {
+        if (IMServerContext.SERVER_CONFIG.isLoginMaxConnectionValidateEnable() &&  IMConstant.MINUS_ONE.equals(imAppDetail.getImMaxConnections())) {
             // 做权限校验，比如，同一个appKey 只允许在线10个连接
             Integer connections = DbHelper.getCurrentAppImConnections(loginContent.getAppKey());
             // 计数从0开始,不能超过最大连接数
