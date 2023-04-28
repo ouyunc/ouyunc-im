@@ -7,14 +7,13 @@ package com.ouyunc.im.constant.enums;
  **/
 public enum OnlineEnum {
 
+    /**
+     * 离线
+     */
+    OFFLINE,
 
     /**
      * 在线
      */
     ONLINE,
-
-    /**
-     * 离线
-     */
-    OFFLINE,
 }

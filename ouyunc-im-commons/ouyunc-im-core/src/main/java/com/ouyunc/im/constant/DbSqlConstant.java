@@ -256,7 +256,7 @@ public class DbSqlConstant {
 
         INSERT_FRIEND("INSERT INTO ouyunc_im_friend (id, user_id, friend_user_id, friend_nick_name, is_shield, create_time, update_time) VALUES (?, ?, ?, ?, ?, ?, ?)","添加好友关系"),
 
-        INSERT_GROUP_USER("INSERT INTO ouyunc_im_group_user (id, group_id, user_id, user_nick_name, is_leader, is_manager, is_shield, mushin, create_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)","添加群成员关系"),
+        INSERT_GROUP_USER("INSERT INTO ouyunc_im_group_user (id, group_id, user_id,group_nick_name, user_nick_name, is_leader, is_manager, is_shield, mushin, create_time) VALUES (?, ?,?, ?, ?, ?, ?, ?, ?, ?)","添加群成员关系"),
 
         INSERT_READ_RECEIPT("INSERT INTO OUYUNC_IM_READ_RECEIPT(ID, MSG_ID, USER_ID) VALUES (?, ?, ?)", "插入已读消息关系"),
 

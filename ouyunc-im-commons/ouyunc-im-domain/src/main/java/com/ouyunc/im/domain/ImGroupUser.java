@@ -26,9 +26,15 @@ public class ImGroupUser implements Serializable {
     private Long groupId;
 
     /**
+     * 群组别名（每个群成员显示的群的名字）
+     */
+    private String groupNickName;
+
+    /**
      * 群成员id
      */
     private Long userId;
+
 
     /**
      * 用户昵称（用户在群里的昵称）
@@ -89,6 +95,14 @@ public class ImGroupUser implements Serializable {
         return userNickName;
     }
 
+    public String getGroupNickName() {
+        return groupNickName;
+    }
+
+    public void setGroupNickName(String groupNickName) {
+        this.groupNickName = groupNickName;
+    }
+
     public void setUserNickName(String userNickName) {
         this.userNickName = userNickName;
     }
@@ -137,9 +151,10 @@ public class ImGroupUser implements Serializable {
     public ImGroupUser() {
     }
 
-    public ImGroupUser(Long id, Long groupId, Long userId, String userNickName, Integer isLeader, Integer isManager, Integer isShield, Integer mushin, String createTime) {
+    public ImGroupUser(Long id, Long groupId, String groupNickName, Long userId, String userNickName, Integer isLeader, Integer isManager, Integer isShield, Integer mushin, String createTime) {
         this.id = id;
         this.groupId = groupId;
+        this.groupNickName = groupNickName;
         this.userId = userId;
         this.userNickName = userNickName;
         this.isLeader = isLeader;

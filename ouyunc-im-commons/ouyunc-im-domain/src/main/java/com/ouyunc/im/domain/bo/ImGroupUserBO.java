@@ -21,7 +21,10 @@ public class ImGroupUserBO {
      */
     private String username;
 
-
+    /**
+     * 群组别名（每个群成员显示的群的名字）
+     */
+    private String groupNickName;
 
     /**
      * 用户昵称（用户在群里的昵称）
@@ -92,6 +95,13 @@ public class ImGroupUserBO {
      */
     private String createTime;
 
+    public String getGroupNickName() {
+        return groupNickName;
+    }
+
+    public void setGroupNickName(String groupNickName) {
+        this.groupNickName = groupNickName;
+    }
 
     public String getGroupId() {
         return groupId;
@@ -224,11 +234,12 @@ public class ImGroupUserBO {
     public ImGroupUserBO() {
     }
 
-    public ImGroupUserBO(String groupId, String userId, String username, String userNickName, String email, String phoneNum, String idCardNum, String avatar, String motto, Integer age, Integer sex, Integer isLeader, Integer isManager, Integer isShield, Integer mushin, String createTime) {
+    public ImGroupUserBO(String groupId, String userId, String username, String userNickName,String groupNickName, String email, String phoneNum, String idCardNum, String avatar, String motto, Integer age, Integer sex, Integer isLeader, Integer isManager, Integer isShield, Integer mushin, String createTime) {
         this.groupId = groupId;
         this.userId = userId;
         this.username = username;
         this.userNickName = userNickName;
+        this.groupNickName = groupNickName;
         this.email = email;
         this.phoneNum = phoneNum;
         this.idCardNum = idCardNum;
