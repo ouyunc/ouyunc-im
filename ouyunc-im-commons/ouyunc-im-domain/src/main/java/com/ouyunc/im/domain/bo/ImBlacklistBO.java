@@ -173,4 +173,23 @@ public class ImBlacklistBO {
     public void setCreateTime(String createTime) {
         this.createTime = createTime;
     }
+
+    public ImBlacklistBO() {
+    }
+
+    public ImBlacklistBO(String identity, Integer identityType, String userId, String username, String nickName, String email, String phoneNum, String idCardNum, String avatar, String motto, Integer age, Integer sex, String createTime) {
+        this.identity = identity;
+        this.identityType = identityType;
+        this.userId = userId;
+        this.username = username;
+        this.nickName = nickName;
+        this.email = email;
+        this.phoneNum = phoneNum;
+        this.idCardNum = idCardNum;
+        this.avatar = avatar;
+        this.motto = motto;
+        this.age = age;
+        this.sex = sex;
+        this.createTime = createTime;
+    }
 }

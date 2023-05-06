@@ -11,23 +11,23 @@ public class DbSqlConstant {
     public enum MYSQL{
 
 
-        SELECT_MESSAGE_READ_RECEIPT("SELECT read_list as readList, \n" +
-                "\tid, \n" +
-                "\tprotocol, \n" +
-                "\tprotocol_version as protocolVersion, \n" +
-                "\tdevice_type as deviceType, \n" +
-                "\tnetwork_type as networkType, \n" +
-                "\tencrypt_type as encryptType, \n" +
-                "\tserialize_algorithm  as serializeAlgorithm, \n" +
-                "\tip, \n" +
-                "\tfrom, \n" +
-                "\tto, \n" +
-                "\ttype, \n" +
-                "\tcontent_type as contentType, \n" +
-                "\tcontent, \n" +
-                "\tsend_time as sendTime, \n" +
-                "\tcreate_time as createTime, \n" +
-                "\tupdate_time as updateTime \n" +
+        SELECT_MESSAGE_READ_RECEIPT("SELECT READ_LIST AS READLIST, \n" +
+                "\tID, \n" +
+                "\tPROTOCOL, \n" +
+                "\tPROTOCOL_VERSION AS PROTOCOLVERSION, \n" +
+                "\tDEVICE_TYPE AS DEVICETYPE, \n" +
+                "\tNETWORK_TYPE AS NETWORKTYPE, \n" +
+                "\tENCRYPT_TYPE AS ENCRYPTTYPE, \n" +
+                "\tSERIALIZE_ALGORITHM  AS SERIALIZEALGORITHM, \n" +
+                "\tIP, \n" +
+                "\tFROM, \n" +
+                "\tTO, \n" +
+                "\tTYPE, \n" +
+                "\tCONTENT_TYPE AS CONTENTTYPE, \n" +
+                "\tCONTENT, \n" +
+                "\tSEND_TIME AS SENDTIME, \n" +
+                "\tCREATE_TIME AS CREATETIME, \n" +
+                "\tUPDATE_TIME AS UPDATETIME \n" +
                 "\t FROM OUYUNC_IM_SEND_MESSAGE WHERE DELETED = 0 AND ID = ? LIMIT 1","查询已读列表"),
 
         UPDATE_MESSAGE_READ_RECEIPT("UPDATE OUYUNC_IM_SEND_MESSAGE SET READ_LIST = ? WHERE DELETED = 0 AND ID = ? ","读已回执，更新已读列表"),
@@ -35,228 +35,228 @@ public class DbSqlConstant {
 
 
         SELECT_BLACK_LIST("\tSELECT\n" +
-                "\touyunc_im_blacklist.identity, \n" +
-                "\touyunc_im_blacklist.user_id as userId, \n" +
-                "\touyunc_im_blacklist.identity_type as identityType, \n" +
-                "\touyunc_im_user.username, \n" +
-                "\touyunc_im_user.nick_name as nickName, \n" +
-                "\touyunc_im_user.avatar, \n" +
-                "\touyunc_im_user.motto, \n" +
-                "\touyunc_im_user.age, \n" +
-                "\touyunc_im_user.sex, \n" +
-                "\touyunc_im_user.email, \n" +
-                "\touyunc_im_user.phone_num as phoneNum, \n" +
-                "\touyunc_im_user.id_card_num as idCardNum,\n" +
-                "\touyunc_im_blacklist.create_time as createTime\n" +
+                "\tOUYUNC_IM_BLACKLIST.IDENTITY, \n" +
+                "\tOUYUNC_IM_BLACKLIST.USER_ID AS USERID, \n" +
+                "\tOUYUNC_IM_BLACKLIST.IDENTITY_TYPE AS IDENTITYTYPE, \n" +
+                "\tOUYUNC_IM_USER.USERNAME, \n" +
+                "\tOUYUNC_IM_USER.NICK_NAME AS NICKNAME, \n" +
+                "\tOUYUNC_IM_USER.AVATAR, \n" +
+                "\tOUYUNC_IM_USER.MOTTO, \n" +
+                "\tOUYUNC_IM_USER.AGE, \n" +
+                "\tOUYUNC_IM_USER.SEX, \n" +
+                "\tOUYUNC_IM_USER.EMAIL, \n" +
+                "\tOUYUNC_IM_USER.PHONE_NUM AS PHONENUM, \n" +
+                "\tOUYUNC_IM_USER.ID_CARD_NUM AS IDCARDNUM,\n" +
+                "\tOUYUNC_IM_BLACKLIST.CREATE_TIME AS CREATETIME\n" +
                 "\n" +
                 "FROM\n" +
-                "\touyunc_im_user\n" +
+                "\tOUYUNC_IM_USER\n" +
                 "\tLEFT JOIN\n" +
-                "\touyunc_im_blacklist\n" +
+                "\tOUYUNC_IM_BLACKLIST\n" +
                 "\tON \n" +
-                "\t\touyunc_im_user.id = ouyunc_im_blacklist.user_id\n" +
+                "\t\tOUYUNC_IM_USER.ID = OUYUNC_IM_BLACKLIST.USER_ID\n" +
                 "WHERE\n" +
-                "\touyunc_im_user.deleted = 0 AND\n" +
-                "\touyunc_im_blacklist.identity = ? AND\n" +
-                "\touyunc_im_blacklist.identity_type = ? AND\n" +
-                "\touyunc_im_blacklist.user_id = ? ", "获取黑名单的用户信息"),
+                "\tOUYUNC_IM_USER.DELETED = 0 AND\n" +
+                "\tOUYUNC_IM_BLACKLIST.IDENTITY = ? AND\n" +
+                "\tOUYUNC_IM_BLACKLIST.IDENTITY_TYPE = ? AND\n" +
+                "\tOUYUNC_IM_BLACKLIST.USER_ID = ? ", "获取黑名单的用户信息"),
 
         SELECT_FRIEND_USER("SELECT\n" +
-                "ouyunc_im_friend.user_id as  userId,\n" +
-                "ouyunc_im_friend.friend_user_id as friendUserId,\n" +
-                "\touyunc_im_user.username as friendUsername, \n" +
-                "\touyunc_im_friend.friend_nick_name as friendNickName, \n" +
-                "\touyunc_im_user.email as friendEmail, \n" +
-                "\touyunc_im_user.phone_num as friendPhoneNum,  \n" +
-                "\touyunc_im_user.id_card_num as friendIdCardNum, \n" +
-                "\touyunc_im_user.avatar as friendAvatar, \n" +
-                "\touyunc_im_user.motto as friendMotto, \n" +
-                "\touyunc_im_user.age as friendAge, \n" +
-                "\touyunc_im_user.sex as friendSex, \n" +
-                "\touyunc_im_friend.is_shield as friendIsShield, \n" +
-                "\touyunc_im_friend.create_time as createTime, \n" +
-                "\touyunc_im_friend.update_time as updateTime\n" +
+                "OUYUNC_IM_FRIEND.USER_ID AS  USERID,\n" +
+                "OUYUNC_IM_FRIEND.FRIEND_USER_ID AS FRIENDUSERID,\n" +
+                "\tOUYUNC_IM_USER.USERNAME AS FRIENDUSERNAME, \n" +
+                "\tOUYUNC_IM_FRIEND.FRIEND_NICK_NAME AS FRIENDNICKNAME, \n" +
+                "\tOUYUNC_IM_USER.EMAIL AS FRIENDEMAIL, \n" +
+                "\tOUYUNC_IM_USER.PHONE_NUM AS FRIENDPHONENUM,  \n" +
+                "\tOUYUNC_IM_USER.ID_CARD_NUM AS FRIENDIDCARDNUM, \n" +
+                "\tOUYUNC_IM_USER.AVATAR AS FRIENDAVATAR, \n" +
+                "\tOUYUNC_IM_USER.MOTTO AS FRIENDMOTTO, \n" +
+                "\tOUYUNC_IM_USER.AGE AS FRIENDAGE, \n" +
+                "\tOUYUNC_IM_USER.SEX AS FRIENDSEX, \n" +
+                "\tOUYUNC_IM_FRIEND.IS_SHIELD AS FRIENDISSHIELD, \n" +
+                "\tOUYUNC_IM_FRIEND.CREATE_TIME AS CREATETIME, \n" +
+                "\tOUYUNC_IM_FRIEND.UPDATE_TIME AS UPDATETIME\n" +
                 "FROM\n" +
-                "\touyunc_im_user\n" +
+                "\tOUYUNC_IM_USER\n" +
                 "\tLEFT JOIN\n" +
-                "\touyunc_im_friend\n" +
+                "\tOUYUNC_IM_FRIEND\n" +
                 "\tON \n" +
-                "\t\touyunc_im_user.id = ouyunc_im_friend.friend_user_id\n" +
+                "\t\tOUYUNC_IM_USER.ID = OUYUNC_IM_FRIEND.FRIEND_USER_ID\n" +
                 "WHERE\n" +
-                "\touyunc_im_user.deleted = 0 AND\n" +
-                "\touyunc_im_friend.user_id = ? and  ouyunc_im_friend.friend_user_id = ?","获取用户好友信息"),
+                "\tOUYUNC_IM_USER.DELETED = 0 AND\n" +
+                "\tOUYUNC_IM_FRIEND.USER_ID = ? AND  OUYUNC_IM_FRIEND.FRIEND_USER_ID = ?","获取用户好友信息"),
 
         SELECT_GROUP_USER("SELECT\n" +
-                "\touyunc_im_group_user.group_id as groupId, \n" +
-                "\touyunc_im_group_user.user_id as userId, \n" +
-                "\touyunc_im_user.username, \n" +
-                "\touyunc_im_group_user.user_nick_name as userNickName, \n" +
-                "\touyunc_im_user.avatar, \n" +
-                "\touyunc_im_user.motto, \n" +
-                "\touyunc_im_user.age, \n" +
-                "\touyunc_im_user.sex, \n" +
-                "\touyunc_im_user.email, \n" +
-                "\touyunc_im_user.phone_num as phoneNum, \n" +
-                "\touyunc_im_user.id_card_num as idCardNum, \n" +
-                "\touyunc_im_group_user.is_leader as isLeader, \n" +
-                "\touyunc_im_group_user.is_manager as isManager, \n" +
-                "\touyunc_im_group_user.is_shield as isShield, \n" +
-                "\touyunc_im_group_user.mushin, \n" +
-                "\touyunc_im_group_user.create_time as createTime\n" +
+                "\tOUYUNC_IM_GROUP_USER.GROUP_ID AS GROUPID, \n" +
+                "\tOUYUNC_IM_GROUP_USER.USER_ID AS USERID, \n" +
+                "\tOUYUNC_IM_USER.USERNAME, \n" +
+                "\tOUYUNC_IM_GROUP_USER.USER_NICK_NAME AS USERNICKNAME, \n" +
+                "\tOUYUNC_IM_USER.AVATAR, \n" +
+                "\tOUYUNC_IM_USER.MOTTO, \n" +
+                "\tOUYUNC_IM_USER.AGE, \n" +
+                "\tOUYUNC_IM_USER.SEX, \n" +
+                "\tOUYUNC_IM_USER.EMAIL, \n" +
+                "\tOUYUNC_IM_USER.PHONE_NUM AS PHONENUM, \n" +
+                "\tOUYUNC_IM_USER.ID_CARD_NUM AS IDCARDNUM, \n" +
+                "\tOUYUNC_IM_GROUP_USER.IS_LEADER AS ISLEADER, \n" +
+                "\tOUYUNC_IM_GROUP_USER.IS_MANAGER AS ISMANAGER, \n" +
+                "\tOUYUNC_IM_GROUP_USER.IS_SHIELD AS ISSHIELD, \n" +
+                "\tOUYUNC_IM_GROUP_USER.MUSHIN, \n" +
+                "\tOUYUNC_IM_GROUP_USER.CREATE_TIME AS CREATETIME\n" +
                 "FROM\n" +
-                "\touyunc_im_user\n" +
+                "\tOUYUNC_IM_USER\n" +
                 "\tLEFT JOIN\n" +
-                "\touyunc_im_group_user\n" +
+                "\tOUYUNC_IM_GROUP_USER\n" +
                 "\tON \n" +
-                "\t\touyunc_im_user.id = ouyunc_im_group_user.user_id\n" +
+                "\t\tOUYUNC_IM_USER.ID = OUYUNC_IM_GROUP_USER.USER_ID\n" +
                 "WHERE\n" +
-                "\touyunc_im_user.deleted = 0 AND\n" +
-                "\touyunc_im_group_user.group_id = ? and ouyunc_im_group_user.user_id = ? ","查询单个群成员"),
+                "\tOUYUNC_IM_USER.DELETED = 0 AND\n" +
+                "\tOUYUNC_IM_GROUP_USER.GROUP_ID = ? AND OUYUNC_IM_GROUP_USER.USER_ID = ? ","查询单个群成员"),
 
         SELECT_GROUP_LEADER_USER("SELECT\n" +
-                "\touyunc_im_group_user.group_id as groupId, \n" +
-                "\touyunc_im_group_user.user_id as userId, \n" +
-                "\touyunc_im_user.username, \n" +
-                "\touyunc_im_group_user.user_nick_name as userNickName, \n" +
-                "\touyunc_im_user.avatar, \n" +
-                "\touyunc_im_user.motto, \n" +
-                "\touyunc_im_user.age, \n" +
-                "\touyunc_im_user.sex, \n" +
-                "\touyunc_im_user.email, \n" +
-                "\touyunc_im_user.phone_num as phoneNum, \n" +
-                "\touyunc_im_user.id_card_num as idCardNum, \n" +
-                "\touyunc_im_group_user.is_leader as isLeader, \n" +
-                "\touyunc_im_group_user.is_manager as isManager, \n" +
-                "\touyunc_im_group_user.is_shield as isShield, \n" +
-                "\touyunc_im_group_user.mushin, \n" +
-                "\touyunc_im_group_user.create_time as createTime\n" +
+                "\tOUYUNC_IM_GROUP_USER.GROUP_ID AS GROUPID, \n" +
+                "\tOUYUNC_IM_GROUP_USER.USER_ID AS USERID, \n" +
+                "\tOUYUNC_IM_USER.USERNAME, \n" +
+                "\tOUYUNC_IM_GROUP_USER.USER_NICK_NAME AS USERNICKNAME, \n" +
+                "\tOUYUNC_IM_USER.AVATAR, \n" +
+                "\tOUYUNC_IM_USER.MOTTO, \n" +
+                "\tOUYUNC_IM_USER.AGE, \n" +
+                "\tOUYUNC_IM_USER.SEX, \n" +
+                "\tOUYUNC_IM_USER.EMAIL, \n" +
+                "\tOUYUNC_IM_USER.PHONE_NUM AS PHONENUM, \n" +
+                "\tOUYUNC_IM_USER.ID_CARD_NUM AS IDCARDNUM, \n" +
+                "\tOUYUNC_IM_GROUP_USER.IS_LEADER AS ISLEADER, \n" +
+                "\tOUYUNC_IM_GROUP_USER.IS_MANAGER AS ISMANAGER, \n" +
+                "\tOUYUNC_IM_GROUP_USER.IS_SHIELD AS ISSHIELD, \n" +
+                "\tOUYUNC_IM_GROUP_USER.MUSHIN, \n" +
+                "\tOUYUNC_IM_GROUP_USER.CREATE_TIME AS CREATETIME\n" +
                 "FROM\n" +
-                "\touyunc_im_user\n" +
+                "\tOUYUNC_IM_USER\n" +
                 "\tLEFT JOIN\n" +
-                "\touyunc_im_group_user\n" +
+                "\tOUYUNC_IM_GROUP_USER\n" +
                 "\tON \n" +
-                "\t\touyunc_im_user.id = ouyunc_im_group_user.user_id\n" +
+                "\t\tOUYUNC_IM_USER.ID = OUYUNC_IM_GROUP_USER.USER_ID\n" +
                 "WHERE\n" +
-                "\touyunc_im_user.deleted = 0 AND\n" +
-                "\touyunc_im_group_user.group_id = ? and ouyunc_im_group_user.is_leader  = 1 ","查询单个群成员"),
+                "\tOUYUNC_IM_USER.DELETED = 0 AND\n" +
+                "\tOUYUNC_IM_GROUP_USER.GROUP_ID = ? AND OUYUNC_IM_GROUP_USER.IS_LEADER  = 1 ","查询单个群成员"),
 
 
         SELECT_GROUP_USERS("SELECT\n" +
-                "\touyunc_im_group_user.group_id as groupId, \n" +
-                "\touyunc_im_group_user.user_id as userId, \n" +
-                "\touyunc_im_user.username, \n" +
-                "\touyunc_im_group_user.user_nick_name as userNickName, \n" +
-                "\touyunc_im_user.avatar, \n" +
-                "\touyunc_im_user.motto, \n" +
-                "\touyunc_im_user.age, \n" +
-                "\touyunc_im_user.sex, \n" +
-                "\touyunc_im_user.email, \n" +
-                "\touyunc_im_user.phone_num as phoneNum, \n" +
-                "\touyunc_im_user.id_card_num as idCardNum, \n" +
-                "\touyunc_im_group_user.is_leader as isLeader, \n" +
-                "\touyunc_im_group_user.is_manager as isManager, \n" +
-                "\touyunc_im_group_user.is_shield as isShield, \n" +
-                "\touyunc_im_group_user.mushin, \n" +
-                "\touyunc_im_group_user.create_time as createTime\n" +
+                "\tOUYUNC_IM_GROUP_USER.GROUP_ID AS GROUPID, \n" +
+                "\tOUYUNC_IM_GROUP_USER.USER_ID AS USERID, \n" +
+                "\tOUYUNC_IM_USER.USERNAME, \n" +
+                "\tOUYUNC_IM_GROUP_USER.USER_NICK_NAME AS USERNICKNAME, \n" +
+                "\tOUYUNC_IM_USER.AVATAR, \n" +
+                "\tOUYUNC_IM_USER.MOTTO, \n" +
+                "\tOUYUNC_IM_USER.AGE, \n" +
+                "\tOUYUNC_IM_USER.SEX, \n" +
+                "\tOUYUNC_IM_USER.EMAIL, \n" +
+                "\tOUYUNC_IM_USER.PHONE_NUM AS PHONENUM, \n" +
+                "\tOUYUNC_IM_USER.ID_CARD_NUM AS IDCARDNUM, \n" +
+                "\tOUYUNC_IM_GROUP_USER.IS_LEADER AS ISLEADER, \n" +
+                "\tOUYUNC_IM_GROUP_USER.IS_MANAGER AS ISMANAGER, \n" +
+                "\tOUYUNC_IM_GROUP_USER.IS_SHIELD AS ISSHIELD, \n" +
+                "\tOUYUNC_IM_GROUP_USER.MUSHIN, \n" +
+                "\tOUYUNC_IM_GROUP_USER.CREATE_TIME AS CREATETIME\n" +
                 "FROM\n" +
-                "\touyunc_im_user\n" +
+                "\tOUYUNC_IM_USER\n" +
                 "\tLEFT JOIN\n" +
-                "\touyunc_im_group_user\n" +
+                "\tOUYUNC_IM_GROUP_USER\n" +
                 "\tON \n" +
-                "\t\touyunc_im_user.id = ouyunc_im_group_user.user_id\n" +
+                "\t\tOUYUNC_IM_USER.ID = OUYUNC_IM_GROUP_USER.USER_ID\n" +
                 "WHERE\n" +
-                "\touyunc_im_user.deleted = 0 AND\n" +
-                "\touyunc_im_group_user.group_id = ?  ","查询群所有成员"),
+                "\tOUYUNC_IM_USER.DELETED = 0 AND\n" +
+                "\tOUYUNC_IM_GROUP_USER.GROUP_ID = ?  ","查询群所有成员"),
 
 
         SELECT_GROUP_LEADER_USERS("SELECT\n" +
-                "\touyunc_im_group_user.group_id as groupId, \n" +
-                "\touyunc_im_group_user.user_id as userId, \n" +
-                "\touyunc_im_user.username, \n" +
-                "\touyunc_im_group_user.user_nick_name as userNickName, \n" +
-                "\touyunc_im_user.avatar, \n" +
-                "\touyunc_im_user.motto, \n" +
-                "\touyunc_im_user.age, \n" +
-                "\touyunc_im_user.sex, \n" +
-                "\touyunc_im_user.email, \n" +
-                "\touyunc_im_user.phone_num as phoneNum, \n" +
-                "\touyunc_im_user.id_card_num as idCardNum, \n" +
-                "\touyunc_im_group_user.is_leader as isLeader, \n" +
-                "\touyunc_im_group_user.is_manager as isManager, \n" +
-                "\touyunc_im_group_user.is_shield as isShield, \n" +
-                "\touyunc_im_group_user.mushin, \n" +
-                "\touyunc_im_group_user.create_time as createTime\n" +
+                "\tOUYUNC_IM_GROUP_USER.GROUP_ID AS GROUPID, \n" +
+                "\tOUYUNC_IM_GROUP_USER.USER_ID AS USERID, \n" +
+                "\tOUYUNC_IM_USER.USERNAME, \n" +
+                "\tOUYUNC_IM_GROUP_USER.USER_NICK_NAME AS USERNICKNAME, \n" +
+                "\tOUYUNC_IM_USER.AVATAR, \n" +
+                "\tOUYUNC_IM_USER.MOTTO, \n" +
+                "\tOUYUNC_IM_USER.AGE, \n" +
+                "\tOUYUNC_IM_USER.SEX, \n" +
+                "\tOUYUNC_IM_USER.EMAIL, \n" +
+                "\tOUYUNC_IM_USER.PHONE_NUM AS PHONENUM, \n" +
+                "\tOUYUNC_IM_USER.ID_CARD_NUM AS IDCARDNUM, \n" +
+                "\tOUYUNC_IM_GROUP_USER.IS_LEADER AS ISLEADER, \n" +
+                "\tOUYUNC_IM_GROUP_USER.IS_MANAGER AS ISMANAGER, \n" +
+                "\tOUYUNC_IM_GROUP_USER.IS_SHIELD AS ISSHIELD, \n" +
+                "\tOUYUNC_IM_GROUP_USER.MUSHIN, \n" +
+                "\tOUYUNC_IM_GROUP_USER.CREATE_TIME AS CREATETIME\n" +
                 "FROM\n" +
-                "\touyunc_im_user\n" +
+                "\tOUYUNC_IM_USER\n" +
                 "\tLEFT JOIN\n" +
-                "\touyunc_im_group_user\n" +
+                "\tOUYUNC_IM_GROUP_USER\n" +
                 "\tON \n" +
-                "\t\touyunc_im_user.id = ouyunc_im_group_user.user_id\n" +
+                "\t\tOUYUNC_IM_USER.ID = OUYUNC_IM_GROUP_USER.USER_ID\n" +
                 "WHERE\n" +
-                "\touyunc_im_user.deleted = 0 AND\n" +
-                "\touyunc_im_group_user.group_id = ?  and (ouyunc_im_group_user.is_leader  = 1 or ouyunc_im_group_user.is_manager = 1) ","查询群管理员或群主列表"),
+                "\tOUYUNC_IM_USER.DELETED = 0 AND\n" +
+                "\tOUYUNC_IM_GROUP_USER.GROUP_ID = ?  AND (OUYUNC_IM_GROUP_USER.IS_LEADER  = 1 OR OUYUNC_IM_GROUP_USER.IS_MANAGER = 1) ","查询群管理员或群主列表"),
 
         SELECT_USER(" SELECT\n" +
-                "\touyunc_im_user.id, \n" +
-                "\touyunc_im_user.open_id as openId, \n" +
-                "\touyunc_im_user.username, \n" +
-                "\touyunc_im_user.password, \n" +
-                "\touyunc_im_user.nick_name as nickName, \n" +
-                "\touyunc_im_user.avatar, \n" +
-                "\touyunc_im_user.motto, \n" +
-                "\touyunc_im_user.age, \n" +
-                "\touyunc_im_user.sex, \n" +
-                "\touyunc_im_user.email, \n" +
-                "\touyunc_im_user.status, \n" +
-                "\touyunc_im_user.phone_num as phoneNum, \n" +
-                "\touyunc_im_user.id_card_num as idCardNum, \n" +
-                "\touyunc_im_user.create_time as createTime, \n" +
-                "\touyunc_im_user.update_time as updateTime\n" +
+                "\tOUYUNC_IM_USER.ID, \n" +
+                "\tOUYUNC_IM_USER.OPEN_ID AS OPENID, \n" +
+                "\tOUYUNC_IM_USER.USERNAME, \n" +
+                "\tOUYUNC_IM_USER.PASSWORD, \n" +
+                "\tOUYUNC_IM_USER.NICK_NAME AS NICKNAME, \n" +
+                "\tOUYUNC_IM_USER.AVATAR, \n" +
+                "\tOUYUNC_IM_USER.MOTTO, \n" +
+                "\tOUYUNC_IM_USER.AGE, \n" +
+                "\tOUYUNC_IM_USER.SEX, \n" +
+                "\tOUYUNC_IM_USER.EMAIL, \n" +
+                "\tOUYUNC_IM_USER.STATUS, \n" +
+                "\tOUYUNC_IM_USER.PHONE_NUM AS PHONENUM, \n" +
+                "\tOUYUNC_IM_USER.ID_CARD_NUM AS IDCARDNUM, \n" +
+                "\tOUYUNC_IM_USER.CREATE_TIME AS CREATETIME, \n" +
+                "\tOUYUNC_IM_USER.UPDATE_TIME AS UPDATETIME\n" +
                 "FROM\n" +
-                "\touyunc_im_user\n" +
+                "\tOUYUNC_IM_USER\n" +
                 "WHERE\n" +
-                "\tdeleted = 0 AND\n" +
-                "\tid = ? ","查询用户信息"),
+                "\tDELETED = 0 AND\n" +
+                "\tID = ? ","查询用户信息"),
 
         SELECT_GROUP("SELECT \n" +
-                "\touyunc_im_group.id, \n" +
-                "\touyunc_im_group.group_name as groupName, \n" +
-                "\touyunc_im_group.group_avatar as groupAvatar, \n" +
-                "\touyunc_im_group.group_description as groupDescription, \n" +
-                "\touyunc_im_group.group_announcement as groupAnnouncement, \n" +
-                "\touyunc_im_group.status, \n" +
-                "\touyunc_im_group.mushin, \n" +
-                "\touyunc_im_group.create_time as createTime, \n" +
-                "\touyunc_im_group.update_time as updateTime \n" +
+                "\tOUYUNC_IM_GROUP.ID, \n" +
+                "\tOUYUNC_IM_GROUP.GROUP_NAME AS GROUPNAME, \n" +
+                "\tOUYUNC_IM_GROUP.GROUP_AVATAR AS GROUPAVATAR, \n" +
+                "\tOUYUNC_IM_GROUP.GROUP_DESCRIPTION AS GROUPDESCRIPTION, \n" +
+                "\tOUYUNC_IM_GROUP.GROUP_ANNOUNCEMENT AS GROUPANNOUNCEMENT, \n" +
+                "\tOUYUNC_IM_GROUP.STATUS, \n" +
+                "\tOUYUNC_IM_GROUP.MUSHIN, \n" +
+                "\tOUYUNC_IM_GROUP.CREATE_TIME AS CREATETIME, \n" +
+                "\tOUYUNC_IM_GROUP.UPDATE_TIME AS UPDATETIME \n" +
                 "FROM\n" +
-                "\touyunc_im_group\n" +
+                "\tOUYUNC_IM_GROUP\n" +
                 "WHERE\n" +
-                "\tdeleted = 0 AND\n" +
-                "\tid = ? ","查询群组信息"),
+                "\tDELETED = 0 AND\n" +
+                "\tID = ? ","查询群组信息"),
 
         SELECT_IM_APP_DETAIL("SELECT \n" +
-                "\touyunc_im_app_detail.id, \n" +
-                "\touyunc_im_app_detail.app_key, \n" +
-                "\touyunc_im_app_detail.app_secret, \n" +
-                "\touyunc_im_app_detail.app_name, \n" +
-                "\touyunc_im_app_detail.im_max_connections, \n" +
-                "\touyunc_im_app_detail.create_time, \n" +
-                "\touyunc_im_app_detail.update_time, \n" +
-                "\touyunc_im_app_detail.deleted\n" +
+                "\tOUYUNC_IM_APP_DETAIL.ID, \n" +
+                "\tOUYUNC_IM_APP_DETAIL.APP_KEY, \n" +
+                "\tOUYUNC_IM_APP_DETAIL.APP_SECRET, \n" +
+                "\tOUYUNC_IM_APP_DETAIL.APP_NAME, \n" +
+                "\tOUYUNC_IM_APP_DETAIL.IM_MAX_CONNECTIONS, \n" +
+                "\tOUYUNC_IM_APP_DETAIL.CREATE_TIME, \n" +
+                "\tOUYUNC_IM_APP_DETAIL.UPDATE_TIME, \n" +
+                "\tOUYUNC_IM_APP_DETAIL.DELETED\n" +
                 "FROM\n" +
-                "\touyunc_im_app_detail\n" +
+                "\tOUYUNC_IM_APP_DETAIL\n" +
                 "WHERE\n" +
-                "\touyunc_im_app_detail.deleted = 0 AND\n" +
-                "\touyunc_im_app_detail.app_key = ? ","查询im app detail 详情信息"),
+                "\tOUYUNC_IM_APP_DETAIL.DELETED = 0 AND\n" +
+                "\tOUYUNC_IM_APP_DETAIL.APP_KEY = ? ","查询IM APP DETAIL 详情信息"),
 
-        DELETE_GROUP("delete  from  ouyunc_im_group  where id = ? ","删除群"),
-        DELETE_GROUP_USER("delete  from  ouyunc_im_group_user  where group_id = ? and user_id= ?","删除群某个成员关系"),
-        DELETE_GROUP_ALL_USER("delete  from  ouyunc_im_group_user  where group_id = ?","删除群所有成员关系"),
+        DELETE_GROUP("DELETE  FROM  OUYUNC_IM_GROUP  WHERE ID = ? ","删除群"),
+        DELETE_GROUP_USER("DELETE  FROM  OUYUNC_IM_GROUP_USER  WHERE GROUP_ID = ? AND USER_ID= ?","删除群某个成员关系"),
+        DELETE_GROUP_ALL_USER("DELETE  FROM  OUYUNC_IM_GROUP_USER  WHERE GROUP_ID = ?","删除群所有成员关系"),
 
 
-        INSERT_FRIEND("INSERT INTO ouyunc_im_friend (id, user_id, friend_user_id, friend_nick_name, is_shield, create_time, update_time) VALUES (?, ?, ?, ?, ?, ?, ?)","添加好友关系"),
+        INSERT_FRIEND("INSERT INTO OUYUNC_IM_FRIEND (ID, USER_ID, FRIEND_USER_ID, FRIEND_NICK_NAME, IS_SHIELD, CREATE_TIME, UPDATE_TIME) VALUES (?, ?, ?, ?, ?, ?, ?)","添加好友关系"),
 
-        INSERT_GROUP_USER("INSERT INTO ouyunc_im_group_user (id, group_id, user_id,group_nick_name, user_nick_name, is_leader, is_manager, is_shield, mushin, create_time) VALUES (?, ?,?, ?, ?, ?, ?, ?, ?, ?)","添加群成员关系"),
+        INSERT_GROUP_USER("INSERT INTO OUYUNC_IM_GROUP_USER (ID, GROUP_ID, USER_ID,GROUP_NICK_NAME, USER_NICK_NAME, IS_LEADER, IS_MANAGER, IS_SHIELD, MUSHIN, CREATE_TIME) VALUES (?, ?,?, ?, ?, ?, ?, ?, ?, ?)","添加群成员关系"),
 
         INSERT_READ_RECEIPT("INSERT INTO OUYUNC_IM_READ_RECEIPT(ID, MSG_ID, USER_ID) VALUES (?, ?, ?)", "插入已读消息关系"),
 
@@ -264,7 +264,10 @@ public class DbSqlConstant {
 
         INSERT_RECEIVE_MESSAGE("INSERT INTO OUYUNC_IM_RECEIVE_MESSAGE (ID, PROTOCOL, PROTOCOL_VERSION, DEVICE_TYPE, NETWORK_TYPE, ENCRYPT_TYPE, SERIALIZE_ALGORITHM, IP, `FROM`, `TO`, TYPE, CONTENT_TYPE, CONTENT, RECEIVE_TIME, CREATE_TIME, UPDATE_TIME, DELETED) VALUES ( ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , 0)", "插入收件箱消息"),
 
-        INSERT_MESSAGE("INSERT INTO OUYUNC_IM_MESSAGE (ID, PROTOCOL, PROTOCOL_VERSION, DEVICE_TYPE, NETWORK_TYPE, ENCRYPT_TYPE, SERIALIZE_ALGORITHM, IP, `FROM`, `TO`, TYPE, CONTENT_TYPE, CONTENT, SEND_TIME, CREATE_TIME, UPDATE_TIME, DELETED) VALUES ( ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , 0)", "插入消息");
+        INSERT_MESSAGE("INSERT INTO OUYUNC_IM_MESSAGE (ID, PROTOCOL, PROTOCOL_VERSION, DEVICE_TYPE, NETWORK_TYPE, ENCRYPT_TYPE, SERIALIZE_ALGORITHM, IP, `FROM`, `TO`, TYPE, CONTENT_TYPE, CONTENT, SEND_TIME, CREATE_TIME, UPDATE_TIME, DELETED) VALUES ( ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , 0)", "插入消息"),
+
+        INSERT_BLACK_LIST("INSERT INTO OUYUNC_IM_BLACKLIST (ID, IDENTITY, USER_ID, IDENTITY_TYPE, CREATE_TIME) VALUES (?, ?, ?, ?, ?) ", "将个人或群加入黑名单");
+
 
         /**
          * sql 脚本

@@ -56,4 +56,8 @@ public class CacheConstant {
     public static final String APP = "app:";
     // im app 连接
     public static final String CONNECTION = ":connection";
+    // 好友请求
+    public static final String FRIEND_REQUEST = "friend-request:";
+    // 群组请求
+    public static final String GROUP_REQUEST = "group-request:";
 }

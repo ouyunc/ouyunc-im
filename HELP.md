@@ -10,6 +10,8 @@
 (1) hash 群组黑名单:    ouyunc:im:black-list:group:${群组唯一标识}              ${用户唯一标识}    ImBlacklistBO
 (1) hash 好友黑名单:    ouyunc:im:black-list:user:${好友唯一标识}              ${用户唯一标识}    ImBlacklistBO
 
+(1) zset好友请求    ouyunc:im:message:friend-request:${from}         packet     ${消息时间戳}                    
+(1) zset群请求    ouyunc:im:message:group-request:${groupId}         packet     ${消息时间戳}
 
 
 (2) zset发件箱消息:   ouyunc:im:message:send:${用户唯一标识}                packet     ${消息时间戳}
@@ -24,3 +26,16 @@
 
 (1) hash存储 saas 中 im 连接数： ouyunc:im:app:${appKey}:connection             ${用户登录的唯一标识}  用户登录信息
 (1) opsvalue存储 saas 中 im app 连接信息： ouyunc:im:app:${appKey}   ImAppDetail
+
+
+
+
+4.0 版本更新内容：
+1，packet 中extra 字段处理；
+2，提取出公共的集群路由逻辑
+3，新增集群路由协议，路由时通过该协议进行传输
+4，验证原始集群中路由是否走pre处理器
+5，优化数据库操作
+6，去除离线消息处理
+7, 配置在线支持设备以及消息过期时间
+8，写定时任务去删除过期的消息

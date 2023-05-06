@@ -31,6 +31,7 @@ public enum MessageContentEnum {
     FRIEND_JOIN(21, String.class, "添加好友请求"),
     FRIEND_REFUSE(22, String.class, "拒绝好友请求"),
     FRIEND_AGREE(23, String.class, "同意好友请求"),
+    FRIEND_REFUSE_AND_JOIN_BLACKLIST(24, String.class, "拒绝好友请求并加入黑名单"),
 
 
 //    FRIEND_DELETE(14, String.class, "删除好友"),
@@ -47,6 +48,7 @@ public enum MessageContentEnum {
     GROUP_EXIT(36, GroupRequestContent.class, "退出群"),
     GROUP_SHIELD(37, GroupRequestContent.class, "屏蔽群"),
     GROUP_PUBLISH_ANNOUNCEMENT(38, String.class, "发布群公告"),
+    GROUP_REFUSE_AND_JOIN_BLACKLIST(39, GroupRequestContent.class, "群主/群管理员拒绝加群申请并加入黑名单"),
 
 
     CHAT_TEXT_CONTENT(51, String.class, "聊天文本内容类型"),

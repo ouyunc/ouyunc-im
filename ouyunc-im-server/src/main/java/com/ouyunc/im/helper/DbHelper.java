@@ -1,10 +1,13 @@
 package com.ouyunc.im.helper;
 
 import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.date.SystemClock;
 import cn.hutool.core.map.MapUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import com.im.cache.l1.distributed.redis.RedisDistributedL1Cache;
+import com.im.cache.l1.distributed.redis.lettuce.RedisFactory;
+import com.im.cache.l1.distributed.redis.redisson.RedissonFactory;
 import com.ouyunc.im.constant.CacheConstant;
 import com.ouyunc.im.constant.DbSqlConstant;
 import com.ouyunc.im.constant.IMConstant;
@@ -21,10 +24,13 @@ import com.ouyunc.im.domain.bo.ImFriendBO;
 import com.ouyunc.im.domain.bo.ImGroupUserBO;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.Message;
+import com.ouyunc.im.packet.message.content.GroupRequestContent;
 import com.ouyunc.im.packet.message.content.OfflineContent;
 import com.ouyunc.im.packet.message.content.ReadReceiptContent;
 import com.ouyunc.im.packet.message.content.UnreadContent;
+import com.ouyunc.im.utils.IdentityUtil;
 import com.ouyunc.im.utils.SnowflakeUtil;
+import org.redisson.api.RLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -538,5 +544,74 @@ public class  DbHelper {
      */
     public static void write2OfflineTimeline(Packet packet, String identity, long timestamp) {
         cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + identity, packet, timestamp);
+    }
+
+    /**
+     * 将from加入to的黑名单
+     * @param from
+     * @param to
+     * @param type  1-用户的黑名单，2-群组的黑名单
+     */
+    public static void joinBlacklist(String from, String to, Integer type) {
+        String nowDateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        ImUser fromUser = getUser(from);
+        if (fromUser == null) {
+            log.error("在加入黑名单处理中，获取用户失败！");
+            return;
+        }
+        ImBlacklistBO imBlacklistBO = new ImBlacklistBO(to, type, from, fromUser.getUsername(), fromUser.getNickName(),fromUser.getEmail(), fromUser.getPhoneNum(), fromUser.getIdCardNum(), fromUser.getAvatar(), fromUser.getMotto(), fromUser.getAge(), fromUser.getSex(), nowDateTime);
+        String suffix = CacheConstant.USER;
+        if (IMConstant.GROUP_TYPE_2.equals(type)) {
+            suffix = CacheConstant.GROUP;
+        }
+        cacheOperator.putHash(CacheConstant.OUYUNC + CacheConstant.IM + CacheConstant.BLACK_LIST +  suffix + to, from, imBlacklistBO);
+        dbOperator.insert(DbSqlConstant.MYSQL.INSERT_BLACK_LIST.sql(), SnowflakeUtil.nextId(), to, from, type, nowDateTime);
+    }
+
+    /**
+     * 处理好友请求相关逻辑
+     * @param packet
+     */
+    public static void handleFriendRequest(Packet packet) {
+        Message message = (Message) packet.getMessage();
+        String from = message.getFrom();
+        String to = message.getTo();
+        MessageContentEnum messageContentEnum = MessageContentEnum.prototype(message.getContentType());
+        // 添加好友请求， 拒绝好友请求直接转发消息，只有同意好友请求才会绑定好友关系
+        // 如果是好友申请，直接转发给对方各个端，不做消息保存；如果A和B同时添加好友，同时同意，则只会保留一份关系
+        RLock lock = RedissonFactory.INSTANCE.redissonClient().getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.GROUP + CacheConstant.REFUSE_AGREE + IdentityUtil.sortComboIdentity(from, to));
+        try{
+            lock.lock();
+            if (MessageContentEnum.FRIEND_AGREE.equals(messageContentEnum)) {
+                bindFriend(from, from);
+            }
+            if (MessageContentEnum.FRIEND_REFUSE_AND_JOIN_BLACKLIST.equals(messageContentEnum)) {
+                // 加入黑名单
+                joinBlacklist(to, from, IMConstant.USER_TYPE_1);
+            }
+            long timestamp = SystemClock.now();
+            cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.FRIEND_REQUEST + from, packet, timestamp);
+            cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.FRIEND_REQUEST + to, packet, timestamp);
+        }finally {
+            lock.unlock();
+        }
+    }
+
+    /**
+     * 处理群组请求
+     * @param packet
+     */
+    public static void handleGroupRequest(Packet packet) {
+        Message message = (Message) packet.getMessage();
+        GroupRequestContent groupRequestContent = JSONUtil.toBean(message.getContent(), GroupRequestContent.class);
+        String groupId = groupRequestContent.getGroupId();
+        String identity = groupRequestContent.getIdentity();
+        MessageContentEnum messageContentEnum = MessageContentEnum.prototype(message.getContentType());
+        if (MessageContentEnum.GROUP_REFUSE_AND_JOIN_BLACKLIST.equals(messageContentEnum)) {
+            joinBlacklist(identity, groupId, IMConstant.GROUP_TYPE_2);
+        }
+        long timestamp = SystemClock.now();
+        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + identity, packet, timestamp);
+        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + groupId, packet, timestamp);
     }
 }

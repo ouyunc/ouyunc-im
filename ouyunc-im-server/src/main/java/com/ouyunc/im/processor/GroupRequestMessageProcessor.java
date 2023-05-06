@@ -4,6 +4,7 @@ import cn.hutool.json.JSONUtil;
 import com.ouyunc.im.constant.enums.MessageEnum;
 import com.ouyunc.im.context.IMProcessContext;
 import com.ouyunc.im.context.IMServerContext;
+import com.ouyunc.im.helper.DbHelper;
 import com.ouyunc.im.helper.MessageHelper;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.ExtraMessage;

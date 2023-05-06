@@ -50,42 +50,43 @@ public class GroupRefuseMessageContentProcessor extends AbstractMessageContentPr
         String from = message.getFrom();
         // 根据to从分布式缓存中取出targetServerAddress目标地址
         String to = message.getTo();
-        RLock lock = RedissonFactory.INSTANCE.redissonClient().getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.GROUP + CacheConstant.REFUSE_AGREE + IdentityUtil.sortComboIdentity(from, to));
-        lock.lock();
+        RLock lock = RedissonFactory.INSTANCE.redissonClient().getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.GROUP + CacheConstant.REFUSE_AGREE + IdentityUtil.sortComboIdentity(groupRequestContent.getIdentity(), groupRequestContent.getGroupId()));
         try {
+            lock.lock();
             // 检查是否已经处理该条消息，如果处理了则不做消息的转发
             // 判断是否已经,已经是好友就不能拒绝了
-            if (MessageValidate.isGroup(to, groupRequestContent.getGroupId())) {
+            if (MessageValidate.isGroup(groupRequestContent.getIdentity(), groupRequestContent.getGroupId())) {
                 return;
             }
-            // 查找群中的管理员以及群主，向其投递加群的请求
-            List<ImGroupUserBO> groupManagerMembers = DbHelper.getGroupMembers(groupRequestContent.getGroupId(), true);
-            if (CollectionUtil.isEmpty(groupManagerMembers)) {
-                return;
-            }
-            for (ImGroupUserBO groupManagerMember : groupManagerMembers) {
-                // 排除自己
-                if (!from.equals(groupManagerMember.getUserId())) {
-                    // 判断该管理员是否在线，如果不在线放入离线消息
-                    List<LoginUserInfo> managersLoginUserInfos = UserHelper.onlineAll(groupManagerMember.getUserId());
-                    if (CollectionUtil.isEmpty(managersLoginUserInfos)) {
-                        // 存入离线消息
-                        DbHelper.write2OfflineTimeline(packet, groupManagerMember.getUserId(), SystemClock.now());
-                    }else {
-                        // 转发给某个客户端的各个设备端
-                        MessageHelper.send2MultiDevices(packet, managersLoginUserInfos);
-                    }
-                }
-            }
-
-            // 判断该对方是否在线，如果不在线放入离线消息，注意该消息不存离线，如果用户不在线则丢弃该消息
-            List<LoginUserInfo> toLoginUserInfos = UserHelper.onlineAll(to);
-            // 转发给某个客户端的各个设备端
-            MessageHelper.send2MultiDevices(packet, toLoginUserInfos);
+            // 处理群组请求
+            DbHelper.handleGroupRequest(packet);
         }finally {
             lock.unlock();
         }
+        // 查找群中的管理员以及群主，向其投递加群的请求
+        List<ImGroupUserBO> groupManagerMembers = DbHelper.getGroupMembers(groupRequestContent.getGroupId(), true);
+        if (CollectionUtil.isEmpty(groupManagerMembers)) {
+            return;
+        }
+        for (ImGroupUserBO groupManagerMember : groupManagerMembers) {
+            // 排除自己
+            if (!from.equals(groupManagerMember.getUserId())) {
+                // 判断该管理员是否在线，如果不在线放入离线消息
+                List<LoginUserInfo> managersLoginUserInfos = UserHelper.onlineAll(groupManagerMember.getUserId());
+                if (CollectionUtil.isEmpty(managersLoginUserInfos)) {
+                    // 存入离线消息
+                    DbHelper.write2OfflineTimeline(packet, groupManagerMember.getUserId(), SystemClock.now());
+                }else {
+                    // 转发给某个客户端的各个设备端
+                    MessageHelper.send2MultiDevices(packet, managersLoginUserInfos);
+                }
+            }
+        }
 
+        // 判断该对方是否在线，如果不在线放入离线消息，注意该消息不存离线，如果用户不在线则丢弃该消息
+        List<LoginUserInfo> toLoginUserInfos = UserHelper.onlineAll(to);
+        // 转发给某个客户端的各个设备端
+        MessageHelper.send2MultiDevices(packet, toLoginUserInfos);
     }
 
 }

@@ -65,18 +65,8 @@ public class  FriendRequestMessageProcessor extends AbstractMessageProcessor{
                 MessageHelper.deliveryMessage(packet, SocketAddressUtil.convert2SocketAddress(extraMessage.getTargetServerAddress()));
                 return;
             }
-            // 添加好友请求， 拒绝好友请求直接转发消息，只有同意好友请求才会绑定好友关系
-            // 如果是好友申请，直接转发给对方各个端，不做消息保存；如果A和B同时添加好友，同时同意，则只会保留一份关系
-            if (MessageContentEnum.FRIEND_AGREE.type() == message.getContentType()) {
-                // 绑定好友关系
-                RLock lock = RedissonFactory.INSTANCE.redissonClient().getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.GROUP + CacheConstant.REFUSE_AGREE + IdentityUtil.sortComboIdentity(from, to));
-                lock.lock();
-                try{
-                    DbHelper.bindFriend(from, to);
-                }finally {
-                    lock.unlock();
-                }
-            }
+            // 存到缓存中7天
+            DbHelper.handleFriendRequest(packet);
             // 转发给该好友的各个设备端
             // 获取该客户端在线的所有客户端，进行推送消息已读
             List<LoginUserInfo> toLoginUserInfos = UserHelper.onlineAll(to);
