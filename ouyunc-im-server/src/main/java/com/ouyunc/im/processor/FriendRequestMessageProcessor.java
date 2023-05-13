@@ -53,7 +53,6 @@ public class  FriendRequestMessageProcessor extends AbstractMessageProcessor{
                 extraMessage = new ExtraMessage();
             }
             // 下面是对集群以及qos消息可靠进行处理
-            String from = message.getFrom();
             // 根据to从分布式缓存中取出targetServerAddress目标地址
             String to = message.getTo();
             // 判断是否从其他服务路由过来的额消息

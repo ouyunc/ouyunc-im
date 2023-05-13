@@ -82,7 +82,16 @@ public class ImUser implements Serializable {
     private Integer status;
 
 
+    /**
+     * 好友添加的应答策略：0-需要验证，1-自动通过，2-自动拒绝
+     */
+    private Integer friendAnswerPolicy;
 
+
+    /**
+     * 群邀请的应答策略：0-需要验证，1-自动通过，2-自动拒绝
+     */
+    private Integer groupAnswerPolicy;
     /**
      * 创建时间
      */
@@ -230,7 +239,44 @@ public class ImUser implements Serializable {
         this.deleted = deleted;
     }
 
+    public Integer getFriendAnswerPolicy() {
+        return friendAnswerPolicy;
+    }
+
+    public void setFriendAnswerPolicy(Integer friendAnswerPolicy) {
+        this.friendAnswerPolicy = friendAnswerPolicy;
+    }
+
+    public Integer getGroupAnswerPolicy() {
+        return groupAnswerPolicy;
+    }
+
+    public void setGroupAnswerPolicy(Integer groupAnswerPolicy) {
+        this.groupAnswerPolicy = groupAnswerPolicy;
+    }
+
     public ImUser() {
+    }
+
+    public ImUser(Long id, String openId, String username, String password, String nickName, String email, String phoneNum, String idCardNum, String avatar, String motto, Integer age, Integer sex, Integer status, Integer friendAnswerPolicy, Integer groupAnswerPolicy, String createTime, String updateTime, Integer deleted) {
+        this.id = id;
+        this.openId = openId;
+        this.username = username;
+        this.password = password;
+        this.nickName = nickName;
+        this.email = email;
+        this.phoneNum = phoneNum;
+        this.idCardNum = idCardNum;
+        this.avatar = avatar;
+        this.motto = motto;
+        this.age = age;
+        this.sex = sex;
+        this.status = status;
+        this.friendAnswerPolicy = friendAnswerPolicy;
+        this.groupAnswerPolicy = groupAnswerPolicy;
+        this.createTime = createTime;
+        this.updateTime = updateTime;
+        this.deleted = deleted;
     }
 
     public ImUser(Long id, String openId, String username, String password, String nickName, String email, String phoneNum, String idCardNum, String avatar, String motto, Integer age, Integer sex, Integer status, String createTime, String updateTime) {

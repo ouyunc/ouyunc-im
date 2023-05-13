@@ -583,7 +583,7 @@ public class  DbHelper {
         try{
             lock.lock();
             if (MessageContentEnum.FRIEND_AGREE.equals(messageContentEnum)) {
-                bindFriend(from, from);
+                bindFriend(from, to);
             }
             if (MessageContentEnum.FRIEND_REFUSE_AND_JOIN_BLACKLIST.equals(messageContentEnum)) {
                 // 加入黑名单
@@ -592,6 +592,25 @@ public class  DbHelper {
             long timestamp = SystemClock.now();
             cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.FRIEND_REQUEST + from, packet, timestamp);
             cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.FRIEND_REQUEST + to, packet, timestamp);
+            // 判断被请求的好友当前是否已开启好友应答的状态
+            if (MessageContentEnum.FRIEND_JOIN.equals(messageContentEnum)) {
+                ImUser toUser = getUser(to);
+                if (toUser != null && !IMConstant.FRIEND_ANSWER_POLICY_WAIT_VERIFY.equals(toUser.getFriendAnswerPolicy())) {
+                    // 自动通过，追加一条对方同意的数据
+                    int contentType = MessageContentEnum.FRIEND_REFUSE.type();
+                    if (IMConstant.FRIEND_ANSWER_POLICY_AUTO_AGREE.equals(toUser.getFriendAnswerPolicy())) {
+                        // 自动同意
+                        contentType = MessageContentEnum.FRIEND_AGREE.type();
+                    }
+                    long autoAnswerTimestamp = SystemClock.now();
+                    Message autoAnswerMessage = new Message(to, from, contentType, null, null, autoAnswerTimestamp);
+                    packet.setMessage(autoAnswerMessage);
+                    cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.FRIEND_REQUEST + from, packet, autoAnswerTimestamp);
+                    cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.FRIEND_REQUEST + to, packet, autoAnswerTimestamp);
+                    // 恢复message
+                    packet.setMessage(message);
+                }
+            }
         }finally {
             lock.unlock();
         }
