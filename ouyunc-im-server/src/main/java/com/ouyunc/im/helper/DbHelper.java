@@ -23,6 +23,7 @@ import com.ouyunc.im.domain.bo.ImBlacklistBO;
 import com.ouyunc.im.domain.bo.ImFriendBO;
 import com.ouyunc.im.domain.bo.ImGroupUserBO;
 import com.ouyunc.im.packet.Packet;
+import com.ouyunc.im.packet.message.ExtraMessage;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.packet.message.content.GroupRequestContent;
 import com.ouyunc.im.packet.message.content.OfflineContent;
@@ -185,12 +186,6 @@ public class  DbHelper {
      * @param to
      */
     public static void bindFriend(String from, String to) {
-        // 首先查询两个人是否是好友，如果不是好友则添加，如果是好友则不做处理
-        ImFriendBO imFriendBO = (ImFriendBO) cacheOperator.getHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.CONTACT + CacheConstant.FRIEND + from, to);
-        // 已经是好友了
-        if (imFriendBO != null) {
-            return;
-        }
         // 从缓存获取用户信息
         ImUser fromUser = (ImUser) cacheOperator.get(CacheConstant.OUYUNC + CacheConstant.IM_USER + from);
         if (fromUser == null && IMServerContext.SERVER_CONFIG.isDbEnable()) {
@@ -576,6 +571,12 @@ public class  DbHelper {
         Message message = (Message) packet.getMessage();
         String from = message.getFrom();
         String to = message.getTo();
+        // 如果是好友直接返回
+        ImFriendBO imFriendBO = (ImFriendBO) cacheOperator.getHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.CONTACT + CacheConstant.FRIEND + from, to);
+        // 已经是好友了
+        if (imFriendBO != null) {
+            return;
+        }
         MessageContentEnum messageContentEnum = MessageContentEnum.prototype(message.getContentType());
         // 添加好友请求， 拒绝好友请求直接转发消息，只有同意好友请求才会绑定好友关系
         // 如果是好友申请，直接转发给对方各个端，不做消息保存；如果A和B同时添加好友，同时同意，则只会保留一份关系
@@ -583,7 +584,7 @@ public class  DbHelper {
         try{
             lock.lock();
             if (MessageContentEnum.FRIEND_AGREE.equals(messageContentEnum)) {
-                bindFriend(from, to);
+                bindFriend(to, from);
             }
             if (MessageContentEnum.FRIEND_REFUSE_AND_JOIN_BLACKLIST.equals(messageContentEnum)) {
                 // 加入黑名单
@@ -601,13 +602,16 @@ public class  DbHelper {
                     if (IMConstant.FRIEND_ANSWER_POLICY_AUTO_AGREE.equals(toUser.getFriendAnswerPolicy())) {
                         // 自动同意
                         contentType = MessageContentEnum.FRIEND_AGREE.type();
+                        bindFriend(from, to);
                     }
-                    long autoAnswerTimestamp = SystemClock.now();
-                    Message autoAnswerMessage = new Message(to, from, contentType, null, null, autoAnswerTimestamp);
+                    Message autoAnswerMessage = new Message(to, from, contentType, null, null, timestamp + 1);
                     packet.setMessage(autoAnswerMessage);
-                    cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.FRIEND_REQUEST + from, packet, autoAnswerTimestamp);
-                    cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.FRIEND_REQUEST + to, packet, autoAnswerTimestamp);
-                    // 恢复message
+                    cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.FRIEND_REQUEST + from, packet, timestamp + 1);
+                    cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.FRIEND_REQUEST + to, packet, timestamp + 1);
+                    // 恢复message,设置额外字段记录自定通过/拒绝 @todo
+                    ExtraMessage extraMessage = JSONUtil.toBean(message.getExtra(), ExtraMessage.class);
+                    extraMessage.setOutExtraData(String.valueOf(contentType));
+                    message.setExtra(JSONUtil.toJsonStr(extraMessage));
                     packet.setMessage(message);
                 }
             }

@@ -6,7 +6,7 @@ import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.helper.DbHelper;
 import com.ouyunc.im.helper.UserHelper;
 import com.ouyunc.im.packet.Packet;
-import com.ouyunc.im.packet.message.ExtraMessage;
+import com.ouyunc.im.packet.message.InnerExtraData;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.validate.MessageValidate;
 import io.netty.channel.ChannelHandlerContext;
@@ -80,9 +80,9 @@ public abstract class AbstractMessageProcessor implements MessageProcessor {
     public void postProcess(ChannelHandlerContext ctx, Packet packet) {
         log.info("现在处理默认的后置处理 packet: {} ...", packet);
         Message message = (Message) packet.getMessage();
-        ExtraMessage extraMessage = JSONUtil.toBean(message.getExtra(), ExtraMessage.class);
+        InnerExtraData innerExtraData = JSONUtil.toBean(message.getExtra(), InnerExtraData.class);
         // 只在消息首次到达服务的地方发送ack给外部客户端
-        if (IMServerContext.SERVER_CONFIG.isAcknowledgeModeEnable() && (extraMessage == null || !extraMessage.isDelivery())) {
+        if (IMServerContext.SERVER_CONFIG.isAcknowledgeModeEnable() && (innerExtraData == null || !innerExtraData.isDelivery())) {
             UserHelper.doReplyAck(message.getFrom(), packet);
         }
     }

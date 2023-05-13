@@ -8,6 +8,7 @@ import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.exception.IMException;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.ExtraMessage;
+import com.ouyunc.im.packet.message.InnerExtraData;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.protocol.Protocol;
 import com.ouyunc.im.utils.IdentityUtil;
@@ -79,7 +80,9 @@ public class MessageHelper {
             throw new IMException("消息接收者不能为空！");
         }
         // 判断是什么类型的协议packet,然后交给具体的协议去处理
-        ((Message) packet.getMessage()).setExtra(null);
+        Message message = (Message) packet.getMessage();
+        ExtraMessage extraMessage = JSONUtil.toBean(message.getExtra(), ExtraMessage.class);
+        message.setExtra(extraMessage.getOutExtraData());
         Protocol.prototype(packet.getProtocol(), packet.getProtocolVersion()).doSendMessage(packet, to);
     }
 
@@ -106,19 +109,19 @@ public class MessageHelper {
         // 成功才将上个路由地址改成本地，异常会在异常处理中获取上个路由服务地址及设置
         // 获取消息扩展消息
         Message message = (Message) packet.getMessage();
-        ExtraMessage extraMessage = JSONUtil.toBean(message.getExtra(), ExtraMessage.class);
-        if (extraMessage == null) {
-            extraMessage = new ExtraMessage();
+        InnerExtraData innerExtraData = JSONUtil.toBean(message.getExtra(), InnerExtraData.class);
+        if (innerExtraData == null) {
+            innerExtraData = new InnerExtraData();
         }
         // 判断是否是首次在集群间传递消息
-        if (!extraMessage.isDelivery()) {
+        if (!innerExtraData.isDelivery()) {
             // 首次进行传递时，将目标主机和所登录的设备进行设置
-            extraMessage.setDeviceEnum(DeviceEnum.getDeviceEnumByValue(packet.getDeviceType()));
+            innerExtraData.setDeviceEnum(DeviceEnum.getDeviceEnumByValue(packet.getDeviceType()));
             LoginUserInfo loginUserInfo = UserHelper.online(message.getTo(), packet.getDeviceType());
-            extraMessage.setTargetServerAddress(loginUserInfo.getLoginServerAddress());
-            extraMessage.setDelivery(true);
+            innerExtraData.setTargetServerAddress(loginUserInfo.getLoginServerAddress());
+            innerExtraData.setDelivery(true);
         }
-        message.setExtra(JSONUtil.toJsonStr(extraMessage));
+        message.setExtra(JSONUtil.toJsonStr(innerExtraData));
         log.info("正在投递消息packet: {} 到服务: {} 上 ...",packet, toSocketAddress);
         // 将本机地址作为上一个路由服务地址传递过去
         // 先从存活的注册表中查找（防止有新添加集群中的服务），然后再从全局中找到最近的服务;
@@ -136,7 +139,7 @@ public class MessageHelper {
         }
         // 异步获取 channel
         Future<Channel> channelFuture = channelPool.acquire();
-        ExtraMessage finalExtraMessage = extraMessage;
+        InnerExtraData finalInnerExtraData = innerExtraData;
         channelFuture.addListener(new FutureListener<Channel>(){
             @Override
             public void operationComplete(Future<Channel> future) throws Exception {
@@ -151,8 +154,8 @@ public class MessageHelper {
                             channel.attr(channelTagPoolKey).set(channelPool.hashCode());
                         }
                         // 当获取channel 成功的时候才将from进行设置进去
-                        finalExtraMessage.setFromServerAddress(IMServerContext.SERVER_CONFIG.getLocalServerAddress());
-                        message.setExtra(JSONUtil.toJsonStr(finalExtraMessage));
+                        finalInnerExtraData.setFromServerAddress(IMServerContext.SERVER_CONFIG.getLocalServerAddress());
+                        message.setExtra(JSONUtil.toJsonStr(finalInnerExtraData));
                         // 客户端将数据写出到中介管道中
                         channel.writeAndFlush(packet);
                         // 用完后进行释放掉

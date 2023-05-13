@@ -21,6 +21,7 @@
         <maven.compiler.target>8</maven.compiler.target>
         <netty-all.version>4.1.63.Final</netty-all.version>
         <hutool.version>5.6.3</hutool.version>
+        <google-guava.version>31.1-jre</google-guava.version>
         <log4j2.version>2.14.1</log4j2.version>
         <aeonbits-owner.version>1.0.12</aeonbits-owner.version>
         <!--注意这里的版本与jdk的版本要匹配-->
@@ -63,6 +64,10 @@
         <dependency>
             <groupId>cn.hutool</groupId>
             <artifactId>hutool-all</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
         </dependency>
         <!--==========================================log4j2===============================-->
         <dependency>
@@ -148,6 +153,13 @@
                 <artifactId>hutool-all</artifactId>
                 <version>${hutool.version}</version>
             </dependency>
+            <!-- https://mvnrepository.com/artifact/com.google.guava/guava -->
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+                <version>${google-guava.version}</version>
+            </dependency>
+
 
             <!--=========================================log4j2=====================================-->
             <!--https://blog.csdn.net/dingyufei615/article/details/104726066/-->

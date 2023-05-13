@@ -8,7 +8,7 @@ import com.ouyunc.im.constant.enums.MessageEnum;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.helper.MessageHelper;
 import com.ouyunc.im.packet.Packet;
-import com.ouyunc.im.packet.message.ExtraMessage;
+import com.ouyunc.im.packet.message.InnerExtraData;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.utils.IdentityUtil;
 import com.ouyunc.im.utils.SocketAddressUtil;
@@ -43,18 +43,18 @@ public class IMRouteFailureProcessorThread implements Runnable {
     public void run() {
         log.warn("获取不到可用的服务连接！packetId: {},开始进行重试...",packet.getPacketId());
         final Message message = (Message) packet.getMessage();
-        ExtraMessage extraMessage = JSONUtil.toBean(message.getExtra(), ExtraMessage.class);
-        if (extraMessage == null) {
-            extraMessage = new ExtraMessage();
+        InnerExtraData innerExtraData = JSONUtil.toBean(message.getExtra(), InnerExtraData.class);
+        if (innerExtraData == null) {
+            innerExtraData = new InnerExtraData();
         }
-        int currentRetry = extraMessage.getCurrentRetry();
+        int currentRetry = innerExtraData.getCurrentRetry();
         currentRetry++;
         // 解析protocolBuf 寻找最终目标机, 清空消息中的列表，添加重试次数+1
-        InetSocketAddress targetSocketAddress = SocketAddressUtil.convert2SocketAddress(extraMessage.getTargetServerAddress());
-        extraMessage.setCurrentRetry(currentRetry);
-        extraMessage.setFromServerAddress(null);
-        extraMessage.setRoutingTables(null);
-        message.setExtra(JSONUtil.toJsonStr(extraMessage));
+        InetSocketAddress targetSocketAddress = SocketAddressUtil.convert2SocketAddress(innerExtraData.getTargetServerAddress());
+        innerExtraData.setCurrentRetry(currentRetry);
+        innerExtraData.setFromServerAddress(null);
+        innerExtraData.setRoutingTables(null);
+        message.setExtra(JSONUtil.toJsonStr(innerExtraData));
         // targetSocketAddress 不改变
         if (log.isDebugEnabled()) {
             log.debug("正在进行第 {} 次重试消息 packetId:{} ",  currentRetry, packet.getPacketId());
@@ -71,7 +71,7 @@ public class IMRouteFailureProcessorThread implements Runnable {
         if (packet.getMessageType() == MessageEnum.IM_PRIVATE_CHAT.getValue() || packet.getMessageType() == MessageEnum.IM_GROUP_CHAT.getValue()) {
             // 对于多端的情况，如果已经有
             long now = SystemClock.now();
-            IMServerContext.MISSING_MESSAGES_CACHE.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.FAIL + CacheConstant.FROM + message.getFrom() + CacheConstant.COLON + CacheConstant.TO + IdentityUtil.generalComboIdentity(message.getTo(), extraMessage.getDeviceEnum().getName()), new MissingPacket(packet, IMServerContext.SERVER_CONFIG.getLocalServerAddress(), now), now);
+            IMServerContext.MISSING_MESSAGES_CACHE.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.FAIL + CacheConstant.FROM + message.getFrom() + CacheConstant.COLON + CacheConstant.TO + IdentityUtil.generalComboIdentity(message.getTo(), innerExtraData.getDeviceEnum().getName()), new MissingPacket(packet, IMServerContext.SERVER_CONFIG.getLocalServerAddress(), now), now);
         }
         log.error("已经重试 {} 次,也没解决问题,该消息packetId : {}将被丢弃！",IMServerContext.SERVER_CONFIG.getClusterMessageRetry(), packet.getPacketId());
     }

@@ -11,7 +11,7 @@ import com.ouyunc.im.helper.DbHelper;
 import com.ouyunc.im.helper.MessageHelper;
 import com.ouyunc.im.helper.UserHelper;
 import com.ouyunc.im.packet.Packet;
-import com.ouyunc.im.packet.message.ExtraMessage;
+import com.ouyunc.im.packet.message.InnerExtraData;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.utils.IdentityUtil;
 import com.ouyunc.im.utils.SocketAddressUtil;
@@ -70,21 +70,21 @@ public class PrivateChatMessageProcessor extends AbstractMessageProcessor{
         log.info("PrivateChatMessageProcessor 正在处理私聊消息packet: {}",packet);
         fireProcess(ctx, packet,(ctx0, packet0)->{
             Message message = (Message) packet.getMessage();
-            ExtraMessage extraMessage = JSONUtil.toBean(message.getExtra(), ExtraMessage.class);
-            if (extraMessage == null) {
-                extraMessage = new ExtraMessage();
+            InnerExtraData innerExtraData = JSONUtil.toBean(message.getExtra(), InnerExtraData.class);
+            if (innerExtraData == null) {
+                innerExtraData = new InnerExtraData();
             }
             // 下面是对集群以及qos消息可靠进行处理
             String from = message.getFrom();
             // 根据to从分布式缓存中取出targetServerAddress目标地址
             String to = message.getTo();
             // 判断是否从其他服务路由过来的额消息
-            if (extraMessage.isDelivery()) {
-                if (IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(extraMessage.getTargetServerAddress()) || !IMServerContext.SERVER_CONFIG.isClusterEnable()) {
-                    MessageHelper.sendMessage(packet, IdentityUtil.generalComboIdentity(to, extraMessage.getDeviceEnum().getName()));
+            if (innerExtraData.isDelivery()) {
+                if (IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(innerExtraData.getTargetServerAddress()) || !IMServerContext.SERVER_CONFIG.isClusterEnable()) {
+                    MessageHelper.sendMessage(packet, IdentityUtil.generalComboIdentity(to, innerExtraData.getDeviceEnum().getName()));
                     return;
                 }
-                MessageHelper.deliveryMessage(packet, SocketAddressUtil.convert2SocketAddress(extraMessage.getTargetServerAddress()));
+                MessageHelper.deliveryMessage(packet, SocketAddressUtil.convert2SocketAddress(innerExtraData.getTargetServerAddress()));
                 return;
             }
             // 将消息写到发件箱和及接收方的收件箱

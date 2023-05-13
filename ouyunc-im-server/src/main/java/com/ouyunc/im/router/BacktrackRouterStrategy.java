@@ -4,7 +4,7 @@ import cn.hutool.json.JSONUtil;
 import com.ouyunc.im.base.RoutingTable;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.packet.Packet;
-import com.ouyunc.im.packet.message.ExtraMessage;
+import com.ouyunc.im.packet.message.InnerExtraData;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.thread.IMRouteFailureProcessorThread;
 import com.ouyunc.im.utils.MapUtil;
@@ -35,9 +35,9 @@ public class BacktrackRouterStrategy implements RouterStrategy{
     public InetSocketAddress route(Packet packet, InetSocketAddress toSocketAddress) {
         // 获得消息
         Message message = (Message) packet.getMessage();
-        ExtraMessage extraMessage = JSONUtil.toBean(message.getExtra(), ExtraMessage.class);
+        InnerExtraData innerExtraData = JSONUtil.toBean(message.getExtra(), InnerExtraData.class);
         // 获取消息中的路由表
-        List<RoutingTable> routingTables = extraMessage.routingTables();
+        List<RoutingTable> routingTables = innerExtraData.routingTables();
         String toSocketAddressStr = SocketAddressUtil.convert2HostPort(toSocketAddress);
         // 判断路由表中是否存在本机服务（是否路由过）
         Iterator<RoutingTable> tableIterator = routingTables.iterator();
@@ -64,11 +64,11 @@ public class BacktrackRouterStrategy implements RouterStrategy{
                 Set<String> routedServerAddresses = new HashSet<>();
                 routedServerAddresses.add(toSocketAddressStr);
                 // 如何找到上一个传递消息的服务地址， extraMessage.getFromServerAddress()可能为空，在第一个节点上
-                localRoutingTable = new RoutingTable(IMServerContext.SERVER_CONFIG.getLocalServerAddress(), extraMessage.getFromServerAddress(), routedServerAddresses);
+                localRoutingTable = new RoutingTable(IMServerContext.SERVER_CONFIG.getLocalServerAddress(), innerExtraData.getFromServerAddress(), routedServerAddresses);
                 routingTables.add(localRoutingTable);
             }
             // 设置message
-            message.setExtra(JSONUtil.toJsonStr(extraMessage));
+            message.setExtra(JSONUtil.toJsonStr(innerExtraData));
             // 下面是挑选一个符合规则的服务
             // 从全量服务注册表中排除一下路由，找出一个符合条件的
             Iterator<Map.Entry<InetSocketAddress, ChannelPool>> allSocketAddressIterator = MapUtil.mergerMaps(IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.asMap(), IMServerContext.CLUSTER_GLOBAL_SERVER_REGISTRY_TABLE.asMap()).entrySet().iterator();

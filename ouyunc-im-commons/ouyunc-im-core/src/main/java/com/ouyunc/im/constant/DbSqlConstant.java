@@ -207,8 +207,8 @@ public class DbSqlConstant {
                 "\tOUYUNC_IM_USER.STATUS, \n" +
                 "\tOUYUNC_IM_USER.PHONE_NUM AS phoneNum, \n" +
                 "\tOUYUNC_IM_USER.ID_CARD_NUM AS idCardNum, \n" +
-                "\tOUYUNC_IM_USER.FRIEND_ANSWER_POLICY AS friendAnswerPolicy\n" +
-                "\tOUYUNC_IM_USER.GROUP_ANSWER_POLICY AS groupAnswerPolicy\n" +
+                "\tOUYUNC_IM_USER.FRIEND_ANSWER_POLICY AS friendAnswerPolicy,\n" +
+                "\tOUYUNC_IM_USER.GROUP_ANSWER_POLICY AS groupAnswerPolicy,\n" +
 
                 "\tOUYUNC_IM_USER.CREATE_TIME AS createTime, \n" +
                 "\tOUYUNC_IM_USER.UPDATE_TIME AS updateTime\n" +

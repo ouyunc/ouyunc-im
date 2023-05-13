@@ -9,7 +9,7 @@ import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.helper.MessageHelper;
 import com.ouyunc.im.helper.UserHelper;
 import com.ouyunc.im.packet.Packet;
-import com.ouyunc.im.packet.message.ExtraMessage;
+import com.ouyunc.im.packet.message.InnerExtraData;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.packet.message.content.ClientReplyAckContent;
 import com.ouyunc.im.utils.IdentityUtil;
@@ -44,10 +44,10 @@ public class ReplyAckMessageProcessor extends AbstractMessageProcessor{
         log.info("正在处理客户端packet: {} 的ack...", packet);
         fireProcess(ctx, packet,(ctx0, packet0)->{
             Message message = (Message) packet.getMessage();
-            ExtraMessage extraMessage = JSONUtil.toBean(message.getExtra(), ExtraMessage.class);
+            InnerExtraData innerExtraData = JSONUtil.toBean(message.getExtra(), InnerExtraData.class);
             // 判断是否是传递消息
-            if (extraMessage == null) {
-                extraMessage = new ExtraMessage();
+            if (innerExtraData == null) {
+                innerExtraData = new InnerExtraData();
             }
             // 根据to从分布式缓存中取出targetServerAddress目标地址
             String to = message.getTo();
@@ -57,9 +57,9 @@ public class ReplyAckMessageProcessor extends AbstractMessageProcessor{
             String comboIdentity = IdentityUtil.generalComboIdentity(to, deviceType);
             String targetServerAddress;
             // 如果该消息是从其他服务传递过来的，则直接进行判断就行了，否则进行多端的转发或发送
-            if (extraMessage.isDelivery()) {
+            if (innerExtraData.isDelivery()) {
                 // 如果是从其他服务传递过来的消息，则直接从目标服务取
-                targetServerAddress = extraMessage.getTargetServerAddress();
+                targetServerAddress = innerExtraData.getTargetServerAddress();
             }else {
                 // 判断消息内容类型是否是客户端回应的消息投递成功的ack
                 if (MessageContentEnum.CLIENT_REPLY_ACK_CONTENT.type() != message.getContentType()) {

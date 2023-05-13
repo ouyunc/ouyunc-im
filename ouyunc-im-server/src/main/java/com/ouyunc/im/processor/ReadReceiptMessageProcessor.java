@@ -11,7 +11,7 @@ import com.ouyunc.im.helper.DbHelper;
 import com.ouyunc.im.helper.MessageHelper;
 import com.ouyunc.im.helper.UserHelper;
 import com.ouyunc.im.packet.Packet;
-import com.ouyunc.im.packet.message.ExtraMessage;
+import com.ouyunc.im.packet.message.InnerExtraData;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.packet.message.content.ReadReceiptContent;
 import com.ouyunc.im.utils.IdentityUtil;
@@ -48,19 +48,19 @@ public class ReadReceiptMessageProcessor extends AbstractMessageProcessor {
             // 获取需要回执的消息id
             Message message = (Message) packet.getMessage();
             // 未开启db
-            ExtraMessage extraMessage = JSONUtil.toBean(message.getExtra(), ExtraMessage.class);
-            if (extraMessage == null) {
-                extraMessage = new ExtraMessage();
+            InnerExtraData innerExtraData = JSONUtil.toBean(message.getExtra(), InnerExtraData.class);
+            if (innerExtraData == null) {
+                innerExtraData = new InnerExtraData();
             }
             // 接收方
             String to = message.getTo();
             // 是传递过来的,判断该消息最终服务地址是否是本机
-            if (extraMessage.isDelivery()) {
-                if (IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(extraMessage.getTargetServerAddress()) || !IMServerContext.SERVER_CONFIG.isClusterEnable()) {
-                    MessageHelper.sendMessage(packet, IdentityUtil.generalComboIdentity(to, extraMessage.getDeviceEnum().getName()));
+            if (innerExtraData.isDelivery()) {
+                if (IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(innerExtraData.getTargetServerAddress()) || !IMServerContext.SERVER_CONFIG.isClusterEnable()) {
+                    MessageHelper.sendMessage(packet, IdentityUtil.generalComboIdentity(to, innerExtraData.getDeviceEnum().getName()));
                     return;
                 }
-                MessageHelper.deliveryMessage(packet, SocketAddressUtil.convert2SocketAddress(extraMessage.getTargetServerAddress()));
+                MessageHelper.deliveryMessage(packet, SocketAddressUtil.convert2SocketAddress(innerExtraData.getTargetServerAddress()));
                 return;
             }
             // 判断是否是已读消息内容类型

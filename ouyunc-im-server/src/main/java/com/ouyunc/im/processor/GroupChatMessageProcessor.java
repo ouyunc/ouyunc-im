@@ -12,7 +12,7 @@ import com.ouyunc.im.helper.DbHelper;
 import com.ouyunc.im.helper.MessageHelper;
 import com.ouyunc.im.helper.UserHelper;
 import com.ouyunc.im.packet.Packet;
-import com.ouyunc.im.packet.message.ExtraMessage;
+import com.ouyunc.im.packet.message.InnerExtraData;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.utils.IdentityUtil;
 import com.ouyunc.im.utils.SocketAddressUtil;
@@ -68,21 +68,21 @@ public class GroupChatMessageProcessor extends AbstractMessageProcessor {
         log.info("GroupChatMessageProcessor 正在处理群聊消息packet: {}", packet);
         fireProcess(ctx, packet, (ctx0, packet0)->{
             Message message = (Message) packet.getMessage();
-            ExtraMessage extraMessage = JSONUtil.toBean(message.getExtra(), ExtraMessage.class);
-            if (extraMessage == null) {
-                extraMessage = new ExtraMessage();
+            InnerExtraData innerExtraData = JSONUtil.toBean(message.getExtra(), InnerExtraData.class);
+            if (innerExtraData == null) {
+                innerExtraData = new InnerExtraData();
             }
             // from 代表群组中的发送者
             String from = message.getFrom();
             // to 代表群组唯一表示
             String to = message.getTo();
             // 判断是否从其他服务路由过来的额消息
-            if (extraMessage.isDelivery()) {
-                if (IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(extraMessage.getTargetServerAddress()) || !IMServerContext.SERVER_CONFIG.isClusterEnable()) {
-                    MessageHelper.sendMessage(packet, IdentityUtil.generalComboIdentity(to, extraMessage.getDeviceEnum().getName()));
+            if (innerExtraData.isDelivery()) {
+                if (IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(innerExtraData.getTargetServerAddress()) || !IMServerContext.SERVER_CONFIG.isClusterEnable()) {
+                    MessageHelper.sendMessage(packet, IdentityUtil.generalComboIdentity(to, innerExtraData.getDeviceEnum().getName()));
                     return;
                 }
-                MessageHelper.deliveryMessage(packet, SocketAddressUtil.convert2SocketAddress(extraMessage.getTargetServerAddress()));
+                MessageHelper.deliveryMessage(packet, SocketAddressUtil.convert2SocketAddress(innerExtraData.getTargetServerAddress()));
                 return;
             }
             // 根据群唯一标识to,获取当前群中所有群成员
