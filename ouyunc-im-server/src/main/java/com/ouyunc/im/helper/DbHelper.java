@@ -339,7 +339,11 @@ public class  DbHelper {
         ImFriendBO imFriendBO = (ImFriendBO) cacheOperator.getHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.CONTACT + CacheConstant.FRIEND + from, to);
         if (imFriendBO == null && IMServerContext.SERVER_CONFIG.isDbEnable()) {
             imFriendBO = dbOperator.selectOne(DbSqlConstant.MYSQL.SELECT_FRIEND_USER.sql(), ImFriendBO.class, from, to);
+            if (imFriendBO != null) {
+                cacheOperator.putHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.CONTACT + CacheConstant.FRIEND + from, to, imFriendBO);
+            }
         }
+
         return imFriendBO;
     }
 
@@ -572,11 +576,12 @@ public class  DbHelper {
         String from = message.getFrom();
         String to = message.getTo();
         // 如果是好友直接返回
-        ImFriendBO imFriendBO = (ImFriendBO) cacheOperator.getHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.CONTACT + CacheConstant.FRIEND + from, to);
+        ImFriendBO imFriendBO = getFriend(from, to);
         // 已经是好友了
         if (imFriendBO != null) {
             return;
         }
+
         MessageContentEnum messageContentEnum = MessageContentEnum.prototype(message.getContentType());
         // 添加好友请求， 拒绝好友请求直接转发消息，只有同意好友请求才会绑定好友关系
         // 如果是好友申请，直接转发给对方各个端，不做消息保存；如果A和B同时添加好友，同时同意，则只会保留一份关系
