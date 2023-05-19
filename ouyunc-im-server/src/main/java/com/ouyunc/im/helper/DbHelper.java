@@ -325,6 +325,9 @@ public class  DbHelper {
         ImGroup imGroup = (ImGroup) cacheOperator.get(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + identity);
         if (imGroup == null && IMServerContext.SERVER_CONFIG.isDbEnable()) {
             imGroup = dbOperator.selectOne(DbSqlConstant.MYSQL.SELECT_GROUP.sql(), ImGroup.class, identity);
+            if (imGroup != null) {
+                cacheOperator.put(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + identity, imGroup);
+            }
         }
         return imGroup;
     }

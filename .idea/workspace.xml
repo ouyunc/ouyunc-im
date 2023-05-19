@@ -9,8 +9,12 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v3.1.1-beta 添加群和好友请求缓存">
+    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v3.1.1-beta 删除好友">
+      <change afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupInviteMessageContentProcessor.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/HELP.md" beforeDir="false" afterPath="$PROJECT_DIR$/HELP.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/IMConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/IMConstant.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/enums/MessageContentEnum.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/enums/MessageContentEnum.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/DbHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/DbHelper.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -354,14 +358,7 @@
       <workItem from="1683457405199" duration="866000" />
       <workItem from="1683458982269" duration="27059000" />
       <workItem from="1684285810219" duration="3072000" />
-      <workItem from="1684416697282" duration="3780000" />
-    </task>
-    <task id="LOCAL-00127" summary="v3.0-beta  优化消息已读">
-      <created>1672638555082</created>
-      <option name="number" value="00127" />
-      <option name="presentableId" value="LOCAL-00127" />
-      <option name="project" value="LOCAL" />
-      <updated>1672638555082</updated>
+      <workItem from="1684416697282" duration="12861000" />
     </task>
     <task id="LOCAL-00128" summary="v3.0-beta  优化消息已读">
       <created>1672647917937</created>
@@ -699,7 +696,14 @@
       <option name="project" value="LOCAL" />
       <updated>1683991216074</updated>
     </task>
-    <option name="localTasksCounter" value="176" />
+    <task id="LOCAL-00176" summary="v3.1.1-beta 删除好友">
+      <created>1684457005934</created>
+      <option name="number" value="00176" />
+      <option name="presentableId" value="LOCAL-00176" />
+      <option name="project" value="LOCAL" />
+      <updated>1684457005935</updated>
+    </task>
+    <option name="localTasksCounter" value="177" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -760,7 +764,6 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
-    <MESSAGE value="v3.0-beta  优化客户端" />
     <MESSAGE value="v3.0-beta  优化群聊" />
     <MESSAGE value="v3.0-beta  优化消息已读" />
     <MESSAGE value="v3.0-beta  优化离线消息" />
@@ -785,7 +788,8 @@
     <MESSAGE value="v3.1.1-beta" />
     <MESSAGE value="v3.1.1-beta 新增群别名" />
     <MESSAGE value="v3.1.1-beta 添加群和好友请求缓存" />
-    <option name="LAST_COMMIT_MESSAGE" value="v3.1.1-beta 添加群和好友请求缓存" />
+    <MESSAGE value="v3.1.1-beta 删除好友" />
+    <option name="LAST_COMMIT_MESSAGE" value="v3.1.1-beta 删除好友" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

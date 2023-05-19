@@ -49,6 +49,7 @@ public enum MessageContentEnum {
     GROUP_SHIELD(37, GroupRequestContent.class, "屏蔽群"),
     GROUP_PUBLISH_ANNOUNCEMENT(38, String.class, "发布群公告"),
     GROUP_REFUSE_AND_JOIN_BLACKLIST(39, GroupRequestContent.class, "群主/群管理员拒绝加群申请并加入黑名单"),
+    GROUP_INVITE_JOIN(40, GroupRequestContent.class, "群成员邀请他人加群"),
 
 
     CHAT_TEXT_CONTENT(51, String.class, "聊天文本内容类型"),

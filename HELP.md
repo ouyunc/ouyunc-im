@@ -41,3 +41,4 @@
 8，写定时任务去删除过期的消息
 9, js-SDK 修改TextEncode 以及雪花算法 bigInt其他浏览器不支持问题
 10, 添加好友或群邀请，自动应答策略
+11, 去除hutool ,使用fastJson以及其他工具类来替代hutool
