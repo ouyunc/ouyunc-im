@@ -32,4 +32,20 @@ public class ExtraMessage implements Serializable {
     public void setInnerExtraData(InnerExtraData innerExtraData) {
         this.innerExtraData = innerExtraData;
     }
+
+    public ExtraMessage() {
+    }
+
+    public ExtraMessage(String outExtraData) {
+        this.outExtraData = outExtraData;
+    }
+
+    public ExtraMessage(InnerExtraData innerExtraData) {
+        this.innerExtraData = innerExtraData;
+    }
+
+    public ExtraMessage(String outExtraData, InnerExtraData innerExtraData) {
+        this.outExtraData = outExtraData;
+        this.innerExtraData = innerExtraData;
+    }
 }

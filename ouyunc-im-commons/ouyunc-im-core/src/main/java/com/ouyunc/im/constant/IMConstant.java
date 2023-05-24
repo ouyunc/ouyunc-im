@@ -350,18 +350,4 @@ public class IMConstant {
      */
     public static final String REMOTE_LOGIN_NOTIFICATIONS = "你的ouyunc账号在另一台设备(ip: %s)上登录，你已被迫下线。如果本人不知晓，请立即冻结账号，并及时修改相关密码。";
 
-    /**
-     * 好友添加请求应答策略待验证
-     */
-    public static final Integer FRIEND_ANSWER_POLICY_WAIT_VERIFY = 0;
-
-    /**
-     * 好友添加请求应答策略自动同意
-     */
-    public static final Integer FRIEND_ANSWER_POLICY_AUTO_AGREE = 1;
-
-    /**
-     * 好友添加请求应答策略自动拒绝
-     */
-    public static final Integer FRIEND_ANSWER_POLICY_AUTO_REFUSE = 2;
 }

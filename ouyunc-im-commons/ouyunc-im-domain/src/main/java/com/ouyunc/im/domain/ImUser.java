@@ -83,13 +83,13 @@ public class ImUser implements Serializable {
 
 
     /**
-     * 好友添加的应答策略：0-需要验证，1-自动通过，2-自动拒绝
+     * 好友添加的应答策略：0-需要验证，1-自动通过
      */
     private Integer friendAnswerPolicy;
 
 
     /**
-     * 群邀请的应答策略：0-需要验证，1-自动通过，2-自动拒绝
+     * 群邀请的应答策略：0-需要验证，1-自动通过
      */
     private Integer groupAnswerPolicy;
     /**
