@@ -44,6 +44,7 @@ public class  FriendRequestMessageProcessor extends AbstractMessageProcessor{
         log.info("FriendRequestMessageProcessor 正在处理好友请求消息packet: {}", packet);
         fireProcess(ctx, packet, (ctx0, packet0)->{
             Message message = (Message) packet.getMessage();
+            String from = message.getFrom();
             InnerExtraData innerExtraData = JSONUtil.toBean(message.getExtra(), InnerExtraData.class);
             if (innerExtraData == null) {
                 innerExtraData = new InnerExtraData();

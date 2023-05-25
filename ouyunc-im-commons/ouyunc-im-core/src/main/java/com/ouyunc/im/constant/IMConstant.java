@@ -335,19 +335,31 @@ public class IMConstant {
      */
     public static final Integer NOT_MUSHIN = 0;
 
-    /**
-     * 加入黑名单
-     */
-    public static final Integer JOIN_BLACKLIST = 1;
 
-    /**
-     * 解除黑名单
-     */
-    public static final Integer NOT_JOIN_BLACKLIST = 0;
 
     /**
      * 同一设备类型，重复登录获远程登录通知
      */
     public static final String REMOTE_LOGIN_NOTIFICATIONS = "你的ouyunc账号在另一台设备(ip: %s)上登录，你已被迫下线。如果本人不知晓，请立即冻结账号，并及时修改相关密码。";
+
+    /**
+     * 好友添加请求应答策略待验证
+     */
+    public static final Integer FRIEND_ANSWER_POLICY_WAIT_VERIFY = 0;
+
+    /**
+     * 好友添加请求应答策略自动同意
+     */
+    public static final Integer FRIEND_ANSWER_POLICY_AUTO_AGREE = 1;
+
+    /**
+     * 群添加请求应答策略待验证
+     */
+    public static final Integer GROUP_ANSWER_POLICY_WAIT_VERIFY = 0;
+
+    /**
+     * 群添加请求应答策略自动同意
+     */
+    public static final Integer GROUP_ANSWER_POLICY_AUTO_AGREE = 1;
 
 }

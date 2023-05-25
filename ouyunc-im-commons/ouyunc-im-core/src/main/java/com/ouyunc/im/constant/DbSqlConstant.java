@@ -207,8 +207,8 @@ public class DbSqlConstant {
                 "\tOUYUNC_IM_USER.STATUS, \n" +
                 "\tOUYUNC_IM_USER.PHONE_NUM AS phoneNum, \n" +
                 "\tOUYUNC_IM_USER.ID_CARD_NUM AS idCardNum, \n" +
-                "\tOUYUNC_IM_USER.FRIEND_ANSWER_POLICY AS friendAnswerPolicy,\n" +
-                "\tOUYUNC_IM_USER.GROUP_ANSWER_POLICY AS groupAnswerPolicy,\n" +
+                "\tOUYUNC_IM_USER.FRIEND_JOIN_POLICY AS friendJoinPolicy,\n" +
+                "\tOUYUNC_IM_USER.GROUP_INVITE_POLICY AS groupInvitePolicy,\n" +
 
                 "\tOUYUNC_IM_USER.CREATE_TIME AS createTime, \n" +
                 "\tOUYUNC_IM_USER.UPDATE_TIME AS updateTime\n" +
@@ -226,6 +226,7 @@ public class DbSqlConstant {
                 "\tOUYUNC_IM_GROUP.GROUP_ANNOUNCEMENT AS groupAnnouncement, \n" +
                 "\tOUYUNC_IM_GROUP.STATUS, \n" +
                 "\tOUYUNC_IM_GROUP.MUSHIN, \n" +
+                "\tOUYUNC_IM_GROUP.GROUP_JOIN_POLICY as groupJoinPolicy, \n" +
                 "\tOUYUNC_IM_GROUP.CREATE_TIME AS createTime, \n" +
                 "\tOUYUNC_IM_GROUP.UPDATE_TIME AS updateTime \n" +
                 "FROM\n" +

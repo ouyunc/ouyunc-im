@@ -41,6 +41,11 @@ public class ImGroup implements Serializable {
     private String groupAnnouncement;
 
     /**
+     * 群加入策略：0-加群需要验证，1-加群自动同意
+     */
+    private Integer groupJoinPolicy;
+
+    /**
      * 是否全体禁言（群主和管理员除外），0-不禁言，1-禁言
      */
     private Integer mushin;
@@ -140,6 +145,14 @@ public class ImGroup implements Serializable {
 
     public void setMushin(Integer mushin) {
         this.mushin = mushin;
+    }
+
+    public Integer getGroupJoinPolicy() {
+        return groupJoinPolicy;
+    }
+
+    public void setGroupJoinPolicy(Integer groupJoinPolicy) {
+        this.groupJoinPolicy = groupJoinPolicy;
     }
 
     public byte getDeleted() {

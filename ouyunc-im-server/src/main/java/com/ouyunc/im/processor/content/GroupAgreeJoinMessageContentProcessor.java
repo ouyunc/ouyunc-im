@@ -26,10 +26,10 @@ import java.util.List;
 /**
  * 同意加群
  */
-public class GroupAgreeMessageContentProcessor extends AbstractMessageContentProcessor{
+public class GroupAgreeJoinMessageContentProcessor extends AbstractMessageContentProcessor{
 
 
-    private static Logger log = LoggerFactory.getLogger(GroupAgreeMessageContentProcessor.class);
+    private static Logger log = LoggerFactory.getLogger(GroupAgreeJoinMessageContentProcessor.class);
 
     @Override
     public MessageContentEnum messageContentType() {

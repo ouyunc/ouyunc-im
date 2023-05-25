@@ -85,13 +85,13 @@ public class ImUser implements Serializable {
     /**
      * 好友添加的应答策略：0-需要验证，1-自动通过
      */
-    private Integer friendAnswerPolicy;
+    private Integer friendJoinPolicy;
 
 
     /**
      * 群邀请的应答策略：0-需要验证，1-自动通过
      */
-    private Integer groupAnswerPolicy;
+    private Integer groupInvitePolicy;
     /**
      * 创建时间
      */
@@ -239,26 +239,26 @@ public class ImUser implements Serializable {
         this.deleted = deleted;
     }
 
-    public Integer getFriendAnswerPolicy() {
-        return friendAnswerPolicy;
+    public Integer getFriendJoinPolicy() {
+        return friendJoinPolicy;
     }
 
-    public void setFriendAnswerPolicy(Integer friendAnswerPolicy) {
-        this.friendAnswerPolicy = friendAnswerPolicy;
+    public void setFriendJoinPolicy(Integer friendJoinPolicy) {
+        this.friendJoinPolicy = friendJoinPolicy;
     }
 
-    public Integer getGroupAnswerPolicy() {
-        return groupAnswerPolicy;
+    public Integer getGroupInvitePolicy() {
+        return groupInvitePolicy;
     }
 
-    public void setGroupAnswerPolicy(Integer groupAnswerPolicy) {
-        this.groupAnswerPolicy = groupAnswerPolicy;
+    public void setGroupInvitePolicy(Integer groupInvitePolicy) {
+        this.groupInvitePolicy = groupInvitePolicy;
     }
 
     public ImUser() {
     }
 
-    public ImUser(Long id, String openId, String username, String password, String nickName, String email, String phoneNum, String idCardNum, String avatar, String motto, Integer age, Integer sex, Integer status, Integer friendAnswerPolicy, Integer groupAnswerPolicy, String createTime, String updateTime, Integer deleted) {
+    public ImUser(Long id, String openId, String username, String password, String nickName, String email, String phoneNum, String idCardNum, String avatar, String motto, Integer age, Integer sex, Integer status, Integer friendJoinPolicy, Integer groupInvitePolicy, String createTime, String updateTime, Integer deleted) {
         this.id = id;
         this.openId = openId;
         this.username = username;
@@ -272,8 +272,8 @@ public class ImUser implements Serializable {
         this.age = age;
         this.sex = sex;
         this.status = status;
-        this.friendAnswerPolicy = friendAnswerPolicy;
-        this.groupAnswerPolicy = groupAnswerPolicy;
+        this.friendJoinPolicy = friendJoinPolicy;
+        this.groupInvitePolicy = groupInvitePolicy;
         this.createTime = createTime;
         this.updateTime = updateTime;
         this.deleted = deleted;

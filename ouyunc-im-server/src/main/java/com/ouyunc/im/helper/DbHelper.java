@@ -39,6 +39,8 @@ import org.slf4j.LoggerFactory;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
@@ -564,9 +566,10 @@ public class  DbHelper {
             if (MessageContentEnum.FRIEND_AGREE.equals(messageContentEnum)) {
                 bindFriend(to, from);
             }
+            long now = SystemClock.now();
             // 将消息缓存到自己的发件箱和别人的收件箱各一份数据
-            cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.FRIEND_REQUEST + from, packet, SystemClock.now());
-            cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.FRIEND_REQUEST + to, packet, SystemClock.now());
+            cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.FRIEND_REQUEST + from, packet, now);
+            cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.FRIEND_REQUEST + to, packet, now);
         } finally {
             lock.unlock();
         }
@@ -593,112 +596,80 @@ public class  DbHelper {
 
     /**
      * 处理群邀请请求
-     *
      * @param packet
      */
     public static void handleGroupInviteRequest(Packet packet) {
         Message message = (Message) packet.getMessage();
-        String from = message.getFrom();
         GroupRequestContent groupRequestContent = JSONUtil.toBean(message.getContent(), GroupRequestContent.class);
+        // 群组id
         String groupId = groupRequestContent.getGroupId();
-        String identity = groupRequestContent.getIdentity();
-        // 邀请好友加入群
         // 被邀请人id 集合
         JSONArray invitedUserIds = JSONUtil.parseArray(groupRequestContent.getData());
-        // 获取当前邀请人在群中的身份（群主、管理员, 普通成员）
-        ImGroupUserBO visitor = DbHelper.getGroupMember(identity, groupId);
-        if (visitor != null) {
-            long timestamp = SystemClock.now();
-            if (IMConstant.GROUP_LEADER.equals(visitor.getIsLeader()) || IMConstant.GROUP_MANAGER.equals(visitor.getIsManager())) {
-                // 群主或者群管理员邀请
-                for (Object invitedUserId : invitedUserIds) {
-                    // 判断被邀请者是否已经在该群中
-                    ImGroupUserBO groupMember = DbHelper.getGroupMember((String) invitedUserId, groupId);
-                    if (groupMember != null) {
-                        continue;
-                    }
-                    // 判断该用户设置的群邀请规则
-                    ImUser invitedUser = DbHelper.getUser((String) invitedUserId);
-                    if (invitedUser != null) {
-                        // 待验证
-                        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + from, packet, timestamp);
-                        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + invitedUserId, packet, timestamp);
-                        // 自动同意
-//                        if (IMConstant.GROUP_ANSWER_POLICY_AUTO_AGREE.equals(invitedUser.getGroupAnswerPolicy())) {
-//                            int contentType = MessageContentEnum.GROUP_REFUSE.type();
-//                            if (IMConstant.GROUP_ANSWER_POLICY_AUTO_AGREE.equals(invitedUser.getGroupAnswerPolicy())) {
-//                                // 自动同意
-//                                contentType = MessageContentEnum.GROUP_AGREE.type();
-//                                bindGroup((String) invitedUserId, groupId);
-//                            }
-//                            Message autoAnswerMessage = new Message((String) invitedUserId, groupId, contentType, null, null, timestamp + 1);
-//                            packet.setMessage(autoAnswerMessage);
-//                            cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + invitedUserId, packet, timestamp + 1);
-//                            cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + from, packet, timestamp + 1);
-//                            // 恢复message,设置额外字段记录自定通过/拒绝 @todo
-//                            ExtraMessage extraMessage = JSONUtil.toBean(message.getExtra(), ExtraMessage.class);
-//                            extraMessage.setOutExtraData(String.valueOf(contentType));
-//                            message.setExtra(JSONUtil.toJsonStr(extraMessage));
-//                            packet.setMessage(message);
-//                        }
-                    }
-                }
-            } else {
-                // 普通群成员邀请
-                for (Object invitedUserId : invitedUserIds) {
-                    // 判断被邀请者是否已经在该群中
-                    ImGroupUserBO groupMember = DbHelper.getGroupMember((String) invitedUserId, groupId);
-                    if (groupMember != null) {
-                        continue;
-                    }
-                    //  判断是否普通群成员邀请
-                    // 判断该用户设置的群邀请规则
-                    ImUser invitedUser = DbHelper.getUser((String) invitedUserId);
-                    if (invitedUser != null) {
-                        // 待验证
-                        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + invitedUserId, packet, timestamp);
-                        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + from, packet, timestamp);
-                        // 自动同意
-//                        if (IMConstant.GROUP_ANSWER_POLICY_AUTO_AGREE.equals(invitedUser.getGroupAnswerPolicy()) ) {
-//                            int contentType = MessageContentEnum.GROUP_REFUSE.type();
-//                            if (IMConstant.GROUP_ANSWER_POLICY_AUTO_AGREE.equals(invitedUser.getGroupAnswerPolicy())) {
-//                                // 自动同意
-//                                contentType = MessageContentEnum.GROUP_AGREE.type();
-//                                // 需要发给该群的群主和管理员去让其同意与否
-//                                // 获取此时该群的群主和管理员，将消息进行转发
-//                                List<ImGroupUserBO> groupMembers = getGroupMembers(groupId, true);
-//                                if (groupMembers != null) {
-//                                    for (ImGroupUserBO imGroupUser : groupMembers) {
-//                                        // 判断该用户是否在线，如果不在线放入离线消息
-//                                        List<LoginUserInfo> groupManagerUserInfos = UserHelper.onlineAll(imGroupUser.getUserId());
-//                                        if (CollectionUtil.isEmpty(groupManagerUserInfos)) {
-//                                            // 存入离线消息
-//                                            write2OfflineTimeline(packet, imGroupUser.getUserId(), timestamp);
-//                                        }else {
-//                                            // 转发给某个客户端的各个设备端
-//                                            MessageHelper.send2MultiDevices(packet, groupManagerUserInfos);
-//                                        }
-//
-//                                    }
-//                                }
-//                            }
-                        Message autoAnswerMessage = new Message((String) invitedUserId, groupId, 1, null, null, timestamp + 1);
-                        packet.setMessage(autoAnswerMessage);
-                        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + invitedUserId, packet, timestamp + 1);
-                        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + from, packet, timestamp + 1);
-                        // 恢复message,设置额外字段记录自定通过/拒绝 @todo
-                        ExtraMessage extraMessage = JSONUtil.toBean(message.getExtra(), ExtraMessage.class);
-                        extraMessage.setOutExtraData(String.valueOf(1));
-                        message.setExtra(JSONUtil.toJsonStr(extraMessage));
-                        packet.setMessage(message);
-                    }
-                }
+        long now = SystemClock.now();
+        // 无论谁邀请邀请，都需要被邀请方同意
+        for (Object invitedUserId : invitedUserIds) {
+            // 判断被邀请者是否已经在该群中
+            ImGroupUserBO groupMember = DbHelper.getGroupMember((String) invitedUserId, groupId);
+            // 该用户已经在群里了
+            if (groupMember != null) {
+                continue;
+            }
+            // 只保留被邀请人的信息
+            cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + invitedUserId, packet, now);
+        }
+    }
 
+    /**
+     * 处理群邀请同意处理
+     * @param packet
+     */
+    public static void handleGroupAgreeInviteRequest(Packet packet) {
+        Message message = (Message) packet.getMessage();
+        String from = message.getFrom();
+        String to = message.getTo();
+        GroupRequestContent groupRequestContent = JSONUtil.toBean(message.getContent(), GroupRequestContent.class);
+        // 群组id
+        String groupId = groupRequestContent.getGroupId();
+        // 获取当前邀请人在群中的身份（群主、管理员, 普通成员）
+        ImGroupUserBO visitor = DbHelper.getGroupMember(to, groupId);
+        if (visitor == null) {
+            return;
+        }
+        long now = SystemClock.now();
+        if (IMConstant.GROUP_LEADER.equals(visitor.getIsLeader()) || IMConstant.GROUP_MANAGER.equals(visitor.getIsManager()) ) {
+            bindGroup(from, groupId);
+        }else {
+            // 该请求是普通成员的邀请，需要发送给该群的其他群主或管理员去授权同意
+            // 查找群中的管理员以及群主，向其投递加群的请求
+            List<ImGroupUserBO> groupManagerMembers = getGroupMembers(groupRequestContent.getGroupId(), true);
+            if (CollectionUtil.isEmpty(groupManagerMembers)) {
+                return;
+            }
+            for (ImGroupUserBO groupManagerMember : groupManagerMembers) {
+                // 判断该管理员是否在线，如果不在线放入离线消息
+                List<LoginUserInfo> managersLoginUserInfos = UserHelper.onlineAll(groupManagerMember.getUserId());
+                if (CollectionUtil.isEmpty(managersLoginUserInfos)) {
+                    // 存入离线消息
+                    write2OfflineTimeline(packet, groupManagerMember.getUserId(), now);
+                }else {
+                    // 转发给某个客户端的各个设备端
+                    MessageHelper.send2MultiDevices(packet, managersLoginUserInfos);
+                }
+                // 并将数据缓存一份缓存中
+                cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + groupManagerMember.getUserId(), packet, now);
             }
         }
+        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + from, packet, now);
+    }
 
-
-
-
+    /**
+     * 处理群邀请拒绝处理
+     * @param packet
+     */
+    public static void handleGroupRefuseInviteRequest(Packet packet) {
+        Message message = (Message) packet.getMessage();
+        String from = message.getFrom();
+        // 只是保存相关信息
+        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + from, packet, SystemClock.now());
     }
 }

@@ -27,8 +27,8 @@ import java.util.List;
  * 拒绝加群
  * @author fzx
  */
-public class GroupRefuseMessageContentProcessor extends AbstractMessageContentProcessor{
-    private static Logger log = LoggerFactory.getLogger(GroupRefuseMessageContentProcessor.class);
+public class GroupRefuseJoinMessageContentProcessor extends AbstractMessageContentProcessor{
+    private static Logger log = LoggerFactory.getLogger(GroupRefuseJoinMessageContentProcessor.class);
 
     @Override
     public MessageContentEnum messageContentType() {
