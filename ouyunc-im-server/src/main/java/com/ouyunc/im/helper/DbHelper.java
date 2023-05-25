@@ -24,7 +24,6 @@ import com.ouyunc.im.domain.bo.ImBlacklistBO;
 import com.ouyunc.im.domain.bo.ImFriendBO;
 import com.ouyunc.im.domain.bo.ImGroupUserBO;
 import com.ouyunc.im.packet.Packet;
-import com.ouyunc.im.packet.message.ExtraMessage;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.packet.message.content.GroupRequestContent;
 import com.ouyunc.im.packet.message.content.OfflineContent;
@@ -39,8 +38,6 @@ import org.slf4j.LoggerFactory;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
@@ -52,7 +49,7 @@ public class  DbHelper {
     /**
      * redis 缓存操作类
      */
-    private static RedisDistributedL1Cache<String, Object> cacheOperator = new RedisDistributedL1Cache<>();
+    public static RedisDistributedL1Cache<String, Object> cacheOperator = new RedisDistributedL1Cache<>();
 
     /**
      * 数据库操作类
@@ -598,18 +595,19 @@ public class  DbHelper {
      * 处理群邀请请求
      * @param packet
      */
+    @Deprecated
     public static void handleGroupInviteRequest(Packet packet) {
         Message message = (Message) packet.getMessage();
         GroupRequestContent groupRequestContent = JSONUtil.toBean(message.getContent(), GroupRequestContent.class);
         // 群组id
         String groupId = groupRequestContent.getGroupId();
         // 被邀请人id 集合
-        JSONArray invitedUserIds = JSONUtil.parseArray(groupRequestContent.getData());
+        List<String> invitedUserIds = groupRequestContent.getInvitedUserIdList();
         long now = SystemClock.now();
         // 无论谁邀请邀请，都需要被邀请方同意
-        for (Object invitedUserId : invitedUserIds) {
+        for (String invitedUserId : invitedUserIds) {
             // 判断被邀请者是否已经在该群中
-            ImGroupUserBO groupMember = DbHelper.getGroupMember((String) invitedUserId, groupId);
+            ImGroupUserBO groupMember = DbHelper.getGroupMember(invitedUserId, groupId);
             // 该用户已经在群里了
             if (groupMember != null) {
                 continue;
@@ -618,6 +616,7 @@ public class  DbHelper {
             cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + invitedUserId, packet, now);
         }
     }
+
 
     /**
      * 处理群邀请同意处理

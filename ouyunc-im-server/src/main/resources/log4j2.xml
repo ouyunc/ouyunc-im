@@ -168,9 +168,9 @@
     <loggers>
         <!-- 设置打印sql语句配置开始,以下两者配合使用,可以优化日志的输出信息,减少一些不必要信息的输出 -->
         <!-- 设置java.sql包下的日志只打印DEBUG及以上级别的日志,此设置可以支持sql语句的日志打印 -->
-        <logger name="com.zaxxer.hikari.pool.HikariPool" level="WARN" additivity="false">
-            <appender-ref ref="Console" />
-        </logger>
+<!--        <logger name="com.zaxxer.hikari.pool.HikariPool" level="WARN" additivity="false">-->
+<!--            <appender-ref ref="Console" />-->
+<!--        </logger>-->
         <logger name="java.sql" level="DEBUG" additivity="false">
             <appender-ref ref="Console"/>
         </logger>

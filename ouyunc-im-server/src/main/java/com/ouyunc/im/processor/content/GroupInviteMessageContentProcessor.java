@@ -5,9 +5,8 @@ import cn.hutool.core.date.SystemClock;
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONUtil;
 import com.ouyunc.im.base.LoginUserInfo;
-import com.ouyunc.im.constant.IMConstant;
+import com.ouyunc.im.constant.CacheConstant;
 import com.ouyunc.im.constant.enums.MessageContentEnum;
-import com.ouyunc.im.domain.ImUser;
 import com.ouyunc.im.domain.bo.ImGroupUserBO;
 import com.ouyunc.im.helper.DbHelper;
 import com.ouyunc.im.helper.MessageHelper;
@@ -20,7 +19,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
-import java.util.Optional;
 
 /**
  * 群成员邀请他人加入群
@@ -43,18 +41,27 @@ public class GroupInviteMessageContentProcessor  extends AbstractMessageContentP
         log.info("GroupInviteMessageContentProcessor 正在处理邀请加群请求 packet: {}...", packet);
         Message message = (Message) packet.getMessage();
         GroupRequestContent groupRequestContent = JSONUtil.toBean(message.getContent(), GroupRequestContent.class);
+        String groupId = groupRequestContent.getGroupId();
         // 被邀请人id 集合
-        JSONArray invitedUserIds = JSONUtil.parseArray(groupRequestContent.getData());
+        List<String> invitedUserIds = groupRequestContent.getInvitedUserIdList();
         // 判断邀请加入的好友是否为空
         if (CollectionUtil.isNotEmpty(invitedUserIds)) {
             // 处理群请求
-            DbHelper.handleGroupInviteRequest(packet);
-            for (Object invitedUserId : invitedUserIds) {
+            long now = SystemClock.now();
+            for (String invitedUserId : invitedUserIds) {
+                // 判断被邀请者是否已经在该群中
+                ImGroupUserBO groupMember = DbHelper.getGroupMember(invitedUserId, groupId);
+                // 该用户已经在群里了
+                if (groupMember != null) {
+                    continue;
+                }
+                // 只保留被邀请人的信息
+                DbHelper.cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + invitedUserId, packet, now);
                 // 判断该用户是否在线，如果不在线放入离线消息
-                List<LoginUserInfo> invitedLoginUserInfos = UserHelper.onlineAll((String) invitedUserId);
+                List<LoginUserInfo> invitedLoginUserInfos = UserHelper.onlineAll(invitedUserId);
                 if (CollectionUtil.isEmpty(invitedLoginUserInfos)) {
                     // 存入离线消息
-                    DbHelper.write2OfflineTimeline(packet, (String) invitedUserId, SystemClock.now());
+                    DbHelper.write2OfflineTimeline(packet, invitedUserId, now);
                 }else {
                     // 转发给某个客户端的各个设备端
                     MessageHelper.send2MultiDevices(packet, invitedLoginUserInfos);

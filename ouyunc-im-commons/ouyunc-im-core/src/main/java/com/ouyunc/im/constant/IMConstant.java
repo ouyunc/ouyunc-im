@@ -335,7 +335,15 @@ public class IMConstant {
      */
     public static final Integer NOT_MUSHIN = 0;
 
+    /**
+     * 加入黑名单
+     */
+    public static final Integer JOIN_BLACKLIST = 1;
 
+    /**
+     * 解除黑名单
+     */
+    public static final Integer NOT_JOIN_BLACKLIST = 0;
 
     /**
      * 同一设备类型，重复登录获远程登录通知
@@ -361,5 +369,18 @@ public class IMConstant {
      * 群添加请求应答策略自动同意
      */
     public static final Integer GROUP_ANSWER_POLICY_AUTO_AGREE = 1;
+
+
+
+    /**
+     * 主动添加群
+     */
+    public static final Integer GROUP_JOIN_AGREE_REFUSE = 0;
+
+
+    /**
+     * 被动添加群（被邀请）
+     */
+    public static final Integer GROUP_INVITE_AGREE_REFUSE = 1;
 
 }
