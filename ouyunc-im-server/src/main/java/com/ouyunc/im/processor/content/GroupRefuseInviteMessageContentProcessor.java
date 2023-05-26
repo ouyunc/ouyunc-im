@@ -20,7 +20,7 @@ public class GroupRefuseInviteMessageContentProcessor extends AbstractMessageCon
 
     @Override
     public MessageContentEnum messageContentType() {
-        return MessageContentEnum.GROUP_AGREE;
+        return MessageContentEnum.GROUP_INVITE_REFUSE;
     }
 
 

@@ -17,7 +17,7 @@ public class GroupAgreeInviteMessageContentProcessor extends AbstractMessageCont
 
     @Override
     public MessageContentEnum messageContentType() {
-        return MessageContentEnum.GROUP_AGREE;
+        return MessageContentEnum.GROUP_INVITE_AGREE;
     }
 
 

@@ -342,7 +342,7 @@ public class  DbHelper {
     public static ImGroupUserBO getGroupMember(String from, String groupId) {
         ImGroupUserBO imGroupUserBO = (ImGroupUserBO) cacheOperator.getHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + groupId + CacheConstant.MEMBERS, from);
         if (imGroupUserBO == null && IMServerContext.SERVER_CONFIG.isDbEnable()) {
-            imGroupUserBO = dbOperator.selectOne(DbSqlConstant.MYSQL.SELECT_GROUP_USER.sql(), ImGroupUserBO.class, from, groupId);
+            imGroupUserBO = dbOperator.selectOne(DbSqlConstant.MYSQL.SELECT_GROUP_USER.sql(), ImGroupUserBO.class, groupId, from);
             if (imGroupUserBO != null) {
                 cacheOperator.putHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + groupId + CacheConstant.MEMBERS, from, imGroupUserBO);
             }
@@ -575,19 +575,26 @@ public class  DbHelper {
 
     /**
      * 处理群组请求
-     *
      * @param packet
      */
     public static void handleGroupRequest(Packet packet) {
         Message message = (Message) packet.getMessage();
-        String from = message.getFrom();
         GroupRequestContent groupRequestContent = JSONUtil.toBean(message.getContent(), GroupRequestContent.class);
         String groupId = groupRequestContent.getGroupId();
         String identity = groupRequestContent.getIdentity();
         MessageContentEnum messageContentEnum = MessageContentEnum.prototype(message.getContentType());
         long timestamp = SystemClock.now();
-
-        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + from, packet, timestamp);
+        // 主动申请同意
+        if (MessageContentEnum.GROUP_AGREE.equals(messageContentEnum)) {
+            // 绑定群关系
+            bindGroup(identity, groupId);
+        }
+        // 被动邀请同意
+        if (MessageContentEnum.GROUP_INVITE_AGREE.equals(messageContentEnum)) {
+            identity = groupRequestContent.getInvitedUserIdList().get(0);
+            bindGroup(identity, groupId);
+        }
+        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + identity, packet, timestamp);
         cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + groupId, packet, timestamp);
     }
 
@@ -654,9 +661,9 @@ public class  DbHelper {
                     // 转发给某个客户端的各个设备端
                     MessageHelper.send2MultiDevices(packet, managersLoginUserInfos);
                 }
-                // 并将数据缓存一份缓存中
-                cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + groupManagerMember.getUserId(), packet, now);
             }
+            // 只缓存到群请求消息中
+            cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + groupId, packet, now);
         }
         cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + from, packet, now);
     }

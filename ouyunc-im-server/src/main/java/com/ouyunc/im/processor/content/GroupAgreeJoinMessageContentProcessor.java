@@ -57,8 +57,6 @@ public class GroupAgreeJoinMessageContentProcessor extends AbstractMessageConten
             }
             // 处理群组请求
             DbHelper.handleGroupRequest(packet);
-            // 绑定群成员关系
-            DbHelper.bindGroup(groupRequestContent.getIdentity(), groupRequestContent.getGroupId());
         }finally {
             lock.unlock();
         }

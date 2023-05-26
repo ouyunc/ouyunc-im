@@ -2,7 +2,6 @@ package com.ouyunc.im.processor.content;
 
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.date.SystemClock;
-import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONUtil;
 import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.CacheConstant;
