@@ -51,6 +51,7 @@ public class GroupRefuseJoinMessageContentProcessor extends AbstractMessageConte
         // 根据to从分布式缓存中取出targetServerAddress目标地址
         String to = message.getTo();
         RLock lock = RedissonFactory.INSTANCE.redissonClient().getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.GROUP + CacheConstant.REFUSE_AGREE + IdentityUtil.sortComboIdentity(groupRequestContent.getIdentity(), groupRequestContent.getGroupId()));
+        long now;
         try {
             lock.lock();
             // 检查是否已经处理该条消息，如果处理了则不做消息的转发
@@ -59,7 +60,7 @@ public class GroupRefuseJoinMessageContentProcessor extends AbstractMessageConte
                 return;
             }
             // 处理群组请求
-            DbHelper.handleGroupRequest(packet);
+            now = DbHelper.handleGroupRequest(packet);
         }finally {
             lock.unlock();
         }
@@ -75,7 +76,7 @@ public class GroupRefuseJoinMessageContentProcessor extends AbstractMessageConte
                 List<LoginUserInfo> managersLoginUserInfos = UserHelper.onlineAll(groupManagerMember.getUserId());
                 if (CollectionUtil.isEmpty(managersLoginUserInfos)) {
                     // 存入离线消息
-                    DbHelper.write2OfflineTimeline(packet, groupManagerMember.getUserId(), SystemClock.now());
+                    DbHelper.write2OfflineTimeline(packet, groupManagerMember.getUserId(), now);
                 }else {
                     // 转发给某个客户端的各个设备端
                     MessageHelper.send2MultiDevices(packet, managersLoginUserInfos);

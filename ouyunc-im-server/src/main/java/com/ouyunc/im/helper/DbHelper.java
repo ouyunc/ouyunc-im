@@ -577,25 +577,27 @@ public class  DbHelper {
      * 处理群组请求
      * @param packet
      */
-    public static void handleGroupRequest(Packet packet) {
+    public static long handleGroupRequest(Packet packet) {
         Message message = (Message) packet.getMessage();
         GroupRequestContent groupRequestContent = JSONUtil.toBean(message.getContent(), GroupRequestContent.class);
         String groupId = groupRequestContent.getGroupId();
         String identity = groupRequestContent.getIdentity();
+        List<String> invitedUserIdList = groupRequestContent.getInvitedUserIdList();
         MessageContentEnum messageContentEnum = MessageContentEnum.prototype(message.getContentType());
         long timestamp = SystemClock.now();
-        // 主动申请同意
+        // 主动申请同意，或同意邀请
         if (MessageContentEnum.GROUP_AGREE.equals(messageContentEnum)) {
+            // 通过被邀请人列表是否为空，来区别是否是主动申请的同意还是邀请流转到群成员的处理
+            if (CollectionUtil.isNotEmpty(invitedUserIdList)) {
+                // 邀请的二次同意
+                identity = invitedUserIdList.get(0);
+            }
             // 绑定群关系
-            bindGroup(identity, groupId);
-        }
-        // 被动邀请同意
-        if (MessageContentEnum.GROUP_INVITE_AGREE.equals(messageContentEnum)) {
-            identity = groupRequestContent.getInvitedUserIdList().get(0);
             bindGroup(identity, groupId);
         }
         cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + identity, packet, timestamp);
         cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + groupId, packet, timestamp);
+        return timestamp;
     }
 
     /**

@@ -23,6 +23,12 @@ public class GroupRequestContent implements Serializable {
 
 
     /**
+     * 会话id（用于标识整个流程会话的）
+     */
+    private String sessionId;
+
+
+    /**
      * 被邀请人,用户id列表
      */
     private List<String> invitedUserIdList;
@@ -55,6 +61,14 @@ public class GroupRequestContent implements Serializable {
 
     public void setInvitedUserIdList(List<String> invitedUserIdList) {
         this.invitedUserIdList = invitedUserIdList;
+    }
+
+    public String getSessionId() {
+        return sessionId;
+    }
+
+    public void setSessionId(String sessionId) {
+        this.sessionId = sessionId;
     }
 
     public String getData() {

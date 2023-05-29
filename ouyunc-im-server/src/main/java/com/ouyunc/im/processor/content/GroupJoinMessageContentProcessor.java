@@ -42,9 +42,10 @@ public class GroupJoinMessageContentProcessor extends AbstractMessageContentProc
         GroupRequestContent groupRequestContent = JSONUtil.toBean(message.getContent(), GroupRequestContent.class);
         // 处理群组请求
         RLock lock = RedissonFactory.INSTANCE.redissonClient().getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.GROUP + CacheConstant.REFUSE_AGREE + IdentityUtil.sortComboIdentity(groupRequestContent.getIdentity(), groupRequestContent.getGroupId()));
+        long now ;
         try{
             lock.lock();
-            DbHelper.handleGroupRequest(packet);
+            now = DbHelper.handleGroupRequest(packet);
         }finally {
             lock.unlock();
         }
@@ -58,7 +59,7 @@ public class GroupJoinMessageContentProcessor extends AbstractMessageContentProc
             List<LoginUserInfo> managersLoginUserInfos = UserHelper.onlineAll(groupManagerMember.getUserId());
             if (CollectionUtil.isEmpty(managersLoginUserInfos)) {
                 // 存入离线消息
-                DbHelper.write2OfflineTimeline(packet, groupManagerMember.getUserId(), SystemClock.now());
+                DbHelper.write2OfflineTimeline(packet, groupManagerMember.getUserId(), now);
             }else {
                 // 转发给某个客户端的各个设备端
                 MessageHelper.send2MultiDevices(packet, managersLoginUserInfos);
