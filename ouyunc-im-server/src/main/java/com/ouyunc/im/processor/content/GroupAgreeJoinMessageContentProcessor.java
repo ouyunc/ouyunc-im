@@ -46,23 +46,34 @@ public class GroupAgreeJoinMessageContentProcessor extends AbstractMessageConten
         String from = message.getFrom();
         // 根据to从分布式缓存中取出targetServerAddress目标地址
         String to = message.getTo();
+        String groupId = groupRequestContent.getGroupId();
+        // 被邀请人id
+        List<String> invitedUserIdList = groupRequestContent.getInvitedUserIdList();
+        String identity = groupRequestContent.getIdentity();
+        // 如果被邀请人不为空，则是邀请的同意处理
+        if (CollectionUtil.isNotEmpty(invitedUserIdList)) {
+            identity = invitedUserIdList.get(0);
+        }
         //获取锁
-        RLock lock = RedissonFactory.INSTANCE.redissonClient().getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.GROUP + CacheConstant.REFUSE_AGREE + IdentityUtil.sortComboIdentity(groupRequestContent.getIdentity(), groupRequestContent.getGroupId()));
-        long now;
+        RLock lock = RedissonFactory.INSTANCE.redissonClient().getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.GROUP + CacheConstant.REFUSE_AGREE + IdentityUtil.sortComboIdentity(identity, groupId));
+        long timestamp;
         try{
             lock.lock();
             // 检查是否已经处理该条消息，如果处理了则不做消息的转发
             // 判断是否已经是好友
-            if (MessageValidate.isGroup(groupRequestContent.getIdentity(), groupRequestContent.getGroupId())) {
+            if (MessageValidate.isGroup(identity, groupId)) {
                 return;
             }
             // 处理群组请求
-            now = DbHelper.handleGroupRequest(packet);
+            timestamp = SystemClock.now();
+            DbHelper.bindGroup(identity, groupId);
+            DbHelper.cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + identity, packet, timestamp);
+            DbHelper.cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + groupId, packet, timestamp);
         }finally {
             lock.unlock();
         }
         // 查找群中的管理员以及群主，向其投递加群的请求
-        List<ImGroupUserBO> groupManagerMembers = DbHelper.getGroupMembers(groupRequestContent.getGroupId(), true);
+        List<ImGroupUserBO> groupManagerMembers = DbHelper.getGroupMembers(groupId, true);
         if (CollectionUtil.isEmpty(groupManagerMembers)) {
             return;
         }
@@ -73,7 +84,7 @@ public class GroupAgreeJoinMessageContentProcessor extends AbstractMessageConten
                 List<LoginUserInfo> managersLoginUserInfos = UserHelper.onlineAll(groupManagerMember.getUserId());
                 if (CollectionUtil.isEmpty(managersLoginUserInfos)) {
                     // 存入离线消息
-                    DbHelper.write2OfflineTimeline(packet, groupManagerMember.getUserId(), now);
+                    DbHelper.write2OfflineTimeline(packet, groupManagerMember.getUserId(), timestamp);
                 }else {
                     // 转发给某个客户端的各个设备端
                     MessageHelper.send2MultiDevices(packet, managersLoginUserInfos);

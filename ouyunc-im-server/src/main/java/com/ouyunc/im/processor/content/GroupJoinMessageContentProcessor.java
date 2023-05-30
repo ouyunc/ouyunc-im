@@ -15,6 +15,7 @@ import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.packet.message.content.GroupRequestContent;
 import com.ouyunc.im.utils.IdentityUtil;
+import com.ouyunc.im.validate.MessageValidate;
 import io.netty.channel.ChannelHandlerContext;
 import org.redisson.api.RLock;
 import org.slf4j.Logger;
@@ -40,12 +41,20 @@ public class GroupJoinMessageContentProcessor extends AbstractMessageContentProc
         // 根据to从分布式缓存中取出targetServerAddress目标地址
         String to = message.getTo();
         GroupRequestContent groupRequestContent = JSONUtil.toBean(message.getContent(), GroupRequestContent.class);
+        String identity = groupRequestContent.getIdentity();
+        String groupId = groupRequestContent.getGroupId();
         // 处理群组请求
         RLock lock = RedissonFactory.INSTANCE.redissonClient().getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.GROUP + CacheConstant.REFUSE_AGREE + IdentityUtil.sortComboIdentity(groupRequestContent.getIdentity(), groupRequestContent.getGroupId()));
-        long now ;
+        long timestamp;
         try{
             lock.lock();
-            now = DbHelper.handleGroupRequest(packet);
+            // 判断是否已经是好友
+            if (MessageValidate.isGroup(identity, groupId)) {
+                return;
+            }
+            timestamp = SystemClock.now();
+            DbHelper.cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + identity, packet, timestamp);
+            DbHelper.cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + groupId, packet, timestamp);
         }finally {
             lock.unlock();
         }
@@ -59,7 +68,7 @@ public class GroupJoinMessageContentProcessor extends AbstractMessageContentProc
             List<LoginUserInfo> managersLoginUserInfos = UserHelper.onlineAll(groupManagerMember.getUserId());
             if (CollectionUtil.isEmpty(managersLoginUserInfos)) {
                 // 存入离线消息
-                DbHelper.write2OfflineTimeline(packet, groupManagerMember.getUserId(), now);
+                DbHelper.write2OfflineTimeline(packet, groupManagerMember.getUserId(), timestamp);
             }else {
                 // 转发给某个客户端的各个设备端
                 MessageHelper.send2MultiDevices(packet, managersLoginUserInfos);
