@@ -28,6 +28,7 @@ public class GroupRequestContent implements Serializable {
     private String sessionId;
 
 
+
     /**
      * 被邀请人,用户id列表
      */
@@ -38,6 +39,10 @@ public class GroupRequestContent implements Serializable {
      */
     private String data;
 
+    /**
+     * 扩展字段，用于处理一些数据信息，比如被邀请，自动同意
+     */
+    private Integer extra;
 
     public String getGroupId() {
         return groupId;
@@ -77,5 +82,13 @@ public class GroupRequestContent implements Serializable {
 
     public void setData(String data) {
         this.data = data;
+    }
+
+    public Integer getExtra() {
+        return extra;
+    }
+
+    public void setExtra(Integer extra) {
+        this.extra = extra;
     }
 }

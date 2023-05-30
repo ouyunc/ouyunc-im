@@ -293,6 +293,12 @@ public class IMConstant {
 
 
     /**
+     * 是群主或管理员
+     */
+    public static final Integer GROUP_LEADER_OR_MANAGER = 2;
+
+
+    /**
      * 用户状态：0-正常
      */
     public static final Integer USER_STATUS_0 = 0;
