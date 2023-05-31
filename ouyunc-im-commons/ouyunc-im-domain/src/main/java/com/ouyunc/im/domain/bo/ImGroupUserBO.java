@@ -29,7 +29,7 @@ public class ImGroupUserBO {
     /**
      * 用户昵称（用户在群里的昵称）
      */
-    private String userNickName;
+    private String nickName;
 
     /**
      * 邮箱
@@ -127,12 +127,12 @@ public class ImGroupUserBO {
         this.username = username;
     }
 
-    public String getUserNickName() {
-        return userNickName;
+    public String getNickName() {
+        return nickName;
     }
 
-    public void setUserNickName(String userNickName) {
-        this.userNickName = userNickName;
+    public void setNickName(String nickName) {
+        this.nickName = nickName;
     }
 
     public String getEmail() {
@@ -234,11 +234,11 @@ public class ImGroupUserBO {
     public ImGroupUserBO() {
     }
 
-    public ImGroupUserBO(String groupId, String userId, String username, String userNickName,String groupNickName, String email, String phoneNum, String idCardNum, String avatar, String motto, Integer age, Integer sex, Integer isLeader, Integer isManager, Integer isShield, Integer mushin, String createTime) {
+    public ImGroupUserBO(String groupId, String userId, String username, String nickName,String groupNickName, String email, String phoneNum, String idCardNum, String avatar, String motto, Integer age, Integer sex, Integer isLeader, Integer isManager, Integer isShield, Integer mushin, String createTime) {
         this.groupId = groupId;
         this.userId = userId;
         this.username = username;
-        this.userNickName = userNickName;
+        this.nickName = nickName;
         this.groupNickName = groupNickName;
         this.email = email;
         this.phoneNum = phoneNum;

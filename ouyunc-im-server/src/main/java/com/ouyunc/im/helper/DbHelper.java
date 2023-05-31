@@ -454,7 +454,7 @@ public class  DbHelper {
                 imBlacklistBO = dbOperator.selectOne(DbSqlConstant.MYSQL.SELECT_BLACK_LIST.sql(), ImBlacklistBO.class, to, type, from);
                 if (imBlacklistBO != null && groupMember != null) {
                     // 是好友
-                    imBlacklistBO.setNickName(groupMember.getUserNickName());
+                    imBlacklistBO.setNickName(groupMember.getNickName());
                 }
             }
             return imBlacklistBO;
