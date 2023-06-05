@@ -44,7 +44,6 @@ public class  FriendRequestMessageProcessor extends AbstractMessageProcessor{
         log.info("FriendRequestMessageProcessor 正在处理好友请求消息packet: {}", packet);
         fireProcess(ctx, packet, (ctx0, packet0)->{
             Message message = (Message) packet.getMessage();
-            String from = message.getFrom();
             InnerExtraData innerExtraData = JSONUtil.toBean(message.getExtra(), InnerExtraData.class);
             if (innerExtraData == null) {
                 innerExtraData = new InnerExtraData();
@@ -61,7 +60,7 @@ public class  FriendRequestMessageProcessor extends AbstractMessageProcessor{
                 MessageHelper.deliveryMessage(packet, SocketAddressUtil.convert2SocketAddress(innerExtraData.getTargetServerAddress()));
                 return;
             }
-            // 存到缓存中7天，@todo做到可配置
+            // 存到缓存中7天，@todo 做到可配置
             DbHelper.handleFriendRequest(packet);
             // 转发给该好友的各个设备端
             // 获取该客户端在线的所有客户端，进行推送消息已读

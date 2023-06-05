@@ -11,8 +11,8 @@
   <component name="ChangeListManager">
     <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v3.1.1-beta 群请求处理">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-domain/src/main/java/com/ouyunc/im/domain/bo/ImGroupUserBO.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-domain/src/main/java/com/ouyunc/im/domain/bo/ImGroupUserBO.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/DbHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/DbHelper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/FriendRequestMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/FriendRequestMessageProcessor.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -355,14 +355,13 @@
       <workItem from="1683457405199" duration="866000" />
       <workItem from="1683458982269" duration="27059000" />
       <workItem from="1684285810219" duration="3072000" />
-      <workItem from="1684416697282" duration="110281000" />
-    </task>
-    <task id="LOCAL-00136" summary="v3.0.1 文档">
-      <created>1672735253564</created>
-      <option name="number" value="00136" />
-      <option name="presentableId" value="LOCAL-00136" />
-      <option name="project" value="LOCAL" />
-      <updated>1672735253564</updated>
+      <workItem from="1684416697282" duration="110901000" />
+      <workItem from="1685584486125" duration="585000" />
+      <workItem from="1685669353314" duration="4337000" />
+      <workItem from="1685698622414" duration="668000" />
+      <workItem from="1685702773933" duration="645000" />
+      <workItem from="1685926557774" duration="340000" />
+      <workItem from="1685926946959" duration="5262000" />
     </task>
     <task id="LOCAL-00137" summary="v3.0.1 文档">
       <created>1672737733935</created>
@@ -700,7 +699,14 @@
       <option name="project" value="LOCAL" />
       <updated>1685438560158</updated>
     </task>
-    <option name="localTasksCounter" value="185" />
+    <task id="LOCAL-00185" summary="v3.1.1-beta 群请求处理">
+      <created>1685525389592</created>
+      <option name="number" value="00185" />
+      <option name="presentableId" value="LOCAL-00185" />
+      <option name="project" value="LOCAL" />
+      <updated>1685525389592</updated>
+    </task>
+    <option name="localTasksCounter" value="186" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
