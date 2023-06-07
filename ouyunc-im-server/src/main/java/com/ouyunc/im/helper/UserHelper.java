@@ -2,6 +2,7 @@ package com.ouyunc.im.helper;
 
 
 import cn.hutool.core.date.SystemClock;
+import cn.hutool.core.map.MapUtil;
 import cn.hutool.json.JSONUtil;
 import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.CacheConstant;
@@ -18,6 +19,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -45,13 +47,12 @@ public class UserHelper {
         // 将用户绑定到channel中并打上tag标签
         LoginUserInfo loginUserInfo = new LoginUserInfo(appKey, identity, IMServerContext.SERVER_CONFIG.getLocalServerAddress(), OnlineEnum.ONLINE, DeviceEnum.getDeviceEnumByValue(loginDeviceType));
         ctx.channel().attr(channelTagLoginKey).set(loginUserInfo);
-        // 记录IM App 下的连接信息，多个设备，多个连接，后期有需求在改造
-        IMServerContext.LOGIN_IM_APP_CONNECTIONS_CACHE.putHash(CacheConstant.OUYUNC + CacheConstant.IM + CacheConstant.APP + appKey + CacheConstant.CONNECTION, comboIdentity, loginUserInfo);
         // 存入用户登录信息
-        IMServerContext.LOGIN_USER_INFO_CACHE.put(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + comboIdentity, loginUserInfo);
+        IMServerContext.LOGIN_USER_INFO_CACHE.putHashIfAbsent(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + identity, DeviceEnum.getDeviceNameByValue(loginDeviceType), loginUserInfo);
         // 存入本地用户注册表
         IMServerContext.USER_REGISTER_TABLE.put(comboIdentity, ctx);
-
+        // 记录IM App 下的连接信息，多个设备，多个连接，后期有需求在改造
+        IMServerContext.LOGIN_IM_APP_CONNECTIONS_CACHE.putHashIfAbsent(CacheConstant.OUYUNC + CacheConstant.IM + CacheConstant.APP + appKey + CacheConstant.CONNECTION, comboIdentity, loginUserInfo);
     }
 
     /**
@@ -63,15 +64,10 @@ public class UserHelper {
      * @return void
      */
     public static void unbind(String identity, byte loginDeviceType, ChannelHandlerContext ctx) {
-        log.info("正在解绑在设备: {} 上的用户: {}", DeviceEnum.getDeviceNameByValue(loginDeviceType), identity);
+        log.info("正在解绑客户端: {} 在设备: {} 上的用户: {}",ctx.channel().id().asShortText(),  DeviceEnum.getDeviceNameByValue(loginDeviceType), identity);
         String comboIdentity = IdentityUtil.generalComboIdentity(identity, loginDeviceType);
-        IMServerContext.LOGIN_USER_INFO_CACHE.delete(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + comboIdentity);
-        IMServerContext.USER_REGISTER_TABLE.delete(comboIdentity);
-        AttributeKey<LoginUserInfo> channelTagLoginKey = AttributeKey.valueOf(IMConstant.CHANNEL_TAG_LOGIN);
-        LoginUserInfo loginUserInfo = ctx.channel().attr(channelTagLoginKey).get();
-        // 记录IM App 下的连接信息，多个设备，只算一个连接
-        IMServerContext.LOGIN_IM_APP_CONNECTIONS_CACHE.deleteHash(CacheConstant.OUYUNC + CacheConstant.IM + CacheConstant.APP + loginUserInfo.getAppKey() + CacheConstant.CONNECTION, comboIdentity);
         ChannelHandlerContext ctx0 = IMServerContext.USER_REGISTER_TABLE.get(comboIdentity);
+        // 下面的close 会触发DefaultSocketChannelInitializer 中的close 监听事件，做删除缓存处理
         if (ctx != null) {
             ctx.close();
         }
@@ -115,14 +111,15 @@ public class UserHelper {
      */
     public static List<LoginUserInfo> onlineAll(String identity, Byte excludeDeviceType) {
         List<LoginUserInfo> loginServerAddressList = new ArrayList<>();
-        for (String supportOnlineDeviceName : IdentityUtil.supportOnlineLoginDevice()) {
-            if (excludeDeviceType == null || !supportOnlineDeviceName.equals(DeviceEnum.getDeviceNameByValue(excludeDeviceType))) {
-                String comboIdentity = IdentityUtil.generalComboIdentity(identity, supportOnlineDeviceName);
-                LoginUserInfo loginUserInfo = IMServerContext.LOGIN_USER_INFO_CACHE.get(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + comboIdentity);
-                if (loginUserInfo != null && OnlineEnum.ONLINE.equals(loginUserInfo.getOnlineStatus())) {
-                    loginServerAddressList.add(loginUserInfo);
+        Map<String, LoginUserInfo> loginUserInfoMap = IMServerContext.LOGIN_USER_INFO_CACHE.getHashAll(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + identity);
+        if (MapUtil.isNotEmpty(loginUserInfoMap)) {
+            loginUserInfoMap.forEach((loginDeviceName, loginUserInfo)->{
+                if (excludeDeviceType == null || !loginDeviceName.equals(DeviceEnum.getDeviceNameByValue(excludeDeviceType))) {
+                    if (loginUserInfo != null && OnlineEnum.ONLINE.equals(loginUserInfo.getOnlineStatus())) {
+                        loginServerAddressList.add(loginUserInfo);
+                    }
                 }
-            }
+            });
         }
         return loginServerAddressList;
     }
@@ -134,8 +131,7 @@ public class UserHelper {
      * @return
      */
     public static LoginUserInfo online(String identity, byte loginDeviceType) {
-        String comboIdentity = IdentityUtil.generalComboIdentity(identity, loginDeviceType);
-        LoginUserInfo loginUserInfo = IMServerContext.LOGIN_USER_INFO_CACHE.get(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + comboIdentity);
+        LoginUserInfo loginUserInfo = IMServerContext.LOGIN_USER_INFO_CACHE.getHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + identity, DeviceEnum.getDeviceNameByValue(loginDeviceType));
         if (loginUserInfo != null && OnlineEnum.ONLINE.equals(loginUserInfo.getOnlineStatus())) {
             return loginUserInfo;
         }

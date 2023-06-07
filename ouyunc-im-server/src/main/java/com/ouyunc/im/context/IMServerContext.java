@@ -122,7 +122,7 @@ public class IMServerContext extends IMContext{
     /**
      * IM 分布式集群中登录的用户信息， 这个可以使用二级缓存来提高效率？使用二级缓存
      */
-    public static ICache<String, LoginUserInfo> LOGIN_USER_INFO_CACHE = new RedisDistributedL1Cache<>();
+    public static RedisDistributedL1Cache<String, LoginUserInfo> LOGIN_USER_INFO_CACHE = new RedisDistributedL1Cache<>();
 
 
     /**

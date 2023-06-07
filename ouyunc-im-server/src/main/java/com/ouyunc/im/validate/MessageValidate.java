@@ -65,14 +65,14 @@ public class MessageValidate {
         //2,判断用户权限是否授权
         // 组合成新的唯一标识
         String comboIdentity = IdentityUtil.generalComboIdentity(identity, loginDeviceType);
-        LoginUserInfo loginUserInfo = IMServerContext.LOGIN_USER_INFO_CACHE.get(CacheConstant.OUYUNC +   CacheConstant.IM_USER + CacheConstant.LOGIN + comboIdentity);
+        LoginUserInfo loginUserInfo = IMServerContext.LOGIN_USER_INFO_CACHE.getHash(CacheConstant.OUYUNC +   CacheConstant.IM_USER + CacheConstant.LOGIN + identity, DeviceEnum.getDeviceNameByValue(loginDeviceType));
         //3,从本地连接中取出该用户的channel
         final ChannelHandlerContext bindCtx = IMServerContext.USER_REGISTER_TABLE.get(comboIdentity);
         // 判断是否合法
         if (loginUserInfo == null || bindCtx == null) {
             log.error("该客户端: {} 没有通过认证，现将其关闭", identity);
             // 没有登录以及出现异常后走的逻辑
-            IMServerContext.LOGIN_USER_INFO_CACHE.delete(CacheConstant.OUYUNC +   CacheConstant.IM_USER + CacheConstant.LOGIN + comboIdentity);
+            IMServerContext.LOGIN_USER_INFO_CACHE.deleteHash(CacheConstant.OUYUNC +   CacheConstant.IM_USER + CacheConstant.LOGIN + identity, DeviceEnum.getDeviceNameByValue(loginDeviceType));
             IMServerContext.USER_REGISTER_TABLE.delete(comboIdentity);
             // 关闭channel
             ctx.close();
@@ -86,7 +86,7 @@ public class MessageValidate {
             return true;
         }
         // 没有登录以及出现异常后走的逻辑
-        IMServerContext.LOGIN_USER_INFO_CACHE.delete(CacheConstant.OUYUNC +   CacheConstant.IM_USER + CacheConstant.LOGIN + comboIdentity);
+        IMServerContext.LOGIN_USER_INFO_CACHE.deleteHash(CacheConstant.OUYUNC +   CacheConstant.IM_USER + CacheConstant.LOGIN + identity, DeviceEnum.getDeviceNameByValue(loginDeviceType));
         IMServerContext.USER_REGISTER_TABLE.delete(comboIdentity);
         // 关闭channel
         ctx.close();

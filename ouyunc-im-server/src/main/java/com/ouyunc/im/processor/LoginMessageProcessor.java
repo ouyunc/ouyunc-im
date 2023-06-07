@@ -108,7 +108,7 @@ public class LoginMessageProcessor extends AbstractMessageProcessor{
             final String comboIdentity = IdentityUtil.generalComboIdentity(loginContent.getIdentity(), packet.getDeviceType());
             //如果之前已经登录（重复登录请求），这里判断是否已经登录过,同一个账号在同一个设备不能同时登录
             //1,从分布式缓存取出该登录用户
-            LoginUserInfo loginUserInfo = IMServerContext.LOGIN_USER_INFO_CACHE.get(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + comboIdentity);
+            LoginUserInfo loginUserInfo = IMServerContext.LOGIN_USER_INFO_CACHE.getHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + loginContent.getIdentity(), DeviceEnum.getDeviceNameByValue(packet.getDeviceType()));
             //2,从本地用户注册表中取出该用户的channel
             final ChannelHandlerContext bindCtx = IMServerContext.USER_REGISTER_TABLE.get(comboIdentity);
             // 如果是都不为空是重复登录请求(1，不同的设备远程登录，2，同一设备重复发送登录请求)，向原有的连接发送通知，有其他客户端登录，并将其连接下线
@@ -122,7 +122,7 @@ public class LoginMessageProcessor extends AbstractMessageProcessor{
                 bindCtx.close();
             }
             if (loginUserInfo != null) {
-                IMServerContext.LOGIN_USER_INFO_CACHE.delete(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + comboIdentity);
+                IMServerContext.LOGIN_USER_INFO_CACHE.deleteHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + loginContent.getIdentity(), DeviceEnum.getDeviceNameByValue(packet.getDeviceType()));
             }
             // 绑定信息,不在往下传递
             UserHelper.bind(loginContent.getAppKey(), loginContent.getIdentity(), packet.getDeviceType(), ctx);

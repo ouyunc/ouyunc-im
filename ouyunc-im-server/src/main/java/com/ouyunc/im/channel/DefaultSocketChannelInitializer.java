@@ -63,14 +63,14 @@ public class DefaultSocketChannelInitializer extends SocketChannelInitializer{
             public void operationComplete(ChannelFuture future) throws Exception {
                 if (future.isDone()) {
                     if (future.isSuccess()) {
-                        log.info("================外部客户端关闭了,正在解绑客户端channel id:  {}==================", socketChannel.id().asShortText());
+                        log.warn("================外部客户端关闭了,正在解绑客户端channel id:  {}==================", socketChannel.id().asShortText());
                         // 解绑外部用户
                         //1,从channel中的attrMap取出相关属性
                         AttributeKey<LoginUserInfo> channelTagLoginKey = AttributeKey.valueOf(IMConstant.CHANNEL_TAG_LOGIN);
                         final LoginUserInfo loginUserInfo = socketChannel.attr(channelTagLoginKey).get();
                         if (loginUserInfo != null) {
                             String comboIdentity = IdentityUtil.generalComboIdentity(loginUserInfo.getIdentity(), loginUserInfo.getDeviceEnum().getName());
-                            IMServerContext.LOGIN_USER_INFO_CACHE.delete(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + comboIdentity);
+                            IMServerContext.LOGIN_USER_INFO_CACHE.deleteHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + loginUserInfo.getIdentity(), loginUserInfo.getDeviceEnum().getName());
                             IMServerContext.USER_REGISTER_TABLE.delete(comboIdentity);
                             IMServerContext.LOGIN_IM_APP_CONNECTIONS_CACHE.deleteHash(CacheConstant.OUYUNC + CacheConstant.IM + CacheConstant.APP + loginUserInfo.getAppKey() + CacheConstant.CONNECTION, comboIdentity);
                         }
