@@ -44,8 +44,7 @@ public class GroupAgreeJoinMessageContentProcessor extends AbstractMessageConten
         GroupRequestContent groupRequestContent = JSONUtil.toBean(message.getContent(), GroupRequestContent.class);
         // 下面是对集群以及qos消息可靠进行处理
         String from = message.getFrom();
-        // 根据to从分布式缓存中取出targetServerAddress目标地址
-        String to = message.getTo();
+
         String groupId = groupRequestContent.getGroupId();
         // 被邀请人id
         List<String> invitedUserIdList = groupRequestContent.getInvitedUserIdList();
@@ -91,8 +90,8 @@ public class GroupAgreeJoinMessageContentProcessor extends AbstractMessageConten
                 }
             }
         }
-        // 判断该对方是否在线，如果不在线放入离线消息，注意该消息不存离线，如果用户不在线则丢弃该消息
-        List<LoginUserInfo> toLoginUserInfos = UserHelper.onlineAll(to);
+        // 判断申请人或被邀请人该对方是否在线，如果不在线放入离线消息，注意该消息不存离线，如果用户不在线则丢弃该消息
+        List<LoginUserInfo> toLoginUserInfos = UserHelper.onlineAll(identity);
         // 转发给某个客户端的各个设备端
         MessageHelper.send2MultiDevices(packet, toLoginUserInfos);
 

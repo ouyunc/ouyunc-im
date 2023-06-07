@@ -1,7 +1,7 @@
 # 偶云客IM
 ## redis 缓存key  
 (1) opsvalue总的用户信息缓存:     ouyunc:im:user:${用户唯一标识}                         ImUser
-(1) opsvalue登录用户信息:     ouyunc:im:user:login:${用户唯一标识}:${登录设备号}             LoginUserInfo
+(1) hash登录用户信息:     ouyunc:im:user:login:${用户唯一标识}             ${登录设备号}             LoginUserInfo
 (1) opsvalue群信息:     ouyunc:im:user:group:${群唯一标识}                   ImGroup
 
 (1) hash联系人（好友）:    ouyunc:im:user:contact:friend:${用户唯一标识}              ${联系人唯一标识}    ImFriendBO           
