@@ -48,8 +48,14 @@ public enum MessageContentEnum {
 
 
     CHAT_TEXT_CONTENT(51, String.class, "聊天文本内容类型"),
-    CHAT_ATTACHMENT_CONTENT(52, AttachmentContent.class, "聊天附件(图片，音频，视频，文件等)"),
-    CHAT_NAME_CARD(53, NameCardContent.class, "名片"),
+    CHAT_ATTACHMENT_CONTENT(52, AttachmentContent.class, "聊天附件(word,pdf,excel文件等)"),
+    CHAT_NAME_CARD(53, NameCardContent.class, "聊天名片"),
+    CHAT_VOICE_CONTENT(54, VoiceContent.class, "聊天语音"),
+    CHAT_PICTURE_CONTENT(55, PictureContent.class, "聊天图片"),
+    CHAT_AUDIO_CONTENT(56, AudioContent.class, "聊天音频"),
+    CHAT_VIDEO_CONTENT(57, VideoContent.class, "聊天视频"),
+    CHAT_VOICE_CALL_RECORD_CONTENT(58, String.class, "语音通话记录"),
+    CHAT_VIDEO_CALL_RECORD_CONTENT(59, String.class, "视频通话记录"),
 
 
 

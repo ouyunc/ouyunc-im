@@ -8,7 +8,7 @@
 (1) hash群（成员）:       ouyunc:im:user:group:${群组唯一标识}:members        ${群成员唯一标识}    ImGroupUserBO
 
 (1) hash 群组黑名单:    ouyunc:im:black-list:group:${群组唯一标识}              ${用户唯一标识}    ImBlacklistBO
-(1) hash 好友黑名单:    ouyunc:im:black-list:user:${好友唯一标识}              ${用户唯一标识}    ImBlacklistBO
+(1) hash 好友黑名单:    ouyunc:im:black-list:user:${用户唯一标识}              ${好友唯一标识}    ImBlacklistBO
 
 (1) zset好友请求    ouyunc:im:message:friend-request:${from}         packet     ${消息时间戳}                    
 (1) zset群请求    ouyunc:im:message:group-request:${groupId}         packet     ${消息时间戳}
@@ -42,5 +42,5 @@
 9, js-SDK 修改TextEncode 以及雪花算法 bigInt其他浏览器不支持问题
 10, 添加好友或群邀请，自动应答策略
 11, 去除hutool ,使用fastJson以及其他工具类来替代hutool
-12, 修改协议，去除ip,改成从本地获取客户端ip
-13，修改登录缓存标识为hash, key（登录用户id）， key1(登录设备号) value
+12, 修改协议，去除ip,改成从本地获取客户端ip 
+13，修改登录缓存标识为hash, key（登录用户id）， key1(登录设备号) value  (ok)
