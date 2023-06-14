@@ -52,7 +52,7 @@ public class GroupExitMessageContentProcessor extends AbstractMessageContentProc
         DbHelper.exitGroup(from, groupRequestContent.getGroupId());
         // 查找群中的群主
         ImGroupUserBO groupLeader = DbHelper.getGroupLeader(groupRequestContent.getGroupId());
-        // 判断该管理员是否在线，如果不在线放入离线消息
+        // 判断群主是否在线，如果不在线放入离线消息
         List<LoginUserInfo> leaderLoginUserInfos = UserHelper.onlineAll(groupLeader.getUserId());
         if (CollectionUtil.isEmpty(leaderLoginUserInfos)) {
             // 存入离线消息

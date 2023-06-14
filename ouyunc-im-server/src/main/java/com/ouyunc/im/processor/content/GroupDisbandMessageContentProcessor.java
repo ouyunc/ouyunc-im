@@ -50,8 +50,8 @@ public class GroupDisbandMessageContentProcessor extends AbstractMessageContentP
             return;
         }
         // 解散群
-        DbHelper.disbandGroup(groupRequestContent.getGroupId());
         List<ImGroupUserBO> groupMembers = DbHelper.getGroupMembers(groupRequestContent.getGroupId());
+        DbHelper.disbandGroup(groupRequestContent.getGroupId());
         if (CollectionUtil.isEmpty(groupMembers)) {
             return;
         }

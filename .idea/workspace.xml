@@ -10,13 +10,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v3.1.1-beta 群请求处理">
-      <change afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/AudioContent.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/PictureContent.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/VideoContent.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/VoiceContent.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/HELP.md" beforeDir="false" afterPath="$PROJECT_DIR$/HELP.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/enums/MessageContentEnum.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/enums/MessageContentEnum.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupDisbandMessageContentProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupDisbandMessageContentProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupExitMessageContentProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupExitMessageContentProcessor.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -365,14 +361,8 @@
       <workItem from="1685698622414" duration="668000" />
       <workItem from="1685702773933" duration="645000" />
       <workItem from="1685926557774" duration="340000" />
-      <workItem from="1685926946959" duration="26365000" />
-    </task>
-    <task id="LOCAL-00140" summary="v3.0.1 文档">
-      <created>1672888950558</created>
-      <option name="number" value="00140" />
-      <option name="presentableId" value="LOCAL-00140" />
-      <option name="project" value="LOCAL" />
-      <updated>1672888950558</updated>
+      <workItem from="1685926946959" duration="33450000" />
+      <workItem from="1686621069858" duration="11876000" />
     </task>
     <task id="LOCAL-00141" summary="v3.0.1 js sdk">
       <created>1673494533323</created>
@@ -710,7 +700,14 @@
       <option name="project" value="LOCAL" />
       <updated>1686122982394</updated>
     </task>
-    <option name="localTasksCounter" value="189" />
+    <task id="LOCAL-00189" summary="v3.1.1-beta 群请求处理">
+      <created>1686209875577</created>
+      <option name="number" value="00189" />
+      <option name="presentableId" value="LOCAL-00189" />
+      <option name="project" value="LOCAL" />
+      <updated>1686209875577</updated>
+    </task>
+    <option name="localTasksCounter" value="190" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
