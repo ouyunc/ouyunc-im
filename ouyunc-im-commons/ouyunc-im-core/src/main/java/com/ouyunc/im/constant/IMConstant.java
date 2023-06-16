@@ -240,6 +240,11 @@ public class IMConstant {
     public static final String HEART_BEAT_HANDLER = "HEART_BEAT_HANDLER";
 
     /**
+     * 消息包集群路由处理器
+     */
+    public static final String PACKET_CLUSTER_ROUTER = "PACKET_CLUSTER_ROUTER";
+
+    /**
      * qos 处理器
      */
     public static final String QOS_HANDLER = "QOS_HANDLER";

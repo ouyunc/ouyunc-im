@@ -1,8 +1,6 @@
 package com.ouyunc.im.processor.content;
 
-import cn.hutool.core.collection.CollectionUtil;
-import cn.hutool.core.date.SystemClock;
-import cn.hutool.json.JSONUtil;
+import com.alibaba.fastjson2.JSON;
 import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.constant.enums.MessageContentEnum;
@@ -13,7 +11,9 @@ import com.ouyunc.im.helper.UserHelper;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.packet.message.content.GroupRequestContent;
+import com.ouyunc.im.utils.SystemClock;
 import io.netty.channel.ChannelHandlerContext;
+import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +41,7 @@ public class GroupKickMessageContentProcessor extends AbstractMessageContentProc
     public void doProcess(ChannelHandlerContext ctx, Packet packet) {
         log.info("GroupKickMessageContentProcessor 正在处理踢出群请求 packet: {}...", packet);
         Message message = (Message) packet.getMessage();
-        GroupRequestContent groupRequestContent = JSONUtil.toBean(message.getContent(), GroupRequestContent.class);
+        GroupRequestContent groupRequestContent = JSON.parseObject(message.getContent(), GroupRequestContent.class);
 
         // 下面是对集群以及qos消息可靠进行处理
         String from = message.getFrom();
@@ -55,7 +55,7 @@ public class GroupKickMessageContentProcessor extends AbstractMessageContentProc
         DbHelper.removeOutGroup(to, groupRequestContent.getGroupId());
         // 判断该管理员是否在线，如果不在线放入离线消息
         List<LoginUserInfo> toLoginUserInfos = UserHelper.onlineAll(to);
-        if (CollectionUtil.isEmpty(toLoginUserInfos)) {
+        if (CollectionUtils.isEmpty(toLoginUserInfos)) {
             // 存入离线消息
             DbHelper.write2OfflineTimeline(packet, to, SystemClock.now());
             return;

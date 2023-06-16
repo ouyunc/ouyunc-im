@@ -1,9 +1,10 @@
 package com.ouyunc.im.router;
 
-import cn.hutool.json.JSONUtil;
+import com.alibaba.fastjson2.JSON;
 import com.ouyunc.im.base.RoutingTable;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.packet.Packet;
+import com.ouyunc.im.packet.message.ExtraMessage;
 import com.ouyunc.im.packet.message.InnerExtraData;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.thread.IMRouteFailureProcessorThread;
@@ -42,10 +43,8 @@ public class RandomRouterStrategy implements RouterStrategy{
         // 该集合中可能存在不属于CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE 中的数据
         // routedUnavailableSocketAddresses 一定不为null
         Message message = (Message) packet.getMessage();
-        InnerExtraData innerExtraData = JSONUtil.toBean(message.getExtra(), InnerExtraData.class);
-        if (innerExtraData == null) {
-            innerExtraData = new InnerExtraData();
-        }
+        ExtraMessage extraMessage = JSON.parseObject(message.getExtra(), ExtraMessage.class);
+        InnerExtraData innerExtraData = extraMessage.getInnerExtraData();
         List<RoutingTable> routingTables = innerExtraData.routingTables();
         String toServerAddress = SocketAddressUtil.convert2HostPort(toSocketAddress);
         // 如果目标机地址与最终目标路由服务的地址相同则添加本地socketAddress 到消息中，否则添加toSocketAddress
@@ -57,7 +56,7 @@ public class RandomRouterStrategy implements RouterStrategy{
         // 已经路由不通的服务列表
         Set<String> routedUnavailableSocketAddresses =  routingTables.stream().map(routingTable -> routingTable.getServerAddress()).collect(Collectors.toSet());
         // 将message 重新设置到packet
-        message.setExtra(JSONUtil.toJsonStr(innerExtraData));
+        message.setExtra(JSON.toJSONString(extraMessage));
         // 2，通过得到的列表解析路由策略进行服务路由（寻找一个可用的服务连接）, 从路由表中取出服务地址
         for (InetSocketAddress inetSocketAddress : MapUtil.mergerMaps(IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.asMap(), IMServerContext.CLUSTER_GLOBAL_SERVER_REGISTRY_TABLE.asMap()).keySet()) {
             // 并排除目标服务器

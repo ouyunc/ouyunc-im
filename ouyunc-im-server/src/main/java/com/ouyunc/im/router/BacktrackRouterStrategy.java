@@ -1,9 +1,10 @@
 package com.ouyunc.im.router;
 
-import cn.hutool.json.JSONUtil;
+import com.alibaba.fastjson2.JSON;
 import com.ouyunc.im.base.RoutingTable;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.packet.Packet;
+import com.ouyunc.im.packet.message.ExtraMessage;
 import com.ouyunc.im.packet.message.InnerExtraData;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.thread.IMRouteFailureProcessorThread;
@@ -35,7 +36,9 @@ public class BacktrackRouterStrategy implements RouterStrategy{
     public InetSocketAddress route(Packet packet, InetSocketAddress toSocketAddress) {
         // 获得消息
         Message message = (Message) packet.getMessage();
-        InnerExtraData innerExtraData = JSONUtil.toBean(message.getExtra(), InnerExtraData.class);
+        // 这里的 message.getExtra() 不可能为空，所以这里不做判空处理了
+        ExtraMessage extraMessage = JSON.parseObject(message.getExtra(), ExtraMessage.class);
+        InnerExtraData innerExtraData = extraMessage.getInnerExtraData();
         // 获取消息中的路由表
         List<RoutingTable> routingTables = innerExtraData.routingTables();
         String toSocketAddressStr = SocketAddressUtil.convert2HostPort(toSocketAddress);
@@ -68,7 +71,7 @@ public class BacktrackRouterStrategy implements RouterStrategy{
                 routingTables.add(localRoutingTable);
             }
             // 设置message
-            message.setExtra(JSONUtil.toJsonStr(innerExtraData));
+            message.setExtra(JSON.toJSONString(extraMessage));
             // 下面是挑选一个符合规则的服务
             // 从全量服务注册表中排除一下路由，找出一个符合条件的
             Iterator<Map.Entry<InetSocketAddress, ChannelPool>> allSocketAddressIterator = MapUtil.mergerMaps(IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.asMap(), IMServerContext.CLUSTER_GLOBAL_SERVER_REGISTRY_TABLE.asMap()).entrySet().iterator();

@@ -1,6 +1,8 @@
 package com.ouyunc.im.packet;
 
+import com.alibaba.fastjson2.annotation.JSONField;
 import com.ouyunc.im.constant.IMConstant;
+import com.ouyunc.im.serialize.Long2StringSerializer;
 import io.protostuff.Tag;
 
 import java.io.Serializable;
@@ -36,6 +38,7 @@ public class Packet<T> implements Serializable {
      * 协议包id 8个字节 使用雪花id
      */
     @Tag(4)
+    @JSONField(serializeUsing = Long2StringSerializer.class)
     private long packetId;
 
     /**

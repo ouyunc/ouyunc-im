@@ -1,12 +1,10 @@
 package com.ouyunc.im.config;
 
-import cn.hutool.core.collection.CollectionUtil;
 import com.ouyunc.im.constant.enums.RouterStrategyEnum;
 import com.ouyunc.im.innerclient.DefaultIMInnerClient;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.logging.LogLevel;
 import io.netty.util.NettyRuntime;
-import org.aeonbits.owner.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

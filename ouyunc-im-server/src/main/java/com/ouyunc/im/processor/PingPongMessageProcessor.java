@@ -1,6 +1,5 @@
 package com.ouyunc.im.processor;
 
-import cn.hutool.core.date.SystemClock;
 import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.constant.enums.MessageContentEnum;
 import com.ouyunc.im.constant.enums.MessageEnum;
@@ -11,6 +10,7 @@ import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.utils.IdentityUtil;
 import com.ouyunc.im.utils.SnowflakeUtil;
+import com.ouyunc.im.utils.SystemClock;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.AttributeKey;
 import org.slf4j.Logger;

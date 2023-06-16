@@ -1,23 +1,18 @@
 package com.ouyunc.im.processor;
 
-import cn.hutool.core.collection.CollectionUtil;
-import cn.hutool.core.date.SystemClock;
-import cn.hutool.json.JSONUtil;
 import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.constant.enums.MessageEnum;
-import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.domain.bo.ImGroupUserBO;
 import com.ouyunc.im.helper.DbHelper;
 import com.ouyunc.im.helper.MessageHelper;
 import com.ouyunc.im.helper.UserHelper;
 import com.ouyunc.im.packet.Packet;
-import com.ouyunc.im.packet.message.InnerExtraData;
 import com.ouyunc.im.packet.message.Message;
-import com.ouyunc.im.utils.IdentityUtil;
-import com.ouyunc.im.utils.SocketAddressUtil;
+import com.ouyunc.im.utils.SystemClock;
 import com.ouyunc.im.validate.MessageValidate;
 import io.netty.channel.ChannelHandlerContext;
+import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,28 +63,15 @@ public class GroupChatMessageProcessor extends AbstractMessageProcessor {
         log.info("GroupChatMessageProcessor 正在处理群聊消息packet: {}", packet);
         fireProcess(ctx, packet, (ctx0, packet0)->{
             Message message = (Message) packet.getMessage();
-            InnerExtraData innerExtraData = JSONUtil.toBean(message.getExtra(), InnerExtraData.class);
-            if (innerExtraData == null) {
-                innerExtraData = new InnerExtraData();
-            }
             // from 代表群组中的发送者
             String from = message.getFrom();
             // to 代表群组唯一表示
             String to = message.getTo();
-            // 判断是否从其他服务路由过来的额消息
-            if (innerExtraData.isDelivery()) {
-                if (IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(innerExtraData.getTargetServerAddress()) || !IMServerContext.SERVER_CONFIG.isClusterEnable()) {
-                    MessageHelper.sendMessage(packet, IdentityUtil.generalComboIdentity(to, innerExtraData.getDeviceEnum().getName()));
-                    return;
-                }
-                MessageHelper.deliveryMessage(packet, SocketAddressUtil.convert2SocketAddress(innerExtraData.getTargetServerAddress()));
-                return;
-            }
             // 根据群唯一标识to,获取当前群中所有群成员
             // 首先从缓存中获取群成员(包括自身)，如果没有在从数据库获取
             List<ImGroupUserBO> groupMembers = DbHelper.getGroupMembers(to);
             // 循环遍历
-            if (CollectionUtil.isEmpty(groupMembers)) {
+            if (CollectionUtils.isEmpty(groupMembers)) {
                 // 解散了
                 return;
             }
@@ -111,10 +93,10 @@ public class GroupChatMessageProcessor extends AbstractMessageProcessor {
                     // 群里其它人员的其他端
                     // 判断，群成员是否屏蔽了该群，如果屏蔽则不能接受到该消息
                     if (IMConstant.NOT_SHIELD.equals(groupMember.getIsShield())) {
-                        List<LoginUserInfo> othersMembersLoginUserInfos = UserHelper.onlineAll(groupMember.getUserId().toString());
-                        if (CollectionUtil.isEmpty(othersMembersLoginUserInfos)) {
+                        List<LoginUserInfo> othersMembersLoginUserInfos = UserHelper.onlineAll(groupMember.getUserId());
+                        if (CollectionUtils.isEmpty(othersMembersLoginUserInfos)) {
                             // 存入离线消息
-                            DbHelper.write2OfflineTimeline(packet,groupMember.getUserId(), timestamp);
+                            DbHelper.write2OfflineTimeline(packet, groupMember.getUserId(), timestamp);
                         }else {
                             // 转发给某个客户端的各个设备端
                             MessageHelper.send2MultiDevices(packet, othersMembersLoginUserInfos);

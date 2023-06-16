@@ -1,8 +1,7 @@
 package com.ouyunc.im.processor.content;
 
-import cn.hutool.core.collection.CollectionUtil;
-import cn.hutool.core.date.SystemClock;
-import cn.hutool.json.JSONUtil;
+
+import com.alibaba.fastjson2.JSON;
 import com.im.cache.l1.distributed.redis.redisson.RedissonFactory;
 import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.CacheConstant;
@@ -15,8 +14,10 @@ import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.packet.message.content.GroupRequestContent;
 import com.ouyunc.im.utils.IdentityUtil;
+import com.ouyunc.im.utils.SystemClock;
 import com.ouyunc.im.validate.MessageValidate;
 import io.netty.channel.ChannelHandlerContext;
+import org.apache.commons.collections4.CollectionUtils;
 import org.redisson.api.RLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,7 +41,7 @@ public class GroupJoinMessageContentProcessor extends AbstractMessageContentProc
         Message message = (Message) packet.getMessage();
         // 根据to从分布式缓存中取出targetServerAddress目标地址
         String to = message.getTo();
-        GroupRequestContent groupRequestContent = JSONUtil.toBean(message.getContent(), GroupRequestContent.class);
+        GroupRequestContent groupRequestContent = JSON.parseObject(message.getContent(), GroupRequestContent.class);
         String identity = groupRequestContent.getIdentity();
         String groupId = groupRequestContent.getGroupId();
         // 处理群组请求
@@ -60,13 +61,13 @@ public class GroupJoinMessageContentProcessor extends AbstractMessageContentProc
         }
         // 查找群中的管理员以及群主，向其投递加群的请求
         List<ImGroupUserBO> groupManagerMembers = DbHelper.getGroupMembers(to, true);
-        if (CollectionUtil.isEmpty(groupManagerMembers)) {
+        if (CollectionUtils.isEmpty(groupManagerMembers)) {
             return;
         }
         for (ImGroupUserBO groupManagerMember : groupManagerMembers) {
             // 判断该管理员是否在线，如果不在线放入离线消息
             List<LoginUserInfo> managersLoginUserInfos = UserHelper.onlineAll(groupManagerMember.getUserId());
-            if (CollectionUtil.isEmpty(managersLoginUserInfos)) {
+            if (CollectionUtils.isEmpty(managersLoginUserInfos)) {
                 // 存入离线消息
                 DbHelper.write2OfflineTimeline(packet, groupManagerMember.getUserId(), timestamp);
             }else {

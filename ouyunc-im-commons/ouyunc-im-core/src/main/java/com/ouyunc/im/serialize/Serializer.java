@@ -1,6 +1,5 @@
 package com.ouyunc.im.serialize;
 
-import cn.hutool.core.util.ObjectUtil;
 import com.caucho.hessian.io.Hessian2Input;
 import com.caucho.hessian.io.Hessian2Output;
 import com.caucho.hessian.io.HessianInput;
@@ -9,8 +8,7 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 import com.esotericsoftware.kryo.pool.KryoPool;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ouyunc.im.utils.ObjectUtil;
 import io.protostuff.LinkedBuffer;
 import io.protostuff.ProtobufIOUtil;
 import io.protostuff.Schema;
@@ -46,26 +44,13 @@ public enum Serializer {
         }
     },
     JSON((byte)2, "json", "json 序列化") {
-        ObjectMapper  objectMapper = new ObjectMapper();
-
         @Override
         public  <T> byte[] serialize(T t)  {
-            try {
-                return objectMapper.writeValueAsBytes(t);
-            } catch (JsonProcessingException e) {
-                log.error("json 序列化失败! 原因：{}", e.getMessage());
-                throw new IllegalStateException(e.getMessage(), e);
-            }
+            return com.alibaba.fastjson2.JSON.toJSONBytes(t);
         }
-
         @Override
         public <T> T deserialize(byte[] data, Class<T> cls){
-            try {
-                return objectMapper.readValue(data, cls);
-            } catch (IOException e) {
-                log.error("json 反序列化失败 原因：{}", e.getMessage());
-                throw new IllegalStateException(e.getMessage(), e);
-            }
+            return com.alibaba.fastjson2.JSON.parseObject(data, cls);
         }
     },
     HESSIAN((byte)3, "hessian", "hessian 序列化") {

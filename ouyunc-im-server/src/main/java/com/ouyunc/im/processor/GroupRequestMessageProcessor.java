@@ -1,15 +1,9 @@
 package com.ouyunc.im.processor;
 
-import cn.hutool.json.JSONUtil;
 import com.ouyunc.im.constant.enums.MessageEnum;
 import com.ouyunc.im.context.IMProcessContext;
-import com.ouyunc.im.context.IMServerContext;
-import com.ouyunc.im.helper.MessageHelper;
 import com.ouyunc.im.packet.Packet;
-import com.ouyunc.im.packet.message.InnerExtraData;
 import com.ouyunc.im.packet.message.Message;
-import com.ouyunc.im.utils.IdentityUtil;
-import com.ouyunc.im.utils.SocketAddressUtil;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,21 +29,6 @@ public class GroupRequestMessageProcessor extends AbstractMessageProcessor{
         log.info("GroupRequestMessageProcessor 正在处理好友请求消息packet: {}", packet);
         fireProcess(ctx, packet, (ctx0, packet0)->{
             Message message = (Message) packet.getMessage();
-            InnerExtraData innerExtraData = JSONUtil.toBean(message.getExtra(), InnerExtraData.class);
-            if (innerExtraData == null) {
-                innerExtraData = new InnerExtraData();
-            }
-            // 根据to 群唯一标识，或客户端唯一标识
-            String to = message.getTo();
-            // 判断是否从其他服务路由过来的消息
-            if (innerExtraData.isDelivery()) {
-                if (IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(innerExtraData.getTargetServerAddress()) || !IMServerContext.SERVER_CONFIG.isClusterEnable()) {
-                    MessageHelper.sendMessage(packet, IdentityUtil.generalComboIdentity(to, innerExtraData.getDeviceEnum().getName()));
-                    return;
-                }
-                MessageHelper.deliveryMessage(packet, SocketAddressUtil.convert2SocketAddress(innerExtraData.getTargetServerAddress()));
-                return;
-            }
             // 判断是什么类型的消息，好友申请，好友拒绝，好友同意等
             IMProcessContext.MESSAGE_CONTENT_PROCESSOR.get(message.getContentType()).doProcess(ctx, packet);
         });

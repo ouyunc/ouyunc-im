@@ -1,22 +1,17 @@
 package com.ouyunc.im.processor;
 
-import cn.hutool.core.collection.CollectionUtil;
-import cn.hutool.core.date.SystemClock;
-import cn.hutool.json.JSONUtil;
 import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.constant.enums.MessageEnum;
-import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.helper.DbHelper;
 import com.ouyunc.im.helper.MessageHelper;
 import com.ouyunc.im.helper.UserHelper;
 import com.ouyunc.im.packet.Packet;
-import com.ouyunc.im.packet.message.InnerExtraData;
 import com.ouyunc.im.packet.message.Message;
-import com.ouyunc.im.utils.IdentityUtil;
-import com.ouyunc.im.utils.SocketAddressUtil;
+import com.ouyunc.im.utils.SystemClock;
 import com.ouyunc.im.validate.MessageValidate;
 import io.netty.channel.ChannelHandlerContext;
+import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,7 +37,7 @@ public class PrivateChatMessageProcessor extends AbstractMessageProcessor{
      */
     @Override
     public void preProcess(ChannelHandlerContext ctx, Packet packet) {
-        log.info("PrivateChatMessageProcessor 正在前置处理 packet: {} ...", packet);
+        log.info("P2rivateChatMessageProcessor 正在前置处理 packet: {} ...", packet);
         // 存储packet到数据库中（目前只是保存相关信息，不做扩展，以后可以做数据分析使用）
         EVENT_EXECUTORS.execute(() -> DbHelper.writeMessage(packet));
         Message message = (Message) packet.getMessage();
@@ -70,23 +65,10 @@ public class PrivateChatMessageProcessor extends AbstractMessageProcessor{
         log.info("PrivateChatMessageProcessor 正在处理私聊消息packet: {}",packet);
         fireProcess(ctx, packet,(ctx0, packet0)->{
             Message message = (Message) packet.getMessage();
-            InnerExtraData innerExtraData = JSONUtil.toBean(message.getExtra(), InnerExtraData.class);
-            if (innerExtraData == null) {
-                innerExtraData = new InnerExtraData();
-            }
             // 下面是对集群以及qos消息可靠进行处理
             String from = message.getFrom();
             // 根据to从分布式缓存中取出targetServerAddress目标地址
             String to = message.getTo();
-            // 判断是否从其他服务路由过来的额消息
-            if (innerExtraData.isDelivery()) {
-                if (IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(innerExtraData.getTargetServerAddress()) || !IMServerContext.SERVER_CONFIG.isClusterEnable()) {
-                    MessageHelper.sendMessage(packet, IdentityUtil.generalComboIdentity(to, innerExtraData.getDeviceEnum().getName()));
-                    return;
-                }
-                MessageHelper.deliveryMessage(packet, SocketAddressUtil.convert2SocketAddress(innerExtraData.getTargetServerAddress()));
-                return;
-            }
             // 将消息写到发件箱和及接收方的收件箱
             long timestamp = SystemClock.now();
             DbHelper.write2SendTimeline(packet, from, timestamp);
@@ -98,7 +80,7 @@ public class PrivateChatMessageProcessor extends AbstractMessageProcessor{
             MessageHelper.send2MultiDevices(packet, fromLoginUserInfos);
             // 获取该客户端在线的所有客户端，进行推送消息已读
             List<LoginUserInfo> toLoginUserInfos = UserHelper.onlineAll(to);
-            if (CollectionUtil.isEmpty(toLoginUserInfos)) {
+            if (CollectionUtils.isEmpty(toLoginUserInfos)) {
                 // 存入离线消息，不以设备来区分
                 DbHelper.write2OfflineTimeline(packet, to, timestamp);
                 return;

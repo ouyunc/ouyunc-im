@@ -1,6 +1,6 @@
 package com.ouyunc.im.innerclient.handler;
 
-import cn.hutool.core.collection.ConcurrentHashSet;
+import com.google.common.collect.Sets;
 import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.context.IMServerContext;
 import io.netty.channel.Channel;
@@ -11,6 +11,7 @@ import io.netty.util.AttributeKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -55,14 +56,14 @@ public class IMInnerClientHeartBeatHandler extends ChannelInboundHandlerAdapter 
                     // 获取锁
                     lock.lock();
                     // 获取当前管道所属的channel pool 的hashcode
-                    ConcurrentHashSet<Channel> coreChannelSet = IMServerContext.CLUSTER_INNER_CLIENT_CORE_CHANNEL_POOL.get(channelPoolHashCode);
+                    Set<Channel> coreChannelSet = IMServerContext.CLUSTER_INNER_CLIENT_CORE_CHANNEL_POOL.get(channelPoolHashCode);
                     // 判断当前核心coreChannelSet中是否已经满了，有可能这里的核心线程一个都没有，但是总的channel已经达到最大值,该channel 不正在写
                     // 注意；核心channel添加的场景及规则如下：一开始消息很多会频繁的创建内部客户端channel直到达到最大channel(有最大channel数规则限制)，
                     // 当消息少量时，会触发该空闲事件，如果核心channel pool 没有达到设置的数量则，添加到池中，后面消息多的时候会优先从channel池中取出channel,
                     // 不在需要创建新的channel,除非消息很多，核心channel 池中的channel 已经用完，则会重新新建channel来处理大量消息
                     if (coreChannelSet.stream().filter(ch -> ch.isActive()).count() >= IMServerContext.SERVER_CONFIG.getClusterInnerClientChannelPoolCoreConnection()) {
                         // 直接关闭该通道，应该移除通道
-                        log.error("===============内部客户端核心channel已经满了，且现在channel {} 处于空闲状态，所以需要关闭该 channel===================", channel.id().asShortText());
+                        log.warn("===============内部客户端核心channel已经满了，且现在channel {} 处于空闲状态，所以需要关闭该 channel===================", channel.id().asShortText());
                         // 这里的关闭会触发内部客户端的关闭，进行核心线程数的相关逻辑处理
                         channel.close();
                         return;

@@ -1,22 +1,19 @@
 package com.ouyunc.im.processor;
 
-import cn.hutool.core.collection.CollectionUtil;
-import cn.hutool.core.date.SystemClock;
-import cn.hutool.json.JSONUtil;
+
+import com.alibaba.fastjson2.JSON;
 import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.enums.MessageContentEnum;
 import com.ouyunc.im.constant.enums.MessageEnum;
-import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.helper.DbHelper;
 import com.ouyunc.im.helper.MessageHelper;
 import com.ouyunc.im.helper.UserHelper;
 import com.ouyunc.im.packet.Packet;
-import com.ouyunc.im.packet.message.InnerExtraData;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.packet.message.content.ReadReceiptContent;
-import com.ouyunc.im.utils.IdentityUtil;
-import com.ouyunc.im.utils.SocketAddressUtil;
+import com.ouyunc.im.utils.SystemClock;
 import io.netty.channel.ChannelHandlerContext;
+import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,29 +44,13 @@ public class ReadReceiptMessageProcessor extends AbstractMessageProcessor {
         fireProcess(ctx, packet, (ctx0, packet0) -> {
             // 获取需要回执的消息id
             Message message = (Message) packet.getMessage();
-            // 未开启db
-            InnerExtraData innerExtraData = JSONUtil.toBean(message.getExtra(), InnerExtraData.class);
-            if (innerExtraData == null) {
-                innerExtraData = new InnerExtraData();
-            }
-            // 接收方
-            String to = message.getTo();
-            // 是传递过来的,判断该消息最终服务地址是否是本机
-            if (innerExtraData.isDelivery()) {
-                if (IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(innerExtraData.getTargetServerAddress()) || !IMServerContext.SERVER_CONFIG.isClusterEnable()) {
-                    MessageHelper.sendMessage(packet, IdentityUtil.generalComboIdentity(to, innerExtraData.getDeviceEnum().getName()));
-                    return;
-                }
-                MessageHelper.deliveryMessage(packet, SocketAddressUtil.convert2SocketAddress(innerExtraData.getTargetServerAddress()));
-                return;
-            }
             // 判断是否是已读消息内容类型
             if (MessageContentEnum.READ_RECEIPT_CONTENT.type() != message.getContentType()) {
                 return;
             }
-            List<ReadReceiptContent> readReceiptList = JSONUtil.toList(message.getContent(), ReadReceiptContent.class);
+            List<ReadReceiptContent> readReceiptList = JSON.parseArray(message.getContent(), ReadReceiptContent.class);
             // 不做处理
-            if (CollectionUtil.isEmpty(readReceiptList)) {
+            if (CollectionUtils.isEmpty(readReceiptList)) {
                 return;
             }
             DbHelper.writeMessageReadReceipt(message.getFrom(), readReceiptList);
@@ -78,10 +59,10 @@ public class ReadReceiptMessageProcessor extends AbstractMessageProcessor {
                 // 判断from是否在线,如果不在线，则将该批次回执消息存到对应客户端的离线信箱中，稍后发布,注意这里涉及接受者多设备端，不考虑发送者多设备端（影响不大）
                 // 重新封装packet消息,进行发送
                 message.setTo(identity);
-                message.setContent(JSONUtil.toJsonStr(readReceiptContents));
+                message.setContent(JSON.toJSONString(readReceiptContents));
                 // 获取该客户端在线的所有客户端，进行推送消息已读
                 List<LoginUserInfo> loginUserInfos = UserHelper.onlineAll(identity);
-                if (CollectionUtil.isEmpty(loginUserInfos)) {
+                if (CollectionUtils.isEmpty(loginUserInfos)) {
                     // 存入离线信箱
                     DbHelper.write2OfflineTimeline(packet, identity, SystemClock.now());
                 } else {

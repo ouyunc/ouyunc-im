@@ -10,9 +10,58 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v3.1.1-beta 群请求处理">
+      <change afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/serialize/Long2StringSerializer.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/ClassScanner.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/MD5Util.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/ObjectUtil.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/SystemClock.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/PacketClusterRouterHandler.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/HELP.md" beforeDir="false" afterPath="$PROJECT_DIR$/HELP.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/IMConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/IMConstant.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/encrypt/Encrypt.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/encrypt/Encrypt.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/Packet.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/Packet.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/ClientReplyAckContent.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/ClientReplyAckContent.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/ReadReceiptContent.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/ReadReceiptContent.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/ServerWarningContent.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/ServerWarningContent.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/serialize/Serializer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/serialize/Serializer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/SnowflakeUtil.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/SnowflakeUtil.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/AbstractIMServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/AbstractIMServer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/config/IMServerConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/config/IMServerConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/context/IMProcessContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/context/IMProcessContext.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/context/IMServerContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/context/IMServerContext.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/DbHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/DbHelper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/MessageHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/MessageHelper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/UserHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/UserHelper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/innerclient/handler/IMInnerClientHeartBeatHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/innerclient/handler/IMInnerClientHeartBeatHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/lock/RedissonDistributedLockAspect.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/lock/RedissonDistributedLockAspect.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/AbstractMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/AbstractMessageProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/FriendRequestMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/FriendRequestMessageProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/GroupChatMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/GroupChatMessageProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/GroupRequestMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/GroupRequestMessageProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/LoginMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/LoginMessageProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/PingPongMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/PingPongMessageProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/PrivateChatMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/PrivateChatMessageProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/ReadReceiptMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/ReadReceiptMessageProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/ReplyAckMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/ReplyAckMessageProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/SynAckMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/SynAckMessageProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupAgreeInviteMessageContentProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupAgreeInviteMessageContentProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupAgreeJoinMessageContentProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupAgreeJoinMessageContentProcessor.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupDisbandMessageContentProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupDisbandMessageContentProcessor.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupExitMessageContentProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupExitMessageContentProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupInviteMessageContentProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupInviteMessageContentProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupJoinMessageContentProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupJoinMessageContentProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupKickMessageContentProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupKickMessageContentProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupRefuseInviteMessageContentProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupRefuseInviteMessageContentProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupRefuseJoinMessageContentProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupRefuseJoinMessageContentProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/protocol/Protocol.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/protocol/Protocol.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/router/BacktrackRouterStrategy.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/router/BacktrackRouterStrategy.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/router/RandomRouterStrategy.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/router/RandomRouterStrategy.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/thread/IMInnerClientHeartbeatThread.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/thread/IMInnerClientHeartbeatThread.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/thread/IMRouteFailureProcessorThread.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/thread/IMRouteFailureProcessorThread.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/ouyunc-im-server.properties" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/ouyunc-im-server.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -105,12 +154,12 @@
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="aspect.path.notification.shown" value="true" />
     <property name="jdk.selected.JAVA_MODULE" value="1.8" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/../jxv-boot" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../hutool" />
     <property name="nodejs_package_manager_path" value="npm" />
     <property name="project.structure.last.edited" value="Artifacts" />
     <property name="project.structure.proportion" value="0.15" />
     <property name="project.structure.side.proportion" value="0.47011495" />
-    <property name="settings.editor.selected.configurable" value="reference.projectsettings.compiler.javacompiler" />
+    <property name="settings.editor.selected.configurable" value="Debugger_Data_Views_Java" />
     <property name="vue.rearranger.settings.migration" value="true" />
   </component>
   <component name="ReactorSettings">
@@ -134,11 +183,11 @@
       <recent name="D:\workspace\ouyu-im\ouyu-core\src\main\java\com\ouyu\im\packet\message\proto" />
     </key>
     <key name="CopyClassDialog.RECENTS_KEY">
+      <recent name="com.ouyunc.im.utils" />
       <recent name="com.ouyunc.im.processor.content" />
       <recent name="com.ouyunc.im.domain.bo" />
       <recent name="com.ouyu.im.config" />
       <recent name="com.ouyu.cache.l1.distributed.redis.lettuce.config" />
-      <recent name="com.ouyu.im.dispatcher" />
     </key>
   </component>
   <component name="RunManager">
@@ -363,6 +412,8 @@
       <workItem from="1685926557774" duration="340000" />
       <workItem from="1685926946959" duration="33450000" />
       <workItem from="1686621069858" duration="11876000" />
+      <workItem from="1686816217775" duration="301000" />
+      <workItem from="1686816990461" duration="27822000" />
     </task>
     <task id="LOCAL-00141" summary="v3.0.1 js sdk">
       <created>1673494533323</created>
@@ -848,6 +899,12 @@
           <line>70</line>
           <option name="timeStamp" value="335" />
         </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="java-line">
+          <condition expression="packet.getMessageType() == 5" language="JAVA" />
+          <url>file://$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/OuyuncServerHandler.java</url>
+          <line>28</line>
+          <option name="timeStamp" value="359" />
+        </line-breakpoint>
         <line-breakpoint enabled="true" type="javascript">
           <url>file://$PROJECT_DIR$/docs/socket/ouyu-socket.js</url>
           <line>328</line>
@@ -862,5 +919,9 @@
         <PinnedItemInfo parentTag="com.github.benmanes.caffeine.cache.UnboundedLocalCache$UnboundedLocalLoadingCache" memberName="cache" />
       </pinned-members>
     </pin-to-top-manager>
+  </component>
+  <component name="XSLT-Support.FileAssociations.UIState">
+    <expand />
+    <select />
   </component>
 </project>

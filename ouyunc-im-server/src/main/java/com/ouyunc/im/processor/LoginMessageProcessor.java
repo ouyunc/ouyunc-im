@@ -1,8 +1,7 @@
 package com.ouyunc.im.processor;
 
-import cn.hutool.core.date.SystemClock;
-import cn.hutool.core.util.StrUtil;
-import cn.hutool.json.JSONUtil;
+
+import com.alibaba.fastjson2.JSON;
 import com.im.cache.l1.distributed.redis.redisson.RedissonFactory;
 import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.CacheConstant;
@@ -21,10 +20,11 @@ import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.packet.message.content.LoginContent;
 import com.ouyunc.im.packet.message.content.ServerNotifyContent;
-import com.ouyunc.im.protocol.Protocol;
 import com.ouyunc.im.utils.IdentityUtil;
 import com.ouyunc.im.utils.SnowflakeUtil;
+import com.ouyunc.im.utils.SystemClock;
 import io.netty.channel.ChannelHandlerContext;
+import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,7 +50,7 @@ public class LoginMessageProcessor extends AbstractMessageProcessor{
      * @return boolean
      */
     public boolean validate(LoginContent loginContent) {
-        if (StrUtil.isEmpty(loginContent.getIdentity()) || StrUtil.isEmpty(loginContent.getAppKey()) || StrUtil.isEmpty(loginContent.getSignature())  || loginContent.getCreateTime() <= 0 || Encrypt.AsymmetricEncrypt.prototype(loginContent.getSignatureAlgorithm()) == null) {
+        if (StringUtils.isEmpty(loginContent.getIdentity()) || StringUtils.isEmpty(loginContent.getAppKey()) || StringUtils.isEmpty(loginContent.getSignature())  || loginContent.getCreateTime() <= 0 || Encrypt.AsymmetricEncrypt.prototype(loginContent.getSignatureAlgorithm()) == null) {
             return false;
         }
         // raw = appkey&identity&createtime_appSecret
@@ -93,7 +93,7 @@ public class LoginMessageProcessor extends AbstractMessageProcessor{
             return;
         }
         //将消息内容转成message
-        LoginContent loginContent = JSONUtil.toBean(loginMessage.getContent(), LoginContent.class);
+        LoginContent loginContent = JSON.parseObject(loginMessage.getContent(), LoginContent.class);
         // 做登录参数校验
         //1,进行参数合法校验，校验失败，结束 ；2,进行签名的校验，校验失败，结束，3，进行权限校验，校验失败，结束
         // 根据appKey 获取appSecret 然后拼接
@@ -101,7 +101,7 @@ public class LoginMessageProcessor extends AbstractMessageProcessor{
         lock.lock();
         try{
             if (IMServerContext.SERVER_CONFIG.isLoginValidateEnable() && !validate(loginContent)) {
-                log.warn("客户端id: {} 登录参数: {}，校验未通过！", ctx.channel().id().asShortText(), JSONUtil.toJsonStr(loginContent));
+                log.warn("客户端id: {} 登录参数: {}，校验未通过！", ctx.channel().id().asShortText(), JSON.toJSONString(loginContent));
                 ctx.close();
                 return;
             }
@@ -114,7 +114,7 @@ public class LoginMessageProcessor extends AbstractMessageProcessor{
             // 如果是都不为空是重复登录请求(1，不同的设备远程登录，2，同一设备重复发送登录请求)，向原有的连接发送通知，有其他客户端登录，并将其连接下线
             if (bindCtx != null) {
                 // 给原有连接发送通知消息，并将其下线，添加新的连接登录
-                Message message = new Message(IMServerContext.SERVER_CONFIG.getLocalHost(), loginContent.getIdentity(), MessageContentEnum.SERVER_NOTIFY_CONTENT.type(), JSONUtil.toJsonStr(new ServerNotifyContent(String.format(IMConstant.REMOTE_LOGIN_NOTIFICATIONS, packet.getIp()))), SystemClock.now());
+                Message message = new Message(IMServerContext.SERVER_CONFIG.getLocalHost(), loginContent.getIdentity(), MessageContentEnum.SERVER_NOTIFY_CONTENT.type(), JSON.toJSONString(new ServerNotifyContent(String.format(IMConstant.REMOTE_LOGIN_NOTIFICATIONS, packet.getIp()))), SystemClock.now());
                 // 注意： 这里的原来的连接使用的序列化方式，应该是和新连接上的序列化方式一致，这里当成一致，当然不一致也可以做，后面遇到再改造
                 Packet notifyPacket = new Packet(packet.getProtocol(), packet.getProtocolVersion(), SnowflakeUtil.nextId(), DeviceEnum.PC_LINUX.getValue(), NetworkEnum.OTHER.getValue(), IMServerContext.SERVER_CONFIG.getLocalHost(), MessageEnum.IM_SERVER_NOTIFY.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), packet.getSerializeAlgorithm(),  message);
                 MessageHelper.sendMessageSync(notifyPacket, comboIdentity);

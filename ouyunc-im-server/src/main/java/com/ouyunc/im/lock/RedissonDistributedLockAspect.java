@@ -1,9 +1,9 @@
 package com.ouyunc.im.lock;
 
 
-import cn.hutool.core.util.StrUtil;
 import com.im.cache.l1.distributed.redis.redisson.RedissonFactory;
 import com.ouyunc.im.constant.CacheConstant;
+import org.apache.commons.lang3.StringUtils;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -43,7 +43,7 @@ public class RedissonDistributedLockAspect {
         //获取redis锁的名称
         String lockName = distributedLock.lockName();
         //判断锁是否有值
-        if (StrUtil.isBlank(lockName)) {
+        if (StringUtils.isBlank(lockName)) {
             //生成锁键名称 lock key name
             MethodSignature signature = (MethodSignature) proceedingJoinPoint.getSignature();
             lockName = CacheConstant.OUYUNC + CacheConstant.LOCK + signature.toLongString();

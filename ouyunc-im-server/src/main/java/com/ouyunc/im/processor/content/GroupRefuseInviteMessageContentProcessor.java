@@ -1,11 +1,11 @@
 package com.ouyunc.im.processor.content;
 
-import cn.hutool.core.date.SystemClock;
 import com.ouyunc.im.constant.CacheConstant;
 import com.ouyunc.im.constant.enums.MessageContentEnum;
 import com.ouyunc.im.helper.DbHelper;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.Message;
+import com.ouyunc.im.utils.SystemClock;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

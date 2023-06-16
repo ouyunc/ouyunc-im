@@ -1,5 +1,8 @@
 package com.ouyunc.im.packet.message.content;
 
+import com.alibaba.fastjson2.annotation.JSONField;
+import com.ouyunc.im.serialize.Long2StringSerializer;
+
 import java.io.Serializable;
 
 /**
@@ -11,6 +14,7 @@ public class ClientReplyAckContent implements Serializable {
     /**
      * 原消息包packet id
      */
+    @JSONField(serializeUsing = Long2StringSerializer.class)
     private long packetId;
 
     /**

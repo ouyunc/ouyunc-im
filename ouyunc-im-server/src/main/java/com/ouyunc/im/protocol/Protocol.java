@@ -1,7 +1,6 @@
 package com.ouyunc.im.protocol;
 
 
-import cn.hutool.core.date.SystemClock;
 import com.ouyunc.im.base.MissingPacket;
 import com.ouyunc.im.constant.CacheConstant;
 import com.ouyunc.im.constant.IMConstant;
@@ -14,6 +13,7 @@ import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.utils.MapUtil;
 import com.ouyunc.im.utils.ReaderWriterUtil;
 import com.ouyunc.im.utils.SocketAddressUtil;
+import com.ouyunc.im.utils.SystemClock;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
@@ -121,6 +121,8 @@ public enum Protocol {
                     // 上一个packet编解码处理器，处理后，会在这里交给包转换器来转换
                     // 转换成包packet，这里为了做兼容客户端心跳
                     .addLast(IMConstant.CONVERT_2_PACKET, new Convert2PacketHandler())
+                    // 添加一个集群中处理消息路由的处理器，这样就不需要在业务处理器中都写一下了
+                    .addLast(IMConstant.PACKET_CLUSTER_ROUTER,new PacketClusterRouterHandler())
                     // 集群内部/外部业务处理
                     .addLast(IMConstant.OUYUNC_IM_HANDLER, new OuyuncServerHandler())
                     // 移除协议分发器

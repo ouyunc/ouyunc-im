@@ -1,5 +1,8 @@
 package com.ouyunc.im.packet.message.content;
 
+import com.alibaba.fastjson2.annotation.JSONField;
+import com.ouyunc.im.serialize.Long2StringSerializer;
+
 import java.io.Serializable;
 
 /**
@@ -16,6 +19,7 @@ public class ReadReceiptContent implements Serializable {
     /**
      * 消息回执id
      */
+    @JSONField(serializeUsing = Long2StringSerializer.class)
     private long packetId;
 
     public String getIdentity() {

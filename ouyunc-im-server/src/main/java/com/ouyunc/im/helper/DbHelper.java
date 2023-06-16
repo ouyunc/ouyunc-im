@@ -1,10 +1,7 @@
 package com.ouyunc.im.helper;
 
-import cn.hutool.core.collection.CollectionUtil;
-import cn.hutool.core.date.SystemClock;
-import cn.hutool.core.map.MapUtil;
-import cn.hutool.core.util.StrUtil;
-import cn.hutool.json.JSONUtil;
+
+import com.alibaba.fastjson2.JSON;
 import com.im.cache.l1.distributed.redis.RedisDistributedL1Cache;
 import com.im.cache.l1.distributed.redis.redisson.RedissonFactory;
 import com.ouyunc.im.constant.CacheConstant;
@@ -27,7 +24,11 @@ import com.ouyunc.im.packet.message.content.OfflineContent;
 import com.ouyunc.im.packet.message.content.ReadReceiptContent;
 import com.ouyunc.im.packet.message.content.UnreadContent;
 import com.ouyunc.im.utils.IdentityUtil;
+import com.ouyunc.im.utils.MapUtil;
 import com.ouyunc.im.utils.SnowflakeUtil;
+import com.ouyunc.im.utils.SystemClock;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,9 +67,9 @@ public class  DbHelper {
         if (MessageContentEnum.UNREAD_CONTENT.type() == message.getContentType()) {
             List<UnreadContent> unreadContentList = new ArrayList<>();
             Set<Packet<Message>> packetSetResult = cacheOperator.reverseRangeZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + message.getFrom(), 0, -1);
-            if (CollectionUtil.isNotEmpty(packetSetResult)) {
+            if (CollectionUtils.isNotEmpty(packetSetResult)) {
                 packetSetResult.stream().collect(Collectors.groupingBy(packet -> packet.getMessage().getFrom())).forEach((from, packetList) -> {
-                    if (CollectionUtil.isNotEmpty(packetList)) {
+                    if (CollectionUtils.isNotEmpty(packetList)) {
                         packetList.stream().collect(Collectors.groupingBy(Packet::getMessageType)).forEach((messageType, messageTypePackets) -> {
                             MessageEnum prototype = MessageEnum.prototype(messageType);
                             if (MessageEnum.IM_PRIVATE_CHAT.equals(prototype)) {
@@ -76,7 +77,7 @@ public class  DbHelper {
                                 lastPackets.add(messageTypePackets.get(0));
                                 unreadContentList.add(new UnreadContent(from, IMConstant.USER_TYPE_1, messageTypePackets.size(), lastPackets));
                             }
-                            if (MessageEnum.IM_GROUP_CHAT.equals(prototype) && CollectionUtil.isNotEmpty(messageTypePackets)) {
+                            if (MessageEnum.IM_GROUP_CHAT.equals(prototype) && CollectionUtils.isNotEmpty(messageTypePackets)) {
                                 messageTypePackets.stream().collect(Collectors.groupingBy(packet -> packet.getMessage().getTo())).forEach((to, groupMessagePackets) -> {
                                     List<Packet<Message>> lastPackets = new ArrayList<>();
                                     lastPackets.add(groupMessagePackets.get(0));
@@ -86,24 +87,24 @@ public class  DbHelper {
                         });
                     }
                 });
-                message.setContent(JSONUtil.toJsonStr(unreadContentList));
+                message.setContent(JSON.toJSONString(unreadContentList));
             }
             return result;
         }
         // 判断是按需来取还是全量拉取
-        OfflineContent offlineContent = JSONUtil.toBean(message.getContent(), OfflineContent.class);
+        OfflineContent offlineContent = JSON.parseObject(message.getContent(), OfflineContent.class);
         List<Packet<Message>> packetList = offlineContent.getPacketList();
         // 如果传过来的消息id不为空，则可能是第N次拉取，从离线消息中删除消息
-        if (CollectionUtil.isNotEmpty(packetList)) {
+        if (CollectionUtils.isNotEmpty(packetList)) {
             for (Packet<Message> packet : packetList) {
                 cacheOperator.removeZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + message.getFrom(), packet);
             }
         }
         // 全量顺序拉取，一次拉取pullSize 大小的消息
-        if (StrUtil.isNotBlank(offlineContent.getIdentity()) && (IMConstant.USER_TYPE_1.equals(offlineContent.getIdentityType()) || IMConstant.GROUP_TYPE_2.equals(offlineContent.getIdentityType()))) {
+        if (StringUtils.isNotBlank(offlineContent.getIdentity()) && (IMConstant.USER_TYPE_1.equals(offlineContent.getIdentityType()) || IMConstant.GROUP_TYPE_2.equals(offlineContent.getIdentityType()))) {
             // 按需拉取,先查出所有，然后过滤前几条给客户端
             Set<Packet<Message>> packetAllSet = cacheOperator.reverseRangeZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + message.getFrom(), 0, -1);
-            if (CollectionUtil.isNotEmpty(packetAllSet)) {
+            if (CollectionUtils.isNotEmpty(packetAllSet)) {
                 Iterator<Packet<Message>> iterator = packetAllSet.iterator();
                 if (IMConstant.USER_TYPE_1.equals(offlineContent.getIdentityType())) {
                     while (iterator.hasNext()) {
@@ -131,7 +132,7 @@ public class  DbHelper {
         } else {
             // 全量分页拉取
             Set<Packet<Message>> packetSetResult = cacheOperator.reverseRangeZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + message.getFrom(), 0, offlineContent.getPullSize() - 1);
-            if (CollectionUtil.isNotEmpty(packetSetResult)) {
+            if (CollectionUtils.isNotEmpty(packetSetResult)) {
                 Iterator<Packet<Message>> iterator = packetSetResult.iterator();
                 while (iterator.hasNext()) {
                     result.add(iterator.next());
@@ -139,7 +140,7 @@ public class  DbHelper {
             }
         }
         offlineContent.setPacketList(result);
-        message.setContent(JSONUtil.toJsonStr(offlineContent));
+        message.setContent(JSON.toJSONString(offlineContent));
         return result;
     }
 
@@ -166,7 +167,7 @@ public class  DbHelper {
      */
     public static Integer getCurrentAppImConnections(String appKey) {
         Map<String, Object> currentImAppConnectionMap = cacheOperator.getHashAll(CacheConstant.OUYUNC + CacheConstant.IM + CacheConstant.APP + appKey + CacheConstant.CONNECTION);
-        if (CollectionUtil.isNotEmpty(currentImAppConnectionMap)) {
+        if (MapUtil.isNotEmpty(currentImAppConnectionMap)) {
             return currentImAppConnectionMap.size();
         }
         return IMConstant.ZERO;
@@ -374,7 +375,7 @@ public class  DbHelper {
         // 从数据库中查询,群成员
         if (IMServerContext.SERVER_CONFIG.isDbEnable()) {
             imUserList = dbOperator.batchSelect(isGroupManager ? DbSqlConstant.MYSQL.SELECT_GROUP_LEADER_USERS.sql() : DbSqlConstant.MYSQL.SELECT_GROUP_USERS.sql(), ImGroupUserBO.class, to);
-            if (CollectionUtil.isNotEmpty(imUserList)) {
+            if (CollectionUtils.isNotEmpty(imUserList)) {
                 Map<Object, ImGroupUserBO> groupUserMap = new HashMap<>();
                 imUserList.forEach(groupUser -> {
                     groupUserMap.put(groupUser.getUserId(), groupUser);
@@ -467,7 +468,7 @@ public class  DbHelper {
      * @return
      */
     public static void writeMessageReadReceipt(String from, List<ReadReceiptContent> readReceiptList) {
-        if (CollectionUtil.isEmpty(readReceiptList)) {
+        if (CollectionUtils.isEmpty(readReceiptList)) {
             return;
         }
         ImUser user = getUser(from);
@@ -490,7 +491,7 @@ public class  DbHelper {
         if (IMServerContext.SERVER_CONFIG.isDbEnable()) {
             Message message = (Message) packet.getMessage();
             String nowDateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-            dbOperator.insert(DbSqlConstant.MYSQL.INSERT_MESSAGE.sql(), packet.getPacketId(), packet.getProtocol(), packet.getProtocolVersion(), packet.getDeviceType(), packet.getNetworkType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), packet.getIp(), message.getFrom(), message.getTo(), packet.getMessageType(), message.getContentType(), JSONUtil.toJsonStr(message.getContent()), message.getCreateTime(), nowDateTime, nowDateTime);
+            dbOperator.insert(DbSqlConstant.MYSQL.INSERT_MESSAGE.sql(), packet.getPacketId(), packet.getProtocol(), packet.getProtocolVersion(), packet.getDeviceType(), packet.getNetworkType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), packet.getIp(), message.getFrom(), message.getTo(), packet.getMessageType(), message.getContentType(), JSON.toJSONString(message.getContent()), message.getCreateTime(), nowDateTime, nowDateTime);
         }
     }
 

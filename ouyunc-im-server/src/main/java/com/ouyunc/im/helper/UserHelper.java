@@ -1,9 +1,7 @@
 package com.ouyunc.im.helper;
 
 
-import cn.hutool.core.date.SystemClock;
-import cn.hutool.core.map.MapUtil;
-import cn.hutool.json.JSONUtil;
+import com.alibaba.fastjson2.JSON;
 import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.CacheConstant;
 import com.ouyunc.im.constant.IMConstant;
@@ -12,6 +10,8 @@ import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.utils.IdentityUtil;
+import com.ouyunc.im.utils.MapUtil;
+import com.ouyunc.im.utils.SystemClock;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.AttributeKey;
 import org.slf4j.Logger;
@@ -87,7 +87,7 @@ public class UserHelper {
     public static void doReplyAck(String from, Packet packet) {
         log.info("服务端正在回复from: {} ackPacket: {}", from, packet);
         // 异步直接发送
-        MessageHelper.sendMessage(new Packet(packet.getProtocol(), packet.getProtocolVersion(), packet.getPacketId(), DeviceEnum.PC_OTHER.getValue(), NetworkEnum.OTHER.getValue(), IMServerContext.SERVER_CONFIG.getLocalHost(), MessageEnum.IM_REPLY_ACK.getValue(), packet.getEncryptType(), packet.getSerializeAlgorithm(),  new Message(IMServerContext.SERVER_CONFIG.getLocalServerAddress(), from, MessageContentEnum.SERVER_REPLY_ACK_CONTENT.type(), JSONUtil.toJsonStr(packet), SystemClock.now())), IdentityUtil.generalComboIdentity(from, packet.getDeviceType()));
+        MessageHelper.sendMessage(new Packet(packet.getProtocol(), packet.getProtocolVersion(), packet.getPacketId(), DeviceEnum.PC_OTHER.getValue(), NetworkEnum.OTHER.getValue(), IMServerContext.SERVER_CONFIG.getLocalHost(), MessageEnum.IM_REPLY_ACK.getValue(), packet.getEncryptType(), packet.getSerializeAlgorithm(),  new Message(IMServerContext.SERVER_CONFIG.getLocalServerAddress(), from, MessageContentEnum.SERVER_REPLY_ACK_CONTENT.type(), JSON.toJSONString(packet), SystemClock.now())), IdentityUtil.generalComboIdentity(from, packet.getDeviceType()));
     }
 
 

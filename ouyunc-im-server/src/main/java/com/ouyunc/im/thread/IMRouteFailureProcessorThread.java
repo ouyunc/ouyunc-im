@@ -1,17 +1,19 @@
 package com.ouyunc.im.thread;
 
-import cn.hutool.core.date.SystemClock;
-import cn.hutool.json.JSONUtil;
+
+import com.alibaba.fastjson2.JSON;
 import com.ouyunc.im.base.MissingPacket;
 import com.ouyunc.im.constant.CacheConstant;
 import com.ouyunc.im.constant.enums.MessageEnum;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.helper.MessageHelper;
 import com.ouyunc.im.packet.Packet;
+import com.ouyunc.im.packet.message.ExtraMessage;
 import com.ouyunc.im.packet.message.InnerExtraData;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.utils.IdentityUtil;
 import com.ouyunc.im.utils.SocketAddressUtil;
+import com.ouyunc.im.utils.SystemClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,10 +45,8 @@ public class IMRouteFailureProcessorThread implements Runnable {
     public void run() {
         log.warn("获取不到可用的服务连接！packetId: {},开始进行重试...",packet.getPacketId());
         final Message message = (Message) packet.getMessage();
-        InnerExtraData innerExtraData = JSONUtil.toBean(message.getExtra(), InnerExtraData.class);
-        if (innerExtraData == null) {
-            innerExtraData = new InnerExtraData();
-        }
+        ExtraMessage extraMessage = JSON.parseObject(message.getExtra(), ExtraMessage.class);
+        InnerExtraData innerExtraData = extraMessage.getInnerExtraData();
         int currentRetry = innerExtraData.getCurrentRetry();
         currentRetry++;
         // 解析protocolBuf 寻找最终目标机, 清空消息中的列表，添加重试次数+1
@@ -54,7 +54,7 @@ public class IMRouteFailureProcessorThread implements Runnable {
         innerExtraData.setCurrentRetry(currentRetry);
         innerExtraData.setFromServerAddress(null);
         innerExtraData.setRoutingTables(null);
-        message.setExtra(JSONUtil.toJsonStr(innerExtraData));
+        message.setExtra(JSON.toJSONString(extraMessage));
         // targetSocketAddress 不改变
         if (log.isDebugEnabled()) {
             log.debug("正在进行第 {} 次重试消息 packetId:{} ",  currentRetry, packet.getPacketId());

@@ -1,7 +1,7 @@
 package com.ouyunc.im.processor;
 
 
-import cn.hutool.json.JSONUtil;
+import com.alibaba.fastjson2.JSON;
 import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.enums.MessageContentEnum;
 import com.ouyunc.im.constant.enums.MessageEnum;
@@ -34,7 +34,7 @@ public class ReplyAckMessageProcessor extends AbstractMessageProcessor{
 
     /**
      * @Author fangzhenxun
-     * @Description ack业务处理
+     * @Description ack业务处理, 如果离线需要伪造对方客户端发送消息接收方已经收到消息
      * @param ctx
      * @param packet
      * @return void
@@ -44,15 +44,14 @@ public class ReplyAckMessageProcessor extends AbstractMessageProcessor{
         log.info("正在处理客户端packet: {} 的ack...", packet);
         fireProcess(ctx, packet,(ctx0, packet0)->{
             Message message = (Message) packet.getMessage();
-            InnerExtraData innerExtraData = JSONUtil.toBean(message.getExtra(), InnerExtraData.class);
-            // 判断是否是传递消息
-            if (innerExtraData == null) {
-                innerExtraData = new InnerExtraData();
-            }
-            // 根据to从分布式缓存中取出targetServerAddress目标地址
+//            InnerExtraData innerExtraData = JSON.parseObject(message.getExtra(), InnerExtraData.class);
+//            // 判断是否是传递消息
+//            if (innerExtraData == null) {
+//                innerExtraData = new InnerExtraData();
+//            }
             String to = message.getTo();
-            // 这里需要前端传递两个值一个消息id一个消息目标的服务器登录设备类型（客户端可以从哪接收的消息获取）
-            ClientReplyAckContent clientReplyAckContent = JSONUtil.toBean(message.getContent(), ClientReplyAckContent.class);
+            // 这里需要前端传递两个值一个消息id一个消息目标的服务器登录设备类型（客户端可以从接收的消息获取）
+            ClientReplyAckContent clientReplyAckContent = JSON.parseObject(message.getContent(), ClientReplyAckContent.class);
             byte deviceType = clientReplyAckContent.getDeviceType();
             String comboIdentity = IdentityUtil.generalComboIdentity(to, deviceType);
             String targetServerAddress;

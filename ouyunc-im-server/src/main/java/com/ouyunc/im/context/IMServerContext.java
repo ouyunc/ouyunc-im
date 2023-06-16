@@ -1,9 +1,9 @@
 package com.ouyunc.im.context;
 
-import cn.hutool.core.collection.ConcurrentHashSet;
 import com.alibaba.ttl.TransmittableThreadLocal;
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.google.common.collect.Sets;
 import com.im.cache.ICache;
 import com.im.cache.l1.distributed.redis.RedisDistributedL1Cache;
 import com.im.cache.l1.local.caffeine.CaffeineLocalL1Cache;
@@ -11,6 +11,7 @@ import com.ouyunc.im.IMServer;
 import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.base.MissingPacket;
 import com.ouyunc.im.config.IMServerConfig;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.pool.ChannelPool;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -18,6 +19,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.net.InetSocketAddress;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -104,11 +106,12 @@ public class IMServerContext extends IMContext{
     /**
      * IM 集群内部客户端核心channel数
      */
-    public static ICache<Integer, ConcurrentHashSet> CLUSTER_INNER_CLIENT_CORE_CHANNEL_POOL = new CaffeineLocalL1Cache<>("CLUSTER_INNER_CLIENT_CORE_CHANNEL_CACHE", Caffeine.newBuilder().build(new CacheLoader() {
+
+    public static ICache<Integer, Set<Channel>> CLUSTER_INNER_CLIENT_CORE_CHANNEL_POOL = new CaffeineLocalL1Cache<>("CLUSTER_INNER_CLIENT_CORE_CHANNEL_CACHE", Caffeine.newBuilder().build(new CacheLoader() {
         @Nullable
         @Override
         public Object load(@NonNull Object o) throws Exception {
-            return new ConcurrentHashSet<>(5);
+            return Sets.newConcurrentHashSet();
         }
         @Override
         public @NonNull Map loadAll(@NonNull Iterable keys) throws Exception {

@@ -1,8 +1,7 @@
 package com.ouyunc.im.processor.content;
 
-import cn.hutool.core.collection.CollectionUtil;
-import cn.hutool.core.date.SystemClock;
-import cn.hutool.json.JSONUtil;
+
+import com.alibaba.fastjson2.JSON;
 import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.CacheConstant;
 import com.ouyunc.im.constant.enums.MessageContentEnum;
@@ -13,7 +12,9 @@ import com.ouyunc.im.helper.UserHelper;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.packet.message.content.GroupRequestContent;
+import com.ouyunc.im.utils.SystemClock;
 import io.netty.channel.ChannelHandlerContext;
+import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,12 +40,12 @@ public class GroupInviteMessageContentProcessor  extends AbstractMessageContentP
     public void doProcess(ChannelHandlerContext ctx, Packet packet) {
         log.info("GroupInviteMessageContentProcessor 正在处理邀请加群请求 packet: {}...", packet);
         Message message = (Message) packet.getMessage();
-        GroupRequestContent groupRequestContent = JSONUtil.toBean(message.getContent(), GroupRequestContent.class);
+        GroupRequestContent groupRequestContent = JSON.parseObject(message.getContent(), GroupRequestContent.class);
         String groupId = groupRequestContent.getGroupId();
         // 被邀请人id 集合
         List<String> invitedUserIds = groupRequestContent.getInvitedUserIdList();
         // 判断邀请加入的好友是否为空
-        if (CollectionUtil.isNotEmpty(invitedUserIds)) {
+        if (CollectionUtils.isNotEmpty(invitedUserIds)) {
             // 处理群请求
             long now = SystemClock.now();
             for (String invitedUserId : invitedUserIds) {
@@ -58,7 +59,7 @@ public class GroupInviteMessageContentProcessor  extends AbstractMessageContentP
                 DbHelper.cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + invitedUserId, packet, now);
                 // 判断该用户是否在线，如果不在线放入离线消息
                 List<LoginUserInfo> invitedLoginUserInfos = UserHelper.onlineAll(invitedUserId);
-                if (CollectionUtil.isEmpty(invitedLoginUserInfos)) {
+                if (CollectionUtils.isEmpty(invitedLoginUserInfos)) {
                     // 存入离线消息
                     DbHelper.write2OfflineTimeline(packet, invitedUserId, now);
                 }else {

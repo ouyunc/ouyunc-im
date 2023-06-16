@@ -1,7 +1,6 @@
 package com.ouyunc.im.thread;
 
 
-import cn.hutool.core.date.SystemClock;
 import com.ouyunc.im.constant.enums.DeviceEnum;
 import com.ouyunc.im.constant.enums.MessageContentEnum;
 import com.ouyunc.im.constant.enums.MessageEnum;
@@ -16,6 +15,7 @@ import com.ouyunc.im.serialize.Serializer;
 import com.ouyunc.im.utils.MapUtil;
 import com.ouyunc.im.utils.SnowflakeUtil;
 import com.ouyunc.im.utils.SocketAddressUtil;
+import com.ouyunc.im.utils.SystemClock;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;

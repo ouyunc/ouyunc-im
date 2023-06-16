@@ -1,7 +1,8 @@
 package com.ouyunc.im.encrypt;
 
-import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.crypto.SecureUtil;
+
+import com.ouyunc.im.utils.MD5Util;
+import com.ouyunc.im.utils.ObjectUtil;
 
 /**
  * @Author fangzhenxun
@@ -224,7 +225,7 @@ public class Encrypt {
         MD5((byte)1, "MD5", "MD5加密算法") {
             @Override
             public String encrypt(String rawStr) {
-                return SecureUtil.md5(rawStr);
+                return MD5Util.md5(rawStr);
             }
 
             @Override

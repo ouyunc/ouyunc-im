@@ -1,8 +1,7 @@
 package com.ouyunc.im.processor.content;
 
-import cn.hutool.core.collection.CollectionUtil;
-import cn.hutool.core.date.SystemClock;
-import cn.hutool.json.JSONUtil;
+
+import com.alibaba.fastjson2.JSON;
 import com.im.cache.l1.distributed.redis.redisson.RedissonFactory;
 import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.CacheConstant;
@@ -15,8 +14,10 @@ import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.packet.message.content.GroupRequestContent;
 import com.ouyunc.im.utils.IdentityUtil;
+import com.ouyunc.im.utils.SystemClock;
 import com.ouyunc.im.validate.MessageValidate;
 import io.netty.channel.ChannelHandlerContext;
+import org.apache.commons.collections4.CollectionUtils;
 import org.redisson.api.RLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,7 +42,7 @@ public class GroupAgreeJoinMessageContentProcessor extends AbstractMessageConten
     public void doProcess(ChannelHandlerContext ctx, Packet packet) {
         log.info("GroupRefuseMessageContentProcessor 正在处理群拒绝请求 packet: {}...", packet);
         Message message = (Message) packet.getMessage();
-        GroupRequestContent groupRequestContent = JSONUtil.toBean(message.getContent(), GroupRequestContent.class);
+        GroupRequestContent groupRequestContent = JSON.parseObject(message.getContent(), GroupRequestContent.class);
         // 下面是对集群以及qos消息可靠进行处理
         String from = message.getFrom();
 
@@ -50,7 +51,7 @@ public class GroupAgreeJoinMessageContentProcessor extends AbstractMessageConten
         List<String> invitedUserIdList = groupRequestContent.getInvitedUserIdList();
         String identity = groupRequestContent.getIdentity();
         // 如果被邀请人不为空，则是邀请的同意处理
-        if (CollectionUtil.isNotEmpty(invitedUserIdList)) {
+        if (CollectionUtils.isNotEmpty(invitedUserIdList)) {
             identity = invitedUserIdList.get(0);
         }
         //获取锁
@@ -73,7 +74,7 @@ public class GroupAgreeJoinMessageContentProcessor extends AbstractMessageConten
         }
         // 查找群中的管理员以及群主，向其投递加群的请求
         List<ImGroupUserBO> groupManagerMembers = DbHelper.getGroupMembers(groupId, true);
-        if (CollectionUtil.isEmpty(groupManagerMembers)) {
+        if (CollectionUtils.isEmpty(groupManagerMembers)) {
             return;
         }
         for (ImGroupUserBO groupManagerMember : groupManagerMembers) {
@@ -81,7 +82,7 @@ public class GroupAgreeJoinMessageContentProcessor extends AbstractMessageConten
             if (!from.equals(groupManagerMember.getUserId())) {
                 // 判断该管理员是否在线，如果不在线放入离线消息
                 List<LoginUserInfo> managersLoginUserInfos = UserHelper.onlineAll(groupManagerMember.getUserId());
-                if (CollectionUtil.isEmpty(managersLoginUserInfos)) {
+                if (CollectionUtils.isEmpty(managersLoginUserInfos)) {
                     // 存入离线消息
                     DbHelper.write2OfflineTimeline(packet, groupManagerMember.getUserId(), timestamp);
                 }else {

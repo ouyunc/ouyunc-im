@@ -20,8 +20,7 @@
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
         <netty-all.version>4.1.63.Final</netty-all.version>
-        <hutool.version>5.6.3</hutool.version>
-        <google-guava.version>31.1-jre</google-guava.version>
+        <google-guava.version>32.0.1-jre</google-guava.version>
         <log4j2.version>2.14.1</log4j2.version>
         <aeonbits-owner.version>1.0.12</aeonbits-owner.version>
         <!--注意这里的版本与jdk的版本要匹配-->
@@ -36,7 +35,11 @@
         <protobuf.version>3.12.2</protobuf.version>
         <!--jackson-->
         <jackson.version>2.14.0</jackson.version>
-        <jackson-datatype-jsr310.version>2.13.4</jackson-datatype-jsr310.version>
+        <fastjson2.version>2.0.33</fastjson2.version>
+        <!--commons-->
+        <commons-codec.version>1.15</commons-codec.version>
+        <commons-collections4.version>4.4</commons-collections4.version>
+        <commons-lang3.version>3.12.0</commons-lang3.version>
         <!--缓存-->
         <spring-redis.version>2.7.6</spring-redis.version>
         <commons-pool2.version>2.11.1</commons-pool2.version>
@@ -61,9 +64,10 @@
             <groupId>io.netty</groupId>
             <artifactId>netty-all</artifactId>
         </dependency>
+
         <dependency>
-            <groupId>cn.hutool</groupId>
-            <artifactId>hutool-all</artifactId>
+            <groupId>com.alibaba.fastjson2</groupId>
+            <artifactId>fastjson2</artifactId>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
@@ -125,7 +129,16 @@
             <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java</artifactId>
         </dependency>
-
+        <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-collections4 -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-collections4</artifactId>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-lang3 -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+        </dependency>
         <!-- https://mvnrepository.com/artifact/org.aspectj/aspectjweaver -->
         <!--​aspectjweaver包含aspectjrt，所以我们只需要引入aspectjweaver依赖包就可以了-->
         <dependency>
@@ -146,18 +159,17 @@
                 <version>${netty-all.version}</version>
             </dependency>
 
-            <!--hutool工具-->
-            <!-- https://mvnrepository.com/artifact/cn.hutool/hutool-all -->
-            <dependency>
-                <groupId>cn.hutool</groupId>
-                <artifactId>hutool-all</artifactId>
-                <version>${hutool.version}</version>
-            </dependency>
             <!-- https://mvnrepository.com/artifact/com.google.guava/guava -->
             <dependency>
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
                 <version>${google-guava.version}</version>
+            </dependency>
+            <!-- https://mvnrepository.com/artifact/com.alibaba.fastjson2/fastjson2 -->
+            <dependency>
+                <groupId>com.alibaba.fastjson2</groupId>
+                <artifactId>fastjson2</artifactId>
+                <version>${fastjson2.version}</version>
             </dependency>
 
 
@@ -271,6 +283,24 @@
                 <groupId>com.fasterxml.jackson.datatype</groupId>
                 <artifactId>jackson-datatype-jsr310</artifactId>
                 <version>${jackson.version}</version>
+            </dependency>
+            <!-- https://mvnrepository.com/artifact/commons-codec/commons-codec -->
+            <dependency>
+                <groupId>commons-codec</groupId>
+                <artifactId>commons-codec</artifactId>
+                <version>${commons-codec.version}</version>
+            </dependency>
+            <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-collections4 -->
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-collections4</artifactId>
+                <version>${commons-collections4.version}</version>
+            </dependency>
+            <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-lang3 -->
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-lang3</artifactId>
+                <version>${commons-lang3.version}</version>
             </dependency>
 
             <!-- https://mvnrepository.com/artifact/org.springframework.data/spring-data-redis -->

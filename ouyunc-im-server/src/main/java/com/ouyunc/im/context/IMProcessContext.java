@@ -1,6 +1,5 @@
 package com.ouyunc.im.context;
 
-import cn.hutool.core.util.ClassUtil;
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
@@ -10,6 +9,7 @@ import com.ouyunc.im.processor.AbstractMessageProcessor;
 import com.ouyunc.im.processor.MessageProcessor;
 import com.ouyunc.im.processor.content.AbstractMessageContentProcessor;
 import com.ouyunc.im.processor.content.MessageContentProcessor;
+import com.ouyunc.im.utils.ClassScanner;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.objenesis.Objenesis;
@@ -41,10 +41,10 @@ public class IMProcessContext {
         @Nullable
         @Override
         public Object load(@NonNull Object o) throws Exception {
-            // 消息美剧
+            // 消息枚举
             MessageEnum prototype = MessageEnum.prototype((byte) o);
             if (prototype != null) {
-                Set<Class<?>> classes = ClassUtil.scanPackageBySuper(MessageProcessor.class.getPackage().getName(), MessageProcessor.class);
+                Set<Class<?>> classes = ClassScanner.scanPackageBySuper(MessageProcessor.class.getPackage().getName(), MessageProcessor.class);
                 for (Class<?> cls : classes) {
                     if (MessageProcessor.class.isAssignableFrom(cls)) {
                         // 排除自身以及抽象类
@@ -84,7 +84,7 @@ public class IMProcessContext {
             // 消息内容
             MessageContentEnum prototype = MessageContentEnum.prototype((int)o);
             if (prototype != null) {
-                Set<Class<?>> classes = ClassUtil.scanPackageBySuper(MessageContentProcessor.class.getPackage().getName(), MessageContentProcessor.class);
+                Set<Class<?>> classes = ClassScanner.scanPackageBySuper(MessageContentProcessor.class.getPackage().getName(), MessageContentProcessor.class);
                 for (Class<?> cls : classes) {
                     if (MessageContentProcessor.class.isAssignableFrom(cls)) {
                         // 排除自身以及抽象类
