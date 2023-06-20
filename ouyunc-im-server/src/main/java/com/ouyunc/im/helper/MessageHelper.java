@@ -103,7 +103,11 @@ public class MessageHelper {
         Message message = (Message) packet.getMessage();
         if (message.getExtra() != null) {
             ExtraMessage extraMessage = JSON.parseObject(message.getExtra(), ExtraMessage.class);
-            message.setExtra(extraMessage.getOutExtraData());
+            String extra = extraMessage.getOutExtraData();
+            if (extra == null) {
+                extra = message.getExtra();
+            }
+            message.setExtra(extra);
         }
         Protocol.prototype(packet.getProtocol(), packet.getProtocolVersion()).doSendMessage(packet, to);
     }
@@ -148,6 +152,7 @@ public class MessageHelper {
             innerExtraData.setDeviceEnum(DeviceEnum.getDeviceEnumByValue(packet.getDeviceType()));
             innerExtraData.setTargetServerAddress(SocketAddressUtil.convert2HostPort(toSocketAddress));
             innerExtraData.setDelivery(true);
+            extraMessage.setOutExtraData(message.getExtra());
             extraMessage.setInnerExtraData(innerExtraData);
             message.setExtra(JSON.toJSONString(extraMessage));
         }

@@ -47,7 +47,7 @@ public class UserHelper {
         LoginUserInfo loginUserInfo = new LoginUserInfo(appKey, identity, IMServerContext.SERVER_CONFIG.getLocalServerAddress(), OnlineEnum.ONLINE, DeviceEnum.getDeviceEnumByValue(loginDeviceType));
         ctx.channel().attr(channelTagLoginKey).set(loginUserInfo);
         // 存入用户登录信息
-        IMServerContext.LOGIN_USER_INFO_CACHE.putHashIfAbsent(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + identity, DeviceEnum.getDeviceNameByValue(loginDeviceType), loginUserInfo);
+        IMServerContext.LOGIN_USER_INFO_CACHE.putHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + identity, DeviceEnum.getDeviceNameByValue(loginDeviceType), loginUserInfo);
         // 存入本地用户注册表
         IMServerContext.USER_REGISTER_TABLE.put(comboIdentity, ctx);
         // 记录IM App 下的连接信息，多个设备，多个连接，后期有需求在改造
