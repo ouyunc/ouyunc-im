@@ -51,11 +51,14 @@ public enum Protocol {
                     // 转换成包packet,内部消息传递都是以packet 进行处理
                     .addLast(IMConstant.CONVERT_2_PACKET, new Convert2PacketHandler())
                     // 在业务处理之前可以进行登录认证处理，登录认证处理，如果不需要登录处理，可在配置文件中配置，不需要在这里处理
-                    .addLast(IMConstant.AUTHENTICATION, new AuthenticationHandler())
+                    // qos 处理
+                    .addLast(IMConstant.QOS_HANDLER, new QosHandler())
+                    // 前置处理
+                    .addLast(IMConstant.PRE_HANDLER, new PacketPreHandler())
                     // 业务处理
                     .addLast(IMConstant.WS_HANDLER, new WsServerHandler())
-                    // 开启qos
-                    .addLast(IMConstant.QOS_HANDLER, new QosHandler());
+                    // 后置处理
+                    .addLast(IMConstant.POST_HANDLER, new PacketPostHandler());
             // 判断是否需要开启客户端心跳如果需要则开启客户端心跳，由于心跳消息不需要登录就可以，所以放在登录认证处理器前面
             // 判断是否开启客户端心跳,如果开启才会添加心跳检测处理器
             if (IMServerContext.SERVER_CONFIG.isHeartBeatEnable()) {

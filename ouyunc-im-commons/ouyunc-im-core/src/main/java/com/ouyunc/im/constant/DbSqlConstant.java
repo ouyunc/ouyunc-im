@@ -11,25 +11,6 @@ public class DbSqlConstant {
     public enum MYSQL{
 
 
-        SELECT_MESSAGE_READ_RECEIPT("SELECT READ_LIST AS readList, \n" +
-                "\tID, \n" +
-                "\tPROTOCOL, \n" +
-                "\tPROTOCOL_VERSION AS protocolVersion, \n" +
-                "\tDEVICE_TYPE AS deviceType, \n" +
-                "\tNETWORK_TYPE AS networkType, \n" +
-                "\tENCRYPT_TYPE AS encryptType, \n" +
-                "\tSERIALIZE_ALGORITHM  AS serializeAlgorithm, \n" +
-                "\tIP, \n" +
-                "\tFROM, \n" +
-                "\tTO, \n" +
-                "\tTYPE, \n" +
-                "\tCONTENT_TYPE AS contentType, \n" +
-                "\tCONTENT, \n" +
-                "\tSEND_TIME AS sendTime, \n" +
-                "\tCREATE_TIME AS createTime, \n" +
-                "\tUPDATE_TIME AS updateTime \n" +
-                "\t FROM OUYUNC_IM_SEND_MESSAGE WHERE DELETED = 0 AND ID = ? LIMIT 1","查询已读列表"),
-
 
         SELECT_BLACK_LIST("\tSELECT\n" +
                 "\tOUYUNC_IM_BLACKLIST.IDENTITY, \n" +
@@ -250,6 +231,11 @@ public class DbSqlConstant {
                 "\tOUYUNC_IM_APP_DETAIL.DELETED = 0 AND\n" +
                 "\tOUYUNC_IM_APP_DETAIL.APP_KEY = ? ","查询IM APP DETAIL 详情信息"),
 
+        SELECT_RECEIVE_MESSAGE("SELECT ID, PROTOCOL, PROTOCOL_VERSION as protocolVersion, DEVICE_TYPE as deviceType, NETWORK_TYPE as networkType, ENCRYPT_TYPE as encryptType,EXTRA, SERIALIZE_ALGORITHM as serializeAlgorithm, IP, `FROM`, `TO`, TYPE, CONTENT_TYPE as contentType, CONTENT, RECEIVE_TIME as receiveTime, CREATE_TIME as createTime, UPDATE_TIME as updateTime, DELETED FROM OUYUNC_IM_RECEIVE_MESSAGE WHERE ID = ?", "插入收件箱消息"),
+
+
+
+
         DELETE_GROUP("DELETE  FROM  OUYUNC_IM_GROUP  WHERE ID = ? ","删除群"),
         DELETE_GROUP_USER("DELETE  FROM  OUYUNC_IM_GROUP_USER  WHERE GROUP_ID = ? AND USER_ID= ?","删除群某个成员关系"),
         DELETE_GROUP_ALL_USER("DELETE  FROM  OUYUNC_IM_GROUP_USER  WHERE GROUP_ID = ?","删除群所有成员关系"),
@@ -264,11 +250,11 @@ public class DbSqlConstant {
 
         INSERT_READ_RECEIPT("INSERT INTO OUYUNC_IM_READ_RECEIPT(ID, MSG_ID, USER_ID) VALUES (?, ?, ?)", "插入已读消息关系"),
 
-        INSERT_SEND_MESSAGE("INSERT INTO OUYUNC_IM_SEND_MESSAGE (ID, PROTOCOL, PROTOCOL_VERSION, DEVICE_TYPE, NETWORK_TYPE, ENCRYPT_TYPE, SERIALIZE_ALGORITHM, IP, `FROM`, `TO`, TYPE, CONTENT_TYPE, CONTENT, SEND_TIME, CREATE_TIME, UPDATE_TIME, DELETED) VALUES ( ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , 0)", "插入发件箱消息"),
+        INSERT_SEND_MESSAGE("INSERT INTO OUYUNC_IM_SEND_MESSAGE (ID, PROTOCOL, PROTOCOL_VERSION, DEVICE_TYPE, NETWORK_TYPE, ENCRYPT_TYPE, SERIALIZE_ALGORITHM, IP, `FROM`, `TO`, TYPE, CONTENT_TYPE, CONTENT,EXTRA, SEND_TIME, CREATE_TIME, UPDATE_TIME, DELETED) VALUES ( ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , 0)", "插入发件箱消息"),
 
-        INSERT_RECEIVE_MESSAGE("INSERT INTO OUYUNC_IM_RECEIVE_MESSAGE (ID, PROTOCOL, PROTOCOL_VERSION, DEVICE_TYPE, NETWORK_TYPE, ENCRYPT_TYPE, SERIALIZE_ALGORITHM, IP, `FROM`, `TO`, TYPE, CONTENT_TYPE, CONTENT, RECEIVE_TIME, CREATE_TIME, UPDATE_TIME, DELETED) VALUES ( ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , 0)", "插入收件箱消息"),
+        INSERT_RECEIVE_MESSAGE("INSERT INTO OUYUNC_IM_RECEIVE_MESSAGE (ID, PROTOCOL, PROTOCOL_VERSION, DEVICE_TYPE, NETWORK_TYPE, ENCRYPT_TYPE, SERIALIZE_ALGORITHM, IP, `FROM`, `TO`, TYPE, CONTENT_TYPE, CONTENT, EXTRA, RECEIVE_TIME, CREATE_TIME, UPDATE_TIME, DELETED) VALUES ( ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , 0)", "插入收件箱消息"),
 
-        INSERT_MESSAGE("INSERT INTO OUYUNC_IM_MESSAGE (ID, PROTOCOL, PROTOCOL_VERSION, DEVICE_TYPE, NETWORK_TYPE, ENCRYPT_TYPE, SERIALIZE_ALGORITHM, IP, `FROM`, `TO`, TYPE, CONTENT_TYPE, CONTENT, SEND_TIME, CREATE_TIME, UPDATE_TIME, DELETED) VALUES ( ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , 0)", "插入消息"),
+        INSERT_MESSAGE("INSERT INTO OUYUNC_IM_MESSAGE (ID, PROTOCOL, PROTOCOL_VERSION, DEVICE_TYPE, NETWORK_TYPE, ENCRYPT_TYPE, SERIALIZE_ALGORITHM, IP, `FROM`, `TO`, TYPE, CONTENT_TYPE, CONTENT,EXTRA, SEND_TIME, CREATE_TIME, UPDATE_TIME, DELETED) VALUES ( ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , 0)", "插入消息"),
 
         INSERT_BLACK_LIST("INSERT INTO OUYUNC_IM_BLACKLIST (ID, IDENTITY, USER_ID, IDENTITY_TYPE, CREATE_TIME) VALUES (?, ?, ?, ?, ?) ", "将个人或群加入黑名单");
 

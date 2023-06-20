@@ -83,9 +83,13 @@ public class ImMessage implements Serializable {
     /**
      * 消息内容,json 字符串
      */
-    private Object content;
+    private String content;
 
 
+    /**
+     * 扩展字段
+     */
+    private String extra;
     /**
      * 发送时间戳，毫秒
      */
@@ -206,12 +210,20 @@ public class ImMessage implements Serializable {
         this.contentType = contentType;
     }
 
-    public Object getContent() {
+    public String getContent() {
         return content;
     }
 
-    public void setContent(Object content) {
+    public void setContent(String content) {
         this.content = content;
+    }
+
+    public String getExtra() {
+        return extra;
+    }
+
+    public void setExtra(String extra) {
+        this.extra = extra;
     }
 
     public Long getSendTime() {

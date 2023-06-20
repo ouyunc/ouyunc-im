@@ -3,8 +3,6 @@ package com.ouyunc.im.constant.enums;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.content.*;
 
-import java.util.List;
-
 /**
  * @Author fangzhenxun
  * @Description: 消息内容类型枚举
@@ -18,13 +16,16 @@ public enum MessageContentEnum {
     PING_CONTENT(3, String.class, "外部消息心跳ping消息内容"),
     PONG_CONTENT(4, String.class, "外部消息心跳pong消息内容"),
     LOGIN_CONTENT(5, LoginContent.class, "外部客户端登录消息内容"),
-    CLIENT_REPLY_ACK_CONTENT(6, ClientReplyAckContent.class, "外部客户端收到消息后的回信内容"),
-    SERVER_REPLY_ACK_CONTENT(7, Packet.class, "服务端收到消息后给客户端的回信内容"),
+
+    CLIENT_QOS_NOTIFY_CONTENT(6, ClientQosNotifyContent.class, "外部客户端收到消息后的notify回信内容"),
+    SERVER_QOS_ACK_CONTENT(7, String.class, "服务端QOS收到消息后给客户端的ack回信内容(消息id)"),
+
     SERVER_WARNING_CONTENT(8, ServerWarningContent.class, "服务端发出的警告内容"),
     READ_RECEIPT_CONTENT(9, ReadReceiptContent.class, "已读回执消息内容, 集合中的对象"),
     OFFLINE_CONTENT(10, OfflineContent.class, "离线消息内容"),
     UNREAD_CONTENT(11, UnreadContent.class, "未读离线消息内容"),
     SERVER_NOTIFY_CONTENT(12, ServerNotifyContent.class, "服务端发给客户端的通知内容"),
+    QOS_RETRY_PACKET_CONTENT(13, Packet.class, "客户端发起的重试消息packet,注意该packet是上次为发送成功的"),
 
 
 

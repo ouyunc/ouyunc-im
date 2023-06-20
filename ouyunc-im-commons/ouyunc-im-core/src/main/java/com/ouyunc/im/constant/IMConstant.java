@@ -121,7 +121,7 @@ public class IMConstant {
     /**
      * 统一登录处理器
      */
-    public static final String AUTHENTICATION = "AUTHENTICATION";
+    public static final String PRE_HANDLER = "AUTHENTICATION";
 
     /**
      * 转换为packet处理器
@@ -249,6 +249,10 @@ public class IMConstant {
      */
     public static final String QOS_HANDLER = "QOS_HANDLER";
 
+    /**
+     * post 处理器
+     */
+    public static final String POST_HANDLER = "POST_HANDLER";
     /**
      * classpath 前缀
      */

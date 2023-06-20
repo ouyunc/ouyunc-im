@@ -1,7 +1,6 @@
 package com.ouyunc.im.helper;
 
 
-import com.alibaba.fastjson2.JSON;
 import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.CacheConstant;
 import com.ouyunc.im.constant.IMConstant;
@@ -77,18 +76,6 @@ public class UserHelper {
     }
 
 
-    /**
-     * @Author fangzhenxun
-     * @Description 客户端做等待ack的队列处理 ，如果在一定时间内没有收到接收方返回的信息则重试发送信息（可能会导致重复接收，客户端需作去重处理）
-     * @param from 消息接收方,不会转发发到多登录设备上
-     * @param packet 原始消息packet
-     * @return void
-     */
-    public static void doReplyAck(String from, Packet packet) {
-        log.info("服务端正在回复from: {} ackPacket: {}", from, packet);
-        // 异步直接发送
-        MessageHelper.sendMessage(new Packet(packet.getProtocol(), packet.getProtocolVersion(), packet.getPacketId(), DeviceEnum.PC_OTHER.getValue(), NetworkEnum.OTHER.getValue(), IMServerContext.SERVER_CONFIG.getLocalHost(), MessageEnum.IM_REPLY_ACK.getValue(), packet.getEncryptType(), packet.getSerializeAlgorithm(),  new Message(IMServerContext.SERVER_CONFIG.getLocalServerAddress(), from, MessageContentEnum.SERVER_REPLY_ACK_CONTENT.type(), JSON.toJSONString(packet), SystemClock.now())), IdentityUtil.generalComboIdentity(from, packet.getDeviceType()));
-    }
 
 
 

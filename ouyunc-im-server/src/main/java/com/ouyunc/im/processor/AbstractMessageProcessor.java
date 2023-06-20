@@ -71,8 +71,7 @@ public abstract class AbstractMessageProcessor implements MessageProcessor {
     }
     /**
      * @Author fangzhenxun
-     * @Description 做默认后置处理, 默认处理时发送完消息后做给发送方做ack回应
-     * 注意其他业务 处理器不用重写该postProcess, 如果重写请注意ack 的处理
+     * @Description 做默认后置处理
      * @param ctx
      * @param packet
      * @return void
@@ -80,11 +79,7 @@ public abstract class AbstractMessageProcessor implements MessageProcessor {
     @Override
     public void postProcess(ChannelHandlerContext ctx, Packet packet) {
         log.info("现在处理默认的后置处理 packet: {} ...", packet);
-        Message message = (Message) packet.getMessage();
-        ExtraMessage extraMessage = JSON.parseObject(message.getExtra(), ExtraMessage.class);
-        // 只在消息首次到达服务的地方发送ack给外部客户端
-        if (IMServerContext.SERVER_CONFIG.isAcknowledgeModeEnable() && (extraMessage == null || extraMessage.getInnerExtraData() == null || !extraMessage.getInnerExtraData().isDelivery())) {
-            UserHelper.doReplyAck(message.getFrom(), packet);
-        }
+        // 默认往下面传递，交给qos后置处理逻辑
+        ctx.fireChannelRead(packet);
     }
 }

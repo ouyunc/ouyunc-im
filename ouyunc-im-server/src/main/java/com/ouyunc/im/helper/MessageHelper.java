@@ -4,6 +4,9 @@ import com.alibaba.fastjson2.JSON;
 import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.constant.enums.DeviceEnum;
+import com.ouyunc.im.constant.enums.MessageContentEnum;
+import com.ouyunc.im.constant.enums.MessageEnum;
+import com.ouyunc.im.constant.enums.NetworkEnum;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.exception.IMException;
 import com.ouyunc.im.packet.Packet;
@@ -13,6 +16,7 @@ import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.protocol.Protocol;
 import com.ouyunc.im.utils.IdentityUtil;
 import com.ouyunc.im.utils.SocketAddressUtil;
+import com.ouyunc.im.utils.SystemClock;
 import io.netty.channel.Channel;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.util.AttributeKey;
@@ -36,6 +40,22 @@ public class MessageHelper {
     private static final Logger log = LoggerFactory.getLogger(MessageHelper.class);
 
     private static final EventExecutorGroup eventExecutors= new DefaultEventExecutorGroup(16);
+
+
+
+
+    /**
+     * @Author fangzhenxun
+     * @Description 客户端做等待ack的队列处理 ，如果在一定时间内没有收到接收方返回的信息则重试发送信息（可能会导致重复接收，客户端需作去重处理），如果消息发送方此时离线，则会进行重试，问题不大
+     * @param from 消息接收方,不会转发发到多登录设备上
+     * @param packet 原始消息packet
+     * @return void
+     */
+    public static void doQos(String from, Packet packet) {
+        log.info("服务端正在回复from: {} ackPacket: {}", from, packet);
+        // 异步直接发送
+        MessageHelper.sendMessage(new Packet(packet.getProtocol(), packet.getProtocolVersion(), packet.getPacketId(), DeviceEnum.PC_OTHER.getValue(), NetworkEnum.OTHER.getValue(), IMServerContext.SERVER_CONFIG.getLocalHost(), MessageEnum.IM_QOS.getValue(), packet.getEncryptType(), packet.getSerializeAlgorithm(),  new Message(IMServerContext.SERVER_CONFIG.getLocalServerAddress(), from, MessageContentEnum.SERVER_QOS_ACK_CONTENT.type(), String.valueOf(packet.getPacketId()), SystemClock.now())), IdentityUtil.generalComboIdentity(from, packet.getDeviceType()));
+    }
 
 
     /**

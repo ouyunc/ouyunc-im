@@ -8,7 +8,7 @@ import java.io.Serializable;
 /**
  * 客户端 回信 ack消息内容
  */
-public class ClientReplyAckContent implements Serializable {
+public class ClientQosNotifyContent implements Serializable {
     private static final long serialVersionUID = 100004L;
 
     /**

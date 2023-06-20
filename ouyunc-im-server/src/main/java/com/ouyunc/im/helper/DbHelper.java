@@ -14,6 +14,7 @@ import com.ouyunc.im.db.operator.DbOperator;
 import com.ouyunc.im.db.operator.MysqlDbOperator;
 import com.ouyunc.im.domain.ImAppDetail;
 import com.ouyunc.im.domain.ImGroup;
+import com.ouyunc.im.domain.ImReceiveMessage;
 import com.ouyunc.im.domain.ImUser;
 import com.ouyunc.im.domain.bo.ImBlacklistBO;
 import com.ouyunc.im.domain.bo.ImFriendBO;
@@ -460,6 +461,43 @@ public class  DbHelper {
         return null;
     }
 
+
+    /**
+     * 从离线信箱中读取消息
+     * @param to
+     */
+    public static Packet readFromOfflineTimeline(String to, long packetId) {
+        Set<Packet> packetSet = cacheOperator.reverseRangeZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + to, 0, -1);
+        if (CollectionUtils.isNotEmpty(packetSet)) {
+            Optional<Packet> packetOptional = packetSet.parallelStream().filter(packet -> packetId == packet.getPacketId()).findFirst();
+            // 如果存在则返回
+            if (packetOptional.isPresent()){
+                return packetOptional.get();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 从接收人信箱中读取消息
+     * @param to
+     * @param packetId
+     */
+    public static Packet readFromReceiveTimeline(String to, long packetId) {
+        Set<Packet> packetSet = cacheOperator.reverseRangeZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.RECEIVE + to, 0, -1);
+        if (CollectionUtils.isNotEmpty(packetSet)) {
+            Optional<Packet> packetOptional = packetSet.parallelStream().filter(packet -> packetId == packet.getPacketId()).findFirst();
+            // 如果存在则返回
+            if (packetOptional.isPresent()){
+                return packetOptional.get();
+            }
+        }
+        ImReceiveMessage receivePacket = dbOperator.selectOne(DbSqlConstant.MYSQL.SELECT_RECEIVE_MESSAGE.sql(), ImReceiveMessage.class, packetId);
+        // 这里数据长度没有查出
+        Message message = new Message(receivePacket.getFrom(), receivePacket.getTo(), receivePacket.getContentType(), receivePacket.getContent(), receivePacket.getExtra(), receivePacket.getReceiveTime());
+        return new Packet(receivePacket.getProtocol(), receivePacket.getProtocolVersion(), receivePacket.getId(),receivePacket.getDeviceType(),receivePacket.getNetworkType(),receivePacket.getIp(),receivePacket.getType(), receivePacket.getEncryptType(), receivePacket.getSerializeAlgorithm(), message);
+    }
+
     /**
      * 处理消息已读回执，开线程处理
      *
@@ -491,7 +529,7 @@ public class  DbHelper {
         if (IMServerContext.SERVER_CONFIG.isDbEnable()) {
             Message message = (Message) packet.getMessage();
             String nowDateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-            dbOperator.insert(DbSqlConstant.MYSQL.INSERT_MESSAGE.sql(), packet.getPacketId(), packet.getProtocol(), packet.getProtocolVersion(), packet.getDeviceType(), packet.getNetworkType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), packet.getIp(), message.getFrom(), message.getTo(), packet.getMessageType(), message.getContentType(), JSON.toJSONString(message.getContent()), message.getCreateTime(), nowDateTime, nowDateTime);
+            dbOperator.insert(DbSqlConstant.MYSQL.INSERT_MESSAGE.sql(), packet.getPacketId(), packet.getProtocol(), packet.getProtocolVersion(), packet.getDeviceType(), packet.getNetworkType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), packet.getIp(), message.getFrom(), message.getTo(), packet.getMessageType(), message.getContentType(), message.getContent(), message.getExtra(), message.getCreateTime(), nowDateTime, nowDateTime);
         }
     }
 
@@ -506,7 +544,7 @@ public class  DbHelper {
         if (IMServerContext.SERVER_CONFIG.isDbEnable()) {
             String nowDateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
             Message message = (Message) packet.getMessage();
-            dbOperator.insert(DbSqlConstant.MYSQL.INSERT_SEND_MESSAGE.sql(), packet.getPacketId(), packet.getProtocol(), packet.getProtocolVersion(), packet.getDeviceType(), packet.getNetworkType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), packet.getIp(), message.getFrom(), message.getTo(), packet.getMessageType(), message.getContentType(), message.getContent(), message.getCreateTime(), nowDateTime, nowDateTime);
+            dbOperator.insert(DbSqlConstant.MYSQL.INSERT_SEND_MESSAGE.sql(), packet.getPacketId(), packet.getProtocol(), packet.getProtocolVersion(), packet.getDeviceType(), packet.getNetworkType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), packet.getIp(), message.getFrom(), message.getTo(), packet.getMessageType(), message.getContentType(), message.getContent(), message.getExtra(), message.getCreateTime(), nowDateTime, nowDateTime);
         }
         cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.SEND + from, packet, timestamp);
     }
@@ -522,7 +560,7 @@ public class  DbHelper {
         if (IMServerContext.SERVER_CONFIG.isDbEnable()) {
             String nowDateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
             Message message = (Message) packet.getMessage();
-            dbOperator.insert(DbSqlConstant.MYSQL.INSERT_RECEIVE_MESSAGE.sql(), packet.getPacketId(), packet.getProtocol(), packet.getProtocolVersion(), packet.getDeviceType(), packet.getNetworkType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), packet.getIp(), message.getFrom(), message.getTo(), packet.getMessageType(), message.getContentType(), message.getContent(), message.getCreateTime(), nowDateTime, nowDateTime);
+            dbOperator.insert(DbSqlConstant.MYSQL.INSERT_RECEIVE_MESSAGE.sql(), packet.getPacketId(), packet.getProtocol(), packet.getProtocolVersion(), packet.getDeviceType(), packet.getNetworkType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), packet.getIp(), message.getFrom(), message.getTo(), packet.getMessageType(), message.getContentType(), message.getContent(), message.getExtra(), message.getCreateTime(), nowDateTime, nowDateTime);
         }
         cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.RECEIVE + to, packet, timestamp);
     }
@@ -569,4 +607,5 @@ public class  DbHelper {
             lock.unlock();
         }
     }
+
 }

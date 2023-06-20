@@ -83,9 +83,12 @@ public class ImReceiveMessage implements Serializable {
     /**
      * 消息内容,json 字符串
      */
-    private Object content;
+    private String content;
 
-
+    /**
+     * 扩展字段
+     */
+    private String extra;
 
     /**
      * 消息接收时间戳，毫秒
@@ -207,12 +210,20 @@ public class ImReceiveMessage implements Serializable {
         this.contentType = contentType;
     }
 
-    public Object getContent() {
+    public String getContent() {
         return content;
     }
 
-    public void setContent(Object content) {
+    public void setContent(String content) {
         this.content = content;
+    }
+
+    public String getExtra() {
+        return extra;
+    }
+
+    public void setExtra(String extra) {
+        this.extra = extra;
     }
 
     public Long getReceiveTime() {
@@ -250,7 +261,7 @@ public class ImReceiveMessage implements Serializable {
     public ImReceiveMessage() {
     }
 
-    public ImReceiveMessage(Long id, byte protocol, byte protocolVersion, byte deviceType, byte networkType, byte encryptType, byte serializeAlgorithm, String ip, String from, String to, byte type, Integer contentType, Object content, Long receiveTime) {
+    public ImReceiveMessage(Long id, byte protocol, byte protocolVersion, byte deviceType, byte networkType, byte encryptType, byte serializeAlgorithm, String ip, String from, String to, byte type, Integer contentType, String content, Long receiveTime) {
         this.id = id;
         this.protocol = protocol;
         this.protocolVersion = protocolVersion;

@@ -20,6 +20,15 @@ public enum DeviceEnum {
     M_WEBOS((byte)5, "m", "移动端Palm webOS是一个嵌入式操作系统"),
     M_MEEGO((byte)6, "m", "移动端MeeGo是一种基于Linux的自由及开放源代码的便携设备操作系统"),
 
+    M_ANDROID_APP((byte)21, "m-app", "移动端安卓系统APP端"),
+    M_ANDROID_H5((byte)22, "m-h5", "移动端安卓系统H5端"),
+    M_ANDROID_XCX((byte)23, "m-xcx", "移动端安卓系统小程序端"),
+
+    M_IOS_APP((byte)31, "m-app", "移动端ios(苹果)系统APP"),
+    M_IOS_H5((byte)32, "m-h5", "移动端ios(苹果)系统H5"),
+    M_IOS_XCX((byte)33, "m-xcx", "移动端ios(苹果)系统小程序"),
+
+
     /**
      * PC端
      */

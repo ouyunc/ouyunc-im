@@ -84,8 +84,13 @@ public class ImSendMessage implements Serializable {
     /**
      * 消息内容,json 字符串
      */
-    private Object content;
+    private String content;
 
+
+    /**
+     * 扩展字段
+     */
+    private String extra;
 
     /**
      * 发送时间，毫秒
@@ -114,7 +119,7 @@ public class ImSendMessage implements Serializable {
     public ImSendMessage() {
     }
 
-    public ImSendMessage(Long id, byte protocol, byte protocolVersion, byte deviceType, byte networkType, byte encryptType, byte serializeAlgorithm, String ip, String from, String to, byte type, Integer contentType, Object content, Long sendTime, String createTime, String updateTime, Integer deleted) {
+    public ImSendMessage(Long id, byte protocol, byte protocolVersion, byte deviceType, byte networkType, byte encryptType, byte serializeAlgorithm, String ip, String from, String to, byte type, Integer contentType, String content, Long sendTime, String createTime, String updateTime, Integer deleted) {
         this.id = id;
         this.protocol = protocol;
         this.protocolVersion = protocolVersion;
@@ -134,7 +139,7 @@ public class ImSendMessage implements Serializable {
         this.deleted = deleted;
     }
 
-    public ImSendMessage(Long id, byte protocol, byte protocolVersion, byte deviceType, byte networkType, byte encryptType, byte serializeAlgorithm, String ip, String from, String to, byte type, Integer contentType, Object content, Long sendTime) {
+    public ImSendMessage(Long id, byte protocol, byte protocolVersion, byte deviceType, byte networkType, byte encryptType, byte serializeAlgorithm, String ip, String from, String to, byte type, Integer contentType, String content, Long sendTime) {
         this.id = id;
         this.protocol = protocol;
         this.protocolVersion = protocolVersion;
@@ -247,14 +252,21 @@ public class ImSendMessage implements Serializable {
         this.contentType = contentType;
     }
 
-    public Object getContent() {
+    public String getContent() {
         return content;
     }
 
-    public void setContent(Object content) {
+    public void setContent(String content) {
         this.content = content;
     }
 
+    public String getExtra() {
+        return extra;
+    }
+
+    public void setExtra(String extra) {
+        this.extra = extra;
+    }
 
     public Long getSendTime() {
         return sendTime;
