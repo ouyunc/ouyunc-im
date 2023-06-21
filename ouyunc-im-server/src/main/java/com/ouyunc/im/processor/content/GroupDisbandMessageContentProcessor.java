@@ -40,7 +40,7 @@ public class GroupDisbandMessageContentProcessor extends AbstractMessageContentP
      */
     @Override
     public void doProcess(ChannelHandlerContext ctx, Packet packet) {
-        log.info("GroupRefuseMessageContentProcessor 正在处理群拒绝请求 packet: {}...", packet);
+        log.info("GroupDisbandMessageContentProcessor 正在处理群拒绝请求 packet: {}...", packet);
         Message message = (Message) packet.getMessage();
         GroupRequestContent groupRequestContent = JSON.parseObject(message.getContent(), GroupRequestContent.class);
         // 下面是对集群以及qos消息可靠进行处理
