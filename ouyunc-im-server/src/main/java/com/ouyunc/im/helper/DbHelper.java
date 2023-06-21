@@ -1,14 +1,12 @@
 package com.ouyunc.im.helper;
 
 
-import com.alibaba.fastjson2.JSON;
 import com.im.cache.l1.distributed.redis.RedisDistributedL1Cache;
 import com.im.cache.l1.distributed.redis.redisson.RedissonFactory;
 import com.ouyunc.im.constant.CacheConstant;
 import com.ouyunc.im.constant.DbSqlConstant;
 import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.constant.enums.MessageContentEnum;
-import com.ouyunc.im.constant.enums.MessageEnum;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.db.operator.DbOperator;
 import com.ouyunc.im.db.operator.MysqlDbOperator;
@@ -21,15 +19,12 @@ import com.ouyunc.im.domain.bo.ImFriendBO;
 import com.ouyunc.im.domain.bo.ImGroupUserBO;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.Message;
-import com.ouyunc.im.packet.message.content.OfflineContent;
 import com.ouyunc.im.packet.message.content.ReadReceiptContent;
-import com.ouyunc.im.packet.message.content.UnreadContent;
 import com.ouyunc.im.utils.IdentityUtil;
 import com.ouyunc.im.utils.MapUtil;
 import com.ouyunc.im.utils.SnowflakeUtil;
 import com.ouyunc.im.utils.SystemClock;
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +32,6 @@ import org.slf4j.LoggerFactory;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * 数据库操作
@@ -54,96 +48,6 @@ public class  DbHelper {
      * 数据库操作类
      */
     private static DbOperator dbOperator = new MysqlDbOperator();
-
-
-    /**
-     * 获取离线消息
-     *
-     * @param message
-     * @return 将在4.0版本去除
-     */
-    @Deprecated
-    public static List<Packet<Message>> pullOfflineMessage(Message message) {
-        List<Packet<Message>> result = new ArrayList<>();
-        if (MessageContentEnum.UNREAD_CONTENT.type() == message.getContentType()) {
-            List<UnreadContent> unreadContentList = new ArrayList<>();
-            Set<Packet<Message>> packetSetResult = cacheOperator.reverseRangeZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + message.getFrom(), 0, -1);
-            if (CollectionUtils.isNotEmpty(packetSetResult)) {
-                packetSetResult.stream().collect(Collectors.groupingBy(packet -> packet.getMessage().getFrom())).forEach((from, packetList) -> {
-                    if (CollectionUtils.isNotEmpty(packetList)) {
-                        packetList.stream().collect(Collectors.groupingBy(Packet::getMessageType)).forEach((messageType, messageTypePackets) -> {
-                            MessageEnum prototype = MessageEnum.prototype(messageType);
-                            if (MessageEnum.IM_PRIVATE_CHAT.equals(prototype)) {
-                                List<Packet<Message>> lastPackets = new ArrayList<>();
-                                lastPackets.add(messageTypePackets.get(0));
-                                unreadContentList.add(new UnreadContent(from, IMConstant.USER_TYPE_1, messageTypePackets.size(), lastPackets));
-                            }
-                            if (MessageEnum.IM_GROUP_CHAT.equals(prototype) && CollectionUtils.isNotEmpty(messageTypePackets)) {
-                                messageTypePackets.stream().collect(Collectors.groupingBy(packet -> packet.getMessage().getTo())).forEach((to, groupMessagePackets) -> {
-                                    List<Packet<Message>> lastPackets = new ArrayList<>();
-                                    lastPackets.add(groupMessagePackets.get(0));
-                                    unreadContentList.add(new UnreadContent(to, IMConstant.GROUP_TYPE_2, groupMessagePackets.size(), lastPackets));
-                                });
-                            }
-                        });
-                    }
-                });
-                message.setContent(JSON.toJSONString(unreadContentList));
-            }
-            return result;
-        }
-        // 判断是按需来取还是全量拉取
-        OfflineContent offlineContent = JSON.parseObject(message.getContent(), OfflineContent.class);
-        List<Packet<Message>> packetList = offlineContent.getPacketList();
-        // 如果传过来的消息id不为空，则可能是第N次拉取，从离线消息中删除消息
-        if (CollectionUtils.isNotEmpty(packetList)) {
-            for (Packet<Message> packet : packetList) {
-                cacheOperator.removeZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + message.getFrom(), packet);
-            }
-        }
-        // 全量顺序拉取，一次拉取pullSize 大小的消息
-        if (StringUtils.isNotBlank(offlineContent.getIdentity()) && (IMConstant.USER_TYPE_1.equals(offlineContent.getIdentityType()) || IMConstant.GROUP_TYPE_2.equals(offlineContent.getIdentityType()))) {
-            // 按需拉取,先查出所有，然后过滤前几条给客户端
-            Set<Packet<Message>> packetAllSet = cacheOperator.reverseRangeZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + message.getFrom(), 0, -1);
-            if (CollectionUtils.isNotEmpty(packetAllSet)) {
-                Iterator<Packet<Message>> iterator = packetAllSet.iterator();
-                if (IMConstant.USER_TYPE_1.equals(offlineContent.getIdentityType())) {
-                    while (iterator.hasNext()) {
-                        Packet<Message> packet = iterator.next();
-                        if (result.size() >= offlineContent.getPullSize()) {
-                            break;
-                        }
-                        if (offlineContent.getIdentity().equals(packet.getMessage().getFrom()) && MessageEnum.IM_PRIVATE_CHAT.getValue() == packet.getMessageType()) {
-                            result.add(packet);
-                        }
-                    }
-                }
-                if (IMConstant.GROUP_TYPE_2.equals(offlineContent.getIdentityType())) {
-                    while (iterator.hasNext()) {
-                        Packet<Message> packet = iterator.next();
-                        if (result.size() >= offlineContent.getPullSize()) {
-                            break;
-                        }
-                        if (offlineContent.getIdentity().equals(packet.getMessage().getTo()) && MessageEnum.IM_GROUP_CHAT.getValue() == packet.getMessageType()) {
-                            result.add(packet);
-                        }
-                    }
-                }
-            }
-        } else {
-            // 全量分页拉取
-            Set<Packet<Message>> packetSetResult = cacheOperator.reverseRangeZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + message.getFrom(), 0, offlineContent.getPullSize() - 1);
-            if (CollectionUtils.isNotEmpty(packetSetResult)) {
-                Iterator<Packet<Message>> iterator = packetSetResult.iterator();
-                while (iterator.hasNext()) {
-                    result.add(iterator.next());
-                }
-            }
-        }
-        offlineContent.setPacketList(result);
-        message.setContent(JSON.toJSONString(offlineContent));
-        return result;
-    }
 
 
     /**
@@ -492,10 +396,13 @@ public class  DbHelper {
                 return packetOptional.get();
             }
         }
-        ImReceiveMessage receivePacket = dbOperator.selectOne(DbSqlConstant.MYSQL.SELECT_RECEIVE_MESSAGE.sql(), ImReceiveMessage.class, packetId);
-        // 这里数据长度没有查出
-        Message message = new Message(receivePacket.getFrom(), receivePacket.getTo(), receivePacket.getContentType(), receivePacket.getContent(), receivePacket.getExtra(), receivePacket.getReceiveTime());
-        return new Packet(receivePacket.getProtocol(), receivePacket.getProtocolVersion(), receivePacket.getId(),receivePacket.getDeviceType(),receivePacket.getNetworkType(),receivePacket.getIp(),receivePacket.getType(), receivePacket.getEncryptType(), receivePacket.getSerializeAlgorithm(), message);
+        if (IMServerContext.SERVER_CONFIG.isDbEnable()) {
+            ImReceiveMessage receivePacket = dbOperator.selectOne(DbSqlConstant.MYSQL.SELECT_RECEIVE_MESSAGE.sql(), ImReceiveMessage.class, packetId);
+            // 这里数据长度没有查出
+            Message message = new Message(receivePacket.getFrom(), receivePacket.getTo(), receivePacket.getContentType(), receivePacket.getContent(), receivePacket.getExtra(), receivePacket.getReceiveTime());
+            return new Packet(receivePacket.getProtocol(), receivePacket.getProtocolVersion(), receivePacket.getId(),receivePacket.getDeviceType(),receivePacket.getNetworkType(),receivePacket.getIp(),receivePacket.getType(), receivePacket.getEncryptType(), receivePacket.getSerializeAlgorithm(), message);
+        }
+        return null;
     }
 
     /**

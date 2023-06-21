@@ -17,7 +17,6 @@ public enum MessageEnum {
     IM_READ_RECEIPT((byte) 4, "im_read_receipt",  "已读回执消息"),
     IM_PRIVATE_CHAT((byte) 5, "im_private_chat",  "私聊消息"),
     IM_GROUP_CHAT((byte) 6, "im_group_chat",  "群聊消息"),
-    IM_OFFLINE((byte) 7, "im_offline",  "离线消息"),
     IM_FRIEND_REQUEST((byte) 8, "im_friend_request",  "好友请求相关消息"),
     IM_GROUP_REQUEST((byte) 9, "im_group_request",  "群请求相关消息"),
 
