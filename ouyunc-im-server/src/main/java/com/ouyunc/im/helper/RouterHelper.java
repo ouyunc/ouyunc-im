@@ -11,7 +11,6 @@ import java.net.InetSocketAddress;
 /**
  * @Author fangzhenxun
  * @Description: 集群中的消息路由助手,按照一定策略，随机/最优, 默认是随机
- * @Version V3.0
  **/
 public class RouterHelper {
 

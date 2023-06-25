@@ -10,7 +10,6 @@ import java.util.concurrent.ConcurrentMap;
 /**
  * @Author fangzhenxun
  * @Description: 线程安全
- * @Version V3.0
  **/
 public class CaffeineLocalL1Cache<K , V > extends AbstractLocalL1Cache<K, V> {
     private static Logger log = LoggerFactory.getLogger(CaffeineLocalL1Cache.class);

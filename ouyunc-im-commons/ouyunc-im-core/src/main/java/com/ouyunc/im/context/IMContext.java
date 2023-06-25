@@ -5,7 +5,6 @@ import com.ouyunc.im.config.IMConfig;
 /**
  * @Author fangzhenxun
  * @Description: IM 上线文
- * @Version V3.0
  **/
 public class IMContext {
 

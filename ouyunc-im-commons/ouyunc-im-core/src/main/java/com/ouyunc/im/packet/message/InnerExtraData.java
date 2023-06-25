@@ -10,7 +10,6 @@ import java.util.List;
 /**
  * @Author fangzhenxun
  * @Description: 扩展消息 message, 额外字段数据，内部使用，不对外开放,集群使用
- * @Version V3.0
  **/
 public class InnerExtraData implements Serializable {
 

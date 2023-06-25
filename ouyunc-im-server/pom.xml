@@ -5,12 +5,12 @@
     <parent>
         <artifactId>ouyunc-im</artifactId>
         <groupId>com.ouyunc</groupId>
-        <version>v3.0</version>
+        <version>4.0.0</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.ouyunc</groupId>
     <artifactId>ouyunc-im-server</artifactId>
-    <version>v3.0</version>
+    <version>${parent.version}</version>
     <description>服务端模块</description>
 
 
@@ -20,19 +20,16 @@
         <dependency>
             <groupId>com.ouyunc</groupId>
             <artifactId>ouyunc-im-cache</artifactId>
-            <version>v3.0</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>com.ouyunc</groupId>
             <artifactId>ouyunc-im-db</artifactId>
-            <version>v3.0</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>com.ouyunc</groupId>
             <artifactId>ouyunc-im-core</artifactId>
-            <version>v3.0</version>
             <scope>compile</scope>
         </dependency>
     </dependencies>

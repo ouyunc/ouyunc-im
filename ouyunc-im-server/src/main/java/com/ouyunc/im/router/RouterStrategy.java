@@ -9,7 +9,6 @@ import java.net.InetSocketAddress;
 /**
  * @Author fangzhenxun
  * @Description: 路由策略接口
- * @Version V3.0
  **/
 public interface RouterStrategy {
     /**

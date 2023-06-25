@@ -1,6 +1,5 @@
 package com.ouyunc.im.innerclient.handler;
 
-import com.google.common.collect.Sets;
 import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.context.IMServerContext;
 import io.netty.channel.Channel;
@@ -24,7 +23,6 @@ import java.util.concurrent.locks.ReentrantLock;
  * 发生异常：不多解释了。
  * 用户事件：由用户触发的各种非常规事件，根据evt的类型来判断不同的事件类型，从而进行不同的处理。
  * 可写状态变更：收到消息后，要回复消息，会先把回复内容写到缓冲区。而缓冲区大小是有一定限制的，当达到上限以后，可写状态就会变为否，不能再写。等缓冲区的内容被冲刷掉后，缓冲区又有了空间，可写状态又会变为是。
- * @Version V3.0
  **/
 public class IMInnerClientHeartBeatHandler extends ChannelInboundHandlerAdapter {
     private static Logger log = LoggerFactory.getLogger(IMInnerClientHeartBeatHandler.class);

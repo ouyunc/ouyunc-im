@@ -5,7 +5,6 @@ option optimize_for  = SPEED;
 /**
  * @Author fangzhenxun
  * @Description: packet 消息实体
- * @Version V3.0
  **/
 message Packet {
   //发送方

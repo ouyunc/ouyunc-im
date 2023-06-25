@@ -25,7 +25,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * @Author fangzhenxun
  * @Description: IM上下文
- * @Version V3.0
  **/
 public class IMServerContext extends IMContext{
 
@@ -120,7 +119,7 @@ public class IMServerContext extends IMContext{
     }));
 
 
-    //=======================================下面的redis实例可以抽离出，使用不同的redis  key前缀来替代，@todo 后期优化===========================
+    //=======================================下面的redis实例可以抽离出，使用不同的redis  key前缀来替代，
 
     /**
      * IM 分布式集群中登录的用户信息， 这个可以使用二级缓存来提高效率？使用二级缓存

@@ -20,7 +20,6 @@ import java.util.Set;
 /**
  * @Author fangzhenxun
  * @Description: 这里使用客户端连接池来进行使用多个通道连接每个集群中的服务器端
- * @Version V3.0
  **/
 public class IMInnerClientPool {
     private static Logger log = LoggerFactory.getLogger(IMInnerClientPool.class);

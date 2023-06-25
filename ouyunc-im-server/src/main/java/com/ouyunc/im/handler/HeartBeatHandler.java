@@ -19,7 +19,6 @@ import org.slf4j.LoggerFactory;
 /**
  * @Author fangzhenxun
  * @Description: 外部客户端的心跳
- * @Version V3.0
  **/
 public class HeartBeatHandler extends SimpleChannelInboundHandler<Packet> {
     private static Logger log = LoggerFactory.getLogger(HeartBeatHandler.class);
@@ -62,7 +61,6 @@ public class HeartBeatHandler extends SimpleChannelInboundHandler<Packet> {
         if (event instanceof IdleStateEvent) {
             // 判断该通道是否是存活
             if(channel.isActive()) {
-                // @todo 在这里面写在线状态的逻辑，偶然事件需要排除,重试（一定的策略）
                 IdleStateEvent idleStateEvent = (IdleStateEvent)event;
                 // 一定时间没有收到外部客户端发来的消息，出触发这里
                 if (IdleState.READER_IDLE.equals(idleStateEvent.state())) {

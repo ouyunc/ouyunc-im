@@ -5,7 +5,6 @@ import com.ouyunc.im.config.IMServerConfig;
 /**
  * @Author fangzhenxun
  * @Description: 内置客户端，在集群中使用，这个接口是入口
- * @Version V3.0
  **/
 public interface IMInnerClient {
 

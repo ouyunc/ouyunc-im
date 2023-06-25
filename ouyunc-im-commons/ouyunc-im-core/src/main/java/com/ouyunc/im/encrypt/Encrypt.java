@@ -7,13 +7,11 @@ import com.ouyunc.im.utils.ObjectUtil;
 /**
  * @Author fangzhenxun
  * @Description: 加密算法
- * @Version V3.0
  **/
 public class Encrypt {
     /**
      * @Author fangzhenxun
      * @Description: 对称加密算法，DES\3DES\AES\SM1\SMS4\PBE\RC2\RC4\RC5
-     * @Version V3.0
      **/
     public enum SymmetryEncrypt {
 
@@ -206,7 +204,6 @@ public class Encrypt {
     /**
      * @Author fangzhenxun
      * @Description 非对称加密算法
-     * @Version V3.0
      */
     public enum AsymmetricEncrypt {
 

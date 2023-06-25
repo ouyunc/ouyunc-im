@@ -8,7 +8,6 @@ import org.slf4j.LoggerFactory;
 /**
  * @Author fangzhenxun
  * @Description: socket channel 的初始化
- * @Version V3.0
  **/
 public abstract class SocketChannelInitializer extends ChannelInitializer<SocketChannel> {
     private static Logger log = LoggerFactory.getLogger(SocketChannelInitializer.class);

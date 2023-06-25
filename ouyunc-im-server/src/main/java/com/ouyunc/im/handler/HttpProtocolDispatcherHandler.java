@@ -15,7 +15,6 @@ import org.slf4j.LoggerFactory;
 /**
  * @Author fangzhenxun
  * @Description: http 调度处理器
- * @Version V3.0
  **/
 public class HttpProtocolDispatcherHandler extends SimpleChannelInboundHandler<Object> {
     private static Logger log = LoggerFactory.getLogger(HttpProtocolDispatcherHandler.class);
@@ -38,7 +37,7 @@ public class HttpProtocolDispatcherHandler extends SimpleChannelInboundHandler<O
                 //如果请求是一次升级了的 WebSocket 请求，则递增引用计数器（retain）并且将它传递给在 ChannelPipeline 中的下个 ChannelInboundHandler
                 ctx.fireChannelRead(request.retain());
             }else {
-                // 处理http 通用请求 @todo 未处理
+                // 处理http 通用请求
                 log.info("=================开始处理http请求=============================");
             }
         }

@@ -11,7 +11,6 @@ import java.util.Objects;
 /**
  * @Author fangzhenxun
  * @Description: 协议包,在本服务中的传递的实体类
- * @Version V3.0
  **/
 public class Packet<T> implements Serializable {
 

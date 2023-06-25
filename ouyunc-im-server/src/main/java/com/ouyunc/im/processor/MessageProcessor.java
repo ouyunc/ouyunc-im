@@ -8,7 +8,6 @@ import org.slf4j.LoggerFactory;
 /**
  * @Author fangzhenxun
  * @Description: 消息处理器接口
- * @Version V3.0
  **/
 public interface MessageProcessor {
     Logger log = LoggerFactory.getLogger(MessageProcessor.class);

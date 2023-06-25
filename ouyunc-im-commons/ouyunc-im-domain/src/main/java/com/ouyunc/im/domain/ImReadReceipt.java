@@ -9,7 +9,6 @@ import java.io.Serializable;
 /**
  * @Author fangzhenxun
  * @Description: 消息已读实体类
- * @Version V3.0
  **/
 @TableName("ouyunc_im_read_receipt")
 public class ImReadReceipt implements Serializable {

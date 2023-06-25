@@ -3,7 +3,6 @@ package com.im.cache;
 /**
  * @Author fangzhenxun
  * @Description: 抽象总父接口
- * @Version V3.0
  **/
 public interface ICache<K,V> {
     /**

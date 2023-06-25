@@ -13,7 +13,6 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * @Author fangzhenxun
  * @Description: 单例模式
- * @Version V3.0
  **/
 public enum RedisFactory {
     INSTANCE;

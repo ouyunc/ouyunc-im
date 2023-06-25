@@ -3,7 +3,6 @@ package com.ouyunc.im.config;
 /**
  * @Author fangzhenxun
  * @Description: im 的公共抽象配置类
- * @Version V3.0
  **/
 public abstract class IMConfig {
 

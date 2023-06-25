@@ -15,7 +15,6 @@ import java.util.List;
 /**
  * @Author fangzhenxun
  * @Description: 自定义编解码器，消息在服务器内部都会转成该packet格式的消息进行传递和处理
- * @Version V3.0
  **/
 public class PacketCodec extends ByteToMessageCodec<Packet<Object>> {
     private static Logger log = LoggerFactory.getLogger(PacketCodec.class);
@@ -44,7 +43,7 @@ public class PacketCodec extends ByteToMessageCodec<Packet<Object>> {
 
     /**
      * @Author fangzhenxun
-     * @Description 校验协议包字段参数 @todo 待完善
+     * @Description 校验协议包字段参数
      * @param packet
      * @return boolean
      */

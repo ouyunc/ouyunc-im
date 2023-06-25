@@ -28,7 +28,6 @@ import java.util.Map;
 /**
  * @Author fangzhenxun
  * @Description: 抽象im服务，用于定义一些其他初始化方法
- * @Version V3.0
  **/
 public abstract class AbstractIMServer implements IMServer{
     private static Logger log = LoggerFactory.getLogger(AbstractIMServer.class);

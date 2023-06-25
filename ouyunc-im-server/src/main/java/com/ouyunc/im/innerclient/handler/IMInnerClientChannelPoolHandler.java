@@ -22,7 +22,6 @@ import java.util.concurrent.TimeUnit;
 /**
  * @Author fangzhenxun
  * @Description: 通过继承AbstractChannelPoolHandler 来实现动态的channel 管理与释放，集群内置客户端的管道处理
- * @Version V3.0
  **/
 public class IMInnerClientChannelPoolHandler implements ChannelPoolHandler {
     private static Logger log = LoggerFactory.getLogger(IMInnerClientChannelPoolHandler.class);
@@ -56,7 +55,6 @@ public class IMInnerClientChannelPoolHandler implements ChannelPoolHandler {
         if (IMServerContext.SERVER_CONFIG.isSslEnable()) {
             // 这个处理器需要放到第一位
             SslUtil.configSSL(ch -> {
-                //@todo 内置客户端SSL/TLS
                 SSLEngine sslEngine = SslUtil.buildClientSslContext().newEngine(channel.alloc());
                 // 客户端模式
                 sslEngine.setUseClientMode(true);
@@ -67,7 +65,7 @@ public class IMInnerClientChannelPoolHandler implements ChannelPoolHandler {
         }
         // 添加消息处理器链
         pipeline.addLast(IMConstant.LOG, new LoggingHandler(IMServerContext.SERVER_CONFIG.getLogLevel()))
-                // 开启Netty自带的心跳处理器，每5秒发送一次心跳，用来做动态channel池处理 @todo ,时间需要调整，以及handler 的顺序
+                // 开启Netty自带的心跳处理器，每5秒发送一次心跳，用来做动态channel池处理 
                 .addLast(IMConstant.INNER_CLIENT_IDLE, new IdleStateHandler(IMServerContext.SERVER_CONFIG.getClusterInnerClientIdleReadTimeOut(), IMServerContext.SERVER_CONFIG.getClusterInnerClientIdleWriteTimeOut(), IMServerContext.SERVER_CONFIG.getClusterInnerClientIdleReadWriteTimeOut(), TimeUnit.SECONDS))
                 // 编解码
                 .addLast(IMConstant.INNER_CLIENT_PACKET_CODEC, new PacketCodec())

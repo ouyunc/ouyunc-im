@@ -3,7 +3,6 @@ package com.ouyunc.im.constant.enums;
 /**
  * @Author fangzhenxun
  * @Description: 网络类型枚举
- * @Version V3.0
  **/
 public enum NetworkEnum {
     OTHER((byte)0, "other", "其他网络"),

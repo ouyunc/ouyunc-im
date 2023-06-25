@@ -7,7 +7,6 @@ import org.slf4j.LoggerFactory;
 /**
  * @Author fangzhenxun
  * @Description: 消息内容抽象处理类
- * @Version V3.0
  **/
 public abstract class AbstractMessageContentProcessor implements MessageContentProcessor {
     private static Logger log = LoggerFactory.getLogger(AbstractMessageContentProcessor.class);

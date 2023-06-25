@@ -6,7 +6,6 @@ import com.ouyunc.im.packet.message.content.*;
 /**
  * @Author fangzhenxun
  * @Description: 消息内容类型枚举
- * @Version V3.0
  **/
 public enum MessageContentEnum {
 

@@ -21,7 +21,6 @@ import java.util.stream.Collectors;
 /**
  * @Author fangzhenxun
  * @Description: 随机路由策略
- * @Version V3.0
  **/
 public class RandomRouterStrategy implements RouterStrategy{
     private static Logger log = LoggerFactory.getLogger(RandomRouterStrategy.class);

@@ -34,7 +34,6 @@ import java.net.InetSocketAddress;
 /**
  * @Author fangzhenxun
  * @Description: 协议类型
- * @Version V3.0
  **/
 public enum Protocol {
 

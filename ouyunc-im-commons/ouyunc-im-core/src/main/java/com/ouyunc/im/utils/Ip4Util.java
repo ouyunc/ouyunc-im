@@ -3,7 +3,6 @@ package com.ouyunc.im.utils;
 /**
  * @Author fangzhenxun
  * @Description: ip4 工具类
- * @Version V3.0
  **/
 public class Ip4Util {
 

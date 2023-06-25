@@ -20,7 +20,6 @@ import org.slf4j.LoggerFactory;
 /**
  * @Author fangzhenxun
  * @Description: 客户端应答消息处理器（qos 保障，客户端收到消息后会发给另外一端收到消息的应答）
- * @Version V3.0
  **/
 public class QosMessageProcessor extends AbstractMessageProcessor{
     private static Logger log = LoggerFactory.getLogger(QosMessageProcessor.class);

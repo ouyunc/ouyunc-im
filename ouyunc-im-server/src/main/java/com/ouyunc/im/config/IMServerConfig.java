@@ -16,7 +16,6 @@ import java.util.Set;
 /**
  * @Author fangzhenxun
  * @Description: 使用建造者模式来进行构建配置对象实例
- * @Version V3.0
  **/
 public class IMServerConfig extends IMConfig{
 

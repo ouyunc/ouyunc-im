@@ -130,7 +130,8 @@ https://gitee.com/etxync/ouyunc-im/wikis/OUYUNC-IM%20v3.x/%E5%AE%A2%E6%88%B7%E7%
 6. 支持白板功能（已完成）
 7. 集成springboot 以ouyunc-im-spring-boot-starter
 8. 打成依赖包放到中央仓库，作为依赖组件来引用
-9. 优化代码
+9. 重构qos消息可靠性到达
+10. 优化其他代码
 
 #### 最后说明
 由于本人技术有限，项目中可能会有bug或代码不规范的地方，如果对你带来了困扰请跳过本项目。
@@ -143,6 +144,16 @@ https://gitee.com/etxync/ouyunc-im/wikis/OUYUNC-IM%20v3.x/%E5%AE%A2%E6%88%B7%E7%
 2. 去掉集群中服务下线的处理（在当前业务中目前用不到，不必考虑）
 3. 优化其他代码
 
+#####  **3.1.1 ~ 4.0.0**
+1. 去除离线消息处理
+2. 增加公共的集群路由逻辑
+3. 添加好友或群邀请，自动应答策略
+4. 去除hutool ,使用fastJson以及其他工具类来替代hutool
+5. 修改登录缓存存储结构为hash, key（登录用户id）， hashKey(登录设备号)  value(登录信息 LoginUserInfo)
+6. 增加登录设备类型
+7. js-SDK 修改TextEncode 以及雪花算法 bigInt其他浏览器不支持问题
+8. 增加平台校验，支持对不同平台作出最大连接数限制
+9. 优化其他代码
 #### 参与贡献
 
 

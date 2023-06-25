@@ -3,7 +3,6 @@ package com.ouyunc.im.constant;
 /**
  * @Author fangzhenxun
  * @Description: 缓存相关常量类
- * @Version V3.0
  **/
 public class CacheConstant {
     // 冒号

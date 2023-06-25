@@ -3,7 +3,6 @@ package com.ouyunc.im.constant.enums;
 /**
  * @Author fangzhenxun
  * @Description: 协议包中的消息类型枚举, RPC 框架中有请求、响应、心跳类型。IM 通讯场景中有登陆、创建群聊、发送消息、接收消息、退出群聊等类型。
- * @Version V3.0
  **/
 public enum MessageEnum {
 

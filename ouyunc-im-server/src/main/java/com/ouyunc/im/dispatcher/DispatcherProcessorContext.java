@@ -5,7 +5,6 @@ import io.netty.channel.ChannelHandlerContext;
 /**
  * @Author fangzhenxun
  * @Description: 上下文
- * @Version V3.0
  **/
 public class DispatcherProcessorContext {
 

@@ -24,7 +24,6 @@ import java.util.Set;
 /**
  * @Author fangzhenxun
  * @Description: IM处理器上下文
- * @Version V3.0
  **/
 public class IMProcessContext {
     private static Logger log = LoggerFactory.getLogger(IMProcessContext.class);

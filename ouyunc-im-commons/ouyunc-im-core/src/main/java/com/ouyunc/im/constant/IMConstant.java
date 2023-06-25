@@ -3,7 +3,6 @@ package com.ouyunc.im.constant;
 /**
  * @Author fangzhenxun
  * @Description: channel 通道相关的常量类
- * @Version V3.0
  **/
 public class IMConstant {
     /**

@@ -14,7 +14,6 @@ import java.util.concurrent.TimeUnit;
 /**
  * @Author fangzhenxun
  * @Description: 默认 IM 内置客户端实现类
- * @Version V3.0
  **/
 public class DefaultIMInnerClient extends AbstractIMInnerClient {
     private static Logger log = LoggerFactory.getLogger(DefaultIMInnerClient.class);

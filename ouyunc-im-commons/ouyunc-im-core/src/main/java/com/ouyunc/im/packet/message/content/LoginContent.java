@@ -6,7 +6,6 @@ import java.io.Serializable;
 /**
  * @Author fangzhenxun
  * @Description: 登录消息内容, 在登录的时候做校验
- * @Version V3.0
  **/
 public class LoginContent implements Serializable {
     private static final long serialVersionUID = 100006L;

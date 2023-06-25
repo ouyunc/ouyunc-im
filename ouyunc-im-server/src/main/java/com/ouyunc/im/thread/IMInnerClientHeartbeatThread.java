@@ -33,7 +33,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * @Author fangzhenxun
  * @Description: 在集群中内置客户端的后置处理
- * @Version V3.0
  **/
 public class IMInnerClientHeartbeatThread implements Runnable {
     private static Logger log = LoggerFactory.getLogger(IMInnerClientHeartbeatThread.class);

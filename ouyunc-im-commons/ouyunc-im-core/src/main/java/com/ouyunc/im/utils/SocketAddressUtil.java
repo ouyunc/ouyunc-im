@@ -7,7 +7,6 @@ import java.net.InetSocketAddress;
 /**
  * @Author fangzhenxun
  * @Description: 网络地址工具类
- * @Version V3.0
  **/
 public class SocketAddressUtil {
 

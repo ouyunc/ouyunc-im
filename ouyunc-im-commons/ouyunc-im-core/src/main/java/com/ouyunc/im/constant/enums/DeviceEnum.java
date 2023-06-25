@@ -4,7 +4,6 @@ package com.ouyunc.im.constant.enums;
 /**
  * @Author fangzhenxun
  * @Description: 客户端设备枚举
- * @Version V3.0
  **/
 public enum DeviceEnum {
 

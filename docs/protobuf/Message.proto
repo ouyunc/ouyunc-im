@@ -4,7 +4,6 @@ option optimize_for  = SPEED;
 /**
  * @Author fangzhenxun
  * @Description: message 消息实体
- * @Version V3.0
  **/
 message Message {
   //发送方

@@ -12,7 +12,6 @@ import org.slf4j.LoggerFactory;
 /**
  * @Author fangzhenxun
  * @Description: 将非packet 协议类型转成Packet,服务内部只处理packet
- * @Version V3.0
  **/
 public class Convert2PacketHandler extends SimpleChannelInboundHandler<Object> {
     private static Logger log = LoggerFactory.getLogger(Convert2PacketHandler.class);

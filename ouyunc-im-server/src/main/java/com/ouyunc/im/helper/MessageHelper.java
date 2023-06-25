@@ -33,7 +33,6 @@ import java.util.List;
 /**
  * @Author fangzhenxun
  * @Description: 消息的传递/发送/读取
- * @Version V3.0
  **/
 public class MessageHelper {
 

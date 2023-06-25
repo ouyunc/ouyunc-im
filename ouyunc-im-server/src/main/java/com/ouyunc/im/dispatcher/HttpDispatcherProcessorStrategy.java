@@ -12,7 +12,6 @@ import io.netty.handler.stream.ChunkedWriteHandler;
 /**
  * @Author fangzhenxun
  * @Description: http 调度处理器
- * @Version V3.0
  **/
 public class HttpDispatcherProcessorStrategy implements DispatcherProcessorStrategy{
 

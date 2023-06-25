@@ -8,7 +8,6 @@ import java.io.Serializable;
 /**
  * @Author fangzhenxun
  * @Description: 用户登录相关信息
- * @Version V3.0
  **/
 public class LoginUserInfo implements Serializable {
     private static final long serialVersionUID = 101;

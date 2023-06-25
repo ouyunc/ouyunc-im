@@ -8,7 +8,6 @@ import java.util.Set;
 /**
  * @Author fangzhenxun
  * @Description: 消息路由表
- * @Version V3.0
  **/
 public class RoutingTable implements Serializable {
 

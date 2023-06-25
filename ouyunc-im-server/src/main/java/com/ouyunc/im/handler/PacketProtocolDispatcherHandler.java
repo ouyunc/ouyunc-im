@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory;
 /**
  * @Author fangzhenxun
  * @Description: packet 协议调度处理器
- * @Version V3.0
  **/
 public class PacketProtocolDispatcherHandler extends SimpleChannelInboundHandler<Packet> {
     private static Logger log = LoggerFactory.getLogger(PacketProtocolDispatcherHandler.class);

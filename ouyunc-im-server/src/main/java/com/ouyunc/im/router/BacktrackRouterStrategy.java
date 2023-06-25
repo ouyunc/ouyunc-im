@@ -20,7 +20,6 @@ import java.util.*;
 /**
  * @Author fangzhenxun
  * @Description: 回溯路由算法
- * @Version V3.0
  **/
 public class BacktrackRouterStrategy implements RouterStrategy{
     private static Logger log = LoggerFactory.getLogger(BacktrackRouterStrategy.class);

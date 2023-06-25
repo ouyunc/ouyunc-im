@@ -9,7 +9,6 @@ import java.util.concurrent.ConcurrentMap;
 /**
  * @Author fangzhenxun
  * @Description: 本地map 缓存，线程安全
- * @Version V3.0
  **/
 public class MapLocalL1Cache<K,V> extends AbstractLocalL1Cache<K,V> {
     private static Logger log = LoggerFactory.getLogger(MapLocalL1Cache.class);

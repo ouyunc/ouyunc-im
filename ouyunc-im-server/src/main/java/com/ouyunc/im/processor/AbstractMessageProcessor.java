@@ -1,13 +1,8 @@
 package com.ouyunc.im.processor;
 
-import com.alibaba.fastjson2.JSON;
 import com.ouyunc.im.constant.enums.MessageEnum;
-import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.helper.DbHelper;
-import com.ouyunc.im.helper.UserHelper;
 import com.ouyunc.im.packet.Packet;
-import com.ouyunc.im.packet.message.ExtraMessage;
-import com.ouyunc.im.packet.message.InnerExtraData;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.validate.MessageValidate;
 import io.netty.channel.ChannelHandlerContext;
@@ -21,7 +16,6 @@ import java.util.function.BiConsumer;
 /**
  * @Author fangzhenxun
  * @Description: 消息抽象处理类
- * @Version V3.0
  **/
 public abstract class AbstractMessageProcessor implements MessageProcessor {
     private static Logger log = LoggerFactory.getLogger(AbstractMessageProcessor.class);

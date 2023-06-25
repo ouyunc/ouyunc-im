@@ -15,7 +15,6 @@ import java.util.List;
 /**
  * @Author fangzhenxun
  * @Description: 协议派发器, 具体请看netty 源码例子
- * @Version V3.0
  **/
 public class ProtocolDispatcher extends ByteToMessageDecoder {
     private static Logger log = LoggerFactory.getLogger(ProtocolDispatcher.class);

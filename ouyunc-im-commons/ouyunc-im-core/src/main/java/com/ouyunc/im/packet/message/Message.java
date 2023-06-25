@@ -7,7 +7,6 @@ import java.io.Serializable;
 /**
  * @Author fangzhenxun
  * @Description: 自定义Immessage
- * @Version V3.0
  **/
 public class Message implements Serializable {
     private static final long serialVersionUID = 102;

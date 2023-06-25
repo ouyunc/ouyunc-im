@@ -15,7 +15,6 @@ import java.util.function.Function;
 /**
  * @Author fangzhenxun
  * @Description: packet编解码工具类
- * @Version V3.0
  **/
 public class ReaderWriterUtil {
     private static Logger log = LoggerFactory.getLogger(ReaderWriterUtil.class);

@@ -28,7 +28,6 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * @Author fangzhenxun
  * @Description: 协议包序列化，使用枚举来定义实现类
- * @Version V3.0
  **/
 public enum Serializer {
 

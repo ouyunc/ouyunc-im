@@ -13,7 +13,6 @@ import java.nio.ByteOrder;
 /**
  * @Author fangzhenxun
  * @Description: packet 调度处理器
- * @Version V3.0
  **/
 public class PacketDispatcherProcessorStrategy implements DispatcherProcessorStrategy{
 

@@ -22,7 +22,6 @@ import java.net.InetSocketAddress;
 /**
  * @Author fangzhenxun
  * @Description: 消息路由失败处理线程
- * @Version V3.0
  **/
 public class IMRouteFailureProcessorThread implements Runnable {
     private static Logger log = LoggerFactory.getLogger(IMRouteFailureProcessorThread.class);

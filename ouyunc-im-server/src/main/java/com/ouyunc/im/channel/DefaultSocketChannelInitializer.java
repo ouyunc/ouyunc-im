@@ -21,7 +21,6 @@ import javax.net.ssl.SSLEngine;
 /**
  * @Author fangzhenxun
  * @Description: 默认初始化 socket channel
- * @Version V3.0
  **/
 public class DefaultSocketChannelInitializer extends SocketChannelInitializer{
     private static Logger log = LoggerFactory.getLogger(DefaultSocketChannelInitializer.class);

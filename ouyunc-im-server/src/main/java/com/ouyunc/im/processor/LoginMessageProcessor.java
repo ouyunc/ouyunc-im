@@ -32,7 +32,6 @@ import org.slf4j.LoggerFactory;
 /**
  * @Author fangzhenxun
  * @Description: 登录消息处理器，这个处理类是第一条连接后发送的第一条消息类型，之后才能发送心跳等业务消息
- * @Version V3.0
  **/
 public class LoginMessageProcessor extends AbstractMessageProcessor{
     private static Logger log = LoggerFactory.getLogger(LoginMessageProcessor.class);

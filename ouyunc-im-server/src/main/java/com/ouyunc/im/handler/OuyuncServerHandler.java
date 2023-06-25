@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory;
 /**
  * @Author fangzhenxun
  * @Description: 自定义 Packet 处理器，客户端连接池中存放的channel 也是这里面的类型数据
- * @Version V3.0
  **/
 public class OuyuncServerHandler extends SimpleChannelInboundHandler<Packet> {
     private static Logger log = LoggerFactory.getLogger(OuyuncServerHandler.class);

@@ -19,7 +19,6 @@ import java.net.InetSocketAddress;
 /**
  * @Author fangzhenxun
  * @Description: im内部客户端使用的心跳消息syn-ack处理器
- * @Version V3.0
  **/
 public class SynAckMessageProcessor extends AbstractMessageProcessor{
     private static Logger log = LoggerFactory.getLogger(SynAckMessageProcessor.class);

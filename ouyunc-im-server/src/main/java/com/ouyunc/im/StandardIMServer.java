@@ -15,7 +15,6 @@ import java.net.UnknownHostException;
 /**
  * @Author fangzhenxun
  * @Description: 标准IMServer 实现类
- * @Version V3.0
  **/
 public class StandardIMServer extends AbstractIMServer{
     private static Logger log = LoggerFactory.getLogger(StandardIMServer.class);

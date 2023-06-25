@@ -14,7 +14,6 @@ import java.util.function.Consumer;
 /**
  * @Author fangzhenxun
  * @Description: ssl 工具类
- * @Version V3.0
  **/
 public class SslUtil {
     private static Logger log = LoggerFactory.getLogger(SslUtil.class);

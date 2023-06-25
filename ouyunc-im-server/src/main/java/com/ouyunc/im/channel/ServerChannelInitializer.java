@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory;
 /**
  * @Author fangzhenxun
  * @Description: server channel 初始化, 预留扩展
- * @Version V3.0
  **/
 public abstract class ServerChannelInitializer extends ChannelInitializer<ServerChannel> {
     private static Logger log = LoggerFactory.getLogger(ServerChannelInitializer.class);

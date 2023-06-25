@@ -24,7 +24,6 @@ import java.util.Map;
 /**
  * @Author fangzhenxun
  * @Description: 用户的绑定，以及其他处理
- * @Version V3.0
  **/
 public class UserHelper {
     private static Logger log = LoggerFactory.getLogger(UserHelper.class);

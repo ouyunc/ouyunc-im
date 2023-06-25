@@ -9,7 +9,6 @@ import java.util.Set;
 /**
  * @Author fangzhenxun
  * @Description: 读取properties 相关配置
- * @Version V3.0
  **/
 @Config.Sources({"classpath:ouyunc-im-server.properties"})
 public interface IMServerProperties extends Config {

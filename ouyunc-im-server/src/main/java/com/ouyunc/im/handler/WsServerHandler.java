@@ -11,7 +11,6 @@ import org.slf4j.LoggerFactory;
 /**
  * @Author fangzhenxun
  * @Description: ws 业务逻辑处理器
- * @Version V3.0
  **/
 public class WsServerHandler extends SimpleChannelInboundHandler<Packet> {
     private static Logger log = LoggerFactory.getLogger(WsServerHandler.class);

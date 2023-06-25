@@ -6,7 +6,7 @@
     <groupId>com.ouyunc</groupId>
     <artifactId>ouyunc-im</artifactId>
     <packaging>pom</packaging>
-    <version>v3.0</version>
+    <version>4.0.0</version>
     <description>偶遇im是一款基于netty的即时通讯项目</description>
     <modules>
         <module>ouyunc-im-commons</module>
@@ -150,6 +150,32 @@
     <!--全局管理包-->
     <dependencyManagement>
         <dependencies>
+
+            <dependency>
+                <groupId>com.ouyunc</groupId>
+                <artifactId>ouyunc-im-cache</artifactId>
+                <version>${version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.ouyunc</groupId>
+                <artifactId>ouyunc-im-db</artifactId>
+                <version>${version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.ouyunc</groupId>
+                <artifactId>ouyunc-im-core</artifactId>
+                <version>${version}</version>
+            </dependency>
+
+
+            <dependency>
+                <groupId>com.ouyunc</groupId>
+                <artifactId>ouyunc-im-domain</artifactId>
+                <version>${version}</version>
+            </dependency>
+
 
             <!--netty 全家桶-->
             <!-- https://mvnrepository.com/artifact/io.netty/netty-all -->

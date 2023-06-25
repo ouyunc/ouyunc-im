@@ -19,7 +19,6 @@ import org.slf4j.LoggerFactory;
 /**
  * @Author fangzhenxun
  * @Description: 外部客户端心跳消息
- * @Version V3.0
  **/
 public class PingPongMessageProcessor extends AbstractMessageProcessor{
     private static Logger log = LoggerFactory.getLogger(PingPongMessageProcessor.class);

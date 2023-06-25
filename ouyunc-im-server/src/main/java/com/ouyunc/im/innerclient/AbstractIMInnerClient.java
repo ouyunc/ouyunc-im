@@ -7,7 +7,6 @@ import org.slf4j.LoggerFactory;
 /**
  * @Author fangzhenxun
  * @Description: 抽象内部客户端
- * @Version V3.0
  **/
 public abstract class AbstractIMInnerClient implements IMInnerClient {
     private static Logger log = LoggerFactory.getLogger(AbstractIMInnerClient.class);

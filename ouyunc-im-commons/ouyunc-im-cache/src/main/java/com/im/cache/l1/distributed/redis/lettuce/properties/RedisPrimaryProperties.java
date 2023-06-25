@@ -6,7 +6,6 @@ import org.aeonbits.owner.Config;
 /**
  * @Author fangzhenxun
  * @Description: redis 核心配置
- * @Version V3.0
  **/
 @Config.LoadPolicy(Config.LoadType.FIRST)
 @Config.Sources({"classpath:ouyunc-im-cache.properties","classpath:ouyunc-im-server.properties","classpath:ouyunc-im-client.properties","classpath:ouyunc-im.properties"})
