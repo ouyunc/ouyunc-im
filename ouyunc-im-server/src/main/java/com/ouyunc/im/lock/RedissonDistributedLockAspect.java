@@ -1,7 +1,7 @@
 package com.ouyunc.im.lock;
 
 
-import com.im.cache.l1.distributed.redis.redisson.RedissonFactory;
+import com.ouyunc.im.cache.l1.distributed.redis.redisson.RedissonFactory;
 import com.ouyunc.im.constant.CacheConstant;
 import org.apache.commons.lang3.StringUtils;
 import org.aspectj.lang.ProceedingJoinPoint;

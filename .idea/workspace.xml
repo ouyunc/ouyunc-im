@@ -9,12 +9,50 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v4.0.0&#10;1. 支持客服相关业务&#10;2. 支持弹幕相关业务&#10;3. 支持语音等（已完成）&#10;4. 支持语音聊天、视频聊天（已完成）&#10;5. 在线简单视频会议（已完成）&#10;6. 支持白板功能（已完成）&#10;7. 集成springboot 以ouyunc-im-spring-boot-starter&#10;8. 打成依赖包放到中央仓库，作为依赖组件来引用&#10;9. 重构qos消息可靠性到达&#10;10. 优化其他代码">
-      <change afterPath="$PROJECT_DIR$/docs/4.0.0/sql/ouyunc-im-mysql-v4.0.0.sql" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/sql/ouyunc-im-mysql-v4.0.0.sql" afterDir="false" />
+    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v4.0.0&#10;1. 修改数据库表名">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/DbSqlConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/DbSqlConstant.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/META-INF/MANIFEST.MF" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/META-INF/MANIFEST.MF" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/im/cache/ICache.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/ICache.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/im/cache/l1/L1Cache.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/L1Cache.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/im/cache/l1/distributed/AbstractDistributedL1Cache.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/AbstractDistributedL1Cache.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/im/cache/l1/distributed/redis/RedisDistributedL1Cache.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/RedisDistributedL1Cache.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/im/cache/l1/distributed/redis/lettuce/RedisFactory.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/RedisFactory.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/im/cache/l1/distributed/redis/lettuce/builder/RedisBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/builder/RedisBuilder.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/im/cache/l1/distributed/redis/lettuce/builder/impl/RedisTemplateBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/builder/impl/RedisTemplateBuilder.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/im/cache/l1/distributed/redis/lettuce/builder/impl/StringRedisTemplateBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/builder/impl/StringRedisTemplateBuilder.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/im/cache/l1/distributed/redis/lettuce/enums/RedisEnum.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/enums/RedisEnum.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/im/cache/l1/distributed/redis/lettuce/properties/ClusterRedisProperties.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/properties/ClusterRedisProperties.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/im/cache/l1/distributed/redis/lettuce/properties/RedisPrimaryProperties.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/properties/RedisPrimaryProperties.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/im/cache/l1/distributed/redis/lettuce/properties/SentinelRedisProperties.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/properties/SentinelRedisProperties.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/im/cache/l1/distributed/redis/lettuce/properties/StandaloneRedisProperties.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/properties/StandaloneRedisProperties.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/im/cache/l1/distributed/redis/lettuce/strategy/RedisStrategy.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/strategy/RedisStrategy.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/im/cache/l1/distributed/redis/lettuce/strategy/impl/ClusterRedisStrategy.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/strategy/impl/ClusterRedisStrategy.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/im/cache/l1/distributed/redis/lettuce/strategy/impl/SentinelRedisStrategy.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/strategy/impl/SentinelRedisStrategy.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/im/cache/l1/distributed/redis/lettuce/strategy/impl/StandaloneRedisStrategy.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/strategy/impl/StandaloneRedisStrategy.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/im/cache/l1/distributed/redis/redisson/RedissonFactory.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/redisson/RedissonFactory.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/im/cache/l1/distributed/redis/redisson/builder/RedissonBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/redisson/builder/RedissonBuilder.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/im/cache/l1/distributed/redis/redisson/builder/impl/RedissonClientBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/redisson/builder/impl/RedissonClientBuilder.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/im/cache/l1/distributed/redis/redisson/enums/RedisEnum.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/redisson/enums/RedisEnum.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/im/cache/l1/distributed/redis/redisson/properties/ClusterRedissonProperties.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/redisson/properties/ClusterRedissonProperties.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/im/cache/l1/distributed/redis/redisson/properties/RedisPrimaryProperties.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/redisson/properties/RedisPrimaryProperties.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/im/cache/l1/distributed/redis/redisson/properties/SentinelRedissonProperties.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/redisson/properties/SentinelRedissonProperties.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/im/cache/l1/distributed/redis/redisson/properties/StandaloneRedissonProperties.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/redisson/properties/StandaloneRedissonProperties.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/im/cache/l1/distributed/redis/redisson/strategy/RedissonStrategy.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/redisson/strategy/RedissonStrategy.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/im/cache/l1/distributed/redis/redisson/strategy/impl/ClusterRedissonStrategy.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/redisson/strategy/impl/ClusterRedissonStrategy.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/im/cache/l1/distributed/redis/redisson/strategy/impl/SentinelRedissonStrategy.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/redisson/strategy/impl/SentinelRedissonStrategy.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/im/cache/l1/distributed/redis/redisson/strategy/impl/StandaloneRedissonStrategy.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/redisson/strategy/impl/StandaloneRedissonStrategy.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/im/cache/l1/local/AbstractLocalL1Cache.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/local/AbstractLocalL1Cache.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/im/cache/l1/local/caffeine/CaffeineLocalL1Cache.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/local/caffeine/CaffeineLocalL1Cache.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/im/cache/l1/local/map/MapLocalL1Cache.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/local/map/MapLocalL1Cache.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/Ip4Util.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/Ip4Util.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/StandardIMServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/StandardIMServer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/context/IMServerContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/context/IMServerContext.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/DbHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/DbHelper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/lock/RedissonDistributedLockAspect.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/lock/RedissonDistributedLockAspect.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/LoginMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/LoginMessageProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupAgreeJoinMessageContentProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupAgreeJoinMessageContentProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupJoinMessageContentProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupJoinMessageContentProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupRefuseJoinMessageContentProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupRefuseJoinMessageContentProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/protocol/Protocol.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/protocol/Protocol.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/ouyunc-im-server.properties" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/ouyunc-im-server.properties" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -122,6 +160,9 @@
       </MavenImportingSettings>
     </option>
   </component>
+  <component name="MavenRunner">
+    <option name="skipTests" value="true" />
+  </component>
   <component name="ProjectId" id="1rHD39bsEE6KBQzoWetTGmn50Xv" />
   <component name="ProjectLevelVcsManager" settingsEditedManually="true">
     <ConfirmationsSetting value="2" id="Add" />
@@ -178,7 +219,20 @@
       <recent name="com.ouyu.cache.l1.distributed.redis.lettuce.config" />
     </key>
   </component>
-  <component name="RunManager">
+  <component name="RunManager" selected="Application.StartIMServer">
+    <configuration name="Ip4Util" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="com.ouyunc.im.utils.Ip4Util" />
+      <module name="ouyunc-im-core" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.ouyunc.im.utils.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
     <configuration name="StartIMServer" type="Application" factoryName="Application" singleton="false">
       <option name="ALTERNATIVE_JRE_PATH" value="1.8" />
       <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
@@ -190,6 +244,11 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Application.Ip4Util" />
+      </list>
+    </recent_temporary>
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="StructureViewFactory">
@@ -409,14 +468,7 @@
       <workItem from="1687837244167" duration="24000" />
       <workItem from="1687837403394" duration="21000" />
       <workItem from="1687837450476" duration="2868000" />
-      <workItem from="1687874023182" duration="3747000" />
-    </task>
-    <task id="LOCAL-00148" summary="v3.0.1 sdk">
-      <created>1675087308907</created>
-      <option name="number" value="00148" />
-      <option name="presentableId" value="LOCAL-00148" />
-      <option name="project" value="LOCAL" />
-      <updated>1675087308907</updated>
+      <workItem from="1687874023182" duration="8080000" />
     </task>
     <task id="LOCAL-00149" summary="v3.0.1 sdk">
       <created>1675242587436</created>
@@ -754,7 +806,14 @@
       <option name="project" value="LOCAL" />
       <updated>1687658036990</updated>
     </task>
-    <option name="localTasksCounter" value="197" />
+    <task id="LOCAL-00197" summary="v4.0.0&#10;1. 修改数据库表名">
+      <created>1687919016104</created>
+      <option name="number" value="00197" />
+      <option name="presentableId" value="LOCAL-00197" />
+      <option name="project" value="LOCAL" />
+      <updated>1687919016104</updated>
+    </task>
+    <option name="localTasksCounter" value="198" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -815,7 +874,6 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
-    <MESSAGE value="v3.0.1 sdk" />
     <MESSAGE value="v3.0.1 集群bug修复" />
     <MESSAGE value="v3.0.1 集群脑裂检测优化" />
     <MESSAGE value="v3.0.1 集群下获取不到登录用户" />
@@ -840,7 +898,8 @@
     <MESSAGE value="v3.1.1-beta qos" />
     <MESSAGE value="v3.1.1-beta 去除离线消息" />
     <MESSAGE value="v4.0.0&#10;1. 支持客服相关业务&#10;2. 支持弹幕相关业务&#10;3. 支持语音等（已完成）&#10;4. 支持语音聊天、视频聊天（已完成）&#10;5. 在线简单视频会议（已完成）&#10;6. 支持白板功能（已完成）&#10;7. 集成springboot 以ouyunc-im-spring-boot-starter&#10;8. 打成依赖包放到中央仓库，作为依赖组件来引用&#10;9. 重构qos消息可靠性到达&#10;10. 优化其他代码" />
-    <option name="LAST_COMMIT_MESSAGE" value="v4.0.0&#10;1. 支持客服相关业务&#10;2. 支持弹幕相关业务&#10;3. 支持语音等（已完成）&#10;4. 支持语音聊天、视频聊天（已完成）&#10;5. 在线简单视频会议（已完成）&#10;6. 支持白板功能（已完成）&#10;7. 集成springboot 以ouyunc-im-spring-boot-starter&#10;8. 打成依赖包放到中央仓库，作为依赖组件来引用&#10;9. 重构qos消息可靠性到达&#10;10. 优化其他代码" />
+    <MESSAGE value="v4.0.0&#10;1. 修改数据库表名" />
+    <option name="LAST_COMMIT_MESSAGE" value="v4.0.0&#10;1. 修改数据库表名" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

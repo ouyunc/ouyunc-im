@@ -1,8 +1,8 @@
 package com.ouyunc.im.helper;
 
 
-import com.im.cache.l1.distributed.redis.RedisDistributedL1Cache;
-import com.im.cache.l1.distributed.redis.redisson.RedissonFactory;
+import com.ouyunc.im.cache.l1.distributed.redis.RedisDistributedL1Cache;
+import com.ouyunc.im.cache.l1.distributed.redis.redisson.RedissonFactory;
 import com.ouyunc.im.constant.CacheConstant;
 import com.ouyunc.im.constant.DbSqlConstant;
 import com.ouyunc.im.constant.IMConstant;

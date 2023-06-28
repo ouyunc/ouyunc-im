@@ -4,12 +4,10 @@ import com.ouyunc.im.banner.IMBanner;
 import com.ouyunc.im.config.IMServerConfig;
 import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.properties.IMServerProperties;
+import com.ouyunc.im.utils.Ip4Util;
 import org.aeonbits.owner.ConfigFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 
 
 /**
@@ -40,14 +38,7 @@ public class StandardIMServer extends AbstractIMServer{
      */
     @Override
     IMServerConfig loadProperties() {
-        String host = null;
-        try {
-            host = InetAddress.getLocalHost().getHostAddress();
-        } catch (UnknownHostException e) {
-            log.error("获取本地host失败！{}", e.getMessage());
-            e.printStackTrace();
-        }
-        log.info("开始装载配置文件信息...");
+        String host = Ip4Util.getLocalHost();
         IMServerProperties propertiesHelper = ConfigFactory.create(IMServerProperties.class, System.getProperties());
         IMServerConfig config = IMServerConfig.newBuilder()
                 .port(propertiesHelper.port())

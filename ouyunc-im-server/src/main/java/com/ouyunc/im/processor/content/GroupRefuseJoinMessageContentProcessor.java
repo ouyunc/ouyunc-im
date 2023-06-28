@@ -2,7 +2,7 @@ package com.ouyunc.im.processor.content;
 
 
 import com.alibaba.fastjson2.JSON;
-import com.im.cache.l1.distributed.redis.redisson.RedissonFactory;
+import com.ouyunc.im.cache.l1.distributed.redis.redisson.RedissonFactory;
 import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.CacheConstant;
 import com.ouyunc.im.constant.enums.MessageContentEnum;
