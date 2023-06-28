@@ -9,10 +9,7 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v4.0.0&#10;1. 修改数据库表名">
-      <change afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/ClassScanner1.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/ClassScanner.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/ClassScanner.java" afterDir="false" />
+    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v4.0.0&#10;1. 优化扫描包">
       <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/StartIMServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/StartIMServer.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -429,14 +426,7 @@
       <workItem from="1687837244167" duration="24000" />
       <workItem from="1687837403394" duration="21000" />
       <workItem from="1687837450476" duration="2868000" />
-      <workItem from="1687874023182" duration="17369000" />
-    </task>
-    <task id="LOCAL-00150" summary="v3.0.1 集群bug修复">
-      <created>1676111280382</created>
-      <option name="number" value="00150" />
-      <option name="presentableId" value="LOCAL-00150" />
-      <option name="project" value="LOCAL" />
-      <updated>1676111280385</updated>
+      <workItem from="1687874023182" duration="17683000" />
     </task>
     <task id="LOCAL-00151" summary="v3.0.1 集群脑裂检测优化">
       <created>1676254678387</created>
@@ -774,7 +764,14 @@
       <option name="project" value="LOCAL" />
       <updated>1687925703476</updated>
     </task>
-    <option name="localTasksCounter" value="199" />
+    <task id="LOCAL-00199" summary="v4.0.0&#10;1. 优化扫描包">
+      <created>1687936182951</created>
+      <option name="number" value="00199" />
+      <option name="presentableId" value="LOCAL-00199" />
+      <option name="project" value="LOCAL" />
+      <updated>1687936182952</updated>
+    </task>
+    <option name="localTasksCounter" value="200" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -835,7 +832,6 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
-    <MESSAGE value="v3.0.1 集群bug修复" />
     <MESSAGE value="v3.0.1 集群脑裂检测优化" />
     <MESSAGE value="v3.0.1 集群下获取不到登录用户" />
     <MESSAGE value="v3.0.1 优化日志记录添加ip" />
@@ -860,7 +856,8 @@
     <MESSAGE value="v3.1.1-beta 去除离线消息" />
     <MESSAGE value="v4.0.0&#10;1. 支持客服相关业务&#10;2. 支持弹幕相关业务&#10;3. 支持语音等（已完成）&#10;4. 支持语音聊天、视频聊天（已完成）&#10;5. 在线简单视频会议（已完成）&#10;6. 支持白板功能（已完成）&#10;7. 集成springboot 以ouyunc-im-spring-boot-starter&#10;8. 打成依赖包放到中央仓库，作为依赖组件来引用&#10;9. 重构qos消息可靠性到达&#10;10. 优化其他代码" />
     <MESSAGE value="v4.0.0&#10;1. 修改数据库表名" />
-    <option name="LAST_COMMIT_MESSAGE" value="v4.0.0&#10;1. 修改数据库表名" />
+    <MESSAGE value="v4.0.0&#10;1. 优化扫描包" />
+    <option name="LAST_COMMIT_MESSAGE" value="v4.0.0&#10;1. 优化扫描包" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
