@@ -47,11 +47,15 @@ http://www.ouyunc.com
 ![项目目录结构](docs/picture/project_struct.png)
 
 #### 演示地址 
-- web端demo 演示地址：
+- web端pc demo 演示地址：
 ```
 略
 ```
-- 移动端demo 演示地址：
+- 移动端H5 demo 演示地址：
+```
+https://m.ouyunc.com
+```
+- 移动端Android demo 演示地址：
 ```
 略
 ```
