@@ -57,7 +57,7 @@ https://m.ouyunc.com
 ```
 - 移动端Android demo 演示地址：
 ```
-略
+[点击下载apk](https://gitee.com/etxync/ouyunc-im/raw/4.0.0/docs/4.0.0/apk/android/ouyunc-im-4.0.4.apk)
 ```
 - 移动端IOS demo 演示地址：
 ```
