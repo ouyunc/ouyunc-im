@@ -47,16 +47,24 @@ http://www.ouyunc.com
 ![项目目录结构](docs/picture/project_struct.png)
 
 #### 演示地址 
-- web端demo 演示地址：
+- web端pc demo 演示地址：
 ```
 略
 ```
-- 移动端demo 演示地址：
+- 移动端H5 demo 演示地址：
+```
+https://m.ouyunc.com
+```
+- 移动端Android demo 演示地址：
+```
+略
+```
+- 移动端IOS demo 演示地址：
 ```
 略
 ```
 #### 演示示例
-- web端演示示例 [:point_down:点击下载](https://gitee.com/etxync/ouyunc-im/raw/v3.0.2/docs/picture/%E5%81%B6%E4%BA%91%E5%AE%A2web%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%BC%94%E7%A4%BA.mp4)
+- web PC端演示示例 [:point_down:点击下载](https://gitee.com/etxync/ouyunc-im/raw/v3.0.2/docs/picture/%E5%81%B6%E4%BA%91%E5%AE%A2web%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%BC%94%E7%A4%BA.mp4)
 
 <video width="320" height="240" controls>
   <source src="https://gitee.com/etxync/ouyunc-im/raw/v3.0.2/docs/picture/%E5%81%B6%E4%BA%91%E5%AE%A2web%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%BC%94%E7%A4%BA.mp4">
@@ -85,6 +93,13 @@ http://www.ouyunc.com
 
 
  **注意** ：如果不做特别说明,全部以大端序读写《https://www.cnblogs.com/iathanasy/p/12617793.html》
+
+#### OUYUNC-IM demo 的仓库地址:
+| 仓库地址 | 说明 |
+|------|----|
+|  [ouyunc-cloud-platform](https://gitee.com/etxync/ouyunc-im/wikis/OUYUNC-IM%20v3.x/%E5%BF%AB%E9%80%9F%E5%BC%80%E5%A7%8B?sort_id=7020530)    | 偶云客云服务平台   |
+|  [ouyunc-app](https://gitee.com/etxync/ouyunc-im/wikis/OUYUNC-IM%20v3.x/%E5%BF%AB%E9%80%9F%E5%BC%80%E5%A7%8B?sort_id=7020530)     |  偶云客uniapp前端  |
+
 
 #### [快速开始](https://gitee.com/etxync/ouyunc-im/wikis/OUYUNC-IM%20v3.x/%E5%BF%AB%E9%80%9F%E5%BC%80%E5%A7%8B?sort_id=7020530)
 
