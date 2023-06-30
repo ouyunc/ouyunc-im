@@ -57,7 +57,7 @@ https://m.ouyunc.com
 ```
 - 移动端Android demo 演示地址 [点击下载apk](https://gitee.com/etxync/ouyunc-im/raw/4.0.0/docs/4.0.0/apk/android/ouyunc-im-4.0.4.apk)或扫描下方二维码下载安装：
 
-<img alt="apk" src="https://gitee.com/etxync/ouyunc-im/raw/4.0.0/docs/picture/ouyunc-im-app.png" width="200" height="350" />
+<img alt="apk" src="https://gitee.com/etxync/ouyunc-im/raw/4.0.0/docs/picture/ouyunc-im-app.png" width="200" height="200" />
 
 
 
@@ -123,8 +123,6 @@ https://gitee.com/etxync/ouyunc-im/wikis/OUYUNC-IM%20v3.x/%E5%AE%A2%E6%88%B7%E7%
 
    qq群:664955628 <a target="_blank" href="https://qm.qq.com/cgi-bin/qm/qr?k=FFFe8sCs4e11KOD89XK6vVrK14NCBb5x&jump_from=webapi&authKey=Y1JeElm7/HUi4cESA9FJgyl51JhCwQ2bDv1uOydLvMvo25+cqe93GUMxPEyB8xND"><img border="0" src="https://pub.idqqimg.com/wpa/images/group.png" alt="偶遇-IM" title="偶遇-IM"></a>  (打广告太多，加群请附加信息)
 
-   基于该项目的一个即时通讯IM demo地址: https://m.ouyunc.com（服务器到期）
-   
    注意：IM涉及到的视频会议由于服务器配置低以及带宽（2M）较小，会出现卡顿延迟现象
 
    如果感觉对你有帮助请点个star支持一下，感谢！
