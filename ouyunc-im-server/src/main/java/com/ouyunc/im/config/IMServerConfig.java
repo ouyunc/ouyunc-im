@@ -5,6 +5,7 @@ import com.ouyunc.im.innerclient.DefaultIMInnerClient;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.logging.LogLevel;
 import io.netty.util.NettyRuntime;
+import org.aeonbits.owner.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,6 +25,11 @@ public class IMServerConfig extends IMConfig{
      * 默认server 端的绑定端口为6001
      */
     private int port;
+
+    /**
+     * 默认server 端websocket path 请求路径
+     */
+    private String websocketPath;
 
     /**
      * 日志级别,默认INFO; TRACE, DEBUG, INFO, WARN, ERROR
@@ -184,6 +190,10 @@ public class IMServerConfig extends IMConfig{
      */
     private Map<ChannelOption, Object> childChannelOptionMap;
 
+    public String getWebsocketPath() {
+        return websocketPath;
+    }
+
     public boolean isLoginValidateEnable() {
         return loginValidateEnable;
     }
@@ -328,6 +338,11 @@ public class IMServerConfig extends IMConfig{
          * 默认server 端的绑定端口为6001
          */
         private int port;
+
+        /**
+         * 默认server 端websocket path 请求路径
+         */
+        private String websocketPath;
 
         /**
          * 日志级别,默认INFO; TRACE, DEBUG, INFO, WARN, ERROR
@@ -551,6 +566,11 @@ public class IMServerConfig extends IMConfig{
             return this;
         }
 
+        public Builder websocketPath(String websocketPath) {
+            this.websocketPath = websocketPath;
+            return this;
+        }
+
         public Builder localServerAddress(String localServerAddress) {
             this.localServerAddress = localServerAddress;
             return this;
@@ -760,6 +780,7 @@ public class IMServerConfig extends IMConfig{
         public IMServerConfig build() {
             IMServerConfig imServerConfig = new IMServerConfig();
             imServerConfig.port = this.port;
+            imServerConfig.websocketPath = this.websocketPath;
             imServerConfig.logLevel = this.logLevel;
             imServerConfig.localHost = this.localHost;
             imServerConfig.localServerAddress = this.localServerAddress;
@@ -806,7 +827,8 @@ public class IMServerConfig extends IMConfig{
     @Override
     public String toString() {
         return "IMServerConfig{" +
-                "\n  localHost='" + localHost + '\'' +
+                "\n , localHost='" + localHost + '\'' +
+                "\n , websocketPath='" + websocketPath + '\'' +
                 "\n , localServerAddress='" + localServerAddress + '\'' +
                 "\n , sslEnable=" + sslEnable +
                 "\n , sslCertificate='" + sslCertificate + '\'' +

@@ -2,6 +2,7 @@ package com.ouyunc.im.protocol;
 
 
 import com.ouyunc.im.base.MissingPacket;
+import com.ouyunc.im.config.IMServerConfig;
 import com.ouyunc.im.constant.CacheConstant;
 import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.constant.enums.MessageEnum;
@@ -46,7 +47,7 @@ public enum Protocol {
                     //10 * 1024 * 1024
                     .addLast(IMConstant.WS_FRAME_AGGREGATOR, new WebSocketFrameAggregator(Integer.MAX_VALUE))
                     //10485760
-                    .addLast(IMConstant.WS_SERVER_PROTOCOL_HANDLER, new WebSocketServerProtocolHandler("/wss", null, true, Integer.MAX_VALUE))
+                    .addLast(IMConstant.WS_SERVER_PROTOCOL_HANDLER, new WebSocketServerProtocolHandler(IMServerContext.SERVER_CONFIG.getWebsocketPath(), null, true, Integer.MAX_VALUE))
                     // 转换成包packet,内部消息传递都是以packet 进行处理
                     .addLast(IMConstant.CONVERT_2_PACKET, new Convert2PacketHandler())
                     // 在业务处理之前可以进行登录认证处理，登录认证处理，如果不需要登录处理，可在配置文件中配置，不需要在这里处理

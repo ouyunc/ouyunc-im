@@ -9,8 +9,11 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v4.0.0&#10;1. 优化扫描包">
+    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v4.0.0&#10;1. apk">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/StandardIMServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/StandardIMServer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/config/IMServerConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/config/IMServerConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/properties/IMServerProperties.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/properties/IMServerProperties.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/ouyunc-im-server.properties" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/ouyunc-im-server.properties" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -140,7 +143,7 @@
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="aspect.path.notification.shown" value="true" />
     <property name="jdk.selected.JAVA_MODULE" value="1.8" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/../wz-ngs/wz-info-api-service" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/docs/4.0.0/apk" />
     <property name="nodejs_package_manager_path" value="npm" />
     <property name="project.structure.last.edited" value="Artifacts" />
     <property name="project.structure.proportion" value="0.15" />
@@ -157,18 +160,18 @@
       <recent name="com.ouyu.im.innerclient" />
     </key>
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="F:\workspace\ouyunc-im\docs\4.0.0\apk" />
       <recent name="F:\workspace\ouyunc-im\docs\4.0.0\js" />
       <recent name="F:\workspace\ouyunc-im\docs\4.0.0\sdk\web_uniapp" />
       <recent name="F:\workspace\ouyunc-im\docs\protobuf" />
       <recent name="F:\workspace\ouyunc-im\docs\html" />
-      <recent name="F:\workspace\ouyunc-im\docs\picture" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="F:\workspace\ouyunc-im\docs\4.0.0\apk\android" />
       <recent name="F:\workspace\ouyunc-im\docs\4.0.0\sdk\uniapp" />
       <recent name="F:\workspace\ouyunc-im\docs\4.0.0" />
       <recent name="F:\workspace\ouyunc-im\docs\picture" />
       <recent name="D:\workspace\ouyu-im\ouyu-server\src" />
-      <recent name="D:\workspace\ouyu-im\docs\picture" />
     </key>
     <key name="CopyClassDialog.RECENTS_KEY">
       <recent name="com.ouyunc.im.utils" />
@@ -428,14 +431,9 @@
       <workItem from="1687837403394" duration="21000" />
       <workItem from="1687837450476" duration="2868000" />
       <workItem from="1687874023182" duration="23318000" />
-      <workItem from="1688086657157" duration="1888000" />
-    </task>
-    <task id="LOCAL-00152" summary="v3.0.1 集群脑裂检测优化">
-      <created>1676262022341</created>
-      <option name="number" value="00152" />
-      <option name="presentableId" value="LOCAL-00152" />
-      <option name="project" value="LOCAL" />
-      <updated>1676262022342</updated>
+      <workItem from="1688086657157" duration="3185000" />
+      <workItem from="1688110747648" duration="568000" />
+      <workItem from="1688368658488" duration="1103000" />
     </task>
     <task id="LOCAL-00153" summary="v3.0.1 集群下获取不到登录用户">
       <created>1676280322949</created>
@@ -773,7 +771,14 @@
       <option name="project" value="LOCAL" />
       <updated>1687936268417</updated>
     </task>
-    <option name="localTasksCounter" value="201" />
+    <task id="LOCAL-00201" summary="v4.0.0&#10;1. 优化扫描包">
+      <created>1688105924341</created>
+      <option name="number" value="00201" />
+      <option name="presentableId" value="LOCAL-00201" />
+      <option name="project" value="LOCAL" />
+      <updated>1688105924341</updated>
+    </task>
+    <option name="localTasksCounter" value="202" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

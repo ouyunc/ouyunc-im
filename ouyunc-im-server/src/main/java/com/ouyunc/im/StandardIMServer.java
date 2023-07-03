@@ -45,6 +45,7 @@ public class StandardIMServer extends AbstractIMServer{
                 .logLevel(propertiesHelper.logLevel())
                 .localHost(host)
                 .localServerAddress(host  + IMConstant.COLON_SPLIT + propertiesHelper.port())
+                .websocketPath(propertiesHelper.websocketPath())
                 .workThreads(propertiesHelper.workThreads())
                 .bossThreads(propertiesHelper.bossThreads())
                 .clusterEnable(propertiesHelper.clusterEnable())

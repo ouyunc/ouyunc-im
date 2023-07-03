@@ -19,6 +19,13 @@ public interface IMServerProperties extends Config {
     @DefaultValue("6001")
     int port();
 
+    /**
+     * 默认server 端websocket path 请求路径
+     */
+    @Key("im.server.websocket-path")
+    @DefaultValue("/")
+    String websocketPath();
+
 
     /**
      * 日志级别,默认INFO; TRACE, DEBUG, INFO, WARN, ERROR
