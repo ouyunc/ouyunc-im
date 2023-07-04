@@ -57,7 +57,7 @@ https://m.ouyunc.com
 ```
 - 移动端Android demo 演示地址 [点击下载apk](https://gitee.com/etxync/ouyunc-im/raw/4.0.0/docs/4.0.0/apk/android/ouyunc-im-4.0.4.apk)或扫描下方二维码下载安装：
 
-<img alt="apk" src="https://gitee.com/etxync/ouyunc-im/raw/4.0.0/docs/picture/ouyunc-im-app.png" width="200" height="200" />
+<img alt="apk" src="https://gitee.com/etxync/ouyunc-im/raw/4.0.0/docs/picture/ouyunc-im-apk.png" width="200" height="200" />
 
 
 
