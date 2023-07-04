@@ -96,11 +96,7 @@ https://m.ouyunc.com
 
  **注意** ：如果不做特别说明,全部以大端序读写《https://www.cnblogs.com/iathanasy/p/12617793.html》
 
-#### OUYUNC-IM demo 的仓库地址:
-| 仓库地址 | 说明 |
-|------|----|
-|  [ouyunc-cloud-platform](https://gitee.com/etxync/ouyunc-cloud-platform)    | 偶云客云服务平台  (如果需要请联系我) |
-|  [ouyunc-app](https://gitee.com/etxync/ouyunc-im/wikis/OUYUNC-IM%20v3.x/%E5%BF%AB%E9%80%9F%E5%BC%80%E5%A7%8B?sort_id=7020530)     |  偶云客uniapp前端 (如果需要请联系我) |
+
 
 
 #### [快速开始](https://gitee.com/etxync/ouyunc-im/wikis/OUYUNC-IM%20v3.x/%E5%BF%AB%E9%80%9F%E5%BC%80%E5%A7%8B?sort_id=7020530)
