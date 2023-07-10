@@ -28,7 +28,7 @@
 
 ```
 
-#### [官网地址](http://www.ouyunc.com) (服务器到期)
+#### [官网地址](http://www.ouyunc.com) (暂未开放)
 ```
 http://www.ouyunc.com
 ```
@@ -55,9 +55,9 @@ http://www.ouyunc.com
 ```
 https://m.ouyunc.com
 ```
-- 移动端Android demo 演示地址 [点击下载apk](https://gitee.com/etxync/ouyunc-im/raw/4.0.0/docs/picture/ouyunc-im-android-4.0.0-apk.png)或扫描下方二维码下载安装：
+- 移动端Android demo 演示地址 [点击下载apk](https://gitee.com/etxync/ouyunc-im/raw/4.0.0/docs/picture/ouyunc-im-android-apk-4.0.0.png)或扫描下方二维码下载安装：
 
-<img alt="apk" src="https://gitee.com/etxync/ouyunc-im/raw/4.0.0/docs/picture/ouyunc-im-android-4.0.0-apk.png" width="200" height="200" />
+<img alt="apk" src="https://gitee.com/etxync/ouyunc-im/raw/4.0.0/docs/picture/ouyunc-im-android-apk-4.0.0.png" width="200" height="200" />
 
 
 
