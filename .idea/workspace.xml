@@ -11,9 +11,7 @@
   <component name="ChangeListManager">
     <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v4.0.0&#10;1. apk">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/StandardIMServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/StandardIMServer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/config/IMServerConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/config/IMServerConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/properties/IMServerProperties.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/properties/IMServerProperties.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/LoginMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/LoginMessageProcessor.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/ouyunc-im-server.properties" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/ouyunc-im-server.properties" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -433,14 +431,8 @@
       <workItem from="1687874023182" duration="23318000" />
       <workItem from="1688086657157" duration="3185000" />
       <workItem from="1688110747648" duration="568000" />
-      <workItem from="1688368658488" duration="1103000" />
-    </task>
-    <task id="LOCAL-00153" summary="v3.0.1 集群下获取不到登录用户">
-      <created>1676280322949</created>
-      <option name="number" value="00153" />
-      <option name="presentableId" value="LOCAL-00153" />
-      <option name="project" value="LOCAL" />
-      <updated>1676280322949</updated>
+      <workItem from="1688368658488" duration="3331000" />
+      <workItem from="1688951085532" duration="2774000" />
     </task>
     <task id="LOCAL-00154" summary="v3.0.1 优化日志记录添加ip">
       <created>1677827762674</created>
@@ -778,7 +770,14 @@
       <option name="project" value="LOCAL" />
       <updated>1688105924341</updated>
     </task>
-    <option name="localTasksCounter" value="202" />
+    <task id="LOCAL-00202" summary="v4.0.0&#10;1. apk">
+      <created>1688370851778</created>
+      <option name="number" value="00202" />
+      <option name="presentableId" value="LOCAL-00202" />
+      <option name="project" value="LOCAL" />
+      <updated>1688370851779</updated>
+    </task>
+    <option name="localTasksCounter" value="203" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -839,7 +838,6 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
-    <MESSAGE value="v3.0.1 集群脑裂检测优化" />
     <MESSAGE value="v3.0.1 集群下获取不到登录用户" />
     <MESSAGE value="v3.0.1 优化日志记录添加ip" />
     <MESSAGE value="v3.0.1 优化集群服务下线撤销举证人" />
@@ -864,7 +862,8 @@
     <MESSAGE value="v4.0.0&#10;1. 支持客服相关业务&#10;2. 支持弹幕相关业务&#10;3. 支持语音等（已完成）&#10;4. 支持语音聊天、视频聊天（已完成）&#10;5. 在线简单视频会议（已完成）&#10;6. 支持白板功能（已完成）&#10;7. 集成springboot 以ouyunc-im-spring-boot-starter&#10;8. 打成依赖包放到中央仓库，作为依赖组件来引用&#10;9. 重构qos消息可靠性到达&#10;10. 优化其他代码" />
     <MESSAGE value="v4.0.0&#10;1. 修改数据库表名" />
     <MESSAGE value="v4.0.0&#10;1. 优化扫描包" />
-    <option name="LAST_COMMIT_MESSAGE" value="v4.0.0&#10;1. 优化扫描包" />
+    <MESSAGE value="v4.0.0&#10;1. apk" />
+    <option name="LAST_COMMIT_MESSAGE" value="v4.0.0&#10;1. apk" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -918,12 +917,6 @@
           <url>file://$PROJECT_DIR$/ouyunc-im-server/target/classes/com/ouyunc/im/lock/RedissonDistributedLockAspect.class</url>
           <line>70</line>
           <option name="timeStamp" value="335" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="java-line">
-          <condition expression="packet.getMessageType() == 5" language="JAVA" />
-          <url>file://$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/OuyuncServerHandler.java</url>
-          <line>27</line>
-          <option name="timeStamp" value="359" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="javascript">
           <url>file://$PROJECT_DIR$/docs/socket/ouyu-socket.js</url>
