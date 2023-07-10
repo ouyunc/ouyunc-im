@@ -28,7 +28,7 @@
 
 ```
 
-#### [官网地址](http://www.ouyunc.com) (服务器到期)
+#### [官网地址](http://www.ouyunc.com) (暂未开放)
 ```
 http://www.ouyunc.com
 ```
@@ -55,9 +55,9 @@ http://www.ouyunc.com
 ```
 https://m.ouyunc.com
 ```
-- 移动端Android demo 演示地址 [点击下载apk](https://gitee.com/etxync/ouyunc-im/raw/4.0.0/docs/4.0.0/apk/android/ouyunc-im-4.0.4.apk)或扫描下方二维码下载安装：
+- 移动端Android demo 演示地址 [点击下载apk](https://gitee.com/etxync/ouyunc-im/raw/4.0.0/docs/picture/ouyunc-im-android-apk-4.0.0.png)或扫描下方二维码下载安装：
 
-<img alt="apk" src="https://gitee.com/etxync/ouyunc-im/raw/4.0.0/docs/picture/ouyunc-im-app.png" width="200" height="200" />
+<img alt="apk" src="https://gitee.com/etxync/ouyunc-im/raw/4.0.0/docs/picture/ouyunc-im-android-apk-4.0.0.png" width="200" height="200" />
 
 
 
@@ -96,11 +96,7 @@ https://m.ouyunc.com
 
  **注意** ：如果不做特别说明,全部以大端序读写《https://www.cnblogs.com/iathanasy/p/12617793.html》
 
-#### OUYUNC-IM demo 的仓库地址:
-| 仓库地址 | 说明 |
-|------|----|
-|  [ouyunc-cloud-platform](https://gitee.com/etxync/ouyunc-cloud-platform)    | 偶云客云服务平台   |
-|  [ouyunc-app](https://gitee.com/etxync/ouyunc-im/wikis/OUYUNC-IM%20v3.x/%E5%BF%AB%E9%80%9F%E5%BC%80%E5%A7%8B?sort_id=7020530)     |  偶云客uniapp前端  |
+
 
 
 #### [快速开始](https://gitee.com/etxync/ouyunc-im/wikis/OUYUNC-IM%20v3.x/%E5%BF%AB%E9%80%9F%E5%BC%80%E5%A7%8B?sort_id=7020530)
