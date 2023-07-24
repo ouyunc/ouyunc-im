@@ -54,6 +54,7 @@ http://www.ouyunc.com
 - 移动端H5 demo 演示地址：
 ```
 https://m.ouyunc.com
+测试账号及密码（也可以自己注册）：test1/1, test2/2, test3/3
 ```
 - 移动端Android demo 演示地址 [点击下载apk](https://gitee.com/etxync/ouyunc-im/raw/4.0.0/docs/picture/ouyunc-im-android-apk-4.0.0.png)或扫描下方二维码下载安装：
 
