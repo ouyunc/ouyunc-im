@@ -1,4 +1,4 @@
-# OUYUNC-IM [![version](https://img.shields.io/badge/version-4.0.0-blue)](https://gitee.com/etxync/ouyunc-im)  
+# OUYUNC-IM [![version](https://img.shields.io/badge/version-4.0.1-blue)](https://gitee.com/etxync/ouyunc-im)  
 [![license](https://img.shields.io/badge/license-MIT-brightgreen)](https://www.mit-license.org/)
 <a href='https://gitee.com/etxync/ouyunc-im/stargazers'><img src='https://gitee.com/etxync/ouyunc-im/badge/star.svg?theme=dark' alt='star'></img></a>
 <a href='https://gitee.com/etxync/ouyunc-im/members'><img src='https://gitee.com/etxync/ouyunc-im/badge/fork.svg?theme=dark' alt='fork'></img></a>
@@ -134,7 +134,7 @@ https://gitee.com/etxync/ouyunc-im/wikis/OUYUNC-IM%20v3.x/%E5%AE%A2%E6%88%B7%E7%
 6. 支持白板功能（已完成）
 7. 集成springboot 以ouyunc-im-spring-boot-starter
 8. 打成依赖包放到中央仓库，作为依赖组件来引用
-9. 重构qos消息可靠性到达
+9. 重构qos消息可靠性到达（已完成）
 10. 优化其他代码
 
 #### 最后说明
@@ -158,6 +158,12 @@ https://gitee.com/etxync/ouyunc-im/wikis/OUYUNC-IM%20v3.x/%E5%AE%A2%E6%88%B7%E7%
 7. js-SDK 修改TextEncode 以及雪花算法 bigInt其他浏览器不支持问题
 8. 增加平台校验，支持对不同平台作出最大连接数限制
 9. 优化其他代码
+
+#####  **4.0.0 ~ 4.0.1**
+1. 添加日志全局链路跟踪
+2. 优化其他代码
+
+
 #### 参与贡献
 
 
