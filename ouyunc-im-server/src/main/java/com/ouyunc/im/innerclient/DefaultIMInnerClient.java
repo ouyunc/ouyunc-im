@@ -1,14 +1,16 @@
 package com.ouyunc.im.innerclient;
 
+import com.alibaba.ttl.threadpool.TtlExecutors;
 import com.ouyunc.im.config.IMServerConfig;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.innerclient.pool.IMInnerClientPool;
 import com.ouyunc.im.thread.IMInnerClientHeartbeatThread;
-import io.netty.util.concurrent.DefaultEventExecutorGroup;
-import io.netty.util.concurrent.EventExecutorGroup;
+import jodd.util.concurrent.ThreadFactoryBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -18,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 public class DefaultIMInnerClient extends AbstractIMInnerClient {
     private static Logger log = LoggerFactory.getLogger(DefaultIMInnerClient.class);
 
-    private static final EventExecutorGroup eventExecutors= new DefaultEventExecutorGroup(1);
+    private static final ScheduledExecutorService EVENT_EXECUTORS  = TtlExecutors.getTtlScheduledExecutorService(Executors.newScheduledThreadPool(16,ThreadFactoryBuilder.create().setNameFormat("inner-client-pool-%d").get()));
 
     /**
      * @Author fangzhenxun
@@ -41,7 +43,7 @@ public class DefaultIMInnerClient extends AbstractIMInnerClient {
     @Override
     void afterPropertiesSet() {
         // 初始化客户端之后做的事情，对内置客户端的包活处理，及时更新处理本地服务注册表,定时任务处理
-        eventExecutors.scheduleWithFixedDelay(new IMInnerClientHeartbeatThread(), 0, IMServerContext.SERVER_CONFIG.getClusterInnerClientHeartbeatInterval(), TimeUnit.SECONDS);
+        EVENT_EXECUTORS.scheduleWithFixedDelay(new IMInnerClientHeartbeatThread(), 0, IMServerContext.SERVER_CONFIG.getClusterInnerClientHeartbeatInterval(), TimeUnit.SECONDS);
     }
 
     /**
@@ -54,6 +56,6 @@ public class DefaultIMInnerClient extends AbstractIMInnerClient {
         // 注销内置客户端
         IMInnerClientPool.stop();
         // 注销额外执行器
-        eventExecutors.shutdownGracefully();
+        EVENT_EXECUTORS.shutdown();
     }
 }

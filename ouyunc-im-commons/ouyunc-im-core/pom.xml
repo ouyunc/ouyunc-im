@@ -10,7 +10,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.ouyunc</groupId>
     <artifactId>ouyunc-im-core</artifactId>
-    <version>${parent.version}</version>
+    <version>${project.parent.version}</version>
     <description>核心模块</description>
     <dependencies>
         <dependency>

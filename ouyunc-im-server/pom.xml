@@ -10,13 +10,18 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.ouyunc</groupId>
     <artifactId>ouyunc-im-server</artifactId>
-    <version>${parent.version}</version>
+    <version>${project.parent.version}</version>
     <description>服务端模块</description>
 
 
 
 
     <dependencies>
+        <dependency>
+            <groupId>com.ouyunc</groupId>
+            <artifactId>ouyunc-im-log</artifactId>
+            <scope>compile</scope>
+        </dependency>
         <dependency>
             <groupId>com.ouyunc</groupId>
             <artifactId>ouyunc-im-cache</artifactId>

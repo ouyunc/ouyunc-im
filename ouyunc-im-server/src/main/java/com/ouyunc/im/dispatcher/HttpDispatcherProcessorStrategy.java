@@ -1,12 +1,10 @@
 package com.ouyunc.im.dispatcher;
 
 import com.ouyunc.im.constant.IMConstant;
-import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.handler.HttpProtocolDispatcherHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
-import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
 
 /**
@@ -19,7 +17,6 @@ public class HttpDispatcherProcessorStrategy implements DispatcherProcessorStrat
     @Override
     public void doProcess(ChannelHandlerContext ctx) {
         ctx.pipeline()
-                .addLast(IMConstant.LOG, new LoggingHandler(IMServerContext.SERVER_CONFIG.getLogLevel()))
                 .addLast(IMConstant.HTTP_SERVER_CODEC, new HttpServerCodec())
                 .addLast(IMConstant.CHUNKED_WRITE_HANDLER, new ChunkedWriteHandler())
                 .addLast(IMConstant.HTTP_OBJECT_AGGREGATOR, new HttpObjectAggregator(Integer.MAX_VALUE))

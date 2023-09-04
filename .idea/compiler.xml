@@ -25,6 +25,8 @@
         <module name="ouyunc-im-domain" />
       </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel target="8" />
+    <bytecodeTargetLevel target="8">
+      <module name="ouyunc-im-log" target="1.8" />
+    </bytecodeTargetLevel>
   </component>
 </project>

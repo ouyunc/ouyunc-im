@@ -326,7 +326,6 @@ public class  DbHelper {
 
     /**
      * 获取from 在to 中的黑名单信息
-     *
      * @param from
      * @param to
      * @param type 1-用户的黑名单，2-群组的黑名单
@@ -342,6 +341,7 @@ public class  DbHelper {
                 if (imBlacklistBO != null && friend != null) {
                     // 是好友
                     imBlacklistBO.setNickName(friend.getFriendNickName());
+                    cacheOperator.putHash(CacheConstant.OUYUNC + CacheConstant.IM + CacheConstant.BLACK_LIST + CacheConstant.USER + to, from, imBlacklistBO);
                 }
                 // 不是好友
                 return imBlacklistBO;
@@ -358,6 +358,7 @@ public class  DbHelper {
                 if (imBlacklistBO != null && groupMember != null) {
                     // 是好友
                     imBlacklistBO.setNickName(groupMember.getNickName());
+                    cacheOperator.putHash(CacheConstant.OUYUNC + CacheConstant.IM + CacheConstant.BLACK_LIST + CacheConstant.GROUP + to, from, imBlacklistBO);
                 }
             }
             return imBlacklistBO;

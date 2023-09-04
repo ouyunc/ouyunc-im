@@ -17,8 +17,6 @@ import com.ouyunc.im.utils.SnowflakeUtil;
 import com.ouyunc.im.utils.SocketAddressUtil;
 import com.ouyunc.im.utils.SystemClock;
 import io.netty.channel.pool.ChannelPool;
-import io.netty.util.concurrent.DefaultEventExecutorGroup;
-import io.netty.util.concurrent.EventExecutorGroup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,10 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  **/
 public class IMInnerClientHeartbeatThread implements Runnable {
     private static Logger log = LoggerFactory.getLogger(IMInnerClientHeartbeatThread.class);
-    /**
-     * 线程池事件执行器
-     */
-    public static final EventExecutorGroup EVENT_EXECUTORS= new DefaultEventExecutorGroup(16);
+
     /**
      * 开始执行的时间
      */

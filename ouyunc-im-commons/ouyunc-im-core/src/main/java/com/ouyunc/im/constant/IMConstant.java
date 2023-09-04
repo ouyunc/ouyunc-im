@@ -397,4 +397,18 @@ public class IMConstant {
      */
     public static final Integer GROUP_INVITE_AGREE_REFUSE = 1;
 
+    /**
+     * 日志全局traceId
+     */
+    public static final String LOG_TRACE_ID = "trace-id";
+
+    /**
+     * 日志全局跟踪spanId
+     */
+    public static final String LOG_SPAN_ID = "span-id";
+
+    /**
+     * 日志全局跟踪 parentSpanId
+     */
+    public static final String LOG_PARENT_SPAN_ID = "parent-span-id";
 }

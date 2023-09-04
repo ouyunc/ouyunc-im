@@ -1,6 +1,7 @@
 package com.ouyunc.im.helper;
 
 import com.alibaba.fastjson2.JSON;
+import com.alibaba.ttl.threadpool.TtlExecutors;
 import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.constant.enums.DeviceEnum;
@@ -21,14 +22,15 @@ import io.netty.channel.Channel;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
-import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
+import jodd.util.concurrent.ThreadFactoryBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 
 /**
  * @Author fangzhenxun
@@ -38,7 +40,7 @@ public class MessageHelper {
 
     private static final Logger log = LoggerFactory.getLogger(MessageHelper.class);
 
-    private static final EventExecutorGroup eventExecutors= new DefaultEventExecutorGroup(16);
+    private static final ExecutorService EVENT_EXECUTORS  = TtlExecutors.getTtlExecutorService(new DefaultEventExecutorGroup(16, ThreadFactoryBuilder.create().setNameFormat("message-send-pool-%d").get()));
 
 
 
@@ -83,7 +85,7 @@ public class MessageHelper {
      */
     public static void sendMessage(Packet packet, String to) {
         // 异步提交
-        eventExecutors.execute(() -> sendMessageSync(packet, to));
+        EVENT_EXECUTORS.execute(() -> sendMessageSync(packet, to));
     }
 
     /**
@@ -111,7 +113,17 @@ public class MessageHelper {
         Protocol.prototype(packet.getProtocol(), packet.getProtocolVersion()).doSendMessage(packet, to);
     }
 
+    public static void main(String[] args) {
+        for (int i = 0; i < 10; i++) {
+            EVENT_EXECUTORS.execute(new Runnable() {
+                @Override
+                public void run() {
+                    System.out.println(Thread.currentThread().getName());
+                }
+            });
+        }
 
+    }
         /**
          * @param toSocketAddress
          * @param packet
@@ -120,7 +132,7 @@ public class MessageHelper {
          * @Description 异步  传递消息，根据服务端的ip包装成InetSocketAddress
          */
     public static void deliveryMessage(Packet packet, InetSocketAddress toSocketAddress) {
-        eventExecutors.execute(() -> deliveryMessageSync(packet, toSocketAddress));
+        EVENT_EXECUTORS.execute(() -> deliveryMessageSync(packet, toSocketAddress));
     }
 
     /**

@@ -22,6 +22,7 @@
         <netty-all.version>4.1.63.Final</netty-all.version>
         <google-guava.version>32.0.1-jre</google-guava.version>
         <log4j2.version>2.14.1</log4j2.version>
+        <log4j2-ttl.version>1.4.0</log4j2-ttl.version>
         <aeonbits-owner.version>1.0.12</aeonbits-owner.version>
         <!--注意这里的版本与jdk的版本要匹配-->
         <caffeine.version>2.9.0</caffeine.version>
@@ -74,6 +75,10 @@
             <artifactId>guava</artifactId>
         </dependency>
         <!--==========================================log4j2===============================-->
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>log4j2-ttl-thread-context-map</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-core</artifactId>
@@ -150,30 +155,34 @@
     <!--全局管理包-->
     <dependencyManagement>
         <dependencies>
-
+            <dependency>
+                <groupId>com.ouyunc</groupId>
+                <artifactId>ouyunc-im-log</artifactId>
+                <version>4.0.0</version>
+            </dependency>
             <dependency>
                 <groupId>com.ouyunc</groupId>
                 <artifactId>ouyunc-im-cache</artifactId>
-                <version>${version}</version>
+                <version>${project.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>com.ouyunc</groupId>
                 <artifactId>ouyunc-im-db</artifactId>
-                <version>${version}</version>
+                <version>${project.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>com.ouyunc</groupId>
                 <artifactId>ouyunc-im-core</artifactId>
-                <version>${version}</version>
+                <version>${project.version}</version>
             </dependency>
 
 
             <dependency>
                 <groupId>com.ouyunc</groupId>
                 <artifactId>ouyunc-im-domain</artifactId>
-                <version>${version}</version>
+                <version>${project.version}</version>
             </dependency>
 
 
@@ -199,9 +208,16 @@
             </dependency>
 
 
+
             <!--=========================================log4j2=====================================-->
             <!--https://blog.csdn.net/dingyufei615/article/details/104726066/-->
             <!--log4j2-->
+            <!-- https://mvnrepository.com/artifact/com.alibaba/log4j2-ttl-thread-context-map -->
+            <dependency>
+                <groupId>com.alibaba</groupId>
+                <artifactId>log4j2-ttl-thread-context-map</artifactId>
+                <version>${log4j2-ttl.version}</version>
+            </dependency>
             <!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core -->
             <dependency>
                 <groupId>org.apache.logging.log4j</groupId>

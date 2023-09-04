@@ -1,10 +1,12 @@
 package com.ouyunc.im.router;
 
+import com.alibaba.ttl.threadpool.TtlExecutors;
 import com.ouyunc.im.packet.Packet;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
-import io.netty.util.concurrent.EventExecutorGroup;
+import jodd.util.concurrent.ThreadFactoryBuilder;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.ExecutorService;
 
 /**
  * @Author fangzhenxun
@@ -14,7 +16,7 @@ public interface RouterStrategy {
     /**
      * IM 全局事件执行器
      */
-    EventExecutorGroup EVENT_EXECUTORS= new DefaultEventExecutorGroup(16);
+    ExecutorService EVENT_EXECUTORS  = TtlExecutors.getTtlExecutorService(new DefaultEventExecutorGroup(16, ThreadFactoryBuilder.create().setNameFormat("router-fail-processor-pool-%d").get()));
 
     /**
      * @Author fangzhenxun

@@ -10,7 +10,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.ouyunc</groupId>
     <artifactId>ouyunc-im-cache</artifactId>
-    <version>${parent.version}</version>
+    <version>${project.parent.version}</version>
     <description>缓存模块</description>
 
 

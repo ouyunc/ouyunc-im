@@ -1,5 +1,6 @@
 package com.ouyunc.im.processor;
 
+import com.alibaba.ttl.threadpool.TtlExecutors;
 import com.ouyunc.im.constant.enums.MessageEnum;
 import com.ouyunc.im.helper.DbHelper;
 import com.ouyunc.im.packet.Packet;
@@ -7,10 +8,11 @@ import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.validate.MessageValidate;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
-import io.netty.util.concurrent.EventExecutorGroup;
+import jodd.util.concurrent.ThreadFactoryBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.ExecutorService;
 import java.util.function.BiConsumer;
 
 /**
@@ -23,7 +25,7 @@ public abstract class AbstractMessageProcessor implements MessageProcessor {
     /**
      * 线程池事件执行器
      */
-    public static final EventExecutorGroup EVENT_EXECUTORS = new DefaultEventExecutorGroup(16);
+    protected static final ExecutorService EVENT_EXECUTORS  = TtlExecutors.getTtlExecutorService(new DefaultEventExecutorGroup(16, ThreadFactoryBuilder.create().setNameFormat("message-processor-%d").get()));
 
     /**
      * 标识子类处理消息的类型，如果一个子类处理多个类型使用 | 逻辑或进行返回

@@ -11,6 +11,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.AttributeKey;
 import org.slf4j.Logger;
@@ -52,7 +53,10 @@ public class DefaultSocketChannelInitializer extends SocketChannelInitializer{
         // 这里为了解决粘包拆包的问题，当第一次数据到达协议分发器时应该是一个完成的包packet
         // 也可以让ProtocolDispatcher继承LengthFieldBasedFrameDecoder来实现半包粘包，考虑到其他协议这里使用继承的方式 @todo （暂时不知道会不会有问题）
         //.addLast(new LengthFieldBasedFrameDecoder())
-        pipeline.addLast(IMConstant.PROTOCOL_DISPATCHER, new ProtocolDispatcher());
+        // 日志
+        pipeline.addLast(IMConstant.LOG, new LoggingHandler(IMServerContext.SERVER_CONFIG.getLogLevel()))
+                // 协议分发器
+                .addLast(IMConstant.PROTOCOL_DISPATCHER, new ProtocolDispatcher());
 
 
         // 每一个客户端连接都会走这里的逻辑，且被监听关闭事件，并作出相关处理逻辑
