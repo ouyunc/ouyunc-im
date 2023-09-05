@@ -113,17 +113,6 @@ public class MessageHelper {
         Protocol.prototype(packet.getProtocol(), packet.getProtocolVersion()).doSendMessage(packet, to);
     }
 
-    public static void main(String[] args) {
-        for (int i = 0; i < 10; i++) {
-            EVENT_EXECUTORS.execute(new Runnable() {
-                @Override
-                public void run() {
-                    System.out.println(Thread.currentThread().getName());
-                }
-            });
-        }
-
-    }
         /**
          * @param toSocketAddress
          * @param packet

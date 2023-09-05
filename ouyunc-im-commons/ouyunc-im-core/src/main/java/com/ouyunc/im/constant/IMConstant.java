@@ -411,4 +411,9 @@ public class IMConstant {
      * 日志全局跟踪 parentSpanId
      */
     public static final String LOG_PARENT_SPAN_ID = "parent-span-id";
+
+    /**
+     * 线程池名称
+     */
+    public static final String OUYUNC_IM_THREAD_POLL = "ouyunc-im";
 }

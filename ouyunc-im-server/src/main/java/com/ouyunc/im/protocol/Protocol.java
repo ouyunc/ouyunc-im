@@ -18,6 +18,8 @@ import com.ouyunc.im.utils.SystemClock;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
@@ -64,10 +66,11 @@ public enum Protocol {
             if (IMServerContext.SERVER_CONFIG.isHeartBeatEnable()) {
                 ctx.pipeline()
                         // 添加读写空闲处理器， 添加后，下条消息就可以接收心跳消息了
-                        .addAfter(IMConstant.LOG, IMConstant.HEART_BEAT_IDLE, new IdleStateHandler(IMServerContext.SERVER_CONFIG.getHeartBeatTimeout(),0,0))
+                        .addAfter(IMConstant.CONVERT_2_PACKET, IMConstant.HEART_BEAT_IDLE, new IdleStateHandler(IMServerContext.SERVER_CONFIG.getHeartBeatTimeout(),0,0))
                         // 处理心跳的以及相关逻辑都放在这里处理
-                        .addAfter(IMConstant.CONVERT_2_PACKET, IMConstant.HEART_BEAT_HANDLER, new HeartBeatHandler());
+                        .addAfter(IMConstant.HEART_BEAT_IDLE, IMConstant.HEART_BEAT_HANDLER, new HeartBeatHandler());
             }
+
             // 移除协议分发器
             ctx.pipeline().remove(IMConstant.HTTP_DISPATCHER_HANDLER);
             // 调用当前handler的下一个handle的active，注意与ctx.pipeline().fireChannelActive()

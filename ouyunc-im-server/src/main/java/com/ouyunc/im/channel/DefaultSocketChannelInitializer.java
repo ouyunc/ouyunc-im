@@ -5,13 +5,13 @@ import com.ouyunc.im.constant.CacheConstant;
 import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.dispatcher.ProtocolDispatcher;
+import com.ouyunc.im.log.IMLoggingHandler;
 import com.ouyunc.im.utils.IdentityUtil;
 import com.ouyunc.im.utils.SslUtil;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.AttributeKey;
 import org.slf4j.Logger;
@@ -54,7 +54,7 @@ public class DefaultSocketChannelInitializer extends SocketChannelInitializer{
         // 也可以让ProtocolDispatcher继承LengthFieldBasedFrameDecoder来实现半包粘包，考虑到其他协议这里使用继承的方式 @todo （暂时不知道会不会有问题）
         //.addLast(new LengthFieldBasedFrameDecoder())
         // 日志
-        pipeline.addLast(IMConstant.LOG, new LoggingHandler(IMServerContext.SERVER_CONFIG.getLogLevel()))
+        pipeline.addLast(IMConstant.LOG, new IMLoggingHandler(IMServerContext.SERVER_CONFIG.getLogLevel()))
                 // 协议分发器
                 .addLast(IMConstant.PROTOCOL_DISPATCHER, new ProtocolDispatcher());
 

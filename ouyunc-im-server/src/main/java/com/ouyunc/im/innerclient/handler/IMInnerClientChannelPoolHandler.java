@@ -65,10 +65,10 @@ public class IMInnerClientChannelPoolHandler implements ChannelPoolHandler {
         }
         // 添加消息处理器链
         pipeline.addLast(IMConstant.LOG, new LoggingHandler(IMServerContext.SERVER_CONFIG.getLogLevel()))
-                // 开启Netty自带的心跳处理器，每5秒发送一次心跳，用来做动态channel池处理 
-                .addLast(IMConstant.INNER_CLIENT_IDLE, new IdleStateHandler(IMServerContext.SERVER_CONFIG.getClusterInnerClientIdleReadTimeOut(), IMServerContext.SERVER_CONFIG.getClusterInnerClientIdleWriteTimeOut(), IMServerContext.SERVER_CONFIG.getClusterInnerClientIdleReadWriteTimeOut(), TimeUnit.SECONDS))
                 // 编解码
                 .addLast(IMConstant.INNER_CLIENT_PACKET_CODEC, new PacketCodec())
+                // 开启Netty自带的心跳处理器，每5秒发送一次心跳，用来做动态channel池处理
+                .addLast(IMConstant.INNER_CLIENT_IDLE, new IdleStateHandler(IMServerContext.SERVER_CONFIG.getClusterInnerClientIdleReadTimeOut(), IMServerContext.SERVER_CONFIG.getClusterInnerClientIdleWriteTimeOut(), IMServerContext.SERVER_CONFIG.getClusterInnerClientIdleReadWriteTimeOut(), TimeUnit.SECONDS))
                 // 心跳检测（动态channel）
                 .addLast(IMConstant.INNER_CLIENT_HEART_BEAT, new IMInnerClientHeartBeatHandler());
 

@@ -9,33 +9,18 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v4.0.0&#10;1. 优化代码">
-      <change afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/log/Log.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v4.0.1&#10;1. 添加日志全局链路">
+      <change afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/log/IMLoggingHandler.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-client/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-client/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/pom.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/IMConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/IMConstant.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-db/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-db/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-db/src/main/java/com/ouyunc/im/db/operator/MysqlDbOperator.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-db/src/main/java/com/ouyunc/im/db/operator/MysqlDbOperator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/log/Log.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/AbstractIMServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/AbstractIMServer.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/channel/DefaultSocketChannelInitializer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/channel/DefaultSocketChannelInitializer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/dispatcher/HttpDispatcherProcessorStrategy.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/dispatcher/HttpDispatcherProcessorStrategy.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/dispatcher/PacketDispatcherProcessorStrategy.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/dispatcher/PacketDispatcherProcessorStrategy.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/Convert2PacketHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/Convert2PacketHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/DbHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/DbHelper.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/MessageHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/MessageHelper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/innerclient/DefaultIMInnerClient.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/innerclient/DefaultIMInnerClient.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/AbstractMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/AbstractMessageProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/PrivateChatMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/PrivateChatMessageProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/router/RouterStrategy.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/router/RouterStrategy.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/thread/IMInnerClientHeartbeatThread.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/thread/IMInnerClientHeartbeatThread.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/log4j2.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/log4j2.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/innerclient/handler/IMInnerClientChannelPoolHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/innerclient/handler/IMInnerClientChannelPoolHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/protocol/Protocol.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/protocol/Protocol.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/ouyunc-im-server.properties" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/ouyunc-im-server.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -109,7 +94,7 @@
     </favorite-branches>
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="v3.1.1-beta" />
+        <entry key="$PROJECT_DIR$" value="4.0.0" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -158,6 +143,7 @@
     <property name="ASKED_ADD_EXTERNAL_FILES" value="true" />
     <property name="DefaultHtmlFileTemplate" value="HTML File" />
     <property name="ExpandSpringBootJavaOptionsPanel" value="true" />
+    <property name="Git.Branch.Popup.ShowAllRemotes" value="true" />
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
@@ -471,14 +457,8 @@
       <workItem from="1688110747648" duration="568000" />
       <workItem from="1688368658488" duration="3331000" />
       <workItem from="1688951085532" duration="2774000" />
-      <workItem from="1693790803779" duration="17927000" />
-    </task>
-    <task id="LOCAL-00154" summary="v3.0.1 优化日志记录添加ip">
-      <created>1677827762674</created>
-      <option name="number" value="00154" />
-      <option name="presentableId" value="LOCAL-00154" />
-      <option name="project" value="LOCAL" />
-      <updated>1677827762674</updated>
+      <workItem from="1693790803779" duration="18322000" />
+      <workItem from="1693875477554" duration="24170000" />
     </task>
     <task id="LOCAL-00155" summary="v3.0.1 优化集群服务下线撤销举证人">
       <created>1678346093761</created>
@@ -816,7 +796,14 @@
       <option name="project" value="LOCAL" />
       <updated>1688370851779</updated>
     </task>
-    <option name="localTasksCounter" value="203" />
+    <task id="LOCAL-00203" summary="v4.0.1&#10;1. 添加日志全局链路">
+      <created>1693811829497</created>
+      <option name="number" value="00203" />
+      <option name="presentableId" value="LOCAL-00203" />
+      <option name="project" value="LOCAL" />
+      <updated>1693811829498</updated>
+    </task>
+    <option name="localTasksCounter" value="204" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -877,7 +864,6 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
-    <MESSAGE value="v3.0.1 集群下获取不到登录用户" />
     <MESSAGE value="v3.0.1 优化日志记录添加ip" />
     <MESSAGE value="v3.0.1 优化集群服务下线撤销举证人" />
     <MESSAGE value="v3.0.2&#10;优化日志级别" />
@@ -902,100 +888,26 @@
     <MESSAGE value="v4.0.0&#10;1. 修改数据库表名" />
     <MESSAGE value="v4.0.0&#10;1. 优化扫描包" />
     <MESSAGE value="v4.0.0&#10;1. apk" />
-    <option name="LAST_COMMIT_MESSAGE" value="v4.0.0&#10;1. apk" />
+    <MESSAGE value="v4.0.1&#10;1. 添加日志全局链路" />
+    <option name="LAST_COMMIT_MESSAGE" value="v4.0.1&#10;1. 添加日志全局链路" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint enabled="true" type="java-line">
-          <url>jar://D:/repository/com/alibaba/druid/1.2.6/druid-1.2.6.jar!/com/alibaba/druid/pool/DruidDataSource.class</url>
-          <line>2341</line>
-          <option name="timeStamp" value="94" />
+          <url>jar://D:/repository/io/netty/netty-all/4.1.63.Final/netty-all-4.1.63.Final-sources.jar!/io/netty/util/concurrent/SingleThreadEventExecutor.java</url>
+          <line>428</line>
+          <option name="timeStamp" value="519" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/processor/AcknowledgeMessageProcessor.java</url>
-          <line>71</line>
-          <option name="timeStamp" value="115" />
+          <url>jar://D:/repository/io/netty/netty-all/4.1.63.Final/netty-all-4.1.63.Final-sources.jar!/io/netty/util/concurrent/AbstractEventExecutor.java</url>
+          <line>163</line>
+          <option name="timeStamp" value="520" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <url>jar://D:/repository/io/netty/netty-all/4.1.63.Final/netty-all-4.1.63.Final-sources.jar!/io/netty/handler/ssl/PemReader.java</url>
-          <line>97</line>
-          <option name="timeStamp" value="133" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/helper/MessageHelper.java</url>
-          <line>226</line>
-          <option name="timeStamp" value="136" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyu-server/src/main/java/com/ouyu/im/helper/MessageHelper.java</url>
-          <line>221</line>
-          <option name="timeStamp" value="161" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-im-server/target/classes/com/ouyunc/im/lock/RedissonDistributedLockAspect.class</url>
-          <line>32</line>
-          <option name="timeStamp" value="189" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-im-server/target/classes/com/ouyunc/im/lock/RedissonDistributedLockAspect.class</url>
-          <line>61</line>
-          <option name="timeStamp" value="196" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-db/src/main/java/com/ouyunc/im/db/operator/MysqlDbOperator.java</url>
-          <line>81</line>
-          <option name="timeStamp" value="231" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-im-server/target/classes/com/ouyunc/im/lock/RedissonDistributedLockAspect.class</url>
-          <line>43</line>
-          <option name="timeStamp" value="334" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-im-server/target/classes/com/ouyunc/im/lock/RedissonDistributedLockAspect.class</url>
-          <line>70</line>
-          <option name="timeStamp" value="335" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>jar://D:/repository/io/netty/netty-all/4.1.63.Final/netty-all-4.1.63.Final-sources.jar!/io/netty/handler/logging/LoggingHandler.java</url>
-          <line>267</line>
-          <option name="timeStamp" value="372" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>jar://D:/repository/io/netty/netty-all/4.1.63.Final/netty-all-4.1.63.Final-sources.jar!/io/netty/handler/logging/LoggingHandler.java</url>
-          <line>270</line>
-          <option name="timeStamp" value="374" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/codec/PacketCodec.java</url>
-          <line>38</line>
-          <option name="timeStamp" value="385" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/codec/PacketCodec.java</url>
-          <line>69</line>
-          <option name="timeStamp" value="386" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/codec/PacketCodec.java</url>
-          <line>34</line>
-          <option name="timeStamp" value="389" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/dispatcher/PacketDispatcherProcessorStrategy.java</url>
-          <line>28</line>
-          <option name="timeStamp" value="390" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-db/src/main/java/com/ouyunc/im/db/operator/MysqlDbOperator.java</url>
-          <line>27</line>
-          <option name="timeStamp" value="406" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="javascript">
-          <url>file://$PROJECT_DIR$/docs/socket/ouyu-socket.js</url>
-          <line>328</line>
-          <option name="timeStamp" value="111" />
+          <url>jar://D:/repository/io/netty/netty-all/4.1.63.Final/netty-all-4.1.63.Final-sources.jar!/io/netty/util/concurrent/SingleThreadEventExecutor.java</url>
+          <line>238</line>
+          <option name="timeStamp" value="531" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
@@ -1006,6 +918,11 @@
         <PinnedItemInfo parentTag="com.github.benmanes.caffeine.cache.UnboundedLocalCache$UnboundedLocalLoadingCache" memberName="cache" />
       </pinned-members>
     </pin-to-top-manager>
+    <watches-manager>
+      <inline-watch fileUrl="file://$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/protocol/Protocol.java" line="94">
+        <watch expression="MDC.get(&quot;trace-id&quot;)" language="JAVA" custom="org.slf4j.MDC" />
+      </inline-watch>
+    </watches-manager>
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />
