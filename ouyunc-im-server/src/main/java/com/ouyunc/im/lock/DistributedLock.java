@@ -5,7 +5,7 @@ import java.lang.annotation.*;
 /**
  * @author fangzhenxun
  * @date 2020/1/8 15:01
- * @description redis 事务注解，使用在方法级别上,作为分布式锁使用
+ * @description redis ，使用在方法级别上,作为分布式锁使用
  */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)

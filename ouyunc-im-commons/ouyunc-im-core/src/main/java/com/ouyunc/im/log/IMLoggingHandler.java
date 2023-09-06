@@ -24,7 +24,7 @@ public class IMLoggingHandler extends LoggingHandler{
      */
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        MDC.put(IMConstant.LOG_TRACE_ID, String.valueOf(SnowflakeUtil.nextId()));
+        MDC.put(IMConstant.LOG_SPAN_ID, String.valueOf(SnowflakeUtil.nextId()));
         super.channelRead(ctx, msg);
     }
 }

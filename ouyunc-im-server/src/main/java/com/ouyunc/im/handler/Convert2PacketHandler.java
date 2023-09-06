@@ -1,5 +1,6 @@
 package com.ouyunc.im.handler;
 
+import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.exception.IMException;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.utils.ReaderWriterUtil;
@@ -8,6 +9,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 /**
  * @Author fangzhenxun
@@ -29,12 +31,19 @@ public class Convert2PacketHandler extends SimpleChannelInboundHandler<Object> {
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
         try {
+            Packet packet = null;
             if (msg instanceof BinaryWebSocketFrame) {
-                Packet packet = ReaderWriterUtil.readByteBuf2Packet(((BinaryWebSocketFrame) msg).content());
-                ctx.fireChannelRead(packet);
+                packet = ReaderWriterUtil.readByteBuf2Packet(((BinaryWebSocketFrame) msg).content());
             }
             if (msg instanceof Packet) {
-                ctx.fireChannelRead(msg);
+                packet = (Packet) msg;
+            }
+            if (packet != null) {
+                MDC.put(IMConstant.LOG_TRACE_ID, String.valueOf(packet.getPacketId()));
+                log.info("消息包转换为：{}", packet);
+                ctx.fireChannelRead(packet);
+            }else {
+                log.error("协议转换为packet发生异常,暂不支持该协议包！");
             }
         }catch (Exception e){
             log.error("协议转换为packet发生异常！");

@@ -31,6 +31,7 @@ public class ProtocolDispatcher extends ByteToMessageDecoder {
      */
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+        log.info("ProtocolDispatcher 协议派发器正在处理...");
         // 首先判断缓冲区是否可读
         if (in == null || !in.isReadable()) {
             log.error("缓冲区不可读！");
