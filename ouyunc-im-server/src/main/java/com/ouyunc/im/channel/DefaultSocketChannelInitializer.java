@@ -5,7 +5,7 @@ import com.ouyunc.im.constant.CacheConstant;
 import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.dispatcher.ProtocolDispatcher;
-import com.ouyunc.im.log.IMLoggingHandler;
+import com.ouyunc.im.handler.IMLoggingHandler;
 import com.ouyunc.im.utils.IdentityUtil;
 import com.ouyunc.im.utils.SslUtil;
 import io.netty.channel.ChannelFuture;

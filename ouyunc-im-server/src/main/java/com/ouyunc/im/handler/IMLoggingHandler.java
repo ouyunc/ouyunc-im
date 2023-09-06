@@ -1,4 +1,4 @@
-package com.ouyunc.im.log;
+package com.ouyunc.im.handler;
 
 import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.utils.SnowflakeUtil;
