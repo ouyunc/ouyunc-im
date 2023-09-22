@@ -10,8 +10,28 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v4.0.1&#10;1. 优化日志全局链路">
+      <change afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/env/AbstractEnvironment.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/env/Environment.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/env/StandardEnvironment.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/exception/handler/GlobalExceptionHandler.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/resolver/AbstractPropertyResolver.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/resolver/CommandLineArgs.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/resolver/CommandLineArgsPropertyResolver.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/resolver/PropertiesPropertyResolver.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/resolver/PropertyResolver.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/resolver/YamlPropertyResolver.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/IMLoggingHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/IMLoggingHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/IMConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/IMConstant.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/AbstractIMServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/AbstractIMServer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/IMServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/IMServer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/StartIMServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/StartIMServer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/Convert2PacketHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/Convert2PacketHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/WsServerHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/WsServerHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/protocol/Protocol.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/protocol/Protocol.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/ouyunc-im-cache.example.properties" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/ouyunc-im-cache.properties.example" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/ouyunc-im-db.example.properties" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/ouyunc-im-db.properties.example" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/ouyunc-im-server.properties" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/ouyunc-im-server.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -44,9 +64,9 @@
         <option value="mybatis-generator-config" />
         <option value="HTML File" />
         <option value="JavaScript File" />
+        <option value="AnnotationType" />
         <option value="Interface" />
         <option value="Class" />
-        <option value="AnnotationType" />
       </list>
     </option>
   </component>
@@ -141,11 +161,12 @@
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="SONARLINT_PRECOMMIT_ANALYSIS" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="add_unversioned_files" value="$PROJECT_DIR$/logs/ouyunc-im/all.log" />
     <property name="aspect.path.notification.shown" value="true" />
     <property name="jdk.selected.JAVA_MODULE" value="1.8" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$/docs/4.0.0/apk" />
     <property name="nodejs_package_manager_path" value="npm" />
-    <property name="project.structure.last.edited" value="Modules" />
+    <property name="project.structure.last.edited" value="Artifacts" />
     <property name="project.structure.proportion" value="0.15" />
     <property name="project.structure.side.proportion" value="0.47011495" />
     <property name="settings.editor.selected.configurable" value="reference.projectsettings.compiler.javacompiler" />
@@ -450,14 +471,12 @@
       <workItem from="1688368658488" duration="3331000" />
       <workItem from="1688951085532" duration="2774000" />
       <workItem from="1693790803779" duration="18322000" />
-      <workItem from="1693875477554" duration="28793000" />
-    </task>
-    <task id="LOCAL-00158" summary="v3.0.2&#10;1，简单web 客户端demo&#10;2，优化代码">
-      <created>1679375957216</created>
-      <option name="number" value="00158" />
-      <option name="presentableId" value="LOCAL-00158" />
-      <option name="project" value="LOCAL" />
-      <updated>1679375957217</updated>
+      <workItem from="1693875477554" duration="31977000" />
+      <workItem from="1693987007866" duration="3551000" />
+      <workItem from="1694143597142" duration="655000" />
+      <workItem from="1695007640268" duration="1104000" />
+      <workItem from="1695174666502" duration="9428000" />
+      <workItem from="1695283056537" duration="2928000" />
     </task>
     <task id="LOCAL-00159" summary="v3.0.2&#10;1，web 客户端简单demo">
       <created>1679467014922</created>
@@ -795,7 +814,14 @@
       <option name="project" value="LOCAL" />
       <updated>1693961945164</updated>
     </task>
-    <option name="localTasksCounter" value="207" />
+    <task id="LOCAL-00207" summary="v4.0.1&#10;1. 优化日志全局链路">
+      <created>1693962463239</created>
+      <option name="number" value="00207" />
+      <option name="presentableId" value="LOCAL-00207" />
+      <option name="project" value="LOCAL" />
+      <updated>1693962463239</updated>
+    </task>
+    <option name="localTasksCounter" value="208" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -911,7 +937,7 @@
       </pinned-members>
     </pin-to-top-manager>
     <watches-manager>
-      <inline-watch fileUrl="file://$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/protocol/Protocol.java" line="94">
+      <inline-watch fileUrl="file://$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/protocol/Protocol.java" line="96">
         <watch expression="MDC.get(&quot;trace-id&quot;)" language="JAVA" custom="org.slf4j.MDC" />
       </inline-watch>
     </watches-manager>

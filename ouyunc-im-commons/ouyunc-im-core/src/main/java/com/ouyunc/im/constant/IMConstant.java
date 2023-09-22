@@ -221,6 +221,10 @@ public class IMConstant {
      */
     public static final String WEBSOCKET_PROTOCOL_CONNECTION = "UPGRADE";
 
+    /**
+     * 全局异常处理器
+     */
+    public static final String GLOBAL_EXCEPTION = "GLOBAL_EXCEPTION";
 
     /**
      * 自定义偶遇im 处理器
@@ -416,4 +420,5 @@ public class IMConstant {
      * 线程池名称
      */
     public static final String OUYUNC_IM_THREAD_POLL = "ouyunc-im";
+
 }

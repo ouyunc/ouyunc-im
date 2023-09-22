@@ -7,6 +7,7 @@ import com.ouyunc.im.constant.CacheConstant;
 import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.constant.enums.MessageEnum;
 import com.ouyunc.im.context.IMServerContext;
+import com.ouyunc.im.exception.handler.GlobalExceptionHandler;
 import com.ouyunc.im.handler.*;
 import com.ouyunc.im.innerclient.pool.IMInnerClientPool;
 import com.ouyunc.im.packet.Packet;
@@ -70,7 +71,8 @@ public enum Protocol {
                         // 处理心跳的以及相关逻辑都放在这里处理
                         .addAfter(IMConstant.HEART_BEAT_IDLE, IMConstant.HEART_BEAT_HANDLER, new HeartBeatHandler());
             }
-
+            // 在最后添加异常处理器
+            ctx.pipeline().addLast(IMConstant.GLOBAL_EXCEPTION, new GlobalExceptionHandler());
             // 移除协议分发器
             ctx.pipeline().remove(IMConstant.HTTP_DISPATCHER_HANDLER);
             // 调用当前handler的下一个handle的active，注意与ctx.pipeline().fireChannelActive()
@@ -131,6 +133,8 @@ public enum Protocol {
                     .addLast(IMConstant.PACKET_CLUSTER_ROUTER,new PacketClusterRouterHandler())
                     // 集群内部/外部业务处理
                     .addLast(IMConstant.OUYUNC_IM_HANDLER, new OuyuncServerHandler())
+                    // 在最后添加异常处理器
+                    .addLast(IMConstant.GLOBAL_EXCEPTION, new GlobalExceptionHandler())
                     // 移除协议分发器
                     .remove(IMConstant.PACKET_DISPATCHER_HANDLER);
             // 调用下一个handle的active

@@ -17,8 +17,6 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.util.concurrent.DefaultThreadFactory;
-import io.netty.util.concurrent.ThreadPerTaskExecutor;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.netty.util.internal.logging.Log4J2LoggerFactory;
 import org.slf4j.Logger;
@@ -87,12 +85,16 @@ public abstract class AbstractIMServer implements IMServer{
      * @return void
      */
     @Override
-    public void start() {
+    public void start(String[] args) {
         log.info("IM开始启动,正在初始化........");
         // 注册关闭钩子
         registerShutdownHook();
         // 设置实现类到本地线程中
         IMServerContext.TTL_THREAD_LOCAL.set(this);
+        // 解析命令行参数,并封装成对象
+        // CommandLineArgs commandLineArgs = new CommandLineArgsResolver().resolverArgs(args);
+        // 准备环境，（处理系统变量，环境变量，以及命令行参数，解析配置文件 yml,properties）
+        // prepareEnvironment(commandLineArgs);
         // 初始化IM服务
         initServer(IMServerContext.SERVER_CONFIG = loadProperties());
     }

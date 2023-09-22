@@ -12,7 +12,7 @@ public interface IMServer {
      * @Description 启动im服务端
      * @return void
      */
-    void start() ;
+    void start(String[] args) ;
 
 
     /**

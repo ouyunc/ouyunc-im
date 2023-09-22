@@ -30,24 +30,19 @@ public class Convert2PacketHandler extends SimpleChannelInboundHandler<Object> {
      */
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
-        try {
-            Packet packet = null;
-            if (msg instanceof BinaryWebSocketFrame) {
-                packet = ReaderWriterUtil.readByteBuf2Packet(((BinaryWebSocketFrame) msg).content());
-            }
-            if (msg instanceof Packet) {
-                packet = (Packet) msg;
-            }
-            if (packet != null) {
-                MDC.put(IMConstant.LOG_TRACE_ID, String.valueOf(packet.getPacketId()));
-                log.info("消息包转换为：{}", packet);
-                ctx.fireChannelRead(packet);
-            }else {
-                log.error("协议转换为packet发生异常,暂不支持该协议包！");
-            }
-        }catch (Exception e){
-            log.error("协议转换为packet发生异常！");
-            throw new IMException("协议转换为packet发生异常！");
+        Packet packet = null;
+        if (msg instanceof BinaryWebSocketFrame) {
+            packet = ReaderWriterUtil.readByteBuf2Packet(((BinaryWebSocketFrame) msg).content());
+        }
+        if (msg instanceof Packet) {
+            packet = (Packet) msg;
+        }
+        if (packet != null) {
+            MDC.put(IMConstant.LOG_TRACE_ID, String.valueOf(packet.getPacketId()));
+            log.info("消息包转换为：{}", packet);
+            ctx.fireChannelRead(packet);
+        }else {
+            throw new IMException("协议转换为packet发生异常,暂不支持该协议包！");
         }
     }
 }

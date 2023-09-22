@@ -2,7 +2,6 @@ package com.ouyunc.im.handler;
 
 import com.ouyunc.im.context.IMProcessContext;
 import com.ouyunc.im.packet.Packet;
-import com.ouyunc.im.qos.Qos;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import org.slf4j.Logger;

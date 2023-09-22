@@ -8,7 +8,7 @@ public class StartIMServer {
 
     public static void main(String[] args) {
         IMServer imServer = new StandardIMServer();
-        imServer.start();
+        imServer.start(args);
     }
 
 

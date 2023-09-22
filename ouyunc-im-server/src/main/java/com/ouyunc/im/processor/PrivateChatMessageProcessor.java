@@ -45,7 +45,7 @@ public class PrivateChatMessageProcessor extends AbstractMessageProcessor{
         String from = message.getFrom();
         // 消息接收方
         String to = message.getTo();
-        // ===================================做权限校验=========================================
+        // ===================================做校验(@todo 这里可以改造，各种校验不通过后响应相关消息给客户端)=========================================
         if (!MessageValidate.isAuth(from, packet.getDeviceType(), ctx) || MessageValidate.isBanned(from, IMConstant.USER_TYPE_1) || !MessageValidate.isFriend(from, to) || MessageValidate.isBackList(from, to, IMConstant.USER_TYPE_1) || MessageValidate.isShield(from, to, IMConstant.USER_TYPE_1)) {
             return;
         }
