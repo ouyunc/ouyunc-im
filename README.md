@@ -1,4 +1,4 @@
-# OUYUNC-IM [![version](https://img.shields.io/badge/version-4.0.1-blue)](https://gitee.com/etxync/ouyunc-im)  
+# OUYUNC-IM [![version](https://img.shields.io/badge/version-4.0.2-blue)](https://gitee.com/etxync/ouyunc-im)  
 [![license](https://img.shields.io/badge/license-MIT-brightgreen)](https://www.mit-license.org/)
 <a href='https://gitee.com/etxync/ouyunc-im/stargazers'><img src='https://gitee.com/etxync/ouyunc-im/badge/star.svg?theme=dark' alt='star'></img></a>
 <a href='https://gitee.com/etxync/ouyunc-im/members'><img src='https://gitee.com/etxync/ouyunc-im/badge/fork.svg?theme=dark' alt='fork'></img></a>
@@ -166,6 +166,9 @@ https://gitee.com/etxync/ouyunc-im/wikis/OUYUNC-IM%20v3.x/%E5%AE%A2%E6%88%B7%E7%
 1. 添加日志全局链路跟踪
 2. 优化其他代码
 
+#####  **4.0.1 ~ 4.0.2**
+1. 添加命令行参数解析
+2. 优化其他代码
 
 #### 参与贡献
 
