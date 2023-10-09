@@ -34,6 +34,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
+import java.util.Map;
 
 /**
  * @Author fangzhenxun
@@ -45,7 +46,7 @@ public enum Protocol {
     WS((byte) 1, (byte)1, "websocket 协议，版本号为1") {
 
         @Override
-        public void doDispatcher(ChannelHandlerContext ctx) {
+        public void doDispatcher(ChannelHandlerContext ctx, Map<String, Object> queryParamsMap) {
             ctx.pipeline()
                     //10 * 1024 * 1024
                     .addLast(IMConstant.WS_FRAME_AGGREGATOR, new WebSocketFrameAggregator(Integer.MAX_VALUE))
@@ -111,7 +112,7 @@ public enum Protocol {
     //处理 http/https
     HTTP((byte)3, (byte)1, "http协议，版本号为1"){
         @Override
-        public void doDispatcher(ChannelHandlerContext ctx) {
+        public void doDispatcher(ChannelHandlerContext ctx, Map<String, Object> queryParamsMap) {
 
         }
 
@@ -124,7 +125,7 @@ public enum Protocol {
     // 目前该协议不对外开放只作为集群内部协议使用，可以对接jt 818,或者其他物联网的通信，字节扩充，
     OUYUC((byte)5, (byte)1, "自定义ouyunc协议，版本号为1"){
         @Override
-        public void doDispatcher(ChannelHandlerContext ctx) {
+        public void doDispatcher(ChannelHandlerContext ctx, Map<String, Object> queryParamsMap) {
             ctx.pipeline()
                     // 上一个packet编解码处理器，处理后，会在这里交给包转换器来转换
                     // 转换成包packet，这里为了做兼容客户端心跳
@@ -230,7 +231,7 @@ public enum Protocol {
     }
     private static Logger log = LoggerFactory.getLogger(Protocol.class);
 
-    public abstract void doDispatcher(ChannelHandlerContext ctx);
+    public abstract void doDispatcher(ChannelHandlerContext ctx, Map<String, Object> queryParamsMap);
 
 
     public abstract void doSendMessage(Packet packet, String to);

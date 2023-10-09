@@ -42,7 +42,7 @@ public class Convert2PacketHandler extends SimpleChannelInboundHandler<Object> {
             log.info("消息包转换为：{}", packet);
             ctx.fireChannelRead(packet);
         }else {
-            throw new IMException("协议转换为packet发生异常,暂不支持该协议包！");
+            throw new IMException("协议转换为packet发生异常,暂不支持该协议！");
         }
     }
 }

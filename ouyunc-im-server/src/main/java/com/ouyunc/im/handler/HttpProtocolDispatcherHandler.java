@@ -2,6 +2,7 @@ package com.ouyunc.im.handler;
 
 import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.protocol.Protocol;
+import com.ouyunc.im.utils.MapUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -10,6 +11,9 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.net.URI;
+import java.util.Map;
 
 
 /**
@@ -31,9 +35,16 @@ public class HttpProtocolDispatcherHandler extends SimpleChannelInboundHandler<O
         // 判断该消息是http何种变种协议
         if (msg instanceof FullHttpRequest) {
             FullHttpRequest request = (FullHttpRequest) msg;
+            String uriStr = request.uri();
+            log.info("=================当前请求路径uri：{}=============================",uriStr);
             // 判断是否是websocket 的101 升级请求，如果是则升级为websocket协议
             if (isUpgradeToWebSocket(request)) {
-                Protocol.prototype(Protocol.WS.getProtocol(), Protocol.WS.getVersion()).doDispatcher(ctx);
+                URI uri = new URI(uriStr);
+                //封装参数传
+                Map<String, Object> queryParamsMap = MapUtil.wrapParams2Map(uri.getQuery());
+                //重设uri
+                request.setUri(uri.getPath());
+                Protocol.prototype(Protocol.WS.getProtocol(), Protocol.WS.getVersion()).doDispatcher(ctx, queryParamsMap);
                 //如果请求是一次升级了的 WebSocket 请求，则递增引用计数器（retain）并且将它传递给在 ChannelPipeline 中的下个 ChannelInboundHandler
                 ctx.fireChannelRead(request.retain());
             }else {
@@ -46,6 +57,7 @@ public class HttpProtocolDispatcherHandler extends SimpleChannelInboundHandler<O
             ctx.fireChannelRead(((WebSocketFrame) msg).retain());
         }
     }
+
 
     /**
      * @Author fangzhenxun
