@@ -86,9 +86,9 @@ public class StandardIMServer extends AbstractIMServer{
                 .heartBeatTimeout(propertiesHelper.heartBeatTimeout())
                 .heartBeatWaitRetry(propertiesHelper.heartBeatWaitRetry())
                 .build();
-        System.setProperty(IMConstant.LOCAL_ADDRESS_KEY, config.getLocalServerAddress());
         // 3,解析命令行参数,并组合属性
         combinedProperties(config, resolverArgs(args));
+        System.setProperty(IMConstant.LOCAL_ADDRESS_KEY, config.getLocalServerAddress());
         // 打印相关生效的配置参数
         log.info("当前配置参数:\r\n {} ", config);
         return config;
