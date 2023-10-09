@@ -158,11 +158,6 @@
         <dependencies>
             <dependency>
                 <groupId>com.ouyunc</groupId>
-                <artifactId>ouyunc-im-log</artifactId>
-                <version>4.0.0</version>
-            </dependency>
-            <dependency>
-                <groupId>com.ouyunc</groupId>
                 <artifactId>ouyunc-im-cache</artifactId>
                 <version>${project.version}</version>
             </dependency>
