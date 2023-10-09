@@ -10,7 +10,7 @@ import com.ouyunc.im.constant.enums.MessageContentEnum;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.db.operator.DbOperator;
 import com.ouyunc.im.db.operator.MysqlDbOperator;
-import com.ouyunc.im.domain.ImAppDetail;
+import com.ouyunc.im.domain.ImApp;
 import com.ouyunc.im.domain.ImGroup;
 import com.ouyunc.im.domain.ImReceiveMessage;
 import com.ouyunc.im.domain.ImUser;
@@ -53,16 +53,16 @@ public class  DbHelper {
     /**
      * 根据appKey 获取app 详情
      */
-    public static ImAppDetail getAppDetail(String appKey) {
-        ImAppDetail appDetail = (ImAppDetail) cacheOperator.get(CacheConstant.OUYUNC + CacheConstant.IM + CacheConstant.APP + appKey);
-        if (appDetail == null && IMServerContext.SERVER_CONFIG.isDbEnable()) {
+    public static ImApp getApp(String appKey) {
+        ImApp app = (ImApp) cacheOperator.get(CacheConstant.OUYUNC + CacheConstant.IM + CacheConstant.APP + appKey);
+        if (app == null && IMServerContext.SERVER_CONFIG.isDbEnable()) {
             // 从数据库查询
-            appDetail = dbOperator.selectOne(DbSqlConstant.MYSQL.SELECT_IM_APP_DETAIL.sql(), ImAppDetail.class, appKey);
-            if (appDetail != null) {
-                cacheOperator.put(CacheConstant.OUYUNC + CacheConstant.IM + CacheConstant.APP + appKey, appDetail);
+            app = dbOperator.selectOne(DbSqlConstant.MYSQL.SELECT_IM_APP_DETAIL.sql(), ImApp.class, appKey);
+            if (app != null) {
+                cacheOperator.put(CacheConstant.OUYUNC + CacheConstant.IM + CacheConstant.APP + appKey, app);
             }
         }
-        return appDetail;
+        return app;
     }
 
     /**

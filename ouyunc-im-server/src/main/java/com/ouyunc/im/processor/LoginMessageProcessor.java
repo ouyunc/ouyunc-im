@@ -11,7 +11,7 @@ import com.ouyunc.im.constant.enums.MessageContentEnum;
 import com.ouyunc.im.constant.enums.MessageEnum;
 import com.ouyunc.im.constant.enums.NetworkEnum;
 import com.ouyunc.im.context.IMServerContext;
-import com.ouyunc.im.domain.ImAppDetail;
+import com.ouyunc.im.domain.ImApp;
 import com.ouyunc.im.encrypt.Encrypt;
 import com.ouyunc.im.helper.DbHelper;
 import com.ouyunc.im.helper.MessageHelper;
@@ -54,20 +54,20 @@ public class LoginMessageProcessor extends AbstractMessageProcessor{
         }
         // raw = appkey&identity&createtime_appSecret
         // 通过 appKey 在缓存或数据库中获取账户及权限信息，然后进行计算校验
-        ImAppDetail imAppDetail = DbHelper.getAppDetail(loginContent.getAppKey());
-        if (imAppDetail == null) {
+        ImApp app = DbHelper.getApp(loginContent.getAppKey());
+        if (app == null) {
             return false;
         }
-        String rawStr = loginContent.getAppKey() + IMConstant.AND + loginContent.getIdentity() + IMConstant.AND + loginContent.getCreateTime() + IMConstant.UNDERLINE + imAppDetail.getAppSecret();
+        String rawStr = loginContent.getAppKey() + IMConstant.AND + loginContent.getIdentity() + IMConstant.AND + loginContent.getCreateTime() + IMConstant.UNDERLINE + app.getAppSecret();
         if (!Encrypt.AsymmetricEncrypt.prototype(loginContent.getSignatureAlgorithm()).validate(rawStr, loginContent.getSignature())) {
             return false;
         }
         // 是否开启
-        if (IMServerContext.SERVER_CONFIG.isLoginMaxConnectionValidateEnable() &&  IMConstant.MINUS_ONE.equals(imAppDetail.getImMaxConnections())) {
+        if (IMServerContext.SERVER_CONFIG.isLoginMaxConnectionValidateEnable() &&  IMConstant.MINUS_ONE.equals(app.getImMaxConnections())) {
             // 做权限校验，比如，同一个appKey 只允许在线10个连接
             Integer connections = DbHelper.getCurrentAppImConnections(loginContent.getAppKey());
             // 计数从0开始,不能超过最大连接数
-            if (++connections >= imAppDetail.getImMaxConnections()) {
+            if (++connections >= app.getImMaxConnections()) {
                 return false;
             }
         }

@@ -46,10 +46,10 @@ CREATE TABLE `oauth_client_details`  (
 INSERT INTO `oauth_client_details` VALUES ('system', '207cf410532f92a47dee245ce9b11ff71f578ebd763eb3bbea44ebd043d018fb', 'ouyunc', 'ouyunc-im', 'app', 'authorization_code,password,refresh_token', 'http://www.baidu.com', 'all', 3600, 7200, '{\"country\":\"CN\",\"country_code\":\"086\"}', 'false', '2020-06-30 10:05:28', '2023-06-15 15:14:56', 0);
 
 -- ----------------------------
--- Table structure for ouyunc_im_app_detail
+-- Table structure for ouyunc_im_app
 -- ----------------------------
-DROP TABLE IF EXISTS `ouyunc_im_app_detail`;
-CREATE TABLE `ouyunc_im_app_detail`  (
+DROP TABLE IF EXISTS `ouyunc_im_app`;
+CREATE TABLE `ouyunc_im_app`  (
   `id` bigint NOT NULL COMMENT '主键id',
   `app_key` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '客户端（外部平台）key  唯一',
   `app_secret` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '客户端 （外部平台）secret',
@@ -62,9 +62,9 @@ CREATE TABLE `ouyunc_im_app_detail`  (
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = 'im 客户端配置' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
--- Records of ouyunc_im_app_detail
+-- Records of ouyunc_im_app
 -- ----------------------------
-INSERT INTO `ouyunc_im_app_detail` VALUES (1, 'ouyunc', '123456', '偶云客', 10, '2023-05-09 21:41:47', '2023-05-09 21:41:55', 0);
+INSERT INTO `ouyunc_im_app` VALUES (1, 'ouyunc', '123456', '偶云客', 10, '2023-05-09 21:41:47', '2023-05-09 21:41:55', 0);
 
 -- ----------------------------
 -- Table structure for ouyunc_im_blacklist

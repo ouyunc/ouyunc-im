@@ -7,10 +7,10 @@ import com.baomidou.mybatisplus.annotation.TableName;
 
 import java.io.Serializable;
 /**
- * 个人或群黑名单
+ * IM 应用平台信息
  */
-@TableName("ouyunc_im_app_detail")
-public class ImAppDetail implements Serializable {
+@TableName("ouyunc_im_app")
+public class ImApp implements Serializable {
     private static final long serialVersionUID = 209;
 
     /**
@@ -127,7 +127,7 @@ public class ImAppDetail implements Serializable {
         this.deleted = deleted;
     }
 
-    public ImAppDetail() {
+    public ImApp() {
     }
 
 }

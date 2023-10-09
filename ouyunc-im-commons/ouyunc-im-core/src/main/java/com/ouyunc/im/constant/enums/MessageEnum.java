@@ -21,7 +21,7 @@ public enum MessageEnum {
 
     BROADCAST((byte) 50, "broadcast",  "广播消息"),
 
-    IM_QOS_RETRY((byte) 66, "IM_QOS_RETRY",  "im qos消息重试"),
+    IM_QOS_RETRY((byte) 66, "im_qos_retry",  "im qos消息重试"),
 
     // =======================================http使用的消息类型================================
     RPC_REQUEST((byte) 101,  "rpc_request", "RPC中有请求消息"),

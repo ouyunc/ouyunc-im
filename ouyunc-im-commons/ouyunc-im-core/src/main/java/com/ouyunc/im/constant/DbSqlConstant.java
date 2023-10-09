@@ -217,19 +217,19 @@ public class DbSqlConstant {
                 "\tID = ? ","查询群组信息"),
 
         SELECT_IM_APP_DETAIL("SELECT \n" +
-                "\touyunc_im_app_detail.ID, \n" +
-                "\touyunc_im_app_detail.APP_KEY as appKey, \n" +
-                "\touyunc_im_app_detail.APP_SECRET as appSecret, \n" +
-                "\touyunc_im_app_detail.APP_NAME as appName, \n" +
-                "\touyunc_im_app_detail.IM_MAX_CONNECTIONS as imMaxConnections, \n" +
-                "\touyunc_im_app_detail.CREATE_TIME as createTime, \n" +
-                "\touyunc_im_app_detail.UPDATE_TIME as updateTime, \n" +
-                "\touyunc_im_app_detail.DELETED\n" +
+                "\touyunc_im_app.ID, \n" +
+                "\touyunc_im_app.APP_KEY as appKey, \n" +
+                "\touyunc_im_app.APP_SECRET as appSecret, \n" +
+                "\touyunc_im_app.APP_NAME as appName, \n" +
+                "\touyunc_im_app.IM_MAX_CONNECTIONS as imMaxConnections, \n" +
+                "\touyunc_im_app.CREATE_TIME as createTime, \n" +
+                "\touyunc_im_app.UPDATE_TIME as updateTime, \n" +
+                "\touyunc_im_app.DELETED\n" +
                 "FROM\n" +
-                "\touyunc_im_app_detail\n" +
+                "\touyunc_im_app\n" +
                 "WHERE\n" +
-                "\touyunc_im_app_detail.DELETED = 0 AND\n" +
-                "\touyunc_im_app_detail.APP_KEY = ? ","查询IM APP DETAIL 详情信息"),
+                "\touyunc_im_app.DELETED = 0 AND\n" +
+                "\touyunc_im_app.APP_KEY = ? ","查询IM APP DETAIL 详情信息"),
 
         SELECT_RECEIVE_MESSAGE("SELECT ID, PROTOCOL, PROTOCOL_VERSION as protocolVersion, DEVICE_TYPE as deviceType, NETWORK_TYPE as networkType, ENCRYPT_TYPE as encryptType,EXTRA, SERIALIZE_ALGORITHM as serializeAlgorithm, IP, `FROM`, `TO`, TYPE, CONTENT_TYPE as contentType, CONTENT, RECEIVE_TIME as receiveTime, CREATE_TIME as createTime, UPDATE_TIME as updateTime, DELETED FROM ouyunc_im_receive_message WHERE ID = ?", "插入收件箱消息"),
 
