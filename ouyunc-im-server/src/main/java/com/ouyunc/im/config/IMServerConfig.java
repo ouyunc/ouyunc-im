@@ -5,7 +5,6 @@ import com.ouyunc.im.innerclient.DefaultIMInnerClient;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.logging.LogLevel;
 import io.netty.util.NettyRuntime;
-import org.aeonbits.owner.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,12 +18,6 @@ import java.util.Set;
  * @Description: 使用建造者模式来进行构建配置对象实例
  **/
 public class IMServerConfig extends IMConfig{
-
-
-    /**
-     * 默认server 端的绑定端口为6001
-     */
-    private int port;
 
     /**
      * 默认server 端websocket path 请求路径
@@ -234,10 +227,6 @@ public class IMServerConfig extends IMConfig{
         return clusterMessageRetry;
     }
 
-    public int getPort() {
-        return port;
-    }
-
     public boolean isClusterEnable() {
         return clusterEnable;
     }
@@ -355,10 +344,6 @@ public class IMServerConfig extends IMConfig{
          */
         private String localHost;
 
-        /**
-         * 本地服务地址 ip:port
-         */
-        private String localServerAddress;
 
 
         /**
@@ -571,10 +556,6 @@ public class IMServerConfig extends IMConfig{
             return this;
         }
 
-        public Builder localServerAddress(String localServerAddress) {
-            this.localServerAddress = localServerAddress;
-            return this;
-        }
 
         public Builder logLevel(LogLevel logLevel) {
             this.logLevel = logLevel;
@@ -783,7 +764,6 @@ public class IMServerConfig extends IMConfig{
             imServerConfig.websocketPath = this.websocketPath;
             imServerConfig.logLevel = this.logLevel;
             imServerConfig.localHost = this.localHost;
-            imServerConfig.localServerAddress = this.localServerAddress;
             imServerConfig.bossThreads = this.bossThreads;
             imServerConfig.workThreads = this.workThreads;
             imServerConfig.clusterEnable = this.clusterEnable;
@@ -829,7 +809,6 @@ public class IMServerConfig extends IMConfig{
         return "IMServerConfig{" +
                 "\n , localHost='" + localHost + '\'' +
                 "\n , websocketPath='" + websocketPath + '\'' +
-                "\n , localServerAddress='" + localServerAddress + '\'' +
                 "\n , sslEnable=" + sslEnable +
                 "\n , sslCertificate='" + sslCertificate + '\'' +
                 "\n , sslPrivateKey='" + sslPrivateKey + '\'' +

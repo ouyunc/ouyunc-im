@@ -91,12 +91,8 @@ public abstract class AbstractIMServer implements IMServer{
         registerShutdownHook();
         // 设置实现类到本地线程中
         IMServerContext.TTL_THREAD_LOCAL.set(this);
-        // 解析命令行参数,并封装成对象
-        // CommandLineArgs commandLineArgs = new CommandLineArgsResolver().resolverArgs(args);
-        // 准备环境，（处理系统变量，环境变量，以及命令行参数，解析配置文件 yml,properties）
-        // prepareEnvironment(commandLineArgs);
         // 初始化IM服务
-        initServer(IMServerContext.SERVER_CONFIG = loadProperties());
+        initServer(IMServerContext.SERVER_CONFIG = loadProperties(args));
     }
 
     /**
@@ -191,7 +187,7 @@ public abstract class AbstractIMServer implements IMServer{
      * @param
      * @return com.ouyu.im.config.IMServerConfig
      */
-    abstract IMServerConfig loadProperties();
+    abstract IMServerConfig loadProperties(String... args);
 
 
     /**

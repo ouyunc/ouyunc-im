@@ -1,5 +1,7 @@
 package com.ouyunc.im.config;
 
+import com.ouyunc.im.constant.IMConstant;
+
 /**
  * @Author fangzhenxun
  * @Description: im 的公共抽象配置类
@@ -7,15 +9,15 @@ package com.ouyunc.im.config;
 public abstract class IMConfig {
 
     /**
+     * 默认server 端的绑定端口为6001
+     */
+    protected int port;
+
+    /**
      * 本地host地址，通过InetAddress.getLocalHost().getHostAddress()获取
      */
     protected String localHost;
 
-
-    /**
-     * 本地服务地址 ip:port
-     */
-    protected String localServerAddress;
 
     /**
      *  全局是否开启SSL/TLS, 默认否
@@ -33,12 +35,16 @@ public abstract class IMConfig {
      */
     protected String sslPrivateKey;
 
+    public int getPort() {
+        return port;
+    }
+
     public String getLocalHost() {
         return localHost;
     }
 
     public String getLocalServerAddress() {
-        return localServerAddress;
+        return localHost  + IMConstant.COLON_SPLIT + port;
     }
 
 
