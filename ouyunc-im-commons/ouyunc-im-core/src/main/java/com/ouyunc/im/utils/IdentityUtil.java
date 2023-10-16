@@ -29,6 +29,16 @@ public class IdentityUtil {
     /**
      * 生成客户端绑定的组合唯一标识
      * @param identity 原始登录唯一标识
+     * @param deviceEnum   设备类型枚举
+     * @return
+     */
+    public static String generalComboIdentity(String identity, DeviceEnum deviceEnum) {
+        return identity + IMConstant.COLON_SPLIT + deviceEnum.getName();
+    }
+
+    /**
+     * 生成客户端绑定的组合唯一标识
+     * @param identity 原始登录唯一标识
      * @param deviceName   设备名称
      * @return
      */

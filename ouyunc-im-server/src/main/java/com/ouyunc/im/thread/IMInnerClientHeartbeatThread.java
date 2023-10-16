@@ -10,17 +10,16 @@ import com.ouyunc.im.encrypt.Encrypt;
 import com.ouyunc.im.helper.MessageHelper;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.Message;
+import com.ouyunc.im.packet.message.Target;
 import com.ouyunc.im.protocol.Protocol;
 import com.ouyunc.im.serialize.Serializer;
 import com.ouyunc.im.utils.MapUtil;
 import com.ouyunc.im.utils.SnowflakeUtil;
-import com.ouyunc.im.utils.SocketAddressUtil;
 import com.ouyunc.im.utils.SystemClock;
 import io.netty.channel.pool.ChannelPool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.InetSocketAddress;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Iterator;
@@ -50,14 +49,13 @@ public class IMInnerClientHeartbeatThread implements Runnable {
     public void run() {
         log.debug("集群服务中当前存活的服务：{}",IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.asMap().keySet());
         // 获取所有注册表中的key,每次更新注册表都会重新获取注册表信息
-        Set<Map.Entry<InetSocketAddress, ChannelPool>> availableGlobalServer = MapUtil.mergerMaps(IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.asMap(), IMServerContext.CLUSTER_GLOBAL_SERVER_REGISTRY_TABLE.asMap()).entrySet();
-        Iterator<Map.Entry<InetSocketAddress, ChannelPool>> socketAddressChannelIterator = availableGlobalServer.iterator();
+        Set<Map.Entry<String, ChannelPool>> availableGlobalServer = MapUtil.mergerMaps(IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.asMap(), IMServerContext.CLUSTER_GLOBAL_SERVER_REGISTRY_TABLE.asMap()).entrySet();
+        Iterator<Map.Entry<String, ChannelPool>> socketAddressChannelIterator = availableGlobalServer.iterator();
         while (socketAddressChannelIterator.hasNext()) {
-            Map.Entry<InetSocketAddress, ChannelPool> socketAddressChannelPoolEntry = socketAddressChannelIterator.next();
-            InetSocketAddress toInetSocketAddress = socketAddressChannelPoolEntry.getKey();
+            Map.Entry<String, ChannelPool> socketAddressChannelPoolEntry = socketAddressChannelIterator.next();
+            String targetServerAddress = socketAddressChannelPoolEntry.getKey();
             // 给暂未连接的的服务（不在注册表中）进行重试连接发送syn去握手，需要回复ack
-            String targetServerAddressStr = SocketAddressUtil.convert2HostPort(toInetSocketAddress);
-            Message message = new Message(IMServerContext.SERVER_CONFIG.getLocalServerAddress(),targetServerAddressStr , MessageContentEnum.SYN_CONTENT.type(), SystemClock.now());
+            Message message = new Message(IMServerContext.SERVER_CONFIG.getLocalServerAddress(),targetServerAddress , MessageContentEnum.SYN_CONTENT.type(), SystemClock.now());
             //  ==============针对以上packet 几种序列化对比: string = SYN=========
             //     packet            message
             // protoStuff 150b         80b  内部心跳只用protoStuff序列化/反序列化
@@ -70,12 +68,12 @@ public class IMInnerClientHeartbeatThread implements Runnable {
             // jdk        500b         346b
             Packet packet = new Packet(Protocol.OUYUC.getProtocol(), Protocol.OUYUC.getVersion(), SnowflakeUtil.nextId(), DeviceEnum.OTHER.getValue(), NetworkEnum.OTHER.getValue(), IMServerContext.SERVER_CONFIG.getLocalHost(), MessageEnum.SYN_ACK.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(),  message);
             // 内部客户端连接池异步传递消息syn ,尝试所有的路径去保持连通
-            MessageHelper.sendMessage(packet, targetServerAddressStr);
+            MessageHelper.sendMessage(packet, Target.newBuilder().targetIdentity(targetServerAddress).build());
             // 先获取给目标服务toInetSocketAddress 发送syn,没有回复ack的次数，默认从0开始
-            AtomicInteger missAckTimes = IMServerContext.CLUSTER_INNER_CLIENT_MISS_ACK_TIMES_CACHE.get(toInetSocketAddress);
+            AtomicInteger missAckTimes = IMServerContext.CLUSTER_INNER_CLIENT_MISS_ACK_TIMES_CACHE.get(targetServerAddress);
             // 判断次数是否到达规定的次数，默认3次（也就是说给目标服务器连续发送3次syn,没有一次得到响应ack）则进行服务下线处理，从活着的服务注册表移除该服务
-            if (IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.asMap().containsKey(toInetSocketAddress) && missAckTimes.incrementAndGet() > IMServerContext.SERVER_CONFIG.getClusterInnerClientHeartbeatWaitRetry()) {
-                IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.delete(toInetSocketAddress);
+            if (IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.asMap().containsKey(targetServerAddress) && missAckTimes.incrementAndGet() > IMServerContext.SERVER_CONFIG.getClusterInnerClientHeartbeatWaitRetry()) {
+                IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.delete(targetServerAddress);
                 // 去除3.0.1 的服务下线相关逻辑，目前不做服务下线处理
             }
         }

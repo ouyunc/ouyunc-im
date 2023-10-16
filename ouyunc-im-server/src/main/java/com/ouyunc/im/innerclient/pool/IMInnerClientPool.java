@@ -73,8 +73,8 @@ public class IMInnerClientPool {
                 // 获取准备好的 channel pool，此时还没有连接
                 SimpleChannelPool simpleChannelPool = singleClientChannelPoolMap.get(inetSocketAddress);
                 // 默认一开始所有的连接都是存活的, 并且缓存所有连接
-                IMServerContext.CLUSTER_GLOBAL_SERVER_REGISTRY_TABLE.put(inetSocketAddress, simpleChannelPool);
-                IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.put(inetSocketAddress, simpleChannelPool);
+                IMServerContext.CLUSTER_GLOBAL_SERVER_REGISTRY_TABLE.put(SocketAddressUtil.convert2HostPort(inetSocketAddress), simpleChannelPool);
+                IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.put(SocketAddressUtil.convert2HostPort(inetSocketAddress), simpleChannelPool);
             }
         }
         log.info("IM内置客户端初始化完成");

@@ -9,23 +9,31 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v4.0.2&#10;1. 优化校验代码&#10;2. 添加全局异常处理&#10;3. 新增命令行参数解析（待完善）">
-      <change afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/ReflectUtils.java" afterDir="false" />
+    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v4.0.2&#10;1. 完善命令行参数解析">
+      <change afterPath="$PROJECT_DIR$/docs/picture/img.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/Target.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/html/client.html" beforeDir="false" afterPath="$PROJECT_DIR$/docs/html/client.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/config/IMConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/config/IMConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/env/AbstractEnvironment.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/env/Environment.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/env/StandardEnvironment.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/resolver/AbstractPropertyResolver.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/resolver/CommandLineArgs.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/base/CommandLineArgs.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/resolver/CommandLineArgsPropertyResolver.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/resolver/PropertiesPropertyResolver.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/resolver/PropertyResolver.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/resolver/YamlPropertyResolver.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/AbstractIMServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/AbstractIMServer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/StandardIMServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/StandardIMServer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/4.0.0/js/uniapp的可供参考main.js" beforeDir="false" afterPath="$PROJECT_DIR$/docs/4.0.0/js/uniapp的可供参考main.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/Packet.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/Packet.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/InnerExtraData.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/InnerExtraData.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/Message.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/Message.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/IdentityUtil.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/IdentityUtil.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/config/IMServerConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/config/IMServerConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/context/IMServerContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/context/IMServerContext.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/PacketClusterRouterHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/PacketClusterRouterHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/MessageHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/MessageHelper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/RouterHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/RouterHelper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/innerclient/pool/IMInnerClientPool.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/innerclient/pool/IMInnerClientPool.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/LoginMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/LoginMessageProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/PingPongMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/PingPongMessageProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/QosMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/QosMessageProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/SynAckMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/SynAckMessageProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/protocol/Protocol.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/protocol/Protocol.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/router/BacktrackRouterStrategy.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/router/BacktrackRouterStrategy.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/router/RandomRouterStrategy.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/router/RandomRouterStrategy.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/router/RouterStrategy.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/router/RouterStrategy.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/thread/IMInnerClientHeartbeatThread.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/thread/IMInnerClientHeartbeatThread.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/thread/IMRouteFailureProcessorThread.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/thread/IMRouteFailureProcessorThread.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/ouyunc-im-server.properties" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/ouyunc-im-server.properties" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -101,7 +109,7 @@
     </favorite-branches>
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="4.0.1" />
+        <entry key="$PROJECT_DIR$" value="4.0.2-beta" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -198,6 +206,19 @@
     </key>
   </component>
   <component name="RunManager" selected="Application.StartIMServer">
+    <configuration name="HttpProtocolDispatcherHandler" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="com.ouyunc.im.handler.HttpProtocolDispatcherHandler" />
+      <module name="ouyunc-im-server" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.ouyunc.im.handler.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
     <configuration name="Ip4Util" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="com.ouyunc.im.utils.Ip4Util" />
       <module name="ouyunc-im-core" />
@@ -250,6 +271,7 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Application.HttpProtocolDispatcherHandler" />
         <item itemvalue="Application.StandardIMServer" />
         <item itemvalue="Application.MessageHelper" />
         <item itemvalue="Application.Ip4Util" />
@@ -487,63 +509,13 @@
       <workItem from="1695174666502" duration="9428000" />
       <workItem from="1695283056537" duration="4034000" />
       <workItem from="1695718011341" duration="69000" />
-      <workItem from="1696742194431" duration="15874000" />
-    </task>
-    <task id="LOCAL-00160" summary="v3.0.2&#10;1，web 客户端简单demo,增加群主标识">
-      <created>1679473757627</created>
-      <option name="number" value="00160" />
-      <option name="presentableId" value="LOCAL-00160" />
-      <option name="project" value="LOCAL" />
-      <updated>1679473757627</updated>
-    </task>
-    <task id="LOCAL-00161" summary="v3.0.2&#10;1，web 客户端简单demo,增加群主标识">
-      <created>1679473814157</created>
-      <option name="number" value="00161" />
-      <option name="presentableId" value="LOCAL-00161" />
-      <option name="project" value="LOCAL" />
-      <updated>1679473814157</updated>
-    </task>
-    <task id="LOCAL-00162" summary="v3.0.2&#10;1，web 客户端简单demo">
-      <created>1679541633022</created>
-      <option name="number" value="00162" />
-      <option name="presentableId" value="LOCAL-00162" />
-      <option name="project" value="LOCAL" />
-      <updated>1679541633022</updated>
-    </task>
-    <task id="LOCAL-00163" summary="v3.0.2&#10;1，优化拉取离线消息的方式">
-      <created>1679562989054</created>
-      <option name="number" value="00163" />
-      <option name="presentableId" value="LOCAL-00163" />
-      <option name="project" value="LOCAL" />
-      <updated>1679562989054</updated>
-    </task>
-    <task id="LOCAL-00164" summary="v3.0.2&#10;1，优化拉取离线消息的方式">
-      <created>1679563065429</created>
-      <option name="number" value="00164" />
-      <option name="presentableId" value="LOCAL-00164" />
-      <option name="project" value="LOCAL" />
-      <updated>1679563065429</updated>
-    </task>
-    <task id="LOCAL-00165" summary="v3.0.2&#10;1，优化拉取离线消息">
-      <created>1679624556309</created>
-      <option name="number" value="00165" />
-      <option name="presentableId" value="LOCAL-00165" />
-      <option name="project" value="LOCAL" />
-      <updated>1679624556311</updated>
-    </task>
-    <task id="LOCAL-00166" summary="v3.0.2&#10;1，优化拉取离线消息">
-      <created>1679636031603</created>
-      <option name="number" value="00166" />
-      <option name="presentableId" value="LOCAL-00166" />
-      <option name="project" value="LOCAL" />
-      <updated>1679636031603</updated>
-    </task>
-    <task id="LOCAL-00167" summary="v3.0.2&#10;1，优化客户端发送按钮，改为键盘提交">
-      <created>1679877869536</created>
-      <option name="number" value="00167" />
-      <option name="presentableId" value="LOCAL-00167" />
-      <option name="project" value="LOCAL" />
-      <updated>1679877869537</updated>
+      <workItem from="1696742194431" duration="17581000" />
+      <workItem from="1696816463396" duration="6844000" />
+      <workItem from="1696837274334" duration="1308000" />
+      <workItem from="1696839408170" duration="3873000" />
+      <workItem from="1696917510745" duration="15000" />
+      <workItem from="1696987384686" duration="5211000" />
+      <workItem from="1697285628392" duration="36557000" />
     </task>
     <task id="LOCAL-00168" summary="v3.0.2&#10;1，优化客户端发送按钮，改为键盘提交">
       <created>1679878388507</created>
@@ -832,7 +804,63 @@
       <option name="project" value="LOCAL" />
       <updated>1695370945163</updated>
     </task>
-    <option name="localTasksCounter" value="209" />
+    <task id="LOCAL-00209" summary="v4.0.2&#10;1. 完善命令行参数解析">
+      <created>1696814327392</created>
+      <option name="number" value="00209" />
+      <option name="presentableId" value="LOCAL-00209" />
+      <option name="project" value="LOCAL" />
+      <updated>1696814327393</updated>
+    </task>
+    <task id="LOCAL-00210" summary="v4.0.2&#10;1. 完善命令行参数解析">
+      <created>1696815565827</created>
+      <option name="number" value="00210" />
+      <option name="presentableId" value="LOCAL-00210" />
+      <option name="project" value="LOCAL" />
+      <updated>1696815565827</updated>
+    </task>
+    <task id="LOCAL-00211" summary="v4.0.2&#10;1. 完善命令行参数解析">
+      <created>1696816656035</created>
+      <option name="number" value="00211" />
+      <option name="presentableId" value="LOCAL-00211" />
+      <option name="project" value="LOCAL" />
+      <updated>1696816656035</updated>
+    </task>
+    <task id="LOCAL-00212" summary="v4.0.2&#10;1. 完善命令行参数解析">
+      <created>1696817120725</created>
+      <option name="number" value="00212" />
+      <option name="presentableId" value="LOCAL-00212" />
+      <option name="project" value="LOCAL" />
+      <updated>1696817120725</updated>
+    </task>
+    <task id="LOCAL-00213" summary="v4.0.2&#10;1. 完善命令行参数解析">
+      <created>1696817158144</created>
+      <option name="number" value="00213" />
+      <option name="presentableId" value="LOCAL-00213" />
+      <option name="project" value="LOCAL" />
+      <updated>1696817158144</updated>
+    </task>
+    <task id="LOCAL-00214" summary="v4.0.2&#10;1. 完善命令行参数解析">
+      <created>1696831301875</created>
+      <option name="number" value="00214" />
+      <option name="presentableId" value="LOCAL-00214" />
+      <option name="project" value="LOCAL" />
+      <updated>1696831301875</updated>
+    </task>
+    <task id="LOCAL-00215" summary="v4.0.2&#10;1. 完善命令行参数解析">
+      <created>1696831815915</created>
+      <option name="number" value="00215" />
+      <option name="presentableId" value="LOCAL-00215" />
+      <option name="project" value="LOCAL" />
+      <updated>1696831815915</updated>
+    </task>
+    <task id="LOCAL-00216" summary="v4.0.2&#10;1. 完善命令行参数解析">
+      <created>1696843047163</created>
+      <option name="number" value="00216" />
+      <option name="presentableId" value="LOCAL-00216" />
+      <option name="project" value="LOCAL" />
+      <updated>1696843047163</updated>
+    </task>
+    <option name="localTasksCounter" value="217" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -893,7 +921,6 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
-    <MESSAGE value="v3.0.2&#10;优化日志级别" />
     <MESSAGE value="v3.0.2&#10;1，简单web 客户端demo&#10;2，优化代码" />
     <MESSAGE value="v3.0.2&#10;1，web 客户端简单demo,增加群主标识" />
     <MESSAGE value="v3.0.2&#10;1，web 客户端简单demo" />
@@ -918,25 +945,28 @@
     <MESSAGE value="v4.0.1&#10;1. 添加日志全局链路" />
     <MESSAGE value="v4.0.1&#10;1. 优化日志全局链路" />
     <MESSAGE value="v4.0.2&#10;1. 优化校验代码&#10;2. 添加全局异常处理&#10;3. 新增命令行参数解析（待完善）" />
-    <option name="LAST_COMMIT_MESSAGE" value="v4.0.2&#10;1. 优化校验代码&#10;2. 添加全局异常处理&#10;3. 新增命令行参数解析（待完善）" />
+    <MESSAGE value="v4.0.2&#10;1. 完善命令行参数解析" />
+    <option name="LAST_COMMIT_MESSAGE" value="v4.0.2&#10;1. 完善命令行参数解析" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
       <breakpoints>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>jar://D:/repository/io/netty/netty-all/4.1.63.Final/netty-all-4.1.63.Final-sources.jar!/io/netty/util/concurrent/SingleThreadEventExecutor.java</url>
-          <line>428</line>
-          <option name="timeStamp" value="519" />
+        <line-breakpoint enabled="true" suspend="THREAD" type="java-line">
+          <condition expression="packet.getMessageType() == 6" language="JAVA" />
+          <url>file://$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/GroupChatMessageProcessor.java</url>
+          <line>101</line>
+          <option name="timeStamp" value="574" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="java-line">
+          <condition expression="packet.getMessageType() == 6" language="JAVA" />
+          <url>file://$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/PacketClusterRouterHandler.java</url>
+          <line>42</line>
+          <option name="timeStamp" value="576" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <url>jar://D:/repository/io/netty/netty-all/4.1.63.Final/netty-all-4.1.63.Final-sources.jar!/io/netty/util/concurrent/AbstractEventExecutor.java</url>
-          <line>163</line>
-          <option name="timeStamp" value="520" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>jar://D:/repository/io/netty/netty-all/4.1.63.Final/netty-all-4.1.63.Final-sources.jar!/io/netty/util/concurrent/SingleThreadEventExecutor.java</url>
-          <line>238</line>
-          <option name="timeStamp" value="531" />
+          <url>file://$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/MessageHelper.java</url>
+          <line>141</line>
+          <option name="timeStamp" value="580" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
@@ -948,7 +978,7 @@
       </pinned-members>
     </pin-to-top-manager>
     <watches-manager>
-      <inline-watch fileUrl="file://$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/protocol/Protocol.java" line="96">
+      <inline-watch fileUrl="file://$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/protocol/Protocol.java" line="94">
         <watch expression="MDC.get(&quot;trace-id&quot;)" language="JAVA" custom="org.slf4j.MDC" />
       </inline-watch>
     </watches-manager>

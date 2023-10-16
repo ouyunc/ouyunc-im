@@ -3,6 +3,7 @@ package com.ouyunc.im.processor;
 
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.im.base.LoginUserInfo;
+import com.ouyunc.im.constant.enums.DeviceEnum;
 import com.ouyunc.im.constant.enums.MessageContentEnum;
 import com.ouyunc.im.constant.enums.MessageEnum;
 import com.ouyunc.im.context.IMServerContext;
@@ -10,9 +11,8 @@ import com.ouyunc.im.helper.MessageHelper;
 import com.ouyunc.im.helper.UserHelper;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.Message;
+import com.ouyunc.im.packet.message.Target;
 import com.ouyunc.im.packet.message.content.ClientQosNotifyContent;
-import com.ouyunc.im.utils.IdentityUtil;
-import com.ouyunc.im.utils.SocketAddressUtil;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,11 +58,12 @@ public class QosMessageProcessor extends AbstractMessageProcessor{
             }
             // 获取目标服务对应的服务地址
             String targetServerAddress = loginUserInfo.getLoginServerAddress();
+            Target target = Target.newBuilder().targetIdentity(to).deviceEnum(DeviceEnum.getDeviceEnumByValue(loginDeviceType)).targetServerAddress(targetServerAddress).build();
             if (IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(targetServerAddress) || !IMServerContext.SERVER_CONFIG.isClusterEnable()) {
-                MessageHelper.sendMessage(packet, IdentityUtil.generalComboIdentity(to, loginDeviceType));
+                MessageHelper.sendMessage(packet, target);
                 return;
             }
-            MessageHelper.deliveryMessage(packet, SocketAddressUtil.convert2SocketAddress(targetServerAddress));
+            MessageHelper.deliveryMessage(packet, target);
         });
         // 这里如果返回ack给发送方，如果发送方不在线了，则不进行消息存储，问题不大。（可能造成的原因是：等发送方恢复在线了，可能会重复发送一条之前已经成功的消息，这个时候客户端需要做去重处理）
     }

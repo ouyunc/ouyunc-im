@@ -1,5 +1,6 @@
 package com.ouyunc.im.packet.message;
 
+import com.ouyunc.im.packet.Packet;
 import io.protostuff.Tag;
 
 import java.io.Serializable;
@@ -8,7 +9,7 @@ import java.io.Serializable;
  * @Author fangzhenxun
  * @Description: 自定义Immessage
  **/
-public class Message implements Serializable {
+public class Message implements Serializable,Cloneable {
     private static final long serialVersionUID = 102;
 
     /**
@@ -129,6 +130,17 @@ public class Message implements Serializable {
         this.to = to;
         this.contentType = contentType;
         this.createTime = createTime;
+    }
+
+    @Override
+    public Message clone(){
+        Message o = null;
+        try {
+            o = (Message) super.clone();
+        } catch (CloneNotSupportedException e) {
+            e.printStackTrace();
+        }
+        return o;
     }
 
     @Override

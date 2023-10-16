@@ -7,14 +7,13 @@ import com.ouyunc.im.helper.MessageHelper;
 import com.ouyunc.im.innerclient.pool.IMInnerClientPool;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.Message;
+import com.ouyunc.im.packet.message.Target;
 import com.ouyunc.im.utils.SnowflakeUtil;
 import com.ouyunc.im.utils.SocketAddressUtil;
 import com.ouyunc.im.utils.SystemClock;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.net.InetSocketAddress;
 
 /**
  * @Author fangzhenxun
@@ -41,20 +40,20 @@ public class SynAckMessageProcessor extends AbstractMessageProcessor{
         // 需要判断收到的消息是目的地是否是本服务器，如果不是在次将消息包传递出去，如果是则处理
         int contentType = synAckMessage.getContentType();
         // 发送端服务器地址：ip:port
-        final String remoteServerAddressStr = synAckMessage.getFrom();
-        log.info("接收到远端IM服务：{}的 {} 请求", remoteServerAddressStr, MessageContentEnum.prototype(contentType).name());
-        final InetSocketAddress remoteServerAddress = SocketAddressUtil.convert2SocketAddress(remoteServerAddressStr);
+        final String remoteServerAddress = synAckMessage.getFrom();
+        log.info("接收到远端IM服务：{}的 {} 请求", remoteServerAddress, MessageContentEnum.prototype(contentType).name());
 
         // syn 可能是经过其他服务转发的，回去的ack可能是经过其他服务转发的
         if (MessageContentEnum.SYN_CONTENT.type() == contentType) {
             synAckMessage.setContentType(MessageContentEnum.ACK_CONTENT.type());
             synAckMessage.setFrom(IMServerContext.SERVER_CONFIG.getLocalServerAddress());
-            synAckMessage.setTo(remoteServerAddressStr);
+            synAckMessage.setTo(remoteServerAddress);
             synAckMessage.setCreateTime(SystemClock.now());
             packet.setPacketId(SnowflakeUtil.nextId());
             packet.setIp(IMServerContext.SERVER_CONFIG.getLocalHost());
             // 这里需要使用客户端连接池来操作，因为可能ctx已经关闭了,使用异步传递
-            MessageHelper.sendMessageSync(packet, remoteServerAddressStr);
+            Target target = Target.newBuilder().targetIdentity(remoteServerAddress).build();
+            MessageHelper.sendMessageSync(packet, target);
             // 下面是解决集群中原有服务是如何发现新加入集群的服务的
             // 判断发到syn的服务是否在 全局服务注册表中，如果不在判断该服务的合法性，如果合法，尝试发送给对方syn进行探测，如果成功则将新加入集群中的服务添加到激活的路由表中
             if (IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.get(remoteServerAddress) == null && IMServerContext.CLUSTER_GLOBAL_SERVER_REGISTRY_TABLE.get(remoteServerAddress) == null) {
@@ -64,7 +63,7 @@ public class SynAckMessageProcessor extends AbstractMessageProcessor{
                 synAckMessage.setContentType(MessageContentEnum.SYN_CONTENT.type());
                 packet.setPacketId(SnowflakeUtil.nextId());
                 // 内部客户端连接池异步传递消息 syn ,尝试所有的路径去保持连通
-                MessageHelper.sendMessage(packet, remoteServerAddressStr);
+                MessageHelper.sendMessage(packet, target);
             }
         }
         if (MessageContentEnum.ACK_CONTENT.type() == contentType) {
@@ -74,7 +73,7 @@ public class SynAckMessageProcessor extends AbstractMessageProcessor{
             // 这一步完成了两个操作:
             // 1，将remoteServerAddress 获取channel pool,
             // 2，如果之前存在该remoteServerAddress 则不进行存储操作，否则存储该channelpool
-            IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.putIfAbsent(remoteServerAddress, IMInnerClientPool.singleClientChannelPoolMap.get(remoteServerAddress));
+            IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.putIfAbsent(remoteServerAddress, IMInnerClientPool.singleClientChannelPoolMap.get(SocketAddressUtil.convert2SocketAddress(remoteServerAddress)));
         }
     }
 

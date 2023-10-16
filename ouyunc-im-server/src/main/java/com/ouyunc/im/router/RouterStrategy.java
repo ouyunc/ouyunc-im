@@ -5,7 +5,6 @@ import com.ouyunc.im.packet.Packet;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import jodd.util.concurrent.ThreadFactoryBuilder;
 
-import java.net.InetSocketAddress;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -24,5 +23,5 @@ public interface RouterStrategy {
      * @param
      * @return io.netty.channel.pool.ChannelPool
      */
-    InetSocketAddress route(Packet packet, InetSocketAddress toSocketAddress);
+    String route(Packet packet, String toServerAddress);
 }

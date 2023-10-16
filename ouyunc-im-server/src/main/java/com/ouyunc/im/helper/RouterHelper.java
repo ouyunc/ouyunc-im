@@ -6,8 +6,6 @@ import com.ouyunc.im.router.BacktrackRouterStrategy;
 import com.ouyunc.im.router.RandomRouterStrategy;
 import com.ouyunc.im.router.RouterStrategy;
 
-import java.net.InetSocketAddress;
-
 /**
  * @Author fangzhenxun
  * @Description: 集群中的消息路由助手,按照一定策略，随机/最优, 默认是随机
@@ -40,8 +38,8 @@ public class RouterHelper {
      * @param
      * @return io.netty.channel.pool.ChannelPool
      */
-    public static InetSocketAddress route(Packet packet, InetSocketAddress toSocketAddress) {
-        return routerStrategy.route(packet, toSocketAddress);
+    public static String route(Packet packet, String toServerAddress) {
+        return routerStrategy.route(packet, toServerAddress);
     }
 
 }

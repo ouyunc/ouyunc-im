@@ -14,9 +14,9 @@ import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.ExtraMessage;
 import com.ouyunc.im.packet.message.InnerExtraData;
 import com.ouyunc.im.packet.message.Message;
+import com.ouyunc.im.packet.message.Target;
 import com.ouyunc.im.protocol.Protocol;
 import com.ouyunc.im.utils.IdentityUtil;
-import com.ouyunc.im.utils.SocketAddressUtil;
 import com.ouyunc.im.utils.SystemClock;
 import io.netty.channel.Channel;
 import io.netty.channel.pool.ChannelPool;
@@ -25,10 +25,10 @@ import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import jodd.util.concurrent.ThreadFactoryBuilder;
+import org.apache.commons.lang3.SerializationUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 
@@ -55,7 +55,7 @@ public class MessageHelper {
     public static void doQos(String from, Packet packet) {
         log.info("服务端正在回复from: {} ackPacket: {}", from, packet);
         // 异步直接发送
-        MessageHelper.sendMessage(new Packet(packet.getProtocol(), packet.getProtocolVersion(), packet.getPacketId(), DeviceEnum.PC_OTHER.getValue(), NetworkEnum.OTHER.getValue(), IMServerContext.SERVER_CONFIG.getLocalHost(), MessageEnum.IM_QOS.getValue(), packet.getEncryptType(), packet.getSerializeAlgorithm(),  new Message(IMServerContext.SERVER_CONFIG.getLocalServerAddress(), from, MessageContentEnum.SERVER_QOS_ACK_CONTENT.type(), String.valueOf(packet.getPacketId()), SystemClock.now())), IdentityUtil.generalComboIdentity(from, packet.getDeviceType()));
+        MessageHelper.sendMessage(new Packet(packet.getProtocol(), packet.getProtocolVersion(), packet.getPacketId(), DeviceEnum.PC_OTHER.getValue(), NetworkEnum.OTHER.getValue(), IMServerContext.SERVER_CONFIG.getLocalHost(), MessageEnum.IM_QOS.getValue(), packet.getEncryptType(), packet.getSerializeAlgorithm(),  new Message(IMServerContext.SERVER_CONFIG.getLocalServerAddress(), from, MessageContentEnum.SERVER_QOS_ACK_CONTENT.type(), String.valueOf(packet.getPacketId()), SystemClock.now())), Target.newBuilder().targetIdentity(from).deviceEnum(DeviceEnum.getDeviceEnumByValue(packet.getDeviceType())).build());
     }
 
 
@@ -68,9 +68,9 @@ public class MessageHelper {
         for (LoginUserInfo loginUserInfo : loginUserInfos) {
             // 走消息传递,设置登录设备类型
             if (IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(loginUserInfo.getLoginServerAddress()) || !IMServerContext.SERVER_CONFIG.isClusterEnable()) {
-                MessageHelper.sendMessage(packet, IdentityUtil.generalComboIdentity(loginUserInfo.getIdentity(), loginUserInfo.getDeviceEnum().getName()));
+                MessageHelper.sendMessage(packet, Target.newBuilder().targetIdentity(loginUserInfo.getIdentity()).deviceEnum(loginUserInfo.getDeviceEnum()).build());
             } else {
-                MessageHelper.deliveryMessage(packet, SocketAddressUtil.convert2SocketAddress(loginUserInfo.getLoginServerAddress()));
+                MessageHelper.deliveryMessage(packet, Target.newBuilder().targetIdentity(loginUserInfo.getIdentity()).targetServerAddress(loginUserInfo.getLoginServerAddress()).deviceEnum(loginUserInfo.getDeviceEnum()).build());
             }
         }
     }
@@ -80,24 +80,26 @@ public class MessageHelper {
      * @Author fangzhenxun
      * @Description 异步发送消息
      * @param packet
-     * @param to 组合后的接收者,唯一用户表示，手机号，身份证号码，token，邮箱
+     * @param target 组合后的接收者,唯一用户表示，手机号，身份证号码，token，邮箱
      * @return void
      */
-    public static void sendMessage(Packet packet, String to) {
+    public static void sendMessage(Packet packet, Target target) {
         // 异步提交
-        EVENT_EXECUTORS.execute(() -> sendMessageSync(packet, to));
+        EVENT_EXECUTORS.execute(() -> sendMessageSync(packet, target));
     }
 
     /**
      * @Author fangzhenxun
      * @Description 同步发送消息
-     * @param packet
-     * @param to 接收者
+     * @param packet0
+     * @param target0 接收者
      * @return void
      */
-    public static void sendMessageSync(Packet packet, String to) {
-        log.info("开始给 {} 发送消息packet: {} ", to, packet);
-        if (to == null) {
+    public static void sendMessageSync(Packet packet0, Target target0) {
+        Packet packet = packet0.clone();
+        Target target = target0.clone();
+        log.info("开始给 {} 发送消息packet: {} ", target, packet);
+        if (target == null) {
             throw new IMException("消息接收者不能为空！");
         }
         // 判断是什么类型的协议packet,然后交给具体的协议去处理
@@ -110,28 +112,35 @@ public class MessageHelper {
             }
             message.setExtra(extra);
         }
+        String to = target.getTargetIdentity();
+        // 如果消息类型是集群心跳
+        if (MessageEnum.SYN_ACK.getValue() != packet.getMessageType()) {
+            to =  IdentityUtil.generalComboIdentity(target.getTargetIdentity(), target.getDeviceEnum());
+        }
         Protocol.prototype(packet.getProtocol(), packet.getProtocolVersion()).doSendMessage(packet, to);
     }
 
         /**
-         * @param toSocketAddress
+         * @param target 目标服务
          * @param packet
          * @return void
          * @Author fangzhenxun
          * @Description 异步  传递消息，根据服务端的ip包装成InetSocketAddress
          */
-    public static void deliveryMessage(Packet packet, InetSocketAddress toSocketAddress) {
-        EVENT_EXECUTORS.execute(() -> deliveryMessageSync(packet, toSocketAddress));
+    public static void deliveryMessage(Packet packet, Target target) {
+        EVENT_EXECUTORS.execute(() -> deliveryMessageSync(packet, target));
     }
 
     /**
-     * @param toSocketAddress  目标服务器地址
-     * @param packet 消息包
+     * @param target0  目标服务
+     * @param packet0 消息包
      * @return void
      * @Author fangzhenxun
      * @Description 同步传递消息，根据服务端的ip包装成InetSocketAddress
      */
-    public static void deliveryMessageSync(Packet packet,InetSocketAddress toSocketAddress) {
+    public static void deliveryMessageSync(Packet packet0, Target target0) {
+        Packet packet = packet0.clone();
+        Target target = target0.clone();
         // 成功才将上个路由地址改成本地，异常会在异常处理中获取上个路由服务地址及设置
         // 获取消息扩展消息
         Message message = (Message) packet.getMessage();
@@ -148,19 +157,19 @@ public class MessageHelper {
         }
         // 判断是否是首次在集群间传递消息
         if (!innerExtraData.isDelivery()) {
-            // 首次进行传递时，将目标主机和所登录的设备进行设置
-            innerExtraData.setDeviceEnum(DeviceEnum.getDeviceEnumByValue(packet.getDeviceType()));
-            innerExtraData.setTargetServerAddress(SocketAddressUtil.convert2HostPort(toSocketAddress));
+            // 首次进行传递时，将目标以及目标主机和所登录的设备进行设置
             innerExtraData.setDelivery(true);
+            innerExtraData.setTarget(target);
             extraMessage.setOutExtraData(message.getExtra());
             extraMessage.setInnerExtraData(innerExtraData);
             message.setExtra(JSON.toJSONString(extraMessage));
         }
-        log.info("正在投递消息packet: {} 到服务: {} 上 ...",packet, toSocketAddress);
+        String toServerAddress = target.getTargetServerAddress();
+        log.info("正在投递消息packet: {} 到服务: {} 上 ...",packet, toServerAddress);
         // 将本机地址作为上一个路由服务地址传递过去
         // 先从存活的注册表中查找（防止有新添加集群中的服务），然后再从全局中找到最近的服务;
         // 重要！重要！重要！，这里是从channel pool 池中或的的channel(该channel的pipline 是内部协议的处理链，也就是说通过池中拿到的channel 所发送的消息，无论协议类型是什么都只会走内部的协议处理器，与协议类型无关),
-        ChannelPool channelPool = IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.get(toSocketAddress);
+        ChannelPool channelPool = IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.get(toServerAddress);
         // 如果从存活的服务注册表中获取不到channelPool 则进行路由其他服务去达到消息目的
         if (channelPool == null) {
             // do something
@@ -168,8 +177,8 @@ public class MessageHelper {
             // 1,消息接收端是不在集群中的服务（非法的服务地址）,不予考虑;
             // 2,消息接收端是后来加入的集群中的服务，在旧的集群中可能由于部分服务之间网络不通导致没有该服务记录保存; 此时的处理方式是路由到其他可用服务上处理
             // 3,两个服务不直接连通，须通过中间服务做中转
-            log.warn("获取不到消息需要到达的服务: {}",SocketAddressUtil.convert2HostPort(toSocketAddress));
-            exceptionHandle(packet, toSocketAddress);
+            log.warn("获取不到消息需要到达的服务: {}", toServerAddress);
+            exceptionHandle(packet, target);
             return;
         }
         // 异步获取 channel
@@ -204,7 +213,7 @@ public class MessageHelper {
                         // 重新封装路由表信息
                         // do something
                         // 重新选择一个新的集群中的服务去路由，直到找到通的或没有任何一个连通的结束
-                        exceptionHandle(packet, toSocketAddress);
+                        exceptionHandle(packet, target);
                     }
 
                 }
@@ -219,17 +228,18 @@ public class MessageHelper {
      * @Author fangzhenxun
      * @Description 异常数据的处理
      * @param packet
-     * @param toSocketAddress
+     * @param target
      * @return void
      */
-    private static void exceptionHandle(Packet packet, InetSocketAddress toSocketAddress) {
+    private static void exceptionHandle(Packet packet, Target target) {
         // 通过路由助手，找到一个可用的服务连接，如果找不到最后会这里处理，重试，下线，等操作
-        InetSocketAddress availableSocketAddress = RouterHelper.route(packet, toSocketAddress);
-        if (availableSocketAddress == null) {
+        String nextAvailableSocketAddress = RouterHelper.route(packet, target.getTargetServerAddress());
+        if (nextAvailableSocketAddress == null) {
             return;
         }
-        // 重新传递消息
-        deliveryMessage(packet,availableSocketAddress);
+        // 设置可用的下个目标服务
+        target.setTargetServerAddress(nextAvailableSocketAddress);
+        deliveryMessage(packet,  target);
     }
 
 }

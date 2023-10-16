@@ -7,8 +7,6 @@ import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.ExtraMessage;
 import com.ouyunc.im.packet.message.InnerExtraData;
 import com.ouyunc.im.packet.message.Message;
-import com.ouyunc.im.utils.IdentityUtil;
-import com.ouyunc.im.utils.SocketAddressUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import org.slf4j.Logger;
@@ -36,12 +34,13 @@ public class PacketClusterRouterHandler extends SimpleChannelInboundHandler<Pack
             InnerExtraData innerExtraData = extraMessage.getInnerExtraData();
             // 判断是否从其他服务路由过来的额消息
             if (innerExtraData != null && innerExtraData.isDelivery()) {
+                log.info("{}   === 接收到集群的消息===》  {}" ,IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(innerExtraData.getTarget().getTargetServerAddress()),JSON.toJSONString(innerExtraData));
                 //这里上一个if 已经做了判断，该服务肯定开启了集群，否则不会走到这里的，所以这里就不判断了。  || !IMServerContext.SERVER_CONFIG.isClusterEnable()
-                if (IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(innerExtraData.getTargetServerAddress())) {
-                    MessageHelper.sendMessage(packet, IdentityUtil.generalComboIdentity(message.getTo(), innerExtraData.getDeviceEnum().getName()));
+                if (IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(innerExtraData.getTarget().getTargetServerAddress())) {
+                    MessageHelper.sendMessage(packet, innerExtraData.getTarget());
                     return;
                 }
-                MessageHelper.deliveryMessage(packet, SocketAddressUtil.convert2SocketAddress(innerExtraData.getTargetServerAddress()));
+                MessageHelper.deliveryMessage(packet, innerExtraData.getTarget());
                 return;
             }
         }

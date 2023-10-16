@@ -4,12 +4,12 @@ import com.alibaba.ttl.TransmittableThreadLocal;
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.collect.Sets;
-import com.ouyunc.im.cache.ICache;
-import com.ouyunc.im.cache.l1.distributed.redis.RedisDistributedL1Cache;
-import com.ouyunc.im.cache.l1.local.caffeine.CaffeineLocalL1Cache;
 import com.ouyunc.im.IMServer;
 import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.base.MissingPacket;
+import com.ouyunc.im.cache.ICache;
+import com.ouyunc.im.cache.l1.distributed.redis.RedisDistributedL1Cache;
+import com.ouyunc.im.cache.l1.local.caffeine.CaffeineLocalL1Cache;
 import com.ouyunc.im.config.IMServerConfig;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -17,7 +17,6 @@ import io.netty.channel.pool.ChannelPool;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-import java.net.InetSocketAddress;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -58,7 +57,7 @@ public class IMServerContext extends IMContext{
     /**
      * IM 集群服务注册表，会动态变化，可能这里的数据会比CLUSTER_GLOBAL_SERVER_REGISTRY_TABLE 中的数据多（原因: 有新的之前没有加入过集群的服务加入到集群中，会更新到这里）
      */
-    public static CaffeineLocalL1Cache<InetSocketAddress, ChannelPool> CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE = new CaffeineLocalL1Cache<>("CLUSTER_SERVER_REGISTRY_TABLE", Caffeine.newBuilder().build(new CacheLoader() {
+    public static CaffeineLocalL1Cache<String, ChannelPool> CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE = new CaffeineLocalL1Cache<>("CLUSTER_SERVER_REGISTRY_TABLE", Caffeine.newBuilder().build(new CacheLoader() {
         @Nullable
         @Override
         public Object load(@NonNull Object o) throws Exception {
@@ -74,7 +73,7 @@ public class IMServerContext extends IMContext{
     /**
      * IM 保存全局服务连接，一般保持不变为集群中的所有服务
      */
-    public static CaffeineLocalL1Cache<InetSocketAddress, ChannelPool> CLUSTER_GLOBAL_SERVER_REGISTRY_TABLE = new CaffeineLocalL1Cache<>("CLUSTER_GLOBAL_SERVER_REGISTRY_TABLE", Caffeine.newBuilder().build(new CacheLoader() {
+    public static CaffeineLocalL1Cache<String, ChannelPool> CLUSTER_GLOBAL_SERVER_REGISTRY_TABLE = new CaffeineLocalL1Cache<>("CLUSTER_GLOBAL_SERVER_REGISTRY_TABLE", Caffeine.newBuilder().build(new CacheLoader() {
         @Nullable
         @Override
         public Object load(@NonNull Object o) throws Exception {
@@ -89,7 +88,7 @@ public class IMServerContext extends IMContext{
     /**
      * 内置客户端在保活处理中，发送syn在一定时间内没有接收到对方返回的ack的次数
      */
-    public static ICache<InetSocketAddress, AtomicInteger> CLUSTER_INNER_CLIENT_MISS_ACK_TIMES_CACHE = new CaffeineLocalL1Cache<>("CLUSTER_INNER_CLIENT_MISS_ACK_TIMES_CACHE", Caffeine.newBuilder().build(new CacheLoader() {
+    public static ICache<String, AtomicInteger> CLUSTER_INNER_CLIENT_MISS_ACK_TIMES_CACHE = new CaffeineLocalL1Cache<>("CLUSTER_INNER_CLIENT_MISS_ACK_TIMES_CACHE", Caffeine.newBuilder().build(new CacheLoader() {
         @Nullable
         @Override
         public Object load(@NonNull Object o) throws Exception {

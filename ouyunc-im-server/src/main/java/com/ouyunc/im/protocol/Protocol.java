@@ -2,7 +2,6 @@ package com.ouyunc.im.protocol;
 
 
 import com.ouyunc.im.base.MissingPacket;
-import com.ouyunc.im.config.IMServerConfig;
 import com.ouyunc.im.constant.CacheConstant;
 import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.constant.enums.MessageEnum;
@@ -19,8 +18,6 @@ import com.ouyunc.im.utils.SystemClock;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
@@ -149,11 +146,10 @@ public enum Protocol {
          */
         @Override
         public void doSendMessage(Packet packet, String to) {
-            InetSocketAddress remoteInetSocketAddress = SocketAddressUtil.convert2SocketAddress(to);
-            ChannelPool channelPool = MapUtil.mergerMaps(IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.asMap(), IMServerContext.CLUSTER_GLOBAL_SERVER_REGISTRY_TABLE.asMap()).get(remoteInetSocketAddress);;
+            ChannelPool channelPool = MapUtil.mergerMaps(IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.asMap(), IMServerContext.CLUSTER_GLOBAL_SERVER_REGISTRY_TABLE.asMap()).get(to);
             if (channelPool == null) {
-                log.warn("有新的服务加入集群，正在尝试与其确认ack,: {}",to);
-                channelPool = IMInnerClientPool.singleClientChannelPoolMap.get(remoteInetSocketAddress);
+                log.warn("有新的服务 {} 加入集群，正在尝试与其确认ack",to);
+                channelPool = IMInnerClientPool.singleClientChannelPoolMap.get(SocketAddressUtil.convert2SocketAddress(to));
             }
             ChannelPool finalChannelPool = channelPool;
             Future<Channel> channelFuture = finalChannelPool.acquire();

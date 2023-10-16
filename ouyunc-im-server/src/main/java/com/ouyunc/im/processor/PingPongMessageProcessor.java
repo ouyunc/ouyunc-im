@@ -1,6 +1,7 @@
 package com.ouyunc.im.processor;
 
 import com.ouyunc.im.constant.IMConstant;
+import com.ouyunc.im.constant.enums.DeviceEnum;
 import com.ouyunc.im.constant.enums.MessageContentEnum;
 import com.ouyunc.im.constant.enums.MessageEnum;
 import com.ouyunc.im.context.IMServerContext;
@@ -8,7 +9,7 @@ import com.ouyunc.im.helper.MessageHelper;
 import com.ouyunc.im.helper.UserHelper;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.Message;
-import com.ouyunc.im.utils.IdentityUtil;
+import com.ouyunc.im.packet.message.Target;
 import com.ouyunc.im.utils.SnowflakeUtil;
 import com.ouyunc.im.utils.SystemClock;
 import io.netty.channel.ChannelHandlerContext;
@@ -43,7 +44,6 @@ public class PingPongMessageProcessor extends AbstractMessageProcessor{
         Message heartBeatMessage = (Message) packet.getMessage();
         String from = heartBeatMessage.getFrom();
         byte loginDeviceType = packet.getDeviceType();
-        final String comboIdentity = IdentityUtil.generalComboIdentity(from, loginDeviceType);
         if (MessageContentEnum.PING_CONTENT.type() == heartBeatMessage.getContentType()) {
             // 可能在三次之内再次发起心跳，此时需要清除 之前心跳超时次数的历史记录
             AttributeKey<Integer> channelTagReadTimeoutKey = AttributeKey.valueOf(IMConstant.CHANNEL_TAG_READ_TIMEOUT);
@@ -56,7 +56,7 @@ public class PingPongMessageProcessor extends AbstractMessageProcessor{
             packet.setPacketId(SnowflakeUtil.nextId());
             packet.setIp(IMServerContext.SERVER_CONFIG.getLocalHost());
             // 写回的是websocket还是其他类型的数据
-            MessageHelper.sendMessage(packet, comboIdentity);
+            MessageHelper.sendMessage(packet, Target.newBuilder().targetIdentity(from).deviceEnum(DeviceEnum.getDeviceEnumByValue(loginDeviceType)).build());
         }else {
             // 非法心跳类型,解绑用户
             log.error("非法心跳内容类型: {},正在解绑用户channel: {}", heartBeatMessage.getContentType(), ctx.channel().id().asShortText());

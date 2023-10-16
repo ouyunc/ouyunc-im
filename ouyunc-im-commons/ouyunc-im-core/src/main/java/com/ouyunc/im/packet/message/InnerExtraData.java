@@ -1,7 +1,6 @@
 package com.ouyunc.im.packet.message;
 
 import com.ouyunc.im.base.RoutingTable;
-import com.ouyunc.im.constant.enums.DeviceEnum;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -29,16 +28,9 @@ public class InnerExtraData implements Serializable {
       */
     private String fromServerAddress;
 
-     /**
-     * 最终接收者所在服务器地址：ip:port
-     */
-    private String targetServerAddress;
 
 
-    /**
-     * 最终接收者当前所使用的的登录设备类型,需要在一开始调用方法的时候设置进来
-     */
-    private DeviceEnum deviceEnum;
+    private Target target;
 
     /**
      * 消息路由表
@@ -56,8 +48,15 @@ public class InnerExtraData implements Serializable {
         this.routingTables = null;
         this.isDelivery = false;
         this.fromServerAddress = null;
-        this.targetServerAddress = null;
-        this.deviceEnum = null;
+        this.target=null;
+    }
+
+    public Target getTarget() {
+        return target;
+    }
+
+    public void setTarget(Target target) {
+        this.target = target;
     }
 
     public int getCurrentRetry() {
@@ -92,21 +91,6 @@ public class InnerExtraData implements Serializable {
         this.fromServerAddress = fromServerAddress;
     }
 
-    public String getTargetServerAddress() {
-        return targetServerAddress;
-    }
-
-    public void setTargetServerAddress(String targetServerAddress) {
-        this.targetServerAddress = targetServerAddress;
-    }
-
-    public DeviceEnum getDeviceEnum() {
-        return deviceEnum;
-    }
-
-    public void setDeviceEnum(DeviceEnum deviceEnum) {
-        this.deviceEnum = deviceEnum;
-    }
 
     public InnerExtraData() {
     }

@@ -1,7 +1,6 @@
 package com.ouyunc.im.config;
 
 import com.ouyunc.im.constant.enums.RouterStrategyEnum;
-import com.ouyunc.im.innerclient.DefaultIMInnerClient;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.logging.LogLevel;
 import io.netty.util.NettyRuntime;
@@ -321,7 +320,7 @@ public class IMServerConfig extends IMConfig{
      * 多属性赋值使用建造者模式 https://www.cnblogs.com/scuwangjun/p/9699895.html
      */
     public static class Builder {
-        private static Logger log = LoggerFactory.getLogger(DefaultIMInnerClient.class);
+        private static Logger log = LoggerFactory.getLogger(Builder.class);
 
         /**
          * 默认server 端的绑定端口为6001

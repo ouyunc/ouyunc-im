@@ -21,12 +21,7 @@ import axios from 'axios'
 Vue.prototype.$axios = axios;
 // #endif
 
-// 引入消息message
-import {Message} from '@/common/js/ouyunc-message.js';
-// 引入 socket
-import Socket from '@/common/js/ouyunc-im-client-uniapp-sdk.js';
 
-import md5 from '@/common/js/md5.js';
 
 
 // 引入uview
@@ -35,6 +30,15 @@ Vue.use(uView)
 Vue.prototype.$request = request;
 // 將socket绑定到实例上
 Vue.prototype.$Socket = Socket;
+
+
+// 引入消息message
+import {Message} from '@/common/js/ouyunc-message.js';
+// 引入 socket
+import Socket from '@/common/js/ouyunc-im-client-uniapp-sdk.js';
+
+import md5 from '@/common/js/md5.js';
+
 
 // 绑定socket 的配置信息
 Vue.prototype.$SocketConfig = {

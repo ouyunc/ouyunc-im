@@ -11,13 +11,11 @@ import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.ExtraMessage;
 import com.ouyunc.im.packet.message.InnerExtraData;
 import com.ouyunc.im.packet.message.Message;
+import com.ouyunc.im.packet.message.Target;
 import com.ouyunc.im.utils.IdentityUtil;
-import com.ouyunc.im.utils.SocketAddressUtil;
 import com.ouyunc.im.utils.SystemClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.net.InetSocketAddress;
 
 /**
  * @Author fangzhenxun
@@ -49,7 +47,7 @@ public class IMRouteFailureProcessorThread implements Runnable {
         int currentRetry = innerExtraData.getCurrentRetry();
         currentRetry++;
         // 解析protocolBuf 寻找最终目标机, 清空消息中的列表，添加重试次数+1
-        InetSocketAddress targetSocketAddress = SocketAddressUtil.convert2SocketAddress(innerExtraData.getTargetServerAddress());
+        Target target = innerExtraData.getTarget();
         innerExtraData.setCurrentRetry(currentRetry);
         innerExtraData.setFromServerAddress(null);
         innerExtraData.setRoutingTables(null);
@@ -61,7 +59,7 @@ public class IMRouteFailureProcessorThread implements Runnable {
         if (currentRetry < IMServerContext.SERVER_CONFIG.getClusterMessageRetry()) {
             // 重试次数+1，清空消息中的曾经路由过的服务，封装消息，找到目标主机
             // retry 去处理
-            MessageHelper.deliveryMessage(packet, targetSocketAddress);
+            MessageHelper.deliveryMessage(packet, target);
             return;
         }
         // 如果重试之后还是出现服务不通，则进行服务的下线处理(这一步在内置客户端心跳保活时处理，这里不做服务下线的处理)，也就是将目标主机从本服务的注册表中删除（如果存在），其他服务上的注册表不做同步更新
@@ -70,7 +68,7 @@ public class IMRouteFailureProcessorThread implements Runnable {
         if (packet.getMessageType() == MessageEnum.IM_PRIVATE_CHAT.getValue() || packet.getMessageType() == MessageEnum.IM_GROUP_CHAT.getValue()) {
             // 对于多端的情况，如果已经有
             long now = SystemClock.now();
-            IMServerContext.MISSING_MESSAGES_CACHE.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.FAIL + CacheConstant.FROM + message.getFrom() + CacheConstant.COLON + CacheConstant.TO + IdentityUtil.generalComboIdentity(message.getTo(), innerExtraData.getDeviceEnum().getName()), new MissingPacket(packet, IMServerContext.SERVER_CONFIG.getLocalServerAddress(), now), now);
+            IMServerContext.MISSING_MESSAGES_CACHE.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.FAIL + CacheConstant.FROM + message.getFrom() + CacheConstant.COLON + CacheConstant.TO + IdentityUtil.generalComboIdentity(message.getTo(), innerExtraData.getTarget().getDeviceEnum().getName()), new MissingPacket(packet, IMServerContext.SERVER_CONFIG.getLocalServerAddress(), now), now);
         }
         log.error("已经重试 {} 次,也没解决问题,该消息packetId : {}将被丢弃！",IMServerContext.SERVER_CONFIG.getClusterMessageRetry(), packet.getPacketId());
     }

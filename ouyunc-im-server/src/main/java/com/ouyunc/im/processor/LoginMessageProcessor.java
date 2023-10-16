@@ -18,6 +18,7 @@ import com.ouyunc.im.helper.MessageHelper;
 import com.ouyunc.im.helper.UserHelper;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.Message;
+import com.ouyunc.im.packet.message.Target;
 import com.ouyunc.im.packet.message.content.LoginContent;
 import com.ouyunc.im.packet.message.content.ServerNotifyContent;
 import com.ouyunc.im.utils.IdentityUtil;
@@ -116,7 +117,7 @@ public class LoginMessageProcessor extends AbstractMessageProcessor{
                 Message message = new Message(IMServerContext.SERVER_CONFIG.getLocalHost(), loginContent.getIdentity(), MessageContentEnum.SERVER_NOTIFY_CONTENT.type(), JSON.toJSONString(new ServerNotifyContent(String.format(IMConstant.REMOTE_LOGIN_NOTIFICATIONS, packet.getIp()))), SystemClock.now());
                 // 注意： 这里的原来的连接使用的序列化方式，应该是和新连接上的序列化方式一致，这里当成一致，当然不一致也可以做，后面遇到再改造
                 Packet notifyPacket = new Packet(packet.getProtocol(), packet.getProtocolVersion(), SnowflakeUtil.nextId(), DeviceEnum.PC_LINUX.getValue(), NetworkEnum.OTHER.getValue(), IMServerContext.SERVER_CONFIG.getLocalHost(), MessageEnum.IM_SERVER_NOTIFY.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), packet.getSerializeAlgorithm(),  message);
-                MessageHelper.sendMessageSync(notifyPacket, comboIdentity);
+                MessageHelper.sendMessageSync(notifyPacket, Target.newBuilder().targetIdentity(loginContent.getIdentity()).deviceEnum(DeviceEnum.getDeviceEnumByValue(packet.getDeviceType())).build());
                 IMServerContext.USER_REGISTER_TABLE.delete(comboIdentity);
                 IMServerContext.LOGIN_USER_INFO_CACHE.deleteHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + loginContent.getIdentity(), DeviceEnum.getDeviceNameByValue(packet.getDeviceType()));
                 bindCtx.close();

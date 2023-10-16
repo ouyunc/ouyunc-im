@@ -2,6 +2,7 @@ package com.ouyunc.im.packet;
 
 import com.alibaba.fastjson2.annotation.JSONField;
 import com.ouyunc.im.constant.IMConstant;
+import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.serialize.Long2StringSerializer;
 import io.protostuff.Tag;
 
@@ -12,7 +13,7 @@ import java.util.Objects;
  * @Author fangzhenxun
  * @Description: 协议包,在本服务中的传递的实体类
  **/
-public class Packet<T> implements Serializable {
+public class Packet<T> implements Serializable, Cloneable {
 
     /**
      * 1个字节,十进制数字 102
@@ -227,6 +228,18 @@ public class Packet<T> implements Serializable {
     @Override
     public int hashCode() {
         return Objects.hash(packetId);
+    }
+
+    @Override
+    public Packet clone(){
+        Packet o = null;
+        try {
+            o = (Packet) super.clone();
+            o.setMessage(((Message)this.message).clone());
+        } catch (CloneNotSupportedException e) {
+            e.printStackTrace();
+        }
+        return o;
     }
 
     @Override
