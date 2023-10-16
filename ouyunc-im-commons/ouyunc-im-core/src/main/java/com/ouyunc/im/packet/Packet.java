@@ -235,7 +235,9 @@ public class Packet<T> implements Serializable, Cloneable {
         Packet o = null;
         try {
             o = (Packet) super.clone();
-            o.setMessage(((Message)this.message).clone());
+            if (this.message != null) {
+                o.setMessage(((Message)this.message).clone());
+            }
         } catch (CloneNotSupportedException e) {
             e.printStackTrace();
         }
@@ -245,7 +247,7 @@ public class Packet<T> implements Serializable, Cloneable {
     @Override
     public String toString() {
         return "Packet{" +
-                "magic=" + magic +
+                "  magic=" + magic +
                 ", protocol=" + protocol +
                 ", protocolVersion=" + protocolVersion +
                 ", packetId=" + packetId +
@@ -255,7 +257,7 @@ public class Packet<T> implements Serializable, Cloneable {
                 ", serializeAlgorithm=" + serializeAlgorithm +
                 ", messageType=" + messageType +
                 ", messageLength=" + messageLength +
-                ", message=" + message.toString() +
+                ", message=" + (message !=null? message.toString(): null) +
                 '}';
     }
 }

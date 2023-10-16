@@ -25,7 +25,6 @@ import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import jodd.util.concurrent.ThreadFactoryBuilder;
-import org.apache.commons.lang3.SerializationUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
