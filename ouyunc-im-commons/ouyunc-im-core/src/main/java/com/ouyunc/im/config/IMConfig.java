@@ -14,6 +14,11 @@ public abstract class IMConfig {
     protected int port;
 
     /**
+     * 默认server 端的ip,可以不指定
+     */
+    protected String ip;
+
+    /**
      * 本地host地址，通过InetAddress.getLocalHost().getHostAddress()获取
      */
     protected String localHost;
@@ -35,6 +40,10 @@ public abstract class IMConfig {
      */
     protected String sslPrivateKey;
 
+    public String getIp() {
+        return ip == null ? localHost : ip;
+    }
+
     public int getPort() {
         return port;
     }
@@ -44,7 +53,7 @@ public abstract class IMConfig {
     }
 
     public String getLocalServerAddress() {
-        return localHost  + IMConstant.COLON_SPLIT + port;
+        return getIp()  + IMConstant.COLON_SPLIT + port;
     }
 
 

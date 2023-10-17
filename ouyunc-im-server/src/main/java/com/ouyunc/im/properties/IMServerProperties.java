@@ -20,6 +20,12 @@ public interface IMServerProperties extends Config {
     int port();
 
     /**
+     * 默认server 端的绑定的ip,如果不指定默认使用本地ip,一般为内网ip
+     */
+    @Key("im.server.ip")
+    String ip();
+
+    /**
      * 默认server 端websocket path 请求路径
      */
     @Key("im.server.websocket-path")

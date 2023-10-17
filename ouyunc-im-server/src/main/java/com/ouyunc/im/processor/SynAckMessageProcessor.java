@@ -50,7 +50,7 @@ public class SynAckMessageProcessor extends AbstractMessageProcessor{
             synAckMessage.setTo(remoteServerAddress);
             synAckMessage.setCreateTime(SystemClock.now());
             packet.setPacketId(SnowflakeUtil.nextId());
-            packet.setIp(IMServerContext.SERVER_CONFIG.getLocalHost());
+            packet.setIp(IMServerContext.SERVER_CONFIG.getIp());
             // 这里需要使用客户端连接池来操作，因为可能ctx已经关闭了,使用异步传递
             Target target = Target.newBuilder().targetIdentity(remoteServerAddress).build();
             MessageHelper.sendMessageSync(packet, target);

@@ -54,7 +54,7 @@ public class PingPongMessageProcessor extends AbstractMessageProcessor{
             heartBeatMessage.setContentType(MessageContentEnum.PONG_CONTENT.type());
             heartBeatMessage.setCreateTime(SystemClock.now());
             packet.setPacketId(SnowflakeUtil.nextId());
-            packet.setIp(IMServerContext.SERVER_CONFIG.getLocalHost());
+            packet.setIp(IMServerContext.SERVER_CONFIG.getIp());
             // 写回的是websocket还是其他类型的数据
             MessageHelper.sendMessage(packet, Target.newBuilder().targetIdentity(from).deviceEnum(DeviceEnum.getDeviceEnumByValue(loginDeviceType)).build());
         }else {

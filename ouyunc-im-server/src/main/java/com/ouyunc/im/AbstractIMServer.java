@@ -145,7 +145,7 @@ public abstract class AbstractIMServer implements IMServer{
                             if (imServerConfig.isClusterEnable()) {
                                 innerIMClient.configure(imServerConfig);
                             }
-                            log.info("IM server启动成功，其绑定地址:{} 端口号:{} 共花费:{} ms.",imServerConfig.getLocalHost(), imServerConfig.getPort(), (SystemClock.now()-startTimeStamp));
+                            log.info("IM server启动成功，其绑定地址:{} 端口号:{} 共花费:{} ms.",imServerConfig.getIp(), imServerConfig.getPort(), (SystemClock.now()-startTimeStamp));
                         }else {
                             log.error("IM server 启动失败！原因: {}", bindFuture.cause().getMessage());
                             throw new Exception(bindFuture.cause().getMessage());

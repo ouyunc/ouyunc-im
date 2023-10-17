@@ -43,12 +43,13 @@ public class StandardIMServer extends AbstractIMServer{
     @Override
     IMServerConfig loadProperties(String... args) {
         // 1,首先加载配置文件中的配置信息，然后处理系统变量，最后处理命令行参数；优先级：(命令行 > 系统 > 配置文件)
-        String host = Ip4Util.getLocalHost();
+        String localHost = Ip4Util.getLocalHost();
         IMServerProperties propertiesHelper = ConfigFactory.create(IMServerProperties.class, System.getProperties());
         IMServerConfig config = IMServerConfig.newBuilder()
                 .port(propertiesHelper.port())
+                .ip(propertiesHelper.ip())
                 .logLevel(propertiesHelper.logLevel())
-                .localHost(host)
+                .localHost(localHost)
                 .websocketPath(propertiesHelper.websocketPath())
                 .workThreads(propertiesHelper.workThreads())
                 .bossThreads(propertiesHelper.bossThreads())

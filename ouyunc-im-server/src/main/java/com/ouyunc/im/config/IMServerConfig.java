@@ -328,6 +328,11 @@ public class IMServerConfig extends IMConfig{
         private int port;
 
         /**
+         * 默认server 端的ip,可以不指定
+         */
+        protected String ip;
+
+        /**
          * 默认server 端websocket path 请求路径
          */
         private String websocketPath;
@@ -566,6 +571,11 @@ public class IMServerConfig extends IMConfig{
             return this;
         }
 
+        public Builder ip(String ip) {
+            this.ip = ip;
+            return this;
+        }
+
         public Builder bossThreads(int bossThreads) {
             this.bossThreads = bossThreads;
             return this;
@@ -760,6 +770,7 @@ public class IMServerConfig extends IMConfig{
         public IMServerConfig build() {
             IMServerConfig imServerConfig = new IMServerConfig();
             imServerConfig.port = this.port;
+            imServerConfig.ip = this.ip;
             imServerConfig.websocketPath = this.websocketPath;
             imServerConfig.logLevel = this.logLevel;
             imServerConfig.localHost = this.localHost;
@@ -806,12 +817,13 @@ public class IMServerConfig extends IMConfig{
     @Override
     public String toString() {
         return "IMServerConfig{" +
+                "\n , port=" + port +
+                "\n , ip=" + ip +
                 "\n , localHost='" + localHost + '\'' +
                 "\n , websocketPath='" + websocketPath + '\'' +
                 "\n , sslEnable=" + sslEnable +
                 "\n , sslCertificate='" + sslCertificate + '\'' +
                 "\n , sslPrivateKey='" + sslPrivateKey + '\'' +
-                "\n , port=" + port +
                 "\n , logLevel=" + logLevel +
                 "\n , bossThreads=" + bossThreads +
                 "\n , workThreads=" + workThreads +
