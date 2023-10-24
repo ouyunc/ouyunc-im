@@ -6,7 +6,7 @@
     <groupId>com.ouyunc</groupId>
     <artifactId>ouyunc-im</artifactId>
     <packaging>pom</packaging>
-    <version>4.0.0</version>
+    <version>4.0.3</version>
     <description>偶遇im是一款基于netty的即时通讯项目</description>
     <modules>
         <module>ouyunc-im-commons</module>

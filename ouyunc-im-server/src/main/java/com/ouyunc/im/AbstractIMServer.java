@@ -134,7 +134,7 @@ public abstract class AbstractIMServer implements IMServer{
                 }
             }
             // 因为bind() 是异步的，这里不用 bind().sync(); 而是添加监听器的方式进行回调
-            ChannelFuture channelFuture = bootstrap.bind(imServerConfig.getIp(), imServerConfig.getPort());
+            ChannelFuture channelFuture = bootstrap.bind(imServerConfig.getPort());
             // 添加监听器来监听是否启动成功,做额外工作
             channelFuture.addListener(new ChannelFutureListener() {
                 @Override
