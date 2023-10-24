@@ -60,10 +60,10 @@ public class QosMessageProcessor extends AbstractMessageProcessor{
             String targetServerAddress = loginUserInfo.getLoginServerAddress();
             Target target = Target.newBuilder().targetIdentity(to).deviceEnum(DeviceEnum.getDeviceEnumByValue(loginDeviceType)).targetServerAddress(targetServerAddress).build();
             if (IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(targetServerAddress) || !IMServerContext.SERVER_CONFIG.isClusterEnable()) {
-                MessageHelper.sendMessage(packet.clone(), target);
+                MessageHelper.sendMessage(packet, target);
                 return;
             }
-            MessageHelper.deliveryMessage(packet.clone(), target);
+            MessageHelper.deliveryMessage(packet, target);
         });
         // 这里如果返回ack给发送方，如果发送方不在线了，则不进行消息存储，问题不大。（可能造成的原因是：等发送方恢复在线了，可能会重复发送一条之前已经成功的消息，这个时候客户端需要做去重处理）
     }
