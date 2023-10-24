@@ -236,7 +236,9 @@ public class Packet<T> implements Serializable, Cloneable {
         try {
             o = (Packet) super.clone();
             if (this.message != null) {
-                o.setMessage(((Message)this.message).clone());
+                if (this.message instanceof Message) {
+                    o.setMessage(((Message)this.message).clone());
+                }
             }
         } catch (CloneNotSupportedException e) {
             e.printStackTrace();

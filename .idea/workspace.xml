@@ -9,18 +9,14 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v4.0.3&#10;1. 解决集群环境中群消息发送，收不到消息bug&#10;2. 优化代码">
+    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v4.0.3&#10;1. 添加集群环境中定制本机暴露ip&#10;2. 优化代码">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/config/IMConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/config/IMConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/Packet.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/Packet.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/AbstractIMServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/AbstractIMServer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/StandardIMServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/StandardIMServer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/config/IMServerConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/config/IMServerConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/OuyuncServerHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/OuyuncServerHandler.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/MessageHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/MessageHelper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/LoginMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/LoginMessageProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/PingPongMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/PingPongMessageProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/QosMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/QosMessageProcessor.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/SynAckMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/SynAckMessageProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/properties/IMServerProperties.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/properties/IMServerProperties.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/thread/IMInnerClientHeartbeatThread.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/thread/IMInnerClientHeartbeatThread.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/ouyunc-im-server.properties" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/ouyunc-im-server.properties" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -192,7 +188,7 @@
       <recent name="com.ouyunc.im.domain.bo" />
     </key>
   </component>
-  <component name="RunManager" selected="Application.Ip4Util">
+  <component name="RunManager" selected="Application.MessageHelper">
     <configuration name="HttpProtocolDispatcherHandler" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="com.ouyunc.im.handler.HttpProtocolDispatcherHandler" />
       <module name="ouyunc-im-server" />
@@ -258,8 +254,8 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Application.Ip4Util" />
         <item itemvalue="Application.MessageHelper" />
+        <item itemvalue="Application.Ip4Util" />
         <item itemvalue="Application.HttpProtocolDispatcherHandler" />
         <item itemvalue="Application.StandardIMServer" />
       </list>
@@ -505,13 +501,13 @@
       <workItem from="1697285628392" duration="36760000" />
       <workItem from="1697423479905" duration="120000" />
       <workItem from="1697424550639" duration="1033000" />
-    </task>
-    <task id="LOCAL-00169" summary="v3.1.0&#10;1，对比v3.0.2 过期离线消息的处理&#10;2，优化数据库处理逻辑&#10;3，定义消息格式处理，暂定在v4.0将packet数据也升级为protobuf">
-      <created>1680513213281</created>
-      <option name="number" value="00169" />
-      <option name="presentableId" value="LOCAL-00169" />
-      <option name="project" value="LOCAL" />
-      <updated>1680513213281</updated>
+      <workItem from="1697694238230" duration="143000" />
+      <workItem from="1697694508635" duration="1469000" />
+      <workItem from="1697789377194" duration="218000" />
+      <workItem from="1698024938678" duration="2299000" />
+      <workItem from="1698050283966" duration="62000" />
+      <workItem from="1698054050256" duration="611000" />
+      <workItem from="1698109746373" duration="2295000" />
     </task>
     <task id="LOCAL-00170" summary="v3.1.1-beta">
       <created>1682263692815</created>
@@ -849,7 +845,14 @@
       <option name="project" value="LOCAL" />
       <updated>1697417867342</updated>
     </task>
-    <option name="localTasksCounter" value="218" />
+    <task id="LOCAL-00218" summary="v4.0.3&#10;1. 添加集群环境中定制本机暴露ip&#10;2. 优化代码">
+      <created>1697503501805</created>
+      <option name="number" value="00218" />
+      <option name="presentableId" value="LOCAL-00218" />
+      <option name="project" value="LOCAL" />
+      <updated>1697503501805</updated>
+    </task>
+    <option name="localTasksCounter" value="219" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -910,7 +913,6 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
-    <MESSAGE value="v3.0.2&#10;1，web 客户端简单demo,增加群主标识" />
     <MESSAGE value="v3.0.2&#10;1，web 客户端简单demo" />
     <MESSAGE value="v3.0.2&#10;1，优化拉取离线消息的方式" />
     <MESSAGE value="v3.0.2&#10;1，优化拉取离线消息" />
@@ -935,7 +937,8 @@
     <MESSAGE value="v4.0.2&#10;1. 优化校验代码&#10;2. 添加全局异常处理&#10;3. 新增命令行参数解析（待完善）" />
     <MESSAGE value="v4.0.2&#10;1. 完善命令行参数解析" />
     <MESSAGE value="v4.0.3&#10;1. 解决集群环境中群消息发送，收不到消息bug&#10;2. 优化代码" />
-    <option name="LAST_COMMIT_MESSAGE" value="v4.0.3&#10;1. 解决集群环境中群消息发送，收不到消息bug&#10;2. 优化代码" />
+    <MESSAGE value="v4.0.3&#10;1. 添加集群环境中定制本机暴露ip&#10;2. 优化代码" />
+    <option name="LAST_COMMIT_MESSAGE" value="v4.0.3&#10;1. 添加集群环境中定制本机暴露ip&#10;2. 优化代码" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -945,11 +948,6 @@
           <url>file://$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/GroupChatMessageProcessor.java</url>
           <line>101</line>
           <option name="timeStamp" value="574" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/MessageHelper.java</url>
-          <line>136</line>
-          <option name="timeStamp" value="582" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>

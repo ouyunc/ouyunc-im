@@ -24,7 +24,7 @@ public class OuyuncServerHandler extends SimpleChannelInboundHandler<Packet> {
      */
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Packet packet) throws Exception {
-        log.info("自定义packet ouyunc 协议处理器 OuyuncServerHandler 正在处理packet= {} ...", packet);
+        log.info("OuyuncServerHandler 正在处理自定义ouyunc，协议包内容：  packet= {} ...", packet);
         IMProcessContext.MESSAGE_PROCESSOR.get(packet.getMessageType()).doProcess(ctx, packet);
     }
 }

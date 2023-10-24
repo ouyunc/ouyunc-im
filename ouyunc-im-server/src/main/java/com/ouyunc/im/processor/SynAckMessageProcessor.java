@@ -41,7 +41,7 @@ public class SynAckMessageProcessor extends AbstractMessageProcessor{
         int contentType = synAckMessage.getContentType();
         // 发送端服务器地址：ip:port
         final String remoteServerAddress = synAckMessage.getFrom();
-        log.info("接收到远端IM服务：{}的 {} 请求", remoteServerAddress, MessageContentEnum.prototype(contentType).name());
+        log.info("SynAckMessageProcessor 集群模式下,远端IM服务：{} 正在发起的 {} 请求", remoteServerAddress, MessageContentEnum.prototype(contentType).name());
 
         // syn 可能是经过其他服务转发的，回去的ack可能是经过其他服务转发的
         if (MessageContentEnum.SYN_CONTENT.type() == contentType) {
