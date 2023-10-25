@@ -36,7 +36,7 @@ public class HttpProtocolDispatcherHandler extends SimpleChannelInboundHandler<O
         if (msg instanceof FullHttpRequest) {
             FullHttpRequest request = (FullHttpRequest) msg;
             String uriStr = request.uri();
-            log.info("=================当前请求路径uri：{}=============================",uriStr);
+            log.info("当前请求路径uri：{}",uriStr);
             // 判断是否是websocket 的101 升级请求，如果是则升级为websocket协议
             if (isUpgradeToWebSocket(request)) {
                 URI uri = new URI(uriStr);

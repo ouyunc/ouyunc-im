@@ -3,6 +3,7 @@ package com.ouyunc.im.channel;
 import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.CacheConstant;
 import com.ouyunc.im.constant.IMConstant;
+import com.ouyunc.im.constant.enums.DeviceEnum;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.dispatcher.ProtocolDispatcher;
 import com.ouyunc.im.handler.IMLoggingHandler;
@@ -72,10 +73,14 @@ public class DefaultSocketChannelInitializer extends SocketChannelInitializer{
                         AttributeKey<LoginUserInfo> channelTagLoginKey = AttributeKey.valueOf(IMConstant.CHANNEL_TAG_LOGIN);
                         final LoginUserInfo loginUserInfo = socketChannel.attr(channelTagLoginKey).get();
                         if (loginUserInfo != null) {
-                            String comboIdentity = IdentityUtil.generalComboIdentity(loginUserInfo.getIdentity(), loginUserInfo.getDeviceEnum().getName());
-                            IMServerContext.LOGIN_USER_INFO_CACHE.deleteHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + loginUserInfo.getIdentity(), loginUserInfo.getDeviceEnum().getName());
-                            IMServerContext.USER_REGISTER_TABLE.delete(comboIdentity);
-                            IMServerContext.LOGIN_IM_APP_CONNECTIONS_CACHE.deleteHash(CacheConstant.OUYUNC + CacheConstant.IM + CacheConstant.APP + loginUserInfo.getAppKey() + CacheConstant.CONNECTION, comboIdentity);
+                            // 从redis再次获取登录信息
+                            LoginUserInfo cacheLoginUserInfo = IMServerContext.LOGIN_USER_INFO_CACHE.getHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + loginUserInfo.getIdentity(), loginUserInfo.getDeviceEnum().getName());
+                            if (cacheLoginUserInfo != null && loginUserInfo.getLoginServerAddress().equals(cacheLoginUserInfo.getLoginServerAddress())) {
+                                String comboIdentity = IdentityUtil.generalComboIdentity(loginUserInfo.getIdentity(), loginUserInfo.getDeviceEnum().getName());
+                                IMServerContext.USER_REGISTER_TABLE.delete(comboIdentity);
+                                IMServerContext.LOGIN_USER_INFO_CACHE.deleteHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + loginUserInfo.getIdentity(), loginUserInfo.getDeviceEnum().getName());
+                                IMServerContext.LOGIN_IM_APP_CONNECTIONS_CACHE.deleteHash(CacheConstant.OUYUNC + CacheConstant.IM + CacheConstant.APP + loginUserInfo.getAppKey() + CacheConstant.CONNECTION, comboIdentity);
+                            }
                         }
                     }
                 }
