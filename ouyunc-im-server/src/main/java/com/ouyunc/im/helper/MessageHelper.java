@@ -9,7 +9,6 @@ import com.ouyunc.im.constant.enums.MessageContentEnum;
 import com.ouyunc.im.constant.enums.MessageEnum;
 import com.ouyunc.im.constant.enums.NetworkEnum;
 import com.ouyunc.im.context.IMServerContext;
-import com.ouyunc.im.encrypt.Encrypt;
 import com.ouyunc.im.exception.IMException;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.ExtraMessage;
@@ -17,12 +16,9 @@ import com.ouyunc.im.packet.message.InnerExtraData;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.packet.message.Target;
 import com.ouyunc.im.protocol.Protocol;
-import com.ouyunc.im.serialize.Serializer;
 import com.ouyunc.im.utils.IdentityUtil;
-import com.ouyunc.im.utils.SnowflakeUtil;
 import com.ouyunc.im.utils.SystemClock;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
@@ -34,7 +30,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.concurrent.ExecutorService;
-import java.util.function.BiConsumer;
 
 /**
  * @Author fangzhenxun

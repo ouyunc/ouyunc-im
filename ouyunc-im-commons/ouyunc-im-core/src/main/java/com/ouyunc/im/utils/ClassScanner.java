@@ -306,7 +306,8 @@ public class ClassScanner implements Serializable {
 
 		Class<?> clazz = null;
 		try {
-			clazz = Class.forName(className);
+			// 加载类时不初始化静态代码块
+			clazz = Class.forName(className,false, Thread.currentThread().getContextClassLoader());
 		} catch (NoClassDefFoundError | ClassNotFoundException e) {
 			// 由于依赖库导致的类无法加载，直接跳过此类
 			classesOfLoadError.add(className);
