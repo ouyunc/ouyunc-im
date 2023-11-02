@@ -283,28 +283,29 @@ CREATE TABLE `ouyunc_im_send_message`  (
 -- Table structure for ouyunc_im_user
 -- ----------------------------
 DROP TABLE IF EXISTS `ouyunc_im_user`;
-CREATE TABLE `ouyunc_im_user`  (
-  `id` bigint NOT NULL COMMENT '主键id',
-  `open_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '开放id',
-  `username` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '用户名称（对应于身份证）',
-  `password` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '用户名密码',
-  `nick_name` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '用户别名',
-  `avatar` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '用户头像url',
-  `motto` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '座右铭/格言',
-  `age` tinyint(1) NULL DEFAULT NULL COMMENT '年龄',
-  `sex` tinyint(1) NULL DEFAULT NULL COMMENT '性别：0-女，1-男，2-其他',
-  `email` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '邮箱',
-  `phone_num` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '手机号（国内）',
-  `id_card_num` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '身份证号码',
-  `status` tinyint(1) NOT NULL DEFAULT 0 COMMENT '用户状态：0-正常，1-异常（被平台封禁）',
-  `create_time` datetime NOT NULL COMMENT '创建时间',
-  `update_time` datetime NOT NULL COMMENT '修改时间',
-  `friend_join_policy` tinyint(1) NOT NULL DEFAULT 0 COMMENT '好友添加的应答策略：0-需要验证，1-自动通过',
-  `group_invite_policy` tinyint(1) NOT NULL DEFAULT 0 COMMENT '群邀请的应答策略：0-需要验证，1-自动通过',
-  `deleted` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否删除，1-已删除，0-未删除',
-  PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户表' ROW_FORMAT = DYNAMIC;
-
+CREATE TABLE `ouyunc_im_user` (
+`id` bigint NOT NULL COMMENT '主键id',
+`open_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '开放id',
+`username` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '用户名称（对应于身份证）',
+`password` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '用户名密码',
+`nick_name` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '用户别名',
+`avatar` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '用户头像url',
+`motto` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '座右铭/格言',
+`age` tinyint(1) DEFAULT NULL COMMENT '年龄',
+`sex` tinyint(1) DEFAULT NULL COMMENT '性别：0-女，1-男，2-其他',
+`email` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '邮箱',
+`phone_num` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '手机号（国内）',
+`id_card_num` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '身份证号码',
+`status` tinyint(1) NOT NULL DEFAULT '0' COMMENT '用户状态：0-正常，1-异常（被平台封禁）',
+`robot` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否是机器人：0-不是，1-是',
+`trusteeship` tinyint unsigned NOT NULL DEFAULT '0' COMMENT '是否托管（如果托管就会有服务端按照一定的策略进行与客户对话）：0-未托管，1-托管',
+`create_time` datetime NOT NULL COMMENT '创建时间',
+`update_time` datetime NOT NULL COMMENT '修改时间',
+`friend_join_policy` tinyint(1) NOT NULL DEFAULT '0' COMMENT '好友添加的应答策略：0-需要验证，1-自动通过',
+`group_invite_policy` tinyint(1) NOT NULL DEFAULT '0' COMMENT '群邀请的应答策略：0-需要验证，1-自动通过',
+`deleted` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否删除，1-已删除，0-未删除',
+PRIMARY KEY (`id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC COMMENT='用户表';
 -- ----------------------------
 -- Records of ouyunc_im_user
 -- ----------------------------

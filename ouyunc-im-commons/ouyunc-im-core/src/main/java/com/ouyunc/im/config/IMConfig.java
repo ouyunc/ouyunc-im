@@ -40,6 +40,12 @@ public abstract class IMConfig {
      */
     protected String sslPrivateKey;
 
+
+    /**
+     *  应用入口主类main.class
+     */
+    protected Class<?> applicationMainClass;
+
     public String getIp() {
         return ip == null ? localHost : ip;
     }
@@ -67,5 +73,9 @@ public abstract class IMConfig {
 
     public String getSslPrivateKey() {
         return sslPrivateKey;
+    }
+
+    public Class<?> getApplicationMainClass() {
+        return applicationMainClass;
     }
 }

@@ -2,6 +2,7 @@ package com.ouyunc.im.handler;
 
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.im.base.LoginUserInfo;
+import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.constant.enums.MessageEnum;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.helper.DbHelper;
@@ -12,6 +13,7 @@ import com.ouyunc.im.packet.message.ExtraMessage;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.qos.Qos;
 import com.ouyunc.im.utils.SystemClock;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import org.apache.commons.collections4.CollectionUtils;
@@ -103,12 +105,22 @@ public class QosHandler extends SimpleChannelInboundHandler<Packet> implements Q
         }
     }
 
+    /**
+     * qos 处理
+     * @param ctx
+     * @param packet
+     * @throws Exception
+     */
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Packet packet) throws Exception {
-        if (!preHandle(ctx, packet)) {
+        // 判断用哪个方法处理执行
+        String handlerName = ctx.name();
+        if (IMConstant.QOS_HANDLER_PRE.equals(handlerName) && !preHandle(ctx, packet)) {
             return;
         }
+        if (IMConstant.QOS_HANDLER_POST.equals(handlerName)) {
+            postHandle(ctx, packet);
+        }
         ctx.fireChannelRead(packet);
-        postHandle(ctx, packet);
     }
 }

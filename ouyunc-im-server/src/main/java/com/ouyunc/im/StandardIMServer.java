@@ -46,6 +46,7 @@ public class StandardIMServer extends AbstractIMServer{
         String localHost = Ip4Util.getLocalHost();
         IMServerProperties propertiesHelper = ConfigFactory.create(IMServerProperties.class, System.getProperties());
         IMServerConfig config = IMServerConfig.newBuilder()
+                .applicationMainClass(deduceMainClass())
                 .port(propertiesHelper.port())
                 .ip(propertiesHelper.ip())
                 .logLevel(propertiesHelper.logLevel())
@@ -95,6 +96,25 @@ public class StandardIMServer extends AbstractIMServer{
         return config;
     }
 
+
+    /**
+     * 查找入口类
+     * @return
+     */
+    private static Class<?> deduceMainClass() {
+        try {
+            StackTraceElement[] stackTrace = new RuntimeException().getStackTrace();
+            for (StackTraceElement stackTraceElement : stackTrace) {
+                if ("main".equals(stackTraceElement.getMethodName())) {
+                    return Class.forName(stackTraceElement.getClassName());
+                }
+            }
+        }
+        catch (ClassNotFoundException ex) {
+            // Swallow and continue
+        }
+        return null;
+    }
 
     /**
      * 组合属性

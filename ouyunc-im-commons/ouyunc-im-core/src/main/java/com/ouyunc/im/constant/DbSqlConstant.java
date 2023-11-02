@@ -190,6 +190,8 @@ public class DbSqlConstant {
                 "\touyunc_im_user.ID_CARD_NUM AS idCardNum, \n" +
                 "\touyunc_im_user.FRIEND_JOIN_POLICY AS friendJoinPolicy,\n" +
                 "\touyunc_im_user.GROUP_INVITE_POLICY AS groupInvitePolicy,\n" +
+                "\touyunc_im_user.robot AS robot,\n" +
+                "\touyunc_im_user.trusteeship AS trusteeship,\n" +
 
                 "\touyunc_im_user.CREATE_TIME AS createTime, \n" +
                 "\touyunc_im_user.UPDATE_TIME AS updateTime\n" +

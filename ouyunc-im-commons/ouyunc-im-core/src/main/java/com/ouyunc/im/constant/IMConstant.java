@@ -250,12 +250,23 @@ public class IMConstant {
     /**
      * qos 处理器
      */
-    public static final String QOS_HANDLER = "QOS_HANDLER";
+    public static final String QOS_HANDLER_PRE = "QOS_HANDLER_PRE";
+
+    /**
+     * qos 处理器
+     */
+    public static final String QOS_HANDLER_POST = "QOS_HANDLER_POST";
 
     /**
      * post 处理器
      */
     public static final String POST_HANDLER = "POST_HANDLER";
+
+    /**
+     * 托管 处理器
+     */
+    public static final String TRUSTEESHIP_HANDLER = "TRUSTEESHIP_HANDLER";
+
     /**
      * classpath 前缀
      */
@@ -421,4 +432,25 @@ public class IMConstant {
      */
     public static final String OUYUNC_IM_THREAD_POLL = "ouyunc-im";
 
+    /**
+     * 被托管
+     */
+    public static final Integer TRUSTEESHIP = 1;
+
+
+    /**
+     * 未被托管
+     */
+    public static final Integer NOT_TRUSTEESHIP = 0;
+
+    /**
+     * 是机器人
+     */
+    public static final Integer ROBOT = 1;
+
+
+    /**
+     * 不是机器人
+     */
+    public static final Integer NOT_ROBOT = 0;
 }

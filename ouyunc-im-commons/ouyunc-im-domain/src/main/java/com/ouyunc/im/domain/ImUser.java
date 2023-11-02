@@ -81,6 +81,17 @@ public class ImUser implements Serializable {
      */
     private Integer status;
 
+    /**
+     * 是否是机器人：0-不是，1-是
+     */
+    private Integer robot;
+
+
+    /**
+     * 是否托管（如果托管就会有服务端按照一定的策略进行与客户对话）：0-未托管，1-托管
+     */
+    private Integer trusteeship;
+
 
     /**
      * 好友添加的应答策略：0-需要验证，1-自动通过
@@ -255,6 +266,22 @@ public class ImUser implements Serializable {
         this.groupInvitePolicy = groupInvitePolicy;
     }
 
+    public Integer getRobot() {
+        return robot;
+    }
+
+    public void setRobot(Integer robot) {
+        this.robot = robot;
+    }
+
+    public Integer getTrusteeship() {
+        return trusteeship;
+    }
+
+    public void setTrusteeship(Integer trusteeship) {
+        this.trusteeship = trusteeship;
+    }
+
     public ImUser() {
     }
 
@@ -295,5 +322,28 @@ public class ImUser implements Serializable {
         this.status = status;
         this.createTime = createTime;
         this.updateTime = updateTime;
+    }
+
+    public ImUser(Long id, String openId, String username, String password, String nickName, String email, String phoneNum, String idCardNum, String avatar, String motto, Integer age, Integer sex, Integer status, Integer robot, Integer trusteeship, Integer friendJoinPolicy, Integer groupInvitePolicy, String createTime, String updateTime, Integer deleted) {
+        this.id = id;
+        this.openId = openId;
+        this.username = username;
+        this.password = password;
+        this.nickName = nickName;
+        this.email = email;
+        this.phoneNum = phoneNum;
+        this.idCardNum = idCardNum;
+        this.avatar = avatar;
+        this.motto = motto;
+        this.age = age;
+        this.sex = sex;
+        this.status = status;
+        this.robot = robot;
+        this.trusteeship = trusteeship;
+        this.friendJoinPolicy = friendJoinPolicy;
+        this.groupInvitePolicy = groupInvitePolicy;
+        this.createTime = createTime;
+        this.updateTime = updateTime;
+        this.deleted = deleted;
     }
 }

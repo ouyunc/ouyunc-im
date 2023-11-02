@@ -349,6 +349,10 @@ public class IMServerConfig extends IMConfig{
         private String localHost;
 
 
+        /**
+         *  应用入口主类main.class
+         */
+        private Class<?> applicationMainClass;
 
         /**
          * boss 线程组个数,默认与netty保持一致
@@ -576,6 +580,11 @@ public class IMServerConfig extends IMConfig{
             return this;
         }
 
+        public Builder applicationMainClass(Class<?> applicationMainClass) {
+            this.applicationMainClass = applicationMainClass;
+            return this;
+        }
+
         public Builder bossThreads(int bossThreads) {
             this.bossThreads = bossThreads;
             return this;
@@ -774,6 +783,8 @@ public class IMServerConfig extends IMConfig{
             imServerConfig.websocketPath = this.websocketPath;
             imServerConfig.logLevel = this.logLevel;
             imServerConfig.localHost = this.localHost;
+            imServerConfig.applicationMainClass = this.applicationMainClass;
+
             imServerConfig.bossThreads = this.bossThreads;
             imServerConfig.workThreads = this.workThreads;
             imServerConfig.clusterEnable = this.clusterEnable;
@@ -820,6 +831,7 @@ public class IMServerConfig extends IMConfig{
                 "\n , port=" + port +
                 "\n , ip=" + ip +
                 "\n , localHost='" + localHost + '\'' +
+                "\n , applicationMainClass='" + applicationMainClass + '\'' +
                 "\n , websocketPath='" + websocketPath + '\'' +
                 "\n , sslEnable=" + sslEnable +
                 "\n , sslCertificate='" + sslCertificate + '\'' +

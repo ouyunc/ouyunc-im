@@ -36,7 +36,7 @@ public abstract class AbstractIMInnerClient implements IMInnerClient {
      */
     @Override
     public void configure(IMServerConfig serverConfig) {
-        log.info("集群模式已开启，正在配置内部客户端...");
+        log.info("集群模式已开启，正在配置内置客户端...");
         initClient(serverConfig);
         afterPropertiesSet();
     }
