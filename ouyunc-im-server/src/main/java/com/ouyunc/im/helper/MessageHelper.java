@@ -65,11 +65,7 @@ public class MessageHelper {
         // 转发给某个客户端的各个在线设备端
         for (LoginUserInfo loginUserInfo : loginUserInfos) {
             // 走消息传递,设置登录设备类型
-            if (IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(loginUserInfo.getLoginServerAddress()) || !IMServerContext.SERVER_CONFIG.isClusterEnable()) {
-                MessageHelper.sendMessage(packet.clone(), Target.newBuilder().targetIdentity(loginUserInfo.getIdentity()).deviceEnum(loginUserInfo.getDeviceEnum()).build());
-            } else {
-                MessageHelper.deliveryMessage(packet.clone(), Target.newBuilder().targetIdentity(loginUserInfo.getIdentity()).targetServerAddress(loginUserInfo.getLoginServerAddress()).deviceEnum(loginUserInfo.getDeviceEnum()).build());
-            }
+            MessageHelper.deliveryMessage(packet.clone(), Target.newBuilder().targetIdentity(loginUserInfo.getIdentity()).targetServerAddress(loginUserInfo.getLoginServerAddress()).deviceEnum(loginUserInfo.getDeviceEnum()).build());
         }
     }
 
@@ -126,6 +122,11 @@ public class MessageHelper {
      * @Description 同步传递消息，根据服务端的ip包装成InetSocketAddress
      */
     public static void deliveryMessageSync(Packet packet, Target target) {
+        // 如果目标主机是本机，则交给sendMessage() 处理
+        if (!IMServerContext.SERVER_CONFIG.isClusterEnable() || IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(target.getTargetServerAddress())) {
+            sendMessage(packet, target);
+            return;
+        }
         // 成功才将上个路由地址改成本地，异常会在异常处理中获取上个路由服务地址及设置
         // 获取消息扩展消息
         Message message = (Message) packet.getMessage();

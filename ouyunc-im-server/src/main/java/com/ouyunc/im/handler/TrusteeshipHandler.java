@@ -15,7 +15,7 @@ import jodd.util.concurrent.ThreadFactoryBuilder;
 import java.util.concurrent.ExecutorService;
 
 /**
- * 托管处理器
+ * 一对一的发送信息托管处理器，注意目前只针对一对一发送消息才会判断是否进行托管，其他可以根据业务自行修改
  */
 public class TrusteeshipHandler extends SimpleChannelInboundHandler<Packet> {
 

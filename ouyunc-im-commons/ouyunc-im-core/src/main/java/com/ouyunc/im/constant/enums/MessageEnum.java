@@ -23,6 +23,10 @@ public enum MessageEnum {
 
     IM_QOS_RETRY((byte) 66, "im_qos_retry",  "im qos消息重试"),
 
+    IM_CHAT_BOT((byte) 80, "im_chat_bot",  "聊天机器人消息"),
+
+    IM_CUSTOMER((byte) 90, "im_customer",  "客服消息处理"),
+
     // =======================================http使用的消息类型================================
     RPC_REQUEST((byte) 101,  "rpc_request", "RPC中有请求消息"),
     RPC_RESPONSE((byte) 102, "rpc_response", "RPC中有响应消息"),

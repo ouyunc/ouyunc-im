@@ -34,7 +34,7 @@ public class PacketClusterRouterHandler extends SimpleChannelInboundHandler<Pack
             InnerExtraData innerExtraData = extraMessage.getInnerExtraData();
             // 判断是否从其他服务路由过来的额消息
             if (innerExtraData != null && innerExtraData.isDelivery()) {
-                log.info("{}   === 接收到集群的消息===》  {}" ,IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(innerExtraData.getTarget().getTargetServerAddress()),JSON.toJSONString(innerExtraData));
+                log.info("{} 接收到集群的消息: {}" ,IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(innerExtraData.getTarget().getTargetServerAddress()),JSON.toJSONString(innerExtraData));
                 //这里上一个if 已经做了判断，该服务肯定开启了集群，否则不会走到这里的，所以这里就不判断了。  || !IMServerContext.SERVER_CONFIG.isClusterEnable()
                 if (IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(innerExtraData.getTarget().getTargetServerAddress())) {
                     // @todo 这里直接写给客户端？还是往下传递再走一遍 （后面根据其他业务在优化调整）
