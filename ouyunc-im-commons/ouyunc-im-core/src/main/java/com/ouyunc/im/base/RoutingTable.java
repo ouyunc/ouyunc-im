@@ -9,7 +9,7 @@ import java.util.Set;
  * @Author fangzhenxun
  * @Description: 消息路由表
  **/
-public class RoutingTable implements Serializable {
+public class RoutingTable implements Serializable  {
 
     /**
      * 当前服务地址 ip:port

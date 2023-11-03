@@ -67,7 +67,7 @@ public class InnerExtraData implements Serializable {
         this.currentRetry = currentRetry;
     }
 
-    public List<RoutingTable> routingTables() {
+    public List<RoutingTable> getRoutingTables() {
         return routingTables == null ? new ArrayList<>(): routingTables;
     }
 

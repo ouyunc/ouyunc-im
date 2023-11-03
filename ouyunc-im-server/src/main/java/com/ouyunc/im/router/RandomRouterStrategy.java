@@ -42,13 +42,14 @@ public class RandomRouterStrategy implements RouterStrategy{
         Message message = (Message) packet.getMessage();
         ExtraMessage extraMessage = JSON.parseObject(message.getExtra(), ExtraMessage.class);
         InnerExtraData innerExtraData = extraMessage.getInnerExtraData();
-        List<RoutingTable> routingTables = innerExtraData.routingTables();
+        List<RoutingTable> routingTables = innerExtraData.getRoutingTables();
         // 如果目标机地址与最终目标路由服务的地址相同则添加本地socketAddress 到消息中，否则添加toSocketAddress
         if (toServerAddress.equals(innerExtraData.getTarget().getTargetServerAddress())) {
             routingTables.add(new RoutingTable(IMServerContext.SERVER_CONFIG.getLocalServerAddress()));
         } else {
             routingTables.add(new RoutingTable(toServerAddress));
         }
+        innerExtraData.setRoutingTables(routingTables);
         // 已经路由不通的服务列表
         Set<String> routedUnavailableSocketAddresses =  routingTables.stream().map(routingTable -> routingTable.getServerAddress()).collect(Collectors.toSet());
         // 将message 重新设置到packet

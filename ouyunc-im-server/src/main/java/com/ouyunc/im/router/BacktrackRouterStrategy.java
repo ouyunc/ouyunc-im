@@ -37,7 +37,7 @@ public class BacktrackRouterStrategy implements RouterStrategy{
         ExtraMessage extraMessage = JSON.parseObject(message.getExtra(), ExtraMessage.class);
         InnerExtraData innerExtraData = extraMessage.getInnerExtraData();
         // 获取消息中的路由表
-        List<RoutingTable> routingTables = innerExtraData.routingTables();
+        List<RoutingTable> routingTables = innerExtraData.getRoutingTables();
         // 判断路由表中是否存在本机服务（是否路由过）
         Iterator<RoutingTable> tableIterator = routingTables.iterator();
         boolean isContain = false;
@@ -65,6 +65,8 @@ public class BacktrackRouterStrategy implements RouterStrategy{
                 // 如何找到上一个传递消息的服务地址， extraMessage.getFromServerAddress()可能为空，在第一个节点上
                 localRoutingTable = new RoutingTable(IMServerContext.SERVER_CONFIG.getLocalServerAddress(), innerExtraData.getFromServerAddress(), routedServerAddresses);
                 routingTables.add(localRoutingTable);
+                // 设置路由表
+                innerExtraData.setRoutingTables(routingTables);
             }
             // 设置message
             message.setExtra(JSON.toJSONString(extraMessage));
