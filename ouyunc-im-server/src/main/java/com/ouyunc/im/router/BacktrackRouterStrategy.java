@@ -31,6 +31,7 @@ public class BacktrackRouterStrategy implements RouterStrategy{
      */
     @Override
     public String route(Packet packet, String toServerAddress) {
+        log.info("正在使用回溯路由算法查找可用服务... ");
         // 获得消息
         Message message = (Message) packet.getMessage();
         // 这里的 message.getExtra() 不可能为空，所以这里不做判空处理了
@@ -43,7 +44,7 @@ public class BacktrackRouterStrategy implements RouterStrategy{
         boolean isContain = false;
         // 当前路由表
         RoutingTable localRoutingTable = null;
-        // 当前路由上一个路由服务
+        // 判断该消息是否路由过本服务
         while (tableIterator.hasNext()){
             RoutingTable routingTable = tableIterator.next();
             // 如果路由表有本机的记录，则，取出路由过的服务地址，并追加
@@ -56,7 +57,6 @@ public class BacktrackRouterStrategy implements RouterStrategy{
                 break;
             }
         }
-        // 判断是否是回溯服务的时候失败，如果是回溯的失败则直接走下面的重试机制 localRoutingTable 可能为空
         if (localRoutingTable == null || !toServerAddress.equals(localRoutingTable.getPreServerAddress())) {
             // 如果没有路由过该服务节点，则进行追加本机服务节点路由表
             if (!isContain) {
@@ -71,15 +71,14 @@ public class BacktrackRouterStrategy implements RouterStrategy{
             // 设置message
             message.setExtra(JSON.toJSONString(extraMessage));
             // 下面是挑选一个符合规则的服务
-            // 从全量服务注册表中排除一下路由，找出一个符合条件的
+            // 从全量服务注册表中排除一下路由，找出一个符合条件的，这里可以根据一定的算法来有限选择一个合适的，这里只是排除条件随机选择一个
             Iterator<Map.Entry<String, ChannelPool>> allSocketAddressIterator = MapUtil.mergerMaps(IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.asMap(), IMServerContext.CLUSTER_GLOBAL_SERVER_REGISTRY_TABLE.asMap()).entrySet().iterator();
             while (allSocketAddressIterator.hasNext()){
                 Map.Entry<String, ChannelPool> next = allSocketAddressIterator.next();
                 String nextServerAddress = next.getKey();
                 boolean isExists = false;
-                // 排除一下路由信息
-                // 在路由表中找出服务节点之前的所有路由(不包括本地路由),localRoutingTable一定不为空
-                for (int i = 0; i < routingTables.indexOf(localRoutingTable); i++) {
+                // 在路由表中所有路由过的线路(不包括本地路由),localRoutingTable一定不为空
+                for (int i = 0; i < routingTables.size(); i++) {
                     if (routingTables.get(i).getServerAddress().equals(nextServerAddress)) {
                         isExists = true;
                         break;
@@ -99,6 +98,7 @@ public class BacktrackRouterStrategy implements RouterStrategy{
                     RoutingTable preRoutingTable = iterator.next();
                     if (localRoutingTable.getPreServerAddress().equals(preRoutingTable.getServerAddress())) {
                         preRoutingTable.getRoutedServerAddresses().add(IMServerContext.SERVER_CONFIG.getLocalServerAddress());
+                        break;
                     }
                 }
                 return localRoutingTable.getPreServerAddress();

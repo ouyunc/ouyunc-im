@@ -69,11 +69,11 @@ public class RoutingTable implements Serializable  {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         RoutingTable that = (RoutingTable) o;
-        return Objects.equals(serverAddress, that.serverAddress);
+        return Objects.equals(this.serverAddress, that.serverAddress);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(serverAddress);
+        return Objects.hash(this.serverAddress);
     }
 }
