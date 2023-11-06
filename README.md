@@ -98,6 +98,11 @@ https://m.ouyunc.com
  **注意** ：如果不做特别说明,全部以大端序读写《https://www.cnblogs.com/iathanasy/p/12617793.html》
 
 
+#### 相关demo源码地址
+| 项目名称            | 项目地址                                      | 项目说明       |
+|-----------------|-------------------------------------------|------------|
+| ouyunc-app      | https://ext.dcloud.net.cn/plugin?id=15255 | uniapp前端地址 |
+| ouyunc-platform | 略                                         | 微服务后端地址    |
 
 
 #### [快速开始](https://gitee.com/etxync/ouyunc-im/wikis/OUYUNC-IM%20v3.x/%E5%BF%AB%E9%80%9F%E5%BC%80%E5%A7%8B?sort_id=7020530)
