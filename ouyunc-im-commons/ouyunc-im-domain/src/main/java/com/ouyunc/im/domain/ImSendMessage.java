@@ -97,6 +97,10 @@ public class ImSendMessage implements Serializable {
      */
     private Long sendTime;
 
+    /**
+     * 消息是否撤回：0-未撤回，1-已撤回消息
+     */
+    private Integer withdraw;
 
     /**
      * 创建时间
@@ -298,5 +302,13 @@ public class ImSendMessage implements Serializable {
 
     public void setDeleted(Integer deleted) {
         this.deleted = deleted;
+    }
+
+    public Integer getWithdraw() {
+        return withdraw;
+    }
+
+    public void setWithdraw(Integer withdraw) {
+        this.withdraw = withdraw;
     }
 }

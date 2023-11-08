@@ -16,8 +16,10 @@ public enum MessageEnum {
     IM_READ_RECEIPT((byte) 4, "im_read_receipt",  "已读回执消息"),
     IM_PRIVATE_CHAT((byte) 5, "im_private_chat",  "私聊消息"),
     IM_GROUP_CHAT((byte) 6, "im_group_chat",  "群聊消息"),
+    IM_WITHDRAW((byte) 7, "im_withdraw",  "消息撤回"),
     IM_FRIEND_REQUEST((byte) 8, "im_friend_request",  "好友请求相关消息"),
     IM_GROUP_REQUEST((byte) 9, "im_group_request",  "群请求相关消息"),
+
 
     BROADCAST((byte) 50, "broadcast",  "广播消息"),
 
@@ -26,6 +28,8 @@ public enum MessageEnum {
     IM_CHAT_BOT((byte) 80, "im_chat_bot",  "聊天机器人消息"),
 
     IM_CUSTOMER((byte) 90, "im_customer",  "客服消息处理"),
+
+
 
     // =======================================http使用的消息类型================================
     RPC_REQUEST((byte) 101,  "rpc_request", "RPC中有请求消息"),

@@ -114,11 +114,21 @@
         <RollingFile name="RollingFile" fileName="${rolling_fileName}" filePattern="${rolling_filePattern}">
             <PatternLayout pattern="${log_pattern}"/>
             <Policies>
+                <!-- 启动时，会删除多余的日志文件 -->
+                <OnStartupTriggeringPolicy/>
                 <TimeBasedTriggeringPolicy interval="${rolling_timeInterval}" modulate="${warn_timeModulate}"/>
                 <SizeBasedTriggeringPolicy size="${every_file_size}"/>
             </Policies>
             <!-- 设置同类型日志,同一文件夹下可以存放的数量,如果不设置此属性则默认存放7个文件 -->
-            <DefaultRolloverStrategy max="${rolling_max}" />
+            <DefaultRolloverStrategy max="${rolling_max}" >
+                <Delete basePath="${basePath}" maxDepth="2">
+                    <!-- 最近30天，最多5GB的日志 -->
+                    <IfFileName glob="*/*.log.gz"/>
+                    <!--这里的age必须和filePattern协调, 后者是精确到HH, 这里就要写成xH, xd就不起作用，另外, 数字最好>2, 否则可能造成删除的时候, 最近的文件还处于被占用状态,导致删除不成功!-->
+                    <!--7天-->
+                    <IfLastModified age="168H" />
+                </Delete>
+            </DefaultRolloverStrategy>
         </RollingFile>
 
         <!-- =======================================打印INFO级别的日志到文件======================================= -->
@@ -128,7 +138,15 @@
                 <TimeBasedTriggeringPolicy interval="${info_timeInterval}" modulate="${info_timeModulate}"/>
                 <SizeBasedTriggeringPolicy size="${every_file_size}"/>
             </Policies>
-            <DefaultRolloverStrategy max="${info_max}" />
+            <DefaultRolloverStrategy max="${info_max}" >
+                <Delete basePath="${basePath}" maxDepth="2">
+                    <!-- 最近30天，最多5GB的日志 -->
+                    <IfFileName glob="*/*.log.gz"/>
+                    <!--这里的age必须和filePattern协调, 后者是精确到HH, 这里就要写成xH, xd就不起作用，另外, 数字最好>2, 否则可能造成删除的时候, 最近的文件还处于被占用状态,导致删除不成功!-->
+                    <!--7天-->
+                    <IfLastModified age="168H" />
+                </Delete>
+            </DefaultRolloverStrategy>
             <Filters>
                 <ThresholdFilter level="WARN" onMatch="DENY" onMismatch="NEUTRAL"/>
                 <ThresholdFilter level="INFO" onMatch="ACCEPT" onMismatch="DENY"/>
@@ -142,7 +160,15 @@
                 <TimeBasedTriggeringPolicy interval="${warn_timeInterval}" modulate="${warn_timeModulate}"/>
                 <SizeBasedTriggeringPolicy size="${every_file_size}"/>
             </Policies>
-            <DefaultRolloverStrategy max="${warn_max}" />
+            <DefaultRolloverStrategy max="${warn_max}" >
+                <Delete basePath="${basePath}" maxDepth="2">
+                    <!-- 最近30天，最多5GB的日志 -->
+                    <IfFileName glob="*/*.log.gz"/>
+                    <!--这里的age必须和filePattern协调, 后者是精确到HH, 这里就要写成xH, xd就不起作用，另外, 数字最好>2, 否则可能造成删除的时候, 最近的文件还处于被占用状态,导致删除不成功!-->
+                    <!--7天-->
+                    <IfLastModified age="168H" />
+                </Delete>
+            </DefaultRolloverStrategy>
             <Filters>
                 <ThresholdFilter level="ERROR" onMatch="DENY" onMismatch="NEUTRAL"/>
                 <ThresholdFilter level="WARN" onMatch="ACCEPT" onMismatch="DENY"/>
@@ -156,7 +182,15 @@
                 <TimeBasedTriggeringPolicy interval="${error_timeInterval}" modulate="${error_timeModulate}"/>
                 <SizeBasedTriggeringPolicy size="${every_file_size}"/>
             </Policies>
-            <DefaultRolloverStrategy max="${error_max}" />
+            <DefaultRolloverStrategy max="${error_max}" >
+                <Delete basePath="${basePath}" maxDepth="2">
+                    <!-- 最近30天，最多5GB的日志 -->
+                    <IfFileName glob="*/*.log.gz"/>
+                    <!--这里的age必须和filePattern协调, 后者是精确到HH, 这里就要写成xH, xd就不起作用，另外, 数字最好>2, 否则可能造成删除的时候, 最近的文件还处于被占用状态,导致删除不成功!-->
+                    <!--7天-->
+                    <IfLastModified age="168H" />
+                </Delete>
+            </DefaultRolloverStrategy>
             <Filters>
                 <ThresholdFilter level="FATAL" onMatch="DENY" onMismatch="NEUTRAL"/>
                 <ThresholdFilter level="ERROR" onMatch="ACCEPT" onMismatch="DENY"/>
