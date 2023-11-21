@@ -83,7 +83,7 @@ public class CustomerMessageProcessor  extends AbstractMessageProcessor{
             DbHelper.write2ReceiveTimeline(packet, to, timestamp);
             // 遍历所有的客服人员，一般一个群里只会有一个客服（默认为机器人客服，如果该机器人账号登录了就是真人客服）和一个客户
             // 定义登录计数器，如果该群里都没有人（人工登录）则交给机器人处理
-            int groupLoginUserCount = 0;
+            int groupLoginUserCount = 1;
             for (ImGroupUserBO groupMember : groupMembers) {
                 // 目前使用id号来作为唯一标识
                 if (from.equals(groupMember.getUserId())) {
