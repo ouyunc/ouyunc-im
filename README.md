@@ -1,4 +1,4 @@
-# OUYUNC-IM [![version](https://img.shields.io/badge/version-4.0.2-blue)](https://gitee.com/etxync/ouyunc-im)  
+# OUYUNC-IM [![version](https://img.shields.io/badge/version-4.2.0-blue)](https://gitee.com/etxync/ouyunc-im)  
 [![license](https://img.shields.io/badge/license-MIT-brightgreen)](https://www.mit-license.org/)
 <a href='https://gitee.com/etxync/ouyunc-im/stargazers'><img src='https://gitee.com/etxync/ouyunc-im/badge/star.svg?theme=dark' alt='star'></img></a>
 <a href='https://gitee.com/etxync/ouyunc-im/members'><img src='https://gitee.com/etxync/ouyunc-im/badge/fork.svg?theme=dark' alt='fork'></img></a>
@@ -98,6 +98,11 @@ https://m.ouyunc.com
  **注意** ：如果不做特别说明,全部以大端序读写《https://www.cnblogs.com/iathanasy/p/12617793.html》
 
 
+#### 相关demo源码地址
+| 项目名称            | 项目地址                                      | 项目说明       |
+|-----------------|-------------------------------------------|------------|
+| ouyunc-app      | https://ext.dcloud.net.cn/plugin?id=15255 | uniapp前端地址 |
+
 
 
 #### [快速开始](https://gitee.com/etxync/ouyunc-im/wikis/OUYUNC-IM%20v3.x/%E5%BF%AB%E9%80%9F%E5%BC%80%E5%A7%8B?sort_id=7020530)
@@ -140,10 +145,6 @@ https://gitee.com/etxync/ouyunc-im/wikis/OUYUNC-IM%20v3.x/%E5%AE%A2%E6%88%B7%E7%
 12. 优化其他代码
 
 
-#### 最后说明
-由于本人技术有限，项目中可能会有bug或代码不规范的地方，如果对你带来了困扰请跳过本项目。
-并且如果有任何想说的欢迎私信或提issue，咱们一起共同探讨交流。
-
 #### 版本升级
 
 #####  **3.0.1 ~ 3.0.2** 
@@ -173,6 +174,20 @@ https://gitee.com/etxync/ouyunc-im/wikis/OUYUNC-IM%20v3.x/%E5%AE%A2%E6%88%B7%E7%
 #####  **4.0.2 ~ 4.0.3**
 1. 解决集群环境下跨服务投递消息时找不到群成员问题
 2. 优化其他代码
+
+#####  **4.0.3 ~ 4.1.0**
+1. 增加聊天托管功能
+2. 增加机器人客服（人工客服），可根据一定的策略或接入chatgpt进行对话，可根据自己的业务扩展处理逻辑
+2. 优化其他代码
+
+#####  **4.1.0 ~ 4.2.0**
+1. 增加消息撤回处理器
+2. 增加消息监控预处理（后续扩展）
+2. 优化其他代码
+
+#### 最后说明
+由于本人技术有限，项目中可能会有bug或代码不规范的地方，如果对你带来了困扰请跳过本项目。
+并且如果有任何想说的欢迎私信或提issue，咱们一起共同探讨交流。
 
 #### 参与贡献
 
