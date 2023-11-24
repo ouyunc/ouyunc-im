@@ -27,7 +27,7 @@ public class MysqlDbOperator extends AbstractDbOperator{
         try{
             return JdbcPool.INSTANCE.jdbcTemplate().queryForObject(sql, new BeanPropertyRowMapper<>(tClass), args);
         }catch (EmptyResultDataAccessException e ){
-            log.warn("未查询到数据，返回null");
+            log.warn("未查询到数据，返回null; sql: {} , args：{}", sql, args);
             return null;
         }
     }
@@ -44,7 +44,7 @@ public class MysqlDbOperator extends AbstractDbOperator{
         try {
             return JdbcPool.INSTANCE.jdbcTemplate().query(sql, new BeanPropertyRowMapper<>(tClass), args);
         }catch (IllegalStateException e) {
-            log.warn("未查询到数据集合，返回null");
+            log.warn("未查询到数据，返回null; sql: {} , args：{}", sql, args);
             return null;
         }
     }

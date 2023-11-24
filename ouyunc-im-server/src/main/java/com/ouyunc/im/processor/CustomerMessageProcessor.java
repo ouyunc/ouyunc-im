@@ -22,7 +22,7 @@ import java.util.List;
 /**
  * 客服消息处理
  */
-public class CustomerMessageProcessor  extends AbstractMessageProcessor{
+public class CustomerMessageProcessor extends AbstractMessageProcessor {
     private static Logger log = LoggerFactory.getLogger(CustomerMessageProcessor.class);
 
 
@@ -32,11 +32,11 @@ public class CustomerMessageProcessor  extends AbstractMessageProcessor{
     }
 
     /**
-     * @Author fangzhenxun
-     * @Description 群聊做权限的过滤
      * @param ctx
      * @param packet
      * @return void
+     * @Author fangzhenxun
+     * @Description 群聊做权限的过滤
      */
     @Override
     public void preProcess(ChannelHandlerContext ctx, Packet packet) {
@@ -56,13 +56,14 @@ public class CustomerMessageProcessor  extends AbstractMessageProcessor{
 
     /**
      * 真正处理客服信息
+     *
      * @param ctx
      * @param packet
      */
     @Override
     public void doProcess(ChannelHandlerContext ctx, Packet packet) {
         log.info("CustomerMessageProcessor 正在处理客服消息packet: {}", packet);
-        fireProcess(ctx, packet, (ctx0, packet0)->{
+        fireProcess(ctx, packet, (ctx0, packet0) -> {
             Message message = (Message) packet.getMessage();
             // from 代表群组中的发送者
             String from = message.getFrom();
@@ -81,29 +82,26 @@ public class CustomerMessageProcessor  extends AbstractMessageProcessor{
             DbHelper.write2SendTimeline(packet, from, timestamp);
             // 将消息存一份到群消息中
             DbHelper.write2ReceiveTimeline(packet, to, timestamp);
+            // 如果是自己找到自己的所有登录端去发送信息
+            List<LoginUserInfo> fromLoginUserInfos = UserHelper.onlineAll(from, packet.getDeviceType());
+            // 排除自己，发给其他端
+            // 转发给自己客户端的各个设备端
+            MessageHelper.send2MultiDevices(packet, fromLoginUserInfos);
             // 遍历所有的客服人员，一般一个群里只会有一个客服（默认为机器人客服，如果该机器人账号登录了就是真人客服）和一个客户
             // 定义登录计数器，如果该群里都没有人（人工登录）则交给机器人处理
-            int groupLoginUserCount = 0;
+            int groupLoginUserCount = 1;
             for (ImGroupUserBO groupMember : groupMembers) {
                 // 目前使用id号来作为唯一标识
-                if (from.equals(groupMember.getUserId())) {
-                    // 如果是自己找到自己的所有登录端去发送信息
-                    List<LoginUserInfo> fromLoginUserInfos = UserHelper.onlineAll(from, packet.getDeviceType());
-                    // 排除自己，发给其他端
-                    // 转发给自己客户端的各个设备端
-                    MessageHelper.send2MultiDevices(packet, fromLoginUserInfos);
-                } else {
+                if (!from.equals(groupMember.getUserId()) && IMConstant.NOT_SHIELD.equals(groupMember.getIsShield())) {
                     // 发给客服
                     // 判断，客服是否屏蔽了该群，如果屏蔽则不能接受到该消息
-                    if (IMConstant.NOT_SHIELD.equals(groupMember.getIsShield())) {
-                        List<LoginUserInfo> customerLoginUserInfos = UserHelper.onlineAll(groupMember.getUserId());
-                        if (CollectionUtils.isEmpty(customerLoginUserInfos)) {
-                            // 如果群里非机器人都没有登录，并且群里只有机器人和客户两个人，则有机器人接管发送
-                            groupLoginUserCount++;
-                        }else {
-                            // 如果登录了，则是人工客服介入了
-                            MessageHelper.send2MultiDevices(packet, customerLoginUserInfos);
-                        }
+                    List<LoginUserInfo> customerLoginUserInfos = UserHelper.onlineAll(groupMember.getUserId());
+                    if (CollectionUtils.isEmpty(customerLoginUserInfos)) {
+                        // 如果群里非机器人都没有登录，并且群里只有机器人和客户两个人，则有机器人接管发送
+                        groupLoginUserCount++;
+                    } else {
+                        // 如果登录了，则是人工客服介入了
+                        MessageHelper.send2MultiDevices(packet, customerLoginUserInfos);
                     }
                 }
             }

@@ -25,7 +25,7 @@
 (4) hash服务离线:   ouyunc:im:cluster:server:offline                  ${服务唯一标识}     set<String>
 
 (1) hash存储 saas 中 im 连接数： ouyunc:im:app:${appKey}:connection             ${用户登录的唯一标识}  用户登录信息
-(1) opsvalue存储 saas 中 im app 连接信息： ouyunc:im:app:${appKey}   ImAppDetail
+(1) opsvalue存储 saas 中 im app 连接信息： ouyunc:im:app:${appKey}   ImApp
 
 
 

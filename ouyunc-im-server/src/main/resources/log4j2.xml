@@ -11,9 +11,9 @@
 
         <!-- 日志默认存放的位置,可以设置为项目根路径下,也可指定绝对路径 -->
         <!-- 存放路径一:通用路径,window平台 -->
-<!--
-        <property name="basePath">d:/logs/${logFileName}</property>
--->
+        <!--
+                <property name="basePath">d:/logs/${logFileName}</property>
+        -->
         <property name="basePath">logs/${logFileName}</property>
         <!-- 存放路径二:web工程专用,java项目没有这个变量,需要删掉,否则会报异常,这里把日志放在web项目的根目录下 -->
         <!-- <property name="basePath">${web:rootDir}/${logFileName}</property> -->
@@ -21,13 +21,18 @@
         <!-- <property name="basePath">${sys:catalina.home}/logs/${logFileName}</property>-->
 
         <!-- 控制台默认输出格式,"%-5level":日志级别,"%l":输出完整的错误位置,是小写的L,因为有行号显示,所以影响日志输出的性能 -->
-<!--        <property name="console_log_pattern">%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight[%-5level] %l - %m%n</property>-->
-        <property name="console_log_pattern">%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight{[${sys:local-address}]} %highlight{[span-id:%X{span-id}]} %highlight{[trace-id:%X{trace-id}]} %highlight{%-5level} [%t] %highlight{%l}: %msg%n</property>
-<!--        <property name="console_log_pattern">%highlight{%-5level}  %X{requestId}|%date{yyyy-MM-dd HH:mm:ss}|[%t]|%highlight{%l}|%m%n</property>-->
+        <!--        <property name="console_log_pattern">%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight[%-5level] %l - %m%n</property>-->
+        <property name="console_log_pattern">%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight{[${sys:local-address}]}
+            %highlight{[span-id:%X{span-id}]} %highlight{[trace-id:%X{trace-id}]} %highlight{%-5level} [%t]
+            %highlight{%l}: %msg%n
+        </property>
+        <!--        <property name="console_log_pattern">%highlight{%-5level}  %X{requestId}|%date{yyyy-MM-dd HH:mm:ss}|[%t]|%highlight{%l}|%m%n</property>-->
         <!-- 日志文件默认输出格式,不带行号输出(行号显示会影响日志输出性能);%C:大写,类名;%M:方法名;%m:错误信息;%n:换行 -->
         <!-- <property name="log_pattern">%d{yyyy-MM-dd HH:mm:ss.SSS} [%-5level] %C.%M - %m%n</property> -->
         <!-- 日志文件默认输出格式,另类带行号输出(对日志输出性能未知);%C:大写,类名;%M:方法名;%L:行号;%m:错误信息;%n:换行 -->
-        <property name="log_pattern">%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight{[${sys:local-address}]} %highlight{[span-id:%X{span-id}]} %highlight{[trace-id:%X{trace-id}]} [%-5level] %C.%M[%L line] - %m%n</property>
+        <property name="log_pattern">%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight{[${sys:local-address}]}
+            %highlight{[span-id:%X{span-id}]} %highlight{[trace-id:%X{trace-id}]} [%-5level] %C.%M[%L line] - %m%n
+        </property>
 
         <!-- 日志默认切割的最小单位 -->
         <property name="every_file_size">20MB</property>
@@ -120,13 +125,13 @@
                 <SizeBasedTriggeringPolicy size="${every_file_size}"/>
             </Policies>
             <!-- 设置同类型日志,同一文件夹下可以存放的数量,如果不设置此属性则默认存放7个文件 -->
-            <DefaultRolloverStrategy max="${rolling_max}" >
+            <DefaultRolloverStrategy max="${rolling_max}">
                 <Delete basePath="${basePath}" maxDepth="2">
                     <!-- 最近30天，最多5GB的日志 -->
                     <IfFileName glob="*/*.log.gz"/>
                     <!--这里的age必须和filePattern协调, 后者是精确到HH, 这里就要写成xH, xd就不起作用，另外, 数字最好>2, 否则可能造成删除的时候, 最近的文件还处于被占用状态,导致删除不成功!-->
                     <!--7天-->
-                    <IfLastModified age="168H" />
+                    <IfLastModified age="168H"/>
                 </Delete>
             </DefaultRolloverStrategy>
         </RollingFile>
@@ -138,13 +143,13 @@
                 <TimeBasedTriggeringPolicy interval="${info_timeInterval}" modulate="${info_timeModulate}"/>
                 <SizeBasedTriggeringPolicy size="${every_file_size}"/>
             </Policies>
-            <DefaultRolloverStrategy max="${info_max}" >
+            <DefaultRolloverStrategy max="${info_max}">
                 <Delete basePath="${basePath}" maxDepth="2">
                     <!-- 最近30天，最多5GB的日志 -->
                     <IfFileName glob="*/*.log.gz"/>
                     <!--这里的age必须和filePattern协调, 后者是精确到HH, 这里就要写成xH, xd就不起作用，另外, 数字最好>2, 否则可能造成删除的时候, 最近的文件还处于被占用状态,导致删除不成功!-->
                     <!--7天-->
-                    <IfLastModified age="168H" />
+                    <IfLastModified age="168H"/>
                 </Delete>
             </DefaultRolloverStrategy>
             <Filters>
@@ -160,13 +165,13 @@
                 <TimeBasedTriggeringPolicy interval="${warn_timeInterval}" modulate="${warn_timeModulate}"/>
                 <SizeBasedTriggeringPolicy size="${every_file_size}"/>
             </Policies>
-            <DefaultRolloverStrategy max="${warn_max}" >
+            <DefaultRolloverStrategy max="${warn_max}">
                 <Delete basePath="${basePath}" maxDepth="2">
                     <!-- 最近30天，最多5GB的日志 -->
                     <IfFileName glob="*/*.log.gz"/>
                     <!--这里的age必须和filePattern协调, 后者是精确到HH, 这里就要写成xH, xd就不起作用，另外, 数字最好>2, 否则可能造成删除的时候, 最近的文件还处于被占用状态,导致删除不成功!-->
                     <!--7天-->
-                    <IfLastModified age="168H" />
+                    <IfLastModified age="168H"/>
                 </Delete>
             </DefaultRolloverStrategy>
             <Filters>
@@ -182,13 +187,13 @@
                 <TimeBasedTriggeringPolicy interval="${error_timeInterval}" modulate="${error_timeModulate}"/>
                 <SizeBasedTriggeringPolicy size="${every_file_size}"/>
             </Policies>
-            <DefaultRolloverStrategy max="${error_max}" >
+            <DefaultRolloverStrategy max="${error_max}">
                 <Delete basePath="${basePath}" maxDepth="2">
                     <!-- 最近30天，最多5GB的日志 -->
                     <IfFileName glob="*/*.log.gz"/>
                     <!--这里的age必须和filePattern协调, 后者是精确到HH, 这里就要写成xH, xd就不起作用，另外, 数字最好>2, 否则可能造成删除的时候, 最近的文件还处于被占用状态,导致删除不成功!-->
                     <!--7天-->
-                    <IfLastModified age="168H" />
+                    <IfLastModified age="168H"/>
                 </Delete>
             </DefaultRolloverStrategy>
             <Filters>
@@ -203,16 +208,32 @@
         <!-- 设置打印sql语句配置开始,以下两者配合使用,可以优化日志的输出信息,减少一些不必要信息的输出 -->
         <!-- 设置java.sql包下的日志只打印DEBUG及以上级别的日志,此设置可以支持sql语句的日志打印 -->
         <logger name="com.zaxxer.hikari" level="WARN" additivity="false">
-            <appender-ref ref="Console" />
+            <appender-ref ref="RollingFile"/>
+            <appender-ref ref="Console"/>
+            <appender-ref ref="InfoFile"/>
+            <appender-ref ref="WarnFile"/>
+            <appender-ref ref="ErrorFile"/>
         </logger>
         <logger name="java.sql" level="DEBUG" additivity="false">
+            <appender-ref ref="RollingFile"/>
             <appender-ref ref="Console"/>
+            <appender-ref ref="InfoFile"/>
+            <appender-ref ref="WarnFile"/>
+            <appender-ref ref="ErrorFile"/>
         </logger>
         <logger name="org.springframework" level="INFO" additivity="false">
-            <appender-ref ref="Console" />
+            <appender-ref ref="RollingFile"/>
+            <appender-ref ref="Console"/>
+            <appender-ref ref="InfoFile"/>
+            <appender-ref ref="WarnFile"/>
+            <appender-ref ref="ErrorFile"/>
         </logger>
         <logger name="org.springframework.jdbc.core.JdbcTemplate" level="DEBUG" additivity="false">
-            <appender-ref ref="Console" />
+            <appender-ref ref="RollingFile"/>
+            <appender-ref ref="Console"/>
+            <appender-ref ref="InfoFile"/>
+            <appender-ref ref="WarnFile"/>
+            <appender-ref ref="ErrorFile"/>
         </logger>
         <!-- 设置打印sql语句配置结束 -->
 

@@ -133,6 +133,12 @@ public class IMConstant {
     public static final String SSL = "SSL";
 
     /**
+     * 监控 处理器
+     */
+    public static final String MONITOR_HANDLER = "MONITOR_HANDLER";
+
+
+    /**
      * 协议调度分发器
      */
     public static final String PROTOCOL_DISPATCHER = "PROTOCOL_DISPATCHER";
@@ -453,4 +459,15 @@ public class IMConstant {
      * 不是机器人
      */
     public static final Integer NOT_ROBOT = 0;
+
+
+    /**
+     * 消息已撤回
+     */
+    public static final Integer WITHDRAW = 1;
+
+    /**
+     * 消息未撤回
+     */
+    public static final Integer NOT_WITHDRAW = 0;
 }

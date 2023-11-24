@@ -3,6 +3,8 @@ package com.ouyunc.im.constant.enums;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.content.*;
 
+import java.util.List;
+
 /**
  * @Author fangzhenxun
  * @Description: 消息内容类型枚举
@@ -22,6 +24,9 @@ public enum MessageContentEnum {
     READ_RECEIPT_CONTENT(9, ReadReceiptContent.class, "已读回执消息内容, 集合中的对象"),
     SERVER_NOTIFY_CONTENT(12, ServerNotifyContent.class, "服务端发给客户端的通知内容"),
     QOS_RETRY_PACKET_CONTENT(13, Packet.class, "客户端发起的重试消息packet,注意该packet是上次为发送成功的"),
+
+    PRIVATE_CHAT_WITHDRAW_CONTENT(14, List.class, "私聊信息撤回"),
+    GROUP_OR_CUSTOMER_CHAT_WITHDRAW_CONTENT(15, List.class, "群聊或客服信息撤回"),
 
 
 

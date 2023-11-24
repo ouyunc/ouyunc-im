@@ -30,7 +30,6 @@ import io.netty.util.concurrent.FutureListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.InetSocketAddress;
 import java.util.Map;
 
 /**
@@ -51,6 +50,8 @@ public enum Protocol {
                     .addLast(IMConstant.WS_SERVER_PROTOCOL_HANDLER, new WebSocketServerProtocolHandler(IMServerContext.SERVER_CONFIG.getWebsocketPath(), null, true, Integer.MAX_VALUE))
                     // 转换成包packet,内部消息传递都是以packet 进行处理
                     .addLast(IMConstant.CONVERT_2_PACKET, new Convert2PacketHandler())
+                    // 添加监控处理逻辑
+                    .addLast(IMConstant.MONITOR_HANDLER, new MonitorHandler())
                     // 在业务处理之前可以进行登录认证处理，登录认证处理，如果不需要登录处理，可在配置文件中配置，不需要在这里处理
                     // qos 前置处理
                     .addLast(IMConstant.QOS_HANDLER_PRE, new QosHandler())

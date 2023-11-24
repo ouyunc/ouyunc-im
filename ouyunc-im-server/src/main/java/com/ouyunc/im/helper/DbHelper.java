@@ -452,7 +452,7 @@ public class  DbHelper {
         if (IMServerContext.SERVER_CONFIG.isDbEnable()) {
             String nowDateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
             Message message = (Message) packet.getMessage();
-            dbOperator.insert(DbSqlConstant.MYSQL.INSERT_SEND_MESSAGE.sql(), packet.getPacketId(), packet.getProtocol(), packet.getProtocolVersion(), packet.getDeviceType(), packet.getNetworkType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), packet.getIp(), message.getFrom(), message.getTo(), packet.getMessageType(), message.getContentType(), message.getContent(), message.getExtra(), message.getCreateTime(), nowDateTime, nowDateTime);
+            dbOperator.insert(DbSqlConstant.MYSQL.INSERT_SEND_MESSAGE.sql(), packet.getPacketId(), packet.getProtocol(), packet.getProtocolVersion(), packet.getDeviceType(), packet.getNetworkType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), packet.getIp(), message.getFrom(), message.getTo(), packet.getMessageType(), message.getContentType(), message.getContent(), message.getExtra(), message.getCreateTime(), IMConstant.NOT_WITHDRAW, nowDateTime, nowDateTime);
         }
         cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.SEND + from, packet, timestamp);
     }
@@ -468,7 +468,7 @@ public class  DbHelper {
         if (IMServerContext.SERVER_CONFIG.isDbEnable()) {
             String nowDateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
             Message message = (Message) packet.getMessage();
-            dbOperator.insert(DbSqlConstant.MYSQL.INSERT_RECEIVE_MESSAGE.sql(), packet.getPacketId(), packet.getProtocol(), packet.getProtocolVersion(), packet.getDeviceType(), packet.getNetworkType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), packet.getIp(), message.getFrom(), message.getTo(), packet.getMessageType(), message.getContentType(), message.getContent(), message.getExtra(), message.getCreateTime(), nowDateTime, nowDateTime);
+            dbOperator.insert(DbSqlConstant.MYSQL.INSERT_RECEIVE_MESSAGE.sql(), packet.getPacketId(), packet.getProtocol(), packet.getProtocolVersion(), packet.getDeviceType(), packet.getNetworkType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), packet.getIp(), message.getFrom(), message.getTo(), packet.getMessageType(), message.getContentType(), message.getContent(), message.getExtra(), message.getCreateTime(), IMConstant.NOT_WITHDRAW, nowDateTime, nowDateTime);
         }
         cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.RECEIVE + to, packet, timestamp);
     }
@@ -516,4 +516,16 @@ public class  DbHelper {
         }
     }
 
+    /**
+     * @Author fangzhenxun
+     * @Description 处理撤回消息，删除离校消息的时候进行加锁
+     * @param packet
+     * @return void
+     */
+    public static void handleWithdrawMessage(Packet packet) {
+        if (IMServerContext.SERVER_CONFIG.isDbEnable()) {
+            String nowDateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            dbOperator.update(DbSqlConstant.MYSQL.UPDATE_SEND_AND_RECEIVE_MESSAGE.sql(), packet.getPacketId(), nowDateTime, packet.getPacketId(), nowDateTime);
+        }
+    }
 }

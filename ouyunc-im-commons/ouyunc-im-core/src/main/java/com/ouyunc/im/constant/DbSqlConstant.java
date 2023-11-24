@@ -243,8 +243,10 @@ public class DbSqlConstant {
         DELETE_GROUP_ALL_USER("DELETE  FROM  ouyunc_im_group_user  WHERE GROUP_ID = ?","删除群所有成员关系"),
 
 
-        UPDATE_MESSAGE_READ_RECEIPT("UPDATE ouyunc_im_send_message SET READ_LIST = ? WHERE DELETED = 0 AND ID = ? ","读已回执，更新已读列表"),
-
+        UPDATE_SEND_AND_RECEIVE_MESSAGE(
+                "UPDATE ouyunc_im_send_message SET withdraw = 1,  update_time = ? WHERE id = ? and deleted = 0;" +
+                " UPDATE ouyunc_im_receive_message SET withdraw = 1,  update_time = ? WHERE id = ? and deleted = 0;",
+                "撤销发件箱和收件箱的消息根据消息id"),
 
         INSERT_FRIEND("INSERT INTO ouyunc_im_friend (ID, USER_ID, FRIEND_USER_ID, FRIEND_NICK_NAME, IS_SHIELD, CREATE_TIME, UPDATE_TIME) VALUES (?, ?, ?, ?, ?, ?, ?)","添加好友关系"),
 
@@ -252,13 +254,11 @@ public class DbSqlConstant {
 
         INSERT_READ_RECEIPT("INSERT INTO ouyunc_im_read_receipt(ID, MSG_ID, USER_ID) VALUES (?, ?, ?)", "插入已读消息关系"),
 
-        INSERT_SEND_MESSAGE("INSERT INTO ouyunc_im_send_message (ID, PROTOCOL, PROTOCOL_VERSION, DEVICE_TYPE, NETWORK_TYPE, ENCRYPT_TYPE, SERIALIZE_ALGORITHM, IP, `FROM`, `TO`, TYPE, CONTENT_TYPE, CONTENT,EXTRA, SEND_TIME, CREATE_TIME, UPDATE_TIME, DELETED) VALUES (?, ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , 0)", "插入发件箱消息"),
+        INSERT_SEND_MESSAGE("INSERT INTO ouyunc_im_send_message (ID, PROTOCOL, PROTOCOL_VERSION, DEVICE_TYPE, NETWORK_TYPE, ENCRYPT_TYPE, SERIALIZE_ALGORITHM, IP, `FROM`, `TO`, TYPE, CONTENT_TYPE, CONTENT,EXTRA, SEND_TIME, WITHDRAW, CREATE_TIME, UPDATE_TIME, DELETED) VALUES (?, ? , ? ,? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , 0)", "插入发件箱消息"),
+        INSERT_RECEIVE_MESSAGE("INSERT INTO ouyunc_im_receive_message (ID, PROTOCOL, PROTOCOL_VERSION, DEVICE_TYPE, NETWORK_TYPE, ENCRYPT_TYPE, SERIALIZE_ALGORITHM, IP, `FROM`, `TO`, TYPE, CONTENT_TYPE, CONTENT, EXTRA, RECEIVE_TIME, WITHDRAW, CREATE_TIME, UPDATE_TIME, DELETED) VALUES ( ?,? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , 0)", "插入收件箱消息"),
 
-        INSERT_RECEIVE_MESSAGE("INSERT INTO ouyunc_im_receive_message (ID, PROTOCOL, PROTOCOL_VERSION, DEVICE_TYPE, NETWORK_TYPE, ENCRYPT_TYPE, SERIALIZE_ALGORITHM, IP, `FROM`, `TO`, TYPE, CONTENT_TYPE, CONTENT, EXTRA, RECEIVE_TIME, CREATE_TIME, UPDATE_TIME, DELETED) VALUES ( ?, ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , 0)", "插入收件箱消息"),
+        INSERT_MESSAGE("INSERT INTO ouyunc_im_message (ID, PROTOCOL, PROTOCOL_VERSION, DEVICE_TYPE, NETWORK_TYPE, ENCRYPT_TYPE, SERIALIZE_ALGORITHM, IP, `FROM`, `TO`, TYPE, CONTENT_TYPE, CONTENT,EXTRA, SEND_TIME, CREATE_TIME, UPDATE_TIME, DELETED) VALUES (?, ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , 0)", "插入全局消息记录");
 
-        INSERT_MESSAGE("INSERT INTO ouyunc_im_message (ID, PROTOCOL, PROTOCOL_VERSION, DEVICE_TYPE, NETWORK_TYPE, ENCRYPT_TYPE, SERIALIZE_ALGORITHM, IP, `FROM`, `TO`, TYPE, CONTENT_TYPE, CONTENT,EXTRA, SEND_TIME, CREATE_TIME, UPDATE_TIME, DELETED) VALUES (?, ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , 0)", "插入消息"),
-
-        INSERT_BLACK_LIST("INSERT INTO ouyunc_im_blacklist (ID, IDENTITY, USER_ID, IDENTITY_TYPE, CREATE_TIME) VALUES (?, ?, ?, ?, ?) ", "将个人或群加入黑名单");
 
 
         /**
@@ -294,6 +294,7 @@ public class DbSqlConstant {
         public void setDescription(String description) {
             this.description = description;
         }
+
     }
 
     /**
