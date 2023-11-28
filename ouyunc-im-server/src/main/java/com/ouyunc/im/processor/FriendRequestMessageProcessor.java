@@ -41,16 +41,15 @@ public class  FriendRequestMessageProcessor extends AbstractMessageProcessor{
             Message message = (Message) packet.getMessage();
             String to = message.getTo();
             // 存到缓存中7天
-            DbHelper.handleFriendRequest(packet);
+            long timestamp = SystemClock.now();
+            DbHelper.handleFriendRequest(packet, timestamp);
+            // 无论是否在线都先存入离线表
+            DbHelper.write2OfflineTimeline(packet, to, timestamp);
             // 转发给该好友的各个设备端
-            // 获取该客户端在线的所有客户端，进行推送消息已读
             List<LoginUserInfo> toLoginUserInfos = UserHelper.onlineAll(to);
-            if (CollectionUtils.isEmpty(toLoginUserInfos)) {
-                // 存入离线消息
-                DbHelper.write2OfflineTimeline(packet, to, SystemClock.now());
-                return;
+            if (CollectionUtils.isNotEmpty(toLoginUserInfos)) {
+                MessageHelper.send2MultiDevices(packet, toLoginUserInfos);
             }
-            MessageHelper.send2MultiDevices(packet, toLoginUserInfos);
         });
     }
 }

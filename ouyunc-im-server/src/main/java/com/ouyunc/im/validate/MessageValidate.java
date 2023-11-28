@@ -36,18 +36,12 @@ public class MessageValidate {
         // 校验客户端是否被平台封禁
         if (IMConstant.USER_TYPE_1.equals(type)) {
             ImUser imUser = DbHelper.getUser(identity);
-            if (imUser != null && IMConstant.USER_STATUS_0.equals(imUser.getStatus())) {
-                return false;
-            }
-            return true;
+            return imUser == null || IMConstant.USER_STATUS_1.equals(imUser.getStatus());
         }
         // 校验群组是否被平台封禁
         if (IMConstant.GROUP_TYPE_2.equals(type)) {
             ImGroup imGroup = DbHelper.getGroup(identity);
-            if (imGroup != null && IMConstant.GROUP_STATUS_0.equals(imGroup.getStatus())){
-                return false;
-            }
-            return true;
+            return imGroup == null || IMConstant.GROUP_STATUS_1.equals(imGroup.getStatus());
         }
         return true;
     }
@@ -121,10 +115,7 @@ public class MessageValidate {
             log.debug("正在校验from: {} 和 to: {} 否是好友关系", from, to);
         }
         ImFriendBO imFriendBO = DbHelper.getFriend(from, to);
-        if (imFriendBO != null) {
-            return true;
-        }
-        return false;
+        return imFriendBO != null;
     }
 
     /**
@@ -139,10 +130,7 @@ public class MessageValidate {
             log.debug("正在校验from: {} 是否被 to: {} 拉黑(在黑名单列表中)", from, to);
         }
         ImBlacklistBO imBlacklistBO = DbHelper.getBackList(from, to, type);
-        if (imBlacklistBO == null) {
-            return false;
-        }
-        return true;
+        return imBlacklistBO != null;
     }
 
     /**
@@ -158,17 +146,11 @@ public class MessageValidate {
         }
         if (IMConstant.USER_TYPE_1.equals(type)) {
             ImFriendBO friend = DbHelper.getFriend(to, from);
-            if (friend != null && IMConstant.NOT_SHIELD.equals(friend.getFriendIsShield())) {
-                return false;
-            }
-            return true;
+            return friend == null || IMConstant.SHIELD.equals(friend.getFriendIsShield());
         }
         if (IMConstant.GROUP_TYPE_2.equals(type)) {
             ImGroupUserBO groupMember = DbHelper.getGroupMember(from, to);
-            if (groupMember != null && IMConstant.NOT_SHIELD.equals(groupMember.getIsShield())) {
-                return false;
-            }
-            return true;
+            return groupMember == null || IMConstant.SHIELD.equals(groupMember.getIsShield());
         }
         return true;
     }
@@ -185,10 +167,7 @@ public class MessageValidate {
             log.debug("正在校验from: {} 是否加入群组 groupIdentity: {}", from, groupIdentity);
         }
         ImGroupUserBO groupMember = DbHelper.getGroupMember(from, groupIdentity);
-        if (groupMember == null) {
-            return false;
-        }
-        return true;
+        return groupMember != null;
     }
 
 }

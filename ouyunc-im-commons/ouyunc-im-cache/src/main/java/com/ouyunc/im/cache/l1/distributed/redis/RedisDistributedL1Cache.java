@@ -161,7 +161,7 @@ public class RedisDistributedL1Cache <K , V > extends AbstractDistributedL1Cache
 
     @Override
     public Long sizeZset(K key) {
-        return redisTemplate.opsForZSet().size(key);
+        return redisTemplate.opsForZSet().zCard(key);
     }
 
     @Override

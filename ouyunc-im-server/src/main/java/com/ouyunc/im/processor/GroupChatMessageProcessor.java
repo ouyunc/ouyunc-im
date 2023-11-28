@@ -73,31 +73,24 @@ public class GroupChatMessageProcessor extends AbstractMessageProcessor {
             List<ImGroupUserBO> groupMembers = DbHelper.getGroupMembers(to);
             // 循环遍历
             if (CollectionUtils.isEmpty(groupMembers)) {
-                // 解散了
+                // 解散了 (该群不存在了)
                 return;
             }
             // 写入发件箱
             long timestamp = SystemClock.now();
-            DbHelper.write2SendTimeline(packet, from, timestamp);
-            // 将消息存一份到群消息中
-            DbHelper.write2ReceiveTimeline(packet, to, timestamp);
-            // 发送所有登录端去发送信息
+            DbHelper.write2Timeline(packet, from, to, timestamp);
+            // 给自己的所有登录端去发送信息
             List<LoginUserInfo> fromLoginUserInfos = UserHelper.onlineAll(from, packet.getDeviceType());
-            // 排除自己，发给其他端
-            // 转发给自己客户端的各个设备端
+            // 转发给自己客户端的各个设备端，排除自己
             MessageHelper.send2MultiDevices(packet, fromLoginUserInfos);
-            // 遍历所有的群成员
             for (ImGroupUserBO groupMember : groupMembers) {
                 // 目前使用id号来作为唯一标识
                 if (!from.equals(groupMember.getUserId()) && IMConstant.NOT_SHIELD.equals(groupMember.getIsShield())) {
-                    // 群里其它人员的其他端
+                    // 无论是否在线都会先存入离线消息表
+                    DbHelper.write2OfflineTimeline(packet, groupMember.getUserId(), timestamp);
                     // 判断，群成员是否屏蔽了该群，如果屏蔽则不能接受到该消息
                     List<LoginUserInfo> othersMembersLoginUserInfos = UserHelper.onlineAll(groupMember.getUserId());
-                    if (CollectionUtils.isEmpty(othersMembersLoginUserInfos)) {
-                        // 存入离线消息
-                        DbHelper.write2OfflineTimeline(packet, groupMember.getUserId(), timestamp);
-                    } else {
-                        // 转发给某个客户端的各个设备端
+                    if (CollectionUtils.isNotEmpty(othersMembersLoginUserInfos)) {
                         MessageHelper.send2MultiDevices(packet, othersMembersLoginUserInfos);
                     }
                 }

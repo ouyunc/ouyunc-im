@@ -2,7 +2,6 @@ package com.ouyunc.im.processor.content;
 
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.im.base.LoginUserInfo;
-import com.ouyunc.im.constant.CacheConstant;
 import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.constant.enums.MessageContentEnum;
 import com.ouyunc.im.domain.bo.ImGroupUserBO;
@@ -48,7 +47,7 @@ public class GroupAgreeInviteMessageContentProcessor extends AbstractMessageCont
         if (visitor == null) {
             return;
         }
-        long now = SystemClock.now();
+        long timestamp = SystemClock.now();
         if (IMConstant.GROUP_LEADER.equals(visitor.getIsLeader()) || IMConstant.GROUP_MANAGER.equals(visitor.getIsManager()) ) {
             DbHelper.bindGroup(from, groupId);
             // 这里使用了一个额外字段来处理邀请状态的流转
@@ -62,20 +61,19 @@ public class GroupAgreeInviteMessageContentProcessor extends AbstractMessageCont
                 return;
             }
             for (ImGroupUserBO groupManagerMember : groupManagerMembers) {
+                // 无论是否在线都会先存入离线消息
+                DbHelper.write2OfflineTimeline(packet, groupManagerMember.getUserId(), timestamp);
                 // 判断该管理员是否在线，如果不在线放入离线消息
                 List<LoginUserInfo> managersLoginUserInfos = UserHelper.onlineAll(groupManagerMember.getUserId());
-                if (CollectionUtils.isEmpty(managersLoginUserInfos)) {
-                    // 存入离线消息
-                    DbHelper.write2OfflineTimeline(packet, groupManagerMember.getUserId(), now);
-                }else {
+                if (CollectionUtils.isNotEmpty(managersLoginUserInfos)) {
                     // 转发给某个客户端的各个设备端
                     MessageHelper.send2MultiDevices(packet, managersLoginUserInfos);
                 }
             }
-            // 只缓存到群请求消息中
-            DbHelper.cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + groupId, packet, now);
+            // 只缓存到群请求消息中,不落库
+            DbHelper.handleGroupRequestMessage(packet, groupId, timestamp);
         }
-        DbHelper.cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + from, packet, now);
+        DbHelper.handleGroupRequestMessage(packet, from, timestamp);
         // 对群邀请人来讲并不太关心被邀请人同意不同意，所以这里就不进行消息通知邀请人了，和邀请的时候一致，也不保存邀请的信息
     }
 }

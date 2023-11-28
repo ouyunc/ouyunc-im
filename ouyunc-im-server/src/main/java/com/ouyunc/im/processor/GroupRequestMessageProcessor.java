@@ -28,9 +28,8 @@ public class GroupRequestMessageProcessor extends AbstractMessageProcessor{
     public void doProcess(ChannelHandlerContext ctx, Packet packet) {
         log.info("GroupRequestMessageProcessor 正在处理好友请求消息packet: {}", packet);
         fireProcess(ctx, packet, (ctx0, packet0)->{
-            Message message = (Message) packet.getMessage();
             // 判断是什么类型的消息，好友申请，好友拒绝，好友同意等
-            IMProcessContext.MESSAGE_CONTENT_PROCESSOR.get(message.getContentType()).doProcess(ctx, packet);
+            IMProcessContext.MESSAGE_CONTENT_PROCESSOR.get(((Message) packet.getMessage()).getContentType()).doProcess(ctx, packet);
         });
 
     }

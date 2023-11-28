@@ -52,10 +52,10 @@ public class WithdrawMessageProcessor extends AbstractMessageProcessor {
             String to = message.getTo();
             // 将消息写到发件箱和及接收方的收件箱
             long timestamp = SystemClock.now();
-            DbHelper.write2SendTimeline(packet, from, timestamp);
-            DbHelper.write2ReceiveTimeline(packet, to, timestamp);
+            // 写入信箱
+            DbHelper.write2Timeline(packet, from, to, timestamp);
             // 修改发件箱和收件箱的消息状态,离线消息，和缓存不做处理交给客户端处理（为了提高服务端性能，能让客户端做的，尽量让客户端去处理）
-            DbHelper.handleWithdrawMessage(packet);
+            DbHelper.handleWithdrawMessage(packet, timestamp);
             // 发送给自己的其他端
             List<LoginUserInfo> fromLoginUserInfos = UserHelper.onlineAll(from, packet.getDeviceType());
             // 排除自己，发给其他端
@@ -63,10 +63,10 @@ public class WithdrawMessageProcessor extends AbstractMessageProcessor {
             MessageHelper.send2MultiDevices(packet, fromLoginUserInfos);
             // 获取该客户端在线的所有客户端，进行推送消息已读
             if (MessageContentEnum.PRIVATE_CHAT_WITHDRAW_CONTENT.type() == contentType) {
+                // 无论是否在线都存入离线消息，不以设备来区分
+                DbHelper.write2OfflineTimeline(packet, to, timestamp);
                 List<LoginUserInfo> toLoginUserInfos = UserHelper.onlineAll(to);
                 if (CollectionUtils.isEmpty(toLoginUserInfos)) {
-                    // 存入离线消息，不以设备来区分
-                    DbHelper.write2OfflineTimeline(packet, to, timestamp);
                     return;
                 }
                 // 转发给某个客户端的各个设备端
@@ -84,21 +84,18 @@ public class WithdrawMessageProcessor extends AbstractMessageProcessor {
                 for (ImGroupUserBO groupMember : groupMembers) {
                     // 目前使用id号来作为唯一标识
                     if (!from.equals(groupMember.getUserId()) && IMConstant.NOT_SHIELD.equals(groupMember.getIsShield())) {
+                        // 无论是否在线都会存储到离线消息中
+                        DbHelper.write2OfflineTimeline(packet, groupMember.getUserId(), timestamp);
                         // 群里其它人员的其他端
                         // 判断，群成员是否屏蔽了该群，如果屏蔽则不能接受到该消息
                         List<LoginUserInfo> othersMembersLoginUserInfos = UserHelper.onlineAll(groupMember.getUserId());
-                        if (CollectionUtils.isEmpty(othersMembersLoginUserInfos)) {
-                            // 存入离线消息
-                            DbHelper.write2OfflineTimeline(packet, groupMember.getUserId(), timestamp);
-                        } else {
+                        if (CollectionUtils.isNotEmpty(othersMembersLoginUserInfos)) {
                             // 转发给某个客户端的各个设备端
                             MessageHelper.send2MultiDevices(packet, othersMembersLoginUserInfos);
                         }
-
                     }
                 }
             }
-
         });
     }
 }

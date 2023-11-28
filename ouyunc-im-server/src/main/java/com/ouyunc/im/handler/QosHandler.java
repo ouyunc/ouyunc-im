@@ -1,26 +1,19 @@
 package com.ouyunc.im.handler;
 
 import com.alibaba.fastjson2.JSON;
-import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.constant.enums.MessageEnum;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.helper.DbHelper;
 import com.ouyunc.im.helper.MessageHelper;
-import com.ouyunc.im.helper.UserHelper;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.ExtraMessage;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.qos.Qos;
-import com.ouyunc.im.utils.SystemClock;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.List;
 
 /**
  * qos 消息质量处理,注意目前qos质量保证，只针对私聊和群聊
@@ -53,28 +46,10 @@ public class QosHandler extends SimpleChannelInboundHandler<Packet> implements Q
                 Message retryMessage = (Message) retryPacket.getMessage();
                 String to = retryMessage.getTo();
                 String from = retryMessage.getFrom();
-                // 判断该重试消息是否被服务器端处理过，如果为处理，则直接变换packet交给下游处理，如果处理过则直接发送
-                Packet existPacket = DbHelper.readFromReceiveTimeline(to, retryPacket.getPacketId());
+                // 判断该重试消息是否被服务器端处理过，如果未处理，则直接变换packet交给下游处理，如果处理过则直接发送
+                Packet existPacket = DbHelper.readFromTimeline(to, retryPacket.getPacketId());
                 if (existPacket != null) {
-                    // 1,判断是否在线，如果在线，直接发送，
-                    MessageEnum retryMessageEnum = MessageEnum.prototype(retryPacket.getMessageType());
-                    // 私聊
-                    if (MessageEnum.IM_PRIVATE_CHAT.equals(retryMessageEnum)) {
-                        List<LoginUserInfo> loginUserInfoList = UserHelper.onlineAll(to);
-                        if (CollectionUtils.isNotEmpty(loginUserInfoList)) {
-                            // 转发给某个客户端的各个设备端
-                            MessageHelper.send2MultiDevices(packet, loginUserInfoList);
-                        }else {
-                            // 检查离线消息是否存在，如果不存在则写入离线信箱
-                            Packet offlinePacket = DbHelper.readFromOfflineTimeline(to, retryPacket.getPacketId());
-                            if (offlinePacket == null) {
-                                // 写入离线消息
-                                DbHelper.write2OfflineTimeline(retryPacket, to, SystemClock.now());
-                            }
-                            // 发送伪ack给消息发送方，取消客户端重试
-                            MessageHelper.doQos(from, retryPacket);
-                        }
-                    }
+                    MessageHelper.doQos(from, retryPacket);
                     // 不往下面传递处理了
                     return false;
                 }

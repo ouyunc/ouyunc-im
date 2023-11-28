@@ -98,10 +98,8 @@ public class UserHelper {
         Map<String, LoginUserInfo> loginUserInfoMap = IMServerContext.LOGIN_USER_INFO_CACHE.getHashAll(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.LOGIN + identity);
         if (MapUtil.isNotEmpty(loginUserInfoMap)) {
             loginUserInfoMap.forEach((loginDeviceName, loginUserInfo)->{
-                if (excludeDeviceType == null || !loginDeviceName.equals(DeviceEnum.getDeviceNameByValue(excludeDeviceType))) {
-                    if (loginUserInfo != null && OnlineEnum.ONLINE.equals(loginUserInfo.getOnlineStatus())) {
-                        loginServerAddressList.add(loginUserInfo);
-                    }
+                if ((excludeDeviceType == null || !loginDeviceName.equals(DeviceEnum.getDeviceNameByValue(excludeDeviceType))) && (loginUserInfo != null && OnlineEnum.ONLINE.equals(loginUserInfo.getOnlineStatus()))) {
+                    loginServerAddressList.add(loginUserInfo);
                 }
             });
         }

@@ -49,8 +49,6 @@ public class GroupRefuseJoinMessageContentProcessor extends AbstractMessageConte
         GroupRequestContent groupRequestContent = JSON.parseObject(message.getContent(), GroupRequestContent.class);
         // 下面是对集群以及qos消息可靠进行处理
         String from = message.getFrom();
-        // 根据to从分布式缓存中取出targetServerAddress目标地址
-        String to = message.getTo();
         String groupId = groupRequestContent.getGroupId();
         // 被邀请人id
         List<String> invitedUserIdList = groupRequestContent.getInvitedUserIdList();
@@ -70,8 +68,8 @@ public class GroupRefuseJoinMessageContentProcessor extends AbstractMessageConte
             }
             // 处理群组请求
             timestamp = SystemClock.now();
-            DbHelper.cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + identity, packet, timestamp);
-            DbHelper.cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + groupId, packet, timestamp);
+            DbHelper.handleGroupRequestMessage(packet, identity, timestamp);
+            DbHelper.handleGroupRequestMessage(packet, groupId, timestamp);
         }finally {
             lock.unlock();
         }
@@ -83,22 +81,20 @@ public class GroupRefuseJoinMessageContentProcessor extends AbstractMessageConte
         for (ImGroupUserBO groupManagerMember : groupManagerMembers) {
             // 排除自己
             if (!from.equals(groupManagerMember.getUserId())) {
+                DbHelper.write2OfflineTimeline(packet, groupManagerMember.getUserId(), timestamp);
                 // 判断该管理员是否在线，如果不在线放入离线消息
                 List<LoginUserInfo> managersLoginUserInfos = UserHelper.onlineAll(groupManagerMember.getUserId());
-                if (CollectionUtils.isEmpty(managersLoginUserInfos)) {
-                    // 存入离线消息
-                    DbHelper.write2OfflineTimeline(packet, groupManagerMember.getUserId(), timestamp);
-                }else {
-                    // 转发给某个客户端的各个设备端
+                if (CollectionUtils.isNotEmpty(managersLoginUserInfos)) {
                     MessageHelper.send2MultiDevices(packet, managersLoginUserInfos);
                 }
             }
         }
-
+        DbHelper.write2OfflineTimeline(packet, identity, timestamp);
         // 判断该对方是否在线，如果不在线放入离线消息，注意该消息不存离线，如果用户不在线则丢弃该消息
         List<LoginUserInfo> toLoginUserInfos = UserHelper.onlineAll(identity);
-        // 转发给某个客户端的各个设备端
-        MessageHelper.send2MultiDevices(packet, toLoginUserInfos);
+        if (CollectionUtils.isNotEmpty(toLoginUserInfos)) {
+            MessageHelper.send2MultiDevices(packet, toLoginUserInfos);
+        }
     }
 
 }

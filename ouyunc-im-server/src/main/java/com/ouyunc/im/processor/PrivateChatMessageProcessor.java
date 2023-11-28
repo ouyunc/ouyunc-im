@@ -71,22 +71,19 @@ public class PrivateChatMessageProcessor extends AbstractMessageProcessor{
             String to = message.getTo();
             // 将消息写到发件箱和及接收方的收件箱
             long timestamp = SystemClock.now();
-            DbHelper.write2SendTimeline(packet, from, timestamp);
-            DbHelper.write2ReceiveTimeline(packet, to, timestamp);
+            DbHelper.write2Timeline(packet, from, to, timestamp);
             // 发送给自己的其他端
             List<LoginUserInfo> fromLoginUserInfos = UserHelper.onlineAll(from, packet.getDeviceType());
-            // 排除自己，发给其他端
             // 转发给自己客户端的各个设备端
             MessageHelper.send2MultiDevices(packet, fromLoginUserInfos);
+            // 将其放入离线消息列表
+            DbHelper.write2OfflineTimeline(packet, to, timestamp);
             // 获取该客户端在线的所有客户端，进行推送消息已读
             List<LoginUserInfo> toLoginUserInfos = UserHelper.onlineAll(to);
-            if (CollectionUtils.isEmpty(toLoginUserInfos)) {
+            if (CollectionUtils.isNotEmpty(toLoginUserInfos)) {
                 // 存入离线消息，不以设备来区分
-                DbHelper.write2OfflineTimeline(packet, to, timestamp);
-                return;
+                MessageHelper.send2MultiDevices(packet, toLoginUserInfos);
             }
-            // 转发给某个客户端的各个设备端
-            MessageHelper.send2MultiDevices(packet, toLoginUserInfos);
         });
 
     }

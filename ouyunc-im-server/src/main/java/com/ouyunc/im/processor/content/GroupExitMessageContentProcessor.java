@@ -53,14 +53,11 @@ public class GroupExitMessageContentProcessor extends AbstractMessageContentProc
         DbHelper.exitGroup(from, groupRequestContent.getGroupId());
         // 查找群中的群主
         ImGroupUserBO groupLeader = DbHelper.getGroupLeader(groupRequestContent.getGroupId());
+        DbHelper.write2OfflineTimeline(packet, groupLeader.getUserId(), SystemClock.now());
         // 判断群主是否在线，如果不在线放入离线消息
         List<LoginUserInfo> leaderLoginUserInfos = UserHelper.onlineAll(groupLeader.getUserId());
-        if (CollectionUtils.isEmpty(leaderLoginUserInfos)) {
-            // 存入离线消息
-            DbHelper.write2OfflineTimeline(packet, groupLeader.getUserId(), SystemClock.now());
-            return;
+        if (CollectionUtils.isNotEmpty(leaderLoginUserInfos)) {
+            MessageHelper.send2MultiDevices(packet, leaderLoginUserInfos);
         }
-        // 转发给某个客户端的各个设备端
-        MessageHelper.send2MultiDevices(packet, leaderLoginUserInfos);
     }
 }

@@ -79,9 +79,7 @@ public class CustomerMessageProcessor extends AbstractMessageProcessor {
             }
             // 写入发件箱
             long timestamp = SystemClock.now();
-            DbHelper.write2SendTimeline(packet, from, timestamp);
-            // 将消息存一份到群消息中
-            DbHelper.write2ReceiveTimeline(packet, to, timestamp);
+            DbHelper.write2Timeline(packet, from, to, timestamp);
             // 如果是自己找到自己的所有登录端去发送信息
             List<LoginUserInfo> fromLoginUserInfos = UserHelper.onlineAll(from, packet.getDeviceType());
             // 排除自己，发给其他端
@@ -93,7 +91,8 @@ public class CustomerMessageProcessor extends AbstractMessageProcessor {
             for (ImGroupUserBO groupMember : groupMembers) {
                 // 目前使用id号来作为唯一标识
                 if (!from.equals(groupMember.getUserId()) && IMConstant.NOT_SHIELD.equals(groupMember.getIsShield())) {
-                    // 发给客服
+                    // 无论是否在线都会先存入离线消息表
+                    DbHelper.write2OfflineTimeline(packet, groupMember.getUserId(), timestamp);
                     // 判断，客服是否屏蔽了该群，如果屏蔽则不能接受到该消息
                     List<LoginUserInfo> customerLoginUserInfos = UserHelper.onlineAll(groupMember.getUserId());
                     if (CollectionUtils.isEmpty(customerLoginUserInfos)) {

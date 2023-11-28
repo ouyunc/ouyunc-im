@@ -41,6 +41,8 @@ public class CacheConstant {
     public static final String SEND = "send:";
     // 接收
     public static final String RECEIVE = "receive:";
+    // 信箱
+    public static final String TIME_LINE = "time_line:";
     // 消息相关公共前缀
     public static final String IM_MESSAGE = "im:message:";
     // 用户相关公共前缀
@@ -49,7 +51,7 @@ public class CacheConstant {
     public static final String FRIEND = "friend:";
     // 群成员相关前缀
     public static final String MEMBERS = ":members";
-    // 分布式做的同意加入群或拒绝加入群
+    // 分布式锁的同意加入群或拒绝加入群
     public static final String REFUSE_AGREE = "refuse-agree:";
     // im app detail 信息数据
     public static final String APP = "app:";

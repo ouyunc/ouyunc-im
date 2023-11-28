@@ -53,13 +53,11 @@ public class GroupKickMessageContentProcessor extends AbstractMessageContentProc
         // 根据to从分布式缓存中取出targetServerAddress目标地址
         String to = message.getTo();
         DbHelper.removeOutGroup(to, groupRequestContent.getGroupId());
+        DbHelper.write2OfflineTimeline(packet, to, SystemClock.now());
         // 判断该管理员是否在线，如果不在线放入离线消息
         List<LoginUserInfo> toLoginUserInfos = UserHelper.onlineAll(to);
-        if (CollectionUtils.isEmpty(toLoginUserInfos)) {
-            // 存入离线消息
-            DbHelper.write2OfflineTimeline(packet, to, SystemClock.now());
-            return;
+        if (CollectionUtils.isNotEmpty(toLoginUserInfos)) {
+            MessageHelper.send2MultiDevices(packet, toLoginUserInfos);
         }
-        MessageHelper.send2MultiDevices(packet, toLoginUserInfos);
     }
 }

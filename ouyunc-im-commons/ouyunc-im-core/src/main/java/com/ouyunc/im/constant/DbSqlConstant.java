@@ -233,7 +233,29 @@ public class DbSqlConstant {
                 "\touyunc_im_app.DELETED = 0 AND\n" +
                 "\touyunc_im_app.APP_KEY = ? ","查询IM APP DETAIL 详情信息"),
 
-        SELECT_RECEIVE_MESSAGE("SELECT ID, PROTOCOL, PROTOCOL_VERSION as protocolVersion, DEVICE_TYPE as deviceType, NETWORK_TYPE as networkType, ENCRYPT_TYPE as encryptType,EXTRA, SERIALIZE_ALGORITHM as serializeAlgorithm, IP, `FROM`, `TO`, TYPE, CONTENT_TYPE as contentType, CONTENT, RECEIVE_TIME as receiveTime, CREATE_TIME as createTime, UPDATE_TIME as updateTime, DELETED FROM ouyunc_im_receive_message WHERE ID = ?", "插入收件箱消息"),
+        SELECT_TIME_LINE("SELECT\n" +
+                "id,\n" +
+                "protocol,\n" +
+                "protocol_version as protocolVersion,\n" +
+                "device_type as deviceType,\n" +
+                "network_type as networkType,\n" +
+                "encrypt_type as encryptType,\n" +
+                "serialize_algorithm as serializeAlgorithm,\n" +
+                "ip,\n" +
+                "`from`,\n" +
+                "`to`,\n" +
+                "type,\n" +
+                "content_type as contentType,\n" +
+                "content,\n" +
+                "extra,\n" +
+                "send_time as sendTime,\n" +
+                "withdraw,\n" +
+                "create_time as createTime,\n" +
+                "update_time as updateTime,\n" +
+                "deleted\n" +
+                "FROM\n" +
+                "ouyunc_im_time_line\n" +
+                "where id =  ? and deleted = 0","查询IM timeline 消息信箱的信息"),
 
 
 
@@ -243,10 +265,7 @@ public class DbSqlConstant {
         DELETE_GROUP_ALL_USER("DELETE  FROM  ouyunc_im_group_user  WHERE GROUP_ID = ?","删除群所有成员关系"),
 
 
-        UPDATE_SEND_AND_RECEIVE_MESSAGE(
-                "UPDATE ouyunc_im_send_message SET withdraw = 1,  update_time = ? WHERE id = ? and deleted = 0;" +
-                " UPDATE ouyunc_im_receive_message SET withdraw = 1,  update_time = ? WHERE id = ? and deleted = 0;",
-                "撤销发件箱和收件箱的消息根据消息id"),
+        UPDATE_TIME_LINE("UPDATE ouyunc_im_time_line SET withdraw = 1,  update_time = ? WHERE id = ? and deleted = 0" ,"撤销信箱箱的消息根据消息id"),
 
         INSERT_FRIEND("INSERT INTO ouyunc_im_friend (ID, USER_ID, FRIEND_USER_ID, FRIEND_NICK_NAME, IS_SHIELD, CREATE_TIME, UPDATE_TIME) VALUES (?, ?, ?, ?, ?, ?, ?)","添加好友关系"),
 
@@ -254,8 +273,7 @@ public class DbSqlConstant {
 
         INSERT_READ_RECEIPT("INSERT INTO ouyunc_im_read_receipt(ID, MSG_ID, USER_ID) VALUES (?, ?, ?)", "插入已读消息关系"),
 
-        INSERT_SEND_MESSAGE("INSERT INTO ouyunc_im_send_message (ID, PROTOCOL, PROTOCOL_VERSION, DEVICE_TYPE, NETWORK_TYPE, ENCRYPT_TYPE, SERIALIZE_ALGORITHM, IP, `FROM`, `TO`, TYPE, CONTENT_TYPE, CONTENT,EXTRA, SEND_TIME, WITHDRAW, CREATE_TIME, UPDATE_TIME, DELETED) VALUES (?, ? , ? ,? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , 0)", "插入发件箱消息"),
-        INSERT_RECEIVE_MESSAGE("INSERT INTO ouyunc_im_receive_message (ID, PROTOCOL, PROTOCOL_VERSION, DEVICE_TYPE, NETWORK_TYPE, ENCRYPT_TYPE, SERIALIZE_ALGORITHM, IP, `FROM`, `TO`, TYPE, CONTENT_TYPE, CONTENT, EXTRA, RECEIVE_TIME, WITHDRAW, CREATE_TIME, UPDATE_TIME, DELETED) VALUES ( ?,? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , 0)", "插入收件箱消息"),
+        INSERT_TIME_LINE("INSERT INTO ouyunc_im_time_line (ID, PROTOCOL, PROTOCOL_VERSION, DEVICE_TYPE, NETWORK_TYPE, ENCRYPT_TYPE, SERIALIZE_ALGORITHM, IP, `FROM`, `TO`, TYPE, CONTENT_TYPE, CONTENT,EXTRA, SEND_TIME, WITHDRAW, CREATE_TIME, UPDATE_TIME, DELETED) VALUES (?, ? , ? ,? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , 0)", "批量插入信箱箱消息（插入两条一条是自己的一条是别人的）"),
 
         INSERT_MESSAGE("INSERT INTO ouyunc_im_message (ID, PROTOCOL, PROTOCOL_VERSION, DEVICE_TYPE, NETWORK_TYPE, ENCRYPT_TYPE, SERIALIZE_ALGORITHM, IP, `FROM`, `TO`, TYPE, CONTENT_TYPE, CONTENT,EXTRA, SEND_TIME, CREATE_TIME, UPDATE_TIME, DELETED) VALUES (?, ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , 0)", "插入全局消息记录");
 

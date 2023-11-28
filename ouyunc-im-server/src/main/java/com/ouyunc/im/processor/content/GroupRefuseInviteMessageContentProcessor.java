@@ -30,7 +30,7 @@ public class GroupRefuseInviteMessageContentProcessor extends AbstractMessageCon
         Message message = (Message) packet.getMessage();
         String from = message.getFrom();
         // 只是保存相关信息
-        DbHelper.cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + from, packet, SystemClock.now());
+        DbHelper.handleGroupRequestMessage(packet, from, SystemClock.now());
         // 对群邀请人来讲并不太关心被邀请人同意不同意，所以这里就不进行消息通知邀请人了，和邀请的时候一致，也不保存邀请的信息
     }
 }

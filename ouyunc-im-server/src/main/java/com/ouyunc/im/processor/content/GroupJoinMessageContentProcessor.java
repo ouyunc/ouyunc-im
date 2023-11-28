@@ -54,8 +54,8 @@ public class GroupJoinMessageContentProcessor extends AbstractMessageContentProc
                 return;
             }
             timestamp = SystemClock.now();
-            DbHelper.cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + identity, packet, timestamp);
-            DbHelper.cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + groupId, packet, timestamp);
+            DbHelper.handleGroupRequestMessage(packet, identity, timestamp);
+            DbHelper.handleGroupRequestMessage(packet, groupId, timestamp);
         }finally {
             lock.unlock();
         }
@@ -65,16 +65,12 @@ public class GroupJoinMessageContentProcessor extends AbstractMessageContentProc
             return;
         }
         for (ImGroupUserBO groupManagerMember : groupManagerMembers) {
+            DbHelper.write2OfflineTimeline(packet, groupManagerMember.getUserId(), timestamp);
             // 判断该管理员是否在线，如果不在线放入离线消息
             List<LoginUserInfo> managersLoginUserInfos = UserHelper.onlineAll(groupManagerMember.getUserId());
-            if (CollectionUtils.isEmpty(managersLoginUserInfos)) {
-                // 存入离线消息
-                DbHelper.write2OfflineTimeline(packet, groupManagerMember.getUserId(), timestamp);
-            }else {
-                // 转发给某个客户端的各个设备端
+            if (CollectionUtils.isNotEmpty(managersLoginUserInfos)) {
                 MessageHelper.send2MultiDevices(packet, managersLoginUserInfos);
             }
-
         }
     }
 }

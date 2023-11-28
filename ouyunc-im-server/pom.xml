@@ -5,12 +5,12 @@
     <parent>
         <artifactId>ouyunc-im</artifactId>
         <groupId>com.ouyunc</groupId>
-        <version>4.0.3</version>
+        <version>5.0.0</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.ouyunc</groupId>
     <artifactId>ouyunc-im-server</artifactId>
-    <version>4.0.3</version>
+    <version>5.0.0</version>
     <description>服务端模块</description>
 
 

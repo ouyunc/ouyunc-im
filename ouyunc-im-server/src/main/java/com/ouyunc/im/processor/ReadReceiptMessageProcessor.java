@@ -60,16 +60,14 @@ public class ReadReceiptMessageProcessor extends AbstractMessageProcessor {
                 // 重新封装packet消息,进行发送
                 message.setTo(identity);
                 message.setContent(JSON.toJSONString(readReceiptContents));
+                // 无论是否在线都会写入离线消息表，然后收到消息后通过ack开确认是否收到消息
+                DbHelper.write2OfflineTimeline(packet, identity, SystemClock.now());
                 // 获取该客户端在线的所有客户端，进行推送消息已读
                 List<LoginUserInfo> loginUserInfos = UserHelper.onlineAll(identity);
-                if (CollectionUtils.isEmpty(loginUserInfos)) {
-                    // 存入离线信箱
-                    DbHelper.write2OfflineTimeline(packet, identity, SystemClock.now());
-                } else {
+                if (CollectionUtils.isNotEmpty(loginUserInfos)) {
                     // 转发给某个客户端的各个设备端
                     MessageHelper.send2MultiDevices(packet, loginUserInfos);
                 }
-
             });
         });
     }

@@ -12,7 +12,7 @@ import com.ouyunc.im.db.operator.DbOperator;
 import com.ouyunc.im.db.operator.MysqlDbOperator;
 import com.ouyunc.im.domain.ImApp;
 import com.ouyunc.im.domain.ImGroup;
-import com.ouyunc.im.domain.ImReceiveMessage;
+import com.ouyunc.im.domain.ImTimeLine;
 import com.ouyunc.im.domain.ImUser;
 import com.ouyunc.im.domain.bo.ImBlacklistBO;
 import com.ouyunc.im.domain.bo.ImFriendBO;
@@ -23,20 +23,21 @@ import com.ouyunc.im.packet.message.content.ReadReceiptContent;
 import com.ouyunc.im.utils.IdentityUtil;
 import com.ouyunc.im.utils.MapUtil;
 import com.ouyunc.im.utils.SnowflakeUtil;
-import com.ouyunc.im.utils.SystemClock;
 import org.apache.commons.collections4.CollectionUtils;
 import org.redisson.api.RLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
  * 数据库操作
  */
-public class  DbHelper {
+public class DbHelper {
     private static final Logger log = LoggerFactory.getLogger(DbHelper.class);
 
     /**
@@ -84,23 +85,23 @@ public class  DbHelper {
      * @param from
      * @param to
      */
-    public static void bindFriend(String from, String to) {
+    public static void bindFriend(String from, String to, long currentTimestamp) {
         ImUser fromUser = getUser(from);
         ImUser toUser = getUser(to);
-        // 绑定关系
-        if (fromUser != null && toUser != null) {
-            String nowDateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-            if (IMServerContext.SERVER_CONFIG.isDbEnable()) {
-                List<Object[]> argsList = new ArrayList<>();
-                argsList.add(new Object[]{SnowflakeUtil.nextId(), fromUser.getId(), toUser.getId(), toUser.getNickName(), IMConstant.NOT_SHIELD, nowDateTime, nowDateTime});
-                argsList.add(new Object[]{SnowflakeUtil.nextId(), toUser.getId(), fromUser.getId(), fromUser.getNickName(), IMConstant.NOT_SHIELD, nowDateTime, nowDateTime});
-                dbOperator.batchInsert(DbSqlConstant.MYSQL.INSERT_FRIEND.sql(), argsList);
-            }
-            // 添加到缓存，好友联系人
-            cacheOperator.putHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.CONTACT + CacheConstant.FRIEND + from, to, new ImFriendBO(fromUser.getId().toString(), toUser.getId().toString(), toUser.getNickName(), toUser.getUsername(), toUser.getEmail(), toUser.getPhoneNum(), toUser.getIdCardNum(), toUser.getAvatar(), toUser.getMotto(), toUser.getAge(), toUser.getSex(), IMConstant.NOT_SHIELD, nowDateTime, nowDateTime));
-            cacheOperator.putHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.CONTACT + CacheConstant.FRIEND + to, from, new ImFriendBO(toUser.getId().toString(), fromUser.getId().toString(), fromUser.getNickName(), fromUser.getUsername(), fromUser.getEmail(), fromUser.getPhoneNum(), fromUser.getIdCardNum(), fromUser.getAvatar(), fromUser.getMotto(), fromUser.getAge(), fromUser.getSex(), IMConstant.NOT_SHIELD, nowDateTime, nowDateTime));
+        if (fromUser == null || toUser == null) {
+            return;
         }
-
+        // 绑定关系
+        String nowDateTime = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(LocalDateTime.ofInstant(Instant.ofEpochMilli(currentTimestamp), ZoneId.systemDefault()));
+        if (IMServerContext.SERVER_CONFIG.isDbEnable()) {
+            List<Object[]> argsList = new ArrayList<>();
+            argsList.add(new Object[]{SnowflakeUtil.nextId(), fromUser.getId(), toUser.getId(), toUser.getNickName(), IMConstant.NOT_SHIELD, nowDateTime, nowDateTime});
+            argsList.add(new Object[]{SnowflakeUtil.nextId(), toUser.getId(), fromUser.getId(), fromUser.getNickName(), IMConstant.NOT_SHIELD, nowDateTime, nowDateTime});
+            dbOperator.batchInsert(DbSqlConstant.MYSQL.INSERT_FRIEND.sql(), argsList);
+        }
+        // 添加到缓存，好友联系人
+        cacheOperator.putHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.CONTACT + CacheConstant.FRIEND + from, to, new ImFriendBO(fromUser.getId().toString(), toUser.getId().toString(), toUser.getNickName(), toUser.getUsername(), toUser.getEmail(), toUser.getPhoneNum(), toUser.getIdCardNum(), toUser.getAvatar(), toUser.getMotto(), toUser.getAge(), toUser.getSex(), IMConstant.NOT_SHIELD, nowDateTime, nowDateTime));
+        cacheOperator.putHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.CONTACT + CacheConstant.FRIEND + to, from, new ImFriendBO(toUser.getId().toString(), fromUser.getId().toString(), fromUser.getNickName(), fromUser.getUsername(), fromUser.getEmail(), fromUser.getPhoneNum(), fromUser.getIdCardNum(), fromUser.getAvatar(), fromUser.getMotto(), fromUser.getAge(), fromUser.getSex(), IMConstant.NOT_SHIELD, nowDateTime, nowDateTime));
     }
 
     /**
@@ -230,7 +231,6 @@ public class  DbHelper {
                 cacheOperator.putHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.CONTACT + CacheConstant.FRIEND + from, to, imFriendBO);
             }
         }
-
         return imFriendBO;
     }
 
@@ -326,6 +326,7 @@ public class  DbHelper {
 
     /**
      * 获取from 在to 中的黑名单信息
+     *
      * @param from
      * @param to
      * @param type 1-用户的黑名单，2-群组的黑名单
@@ -368,40 +369,26 @@ public class  DbHelper {
 
 
     /**
-     * 从离线信箱中读取消息
-     * @param to
-     */
-    public static Packet readFromOfflineTimeline(String to, long packetId) {
-        Set<Packet> packetSet = cacheOperator.reverseRangeZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + to, 0, -1);
-        if (CollectionUtils.isNotEmpty(packetSet)) {
-            Optional<Packet> packetOptional = packetSet.parallelStream().filter(packet -> packetId == packet.getPacketId()).findFirst();
-            // 如果存在则返回
-            if (packetOptional.isPresent()){
-                return packetOptional.get();
-            }
-        }
-        return null;
-    }
-
-    /**
-     * 从接收人信箱中读取消息
+     * 从信箱中读取消息
+     *
      * @param to
      * @param packetId
      */
-    public static Packet readFromReceiveTimeline(String to, long packetId) {
-        Set<Packet> packetSet = cacheOperator.reverseRangeZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.RECEIVE + to, 0, -1);
+    public static Packet readFromTimeline(String to, long packetId) {
+        // 从离线消息中
+        Set<Packet> packetSet = cacheOperator.reverseRangeZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.TIME_LINE + to, 0, -1);
         if (CollectionUtils.isNotEmpty(packetSet)) {
             Optional<Packet> packetOptional = packetSet.parallelStream().filter(packet -> packetId == packet.getPacketId()).findFirst();
             // 如果存在则返回
-            if (packetOptional.isPresent()){
+            if (packetOptional.isPresent()) {
                 return packetOptional.get();
             }
         }
         if (IMServerContext.SERVER_CONFIG.isDbEnable()) {
-            ImReceiveMessage receivePacket = dbOperator.selectOne(DbSqlConstant.MYSQL.SELECT_RECEIVE_MESSAGE.sql(), ImReceiveMessage.class, packetId);
+            ImTimeLine timeLinePacket = dbOperator.selectOne(DbSqlConstant.MYSQL.SELECT_TIME_LINE.sql(), ImTimeLine.class, packetId);
             // 这里数据长度没有查出
-            Message message = new Message(receivePacket.getFrom(), receivePacket.getTo(), receivePacket.getContentType(), receivePacket.getContent(), receivePacket.getExtra(), receivePacket.getReceiveTime());
-            return new Packet(receivePacket.getProtocol(), receivePacket.getProtocolVersion(), receivePacket.getId(),receivePacket.getDeviceType(),receivePacket.getNetworkType(),receivePacket.getIp(),receivePacket.getType(), receivePacket.getEncryptType(), receivePacket.getSerializeAlgorithm(), message);
+            Message message = new Message(timeLinePacket.getFrom(), timeLinePacket.getTo(), timeLinePacket.getContentType(), timeLinePacket.getContent(), timeLinePacket.getExtra(), timeLinePacket.getSendTime());
+            return new Packet(timeLinePacket.getProtocol(), timeLinePacket.getProtocolVersion(), timeLinePacket.getId(), timeLinePacket.getDeviceType(), timeLinePacket.getNetworkType(), timeLinePacket.getIp(), timeLinePacket.getType(), timeLinePacket.getEncryptType(), timeLinePacket.getSerializeAlgorithm(), message);
         }
         return null;
     }
@@ -414,9 +401,6 @@ public class  DbHelper {
      * @return
      */
     public static void writeMessageReadReceipt(String from, List<ReadReceiptContent> readReceiptList) {
-        if (CollectionUtils.isEmpty(readReceiptList)) {
-            return;
-        }
         ImUser user = getUser(from);
         List<Object[]> batchArgs = new ArrayList<>();
         for (ReadReceiptContent readReceiptContent : readReceiptList) {
@@ -444,43 +428,43 @@ public class  DbHelper {
     /**
      * @param packet
      * @param from
-     * @return void
-     * @Author fangzhenxun
-     * @Description 将消息写到from的 发件箱
-     */
-    public static void write2SendTimeline(Packet packet, String from, long timestamp) {
-        if (IMServerContext.SERVER_CONFIG.isDbEnable()) {
-            String nowDateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-            Message message = (Message) packet.getMessage();
-            dbOperator.insert(DbSqlConstant.MYSQL.INSERT_SEND_MESSAGE.sql(), packet.getPacketId(), packet.getProtocol(), packet.getProtocolVersion(), packet.getDeviceType(), packet.getNetworkType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), packet.getIp(), message.getFrom(), message.getTo(), packet.getMessageType(), message.getContentType(), message.getContent(), message.getExtra(), message.getCreateTime(), IMConstant.NOT_WITHDRAW, nowDateTime, nowDateTime);
-        }
-        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.SEND + from, packet, timestamp);
-    }
-
-    /**
-     * @param packet
      * @param to
+     * @param timestamp
      * @return void
      * @Author fangzhenxun
-     * @Description 将消息写到to 的收件箱
+     * @Description 将消息信箱中(这里需要写两条消息, 发送者信箱中一条, 接受者信箱中一条 ; 每个用户都会有一个信箱用来接收消息和发送消息, 群组也一样)
      */
-    public static void write2ReceiveTimeline(Packet packet, String to, long timestamp) {
+    public static void write2Timeline(Packet packet, String from, String to, long timestamp) {
         if (IMServerContext.SERVER_CONFIG.isDbEnable()) {
-            String nowDateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            String nowDateTime = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(LocalDateTime.ofInstant(Instant.ofEpochMilli(timestamp), ZoneId.systemDefault()));
             Message message = (Message) packet.getMessage();
-            dbOperator.insert(DbSqlConstant.MYSQL.INSERT_RECEIVE_MESSAGE.sql(), packet.getPacketId(), packet.getProtocol(), packet.getProtocolVersion(), packet.getDeviceType(), packet.getNetworkType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), packet.getIp(), message.getFrom(), message.getTo(), packet.getMessageType(), message.getContentType(), message.getContent(), message.getExtra(), message.getCreateTime(), IMConstant.NOT_WITHDRAW, nowDateTime, nowDateTime);
+            dbOperator.insert(DbSqlConstant.MYSQL.INSERT_TIME_LINE.sql(), packet.getPacketId(), packet.getProtocol(), packet.getProtocolVersion(), packet.getDeviceType(), packet.getNetworkType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), packet.getIp(), message.getFrom(), message.getTo(), packet.getMessageType(), message.getContentType(), message.getContent(), message.getExtra(), message.getCreateTime(), IMConstant.NOT_WITHDRAW, nowDateTime, nowDateTime);
         }
-        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.RECEIVE + to, packet, timestamp);
+        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.TIME_LINE + from, packet, timestamp);
+        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.TIME_LINE + to, packet, timestamp);
     }
 
+
     /**
-     * 存入离线消息
+     * 存入离线消息,注意： 离线消息原则上每个用户只存最近拉取的一条数据
+     * 对于一个用户，在他登出后的离线期间内，肯定是所有的消息都没有收到的，完全不用对所有的每一条离线消息存储一个离线msg_id，而只需要存储最近一条拉取到的离线消息的time（或者msg_id），下次登录时拉取在那之后的所有群消息即可，而完全没有必要存储每个人未拉取到的离线消息msg_id
+     * 这里要保证在客户上线的时候要去拉取离线消息中的数据并进行ack
+     * 这里需要加锁，因为在收到消息后需要手动ack 来更新或删除该离线消息数据
      *
      * @param identity 消息发送者
      * @param packet
      */
     public static void write2OfflineTimeline(Packet packet, String identity, long timestamp) {
-        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + identity, packet, timestamp);
+        RLock lock = RedissonFactory.INSTANCE.redissonClient().getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + identity);
+        try {
+            lock.lock();
+            Long count = cacheOperator.sizeZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + identity);
+            if (count == null || count == 0) {
+                cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + identity, packet.getPacketId(), timestamp);
+            }
+        } finally {
+            lock.unlock();
+        }
     }
 
 
@@ -489,7 +473,7 @@ public class  DbHelper {
      *
      * @param packet
      */
-    public static void handleFriendRequest(Packet packet) {
+    public static void handleFriendRequest(Packet packet, long timestamp) {
         Message message = (Message) packet.getMessage();
         String from = message.getFrom();
         String to = message.getTo();
@@ -505,27 +489,38 @@ public class  DbHelper {
             }
             // 处理对方同意的消息
             if (MessageContentEnum.FRIEND_AGREE.equals(messageContentEnum)) {
-                bindFriend(to, from);
+                bindFriend(to, from, timestamp);
             }
-            long now = SystemClock.now();
-            // 将消息缓存到自己的发件箱和别人的收件箱各一份数据
-            cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.FRIEND_REQUEST + from, packet, now);
-            cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.FRIEND_REQUEST + to, packet, now);
+            // 将消息缓存到自己的信箱和别人的信箱各一份数据， 每个用户都有一个信箱（收件箱和发件箱），这里只是好友请求的收发件箱，不做落库处理
+            cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.FRIEND_REQUEST + from, packet, timestamp);
+            cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.FRIEND_REQUEST + to, packet, timestamp);
         } finally {
             lock.unlock();
         }
     }
 
     /**
-     * @Author fangzhenxun
-     * @Description 处理撤回消息，删除离校消息的时候进行加锁
      * @param packet
      * @return void
+     * @Author fangzhenxun
+     * @Description 处理撤回消息，删除离校消息的时候进行加锁
      */
-    public static void handleWithdrawMessage(Packet packet) {
+    public static void handleWithdrawMessage(Packet packet, long timestamp) {
         if (IMServerContext.SERVER_CONFIG.isDbEnable()) {
-            String nowDateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-            dbOperator.update(DbSqlConstant.MYSQL.UPDATE_SEND_AND_RECEIVE_MESSAGE.sql(), packet.getPacketId(), nowDateTime, packet.getPacketId(), nowDateTime);
+            String nowDateTime = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(LocalDateTime.ofInstant(Instant.ofEpochMilli(timestamp), ZoneId.systemDefault()));
+            dbOperator.update(DbSqlConstant.MYSQL.UPDATE_TIME_LINE.sql(), nowDateTime, packet.getPacketId());
         }
+    }
+
+    /**
+     * @param packet
+     * @param identity
+     * @param now
+     * @return void
+     * @Author fangzhenxun
+     * @Description 处理群请求消息
+     */
+    public static void handleGroupRequestMessage(Packet packet, String identity, long now) {
+        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + identity, packet, now);
     }
 }

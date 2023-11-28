@@ -10,8 +10,8 @@ import java.io.Serializable;
 /**
  * 客户端发件箱
  */
-@TableName("ouyunc_im_send_message")
-public class ImSendMessage implements Serializable {
+@TableName("ouyunc_im_time_line")
+public class ImTimeLine implements Serializable {
     private static final long serialVersionUID = 206;
 
 
@@ -93,7 +93,7 @@ public class ImSendMessage implements Serializable {
     private String extra;
 
     /**
-     * 发送时间，毫秒
+     * 客户端发送时间，毫秒
      */
     private Long sendTime;
 
@@ -120,10 +120,10 @@ public class ImSendMessage implements Serializable {
     @TableLogic
     private Integer deleted;
 
-    public ImSendMessage() {
+    public ImTimeLine() {
     }
 
-    public ImSendMessage(Long id, byte protocol, byte protocolVersion, byte deviceType, byte networkType, byte encryptType, byte serializeAlgorithm, String ip, String from, String to, byte type, Integer contentType, String content, Long sendTime, String createTime, String updateTime, Integer deleted) {
+    public ImTimeLine(Long id, byte protocol, byte protocolVersion, byte deviceType, byte networkType, byte encryptType, byte serializeAlgorithm, String ip, String from, String to, byte type, Integer contentType, String content, Long sendTime, String createTime, String updateTime, Integer deleted) {
         this.id = id;
         this.protocol = protocol;
         this.protocolVersion = protocolVersion;
@@ -143,7 +143,7 @@ public class ImSendMessage implements Serializable {
         this.deleted = deleted;
     }
 
-    public ImSendMessage(Long id, byte protocol, byte protocolVersion, byte deviceType, byte networkType, byte encryptType, byte serializeAlgorithm, String ip, String from, String to, byte type, Integer contentType, String content, Long sendTime) {
+    public ImTimeLine(Long id, byte protocol, byte protocolVersion, byte deviceType, byte networkType, byte encryptType, byte serializeAlgorithm, String ip, String from, String to, byte type, Integer contentType, String content, Long sendTime) {
         this.id = id;
         this.protocol = protocol;
         this.protocolVersion = protocolVersion;

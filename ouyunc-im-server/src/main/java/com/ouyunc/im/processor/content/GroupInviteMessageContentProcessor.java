@@ -3,7 +3,6 @@ package com.ouyunc.im.processor.content;
 
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.im.base.LoginUserInfo;
-import com.ouyunc.im.constant.CacheConstant;
 import com.ouyunc.im.constant.enums.MessageContentEnum;
 import com.ouyunc.im.domain.bo.ImGroupUserBO;
 import com.ouyunc.im.helper.DbHelper;
@@ -44,31 +43,26 @@ public class GroupInviteMessageContentProcessor  extends AbstractMessageContentP
         String groupId = groupRequestContent.getGroupId();
         // 被邀请人id 集合
         List<String> invitedUserIds = groupRequestContent.getInvitedUserIdList();
-        // 判断邀请加入的好友是否为空
-        if (CollectionUtils.isNotEmpty(invitedUserIds)) {
-            // 处理群请求
-            long now = SystemClock.now();
-            for (String invitedUserId : invitedUserIds) {
-                // 判断被邀请者是否已经在该群中
-                ImGroupUserBO groupMember = DbHelper.getGroupMember(invitedUserId, groupId);
-                // 该用户已经在群里了
-                if (groupMember != null) {
-                    continue;
-                }
-                // 只保留被邀请人的信息
-                DbHelper.cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + invitedUserId, packet, now);
-                // 判断该用户是否在线，如果不在线放入离线消息
-                List<LoginUserInfo> invitedLoginUserInfos = UserHelper.onlineAll(invitedUserId);
-                if (CollectionUtils.isEmpty(invitedLoginUserInfos)) {
-                    // 存入离线消息
-                    DbHelper.write2OfflineTimeline(packet, invitedUserId, now);
-                }else {
-                    // 转发给某个客户端的各个设备端
-                    MessageHelper.send2MultiDevices(packet, invitedLoginUserInfos);
-                }
-
+        if (CollectionUtils.isEmpty(invitedUserIds)) {
+            return;
+        }
+        // 处理群请求
+        long timestamp = SystemClock.now();
+        for (String invitedUserId : invitedUserIds) {
+            // 判断被邀请者是否已经在该群中
+            ImGroupUserBO groupMember = DbHelper.getGroupMember(invitedUserId, groupId);
+            // 该用户已经在群里了
+            if (groupMember != null) {
+                continue;
             }
-
+            // 只保留被邀请人的信息
+            DbHelper.handleGroupRequestMessage(packet, invitedUserId, timestamp);
+            DbHelper.write2OfflineTimeline(packet, invitedUserId, timestamp);
+            // 判断该用户是否在线，如果不在线放入离线消息
+            List<LoginUserInfo> invitedLoginUserInfos = UserHelper.onlineAll(invitedUserId);
+            if (CollectionUtils.isNotEmpty(invitedLoginUserInfos)) {
+                MessageHelper.send2MultiDevices(packet, invitedLoginUserInfos);
+            }
         }
     }
 }
