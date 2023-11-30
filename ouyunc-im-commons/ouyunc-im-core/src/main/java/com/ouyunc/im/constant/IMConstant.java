@@ -1,5 +1,7 @@
 package com.ouyunc.im.constant;
 
+import javafx.beans.binding.Bindings;
+
 /**
  * @Author fangzhenxun
  * @Description: channel 通道相关的常量类
@@ -136,6 +138,7 @@ public class IMConstant {
      * 监控 处理器
      */
     public static final String MONITOR_HANDLER = "MONITOR_HANDLER";
+
 
 
     /**
@@ -470,4 +473,45 @@ public class IMConstant {
      * 消息未撤回
      */
     public static final Integer NOT_WITHDRAW = 0;
+
+    /**
+     * mqtt
+     */
+    public static final String MQTT = "mqtt";
+
+    /**
+     * mqtt31
+     */
+    public static final String MQTT31 = "mqttv3.1";
+    /**
+     * SEC_WEBSOCKET_PROTOCOL
+     */
+    public static final String SEC_WEBSOCKET_PROTOCOL = "sec-websocket-protocol";
+
+    /**
+     * mqtt 与websocket 协议的编解码
+     */
+    public static final String MQTT_WEBSOCKET_CODEC = "MQTT_WEBSOCKET_CODEC";
+
+
+    /**
+     * mqtt协议的解解码
+     */
+    public static final String MQTT_DECODER = "MQTT_DECODER";
+
+
+    /**
+     * mqtt协议的编码解码
+     */
+    public static final String MQTT_ENCODER = "MQTT_ENCODER";
+
+    /**
+     * mqtt协议真正处理逻辑的地方
+     */
+    public static final String MQTT_SERVER = "MQTT_SERVER";
+
+    /**
+     * 定义websocket支持的子协议，如果多个使用英文逗号隔开
+     */
+    public static final String WEBSOCKET_SUB_PROTOCOLS = "mqtt,mqttv3.1";
 }

@@ -2,6 +2,7 @@ package com.ouyunc.im.protocol;
 
 
 import com.ouyunc.im.base.MissingPacket;
+import com.ouyunc.im.codec.MqttWebSocketCodec;
 import com.ouyunc.im.constant.CacheConstant;
 import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.constant.enums.MessageEnum;
@@ -20,9 +21,12 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.pool.ChannelPool;
+import io.netty.handler.codec.http.HttpContentCompressor;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrameAggregator;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
+import io.netty.handler.codec.mqtt.MqttDecoder;
+import io.netty.handler.codec.mqtt.MqttEncoder;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
@@ -111,6 +115,8 @@ public enum Protocol {
         }
     },
 
+
+
     //处理 http/https
     HTTP((byte)3, (byte)1, "http协议，版本号为1"){
         @Override
@@ -125,7 +131,7 @@ public enum Protocol {
     },
 
     // 目前该协议不对外开放只作为集群内部协议使用，可以对接jt 818,或者其他物联网的通信，字节扩充，
-    OUYUC((byte)5, (byte)1, "自定义ouyunc协议，版本号为1"){
+    OUYUNC((byte)5, (byte)1, "自定义ouyunc协议，版本号为1"){
         @Override
         public void doDispatcher(ChannelHandlerContext ctx, Map<String, Object> queryParamsMap) {
             ctx.pipeline()
@@ -184,6 +190,46 @@ public enum Protocol {
                     }
                 }
             });
+        }
+    },
+    //mqtt @ todo 还有添加心跳，等相关处理
+    MQTT((byte)6, (byte)4, "mqtt协议，版本号为3.1.1"){
+        @Override
+        public void doDispatcher(ChannelHandlerContext ctx, Map<String, Object> queryParamsMap) {
+            ctx.pipeline()
+                    .addLast(IMConstant.MQTT_DECODER, new MqttDecoder())
+                    .addLast(IMConstant.MQTT_ENCODER, MqttEncoder.INSTANCE)
+                    .addLast(IMConstant.MQTT_SERVER, new MqttServerHandler());
+            // 调用下一个handle的active
+            ctx.fireChannelActive();
+        }
+
+        @Override
+        public void doSendMessage(Packet packet, String to) {
+            // do something
+        }
+    },
+    //mqtt_ws 协议
+    MQTT_WS((byte)7, (byte)4, "基于websocket的mqtt协议，版本号为3.1.1"){
+        @Override
+        public void doDispatcher(ChannelHandlerContext ctx, Map<String, Object> queryParamsMap) {
+            ctx.pipeline()
+                    //10 * 1024 * 1024
+                    .addLast(IMConstant.WS_FRAME_AGGREGATOR, new WebSocketFrameAggregator(Integer.MAX_VALUE))
+                    //10485760
+                    .addLast(IMConstant.WS_SERVER_PROTOCOL_HANDLER, new WebSocketServerProtocolHandler(IMServerContext.SERVER_CONFIG.getWebsocketPath(), IMConstant.WEBSOCKET_SUB_PROTOCOLS, true, Integer.MAX_VALUE))
+                    .addLast(IMConstant.MQTT_WEBSOCKET_CODEC, new MqttWebSocketCodec())
+                    .addLast(IMConstant.MQTT_DECODER, new MqttDecoder())
+                    .addLast(IMConstant.MQTT_ENCODER, MqttEncoder.INSTANCE)
+                    .addLast(IMConstant.MQTT_SERVER, new MqttServerHandler())
+                    .remove(IMConstant.HTTP_DISPATCHER_HANDLER);
+            // 调用下一个handle的active
+            ctx.fireChannelActive();
+        }
+
+        @Override
+        public void doSendMessage(Packet packet, String to) {
+            // do something
         }
     };
 

@@ -14,9 +14,8 @@
 (1) zset群请求    ouyunc:im:message:group-request:${groupId}         packet     ${消息时间戳}
 
 
-(2) zset发件箱消息:   ouyunc:im:message:send:${用户唯一标识}                packet     ${消息时间戳}
-(3) zset收件箱消息:   ouyunc:im:message:receive:${用户/群唯一标识}             packet            ${消息时间戳}
-(4) zset离线消息:   ouyunc:im:message:offline:${用户唯一标识}               packet            ${消息时间戳}
+(2) zset信箱消息:   ouyunc:im:message:time_line:${用户唯一标识}                packet     ${消息时间戳}
+(4) zset离线消息:   ouyunc:im:message:offline:${用户唯一标识}               packetId            ${消息时间戳}
 
 (5) zset全局失败消息:     ouyunc:im:message:fail:from:${from}:to:${to}            missPacket            ${消息时间戳}
 (1) hash 已读消息:    ouyunc:im:message:read-receipt:${消息id}              ${用户唯一标识}    ImUser

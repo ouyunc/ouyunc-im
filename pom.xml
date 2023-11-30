@@ -19,7 +19,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
-        <netty-all.version>4.1.63.Final</netty-all.version>
+        <netty-all.version>4.1.101.Final</netty-all.version>
         <google-guava.version>32.0.1-jre</google-guava.version>
         <log4j2.version>2.14.1</log4j2.version>
         <log4j2-ttl.version>1.4.0</log4j2-ttl.version>

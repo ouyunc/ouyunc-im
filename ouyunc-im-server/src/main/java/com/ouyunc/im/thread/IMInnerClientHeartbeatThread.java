@@ -66,7 +66,7 @@ public class IMInnerClientHeartbeatThread implements Runnable {
             // hessian    430b         235b
             // fst        650b         315b
             // jdk        500b         346b
-            Packet packet = new Packet(Protocol.OUYUC.getProtocol(), Protocol.OUYUC.getVersion(), SnowflakeUtil.nextId(), DeviceEnum.OTHER.getValue(), NetworkEnum.OTHER.getValue(), IMServerContext.SERVER_CONFIG.getIp(), MessageEnum.SYN_ACK.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(),  message);
+            Packet packet = new Packet(Protocol.OUYUNC.getProtocol(), Protocol.OUYUNC.getVersion(), SnowflakeUtil.nextId(), DeviceEnum.OTHER.getValue(), NetworkEnum.OTHER.getValue(), IMServerContext.SERVER_CONFIG.getIp(), MessageEnum.SYN_ACK.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(),  message);
             // 内部客户端连接池异步传递消息syn ,尝试所有的路径去保持连通
             MessageHelper.sendMessage(packet, Target.newBuilder().targetIdentity(targetServerAddress).build());
             // 先获取给目标服务toInetSocketAddress 发送syn,没有回复ack的次数，默认从0开始

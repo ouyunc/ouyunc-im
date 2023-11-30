@@ -24,11 +24,11 @@ public class HttpProtocolDispatcherHandler extends SimpleChannelInboundHandler<O
     private static Logger log = LoggerFactory.getLogger(HttpProtocolDispatcherHandler.class);
 
     /**
-     * @Author fangzhenxun
-     * @Description 处理http类协议
      * @param ctx
      * @param msg
      * @return void
+     * @Author fangzhenxun
+     * @Description 处理http类协议
      */
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -36,18 +36,26 @@ public class HttpProtocolDispatcherHandler extends SimpleChannelInboundHandler<O
         if (msg instanceof FullHttpRequest) {
             FullHttpRequest request = (FullHttpRequest) msg;
             String uriStr = request.uri();
-            log.info("当前请求路径uri：{}",uriStr);
+            log.info("当前请求路径uri：{}", uriStr);
             // 判断是否是websocket 的101 升级请求，如果是则升级为websocket协议
             if (isUpgradeToWebSocket(request)) {
+
                 URI uri = new URI(uriStr);
                 //封装参数传
                 Map<String, Object> queryParamsMap = MapUtil.wrapParams2Map(uri.getQuery());
                 //重设uri
                 request.setUri(uri.getPath());
-                Protocol.prototype(Protocol.WS.getProtocol(), Protocol.WS.getVersion()).doDispatcher(ctx, queryParamsMap);
+                // 获取websocket 子协议
+                String secWebsocketProtocol = request.headers().get(IMConstant.SEC_WEBSOCKET_PROTOCOL);
+                // 判断各种子协议并处理，目前这里只判断是否建立在websocket之上的mqtt协议
+                if (IMConstant.MQTT.equals(secWebsocketProtocol) || IMConstant.MQTT31.equals(secWebsocketProtocol)) {
+                    Protocol.prototype(Protocol.MQTT_WS.getProtocol(), Protocol.MQTT_WS.getVersion()).doDispatcher(ctx, queryParamsMap);
+                } else {
+                    Protocol.prototype(Protocol.WS.getProtocol(), Protocol.WS.getVersion()).doDispatcher(ctx, queryParamsMap);
+                }
                 //如果请求是一次升级了的 WebSocket 请求，则递增引用计数器（retain）并且将它传递给在 ChannelPipeline 中的下个 ChannelInboundHandler
                 ctx.fireChannelRead(request.retain());
-            }else {
+            } else {
                 // 处理http 通用请求
                 log.info("=================开始处理http请求=============================");
             }
@@ -60,10 +68,10 @@ public class HttpProtocolDispatcherHandler extends SimpleChannelInboundHandler<O
 
 
     /**
-     * @Author fangzhenxun
-     * @Description 判断当前http 请求是何种作用
      * @param request
      * @return boolean
+     * @Author fangzhenxun
+     * @Description 判断当前http 请求是何种作用
      */
     protected boolean isUpgradeToWebSocket(FullHttpRequest request) {
         HttpHeaders httpHeaders = request.headers();
