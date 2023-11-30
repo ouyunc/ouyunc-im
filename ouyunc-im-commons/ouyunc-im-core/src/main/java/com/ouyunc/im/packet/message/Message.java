@@ -1,6 +1,5 @@
 package com.ouyunc.im.packet.message;
 
-import com.ouyunc.im.packet.Packet;
 import io.protostuff.Tag;
 
 import java.io.Serializable;

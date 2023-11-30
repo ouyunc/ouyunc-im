@@ -20,6 +20,8 @@ public enum MessageEnum {
     IM_FRIEND_REQUEST((byte) 8, "im_friend_request",  "好友请求相关消息"),
     IM_GROUP_REQUEST((byte) 9, "im_group_request",  "群请求相关消息"),
 
+    MQTT((byte) 20, "mqtt",  "mqttMessage 消息"),
+
 
     BROADCAST((byte) 50, "broadcast",  "广播消息"),
 

@@ -7,7 +7,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 
 /**
  * @Author fangzhenxun
- * @Description: mqtt 协议分发处理器
+ * @Description: mqtt 原生协议分发处理器
  **/
 public class MqttProtocolDispatcherHandler extends SimpleChannelInboundHandler<Object> {
     @Override

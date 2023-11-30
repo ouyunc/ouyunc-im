@@ -1,12 +1,23 @@
 package com.ouyunc.im.handler;
 
 import com.ouyunc.im.constant.IMConstant;
+import com.ouyunc.im.constant.enums.DeviceEnum;
+import com.ouyunc.im.constant.enums.MessageEnum;
+import com.ouyunc.im.constant.enums.NetworkEnum;
+import com.ouyunc.im.context.IMServerContext;
+import com.ouyunc.im.encrypt.Encrypt;
 import com.ouyunc.im.exception.IMException;
 import com.ouyunc.im.packet.Packet;
+import com.ouyunc.im.packet.message.content.MqttContent;
+import com.ouyunc.im.protocol.Protocol;
+import com.ouyunc.im.serialize.Serializer;
 import com.ouyunc.im.utils.ReaderWriterUtil;
+import com.ouyunc.im.utils.SnowflakeUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
+import io.netty.handler.codec.mqtt.MqttFixedHeader;
+import io.netty.handler.codec.mqtt.MqttMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -36,6 +47,17 @@ public class Convert2PacketHandler extends SimpleChannelInboundHandler<Object> {
         }
         if (msg instanceof Packet) {
             packet = (Packet) msg;
+        }
+        // 处理mqtt消息
+        if (msg instanceof MqttMessage) {
+            MqttMessage mqttMessage = (MqttMessage)msg;
+            // 解码成功后，再去转换传递
+            if (mqttMessage.decoderResult().isSuccess()) {
+                packet = ReaderWriterUtil.convertOther2Packet(mqttMessage, mqttMessage0 ->{
+                    MqttContent mqttContent = new MqttContent(mqttMessage0.fixedHeader(), mqttMessage0.variableHeader(), mqttMessage0.payload());
+                    return new Packet(Protocol.MQTT.getProtocol(), Protocol.MQTT.getVersion(), SnowflakeUtil.nextId(), DeviceEnum.OTHER.getValue(), NetworkEnum.OTHER.getValue(), IMServerContext.SERVER_CONFIG.getIp(), MessageEnum.MQTT.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(),  mqttContent);
+                });
+            }
         }
         if (packet != null) {
             MDC.put(IMConstant.LOG_TRACE_ID, String.valueOf(packet.getPacketId()));

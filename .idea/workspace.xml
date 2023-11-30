@@ -10,22 +10,15 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/docs/sql/ouyunc-im-mysql-v5.0.0.sql" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/codec/MqttWebSocketCodec.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/dispatcher/MqttDispatcherProcessorStrategy.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/MqttProtocolDispatcherHandler.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/MqttServerHandler.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/MqttContent.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/HELP.md" beforeDir="false" afterPath="$PROJECT_DIR$/HELP.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/IMConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/IMConstant.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/dispatcher/HttpDispatcherProcessorStrategy.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/dispatcher/HttpDispatcherProcessorStrategy.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/dispatcher/ProtocolDispatcher.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/dispatcher/ProtocolDispatcher.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/HttpProtocolDispatcherHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/HttpProtocolDispatcherHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/PacketProtocolDispatcherHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/PacketProtocolDispatcherHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/enums/MessageEnum.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/enums/MessageEnum.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/Message.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/Message.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/ReaderWriterUtil.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/ReaderWriterUtil.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/Convert2PacketHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/Convert2PacketHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/MqttProtocolDispatcherHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/MqttProtocolDispatcherHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/MqttServerHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/MqttServerHandler.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/protocol/Protocol.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/protocol/Protocol.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/thread/IMInnerClientHeartbeatThread.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/thread/IMInnerClientHeartbeatThread.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/ouyunc-im-server.properties" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/ouyunc-im-server.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -539,14 +532,9 @@
       <workItem from="1700902926256" duration="2119000" />
       <workItem from="1701048111942" duration="27484000" />
       <workItem from="1701247726047" duration="3615000" />
-      <workItem from="1701308961635" duration="15375000" />
-    </task>
-    <task id="LOCAL-00180" summary="v3.1.1-beta 群邀请好友">
-      <created>1685005905504</created>
-      <option name="number" value="00180" />
-      <option name="presentableId" value="LOCAL-00180" />
-      <option name="project" value="LOCAL" />
-      <updated>1685005905504</updated>
+      <workItem from="1701308961635" duration="23448000" />
+      <workItem from="1701339757861" duration="1330000" />
+      <workItem from="1701345375168" duration="6651000" />
     </task>
     <task id="LOCAL-00181" summary="v3.1.1-beta 群请求处理">
       <created>1685089492685</created>
@@ -884,7 +872,14 @@
       <option name="project" value="LOCAL" />
       <updated>1701146475593</updated>
     </task>
-    <option name="localTasksCounter" value="229" />
+    <task id="LOCAL-00229" summary="v5.0.0&#10;1. 添加mqtt相关协议处理代码&#10;2. 优化代码">
+      <created>1701324967911</created>
+      <option name="number" value="00229" />
+      <option name="presentableId" value="LOCAL-00229" />
+      <option name="project" value="LOCAL" />
+      <updated>1701324967911</updated>
+    </task>
+    <option name="localTasksCounter" value="230" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -943,10 +938,14 @@
         </entry>
       </map>
     </option>
+    <option name="OPEN_TABS">
+      <set>
+        <option value="1" />
+      </set>
+    </option>
   </component>
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
-    <MESSAGE value="v3.1.1-beta 添加群和好友请求缓存" />
     <MESSAGE value="v3.1.1-beta 删除好友" />
     <MESSAGE value="v3.1.1-beta 邀请好友" />
     <MESSAGE value="v3.1.1-beta 群邀请好友" />
@@ -971,33 +970,34 @@
     <MESSAGE value="v4.1.0&#10;1. 修改集群消息传递&#10;2. 优化代码" />
     <MESSAGE value="v4.2.0&#10;1. 添加消息撤回处理器&#10;2. 增添监控预处理&#10;3. 优化代码" />
     <MESSAGE value="v5.0.0&#10;1. 全新设计消息存储结构，更加减少存储，提高效率&#10;2. 理论上消息可靠传输100%&#10;3. 优化代码" />
-    <option name="LAST_COMMIT_MESSAGE" value="v5.0.0&#10;1. 全新设计消息存储结构，更加减少存储，提高效率&#10;2. 理论上消息可靠传输100%&#10;3. 优化代码" />
+    <MESSAGE value="v5.0.0&#10;1. 添加mqtt相关协议处理代码&#10;2. 优化代码" />
+    <option name="LAST_COMMIT_MESSAGE" value="v5.0.0&#10;1. 添加mqtt相关协议处理代码&#10;2. 优化代码" />
   </component>
   <component name="WindowStateProjectService">
-    <state x="574" y="128" key="#com.intellij.ide.util.MemberChooser" timestamp="1701323767366">
+    <state x="574" y="128" key="#com.intellij.ide.util.MemberChooser" timestamp="1701355256977">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state x="574" y="128" key="#com.intellij.ide.util.MemberChooser/0.0.1536.824@0.0.1536.824" timestamp="1701323767366" />
+    <state x="574" y="128" key="#com.intellij.ide.util.MemberChooser/0.0.1536.824@0.0.1536.824" timestamp="1701355256977" />
     <state x="520" y="196" key="#com.intellij.ide.util.TreeClassChooserDialog" timestamp="1700790676399">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state x="520" y="196" key="#com.intellij.ide.util.TreeClassChooserDialog/0.0.1536.824@0.0.1536.824" timestamp="1700790676399" />
-    <state x="499" y="159" key="#com.intellij.refactoring.safeDelete.UnsafeUsagesDialog" timestamp="1700903624412">
+    <state x="499" y="159" key="#com.intellij.refactoring.safeDelete.UnsafeUsagesDialog" timestamp="1701340738573">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state x="499" y="159" key="#com.intellij.refactoring.safeDelete.UnsafeUsagesDialog/0.0.1536.824@0.0.1536.824" timestamp="1700903624412" />
-    <state x="262" y="202" width="602" height="589" key="#xdebugger.evaluate" timestamp="1701324611276">
+    <state x="499" y="159" key="#com.intellij.refactoring.safeDelete.UnsafeUsagesDialog/0.0.1536.824@0.0.1536.824" timestamp="1701340738573" />
+    <state x="454" y="235" width="700" height="589" key="#xdebugger.evaluate" timestamp="1701353645922">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state x="262" y="202" width="602" height="589" key="#xdebugger.evaluate/0.0.1536.824@0.0.1536.824" timestamp="1701324611276" />
-    <state x="295" y="0" key="CommitChangelistDialog2" timestamp="1701146474126">
+    <state x="454" y="235" width="700" height="589" key="#xdebugger.evaluate/0.0.1536.824@0.0.1536.824" timestamp="1701353645922" />
+    <state x="295" y="0" key="CommitChangelistDialog2" timestamp="1701324967019">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state x="295" y="0" key="CommitChangelistDialog2/0.0.1536.824@0.0.1536.824" timestamp="1701146474126" />
-    <state width="1214" height="466" key="DebuggerActiveHint" timestamp="1701324538489">
+    <state x="295" y="0" key="CommitChangelistDialog2/0.0.1536.824@0.0.1536.824" timestamp="1701324967019" />
+    <state width="1214" height="466" key="DebuggerActiveHint" timestamp="1701355183668">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1214" height="466" key="DebuggerActiveHint/0.0.1536.824@0.0.1536.824" timestamp="1701324538489" />
+    <state width="1214" height="466" key="DebuggerActiveHint/0.0.1536.824@0.0.1536.824" timestamp="1701355183668" />
     <state x="93" y="93" width="1350" height="638" key="DiffContextDialog" timestamp="1700794340608">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
@@ -1006,62 +1006,66 @@
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state x="549" y="167" key="FileChooserDialogImpl/0.0.1536.824@0.0.1536.824" timestamp="1701310131775" />
-    <state width="1493" height="335" key="GridCell.Tab.0.bottom" timestamp="1701324927833">
+    <state width="1493" height="385" key="GridCell.Tab.0.bottom" timestamp="1701355248385">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="335" key="GridCell.Tab.0.bottom/0.0.1536.824@0.0.1536.824" timestamp="1701324927833" />
-    <state width="1493" height="335" key="GridCell.Tab.0.center" timestamp="1701324927833">
+    <state width="1493" height="385" key="GridCell.Tab.0.bottom/0.0.1536.824@0.0.1536.824" timestamp="1701355248385" />
+    <state width="1493" height="385" key="GridCell.Tab.0.center" timestamp="1701355248385">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="335" key="GridCell.Tab.0.center/0.0.1536.824@0.0.1536.824" timestamp="1701324927833" />
-    <state width="1493" height="335" key="GridCell.Tab.0.left" timestamp="1701324927833">
+    <state width="1493" height="385" key="GridCell.Tab.0.center/0.0.1536.824@0.0.1536.824" timestamp="1701355248385" />
+    <state width="1493" height="385" key="GridCell.Tab.0.left" timestamp="1701355248385">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="335" key="GridCell.Tab.0.left/0.0.1536.824@0.0.1536.824" timestamp="1701324927833" />
-    <state width="1493" height="335" key="GridCell.Tab.0.right" timestamp="1701324927833">
+    <state width="1493" height="385" key="GridCell.Tab.0.left/0.0.1536.824@0.0.1536.824" timestamp="1701355248385" />
+    <state width="1493" height="385" key="GridCell.Tab.0.right" timestamp="1701355248385">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="335" key="GridCell.Tab.0.right/0.0.1536.824@0.0.1536.824" timestamp="1701324927833" />
-    <state width="1493" height="335" key="GridCell.Tab.1.bottom" timestamp="1701324927834">
+    <state width="1493" height="385" key="GridCell.Tab.0.right/0.0.1536.824@0.0.1536.824" timestamp="1701355248385" />
+    <state width="1493" height="385" key="GridCell.Tab.1.bottom" timestamp="1701355248385">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="335" key="GridCell.Tab.1.bottom/0.0.1536.824@0.0.1536.824" timestamp="1701324927834" />
-    <state width="1493" height="335" key="GridCell.Tab.1.center" timestamp="1701324927834">
+    <state width="1493" height="385" key="GridCell.Tab.1.bottom/0.0.1536.824@0.0.1536.824" timestamp="1701355248385" />
+    <state width="1493" height="385" key="GridCell.Tab.1.center" timestamp="1701355248385">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="335" key="GridCell.Tab.1.center/0.0.1536.824@0.0.1536.824" timestamp="1701324927834" />
-    <state width="1493" height="335" key="GridCell.Tab.1.left" timestamp="1701324927834">
+    <state width="1493" height="385" key="GridCell.Tab.1.center/0.0.1536.824@0.0.1536.824" timestamp="1701355248385" />
+    <state width="1493" height="385" key="GridCell.Tab.1.left" timestamp="1701355248385">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="335" key="GridCell.Tab.1.left/0.0.1536.824@0.0.1536.824" timestamp="1701324927834" />
-    <state width="1493" height="335" key="GridCell.Tab.1.right" timestamp="1701324927834">
+    <state width="1493" height="385" key="GridCell.Tab.1.left/0.0.1536.824@0.0.1536.824" timestamp="1701355248385" />
+    <state width="1493" height="385" key="GridCell.Tab.1.right" timestamp="1701355248385">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="335" key="GridCell.Tab.1.right/0.0.1536.824@0.0.1536.824" timestamp="1701324927834" />
+    <state width="1493" height="385" key="GridCell.Tab.1.right/0.0.1536.824@0.0.1536.824" timestamp="1701355248385" />
     <state x="270" y="0" key="SettingsEditor" timestamp="1701144595186">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state x="270" y="0" key="SettingsEditor/0.0.1536.824@0.0.1536.824" timestamp="1701144595186" />
-    <state x="361" y="145" key="Vcs.Push.Dialog.v2" timestamp="1701146495507">
+    <state x="490" y="154" width="540" height="524" key="StructurePopup" timestamp="1701341127821">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state x="361" y="145" key="Vcs.Push.Dialog.v2/0.0.1536.824@0.0.1536.824" timestamp="1701146495507" />
-    <state width="775" height="419" key="XDebugger.FullValuePopup" timestamp="1701317484047">
+    <state x="490" y="154" width="540" height="524" key="StructurePopup/0.0.1536.824@0.0.1536.824" timestamp="1701341127821" />
+    <state x="361" y="145" key="Vcs.Push.Dialog.v2" timestamp="1701324982600">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="775" height="419" key="XDebugger.FullValuePopup/0.0.1536.824@0.0.1536.824" timestamp="1701317484047" />
-    <state x="449" y="236" key="com.intellij.ide.util.TipDialog" timestamp="1700788132154">
+    <state x="361" y="145" key="Vcs.Push.Dialog.v2/0.0.1536.824@0.0.1536.824" timestamp="1701324982600" />
+    <state width="775" height="419" key="XDebugger.FullValuePopup" timestamp="1701353632226">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state x="449" y="236" key="com.intellij.ide.util.TipDialog/0.0.1536.824@0.0.1536.824" timestamp="1700788132154" />
+    <state width="775" height="419" key="XDebugger.FullValuePopup/0.0.1536.824@0.0.1536.824" timestamp="1701353632226" />
+    <state x="449" y="236" key="com.intellij.ide.util.TipDialog" timestamp="1701345938696">
+      <screen x="0" y="0" width="1536" height="824" />
+    </state>
+    <state x="449" y="236" key="com.intellij.ide.util.TipDialog/0.0.1536.824@0.0.1536.824" timestamp="1701345938696" />
     <state x="499" y="177" key="extract.method.dialog" timestamp="1701057117014">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state x="499" y="177" key="extract.method.dialog/0.0.1536.824@0.0.1536.824" timestamp="1701057117014" />
-    <state x="447" y="145" width="694" height="534" key="find.popup" timestamp="1700904647284">
+    <state x="450" y="154" width="694" height="534" key="find.popup" timestamp="1701346433978">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state x="447" y="145" width="694" height="534" key="find.popup/0.0.1536.824@0.0.1536.824" timestamp="1700904647284" />
+    <state x="450" y="154" width="694" height="534" key="find.popup/0.0.1536.824@0.0.1536.824" timestamp="1701346433978" />
     <state x="483" y="203" key="git4idea.merge.GitPullDialog" timestamp="1700794184304">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
@@ -1070,18 +1074,38 @@
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state x="425" y="187" key="run.anything.popup/0.0.1536.824@0.0.1536.824" timestamp="1700788341976" />
-    <state x="431" y="145" width="672" height="678" key="search.everywhere.popup" timestamp="1701315305851">
+    <state x="431" y="145" width="672" height="678" key="search.everywhere.popup" timestamp="1701336306412">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state x="431" y="145" width="672" height="678" key="search.everywhere.popup/0.0.1536.824@0.0.1536.824" timestamp="1701315305851" />
+    <state x="431" y="145" width="672" height="678" key="search.everywhere.popup/0.0.1536.824@0.0.1536.824" timestamp="1701336306412" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/serialize/Long2StringSerializer.java</url>
-          <line>19</line>
-          <option name="timeStamp" value="64" />
+          <url>file://$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/MqttServerHandler.java</url>
+          <line>34</line>
+          <option name="timeStamp" value="94" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>jar://D:/repository/io/netty/netty-transport/4.1.82.Final/netty-transport-4.1.82.Final.jar!/io/netty/channel/AbstractChannelHandlerContext.class</url>
+          <line>286</line>
+          <option name="timeStamp" value="106" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>jar://D:/repository/io/netty/netty-transport/4.1.101.Final/netty-transport-4.1.101.Final.jar!/io/netty/channel/SimpleChannelInboundHandler.class</url>
+          <line>44</line>
+          <option name="timeStamp" value="115" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>jar://D:/repository/io/netty/netty-codec-mqtt/4.1.101.Final/netty-codec-mqtt-4.1.101.Final.jar!/io/netty/handler/codec/mqtt/MqttDecoder.class</url>
+          <line>86</line>
+          <option name="timeStamp" value="129" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/MqttServerHandler.java</url>
+          <line>28</line>
+          <option name="timeStamp" value="133" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>

@@ -199,6 +199,7 @@ public enum Protocol {
             ctx.pipeline()
                     .addLast(IMConstant.MQTT_DECODER, new MqttDecoder())
                     .addLast(IMConstant.MQTT_ENCODER, MqttEncoder.INSTANCE)
+                    .addLast(IMConstant.CONVERT_2_PACKET, new Convert2PacketHandler())
                     .addLast(IMConstant.MQTT_SERVER, new MqttServerHandler());
             // 调用下一个handle的active
             ctx.fireChannelActive();
@@ -221,6 +222,7 @@ public enum Protocol {
                     .addLast(IMConstant.MQTT_WEBSOCKET_CODEC, new MqttWebSocketCodec())
                     .addLast(IMConstant.MQTT_DECODER, new MqttDecoder())
                     .addLast(IMConstant.MQTT_ENCODER, MqttEncoder.INSTANCE)
+                    .addLast(IMConstant.CONVERT_2_PACKET, new Convert2PacketHandler())
                     .addLast(IMConstant.MQTT_SERVER, new MqttServerHandler())
                     .remove(IMConstant.HTTP_DISPATCHER_HANDLER);
             // 调用下一个handle的active
