@@ -35,6 +35,22 @@ public class LoginContent implements Serializable {
 
     private byte signatureAlgorithm;
 
+    /**
+     * 客户端心跳过期时间（读写空闲时间，如果为空则使用全局配置的读空闲时间）,单位秒
+     */
+    private int heartBeatExpireTime;
+
+
+    /**
+     * 遗嘱消息，客户端下线后，根据具体业务推送将该信息推送给相关联的人，可以是json格式字符串，具体看业务
+     */
+    private String willMessage;
+
+
+    /**
+     * 是否复用之前的会话信息（主要是业务相关），具体业务具体对待 0-不清除，1-清除
+     */
+    private int cleanSession;
 
     /**
      * 创建时间戳（毫秒）
@@ -81,5 +97,60 @@ public class LoginContent implements Serializable {
     public void setSignatureAlgorithm(byte signatureAlgorithm) {
 
         this.signatureAlgorithm = signatureAlgorithm;
+    }
+
+    public int getHeartBeatExpireTime() {
+        return heartBeatExpireTime;
+    }
+
+    public void setHeartBeatExpireTime(int heartBeatExpireTime) {
+        this.heartBeatExpireTime = heartBeatExpireTime;
+    }
+
+    public String getWillMessage() {
+        return willMessage;
+    }
+
+    public void setWillMessage(String willMessage) {
+        this.willMessage = willMessage;
+    }
+
+    public int getCleanSession() {
+        return cleanSession;
+    }
+
+    public void setCleanSession(int cleanSession) {
+        this.cleanSession = cleanSession;
+    }
+
+    public LoginContent() {
+    }
+
+    public LoginContent(String identity, String appKey, String signature, byte signatureAlgorithm, int heartBeatExpireTime, long createTime) {
+        this.identity = identity;
+        this.appKey = appKey;
+        this.signature = signature;
+        this.signatureAlgorithm = signatureAlgorithm;
+        this.heartBeatExpireTime = heartBeatExpireTime;
+        this.createTime = createTime;
+    }
+
+    public LoginContent(String identity, String appKey, String signature, byte signatureAlgorithm, int heartBeatExpireTime, String willMessage, int cleanSession, long createTime) {
+        this.identity = identity;
+        this.appKey = appKey;
+        this.signature = signature;
+        this.signatureAlgorithm = signatureAlgorithm;
+        this.heartBeatExpireTime = heartBeatExpireTime;
+        this.willMessage = willMessage;
+        this.cleanSession = cleanSession;
+        this.createTime = createTime;
+    }
+
+    public LoginContent(String identity, String appKey, String signature, byte signatureAlgorithm, long createTime) {
+        this.identity = identity;
+        this.appKey = appKey;
+        this.signature = signature;
+        this.signatureAlgorithm = signatureAlgorithm;
+        this.createTime = createTime;
     }
 }

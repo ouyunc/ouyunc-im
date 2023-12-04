@@ -17,7 +17,7 @@ public class IMBanner {
             " \\______/   \\______/      |__|      \\______/  |__| \\__|  \\______|       |__| |__|  |__| \n";
 
 
-    private static final String VERSION = "OUYUNC-IM::4.0.3 \n";
+    private static final String VERSION = "OUYUNC-IM::5.0.0 \n";
 
     public static void printBanner(PrintStream printStream) {
         printStream.print(BANNER);

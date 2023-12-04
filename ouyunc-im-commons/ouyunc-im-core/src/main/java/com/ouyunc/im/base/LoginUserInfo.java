@@ -18,7 +18,7 @@ public class LoginUserInfo implements Serializable {
     private String appKey;
 
     /**
-     * 登录唯一标识，用户id，手机号，身份证号码等
+     * 登录唯一标识，用户id，手机号，身份证号码,设备码等
      */
     private String identity;
 

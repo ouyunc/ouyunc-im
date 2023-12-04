@@ -21,7 +21,7 @@ public interface MessageProcessor {
      * @Author fangzhenxun
      * @Description 前置处理器，做认证授权相关处理，在真正处理消息前处理
      */
-    default void preProcess(ChannelHandlerContext ctx, Packet packet) {};
+    default void preProcess(ChannelHandlerContext ctx, Packet packet) {}
 
 
     /**
@@ -42,7 +42,8 @@ public interface MessageProcessor {
      * @Author fangzhenxun
      * @Description 做后逻辑处理
      */
-    default void postProcess(ChannelHandlerContext ctx, Packet packet) {};
+    default void postProcess(ChannelHandlerContext ctx, Packet packet) {
+    }
 
 
 

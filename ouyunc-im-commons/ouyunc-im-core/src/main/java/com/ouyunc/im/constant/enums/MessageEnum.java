@@ -20,7 +20,23 @@ public enum MessageEnum {
     IM_FRIEND_REQUEST((byte) 8, "im_friend_request",  "好友请求相关消息"),
     IM_GROUP_REQUEST((byte) 9, "im_group_request",  "群请求相关消息"),
 
-    MQTT((byte) 20, "mqtt",  "mqttMessage 消息"),
+    MQTT_CONNECT((byte) 2, "1",  "mqtt 连接消息"),
+    MQTT_CONNACK((byte)22, "2", "mqtt 连接回复消息"),
+    MQTT_PUBLISH((byte)23, "3", "mqtt 发布消息"),
+    MQTT_PUBACK((byte)24, "4", "mqtt 发布消息"),
+    MQTT_PUBREC((byte)25, "5", "mqtt 发布消息"),
+    MQTT_PUBREL((byte)26, "6", "mqtt 发布消息"),
+    MQTT_PUBCOMP((byte)27, "7", "mqtt 发布消息"),
+    MQTT_SUBSCRIBE((byte)28, "8", "mqtt 订阅消息"),
+    MQTT_SUBACK((byte)29, "9", "mqtt 订阅回复消息"),
+    MQTT_UNSUBSCRIBE((byte)30, "10", "mqtt 解除订阅消息"),
+    MQTT_UNSUBACK((byte)31, "11", "mqtt 解除订阅回复消息"),
+    MQTT_PINGREQ((byte)1, "12", "mqtt 心跳ping"),
+    MQTT_PINGRESP((byte)33, "13", "mqtt 心跳pong"),
+    MQTT_DISCONNECT((byte)34, "14", "mqtt 断开连接消息"),
+    MQTT_AUTH((byte)35, "15", "mqtt 认证权限消息"),
+
+
 
 
     BROADCAST((byte) 50, "broadcast",  "广播消息"),
@@ -80,6 +96,15 @@ public enum MessageEnum {
     public static MessageEnum prototype(byte value) {
         for (MessageEnum messageEnum : MessageEnum.values()) {
             if (messageEnum.value == value) {
+                return messageEnum;
+            }
+        }
+        return null;
+    }
+
+    public static MessageEnum getMessageEnumByName(String name) {
+        for (MessageEnum messageEnum : MessageEnum.values()) {
+            if (messageEnum.name.equals(name)) {
                 return messageEnum;
             }
         }

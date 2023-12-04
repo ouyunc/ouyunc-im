@@ -514,4 +514,15 @@ public class IMConstant {
      * 定义websocket支持的子协议，如果多个使用英文逗号隔开
      */
     public static final String WEBSOCKET_SUB_PROTOCOLS = "mqtt,mqttv3.1";
+
+    /**
+     * 清除之前的会话
+     */
+    public static final int CLEAN_SESSION = 1;
+
+    /**
+     * 不清除之前的会话
+     */
+    public static final int NOT_CLEAN_SESSION = 0;
+
 }

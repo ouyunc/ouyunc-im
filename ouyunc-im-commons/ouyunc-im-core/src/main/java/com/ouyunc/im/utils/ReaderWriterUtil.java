@@ -7,7 +7,6 @@ import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.serialize.Serializer;
 import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.mqtt.MqttMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -111,7 +110,6 @@ public class ReaderWriterUtil {
         //加密后的消息内容，n个字节, 不同的消息类型有可能是不同的数据内容
         out.writeBytes(encryptMessageBytes);
     }
-
 
     /**
      * @Author fangzhenxun

@@ -2,6 +2,7 @@ package com.ouyunc.im.constant.enums;
 
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.content.*;
+import io.netty.handler.codec.mqtt.MqttMessage;
 
 import java.util.List;
 
@@ -58,6 +59,10 @@ public enum MessageContentEnum {
     CHAT_VIDEO_CONTENT(57, VideoContent.class, "聊天视频"),
     CHAT_VOICE_CALL_RECORD_CONTENT(58, String.class, "语音通话记录"),
     CHAT_VIDEO_CALL_RECORD_CONTENT(59, String.class, "视频通话记录"),
+
+
+
+    MQTT(80, MqttMessage.class, "mqtt消息内容"),
 
 
 

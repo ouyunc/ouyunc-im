@@ -9,6 +9,7 @@ import com.ouyunc.im.constant.enums.MessageEnum;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.exception.handler.GlobalExceptionHandler;
 import com.ouyunc.im.handler.*;
+import com.ouyunc.im.helper.MqttHelper;
 import com.ouyunc.im.innerclient.pool.IMInnerClientPool;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.Message;
@@ -27,6 +28,7 @@ import io.netty.handler.codec.http.websocketx.WebSocketFrameAggregator;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import io.netty.handler.codec.mqtt.MqttDecoder;
 import io.netty.handler.codec.mqtt.MqttEncoder;
+import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
@@ -70,14 +72,6 @@ public enum Protocol {
                     // 托管处理器
                     .addLast(IMConstant.TRUSTEESHIP_HANDLER, new TrusteeshipHandler());
             // 判断是否需要开启客户端心跳如果需要则开启客户端心跳，由于心跳消息不需要登录就可以，所以放在登录认证处理器前面
-            // 判断是否开启客户端心跳,如果开启才会添加心跳检测处理器
-            if (IMServerContext.SERVER_CONFIG.isHeartBeatEnable()) {
-                ctx.pipeline()
-                        // 添加读写空闲处理器， 添加后，下条消息就可以接收心跳消息了
-                        .addAfter(IMConstant.CONVERT_2_PACKET, IMConstant.HEART_BEAT_IDLE, new IdleStateHandler(IMServerContext.SERVER_CONFIG.getHeartBeatTimeout(),0,0))
-                        // 处理心跳的以及相关逻辑都放在这里处理
-                        .addAfter(IMConstant.HEART_BEAT_IDLE, IMConstant.HEART_BEAT_HANDLER, new HeartBeatHandler());
-            }
             // 在最后添加异常处理器
             ctx.pipeline().addLast(IMConstant.GLOBAL_EXCEPTION, new GlobalExceptionHandler());
             // 移除协议分发器
@@ -200,14 +194,30 @@ public enum Protocol {
                     .addLast(IMConstant.MQTT_DECODER, new MqttDecoder())
                     .addLast(IMConstant.MQTT_ENCODER, MqttEncoder.INSTANCE)
                     .addLast(IMConstant.CONVERT_2_PACKET, new Convert2PacketHandler())
-                    .addLast(IMConstant.MQTT_SERVER, new MqttServerHandler());
+                    // 前置处理
+                    .addLast(IMConstant.PRE_HANDLER, new PacketPreHandler())
+                    // 业务处理
+                    .addLast(IMConstant.MQTT_SERVER, new MqttServerHandler())
+                    // 后置处理
+                    .addLast(IMConstant.POST_HANDLER, new PacketPostHandler())
+                    .remove(IMConstant.HTTP_DISPATCHER_HANDLER);
+            ctx.pipeline().addLast(IMConstant.GLOBAL_EXCEPTION, new GlobalExceptionHandler());
             // 调用下一个handle的active
             ctx.fireChannelActive();
         }
 
         @Override
         public void doSendMessage(Packet packet, String to) {
-            // do something
+            if (log.isDebugEnabled()) {
+                log.debug("mqtt 正在发送消息...");
+            }
+            try{
+                //从用户注册表中，获取用户对应的channel然后将消息写出去
+                IMServerContext.USER_REGISTER_TABLE.get(to).writeAndFlush(MqttHelper.unwrapPacket2Mqtt(packet));
+            }catch (Exception e) {
+                log.error("消息packet: {} 发送给客户端: {} 失败!,原因：{}", packet, to, e.getMessage());
+                // 消息丢失 @todo 后面处理
+            }
         }
     },
     //mqtt_ws 协议
@@ -223,8 +233,15 @@ public enum Protocol {
                     .addLast(IMConstant.MQTT_DECODER, new MqttDecoder())
                     .addLast(IMConstant.MQTT_ENCODER, MqttEncoder.INSTANCE)
                     .addLast(IMConstant.CONVERT_2_PACKET, new Convert2PacketHandler())
+                    // 前置处理
+                    .addLast(IMConstant.PRE_HANDLER, new PacketPreHandler())
+                    // 业务处理
                     .addLast(IMConstant.MQTT_SERVER, new MqttServerHandler())
+                    // 后置处理
+                    .addLast(IMConstant.POST_HANDLER, new PacketPostHandler())
                     .remove(IMConstant.HTTP_DISPATCHER_HANDLER);
+
+            ctx.pipeline().addLast(IMConstant.GLOBAL_EXCEPTION, new GlobalExceptionHandler());
             // 调用下一个handle的active
             ctx.fireChannelActive();
         }
@@ -236,6 +253,7 @@ public enum Protocol {
     };
 
 
+    private static Logger log = LoggerFactory.getLogger(Protocol.class);
     private byte protocol;
     private byte version;
     private String description;
@@ -244,6 +262,15 @@ public enum Protocol {
         this.protocol = protocol;
         this.version = version;
         this.description = description;
+    }
+
+    public static Protocol prototype(short protocol, byte protocolVersion) {
+        for (Protocol protocolEnum : Protocol.values()) {
+            if (protocolEnum.protocol == protocol && protocolEnum.version == protocolVersion) {
+                return protocolEnum;
+            }
+        }
+        return null;
     }
 
     public byte getProtocol() {
@@ -269,16 +296,6 @@ public enum Protocol {
     public void setDescription(String description) {
         this.description = description;
     }
-
-    public static Protocol prototype(short protocol, byte protocolVersion) {
-        for (Protocol protocolEnum : Protocol.values()) {
-            if (protocolEnum.protocol == protocol && protocolEnum.version == protocolVersion) {
-                return protocolEnum;
-            }
-        }
-        return null;
-    }
-    private static Logger log = LoggerFactory.getLogger(Protocol.class);
 
     public abstract void doDispatcher(ChannelHandlerContext ctx, Map<String, Object> queryParamsMap);
 
