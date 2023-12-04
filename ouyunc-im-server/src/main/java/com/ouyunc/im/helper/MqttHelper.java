@@ -27,6 +27,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -136,40 +137,45 @@ public class MqttHelper {
             case IM_LOGIN:
             case MQTT_CONNECT:
                 // variableHeader
-                String name = MapUtils.getString(variableHeader, "name");
-                int version = MapUtils.getIntValue(variableHeader, "version");
-                boolean hasUserName = MapUtils.getBooleanValue(variableHeader, "hasUserName");
-                boolean hasPassword = MapUtils.getBooleanValue(variableHeader, "hasPassword");
-                boolean isWillRetain = MapUtils.getBooleanValue(variableHeader, "isWillRetain");
-                int willQos = MapUtils.getIntValue(variableHeader, "willQos");
-                boolean isWillFlag = MapUtils.getBooleanValue(variableHeader, "isWillFlag");
-                boolean isCleanSession = MapUtils.getBooleanValue(variableHeader, "isCleanSession");
-                int keepAliveTimeSeconds = MapUtils.getIntValue(variableHeader, "keepAliveTimeSeconds");
-                Map<String, Object> propertiesMap = (Map<String, Object>) MapUtils.getMap(variableHeader, "properties");
-                MqttProperties properties = null;
-                properties = wrapProperties(properties, propertiesMap);
+                if (variableHeader != null) {
+                    String name = MapUtils.getString(variableHeader, "name");
+                    int version = MapUtils.getIntValue(variableHeader, "version");
+                    boolean hasUserName = MapUtils.getBooleanValue(variableHeader, "hasUserName");
+                    boolean hasPassword = MapUtils.getBooleanValue(variableHeader, "hasPassword");
+                    boolean isWillRetain = MapUtils.getBooleanValue(variableHeader, "isWillRetain");
+                    int willQos = MapUtils.getIntValue(variableHeader, "willQos");
+                    boolean isWillFlag = MapUtils.getBooleanValue(variableHeader, "isWillFlag");
+                    boolean isCleanSession = MapUtils.getBooleanValue(variableHeader, "isCleanSession");
+                    int keepAliveTimeSeconds = MapUtils.getIntValue(variableHeader, "keepAliveTimeSeconds");
+                    Map<String, Object> propertiesMap = (Map<String, Object>) MapUtils.getMap(variableHeader, "properties");
+                    MqttProperties properties = null;
+                    properties = wrapProperties(properties, propertiesMap);
+                    mqttVariableHeader = new MqttConnectVariableHeader(name, version, hasUserName, hasPassword, isWillRetain, willQos, isWillFlag, isCleanSession, keepAliveTimeSeconds, properties);
+                }
 
                 // payload
-                String clientIdentifier = MapUtils.getString(payload, "clientIdentifier");
-                String willTopic = MapUtils.getString(payload, "willTopic");
-                String userName = MapUtils.getString(payload, "userName");
-                Map<String, Object> willPropertiesMap = (Map<String, Object>) MapUtils.getMap(payload, "willProperties");
-                byte[] passwordBytes = null;
-                byte[] willMessageBytes = null;
-                MqttProperties willProperties = null;
-                List<Number> password = (List) MapUtils.getObject(payload, "password");
-                if (CollectionUtils.isNotEmpty(password)) {
-                    passwordBytes = Bytes.toArray(password);
+                if (payload != null) {
+                    String clientIdentifier = MapUtils.getString(payload, "clientIdentifier");
+                    String willTopic = MapUtils.getString(payload, "willTopic");
+                    String userName = MapUtils.getString(payload, "userName");
+                    Map<String, Object> willPropertiesMap = (Map<String, Object>) MapUtils.getMap(payload, "willProperties");
+                    byte[] passwordBytes = null;
+                    byte[] willMessageBytes = null;
+                    MqttProperties willProperties = null;
+                    List<Number> password = (List) MapUtils.getObject(payload, "password");
+                    if (CollectionUtils.isNotEmpty(password)) {
+                        passwordBytes = Bytes.toArray(password);
+                    }
+                    List<Number> willMessage = (List) MapUtils.getObject(payload, "willMessage");
+                    if (CollectionUtils.isNotEmpty(willMessage)) {
+                        willMessageBytes = Bytes.toArray(willMessage);
+                    }
+                    if (willPropertiesMap != null) {
+                        willProperties = wrapProperties(willProperties, willPropertiesMap);
+                    }
+                    mqttPayload = new MqttConnectPayload(clientIdentifier, willProperties, willTopic, willMessageBytes, userName, passwordBytes);
                 }
-                List<Number> willMessage = (List) MapUtils.getObject(payload, "willMessage");
-                if (CollectionUtils.isNotEmpty(willMessage)) {
-                    willMessageBytes = Bytes.toArray(willMessage);
-                }
-                if (willPropertiesMap != null) {
-                    willProperties = wrapProperties(willProperties, willPropertiesMap);
-                }
-                mqttVariableHeader = new MqttConnectVariableHeader(name, version, hasUserName, hasPassword, isWillRetain, willQos, isWillFlag, isCleanSession, keepAliveTimeSeconds, properties);
-                mqttPayload = new MqttConnectPayload(clientIdentifier, willProperties, willTopic, willMessageBytes, userName, passwordBytes);
+
                 break;
             case MQTT_CONNACK:
                 break;
@@ -184,6 +190,35 @@ public class MqttHelper {
             case MQTT_PUBCOMP:
                 break;
             case MQTT_SUBSCRIBE:
+
+                // variableHeader
+                if (variableHeader != null) {
+                    int messageId = MapUtils.getIntValue(variableHeader, "messageId");
+                    Map<String, Object> subscribePropertiesMap = (Map<String, Object>) MapUtils.getMap(variableHeader, "properties");
+                    MqttProperties subscribeProperties = null;
+                    subscribeProperties = wrapProperties(subscribeProperties, subscribePropertiesMap);
+                    mqttVariableHeader = new MqttMessageIdAndPropertiesVariableHeader(messageId, subscribeProperties);
+                }
+
+                // payload
+                if (payload != null) {
+                    List<Map<String,Object>> topicSubscriptionsMapList = (List) MapUtils.getObject(payload, "topicSubscriptions");
+                    List<MqttTopicSubscription> topicSubscriptions = new ArrayList<>();
+                    if (CollectionUtils.isNotEmpty(topicSubscriptionsMapList)) {
+                        // 遍历订阅的主题
+                        topicSubscriptionsMapList.forEach(topicSubscriptionsMap ->{
+                            String topicFilter = MapUtils.getString(topicSubscriptionsMap, "topicFilter");
+                            Map<String, Object> optionMap = (Map<String, Object>) MapUtils.getMap(topicSubscriptionsMap, "option");
+                            int qos = MapUtils.getIntValue(optionMap, "qos");
+                            boolean noLocal = MapUtils.getBooleanValue(optionMap, "noLocal");
+                            boolean retainAsPublished = MapUtils.getBooleanValue(optionMap, "retainAsPublished");
+                            int retainHandling = MapUtils.getIntValue(optionMap, "retainHandling");
+                            topicSubscriptions.add(new MqttTopicSubscription(topicFilter, new MqttSubscriptionOption(MqttQoS.valueOf(qos), noLocal, retainAsPublished, MqttSubscriptionOption.RetainedHandlingPolicy.valueOf(retainHandling))));
+                        });
+                    }
+                    mqttPayload = new MqttSubscribePayload(topicSubscriptions);
+                }
+
                 break;
             case MQTT_SUBACK:
                 break;
@@ -197,11 +232,13 @@ public class MqttHelper {
             case MQTT_PINGRESP:
                 break;
             case MQTT_DISCONNECT:
-                byte reasonCode = MapUtils.getByteValue(variableHeader, "reasonCode");
-                Map<String, Object> disConnectPropertiesMap = (Map<String, Object>) MapUtils.getMap(variableHeader, "properties");
-                MqttProperties disConnectProperties = null;
-                disConnectProperties = wrapProperties(disConnectProperties, disConnectPropertiesMap);
-                mqttVariableHeader = new MqttReasonCodeAndPropertiesVariableHeader(reasonCode,  disConnectProperties);
+                if (variableHeader != null) {
+                    byte reasonCode = MapUtils.getByteValue(variableHeader, "reasonCode");
+                    Map<String, Object> disConnectPropertiesMap = (Map<String, Object>) MapUtils.getMap(variableHeader, "properties");
+                    MqttProperties disConnectProperties = null;
+                    disConnectProperties = wrapProperties(disConnectProperties, disConnectPropertiesMap);
+                    mqttVariableHeader = new MqttReasonCodeAndPropertiesVariableHeader(reasonCode,  disConnectProperties);
+                }
                 break;
             case MQTT_AUTH:
                 break;

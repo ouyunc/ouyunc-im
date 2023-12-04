@@ -1,8 +1,10 @@
 package com.ouyunc.im.processor;
 
 import com.ouyunc.im.constant.enums.MessageEnum;
+import com.ouyunc.im.helper.MqttHelper;
 import com.ouyunc.im.packet.Packet;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.mqtt.MqttMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,6 +32,8 @@ public class MqttSubscribeMessageProcessor extends AbstractMessageProcessor{
     @Override
     public void doProcess(ChannelHandlerContext ctx, Packet packet) {
         log.info("MqttSubscribeMessageProcessor 正在处理客户端订阅信息...");
+        MqttMessage mqttMessage = MqttHelper.unwrapPacket2Mqtt(packet);
+        System.out.println(mqttMessage);
         // do nothing
     }
 }
