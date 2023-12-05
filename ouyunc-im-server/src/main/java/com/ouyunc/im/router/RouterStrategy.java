@@ -15,13 +15,13 @@ public interface RouterStrategy {
     /**
      * IM 全局事件执行器
      */
-    ExecutorService EVENT_EXECUTORS  = TtlExecutors.getTtlExecutorService(new DefaultEventExecutorGroup(16, ThreadFactoryBuilder.create().setNameFormat("router-fail-processor-pool-%d").get()));
+    ExecutorService EVENT_EXECUTORS = TtlExecutors.getTtlExecutorService(new DefaultEventExecutorGroup(16, ThreadFactoryBuilder.create().setNameFormat("router-fail-processor-pool-%d").get()));
 
     /**
-     * @Author fangzhenxun
-     * @Description 根据路由返回具体的channel连接池
      * @param
      * @return io.netty.channel.pool.ChannelPool
+     * @Author fangzhenxun
+     * @Description 根据路由返回具体的channel连接池
      */
     String route(Packet packet, String toServerAddress);
 }

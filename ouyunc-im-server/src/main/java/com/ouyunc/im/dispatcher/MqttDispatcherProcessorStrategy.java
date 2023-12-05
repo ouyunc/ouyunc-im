@@ -10,14 +10,14 @@ import org.slf4j.LoggerFactory;
  * @Author fangzhenxun
  * @Description: mqtt 协议
  **/
-public class MqttDispatcherProcessorStrategy implements DispatcherProcessorStrategy{
+public class MqttDispatcherProcessorStrategy implements DispatcherProcessorStrategy {
     private static Logger log = LoggerFactory.getLogger(MqttDispatcherProcessorStrategy.class);
 
     /**
-     * @Author fangzhenxun
-     * @Description 在这里进行处理原生mqtt协议以及不同版本
      * @param ctx
      * @return void
+     * @Author fangzhenxun
+     * @Description 在这里进行处理原生mqtt协议以及不同版本
      */
     @Override
     public void doProcess(ChannelHandlerContext ctx) {

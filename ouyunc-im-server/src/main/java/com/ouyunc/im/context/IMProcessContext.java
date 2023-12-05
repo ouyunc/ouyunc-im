@@ -71,7 +71,6 @@ public class IMProcessContext {
     });
 
 
-
     /**
      * 配置消息处理接口的所有实现类
      */
@@ -95,14 +94,14 @@ public class IMProcessContext {
                 if (!MessageProcessor.class.equals(cls) && !Modifier.isAbstract(cls.getModifiers())) {
                     Object messageProcessor = objenesis.newInstance(cls);
                     if (AbstractMessageProcessor.class.isAssignableFrom(cls)) {
-                        MESSAGE_PROCESSOR.put(((AbstractMessageProcessor)messageProcessor).messageType().getValue(), ((AbstractMessageProcessor)messageProcessor));
+                        MESSAGE_PROCESSOR.put(((AbstractMessageProcessor) messageProcessor).messageType().getValue(), ((AbstractMessageProcessor) messageProcessor));
                     }
                     if (AbstractMessageContentProcessor.class.isAssignableFrom(cls)) {
-                        MESSAGE_CONTENT_PROCESSOR.put(((AbstractMessageContentProcessor)messageProcessor).messageContentType().type(), ((AbstractMessageContentProcessor)messageProcessor));
+                        MESSAGE_CONTENT_PROCESSOR.put(((AbstractMessageContentProcessor) messageProcessor).messageContentType().type(), ((AbstractMessageContentProcessor) messageProcessor));
                     }
                     if (AbstractChatbotMessageProcessor.class.isAssignableFrom(cls)) {
                         // 排除自身以及抽象类
-                        CHAT_BOT_PROCESSOR.add((AbstractChatbotMessageProcessor)messageProcessor);
+                        CHAT_BOT_PROCESSOR.add((AbstractChatbotMessageProcessor) messageProcessor);
                     }
                 }
             }
@@ -114,20 +113,20 @@ public class IMProcessContext {
             MessageProcessor messageProcessor = iterator.next();
             Class<? extends MessageProcessor> cls = messageProcessor.getClass();
             if (AbstractMessageProcessor.class.isAssignableFrom(cls)) {
-                MESSAGE_PROCESSOR.put(((AbstractMessageProcessor)messageProcessor).messageType().getValue(), ((AbstractMessageProcessor)messageProcessor));
+                MESSAGE_PROCESSOR.put(((AbstractMessageProcessor) messageProcessor).messageType().getValue(), ((AbstractMessageProcessor) messageProcessor));
             }
             if (AbstractMessageContentProcessor.class.isAssignableFrom(cls)) {
-                MESSAGE_CONTENT_PROCESSOR.put(((AbstractMessageContentProcessor)messageProcessor).messageContentType().type(), ((AbstractMessageContentProcessor)messageProcessor));
+                MESSAGE_CONTENT_PROCESSOR.put(((AbstractMessageContentProcessor) messageProcessor).messageContentType().type(), ((AbstractMessageContentProcessor) messageProcessor));
             }
             if (AbstractChatbotMessageProcessor.class.isAssignableFrom(cls)) {
                 // 排除自身以及抽象类
-                CHAT_BOT_PROCESSOR.add((AbstractChatbotMessageProcessor)messageProcessor);
+                CHAT_BOT_PROCESSOR.add((AbstractChatbotMessageProcessor) messageProcessor);
             }
         }
         // 排序并整合
         CHAT_BOT_PROCESSOR = CHAT_BOT_PROCESSOR.stream().sorted(Comparator.comparingInt(AbstractChatbotMessageProcessor::order)).collect(Collectors.toList());
         for (int i = 0; i < CHAT_BOT_PROCESSOR.size(); i++) {
-            if(i == CHAT_BOT_PROCESSOR.size() -1){
+            if (i == CHAT_BOT_PROCESSOR.size() - 1) {
                 CHAT_BOT_PROCESSOR.get(i).setNextHandler(null);
             } else {
                 CHAT_BOT_PROCESSOR.get(i).setNextHandler(CHAT_BOT_PROCESSOR.get(i + 1));

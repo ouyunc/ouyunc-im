@@ -64,14 +64,14 @@ public interface IMServerProperties extends Config {
     boolean clusterEnable();
 
     /**
-     *  集群中的服务ip + port (包括自己本身的ip + port), 例如：有10 台服务做集群，就把十台的服务端的IP以及端口号写上即可
+     * 集群中的服务ip + port (包括自己本身的ip + port), 例如：有10 台服务做集群，就把十台的服务端的IP以及端口号写上即可
      */
     @Key("im.server.cluster.address")
     Set<String> clusterAddress();
 
 
     /**
-     *  集群中的服务开启脑裂检测，默认开启
+     * 集群中的服务开启脑裂检测，默认开启
      */
     @Key("im.server.cluster.split-brain.detection.enable")
     @DefaultValue("true")
@@ -93,7 +93,7 @@ public interface IMServerProperties extends Config {
 
 
     /**
-     *  集群中，服务启动时，服务注册表的增量更新时间，单位秒，默认5秒
+     * 集群中，服务启动时，服务注册表的增量更新时间，单位秒，默认5秒
      */
     @Key("im.server.cluster.inner-client.heart-beat.interval")
     @DefaultValue("5")
@@ -101,21 +101,21 @@ public interface IMServerProperties extends Config {
 
 
     /**
-     *  集群中，内置客户端读超时，单位秒，默认0秒钟
+     * 集群中，内置客户端读超时，单位秒，默认0秒钟
      */
     @Key("im.server.cluster.inner-client.idle-read-time-out")
     @DefaultValue("0")
     int clusterInnerClientIdleReadTimeOut();
 
     /**
-     *  集群中，内置客户端写超时，单位秒，默认0秒钟
+     * 集群中，内置客户端写超时，单位秒，默认0秒钟
      */
     @Key("im.server.cluster.inner-client.idle-write-time-out")
     @DefaultValue("0")
     int clusterInnerClientIdleWriteTimeOut();
 
     /**
-     *  集群中，内置客户端读写超时，单位秒，默认5秒钟
+     * 集群中，内置客户端读写超时，单位秒，默认5秒钟
      */
     @Key("im.server.cluster.inner-client.idle-read-write-time-out")
     @DefaultValue("5")
@@ -157,7 +157,7 @@ public interface IMServerProperties extends Config {
     int clusterInnerClientHeartbeatWaitRetry();
 
     /**
-     *  集群中，路由服务的策略，默认回溯，RANDOM，BACKTRACK
+     * 集群中，路由服务的策略，默认回溯，RANDOM，BACKTRACK
      */
     @Key("im.server.cluster.route-strategy")
     @DefaultValue("RANDOM")
@@ -234,28 +234,25 @@ public interface IMServerProperties extends Config {
     int heartBeatWaitRetry();
 
     /**
-     *  全局是否开启SSL/TLS, 默认否
+     * 全局是否开启SSL/TLS, 默认否
      */
     @Key("im.server.ssl.enable")
     @DefaultValue("false")
     boolean sslEnable();
 
     /**
-     *  SSL/TLS 证书文件路径
+     * SSL/TLS 证书文件路径
      */
     @Key("im.server.ssl.certificate")
     @DefaultValue("ssl/ouyunc.com.pem")
     String sslCertificate();
 
     /**
-     *  SSL/TLS 私钥文件路劲
+     * SSL/TLS 私钥文件路劲
      */
     @Key("im.server.ssl.private-key")
     @DefaultValue("ssl/ouyunc.com_pkcs8.key")
     String sslPrivateKey();
-
-
-
 
 
     /**

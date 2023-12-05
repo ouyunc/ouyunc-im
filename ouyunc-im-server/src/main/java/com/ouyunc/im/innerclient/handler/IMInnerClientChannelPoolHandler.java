@@ -29,23 +29,21 @@ public class IMInnerClientChannelPoolHandler implements ChannelPoolHandler {
 
     @Override
     public void channelReleased(Channel ch) throws Exception {
-        log.info("客户端释放channel Id: {}",ch.id().asShortText());
+        log.info("客户端释放channel Id: {}", ch.id().asShortText());
     }
 
     @Override
     public void channelAcquired(Channel ch) throws Exception {
-        log.info("从客户端连接池中 获取channel Id: {}",ch.id().asShortText());
+        log.info("从客户端连接池中 获取channel Id: {}", ch.id().asShortText());
     }
 
 
-
-
     /**
+     * @param channel
+     * @return void
      * @Author fangzhenxun
      * @Description channel 的创建,初次与服务端建立连接的时候会创建channel，内置客户端只做发送处理，不牵涉到粘包，半包，拿到的就是一个完整的包
      * 这个链接池，所有协议以及包类型的信息都会走这里
-     * @param channel
-     * @return void
      */
     @Override
     public void channelCreated(Channel channel) throws Exception {

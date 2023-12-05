@@ -9,6 +9,8 @@ import com.ouyunc.im.helper.DbHelper;
 import com.ouyunc.im.helper.MessageHelper;
 import com.ouyunc.im.helper.UserHelper;
 import com.ouyunc.im.packet.Packet;
+import com.ouyunc.im.packet.message.ExtraMessage;
+import com.ouyunc.im.packet.message.InnerExtraData;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.packet.message.content.GroupRequestContent;
 import com.ouyunc.im.utils.SystemClock;
@@ -22,7 +24,7 @@ import java.util.List;
 /**
  * 踢出群群
  */
-public class GroupKickMessageContentProcessor extends AbstractMessageContentProcessor{
+public class GroupKickMessageContentProcessor extends AbstractMessageContentProcessor {
     private static Logger log = LoggerFactory.getLogger(GroupKickMessageContentProcessor.class);
 
     @Override
@@ -31,31 +33,34 @@ public class GroupKickMessageContentProcessor extends AbstractMessageContentProc
     }
 
     /**
-     * @Author fangzhenxun
-     * @Description 踢出群
      * @param ctx
      * @param packet
      * @return void
+     * @Author fangzhenxun
+     * @Description 踢出群
      */
     @Override
     public void doProcess(ChannelHandlerContext ctx, Packet packet) {
         log.info("GroupKickMessageContentProcessor 正在处理踢出群请求 packet: {}...", packet);
         Message message = (Message) packet.getMessage();
+        ExtraMessage extraMessage = JSON.parseObject(message.getExtra(), ExtraMessage.class);
+        InnerExtraData innerExtraData = extraMessage.getInnerExtraData();
+        String appKey = innerExtraData.getAppKey();
         GroupRequestContent groupRequestContent = JSON.parseObject(message.getContent(), GroupRequestContent.class);
 
         // 下面是对集群以及qos消息可靠进行处理
         String from = message.getFrom();
         // 判断from 发起者是否有事群主或管理员
-        ImGroupUserBO groupMember = DbHelper.getGroupMember(from, groupRequestContent.getGroupId());
+        ImGroupUserBO groupMember = DbHelper.getGroupMember(appKey, from, groupRequestContent.getGroupId());
         if (!IMConstant.GROUP_MANAGER.equals(groupMember.getIsLeader()) && !IMConstant.GROUP_LEADER.equals(groupMember.getIsLeader())) {
             return;
         }
         // 根据to从分布式缓存中取出targetServerAddress目标地址
         String to = message.getTo();
-        DbHelper.removeOutGroup(to, groupRequestContent.getGroupId());
-        DbHelper.write2OfflineTimeline(packet, to, SystemClock.now());
+        DbHelper.removeOutGroup(appKey, to, groupRequestContent.getGroupId());
+        DbHelper.write2OfflineTimeline(appKey, packet, to, SystemClock.now());
         // 判断该管理员是否在线，如果不在线放入离线消息
-        List<LoginUserInfo> toLoginUserInfos = UserHelper.onlineAll(to);
+        List<LoginUserInfo> toLoginUserInfos = UserHelper.onlineAll(appKey, to);
         if (CollectionUtils.isNotEmpty(toLoginUserInfos)) {
             MessageHelper.send2MultiDevices(packet, toLoginUserInfos);
         }

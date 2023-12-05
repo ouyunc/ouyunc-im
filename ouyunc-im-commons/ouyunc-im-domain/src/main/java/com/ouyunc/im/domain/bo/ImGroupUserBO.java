@@ -6,6 +6,11 @@ package com.ouyunc.im.domain.bo;
 public class ImGroupUserBO {
 
     /**
+     * 所属平台唯一标识
+     */
+    private String appKey;
+
+    /**
      * 群组id
      */
     private String groupId;
@@ -231,6 +236,14 @@ public class ImGroupUserBO {
         this.createTime = createTime;
     }
 
+    public String getAppKey() {
+        return appKey;
+    }
+
+    public void setAppKey(String appKey) {
+        this.appKey = appKey;
+    }
+
     public ImGroupUserBO() {
     }
 
@@ -240,6 +253,27 @@ public class ImGroupUserBO {
         this.username = username;
         this.nickName = nickName;
         this.groupNickName = groupNickName;
+        this.email = email;
+        this.phoneNum = phoneNum;
+        this.idCardNum = idCardNum;
+        this.avatar = avatar;
+        this.motto = motto;
+        this.age = age;
+        this.sex = sex;
+        this.isLeader = isLeader;
+        this.isManager = isManager;
+        this.isShield = isShield;
+        this.mushin = mushin;
+        this.createTime = createTime;
+    }
+
+    public ImGroupUserBO(String appKey, String groupId, String userId, String username, String groupNickName, String nickName, String email, String phoneNum, String idCardNum, String avatar, String motto, Integer age, Integer sex, Integer isLeader, Integer isManager, Integer isShield, Integer mushin, String createTime) {
+        this.appKey = appKey;
+        this.groupId = groupId;
+        this.userId = userId;
+        this.username = username;
+        this.groupNickName = groupNickName;
+        this.nickName = nickName;
         this.email = email;
         this.phoneNum = phoneNum;
         this.idCardNum = idCardNum;

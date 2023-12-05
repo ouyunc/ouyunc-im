@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @Author fangzhenxun
  * @Description: IM上下文
  **/
-public class IMServerContext extends IMContext{
+public class IMServerContext extends IMContext {
 
     /**
      * ttl Thread local
@@ -48,6 +48,7 @@ public class IMServerContext extends IMContext{
         public Object load(@NonNull Object o) throws Exception {
             return null;
         }
+
         @Override
         public @NonNull Map loadAll(@NonNull Iterable keys) throws Exception {
             return null;
@@ -63,6 +64,7 @@ public class IMServerContext extends IMContext{
         public Object load(@NonNull Object o) throws Exception {
             return null;
         }
+
         @Override
         public @NonNull Map loadAll(@NonNull Iterable keys) throws Exception {
             return null;
@@ -79,6 +81,7 @@ public class IMServerContext extends IMContext{
         public Object load(@NonNull Object o) throws Exception {
             return null;
         }
+
         @Override
         public @NonNull Map loadAll(@NonNull Iterable keys) throws Exception {
             return null;
@@ -94,6 +97,7 @@ public class IMServerContext extends IMContext{
         public Object load(@NonNull Object o) throws Exception {
             return new AtomicInteger(0);
         }
+
         @Override
         public @NonNull Map loadAll(@NonNull Iterable keys) throws Exception {
             return null;
@@ -111,6 +115,7 @@ public class IMServerContext extends IMContext{
         public Object load(@NonNull Object o) throws Exception {
             return Sets.newConcurrentHashSet();
         }
+
         @Override
         public @NonNull Map loadAll(@NonNull Iterable keys) throws Exception {
             return null;
@@ -135,7 +140,6 @@ public class IMServerContext extends IMContext{
      * IM 服务中丢失的消息 packet
      */
     public static RedisDistributedL1Cache<String, MissingPacket> MISSING_MESSAGES_CACHE = new RedisDistributedL1Cache<>();
-
 
 
 }

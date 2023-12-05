@@ -67,10 +67,10 @@ public class ProtocolDispatcher extends ByteToMessageDecoder {
 
 
     /**
-     * @Author fangzhenxun
-     * @Description 判断是否是mqtt的connect协议
      * @param in
      * @return boolean
+     * @Author fangzhenxun
+     * @Description 判断是否是mqtt的connect协议
      */
     private boolean isMqtt(ByteBuf in) {
         for (int i = 0; i < 4; i++) {
@@ -84,11 +84,11 @@ public class ProtocolDispatcher extends ByteToMessageDecoder {
     }
 
     /**
-     * @Author fangzhenxun
-     * @Description 选取具体哪个mqtt 以及协议版本
      * @param in
      * @param retainLength
      * @return boolean
+     * @Author fangzhenxun
+     * @Description 选取具体哪个mqtt 以及协议版本
      */
     private boolean determineMqtt(ByteBuf in, int retainLength) {
         final byte MSB = in.getByte(retainLength + 2);
@@ -104,7 +104,7 @@ public class ProtocolDispatcher extends ByteToMessageDecoder {
                 final byte protocolVersion = in.getByte(retainLength + 8);
                 return protocolVersion == 4 || protocolVersion == 5;
             }
-        }else if (MSB == 0 && LSB == 6) {
+        } else if (MSB == 0 && LSB == 6) {
             final byte d = in.getByte(retainLength + 8);
             final byte p = in.getByte(retainLength + 9);
             //协议可能是3.1

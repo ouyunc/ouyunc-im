@@ -10,7 +10,7 @@ import org.slf4j.MDC;
 /**
  * 日志全局链路记录
  */
-public class IMLoggingHandler extends LoggingHandler{
+public class IMLoggingHandler extends LoggingHandler {
 
     public IMLoggingHandler(LogLevel level) {
         super(level);
@@ -18,6 +18,7 @@ public class IMLoggingHandler extends LoggingHandler{
 
     /**
      * 添加日志跟踪ID
+     *
      * @param ctx
      * @param msg
      * @throws Exception

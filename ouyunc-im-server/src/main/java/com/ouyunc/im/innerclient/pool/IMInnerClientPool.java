@@ -54,12 +54,12 @@ public class IMInnerClientPool {
     }
 
     /**
-     * @Author fangzhenxun
-     * @Description 使用连接池初始化内置客户端，动态扩容缩容连接
      * @param serverConfig
      * @return void
+     * @Author fangzhenxun
+     * @Description 使用连接池初始化内置客户端，动态扩容缩容连接
      */
-    public static void init(IMServerConfig serverConfig){
+    public static void init(IMServerConfig serverConfig) {
         log.info("IM内置客户端开始启动......");
         // 获取集群中的所有服务地址列表
         Set<String> clusterAddress = serverConfig.getClusterAddress();
@@ -68,7 +68,7 @@ public class IMInnerClientPool {
             // 获取本机ip与端口号
             String localServerAddress0 = IMConstant.LOCAL_HOST + IMConstant.COLON_SPLIT + serverConfig.getPort();
             // 排除本机,将集群服务存放到服务注册表中
-            if  (!localServerAddress0.equals(serverAddress) && !IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(serverAddress)) {
+            if (!localServerAddress0.equals(serverAddress) && !IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(serverAddress)) {
                 final InetSocketAddress inetSocketAddress = SocketAddressUtil.convert2SocketAddress(serverAddress);
                 // 获取准备好的 channel pool，此时还没有连接
                 SimpleChannelPool simpleChannelPool = singleClientChannelPoolMap.get(inetSocketAddress);
@@ -81,12 +81,12 @@ public class IMInnerClientPool {
     }
 
     /**
-     * @Author fangzhenxun
-     * @Description 注销内置客户端
      * @param
      * @return void
+     * @Author fangzhenxun
+     * @Description 注销内置客户端
      */
-    public static void stop(){
+    public static void stop() {
         if (workGroup != null) {
             workGroup.shutdownGracefully();
         }

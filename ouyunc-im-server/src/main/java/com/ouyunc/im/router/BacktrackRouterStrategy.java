@@ -19,15 +19,15 @@ import java.util.*;
  * @Author fangzhenxun
  * @Description: 回溯路由算法
  **/
-public class BacktrackRouterStrategy implements RouterStrategy{
+public class BacktrackRouterStrategy implements RouterStrategy {
     private static Logger log = LoggerFactory.getLogger(BacktrackRouterStrategy.class);
 
     /**
-     * @Author fangzhenxun
-     * @Description 回溯路由,找出一个有效的路由
      * @param toServerAddress
      * @param packet
      * @return java.net.InetSocketAddress
+     * @Author fangzhenxun
+     * @Description 回溯路由, 找出一个有效的路由
      */
     @Override
     public String route(Packet packet, String toServerAddress) {
@@ -45,7 +45,7 @@ public class BacktrackRouterStrategy implements RouterStrategy{
         // 当前路由表
         RoutingTable localRoutingTable = null;
         // 判断该消息是否路由过本服务
-        while (tableIterator.hasNext()){
+        while (tableIterator.hasNext()) {
             RoutingTable routingTable = tableIterator.next();
             // 如果路由表有本机的记录，则，取出路由过的服务地址，并追加
             if (routingTable.getServerAddress().equals(IMServerContext.SERVER_CONFIG.getLocalServerAddress())) {
@@ -73,7 +73,7 @@ public class BacktrackRouterStrategy implements RouterStrategy{
             // 下面是挑选一个符合规则的服务
             // 从全量服务注册表中排除一下路由，找出一个符合条件的，这里可以根据一定的算法来有限选择一个合适的，这里只是排除条件随机选择一个
             Iterator<Map.Entry<String, ChannelPool>> allSocketAddressIterator = MapUtil.mergerMaps(IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.asMap(), IMServerContext.CLUSTER_GLOBAL_SERVER_REGISTRY_TABLE.asMap()).entrySet().iterator();
-            while (allSocketAddressIterator.hasNext()){
+            while (allSocketAddressIterator.hasNext()) {
                 Map.Entry<String, ChannelPool> next = allSocketAddressIterator.next();
                 String nextServerAddress = next.getKey();
                 boolean isExists = false;

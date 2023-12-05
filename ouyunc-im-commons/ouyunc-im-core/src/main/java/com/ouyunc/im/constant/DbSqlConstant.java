@@ -21,6 +21,7 @@ public class DbSqlConstant {
                 "\touyunc_im_user.AVATAR, \n" +
                 "\touyunc_im_user.MOTTO, \n" +
                 "\touyunc_im_user.AGE, \n" +
+                "\touyunc_im_user.APP_KEY AS appKey, \n" +
                 "\touyunc_im_user.SEX, \n" +
                 "\touyunc_im_user.EMAIL, \n" +
                 "\touyunc_im_user.PHONE_NUM AS phoneNum, \n" +
@@ -45,6 +46,7 @@ public class DbSqlConstant {
                 "\touyunc_im_user.USERNAME AS FRIENDUSERNAME, \n" +
                 "\touyunc_im_friend.FRIEND_NICK_NAME AS friendNickName, \n" +
                 "\touyunc_im_user.EMAIL AS friendEmail, \n" +
+                "\touyunc_im_user.APP_KEY AS appKey, \n" +
                 "\touyunc_im_user.PHONE_NUM AS friendPhoneNum,  \n" +
                 "\touyunc_im_user.ID_CARD_NUM AS friendIdCardNum, \n" +
                 "\touyunc_im_user.AVATAR AS friendAvatar, \n" +
@@ -70,6 +72,7 @@ public class DbSqlConstant {
                 "\touyunc_im_user.USERNAME, \n" +
                 "\touyunc_im_group_user.USER_NICK_NAME AS userNickName, \n" +
                 "\touyunc_im_user.AVATAR, \n" +
+                "\touyunc_im_user.APP_KEY AS appKey, \n" +
                 "\touyunc_im_user.MOTTO, \n" +
                 "\touyunc_im_user.AGE, \n" +
                 "\touyunc_im_user.SEX, \n" +
@@ -97,6 +100,7 @@ public class DbSqlConstant {
                 "\touyunc_im_user.USERNAME, \n" +
                 "\touyunc_im_group_user.USER_NICK_NAME AS userNickName, \n" +
                 "\touyunc_im_user.AVATAR, \n" +
+                "\touyunc_im_user.APP_KEY AS appKey, \n" +
                 "\touyunc_im_user.MOTTO, \n" +
                 "\touyunc_im_user.AGE, \n" +
                 "\touyunc_im_user.SEX, \n" +
@@ -126,6 +130,7 @@ public class DbSqlConstant {
                 "\touyunc_im_group_user.USER_NICK_NAME AS userNickName, \n" +
                 "\touyunc_im_user.AVATAR, \n" +
                 "\touyunc_im_user.MOTTO, \n" +
+                "\touyunc_im_user.APP_KEY AS appKey, \n" +
                 "\touyunc_im_user.AGE, \n" +
                 "\touyunc_im_user.SEX, \n" +
                 "\touyunc_im_user.EMAIL, \n" +
@@ -154,6 +159,7 @@ public class DbSqlConstant {
                 "\touyunc_im_group_user.USER_NICK_NAME AS userNickName, \n" +
                 "\touyunc_im_user.AVATAR, \n" +
                 "\touyunc_im_user.MOTTO, \n" +
+                "\touyunc_im_user.APP_KEY AS appKey, \n" +
                 "\touyunc_im_user.AGE, \n" +
                 "\touyunc_im_user.SEX, \n" +
                 "\touyunc_im_user.EMAIL, \n" +
@@ -178,6 +184,7 @@ public class DbSqlConstant {
                 "\touyunc_im_user.ID, \n" +
                 "\touyunc_im_user.OPEN_ID AS openId, \n" +
                 "\touyunc_im_user.USERNAME, \n" +
+                "\touyunc_im_user.APP_KEY AS appKey, \n" +
                 "\touyunc_im_user.PASSWORD, \n" +
                 "\touyunc_im_user.NICK_NAME AS nickName, \n" +
                 "\touyunc_im_user.AVATAR, \n" +
@@ -204,6 +211,7 @@ public class DbSqlConstant {
         SELECT_GROUP("SELECT \n" +
                 "\touyunc_im_group.ID, \n" +
                 "\touyunc_im_group.GROUP_NAME AS groupName, \n" +
+                "\touyunc_im_group.APP_KEY AS appKey, \n" +
                 "\touyunc_im_group.GROUP_AVATAR AS groupAvatar, \n" +
                 "\touyunc_im_group.GROUP_DESCRIPTION AS groupDescription, \n" +
                 "\touyunc_im_group.GROUP_ANNOUNCEMENT AS groupAnnouncement, \n" +
@@ -234,25 +242,26 @@ public class DbSqlConstant {
                 "\touyunc_im_app.APP_KEY = ? ","查询IM APP DETAIL 详情信息"),
 
         SELECT_TIME_LINE("SELECT\n" +
-                "id,\n" +
-                "protocol,\n" +
-                "protocol_version as protocolVersion,\n" +
-                "device_type as deviceType,\n" +
-                "network_type as networkType,\n" +
-                "encrypt_type as encryptType,\n" +
-                "serialize_algorithm as serializeAlgorithm,\n" +
-                "ip,\n" +
-                "`from`,\n" +
-                "`to`,\n" +
-                "type,\n" +
-                "content_type as contentType,\n" +
-                "content,\n" +
-                "extra,\n" +
-                "send_time as sendTime,\n" +
-                "withdraw,\n" +
-                "create_time as createTime,\n" +
-                "update_time as updateTime,\n" +
-                "deleted\n" +
+                "ID,\n" +
+                "PROTOCOL,\n" +
+                "PROTOCOL_VERSION as protocolVersion,\n" +
+                "DEVICE_TYPE as deviceType,\n" +
+                "NETWORK_TYPE as networkType,\n" +
+                "ENCRYPT_TYPE as encryptType,\n" +
+                "SERIALIZE_ALGORITHM as serializeAlgorithm,\n" +
+                "IP,\n" +
+                "`FROM`,\n" +
+                "`TO`,\n" +
+                "TYPE,\n" +
+                "CONTENT_TYPE as contentType,\n" +
+                "CONTENT,\n" +
+                "APP_KEY AS appKey, \n" +
+                "EXTRA,\n" +
+                "SEND_TIME as sendTime,\n" +
+                "WITHDRAW,\n" +
+                "CREATE_TIME as createTime,\n" +
+                "UPDATE_TIME as updateTime,\n" +
+                "DELETED\n" +
                 "FROM\n" +
                 "ouyunc_im_time_line\n" +
                 "where id =  ? and deleted = 0","查询IM timeline 消息信箱的信息"),
@@ -267,15 +276,15 @@ public class DbSqlConstant {
 
         UPDATE_TIME_LINE("UPDATE ouyunc_im_time_line SET withdraw = 1,  update_time = ? WHERE id = ? and deleted = 0" ,"撤销信箱箱的消息根据消息id"),
 
-        INSERT_FRIEND("INSERT INTO ouyunc_im_friend (ID, USER_ID, FRIEND_USER_ID, FRIEND_NICK_NAME, IS_SHIELD, CREATE_TIME, UPDATE_TIME) VALUES (?, ?, ?, ?, ?, ?, ?)","添加好友关系"),
+        INSERT_FRIEND("INSERT INTO ouyunc_im_friend (ID, USER_ID, FRIEND_USER_ID, FRIEND_NICK_NAME, IS_SHIELD, APP_KEY, CREATE_TIME, UPDATE_TIME) VALUES (?, ?, ?, ?, ?, ?,?, ?)","添加好友关系"),
 
-        INSERT_GROUP_USER("INSERT INTO ouyunc_im_group_user (ID, GROUP_ID, USER_ID,GROUP_NICK_NAME, USER_NICK_NAME, IS_LEADER, IS_MANAGER, IS_SHIELD, MUSHIN, CREATE_TIME) VALUES (?, ?,?, ?, ?, ?, ?, ?, ?, ?)","添加群成员关系"),
+        INSERT_GROUP_USER("INSERT INTO ouyunc_im_group_user (ID, GROUP_ID, USER_ID,GROUP_NICK_NAME, USER_NICK_NAME, IS_LEADER, IS_MANAGER, IS_SHIELD, MUSHIN, APP_KEY, CREATE_TIME) VALUES (?,?, ?,?, ?, ?, ?, ?, ?, ?, ?)","添加群成员关系"),
 
         INSERT_READ_RECEIPT("INSERT INTO ouyunc_im_read_receipt(ID, MSG_ID, USER_ID) VALUES (?, ?, ?)", "插入已读消息关系"),
 
-        INSERT_TIME_LINE("INSERT INTO ouyunc_im_time_line (ID, PROTOCOL, PROTOCOL_VERSION, DEVICE_TYPE, NETWORK_TYPE, ENCRYPT_TYPE, SERIALIZE_ALGORITHM, IP, `FROM`, `TO`, TYPE, CONTENT_TYPE, CONTENT,EXTRA, SEND_TIME, WITHDRAW, CREATE_TIME, UPDATE_TIME, DELETED) VALUES (?, ? , ? ,? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , 0)", "批量插入信箱箱消息（插入两条一条是自己的一条是别人的）"),
+        INSERT_TIME_LINE("INSERT INTO ouyunc_im_time_line (ID, PROTOCOL, PROTOCOL_VERSION, DEVICE_TYPE, NETWORK_TYPE, ENCRYPT_TYPE, SERIALIZE_ALGORITHM, IP, `FROM`, `TO`, TYPE, CONTENT_TYPE, CONTENT,EXTRA, SEND_TIME, WITHDRAW, APP_KEY, CREATE_TIME, UPDATE_TIME, DELETED) VALUES (?, ?, ? , ? ,? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , 0)", "批量插入信箱箱消息（插入两条一条是自己的一条是别人的）"),
 
-        INSERT_MESSAGE("INSERT INTO ouyunc_im_message (ID, PROTOCOL, PROTOCOL_VERSION, DEVICE_TYPE, NETWORK_TYPE, ENCRYPT_TYPE, SERIALIZE_ALGORITHM, IP, `FROM`, `TO`, TYPE, CONTENT_TYPE, CONTENT,EXTRA, SEND_TIME, CREATE_TIME, UPDATE_TIME, DELETED) VALUES (?, ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , 0)", "插入全局消息记录");
+        INSERT_MESSAGE("INSERT INTO ouyunc_im_message (ID, PROTOCOL, PROTOCOL_VERSION, DEVICE_TYPE, NETWORK_TYPE, ENCRYPT_TYPE, SERIALIZE_ALGORITHM, IP, `FROM`, `TO`, TYPE, CONTENT_TYPE, CONTENT,EXTRA, SEND_TIME, APP_KEY, CREATE_TIME, UPDATE_TIME, DELETED) VALUES (?,?, ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , 0)", "插入全局消息记录");
 
 
 

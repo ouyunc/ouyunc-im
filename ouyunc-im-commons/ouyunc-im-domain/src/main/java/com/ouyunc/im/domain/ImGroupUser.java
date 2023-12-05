@@ -21,6 +21,11 @@ public class ImGroupUser implements Serializable {
     private Long id;
 
     /**
+     * 所属平台唯一标识
+     */
+    private String appKey;
+
+    /**
      * 群组id
      */
     private Long groupId;
@@ -147,12 +152,33 @@ public class ImGroupUser implements Serializable {
         this.createTime = createTime;
     }
 
+    public String getAppKey() {
+        return appKey;
+    }
+
+    public void setAppKey(String appKey) {
+        this.appKey = appKey;
+    }
 
     public ImGroupUser() {
     }
 
     public ImGroupUser(Long id, Long groupId, String groupNickName, Long userId, String userNickName, Integer isLeader, Integer isManager, Integer isShield, Integer mushin, String createTime) {
         this.id = id;
+        this.groupId = groupId;
+        this.groupNickName = groupNickName;
+        this.userId = userId;
+        this.userNickName = userNickName;
+        this.isLeader = isLeader;
+        this.isManager = isManager;
+        this.isShield = isShield;
+        this.mushin = mushin;
+        this.createTime = createTime;
+    }
+
+    public ImGroupUser(Long id, String appKey, Long groupId, String groupNickName, Long userId, String userNickName, Integer isLeader, Integer isManager, Integer isShield, Integer mushin, String createTime) {
+        this.id = id;
+        this.appKey = appKey;
         this.groupId = groupId;
         this.groupNickName = groupNickName;
         this.userId = userId;

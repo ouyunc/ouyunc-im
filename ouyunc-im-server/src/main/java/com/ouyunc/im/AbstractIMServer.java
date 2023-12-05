@@ -28,13 +28,14 @@ import java.util.Map;
  * @Author fangzhenxun
  * @Description: 抽象im服务，用于定义一些其他初始化方法
  **/
-public abstract class AbstractIMServer implements IMServer{
+public abstract class AbstractIMServer implements IMServer {
     private static Logger log = LoggerFactory.getLogger(AbstractIMServer.class);
 
     /**
      * 服务启动对象
      */
-    private final static ServerBootstrap bootstrap = new ServerBootstrap();;
+    private final static ServerBootstrap bootstrap = new ServerBootstrap();
+    ;
 
     /**
      * boss 线程组
@@ -80,9 +81,9 @@ public abstract class AbstractIMServer implements IMServer{
     }
 
     /**
+     * @return void
      * @Author fangzhenxun
      * @Description im服务启动入口
-     * @return void
      */
     @Override
     public void start(String[] args) {
@@ -96,9 +97,9 @@ public abstract class AbstractIMServer implements IMServer{
     }
 
     /**
+     * @return void
      * @Author fangzhenxun
      * @Description 初始化im server服务&内置客户端（集群使用）
-     * @return void
      */
     private void initServer(IMServerConfig imServerConfig) {
         final long startTimeStamp = SystemClock.now();
@@ -107,7 +108,7 @@ public abstract class AbstractIMServer implements IMServer{
         // 配置boss 线程组&工作线程组
         bossGroup = new NioEventLoopGroup(imServerConfig.getBossThreads());
         workerGroup = new NioEventLoopGroup(imServerConfig.getWorkThreads());
-        try{
+        try {
             // 设置相关属性
             bootstrap.group(bossGroup, workerGroup)
                     // 通过反射拿到对应的处理通道类型
@@ -145,8 +146,8 @@ public abstract class AbstractIMServer implements IMServer{
                             if (imServerConfig.isClusterEnable()) {
                                 innerIMClient.configure(imServerConfig);
                             }
-                            log.info("IM server启动成功，其绑定地址:{} 端口号:{} 共花费:{} ms.",imServerConfig.getIp(), imServerConfig.getPort(), (SystemClock.now()-startTimeStamp));
-                        }else {
+                            log.info("IM server启动成功，其绑定地址:{} 端口号:{} 共花费:{} ms.", imServerConfig.getIp(), imServerConfig.getPort(), (SystemClock.now() - startTimeStamp));
+                        } else {
                             log.error("IM server 启动失败！原因: {}", bindFuture.cause().getMessage());
                             throw new Exception(bindFuture.cause().getMessage());
                         }
@@ -155,10 +156,10 @@ public abstract class AbstractIMServer implements IMServer{
             });
             // 对关闭通道进行监听,不是立刻关闭,这里主要是为了优雅的关闭，将主线程阻塞处理
             channelFuture.channel().closeFuture().sync();
-        }catch (Exception e){
+        } catch (Exception e) {
             log.error("IM server 出现异常,原因：{}; 正在关闭服务...", e.getMessage());
             e.printStackTrace();
-        }finally {
+        } finally {
             // 优雅关闭
             bossGroup.shutdownGracefully();
             workerGroup.shutdownGracefully();
@@ -169,9 +170,9 @@ public abstract class AbstractIMServer implements IMServer{
 
 
     /**
+     * @return void
      * @Author fangzhenxun
      * @Description 主动注销服务
-     * @return void
      */
     @Override
     public void stop() {
@@ -180,24 +181,23 @@ public abstract class AbstractIMServer implements IMServer{
     }
 
 
-
     /**
-     * @Author fangzhenxun
-     * @Description IM服务配置类
      * @param
      * @return com.ouyu.im.config.IMServerConfig
+     * @Author fangzhenxun
+     * @Description IM服务配置类
      */
     abstract IMServerConfig loadProperties(String... args);
 
 
     /**
+     * @return void
      * @Author fangzhenxun
      * @Description 监听注销服务钩子
-     * @return void
      */
     private void registerShutdownHook() {
         // 注册关闭钩子
-        Runtime.getRuntime().addShutdownHook(new Thread(){
+        Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override
             public void run() {
                 // 在关闭钩子中执行收尾工作
@@ -216,7 +216,6 @@ public abstract class AbstractIMServer implements IMServer{
             }
         });
     }
-
 
 
 }

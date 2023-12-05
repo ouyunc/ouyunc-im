@@ -28,8 +28,14 @@ public class InnerExtraData implements Serializable {
       */
     private String fromServerAddress;
 
+    /**
+     * 平台唯一标识
+     */
+    private String appKey;
 
-
+    /**
+     * 发送消息的目标信息
+     */
     private Target target;
 
     /**
@@ -48,7 +54,16 @@ public class InnerExtraData implements Serializable {
         this.routingTables = null;
         this.isDelivery = false;
         this.fromServerAddress = null;
+        this.appKey = null;
         this.target=null;
+    }
+
+    public String getAppKey() {
+        return appKey;
+    }
+
+    public void setAppKey(String appKey) {
+        this.appKey = appKey;
     }
 
     public Target getTarget() {
@@ -91,6 +106,14 @@ public class InnerExtraData implements Serializable {
         this.fromServerAddress = fromServerAddress;
     }
 
+    public InnerExtraData(boolean isDelivery, int currentRetry, String fromServerAddress, String appKey, Target target, List<RoutingTable> routingTables) {
+        this.isDelivery = isDelivery;
+        this.currentRetry = currentRetry;
+        this.fromServerAddress = fromServerAddress;
+        this.appKey = appKey;
+        this.target = target;
+        this.routingTables = routingTables;
+    }
 
     public InnerExtraData() {
     }

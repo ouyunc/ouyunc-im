@@ -18,15 +18,14 @@ import java.lang.reflect.Field;
  * @Author fangzhenxun
  * @Description: 标准IMServer 实现类
  **/
-public class StandardIMServer extends AbstractIMServer{
+public class StandardIMServer extends AbstractIMServer {
     private static Logger log = LoggerFactory.getLogger(StandardIMServer.class);
 
     /**
-     * @Author fangzhenxun
-     * @Description
-     * 如果需要扩展 serverChannelInit 或者 socketChannelInit 可以调用父类的set方法来进行扩展
-     * 在该类的其他方法中设置也可以，通过继承ServerChannelInitializer或SocketChannelInitializer来初始化
      * @return com.ouyu.im.config.IMServerConfig
+     * @Author fangzhenxun
+     * @Description 如果需要扩展 serverChannelInit 或者 socketChannelInit 可以调用父类的set方法来进行扩展
+     * 在该类的其他方法中设置也可以，通过继承ServerChannelInitializer或SocketChannelInitializer来初始化
      */
     public StandardIMServer() {
         // 打印banner
@@ -36,9 +35,9 @@ public class StandardIMServer extends AbstractIMServer{
     }
 
     /**
+     * @return com.ouyu.im.config.IMServerConfig
      * @Author fangzhenxun
      * @Description 装载服务端配置属性
-     * @return com.ouyu.im.config.IMServerConfig
      */
     @Override
     IMServerConfig loadProperties(String... args) {
@@ -99,6 +98,7 @@ public class StandardIMServer extends AbstractIMServer{
 
     /**
      * 查找入口类
+     *
      * @return
      */
     private static Class<?> deduceMainClass() {
@@ -109,8 +109,7 @@ public class StandardIMServer extends AbstractIMServer{
                     return Class.forName(stackTraceElement.getClassName());
                 }
             }
-        }
-        catch (ClassNotFoundException ex) {
+        } catch (ClassNotFoundException ex) {
             // Swallow and continue
         }
         return null;
@@ -120,7 +119,7 @@ public class StandardIMServer extends AbstractIMServer{
      * 组合属性
      */
     private void combinedProperties(IMServerConfig config, CommandLineArgs commandLineArgs) {
-        commandLineArgs.getOptionNames().forEach(fieldName ->{
+        commandLineArgs.getOptionNames().forEach(fieldName -> {
             Field field = ReflectUtils.findField(config.getClass(), fieldName);
             if (field != null) {
                 ReflectUtils.setValueByField(field, config, commandLineArgs.getOptionValues(fieldName));
@@ -130,6 +129,7 @@ public class StandardIMServer extends AbstractIMServer{
 
     /**
      * 解析处理命令行参数
+     *
      * @param args
      * @return
      */
@@ -148,7 +148,7 @@ public class StandardIMServer extends AbstractIMServer{
                     optionName = optionText;
                 }
                 if (optionName.isEmpty()) {
-                    log.error("非法命令行参数: {}" ,arg);
+                    log.error("非法命令行参数: {}", arg);
                     throw new IllegalArgumentException("非法命令行参数: " + arg);
                 }
                 commandLineArgs.addOptionArg(optionName, optionValue);

@@ -1,9 +1,12 @@
 package com.ouyunc.im.processor.content;
 
+import com.alibaba.fastjson2.JSON;
 import com.ouyunc.im.constant.CacheConstant;
 import com.ouyunc.im.constant.enums.MessageContentEnum;
 import com.ouyunc.im.helper.DbHelper;
 import com.ouyunc.im.packet.Packet;
+import com.ouyunc.im.packet.message.ExtraMessage;
+import com.ouyunc.im.packet.message.InnerExtraData;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.utils.SystemClock;
 import io.netty.channel.ChannelHandlerContext;
@@ -13,7 +16,7 @@ import org.slf4j.LoggerFactory;
 /**
  * 被邀请者拒绝邀请加入群
  */
-public class GroupRefuseInviteMessageContentProcessor extends AbstractMessageContentProcessor{
+public class GroupRefuseInviteMessageContentProcessor extends AbstractMessageContentProcessor {
 
 
     private static Logger log = LoggerFactory.getLogger(GroupRefuseInviteMessageContentProcessor.class);
@@ -28,9 +31,12 @@ public class GroupRefuseInviteMessageContentProcessor extends AbstractMessageCon
     public void doProcess(ChannelHandlerContext ctx, Packet packet) {
         log.info("GroupRefuseInviteMessageContentProcessor 正在处理群邀请拒绝请求 packet: {}...", packet);
         Message message = (Message) packet.getMessage();
+        ExtraMessage extraMessage = JSON.parseObject(message.getExtra(), ExtraMessage.class);
+        InnerExtraData innerExtraData = extraMessage.getInnerExtraData();
+        String appKey = innerExtraData.getAppKey();
         String from = message.getFrom();
         // 只是保存相关信息
-        DbHelper.handleGroupRequestMessage(packet, from, SystemClock.now());
+        DbHelper.handleGroupRequestMessage(appKey, packet, from, SystemClock.now());
         // 对群邀请人来讲并不太关心被邀请人同意不同意，所以这里就不进行消息通知邀请人了，和邀请的时候一致，也不保存邀请的信息
     }
 }

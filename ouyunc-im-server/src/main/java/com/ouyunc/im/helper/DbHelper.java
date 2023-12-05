@@ -55,29 +55,17 @@ public class DbHelper {
      * 根据appKey 获取app 详情
      */
     public static ImApp getApp(String appKey) {
-        ImApp app = (ImApp) cacheOperator.get(CacheConstant.OUYUNC + CacheConstant.IM + CacheConstant.APP + appKey);
+        ImApp app = (ImApp) cacheOperator.get(CacheConstant.OUYUNC + CacheConstant.APP + appKey);
         if (app == null && IMServerContext.SERVER_CONFIG.isDbEnable()) {
             // 从数据库查询
             app = dbOperator.selectOne(DbSqlConstant.MYSQL.SELECT_IM_APP_DETAIL.sql(), ImApp.class, appKey);
             if (app != null) {
-                cacheOperator.put(CacheConstant.OUYUNC + CacheConstant.IM + CacheConstant.APP + appKey, app);
+                cacheOperator.put(CacheConstant.OUYUNC + CacheConstant.APP + appKey, app);
             }
         }
         return app;
     }
 
-    /**
-     * 获取当前已经连im 连接数
-     *
-     * @return
-     */
-    public static Integer getCurrentAppImConnections(String appKey) {
-        Map<String, Object> currentImAppConnectionMap = cacheOperator.getHashAll(CacheConstant.OUYUNC + CacheConstant.IM + CacheConstant.APP + appKey + CacheConstant.CONNECTION);
-        if (MapUtil.isNotEmpty(currentImAppConnectionMap)) {
-            return currentImAppConnectionMap.size();
-        }
-        return IMConstant.ZERO;
-    }
 
     /**
      * 绑定好友关系,只要一方删除好友，双方的联系人列表都会删除,所以只需获取一方是否是好友就可以
@@ -85,9 +73,9 @@ public class DbHelper {
      * @param from
      * @param to
      */
-    public static void bindFriend(String from, String to, long currentTimestamp) {
-        ImUser fromUser = getUser(from);
-        ImUser toUser = getUser(to);
+    public static void bindFriend(String appKey, String from, String to, long currentTimestamp) {
+        ImUser fromUser = getUser(appKey, from);
+        ImUser toUser = getUser(appKey, to);
         if (fromUser == null || toUser == null) {
             return;
         }
@@ -95,13 +83,13 @@ public class DbHelper {
         String nowDateTime = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(LocalDateTime.ofInstant(Instant.ofEpochMilli(currentTimestamp), ZoneId.systemDefault()));
         if (IMServerContext.SERVER_CONFIG.isDbEnable()) {
             List<Object[]> argsList = new ArrayList<>();
-            argsList.add(new Object[]{SnowflakeUtil.nextId(), fromUser.getId(), toUser.getId(), toUser.getNickName(), IMConstant.NOT_SHIELD, nowDateTime, nowDateTime});
-            argsList.add(new Object[]{SnowflakeUtil.nextId(), toUser.getId(), fromUser.getId(), fromUser.getNickName(), IMConstant.NOT_SHIELD, nowDateTime, nowDateTime});
+            argsList.add(new Object[]{SnowflakeUtil.nextId(), fromUser.getId(), toUser.getId(), toUser.getNickName(), IMConstant.NOT_SHIELD, appKey, nowDateTime, nowDateTime});
+            argsList.add(new Object[]{SnowflakeUtil.nextId(), toUser.getId(), fromUser.getId(), fromUser.getNickName(), IMConstant.NOT_SHIELD, appKey, nowDateTime, nowDateTime});
             dbOperator.batchInsert(DbSqlConstant.MYSQL.INSERT_FRIEND.sql(), argsList);
         }
         // 添加到缓存，好友联系人
-        cacheOperator.putHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.CONTACT + CacheConstant.FRIEND + from, to, new ImFriendBO(fromUser.getId().toString(), toUser.getId().toString(), toUser.getNickName(), toUser.getUsername(), toUser.getEmail(), toUser.getPhoneNum(), toUser.getIdCardNum(), toUser.getAvatar(), toUser.getMotto(), toUser.getAge(), toUser.getSex(), IMConstant.NOT_SHIELD, nowDateTime, nowDateTime));
-        cacheOperator.putHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.CONTACT + CacheConstant.FRIEND + to, from, new ImFriendBO(toUser.getId().toString(), fromUser.getId().toString(), fromUser.getNickName(), fromUser.getUsername(), fromUser.getEmail(), fromUser.getPhoneNum(), fromUser.getIdCardNum(), fromUser.getAvatar(), fromUser.getMotto(), fromUser.getAge(), fromUser.getSex(), IMConstant.NOT_SHIELD, nowDateTime, nowDateTime));
+        cacheOperator.putHash(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.IM_USER + CacheConstant.CONTACT + CacheConstant.FRIEND + from, to, new ImFriendBO(fromUser.getId().toString(), appKey, toUser.getId().toString(), toUser.getNickName(), toUser.getUsername(), toUser.getEmail(), toUser.getPhoneNum(), toUser.getIdCardNum(), toUser.getAvatar(), toUser.getMotto(), toUser.getAge(), toUser.getSex(), IMConstant.NOT_SHIELD, nowDateTime, nowDateTime));
+        cacheOperator.putHash(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.IM_USER + CacheConstant.CONTACT + CacheConstant.FRIEND + to, from, new ImFriendBO(toUser.getId().toString(), appKey, fromUser.getId().toString(), fromUser.getNickName(), fromUser.getUsername(), fromUser.getEmail(), fromUser.getPhoneNum(), fromUser.getIdCardNum(), fromUser.getAvatar(), fromUser.getMotto(), fromUser.getAge(), fromUser.getSex(), IMConstant.NOT_SHIELD, nowDateTime, nowDateTime));
     }
 
     /**
@@ -110,28 +98,28 @@ public class DbHelper {
      * @param from    客户端唯一标识
      * @param groupId 群唯一标识
      */
-    public static void bindGroup(String from, String groupId) {
-        ImGroupUserBO imGroupUserBO = (ImGroupUserBO) cacheOperator.getHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + groupId + CacheConstant.MEMBERS, from);
+    public static void bindGroup(String appKey, String from, String groupId) {
+        ImGroupUserBO imGroupUserBO = (ImGroupUserBO) cacheOperator.getHash(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.IM_USER + CacheConstant.GROUP + groupId + CacheConstant.MEMBERS, from);
         // 已经存在群成员中
         if (imGroupUserBO != null) {
             return;
         }
         // 获取群信息
-        ImGroup group = getGroup(groupId);
+        ImGroup group = getGroup(appKey, groupId);
         if (group == null) {
             log.error("在绑定群关系中，获取群信息失败！");
             return;
         }
         // 从缓存获取用户信息
-        ImUser fromUser = getUser(from);
+        ImUser fromUser = getUser(appKey, from);
         if (fromUser != null) {
             String nowDateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
             if (IMServerContext.SERVER_CONFIG.isDbEnable()) {
                 // 存入数据库
-                dbOperator.insert(DbSqlConstant.MYSQL.INSERT_GROUP_USER.sql(), SnowflakeUtil.nextId(), groupId, from, group.getGroupName(), fromUser.getNickName(), IMConstant.NOT_GROUP_LEADER, IMConstant.NOT_GROUP_MANAGER, IMConstant.NOT_SHIELD, IMConstant.NOT_MUSHIN, nowDateTime);
+                dbOperator.insert(DbSqlConstant.MYSQL.INSERT_GROUP_USER.sql(), SnowflakeUtil.nextId(), groupId, from, group.getGroupName(), fromUser.getNickName(), IMConstant.NOT_GROUP_LEADER, IMConstant.NOT_GROUP_MANAGER, IMConstant.NOT_SHIELD, IMConstant.NOT_MUSHIN, appKey, nowDateTime);
             }
             // 放入缓存
-            cacheOperator.putHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + groupId + CacheConstant.MEMBERS, from, new ImGroupUserBO(groupId, fromUser.getId().toString(), fromUser.getUsername(), fromUser.getNickName(), group.getGroupName(), fromUser.getEmail(), fromUser.getPhoneNum(), fromUser.getIdCardNum(), fromUser.getAvatar(), fromUser.getMotto(), fromUser.getAge(), fromUser.getSex(), IMConstant.NOT_GROUP_LEADER, IMConstant.NOT_GROUP_MANAGER, IMConstant.NOT_SHIELD, IMConstant.NOT_MUSHIN, nowDateTime));
+            cacheOperator.putHash(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.IM_USER + CacheConstant.GROUP + groupId + CacheConstant.MEMBERS, from, new ImGroupUserBO(appKey, groupId, fromUser.getId().toString(), fromUser.getUsername(), fromUser.getNickName(), group.getGroupName(), fromUser.getEmail(), fromUser.getPhoneNum(), fromUser.getIdCardNum(), fromUser.getAvatar(), fromUser.getMotto(), fromUser.getAge(), fromUser.getSex(), IMConstant.NOT_GROUP_LEADER, IMConstant.NOT_GROUP_MANAGER, IMConstant.NOT_SHIELD, IMConstant.NOT_MUSHIN, nowDateTime));
         }
 
     }
@@ -143,11 +131,11 @@ public class DbHelper {
      * @Author fangzhenxun
      * @Description 将to 移除群（剔除群）
      */
-    public static void removeOutGroup(String to, String groupId) {
+    public static void removeOutGroup(String appKey, String to, String groupId) {
         if (IMServerContext.SERVER_CONFIG.isDbEnable()) {
             dbOperator.delete(DbSqlConstant.MYSQL.DELETE_GROUP_USER.sql(), groupId, to);
         }
-        cacheOperator.deleteHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + groupId + CacheConstant.MEMBERS, to);
+        cacheOperator.deleteHash(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.IM_USER + CacheConstant.GROUP + groupId + CacheConstant.MEMBERS, to);
     }
 
 
@@ -156,13 +144,13 @@ public class DbHelper {
      *
      * @param groupId
      */
-    public static void disbandGroup(String groupId) {
+    public static void disbandGroup(String appKey, String groupId) {
         if (IMServerContext.SERVER_CONFIG.isDbEnable()) {
             dbOperator.delete(DbSqlConstant.MYSQL.DELETE_GROUP.sql(), groupId);
             dbOperator.delete(DbSqlConstant.MYSQL.DELETE_GROUP_ALL_USER.sql(), groupId);
         }
-        cacheOperator.delete(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + groupId);
-        cacheOperator.deleteHashAll(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + groupId + CacheConstant.MEMBERS);
+        cacheOperator.delete(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.IM_USER + CacheConstant.GROUP + groupId);
+        cacheOperator.deleteHashAll(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.IM_USER + CacheConstant.GROUP + groupId + CacheConstant.MEMBERS);
     }
 
 
@@ -173,11 +161,11 @@ public class DbHelper {
      * @Author fangzhenxun
      * @Description 退出群
      */
-    public static void exitGroup(String from, String groupId) {
+    public static void exitGroup(String appKey, String from, String groupId) {
         if (IMServerContext.SERVER_CONFIG.isDbEnable()) {
             dbOperator.delete(DbSqlConstant.MYSQL.DELETE_GROUP_USER.sql(), groupId, from);
         }
-        cacheOperator.deleteHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + groupId + CacheConstant.MEMBERS, from);
+        cacheOperator.deleteHash(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.IM_USER + CacheConstant.GROUP + groupId + CacheConstant.MEMBERS, from);
     }
 
     /**
@@ -186,14 +174,14 @@ public class DbHelper {
      * @param identity
      * @return
      */
-    public static ImUser getUser(String identity) {
-        ImUser imUser = (ImUser) cacheOperator.get(CacheConstant.OUYUNC + CacheConstant.IM_USER + identity);
+    public static ImUser getUser(String appKey, String identity) {
+        ImUser imUser = (ImUser) cacheOperator.get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.USER + identity);
         if (imUser == null && IMServerContext.SERVER_CONFIG.isDbEnable()) {
             // 查询数据库
             imUser = dbOperator.selectOne(DbSqlConstant.MYSQL.SELECT_USER.sql(), ImUser.class, identity);
             if (imUser != null) {
                 // 放入缓存
-                cacheOperator.put(CacheConstant.OUYUNC + CacheConstant.IM_USER + identity, imUser);
+                cacheOperator.put(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.USER + identity, imUser);
             }
         }
         return imUser;
@@ -205,12 +193,12 @@ public class DbHelper {
      * @param identity
      * @return
      */
-    public static ImGroup getGroup(String identity) {
-        ImGroup imGroup = (ImGroup) cacheOperator.get(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + identity);
+    public static ImGroup getGroup(String appKey, String identity) {
+        ImGroup imGroup = (ImGroup) cacheOperator.get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.IM_USER + CacheConstant.GROUP + identity);
         if (imGroup == null && IMServerContext.SERVER_CONFIG.isDbEnable()) {
             imGroup = dbOperator.selectOne(DbSqlConstant.MYSQL.SELECT_GROUP.sql(), ImGroup.class, identity);
             if (imGroup != null) {
-                cacheOperator.put(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + identity, imGroup);
+                cacheOperator.put(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.IM_USER + CacheConstant.GROUP + identity, imGroup);
             }
         }
         return imGroup;
@@ -223,12 +211,12 @@ public class DbHelper {
      * @param to
      * @return
      */
-    public static ImFriendBO getFriend(String from, String to) {
-        ImFriendBO imFriendBO = (ImFriendBO) cacheOperator.getHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.CONTACT + CacheConstant.FRIEND + from, to);
+    public static ImFriendBO getFriend(String appKey, String from, String to) {
+        ImFriendBO imFriendBO = (ImFriendBO) cacheOperator.getHash(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.IM_USER + CacheConstant.CONTACT + CacheConstant.FRIEND + from, to);
         if (imFriendBO == null && IMServerContext.SERVER_CONFIG.isDbEnable()) {
             imFriendBO = dbOperator.selectOne(DbSqlConstant.MYSQL.SELECT_FRIEND_USER.sql(), ImFriendBO.class, from, to);
             if (imFriendBO != null) {
-                cacheOperator.putHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.CONTACT + CacheConstant.FRIEND + from, to, imFriendBO);
+                cacheOperator.putHash(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.IM_USER + CacheConstant.CONTACT + CacheConstant.FRIEND + from, to, imFriendBO);
             }
         }
         return imFriendBO;
@@ -242,12 +230,12 @@ public class DbHelper {
      * @param groupId 群唯一标识
      * @return
      */
-    public static ImGroupUserBO getGroupMember(String from, String groupId) {
-        ImGroupUserBO imGroupUserBO = (ImGroupUserBO) cacheOperator.getHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + groupId + CacheConstant.MEMBERS, from);
+    public static ImGroupUserBO getGroupMember(String appKey, String from, String groupId) {
+        ImGroupUserBO imGroupUserBO = (ImGroupUserBO) cacheOperator.getHash(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.IM_USER + CacheConstant.GROUP + groupId + CacheConstant.MEMBERS, from);
         if (imGroupUserBO == null && IMServerContext.SERVER_CONFIG.isDbEnable()) {
             imGroupUserBO = dbOperator.selectOne(DbSqlConstant.MYSQL.SELECT_GROUP_USER.sql(), ImGroupUserBO.class, groupId, from);
             if (imGroupUserBO != null) {
-                cacheOperator.putHash(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + groupId + CacheConstant.MEMBERS, from, imGroupUserBO);
+                cacheOperator.putHash(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.IM_USER + CacheConstant.GROUP + groupId + CacheConstant.MEMBERS, from, imGroupUserBO);
             }
         }
         return imGroupUserBO;
@@ -261,9 +249,9 @@ public class DbHelper {
      * @param isGroupManager 是群管理员（包括群主）
      * @return
      */
-    public static List<ImGroupUserBO> getGroupMembers(String to, boolean isGroupManager) {
+    public static List<ImGroupUserBO> getGroupMembers(String appKey, String to, boolean isGroupManager) {
         List<ImGroupUserBO> imUserList = new ArrayList<>();
-        Map<String, Object> groupUserBOMap = cacheOperator.getHashAll(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + to + CacheConstant.MEMBERS);
+        Map<String, Object> groupUserBOMap = cacheOperator.getHashAll(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.IM_USER + CacheConstant.GROUP + to + CacheConstant.MEMBERS);
         if (MapUtil.isNotEmpty(groupUserBOMap)) {
             for (Map.Entry<String, Object> entry : groupUserBOMap.entrySet()) {
                 ImGroupUserBO imGroupUser = (ImGroupUserBO) entry.getValue();
@@ -285,7 +273,7 @@ public class DbHelper {
                 imUserList.forEach(groupUser -> {
                     groupUserMap.put(groupUser.getUserId(), groupUser);
                 });
-                cacheOperator.putHashAll(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + to + CacheConstant.MEMBERS, groupUserMap);
+                cacheOperator.putHashAll(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.IM_USER + CacheConstant.GROUP + to + CacheConstant.MEMBERS, groupUserMap);
             }
         }
         return imUserList;
@@ -297,8 +285,8 @@ public class DbHelper {
      * @param groupId 群组唯一标识
      * @return
      */
-    public static List<ImGroupUserBO> getGroupMembers(String groupId) {
-        return getGroupMembers(groupId, false);
+    public static List<ImGroupUserBO> getGroupMembers(String appKey, String groupId) {
+        return getGroupMembers(appKey, groupId, false);
     }
 
     /**
@@ -307,8 +295,8 @@ public class DbHelper {
      * @Author fangzhenxun
      * @Description 获取该群的群主信息
      */
-    public static ImGroupUserBO getGroupLeader(String groupId) {
-        Map<String, Object> groupUserBOMap = cacheOperator.getHashAll(CacheConstant.OUYUNC + CacheConstant.IM_USER + CacheConstant.GROUP + groupId + CacheConstant.MEMBERS);
+    public static ImGroupUserBO getGroupLeader(String appKey, String groupId) {
+        Map<String, Object> groupUserBOMap = cacheOperator.getHashAll(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.IM_USER + CacheConstant.GROUP + groupId + CacheConstant.MEMBERS);
         ImGroupUserBO imGroupUser = null;
         if (MapUtil.isNotEmpty(groupUserBOMap)) {
             for (Map.Entry<String, Object> entry : groupUserBOMap.entrySet()) {
@@ -332,17 +320,17 @@ public class DbHelper {
      * @param type 1-用户的黑名单，2-群组的黑名单
      * @return
      */
-    public static ImBlacklistBO getBackList(String from, String to, Integer type) {
+    public static ImBlacklistBO getBackList(String appKey, String from, String to, Integer type) {
         if (IMConstant.USER_TYPE_1.equals(type)) {
-            ImBlacklistBO imBlacklistBO = (ImBlacklistBO) cacheOperator.getHash(CacheConstant.OUYUNC + CacheConstant.IM + CacheConstant.BLACK_LIST + CacheConstant.USER + to, from);
+            ImBlacklistBO imBlacklistBO = (ImBlacklistBO) cacheOperator.getHash(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.IM + CacheConstant.BLACK_LIST + CacheConstant.USER + to, from);
             if (imBlacklistBO == null && IMServerContext.SERVER_CONFIG.isDbEnable()) {
                 // 判断是否是好友
-                ImFriendBO friend = getFriend(from, to);
+                ImFriendBO friend = getFriend(appKey, from, to);
                 imBlacklistBO = dbOperator.selectOne(DbSqlConstant.MYSQL.SELECT_BLACK_LIST.sql(), ImBlacklistBO.class, to, type, from);
                 if (imBlacklistBO != null && friend != null) {
                     // 是好友
                     imBlacklistBO.setNickName(friend.getFriendNickName());
-                    cacheOperator.putHash(CacheConstant.OUYUNC + CacheConstant.IM + CacheConstant.BLACK_LIST + CacheConstant.USER + to, from, imBlacklistBO);
+                    cacheOperator.putHash(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.IM + CacheConstant.BLACK_LIST + CacheConstant.USER + to, from, imBlacklistBO);
                 }
                 // 不是好友
                 return imBlacklistBO;
@@ -351,15 +339,15 @@ public class DbHelper {
         }
         // 群组黑名单
         if (IMConstant.GROUP_TYPE_2.equals(type)) {
-            ImBlacklistBO imBlacklistBO = (ImBlacklistBO) cacheOperator.getHash(CacheConstant.OUYUNC + CacheConstant.IM + CacheConstant.BLACK_LIST + CacheConstant.GROUP + to, from);
+            ImBlacklistBO imBlacklistBO = (ImBlacklistBO) cacheOperator.getHash(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.IM + CacheConstant.BLACK_LIST + CacheConstant.GROUP + to, from);
             if (imBlacklistBO == null && IMServerContext.SERVER_CONFIG.isDbEnable()) {
                 // 判断该用户是否在群组中
-                ImGroupUserBO groupMember = getGroupMember(from, to);
+                ImGroupUserBO groupMember = getGroupMember(appKey, from, to);
                 imBlacklistBO = dbOperator.selectOne(DbSqlConstant.MYSQL.SELECT_BLACK_LIST.sql(), ImBlacklistBO.class, to, type, from);
                 if (imBlacklistBO != null && groupMember != null) {
                     // 是好友
                     imBlacklistBO.setNickName(groupMember.getNickName());
-                    cacheOperator.putHash(CacheConstant.OUYUNC + CacheConstant.IM + CacheConstant.BLACK_LIST + CacheConstant.GROUP + to, from, imBlacklistBO);
+                    cacheOperator.putHash(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.IM + CacheConstant.BLACK_LIST + CacheConstant.GROUP + to, from, imBlacklistBO);
                 }
             }
             return imBlacklistBO;
@@ -374,9 +362,9 @@ public class DbHelper {
      * @param to
      * @param packetId
      */
-    public static Packet readFromTimeline(String to, long packetId) {
+    public static Packet readFromTimeline(String appKey, String to, long packetId) {
         // 从离线消息中
-        Set<Packet> packetSet = cacheOperator.reverseRangeZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.TIME_LINE + to, 0, -1);
+        Set<Packet> packetSet = cacheOperator.reverseRangeZset(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.IM_MESSAGE + CacheConstant.TIME_LINE + to, 0, -1);
         if (CollectionUtils.isNotEmpty(packetSet)) {
             Optional<Packet> packetOptional = packetSet.parallelStream().filter(packet -> packetId == packet.getPacketId()).findFirst();
             // 如果存在则返回
@@ -400,12 +388,12 @@ public class DbHelper {
      * @param readReceiptList
      * @return
      */
-    public static void writeMessageReadReceipt(String from, List<ReadReceiptContent> readReceiptList) {
-        ImUser user = getUser(from);
+    public static void writeMessageReadReceipt(String appKey, String from, List<ReadReceiptContent> readReceiptList) {
+        ImUser user = getUser(appKey, from);
         List<Object[]> batchArgs = new ArrayList<>();
         for (ReadReceiptContent readReceiptContent : readReceiptList) {
             batchArgs.add(new Object[]{SnowflakeUtil.nextId(), readReceiptContent.getPacketId(), from});
-            cacheOperator.putHash(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.READ_RECEIPT + readReceiptContent.getPacketId(), from, user);
+            cacheOperator.putHash(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.IM_MESSAGE + CacheConstant.READ_RECEIPT + readReceiptContent.getPacketId(), from, user);
         }
         if (IMServerContext.SERVER_CONFIG.isDbEnable()) {
             dbOperator.batchInsert(DbSqlConstant.MYSQL.INSERT_READ_RECEIPT.sql(), batchArgs);
@@ -417,11 +405,11 @@ public class DbHelper {
      *
      * @param packet
      */
-    public static void writeMessage(Packet packet) {
+    public static void writeMessage(String appKey, Packet packet) {
         if (IMServerContext.SERVER_CONFIG.isDbEnable()) {
             Message message = (Message) packet.getMessage();
             String nowDateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-            dbOperator.insert(DbSqlConstant.MYSQL.INSERT_MESSAGE.sql(), packet.getPacketId(), packet.getProtocol(), packet.getProtocolVersion(), packet.getDeviceType(), packet.getNetworkType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), packet.getIp(), message.getFrom(), message.getTo(), packet.getMessageType(), message.getContentType(), message.getContent(), message.getExtra(), message.getCreateTime(), nowDateTime, nowDateTime);
+            dbOperator.insert(DbSqlConstant.MYSQL.INSERT_MESSAGE.sql(), packet.getPacketId(), packet.getProtocol(), packet.getProtocolVersion(), packet.getDeviceType(), packet.getNetworkType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), packet.getIp(), message.getFrom(), message.getTo(), packet.getMessageType(), message.getContentType(), message.getContent(), message.getExtra(), appKey, message.getCreateTime(), nowDateTime, nowDateTime);
         }
     }
 
@@ -434,14 +422,14 @@ public class DbHelper {
      * @Author fangzhenxun
      * @Description 将消息信箱中(这里需要写两条消息, 发送者信箱中一条, 接受者信箱中一条 ; 每个用户都会有一个信箱用来接收消息和发送消息, 群组也一样)
      */
-    public static void write2Timeline(Packet packet, String from, String to, long timestamp) {
+    public static void write2Timeline(String appKey, Packet packet, String from, String to, long timestamp) {
         if (IMServerContext.SERVER_CONFIG.isDbEnable()) {
-            String nowDateTime = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(LocalDateTime.ofInstant(Instant.ofEpochMilli(timestamp), ZoneId.systemDefault()));
             Message message = (Message) packet.getMessage();
-            dbOperator.insert(DbSqlConstant.MYSQL.INSERT_TIME_LINE.sql(), packet.getPacketId(), packet.getProtocol(), packet.getProtocolVersion(), packet.getDeviceType(), packet.getNetworkType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), packet.getIp(), message.getFrom(), message.getTo(), packet.getMessageType(), message.getContentType(), message.getContent(), message.getExtra(), message.getCreateTime(), IMConstant.NOT_WITHDRAW, nowDateTime, nowDateTime);
+            String nowDateTime = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(LocalDateTime.ofInstant(Instant.ofEpochMilli(timestamp), ZoneId.systemDefault()));
+            dbOperator.insert(DbSqlConstant.MYSQL.INSERT_TIME_LINE.sql(), packet.getPacketId(), packet.getProtocol(), packet.getProtocolVersion(), packet.getDeviceType(), packet.getNetworkType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), packet.getIp(), message.getFrom(), message.getTo(), packet.getMessageType(), message.getContentType(), message.getContent(), message.getExtra(), message.getCreateTime(), IMConstant.NOT_WITHDRAW, appKey, nowDateTime, nowDateTime);
         }
-        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.TIME_LINE + from, packet, timestamp);
-        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.TIME_LINE + to, packet, timestamp);
+        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.IM_MESSAGE + CacheConstant.TIME_LINE + from, packet, timestamp);
+        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.IM_MESSAGE + CacheConstant.TIME_LINE + to, packet, timestamp);
     }
 
 
@@ -454,13 +442,13 @@ public class DbHelper {
      * @param identity 消息发送者
      * @param packet
      */
-    public static void write2OfflineTimeline(Packet packet, String identity, long timestamp) {
-        RLock lock = RedissonFactory.INSTANCE.redissonClient().getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + identity);
+    public static void write2OfflineTimeline(String appKey, Packet packet, String identity, long timestamp) {
+        RLock lock = RedissonFactory.INSTANCE.redissonClient().getLock(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.LOCK + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + identity);
         try {
             lock.lock();
-            Long count = cacheOperator.sizeZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + identity);
+            Long count = cacheOperator.sizeZset(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + identity);
             if (count == null || count == 0) {
-                cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + identity, packet.getPacketId(), timestamp);
+                cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.IM_MESSAGE + CacheConstant.OFFLINE + identity, packet.getPacketId(), timestamp);
             }
         } finally {
             lock.unlock();
@@ -473,27 +461,27 @@ public class DbHelper {
      *
      * @param packet
      */
-    public static void handleFriendRequest(Packet packet, long timestamp) {
+    public static void handleFriendRequest(String appKey, Packet packet, long timestamp) {
         Message message = (Message) packet.getMessage();
         String from = message.getFrom();
         String to = message.getTo();
         MessageContentEnum messageContentEnum = MessageContentEnum.prototype(message.getContentType());
-        RLock lock = RedissonFactory.INSTANCE.redissonClient().getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.GROUP + CacheConstant.REFUSE_AGREE + IdentityUtil.sortComboIdentity(from, to));
+        RLock lock = RedissonFactory.INSTANCE.redissonClient().getLock(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.LOCK + CacheConstant.FRIEND + CacheConstant.REFUSE_AGREE + IdentityUtil.sortComboIdentity(from, to));
         try {
             lock.lock();
             // 如果是好友直接返回
-            ImFriendBO imFriendBO = getFriend(from, to);
+            ImFriendBO imFriendBO = getFriend(appKey, from, to);
             // 已经是好友了
             if (imFriendBO != null) {
                 return;
             }
             // 处理对方同意的消息
             if (MessageContentEnum.FRIEND_AGREE.equals(messageContentEnum)) {
-                bindFriend(to, from, timestamp);
+                bindFriend(appKey, to, from, timestamp);
             }
             // 将消息缓存到自己的信箱和别人的信箱各一份数据， 每个用户都有一个信箱（收件箱和发件箱），这里只是好友请求的收发件箱，不做落库处理
-            cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.FRIEND_REQUEST + from, packet, timestamp);
-            cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.FRIEND_REQUEST + to, packet, timestamp);
+            cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.IM_MESSAGE + CacheConstant.FRIEND_REQUEST + from, packet, timestamp);
+            cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.IM_MESSAGE + CacheConstant.FRIEND_REQUEST + to, packet, timestamp);
         } finally {
             lock.unlock();
         }
@@ -520,7 +508,7 @@ public class DbHelper {
      * @Author fangzhenxun
      * @Description 处理群请求消息
      */
-    public static void handleGroupRequestMessage(Packet packet, String identity, long now) {
-        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + identity, packet, now);
+    public static void handleGroupRequestMessage(String appKey, Packet packet, String identity, long now) {
+        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.IM_MESSAGE + CacheConstant.GROUP_REQUEST + identity, packet, now);
     }
 }

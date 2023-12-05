@@ -25,33 +25,38 @@ public class MessageValidate {
 
     /**
      * 是否被平台封禁
-     * @param identity  唯一标识（客户端或群组）
-     * @param type  1-客户端，2-群组
+     *
+     * @param identity 唯一标识（客户端或群组）
+     * @param type     1-客户端，2-群组
      * @return
      */
-    public static boolean isBanned(String identity, Integer type) {
+    public static boolean isBanned(String appKey, String identity, Integer type) {
         if (log.isDebugEnabled()) {
             log.debug("正在校验identity {} 是否被平台封禁", identity);
         }
         // 校验客户端是否被平台封禁
         if (IMConstant.USER_TYPE_1.equals(type)) {
-            ImUser imUser = DbHelper.getUser(identity);
+            ImUser imUser = DbHelper.getUser(appKey, identity);
             return imUser == null || IMConstant.USER_STATUS_1.equals(imUser.getStatus());
         }
         // 校验群组是否被平台封禁
         if (IMConstant.GROUP_TYPE_2.equals(type)) {
-            ImGroup imGroup = DbHelper.getGroup(identity);
+            ImGroup imGroup = DbHelper.getGroup(appKey, identity);
             return imGroup == null || IMConstant.GROUP_STATUS_1.equals(imGroup.getStatus());
         }
         return true;
     }
 
     /**
-     * 客户端是否认证（登录）
-     * @param identity  消息发送方唯一标识
-     * @return
+     * @param appKey
+     * @param identity
+     * @param loginDeviceType
+     * @param ctx
+     * @return boolean
+     * @Author fangzhenxun
+     * @Description 客户端是否认证（登录）
      */
-    public static boolean isAuth(String identity, byte loginDeviceType,  ChannelHandlerContext ctx) {
+    public static boolean isAuth(String appKey, String identity, byte loginDeviceType, ChannelHandlerContext ctx) {
         if (log.isDebugEnabled()) {
             log.debug("正在校验identity {} 是否在设备: {} 登录认证", identity, DeviceEnum.getDeviceNameByValue(loginDeviceType));
         }
@@ -59,14 +64,14 @@ public class MessageValidate {
         //2,判断用户权限是否授权
         // 组合成新的唯一标识
         String comboIdentity = IdentityUtil.generalComboIdentity(identity, loginDeviceType);
-        LoginUserInfo loginUserInfo = IMServerContext.LOGIN_USER_INFO_CACHE.getHash(CacheConstant.OUYUNC +   CacheConstant.IM_USER + CacheConstant.LOGIN + identity, DeviceEnum.getDeviceNameByValue(loginDeviceType));
+        LoginUserInfo loginUserInfo = IMServerContext.LOGIN_USER_INFO_CACHE.getHash(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.LOGIN + CacheConstant.USER + identity, DeviceEnum.getDeviceNameByValue(loginDeviceType));
         //3,从本地连接中取出该用户的channel
         final ChannelHandlerContext bindCtx = IMServerContext.USER_REGISTER_TABLE.get(comboIdentity);
         // 判断是否合法
         if (loginUserInfo == null || bindCtx == null) {
             log.error("该客户端: {} 没有通过认证，现将其关闭", identity);
             // 没有登录以及出现异常后走的逻辑
-            IMServerContext.LOGIN_USER_INFO_CACHE.deleteHash(CacheConstant.OUYUNC +   CacheConstant.IM_USER + CacheConstant.LOGIN + identity, DeviceEnum.getDeviceNameByValue(loginDeviceType));
+            IMServerContext.LOGIN_USER_INFO_CACHE.deleteHash(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.LOGIN + CacheConstant.USER + identity, DeviceEnum.getDeviceNameByValue(loginDeviceType));
             IMServerContext.USER_REGISTER_TABLE.delete(comboIdentity);
             // 关闭channel
             ctx.close();
@@ -80,7 +85,7 @@ public class MessageValidate {
             return true;
         }
         // 没有登录以及出现异常后走的逻辑
-        IMServerContext.LOGIN_USER_INFO_CACHE.deleteHash(CacheConstant.OUYUNC +   CacheConstant.IM_USER + CacheConstant.LOGIN + identity, DeviceEnum.getDeviceNameByValue(loginDeviceType));
+        IMServerContext.LOGIN_USER_INFO_CACHE.deleteHash(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.LOGIN + CacheConstant.USER + identity, DeviceEnum.getDeviceNameByValue(loginDeviceType));
         IMServerContext.USER_REGISTER_TABLE.delete(comboIdentity);
         // 关闭channel
         ctx.close();
@@ -92,9 +97,10 @@ public class MessageValidate {
 
     /**
      * from是否有权限
-     * @param from  消息发送方唯一标识（客户端或群组）
-     * @param type  1-客户端，2-群组
-     * @param permissions  权限数组
+     *
+     * @param from        消息发送方唯一标识（客户端或群组）
+     * @param type        1-客户端，2-群组
+     * @param permissions 权限数组
      * @return
      */
     public static boolean hasPermission(String from, Integer type, String... permissions) {
@@ -106,50 +112,53 @@ public class MessageValidate {
 
     /**
      * to 是否在from的好友列表中，否是好友关系
-     * @param from  消息发送方唯一标识（客户端）
-     * @param to  消息接收方唯一标识（客户端）
+     *
+     * @param from 消息发送方唯一标识（客户端）
+     * @param to   消息接收方唯一标识（客户端）
      * @return
      */
-    public static boolean isFriend(String from, String to) {
+    public static boolean isFriend(String appKey, String from, String to) {
         if (log.isDebugEnabled()) {
             log.debug("正在校验from: {} 和 to: {} 否是好友关系", from, to);
         }
-        ImFriendBO imFriendBO = DbHelper.getFriend(from, to);
+        ImFriendBO imFriendBO = DbHelper.getFriend(appKey, from, to);
         return imFriendBO != null;
     }
 
     /**
      * from是否被to拉黑，是否被拉黑(在黑名单列表中)
-     * @param from  消息发送方唯一标识（客户端）
-     * @param type  1-客户端，2-群组
-     * @param to  消息接收方唯一标识（客户端或群组）
+     *
+     * @param from 消息发送方唯一标识（客户端）
+     * @param type 1-客户端，2-群组
+     * @param to   消息接收方唯一标识（客户端或群组）
      * @return
      */
-    public static boolean isBackList(String from,  String to, Integer type) {
+    public static boolean isBackList(String appKey, String from, String to, Integer type) {
         if (log.isDebugEnabled()) {
             log.debug("正在校验from: {} 是否被 to: {} 拉黑(在黑名单列表中)", from, to);
         }
-        ImBlacklistBO imBlacklistBO = DbHelper.getBackList(from, to, type);
+        ImBlacklistBO imBlacklistBO = DbHelper.getBackList(appKey, from, to, type);
         return imBlacklistBO != null;
     }
 
     /**
      * from是否被to屏蔽了，是否屏蔽（群组）/被屏蔽（客户端）
-     * @param from  消息发送方唯一标识
-     * @param to  消息接收方唯一标识 (客户端或群组)
-     * @param type  1-客户端，2-群组
+     *
+     * @param from 消息发送方唯一标识
+     * @param to   消息接收方唯一标识 (客户端或群组)
+     * @param type 1-客户端，2-群组
      * @return
      */
-    public static boolean isShield(String from, String to, Integer type) {
+    public static boolean isShield(String appKey, String from, String to, Integer type) {
         if (log.isDebugEnabled()) {
             log.debug("正在校验from: {} 是否被 to: {} 屏蔽(不接受它的消息)", from, to);
         }
         if (IMConstant.USER_TYPE_1.equals(type)) {
-            ImFriendBO friend = DbHelper.getFriend(to, from);
+            ImFriendBO friend = DbHelper.getFriend(appKey, to, from);
             return friend == null || IMConstant.SHIELD.equals(friend.getFriendIsShield());
         }
         if (IMConstant.GROUP_TYPE_2.equals(type)) {
-            ImGroupUserBO groupMember = DbHelper.getGroupMember(from, to);
+            ImGroupUserBO groupMember = DbHelper.getGroupMember(appKey, from, to);
             return groupMember == null || IMConstant.SHIELD.equals(groupMember.getIsShield());
         }
         return true;
@@ -158,15 +167,16 @@ public class MessageValidate {
 
     /**
      * from 是否在群组groupIdentity中  是否已经在群中
-     * @param from  消息发送方唯一标识
-     * @param groupIdentity  消息接收方(群)唯一标识
+     *
+     * @param from          消息发送方唯一标识
+     * @param groupIdentity 消息接收方(群)唯一标识
      * @return
      */
-    public static boolean isGroup(String from, String groupIdentity) {
+    public static boolean isGroup(String appKey, String from, String groupIdentity) {
         if (log.isDebugEnabled()) {
             log.debug("正在校验from: {} 是否加入群组 groupIdentity: {}", from, groupIdentity);
         }
-        ImGroupUserBO groupMember = DbHelper.getGroupMember(from, groupIdentity);
+        ImGroupUserBO groupMember = DbHelper.getGroupMember(appKey, from, groupIdentity);
         return groupMember != null;
     }
 

@@ -31,14 +31,13 @@ public class IMInnerClientHeartBeatHandler extends ChannelInboundHandlerAdapter 
     private static final Lock lock = new ReentrantLock(true);
 
 
-
     /**
-     * @Author fangzhenxun
-     * @Description 检测用户时间，用于动态对channel的管理, 在触发响应的idle 规则后，会触发这里的事件方法，并作出判断和处理
-     * 当核心channel处于空闲状态时会触发这里的事件
      * @param ctx
      * @param event
      * @return void
+     * @Author fangzhenxun
+     * @Description 检测用户时间，用于动态对channel的管理, 在触发响应的idle 规则后，会触发这里的事件方法，并作出判断和处理
+     * 当核心channel处于空闲状态时会触发这里的事件
      */
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object event) throws Exception {
@@ -46,7 +45,7 @@ public class IMInnerClientHeartBeatHandler extends ChannelInboundHandlerAdapter 
         // 当该空闲事件触发时，则说明该通道channel没有任何的消息过来,则需要进行判断进行释放处理
         if (event instanceof IdleStateEvent) {
             // 判断该通道是否是存活
-            if(channel.isActive()) {
+            if (channel.isActive()) {
                 try {
                     // 从该channel中取出标签
                     AttributeKey<Integer> channelPoolHashCodeKey = AttributeKey.valueOf(IMConstant.CHANNEL_TAG_POOL);

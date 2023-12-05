@@ -20,6 +20,11 @@ public class ImFriend implements Serializable {
     private Long id;
 
     /**
+     * 所属平台唯一标识
+     */
+    private String appKey;
+
+    /**
      * 用户id
      */
     private Long userId;
@@ -52,6 +57,13 @@ public class ImFriend implements Serializable {
      */
     private String updateTime;
 
+    public String getAppKey() {
+        return appKey;
+    }
+
+    public void setAppKey(String appKey) {
+        this.appKey = appKey;
+    }
 
     public Long getId() {
         return id;
@@ -108,6 +120,20 @@ public class ImFriend implements Serializable {
     }
 
     public void setUpdateTime(String updateTime) {
+        this.updateTime = updateTime;
+    }
+
+    public ImFriend() {
+    }
+
+    public ImFriend(Long id, String appKey, Long userId, Long friendUserId, String friendNickName, Integer isShield, String createTime, String updateTime) {
+        this.id = id;
+        this.appKey = appKey;
+        this.userId = userId;
+        this.friendUserId = friendUserId;
+        this.friendNickName = friendNickName;
+        this.isShield = isShield;
+        this.createTime = createTime;
         this.updateTime = updateTime;
     }
 }

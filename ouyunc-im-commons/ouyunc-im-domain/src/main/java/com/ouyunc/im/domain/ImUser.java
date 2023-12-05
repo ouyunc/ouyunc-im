@@ -21,6 +21,12 @@ public class ImUser implements Serializable {
     private Long id;
 
     /**
+     * 所属平台唯一标识
+     */
+    private String appKey;
+
+
+    /**
      * 开放id
      */
     private String openId;
@@ -121,6 +127,13 @@ public class ImUser implements Serializable {
     @TableLogic
     private Integer deleted;
 
+    public String getAppKey() {
+        return appKey;
+    }
+
+    public void setAppKey(String appKey) {
+        this.appKey = appKey;
+    }
 
     public Long getId() {
         return id;
@@ -283,6 +296,30 @@ public class ImUser implements Serializable {
     }
 
     public ImUser() {
+    }
+
+    public ImUser(Long id, String appKey, String openId, String username, String password, String nickName, String email, String phoneNum, String idCardNum, String avatar, String motto, Integer age, Integer sex, Integer status, Integer robot, Integer trusteeship, Integer friendJoinPolicy, Integer groupInvitePolicy, String createTime, String updateTime, Integer deleted) {
+        this.id = id;
+        this.appKey = appKey;
+        this.openId = openId;
+        this.username = username;
+        this.password = password;
+        this.nickName = nickName;
+        this.email = email;
+        this.phoneNum = phoneNum;
+        this.idCardNum = idCardNum;
+        this.avatar = avatar;
+        this.motto = motto;
+        this.age = age;
+        this.sex = sex;
+        this.status = status;
+        this.robot = robot;
+        this.trusteeship = trusteeship;
+        this.friendJoinPolicy = friendJoinPolicy;
+        this.groupInvitePolicy = groupInvitePolicy;
+        this.createTime = createTime;
+        this.updateTime = updateTime;
+        this.deleted = deleted;
     }
 
     public ImUser(Long id, String openId, String username, String password, String nickName, String email, String phoneNum, String idCardNum, String avatar, String motto, Integer age, Integer sex, Integer status, Integer friendJoinPolicy, Integer groupInvitePolicy, String createTime, String updateTime, Integer deleted) {

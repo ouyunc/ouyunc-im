@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
  * @Author fangzhenxun
  * @Description: 消息的后置处理器
  **/
-public class PacketPostHandler extends SimpleChannelInboundHandler<Packet>{
+public class PacketPostHandler extends SimpleChannelInboundHandler<Packet> {
     private static Logger log = LoggerFactory.getLogger(PacketPostHandler.class);
 
     @Override

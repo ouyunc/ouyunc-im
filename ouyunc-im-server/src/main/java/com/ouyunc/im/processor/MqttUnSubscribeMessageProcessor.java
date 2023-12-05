@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory;
  * @Author fangzhenxun
  * @Description: 处理mqtt 客户端解除订阅的消息
  **/
-public class MqttUnSubscribeMessageProcessor extends AbstractMessageProcessor{
+public class MqttUnSubscribeMessageProcessor extends AbstractMessageProcessor {
     private static Logger log = LoggerFactory.getLogger(MqttUnSubscribeMessageProcessor.class);
 
 
@@ -21,11 +21,11 @@ public class MqttUnSubscribeMessageProcessor extends AbstractMessageProcessor{
 
 
     /**
-     * @Author fangzhenxun
-     * @Description 真正处理逻辑的地方
      * @param ctx
      * @param packet
      * @return void
+     * @Author fangzhenxun
+     * @Description 真正处理逻辑的地方
      */
     @Override
     public void doProcess(ChannelHandlerContext ctx, Packet packet) {

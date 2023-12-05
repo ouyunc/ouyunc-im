@@ -47,7 +47,7 @@ public class IMInnerClientHeartbeatThread implements Runnable {
      */
     @Override
     public void run() {
-        log.debug("集群服务中当前存活的服务：{}",IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.asMap().keySet());
+        log.debug("集群服务中当前存活的服务：{}", IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.asMap().keySet());
         // 获取所有注册表中的key,每次更新注册表都会重新获取注册表信息
         Set<Map.Entry<String, ChannelPool>> availableGlobalServer = MapUtil.mergerMaps(IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.asMap(), IMServerContext.CLUSTER_GLOBAL_SERVER_REGISTRY_TABLE.asMap()).entrySet();
         Iterator<Map.Entry<String, ChannelPool>> socketAddressChannelIterator = availableGlobalServer.iterator();
@@ -55,7 +55,7 @@ public class IMInnerClientHeartbeatThread implements Runnable {
             Map.Entry<String, ChannelPool> socketAddressChannelPoolEntry = socketAddressChannelIterator.next();
             String targetServerAddress = socketAddressChannelPoolEntry.getKey();
             // 给暂未连接的的服务（不在注册表中）进行重试连接发送syn去握手，需要回复ack
-            Message message = new Message(IMServerContext.SERVER_CONFIG.getLocalServerAddress(),targetServerAddress , MessageContentEnum.SYN_CONTENT.type(), SystemClock.now());
+            Message message = new Message(IMServerContext.SERVER_CONFIG.getLocalServerAddress(), targetServerAddress, MessageContentEnum.SYN_CONTENT.type(), SystemClock.now());
             //  ==============针对以上packet 几种序列化对比: string = SYN=========
             //     packet            message
             // protoStuff 150b         80b  内部心跳只用protoStuff序列化/反序列化
@@ -66,7 +66,7 @@ public class IMInnerClientHeartbeatThread implements Runnable {
             // hessian    430b         235b
             // fst        650b         315b
             // jdk        500b         346b
-            Packet packet = new Packet(Protocol.OUYUNC.getProtocol(), Protocol.OUYUNC.getVersion(), SnowflakeUtil.nextId(), DeviceEnum.OTHER.getValue(), NetworkEnum.OTHER.getValue(), IMServerContext.SERVER_CONFIG.getIp(), MessageEnum.SYN_ACK.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(),  message);
+            Packet packet = new Packet(Protocol.OUYUNC.getProtocol(), Protocol.OUYUNC.getVersion(), SnowflakeUtil.nextId(), DeviceEnum.OTHER.getValue(), NetworkEnum.OTHER.getValue(), IMServerContext.SERVER_CONFIG.getIp(), MessageEnum.SYN_ACK.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(), message);
             // 内部客户端连接池异步传递消息syn ,尝试所有的路径去保持连通
             MessageHelper.sendMessage(packet, Target.newBuilder().targetIdentity(targetServerAddress).build());
             // 先获取给目标服务toInetSocketAddress 发送syn,没有回复ack的次数，默认从0开始
@@ -78,12 +78,11 @@ public class IMInnerClientHeartbeatThread implements Runnable {
             }
         }
         // 判断该服务所在的集群个数是否小于服务列表的半数（用于解决脑裂）, 启动服务30分钟后进行检测是否脑裂,如果满足则系统退出
-        if (IMServerContext.SERVER_CONFIG.isClusterSplitBrainDetectionEnable() && (IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.size() + 1) <= (int)Math.ceil(availableGlobalServer.size()/2.0) && ChronoUnit.MINUTES.between(beginTime, Instant.now()) >= IMServerContext.SERVER_CONFIG.getClusterSplitBrainDetectionDelay()) {
+        if (IMServerContext.SERVER_CONFIG.isClusterSplitBrainDetectionEnable() && (IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.size() + 1) <= (int) Math.ceil(availableGlobalServer.size() / 2.0) && ChronoUnit.MINUTES.between(beginTime, Instant.now()) >= IMServerContext.SERVER_CONFIG.getClusterSplitBrainDetectionDelay()) {
             log.error("集群服务脑裂检测中，服务 {} 异常，开始注销...", IMServerContext.SERVER_CONFIG.getLocalServerAddress());
             IMServerContext.TTL_THREAD_LOCAL.get().stop();
         }
     }
-
 
 
 }

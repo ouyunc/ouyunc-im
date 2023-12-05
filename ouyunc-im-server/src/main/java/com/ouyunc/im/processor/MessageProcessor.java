@@ -13,7 +13,6 @@ public interface MessageProcessor {
     Logger log = LoggerFactory.getLogger(MessageProcessor.class);
 
 
-
     /**
      * @param ctx
      * @param packet
@@ -21,7 +20,8 @@ public interface MessageProcessor {
      * @Author fangzhenxun
      * @Description 前置处理器，做认证授权相关处理，在真正处理消息前处理
      */
-    default void preProcess(ChannelHandlerContext ctx, Packet packet) {}
+    default void preProcess(ChannelHandlerContext ctx, Packet packet) {
+    }
 
 
     /**
@@ -34,7 +34,6 @@ public interface MessageProcessor {
     void doProcess(ChannelHandlerContext ctx, Packet packet);
 
 
-
     /**
      * @param ctx
      * @param packet
@@ -44,7 +43,6 @@ public interface MessageProcessor {
      */
     default void postProcess(ChannelHandlerContext ctx, Packet packet) {
     }
-
 
 
 }

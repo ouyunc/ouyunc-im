@@ -25,7 +25,7 @@ public @interface DistributedLock {
      * 锁的超时时间(锁有效时间)，以秒为单位
      * 如果不指定，则不会超时，只能手工解锁时才会释放
      */
-    long leaseTime() default 0 ;
+    long leaseTime() default 0;
 
 
     /**

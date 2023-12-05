@@ -15,6 +15,8 @@ public class CacheConstant {
     public static final String OUYUNC = "ouyunc:";
     //  im公共前缀
     public static final String IM = "im:";
+    // 平台的 唯一标识key 公共前缀
+    public static final String APP_KEY = "app-key:";
     // 集群服务下线hash key
     public static final String CLUSTER_SERVER = "cluster:server:";
     // 群组
@@ -56,7 +58,7 @@ public class CacheConstant {
     // im app detail 信息数据
     public static final String APP = "app:";
     // im app 连接
-    public static final String CONNECTION = ":connection";
+    public static final String CONNECTIONS = ":connections";
     // 好友请求
     public static final String FRIEND_REQUEST = "friend-request:";
     // 群组请求

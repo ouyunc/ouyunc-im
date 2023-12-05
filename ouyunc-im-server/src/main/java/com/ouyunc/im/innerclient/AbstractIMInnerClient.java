@@ -13,26 +13,26 @@ public abstract class AbstractIMInnerClient implements IMInnerClient {
 
 
     /**
-     * @Author fangzhenxun
-     * @Description 初始化内置客户端
      * @param serverConfig
      * @return void
+     * @Author fangzhenxun
+     * @Description 初始化内置客户端
      */
     abstract void initClient(IMServerConfig serverConfig);
 
     /**
-     * @Author fangzhenxun
-     * @Description 初始化后做善后操作
      * @param
      * @return void
+     * @Author fangzhenxun
+     * @Description 初始化后做善后操作
      */
     abstract void afterPropertiesSet();
 
     /**
-     * @Author fangzhenxun
-     * @Description 启动内置客户端，作用于集群使用
      * @param serverConfig
      * @return void
+     * @Author fangzhenxun
+     * @Description 启动内置客户端，作用于集群使用
      */
     @Override
     public void configure(IMServerConfig serverConfig) {

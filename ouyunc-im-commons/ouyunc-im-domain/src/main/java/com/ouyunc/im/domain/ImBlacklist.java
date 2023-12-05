@@ -30,6 +30,11 @@ public class ImBlacklist implements Serializable {
     private Long userId;
 
     /**
+     * 所属平台唯一标识
+     */
+    private String appKey;
+
+    /**
      * 唯一标识类型，1-客户端唯一标识（用户），2-群唯一标识
      */
     private Integer identityType;
@@ -80,9 +85,26 @@ public class ImBlacklist implements Serializable {
         this.createTime = createTime;
     }
 
+    public String getAppKey() {
+        return appKey;
+    }
+
+    public void setAppKey(String appKey) {
+        this.appKey = appKey;
+    }
+
     public ImBlacklist(Long identity, Long userId, Integer identityType, String createTime) {
         this.identity = identity;
         this.userId = userId;
+        this.identityType = identityType;
+        this.createTime = createTime;
+    }
+
+    public ImBlacklist(Long id, Long identity, Long userId, String appKey, Integer identityType, String createTime) {
+        this.id = id;
+        this.identity = identity;
+        this.userId = userId;
+        this.appKey = appKey;
         this.identityType = identityType;
         this.createTime = createTime;
     }

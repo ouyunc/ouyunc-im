@@ -21,6 +21,11 @@ public class ImMessage implements Serializable {
     private Long id;
 
     /**
+     * 所属平台唯一标识
+     */
+    private String appKey;
+
+    /**
      * 1个字节  协议类型,ws,http,自定义,默认为内部协议OUYUNC
      */
     private byte protocol;
@@ -255,6 +260,39 @@ public class ImMessage implements Serializable {
     }
 
     public void setDeleted(Integer deleted) {
+        this.deleted = deleted;
+    }
+
+    public String getAppKey() {
+        return appKey;
+    }
+
+    public void setAppKey(String appKey) {
+        this.appKey = appKey;
+    }
+
+    public ImMessage() {
+    }
+
+    public ImMessage(Long id, String appKey, byte protocol, byte protocolVersion, byte deviceType, byte networkType, byte encryptType, byte serializeAlgorithm, String ip, String from, String to, byte type, Integer contentType, String content, String extra, Long sendTime, String createTime, String updateTime, Integer deleted) {
+        this.id = id;
+        this.appKey = appKey;
+        this.protocol = protocol;
+        this.protocolVersion = protocolVersion;
+        this.deviceType = deviceType;
+        this.networkType = networkType;
+        this.encryptType = encryptType;
+        this.serializeAlgorithm = serializeAlgorithm;
+        this.ip = ip;
+        this.from = from;
+        this.to = to;
+        this.type = type;
+        this.contentType = contentType;
+        this.content = content;
+        this.extra = extra;
+        this.sendTime = sendTime;
+        this.createTime = createTime;
+        this.updateTime = updateTime;
         this.deleted = deleted;
     }
 }

@@ -9,10 +9,10 @@ import io.netty.channel.ChannelHandlerContext;
 public interface DispatcherProcessorStrategy {
 
     /**
-     * @Author fangzhenxun
-     * @Description 处理逻辑
      * @param ctx
      * @return void
+     * @Author fangzhenxun
+     * @Description 处理逻辑
      */
     void doProcess(ChannelHandlerContext ctx);
 }

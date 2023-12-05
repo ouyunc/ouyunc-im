@@ -8,17 +8,17 @@ public interface IMServer {
 
 
     /**
+     * @return void
      * @Author fangzhenxun
      * @Description 启动im服务端
-     * @return void
      */
-    void start(String[] args) ;
+    void start(String[] args);
 
 
     /**
+     * @return void
      * @Author fangzhenxun
      * @Description 停止im服务端
-     * @return void
      */
     void stop();
 

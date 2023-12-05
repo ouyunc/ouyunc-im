@@ -1,5 +1,6 @@
 package com.ouyunc.im.processor;
 
+import com.alibaba.fastjson2.JSON;
 import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.constant.enums.MessageEnum;
@@ -9,6 +10,8 @@ import com.ouyunc.im.helper.DbHelper;
 import com.ouyunc.im.helper.MessageHelper;
 import com.ouyunc.im.helper.UserHelper;
 import com.ouyunc.im.packet.Packet;
+import com.ouyunc.im.packet.message.ExtraMessage;
+import com.ouyunc.im.packet.message.InnerExtraData;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.utils.SystemClock;
 import com.ouyunc.im.validate.MessageValidate;
@@ -40,14 +43,17 @@ public class CustomerMessageProcessor extends AbstractMessageProcessor {
      */
     @Override
     public void preProcess(ChannelHandlerContext ctx, Packet packet) {
-        EVENT_EXECUTORS.execute(() -> DbHelper.writeMessage(packet));
         Message message = (Message) packet.getMessage();
+        ExtraMessage extraMessage = JSON.parseObject(message.getExtra(), ExtraMessage.class);
+        InnerExtraData innerExtraData = extraMessage.getInnerExtraData();
+        String appKey = innerExtraData.getAppKey();
+        EVENT_EXECUTORS.execute(() -> DbHelper.writeMessage(appKey, packet));
         // 消息发送方
         String from = message.getFrom();
         // 消息接收方
         String to = message.getTo();
         // ===================================做校验
-        if (!MessageValidate.isAuth(from, packet.getDeviceType(), ctx) || MessageValidate.isBanned(from, IMConstant.USER_TYPE_1) || MessageValidate.isBanned(to, IMConstant.GROUP_TYPE_2) || !MessageValidate.isGroup(from, to) || MessageValidate.isBackList(from, to, IMConstant.GROUP_TYPE_2)) {
+        if (!MessageValidate.isAuth(appKey, from, packet.getDeviceType(), ctx) || MessageValidate.isBanned(appKey, from, IMConstant.USER_TYPE_1) || MessageValidate.isBanned(appKey, to, IMConstant.GROUP_TYPE_2) || !MessageValidate.isGroup(appKey, from, to) || MessageValidate.isBackList(appKey, from, to, IMConstant.GROUP_TYPE_2)) {
             return;
         }
         // 交给下个处理
@@ -65,13 +71,16 @@ public class CustomerMessageProcessor extends AbstractMessageProcessor {
         log.info("CustomerMessageProcessor 正在处理客服消息packet: {}", packet);
         fireProcess(ctx, packet, (ctx0, packet0) -> {
             Message message = (Message) packet.getMessage();
+            ExtraMessage extraMessage = JSON.parseObject(message.getExtra(), ExtraMessage.class);
+            InnerExtraData innerExtraData = extraMessage.getInnerExtraData();
+            String appKey = innerExtraData.getAppKey();
             // from 代表群组中的发送者
             String from = message.getFrom();
             // to 代表群组唯一表示
             String to = message.getTo();
             // 根据群唯一标识to,获取当前群中所有群成员
             // 首先从缓存中获取群成员(包括自身)，如果没有在从数据库获取
-            List<ImGroupUserBO> groupMembers = DbHelper.getGroupMembers(to);
+            List<ImGroupUserBO> groupMembers = DbHelper.getGroupMembers(appKey, to);
             // 循环遍历
             if (CollectionUtils.isEmpty(groupMembers)) {
                 // 该客户没有分配客服，不予处理
@@ -79,9 +88,9 @@ public class CustomerMessageProcessor extends AbstractMessageProcessor {
             }
             // 写入发件箱
             long timestamp = SystemClock.now();
-            DbHelper.write2Timeline(packet, from, to, timestamp);
+            DbHelper.write2Timeline(appKey, packet, from, to, timestamp);
             // 如果是自己找到自己的所有登录端去发送信息
-            List<LoginUserInfo> fromLoginUserInfos = UserHelper.onlineAll(from, packet.getDeviceType());
+            List<LoginUserInfo> fromLoginUserInfos = UserHelper.onlineAll(appKey, from, packet.getDeviceType());
             // 排除自己，发给其他端
             // 转发给自己客户端的各个设备端
             MessageHelper.send2MultiDevices(packet, fromLoginUserInfos);
@@ -92,9 +101,9 @@ public class CustomerMessageProcessor extends AbstractMessageProcessor {
                 // 目前使用id号来作为唯一标识
                 if (!from.equals(groupMember.getUserId()) && IMConstant.NOT_SHIELD.equals(groupMember.getIsShield())) {
                     // 无论是否在线都会先存入离线消息表
-                    DbHelper.write2OfflineTimeline(packet, groupMember.getUserId(), timestamp);
+                    DbHelper.write2OfflineTimeline(appKey, packet, groupMember.getUserId(), timestamp);
                     // 判断，客服是否屏蔽了该群，如果屏蔽则不能接受到该消息
-                    List<LoginUserInfo> customerLoginUserInfos = UserHelper.onlineAll(groupMember.getUserId());
+                    List<LoginUserInfo> customerLoginUserInfos = UserHelper.onlineAll(appKey, groupMember.getUserId());
                     if (CollectionUtils.isEmpty(customerLoginUserInfos)) {
                         // 如果群里非机器人都没有登录，并且群里只有机器人和客户两个人，则有机器人接管发送
                         groupLoginUserCount++;

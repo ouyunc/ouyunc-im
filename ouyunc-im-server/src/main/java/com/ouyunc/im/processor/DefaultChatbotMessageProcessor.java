@@ -7,10 +7,12 @@ import org.slf4j.LoggerFactory;
 /**
  * 默认机器人托管处理器
  */
-public class DefaultChatbotMessageProcessor extends AbstractChatbotMessageProcessor{
+public class DefaultChatbotMessageProcessor extends AbstractChatbotMessageProcessor {
     private static Logger log = LoggerFactory.getLogger(DefaultChatbotMessageProcessor.class);
 
-    /**处理的顺序
+    /**
+     * 处理的顺序
+     *
      * @param
      * @return int
      */
@@ -21,6 +23,7 @@ public class DefaultChatbotMessageProcessor extends AbstractChatbotMessageProces
 
     /**
      * 不进行处理
+     *
      * @param packet
      * @return
      */
@@ -31,6 +34,7 @@ public class DefaultChatbotMessageProcessor extends AbstractChatbotMessageProces
 
     /**
      * 机器人托管处理器
+     *
      * @param packet
      */
     @Override

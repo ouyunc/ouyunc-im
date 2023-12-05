@@ -12,7 +12,7 @@ import java.nio.ByteOrder;
  * @Author fangzhenxun
  * @Description: packet 调度处理器
  **/
-public class PacketDispatcherProcessorStrategy implements DispatcherProcessorStrategy{
+public class PacketDispatcherProcessorStrategy implements DispatcherProcessorStrategy {
 
 
     @Override

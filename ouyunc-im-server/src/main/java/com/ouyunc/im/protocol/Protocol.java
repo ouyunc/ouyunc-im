@@ -1,6 +1,7 @@
 package com.ouyunc.im.protocol;
 
 
+import com.alibaba.fastjson2.JSON;
 import com.ouyunc.im.base.MissingPacket;
 import com.ouyunc.im.codec.MqttWebSocketCodec;
 import com.ouyunc.im.constant.CacheConstant;
@@ -12,6 +13,8 @@ import com.ouyunc.im.handler.*;
 import com.ouyunc.im.helper.MqttHelper;
 import com.ouyunc.im.innerclient.pool.IMInnerClientPool;
 import com.ouyunc.im.packet.Packet;
+import com.ouyunc.im.packet.message.ExtraMessage;
+import com.ouyunc.im.packet.message.InnerExtraData;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.utils.MapUtil;
 import com.ouyunc.im.utils.ReaderWriterUtil;
@@ -45,8 +48,7 @@ import java.util.Map;
 public enum Protocol {
 
     // 处理ws/wss,这里相当于关键入口
-    WS((byte) 1, (byte)1, "websocket 协议，版本号为1") {
-
+    WS((byte) 1, (byte) 1, "websocket 协议，版本号为1") {
         @Override
         public void doDispatcher(ChannelHandlerContext ctx, Map<String, Object> queryParamsMap) {
             ctx.pipeline()
@@ -89,30 +91,35 @@ public enum Protocol {
          */
         @Override
         public void doSendMessage(Packet packet, String to) {
-            try{
+            // 清理集群消息投递过程中产生的路由记录
+            Message message = (Message) packet.getMessage();
+            // 这里应该不会为null
+            ExtraMessage extraMessage = JSON.parseObject(message.getExtra(), ExtraMessage.class);
+            InnerExtraData innerExtraData = extraMessage.getInnerExtraData();
+            String appKey = innerExtraData.getAppKey();
+            message.setExtra(extraMessage.getOutExtraData());
+            try {
                 // 这里可以处理具体发送多设备的在线消息，离线以及在线
                 // 需要考虑多设备登录？离线消息如何嵌入？，多种消息类型进行统一处理
                 final ByteBuf byteBuf = ByteBufAllocator.DEFAULT.buffer();
                 ReaderWriterUtil.writePacketInByteBuf(packet, byteBuf);
                 //从用户注册表中，获取用户对应的channel然后将消息写出去
                 IMServerContext.USER_REGISTER_TABLE.get(to).writeAndFlush(new BinaryWebSocketFrame(byteBuf));
-            }catch (Exception e) {
+            } catch (Exception e) {
                 log.error("消息packet: {} 发送给用户: {} 失败!", packet, to);
-                Message message = (Message) packet.getMessage();
                 // 消息丢失
                 if (packet.getMessageType() == MessageEnum.IM_PRIVATE_CHAT.getValue() || packet.getMessageType() == MessageEnum.IM_GROUP_CHAT.getValue()) {
                     // 对于多端的情况
                     long now = SystemClock.now();
-                    IMServerContext.MISSING_MESSAGES_CACHE.addZset(CacheConstant.OUYUNC + CacheConstant.IM_MESSAGE + CacheConstant.FAIL + CacheConstant.FROM + message.getFrom() + CacheConstant.COLON + CacheConstant.TO + to , new MissingPacket(packet, IMServerContext.SERVER_CONFIG.getLocalServerAddress(), now), now);
+                    IMServerContext.MISSING_MESSAGES_CACHE.addZset(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.IM_MESSAGE + CacheConstant.FAIL + CacheConstant.FROM + message.getFrom() + CacheConstant.COLON + CacheConstant.TO + to, new MissingPacket(packet, IMServerContext.SERVER_CONFIG.getLocalServerAddress(), now), now);
                 }
             }
         }
     },
 
 
-
     //处理 http/https
-    HTTP((byte)3, (byte)1, "http协议，版本号为1"){
+    HTTP((byte) 3, (byte) 1, "http协议，版本号为1") {
         @Override
         public void doDispatcher(ChannelHandlerContext ctx, Map<String, Object> queryParamsMap) {
 
@@ -125,7 +132,7 @@ public enum Protocol {
     },
 
     // 目前该协议不对外开放只作为集群内部协议使用，可以对接jt 818,或者其他物联网的通信，字节扩充，
-    OUYUNC((byte)5, (byte)1, "自定义ouyunc协议，版本号为1"){
+    OUYUNC((byte) 5, (byte) 1, "自定义ouyunc协议，版本号为1") {
         @Override
         public void doDispatcher(ChannelHandlerContext ctx, Map<String, Object> queryParamsMap) {
             ctx.pipeline()
@@ -133,7 +140,7 @@ public enum Protocol {
                     // 转换成包packet，这里为了做兼容客户端心跳
                     .addLast(IMConstant.CONVERT_2_PACKET, new Convert2PacketHandler())
                     // 添加一个集群中处理消息路由的处理器，这样就不需要在业务处理器中都写一下了
-                    .addLast(IMConstant.PACKET_CLUSTER_ROUTER,new PacketClusterRouterHandler())
+                    .addLast(IMConstant.PACKET_CLUSTER_ROUTER, new PacketClusterRouterHandler())
                     // 集群内部/外部业务处理
                     .addLast(IMConstant.OUYUNC_IM_HANDLER, new OuyuncServerHandler())
                     // 在最后添加异常处理器
@@ -151,14 +158,21 @@ public enum Protocol {
          */
         @Override
         public void doSendMessage(Packet packet, String to) {
+            Message message = (Message) packet.getMessage();
+            // 这里应该不会为null
+            ExtraMessage extraMessage = JSON.parseObject(message.getExtra(), ExtraMessage.class);
+            InnerExtraData innerExtraData = extraMessage.getInnerExtraData();
+            String appKey = innerExtraData.getAppKey();
+            message.setExtra(extraMessage.getOutExtraData());
+
             ChannelPool channelPool = MapUtil.mergerMaps(IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.asMap(), IMServerContext.CLUSTER_GLOBAL_SERVER_REGISTRY_TABLE.asMap()).get(to);
             if (channelPool == null) {
-                log.warn("有新的服务 {} 加入集群，正在尝试与其确认ack",to);
+                log.warn("有新的服务 {} 加入集群，正在尝试与其确认ack", to);
                 channelPool = IMInnerClientPool.singleClientChannelPoolMap.get(SocketAddressUtil.convert2SocketAddress(to));
             }
             ChannelPool finalChannelPool = channelPool;
             Future<Channel> channelFuture = finalChannelPool.acquire();
-            channelFuture.addListener(new FutureListener<Channel>(){
+            channelFuture.addListener(new FutureListener<Channel>() {
                 @Override
                 public void operationComplete(Future<Channel> future) throws Exception {
                     if (future.isDone()) {
@@ -175,10 +189,10 @@ public enum Protocol {
                             channel.writeAndFlush(packet);
                             // 用完后进行释放掉
                             finalChannelPool.release(channel);
-                        }else {
+                        } else {
                             // 获取失败
                             Throwable cause = future.cause();
-                            log.error("客户端获取channel异常！原因: {}", cause.getMessage());
+                            log.error("平台 {} 下的客户端获取channel异常！原因: {}", appKey, cause.getMessage());
                         }
 
                     }
@@ -187,7 +201,7 @@ public enum Protocol {
         }
     },
     //mqtt @ todo 还有添加心跳，等相关处理
-    MQTT((byte)6, (byte)4, "mqtt协议，版本号为3.1.1"){
+    MQTT((byte) 6, (byte) 4, "mqtt协议，版本号为3.1.1") {
         @Override
         public void doDispatcher(ChannelHandlerContext ctx, Map<String, Object> queryParamsMap) {
             ctx.pipeline()
@@ -211,17 +225,23 @@ public enum Protocol {
             if (log.isDebugEnabled()) {
                 log.debug("mqtt 正在发送消息...");
             }
-            try{
+            Message message = (Message) packet.getMessage();
+            // 这里应该不会为null
+            ExtraMessage extraMessage = JSON.parseObject(message.getExtra(), ExtraMessage.class);
+            InnerExtraData innerExtraData = extraMessage.getInnerExtraData();
+            String appKey = innerExtraData.getAppKey();
+            message.setExtra(extraMessage.getOutExtraData());
+            try {
                 //从用户注册表中，获取用户对应的channel然后将消息写出去
                 IMServerContext.USER_REGISTER_TABLE.get(to).writeAndFlush(MqttHelper.unwrapPacket2Mqtt(packet));
-            }catch (Exception e) {
+            } catch (Exception e) {
                 log.error("消息packet: {} 发送给客户端: {} 失败!,原因：{}", packet, to, e.getMessage());
                 // 消息丢失 @todo 后面处理
             }
         }
     },
     //mqtt_ws 协议
-    MQTT_WS((byte)7, (byte)4, "基于websocket的mqtt协议，版本号为3.1.1"){
+    MQTT_WS((byte) 7, (byte) 4, "基于websocket的mqtt协议，版本号为3.1.1") {
         @Override
         public void doDispatcher(ChannelHandlerContext ctx, Map<String, Object> queryParamsMap) {
             ctx.pipeline()
@@ -248,7 +268,22 @@ public enum Protocol {
 
         @Override
         public void doSendMessage(Packet packet, String to) {
-            // do something
+            if (log.isDebugEnabled()) {
+                log.debug("mqtt-ws 正在发送消息...");
+            }
+            Message message = (Message) packet.getMessage();
+            // 这里应该不会为null
+            ExtraMessage extraMessage = JSON.parseObject(message.getExtra(), ExtraMessage.class);
+            InnerExtraData innerExtraData = extraMessage.getInnerExtraData();
+            String appKey = innerExtraData.getAppKey();
+            message.setExtra(extraMessage.getOutExtraData());
+            try {
+                //从用户注册表中，获取用户对应的channel然后将消息写出去
+                IMServerContext.USER_REGISTER_TABLE.get(to).writeAndFlush(MqttHelper.unwrapPacket2Mqtt(packet));
+            } catch (Exception e) {
+                log.error("消息packet: {} 发送给客户端: {} 失败!,原因：{}", packet, to, e.getMessage());
+                // 消息丢失 @todo 后面处理
+            }
         }
     };
 

@@ -16,11 +16,11 @@ public class OuyuncServerHandler extends SimpleChannelInboundHandler<Packet> {
 
 
     /**
-     * @Author fangzhenxun
-     * @Description 自定义偶遇im 处理器
      * @param ctx
      * @param packet
      * @return void
+     * @Author fangzhenxun
+     * @Description 自定义偶遇im 处理器
      */
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Packet packet) throws Exception {

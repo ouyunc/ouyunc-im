@@ -1,5 +1,6 @@
 package com.ouyunc.im.processor;
 
+import com.alibaba.fastjson2.JSON;
 import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.constant.enums.MessageContentEnum;
@@ -9,6 +10,8 @@ import com.ouyunc.im.helper.DbHelper;
 import com.ouyunc.im.helper.MessageHelper;
 import com.ouyunc.im.helper.UserHelper;
 import com.ouyunc.im.packet.Packet;
+import com.ouyunc.im.packet.message.ExtraMessage;
+import com.ouyunc.im.packet.message.InnerExtraData;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.utils.SystemClock;
 import io.netty.channel.ChannelHandlerContext;
@@ -41,6 +44,9 @@ public class WithdrawMessageProcessor extends AbstractMessageProcessor {
         log.info("WithdrawMessageProcessor 撤回处理器正在处理消息：{}", packet);
         fireProcess(ctx, packet, (ctx0, packet0) -> {
             Message message = (Message) packet.getMessage();
+            ExtraMessage extraMessage = JSON.parseObject(message.getExtra(), ExtraMessage.class);
+            InnerExtraData innerExtraData = extraMessage.getInnerExtraData();
+            String appKey = innerExtraData.getAppKey();
             int contentType = message.getContentType();
             // 目前只针对私聊和群聊消息进行撤回
             if (MessageContentEnum.PRIVATE_CHAT_WITHDRAW_CONTENT.type() != contentType && MessageContentEnum.GROUP_OR_CUSTOMER_CHAT_WITHDRAW_CONTENT.type() != contentType) {
@@ -53,19 +59,19 @@ public class WithdrawMessageProcessor extends AbstractMessageProcessor {
             // 将消息写到发件箱和及接收方的收件箱
             long timestamp = SystemClock.now();
             // 写入信箱
-            DbHelper.write2Timeline(packet, from, to, timestamp);
+            DbHelper.write2Timeline(appKey, packet, from, to, timestamp);
             // 修改发件箱和收件箱的消息状态,离线消息，和缓存不做处理交给客户端处理（为了提高服务端性能，能让客户端做的，尽量让客户端去处理）
             DbHelper.handleWithdrawMessage(packet, timestamp);
             // 发送给自己的其他端
-            List<LoginUserInfo> fromLoginUserInfos = UserHelper.onlineAll(from, packet.getDeviceType());
+            List<LoginUserInfo> fromLoginUserInfos = UserHelper.onlineAll(appKey, from, packet.getDeviceType());
             // 排除自己，发给其他端
             // 转发给自己客户端的各个设备端
             MessageHelper.send2MultiDevices(packet, fromLoginUserInfos);
             // 获取该客户端在线的所有客户端，进行推送消息已读
             if (MessageContentEnum.PRIVATE_CHAT_WITHDRAW_CONTENT.type() == contentType) {
                 // 无论是否在线都存入离线消息，不以设备来区分
-                DbHelper.write2OfflineTimeline(packet, to, timestamp);
-                List<LoginUserInfo> toLoginUserInfos = UserHelper.onlineAll(to);
+                DbHelper.write2OfflineTimeline(appKey, packet, to, timestamp);
+                List<LoginUserInfo> toLoginUserInfos = UserHelper.onlineAll(appKey, to);
                 if (CollectionUtils.isEmpty(toLoginUserInfos)) {
                     return;
                 }
@@ -74,7 +80,7 @@ public class WithdrawMessageProcessor extends AbstractMessageProcessor {
             }
             if (MessageContentEnum.GROUP_OR_CUSTOMER_CHAT_WITHDRAW_CONTENT.type() == contentType) {
                 // 首先从缓存中获取群成员(包括自身)，如果没有在从数据库获取
-                List<ImGroupUserBO> groupMembers = DbHelper.getGroupMembers(to);
+                List<ImGroupUserBO> groupMembers = DbHelper.getGroupMembers(appKey, to);
                 // 循环遍历
                 if (CollectionUtils.isEmpty(groupMembers)) {
                     // 解散了
@@ -85,10 +91,10 @@ public class WithdrawMessageProcessor extends AbstractMessageProcessor {
                     // 目前使用id号来作为唯一标识
                     if (!from.equals(groupMember.getUserId()) && IMConstant.NOT_SHIELD.equals(groupMember.getIsShield())) {
                         // 无论是否在线都会存储到离线消息中
-                        DbHelper.write2OfflineTimeline(packet, groupMember.getUserId(), timestamp);
+                        DbHelper.write2OfflineTimeline(appKey, packet, groupMember.getUserId(), timestamp);
                         // 群里其它人员的其他端
                         // 判断，群成员是否屏蔽了该群，如果屏蔽则不能接受到该消息
-                        List<LoginUserInfo> othersMembersLoginUserInfos = UserHelper.onlineAll(groupMember.getUserId());
+                        List<LoginUserInfo> othersMembersLoginUserInfos = UserHelper.onlineAll(appKey, groupMember.getUserId());
                         if (CollectionUtils.isNotEmpty(othersMembersLoginUserInfos)) {
                             // 转发给某个客户端的各个设备端
                             MessageHelper.send2MultiDevices(packet, othersMembersLoginUserInfos);

@@ -9,17 +9,17 @@ import com.ouyunc.im.config.IMServerConfig;
 public interface IMInnerClient {
 
     /**
-     * @Author fangzhenxun
-     * @Description 配置内置客户端根据当前服务的配置注册到当前服务端以及其他已经启动的服务端上
      * @param serverConfig
      * @return void
+     * @Author fangzhenxun
+     * @Description 配置内置客户端根据当前服务的配置注册到当前服务端以及其他已经启动的服务端上
      */
     void configure(IMServerConfig serverConfig);
 
     /**
+     * @return void
      * @Author fangzhenxun
      * @Description 停止内部客户端
-     * @return void
      */
 
     void stop();

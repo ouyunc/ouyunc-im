@@ -11,6 +11,11 @@ public class ImFriendBO {
     private String userId;
 
     /**
+     * 所属平台唯一标识
+     */
+    private String appKey;
+
+    /**
      * 好友用户id
      */
     private String friendUserId;
@@ -79,6 +84,13 @@ public class ImFriendBO {
      */
     private String updateTime;
 
+    public String getAppKey() {
+        return appKey;
+    }
+
+    public void setAppKey(String appKey) {
+        this.appKey = appKey;
+    }
 
     public String getUserId() {
         return userId;
@@ -194,6 +206,24 @@ public class ImFriendBO {
     }
 
     public ImFriendBO() {
+    }
+
+    public ImFriendBO(String userId, String appKey, String friendUserId, String friendNickName, String friendUsername, String friendEmail, String friendPhoneNum, String friendIdCardNum, String friendAvatar, String friendMotto, Integer friendAge, Integer friendSex, Integer friendIsShield, String createTime, String updateTime) {
+        this.userId = userId;
+        this.appKey = appKey;
+        this.friendUserId = friendUserId;
+        this.friendNickName = friendNickName;
+        this.friendUsername = friendUsername;
+        this.friendEmail = friendEmail;
+        this.friendPhoneNum = friendPhoneNum;
+        this.friendIdCardNum = friendIdCardNum;
+        this.friendAvatar = friendAvatar;
+        this.friendMotto = friendMotto;
+        this.friendAge = friendAge;
+        this.friendSex = friendSex;
+        this.friendIsShield = friendIsShield;
+        this.createTime = createTime;
+        this.updateTime = updateTime;
     }
 
     public ImFriendBO(String userId, String friendUserId, String friendNickName, String friendUsername, String friendEmail, String friendPhoneNum, String friendIdCardNum, String friendAvatar, String friendMotto, Integer friendAge, Integer friendSex, Integer friendIsShield, String createTime, String updateTime) {

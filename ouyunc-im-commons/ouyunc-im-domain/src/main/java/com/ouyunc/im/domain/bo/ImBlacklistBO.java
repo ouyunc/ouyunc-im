@@ -10,6 +10,11 @@ public class ImBlacklistBO {
     private String identity;
 
     /**
+     * 所属平台唯一标识
+     */
+    private String appKey;
+
+    /**
      * 唯一标识类型，1-客户端唯一标识（用户），2-群唯一标识
      */
     private Integer identityType;
@@ -174,11 +179,36 @@ public class ImBlacklistBO {
         this.createTime = createTime;
     }
 
+    public String getAppKey() {
+        return appKey;
+    }
+
+    public void setAppKey(String appKey) {
+        this.appKey = appKey;
+    }
+
     public ImBlacklistBO() {
     }
 
     public ImBlacklistBO(String identity, Integer identityType, String userId, String username, String nickName, String email, String phoneNum, String idCardNum, String avatar, String motto, Integer age, Integer sex, String createTime) {
         this.identity = identity;
+        this.identityType = identityType;
+        this.userId = userId;
+        this.username = username;
+        this.nickName = nickName;
+        this.email = email;
+        this.phoneNum = phoneNum;
+        this.idCardNum = idCardNum;
+        this.avatar = avatar;
+        this.motto = motto;
+        this.age = age;
+        this.sex = sex;
+        this.createTime = createTime;
+    }
+
+    public ImBlacklistBO(String identity, String appKey, Integer identityType, String userId, String username, String nickName, String email, String phoneNum, String idCardNum, String avatar, String motto, Integer age, Integer sex, String createTime) {
+        this.identity = identity;
+        this.appKey = appKey;
         this.identityType = identityType;
         this.userId = userId;
         this.username = username;

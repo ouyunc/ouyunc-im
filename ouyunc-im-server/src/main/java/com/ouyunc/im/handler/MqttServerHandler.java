@@ -19,11 +19,11 @@ public class MqttServerHandler extends SimpleChannelInboundHandler<Packet> {
 
 
     /**
-     * @Author fangzhenxun
-     * @Description mqtt 真正处理的逻辑
      * @param ctx
      * @param packet
      * @return void
+     * @Author fangzhenxun
+     * @Description mqtt 真正处理的逻辑
      */
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Packet packet) throws Exception {

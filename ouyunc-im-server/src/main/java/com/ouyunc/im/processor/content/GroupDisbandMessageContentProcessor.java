@@ -10,6 +10,8 @@ import com.ouyunc.im.helper.DbHelper;
 import com.ouyunc.im.helper.MessageHelper;
 import com.ouyunc.im.helper.UserHelper;
 import com.ouyunc.im.packet.Packet;
+import com.ouyunc.im.packet.message.ExtraMessage;
+import com.ouyunc.im.packet.message.InnerExtraData;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.packet.message.content.GroupRequestContent;
 import com.ouyunc.im.utils.SystemClock;
@@ -23,7 +25,7 @@ import java.util.List;
 /**
  * 解散群
  */
-public class GroupDisbandMessageContentProcessor extends AbstractMessageContentProcessor{
+public class GroupDisbandMessageContentProcessor extends AbstractMessageContentProcessor {
     private static Logger log = LoggerFactory.getLogger(GroupDisbandMessageContentProcessor.class);
 
     @Override
@@ -32,35 +34,38 @@ public class GroupDisbandMessageContentProcessor extends AbstractMessageContentP
     }
 
     /**
-     * @Author fangzhenxun
-     * @Description 群主解散群
      * @param ctx
      * @param packet
      * @return void
+     * @Author fangzhenxun
+     * @Description 群主解散群
      */
     @Override
     public void doProcess(ChannelHandlerContext ctx, Packet packet) {
         log.info("GroupDisbandMessageContentProcessor 正在处理群拒绝请求 packet: {}...", packet);
         Message message = (Message) packet.getMessage();
+        ExtraMessage extraMessage = JSON.parseObject(message.getExtra(), ExtraMessage.class);
+        InnerExtraData innerExtraData = extraMessage.getInnerExtraData();
+        String appKey = innerExtraData.getAppKey();
         GroupRequestContent groupRequestContent = JSON.parseObject(message.getContent(), GroupRequestContent.class);
         // 下面是对集群以及qos消息可靠进行处理
         String from = message.getFrom();
-        ImGroupUserBO groupMember = DbHelper.getGroupMember(from, groupRequestContent.getGroupId());
+        ImGroupUserBO groupMember = DbHelper.getGroupMember(appKey, from, groupRequestContent.getGroupId());
         // 群主只能解散和转让群主
         if (!IMConstant.GROUP_LEADER.equals(groupMember.getIsLeader())) {
             return;
         }
         // 解散群
-        List<ImGroupUserBO> groupMembers = DbHelper.getGroupMembers(groupRequestContent.getGroupId());
-        DbHelper.disbandGroup(groupRequestContent.getGroupId());
+        List<ImGroupUserBO> groupMembers = DbHelper.getGroupMembers(appKey, groupRequestContent.getGroupId());
+        DbHelper.disbandGroup(appKey, groupRequestContent.getGroupId());
         if (CollectionUtils.isEmpty(groupMembers)) {
             return;
         }
         for (ImGroupUserBO member : groupMembers) {
             // 排除群主自身
             if (!from.equals(member.getUserId())) {
-                DbHelper.write2OfflineTimeline(packet,member.getUserId(), SystemClock.now());
-                List<LoginUserInfo> managersLoginUserInfos = UserHelper.onlineAll(member.getUserId());
+                DbHelper.write2OfflineTimeline(appKey, packet, member.getUserId(), SystemClock.now());
+                List<LoginUserInfo> managersLoginUserInfos = UserHelper.onlineAll(appKey, member.getUserId());
                 if (CollectionUtils.isNotEmpty(managersLoginUserInfos)) {
                     MessageHelper.send2MultiDevices(packet, managersLoginUserInfos);
                 }

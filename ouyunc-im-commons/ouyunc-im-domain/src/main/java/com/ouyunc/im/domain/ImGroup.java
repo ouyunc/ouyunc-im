@@ -21,6 +21,11 @@ public class ImGroup implements Serializable {
     private Long id;
 
     /**
+     * 所属平台唯一标识
+     */
+    private String appKey;
+
+    /**
      * 群组名称
      */
     private String groupName;
@@ -160,6 +165,32 @@ public class ImGroup implements Serializable {
     }
 
     public void setDeleted(byte deleted) {
+        this.deleted = deleted;
+    }
+
+    public String getAppKey() {
+        return appKey;
+    }
+
+    public void setAppKey(String appKey) {
+        this.appKey = appKey;
+    }
+
+    public ImGroup() {
+    }
+
+    public ImGroup(Long id, String appKey, String groupName, String groupAvatar, String groupDescription, String groupAnnouncement, Integer groupJoinPolicy, Integer mushin, Integer status, String createTime, String updateTime, byte deleted) {
+        this.id = id;
+        this.appKey = appKey;
+        this.groupName = groupName;
+        this.groupAvatar = groupAvatar;
+        this.groupDescription = groupDescription;
+        this.groupAnnouncement = groupAnnouncement;
+        this.groupJoinPolicy = groupJoinPolicy;
+        this.mushin = mushin;
+        this.status = status;
+        this.createTime = createTime;
+        this.updateTime = updateTime;
         this.deleted = deleted;
     }
 }

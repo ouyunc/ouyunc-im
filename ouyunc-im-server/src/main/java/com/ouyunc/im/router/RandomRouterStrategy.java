@@ -20,20 +20,19 @@ import java.util.stream.Collectors;
  * @Author fangzhenxun
  * @Description: 随机路由策略
  **/
-public class RandomRouterStrategy implements RouterStrategy{
+public class RandomRouterStrategy implements RouterStrategy {
     private static Logger log = LoggerFactory.getLogger(RandomRouterStrategy.class);
 
 
-
     /**
-     * @Author fangzhenxun
-     * @Description 随机返回存活连接中的一个连接，并排除自己
      * @param toServerAddress
      * @param packet
      * @return io.netty.channel.pool.ChannelPool
+     * @Author fangzhenxun
+     * @Description 随机返回存活连接中的一个连接，并排除自己
      */
     @Override
-    public String route(Packet packet, String toServerAddress){
+    public String route(Packet packet, String toServerAddress) {
         log.info("当前使用随机路由策略 RandomRouterStrategy 来寻找可用的服务连接...");
         // 这里逻辑需要改动, 这里应不应该搞一个全局的不可用服务列表？其实没必要，如果搞得化还是需要解析消息，但可能及时发现不可用的服务了
         // 1,  再次解析与封装msg,在扩展字段中取出并添加这个消息目前路由到的不可用的服务，防止下次路由策略的再次路由到该服务上,并且返回该消息经历过部分服务连接中的不可用服务列表(已经路由过的包括toSocketAddress)
@@ -51,7 +50,7 @@ public class RandomRouterStrategy implements RouterStrategy{
         }
         innerExtraData.setRoutingTables(routingTables);
         // 已经路由不通的服务列表
-        Set<String> routedUnavailableSocketAddresses =  routingTables.stream().map(routingTable -> routingTable.getServerAddress()).collect(Collectors.toSet());
+        Set<String> routedUnavailableSocketAddresses = routingTables.stream().map(routingTable -> routingTable.getServerAddress()).collect(Collectors.toSet());
         // 将message 重新设置到packet
         message.setExtra(JSON.toJSONString(extraMessage));
         // 2，通过得到的列表解析路由策略进行服务路由（寻找一个可用的服务连接）, 从路由表中取出服务地址

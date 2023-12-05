@@ -13,6 +13,6 @@ public class MqttProtocolDispatcherHandler extends SimpleChannelInboundHandler<O
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
         Protocol.prototype(Protocol.MQTT.getProtocol(), Protocol.MQTT.getVersion()).doDispatcher(ctx, null);
-        ctx.fireChannelRead(((ByteBuf)msg).retain());
+        ctx.fireChannelRead(((ByteBuf) msg).retain());
     }
 }

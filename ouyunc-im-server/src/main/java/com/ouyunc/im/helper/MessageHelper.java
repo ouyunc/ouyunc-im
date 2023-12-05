@@ -94,12 +94,6 @@ public class MessageHelper {
         if (target == null) {
             throw new IMException("消息接收者不能为空！");
         }
-        // 清理集群消息投递过程中产生的路由记录
-        Message message = (Message) packet.getMessage();
-        String extra = message.getExtra();
-        if (extra != null) {
-            message.setExtra(JSON.parseObject(extra, ExtraMessage.class).getOutExtraData());
-        }
         Protocol.prototype(packet.getProtocol(), packet.getProtocolVersion()).doSendMessage(packet, MessageEnum.SYN_ACK.getValue() != packet.getMessageType() ? IdentityUtil.generalComboIdentity(target.getTargetIdentity(), target.getDeviceEnum()) : target.getTargetIdentity());
     }
 

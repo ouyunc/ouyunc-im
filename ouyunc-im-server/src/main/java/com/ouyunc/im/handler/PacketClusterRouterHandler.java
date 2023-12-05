@@ -21,6 +21,7 @@ public class PacketClusterRouterHandler extends SimpleChannelInboundHandler<Pack
 
     /**
      * 在集群环境下收发消息的客户端不在同一个服务中，需要进行路由处理则使用该方式进行路由处理
+     *
      * @param ctx
      * @param packet
      * @throws Exception
@@ -34,7 +35,7 @@ public class PacketClusterRouterHandler extends SimpleChannelInboundHandler<Pack
             InnerExtraData innerExtraData = extraMessage.getInnerExtraData();
             // 判断是否从其他服务路由过来的额消息
             if (innerExtraData != null && innerExtraData.isDelivery()) {
-                log.info("{} 接收到集群的消息: {}" ,IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(innerExtraData.getTarget().getTargetServerAddress()),JSON.toJSONString(innerExtraData));
+                log.info("{} 接收到集群的消息: {}", IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(innerExtraData.getTarget().getTargetServerAddress()), JSON.toJSONString(innerExtraData));
                 // @todo 这里直接写给客户端？还是往下传递再走一遍 （后面根据其他业务在优化调整）
                 MessageHelper.deliveryMessage(packet, innerExtraData.getTarget());
                 return;

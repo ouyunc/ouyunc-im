@@ -19,7 +19,7 @@ import org.slf4j.LoggerFactory;
  * @Author fangzhenxun
  * @Description: im内部客户端使用的心跳消息syn-ack处理器
  **/
-public class SynAckMessageProcessor extends AbstractMessageProcessor{
+public class SynAckMessageProcessor extends AbstractMessageProcessor {
     private static Logger log = LoggerFactory.getLogger(SynAckMessageProcessor.class);
 
     @Override
@@ -29,6 +29,7 @@ public class SynAckMessageProcessor extends AbstractMessageProcessor{
 
     /**
      * 内部客户端 syn-ack的逻辑处理, 注意：记住from 和 to 代表的什么含义以及所存储的值是什么
+     *
      * @param ctx
      * @param packet
      */

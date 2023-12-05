@@ -16,7 +16,7 @@ import java.util.Set;
  * @Author fangzhenxun
  * @Description: 使用建造者模式来进行构建配置对象实例
  **/
-public class IMServerConfig extends IMConfig{
+public class IMServerConfig extends IMConfig {
 
     /**
      * 默认server 端websocket path 请求路径
@@ -53,7 +53,7 @@ public class IMServerConfig extends IMConfig{
 
 
     /**
-     *  集群中的服务开启脑裂检测，默认开启
+     * 集群中的服务开启脑裂检测，默认开启
      */
     private boolean clusterSplitBrainDetectionEnable;
 
@@ -69,23 +69,23 @@ public class IMServerConfig extends IMConfig{
     private int clusterMessageRetry;
 
     /**
-     *  集群中，服务启动时，服务注册表的增量更新时间，单位秒，默认5秒
+     * 集群中，服务启动时，服务注册表的增量更新时间，单位秒，默认5秒
      */
     private int clusterInnerClientHeartbeatInterval;
 
 
     /**
-     *  集群中，内置客户端读超时，单位秒，默认0秒钟
+     * 集群中，内置客户端读超时，单位秒，默认0秒钟
      */
     private int clusterInnerClientIdleReadTimeOut;
 
     /**
-     *  集群中，内置客户端写超时，单位秒，默认0秒钟
+     * 集群中，内置客户端写超时，单位秒，默认0秒钟
      */
     private int clusterInnerClientIdleWriteTimeOut;
 
     /**
-     *  集群中，内置客户端读写超时，单位秒，默认5秒钟
+     * 集群中，内置客户端读写超时，单位秒，默认5秒钟
      */
     private int clusterInnerClientIdleReadWriteTimeOut;
 
@@ -308,11 +308,11 @@ public class IMServerConfig extends IMConfig{
     }
 
     /**
+     * @return com.ouyu.im.config.IMServerConfig.Builder
      * @Author fangzhenxun
      * @Description builder 入口
-     * @return com.ouyu.im.config.IMServerConfig.Builder
      */
-    public static Builder newBuilder(){
+    public static Builder newBuilder() {
         return new Builder();
     }
 
@@ -350,7 +350,7 @@ public class IMServerConfig extends IMConfig{
 
 
         /**
-         *  应用入口主类main.class
+         * 应用入口主类main.class
          */
         private Class<?> applicationMainClass;
 
@@ -369,7 +369,7 @@ public class IMServerConfig extends IMConfig{
         /**
          * 服务端是否启动集群，如果开启下面的ip + port 需要配置
          */
-        private  boolean clusterEnable;
+        private boolean clusterEnable;
 
         /**
          * # 集群中的服务ip + port (包括自己本身的ip + port), 例如：有10 台服务做集群，就把十台的服务端的IP以及端口号写上即可
@@ -378,7 +378,7 @@ public class IMServerConfig extends IMConfig{
 
 
         /**
-         *  集群中的服务开启脑裂检测，默认开启
+         * 集群中的服务开启脑裂检测，默认开启
          */
         private boolean clusterSplitBrainDetectionEnable;
 
@@ -394,24 +394,23 @@ public class IMServerConfig extends IMConfig{
         private int clusterMessageRetry;
 
         /**
-         *  集群中，服务启动时，服务注册表的增量更新时间，单位秒，默认5秒
+         * 集群中，服务启动时，服务注册表的增量更新时间，单位秒，默认5秒
          */
         private int clusterInnerClientHeartbeatInterval;
 
 
-
         /**
-         *  集群中，内置客户端读超时，单位秒，默认0秒钟
+         * 集群中，内置客户端读超时，单位秒，默认0秒钟
          */
         private int clusterInnerClientIdleReadTimeOut;
 
         /**
-         *  集群中，内置客户端写超时，单位秒，默认0秒钟
+         * 集群中，内置客户端写超时，单位秒，默认0秒钟
          */
         private int clusterInnerClientIdleWriteTimeOut;
 
         /**
-         *  集群中，内置客户端读写超时，单位秒，默认5秒钟
+         * 集群中，内置客户端读写超时，单位秒，默认5秒钟
          */
         private int clusterInnerClientIdleReadWriteTimeOut;
 
@@ -486,7 +485,7 @@ public class IMServerConfig extends IMConfig{
         /**
          * 单位秒 ， 外部客户端与服务端的心跳超时时间，如果服务端未收到客户端的心跳包在一定策略下会进行重试等待，最后如果如果没有连接上则将该客户端下线处理
          */
-        private  int heartBeatTimeout;
+        private int heartBeatTimeout;
 
 
         /**
@@ -495,18 +494,18 @@ public class IMServerConfig extends IMConfig{
         private int heartBeatWaitRetry;
 
         /**
-         *  全局是否开启SSL/TLS, 默认否
+         * 全局是否开启SSL/TLS, 默认否
          */
         private boolean sslEnable;
 
         /**
-         *  SSL/TLS 证书文件路径
+         * SSL/TLS 证书文件路径
          */
 
         private String sslCertificate;
 
         /**
-         *  SSL/TLS 私钥文件路劲
+         * SSL/TLS 私钥文件路劲
          */
         private String sslPrivateKey;
 
@@ -521,27 +520,27 @@ public class IMServerConfig extends IMConfig{
          * 已连接队列：已完成连接队列三次握手已完成，内核正等待进程执行accept的调用中的数量
          * 未连接队列：未完成连接队列一个SYN已经到达，但三次握手还没有完成的连接中的数量
          */
-        private  int bossOptionSoBacklog;
+        private int bossOptionSoBacklog;
 
         /**
          * # 地址复用，默认值False
          */
-        private  boolean bossOptionSoReuseaddr;
+        private boolean bossOptionSoReuseaddr;
 
         /**
          * 单位秒 ， 外部客户端与服务端的心跳超时时间，如果服务端未收到客户端的心跳包在一定策略下会进行重试等待，最后如果如果没有连接上则将该客户端下线处理
          */
-        private  boolean workerChildOptionSoKeepalive;
+        private boolean workerChildOptionSoKeepalive;
 
         /**
          * 单位秒 ， 外部客户端与服务端的心跳超时时间，如果服务端未收到客户端的心跳包在一定策略下会进行重试等待，最后如果如果没有连接上则将该客户端下线处理
          */
-        private  boolean workerChildOptionTcpNoDelay;
+        private boolean workerChildOptionTcpNoDelay;
 
         /**
          * # 地址复用，默认值False
          */
-        private  boolean workerChildOptionSoReuseaddr;
+        private boolean workerChildOptionSoReuseaddr;
 
 
         /**
@@ -771,10 +770,10 @@ public class IMServerConfig extends IMConfig{
         }
 
         /**
-         * @Author fangzhenxun
-         * @Description 通过builder来组装返回数据
          * @param
          * @return com.ouyu.im.config.IMServerConfig
+         * @Author fangzhenxun
+         * @Description 通过builder来组装返回数据
          */
         public IMServerConfig build() {
             IMServerConfig imServerConfig = new IMServerConfig();

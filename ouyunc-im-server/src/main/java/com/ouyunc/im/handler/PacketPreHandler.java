@@ -15,11 +15,11 @@ public class PacketPreHandler extends SimpleChannelInboundHandler<Packet> {
     private static Logger log = LoggerFactory.getLogger(PacketPreHandler.class);
 
     /**
-     * @Author fangzhenxun
-     * @Description 登录逻辑处理
      * @param ctx
      * @param packet
      * @return void
+     * @Author fangzhenxun
+     * @Description 登录逻辑处理
      */
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Packet packet) throws Exception {

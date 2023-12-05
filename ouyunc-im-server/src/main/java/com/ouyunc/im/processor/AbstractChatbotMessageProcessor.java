@@ -18,6 +18,7 @@ public abstract class AbstractChatbotMessageProcessor implements MessageProcesso
 
     /**
      * 是否匹配，如果匹配往下个托管处理器传递
+     *
      * @param packet
      * @return
      */
@@ -37,6 +38,7 @@ public abstract class AbstractChatbotMessageProcessor implements MessageProcesso
 
     /**
      * 执行顺序,越小优先级越高
+     *
      * @return
      */
     public abstract int order();
@@ -44,6 +46,7 @@ public abstract class AbstractChatbotMessageProcessor implements MessageProcesso
 
     /**
      * 子类去实现具体业务逻辑
+     *
      * @param packet
      */
     public abstract void doProcess0(Packet packet);

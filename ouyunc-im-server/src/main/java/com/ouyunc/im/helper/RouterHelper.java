@@ -8,7 +8,7 @@ import com.ouyunc.im.router.RouterStrategy;
 
 /**
  * @Author fangzhenxun
- * @Description: 集群中的消息路由助手,按照一定策略，随机/最优, 默认是随机
+ * @Description: 集群中的消息路由助手, 按照一定策略，随机/最优, 默认是随机
  **/
 public class RouterHelper {
 
@@ -33,10 +33,10 @@ public class RouterHelper {
 
 
     /**
-     * @Author fangzhenxun
-     * @Description 根据一定策略在 IMContext 中的存活连接中寻找channelPoll
      * @param
      * @return io.netty.channel.pool.ChannelPool
+     * @Author fangzhenxun
+     * @Description 根据一定策略在 IMContext 中的存活连接中寻找channelPoll
      */
     public static String route(Packet packet, String toServerAddress) {
         return routerStrategy.route(packet, toServerAddress);

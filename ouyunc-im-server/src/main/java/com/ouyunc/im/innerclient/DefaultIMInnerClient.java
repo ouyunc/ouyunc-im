@@ -20,13 +20,13 @@ import java.util.concurrent.TimeUnit;
 public class DefaultIMInnerClient extends AbstractIMInnerClient {
     private static Logger log = LoggerFactory.getLogger(DefaultIMInnerClient.class);
 
-    private static final ScheduledExecutorService EVENT_EXECUTORS  = TtlExecutors.getTtlScheduledExecutorService(Executors.newScheduledThreadPool(16,ThreadFactoryBuilder.create().setNameFormat("inner-client-pool-%d").get()));
+    private static final ScheduledExecutorService EVENT_EXECUTORS = TtlExecutors.getTtlScheduledExecutorService(Executors.newScheduledThreadPool(16, ThreadFactoryBuilder.create().setNameFormat("inner-client-pool-%d").get()));
 
     /**
-     * @Author fangzhenxun
-     * @Description 将内置客户端的一些基本信息进行初始化
      * @param serverConfig
      * @return void
+     * @Author fangzhenxun
+     * @Description 将内置客户端的一些基本信息进行初始化
      */
     @Override
     void initClient(IMServerConfig serverConfig) {
@@ -35,10 +35,10 @@ public class DefaultIMInnerClient extends AbstractIMInnerClient {
     }
 
     /**
-     * @Author fangzhenxun
-     * @Description 做一些初始化后的处理，内部客户端心跳
      * @param
      * @return void
+     * @Author fangzhenxun
+     * @Description 做一些初始化后的处理，内部客户端心跳
      */
     @Override
     void afterPropertiesSet() {
@@ -47,9 +47,9 @@ public class DefaultIMInnerClient extends AbstractIMInnerClient {
     }
 
     /**
+     * @return void
      * @Author fangzhenxun
      * @Description 停止内部客户端
-     * @return void
      */
     @Override
     public void stop() {

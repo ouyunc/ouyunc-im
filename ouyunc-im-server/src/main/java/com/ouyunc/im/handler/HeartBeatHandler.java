@@ -25,11 +25,11 @@ public class HeartBeatHandler extends SimpleChannelInboundHandler<Packet> {
 
 
     /**
-     * @Author fangzhenxun
-     * @Description 这里处理业务逻辑,如果开启外部客户端的心跳，则所有业务消息都会走这里，这里根据规则放行或拦截
      * @param ctx
      * @param packet
      * @return void
+     * @Author fangzhenxun
+     * @Description 这里处理业务逻辑, 如果开启外部客户端的心跳，则所有业务消息都会走这里，这里根据规则放行或拦截
      */
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Packet packet) throws Exception {
@@ -48,11 +48,11 @@ public class HeartBeatHandler extends SimpleChannelInboundHandler<Packet> {
     }
 
     /**
-     * @Author fangzhenxun
-     * @Description 读事件触发后会走这里（服务端读取客户端信息超时，客户端超过一段时间没有发送心跳消息会触发这里，当然也可以在客户端做心跳的检测梳理）
      * @param ctx
      * @param event
      * @return void
+     * @Author fangzhenxun
+     * @Description 读事件触发后会走这里（服务端读取客户端信息超时，客户端超过一段时间没有发送心跳消息会触发这里，当然也可以在客户端做心跳的检测梳理）
      */
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object event) throws Exception {
@@ -60,8 +60,8 @@ public class HeartBeatHandler extends SimpleChannelInboundHandler<Packet> {
         // 当该空闲事件触发时，则说明该通道channel没有任何的消息过来,则需要进行判断进行释放处理
         if (event instanceof IdleStateEvent) {
             // 判断该通道是否是存活
-            if(channel.isActive()) {
-                IdleStateEvent idleStateEvent = (IdleStateEvent)event;
+            if (channel.isActive()) {
+                IdleStateEvent idleStateEvent = (IdleStateEvent) event;
                 // 一定时间没有收到外部客户端发来的消息，出触发这里
                 if (IdleState.READER_IDLE.equals(idleStateEvent.state())) {
                     // 记录该channel 是第几次连续触发读超时，如果超过三次，则标注该客户端离线，并尝试通知客户端进行重试连接
@@ -71,10 +71,10 @@ public class HeartBeatHandler extends SimpleChannelInboundHandler<Packet> {
                     if (readTimeoutTimes == null) {
                         readTimeoutTimes = 1;
                     }
-                    log.info("外部客户端channel: {} 的 read_idle: {} 第 {} 触发了",channel.id().asShortText(), ((IdleStateEvent)event).state(), readTimeoutTimes);
+                    log.info("外部客户端channel: {} 的 read_idle: {} 第 {} 触发了", channel.id().asShortText(), ((IdleStateEvent) event).state(), readTimeoutTimes);
 
                     // 如果连续超过三次
-                    if (readTimeoutTimes > IMServerContext.SERVER_CONFIG.getHeartBeatWaitRetry()-1) {
+                    if (readTimeoutTimes > IMServerContext.SERVER_CONFIG.getHeartBeatWaitRetry() - 1) {
                         // 多次没有收到心跳断开连接
                         AttributeKey<LoginUserInfo> channelTagLoginKey = AttributeKey.valueOf(IMConstant.CHANNEL_TAG_LOGIN);
                         final LoginUserInfo loginUserInfo = channel.attr(channelTagLoginKey).get();
@@ -89,7 +89,7 @@ public class HeartBeatHandler extends SimpleChannelInboundHandler<Packet> {
                     // 设置连续超时次数
                     channel.attr(channelTagReadTimeoutKey).set(++readTimeoutTimes);
                 }
-            }else {
+            } else {
                 log.error("当前channel->id: {} inActive", channel.id().asShortText());
             }
         } else {
