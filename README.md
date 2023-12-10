@@ -101,7 +101,8 @@ https://m.ouyunc.com
 #### 相关demo源码地址
 | 项目名称            | 项目地址                                      | 项目说明       |
 |-----------------|-------------------------------------------|------------|
-| ouyunc-app      | https://ext.dcloud.net.cn/plugin?id=15255 | uniapp前端地址 |
+| ouyunc-app      | https://ext.dcloud.net.cn/plugin?id=15255 | v4.x uniapp前端地址 |
+| ouyunc-cloud-platform      | https://gitee.com/etxync/ouyunc-cloud-platform | v4.x 后端地址 |
 
 
 
@@ -130,19 +131,11 @@ https://gitee.com/etxync/ouyunc-im/wikis/OUYUNC-IM%20v3.x/%E5%AE%A2%E6%88%B7%E7%
    如果感觉对你有帮助请点个star支持一下，感谢！
 
  
-#### 下个版本
-1. 支持客服相关业务（已完成）
-2. 支持弹幕相关业务（已完成）
-3. 支持语音等（已完成）
-4. 支持语音聊天、视频聊天（已完成）
-5. 在线简单视频会议（已完成）
-6. 支持白板功能（已完成）
-7. 集成springboot 以ouyunc-im-spring-boot-starter
-8. 打成依赖包放到中央仓库，作为依赖组件来引用
-9. 重构qos消息可靠性到达（已完成）
-10. 优化数据库模块，支持分表分库
-11. 添加es来处理搜索消息
-12. 优化其他代码
+#### 下个版本 v5.0.0
+1. 优化消息存储
+2. 添加多租户支持
+3. 添加mqtt协议
+4. 优化其他代码
 
 
 #### 版本升级
