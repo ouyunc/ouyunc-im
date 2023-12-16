@@ -19,8 +19,8 @@ import java.util.*;
  * @Author fangzhenxun
  * @Description: 回溯路由算法
  **/
-public class BacktrackRouterStrategy implements RouterStrategy {
-    private static Logger log = LoggerFactory.getLogger(BacktrackRouterStrategy.class);
+public class BacktrackMessageRouterStrategy extends AbstractMessageRouterStrategy {
+    private static Logger log = LoggerFactory.getLogger(BacktrackMessageRouterStrategy.class);
 
     /**
      * @param toServerAddress

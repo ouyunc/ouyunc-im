@@ -11,6 +11,8 @@ import com.ouyunc.im.cache.ICache;
 import com.ouyunc.im.cache.l1.distributed.redis.RedisDistributedL1Cache;
 import com.ouyunc.im.cache.l1.local.caffeine.CaffeineLocalL1Cache;
 import com.ouyunc.im.config.IMServerConfig;
+import com.ouyunc.im.event.IMEvent;
+import com.ouyunc.im.listener.IMEventMulticaster;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.pool.ChannelPool;
@@ -26,6 +28,11 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @Description: IM上下文
  **/
 public class IMServerContext extends IMContext {
+
+    /**
+     * im 事件多播器
+     * */
+    public static IMEventMulticaster IM_EVENT_MULTICASTER;
 
     /**
      * ttl Thread local
@@ -142,4 +149,10 @@ public class IMServerContext extends IMContext {
     public static RedisDistributedL1Cache<String, MissingPacket> MISSING_MESSAGES_CACHE = new RedisDistributedL1Cache<>();
 
 
+    /**
+     * 发布IM事件
+     */
+    public static void publishEvent(IMEvent event) {
+        IM_EVENT_MULTICASTER.multicastEvent(event);
+    }
 }

@@ -20,8 +20,8 @@ import java.util.stream.Collectors;
  * @Author fangzhenxun
  * @Description: 随机路由策略
  **/
-public class RandomRouterStrategy implements RouterStrategy {
-    private static Logger log = LoggerFactory.getLogger(RandomRouterStrategy.class);
+public class RandomMessageRouterStrategy extends AbstractMessageRouterStrategy {
+    private static Logger log = LoggerFactory.getLogger(RandomMessageRouterStrategy.class);
 
 
     /**

@@ -25,14 +25,11 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.pool.ChannelPool;
-import io.netty.handler.codec.http.HttpContentCompressor;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrameAggregator;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import io.netty.handler.codec.mqtt.MqttDecoder;
 import io.netty.handler.codec.mqtt.MqttEncoder;
-import io.netty.handler.codec.mqtt.MqttMessage;
-import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
@@ -111,7 +108,7 @@ public enum Protocol {
                 if (packet.getMessageType() == MessageEnum.IM_PRIVATE_CHAT.getValue() || packet.getMessageType() == MessageEnum.IM_GROUP_CHAT.getValue()) {
                     // 对于多端的情况
                     long now = SystemClock.now();
-                    IMServerContext.MISSING_MESSAGES_CACHE.addZset(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.IM_MESSAGE + CacheConstant.FAIL + CacheConstant.FROM + message.getFrom() + CacheConstant.COLON + CacheConstant.TO + to, new MissingPacket(packet, IMServerContext.SERVER_CONFIG.getLocalServerAddress(), now), now);
+                    IMServerContext.MISSING_MESSAGES_CACHE.addZset(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.IM_MESSAGE + CacheConstant.FAIL + CacheConstant.FROM + message.getFrom() + CacheConstant.COLON + CacheConstant.TO + to, new MissingPacket(packet, IMServerContext.SERVER_CONFIG.getLocalServerAddress(), now), now);
                 }
             }
         }
@@ -211,7 +208,7 @@ public enum Protocol {
                     // 前置处理
                     .addLast(IMConstant.PRE_HANDLER, new PacketPreHandler())
                     // 业务处理
-                    .addLast(IMConstant.MQTT_SERVER, new MqttServerHandler())
+                    .addLast(IMConstant.MQTT_SERVER, new MqttBrokerServerHandler())
                     // 后置处理
                     .addLast(IMConstant.POST_HANDLER, new PacketPostHandler())
                     .remove(IMConstant.HTTP_DISPATCHER_HANDLER);
@@ -256,7 +253,7 @@ public enum Protocol {
                     // 前置处理
                     .addLast(IMConstant.PRE_HANDLER, new PacketPreHandler())
                     // 业务处理
-                    .addLast(IMConstant.MQTT_SERVER, new MqttServerHandler())
+                    .addLast(IMConstant.MQTT_SERVER, new MqttBrokerServerHandler())
                     // 后置处理
                     .addLast(IMConstant.POST_HANDLER, new PacketPostHandler())
                     .remove(IMConstant.HTTP_DISPATCHER_HANDLER);

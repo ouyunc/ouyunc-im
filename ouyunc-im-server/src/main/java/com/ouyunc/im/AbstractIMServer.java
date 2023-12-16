@@ -1,13 +1,24 @@
 package com.ouyunc.im;
 
+import com.alibaba.ttl.threadpool.TtlExecutors;
 import com.ouyunc.im.channel.DefaultServerChannelInitializer;
 import com.ouyunc.im.channel.DefaultSocketChannelInitializer;
 import com.ouyunc.im.channel.ServerChannelInitializer;
 import com.ouyunc.im.channel.SocketChannelInitializer;
 import com.ouyunc.im.config.IMServerConfig;
+import com.ouyunc.im.context.IMProcessContext;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.innerclient.DefaultIMInnerClient;
 import com.ouyunc.im.innerclient.IMInnerClient;
+import com.ouyunc.im.listener.AbstractImEventMulticaster;
+import com.ouyunc.im.listener.DefaultImEventMulticaster;
+import com.ouyunc.im.listener.IMEventMulticaster;
+import com.ouyunc.im.listener.IMListener;
+import com.ouyunc.im.processor.AbstractChatbotMessageProcessor;
+import com.ouyunc.im.processor.AbstractMessageProcessor;
+import com.ouyunc.im.processor.MessageProcessor;
+import com.ouyunc.im.processor.content.AbstractMessageContentProcessor;
+import com.ouyunc.im.utils.ClassScanner;
 import com.ouyunc.im.utils.MapUtil;
 import com.ouyunc.im.utils.SystemClock;
 import io.netty.bootstrap.ServerBootstrap;
@@ -17,12 +28,20 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.netty.util.internal.logging.Log4J2LoggerFactory;
+import jodd.util.concurrent.ThreadFactoryBuilder;
+import org.objenesis.Objenesis;
+import org.objenesis.ObjenesisStd;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Map;
+import java.io.IOException;
+import java.lang.reflect.Modifier;
+import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 /**
  * @Author fangzhenxun
@@ -30,6 +49,8 @@ import java.util.Map;
  **/
 public abstract class AbstractIMServer implements IMServer {
     private static Logger log = LoggerFactory.getLogger(AbstractIMServer.class);
+
+    private static Objenesis objenesis = new ObjenesisStd(true);
 
     /**
      * 服务启动对象
@@ -92,16 +113,24 @@ public abstract class AbstractIMServer implements IMServer {
         registerShutdownHook();
         // 设置实现类到本地线程中
         IMServerContext.TTL_THREAD_LOCAL.set(this);
+        // 加载配置
+        IMServerContext.SERVER_CONFIG = loadProperties(args);
+        // 加载事件监听器
+        loadEventListener();
+        // 加载消息处理器
+        loadMessageProcessor();
         // 初始化IM服务
-        initServer(IMServerContext.SERVER_CONFIG = loadProperties(args));
+        initServer();
     }
+
 
     /**
      * @return void
      * @Author fangzhenxun
      * @Description 初始化im server服务&内置客户端（集群使用）
      */
-    private void initServer(IMServerConfig imServerConfig) {
+    private void initServer() {
+        IMServerConfig imServerConfig = IMServerContext.SERVER_CONFIG;
         final long startTimeStamp = SystemClock.now();
         // 集成log4j2
         InternalLoggerFactory.setDefaultFactory(Log4J2LoggerFactory.INSTANCE);
@@ -169,15 +198,24 @@ public abstract class AbstractIMServer implements IMServer {
     }
 
 
+
     /**
-     * @return void
-     * @Author fangzhenxun
-     * @Description 主动注销服务
+     * 查找入口类
+     *
+     * @return
      */
-    @Override
-    public void stop() {
-        log.error("IM server 开始注销程序...");
-        System.exit(0);
+    protected static Class<?> deduceMainClass() {
+        try {
+            StackTraceElement[] stackTrace = new RuntimeException().getStackTrace();
+            for (StackTraceElement stackTraceElement : stackTrace) {
+                if ("main".equals(stackTraceElement.getMethodName())) {
+                    return Class.forName(stackTraceElement.getClassName());
+                }
+            }
+        } catch (ClassNotFoundException ex) {
+            // Swallow and continue
+        }
+        return null;
     }
 
 
@@ -188,6 +226,109 @@ public abstract class AbstractIMServer implements IMServer {
      * @Description IM服务配置类
      */
     abstract IMServerConfig loadProperties(String... args);
+
+
+
+    /**
+     * @Author fangzhenxun
+     * @Description 加载事件监听器
+     * @param
+     * @return void
+     */
+    protected void loadEventListener() {
+        Set<Class<?>> classes = new HashSet<>();
+        try {
+            classes = ClassScanner.scanPackageBySuper(IMServerContext.SERVER_CONFIG.getApplicationMainClass().getPackage().getName(), IMListener.class);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        for (Class<?> cls : classes) {
+            if (IMListener.class.isAssignableFrom(cls)) {
+                // 排除自身以及抽象类
+                if (!IMListener.class.equals(cls) && !Modifier.isAbstract(cls.getModifiers())) {
+                    IMListener imListener = (IMListener) objenesis.newInstance(cls);
+                    // 排除不是直接实现该接口的
+                    DefaultImEventMulticaster imEventMulticaster = new DefaultImEventMulticaster();
+                    // 这里配置线程池来处理，如果同步发送事件可以注释下面一行
+                    imEventMulticaster.setTaskExecutor(TtlExecutors.getTtlExecutorService(new DefaultEventExecutorGroup(16, ThreadFactoryBuilder.create().setNameFormat("event-listener-%d").get())));
+                    imEventMulticaster.addImListener(imListener);
+                    IMServerContext.IM_EVENT_MULTICASTER = imEventMulticaster;
+                }
+            }
+        }
+
+    }
+
+    /**
+     * @Author fangzhenxun
+     * @Description 加载消息处理器
+     * @param
+     * @return void
+     */
+    protected void loadMessageProcessor() {
+        Set<Class<?>> classes = new HashSet<>();
+        try {
+            // @todo 这里扫描包的返回可以放到配置文件中指定，后面进行优化处理
+            classes = ClassScanner.scanPackageBySuper(IMServerContext.SERVER_CONFIG.getApplicationMainClass().getPackage().getName(), MessageProcessor.class);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        for (Class<?> cls : classes) {
+            if (MessageProcessor.class.isAssignableFrom(cls)) {
+                // 排除自身以及抽象类
+                if (!MessageProcessor.class.equals(cls) && !Modifier.isAbstract(cls.getModifiers())) {
+                    Object messageProcessor = objenesis.newInstance(cls);
+                    if (AbstractMessageProcessor.class.isAssignableFrom(cls)) {
+                        IMProcessContext.MESSAGE_PROCESSOR.put(((AbstractMessageProcessor) messageProcessor).messageType().getValue(), ((AbstractMessageProcessor) messageProcessor));
+                    }
+                    if (AbstractMessageContentProcessor.class.isAssignableFrom(cls)) {
+                        IMProcessContext.MESSAGE_CONTENT_PROCESSOR.put(((AbstractMessageContentProcessor) messageProcessor).messageContentType().type(), ((AbstractMessageContentProcessor) messageProcessor));
+                    }
+                    if (AbstractChatbotMessageProcessor.class.isAssignableFrom(cls)) {
+                        // 排除自身以及抽象类
+                        IMProcessContext.CHAT_BOT_PROCESSOR.add((AbstractChatbotMessageProcessor) messageProcessor);
+                    }
+                }
+            }
+        }
+        // spi
+        ServiceLoader<MessageProcessor> messageProcessors = ServiceLoader.load(MessageProcessor.class);
+        Iterator<MessageProcessor> iterator = messageProcessors.iterator();
+        while (iterator.hasNext()) {
+            MessageProcessor messageProcessor = iterator.next();
+            Class<? extends MessageProcessor> cls = messageProcessor.getClass();
+            if (AbstractMessageProcessor.class.isAssignableFrom(cls)) {
+                IMProcessContext.MESSAGE_PROCESSOR.put(((AbstractMessageProcessor) messageProcessor).messageType().getValue(), ((AbstractMessageProcessor) messageProcessor));
+            }
+            if (AbstractMessageContentProcessor.class.isAssignableFrom(cls)) {
+                IMProcessContext.MESSAGE_CONTENT_PROCESSOR.put(((AbstractMessageContentProcessor) messageProcessor).messageContentType().type(), ((AbstractMessageContentProcessor) messageProcessor));
+            }
+            if (AbstractChatbotMessageProcessor.class.isAssignableFrom(cls)) {
+                // 排除自身以及抽象类
+                IMProcessContext.CHAT_BOT_PROCESSOR.add((AbstractChatbotMessageProcessor) messageProcessor);
+            }
+        }
+        // 排序并整合
+        IMProcessContext.CHAT_BOT_PROCESSOR = IMProcessContext.CHAT_BOT_PROCESSOR.stream().sorted(Comparator.comparingInt(AbstractChatbotMessageProcessor::order)).collect(Collectors.toList());
+        for (int i = 0; i < IMProcessContext.CHAT_BOT_PROCESSOR.size(); i++) {
+            if (i == IMProcessContext.CHAT_BOT_PROCESSOR.size() - 1) {
+                IMProcessContext.CHAT_BOT_PROCESSOR.get(i).setNextHandler(null);
+            } else {
+                IMProcessContext.CHAT_BOT_PROCESSOR.get(i).setNextHandler(IMProcessContext.CHAT_BOT_PROCESSOR.get(i + 1));
+            }
+        }
+    }
+
+    /**
+     * @return void
+     * @Author fangzhenxun
+     * @Description 主动注销服务
+     */
+    @Override
+    public void stop() {
+        log.error("IM server 开始注销程序...");
+        System.exit(0);
+    }
 
 
     /**

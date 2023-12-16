@@ -5,6 +5,7 @@ import com.ouyunc.im.constant.CacheConstant;
 import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.dispatcher.ProtocolDispatcher;
+import com.ouyunc.im.event.IMOnlineEvent;
 import com.ouyunc.im.handler.IMLoggingHandler;
 import com.ouyunc.im.utils.IdentityUtil;
 import com.ouyunc.im.utils.SslUtil;
@@ -18,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLEngine;
+import java.time.Clock;
 
 /**
  * @Author fangzhenxun
@@ -73,13 +75,15 @@ public class DefaultSocketChannelInitializer extends SocketChannelInitializer {
                         final LoginUserInfo loginUserInfo = socketChannel.attr(channelTagLoginKey).get();
                         if (loginUserInfo != null) {
                             // 从redis再次获取登录信息
-                            LoginUserInfo cacheLoginUserInfo = IMServerContext.LOGIN_USER_INFO_CACHE.getHash(CacheConstant.OUYUNC + CacheConstant.APP_KEY + loginUserInfo.getAppKey() + CacheConstant.LOGIN + CacheConstant.USER + loginUserInfo.getIdentity(), loginUserInfo.getDeviceEnum().getName());
+                            LoginUserInfo cacheLoginUserInfo = IMServerContext.LOGIN_USER_INFO_CACHE.getHash(CacheConstant.OUYUNC + CacheConstant.APP_KEY + loginUserInfo.getAppKey() + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + loginUserInfo.getIdentity(), loginUserInfo.getDeviceEnum().getName());
                             if (cacheLoginUserInfo != null && loginUserInfo.getLoginServerAddress().equals(cacheLoginUserInfo.getLoginServerAddress())) {
                                 String comboIdentity = IdentityUtil.generalComboIdentity(loginUserInfo.getIdentity(), loginUserInfo.getDeviceEnum().getName());
                                 IMServerContext.USER_REGISTER_TABLE.delete(comboIdentity);
-                                IMServerContext.LOGIN_USER_INFO_CACHE.deleteHash(CacheConstant.OUYUNC + CacheConstant.APP_KEY + loginUserInfo.getAppKey() + CacheConstant.LOGIN + CacheConstant.USER + loginUserInfo.getIdentity(), loginUserInfo.getDeviceEnum().getName());
-                                IMServerContext.LOGIN_IM_APP_CONNECTIONS_CACHE.deleteHash(CacheConstant.OUYUNC + CacheConstant.APP_KEY + loginUserInfo.getAppKey() + CacheConstant.CONNECTIONS, comboIdentity);
+                                IMServerContext.LOGIN_USER_INFO_CACHE.deleteHash(CacheConstant.OUYUNC + CacheConstant.APP_KEY + loginUserInfo.getAppKey() + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + loginUserInfo.getIdentity(), loginUserInfo.getDeviceEnum().getName());
+                                IMServerContext.LOGIN_IM_APP_CONNECTIONS_CACHE.deleteHash(CacheConstant.OUYUNC + CacheConstant.APP_KEY + loginUserInfo.getAppKey() + CacheConstant.COLON + CacheConstant.CONNECTIONS, comboIdentity);
                             }
+                            // 发送客户端离线事件
+                            IMServerContext.publishEvent(new IMOnlineEvent(cacheLoginUserInfo, Clock.systemUTC()));
                         }
                     }
                 }

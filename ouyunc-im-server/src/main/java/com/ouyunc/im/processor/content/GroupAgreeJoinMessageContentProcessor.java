@@ -59,7 +59,7 @@ public class GroupAgreeJoinMessageContentProcessor extends AbstractMessageConten
             identity = invitedUserIdList.get(0);
         }
         //获取锁
-        RLock lock = RedissonFactory.INSTANCE.redissonClient().getLock(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.LOCK + CacheConstant.GROUP + CacheConstant.REFUSE_AGREE + IdentityUtil.sortComboIdentity(identity, groupId));
+        RLock lock = RedissonFactory.INSTANCE.redissonClient().getLock(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.LOCK + CacheConstant.GROUP + CacheConstant.REFUSE_AGREE + IdentityUtil.sortComboIdentity(identity, groupId));
         long timestamp;
         try {
             lock.lock();

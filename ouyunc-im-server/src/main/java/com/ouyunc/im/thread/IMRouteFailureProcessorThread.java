@@ -68,7 +68,7 @@ public class IMRouteFailureProcessorThread implements Runnable {
         if (packet.getMessageType() == MessageEnum.IM_PRIVATE_CHAT.getValue() || packet.getMessageType() == MessageEnum.IM_GROUP_CHAT.getValue()) {
             // 对于多端的情况，如果已经有
             long now = SystemClock.now();
-            IMServerContext.MISSING_MESSAGES_CACHE.addZset(CacheConstant.OUYUNC + CacheConstant.APP_KEY + innerExtraData.getAppKey() + CacheConstant.IM_MESSAGE + CacheConstant.FAIL + CacheConstant.FROM + message.getFrom() + CacheConstant.COLON + CacheConstant.TO + IdentityUtil.generalComboIdentity(message.getTo(), innerExtraData.getTarget().getDeviceEnum().getName()), new MissingPacket(packet, IMServerContext.SERVER_CONFIG.getLocalServerAddress(), now), now);
+            IMServerContext.MISSING_MESSAGES_CACHE.addZset(CacheConstant.OUYUNC + CacheConstant.APP_KEY + innerExtraData.getAppKey() + CacheConstant.COLON + CacheConstant.IM_MESSAGE + CacheConstant.FAIL + CacheConstant.FROM + message.getFrom() + CacheConstant.COLON + CacheConstant.TO + IdentityUtil.generalComboIdentity(message.getTo(), innerExtraData.getTarget().getDeviceEnum().getName()), new MissingPacket(packet, IMServerContext.SERVER_CONFIG.getLocalServerAddress(), now), now);
         }
         log.error("已经重试 {} 次,也没解决问题,该消息packetId : {}将被丢弃！", IMServerContext.SERVER_CONFIG.getClusterMessageRetry(), packet.getPacketId());
     }

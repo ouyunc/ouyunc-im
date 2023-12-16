@@ -266,7 +266,19 @@ public class DbSqlConstant {
                 "ouyunc_im_time_line\n" +
                 "where id =  ? and deleted = 0","查询IM timeline 消息信箱的信息"),
 
-
+        SELECT_MQTT_TOPIC("SELECT\n" +
+                "ouyunc_mqtt_topic.id,\n" +
+                "ouyunc_mqtt_topic.app_key as appKey,\n" +
+                "ouyunc_mqtt_topic.topic,\n" +
+                "ouyunc_mqtt_topic.description,\n" +
+                "ouyunc_mqtt_topic.create_time as createTime,\n" +
+                "ouyunc_mqtt_topic.deleted\n" +
+                "FROM\n" +
+                "ouyunc_mqtt_topic\n" +
+                "WHERE\n" +
+                "ouyunc_mqtt_topic.app_key = ? AND\n" +
+                "ouyunc_mqtt_topic.topic = ? AND\n" +
+                "ouyunc_mqtt_topic.deleted = 0", "根据mqtt 主题以及appKey 查询主题信息"),
 
 
         DELETE_GROUP("DELETE  FROM  ouyunc_im_group  WHERE ID = ? ","删除群"),
@@ -275,6 +287,12 @@ public class DbSqlConstant {
 
 
         UPDATE_TIME_LINE("UPDATE ouyunc_im_time_line SET withdraw = 1,  update_time = ? WHERE id = ? and deleted = 0" ,"撤销信箱箱的消息根据消息id"),
+
+
+        INSERT_MQTT_TOPIC("INSERT INTO ouyunc_mqtt_topic(ID, APP_KEY, TOPIC, DESCRIPTION, CREATE_TIME, DELETED) VALUES (?, ?, ?, ?, ?, 0)", "插入mqtt topic 主题信息"),
+
+        INSERT_MQTT_TOPIC_SUBSCRIBE("INSERT INTO ouyunc_mqtt_topic_subscribe(ID, APP_KEY, TOPIC_ID, CLIENT_ID, QOS, NO_LOCAL, RETAIN_AS_PUBLISHED, RETAIN_HANDLING, CREATE_TIME, UPDATE_TIME, DELETED) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)","插入mqtt topic 的订阅信息"),
+
 
         INSERT_FRIEND("INSERT INTO ouyunc_im_friend (ID, USER_ID, FRIEND_USER_ID, FRIEND_NICK_NAME, IS_SHIELD, APP_KEY, CREATE_TIME, UPDATE_TIME) VALUES (?, ?, ?, ?, ?, ?,?, ?)","添加好友关系"),
 
@@ -285,7 +303,6 @@ public class DbSqlConstant {
         INSERT_TIME_LINE("INSERT INTO ouyunc_im_time_line (ID, PROTOCOL, PROTOCOL_VERSION, DEVICE_TYPE, NETWORK_TYPE, ENCRYPT_TYPE, SERIALIZE_ALGORITHM, IP, `FROM`, `TO`, TYPE, CONTENT_TYPE, CONTENT,EXTRA, SEND_TIME, WITHDRAW, APP_KEY, CREATE_TIME, UPDATE_TIME, DELETED) VALUES (?, ?, ? , ? ,? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , 0)", "批量插入信箱箱消息（插入两条一条是自己的一条是别人的）"),
 
         INSERT_MESSAGE("INSERT INTO ouyunc_im_message (ID, PROTOCOL, PROTOCOL_VERSION, DEVICE_TYPE, NETWORK_TYPE, ENCRYPT_TYPE, SERIALIZE_ALGORITHM, IP, `FROM`, `TO`, TYPE, CONTENT_TYPE, CONTENT,EXTRA, SEND_TIME, APP_KEY, CREATE_TIME, UPDATE_TIME, DELETED) VALUES (?,?, ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , 0)", "插入全局消息记录");
-
 
 
         /**

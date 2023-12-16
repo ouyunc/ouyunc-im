@@ -96,24 +96,6 @@ public class StandardIMServer extends AbstractIMServer {
     }
 
 
-    /**
-     * 查找入口类
-     *
-     * @return
-     */
-    private static Class<?> deduceMainClass() {
-        try {
-            StackTraceElement[] stackTrace = new RuntimeException().getStackTrace();
-            for (StackTraceElement stackTraceElement : stackTrace) {
-                if ("main".equals(stackTraceElement.getMethodName())) {
-                    return Class.forName(stackTraceElement.getClassName());
-                }
-            }
-        } catch (ClassNotFoundException ex) {
-            // Swallow and continue
-        }
-        return null;
-    }
 
     /**
      * 组合属性

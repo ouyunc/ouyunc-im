@@ -14,8 +14,8 @@ import org.slf4j.LoggerFactory;
  * @Description: mqtt协议服务核心处理
  **/
 @ChannelHandler.Sharable
-public class MqttServerHandler extends SimpleChannelInboundHandler<Packet> {
-    private static Logger log = LoggerFactory.getLogger(MqttServerHandler.class);
+public class MqttBrokerServerHandler extends SimpleChannelInboundHandler<Packet> {
+    private static Logger log = LoggerFactory.getLogger(MqttBrokerServerHandler.class);
 
 
     /**

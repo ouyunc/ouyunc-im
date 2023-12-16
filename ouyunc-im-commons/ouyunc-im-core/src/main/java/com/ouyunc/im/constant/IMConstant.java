@@ -525,4 +525,8 @@ public class IMConstant {
      */
     public static final int NOT_CLEAN_SESSION = 0;
 
+    /**
+     * 主题过滤器无效
+     */
+    public static final int MQTT_REASON_CODE_INVALID_TOPIC = 143;
 }

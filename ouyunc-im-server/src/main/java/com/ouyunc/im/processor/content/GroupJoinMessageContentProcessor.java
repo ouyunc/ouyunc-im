@@ -50,7 +50,7 @@ public class GroupJoinMessageContentProcessor extends AbstractMessageContentProc
         String identity = groupRequestContent.getIdentity();
         String groupId = groupRequestContent.getGroupId();
         // 处理群组请求
-        RLock lock = RedissonFactory.INSTANCE.redissonClient().getLock(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.LOCK + CacheConstant.GROUP + CacheConstant.REFUSE_AGREE + IdentityUtil.sortComboIdentity(groupRequestContent.getIdentity(), groupRequestContent.getGroupId()));
+        RLock lock = RedissonFactory.INSTANCE.redissonClient().getLock(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.LOCK + CacheConstant.GROUP + CacheConstant.REFUSE_AGREE + IdentityUtil.sortComboIdentity(groupRequestContent.getIdentity(), groupRequestContent.getGroupId()));
         long timestamp;
         try {
             lock.lock();

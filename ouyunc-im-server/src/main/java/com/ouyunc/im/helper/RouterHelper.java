@@ -2,8 +2,9 @@ package com.ouyunc.im.helper;
 
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.packet.Packet;
-import com.ouyunc.im.router.BacktrackRouterStrategy;
-import com.ouyunc.im.router.RandomRouterStrategy;
+import com.ouyunc.im.router.AbstractMessageRouterStrategy;
+import com.ouyunc.im.router.BacktrackMessageRouterStrategy;
+import com.ouyunc.im.router.RandomMessageRouterStrategy;
 import com.ouyunc.im.router.RouterStrategy;
 
 /**
@@ -15,7 +16,7 @@ public class RouterHelper {
     /**
      * 路由策略
      */
-    private static RouterStrategy routerStrategy;
+    private static AbstractMessageRouterStrategy routerStrategy;
 
     /**
      * 静态代码块初始化具体策略实现
@@ -23,10 +24,10 @@ public class RouterHelper {
     static {
         switch (IMServerContext.SERVER_CONFIG.getClusterServerRouteStrategy()) {
             case RANDOM:
-                routerStrategy = new RandomRouterStrategy();
+                routerStrategy = new RandomMessageRouterStrategy();
                 break;
             case BACKTRACK:
-                routerStrategy = new BacktrackRouterStrategy();
+                routerStrategy = new BacktrackMessageRouterStrategy();
                 break;
         }
     }

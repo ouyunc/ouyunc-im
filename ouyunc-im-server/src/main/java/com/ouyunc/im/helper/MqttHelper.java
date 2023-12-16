@@ -7,6 +7,7 @@ import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.constant.enums.*;
 import com.ouyunc.im.context.IMServerContext;
+import com.ouyunc.im.domain.MqttTopic;
 import com.ouyunc.im.encrypt.Encrypt;
 import com.ouyunc.im.exception.IMException;
 import com.ouyunc.im.packet.Packet;
@@ -440,4 +441,26 @@ public class MqttHelper {
         }
     }
 
+
+
+    /**
+     * @param
+     * @return io.netty.channel.pool.ChannelPool
+     * @Author fangzhenxun
+     * @Description 匹配topic ,根据不同的策略来实现，如果针对大数据量可以使用二级缓存等优化方式
+     */
+    public static List<MqttTopic> routeTopic(String topic) {
+        return null;
+    }
+
+
+    /**
+     * @Author fangzhenxun
+     * @Description 合法返回true， 否则返回false
+     * @param mqttTopicSubscriptions
+     * @return boolean
+     */
+    public static boolean validateTopic(List<MqttTopicSubscription> mqttTopicSubscriptions) {
+        return true;
+    }
 }

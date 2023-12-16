@@ -58,9 +58,13 @@ public class CacheConstant {
     // im app detail 信息数据
     public static final String APP = "app:";
     // im app 连接
-    public static final String CONNECTIONS = ":connections";
+    public static final String CONNECTIONS = "connections";
     // 好友请求
     public static final String FRIEND_REQUEST = "friend-request:";
     // 群组请求
     public static final String GROUP_REQUEST = "group-request:";
+    // mqtt
+    public static final String MQTT = "mqtt:";
+    // topic
+    public static final String TOPIC = "topic";
 }

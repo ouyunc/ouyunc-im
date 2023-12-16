@@ -13,6 +13,7 @@ import com.ouyunc.im.constant.enums.NetworkEnum;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.domain.ImApp;
 import com.ouyunc.im.encrypt.Encrypt;
+import com.ouyunc.im.event.IMOnlineEvent;
 import com.ouyunc.im.handler.HeartBeatHandler;
 import com.ouyunc.im.helper.DbHelper;
 import com.ouyunc.im.helper.MessageHelper;
@@ -36,6 +37,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.time.Clock;
 
 /**
  * @Author fangzhenxun
@@ -73,7 +76,7 @@ public class LoginMessageProcessor extends AbstractMessageProcessor {
         // 是否开启
         if (IMServerContext.SERVER_CONFIG.isLoginMaxConnectionValidateEnable() && IMConstant.MINUS_ONE.equals(app.getImMaxConnections())) {
             // 做权限校验，比如，同一个appKey 只允许在线10个连接
-            Integer connections = IMServerContext.LOGIN_IM_APP_CONNECTIONS_CACHE.getHashAll(CacheConstant.OUYUNC + CacheConstant.APP_KEY + loginContent.getAppKey() + CacheConstant.CONNECTIONS).size();
+            Integer connections = IMServerContext.LOGIN_IM_APP_CONNECTIONS_CACHE.getHashAll(CacheConstant.OUYUNC + CacheConstant.APP_KEY + loginContent.getAppKey() + CacheConstant.COLON + CacheConstant.CONNECTIONS).size();
             // 计数从0开始,不能超过最大连接数
             if (++connections >= app.getImMaxConnections()) {
                 return false;
@@ -135,13 +138,13 @@ public class LoginMessageProcessor extends AbstractMessageProcessor {
             final String comboIdentity = IdentityUtil.generalComboIdentity(loginContent.getIdentity(), packet.getDeviceType());
             //如果之前已经登录（重复登录请求），这里判断是否已经登录过,同一个账号在同一个设备不能同时登录
             //1,从分布式缓存取出该登录用户
-            LoginUserInfo loginUserInfo = IMServerContext.LOGIN_USER_INFO_CACHE.getHash(CacheConstant.OUYUNC + CacheConstant.APP_KEY + loginContent.getAppKey() + CacheConstant.LOGIN + CacheConstant.USER + loginContent.getIdentity(), DeviceEnum.getDeviceNameByValue(packet.getDeviceType()));
+            LoginUserInfo loginUserInfo = IMServerContext.LOGIN_USER_INFO_CACHE.getHash(CacheConstant.OUYUNC + CacheConstant.APP_KEY + loginContent.getAppKey() + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + loginContent.getIdentity(), DeviceEnum.getDeviceNameByValue(packet.getDeviceType()));
             //2,从本地用户注册表中取出该用户的channel
             final ChannelHandlerContext bindCtx = IMServerContext.USER_REGISTER_TABLE.get(comboIdentity);
             // 如果是都不为空是重复登录请求(1，不同的设备远程登录，2，同一设备重复发送登录请求)，向原有的连接发送通知，有其他客户端登录，并将其连接下线
             // 下面如论是否开启支持清除公共注册表的相关信息
             if (loginUserInfo != null) {
-                IMServerContext.LOGIN_USER_INFO_CACHE.deleteHash(CacheConstant.OUYUNC + CacheConstant.APP_KEY + loginContent.getAppKey() + CacheConstant.LOGIN + CacheConstant.USER + loginContent.getIdentity(), DeviceEnum.getDeviceNameByValue(packet.getDeviceType()));
+                IMServerContext.LOGIN_USER_INFO_CACHE.deleteHash(CacheConstant.OUYUNC + CacheConstant.APP_KEY + loginContent.getAppKey() + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + loginContent.getIdentity(), DeviceEnum.getDeviceNameByValue(packet.getDeviceType()));
                 // 给原有连接发送通知消息，并将其下线，添加新的连接登录
                 // 注意： 这里的原来的连接使用的序列化方式，应该是和新连接上的序列化方式一致，这里当成一致，当然不一致也可以做，后面遇到再改造
                 Packet notifyPacket = new Packet(packet.getProtocol(), packet.getProtocolVersion(), SnowflakeUtil.nextId(), DeviceEnum.PC_LINUX.getValue(), NetworkEnum.OTHER.getValue(), IMServerContext.SERVER_CONFIG.getIp(), MessageEnum.IM_SERVER_NOTIFY.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), packet.getSerializeAlgorithm(), new Message(IMServerContext.SERVER_CONFIG.getIp(), loginContent.getIdentity(), MessageContentEnum.SERVER_NOTIFY_CONTENT.type(), JSON.toJSONString(new ServerNotifyContent(String.format(IMConstant.REMOTE_LOGIN_NOTIFICATIONS, packet.getIp()))), SystemClock.now()));
@@ -152,7 +155,9 @@ public class LoginMessageProcessor extends AbstractMessageProcessor {
                 bindCtx.close();
             }
             // 绑定信息
-            UserHelper.bind(loginContent.getAppKey(), loginContent.getIdentity(), packet.getDeviceType(), ctx);
+            loginUserInfo = UserHelper.bind(loginContent.getAppKey(), loginContent.getIdentity(), packet.getDeviceType(), ctx);
+            // 发送客户端登录事件
+            IMServerContext.publishEvent(new IMOnlineEvent(loginUserInfo, Clock.systemUTC()));
         } finally {
             lock.unlock();
         }
@@ -180,6 +185,7 @@ public class LoginMessageProcessor extends AbstractMessageProcessor {
                     // 处理心跳的以及相关逻辑都放在这里处理
                     .addAfter(IMConstant.HEART_BEAT_IDLE, IMConstant.HEART_BEAT_HANDLER, new HeartBeatHandler());
         }
+
     }
 
 
