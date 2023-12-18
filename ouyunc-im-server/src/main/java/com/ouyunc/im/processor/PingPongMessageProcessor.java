@@ -7,7 +7,6 @@ import com.ouyunc.im.constant.enums.MessageEnum;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.helper.MessageHelper;
 import com.ouyunc.im.helper.MqttHelper;
-import com.ouyunc.im.helper.UserHelper;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.packet.message.Target;
@@ -64,6 +63,6 @@ public class PingPongMessageProcessor extends AbstractMessageProcessor {
         packet.setPacketId(SnowflakeUtil.nextId());
         packet.setIp(IMServerContext.SERVER_CONFIG.getIp());
         // 写回的是websocket还是其他类型的数据
-        MessageHelper.sendMessage(packet, Target.newBuilder().targetIdentity(from).deviceEnum(DeviceEnum.getDeviceEnumByValue(packet.getDeviceType())).build());
+        MessageHelper.asyncSendMessage(packet, Target.newBuilder().targetIdentity(from).deviceEnum(DeviceEnum.getDeviceEnumByValue(packet.getDeviceType())).build());
     }
 }

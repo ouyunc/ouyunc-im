@@ -54,7 +54,7 @@ public class SynAckMessageProcessor extends AbstractMessageProcessor {
             packet.setIp(IMServerContext.SERVER_CONFIG.getIp());
             // 这里需要使用客户端连接池来操作，因为可能ctx已经关闭了,使用异步传递
             Target target = Target.newBuilder().targetIdentity(remoteServerAddress).build();
-            MessageHelper.sendMessageSync(packet, target);
+            MessageHelper.syncSendMessage(packet, target);
             // 下面是解决集群中原有服务是如何发现新加入集群的服务的
             // 判断发到syn的服务是否在 全局服务注册表中，如果不在判断该服务的合法性，如果合法，尝试发送给对方syn进行探测，如果成功则将新加入集群中的服务添加到激活的路由表中
             if (IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.get(remoteServerAddress) == null && IMServerContext.CLUSTER_GLOBAL_SERVER_REGISTRY_TABLE.get(remoteServerAddress) == null) {
@@ -64,7 +64,7 @@ public class SynAckMessageProcessor extends AbstractMessageProcessor {
                 synAckMessage.setContentType(MessageContentEnum.SYN_CONTENT.type());
                 packet.setPacketId(SnowflakeUtil.nextId());
                 // 内部客户端连接池异步传递消息 syn ,尝试所有的路径去保持连通
-                MessageHelper.sendMessage(packet, target);
+                MessageHelper.asyncSendMessage(packet, target);
             }
         }
         if (MessageContentEnum.ACK_CONTENT.type() == contentType) {

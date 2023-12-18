@@ -59,7 +59,7 @@ public class IMRouteFailureProcessorThread implements Runnable {
         if (currentRetry < IMServerContext.SERVER_CONFIG.getClusterMessageRetry()) {
             // 重试次数+1，清空消息中的曾经路由过的服务，封装消息，找到目标主机
             // retry 去处理
-            MessageHelper.deliveryMessage(packet, target);
+            MessageHelper.asyncDeliveryMessage(packet, target);
             return;
         }
         // 如果重试之后还是出现服务不通，则进行服务的下线处理(这一步在内置客户端心跳保活时处理，这里不做服务下线的处理)，也就是将目标主机从本服务的注册表中删除（如果存在），其他服务上的注册表不做同步更新

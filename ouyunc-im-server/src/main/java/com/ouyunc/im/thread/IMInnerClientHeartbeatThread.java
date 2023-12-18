@@ -68,7 +68,7 @@ public class IMInnerClientHeartbeatThread implements Runnable {
             // jdk        500b         346b
             Packet packet = new Packet(Protocol.OUYUNC.getProtocol(), Protocol.OUYUNC.getVersion(), SnowflakeUtil.nextId(), DeviceEnum.OTHER.getValue(), NetworkEnum.OTHER.getValue(), IMServerContext.SERVER_CONFIG.getIp(), MessageEnum.SYN_ACK.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(), message);
             // 内部客户端连接池异步传递消息syn ,尝试所有的路径去保持连通
-            MessageHelper.sendMessage(packet, Target.newBuilder().targetIdentity(targetServerAddress).build());
+            MessageHelper.asyncSendMessage(packet, Target.newBuilder().targetIdentity(targetServerAddress).build());
             // 先获取给目标服务toInetSocketAddress 发送syn,没有回复ack的次数，默认从0开始
             AtomicInteger missAckTimes = IMServerContext.CLUSTER_INNER_CLIENT_MISS_ACK_TIMES_CACHE.get(targetServerAddress);
             // 判断次数是否到达规定的次数，默认3次（也就是说给目标服务器连续发送3次syn,没有一次得到响应ack）则进行服务下线处理，从活着的服务注册表移除该服务

@@ -4,12 +4,9 @@ import com.alibaba.fastjson2.JSON;
 import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.constant.enums.DeviceEnum;
 import com.ouyunc.im.constant.enums.MessageEnum;
-import com.ouyunc.im.context.IMServerContext;
-import com.ouyunc.im.domain.MqttTopic;
 import com.ouyunc.im.helper.DbHelper;
 import com.ouyunc.im.helper.MessageHelper;
 import com.ouyunc.im.helper.MqttHelper;
-import com.ouyunc.im.helper.UserHelper;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.ExtraMessage;
 import com.ouyunc.im.packet.message.InnerExtraData;
@@ -23,9 +20,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * @Author fangzhenxun
@@ -67,7 +61,7 @@ public class MqttSubscribeMessageProcessor extends AbstractMessageProcessor {
                     new MqttFixedHeader(MqttMessageType.SUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
                     MqttMessageIdVariableHeader.from(variableHeader.messageId()),
                     new MqttSubAckPayload(IMConstant.MQTT_REASON_CODE_INVALID_TOPIC))));
-            MessageHelper.sendMessage(packet.clone(), Target.newBuilder().targetIdentity(from).deviceEnum(DeviceEnum.getDeviceEnumByValue(packet.getDeviceType())).build());
+            MessageHelper.asyncSendMessage(packet.clone(), Target.newBuilder().targetIdentity(from).deviceEnum(DeviceEnum.getDeviceEnumByValue(packet.getDeviceType())).build());
         }
         // 查找topic是否存在，如果不存在则持久化并加入新的订阅客户端，如果存在则追加订阅信息
         List<Integer> qosReasonCode = new ArrayList<>();
@@ -80,7 +74,7 @@ public class MqttSubscribeMessageProcessor extends AbstractMessageProcessor {
                 new MqttFixedHeader(MqttMessageType.SUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
                 MqttMessageIdVariableHeader.from(variableHeader.messageId()),
                 new MqttSubAckPayload(qosReasonCode))));
-        MessageHelper.sendMessage(packet.clone(), Target.newBuilder().targetIdentity(from).deviceEnum(DeviceEnum.getDeviceEnumByValue(packet.getDeviceType())).build());
+        MessageHelper.asyncSendMessage(packet.clone(), Target.newBuilder().targetIdentity(from).deviceEnum(DeviceEnum.getDeviceEnumByValue(packet.getDeviceType())).build());
         // 发布该topic 下的retain 消息
 
     }

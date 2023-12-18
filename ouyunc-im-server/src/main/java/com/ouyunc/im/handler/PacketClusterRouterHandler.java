@@ -37,7 +37,7 @@ public class PacketClusterRouterHandler extends SimpleChannelInboundHandler<Pack
             if (innerExtraData != null && innerExtraData.isDelivery()) {
                 log.info("{} 接收到集群的消息: {}", IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(innerExtraData.getTarget().getTargetServerAddress()), JSON.toJSONString(innerExtraData));
                 // @todo 这里直接写给客户端？还是往下传递再走一遍 （后面根据其他业务在优化调整）
-                MessageHelper.deliveryMessage(packet, innerExtraData.getTarget());
+                MessageHelper.asyncDeliveryMessage(packet, innerExtraData.getTarget());
                 return;
             }
         }

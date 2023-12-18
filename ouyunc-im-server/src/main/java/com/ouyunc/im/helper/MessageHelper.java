@@ -3,11 +3,10 @@ package com.ouyunc.im.helper;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.ttl.threadpool.TtlExecutors;
 import com.ouyunc.im.base.LoginUserInfo;
+import com.ouyunc.im.base.SendCallback;
+import com.ouyunc.im.base.SendResult;
 import com.ouyunc.im.constant.IMConstant;
-import com.ouyunc.im.constant.enums.DeviceEnum;
-import com.ouyunc.im.constant.enums.MessageContentEnum;
-import com.ouyunc.im.constant.enums.MessageEnum;
-import com.ouyunc.im.constant.enums.NetworkEnum;
+import com.ouyunc.im.constant.enums.*;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.exception.IMException;
 import com.ouyunc.im.packet.Packet;
@@ -52,7 +51,7 @@ public class MessageHelper {
     public static void doQos(String from, Packet packet) {
         log.info("服务端正在回复from: {} ackPacket: {}", from, packet);
         // 异步直接发送
-        MessageHelper.sendMessage(new Packet(packet.getProtocol(), packet.getProtocolVersion(), packet.getPacketId(), DeviceEnum.PC_OTHER.getValue(), NetworkEnum.OTHER.getValue(), IMServerContext.SERVER_CONFIG.getIp(), MessageEnum.IM_QOS.getValue(), packet.getEncryptType(), packet.getSerializeAlgorithm(), new Message(IMServerContext.SERVER_CONFIG.getLocalServerAddress(), from, MessageContentEnum.SERVER_QOS_ACK_CONTENT.type(), String.valueOf(packet.getPacketId()), SystemClock.now())), Target.newBuilder().targetIdentity(from).deviceEnum(DeviceEnum.getDeviceEnumByValue(packet.getDeviceType())).build());
+        MessageHelper.asyncSendMessage(new Packet(packet.getProtocol(), packet.getProtocolVersion(), packet.getPacketId(), DeviceEnum.PC_OTHER.getValue(), NetworkEnum.OTHER.getValue(), IMServerContext.SERVER_CONFIG.getIp(), MessageEnum.IM_QOS.getValue(), packet.getEncryptType(), packet.getSerializeAlgorithm(), new Message(IMServerContext.SERVER_CONFIG.getLocalServerAddress(), from, MessageContentEnum.SERVER_QOS_ACK_CONTENT.type(), String.valueOf(packet.getPacketId()), SystemClock.now())), Target.newBuilder().targetIdentity(from).deviceEnum(DeviceEnum.getDeviceEnumByValue(packet.getDeviceType())).build());
     }
 
 
@@ -65,7 +64,7 @@ public class MessageHelper {
         // 转发给某个客户端的各个在线设备端
         for (LoginUserInfo loginUserInfo : loginUserInfos) {
             // 走消息传递,设置登录设备类型
-            MessageHelper.deliveryMessage(packet.clone(), Target.newBuilder().targetIdentity(loginUserInfo.getIdentity()).targetServerAddress(loginUserInfo.getLoginServerAddress()).deviceEnum(loginUserInfo.getDeviceEnum()).build());
+            MessageHelper.asyncDeliveryMessage(packet.clone(), Target.newBuilder().targetIdentity(loginUserInfo.getIdentity()).targetServerAddress(loginUserInfo.getLoginServerAddress()).deviceEnum(loginUserInfo.getDeviceEnum()).build());
         }
     }
 
@@ -77,9 +76,25 @@ public class MessageHelper {
      * @Author fangzhenxun
      * @Description 异步发送消息
      */
-    public static void sendMessage(Packet packet, Target target) {
+    public static void asyncSendMessage(Packet packet, Target target) {
         // 异步提交
-        EVENT_EXECUTORS.execute(() -> sendMessageSync(packet, target));
+        EVENT_EXECUTORS.execute(() -> syncSendMessage(packet, target, sendResult->{
+            if (log.isDebugEnabled()) {
+                log.debug("发给： {} 的消息： {} 发送结果: {}", target, packet, sendResult.getSendStatus());
+            }
+        }));
+    }
+
+    /**
+     * @param packet
+     * @param target 组合后的接收者,唯一用户表示，手机号，身份证号码，token，邮箱
+     * @return void
+     * @Author fangzhenxun
+     * @Description 异步发送消息
+     */
+    public static void asyncSendMessage(Packet packet, Target target, SendCallback sendCallback) {
+        // 异步提交
+        EVENT_EXECUTORS.execute(() -> syncSendMessage(packet, target, sendCallback));
     }
 
     /**
@@ -89,12 +104,32 @@ public class MessageHelper {
      * @Author fangzhenxun
      * @Description 同步发送消息
      */
-    public static void sendMessageSync(Packet packet, Target target) {
+    public static void syncSendMessage(Packet packet, Target target, SendCallback sendCallback) {
         log.info("开始给 {} 发送消息packet: {} ", target, packet);
         if (target == null) {
             throw new IMException("消息接收者不能为空！");
         }
-        Protocol.prototype(packet.getProtocol(), packet.getProtocolVersion()).doSendMessage(packet, MessageEnum.SYN_ACK.getValue() != packet.getMessageType() ? IdentityUtil.generalComboIdentity(target.getTargetIdentity(), target.getDeviceEnum()) : target.getTargetIdentity());
+        Protocol.prototype(packet.getProtocol(), packet.getProtocolVersion()).doSendMessage(packet, MessageEnum.SYN_ACK.getValue() != packet.getMessageType() ? IdentityUtil.generalComboIdentity(target.getTargetIdentity(), target.getDeviceEnum()) : target.getTargetIdentity(), sendCallback);
+    }
+
+
+    /**
+     * @param packet
+     * @param target 接收者
+     * @return void
+     * @Author fangzhenxun
+     * @Description 同步发送消息
+     */
+    public static void syncSendMessage(Packet packet, Target target) {
+        log.info("开始给 {} 发送消息packet: {} ", target, packet);
+        if (target == null) {
+            throw new IMException("消息接收者不能为空！");
+        }
+        Protocol.prototype(packet.getProtocol(), packet.getProtocolVersion()).doSendMessage(packet, MessageEnum.SYN_ACK.getValue() != packet.getMessageType() ? IdentityUtil.generalComboIdentity(target.getTargetIdentity(), target.getDeviceEnum()) : target.getTargetIdentity(), sendResult ->{
+            if (log.isDebugEnabled()) {
+                log.debug("发给： {} 的消息： {} 发送结果: {}", target, packet, sendResult.getSendStatus());
+            }
+        });
     }
 
     /**
@@ -104,8 +139,39 @@ public class MessageHelper {
      * @Author fangzhenxun
      * @Description 异步  传递消息，根据服务端的ip包装成InetSocketAddress
      */
-    public static void deliveryMessage(Packet packet, Target target) {
-        EVENT_EXECUTORS.execute(() -> deliveryMessageSync(packet, target));
+    public static void asyncDeliveryMessage(Packet packet, Target target) {
+        EVENT_EXECUTORS.execute(() -> syncDeliveryMessage(packet, target, sendResult -> {
+            if (log.isDebugEnabled()) {
+                log.debug("发给： {} 的消息： {} 发送结果: {}", target, packet, sendResult.getSendStatus());
+            }
+        }));
+    }
+
+    /**
+     * @param target 目标服务
+     * @param packet
+     * @return void
+     * @Author fangzhenxun
+     * @Description 异步  传递消息，根据服务端的ip包装成InetSocketAddress
+     */
+    public static void asyncDeliveryMessage(Packet packet, Target target, SendCallback sendCallback) {
+        EVENT_EXECUTORS.execute(() -> syncDeliveryMessage(packet, target, sendCallback));
+    }
+
+
+    /**
+     * @param target 目标服务
+     * @param packet 消息包
+     * @return void
+     * @Author fangzhenxun
+     * @Description 同步传递消息，根据服务端的ip包装成InetSocketAddress
+     */
+    public static void syncDeliveryMessage(Packet packet, Target target) {
+        syncDeliveryMessage(packet, target, sendResult -> {
+            if (log.isDebugEnabled()) {
+                log.debug("发给： {} 的消息： {} 发送结果: {}", target, packet, sendResult.getSendStatus());
+            }
+        });
     }
 
     /**
@@ -115,10 +181,10 @@ public class MessageHelper {
      * @Author fangzhenxun
      * @Description 同步传递消息，根据服务端的ip包装成InetSocketAddress
      */
-    public static void deliveryMessageSync(Packet packet, Target target) {
+    public static void syncDeliveryMessage(Packet packet, Target target, SendCallback sendCallback) {
         // 如果目标主机是本机，则交给sendMessage() 处理
         if (!IMServerContext.SERVER_CONFIG.isClusterEnable() || IMServerContext.SERVER_CONFIG.getLocalServerAddress().equals(target.getTargetServerAddress())) {
-            sendMessage(packet, target);
+            asyncSendMessage(packet, target, sendCallback);
             return;
         }
         // 成功才将上个路由地址改成本地，异常会在异常处理中获取上个路由服务地址及设置
@@ -158,7 +224,7 @@ public class MessageHelper {
             // 2,消息接收端是后来加入的集群中的服务，在旧的集群中可能由于部分服务之间网络不通导致没有该服务记录保存; 此时的处理方式是路由到其他可用服务上处理
             // 3,两个服务不直接连通，须通过中间服务做中转
             log.warn("获取不到消息需要到达的服务: {}", toServerAddress);
-            exceptionHandle(packet, target);
+            exceptionHandle(packet, target, sendCallback);
             return;
         }
         // 异步获取 channel
@@ -186,6 +252,7 @@ public class MessageHelper {
                         channel.writeAndFlush(packet);
                         // 用完后进行释放掉
                         channelPool.release(channel);
+                        sendCallback.onCallback(SendResult.builder().sendStatus(SendStatus.SEND_OK).packet(packet).build());
                     } else {
                         // 获取失败
                         Throwable cause = future.cause();
@@ -193,13 +260,16 @@ public class MessageHelper {
                         // 重新封装路由表信息
                         // do something
                         // 重新选择一个新的集群中的服务去路由，直到找到通的或没有任何一个连通的结束
-                        exceptionHandle(packet, target);
+                        exceptionHandle(packet, target, sendCallback);
                     }
 
                 }
             }
         });
     }
+
+
+
 
 
     /**
@@ -209,15 +279,16 @@ public class MessageHelper {
      * @Author fangzhenxun
      * @Description 异常数据的处理
      */
-    private static void exceptionHandle(Packet packet, Target target) {
+    private static void exceptionHandle(Packet packet, Target target, SendCallback sendCallback) {
         // 通过路由助手，找到一个可用的服务连接，如果找不到最后会这里处理，重试，下线，等操作
         String nextAvailableSocketAddress = RouterHelper.route(packet, target.getTargetServerAddress());
         if (nextAvailableSocketAddress == null) {
+            sendCallback.onCallback(SendResult.builder().sendStatus(SendStatus.SEND_FAIL).packet(packet).exception(new IMException("消息id: " + packet.getPacketId() + " 尝试路由多次，都没有找到可用的服务！")).build());
             return;
         }
         // 设置可用的下个目标服务
         target.setTargetServerAddress(nextAvailableSocketAddress);
-        deliveryMessage(packet, target);
+        asyncDeliveryMessage(packet, target, sendCallback);
     }
 
 }

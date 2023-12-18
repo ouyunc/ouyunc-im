@@ -3,10 +3,13 @@ package com.ouyunc.im.protocol;
 
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.im.base.MissingPacket;
+import com.ouyunc.im.base.SendCallback;
+import com.ouyunc.im.base.SendResult;
 import com.ouyunc.im.codec.MqttWebSocketCodec;
 import com.ouyunc.im.constant.CacheConstant;
 import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.constant.enums.MessageEnum;
+import com.ouyunc.im.constant.enums.SendStatus;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.exception.handler.GlobalExceptionHandler;
 import com.ouyunc.im.handler.*;
@@ -87,7 +90,7 @@ public enum Protocol {
          * @return void
          */
         @Override
-        public void doSendMessage(Packet packet, String to) {
+        public void doSendMessage(Packet packet, String to, SendCallback sendCallback) {
             // 清理集群消息投递过程中产生的路由记录
             Message message = (Message) packet.getMessage();
             // 这里应该不会为null
@@ -102,6 +105,7 @@ public enum Protocol {
                 ReaderWriterUtil.writePacketInByteBuf(packet, byteBuf);
                 //从用户注册表中，获取用户对应的channel然后将消息写出去
                 IMServerContext.USER_REGISTER_TABLE.get(to).writeAndFlush(new BinaryWebSocketFrame(byteBuf));
+                sendCallback.onCallback(SendResult.builder().sendStatus(SendStatus.SEND_OK).packet(packet).build());
             } catch (Exception e) {
                 log.error("消息packet: {} 发送给用户: {} 失败!", packet, to);
                 // 消息丢失
@@ -110,6 +114,7 @@ public enum Protocol {
                     long now = SystemClock.now();
                     IMServerContext.MISSING_MESSAGES_CACHE.addZset(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.IM_MESSAGE + CacheConstant.FAIL + CacheConstant.FROM + message.getFrom() + CacheConstant.COLON + CacheConstant.TO + to, new MissingPacket(packet, IMServerContext.SERVER_CONFIG.getLocalServerAddress(), now), now);
                 }
+                sendCallback.onCallback(SendResult.builder().sendStatus(SendStatus.SEND_FAIL).packet(packet).exception(e).build());
             }
         }
     },
@@ -123,7 +128,7 @@ public enum Protocol {
         }
 
         @Override
-        public void doSendMessage(Packet packet, String to) {
+        public void doSendMessage(Packet packet, String to, SendCallback sendCallback) {
             // do something
         }
     },
@@ -154,7 +159,7 @@ public enum Protocol {
          * @param to
          */
         @Override
-        public void doSendMessage(Packet packet, String to) {
+        public void doSendMessage(Packet packet, String to, SendCallback sendCallback) {
             Message message = (Message) packet.getMessage();
             // 这里应该不会为null
             ExtraMessage extraMessage = JSON.parseObject(message.getExtra(), ExtraMessage.class);
@@ -186,10 +191,12 @@ public enum Protocol {
                             channel.writeAndFlush(packet);
                             // 用完后进行释放掉
                             finalChannelPool.release(channel);
+                            sendCallback.onCallback(SendResult.builder().sendStatus(SendStatus.SEND_OK).packet(packet).build());
                         } else {
                             // 获取失败
-                            Throwable cause = future.cause();
-                            log.error("平台 {} 下的客户端获取channel异常！原因: {}", appKey, cause.getMessage());
+                            Throwable e = future.cause();
+                            log.error("平台 {} 下的客户端获取channel异常！原因: {}", appKey, e.getMessage());
+                            sendCallback.onCallback(SendResult.builder().sendStatus(SendStatus.SEND_FAIL).packet(packet).exception(e).build());
                         }
 
                     }
@@ -218,7 +225,7 @@ public enum Protocol {
         }
 
         @Override
-        public void doSendMessage(Packet packet, String to) {
+        public void doSendMessage(Packet packet, String to, SendCallback sendCallback) {
             if (log.isDebugEnabled()) {
                 log.debug("mqtt 正在发送消息...");
             }
@@ -231,9 +238,11 @@ public enum Protocol {
             try {
                 //从用户注册表中，获取用户对应的channel然后将消息写出去
                 IMServerContext.USER_REGISTER_TABLE.get(to).writeAndFlush(MqttHelper.unwrapPacket2Mqtt(packet));
+                sendCallback.onCallback(SendResult.builder().sendStatus(SendStatus.SEND_OK).packet(packet).build());
             } catch (Exception e) {
                 log.error("消息packet: {} 发送给客户端: {} 失败!,原因：{}", packet, to, e.getMessage());
                 // 消息丢失 @todo 后面处理
+                sendCallback.onCallback(SendResult.builder().sendStatus(SendStatus.SEND_FAIL).packet(packet).exception(e).build());
             }
         }
     },
@@ -264,7 +273,7 @@ public enum Protocol {
         }
 
         @Override
-        public void doSendMessage(Packet packet, String to) {
+        public void doSendMessage(Packet packet, String to, SendCallback sendCallback) {
             if (log.isDebugEnabled()) {
                 log.debug("mqtt-ws 正在发送消息...");
             }
@@ -277,9 +286,11 @@ public enum Protocol {
             try {
                 //从用户注册表中，获取用户对应的channel然后将消息写出去
                 IMServerContext.USER_REGISTER_TABLE.get(to).writeAndFlush(MqttHelper.unwrapPacket2Mqtt(packet));
+                sendCallback.onCallback(SendResult.builder().sendStatus(SendStatus.SEND_OK).packet(packet).build());
             } catch (Exception e) {
                 log.error("消息packet: {} 发送给客户端: {} 失败!,原因：{}", packet, to, e.getMessage());
                 // 消息丢失 @todo 后面处理
+                sendCallback.onCallback(SendResult.builder().sendStatus(SendStatus.SEND_FAIL).packet(packet).exception(e).build());
             }
         }
     };
@@ -329,8 +340,23 @@ public enum Protocol {
         this.description = description;
     }
 
+
+    /**
+     * @Author fangzhenxun
+     * @Description 协议分发器
+     * @param ctx
+     * @param queryParamsMap 请求参数
+     * @return void
+     */
     public abstract void doDispatcher(ChannelHandlerContext ctx, Map<String, Object> queryParamsMap);
 
-
-    public abstract void doSendMessage(Packet packet, String to);
+    /**
+     * @Author fangzhenxun
+     * @Description
+     * @param packet 消息包
+     * @param to 接受者
+     * @param sendCallback 这个发送的回调，针对成功来说，只是理论上的成功，因为writeAndFlush 本身就是异步的，加上网络的不稳定性，很难严格意义上的判断发送成功
+     * @return void
+     */
+    public abstract void doSendMessage(Packet packet, String to, SendCallback sendCallback);
 }
