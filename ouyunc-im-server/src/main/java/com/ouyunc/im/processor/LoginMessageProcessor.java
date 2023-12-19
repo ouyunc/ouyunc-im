@@ -69,7 +69,7 @@ public class LoginMessageProcessor extends AbstractMessageProcessor {
         if (app == null) {
             return false;
         }
-        String rawStr = loginContent.getAppKey() + IMConstant.AND + loginContent.getIdentity() + IMConstant.AND + loginContent.getCreateTime() + IMConstant.UNDERLINE + app.getAppSecret();
+        String rawStr = loginContent.getAppKey() + IMConstant.AND + loginContent.getIdentity() + IMConstant.AND + loginContent.getCreateTime() + IMConstant.UNDER_LINE + app.getAppSecret();
         if (!Encrypt.AsymmetricEncrypt.prototype(loginContent.getSignatureAlgorithm()).validate(rawStr, loginContent.getSignature())) {
             return false;
         }

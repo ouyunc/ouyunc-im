@@ -10,19 +10,15 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/base/SendCallback.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/base/SendResult.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/enums/SendStatus.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/PacketClusterRouterHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/PacketClusterRouterHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/MessageHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/MessageHelper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/IMConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/IMConstant.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/IdentityUtil.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/IdentityUtil.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/DbHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/DbHelper.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/LoginMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/LoginMessageProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/MqttSubscribeMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/MqttSubscribeMessageProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/PingPongMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/PingPongMessageProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/SynAckMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/SynAckMessageProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupAgreeJoinMessageContentProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupAgreeJoinMessageContentProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupJoinMessageContentProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupJoinMessageContentProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupRefuseJoinMessageContentProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupRefuseJoinMessageContentProcessor.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/protocol/Protocol.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/protocol/Protocol.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/thread/IMInnerClientHeartbeatThread.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/thread/IMInnerClientHeartbeatThread.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/thread/IMRouteFailureProcessorThread.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/thread/IMRouteFailureProcessorThread.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -544,14 +540,8 @@
       <workItem from="1701825266761" duration="24946000" />
       <workItem from="1702179288542" duration="1356000" />
       <workItem from="1702717940641" duration="17790000" />
-      <workItem from="1702907361624" duration="3643000" />
-    </task>
-    <task id="LOCAL-00185" summary="v3.1.1-beta 群请求处理">
-      <created>1685525389592</created>
-      <option name="number" value="00185" />
-      <option name="presentableId" value="LOCAL-00185" />
-      <option name="project" value="LOCAL" />
-      <updated>1685525389592</updated>
+      <workItem from="1702907361624" duration="3782000" />
+      <workItem from="1702994418295" duration="1011000" />
     </task>
     <task id="LOCAL-00186" summary="v3.1.1-beta 群请求处理">
       <created>1685956733337</created>
@@ -889,7 +879,14 @@
       <option name="project" value="LOCAL" />
       <updated>1701788718877</updated>
     </task>
-    <option name="localTasksCounter" value="234" />
+    <task id="LOCAL-00234" summary="v5.0.0&#10;1. 添加消息发送回调&#10;2. 优化代码">
+      <created>1702911096729</created>
+      <option name="number" value="00234" />
+      <option name="presentableId" value="LOCAL-00234" />
+      <option name="project" value="LOCAL" />
+      <updated>1702911096730</updated>
+    </task>
+    <option name="localTasksCounter" value="235" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -956,7 +953,6 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
-    <MESSAGE value="v3.1.1-beta 删除好友" />
     <MESSAGE value="v3.1.1-beta 邀请好友" />
     <MESSAGE value="v3.1.1-beta 群邀请好友" />
     <MESSAGE value="v3.1.1-beta 群请求处理" />
@@ -981,7 +977,8 @@
     <MESSAGE value="v4.2.0&#10;1. 添加消息撤回处理器&#10;2. 增添监控预处理&#10;3. 优化代码" />
     <MESSAGE value="v5.0.0&#10;1. 全新设计消息存储结构，更加减少存储，提高效率&#10;2. 理论上消息可靠传输100%&#10;3. 优化代码" />
     <MESSAGE value="v5.0.0&#10;1. 添加mqtt相关协议处理代码&#10;2. 优化代码" />
-    <option name="LAST_COMMIT_MESSAGE" value="v5.0.0&#10;1. 添加mqtt相关协议处理代码&#10;2. 优化代码" />
+    <MESSAGE value="v5.0.0&#10;1. 添加消息发送回调&#10;2. 优化代码" />
+    <option name="LAST_COMMIT_MESSAGE" value="v5.0.0&#10;1. 添加消息发送回调&#10;2. 优化代码" />
   </component>
   <component name="WindowStateProjectService">
     <state x="552" y="172" key="#com.aspose.examples.AsposeExampleDialog" timestamp="1701825860249">
@@ -1008,10 +1005,10 @@
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state x="297" y="365" width="962" height="453" key="#xdebugger.evaluate/0.0.1536.824@0.0.1536.824" timestamp="1702749442610" />
-    <state x="295" y="0" key="CommitChangelistDialog2" timestamp="1702751409963">
+    <state x="295" y="0" key="CommitChangelistDialog2" timestamp="1702911095817">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state x="295" y="0" key="CommitChangelistDialog2/0.0.1536.824@0.0.1536.824" timestamp="1702751409963" />
+    <state x="295" y="0" key="CommitChangelistDialog2/0.0.1536.824@0.0.1536.824" timestamp="1702911095817" />
     <state width="1214" height="636" key="DebuggerActiveHint" timestamp="1702749525192">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
@@ -1024,38 +1021,38 @@
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state x="549" y="167" key="FileChooserDialogImpl/0.0.1536.824@0.0.1536.824" timestamp="1702907723411" />
-    <state width="1493" height="310" key="GridCell.Tab.0.bottom" timestamp="1702911064917">
+    <state width="1493" height="511" key="GridCell.Tab.0.bottom" timestamp="1702995472020">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="310" key="GridCell.Tab.0.bottom/0.0.1536.824@0.0.1536.824" timestamp="1702911064917" />
-    <state width="1493" height="310" key="GridCell.Tab.0.center" timestamp="1702911064917">
+    <state width="1493" height="511" key="GridCell.Tab.0.bottom/0.0.1536.824@0.0.1536.824" timestamp="1702995472020" />
+    <state width="1493" height="511" key="GridCell.Tab.0.center" timestamp="1702995472020">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="310" key="GridCell.Tab.0.center/0.0.1536.824@0.0.1536.824" timestamp="1702911064917" />
-    <state width="1493" height="310" key="GridCell.Tab.0.left" timestamp="1702911064917">
+    <state width="1493" height="511" key="GridCell.Tab.0.center/0.0.1536.824@0.0.1536.824" timestamp="1702995472020" />
+    <state width="1493" height="511" key="GridCell.Tab.0.left" timestamp="1702995472020">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="310" key="GridCell.Tab.0.left/0.0.1536.824@0.0.1536.824" timestamp="1702911064917" />
-    <state width="1493" height="310" key="GridCell.Tab.0.right" timestamp="1702911064917">
+    <state width="1493" height="511" key="GridCell.Tab.0.left/0.0.1536.824@0.0.1536.824" timestamp="1702995472020" />
+    <state width="1493" height="511" key="GridCell.Tab.0.right" timestamp="1702995472020">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="310" key="GridCell.Tab.0.right/0.0.1536.824@0.0.1536.824" timestamp="1702911064917" />
-    <state width="1493" height="310" key="GridCell.Tab.1.bottom" timestamp="1702911064917">
+    <state width="1493" height="511" key="GridCell.Tab.0.right/0.0.1536.824@0.0.1536.824" timestamp="1702995472020" />
+    <state width="1493" height="511" key="GridCell.Tab.1.bottom" timestamp="1702995472020">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="310" key="GridCell.Tab.1.bottom/0.0.1536.824@0.0.1536.824" timestamp="1702911064917" />
-    <state width="1493" height="310" key="GridCell.Tab.1.center" timestamp="1702911064917">
+    <state width="1493" height="511" key="GridCell.Tab.1.bottom/0.0.1536.824@0.0.1536.824" timestamp="1702995472020" />
+    <state width="1493" height="511" key="GridCell.Tab.1.center" timestamp="1702995472020">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="310" key="GridCell.Tab.1.center/0.0.1536.824@0.0.1536.824" timestamp="1702911064917" />
-    <state width="1493" height="310" key="GridCell.Tab.1.left" timestamp="1702911064917">
+    <state width="1493" height="511" key="GridCell.Tab.1.center/0.0.1536.824@0.0.1536.824" timestamp="1702995472020" />
+    <state width="1493" height="511" key="GridCell.Tab.1.left" timestamp="1702995472020">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="310" key="GridCell.Tab.1.left/0.0.1536.824@0.0.1536.824" timestamp="1702911064917" />
-    <state width="1493" height="310" key="GridCell.Tab.1.right" timestamp="1702911064917">
+    <state width="1493" height="511" key="GridCell.Tab.1.left/0.0.1536.824@0.0.1536.824" timestamp="1702995472020" />
+    <state width="1493" height="511" key="GridCell.Tab.1.right" timestamp="1702995472020">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state width="1493" height="310" key="GridCell.Tab.1.right/0.0.1536.824@0.0.1536.824" timestamp="1702911064917" />
+    <state width="1493" height="511" key="GridCell.Tab.1.right/0.0.1536.824@0.0.1536.824" timestamp="1702995472020" />
     <state x="270" y="0" key="SettingsEditor" timestamp="1701564681043">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
@@ -1064,10 +1061,10 @@
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state x="830" y="141" width="543" height="524" key="StructurePopup/0.0.1536.824@0.0.1536.824" timestamp="1701411262414" />
-    <state x="361" y="145" key="Vcs.Push.Dialog.v2" timestamp="1702751425333">
+    <state x="361" y="145" key="Vcs.Push.Dialog.v2" timestamp="1702911104250">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state x="361" y="145" key="Vcs.Push.Dialog.v2/0.0.1536.824@0.0.1536.824" timestamp="1702751425333" />
+    <state x="361" y="145" key="Vcs.Push.Dialog.v2/0.0.1536.824@0.0.1536.824" timestamp="1702911104250" />
     <state width="775" height="419" key="XDebugger.FullValuePopup" timestamp="1701856183379">
       <screen x="0" y="0" width="1536" height="824" />
     </state>

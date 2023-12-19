@@ -26,6 +26,8 @@ import com.ouyunc.im.utils.SystemClock;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
@@ -104,8 +106,16 @@ public enum Protocol {
                 final ByteBuf byteBuf = ByteBufAllocator.DEFAULT.buffer();
                 ReaderWriterUtil.writePacketInByteBuf(packet, byteBuf);
                 //从用户注册表中，获取用户对应的channel然后将消息写出去
-                IMServerContext.USER_REGISTER_TABLE.get(to).writeAndFlush(new BinaryWebSocketFrame(byteBuf));
-                sendCallback.onCallback(SendResult.builder().sendStatus(SendStatus.SEND_OK).packet(packet).build());
+                ChannelFuture sendResultChannelFuture = IMServerContext.USER_REGISTER_TABLE.get(to).writeAndFlush(new BinaryWebSocketFrame(byteBuf));
+                sendResultChannelFuture.addListener((ChannelFutureListener) channelFuture -> {
+                    if (channelFuture.isDone()) {
+                        if (channelFuture.isSuccess()) {
+                            sendCallback.onCallback(SendResult.builder().sendStatus(SendStatus.SEND_OK).packet(packet).build());
+                        }else {
+                            sendCallback.onCallback(SendResult.builder().sendStatus(SendStatus.SEND_FAIL).packet(packet).exception(channelFuture.cause()).build());
+                        }
+                    }
+                });
             } catch (Exception e) {
                 log.error("消息packet: {} 发送给用户: {} 失败!", packet, to);
                 // 消息丢失
@@ -188,10 +198,18 @@ public enum Protocol {
                                 channel.attr(channelTagPoolKey).set(finalChannelPool.hashCode());
                             }
                             // 客户端将数据写出到中介管道中
-                            channel.writeAndFlush(packet);
+                            ChannelFuture sendResultChannelFuture = channel.writeAndFlush(packet);
+                            sendResultChannelFuture.addListener((ChannelFutureListener) channelFuture -> {
+                                if (channelFuture.isDone()) {
+                                    if (channelFuture.isSuccess()) {
+                                        sendCallback.onCallback(SendResult.builder().sendStatus(SendStatus.SEND_OK).packet(packet).build());
+                                    }else {
+                                        sendCallback.onCallback(SendResult.builder().sendStatus(SendStatus.SEND_FAIL).packet(packet).exception(channelFuture.cause()).build());
+                                    }
+                                }
+                            });
                             // 用完后进行释放掉
                             finalChannelPool.release(channel);
-                            sendCallback.onCallback(SendResult.builder().sendStatus(SendStatus.SEND_OK).packet(packet).build());
                         } else {
                             // 获取失败
                             Throwable e = future.cause();
@@ -237,8 +255,16 @@ public enum Protocol {
             message.setExtra(extraMessage.getOutExtraData());
             try {
                 //从用户注册表中，获取用户对应的channel然后将消息写出去
-                IMServerContext.USER_REGISTER_TABLE.get(to).writeAndFlush(MqttHelper.unwrapPacket2Mqtt(packet));
-                sendCallback.onCallback(SendResult.builder().sendStatus(SendStatus.SEND_OK).packet(packet).build());
+                ChannelFuture sendResultChannelFuture = IMServerContext.USER_REGISTER_TABLE.get(to).writeAndFlush(MqttHelper.unwrapPacket2Mqtt(packet));
+                sendResultChannelFuture.addListener((ChannelFutureListener) channelFuture -> {
+                    if (channelFuture.isDone()) {
+                        if (channelFuture.isSuccess()) {
+                            sendCallback.onCallback(SendResult.builder().sendStatus(SendStatus.SEND_OK).packet(packet).build());
+                        }else {
+                            sendCallback.onCallback(SendResult.builder().sendStatus(SendStatus.SEND_FAIL).packet(packet).exception(channelFuture.cause()).build());
+                        }
+                    }
+                });
             } catch (Exception e) {
                 log.error("消息packet: {} 发送给客户端: {} 失败!,原因：{}", packet, to, e.getMessage());
                 // 消息丢失 @todo 后面处理
@@ -285,8 +311,16 @@ public enum Protocol {
             message.setExtra(extraMessage.getOutExtraData());
             try {
                 //从用户注册表中，获取用户对应的channel然后将消息写出去
-                IMServerContext.USER_REGISTER_TABLE.get(to).writeAndFlush(MqttHelper.unwrapPacket2Mqtt(packet));
-                sendCallback.onCallback(SendResult.builder().sendStatus(SendStatus.SEND_OK).packet(packet).build());
+                ChannelFuture sendResultChannelFuture = IMServerContext.USER_REGISTER_TABLE.get(to).writeAndFlush(MqttHelper.unwrapPacket2Mqtt(packet));
+                sendResultChannelFuture.addListener((ChannelFutureListener) channelFuture -> {
+                    if (channelFuture.isDone()) {
+                        if (channelFuture.isSuccess()) {
+                            sendCallback.onCallback(SendResult.builder().sendStatus(SendStatus.SEND_OK).packet(packet).build());
+                        }else {
+                            sendCallback.onCallback(SendResult.builder().sendStatus(SendStatus.SEND_FAIL).packet(packet).exception(channelFuture.cause()).build());
+                        }
+                    }
+                });
             } catch (Exception e) {
                 log.error("消息packet: {} 发送给客户端: {} 失败!,原因：{}", packet, to, e.getMessage());
                 // 消息丢失 @todo 后面处理
@@ -297,8 +331,20 @@ public enum Protocol {
 
 
     private static Logger log = LoggerFactory.getLogger(Protocol.class);
+
+    /**
+     * 协议编号
+     */
     private byte protocol;
+
+    /**
+     * 协议版本
+     */
     private byte version;
+
+    /**
+     * 协议描述
+     */
     private String description;
 
     Protocol(byte protocol, byte version, String description) {

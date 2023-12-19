@@ -1,7 +1,5 @@
 package com.ouyunc.im.constant;
 
-import javafx.beans.binding.Bindings;
-
 /**
  * @Author fangzhenxun
  * @Description: channel 通道相关的常量类
@@ -51,7 +49,14 @@ public class IMConstant {
     /**
      * 下划线
      */
-    public static final String UNDERLINE = "_";
+    public static final String UNDER_LINE = "_";
+
+    /**
+     * 中划线
+     */
+    public static final String MIDDLE_LINE = "-";
+
+
 
     /**
      * &符号

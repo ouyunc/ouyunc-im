@@ -464,7 +464,7 @@ public class DbHelper {
         String from = message.getFrom();
         String to = message.getTo();
         MessageContentEnum messageContentEnum = MessageContentEnum.prototype(message.getContentType());
-        RLock lock = RedissonFactory.INSTANCE.redissonClient().getLock(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.LOCK + CacheConstant.FRIEND + CacheConstant.REFUSE_AGREE + IdentityUtil.sortComboIdentity(from, to));
+        RLock lock = RedissonFactory.INSTANCE.redissonClient().getLock(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.LOCK + CacheConstant.FRIEND + CacheConstant.REFUSE_AGREE + IdentityUtil.sessionId(from, to));
         try {
             lock.lock();
             // 如果是好友直接返回
