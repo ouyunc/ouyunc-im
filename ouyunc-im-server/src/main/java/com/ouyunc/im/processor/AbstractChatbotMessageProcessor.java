@@ -29,7 +29,8 @@ public abstract class AbstractChatbotMessageProcessor implements MessageProcesso
 
     @Override
     public void doProcess(ChannelHandlerContext ctx, Packet packet) {
-        doProcess0(packet);
+        // 具体业务处理
+        doProcess(packet);
         // 判断是否要传递给下一个
         if (match(packet) && next != null) {
             next.doProcess(ctx, packet);
@@ -49,5 +50,5 @@ public abstract class AbstractChatbotMessageProcessor implements MessageProcesso
      *
      * @param packet
      */
-    public abstract void doProcess0(Packet packet);
+    public abstract void doProcess(Packet packet);
 }

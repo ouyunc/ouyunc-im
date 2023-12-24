@@ -1,9 +1,14 @@
 package com.ouyunc.im.processor;
 
+import com.alibaba.ttl.threadpool.TtlExecutors;
 import com.ouyunc.im.packet.Packet;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.util.concurrent.DefaultEventExecutorGroup;
+import jodd.util.concurrent.ThreadFactoryBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.concurrent.ExecutorService;
 
 /**
  * @Author fangzhenxun
@@ -11,6 +16,11 @@ import org.slf4j.LoggerFactory;
  **/
 public interface MessageProcessor {
     Logger log = LoggerFactory.getLogger(MessageProcessor.class);
+
+    /**
+     * 线程池事件执行器
+     */
+    ExecutorService EVENT_EXECUTORS = TtlExecutors.getTtlExecutorService(new DefaultEventExecutorGroup(16, ThreadFactoryBuilder.create().setNameFormat("message-processor-%d").get()));
 
 
     /**

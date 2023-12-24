@@ -6,29 +6,29 @@ import java.time.Clock;
 
 /**
  * @Author fangzhenxun
- * @Description: 用户离线事件
+ * @Description: im 消息转成功换成 packet 事件
  **/
-public class IMOfflineEvent extends IMEvent {
+public class IMWritePacketEvent extends IMEvent {
 
     /**
      * channel 上下文
      */
     private ChannelHandlerContext ctx;
 
-    public IMOfflineEvent(Object source) {
+    public IMWritePacketEvent(Object source) {
         super(source);
     }
 
-    public IMOfflineEvent(Object source, ChannelHandlerContext ctx) {
+    public IMWritePacketEvent(Object source, ChannelHandlerContext ctx) {
         super(source);
         this.ctx = ctx;
     }
 
-    public IMOfflineEvent(Object source, Clock clock) {
+    public IMWritePacketEvent(Object source, Clock clock) {
         super(source, clock);
     }
 
-    public IMOfflineEvent(Object source, ChannelHandlerContext ctx, Clock clock) {
+    public IMWritePacketEvent(Object source, ChannelHandlerContext ctx, Clock clock) {
         super(source, clock);
         this.ctx = ctx;
     }

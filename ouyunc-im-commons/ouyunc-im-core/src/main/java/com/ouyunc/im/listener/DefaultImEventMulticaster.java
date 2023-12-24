@@ -40,26 +40,26 @@ public class DefaultImEventMulticaster extends AbstractImEventMulticaster{
 
 
 
+
     /**
      * @Author fangzhenxun
-     * @Description 多播时间
+     * @Description 异步多播事件
      * @param event
+     * @param async 是否异步执行事件 true-异步， false-同步
      * @return void
      */
     @Override
-    public void multicastEvent(IMEvent event) {
+    public void multicastEvent(IMEvent event, boolean async) {
         Executor executor = getTaskExecutor();
         // 遍历所有的事件监听器
         for (IMListener<?> listener : getImListeners(event)) {
-            if (executor != null) {
+            if (async && executor != null) {
                 executor.execute(() -> invokeListener(listener, event));
             } else {
                 invokeListener(listener, event);
             }
         }
     }
-
-
 
 
     /**

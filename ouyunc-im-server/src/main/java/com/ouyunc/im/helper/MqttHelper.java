@@ -12,8 +12,10 @@ import com.ouyunc.im.encrypt.Encrypt;
 import com.ouyunc.im.exception.IMException;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.Message;
+import com.ouyunc.im.packet.message.content.LoginContent;
 import com.ouyunc.im.protocol.Protocol;
 import com.ouyunc.im.serialize.Serializer;
+import com.ouyunc.im.utils.MD5Util;
 import com.ouyunc.im.utils.ReaderWriterUtil;
 import com.ouyunc.im.utils.SnowflakeUtil;
 import com.ouyunc.im.utils.SystemClock;
@@ -62,52 +64,57 @@ public class MqttHelper {
 
     /**
      * @param ctx
-     * @param mqttMessage
+     * @param message
      * @return com.ouyunc.im.packet.Packet
      * @Author fangzhenxun
      * @Description 包装或转换mqtt消息到packet
      */
-    public static Packet wrapMqtt2Packet(ChannelHandlerContext ctx, MqttMessage mqttMessage) {
+    public static Packet wrapMqtt2Packet(ChannelHandlerContext ctx, MqttMessage message) {
         // 消息解码器出现异常
-        if (validateMqttDecoderResultException(ctx, mqttMessage)) {
+        if (validateMqttDecoderResultException(ctx, message)) {
             return null;
         }
         // 解码成功后，再去转换传递
-        if (mqttMessage.decoderResult().isSuccess()) {
-            return ReaderWriterUtil.convertOther2Packet(mqttMessage, mqttMessage0 -> {
+        if (message.decoderResult().isSuccess()) {
+            return ReaderWriterUtil.convertOther2Packet(message, mqttMessage -> {
                 String from = null;
                 String to = null;
-                MqttFixedHeader fixedHeader = mqttMessage0.fixedHeader();
+                Object content = null;
+                MqttFixedHeader fixedHeader = mqttMessage.fixedHeader();
                 MqttMessageType mqttMessageType = fixedHeader.messageType();
                 AttributeKey<LoginUserInfo> channelTagLoginKey = AttributeKey.valueOf(IMConstant.CHANNEL_TAG_LOGIN);
                 LoginUserInfo loginUserInfo = ctx.channel().attr(channelTagLoginKey).get();
                 if (loginUserInfo == null) {
                     // 在通过消息内容获取，比如连接，或者携带唯一标识，这里只对连接信息做处理
                     if (MqttMessageType.CONNECT.equals(mqttMessageType)) {
-                        MqttConnectPayload payload = (MqttConnectPayload) mqttMessage0.payload();
+                        MqttConnectPayload payload = (MqttConnectPayload) mqttMessage.payload();
+                        MqttConnectVariableHeader variableHeader = (MqttConnectVariableHeader) mqttMessage.variableHeader();
                         from = payload.clientIdentifier();
+                        long createTime = SystemClock.now();
+                        // @todo 这里先写死, 后面再改
+                        content = new LoginContent(from, "ouyunc", MD5Util.md5("ouyunc&" + from + "&" + createTime + "_123456"), (byte) 1, variableHeader.keepAliveTimeSeconds(), payload.willMessage(), payload.willTopic(),variableHeader.isCleanSession() ? IMConstant.CLEAN_SESSION : IMConstant.NOT_CLEAN_SESSION, createTime);
                         // 这里要求connect 时 clientId不为空
                         if (StringUtils.isBlank(from)) {
                             MqttConnAckMessage connAckMessage = (MqttConnAckMessage) MqttMessageFactory.newMessage(
                                     new MqttFixedHeader(MqttMessageType.CONNACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
                                     new MqttConnAckVariableHeader(MqttConnectReturnCode.CONNECTION_REFUSED_IDENTIFIER_REJECTED, false), null);
+                            // 集群环境下的消息路由一定不会走到这里，所以这里直接使用ctx 写出去即可
                             ctx.writeAndFlush(connAckMessage);
                             ctx.close();
                         }
-                    } else {
-                        // @todo 通过其他内容去拿到from的唯一标识， 暂不做实现
                     }
+                    // 再次校验
                     if (from == null) {
                         return null;
                     }
                 } else {
                     // 一般是已经连接上的非连接命令消息类型，可能会重复连接，需要在后面处理
                     from = loginUserInfo.getIdentity();
+                    content = mqttMessage;
                 }
                 // 这里需要根据不同的主题来匹配对应的唯一标识：主题存储结构  topicId, topic, topicDescription
                 // @todo 注意这里的from 从ctx中的属性取，当然也可以每次发消息携带过来 ; to 应该指的是订阅某个topic的客户，把他抽象一个群，topic就是一个群组，订阅该topic就是该群组中的人，可以使用redis 的hash 来存储topic 和 群成员的关系，这里要拿到topic 的所有订阅的成员
-                Message message = new Message(from, to, MessageContentEnum.MQTT.type(), GSON.toJson(mqttMessage0), SystemClock.now());
-                return new Packet(Protocol.MQTT.getProtocol(), Protocol.MQTT.getVersion(), SnowflakeUtil.nextId(), DeviceEnum.OTHER.getValue(), NetworkEnum.OTHER.getValue(), IMServerContext.SERVER_CONFIG.getIp(), MessageEnum.getMessageEnumByName(String.valueOf(mqttMessageType.value())).getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(), message);
+                return new Packet(Protocol.MQTT.getProtocol(), Protocol.MQTT.getVersion(), SnowflakeUtil.nextId(), DeviceEnum.OTHER.getValue(), NetworkEnum.OTHER.getValue(), IMServerContext.SERVER_CONFIG.getIp(), MessageEnum.getMessageEnumByName(String.valueOf(mqttMessageType.value())).getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(), new Message(from, to, MessageContentEnum.MQTT.type(), GSON.toJson(content), SystemClock.now()));
             });
         }
         return null;

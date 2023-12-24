@@ -54,10 +54,9 @@ public interface IMEventMulticaster {
 
     /**
      * @Author fangzhenxun
-     * @Description 多播事件
+     * @Description 同步多播事件
      * @param event
      * @return void
      */
-    void multicastEvent(IMEvent event);
-
+    void multicastEvent(IMEvent event, boolean sync);
 }

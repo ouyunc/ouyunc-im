@@ -48,6 +48,11 @@ public class LoginContent implements Serializable {
 
 
     /**
+     * 遗嘱主题，客户端下线后，根据具体业务推送将遗嘱信息willMessage推送给订阅willTopic的客户端，可以是json格式字符串，具体看业务
+     */
+    private String willTopic;
+
+    /**
      * 是否复用之前的会话信息（主要是业务相关），具体业务具体对待 0-不清除，1-清除
      */
     private int cleanSession;
@@ -123,6 +128,14 @@ public class LoginContent implements Serializable {
         this.cleanSession = cleanSession;
     }
 
+    public String getWillTopic() {
+        return willTopic;
+    }
+
+    public void setWillTopic(String willTopic) {
+        this.willTopic = willTopic;
+    }
+
     public LoginContent() {
     }
 
@@ -135,13 +148,15 @@ public class LoginContent implements Serializable {
         this.createTime = createTime;
     }
 
-    public LoginContent(String identity, String appKey, String signature, byte signatureAlgorithm, int heartBeatExpireTime, String willMessage, int cleanSession, long createTime) {
+
+    public LoginContent(String identity, String appKey, String signature, byte signatureAlgorithm, int heartBeatExpireTime, String willMessage, String willTopic, int cleanSession, long createTime) {
         this.identity = identity;
         this.appKey = appKey;
         this.signature = signature;
         this.signatureAlgorithm = signatureAlgorithm;
         this.heartBeatExpireTime = heartBeatExpireTime;
         this.willMessage = willMessage;
+        this.willTopic = willTopic;
         this.cleanSession = cleanSession;
         this.createTime = createTime;
     }

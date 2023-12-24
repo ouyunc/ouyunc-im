@@ -150,9 +150,13 @@ public class IMServerContext extends IMContext {
 
 
     /**
-     * 发布IM事件
+     * @Author fangzhenxun
+     * @Description 发布IM事件
+     * @param event IMEvent事件的子类
+     * @param async 是否异步发布事件 true-异步，false-同步
+     * @return void
      */
-    public static void publishEvent(IMEvent event) {
-        IM_EVENT_MULTICASTER.multicastEvent(event);
+    public static void publishEvent(IMEvent event, boolean async) {
+        IM_EVENT_MULTICASTER.multicastEvent(event, async);
     }
 }

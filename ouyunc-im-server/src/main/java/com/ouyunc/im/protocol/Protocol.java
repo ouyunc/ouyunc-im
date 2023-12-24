@@ -222,7 +222,9 @@ public enum Protocol {
             });
         }
     },
-    //mqtt @ todo 还有添加心跳，等相关处理
+
+
+    //mqtt
     MQTT((byte) 6, (byte) 4, "mqtt协议，版本号为3.1.1") {
         @Override
         public void doDispatcher(ChannelHandlerContext ctx, Map<String, Object> queryParamsMap) {
@@ -272,6 +274,8 @@ public enum Protocol {
             }
         }
     },
+
+
     //mqtt_ws 协议
     MQTT_WS((byte) 7, (byte) 4, "基于websocket的mqtt协议，版本号为3.1.1") {
         @Override

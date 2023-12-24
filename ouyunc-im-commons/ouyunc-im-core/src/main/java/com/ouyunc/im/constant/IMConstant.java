@@ -36,6 +36,11 @@ public class IMConstant {
     public static final String CHANNEL_TAG_LOGIN = "CHANNEL_TAG_LOGIN";
 
     /**
+     * channel 所绑定的app key
+     */
+    public static final String APP_KEY = "APP_KEY";
+
+    /**
      * channel 客户端读超时的次数标签
      */
     public static final String CHANNEL_TAG_READ_TIMEOUT = "CHANNEL_TAG_READ_TIMEOUT";

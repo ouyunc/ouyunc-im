@@ -41,7 +41,7 @@ public class PacketClusterRouterHandler extends SimpleChannelInboundHandler<Pack
                 return;
             }
         }
-        // 交给下个处理器, 如果上面条件没满足，则直接交给下个处理器去处理
+        // 交给下个处理器, 如果上面条件没满足，则直接交给下个处理器去处理，一般是syn-ack集群内部心跳才会走这里
         ctx.fireChannelRead(packet);
     }
 }

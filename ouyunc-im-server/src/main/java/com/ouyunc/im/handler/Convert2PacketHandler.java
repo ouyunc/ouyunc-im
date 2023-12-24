@@ -56,6 +56,7 @@ public class Convert2PacketHandler extends SimpleChannelInboundHandler<Object> {
         if (packet != null) {
             MDC.put(IMConstant.LOG_TRACE_ID, String.valueOf(packet.getPacketId()));
             log.info("消息包转换为：{}", packet);
+            // 注意这里提前将该消息的所属平台信息赋值，以供后面来使用。
             setAppKey(ctx, msg, packet);
             // 直接传递
             ctx.fireChannelRead(packet);
@@ -77,12 +78,14 @@ public class Convert2PacketHandler extends SimpleChannelInboundHandler<Object> {
         Message message = (Message) packet.getMessage();
         ExtraMessage extraMessage = JSON.parseObject(message.getExtra(), ExtraMessage.class);
         InnerExtraData innerExtraData = null;
+        String outExtraData = null;
         if (extraMessage == null) {
             extraMessage = new ExtraMessage();
             innerExtraData = new InnerExtraData();
         }
         if (extraMessage != null) {
             innerExtraData = extraMessage.getInnerExtraData();
+            outExtraData = extraMessage.getOutExtraData();
             if (innerExtraData == null) {
                 innerExtraData = new InnerExtraData();
             }
@@ -108,7 +111,7 @@ public class Convert2PacketHandler extends SimpleChannelInboundHandler<Object> {
                 LoginUserInfo loginUserInfo = ctx.channel().attr(channelTagLoginKey).get();
                 innerExtraData.setAppKey(loginUserInfo.getAppKey());
             }
-            extraMessage.setOutExtraData(message.getExtra());
+            extraMessage.setOutExtraData(outExtraData);
             extraMessage.setInnerExtraData(innerExtraData);
             message.setExtra(JSON.toJSONString(extraMessage));
         }

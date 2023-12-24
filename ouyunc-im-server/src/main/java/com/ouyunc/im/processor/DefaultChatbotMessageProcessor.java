@@ -38,7 +38,7 @@ public class DefaultChatbotMessageProcessor extends AbstractChatbotMessageProces
      * @param packet
      */
     @Override
-    public void doProcess0(Packet packet) {
+    public void doProcess(Packet packet) {
         log.info("DefaultChatbotMessageProcessor do nothing");
         // do nothing
     }
