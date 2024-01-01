@@ -22,7 +22,7 @@ public class DefaultChatbotMessageProcessor extends AbstractChatbotMessageProces
     }
 
     /**
-     * 不进行处理
+     * 不进行传递处理
      *
      * @param packet
      * @return

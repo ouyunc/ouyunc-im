@@ -3,7 +3,7 @@ package com.ouyunc.im.processor;
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.constant.enums.DeviceEnum;
-import com.ouyunc.im.constant.enums.MessageEnum;
+import com.ouyunc.im.constant.enums.MessageTypeEnum;
 import com.ouyunc.im.helper.DbHelper;
 import com.ouyunc.im.helper.MessageHelper;
 import com.ouyunc.im.helper.MqttHelper;
@@ -30,8 +30,8 @@ public class MqttSubscribeMessageProcessor extends AbstractMessageProcessor {
 
 
     @Override
-    public MessageEnum messageType() {
-        return MessageEnum.MQTT_SUBSCRIBE;
+    public MessageTypeEnum messageType() {
+        return MessageTypeEnum.MQTT_SUBSCRIBE;
     }
 
 
@@ -76,7 +76,7 @@ public class MqttSubscribeMessageProcessor extends AbstractMessageProcessor {
                 new MqttSubAckPayload(qosReasonCode))));
         MessageHelper.asyncSendMessage(packet.clone(), Target.newBuilder().targetIdentity(from).deviceEnum(DeviceEnum.getDeviceEnumByValue(packet.getDeviceType())).build());
         // 发布该topic 下的retain 消息
-
+        MqttHelper.publishRetainMessage(packet);
     }
 
 }

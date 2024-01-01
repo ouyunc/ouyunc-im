@@ -67,4 +67,6 @@ public class CacheConstant {
     public static final String MQTT = "mqtt:";
     // topic
     public static final String TOPIC = "topic";
+    // 聊天会话
+    public static final String SESSION = "session:";
 }

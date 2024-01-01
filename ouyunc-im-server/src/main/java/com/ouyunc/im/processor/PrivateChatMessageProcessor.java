@@ -3,7 +3,7 @@ package com.ouyunc.im.processor;
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.IMConstant;
-import com.ouyunc.im.constant.enums.MessageEnum;
+import com.ouyunc.im.constant.enums.MessageTypeEnum;
 import com.ouyunc.im.helper.DbHelper;
 import com.ouyunc.im.helper.MessageHelper;
 import com.ouyunc.im.helper.UserHelper;
@@ -28,8 +28,8 @@ public class PrivateChatMessageProcessor extends AbstractMessageProcessor {
 
 
     @Override
-    public MessageEnum messageType() {
-        return MessageEnum.IM_PRIVATE_CHAT;
+    public MessageTypeEnum messageType() {
+        return MessageTypeEnum.IM_PRIVATE_CHAT;
     }
 
 

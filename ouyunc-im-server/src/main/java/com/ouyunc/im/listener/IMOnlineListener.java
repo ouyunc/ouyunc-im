@@ -1,12 +1,15 @@
 package com.ouyunc.im.listener;
 
 import com.ouyunc.im.event.IMOnlineEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @Author fangzhenxun
  * @Description: im 在线监听器
  **/
 public class IMOnlineListener implements IMListener<IMOnlineEvent> {
+    private static Logger log = LoggerFactory.getLogger(IMOnlineListener.class);
 
 
     /**
@@ -17,6 +20,9 @@ public class IMOnlineListener implements IMListener<IMOnlineEvent> {
      */
     @Override
     public void onApplicationEvent(IMOnlineEvent event) {
+        if (log.isDebugEnabled()) {
+            log.debug("im 上线事件监听器正在处理：{}", event);
+        }
         // do nothing
     }
 }

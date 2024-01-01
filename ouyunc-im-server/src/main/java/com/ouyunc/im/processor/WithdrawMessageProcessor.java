@@ -4,7 +4,7 @@ import com.alibaba.fastjson2.JSON;
 import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.constant.enums.MessageContentEnum;
-import com.ouyunc.im.constant.enums.MessageEnum;
+import com.ouyunc.im.constant.enums.MessageTypeEnum;
 import com.ouyunc.im.domain.bo.ImGroupUserBO;
 import com.ouyunc.im.helper.DbHelper;
 import com.ouyunc.im.helper.MessageHelper;
@@ -29,8 +29,8 @@ public class WithdrawMessageProcessor extends AbstractMessageProcessor {
     private static Logger log = LoggerFactory.getLogger(WithdrawMessageProcessor.class);
 
     @Override
-    public MessageEnum messageType() {
-        return MessageEnum.IM_WITHDRAW;
+    public MessageTypeEnum messageType() {
+        return MessageTypeEnum.IM_WITHDRAW;
     }
 
     /**

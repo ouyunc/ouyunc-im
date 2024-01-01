@@ -66,7 +66,7 @@ public class IMProcessContext {
 
 
     /**
-     * 配置消息处理接口的所有实现类
+     * 配置机器人消息处理接口的所有实现类
      */
     public static List<AbstractChatbotMessageProcessor> CHAT_BOT_PROCESSOR = new ArrayList<>();
 

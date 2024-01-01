@@ -1,7 +1,7 @@
 package com.ouyunc.im.processor;
 
 import com.ouyunc.im.constant.enums.MessageContentEnum;
-import com.ouyunc.im.constant.enums.MessageEnum;
+import com.ouyunc.im.constant.enums.MessageTypeEnum;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.helper.MessageHelper;
 import com.ouyunc.im.innerclient.pool.IMInnerClientPool;
@@ -23,8 +23,8 @@ public class SynAckMessageProcessor extends AbstractMessageProcessor {
     private static Logger log = LoggerFactory.getLogger(SynAckMessageProcessor.class);
 
     @Override
-    public MessageEnum messageType() {
-        return MessageEnum.SYN_ACK;
+    public MessageTypeEnum messageType() {
+        return MessageTypeEnum.SYN_ACK;
     }
 
     /**

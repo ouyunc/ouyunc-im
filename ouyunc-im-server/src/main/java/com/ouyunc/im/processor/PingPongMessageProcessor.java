@@ -3,7 +3,7 @@ package com.ouyunc.im.processor;
 import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.constant.enums.DeviceEnum;
 import com.ouyunc.im.constant.enums.MessageContentEnum;
-import com.ouyunc.im.constant.enums.MessageEnum;
+import com.ouyunc.im.constant.enums.MessageTypeEnum;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.helper.MessageHelper;
 import com.ouyunc.im.helper.MqttHelper;
@@ -29,8 +29,8 @@ public class PingPongMessageProcessor extends AbstractMessageProcessor {
     private static Logger log = LoggerFactory.getLogger(PingPongMessageProcessor.class);
 
     @Override
-    public MessageEnum messageType() {
-        return MessageEnum.IM_PING_PONG;
+    public MessageTypeEnum messageType() {
+        return MessageTypeEnum.IM_PING_PONG;
     }
 
 

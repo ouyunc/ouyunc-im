@@ -1,6 +1,6 @@
 package com.ouyunc.im.processor;
 
-import com.ouyunc.im.constant.enums.MessageEnum;
+import com.ouyunc.im.constant.enums.MessageTypeEnum;
 import com.ouyunc.im.context.IMProcessContext;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.Message;
@@ -15,8 +15,8 @@ public class GroupRequestMessageProcessor extends AbstractMessageProcessor {
     private static Logger log = LoggerFactory.getLogger(GroupRequestMessageProcessor.class);
 
     @Override
-    public MessageEnum messageType() {
-        return MessageEnum.IM_GROUP_REQUEST;
+    public MessageTypeEnum messageType() {
+        return MessageTypeEnum.IM_GROUP_REQUEST;
     }
 
     /**

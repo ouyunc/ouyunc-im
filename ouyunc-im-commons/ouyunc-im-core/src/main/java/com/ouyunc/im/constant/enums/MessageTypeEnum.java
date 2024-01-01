@@ -4,7 +4,7 @@ package com.ouyunc.im.constant.enums;
  * @Author fangzhenxun
  * @Description: 协议包中的消息类型枚举, RPC 框架中有请求、响应、心跳类型。IM 通讯场景中有登陆、创建群聊、发送消息、接收消息、退出群聊等类型。
  **/
-public enum MessageEnum {
+public enum MessageTypeEnum {
 
 
     SYN_ACK((byte) 0, "syn_ack",  "内部使用的心跳消息类型"),
@@ -63,7 +63,7 @@ public enum MessageEnum {
     private String name;
     private String description;
 
-    MessageEnum(byte value, String name, String description) {
+    MessageTypeEnum(byte value, String name, String description) {
         this.value = value;
         this.name = name;
         this.description = description;
@@ -93,8 +93,8 @@ public enum MessageEnum {
         this.description = description;
     }
 
-    public static MessageEnum prototype(byte value) {
-        for (MessageEnum messageEnum : MessageEnum.values()) {
+    public static MessageTypeEnum prototype(byte value) {
+        for (MessageTypeEnum messageEnum : MessageTypeEnum.values()) {
             if (messageEnum.value == value) {
                 return messageEnum;
             }
@@ -102,8 +102,8 @@ public enum MessageEnum {
         return null;
     }
 
-    public static MessageEnum getMessageEnumByName(String name) {
-        for (MessageEnum messageEnum : MessageEnum.values()) {
+    public static MessageTypeEnum getMessageEnumByName(String name) {
+        for (MessageTypeEnum messageEnum : MessageTypeEnum.values()) {
             if (messageEnum.name.equals(name)) {
                 return messageEnum;
             }

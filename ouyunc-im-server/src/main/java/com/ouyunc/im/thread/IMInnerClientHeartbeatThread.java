@@ -3,7 +3,7 @@ package com.ouyunc.im.thread;
 
 import com.ouyunc.im.constant.enums.DeviceEnum;
 import com.ouyunc.im.constant.enums.MessageContentEnum;
-import com.ouyunc.im.constant.enums.MessageEnum;
+import com.ouyunc.im.constant.enums.MessageTypeEnum;
 import com.ouyunc.im.constant.enums.NetworkEnum;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.encrypt.Encrypt;
@@ -66,7 +66,7 @@ public class IMInnerClientHeartbeatThread implements Runnable {
             // hessian    430b         235b
             // fst        650b         315b
             // jdk        500b         346b
-            Packet packet = new Packet(Protocol.OUYUNC.getProtocol(), Protocol.OUYUNC.getVersion(), SnowflakeUtil.nextId(), DeviceEnum.OTHER.getValue(), NetworkEnum.OTHER.getValue(), IMServerContext.SERVER_CONFIG.getIp(), MessageEnum.SYN_ACK.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(), message);
+            Packet packet = new Packet(Protocol.OUYUNC.getProtocol(), Protocol.OUYUNC.getVersion(), SnowflakeUtil.nextId(), DeviceEnum.OTHER.getValue(), NetworkEnum.OTHER.getValue(), IMServerContext.SERVER_CONFIG.getIp(), MessageTypeEnum.SYN_ACK.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(), message);
             // 内部客户端连接池异步传递消息syn ,尝试所有的路径去保持连通
             MessageHelper.asyncSendMessage(packet, Target.newBuilder().targetIdentity(targetServerAddress).build());
             // 先获取给目标服务toInetSocketAddress 发送syn,没有回复ack的次数，默认从0开始

@@ -8,7 +8,7 @@ import com.ouyunc.im.base.SendResult;
 import com.ouyunc.im.codec.MqttWebSocketCodec;
 import com.ouyunc.im.constant.CacheConstant;
 import com.ouyunc.im.constant.IMConstant;
-import com.ouyunc.im.constant.enums.MessageEnum;
+import com.ouyunc.im.constant.enums.MessageTypeEnum;
 import com.ouyunc.im.constant.enums.SendStatus;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.exception.handler.GlobalExceptionHandler;
@@ -119,7 +119,7 @@ public enum Protocol {
             } catch (Exception e) {
                 log.error("消息packet: {} 发送给用户: {} 失败!", packet, to);
                 // 消息丢失
-                if (packet.getMessageType() == MessageEnum.IM_PRIVATE_CHAT.getValue() || packet.getMessageType() == MessageEnum.IM_GROUP_CHAT.getValue()) {
+                if (packet.getMessageType() == MessageTypeEnum.IM_PRIVATE_CHAT.getValue() || packet.getMessageType() == MessageTypeEnum.IM_GROUP_CHAT.getValue()) {
                     // 对于多端的情况
                     long now = SystemClock.now();
                     IMServerContext.MISSING_MESSAGES_CACHE.addZset(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.IM_MESSAGE + CacheConstant.FAIL + CacheConstant.FROM + message.getFrom() + CacheConstant.COLON + CacheConstant.TO + to, new MissingPacket(packet, IMServerContext.SERVER_CONFIG.getLocalServerAddress(), now), now);
@@ -170,13 +170,6 @@ public enum Protocol {
          */
         @Override
         public void doSendMessage(Packet packet, String to, SendCallback sendCallback) {
-            Message message = (Message) packet.getMessage();
-            // 这里应该不会为null
-            ExtraMessage extraMessage = JSON.parseObject(message.getExtra(), ExtraMessage.class);
-            InnerExtraData innerExtraData = extraMessage.getInnerExtraData();
-            String appKey = innerExtraData.getAppKey();
-            message.setExtra(extraMessage.getOutExtraData());
-
             ChannelPool channelPool = MapUtil.mergerMaps(IMServerContext.CLUSTER_ACTIVE_SERVER_REGISTRY_TABLE.asMap(), IMServerContext.CLUSTER_GLOBAL_SERVER_REGISTRY_TABLE.asMap()).get(to);
             if (channelPool == null) {
                 log.warn("有新的服务 {} 加入集群，正在尝试与其确认ack", to);
@@ -213,7 +206,7 @@ public enum Protocol {
                         } else {
                             // 获取失败
                             Throwable e = future.cause();
-                            log.error("平台 {} 下的客户端获取channel异常！原因: {}", appKey, e.getMessage());
+                            log.error("获取远端地址失败：{}", e.getMessage());
                             sendCallback.onCallback(SendResult.builder().sendStatus(SendStatus.SEND_FAIL).packet(packet).exception(e).build());
                         }
 

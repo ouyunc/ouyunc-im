@@ -1,10 +1,9 @@
 package com.ouyunc.im.handler;
 
 import com.alibaba.fastjson2.JSON;
-import com.google.gson.Gson;
 import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.IMConstant;
-import com.ouyunc.im.constant.enums.MessageEnum;
+import com.ouyunc.im.constant.enums.MessageTypeEnum;
 import com.ouyunc.im.exception.IMException;
 import com.ouyunc.im.helper.MqttHelper;
 import com.ouyunc.im.packet.Packet;
@@ -30,9 +29,6 @@ import org.slf4j.MDC;
 public class Convert2PacketHandler extends SimpleChannelInboundHandler<Object> {
     private static Logger log = LoggerFactory.getLogger(Convert2PacketHandler.class);
 
-    private static Gson gson = new Gson();
-
-
     /**
      * @param ctx
      * @param msg
@@ -56,8 +52,10 @@ public class Convert2PacketHandler extends SimpleChannelInboundHandler<Object> {
         if (packet != null) {
             MDC.put(IMConstant.LOG_TRACE_ID, String.valueOf(packet.getPacketId()));
             log.info("消息包转换为：{}", packet);
-            // 注意这里提前将该消息的所属平台信息赋值，以供后面来使用。
-            setAppKey(ctx, msg, packet);
+            // 注意这里提前将该消息的所属平台信息赋值，以供后面来使用。无论单聊还是私聊都会在这里进行赋值
+            if (packet.getMessageType() != MessageTypeEnum.SYN_ACK.getValue()) {
+                setAppKey(ctx, msg, packet);
+            }
             // 直接传递
             ctx.fireChannelRead(packet);
         } else {
@@ -93,7 +91,7 @@ public class Convert2PacketHandler extends SimpleChannelInboundHandler<Object> {
         // 判断是否是首次在集群间传递消息
         if (!innerExtraData.isDelivery()) {
             // 首次进行传递时，将目标以及目标主机和所登录的设备进行设置
-            if (MessageEnum.IM_LOGIN.getValue() == packet.getMessageType()) {
+            if (MessageTypeEnum.IM_LOGIN.getValue() == packet.getMessageType()) {
                 // 这里不同的消息会有不同的设置方式
                 String appKey = null;
                 if (msg instanceof MqttMessage) {
@@ -106,7 +104,7 @@ public class Convert2PacketHandler extends SimpleChannelInboundHandler<Object> {
                 }
                 innerExtraData.setAppKey(appKey);
             }
-            if (MessageEnum.IM_LOGIN.getValue() != packet.getMessageType()) {
+            if (MessageTypeEnum.IM_LOGIN.getValue() != packet.getMessageType()) {
                 AttributeKey<LoginUserInfo> channelTagLoginKey = AttributeKey.valueOf(IMConstant.CHANNEL_TAG_LOGIN);
                 LoginUserInfo loginUserInfo = ctx.channel().attr(channelTagLoginKey).get();
                 innerExtraData.setAppKey(loginUserInfo.getAppKey());

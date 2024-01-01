@@ -40,6 +40,10 @@ public class LoginContent implements Serializable {
      */
     private int heartBeatExpireTime;
 
+    /**
+     * 是否启用遗嘱: 1-启用，0-不启用
+     */
+    private int enableWill;
 
     /**
      * 遗嘱消息，客户端下线后，根据具体业务推送将该信息推送给相关联的人，可以是json格式字符串，具体看业务
@@ -136,6 +140,14 @@ public class LoginContent implements Serializable {
         this.willTopic = willTopic;
     }
 
+    public int getEnableWill() {
+        return enableWill;
+    }
+
+    public void setEnableWill(int enableWill) {
+        this.enableWill = enableWill;
+    }
+
     public LoginContent() {
     }
 
@@ -148,13 +160,13 @@ public class LoginContent implements Serializable {
         this.createTime = createTime;
     }
 
-
-    public LoginContent(String identity, String appKey, String signature, byte signatureAlgorithm, int heartBeatExpireTime, String willMessage, String willTopic, int cleanSession, long createTime) {
+    public LoginContent(String identity, String appKey, String signature, byte signatureAlgorithm, int heartBeatExpireTime, int enableWill, String willMessage, String willTopic, int cleanSession, long createTime) {
         this.identity = identity;
         this.appKey = appKey;
         this.signature = signature;
         this.signatureAlgorithm = signatureAlgorithm;
         this.heartBeatExpireTime = heartBeatExpireTime;
+        this.enableWill = enableWill;
         this.willMessage = willMessage;
         this.willTopic = willTopic;
         this.cleanSession = cleanSession;

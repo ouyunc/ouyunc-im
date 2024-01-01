@@ -25,6 +25,9 @@ public class MonitorHandler extends SimpleChannelInboundHandler<Packet> {
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Packet packet) throws Exception {
         log.info("监控处理器MonitorHandler正在监控消息：{}", packet);
+        // do nothing
+
+
         ctx.fireChannelRead(packet);
     }
 }

@@ -51,7 +51,7 @@ public class MessageHelper {
     public static void doQos(String from, Packet packet) {
         log.info("服务端正在回复from: {} ackPacket: {}", from, packet);
         // 异步直接发送
-        MessageHelper.asyncSendMessage(new Packet(packet.getProtocol(), packet.getProtocolVersion(), packet.getPacketId(), DeviceEnum.PC_OTHER.getValue(), NetworkEnum.OTHER.getValue(), IMServerContext.SERVER_CONFIG.getIp(), MessageEnum.IM_QOS.getValue(), packet.getEncryptType(), packet.getSerializeAlgorithm(), new Message(IMServerContext.SERVER_CONFIG.getLocalServerAddress(), from, MessageContentEnum.SERVER_QOS_ACK_CONTENT.type(), String.valueOf(packet.getPacketId()), SystemClock.now())), Target.newBuilder().targetIdentity(from).deviceEnum(DeviceEnum.getDeviceEnumByValue(packet.getDeviceType())).build());
+        MessageHelper.asyncSendMessage(new Packet(packet.getProtocol(), packet.getProtocolVersion(), packet.getPacketId(), DeviceEnum.PC_OTHER.getValue(), NetworkEnum.OTHER.getValue(), IMServerContext.SERVER_CONFIG.getIp(), MessageTypeEnum.IM_QOS.getValue(), packet.getEncryptType(), packet.getSerializeAlgorithm(), new Message(IMServerContext.SERVER_CONFIG.getLocalServerAddress(), from, MessageContentEnum.SERVER_QOS_ACK_CONTENT.type(), String.valueOf(packet.getPacketId()), SystemClock.now())), Target.newBuilder().targetIdentity(from).deviceEnum(DeviceEnum.getDeviceEnumByValue(packet.getDeviceType())).build());
     }
 
 
@@ -109,7 +109,7 @@ public class MessageHelper {
         if (target == null) {
             throw new IMException("消息接收者不能为空！");
         }
-        Protocol.prototype(packet.getProtocol(), packet.getProtocolVersion()).doSendMessage(packet, MessageEnum.SYN_ACK.getValue() != packet.getMessageType() ? IdentityUtil.generalComboIdentity(target.getTargetIdentity(), target.getDeviceEnum()) : target.getTargetIdentity(), sendCallback);
+        Protocol.prototype(packet.getProtocol(), packet.getProtocolVersion()).doSendMessage(packet, MessageTypeEnum.SYN_ACK.getValue() != packet.getMessageType() ? IdentityUtil.generalComboIdentity(target.getTargetIdentity(), target.getDeviceEnum()) : target.getTargetIdentity(), sendCallback);
     }
 
 
@@ -125,7 +125,7 @@ public class MessageHelper {
         if (target == null) {
             throw new IMException("消息接收者不能为空！");
         }
-        Protocol.prototype(packet.getProtocol(), packet.getProtocolVersion()).doSendMessage(packet, MessageEnum.SYN_ACK.getValue() != packet.getMessageType() ? IdentityUtil.generalComboIdentity(target.getTargetIdentity(), target.getDeviceEnum()) : target.getTargetIdentity(), sendResult ->{
+        Protocol.prototype(packet.getProtocol(), packet.getProtocolVersion()).doSendMessage(packet, MessageTypeEnum.SYN_ACK.getValue() != packet.getMessageType() ? IdentityUtil.generalComboIdentity(target.getTargetIdentity(), target.getDeviceEnum()) : target.getTargetIdentity(), sendResult ->{
             if (log.isDebugEnabled()) {
                 log.debug("发给： {} 的消息： {} 发送结果: {}", target, packet, sendResult.getSendStatus());
             }

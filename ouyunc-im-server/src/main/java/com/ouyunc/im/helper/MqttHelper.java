@@ -92,7 +92,7 @@ public class MqttHelper {
                         from = payload.clientIdentifier();
                         long createTime = SystemClock.now();
                         // @todo 这里先写死, 后面再改
-                        content = new LoginContent(from, "ouyunc", MD5Util.md5("ouyunc&" + from + "&" + createTime + "_123456"), (byte) 1, variableHeader.keepAliveTimeSeconds(), payload.willMessage(), payload.willTopic(),variableHeader.isCleanSession() ? IMConstant.CLEAN_SESSION : IMConstant.NOT_CLEAN_SESSION, createTime);
+                        content = new LoginContent(from, "ouyunc", MD5Util.md5("ouyunc&" + from + "&" + createTime + "_123456"), (byte) 1, variableHeader.keepAliveTimeSeconds(), variableHeader.isWillFlag() ? IMConstant.ENABLE_WILL : IMConstant.DISABLE_WILL,payload.willMessage(), payload.willTopic(),variableHeader.isCleanSession() ? IMConstant.CLEAN_SESSION : IMConstant.NOT_CLEAN_SESSION, createTime);
                         // 这里要求connect 时 clientId不为空
                         if (StringUtils.isBlank(from)) {
                             MqttConnAckMessage connAckMessage = (MqttConnAckMessage) MqttMessageFactory.newMessage(
@@ -114,7 +114,7 @@ public class MqttHelper {
                 }
                 // 这里需要根据不同的主题来匹配对应的唯一标识：主题存储结构  topicId, topic, topicDescription
                 // @todo 注意这里的from 从ctx中的属性取，当然也可以每次发消息携带过来 ; to 应该指的是订阅某个topic的客户，把他抽象一个群，topic就是一个群组，订阅该topic就是该群组中的人，可以使用redis 的hash 来存储topic 和 群成员的关系，这里要拿到topic 的所有订阅的成员
-                return new Packet(Protocol.MQTT.getProtocol(), Protocol.MQTT.getVersion(), SnowflakeUtil.nextId(), DeviceEnum.OTHER.getValue(), NetworkEnum.OTHER.getValue(), IMServerContext.SERVER_CONFIG.getIp(), MessageEnum.getMessageEnumByName(String.valueOf(mqttMessageType.value())).getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(), new Message(from, to, MessageContentEnum.MQTT.type(), GSON.toJson(content), SystemClock.now()));
+                return new Packet(Protocol.MQTT.getProtocol(), Protocol.MQTT.getVersion(), SnowflakeUtil.nextId(), DeviceEnum.OTHER.getValue(), NetworkEnum.OTHER.getValue(), IMServerContext.SERVER_CONFIG.getIp(), MessageTypeEnum.getMessageEnumByName(String.valueOf(mqttMessageType.value())).getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(), new Message(from, to, MessageContentEnum.MQTT.type(), GSON.toJson(content), SystemClock.now()));
             });
         }
         return null;
@@ -131,7 +131,7 @@ public class MqttHelper {
         if (packet == null) {
             return null;
         }
-        MessageEnum prototype = MessageEnum.prototype(packet.getMessageType());
+        MessageTypeEnum prototype = MessageTypeEnum.prototype(packet.getMessageType());
         if (prototype == null) {
             return null;
         }
@@ -266,7 +266,7 @@ public class MqttHelper {
      */
     private static boolean validateMqttDecoderResultException(ChannelHandlerContext ctx, MqttMessage mqttMessage) {
         if (mqttMessage.decoderResult().isFailure()) {
-            MessageEnum prototype = MessageEnum.prototype((byte) mqttMessage.fixedHeader().messageType().value());
+            MessageTypeEnum prototype = MessageTypeEnum.prototype((byte) mqttMessage.fixedHeader().messageType().value());
             switch (prototype) {
                 case MQTT_CONNECT:
                     // 在这里就要判断是什么类型的错误
@@ -469,5 +469,43 @@ public class MqttHelper {
      */
     public static boolean validateTopic(List<MqttTopicSubscription> mqttTopicSubscriptions) {
         return true;
+    }
+
+    /**
+     * @Author fangzhenxun
+     * @Description 清除之前的会话信息
+     * @param loginContent
+     * @return void
+     */
+    public static void cleanSession(LoginContent loginContent) {
+    }
+
+    /**
+     * @Author fangzhenxun
+     * @Description 保存遗嘱消息
+     * @param loginContent
+     * @return void
+     */
+    public static void saveWillMessage(LoginContent loginContent) {
+
+    }
+
+    /**
+     * @Author fangzhenxun
+     * @Description 发布重复消息
+     * @param loginContent
+     * @return void
+     */
+    public static void publishDupMessage(LoginContent loginContent) {
+
+    }
+
+    /**
+     * @Author fangzhenxun
+     * @Description 发布retain 消息
+     * @param packet
+     * @return void
+     */
+    public static void publishRetainMessage(Packet packet) {
     }
 }

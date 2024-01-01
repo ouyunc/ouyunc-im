@@ -1,6 +1,6 @@
 package com.ouyunc.im.processor;
 
-import com.ouyunc.im.constant.enums.MessageEnum;
+import com.ouyunc.im.constant.enums.MessageTypeEnum;
 import com.ouyunc.im.packet.Packet;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
@@ -15,8 +15,8 @@ public class MqttUnSubscribeMessageProcessor extends AbstractMessageProcessor {
 
 
     @Override
-    public MessageEnum messageType() {
-        return MessageEnum.MQTT_UNSUBSCRIBE;
+    public MessageTypeEnum messageType() {
+        return MessageTypeEnum.MQTT_UNSUBSCRIBE;
     }
 
 

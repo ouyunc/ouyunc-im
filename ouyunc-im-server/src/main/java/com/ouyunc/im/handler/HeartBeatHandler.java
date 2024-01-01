@@ -2,7 +2,7 @@ package com.ouyunc.im.handler;
 
 import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.IMConstant;
-import com.ouyunc.im.constant.enums.MessageEnum;
+import com.ouyunc.im.constant.enums.MessageTypeEnum;
 import com.ouyunc.im.context.IMProcessContext;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.helper.UserHelper;
@@ -35,7 +35,7 @@ public class HeartBeatHandler extends SimpleChannelInboundHandler<Packet> {
     protected void channelRead0(ChannelHandlerContext ctx, Packet packet) throws Exception {
         // 由于所有消息都会经过心跳处理器，所以这里对真正需要心跳处理的数据进行拦截处理，其他的数据直接放行不做处理
         // 需要判断是否是心跳的消息类型
-        if (MessageEnum.IM_PING_PONG.getValue() != packet.getMessageType()) {
+        if (MessageTypeEnum.IM_PING_PONG.getValue() != packet.getMessageType()) {
             // 交给下面业务处理器去处理
             ctx.fireChannelRead(packet);
             return;
@@ -44,7 +44,7 @@ public class HeartBeatHandler extends SimpleChannelInboundHandler<Packet> {
             log.debug("HeartBeatHandler 正在处理心跳...");
         }
         // 如果是外部客户端的心跳消息则直接掉用心跳消息处理器来进行处理,然后就结束了，不会往下面透传消息
-        IMProcessContext.MESSAGE_PROCESSOR.get(MessageEnum.IM_PING_PONG.getValue()).doProcess(ctx, packet);
+        IMProcessContext.MESSAGE_PROCESSOR.get(MessageTypeEnum.IM_PING_PONG.getValue()).doProcess(ctx, packet);
     }
 
     /**

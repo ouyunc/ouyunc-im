@@ -2,13 +2,13 @@ package com.ouyunc.im.processor;
 
 
 import com.alibaba.fastjson2.JSON;
-import com.ouyunc.im.cache.l1.distributed.redis.redisson.RedissonFactory;
 import com.ouyunc.im.base.LoginUserInfo;
+import com.ouyunc.im.cache.l1.distributed.redis.redisson.RedissonFactory;
 import com.ouyunc.im.constant.CacheConstant;
 import com.ouyunc.im.constant.IMConstant;
 import com.ouyunc.im.constant.enums.DeviceEnum;
 import com.ouyunc.im.constant.enums.MessageContentEnum;
-import com.ouyunc.im.constant.enums.MessageEnum;
+import com.ouyunc.im.constant.enums.MessageTypeEnum;
 import com.ouyunc.im.constant.enums.NetworkEnum;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.domain.ImApp;
@@ -20,14 +20,11 @@ import com.ouyunc.im.helper.MessageHelper;
 import com.ouyunc.im.helper.MqttHelper;
 import com.ouyunc.im.helper.UserHelper;
 import com.ouyunc.im.packet.Packet;
-import com.ouyunc.im.packet.message.ExtraMessage;
-import com.ouyunc.im.packet.message.InnerExtraData;
 import com.ouyunc.im.packet.message.Message;
 import com.ouyunc.im.packet.message.Target;
 import com.ouyunc.im.packet.message.content.LoginContent;
 import com.ouyunc.im.packet.message.content.ServerNotifyContent;
 import com.ouyunc.im.utils.IdentityUtil;
-import com.ouyunc.im.utils.MD5Util;
 import com.ouyunc.im.utils.SnowflakeUtil;
 import com.ouyunc.im.utils.SystemClock;
 import io.netty.channel.ChannelHandlerContext;
@@ -49,8 +46,8 @@ public class LoginMessageProcessor extends AbstractMessageProcessor {
 
 
     @Override
-    public MessageEnum messageType() {
-        return MessageEnum.IM_LOGIN;
+    public MessageTypeEnum messageType() {
+        return MessageTypeEnum.IM_LOGIN;
     }
 
     /**
@@ -97,14 +94,8 @@ public class LoginMessageProcessor extends AbstractMessageProcessor {
     public void preProcess(ChannelHandlerContext ctx, Packet packet) {
         // 这里判断该消息是否需要
         log.info("正在处理预登录消息...");
-//        // 取出登录消息
-          final Message loginMessage = (Message) packet.getMessage();
-//        ExtraMessage extraMessage = JSON.parseObject(loginMessage.getExtra(), ExtraMessage.class);
-//        InnerExtraData innerExtraData = extraMessage.getInnerExtraData();
-//        String appKey = innerExtraData.getAppKey();
-//        EVENT_EXECUTORS.execute(() -> DbHelper.writeMessage(appKey, packet));
-//
-
+        // 取出登录消息
+        final Message loginMessage = (Message) packet.getMessage();
         //将消息内容转成message
         LoginContent loginContent = JSON.parseObject(loginMessage.getContent(), LoginContent.class);
         // 做登录参数校验
@@ -130,14 +121,14 @@ public class LoginMessageProcessor extends AbstractMessageProcessor {
             // 构造默认发送的是IM 的消息格式
             Message message = new Message(IMServerContext.SERVER_CONFIG.getIp(), loginContent.getIdentity(), MessageContentEnum.SERVER_NOTIFY_CONTENT.type(), JSON.toJSONString(new ServerNotifyContent(String.format(IMConstant.REMOTE_LOGIN_NOTIFICATIONS, packet.getIp()))), SystemClock.now());
             // 注意： 这里的原来的连接使用的序列化方式，应该是和新连接上的序列化方式一致，这里当成一致，当然不一致也可以做，后面遇到再改造
-            Packet notifyPacket = new Packet(packet.getProtocol(), packet.getProtocolVersion(), SnowflakeUtil.nextId(), DeviceEnum.PC_LINUX.getValue(), NetworkEnum.OTHER.getValue(), IMServerContext.SERVER_CONFIG.getIp(), MessageEnum.IM_SERVER_NOTIFY.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), packet.getSerializeAlgorithm(), message);
+            Packet notifyPacket = new Packet(packet.getProtocol(), packet.getProtocolVersion(), SnowflakeUtil.nextId(), DeviceEnum.PC_LINUX.getValue(), NetworkEnum.OTHER.getValue(), IMServerContext.SERVER_CONFIG.getIp(), MessageTypeEnum.IM_SERVER_NOTIFY.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), packet.getSerializeAlgorithm(), message);
             if (loginUserInfo != null) {
                 // 删除原来的redis缓存中的登录信息
                 IMServerContext.LOGIN_USER_INFO_CACHE.deleteHash(CacheConstant.OUYUNC + CacheConstant.APP_KEY + loginContent.getAppKey() + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + loginContent.getIdentity(), DeviceEnum.getDeviceNameByValue(packet.getDeviceType()));
                 // 给原有连接发送通知消息，并将其下线，添加新的连接登录
                 if (MessageContentEnum.MQTT.type() == loginMessage.getContentType()) {
                     // 设置消息类型
-                    notifyPacket.setMessageType(MessageEnum.MQTT_CONNACK.getValue());
+                    notifyPacket.setMessageType(MessageTypeEnum.MQTT_CONNACK.getValue());
                     // 构造mqtt消息内容，这里原因码使用这个，可根据需求自行修改 CONNECTION_REFUSED_USE_ANOTHER_SERVER 使用另一台服务器，
                     MqttConnAckMessage mqttConnAckMessageContent = (MqttConnAckMessage) MqttMessageFactory.newMessage(
                             new MqttFixedHeader(MqttMessageType.CONNACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
@@ -158,20 +149,26 @@ public class LoginMessageProcessor extends AbstractMessageProcessor {
             // 接收端回应登录设备登录成功信息
             // 如果是mqtt的登录消息需要额外发送连接确认给客户端
             if (MessageContentEnum.MQTT.type() == loginMessage.getContentType()) {
-                // @todo 判断mqtt 的 cleanSession 是否开启 清除会话，主要是订阅相关数据
-
-                // @todo mqtt 保存遗嘱
-
+                // 判断mqtt 的 cleanSession 是否开启 清除会话，主要是订阅相关数据
+                if (IMConstant.CLEAN_SESSION == loginContent.getCleanSession()) {
+                    MqttHelper.cleanSession(loginContent);
+                }
+                // mqtt 保存遗嘱
+                if (IMConstant.ENABLE_WILL == loginContent.getEnableWill()) {
+                    MqttHelper.saveWillMessage(loginContent);
+                }
                 // mqtt回应连接端AcK
                 // 设置消息类型
-                notifyPacket.setMessageType(MessageEnum.MQTT_CONNACK.getValue());
+                notifyPacket.setMessageType(MessageTypeEnum.MQTT_CONNACK.getValue());
                 MqttConnAckMessage okResp = (MqttConnAckMessage) MqttMessageFactory.newMessage(
                         new MqttFixedHeader(MqttMessageType.CONNACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
                         new MqttConnAckVariableHeader(MqttConnectReturnCode.CONNECTION_ACCEPTED, true), null);
                 message.setContentType(MessageContentEnum.MQTT.type());
                 message.setContent(MqttHelper.gson().toJson(okResp));
-                // @todo mqtt 根据cleanSession 处理dup
-
+                // mqtt 根据cleanSession 处理dup
+                if (IMConstant.NOT_CLEAN_SESSION == loginContent.getCleanSession()) {
+                    MqttHelper.publishDupMessage(loginContent);
+                }
             }
             // 同步发送登录成功消息给客户端
             MessageHelper.syncSendMessage(notifyPacket, Target.newBuilder().targetIdentity(loginUserInfo.getIdentity()).targetServerAddress(loginUserInfo.getLoginServerAddress()).deviceEnum(loginUserInfo.getDeviceEnum()).build());

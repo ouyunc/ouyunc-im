@@ -1,7 +1,7 @@
 package com.ouyunc.im.processor;
 
 import com.alibaba.fastjson2.JSON;
-import com.ouyunc.im.constant.enums.MessageEnum;
+import com.ouyunc.im.constant.enums.MessageTypeEnum;
 import com.ouyunc.im.helper.DbHelper;
 import com.ouyunc.im.packet.Packet;
 import com.ouyunc.im.packet.message.ExtraMessage;
@@ -24,7 +24,7 @@ public abstract class AbstractMessageProcessor implements MessageProcessor {
     /**
      * 标识子类处理消息的类型，如果一个子类处理多个类型使用 | 逻辑或进行返回
      */
-    public abstract MessageEnum messageType();
+    public abstract MessageTypeEnum messageType();
 
     /**
      * @param ctx

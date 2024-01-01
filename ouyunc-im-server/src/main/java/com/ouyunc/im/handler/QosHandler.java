@@ -2,7 +2,7 @@ package com.ouyunc.im.handler;
 
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.im.constant.IMConstant;
-import com.ouyunc.im.constant.enums.MessageEnum;
+import com.ouyunc.im.constant.enums.MessageTypeEnum;
 import com.ouyunc.im.context.IMServerContext;
 import com.ouyunc.im.helper.DbHelper;
 import com.ouyunc.im.helper.MessageHelper;
@@ -35,13 +35,13 @@ public class QosHandler extends SimpleChannelInboundHandler<Packet> implements Q
     public boolean preHandle(ChannelHandlerContext ctx, Packet packet) {
         log.info("qos 消息可靠前置处理器 QosHandler 正在处理...");
         // 如果是消息重试，则判断对方消息箱中是否存在
-        MessageEnum messageEnum = MessageEnum.prototype(packet.getMessageType());
+        MessageTypeEnum messageEnum = MessageTypeEnum.prototype(packet.getMessageType());
         if (messageEnum == null) {
             log.error("消息 :{}  的内容类型 messageType 不能为空！", packet.getPacketId(), packet.getMessageType());
             return false;
         }
         // 判断是否是消息重试的消息类型
-        if (MessageEnum.IM_QOS_RETRY.equals(messageEnum)) {
+        if (MessageTypeEnum.IM_QOS_RETRY.equals(messageEnum)) {
             Message message = (Message) packet.getMessage();
             ExtraMessage extraMessage = JSON.parseObject(message.getExtra(), ExtraMessage.class);
             InnerExtraData innerExtraData = extraMessage.getInnerExtraData();

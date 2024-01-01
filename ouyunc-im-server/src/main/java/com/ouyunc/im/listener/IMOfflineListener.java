@@ -1,12 +1,15 @@
 package com.ouyunc.im.listener;
 
 import com.ouyunc.im.event.IMOfflineEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @Author fangzhenxun
  * @Description: im 离线监听器
  **/
 public class IMOfflineListener implements IMListener<IMOfflineEvent> {
+    private static Logger log = LoggerFactory.getLogger(IMOfflineListener.class);
 
 
     /**
@@ -17,6 +20,9 @@ public class IMOfflineListener implements IMListener<IMOfflineEvent> {
      */
     @Override
     public void onApplicationEvent(IMOfflineEvent event) {
+        if (log.isDebugEnabled()) {
+            log.debug("im 离线事件监听器正在处理：{}", event);
+        }
         // do nothing
     }
 }

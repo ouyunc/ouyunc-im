@@ -83,7 +83,7 @@ public class DefaultSocketChannelInitializer extends SocketChannelInitializer {
                                 IMServerContext.LOGIN_IM_APP_CONNECTIONS_CACHE.deleteHash(CacheConstant.OUYUNC + CacheConstant.APP_KEY + loginUserInfo.getAppKey() + CacheConstant.COLON + CacheConstant.CONNECTIONS, comboIdentity);
                             }
                             // 发送客户端离线事件
-                            IMServerContext.publishEvent(new IMOnlineEvent(cacheLoginUserInfo, Clock.systemUTC()));
+                            IMServerContext.publishEvent(new IMOnlineEvent(cacheLoginUserInfo, Clock.systemUTC()), true);
                         }
                     }
                 }

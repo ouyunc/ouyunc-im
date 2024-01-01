@@ -2,7 +2,7 @@ package com.ouyunc.im.processor;
 
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.im.base.LoginUserInfo;
-import com.ouyunc.im.constant.enums.MessageEnum;
+import com.ouyunc.im.constant.enums.MessageTypeEnum;
 import com.ouyunc.im.helper.DbHelper;
 import com.ouyunc.im.helper.MessageHelper;
 import com.ouyunc.im.helper.UserHelper;
@@ -27,8 +27,8 @@ public class FriendRequestMessageProcessor extends AbstractMessageProcessor {
 
 
     @Override
-    public MessageEnum messageType() {
-        return MessageEnum.IM_FRIEND_REQUEST;
+    public MessageTypeEnum messageType() {
+        return MessageTypeEnum.IM_FRIEND_REQUEST;
     }
 
     /**

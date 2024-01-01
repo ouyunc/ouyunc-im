@@ -426,8 +426,7 @@ public class DbHelper {
             String nowDateTime = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(LocalDateTime.ofInstant(Instant.ofEpochMilli(timestamp), ZoneId.systemDefault()));
             dbOperator.insert(DbSqlConstant.MYSQL.INSERT_TIME_LINE.sql(), packet.getPacketId(), packet.getProtocol(), packet.getProtocolVersion(), packet.getDeviceType(), packet.getNetworkType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), packet.getIp(), message.getFrom(), message.getTo(), packet.getMessageType(), message.getContentType(), message.getContent(), message.getExtra(), message.getCreateTime(), IMConstant.NOT_WITHDRAW, appKey, nowDateTime, nowDateTime);
         }
-        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.IM_MESSAGE + CacheConstant.TIME_LINE + from, packet, timestamp);
-        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.IM_MESSAGE + CacheConstant.TIME_LINE + to, packet, timestamp);
+        cacheOperator.addZset(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.IM_MESSAGE + CacheConstant.SESSION + IdentityUtil.sessionId(from,to), packet, timestamp);
     }
 
 

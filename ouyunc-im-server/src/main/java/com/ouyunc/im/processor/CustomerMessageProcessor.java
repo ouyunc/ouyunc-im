@@ -3,7 +3,7 @@ package com.ouyunc.im.processor;
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.im.base.LoginUserInfo;
 import com.ouyunc.im.constant.IMConstant;
-import com.ouyunc.im.constant.enums.MessageEnum;
+import com.ouyunc.im.constant.enums.MessageTypeEnum;
 import com.ouyunc.im.context.IMProcessContext;
 import com.ouyunc.im.domain.bo.ImGroupUserBO;
 import com.ouyunc.im.helper.DbHelper;
@@ -30,8 +30,8 @@ public class CustomerMessageProcessor extends AbstractMessageProcessor {
 
 
     @Override
-    public MessageEnum messageType() {
-        return MessageEnum.IM_CUSTOMER;
+    public MessageTypeEnum messageType() {
+        return MessageTypeEnum.IM_CUSTOMER;
     }
 
     /**
@@ -52,7 +52,7 @@ public class CustomerMessageProcessor extends AbstractMessageProcessor {
         String from = message.getFrom();
         // 消息接收方
         String to = message.getTo();
-        // ===================================做校验
+        // ===================================做校验================================
         if (!MessageValidate.isAuth(appKey, from, packet.getDeviceType(), ctx) || MessageValidate.isBanned(appKey, from, IMConstant.USER_TYPE_1) || MessageValidate.isBanned(appKey, to, IMConstant.GROUP_TYPE_2) || !MessageValidate.isGroup(appKey, from, to) || MessageValidate.isBackList(appKey, from, to, IMConstant.GROUP_TYPE_2)) {
             return;
         }

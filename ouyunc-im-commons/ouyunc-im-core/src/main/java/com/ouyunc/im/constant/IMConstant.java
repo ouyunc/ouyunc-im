@@ -539,4 +539,14 @@ public class IMConstant {
      * 主题过滤器无效
      */
     public static final int MQTT_REASON_CODE_INVALID_TOPIC = 143;
+
+    /**
+     * 启用遗嘱
+     */
+    public static final int ENABLE_WILL = 1;
+
+    /**
+     * 禁用遗嘱
+     */
+    public static final int DISABLE_WILL = 0;
 }
