@@ -10,18 +10,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/docs/5.0.0/apk/android/ouyunc-im-4.0.4.apk" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/5.0.0/js/big-integer.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/5.0.0/js/google-protobuf.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/5.0.0/js/md5.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/5.0.0/js/ouyunc-im-client-uniapp-sdk.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/5.0.0/js/ouyunc-message.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/5.0.0/js/snowflake-id.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/5.0.0/js/text-decode.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/5.0.0/js/uniapp的可供参考main.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/5.0.0/sdk/uniapp/ouyunc-im-client-uniapp-sdk.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/5.0.0/sql/ouyunc-im-mysql-v5.0.0.sql" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -170,15 +159,19 @@
     <option name="notificationShown" value="true" />
   </component>
   <component name="RecentsManager">
-    <key name="CreateClassDialog.RecentsKey">
-      <recent name="com.ouyu.im.innerclient" />
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="F:\workspace\ouyunc-im\docs\4.0.0\apk\android" />
+      <recent name="F:\workspace\ouyunc-im\docs\4.0.0\sdk\uniapp" />
+      <recent name="F:\workspace\ouyunc-im\docs\4.0.0" />
+      <recent name="F:\workspace\ouyunc-im\docs\picture" />
+      <recent name="D:\workspace\ouyu-im\ouyu-server\src" />
     </key>
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="D:\workspace\ouyunc-im\docs" />
       <recent name="D:\workspace\ouyunc-im\docs\sql" />
       <recent name="F:\workspace\ouyunc-im\docs\4.0.0\apk" />
       <recent name="F:\workspace\ouyunc-im\docs\4.0.0\js" />
       <recent name="F:\workspace\ouyunc-im\docs\4.0.0\sdk\web_uniapp" />
-      <recent name="F:\workspace\ouyunc-im\docs\protobuf" />
     </key>
     <key name="CopyClassDialog.RECENTS_KEY">
       <recent name="com.ouyunc.im.listener" />
@@ -187,12 +180,8 @@
       <recent name="com.ouyunc.im.domain" />
       <recent name="com.ouyunc.im.processor" />
     </key>
-    <key name="MoveFile.RECENT_KEYS">
-      <recent name="F:\workspace\ouyunc-im\docs\4.0.0\apk\android" />
-      <recent name="F:\workspace\ouyunc-im\docs\4.0.0\sdk\uniapp" />
-      <recent name="F:\workspace\ouyunc-im\docs\4.0.0" />
-      <recent name="F:\workspace\ouyunc-im\docs\picture" />
-      <recent name="D:\workspace\ouyu-im\ouyu-server\src" />
+    <key name="CreateClassDialog.RecentsKey">
+      <recent name="com.ouyu.im.innerclient" />
     </key>
   </component>
   <component name="RunManager" selected="Application.StartIMServer">
@@ -547,14 +536,7 @@
       <workItem from="1702994418295" duration="1336000" />
       <workItem from="1702995787960" duration="574000" />
       <workItem from="1703404187028" duration="14317000" />
-      <workItem from="1704065283018" duration="8386000" />
-    </task>
-    <task id="LOCAL-00189" summary="v3.1.1-beta 群请求处理">
-      <created>1686209875577</created>
-      <option name="number" value="00189" />
-      <option name="presentableId" value="LOCAL-00189" />
-      <option name="project" value="LOCAL" />
-      <updated>1686209875577</updated>
+      <workItem from="1704065283018" duration="8667000" />
     </task>
     <task id="LOCAL-00190" summary="v3.1.1-beta 优化处理">
       <created>1686906322045</created>
@@ -892,7 +874,14 @@
       <option name="project" value="LOCAL" />
       <updated>1704076055268</updated>
     </task>
-    <option name="localTasksCounter" value="238" />
+    <task id="LOCAL-00238" summary="v5.0.0&#10;1. 添加消息发送回调&#10;2. 优化代码">
+      <created>1704076343677</created>
+      <option name="number" value="00238" />
+      <option name="presentableId" value="LOCAL-00238" />
+      <option name="project" value="LOCAL" />
+      <updated>1704076343678</updated>
+    </task>
+    <option name="localTasksCounter" value="239" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1015,10 +1004,10 @@
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state x="297" y="365" width="962" height="453" key="#xdebugger.evaluate/0.0.1536.824@0.0.1536.824" timestamp="1702749442610" />
-    <state x="209" y="0" key="CommitChangelistDialog2" timestamp="1704076053648">
+    <state x="209" y="0" key="CommitChangelistDialog2" timestamp="1704076342961">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state x="209" y="0" key="CommitChangelistDialog2/0.0.1536.824@0.0.1536.824" timestamp="1704076053648" />
+    <state x="209" y="0" key="CommitChangelistDialog2/0.0.1536.824@0.0.1536.824" timestamp="1704076342961" />
     <state width="1214" height="636" key="DebuggerActiveHint" timestamp="1704071985657">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
@@ -1071,10 +1060,10 @@
       <screen x="0" y="0" width="1536" height="824" />
     </state>
     <state x="830" y="141" width="543" height="524" key="StructurePopup/0.0.1536.824@0.0.1536.824" timestamp="1701411262414" />
-    <state x="361" y="145" key="Vcs.Push.Dialog.v2" timestamp="1704076092934">
+    <state x="361" y="145" key="Vcs.Push.Dialog.v2" timestamp="1704076352522">
       <screen x="0" y="0" width="1536" height="824" />
     </state>
-    <state x="361" y="145" key="Vcs.Push.Dialog.v2/0.0.1536.824@0.0.1536.824" timestamp="1704076092934" />
+    <state x="361" y="145" key="Vcs.Push.Dialog.v2/0.0.1536.824@0.0.1536.824" timestamp="1704076352522" />
     <state width="775" height="419" key="XDebugger.FullValuePopup" timestamp="1701856183379">
       <screen x="0" y="0" width="1536" height="824" />
     </state>

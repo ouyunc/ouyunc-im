@@ -1,4 +1,4 @@
-# OUYUNC-IM [![version](https://img.shields.io/badge/version-4.2.0-blue)](https://gitee.com/etxync/ouyunc-im)  
+# OUYUNC-IM [![version](https://img.shields.io/badge/version-5.0.0-blue)](https://gitee.com/etxync/ouyunc-im)  
 [![license](https://img.shields.io/badge/license-MIT-brightgreen)](https://www.mit-license.org/)
 <a href='https://gitee.com/etxync/ouyunc-im/stargazers'><img src='https://gitee.com/etxync/ouyunc-im/badge/star.svg?theme=dark' alt='star'></img></a>
 <a href='https://gitee.com/etxync/ouyunc-im/members'><img src='https://gitee.com/etxync/ouyunc-im/badge/fork.svg?theme=dark' alt='fork'></img></a>
@@ -178,12 +178,19 @@ https://gitee.com/etxync/ouyunc-im/wikis/OUYUNC-IM%20v3.x/%E5%AE%A2%E6%88%B7%E7%
 #####  **4.0.3 ~ 4.1.0**
 1. 增加聊天托管功能
 2. 增加机器人客服（人工客服），可根据一定的策略或接入chatgpt进行对话，可根据自己的业务扩展处理逻辑
-2. 优化其他代码
+3. 优化其他代码
 
 #####  **4.1.0 ~ 4.2.0**
 1. 增加消息撤回处理器
 2. 增加消息监控预处理（后续扩展）
-2. 优化其他代码
+3. 优化其他代码
+
+#####  **4.2.0 ~ 5.0.0**
+1. 增加多租户
+2. 增加mqtt协议处理
+3. 添加群聊和私聊会话消息
+4. 对离线消息的存储格式进行重构
+5. 优化其他代码
 
 #### 最后说明
 由于本人技术有限，项目中可能会有bug或代码不规范的地方，如果对你带来了困扰请跳过本项目。
