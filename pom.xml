@@ -1,448 +1,388 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
-    <groupId>com.ouyunc</groupId>
-    <artifactId>ouyunc-im</artifactId>
-    <packaging>pom</packaging>
-    <version>5.0.0</version>
-    <description>偶遇im是一款基于netty的即时通讯项目</description>
-    <modules>
-        <module>ouyunc-im-commons</module>
-        <module>ouyunc-im-client</module>
-        <module>ouyunc-im-server</module>
-    </modules>
-    <properties>
-        <java.version>1.8</java.version>
-        <java.encoding>UTF-8</java.encoding>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>8</maven.compiler.source>
-        <maven.compiler.target>8</maven.compiler.target>
-        <netty-all.version>4.1.101.Final</netty-all.version>
-        <google-guava.version>32.0.1-jre</google-guava.version>
-        <log4j2.version>2.14.1</log4j2.version>
-        <log4j2-ttl.version>1.4.0</log4j2-ttl.version>
-        <aeonbits-owner.version>1.0.12</aeonbits-owner.version>
-        <yaml.version>2.2</yaml.version>
-        <!--注意这里的版本与jdk的版本要匹配-->
-        <caffeine.version>2.9.0</caffeine.version>
-        <gson.version>2.8.6</gson.version>
-        <kryo.version>5.0.0-RC9</kryo.version>
-        <kryo-shaded.version>4.0.2</kryo-shaded.version>
-        <hessian.version>4.0.7</hessian.version>
-        <!--注意版本，与jdk版本-->
-        <fst.version>2.57</fst.version>
-        <protostuff.version>1.7.2</protostuff.version>
-        <protobuf.version>3.12.2</protobuf.version>
-        <!--jackson-->
-        <jackson.version>2.14.0</jackson.version>
-        <fastjson2.version>2.0.33</fastjson2.version>
-        <!--commons-->
-        <commons-codec.version>1.15</commons-codec.version>
-        <commons-collections4.version>4.4</commons-collections4.version>
-        <commons-lang3.version>3.12.0</commons-lang3.version>
-        <!--缓存-->
-        <spring-redis.version>2.7.6</spring-redis.version>
-        <commons-pool2.version>2.11.1</commons-pool2.version>
-        <lettuce.version>6.1.10.RELEASE</lettuce.version>
-        <redisson.version>3.18.0</redisson.version>
-        <!--mysql8数据库连接-->
-        <mysql-connector-java.version>8.0.30</mysql-connector-java.version>
-        <HikariCP.version>4.0.3</HikariCP.version>
-        <spring-jdbc.version>5.3.24</spring-jdbc.version>
-        <!--aop-->
-        <aspectjweaver.version>1.9.9.1</aspectjweaver.version>
-        <!--ttl threadlocal-->
-        <transmittable-thread-local.version>2.14.0</transmittable-thread-local.version>
 
-    </properties>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
 
-    <!--添加公共依赖-->
+  <groupId>com.ouyunc</groupId>
+  <artifactId>ouyunc-im</artifactId>
+  <version>6.0.0</version>
+  <name>ouyunc-message</name>
+  <description>偶云客消息服务</description>
+  <url>http://www.ouyunc.com</url>
+  <packaging>pom</packaging>
+
+  <!--模块-->
+  <modules>
+    <module>ouyunc-client</module>
+    <module>ouyunc-commons</module>
+    <module>ouyunc-server</module>
+  </modules>
+  <!--属性-->
+  <properties>
+    <ouyunc.version>6.0.0</ouyunc.version>
+    <java.version>21</java.version>
+    <java.encoding>UTF-8</java.encoding>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.build.timestamp.format>yyyyMMddHHmmss</maven.build.timestamp.format>
+    <maven.compiler.source>21</maven.compiler.source>
+    <maven.compiler.target>21</maven.compiler.target>
+    <maven.compiler.release>21</maven.compiler.release>
+    <netty-all.version>4.1.112.Final</netty-all.version>
+    <!--yaml 相关依赖-->
+    <yaml.version>2.2</yaml.version>
+    <!--ttl threadlocal 相关依赖-->
+    <transmittable-thread-local.version>2.14.5</transmittable-thread-local.version>
+
+    <!--commons 相关依赖-->
+    <commons-codec.version>1.16.1</commons-codec.version>
+    <commons-collections4.version>4.4</commons-collections4.version>
+    <commons-lang3.version>3.14.0</commons-lang3.version>
+
+    <!--json-->
+    <fastjson2.version>2.0.33</fastjson2.version>
+    <!--log 一来-->
+    <slf4j.version>1.7.36</slf4j.version>
+    <log4j2.version>2.23.1</log4j2.version>
+
+
+    <!--cache-->
+    <caffeine.version>3.1.8</caffeine.version>
+    <google-guava.version>33.2.1-jre</google-guava.version>
+    <redis.version>3.3.3</redis.version>
+    <redisson.version>3.34.1</redisson.version>
+    <lettuce.version>6.3.2.RELEASE</lettuce.version>
+    <commons-pool2.version>2.11.1</commons-pool2.version>
+    <jackson.version>2.17.2</jackson.version>
+    <!--reactor-->
+    <reactor.version>3.6.9</reactor.version>
+    <!--创建对象-->
+    <objenesis.version>3.3</objenesis.version>
+    <!--序列化-->
+    <protostuff.version>1.8.0</protostuff.version>
+    <protobuf.version>4.28.0-RC3</protobuf.version>
+    <!--aop-->
+    <aspectjweaver.version>1.9.21.2</aspectjweaver.version>
+
+  </properties>
+
+  <!--依赖-->
+  <dependencies>
+    <!-- https://mvnrepository.com/artifact/io.netty/netty-all -->
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-all</artifactId>
+    </dependency>
+
+    <!--local cache-->
+    <dependency>
+      <groupId>com.github.ben-manes.caffeine</groupId>
+      <artifactId>caffeine</artifactId>
+    </dependency>
+
+    <!--用作父子线程之间的变量传递-->
+    <!-- https://mvnrepository.com/artifact/com.alibaba/transmittable-thread-local -->
+    <dependency>
+      <groupId>com.alibaba</groupId>
+      <artifactId>transmittable-thread-local</artifactId>
+    </dependency>
+    <!-- https://mvnrepository.com/artifact/commons-codec/commons-codec -->
+    <dependency>
+      <groupId>commons-codec</groupId>
+      <artifactId>commons-codec</artifactId>
+    </dependency>
+    <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-collections4 -->
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-collections4</artifactId>
+    </dependency>
+    <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-lang3 -->
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+    </dependency>
+    <!-- https://mvnrepository.com/artifact/com.alibaba.fastjson2/fastjson2 -->
+    <dependency>
+      <groupId>com.alibaba.fastjson2</groupId>
+      <artifactId>fastjson2</artifactId>
+    </dependency>
+
+    <!--日志框架-->
+    <!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core -->
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-slf4j-impl</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>io.projectreactor</groupId>
+      <artifactId>reactor-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.protostuff</groupId>
+      <artifactId>protostuff-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.protostuff</groupId>
+      <artifactId>protostuff-runtime</artifactId>
+    </dependency>
+    <!-- https://mvnrepository.com/artifact/com.google.protobuf/protobuf-java -->
+    <dependency>
+      <groupId>com.google.protobuf</groupId>
+      <artifactId>protobuf-java</artifactId>
+    </dependency>
+    <!--aspectjweaver包含aspectjrt，所以我们只需要引入aspectjweaver依赖包就可以了-->
+    <dependency>
+      <groupId>org.aspectj</groupId>
+      <artifactId>aspectjweaver</artifactId>
+    </dependency>
+  </dependencies>
+
+  <!--依赖管理-->
+  <dependencyManagement>
     <dependencies>
+      <!-- https://mvnrepository.com/artifact/io.netty/netty-all -->
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-all</artifactId>
+        <version>${netty-all.version}</version>
+      </dependency>
+      <!--Yml / yaml 文件解析-->
+      <!-- https://mvnrepository.com/artifact/org.yaml/snakeyaml -->
+      <dependency>
+        <groupId>org.yaml</groupId>
+        <artifactId>snakeyaml</artifactId>
+        <version>${yaml.version}</version>
+      </dependency>
+      <!--用作父子线程之间的变量传递-->
+      <!-- https://mvnrepository.com/artifact/com.alibaba/transmittable-thread-local -->
+      <dependency>
+        <groupId>com.alibaba</groupId>
+        <artifactId>transmittable-thread-local</artifactId>
+        <version>${transmittable-thread-local.version}</version>
+      </dependency>
+      <!-- https://mvnrepository.com/artifact/commons-codec/commons-codec -->
+      <dependency>
+        <groupId>commons-codec</groupId>
+        <artifactId>commons-codec</artifactId>
+        <version>${commons-codec.version}</version>
+      </dependency>
+      <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-collections4 -->
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-collections4</artifactId>
+        <version>${commons-collections4.version}</version>
+      </dependency>
+      <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-lang3 -->
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-lang3</artifactId>
+        <version>${commons-lang3.version}</version>
+      </dependency>
+
+      <!-- https://mvnrepository.com/artifact/com.alibaba.fastjson2/fastjson2 -->
+      <dependency>
+        <groupId>com.alibaba.fastjson2</groupId>
+        <artifactId>fastjson2</artifactId>
+        <version>${fastjson2.version}</version>
+      </dependency>
+
+      <!--日志框架-->
+      <!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core -->
+      <dependency>
+        <groupId>org.apache.logging.log4j</groupId>
+        <artifactId>log4j-core</artifactId>
+        <version>${log4j2.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.logging.log4j</groupId>
+        <artifactId>log4j-slf4j-impl</artifactId>
+        <version>${log4j2.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-api</artifactId>
+        <version>${slf4j.version}</version>
+      </dependency>
+      <!-- https://mvnrepository.com/artifact/com.github.ben-manes.caffeine/caffeine -->
+      <dependency>
+        <groupId>com.github.ben-manes.caffeine</groupId>
+        <artifactId>caffeine</artifactId>
+        <version>${caffeine.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava</artifactId>
+        <version>${google-guava.version}</version>
+      </dependency>
+      <!--实例化对象依赖-->
+      <!-- https://mvnrepository.com/artifact/org.objenesis/objenesis -->
+      <dependency>
+        <groupId>org.objenesis</groupId>
+        <artifactId>objenesis</artifactId>
+        <version>${objenesis.version}</version>
+      </dependency>
 
 
-        <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-all</artifactId>
-        </dependency>
+      <dependency>
+        <groupId>io.protostuff</groupId>
+        <artifactId>protostuff-core</artifactId>
+        <version>${protostuff.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.protostuff</groupId>
+        <artifactId>protostuff-runtime</artifactId>
+        <version>${protostuff.version}</version>
+      </dependency>
+      <!-- https://mvnrepository.com/artifact/com.google.protobuf/protobuf-java -->
+      <dependency>
+        <groupId>com.google.protobuf</groupId>
+        <artifactId>protobuf-java</artifactId>
+        <version>${protobuf.version}</version>
+      </dependency>
 
-        <dependency>
-            <groupId>com.alibaba.fastjson2</groupId>
-            <artifactId>fastjson2</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-        </dependency>
-        <!--==========================================log4j2===============================-->
-        <dependency>
-            <groupId>com.alibaba</groupId>
-            <artifactId>log4j2-ttl-thread-context-map</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-slf4j-impl</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.aeonbits.owner</groupId>
-            <artifactId>owner-java8</artifactId>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/com.github.ben-manes.caffeine/caffeine 本地缓存之王用于替代concurrentHanshMap-->
-        <dependency>
-            <groupId>com.github.ben-manes.caffeine</groupId>
-            <artifactId>caffeine</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.google.code.gson</groupId>
-            <artifactId>gson</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.esotericsoftware</groupId>
-            <artifactId>kryo</artifactId>
-        </dependency>
-        <!--由于kryo使用了较高版本的asm，可能会与业务现有依赖的asm产生冲突，所以加入如下依稀，防止出现冲突-->
-        <dependency>
-            <groupId>com.esotericsoftware</groupId>
-            <artifactId>kryo-shaded</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.caucho</groupId>
-            <artifactId>hessian</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>de.ruedigermoeller</groupId>
-            <artifactId>fst</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.protostuff</groupId>
-            <artifactId>protostuff-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.protostuff</groupId>
-            <artifactId>protostuff-runtime</artifactId>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/com.google.protobuf/protobuf-java -->
-        <dependency>
-            <groupId>com.google.protobuf</groupId>
-            <artifactId>protobuf-java</artifactId>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-collections4 -->
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-collections4</artifactId>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-lang3 -->
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-lang3</artifactId>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/org.aspectj/aspectjweaver -->
-        <!--​aspectjweaver包含aspectjrt，所以我们只需要引入aspectjweaver依赖包就可以了-->
-        <dependency>
-            <groupId>org.aspectj</groupId>
-            <artifactId>aspectjweaver</artifactId>
-        </dependency>
+      <dependency>
+        <groupId>org.springframework.data</groupId>
+        <artifactId>spring-data-redis</artifactId>
+        <version>${redis.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>springframework</groupId>
+            <artifactId>spring-aop</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>springframework</groupId>
+            <artifactId>spring-tx</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>springframework</groupId>
+            <artifactId>spring-oxm</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>springframework</groupId>
+            <artifactId>spring-context-support</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+
+      <dependency>
+        <groupId>org.redisson</groupId>
+        <artifactId>redisson</artifactId>
+        <version>${redisson.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.lettuce</groupId>
+        <artifactId>lettuce-core</artifactId>
+        <version>${lettuce.version}</version>
+      </dependency>
+      <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-pool2 -->
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-pool2</artifactId>
+        <version>${commons-pool2.version}</version>
+      </dependency>
+
+
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>${jackson.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-core</artifactId>
+        <version>${jackson.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-annotations</artifactId>
+        <version>${jackson.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>com.fasterxml.jackson.datatype</groupId>
+        <artifactId>jackson-datatype-jsr310</artifactId>
+        <version>${jackson.version}</version>
+      </dependency>
+      <!-- https://mvnrepository.com/artifact/io.projectreactor/reactor-core -->
+      <dependency>
+        <groupId>io.projectreactor</groupId>
+        <artifactId>reactor-core</artifactId>
+        <version>${reactor.version}</version>
+      </dependency>
+
+      <!-- https://mvnrepository.com/artifact/org.aspectj/aspectjweaver -->
+      <dependency>
+        <groupId>org.aspectj</groupId>
+        <artifactId>aspectjweaver</artifactId>
+        <version>${aspectjweaver.version}</version>
+      </dependency>
     </dependencies>
+  </dependencyManagement>
 
-    <!--全局管理包-->
-    <dependencyManagement>
+  <build>
+    <!--设置打包名称-->
+    <finalName> ${project.artifactId}-${project.version}_${maven.build.timestamp}</finalName>
+    <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>aspectj-maven-plugin</artifactId>
+        <version>1.15.0</version>
         <dependencies>
-            <dependency>
-                <groupId>com.ouyunc</groupId>
-                <artifactId>ouyunc-im-cache</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.ouyunc</groupId>
-                <artifactId>ouyunc-im-db</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.ouyunc</groupId>
-                <artifactId>ouyunc-im-core</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-
-            <dependency>
-                <groupId>com.ouyunc</groupId>
-                <artifactId>ouyunc-im-domain</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-
-            <!--netty 全家桶-->
-            <!-- https://mvnrepository.com/artifact/io.netty/netty-all -->
-            <dependency>
-                <groupId>io.netty</groupId>
-                <artifactId>netty-all</artifactId>
-                <version>${netty-all.version}</version>
-            </dependency>
-
-            <!-- https://mvnrepository.com/artifact/com.google.guava/guava -->
-            <dependency>
-                <groupId>com.google.guava</groupId>
-                <artifactId>guava</artifactId>
-                <version>${google-guava.version}</version>
-            </dependency>
-            <!-- https://mvnrepository.com/artifact/com.alibaba.fastjson2/fastjson2 -->
-            <dependency>
-                <groupId>com.alibaba.fastjson2</groupId>
-                <artifactId>fastjson2</artifactId>
-                <version>${fastjson2.version}</version>
-            </dependency>
-
-
-
-            <!--=========================================log4j2=====================================-->
-            <!--https://blog.csdn.net/dingyufei615/article/details/104726066/-->
-            <!--log4j2-->
-            <!-- https://mvnrepository.com/artifact/com.alibaba/log4j2-ttl-thread-context-map -->
-            <dependency>
-                <groupId>com.alibaba</groupId>
-                <artifactId>log4j2-ttl-thread-context-map</artifactId>
-                <version>${log4j2-ttl.version}</version>
-            </dependency>
-            <!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core -->
-            <dependency>
-                <groupId>org.apache.logging.log4j</groupId>
-                <artifactId>log4j-core</artifactId>
-                <version>${log4j2.version}</version>
-            </dependency>
-
-            <!--log4j2-api-->
-            <!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-api -->
-            <dependency>
-                <groupId>org.apache.logging.log4j</groupId>
-                <artifactId>log4j-api</artifactId>
-                <version>${log4j2.version}</version>
-            </dependency>
-
-            <!--log4j2 与slf4j 的桥接 ;这个包的作用就是使用slf4j的api，但是底层实现是基于log4j2.-->
-            <!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-slf4j-impl -->
-            <dependency>
-                <groupId>org.apache.logging.log4j</groupId>
-                <artifactId>log4j-slf4j-impl</artifactId>
-                <version>${log4j2.version}</version>
-            </dependency>
-
-            <!--简化操作properties 文件的工具-->
-            <!-- https://mvnrepository.com/artifact/org.aeonbits.owner/owner-java8 -->
-            <dependency>
-                <groupId>org.aeonbits.owner</groupId>
-                <artifactId>owner-java8</artifactId>
-                <version>${aeonbits-owner.version}</version>
-            </dependency>
-            <!--Yml / yaml 文件解析-->
-            <!-- https://mvnrepository.com/artifact/org.yaml/snakeyaml -->
-            <dependency>
-                <groupId>org.yaml</groupId>
-                <artifactId>snakeyaml</artifactId>
-                <version>${yaml.version}</version>
-            </dependency>
-
-            <!-- https://mvnrepository.com/artifact/com.github.ben-manes.caffeine/caffeine 本地缓存之王用于替代concurrentHanshMap-->
-            <dependency>
-                <groupId>com.github.ben-manes.caffeine</groupId>
-                <artifactId>caffeine</artifactId>
-                <version>${caffeine.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.google.code.gson</groupId>
-                <artifactId>gson</artifactId>
-                <version>${gson.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.esotericsoftware</groupId>
-                <artifactId>kryo</artifactId>
-                <version>${kryo.version}</version>
-            </dependency>
-            <!--由于kryo使用了较高版本的asm，可能会与业务现有依赖的asm产生冲突，所以加入如下依稀，防止出现冲突-->
-            <dependency>
-                <groupId>com.esotericsoftware</groupId>
-                <artifactId>kryo-shaded</artifactId>
-                <version>${kryo-shaded.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.caucho</groupId>
-                <artifactId>hessian</artifactId>
-                <version>${hessian.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>de.ruedigermoeller</groupId>
-                <artifactId>fst</artifactId>
-                <version>${fst.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.protostuff</groupId>
-                <artifactId>protostuff-core</artifactId>
-                <version>${protostuff.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.protostuff</groupId>
-                <artifactId>protostuff-runtime</artifactId>
-                <version>${protostuff.version}</version>
-            </dependency>
-            <!-- https://mvnrepository.com/artifact/com.google.protobuf/protobuf-java -->
-            <dependency>
-                <groupId>com.google.protobuf</groupId>
-                <artifactId>protobuf-java</artifactId>
-                <version>${protobuf.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.fasterxml.jackson.core</groupId>
-                <artifactId>jackson-databind</artifactId>
-                <version>${jackson.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.fasterxml.jackson.core</groupId>
-                <artifactId>jackson-core</artifactId>
-                <version>${jackson.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.fasterxml.jackson.core</groupId>
-                <artifactId>jackson-annotations</artifactId>
-                <version>${jackson.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.fasterxml.jackson.datatype</groupId>
-                <artifactId>jackson-datatype-jsr310</artifactId>
-                <version>${jackson.version}</version>
-            </dependency>
-            <!-- https://mvnrepository.com/artifact/commons-codec/commons-codec -->
-            <dependency>
-                <groupId>commons-codec</groupId>
-                <artifactId>commons-codec</artifactId>
-                <version>${commons-codec.version}</version>
-            </dependency>
-            <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-collections4 -->
-            <dependency>
-                <groupId>org.apache.commons</groupId>
-                <artifactId>commons-collections4</artifactId>
-                <version>${commons-collections4.version}</version>
-            </dependency>
-            <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-lang3 -->
-            <dependency>
-                <groupId>org.apache.commons</groupId>
-                <artifactId>commons-lang3</artifactId>
-                <version>${commons-lang3.version}</version>
-            </dependency>
-
-            <!-- https://mvnrepository.com/artifact/org.springframework.data/spring-data-redis -->
-            <dependency>
-                <groupId>org.springframework.data</groupId>
-                <artifactId>spring-data-redis</artifactId>
-                <version>${spring-redis.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.apache.commons</groupId>
-                <artifactId>commons-pool2</artifactId>
-                <version>${commons-pool2.version}</version>
-            </dependency>
-
-            <!-- https://mvnrepository.com/artifact/io.lettuce/lettuce-core  如果配置连接池需要使用commons-pool2-->
-            <dependency>
-                <groupId>io.lettuce</groupId>
-                <artifactId>lettuce-core</artifactId>
-                <version>${lettuce.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.redisson</groupId>
-                <artifactId>redisson</artifactId>
-                <version>${redisson.version}</version>
-            </dependency>
-
-            <!-- https://mvnrepository.com/artifact/mysql/mysql-connector-java -->
-            <dependency>
-                <groupId>mysql</groupId>
-                <artifactId>mysql-connector-java</artifactId>
-                <version>${mysql-connector-java.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.zaxxer</groupId>
-                <artifactId>HikariCP</artifactId>
-                <version>${HikariCP.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.springframework</groupId>
-                <artifactId>spring-jdbc</artifactId>
-                <version>${spring-jdbc.version}</version>
-            </dependency>
-            <!-- https://mvnrepository.com/artifact/org.aspectj/aspectjweaver -->
-            <dependency>
-                <groupId>org.aspectj</groupId>
-                <artifactId>aspectjweaver</artifactId>
-                <version>${aspectjweaver.version}</version>
-            </dependency>
-            <!--用作父子线程之间的变量传递-->
-            <!-- https://mvnrepository.com/artifact/com.alibaba/transmittable-thread-local -->
-            <dependency>
-                <groupId>com.alibaba</groupId>
-                <artifactId>transmittable-thread-local</artifactId>
-                <version>${transmittable-thread-local.version}</version>
-            </dependency>
+          <dependency>
+            <groupId>org.aspectj</groupId>
+            <artifactId>aspectjtools</artifactId>
+            <!-- AspectJ compiler version, in sync with runtime -->
+            <version>${aspectjweaver.version}</version>
+          </dependency>
         </dependencies>
-    </dependencyManagement>
+        <configuration>
+          <encoding>${java.encoding}</encoding>
+          <source>${maven.compiler.source}</source>
+          <target>${maven.compiler.target}</target>
+          <complianceLevel>${maven.compiler.source}</complianceLevel>
+          <showWeaveInfo>true</showWeaveInfo>
+          <Xlint>ignore</Xlint>
+          <skip>false</skip>
+          <detail>true</detail>
+          <verbose>true</verbose>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>compile</goal>
+              <goal>test-compile</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <!--jdk编译插件-->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.13.0</version>
+        <configuration>
+          <source>${maven.compiler.source}</source>
+          <target>${maven.compiler.target}</target>
+          <encoding>${java.encoding}</encoding>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 
-    <build>
-        <plugins>
-            <!--切面插件-->
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>aspectj-maven-plugin</artifactId>
-                <version>1.14.0</version>
-                <configuration>
-                    <source>1.8</source>
-                    <encoding>UTF-8</encoding>
-                    <target>1.8</target>
-                    <complianceLevel>1.8</complianceLevel>
-                    <showWeaveInfo>true</showWeaveInfo>
-                    <Xlint>ignore</Xlint>
-                    <skip>false</skip>
-                </configuration>
-                <executions>
-                    <execution>
-                        <configuration>
-                            <skip>false</skip>
-                        </configuration>
-                        <goals>
-                            <goal>compile</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.10.1</version>
-                <configuration>
-                    <source>8</source>
-                    <target>8</target>
-                    <encoding>UTF-8</encoding>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
+
 </project>

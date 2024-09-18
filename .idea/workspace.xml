@@ -10,7 +10,224 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/encodings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/encodings.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/netty-all-4.1.63.Final-sources.jar" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/netty-all-4.1.63.Final.jar" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-client/pom.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-client/src/main/java/com/ouyunc/im/client/StartIMClient.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/pom.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/ICache.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/L1Cache.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/AbstractDistributedL1Cache.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/RedisDistributedL1Cache.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/RedisFactory.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/builder/RedisBuilder.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/builder/impl/RedisTemplateBuilder.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/builder/impl/StringRedisTemplateBuilder.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/enums/RedisEnum.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/properties/ClusterRedisProperties.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/properties/RedisPrimaryProperties.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/properties/SentinelRedisProperties.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/properties/StandaloneRedisProperties.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/strategy/RedisStrategy.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/strategy/impl/ClusterRedisStrategy.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/strategy/impl/SentinelRedisStrategy.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/strategy/impl/StandaloneRedisStrategy.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/redisson/RedissonFactory.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/redisson/builder/RedissonBuilder.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/redisson/builder/impl/RedissonClientBuilder.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/redisson/enums/RedisEnum.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/redisson/properties/ClusterRedissonProperties.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/redisson/properties/RedisPrimaryProperties.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/redisson/properties/SentinelRedissonProperties.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/redisson/properties/StandaloneRedissonProperties.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/redisson/strategy/RedissonStrategy.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/redisson/strategy/impl/ClusterRedissonStrategy.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/redisson/strategy/impl/SentinelRedissonStrategy.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/redisson/strategy/impl/StandaloneRedissonStrategy.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/local/AbstractLocalL1Cache.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/local/caffeine/CaffeineLocalL1Cache.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/local/map/MapLocalL1Cache.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/pom.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/base/CommandLineArgs.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/base/LoginUserInfo.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/base/MissingPacket.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/base/RoutingTable.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/base/SendCallback.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/base/SendResult.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/codec/MqttWebSocketCodec.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/codec/PacketCodec.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/config/IMConfig.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/CacheConstant.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/DbSqlConstant.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/IMConstant.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/enums/DeviceEnum.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/enums/MessageContentEnum.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/enums/MessageTypeEnum.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/enums/NetworkEnum.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/enums/OnlineEnum.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/enums/RouterStrategyEnum.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/enums/SendStatus.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/context/IMContext.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/encrypt/Encrypt.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/exception/IMException.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/exception/handler/GlobalExceptionHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/Packet.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/ExtraMessage.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/InnerExtraData.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/Message.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/Target.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/AttachmentContent.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/AudioContent.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/ClientQosNotifyContent.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/GroupRequestContent.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/LoginContent.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/NameCardContent.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/PictureContent.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/ReadReceiptContent.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/ServerNotifyContent.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/ServerWarningContent.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/VideoContent.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/VoiceContent.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/serialize/Long2StringSerializer.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/serialize/Serializer.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/ClassScanner.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/IdentityUtil.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/Ip4Util.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/MD5Util.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/MapUtil.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/ObjectUtil.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/ReaderWriterUtil.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/ReflectUtils.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/SnowflakeUtil.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/SocketAddressUtil.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/SslUtil.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/SystemClock.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-db/pom.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-db/src/main/java/com/ouyunc/im/db/config/JdbcPool.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-db/src/main/java/com/ouyunc/im/db/operator/AbstractDbOperator.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-db/src/main/java/com/ouyunc/im/db/operator/DbOperator.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-db/src/main/java/com/ouyunc/im/db/operator/MysqlDbOperator.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-db/src/main/java/com/ouyunc/im/db/properties/DbProperties.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-domain/pom.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-domain/src/main/java/com/ouyunc/im/domain/ImApp.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-domain/src/main/java/com/ouyunc/im/domain/ImBlacklist.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-domain/src/main/java/com/ouyunc/im/domain/ImFriend.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-domain/src/main/java/com/ouyunc/im/domain/ImGroup.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-domain/src/main/java/com/ouyunc/im/domain/ImGroupUser.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-domain/src/main/java/com/ouyunc/im/domain/ImMessage.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-domain/src/main/java/com/ouyunc/im/domain/ImReadReceipt.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-domain/src/main/java/com/ouyunc/im/domain/ImTimeLine.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-domain/src/main/java/com/ouyunc/im/domain/ImUser.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-domain/src/main/java/com/ouyunc/im/domain/MqttTopic.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-domain/src/main/java/com/ouyunc/im/domain/MqttTopicSubscribe.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-domain/src/main/java/com/ouyunc/im/domain/bo/ImBlacklistBO.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-domain/src/main/java/com/ouyunc/im/domain/bo/ImFriendBO.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-domain/src/main/java/com/ouyunc/im/domain/bo/ImGroupUserBO.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/pom.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/pom.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/AbstractIMServer.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/IMServer.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/StandardIMServer.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/StartIMServer.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/banner/IMBanner.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/channel/DefaultServerChannelInitializer.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/channel/DefaultSocketChannelInitializer.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/channel/ServerChannelInitializer.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/channel/SocketChannelInitializer.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/config/IMServerConfig.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/context/IMProcessContext.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/context/IMServerContext.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/dispatcher/DispatcherProcessorContext.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/dispatcher/DispatcherProcessorStrategy.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/dispatcher/HttpDispatcherProcessorStrategy.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/dispatcher/MqttDispatcherProcessorStrategy.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/dispatcher/PacketDispatcherProcessorStrategy.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/dispatcher/ProtocolDispatcher.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/event/IMEvent.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/event/IMOfflineEvent.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/event/IMOnlineEvent.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/event/IMWritePacketEvent.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/Convert2PacketHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/HeartBeatHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/HttpProtocolDispatcherHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/IMLoggingHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/MonitorHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/MqttBrokerServerHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/MqttProtocolDispatcherHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/OuyuncServerHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/PacketClusterRouterHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/PacketPostHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/PacketPreHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/PacketProtocolDispatcherHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/QosHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/TrusteeshipHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/WsServerHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/DbHelper.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/MessageHelper.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/MqttHelper.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/RouterHelper.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/UserHelper.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/innerclient/AbstractIMInnerClient.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/innerclient/DefaultIMInnerClient.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/innerclient/IMInnerClient.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/innerclient/handler/IMInnerClientChannelPoolHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/innerclient/handler/IMInnerClientHeartBeatHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/innerclient/pool/IMInnerClientPool.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/listener/AbstractImEventMulticaster.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/listener/DefaultImEventMulticaster.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/listener/IMEventMulticaster.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/listener/IMListener.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/listener/IMOfflineListener.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/listener/IMOnlineListener.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/lock/DistributedLock.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/lock/RedissonDistributedLockAspect.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/AbstractChatbotMessageProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/AbstractMessageProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/CustomerMessageProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/DefaultChatbotMessageProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/FriendRequestMessageProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/GroupChatMessageProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/GroupRequestMessageProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/LoginMessageProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/MessageProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/MqttDisConnectMessageProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/MqttSubscribeMessageProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/MqttUnSubscribeMessageProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/PingPongMessageProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/PrivateChatMessageProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/ReadReceiptMessageProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/SynAckMessageProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/WithdrawMessageProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/AbstractMessageContentProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupAgreeInviteMessageContentProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupAgreeJoinMessageContentProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupDisbandMessageContentProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupExitMessageContentProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupInviteMessageContentProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupJoinMessageContentProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupKickMessageContentProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupRefuseInviteMessageContentProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupRefuseJoinMessageContentProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/properties/IMServerProperties.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/protocol/Protocol.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/qos/Qos.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/router/AbstractMessageRouterStrategy.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/router/AbstractTopicRouterStrategy.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/router/BacktrackMessageRouterStrategy.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/router/RandomMessageRouterStrategy.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/router/RouterStrategy.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/thread/IMInnerClientHeartbeatThread.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/thread/IMRouteFailureProcessorThread.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/validate/MessageValidate.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/log4j2.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/ouyunc-im-cache.properties.example" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/ouyunc-im-db.properties.example" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/ouyunc-im-server.properties" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -98,23 +315,19 @@
       <filtered-out-file-type name="COMMIT_BY_MESSAGE" />
     </file-type-list>
   </component>
-  <component name="JsFlowSettings">
-    <service-enabled>true</service-enabled>
-    <exe-path />
-    <other-services-enabled>true</other-services-enabled>
-    <auto-save>true</auto-save>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
   </component>
   <component name="MavenImportPreferences">
     <option name="generalSettings">
       <MavenGeneralSettings>
-        <option name="localRepository" value="D:\repository" />
-        <option name="mavenHome" value="D:/工具/java/maven/apache-maven-3.6.3" />
-        <option name="userSettingsFile" value="D:\工具\java\maven\apache-maven-3.6.3\conf\ali-settings.xml" />
+        <option name="localRepository" value="C:\repository" />
+        <option name="mavenHome" value="$PROJECT_DIR$/../../../../software/apache-maven-3.9.6" />
+        <option name="userSettingsFile" value="C:\software\apache-maven-3.9.6\conf\ali-setting.xml" />
       </MavenGeneralSettings>
     </option>
     <option name="importingSettings">
       <MavenImportingSettings>
-        <option name="importAutomatically" value="true" />
         <option name="vmOptionsForImporter" value="-Xmx768m" />
       </MavenImportingSettings>
     </option>
@@ -122,39 +335,33 @@
   <component name="MavenRunner">
     <option name="skipTests" value="true" />
   </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 8
+}</component>
   <component name="ProjectId" id="1rHD39bsEE6KBQzoWetTGmn50Xv" />
   <component name="ProjectLevelVcsManager" settingsEditedManually="true">
     <ConfirmationsSetting value="2" id="Add" />
   </component>
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
-    <option name="showExcludedFiles" value="true" />
     <option name="showLibraryContents" value="true" />
     <option name="showMembers" value="true" />
     <option name="showVisibilityIcons" value="true" />
   </component>
-  <component name="PropertiesComponent">
-    <property name="ASKED_ADD_EXTERNAL_FILES" value="true" />
-    <property name="DefaultHtmlFileTemplate" value="HTML File" />
-    <property name="ExpandSpringBootJavaOptionsPanel" value="true" />
-    <property name="Git.Branch.Popup.ShowAllRemotes" value="true" />
-    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
-    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
-    <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
-    <property name="SONARLINT_PRECOMMIT_ANALYSIS" value="true" />
-    <property name="WebServerToolWindowFactoryState" value="false" />
-    <property name="add_unversioned_files" value="$PROJECT_DIR$/logs/ouyunc-im/all.log&#10;F:/workspace/ouyunc-im/logs/ouyunc-im/error.log" />
-    <property name="aspect.path.notification.shown" value="true" />
-    <property name="jdk.selected.JAVA_MODULE" value="1.8" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/docs" />
-    <property name="nodejs_package_manager_path" value="npm" />
-    <property name="project.structure.last.edited" value="Modules" />
-    <property name="project.structure.proportion" value="0.15" />
-    <property name="project.structure.side.proportion" value="0.47011495" />
-    <property name="settings.editor.selected.configurable" value="preferences.pluginManager" />
-    <property name="settings.editor.splitter.proportion" value="0.2597865" />
-    <property name="vue.rearranger.settings.migration" value="true" />
-  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
+    &quot;aspect.path.notification.shown&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;5.0.0&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/fzx/Desktop/ouyunc-im&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;MavenSettings&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  }
+}</component>
   <component name="ReactorSettings">
     <option name="notificationShown" value="true" />
   </component>
@@ -261,7 +468,7 @@
       </list>
     </recent_temporary>
   </component>
-  <component name="SpellCheckerSettings" BundledDictionaries="0" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" Dictionaries="0" CorrectionsLimit="5" DefaultDictionary="application-level" UseSingleDictionary="true" />
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="StructureViewFactory">
     <option name="ACTIVE_ACTIONS" value=",SHOW_INTERFACES,SHOW_FIELDS,SHOW_INHERITED" />
   </component>
@@ -537,6 +744,8 @@
       <workItem from="1702995787960" duration="574000" />
       <workItem from="1703404187028" duration="14317000" />
       <workItem from="1704065283018" duration="8667000" />
+      <workItem from="1726620809237" duration="740000" />
+      <workItem from="1726621873669" duration="556000" />
     </task>
     <task id="LOCAL-00190" summary="v3.1.1-beta 优化处理">
       <created>1686906322045</created>
@@ -885,7 +1094,7 @@
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
-    <option name="version" value="1" />
+    <option name="version" value="3" />
   </component>
   <component name="Vcs.Log.History.Properties">
     <option name="COLUMN_ID_ORDER">
@@ -904,7 +1113,6 @@
         <entry key="1">
           <value>
             <State>
-              <option name="SHOW_ONLY_AFFECTED_CHANGES" value="true" />
               <option name="FILTERS">
                 <map>
                   <entry key="branch">
@@ -923,6 +1131,7 @@
                   </entry>
                 </map>
               </option>
+              <option name="SHOW_ONLY_AFFECTED_CHANGES" value="true" />
             </State>
           </value>
         </entry>
@@ -933,17 +1142,10 @@
         </entry>
         <entry key="MAIN">
           <value>
-            <State>
-              <option name="COLUMN_ORDER" />
-            </State>
+            <State />
           </value>
         </entry>
       </map>
-    </option>
-    <option name="OPEN_TABS">
-      <set>
-        <option value="1" />
-      </set>
     </option>
   </component>
   <component name="VcsManagerConfiguration">
@@ -974,136 +1176,6 @@
     <MESSAGE value="v5.0.0&#10;1. 添加mqtt相关协议处理代码&#10;2. 优化代码" />
     <MESSAGE value="v5.0.0&#10;1. 添加消息发送回调&#10;2. 优化代码" />
     <option name="LAST_COMMIT_MESSAGE" value="v5.0.0&#10;1. 添加消息发送回调&#10;2. 优化代码" />
-  </component>
-  <component name="WindowStateProjectService">
-    <state x="552" y="172" key="#com.aspose.examples.AsposeExampleDialog" timestamp="1701825860249">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="552" y="172" key="#com.aspose.examples.AsposeExampleDialog/0.0.1536.824@0.0.1536.824" timestamp="1701825860249" />
-    <state x="574" y="128" key="#com.intellij.ide.util.MemberChooser" timestamp="1704069079629">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="574" y="128" key="#com.intellij.ide.util.MemberChooser/0.0.1536.824@0.0.1536.824" timestamp="1704069079629" />
-    <state x="520" y="196" key="#com.intellij.ide.util.TreeClassChooserDialog" timestamp="1700790676399">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="520" y="196" key="#com.intellij.ide.util.TreeClassChooserDialog/0.0.1536.824@0.0.1536.824" timestamp="1700790676399" />
-    <state x="310" y="337" key="#com.intellij.refactoring.move.MoveHandler.SelectRefactoringDialog" timestamp="1704065450408">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="310" y="337" key="#com.intellij.refactoring.move.MoveHandler.SelectRefactoringDialog/0.0.1536.824@0.0.1536.824" timestamp="1704065450408" />
-    <state x="291" y="0" width="339" height="824" key="#com.intellij.refactoring.rename.AutomaticRenamingDialog" timestamp="1704074742809">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="291" y="0" width="339" height="824" key="#com.intellij.refactoring.rename.AutomaticRenamingDialog/0.0.1536.824@0.0.1536.824" timestamp="1704074742809" />
-    <state x="499" y="159" key="#com.intellij.refactoring.safeDelete.UnsafeUsagesDialog" timestamp="1702746795195">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="499" y="159" key="#com.intellij.refactoring.safeDelete.UnsafeUsagesDialog/0.0.1536.824@0.0.1536.824" timestamp="1702746795195" />
-    <state x="297" y="365" width="962" height="453" key="#xdebugger.evaluate" timestamp="1702749442610">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="297" y="365" width="962" height="453" key="#xdebugger.evaluate/0.0.1536.824@0.0.1536.824" timestamp="1702749442610" />
-    <state x="209" y="0" key="CommitChangelistDialog2" timestamp="1704076342961">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="209" y="0" key="CommitChangelistDialog2/0.0.1536.824@0.0.1536.824" timestamp="1704076342961" />
-    <state width="1214" height="636" key="DebuggerActiveHint" timestamp="1704071985657">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="1214" height="636" key="DebuggerActiveHint/0.0.1536.824@0.0.1536.824" timestamp="1704071985657" />
-    <state x="93" y="93" width="1350" height="638" key="DiffContextDialog" timestamp="1700794340608">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="93" y="93" width="1350" height="638" key="DiffContextDialog/0.0.1536.824@0.0.1536.824" timestamp="1700794340608" />
-    <state x="549" y="167" key="FileChooserDialogImpl" timestamp="1702907723411">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="549" y="167" key="FileChooserDialogImpl/0.0.1536.824@0.0.1536.824" timestamp="1702907723411" />
-    <state width="1493" height="97" key="GridCell.Tab.0.bottom" timestamp="1704075009806">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="1493" height="97" key="GridCell.Tab.0.bottom/0.0.1536.824@0.0.1536.824" timestamp="1704075009806" />
-    <state width="1493" height="97" key="GridCell.Tab.0.center" timestamp="1704075009806">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="1493" height="97" key="GridCell.Tab.0.center/0.0.1536.824@0.0.1536.824" timestamp="1704075009806" />
-    <state width="1493" height="97" key="GridCell.Tab.0.left" timestamp="1704075009806">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="1493" height="97" key="GridCell.Tab.0.left/0.0.1536.824@0.0.1536.824" timestamp="1704075009806" />
-    <state width="1493" height="97" key="GridCell.Tab.0.right" timestamp="1704075009806">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="1493" height="97" key="GridCell.Tab.0.right/0.0.1536.824@0.0.1536.824" timestamp="1704075009806" />
-    <state width="1493" height="97" key="GridCell.Tab.1.bottom" timestamp="1704075009806">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="1493" height="97" key="GridCell.Tab.1.bottom/0.0.1536.824@0.0.1536.824" timestamp="1704075009806" />
-    <state width="1493" height="97" key="GridCell.Tab.1.center" timestamp="1704075009806">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="1493" height="97" key="GridCell.Tab.1.center/0.0.1536.824@0.0.1536.824" timestamp="1704075009806" />
-    <state width="1493" height="97" key="GridCell.Tab.1.left" timestamp="1704075009806">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="1493" height="97" key="GridCell.Tab.1.left/0.0.1536.824@0.0.1536.824" timestamp="1704075009806" />
-    <state width="1493" height="97" key="GridCell.Tab.1.right" timestamp="1704075009806">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="1493" height="97" key="GridCell.Tab.1.right/0.0.1536.824@0.0.1536.824" timestamp="1704075009806" />
-    <state x="270" y="0" key="SettingsEditor" timestamp="1702995767051">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="270" y="0" key="SettingsEditor/0.0.1536.824@0.0.1536.824" timestamp="1702995767051" />
-    <state x="830" y="141" width="543" height="524" key="StructurePopup" timestamp="1701411262414">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="830" y="141" width="543" height="524" key="StructurePopup/0.0.1536.824@0.0.1536.824" timestamp="1701411262414" />
-    <state x="361" y="145" key="Vcs.Push.Dialog.v2" timestamp="1704076352522">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="361" y="145" key="Vcs.Push.Dialog.v2/0.0.1536.824@0.0.1536.824" timestamp="1704076352522" />
-    <state width="775" height="419" key="XDebugger.FullValuePopup" timestamp="1701856183379">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state width="775" height="419" key="XDebugger.FullValuePopup/0.0.1536.824@0.0.1536.824" timestamp="1701856183379" />
-    <state x="93" y="93" width="1350" height="638" key="com.intellij.history.integration.ui.views.FileHistoryDialog" timestamp="1703406194032">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="93" y="93" width="1350" height="638" key="com.intellij.history.integration.ui.views.FileHistoryDialog/0.0.1536.824@0.0.1536.824" timestamp="1703406194032" />
-    <state x="449" y="236" key="com.intellij.ide.util.TipDialog" timestamp="1702996314392">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="449" y="236" key="com.intellij.ide.util.TipDialog/0.0.1536.824@0.0.1536.824" timestamp="1702996314392" />
-    <state x="279" y="148" key="com.intellij.xdebugger.impl.breakpoints.ui.BreakpointsDialogFactory$2" timestamp="1701609216598">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="279" y="148" key="com.intellij.xdebugger.impl.breakpoints.ui.BreakpointsDialogFactory$2/0.0.1536.824@0.0.1536.824" timestamp="1701609216598" />
-    <state x="499" y="177" key="extract.method.dialog" timestamp="1701057117014">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="499" y="177" key="extract.method.dialog/0.0.1536.824@0.0.1536.824" timestamp="1701057117014" />
-    <state x="450" y="154" width="712" height="534" key="find.popup" timestamp="1702742573790">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="450" y="154" width="712" height="534" key="find.popup/0.0.1536.824@0.0.1536.824" timestamp="1702742573790" />
-    <state x="483" y="203" key="git4idea.merge.GitPullDialog" timestamp="1702751417784">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="483" y="203" key="git4idea.merge.GitPullDialog/0.0.1536.824@0.0.1536.824" timestamp="1702751417784" />
-    <state x="470" y="30" key="refactoring.ChangeSignatureDialog" timestamp="1702910386015">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="470" y="30" key="refactoring.ChangeSignatureDialog/0.0.1536.824@0.0.1536.824" timestamp="1702910386015" />
-    <state x="425" y="187" key="run.anything.popup" timestamp="1701748034875">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="425" y="187" key="run.anything.popup/0.0.1536.824@0.0.1536.824" timestamp="1701748034875" />
-    <state x="431" y="145" width="672" height="678" key="search.everywhere.popup" timestamp="1702734672118">
-      <screen x="0" y="0" width="1536" height="824" />
-    </state>
-    <state x="431" y="145" width="672" height="678" key="search.everywhere.popup/0.0.1536.824@0.0.1536.824" timestamp="1702734672118" />
   </component>
   <component name="XDebuggerManager">
     <pin-to-top-manager>
