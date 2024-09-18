@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.ouyunc</groupId>
+        <artifactId>ouyunc-im</artifactId>
+        <version>6.0.0</version>
+    </parent>
+    <artifactId>ouyunc-client</artifactId>
+    <name>ouyunc-client</name>
+    <description>消息客户端</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.ouyunc</groupId>
+            <artifactId>ouyunc-core</artifactId>
+            <version>${ouyunc.version}</version>
+        </dependency>
+    </dependencies>
+
+</project>

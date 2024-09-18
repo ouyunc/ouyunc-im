@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.ouyunc</groupId>
+        <artifactId>ouyunc-im</artifactId>
+        <version>6.0.0</version>
+    </parent>
+    <artifactId>ouyunc-server</artifactId>
+    <name>ouyunc-server</name>
+    <description>消息服务端</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.ouyunc</groupId>
+            <artifactId>ouyunc-core</artifactId>
+            <version>${ouyunc.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.ouyunc</groupId>
+            <artifactId>ouyunc-repository</artifactId>
+            <version>${ouyunc.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.ouyunc</groupId>
+            <artifactId>ouyunc-cache</artifactId>
+            <version>${ouyunc.version}</version>
+        </dependency>
+    </dependencies>
+
+
+    <build>
+        <!--设置打包名称-->
+        <plugins>
+            <!--切面插件, 跨 JAR 的织入限制：
+      默认情况下，AspectJ 在编译时仅对同一个编译单元内的类进行织入。
+      要使一个切面对另一个 JAR 中的类生效，需要在构建过程中使用 AspectJ 编译器同时处理所有相关的 JAR 文件。-->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>aspectj-maven-plugin</artifactId>
+                <version>1.15.0</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.aspectj</groupId>
+                        <artifactId>aspectjtools</artifactId>
+                        <!-- AspectJ compiler version, in sync with runtime -->
+                        <version>${aspectjweaver.version}</version>
+                    </dependency>
+                </dependencies>
+                <configuration>
+                    <encoding>${java.encoding}</encoding>
+                    <source>${maven.compiler.source}</source>
+                    <target>${maven.compiler.target}</target>
+                    <complianceLevel>${maven.compiler.source}</complianceLevel>
+                    <showWeaveInfo>true</showWeaveInfo>
+                    <Xlint>ignore</Xlint>
+                    <skip>false</skip>
+                    <detail>true</detail>
+                    <verbose>true</verbose>
+                    <weaveDependencies>
+                        <weaveDependency>
+                            <groupId>com.ouyunc</groupId>
+                            <artifactId>ouyunc-cache</artifactId>
+                        </weaveDependency>
+                        <weaveDependency>
+                            <groupId>com.ouyunc</groupId>
+                            <artifactId>ouyunc-core</artifactId>
+                        </weaveDependency>
+                    </weaveDependencies>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>compile</goal>
+                            <goal>test-compile</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+        </plugins>
+    </build>
+</project>
