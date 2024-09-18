@@ -1,4 +1,4 @@
-# OUYUNC-IM [![version](https://img.shields.io/badge/version-5.0.0-blue)](https://gitee.com/etxync/ouyunc-im)  
+# OUYUNC-IM [![version](https://img.shields.io/badge/version-6.0.0-blue)](https://gitee.com/etxync/ouyunc-im)  
 [![license](https://img.shields.io/badge/license-MIT-brightgreen)](https://www.mit-license.org/)
 <a href='https://gitee.com/etxync/ouyunc-im/stargazers'><img src='https://gitee.com/etxync/ouyunc-im/badge/star.svg?theme=dark' alt='star'></img></a>
 <a href='https://gitee.com/etxync/ouyunc-im/members'><img src='https://gitee.com/etxync/ouyunc-im/badge/fork.svg?theme=dark' alt='fork'></img></a>
@@ -17,12 +17,12 @@
  (10)通过ack以及重试机制保证消息可靠，功能可扩展性很强；
  (11)tcp协议包packet                                                                                                             
   
-|    1    |     1   |    1    |     8    |    1     |    1     |     4     |    1     |     1     |     1     |    4     |      n    |
-+---------+---------+---------+----------+----------+----------+-----------+----------+-----------+-----------+----------+-----------+
+|    1    |     1   |    1    |     8    |    1     |    1     |    1     |     1     |     1     |    4     |      n    |
++---------+---------+---------+----------+----------+----------+----------+-----------+-----------+----------+-----------+
 |         |         |         |          |          |          |           |          |           |           |          |           |
-|  魔数   |  协议类型| 协议版本 | 协议包id | 设备类型 | 网络类型  |  IP地址   | 加密算法 | 序列化算法 |  消息类型  | 消息长度 |  消息体    |
-|         |         |         |          |          |          |           |          |           |           |          |           |
-+---------+---------+---------+----------+----------+----------+-----------+----------+-----------+-----------+----------+-----------+
+|  魔数   |  协议类型| 协议版本 | 协议包id | 设备类型 | 网络类型  | 加密算法 | 序列化算法 |  消息类型  | 消息长度 |  消息体    |
+|         |         |         |          |          |         |          |           |           |          |           |
++---------+---------+---------+----------+----------+---------+----------+-----------+-----------+----------+-----------+
 
 
 
@@ -35,7 +35,7 @@ http://www.ouyunc.com
 
 #### 软件架构
 
-##### 开发环境：jdk1.8 + netty4.1.x
+##### 开发环境：jdk21 + netty4.1.x
 
 ##### 软件架构图：
 
@@ -191,6 +191,9 @@ https://gitee.com/etxync/ouyunc-im/wikis/OUYUNC-IM%20v3.x/%E5%AE%A2%E6%88%B7%E7%
 3. 添加群聊和私聊会话消息
 4. 对离线消息的存储格式进行重构
 5. 优化其他代码
+#####  **5.0.0 ~ 6.0.0**
+1. 适配jdk21,重构项目为框架，增加扩展点
+2. 优化其他代码
 
 #### 最后说明
 由于本人技术有限，项目中可能会有bug或代码不规范的地方，如果对你带来了困扰请跳过本项目。
