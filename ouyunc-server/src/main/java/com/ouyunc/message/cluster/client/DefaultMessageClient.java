@@ -20,7 +20,7 @@ public class DefaultMessageClient extends AbstractMessageClient {
     /***
      * 定时任务事件执行器
      */
-    private static final ScheduledExecutorService SCHEDULED_EVENT_EXECUTORS = Executors.newScheduledThreadPool(16, new BasicThreadFactory.Builder().namingPattern("cluster-message-client-pool-%d").build());
+    private static final ScheduledExecutorService SCHEDULED_EVENT_EXECUTORS = Executors.newScheduledThreadPool(16, new BasicThreadFactory.Builder().daemon(true).namingPattern("cluster-message-client-pool-%d").build());
 
 
 
