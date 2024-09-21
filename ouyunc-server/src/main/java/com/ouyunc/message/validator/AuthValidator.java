@@ -1,13 +1,14 @@
 package com.ouyunc.message.validator;
 
-import com.ouyunc.base.constant.CacheConstant;
+import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.OnlineEnum;
 import com.ouyunc.base.model.LoginClientInfo;
-import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
+import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.message.context.MessageServerContext;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.util.AttributeKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,17 +31,14 @@ public enum AuthValidator implements Validator<Packet> {
         byte deviceTypeValue = packet.getDeviceType();
         Message message = packet.getMessage();
         String from = message.getFrom();
-        Metadata metadata = message.getMetadata();
         String deviceTypeName = MessageServerContext.deviceTypeCache.get(deviceTypeValue).getDeviceTypeName();
         if (log.isDebugEnabled()) {
             log.debug("正在校验消息发送方 from {} 是否已在设备: {} 登录认证", from, deviceTypeName);
         }
-        //1,判断用户是否登录
-        // 从redis获取登录信息
-        String clientLoginCacheKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + from;
-        // 这里不进行判空了，到这里肯定不为空（登录信息里面一定要有登录设备的类型）
-        LoginClientInfo cacheLoginClientInfo = MessageServerContext.remoteLoginClientInfoCache.getHash(clientLoginCacheKey, deviceTypeName);
+        //1,判断用户是否登录, 2024-09-21 这里修改不从redis取登录信息，减少Redis的压力
+        AttributeKey<LoginClientInfo> channelTagLoginKey = AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
+        LoginClientInfo loginClientInfo = ctx.channel().attr(channelTagLoginKey).get();
         // 判断是否在线， 也可以进行扩展进行给客户端发送登录认证失败的消息
-        return cacheLoginClientInfo != null && OnlineEnum.ONLINE.equals(cacheLoginClientInfo.getOnlineStatus());
+        return loginClientInfo != null && OnlineEnum.ONLINE.equals(loginClientInfo.getOnlineStatus()) && MessageContext.messageProperties.getLocalServerAddress().equals(loginClientInfo.getLoginServerAddress());
     }
 }

@@ -11,223 +11,15 @@
   <component name="ChangeListManager">
     <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/encodings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/encodings.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/netty-all-4.1.63.Final-sources.jar" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/netty-all-4.1.63.Final.jar" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-client/pom.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-client/src/main/java/com/ouyunc/im/client/StartIMClient.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/pom.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/ICache.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/L1Cache.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/AbstractDistributedL1Cache.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/RedisDistributedL1Cache.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/RedisFactory.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/builder/RedisBuilder.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/builder/impl/RedisTemplateBuilder.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/builder/impl/StringRedisTemplateBuilder.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/enums/RedisEnum.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/properties/ClusterRedisProperties.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/properties/RedisPrimaryProperties.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/properties/SentinelRedisProperties.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/properties/StandaloneRedisProperties.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/strategy/RedisStrategy.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/strategy/impl/ClusterRedisStrategy.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/strategy/impl/SentinelRedisStrategy.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/lettuce/strategy/impl/StandaloneRedisStrategy.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/redisson/RedissonFactory.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/redisson/builder/RedissonBuilder.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/redisson/builder/impl/RedissonClientBuilder.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/redisson/enums/RedisEnum.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/redisson/properties/ClusterRedissonProperties.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/redisson/properties/RedisPrimaryProperties.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/redisson/properties/SentinelRedissonProperties.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/redisson/properties/StandaloneRedissonProperties.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/redisson/strategy/RedissonStrategy.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/redisson/strategy/impl/ClusterRedissonStrategy.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/redisson/strategy/impl/SentinelRedissonStrategy.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/distributed/redis/redisson/strategy/impl/StandaloneRedissonStrategy.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/local/AbstractLocalL1Cache.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/local/caffeine/CaffeineLocalL1Cache.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-cache/src/main/java/com/ouyunc/im/cache/l1/local/map/MapLocalL1Cache.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/pom.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/base/CommandLineArgs.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/base/LoginUserInfo.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/base/MissingPacket.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/base/RoutingTable.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/base/SendCallback.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/base/SendResult.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/codec/MqttWebSocketCodec.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/codec/PacketCodec.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/config/IMConfig.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/CacheConstant.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/DbSqlConstant.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/IMConstant.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/enums/DeviceEnum.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/enums/MessageContentEnum.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/enums/MessageTypeEnum.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/enums/NetworkEnum.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/enums/OnlineEnum.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/enums/RouterStrategyEnum.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/constant/enums/SendStatus.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/context/IMContext.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/encrypt/Encrypt.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/exception/IMException.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/exception/handler/GlobalExceptionHandler.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/Packet.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/ExtraMessage.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/InnerExtraData.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/Message.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/Target.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/AttachmentContent.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/AudioContent.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/ClientQosNotifyContent.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/GroupRequestContent.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/LoginContent.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/NameCardContent.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/PictureContent.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/ReadReceiptContent.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/ServerNotifyContent.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/ServerWarningContent.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/VideoContent.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/packet/message/content/VoiceContent.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/serialize/Long2StringSerializer.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/serialize/Serializer.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/ClassScanner.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/IdentityUtil.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/Ip4Util.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/MD5Util.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/MapUtil.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/ObjectUtil.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/ReaderWriterUtil.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/ReflectUtils.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/SnowflakeUtil.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/SocketAddressUtil.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/SslUtil.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-core/src/main/java/com/ouyunc/im/utils/SystemClock.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-db/pom.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-db/src/main/java/com/ouyunc/im/db/config/JdbcPool.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-db/src/main/java/com/ouyunc/im/db/operator/AbstractDbOperator.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-db/src/main/java/com/ouyunc/im/db/operator/DbOperator.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-db/src/main/java/com/ouyunc/im/db/operator/MysqlDbOperator.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-db/src/main/java/com/ouyunc/im/db/properties/DbProperties.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-domain/pom.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-domain/src/main/java/com/ouyunc/im/domain/ImApp.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-domain/src/main/java/com/ouyunc/im/domain/ImBlacklist.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-domain/src/main/java/com/ouyunc/im/domain/ImFriend.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-domain/src/main/java/com/ouyunc/im/domain/ImGroup.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-domain/src/main/java/com/ouyunc/im/domain/ImGroupUser.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-domain/src/main/java/com/ouyunc/im/domain/ImMessage.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-domain/src/main/java/com/ouyunc/im/domain/ImReadReceipt.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-domain/src/main/java/com/ouyunc/im/domain/ImTimeLine.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-domain/src/main/java/com/ouyunc/im/domain/ImUser.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-domain/src/main/java/com/ouyunc/im/domain/MqttTopic.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-domain/src/main/java/com/ouyunc/im/domain/MqttTopicSubscribe.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-domain/src/main/java/com/ouyunc/im/domain/bo/ImBlacklistBO.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-domain/src/main/java/com/ouyunc/im/domain/bo/ImFriendBO.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-domain/src/main/java/com/ouyunc/im/domain/bo/ImGroupUserBO.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-commons/pom.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/pom.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/AbstractIMServer.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/IMServer.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/StandardIMServer.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/StartIMServer.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/banner/IMBanner.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/channel/DefaultServerChannelInitializer.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/channel/DefaultSocketChannelInitializer.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/channel/ServerChannelInitializer.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/channel/SocketChannelInitializer.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/config/IMServerConfig.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/context/IMProcessContext.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/context/IMServerContext.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/dispatcher/DispatcherProcessorContext.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/dispatcher/DispatcherProcessorStrategy.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/dispatcher/HttpDispatcherProcessorStrategy.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/dispatcher/MqttDispatcherProcessorStrategy.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/dispatcher/PacketDispatcherProcessorStrategy.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/dispatcher/ProtocolDispatcher.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/event/IMEvent.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/event/IMOfflineEvent.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/event/IMOnlineEvent.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/event/IMWritePacketEvent.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/Convert2PacketHandler.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/HeartBeatHandler.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/HttpProtocolDispatcherHandler.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/IMLoggingHandler.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/MonitorHandler.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/MqttBrokerServerHandler.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/MqttProtocolDispatcherHandler.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/OuyuncServerHandler.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/PacketClusterRouterHandler.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/PacketPostHandler.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/PacketPreHandler.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/PacketProtocolDispatcherHandler.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/QosHandler.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/TrusteeshipHandler.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/handler/WsServerHandler.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/DbHelper.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/MessageHelper.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/MqttHelper.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/RouterHelper.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/helper/UserHelper.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/innerclient/AbstractIMInnerClient.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/innerclient/DefaultIMInnerClient.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/innerclient/IMInnerClient.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/innerclient/handler/IMInnerClientChannelPoolHandler.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/innerclient/handler/IMInnerClientHeartBeatHandler.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/innerclient/pool/IMInnerClientPool.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/listener/AbstractImEventMulticaster.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/listener/DefaultImEventMulticaster.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/listener/IMEventMulticaster.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/listener/IMListener.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/listener/IMOfflineListener.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/listener/IMOnlineListener.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/lock/DistributedLock.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/lock/RedissonDistributedLockAspect.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/AbstractChatbotMessageProcessor.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/AbstractMessageProcessor.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/CustomerMessageProcessor.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/DefaultChatbotMessageProcessor.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/FriendRequestMessageProcessor.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/GroupChatMessageProcessor.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/GroupRequestMessageProcessor.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/LoginMessageProcessor.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/MessageProcessor.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/MqttDisConnectMessageProcessor.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/MqttSubscribeMessageProcessor.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/MqttUnSubscribeMessageProcessor.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/PingPongMessageProcessor.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/PrivateChatMessageProcessor.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/ReadReceiptMessageProcessor.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/SynAckMessageProcessor.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/WithdrawMessageProcessor.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/AbstractMessageContentProcessor.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupAgreeInviteMessageContentProcessor.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupAgreeJoinMessageContentProcessor.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupDisbandMessageContentProcessor.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupExitMessageContentProcessor.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupInviteMessageContentProcessor.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupJoinMessageContentProcessor.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupKickMessageContentProcessor.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupRefuseInviteMessageContentProcessor.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/processor/content/GroupRefuseJoinMessageContentProcessor.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/properties/IMServerProperties.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/protocol/Protocol.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/qos/Qos.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/router/AbstractMessageRouterStrategy.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/router/AbstractTopicRouterStrategy.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/router/BacktrackMessageRouterStrategy.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/router/RandomMessageRouterStrategy.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/router/RouterStrategy.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/thread/IMInnerClientHeartbeatThread.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/thread/IMRouteFailureProcessorThread.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/java/com/ouyunc/im/validate/MessageValidate.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/log4j2.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/ouyunc-im-cache.properties.example" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/ouyunc-im-db.properties.example" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-im-server/src/main/resources/ouyunc-im-server.properties" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/context/MessageServerContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/context/MessageServerContext.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/dispatcher/HttpProtocolDispatcherProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/dispatcher/HttpProtocolDispatcherProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/dispatcher/MqttProtocolDispatcherProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/dispatcher/MqttProtocolDispatcherProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/dispatcher/PacketProtocolDispatcherProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/dispatcher/PacketProtocolDispatcherProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/dispatcher/ProtocolDispatcher.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/dispatcher/ProtocolDispatcher.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/dispatcher/ProtocolDispatcherProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/dispatcher/ProtocolDispatcherProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/validator/AuthValidator.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/validator/AuthValidator.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -348,20 +140,25 @@
     <option name="showMembers" value="true" />
     <option name="showVisibilityIcons" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
-    &quot;aspect.path.notification.shown&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;5.0.0&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/fzx/Desktop/ouyunc-im&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;MavenSettings&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Maven.ouyunc-im [clean].executor": "Run",
+    "Maven.ouyunc-im [install].executor": "Run",
+    "WebServerToolWindowFactoryState": "false",
+    "aspect.path.notification.shown": "true",
+    "git-widget-placeholder": "6.0.0",
+    "last_opened_file_path": "C:/Users/fzx/Desktop/ouyunc-im",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "project.structure.last.edited": "Project",
+    "project.structure.proportion": "0.15",
+    "project.structure.side.proportion": "0.0",
+    "settings.editor.selected.configurable": "MavenSettings",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="ReactorSettings">
     <option name="notificationShown" value="true" />
   </component>
@@ -391,7 +188,7 @@
       <recent name="com.ouyu.im.innerclient" />
     </key>
   </component>
-  <component name="RunManager" selected="Application.StartIMServer">
+  <component name="RunManager" selected="Application.StartServer">
     <configuration name="DbHelper" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="com.ouyunc.im.helper.DbHelper" />
       <module name="ouyunc-im-server" />
@@ -442,6 +239,19 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
+    <configuration name="StartServer" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="com.ouyunc.message.StartServer" />
+      <module name="ouyunc-server" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.ouyunc.message.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
     <configuration name="Test" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="com.ouyunc.im.listener.Test" />
       <module name="ouyunc-im-core" />
@@ -455,16 +265,13 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="OuyuncAuthApplication#1" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" path="$APPLICATION_CONFIG_DIR$/scratches/OuyuncAuthApplication.http" runType="Run single request">
-      <method v="2" />
-    </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Application.StartServer" />
         <item itemvalue="Application.Test" />
         <item itemvalue="Application.DefaultImEventMulticaster" />
         <item itemvalue="Application.MqttSubscribeMessageProcessor" />
         <item itemvalue="Application.DbHelper" />
-        <item itemvalue="HTTP Request.OuyuncAuthApplication#1" />
       </list>
     </recent_temporary>
   </component>

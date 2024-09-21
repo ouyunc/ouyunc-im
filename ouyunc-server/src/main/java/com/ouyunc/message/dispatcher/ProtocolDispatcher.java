@@ -2,8 +2,8 @@ package com.ouyunc.message.dispatcher;
 
 
 import com.ouyunc.base.constant.MessageConstant;
-import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.base.exception.MessageException;
+import com.ouyunc.message.context.MessageServerContext;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
@@ -44,7 +44,7 @@ public class ProtocolDispatcher extends ByteToMessageDecoder {
         if (readerIndex != 0) {
             return;
         }
-        ProtocolDispatcherProcessor<ByteBuf> protocolDispatcherProcessor = getProtocolDispatcherProcessor(in);
+        ProtocolDispatcherProcessor protocolDispatcherProcessor = getProtocolDispatcherProcessor(in);
         // 包含http/https/ws/wss
         if (protocolDispatcherProcessor != null) {
             protocolDispatcherProcessor.process(ctx);
@@ -76,9 +76,9 @@ public class ProtocolDispatcher extends ByteToMessageDecoder {
      * @author fzx
      * @description 获取协议处理器
      */
-    public ProtocolDispatcherProcessor<ByteBuf> getProtocolDispatcherProcessor(ByteBuf in) {
+    public ProtocolDispatcherProcessor getProtocolDispatcherProcessor(ByteBuf in) {
         // 匹配并获取协议分发器
-        for (ProtocolDispatcherProcessor<ByteBuf> protocolDispatcherProcessor : MessageServerContext.protocolDispatcherProcessors) {
+        for (ProtocolDispatcherProcessor protocolDispatcherProcessor : MessageServerContext.protocolDispatcherProcessors) {
             if (protocolDispatcherProcessor.match(in)) {
                 return protocolDispatcherProcessor;
             }

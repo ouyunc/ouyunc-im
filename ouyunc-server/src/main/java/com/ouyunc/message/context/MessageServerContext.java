@@ -22,7 +22,6 @@ import com.ouyunc.message.protocol.NativePacketProtocol;
 import com.ouyunc.message.protocol.PacketProtocol;
 import com.ouyunc.message.router.BacktrackMessageRouter;
 import com.ouyunc.message.router.Router;
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.pool.ChannelPool;
@@ -53,7 +52,7 @@ public class MessageServerContext extends MessageContext {
     /**
      * Message 协议分发处理器
      */
-    public static List<ProtocolDispatcherProcessor<ByteBuf>> protocolDispatcherProcessors = new ArrayList<>();
+    public static List<ProtocolDispatcherProcessor> protocolDispatcherProcessors = new ArrayList<>();
 
 
 

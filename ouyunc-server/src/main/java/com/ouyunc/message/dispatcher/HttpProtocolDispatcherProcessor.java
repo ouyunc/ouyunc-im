@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory;
  * @author fzx
  * @description http 协议
  */
-public class HttpProtocolDispatcherProcessor implements ProtocolDispatcherProcessor<ByteBuf> {
+public class HttpProtocolDispatcherProcessor implements ProtocolDispatcherProcessor {
     private static final Logger log = LoggerFactory.getLogger(HttpProtocolDispatcherProcessor.class);
 
     @Override

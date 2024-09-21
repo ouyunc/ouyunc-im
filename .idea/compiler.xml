@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="AjcSettings">
-    <option name="ajcPath" value="$PROJECT_DIR$/../../../../repository/org/aspectj/aspectjtools/1.9.21.2/aspectjtools-1.9.21.2.jar" />
+    <option name="ajcPath" value="$PROJECT_DIR$/../../repository/org/aspectj/aspectjtools/1.9.21.2/aspectjtools-1.9.21.2.jar" />
     <option name="cmdLineParams" value="-Xlint:ignore -showWeaveInfo" />
     <option name="delegateToJavac" value="true" />
   </component>
@@ -32,7 +32,7 @@
       <module name="ouyunc-im-commons" target="1.8" />
       <module name="ouyunc-im-core" target="1.8" />
       <module name="ouyunc-im-db" target="1.8" />
-      <module name="ouyunc-im-domain" target="1.8" />
+      <module name="ouyunc-im-domain" target="1.5" />
       <module name="ouyunc-im-server" target="1.8" />
     </bytecodeTargetLevel>
   </component>

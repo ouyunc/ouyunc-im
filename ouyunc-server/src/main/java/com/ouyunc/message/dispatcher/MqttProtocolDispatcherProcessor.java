@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
  * @author fzx
  * @description mqtt 协议
  */
-public class MqttProtocolDispatcherProcessor implements ProtocolDispatcherProcessor<ByteBuf> {
+public class MqttProtocolDispatcherProcessor implements ProtocolDispatcherProcessor {
     private static final Logger log = LoggerFactory.getLogger(MqttProtocolDispatcherProcessor.class);
 
     @Override

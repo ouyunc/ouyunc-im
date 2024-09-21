@@ -13,7 +13,7 @@ import java.nio.ByteOrder;
  * @author fzx
  * @description packet 协议,用于服务内部使用，主要用于集群节点之间通信
  */
-public class PacketProtocolDispatcherProcessor implements ProtocolDispatcherProcessor<ByteBuf> {
+public class PacketProtocolDispatcherProcessor implements ProtocolDispatcherProcessor {
     @Override
     public boolean match(ByteBuf in) {
         // 判断是何种协议,注意这里不可以使用  in.readByte();
