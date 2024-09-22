@@ -56,11 +56,11 @@ public class LoginMessageProcessor extends AbstractMessageProcessor<Byte> {
             return;
         }
         DeviceType deviceType = MessageServerContext.deviceTypeCache.get(packet.getDeviceType());
-        String clientLoginCacheKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + loginContent.getAppKey() + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + loginContent.getIdentity();
+        String comboIdentity = IdentityUtil.generalComboIdentity(loginContent.getIdentity(), deviceType.getDeviceTypeName());
+        String clientLoginCacheKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + loginContent.getAppKey() + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + comboIdentity;
         //如果之前已经登录（重复登录请求），这里判断是否已经登录过,同一个账号在同一个设备不能同时登录
         //1,从分布式缓存取出该登录用户
-        LoginClientInfo cacheLoginClientInfo = MessageServerContext.remoteLoginClientInfoCache.getHash(clientLoginCacheKey, deviceType.getDeviceTypeName());
-        String comboIdentity = IdentityUtil.generalComboIdentity(loginContent.getIdentity(), deviceType.getDeviceTypeName());
+        LoginClientInfo cacheLoginClientInfo = MessageServerContext.remoteLoginClientInfoCache.get(clientLoginCacheKey);
         //2,从本地用户注册表中取出该用户的channel
         ChannelHandlerContext bindCtx = MessageServerContext.localClientRegisterTable.get(comboIdentity);
         // 重复登录请求(1，不同的设备远程登录，2，同一设备重复发送登录请求)，向原有的连接发送通知，有其他客户端登录，并将其连接下线

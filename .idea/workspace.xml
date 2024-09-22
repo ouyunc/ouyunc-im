@@ -9,17 +9,12 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
+    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v6.0.0 优化代码">
       <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/context/MessageServerContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/context/MessageServerContext.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/dispatcher/HttpProtocolDispatcherProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/dispatcher/HttpProtocolDispatcherProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/dispatcher/MqttProtocolDispatcherProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/dispatcher/MqttProtocolDispatcherProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/dispatcher/PacketProtocolDispatcherProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/dispatcher/PacketProtocolDispatcherProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/dispatcher/ProtocolDispatcher.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/dispatcher/ProtocolDispatcher.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/dispatcher/ProtocolDispatcherProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/dispatcher/ProtocolDispatcherProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/validator/AuthValidator.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/validator/AuthValidator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/channel/DefaultSocketChannelInitializer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/channel/DefaultSocketChannelInitializer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/ClientHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/ClientHelper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/LoginMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/LoginMessageProcessor.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -142,16 +137,20 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
+    "Application.StartServer.executor": "Debug",
     "Maven.ouyunc-im [clean].executor": "Run",
     "Maven.ouyunc-im [install].executor": "Run",
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
     "WebServerToolWindowFactoryState": "false",
     "aspect.path.notification.shown": "true",
     "git-widget-placeholder": "6.0.0",
+    "kotlin-language-version-configured": "true",
     "last_opened_file_path": "C:/Users/fzx/Desktop/ouyunc-im",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
     "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
     "project.structure.last.edited": "Project",
     "project.structure.proportion": "0.15",
     "project.structure.side.proportion": "0.0",
@@ -553,6 +552,7 @@
       <workItem from="1704065283018" duration="8667000" />
       <workItem from="1726620809237" duration="740000" />
       <workItem from="1726621873669" duration="556000" />
+      <workItem from="1726963519469" duration="685000" />
     </task>
     <task id="LOCAL-00190" summary="v3.1.1-beta 优化处理">
       <created>1686906322045</created>
@@ -897,7 +897,7 @@
       <option name="project" value="LOCAL" />
       <updated>1704076343678</updated>
     </task>
-    <option name="localTasksCounter" value="239" />
+    <option name="localTasksCounter" value="240" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -957,7 +957,6 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
-    <MESSAGE value="v3.1.1-beta 邀请好友" />
     <MESSAGE value="v3.1.1-beta 群邀请好友" />
     <MESSAGE value="v3.1.1-beta 群请求处理" />
     <MESSAGE value="v3.1.1-beta 优化处理" />
@@ -982,7 +981,8 @@
     <MESSAGE value="v5.0.0&#10;1. 全新设计消息存储结构，更加减少存储，提高效率&#10;2. 理论上消息可靠传输100%&#10;3. 优化代码" />
     <MESSAGE value="v5.0.0&#10;1. 添加mqtt相关协议处理代码&#10;2. 优化代码" />
     <MESSAGE value="v5.0.0&#10;1. 添加消息发送回调&#10;2. 优化代码" />
-    <option name="LAST_COMMIT_MESSAGE" value="v5.0.0&#10;1. 添加消息发送回调&#10;2. 优化代码" />
+    <MESSAGE value="v6.0.0 优化代码" />
+    <option name="LAST_COMMIT_MESSAGE" value="v6.0.0 优化代码" />
   </component>
   <component name="XDebuggerManager">
     <pin-to-top-manager>

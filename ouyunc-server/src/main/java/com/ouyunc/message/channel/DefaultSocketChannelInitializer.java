@@ -82,15 +82,16 @@ public class DefaultSocketChannelInitializer extends SocketChannelInitializer {
                             String comboIdentity = IdentityUtil.generalComboIdentity(loginClientInfo.getIdentity(), clientLoginDeviceName);
                             // 登录信息一致,才进行解绑，删除缓存信息
                             MessageServerContext.localClientRegisterTable.delete(comboIdentity);
+                            String loginClientInfoCacheKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + loginClientInfo.getAppKey() + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + comboIdentity;
                             // 获取分布式锁, 这里使用锁的目的，可以参考登录处理器的分布式锁，防止重复解绑 LoginMessageProcessor
                             RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + loginClientInfo.getAppKey() + CacheConstant.COLON + comboIdentity);
                             try {
                                 if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
-                                    LoginClientInfo cacheLoginUserInfo = MessageServerContext.remoteLoginClientInfoCache.getHash(CacheConstant.OUYUNC + CacheConstant.APP_KEY + loginClientInfo.getAppKey() + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + loginClientInfo.getIdentity(), clientLoginDeviceName);
+                                    LoginClientInfo cacheLoginClientInfo = MessageServerContext.remoteLoginClientInfoCache.get(loginClientInfoCacheKey);
                                     // 这里比较两个登录服务器地址是否一致的目的是因为，无论集群还是单服务 在ctx异步关闭时,有可能存在关闭的执行顺序比绑定客户端的方法执行的慢，导致缓存被覆盖，结果又给删除了缓存信息，导致数据错乱。
-                                    if (cacheLoginUserInfo != null && loginClientInfo.getLoginServerAddress().equals(cacheLoginUserInfo.getLoginServerAddress()) && cacheLoginUserInfo.getLastLoginTime() == loginClientInfo.getLastLoginTime()) {
+                                    if (cacheLoginClientInfo != null && loginClientInfo.getLoginServerAddress().equals(cacheLoginClientInfo.getLoginServerAddress()) && cacheLoginClientInfo.getLastLoginTime() == loginClientInfo.getLastLoginTime()) {
                                         // 缓存中有没有登录信息都进行删除下
-                                        MessageServerContext.remoteLoginClientInfoCache.deleteHash(CacheConstant.OUYUNC + CacheConstant.APP_KEY + loginClientInfo.getAppKey() + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + loginClientInfo.getIdentity(), clientLoginDeviceName);
+                                        MessageServerContext.remoteLoginClientInfoCache.delete(loginClientInfoCacheKey);
                                     }else {
                                         log.warn("客户端: {} 解绑登录信息失败,原因：缓存中不存在登录信息或登录地址不匹配", loginClientInfo);
                                     }

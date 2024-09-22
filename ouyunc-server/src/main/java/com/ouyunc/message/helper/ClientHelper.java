@@ -48,7 +48,7 @@ public class ClientHelper {
         try {
             if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
                 // 客户端登录信息存入缓存
-                MessageServerContext.remoteLoginClientInfoCache.putHash(CacheConstant.OUYUNC + CacheConstant.APP_KEY + loginContent.getAppKey() + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + loginContent.getIdentity(), deviceType.getDeviceTypeName() , loginClientInfo);
+                MessageServerContext.remoteLoginClientInfoCache.put(CacheConstant.OUYUNC + CacheConstant.APP_KEY + loginContent.getAppKey() + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + comboIdentity , loginClientInfo);
             }else {
                 log.error("客户端: {} 绑定登录信息失败,原因：获取分布式锁失败", loginContent);
             }
