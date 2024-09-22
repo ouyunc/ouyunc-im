@@ -4,10 +4,7 @@ import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.OuyuncMessageTypeEnum;
 import com.ouyunc.base.constant.enums.SendStatusEnum;
 import com.ouyunc.base.exception.MessageException;
-import com.ouyunc.base.model.Metadata;
-import com.ouyunc.base.model.SendCallback;
-import com.ouyunc.base.model.SendResult;
-import com.ouyunc.base.model.Target;
+import com.ouyunc.base.model.*;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.message.context.MessageServerContext;
@@ -21,6 +18,7 @@ import io.netty.util.concurrent.FutureListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collection;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -34,6 +32,27 @@ public class MessageHelper {
 
     private static final  ExecutorService messageSendExecutor= Executors.newVirtualThreadPerTaskExecutor();
 
+    /**
+     * 同步发送消息给多个客户端
+     */
+    public static void syncSendMessage(Packet packet, Collection<LoginClientInfo> loginClientInfos) {
+        // 转发给某个客户端的各个在线设备端
+        for (LoginClientInfo loginClientInfo : loginClientInfos) {
+            // 走消息传递,设置登录设备类型
+            syncSendMessage(packet, Target.newBuilder().targetIdentity(loginClientInfo.getIdentity()).targetServerAddress(loginClientInfo.getLoginServerAddress()).deviceType(loginClientInfo.getDeviceType()).build());
+        }
+    }
+
+    /**
+     * 异步发送消息给多个客户端
+     */
+    public static void asyncSendMessage(Packet packet, Collection<LoginClientInfo> loginClientInfos) {
+        // 转发给某个客户端的各个在线设备端
+        for (LoginClientInfo loginUserInfo : loginClientInfos) {
+            // 走消息传递,设置登录设备类型
+            asyncSendMessage(packet, Target.newBuilder().targetIdentity(loginUserInfo.getIdentity()).targetServerAddress(loginUserInfo.getLoginServerAddress()).deviceType(loginUserInfo.getDeviceType()).build());
+        }
+    }
 
     /**
      * @Author fzx
