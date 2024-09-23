@@ -11,8 +11,9 @@
   <component name="ChangeListManager">
     <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v6.0.0 优化代码">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/AbstractMessageServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/AbstractMessageServer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/context/MessageServerContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/context/MessageServerContext.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/ClientHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/ClientHelper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/MessageHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/MessageHelper.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -552,7 +553,8 @@
       <workItem from="1726621873669" duration="556000" />
       <workItem from="1726963519469" duration="989000" />
       <workItem from="1726994967156" duration="599000" />
-      <workItem from="1727006337062" duration="3367000" />
+      <workItem from="1727006337062" duration="3428000" />
+      <workItem from="1727094200082" duration="1788000" />
     </task>
     <task id="LOCAL-00190" summary="v3.1.1-beta 优化处理">
       <created>1686906322045</created>
@@ -897,7 +899,7 @@
       <option name="project" value="LOCAL" />
       <updated>1704076343678</updated>
     </task>
-    <option name="localTasksCounter" value="241" />
+    <option name="localTasksCounter" value="242" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -985,6 +987,30 @@
     <option name="LAST_COMMIT_MESSAGE" value="v6.0.0 优化代码" />
   </component>
   <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>jar://$PROJECT_DIR$/../../repository/com/github/ben-manes/caffeine/caffeine/3.1.8/caffeine-3.1.8.jar!/com/github/benmanes/caffeine/cache/LocalManualCache.class</url>
+          <line>68</line>
+          <option name="timeStamp" value="7" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>jar://$PROJECT_DIR$/../../repository/com/github/ben-manes/caffeine/caffeine/3.1.8/caffeine-3.1.8.jar!/com/github/benmanes/caffeine/cache/LocalManualCache.class</url>
+          <line>80</line>
+          <option name="timeStamp" value="8" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>jar://$PROJECT_DIR$/../../repository/com/github/ben-manes/caffeine/caffeine/3.1.8/caffeine-3.1.8.jar!/com/github/benmanes/caffeine/cache/LocalManualCache.class</url>
+          <line>75</line>
+          <option name="timeStamp" value="9" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>jar://$PROJECT_DIR$/../../repository/com/github/ben-manes/caffeine/caffeine/3.1.8/caffeine-3.1.8.jar!/com/github/benmanes/caffeine/cache/LocalManualCache.class</url>
+          <line>74</line>
+          <option name="timeStamp" value="10" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
     <pin-to-top-manager>
       <pinned-members>
         <PinnedItemInfo />

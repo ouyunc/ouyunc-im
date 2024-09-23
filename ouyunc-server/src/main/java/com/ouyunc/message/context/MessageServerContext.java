@@ -32,7 +32,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -85,10 +84,6 @@ public class MessageServerContext extends MessageContext {
         public @Nullable ChannelHandlerContext load(String messageTypeValue) throws Exception {
             return null;
         }
-        @Override
-        public Map<? extends String, ? extends ChannelHandlerContext> loadAll(Set<? extends String> keys) throws Exception {
-            return null;
-        }
     }));
 
 
@@ -102,10 +97,6 @@ public class MessageServerContext extends MessageContext {
          */
         @Override
         public @Nullable DeviceType load(Byte messageTypeValue) throws Exception {
-            return null;
-        }
-        @Override
-        public Map<? extends Byte, ? extends DeviceType> loadAll(Set<? extends Byte> keys) throws Exception {
             return null;
         }
     }));
@@ -152,10 +143,6 @@ public class MessageServerContext extends MessageContext {
             return null;
         }
 
-        @Override
-        public Map<? extends Number, ? extends AbstractMessageProcessor<? extends Number>> loadAll(Set<? extends Number> keys) throws Exception {
-            return null;
-        }
     }));
 
 
@@ -170,10 +157,6 @@ public class MessageServerContext extends MessageContext {
         public @Nullable AbstractBaseProcessor<? extends Number> load(Number messageTypeValue) throws Exception {
             return null;
         }
-        @Override
-        public Map<? extends Number, ? extends AbstractBaseProcessor<? extends Number>> loadAll(Set<? extends Number> keys) throws Exception {
-            return null;
-        }
     }));
 
     /**
@@ -183,11 +166,6 @@ public class MessageServerContext extends MessageContext {
         @Nullable
         @Override
         public ChannelPool load(String node) throws Exception {
-            return null;
-        }
-
-        @Override
-        public Map<? extends String, ? extends ChannelPool> loadAll(Set<? extends String> keys) throws Exception {
             return null;
         }
     }));
@@ -202,11 +180,6 @@ public class MessageServerContext extends MessageContext {
         public ChannelPool load(String node) throws Exception {
             return null;
         }
-
-        @Override
-        public Map<? extends String, ? extends ChannelPool> loadAll(Set<? extends String> keys) throws Exception {
-            return null;
-        }
     }));
 
     /**
@@ -216,11 +189,6 @@ public class MessageServerContext extends MessageContext {
         @Override
         public Set<Channel> load(Integer channelPoolHashCode) throws Exception {
             return Sets.newConcurrentHashSet();
-        }
-
-        @Override
-        public Map<? extends Integer, ? extends Set<Channel>> loadAll(Set<? extends Integer> keys) throws Exception {
-            return null;
         }
     }));
 
@@ -233,11 +201,6 @@ public class MessageServerContext extends MessageContext {
         @Override
         public  AtomicInteger load(String s) throws Exception {
             return new AtomicInteger(0);
-        }
-
-        @Override
-        public Map<? extends String, ? extends AtomicInteger> loadAll(Set<? extends String> keys) throws Exception {
-            return null;
         }
     }));
 

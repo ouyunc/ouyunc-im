@@ -17,10 +17,10 @@ import org.redisson.api.RLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * @author fzx
@@ -75,25 +75,26 @@ public class ClientHelper {
      * @Author fzx
      * @Description 判断客户端是否在线, 如果在线返回该客户端所有在线连接的登录信息，支持多端登录
      */
-//    public static List<LoginClientInfo> onlineAll(String appKey, String identity) {
-//        return onlineAll(appKey, identity, null);
-//    }
+    public static List<LoginClientInfo> onlineAll(String appKey, String identity) {
+        return onlineAll(appKey, identity, null);
+    }
 
     /**
      * @param identity          用户登录唯一标识，手机号，邮箱，身份证号码等
-     * @param excludeDeviceType 需要排除的设备类型 @todo
+     * @param excludeDeviceTypeList 需要排除的设备类型集合
      * @return String
      * @Author fzx
      * @Description 判断客户端是否在线, 如果在线返回该客户端所有在线连接的登录信息，支持多端登录
      */
-//    public static List<LoginClientInfo> onlineAll(String appKey, String identity, DeviceType excludeDeviceType) {
-//        List<LoginClientInfo> loginServerAddressList = new ArrayList<>();
-//
-//
-//        String comboIdentity = IdentityUtil.generalComboIdentity(identity, loginDeviceTypeName);
-//        // 先从本地注册表获取，如果在同一个服务器上或者不是集群
-//        ChannelHandlerContext ctx = MessageServerContext.localClientRegisterTable.get(comboIdentity);
-//
+    public static List<LoginClientInfo> onlineAll(String appKey, String identity, List<DeviceType> excludeDeviceTypeList) {
+        List<LoginClientInfo> loginServerAddressList = new ArrayList<>();
+        // 获取所有的实现DeviceType接口的枚举实例
+        Set<String> comboIdentitySet = MessageServerContext.deviceTypeCache.asMap().values().parallelStream().map(deviceType -> identity + deviceType.getDeviceTypeName()).collect(Collectors.toSet());
+        // 先从本地注册表获取，如果在同一个服务器上或者不是集群
+        Collection<ChannelHandlerContext> allLoginClientChannelHandlerContexts = MessageServerContext.localClientRegisterTable.getAll(comboIdentitySet);
+
+
+
 //        MessageServerContext.remoteLoginClientInfoCache.getAll();
 //
 //
@@ -104,8 +105,8 @@ public class ClientHelper {
 //                }
 //            });
 //        }
-//        return loginServerAddressList;
-//    }
+        return loginServerAddressList;
+    }
 
     /**
      * 获取某个端的登录信息
