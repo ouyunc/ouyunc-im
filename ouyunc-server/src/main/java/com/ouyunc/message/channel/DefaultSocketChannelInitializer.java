@@ -79,7 +79,7 @@ public class DefaultSocketChannelInitializer extends SocketChannelInitializer {
                         if (loginClientInfo != null) {
                             // 这里不进行判空了，到这里肯定不为空（登录信息里面一定要有登录设备的类型）
                             String clientLoginDeviceName = loginClientInfo.getDeviceType().getDeviceTypeName();
-                            String comboIdentity = IdentityUtil.generalComboIdentity(loginClientInfo.getIdentity(), clientLoginDeviceName);
+                            String comboIdentity = IdentityUtil.generalComboIdentity(loginClientInfo.getAppKey(), loginClientInfo.getIdentity(), clientLoginDeviceName);
                             // 登录信息一致,才进行解绑，删除缓存信息
                             MessageServerContext.localClientRegisterTable.delete(comboIdentity);
                             String loginClientInfoCacheKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + loginClientInfo.getAppKey() + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + comboIdentity;

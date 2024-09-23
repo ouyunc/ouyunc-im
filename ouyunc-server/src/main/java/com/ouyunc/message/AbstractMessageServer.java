@@ -206,6 +206,8 @@ public abstract class AbstractMessageServer implements MessageServer {
                     .channel(NioServerSocketChannel.class)
                     // boss 线程组处理器,handler在初始化时就会执行
                     .handler(serverChannelInitializer)
+                    // 本地地址
+                    .localAddress(MessageServerContext.serverProperties().getIp(), MessageServerContext.serverProperties().getPort())
                     // worker线程组处理器,childHandler会在客户端成功connect后执行
                     .childHandler(socketChannelInitializer);
             // 设置boss 线程组相关的属性
@@ -223,7 +225,7 @@ public abstract class AbstractMessageServer implements MessageServer {
                 }
             }
             // 因为bind() 是异步的，这里不用 bind().sync(); 而是添加监听器的方式进行回调
-            ChannelFuture channelFuture = bootstrap.bind(MessageServerContext.serverProperties().getPort());
+            ChannelFuture channelFuture = bootstrap.bind();
             // 添加监听器来监听是否启动成功,做额外工作
             channelFuture.addListener(new ChannelFutureListener() {
                 @Override

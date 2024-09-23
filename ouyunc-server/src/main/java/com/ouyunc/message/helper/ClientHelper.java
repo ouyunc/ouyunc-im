@@ -8,19 +8,23 @@ import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.message.content.LoginContent;
 import com.ouyunc.base.utils.IdentityUtil;
-import com.ouyunc.base.utils.MapUtil;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.message.context.MessageServerContext;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.AttributeKey;
+import org.apache.commons.collections4.CollectionUtils;
 import org.redisson.api.RLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @author fzx
@@ -35,7 +39,7 @@ public class ClientHelper {
      * @author fzx
      * @description 客户端绑定登录信息
      */
-    public static LoginClientInfo bind(LoginContent loginContent, long loginTimestamp,ChannelHandlerContext ctx) {
+    public static LoginClientInfo bind(ChannelHandlerContext ctx, LoginContent loginContent, long loginTimestamp) {
         String appKey = loginContent.getAppKey();
         String identity = loginContent.getIdentity();
         DeviceType deviceType = loginContent.getDeviceType();
@@ -45,7 +49,7 @@ public class ClientHelper {
         LoginClientInfo loginClientInfo = new LoginClientInfo(MessageContext.messageProperties.getLocalServerAddress(), OnlineEnum.ONLINE, null, loginTimestamp, appKey, identity, deviceType, loginContent.getSignature(), loginContent.getSignatureAlgorithm(), loginContent.getHeartBeatExpireTime(), loginContent.getEnableWill(), loginContent.getWillMessage(), loginContent.getWillTopic(), loginContent.getCleanSession(), loginContent.getSessionExpiryInterval(), loginContent.getCreateTime());
         ctx.channel().attr(channelTagLoginKey).set(loginClientInfo);
         // 存入本地用户注册表
-        String comboIdentity = IdentityUtil.generalComboIdentity(identity, deviceType.getDeviceTypeName());
+        String comboIdentity = IdentityUtil.generalComboIdentity(loginContent.getAppKey(), identity, deviceType.getDeviceTypeName());
         MessageServerContext.localClientRegisterTable.put(comboIdentity, ctx);
         // 使用分布式锁来处理重复登录
         RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + loginContent.getAppKey() + CacheConstant.COLON + comboIdentity);
@@ -68,43 +72,56 @@ public class ClientHelper {
     }
 
 
-
-    /**
-     * @param identity 用户登录唯一标识，手机号，邮箱，身份证号码等
-     * @return String
-     * @Author fzx
-     * @Description 判断客户端是否在线, 如果在线返回该客户端所有在线连接的登录信息，支持多端登录
-     */
-    public static List<LoginClientInfo> onlineAll(String appKey, String identity) {
-        return onlineAll(appKey, identity, null);
-    }
-
     /**
      * @param identity          用户登录唯一标识，手机号，邮箱，身份证号码等
-     * @param excludeDeviceTypeList 需要排除的设备类型集合
+     * @param excludeDeviceTypeArr 需要排除的设备类型数组
      * @return String
      * @Author fzx
      * @Description 判断客户端是否在线, 如果在线返回该客户端所有在线连接的登录信息，支持多端登录
      */
-    public static List<LoginClientInfo> onlineAll(String appKey, String identity, List<DeviceType> excludeDeviceTypeList) {
+    public static List<LoginClientInfo> onlineAll(String appKey, String identity, DeviceType... excludeDeviceTypeArr) {
         List<LoginClientInfo> loginServerAddressList = new ArrayList<>();
         // 获取所有的实现DeviceType接口的枚举实例
-        Set<String> comboIdentitySet = MessageServerContext.deviceTypeCache.asMap().values().parallelStream().map(deviceType -> identity + deviceType.getDeviceTypeName()).collect(Collectors.toSet());
+        ConcurrentMap<Byte, DeviceType> deviceTypeCacheMap = MessageServerContext.deviceTypeCache.asMap();
+        Stream<DeviceType> deviceTypeStream = deviceTypeCacheMap.values().parallelStream();
+        if (excludeDeviceTypeArr != null && excludeDeviceTypeArr.length > 0) {
+            deviceTypeStream = deviceTypeStream.filter(deviceType -> {
+                boolean contain = false;
+                for (DeviceType excludeDeviceType : excludeDeviceTypeArr) {
+                    if (deviceType.getDeviceTypeName().equals(excludeDeviceType.getDeviceTypeName())) {
+                        contain = true;
+                    }
+                }
+                return contain;
+            });
+        }
+        Set<String> comboIdentitySet = deviceTypeStream.map(deviceType -> IdentityUtil.generalComboIdentity(appKey, identity, deviceType)).collect(Collectors.toSet());
+        int validComboIdentitySetSize = comboIdentitySet.size();
         // 先从本地注册表获取，如果在同一个服务器上或者不是集群
         Collection<ChannelHandlerContext> allLoginClientChannelHandlerContexts = MessageServerContext.localClientRegisterTable.getAll(comboIdentitySet);
-
-
-
-//        MessageServerContext.remoteLoginClientInfoCache.getAll();
-//
-//
-//        if (MapUtil.isNotEmpty(loginUserInfoMap)) {
-//            loginUserInfoMap.forEach((loginDeviceName, loginUserInfo) -> {
-//                if ((excludeDeviceType == null || !loginDeviceName.equals(DeviceEnum.getDeviceNameByValue(excludeDeviceType))) && (loginUserInfo != null && OnlineEnum.ONLINE.equals(loginUserInfo.getOnlineStatus()))) {
-//                    loginServerAddressList.add(loginUserInfo);
-//                }
-//            });
-//        }
+        // 判断comboIdentitySet的size 与结果集的大小是否相等，如果不相等则在从redis获取，如果相等则返回
+        AttributeKey<LoginClientInfo> channelTagLoginKey = AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
+        List<LoginClientInfo> loginClientInfoList = new ArrayList<>(3);
+        // 从ctx上下文获取客户端登录信息
+        allLoginClientChannelHandlerContexts.forEach(ctx -> {
+            LoginClientInfo loginClientInfo = ctx.channel().attr(channelTagLoginKey).get();
+            if (loginClientInfo != null && OnlineEnum.ONLINE.equals(loginClientInfo.getOnlineStatus())) {
+                loginClientInfoList.add(loginClientInfo);
+                // 移除掉已经从本地获取的有效客户端登录信息
+                comboIdentitySet.remove(IdentityUtil.generalComboIdentity(appKey, identity, loginClientInfo.getDeviceType()));
+            }
+        });
+        if (validComboIdentitySetSize == loginClientInfoList.size()) {
+            return loginClientInfoList;
+        }
+        // 如果不相等，则将没有查询到的数据通过缓存来获取
+        // comboIdentitySet 中排除已经从本地获取结果的key
+        Collection<LoginClientInfo> remoteCacheLoginClientInfos = MessageServerContext.remoteLoginClientInfoCache.getAll(comboIdentitySet);
+        if (CollectionUtils.isNotEmpty(remoteCacheLoginClientInfos)) {
+             // 筛选合法的数据
+            loginServerAddressList.addAll(remoteCacheLoginClientInfos.stream().filter(loginClientInfo -> loginClientInfo != null && OnlineEnum.ONLINE.equals(loginClientInfo.getOnlineStatus())).collect(Collectors.toList()));
+        }
+        // 最后返回符合条件的数据
         return loginServerAddressList;
     }
 
@@ -124,7 +141,7 @@ public class ClientHelper {
      * @return
      */
     private static LoginClientInfo online(String appKey, String identity, String loginDeviceTypeName) {
-        String comboIdentity = IdentityUtil.generalComboIdentity(identity, loginDeviceTypeName);
+        String comboIdentity = IdentityUtil.generalComboIdentity(appKey, identity, loginDeviceTypeName);
         // 先从本地注册表获取，如果在同一个服务器上或者不是集群
         ChannelHandlerContext ctx = MessageServerContext.localClientRegisterTable.get(comboIdentity);
         if (ctx != null) {

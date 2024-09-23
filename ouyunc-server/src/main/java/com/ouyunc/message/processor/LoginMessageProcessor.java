@@ -56,7 +56,7 @@ public class LoginMessageProcessor extends AbstractMessageProcessor<Byte> {
             return;
         }
         DeviceType deviceType = MessageServerContext.deviceTypeCache.get(packet.getDeviceType());
-        String comboIdentity = IdentityUtil.generalComboIdentity(loginContent.getIdentity(), deviceType.getDeviceTypeName());
+        String comboIdentity = IdentityUtil.generalComboIdentity(loginContent.getAppKey(), loginContent.getIdentity(), deviceType.getDeviceTypeName());
         String clientLoginCacheKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + loginContent.getAppKey() + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + comboIdentity;
         //如果之前已经登录（重复登录请求），这里判断是否已经登录过,同一个账号在同一个设备不能同时登录
         //1,从分布式缓存取出该登录用户
@@ -81,7 +81,7 @@ public class LoginMessageProcessor extends AbstractMessageProcessor<Byte> {
             bindCtx.close();
         }
         // 绑定信息
-        cacheLoginClientInfo = ClientHelper.bind(loginContent, loginTimestamp, ctx);
+        cacheLoginClientInfo = ClientHelper.bind(ctx, loginContent, loginTimestamp);
         // 判断是否加入读写空闲,只要服务端开启支持心跳，才会可能加入心跳处理，这里可以根据自己的协议或业务逻辑进行调整
         if (MessageServerContext.serverProperties().isHeartBeatEnable()) {
             // 判断是否开启客户端心跳

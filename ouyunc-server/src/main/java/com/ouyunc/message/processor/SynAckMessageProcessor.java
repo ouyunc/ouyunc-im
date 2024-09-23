@@ -3,12 +3,10 @@ package com.ouyunc.message.processor;
 import com.ouyunc.base.constant.enums.MessageType;
 import com.ouyunc.base.constant.enums.OuyuncMessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.OuyuncMessageTypeEnum;
-import com.ouyunc.base.model.Target;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.message.cluster.client.pool.MessageClientPool;
 import com.ouyunc.message.context.MessageServerContext;
-import com.ouyunc.message.helper.MessageHelper;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,8 +45,7 @@ public class SynAckMessageProcessor extends AbstractMessageProcessor<Byte> {
             synAckMessage.setTo(remoteServerAddress);
             synAckMessage.setCreateTime(Clock.systemUTC().millis());
             packet.setPacketId(MessageServerContext.<Long>idGenerator().generateId());
-            Target target = Target.newBuilder().targetIdentity(remoteServerAddress).build();
-            MessageHelper.syncSendMessage(packet, target);
+            MessageServerContext.findProtocol(packet.getProtocol(), packet.getProtocolVersion()).doSendMessage(packet, remoteServerAddress, (sendResult)->{});
             // 下面是解决集群中原有服务是如何发现新加入集群的服务的
             // 判断发到syn的服务是否在 全局服务注册表中，如果不在判断该服务的合法性，如果合法，尝试发送给对方syn进行探测，如果成功则将新加入集群中的服务添加到激活的路由表中
             if (MessageServerContext.clusterActiveServerRegistryTableCache.get(remoteServerAddress) == null && MessageServerContext.clusterGlobalServerRegistryTableCache.get(remoteServerAddress) == null) {
@@ -58,11 +55,12 @@ public class SynAckMessageProcessor extends AbstractMessageProcessor<Byte> {
                 synAckMessage.setContentType(OuyuncMessageContentTypeEnum.SYN_CONTENT.getType());
                 packet.setPacketId(MessageServerContext.<Long>idGenerator().generateId());
                 // 内部客户端连接池异步传递消息 syn ,尝试所有的路径去保持连通
-                MessageHelper.asyncSendMessage(packet, target);
+                messageProcessorExecutor.submit(()->{
+                    MessageServerContext.findProtocol(packet.getProtocol(), packet.getProtocolVersion()).doSendMessage(packet, remoteServerAddress, (sendResult)->{});
+                });
             }
-        }
-        // 收到回应则添加新的服务到集群
-        if (OuyuncMessageContentTypeEnum.ACK_CONTENT.getType() == contentType) {
+        }else if (OuyuncMessageContentTypeEnum.ACK_CONTENT.getType() == contentType) {
+            // 收到回应则添加新的服务到集群
             // 清空本地 missAckTimes 次数
             MessageServerContext.clusterClientMissAckTimesCache.delete(remoteServerAddress);
             // 如果相等则添加到注册表，清空packet 中 message 的 路由信息，其实这里不需要清空了（不向外转发）

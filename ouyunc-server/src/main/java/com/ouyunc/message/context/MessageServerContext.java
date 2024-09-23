@@ -160,7 +160,7 @@ public class MessageServerContext extends MessageContext {
     }));
 
     /**
-     *  集群服务注册表，会动态变化，可能这里的数据会比CLUSTER_GLOBAL_SERVER_REGISTRY_TABLE 中的数据多（原因: 有新的之前没有加入过集群的服务加入到集群中，会更新到这里）
+     *  集群服务注册表ip:port，会动态变化，可能这里的数据会比CLUSTER_GLOBAL_SERVER_REGISTRY_TABLE 中的数据多（原因: 有新的之前没有加入过集群的服务加入到集群中，会更新到这里）
      */
     public static Cache<String, ChannelPool> clusterActiveServerRegistryTableCache = new CaffeineLocalCache<>("clusterActiveServerRegistryTableCache", Caffeine.newBuilder().build(new CacheLoader<>() {
         @Nullable
