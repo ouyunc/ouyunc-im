@@ -62,7 +62,7 @@ public class MessageClusterSynAckThread implements Runnable{
             // hessian    430b         235b
             // fst        650b         315b
             // jdk        500b         346b
-            Packet packet = new Packet(NativePacketProtocol.OUYUNC.getProtocol(), NativePacketProtocol.OUYUNC.getProtocolVersion(), MessageServerContext.<Long>idGenerator().generateId(), DeviceTypeEnum.OTHER.getValue(), NetworkEnum.OTHER.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(), OuyuncMessageTypeEnum.SYN_ACK.getType(), message);
+            Packet packet = new Packet(NativePacketProtocol.OUYUNC.getProtocol(), NativePacketProtocol.OUYUNC.getProtocolVersion(), MessageServerContext.<Long>idGenerator().generateId(), DeviceTypeEnum.PC.getValue(), NetworkEnum.OTHER.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(), OuyuncMessageTypeEnum.SYN_ACK.getType(), message);
             // 内部客户端连接池异步传递消息syn ,尝试所有的路径去保持连通
             MessageHelper.asyncSendMessage(packet, Target.newBuilder().targetIdentity(targetServerAddress).build());
             // 先获取给目标服务toInetSocketAddress 发送syn,没有回复ack的次数，默认从0开始

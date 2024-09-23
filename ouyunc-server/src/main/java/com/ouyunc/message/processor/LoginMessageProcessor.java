@@ -69,7 +69,7 @@ public class LoginMessageProcessor extends AbstractMessageProcessor<Byte> {
         long loginTimestamp = Clock.systemUTC().millis();
         Message message = new Message(MessageServerContext.serverProperties().getIp(), loginContent.getIdentity(), WsMessageContentTypeEnum.SERVER_NOTIFY_CONTENT.getType(), JSON.toJSONString(new ServerNotifyContent(String.format(MessageConstant.REMOTE_LOGIN_NOTIFICATIONS, loginMessage.getMetadata().getClientIp()))), loginTimestamp);
         // 注意： 这里的原来的连接使用的序列化方式，应该是和新连接上的序列化方式一致，这里当成一致，当然不一致也可以做，后面遇到再改造
-        Packet notifyPacket = new Packet(packet.getProtocol(), packet.getProtocolVersion(), SnowflakeUtil.nextId(), DeviceTypeEnum.PC_LINUX.getValue(), NetworkEnum.OTHER.getValue(), WsMessageTypeEnum.SERVER_NOTIFY.getType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), message);
+        Packet notifyPacket = new Packet(packet.getProtocol(), packet.getProtocolVersion(), SnowflakeUtil.nextId(), DeviceTypeEnum.PC.getValue(), NetworkEnum.OTHER.getValue(), WsMessageTypeEnum.SERVER_NOTIFY.getType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), message);
         if (cacheLoginClientInfo != null) {
             // 给原有连接发送通知消息，并将其下线，添加新的连接登录,覆盖之前的登录信息
             // 异步发送给已经在线的通知
