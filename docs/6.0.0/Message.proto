@@ -1,0 +1,28 @@
+syntax = "proto3";
+package com.ouyunc.base.packet.message;
+option optimize_for  = SPEED;
+/**
+ * @Author fangzhenxun
+ * @Description: message 消息实体
+ **/
+message Message {
+  //发送方
+  string from = 1;
+  //接受方
+  string to = 2;
+   //内容类型，根据不同的内容类型，可以序列化不同的json,如登录，聊天，信令服务，等
+  uint32 content_type = 3;
+  //具体内容
+  string content = 4;
+  // 扩展字段
+  string extra = 5;
+  /**
+     * 消息可靠性标识 qos = 0/1/2
+     * QoS 0：至多一次，at most once；发送方发送一条消息，接收方最多能接收到一次。即发送方完成消息发送之后不关心消息发送是否成功。
+     * QoS 1：至少一次，at least once；发送方发送一条消息，接收方至少能接收到一次。即发送方完成消息发送之后，若发送失败，则继续重发直到接受方接收到消息为止。这种模式下可能会导致接收方收到重复的消息。
+     * QoS 2：确保一次：exactly once；发送方发送一条消息，接收方一定且只能收到一次。即发送方完成消息发送之后，若发送失败，则继续重发直到接收方接收到消息为止，在这一过程中同时保证接收方不会因为消息重传而收到重复的消息。
+     */
+  uint32 qos = 6;
+  //时间戳,毫秒
+  uint64 create_time = 7;
+}

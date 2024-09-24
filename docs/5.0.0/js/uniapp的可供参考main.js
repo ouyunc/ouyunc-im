@@ -35,7 +35,7 @@ Vue.prototype.$Socket = Socket;
 // 引入消息message
 import {Message} from '@/common/js/ouyunc-message.js';
 // 引入 socket
-import Socket from '@/common/js/ouyunc-im-client-uniapp-sdk.js';
+import Socket from '@/common/js/ouyunc-message-client-uniapp-sdk.js';
 
 import md5 from '@/common/js/md5.js';
 

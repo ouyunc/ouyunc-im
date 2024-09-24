@@ -51,25 +51,26 @@ public class Message implements Serializable {
     private String extra;
 
     /**
-     * 元数据 json str，对内访问
-     */
-    @Tag(6)
-    private Metadata metadata;
-
-    /**
      * 消息可靠性标识 qos = 0/1/2
      * QoS 0：至多一次，at most once；发送方发送一条消息，接收方最多能接收到一次。即发送方完成消息发送之后不关心消息发送是否成功。
      * QoS 1：至少一次，at least once；发送方发送一条消息，接收方至少能接收到一次。即发送方完成消息发送之后，若发送失败，则继续重发直到接受方接收到消息为止。这种模式下可能会导致接收方收到重复的消息。
      * QoS 2：确保一次：exactly once；发送方发送一条消息，接收方一定且只能收到一次。即发送方完成消息发送之后，若发送失败，则继续重发直到接收方接收到消息为止，在这一过程中同时保证接收方不会因为消息重传而收到重复的消息。
      */
-    @Tag(7)
+    @Tag(6)
     private int qos;
 
     /**
      * 客户端消息创建时间戳（毫秒）
      */
-    @Tag(8)
+    @Tag(7)
     private long createTime;
+
+
+    /**
+     * 元数据，对内访问
+     */
+    @Tag(8)
+    private Metadata metadata;
 
 
 
