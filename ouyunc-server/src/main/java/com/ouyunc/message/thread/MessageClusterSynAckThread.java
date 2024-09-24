@@ -6,14 +6,12 @@ import com.ouyunc.base.constant.enums.NetworkEnum;
 import com.ouyunc.base.constant.enums.OuyuncMessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.OuyuncMessageTypeEnum;
 import com.ouyunc.base.encrypt.Encrypt;
-import com.ouyunc.base.model.Target;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.serialize.Serializer;
 import com.ouyunc.base.utils.MapUtil;
 import com.ouyunc.core.listener.event.ServerOfflineEvent;
 import com.ouyunc.message.context.MessageServerContext;
-import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.protocol.NativePacketProtocol;
 import io.netty.channel.pool.ChannelPool;
 import org.slf4j.Logger;
@@ -63,8 +61,6 @@ public class MessageClusterSynAckThread implements Runnable{
             // fst        650b         315b
             // jdk        500b         346b
             Packet packet = new Packet(NativePacketProtocol.OUYUNC.getProtocol(), NativePacketProtocol.OUYUNC.getProtocolVersion(), MessageServerContext.<Long>idGenerator().generateId(), DeviceTypeEnum.PC.getValue(), NetworkEnum.OTHER.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(), OuyuncMessageTypeEnum.SYN_ACK.getType(), message);
-            // 内部客户端连接池异步传递消息syn ,尝试所有的路径去保持连通
-            MessageHelper.asyncSendMessage(packet, Target.newBuilder().targetIdentity(targetServerAddress).build());
             // 先获取给目标服务toInetSocketAddress 发送syn,没有回复ack的次数，默认从0开始
             AtomicInteger missAckTimes = MessageServerContext.clusterClientMissAckTimesCache.get(targetServerAddress);
             // 判断次数是否到达规定的次数，默认3次（也就是说给目标服务器连续发送3次syn,没有一次得到响应ack）则进行服务下线处理，从活着的服务注册表移除该服务
@@ -73,6 +69,8 @@ public class MessageClusterSynAckThread implements Runnable{
                 // 发送服务离线事件
                 MessageServerContext.publishEvent(new ServerOfflineEvent(targetServerAddress), true);
             }
+            // 内部客户端连接池传递消息syn ,尝试所有的路径去保持连通
+            MessageServerContext.findProtocol(packet.getProtocol(), packet.getProtocolVersion()).doSendMessage(packet, targetServerAddress, (sendResult)->{});
         }
         // 判断该服务所在的集群个数是否小于服务列表的半数（用于解决脑裂）, 启动服务30分钟后进行检测是否脑裂,如果满足则系统退出
         if (MessageServerContext.serverProperties().isClusterSplitBrainDetectionEnable() && (MessageServerContext.clusterActiveServerRegistryTableCache.sizeMap() + MessageConstant.ONE) <= availableGlobalServer.size() / 2 && ChronoUnit.MINUTES.between(beginTime, Instant.now()) >= MessageServerContext.serverProperties().getClusterSplitBrainDetectionDelayTime()) {

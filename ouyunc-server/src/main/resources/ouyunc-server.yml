@@ -2,7 +2,7 @@
 ouyunc:
   message:
     # 服务端口
-    port: 8083
+    port: 8084·
     # 服务名称
     name: ouyunc-message
     # server提供的暴露ip(可以理解为主动设置本机ip),如果不指定则使用本地网卡ip，一般为内网ip; 注意如果开启集群，要注意集群服务的地址和该服务所在ip的网络是否连通
@@ -80,9 +80,9 @@ ouyunc:
     # 集群配置
     cluster:
       # 是否开启集群，默认关闭
-      enable: false
+      enable: true
       # 集群中服务端地址，多个用逗号隔开
-      nodes: 192.168.0.113:8081,192.168.0.113:8082,192.168.0.113:8083
+      nodes: 192.168.0.113:8081,192.168.0.113:8082,192.168.0.113:8083,192.168.0.113:8084
       # 集群中消息重试次数，消息如果不通，会进行重试三次
       message-retry: 3
       client:
@@ -95,7 +95,7 @@ ouyunc:
         #  集群中客户端channel pool 中核心连接数 默认 5
         channel-pool-core-connection: 5
         # 集群中，服务启动时，服务注册表的增量更新时间间隔（心跳时间），单位秒，默认5秒
-        heart-beat-interval: 3
+        heart-beat-interval: 1
         # 集群中，客户端心跳重试次数，默认3次
         heart-beat-wait-retry: 3
         #  集群中，内置客户端读超时，单位秒，默认0秒钟

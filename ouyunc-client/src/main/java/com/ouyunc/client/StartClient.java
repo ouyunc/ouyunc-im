@@ -27,9 +27,9 @@ public class StartClient {    private static final ScheduledExecutorService SCHE
         LoginContent loginContent = new LoginContent();
         loginContent.setAppKey("ouyunc");
         loginContent.setIdentity("18856895462");
-        loginContent.setDeviceType(DeviceTypeEnum.PC_LINUX);
+        loginContent.setDeviceType(DeviceTypeEnum.PC);
         Message message = new Message("123456:1", "18856895462", WsMessageContentTypeEnum.LOGIN_REQUEST_CONTENT.getType(), JSON.toJSONString(loginContent), Clock.systemUTC().millis());
-        Packet packet = new Packet(ProtocolTypeEnum.WS.getProtocol(), ProtocolTypeEnum.WS.getProtocolVersion(), SnowflakeUtil.nextId(), DeviceTypeEnum.PC_LINUX.getDeviceTypeValue(), NetworkEnum.OTHER.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(), WsMessageTypeEnum.LOGIN.getType(), message);
+        Packet packet = new Packet(ProtocolTypeEnum.WS.getProtocol(), ProtocolTypeEnum.WS.getProtocolVersion(), SnowflakeUtil.nextId(), DeviceTypeEnum.PC.getDeviceTypeValue(), NetworkEnum.OTHER.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(), WsMessageTypeEnum.LOGIN.getType(), message);
 
         MessageClientTemplate.syncSendMessage(packet);
 
@@ -39,9 +39,9 @@ public class StartClient {    private static final ScheduledExecutorService SCHE
                 LoginContent loginContent = new LoginContent();
                 loginContent.setAppKey("ouyunc");
                 loginContent.setIdentity("18856895462");
-                loginContent.setDeviceType(DeviceTypeEnum.PC_LINUX);
+                loginContent.setDeviceType(DeviceTypeEnum.PC);
                 Message message = new Message("123456:1", "18856895462", WsMessageContentTypeEnum.LOGIN_REQUEST_CONTENT.getType(), JSON.toJSONString(loginContent), Clock.systemUTC().millis());
-                Packet packet = new Packet(ProtocolTypeEnum.WS.getProtocol(), ProtocolTypeEnum.WS.getProtocolVersion(), SnowflakeUtil.nextId(), DeviceTypeEnum.PC_LINUX.getDeviceTypeValue(), NetworkEnum.OTHER.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(), WsMessageTypeEnum.LOGIN.getType(), message);
+                Packet packet = new Packet(ProtocolTypeEnum.WS.getProtocol(), ProtocolTypeEnum.WS.getProtocolVersion(), SnowflakeUtil.nextId(), DeviceTypeEnum.PC.getDeviceTypeValue(), NetworkEnum.OTHER.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(), WsMessageTypeEnum.LOGIN.getType(), message);
 
                 //MessageClientTemplate.syncSendMessage(packet);
             }
