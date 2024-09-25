@@ -47,6 +47,8 @@ public class LoginMessageProcessor extends AbstractMessageProcessor<Byte> {
         Message loginMessage = packet.getMessage();
         //将消息内容转成message
         LoginContent loginContent = JSON.parseObject(loginMessage.getContent(), LoginContent.class);
+        // 设置设备类型
+        loginContent.setDeviceType(MessageServerContext.deviceTypeCache.get(packet.getDeviceType()));
         // 做登录参数校验
         //1,进行参数合法校验，校验失败，结束 ；2,进行签名的校验，校验失败，结束，3，进行权限校验，校验失败，结束
         // 根据appKey 获取appSecret 然后拼接

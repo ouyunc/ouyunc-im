@@ -91,7 +91,14 @@ public class Message implements Serializable {
         this.content = content;
         this.createTime = createTime;
     }
-
+    public Message(String from, String to, int contentType, String content, long createTime, Metadata metadata) {
+        this.from = from;
+        this.to = to;
+        this.contentType = contentType;
+        this.content = content;
+        this.createTime = createTime;
+        this.metadata = metadata;
+    }
     public Message(String from, String to, int contentType, String content, String extraData, int qos, long createTime) {
         this.from = from;
         this.to = to;
@@ -146,7 +153,7 @@ public class Message implements Serializable {
     }
 
     public Metadata getMetadata() {
-        return metadata;
+        return metadata == null ? new Metadata() : metadata;
     }
 
     public void setMetadata(Metadata metadata) {
