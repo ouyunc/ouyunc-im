@@ -83,7 +83,8 @@ public class MessageHelper {
      * @Author fzx
      * @Description 同步投递消息,不对外暴漏
      */
-    private static void doSendMessage(Packet packet, Target target, SendCallback sendCallback) {
+    private static void doSendMessage(Packet originPacket, Target target, SendCallback sendCallback) {
+        Packet packet = originPacket.clone();
         log.info("开始给 {} 传递消息packet: {} ", target, packet);
         // 获取消息元数据消息
         Metadata metadata = packet.getMessage().getMetadata();

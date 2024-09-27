@@ -10,11 +10,25 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v6.0.0 优化代码">
+      <change afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/dispatcher/HAProxyProtocolDispatcherProcessor.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/model/LoginClientInfo.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/model/LoginClientInfo.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-client/src/main/java/com/ouyunc/client/StartClient.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-client/src/main/java/com/ouyunc/client/StartClient.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/MessageConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/MessageConstant.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/enums/DeviceType.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/enums/DeviceType.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/model/Metadata.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/model/Metadata.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/model/RoutingTable.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/model/RoutingTable.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/model/Target.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/model/Target.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/packet/Packet.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/packet/Packet.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/packet/message/Message.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/packet/message/Message.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/convert/BinaryWebSocketFramePacketConverter.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/convert/BinaryWebSocketFramePacketConverter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/LoginMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/LoginMessageProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/utils/IpUtil.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/utils/IpUtil.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/channel/DefaultSocketChannelInitializer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/channel/DefaultSocketChannelInitializer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/dispatcher/HttpProtocolDispatcherProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/dispatcher/HttpProtocolDispatcherProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/dispatcher/MqttProtocolDispatcherProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/dispatcher/MqttProtocolDispatcherProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/dispatcher/PacketProtocolDispatcherProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/dispatcher/PacketProtocolDispatcherProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/dispatcher/ProtocolDispatcher.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/dispatcher/ProtocolDispatcher.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/dispatcher/ProtocolDispatcherProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/dispatcher/ProtocolDispatcherProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/handler/HttpProtocolDispatcherHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/handler/HttpProtocolDispatcherHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/MessageHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/MessageHelper.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server.yml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -49,8 +63,8 @@
         <option value="AnnotationType" />
         <option value="Interface" />
         <option value="Enum" />
-        <option value="Class" />
         <option value="HTML File" />
+        <option value="Class" />
       </list>
     </option>
   </component>
@@ -138,6 +152,7 @@
   </component>
   <component name="PropertiesComponent">{
   &quot;keyToString&quot;: {
+    &quot;Application.StartClient.executor&quot;: &quot;Debug&quot;,
     &quot;Application.StartServer.executor&quot;: &quot;Debug&quot;,
     &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
     &quot;Maven.ouyunc-im [clean].executor&quot;: &quot;Run&quot;,
@@ -190,19 +205,6 @@
     </key>
   </component>
   <component name="RunManager" selected="Application.StartServer">
-    <configuration name="DbHelper" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
-      <option name="MAIN_CLASS_NAME" value="com.ouyunc.im.helper.DbHelper" />
-      <module name="ouyunc-im-server" />
-      <extension name="coverage">
-        <pattern>
-          <option name="PATTERN" value="com.ouyunc.im.helper.*" />
-          <option name="ENABLED" value="true" />
-        </pattern>
-      </extension>
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
     <configuration name="DefaultImEventMulticaster" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="com.ouyunc.im.listener.DefaultImEventMulticaster" />
       <module name="ouyunc-im-core" />
@@ -222,6 +224,19 @@
       <extension name="coverage">
         <pattern>
           <option name="PATTERN" value="com.ouyunc.im.processor.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="StartClient" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="com.ouyunc.client.StartClient" />
+      <module name="ouyunc-client" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.ouyunc.client.*" />
           <option name="ENABLED" value="true" />
         </pattern>
       </extension>
@@ -268,7 +283,7 @@
     </configuration>
     <list>
       <item itemvalue="Application.StartIMServer" />
-      <item itemvalue="Application.DbHelper" />
+      <item itemvalue="Application.StartClient" />
       <item itemvalue="Application.DefaultImEventMulticaster" />
       <item itemvalue="Application.MqttSubscribeMessageProcessor" />
       <item itemvalue="Application.StartServer" />
@@ -277,10 +292,10 @@
     <recent_temporary>
       <list>
         <item itemvalue="Application.StartServer" />
+        <item itemvalue="Application.StartClient" />
         <item itemvalue="Application.Test" />
         <item itemvalue="Application.DefaultImEventMulticaster" />
         <item itemvalue="Application.MqttSubscribeMessageProcessor" />
-        <item itemvalue="Application.DbHelper" />
       </list>
     </recent_temporary>
   </component>
@@ -567,7 +582,10 @@
       <workItem from="1727006337062" duration="3428000" />
       <workItem from="1727094200082" duration="8302000" />
       <workItem from="1727180130184" duration="8796000" />
-      <workItem from="1727262040548" duration="6994000" />
+      <workItem from="1727262040548" duration="7308000" />
+      <workItem from="1727349102818" duration="8330000" />
+      <workItem from="1727436915701" duration="3885000" />
+      <workItem from="1727446127697" duration="7051000" />
     </task>
     <task id="LOCAL-00190" summary="v3.1.1-beta 优化处理">
       <created>1686906322045</created>
@@ -912,7 +930,7 @@
       <option name="project" value="LOCAL" />
       <updated>1704076343678</updated>
     </task>
-    <option name="localTasksCounter" value="247" />
+    <option name="localTasksCounter" value="248" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1023,19 +1041,24 @@
           <option name="timeStamp" value="10" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/ClientHelper.java</url>
+          <url>jar://$PROJECT_DIR$/../../repository/io/netty/netty-codec-haproxy/4.1.112.Final/netty-codec-haproxy-4.1.112.Final-sources.jar!/io/netty/handler/codec/haproxy/HAProxyMessageDecoder.java</url>
+          <line>175</line>
+          <option name="timeStamp" value="52" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>jar://$PROJECT_DIR$/../../repository/io/netty/netty-codec-haproxy/4.1.112.Final/netty-codec-haproxy-4.1.112.Final-sources.jar!/io/netty/handler/codec/haproxy/HAProxyMessageDecoder.java</url>
+          <line>340</line>
+          <option name="timeStamp" value="54" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/dispatcher/ProtocolDispatcher.java</url>
+          <line>28</line>
+          <option name="timeStamp" value="64" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/dispatcher/ProtocolDispatcher.java</url>
           <line>43</line>
-          <option name="timeStamp" value="36" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/ClientOnlineListener.java</url>
-          <line>22</line>
-          <option name="timeStamp" value="38" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/convert/BinaryWebSocketFramePacketConverter.java</url>
-          <line>42</line>
-          <option name="timeStamp" value="39" />
+          <option name="timeStamp" value="65" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>

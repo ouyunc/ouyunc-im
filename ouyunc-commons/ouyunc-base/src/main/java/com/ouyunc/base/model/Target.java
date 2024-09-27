@@ -9,7 +9,7 @@ import java.io.Serializable;
 /**
  * 消息接收的目标
  */
-public class Target implements Serializable{
+public class Target implements Serializable, Cloneable{
 
     /**
      * 接收者唯一标识
@@ -57,6 +57,15 @@ public class Target implements Serializable{
 
     public static Builder newBuilder(){
         return new Builder();
+    }
+
+    @Override
+    public Target clone() {
+        try {
+            return (Target) super.clone();
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError();
+        }
     }
 
     public static class Builder {

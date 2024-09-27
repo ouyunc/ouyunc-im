@@ -21,7 +21,7 @@ public class PacketProtocolDispatcherProcessor implements ProtocolDispatcherProc
     }
 
     @Override
-    public void process(ChannelHandlerContext ctx) {
+    public void process(ChannelHandlerContext ctx, ByteBuf in) {
         ctx.pipeline()
                 // 粘包半包处理
                 .addLast(MessageConstant.PACKET_DECODE_HANDLER, new LengthFieldBasedFrameDecoder(ByteOrder.BIG_ENDIAN, MessageConstant.MAX_FRAME_LENGTH, MessageConstant.LENGTH_FIELD_OFFSET, MessageConstant.LENGTH_FIELD_LENGTH, MessageConstant.LENGTH_ADJUSTMENT, MessageConstant.INITIAL_BYTES_TO_STRIP, MessageConstant.FAIL_FAST))

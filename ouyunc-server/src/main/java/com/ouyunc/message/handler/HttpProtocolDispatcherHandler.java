@@ -32,6 +32,7 @@ public class HttpProtocolDispatcherHandler extends SimpleChannelInboundHandler<O
     protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
         // 判断该消息是http何种变种协议
         if (msg instanceof FullHttpRequest request) {
+            // 获取真实ip 并设置
             String uriStr = request.uri();
             log.info("当前请求路径uri：{}", uriStr);
             URI uri = new URI(uriStr);

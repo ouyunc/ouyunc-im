@@ -9,7 +9,7 @@ import java.util.List;
  * @Author fzx
  * @Description: 扩展消息 message, 额外字段数据，内部使用，不对外开放,集群使用
  **/
-public class Metadata implements Serializable {
+public class Metadata implements Serializable, Cloneable {
 
 
     /**
@@ -129,5 +129,25 @@ public class Metadata implements Serializable {
     }
 
     public Metadata() {
+    }
+
+    @Override
+    public Metadata clone() {
+        try {
+            Metadata metadata = (Metadata) super.clone();
+            if (this.target != null) {
+                metadata.setTarget(this.target.clone());
+            }
+            if (this.routingTables != null) {
+                List<RoutingTable> routingTableList = new ArrayList<>();
+                for (RoutingTable routingTable : this.routingTables) {
+                    routingTableList.add(routingTable.clone());
+                }
+                metadata.setRoutingTables(routingTableList);
+            }
+            return metadata;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError();
+        }
     }
 }

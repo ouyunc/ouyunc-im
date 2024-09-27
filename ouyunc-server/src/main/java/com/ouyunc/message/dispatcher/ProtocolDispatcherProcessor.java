@@ -7,7 +7,7 @@ import io.netty.channel.ChannelHandlerContext;
  * @Author fzx
  * @Description: 协议分发处理器策略
  **/
-public interface ProtocolDispatcherProcessor {
+public interface ProtocolDispatcherProcessor{
 
     /***
      * @author fzx
@@ -19,5 +19,5 @@ public interface ProtocolDispatcherProcessor {
      * @Author fzx
      * @Description 处理逻辑
      */
-    void process(ChannelHandlerContext ctx);
+    void process(ChannelHandlerContext ctx, ByteBuf in);
 }

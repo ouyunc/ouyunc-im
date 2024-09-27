@@ -14,7 +14,7 @@ import java.util.Objects;
  * @author fzx
  * @description 协议包
  */
-public class Packet implements Serializable{
+public class Packet implements Serializable, Cloneable{
     @Serial
     private static final long serialVersionUID = 1L;
 
@@ -244,5 +244,18 @@ public class Packet implements Serializable{
                 ", messageLength=" + messageLength +
                 ", message=" + message +
                 '}';
+    }
+
+    @Override
+    public Packet clone() {
+        try {
+            Packet packet = (Packet) super.clone();
+            if (this.message != null) {
+                packet.setMessage(this.message.clone());
+            }
+            return packet;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError();
+        }
     }
 }

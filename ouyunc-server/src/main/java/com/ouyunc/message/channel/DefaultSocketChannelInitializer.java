@@ -14,7 +14,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.codec.haproxy.HAProxyMessageDecoder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.AttributeKey;
 import org.redisson.api.RLock;
@@ -54,11 +53,6 @@ public class DefaultSocketChannelInitializer extends SocketChannelInitializer {
         }
         // 日志处理器
         pipeline.addLast(MessageConstant.LOG_HANDLER, new MessageLoggingHandler(MessageServerContext.serverProperties().getLogLevel()));
-        // 判断是否开启proxy protocol 代理，为了获取真实的客户端ip
-        if (MessageServerContext.serverProperties().isProxyProtocolEnable()) {
-            // 解析Proxy protocol协议,获取真实客户端ip ,https://cloud.tencent.com/developer/article/2170703
-            pipeline.addLast(MessageConstant.HA_PROXY_PROTOCOL_DECODER_HANDLER, new HAProxyMessageDecoder());
-        }
         // 协议分发器
         pipeline.addLast(MessageConstant.PROTOCOL_DISPATCHER_HANDLER, new ProtocolDispatcher());
         // 每一个客户端连接都会走这里的逻辑，且被监听关闭事件，并作出相关处理逻辑

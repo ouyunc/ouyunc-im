@@ -30,7 +30,7 @@ public class HttpProtocolDispatcherProcessor implements ProtocolDispatcherProces
      * @Description 处理该协议对应的handler
      */
     @Override
-    public void process(ChannelHandlerContext ctx) {
+    public void process(ChannelHandlerContext ctx, ByteBuf in) {
         ctx.pipeline()
                 .addLast(MessageConstant.HTTP_SERVER_CODEC_HANDLER, new HttpServerCodec())
                 .addLast(MessageConstant.CHUNKED_WRITE_HANDLER, new ChunkedWriteHandler())

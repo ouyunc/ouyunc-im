@@ -1,14 +1,11 @@
 package com.ouyunc.message.dispatcher;
 
 
-import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.message.context.MessageServerContext;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
-import io.netty.handler.codec.haproxy.HAProxyMessage;
-import io.netty.util.AttributeKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,7 +44,7 @@ public class ProtocolDispatcher extends ByteToMessageDecoder {
         ProtocolDispatcherProcessor protocolDispatcherProcessor = getProtocolDispatcherProcessor(in);
         // 包含http/https/ws/wss
         if (protocolDispatcherProcessor != null) {
-            protocolDispatcherProcessor.process(ctx);
+            protocolDispatcherProcessor.process(ctx, in);
         } else {
             // 不知道的协议将关闭
             log.error("正在关闭非法协议！，channelID: {}", ctx.channel().id().asShortText());
@@ -56,21 +53,6 @@ public class ProtocolDispatcher extends ByteToMessageDecoder {
         }
     }
 
-    /***
-     * @author fzx
-     * @description
-     */
-    @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (msg instanceof HAProxyMessage proxyMessage) {
-            log.info("真实客户端的代理信息: HAProxyMessage: {}", proxyMessage);
-            // 存入ctx 中，注意不能跨服务从ctx 获取该值，后面会解析处理存到packet中传递
-            AttributeKey<HAProxyMessage> proxyMessageKey = AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_HAPROXY_PROTOCOL);
-            ctx.channel().attr(proxyMessageKey).set(proxyMessage);
-        }else{
-            super.channelRead(ctx, msg);
-        }
-    }
 
     /***
      * @author fzx

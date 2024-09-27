@@ -17,4 +17,6 @@ public interface DeviceType {
      * @description 获取消获取设备类型名称
      */
     String getDeviceTypeName();
+
+
 }

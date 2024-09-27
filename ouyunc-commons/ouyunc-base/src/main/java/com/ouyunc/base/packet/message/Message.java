@@ -10,7 +10,7 @@ import java.io.Serializable;
  * @author fzx
  * @description 消息
  */
-public class Message implements Serializable {
+public class Message implements Serializable, Cloneable {
     @Serial
     private static final long serialVersionUID = 1L;
 
@@ -182,5 +182,18 @@ public class Message implements Serializable {
 
     public void setQos(int qos) {
         this.qos = qos;
+    }
+
+    @Override
+    public Message clone() {
+        try {
+            Message message = (Message) super.clone();
+            if (this.metadata != null) {
+                message.setMetadata(this.metadata.clone());
+            }
+            return message;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError();
+        }
     }
 }

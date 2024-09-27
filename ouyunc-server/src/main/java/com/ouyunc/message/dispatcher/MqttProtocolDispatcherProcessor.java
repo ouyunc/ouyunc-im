@@ -20,7 +20,7 @@ public class MqttProtocolDispatcherProcessor implements ProtocolDispatcherProces
     }
 
     @Override
-    public void process(ChannelHandlerContext ctx) {
+    public void process(ChannelHandlerContext ctx, ByteBuf in) {
         ctx.pipeline()
                 .addLast(MessageConstant.MQTT_DISPATCHER_HANDLER, new MqttProtocolDispatcherHandler())
                 .remove(MessageConstant.PROTOCOL_DISPATCHER_HANDLER);

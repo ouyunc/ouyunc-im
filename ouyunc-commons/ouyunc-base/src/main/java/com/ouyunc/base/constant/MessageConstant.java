@@ -76,7 +76,7 @@ public class MessageConstant {
     /**
      * channel 的haproxy protocol 协议标签存放代理后的真实客户端的代理信息  HAProxyMessage
      */
-    public static final String CHANNEL_ATTR_KEY_TAG_HAPROXY_PROTOCOL = "CHANNEL_ATTR_KEY_TAG_HAPROXY_PROTOCOL";
+    public static final String CHANNEL_ATTR_KEY_TAG_CLIENT_REAL_IP = "CHANNEL_ATTR_KEY_TAG_HAPROXY_PROTOCOL";
 
     /**
      * channel 的登录标签，存放的是LoginUserInfo对象

@@ -10,7 +10,7 @@ ouyunc:
     # 代理协议配置, 该服务是否被代理，如果被代理，则需要开启代理协议，可以获取真实的客户端ip,具体可参考 ：https://juejin.cn/post/6858167170342649869，https://blog.csdn.net/x763795151/article/details/130874425#:~:text=%E5%85%B3%E9%94%AE%E5%9C%A8%E4%BA%8ENg。   https://cloud.tencent.com/developer/article/2170703
     proxy-protocol:
       # 默认不开启
-      enable: false
+      enable: true
     # websocket 配置
     websocket:
       # websocket 监听路径

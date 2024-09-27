@@ -9,7 +9,7 @@ import java.util.Set;
  * @Author fzx
  * @Description: 消息路由表
  **/
-public class RoutingTable implements Serializable  {
+public class RoutingTable implements Serializable, Cloneable  {
 
     /**
      * 当前服务地址 ip:port
@@ -75,5 +75,19 @@ public class RoutingTable implements Serializable  {
     @Override
     public int hashCode() {
         return Objects.hash(this.serverAddress);
+    }
+
+    @Override
+    public RoutingTable clone() {
+        try {
+            RoutingTable routingTable = (RoutingTable) super.clone();
+            if (this.routedServerAddresses != null) {
+                Set<String> routedServerAddresses = new HashSet<>(this.routedServerAddresses);
+                routingTable.setRoutedServerAddresses(routedServerAddresses);
+            }
+            return routingTable;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError();
+        }
     }
 }
