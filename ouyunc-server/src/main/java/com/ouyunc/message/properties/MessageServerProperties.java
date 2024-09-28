@@ -33,12 +33,6 @@ public class MessageServerProperties extends MessageProperties {
     @Key("ouyunc.message.protocol-dispatcher-processor.scan-package-paths")
     private List<String> messageProtocolProcessorScanPackagePaths;
 
-    /**
-     * 是否开启proxyProtocol 如nginx 转发tcp 等 ，具体可参考： https://juejin.cn/post/6858167170342649869，https://blog.csdn.net/x763795151/article/details/130874425#:~:text=%E5%85%B3%E9%94%AE%E5%9C%A8%E4%BA%8ENg。   https://cloud.tencent.com/developer/article/2170703
-     */
-    @Key(value = "ouyunc.message.proxy-protocol.enable", defaultValue = "false")
-    private boolean proxyProtocolEnable;
-
 
     /**
      * boss 线程组个数,默认与netty保持一致
@@ -328,14 +322,6 @@ public class MessageServerProperties extends MessageProperties {
         this.messageProtocolProcessorScanPackagePaths = messageProtocolProcessorScanPackagePaths;
     }
 
-    public boolean isProxyProtocolEnable() {
-        return proxyProtocolEnable;
-    }
-
-    public void setProxyProtocolEnable(boolean proxyProtocolEnable) {
-        this.proxyProtocolEnable = proxyProtocolEnable;
-    }
-
     public int getBossThreads() {
         return bossThreads;
     }
@@ -515,7 +501,6 @@ public class MessageServerProperties extends MessageProperties {
                 "\n, sslEnable=" + super.isSslEnable() +
                 "\n, sslCertificate='" + super.getSslCertificate() + '\'' +
                 "\n, sslPrivateKey='" + super.getSslPrivateKey() + '\'' +
-                "\n, proxyProtocolEnable=" + isProxyProtocolEnable() +
                 "\n, applicationName='" + super.getApplicationName() + '\'' +
                 "\n, messageListenersScanPackagePaths=" + messageListenersScanPackagePaths +
                 "\n, messageProcessorScanPackagePaths=" + messageProcessorScanPackagePaths +

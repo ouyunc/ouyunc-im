@@ -7,10 +7,6 @@ ouyunc:
     name: ouyunc-message
     # server提供的暴露ip(可以理解为主动设置本机ip),如果不指定则使用本地网卡ip，一般为内网ip; 注意如果开启集群，要注意集群服务的地址和该服务所在ip的网络是否连通
     #ip: 127.0.0.1
-    # 代理协议配置, 该服务是否被代理，如果被代理，则需要开启代理协议，可以获取真实的客户端ip,具体可参考 ：https://juejin.cn/post/6858167170342649869，https://blog.csdn.net/x763795151/article/details/130874425#:~:text=%E5%85%B3%E9%94%AE%E5%9C%A8%E4%BA%8ENg。   https://cloud.tencent.com/developer/article/2170703
-    proxy-protocol:
-      # 默认不开启
-      enable: true
     # websocket 配置
     websocket:
       # websocket 监听路径
