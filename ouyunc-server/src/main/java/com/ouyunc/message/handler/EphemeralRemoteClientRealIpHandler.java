@@ -18,7 +18,7 @@ public class EphemeralRemoteClientRealIpHandler extends SimpleChannelInboundHand
     private static final Logger log = LoggerFactory.getLogger(EphemeralRemoteClientRealIpHandler.class);
 
     /**
-     * 获取远端客户端真实ip, 注意：客户端ip 可能被伪造，这里不做分析处理；@todo 将下面的if 改写成策略
+     * 获取远端客户端真实ip, 注意：客户端ip 可能被伪造，这里不做分析处理；可以优化将下面的if 改写成策略，让各个ProtocolDispatcherProcessor的子类去实现具体的逻辑，目前暂不做优化处理
      * @param ctx
      * @param msg
      * @throws Exception
