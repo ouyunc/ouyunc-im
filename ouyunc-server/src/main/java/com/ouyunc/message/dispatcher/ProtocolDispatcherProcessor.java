@@ -1,13 +1,13 @@
 package com.ouyunc.message.dispatcher;
 
+import com.ouyunc.message.processor.Processor;
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandlerContext;
 
 /**
  * @Author fzx
  * @Description: 协议分发处理器策略
  **/
-public interface ProtocolDispatcherProcessor{
+public interface ProtocolDispatcherProcessor extends Processor<ByteBuf> {
 
     /***
      * @author fzx
@@ -15,9 +15,4 @@ public interface ProtocolDispatcherProcessor{
      */
     boolean match(ByteBuf in);
 
-    /**
-     * @Author fzx
-     * @Description 处理逻辑
-     */
-    void process(ChannelHandlerContext ctx, ByteBuf in);
 }

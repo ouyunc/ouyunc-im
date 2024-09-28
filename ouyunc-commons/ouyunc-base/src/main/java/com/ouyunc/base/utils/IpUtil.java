@@ -82,10 +82,10 @@ public class IpUtil {
      */
     public static String getIp(ChannelHandlerContext ctx) {
         // 首先尝试从代理信息中获取，如果没有在从ctx 中获取
-        AttributeKey<HAProxyMessage> proxyMessageKey = AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_CLIENT_REAL_IP);
-        HAProxyMessage haproxyMsg = ctx.channel().attr(proxyMessageKey).get();
-        if (haproxyMsg != null) {
-            return haproxyMsg.sourceAddress();
+        AttributeKey<String> proxyMessageKey = AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_CLIENT_REAL_IP);
+        String clientRealIp = ctx.channel().attr(proxyMessageKey).get();
+        if (clientRealIp != null) {
+            return clientRealIp;
         }
         if (ctx.channel().remoteAddress() instanceof InetSocketAddress socketAddress) {
             return socketAddress.getAddress().getHostAddress();

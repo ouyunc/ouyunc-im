@@ -51,7 +51,10 @@ public class MessageConstant {
      */
     public static final String COLON_SPLIT = ":";
 
-
+    /**
+     * 请求头 X_REAL_IP key
+     */
+    public static final String HEADER_X_REAL_IP = "X-Real-IP";
 
     /**
      * 消息应用名称

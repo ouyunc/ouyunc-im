@@ -4,6 +4,7 @@ import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.MessageContentType;
 import com.ouyunc.base.constant.enums.MessageType;
 import com.ouyunc.base.model.ProtocolType;
+import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.utils.ClassScannerUtil;
 import com.ouyunc.base.utils.IpUtil;
 import com.ouyunc.base.utils.OrderSortUtil;
@@ -128,6 +129,7 @@ public class StandardMessageServer extends AbstractMessageServer {
      * @author fzx
      * @description 加载消息处理器
      */
+    @SuppressWarnings("unchecked")
     @Override
     void loadMessageProcessor() {
         log.debug("正在加载消息处理器......");
@@ -140,11 +142,11 @@ public class StandardMessageServer extends AbstractMessageServer {
             log.error("扫描消息处理器失败: {}", e.getMessage());
         }
         // 过滤并获取所有的AbstractBaseProcessor的实现类集合
-        Set<Processor> processorSet =  messageProcessorClazzSet.parallelStream().filter(processorClazz -> Processor.class.isAssignableFrom(processorClazz) && !Processor.class.equals(processorClazz) && !Modifier.isAbstract(processorClazz.getModifiers()) && !ProcessorChainProxy.class.equals(processorClazz) && !DelegatingMessageProcessorChain.class.equals(processorClazz) && !DelegatingMessageContentProcessorChain.class.equals(processorClazz)).map(processorClazz-> (Processor)objenesis.newInstance(processorClazz)).collect(Collectors.toSet());
+        Set<Processor<Packet>> processorSet =  messageProcessorClazzSet.parallelStream().filter(processorClazz -> Processor.class.isAssignableFrom(processorClazz) && !Processor.class.equals(processorClazz) && !Modifier.isAbstract(processorClazz.getModifiers()) && !ProcessorChainProxy.class.equals(processorClazz) && !DelegatingMessageProcessorChain.class.equals(processorClazz) && !DelegatingMessageContentProcessorChain.class.equals(processorClazz)).map(processorClazz-> (Processor<Packet>)objenesis.newInstance(processorClazz)).collect(Collectors.toSet());
         // 消息处理器继承了 AbstractMessageProcessor ，消息内容处理器继承了 AbstractBaseProcessor ，分别筛选该两个类的实现类，且 type为MessageType 和MessageContentType 的处理类集合
         List<AbstractMessageProcessor<? extends Number>> messageProcessorList = new ArrayList<>();
         List<AbstractBaseProcessor<? extends Number>> messageContentProcessorList = new ArrayList<>();
-        for (Processor processor : processorSet) {
+        for (Processor<Packet> processor : processorSet) {
             if (processor instanceof AbstractMessageProcessor<?> messageProcessor  && messageProcessor.type() instanceof MessageType) {
                 // 消息处理器
                 messageProcessorList.add(messageProcessor);

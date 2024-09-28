@@ -123,7 +123,7 @@ public enum NativePacketProtocol implements PacketProtocol {
                     channelPool = MessageClientPool.clientSimpleChannelPoolMap.get(to);
                 }catch (Exception e) {
                     log.error("通过参数to: {} , 获取/创建channelPool异常， 原因：{}", to, e.getMessage());
-                    throw new MessageException("获取/创建channelPool异常!");
+                    throw new MessageException(e);
                 }
             }
             final ChannelPool finalChannelPool = channelPool;

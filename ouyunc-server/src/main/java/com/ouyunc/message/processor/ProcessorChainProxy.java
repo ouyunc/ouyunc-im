@@ -12,7 +12,7 @@ import java.util.List;
 /**
  * 处理器链代理类
  */
-public class ProcessorChainProxy<T extends Processor> extends AbstractMessageProcessor<Number> {
+public class ProcessorChainProxy<T extends Processor<Packet>> extends AbstractMessageProcessor<Number> {
     private static final Logger log = LoggerFactory.getLogger(ProcessorChainProxy.class);
 
     /**

@@ -2,6 +2,7 @@ package com.ouyunc.message.dispatcher;
 
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.message.handler.HttpProtocolDispatcherHandler;
+import com.ouyunc.message.handler.EphemeralRemoteClientRealIpHandler;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpObjectAggregator;
@@ -35,10 +36,10 @@ public class HttpProtocolDispatcherProcessor implements ProtocolDispatcherProces
                 .addLast(MessageConstant.HTTP_SERVER_CODEC_HANDLER, new HttpServerCodec())
                 .addLast(MessageConstant.CHUNKED_WRITE_HANDLER, new ChunkedWriteHandler())
                 .addLast(MessageConstant.HTTP_OBJECT_AGGREGATOR_HANDLER, new HttpObjectAggregator(Integer.MAX_VALUE))
+                .addLast(MessageConstant.REMOTE_CLIENT_REAL_IP_HANDLER, new EphemeralRemoteClientRealIpHandler())
                 // 这一步没有加自定义编解码器，是因为上面的处理器已经处理了消息编解码
                 // http 协议分发处理器
                 .addLast(MessageConstant.HTTP_DISPATCHER_HANDLER, new HttpProtocolDispatcherHandler());
-
         // 移除协议分发器，如果不移除在处理业务消息时还是会进行消息分发处理
         ctx.pipeline().remove(MessageConstant.PROTOCOL_DISPATCHER_HANDLER);
         // 调用下一个handle的active

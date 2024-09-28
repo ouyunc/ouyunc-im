@@ -1,7 +1,7 @@
 package com.ouyunc.message.dispatcher;
 
 import com.ouyunc.base.constant.MessageConstant;
-import com.ouyunc.message.handler.RemoteClientRealIpHandler;
+import com.ouyunc.message.handler.EphemeralRemoteClientRealIpHandler;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.haproxy.HAProxyMessageDecoder;
@@ -92,7 +92,7 @@ public class HAProxyProtocolDispatcherProcessor implements ProtocolDispatcherPro
     public void process(ChannelHandlerContext ctx, ByteBuf in) {
         // 存入ctx 中，注意不能跨服务从ctx 获取该值，后面会解析处理存到packet中传递
         ctx.pipeline().addLast(MessageConstant.HA_PROXY_PROTOCOL_DECODER_HANDLER, new HAProxyMessageDecoder());
-        ctx.pipeline().addLast(MessageConstant.REMOTE_CLIENT_REAL_IP_HANDLER, new RemoteClientRealIpHandler());
+        ctx.pipeline().addLast(MessageConstant.REMOTE_CLIENT_REAL_IP_HANDLER, new EphemeralRemoteClientRealIpHandler());
         ctx.fireChannelRead(in.retain());
     }
 

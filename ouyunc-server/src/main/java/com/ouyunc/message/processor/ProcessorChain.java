@@ -7,7 +7,7 @@ import java.util.List;
 /**
  * 处理器链
  */
-public interface ProcessorChain<T extends Processor> {
+public interface ProcessorChain<T extends Processor<Packet>> {
 
     /**
      * 匹配器
