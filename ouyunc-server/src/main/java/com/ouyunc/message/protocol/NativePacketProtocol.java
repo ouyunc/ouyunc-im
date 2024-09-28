@@ -119,7 +119,12 @@ public enum NativePacketProtocol implements PacketProtocol {
             // 判断是否有连接池，如果没有则创建新的连接池
             if (channelPool == null) {
                 log.warn("有新的服务 {} 加入集群，正在尝试与其确认ack", to);
-                channelPool = MessageClientPool.clientSimpleChannelPoolMap.get(to);
+                try {
+                    channelPool = MessageClientPool.clientSimpleChannelPoolMap.get(to);
+                }catch (Exception e) {
+                    log.error("通过参数to: {} , 获取/创建channelPool异常， 原因：{}", to, e.getMessage());
+                    throw new MessageException("获取/创建channelPool异常!");
+                }
             }
             final ChannelPool finalChannelPool = channelPool;
             // 从连接池中获取一个连接

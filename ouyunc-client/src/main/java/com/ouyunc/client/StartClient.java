@@ -66,7 +66,7 @@ public class StartClient {    private static final ScheduledExecutorService SCHE
                         socketChannel.pipeline().addLast(new SimpleChannelInboundHandler() {
                             @Override
                             public void channelActive(ChannelHandlerContext ctx) throws Exception {
-                                Message message = new Message("125", "235", OuyuncMessageContentTypeEnum.SYN_CONTENT.getType(), Clock.systemUTC().millis());
+                                Message message = new Message("12", "192.168.0.113:6001", OuyuncMessageContentTypeEnum.SYN_CONTENT.getType(), Clock.systemUTC().millis());
                                 //  ==============针对以上packet 几种序列化对比: string = SYN=========
                                 //     packet            message
                                 // protoStuff 150b         80b  内部心跳只用protoStuff序列化/反序列化
@@ -89,6 +89,6 @@ public class StartClient {    private static final ScheduledExecutorService SCHE
                         });
                     }
                 });
-        Channel ch = b.connect("192.168.0.113", 8066).sync().channel();
+        Channel ch = b.connect("192.168.0.113", 6003).sync().channel();
     }
 }

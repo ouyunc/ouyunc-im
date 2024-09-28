@@ -1,7 +1,10 @@
 package com.ouyunc.message.dispatcher;
 
+import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.message.handler.RemoteClientRealIpHandler;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.haproxy.HAProxyMessageDecoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,11 +16,8 @@ import org.slf4j.LoggerFactory;
 public class HAProxyProtocolDispatcherProcessor implements ProtocolDispatcherProcessor{
     private static final Logger log = LoggerFactory.getLogger(HAProxyProtocolDispatcherProcessor.class);
 
-    /**
-     * proxy protocol version
-     */
-    private int version = -1;
 
+    private int version = -1;
 
     /**
      * V2 protocol binary header prefix
@@ -91,11 +91,9 @@ public class HAProxyProtocolDispatcherProcessor implements ProtocolDispatcherPro
     @Override
     public void process(ChannelHandlerContext ctx, ByteBuf in) {
         // 存入ctx 中，注意不能跨服务从ctx 获取该值，后面会解析处理存到packet中传递
-//        if (clientRealIp != null) {
-//            log.info("真实客户端的代理信息proxy protocol version: {} 解析到的 clientRealIp: {}", this.version, clientRealIp);
-//            AttributeKey<String> proxyMessageKey = AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_CLIENT_REAL_IP);
-//            ctx.channel().attr(proxyMessageKey).set(clientRealIp);
-//        }
+        ctx.pipeline().addLast(MessageConstant.HA_PROXY_PROTOCOL_DECODER_HANDLER, new HAProxyMessageDecoder());
+        ctx.pipeline().addLast(MessageConstant.REMOTE_CLIENT_REAL_IP_HANDLER, new RemoteClientRealIpHandler());
+        ctx.fireChannelRead(in.retain());
     }
 
 }

@@ -117,6 +117,11 @@ public class MessageConstant {
      */
     public static final String HA_PROXY_PROTOCOL_DECODER_HANDLER = "HA_PROXY_PROTOCOL_DECODER_HANDLER";
 
+    /**
+     * 处理客户端真实ip
+     */
+    public static final String REMOTE_CLIENT_REAL_IP_HANDLER = "REMOTE_CLIENT_REAL_IP_HANDLER";
+
 
 
     /**
