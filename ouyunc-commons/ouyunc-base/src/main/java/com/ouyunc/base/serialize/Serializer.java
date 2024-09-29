@@ -56,11 +56,14 @@ public enum Serializer {
         // 获取schema
         @SuppressWarnings("unchecked")
         private static<T> Schema<T> getSchema(Class<T> clazz) {
-            Schema<T> schema = (Schema<T>) cachedSchema.get(clazz);
-            if (schema == null) {
-                schema = RuntimeSchema.getSchema(clazz);
-                if (schema != null) {
-                    cachedSchema.put(clazz, schema);
+            Schema<T> schema;
+            synchronized (cachedSchema) {
+                schema = (Schema<T>) cachedSchema.get(clazz);
+                if (schema == null) {
+                    schema = RuntimeSchema.getSchema(clazz);
+                    if (schema != null) {
+                        cachedSchema.put(clazz, schema);
+                    }
                 }
             }
             return schema;
