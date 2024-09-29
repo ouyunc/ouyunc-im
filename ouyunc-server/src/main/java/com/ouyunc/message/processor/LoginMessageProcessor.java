@@ -85,11 +85,11 @@ public class LoginMessageProcessor extends AbstractMessageProcessor<Byte> {
         // 绑定信息
         cacheLoginClientInfo = ClientHelper.bind(ctx, loginContent, loginTimestamp);
         // 判断是否加入读写空闲,只要服务端开启支持心跳，才会可能加入心跳处理，这里可以根据自己的协议或业务逻辑进行调整
-        if (MessageServerContext.serverProperties().isHeartBeatEnable()) {
+        if (MessageServerContext.serverProperties().isClientHeartBeatEnable()) {
             // 判断是否开启客户端心跳
             ctx.pipeline()
                     // 添加读写空闲处理器， 添加后，下条消息就可以接收心跳消息了
-                    .addAfter(MessageConstant.CONVERT_2_PACKET_HANDLER, MessageConstant.HEART_BEAT_IDLE_HANDLER, new IdleStateHandler(loginContent.getHeartBeatExpireTime() > 0 ? Math.round(loginContent.getHeartBeatExpireTime() * 1.5f) : MessageServerContext.serverProperties().getHeartBeatTimeout(), 0, 0))
+                    .addAfter(MessageConstant.CONVERT_2_PACKET_HANDLER, MessageConstant.HEART_BEAT_IDLE_HANDLER, new IdleStateHandler(loginContent.getHeartBeatExpireTime() > MessageConstant.ZERO ? Math.round(loginContent.getHeartBeatExpireTime() * MessageConstant.ONE_POINT_FIVE) : MessageServerContext.serverProperties().getClientHeartBeatTimeout(), MessageConstant.ZERO, MessageConstant.ZERO))
                     // 处理心跳的以及相关逻辑都放在这里处理
                     .addAfter(MessageConstant.HEART_BEAT_IDLE_HANDLER, MessageConstant.HEART_BEAT_HANDLER, new HeartBeatHandler());
         }

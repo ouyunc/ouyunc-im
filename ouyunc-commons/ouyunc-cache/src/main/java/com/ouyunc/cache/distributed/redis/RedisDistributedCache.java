@@ -63,6 +63,10 @@ public class RedisDistributedCache<K, V> extends AbstractDistributedCache<K,V> {
 
     @Override
     public void put(K key, V value, long timeout, TimeUnit unit) {
+        if (timeout <= 0) {
+            redisTemplate.opsForValue().set(key, value);
+            return;
+        }
         redisTemplate.opsForValue().set(key, value, timeout, unit);
     }
 

@@ -4,6 +4,7 @@ import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.DeviceType;
 import com.ouyunc.base.constant.enums.OnlineEnum;
+import com.ouyunc.base.constant.enums.SaveModeEnum;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.message.content.LoginContent;
@@ -55,8 +56,14 @@ public class ClientHelper {
         RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + loginContent.getAppKey() + CacheConstant.COLON + comboIdentity);
         try {
             if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
+                long expireTime = MessageConstant.MINUS_ONE;
+                // 如果客户端的登录信息存储模式是有限/短暂的则 保存时间是，心跳间隔时间*最大重试次数+5，这里加5是为了尽可能给其他程序去处理相关逻辑，如读写空闲事件
+                if (SaveModeEnum.FINITE.equals(MessageServerContext.serverProperties().getClientLoginInfoSaveMode())) {
+                    int heartBeatExpire = loginContent.getHeartBeatExpireTime() > MessageConstant.ZERO ? Math.round(loginContent.getHeartBeatExpireTime() * MessageConstant.ONE_POINT_FIVE) : MessageServerContext.serverProperties().getClientHeartBeatTimeout();
+                    expireTime = Integer.toUnsignedLong((heartBeatExpire * MessageServerContext.serverProperties().getClientHeartBeatWaitRetry())) + MessageConstant.FIVE;
+                }
                 // 客户端登录信息存入缓存
-                MessageServerContext.remoteLoginClientInfoCache.put(CacheConstant.OUYUNC + CacheConstant.APP_KEY + loginContent.getAppKey() + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + comboIdentity, loginClientInfo);
+                MessageServerContext.remoteLoginClientInfoCache.put(CacheConstant.OUYUNC + CacheConstant.APP_KEY + loginContent.getAppKey() + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + comboIdentity, loginClientInfo, expireTime, TimeUnit.SECONDS);
             }else {
                 log.error("客户端: {} 绑定登录信息失败,原因：获取分布式锁失败", loginContent);
             }

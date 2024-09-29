@@ -1,5 +1,6 @@
 package com.ouyunc.message.properties;
 
+import com.ouyunc.base.constant.enums.SaveModeEnum;
 import com.ouyunc.core.properties.MessageProperties;
 import com.ouyunc.core.properties.annotation.Key;
 import com.ouyunc.core.properties.annotation.LoadProperties;
@@ -99,22 +100,34 @@ public class MessageServerProperties extends MessageProperties {
 
 
     /***
+     * 外部客户端的登录信息（包含在线状态），FOREVER-永久， FINITE-有限
+     */
+    @Key(value = "ouyunc.message.client.login-info.save-mode", defaultValue = "FOREVER")
+    SaveModeEnum clientLoginInfoSaveMode;
+
+    /***
+     *  调度扫描需要更新状态的队列的时间间隔：单位毫秒 ,默认1000； 注意：当开启FINITE 该字段有效，且登录过期时间为: client.heart-beat.timeout * client.heart-beat.wait-retry  单位秒
+     */
+    @Key(value = "ouyunc.message.client.login-info.schedule-time-interval", defaultValue = "1000")
+    long clientLoginInfoScheduleTimeInterval;
+
+    /***
      * 全局是否开启心跳，用来检测连接上的客户端需要发送心跳包（只针对外部客户端），默认开启
      */
-    @Key(value = "ouyunc.message.heart-beat.enable", defaultValue = "true")
-    boolean heartBeatEnable;
+    @Key(value = "ouyunc.message.client.heart-beat.enable", defaultValue = "true")
+    boolean clientHeartBeatEnable;
 
     /***
      * 单位秒 ， 外部客户端与服务端的心跳超时时间，如果服务端未收到客户端的心跳包在一定策略下会进行重试等待，最后如果如果没有连接上则将该客户端下线处理
      */
-    @Key(value = "ouyunc.message.heart-beat.timeout", defaultValue = "15")
-    int heartBeatTimeout;
+    @Key(value = "ouyunc.message.client.heart-beat.timeout", defaultValue = "15")
+    int clientHeartBeatTimeout;
 
     /***
      * 外部客户端，心跳重试等待次数，默认3次，超过3次没有心跳则关闭外部客户端channel  不能为负数
      */
-    @Key(value = "ouyunc.message.heart-beat.wait-retry", defaultValue = "3")
-    int heartBeatWaitRetry;
+    @Key(value = "ouyunc.message.client.heart-beat.wait-retry", defaultValue = "3")
+    int clientHeartBeatWaitRetry;
 
 
 
@@ -378,6 +391,22 @@ public class MessageServerProperties extends MessageProperties {
         this.clusterClientHeartbeatWaitRetry = clusterClientHeartbeatWaitRetry;
     }
 
+    public SaveModeEnum getClientLoginInfoSaveMode() {
+        return clientLoginInfoSaveMode;
+    }
+
+    public void setClientLoginInfoSaveMode(SaveModeEnum clientLoginInfoSaveMode) {
+        this.clientLoginInfoSaveMode = clientLoginInfoSaveMode;
+    }
+
+    public long getClientLoginInfoScheduleTimeInterval() {
+        return clientLoginInfoScheduleTimeInterval;
+    }
+
+    public void setClientLoginInfoScheduleTimeInterval(long clientLoginInfoScheduleTimeInterval) {
+        this.clientLoginInfoScheduleTimeInterval = clientLoginInfoScheduleTimeInterval;
+    }
+
     /**
      * 获取boss 线程组配置, 这里对其进行组装
      */
@@ -466,28 +495,28 @@ public class MessageServerProperties extends MessageProperties {
         this.workerChildOptionWriteBufferLowWaterMark = workerChildOptionWriteBufferLowWaterMark;
     }
 
-    public boolean isHeartBeatEnable() {
-        return heartBeatEnable;
+    public boolean isClientHeartBeatEnable() {
+        return clientHeartBeatEnable;
     }
 
-    public void setHeartBeatEnable(boolean heartBeatEnable) {
-        this.heartBeatEnable = heartBeatEnable;
+    public void setClientHeartBeatEnable(boolean clientHeartBeatEnable) {
+        this.clientHeartBeatEnable = clientHeartBeatEnable;
     }
 
-    public int getHeartBeatTimeout() {
-        return heartBeatTimeout;
+    public int getClientHeartBeatTimeout() {
+        return clientHeartBeatTimeout;
     }
 
-    public void setHeartBeatTimeout(int heartBeatTimeout) {
-        this.heartBeatTimeout = heartBeatTimeout;
+    public void setClientHeartBeatTimeout(int clientHeartBeatTimeout) {
+        this.clientHeartBeatTimeout = clientHeartBeatTimeout;
     }
 
-    public int getHeartBeatWaitRetry() {
-        return heartBeatWaitRetry;
+    public int getClientHeartBeatWaitRetry() {
+        return clientHeartBeatWaitRetry;
     }
 
-    public void setHeartBeatWaitRetry(int heartBeatWaitRetry) {
-        this.heartBeatWaitRetry = heartBeatWaitRetry;
+    public void setClientHeartBeatWaitRetry(int clientHeartBeatWaitRetry) {
+        this.clientHeartBeatWaitRetry = clientHeartBeatWaitRetry;
     }
 
 
@@ -515,9 +544,11 @@ public class MessageServerProperties extends MessageProperties {
                 "\n, workerChildOptionSoReuseaddr=" + workerChildOptionSoReuseaddr +
                 "\n, workerChildOptionWriteBufferHighWaterMark=" + workerChildOptionWriteBufferHighWaterMark +
                 "\n, workerChildOptionWriteBufferLowWaterMark=" + workerChildOptionWriteBufferLowWaterMark +
-                "\n, heartBeatEnable=" + heartBeatEnable +
-                "\n, heartBeatTimeout=" + heartBeatTimeout +
-                "\n, heartBeatWaitRetry=" + heartBeatWaitRetry +
+                "\n, clientLoginInfoSaveMode=" + clientLoginInfoSaveMode +
+                "\n, clientLoginInfoScheduleTimeInterval=" + clientLoginInfoScheduleTimeInterval +
+                "\n, clientHeartBeatEnable=" + clientHeartBeatEnable +
+                "\n, clientHeartBeatTimeout=" + clientHeartBeatTimeout +
+                "\n, clientHeartBeatWaitRetry=" + clientHeartBeatWaitRetry +
                 "\n, websocketPath='" + websocketPath + '\'' +
                 "\n, clusterEnable=" + clusterEnable +
                 "\n, nodes=" + nodes +

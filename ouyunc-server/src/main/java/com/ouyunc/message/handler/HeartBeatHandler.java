@@ -3,7 +3,6 @@ package com.ouyunc.message.handler;
 
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.WsMessageTypeEnum;
-import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.message.context.MessageServerContext;
 import io.netty.channel.Channel;
@@ -72,15 +71,7 @@ public class HeartBeatHandler extends SimpleChannelInboundHandler<Packet> {
                     }
                     log.info("外部客户端channel: {} 的 read_idle: {} 第 {} 触发了", channel.id().asShortText(), ((IdleStateEvent) event).state(), readTimeoutTimes);
                     // 如果连续超过三次
-                    if (readTimeoutTimes > MessageServerContext.serverProperties().getHeartBeatWaitRetry() - MessageConstant.ONE) {
-                        // 多次没有收到心跳断开连接
-                        AttributeKey<LoginClientInfo> channelTagLoginKey = AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
-                        final LoginClientInfo loginClientInfo = channel.attr(channelTagLoginKey).get();
-                        // 这里的ctx 与注册表中的ctx 是同一个应用,
-                        if (loginClientInfo == null) {
-                            ctx.close();
-                            return;
-                        }
+                    if (readTimeoutTimes > MessageServerContext.serverProperties().getClientHeartBeatWaitRetry() - MessageConstant.ONE) {
                         ctx.close();
                         return;
                     }

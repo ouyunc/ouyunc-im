@@ -23,7 +23,22 @@ ouyunc:
     log:
       # 日志级别
       level: DEBUG
-
+    # 客户端配置
+    client:
+      # 外部客户端的登录信息（包含在线状态），FOREVER-永久， FINITE-有限
+      login-info:
+        save-mode: FOREVER
+        # 调度扫描需要更新状态的队列的时间间隔：单位毫秒 ,默认1000； 注意：当开启FINITE 该字段有效，且登录过期时间为: client.heart-beat.timeout * client.heart-beat.wait-retry  单位秒
+        schedule-time-interval: 1000
+      # 心跳配置,服务端与外部客户端的心跳配置
+      heart-beat:
+        # 全局是否开启心跳，用来检测连接上的客户端需要发送心跳包（只针对外部客户端），默认开启
+        enable: true
+        # 单位秒 ， 外部客户端与服务端的心跳超时时间，如果服务端未收到客户端的心跳包在一定策略下会进行重试等待，最后如果如果没有连接上则将该客户端下线处理
+        timeout: 15
+        # 外部客户端，心跳重试等待次数，默认3次，超过3次没有心跳则关闭外部客户端channel  不能为负数
+        wait-retry: 3
+    # 客户端登录信息保存模式， FOREVER-永久， FINITE-有限； 默认值永久
     # 消息监听器包扫描路径
     listeners:
       scan-package-paths:
@@ -65,14 +80,7 @@ ouyunc:
         write-buffer-high-water-mark: 65536
         # 低水位,默认32kb,写低水位标记，默认值32KB(32 * 1024)。当Netty的写缓冲区中的字节超过高水位之后若下降到低水位，则Channel的isWritable()返回True。写高低水位标记使用户可以控制写入数据速度，从而实现流量控制。推荐做法是：每次调用channl.write(msg)方法首先调用channel.isWritable()判断是否可写
         write-buffer-low-water-mark: 3624
-    # 心跳配置,服务端与客户端的心跳配置
-    heart-beat:
-      # 全局是否开启心跳，用来检测连接上的客户端需要发送心跳包（只针对外部客户端），默认开启
-      enable: true
-      # 单位秒 ， 外部客户端与服务端的心跳超时时间，如果服务端未收到客户端的心跳包在一定策略下会进行重试等待，最后如果如果没有连接上则将该客户端下线处理
-      timeout: 15
-      # 外部客户端，心跳重试等待次数，默认3次，超过3次没有心跳则关闭外部客户端channel  不能为负数
-      wait-retry: 3
+
     # 集群配置
     cluster:
       # 是否开启集群，默认关闭

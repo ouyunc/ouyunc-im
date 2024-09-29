@@ -22,6 +22,16 @@ public class MessageConstant {
     public static final Integer ONE = 1;
 
     /**
+     * 1.5
+     */
+    public static final Float ONE_POINT_FIVE = 1.5f;
+
+    /**
+     * 5
+     */
+    public static final Integer FIVE = 5;
+
+    /**
      * 100
      */
     public static final Integer ONE_HUNDRED = 100;
