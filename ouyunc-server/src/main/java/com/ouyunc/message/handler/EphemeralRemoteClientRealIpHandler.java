@@ -1,11 +1,11 @@
 package com.ouyunc.message.handler;
 
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.utils.IpUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.haproxy.HAProxyMessage;
 import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.util.AttributeKey;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -36,8 +36,7 @@ public class EphemeralRemoteClientRealIpHandler extends SimpleChannelInboundHand
             }
         }else if (msg instanceof FullHttpRequest request) {
             // 工具类获取真实的客户端ip
-            HttpHeaders headers = request.headers();
-            String clientRealIp = headers.get(MessageConstant.HEADER_X_REAL_IP);
+            String clientRealIp = IpUtil.getIp(request.headers());
             if (StringUtils.isNoneBlank(clientRealIp)) {
                 AttributeKey<String> proxyMessageKey = AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_CLIENT_REAL_IP);
                 ctx.channel().attr(proxyMessageKey).set(clientRealIp);
