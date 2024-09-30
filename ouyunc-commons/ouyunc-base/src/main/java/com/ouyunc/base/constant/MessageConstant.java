@@ -10,6 +10,10 @@ public class MessageConstant {
      * 0
      */
     public static final Integer ZERO = 0;
+    /**
+     * 0.5
+     */
+    public static final Float ZERO_POINT_FIVE = 0.5f;
 
     /**
      * -1

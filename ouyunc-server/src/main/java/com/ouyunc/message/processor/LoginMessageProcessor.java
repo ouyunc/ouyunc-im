@@ -33,8 +33,6 @@ public class LoginMessageProcessor extends AbstractMessageProcessor<Byte> {
     private static final Logger log = LoggerFactory.getLogger(LoginMessageProcessor.class);
 
 
-
-
     /***
      * @author fzx
      * @description 消息前置处理，做登录业务逻辑
@@ -89,7 +87,7 @@ public class LoginMessageProcessor extends AbstractMessageProcessor<Byte> {
             // 判断是否开启客户端心跳
             ctx.pipeline()
                     // 添加读写空闲处理器， 添加后，下条消息就可以接收心跳消息了
-                    .addAfter(MessageConstant.CONVERT_2_PACKET_HANDLER, MessageConstant.HEART_BEAT_IDLE_HANDLER, new IdleStateHandler(loginContent.getHeartBeatExpireTime() > MessageConstant.ZERO ? Math.round(loginContent.getHeartBeatExpireTime() * MessageConstant.ONE_POINT_FIVE) : MessageServerContext.serverProperties().getClientHeartBeatTimeout(), MessageConstant.ZERO, MessageConstant.ZERO))
+                    .addAfter(MessageConstant.CONVERT_2_PACKET_HANDLER, MessageConstant.HEART_BEAT_IDLE_HANDLER, new IdleStateHandler(ClientHelper.calculateClientHeartBeatTimeout(loginContent), MessageConstant.ZERO, MessageConstant.ZERO))
                     // 处理心跳的以及相关逻辑都放在这里处理
                     .addAfter(MessageConstant.HEART_BEAT_IDLE_HANDLER, MessageConstant.HEART_BEAT_HANDLER, new HeartBeatHandler());
         }
