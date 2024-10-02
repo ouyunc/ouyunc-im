@@ -106,6 +106,11 @@ public class MessageConstant {
      */
     public static final String CHANNEL_ATTR_KEY_TAG_LOGIN = "CHANNEL_TAG_LOGIN";
 
+    /**
+     * 该链接上次的心跳时间戳
+     */
+    public static final String CHANNEL_ATTR_KEY_TAG_LAST_HEARTBEAT_TIMESTAMP = "CHANNEL_ATTR_KEY_TAG_LAST_HEARTBEAT_TIMESTAMP";
+
 
     /**
      * channel 客户端读超时的次数标签
