@@ -1,9 +1,9 @@
 package com.ouyunc.core.codec;
 
 
-import com.ouyunc.base.utils.PacketReaderWriterUtil;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.packet.Packet;
+import com.ouyunc.base.utils.PacketReaderWriterUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageCodec;

@@ -24,8 +24,8 @@ public class MqttProtocolDispatcherProcessor implements ProtocolDispatcherProces
         ctx.pipeline()
                 .addLast(MessageConstant.MQTT_DISPATCHER_HANDLER, new MqttProtocolDispatcherHandler())
                 .remove(MessageConstant.PROTOCOL_DISPATCHER_HANDLER);
-        // 调用下一个handle的active
-        ctx.fireChannelActive();
+        // 调用下一个handle
+        ctx.fireChannelRead(in.retain());
     }
     /**
      * @Author fzx

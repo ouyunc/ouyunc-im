@@ -91,6 +91,7 @@ public class HAProxyProtocolDispatcherProcessor implements ProtocolDispatcherPro
     @Override
     public void process(ChannelHandlerContext ctx, ByteBuf in) {
         // 存入ctx 中，注意不能跨服务从ctx 获取该值，后面会解析处理存到packet中传递
+        log.info("正在处理HAProxy protocol...");
         ctx.pipeline().addLast(MessageConstant.HA_PROXY_PROTOCOL_DECODER_HANDLER, new HAProxyMessageDecoder());
         ctx.pipeline().addLast(MessageConstant.REMOTE_CLIENT_REAL_IP_HANDLER, new EphemeralRemoteClientRealIpHandler());
         ctx.fireChannelRead(in.retain());

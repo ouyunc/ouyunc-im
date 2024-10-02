@@ -1,6 +1,7 @@
 package com.ouyunc.base.serialize;
 
 
+import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.utils.ObjectUtil;
 import io.protostuff.LinkedBuffer;
 import io.protostuff.ProtobufIOUtil;
@@ -157,7 +158,7 @@ public enum Serializer {
                 return serializer;
             }
         }
-        return null;
+        throw new MessageException("找不到匹配的序列化: " + value);
     }
 
 

@@ -1,6 +1,7 @@
 package com.ouyunc.message.dispatcher;
 
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.utils.PacketMagicUtil;
 import com.ouyunc.core.codec.PacketCodec;
 import com.ouyunc.message.handler.PacketProtocolDispatcherHandler;
 import io.netty.buffer.ByteBuf;
@@ -17,7 +18,9 @@ public class PacketProtocolDispatcherProcessor implements ProtocolDispatcherProc
     @Override
     public boolean match(ByteBuf in) {
         // 判断是何种协议,注意这里不可以使用  in.readByte();
-        return isPacket(in.getByte(MessageConstant.ZERO));
+        byte[] magicBytes = new byte[MessageConstant.MAGIC_BYTE_LENGTH];
+        in.getBytes(in.readerIndex(), magicBytes);
+        return isPacket(magicBytes);
     }
 
     @Override
@@ -32,15 +35,15 @@ public class PacketProtocolDispatcherProcessor implements ProtocolDispatcherProc
 
         // 移除协议分发器
         ctx.pipeline().remove(MessageConstant.PROTOCOL_DISPATCHER_HANDLER);
-        // 调用下一个handle的active，注意ctx.fireChannelActive 与ctx.pipeline().fireChannelActive 区别
-        ctx.fireChannelActive();
+        // 调用下一个handle
+        ctx.fireChannelRead(in.retain());
     }
 
     /**
      * @Author fzx
      * @Description 判断是否是packet类型协议
      */
-    private boolean isPacket(byte magic1) {
-        return magic1 == MessageConstant.PACKET_MAGIC;
+    private boolean isPacket(byte[] magicBytes) {
+        return PacketMagicUtil.isPacketMagic(magicBytes);
     }
 }

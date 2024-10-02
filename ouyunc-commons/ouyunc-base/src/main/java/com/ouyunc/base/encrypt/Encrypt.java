@@ -1,6 +1,7 @@
 package com.ouyunc.base.encrypt;
 
 
+import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.utils.MD5Util;
 import com.ouyunc.base.utils.ObjectUtil;
 
@@ -176,7 +177,7 @@ public class Encrypt {
                     return encryptEnum;
                 }
             }
-            return null;
+            throw new MessageException("找不到匹配的加密方式: " + value);
         }
 
         /**

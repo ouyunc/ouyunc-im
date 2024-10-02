@@ -61,6 +61,7 @@ public class ProtocolDispatcher extends ByteToMessageDecoder {
     public ProtocolDispatcherProcessor getProtocolDispatcherProcessor(ByteBuf in) {
         // 匹配并获取协议分发器
         for (ProtocolDispatcherProcessor protocolDispatcherProcessor : MessageServerContext.protocolDispatcherProcessors) {
+            // 注意这里的math 在匹配的时候Packet 的私有自定义协议的匹配方式，有待改进，目前只用一个字节来判断
             if (protocolDispatcherProcessor.match(in)) {
                 return protocolDispatcherProcessor;
             }

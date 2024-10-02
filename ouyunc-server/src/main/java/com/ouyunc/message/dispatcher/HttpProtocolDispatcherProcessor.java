@@ -42,8 +42,8 @@ public class HttpProtocolDispatcherProcessor implements ProtocolDispatcherProces
                 .addLast(MessageConstant.HTTP_DISPATCHER_HANDLER, new HttpProtocolDispatcherHandler());
         // 移除协议分发器，如果不移除在处理业务消息时还是会进行消息分发处理
         ctx.pipeline().remove(MessageConstant.PROTOCOL_DISPATCHER_HANDLER);
-        // 调用下一个handle的active
-        ctx.fireChannelActive();
+        // 调用下一个handle
+        ctx.fireChannelRead(in.retain());
     }
 
 

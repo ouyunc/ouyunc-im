@@ -20,10 +20,10 @@ public class Packet implements Serializable, Cloneable{
 
 
     /**
-     * 1个字节, 魔数 十进制数字 102
+     * 5个字节, 魔数 since v6.0.0 后 改成字节数组 OUYUNC
      */
     @Tag(1)
-    private byte magic = MessageConstant.PACKET_MAGIC;
+    private byte[] magic = MessageConstant.PACKET_MAGIC;
 
     /**
      * 1个字节  协议类型,ws,http,自定义等
@@ -87,11 +87,11 @@ public class Packet implements Serializable, Cloneable{
     private Message message;
 
 
-    public byte getMagic() {
+    public byte[] getMagic() {
         return magic;
     }
 
-    public void setMagic(byte magic) {
+    public void setMagic(byte[] magic) {
         this.magic = magic;
     }
 
@@ -203,19 +203,6 @@ public class Packet implements Serializable, Cloneable{
         this.message = message;
     }
 
-    public Packet(byte magic, byte protocol, byte protocolVersion, long packetId, byte deviceType, byte networkType, byte encryptType, byte serializeAlgorithm, byte messageType, int messageLength, Message message) {
-        this.magic = magic;
-        this.protocol = protocol;
-        this.protocolVersion = protocolVersion;
-        this.packetId = packetId;
-        this.deviceType = deviceType;
-        this.networkType = networkType;
-        this.encryptType = encryptType;
-        this.serializeAlgorithm = serializeAlgorithm;
-        this.messageType = messageType;
-        this.messageLength = messageLength;
-        this.message = message;
-    }
 
     @Override
     public boolean equals(Object o) {

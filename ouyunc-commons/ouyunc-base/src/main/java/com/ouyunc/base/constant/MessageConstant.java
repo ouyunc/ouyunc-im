@@ -51,9 +51,16 @@ public class MessageConstant {
     public static final long LOCK_LEASE_TIME = 5;
 
     /**
-     * 自定义协议的魔数,十进制102
+     * 自定义协议的魔数6个字节,字节数组 OUYUNC
      */
-    public static final byte PACKET_MAGIC = 0x66;
+    public static final byte[] PACKET_MAGIC = {
+            (byte) 0x4F,//十进制79（O）
+            (byte) 0x55,//十进制85（U）
+            (byte) 0x59,//十进制89（Y）
+            (byte) 0x55,//十进制85（U）
+            (byte) 0x4E,//十进制78（N）
+            (byte) 0x43//十进制67 （C）
+    };
 
     /**
      *urf-8
@@ -363,7 +370,7 @@ public class MessageConstant {
     public static final int LENGTH_FIELD_LENGTH = 4;
 
     /**
-     * |    1    |     1   |    1    |     8    |    1     |    1      |    1     |     1     |     1     |    4     |      n    |
+     * |    6   |     1   |    1    |     8    |    1     |    1      |    1     |     1     |     1     |    4     |      n    |
      * +---------+---------+---------+----------+----------+----------+-----------+----------+-----------+-----------+----------+-
      * |         |         |         |          |          |          |           |          |           |           |          |
      * |  魔数    |  协议类型| 协议版本  | 协议包id  | 设备类型  | 网络类型   | 加密算法   | 序列化算法 |  消息类型   | 消息长度   |  消息体   |
@@ -373,9 +380,9 @@ public class MessageConstant {
      */
 
     /**
-     * LengthFieldBasedFrameDecoder 消息长度字段的 偏移字节，这里是固定协议头大小（16字节）
+     * LengthFieldBasedFrameDecoder 消息长度字段的 偏移字节，这里是固定协议头大小（21字节）
      */
-    public static final int LENGTH_FIELD_OFFSET = 16;
+    public static final int LENGTH_FIELD_OFFSET = 21;
     /**
      * LengthFieldBasedFrameDecoder  修改帧数据长度字段中定义的值，可以为负数 因为有时候我们习惯把头部记入长度,若为负数,则说明要推后多少个字段
      */
@@ -392,7 +399,7 @@ public class MessageConstant {
     /**
      * packet 中魔数所占字节数
      */
-    public static final int MAGIC_BYTES = 1;
+    public static final int MAGIC_BYTE_LENGTH = PACKET_MAGIC.length;
 
 
     /**

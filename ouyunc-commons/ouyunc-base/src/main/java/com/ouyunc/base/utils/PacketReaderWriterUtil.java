@@ -3,6 +3,7 @@ package com.ouyunc.base.utils;
 
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.encrypt.Encrypt;
+import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.serialize.Serializer;
@@ -34,8 +35,13 @@ public class PacketReaderWriterUtil {
             log.error("定长解码器LengthFieldBasedFrameDecoder===>在协议分发时出现异常！");
             throw new RuntimeException("定长解码器LengthFieldBasedFrameDecoder===>在协议分发时出现异常！");
         }
-        //跳过魔数 1个字节，当然可以读取魔数判断是否是符合要求，这里不做校验
-        in.skipBytes(MessageConstant.MAGIC_BYTES);
+        // 读取魔数判断是否是符合要求
+        byte[] magicBytes = new byte[MessageConstant.MAGIC_BYTE_LENGTH];
+        in.readBytes(magicBytes);
+        if (!PacketMagicUtil.isPacketMagic(magicBytes)) {
+            log.error("非法魔数:{}",magicBytes);
+            throw new MessageException("非法魔数！");
+        }
         //包协议， 1个字节
         final byte protocol = in.readByte();
         //协议版本号，1个字节
@@ -73,7 +79,7 @@ public class PacketReaderWriterUtil {
      */
     public static void writePacketInByteBuf(Packet packet, ByteBuf out) {
         //魔数 1个字节
-        out.writeByte(packet.getMagic());
+        out.writeBytes(packet.getMagic());
         //包协议， 1个字节
         out.writeByte(packet.getProtocol());
         //协议版本号，1个字节
