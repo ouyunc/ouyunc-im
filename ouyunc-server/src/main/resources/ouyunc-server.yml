@@ -2,7 +2,7 @@
 ouyunc:
   message:
     # 服务端口
-    port: 6002
+    port: 6005
     # 服务名称
     name: ouyunc-message
     # server提供的暴露ip(可以理解为主动设置本机ip),如果不指定则使用本地网卡ip，一般为内网ip; 注意如果开启集群，要注意集群服务的地址和该服务所在ip的网络是否连通
@@ -27,9 +27,11 @@ ouyunc:
     client:
       # 外部客户端的登录信息（包含在线状态），FOREVER-永久， FINITE-有限
       login-info:
-        save-mode: FOREVER
+        save-mode: FINITE
         # 调度扫描需要更新状态的队列的时间间隔：单位毫秒 ,默认1000； 注意：当开启FINITE 该字段有效，且登录过期时间为: client.heart-beat.timeout * client.heart-beat.wait-retry  单位秒
         schedule-time-interval: 1000
+        # 批量更新数据量，默认5000 ，通过Redis pipeline 来操作批量命令， 减少网络传输的消耗，更具业务和配置自行配置
+        batch-update-size: 5000
       # 心跳配置,服务端与外部客户端的心跳配置
       heart-beat:
         # 全局是否开启心跳，用来检测连接上的客户端需要发送心跳包（只针对外部客户端），默认开启
@@ -86,7 +88,7 @@ ouyunc:
       # 是否开启集群，默认关闭
       enable: true
       # 集群中服务端地址，多个用逗号隔开
-      nodes: 192.168.1.4:6001,192.168.1.4:6002,192.168.1.4:6003
+      nodes: 192.168.1.4:6001,192.168.1.4:6002,192.168.1.4:6003,192.168.1.4:6004,192.168.1.4:6005
       # 集群中消息重试次数，消息如果不通，会进行重试三次
       message-retry: 3
       client:
@@ -99,7 +101,7 @@ ouyunc:
         #  集群中客户端channel pool 中核心连接数 默认 5
         channel-pool-core-connection: 5
         # 集群中，服务启动时，服务注册表的增量更新时间间隔（心跳时间），单位秒，默认5秒
-        heart-beat-interval: 10
+        heart-beat-interval: 1
         # 集群中，客户端心跳重试次数，默认3次
         heart-beat-wait-retry: 3
         #  集群中，内置客户端读超时，单位秒，默认0秒钟

@@ -4,22 +4,22 @@ import io.netty.channel.ChannelHandlerContext;
 
 /**
  * @Author fzx
- * @Description: 客户端上线事件
+ * @Description: 客户端登录成功事件
  **/
-public class ClientOnlineEvent extends MessageEvent {
+public class ClientLoginEvent extends MessageEvent {
 
     /**
      * channel 上下文
      */
     private final ChannelHandlerContext ctx;
 
-    public ClientOnlineEvent(Object source, ChannelHandlerContext ctx) {
+    public ClientLoginEvent(Object source, ChannelHandlerContext ctx) {
         super(source);
         this.ctx = ctx;
     }
 
 
-    public ClientOnlineEvent(Object source, ChannelHandlerContext ctx, long publishTime) {
+    public ClientLoginEvent(Object source, ChannelHandlerContext ctx, long publishTime) {
         super(source, publishTime);
         this.ctx = ctx;
     }

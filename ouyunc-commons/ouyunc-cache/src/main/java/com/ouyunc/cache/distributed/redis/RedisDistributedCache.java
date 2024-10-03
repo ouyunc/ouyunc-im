@@ -2,7 +2,10 @@ package com.ouyunc.cache.distributed.redis;
 
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.cache.distributed.AbstractDistributedCache;
+import org.springframework.dao.DataAccessException;
+import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.SessionCallback;
 
 import java.util.List;
 import java.util.Map;
@@ -70,6 +73,23 @@ public class RedisDistributedCache<K, V> extends AbstractDistributedCache<K,V> {
         redisTemplate.opsForValue().set(key, value, timeout, unit);
     }
 
+    @Override
+    public void expire(K key, long timeout, TimeUnit unit) {
+        redisTemplate.expire(key, timeout, unit);
+    }
+
+    @Override
+    public void batchExpire(List<K> keys, long timeout, TimeUnit unit) {
+        redisTemplate.executePipelined(new SessionCallback<>() {
+            @Override
+            public <KK, V> Object execute(RedisOperations<KK, V> operations) throws DataAccessException {
+                for (K key : keys) {
+                    operations.expire((KK) key, timeout, unit);
+                }
+                return null;
+            }
+        });
+    }
 
     @Override
     public void putHash(K key, Object hashKey, V value) {

@@ -59,6 +59,18 @@ public interface Cache<K,V> {
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * 设置过期时间
+     */
+    default void expire(K key, long timeout, TimeUnit unit){
+        throw new UnsupportedOperationException();
+    }
+    /**
+     * 设置过期时间
+     */
+    default void batchExpire(List<K> keys, long timeout, TimeUnit unit){
+        throw new UnsupportedOperationException();
+    }
 
 
     /**

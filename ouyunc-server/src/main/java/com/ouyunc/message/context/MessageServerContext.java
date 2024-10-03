@@ -7,6 +7,7 @@ import com.ouyunc.base.constant.enums.DeviceType;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
+import com.ouyunc.base.packet.message.content.LoginContent;
 import com.ouyunc.cache.Cache;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.cache.distributed.redis.RedisDistributedCache;
@@ -33,6 +34,7 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -46,6 +48,11 @@ public class MessageServerContext extends MessageContext {
      * message 服务实例
      */
     public static MessageServer server;
+
+    /**
+     * 客户端登录保活队列，这个是无界队列，可以根据业务场景和使用方式调整，注意内存和垃圾回收相关
+     */
+    public static final ConcurrentLinkedQueue<LoginContent> clientKeepAliveQueue = new ConcurrentLinkedQueue<>();
 
 
     /**

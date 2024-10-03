@@ -1,5 +1,6 @@
 package com.ouyunc.message.cluster.client;
 
+import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.thread.MessageClusterSynAckThread;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
@@ -31,7 +32,7 @@ public class DefaultMessageClient extends AbstractMessageClient {
     @Override
     void afterPropertiesSet() {
         // 初始化客户端之后做的事情，对内置客户端的包活处理，及时更新处理本地服务注册表,定时任务处理
-        SCHEDULED_EVENT_EXECUTORS.scheduleWithFixedDelay(new MessageClusterSynAckThread(), 0, MessageServerContext.serverProperties().getClusterClientHeartbeatInterval(), TimeUnit.SECONDS);
+        SCHEDULED_EVENT_EXECUTORS.scheduleWithFixedDelay(new MessageClusterSynAckThread(), MessageConstant.ZERO, MessageServerContext.serverProperties().getClusterClientHeartbeatInterval(), TimeUnit.SECONDS);
     }
 
 

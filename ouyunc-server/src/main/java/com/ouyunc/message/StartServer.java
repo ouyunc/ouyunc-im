@@ -11,6 +11,5 @@ public class StartServer {
     public static void main(String[] args) throws IOException {
         MessageServer server = new StandardMessageServer();
         server.start(args);
-
     }
 }

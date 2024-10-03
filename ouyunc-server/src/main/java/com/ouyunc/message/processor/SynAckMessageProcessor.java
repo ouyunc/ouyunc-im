@@ -5,6 +5,7 @@ import com.ouyunc.base.constant.enums.OuyuncMessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.OuyuncMessageTypeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
+import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.message.cluster.client.pool.MessageClientPool;
 import com.ouyunc.message.context.MessageServerContext;
 import io.netty.channel.ChannelHandlerContext;
@@ -43,7 +44,7 @@ public class SynAckMessageProcessor extends AbstractMessageProcessor<Byte> {
             synAckMessage.setContentType(OuyuncMessageContentTypeEnum.ACK_CONTENT.getType());
             synAckMessage.setFrom(MessageServerContext.serverProperties().getLocalServerAddress());
             synAckMessage.setTo(remoteServerAddress);
-            synAckMessage.setCreateTime(Clock.systemUTC().millis());
+            synAckMessage.setCreateTime(TimeUtil.currentTimeMillis());
             packet.setPacketId(MessageServerContext.<Long>idGenerator().generateId());
             MessageServerContext.findProtocol(packet.getProtocol(), packet.getProtocolVersion()).doSendMessage(packet, remoteServerAddress, (sendResult)->{});
             // 下面是解决集群中原有服务是如何发现新加入集群的服务的

@@ -6,7 +6,7 @@ import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.utils.SSLUtil;
-import com.ouyunc.core.listener.event.ClientOfflineEvent;
+import com.ouyunc.core.listener.event.ClientLogoutEvent;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.dispatcher.ProtocolDispatcher;
 import com.ouyunc.message.handler.MessageLoggingHandler;
@@ -101,7 +101,7 @@ public class DefaultSocketChannelInitializer extends SocketChannelInitializer {
                                 }
                             }
                             // 发送客户端离线事件， 可以处理发送遗嘱等客户端关闭后的操作逻辑
-                            MessageServerContext.publishEvent(new ClientOfflineEvent(loginClientInfo), true);
+                            MessageServerContext.publishEvent(new ClientLogoutEvent(loginClientInfo), true);
                         }
                     }
                 }

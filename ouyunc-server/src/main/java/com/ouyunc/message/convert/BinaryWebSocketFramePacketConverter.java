@@ -10,6 +10,7 @@ import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.packet.message.content.LoginContent;
 import com.ouyunc.base.utils.IpUtil;
 import com.ouyunc.base.utils.PacketReaderWriterUtil;
+import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.protocol.NativePacketProtocol;
 import io.netty.buffer.ByteBuf;
@@ -59,7 +60,7 @@ public enum BinaryWebSocketFramePacketConverter implements PacketConverter<Binar
                 // 获取客户端真实ip
                 metadata.setClientIp(IpUtil.getIp(ctx));
                 // 设置服务器时间
-                metadata.setServerTime(Clock.systemUTC().millis());
+                metadata.setServerTime(TimeUtil.currentTimeMillis());
             }
             message.setMetadata(metadata);
             return packet;

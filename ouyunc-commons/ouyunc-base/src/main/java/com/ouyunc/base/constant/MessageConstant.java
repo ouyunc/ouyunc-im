@@ -118,6 +118,11 @@ public class MessageConstant {
      */
     public static final String CHANNEL_ATTR_KEY_TAG_LAST_HEARTBEAT_TIMESTAMP = "CHANNEL_ATTR_KEY_TAG_LAST_HEARTBEAT_TIMESTAMP";
 
+    /**
+     * 链接上次的心跳间隔时间
+     */
+    public static final String CHANNEL_ATTR_KEY_TAG_HEARTBEAT_TIMEOUT = "CHANNEL_ATTR_KEY_TAG_HEARTBEAT_TIME";
+
 
     /**
      * channel 客户端读超时的次数标签
@@ -207,6 +212,11 @@ public class MessageConstant {
      * 转换为packet处理器
      */
     public static final String CONVERT_2_PACKET_HANDLER = "CONVERT_2_PACKET_HANDLER";
+
+    /**
+     * 客户端登录保活处理器
+     */
+    public static final String CLIENT_LOGIN_KEEP_ALIVE_HANDLER = "LOGIN_KEEP_ALIVE_HANDLER";
 
 
     /**

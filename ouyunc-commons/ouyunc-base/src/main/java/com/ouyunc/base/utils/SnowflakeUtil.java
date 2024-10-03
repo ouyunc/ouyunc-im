@@ -59,7 +59,7 @@ public class SnowflakeUtil {
      * @return long
      **/
     public synchronized static long nextId(){
-        long now = Clock.systemUTC().millis();
+        long now = TimeUtil.currentTimeMillis();
         //如果当前时间小于上一次ID生成的时间戳，说明系统时钟回退过这个时候应当抛出异常
         if (now < LAST_TIME_STAMP) {
             if (LAST_TIME_STAMP - now >= 2000L) {
@@ -87,9 +87,9 @@ public class SnowflakeUtil {
      * 获取下一不同毫秒的时间戳，不能与最后的时间戳一样
      */
     private static long nextMillis(long lastMillis) {
-        long now = Clock.systemUTC().millis();
+        long now = TimeUtil.currentTimeMillis();
         while (now <= lastMillis) {
-            now = Clock.systemUTC().millis();
+            now = TimeUtil.currentTimeMillis();
         }
         return now;
     }
@@ -131,11 +131,11 @@ public class SnowflakeUtil {
 
     public static void main(String[] args) {
         Set ids = new HashSet();
-        long start = Clock.systemUTC().millis();
+        long start = TimeUtil.currentTimeMillis();
         for (int i = 0; i < 5000; i++) {
             System.out.println(i+ "-->" +nextId());
         }
-        long end = Clock.systemUTC().millis();
+        long end = TimeUtil.currentTimeMillis();
         System.out.println("共生成id[" + ids.size() + "]个，花费时间[" + (end - start) + "]毫秒");
     }
 }

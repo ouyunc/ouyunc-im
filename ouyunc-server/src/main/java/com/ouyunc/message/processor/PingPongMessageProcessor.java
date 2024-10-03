@@ -8,6 +8,7 @@ import com.ouyunc.base.constant.enums.WsMessageTypeEnum;
 import com.ouyunc.base.model.Target;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
+import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.MessageHelper;
@@ -51,7 +52,7 @@ public class PingPongMessageProcessor extends AbstractMessageProcessor<Byte> {
         heartBeatMessage.setFrom(MessageContext.messageProperties.getLocalServerAddress());
         heartBeatMessage.setTo(from);
         heartBeatMessage.setContentType(WsMessageContentTypeEnum.PING_CONTENT.getType());
-        heartBeatMessage.setCreateTime(Clock.systemUTC().millis());
+        heartBeatMessage.setCreateTime(TimeUtil.currentTimeMillis());
         packet.setPacketId(MessageContext.<Long>idGenerator().generateId());
         // 写回的是websocket还是其他类型的数据
         MessageHelper.asyncSendMessage(packet, Target.newBuilder().targetIdentity(from).deviceType(MessageServerContext.deviceTypeCache.get(packet.getDeviceType())).build());

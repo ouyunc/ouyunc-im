@@ -10,6 +10,7 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.serialize.Serializer;
 import com.ouyunc.base.utils.MapUtil;
+import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.core.listener.event.ServerOfflineEvent;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.protocol.NativePacketProtocol;
@@ -49,7 +50,7 @@ public class MessageClusterSynAckThread implements Runnable{
         for (Map.Entry<String, ChannelPool> socketAddressChannelPoolEntry : availableGlobalServer) {
             String targetServerAddress = socketAddressChannelPoolEntry.getKey();
             // 给暂未连接的的服务（不在注册表中）进行重试连接发送syn去握手，需要回复ack
-            Message message = new Message(MessageServerContext.serverProperties().getLocalServerAddress(), targetServerAddress, OuyuncMessageContentTypeEnum.SYN_CONTENT.getType(), Clock.systemUTC().millis());
+            Message message = new Message(MessageServerContext.serverProperties().getLocalServerAddress(), targetServerAddress, OuyuncMessageContentTypeEnum.SYN_CONTENT.getType(), TimeUtil.currentTimeMillis());
             //  ==============针对以上packet 几种序列化对比: string = SYN=========
             //     packet            message
             // protoStuff 150b         80b  内部心跳只用protoStuff序列化/反序列化

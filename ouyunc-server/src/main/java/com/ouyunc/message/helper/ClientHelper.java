@@ -57,12 +57,17 @@ public class ClientHelper {
         try {
             if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
                 long expireTime = MessageConstant.MINUS_ONE;
+                // 计算心跳超时时间
+                int heartBeatTimeout = calculateClientHeartBeatTimeout(loginContent);
                 // 如果客户端的登录信息存储模式是有限/短暂的则 保存时间是，心跳间隔时间*最大重试次数+5，这里加5是为了尽可能给其他程序去处理相关逻辑，如读写空闲事件
-                if (SaveModeEnum.FINITE.equals(MessageServerContext.serverProperties().getClientLoginInfoSaveMode())) {
-                    expireTime = Integer.toUnsignedLong((calculateClientHeartBeatTimeout(loginContent) * MessageServerContext.serverProperties().getClientHeartBeatWaitRetry())) + MessageConstant.FIVE;
+                if (MessageServerContext.serverProperties().isClientHeartBeatEnable() && SaveModeEnum.FINITE.equals(MessageServerContext.serverProperties().getClientLoginInfoSaveMode())) {
+                    expireTime = Integer.toUnsignedLong((heartBeatTimeout * MessageServerContext.serverProperties().getClientHeartBeatWaitRetry())) + MessageConstant.FIVE;
                 }
                 // 客户端登录信息存入缓存
                 MessageServerContext.remoteLoginClientInfoCache.put(CacheConstant.OUYUNC + CacheConstant.APP_KEY + loginContent.getAppKey() + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + comboIdentity, loginClientInfo, expireTime, TimeUnit.SECONDS);
+                // 将心跳设置到ctx 中
+                ctx.channel().attr(AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_HEARTBEAT_TIMEOUT)).set(heartBeatTimeout);
+                ctx.channel().attr(AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_LAST_HEARTBEAT_TIMESTAMP)).set(loginTimestamp);
             }else {
                 log.error("客户端: {} 绑定登录信息失败,原因：获取分布式锁失败", loginContent);
             }

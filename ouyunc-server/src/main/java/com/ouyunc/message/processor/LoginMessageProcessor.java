@@ -13,13 +13,15 @@ import com.ouyunc.base.packet.message.content.LoginContent;
 import com.ouyunc.base.packet.message.content.ServerNotifyContent;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.utils.SnowflakeUtil;
-import com.ouyunc.core.listener.event.ClientOnlineEvent;
+import com.ouyunc.base.utils.TimeUtil;
+import com.ouyunc.core.listener.event.ClientLoginEvent;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.handler.HeartBeatHandler;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.timeout.IdleStateHandler;
+import io.netty.util.AttributeKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,7 +44,7 @@ public class LoginMessageProcessor extends AbstractMessageProcessor<Byte> {
         // 这里判断该消息是否需要
         log.info("正在处理预登录消息...");
         // 构造默认发送的是IM 的消息格式
-        long loginTimestamp = Clock.systemUTC().millis();
+        long loginTimestamp = TimeUtil.currentTimeMillis();
         // 取出登录消息
         Message loginMessage = packet.getMessage();
         //将消息内容转成message
@@ -83,11 +85,13 @@ public class LoginMessageProcessor extends AbstractMessageProcessor<Byte> {
         // 绑定信息
         cacheLoginClientInfo = ClientHelper.bind(ctx, loginContent, loginTimestamp);
         // 判断是否加入读写空闲,只要服务端开启支持心跳，才会可能加入心跳处理，这里可以根据自己的协议或业务逻辑进行调整
-        if (MessageServerContext.serverProperties().isClientHeartBeatEnable()) {
+        AttributeKey<Integer> channelTapHeartbeatTimeoutKey = AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_HEARTBEAT_TIMEOUT);
+        Integer heartbeatExpireTime = ctx.channel().attr(channelTapHeartbeatTimeoutKey).get();
+        if (MessageServerContext.serverProperties().isClientHeartBeatEnable() && heartbeatExpireTime != null) {
             // 判断是否开启客户端心跳
             ctx.pipeline()
                     // 添加读写空闲处理器， 添加后，下条消息就可以接收心跳消息了
-                    .addAfter(MessageConstant.CONVERT_2_PACKET_HANDLER, MessageConstant.HEART_BEAT_IDLE_HANDLER, new IdleStateHandler(ClientHelper.calculateClientHeartBeatTimeout(loginContent), MessageConstant.ZERO, MessageConstant.ZERO))
+                    .addAfter(MessageConstant.CONVERT_2_PACKET_HANDLER, MessageConstant.HEART_BEAT_IDLE_HANDLER, new IdleStateHandler(heartbeatExpireTime, MessageConstant.ZERO, MessageConstant.ZERO))
                     // 处理心跳的以及相关逻辑都放在这里处理
                     .addAfter(MessageConstant.HEART_BEAT_IDLE_HANDLER, MessageConstant.HEART_BEAT_HANDLER, new HeartBeatHandler());
         }
@@ -98,7 +102,7 @@ public class LoginMessageProcessor extends AbstractMessageProcessor<Byte> {
         message.setContent(null);
         MessageHelper.syncSendMessage(notifyPacket, Target.newBuilder().targetIdentity(cacheLoginClientInfo.getIdentity()).targetServerAddress(cacheLoginClientInfo.getLoginServerAddress()).deviceType(deviceType).build());
         // 发送客户端成功登录事件
-        MessageServerContext.publishEvent(new ClientOnlineEvent(cacheLoginClientInfo, ctx, loginTimestamp), true);
+        MessageServerContext.publishEvent(new ClientLoginEvent(cacheLoginClientInfo, ctx, loginTimestamp), true);
     }
 
     /***

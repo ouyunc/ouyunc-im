@@ -1,6 +1,7 @@
 package com.ouyunc.message;
 
 import com.ouyunc.base.constant.enums.DeviceTypeEnum;
+import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.core.listener.event.ServerStartupEvent;
 import com.ouyunc.message.banner.MessageBanner;
 import com.ouyunc.message.channel.DefaultServerChannelInitializer;
@@ -191,7 +192,7 @@ public abstract class AbstractMessageServer implements MessageServer {
     @SuppressWarnings({"rawtypes","unchecked"})
     protected void initServer() {
         log.debug("开始初始化核心message服务......");
-        final long startTimeStamp = Clock.systemUTC().millis();
+        final long startTimeStamp = TimeUtil.currentTimeMillis();
         // 集成log4j2
         InternalLoggerFactory.setDefaultFactory(Log4J2LoggerFactory.INSTANCE);
         // 配置boss 线程组&工作线程组
@@ -236,7 +237,7 @@ public abstract class AbstractMessageServer implements MessageServer {
                             }
                             log.debug("核心message服务初始化完成");
                             MessageServerContext.publishEvent(new ServerStartupEvent(MessageServerContext.serverProperties().getLocalServerAddress()), true);
-                            log.debug("IM server启动成功，其绑定地址:{} 端口号:{} 共花费:{} ms.", MessageServerContext.serverProperties().getIp(), MessageServerContext.serverProperties().getPort(), (Clock.systemUTC().millis() - startTimeStamp));
+                            log.debug("IM server启动成功，其绑定地址:{} 端口号:{} 共花费:{} ms.", MessageServerContext.serverProperties().getIp(), MessageServerContext.serverProperties().getPort(), (TimeUtil.currentTimeMillis() - startTimeStamp));
                         } else {
                             log.error("IM server 启动失败！原因: {}", bindFuture.cause().getMessage());
                             throw new Exception(bindFuture.cause().getMessage());

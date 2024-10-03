@@ -52,6 +52,8 @@ public enum NativePacketProtocol implements PacketProtocol {
                     .addLast(MessageConstant.WS_SERVER_PROTOCOL_HANDLER, new WebSocketServerProtocolHandler(MessageServerContext.serverProperties().getWebsocketPath(), null, true, Integer.MAX_VALUE))
                     // 转换成包packet,内部消息传递都是以packet 进行处理
                     .addLast(MessageConstant.CONVERT_2_PACKET_HANDLER, new Convert2PacketHandler())
+                    // 客户端登录保活处理器
+                    .addLast(MessageConstant.CLIENT_LOGIN_KEEP_ALIVE_HANDLER, new ClientLoginKeepAliveHandler())
                     // 添加监控处理逻辑
                     .addLast(MessageConstant.MONITOR_HANDLER, new MonitorHandler())
                     // 在业务处理之前可以进行登录认证处理，登录认证处理，如果不需要登录处理，可在配置文件中配置，不需要在这里处理
@@ -173,6 +175,10 @@ public enum NativePacketProtocol implements PacketProtocol {
                     .addLast(MessageConstant.MQTT_DECODER_HANDLER, new MqttDecoder())
                     .addLast(MessageConstant.MQTT_ENCODER_HANDLER, MqttEncoder.INSTANCE)
                     .addLast(MessageConstant.CONVERT_2_PACKET_HANDLER, new Convert2PacketHandler())
+                    // 客户端登录保活处理器
+                    .addLast(MessageConstant.CLIENT_LOGIN_KEEP_ALIVE_HANDLER, new ClientLoginKeepAliveHandler())
+                    // 添加监控处理逻辑
+                    .addLast(MessageConstant.MONITOR_HANDLER, new MonitorHandler())
                     // 前置处理
                     .addLast(MessageConstant.PRE_HANDLER, new PacketPreHandler())
                     // 业务处理
