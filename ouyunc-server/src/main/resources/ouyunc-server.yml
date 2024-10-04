@@ -30,8 +30,8 @@ ouyunc:
         save-mode: FINITE
         # 调度扫描需要更新状态的队列的时间间隔：单位毫秒 ,默认1000； 注意：当开启FINITE 该字段有效，且登录过期时间为: client.heart-beat.timeout * client.heart-beat.wait-retry  单位秒
         schedule-time-interval: 1000
-        # 批量更新数据量，默认5000 ，通过Redis pipeline 来操作批量命令， 减少网络传输的消耗，更具业务和配置自行配置
-        batch-update-size: 5000
+        # 批量过期数据量，默认1000 ，通过Redis pipeline 来操作批量命令， 减少网络传输的消耗，更具业务和配置自行配置
+        batch-expire-size: 1000
       # 心跳配置,服务端与外部客户端的心跳配置
       heart-beat:
         # 全局是否开启心跳，用来检测连接上的客户端需要发送心跳包（只针对外部客户端），默认开启

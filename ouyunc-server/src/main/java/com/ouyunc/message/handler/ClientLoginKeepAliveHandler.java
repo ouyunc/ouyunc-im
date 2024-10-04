@@ -37,7 +37,7 @@ public class ClientLoginKeepAliveHandler extends SimpleChannelInboundHandler<Pac
         if (WsMessageTypeEnum.PING_PONG.getType() != packet.getMessageType()) {
             // 设置本次时间为
             ctx.channel().attr(channelTagLastHeartbeatTimestampKey).set(packet.getMessage().getMetadata().getServerTime());
-            // @todo 将放入保活队列
+            //  将放入保活队列
             LoginClientInfo loginClientInfo = ctx.channel().attr(channelTagLoginKey).get();
             MessageServerContext.clientKeepAliveQueue.offer(loginClientInfo);
             ctx.fireChannelRead(packet);
@@ -62,7 +62,7 @@ public class ClientLoginKeepAliveHandler extends SimpleChannelInboundHandler<Pac
         if (currentTimeMillis >= lastHeartbeatTimestamp + heartbeatTimeout) {
             // 满足条件重新设置上次心跳
             ctx.channel().attr(channelTagLastHeartbeatTimestampKey).set(packet.getMessage().getMetadata().getServerTime());
-            // @todo 将放入保活队列
+            // 将放入保活队列
             LoginClientInfo loginClientInfo = ctx.channel().attr(channelTagLoginKey).get();
             MessageServerContext.clientKeepAliveQueue.offer(loginClientInfo);
         }

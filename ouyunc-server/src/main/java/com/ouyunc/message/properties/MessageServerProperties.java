@@ -112,6 +112,12 @@ public class MessageServerProperties extends MessageProperties {
     long clientLoginInfoScheduleTimeInterval;
 
     /***
+     *
+     */
+    @Key(value = "ouyunc.message.client.login-info.batch-expire-size", defaultValue = "1000")
+    int clientLoginInfoBatchExpireSize;
+
+    /***
      * 全局是否开启心跳，用来检测连接上的客户端需要发送心跳包（只针对外部客户端），默认开启
      */
     @Key(value = "ouyunc.message.client.heart-beat.enable", defaultValue = "true")
@@ -519,6 +525,13 @@ public class MessageServerProperties extends MessageProperties {
         this.clientHeartBeatWaitRetry = clientHeartBeatWaitRetry;
     }
 
+    public int getClientLoginInfoBatchExpireSize() {
+        return clientLoginInfoBatchExpireSize;
+    }
+
+    public void setClientLoginInfoBatchExpireSize(int clientLoginInfoBatchExpireSize) {
+        this.clientLoginInfoBatchExpireSize = clientLoginInfoBatchExpireSize;
+    }
 
     @Override
     public String toString() {
@@ -546,6 +559,7 @@ public class MessageServerProperties extends MessageProperties {
                 "\n, workerChildOptionWriteBufferLowWaterMark=" + workerChildOptionWriteBufferLowWaterMark +
                 "\n, clientLoginInfoSaveMode=" + clientLoginInfoSaveMode +
                 "\n, clientLoginInfoScheduleTimeInterval=" + clientLoginInfoScheduleTimeInterval +
+                "\n, clientLoginInfoBatchExpireSize=" + clientLoginInfoBatchExpireSize +
                 "\n, clientHeartBeatEnable=" + clientHeartBeatEnable +
                 "\n, clientHeartBeatTimeout=" + clientHeartBeatTimeout +
                 "\n, clientHeartBeatWaitRetry=" + clientHeartBeatWaitRetry +

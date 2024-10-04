@@ -45,10 +45,21 @@ public class ClientHelper {
         String identity = loginContent.getIdentity();
         DeviceType deviceType = loginContent.getDeviceType();
         log.info("channel: {} 正在绑定客户端: {} 登录设备: {} 在平台标识appKey: {} 上的登录",ctx.channel().id().asShortText(), identity, deviceType.getDeviceTypeName(), appKey);
+        // 计算登录过期时间
+        long expireTime = MessageConstant.MINUS_ONE;
+        // 计算心跳超时时间
+        int heartBeatTimeout = calculateClientHeartBeatTimeout(loginContent);
+        // 如果客户端的登录信息存储模式是有限/短暂的则 保存时间是，心跳间隔时间*最大重试次数+5，这里加5是为了尽可能给其他程序去处理相关逻辑，如读写空闲事件
+        if (MessageServerContext.serverProperties().isClientHeartBeatEnable() && SaveModeEnum.FINITE.equals(MessageServerContext.serverProperties().getClientLoginInfoSaveMode())) {
+            expireTime = Integer.toUnsignedLong((heartBeatTimeout * MessageServerContext.serverProperties().getClientHeartBeatWaitRetry())) + MessageConstant.FIVE;
+        }
         AttributeKey<LoginClientInfo> channelTagLoginKey = AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
         // 将用户绑定到channel中并打上tag标签
-        LoginClientInfo loginClientInfo = new LoginClientInfo(MessageContext.messageProperties.getLocalServerAddress(), OnlineEnum.ONLINE, null, loginTimestamp, appKey, identity, deviceType, loginContent.getSignature(), loginContent.getSignatureAlgorithm(), loginContent.getHeartBeatExpireTime(), loginContent.getEnableWill(), loginContent.getWillMessage(), loginContent.getWillTopic(), loginContent.getCleanSession(), loginContent.getSessionExpiryInterval(), loginContent.getCreateTime());
+        LoginClientInfo loginClientInfo = new LoginClientInfo(MessageContext.messageProperties.getLocalServerAddress(), OnlineEnum.ONLINE, null, expireTime, loginTimestamp, appKey, identity, deviceType, loginContent.getSignature(), loginContent.getSignatureAlgorithm(), loginContent.getHeartBeatExpireTime(), loginContent.getEnableWill(), loginContent.getWillMessage(), loginContent.getWillTopic(), loginContent.getCleanSession(), loginContent.getSessionExpiryInterval(), loginContent.getCreateTime());
         ctx.channel().attr(channelTagLoginKey).set(loginClientInfo);
+        // 将心跳设置到ctx 中
+        ctx.channel().attr(AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_HEARTBEAT_TIMEOUT)).set(heartBeatTimeout);
+        ctx.channel().attr(AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_LAST_HEARTBEAT_TIMESTAMP)).set(loginTimestamp);
         // 存入本地用户注册表
         String comboIdentity = IdentityUtil.generalComboIdentity(loginContent.getAppKey(), identity, deviceType.getDeviceTypeName());
         MessageServerContext.localClientRegisterTable.put(comboIdentity, ctx);
@@ -56,18 +67,8 @@ public class ClientHelper {
         RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + loginContent.getAppKey() + CacheConstant.COLON + comboIdentity);
         try {
             if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
-                long expireTime = MessageConstant.MINUS_ONE;
-                // 计算心跳超时时间
-                int heartBeatTimeout = calculateClientHeartBeatTimeout(loginContent);
-                // 如果客户端的登录信息存储模式是有限/短暂的则 保存时间是，心跳间隔时间*最大重试次数+5，这里加5是为了尽可能给其他程序去处理相关逻辑，如读写空闲事件
-                if (MessageServerContext.serverProperties().isClientHeartBeatEnable() && SaveModeEnum.FINITE.equals(MessageServerContext.serverProperties().getClientLoginInfoSaveMode())) {
-                    expireTime = Integer.toUnsignedLong((heartBeatTimeout * MessageServerContext.serverProperties().getClientHeartBeatWaitRetry())) + MessageConstant.FIVE;
-                }
                 // 客户端登录信息存入缓存
                 MessageServerContext.remoteLoginClientInfoCache.put(CacheConstant.OUYUNC + CacheConstant.APP_KEY + loginContent.getAppKey() + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + comboIdentity, loginClientInfo, expireTime, TimeUnit.SECONDS);
-                // 将心跳设置到ctx 中
-                ctx.channel().attr(AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_HEARTBEAT_TIMEOUT)).set(heartBeatTimeout);
-                ctx.channel().attr(AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_LAST_HEARTBEAT_TIMESTAMP)).set(loginTimestamp);
             }else {
                 log.error("客户端: {} 绑定登录信息失败,原因：获取分布式锁失败", loginContent);
             }

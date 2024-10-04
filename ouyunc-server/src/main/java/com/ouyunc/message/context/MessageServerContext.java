@@ -52,7 +52,7 @@ public class MessageServerContext extends MessageContext {
     /**
      * 客户端登录保活队列，这个是无界队列，可以根据业务场景和使用方式调整，注意内存和垃圾回收相关
      */
-    public static final ConcurrentLinkedQueue<LoginContent> clientKeepAliveQueue = new ConcurrentLinkedQueue<>();
+    public static final ConcurrentLinkedQueue<LoginClientInfo> clientKeepAliveQueue = new ConcurrentLinkedQueue<>();
 
 
     /**

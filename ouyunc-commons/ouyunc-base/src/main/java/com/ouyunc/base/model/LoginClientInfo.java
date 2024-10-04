@@ -29,6 +29,12 @@ public class LoginClientInfo extends LoginContent {
      */
     private String authorizationScope;
 
+
+    /**
+     * 登录信息过期时间，单位秒
+     */
+    private long loginExpireTime;
+
     /**
      * 最近一次登录时间戳
      */
@@ -67,6 +73,14 @@ public class LoginClientInfo extends LoginContent {
         this.lastLoginTime = lastLoginTime;
     }
 
+    public long getLoginExpireTime() {
+        return loginExpireTime;
+    }
+
+    public void setLoginExpireTime(long loginExpireTime) {
+        this.loginExpireTime = loginExpireTime;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -83,11 +97,12 @@ public class LoginClientInfo extends LoginContent {
     public LoginClientInfo() {
     }
 
-    public LoginClientInfo(String loginServerAddress, OnlineEnum onlineStatus, String authorizationScope, long lastLoginTime, String appKey, String identity, DeviceType deviceType, String signature, byte signatureAlgorithm, int heartBeatExpireTime, int enableWill, String willMessage, String willTopic, int cleanSession, int sessionExpiryInterval, long createTime) {
+    public LoginClientInfo(String loginServerAddress, OnlineEnum onlineStatus, String authorizationScope, long loginExpireTime, long lastLoginTime, String appKey, String identity, DeviceType deviceType, String signature, byte signatureAlgorithm, int heartBeatExpireTime, int enableWill, String willMessage, String willTopic, int cleanSession, int sessionExpiryInterval, long createTime) {
         super(appKey, identity, deviceType, signature, signatureAlgorithm, heartBeatExpireTime, enableWill,  willMessage, willTopic, cleanSession, sessionExpiryInterval, createTime);
         this.loginServerAddress = loginServerAddress;
         this.onlineStatus = onlineStatus;
         this.authorizationScope = authorizationScope;
+        this.loginExpireTime = loginExpireTime;
         this.lastLoginTime = lastLoginTime;
     }
 }
