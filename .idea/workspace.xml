@@ -9,9 +9,10 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v6.0.0 优化代码,修改协议魔数为OUYUNC,添加客户端登录过期自定义时间">
+    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v6.0.0 添加客户端登录过期自定义时间">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/thread/ClientLoginKeepAliveThread.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/thread/ClientLoginKeepAliveThread.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/handler/ClientLoginKeepAliveHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/handler/ClientLoginKeepAliveHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server.yml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -132,32 +133,33 @@
     <option name="showMembers" value="true" />
     <option name="showVisibilityIcons" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Application.StartClient.executor&quot;: &quot;Debug&quot;,
-    &quot;Application.StartServer.executor&quot;: &quot;Debug&quot;,
-    &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
-    &quot;Maven.ouyunc-im [clean].executor&quot;: &quot;Run&quot;,
-    &quot;Maven.ouyunc-im [install].executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
-    &quot;aspect.path.notification.shown&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;6.0.0&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;D:/workspace/ouyunc-im/docs/6.0.0&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;project.structure.last.edited&quot;: &quot;Project&quot;,
-    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
-    &quot;project.structure.side.proportion&quot;: &quot;0.0&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Application.MessageConstant.executor": "Debug",
+    "Application.StartClient.executor": "Debug",
+    "Application.StartServer.executor": "Debug",
+    "DefaultHtmlFileTemplate": "HTML File",
+    "Maven.ouyunc-im [clean].executor": "Run",
+    "Maven.ouyunc-im [install].executor": "Run",
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "WebServerToolWindowFactoryState": "false",
+    "aspect.path.notification.shown": "true",
+    "git-widget-placeholder": "6.0.0",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "D:/workspace/ouyunc-im/docs/6.0.0",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "project.structure.last.edited": "Project",
+    "project.structure.proportion": "0.15",
+    "project.structure.side.proportion": "0.0",
+    "settings.editor.selected.configurable": "preferences.pluginManager",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="ReactorSettings">
     <option name="notificationShown" value="true" />
   </component>
@@ -201,12 +203,12 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="MqttSubscribeMessageProcessor" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
-      <option name="MAIN_CLASS_NAME" value="com.ouyunc.im.processor.MqttSubscribeMessageProcessor" />
-      <module name="ouyunc-im-server" />
+    <configuration name="MessageConstant" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="com.ouyunc.base.constant.MessageConstant" />
+      <module name="ouyunc-base" />
       <extension name="coverage">
         <pattern>
-          <option name="PATTERN" value="com.ouyunc.im.processor.*" />
+          <option name="PATTERN" value="com.ouyunc.base.constant.*" />
           <option name="ENABLED" value="true" />
         </pattern>
       </extension>
@@ -214,12 +216,12 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="StartClient" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
-      <option name="MAIN_CLASS_NAME" value="com.ouyunc.client.StartClient" />
-      <module name="ouyunc-client" />
+    <configuration name="MqttSubscribeMessageProcessor" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="com.ouyunc.im.processor.MqttSubscribeMessageProcessor" />
+      <module name="ouyunc-im-server" />
       <extension name="coverage">
         <pattern>
-          <option name="PATTERN" value="com.ouyunc.client.*" />
+          <option name="PATTERN" value="com.ouyunc.im.processor.*" />
           <option name="ENABLED" value="true" />
         </pattern>
       </extension>
@@ -279,7 +281,7 @@
     </configuration>
     <list>
       <item itemvalue="Application.StartIMServer" />
-      <item itemvalue="Application.StartClient" />
+      <item itemvalue="Application.MessageConstant" />
       <item itemvalue="Application.DefaultImEventMulticaster" />
       <item itemvalue="Application.MqttSubscribeMessageProcessor" />
       <item itemvalue="Application.StartServer" />
@@ -288,10 +290,10 @@
     <recent_temporary>
       <list>
         <item itemvalue="Application.StartServer" />
+        <item itemvalue="Application.MessageConstant" />
         <item itemvalue="Application.Test" />
         <item itemvalue="Application.MqttSubscribeMessageProcessor" />
         <item itemvalue="Application.DefaultImEventMulticaster" />
-        <item itemvalue="Application.StartClient" />
       </list>
     </recent_temporary>
   </component>
@@ -590,7 +592,7 @@
       <workItem from="1727615319690" duration="5113000" />
       <workItem from="1727871289612" duration="4264000" />
       <workItem from="1727953470543" duration="14171000" />
-      <workItem from="1728005482424" duration="4165000" />
+      <workItem from="1728005482424" duration="9848000" />
     </task>
     <task id="LOCAL-00190" summary="v3.1.1-beta 优化处理">
       <created>1686906322045</created>
@@ -935,7 +937,7 @@
       <option name="project" value="LOCAL" />
       <updated>1704076343678</updated>
     </task>
-    <option name="localTasksCounter" value="255" />
+    <option name="localTasksCounter" value="256" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -995,7 +997,6 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
-    <MESSAGE value="v3.1.1-beta 优化处理" />
     <MESSAGE value="v3.1.1-beta qos" />
     <MESSAGE value="v3.1.1-beta 去除离线消息" />
     <MESSAGE value="v4.0.0&#10;1. 支持客服相关业务&#10;2. 支持弹幕相关业务&#10;3. 支持语音等（已完成）&#10;4. 支持语音聊天、视频聊天（已完成）&#10;5. 在线简单视频会议（已完成）&#10;6. 支持白板功能（已完成）&#10;7. 集成springboot 以ouyunc-im-spring-boot-starter&#10;8. 打成依赖包放到中央仓库，作为依赖组件来引用&#10;9. 重构qos消息可靠性到达&#10;10. 优化其他代码" />
@@ -1020,9 +1021,19 @@
     <MESSAGE value="v6.0.0 优化代码" />
     <MESSAGE value="v6.0.0 优化代码  被代理，获取真实客户端ip" />
     <MESSAGE value="v6.0.0 优化代码,修改协议魔数为OUYUNC,添加客户端登录过期自定义时间" />
-    <option name="LAST_COMMIT_MESSAGE" value="v6.0.0 优化代码,修改协议魔数为OUYUNC,添加客户端登录过期自定义时间" />
+    <MESSAGE value="v6.0.0 添加客户端登录过期自定义时间" />
+    <option name="LAST_COMMIT_MESSAGE" value="v6.0.0 添加客户端登录过期自定义时间" />
   </component>
   <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/handler/ClientLoginKeepAliveHandler.java</url>
+          <line>27</line>
+          <option name="timeStamp" value="18" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
     <pin-to-top-manager>
       <pinned-members>
         <PinnedItemInfo />

@@ -25,6 +25,7 @@ public class ClientLoginKeepAliveHandler extends SimpleChannelInboundHandler<Pac
      */
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Packet packet) throws Exception {
+        log.info("客户端登录保活...");
         // 每次有消息数据进来, 从ctx上次心跳时间，从登录信息中解析心跳间隔时间
         // 获取该channel 上次的心跳时间戳
         if (!MessageServerContext.serverProperties().isClientHeartBeatEnable() || !SaveModeEnum.FINITE.equals(MessageServerContext.serverProperties().getClientLoginInfoSaveMode())) {
@@ -34,7 +35,7 @@ public class ClientLoginKeepAliveHandler extends SimpleChannelInboundHandler<Pac
         AttributeKey<LoginClientInfo> channelTagLoginKey = AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
         // 判断是否是心跳消息
         AttributeKey<Long> channelTagLastHeartbeatTimestampKey = AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_LAST_HEARTBEAT_TIMESTAMP);
-        if (WsMessageTypeEnum.PING_PONG.getType() != packet.getMessageType()) {
+        if (WsMessageTypeEnum.PING_PONG.getType() == packet.getMessageType()) {
             // 设置本次时间为
             ctx.channel().attr(channelTagLastHeartbeatTimestampKey).set(packet.getMessage().getMetadata().getServerTime());
             //  将放入保活队列

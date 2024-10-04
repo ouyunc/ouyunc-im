@@ -16,6 +16,7 @@ import com.ouyunc.base.utils.SnowflakeUtil;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.core.listener.event.ClientLoginEvent;
 import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.message.handler.ClientLoginKeepAliveHandler;
 import com.ouyunc.message.handler.HeartBeatHandler;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
@@ -90,8 +91,10 @@ public class LoginMessageProcessor extends AbstractMessageProcessor<Byte> {
         if (MessageServerContext.serverProperties().isClientHeartBeatEnable() && heartbeatExpireTime != null) {
             // 判断是否开启客户端心跳
             ctx.pipeline()
+                    // 客户端登录保活处理器
+                    .addAfter(MessageConstant.CONVERT_2_PACKET_HANDLER, MessageConstant.CLIENT_LOGIN_KEEP_ALIVE_HANDLER, new ClientLoginKeepAliveHandler())
                     // 添加读写空闲处理器， 添加后，下条消息就可以接收心跳消息了
-                    .addAfter(MessageConstant.CONVERT_2_PACKET_HANDLER, MessageConstant.HEART_BEAT_IDLE_HANDLER, new IdleStateHandler(heartbeatExpireTime, MessageConstant.ZERO, MessageConstant.ZERO))
+                    .addAfter(MessageConstant.CLIENT_LOGIN_KEEP_ALIVE_HANDLER, MessageConstant.HEART_BEAT_IDLE_HANDLER, new IdleStateHandler(heartbeatExpireTime, MessageConstant.ZERO, MessageConstant.ZERO))
                     // 处理心跳的以及相关逻辑都放在这里处理
                     .addAfter(MessageConstant.HEART_BEAT_IDLE_HANDLER, MessageConstant.HEART_BEAT_HANDLER, new HeartBeatHandler());
         }
