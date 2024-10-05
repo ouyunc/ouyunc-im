@@ -10,9 +10,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v6.0.0 添加客户端登录过期自定义时间">
+      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/utils/SystemClock.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/cluster/client/DefaultMessageClient.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/cluster/client/DefaultMessageClient.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/utils/TimeUtil.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/utils/TimeUtil.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -138,6 +138,7 @@
     "Application.MessageConstant.executor": "Debug",
     "Application.StartClient.executor": "Debug",
     "Application.StartServer.executor": "Debug",
+    "Application.TimeUtil.executor": "Run",
     "DefaultHtmlFileTemplate": "HTML File",
     "Maven.ouyunc-im [clean].executor": "Run",
     "Maven.ouyunc-im [install].executor": "Run",
@@ -189,20 +190,7 @@
       <recent name="com.ouyunc.im.domain" />
     </key>
   </component>
-  <component name="RunManager" selected="Application.StartServer">
-    <configuration name="DefaultImEventMulticaster" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
-      <option name="MAIN_CLASS_NAME" value="com.ouyunc.im.listener.DefaultImEventMulticaster" />
-      <module name="ouyunc-im-core" />
-      <extension name="coverage">
-        <pattern>
-          <option name="PATTERN" value="com.ouyunc.im.listener.*" />
-          <option name="ENABLED" value="true" />
-        </pattern>
-      </extension>
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
+  <component name="RunManager" selected="Application.TimeUtil">
     <configuration name="MessageConstant" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="com.ouyunc.base.constant.MessageConstant" />
       <module name="ouyunc-base" />
@@ -267,6 +255,19 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
+    <configuration name="TimeUtil" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="com.ouyunc.base.utils.TimeUtil" />
+      <module name="ouyunc-base" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.ouyunc.base.utils.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
     <configuration default="true" type="JetRunConfigurationType">
       <module name="ouyunc-im-commons" />
       <method v="2">
@@ -282,19 +283,19 @@
     </configuration>
     <list>
       <item itemvalue="Application.StartIMServer" />
+      <item itemvalue="Application.TimeUtil" />
       <item itemvalue="Application.MessageConstant" />
-      <item itemvalue="Application.DefaultImEventMulticaster" />
       <item itemvalue="Application.MqttSubscribeMessageProcessor" />
       <item itemvalue="Application.StartServer" />
       <item itemvalue="Application.Test" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Application.TimeUtil" />
         <item itemvalue="Application.StartServer" />
         <item itemvalue="Application.MessageConstant" />
         <item itemvalue="Application.Test" />
         <item itemvalue="Application.MqttSubscribeMessageProcessor" />
-        <item itemvalue="Application.DefaultImEventMulticaster" />
       </list>
     </recent_temporary>
   </component>
@@ -593,7 +594,7 @@
       <workItem from="1727615319690" duration="5113000" />
       <workItem from="1727871289612" duration="4264000" />
       <workItem from="1727953470543" duration="14171000" />
-      <workItem from="1728005482424" duration="13962000" />
+      <workItem from="1728005482424" duration="17075000" />
     </task>
     <task id="LOCAL-00190" summary="v3.1.1-beta 优化处理">
       <created>1686906322045</created>
@@ -938,7 +939,7 @@
       <option name="project" value="LOCAL" />
       <updated>1704076343678</updated>
     </task>
-    <option name="localTasksCounter" value="257" />
+    <option name="localTasksCounter" value="258" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
