@@ -4,7 +4,7 @@ import com.ouyunc.base.constant.enums.SaveModeEnum;
 import com.ouyunc.core.listener.MessageListener;
 import com.ouyunc.core.listener.event.ServerStartupEvent;
 import com.ouyunc.message.context.MessageServerContext;
-import com.ouyunc.message.thread.ClientLoginKeepAliveThread;
+import com.ouyunc.message.thread.LoginKeepAliveThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,7 +23,7 @@ public class ServerStartupEventListener implements MessageListener<ServerStartup
     public void onApplicationEvent(ServerStartupEvent event) {
         // 判断是否开启客户端登录信息的
         if (MessageServerContext.serverProperties().isClientHeartBeatEnable() && SaveModeEnum.FINITE.equals(MessageServerContext.serverProperties().getClientLoginInfoSaveMode())) {
-            Thread clientLoginKeepAliveThread = new Thread(new ClientLoginKeepAliveThread());
+            Thread clientLoginKeepAliveThread = new Thread(new LoginKeepAliveThread());
             // 设置线程参数
             clientLoginKeepAliveThread.setName("client-login-keep-alive-thread");
             clientLoginKeepAliveThread.setDaemon(true);

@@ -15,8 +15,8 @@ import org.slf4j.LoggerFactory;
 /**
  * 登录保活处理器
  */
-public class ClientLoginKeepAliveHandler extends SimpleChannelInboundHandler<Packet> {
-    private static final Logger log = LoggerFactory.getLogger(ClientLoginKeepAliveHandler.class);
+public class LoginKeepAliveHandler extends SimpleChannelInboundHandler<Packet> {
+    private static final Logger log = LoggerFactory.getLogger(LoginKeepAliveHandler.class);
 
     /**
      * 客户端登录保活, 生产者

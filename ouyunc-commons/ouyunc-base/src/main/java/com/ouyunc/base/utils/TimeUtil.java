@@ -19,16 +19,19 @@ public class TimeUtil {
 
 
 
-
     public static void main(String[] args) {
+
         for (int t = 0; t < 100; t++) {
             StopWatch stopWatch = StopWatch.createStarted();
             // 获取一千万次时间
             for (int i = 0; i < 10000000; i++) {
-                currentTimeMillis();
+                long l = currentTimeMillis();
+                //long l1 = System.currentTimeMillis();
+                //System.out.println("l="+l + "         l1"+l1);
             }
             stopWatch.stop();
             System.out.println(stopWatch.getTime());
         }
+
     }
 }

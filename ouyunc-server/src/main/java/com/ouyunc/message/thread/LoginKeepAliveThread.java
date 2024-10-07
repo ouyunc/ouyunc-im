@@ -19,7 +19,7 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * 客户端登录保活线程，消费者
  */
-public class ClientLoginKeepAliveThread implements Runnable{
+public class LoginKeepAliveThread implements Runnable{
 
 
     private static final RedisTemplate<String, LoginContent> redisTemplate = CacheFactory.REDIS.instance();
