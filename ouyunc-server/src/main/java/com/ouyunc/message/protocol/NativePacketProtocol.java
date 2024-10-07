@@ -16,7 +16,6 @@ import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.convert.PacketConverter;
 import com.ouyunc.message.handler.*;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.pool.ChannelPool;
@@ -298,11 +297,11 @@ public enum NativePacketProtocol implements PacketProtocol {
             if (channel.isActive() && channel.isWritable()) {
                 // 如果channel是活跃的,可写的，高水位低水位，则直接写出去
                 for (PacketConverter<?> packetConverter : MessageServerContext.packetConverterList) {
+                    // 注意：这里转换后，不要将metadata 置空，但是发送出去的消息，建议不要带元数据
                     Object msg = packetConverter.convertFromPacket(packet);
                     if (msg != null) {
                         // 将消息写到channel
-                        ChannelFuture channelFuture = channel.writeAndFlush(msg);
-                        channelFuture.addListener(future -> {
+                        channel.writeAndFlush(msg).addListener(future -> {
                             if (future.isDone()) {
                                 if (future.isSuccess()) {
                                     // 回调成功

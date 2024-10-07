@@ -3,11 +3,12 @@ package com.ouyunc.message.context;
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.collect.Sets;
+import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.DeviceType;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.model.LoginClientInfo;
+import com.ouyunc.base.model.SendResult;
 import com.ouyunc.base.packet.Packet;
-import com.ouyunc.base.packet.message.content.LoginContent;
 import com.ouyunc.cache.Cache;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.cache.distributed.redis.RedisDistributedCache;
@@ -80,6 +81,31 @@ public class MessageServerContext extends MessageContext {
 
 
 
+    // ================================================================redis=====================================
+    /**
+     * 客户端登录信息redis缓存,使用0号库
+     */
+    public static Cache<String, LoginClientInfo> remoteLoginClientInfoCache = new RedisDistributedCache<>(CacheFactory.REDIS.instance());
+
+    /**
+     * 消息发送失败的消息 redis缓存,使用1号库
+     */
+    public static Cache<String, SendResult> sendFailPacketInfoCache = new RedisDistributedCache<>(CacheFactory.REDIS.instance(MessageConstant.ONE));
+
+
+    /**
+     * 分布式锁redisson
+     */
+    public static RedissonClient redissonClient = CacheFactory.REDISSON.instance();
+
+
+
+
+    // ================================================================local=====================================
+
+
+
+
     /**
      * 外部（本地）用户的通道channel缓存，该缓存中不包含集群中的内置客户端的channel, 这里的key 可以是手机号/身份证/token 等唯一标识用户的字段
      */
@@ -107,35 +133,6 @@ public class MessageServerContext extends MessageContext {
             return null;
         }
     }));
-
-    // ================================================================redis=====================================
-    /**
-     * 客户端登录信息redis缓存,使用0号库
-     */
-    public static Cache<String, LoginClientInfo> remoteLoginClientInfoCache = new RedisDistributedCache<>(CacheFactory.REDIS.instance());
-
-    /**
-     * 分布式锁redisson
-     */
-    public static RedissonClient redissonClient = CacheFactory.REDISSON.instance();
-
-
-
-
-    /**
-     * 设置设备类型列表
-     * @param deviceTypeClass 设备类型枚举类
-     */
-    public static void addDeviceType(Class<? extends DeviceType> deviceTypeClass) {
-        if (deviceTypeClass.isEnum()) {
-            DeviceType[] deviceTypeEnumConstants = deviceTypeClass.getEnumConstants();
-            if (deviceTypeEnumConstants != null) {
-                for (DeviceType deviceTypeEnumConstant : deviceTypeEnumConstants) {
-                    deviceTypeCache.put(deviceTypeEnumConstant.getDeviceTypeValue(), deviceTypeEnumConstant);
-                }
-            }
-        }
-    }
 
     /**
      * 缓存消息处理接口的所有实现类, Number 类型是 Byte
@@ -211,6 +208,20 @@ public class MessageServerContext extends MessageContext {
         }
     }));
 
+    /**
+     * 设置设备类型列表
+     * @param deviceTypeClass 设备类型枚举类
+     */
+    public static void addDeviceType(Class<? extends DeviceType> deviceTypeClass) {
+        if (deviceTypeClass.isEnum()) {
+            DeviceType[] deviceTypeEnumConstants = deviceTypeClass.getEnumConstants();
+            if (deviceTypeEnumConstants != null) {
+                for (DeviceType deviceTypeEnumConstant : deviceTypeEnumConstants) {
+                    deviceTypeCache.put(deviceTypeEnumConstant.getDeviceTypeValue(), deviceTypeEnumConstant);
+                }
+            }
+        }
+    }
 
     /**
      * 获取服务端配置信息

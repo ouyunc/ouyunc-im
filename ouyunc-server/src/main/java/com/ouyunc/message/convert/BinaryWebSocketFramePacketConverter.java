@@ -11,15 +11,12 @@ import com.ouyunc.base.packet.message.content.LoginContent;
 import com.ouyunc.base.utils.IpUtil;
 import com.ouyunc.base.utils.PacketReaderWriterUtil;
 import com.ouyunc.base.utils.TimeUtil;
-import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.protocol.NativePacketProtocol;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.util.AttributeKey;
-
-import java.time.Clock;
 
 /**
  * @author fzx
@@ -77,9 +74,14 @@ public enum BinaryWebSocketFramePacketConverter implements PacketConverter<Binar
         // 将packet 的元数据信息清空（内部辅助数据，不对客户端暴漏）
         // 如果该包是内部协议的包，则进行逻辑处理
         if (NativePacketProtocol.WS.getProtocol() == packet.getProtocol() && NativePacketProtocol.WS.getProtocolVersion() == packet.getProtocolVersion()) {
-            packet.getMessage().setMetadata(null);
+            // 暂存元数据信息
+            Message message = packet.getMessage();
+            Metadata metadata = message.getMetadata();
+            message.setMetadata(null);
             ByteBuf byteBuf = ByteBufAllocator.DEFAULT.buffer();
             PacketReaderWriterUtil.writePacketInByteBuf(packet, byteBuf);
+            // 在将该元数据设置进去
+            message.setMetadata(metadata);
             return new BinaryWebSocketFrame(byteBuf);
         }
         return null;
