@@ -35,7 +35,7 @@ public class LoginKeepAliveThread implements Runnable{
         long clientLoginInfoScheduleTimeInterval = MessageServerContext.serverProperties().getClientLoginInfoScheduleTimeInterval();
         while (true) {
             // 这里用size 判断虽然会不准，但是没啥问题
-            if (MessageServerContext.clientKeepAliveQueue.size() >= clientLoginInfoBatchExpireSize || (TimeUtil.currentTimeMillis() >= lastBatchSubmitTimeMillis.get() + clientLoginInfoScheduleTimeInterval)) {
+            if (MessageServerContext.clientKeepAliveQueue.size() >= clientLoginInfoBatchExpireSize || (!MessageServerContext.clientKeepAliveQueue.isEmpty() && TimeUtil.currentTimeMillis() >= lastBatchSubmitTimeMillis.get() + clientLoginInfoScheduleTimeInterval)) {
                 redisTemplate.executePipelined(new SessionCallback<>() {
                     @SuppressWarnings("unchecked")
                     @Override

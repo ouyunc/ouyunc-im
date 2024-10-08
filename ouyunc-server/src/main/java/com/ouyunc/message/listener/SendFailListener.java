@@ -32,7 +32,7 @@ public class SendFailListener implements MessageListener<SendFailEvent> {
             Packet packet = sendResult.getPacket();
             Message message = packet.getMessage();
             Metadata metadata = message.getMetadata();
-            MessageServerContext.sendFailPacketInfoCache.addZset(CacheConstant.OUYUNC + CacheConstant.SEND_FAIL + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + packet.getMessageType() + CacheConstant.COLON + CacheConstant.FROM + message.getFrom() + CacheConstant.COLON + message.getTo(), sendResult, metadata.getServerTime());
+            MessageServerContext.sendFailPacketInfoCache.addZset(CacheConstant.OUYUNC + CacheConstant.SEND_FAIL + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + packet.getMessageType() + CacheConstant.COLON + CacheConstant.FROM + message.getFrom() + CacheConstant.COLON + message.getTo() + CacheConstant.COLON + packet.getPacketId(), sendResult, metadata.getServerTime());
         }
     }
 }
