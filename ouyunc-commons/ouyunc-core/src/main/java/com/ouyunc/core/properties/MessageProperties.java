@@ -32,7 +32,7 @@ public class MessageProperties {
     /**
      * 本地host地址，通过InetAddress.getLocalHost().getHostAddress()获取
      */
-    protected String localHost;
+    private String localHost;
 
     /**
      * 日志级别,默认INFO; TRACE, DEBUG, INFO, WARN, ERROR

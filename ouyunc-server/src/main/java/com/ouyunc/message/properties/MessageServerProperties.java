@@ -538,7 +538,8 @@ public class MessageServerProperties extends MessageProperties {
         return " \nMessageServerProperties{" +
                 "\n  port=" + super.getPort() +
                 "\n, ip='" + super.getIp() + '\'' +
-                "\n, localHost='" + localHost + '\'' +
+                "\n, localHost='" + super.getLocalHost() + '\'' +
+                "\n, localServerAddress='" + super.getLocalServerAddress() + '\'' +
                 "\n, logLevel=" + super.getLogLevel() +
                 "\n, sslEnable=" + super.isSslEnable() +
                 "\n, sslCertificate='" + super.getSslCertificate() + '\'' +

@@ -19,16 +19,13 @@ import java.util.concurrent.TimeUnit;
  */
 @Aspect
 public class RedissonDistributedLockAspect {
-    private static Logger log = LoggerFactory.getLogger(RedissonDistributedLockAspect.class);
+    private static final Logger log = LoggerFactory.getLogger(RedissonDistributedLockAspect.class);
 
     /**
      * redisson 客户端
      **/
-    private static final RedissonClient redissonClient;
+    private static final RedissonClient redissonClient = CacheFactory.REDISSON.instance();
 
-    static {
-        redissonClient = CacheFactory.REDISSON.instance(15);
-    }
 
     /**
      * @author fzx
