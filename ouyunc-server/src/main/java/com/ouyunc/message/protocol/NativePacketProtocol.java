@@ -180,7 +180,7 @@ public enum NativePacketProtocol implements PacketProtocol {
                     .addLast(MessageConstant.MQTT_SERVER_HANDLER, new PacketHandler())
                     // 后置处理
                     .addLast(MessageConstant.POST_HANDLER, new PacketPostHandler())
-                    .remove(MessageConstant.HTTP_DISPATCHER_HANDLER);
+                    .remove(MessageConstant.MQTT_DISPATCHER_HANDLER);
             ctx.pipeline().addLast(MessageConstant.EXCEPTION_HANDLER, new MessageExceptionHandler());
             // 调用下一个handle的active
             ctx.fireChannelActive();

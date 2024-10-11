@@ -10,11 +10,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v6.0.0 优化获取当前时间戳毫秒">
-      <change afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/handler/QosHandler.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/validator/Us.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-cache/src/main/java/com/ouyunc/cache/config/lock/RedissonDistributedLockAspect.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-cache/src/main/java/com/ouyunc/cache/config/lock/RedissonDistributedLockAspect.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-core/src/main/java/com/ouyunc/core/properties/MessageProperties.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-core/src/main/java/com/ouyunc/core/properties/MessageProperties.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/properties/MessageServerProperties.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/properties/MessageServerProperties.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/StartServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/StartServer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/convert/MqttMessagePacketConverter.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/convert/MqttMessagePacketConverter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/protocol/NativePacketProtocol.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/protocol/NativePacketProtocol.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -599,7 +601,8 @@
       <workItem from="1728005482424" duration="18455000" />
       <workItem from="1728301367502" duration="5293000" />
       <workItem from="1728386555656" duration="2563000" />
-      <workItem from="1728559313892" duration="2882000" />
+      <workItem from="1728559313892" duration="4026000" />
+      <workItem from="1728651706853" duration="5801000" />
     </task>
     <task id="LOCAL-00190" summary="v3.1.1-beta 优化处理">
       <created>1686906322045</created>
@@ -944,7 +947,7 @@
       <option name="project" value="LOCAL" />
       <updated>1704076343678</updated>
     </task>
-    <option name="localTasksCounter" value="262" />
+    <option name="localTasksCounter" value="263" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1035,17 +1038,29 @@
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/handler/Convert2PacketHandler.java</url>
-          <line>28</line>
-          <option name="timeStamp" value="1" />
+          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/convert/MqttMessagePacketConverter.java</url>
+          <line>25</line>
+          <option name="timeStamp" value="3" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/StartServer.java</url>
+          <line>25</line>
+          <option name="timeStamp" value="6" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/StartServer.java</url>
+          <line>24</line>
+          <option name="timeStamp" value="10" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
     <pin-to-top-manager>
       <pinned-members>
         <PinnedItemInfo />
+        <PinnedItemInfo parentTag="io.netty.handler.codec.mqtt.MqttConnectMessage" memberName="variableHeader" />
         <PinnedItemInfo parentTag="io.netty.channel.DefaultChannelHandlerContext" memberName="prev" />
         <PinnedItemInfo parentTag="io.netty.handler.codec.DefaultHeadersImpl" memberName="entries" />
+        <PinnedItemInfo parentTag="io.netty.handler.codec.mqtt.MqttConnectMessage" memberName="mqttFixedHeader" />
       </pinned-members>
     </pin-to-top-manager>
   </component>
