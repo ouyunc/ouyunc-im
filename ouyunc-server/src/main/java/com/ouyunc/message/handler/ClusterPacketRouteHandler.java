@@ -1,8 +1,8 @@
 package com.ouyunc.message.handler;
 
-import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
+import com.ouyunc.base.serialize.Serializer;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.message.helper.MessageHelper;
 import io.netty.channel.ChannelHandlerContext;
@@ -29,7 +29,7 @@ public class ClusterPacketRouteHandler extends SimpleChannelInboundHandler<Packe
         Metadata metadata = packet.getMessage().getMetadata();
         // 判断是否从其他服务路由过来的消息
         if (metadata != null && metadata.isRouted()) {
-            log.info("当前服务：{} 接收到集群的消息: {}", MessageContext.messageProperties.getLocalServerAddress(), JSON.toJSONString(packet));
+            log.info("当前服务：{} 接收到集群的消息: {}", MessageContext.messageProperties.getLocalServerAddress(), Serializer.JSON.serializeToString(packet));
             MessageHelper.asyncSendMessage(packet, metadata.getTarget());
             return;
         }

@@ -6,6 +6,9 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
+/**
+ * 使用该类，获取到的时间精度可能会有一点丢失
+ */
 public class SystemClock {
 
     private final long period;

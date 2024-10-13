@@ -41,6 +41,16 @@ public enum Serializer {
         public <T> T deserialize(byte[] data, Class<T> cls){
             return com.alibaba.fastjson2.JSON.parseObject(data, cls);
         }
+
+        @Override
+        public <T> String serializeToString(T t) {
+            return com.alibaba.fastjson2.JSON.toJSONString(t, MqttMessageJSONFactory.writeContext);
+        }
+
+        @Override
+        public <T> T deserializeFromString(String str, Class<T> cls) {
+            return com.alibaba.fastjson2.JSON.parseObject(str, cls, MqttMessageJSONFactory.readerContext);
+        }
     },
 
     PROTO_STUFF((byte)6, "protoStuff", "protoStuff(基于protoBuf) 序列化"){
@@ -173,4 +183,21 @@ public enum Serializer {
      * @Description 反序列化
      */
     public abstract<T> T deserialize(byte[] bytes, Class<T> cls);
+
+
+    /**
+     * @Author fzx
+     * @Description 序列化
+     */
+    public <T> String serializeToString(T t) {
+        throw new UnsupportedOperationException("暂时不支持该序列化的方式");
+    }
+
+    /**
+     * @Author fzx
+     * @Description 反序列化
+     */
+    public <T> T deserializeFromString(String str, Class<T> cls) {
+        throw new UnsupportedOperationException("暂时不支持该序列化的方式");
+    }
 }

@@ -10,13 +10,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v6.0.0 优化获取当前时间戳毫秒">
-      <change afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/validator/Us.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/serialize/MqttMessageJSONFactory.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/StartServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/StartServer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/convert/MqttMessagePacketConverter.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/convert/MqttMessagePacketConverter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/protocol/NativePacketProtocol.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/protocol/NativePacketProtocol.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/serialize/Serializer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/serialize/Serializer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/utils/SystemClock.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/utils/SystemClock.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/handler/ClusterPacketRouteHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/handler/ClusterPacketRouteHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/LoginMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/LoginMessageProcessor.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -139,6 +138,7 @@
   </component>
   <component name="PropertiesComponent">{
   &quot;keyToString&quot;: {
+    &quot;Application.Main.executor&quot;: &quot;Run&quot;,
     &quot;Application.MessageConstant.executor&quot;: &quot;Debug&quot;,
     &quot;Application.StartClient.executor&quot;: &quot;Debug&quot;,
     &quot;Application.StartServer.executor&quot;: &quot;Debug&quot;,
@@ -195,12 +195,12 @@
     </key>
   </component>
   <component name="RunManager" selected="Application.StartServer">
-    <configuration name="MessageConstant" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
-      <option name="MAIN_CLASS_NAME" value="com.ouyunc.base.constant.MessageConstant" />
-      <module name="ouyunc-base" />
+    <configuration name="Main" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="com.ouyunc.message.validator.Main" />
+      <module name="ouyunc-server" />
       <extension name="coverage">
         <pattern>
-          <option name="PATTERN" value="com.ouyunc.base.constant.*" />
+          <option name="PATTERN" value="com.ouyunc.message.validator.*" />
           <option name="ENABLED" value="true" />
         </pattern>
       </extension>
@@ -208,12 +208,12 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="MqttSubscribeMessageProcessor" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
-      <option name="MAIN_CLASS_NAME" value="com.ouyunc.im.processor.MqttSubscribeMessageProcessor" />
-      <module name="ouyunc-im-server" />
+    <configuration name="MessageConstant" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="com.ouyunc.base.constant.MessageConstant" />
+      <module name="ouyunc-base" />
       <extension name="coverage">
         <pattern>
-          <option name="PATTERN" value="com.ouyunc.im.processor.*" />
+          <option name="PATTERN" value="com.ouyunc.base.constant.*" />
           <option name="ENABLED" value="true" />
         </pattern>
       </extension>
@@ -287,19 +287,19 @@
     </configuration>
     <list>
       <item itemvalue="Application.StartIMServer" />
+      <item itemvalue="Application.Main" />
       <item itemvalue="Application.TimeUtil" />
       <item itemvalue="Application.MessageConstant" />
-      <item itemvalue="Application.MqttSubscribeMessageProcessor" />
       <item itemvalue="Application.StartServer" />
       <item itemvalue="Application.Test" />
     </list>
     <recent_temporary>
       <list>
         <item itemvalue="Application.StartServer" />
+        <item itemvalue="Application.Main" />
         <item itemvalue="Application.TimeUtil" />
         <item itemvalue="Application.MessageConstant" />
         <item itemvalue="Application.Test" />
-        <item itemvalue="Application.MqttSubscribeMessageProcessor" />
       </list>
     </recent_temporary>
   </component>
@@ -603,6 +603,10 @@
       <workItem from="1728386555656" duration="2563000" />
       <workItem from="1728559313892" duration="4026000" />
       <workItem from="1728651706853" duration="5801000" />
+      <workItem from="1728778475450" duration="985000" />
+      <workItem from="1728803386451" duration="4685000" />
+      <workItem from="1728812947409" duration="4019000" />
+      <workItem from="1728821988974" duration="4782000" />
     </task>
     <task id="LOCAL-00190" summary="v3.1.1-beta 优化处理">
       <created>1686906322045</created>
@@ -1038,19 +1042,29 @@
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/StartServer.java</url>
+          <line>13</line>
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/convert/MqttMessagePacketConverter.java</url>
-          <line>25</line>
+          <line>21</line>
           <option name="timeStamp" value="3" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/StartServer.java</url>
-          <line>25</line>
-          <option name="timeStamp" value="6" />
+          <url>file://$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/serialize/Serializer.java</url>
+          <line>46</line>
+          <option name="timeStamp" value="18" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/StartServer.java</url>
-          <line>24</line>
-          <option name="timeStamp" value="10" />
+          <url>file://$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/serialize/MqttMessageJSONFactory.java</url>
+          <line>76</line>
+          <option name="timeStamp" value="24" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/serialize/MqttMessageJSONFactory.java</url>
+          <line>60</line>
+          <option name="timeStamp" value="25" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
