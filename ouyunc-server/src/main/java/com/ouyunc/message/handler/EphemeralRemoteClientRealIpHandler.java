@@ -36,7 +36,7 @@ public class EphemeralRemoteClientRealIpHandler extends SimpleChannelInboundHand
             }
         }else if (msg instanceof FullHttpRequest request) {
             // 工具类获取真实的客户端ip
-            String clientRealIp = IpUtil.getIp(request.headers());
+            String clientRealIp = IpUtil.getIpFromHttpHeaders(request.headers());
             if (StringUtils.isNoneBlank(clientRealIp)) {
                 AttributeKey<String> proxyMessageKey = AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_CLIENT_REAL_IP);
                 ctx.channel().attr(proxyMessageKey).set(clientRealIp);

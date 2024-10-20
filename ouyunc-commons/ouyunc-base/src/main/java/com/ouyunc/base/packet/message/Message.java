@@ -109,6 +109,16 @@ public class Message implements Serializable, Cloneable {
         this.createTime = createTime;
     }
 
+    public Message(String from, String to, int contentType, String content, int qos, long createTime, Metadata metadata) {
+        this.from = from;
+        this.to = to;
+        this.contentType = contentType;
+        this.content = content;
+        this.qos = qos;
+        this.createTime = createTime;
+        this.metadata = metadata;
+    }
+
     public Message(String from, String to, int contentType, String content, String extraData, Metadata metadata, int qos, long createTime) {
         this.from = from;
         this.to = to;

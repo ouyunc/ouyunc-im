@@ -8,8 +8,7 @@ public enum ProtocolTypeEnum {
     WS((byte) 1, (byte) 1),
     HTTP((byte) 2, (byte) 1),
     OUYUNC((byte) 3, (byte) 1),
-    MQTT((byte) 4, (byte) 1),
-    MQTT_WS((byte) 5, (byte) 1)
+    MQTT((byte) 4, (byte) 0),
     ;
 
 

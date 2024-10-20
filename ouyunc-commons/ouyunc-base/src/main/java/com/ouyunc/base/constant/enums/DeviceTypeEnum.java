@@ -43,6 +43,7 @@ public enum DeviceTypeEnum implements DeviceType {
 
 
     // 可以扩展其他iot 等设备类型，如不同的品牌的设备对应相同的名称
+    IOT((byte) 21, "iot", "iot设备"),
 
 
     ;

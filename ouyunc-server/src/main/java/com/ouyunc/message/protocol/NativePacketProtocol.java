@@ -6,10 +6,10 @@ import com.ouyunc.base.constant.enums.ProtocolTypeEnum;
 import com.ouyunc.base.constant.enums.SendStatusEnum;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.exception.handler.MessageExceptionHandler;
+import com.ouyunc.base.model.Protocol;
 import com.ouyunc.base.model.SendCallback;
 import com.ouyunc.base.model.SendResult;
 import com.ouyunc.base.packet.Packet;
-import com.ouyunc.core.codec.MqttWebSocketCodec;
 import com.ouyunc.core.listener.event.SendFailEvent;
 import com.ouyunc.message.cluster.client.pool.MessageClientPool;
 import com.ouyunc.message.context.MessageServerContext;
@@ -18,6 +18,7 @@ import com.ouyunc.message.handler.*;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.handler.codec.http.websocketx.WebSocketFrameAggregator;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
@@ -42,11 +43,12 @@ public enum NativePacketProtocol implements PacketProtocol {
     WS(ProtocolTypeEnum.WS.getProtocol(), ProtocolTypeEnum.WS.getProtocolVersion(), "websocket 协议，版本号为1") {
         @Override
         public void doDispatcher(ChannelHandlerContext ctx, Map<String, Object> queryParamsMap) {
+            ctx.channel().attr(protocolAttrKey).set(this);
             ctx.pipeline()
                     //10 * 1024 * 1024
                     .addLast(MessageConstant.WS_FRAME_AGGREGATOR_HANDLER, new WebSocketFrameAggregator(Integer.MAX_VALUE))
                     // 开启压缩
-                    .addLast(new WebSocketServerCompressionHandler())
+                    .addLast(MessageConstant.WS_COMPRESSION_HANDLER, new WebSocketServerCompressionHandler())
                     //10485760
                     .addLast(MessageConstant.WS_SERVER_PROTOCOL_HANDLER, new WebSocketServerProtocolHandler(MessageServerContext.serverProperties().getWebsocketPath(), null, true, Integer.MAX_VALUE))
                     // 转换成包packet,内部消息传递都是以packet 进行处理
@@ -77,6 +79,7 @@ public enum NativePacketProtocol implements PacketProtocol {
     HTTP(ProtocolTypeEnum.HTTP.getProtocol(), ProtocolTypeEnum.HTTP.getProtocolVersion(), "http协议，版本号为1") {
         @Override
         public void doDispatcher(ChannelHandlerContext ctx, Map<String, Object> queryParamsMap) {
+            ctx.channel().attr(protocolAttrKey).set(this);
 
         }
 
@@ -87,6 +90,7 @@ public enum NativePacketProtocol implements PacketProtocol {
     OUYUNC(ProtocolTypeEnum.OUYUNC.getProtocol(), ProtocolTypeEnum.OUYUNC.getProtocolVersion(), "自定义ouyunc协议，版本号为1") {
         @Override
         public void doDispatcher(ChannelHandlerContext ctx, Map<String, Object> queryParamsMap) {
+            ctx.channel().attr(protocolAttrKey).set(this);
             ctx.pipeline()
                     // 上一个packet编解码处理器，处理后，会在这里交给包转换器来转换
                     // 转换成包packet，这里为了做兼容客户端心跳
@@ -168,8 +172,9 @@ public enum NativePacketProtocol implements PacketProtocol {
     MQTT(ProtocolTypeEnum.MQTT.getProtocol(), ProtocolTypeEnum.MQTT.getProtocolVersion(), "mqtt协议，版本号为v3.1/v3.1.1/v5.0") {
         @Override
         public void doDispatcher(ChannelHandlerContext ctx, Map<String, Object> queryParamsMap) {
-            ctx.pipeline()
-                    .addLast(MessageConstant.MQTT_DECODER_HANDLER, new MqttDecoder())
+            ctx.channel().attr(protocolAttrKey).set(this);
+            ChannelPipeline pipeline = ctx.pipeline();
+            pipeline.addLast(MessageConstant.MQTT_DECODER_HANDLER, new MqttDecoder())
                     .addLast(MessageConstant.MQTT_ENCODER_HANDLER, MqttEncoder.INSTANCE)
                     .addLast(MessageConstant.CONVERT_2_PACKET_HANDLER, new Convert2PacketHandler())
                     // 添加监控处理逻辑
@@ -180,34 +185,28 @@ public enum NativePacketProtocol implements PacketProtocol {
                     .addLast(MessageConstant.MQTT_SERVER_HANDLER, new PacketHandler())
                     // 后置处理
                     .addLast(MessageConstant.POST_HANDLER, new PacketPostHandler())
-                    .remove(MessageConstant.MQTT_DISPATCHER_HANDLER);
-            ctx.pipeline().addLast(MessageConstant.EXCEPTION_HANDLER, new MessageExceptionHandler());
+                    .addLast(MessageConstant.EXCEPTION_HANDLER, new MessageExceptionHandler());
+            // 移除掉掉协议分发器
+            MqttProtocolDispatcherHandler mqttProtocolDispatcherHandler = pipeline.get(MqttProtocolDispatcherHandler.class);
+            if (mqttProtocolDispatcherHandler != null) {
+                pipeline.remove(MqttProtocolDispatcherHandler.class);
+            }
+            HttpProtocolDispatcherHandler httpProtocolDispatcherHandler = pipeline.get(HttpProtocolDispatcherHandler.class);
+            if (httpProtocolDispatcherHandler != null) {
+                pipeline.remove(HttpProtocolDispatcherHandler.class);
+            }
             // 调用下一个handle的active
             ctx.fireChannelActive();
         }
 
 
-    },
+    }
 
 
-    //mqtt_ws 协议
-    MQTT_WS(ProtocolTypeEnum.MQTT_WS.getProtocol(), ProtocolTypeEnum.MQTT_WS.getProtocolVersion(), "基于websocket的mqtt协议，版本号为v3.1/v3.1.1/v5.0") {
-        @Override
-        public void doDispatcher(ChannelHandlerContext ctx, Map<String, Object> queryParamsMap) {
-            ctx.pipeline()
-                    //10 * 1024 * 1024
-                    .addLast(MessageConstant.WS_FRAME_AGGREGATOR_HANDLER, new WebSocketFrameAggregator(Integer.MAX_VALUE))
-                    //10485760
-                    .addLast(MessageConstant.WS_SERVER_PROTOCOL_HANDLER, new WebSocketServerProtocolHandler(MessageServerContext.serverProperties().getWebsocketPath(), MessageConstant.MQTT_WEBSOCKET_SUB_PROTOCOLS, true, Integer.MAX_VALUE))
-                    // mqtt websocket 编解码器
-                    .addLast(MessageConstant.MQTT_WEBSOCKET_CODEC_HANDLER, new MqttWebSocketCodec());
-            // 调用mqtt
-            MQTT.doDispatcher(ctx, queryParamsMap);
-        }
-    };
-
+    ;
 
     private static final Logger log = LoggerFactory.getLogger(NativePacketProtocol.class);
+    public static final AttributeKey<Protocol> protocolAttrKey = AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_PROTOCOL_TYPE);
 
     /**
      * 协议编号

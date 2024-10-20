@@ -58,6 +58,8 @@ public class PacketReaderWriterUtil {
         final byte serializeAlgorithm = in.readByte();
         //消息类型，1个字节
         final byte messageType = in.readByte();
+        //保留位，1个字节
+        final byte retain = in.readByte();
         //加密后的消息长度.4个字节
         final int messageLength = in.readInt();
         byte[] messageContentBytes = new byte[messageLength];
@@ -69,7 +71,7 @@ public class PacketReaderWriterUtil {
         // 得到一个完整的包,需要根据具体的消息类型获取消息class
         final Message message = Serializer.prototype(serializeAlgorithm).deserialize(decryptMessageBytes, Message.class);
         // 将解码后的数据添加集合中
-        return new Packet(protocol, protocolVersion, packetId, deviceType, networkType, encryptType,serializeAlgorithm, messageType, messageLength, message);
+        return new Packet(protocol, protocolVersion, packetId, deviceType, networkType, encryptType,serializeAlgorithm, messageType, retain, messageLength, message);
     }
 
 
@@ -96,6 +98,8 @@ public class PacketReaderWriterUtil {
         out.writeByte(packet.getSerializeAlgorithm());
         //消息类型 1 个字节，如 RPC 框架中有请求、响应、心跳类型。IM 通讯场景中有登陆、创建群聊、发送消息、接收消息、退出群聊等类型。
         out.writeByte(packet.getMessageType());
+        //保留位，1个字节
+        out.writeByte(packet.getRetain());
         //将具体的消息序列化
         final Serializer serializer = Serializer.prototype(packet.getSerializeAlgorithm());
         // 注意：这里序列化的是消息message, 没有将packet整个序列化

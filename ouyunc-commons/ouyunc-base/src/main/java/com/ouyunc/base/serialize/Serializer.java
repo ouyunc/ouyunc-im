@@ -44,12 +44,12 @@ public enum Serializer {
 
         @Override
         public <T> String serializeToString(T t) {
-            return com.alibaba.fastjson2.JSON.toJSONString(t, MqttMessageJSONFactory.writeContext);
+            return com.alibaba.fastjson2.JSON.toJSONString(t);
         }
 
         @Override
         public <T> T deserializeFromString(String str, Class<T> cls) {
-            return com.alibaba.fastjson2.JSON.parseObject(str, cls, MqttMessageJSONFactory.readerContext);
+            return com.alibaba.fastjson2.JSON.parseObject(str, cls);
         }
     },
 

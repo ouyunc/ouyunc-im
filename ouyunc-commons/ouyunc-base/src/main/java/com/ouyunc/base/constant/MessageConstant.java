@@ -98,20 +98,25 @@ public class MessageConstant {
     public static final String BOOTSTRAP_ATTR_KEY_TAG_CLUSTER_CLIENT_VALUE = "OUYUNC_CLUSTER_CLIENT";
 
     /**
+     * ctx 的协议类型标签
+     */
+    public static final String CHANNEL_ATTR_KEY_TAG_PROTOCOL_TYPE = "PROTOCOL_TYPE";
+
+    /**
      * channel 的haproxy protocol 协议标签存放代理后的真实客户端的代理信息  HAProxyMessage
      */
-    public static final String CHANNEL_ATTR_KEY_TAG_CLIENT_REAL_IP = "CHANNEL_ATTR_KEY_TAG_HAPROXY_PROTOCOL";
+    public static final String CHANNEL_ATTR_KEY_TAG_CLIENT_REAL_IP = "CHANNEL_ATTR_KEY_TAG_CLIENT_REAL_IP";
 
     /**
      * channel 的登录标签，存放的是LoginUserInfo对象
      */
-    public static final String CHANNEL_ATTR_KEY_TAG_POOL = "CHANNEL_TAG_POOL";
+    public static final String CHANNEL_ATTR_KEY_TAG_POOL = "CHANNEL_ATTR_KEY_TAG_POOL";
 
 
     /**
      * channel 的登录标签，存放的是LoginUserInfo对象
      */
-    public static final String CHANNEL_ATTR_KEY_TAG_LOGIN = "CHANNEL_TAG_LOGIN";
+    public static final String CHANNEL_ATTR_KEY_TAG_LOGIN = "CHANNEL_ATTR_KEY_TAG_LOGIN";
 
     /**
      * 该链接上次的心跳时间戳
@@ -127,7 +132,7 @@ public class MessageConstant {
     /**
      * channel 客户端读超时的次数标签
      */
-    public static final String CHANNEL_ATTR_KEY_TAG_READ_TIMEOUT_TIMES = "CHANNEL_TAG_CLIENT_READ_TIMEOUT_TIMES";
+    public static final String CHANNEL_ATTR_KEY_TAG_READ_TIMEOUT_TIMES = "CHANNEL_ATTR_KEY_TAG_CLIENT_READ_TIMEOUT_TIMES";
 
 
 
@@ -200,6 +205,11 @@ public class MessageConstant {
      * ws 聚合 websocket 的数据帧
      */
     public static final String WS_FRAME_AGGREGATOR_HANDLER = "WS_FRAME_AGGREGATOR_HANDLER";
+
+    /**
+     * ws 聚合 websocket 的数据压缩
+     */
+    public static final String WS_COMPRESSION_HANDLER = "WS_COMPRESSION_HANDLER";
 
     /**
      * ws 向外暴漏服务地址
@@ -367,7 +377,7 @@ public class MessageConstant {
     /**
      * mqtt31
      */
-    public static final String MQTT31 = "mqttv3.1";
+    public static final String MQTT_3_1 = "mqttv3.1";
 
 
     /**
@@ -380,19 +390,19 @@ public class MessageConstant {
     public static final int LENGTH_FIELD_LENGTH = 4;
 
     /**
-     * |    6   |     1   |    1    |     8    |    1     |    1      |    1     |     1     |     1     |    4     |      n    |
-     * +---------+---------+---------+----------+----------+----------+-----------+----------+-----------+-----------+----------+-
-     * |         |         |         |          |          |          |           |          |           |           |          |
-     * |  魔数    |  协议类型| 协议版本  | 协议包id  | 设备类型  | 网络类型   | 加密算法   | 序列化算法 |  消息类型   | 消息长度   |  消息体   |
-     * |         |         |         |          |          |          |           |          |           |           |          |
-     * +---------+---------+---------+----------+----------+----------+-----------+----------+-----------+-----------+----------+-
+     * |    6   |     1   |    1    |     8    |    1     |    1      |    1     |     1     |     1     |     1     |      4    |    n     |
+     * +---------+---------+---------+----------+----------+----------+-----------+----------+-----------+-----------+-----------+----------+-
+     * |         |         |         |          |          |          |           |          |           |           |           |          |
+     * |  魔数    |  协议类型| 协议版本  | 协议包id  | 设备类型   | 网络类型  | 加密算法    | 序列化算法 |  消息类型   | 保留字段   |  消息长度   |   消息体  |
+     * |         |         |         |          |          |          |           |          |           |           |           |          |
+     * +---------+---------+---------+----------+----------+----------+-----------+----------+-----------+-----------+-----------+----------+-
      * 参数含义及如何设置： 可参看 https://blog.csdn.net/hxj413977035/article/details/121633308
      */
 
     /**
      * LengthFieldBasedFrameDecoder 消息长度字段的 偏移字节，这里是固定协议头大小（21字节）
      */
-    public static final int LENGTH_FIELD_OFFSET = 21;
+    public static final int LENGTH_FIELD_OFFSET = 22;
     /**
      * LengthFieldBasedFrameDecoder  修改帧数据长度字段中定义的值，可以为负数 因为有时候我们习惯把头部记入长度,若为负数,则说明要推后多少个字段
      */

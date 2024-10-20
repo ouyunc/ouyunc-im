@@ -144,6 +144,7 @@ public class MessageServerContext extends MessageContext {
          */
         @Override
         public @Nullable AbstractMessageProcessor<? extends Number> load(Number messageTypeValue) throws Exception {
+            log.error("未找到合适的消息处理器，来处理：{} 类型的消息！", messageTypeValue);
             return null;
         }
 
@@ -158,7 +159,8 @@ public class MessageServerContext extends MessageContext {
          * 获取消息内容处理器的时候，先从缓存中取，如果没有则进行加载走load()方法
          */
         @Override
-        public @Nullable AbstractBaseProcessor<? extends Number> load(Number messageTypeValue) throws Exception {
+        public @Nullable AbstractBaseProcessor<? extends Number> load(Number messageContentTypeValue) throws Exception {
+            log.error("未找到合适的消息内容处理器，来处理：{} 类型的消息内容！", messageContentTypeValue);
             return null;
         }
     }));

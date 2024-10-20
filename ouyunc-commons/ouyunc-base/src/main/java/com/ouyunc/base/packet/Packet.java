@@ -75,15 +75,21 @@ public class Packet implements Serializable, Cloneable{
     private byte messageType;
 
     /**
-     * 加密后的消息长度.4个字节
+     * 保留位，1个字节
      */
     @Tag(10)
+    private byte retain;
+
+    /**
+     * 加密后的消息长度.4个字节
+     */
+    @Tag(11)
     private int messageLength;
 
     /**
      * 消息内容，n个字节, 不同的消息类型有可能是不同的数据内容
      */
-    @Tag(11)
+    @Tag(12)
     private Message message;
 
 
@@ -167,6 +173,14 @@ public class Packet implements Serializable, Cloneable{
         this.messageLength = messageLength;
     }
 
+    public byte getRetain() {
+        return retain;
+    }
+
+    public void setRetain(byte retain) {
+        this.retain = retain;
+    }
+
     public Message getMessage() {
         return message;
     }
@@ -190,7 +204,7 @@ public class Packet implements Serializable, Cloneable{
         this.message = message;
     }
 
-    public Packet(byte protocol, byte protocolVersion, long packetId, byte deviceType, byte networkType, byte encryptType, byte serializeAlgorithm, byte messageType, int messageLength, Message message) {
+    public Packet(byte protocol, byte protocolVersion, long packetId, byte deviceType, byte networkType, byte encryptType, byte serializeAlgorithm, byte messageType, byte retain, Message message) {
         this.protocol = protocol;
         this.protocolVersion = protocolVersion;
         this.packetId = packetId;
@@ -199,6 +213,20 @@ public class Packet implements Serializable, Cloneable{
         this.encryptType = encryptType;
         this.serializeAlgorithm = serializeAlgorithm;
         this.messageType = messageType;
+        this.retain = retain;
+        this.message = message;
+    }
+
+    public Packet(byte protocol, byte protocolVersion, long packetId, byte deviceType, byte networkType, byte encryptType, byte serializeAlgorithm, byte messageType, byte retain, int messageLength, Message message) {
+        this.protocol = protocol;
+        this.protocolVersion = protocolVersion;
+        this.packetId = packetId;
+        this.deviceType = deviceType;
+        this.networkType = networkType;
+        this.encryptType = encryptType;
+        this.serializeAlgorithm = serializeAlgorithm;
+        this.messageType = messageType;
+        this.retain = retain;
         this.messageLength = messageLength;
         this.message = message;
     }
@@ -228,6 +256,7 @@ public class Packet implements Serializable, Cloneable{
                 ", encryptType=" + encryptType +
                 ", serializeAlgorithm=" + serializeAlgorithm +
                 ", messageType=" + messageType +
+                ", retain=" + retain +
                 ", messageLength=" + messageLength +
                 ", message=" + message +
                 '}';

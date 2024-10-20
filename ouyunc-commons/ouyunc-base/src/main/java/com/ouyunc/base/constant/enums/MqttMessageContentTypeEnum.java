@@ -1,21 +1,14 @@
 package com.ouyunc.base.constant.enums;
 
-import com.ouyunc.base.packet.message.content.LoginContent;
+import io.netty.handler.codec.mqtt.MqttConnectMessage;
+import io.netty.handler.codec.mqtt.MqttMessageType;
 
 /**
  * @author fzx
- * @description ws消息内容类型枚举
+ * @description mqtt消息内容类型枚举
  */
-public enum WsMessageContentTypeEnum implements MessageContentType {
-    LOGIN_REQUEST_CONTENT(10,ProtocolTypeEnum.WS.getProtocol(), ProtocolTypeEnum.WS.getProtocolVersion(), LoginContent.class, "外部客户端登录消息内容"),
-    LOGIN_RESPONSE_FAIL_CONTENT(11,ProtocolTypeEnum.WS.getProtocol(), ProtocolTypeEnum.WS.getProtocolVersion(), String.class, "外部客户端登录失败消息内容"),
-    LOGIN_RESPONSE_SUCCESS_CONTENT(12,ProtocolTypeEnum.WS.getProtocol(), ProtocolTypeEnum.WS.getProtocolVersion(), String.class, "外部客户端登录成功消息内容"),
-
-    PING_CONTENT(13,ProtocolTypeEnum.WS.getProtocol(), ProtocolTypeEnum.WS.getProtocolVersion(), String.class, "外部消息心跳ping消息内容"),
-
-    SERVER_NOTIFY_CONTENT(14,ProtocolTypeEnum.WS.getProtocol(), ProtocolTypeEnum.WS.getProtocolVersion(), String.class, "服务端发给客户端的通知内容"),
-    TEXT_CONTENT(15,ProtocolTypeEnum.WS.getProtocol(), ProtocolTypeEnum.WS.getProtocolVersion(), String.class, "文本内容类型"),
-
+public enum MqttMessageContentTypeEnum implements MessageContentType {
+    MQTT_CONNECT(51,ProtocolTypeEnum.MQTT.getProtocol(), ProtocolTypeEnum.MQTT.getProtocolVersion(), MqttMessageType.CONNECT.value(), MqttConnectMessage.class, "mqtt客户端connect消息内容"),
     ;
     /**
      * 唯一标识code
@@ -25,6 +18,8 @@ public enum WsMessageContentTypeEnum implements MessageContentType {
     private byte protocol;
 
     private byte protocolVersion;
+
+    private int mqttMessageTypeValue;
     /**
      * 枚举对应的内容具体类
      */
@@ -34,10 +29,11 @@ public enum WsMessageContentTypeEnum implements MessageContentType {
      */
     private String description;
 
-    WsMessageContentTypeEnum(int messageContentType, byte protocol, byte protocolVersion, Class<?> contentClass, String description) {
-        this.type = messageContentType;
+    MqttMessageContentTypeEnum(int type, byte protocol, byte protocolVersion, int mqttMessageTypeValue, Class<?> contentClass, String description) {
+        this.type = type;
         this.protocol = protocol;
         this.protocolVersion = protocolVersion;
+        this.mqttMessageTypeValue = mqttMessageTypeValue;
         this.contentClass = contentClass;
         this.description = description;
     }
@@ -82,6 +78,14 @@ public enum WsMessageContentTypeEnum implements MessageContentType {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public int getMqttMessageTypeValue() {
+        return mqttMessageTypeValue;
+    }
+
+    public void setMqttMessageTypeValue(int mqttMessageTypeValue) {
+        this.mqttMessageTypeValue = mqttMessageTypeValue;
     }
 
 }

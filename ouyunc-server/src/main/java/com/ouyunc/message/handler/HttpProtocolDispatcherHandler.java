@@ -2,6 +2,7 @@ package com.ouyunc.message.handler;
 
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.utils.MapUtil;
+import com.ouyunc.core.codec.MqttWebSocketCodec;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.protocol.NativePacketProtocol;
 import io.netty.channel.ChannelHandlerContext;
@@ -10,6 +11,9 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketFrameAggregator;
+import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
+import io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketServerCompressionHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,8 +49,16 @@ public class HttpProtocolDispatcherHandler extends SimpleChannelInboundHandler<O
                 // 获取websocket 子协议
                 String secWebsocketProtocol = request.headers().get(MessageConstant.SEC_WEBSOCKET_PROTOCOL);
                 // 判断各种子协议并处理，目前这里只判断是否建立在websocket之上的mqtt协议
-                if (MessageConstant.MQTT.equals(secWebsocketProtocol) || MessageConstant.MQTT31.equals(secWebsocketProtocol)) {
-                    MessageServerContext.findProtocol(NativePacketProtocol.MQTT_WS.getProtocol(), NativePacketProtocol.MQTT_WS.getProtocolVersion()).doDispatcher(ctx, queryParamsMap);
+                if (MessageConstant.MQTT.equals(secWebsocketProtocol) || MessageConstant.MQTT_3_1.equals(secWebsocketProtocol)) {
+                    ctx.pipeline()
+                            //10 * 1024 * 1024
+                            .addLast(MessageConstant.WS_FRAME_AGGREGATOR_HANDLER, new WebSocketFrameAggregator(Integer.MAX_VALUE))
+                            .addLast(MessageConstant.WS_COMPRESSION_HANDLER, new WebSocketServerCompressionHandler())
+                            //10485760
+                            .addLast(MessageConstant.WS_SERVER_PROTOCOL_HANDLER, new WebSocketServerProtocolHandler(MessageServerContext.serverProperties().getWebsocketPath(), MessageConstant.MQTT_WEBSOCKET_SUB_PROTOCOLS, true, Integer.MAX_VALUE))
+                            // mqtt websocket 编解码器
+                            .addLast(MessageConstant.MQTT_WEBSOCKET_CODEC_HANDLER, new MqttWebSocketCodec());
+                    MessageServerContext.findProtocol(NativePacketProtocol.MQTT.getProtocol(), NativePacketProtocol.MQTT.getProtocolVersion()).doDispatcher(ctx, queryParamsMap);
                 } else {
                     MessageServerContext.findProtocol(NativePacketProtocol.WS.getProtocol(), NativePacketProtocol.WS.getProtocolVersion()).doDispatcher(ctx, queryParamsMap);
                 }

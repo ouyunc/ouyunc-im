@@ -20,7 +20,6 @@ public class PacketProtocolDispatcherHandler extends SimpleChannelInboundHandler
     protected void channelRead0(ChannelHandlerContext ctx, Packet packet) throws Exception {
         log.info("开始添加packet的具体处理器");
         MessageServerContext.findProtocol(NativePacketProtocol.OUYUNC.getProtocol(), NativePacketProtocol.OUYUNC.getProtocolVersion()).doDispatcher(ctx, null);
-        // 计数器重新加一次，交给下一个handler 处理，
         // 注意：这里一定要将消息往下传，这个与ByteToMessageDecoder不一样，在ByteToMessageDecoder中可以不用传，因为源码中已经帮我们传了，具体可看源码。
         ctx.fireChannelRead(packet);
     }
