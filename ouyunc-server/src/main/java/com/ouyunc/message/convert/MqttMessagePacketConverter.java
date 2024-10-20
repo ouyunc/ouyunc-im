@@ -19,7 +19,6 @@ import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.protocol.NativePacketProtocol;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.mqtt.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,67 +74,24 @@ public enum MqttMessagePacketConverter implements PacketConverter<MqttMessage>{
                 // 设置服务器时间
                 metadata.setServerTime(TimeUtil.currentTimeMillis());
             }
-            String from = "123";
-            String to = "456";
-            // @todo 开始获取from 和 to 根据不同的消息类型获取订阅的主题信息，类似群组的概念
-            switch (mqttMessageType) {
-                case PUBLISH:
-                    LoginClientInfo loginClientInfo =ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
-                    break;
-
-                case PUBREL:
-                    break;
-
-                case SUBSCRIBE:
-                    break;
-                case UNSUBSCRIBE:
-
-                    break;
-
-                case AUTH:
-
-                    break;
-                case CONNACK:
-                    break;
-                case CONNECT:
-                    if (mqttMessage instanceof MqttConnectMessage mqttConnectMessage) {
-                        MqttConnectPayload payload = mqttConnectMessage.payload();
-                        from = payload.clientIdentifier();
-                        to = MessageServerContext.serverProperties().getLocalServerAddress();
-                    }else {
-                        log.error("暂不支持该消息类型：type={}", mqttMessageType);
-                    }
-                    break;
-                case DISCONNECT:
-                    break;
-                case PINGREQ:
-                    break;
-                case PINGRESP:
-                    break;
-                case PUBACK:
-                    break;
-                case PUBCOMP:
-                    break;
-                case PUBREC:
-                    break;
-                case SUBACK:
-                    break;
-                case UNSUBACK:
-
-                    break;
-                default:
-                    log.error("Unknown message type : {}, do not know how to validate fixed header", mqttMessageType);
-                    throw new DecoderException("Unknown message type, do not know how to validate fixed header");
+            String from;
+            if (MqttMessageType.CONNECT.equals(mqttMessageType) && mqttMessage instanceof MqttConnectMessage mqttConnectMessage) {
+                from = mqttConnectMessage.payload().clientIdentifier();
+            }else {
+                LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
+                if (loginClientInfo == null) {
+                    log.error("mqtt 登录信息不存在！");
+                    return null;
+                }
+                from = loginClientInfo.getIdentity();
             }
-
-
             MqttMessageContentTypeEnum mqttMessageContentType = MqttMessageContentTypeEnum.getMqttMessageContentTypeByMqttMessageTypeValue(mqttMessageType.value());
             if (mqttMessageContentType == null) {
                 log.error("暂不支持该消息类型：type={}", mqttMessageType);
                 return null;
             }
             // 根据消息类型设置from 和 to
-            Message message = new Message(from, to, mqttMessageContentType.getType(), mqttMessageBase64Content , mqttFixedHeader.qosLevel().value(), TimeUtil.currentTimeMillis(), metadata);
+            Message message = new Message(from, MessageServerContext.serverProperties().getLocalServerAddress(), mqttMessageContentType.getType(), mqttMessageBase64Content , mqttFixedHeader.qosLevel().value(), TimeUtil.currentTimeMillis(), metadata);
             return new Packet(protocolValue, protocolVersion, MessageServerContext.<Long>idGenerator().generateId(), DeviceTypeEnum.IOT.getValue(), NetworkEnum.NET_4G.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(), MqttMessageTypeEnum.MQTT.getType(), mqttVersion.protocolLevel(), message);
         }
         return null;
