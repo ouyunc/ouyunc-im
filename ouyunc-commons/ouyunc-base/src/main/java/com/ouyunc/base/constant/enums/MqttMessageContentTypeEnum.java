@@ -88,4 +88,12 @@ public enum MqttMessageContentTypeEnum implements MessageContentType {
         this.mqttMessageTypeValue = mqttMessageTypeValue;
     }
 
+    public static MqttMessageContentTypeEnum getMqttMessageContentTypeByMqttMessageTypeValue(int mqttMessageTypeValue) {
+        for (MqttMessageContentTypeEnum mqttMessageContentType : MqttMessageContentTypeEnum.values()) {
+            if (mqttMessageContentType.mqttMessageTypeValue == mqttMessageTypeValue) {
+                return mqttMessageContentType;
+            }
+        }
+        return null;
+    }
 }

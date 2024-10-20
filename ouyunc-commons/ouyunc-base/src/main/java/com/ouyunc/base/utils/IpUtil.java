@@ -3,7 +3,6 @@ package com.ouyunc.base.utils;
 import com.ouyunc.base.constant.MessageConstant;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.util.AttributeKey;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -84,8 +83,7 @@ public class IpUtil {
      */
     public static String getIp(ChannelHandlerContext ctx) {
         // 首先尝试从代理信息中获取，如果没有在从ctx 中获取
-        AttributeKey<String> proxyMessageKey = AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_CLIENT_REAL_IP);
-        String clientRealIp = ctx.channel().attr(proxyMessageKey).get();
+        String clientRealIp = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_CLIENT_REAL_IP);
         if (clientRealIp != null) {
             return clientRealIp;
         }

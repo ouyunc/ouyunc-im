@@ -5,10 +5,10 @@ import com.ouyunc.base.constant.enums.SaveModeEnum;
 import com.ouyunc.base.constant.enums.WsMessageTypeEnum;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
+import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.message.context.MessageServerContext;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.util.AttributeKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,27 +32,24 @@ public class LoginKeepAliveHandler extends SimpleChannelInboundHandler<Packet> {
             ctx.fireChannelRead(packet);
             return;
         }
-        AttributeKey<LoginClientInfo> channelTagLoginKey = AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
         // 判断是否是心跳消息
-        AttributeKey<Long> channelTagLastHeartbeatTimestampKey = AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_LAST_HEARTBEAT_TIMESTAMP);
         if (WsMessageTypeEnum.PING_PONG.getType() == packet.getMessageType()) {
             // 设置本次时间为
-            ctx.channel().attr(channelTagLastHeartbeatTimestampKey).set(packet.getMessage().getMetadata().getServerTime());
+            ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LAST_HEARTBEAT_TIMESTAMP, packet.getMessage().getMetadata().getServerTime());
             //  将放入保活队列
-            LoginClientInfo loginClientInfo = ctx.channel().attr(channelTagLoginKey).get();
+            LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
             MessageServerContext.clientKeepAliveQueue.offer(loginClientInfo);
             ctx.fireChannelRead(packet);
             return;
         }
         // 如果不是心跳，继续判断该消息是否到达心跳的时间
-        Long lastHeartbeatTimestamp = ctx.channel().attr(channelTagLastHeartbeatTimestampKey).get();
+        Long lastHeartbeatTimestamp = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LAST_HEARTBEAT_TIMESTAMP);
         if (lastHeartbeatTimestamp == null) {
             ctx.fireChannelRead(packet);
             return;
         }
         // 获取channel 心跳超时时间
-        AttributeKey<Integer> channelTagHeartbeatTimeoutKey = AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_HEARTBEAT_TIMEOUT);
-        Integer heartbeatTimeout = ctx.channel().attr(channelTagHeartbeatTimeoutKey).get();
+        Integer heartbeatTimeout = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_HEARTBEAT_TIMEOUT);
         if (heartbeatTimeout == null) {
             ctx.fireChannelRead(packet);
             return;
@@ -62,9 +59,9 @@ public class LoginKeepAliveHandler extends SimpleChannelInboundHandler<Packet> {
         // 判断当前时间是否大于等于上次心跳时间戳+心跳时间
         if (currentTimeMillis >= lastHeartbeatTimestamp + heartbeatTimeout) {
             // 满足条件重新设置上次心跳
-            ctx.channel().attr(channelTagLastHeartbeatTimestampKey).set(packet.getMessage().getMetadata().getServerTime());
+            ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LAST_HEARTBEAT_TIMESTAMP, packet.getMessage().getMetadata().getServerTime());
             // 将放入保活队列
-            LoginClientInfo loginClientInfo = ctx.channel().attr(channelTagLoginKey).get();
+            LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
             MessageServerContext.clientKeepAliveQueue.offer(loginClientInfo);
         }
         ctx.fireChannelRead(packet);

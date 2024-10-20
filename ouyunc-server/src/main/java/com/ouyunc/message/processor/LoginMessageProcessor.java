@@ -12,18 +12,18 @@ import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.packet.message.content.LoginContent;
 import com.ouyunc.base.packet.message.content.ServerNotifyContent;
 import com.ouyunc.base.serialize.Serializer;
+import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.utils.SnowflakeUtil;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.core.listener.event.ClientLoginEvent;
 import com.ouyunc.message.context.MessageServerContext;
-import com.ouyunc.message.handler.LoginKeepAliveHandler;
 import com.ouyunc.message.handler.HeartBeatHandler;
+import com.ouyunc.message.handler.LoginKeepAliveHandler;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.timeout.IdleStateHandler;
-import io.netty.util.AttributeKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -85,8 +85,7 @@ public class LoginMessageProcessor extends AbstractMessageProcessor<Byte> {
         // 绑定信息
         cacheLoginClientInfo = ClientHelper.bind(ctx, loginContent, loginTimestamp);
         // 判断是否加入读写空闲,只要服务端开启支持心跳，才会可能加入心跳处理，这里可以根据自己的协议或业务逻辑进行调整
-        AttributeKey<Integer> channelTapHeartbeatTimeoutKey = AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_HEARTBEAT_TIMEOUT);
-        Integer heartbeatExpireTime = ctx.channel().attr(channelTapHeartbeatTimeoutKey).get();
+        Integer heartbeatExpireTime = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_HEARTBEAT_TIMEOUT);
         if (MessageServerContext.serverProperties().isClientHeartBeatEnable() && heartbeatExpireTime != null) {
             // 判断是否开启客户端心跳
             ctx.pipeline()

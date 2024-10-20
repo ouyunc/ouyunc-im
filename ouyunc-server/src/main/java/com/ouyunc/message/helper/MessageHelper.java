@@ -5,12 +5,12 @@ import com.ouyunc.base.constant.enums.SendStatusEnum;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.model.*;
 import com.ouyunc.base.packet.Packet;
+import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.message.context.MessageServerContext;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.pool.ChannelPool;
-import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import org.slf4j.Logger;
@@ -124,10 +124,9 @@ public class MessageHelper {
                 if (acquireFuture.isSuccess()) {
                     Channel channel = acquireFuture.getNow();
                     // 给该通道打上标签(如果该通道channel 上有标签则不需要再打标签),打上标签的目的，是为了以后动态回收该channel,保证核心channel数
-                    AttributeKey<Integer> channelTagPoolKey = AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_POOL);
-                    Integer channelPoolHashCode = channel.attr(channelTagPoolKey).get();
+                    Integer channelPoolHashCode = ChannelAttrUtil.getChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_TAG_POOL);
                     if (channelPoolHashCode == null) {
-                        channel.attr(channelTagPoolKey).set(channelPool.hashCode());
+                        ChannelAttrUtil.setChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_TAG_POOL, channelPool.hashCode());
                     }
                     // 当获取channel 成功的时候才将from进行设置进去
                     metadata.setFromServerAddress(MessageServerContext.serverProperties().getLocalServerAddress());

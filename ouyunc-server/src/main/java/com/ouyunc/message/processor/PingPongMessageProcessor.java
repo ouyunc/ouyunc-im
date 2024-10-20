@@ -8,16 +8,14 @@ import com.ouyunc.base.constant.enums.WsMessageTypeEnum;
 import com.ouyunc.base.model.Target;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
+import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.MessageHelper;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.util.AttributeKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.time.Clock;
 
 /**
  * @Author fzx
@@ -43,8 +41,7 @@ public class PingPongMessageProcessor extends AbstractMessageProcessor<Byte> {
             log.debug("PingPongMessageProcessor 正在处理外部客户端心跳 {} ...", packet);
         }
         // 可能在三次之内再次发起心跳，此时需要清除 之前心跳超时次数的历史记录
-        AttributeKey<Integer> channelTagReadTimeoutKey = AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_READ_TIMEOUT_TIMES);
-        ctx.channel().attr(channelTagReadTimeoutKey).set(null);
+        ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_READ_TIMEOUT_TIMES, null);
         // 发送pong
         // 处理心跳消息
         Message heartBeatMessage = packet.getMessage();

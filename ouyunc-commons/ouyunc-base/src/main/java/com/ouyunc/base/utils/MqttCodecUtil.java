@@ -53,15 +53,18 @@ public final class MqttCodecUtil {
         ByteBuf byteBuf = MqttEncoderUtil.INSTANCE.doEncode(mqttVersion, mqttMessage);
         byte[] mqttMessageBytes = new byte[byteBuf.readableBytes()];
         byteBuf.readBytes(mqttMessageBytes);
-        byteBuf.release();
-        return Base64.getEncoder().encodeToString(mqttMessageBytes);
+        byteBuf = null;
+        String mqttMessageBase64Content = Base64.getEncoder().encodeToString(mqttMessageBytes);
+        mqttMessageBytes = null;
+        return mqttMessageBase64Content;
     }
     public static MqttMessage decode(MqttVersion mqttVersion, String mqttMessageBase64Content) {
         byte[] mqttMessageBytes = Base64.getDecoder().decode(mqttMessageBase64Content);
         ByteBuf buffer = ByteBufAllocator.DEFAULT.buffer();
         buffer.writeBytes(mqttMessageBytes);
+        mqttMessageBytes = null;
         MqttMessage mqttMessage = MqttDecoderUtil.INSTANCE.doDecode(mqttVersion, buffer);
-        buffer.release();
+        buffer = null;
         return mqttMessage;
     }
 

@@ -8,6 +8,7 @@ import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.packet.message.content.LoginContent;
+import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.IpUtil;
 import com.ouyunc.base.utils.PacketReaderWriterUtil;
 import com.ouyunc.base.utils.TimeUtil;
@@ -16,7 +17,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
-import io.netty.util.AttributeKey;
 
 /**
  * @author fzx
@@ -50,8 +50,7 @@ public enum BinaryWebSocketFramePacketConverter implements PacketConverter<Binar
                     metadata.setAppKey(loginContent.getAppKey());
                 }else {
                     // 不是登录类型的消息，说明该客户端已经登录，可以从当前通道获取用户appKey
-                    AttributeKey<LoginClientInfo> channelTagLoginKey = AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
-                    LoginClientInfo loginClientInfo = ctx.channel().attr(channelTagLoginKey).get();
+                    LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
                     metadata.setAppKey(loginClientInfo.getAppKey());
                 }
                 // 获取客户端真实ip

@@ -4,13 +4,13 @@ package com.ouyunc.message.handler;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.WsMessageTypeEnum;
 import com.ouyunc.base.packet.Packet;
+import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.message.context.MessageServerContext;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
-import io.netty.util.AttributeKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,9 +63,8 @@ public class HeartBeatHandler extends SimpleChannelInboundHandler<Packet> {
                 // 一定时间没有收到外部客户端发来的消息，出触发这里
                 if (IdleState.READER_IDLE.equals(idleStateEvent.state())) {
                     // 记录该channel 是第几次连续触发读超时，如果超过三次，则标注该客户端离线，并尝试通知客户端进行重试连接
-                    AttributeKey<Integer> channelTagReadTimeoutKey = AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_READ_TIMEOUT_TIMES);
                     // channel 连续读超时次数
-                    Integer readTimeoutTimes = channel.attr(channelTagReadTimeoutKey).get();
+                    Integer readTimeoutTimes = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_READ_TIMEOUT_TIMES);
                     if (readTimeoutTimes == null) {
                         readTimeoutTimes = MessageConstant.ONE;
                     }
@@ -76,7 +75,7 @@ public class HeartBeatHandler extends SimpleChannelInboundHandler<Packet> {
                         return;
                     }
                     // 设置连续超时次数
-                    channel.attr(channelTagReadTimeoutKey).set(++readTimeoutTimes);
+                    ChannelAttrUtil.setChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_TAG_READ_TIMEOUT_TIMES, ++readTimeoutTimes);
                 }
             } else {
                 log.error("当前channel->id: {} inActive", channel.id().asShortText());

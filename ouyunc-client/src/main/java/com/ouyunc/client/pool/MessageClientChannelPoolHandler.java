@@ -4,10 +4,9 @@ package com.ouyunc.client.pool;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.ProtocolTypeEnum;
 import com.ouyunc.base.model.Protocol;
-import com.ouyunc.base.utils.SSLUtil;
+import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.client.selector.ProtocolSelector;
 import com.ouyunc.client.selector.WebsocketProtocolDispatcherProcessor;
-import com.ouyunc.core.context.MessageContext;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -15,12 +14,9 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.pool.AbstractChannelPoolHandler;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.handler.ssl.SslHandler;
 import io.netty.util.AttributeKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.net.ssl.SSLEngine;
 
 /**
  * @Author fzx
@@ -69,11 +65,10 @@ public class MessageClientChannelPoolHandler extends AbstractChannelPoolHandler 
                         log.error("协议类型： {}  的  channel id {} 关闭了", channel.id().asShortText(), protocol);
                         // 从管道中取出登录的信息
                         //1,从channel中的attrMap取出相关属性
-                        AttributeKey<ProtocolTypeEnum> channelTagLoginKey = AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
-                        ProtocolTypeEnum protocolType =  channel.attr(channelTagLoginKey).get();
+                        ProtocolTypeEnum protocolType = ChannelAttrUtil.getChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
                         // 如果登录客户端不为空，则发送客户端离线事件
                         if (protocolType != null) {
-                            channel.attr(channelTagLoginKey).set(null);
+                            ChannelAttrUtil.setChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN, null);
                             // @todo 这里可以发布离线事件
                         }
                     }

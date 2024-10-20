@@ -2,12 +2,12 @@ package com.ouyunc.message.cluster.client.handler;
 
 
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.message.context.MessageServerContext;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.timeout.IdleStateEvent;
-import io.netty.util.AttributeKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,8 +48,7 @@ public class MessageClientHeartBeatHandler extends ChannelInboundHandlerAdapter 
             if (channel.isActive()) {
                 try {
                     // 从该channel中取出标签
-                    AttributeKey<Integer> channelPoolHashCodeKey = AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_POOL);
-                    Integer channelPoolHashCode = channel.attr(channelPoolHashCodeKey).get();
+                    Integer channelPoolHashCode = ChannelAttrUtil.getChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_TAG_POOL);
                     // 获取锁
                     lock.lock();
                     // 获取当前管道所属的channel pool 的hashcode

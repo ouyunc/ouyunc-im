@@ -8,11 +8,11 @@ import com.ouyunc.base.constant.enums.SaveModeEnum;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.message.content.LoginContent;
+import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.message.context.MessageServerContext;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.util.AttributeKey;
 import org.apache.commons.collections4.CollectionUtils;
 import org.redisson.api.RLock;
 import org.slf4j.Logger;
@@ -35,7 +35,6 @@ public class ClientHelper {
 
     private static final Logger log = LoggerFactory.getLogger(ClientHelper.class);
 
-
     /***
      * @author fzx
      * @description 客户端绑定登录信息
@@ -53,13 +52,12 @@ public class ClientHelper {
         if (MessageServerContext.serverProperties().isClientHeartBeatEnable() && SaveModeEnum.FINITE.equals(MessageServerContext.serverProperties().getClientLoginInfoSaveMode())) {
             expireTime = Integer.toUnsignedLong((heartBeatTimeout * MessageServerContext.serverProperties().getClientHeartBeatWaitRetry())) + MessageConstant.FIVE;
         }
-        AttributeKey<LoginClientInfo> channelTagLoginKey = AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
         // 将用户绑定到channel中并打上tag标签
         LoginClientInfo loginClientInfo = new LoginClientInfo(MessageContext.messageProperties.getLocalServerAddress(), OnlineEnum.ONLINE, null, expireTime, loginTimestamp, appKey, identity, deviceType, loginContent.getSignature(), loginContent.getSignatureAlgorithm(), loginContent.getHeartBeatExpireTime(), loginContent.getEnableWill(), loginContent.getWillMessage(), loginContent.getWillTopic(), loginContent.getCleanSession(), loginContent.getSessionExpiryInterval(), loginContent.getCreateTime());
-        ctx.channel().attr(channelTagLoginKey).set(loginClientInfo);
+        ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN ,loginClientInfo);
         // 将心跳设置到ctx 中
-        ctx.channel().attr(AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_HEARTBEAT_TIMEOUT)).set(heartBeatTimeout);
-        ctx.channel().attr(AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_LAST_HEARTBEAT_TIMESTAMP)).set(loginTimestamp);
+        ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_HEARTBEAT_TIMEOUT ,heartBeatTimeout);
+        ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LAST_HEARTBEAT_TIMESTAMP ,loginTimestamp);
         // 存入本地用户注册表
         String comboIdentity = IdentityUtil.generalComboIdentity(loginContent.getAppKey(), identity, deviceType.getDeviceTypeName());
         MessageServerContext.localClientRegisterTable.put(comboIdentity, ctx);
@@ -125,11 +123,10 @@ public class ClientHelper {
         // 先从本地注册表获取，如果在同一个服务器上或者不是集群
         Collection<ChannelHandlerContext> allLoginClientChannelHandlerContexts = MessageServerContext.localClientRegisterTable.getAll(comboIdentitySet);
         // 判断comboIdentitySet的size 与结果集的大小是否相等，如果不相等则在从redis获取，如果相等则返回
-        AttributeKey<LoginClientInfo> channelTagLoginKey = AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
         List<LoginClientInfo> loginClientInfoList = new ArrayList<>(3);
         // 从ctx上下文获取客户端登录信息
         allLoginClientChannelHandlerContexts.forEach(ctx -> {
-            LoginClientInfo loginClientInfo = ctx.channel().attr(channelTagLoginKey).get();
+            LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
             if (loginClientInfo != null && OnlineEnum.ONLINE.equals(loginClientInfo.getOnlineStatus())) {
                 loginClientInfoList.add(loginClientInfo);
                 // 移除掉已经从本地获取的有效客户端登录信息
@@ -170,8 +167,7 @@ public class ClientHelper {
         // 先从本地注册表获取，如果在同一个服务器上或者不是集群
         ChannelHandlerContext ctx = MessageServerContext.localClientRegisterTable.get(comboIdentity);
         if (ctx != null) {
-            AttributeKey<LoginClientInfo> channelTagLoginKey = AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
-            LoginClientInfo loginClientInfo = ctx.channel().attr(channelTagLoginKey).get();
+            LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
             if (loginClientInfo != null && OnlineEnum.ONLINE.equals(loginClientInfo.getOnlineStatus()) && MessageContext.messageProperties.getLocalServerAddress().equals(loginClientInfo.getLoginServerAddress())) {
                 return loginClientInfo;
             }

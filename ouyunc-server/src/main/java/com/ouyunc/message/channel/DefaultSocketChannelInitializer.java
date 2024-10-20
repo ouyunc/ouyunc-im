@@ -4,6 +4,7 @@ import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.model.LoginClientInfo;
+import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.utils.SSLUtil;
 import com.ouyunc.core.listener.event.ClientLogoutEvent;
@@ -15,7 +16,6 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.ssl.SslHandler;
-import io.netty.util.AttributeKey;
 import org.redisson.api.RLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,8 +68,7 @@ public class DefaultSocketChannelInitializer extends SocketChannelInitializer {
                         log.warn("================客户端关闭了,正在处理客户端 channel id:  {}==================", socketChannel.id().asShortText());
                         // 解绑已绑定的外部用户
                         //1,从channel中的attrMap取出相关属性
-                        AttributeKey<LoginClientInfo> channelTagLoginKey = AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
-                        final LoginClientInfo loginClientInfo = socketChannel.attr(channelTagLoginKey).get();
+                        final LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(socketChannel, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
                         if (loginClientInfo != null) {
                             // 这里不进行判空了，到这里肯定不为空（登录信息里面一定要有登录设备的类型）
                             String clientLoginDeviceName = loginClientInfo.getDeviceType().getDeviceTypeName();

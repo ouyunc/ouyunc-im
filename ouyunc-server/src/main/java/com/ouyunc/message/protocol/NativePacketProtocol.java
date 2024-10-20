@@ -10,6 +10,7 @@ import com.ouyunc.base.model.Protocol;
 import com.ouyunc.base.model.SendCallback;
 import com.ouyunc.base.model.SendResult;
 import com.ouyunc.base.packet.Packet;
+import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.core.listener.event.SendFailEvent;
 import com.ouyunc.message.cluster.client.pool.MessageClientPool;
 import com.ouyunc.message.context.MessageServerContext;
@@ -139,10 +140,9 @@ public enum NativePacketProtocol implements PacketProtocol {
                         // 获取连接
                         Channel channel = acquireFuture.getNow();
                         // 给该通道打上标签(如果该通道channel 上有标签则不需要再打标签),打上标签的目的，是为了以后动态回收该channel,保证核心channel数
-                        AttributeKey<Integer> channelTagPoolKey = AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_POOL);
-                        Integer channelPoolHashCode = channel.attr(channelTagPoolKey).get();
+                        Integer channelPoolHashCode = ChannelAttrUtil.getChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_TAG_POOL);
                         if (channelPoolHashCode == null) {
-                            channel.attr(channelTagPoolKey).set(finalChannelPool.hashCode());
+                            ChannelAttrUtil.setChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_TAG_POOL, finalChannelPool.hashCode());
                         }
                         // 客户端将数据写出到中介管道中
                         channel.writeAndFlush(packet).addListener((ChannelFutureListener) future -> {

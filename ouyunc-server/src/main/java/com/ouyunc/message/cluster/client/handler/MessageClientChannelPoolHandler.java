@@ -2,6 +2,7 @@ package com.ouyunc.message.cluster.client.handler;
 
 
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.SSLUtil;
 import com.ouyunc.core.codec.PacketCodec;
 import com.ouyunc.message.context.MessageServerContext;
@@ -13,7 +14,6 @@ import io.netty.channel.pool.AbstractChannelPoolHandler;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.timeout.IdleStateHandler;
-import io.netty.util.AttributeKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,8 +64,7 @@ public class MessageClientChannelPoolHandler extends AbstractChannelPoolHandler 
                 if (future.isDone()) {
                     if (future.isSuccess()) {
                         // 从该channel中取出标签
-                        AttributeKey<Integer> channelPoolHashCodeKey = AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_POOL);
-                        Integer channelPoolHashCode = channel.attr(channelPoolHashCodeKey).get();
+                        Integer channelPoolHashCode = ChannelAttrUtil.getChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_TAG_POOL);
                         if (channelPoolHashCode != null) {
                             // 关闭channel 并尝试并移除内部客户端核心channel
                             MessageServerContext.clusterClientCoreChannelPoolCache.get(channelPoolHashCode).remove(channel);
