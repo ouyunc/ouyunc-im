@@ -199,4 +199,22 @@ public class LoginContent implements Serializable {
         this.sessionExpiryInterval = sessionExpiryInterval;
         this.createTime = createTime;
     }
+
+    @Override
+    public String toString() {
+        return "LoginContent{" +
+                "  appKey='" + appKey + '\'' +
+                ", identity='" + identity + '\'' +
+                ", deviceType=" + deviceType +
+                ", signature='" + signature + '\'' +
+                ", signatureAlgorithm=" + signatureAlgorithm +
+                ", heartBeatExpireTime=" + heartBeatExpireTime +
+                ", enableWill=" + enableWill +
+                ", willMessage='" + willMessage + '\'' +
+                ", willTopic='" + willTopic + '\'' +
+                ", cleanSession=" + cleanSession +
+                ", sessionExpiryInterval=" + sessionExpiryInterval +
+                ", createTime=" + createTime +
+                '}';
+    }
 }

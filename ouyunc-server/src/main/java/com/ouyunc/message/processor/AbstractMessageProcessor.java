@@ -27,13 +27,6 @@ public abstract class AbstractMessageProcessor<T extends Number> extends Abstrac
 
 
     /**
-     * 获取数据存储实现类, 子类可以重写来实现自定义存储实现
-     */
-    public Repository repository() {
-        return new DefaultRepository();
-    }
-
-    /**
      * @Author fzx
      * @Description 前置处理器，做认证授权相关处理，在真正处理消息前处理
      */

@@ -118,6 +118,12 @@ public class MessageConstant {
      */
     public static final String CHANNEL_ATTR_KEY_TAG_LOGIN = "CHANNEL_ATTR_KEY_TAG_LOGIN";
 
+
+    /**
+     * channel 关闭时的钩子标签
+     */
+    public static final String CHANNEL_ATTR_KEY_CHANNEL_CLOSE_HOOK = "CHANNEL_ATTR_KEY_CHANNEL_CLOSE_HOOK";
+
     /**
      * 该链接上次的心跳时间戳
      */

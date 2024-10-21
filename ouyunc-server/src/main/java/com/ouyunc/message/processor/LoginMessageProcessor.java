@@ -5,6 +5,7 @@ import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.*;
+import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.model.Target;
 import com.ouyunc.base.packet.Packet;
@@ -17,15 +18,21 @@ import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.utils.SnowflakeUtil;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.core.listener.event.ClientLoginEvent;
+import com.ouyunc.core.listener.event.ClientLogoutEvent;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.handler.HeartBeatHandler;
 import com.ouyunc.message.handler.LoginKeepAliveHandler;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.timeout.IdleStateHandler;
+import org.redisson.api.RLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 /**
  * @Author fzx
@@ -77,13 +84,54 @@ public class LoginMessageProcessor extends AbstractMessageProcessor<Byte> {
             // 异步发送给已经在线的通知
             MessageHelper.asyncSendMessage(notifyPacket, Target.newBuilder().targetIdentity(cacheLoginClientInfo.getIdentity()).targetServerAddress(cacheLoginClientInfo.getLoginServerAddress()).deviceType(deviceType).build());
         }
-        // 如果还在当前服务登录的话，先关闭之前的连接， 如果不在该服务器再次登录，也是需要关闭之前的channel,否则，如果当前登录绑定了信息，后面另外的channel 在关闭然后触发关闭事件，导致删除失败就会把缓存的登录信息给删掉
+        // 如果还在当前服务登录的话，先关闭之前的连接(这里没有强制去通知让原来的连接进行跨服务下线，只是通过心跳让其自动感知下线)， 如果不在该服务器再次登录，也是需要关闭之前的channel,否则，如果当前登录绑定了信息，后面另外的channel 在关闭然后触发关闭事件，导致删除失败就会把缓存的登录信息给删掉
         if (bindCtx != null) {
             // 如果之前有绑定信息，且不为空，这里会触发close 监听事件，进而会删除本地缓存和远端缓存，注意这里是异步执行，可能会影响绑定的信息
             bindCtx.close();
         }
         // 绑定信息
         cacheLoginClientInfo = ClientHelper.bind(ctx, loginContent, loginTimestamp);
+        // 添加channel 关闭后释放资源的钩子, 该逻辑在DefaultSocketChannelInitializer 中进行调用
+        Consumer<Channel> channelCloseHook = channel -> {
+            //1,从channel中的attrMap取出相关属性
+            final LoginClientInfo closingLocalloginClientInfo = ChannelAttrUtil.getChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
+            if (closingLocalloginClientInfo != null) {
+                // 这里不进行判空了，到这里肯定不为空（登录信息里面一定要有登录设备的类型）
+                String clientLoginDeviceName = closingLocalloginClientInfo.getDeviceType().getDeviceTypeName();
+                String closingComboIdentity = IdentityUtil.generalComboIdentity(closingLocalloginClientInfo.getAppKey(), closingLocalloginClientInfo.getIdentity(), clientLoginDeviceName);
+                // 登录信息一致,才进行解绑，删除缓存信息
+                MessageServerContext.localClientRegisterTable.delete(closingComboIdentity);
+                String loginClientInfoCacheKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + closingLocalloginClientInfo.getAppKey() + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + closingComboIdentity;
+                // 获取分布式锁, 这里使用锁的目的，可以参考登录处理器的分布式锁，防止重复解绑 LoginMessageProcessor
+                RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + closingLocalloginClientInfo.getAppKey() + CacheConstant.COLON + closingComboIdentity);
+                try {
+                    if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
+                        LoginClientInfo closingRemoteLoginClientInfo = MessageServerContext.remoteLoginClientInfoCache.get(loginClientInfoCacheKey);
+                        // 这里比较两个登录服务器地址是否一致的目的是因为，无论集群还是单服务 在ctx异步关闭时,有可能存在关闭的执行顺序比绑定客户端的方法执行的慢，导致缓存被覆盖，结果又给删除了缓存信息，导致数据错乱。
+                        if (closingRemoteLoginClientInfo != null && closingLocalloginClientInfo.getLoginServerAddress().equals(closingRemoteLoginClientInfo.getLoginServerAddress()) && closingRemoteLoginClientInfo.getLastLoginTime() == closingLocalloginClientInfo.getLastLoginTime()) {
+                            // 缓存中有没有登录信息都进行删除下
+                            MessageServerContext.remoteLoginClientInfoCache.delete(loginClientInfoCacheKey);
+                        }else {
+                            log.warn("客户端: {} 解绑登录信息失败,原因：缓存中不存在登录信息或登录地址不匹配", closingLocalloginClientInfo);
+                        }
+                    }else {
+                        log.error("客户端: {} 绑定登录信息失败,原因：获取分布式锁失败", closingLocalloginClientInfo);
+                    }
+                } catch (Exception e) {
+                    log.error("客户端: {} 绑定登录信息失败,原因：{}", closingLocalloginClientInfo, e.getMessage());
+                    throw new MessageException(e);
+                } finally {
+                    if (lock.isLocked() && lock.isHeldByCurrentThread()) {
+                        lock.unlock();
+                    }
+                }
+                // 发送客户端离线事件， 可以处理发送遗嘱等客户端关闭后的操作逻辑
+                MessageServerContext.publishEvent(new ClientLogoutEvent(closingLocalloginClientInfo), true);
+            }
+        };
+        // 设置channel 关闭后的回调
+        ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_CHANNEL_CLOSE_HOOK, channelCloseHook);
+
         // 判断是否加入读写空闲,只要服务端开启支持心跳，才会可能加入心跳处理，这里可以根据自己的协议或业务逻辑进行调整
         Integer heartbeatExpireTime = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_HEARTBEAT_TIMEOUT);
         if (MessageServerContext.serverProperties().isClientHeartBeatEnable() && heartbeatExpireTime != null) {
@@ -97,7 +145,6 @@ public class LoginMessageProcessor extends AbstractMessageProcessor<Byte> {
                     .addAfter(MessageConstant.HEART_BEAT_IDLE_HANDLER, MessageConstant.HEART_BEAT_HANDLER, new HeartBeatHandler());
         }
         // 接收端回应登录设备登录成功信息
-        // 如果是mqtt的登录消息需要额外发送连接确认给客户端
         // 同步发送登录成功消息给客户端
         message.setContentType(WsMessageContentTypeEnum.LOGIN_RESPONSE_SUCCESS_CONTENT.getType());
         message.setContent(null);

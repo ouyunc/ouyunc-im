@@ -67,6 +67,10 @@ public enum MqttMessagePacketConverter implements PacketConverter<MqttMessage>{
                 }else {
                     // 不是登录类型的消息，说明该客户端已经登录，可以从当前通道获取用户appKey
                     LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
+                    if (loginClientInfo == null) {
+                        log.error("mqtt 登录信息不存在！");
+                        return null;
+                    }
                     metadata.setAppKey(loginClientInfo.getAppKey());
                 }
                 // 获取客户端真实ip

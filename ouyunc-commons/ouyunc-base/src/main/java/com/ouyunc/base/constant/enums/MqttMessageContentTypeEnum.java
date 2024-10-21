@@ -1,5 +1,6 @@
 package com.ouyunc.base.constant.enums;
 
+import io.netty.handler.codec.mqtt.MqttConnAckMessage;
 import io.netty.handler.codec.mqtt.MqttConnectMessage;
 import io.netty.handler.codec.mqtt.MqttMessageType;
 
@@ -9,6 +10,7 @@ import io.netty.handler.codec.mqtt.MqttMessageType;
  */
 public enum MqttMessageContentTypeEnum implements MessageContentType {
     MQTT_CONNECT(51,ProtocolTypeEnum.MQTT.getProtocol(), ProtocolTypeEnum.MQTT.getProtocolVersion(), MqttMessageType.CONNECT.value(), MqttConnectMessage.class, "mqtt客户端connect消息内容"),
+    MQTT_CONNECT_ACK(5,ProtocolTypeEnum.MQTT.getProtocol(), ProtocolTypeEnum.MQTT.getProtocolVersion(), MqttMessageType.CONNACK.value(), MqttConnAckMessage.class, "mqtt客户端connAck消息内容"),
     ;
     /**
      * 唯一标识code

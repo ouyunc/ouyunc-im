@@ -53,7 +53,7 @@ public class ClientHelper {
             expireTime = Integer.toUnsignedLong((heartBeatTimeout * MessageServerContext.serverProperties().getClientHeartBeatWaitRetry())) + MessageConstant.FIVE;
         }
         // 将用户绑定到channel中并打上tag标签
-        LoginClientInfo loginClientInfo = new LoginClientInfo(MessageContext.messageProperties.getLocalServerAddress(), OnlineEnum.ONLINE, null, expireTime, loginTimestamp, appKey, identity, deviceType, loginContent.getSignature(), loginContent.getSignatureAlgorithm(), loginContent.getHeartBeatExpireTime(), loginContent.getEnableWill(), loginContent.getWillMessage(), loginContent.getWillTopic(), loginContent.getCleanSession(), loginContent.getSessionExpiryInterval(), loginContent.getCreateTime());
+        LoginClientInfo loginClientInfo = new LoginClientInfo(MessageContext.messageProperties.getLocalServerAddress(), OnlineEnum.ONLINE, null, expireTime, loginTimestamp, appKey, identity, deviceType, loginContent.getSignature(), loginContent.getSignatureAlgorithm(), loginContent.getHeartBeatExpireTime(), loginContent.getEnableWill(), loginContent.getWillMessage(), loginContent.getWillTopic(), loginContent.getCleanSession(), loginContent.getSessionExpiryInterval(), loginTimestamp);
         ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN ,loginClientInfo);
         // 将心跳设置到ctx 中
         ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_HEARTBEAT_TIMEOUT ,heartBeatTimeout);

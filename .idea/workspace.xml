@@ -9,11 +9,19 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v6.0.1  优化代码，处理mqtt">
-      <change afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/MqttConnectMessageProcessor.java" afterDir="false" />
+    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v6.0.1  处理mqtt">
+      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/MqttRepository.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/MessageConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/MessageConstant.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/enums/MqttMessageContentTypeEnum.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/enums/MqttMessageContentTypeEnum.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/packet/message/content/LoginContent.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/packet/message/content/LoginContent.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/channel/DefaultSocketChannelInitializer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/channel/DefaultSocketChannelInitializer.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/convert/MqttMessagePacketConverter.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/convert/MqttMessagePacketConverter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/MqttMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/MqttMessageProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/ClientHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/ClientHelper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/AbstractBaseProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/AbstractBaseProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/AbstractMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/AbstractMessageProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/LoginMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/LoginMessageProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/MqttConnectMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/MqttConnectMessageProcessor.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -608,7 +616,10 @@
       <workItem from="1729296671396" duration="2453000" />
       <workItem from="1729302255604" duration="27164000" />
       <workItem from="1729405422257" duration="10812000" />
-      <workItem from="1729427768557" duration="871000" />
+      <workItem from="1729427768557" duration="1955000" />
+      <workItem from="1729433562183" duration="623000" />
+      <workItem from="1729467793630" duration="9511000" />
+      <workItem from="1729502394811" duration="9691000" />
     </task>
     <task id="LOCAL-00190" summary="v3.1.1-beta 优化处理">
       <created>1686906322045</created>
@@ -953,7 +964,7 @@
       <option name="project" value="LOCAL" />
       <updated>1704076343678</updated>
     </task>
-    <option name="localTasksCounter" value="265" />
+    <option name="localTasksCounter" value="266" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1013,7 +1024,6 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
-    <MESSAGE value="v4.0.0&#10;1. 修改数据库表名" />
     <MESSAGE value="v4.0.0&#10;1. 优化扫描包" />
     <MESSAGE value="v4.0.0&#10;1. apk" />
     <MESSAGE value="v4.0.1&#10;1. 添加日志全局链路" />
@@ -1038,7 +1048,8 @@
     <MESSAGE value="v6.0.0 优化获取当前时间戳毫秒" />
     <MESSAGE value="v6.0.1" />
     <MESSAGE value="v6.0.1  优化代码，处理mqtt" />
-    <option name="LAST_COMMIT_MESSAGE" value="v6.0.1  优化代码，处理mqtt" />
+    <MESSAGE value="v6.0.1  处理mqtt" />
+    <option name="LAST_COMMIT_MESSAGE" value="v6.0.1  处理mqtt" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -1049,9 +1060,14 @@
           <option name="timeStamp" value="1" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/MqttConnectMessageProcessor.java</url>
-          <line>23</line>
-          <option name="timeStamp" value="10" />
+          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/convert/MqttMessagePacketConverter.java</url>
+          <line>84</line>
+          <option name="timeStamp" value="4" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/convert/MqttMessagePacketConverter.java</url>
+          <line>85</line>
+          <option name="timeStamp" value="5" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
