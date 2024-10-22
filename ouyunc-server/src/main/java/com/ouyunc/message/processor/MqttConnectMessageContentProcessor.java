@@ -4,22 +4,21 @@ import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.*;
 import com.ouyunc.base.encrypt.Encrypt;
+import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.model.LoginClientInfo;
-import com.ouyunc.base.model.Target;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.packet.message.content.LoginContent;
-import com.ouyunc.base.packet.message.content.ServerNotifyContent;
-import com.ouyunc.base.serialize.Serializer;
-import com.ouyunc.base.utils.*;
+import com.ouyunc.base.utils.ChannelAttrUtil;
+import com.ouyunc.base.utils.IdentityUtil;
+import com.ouyunc.base.utils.MqttCodecUtil;
+import com.ouyunc.base.utils.TimeUtil;
+import com.ouyunc.core.listener.event.ClientLogoutEvent;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.handler.HeartBeatHandler;
 import com.ouyunc.message.handler.LoginKeepAliveHandler;
 import com.ouyunc.message.helper.ClientHelper;
-import com.ouyunc.message.helper.MessageHelper;
-import com.ouyunc.repository.DefaultRepository;
 import com.ouyunc.repository.MqttRepository;
-import com.ouyunc.repository.Repository;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -27,16 +26,18 @@ import io.netty.handler.codec.mqtt.*;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.CharsetUtil;
 import org.apache.commons.lang3.StringUtils;
+import org.redisson.api.RLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 /**
  * mqtt connect
  */
-public class MqttConnectMessageProcessor extends AbstractBaseProcessor<Integer>{
-    private static final Logger log = LoggerFactory.getLogger(MqttConnectMessageProcessor.class);
+public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<Integer>{
+    private static final Logger log = LoggerFactory.getLogger(MqttConnectMessageContentProcessor.class);
 
     @Override
     public MessageContentType type() {
@@ -141,8 +142,44 @@ public class MqttConnectMessageProcessor extends AbstractBaseProcessor<Integer>{
             ClientHelper.bind(ctx, loginContent, loginTimestamp);
             // 处理回调信息
             Consumer<Channel> channelConsumer = channel -> {
+                log.warn("客户端断开连接, 触发回调, comboIdentity: {}, channel: {}", comboIdentity, channel);
                 // 处理掉线事件
-                log.warn("channel: {}  掉线下了", channel.id().asShortText());
+                //1,从channel中的attrMap取出相关属性
+                final LoginClientInfo closingLocalloginClientInfo = ChannelAttrUtil.getChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
+                if (closingLocalloginClientInfo != null) {
+                    // 这里不进行判空了，到这里肯定不为空（登录信息里面一定要有登录设备的类型）
+                    String clientLoginDeviceName = closingLocalloginClientInfo.getDeviceType().getDeviceTypeName();
+                    String closingComboIdentity = IdentityUtil.generalComboIdentity(closingLocalloginClientInfo.getAppKey(), closingLocalloginClientInfo.getIdentity(), clientLoginDeviceName);
+                    // 登录信息一致,才进行解绑，删除缓存信息
+                    MessageServerContext.localClientRegisterTable.delete(closingComboIdentity);
+                    String loginClientInfoCacheKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + closingLocalloginClientInfo.getAppKey() + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + closingComboIdentity;
+                    // 获取分布式锁, 这里使用锁的目的，可以参考登录处理器的分布式锁，防止重复解绑 LoginMessageProcessor
+                    RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + closingLocalloginClientInfo.getAppKey() + CacheConstant.COLON + closingComboIdentity);
+                    try {
+                        if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
+                            LoginClientInfo closingRemoteLoginClientInfo = MessageServerContext.remoteLoginClientInfoCache.get(loginClientInfoCacheKey);
+                            // 这里比较两个登录服务器地址是否一致的目的是因为，无论集群还是单服务 在ctx异步关闭时,有可能存在关闭的执行顺序比绑定客户端的方法执行的慢，导致缓存被覆盖，结果又给删除了缓存信息，导致数据错乱。
+                            if (closingRemoteLoginClientInfo != null && closingLocalloginClientInfo.getLoginServerAddress().equals(closingRemoteLoginClientInfo.getLoginServerAddress()) && closingRemoteLoginClientInfo.getLastLoginTime() == closingLocalloginClientInfo.getLastLoginTime()) {
+                                // 缓存中有没有登录信息都进行设置下线
+                                closingRemoteLoginClientInfo.setOnlineStatus(OnlineEnum.OFFLINE);
+                                MessageServerContext.remoteLoginClientInfoCache.put(loginClientInfoCacheKey, closingRemoteLoginClientInfo, closingRemoteLoginClientInfo.getSessionExpiryInterval(), TimeUnit.SECONDS);
+                            }else {
+                                log.warn("mqtt客户端: {} 解绑登录信息失败,原因：缓存中不存在登录信息或登录地址不匹配", closingLocalloginClientInfo);
+                            }
+                        }else {
+                            log.error("mqtt客户端: {} 绑定登录信息失败,原因：获取分布式锁失败", closingLocalloginClientInfo);
+                        }
+                    } catch (Exception e) {
+                        log.error("mqtt客户端: {} 绑定登录信息失败,原因：{}", closingLocalloginClientInfo, e.getMessage());
+                        throw new MessageException(e);
+                    } finally {
+                        if (lock.isLocked() && lock.isHeldByCurrentThread()) {
+                            lock.unlock();
+                        }
+                    }
+                    // 发送客户端离线事件， 可以处理发送遗嘱等客户端关闭后的操作逻辑
+                    MessageServerContext.publishEvent(new ClientLogoutEvent(closingLocalloginClientInfo), true);
+                }
             };
             // 设置channel关闭后的钩子
             ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_CHANNEL_CLOSE_HOOK, channelConsumer);
