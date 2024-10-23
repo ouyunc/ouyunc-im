@@ -9,12 +9,13 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v6.0.1  处理mqtt">
-      <change afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/MqttDisconnectMessageContentProcessor.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/MqttPingPongMessageContentProcessor.java" afterDir="false" />
+    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v6.0.1  处理mqtt 断开连接和心跳">
+      <change afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/MqttUnSubscribeMessageContentProcessor.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/enums/MqttMessageContentTypeEnum.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/enums/MqttMessageContentTypeEnum.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/MqttConnectMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/MqttConnectMessageContentProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/MqttRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/MqttRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/MqttDisconnectMessageContentProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/MqttDisconnectMessageContentProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/MqttPingPongMessageContentProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/MqttPingPongMessageContentProcessor.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -614,7 +615,9 @@
       <workItem from="1729467793630" duration="9511000" />
       <workItem from="1729502394811" duration="9691000" />
       <workItem from="1729563272679" duration="598000" />
-      <workItem from="1729590781652" duration="7333000" />
+      <workItem from="1729590781652" duration="7601000" />
+      <workItem from="1729640704540" duration="5837000" />
+      <workItem from="1729674394837" duration="1984000" />
     </task>
     <task id="LOCAL-00190" summary="v3.1.1-beta 优化处理">
       <created>1686906322045</created>
@@ -959,7 +962,7 @@
       <option name="project" value="LOCAL" />
       <updated>1704076343678</updated>
     </task>
-    <option name="localTasksCounter" value="266" />
+    <option name="localTasksCounter" value="267" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1019,7 +1022,6 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
-    <MESSAGE value="v4.0.0&#10;1. 优化扫描包" />
     <MESSAGE value="v4.0.0&#10;1. apk" />
     <MESSAGE value="v4.0.1&#10;1. 添加日志全局链路" />
     <MESSAGE value="v4.0.1&#10;1. 优化日志全局链路" />
@@ -1044,7 +1046,8 @@
     <MESSAGE value="v6.0.1" />
     <MESSAGE value="v6.0.1  优化代码，处理mqtt" />
     <MESSAGE value="v6.0.1  处理mqtt" />
-    <option name="LAST_COMMIT_MESSAGE" value="v6.0.1  处理mqtt" />
+    <MESSAGE value="v6.0.1  处理mqtt 断开连接和心跳" />
+    <option name="LAST_COMMIT_MESSAGE" value="v6.0.1  处理mqtt 断开连接和心跳" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

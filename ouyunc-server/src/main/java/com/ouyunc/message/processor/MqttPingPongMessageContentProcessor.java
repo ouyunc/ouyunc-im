@@ -21,7 +21,7 @@ public class MqttPingPongMessageContentProcessor extends AbstractBaseProcessor<I
 
     @Override
     public MessageContentType type() {
-        return MqttMessageContentTypeEnum.MQTT_CONNECT_PINGREQ;
+        return MqttMessageContentTypeEnum.MQTT_PINGREQ;
     }
 
     @Override

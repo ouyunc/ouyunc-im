@@ -1,9 +1,6 @@
 package com.ouyunc.base.constant.enums;
 
-import io.netty.handler.codec.mqtt.MqttConnAckMessage;
-import io.netty.handler.codec.mqtt.MqttConnectMessage;
-import io.netty.handler.codec.mqtt.MqttMessage;
-import io.netty.handler.codec.mqtt.MqttMessageType;
+import io.netty.handler.codec.mqtt.*;
 
 /**
  * @author fzx
@@ -12,8 +9,9 @@ import io.netty.handler.codec.mqtt.MqttMessageType;
 public enum MqttMessageContentTypeEnum implements MessageContentType {
     MQTT_CONNECT(51,ProtocolTypeEnum.MQTT.getProtocol(), ProtocolTypeEnum.MQTT.getProtocolVersion(), MqttMessageType.CONNECT.value(), MqttConnectMessage.class, "mqtt客户端connect消息内容"),
     MQTT_CONNECT_ACK(52,ProtocolTypeEnum.MQTT.getProtocol(), ProtocolTypeEnum.MQTT.getProtocolVersion(), MqttMessageType.CONNACK.value(), MqttConnAckMessage.class, "mqtt客户端connAck消息内容"),
-    MQTT_CONNECT_PINGREQ(53,ProtocolTypeEnum.MQTT.getProtocol(), ProtocolTypeEnum.MQTT.getProtocolVersion(), MqttMessageType.PINGREQ.value(), MqttMessage.class, "mqtt客户端PINGREQ心跳消息内容"),
-    MQTT_CONNECT_DISCONNECT(54,ProtocolTypeEnum.MQTT.getProtocol(), ProtocolTypeEnum.MQTT.getProtocolVersion(), MqttMessageType.DISCONNECT.value(), MqttMessage.class, "mqtt客户端DISCONNECT心跳消息内容"),
+    MQTT_PINGREQ(53,ProtocolTypeEnum.MQTT.getProtocol(), ProtocolTypeEnum.MQTT.getProtocolVersion(), MqttMessageType.PINGREQ.value(), MqttMessage.class, "mqtt客户端PINGREQ心跳消息内容"),
+    MQTT_DISCONNECT(54,ProtocolTypeEnum.MQTT.getProtocol(), ProtocolTypeEnum.MQTT.getProtocolVersion(), MqttMessageType.DISCONNECT.value(), MqttMessage.class, "mqtt客户端DISCONNECT消息内容"),
+    MQTT_UNSUBSCRIBE(55,ProtocolTypeEnum.MQTT.getProtocol(), ProtocolTypeEnum.MQTT.getProtocolVersion(), MqttMessageType.UNSUBSCRIBE.value(), MqttUnsubscribeMessage.class, "mqtt客户端Unsubscribe消息内容"),
     ;
     /**
      * 唯一标识code

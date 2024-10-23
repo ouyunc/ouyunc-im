@@ -59,7 +59,6 @@ public class MqttMessageProcessor extends AbstractMessageProcessor<Byte> {
      */
     @Override
     public void process(ChannelHandlerContext ctx, Packet packet) {
-        // do nothing
         MessageServerContext.messageContentProcessorCache.get(packet.getMessage().getContentType()).process(ctx, packet);
     }
 

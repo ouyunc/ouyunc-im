@@ -15,12 +15,12 @@ public class MqttDisconnectMessageContentProcessor extends AbstractBaseProcessor
 
     @Override
     public MessageContentType type() {
-        return MqttMessageContentTypeEnum.MQTT_CONNECT_DISCONNECT;
+        return MqttMessageContentTypeEnum.MQTT_DISCONNECT;
     }
 
     @Override
     public void process(ChannelHandlerContext ctx, Packet packet) {
-        log.info("MqttDisconnectMessageProcessor 正在处理mqtt 断开连接消息...");
+        log.warn("MqttDisconnectMessageProcessor 正在处理mqtt 断开连接消息...");
         ctx.close();
     }
 }
