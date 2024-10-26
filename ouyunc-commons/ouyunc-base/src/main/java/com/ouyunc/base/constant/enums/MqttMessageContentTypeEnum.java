@@ -11,7 +11,9 @@ public enum MqttMessageContentTypeEnum implements MessageContentType {
     MQTT_CONNECT_ACK(52,ProtocolTypeEnum.MQTT.getProtocol(), ProtocolTypeEnum.MQTT.getProtocolVersion(), MqttMessageType.CONNACK.value(), MqttConnAckMessage.class, "mqtt客户端connAck消息内容"),
     MQTT_PINGREQ(53,ProtocolTypeEnum.MQTT.getProtocol(), ProtocolTypeEnum.MQTT.getProtocolVersion(), MqttMessageType.PINGREQ.value(), MqttMessage.class, "mqtt客户端PINGREQ心跳消息内容"),
     MQTT_DISCONNECT(54,ProtocolTypeEnum.MQTT.getProtocol(), ProtocolTypeEnum.MQTT.getProtocolVersion(), MqttMessageType.DISCONNECT.value(), MqttMessage.class, "mqtt客户端DISCONNECT消息内容"),
-    MQTT_UNSUBSCRIBE(55,ProtocolTypeEnum.MQTT.getProtocol(), ProtocolTypeEnum.MQTT.getProtocolVersion(), MqttMessageType.UNSUBSCRIBE.value(), MqttUnsubscribeMessage.class, "mqtt客户端Unsubscribe消息内容"),
+    MQTT_SUBSCRIBE(55,ProtocolTypeEnum.MQTT.getProtocol(), ProtocolTypeEnum.MQTT.getProtocolVersion(), MqttMessageType.UNSUBSCRIBE.value(), MqttSubscribeMessage.class, "mqtt客户端subscribe消息内容"),
+    MQTT_UNSUBSCRIBE(56,ProtocolTypeEnum.MQTT.getProtocol(), ProtocolTypeEnum.MQTT.getProtocolVersion(), MqttMessageType.UNSUBSCRIBE.value(), MqttUnsubscribeMessage.class, "mqtt客户端Unsubscribe消息内容"),
+    MQTT_PUBLISH(57,ProtocolTypeEnum.MQTT.getProtocol(), ProtocolTypeEnum.MQTT.getProtocolVersion(), MqttMessageType.PUBLISH.value(), MqttPublishMessage.class, "mqtt客户端publish消息内容"),
     ;
     /**
      * 唯一标识code
