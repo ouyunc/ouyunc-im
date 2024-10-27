@@ -1,9 +1,8 @@
 package com.ouyunc.message.processor;
 
 import com.ouyunc.base.packet.Packet;
+import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.validator.AuthValidator;
-import com.ouyunc.repository.DefaultRepository;
-import com.ouyunc.repository.Repository;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,7 +40,10 @@ public abstract class AbstractMessageProcessor<T extends Number> extends Abstrac
             ctx.close();
             return;
         }
-        // 交给下个处理
+        // 做qos 处理
+        if (MessageServerContext.serverProperties().isQosEnable() && !qosPreHandle(ctx, packet)) {
+            return;
+        }
         ctx.fireChannelRead(packet);
     }
 
@@ -61,6 +63,9 @@ public abstract class AbstractMessageProcessor<T extends Number> extends Abstrac
      * @Description 做后置处理
      */
     public void postProcess(ChannelHandlerContext ctx, Packet packet) {
+        if (MessageServerContext.serverProperties().isQosEnable()) {
+            qosPostHandle(ctx, packet);
+        }
         ctx.fireChannelRead(packet);
     }
 }

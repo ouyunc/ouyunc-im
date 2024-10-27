@@ -275,6 +275,10 @@ public class MessageConstant {
      * 监控 处理器
      */
     public static final String MONITOR_HANDLER = "MONITOR_HANDLER";
+
+
+
+
     /**
      * 统一登录处理器
      */

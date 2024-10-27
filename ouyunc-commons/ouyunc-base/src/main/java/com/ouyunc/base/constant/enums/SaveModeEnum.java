@@ -9,5 +9,5 @@ public enum SaveModeEnum {
     /**
      * 有限
      */
-    FINITE,
+    FINITE
 }

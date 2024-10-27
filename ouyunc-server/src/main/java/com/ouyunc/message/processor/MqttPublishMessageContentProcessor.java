@@ -36,4 +36,14 @@ public class MqttPublishMessageContentProcessor extends AbstractBaseProcessor<In
         log.error("################==   ",decode.variableHeader().packetId());
         System.out.println("**********==" + decode.variableHeader().packetId());
     }
+
+    @Override
+    public boolean qosPreHandle(ChannelHandlerContext ctx, Packet packet) {
+        return super.qosPreHandle(ctx, packet);
+    }
+
+    @Override
+    public void qosPostHandle(ChannelHandlerContext ctx, Packet packet) {
+        super.qosPostHandle(ctx, packet);
+    }
 }

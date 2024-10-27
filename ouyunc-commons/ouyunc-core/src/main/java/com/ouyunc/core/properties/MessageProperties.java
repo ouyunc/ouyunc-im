@@ -1,6 +1,7 @@
 package com.ouyunc.core.properties;
 
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.enums.QosModeEnum;
 import com.ouyunc.core.properties.annotation.Key;
 import io.netty.handler.logging.LogLevel;
 
@@ -39,6 +40,18 @@ public class MessageProperties {
      */
     @Key(value = "ouyunc.message.log.level", defaultValue = "INFO")
     private LogLevel logLevel;
+
+    /**
+     * 是否开启qos 消息服务质量，默认关闭
+     */
+    @Key(value = "ouyunc.message.qos.enable", defaultValue = "false")
+    private boolean qosEnable;
+
+    /**
+     * 模式，CLIENT-客户端模式，SERVER-服务端模式, 默认客户端（需要客户端配合实现，对服务端压力小，且服务端是无状态的），服务端模式则是服务端保存消息，然后定时发送给接收方，会影响性能，且服务端变成有状态服务
+     */
+    @Key(value = "ouyunc.message.qos.mode", defaultValue = "CLIENT")
+    private QosModeEnum qosMode;
 
     /**
      * 是否开启ssl/tls
@@ -128,15 +141,31 @@ public class MessageProperties {
         this.logLevel = logLevel;
     }
 
+    public boolean isQosEnable() {
+        return qosEnable;
+    }
 
+    public void setQosEnable(boolean qosEnable) {
+        this.qosEnable = qosEnable;
+    }
+
+    public QosModeEnum getQosMode() {
+        return qosMode;
+    }
+
+    public void setQosMode(QosModeEnum qosMode) {
+        this.qosMode = qosMode;
+    }
 
     @Override
     public String toString() {
         return "BaseMessageProperties{" +
-                "port=" + port +
+                "  port=" + port +
                 ", ip='" + ip + '\'' +
                 ", localHost='" + localHost + '\'' +
                 ", logLevel=" + logLevel +
+                ", qosEnable=" + qosEnable +
+                ", qosMode=" + qosMode +
                 ", sslEnable=" + sslEnable +
                 ", sslCertificate='" + sslCertificate + '\'' +
                 ", sslPrivateKey='" + sslPrivateKey + '\'' +

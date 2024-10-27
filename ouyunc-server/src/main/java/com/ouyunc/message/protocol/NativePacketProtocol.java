@@ -62,12 +62,12 @@ public enum NativePacketProtocol implements PacketProtocol {
                     // 业务处理
                     .addLast(MessageConstant.WS_HANDLER, new PacketHandler())
                     // 后置处理
-                    .addLast(MessageConstant.POST_HANDLER, new PacketPostHandler());
-            // 判断是否需要开启客户端心跳如果需要则开启客户端心跳，由于心跳消息不需要登录就可以，所以放在登录认证处理器前面
-            // 在最后添加异常处理器
-            ctx.pipeline().addLast(MessageConstant.EXCEPTION_HANDLER, new MessageExceptionHandler());
-            // 移除协议分发器
-            ctx.pipeline().remove(MessageConstant.HTTP_DISPATCHER_HANDLER);
+                    .addLast(MessageConstant.POST_HANDLER, new PacketPostHandler())
+                    // 判断是否需要开启客户端心跳如果需要则开启客户端心跳，由于心跳消息不需要登录就可以，所以放在登录认证处理器前面
+                    // 在最后添加异常处理器
+                    .addLast(MessageConstant.EXCEPTION_HANDLER, new MessageExceptionHandler())
+                    // 移除协议分发器
+                    .remove(MessageConstant.HTTP_DISPATCHER_HANDLER);
             // 调用当前handler的下一个handle的active，注意与ctx.pipeline().fireChannelActive()
             ctx.fireChannelActive();
         }
@@ -185,6 +185,7 @@ public enum NativePacketProtocol implements PacketProtocol {
                     .addLast(MessageConstant.MQTT_SERVER_HANDLER, new PacketHandler())
                     // 后置处理
                     .addLast(MessageConstant.POST_HANDLER, new PacketPostHandler())
+                    // 异常处理器
                     .addLast(MessageConstant.EXCEPTION_HANDLER, new MessageExceptionHandler());
             // 移除掉掉协议分发器
             MqttProtocolDispatcherHandler mqttProtocolDispatcherHandler = pipeline.get(MqttProtocolDispatcherHandler.class);

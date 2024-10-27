@@ -541,6 +541,8 @@ public class MessageServerProperties extends MessageProperties {
                 "\n, localHost='" + super.getLocalHost() + '\'' +
                 "\n, localServerAddress='" + super.getLocalServerAddress() + '\'' +
                 "\n, logLevel=" + super.getLogLevel() +
+                "\n, qosEnable=" + super.isQosEnable() +
+                "\n, qosMode=" + super.getQosMode() +
                 "\n, sslEnable=" + super.isSslEnable() +
                 "\n, sslCertificate='" + super.getSslCertificate() + '\'' +
                 "\n, sslPrivateKey='" + super.getSslPrivateKey() + '\'' +

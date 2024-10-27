@@ -41,7 +41,10 @@ import java.util.function.Consumer;
 public class LoginMessageProcessor extends AbstractMessageProcessor<Byte> {
     private static final Logger log = LoggerFactory.getLogger(LoginMessageProcessor.class);
 
-
+    @Override
+    public MessageType type() {
+        return WsMessageTypeEnum.LOGIN;
+    }
     /***
      * @author fzx
      * @description 消息前置处理，做登录业务逻辑
@@ -171,9 +174,4 @@ public class LoginMessageProcessor extends AbstractMessageProcessor<Byte> {
         return true;
     }
 
-
-    @Override
-    public MessageType type() {
-        return WsMessageTypeEnum.LOGIN;
-    }
 }
