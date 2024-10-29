@@ -12,7 +12,6 @@ import com.ouyunc.base.utils.MqttCodecUtil;
 import com.ouyunc.repository.MqttRepository;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
-import io.netty.util.AttributeKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,16 +50,13 @@ public class MqttUnSubscribeMessageContentProcessor extends AbstractBaseProcesso
                 return;
             }
             String comboIdentity = IdentityUtil.generalComboIdentity(loginClientInfo.getAppKey(), loginClientInfo.getIdentity(), loginClientInfo.getDeviceType());
-            topicFilters.forEach(topicFilter -> {
-                repository().unSubscribe(topicFilter, comboIdentity);
-                log.debug("UNSUBSCRIBE - clientId: {}, topicFilter: {}", comboIdentity, topicFilter);
-            });
+            repository().unSubscribe(loginClientInfo.getAppKey(), comboIdentity, topicFilters);
             MqttUnsubAckMessage unsubAckMessage = (MqttUnsubAckMessage) MqttMessageFactory.newMessage(
                     new MqttFixedHeader(MqttMessageType.UNSUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
                     MqttMessageIdVariableHeader.from(mqttUnsubscribeMessage.variableHeader().messageId()), null);
             ctx.writeAndFlush(unsubAckMessage);
         }else {
-            log.error("MqttUnSubscribeMessageContentProcessor 非法取消订阅主题！");
+            log.error("MqttUnSubscribeMessageContentProcessor 取消订阅失败！");
         }
 
     }

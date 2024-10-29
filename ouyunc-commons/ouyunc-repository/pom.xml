@@ -19,5 +19,11 @@
       <version>${ouyunc.version}</version>
       <optional>true</optional>
     </dependency>
+    <dependency>
+      <groupId>com.ouyunc</groupId>
+      <artifactId>ouyunc-cache</artifactId>
+      <version>${ouyunc.version}</version>
+      <optional>true</optional>
+    </dependency>
   </dependencies>
 </project>

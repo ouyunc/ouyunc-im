@@ -50,4 +50,19 @@ public class CacheConstant {
      * 接收方
      */
     public static final String TO = "to:";
+
+    /***
+     * mqtt
+     */
+    public static final String MQTT = "mqtt:";
+
+    /***
+     * topic
+     */
+    public static final String TOPIC = "topic:";
+
+    /***
+     * topic-list
+     */
+    public static final String TOPIC_LIST = "topic-list";
 }
