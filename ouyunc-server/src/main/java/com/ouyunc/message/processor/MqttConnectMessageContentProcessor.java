@@ -31,6 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 /**
@@ -49,7 +50,7 @@ public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<In
     public MqttRepository repository() {
         return new MqttRepository();
     }
-
+private static AtomicInteger i= new AtomicInteger(0);
     @Override
     public void process(ChannelHandlerContext ctx, Packet packet) {
         log.info("MqttConnectMessageProcessor connect 正在处理mqtt 连接消息...");
@@ -106,7 +107,7 @@ public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<In
                 sessionExpiryInterval = sessionExpiryIntervalProperty.value();
             }
             // @todo 根据自己的业务这里进行修改
-            LoginContent loginContent = new LoginContent(appKey, mqttConnectPayload.clientIdentifier(), DeviceTypeEnum.IOT, signature, Encrypt.AsymmetricEncrypt.MD5.getValue(), mqttConnectVariableHeader.keepAliveTimeSeconds(), mqttConnectVariableHeader.isWillFlag() ? MessageConstant.ONE : MessageConstant.ZERO, new String(mqttConnectPayload.willMessageInBytes(), CharsetUtil.UTF_8), mqttConnectPayload.willTopic(), mqttConnectVariableHeader.isCleanSession()? MessageConstant.ONE : MessageConstant.ZERO, sessionExpiryInterval, connectMessage.getCreateTime());
+            LoginContent loginContent = new LoginContent(appKey, mqttConnectPayload.clientIdentifier() + i.getAndIncrement(), DeviceTypeEnum.IOT, signature, Encrypt.AsymmetricEncrypt.MD5.getValue(), mqttConnectVariableHeader.keepAliveTimeSeconds(), mqttConnectVariableHeader.isWillFlag() ? MessageConstant.ONE : MessageConstant.ZERO, "123", "/test/aaa", mqttConnectVariableHeader.isCleanSession()? MessageConstant.ONE : MessageConstant.ZERO, sessionExpiryInterval, connectMessage.getCreateTime());
             if (!validate(loginContent)) {
                 MqttMessage connAckMessage = MqttMessageFactory.newMessage(
                         new MqttFixedHeader(MqttMessageType.CONNACK, false, MqttQoS.AT_MOST_ONCE, false, 0),

@@ -83,7 +83,7 @@ public final class MqttDecoderUtil extends ReplayingDecoder<MqttDecoderUtil.Deco
         int bytesRemainingInVariablePart = 0;
         MqttFixedHeader mqttFixedHeader = null;
         Object variableHeader = null;
-        switch (state()) {
+        switch (DecoderState.READ_FIXED_HEADER) {
             case READ_FIXED_HEADER: try {
                 mqttFixedHeader = decodeFixedHeader(mqttVersion, buffer);
                 bytesRemainingInVariablePart = mqttFixedHeader.remainingLength();
