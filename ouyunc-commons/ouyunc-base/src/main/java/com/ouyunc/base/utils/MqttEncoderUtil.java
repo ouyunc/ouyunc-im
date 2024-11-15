@@ -48,7 +48,7 @@ public final class MqttEncoderUtil  {
      * @param message MQTT message to encode
      * @return ByteBuf with encoded bytes
      */
-    public  ByteBuf doEncode(MqttVersion mqttVersion,
+    public ByteBuf doEncode(MqttVersion mqttVersion,
                      MqttMessage message) {
 
 

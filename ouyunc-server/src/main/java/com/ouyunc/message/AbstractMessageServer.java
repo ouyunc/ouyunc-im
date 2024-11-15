@@ -29,7 +29,6 @@ import org.objenesis.ObjenesisStd;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.Clock;
 import java.util.Map;
 
 /**
@@ -226,22 +225,19 @@ public abstract class AbstractMessageServer implements MessageServer {
             // 因为bind() 是异步的，这里不用 bind().sync(); 而是添加监听器的方式进行回调
             ChannelFuture channelFuture = bootstrap.bind();
             // 添加监听器来监听是否启动成功,做额外工作
-            channelFuture.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture bindFuture) throws Exception {
-                    if (bindFuture.isDone()) {
-                        if (bindFuture.isSuccess()) {
-                            // =====================开始处理内置客户端用于做集群=================
-                            if (MessageServerContext.serverProperties().isClusterEnable()) {
-                                messageClient.configure(MessageServerContext.serverProperties());
-                            }
-                            log.debug("核心message服务初始化完成");
-                            MessageServerContext.publishEvent(new ServerStartupEvent(MessageServerContext.serverProperties().getLocalServerAddress()), true);
-                            log.debug("IM server启动成功，其绑定地址:{} 端口号:{} 共花费:{} ms.", MessageServerContext.serverProperties().getIp(), MessageServerContext.serverProperties().getPort(), (TimeUtil.currentTimeMillis() - startTimeStamp));
-                        } else {
-                            log.error("IM server 启动失败！原因: {}", bindFuture.cause().getMessage());
-                            throw new Exception(bindFuture.cause().getMessage());
+            channelFuture.addListener((ChannelFutureListener) bindFuture -> {
+                if (bindFuture.isDone()) {
+                    if (bindFuture.isSuccess()) {
+                        // =====================开始处理内置客户端用于做集群=================
+                        if (MessageServerContext.serverProperties().isClusterEnable()) {
+                            messageClient.configure(MessageServerContext.serverProperties());
                         }
+                        log.debug("核心message服务初始化完成");
+                        MessageServerContext.publishEvent(new ServerStartupEvent(MessageServerContext.serverProperties().getLocalServerAddress()), true);
+                        log.debug("IM server启动成功，其绑定地址:{} 端口号:{} 共花费:{} ms.", MessageServerContext.serverProperties().getIp(), MessageServerContext.serverProperties().getPort(), (TimeUtil.currentTimeMillis() - startTimeStamp));
+                    } else {
+                        log.error("IM server 启动失败！原因: {}", bindFuture.cause().getMessage());
+                        throw new Exception(bindFuture.cause().getMessage());
                     }
                 }
             });
@@ -275,7 +271,9 @@ public abstract class AbstractMessageServer implements MessageServer {
                 workerGroup.shutdownGracefully();
             }
             // 停止内部消息客户端
-            messageClient.stop();
+            if (MessageServerContext.serverProperties().isClusterEnable()) {
+                messageClient.stop();
+            }
             log.error("Message server注销完成");
         }));
     }

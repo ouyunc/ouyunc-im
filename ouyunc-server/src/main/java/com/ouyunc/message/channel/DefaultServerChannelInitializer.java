@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory;
  * @Description: 默认初始化 server channel
  **/
 public class DefaultServerChannelInitializer extends ServerChannelInitializer {
-    private static Logger log = LoggerFactory.getLogger(DefaultServerChannelInitializer.class);
+    private static final Logger log = LoggerFactory.getLogger(DefaultServerChannelInitializer.class);
 
 
     /**

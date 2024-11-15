@@ -47,5 +47,6 @@ public abstract class AbstractMessageClient implements MessageClient {
     @Override
     public void stop() {
         log.error("正在注销集群内置客户端......");
+        MessageClientPool.stop();
     }
 }

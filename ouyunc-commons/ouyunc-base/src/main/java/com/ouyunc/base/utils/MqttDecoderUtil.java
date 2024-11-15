@@ -17,9 +17,7 @@
 package com.ouyunc.base.utils;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.DecoderException;
-import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.mqtt.*;
 import io.netty.handler.codec.mqtt.MqttProperties.IntegerProperty;
@@ -28,7 +26,6 @@ import io.netty.util.internal.ObjectUtil;
 
 import java.util.ArrayList;
 import java.util.List;
-
 
 import static com.ouyunc.base.utils.MqttCodecUtil.*;
 import static io.netty.handler.codec.mqtt.MqttConstant.DEFAULT_MAX_BYTES_IN_MESSAGE;
@@ -43,7 +40,7 @@ import static io.netty.handler.codec.mqtt.MqttSubscriptionOption.RetainedHandlin
  * <a href="https://docs.oasis-open.org/mqtt/mqtt/v5.0/mqtt-v5.0.html">v5.0</a>, depending on the
  * version specified in the CONNECT message that first goes through the channel.
  */
-public final class MqttDecoderUtil extends ReplayingDecoder<MqttDecoderUtil.DecoderState> {
+public final class MqttDecoderUtil {
 
     public static final MqttDecoderUtil INSTANCE = new MqttDecoderUtil();
 
@@ -73,7 +70,6 @@ public final class MqttDecoderUtil extends ReplayingDecoder<MqttDecoderUtil.Deco
     }
 
     public MqttDecoderUtil(int maxBytesInMessage, int maxClientIdLength) {
-        super(DecoderState.READ_FIXED_HEADER);
         this.maxBytesInMessage = ObjectUtil.checkPositive(maxBytesInMessage, "maxBytesInMessage");
         this.maxClientIdLength = ObjectUtil.checkPositive(maxClientIdLength, "maxClientIdLength");
     }
@@ -87,7 +83,7 @@ public final class MqttDecoderUtil extends ReplayingDecoder<MqttDecoderUtil.Deco
             case READ_FIXED_HEADER: try {
                 mqttFixedHeader = decodeFixedHeader(mqttVersion, buffer);
                 bytesRemainingInVariablePart = mqttFixedHeader.remainingLength();
-                checkpoint(DecoderState.READ_VARIABLE_HEADER);
+                //checkpoint(DecoderState.READ_VARIABLE_HEADER);
                 // fall through
             } catch (Exception cause) {
                 return invalidMessage(cause, mqttFixedHeader, variableHeader);
@@ -97,11 +93,11 @@ public final class MqttDecoderUtil extends ReplayingDecoder<MqttDecoderUtil.Deco
                 final Result<?> decodedVariableHeader = decodeVariableHeader(mqttVersion, buffer, mqttFixedHeader, bytesRemainingInVariablePart);
                 variableHeader = decodedVariableHeader.value;
                 if (bytesRemainingInVariablePart > maxBytesInMessage) {
-                    buffer.skipBytes(actualReadableBytes());
+                    //buffer.skipBytes(actualReadableBytes());
                     throw new TooLongFrameException("too large message: " + bytesRemainingInVariablePart + " bytes");
                 }
                 bytesRemainingInVariablePart -= decodedVariableHeader.numberOfBytesConsumed;
-                checkpoint(DecoderState.READ_PAYLOAD);
+                //checkpoint(DecoderState.READ_PAYLOAD);
                 // fall through
             } catch (Exception cause) {
                 return invalidMessage(cause, mqttFixedHeader, variableHeader);
@@ -121,7 +117,7 @@ public final class MqttDecoderUtil extends ReplayingDecoder<MqttDecoderUtil.Deco
                             "non-zero remaining payload bytes: " +
                                     bytesRemainingInVariablePart + " (" + mqttFixedHeader.messageType() + ')');
                 }
-                checkpoint(DecoderState.READ_FIXED_HEADER);
+                //checkpoint(DecoderState.READ_FIXED_HEADER);
                 mqttMessage = MqttMessageFactory.newMessage(
                         mqttFixedHeader, variableHeader, decodedPayload.value);
                 mqttFixedHeader = null;
@@ -133,7 +129,7 @@ public final class MqttDecoderUtil extends ReplayingDecoder<MqttDecoderUtil.Deco
 
             case BAD_MESSAGE:
                 // Keep discarding until disconnection.
-                buffer.skipBytes(actualReadableBytes());
+                //buffer.skipBytes(actualReadableBytes());
                 break;
 
             default:
@@ -143,18 +139,9 @@ public final class MqttDecoderUtil extends ReplayingDecoder<MqttDecoderUtil.Deco
         return mqttMessage;
     }
 
-    @Deprecated
-    @Override
-    public void decode(ChannelHandlerContext ctx, ByteBuf buffer, List<Object> out) throws Exception {
-        MqttVersion mqttVersion = getMqttVersion(ctx);
-        if (mqttVersion == null) {
-            throw new RuntimeException("mqtt 获取版本号异常！");
-        }
-        out.add(doDecode(mqttVersion, buffer));
-    }
 
     private MqttMessage invalidMessage(Throwable cause,MqttFixedHeader mqttFixedHeader, Object variableHeader) {
-      checkpoint(DecoderState.BAD_MESSAGE);
+      //checkpoint(DecoderState.BAD_MESSAGE);
       return MqttMessageFactory.newInvalidMessage(mqttFixedHeader, variableHeader, cause);
     }
 
