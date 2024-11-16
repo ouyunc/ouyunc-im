@@ -4,6 +4,7 @@ import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.model.MqttLoginClientInfo;
 import com.ouyunc.core.listener.MessageListener;
 import com.ouyunc.core.listener.event.ClientLogoutEvent;
+import com.ouyunc.message.processor.MqttPublishMessageContentProcessor;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.codec.mqtt.*;
 import io.netty.util.CharsetUtil;
@@ -34,13 +35,13 @@ public class ClientLogoutListener implements MessageListener<ClientLogoutEvent> 
         }
         // 处理mqtt遗嘱信息
         if (source instanceof MqttLoginClientInfo mqttLoginClientInfo && mqttLoginClientInfo.getEnableWill() == MessageConstant.ONE && StringUtils.isNoneBlank(mqttLoginClientInfo.getWillMessage())) {
+            log.info("客户端离线，发送遗嘱消息：{}", mqttLoginClientInfo);
             MqttMessage willMqttMessage = MqttMessageFactory.newMessage(
                     new MqttFixedHeader(MqttMessageType.PUBLISH, false, MqttQoS.valueOf(mqttLoginClientInfo.getQos()), mqttLoginClientInfo.getIsWillRetain() == MessageConstant.ONE, 0),
                     new MqttPublishVariableHeader(mqttLoginClientInfo.getWillTopic(), 0), ByteBufAllocator.DEFAULT.buffer().writeBytes(mqttLoginClientInfo.getWillMessage().getBytes(CharsetUtil.UTF_8)));
-            // @todo 发送遗嘱消息给订阅willTopic 的客户端
-
+            // 发送遗嘱消息到willTopic
+            MqttPublishMessageContentProcessor.doPublishMessage(willMqttMessage);
         }
-
-        // do nothing
+        // do other something
     }
 }

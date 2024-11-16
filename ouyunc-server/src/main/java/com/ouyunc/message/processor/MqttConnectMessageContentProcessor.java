@@ -125,8 +125,7 @@ public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<In
                 ctx.close();
                 return;
             }
-            DeviceType deviceType = DeviceTypeEnum.IOT;
-            String comboIdentity = IdentityUtil.generalComboIdentity(mqttLoginClientInfo.getAppKey(), mqttLoginClientInfo.getIdentity(), deviceType.getDeviceTypeName());
+            String comboIdentity = IdentityUtil.generalComboIdentity(mqttLoginClientInfo.getAppKey(), mqttLoginClientInfo.getIdentity(), DeviceTypeEnum.IOT);
             String clientLoginCacheKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + mqttLoginClientInfo.getAppKey() + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + comboIdentity;
             //如果之前已经登录（重复登录请求），这里判断是否已经登录过,同一个账号在同一个设备不能同时登录
             //1,从分布式缓存取出该登录用户
@@ -135,7 +134,7 @@ public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<In
             ChannelHandlerContext bindCtx = MessageServerContext.localClientRegisterTable.get(comboIdentity);
             // 如果还在当前服务登录的话，先关闭之前的连接(这里没有强制去通知让原来的连接进行跨服务下线，只是通过心跳让其自动感知下线)， 如果不在该服务器再次登录，也是需要关闭之前的channel,否则，如果当前登录绑定了信息，后面另外的channel 在关闭然后触发关闭事件，导致删除失败就会把缓存的登录信息给删掉
             if (bindCtx != null) {
-                // 如果之前有绑定信息，且不为空，这里会触发close 监听事件，进而会删除本地缓存和远端缓存，注意这里是异步执行，可能会影响绑定的信息
+                // 如果之前有绑定信息，且不为空，这里会触发close 监听事件，进而会删除本地缓存和远端缓存，注意这里是异步执行
                 bindCtx.close();
             }
             // sessionPresent

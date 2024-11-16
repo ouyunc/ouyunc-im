@@ -35,7 +35,7 @@ public class MqttRepository implements Repository{
      * @param comboIdentity
      * @param mqttMessage
      */
-    public void saveWillMessage(String comboIdentity, MqttMessage mqttMessage) {
+    public void savePublishMessage(MqttMessage mqttMessage) {
 
     }
 
