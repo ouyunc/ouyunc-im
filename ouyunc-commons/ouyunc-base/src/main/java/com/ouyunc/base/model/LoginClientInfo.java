@@ -29,6 +29,10 @@ public class LoginClientInfo extends LoginContent {
      */
     private String authorizationScope;
 
+    /**
+     * 服务端计算后的心跳超时时间，单位秒
+     */
+    private int heartBeatTimeout;
 
     /**
      * 登录信息过期时间，单位秒
@@ -40,6 +44,13 @@ public class LoginClientInfo extends LoginContent {
      */
     private long lastLoginTime;
 
+    public int getHeartBeatTimeout() {
+        return heartBeatTimeout;
+    }
+
+    public void setHeartBeatTimeout(int heartBeatTimeout) {
+        this.heartBeatTimeout = heartBeatTimeout;
+    }
 
     public String getLoginServerAddress() {
         return loginServerAddress;
@@ -97,12 +108,13 @@ public class LoginClientInfo extends LoginContent {
     public LoginClientInfo() {
     }
 
-    public LoginClientInfo(String loginServerAddress, OnlineEnum onlineStatus, String authorizationScope, long loginExpireTime, long lastLoginTime, String appKey, String identity, DeviceType deviceType, String signature, byte signatureAlgorithm, int heartBeatExpireTime, int enableWill, String willMessage, String willTopic, int cleanSession, int sessionExpiryInterval, long createTime) {
-        super(appKey, identity, deviceType, signature, signatureAlgorithm, heartBeatExpireTime, enableWill,  willMessage, willTopic, cleanSession, sessionExpiryInterval, createTime);
+    public LoginClientInfo(String loginServerAddress, OnlineEnum onlineStatus, String authorizationScope, long loginExpireTime, int heartBeatTimeout, long lastLoginTime, String appKey, String identity, DeviceType deviceType, String signature, byte signatureAlgorithm, int heartBeatExpireTime, long createTime) {
+        super(appKey, identity, deviceType, signature, signatureAlgorithm, heartBeatExpireTime, createTime);
         this.loginServerAddress = loginServerAddress;
         this.onlineStatus = onlineStatus;
         this.authorizationScope = authorizationScope;
         this.loginExpireTime = loginExpireTime;
+        this.heartBeatTimeout = heartBeatTimeout;
         this.lastLoginTime = lastLoginTime;
     }
 }

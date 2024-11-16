@@ -17,6 +17,7 @@ import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.utils.SnowflakeUtil;
 import com.ouyunc.base.utils.TimeUtil;
+import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.ClientLoginEvent;
 import com.ouyunc.core.listener.event.ClientLogoutEvent;
 import com.ouyunc.message.context.MessageServerContext;
@@ -45,6 +46,7 @@ public class LoginMessageProcessor extends AbstractMessageProcessor<Byte> {
     public MessageType type() {
         return WsMessageTypeEnum.LOGIN;
     }
+
     /***
      * @author fzx
      * @description 消息前置处理，做登录业务逻辑
@@ -93,7 +95,7 @@ public class LoginMessageProcessor extends AbstractMessageProcessor<Byte> {
             bindCtx.close();
         }
         // 绑定信息
-        cacheLoginClientInfo = ClientHelper.bind(ctx, loginContent, loginTimestamp);
+        ClientHelper.bind(ctx, cacheLoginClientInfo = new LoginClientInfo(MessageContext.messageProperties.getLocalServerAddress(), OnlineEnum.ONLINE, null, ClientHelper.calculateClientLoginExpireTime(loginContent.getHeartBeatExpireTime()), ClientHelper.calculateClientHeartBeatTimeout(loginContent.getHeartBeatExpireTime()), loginTimestamp, loginContent.getAppKey(), loginContent.getIdentity(), deviceType, loginContent.getSignature(), loginContent.getSignatureAlgorithm(), loginContent.getHeartBeatExpireTime(), loginTimestamp));
         // 添加channel 关闭后释放资源的钩子, 该逻辑在DefaultSocketChannelInitializer 中进行调用
         Consumer<Channel> channelCloseHook = channel -> {
             //1,从channel中的attrMap取出相关属性
@@ -114,10 +116,10 @@ public class LoginMessageProcessor extends AbstractMessageProcessor<Byte> {
                         if (closingRemoteLoginClientInfo != null && closingLocalloginClientInfo.getLoginServerAddress().equals(closingRemoteLoginClientInfo.getLoginServerAddress()) && closingRemoteLoginClientInfo.getLastLoginTime() == closingLocalloginClientInfo.getLastLoginTime()) {
                             // 缓存中有没有登录信息都进行删除下
                             MessageServerContext.remoteLoginClientInfoCache.delete(loginClientInfoCacheKey);
-                        }else {
+                        } else {
                             log.warn("客户端: {} 解绑登录信息失败,原因：缓存中不存在登录信息或登录地址不匹配", closingLocalloginClientInfo);
                         }
-                    }else {
+                    } else {
                         log.error("客户端: {} 绑定登录信息失败,原因：获取分布式锁失败", closingLocalloginClientInfo);
                     }
                 } catch (Exception e) {

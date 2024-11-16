@@ -1,6 +1,5 @@
 package com.ouyunc.message.processor;
 
-import com.ouyunc.base.packet.Packet;
 import io.netty.channel.ChannelHandlerContext;
 
 /**

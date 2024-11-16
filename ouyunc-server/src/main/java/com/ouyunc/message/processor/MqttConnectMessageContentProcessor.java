@@ -6,6 +6,7 @@ import com.ouyunc.base.constant.enums.*;
 import com.ouyunc.base.encrypt.Encrypt;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.model.LoginClientInfo;
+import com.ouyunc.base.model.MqttLoginClientInfo;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.packet.message.content.LoginContent;
@@ -13,13 +14,13 @@ import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.utils.MqttCodecUtil;
 import com.ouyunc.base.utils.TimeUtil;
+import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.ClientLogoutEvent;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.handler.HeartBeatHandler;
 import com.ouyunc.message.handler.LoginKeepAliveHandler;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.repository.MqttRepository;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
@@ -31,7 +32,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 /**
@@ -50,14 +50,16 @@ public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<In
     public MqttRepository repository() {
         return new MqttRepository();
     }
-private static AtomicInteger i= new AtomicInteger(0);
     @Override
     public void process(ChannelHandlerContext ctx, Packet packet) {
         log.info("MqttConnectMessageProcessor connect 正在处理mqtt 连接消息...");
         long loginTimestamp = TimeUtil.currentTimeMillis();
         Message connectMessage = packet.getMessage();
-
         MqttVersion mqttVersion = MqttCodecUtil.getMqttVersion(packet.getRetain());
+        if (mqttVersion == null) {
+            log.error("MqttConnectMessageProcessor connect 消息解码失败，请检查协议版本是否正确！");
+            return;
+        }
         MqttMessage mqttMessage = MqttCodecUtil.decode(mqttVersion, connectMessage.getContent());
         if (mqttMessage instanceof MqttConnectMessage mqttConnectMessage) {
             // 消息解码器出现异常
@@ -99,6 +101,14 @@ private static AtomicInteger i= new AtomicInteger(0);
             String appKey = mqttConnectPayload.userName();
             byte[] passwordBytes = mqttConnectPayload.passwordInBytes();
             String signature =  passwordBytes == null ? null : new String(passwordBytes, CharsetUtil.UTF_8);
+            byte[] willMessageInBytes = mqttConnectPayload.willMessageInBytes();
+            String willMessage = willMessageInBytes == null ? null : new String(willMessageInBytes, CharsetUtil.UTF_8);
+            String willTopic = mqttConnectPayload.willTopic();
+            int enableWill = mqttConnectVariableHeader.isWillFlag() ? MessageConstant.ONE : MessageConstant.ZERO;
+            int qos = mqttConnectVariableHeader.willQos();
+            int cleanSession = mqttConnectVariableHeader.isCleanSession() ? MessageConstant.ONE : MessageConstant.ZERO;
+            int isWillRetain = mqttConnectVariableHeader.isWillRetain() ? MessageConstant.ONE : MessageConstant.ZERO;
+            byte version = mqttVersion.protocolLevel();
             // 永不过期
             int sessionExpiryInterval = MessageConstant.MINUS_ONE;
             // 构造登录消息
@@ -106,9 +116,8 @@ private static AtomicInteger i= new AtomicInteger(0);
             if (sessionExpiryIntervalProperty != null) {
                 sessionExpiryInterval = sessionExpiryIntervalProperty.value();
             }
-            // @todo 根据自己的业务这里进行修改
-            LoginContent loginContent = new LoginContent(appKey, mqttConnectPayload.clientIdentifier() + i.getAndIncrement(), DeviceTypeEnum.IOT, signature, Encrypt.AsymmetricEncrypt.MD5.getValue(), mqttConnectVariableHeader.keepAliveTimeSeconds(), mqttConnectVariableHeader.isWillFlag() ? MessageConstant.ONE : MessageConstant.ZERO, "123", "/test/aaa", mqttConnectVariableHeader.isCleanSession()? MessageConstant.ONE : MessageConstant.ZERO, sessionExpiryInterval, connectMessage.getCreateTime());
-            if (!validate(loginContent)) {
+            MqttLoginClientInfo mqttLoginClientInfo = new MqttLoginClientInfo(MessageContext.messageProperties.getLocalServerAddress(), OnlineEnum.ONLINE, null, ClientHelper.calculateClientLoginExpireTime(sessionExpiryInterval), ClientHelper.calculateClientHeartBeatTimeout(sessionExpiryInterval), loginTimestamp, appKey, mqttConnectPayload.clientIdentifier(), DeviceTypeEnum.IOT, signature, Encrypt.AsymmetricEncrypt.MD5.getValue(), sessionExpiryInterval, loginTimestamp, enableWill, qos, version, isWillRetain, willMessage, willTopic, cleanSession, sessionExpiryInterval);
+            if (!validate(mqttLoginClientInfo)) {
                 MqttMessage connAckMessage = MqttMessageFactory.newMessage(
                         new MqttFixedHeader(MqttMessageType.CONNACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
                         new MqttConnAckVariableHeader(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED, false), null);
@@ -117,8 +126,8 @@ private static AtomicInteger i= new AtomicInteger(0);
                 return;
             }
             DeviceType deviceType = DeviceTypeEnum.IOT;
-            String comboIdentity = IdentityUtil.generalComboIdentity(loginContent.getAppKey(), loginContent.getIdentity(), deviceType.getDeviceTypeName());
-            String clientLoginCacheKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + loginContent.getAppKey() + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + comboIdentity;
+            String comboIdentity = IdentityUtil.generalComboIdentity(mqttLoginClientInfo.getAppKey(), mqttLoginClientInfo.getIdentity(), deviceType.getDeviceTypeName());
+            String clientLoginCacheKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + mqttLoginClientInfo.getAppKey() + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + comboIdentity;
             //如果之前已经登录（重复登录请求），这里判断是否已经登录过,同一个账号在同一个设备不能同时登录
             //1,从分布式缓存取出该登录用户
             LoginClientInfo cacheLoginClientInfo = MessageServerContext.remoteLoginClientInfoCache.get(clientLoginCacheKey);
@@ -129,49 +138,47 @@ private static AtomicInteger i= new AtomicInteger(0);
                 // 如果之前有绑定信息，且不为空，这里会触发close 监听事件，进而会删除本地缓存和远端缓存，注意这里是异步执行，可能会影响绑定的信息
                 bindCtx.close();
             }
-            // 处理遗嘱信息
-            if (mqttConnectMessage.variableHeader().isWillFlag()) {
-                MqttMessage willMqttMessage = MqttMessageFactory.newMessage(
-                        new MqttFixedHeader(MqttMessageType.PUBLISH, false, MqttQoS.valueOf(mqttConnectMessage.variableHeader().willQos()), mqttConnectMessage.variableHeader().isWillRetain(), 0),
-                        new MqttPublishVariableHeader(mqttConnectMessage.payload().willTopic(), 0), ByteBufAllocator.DEFAULT.buffer().writeBytes(mqttConnectMessage.payload().willMessageInBytes()));
-                // @todo 保存遗嘱消息到缓存
-                repository().saveWillMessage(comboIdentity, willMqttMessage);
-            }
             // sessionPresent
             boolean sessionPresent = cacheLoginClientInfo != null && !mqttConnectMessage.variableHeader().isCleanSession();
-            // 绑定信息
-            ClientHelper.bind(ctx, loginContent, loginTimestamp);
+            ClientHelper.bind(ctx, mqttLoginClientInfo);
             // 处理回调信息
             Consumer<Channel> channelConsumer = channel -> {
                 log.warn("客户端断开连接, 触发回调, comboIdentity: {}, channel: {}", comboIdentity, channel);
                 // 处理掉线事件
                 //1,从channel中的attrMap取出相关属性
-                final LoginClientInfo closingLocalloginClientInfo = ChannelAttrUtil.getChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
-                if (closingLocalloginClientInfo != null) {
+                final LoginClientInfo closingLocalLoginClientInfo = ChannelAttrUtil.getChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
+                if (closingLocalLoginClientInfo != null) {
                     // 这里不进行判空了，到这里肯定不为空（登录信息里面一定要有登录设备的类型）
-                    String clientLoginDeviceName = closingLocalloginClientInfo.getDeviceType().getDeviceTypeName();
-                    String closingComboIdentity = IdentityUtil.generalComboIdentity(closingLocalloginClientInfo.getAppKey(), closingLocalloginClientInfo.getIdentity(), clientLoginDeviceName);
+                    String clientLoginDeviceName = closingLocalLoginClientInfo.getDeviceType().getDeviceTypeName();
+                    String closingComboIdentity = IdentityUtil.generalComboIdentity(closingLocalLoginClientInfo.getAppKey(), closingLocalLoginClientInfo.getIdentity(), clientLoginDeviceName);
                     // 登录信息一致,才进行解绑，删除缓存信息
                     MessageServerContext.localClientRegisterTable.delete(closingComboIdentity);
-                    String loginClientInfoCacheKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + closingLocalloginClientInfo.getAppKey() + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + closingComboIdentity;
+                    String loginClientInfoCacheKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + closingLocalLoginClientInfo.getAppKey() + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + closingComboIdentity;
                     // 获取分布式锁, 这里使用锁的目的，可以参考登录处理器的分布式锁，防止重复解绑 LoginMessageProcessor
-                    RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + closingLocalloginClientInfo.getAppKey() + CacheConstant.COLON + closingComboIdentity);
+                    RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + closingLocalLoginClientInfo.getAppKey() + CacheConstant.COLON + closingComboIdentity);
                     try {
                         if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
-                            LoginClientInfo closingRemoteLoginClientInfo = MessageServerContext.remoteLoginClientInfoCache.get(loginClientInfoCacheKey);
-                            // 这里比较两个登录服务器地址是否一致的目的是因为，无论集群还是单服务 在ctx异步关闭时,有可能存在关闭的执行顺序比绑定客户端的方法执行的慢，导致缓存被覆盖，结果又给删除了缓存信息，导致数据错乱。
-                            if (closingRemoteLoginClientInfo != null && closingLocalloginClientInfo.getLoginServerAddress().equals(closingRemoteLoginClientInfo.getLoginServerAddress()) && closingRemoteLoginClientInfo.getLastLoginTime() == closingLocalloginClientInfo.getLastLoginTime()) {
-                                // 缓存中有没有登录信息都进行设置下线
-                                closingRemoteLoginClientInfo.setOnlineStatus(OnlineEnum.OFFLINE);
-                                MessageServerContext.remoteLoginClientInfoCache.put(loginClientInfoCacheKey, closingRemoteLoginClientInfo, closingRemoteLoginClientInfo.getSessionExpiryInterval(), TimeUnit.SECONDS);
-                            }else {
-                                log.warn("mqtt客户端: {} 解绑登录信息失败,原因：缓存中不存在登录信息或登录地址不匹配", closingLocalloginClientInfo);
+                            LoginClientInfo closingRemoteLoginClientInfo =  MessageServerContext.remoteLoginClientInfoCache.get(loginClientInfoCacheKey);
+                            if (closingRemoteLoginClientInfo instanceof MqttLoginClientInfo closingRemoteMqttLoginClientInfo) {
+                                // 这里比较两个登录服务器地址是否一致的目的是因为，无论集群还是单服务 在ctx异步关闭时,有可能存在关闭的执行顺序比绑定客户端的方法执行的慢，导致缓存被覆盖，结果又给删除了缓存信息，导致数据错乱。
+                                if (closingLocalLoginClientInfo.getLoginServerAddress().equals(closingRemoteMqttLoginClientInfo.getLoginServerAddress()) && closingRemoteMqttLoginClientInfo.getLastLoginTime() == closingLocalLoginClientInfo.getLastLoginTime()) {
+                                    // 缓存中有没有登录信息都进行设置下线,如果开启cleanSession 则进行下线处理，如果没有开启则直接删除
+                                    if (closingRemoteMqttLoginClientInfo.getCleanSession() == MessageConstant.ZERO) {
+                                        MessageServerContext.remoteLoginClientInfoCache.delete(loginClientInfoCacheKey);
+                                    }else if (closingRemoteMqttLoginClientInfo.getCleanSession() == MessageConstant.ONE) {
+                                        closingRemoteMqttLoginClientInfo.setOnlineStatus(OnlineEnum.OFFLINE);
+                                        MessageServerContext.remoteLoginClientInfoCache.put(loginClientInfoCacheKey, closingRemoteMqttLoginClientInfo, closingRemoteMqttLoginClientInfo.getSessionExpiryInterval(), TimeUnit.SECONDS);
+                                    }
+                                }else {
+                                    log.warn("mqtt客户端: {} 解绑登录信息失败,原因：缓存中不存在登录信息或登录地址不匹配", closingLocalLoginClientInfo);
+                                }
                             }
+
                         }else {
-                            log.error("mqtt客户端: {} 绑定登录信息失败,原因：获取分布式锁失败", closingLocalloginClientInfo);
+                            log.error("mqtt客户端: {} 绑定登录信息失败,原因：获取分布式锁失败", closingLocalLoginClientInfo);
                         }
                     } catch (Exception e) {
-                        log.error("mqtt客户端: {} 绑定登录信息失败,原因：{}", closingLocalloginClientInfo, e.getMessage());
+                        log.error("mqtt客户端: {} 绑定登录信息失败,原因：{}", closingLocalLoginClientInfo, e.getMessage());
                         throw new MessageException(e);
                     } finally {
                         if (lock.isLocked() && lock.isHeldByCurrentThread()) {
@@ -179,7 +186,7 @@ private static AtomicInteger i= new AtomicInteger(0);
                         }
                     }
                     // 发送客户端离线事件， 可以处理发送遗嘱等客户端关闭后的操作逻辑
-                    MessageServerContext.publishEvent(new ClientLogoutEvent(closingLocalloginClientInfo), true);
+                    MessageServerContext.publishEvent(new ClientLogoutEvent(closingLocalLoginClientInfo), true);
                 }
             };
             // 设置channel关闭后的钩子
