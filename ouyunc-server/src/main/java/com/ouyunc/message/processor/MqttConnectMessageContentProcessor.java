@@ -111,6 +111,8 @@ public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<In
             int cleanSession = mqttConnectVariableHeader.isCleanSession() ? MessageConstant.ONE : MessageConstant.ZERO;
             int isWillRetain = mqttConnectVariableHeader.isWillRetain() ? MessageConstant.ONE : MessageConstant.ZERO;
             byte version = mqttVersion.protocolLevel();
+            // 心跳
+            int keepAlive = mqttConnectVariableHeader.keepAliveTimeSeconds();
             // 永不过期
             int sessionExpiryInterval = MessageConstant.MINUS_ONE;
             // 构造登录消息
@@ -118,7 +120,7 @@ public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<In
             if (sessionExpiryIntervalProperty != null) {
                 sessionExpiryInterval = sessionExpiryIntervalProperty.value();
             }
-            MqttLoginClientInfo mqttLoginClientInfo = new MqttLoginClientInfo(MessageContext.messageProperties.getLocalServerAddress(), OnlineEnum.ONLINE, null, ClientHelper.calculateClientLoginExpireTime(sessionExpiryInterval), ClientHelper.calculateClientHeartBeatTimeout(sessionExpiryInterval), loginTimestamp, appKey, mqttConnectPayload.clientIdentifier(), DeviceTypeEnum.IOT, signature, Encrypt.AsymmetricEncrypt.MD5.getValue(), sessionExpiryInterval, loginTimestamp, enableWill, qos, version, isWillRetain, willMessage, willTopic, cleanSession, sessionExpiryInterval);
+            MqttLoginClientInfo mqttLoginClientInfo = new MqttLoginClientInfo(MessageContext.messageProperties.getLocalServerAddress(), OnlineEnum.ONLINE, null, ClientHelper.calculateClientLoginExpireTime(keepAlive), ClientHelper.calculateClientHeartBeatTimeout(keepAlive), loginTimestamp, appKey, mqttConnectPayload.clientIdentifier(), DeviceTypeEnum.IOT, signature, Encrypt.AsymmetricEncrypt.MD5.getValue(), keepAlive, loginTimestamp, enableWill, qos, version, isWillRetain, willMessage, willTopic, cleanSession, sessionExpiryInterval);
             if (!validate(mqttLoginClientInfo)) {
                 MqttMessage connAckMessage = MqttMessageFactory.newMessage(
                         new MqttFixedHeader(MqttMessageType.CONNACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
