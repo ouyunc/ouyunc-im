@@ -24,7 +24,7 @@ public class MqttPublishMessageContentProcessor extends AbstractBaseProcessor<In
     @SuppressWarnings("unchecked")
     @Override
     public MqttRepository repository() {
-        return new MqttRepository();
+        return MqttRepository.INSTANCE;
     }
 
     @Override
@@ -33,8 +33,6 @@ public class MqttPublishMessageContentProcessor extends AbstractBaseProcessor<In
             log.debug("MqttPublishMessageContentProcessor 正在处理mqtt 发布消息 {} ...", packet);
         }
         MqttMessage mqttPublishMessage = MqttCodecUtil.decode(MqttCodecUtil.getMqttVersion(packet.getRetain()), packet.getMessage().getContent());
-        // 存储数据
-        repository().savePublishMessage(mqttPublishMessage);
         // 发送消息
         doPublishMessage(mqttPublishMessage);
         // 处理qos
@@ -45,10 +43,12 @@ public class MqttPublishMessageContentProcessor extends AbstractBaseProcessor<In
      * 发布消息
      * @param mqttMessage
      */
-    public static void doPublishMessage(MqttMessage mqttMessage){
+    public void doPublishMessage(MqttMessage mqttMessage){
+        // 存储数据
+        repository().savePublishMessage(mqttMessage);
         if (mqttMessage instanceof MqttPublishMessage mqttPublishMessage) {
             // TODO 1，找到所有的订阅的客户端，发送消息；
-
+            log.info("发布消息：{}", mqttPublishMessage);
         }
     }
 

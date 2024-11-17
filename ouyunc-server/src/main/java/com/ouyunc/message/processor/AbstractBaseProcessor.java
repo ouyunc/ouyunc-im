@@ -22,7 +22,7 @@ public abstract class AbstractBaseProcessor<T extends Number> implements Process
      */
     @SuppressWarnings("unchecked")
     public <R extends Repository> R repository() {
-        return (R) new DefaultRepository();
+        return (R) DefaultRepository.INSTANCE;
     }
 
     /**

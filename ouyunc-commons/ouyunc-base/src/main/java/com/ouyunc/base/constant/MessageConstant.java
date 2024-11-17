@@ -51,6 +51,19 @@ public class MessageConstant {
     public static final long LOCK_LEASE_TIME = 5;
 
     /**
+     * false
+     */
+    public static final boolean FALSE = false;
+
+    /**
+     * true
+     */
+    public static final boolean TRUE = true;
+
+
+
+
+    /**
      * 自定义协议的魔数6个字节,字节数组 OUYUNC
      */
     public static final byte[] PACKET_MAGIC = {

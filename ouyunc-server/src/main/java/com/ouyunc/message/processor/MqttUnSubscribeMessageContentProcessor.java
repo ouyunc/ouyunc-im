@@ -30,7 +30,7 @@ public class MqttUnSubscribeMessageContentProcessor extends AbstractBaseProcesso
     @SuppressWarnings("unchecked")
     @Override
     public MqttRepository repository() {
-        return new MqttRepository();
+        return MqttRepository.INSTANCE;
     }
 
     @Override

@@ -1,9 +1,12 @@
 package com.ouyunc.message.listener;
 
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.enums.MqttMessageContentTypeEnum;
 import com.ouyunc.base.model.MqttLoginClientInfo;
 import com.ouyunc.core.listener.MessageListener;
 import com.ouyunc.core.listener.event.ClientLogoutEvent;
+import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.message.processor.AbstractBaseProcessor;
 import com.ouyunc.message.processor.MqttPublishMessageContentProcessor;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.codec.mqtt.*;
@@ -40,7 +43,10 @@ public class ClientLogoutListener implements MessageListener<ClientLogoutEvent> 
                     new MqttFixedHeader(MqttMessageType.PUBLISH, false, MqttQoS.valueOf(mqttLoginClientInfo.getQos()), mqttLoginClientInfo.getIsWillRetain() == MessageConstant.ONE, 0),
                     new MqttPublishVariableHeader(mqttLoginClientInfo.getWillTopic(), 0), ByteBufAllocator.DEFAULT.buffer().writeBytes(mqttLoginClientInfo.getWillMessage().getBytes(CharsetUtil.UTF_8)));
             // 发送遗嘱消息到willTopic
-            MqttPublishMessageContentProcessor.doPublishMessage(willMqttMessage);
+            AbstractBaseProcessor<? extends Number> baseProcessor = MessageServerContext.messageContentProcessorCache.get(MqttMessageContentTypeEnum.MQTT_PUBLISH.getType());
+            if (baseProcessor instanceof MqttPublishMessageContentProcessor mqttPublishMessageContentProcessor) {
+                mqttPublishMessageContentProcessor.doPublishMessage(willMqttMessage);
+            }
         }
         // do other something
     }

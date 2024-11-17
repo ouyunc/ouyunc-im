@@ -14,11 +14,12 @@ import org.springframework.data.redis.core.SessionCallback;
 import java.util.List;
 
 /**
- * mqtt 消息持久化操作
+ * mqtt 消息持久化操作, 单例模式
  */
-public class MqttRepository implements Repository{
-
+public enum MqttRepository implements Repository{
+    INSTANCE;
     private static final RedisTemplate redisTemplate = CacheFactory.REDIS.instance();
+
 
     /**
      * 保存全量信息
@@ -26,13 +27,13 @@ public class MqttRepository implements Repository{
      */
     @Override
     public void save(Packet packet) {
+        // 直接保存到数据库中，或者influxdb等时序数据库中
 
     }
 
 
     /**
      * 保存遗嘱消息
-     * @param comboIdentity
      * @param mqttMessage
      */
     public void savePublishMessage(MqttMessage mqttMessage) {

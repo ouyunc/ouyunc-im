@@ -21,6 +21,8 @@ import com.ouyunc.message.handler.HeartBeatHandler;
 import com.ouyunc.message.handler.LoginKeepAliveHandler;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.repository.MqttRepository;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
@@ -48,7 +50,7 @@ public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<In
     @SuppressWarnings("unchecked")
     @Override
     public MqttRepository repository() {
-        return new MqttRepository();
+        return MqttRepository.INSTANCE;
     }
     @Override
     public void process(ChannelHandlerContext ctx, Packet packet) {
@@ -134,6 +136,10 @@ public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<In
             ChannelHandlerContext bindCtx = MessageServerContext.localClientRegisterTable.get(comboIdentity);
             // 如果还在当前服务登录的话，先关闭之前的连接(这里没有强制去通知让原来的连接进行跨服务下线，只是通过心跳让其自动感知下线)， 如果不在该服务器再次登录，也是需要关闭之前的channel,否则，如果当前登录绑定了信息，后面另外的channel 在关闭然后触发关闭事件，导致删除失败就会把缓存的登录信息给删掉
             if (bindCtx != null) {
+                // @todo 关闭dup qos1
+                if (cleanSession == MessageConstant.ONE) {
+                    //dupPublishMessageStoreService.removeByClient(msg.payload().clientIdentifier());
+			    }
                 // 如果之前有绑定信息，且不为空，这里会触发close 监听事件，进而会删除本地缓存和远端缓存，注意这里是异步执行
                 bindCtx.close();
             }
@@ -208,21 +214,15 @@ public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<In
                     new MqttConnAckVariableHeader(MqttConnectReturnCode.CONNECTION_ACCEPTED, sessionPresent), null);
             ctx.writeAndFlush(mqttConnAckMessage);
             log.debug("CONNECT - clientId: {}, cleanSession: {}", mqttConnectMessage.payload().clientIdentifier(), mqttConnectMessage.variableHeader().isCleanSession());
-            // 如果cleanSession为0, 需要重发同一clientId存储的未完成的QoS1和QoS2的DUP消息
-//            if (!msg.variableHeader().isCleanSession()) {
+            // @todo 如果cleanSession为0, 需要重发同一clientId存储的未完成的QoS1和QoS2的DUP消息
+//            if (cleanSession == MessageConstant.ONE) {
 //                List<DupPublishMessageStore> dupPublishMessageStoreList = dupPublishMessageStoreService.get(msg.payload().clientIdentifier());
-//                List<DupPubRelMessageStore> dupPubRelMessageStoreList = dupPubRelMessageStoreService.get(msg.payload().clientIdentifier());
-//                dupPublishMessageStoreList.forEach(dupPublishMessageStore -> {
+//                // qos 1 消息重发
+//                dupPublishMessageList.forEach(dupPublishMessageStore -> {
 //                    MqttPublishMessage publishMessage = (MqttPublishMessage) MqttMessageFactory.newMessage(
 //                            new MqttFixedHeader(MqttMessageType.PUBLISH, true, MqttQoS.valueOf(dupPublishMessageStore.getMqttQoS()), false, 0),
-//                            new MqttPublishVariableHeader(dupPublishMessageStore.getTopic(), dupPublishMessageStore.getMessageId()), Unpooled.buffer().writeBytes(dupPublishMessageStore.getMessageBytes()));
+//                            new MqttPublishVariableHeader(dupPublishMessageStore.getTopic(), dupPublishMessageStore.getMessageId()), ByteBufAllocator.DEFAULT.buffer().writeBytes(dupPublishMessageStore.getMessageBytes()));
 //                    ctx.writeAndFlush(publishMessage);
-//                });
-//                dupPubRelMessageStoreList.forEach(dupPubRelMessageStore -> {
-//                    MqttMessage pubRelMessage = MqttMessageFactory.newMessage(
-//                            new MqttFixedHeader(MqttMessageType.PUBREL, true, MqttQoS.AT_MOST_ONCE, false, 0),
-//                            MqttMessageIdVariableHeader.from(dupPubRelMessageStore.getMessageId()), null);
-//                    ctx.writeAndFlush(pubRelMessage);
 //                });
 //            }
         }else {
