@@ -21,7 +21,28 @@ public class IpUtil {
     private static final Logger log = LoggerFactory.getLogger(IpUtil.class);
     private static final String unknown = "unknown";
 
+    private final static byte[][] INVALID_MACS = {
+            {0x00, 0x05, 0x69},             // VMWare
+            {0x00, 0x1C, 0x14},             // VMWare
+            {0x00, 0x0C, 0x29},             // VMWare
+            {0x00, 0x50, 0x56},             // VMWare
+            {0x08, 0x00, 0x27},             // Virtualbox
+            {0x0A, 0x00, 0x27},             // Virtualbox
+            {0x00, 0x03, (byte) 0xFF},       // Virtual-PC
+            {0x00, 0x15, 0x5D}              // Hyper-V
+    };
 
+    public static boolean isVMMac(byte[] mac) {
+        if (null == mac) {
+            return false;
+        }
+        for (byte[] invalid : INVALID_MACS) {
+            if (invalid[0] == mac[0] && invalid[1] == mac[1] && invalid[2] == mac[2]) {
+                return true;
+            }
+        }
+        return false;
+    }
     /**
      * 这里使用NetworkInterface 来获取本地ip ,使用InetAddress.getLocalHost().getHostAddress()来获取本地ip在window是正确的，linux不正确
      */
@@ -31,13 +52,22 @@ public class IpUtil {
             InetAddress ip;
             while (allNetInterfaces.hasMoreElements()) {
                 NetworkInterface netInterface = allNetInterfaces.nextElement();
-                if (!(netInterface.isLoopback() || netInterface.isVirtual() || !netInterface.isUp())) {
-                    Enumeration<InetAddress> addresses = netInterface.getInetAddresses();
-                    while (addresses.hasMoreElements()) {
-                        ip = addresses.nextElement();
-                        if (ip instanceof Inet4Address) {
-                            return ip.getHostAddress();
-                        }
+                if (!netInterface.isUp() || netInterface.isLoopback() || netInterface.isVirtual()) {
+                    log.warn("{} is not a valid network interface", netInterface.getDisplayName());
+                    continue;
+                }
+                if (isVMMac(netInterface.getHardwareAddress())) {
+                    log.warn("{} is not a valid network interface", netInterface.getDisplayName());
+                    continue;
+                }
+                Enumeration<InetAddress> addresses = netInterface.getInetAddresses();
+                while (addresses.hasMoreElements()) {
+                    ip = addresses.nextElement();
+                    if (ip.isLinkLocalAddress()) {
+                        continue;
+                    }
+                    if (ip instanceof Inet4Address) {
+                        return ip.getHostAddress();
                     }
                 }
             }
@@ -46,6 +76,9 @@ public class IpUtil {
         }
         return "";
     }
+
+
+
     /**
      * @Author fangzhenxun
      * @Description 字符串ip转int
