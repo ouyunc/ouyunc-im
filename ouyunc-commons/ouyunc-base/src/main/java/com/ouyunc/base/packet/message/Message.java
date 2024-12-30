@@ -206,4 +206,18 @@ public class Message implements Serializable, Cloneable {
             throw new AssertionError();
         }
     }
+
+    @Override
+    public String toString() {
+        return "Message{" +
+                "from='" + from + '\'' +
+                ", to='" + to + '\'' +
+                ", contentType=" + contentType +
+                ", content='" + content + '\'' +
+                ", extra='" + extra + '\'' +
+                ", qos=" + qos +
+                ", createTime=" + createTime +
+                ", metadata=" + metadata +
+                '}';
+    }
 }

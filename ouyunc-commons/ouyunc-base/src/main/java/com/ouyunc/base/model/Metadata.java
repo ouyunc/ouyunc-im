@@ -150,4 +150,18 @@ public class Metadata implements Serializable, Cloneable {
             throw new AssertionError();
         }
     }
+
+    @Override
+    public String toString() {
+        return "Metadata{" +
+                "appKey='" + appKey + '\'' +
+                ", routed=" + routed +
+                ", currentRetry=" + currentRetry +
+                ", fromServerAddress='" + fromServerAddress + '\'' +
+                ", target=" + target +
+                ", routingTables=" + routingTables +
+                ", clientIp='" + clientIp + '\'' +
+                ", serverTime=" + serverTime +
+                '}';
+    }
 }

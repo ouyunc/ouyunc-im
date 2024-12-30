@@ -90,4 +90,13 @@ public class RoutingTable implements Serializable, Cloneable  {
             throw new AssertionError();
         }
     }
+
+    @Override
+    public String toString() {
+        return "RoutingTable{" +
+                "serverAddress='" + serverAddress + '\'' +
+                ", preServerAddress='" + preServerAddress + '\'' +
+                ", routedServerAddresses=" + routedServerAddresses +
+                '}';
+    }
 }
