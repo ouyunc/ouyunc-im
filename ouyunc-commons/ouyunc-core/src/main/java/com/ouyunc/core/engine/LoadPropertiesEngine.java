@@ -97,6 +97,9 @@ public class LoadPropertiesEngine{
                 for (int i = 0; i < keys.length; i++) {
                     Object value = ymlInfo.get(keys[i]);
                     if (value == null) {
+                        if (StringUtils.isNotEmpty(defaultValue)) {
+                            ReflectUtil.setValueByField(field, t, defaultValue);
+                        }
                         break;
                     }
                     if (i < keys.length - 1) {
@@ -109,7 +112,6 @@ public class LoadPropertiesEngine{
                         }
                     }
                 }
-
             }else {
                 if (StringUtils.isNotBlank(defaultValue)) {
                     ReflectUtil.setValueByField(field, t, defaultValue);

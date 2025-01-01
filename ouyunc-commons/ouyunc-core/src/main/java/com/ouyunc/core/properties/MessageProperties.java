@@ -21,7 +21,7 @@ public class MessageProperties {
      * 如果是服务端 ，server提供的暴露ip(可以理解为主动设置本机ip),如果不指定则使用本地网卡ip，一般为内网ip; 注意如果开启集群，要注意集群服务的地址和该服务所在ip的网络是否连通
      * client ，如果是客户端则代表的是绑定的远端ip 或者是域名
      */
-    @Key(value = "ouyunc.message.ip", defaultValue = "127.0.0.1")
+    @Key(value = "ouyunc.message.ip")
     private String ip;
 
     /**

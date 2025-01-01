@@ -31,7 +31,10 @@
             </exclusions>
         </dependency>
         <!--日志框架-->
-
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-log4j2</artifactId>
+        </dependency>
         <dependency>
             <groupId>com.ouyunc</groupId>
             <artifactId>ouyunc-server</artifactId>
