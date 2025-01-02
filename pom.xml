@@ -63,7 +63,7 @@
     <protostuff.version>1.8.0</protostuff.version>
     <protobuf.version>4.28.0-RC3</protobuf.version>
     <!--aop-->
-    <aspectjweaver.version>1.9.21.2</aspectjweaver.version>
+    <aspectjweaver.version>1.9.22.1</aspectjweaver.version>
 
   </properties>
 

@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="AjcSettings">
-    <option name="ajcPath" value="$PROJECT_DIR$/../../repository/org/aspectj/aspectjtools/1.9.21.2/aspectjtools-1.9.21.2.jar" />
+    <option name="ajcPath" value="$PROJECT_DIR$/../../repository/org/aspectj/aspectjtools/1.9.22.1/aspectjtools-1.9.22.1.jar" />
     <option name="cmdLineParams" value="-Xlint:ignore -showWeaveInfo" />
     <option name="delegateToJavac" value="true" />
+    <option name="aptOptionsEnabled" value="true" />
   </component>
   <component name="CompilerConfiguration">
+    <option name="DEFAULT_COMPILER" value="ajc" />
     <annotationProcessing>
       <profile name="Maven default annotation processors profile" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
@@ -26,15 +28,7 @@
         <module name="ouyunc-repository" />
       </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel target="8">
-      <module name="ouyunc-im-cache" target="1.8" />
-      <module name="ouyunc-im-client" target="1.8" />
-      <module name="ouyunc-im-commons" target="1.8" />
-      <module name="ouyunc-im-core" target="1.8" />
-      <module name="ouyunc-im-db" target="1.8" />
-      <module name="ouyunc-im-domain" target="1.5" />
-      <module name="ouyunc-im-server" target="1.8" />
-    </bytecodeTargetLevel>
+    <bytecodeTargetLevel target="21" />
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
