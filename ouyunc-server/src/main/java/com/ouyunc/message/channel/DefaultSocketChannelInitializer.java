@@ -40,9 +40,9 @@ public class DefaultSocketChannelInitializer extends SocketChannelInitializer {
             SSLUtil.configSSL(channel -> {
                 SSLEngine sslEngine = SSLUtil.buildServerSslContext(MessageServerContext.serverProperties().getSslCertificate(), MessageServerContext.serverProperties().getSslPrivateKey()).newEngine(channel.alloc());
                 // 服务器端模式，客户端模式设置为true
-                sslEngine.setUseClientMode(false);
+                sslEngine.setUseClientMode(MessageConstant.FALSE);
                 // 不需要验证客户端，客户端不设置该项；  SSL/TLS 开启后有多种认证方式：1-不需要认证，2-单向认证（一般是客户端认证），3-双向认证
-                sslEngine.setNeedClientAuth(false);
+                sslEngine.setNeedClientAuth(MessageConstant.FALSE);
                 channel.pipeline().addFirst(MessageConstant.SSL_HANDLER, new SslHandler(sslEngine));
             }, socketChannel);
         }

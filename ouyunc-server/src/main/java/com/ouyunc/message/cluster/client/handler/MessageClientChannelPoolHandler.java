@@ -42,9 +42,9 @@ public class MessageClientChannelPoolHandler extends AbstractChannelPoolHandler 
             SSLUtil.configSSL(ch -> {
                 SSLEngine sslEngine = SSLUtil.buildClientSslContext(MessageServerContext.serverProperties().getSslCertificate(), MessageServerContext.serverProperties().getSslPrivateKey()).newEngine(channel.alloc());
                 // 客户端模式
-                sslEngine.setUseClientMode(true);
+                sslEngine.setUseClientMode(MessageConstant.TRUE);
                 // 不进行客户端校验
-                sslEngine.setNeedClientAuth(false);
+                sslEngine.setNeedClientAuth(MessageConstant.FALSE);
                 pipeline.addFirst(new SslHandler(sslEngine));
             }, channel);
         }

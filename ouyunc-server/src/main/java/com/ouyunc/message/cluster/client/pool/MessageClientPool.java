@@ -2,6 +2,7 @@ package com.ouyunc.message.cluster.client.pool;
 
 
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.utils.SocketAddressUtil;
 import com.ouyunc.message.cluster.client.handler.MessageClientChannelPoolHandler;
 import com.ouyunc.message.context.MessageServerContext;
@@ -49,13 +50,13 @@ public class MessageClientPool {
     // 初始化
     static {
         bootstrap = new Bootstrap();
-        workGroup = new NioEventLoopGroup(Runtime.getRuntime().availableProcessors()*2);
+        workGroup = new NioEventLoopGroup(Runtime.getRuntime().availableProcessors()* NumberConstant.NUMBER_2);
         AttributeKey<String> clusterClientTagKey = AttributeKey.valueOf(MessageConstant.BOOTSTRAP_ATTR_KEY_TAG_CLIENT);;
         bootstrap.group(workGroup)
                 .channel(NioSocketChannel.class)
-                .option(ChannelOption.SO_REUSEADDR, true)
-                .option(ChannelOption.SO_KEEPALIVE, true)
-                .option(ChannelOption.TCP_NODELAY, true)
+                .option(ChannelOption.SO_REUSEADDR, MessageConstant.TRUE)
+                .option(ChannelOption.SO_KEEPALIVE, MessageConstant.TRUE)
+                .option(ChannelOption.TCP_NODELAY, MessageConstant.TRUE)
                 .attr(clusterClientTagKey, MessageConstant.BOOTSTRAP_ATTR_KEY_TAG_CLUSTER_CLIENT_VALUE)
         ;
 

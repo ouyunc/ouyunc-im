@@ -40,8 +40,8 @@ public class ClientLogoutListener implements MessageListener<ClientLogoutEvent> 
         if (source instanceof MqttLoginClientInfo mqttLoginClientInfo && mqttLoginClientInfo.getEnableWill() == NumberConstant.NUMBER_1 && StringUtils.isNoneBlank(mqttLoginClientInfo.getWillMessage())) {
             log.info("客户端离线，发送遗嘱消息：{}", mqttLoginClientInfo);
             MqttMessage willMqttMessage = MqttMessageFactory.newMessage(
-                    new MqttFixedHeader(MqttMessageType.PUBLISH, false, MqttQoS.valueOf(mqttLoginClientInfo.getQos()), mqttLoginClientInfo.getIsWillRetain() == NumberConstant.NUMBER_1, 0),
-                    new MqttPublishVariableHeader(mqttLoginClientInfo.getWillTopic(), 0), ByteBufAllocator.DEFAULT.buffer().writeBytes(mqttLoginClientInfo.getWillMessage().getBytes(CharsetUtil.UTF_8)));
+                    new MqttFixedHeader(MqttMessageType.PUBLISH, false, MqttQoS.valueOf(mqttLoginClientInfo.getQos()), mqttLoginClientInfo.getIsWillRetain() == NumberConstant.NUMBER_1, NumberConstant.NUMBER_0),
+                    new MqttPublishVariableHeader(mqttLoginClientInfo.getWillTopic(), NumberConstant.NUMBER_0), ByteBufAllocator.DEFAULT.buffer().writeBytes(mqttLoginClientInfo.getWillMessage().getBytes(CharsetUtil.UTF_8)));
             // 发送遗嘱消息到willTopic
             AbstractBaseProcessor<? extends Number> baseProcessor = MessageServerContext.messageContentProcessorCache.get(MqttMessageContentTypeEnum.MQTT_PUBLISH.getType());
             if (baseProcessor instanceof MqttPublishMessageContentProcessor mqttPublishMessageContentProcessor) {
