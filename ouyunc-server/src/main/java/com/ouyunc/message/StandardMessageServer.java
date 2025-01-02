@@ -1,6 +1,6 @@
 package com.ouyunc.message;
 
-import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.MessageContentType;
 import com.ouyunc.base.constant.enums.MessageType;
 import com.ouyunc.base.model.ProtocolType;
@@ -158,10 +158,10 @@ public class StandardMessageServer extends AbstractMessageServer {
         // 消息 分别按照类型值分组，并排序
         messageProcessorList.stream().collect(Collectors.groupingBy(messageProcessor -> messageProcessor.type().getType())).forEach((messageTypeValue, messageProcessors)->{
             int messageProcessorSize = messageProcessors.size();
-            if (messageProcessorSize == MessageConstant.ONE) {
+            if (messageProcessorSize == NumberConstant.NUMBER_1) {
                 AbstractMessageProcessor<? extends Number> messageProcessor = messageProcessors.getFirst();
                 MessageServerContext.messageProcessorCache.put(messageTypeValue, messageProcessor);
-            }else if (messageProcessorSize > MessageConstant.ONE) {
+            }else if (messageProcessorSize > NumberConstant.NUMBER_1) {
                 List<ProcessorChain<AbstractMessageProcessor<? extends Number>>> processorChains = new ArrayList<>();
                 // 如果大于1，则转换为代理
                 messageProcessors.stream().collect(Collectors.groupingBy(processor -> new ProtocolType(processor.type().getProtocol(), processor.type().getProtocolVersion()))).forEach((protocolType, protocolTypeProcessors)->{
@@ -181,10 +181,10 @@ public class StandardMessageServer extends AbstractMessageServer {
         // 消息内容，分别按照类型值分组，并排序
         messageContentProcessorList.stream().collect(Collectors.groupingBy(messageContentProcessor -> messageContentProcessor.type().getType())).forEach((messageContentTypeValue, messageContentProcessors)->{
             int messageContentProcessorSize = messageContentProcessors.size();
-            if (messageContentProcessorSize == MessageConstant.ONE) {
+            if (messageContentProcessorSize == NumberConstant.NUMBER_1) {
                 AbstractBaseProcessor<? extends Number> messageContentProcessor = messageContentProcessors.getFirst();
                 MessageServerContext.messageContentProcessorCache.put(messageContentTypeValue, messageContentProcessor);
-            }else if (messageContentProcessorSize > MessageConstant.ONE) {
+            }else if (messageContentProcessorSize > NumberConstant.NUMBER_1) {
                 List<ProcessorChain<AbstractBaseProcessor<? extends Number>>> processorChains = new ArrayList<>();
                 // 如果大于1，则转换为代理
                 messageContentProcessors.stream().collect(Collectors.groupingBy(processor -> new ProtocolType(processor.type().getProtocol(), processor.type().getProtocolVersion()))).forEach((protocolType, protocolTypeProcessors)->{

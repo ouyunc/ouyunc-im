@@ -2,7 +2,11 @@ package com.ouyunc.message.processor;
 
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
-import com.ouyunc.base.constant.enums.*;
+import com.ouyunc.base.constant.NumberConstant;
+import com.ouyunc.base.constant.enums.DeviceTypeEnum;
+import com.ouyunc.base.constant.enums.MessageContentType;
+import com.ouyunc.base.constant.enums.MqttMessageContentTypeEnum;
+import com.ouyunc.base.constant.enums.OnlineEnum;
 import com.ouyunc.base.encrypt.Encrypt;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.model.LoginClientInfo;
@@ -21,8 +25,6 @@ import com.ouyunc.message.handler.HeartBeatHandler;
 import com.ouyunc.message.handler.LoginKeepAliveHandler;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.repository.MqttRepository;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
@@ -106,15 +108,15 @@ public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<In
             byte[] willMessageInBytes = mqttConnectPayload.willMessageInBytes();
             String willMessage = willMessageInBytes == null ? null : new String(willMessageInBytes, CharsetUtil.UTF_8);
             String willTopic = mqttConnectPayload.willTopic();
-            int enableWill = mqttConnectVariableHeader.isWillFlag() ? MessageConstant.ONE : MessageConstant.ZERO;
+            int enableWill = mqttConnectVariableHeader.isWillFlag() ? NumberConstant.NUMBER_1 : NumberConstant.NUMBER_0;
             int qos = mqttConnectVariableHeader.willQos();
-            int cleanSession = mqttConnectVariableHeader.isCleanSession() ? MessageConstant.ONE : MessageConstant.ZERO;
-            int isWillRetain = mqttConnectVariableHeader.isWillRetain() ? MessageConstant.ONE : MessageConstant.ZERO;
+            int cleanSession = mqttConnectVariableHeader.isCleanSession() ? NumberConstant.NUMBER_1 : NumberConstant.NUMBER_0;
+            int isWillRetain = mqttConnectVariableHeader.isWillRetain() ? NumberConstant.NUMBER_1 : NumberConstant.NUMBER_0;
             byte version = mqttVersion.protocolLevel();
             // 心跳
             int keepAlive = mqttConnectVariableHeader.keepAliveTimeSeconds();
             // 永不过期
-            int sessionExpiryInterval = MessageConstant.MINUS_ONE;
+            int sessionExpiryInterval = NumberConstant.NUMBER_NEGATIVE_1;
             // 构造登录消息
             MqttProperties.MqttProperty<Integer> sessionExpiryIntervalProperty = mqttConnectVariableHeader.properties().getProperty(MqttProperties.MqttPropertyType.SESSION_EXPIRY_INTERVAL.value());
             if (sessionExpiryIntervalProperty != null) {
@@ -139,7 +141,7 @@ public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<In
             // 如果还在当前服务登录的话，先关闭之前的连接(这里没有强制去通知让原来的连接进行跨服务下线，只是通过心跳让其自动感知下线)， 如果不在该服务器再次登录，也是需要关闭之前的channel,否则，如果当前登录绑定了信息，后面另外的channel 在关闭然后触发关闭事件，导致删除失败就会把缓存的登录信息给删掉
             if (bindCtx != null) {
                 // @todo 关闭dup qos1
-                if (cleanSession == MessageConstant.ONE) {
+                if (cleanSession == NumberConstant.NUMBER_1) {
                     //dupPublishMessageStoreService.removeByClient(msg.payload().clientIdentifier());
 			    }
                 // 如果之前有绑定信息，且不为空，这里会触发close 监听事件，进而会删除本地缓存和远端缓存，注意这里是异步执行
@@ -170,9 +172,9 @@ public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<In
                                 // 这里比较两个登录服务器地址是否一致的目的是因为，无论集群还是单服务 在ctx异步关闭时,有可能存在关闭的执行顺序比绑定客户端的方法执行的慢，导致缓存被覆盖，结果又给删除了缓存信息，导致数据错乱。
                                 if (closingLocalLoginClientInfo.getLoginServerAddress().equals(closingRemoteMqttLoginClientInfo.getLoginServerAddress()) && closingRemoteMqttLoginClientInfo.getLastLoginTime() == closingLocalLoginClientInfo.getLastLoginTime()) {
                                     // 缓存中有没有登录信息都进行设置下线,如果开启cleanSession 则进行下线处理，如果没有开启则直接删除
-                                    if (closingRemoteMqttLoginClientInfo.getCleanSession() == MessageConstant.ZERO) {
+                                    if (closingRemoteMqttLoginClientInfo.getCleanSession() == NumberConstant.NUMBER_0) {
                                         MessageServerContext.remoteLoginClientInfoCache.delete(loginClientInfoCacheKey);
-                                    }else if (closingRemoteMqttLoginClientInfo.getCleanSession() == MessageConstant.ONE) {
+                                    }else if (closingRemoteMqttLoginClientInfo.getCleanSession() == NumberConstant.NUMBER_1) {
                                         closingRemoteMqttLoginClientInfo.setOnlineStatus(OnlineEnum.OFFLINE);
                                         MessageServerContext.remoteLoginClientInfoCache.put(loginClientInfoCacheKey, closingRemoteMqttLoginClientInfo, closingRemoteMqttLoginClientInfo.getSessionExpiryInterval(), TimeUnit.SECONDS);
                                     }
@@ -206,7 +208,7 @@ public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<In
                         // 客户端登录保活处理器
                         .addAfter(MessageConstant.CONVERT_2_PACKET_HANDLER, MessageConstant.CLIENT_LOGIN_KEEP_ALIVE_HANDLER, new LoginKeepAliveHandler())
                         // 添加读写空闲处理器， 添加后，下条消息就可以接收心跳消息了
-                        .addAfter(MessageConstant.CLIENT_LOGIN_KEEP_ALIVE_HANDLER, MessageConstant.HEART_BEAT_IDLE_HANDLER, new IdleStateHandler(heartbeatExpireTime, MessageConstant.ZERO, MessageConstant.ZERO))
+                        .addAfter(MessageConstant.CLIENT_LOGIN_KEEP_ALIVE_HANDLER, MessageConstant.HEART_BEAT_IDLE_HANDLER, new IdleStateHandler(heartbeatExpireTime, NumberConstant.NUMBER_0, NumberConstant.NUMBER_0))
                         // 处理心跳的以及相关逻辑都放在这里处理
                         .addAfter(MessageConstant.HEART_BEAT_IDLE_HANDLER, MessageConstant.HEART_BEAT_HANDLER, new HeartBeatHandler());
             }
@@ -217,7 +219,7 @@ public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<In
             ctx.writeAndFlush(mqttConnAckMessage);
             log.debug("CONNECT - clientId: {}, cleanSession: {}", mqttConnectMessage.payload().clientIdentifier(), mqttConnectMessage.variableHeader().isCleanSession());
             // @todo 如果cleanSession为0, 需要重发同一clientId存储的未完成的QoS1和QoS2的DUP消息
-//            if (cleanSession == MessageConstant.ONE) {
+//            if (cleanSession == NumberConstant.NUMBER_1) {
 //                List<DupPublishMessageStore> dupPublishMessageStoreList = dupPublishMessageStoreService.get(msg.payload().clientIdentifier());
 //                // qos 1 消息重发
 //                dupPublishMessageList.forEach(dupPublishMessageStore -> {

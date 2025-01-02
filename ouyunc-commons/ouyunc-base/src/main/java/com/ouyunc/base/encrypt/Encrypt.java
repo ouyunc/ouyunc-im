@@ -1,6 +1,7 @@
 package com.ouyunc.base.encrypt;
 
 
+import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.utils.MD5Util;
 import com.ouyunc.base.utils.ObjectUtil;
@@ -16,7 +17,7 @@ public class Encrypt {
      **/
     public enum SymmetryEncrypt {
 
-        NONE((byte)0, "none", "不加密"){
+        NONE(NumberConstant.NUMBER_0, "none", "不加密"){
             @Override
             public <T> byte[] encrypt(T t) {
                 if (t instanceof byte[]) {
@@ -33,7 +34,7 @@ public class Encrypt {
                 return ObjectUtil.deserialize(bytes);
             }
         },
-        DES((byte)1, "des", "DES加密算法"){
+        DES(NumberConstant.NUMBER_1, "des", "DES加密算法"){
             @Override
             public <T> byte[] encrypt(T t) {
                 return new byte[0];
@@ -44,7 +45,7 @@ public class Encrypt {
                 return null;
             }
         },
-        DES_3((byte)2, "3des", "3DES加密算法"){
+        DES_3(NumberConstant.NUMBER_2, "3des", "3DES加密算法"){
             @Override
             public <T> byte[] encrypt(T t) {
                 return new byte[0];
@@ -55,7 +56,7 @@ public class Encrypt {
                 return null;
             }
         },
-        AES((byte)3, "aes", "AES加密算法"){
+        AES(NumberConstant.NUMBER_3, "aes", "AES加密算法"){
             @Override
             public <T> byte[] encrypt(T t) {
                 return new byte[0];
@@ -66,7 +67,7 @@ public class Encrypt {
                 return null;
             }
         },
-        SM1((byte)4, "sm1", "SM1加密算法"){
+        SM1(NumberConstant.NUMBER_4, "sm1", "SM1加密算法"){
             @Override
             public <T> byte[] encrypt(T t) {
                 return new byte[0];
@@ -77,7 +78,7 @@ public class Encrypt {
                 return null;
             }
         },
-        SMS4((byte)5, "sms4", "SMS4加密算法"){
+        SMS4(NumberConstant.NUMBER_5, "sms4", "SMS4加密算法"){
             @Override
             public <T> byte[] encrypt(T t) {
                 return new byte[0];
@@ -88,7 +89,7 @@ public class Encrypt {
                 return null;
             }
         },
-        PBE((byte)6, "pbe", "PBE加密算法"){
+        PBE(NumberConstant.NUMBER_6, "pbe", "PBE加密算法"){
             @Override
             public <T> byte[] encrypt(T t) {
                 return new byte[0];
@@ -99,7 +100,7 @@ public class Encrypt {
                 return null;
             }
         },
-        RC2((byte)7, "rc2", "RC2加密算法"){
+        RC2(NumberConstant.NUMBER_7, "rc2", "RC2加密算法"){
             @Override
             public <T> byte[] encrypt(T t) {
                 return new byte[0];
@@ -110,7 +111,7 @@ public class Encrypt {
                 return null;
             }
         },
-        RC4((byte)8, "rc4", "RC4加密算法"){
+        RC4(NumberConstant.NUMBER_8, "rc4", "RC4加密算法"){
             @Override
             public <T> byte[] encrypt(T t) {
                 return new byte[0];
@@ -121,7 +122,7 @@ public class Encrypt {
                 return null;
             }
         },
-        RC5((byte)9, "rc5", "RC5加密算法"){
+        RC5(NumberConstant.NUMBER_9, "rc5", "RC5加密算法"){
             @Override
             public <T> byte[] encrypt(T t) {
                 return new byte[0];

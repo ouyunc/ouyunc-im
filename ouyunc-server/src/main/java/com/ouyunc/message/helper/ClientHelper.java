@@ -2,6 +2,7 @@ package com.ouyunc.message.helper;
 
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.DeviceType;
 import com.ouyunc.base.constant.enums.OnlineEnum;
 import com.ouyunc.base.constant.enums.SaveModeEnum;
@@ -71,9 +72,9 @@ public class ClientHelper {
      */
     public static int calculateClientHeartBeatTimeout(int heartBeatExpireTime) {
         int heartBeatTimeSeconds = MessageServerContext.serverProperties().getClientHeartBeatTimeout();
-        if (heartBeatExpireTime > MessageConstant.ZERO) {
+        if (heartBeatExpireTime > NumberConstant.NUMBER_0) {
             int x = Math.round(heartBeatExpireTime * MessageConstant.ZERO_POINT_FIVE);
-            heartBeatTimeSeconds = x >= MessageConstant.FIVE ? heartBeatExpireTime + MessageConstant.FIVE : heartBeatExpireTime + x;
+            heartBeatTimeSeconds = x >= NumberConstant.NUMBER_5 ? heartBeatExpireTime + NumberConstant.NUMBER_5 : heartBeatExpireTime + x;
         }
         return heartBeatTimeSeconds;
     }
@@ -85,12 +86,12 @@ public class ClientHelper {
      * @return
      */
     public static long calculateClientLoginExpireTime(int heartBeatExpireTime) {
-        long expireTime = MessageConstant.MINUS_ONE;
+        long expireTime = NumberConstant.NUMBER_NEGATIVE_1;
         // 计算心跳超时时间
         int heartBeatTimeout = calculateClientHeartBeatTimeout(heartBeatExpireTime);
         // 如果客户端的登录信息存储模式是有限/短暂的则 保存时间是，心跳间隔时间*最大重试次数+5，这里加5是为了尽可能给其他程序去处理相关逻辑，如读写空闲事件
         if (MessageServerContext.serverProperties().isClientHeartBeatEnable() && SaveModeEnum.FINITE.equals(MessageServerContext.serverProperties().getClientLoginInfoSaveMode())) {
-            expireTime = Integer.toUnsignedLong((heartBeatTimeout * MessageServerContext.serverProperties().getClientHeartBeatWaitRetry())) + MessageConstant.FIVE;
+            expireTime = Integer.toUnsignedLong((heartBeatTimeout * MessageServerContext.serverProperties().getClientHeartBeatWaitRetry())) + NumberConstant.NUMBER_5;
         }
         return expireTime;
     }

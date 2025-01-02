@@ -2,6 +2,7 @@ package com.ouyunc.message.handler;
 
 
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.WsMessageTypeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.utils.ChannelAttrUtil;
@@ -66,11 +67,11 @@ public class HeartBeatHandler extends SimpleChannelInboundHandler<Packet> {
                     // channel 连续读超时次数
                     Integer readTimeoutTimes = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_READ_TIMEOUT_TIMES);
                     if (readTimeoutTimes == null) {
-                        readTimeoutTimes = MessageConstant.ONE;
+                        readTimeoutTimes = (int) NumberConstant.NUMBER_1;
                     }
                     log.info("外部客户端channel: {} 的 read_idle: {} 第 {} 触发了", channel.id().asShortText(), ((IdleStateEvent) event).state(), readTimeoutTimes);
                     // 如果连续超过三次
-                    if (readTimeoutTimes > MessageServerContext.serverProperties().getClientHeartBeatWaitRetry() - MessageConstant.ONE) {
+                    if (readTimeoutTimes > MessageServerContext.serverProperties().getClientHeartBeatWaitRetry() - NumberConstant.NUMBER_1) {
                         ctx.close();
                         return;
                     }

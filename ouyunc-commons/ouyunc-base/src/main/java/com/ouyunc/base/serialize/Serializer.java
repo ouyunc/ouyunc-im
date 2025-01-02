@@ -1,6 +1,7 @@
 package com.ouyunc.base.serialize;
 
 
+import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.utils.ObjectUtil;
 import io.protostuff.LinkedBuffer;
@@ -21,7 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
  **/
 public enum Serializer {
 
-    JDK((byte)1, "jdk", "jdk 序列化") {
+    JDK(NumberConstant.NUMBER_1, "jdk", "jdk 序列化") {
         @Override
         public  <T> byte[] serialize(T t)  {
             return ObjectUtil.serialize(t);
@@ -32,7 +33,7 @@ public enum Serializer {
             return ObjectUtil.deserialize(data);
         }
     },
-    JSON((byte)2, "json", "json 序列化") {
+    JSON(NumberConstant.NUMBER_2, "json", "json 序列化") {
         @Override
         public  <T> byte[] serialize(T t)  {
             return com.alibaba.fastjson2.JSON.toJSONBytes(t);
@@ -53,7 +54,7 @@ public enum Serializer {
         }
     },
 
-    PROTO_STUFF((byte)6, "protoStuff", "protoStuff(基于protoBuf) 序列化"){
+    PROTO_STUFF(NumberConstant.NUMBER_6, "protoStuff", "protoStuff(基于protoBuf) 序列化"){
         // 轻量级实例化特定类
 
         private final Objenesis objenesis = new ObjenesisStd(true);

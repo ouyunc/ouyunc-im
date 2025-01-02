@@ -1,6 +1,6 @@
 package com.ouyunc.base.utils;
 
-import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.model.Order;
 import org.apache.commons.collections4.CollectionUtils;
 
@@ -25,8 +25,8 @@ public class OrderSortUtil {
         list.sort((o1, o2) -> {
             Order o1Order = o1.getClass().getAnnotation(Order.class);
             Order o2Order = o2.getClass().getAnnotation(Order.class);
-            int o1OrderValue = MessageConstant.ONE_HUNDRED;
-            int o2OrderValue = MessageConstant.ONE_HUNDRED;
+            int o1OrderValue = NumberConstant.NUMBER_100;
+            int o2OrderValue = NumberConstant.NUMBER_100;
             if (o1Order != null) {
                 o1OrderValue = o1Order.value();
             }

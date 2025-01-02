@@ -1,6 +1,6 @@
 package com.ouyunc.message.listener;
 
-import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.MqttMessageContentTypeEnum;
 import com.ouyunc.base.model.MqttLoginClientInfo;
 import com.ouyunc.core.listener.MessageListener;
@@ -37,10 +37,10 @@ public class ClientLogoutListener implements MessageListener<ClientLogoutEvent> 
             return;
         }
         // 处理mqtt遗嘱信息
-        if (source instanceof MqttLoginClientInfo mqttLoginClientInfo && mqttLoginClientInfo.getEnableWill() == MessageConstant.ONE && StringUtils.isNoneBlank(mqttLoginClientInfo.getWillMessage())) {
+        if (source instanceof MqttLoginClientInfo mqttLoginClientInfo && mqttLoginClientInfo.getEnableWill() == NumberConstant.NUMBER_1 && StringUtils.isNoneBlank(mqttLoginClientInfo.getWillMessage())) {
             log.info("客户端离线，发送遗嘱消息：{}", mqttLoginClientInfo);
             MqttMessage willMqttMessage = MqttMessageFactory.newMessage(
-                    new MqttFixedHeader(MqttMessageType.PUBLISH, false, MqttQoS.valueOf(mqttLoginClientInfo.getQos()), mqttLoginClientInfo.getIsWillRetain() == MessageConstant.ONE, 0),
+                    new MqttFixedHeader(MqttMessageType.PUBLISH, false, MqttQoS.valueOf(mqttLoginClientInfo.getQos()), mqttLoginClientInfo.getIsWillRetain() == NumberConstant.NUMBER_1, 0),
                     new MqttPublishVariableHeader(mqttLoginClientInfo.getWillTopic(), 0), ByteBufAllocator.DEFAULT.buffer().writeBytes(mqttLoginClientInfo.getWillMessage().getBytes(CharsetUtil.UTF_8)));
             // 发送遗嘱消息到willTopic
             AbstractBaseProcessor<? extends Number> baseProcessor = MessageServerContext.messageContentProcessorCache.get(MqttMessageContentTypeEnum.MQTT_PUBLISH.getType());

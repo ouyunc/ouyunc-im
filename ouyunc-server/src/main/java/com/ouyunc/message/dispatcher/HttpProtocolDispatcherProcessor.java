@@ -1,8 +1,9 @@
 package com.ouyunc.message.dispatcher;
 
 import com.ouyunc.base.constant.MessageConstant;
-import com.ouyunc.message.handler.HttpProtocolDispatcherHandler;
+import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.message.handler.EphemeralRemoteClientRealIpHandler;
+import com.ouyunc.message.handler.HttpProtocolDispatcherHandler;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpObjectAggregator;
@@ -21,8 +22,8 @@ public class HttpProtocolDispatcherProcessor implements ProtocolDispatcherProces
     @Override
     public boolean match(ByteBuf in) {
         // 判断是何种协议,注意这里不可以使用  in.readByte();
-        final byte magic1 = in.getByte(MessageConstant.ZERO);
-        final byte magic2 = in.getByte(MessageConstant.ZERO + 1);
+        final byte magic1 = in.getByte(NumberConstant.NUMBER_0);
+        final byte magic2 = in.getByte(NumberConstant.NUMBER_0 + 1);
         return isHttp(magic1, magic2);
     }
 
