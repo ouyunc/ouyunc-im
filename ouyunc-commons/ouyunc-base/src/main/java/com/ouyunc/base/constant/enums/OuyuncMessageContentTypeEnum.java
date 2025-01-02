@@ -1,12 +1,14 @@
 package com.ouyunc.base.constant.enums;
 
+import com.ouyunc.base.constant.NumberConstant;
+
 /**
  * @author fzx
  * @description 基础消息内容类型枚举
  */
 public enum OuyuncMessageContentTypeEnum implements MessageContentType {
-    SYN_CONTENT(1, ProtocolTypeEnum.OUYUNC.getProtocol(), ProtocolTypeEnum.OUYUNC.getProtocolVersion(), String.class, "内部消息心跳syn消息内容"),
-    ACK_CONTENT(2,ProtocolTypeEnum.OUYUNC.getProtocol(), ProtocolTypeEnum.OUYUNC.getProtocolVersion(), String.class, "内部消息心跳ack消息内容"),
+    SYN_CONTENT(NumberConstant.NUMBER_1, ProtocolTypeEnum.OUYUNC.getProtocol(), ProtocolTypeEnum.OUYUNC.getProtocolVersion(), String.class, "内部消息心跳syn消息内容"),
+    ACK_CONTENT(NumberConstant.NUMBER_2,ProtocolTypeEnum.OUYUNC.getProtocol(), ProtocolTypeEnum.OUYUNC.getProtocolVersion(), String.class, "内部消息心跳ack消息内容"),
 
     ;
     /**

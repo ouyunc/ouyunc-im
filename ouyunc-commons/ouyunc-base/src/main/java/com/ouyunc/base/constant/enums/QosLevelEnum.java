@@ -1,5 +1,6 @@
 package com.ouyunc.base.constant.enums;
 
+import com.ouyunc.base.constant.NumberConstant;
 import io.netty.handler.codec.mqtt.MqttQoS;
 
 /**
@@ -7,10 +8,10 @@ import io.netty.handler.codec.mqtt.MqttQoS;
  */
 public enum QosLevelEnum {
 
-    QOS_0(0, MqttQoS.AT_MOST_ONCE.value(), "QOS_0", "至多一次"),
-    QOS_1(1, MqttQoS.AT_LEAST_ONCE.value(), "QOS_1", "至少一次"),
-    QOS_2(2, MqttQoS.EXACTLY_ONCE.value(), "QOS_2", "仅一次"),
-    QOS_3(3, MqttQoS.FAILURE.value(), "QOS_3", "错误qos级别")
+    QOS_0(NumberConstant.NUMBER_0, MqttQoS.AT_MOST_ONCE.value(), "QOS_0", "至多一次"),
+    QOS_1(NumberConstant.NUMBER_1, MqttQoS.AT_LEAST_ONCE.value(), "QOS_1", "至少一次"),
+    QOS_2(NumberConstant.NUMBER_2, MqttQoS.EXACTLY_ONCE.value(), "QOS_2", "仅一次"),
+    QOS_3(NumberConstant.NUMBER_3, MqttQoS.FAILURE.value(), "QOS_3", "错误qos级别")
 
     ;
 

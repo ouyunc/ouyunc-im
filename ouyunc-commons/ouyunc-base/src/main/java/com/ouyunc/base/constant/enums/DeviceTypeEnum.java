@@ -1,6 +1,8 @@
 package com.ouyunc.base.constant.enums;
 
 
+import com.ouyunc.base.constant.NumberConstant;
+
 /**
  * @Author fzx
  * @Description: 客户端设备枚举, 注意如果想扩展设备枚举，可以在此类进行添加或者新建枚举类实现DeviceType接口并将实现类添加到   MessageServerContext。deviceTypeClassList中  请看： MessageServerContext
@@ -8,12 +10,12 @@ package com.ouyunc.base.constant.enums;
  **/
 public enum DeviceTypeEnum implements DeviceType {
 
-    OTHER((byte) 0, "other", "其他设备"),
+    OTHER(NumberConstant.NUMBER_0, "other", "其他设备"),
 
     /**
      * 移动端
      */
-    M((byte) 1, "m", "移动端系统"),
+    M(NumberConstant.NUMBER_1, "m", "移动端系统"),
 //    M_ANDROID((byte) 2, "m", "移动端安卓系统"),
 //    M_IOS((byte) 3, "m", "移动端ios(苹果)系统"),
 //    M_WINDOWS((byte) 4, "m", "移动端windows操作系统"),
@@ -35,7 +37,7 @@ public enum DeviceTypeEnum implements DeviceType {
     /**
      * PC端
      */
-    PC((byte) 11, "pc", "电脑端系统"),
+    PC(NumberConstant.NUMBER_11, "pc", "电脑端系统"),
 //    PC_MAC((byte) 12, "pc", "电脑端苹果系统mac"),
 //    PC_WINDOWS((byte) 13, "pc", "电脑端windows系统"),
 //    PC_LINUX((byte) 14, "pc", "电脑端linux系统"),
@@ -43,7 +45,7 @@ public enum DeviceTypeEnum implements DeviceType {
 
 
     // 可以扩展其他iot 等设备类型，如不同的品牌的设备对应相同的名称
-    IOT((byte) 21, "iot", "iot设备"),
+    IOT(NumberConstant.NUMBER_21, "iot", "iot设备"),
 
 
     ;

@@ -1,6 +1,5 @@
 package com.ouyunc.message.processor;
 
-import com.ouyunc.base.constant.enums.WsMessageTypeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.validator.AuthValidator;
@@ -35,12 +34,6 @@ public abstract class AbstractMessageProcessor<T extends Number> extends Abstrac
         messageProcessorExecutor.execute(() -> {
             repository().save(packet);
         });
-        // 判断是否禁用某个消息类型：比如没有开启心跳消息，但是发送了心跳类型的消息，则关闭channel
-        if (!MessageServerContext.serverProperties().isClientHeartBeatEnable() && packet.getMessageType() == WsMessageTypeEnum.PING_PONG.getType()) {
-            log.error("校验消息: {} 中的消息类型: {} 不合法,开始关闭channel", packet, packet.getMessageType());
-            ctx.close();
-            return;
-        }
         if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
             // 关闭当前 channel，这里会触发 DefaultSocketChannelInitializer 中的关闭逻辑
             log.error("校验消息: {} 中的发送方登录认证失败,开始关闭channel", packet);

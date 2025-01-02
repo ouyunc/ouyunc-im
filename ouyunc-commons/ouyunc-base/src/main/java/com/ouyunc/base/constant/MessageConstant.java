@@ -41,12 +41,12 @@ public class MessageConstant {
     public static final Integer ONE_HUNDRED = 100;
 
     /**
-     * 锁等待时间 5
+     * 锁等待时间 5 s
      */
     public static final long LOCK_WAIT_TIME = 5;
 
     /**
-     * 锁持有时间 30
+     * 锁持有时间 30 s
      */
     public static final long LOCK_LEASE_TIME = 5;
 

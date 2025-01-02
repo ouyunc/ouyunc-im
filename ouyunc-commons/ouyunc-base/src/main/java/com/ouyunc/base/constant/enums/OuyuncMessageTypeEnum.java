@@ -1,11 +1,13 @@
 package com.ouyunc.base.constant.enums;
 
+import com.ouyunc.base.constant.NumberConstant;
+
 /**
  * @Author fzx
  * @Description: OUYUNC 协议的 消息类型枚举
  **/
 public enum OuyuncMessageTypeEnum implements MessageType {
-    SYN_ACK((byte) 0, ProtocolTypeEnum.OUYUNC.getProtocol(), ProtocolTypeEnum.OUYUNC.getProtocolVersion(), "syn_ack",  "集群内部使用的心跳消息类型"),
+    SYN_ACK(NumberConstant.NUMBER_0, ProtocolTypeEnum.OUYUNC.getProtocol(), ProtocolTypeEnum.OUYUNC.getProtocolVersion(), "syn_ack",  "集群内部使用的心跳消息类型"),
 
     ;
 

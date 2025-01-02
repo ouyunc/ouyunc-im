@@ -1,14 +1,16 @@
 package com.ouyunc.base.constant.enums;
 
+import com.ouyunc.base.constant.NumberConstant;
+
 /**
  * @Author fzx
  * @Description: ws 协议的消息类型枚举
  **/
 public enum WsMessageTypeEnum implements MessageType {
-    PING_PONG((byte) 10, ProtocolTypeEnum.WS.getProtocol(), ProtocolTypeEnum.WS.getProtocolVersion(),"ping_pong",  "外部客户端心跳消息"),
-    LOGIN((byte) 11, ProtocolTypeEnum.WS.getProtocol(), ProtocolTypeEnum.WS.getProtocolVersion(), "login",  "外部客户端登录消息") ,
+    PING_PONG(NumberConstant.NUMBER_10, ProtocolTypeEnum.WS.getProtocol(), ProtocolTypeEnum.WS.getProtocolVersion(),"ping_pong",  "外部客户端心跳消息"),
+    LOGIN(NumberConstant.NUMBER_11, ProtocolTypeEnum.WS.getProtocol(), ProtocolTypeEnum.WS.getProtocolVersion(), "login",  "外部客户端登录消息") ,
 
-    SERVER_NOTIFY((byte) 12, ProtocolTypeEnum.WS.getProtocol(), ProtocolTypeEnum.WS.getProtocolVersion(), "server_notify", "服务端的通知消息"),
+    SERVER_NOTIFY(NumberConstant.NUMBER_12, ProtocolTypeEnum.WS.getProtocol(), ProtocolTypeEnum.WS.getProtocolVersion(), "server_notify", "服务端的通知消息"),
 
     ;
 

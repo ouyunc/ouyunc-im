@@ -1,11 +1,13 @@
 package com.ouyunc.base.constant.enums;
 
+import com.ouyunc.base.constant.NumberConstant;
+
 /**
  * @Author fzx
  * @Description: mqtt 协议的消息类型枚举
  **/
 public enum MqttMessageTypeEnum implements MessageType {
-    MQTT((byte) 51, ProtocolTypeEnum.MQTT.getProtocol(), ProtocolTypeEnum.MQTT.getProtocolVersion(), "MQTT",  "mqtt消息类型"),
+    MQTT(NumberConstant.NUMBER_51, ProtocolTypeEnum.MQTT.getProtocol(), ProtocolTypeEnum.MQTT.getProtocolVersion(), "MQTT",  "mqtt消息类型"),
 
     ;
 

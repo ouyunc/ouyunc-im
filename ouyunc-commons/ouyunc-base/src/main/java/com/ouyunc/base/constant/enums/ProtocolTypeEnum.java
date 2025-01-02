@@ -1,14 +1,16 @@
 package com.ouyunc.base.constant.enums;
 
+import com.ouyunc.base.constant.NumberConstant;
+
 /**
  * 协议类型
  */
 public enum ProtocolTypeEnum {
 
-    WS((byte) 1, (byte) 1),
-    HTTP((byte) 2, (byte) 1),
-    OUYUNC((byte) 3, (byte) 1),
-    MQTT((byte) 4, (byte) 0),
+    WS(NumberConstant.NUMBER_1, NumberConstant.NUMBER_1),
+    HTTP(NumberConstant.NUMBER_2, NumberConstant.NUMBER_1),
+    OUYUNC(NumberConstant.NUMBER_3, NumberConstant.NUMBER_1),
+    MQTT(NumberConstant.NUMBER_4, NumberConstant.NUMBER_0),
     ;
 
 
