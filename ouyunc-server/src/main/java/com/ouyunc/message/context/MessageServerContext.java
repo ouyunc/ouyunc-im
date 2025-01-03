@@ -90,7 +90,7 @@ public class MessageServerContext extends MessageContext {
     /**
      * 消息发送失败的消息 redis缓存,使用1号库
      */
-    public static Cache<String, SendResult> sendFailPacketInfoCache = new RedisDistributedCache<>(CacheFactory.REDIS.instance(NumberConstant.NUMBER_1));
+    public static Cache<String, SendResult> sendFailPacketInfoCache = new RedisDistributedCache<>(CacheFactory.REDIS.instance());
 
 
     /**
