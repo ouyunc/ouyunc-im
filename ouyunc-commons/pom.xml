@@ -17,6 +17,8 @@
         <module>ouyunc-repository</module>
         <module>ouyunc-cache</module>
         <module>ouyunc-domain</module>
+        <module>ouyunc-mq</module>
+        <module>ouyunc-db</module>
     </modules>
     <packaging>pom</packaging>
 

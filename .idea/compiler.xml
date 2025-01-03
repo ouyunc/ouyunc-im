@@ -14,6 +14,7 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <module name="ouyunc-message-spring-boot-starter" />
+        <module name="ouyunc-db-mysql" />
         <module name="ouyunc-base" />
         <module name="ouyu-cache" />
         <module name="ouyunc-domain" />
@@ -21,11 +22,15 @@
         <module name="ouyunc-client" />
         <module name="ouyu-client" />
         <module name="ouyunc-cache" />
+        <module name="ouyunc-db-mongo" />
         <module name="ouyunc-core" />
         <module name="ouyu-server" />
+        <module name="ouyunc-mq-rocket" />
         <module name="ouyunc-server" />
+        <module name="ouyunc-db-influx" />
         <module name="ouyu-core" />
         <module name="ouyunc-repository" />
+        <module name="ouyunc-mq-kafka" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel target="21" />
