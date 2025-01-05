@@ -11,5 +11,35 @@
     <artifactId>ouyunc-db-mysql</artifactId>
     <description>mysql模块</description>
 
+    <properties>
+        <mysql.version>9.0.0</mysql.version>
+        <sprig-jdbc.version>6.2.1</sprig-jdbc.version>
+        <hikari.version>6.2.1</hikari.version>
+    </properties>
+
+    <dependencies>
+        <!-- HikariCP -->
+        <dependency>
+            <groupId>com.zaxxer</groupId>
+            <artifactId>HikariCP</artifactId>
+            <version>${hikari.version}</version>
+        </dependency>
+
+        <!-- Spring JDBC (用于JdbcTemplate) -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-jdbc</artifactId>
+            <version>${sprig-jdbc.version}</version>
+        </dependency>
+
+        <!-- MySQL驱动 -->
+        <!-- https://mvnrepository.com/artifact/com.mysql/mysql-connector-j -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <version>${mysql.version}</version>
+        </dependency>
+
+    </dependencies>
 
 </project>
