@@ -1,8 +1,11 @@
 package com.ouyunc;
 
+import com.ouyunc.base.utils.YmlUtil;
 import com.ouyunc.operator.DbOperator;
+import com.ouyunc.properties.JdbcProperties;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.EmptyResultDataAccessException;
@@ -14,7 +17,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.sql.DataSource;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * jdbc 工厂
@@ -30,7 +32,7 @@ public enum JdbcFactory implements DbOperator {
            if (jdbcTemplate == null) {
                synchronized (JdbcTemplate.class) {
                    if (jdbcTemplate == null) {
-                       jdbcTemplate = new JdbcTemplate(dataSource);
+                       jdbcTemplate = new JdbcTemplate(getDataSource());
                        // 设置查询超时时间（秒）
                        jdbcTemplate.setQueryTimeout(30);
                        // 设置获取警告信息
@@ -40,52 +42,12 @@ public enum JdbcFactory implements DbOperator {
            }
            return jdbcTemplate;
        }
-        /**
-         * 事务管理器
-         */
-        public DataSourceTransactionManager transactionManager() {
-            DataSourceTransactionManager txManager = new DataSourceTransactionManager(dataSource);
-            // 设置全局事务超时时间（秒）
-            txManager.setDefaultTimeout(30);
-            // 设置验证已存在的事务
-            txManager.setValidateExistingTransaction(true);
-            // 设置回滚时是否只回滚到保存点
-            txManager.setNestedTransactionAllowed(true);
-            return txManager;
-        }
 
-        /**
-         * 读写事务模板
-         */
-        public TransactionTemplate transactionTemplate() {
-            TransactionTemplate template = new TransactionTemplate(transactionManager());
-            // 设置事务传播行为
-            template.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
-            // 设置事务隔离级别
-            template.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
-            // 设置事务超时时间（秒）
-            template.setTimeout(30);
-            // 设置是否只读事务
-            template.setReadOnly(false);
-            return template;
-        }
-
-        /**
-         * 只读操作的事务模板
-         */
-        public TransactionTemplate readOnlyTransactionTemplate() {
-            TransactionTemplate template = new TransactionTemplate(transactionManager());
-            template.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
-            template.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
-            template.setTimeout(10);
-            template.setReadOnly(true);
-            return template;
-        }
 
 
         @Override
-        public <T> T execute(String sql, Class<T> tClass, Object... args) {
-            //return jdbcTemplate().execute(sql, );
+        public void execute(String sql) {
+            jdbcTemplate().execute(sql);
         }
 
         @Override
@@ -138,16 +100,13 @@ public enum JdbcFactory implements DbOperator {
             return jdbcTemplate().batchUpdate(sql, batchArgs);
         }
 
-
-
-
     }
 
     ;
 
-    private int version;
+    private final int version;
 
-    private String description;
+    private final String description;
 
     JdbcFactory(int version, String description) {
         this.version = version;
@@ -158,20 +117,44 @@ public enum JdbcFactory implements DbOperator {
         return version;
     }
 
-    public void setVersion(int version) {
-        this.version = version;
-    }
+
 
     public String getDescription() {
         return description;
     }
 
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
 
     private static final Logger log = LoggerFactory.getLogger(JdbcFactory.class);
+
+    /**
+     * 事务管理器
+     */
+    private DataSourceTransactionManager transactionManager() {
+        DataSourceTransactionManager txManager = new DataSourceTransactionManager(getDataSource());
+        // 设置全局事务超时时间（秒）
+        txManager.setDefaultTimeout(30);
+        // 设置验证已存在的事务
+        txManager.setValidateExistingTransaction(true);
+        // 设置回滚时是否只回滚到保存点
+        txManager.setNestedTransactionAllowed(true);
+        return txManager;
+    }
+
+    /**
+     * 读写事务模板
+     */
+    public TransactionTemplate withTransaction() {
+        TransactionTemplate template = new TransactionTemplate(transactionManager());
+        // 设置事务传播行为
+        template.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
+        // 设置事务隔离级别
+        template.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
+        // 设置事务超时时间（秒）
+        template.setTimeout(30);
+        // 设置是否只读事务
+        template.setReadOnly(false);
+        return template;
+    }
 
     /**
      * 定义数据源, 数据源连接池使用 hikari
@@ -181,7 +164,7 @@ public enum JdbcFactory implements DbOperator {
     /**
      * 获取数据源
      */
-    public DataSource getDataSource() {
+    private static DataSource getDataSource() {
         if (dataSource == null) {
             dataSource = (HikariDataSource) createDataSource();
         }
@@ -191,75 +174,69 @@ public enum JdbcFactory implements DbOperator {
     /**
      * 创建数据源
      */
-    public DataSource createDataSource() {
+    private static DataSource createDataSource() {
+        JdbcProperties jdbcProperties = YmlUtil.getActiveProfileValue("ouyunc-server.yml", "ouyunc.jdbc", JdbcProperties.class);
+        if (jdbcProperties == null) {
+            throw new RuntimeException("未找到配置文件 ouyunc-server.yml 中的 ouyunc.jdbc 配置");
+        }
         HikariConfig config = new HikariConfig();
 
         // ====================== 必须的基本配置 ======================
-        config.setJdbcUrl("jdbc:mysql://localhost:3306/your_database" +
-                "?useUnicode=true" +
-                "&characterEncoding=utf8" +
-                "&useSSL=false" +
-                "&serverTimezone=Asia/Shanghai" +
-                "&allowPublicKeyRetrieval=true" +
-                "&rewriteBatchedStatements=true");
-        config.setUsername("your_username");
-        config.setPassword("your_password");
-        config.setDriverClassName("com.mysql.cj.jdbc.Driver");
+        config.setJdbcUrl(jdbcProperties.getUrl());
+        config.setUsername(jdbcProperties.getUsername());
+        config.setPassword(jdbcProperties.getPassword());
+        config.setDriverClassName(jdbcProperties.getDriverClassName());
 
         // ====================== 连接池基本配置 ======================
-        config.setPoolName("HikariPool-1");              // 连接池的名称
-        config.setMaximumPoolSize(10);                   // 最大连接数
-        config.setMinimumIdle(5);                        // 最小空闲连接数
+        // 连接池的名称
+        config.setPoolName(jdbcProperties.getHikariPool().getPoolName());
+        // 最大连接数
+        config.setMaximumPoolSize(jdbcProperties.getHikariPool().getMaximumPoolSize());
+        // 最小空闲连接数
+        config.setMinimumIdle(jdbcProperties.getHikariPool().getMinimumIdle());
 
         // ====================== 连接时间相关配置 ======================
-        config.setConnectionTimeout(30000);              // 连接超时时间（毫秒）：等待可用连接的最大时间
-        config.setIdleTimeout(600000);                   // 空闲超时时间（毫秒）：连接允许在池中闲置的最长时间
-        config.setMaxLifetime(1800000);                  // 连接最大生命周期（毫秒）：连接最长生命周期，强制关闭
-        config.setKeepaliveTime(30000);                  // 心跳检测时间（毫秒）：测试连接是否有效的间隔时间
-        config.setValidationTimeout(5000);               // 连接验证超时时间（毫秒）：测试连接有效性的超时时间
+        // 连接超时时间（毫秒）：等待可用连接的最大时间
+        config.setConnectionTimeout(jdbcProperties.getHikariPool().getConnectionTimeout());
+        // 空闲超时时间（毫秒）：连接允许在池中闲置的最长时间
+        config.setIdleTimeout(jdbcProperties.getHikariPool().getIdleTimeout());
+        // 连接最大生命周期（毫秒）：连接最长生命周期，强制关闭
+        config.setMaxLifetime(jdbcProperties.getHikariPool().getMaxLifetime());
+        // 心跳检测时间（毫秒）：测试连接是否有效的间隔时间
+        config.setKeepaliveTime(jdbcProperties.getHikariPool().getKeepaliveTime());
+        // 连接验证超时时间（毫秒）：测试连接有效性的超时时间
+        config.setValidationTimeout(jdbcProperties.getHikariPool().getValidationTimeout());
 
         // ====================== 连接池运行相关配置 ======================
-        config.setAutoCommit(true);                      // 是否自动提交事务
-        config.setInitializationFailTimeout(1);          // 连接池初始化失败超时时间（毫秒）
-        config.setIsolateInternalQueries(false);         // 是否隔离内部查询
-        config.setAllowPoolSuspension(false);            // 是否允许池暂停
-        config.setReadOnly(false);                       // 是否设置默认连接只读
-        config.setRegisterMbeans(false);                 // 是否注册JMX监控
+        // 是否自动提交事务
+        config.setAutoCommit(jdbcProperties.getHikariPool().isAutoCommit());
+        // 连接池初始化失败超时时间（毫秒）
+        config.setInitializationFailTimeout(jdbcProperties.getHikariPool().getInitializationFailTimeout());
+        // 是否隔离内部查询
+        config.setIsolateInternalQueries(jdbcProperties.getHikariPool().isIsolateInternalQueries());
+        // 是否允许池暂停
+        config.setAllowPoolSuspension(jdbcProperties.getHikariPool().isAllowPoolSuspension());
+        // 是否设置默认连接只读
+        config.setReadOnly(jdbcProperties.getHikariPool().isReadOnly());
+        // 是否注册JMX监控
+        config.setRegisterMbeans(jdbcProperties.getHikariPool().isRegisterMbeans());
 
         // ====================== 连接检测配置 ======================
         // 连接健康检查
-        config.setConnectionTestQuery("SELECT 1");        // 连接测试查询
-        config.setLeakDetectionThreshold(60000);         // 连接泄露检测阈值（毫秒）
-
-        // ====================== MySQL性能优化配置 ======================
-        // 缓存预编译语句
-        config.addDataSourceProperty("cachePrepStmts", "true");
-        config.addDataSourceProperty("prepStmtCacheSize", "250");
-        config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
-
-        // 服务端预编译
-        config.addDataSourceProperty("useServerPrepStmts", "true");
-        config.addDataSourceProperty("useLocalSessionState", "true");
-        config.addDataSourceProperty("rewriteBatchedStatements", "true");
-        config.addDataSourceProperty("cacheResultSetMetadata", "true");
-        config.addDataSourceProperty("cacheServerConfiguration", "true");
-        config.addDataSourceProperty("elideSetAutoCommits", "true");
-        config.addDataSourceProperty("maintainTimeStats", "false");
-
-        // 网络超时设置
-        config.addDataSourceProperty("socketTimeout", "30000");
-        config.addDataSourceProperty("connectTimeout", "10000");
-
-        // 缓冲区设置
-        config.addDataSourceProperty("useConfigs", "maxPerformance");
-
+        String connectionTestQuery = jdbcProperties.getHikariPool().getConnectionTestQuery();
+        if (StringUtils.isNotBlank(connectionTestQuery)) {
+            // 连接测试查询
+            config.setConnectionTestQuery(connectionTestQuery);
+        }
+        // 连接泄露检测阈值（毫秒）
+        config.setLeakDetectionThreshold(jdbcProperties.getHikariPool().getLeakDetectionThreshold());
         return new HikariDataSource(config);
     }
 
     /**
      * 关闭数据源
      */
-    public void closeDataSource() {
+    private static void closeDataSource() {
         if (dataSource != null && !dataSource.isClosed()) {
             dataSource.close();
         }

@@ -6,11 +6,12 @@
     <parent>
         <groupId>com.ouyunc</groupId>
         <artifactId>ouyunc-im</artifactId>
-        <version>6.0.0</version>
+        <version>${revision}</version>
     </parent>
     <artifactId>ouyunc-commons</artifactId>
     <name>ouyunc-commons</name>
     <description>公共模块</description>
+    <packaging>pom</packaging>
     <modules>
         <module>ouyunc-base</module>
         <module>ouyunc-core</module>
@@ -20,6 +21,5 @@
         <module>ouyunc-mq</module>
         <module>ouyunc-db</module>
     </modules>
-    <packaging>pom</packaging>
 
 </project>

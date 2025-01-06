@@ -9,12 +9,12 @@ public interface DbOperator {
 
     /**
      * 执行任何sql,一般执行DDL语句 ,如存储过程，函数等
-     * @param sql
+     *
      * @param tClass
-     * @param args
+     * @param sql
      * @return
      */
-    <T> T execute(String sql, Class<T> tClass, Object... args);
+    void execute(String sql);
 
 
     /**

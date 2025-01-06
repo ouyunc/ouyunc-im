@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.ouyunc</groupId>
         <artifactId>ouyunc-db</artifactId>
-        <version>6.0.0</version>
+        <version>${revision}</version>
     </parent>
     <artifactId>ouyunc-db-mysql</artifactId>
     <description>mysql模块</description>
@@ -39,6 +39,8 @@
             <artifactId>mysql-connector-j</artifactId>
             <version>${mysql.version}</version>
         </dependency>
+
+
 
     </dependencies>
 

@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.ouyunc</groupId>
         <artifactId>ouyunc-commons</artifactId>
-        <version>6.0.0</version>
+        <version>${revision}</version>
     </parent>
     <artifactId>ouyunc-domain</artifactId>
     <name>ouyunc-domain</name>

@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.ouyunc</groupId>
         <artifactId>ouyunc-im</artifactId>
-        <version>6.0.0</version>
+        <version>${revision}</version>
     </parent>
     <artifactId>ouyunc-client</artifactId>
     <name>ouyunc-client</name>
@@ -16,7 +16,7 @@
         <dependency>
             <groupId>com.ouyunc</groupId>
             <artifactId>ouyunc-core</artifactId>
-            <version>${ouyunc.version}</version>
+            <version>${revision}</version>
         </dependency>
     </dependencies>
 

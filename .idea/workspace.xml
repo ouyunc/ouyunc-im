@@ -10,12 +10,32 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v6.0.1  数值常量">
-      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/java/com/ouyunc/operator/DbOperator.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/java/com/ouyunc/operator/MysqlDbOperator.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/resources/ouyunc-server.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/java/com/ouyunc/AbstractDataSource.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-client/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-client/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-cache/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-cache/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-core/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-core/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-influx/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-influx/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mongo/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mongo/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/pom.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/java/com/ouyunc/JdbcFactory.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/java/com/ouyunc/JdbcFactory.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/java/com/ouyunc/config/TransactionConfig.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/java/com/ouyunc/operator/DbOperator.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/java/com/ouyunc/operator/DbOperator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/java/com/ouyunc/operator/MysqlDbOperator.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/java/com/ouyunc/properties/JdbcProperties.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/java/com/ouyunc/properties/JdbcProperties.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/resources/hikari-pool.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/resources/hikari-pool.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/ouyunc-mq-kafka/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/ouyunc-mq-kafka/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/ouyunc-mq-rocket/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/ouyunc-mq-rocket/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/banner/MessageBanner.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/banner/MessageBanner.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -107,19 +127,14 @@
     <option name="generalSettings">
       <MavenGeneralSettings>
         <option name="localRepository" value="D:\repository" />
-        <option name="mavenHome" value="D:\工具\java\maven\apache-maven-3.6.3" />
-        <option name="userSettingsFile" value="D:\工具\java\maven\apache-maven-3.6.3\conf\ali-settings.xml" />
+        <option name="mavenHome" value="C:/Program Files/apache-maven-3.9.9" />
+        <option name="userSettingsFile" value="C:\Program Files\apache-maven-3.9.9\conf\ali-settings.xml" />
       </MavenGeneralSettings>
     </option>
     <option name="importingSettings">
       <MavenImportingSettings>
         <option name="vmOptionsForImporter" value="-Xmx768m" />
       </MavenImportingSettings>
-    </option>
-    <option name="enabledProfiles">
-      <list>
-        <option value="native" />
-      </list>
     </option>
   </component>
   <component name="MavenRunner">
@@ -165,17 +180,17 @@
     "git-widget-placeholder": "6.1.0",
     "jdk.selected.JAVA_MODULE": "21",
     "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "D:/workspace/ouyunc-im/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/java/com/ouyunc/operator",
+    "last_opened_file_path": "D:/workspace/ouyunc-im/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/resources",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
-    "project.structure.last.edited": "Project",
+    "project.structure.last.edited": "Modules",
     "project.structure.proportion": "0.15",
     "project.structure.side.proportion": "0.0",
-    "settings.editor.selected.configurable": "preferences.keymap",
-    "spring.configuration.checksum": "adb7e58effabd6ea5db6b8c67de58a9a",
+    "settings.editor.selected.configurable": "MavenSettings",
+    "spring.configuration.checksum": "8dec8761cbdee7c211e9b0b396bc9b9a",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
@@ -187,11 +202,11 @@
       <recent name="com.ouyu.im.innerclient" />
     </key>
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="D:\workspace\ouyunc-im\ouyunc-commons\ouyunc-db\ouyunc-db-mysql\src\main\resources" />
       <recent name="D:\workspace\ouyunc-im\ouyunc-commons\ouyunc-db\ouyunc-db-mysql\src\main\java\com\ouyunc\operator" />
       <recent name="D:\workspace\ouyunc-im\ouyunc-message-spring-boot-starter\src\main\resources" />
       <recent name="D:\workspace\ouyunc-im\ouyunc-server\src\main\java\com\ouyunc\message\processor" />
       <recent name="D:\workspace\ouyunc-im\docs\6.0.0" />
-      <recent name="D:\workspace\ouyunc-im\docs" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="F:\workspace\ouyunc-im\docs\4.0.0\apk\android" />
@@ -201,14 +216,14 @@
       <recent name="D:\workspace\ouyu-im\ouyu-server\src" />
     </key>
     <key name="CopyClassDialog.RECENTS_KEY">
+      <recent name="com.ouyunc.properties" />
       <recent name="com.ouyunc.message.processor" />
       <recent name="com.ouyunc.base.constant.enums" />
       <recent name="com.ouyunc.message.handler" />
       <recent name="com.ouyunc.message.listener" />
-      <recent name="com.ouyunc.im.listener" />
     </key>
   </component>
-  <component name="RunManager" selected="Application.StartIMServer">
+  <component name="RunManager" selected="Application.JdbcFactory">
     <configuration name="CaffeineTest" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="com.ouyunc.message.validator.CaffeineTest" />
       <module name="ouyunc-server" />
@@ -222,12 +237,12 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="IpUtil" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
-      <option name="MAIN_CLASS_NAME" value="com.ouyunc.base.utils.IpUtil" />
-      <module name="ouyunc-base" />
+    <configuration name="JdbcFactory" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="com.ouyunc.JdbcFactory" />
+      <module name="ouyunc-db-mysql" />
       <extension name="coverage">
         <pattern>
-          <option name="PATTERN" value="com.ouyunc.base.utils.*" />
+          <option name="PATTERN" value="com.ouyunc.*" />
           <option name="ENABLED" value="true" />
         </pattern>
       </extension>
@@ -308,7 +323,7 @@
     </configuration>
     <list>
       <item itemvalue="Application.StartIMServer" />
-      <item itemvalue="Application.IpUtil" />
+      <item itemvalue="Application.JdbcFactory" />
       <item itemvalue="Application.CaffeineTest" />
       <item itemvalue="Application.Main" />
       <item itemvalue="Application.TimeUtil" />
@@ -317,11 +332,11 @@
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Application.JdbcFactory" />
         <item itemvalue="Application.StartServer" />
         <item itemvalue="Application.TimeUtil" />
         <item itemvalue="Application.Main" />
         <item itemvalue="Application.CaffeineTest" />
-        <item itemvalue="Application.IpUtil" />
       </list>
     </recent_temporary>
   </component>
@@ -669,6 +684,7 @@
       <workItem from="1735911334375" duration="2684000" />
       <workItem from="1736040629841" duration="727000" />
       <workItem from="1736041367274" duration="4737000" />
+      <workItem from="1736148944947" duration="692000" />
     </task>
     <task id="LOCAL-00190" summary="v3.1.1-beta 优化处理">
       <created>1686906322045</created>
@@ -1140,6 +1156,16 @@
           <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/ProcessorChainProxy.java</url>
           <line>71</line>
           <option name="timeStamp" value="74" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/java/com/ouyunc/JdbcFactory.java</url>
+          <line>176</line>
+          <option name="timeStamp" value="77" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/java/com/ouyunc/JdbcFactory.java</url>
+          <line>192</line>
+          <option name="timeStamp" value="79" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>

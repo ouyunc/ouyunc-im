@@ -152,3 +152,32 @@ ouyunc:
           maxIdle: 8
           # 连接池中的最小空闲连接
           minIdle: 0
+
+
+  jdbc:
+    # 数据库连接基本信息
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/test?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true
+    username: root
+    password: root
+    hikari-pool:
+      # 连接池基本配置
+      pool-name: ouyunc-hikari-pool
+      maximum-pool-size: 10
+      minimum-idle: 5
+      # 连接时间相关配置
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      keepalive-time: 30000
+      validation-timeout: 5000
+      # 连接池运行配置
+      auto-commit: true
+      initialization-fail-timeout: 1
+      isolate-internal-queries: false
+      allow-pool-suspension: false
+      read-only: false
+      register-mbeans: false
+      # 连接检测配置
+      #connection-test-query: select 1
+      leak-detection-threshold: 60000
