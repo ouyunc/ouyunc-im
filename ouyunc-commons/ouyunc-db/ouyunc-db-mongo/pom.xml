@@ -11,5 +11,16 @@
     <artifactId>ouyunc-db-mongo</artifactId>
     <description>mongodb模块</description>
 
+    <properties>
+        <mongodb.version>4.4.1</mongodb.version>
+    </properties>
 
+    <dependencies>
+        <!-- https://mvnrepository.com/artifact/org.springframework.data/spring-data-mongodb -->
+        <dependency>
+            <groupId>org.springframework.data</groupId>
+            <artifactId>spring-data-mongodb</artifactId>
+            <version>${mongodb.version}</version>
+        </dependency>
+    </dependencies>
 </project>

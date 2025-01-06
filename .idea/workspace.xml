@@ -9,33 +9,15 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v6.0.1  数值常量">
-      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/resources/ouyunc-server.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
+    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v6.1.0  更改版本号，jdbc 模板">
+      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mongo/src/main/java/com/ouyunc/MongodbFactory.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-client/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-client/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-cache/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-cache/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-core/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-core/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-influx/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-influx/pom.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mongo/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mongo/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mongo/src/main/java/com/ouyunc/Main.java" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/java/com/ouyunc/JdbcFactory.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/java/com/ouyunc/JdbcFactory.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/java/com/ouyunc/operator/DbOperator.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/java/com/ouyunc/operator/DbOperator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/java/com/ouyunc/operator/MysqlDbOperator.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/java/com/ouyunc/properties/JdbcProperties.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/java/com/ouyunc/properties/JdbcProperties.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/resources/hikari-pool.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/resources/hikari-pool.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/ouyunc-mq-kafka/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/ouyunc-mq-kafka/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/ouyunc-mq-rocket/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/ouyunc-mq-rocket/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/banner/MessageBanner.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/banner/MessageBanner.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/AbstractMessageServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/AbstractMessageServer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/StartServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/StartServer.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -190,7 +172,7 @@
     "project.structure.proportion": "0.15",
     "project.structure.side.proportion": "0.0",
     "settings.editor.selected.configurable": "MavenSettings",
-    "spring.configuration.checksum": "8dec8761cbdee7c211e9b0b396bc9b9a",
+    "spring.configuration.checksum": "54b21603a0017810b2c8ba771106add9",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
@@ -223,7 +205,7 @@
       <recent name="com.ouyunc.message.listener" />
     </key>
   </component>
-  <component name="RunManager" selected="Application.JdbcFactory">
+  <component name="RunManager" selected="Application.StartIMServer">
     <configuration name="CaffeineTest" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="com.ouyunc.message.validator.CaffeineTest" />
       <module name="ouyunc-server" />
@@ -684,7 +666,8 @@
       <workItem from="1735911334375" duration="2684000" />
       <workItem from="1736040629841" duration="727000" />
       <workItem from="1736041367274" duration="4737000" />
-      <workItem from="1736148944947" duration="692000" />
+      <workItem from="1736148944947" duration="1044000" />
+      <workItem from="1736150644671" duration="2156000" />
     </task>
     <task id="LOCAL-00190" summary="v3.1.1-beta 优化处理">
       <created>1686906322045</created>
@@ -1029,7 +1012,7 @@
       <option name="project" value="LOCAL" />
       <updated>1704076343678</updated>
     </task>
-    <option name="localTasksCounter" value="281" />
+    <option name="localTasksCounter" value="282" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1089,7 +1072,6 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
-    <MESSAGE value="v4.0.3&#10;1. 调整集群环境下同一账号登录时在另一台设备上提示登录信息&#10;2. 优化代码" />
     <MESSAGE value="v4.1.0&#10;1. 添加用户托管给机器人&#10;2. 优化代码" />
     <MESSAGE value="v4.1.0&#10;1. 添加客服处理器&#10;2. 优化代码" />
     <MESSAGE value="v4.1.0&#10;1. 修改集群消息传递&#10;2. 优化代码" />
@@ -1114,7 +1096,8 @@
     <MESSAGE value="v6.0.1  实体类添加tostring" />
     <MESSAGE value="v6.0.1  默认前置拦截增加，心跳如果没开启进行拦截" />
     <MESSAGE value="v6.0.1  数值常量" />
-    <option name="LAST_COMMIT_MESSAGE" value="v6.0.1  数值常量" />
+    <MESSAGE value="v6.1.0  更改版本号，jdbc 模板" />
+    <option name="LAST_COMMIT_MESSAGE" value="v6.1.0  更改版本号，jdbc 模板" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -1158,14 +1141,14 @@
           <option name="timeStamp" value="74" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/java/com/ouyunc/JdbcFactory.java</url>
-          <line>176</line>
-          <option name="timeStamp" value="77" />
+          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/AbstractMessageServer.java</url>
+          <line>173</line>
+          <option name="timeStamp" value="75" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/java/com/ouyunc/JdbcFactory.java</url>
-          <line>192</line>
-          <option name="timeStamp" value="79" />
+          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/AbstractMessageServer.java</url>
+          <line>171</line>
+          <option name="timeStamp" value="82" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>

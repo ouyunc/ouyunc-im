@@ -24,36 +24,20 @@ import java.util.List;
 public enum JdbcFactory implements DbOperator {
 
     JDBC_TEMPLATE (1, "jdbc v1.0操作模板"){
-        private static volatile JdbcTemplate jdbcTemplate;
-        /**
-         * 获取jdbcTemplate
-         */
-       private JdbcTemplate jdbcTemplate() {
-           if (jdbcTemplate == null) {
-               synchronized (JdbcTemplate.class) {
-                   if (jdbcTemplate == null) {
-                       jdbcTemplate = new JdbcTemplate(getDataSource());
-                       // 设置查询超时时间（秒）
-                       jdbcTemplate.setQueryTimeout(30);
-                       // 设置获取警告信息
-                       jdbcTemplate.setIgnoreWarnings(false);
-                   }
-               }
-           }
-           return jdbcTemplate;
-       }
+
+
 
 
 
         @Override
         public void execute(String sql) {
-            jdbcTemplate().execute(sql);
+            instance().execute(sql);
         }
 
         @Override
         public <T> T selectOne(String sql, Class<T> tClass, Object... args) {
             try{
-                return jdbcTemplate().queryForObject(sql, new BeanPropertyRowMapper<>(tClass), args);
+                return instance().queryForObject(sql, new BeanPropertyRowMapper<>(tClass), args);
             }catch (EmptyResultDataAccessException e ){
                 log.error("未查询到数据，返回null");
                 return null;
@@ -63,7 +47,7 @@ public enum JdbcFactory implements DbOperator {
         @Override
         public <T> List<T> batchSelect(String sql, Class<T> tClass, Object... args) {
             try {
-                return jdbcTemplate().query(sql, new BeanPropertyRowMapper<>(tClass), args);
+                return instance().query(sql, new BeanPropertyRowMapper<>(tClass), args);
             }catch (IllegalStateException e) {
                 log.error("未查询到数据集合，返回null");
                 return null;
@@ -72,32 +56,32 @@ public enum JdbcFactory implements DbOperator {
 
         @Override
         public int insert(String sql, Object... args) {
-            return jdbcTemplate().update(sql, args);
+            return instance().update(sql, args);
         }
 
         @Override
         public int[] batchInsert(String sql, List<Object[]> batchArgs) {
-            return jdbcTemplate().batchUpdate(sql, batchArgs);
+            return instance().batchUpdate(sql, batchArgs);
         }
 
         @Override
         public int update(String sql, Object... args) {
-            return jdbcTemplate().update(sql, args);
+            return instance().update(sql, args);
         }
 
         @Override
         public int[] batchUpdate(String sql, List<Object[]> batchArgs) {
-            return jdbcTemplate().batchUpdate(sql, batchArgs);
+            return instance().batchUpdate(sql, batchArgs);
         }
 
         @Override
         public int delete(String sql, Object... args) {
-            return jdbcTemplate().update(sql, args);
+            return instance().update(sql, args);
         }
 
         @Override
         public int[] batchDelete(String sql, List<Object[]> batchArgs) {
-            return jdbcTemplate().batchUpdate(sql, batchArgs);
+            return instance().batchUpdate(sql, batchArgs);
         }
 
     }
@@ -125,6 +109,26 @@ public enum JdbcFactory implements DbOperator {
 
 
     private static final Logger log = LoggerFactory.getLogger(JdbcFactory.class);
+
+    private static volatile JdbcTemplate jdbcTemplate;
+
+    /**
+     * 获取jdbcTemplate
+     */
+    public JdbcTemplate instance() {
+        if (jdbcTemplate == null) {
+            synchronized (JdbcTemplate.class) {
+                if (jdbcTemplate == null) {
+                    jdbcTemplate = new JdbcTemplate(getDataSource());
+                    // 设置查询超时时间（秒）
+                    jdbcTemplate.setQueryTimeout(30);
+                    // 设置获取警告信息
+                    jdbcTemplate.setIgnoreWarnings(false);
+                }
+            }
+        }
+        return jdbcTemplate;
+    }
 
     /**
      * 事务管理器
