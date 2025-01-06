@@ -117,7 +117,7 @@ public enum JdbcFactory implements DbOperator {
      */
     public JdbcTemplate instance() {
         if (jdbcTemplate == null) {
-            synchronized (JdbcTemplate.class) {
+            synchronized (JdbcFactory.class) {
                 if (jdbcTemplate == null) {
                     jdbcTemplate = new JdbcTemplate(getDataSource());
                     // 设置查询超时时间（秒）

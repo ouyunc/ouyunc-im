@@ -22,5 +22,13 @@
             <artifactId>spring-data-mongodb</artifactId>
             <version>${mongodb.version}</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/org.mongodb/mongodb-driver-sync -->
+        <dependency>
+            <groupId>org.mongodb</groupId>
+            <artifactId>mongodb-driver-sync</artifactId>
+            <version>5.2.1</version>
+        </dependency>
+
+
     </dependencies>
 </project>
