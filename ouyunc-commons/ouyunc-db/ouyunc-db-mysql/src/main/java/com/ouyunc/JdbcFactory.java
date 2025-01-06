@@ -1,33 +1,43 @@
 package com.ouyunc;
 
-import com.ouyunc.properties.JdbcProperties;
+import com.ouyunc.operator.DbOperator;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.sql.DataSource;
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * jdbc 工厂
  */
-public enum JdbcFactory{
-
+public enum JdbcFactory implements DbOperator {
 
     JDBC_TEMPLATE (1, "jdbc v1.0操作模板"){
+        private static volatile JdbcTemplate jdbcTemplate;
         /**
          * 获取jdbcTemplate
          */
        private JdbcTemplate jdbcTemplate() {
-           JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
-           // 设置查询超时时间（秒）
-           jdbcTemplate.setQueryTimeout(30);
-           // 设置最大行数限制
-           jdbcTemplate.setMaxRows(500);
-           // 设置获取警告信息
-           jdbcTemplate.setIgnoreWarnings(false);
+           if (jdbcTemplate == null) {
+               synchronized (JdbcTemplate.class) {
+                   if (jdbcTemplate == null) {
+                       jdbcTemplate = new JdbcTemplate(dataSource);
+                       // 设置查询超时时间（秒）
+                       jdbcTemplate.setQueryTimeout(30);
+                       // 设置获取警告信息
+                       jdbcTemplate.setIgnoreWarnings(false);
+                   }
+               }
+           }
            return jdbcTemplate;
        }
         /**
@@ -73,7 +83,60 @@ public enum JdbcFactory{
         }
 
 
+        @Override
+        public <T> T execute(String sql, Class<T> tClass, Object... args) {
+            //return jdbcTemplate().execute(sql, );
+        }
 
+        @Override
+        public <T> T selectOne(String sql, Class<T> tClass, Object... args) {
+            try{
+                return jdbcTemplate().queryForObject(sql, new BeanPropertyRowMapper<>(tClass), args);
+            }catch (EmptyResultDataAccessException e ){
+                log.error("未查询到数据，返回null");
+                return null;
+            }
+        }
+
+        @Override
+        public <T> List<T> batchSelect(String sql, Class<T> tClass, Object... args) {
+            try {
+                return jdbcTemplate().query(sql, new BeanPropertyRowMapper<>(tClass), args);
+            }catch (IllegalStateException e) {
+                log.error("未查询到数据集合，返回null");
+                return null;
+            }
+        }
+
+        @Override
+        public int insert(String sql, Object... args) {
+            return jdbcTemplate().update(sql, args);
+        }
+
+        @Override
+        public int[] batchInsert(String sql, List<Object[]> batchArgs) {
+            return jdbcTemplate().batchUpdate(sql, batchArgs);
+        }
+
+        @Override
+        public int update(String sql, Object... args) {
+            return jdbcTemplate().update(sql, args);
+        }
+
+        @Override
+        public int[] batchUpdate(String sql, List<Object[]> batchArgs) {
+            return jdbcTemplate().batchUpdate(sql, batchArgs);
+        }
+
+        @Override
+        public int delete(String sql, Object... args) {
+            return jdbcTemplate().update(sql, args);
+        }
+
+        @Override
+        public int[] batchDelete(String sql, List<Object[]> batchArgs) {
+            return jdbcTemplate().batchUpdate(sql, batchArgs);
+        }
 
 
 
@@ -106,6 +169,9 @@ public enum JdbcFactory{
     public void setDescription(String description) {
         this.description = description;
     }
+
+
+    private static final Logger log = LoggerFactory.getLogger(JdbcFactory.class);
 
     /**
      * 定义数据源, 数据源连接池使用 hikari
