@@ -1,4 +1,4 @@
-package com.ouyunc.properties;
+package com.ouyunc.db.mysql.properties;
 
 public class JdbcProperties {
 

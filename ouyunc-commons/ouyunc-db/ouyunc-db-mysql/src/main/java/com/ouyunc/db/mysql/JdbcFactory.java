@@ -1,8 +1,8 @@
-package com.ouyunc;
+package com.ouyunc.db.mysql;
 
 import com.ouyunc.base.utils.YmlUtil;
-import com.ouyunc.operator.DbOperator;
-import com.ouyunc.properties.JdbcProperties;
+import com.ouyunc.db.mysql.operator.DbOperator;
+import com.ouyunc.db.mysql.properties.JdbcProperties;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.apache.commons.lang3.StringUtils;
@@ -179,7 +179,7 @@ public enum JdbcFactory implements DbOperator {
      * 创建数据源
      */
     private static DataSource createDataSource() {
-        JdbcProperties jdbcProperties = YmlUtil.getActiveProfileValue("ouyunc-server.yml", "ouyunc.jdbc", JdbcProperties.class);
+        JdbcProperties jdbcProperties = YmlUtil.getActiveProfileValue("ouyunc-server.yml", "ouyunc.db.jdbc", JdbcProperties.class);
         if (jdbcProperties == null) {
             throw new RuntimeException("未找到配置文件 ouyunc-server.yml 中的 ouyunc.jdbc 配置");
         }

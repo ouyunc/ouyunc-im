@@ -32,6 +32,11 @@
             <artifactId>ouyunc-db-mysql</artifactId>
             <version>${revision}</version>
         </dependency>
+        <dependency>
+            <groupId>com.ouyunc</groupId>
+            <artifactId>ouyunc-db-mongo</artifactId>
+            <version>${revision}</version>
+        </dependency>
     </dependencies>
 
 

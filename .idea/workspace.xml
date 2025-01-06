@@ -9,14 +9,16 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v6.1.0  更改版本号，jdbc 模板">
-      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mongo/src/main/java/com/ouyunc/MongodbFactory.java" afterDir="false" />
+    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v6.1.0  mongodb 模板">
+      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mongo/src/main/java/com/ouyunc/db/mongo/MongodbFactory.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mongo/src/main/java/com/ouyunc/db/mongo/properties/MongodbProperties.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mongo/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mongo/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mongo/src/main/java/com/ouyunc/Main.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/java/com/ouyunc/JdbcFactory.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/java/com/ouyunc/JdbcFactory.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/AbstractMessageServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/AbstractMessageServer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/StartServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/StartServer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mongo/src/main/java/com/ouyunc/MongodbFactory.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/java/com/ouyunc/JdbcFactory.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/java/com/ouyunc/db/mysql/JdbcFactory.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/java/com/ouyunc/operator/DbOperator.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/java/com/ouyunc/db/mysql/operator/DbOperator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/java/com/ouyunc/properties/JdbcProperties.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/java/com/ouyunc/db/mysql/properties/JdbcProperties.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/pom.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server.yml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -220,11 +222,11 @@
       </method>
     </configuration>
     <configuration name="JdbcFactory" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
-      <option name="MAIN_CLASS_NAME" value="com.ouyunc.JdbcFactory" />
+      <option name="MAIN_CLASS_NAME" value="com.ouyunc.db.mysql.JdbcFactory" />
       <module name="ouyunc-db-mysql" />
       <extension name="coverage">
         <pattern>
-          <option name="PATTERN" value="com.ouyunc.*" />
+          <option name="PATTERN" value="com.ouyunc.db.mongo.*" />
           <option name="ENABLED" value="true" />
         </pattern>
       </extension>
@@ -667,7 +669,7 @@
       <workItem from="1736040629841" duration="727000" />
       <workItem from="1736041367274" duration="4737000" />
       <workItem from="1736148944947" duration="1044000" />
-      <workItem from="1736150644671" duration="2156000" />
+      <workItem from="1736150644671" duration="5358000" />
     </task>
     <task id="LOCAL-00190" summary="v3.1.1-beta 优化处理">
       <created>1686906322045</created>
@@ -1012,7 +1014,7 @@
       <option name="project" value="LOCAL" />
       <updated>1704076343678</updated>
     </task>
-    <option name="localTasksCounter" value="282" />
+    <option name="localTasksCounter" value="283" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1072,7 +1074,6 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
-    <MESSAGE value="v4.1.0&#10;1. 添加用户托管给机器人&#10;2. 优化代码" />
     <MESSAGE value="v4.1.0&#10;1. 添加客服处理器&#10;2. 优化代码" />
     <MESSAGE value="v4.1.0&#10;1. 修改集群消息传递&#10;2. 优化代码" />
     <MESSAGE value="v4.2.0&#10;1. 添加消息撤回处理器&#10;2. 增添监控预处理&#10;3. 优化代码" />
@@ -1097,7 +1098,8 @@
     <MESSAGE value="v6.0.1  默认前置拦截增加，心跳如果没开启进行拦截" />
     <MESSAGE value="v6.0.1  数值常量" />
     <MESSAGE value="v6.1.0  更改版本号，jdbc 模板" />
-    <option name="LAST_COMMIT_MESSAGE" value="v6.1.0  更改版本号，jdbc 模板" />
+    <MESSAGE value="v6.1.0  mongodb 模板" />
+    <option name="LAST_COMMIT_MESSAGE" value="v6.1.0  mongodb 模板" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -1141,14 +1143,19 @@
           <option name="timeStamp" value="74" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/AbstractMessageServer.java</url>
-          <line>173</line>
-          <option name="timeStamp" value="75" />
+          <url>file://$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mongo/src/main/java/com/ouyunc/db/mongo/MongodbFactory.java</url>
+          <line>26</line>
+          <option name="timeStamp" value="87" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mongo/src/main/java/com/ouyunc/db/mongo/MongodbFactory.java</url>
+          <line>40</line>
+          <option name="timeStamp" value="90" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/AbstractMessageServer.java</url>
-          <line>171</line>
-          <option name="timeStamp" value="82" />
+          <line>160</line>
+          <option name="timeStamp" value="92" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>

@@ -154,30 +154,31 @@ ouyunc:
           minIdle: 0
 
 
-  jdbc:
-    # 数据库连接基本信息
-    driverClassName: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/test?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true
-    username: root
-    password: root
-    hikariPool:
-      # 连接池基本配置
-      poolName: ouyunc-hikari-pool
-      maximumPoolSize: 10
-      minimumIdle: 5
-      # 连接时间相关配置
-      connectionTimeout: 30000
-      idleTimeout: 600000
-      maxLifetime: 1800000
-      keepaliveTime: 30000
-      validationTimeout: 5000
-      # 连接池运行配置
-      autoCommit: true
-      initializationFailTimeout: 1
-      isolateInternalQueries: false
-      allowPoolSuspension: false
-      readOnly: false
-      registerMbeans: false
-      # 连接检测配置
-      #connection-test-query: select 1
-      leakDetectionThreshold: 60000
+  db:
+    jdbc:
+      # 数据库连接基本信息
+      driverClassName: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://localhost:3306/test?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true
+      username: root
+      password: root
+      hikariPool:
+        # 连接池基本配置
+        poolName: ouyunc-hikari-pool
+        maximumPoolSize: 10
+        minimumIdle: 5
+        # 连接时间相关配置
+        connectionTimeout: 30000
+        idleTimeout: 600000
+        maxLifetime: 1800000
+        keepaliveTime: 30000
+        validationTimeout: 5000
+        # 连接池运行配置
+        autoCommit: true
+        initializationFailTimeout: 1
+        isolateInternalQueries: false
+        allowPoolSuspension: false
+        readOnly: false
+        registerMbeans: false
+        # 连接检测配置
+        #connection-test-query: select 1
+        leakDetectionThreshold: 60000
