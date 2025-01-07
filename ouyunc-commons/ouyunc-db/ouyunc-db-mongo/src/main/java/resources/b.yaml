@@ -1,0 +1,23 @@
+mongodb:
+  compression:
+    enabled: true
+    types: zlib,snappy,zstd
+  pool:
+    maxIdleTime: 600000
+    maxLifeTime: 1800000
+    maxSize: 100
+    maxWaitTime: 5000
+    minSize: 10
+  readConcern: majority
+  readPreference: primaryPreferred
+  socket:
+    connectTimeout: 10000
+    readTimeout: 15000
+  ssl:
+    enabled: false
+    invalidHostAllowed: false
+  uri: mongodb://username:password@localhost:27017,localhost:27018/database?replicaSet=rs0&authSource=admin
+  writeConcern:
+    journal: true
+    w: majority
+    wtimeout: 1000

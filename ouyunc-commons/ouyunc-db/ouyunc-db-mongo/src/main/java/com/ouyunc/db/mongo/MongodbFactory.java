@@ -1,13 +1,12 @@
 package com.ouyunc.db.mongo;
 
 import com.fasterxml.jackson.databind.util.Converter;
-import com.mongodb.MongoClientSettings;
-import com.mongodb.ReadPreference;
-import com.mongodb.WriteConcern;
+import com.mongodb.*;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.ouyunc.base.utils.YmlUtil;
 import com.ouyunc.db.mongo.properties.MongodbProperties;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.mongodb.MongoDatabaseFactory;
@@ -25,8 +24,10 @@ import java.io.InputStream;
 import java.security.KeyStore;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author fzx
@@ -37,7 +38,10 @@ public enum MongodbFactory {
 
     MONGODB_TEMPLATE (1, "mongodb v1.0操作模板"){
         // 默认mongo库名,加载配置文件的时候会有一个默认值来进行初始化，如果不传数据库名称，则使用默认的数据库来操作
-        private static final String DEFAULT_DATABASE_NAME;
+        private static String DEFAULT_DATABASE_NAME = "ouyunc";
+
+        // mongodb 属性配置文件
+        private static final MongodbProperties mongodbProperties;
 
         // mongodb 库名-操作模板 map
         private static final ConcurrentHashMap<String, MongoTemplate> mongoTemplateMap = new ConcurrentHashMap<>();
@@ -52,8 +56,12 @@ public enum MongodbFactory {
 
         static {
             // 判断配置文件中的默认数据库名称是否为空，如果不为空则使用配置文件中的默认数据库名称
-            MongodbProperties mongodbProperties = YmlUtil.getActiveProfileValue("ouyunc-server.yml", "ouyunc.db.mongo", MongodbProperties.class);
-            DEFAULT_DATABASE_NAME = System.getProperty("mongodb.database.name");
+            mongodbProperties = YmlUtil.getActiveProfileValue("b.yaml", "mongodb", MongodbProperties.class);
+            if (mongodbProperties != null) {
+                if (StringUtils.isNotBlank(mongodbProperties.getDefaultDatabase())) {
+                    DEFAULT_DATABASE_NAME = mongodbProperties.getDefaultDatabase();
+                }
+            }
         }
         /**
          * 使用指定的数据库名称来进行操作数据
@@ -70,8 +78,8 @@ public enum MongodbFactory {
                 }
             }
             if (mongoTemplate == null) {
-                log.error("");
-                throw new RuntimeException("");
+                log.error("template 配置失败");
+                throw new RuntimeException("template 配置失败");
             }
             return mongoTemplate;
         }
@@ -95,61 +103,25 @@ public enum MongodbFactory {
         }
 
         private static MongoClientSettings createMongoClientSettings() {
-            Properties props = loadProperties();
-
             return MongoClientSettings.builder()
                     // ===== 基本连接配置 =====
-                    .applyConnectionString(new ConnectionString(props.getProperty("mongodb.uri")))
+                    .applyConnectionString(new ConnectionString(mongodbProperties.getUri()))
 
                     // ===== 连接池配置 =====
                     .applyToConnectionPoolSettings(builder -> {
-                        builder.maxSize(Integer.parseInt(props.getProperty("mongodb.pool.maxSize", "100")))
-                                .minSize(Integer.parseInt(props.getProperty("mongodb.pool.minSize", "10")))
-                                .maxWaitTime(Long.parseLong(props.getProperty("mongodb.pool.maxWaitTime", "5000")),
+                        builder.maxSize(mongodbProperties.getPool().getMaxSize())
+                                .minSize(mongodbProperties.getPool().getMinSize())
+                                .maxWaitTime(mongodbProperties.getPool().getMaxWaitTime(),
                                         TimeUnit.MILLISECONDS)
-                                .maxConnectionLifeTime(Long.parseLong(props.getProperty("mongodb.pool.maxLifeTime", "1800000")),
+                                .maxConnectionLifeTime(mongodbProperties.getPool().getMaxLifeTime(),
                                         TimeUnit.MILLISECONDS)
-                                .maxConnectionIdleTime(Long.parseLong(props.getProperty("mongodb.pool.maxIdleTime", "600000")),
+                                .maxConnectionIdleTime(mongodbProperties.getPool().getMaxIdleTime(),
                                         TimeUnit.MILLISECONDS)
-                                .maintenanceInitialDelay(0, TimeUnit.MILLISECONDS)
-                                .maintenanceFrequency(1, TimeUnit.MINUTES)
-                                .maxConnecting(2)
-                                .pendingConnectionTimeout(Duration.ofSeconds(30));
+                                .maintenanceInitialDelay(mongodbProperties.getPool().getMaintenanceInitialDelay(), TimeUnit.MILLISECONDS)
+                                .maintenanceFrequency(mongodbProperties.getPool().getMaintenanceFrequency(), TimeUnit.MINUTES)
+                                .maxConnecting(mongodbProperties.getPool().getMaxConnecting());
                     })
 
-                    // ===== 服务器设置 =====
-                    .applyToServerSettings(builder -> {
-                        builder.heartbeatFrequency(10, TimeUnit.SECONDS)
-                                .minHeartbeatFrequency(500, TimeUnit.MILLISECONDS);
-                    })
-
-                    // ===== 套接字设置 =====
-                    .applyToSocketSettings(builder -> {
-                        builder.connectTimeout(Integer.parseInt(props.getProperty("mongodb.socket.connectTimeout", "10000")),
-                                        TimeUnit.MILLISECONDS)
-                                .readTimeout(Integer.parseInt(props.getProperty("mongodb.socket.readTimeout", "15000")),
-                                        TimeUnit.MILLISECONDS)
-                                .receiveBufferSize(1024 * 1024)
-                                .sendBufferSize(1024 * 1024);
-                    })
-
-                    // ===== SSL设置 =====
-                    .applyToSslSettings(builder -> {
-                        builder.enabled(Boolean.parseBoolean(props.getProperty("mongodb.ssl.enabled", "false")))
-                                .invalidHostNameAllowed(Boolean.parseBoolean(props.getProperty("mongodb.ssl.invalidHostAllowed", "false")))
-                                .context(createSSLContext());
-                    })
-
-                    // ===== 集群设置 =====
-                    .applyToClusterSettings(builder -> {
-                        builder.hosts(Arrays.asList(
-                                        new ServerAddress("localhost", 27017),
-                                        new ServerAddress("localhost", 27018)
-                                ))
-                                .mode(ClusterConnectionMode.MULTIPLE)
-                                .serverSelectionTimeout(5, TimeUnit.SECONDS)
-                                .localThreshold(15, TimeUnit.MILLISECONDS);
-                    })
 
                     // ===== 压缩设置 =====
                     .compressorList(Arrays.asList(
@@ -172,15 +144,14 @@ public enum MongodbFactory {
 
                     // ===== 读取关注 =====
                     .readConcern(ReadConcern.MAJORITY)
-
                     .build();
         }
 
         private static MappingMongoConverter createMongoConverter(MongoDatabaseFactory mongoDatabaseFactory) {
             // 创建自定义转换器列表
             List<Converter<?, ?>> converters = new ArrayList<>();
-            converters.add(new DetailedMongoConfig.DateToLocalDateTimeConverter());
-            converters.add(new DetailedMongoConfig.LocalDateTimeToDateConverter());
+            //converters.add(new DetailedMongoConfig.DateToLocalDateTimeConverter());
+            //converters.add(new DetailedMongoConfig.LocalDateTimeToDateConverter());
 
             // 创建自定义转换服务
             MongoCustomConversions conversions = new MongoCustomConversions(converters);
@@ -203,37 +174,6 @@ public enum MongodbFactory {
             return converter;
         }
 
-        private static SSLContext createSSLContext() {
-            try {
-                // 加载信任库
-                KeyStore trustStore = KeyStore.getInstance("JKS");
-                try (InputStream is = new FileInputStream("truststore.jks")) {
-                    trustStore.load(is, "truststore_password".toCharArray());
-                }
-
-                // 创建信任管理器
-                TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-                tmf.init(trustStore);
-
-                // 加载密钥库
-                KeyStore keyStore = KeyStore.getInstance("JKS");
-                try (InputStream is = new FileInputStream("keystore.jks")) {
-                    keyStore.load(is, "keystore_password".toCharArray());
-                }
-
-                // 创建密钥管理器
-                KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-                kmf.init(keyStore, "key_password".toCharArray());
-
-                // 创建并配置SSL上下文
-                SSLContext sslContext = SSLContext.getInstance("TLS");
-                sslContext.init(kmf.getKeyManagers(), tmf.getTrustManagers(), new SecureRandom());
-
-                return sslContext;
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to create SSL context", e);
-            }
-        }
     };
     private final int version;
     private final String description;
