@@ -20,7 +20,6 @@ public enum MqttRepository implements Repository{
     INSTANCE;
     private static final RedisTemplate redisTemplate = CacheFactory.REDIS.instance();
 
-
     /**
      * 保存全量信息
      * @param packet

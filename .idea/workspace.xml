@@ -10,12 +10,21 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v6.1.0  mongodb 模板">
+      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/PropertiesConfigConstant.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-influx/src/main/java/com/ouyunc/db/influx/InfluxdbFactory.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-influx/src/main/java/com/ouyunc/db/influx/properties/InfluxdbProperties.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mongo/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mongo/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-cache/src/main/java/com/ouyunc/cache/config/redis/builder/AbstractRedisBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-cache/src/main/java/com/ouyunc/cache/config/redis/builder/AbstractRedisBuilder.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-influx/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-influx/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-influx/src/main/java/com/ouyunc/Main.java" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mongo/src/main/java/com/ouyunc/db/mongo/MongodbFactory.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mongo/src/main/java/com/ouyunc/db/mongo/MongodbFactory.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mongo/src/main/java/resources/b.yaml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/AbstractMessageServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/AbstractMessageServer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mongo/src/main/java/com/ouyunc/db/mongo/properties/MongodbProperties.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mongo/src/main/java/com/ouyunc/db/mongo/properties/MongodbProperties.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/java/com/ouyunc/db/mysql/JdbcFactory.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/java/com/ouyunc/db/mysql/JdbcFactory.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/MqttRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/MqttRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/pom.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
     </list>
@@ -676,7 +685,7 @@
       <workItem from="1736150644671" duration="5358000" />
       <workItem from="1736174601113" duration="1796000" />
       <workItem from="1736211083702" duration="7013000" />
-      <workItem from="1736587329173" duration="3194000" />
+      <workItem from="1736587329173" duration="11026000" />
     </task>
     <task id="LOCAL-00190" summary="v3.1.1-beta 优化处理">
       <created>1686906322045</created>
@@ -1021,7 +1030,7 @@
       <option name="project" value="LOCAL" />
       <updated>1704076343678</updated>
     </task>
-    <option name="localTasksCounter" value="283" />
+    <option name="localTasksCounter" value="284" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1153,11 +1162,6 @@
           <url>jar://$PROJECT_DIR$/../../repository/org/mongodb/mongodb-driver-core/5.2.1/mongodb-driver-core-5.2.1.jar!/com/mongodb/internal/connection/InternalStreamConnection.class</url>
           <line>194</line>
           <option name="timeStamp" value="115" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/AbstractMessageServer.java</url>
-          <line>175</line>
-          <option name="timeStamp" value="120" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>

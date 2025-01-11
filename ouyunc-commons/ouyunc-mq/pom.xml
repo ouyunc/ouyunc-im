@@ -16,5 +16,12 @@
         <module>ouyunc-mq-rocket</module>
     </modules>
 
-
+    <dependencies>
+        <dependency>
+            <groupId>com.ouyunc</groupId>
+            <artifactId>ouyunc-base</artifactId>
+            <version>${revision}</version>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
 </project>

@@ -26,11 +26,11 @@
         <module name="ouyunc-core" />
         <module name="ouyu-server" />
         <module name="ouyunc-mq-rocket" />
-        <module name="ouyunc-server" />
         <module name="ouyunc-db-influx" />
+        <module name="ouyunc-server" />
         <module name="ouyu-core" />
-        <module name="ouyunc-repository" />
         <module name="ouyunc-mq-kafka" />
+        <module name="ouyunc-repository" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel target="21" />

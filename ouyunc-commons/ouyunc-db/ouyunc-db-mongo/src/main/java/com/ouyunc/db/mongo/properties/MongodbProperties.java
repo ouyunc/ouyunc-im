@@ -8,8 +8,18 @@ package com.ouyunc.db.mongo.properties;
  * @description: mongodb 配置文件
  */
 public class MongodbProperties {
+
+    /**
+     * 连接 uri
+     */
     private String uri;
+    /**
+     * 默认数据库
+     */
     private String defaultDatabase;
+    /**
+     * 连接池
+     */
     private PoolSettings pool;
 
 

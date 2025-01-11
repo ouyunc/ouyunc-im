@@ -1,5 +1,6 @@
 package com.ouyunc.cache.config.redis.builder;
 
+import com.ouyunc.base.constant.PropertiesConfigConstant;
 import com.ouyunc.base.utils.YmlUtil;
 import com.ouyunc.cache.config.constant.ModelEnum;
 import com.ouyunc.cache.config.redis.properties.RedisProperties;
@@ -8,6 +9,7 @@ import com.ouyunc.cache.config.redis.strategy.RedisStrategy;
 import com.ouyunc.cache.config.redis.strategy.SentinelRedisStrategy;
 import com.ouyunc.cache.config.redis.strategy.StandaloneRedisStrategy;
 import org.apache.commons.collections4.CollectionUtils;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,7 +34,7 @@ public abstract class AbstractRedisBuilder<T> implements RedisBuilder<T>{
 
     static {
         // 注意：如果想使用其他的配置文件名称，可以全局搜索 ouyunc-server.yml， 然后替换自己的文件名
-        redisProperties = YmlUtil.getActiveProfileValue("ouyunc-server.yml", "ouyunc.cache.redis", RedisProperties.class);
+        redisProperties = YmlUtil.getActiveProfileValue(PropertiesConfigConstant.GLOBAL_CONFIG_FILE_LOCATION, PropertiesConfigConstant.CACHE_CONFIG_PROPERTIES_PREFIX, RedisProperties.class);
         if (redisProperties != null) {
             initModeAndStrategy();
         }

@@ -37,5 +37,11 @@
       <version>${revision}</version>
       <optional>true</optional>
     </dependency>
+    <dependency>
+      <groupId>com.ouyunc</groupId>
+      <artifactId>ouyunc-db-influx</artifactId>
+      <version>${revision}</version>
+      <optional>true</optional>
+    </dependency>
   </dependencies>
 </project>

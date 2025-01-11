@@ -12,5 +12,12 @@
     <artifactId>ouyunc-db-influx</artifactId>
     <description>influxdb 模块</description>
 
+    <dependencies>
+        <!-- https://mvnrepository.com/artifact/com.influxdb/influxdb-client-java -->
+        <dependency>
+            <groupId>com.influxdb</groupId>
+            <artifactId>influxdb-client-java</artifactId>
+        </dependency>
+    </dependencies>
 
 </project>

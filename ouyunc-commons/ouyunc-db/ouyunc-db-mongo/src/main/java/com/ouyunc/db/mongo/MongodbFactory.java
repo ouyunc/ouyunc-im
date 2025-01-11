@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.util.Converter;
 import com.mongodb.*;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
+import com.ouyunc.base.constant.PropertiesConfigConstant;
 import com.ouyunc.base.utils.YmlUtil;
 import com.ouyunc.db.mongo.properties.MongodbProperties;
 import org.apache.commons.lang3.StringUtils;
@@ -49,7 +50,7 @@ public enum MongodbFactory {
 
         static {
             // 判断配置文件中的默认数据库名称是否为空，如果不为空则使用配置文件中的默认数据库名称
-            mongodbProperties = YmlUtil.getActiveProfileValue("ouyunc-server.yml", "ouyunc.db.mongo", MongodbProperties.class);
+            mongodbProperties = YmlUtil.getActiveProfileValue(PropertiesConfigConstant.GLOBAL_CONFIG_FILE_LOCATION, PropertiesConfigConstant.MONGODB_CONFIG_PROPERTIES_PREFIX, MongodbProperties.class);
             if (mongodbProperties != null) {
                 if (StringUtils.isNotBlank(mongodbProperties.getDefaultDatabase())) {
                     DEFAULT_DATABASE_NAME = mongodbProperties.getDefaultDatabase();
