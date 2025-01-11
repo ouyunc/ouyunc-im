@@ -16,13 +16,6 @@ import org.springframework.data.mongodb.core.WriteResultChecking;
 import org.springframework.data.mongodb.core.convert.*;
 import org.springframework.data.mongodb.core.mapping.MongoMappingContext;
 
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManagerFactory;
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.security.KeyStore;
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -56,11 +49,13 @@ public enum MongodbFactory {
 
         static {
             // 判断配置文件中的默认数据库名称是否为空，如果不为空则使用配置文件中的默认数据库名称
-            mongodbProperties = YmlUtil.getActiveProfileValue("b.yaml", "mongodb", MongodbProperties.class);
+            mongodbProperties = YmlUtil.getActiveProfileValue("ouyunc-server.yml", "ouyunc.db.mongo", MongodbProperties.class);
             if (mongodbProperties != null) {
                 if (StringUtils.isNotBlank(mongodbProperties.getDefaultDatabase())) {
                     DEFAULT_DATABASE_NAME = mongodbProperties.getDefaultDatabase();
                 }
+            }else {
+                throw new RuntimeException("获取mongodb配置文件失败");
             }
         }
         /**

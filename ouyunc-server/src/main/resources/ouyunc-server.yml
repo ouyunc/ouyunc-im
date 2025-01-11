@@ -124,6 +124,9 @@ ouyunc:
           enable: true
           # 检测延迟时间（服务启动后多久后开始检测），默认10分钟，单位分钟
           delay-time: 10
+
+#===========================================中间件配置=====================================
+
   # 缓存配置， 注意这里没有使用横划线，如果使用可以做下处理
   cache:
     redis:
@@ -153,8 +156,9 @@ ouyunc:
           # 连接池中的最小空闲连接
           minIdle: 0
 
-
+  # 数据库配置
   db:
+    # jdbc-mysql 配置
     jdbc:
       # 数据库连接基本信息
       driverClassName: com.mysql.cj.jdbc.Driver
@@ -182,3 +186,17 @@ ouyunc:
         # 连接检测配置
         #connection-test-query: select 1
         leakDetectionThreshold: 60000
+
+    # mongodb 配置
+    mongo:
+      uri: mongodb://localhost:27017
+      defaultDatabase: school
+      pool:
+        maxIdleTime: 600000
+        maxLifeTime: 1800000
+        maxSize: 100
+        maxWaitTime: 5000
+        minSize: 10
+        maintenanceInitialDelay: 0
+        maintenanceFrequency: 1
+        maxConnecting: 10
