@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory;
 
 
 /**
- * influxdb 工厂
+ * influxdb 工厂, 后面可以配置多个工厂
  */
 public enum InfluxdbFactory {
 

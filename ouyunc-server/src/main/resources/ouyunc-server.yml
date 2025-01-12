@@ -206,4 +206,5 @@ ouyunc:
     influx:
       url: http://localhost:8086
       token: lC0MSlfMUSCKy64zsfNzIS6A8ArFms5z5oJHZNyqjyGQXma3O_ubfffp4uBukZgrf19w3egl9VyxS0tKqG2wXA==
+      # 默认org
       org: ouyunc

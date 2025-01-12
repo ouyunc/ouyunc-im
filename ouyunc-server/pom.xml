@@ -27,21 +27,21 @@
             <artifactId>ouyunc-cache</artifactId>
             <version>${revision}</version>
         </dependency>
-<!--        <dependency>-->
-<!--            <groupId>com.ouyunc</groupId>-->
-<!--            <artifactId>ouyunc-db-mysql</artifactId>-->
-<!--            <version>${revision}</version>-->
-<!--        </dependency>-->
-<!--        <dependency>-->
-<!--            <groupId>com.ouyunc</groupId>-->
-<!--            <artifactId>ouyunc-db-mongo</artifactId>-->
-<!--            <version>${revision}</version>-->
-<!--        </dependency>-->
-<!--        <dependency>-->
-<!--            <groupId>com.ouyunc</groupId>-->
-<!--            <artifactId>ouyunc-db-influx</artifactId>-->
-<!--            <version>${revision}</version>-->
-<!--        </dependency>-->
+        <dependency>
+            <groupId>com.ouyunc</groupId>
+            <artifactId>ouyunc-db-mysql</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.ouyunc</groupId>
+            <artifactId>ouyunc-db-mongo</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.ouyunc</groupId>
+            <artifactId>ouyunc-db-influx</artifactId>
+            <version>${revision}</version>
+        </dependency>
     </dependencies>
 
 
