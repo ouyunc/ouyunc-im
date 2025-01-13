@@ -1,6 +1,6 @@
 package com.ouyunc.cache.config.redis.builder;
 
-import com.ouyunc.cache.config.constant.ModelEnum;
+import com.ouyunc.cache.config.constant.ModeEnum;
 import com.ouyunc.cache.config.redis.strategy.RedisStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,7 +51,7 @@ public class StringRedisTemplateBuilder extends AbstractRedisBuilder<StringRedis
     private RedisStrategy currentRedisStrategy() {
         if (!redisStrategyList.isEmpty()) {
             return redisStrategyList.parallelStream().filter(redisStrategy -> {
-                ModelEnum redisModel = redisStrategy.getModel();
+                ModeEnum redisModel = redisStrategy.getModel();
                 if (mode.equals(redisModel)) {
                     logger.info("当前StringRedisTemplate加载模式为========》" + redisStrategy.getModel().getRedisModel());
                 }

@@ -1,7 +1,7 @@
 package com.ouyunc.cache.config.redis.builder;
 
 
-import com.ouyunc.cache.config.constant.ModelEnum;
+import com.ouyunc.cache.config.constant.ModeEnum;
 import com.ouyunc.cache.config.redis.strategy.RedisStrategy;
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
@@ -36,7 +36,7 @@ public class RedissonClientBuilder extends AbstractRedisBuilder<RedissonClient> 
     private RedisStrategy currentRedissonStrategy() {
         if (!redisStrategyList.isEmpty()) {
             return redisStrategyList.parallelStream().filter(redissonStrategy -> {
-                ModelEnum redisModel = redissonStrategy.getModel();
+                ModeEnum redisModel = redissonStrategy.getModel();
                 if (mode.equals(redisModel)) {
                     log.info("当前redisClient加载模式为========》" + redissonStrategy.getModel().getRedisModel());
                 }

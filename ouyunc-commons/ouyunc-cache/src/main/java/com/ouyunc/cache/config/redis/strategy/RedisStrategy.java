@@ -1,6 +1,6 @@
 package com.ouyunc.cache.config.redis.strategy;
 
-import com.ouyunc.cache.config.constant.ModelEnum;
+import com.ouyunc.cache.config.constant.ModeEnum;
 import com.ouyunc.cache.config.redis.properties.RedisProperties;
 import org.redisson.config.Config;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -14,7 +14,7 @@ public interface RedisStrategy {
     /**
      * 标识redis实现类的模式类型
      */
-    ModelEnum getModel();
+    ModeEnum getModel();
 
 
     /**

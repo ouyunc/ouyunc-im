@@ -2,7 +2,7 @@ package com.ouyunc.cache.config.redis.builder;
 
 import com.ouyunc.base.constant.PropertiesConfigConstant;
 import com.ouyunc.base.utils.YmlUtil;
-import com.ouyunc.cache.config.constant.ModelEnum;
+import com.ouyunc.cache.config.constant.ModeEnum;
 import com.ouyunc.cache.config.redis.properties.RedisProperties;
 import com.ouyunc.cache.config.redis.strategy.ClusterRedisStrategy;
 import com.ouyunc.cache.config.redis.strategy.RedisStrategy;
@@ -25,7 +25,7 @@ public abstract class AbstractRedisBuilder<T> implements RedisBuilder<T>{
     /**
      * 获取当前选中的redis使用模式类型，如果没有设置primary则默认为单例模式类型
      **/
-    protected static ModelEnum mode;
+    protected static ModeEnum mode;
 
     /**
      * 获取所有redisson的模式策略
@@ -52,11 +52,11 @@ public abstract class AbstractRedisBuilder<T> implements RedisBuilder<T>{
     public static void initModeAndStrategy() {
         // 从配置中心读取配置信息,请注意类的初始化和加载顺序
         if (redisProperties.getCluster() != null && CollectionUtils.isNotEmpty(redisProperties.getCluster().getNodes())) {
-            mode = ModelEnum.CLUSTER;
+            mode = ModeEnum.CLUSTER;
         }else if (redisProperties.getSentinel() != null && CollectionUtils.isNotEmpty(redisProperties.getSentinel().getNodes())) {
-            mode = ModelEnum.SENTINEL;
+            mode = ModeEnum.SENTINEL;
         }else {
-            mode = ModelEnum.STANDALONE;
+            mode = ModeEnum.STANDALONE;
         }
         redisStrategyList = new ArrayList<>() {{
             add(new StandaloneRedisStrategy());

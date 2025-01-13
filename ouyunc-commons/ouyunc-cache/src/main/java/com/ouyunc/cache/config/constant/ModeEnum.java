@@ -4,7 +4,7 @@ package com.ouyunc.cache.config.constant;
  * @author fzx
  * @description redisson 配置所涉及到的枚举类
  */
-public enum ModelEnum {
+public enum ModeEnum {
 
 
     /**
@@ -27,7 +27,7 @@ public enum ModelEnum {
      */
     private String redisModel;
 
-    ModelEnum(String redisModel) {
+    ModeEnum(String redisModel) {
         this.redisModel = redisModel;
     }
 

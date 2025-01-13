@@ -9,7 +9,7 @@ import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
-import com.ouyunc.cache.config.constant.ModelEnum;
+import com.ouyunc.cache.config.constant.ModeEnum;
 import com.ouyunc.cache.config.redis.strategy.RedisStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,7 +83,7 @@ public class RedisTemplateBuilder extends AbstractRedisBuilder<RedisTemplate<?,?
     private RedisStrategy currentRedisStrategy() {
         if (!redisStrategyList.isEmpty()) {
             return redisStrategyList.parallelStream().filter(redisStrategy -> {
-                ModelEnum redisModel = redisStrategy.getModel();
+                ModeEnum redisModel = redisStrategy.getModel();
                 if (mode.equals(redisModel)) {
                     logger.info("当前redisTemplate加载模式为========》" + redisStrategy.getModel().getRedisModel());
                 }

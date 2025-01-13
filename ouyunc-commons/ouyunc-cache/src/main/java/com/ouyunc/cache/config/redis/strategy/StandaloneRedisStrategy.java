@@ -1,6 +1,6 @@
 package com.ouyunc.cache.config.redis.strategy;
 
-import com.ouyunc.cache.config.constant.ModelEnum;
+import com.ouyunc.cache.config.constant.ModeEnum;
 import com.ouyunc.cache.config.redis.properties.RedisProperties;
 import org.redisson.config.Config;
 import org.redisson.config.SingleServerConfig;
@@ -20,8 +20,8 @@ public class StandaloneRedisStrategy extends AbstractRedisStrategy {
      * @description  单例模式类型
      **/
     @Override
-    public ModelEnum getModel() {
-        return ModelEnum.STANDALONE;
+    public ModeEnum getModel() {
+        return ModeEnum.STANDALONE;
     }
 
 

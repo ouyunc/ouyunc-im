@@ -1,7 +1,7 @@
 package com.ouyunc.cache.config.redis.strategy;
 
 
-import com.ouyunc.cache.config.constant.ModelEnum;
+import com.ouyunc.cache.config.constant.ModeEnum;
 import com.ouyunc.cache.config.redis.properties.RedisProperties;
 import org.redisson.config.Config;
 import org.redisson.config.ReadMode;
@@ -25,8 +25,8 @@ public class SentinelRedisStrategy extends AbstractRedisStrategy {
      * @description  哨兵模式类型
      **/
     @Override
-    public ModelEnum getModel() {
-        return ModelEnum.SENTINEL;
+    public ModeEnum getModel() {
+        return ModeEnum.SENTINEL;
     }
 
 

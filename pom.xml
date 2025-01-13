@@ -71,6 +71,8 @@
     <snappy-java.version>1.1.10.7</snappy-java.version>
     <zstd-jni.version>1.5.6-9</zstd-jni.version>
     <influxdb.version>7.2.0</influxdb.version>
+    <!--kafka-->
+    <kafka.version>3.3.1</kafka.version>
   </properties>
 
   <!--依赖-->
@@ -379,6 +381,14 @@
         <artifactId>influxdb-client-java</artifactId>
         <version>${influxdb.version}</version>
       </dependency>
+      <!--kafka-->
+      <!-- https://mvnrepository.com/artifact/org.springframework.kafka/spring-kafka -->
+      <dependency>
+        <groupId>org.springframework.kafka</groupId>
+        <artifactId>spring-kafka</artifactId>
+        <version>${kafka.version}</version>
+      </dependency>
+
     </dependencies>
   </dependencyManagement>
 

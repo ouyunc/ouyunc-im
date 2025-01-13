@@ -1,6 +1,6 @@
 package com.ouyunc.cache.config.redis.strategy;
 
-import com.ouyunc.cache.config.constant.ModelEnum;
+import com.ouyunc.cache.config.constant.ModeEnum;
 import com.ouyunc.cache.config.redis.properties.RedisProperties;
 import org.redisson.config.ClusterServersConfig;
 import org.redisson.config.Config;
@@ -22,8 +22,8 @@ public class ClusterRedisStrategy extends AbstractRedisStrategy {
      * @description  集群模式类型
      **/
     @Override
-    public ModelEnum getModel() {
-        return ModelEnum.CLUSTER;
+    public ModeEnum getModel() {
+        return ModeEnum.CLUSTER;
     }
 
     @Override
