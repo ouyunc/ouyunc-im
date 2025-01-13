@@ -3,9 +3,9 @@ package com.ouyunc.mq.kafka;
 import com.ouyunc.mq.kafka.builder.AbstractKafkaBuilder;
 import com.ouyunc.mq.kafka.builder.KafkaAdminBuilder;
 import com.ouyunc.mq.kafka.builder.KafkaTemplateBuilder;
-import org.apache.kafka.clients.admin.AdminClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.kafka.core.KafkaAdmin;
 import org.springframework.kafka.core.KafkaTemplate;
 
 /**
@@ -36,20 +36,20 @@ public enum KafkaFactory {
     },
 
     KAFKA_ADMIN_CLIENT(3, "kafkaAdminClient v3 版本") {
-        private static volatile AdminClient adminClient;
+        private static volatile KafkaAdmin kafkaAdmin;
 
         @SuppressWarnings("unchecked")
         @Override
-        public AdminClient instance() {
-            if (adminClient == null) {
+        public KafkaAdmin instance() {
+            if (kafkaAdmin == null) {
                 synchronized (KafkaFactory.class) {
-                    if (adminClient == null) {
-                        AbstractKafkaBuilder<AdminClient> kafkaAdminClientBuilder = new KafkaAdminBuilder();
-                        adminClient =  kafkaAdminClientBuilder.build();
+                    if (kafkaAdmin == null) {
+                        AbstractKafkaBuilder<KafkaAdmin> kafkaAdminClientBuilder = new KafkaAdminBuilder();
+                        kafkaAdmin =  kafkaAdminClientBuilder.build();
                     }
                 }
             }
-            return adminClient;
+            return kafkaAdmin;
         }
     }
     ;
