@@ -2,7 +2,6 @@ package com.ouyunc.mq.kafka.strategy;
 
 
 import com.ouyunc.mq.kafka.enums.KafkaModeEnum;
-import com.ouyunc.mq.kafka.properties.ClusterKafkaMqProperties;
 import com.ouyunc.mq.kafka.properties.KafkaProperties;
 import com.ouyunc.mq.kafka.properties.StandaloneKafkaMqProperties;
 import org.apache.commons.collections4.CollectionUtils;
@@ -49,7 +48,7 @@ public class StandaloneKafkaMqStrategy implements KafkaMqStrategy {
      **/
     @Override
     public ProducerFactory<?,?> buildProducerFactory(KafkaProperties kafkaProperties) {
-        if (kafkaProperties instanceof StandaloneKafkaMqProperties standaloneKafkaProperties) {
+        if (this.standaloneKafkaMqProperties != null && kafkaProperties instanceof StandaloneKafkaMqProperties standaloneKafkaProperties) {
             this.standaloneKafkaMqProperties = standaloneKafkaProperties;
         }
         return new DefaultKafkaProducerFactory<>(producerProperties());
@@ -95,7 +94,11 @@ public class StandaloneKafkaMqStrategy implements KafkaMqStrategy {
      * @param
      * @return org.springframework.kafka.config.KafkaListenerContainerFactory<?>
      **/
-    public KafkaListenerContainerFactory<?> multiListenerContainer() {
+    @Override
+    public KafkaListenerContainerFactory<?> buildKafkaListenerContainerFactory(KafkaProperties kafkaProperties) {
+        if (this.standaloneKafkaMqProperties != null && kafkaProperties instanceof StandaloneKafkaMqProperties standaloneKafkaProperties) {
+            this.standaloneKafkaMqProperties = standaloneKafkaProperties;
+        }
         ConcurrentKafkaListenerContainerFactory<String, String> ckcFactory = new ConcurrentKafkaListenerContainerFactory<>();
         //配置消费者工厂
         ckcFactory.setConsumerFactory(consumerFactory());

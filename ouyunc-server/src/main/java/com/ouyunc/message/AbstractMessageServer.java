@@ -3,6 +3,7 @@ package com.ouyunc.message;
 import com.ouyunc.base.constant.enums.DeviceTypeEnum;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.core.listener.event.ServerStartupEvent;
+import com.ouyunc.core.listener.event.ServerStopEvent;
 import com.ouyunc.message.banner.MessageBanner;
 import com.ouyunc.message.channel.DefaultServerChannelInitializer;
 import com.ouyunc.message.channel.DefaultSocketChannelInitializer;
@@ -179,6 +180,8 @@ public abstract class AbstractMessageServer implements MessageServer {
     @Override
     public void stop() {
         log.error("IM server 开始注销程序...");
+        // 系统关闭进行事件通知,可以进行释放资源等一些处理
+        MessageServerContext.publishEvent(new ServerStopEvent(this), false);
         // 系统退出，会触发服务关闭钩子，从而释放资源并关闭程序
         System.exit(0);
     }

@@ -42,7 +42,7 @@ public class ClusterKafkaMqStrategy implements KafkaMqStrategy {
      **/
     @Override
     public ProducerFactory<?,?> buildProducerFactory(KafkaProperties kafkaProperties) {
-        if (kafkaProperties instanceof ClusterKafkaMqProperties clusterKafkaProperties) {
+        if (this.clusterKafkaMqProperties != null && kafkaProperties instanceof ClusterKafkaMqProperties clusterKafkaProperties) {
             this.clusterKafkaMqProperties = clusterKafkaProperties;
         }
         return new DefaultKafkaProducerFactory<>(producerProperties());
@@ -88,7 +88,11 @@ public class ClusterKafkaMqStrategy implements KafkaMqStrategy {
      * @param
      * @return org.springframework.kafka.config.KafkaListenerContainerFactory<?>
      **/
-    public KafkaListenerContainerFactory<?> multiListenerContainer() {
+    @Override
+    public KafkaListenerContainerFactory<?> buildKafkaListenerContainerFactory(KafkaProperties kafkaProperties) {
+        if (this.clusterKafkaMqProperties != null && kafkaProperties instanceof ClusterKafkaMqProperties clusterKafkaProperties) {
+            this.clusterKafkaMqProperties = clusterKafkaProperties;
+        }
         ConcurrentKafkaListenerContainerFactory<String, String> ckcFactory = new ConcurrentKafkaListenerContainerFactory<>();
         //配置消费者工厂
         ckcFactory.setConsumerFactory(consumerFactory());

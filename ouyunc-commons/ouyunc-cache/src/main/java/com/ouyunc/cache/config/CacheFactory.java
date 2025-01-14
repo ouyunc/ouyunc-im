@@ -20,13 +20,15 @@ public enum CacheFactory {
         //每一个数据库只有一个redisTemplate 实例
         private static final ConcurrentHashMap<Integer, RedisTemplate<?,?>> redisTemplateMap = new ConcurrentHashMap<>();
         private static RedisProperties existRedisProperties;
+
+        @SuppressWarnings("unchecked")
         @Override
-        public <T> T instance(RedisProperties ...redisProperties) {
+        public RedisTemplate<?,?> instance(RedisProperties ...redisProperties) {
             return instance(0, redisProperties);
         }
         @SuppressWarnings("unchecked")
         @Override
-        public <T> T instance(int database,RedisProperties ...redisProperties) {
+        public RedisTemplate<?,?> instance(int database,RedisProperties ...redisProperties) {
             if (redisTemplateMap.get(database) == null) {
                 synchronized (ConcurrentHashMap.class) {
                     if (redisTemplateMap.get(database) == null) {
@@ -44,7 +46,7 @@ public enum CacheFactory {
                     }
                 }
             }
-            return (T) redisTemplateMap.get(database);
+            return  redisTemplateMap.get(database);
         }
     },
 
@@ -54,7 +56,7 @@ public enum CacheFactory {
         private static RedisProperties existRedisProperties;
         @SuppressWarnings("unchecked")
         @Override
-        public <T> T instance(int database,RedisProperties ...redisProperties) {
+        public RedissonClient instance(int database,RedisProperties ...redisProperties) {
             if (redissonClientMap.get(database) == null) {
                 synchronized (ConcurrentHashMap.class) {
                     if (redissonClientMap.get(database) == null) {
@@ -71,11 +73,12 @@ public enum CacheFactory {
                     }
                 }
             }
-            return (T) redissonClientMap.get(database);
+            return redissonClientMap.get(database);
         }
 
+        @SuppressWarnings("unchecked")
         @Override
-        public <T> T instance(RedisProperties ...redisProperties) {
+        public RedissonClient instance(RedisProperties ...redisProperties) {
             return instance(0, redisProperties);
         }
     };
