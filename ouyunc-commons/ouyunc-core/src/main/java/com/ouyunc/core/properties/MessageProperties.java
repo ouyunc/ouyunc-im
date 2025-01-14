@@ -102,7 +102,7 @@ public class MessageProperties {
     }
 
     public String getLocalHost() {
-        return localHost;
+        return getIp();
     }
 
     public void setLocalHost(String localHost) {
