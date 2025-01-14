@@ -7,6 +7,9 @@
     <option name="aptOptionsEnabled" value="true" />
   </component>
   <component name="CompilerConfiguration">
+    <excludeFromCompile>
+      <directory url="file://$PROJECT_DIR$/ouyunc-commons/ouyunc-ai/src/main/resources/archetype-resources" includeSubdirectories="true" />
+    </excludeFromCompile>
     <annotationProcessing>
       <profile name="Maven default annotation processors profile" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
@@ -22,6 +25,7 @@
         <module name="ouyu-client" />
         <module name="ouyunc-cache" />
         <module name="ouyunc-db-mongo" />
+        <module name="ouyunc-ai" />
         <module name="ouyunc-core" />
         <module name="ouyu-server" />
         <module name="ouyunc-mq-rocket" />
