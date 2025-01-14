@@ -1,4 +1,4 @@
-# OUYUNC-IM [![version](https://img.shields.io/badge/version-6.0.0-blue)](https://gitee.com/etxync/ouyunc-im)  
+# OUYUNC-IM [![version](https://img.shields.io/badge/version-6.1.0-blue)](https://gitee.com/etxync/ouyunc-im)  
 [![license](https://img.shields.io/badge/license-MIT-brightgreen)](https://www.mit-license.org/)
 <a href='https://gitee.com/etxync/ouyunc-im/stargazers'><img src='https://gitee.com/etxync/ouyunc-im/badge/star.svg?theme=dark' alt='star'></img></a>
 <a href='https://gitee.com/etxync/ouyunc-im/members'><img src='https://gitee.com/etxync/ouyunc-im/badge/fork.svg?theme=dark' alt='fork'></img></a>
@@ -136,12 +136,11 @@ https://gitee.com/etxync/ouyunc-im/wikis/OUYUNC-IM%20v3.x/%E5%AE%A2%E6%88%B7%E7%
 4. 支持语音聊天、视频聊天（已完成）
 5. 在线简单视频会议（已完成）
 6. 支持白板功能（已完成）
-7. 集成springboot 以ouyunc-im-spring-boot-starter
+7. 集成springboot 以ouyunc-im-spring-boot-starter （已完成）
 8. 打成依赖包放到中央仓库，作为依赖组件来引用
 9. 重构qos消息可靠性到达（已完成）
 10. 优化数据库模块，支持分表分库
-11. 添加es来处理搜索消息
-12. 优化其他代码
+11. 优化其他代码
 
 
 #### 版本升级
@@ -190,8 +189,13 @@ https://gitee.com/etxync/ouyunc-im/wikis/OUYUNC-IM%20v3.x/%E5%AE%A2%E6%88%B7%E7%
 3. 添加群聊和私聊会话消息
 4. 对离线消息的存储格式进行重构
 5. 优化其他代码
+
 #####  **5.0.0 ~ 6.0.0**
 1. 适配jdk21,重构项目为框架，增加扩展点
+2. 优化其他代码
+
+#####  **6.0.0 ~ 6.1.0**
+1. 添加业务操作工具类
 2. 优化其他代码
 
 #### 最后说明
