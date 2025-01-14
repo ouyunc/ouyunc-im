@@ -1,6 +1,7 @@
 package com.ouyunc.base.utils;
 
 import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONReader;
 import com.alibaba.ttl.TransmittableThreadLocal;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -130,7 +131,7 @@ public class YmlUtil {
      */
     public static<T> T getValue(String fileName , String key, Class<T> tClass){
         Object value = getValue(key, fileName);
-        return JSON.parseObject(JSON.toJSONString(value), tClass);
+        return JSON.parseObject(JSON.toJSONString(value), tClass, JSONReader.Feature.SupportClassForName);
     }
 
     /**

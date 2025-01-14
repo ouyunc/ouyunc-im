@@ -2,6 +2,8 @@ package com.ouyunc.mq.kafka.properties;
 
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
+
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -10,7 +12,7 @@ import java.util.List;
  * @date 2025/1/13 16:57
  * @version 1.0
  */
-public class ClusterKafkaMqProperties extends KafkaProperties {
+public class ClusterKafkaProperties extends KafkaProperties {
 
 
     /**
@@ -75,7 +77,7 @@ public class ClusterKafkaMqProperties extends KafkaProperties {
         /**
          * 以逗号分隔的主机：端口对列表，用于建立与Kafka群集的初始连接
          **/
-        private List<String> bootstrapServers;
+        private List<String> bootstrapServers = new ArrayList<>();
 
         /**
          * 生产者可用于缓冲等待发送到服务器的记录的内存总字节数，默认值为33554432
@@ -130,8 +132,9 @@ public class ClusterKafkaMqProperties extends KafkaProperties {
             return bootstrapServers;
         }
 
-        public void setBootstrapServers(List<String> bootstrapServers) {
-            this.bootstrapServers = bootstrapServers;
+        // 这里对数组进行拆分，做特殊处理
+        public void setBootstrapServers(List<String> bootstrapServerList) {
+            KafkaProperties.setBootstrapServers(bootstrapServerList, bootstrapServers);
         }
 
         public Integer getBufferMemory() {
@@ -211,7 +214,7 @@ public class ClusterKafkaMqProperties extends KafkaProperties {
         /**
          * 以逗号分隔的主机：端口对列表，用于建立与Kafka群集的初始连接。
          **/
-        private List<String> bootstrapServers;
+        private List<String> bootstrapServers = new ArrayList<>();
 
         /**
          * ID在发出请求时传递给服务器;用于服务器端日志记录。
@@ -295,8 +298,9 @@ public class ClusterKafkaMqProperties extends KafkaProperties {
             return bootstrapServers;
         }
 
-        public void setBootstrapServers(List<String> bootstrapServers) {
-            this.bootstrapServers = bootstrapServers;
+        // 这里对数组进行拆分，做特殊处理
+        public void setBootstrapServers(List<String> bootstrapServerList) {
+            KafkaProperties.setBootstrapServers(bootstrapServerList, bootstrapServers);
         }
 
         public String getClientId() {

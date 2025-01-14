@@ -10,7 +10,7 @@ import org.springframework.kafka.core.ProducerFactory;
  * @Description kafka 策略抽象类
  * @Date 2020/3/13 11:10
  **/
-public interface KafkaMqStrategy<K, V> {
+public interface KafkaStrategy<K, V> {
 
 
     /**

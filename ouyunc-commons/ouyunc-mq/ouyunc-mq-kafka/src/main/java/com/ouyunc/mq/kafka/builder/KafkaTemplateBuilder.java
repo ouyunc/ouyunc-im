@@ -1,6 +1,6 @@
 package com.ouyunc.mq.kafka.builder;
 
-import com.ouyunc.mq.kafka.strategy.KafkaMqStrategy;
+import com.ouyunc.mq.kafka.strategy.KafkaStrategy;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
 
@@ -21,9 +21,9 @@ public class KafkaTemplateBuilder extends AbstractKafkaBuilder<KafkaTemplate<?,?
     @Override
     public KafkaTemplate<?, ?> build() {
         //获取当前选中的配置策略
-        KafkaMqStrategy<?,?> kafkaMqStrategy = currentKafkaStrategy();
+        KafkaStrategy<?,?> kafkaMqStrategy = currentKafkaStrategy();
         //构建生产者工厂
-        ProducerFactory<?,?> producerFactory = kafkaMqStrategy.buildProducerFactory(commonProperties);
+        ProducerFactory<?,?> producerFactory = kafkaMqStrategy.buildProducerFactory(kafkaProperties);
         //创建kafka操作模版
         return new KafkaTemplate<>(producerFactory);
     }

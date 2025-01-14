@@ -33,4 +33,14 @@ public class PropertiesConfigConstant {
      * mq kafka 配置属性前缀
      */
     public static final String  KAFKA_CONFIG_PROPERTIES_PREFIX = "ouyunc.mq.kafka";
+
+    /**
+     * mq kafka 单实例配置属性前缀
+     */
+    public static final String  KAFKA_STANDALONE_CONFIG_PROPERTIES_PREFIX = "ouyunc.mq.kafka.standalone";
+
+    /**
+     * mq kafka 集群 配置属性前缀
+     */
+    public static final String  KAFKA_CLUSTER_CONFIG_PROPERTIES_PREFIX = "ouyunc.mq.kafka.cluster";
 }

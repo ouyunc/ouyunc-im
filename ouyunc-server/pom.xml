@@ -42,6 +42,11 @@
             <artifactId>ouyunc-db-influx</artifactId>
             <version>${revision}</version>
         </dependency>
+        <dependency>
+            <groupId>com.ouyunc</groupId>
+            <artifactId>ouyunc-mq-kafka</artifactId>
+            <version>${revision}</version>
+        </dependency>
     </dependencies>
 
 

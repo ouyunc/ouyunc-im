@@ -101,9 +101,6 @@ public enum KafkaFactory {
 
     private static final Logger log = LoggerFactory.getLogger(KafkaFactory.class);
 
-    public static void func() {
-
-    }
 
     /**
      * @Author fzx

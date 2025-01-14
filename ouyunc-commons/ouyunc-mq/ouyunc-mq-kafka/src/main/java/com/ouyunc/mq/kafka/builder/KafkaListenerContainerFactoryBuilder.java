@@ -1,6 +1,6 @@
 package com.ouyunc.mq.kafka.builder;
 
-import com.ouyunc.mq.kafka.strategy.KafkaMqStrategy;
+import com.ouyunc.mq.kafka.strategy.KafkaStrategy;
 import org.springframework.kafka.config.KafkaListenerContainerFactory;
 
 /**
@@ -21,8 +21,8 @@ public class KafkaListenerContainerFactoryBuilder extends AbstractKafkaBuilder<K
     @Override
     public KafkaListenerContainerFactory<?> build() {
         //获取当前选中的配置策略
-        KafkaMqStrategy<?,?> kafkaMqStrategy = currentKafkaStrategy();
+        KafkaStrategy<?,?> kafkaMqStrategy = currentKafkaStrategy();
         //构建kafka监听容器工厂
-        return kafkaMqStrategy.buildKafkaListenerContainerFactory(commonProperties);
+        return kafkaMqStrategy.buildKafkaListenerContainerFactory(kafkaProperties);
     }
 }
