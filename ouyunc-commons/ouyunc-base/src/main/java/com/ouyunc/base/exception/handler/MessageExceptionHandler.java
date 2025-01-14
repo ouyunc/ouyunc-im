@@ -18,6 +18,7 @@ public class MessageExceptionHandler extends ChannelDuplexHandler {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         log.error("通道 channelId: {} 发生了异常: {} ", ctx.channel().id(), cause.getMessage());
+        // 推送mq, 记录日志，发送邮件或短信进行通知
         // do nothing
     }
 }
