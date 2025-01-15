@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -24,9 +25,27 @@ import java.util.List;
  */
 public enum JdbcFactory implements DbOperator {
 
-    JDBC_TEMPLATE (1, "jdbc v1.0操作模板"){
-
-
+    JDBC_TEMPLATE (1, "jdbcTemplate v1.0操作模板"){
+        private static volatile JdbcTemplate jdbcTemplate;
+        /**
+         * 获取jdbcTemplate
+         */
+        @SuppressWarnings("unchecked")
+        @Override
+        public JdbcTemplate instance() {
+            if (jdbcTemplate == null) {
+                synchronized (JdbcFactory.class) {
+                    if (jdbcTemplate == null) {
+                        jdbcTemplate = new JdbcTemplate(getDataSource());
+                        // 设置查询超时时间（秒）
+                        jdbcTemplate.setQueryTimeout(30);
+                        // 设置获取警告信息
+                        jdbcTemplate.setIgnoreWarnings(false);
+                    }
+                }
+            }
+            return jdbcTemplate;
+        }
 
 
 
@@ -46,7 +65,7 @@ public enum JdbcFactory implements DbOperator {
         }
 
         @Override
-        public <T> List<T> batchSelect(String sql, Class<T> tClass, Object... args) {
+        public <T> List<T> selectList(String sql, Class<T> tClass, Object... args) {
             try {
                 return instance().query(sql, new BeanPropertyRowMapper<>(tClass), args);
             }catch (IllegalStateException e) {
@@ -85,8 +104,57 @@ public enum JdbcFactory implements DbOperator {
             return instance().batchUpdate(sql, batchArgs);
         }
 
-    }
+    },
+    JDBC_CLIENT(1, "jdbcClient v1.0操作模板") {
+        private static volatile JdbcClient jdbcClient;
+        /**
+         * 获取jdbcTemplate
+         */
+        @SuppressWarnings("unchecked")
+        @Override
+        public JdbcClient instance() {
+            if (jdbcClient == null) {
+                synchronized (JdbcFactory.class) {
+                    if (jdbcClient == null) {
+                        JdbcTemplate jdbcTemplate =  JDBC_TEMPLATE.instance();
+                        jdbcClient = JdbcClient.create(jdbcTemplate);
+                    }
+                }
+            }
+            return jdbcClient;
+        }
 
+        @Override
+        public void execute(String sql) {
+            jdbcClient.sql(sql).update();
+        }
+
+        @Override
+        public <T> T selectOne(String sql, Class<T> tClass, Object... args) {
+            return jdbcClient.sql(sql).params(args).query(tClass).optional().orElse(null);
+        }
+
+        @Override
+        public <T> List<T> selectList(String sql, Class<T> tClass, Object... args) {
+            return jdbcClient.sql(sql).params(args).query(tClass).list();
+        }
+
+        @Override
+        public int insert(String sql, Object... args) {
+            return jdbcClient.sql(sql).params(args).update();
+        }
+
+        @Override
+        public int update(String sql, Object... args) {
+            return jdbcClient.sql(sql).params(args).update();
+        }
+
+        @Override
+        public int delete(String sql, Object... args) {
+            return jdbcClient.sql(sql).params(args).update();
+        }
+
+    }
     ;
 
     private final int version;
@@ -111,25 +179,9 @@ public enum JdbcFactory implements DbOperator {
 
     private static final Logger log = LoggerFactory.getLogger(JdbcFactory.class);
 
-    private static volatile JdbcTemplate jdbcTemplate;
 
-    /**
-     * 获取jdbcTemplate
-     */
-    public JdbcTemplate instance() {
-        if (jdbcTemplate == null) {
-            synchronized (JdbcFactory.class) {
-                if (jdbcTemplate == null) {
-                    jdbcTemplate = new JdbcTemplate(getDataSource());
-                    // 设置查询超时时间（秒）
-                    jdbcTemplate.setQueryTimeout(30);
-                    // 设置获取警告信息
-                    jdbcTemplate.setIgnoreWarnings(false);
-                }
-            }
-        }
-        return jdbcTemplate;
-    }
+
+
 
     /**
      * 事务管理器
@@ -246,4 +298,10 @@ public enum JdbcFactory implements DbOperator {
             dataSource.close();
         }
     }
+
+    /**
+     * 获取实例
+     */
+    public abstract <T> T instance();
+
 }

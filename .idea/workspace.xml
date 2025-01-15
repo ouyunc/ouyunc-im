@@ -9,13 +9,10 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v6.1.0  kafka 模板">
-      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-ai/pom.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-ai/src/main/java/com/ouyunc/ai/Main.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/encodings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/encodings.xml" afterDir="false" />
+    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v6.1.0  添加AI模块">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/java/com/ouyunc/db/mysql/JdbcFactory.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/java/com/ouyunc/db/mysql/JdbcFactory.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/java/com/ouyunc/db/mysql/operator/DbOperator.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/java/com/ouyunc/db/mysql/operator/DbOperator.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -673,7 +670,7 @@
       <workItem from="1736587329173" duration="11455000" />
       <workItem from="1736671972751" duration="3687000" />
       <workItem from="1736814347943" duration="609000" />
-      <workItem from="1736818716586" duration="12606000" />
+      <workItem from="1736818716586" duration="16582000" />
     </task>
     <task id="LOCAL-00190" summary="v3.1.1-beta 优化处理">
       <created>1686906322045</created>
@@ -1018,7 +1015,7 @@
       <option name="project" value="LOCAL" />
       <updated>1704076343678</updated>
     </task>
-    <option name="localTasksCounter" value="293" />
+    <option name="localTasksCounter" value="294" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1078,7 +1075,6 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
-    <MESSAGE value="v4.2.0&#10;1. 添加消息撤回处理器&#10;2. 增添监控预处理&#10;3. 优化代码" />
     <MESSAGE value="v5.0.0&#10;1. 全新设计消息存储结构，更加减少存储，提高效率&#10;2. 理论上消息可靠传输100%&#10;3. 优化代码" />
     <MESSAGE value="v5.0.0&#10;1. 添加mqtt相关协议处理代码&#10;2. 优化代码" />
     <MESSAGE value="v5.0.0&#10;1. 添加消息发送回调&#10;2. 优化代码" />
@@ -1103,7 +1099,8 @@
     <MESSAGE value="v6.1.0  mongodb 模板" />
     <MESSAGE value="v6.1.0  influxdb 模板" />
     <MESSAGE value="v6.1.0  kafka 模板" />
-    <option name="LAST_COMMIT_MESSAGE" value="v6.1.0  kafka 模板" />
+    <MESSAGE value="v6.1.0  添加AI模块" />
+    <option name="LAST_COMMIT_MESSAGE" value="v6.1.0  添加AI模块" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

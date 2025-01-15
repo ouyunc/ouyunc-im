@@ -33,7 +33,7 @@ public interface DbOperator {
      * @param args
      * @return
      */
-    <T> List<T> batchSelect(String sql, Class<T> tClass, Object... args);
+    <T> List<T> selectList(String sql, Class<T> tClass, Object... args);
 
     /**
      * 单个插入
@@ -49,7 +49,9 @@ public interface DbOperator {
      * @param batchArgs
      * @return
      */
-    int[] batchInsert(String sql, List<Object[]> batchArgs);
+    default int[] batchInsert(String sql, List<Object[]> batchArgs){
+        throw new UnsupportedOperationException("不支持批量插入");
+    }
 
     /**
      * 单个修改
@@ -65,7 +67,9 @@ public interface DbOperator {
      * @param batchArgs
      * @return
      */
-    int[] batchUpdate(String sql, List<Object[]> batchArgs);
+    default int[] batchUpdate(String sql, List<Object[]> batchArgs){
+        throw new UnsupportedOperationException("不支持批量更新");
+    }
 
     /**
      * 单个删除
@@ -81,5 +85,7 @@ public interface DbOperator {
      * @param batchArgs
      * @return
      */
-    int[] batchDelete(String sql, List<Object[]> batchArgs);
+    default int[] batchDelete(String sql, List<Object[]> batchArgs) {
+        throw new UnsupportedOperationException("不支持批量删除");
+    }
 }
