@@ -29,7 +29,7 @@
         <!-- 日志文件默认输出格式,不带行号输出(行号显示会影响日志输出性能);%C:大写,类名;%M:方法名;%m:错误信息;%n:换行 -->
         <!-- <property name="log_pattern">%d{yyyy-MM-dd HH:mm:ss.SSS} [%-5level] %C.%M - %m%n</property> -->
         <!-- 日志文件默认输出格式,另类带行号输出(对日志输出性能未知);%C:大写,类名;%M:方法名;%L:行号;%m:错误信息;%n:换行 -->
-        <property name="log_pattern">%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight{[${logFileName}]} %highlight{[${sys:local-server-address:-127.0.0.1}]} %highlight{[trace-id:%X{trace-id}]} %highlight{[span-id:%X{span-id}]}  %highlight{[%-5level]} %c{1.}.%m[%l line] - %m%n</property>
+        <property name="log_pattern">%d{yyyy-MM-dd HH:mm:ss.SSS} [${logFileName}] [${sys:local-server-address:-127.0.0.1}] [trace-id:%X{trace-id}] [span-id:%X{span-id}]  [%-5level] [%t] %c{1.} -> %msg%n</property>
 
         <!-- 日志默认切割的最小单位 -->
         <property name="every_file_size">20MB</property>
