@@ -21,7 +21,8 @@ import javax.sql.DataSource;
 import java.util.List;
 
 /**
- * jdbc 工厂
+ * jdbc 工厂，旨在提供消息的持久化工具类；
+ * 如果使用其他持久化方式存储 如：基于阿里表格存储（Tablestore）自研的Timeline模型构建的消息进行存储，或其他方式，可自定扩展或自定义
  */
 public enum JdbcFactory implements DbOperator {
 
