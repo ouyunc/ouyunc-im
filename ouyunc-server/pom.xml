@@ -29,7 +29,7 @@
         </dependency>
         <dependency>
             <groupId>com.ouyunc</groupId>
-            <artifactId>ouyunc-db-mysql</artifactId>
+            <artifactId>ouyunc-db-jdbc</artifactId>
             <version>${revision}</version>
         </dependency>
         <dependency>

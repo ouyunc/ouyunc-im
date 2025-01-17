@@ -8,7 +8,7 @@
         <artifactId>ouyunc-db</artifactId>
         <version>${revision}</version>
     </parent>
-    <artifactId>ouyunc-db-mysql</artifactId>
+    <artifactId>ouyunc-db-jdbc</artifactId>
     <description>mysql模块</description>
 
     <properties>

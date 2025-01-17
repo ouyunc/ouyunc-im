@@ -14,7 +14,7 @@
     <modules>
         <module>ouyunc-db-influx</module>
         <module>ouyunc-db-mongo</module>
-        <module>ouyunc-db-mysql</module>
+        <module>ouyunc-db-jdbc</module>
     </modules>
 
     <dependencies>

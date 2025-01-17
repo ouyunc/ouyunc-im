@@ -1,9 +1,9 @@
-package com.ouyunc.db.mysql;
+package com.ouyunc.db.jdbc;
 
 import com.ouyunc.base.constant.PropertiesConfigConstant;
 import com.ouyunc.base.utils.YmlUtil;
-import com.ouyunc.db.mysql.operator.DbOperator;
-import com.ouyunc.db.mysql.properties.JdbcProperties;
+import com.ouyunc.db.jdbc.operator.DbOperator;
+import com.ouyunc.db.jdbc.properties.JdbcProperties;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.apache.commons.lang3.StringUtils;
