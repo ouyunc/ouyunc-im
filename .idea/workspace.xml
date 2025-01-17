@@ -9,8 +9,9 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v6.1.0  更改输出到文件日志格式">
+    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v6.1.0  springboot starter 版本号">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-message-spring-boot-starter/src/main/java/com/ouyunc/ouyuncmessagespringbootstarter/pro/PP.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-message-spring-boot-starter/src/main/java/com/ouyunc/ouyuncmessagespringbootstarter/pro/PP.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -672,6 +673,7 @@
       <workItem from="1736987376094" duration="32000" />
       <workItem from="1736987436086" duration="97000" />
       <workItem from="1737014153161" duration="1607000" />
+      <workItem from="1737080293731" duration="1172000" />
     </task>
     <task id="LOCAL-00190" summary="v3.1.1-beta 优化处理">
       <created>1686906322045</created>
@@ -1016,7 +1018,7 @@
       <option name="project" value="LOCAL" />
       <updated>1704076343678</updated>
     </task>
-    <option name="localTasksCounter" value="296" />
+    <option name="localTasksCounter" value="298" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1076,8 +1078,6 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
-    <MESSAGE value="v5.0.0&#10;1. 添加mqtt相关协议处理代码&#10;2. 优化代码" />
-    <MESSAGE value="v5.0.0&#10;1. 添加消息发送回调&#10;2. 优化代码" />
     <MESSAGE value="v6.0.0 优化代码" />
     <MESSAGE value="v6.0.0 优化代码  被代理，获取真实客户端ip" />
     <MESSAGE value="v6.0.0 优化代码,修改协议魔数为OUYUNC,添加客户端登录过期自定义时间" />
@@ -1101,7 +1101,9 @@
     <MESSAGE value="v6.1.0  kafka 模板" />
     <MESSAGE value="v6.1.0  添加AI模块" />
     <MESSAGE value="v6.1.0  更改输出到文件日志格式" />
-    <option name="LAST_COMMIT_MESSAGE" value="v6.1.0  更改输出到文件日志格式" />
+    <MESSAGE value="v6.1.0  jdbc" />
+    <MESSAGE value="v6.1.0  springboot starter 版本号" />
+    <option name="LAST_COMMIT_MESSAGE" value="v6.1.0  springboot starter 版本号" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
