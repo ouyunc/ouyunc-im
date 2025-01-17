@@ -16,10 +16,10 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <module name="ouyunc-message-spring-boot-starter" />
-        <module name="ouyunc-db-mysql" />
         <module name="ouyunc-base" />
         <module name="ouyu-cache" />
         <module name="ouyunc-domain" />
+        <module name="ouyunc-db-jdbc" />
         <module name="ouyu-db" />
         <module name="ouyunc-client" />
         <module name="ouyu-client" />

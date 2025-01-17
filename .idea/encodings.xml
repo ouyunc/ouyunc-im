@@ -14,10 +14,10 @@
     <file url="file://$PROJECT_DIR$/ouyunc-commons/ouyunc-core/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-influx/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-influx/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-jdbc/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-jdbc/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mongo/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mongo/src/main/resources" charset="UTF-8" />
-    <file url="file://$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/java" charset="UTF-8" />
-    <file url="file://$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mysql/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/ouyunc-commons/ouyunc-db/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/ouyunc-commons/ouyunc-db/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java" charset="UTF-8" />
