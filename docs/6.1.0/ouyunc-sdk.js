@@ -188,10 +188,10 @@ class Socket {
      */
     _bindWebSocketEvents(ws) {
         ws.onopen = (e) => {
+            console.log('WebSocket connection established');
             this.connected = true;
             this.reconnecting = false;
             this.onopen?.(e);
-            console.log('WebSocket connection established');
         };
 
         ws.onmessage = async (e) => {
@@ -223,6 +223,7 @@ class Socket {
      */
     _bindUniAppEvents(ws) {
         ws.onOpen((e) => {
+            console.log('WebSocket connection established');
             this.connected = true;
             this.reconnecting = false;
             this.onopen?.(e);
