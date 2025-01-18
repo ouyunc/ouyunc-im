@@ -10,7 +10,7 @@ import com.ouyunc.base.packet.message.content.LoginContent;
 public enum WsMessageContentTypeEnum implements MessageContentType {
     LOGIN_REQUEST_CONTENT(NumberConstant.NUMBER_10,ProtocolTypeEnum.WS.getProtocol(), ProtocolTypeEnum.WS.getProtocolVersion(), LoginContent.class, "外部客户端登录消息内容"),
     LOGIN_RESPONSE_FAIL_CONTENT(NumberConstant.NUMBER_11,ProtocolTypeEnum.WS.getProtocol(), ProtocolTypeEnum.WS.getProtocolVersion(), String.class, "外部客户端登录失败消息内容"),
-    LOGIN_RESPONSE_SUCCESS_CONTENT(NumberConstant.NUMBER_12,ProtocolTypeEnum.WS.getProtocol(), ProtocolTypeEnum.WS.getProtocolVersion(), String.class, "外部客户端登录成功消息内容"),
+    LOGIN_RESPONSE_SUCCESS_CONTENT(NumberConstant.NUMBER_12,ProtocolTypeEnum.WS.getProtocol(), ProtocolTypeEnum.WS.getProtocolVersion(), String.class, "客户端登录成功"),
     PING_CONTENT(NumberConstant.NUMBER_13,ProtocolTypeEnum.WS.getProtocol(), ProtocolTypeEnum.WS.getProtocolVersion(), String.class, "外部消息心跳ping消息内容"),
     SERVER_NOTIFY_CONTENT(NumberConstant.NUMBER_14,ProtocolTypeEnum.WS.getProtocol(), ProtocolTypeEnum.WS.getProtocolVersion(), String.class, "服务端发给客户端的通知内容"),
     TEXT_CONTENT(NumberConstant.NUMBER_15,ProtocolTypeEnum.WS.getProtocol(), ProtocolTypeEnum.WS.getProtocolVersion(), String.class, "文本内容类型"),

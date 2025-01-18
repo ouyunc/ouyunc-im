@@ -30,7 +30,8 @@ public class HttpProtocolDispatcherHandler extends SimpleChannelInboundHandler<O
 
     /**
      * @Author fzx
-     * @Description 处理http类协议
+     * @Description 处理http类协议；
+     * 注意：这里可以提前做一些appKey 的鉴权（防止客户端只连接不登录，白白占用连接资源）以及appKey下连接数的统计或限制；
      */
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {

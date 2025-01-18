@@ -46,13 +46,14 @@ public class PingPongMessageProcessor extends AbstractMessageProcessor<Byte> {
         // 处理心跳消息
         Message heartBeatMessage = packet.getMessage();
         String from = heartBeatMessage.getFrom();
-        heartBeatMessage.setFrom(MessageContext.messageProperties.getLocalServerAddress());
+        heartBeatMessage.setFrom(null);
         heartBeatMessage.setTo(from);
+        heartBeatMessage.setContent(null);
         heartBeatMessage.setContentType(WsMessageContentTypeEnum.PING_CONTENT.getType());
         heartBeatMessage.setCreateTime(TimeUtil.currentTimeMillis());
         packet.setPacketId(MessageContext.<Long>idGenerator().generateId());
         // 写回的是websocket还是其他类型的数据
-        MessageHelper.asyncSendMessage(packet, Target.newBuilder().targetIdentity(from).deviceType(MessageServerContext.deviceTypeCache.get(packet.getDeviceType())).build());
+        MessageHelper.asyncSendMessage(packet, Target.newBuilder().targetIdentity(from).deviceType(MessageServerContext.deviceTypeCache.get(packet.getDeviceType())).targetServerAddress(MessageServerContext.serverProperties().getLocalServerAddress()).build());
 
     }
 }

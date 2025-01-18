@@ -11,7 +11,6 @@ public enum WsMessageTypeEnum implements MessageType {
     LOGIN(NumberConstant.NUMBER_11, ProtocolTypeEnum.WS.getProtocol(), ProtocolTypeEnum.WS.getProtocolVersion(), "login",  "外部客户端登录消息") ,
 
     SERVER_NOTIFY(NumberConstant.NUMBER_12, ProtocolTypeEnum.WS.getProtocol(), ProtocolTypeEnum.WS.getProtocolVersion(), "server_notify", "服务端的通知消息"),
-
     ;
 
     private byte type;

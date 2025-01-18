@@ -82,7 +82,7 @@ public class LoginMessageProcessor extends AbstractMessageProcessor<Byte> {
         ChannelHandlerContext bindCtx = MessageServerContext.localClientRegisterTable.get(comboIdentity);
         // 重复登录请求(1，不同的设备远程登录，2，同一设备重复发送登录请求)，向原有的连接发送通知，有其他客户端登录，并将其连接下线
         // 下面如论是否开启支持清除公共注册表的相关信息
-        Message message = new Message(MessageServerContext.serverProperties().getIp(), loginContent.getIdentity(), WsMessageContentTypeEnum.SERVER_NOTIFY_CONTENT.getType(), Serializer.JSON.serializeToString(new ServerNotifyContent(String.format(MessageConstant.REMOTE_LOGIN_NOTIFICATIONS, loginMessage.getMetadata().getClientIp()))), loginTimestamp, loginMessage.getMetadata());
+        Message message = new Message(null, loginContent.getIdentity(), WsMessageContentTypeEnum.SERVER_NOTIFY_CONTENT.getType(), Serializer.JSON.serializeToString(new ServerNotifyContent(String.format(MessageConstant.REMOTE_LOGIN_NOTIFICATIONS, loginMessage.getMetadata().getClientIp()))), loginTimestamp, loginMessage.getMetadata());
         // 注意： 这里的原来的连接使用的序列化方式，应该是和新连接上的序列化方式一致，这里当成一致，当然不一致也可以做，后面遇到再改造
         Packet notifyPacket = new Packet(packet.getProtocol(), packet.getProtocolVersion(), SnowflakeUtil.nextId(), DeviceTypeEnum.PC.getValue(), NetworkEnum.OTHER.getValue(), packet.getEncryptType(), packet.getSerializeAlgorithm(), WsMessageTypeEnum.SERVER_NOTIFY.getType(), message);
         if (cacheLoginClientInfo != null) {
@@ -153,7 +153,7 @@ public class LoginMessageProcessor extends AbstractMessageProcessor<Byte> {
         // 接收端回应登录设备登录成功信息
         // 同步发送登录成功消息给客户端
         message.setContentType(WsMessageContentTypeEnum.LOGIN_RESPONSE_SUCCESS_CONTENT.getType());
-        message.setContent(null);
+        message.setContent(WsMessageContentTypeEnum.LOGIN_RESPONSE_SUCCESS_CONTENT.getDescription());
         MessageHelper.syncSendMessage(notifyPacket, Target.newBuilder().targetIdentity(cacheLoginClientInfo.getIdentity()).targetServerAddress(cacheLoginClientInfo.getLoginServerAddress()).deviceType(deviceType).build());
         // 发送客户端成功登录事件
         MessageServerContext.publishEvent(new ClientLoginEvent(cacheLoginClientInfo, ctx, loginTimestamp), true);
