@@ -63,7 +63,7 @@ class Socket {
         this.snowflake = new Snowflake(1,1);
         // 初始化WebSocket
         this._initWebSocket();
-        console.log(`欢迎使用OUYUNC-IM客户端,如果有需要帮助,请联系作者。`);
+        console.log(`欢迎使用OUYUNC-IM客户端,如果需要帮助,请联系作者。`);
         console.log(`Initializing OuyuncIM v${Socket.VERSION}`);
     }
 
