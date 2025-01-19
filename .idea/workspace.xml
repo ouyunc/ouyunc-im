@@ -10,7 +10,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v6.1.0  js 客户端">
-      <change beforePath="$PROJECT_DIR$/docs/6.1.0/ouyunc-sdk.js" beforeDir="false" afterPath="$PROJECT_DIR$/docs/6.1.0/ouyunc-sdk.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/6.1.0/Message.proto" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/6.1.0/google-protobuf.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/6.1.0/readme.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/6.1.0/readme.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -679,7 +682,7 @@
       <workItem from="1736987436086" duration="97000" />
       <workItem from="1737014153161" duration="1607000" />
       <workItem from="1737080293731" duration="1172000" />
-      <workItem from="1737192475231" duration="6681000" />
+      <workItem from="1737192475231" duration="8927000" />
     </task>
     <task id="LOCAL-00190" summary="v3.1.1-beta 优化处理">
       <created>1686906322045</created>
@@ -1024,7 +1027,7 @@
       <option name="project" value="LOCAL" />
       <updated>1704076343678</updated>
     </task>
-    <option name="localTasksCounter" value="300" />
+    <option name="localTasksCounter" value="302" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
