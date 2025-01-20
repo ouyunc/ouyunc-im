@@ -3,11 +3,9 @@ package com.ouyunc.message.context;
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.collect.Sets;
-import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.DeviceType;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.model.LoginClientInfo;
-import com.ouyunc.base.model.SendResult;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.cache.Cache;
 import com.ouyunc.cache.config.CacheFactory;
@@ -86,11 +84,6 @@ public class MessageServerContext extends MessageContext {
      * 客户端登录信息redis缓存,使用0号库
      */
     public static Cache<String, LoginClientInfo> remoteLoginClientInfoCache = new RedisDistributedCache<>(CacheFactory.REDIS.instance());
-
-    /**
-     * 消息发送失败的消息 redis缓存,使用1号库
-     */
-    public static Cache<String, SendResult> sendFailPacketInfoCache = new RedisDistributedCache<>(CacheFactory.REDIS.instance());
 
 
     /**
