@@ -148,9 +148,9 @@ public abstract class AbstractMessageServer implements MessageServer {
      */
     @Override
     public void start(String[] args) {
-        log.debug("message开始启动,正在初始化......");
         // 打印banner
         MessageBanner.printBanner(System.out);
+        log.debug("message开始启动,正在初始化......");
         // 注册关闭钩子
         registerShutdownHook();
         // 设置服务实例
