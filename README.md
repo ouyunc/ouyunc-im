@@ -42,8 +42,6 @@ http://www.ouyunc.com
 
 ##### 代码目录结构：
 
-
-![项目目录结构](docs/picture/project_struct.png)
 ![项目目录结构](docs/picture/a5c20ca8d036834c5b40888e0a1669e.png)
 
 #### 演示地址 
