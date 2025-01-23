@@ -44,6 +44,7 @@ http://www.ouyunc.com
 
 
 ![项目目录结构](docs/picture/project_struct.png)
+![项目目录结构](docs/picture/a5c20ca8d036834c5b40888e0a1669e.png)
 
 #### 演示地址 
 - web端pc demo 演示地址 （服务器过期）：
