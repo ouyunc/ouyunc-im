@@ -47,9 +47,9 @@ public class MessageHelper {
      */
     public static void asyncSendMessage(Packet packet, Collection<LoginClientInfo> loginClientInfos) {
         // 转发给某个客户端的各个在线设备端
-        for (LoginClientInfo loginUserInfo : loginClientInfos) {
+        for (LoginClientInfo loginClientInfo : loginClientInfos) {
             // 走消息传递,设置登录设备类型
-            asyncSendMessage(packet, Target.newBuilder().targetIdentity(loginUserInfo.getIdentity()).targetServerAddress(loginUserInfo.getLoginServerAddress()).deviceType(loginUserInfo.getDeviceType()).build());
+            asyncSendMessage(packet, Target.newBuilder().targetIdentity(loginClientInfo.getIdentity()).targetServerAddress(loginClientInfo.getLoginServerAddress()).deviceType(loginClientInfo.getDeviceType()).build());
         }
     }
 
