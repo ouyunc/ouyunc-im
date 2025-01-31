@@ -3,9 +3,6 @@ package com.ouyunc.message.schedule;
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.ouyunc.base.constant.NumberConstant;
-import com.ouyunc.base.model.LoginClientInfo;
-import com.ouyunc.base.model.Target;
-import com.ouyunc.base.packet.Packet;
 import com.ouyunc.cache.Cache;
 import com.ouyunc.cache.local.caffeine.CaffeineLocalCache;
 import io.netty.util.HashedWheelTimer;
@@ -23,12 +20,14 @@ import java.util.concurrent.TimeUnit;
 public class QosScheduleTimer {
     private static final Logger log = LoggerFactory.getLogger(QosScheduleTimer.class);
 
-    public static Cache<String, QosTimerTask> qosTimerTaskCaffeine = new CaffeineLocalCache<>("qosTimerTaskCaffeine", Caffeine.newBuilder().build(new CacheLoader<>() {
+    private static final Cache<String, TimerTaskWrapper> qosTimerTaskCaffeine = new CaffeineLocalCache<>("qosTimerTaskCaffeine", Caffeine.newBuilder().build(new CacheLoader<>() {
         @Override
-        public @Nullable QosTimerTask load(String taskId) throws Exception {
+        public @Nullable TimerTaskWrapper load(String taskId) throws Exception {
             return null;
         }
     }));
+
+
     /**
      * 虚拟线程
      */
@@ -39,18 +38,26 @@ public class QosScheduleTimer {
         Thread thread = new Thread(r, "Qos-Timer-Worker");
         thread.setDaemon(true);
         return thread;
-    }, 100, TimeUnit.MILLISECONDS, 1024);
+    }, NumberConstant.NUMBER_100, TimeUnit.MILLISECONDS, 1024);
 
 
     /**
      *  调度
      */
-    public static void schedule(Packet packet, LoginClientInfo loginClientInfo, long delay, TimeUnit timeUnit) {
+    public static void schedule(String taskId, Runnable task, long delay, TimeUnit timeUnit) {
+        schedule(taskId, task, delay, timeUnit, NumberConstant.NUMBER_NEGATIVE_1);
+    }
+
+    /**
+     * 无循环次数限制
+     */
+    public static void schedule(String taskId, Runnable task, long delay, TimeUnit timeUnit, int maxLoops) {
         qosExecutor.submit(() -> {
             try {
-                QosTimerTask qosTimerTask = new QosTimerTask(String.valueOf(packet.getPacketId()), packet, Target.newBuilder().targetIdentity(loginClientInfo.getIdentity()).targetServerAddress(loginClientInfo.getLoginServerAddress()).deviceType(loginClientInfo.getDeviceType()).build(), timer, delay, timeUnit);
+                TimerTaskWrapper qosTimerTask = new TimerTaskWrapper(taskId, task, timer, delay, timeUnit, maxLoops);
                 // 存储任务信息
-                qosTimerTaskCaffeine.put(qosTimerTask.getTaskId(), qosTimerTask);
+                qosTimerTaskCaffeine.put(taskId, qosTimerTask);
+                // 开启第一层定时任务
                 timer.newTimeout(qosTimerTask, NumberConstant.NUMBER_0, timeUnit);
             }catch (Exception e) {
                 log.error("qos调度异常：{}", e.getMessage());
@@ -62,7 +69,7 @@ public class QosScheduleTimer {
      * 取消任务
      */
     public static boolean cancel(String taskId) {
-        QosTimerTask qosTimerTask = qosTimerTaskCaffeine.get(taskId);
+        TimerTaskWrapper qosTimerTask = qosTimerTaskCaffeine.get(taskId);
         if (qosTimerTask != null) {
             return qosTimerTask.cancel();
         }

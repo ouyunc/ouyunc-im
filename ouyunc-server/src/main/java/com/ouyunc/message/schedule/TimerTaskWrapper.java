@@ -1,25 +1,40 @@
 package com.ouyunc.message.schedule;
 
-import com.ouyunc.base.model.Target;
-import com.ouyunc.base.packet.Packet;
+import com.ouyunc.base.constant.NumberConstant;
 import io.netty.util.Timeout;
 import io.netty.util.Timer;
 import io.netty.util.TimerTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * qos timerTask
  */
-public class QosTimerTask implements TimerTask{
-    private static final Logger log = LoggerFactory.getLogger(QosTimerTask.class);
+public class TimerTaskWrapper implements TimerTask{
+    private static final Logger log = LoggerFactory.getLogger(TimerTaskWrapper.class);
+    private static final ExecutorService qosTaskExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
     /**
      * 任务id
      */
     private String taskId;
+
+
+    /**
+     * 运行任务
+     */
+    private Runnable runnableTask;
+
+    /**
+     * 触发器
+     */
+    private Timer timer;
 
     /**
      * 任务延迟时间
@@ -31,10 +46,6 @@ public class QosTimerTask implements TimerTask{
      */
     private TimeUnit timeUnit;
 
-    /**
-     * 触发器
-     */
-    private Timer timer;
 
     /**
      * 超时时间
@@ -42,25 +53,26 @@ public class QosTimerTask implements TimerTask{
     private Timeout scheduledTimeout;
 
     /**
-     * 额外参数 t
+     *  当前循环次数
      */
-    private Packet packet;
+    private final AtomicInteger currentLoopCount;
 
     /**
-     * 目标地址
+     *  最大循环次数， 小于0 表示一直循环
      */
-    private Target target;
+    private final int maxLoops;
 
 
-    public QosTimerTask(String taskId, Packet packet, Target target,  Timer timer, long delay, TimeUnit timeUnit) {
+
+    public TimerTaskWrapper(String taskId, Runnable runnableTask, Timer timer, long delay, TimeUnit timeUnit, int maxLoops) {
         this.taskId = taskId;
+        this.runnableTask = runnableTask;
+        this.timer = timer;
         this.delay = delay;
         this.timeUnit = timeUnit;
-        this.timer = timer;
-        this.packet = packet;
-        this.target = target;
+        this.maxLoops = maxLoops;
+        this.currentLoopCount = new AtomicInteger(0);
     }
-
 
     public String getTaskId() {
         return taskId;
@@ -70,13 +82,7 @@ public class QosTimerTask implements TimerTask{
         this.taskId = taskId;
     }
 
-    public Target getTarget() {
-        return target;
-    }
 
-    public void setTarget(Target target) {
-        this.target = target;
-    }
 
     public long getDelay() {
         return delay;
@@ -110,12 +116,12 @@ public class QosTimerTask implements TimerTask{
         this.scheduledTimeout = scheduledTimeout;
     }
 
-    public Packet getPacket() {
-        return packet;
+    public Runnable getRunnableTask() {
+        return runnableTask;
     }
 
-    public void setPacket(Packet packet) {
-        this.packet = packet;
+    public void setRunnableTask(Runnable runnableTask) {
+        this.runnableTask = runnableTask;
     }
 
     public boolean cancel() {
@@ -129,14 +135,16 @@ public class QosTimerTask implements TimerTask{
     @Override
     public void run(Timeout timeout) throws Exception {
         try {
-//            MessageHelper.asyncSendMessage(packet, target, (sendResult)->{
-//                if (SendStatusEnum.SEND_FAIL.equals(sendResult.getSendStatus())) {
-//                    log.error("qos schedule timer 发送消息失败！");
-//                    // todo 记录到失败表中/离线消息表
-//                }
-//            });
-            System.out.println(1111);
-        } finally {
+            // 当前循环计数
+            if (maxLoops >= NumberConstant.NUMBER_0 && currentLoopCount.incrementAndGet() > maxLoops) {
+                cancel();
+                return;
+            }
+            CompletableFuture.runAsync(runnableTask, qosTaskExecutor);
+        }catch (Exception e){
+            log.error("qos 执行定时调度任务异常：{}", e.getMessage());
+            // todo 记录到错误日志或业务错误表中
+        }finally {
             // 重新调度以实现固定频率
             scheduledTimeout = timer.newTimeout(this, delay, timeUnit);
         }
