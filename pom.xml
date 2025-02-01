@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
@@ -64,7 +63,10 @@
     <protobuf.version>4.28.0-RC3</protobuf.version>
     <!--aop-->
     <aspectjweaver.version>1.9.22.1</aspectjweaver.version>
-
+    <!--jdbc-->
+    <mysql.version>9.0.0</mysql.version>
+    <sprig-jdbc.version>6.2.1</sprig-jdbc.version>
+    <hikari.version>6.2.1</hikari.version>
     <!--mongodb-->
     <spring-mongodb.version>4.4.1</spring-mongodb.version>
     <mongodb-driver.version>5.2.1</mongodb-driver.version>
@@ -275,24 +277,6 @@
         <groupId>org.springframework.data</groupId>
         <artifactId>spring-data-redis</artifactId>
         <version>${redis.version}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>springframework</groupId>
-            <artifactId>spring-aop</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>springframework</groupId>
-            <artifactId>spring-tx</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>springframework</groupId>
-            <artifactId>spring-oxm</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>springframework</groupId>
-            <artifactId>spring-context-support</artifactId>
-          </exclusion>
-        </exclusions>
       </dependency>
 
       <dependency>
@@ -356,6 +340,7 @@
         <artifactId>spring-data-mongodb</artifactId>
         <version>${spring-mongodb.version}</version>
       </dependency>
+
       <dependency>
         <groupId>org.mongodb</groupId>
         <artifactId>mongodb-driver-sync</artifactId>
@@ -388,7 +373,27 @@
         <artifactId>spring-kafka</artifactId>
         <version>${kafka.version}</version>
       </dependency>
+      <!-- HikariCP -->
+      <dependency>
+        <groupId>com.zaxxer</groupId>
+        <artifactId>HikariCP</artifactId>
+        <version>${hikari.version}</version>
+      </dependency>
 
+      <!-- Spring JDBC (用于JdbcTemplate) -->
+      <dependency>
+        <groupId>org.springframework</groupId>
+        <artifactId>spring-jdbc</artifactId>
+        <version>${sprig-jdbc.version}</version>
+      </dependency>
+
+      <!-- MySQL驱动 -->
+      <!-- https://mvnrepository.com/artifact/com.mysql/mysql-connector-j -->
+      <dependency>
+        <groupId>com.mysql</groupId>
+        <artifactId>mysql-connector-j</artifactId>
+        <version>${mysql.version}</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 

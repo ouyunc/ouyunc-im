@@ -4,43 +4,28 @@
     <option name="ajcPath" value="$PROJECT_DIR$/../../repository/org/aspectj/aspectjtools/1.9.22.1/aspectjtools-1.9.22.1.jar" />
     <option name="cmdLineParams" value="-Xlint:ignore -showWeaveInfo" />
     <option name="delegateToJavac" value="true" />
-    <option name="aptOptionsEnabled" value="true" />
   </component>
   <component name="CompilerConfiguration">
-    <excludeFromCompile>
-      <directory url="file://$PROJECT_DIR$/ouyunc-commons/ouyunc-ai/src/main/resources/archetype-resources" includeSubdirectories="true" />
-    </excludeFromCompile>
+    <option name="DEFAULT_COMPILER" value="ajc" />
     <annotationProcessing>
       <profile name="Maven default annotation processors profile" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="ouyunc-message-spring-boot-starter" />
         <module name="ouyunc-base" />
-        <module name="ouyu-cache" />
         <module name="ouyunc-domain" />
         <module name="ouyunc-db-jdbc" />
-        <module name="ouyu-db" />
         <module name="ouyunc-client" />
-        <module name="ouyu-client" />
         <module name="ouyunc-cache" />
         <module name="ouyunc-db-mongo" />
         <module name="ouyunc-ai" />
         <module name="ouyunc-core" />
-        <module name="ouyu-server" />
         <module name="ouyunc-mq-rocket" />
         <module name="ouyunc-db-influx" />
         <module name="ouyunc-server" />
-        <module name="ouyu-core" />
         <module name="ouyunc-mq-kafka" />
         <module name="ouyunc-repository" />
       </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel target="21" />
-  </component>
-  <component name="JavacSettings">
-    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
-      <module name="ouyunc-message-spring-boot-starter" options="-parameters" />
-    </option>
   </component>
 </project>
