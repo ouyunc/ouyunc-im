@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.util.Converter;
 import com.mongodb.*;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
+import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.PropertiesConfigConstant;
 import com.ouyunc.base.utils.YmlUtil;
 import com.ouyunc.db.mongo.properties.MongodbProperties;
@@ -30,7 +31,7 @@ import java.util.concurrent.TimeUnit;
  */
 public enum MongodbFactory {
 
-    MONGODB_TEMPLATE (1, "mongodb v1.0操作模板"){
+    MONGODB_TEMPLATE (NumberConstant.NUMBER_1, "mongodb v1.0操作模板"){
         // 默认mongo库名,加载配置文件的时候会有一个默认值来进行初始化，如果不传数据库名称，则使用默认的数据库来操作
         private static String DEFAULT_DATABASE_NAME = "ouyunc";
 

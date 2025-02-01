@@ -1,5 +1,6 @@
 package com.ouyunc.db.jdbc;
 
+import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.PropertiesConfigConstant;
 import com.ouyunc.base.utils.YmlUtil;
 import com.ouyunc.db.jdbc.operator.DbOperator;
@@ -26,7 +27,7 @@ import java.util.List;
  */
 public enum JdbcFactory implements DbOperator {
 
-    JDBC_TEMPLATE (1, "jdbcTemplate v1.0操作模板"){
+    JDBC_TEMPLATE (NumberConstant.NUMBER_1, "jdbcTemplate v1.0操作模板"){
         private static volatile JdbcTemplate jdbcTemplate;
         /**
          * 获取jdbcTemplate
@@ -39,7 +40,7 @@ public enum JdbcFactory implements DbOperator {
                     if (jdbcTemplate == null) {
                         jdbcTemplate = new JdbcTemplate(getDataSource());
                         // 设置查询超时时间（秒）
-                        jdbcTemplate.setQueryTimeout(30);
+                        jdbcTemplate.setQueryTimeout(NumberConstant.NUMBER_30);
                         // 设置获取警告信息
                         jdbcTemplate.setIgnoreWarnings(false);
                     }
@@ -106,7 +107,7 @@ public enum JdbcFactory implements DbOperator {
         }
 
     },
-    JDBC_CLIENT(1, "jdbcClient v1.0操作模板") {
+    JDBC_CLIENT(NumberConstant.NUMBER_1, "jdbcClient v1.0操作模板") {
         private static volatile JdbcClient jdbcClient;
         /**
          * 获取jdbcTemplate
@@ -190,7 +191,7 @@ public enum JdbcFactory implements DbOperator {
     private DataSourceTransactionManager transactionManager() {
         DataSourceTransactionManager txManager = new DataSourceTransactionManager(getDataSource());
         // 设置全局事务超时时间（秒）
-        txManager.setDefaultTimeout(30);
+        txManager.setDefaultTimeout(NumberConstant.NUMBER_30);
         // 设置验证已存在的事务
         txManager.setValidateExistingTransaction(true);
         // 设置回滚时是否只回滚到保存点
@@ -208,7 +209,7 @@ public enum JdbcFactory implements DbOperator {
         // 设置事务隔离级别
         template.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
         // 设置事务超时时间（秒）
-        template.setTimeout(30);
+        template.setTimeout(NumberConstant.NUMBER_30);
         // 设置是否只读事务
         template.setReadOnly(false);
         return template;

@@ -1,5 +1,6 @@
 package com.ouyunc.mq.kafka;
 
+import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.mq.kafka.builder.AbstractKafkaBuilder;
 import com.ouyunc.mq.kafka.builder.KafkaAdminBuilder;
 import com.ouyunc.mq.kafka.builder.KafkaListenerContainerFactoryBuilder;
@@ -17,7 +18,7 @@ import org.springframework.kafka.core.KafkaTemplate;
  */
 public enum KafkaFactory {
 
-    KAFKA_TEMPLATE(3, "kafkaTemplate v3 版本") {
+    KAFKA_TEMPLATE(NumberConstant.NUMBER_3, "kafkaTemplate v3 版本") {
 
         private static volatile KafkaTemplate<?, ?> kafkaTemplate;
 
@@ -37,7 +38,7 @@ public enum KafkaFactory {
         }
     },
 
-    KAFKA_LISTENER_CONTAINER(3, "kafkaListenerContainerFactory v3 版本") {
+    KAFKA_LISTENER_CONTAINER(NumberConstant.NUMBER_3, "kafkaListenerContainerFactory v3 版本") {
 
         // kafka 监听容器工厂,在使用创建容器的时候，关闭应用记得停止容器和销毁容器
         private static volatile KafkaListenerContainerFactory<?> kafkaListenerContainerFactory;
@@ -60,7 +61,7 @@ public enum KafkaFactory {
 
     },
 
-    KAFKA_ADMIN(3, "kafkaAdmin v3 版本") {
+    KAFKA_ADMIN(NumberConstant.NUMBER_3, "kafkaAdmin v3 版本") {
         private static volatile KafkaAdmin kafkaAdmin;
 
         @SuppressWarnings("unchecked")
