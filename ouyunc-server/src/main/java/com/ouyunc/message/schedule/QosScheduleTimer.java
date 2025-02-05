@@ -3,8 +3,11 @@ package com.ouyunc.message.schedule;
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.ouyunc.base.constant.NumberConstant;
+import com.ouyunc.base.model.Target;
+import com.ouyunc.base.packet.Packet;
 import com.ouyunc.cache.Cache;
 import com.ouyunc.cache.local.caffeine.CaffeineLocalCache;
+import com.ouyunc.message.helper.MessageHelper;
 import io.netty.util.HashedWheelTimer;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
@@ -41,29 +44,26 @@ public class QosScheduleTimer {
     }, NumberConstant.NUMBER_100, TimeUnit.MILLISECONDS, 1024);
 
 
-    /**
-     *  调度
-     */
-    public static void schedule(String taskId, Runnable task, long delay, TimeUnit timeUnit) {
-        schedule(taskId, task, delay, timeUnit, NumberConstant.NUMBER_NEGATIVE_1);
-    }
 
-    /**
-     * 无循环次数限制
-     */
-    public static void schedule(String taskId, Runnable task, long delay, TimeUnit timeUnit, int maxLoops) {
+    public static void schedule(Packet packet, Target target, long delay, TimeUnit timeUnit, int maxLoops) {
         qosExecutor.submit(() -> {
             try {
-                TimerTaskWrapper qosTimerTask = new TimerTaskWrapper(taskId, task, timer, delay, timeUnit, maxLoops);
+                // 构建任务信息
+                TimerTaskWrapper qosTimerTask = new TimerTaskWrapper(String.valueOf(packet.getPacketId()), () -> {
+                    // 这里面抛异常会被task run 方法捕获，这里面抛异常不会影响其他任务
+                    MessageHelper.asyncSendMessage(packet, target);
+                }, timer, delay, timeUnit, maxLoops);
                 // 存储任务信息
-                qosTimerTaskCaffeine.put(taskId, qosTimerTask);
+                qosTimerTaskCaffeine.put(String.valueOf(packet.getPacketId()), qosTimerTask);
                 // 开启第一层定时任务
                 timer.newTimeout(qosTimerTask, NumberConstant.NUMBER_0, timeUnit);
             }catch (Exception e) {
                 log.error("qos调度异常：{}", e.getMessage());
+                // 这里可以做错误日志记录
             }
         });
     }
+
 
     /**
      * 取消任务
@@ -72,6 +72,8 @@ public class QosScheduleTimer {
         TimerTaskWrapper qosTimerTask = qosTimerTaskCaffeine.get(taskId);
         if (qosTimerTask != null) {
             return qosTimerTask.cancel();
+        }else {
+            log.error("qos取消任务失败，任务不存在,id：{}", taskId);
         }
         return false;
     }

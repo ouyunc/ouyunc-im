@@ -153,9 +153,12 @@ public class TimerTaskWrapper implements TimerTask{
                 cancel();
                 return;
             }
-            CompletableFuture.runAsync(runnableTask, qosTaskExecutor);
+            CompletableFuture.runAsync(runnableTask, qosTaskExecutor).exceptionally(ex -> {
+                log.error("执行定时调度任务异常：{}", ex.getMessage());
+                return null;
+            });;
         }catch (Exception e){
-            log.error("qos 执行定时调度任务异常：{}", e.getMessage());
+            log.error("执行定时调度任务异常：{}", e.getMessage());
         }finally {
             // 重新调度以实现固定频率
             scheduledTimeout = timer.newTimeout(this, delay, timeUnit);

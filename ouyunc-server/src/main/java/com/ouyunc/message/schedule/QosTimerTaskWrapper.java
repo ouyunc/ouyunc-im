@@ -49,7 +49,11 @@ public class QosTimerTaskWrapper extends TimerTaskWrapper{
                 MessageServerContext.publishEvent(new SendOfflineEvent(packet), true);
                 return;
             }
-            CompletableFuture.runAsync(runnableTask, qosTaskExecutor);
+            CompletableFuture.runAsync(runnableTask, qosTaskExecutor).exceptionally(ex -> {
+                // 将消息发送到离线消息mq
+                MessageServerContext.publishEvent(new SendOfflineEvent(packet), true);
+                return null;
+            });
         }catch (Exception e){
             log.error("qos 执行定时调度任务异常：{}", e.getMessage());
             // 将消息发送到离线消息mq

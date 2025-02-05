@@ -9,12 +9,11 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v6.1.1  发送失败发送到mq">
-      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-core/src/main/java/com/ouyunc/core/listener/event/SendOfflineEvent.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/SendOfflineListener.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/schedule/QosTimerTaskWrapper.java" afterDir="false" />
+    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v6.1.1  qos timer">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/SendFailListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/SendFailListener.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/StartServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/StartServer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/schedule/QosScheduleTimer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/schedule/QosScheduleTimer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/schedule/QosTimerTaskWrapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/schedule/QosTimerTaskWrapper.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/schedule/TimerTaskWrapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/schedule/TimerTaskWrapper.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -129,10 +128,11 @@
     <ConfirmationsSetting value="2" id="Add" />
   </component>
   <component name="ProjectViewState">
+    <option name="flattenModules" value="true" />
     <option name="hideEmptyMiddlePackages" value="true" />
-    <option name="showExcludedFiles" value="false" />
     <option name="showLibraryContents" value="true" />
-    <option name="showScratchesAndConsoles" value="false" />
+    <option name="showMembers" value="true" />
+    <option name="showVisibilityIcons" value="true" />
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
@@ -141,7 +141,7 @@
     "Application.Main.executor": "Run",
     "Application.MessageConstant.executor": "Debug",
     "Application.StartClient.executor": "Debug",
-    "Application.StartIMServer.executor": "Debug",
+    "Application.StartIMServer.executor": "Run",
     "Application.StartServer.executor": "Debug",
     "Application.Test.executor": "Debug",
     "Application.TimeUtil.executor": "Run",
@@ -1027,7 +1027,7 @@
       <option name="project" value="LOCAL" />
       <updated>1704076343678</updated>
     </task>
-    <option name="localTasksCounter" value="308" />
+    <option name="localTasksCounter" value="309" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1087,7 +1087,6 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
-    <MESSAGE value="v6.0.0 优化代码,修改协议魔数为OUYUNC,添加客户端登录过期自定义时间" />
     <MESSAGE value="v6.0.0 添加客户端登录过期自定义时间" />
     <MESSAGE value="v6.0.0 优化获取当前时间戳毫秒" />
     <MESSAGE value="v6.0.1" />
@@ -1112,7 +1111,8 @@
     <MESSAGE value="v6.1.0  springboot starter 版本号" />
     <MESSAGE value="v6.1.0  js 客户端" />
     <MESSAGE value="v6.1.1  发送失败发送到mq" />
-    <option name="LAST_COMMIT_MESSAGE" value="v6.1.1  发送失败发送到mq" />
+    <MESSAGE value="v6.1.1  qos timer" />
+    <option name="LAST_COMMIT_MESSAGE" value="v6.1.1  qos timer" />
   </component>
   <component name="XDebuggerManager">
     <pin-to-top-manager>

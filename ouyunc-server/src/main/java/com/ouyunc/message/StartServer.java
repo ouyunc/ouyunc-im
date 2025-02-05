@@ -8,7 +8,7 @@ import java.io.IOException;
  **/
 public class StartServer {
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, InterruptedException {
         MessageServer server = new StandardMessageServer();
         server.start(args);
     }
