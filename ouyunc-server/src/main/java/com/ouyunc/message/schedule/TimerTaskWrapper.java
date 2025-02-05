@@ -18,7 +18,12 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class TimerTaskWrapper implements TimerTask{
     private static final Logger log = LoggerFactory.getLogger(TimerTaskWrapper.class);
-    private static final ExecutorService qosTaskExecutor = Executors.newVirtualThreadPerTaskExecutor();
+
+
+    /**
+     * 线程池
+     */
+    protected static final ExecutorService qosTaskExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
     /**
      * 任务id
@@ -29,38 +34,38 @@ public class TimerTaskWrapper implements TimerTask{
     /**
      * 运行任务
      */
-    private Runnable runnableTask;
+    protected Runnable runnableTask;
 
     /**
      * 触发器
      */
-    private Timer timer;
+    protected Timer timer;
 
     /**
      * 任务延迟时间
      */
-    private long delay;
+    protected long delay;
 
     /**
      * 时间单位
      */
-    private TimeUnit timeUnit;
+    protected TimeUnit timeUnit;
 
 
     /**
      * 超时时间
      */
-    private Timeout scheduledTimeout;
+    protected Timeout scheduledTimeout;
 
     /**
      *  当前循环次数
      */
-    private final AtomicInteger currentLoopCount;
+    protected final AtomicInteger currentLoopCount;
 
     /**
      *  最大循环次数， 小于0 表示一直循环
      */
-    private final int maxLoops;
+    protected final int maxLoops;
 
 
 
@@ -124,6 +129,14 @@ public class TimerTaskWrapper implements TimerTask{
         this.runnableTask = runnableTask;
     }
 
+    public AtomicInteger getCurrentLoopCount() {
+        return currentLoopCount;
+    }
+
+    public int getMaxLoops() {
+        return maxLoops;
+    }
+
     public boolean cancel() {
         // 停止单个任务
         if (scheduledTimeout != null && !scheduledTimeout.isExpired() && !scheduledTimeout.isCancelled()) {
@@ -143,7 +156,6 @@ public class TimerTaskWrapper implements TimerTask{
             CompletableFuture.runAsync(runnableTask, qosTaskExecutor);
         }catch (Exception e){
             log.error("qos 执行定时调度任务异常：{}", e.getMessage());
-            // todo 记录到错误日志或业务错误表中
         }finally {
             // 重新调度以实现固定频率
             scheduledTimeout = timer.newTimeout(this, delay, timeUnit);

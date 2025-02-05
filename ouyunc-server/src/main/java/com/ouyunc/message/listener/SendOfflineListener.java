@@ -1,18 +1,17 @@
 package com.ouyunc.message.listener;
 
-import com.ouyunc.base.model.SendResult;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.core.listener.MessageListener;
-import com.ouyunc.core.listener.event.SendFailEvent;
+import com.ouyunc.core.listener.event.SendOfflineEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * @Author fzx
- * @Description: 消息发送失败监听器， 可以做消息日志的记录，重发等操作
+ * @Description: 消息发送离线事件监听器，将离线消息发送到mq来处理
  **/
-public class SendFailListener implements MessageListener<SendFailEvent> {
-    private static final Logger log = LoggerFactory.getLogger(SendFailListener.class);
+public class SendOfflineListener implements MessageListener<SendOfflineEvent> {
+    private static final Logger log = LoggerFactory.getLogger(SendOfflineListener.class);
 
     /**
      * kafkaTemplate
@@ -25,13 +24,13 @@ public class SendFailListener implements MessageListener<SendFailEvent> {
      * @Description 处理发送消息失败的事件
      */
     @Override
-    public void onApplicationEvent(SendFailEvent event) {
+    public void onApplicationEvent(SendOfflineEvent event) {
         if (log.isDebugEnabled()) {
-            log.debug("消息发送失败事件监听器正在处理：{}", event);
+            log.debug("离线消息发送事件监听器正在处理：{}", event);
         }
         // 这里可以丢到mq中去处理，注意：发送失败的消息可能是重试的或者集群间消息传递，所以可能业务上需要做幂等处理
-        if (event.getSource() instanceof SendResult sendResult) {
-            //kafkaTemplate.send("ouyunc-message-send-fail", sendResult);
+        if (event.getSource() instanceof Packet packet) {
+
         }
     }
 }
