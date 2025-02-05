@@ -13,6 +13,11 @@ import org.slf4j.LoggerFactory;
 public class SendFailListener implements MessageListener<SendFailEvent> {
     private static final Logger log = LoggerFactory.getLogger(SendFailListener.class);
 
+    /**
+     * kafkaTemplate
+     */
+    //private static final KafkaTemplate<String, Object> kafkaTemplate = KafkaFactory.KAFKA_TEMPLATE.instance();
+
 
     /**
      * @Author fzx
@@ -23,8 +28,9 @@ public class SendFailListener implements MessageListener<SendFailEvent> {
         if (log.isDebugEnabled()) {
             log.debug("消息发送失败事件监听器正在处理：{}", event);
         }
+        // 这里可以丢到mq中去处理，注意：发送失败的消息可能是重试的或者集群间消息传递，所以可能业务上需要做幂等处理
         if (event.getSource() instanceof SendResult sendResult) {
-           // 这里可以丢到mq中去处理
+            //kafkaTemplate.send("ouyunc-message-send-fail", sendResult);
         }
     }
 }

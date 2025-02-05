@@ -7,6 +7,7 @@ import com.ouyunc.base.model.*;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.IdentityUtil;
+import com.ouyunc.core.listener.event.SendFailEvent;
 import com.ouyunc.message.context.MessageServerContext;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
@@ -137,7 +138,12 @@ public class MessageHelper {
                             if (channelFuture.isSuccess()) {
                                 sendCallback.onCallback(SendResult.builder().sendStatus(SendStatusEnum.SEND_OK).packet(packet).build());
                             }else {
-                                sendCallback.onCallback(SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(future.cause()).build());
+                                // 发送结果
+                                SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(future.cause()).build();
+                                // 发送失败回调
+                                sendCallback.onCallback(sendResult);
+                                // 发布发送失败事件
+                                MessageServerContext.publishEvent(new SendFailEvent(sendResult), true);
                             }
                         }
                     });;
@@ -165,7 +171,12 @@ public class MessageHelper {
         // 通过路由助手，找到一个可用的服务连接，如果找不到最后会这里处理，重试，下线，等操作
         String nextAvailableSocketAddress = MessageServerContext.messageRouter.route(packet, target.getTargetServerAddress());
         if (nextAvailableSocketAddress == null) {
-            sendCallback.onCallback(SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(new MessageException("消息id: " + packet.getPacketId() + " 尝试路由多次，都没有找到可用的服务！")).build());
+            // 发送结果
+            SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(new MessageException("消息id: " + packet.getPacketId() + " 尝试路由多次，都没有找到可用的服务！")).build();
+            // 发送失败回调
+            sendCallback.onCallback(sendResult);
+            // 发布发送失败事件
+            MessageServerContext.publishEvent(new SendFailEvent(sendResult), true);
             return;
         }
         // 设置可用的下个目标服务
