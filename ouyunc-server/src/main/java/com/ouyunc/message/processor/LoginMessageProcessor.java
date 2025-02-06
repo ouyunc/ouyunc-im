@@ -18,6 +18,7 @@ import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.utils.SnowflakeUtil;
 import com.ouyunc.base.utils.TimeUtil;
+import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.ClientLoginEvent;
 import com.ouyunc.core.listener.event.ClientLogoutEvent;
@@ -29,9 +30,14 @@ import com.ouyunc.message.helper.MessageHelper;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.timeout.IdleStateHandler;
+import org.jetbrains.annotations.NotNull;
 import org.redisson.api.RLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
+import org.springframework.data.redis.core.RedisOperations;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.SessionCallback;
 
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -116,7 +122,20 @@ public class LoginMessageProcessor extends AbstractMessageProcessor<Byte> {
                         // 这里比较两个登录服务器地址是否一致的目的是因为，无论集群还是单服务 在ctx异步关闭时,有可能存在关闭的执行顺序比绑定客户端的方法执行的慢，导致缓存被覆盖，结果又给删除了缓存信息，导致数据错乱。
                         if (closingRemoteLoginClientInfo != null && closingLocalloginClientInfo.getLoginServerAddress().equals(closingRemoteLoginClientInfo.getLoginServerAddress()) && closingRemoteLoginClientInfo.getLastLoginTime() == closingLocalloginClientInfo.getLastLoginTime()) {
                             // 缓存中有没有登录信息都进行删除下
-                            MessageServerContext.remoteLoginClientInfoCache.delete(loginClientInfoCacheKey);
+                            // 删除appKey 下的连接统计信息
+                            RedisTemplate<String, Object> redisTemplate = CacheFactory.REDIS.instance();
+                            redisTemplate.executePipelined(new SessionCallback<>() {
+                                @SuppressWarnings("unchecked")
+                                @Override
+                                public <K, V> Object execute(@NotNull RedisOperations<K, V> operations) throws DataAccessException {
+                                    // 删除登录信息
+                                    operations.delete((K) loginClientInfoCacheKey);
+                                    // 删除appKey 下的连接统计信息
+                                    operations.opsForHash().delete((K) (CacheConstant.OUYUNC + CacheConstant.CONNECTIONS + CacheConstant.APP_KEY + closingLocalloginClientInfo.getAppKey()), closingComboIdentity);
+                                    return null;
+                                }
+                            });
+
                         } else {
                             log.warn("客户端: {} 解绑登录信息失败,原因：缓存中不存在登录信息或登录地址不匹配", closingLocalloginClientInfo);
                         }

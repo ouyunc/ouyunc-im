@@ -1,6 +1,5 @@
 package com.ouyunc.cache.distributed.redis;
 
-import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.cache.distributed.AbstractDistributedCache;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.RedisOperations;
@@ -20,13 +19,17 @@ public class RedisDistributedCache<K, V> extends AbstractDistributedCache<K,V> {
     /**
      * redis 缓存模板
      */
-    private RedisTemplate<K, V> redisTemplate = CacheFactory.REDIS.instance();
+    private final RedisTemplate<K, V> redisTemplate;
 
-    public RedisDistributedCache() {
-    }
 
     public RedisDistributedCache(RedisTemplate<K, V> redisTemplate) {
         this.redisTemplate = redisTemplate;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public RedisTemplate<K, V> instance() {
+        return redisTemplate;
     }
 
     @Override

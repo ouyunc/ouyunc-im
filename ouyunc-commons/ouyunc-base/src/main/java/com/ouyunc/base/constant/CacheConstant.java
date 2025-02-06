@@ -22,6 +22,11 @@ public class CacheConstant {
     public static final String APP_KEY = "app-key:";
 
     /***
+     * 平台appKey链接数
+     */
+    public static final String CONNECTIONS = "connections:";
+
+    /***
      * 锁
      */
     public static final String LOCK = "lock:";

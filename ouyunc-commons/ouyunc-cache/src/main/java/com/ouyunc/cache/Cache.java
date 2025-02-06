@@ -14,6 +14,13 @@ import java.util.concurrent.TimeUnit;
 public interface Cache<K,V> {
 
     /**
+     * 获取缓存实例
+     * @return
+     * @param <T>
+     */
+    <T> T instance();
+
+    /**
      * 存放数据
      */
     void put(K key, V value);

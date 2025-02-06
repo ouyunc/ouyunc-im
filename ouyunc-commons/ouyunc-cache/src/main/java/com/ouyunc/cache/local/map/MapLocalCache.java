@@ -36,6 +36,12 @@ public class MapLocalCache<K,V> extends AbstractLocalCache<K,V> {
         return concurrentMap;
     }
 
+    @SuppressWarnings("unchecked")
+    @Override
+    public ConcurrentMap<K, V> instance() {
+        return concurrentMap;
+    }
+
     @Override
     public void put(K key, V value) {
         concurrentMap.put(key,value);

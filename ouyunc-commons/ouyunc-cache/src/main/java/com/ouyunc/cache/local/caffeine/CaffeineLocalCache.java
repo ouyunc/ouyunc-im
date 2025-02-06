@@ -34,6 +34,12 @@ public class CaffeineLocalCache<K , V > extends AbstractLocalCache<K, V> {
         this.loadingCache = loadingCache;
     }
 
+    @SuppressWarnings("unchecked")
+    @Override
+    public LoadingCache<K, V> instance() {
+        return loadingCache;
+    }
+
     /**
      * @Author fzx
      * @Description 如果有值就覆盖
