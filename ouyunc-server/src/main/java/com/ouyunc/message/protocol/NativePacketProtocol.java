@@ -44,6 +44,7 @@ public enum NativePacketProtocol implements PacketProtocol {
     WS(ProtocolTypeEnum.WS.getProtocol(), ProtocolTypeEnum.WS.getProtocolVersion(), "websocket 协议，版本号为1") {
         @Override
         public void doDispatcher(ChannelHandlerContext ctx, Map<String, Object> queryParamsMap) {
+            // todo 这里可以根据业务提前做appKey 的验证和appKey下连接数的统计，
             ctx.channel().attr(protocolAttrKey).set(this);
             ctx.pipeline()
                     //10 * 1024 * 1024
