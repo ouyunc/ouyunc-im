@@ -44,7 +44,13 @@ public enum NativePacketProtocol implements PacketProtocol {
     WS(ProtocolTypeEnum.WS.getProtocol(), ProtocolTypeEnum.WS.getProtocolVersion(), "websocket 协议，版本号为1") {
         @Override
         public void doDispatcher(ChannelHandlerContext ctx, Map<String, Object> queryParamsMap) {
-            // todo 这里可以根据业务提前做appKey 的验证和appKey下连接数的统计，
+            // 这里可以根据业务提前做appKey 的验证和appKey下连接数的统计，直接从queryParamsMap 这里面取值即可
+            // 如果这里提前做校验签名了，登录那边可校验可不校验；为什么在这里提前做签名验证？因为读写空闲的开启默认在登录成功后才开启，如果外部客户端或非法客户端通过ws协议只连接不做登录，那么就是无用的连接且会占用连接资源，所以这里提前做签名验证，如果签名验证失败，直接断开连接，这样连接资源会减少，同时不会占用连接资源；fast-fail
+            // appKey的连接数统计，为什么在这里做链接数的统计？因为为了防止签名验证通过后，外部或非法客户端不发送登录信息，则无法真实统计该客户端的真实连接数，无法对外部客户端提前做连接限制，可能造成非法连接过多，从而造成资源浪费，增加服务器压力；
+            if (!verifySignature(queryParamsMap) || !verifyAppKeyConnects(queryParamsMap)) {
+                // 关闭连接
+                ctx.close();
+            }
             ctx.channel().attr(protocolAttrKey).set(this);
             ctx.pipeline()
                     //10 * 1024 * 1024
@@ -73,6 +79,27 @@ public enum NativePacketProtocol implements PacketProtocol {
             ctx.fireChannelActive();
         }
 
+
+        /**
+         *  校验和统计appKey的连接数
+         * @param queryParamsMap
+         * @return
+         */
+        private boolean verifyAppKeyConnects(Map<String, Object> queryParamsMap) {
+            // 1,统计连接数
+            // 2,校验连接数是否大于允许的连接数
+            return true;
+        }
+
+        /**
+         *  提前验证签名
+         * @param queryParamsMap
+         * @return
+         */
+        private boolean verifySignature(Map<String, Object> queryParamsMap) {
+            // 根据业务自行处理，有些业务或appKey是不需要校验和签名的
+            return true;
+        }
 
     },
 
