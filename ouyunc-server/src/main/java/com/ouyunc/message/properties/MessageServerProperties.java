@@ -149,10 +149,16 @@ public class MessageServerProperties extends MessageProperties {
 
 
     /***
-     * appKey的连接数统计,刷新步长，单位秒，默认3600秒
+     * appKey的连接数统计,刷新步长，单位毫秒，默认10000
      */
-    @Key(value = "ouyunc.message.client.app-key.refresh-connection.step-interval", defaultValue = "3600")
-    long appKeyConnectionCountRefreshStepInterval;
+    @Key(value = "ouyunc.message.client.app-key.refresh-connection.step", defaultValue = "10000")
+    long appKeyConnectionCountRefreshStep;
+
+    /***
+     # 偏移量，单位秒，默认值3600， 更具具体情况来调整，如果所有服务器都宕机且时间很长，那么该值可以设置大点，如果服务器宕机时间短，那么该值可以设置小点
+     */
+    @Key(value = "ouyunc.message.client.app-key.refresh-connection.offset", defaultValue = "3600")
+    long appKeyConnectionCountRefreshOffset;
 
 
     /**
@@ -302,6 +308,14 @@ public class MessageServerProperties extends MessageProperties {
         this.clusterClientIdleReadWriteTimeout = clusterClientIdleReadWriteTimeout;
     }
 
+    public long getAppKeyConnectionCountRefreshOffset() {
+        return appKeyConnectionCountRefreshOffset;
+    }
+
+    public void setAppKeyConnectionCountRefreshOffset(long appKeyConnectionCountRefreshOffset) {
+        this.appKeyConnectionCountRefreshOffset = appKeyConnectionCountRefreshOffset;
+    }
+
     public long getClusterClientChannelPoolAcquireTimeoutMillis() {
         return clusterClientChannelPoolAcquireTimeoutMillis;
     }
@@ -342,12 +356,12 @@ public class MessageServerProperties extends MessageProperties {
         this.messageListenersScanPackagePaths = messageListenersScanPackagePaths;
     }
 
-    public long getAppKeyConnectionCountRefreshStepInterval() {
-        return appKeyConnectionCountRefreshStepInterval;
+    public long getAppKeyConnectionCountRefreshStep() {
+        return appKeyConnectionCountRefreshStep;
     }
 
-    public void setAppKeyConnectionCountRefreshStepInterval(long appKeyConnectionCountRefreshStepInterval) {
-        this.appKeyConnectionCountRefreshStepInterval = appKeyConnectionCountRefreshStepInterval;
+    public void setAppKeyConnectionCountRefreshStep(long appKeyConnectionCountRefreshStep) {
+        this.appKeyConnectionCountRefreshStep = appKeyConnectionCountRefreshStep;
     }
 
     public List<String> getMessageProcessorScanPackagePaths() {
