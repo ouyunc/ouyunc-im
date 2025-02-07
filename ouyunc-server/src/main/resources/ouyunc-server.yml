@@ -46,6 +46,15 @@ ouyunc:
         timeout: 15
         # 外部客户端，心跳重试等待次数，默认3次，超过3次没有心跳则关闭外部客户端channel  不能为负数
         wait-retry: 3
+      # appKey 的连接数统计，是否启用定时刷新清理，以及 定时刷新清理时间间隔
+      app-key:
+        # 刷新连接数统计
+        refresh-connection:
+          # 开启
+          enable: true
+          # 时间间隔，单位秒，默认值5
+          interval: 5
+
     # 客户端登录信息保存模式， FOREVER-永久， FINITE-有限； 默认值永久
     # 消息监听器包扫描路径
     listeners:

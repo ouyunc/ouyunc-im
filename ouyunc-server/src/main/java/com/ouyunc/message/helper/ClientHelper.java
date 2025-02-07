@@ -10,13 +10,20 @@ import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.IdentityUtil;
+import com.ouyunc.base.utils.TimeUtil;
+import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.message.context.MessageServerContext;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.collections4.CollectionUtils;
+import org.jetbrains.annotations.NotNull;
 import org.redisson.api.RLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
+import org.springframework.data.redis.core.RedisOperations;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.SessionCallback;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -52,7 +59,26 @@ public class ClientHelper {
         try {
             if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
                 // 客户端登录信息存入缓存
-                MessageServerContext.remoteLoginClientInfoCache.put(CacheConstant.OUYUNC + CacheConstant.APP_KEY + loginClientInfo.getAppKey() + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + comboIdentity, loginClientInfo, loginClientInfo.getLoginExpireTime(), TimeUnit.SECONDS);
+                RedisTemplate<String, Object> redisTemplate = CacheFactory.REDIS.instance();
+                redisTemplate.executePipelined(new SessionCallback<>() {
+                    @SuppressWarnings("unchecked")
+                    @Override
+                    public <K, V> Object execute(@NotNull RedisOperations<K, V> operations) throws DataAccessException {
+                        String key = CacheConstant.OUYUNC + CacheConstant.APP_KEY + loginClientInfo.getAppKey() + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + comboIdentity;
+                        long loginExpireTime = loginClientInfo.getLoginExpireTime();
+                        if (loginExpireTime <= 0) {
+                            operations.opsForValue().set((K) key, (V) loginClientInfo);
+                            // appKey 连接信息的score 如果是小于0 也就是 -1 则证明是不需要进行保活，一致保留到缓存中
+                            operations.opsForZSet().add((K) (CacheConstant.OUYUNC + CacheConstant.CONNECTIONS + CacheConstant.APP_KEY + loginClientInfo.getAppKey()), (V) comboIdentity, NumberConstant.NUMBER_NEGATIVE_1);
+                        }else {
+                            operations.opsForValue().set((K) key, (V) loginClientInfo, loginExpireTime, TimeUnit.SECONDS);
+                            // 添加appKey统计信息
+                            operations.opsForZSet().add((K) (CacheConstant.OUYUNC + CacheConstant.CONNECTIONS + CacheConstant.APP_KEY + loginClientInfo.getAppKey()), (V) comboIdentity, TimeUtil.currentTimeMillis() + loginExpireTime*MessageConstant.NUMBER_1000);
+                        }
+                        return null;
+                    }
+                });
+
             }else {
                 log.error("客户端: {} 绑定登录信息失败,原因：获取分布式锁失败", loginClientInfo);
             }

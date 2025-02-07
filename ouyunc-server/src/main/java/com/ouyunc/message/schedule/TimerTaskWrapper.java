@@ -2,7 +2,6 @@ package com.ouyunc.message.schedule;
 
 import com.ouyunc.base.constant.NumberConstant;
 import io.netty.util.Timeout;
-import io.netty.util.Timer;
 import io.netty.util.TimerTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,10 +35,6 @@ public class TimerTaskWrapper implements TimerTask{
      */
     protected Runnable runnableTask;
 
-    /**
-     * 触发器
-     */
-    protected Timer timer;
 
     /**
      * 任务延迟时间
@@ -69,10 +64,9 @@ public class TimerTaskWrapper implements TimerTask{
 
 
 
-    public TimerTaskWrapper(String taskId, Runnable runnableTask, Timer timer, long delay, TimeUnit timeUnit, int maxLoops) {
+    public TimerTaskWrapper(String taskId, Runnable runnableTask, long delay, TimeUnit timeUnit, int maxLoops) {
         this.taskId = taskId;
         this.runnableTask = runnableTask;
-        this.timer = timer;
         this.delay = delay;
         this.timeUnit = timeUnit;
         this.maxLoops = maxLoops;
@@ -103,14 +97,6 @@ public class TimerTaskWrapper implements TimerTask{
 
     public void setTimeUnit(TimeUnit timeUnit) {
         this.timeUnit = timeUnit;
-    }
-
-    public Timer getTimer() {
-        return timer;
-    }
-
-    public void setTimer(Timer timer) {
-        this.timer = timer;
     }
 
     public Timeout getScheduledTimeout() {
@@ -161,7 +147,7 @@ public class TimerTaskWrapper implements TimerTask{
             log.error("执行定时调度任务异常：{}", e.getMessage());
         }finally {
             // 重新调度以实现固定频率
-            scheduledTimeout = timer.newTimeout(this, delay, timeUnit);
+            scheduledTimeout = timeout.timer().newTimeout(this, delay, timeUnit);
         }
     }
 }

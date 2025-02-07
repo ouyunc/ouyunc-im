@@ -52,7 +52,7 @@ public class QosScheduleTimer {
                 TimerTaskWrapper qosTimerTask = new TimerTaskWrapper(String.valueOf(packet.getPacketId()), () -> {
                     // 这里面抛异常会被task run 方法捕获，这里面抛异常不会影响其他任务
                     MessageHelper.asyncSendMessage(packet, target);
-                }, timer, delay, timeUnit, maxLoops);
+                }, delay, timeUnit, maxLoops);
                 // 存储任务信息
                 qosTimerTaskCaffeine.put(String.valueOf(packet.getPacketId()), qosTimerTask);
                 // 开启第一层定时任务

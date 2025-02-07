@@ -2,12 +2,16 @@ package com.ouyunc.message.thread;
 
 
 import com.ouyunc.base.constant.CacheConstant;
+import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.message.content.LoginContent;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.message.context.MessageServerContext;
+import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -20,6 +24,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * 客户端登录保活线程，消费者
  */
 public class LoginKeepAliveThread implements Runnable{
+    private static final Logger log = LoggerFactory.getLogger(LoginKeepAliveThread.class);
 
 
     private static final RedisTemplate<String, LoginContent> redisTemplate = CacheFactory.REDIS.instance();
@@ -34,23 +39,31 @@ public class LoginKeepAliveThread implements Runnable{
         int clientLoginInfoBatchExpireSize = MessageServerContext.serverProperties().getClientLoginInfoBatchExpireSize();
         long clientLoginInfoScheduleTimeInterval = MessageServerContext.serverProperties().getClientLoginInfoScheduleTimeInterval();
         while (true) {
-            // 这里用size 判断虽然会不准，但是没啥问题
-            if (MessageServerContext.clientKeepAliveQueue.size() >= clientLoginInfoBatchExpireSize || (!MessageServerContext.clientKeepAliveQueue.isEmpty() && TimeUtil.currentTimeMillis() >= lastBatchSubmitTimeMillis.get() + clientLoginInfoScheduleTimeInterval)) {
-                redisTemplate.executePipelined(new SessionCallback<>() {
-                    @SuppressWarnings("unchecked")
-                    @Override
-                    public <K, V> Object execute(RedisOperations<K, V> operations) throws DataAccessException {
-                        for (int i = 0; i < clientLoginInfoBatchExpireSize; i++) {
-                            LoginClientInfo loginClientInfo = MessageServerContext.clientKeepAliveQueue.poll();
-                            if (loginClientInfo != null) {
-                                operations.expire((K) (CacheConstant.OUYUNC + CacheConstant.APP_KEY + loginClientInfo.getAppKey() + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + IdentityUtil.generalComboIdentity(loginClientInfo.getAppKey(), loginClientInfo.getIdentity(), loginClientInfo.getDeviceType())), loginClientInfo.getLoginExpireTime(), TimeUnit.SECONDS);
+            try {
+                // 这里用size 判断虽然会不准，但是没啥问题
+                if (MessageServerContext.clientKeepAliveQueue.size() >= clientLoginInfoBatchExpireSize || (!MessageServerContext.clientKeepAliveQueue.isEmpty() && TimeUtil.currentTimeMillis() >= lastBatchSubmitTimeMillis.get() + clientLoginInfoScheduleTimeInterval)) {
+                    redisTemplate.executePipelined(new SessionCallback<>() {
+                        @SuppressWarnings("unchecked")
+                        @Override
+                        public <K, V> Object execute(@NotNull RedisOperations<K, V> operations) throws DataAccessException {
+                            for (int i = 0; i < clientLoginInfoBatchExpireSize; i++) {
+                                LoginClientInfo loginClientInfo = MessageServerContext.clientKeepAliveQueue.poll();
+                                if (loginClientInfo != null) {
+                                    String comboIdentity = IdentityUtil.generalComboIdentity(loginClientInfo.getAppKey(), loginClientInfo.getIdentity(), loginClientInfo.getDeviceType());
+                                    long loginExpireTime = loginClientInfo.getLoginExpireTime();
+                                    operations.expire((K) (CacheConstant.OUYUNC + CacheConstant.APP_KEY + loginClientInfo.getAppKey() + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + comboIdentity), loginExpireTime, TimeUnit.SECONDS);
+                                    operations.opsForZSet().add((K) (CacheConstant.OUYUNC + CacheConstant.CONNECTIONS + CacheConstant.APP_KEY + loginClientInfo.getAppKey()), (V) comboIdentity, TimeUtil.currentTimeMillis() + loginExpireTime* MessageConstant.NUMBER_1000);
+                                }
                             }
+                            return null;
                         }
-                        return null;
-                    }
-                });
-                lastBatchSubmitTimeMillis.set(TimeUtil.currentTimeMillis());
+                    });
+                    lastBatchSubmitTimeMillis.set(TimeUtil.currentTimeMillis());
+                }
+            } catch (Exception e) {
+                log.error("客户端登录保活线程异常中断，原因：{}", e.getMessage());
             }
+
         }
     }
 }

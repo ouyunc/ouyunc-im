@@ -5,7 +5,6 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.core.listener.event.SendOfflineEvent;
 import com.ouyunc.message.context.MessageServerContext;
 import io.netty.util.Timeout;
-import io.netty.util.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,8 +25,8 @@ public class QosTimerTaskWrapper extends TimerTaskWrapper{
      */
     private Packet packet;
 
-    public QosTimerTaskWrapper(Packet packet, Runnable runnableTask,  Timer timer, long delay, TimeUnit timeUnit, int maxLoops) {
-        super(String.valueOf(packet.getPacketId()), runnableTask, timer, delay, timeUnit, maxLoops);
+    public QosTimerTaskWrapper(Packet packet, Runnable runnableTask, long delay, TimeUnit timeUnit, int maxLoops) {
+        super(String.valueOf(packet.getPacketId()), runnableTask, delay, timeUnit, maxLoops);
         this.packet = packet;
     }
 
@@ -60,7 +59,7 @@ public class QosTimerTaskWrapper extends TimerTaskWrapper{
             MessageServerContext.publishEvent(new SendOfflineEvent(packet), true);
         }finally {
             // 重新调度以实现固定频率
-            scheduledTimeout = timer.newTimeout(this, delay, timeUnit);
+            scheduledTimeout = timeout.timer().newTimeout(this, delay, timeUnit);
         }
     }
 }

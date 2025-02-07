@@ -135,7 +135,17 @@ public class MessageServerProperties extends MessageProperties {
     @Key(value = "ouyunc.message.client.heart-beat.wait-retry", defaultValue = "3")
     int clientHeartBeatWaitRetry;
 
+    /***
+     * 是否开启appKey的连接数统计，默认开启
+     */
+    @Key(value = "ouyunc.message.client.app-key.refresh-connection.enable", defaultValue = "true")
+    boolean appKeyConnectionCountRefreshEnable;
 
+    /***
+     * appKey的连接数统计定时清理过期连接的间隔时间，刷新时间间隔，单位秒，默认5秒
+     */
+    @Key(value = "ouyunc.message.client.app-key.refresh-connection.interval", defaultValue = "5")
+    long appKeyConnectionCountRefreshInterval;
 
 
     /**
@@ -339,6 +349,22 @@ public class MessageServerProperties extends MessageProperties {
 
     public void setMessageProtocolProcessorScanPackagePaths(List<String> messageProtocolProcessorScanPackagePaths) {
         this.messageProtocolProcessorScanPackagePaths = messageProtocolProcessorScanPackagePaths;
+    }
+
+    public boolean isAppKeyConnectionCountRefreshEnable() {
+        return appKeyConnectionCountRefreshEnable;
+    }
+
+    public void setAppKeyConnectionCountRefreshEnable(boolean appKeyConnectionCountRefreshEnable) {
+        this.appKeyConnectionCountRefreshEnable = appKeyConnectionCountRefreshEnable;
+    }
+
+    public long getAppKeyConnectionCountRefreshInterval() {
+        return appKeyConnectionCountRefreshInterval;
+    }
+
+    public void setAppKeyConnectionCountRefreshInterval(long appKeyConnectionCountRefreshInterval) {
+        this.appKeyConnectionCountRefreshInterval = appKeyConnectionCountRefreshInterval;
     }
 
     public int getBossThreads() {
@@ -566,6 +592,8 @@ public class MessageServerProperties extends MessageProperties {
                 "\n, clientHeartBeatEnable=" + clientHeartBeatEnable +
                 "\n, clientHeartBeatTimeout=" + clientHeartBeatTimeout +
                 "\n, clientHeartBeatWaitRetry=" + clientHeartBeatWaitRetry +
+                "\n, appKeyConnectionCountRefreshEnable=" + appKeyConnectionCountRefreshEnable +
+                "\n, appKeyConnectionCountRefreshInterval=" + appKeyConnectionCountRefreshInterval +
                 "\n, websocketPath='" + websocketPath + '\'' +
                 "\n, clusterEnable=" + clusterEnable +
                 "\n, nodes=" + nodes +
@@ -583,4 +611,5 @@ public class MessageServerProperties extends MessageProperties {
                 "\n, clusterSplitBrainDetectionDelayTime=" + clusterSplitBrainDetectionDelayTime +
                 '}';
     }
+
 }

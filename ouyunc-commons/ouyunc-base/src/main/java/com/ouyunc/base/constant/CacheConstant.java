@@ -17,6 +17,11 @@ public class CacheConstant {
     public static final String OUYUNC = "ouyunc:";
 
     /***
+     * 所有的appKey
+     */
+    public static final String APP_KEYS = "APP_KEYS";
+
+    /***
      * 平台的 唯一标识key 公共前缀
      */
     public static final String APP_KEY = "app-key:";

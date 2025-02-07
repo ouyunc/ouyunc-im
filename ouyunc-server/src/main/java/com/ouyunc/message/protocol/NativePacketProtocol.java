@@ -89,15 +89,7 @@ public enum NativePacketProtocol implements PacketProtocol {
          * @return
          */
         private boolean preVerifyAppKeyConnects(Map<String, Object> queryParamsMap) {
-//            String appKey = MapUtils.getString(queryParamsMap, "appKey");
-//            String identity = MapUtils.getString(queryParamsMap, "identity");
-//            String signature = MapUtils.getString(queryParamsMap, "signature");
-//            long createTime = MapUtils.getLong(queryParamsMap, "createTime");
-//            // 1,统计连接数
-//            // 2,校验连接数是否大于允许的连接数
-//            // 3,校验通过后添加统计数
-//            RedisTemplate<String, Object> redisTemplate = CacheFactory.REDIS.instance();
-//            redisTemplate.opsForHash().put(CacheConstant.OUYUNC + CacheConstant.CONNECTIONS + CacheConstant.APP_KEY + appKey, identity, 1);
+
             return true;
         }
 

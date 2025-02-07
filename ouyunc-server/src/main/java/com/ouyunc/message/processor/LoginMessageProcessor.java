@@ -131,7 +131,7 @@ public class LoginMessageProcessor extends AbstractMessageProcessor<Byte> {
                                     // 删除登录信息
                                     operations.delete((K) loginClientInfoCacheKey);
                                     // 删除appKey 下的连接统计信息
-                                    operations.opsForHash().delete((K) (CacheConstant.OUYUNC + CacheConstant.CONNECTIONS + CacheConstant.APP_KEY + closingLocalloginClientInfo.getAppKey()), closingComboIdentity);
+                                    operations.opsForZSet().remove((K) (CacheConstant.OUYUNC + CacheConstant.CONNECTIONS + CacheConstant.APP_KEY + closingLocalloginClientInfo.getAppKey()), closingComboIdentity);
                                     return null;
                                 }
                             });

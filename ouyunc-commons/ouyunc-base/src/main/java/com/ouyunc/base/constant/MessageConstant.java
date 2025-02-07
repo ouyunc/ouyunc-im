@@ -22,6 +22,29 @@ public class MessageConstant {
      */
     public static final long LOCK_LEASE_TIME = 5;
 
+
+    /**
+     * 数字1000
+     */
+    public static final int NUMBER_1000 = 1000;
+
+    /**
+     * 数字5000
+     */
+    public static final int NUMBER_5000 = 5000;
+
+    /**
+     * 数字10000
+     */
+    public static final int NUMBER_10000 = 10000;
+
+
+    /**
+     * 一天的时间戳
+     */
+    public static final long DAY_TIMESTAMP = 24*60*60*1000L;
+
+
     /**
      * false
      */
