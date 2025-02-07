@@ -45,6 +45,23 @@ public class MessageConstant {
     public static final long DAY_TIMESTAMP = 24*60*60*1000L;
 
 
+
+    /**
+     * 一小时的时间戳
+     */
+    public static final long HOUR_TIMESTAMP = 60*60*1000L;
+
+
+    /**
+     * 一分钟的时间戳
+     */
+    public static final long MINUTE_TIMESTAMP = 60*1000L;
+
+    /**
+     * 一秒的时间戳
+     */
+    public static final long SECOND_TIMESTAMP = NUMBER_1000;
+
     /**
      * false
      */

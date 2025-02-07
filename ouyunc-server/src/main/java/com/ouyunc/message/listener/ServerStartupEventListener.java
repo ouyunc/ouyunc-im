@@ -2,7 +2,6 @@ package com.ouyunc.message.listener;
 
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
-import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.SaveModeEnum;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.cache.config.CacheFactory;
@@ -58,8 +57,8 @@ public class ServerStartupEventListener implements MessageListener<ServerStartup
                     // 查询zset score值 小于当前时间戳的 appKey 连接数且不等于-1
                     // 要删除成员的最大分数
                     double maxScore = TimeUtil.currentTimeMillis();
-                    // 要删除成员的最小分数， 这个需要给定一个合适的起止时间，比如在程序开始启动的那一天，或者当前时间戳减去一定的时间范围，比如一天，或者一周，或者一个月等。这里用过去一周的时间，这样删除的数据量会比较少，不会影响性能。
-                    double minScore = maxScore - NumberConstant.NUMBER_7 * MessageConstant.DAY_TIMESTAMP;
+                    // 要删除成员的最小分数， 这个需要给定一个合适的起止时间，比如在程序开始启动的那一天，或者当前时间戳减去一定的时间范围，比如一天，或者一周，或者一个月等。这里用过去一天的时间，这样删除的数据量会比较少，不会影响性能。
+                    double minScore = maxScore - MessageServerContext.serverProperties().getAppKeyConnectionCountRefreshStepInterval() * MessageConstant.SECOND_TIMESTAMP;
                     // 每次删除操作处理的分数区间大小,5000 毫秒范围的数据
                     int batchSize = MessageConstant.NUMBER_5000;
                     for (Object appKey : appKeys) {
@@ -73,11 +72,7 @@ public class ServerStartupEventListener implements MessageListener<ServerStartup
                                     // 计算本次删除操作的最大分数边界，确保不超过设定的 maxScore
                                     double currentMaxScore = Math.min(minScore + batchSize, maxScore);
                                     // 执行删除操作，返回删除的成员数量
-                                    Long removedCount = redisTemplate.opsForZSet().removeRangeByScore(CacheConstant.OUYUNC + CacheConstant.CONNECTIONS + CacheConstant.APP_KEY + appKey, minScore, currentMaxScore);
-                                    if (removedCount == null || removedCount == NumberConstant.NUMBER_0) {
-                                        // 如果本次删除数量为 0，说明该区间内没有可删除的成员，跳出循环
-                                        break;
-                                    }
+                                    redisTemplate.opsForZSet().removeRangeByScore(CacheConstant.OUYUNC + CacheConstant.CONNECTIONS + CacheConstant.APP_KEY + appKey, minScore, currentMaxScore);
                                     // 更新下一次删除操作的起始分数
                                     minScore = currentMaxScore;
                                 }

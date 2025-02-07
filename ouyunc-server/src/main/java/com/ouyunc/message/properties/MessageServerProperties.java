@@ -148,6 +148,13 @@ public class MessageServerProperties extends MessageProperties {
     long appKeyConnectionCountRefreshInterval;
 
 
+    /***
+     * appKey的连接数统计,刷新步长，单位秒，默认3600秒
+     */
+    @Key(value = "ouyunc.message.client.app-key.refresh-connection.step-interval", defaultValue = "3600")
+    long appKeyConnectionCountRefreshStepInterval;
+
+
     /**
      * 服务端连接websocket的path
      */
@@ -333,6 +340,14 @@ public class MessageServerProperties extends MessageProperties {
 
     public void setMessageListenersScanPackagePaths(List<String> messageListenersScanPackagePaths) {
         this.messageListenersScanPackagePaths = messageListenersScanPackagePaths;
+    }
+
+    public long getAppKeyConnectionCountRefreshStepInterval() {
+        return appKeyConnectionCountRefreshStepInterval;
+    }
+
+    public void setAppKeyConnectionCountRefreshStepInterval(long appKeyConnectionCountRefreshStepInterval) {
+        this.appKeyConnectionCountRefreshStepInterval = appKeyConnectionCountRefreshStepInterval;
     }
 
     public List<String> getMessageProcessorScanPackagePaths() {
