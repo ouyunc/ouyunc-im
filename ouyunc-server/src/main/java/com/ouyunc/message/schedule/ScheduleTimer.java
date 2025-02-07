@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 /**
  * 调度器
@@ -25,7 +26,7 @@ public class ScheduleTimer {
     /**
      * 调度定时任务
      */
-    public static void schedule(String taskId, Runnable task, long delay, TimeUnit timeUnit, int maxLoops) {
+    public static void schedule(String taskId, Consumer<TimerTaskWrapper> task, long delay, TimeUnit timeUnit, int maxLoops) {
         // 开启第一层定时任务
         timer.newTimeout(new TimerTaskWrapper(taskId, task, delay, timeUnit, maxLoops), NumberConstant.NUMBER_0, timeUnit);
     }
@@ -33,7 +34,7 @@ public class ScheduleTimer {
     /**
      * 一直循环调度定时任务
      */
-    public static void schedule(String taskId, Runnable task, long delay, TimeUnit timeUnit) {
+    public static void schedule(String taskId, Consumer<TimerTaskWrapper> task, long delay, TimeUnit timeUnit) {
         schedule(taskId, task, delay, timeUnit, NumberConstant.NUMBER_NEGATIVE_1);
     }
 

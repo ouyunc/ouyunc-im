@@ -11,6 +11,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 
 /**
  * qos timerTask
@@ -27,13 +28,13 @@ public class TimerTaskWrapper implements TimerTask{
     /**
      * 任务id
      */
-    private String taskId;
+    protected String taskId;
 
 
     /**
      * 运行任务
      */
-    protected Runnable runnableTask;
+    protected Consumer<TimerTaskWrapper> runnableTask;
 
 
     /**
@@ -64,7 +65,7 @@ public class TimerTaskWrapper implements TimerTask{
 
 
 
-    public TimerTaskWrapper(String taskId, Runnable runnableTask, long delay, TimeUnit timeUnit, int maxLoops) {
+    public TimerTaskWrapper(String taskId, Consumer<TimerTaskWrapper> runnableTask, long delay, TimeUnit timeUnit, int maxLoops) {
         this.taskId = taskId;
         this.runnableTask = runnableTask;
         this.delay = delay;
@@ -107,11 +108,11 @@ public class TimerTaskWrapper implements TimerTask{
         this.scheduledTimeout = scheduledTimeout;
     }
 
-    public Runnable getRunnableTask() {
+    public Consumer<TimerTaskWrapper> getRunnableTask() {
         return runnableTask;
     }
 
-    public void setRunnableTask(Runnable runnableTask) {
+    public void setRunnableTask(Consumer<TimerTaskWrapper> runnableTask) {
         this.runnableTask = runnableTask;
     }
 
@@ -139,10 +140,10 @@ public class TimerTaskWrapper implements TimerTask{
                 cancel();
                 return;
             }
-            CompletableFuture.runAsync(runnableTask, qosTaskExecutor).exceptionally(ex -> {
+            CompletableFuture.runAsync(() -> runnableTask.accept(this), qosTaskExecutor).exceptionally(ex -> {
                 log.error("执行定时调度任务异常：{}", ex.getMessage());
                 return null;
-            });;
+            });
         }catch (Exception e){
             log.error("执行定时调度任务异常：{}", e.getMessage());
         }finally {
