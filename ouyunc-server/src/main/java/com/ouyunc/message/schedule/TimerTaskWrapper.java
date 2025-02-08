@@ -1,8 +1,13 @@
 package com.ouyunc.message.schedule;
 
+import com.github.benmanes.caffeine.cache.CacheLoader;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.ouyunc.base.constant.NumberConstant;
+import com.ouyunc.cache.Cache;
+import com.ouyunc.cache.local.caffeine.CaffeineLocalCache;
 import io.netty.util.Timeout;
 import io.netty.util.TimerTask;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,6 +30,16 @@ public class TimerTaskWrapper implements TimerTask{
      */
     protected static final ExecutorService qosTaskExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
+    /***
+     * 任务缓存
+     */
+    public static final Cache<String, TimerTaskWrapper> timerTaskCaffeine = new CaffeineLocalCache<>("timerTaskCaffeine", Caffeine.newBuilder().build(new CacheLoader<>() {
+        @Override
+        public @Nullable TimerTaskWrapper load(String taskId) throws Exception {
+            return null;
+        }
+    }));
+
     /**
      * 任务id
      */
@@ -40,18 +55,23 @@ public class TimerTaskWrapper implements TimerTask{
     /**
      * 任务延迟时间
      */
-    protected long delay;
+    protected long period;
 
     /**
      * 时间单位
      */
     protected TimeUnit timeUnit;
 
-
     /**
      * 超时时间
      */
     protected Timeout scheduledTimeout;
+
+
+    /**
+     * 是否同步执行提交的任务
+     */
+    protected boolean sync;
 
     /**
      *  当前循环次数
@@ -65,13 +85,15 @@ public class TimerTaskWrapper implements TimerTask{
 
 
 
-    public TimerTaskWrapper(String taskId, Consumer<TimerTaskWrapper> runnableTask, long delay, TimeUnit timeUnit, int maxLoops) {
+    public TimerTaskWrapper(String taskId, Consumer<TimerTaskWrapper> runnableTask, long period, TimeUnit timeUnit, boolean sync, int maxLoops) {
         this.taskId = taskId;
         this.runnableTask = runnableTask;
-        this.delay = delay;
+        this.period = period;
         this.timeUnit = timeUnit;
         this.maxLoops = maxLoops;
         this.currentLoopCount = new AtomicInteger(0);
+        this.sync = sync;
+        timerTaskCaffeine.put(taskId, this);
     }
 
     public String getTaskId() {
@@ -85,11 +107,11 @@ public class TimerTaskWrapper implements TimerTask{
 
 
     public long getDelay() {
-        return delay;
+        return period;
     }
 
     public void setDelay(long delay) {
-        this.delay = delay;
+        this.period = delay;
     }
 
     public TimeUnit getTimeUnit() {
@@ -125,8 +147,11 @@ public class TimerTaskWrapper implements TimerTask{
     }
 
     public boolean cancel() {
+        // 删除任务
+        timerTaskCaffeine.delete(taskId);
         // 停止单个任务
         if (scheduledTimeout != null && !scheduledTimeout.isExpired() && !scheduledTimeout.isCancelled()) {
+            // 真正停止
             return scheduledTimeout.cancel();
         }
         return false;
@@ -134,21 +159,32 @@ public class TimerTaskWrapper implements TimerTask{
 
     @Override
     public void run(Timeout timeout) throws Exception {
+        TimerTaskWrapper timerTaskWrapper = timerTaskCaffeine.get(taskId);
         try {
+            // 如果已经取消则取消当前
+            if (timerTaskWrapper == null) {
+                timeout.cancel();
+                return;
+            }
             // 当前循环计数
             if (maxLoops >= NumberConstant.NUMBER_0 && currentLoopCount.incrementAndGet() > maxLoops) {
                 cancel();
                 return;
             }
-            CompletableFuture.runAsync(() -> runnableTask.accept(this), qosTaskExecutor).exceptionally(ex -> {
-                log.error("执行定时调度任务异常：{}", ex.getMessage());
-                return null;
-            });
-        }catch (Exception e){
-            log.error("执行定时调度任务异常：{}", e.getMessage());
+            // 同步执行任务还是异步执行任务
+            if (sync) {
+                runnableTask.accept(this);
+            }else {
+                CompletableFuture.runAsync(() -> runnableTask.accept(this), qosTaskExecutor).exceptionally(ex -> {
+                    log.error("执行定时调度任务异常：{}", ex.getMessage());
+                    return null;
+                });
+            }
         }finally {
             // 重新调度以实现固定频率
-            scheduledTimeout = timeout.timer().newTimeout(this, delay, timeUnit);
+            if (timerTaskWrapper != null) {
+                scheduledTimeout = timeout.timer().newTimeout(this, period, timeUnit);
+            }
         }
     }
 }

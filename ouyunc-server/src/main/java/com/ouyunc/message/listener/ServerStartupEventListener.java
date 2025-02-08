@@ -54,7 +54,7 @@ public class ServerStartupEventListener implements MessageListener<ServerStartup
             // 要删除成员的最小分数， 这个需要给定一个合适的起止时间，比如在程序开始启动的那一天，或者当前时间戳减去一定的时间范围，比如一天，或者一周，或者一个月等。这里用过去一天的时间，这样删除的数据量会比较少，不会影响性能。
             final AtomicLong minScore = new AtomicLong(NumberConstant.NUMBER_0);
             // 调度
-            ScheduleTimer.schedule("appKey-connection-count-refresh-timer", (taskWrapper) -> {
+            ScheduleTimer.scheduleAtFixedRate("appKey-connection-count-refresh-timer", (taskWrapper) -> {
                 // 获取所有appKey
                 Set<Object> appKeys = redisTemplate.opsForSet().members(CacheConstant.OUYUNC + CacheConstant.APP_KEYS);
                 if (CollectionUtils.isNotEmpty(appKeys)) {
@@ -89,7 +89,7 @@ public class ServerStartupEventListener implements MessageListener<ServerStartup
                         }
                     }
                 }
-            }, MessageServerContext.serverProperties().getAppKeyConnectionCountRefreshInterval(), TimeUnit.SECONDS);
+            }, MessageServerContext.serverProperties().getAppKeyConnectionCountRefreshInterval(), MessageServerContext.serverProperties().getAppKeyConnectionCountRefreshInterval(), TimeUnit.SECONDS);
         }
 
     }

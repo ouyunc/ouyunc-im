@@ -206,4 +206,53 @@ public class ClientHelper {
         }
         return null;
     }
+
+
+    /**
+     * 获取某个在线appKey 连接数
+     * @param appKey
+     * @return
+     */
+    public static long connections(String appKey) {
+        RedisTemplate<String, Object> redisTemplate = CacheFactory.REDIS.instance();
+        Long connections = redisTemplate.opsForZSet().zCard(CacheConstant.OUYUNC + CacheConstant.CONNECTIONS + CacheConstant.APP_KEY + appKey);
+        if (connections == null) {
+            return NumberConstant.NUMBER_0;
+        }
+        return connections;
+    }
+
+
+    /**
+     * 获取所有appKey的连接数总和
+     * @return
+     */
+    @SuppressWarnings("unchecked")
+    public static long connections() {
+        RedisTemplate<String, Object> redisTemplate = CacheFactory.REDIS.instance();
+        Set<Object> appKeys = redisTemplate.opsForSet().members(CacheConstant.OUYUNC + CacheConstant.APP_KEYS);
+        if (CollectionUtils.isEmpty(appKeys)) {
+            return NumberConstant.NUMBER_0;
+        }
+        // 依次获取每个appKey的数据
+        long totalConnections = NumberConstant.NUMBER_0;
+        List<Object> executedResultList = redisTemplate.executePipelined(new SessionCallback<>() {
+            @Override
+            public <K, V> Object execute(@NotNull RedisOperations<K, V> operations) throws DataAccessException {
+                for (Object appKey : appKeys) {
+                    operations.opsForZSet().zCard((K) (CacheConstant.OUYUNC + CacheConstant.CONNECTIONS + CacheConstant.APP_KEY + appKey));
+                }
+                return null;
+            }
+        });
+        // 统计所有appKey的连接数
+        if (CollectionUtils.isNotEmpty(executedResultList)) {
+            for (Object result : executedResultList) {
+                if (result instanceof Long connection) {
+                    totalConnections += connection;
+                }
+            }
+        }
+        return totalConnections;
+    }
 }
