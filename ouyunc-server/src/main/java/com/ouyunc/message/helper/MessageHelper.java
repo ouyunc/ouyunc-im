@@ -45,6 +45,7 @@ public class MessageHelper {
 
     /**
      * 异步发送消息给多个客户端
+     * 注意！注意！注意！，异步发送，只是逻辑处理事异步的，但是具体讲消息发送出去的时间不确定，因为最后发送消息的的writeAndFlush()方法，会被封装到channel.eventLoop()单线程的任务队列中；队列里面任务的执行时间可查看相关文档
      */
     public static void asyncSendMessage(Packet packet, Collection<LoginClientInfo> loginClientInfos) {
         // 转发给某个客户端的各个在线设备端
@@ -64,7 +65,8 @@ public class MessageHelper {
 
     /**
      * @Author fzx
-     * @Description 异步发送消息，不带回调
+     * @Description 异步发送消息，不带回调，
+     * 注意！注意！注意！，异步发送，只是逻辑处理事异步的，但是具体讲消息发送出去的时间不确定，因为最后发送消息的的writeAndFlush()方法，会被封装到channel.eventLoop()单线程的任务队列中；队列里面任务的执行时间可查看相关文档
      */
     public static void asyncSendMessage(Packet packet, Target target) {
         asyncSendMessage(packet, target, (sendResult)->{});
@@ -74,6 +76,7 @@ public class MessageHelper {
     /**
      * @Author fzx
      * @Description 异步投递消息，添加回调
+     * 注意！注意！注意！，异步发送，只是逻辑处理事异步的，但是具体讲消息发送出去的时间不确定，因为最后发送消息的的writeAndFlush()方法，会被封装到channel.eventLoop()单线程的任务队列中；队列里面任务的执行时间可查看相关文档
      */
     public static void asyncSendMessage(Packet packet, Target target, SendCallback sendCallback) {
         messageSendExecutor.execute(()-> doSendMessage(packet, target, sendCallback));
