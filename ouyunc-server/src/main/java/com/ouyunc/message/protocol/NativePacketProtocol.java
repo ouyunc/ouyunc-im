@@ -2,6 +2,7 @@ package com.ouyunc.message.protocol;
 
 
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.ProtocolTypeEnum;
 import com.ouyunc.base.constant.enums.SendStatusEnum;
 import com.ouyunc.base.exception.MessageException;
@@ -16,10 +17,7 @@ import com.ouyunc.message.cluster.client.pool.MessageClientPool;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.convert.PacketConverter;
 import com.ouyunc.message.handler.*;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPipeline;
+import io.netty.channel.*;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.handler.codec.http.websocketx.WebSocketFrameAggregator;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
@@ -27,8 +25,11 @@ import io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketSe
 import io.netty.handler.codec.mqtt.MqttDecoder;
 import io.netty.handler.codec.mqtt.MqttEncoder;
 import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.DefaultEventExecutorGroup;
+import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
+import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,6 +43,8 @@ public enum NativePacketProtocol implements PacketProtocol {
 
     // 处理ws/wss,这里相当于关键入口
     WS(ProtocolTypeEnum.WS.getProtocol(), ProtocolTypeEnum.WS.getProtocolVersion(), "websocket 协议，版本号为1") {
+        private final EventExecutorGroup eventExecutorGroup = new DefaultEventExecutorGroup(Runtime.getRuntime().availableProcessors()* NumberConstant.NUMBER_2, new BasicThreadFactory.Builder().namingPattern("Ws-Protocol-Pool-%d").build());
+
         @Override
         public void doDispatcher(ChannelHandlerContext ctx, Map<String, Object> queryParamsMap) {
             // 这里可以根据业务提前做appKey 的验证和appKey下连接数的统计，直接从queryParamsMap 这里面取值即可
@@ -66,11 +69,11 @@ public enum NativePacketProtocol implements PacketProtocol {
                     .addLast(MessageConstant.MONITOR_HANDLER, new MonitorHandler())
                     // 在业务处理之前可以进行登录认证处理，登录认证处理，如果不需要登录处理，可在配置文件中配置，不需要在这里处理
                     // 前置处理
-                    .addLast(MessageConstant.PRE_HANDLER, new PacketPreHandler())
+                    .addLast(eventExecutorGroup, MessageConstant.PRE_HANDLER, new PacketPreHandler())
                     // 业务处理
-                    .addLast(MessageConstant.WS_HANDLER, new PacketHandler())
+                    .addLast(eventExecutorGroup, MessageConstant.WS_HANDLER, new PacketHandler())
                     // 后置处理
-                    .addLast(MessageConstant.POST_HANDLER, new PacketPostHandler())
+                    .addLast(eventExecutorGroup, MessageConstant.POST_HANDLER, new PacketPostHandler())
                     // 判断是否需要开启客户端心跳如果需要则开启客户端心跳，由于心跳消息不需要登录就可以，所以放在登录认证处理器前面
                     // 在最后添加异常处理器
                     .addLast(MessageConstant.EXCEPTION_HANDLER, new MessageExceptionHandler())
@@ -119,6 +122,7 @@ public enum NativePacketProtocol implements PacketProtocol {
 
     // 目前该协议不对外开放只作为集群内部协议使用，可以对接jt 818,或者其他物联网的通信，字节扩充，
     OUYUNC(ProtocolTypeEnum.OUYUNC.getProtocol(), ProtocolTypeEnum.OUYUNC.getProtocolVersion(), "自定义ouyunc协议，版本号为1") {
+        private final EventExecutorGroup eventExecutorGroup = new DefaultEventExecutorGroup(Runtime.getRuntime().availableProcessors()* NumberConstant.NUMBER_2, new BasicThreadFactory.Builder().namingPattern("Ouyunc-Protocol-Pool-%d").build());
         @Override
         public void doDispatcher(ChannelHandlerContext ctx, Map<String, Object> queryParamsMap) {
             ctx.channel().attr(protocolAttrKey).set(this);
@@ -129,7 +133,7 @@ public enum NativePacketProtocol implements PacketProtocol {
                     // 添加一个集群中处理消息路由的处理器，这样就不需要在业务处理器中都写一下了
                     .addLast(MessageConstant.PACKET_CLUSTER_ROUTER_HANDLER, new ClusterPacketRouteHandler())
                     // 集群内部/外部业务处理
-                    .addLast(MessageConstant.OUYUNC_HANDLER, new PacketHandler())
+                    .addLast(eventExecutorGroup, MessageConstant.OUYUNC_HANDLER, new PacketHandler())
                     // 在最后添加异常处理器
                     .addLast(MessageConstant.EXCEPTION_HANDLER, new MessageExceptionHandler())
                     // 移除协议分发器
@@ -175,15 +179,13 @@ public enum NativePacketProtocol implements PacketProtocol {
                             ChannelAttrUtil.setChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_TAG_POOL, finalChannelPool.hashCode());
                         }
                         // 客户端将数据写出到中介管道中
-                        channel.writeAndFlush(packet).addListener((ChannelFutureListener) future -> {
-                            if (channelFuture.isDone()) {
-                                if (channelFuture.isSuccess()) {
-                                    sendCallback.onCallback(SendResult.builder().sendStatus(SendStatusEnum.SEND_OK).packet(packet).build());
-                                }else {
-                                    sendCallback.onCallback(SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(future.cause()).build());
-                                }
-                            }
-                        });
+                        EventLoop eventLoop = channel.eventLoop();
+                        if (eventLoop.inEventLoop()) {
+                            // 如果当前线程是 EventLoop 线程，直接写入
+                            writeAndFlush(channel, packet, sendCallback);
+                        } else {
+                            eventLoop.execute(() -> writeAndFlush(channel, packet, sendCallback));
+                        }
                         // 用完后进行释放掉
                         finalChannelPool.release(channel);
                     } else {
@@ -195,11 +197,32 @@ public enum NativePacketProtocol implements PacketProtocol {
                 }
             });
         }
+
+        /**
+         * 写入数据到channel中
+         * @param channel
+         * @param packet
+         * @param sendCallback
+         */
+        private void writeAndFlush(Channel channel, Packet packet, SendCallback sendCallback) {
+            channel.writeAndFlush(packet).addListener((ChannelFutureListener) future -> {
+                if (future.isDone()) {
+                    if (future.isSuccess()) {
+                        sendCallback.onCallback(SendResult.builder().sendStatus(SendStatusEnum.SEND_OK).packet(packet).build());
+                    } else {
+                        sendCallback.onCallback(SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(future.cause()).build());
+                    }
+                }
+            });
+        }
     },
 
 
     //mqtt
     MQTT(ProtocolTypeEnum.MQTT.getProtocol(), ProtocolTypeEnum.MQTT.getProtocolVersion(), "mqtt协议，版本号为v3.1/v3.1.1/v5.0") {
+
+        private final EventExecutorGroup eventExecutorGroup = new DefaultEventExecutorGroup(Runtime.getRuntime().availableProcessors()* NumberConstant.NUMBER_2,new BasicThreadFactory.Builder().namingPattern("Mqtt-Protocol-Pool-%d").build());
+
         @Override
         public void doDispatcher(ChannelHandlerContext ctx, Map<String, Object> queryParamsMap) {
             ctx.channel().attr(protocolAttrKey).set(this);
@@ -210,11 +233,11 @@ public enum NativePacketProtocol implements PacketProtocol {
                     // 添加监控处理逻辑
                     .addLast(MessageConstant.MONITOR_HANDLER, new MonitorHandler())
                     // 前置处理
-                    .addLast(MessageConstant.PRE_HANDLER, new PacketPreHandler())
+                    .addLast(eventExecutorGroup, MessageConstant.PRE_HANDLER, new PacketPreHandler())
                     // 业务处理
-                    .addLast(MessageConstant.MQTT_SERVER_HANDLER, new PacketHandler())
+                    .addLast(eventExecutorGroup, MessageConstant.MQTT_SERVER_HANDLER, new PacketHandler())
                     // 后置处理
-                    .addLast(MessageConstant.POST_HANDLER, new PacketPostHandler())
+                    .addLast(eventExecutorGroup, MessageConstant.POST_HANDLER, new PacketPostHandler())
                     // 异常处理器
                     .addLast(MessageConstant.EXCEPTION_HANDLER, new MessageExceptionHandler());
             // 移除掉掉协议分发器
@@ -299,24 +322,23 @@ public enum NativePacketProtocol implements PacketProtocol {
     }
 
     /**
-     * @Author fzx
-     * @Description 协议分发器
      * @param ctx
      * @param queryParamsMap 请求参数
      * @return void
+     * @Author fzx
+     * @Description 协议分发器
      */
     @Override
     public void doDispatcher(ChannelHandlerContext ctx, Map<String, Object> queryParamsMap) {
 
     }
-
     /**
-     * @Author fzx
-     * @Description
-     * @param packet 消息包
-     * @param to 接受者,组合唯一值
+     * @param packet       消息包
+     * @param to           接受者,组合唯一值
      * @param sendCallback 这个发送的回调，针对成功来说，只是理论上的成功，因为writeAndFlush 本身就是异步的，加上网络的不稳定性，很难严格意义上的判断发送成功
      * @return void
+     * @Author fzx
+     * @Description
      */
     @Override
     public void doSendMessage(Packet packet, String to, SendCallback sendCallback) {
@@ -330,20 +352,16 @@ public enum NativePacketProtocol implements PacketProtocol {
                     // 注意：这里转换后，不要将metadata 置空，但是发送出去的消息，建议不要带元数据
                     Object msg = packetConverter.convertFromPacket(packet);
                     if (msg != null) {
-                        // 将消息写到channel
-                        channel.writeAndFlush(msg).addListener(future -> {
-                            if (future.isDone()) {
-                                if (future.isSuccess()) {
-                                    // 回调成功
-                                    sendCallback.onCallback(SendResult.builder().sendStatus(SendStatusEnum.SEND_OK).packet(packet).build());
-                                }else {
-                                    // 回调失败
-                                    SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(future.cause()).build();
-                                    sendCallback.onCallback(sendResult);
-                                    MessageServerContext.publishEvent(new SendFailEvent(sendResult), true);
-                                }
-                            }
-                        });
+                        // 将消息写到channel,避免线程安全问题
+                        EventLoop eventLoop = channel.eventLoop();
+                        if (eventLoop.inEventLoop()) {
+                            // 如果当前线程是 EventLoop 线程，直接写入
+                            writeAndFlush(channel, msg, packet, sendCallback);
+                        } else {
+                            // 如果不是 EventLoop 线程，将任务提交到 EventLoop 线程中执行；
+                            // 注意：在 Netty 中使用 ctx.channel().eventLoop().execute() 向 EventLoop 提交任务时，队列里的任务并不一定非要等当前正在执行的方法结束后才开始执行，这取决于当前线程是否为 EventLoop 线程以及 EventLoop 的状态；具体可查看文档
+                            eventLoop.execute(() -> writeAndFlush(channel, msg, packet, sendCallback));
+                        }
                         return;
                     }
                 }
@@ -360,9 +378,33 @@ public enum NativePacketProtocol implements PacketProtocol {
         } catch (Exception e) {
             log.error("消息packet: {} 发送给用户: {} 失败!", packet, to);
             // 消息丢失
-            SendResult sendResult =  SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(e).build();
+            SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(e).build();
             sendCallback.onCallback(sendResult);
             MessageServerContext.publishEvent(new SendFailEvent(sendResult), true);
         }
+    }
+
+
+    /**
+     * 将消息写到channel
+     * @param channel
+     * @param msg
+     * @param packet
+     * @param sendCallback
+     */
+    private void writeAndFlush(Channel channel, Object msg, Packet packet, SendCallback sendCallback) {
+        channel.writeAndFlush(msg).addListener(future -> {
+            if (future.isDone()) {
+                if (future.isSuccess()) {
+                    // 回调成功
+                    sendCallback.onCallback(SendResult.builder().sendStatus(SendStatusEnum.SEND_OK).packet(packet).build());
+                } else {
+                    // 回调失败
+                    SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(future.cause()).build();
+                    sendCallback.onCallback(sendResult);
+                    MessageServerContext.publishEvent(new SendFailEvent(sendResult), true);
+                }
+            }
+        });
     }
 }

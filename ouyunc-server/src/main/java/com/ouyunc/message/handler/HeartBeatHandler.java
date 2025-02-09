@@ -69,7 +69,7 @@ public class HeartBeatHandler extends SimpleChannelInboundHandler<Packet> {
                     if (readTimeoutTimes == null) {
                         readTimeoutTimes = (int) NumberConstant.NUMBER_1;
                     }
-                    log.info("外部客户端channel: {} 的 read_idle: {} 第 {} 触发了", channel.id().asShortText(), ((IdleStateEvent) event).state(), readTimeoutTimes);
+                    log.warn("外部客户端channel: {} 的 read_idle: {} 第 {} 触发了", channel.id().asShortText(), ((IdleStateEvent) event).state(), readTimeoutTimes);
                     // 如果连续超过三次
                     if (readTimeoutTimes > MessageServerContext.serverProperties().getClientHeartBeatWaitRetry() - NumberConstant.NUMBER_1) {
                         ctx.close();

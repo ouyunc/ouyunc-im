@@ -30,7 +30,7 @@ public class ClientLogoutListener implements MessageListener<ClientLogoutEvent> 
     @Override
     public void onApplicationEvent(ClientLogoutEvent event) {
         if (log.isDebugEnabled()) {
-            log.debug("离线事件监听器正在处理：{}", event);
+            log.warn("离线事件监听器正在处理：{}", event);
         }
         Object source = event.getSource();
         if (source == null) {

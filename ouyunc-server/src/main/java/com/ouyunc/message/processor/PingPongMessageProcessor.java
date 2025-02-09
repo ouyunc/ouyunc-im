@@ -54,6 +54,5 @@ public class PingPongMessageProcessor extends AbstractMessageProcessor<Byte> {
         packet.setPacketId(MessageContext.<Long>idGenerator().generateId());
         // 写回的是websocket还是其他类型的数据
         MessageHelper.asyncSendMessage(packet, Target.newBuilder().targetIdentity(from).deviceType(MessageServerContext.deviceTypeCache.get(packet.getDeviceType())).targetServerAddress(MessageServerContext.serverProperties().getLocalServerAddress()).build());
-
     }
 }

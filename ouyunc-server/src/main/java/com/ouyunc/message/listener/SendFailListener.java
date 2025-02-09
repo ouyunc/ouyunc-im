@@ -1,7 +1,6 @@
 package com.ouyunc.message.listener;
 
 import com.ouyunc.base.model.SendResult;
-import com.ouyunc.base.packet.Packet;
 import com.ouyunc.core.listener.MessageListener;
 import com.ouyunc.core.listener.event.SendFailEvent;
 import org.slf4j.Logger;
@@ -27,7 +26,7 @@ public class SendFailListener implements MessageListener<SendFailEvent> {
     @Override
     public void onApplicationEvent(SendFailEvent event) {
         if (log.isDebugEnabled()) {
-            log.debug("消息发送失败事件监听器正在处理：{}", event);
+            log.error("消息发送失败事件监听器正在处理：{}", event.getSource());
         }
         // 这里可以丢到mq中去处理，注意：发送失败的消息可能是重试的或者集群间消息传递，所以可能业务上需要做幂等处理
         if (event.getSource() instanceof SendResult sendResult) {
