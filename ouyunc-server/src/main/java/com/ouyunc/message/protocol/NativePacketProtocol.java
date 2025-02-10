@@ -183,8 +183,11 @@ public enum NativePacketProtocol implements PacketProtocol {
                         if (eventLoop.inEventLoop()) {
                             // 如果当前线程是 EventLoop 线程，直接写入
                             writeAndFlush(channel, packet, sendCallback);
-                        } else {
+                        } else if (!eventLoop.isTerminated() && !eventLoop.isShutdown() && !eventLoop.isShuttingDown()) {
                             eventLoop.execute(() -> writeAndFlush(channel, packet, sendCallback));
+                        }else {
+                            log.error("发送消息时，channel.eventLoop 被终止或关闭； channelId: {}", channel.id().asShortText());
+                            sendCallback.onCallback(SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(new MessageException("发送消息时，channel.eventLoop 被终止或关闭!")).build());
                         }
                         // 用完后进行释放掉
                         finalChannelPool.release(channel);
@@ -357,10 +360,15 @@ public enum NativePacketProtocol implements PacketProtocol {
                         if (eventLoop.inEventLoop()) {
                             // 如果当前线程是 EventLoop 线程，直接写入
                             writeAndFlush(channel, msg, packet, sendCallback);
-                        } else {
+                        } else if (!eventLoop.isTerminated() && !eventLoop.isShutdown() && !eventLoop.isShuttingDown()) {
                             // 如果不是 EventLoop 线程，将任务提交到 EventLoop 线程中执行；
                             // 注意：在 Netty 中使用 ctx.channel().eventLoop().execute() 向 EventLoop 提交任务时，队列里的任务并不一定非要等当前正在执行的方法结束后才开始执行，这取决于当前线程是否为 EventLoop 线程以及 EventLoop 的状态；具体可查看文档
                             eventLoop.execute(() -> writeAndFlush(channel, msg, packet, sendCallback));
+                        }else {
+                            log.error("发送消息时，channel.eventLoop 被终止或关闭； channelId: {}", channel.id().asShortText());
+                            SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(new MessageException("发送消息时，channel.eventLoop 被终止或关闭！")).build();
+                            sendCallback.onCallback(sendResult);
+                            MessageServerContext.publishEvent(new SendFailEvent(sendResult), true);
                         }
                         return;
                     }

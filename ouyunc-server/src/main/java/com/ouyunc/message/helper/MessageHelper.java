@@ -11,6 +11,7 @@ import com.ouyunc.core.listener.event.SendFailEvent;
 import com.ouyunc.message.context.MessageServerContext;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.EventLoop;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
@@ -136,20 +137,20 @@ public class MessageHelper {
                     // 当获取channel 成功的时候才将from进行设置进去
                     metadata.setFromServerAddress(MessageServerContext.serverProperties().getLocalServerAddress());
                     // 客户端将数据写出到中介管道中
-                    channel.writeAndFlush(packet).addListener((ChannelFutureListener) future -> {
-                        if (channelFuture.isDone()) {
-                            if (channelFuture.isSuccess()) {
-                                sendCallback.onCallback(SendResult.builder().sendStatus(SendStatusEnum.SEND_OK).packet(packet).build());
-                            }else {
-                                // 发送结果
-                                SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(future.cause()).build();
-                                // 发送失败回调
-                                sendCallback.onCallback(sendResult);
-                                // 发布发送失败事件
-                                MessageServerContext.publishEvent(new SendFailEvent(sendResult), true);
-                            }
-                        }
-                    });;
+                    EventLoop eventLoop = channel.eventLoop();
+                    if (eventLoop.inEventLoop()) {
+                        writeAndFlush(channel, packet, sendCallback);
+                    } else if (!eventLoop.isTerminated() && !eventLoop.isShutdown() && !eventLoop.isShuttingDown()) {
+                        eventLoop.execute(() -> writeAndFlush(channel, packet, sendCallback));
+                    }else {
+                        log.error("发送消息时，channel.eventLoop 被终止或关闭！");
+                        // 发送结果
+                        SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(new MessageException("集群间发送消息时，channel.eventLoop 被终止或关闭!")).build();
+                        // 发送失败回调
+                        sendCallback.onCallback(sendResult);
+                        // 发布发送失败事件
+                        MessageServerContext.publishEvent(new SendFailEvent(sendResult), true);
+                    }
                     // 用完后进行释放掉
                     channelPool.release(channel);
                 } else {
@@ -165,7 +166,28 @@ public class MessageHelper {
     }
 
 
-
+    /**
+     * 写消息和刷新
+     * @param channel
+     * @param packet
+     * @param sendCallback
+     */
+    private static void writeAndFlush(Channel channel, Packet packet, SendCallback sendCallback) {
+        channel.writeAndFlush(packet).addListener((ChannelFutureListener) future -> {
+            if (future.isDone()) {
+                if (future.isSuccess()) {
+                    sendCallback.onCallback(SendResult.builder().sendStatus(SendStatusEnum.SEND_OK).packet(packet).build());
+                }else {
+                    // 发送结果
+                    SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(future.cause()).build();
+                    // 发送失败回调
+                    sendCallback.onCallback(sendResult);
+                    // 发布发送失败事件
+                    MessageServerContext.publishEvent(new SendFailEvent(sendResult), true);
+                }
+            }
+        });;
+    }
     /**
      * @Author fzx
      * @Description 异常数据的处理

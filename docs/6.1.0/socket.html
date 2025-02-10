@@ -32,7 +32,7 @@ let defaultConfig = {
             delay: 2000
         }
     };
-const socket = new Socket('ws://192.168.0.106:6003/ws', {
+const socket = new Socket('ws://172.18.62.195:6003/ws', {
     clientType: 1,
     // 2-json序列化，6-protocolbuf 序列化，需要引入两个protobuf文件，且 属性 Message: proto.com.ouyunc.base.packet.message.Message,需要配置
 	serializeAlgorithm: 2,
