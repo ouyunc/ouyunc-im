@@ -56,6 +56,8 @@ public class MessageHelper {
         }
     }
 
+
+
     /**
      * @Author fzx
      * @Description 同步发送消息
@@ -91,7 +93,7 @@ public class MessageHelper {
      */
     private static void doSendMessage(Packet originPacket, Target target, SendCallback sendCallback) {
         Packet packet = originPacket.clone();
-        log.info("开始给 {} 传递消息packet: {} ", target, packet);
+        log.debug("开始给 {} 传递消息packet: {} ", target, packet);
         // 获取消息元数据消息
         Metadata metadata = packet.getMessage().getMetadata();
         // 需要发送到的服务器地址

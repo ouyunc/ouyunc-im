@@ -1,8 +1,8 @@
 package com.ouyunc.message.handler;
 
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.constant.enums.SaveModeEnum;
-import com.ouyunc.base.constant.enums.WsMessageTypeEnum;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.utils.ChannelAttrUtil;
@@ -25,7 +25,7 @@ public class LoginKeepAliveHandler extends SimpleChannelInboundHandler<Packet> {
      */
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Packet packet) throws Exception {
-        log.info("客户端登录保活...");
+        log.debug("客户端登录保活...");
         // 每次有消息数据进来, 从ctx上次心跳时间，从登录信息中解析心跳间隔时间
         // 获取该channel 上次的心跳时间戳
         if (!MessageServerContext.serverProperties().isClientHeartBeatEnable() || !SaveModeEnum.FINITE.equals(MessageServerContext.serverProperties().getClientLoginInfoSaveMode())) {
@@ -33,7 +33,7 @@ public class LoginKeepAliveHandler extends SimpleChannelInboundHandler<Packet> {
             return;
         }
         // 判断是否是心跳消息
-        if (WsMessageTypeEnum.PING_PONG.getType() == packet.getMessageType()) {
+        if (MessageTypeEnum.PING_PONG.getType() == packet.getMessageType()) {
             // 设置本次时间为
             ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LAST_HEARTBEAT_TIMESTAMP, packet.getMessage().getMetadata().getServerTime());
             //  将放入保活队列

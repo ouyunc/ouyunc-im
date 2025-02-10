@@ -122,7 +122,7 @@ public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<In
             if (sessionExpiryIntervalProperty != null) {
                 sessionExpiryInterval = sessionExpiryIntervalProperty.value();
             }
-            MqttLoginClientInfo mqttLoginClientInfo = new MqttLoginClientInfo(MessageContext.messageProperties.getLocalServerAddress(), OnlineEnum.ONLINE, null, ClientHelper.calculateClientLoginExpireTime(keepAlive), ClientHelper.calculateClientHeartBeatTimeout(keepAlive), loginTimestamp, appKey, mqttConnectPayload.clientIdentifier(), DeviceTypeEnum.IOT, signature, Encrypt.AsymmetricEncrypt.MD5.getValue(), keepAlive, loginTimestamp, enableWill, qos, version, isWillRetain, willMessage, willTopic, cleanSession, sessionExpiryInterval);
+            MqttLoginClientInfo mqttLoginClientInfo = new MqttLoginClientInfo(MessageContext.messageProperties.getLocalServerAddress(), OnlineEnum.ONLINE, null, ClientHelper.calculateClientLoginExpireTime(keepAlive), ClientHelper.calculateClientHeartBeatTimeout(keepAlive), loginTimestamp, appKey, mqttConnectPayload.clientIdentifier(), DeviceTypeEnum.IOT, mqttConnectPayload.clientIdentifier(), signature, Encrypt.AsymmetricEncrypt.MD5.getValue(), keepAlive, loginTimestamp, enableWill, qos, version, isWillRetain, willMessage, willTopic, cleanSession, sessionExpiryInterval);
             if (!validate(mqttLoginClientInfo)) {
                 MqttMessage connAckMessage = MqttMessageFactory.newMessage(
                         new MqttFixedHeader(MqttMessageType.CONNACK, false, MqttQoS.AT_MOST_ONCE, false, 0),

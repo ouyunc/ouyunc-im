@@ -1,5 +1,6 @@
 package com.ouyunc.message.listener;
 
+import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.model.SendResult;
 import com.ouyunc.core.listener.MessageListener;
 import com.ouyunc.core.listener.event.SendFailEvent;
@@ -26,7 +27,7 @@ public class SendFailListener implements MessageListener<SendFailEvent> {
     @Override
     public void onApplicationEvent(SendFailEvent event) {
         if (log.isDebugEnabled()) {
-            log.error("消息发送失败事件监听器正在处理：{}", event.getSource());
+            log.error("消息发送失败事件监听器正在处理：{}", JSON.toJSONString(event.getSource()));
         }
         // 这里可以丢到mq中去处理，注意：发送失败的消息可能是重试的或者集群间消息传递，所以可能业务上需要做幂等处理
         if (event.getSource() instanceof SendResult sendResult) {

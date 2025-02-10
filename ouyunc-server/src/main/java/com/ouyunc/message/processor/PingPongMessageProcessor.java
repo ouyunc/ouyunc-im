@@ -2,9 +2,9 @@ package com.ouyunc.message.processor;
 
 
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.MessageType;
-import com.ouyunc.base.constant.enums.WsMessageContentTypeEnum;
-import com.ouyunc.base.constant.enums.WsMessageTypeEnum;
+import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.model.Target;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
@@ -26,7 +26,7 @@ public class PingPongMessageProcessor extends AbstractMessageProcessor<Byte> {
 
     @Override
     public MessageType type() {
-        return WsMessageTypeEnum.PING_PONG;
+        return MessageTypeEnum.PING_PONG;
     }
 
 
@@ -49,7 +49,7 @@ public class PingPongMessageProcessor extends AbstractMessageProcessor<Byte> {
         heartBeatMessage.setFrom(null);
         heartBeatMessage.setTo(from);
         heartBeatMessage.setContent(null);
-        heartBeatMessage.setContentType(WsMessageContentTypeEnum.PING_CONTENT.getType());
+        heartBeatMessage.setContentType(MessageContentTypeEnum.PING_CONTENT.getType());
         heartBeatMessage.setCreateTime(TimeUtil.currentTimeMillis());
         packet.setPacketId(MessageContext.<Long>idGenerator().generateId());
         // 写回的是websocket还是其他类型的数据

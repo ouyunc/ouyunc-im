@@ -1,21 +1,11 @@
 package com.ouyunc.client.handler;
 
-import com.ouyunc.base.constant.MessageConstant;
-import com.ouyunc.base.constant.enums.ProtocolTypeEnum;
-import com.ouyunc.base.constant.enums.WsMessageContentTypeEnum;
-import com.ouyunc.base.packet.Packet;
-import com.ouyunc.base.packet.message.Message;
-import com.ouyunc.base.utils.PacketReaderWriterUtil;
-import com.ouyunc.client.listener.event.OnMessageEvent;
-import com.ouyunc.core.context.MessageContext;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
-import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
-import io.netty.util.AttributeKey;
 
 import java.net.URI;
 

@@ -175,7 +175,7 @@ public class StandardMessageServer extends AbstractMessageServer {
                 ProcessorChainProxy<AbstractMessageProcessor<? extends Number>> processorChainProxy = new ProcessorChainProxy<>(processorChains, processorChains.getFirst().getProcessors().getFirst().type());
                 MessageServerContext.messageProcessorCache.put(messageTypeValue, processorChainProxy);
             }
-            log.debug("消息类型处理器： {}", MessageServerContext.messageProcessorCache.get(messageTypeValue));
+            log.debug("消息类型处理器({})： {}", messageTypeValue, MessageServerContext.messageProcessorCache.get(messageTypeValue));
         });
 
         // 消息内容，分别按照类型值分组，并排序
@@ -198,11 +198,10 @@ public class StandardMessageServer extends AbstractMessageServer {
                 ProcessorChainProxy<AbstractBaseProcessor<? extends Number>> processorChainProxy = new ProcessorChainProxy<>(processorChains, processorChains.getFirst().getProcessors().getFirst().type());
                 MessageServerContext.messageContentProcessorCache.put(messageContentTypeValue, processorChainProxy);
             }
-            log.debug("消息内容类型处理器： {}", MessageServerContext.messageContentProcessorCache.get(messageContentTypeValue));
+            log.debug("消息内容类型处理器({})： {}",messageContentTypeValue ,MessageServerContext.messageContentProcessorCache.get(messageContentTypeValue));
         });
         log.debug("消息处理器加载完成");
     }
-
 
 
 

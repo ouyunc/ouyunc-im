@@ -108,8 +108,8 @@ public class LoginClientInfo extends LoginContent {
     public LoginClientInfo() {
     }
 
-    public LoginClientInfo(String loginServerAddress, OnlineEnum onlineStatus, String authorizationScope, long loginExpireTime, int heartBeatTimeout, long lastLoginTime, String appKey, String identity, DeviceType deviceType, String signature, byte signatureAlgorithm, int heartBeatExpireTime, long createTime) {
-        super(appKey, identity, deviceType, signature, signatureAlgorithm, heartBeatExpireTime, createTime);
+    public LoginClientInfo(String loginServerAddress, OnlineEnum onlineStatus, String authorizationScope, long loginExpireTime, int heartBeatTimeout, long lastLoginTime, String appKey, String identity, DeviceType deviceType, String sn, String signature, byte signatureAlgorithm, int heartBeatExpireTime, long createTime) {
+        super(appKey, identity, deviceType, sn, signature, signatureAlgorithm, heartBeatExpireTime, createTime);
         this.loginServerAddress = loginServerAddress;
         this.onlineStatus = onlineStatus;
         this.authorizationScope = authorizationScope;

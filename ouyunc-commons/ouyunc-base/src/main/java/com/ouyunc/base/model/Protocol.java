@@ -5,6 +5,7 @@ package com.ouyunc.base.model;
  */
 public interface Protocol {
     /**
+     *
      * 获取协议值
      */
     byte getProtocol();

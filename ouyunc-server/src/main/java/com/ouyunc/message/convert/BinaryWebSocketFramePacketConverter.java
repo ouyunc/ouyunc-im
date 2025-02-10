@@ -2,7 +2,7 @@ package com.ouyunc.message.convert;
 
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.MessageConstant;
-import com.ouyunc.base.constant.enums.WsMessageTypeEnum;
+import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
@@ -45,7 +45,7 @@ public enum BinaryWebSocketFramePacketConverter implements PacketConverter<Binar
             if (!metadata.isRouted()) {
                 // 设置该消息发送者当前登录所属的平台 appKey
                 // 设置默认的appKey
-                if (WsMessageTypeEnum.LOGIN.getType() == packet.getMessageType()) {
+                if (MessageTypeEnum.LOGIN.getType() == packet.getMessageType()) {
                     LoginContent loginContent = JSON.parseObject(message.getContent(), LoginContent.class);
                     metadata.setAppKey(loginContent.getAppKey());
                 }else {

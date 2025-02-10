@@ -35,6 +35,11 @@ public class LoginContent implements Serializable {
     private DeviceType deviceType;
 
     /**
+     * 设备序列号
+     */
+    private String sn;
+
+    /**
      * 签名，通过一定算法与AppSecret一起计算得到的签名
      */
 
@@ -98,6 +103,14 @@ public class LoginContent implements Serializable {
         this.signatureAlgorithm = signatureAlgorithm;
     }
 
+    public String getSn() {
+        return sn;
+    }
+
+    public void setSn(String sn) {
+        this.sn = sn;
+    }
+
     public int getHeartBeatExpireTime() {
         return heartBeatExpireTime;
     }
@@ -117,10 +130,11 @@ public class LoginContent implements Serializable {
     public LoginContent() {
     }
 
-    public LoginContent(String appKey, String identity, DeviceType deviceType, String signature, byte signatureAlgorithm, int heartBeatExpireTime,  long createTime) {
+    public LoginContent(String appKey, String identity, DeviceType deviceType,String sn, String signature, byte signatureAlgorithm, int heartBeatExpireTime,  long createTime) {
         this.appKey = appKey;
         this.identity = identity;
         this.deviceType = deviceType;
+        this.sn = sn;
         this.signature = signature;
         this.signatureAlgorithm = signatureAlgorithm;
         this.heartBeatExpireTime = heartBeatExpireTime;
@@ -133,6 +147,7 @@ public class LoginContent implements Serializable {
                 "  appKey='" + appKey + '\'' +
                 ", identity='" + identity + '\'' +
                 ", deviceType=" + deviceType +
+                ", sn=" + sn +
                 ", signature='" + signature + '\'' +
                 ", signatureAlgorithm=" + signatureAlgorithm +
                 ", heartBeatExpireTime=" + heartBeatExpireTime +
