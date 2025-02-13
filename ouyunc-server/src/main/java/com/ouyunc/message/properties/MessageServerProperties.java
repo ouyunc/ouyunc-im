@@ -20,32 +20,32 @@ public class MessageServerProperties extends MessageProperties {
      * 消息监听器扫描包路径
      */
     @Key("ouyunc.message.listeners.scan-package-paths")
-    private List<String> messageListenersScanPackagePaths;
+    List<String> messageListenersScanPackagePaths;
 
     /**
      * 消息处理器扫描包路径
      */
     @Key("ouyunc.message.processor.scan-package-paths")
-    private List<String> messageProcessorScanPackagePaths;
+    List<String> messageProcessorScanPackagePaths;
 
     /**
      * 消息分发协议处理器扫描包路径
      */
     @Key("ouyunc.message.protocol-dispatcher-processor.scan-package-paths")
-    private List<String> messageProtocolProcessorScanPackagePaths;
+    List<String> messageProtocolProcessorScanPackagePaths;
 
 
     /**
      * boss 线程组个数,默认与netty保持一致
      */
     @Key(value = "ouyunc.message.boss.threads", defaultValue = "1")
-    private int bossThreads;
+    int bossThreads;
 
     /**
      * 连接超时时间, 连接超时毫秒数，默认值30000毫秒即30秒。
      */
     @Key(value = "ouyunc.message.boss.option.connect-timeout-millis", defaultValue = "30000")
-    private int bossOptionConnectTimeoutMillis;
+    int bossOptionConnectTimeoutMillis;
 
     /**
      * 指定了内核为此套接口排队的最大连接个数。对于给定的监听套接口，内核要维护两个队列:
@@ -135,6 +135,25 @@ public class MessageServerProperties extends MessageProperties {
     @Key(value = "ouyunc.message.client.heart-beat.wait-retry", defaultValue = "3")
     int clientHeartBeatWaitRetry;
 
+
+    /***
+     *定时循环初始延迟时间，模式是服务端模式时生效,单位秒
+     */
+    @Key(value = "ouyunc.message.qos.initial-delay", defaultValue = "3")
+    long qosInitialDelay;
+
+    /***
+     *定时循环初始延迟时间，模式是服务端模式时生效,单位秒
+     */
+    @Key(value = "ouyunc.message.qos.period", defaultValue = "3")
+    long qosPeriod;
+
+    /***
+     * 最大循环次数，默认3次，每次循环间隔时间是period, -1 代表一致循环
+     */
+    @Key(value = "ouyunc.message.qos.max-loops", defaultValue = "3")
+    int qosMaxLoops;
+
     /***
      * 是否开启appKey的连接数统计，默认开启
      */
@@ -165,15 +184,14 @@ public class MessageServerProperties extends MessageProperties {
      * 服务端连接websocket的path
      */
     @Key(value = "ouyunc.message.websocket.path")
-    private String websocketPath;
-
+    String websocketPath;
 
 
     /**
      * 是否开启集群，默认否
      */
     @Key(value = "ouyunc.message.cluster.enable", defaultValue = "false")
-    private boolean clusterEnable;
+    boolean clusterEnable;
 
     /**
      * # 集群中的服务ip + port (包括自己本身的ip + port), 例如：有10 台服务做集群，就把十台的服务端的IP以及端口号写上即可
@@ -217,48 +235,71 @@ public class MessageServerProperties extends MessageProperties {
      * 集群中客户端channel pool 中，等待连接池连接的最大时间，单位毫秒, 默认10s
      */
     @Key(value = "ouyunc.message.cluster.client.channel-pool-acquire-timeout-millis", defaultValue = "10000")
-    private long clusterClientChannelPoolAcquireTimeoutMillis;
+    long clusterClientChannelPoolAcquireTimeoutMillis;
 
     /**
      * 集群中客户端channel pool 中最大连接数, 默认100，根据实际并发进行调整
      */
     @Key(value = "ouyunc.message.cluster.client.channel-pool-max-connection", defaultValue = "100")
-    private int clusterClientChannelPoolMaxConnection;
+    int clusterClientChannelPoolMaxConnection;
 
     /**
      * 集群中客户端channel pool 中，在请求获取/建立连接大于maxConnections数时，创建等待建立连接的最大定时任务数量。例如maxConnections=2，此时已经建立了2连接，但是没有放入到连接池中，接下来的请求就会放入到一个后台执行的定时任务中，如果到了时间连接池中还没有连接，就可以建立不大于maxPendingAcquires的连接数，如果连接池中有连接了就从连接池中获取
      * 默认推荐 最大连接数的30%
      */
     @Key(value = "ouyunc.message.cluster.client.channel-pool-max-pending-acquires", defaultValue = "30")
-    private int clusterClientChannelPoolMaxPendingAcquires;
+    int clusterClientChannelPoolMaxPendingAcquires;
 
     /**
      * 集群中客户端channel pool 中核心连接数
      */
     @Key(value = "ouyunc.message.cluster.client.channel-pool-core-connection", defaultValue = "5")
-    private int clusterClientChannelPoolCoreConnection;
+    int clusterClientChannelPoolCoreConnection;
 
 
     /**
      * 集群中内部客户端，发送syn最大等待3个心跳时间段，如果没有及时得到响应则进行本地下线
      */
     @Key(value = "ouyunc.message.cluster.client.heart-beat-wait-retry", defaultValue = "3")
-    private int clusterClientHeartbeatWaitRetry;
+    int clusterClientHeartbeatWaitRetry;
 
 
     /**
      * 集群中的服务开启脑裂检测，默认开启
      */
     @Key(value = "ouyunc.message.cluster.server.split-brain-detection.enable", defaultValue = "true")
-    private boolean clusterSplitBrainDetectionEnable;
+    boolean clusterSplitBrainDetectionEnable;
 
     /**
      * 单位分钟，默认10 集群中，开始检测脑裂的延迟时间（服务启动后多久开始进行脑裂的检测），之后就每个心跳检测一次
      */
     @Key(value = "ouyunc.message.cluster.server.split-brain-detection.delay-time", defaultValue = "10")
-    private long clusterSplitBrainDetectionDelayTime;
+    long clusterSplitBrainDetectionDelayTime;
 
 
+    public long getQosInitialDelay() {
+        return qosInitialDelay;
+    }
+
+    public void setQosInitialDelay(long qosInitialDelay) {
+        this.qosInitialDelay = qosInitialDelay;
+    }
+
+    public long getQosPeriod() {
+        return qosPeriod;
+    }
+
+    public void setQosPeriod(long qosPeriod) {
+        this.qosPeriod = qosPeriod;
+    }
+
+    public int getQosMaxLoops() {
+        return qosMaxLoops;
+    }
+
+    public void setQosMaxLoops(int qosMaxLoops) {
+        this.qosMaxLoops = qosMaxLoops;
+    }
 
     public Set<String> getNodes() {
         return nodes;
@@ -491,7 +532,6 @@ public class MessageServerProperties extends MessageProperties {
     }
 
 
-
     public int getBossOptionConnectTimeoutMillis() {
         return bossOptionConnectTimeoutMillis;
     }
@@ -598,6 +638,9 @@ public class MessageServerProperties extends MessageProperties {
                 "\n, logLevel=" + super.getLogLevel() +
                 "\n, qosEnable=" + super.isQosEnable() +
                 "\n, qosMode=" + super.getQosMode() +
+                "\n, qosInitialDelay=" + qosInitialDelay +
+                "\n, qosPeriod=" + qosPeriod +
+                "\n, qosMaxLoops=" + qosMaxLoops +
                 "\n, sslEnable=" + super.isSslEnable() +
                 "\n, sslCertificate='" + super.getSslCertificate() + '\'' +
                 "\n, sslPrivateKey='" + super.getSslPrivateKey() + '\'' +

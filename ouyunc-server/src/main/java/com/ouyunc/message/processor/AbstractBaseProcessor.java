@@ -1,6 +1,5 @@
 package com.ouyunc.message.processor;
 
-import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.*;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.model.Metadata;
@@ -90,7 +89,7 @@ public abstract class AbstractBaseProcessor<T extends Number> implements Process
                     for (LoginClientInfo targetLoginClientInfo : targetLoginClientInfos) {
                         MessageHelper.asyncSendMessage(schedulePackage, Target.newBuilder().targetIdentity(targetLoginClientInfo.getIdentity()).deviceType(targetLoginClientInfo.getDeviceType()).targetServerAddress(targetLoginClientInfo.getLoginServerAddress()).build());
                     }
-                }, NumberConstant.NUMBER_3, NumberConstant.NUMBER_3, TimeUnit.SECONDS, NumberConstant.NUMBER_3);
+                }, MessageServerContext.serverProperties().getQosInitialDelay(), MessageServerContext.serverProperties().getQosPeriod(), TimeUnit.SECONDS, MessageServerContext.serverProperties().getQosMaxLoops());
             }
             // 发送ack
             // 构造一个ack消息包
