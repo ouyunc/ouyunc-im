@@ -57,6 +57,10 @@ public class CacheConstant {
     public static final String TO = "to:";
 
     /***
+     * 离线
+     */
+    public static final String OFFLINE = "offline:";
+    /***
      * mqtt
      */
     public static final String MQTT = "mqtt:";

@@ -8,7 +8,7 @@ import java.util.List;
 /**
  * 委派消息处理器链
  */
-final public class DelegatingMessageProcessorChain implements ProcessorChain<AbstractMessageProcessor<? extends Number>> {
+public final class DelegatingMessageProcessorChain implements ProcessorChain<AbstractMessageProcessor<? extends Number>> {
 
     private final ProtocolType protocolType;
 
