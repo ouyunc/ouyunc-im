@@ -10,15 +10,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v6.1.1  添加 qos received message ack 处理">
+      <change afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/ReadReceiptMessageProcessor.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/enums/MessageContentTypeEnum.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/enums/MessageContentTypeEnum.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/enums/MessageTypeEnum.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/enums/MessageTypeEnum.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/DefaultRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/DefaultRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/MqttRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/MqttRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/Repository.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/Repository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/RemoveOfflineListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/RemoveOfflineListener.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/AbstractBaseProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/AbstractBaseProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/AbstractMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/AbstractMessageProcessor.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -986,7 +979,7 @@
       <option name="project" value="LOCAL" />
       <updated>1704076343678</updated>
     </task>
-    <option name="localTasksCounter" value="317" />
+    <option name="localTasksCounter" value="318" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
