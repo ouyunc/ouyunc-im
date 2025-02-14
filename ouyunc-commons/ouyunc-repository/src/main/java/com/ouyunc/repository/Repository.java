@@ -14,4 +14,11 @@ public interface Repository {
      */
     void save(Packet packet);
 
+    /**
+     * 检查消息是否重复发送（也就是是否已经持久化）
+     * @param packet
+     * @return
+     */
+    boolean checkDup(Packet packet);
+
 }

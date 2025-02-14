@@ -43,7 +43,7 @@ public abstract class AbstractMessageProcessor<T extends Number> extends Abstrac
         // 校验是否拥有相关权限 permission
 
         // 做qos 处理
-        if (MessageServerContext.serverProperties().isQosEnable() && !qosPreHandle(ctx, packet)) {
+        if (MessageServerContext.serverProperties().isQosEnable() && qosPreHandle(ctx, packet)) {
             return;
         }
         ctx.fireChannelRead(packet);

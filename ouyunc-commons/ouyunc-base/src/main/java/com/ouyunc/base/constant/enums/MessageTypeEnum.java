@@ -11,6 +11,8 @@ public enum MessageTypeEnum implements MessageType {
 
     QOS_C2S_ACK(NumberConstant.NUMBER_NEGATIVE_2, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), "c2s_ack",  "qos  客户端发送给服务端的，标识客户端已经收到服务端发来的消息"),
 
+    QOS_DUP(NumberConstant.NUMBER_NEGATIVE_3, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), "dup",  "qos  客户端重发消息"),
+
     PING_PONG(NumberConstant.NUMBER_10, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(),"ping_pong",  "外部客户端心跳消息"),
 
     LOGIN(NumberConstant.NUMBER_11, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), "login",  "外部客户端登录消息") ,
