@@ -9,13 +9,13 @@ import com.ouyunc.base.packet.message.content.LoginContent;
  * @description 消息内容类型枚举
  */
 public enum MessageContentTypeEnum implements MessageContentType {
-    QOS_DUP_CONTENT(NumberConstant.NUMBER_NEGATIVE_3, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), Packet.class,  "qos  客户端重发消息的消息内容"),
-    LOGIN_REQUEST_CONTENT(NumberConstant.NUMBER_10,ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), LoginContent.class, "外部客户端登录消息内容"),
-    LOGIN_RESPONSE_FAIL_CONTENT(NumberConstant.NUMBER_11,ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), String.class, "外部客户端登录失败消息内容"),
-    LOGIN_RESPONSE_SUCCESS_CONTENT(NumberConstant.NUMBER_12,ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), String.class, "客户端登录成功"),
-    PING_CONTENT(NumberConstant.NUMBER_13,ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), String.class, "外部消息心跳ping消息内容"),
+    PING_PONG_CONTENT(NumberConstant.NUMBER_NEGATIVE_1,ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), String.class, "外部消息心跳ping消息内容"),
+    LOGIN_REQUEST_CONTENT(NumberConstant.NUMBER_NEGATIVE_2,ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), LoginContent.class, "外部客户端登录消息内容"),
+    LOGIN_RESPONSE_FAIL_CONTENT(NumberConstant.NUMBER_NEGATIVE_3,ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), String.class, "外部客户端登录失败消息内容"),
+    LOGIN_RESPONSE_SUCCESS_CONTENT(NumberConstant.NUMBER_NEGATIVE_4,ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), String.class, "客户端登录成功"),
+    QOS_DUP_CONTENT(NumberConstant.NUMBER_NEGATIVE_5, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), Packet.class,  "qos  客户端重发消息的消息内容"),
 
-    TEXT_CONTENT(NumberConstant.NUMBER_127, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), String.class, "文本内容类型"),
+    TEXT_CONTENT(NumberConstant.NUMBER_NEGATIVE_128, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), String.class, "文本内容类型"),
 
     ;
     /**

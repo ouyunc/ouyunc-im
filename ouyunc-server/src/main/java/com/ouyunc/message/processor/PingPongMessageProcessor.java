@@ -49,7 +49,7 @@ public class PingPongMessageProcessor extends AbstractMessageProcessor<Byte> {
         heartBeatMessage.setFrom(null);
         heartBeatMessage.setTo(from);
         heartBeatMessage.setContent(null);
-        heartBeatMessage.setContentType(MessageContentTypeEnum.PING_CONTENT.getType());
+        heartBeatMessage.setContentType(MessageContentTypeEnum.PING_PONG_CONTENT.getType());
         heartBeatMessage.setCreateTime(TimeUtil.currentTimeMillis());
         packet.setPacketId(MessageContext.<Long>idGenerator().generateId());
         // 写回的是websocket还是其他类型的数据
