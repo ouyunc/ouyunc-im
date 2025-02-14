@@ -15,7 +15,7 @@ public abstract class AbstractMessageRouter implements Router<String, Packet, St
     /***
      * 消息路由器的虚拟线程池
      */
-    public static final ExecutorService routerExecutor = Executors.newVirtualThreadPerTaskExecutor();
+    protected static final ExecutorService routerExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
 
     /***

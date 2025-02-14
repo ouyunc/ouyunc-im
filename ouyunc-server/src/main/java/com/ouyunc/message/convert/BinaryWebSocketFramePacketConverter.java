@@ -17,6 +17,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author fzx
@@ -25,6 +27,8 @@ import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 public enum BinaryWebSocketFramePacketConverter implements PacketConverter<BinaryWebSocketFrame>{
     INSTANCE
     ;
+    private static final Logger log = LoggerFactory.getLogger(BinaryWebSocketFramePacketConverter.class);
+
     /***
      * @author fzx
      * @description 需要处理 消息元数据的初始化
@@ -51,6 +55,11 @@ public enum BinaryWebSocketFramePacketConverter implements PacketConverter<Binar
                 }else {
                     // 不是登录类型的消息，说明该客户端已经登录，可以从当前通道获取用户appKey
                     LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
+                    if (loginClientInfo == null) {
+                        log.error("客户端:{} 未登录，请先登录", message.getFrom());
+                        ctx.close();
+                        return null;
+                    }
                     metadata.setAppKey(loginClientInfo.getAppKey());
                 }
                 // 获取客户端真实ip

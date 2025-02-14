@@ -9,10 +9,13 @@ class Socket {
     static HEADER_LENGTH = 26;
     static PROTOCOL = 1;
     static PROTOCOL_VERSION = 1;
-    static VERSION = '6.1.0';
+    static VERSION = '6.2.0';
     static MESSAGE_TYPES = {
         HEARTBEAT: -1,
         LOGIN: -2
+    };
+    static MESSAGE_CONTENT_TYPES = {
+        HEARTBEAT: -1,
     };
 
     // 文本编解码器
@@ -573,7 +576,7 @@ class HeartbeatManager {
                 message: {
                     from: this.socket.loginIdentity,
                     to: '',
-                    contentType: -1,
+                    contentType: Socket.MESSAGE_CONTENT_TYPES.HEARTBEAT,
                     content: '',
                     qos: 0,
                     createTime: Date.now()
