@@ -29,17 +29,18 @@ public class QosC2SMessageProcessor extends AbstractMessageProcessor<Byte> {
      */
     @Override
     public void process(ChannelHandlerContext ctx, Packet packet) {
-        if (MessageServerContext.serverProperties().isQosEnable() && QosModeEnum.SERVER.equals(MessageServerContext.serverProperties().getQosMode())) {
-            Message message = packet.getMessage();
-            String receivedPackageId = message.getContent();
-            log.info("QosC2SMessageProcessor 外部客户端接收到消息id: {}", receivedPackageId);
-            // 移除离线消息,通过异步发送移除离线消息事件
-            MessageServerContext.publishEvent(new RemoveOfflineEvent(packet), true);
-            // 停止本地的qos定时任务
-            ScheduleTimer.cancel(receivedPackageId);
-        }else {
-            log.warn("QosC2SMessageProcessor qos未开启或者qos模式不是服务端模式,忽略处理");
-        }
-
+        fireProcess(ctx, packet, (ctx0, packet0) -> {
+            if (MessageServerContext.serverProperties().isQosEnable() && QosModeEnum.SERVER.equals(MessageServerContext.serverProperties().getQosMode())) {
+                Message message = packet.getMessage();
+                String receivedPackageId = message.getContent();
+                log.info("QosC2SMessageProcessor 外部客户端接收到消息id: {}", receivedPackageId);
+                // 移除离线消息,通过异步发送移除离线消息事件
+                MessageServerContext.publishEvent(new RemoveOfflineEvent(packet), true);
+                // 停止本地的qos定时任务
+                ScheduleTimer.cancel(receivedPackageId);
+            }else {
+                log.warn("QosC2SMessageProcessor qos未开启或者qos模式不是服务端模式,忽略处理");
+            }
+        });
     }
 }
