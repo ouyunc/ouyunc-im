@@ -1,5 +1,5 @@
 import App from './App'
-import Socket from './common/js/ouyunc-sdk.js'
+import Socket from './common/js/ouyunc-message-sdk.js'
 
 import './common/js/ouyunc-protobuf-message.js'
 const socket = new Socket('ws://172.18.62.195:6003/ws', {

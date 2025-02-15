@@ -449,6 +449,9 @@ class Socket {
                 const setterName = `set${key.charAt(0).toUpperCase()}${key.slice(1)}`;
                 if (typeof protoMessage[setterName] === 'function') {
                     protoMessage[setterName](value);
+                    // 进行特殊处理
+                }else if (typeof protoMessage[`${setterName}List`] === 'function') {
+                    protoMessage[`${setterName}List`](value);
                 }
             });
             return protoMessage.serializeBinary();
@@ -473,6 +476,7 @@ class Socket {
                 to: message.getTo(),
                 contentType: message.getContentType(),
                 content: message.getContent(),
+                at: message.getAtList(),
                 qos: message.getQos(),
                 extra: message.getExtra(),
                 createTime: message.getCreateTime()

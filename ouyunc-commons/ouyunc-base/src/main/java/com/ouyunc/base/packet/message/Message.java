@@ -5,6 +5,7 @@ import io.protostuff.Tag;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.util.List;
 
 /**
  * @author fzx
@@ -45,9 +46,15 @@ public class Message implements Serializable, Cloneable {
 
 
     /**
-     * 客户端扩展/附加字段，客户端自定义数据字段，如：消息发送时间、消息发送者昵称、消息发送者头像、消息发送者设备类型、消息发送者网络类型、消息发送者客户端版本、消息发送者客户端语言、消息发送者客户端平台、消息发送者客户端IP、消息发送者客户端MAC地址、消息发送者客户端操作系统、消息发送者客户端浏览器、消息发送者客户端浏览器版本、消息发送者客户端浏览器语言、消息发送
+     * @xxx, 功能的实现，存放群聊的@人员所登录绑定的唯一标识集合
      */
     @Tag(5)
+    private List<String> at;
+
+    /**
+     * 客户端扩展/附加字段，客户端自定义数据字段，如：消息发送时间、消息发送者昵称、消息发送者头像、消息发送者设备类型、消息发送者网络类型、消息发送者客户端版本、消息发送者客户端语言、消息发送者客户端平台、消息发送者客户端IP、消息发送者客户端MAC地址、消息发送者客户端操作系统、消息发送者客户端浏览器、消息发送者客户端浏览器版本、消息发送者客户端浏览器语言、消息发送
+     */
+    @Tag(6)
     private String extra;
 
     /**
@@ -56,20 +63,20 @@ public class Message implements Serializable, Cloneable {
      * QoS 1：至少一次，at least once；发送方发送一条消息，接收方至少能接收到一次。即发送方完成消息发送之后，若发送失败，则继续重发直到接受方接收到消息为止。这种模式下可能会导致接收方收到重复的消息。
      * QoS 2：确保一次：exactly once；发送方发送一条消息，接收方一定且只能收到一次。即发送方完成消息发送之后，若发送失败，则继续重发直到接收方接收到消息为止，在这一过程中同时保证接收方不会因为消息重传而收到重复的消息。
      */
-    @Tag(6)
+    @Tag(7)
     private int qos;
 
     /**
      * 客户端消息创建时间戳（毫秒）
      */
-    @Tag(7)
+    @Tag(8)
     private long createTime;
 
 
     /**
      * 元数据，对内访问
      */
-    @Tag(8)
+    @Tag(9)
     private Metadata metadata;
 
 
@@ -91,6 +98,17 @@ public class Message implements Serializable, Cloneable {
         this.content = content;
         this.createTime = createTime;
     }
+
+    public Message(String extra, long createTime, List<String> at, String content, int contentType, String to, String from) {
+        this.extra = extra;
+        this.createTime = createTime;
+        this.at = at;
+        this.content = content;
+        this.contentType = contentType;
+        this.to = to;
+        this.from = from;
+    }
+
     public Message(String from, String to, int contentType, String content, long createTime, Metadata metadata) {
         this.from = from;
         this.to = to;
@@ -128,6 +146,18 @@ public class Message implements Serializable, Cloneable {
         this.metadata = metadata;
         this.qos = qos;
         this.createTime = createTime;
+    }
+
+    public Message(String from, String to, int contentType, String content, List<String> at, String extra, int qos, long createTime, Metadata metadata) {
+        this.from = from;
+        this.to = to;
+        this.contentType = contentType;
+        this.content = content;
+        this.at = at;
+        this.extra = extra;
+        this.qos = qos;
+        this.createTime = createTime;
+        this.metadata = metadata;
     }
 
     public String getFrom() {
@@ -184,6 +214,14 @@ public class Message implements Serializable, Cloneable {
 
     public void setExtra(String extra) {
         this.extra = extra;
+    }
+
+    public List<String> getAt() {
+        return at;
+    }
+
+    public void setAt(List<String> at) {
+        this.at = at;
     }
 
     public int getQos() {

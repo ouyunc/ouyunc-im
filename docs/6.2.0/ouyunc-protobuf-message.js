@@ -28,7 +28,7 @@ goog.exportSymbol('proto.com.ouyunc.base.packet.message.Message', null, global);
  * @constructor
  */
 proto.com.ouyunc.base.packet.message.Message = function(opt_data) {
-  jspb.Message.initialize(this, opt_data, 0, -1, null, null);
+  jspb.Message.initialize(this, opt_data, 0, -1, proto.com.ouyunc.base.packet.message.Message.repeatedFields_, null);
 };
 goog.inherits(proto.com.ouyunc.base.packet.message.Message, jspb.Message);
 if (goog.DEBUG && !COMPILED) {
@@ -38,6 +38,13 @@ if (goog.DEBUG && !COMPILED) {
    */
   proto.com.ouyunc.base.packet.message.Message.displayName = 'proto.com.ouyunc.base.packet.message.Message';
 }
+
+/**
+ * List of repeated fields within this message type.
+ * @private {!Array<number>}
+ * @const
+ */
+proto.com.ouyunc.base.packet.message.Message.repeatedFields_ = [5];
 
 
 
@@ -74,9 +81,10 @@ proto.com.ouyunc.base.packet.message.Message.toObject = function(includeInstance
     to: jspb.Message.getFieldWithDefault(msg, 2, ""),
     contentType: jspb.Message.getFieldWithDefault(msg, 3, 0),
     content: jspb.Message.getFieldWithDefault(msg, 4, ""),
-    extra: jspb.Message.getFieldWithDefault(msg, 5, ""),
-    qos: jspb.Message.getFieldWithDefault(msg, 6, 0),
-    createTime: jspb.Message.getFieldWithDefault(msg, 7, 0)
+    atList: (f = jspb.Message.getRepeatedField(msg, 5)) == null ? undefined : f,
+    extra: jspb.Message.getFieldWithDefault(msg, 6, ""),
+    qos: jspb.Message.getFieldWithDefault(msg, 7, 0),
+    createTime: jspb.Message.getFieldWithDefault(msg, 8, 0)
   };
 
   if (includeInstance) {
@@ -122,7 +130,7 @@ proto.com.ouyunc.base.packet.message.Message.deserializeBinaryFromReader = funct
       msg.setTo(value);
       break;
     case 3:
-      var value = /** @type {number} */ (reader.readUint32());
+      var value = /** @type {number} */ (reader.readInt32());
       msg.setContentType(value);
       break;
     case 4:
@@ -131,13 +139,17 @@ proto.com.ouyunc.base.packet.message.Message.deserializeBinaryFromReader = funct
       break;
     case 5:
       var value = /** @type {string} */ (reader.readString());
-      msg.setExtra(value);
+      msg.addAt(value);
       break;
     case 6:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setExtra(value);
+      break;
+    case 7:
       var value = /** @type {number} */ (reader.readUint32());
       msg.setQos(value);
       break;
-    case 7:
+    case 8:
       var value = /** @type {number} */ (reader.readUint64());
       msg.setCreateTime(value);
       break;
@@ -186,7 +198,7 @@ proto.com.ouyunc.base.packet.message.Message.serializeBinaryToWriter = function(
   }
   f = message.getContentType();
   if (f !== 0) {
-    writer.writeUint32(
+    writer.writeInt32(
       3,
       f
     );
@@ -198,24 +210,31 @@ proto.com.ouyunc.base.packet.message.Message.serializeBinaryToWriter = function(
       f
     );
   }
+  f = message.getAtList();
+  if (f.length > 0) {
+    writer.writeRepeatedString(
+      5,
+      f
+    );
+  }
   f = message.getExtra();
   if (f.length > 0) {
     writer.writeString(
-      5,
+      6,
       f
     );
   }
   f = message.getQos();
   if (f !== 0) {
     writer.writeUint32(
-      6,
+      7,
       f
     );
   }
   f = message.getCreateTime();
   if (f !== 0) {
     writer.writeUint64(
-      7,
+      8,
       f
     );
   }
@@ -259,7 +278,7 @@ proto.com.ouyunc.base.packet.message.Message.prototype.setTo = function(value) {
 
 
 /**
- * optional uint32 content_type = 3;
+ * optional int32 content_type = 3;
  * @return {number}
  */
 proto.com.ouyunc.base.packet.message.Message.prototype.getContentType = function() {
@@ -295,11 +314,48 @@ proto.com.ouyunc.base.packet.message.Message.prototype.setContent = function(val
 
 
 /**
- * optional string extra = 5;
+ * repeated string at = 5;
+ * @return {!Array<string>}
+ */
+proto.com.ouyunc.base.packet.message.Message.prototype.getAtList = function() {
+  return /** @type {!Array<string>} */ (jspb.Message.getRepeatedField(this, 5));
+};
+
+
+/**
+ * @param {!Array<string>} value
+ * @return {!proto.com.ouyunc.base.packet.message.Message} returns this
+ */
+proto.com.ouyunc.base.packet.message.Message.prototype.setAtList = function(value) {
+  return jspb.Message.setField(this, 5, value || []);
+};
+
+
+/**
+ * @param {string} value
+ * @param {number=} opt_index
+ * @return {!proto.com.ouyunc.base.packet.message.Message} returns this
+ */
+proto.com.ouyunc.base.packet.message.Message.prototype.addAt = function(value, opt_index) {
+  return jspb.Message.addToRepeatedField(this, 5, value, opt_index);
+};
+
+
+/**
+ * Clears the list making it empty but non-null.
+ * @return {!proto.com.ouyunc.base.packet.message.Message} returns this
+ */
+proto.com.ouyunc.base.packet.message.Message.prototype.clearAtList = function() {
+  return this.setAtList([]);
+};
+
+
+/**
+ * optional string extra = 6;
  * @return {string}
  */
 proto.com.ouyunc.base.packet.message.Message.prototype.getExtra = function() {
-  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 5, ""));
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 6, ""));
 };
 
 
@@ -308,33 +364,15 @@ proto.com.ouyunc.base.packet.message.Message.prototype.getExtra = function() {
  * @return {!proto.com.ouyunc.base.packet.message.Message} returns this
  */
 proto.com.ouyunc.base.packet.message.Message.prototype.setExtra = function(value) {
-  return jspb.Message.setProto3StringField(this, 5, value);
+  return jspb.Message.setProto3StringField(this, 6, value);
 };
 
 
 /**
- * optional uint32 qos = 6;
+ * optional uint32 qos = 7;
  * @return {number}
  */
 proto.com.ouyunc.base.packet.message.Message.prototype.getQos = function() {
-  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 6, 0));
-};
-
-
-/**
- * @param {number} value
- * @return {!proto.com.ouyunc.base.packet.message.Message} returns this
- */
-proto.com.ouyunc.base.packet.message.Message.prototype.setQos = function(value) {
-  return jspb.Message.setProto3IntField(this, 6, value);
-};
-
-
-/**
- * optional uint64 create_time = 7;
- * @return {number}
- */
-proto.com.ouyunc.base.packet.message.Message.prototype.getCreateTime = function() {
   return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 7, 0));
 };
 
@@ -343,17 +381,35 @@ proto.com.ouyunc.base.packet.message.Message.prototype.getCreateTime = function(
  * @param {number} value
  * @return {!proto.com.ouyunc.base.packet.message.Message} returns this
  */
-proto.com.ouyunc.base.packet.message.Message.prototype.setCreateTime = function(value) {
+proto.com.ouyunc.base.packet.message.Message.prototype.setQos = function(value) {
   return jspb.Message.setProto3IntField(this, 7, value);
+};
+
+
+/**
+ * optional uint64 create_time = 8;
+ * @return {number}
+ */
+proto.com.ouyunc.base.packet.message.Message.prototype.getCreateTime = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 8, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.com.ouyunc.base.packet.message.Message} returns this
+ */
+proto.com.ouyunc.base.packet.message.Message.prototype.setCreateTime = function(value) {
+  return jspb.Message.setProto3IntField(this, 8, value);
 };
 
 
 goog.object.extend(exports, proto.com.ouyunc.base.packet.message);
 
 },{"google-protobuf":3}],2:[function(require,module,exports){
-  var message= require('./Message_pb');
+ var message= require('./Message_pb');
   module.exports = {
-      DataProto: message
+      MessageProto: message
   }
 },{"./Message_pb":1}],3:[function(require,module,exports){
 (function (global){(function (){

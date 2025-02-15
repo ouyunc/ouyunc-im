@@ -1,0 +1,64 @@
+// ouyunc-im-message示例数据
+{
+  "_id": {
+    "$numberLong": "1234567890"
+  },
+  "protocol": 1,
+  "protocol_version": 1,
+  "device_type": 2,
+  "network_type": 3,
+  "encrypt_type": 1,
+  "serialize_algorithm": 2,
+  "message_type": 4,
+  "retain": 0,
+  "client_ip": "192.168.1.100",
+  "from": "user123",
+  "to": "group456",
+  "content_type": 1,
+  "content": "这是一条测试消息",
+  "extra": "一些额外的消息扩展内容",
+  "at": ["user456", "user789"],
+  "qos": 1,
+  "client_send_time": {
+    "$numberLong": "1672531200000"
+  },
+  "server_arrival_time": {
+    "$numberLong": "1672531201000"
+  },
+  "read": 0,
+  "withdrawn": 0,
+  "create_time": {
+    "$date": {
+      "$numberLong": "1672531200000"
+    }
+  },
+  "update_time": {
+    "$date": {
+      "$numberLong": "1672531200000"
+    }
+  },
+  "expire_at": {
+    "$date": {
+      "$numberLong": "1672531200000" // 过期时间,需要再文件中创建ttl索引
+    }
+  }
+}
+
+// ouyunc-im-read-receipt 已读回执示例数据
+{
+  "_id": {
+    "$numberLong": "123456789"  // 对应 MySQL 的 id，使用 long 类型
+  },
+  "msg_id": {
+    "$numberLong": "987654321"  // 对应 MySQL 的 msg_id，使用 long 类型
+  },
+  "user_id": "user_001",
+  "read_time": {
+    "$numberLong": "1699000000000"  // 已读时间戳，单位为毫秒
+  },
+  "create_time": {
+    "$date": {
+      "$numberLong": "1699000000000"  // 创建时间，以日期类型存储对应的时间戳
+    }
+  }
+}

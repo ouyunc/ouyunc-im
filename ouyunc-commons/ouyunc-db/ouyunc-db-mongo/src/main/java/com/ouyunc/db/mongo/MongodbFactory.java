@@ -1,6 +1,5 @@
 package com.ouyunc.db.mongo;
 
-import com.fasterxml.jackson.databind.util.Converter;
 import com.mongodb.*;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
@@ -11,6 +10,8 @@ import com.ouyunc.db.mongo.properties.MongodbProperties;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.convert.converter.Converter;
+import org.springframework.data.convert.Jsr310Converters;
 import org.springframework.data.mongodb.MongoDatabaseFactory;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.SimpleMongoClientDatabaseFactory;
@@ -146,13 +147,10 @@ public enum MongodbFactory {
 
         private static MappingMongoConverter createMongoConverter(MongoDatabaseFactory mongoDatabaseFactory) {
             // 创建自定义转换器列表
-            List<Converter<?, ?>> converters = new ArrayList<>();
-            //converters.add(new DetailedMongoConfig.DateToLocalDateTimeConverter());
-            //converters.add(new DetailedMongoConfig.LocalDateTimeToDateConverter());
-
+            // 时间转换器
+            List<Converter<?, ?>> converters = new ArrayList<>(Jsr310Converters.getConvertersToRegister());
             // 创建自定义转换服务
             MongoCustomConversions conversions = new MongoCustomConversions(converters);
-
             // 创建映射上下文
             MongoMappingContext mappingContext = new MongoMappingContext();
             mappingContext.setSimpleTypeHolder(conversions.getSimpleTypeHolder());
