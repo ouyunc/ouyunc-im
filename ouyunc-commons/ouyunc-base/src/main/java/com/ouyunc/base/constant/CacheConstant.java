@@ -19,7 +19,7 @@ public class CacheConstant {
     /***
      * 所有的appKey
      */
-    public static final String APP_KEYS = "APP_KEYS";
+    public static final String APP_KEYS = "app-keys";
 
     /***
      * 平台的 唯一标识key 公共前缀
