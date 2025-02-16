@@ -78,7 +78,7 @@ public class MessageConstant {
     /**
      * 自定义协议的魔数6个字节,字节数组 OUYUNC
      */
-    public static final byte[] PACKET_MAGIC = {
+    public static final byte[] PACKET_MAGIC_BYTES = {
             (byte) 0x4F,//十进制79（O）
             (byte) 0x55,//十进制85（U）
             (byte) 0x59,//十进制89（Y）
@@ -86,6 +86,11 @@ public class MessageConstant {
             (byte) 0x4E,//十进制78（N）
             (byte) 0x43//十进制67 （C）
     };
+
+    /**
+     *  OUYUNC
+     */
+    public static final String PACKET_MAGIC = "OUYUNC";
 
     /**
      *urf-8
@@ -454,7 +459,7 @@ public class MessageConstant {
     /**
      * packet 中魔数所占字节数
      */
-    public static final int MAGIC_BYTE_LENGTH = PACKET_MAGIC.length;
+    public static final int MAGIC_BYTE_LENGTH = PACKET_MAGIC_BYTES.length;
 
 
     /**

@@ -12,4 +12,12 @@
     <name>ouyunc-domain</name>
     <description>实体类模块</description>
 
+    <dependencies>
+        <dependency>
+            <groupId>com.ouyunc</groupId>
+            <artifactId>ouyunc-db-mongo</artifactId>
+            <version>${revision}</version>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
 </project>

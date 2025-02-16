@@ -59,7 +59,13 @@ public class MqttMessageProcessor extends AbstractMessageProcessor<Byte> {
      */
     @Override
     public void process(ChannelHandlerContext ctx, Packet packet) {
-        MessageServerContext.messageContentProcessorCache.get(packet.getMessage().getContentType()).process(ctx, packet);
+        AbstractBaseProcessor<? extends Number> mqttContentProcessor = MessageServerContext.messageContentProcessorCache.get(packet.getMessage().getContentType());
+        if (mqttContentProcessor == null) {
+            log.error("未找到对应的消息处理器，messageType= {}, 将关闭该连接!", packet.getMessageType());
+            ctx.close();
+            return;
+        }
+        mqttContentProcessor.process(ctx, packet);
     }
 
 }

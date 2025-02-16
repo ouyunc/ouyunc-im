@@ -34,6 +34,18 @@ public class MessageServerProperties extends MessageProperties {
     @Key("ouyunc.message.protocol-dispatcher-processor.scan-package-paths")
     List<String> messageProtocolProcessorScanPackagePaths;
 
+    /**
+     * 是否开启消息拦截器扫描包路径，true 开启，false-关闭
+     */
+    @Key(value = "ouyunc.message.interceptor.enable", defaultValue = "true")
+    boolean messageInterceptorEnable;
+
+    /**
+     * 消息拦截器扫描包路径
+     */
+    @Key("ouyunc.message.interceptor.scan-package-paths")
+    List<String> messageInterceptorScanPackagePaths;
+
 
     /**
      * boss 线程组个数,默认与netty保持一致
@@ -137,22 +149,28 @@ public class MessageServerProperties extends MessageProperties {
 
 
     /***
-     *定时循环初始延迟时间，模式是服务端模式时生效,单位秒
+     * 是否开启qos重试发送机制，默认关闭
      */
-    @Key(value = "ouyunc.message.qos.initial-delay", defaultValue = "3")
-    long qosInitialDelay;
+    @Key(value = "ouyunc.message.qos.retry.enable", defaultValue = "false")
+    boolean qosRetryEnable;
 
     /***
      *定时循环初始延迟时间，模式是服务端模式时生效,单位秒
      */
-    @Key(value = "ouyunc.message.qos.period", defaultValue = "3")
-    long qosPeriod;
+    @Key(value = "ouyunc.message.qos.retry.initial-delay", defaultValue = "3")
+    long qosRetryInitialDelay;
+
+    /***
+     *定时循环初始延迟时间，模式是服务端模式时生效,单位秒
+     */
+    @Key(value = "ouyunc.message.qos.retry.period", defaultValue = "3")
+    long qosRetryPeriod;
 
     /***
      * 最大循环次数，默认3次，每次循环间隔时间是period, -1 代表一致循环
      */
-    @Key(value = "ouyunc.message.qos.max-loops", defaultValue = "3")
-    int qosMaxLoops;
+    @Key(value = "ouyunc.message.qos.retry.max-loops", defaultValue = "3")
+    int qosRetryMaxLoops;
 
     /***
      * 是否开启appKey的连接数统计，默认开启
@@ -276,29 +294,52 @@ public class MessageServerProperties extends MessageProperties {
     @Key(value = "ouyunc.message.cluster.server.split-brain-detection.delay-time", defaultValue = "10")
     long clusterSplitBrainDetectionDelayTime;
 
-
-    public long getQosInitialDelay() {
-        return qosInitialDelay;
+    public boolean isMessageInterceptorEnable() {
+        return messageInterceptorEnable;
     }
 
-    public void setQosInitialDelay(long qosInitialDelay) {
-        this.qosInitialDelay = qosInitialDelay;
+    public void setMessageInterceptorEnable(boolean messageInterceptorEnable) {
+        this.messageInterceptorEnable = messageInterceptorEnable;
     }
 
-    public long getQosPeriod() {
-        return qosPeriod;
+    public List<String> getMessageInterceptorScanPackagePaths() {
+        return messageInterceptorScanPackagePaths;
     }
 
-    public void setQosPeriod(long qosPeriod) {
-        this.qosPeriod = qosPeriod;
+    public void setMessageInterceptorScanPackagePaths(List<String> messageInterceptorScanPackagePaths) {
+        this.messageInterceptorScanPackagePaths = messageInterceptorScanPackagePaths;
     }
 
-    public int getQosMaxLoops() {
-        return qosMaxLoops;
+    public long getQosRetryInitialDelay() {
+        return qosRetryInitialDelay;
     }
 
-    public void setQosMaxLoops(int qosMaxLoops) {
-        this.qosMaxLoops = qosMaxLoops;
+    public void setQosRetryInitialDelay(long qosRetryInitialDelay) {
+        this.qosRetryInitialDelay = qosRetryInitialDelay;
+    }
+
+    public long getQosRetryPeriod() {
+        return qosRetryPeriod;
+    }
+
+    public void setQosRetryPeriod(long qosRetryPeriod) {
+        this.qosRetryPeriod = qosRetryPeriod;
+    }
+
+    public int getQosRetryMaxLoops() {
+        return qosRetryMaxLoops;
+    }
+
+    public void setQosRetryMaxLoops(int qosRetryMaxLoops) {
+        this.qosRetryMaxLoops = qosRetryMaxLoops;
+    }
+
+    public boolean isQosRetryEnable() {
+        return qosRetryEnable;
+    }
+
+    public void setQosRetryEnable(boolean qosRetryEnable) {
+        this.qosRetryEnable = qosRetryEnable;
     }
 
     public Set<String> getNodes() {
@@ -638,9 +679,10 @@ public class MessageServerProperties extends MessageProperties {
                 "\n, logLevel=" + super.getLogLevel() +
                 "\n, qosEnable=" + super.isQosEnable() +
                 "\n, qosMode=" + super.getQosMode() +
-                "\n, qosInitialDelay=" + qosInitialDelay +
-                "\n, qosPeriod=" + qosPeriod +
-                "\n, qosMaxLoops=" + qosMaxLoops +
+                "\n, qosRetryEnable=" + qosRetryEnable +
+                "\n, qosRetryInitialDelay=" + qosRetryInitialDelay +
+                "\n, qosRetryPeriod=" + qosRetryPeriod +
+                "\n, qosRetryMaxLoops=" + qosRetryMaxLoops +
                 "\n, sslEnable=" + super.isSslEnable() +
                 "\n, sslCertificate='" + super.getSslCertificate() + '\'' +
                 "\n, sslPrivateKey='" + super.getSslPrivateKey() + '\'' +
@@ -648,6 +690,8 @@ public class MessageServerProperties extends MessageProperties {
                 "\n, messageListenersScanPackagePaths=" + messageListenersScanPackagePaths +
                 "\n, messageProcessorScanPackagePaths=" + messageProcessorScanPackagePaths +
                 "\n, messageProtocolProcessorScanPackagePaths=" + messageProtocolProcessorScanPackagePaths +
+                "\n, messageInterceptorEnable=" + messageInterceptorEnable +
+                "\n, messageInterceptorScanPackagePaths=" + messageInterceptorScanPackagePaths +
                 "\n, bossThreads=" + bossThreads +
                 "\n, bossOptionConnectTimeoutMillis=" + bossOptionConnectTimeoutMillis +
                 "\n, bossOptionSoBacklog=" + bossOptionSoBacklog +

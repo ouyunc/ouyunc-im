@@ -127,6 +127,14 @@ public abstract class AbstractMessageServer implements MessageServer {
      */
     abstract void loadMessageProcessor();
 
+
+    /***
+     * @author fzx
+     * @description 加载发送消息拦截器
+     */
+    abstract void loadMessageInterceptor();
+
+
     /***
      * @author fzx
      * @description 初始化服务之前做些处理，可以对上下文属性值进行改变
@@ -166,6 +174,8 @@ public abstract class AbstractMessageServer implements MessageServer {
         loadProtocolProcessor();
         // 加载消息处理器
         loadMessageProcessor();
+        // 加载发送消息拦截器
+        loadMessageInterceptor();
         // 初始化服务之前做些操作，可以对上下文属性值进行改变
         beforeInitServer();
         // 初始化IM服务

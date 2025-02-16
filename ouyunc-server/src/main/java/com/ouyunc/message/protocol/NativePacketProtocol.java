@@ -6,7 +6,6 @@ import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.ProtocolTypeEnum;
 import com.ouyunc.base.constant.enums.SendStatusEnum;
 import com.ouyunc.base.exception.MessageException;
-import com.ouyunc.base.exception.handler.MessageExceptionHandler;
 import com.ouyunc.base.model.Protocol;
 import com.ouyunc.base.model.SendCallback;
 import com.ouyunc.base.model.SendResult;
@@ -76,7 +75,7 @@ public enum NativePacketProtocol implements PacketProtocol {
                     .addLast(eventExecutorGroup, MessageConstant.POST_HANDLER, new PacketPostHandler())
                     // 判断是否需要开启客户端心跳如果需要则开启客户端心跳，由于心跳消息不需要登录就可以，所以放在登录认证处理器前面
                     // 在最后添加异常处理器
-                    .addLast(MessageConstant.EXCEPTION_HANDLER, new MessageExceptionHandler())
+                    .addLast(MessageConstant.EXCEPTION_HANDLER, new ExceptionHandler())
                     // 移除协议分发器
                     .remove(MessageConstant.HTTP_DISPATCHER_HANDLER);
             // 调用当前handler的下一个handle的active，注意与ctx.pipeline().fireChannelActive()
@@ -135,7 +134,7 @@ public enum NativePacketProtocol implements PacketProtocol {
                     // 集群内部/外部业务处理
                     .addLast(eventExecutorGroup, MessageConstant.OUYUNC_HANDLER, new PacketHandler())
                     // 在最后添加异常处理器
-                    .addLast(MessageConstant.EXCEPTION_HANDLER, new MessageExceptionHandler())
+                    .addLast(MessageConstant.EXCEPTION_HANDLER, new ExceptionHandler())
                     // 移除协议分发器
                     .remove(MessageConstant.PACKET_DISPATCHER_HANDLER);
             // 调用下一个handle的active
@@ -242,7 +241,7 @@ public enum NativePacketProtocol implements PacketProtocol {
                     // 后置处理
                     .addLast(eventExecutorGroup, MessageConstant.POST_HANDLER, new PacketPostHandler())
                     // 异常处理器
-                    .addLast(MessageConstant.EXCEPTION_HANDLER, new MessageExceptionHandler());
+                    .addLast(MessageConstant.EXCEPTION_HANDLER, new ExceptionHandler());
             // 移除掉掉协议分发器
             MqttProtocolDispatcherHandler mqttProtocolDispatcherHandler = pipeline.get(MqttProtocolDispatcherHandler.class);
             if (mqttProtocolDispatcherHandler != null) {

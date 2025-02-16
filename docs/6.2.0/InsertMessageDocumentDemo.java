@@ -39,8 +39,6 @@ public class InsertMessageDocument {
                .append("server_arrival_time", System.currentTimeMillis())
                .append("read", false)
                .append("withdrawn", false)
-                .append("create_time", new Date())
-                .append("update_time", new Date())
                .append("expire_at", expireDate);
 
 

@@ -23,7 +23,7 @@ public class Packet implements Serializable, Cloneable{
      * 5个字节, 魔数 since v6.0.0 后 改成字节数组 OUYUNC
      */
     @Tag(1)
-    private byte[] magic = MessageConstant.PACKET_MAGIC;
+    private byte[] magic = MessageConstant.PACKET_MAGIC_BYTES;
 
     /**
      * 1个字节  协议类型,ws,http,自定义等

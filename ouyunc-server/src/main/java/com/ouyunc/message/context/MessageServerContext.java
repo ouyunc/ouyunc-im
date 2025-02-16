@@ -12,6 +12,7 @@ import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.cache.distributed.redis.RedisDistributedCache;
 import com.ouyunc.cache.local.caffeine.CaffeineLocalCache;
 import com.ouyunc.core.context.MessageContext;
+import com.ouyunc.core.intercept.AbstractMessageInterceptor;
 import com.ouyunc.message.MessageServer;
 import com.ouyunc.message.convert.PacketConverter;
 import com.ouyunc.message.dispatcher.ProtocolDispatcherProcessor;
@@ -59,7 +60,10 @@ public class MessageServerContext extends MessageContext {
      */
     public static List<ProtocolDispatcherProcessor> protocolDispatcherProcessors = new ArrayList<>();
 
-
+    /**
+     * 发送消息的拦截器，主要针对MessageHelp类中发送消息的拦截处理，是个拦截器链
+     */
+    public static List<AbstractMessageInterceptor> messageInterceptorChain = new ArrayList<>();
 
     /**
      * 缓存消息协议
@@ -153,7 +157,7 @@ public class MessageServerContext extends MessageContext {
          */
         @Override
         public @Nullable AbstractBaseProcessor<? extends Number> load(Number messageContentTypeValue) throws Exception {
-            log.error("未找到合适的消息内容处理器，来处理：{} 类型的消息内容！", messageContentTypeValue);
+            log.warn("未找到合适的消息内容处理器，来处理：{} 类型的消息内容！", messageContentTypeValue);
             return null;
         }
     }));

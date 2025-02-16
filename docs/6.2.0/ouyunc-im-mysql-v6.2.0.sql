@@ -11,7 +11,7 @@
  Target Server Version : 50729
  File Encoding         : 65001
 
- Date: 15/02/2025 20:39:36
+ Date: 16/02/2025 17:31:56
 */
 
 SET NAMES utf8mb4;
@@ -41,7 +41,7 @@ CREATE TABLE `ouyunc_im_message`  (
                                       `qos` tinyint(1) NOT NULL COMMENT '消息可靠性标识 qos = 0/1/2\r\n     * QoS 0：至多一次，at most once；发送方发送一条消息，接收方最多能接收到一次。即发送方完成消息发送之后不关心消息发送是否成功。\r\n     * QoS 1：至少一次，at least once；发送方发送一条消息，接收方至少能接收到一次。即发送方完成消息发送之后，若发送失败，则继续重发直到接受方接收到消息为止。这种模式下可能会导致接收方收到重复的消息。\r\n     * QoS 2：确保一次：exactly once；发送方发送一条消息，接收方一定且只能收到一次。即发送方完成消息发送之后，若发送失败，则继续重发直到接收方接收到消息为止，在这一过程中同时保证接收方不会因为消息重传而收到重复的消息。',
                                       `client_send_time` bigint(20) NOT NULL COMMENT '消息发送时间戳',
                                       `server_arrival_time` bigint(20) NOT NULL COMMENT '消息首次到达服务端时间戳',
-                                      `read` bit(1) NOT NULL DEFAULT b'0' COMMENT '已读（只针对单聊有效，该字段对群聊业务无效）：0-未读，1-已读',
+                                      `read` tinyint(1) NOT NULL DEFAULT 0 COMMENT '已读（只针对单聊有效，该字段对群聊业务无效）：0-未读，1-已读,  2-已读撤回（未读）',
                                       `withdrawn` bit(1) NOT NULL DEFAULT b'0' COMMENT '已撤回：0-未撤回，1-已撤回',
                                       `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
                                       `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',

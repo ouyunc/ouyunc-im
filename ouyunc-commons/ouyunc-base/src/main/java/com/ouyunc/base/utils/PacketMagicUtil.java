@@ -17,7 +17,7 @@ public class PacketMagicUtil {
             return false;
         }
         for (int i = 0; i < MessageConstant.MAGIC_BYTE_LENGTH; i++) {
-            if (MessageConstant.PACKET_MAGIC[i] != magicBytes[i]) {
+            if (MessageConstant.PACKET_MAGIC_BYTES[i] != magicBytes[i]) {
                 return false;
             }
         }

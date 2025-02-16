@@ -7,6 +7,7 @@ import com.ouyunc.base.model.*;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.IdentityUtil;
+import com.ouyunc.core.intercept.AbstractMessageInterceptor;
 import com.ouyunc.core.listener.event.SendFailEvent;
 import com.ouyunc.message.context.MessageServerContext;
 import io.netty.channel.Channel;
@@ -15,6 +16,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
+import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,6 +65,19 @@ public class MessageHelper {
      * @Description 同步发送消息
      */
     public static void syncSendMessage(Packet packet, Target target) {
+        if (CollectionUtils.isNotEmpty(MessageServerContext.messageInterceptorChain)) {
+            for (AbstractMessageInterceptor messageInterceptor : MessageServerContext.messageInterceptorChain) {
+                if (!messageInterceptor.preHandle(packet)) {
+                    log.warn("消息拦截器 {} 拦截了消息: {}", messageInterceptor.getClass().getName(), packet);
+                    return;
+                }
+            }
+            doSendMessage(packet, target, (sendResult)->{});
+            for (AbstractMessageInterceptor messageInterceptor : MessageServerContext.messageInterceptorChain) {
+                messageInterceptor.postHandle(packet);
+            }
+            return;
+        }
         doSendMessage(packet, target, (sendResult)->{});
     }
 
@@ -82,7 +97,22 @@ public class MessageHelper {
      * 注意！注意！注意！，异步发送，只是逻辑处理事异步的，但是具体讲消息发送出去的时间不确定，因为最后发送消息的的writeAndFlush()方法，会被封装到channel.eventLoop()单线程的任务队列中；队列里面任务的执行时间可查看相关文档
      */
     public static void asyncSendMessage(Packet packet, Target target, SendCallback sendCallback) {
-        messageSendExecutor.execute(()-> doSendMessage(packet, target, sendCallback));
+        messageSendExecutor.execute(()-> {
+            if (CollectionUtils.isNotEmpty(MessageServerContext.messageInterceptorChain)) {
+                for (AbstractMessageInterceptor messageInterceptor : MessageServerContext.messageInterceptorChain) {
+                    if (!messageInterceptor.preHandle(packet)) {
+                        log.warn("消息拦截器 {} 拦截了消息: {}", messageInterceptor.getClass().getName(), packet);
+                        return;
+                    }
+                }
+                doSendMessage(packet, target, sendCallback);
+                for (AbstractMessageInterceptor messageInterceptor : MessageServerContext.messageInterceptorChain) {
+                    messageInterceptor.postHandle(packet);
+                }
+                return;
+            }
+            doSendMessage(packet, target, sendCallback);
+        });
     }
 
 

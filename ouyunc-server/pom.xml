@@ -19,6 +19,11 @@
         </dependency>
         <dependency>
             <groupId>com.ouyunc</groupId>
+            <artifactId>ouyunc-domain</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.ouyunc</groupId>
             <artifactId>ouyunc-repository</artifactId>
             <version>${revision}</version>
         </dependency>

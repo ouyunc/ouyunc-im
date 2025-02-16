@@ -21,6 +21,12 @@
     </dependency>
     <dependency>
       <groupId>com.ouyunc</groupId>
+      <artifactId>ouyunc-domain</artifactId>
+      <version>${revision}</version>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.ouyunc</groupId>
       <artifactId>ouyunc-cache</artifactId>
       <version>${revision}</version>
       <optional>true</optional>

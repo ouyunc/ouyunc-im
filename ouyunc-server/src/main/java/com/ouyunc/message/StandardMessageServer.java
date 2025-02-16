@@ -10,6 +10,8 @@ import com.ouyunc.base.utils.IpUtil;
 import com.ouyunc.base.utils.OrderSortUtil;
 import com.ouyunc.base.utils.ReflectUtil;
 import com.ouyunc.core.engine.LoadPropertiesEngine;
+import com.ouyunc.core.intercept.AbstractMessageInterceptor;
+import com.ouyunc.core.intercept.Interceptor;
 import com.ouyunc.core.listener.MessageListener;
 import com.ouyunc.core.listener.SimpleMessageEventMulticaster;
 import com.ouyunc.core.listener.event.MessageEvent;
@@ -203,6 +205,33 @@ public class StandardMessageServer extends AbstractMessageServer {
         log.debug("消息处理器加载完成");
     }
 
+    /**
+     * 加载消息发送拦截器
+     */
+    @Override
+    void loadMessageInterceptor() {
+        if (!MessageServerContext.serverProperties().isMessageInterceptorEnable()) {
+            return;
+        }
+        log.debug("开始加载消息发送拦截器...");
+        Set<Class<?>> interceptorClazzSet = new HashSet<>();
+        try {
+            for (String interceptorScanPackagePath : MessageServerContext.serverProperties().getMessageInterceptorScanPackagePaths()) {
+                interceptorClazzSet.addAll(ClassScannerUtil.scanPackageBySuper(interceptorScanPackagePath, Interceptor.class));
+            }
+        } catch (IOException e) {
+            log.error("扫描消息处理器失败: {}", e.getMessage());
+        }
+        Set<Class<?>> interceptorSet =  interceptorClazzSet.parallelStream().filter(interceptorClazz -> Interceptor.class.isAssignableFrom(interceptorClazz) && !Interceptor.class.equals(interceptorClazz) && !Modifier.isAbstract(interceptorClazz.getModifiers())).collect(Collectors.toSet());
+        for (Class<?> interceptorClazz  : interceptorSet) {
+            if (AbstractMessageInterceptor.class.isAssignableFrom(interceptorClazz)) {
+                MessageServerContext.messageInterceptorChain.add((AbstractMessageInterceptor)objenesis.newInstance(interceptorClazz));
+            }
+        }
+        // 排序
+        OrderSortUtil.sort(MessageServerContext.messageInterceptorChain);
+        log.debug("消息发送拦截器加载完成");
+    }
 
 
     /**

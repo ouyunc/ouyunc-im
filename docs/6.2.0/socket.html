@@ -76,6 +76,26 @@ socket.onmessage = ({
     console.log('messageId:', messageId);
 	console.log('messageType:', messageType);
 	console.log('message:', message);
+
+
+    let packet = socket.send({
+        // 登录消息类型，
+        messageType: -6,
+        // 消息
+        message: {
+            // 消息发送方唯一标识，建议使用用户id
+            from: '18888888888',
+            // 消息接收方唯一标识，这里是登录，接受者是服务器，值可以为空串
+            to: '18569858',
+            // 消息内容类型
+            contentType: -128,
+            at: ['ad','rrr'],
+            // 消息内容content 是string 类型
+            content: '你好啊',
+            createTime: new Date().getTime()
+        }
+    });
+    console.log('发送私聊')
 };
 
 

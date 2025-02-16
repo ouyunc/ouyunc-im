@@ -60,6 +60,12 @@ public class CacheConstant {
      * 离线
      */
     public static final String OFFLINE = "offline:";
+
+    /***
+     * 会话
+     */
+    public static final String SESSION = "session:";
+
     /***
      * mqtt
      */
