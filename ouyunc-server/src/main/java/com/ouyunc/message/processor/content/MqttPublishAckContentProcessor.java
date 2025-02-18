@@ -1,20 +1,18 @@
-package com.ouyunc.message.processor;
+package com.ouyunc.message.processor.content;
 
 import com.ouyunc.base.constant.enums.MessageContentType;
 import com.ouyunc.base.constant.enums.MqttMessageContentTypeEnum;
 import com.ouyunc.base.packet.Packet;
-import com.ouyunc.base.utils.MqttCodecUtil;
+import com.ouyunc.message.processor.AbstractBaseProcessor;
 import com.ouyunc.repository.MqttRepository;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.mqtt.MqttMessage;
-import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * mqtt 接收客户端的qos1 发布确认信息
  */
-public class MqttPublishAckContentProcessor extends AbstractBaseProcessor<Integer>{
+public class MqttPublishAckContentProcessor extends AbstractBaseProcessor<Integer> {
     private static final Logger log = LoggerFactory.getLogger(MqttPublishAckContentProcessor.class);
 
     @Override

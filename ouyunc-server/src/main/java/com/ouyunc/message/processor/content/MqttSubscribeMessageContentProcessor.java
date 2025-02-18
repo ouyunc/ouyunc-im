@@ -1,4 +1,4 @@
-package com.ouyunc.message.processor;
+package com.ouyunc.message.processor.content;
 
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.MessageContentType;
@@ -10,12 +10,10 @@ import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.utils.MqttCodecUtil;
+import com.ouyunc.message.processor.AbstractBaseProcessor;
 import com.ouyunc.repository.MqttRepository;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
-import io.netty.util.AttributeKey;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,7 +24,7 @@ import java.util.List;
 /**
  * mqtt 订阅
  */
-public class MqttSubscribeMessageContentProcessor extends AbstractBaseProcessor<Integer>{
+public class MqttSubscribeMessageContentProcessor extends AbstractBaseProcessor<Integer> {
     private static final Logger log = LoggerFactory.getLogger(MqttSubscribeMessageContentProcessor.class);
 
     @Override

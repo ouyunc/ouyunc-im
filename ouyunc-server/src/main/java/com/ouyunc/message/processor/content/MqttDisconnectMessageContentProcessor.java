@@ -1,8 +1,9 @@
-package com.ouyunc.message.processor;
+package com.ouyunc.message.processor.content;
 
 import com.ouyunc.base.constant.enums.MessageContentType;
 import com.ouyunc.base.constant.enums.MqttMessageContentTypeEnum;
 import com.ouyunc.base.packet.Packet;
+import com.ouyunc.message.processor.AbstractBaseProcessor;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,7 +11,7 @@ import org.slf4j.LoggerFactory;
 /**
  * mqtt 断开连接
  */
-public class MqttDisconnectMessageContentProcessor extends AbstractBaseProcessor<Integer>{
+public class MqttDisconnectMessageContentProcessor extends AbstractBaseProcessor<Integer> {
     private static final Logger log = LoggerFactory.getLogger(MqttDisconnectMessageContentProcessor.class);
 
     @Override

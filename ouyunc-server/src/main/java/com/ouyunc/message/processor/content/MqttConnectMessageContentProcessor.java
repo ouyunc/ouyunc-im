@@ -1,4 +1,4 @@
-package com.ouyunc.message.processor;
+package com.ouyunc.message.processor.content;
 
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
@@ -24,6 +24,7 @@ import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.handler.HeartBeatHandler;
 import com.ouyunc.message.handler.LoginKeepAliveHandler;
 import com.ouyunc.message.helper.ClientHelper;
+import com.ouyunc.message.processor.AbstractBaseProcessor;
 import com.ouyunc.repository.MqttRepository;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -41,7 +42,7 @@ import java.util.function.Consumer;
 /**
  * mqtt connect
  */
-public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<Integer>{
+public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<Integer> {
     private static final Logger log = LoggerFactory.getLogger(MqttConnectMessageContentProcessor.class);
 
     @Override

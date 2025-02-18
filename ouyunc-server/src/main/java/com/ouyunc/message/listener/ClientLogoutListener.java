@@ -7,7 +7,7 @@ import com.ouyunc.core.listener.MessageListener;
 import com.ouyunc.core.listener.event.ClientLogoutEvent;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.processor.AbstractBaseProcessor;
-import com.ouyunc.message.processor.MqttPublishMessageContentProcessor;
+import com.ouyunc.message.processor.content.MqttPublishMessageContentProcessor;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.codec.mqtt.*;
 import io.netty.util.CharsetUtil;

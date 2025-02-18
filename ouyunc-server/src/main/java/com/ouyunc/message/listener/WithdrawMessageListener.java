@@ -1,9 +1,11 @@
 package com.ouyunc.message.listener;
 
+import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.JdbcSqlConstant;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.packet.Packet;
+import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.core.listener.MessageListener;
 import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.core.listener.event.SaveMessageEvent;
@@ -18,6 +20,7 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
 
@@ -44,6 +47,11 @@ public class WithdrawMessageListener implements MessageListener<SaveMessageEvent
     private static final JdbcTemplate jdbcTemplate = JdbcFactory.JDBC_TEMPLATE.instance();
 
     /**
+     * redisTemplate
+     */
+    private static final RedisTemplate<String, ?> redisTemplate = CacheFactory.REDIS.instance();
+
+    /**
      * @Author fzx
      * @Description  撤销消息监听器， 这里的逻辑需要和SaveMessageListener 的逻辑保持呼应
      * @Param [event]
@@ -65,6 +73,8 @@ public class WithdrawMessageListener implements MessageListener<SaveMessageEvent
                     Update update = new Update().set(MessageEntity.Fields.withdrawn, NumberConstant.NUMBER_1);
                     // 执行更新操作
                     mongoTemplate.updateFirst(query, update, MessageEntity.class);
+                    // 再次删除redis缓存的热点数据
+                    redisTemplate.delete(CacheConstant.OUYUNC + CacheConstant.APP_KEY + packet.getMessage().getMetadata().getAppKey() + CacheConstant.COLON + CacheConstant.MESSAGE + packet.getPacketId());
                 } catch (Exception e) {
                     log.error("撤销消息从数据库和mongodb 中异常: {}", e.getMessage());
                     // 发送消息到异常事件中 @todo 定义异常类型

@@ -1,5 +1,6 @@
 package com.ouyunc.message.intercept;
 
+import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.QosLevelEnum;
 import com.ouyunc.base.constant.enums.QosModeEnum;
 import com.ouyunc.base.model.LoginClientInfo;
@@ -21,7 +22,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * qos 消息重试拦截器
  */
-@Order(100)
+@Order(NumberConstant.NUMBER_100)
 public class QosRetryMessageInterceptor extends AbstractMessageInterceptor {
     @Override
     public boolean preHandle(Packet packet) {

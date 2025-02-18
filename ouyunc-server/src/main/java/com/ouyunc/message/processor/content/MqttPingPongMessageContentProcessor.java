@@ -1,10 +1,11 @@
-package com.ouyunc.message.processor;
+package com.ouyunc.message.processor.content;
 
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.MessageContentType;
 import com.ouyunc.base.constant.enums.MqttMessageContentTypeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.utils.ChannelAttrUtil;
+import com.ouyunc.message.processor.AbstractBaseProcessor;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttFixedHeader;
 import io.netty.handler.codec.mqtt.MqttMessage;
@@ -16,7 +17,7 @@ import org.slf4j.LoggerFactory;
 /**
  * mqtt 心跳
  */
-public class MqttPingPongMessageContentProcessor extends AbstractBaseProcessor<Integer>{
+public class MqttPingPongMessageContentProcessor extends AbstractBaseProcessor<Integer> {
     private static final Logger log = LoggerFactory.getLogger(MqttPingPongMessageContentProcessor.class);
 
     @Override

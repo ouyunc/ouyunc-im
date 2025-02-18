@@ -1,5 +1,6 @@
 package com.ouyunc.repository;
 
+import com.alibaba.fastjson2.JSON;
 import com.google.common.collect.Lists;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.LuaScriptConstant;
@@ -8,9 +9,11 @@ import com.ouyunc.base.constant.enums.QosLevelEnum;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
-import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.core.context.MessageContext;
+import org.apache.commons.collections4.CollectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 
@@ -26,6 +29,7 @@ public enum DefaultRepository implements Repository{
     INSTANCE;
 
     private static final RedisTemplate<String, ?> redisTemplate = CacheFactory.REDIS.instance();
+    private static final Logger log = LoggerFactory.getLogger(DefaultRepository.class);
 
     @Override
     public void save(Packet packet) {
@@ -52,9 +56,23 @@ public enum DefaultRepository implements Repository{
     public boolean withdrawMessage(Packet packet, String sessionId) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-
-
-        return redisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.WITHDRAW_MESSAGE_LUA_SCRIPT, Boolean.class), keys, args);
+        // 获取需要撤销的消息id，（这里使用String类型接收）
+        List<String> packetIds = JSON.parseArray(message.getContent(), String.class);
+        // 如果没有被撤销的消息id，则直接返回false
+        if (CollectionUtils.isEmpty(packetIds)) {
+            return false;
+        }
+        // 批量撤回消息
+        List<String> keys = Lists.newArrayList();
+        Object[] args = new Object[packetIds.size()];
+        for (int i = 0; i < packetIds.size(); i++) {
+            String withdrawPacketId = packetIds.get(i);
+            keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.MESSAGE + withdrawPacketId);
+            keys.add(CacheConstant.OUYUNC +  CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.SESSION + sessionId);
+            keys.add(CacheConstant.OUYUNC +  CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + message.getTo());
+            args[i] = withdrawPacketId;
+        }
+        return redisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_WITHDRAW_MESSAGE_LUA_SCRIPT, Boolean.class), keys, args);
     }
 
 

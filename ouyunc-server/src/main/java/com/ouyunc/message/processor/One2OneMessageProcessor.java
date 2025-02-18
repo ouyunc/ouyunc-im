@@ -1,6 +1,5 @@
 package com.ouyunc.message.processor;
 
-import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
@@ -77,19 +76,18 @@ public class One2OneMessageProcessor extends AbstractMessageProcessor<Byte>{
 
         // 可以做额外的业务处理, 比如这里将消息撤回，已读，撤销已读做特殊处理;
         if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == message.getContentType()) {
-            // 获取需要撤销的消息id，（这里使用String类型接收）
-            List<String> packetIds = JSON.parseArray(message.getContent(), String.class);
-            if (CollectionUtils.isEmpty(packetIds)) {
-                log.warn("处理撤销消息异常，packetIds: {} 为空", packetIds);
-                return;
-            }
-            // 处理撤销消息
+            // 处理撤销消息，这里撤销是删除缓存中的消息，以及离线消息和会话消息
             if (!repository().withdrawMessage(packet, sessionId)) {
                 // 未撤销成功
-                log.error("处理撤销消息异常，packetIds: {}", packetIds);
+                log.error("撤销消息异常，packet: {}", packet);
                 return;
             }
-            // 撤销磁盘的消息
+            // 撤销磁盘的消息，注意：这里可能会出现一种情况，先删除redis 中的数据，后通过异步事件操作删除的持久化的数据；
+            // 假如A正要执行删除缓存中的数据，
+            // B突然上线或者拉取会话中的消息id,
+            // 此时A删除缓存成功，B从缓存查询数据没有查到，然后从持久化中查询，此时B会查到数据（A还没来得及修改的老数据）
+            // 然后将数据添加到缓存中，会导致脏数据；如何解决呢？
+            // 这里提供一种简单的解决方式：可以在持久化修改后再次删除热点消息；存在短暂的脏数据。如果持久化异常，会进行监控池中最后通过人工或者其他流程操作最终一致性；
             MessageServerContext.publishEvent(new WithdrawMessageEvent(packet), true);
         }
 

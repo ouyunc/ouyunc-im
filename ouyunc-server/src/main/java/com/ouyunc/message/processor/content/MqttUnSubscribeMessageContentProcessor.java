@@ -1,4 +1,4 @@
-package com.ouyunc.message.processor;
+package com.ouyunc.message.processor.content;
 
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.MessageContentType;
@@ -9,6 +9,7 @@ import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.utils.MqttCodecUtil;
+import com.ouyunc.message.processor.AbstractBaseProcessor;
 import com.ouyunc.repository.MqttRepository;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
@@ -20,7 +21,7 @@ import java.util.List;
 /**
  * mqtt 取消订阅
  */
-public class MqttUnSubscribeMessageContentProcessor extends AbstractBaseProcessor<Integer>{
+public class MqttUnSubscribeMessageContentProcessor extends AbstractBaseProcessor<Integer> {
     private static final Logger log = LoggerFactory.getLogger(MqttUnSubscribeMessageContentProcessor.class);
 
     @Override
