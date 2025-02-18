@@ -157,7 +157,6 @@ public class MessageServerContext extends MessageContext {
          */
         @Override
         public @Nullable AbstractBaseProcessor<? extends Number> load(Number messageContentTypeValue) throws Exception {
-            log.warn("未找到合适的消息内容处理器，来处理：{} 类型的消息内容！", messageContentTypeValue);
             return null;
         }
     }));

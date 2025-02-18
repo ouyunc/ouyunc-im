@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.ouyunc</groupId>
     <artifactId>ouyunc-message-spring-boot-starter</artifactId>
-    <version>6.0.0</version>
+    <version>6.2.0</version>
     <name>ouyunc-message-spring-boot-starter</name>
     <description>message spring boot starter</description>
 
@@ -38,7 +38,7 @@
         <dependency>
             <groupId>com.ouyunc</groupId>
             <artifactId>ouyunc-server</artifactId>
-            <version>6.1.1</version>
+            <version>6.2.0</version>
         </dependency>
 
         <dependency>

@@ -75,7 +75,7 @@ public class ServerStartupEventListener implements MessageListener<ServerStartup
                                     // 计算本次删除操作的最大分数边界，确保不超过设定的 maxScore
                                     long currentMaxScore = Math.min(minScore.get() + MessageServerContext.serverProperties().getAppKeyConnectionCountRefreshStep(), maxScore);
                                     // 执行删除操作，返回删除的成员数量
-                                    redisTemplate.opsForZSet().removeRangeByScore(CacheConstant.OUYUNC + CacheConstant.CONNECTIONS + CacheConstant.APP_KEY + appKey, minScore.get(), currentMaxScore);
+                                    redisTemplate.opsForZSet().removeRangeByScore(CacheConstant.OUYUNC  + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.CONNECTIONS, minScore.get(), currentMaxScore);
                                     // 更新下一次删除操作的起始分数
                                     minScore.set(currentMaxScore);
                                 }

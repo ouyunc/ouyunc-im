@@ -123,6 +123,14 @@ public class MessageEntity {
      */
     private LocalDateTime expireAt;
 
+    public static final class Fields {
+        public static final String id = "id";
+        public static final String read = "read";
+        public static final String withdrawn = "withdrawn";
+    }
+
+
+
     // 构造函数、Getter 和 Setter 方法
     public MessageEntity() {}
 

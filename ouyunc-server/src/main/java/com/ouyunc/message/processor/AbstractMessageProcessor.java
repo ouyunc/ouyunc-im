@@ -3,6 +3,7 @@ package com.ouyunc.message.processor;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.validator.AuthValidator;
+import com.ouyunc.repository.DefaultRepository;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +25,15 @@ public abstract class AbstractMessageProcessor<T extends Number> extends Abstrac
      */
     public static final ExecutorService messageProcessorExecutor =  Executors.newVirtualThreadPerTaskExecutor();
 
+
+
+    /**
+     * 获取数据存储实现类, 子类可以重写来实现自定义存储实现
+     */
+    @SuppressWarnings("unchecked")
+    public DefaultRepository repository() {
+        return DefaultRepository.INSTANCE;
+    }
 
     /**
      * @Author fzx

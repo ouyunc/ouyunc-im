@@ -38,7 +38,7 @@ public enum MqttRepository implements Repository{
     public boolean checkDup(Packet packet) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        Double score = redisTemplate.opsForZSet().score(CacheConstant.OUYUNC + CacheConstant.OFFLINE + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + message.getTo(), packet.getPacketId());
+        Double score = redisTemplate.opsForZSet().score(CacheConstant.OUYUNC  + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + message.getTo(), packet.getPacketId());
         // 如果分数不为 null，则表示值存在
         return !Objects.isNull(score);
     }

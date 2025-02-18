@@ -35,7 +35,7 @@ public class RemoveOfflineListener implements MessageListener<RemoveOfflineEvent
             String from = message.getFrom();
             Metadata metadata = message.getMetadata();
             String receivedPacketId = message.getContent();
-            redisTemplate.opsForZSet().remove(CacheConstant.OUYUNC +  CacheConstant.OFFLINE + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON +  from, receivedPacketId);
+            redisTemplate.opsForZSet().remove(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON +  CacheConstant.OFFLINE  +  from, receivedPacketId);
         }
     }
 

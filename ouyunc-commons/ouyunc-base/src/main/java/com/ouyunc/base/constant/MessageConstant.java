@@ -40,14 +40,14 @@ public class MessageConstant {
 
 
     /**
-     * 一天的时间戳
+     * 一天的时间戳 毫秒
      */
     public static final long DAY_TIMESTAMP = 24*60*60*1000L;
 
 
 
     /**
-     * 一小时的时间戳
+     * 一小时的时间戳， 毫秒
      */
     public static final long HOUR_TIMESTAMP = 60*60*1000L;
 

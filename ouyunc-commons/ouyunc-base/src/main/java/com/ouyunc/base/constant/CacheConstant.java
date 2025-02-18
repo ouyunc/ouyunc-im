@@ -27,9 +27,14 @@ public class CacheConstant {
     public static final String APP_KEY = "app-key:";
 
     /***
+     * 消息缓存公共前缀
+     */
+    public static final String MESSAGE = "message:";
+
+    /***
      * 平台appKey链接数
      */
-    public static final String CONNECTIONS = "connections:";
+    public static final String CONNECTIONS = "connections";
 
     /***
      * 锁
@@ -45,6 +50,11 @@ public class CacheConstant {
      * 用户
      */
     public static final String USER = "user:";
+
+    /***
+     * 群组绑定的用户
+     */
+    public static final String GROUP_USERS = "group-users:";
 
     /***
      * 发送方

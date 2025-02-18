@@ -69,11 +69,11 @@ public class ClientHelper {
                         if (loginExpireTime <= 0) {
                             operations.opsForValue().set((K) key, (V) loginClientInfo);
                             // appKey 连接信息的score 如果是小于0 也就是 -1 则证明是不需要进行保活，一致保留到缓存中
-                            operations.opsForZSet().add((K) (CacheConstant.OUYUNC + CacheConstant.CONNECTIONS + CacheConstant.APP_KEY + loginClientInfo.getAppKey()), (V) comboIdentity, NumberConstant.NUMBER_NEGATIVE_1);
+                            operations.opsForZSet().add((K) (CacheConstant.OUYUNC  + CacheConstant.APP_KEY + loginClientInfo.getAppKey() + CacheConstant.COLON + CacheConstant.CONNECTIONS), (V) comboIdentity, NumberConstant.NUMBER_NEGATIVE_1);
                         }else {
                             operations.opsForValue().set((K) key, (V) loginClientInfo, loginExpireTime, TimeUnit.SECONDS);
                             // 添加appKey统计信息
-                            operations.opsForZSet().add((K) (CacheConstant.OUYUNC + CacheConstant.CONNECTIONS + CacheConstant.APP_KEY + loginClientInfo.getAppKey()), (V) comboIdentity, TimeUtil.currentTimeMillis() + loginExpireTime*MessageConstant.NUMBER_1000);
+                            operations.opsForZSet().add((K) (CacheConstant.OUYUNC  + CacheConstant.APP_KEY + loginClientInfo.getAppKey() + CacheConstant.COLON + CacheConstant.CONNECTIONS), (V) comboIdentity, TimeUtil.currentTimeMillis() + loginExpireTime*MessageConstant.NUMBER_1000);
                         }
                         return null;
                     }
@@ -215,7 +215,7 @@ public class ClientHelper {
      */
     public static long connections(String appKey) {
         RedisTemplate<String, Object> redisTemplate = CacheFactory.REDIS.instance();
-        Long connections = redisTemplate.opsForZSet().zCard(CacheConstant.OUYUNC + CacheConstant.CONNECTIONS + CacheConstant.APP_KEY + appKey);
+        Long connections = redisTemplate.opsForZSet().zCard(CacheConstant.OUYUNC  + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.CONNECTIONS);
         if (connections == null) {
             return NumberConstant.NUMBER_0;
         }
@@ -240,7 +240,7 @@ public class ClientHelper {
             @Override
             public <K, V> Object execute(@NotNull RedisOperations<K, V> operations) throws DataAccessException {
                 for (Object appKey : appKeys) {
-                    operations.opsForZSet().zCard((K) (CacheConstant.OUYUNC + CacheConstant.CONNECTIONS + CacheConstant.APP_KEY + appKey));
+                    operations.opsForZSet().zCard((K) (CacheConstant.OUYUNC  + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.CONNECTIONS));
                 }
                 return null;
             }

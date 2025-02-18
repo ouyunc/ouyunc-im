@@ -8,19 +8,30 @@ import com.ouyunc.base.packet.Packet;
  **/
 public class ExceptionEvent extends MessageEvent {
     /**
-     * channel 上下文
+     * packet
      */
     private final Packet packet;
 
+    /**
+     * error message
+     */
+    private String errorMessage;
 
-    public ExceptionEvent(Object source, Packet packet) {
+    public ExceptionEvent(Object source,  Packet packet) {
         super(source);
         this.packet = packet;
     }
 
-    public ExceptionEvent(Object source, long publishTime, Packet packet) {
+    public ExceptionEvent(Object source, String errorMessage, Packet packet) {
+        super(source);
+        this.packet = packet;
+        this.errorMessage = errorMessage;
+    }
+
+    public ExceptionEvent(Object source, String errorMessage,  Packet packet, long publishTime) {
         super(source, publishTime);
         this.packet = packet;
+        this.errorMessage = errorMessage;
     }
 
     public Packet getPacket() {

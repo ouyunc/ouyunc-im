@@ -10,7 +10,8 @@ public class JdbcSqlConstant {
      */
     public enum MYSQL{
 
-        INSERT_MESSAGE("INSERT INTO `ouyunc_im_message`(`id`, `protocol`, `protocol_version`, `device_type`, `network_type`, `encrypt_type`, `serialize_algorithm`, `message_type`, `retain`, `client_ip`, `from`, `to`, `content_type`, `content`, `extra`, `at`, `qos`, `client_send_time`, `server_arrival_time`, `read`, `withdrawn`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", "保存消息")
+        INSERT_MESSAGE("INSERT INTO `ouyunc_im_message`(`id`, `protocol`, `protocol_version`, `device_type`, `network_type`, `encrypt_type`, `serialize_algorithm`, `message_type`, `retain`, `client_ip`, `from`, `to`, `content_type`, `content`, `extra`, `at`, `qos`, `client_send_time`, `server_arrival_time`, `read`, `withdrawn`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", "保存消息"),
+        WITHDRAW_MESSAGE("UPDATE `ouyunc_im_message` SET `withdrawn` = ? WHERE id = ? ", "撤回消息")
 
         ;
 
