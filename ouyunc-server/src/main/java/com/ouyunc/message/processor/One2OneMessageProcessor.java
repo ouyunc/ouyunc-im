@@ -80,6 +80,7 @@ public class One2OneMessageProcessor extends AbstractMessageProcessor<Byte>{
             if (!repository().withdrawMessage(packet, sessionId)) {
                 // 未撤销成功
                 log.error("撤销消息异常，packet: {}", packet);
+                MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "撤销消息异常!", packet), true);
                 return;
             }
             // 撤销磁盘的消息，注意：这里可能会出现一种情况，先删除redis 中的数据，后通过异步事件操作删除的持久化的数据；
