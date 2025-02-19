@@ -8,7 +8,6 @@ import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
-import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.core.listener.event.ReadReceiptMessageEvent;
@@ -21,7 +20,6 @@ import com.ouyunc.message.validator.AuthValidator;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.collections4.CollectionUtils;
 import org.redisson.api.RLock;
-import org.redisson.api.RedissonClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,10 +34,6 @@ import java.util.concurrent.TimeUnit;
 public class GroupMessageProcessor extends AbstractMessageProcessor<Byte>{
     private static final Logger log = LoggerFactory.getLogger(GroupMessageProcessor.class);
 
-    /**
-     * redisson 客户端
-     */
-    private final RedissonClient redissonClient = CacheFactory.REDISSON.instance();
 
     @Override
     public MessageType type() {
@@ -110,8 +104,8 @@ public class GroupMessageProcessor extends AbstractMessageProcessor<Byte>{
             // 撤回，会通知所有用户
             // 处理撤销消息，这里撤销是删除缓存中的消息，以及离线消息和会话消息
             // 加锁，防止获取消息的时候出现脏数据,这里使用联锁，因为在对方获取离线数据和会话数据时都可能出现脏数据
-            RLock multiLock = redissonClient.getMultiLock(redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.SESSION + sessionId),
-                    redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + message.getTo()));
+            RLock multiLock = MessageServerContext.redissonClient.getMultiLock(MessageServerContext.redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.SESSION + sessionId),
+                    MessageServerContext.redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + message.getTo()));
             try {
                 if (multiLock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
                     if (!repository().withdrawMessage(packet, sessionId)) {
@@ -145,8 +139,8 @@ public class GroupMessageProcessor extends AbstractMessageProcessor<Byte>{
         }else if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == message.getContentType()) {
             // 群消息已读回执
             // 加锁，防止获取消息的时候出现脏数据,这里使用联锁，因为在对方获取离线数据和会话数据时都可能出现脏数据
-            RLock multiLock = redissonClient.getMultiLock(redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.SESSION + sessionId),
-                    redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + message.getTo()));
+            RLock multiLock = MessageServerContext.redissonClient.getMultiLock(MessageServerContext.redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.SESSION + sessionId),
+                    MessageServerContext.redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + message.getTo()));
             try {
                 if (multiLock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
                     if (!repository().readReceiptMessage(packet, NumberConstant.NUMBER_30 * MessageConstant.DAY_TIMESTAMP)) {

@@ -13,7 +13,6 @@ import com.ouyunc.message.schedule.ScheduleTimer;
 import com.ouyunc.message.thread.LoginKeepAliveThread;
 import org.apache.commons.collections4.CollectionUtils;
 import org.redisson.api.RLock;
-import org.redisson.api.RedissonClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -49,8 +48,6 @@ public class ServerStartupEventListener implements MessageListener<ServerStartup
             // 启用一个定时任务来做appKey连接数的定时检查刷新
             // 获取redis 实例
             RedisTemplate<String, Object> redisTemplate = CacheFactory.REDIS.instance();
-            // redisson
-            RedissonClient redissonClient = CacheFactory.REDISSON.instance();
             // 要删除成员的最小分数， 这个需要给定一个合适的起止时间，比如在程序开始启动的那一天，或者当前时间戳减去一定的时间范围，比如一天，或者一周，或者一个月等。这里用过去一天的时间，这样删除的数据量会比较少，不会影响性能。
             final AtomicLong minScore = new AtomicLong(NumberConstant.NUMBER_0);
             // 调度
@@ -66,7 +63,7 @@ public class ServerStartupEventListener implements MessageListener<ServerStartup
                     }
                     for (Object appKey : appKeys) {
                         // 加锁,多实例的
-                        RLock lock = redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + appKey);
+                        RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + appKey);
                         try {
                             // 锁等待 和 锁过期时间
                             if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
