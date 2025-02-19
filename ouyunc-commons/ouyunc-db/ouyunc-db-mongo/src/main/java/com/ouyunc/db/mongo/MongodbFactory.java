@@ -67,8 +67,8 @@ public enum MongodbFactory {
         @Override
         public MongoTemplate instance(String databaseName) {
             // 进行配置mongoTemplate 的初始化
-            MongoTemplate mongoTemplate = null;
-            if (mongoTemplateMap.get(databaseName) == null) {
+            MongoTemplate mongoTemplate = mongoTemplateMap.get(databaseName);
+            if (mongoTemplate == null) {
                 synchronized (MongodbFactory.class) {
                     if (mongoTemplateMap.get(databaseName) == null) {
                         mongoTemplateMap.put(databaseName, mongoTemplate = createMongoTemplate(databaseName));

@@ -192,7 +192,7 @@ ouyunc:
     jdbc:
       # 数据库连接基本信息
       driverClassName: com.mysql.cj.jdbc.Driver
-      url: jdbc:mysql://localhost:3306/test?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true
+      url: jdbc:mysql://localhost:3306/message?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true
       username: root
       password: root
       hikariPool:
@@ -220,7 +220,7 @@ ouyunc:
     # mongodb 配置
     mongo:
       uri: mongodb://localhost:27017
-      defaultDatabase: school
+      defaultDatabase: ouyunc-message
       pool:
         maxIdleTime: 600000
         maxLifeTime: 1800000

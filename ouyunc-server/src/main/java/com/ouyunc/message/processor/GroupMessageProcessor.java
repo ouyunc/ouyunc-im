@@ -59,6 +59,7 @@ public class GroupMessageProcessor extends AbstractMessageProcessor<Byte>{
             return;
         }
         // 校验是否拥有相关权限 permission （是否被拉黑，禁用等）
+        ctx.fireChannelRead(packet);
 
     }
 

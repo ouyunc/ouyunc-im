@@ -62,7 +62,7 @@ public class One2OneMessageProcessor extends AbstractMessageProcessor<Byte>{
             return;
         }
         // 校验是否拥有相关权限 permission （对方是否被拉黑，禁用等）
-
+        ctx.fireChannelRead(packet);
     }
 
     @Override
