@@ -20,6 +20,9 @@ public enum ExceptionCodeEnum {
 
     WITHDRAW_MESSAGE_ERROR(40001, "撤回消息错误"),
 
+
+    READ_RECEIPT_MESSAGE_ERROR(50001, "读已回执消息错误"),
+
     ;
 
     private final int code;

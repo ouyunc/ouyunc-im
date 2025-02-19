@@ -83,7 +83,7 @@ public class RedissonDistributedLockAspect {
             throw new RuntimeException(e);
         } finally {
             //释放锁
-            if (lock.isLocked() && lock.isHeldByCurrentThread()) {
+            if (lock.isHeldByCurrentThread()) {
                 lock.unlock();
             }
         }

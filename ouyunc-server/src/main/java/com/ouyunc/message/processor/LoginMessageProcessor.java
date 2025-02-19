@@ -148,7 +148,7 @@ public class LoginMessageProcessor extends AbstractMessageProcessor<Byte> {
                     log.error("客户端: {} 绑定登录信息失败,原因：{}", closingLocalloginClientInfo, e.getMessage());
                     throw new MessageException(e);
                 } finally {
-                    if (lock.isLocked() && lock.isHeldByCurrentThread()) {
+                    if (lock.isHeldByCurrentThread()) {
                         lock.unlock();
                     }
                 }

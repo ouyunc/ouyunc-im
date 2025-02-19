@@ -83,7 +83,7 @@ public class ServerStartupEventListener implements MessageListener<ServerStartup
                         } catch (InterruptedException e) {
                             log.error("appKey-connection-count-refresh-timer 获取锁失败,原因：{}", e.getMessage());
                         } finally {
-                            if (lock.isLocked() && lock.isHeldByCurrentThread()) {
+                            if (lock.isHeldByCurrentThread()) {
                                 lock.unlock();
                             }
                         }

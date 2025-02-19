@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -75,6 +76,34 @@ public enum DefaultRepository implements Repository{
         return redisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_WITHDRAW_MESSAGE_LUA_SCRIPT, Boolean.class), keys, args);
     }
 
+    /**
+     * 处理读已回执消息
+     */
+    public boolean readReceiptMessage(Packet packet, long expireTime) {
+        Message message = packet.getMessage();
+        Metadata metadata = message.getMetadata();
+        // 已读的消息id，（这里使用String类型接收）
+        List<String> readPacketIds = JSON.parseArray(message.getContent(), String.class);
+        // 如果已读的消息id，则直接返回false
+        if (CollectionUtils.isEmpty(readPacketIds)) {
+            return false;
+        }
+        // 批量已读回执消息
+        List<String> keys = Lists.newArrayList();
+        List<Object> args = Lists.newArrayList();
+        for (String readPacketId : readPacketIds) {
+            keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.MESSAGE + readPacketId);
+            keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.READ_MESSAGE + readPacketId);
+            // 阅读人
+            args.add(message.getFrom());
+            // 已读时间
+            args.add(metadata.getServerTime());
+            // 整体过期时间，这里是毫秒
+            args.add(expireTime);
+        }
+        return redisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_READ_RECEIPT_MESSAGE_LUA_SCRIPT, Boolean.class), keys, args.toArray());
+    }
+
 
     /**
      * 获取群组用户列表的用户唯一标识，这里直接从缓存中取，获取不到就失败，不需要再从数据库中获取，如果有需要可以做多级缓存
@@ -109,6 +138,28 @@ public enum DefaultRepository implements Repository{
             luaScript = LuaScriptConstant.SAVE_MESSAGE_WITH_OFFLINE_LUA_SCRIPT;
         }
         return redisTemplate.execute(new DefaultRedisScript<>(luaScript, Boolean.class), keys, args);
+    }
+
+    /**
+     * 群组批量保存，保存业务消息以及离线消息和会话消息
+     * @param packet
+     * @param expireTime 过期时间，单位毫秒，多久后过期
+     * @return
+     */
+    public boolean batchSaveMessage(Packet packet, Set<String> groupUserIdentitySet, long expireTime) {
+        Message message = packet.getMessage();
+        Metadata metadata = message.getMetadata();
+        List<String> keys = Lists.newArrayList(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.MESSAGE + packet.getPacketId(),
+                CacheConstant.OUYUNC +  CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.SESSION + message.getTo());
+        List<Object> args = new ArrayList<>();
+        args.add(packet);                       // ARGV[1]
+        args.add(expireTime);                    // ARGV[2] expireTime
+        args.add(packet.getPacketId());          // ARGV[3] value2
+        args.add(metadata.getServerTime());       // ARGV[4] score
+        args.add(groupUserIdentitySet.size());    // ARGV[5] groupUserCount
+        // ARGV[6]
+        args.addAll(groupUserIdentitySet);
+        return redisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_SAVE_MESSAGE_LUA_SCRIPT, Boolean.class), keys, args);
     }
 
 

@@ -86,7 +86,7 @@ public class ClientHelper {
             log.error("客户端绑定登录信息失败,原因：{}", e.getMessage());
             throw new MessageException(e);
         } finally {
-            if (lock.isLocked() && lock.isHeldByCurrentThread()) {
+            if (lock.isHeldByCurrentThread()) {
                 lock.unlock();
             }
         }

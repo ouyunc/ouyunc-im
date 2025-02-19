@@ -32,6 +32,11 @@ public class CacheConstant {
     public static final String MESSAGE = "message:";
 
     /***
+     * 已读消息缓存公共前缀
+     */
+    public static final String READ_MESSAGE = "read-message:";
+
+    /***
      * 平台appKey链接数
      */
     public static final String CONNECTIONS = "connections";

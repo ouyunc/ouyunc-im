@@ -191,7 +191,7 @@ public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<In
                         log.error("mqtt客户端: {} 绑定登录信息失败,原因：{}", closingLocalLoginClientInfo, e.getMessage());
                         throw new MessageException(e);
                     } finally {
-                        if (lock.isLocked() && lock.isHeldByCurrentThread()) {
+                        if (lock.isHeldByCurrentThread()) {
                             lock.unlock();
                         }
                     }
