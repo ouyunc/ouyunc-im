@@ -9,7 +9,7 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.core.listener.MessageListener;
 import com.ouyunc.core.listener.event.ExceptionEvent;
-import com.ouyunc.core.listener.event.SaveMessageEvent;
+import com.ouyunc.core.listener.event.WithdrawMessageEvent;
 import com.ouyunc.db.jdbc.JdbcFactory;
 import com.ouyunc.db.mongo.MongodbFactory;
 import com.ouyunc.domain.entity.MessageEntity;
@@ -30,7 +30,7 @@ import java.util.List;
  * @Author fzx
  * @Description: 撤销消息监听器
  **/
-public class WithdrawMessageListener implements MessageListener<SaveMessageEvent> {
+public class WithdrawMessageListener implements MessageListener<WithdrawMessageEvent> {
     private static final Logger log = LoggerFactory.getLogger(WithdrawMessageListener.class);
 
     /**
@@ -51,7 +51,7 @@ public class WithdrawMessageListener implements MessageListener<SaveMessageEvent
      * @Return void
      */
     @Override
-    public void onApplicationEvent(SaveMessageEvent event) {
+    public void onApplicationEvent(WithdrawMessageEvent event) {
         if (event.getSource() instanceof Packet packet) {
             log.debug("撤销消息: {} 从数据库和mongodb 中", packet);
             Message message = packet.getMessage();

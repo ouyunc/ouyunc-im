@@ -26,7 +26,7 @@ ouyunc:
     # QOS 消息服务质量配置
     qos:
       # 是否开启qos，默认关闭
-      enable: false
+      enable: true
       # 模式，CLIENT-客户端模式，SERVER-服务端模式, 默认客户端（需要客户端配合实现，对服务端压力小，且服务端是无状态的），服务端模式则是服务端保存消息，然后定时发送给接收方，会影响性能，且服务端变成有状态服务
       mode: CLIENT
       # 模式是服务端模式时生效
@@ -192,7 +192,7 @@ ouyunc:
     jdbc:
       # 数据库连接基本信息
       driverClassName: com.mysql.cj.jdbc.Driver
-      url: jdbc:mysql://localhost:3306/message?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true
+      url: jdbc:mysql://localhost:3306/ouyunc-message?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true
       username: root
       password: root
       hikariPool:

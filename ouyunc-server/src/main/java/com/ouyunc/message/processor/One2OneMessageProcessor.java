@@ -157,7 +157,7 @@ public class One2OneMessageProcessor extends AbstractMessageProcessor<Byte>{
         List<LoginClientInfo> toLoginClientInfos = ClientHelper.onlineAll(message.getMetadata().getAppKey(), message.getTo());
         // 如果不在线的话，先保存到离线消息队列中，然后发送消息到对方
         if (CollectionUtils.isEmpty(toLoginClientInfos)) {
-            log.warn("发送消息到: {} 失败, 对方不在线!,消息已存储到离线队列中", message.getTo());
+            log.warn("发送消息到: {} 失败, 对方不在线!,消息已存储", message.getTo());
             return;
         }
         // 异步发送消息
