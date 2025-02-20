@@ -52,14 +52,14 @@ socket.onopen = (e) => {
             // 消息
             message: {
                 // 消息发送方唯一标识，建议使用用户id
-                from: '18888888888',
+                from: '19999999999',
                 // 消息接收方唯一标识，这里是登录，接受者是服务器，值可以为空串
                 to: '',
                 // 消息内容类型
                 contentType: -2,
                 // 消息内容content 是string 类型
                 content: JSON.stringify({
-                    identity: '18888888888',
+                    identity: '19999999999',
                     appKey: 'ouyunc',
                     signatureAlgorithm: 1,//md5
                     signature: '123456',
@@ -85,22 +85,24 @@ socket.onmessage = ({
         document.getElementById('sendMessage').value = document.getElementById('sendMessage').value + "\n" +message.content;
     }
 
+
+    // 注意延迟，不然就会疯狂发消息，收到消息就会发给对方，哈哈
+
     let packet = socket.send({
         // 登录消息类型，
         messageType: -7,
         // 消息
         message: {
             // 消息发送方唯一标识，建议使用用户id
-            from: '18888888888',
+            from: '19999999999',
             // 消息接收方唯一标识，这里是登录，接受者是服务器，值可以为空串
             to: '123456',
             // 消息内容类型
             contentType: -128,
             at: ['ad','rrr'],
-            //qos: 1,
+            qos: 1,
             // 消息内容content 是string 类型9223372036854775807
-            //content: JSON.stringify(['301789975328985088','301790017834061824']),
-            content: '你好我是18888888888',
+            content: '你好我是19999999999',
             createTime: new Date().getTime()
         }
     });

@@ -81,7 +81,7 @@ public class GroupMessageProcessor extends AbstractMessageProcessor<Byte>{
         // 如果不需要QOS，或者该消息qos 等于0，则直接返回,则不需要存储到离线数据，则是需要存储一份群会话消息；这种情况走读扩散
         if (!MessageContext.messageProperties.isQosEnable() || message.getQos() == QosLevelEnum.QOS_0.getLevel()) {
             // 保存消息， 30 天 过期， 后面通过配置文件进行可配置
-            if (!repository().saveMessage(packet, message.getTo(), NumberConstant.NUMBER_30 * MessageConstant.DAY_TIMESTAMP)) {
+            if (!repository().saveMessage(packet, sessionId, NumberConstant.NUMBER_30 * MessageConstant.DAY_TIMESTAMP)) {
                 log.error("群消息: {} 保存非qos质量消息异常", packet);
                 MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,"保存群息异常!", packet), true);
                 return;
