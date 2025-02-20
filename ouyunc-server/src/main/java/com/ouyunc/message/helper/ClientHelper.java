@@ -130,7 +130,7 @@ public class ClientHelper {
      * @Description 判断客户端是否在线, 如果在线返回该客户端所有在线连接的登录信息，支持多端登录
      */
     public static List<LoginClientInfo> onlineAll(String appKey, String identity, DeviceType... excludeDeviceTypeArr) {
-        List<LoginClientInfo> loginServerAddressList = new ArrayList<>();
+        List<LoginClientInfo> loginClientInfoList = new ArrayList<>(NumberConstant.NUMBER_3);
         // 获取所有的实现DeviceType接口的枚举实例
         ConcurrentMap<Byte, DeviceType> deviceTypeCacheMap = MessageServerContext.deviceTypeCache.asMap();
         Stream<DeviceType> deviceTypeStream = deviceTypeCacheMap.values().parallelStream();
@@ -150,7 +150,6 @@ public class ClientHelper {
         // 先从本地注册表获取，如果在同一个服务器上或者不是集群
         Collection<ChannelHandlerContext> allLoginClientChannelHandlerContexts = MessageServerContext.localClientRegisterTable.getAll(comboIdentitySet);
         // 判断comboIdentitySet的size 与结果集的大小是否相等，如果不相等则在从redis获取，如果相等则返回
-        List<LoginClientInfo> loginClientInfoList = new ArrayList<>(NumberConstant.NUMBER_3);
         // 从ctx上下文获取客户端登录信息
         allLoginClientChannelHandlerContexts.forEach(ctx -> {
             LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
@@ -168,10 +167,10 @@ public class ClientHelper {
         Collection<LoginClientInfo> remoteCacheLoginClientInfos = MessageServerContext.remoteLoginClientInfoCache.getAll(comboIdentitySet);
         if (CollectionUtils.isNotEmpty(remoteCacheLoginClientInfos)) {
              // 筛选合法的数据
-            loginServerAddressList.addAll(remoteCacheLoginClientInfos.stream().filter(loginClientInfo -> loginClientInfo != null && OnlineEnum.ONLINE.equals(loginClientInfo.getOnlineStatus())).collect(Collectors.toList()));
+            loginClientInfoList.addAll(remoteCacheLoginClientInfos.stream().filter(loginClientInfo -> loginClientInfo != null && OnlineEnum.ONLINE.equals(loginClientInfo.getOnlineStatus())).collect(Collectors.toList()));
         }
         // 最后返回符合条件的数据
-        return loginServerAddressList;
+        return loginClientInfoList;
     }
 
     /**

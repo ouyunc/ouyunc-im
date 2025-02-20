@@ -138,17 +138,22 @@ public class LuaScriptConstant {
      * 批量撤回消息lua 脚本
      */
     public static final String BATCH_WITHDRAW_MESSAGE_LUA_SCRIPT = "local all_success = true\n" +
-            "for i = 1, #ARGV, 3 do\n" +
-            "    local key1 = KEYS[i]\n" +
-            "    local key2 = KEYS[i + 1]\n" +
-            "    local key3 = KEYS[i + 2]\n" +
-            "    local value = ARGV[i / 3 + 1]\n" +
-            "    local success, _ = pcall(function()\n" +
-            "        redis.call('DEL', key1)\n" +
-            "        redis.call('ZREM', key2, value)\n" +
-            "        redis.call('ZREM', key3, value)\n" +
-            "    end)\n" +
-            "    if not success then\n" +
+            "for n = 1, #ARGV do\n" +
+            "    local key_index = (n - 1) * 3 + 1\n" +
+            "    if key_index + 2 <= #KEYS then\n" +
+            "        local key1 = KEYS[key_index]\n" +
+            "        local key2 = KEYS[key_index + 1]\n" +
+            "        local key3 = KEYS[key_index + 2]\n" +
+            "        local value = ARGV[n]\n" +
+            "        local success, _ = pcall(function()\n" +
+            "            redis.call('DEL', key1)\n" +
+            "            redis.call('ZREM', key2, value)\n" +
+            "            redis.call('ZREM', key3, value)\n" +
+            "        end)\n" +
+            "        if not success then\n" +
+            "            all_success = false\n" +
+            "        end\n" +
+            "    else\n" +
             "        all_success = false\n" +
             "    end\n" +
             "end\n" +

@@ -32,7 +32,9 @@ let defaultConfig = {
             delay: 2000
         }
     };
-const socket = new Socket('ws://192.168.0.106:6003/ws', {
+var url = 'ws://172.18.62.195:6003/ws'
+var local = 'ws://192.168.0.106:6003/ws'
+const socket = new Socket(url, {
     clientType: 1,
     // 2-json序列化，6-protocolbuf 序列化，需要引入两个protobuf文件，且 属性 Message: proto.com.ouyunc.base.packet.message.Message,需要配置
 	serializeAlgorithm: 6,
@@ -76,7 +78,12 @@ socket.onmessage = ({
     console.log('messageId:', messageId);
 	console.log('messageType:', messageType);
 	console.log('message:', message);
-
+    if (messageType === -6) {
+        document.getElementById('responseMessage').value = document.getElementById('responseMessage').value + "\n" + message.content;
+    }
+    if (messageType === -7) {
+        document.getElementById('sendMessage').value = document.getElementById('sendMessage').value + "\n" +message.content;
+    }
 
     let packet = socket.send({
         // 登录消息类型，
@@ -86,13 +93,14 @@ socket.onmessage = ({
             // 消息发送方唯一标识，建议使用用户id
             from: '18888888888',
             // 消息接收方唯一标识，这里是登录，接受者是服务器，值可以为空串
-            to: '18569858',
+            to: '166666666666',
             // 消息内容类型
-            contentType: -6,
-           // at: ['ad','rrr'],
+            contentType: -7,
+            at: ['ad','rrr'],
             qos: 1,
-            // 消息内容content 是string 类型
-            content: JSON.stringify(['301230208726470656','301219613067317248']),
+            // 消息内容content 是string 类型9223372036854775807
+            content: JSON.stringify(['301789975328985088','301790017834061824']),
+            //content: '你好',
             createTime: new Date().getTime()
         }
     });
@@ -117,15 +125,16 @@ socket.onmessage = ({
 <body>
 
     <form onsubmit="return false">
-
+        单
         <textarea  id="responseMessage" style="height: 300px; width: 100px"></textarea>
-        <input type="button" onclick="document.getElementById('responseMessage').value = ''" value="清空内容"/>
+<!--        <input type="button" onclick="document.getElementById('responseMessage').value = ''" value="清空内容"/>-->
+        群
         <textarea id="sendMessage" name="sendMessage" style="height: 300px; width: 100px"></textarea>
-        <input type="button" onclick="send(this.form.sendMessage.value)" value="发送消息" />
+<!--        <input type="button" onclick="send(this.form.sendMessage.value)" value="发送消息" />-->
 
 
-        <input type="text" name="add" />
-        <input type="button" onclick="addFriend(this.form.add.value)" value="添加好友" />
+<!--        <input type="text" name="add" />-->
+<!--        <input type="button" onclick="addFriend(this.form.add.value)" value="添加好友" />-->
 
     </form>
 

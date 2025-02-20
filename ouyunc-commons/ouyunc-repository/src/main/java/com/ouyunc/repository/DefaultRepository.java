@@ -58,7 +58,7 @@ public enum DefaultRepository implements Repository{
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         // 获取需要撤销的消息id，（这里使用String类型接收）
-        List<String> packetIds = JSON.parseArray(message.getContent(), String.class);
+        List<Long> packetIds = JSON.parseArray(message.getContent(), Long.class);
         // 如果没有被撤销的消息id，则直接返回false
         if (CollectionUtils.isEmpty(packetIds)) {
             return false;
@@ -67,7 +67,7 @@ public enum DefaultRepository implements Repository{
         List<String> keys = Lists.newArrayList();
         Object[] args = new Object[packetIds.size()];
         for (int i = 0; i < packetIds.size(); i++) {
-            String withdrawPacketId = packetIds.get(i);
+            Long withdrawPacketId = packetIds.get(i);
             keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.MESSAGE + withdrawPacketId);
             keys.add(CacheConstant.OUYUNC +  CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.SESSION + sessionId);
             keys.add(CacheConstant.OUYUNC +  CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + message.getTo());
@@ -83,7 +83,7 @@ public enum DefaultRepository implements Repository{
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         // 已读的消息id，（这里使用String类型接收）
-        List<String> readPacketIds = JSON.parseArray(message.getContent(), String.class);
+        List<Long> readPacketIds = JSON.parseArray(message.getContent(), Long.class);
         // 如果已读的消息id，则直接返回false
         if (CollectionUtils.isEmpty(readPacketIds)) {
             return false;
@@ -91,7 +91,7 @@ public enum DefaultRepository implements Repository{
         // 批量已读回执消息
         List<String> keys = Lists.newArrayList();
         List<Object> args = Lists.newArrayList();
-        for (String readPacketId : readPacketIds) {
+        for (Long readPacketId : readPacketIds) {
             keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.MESSAGE + readPacketId);
             keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.READ_MESSAGE + readPacketId);
             // 阅读人

@@ -57,7 +57,7 @@ public class ReadReceiptMessageListener implements MessageListener<ReadReceiptMe
             // 在事务中执行
             Message message = packet.getMessage();
             // 获取需要撤销的消息id，（这里使用String类型接收）
-            List<String> readPacketIds = JSON.parseArray(message.getContent(), String.class);
+            List<Long> readPacketIds = JSON.parseArray(message.getContent(), Long.class);
             if (CollectionUtils.isEmpty(readPacketIds)) {
                 log.error("已读回执消息异常,已读回执消息的消息id为空，packet: {}", packet);
                 return;
@@ -66,11 +66,13 @@ public class ReadReceiptMessageListener implements MessageListener<ReadReceiptMe
             Boolean executeResult = JdbcFactory.JDBC_TEMPLATE.withTransaction().execute(status -> {
                 try {
                     // 数据库中是永久保存的
-                    List<Object[]> batchWithdrawArgs = Lists.newArrayList();
+                    List<Object[]> batchUpdateReadReceiptArgs = Lists.newArrayList();
+                    List<Object[]> batchInsertReadReceiptArgs = Lists.newArrayList();
                     // 创建 BulkOperations 对象，使用 ORDERED 模式，按顺序执行操作
                     BulkOperations bulkOps = mongoTemplate.bulkOps(BulkOperations.BulkMode.ORDERED, MessageEntity.class);
-                    for (String readPacketId : readPacketIds) {
-                        batchWithdrawArgs.add(new Object[]{NumberConstant.NUMBER_1, readPacketId});
+                    for (Long readPacketId : readPacketIds) {
+                        batchUpdateReadReceiptArgs.add(new Object[]{NumberConstant.NUMBER_1, readPacketId});
+                        batchInsertReadReceiptArgs.add(new Object[]{MessageServerContext.<Long>idGenerator().generateId(), readPacketId, message.getFrom(), message.getMetadata().getServerTime()});
                         // 创建查询条件，根据 ID 查找文档
                         Query query = new Query(Criteria.where(MessageEntity.Fields.id).is(readPacketId));
                         // 创建更新操作
@@ -78,7 +80,9 @@ public class ReadReceiptMessageListener implements MessageListener<ReadReceiptMe
                         // 将更新操作添加到 BulkOperations 中
                         bulkOps.updateOne(query, update);
                     }
-                    jdbcTemplate.batchUpdate(JdbcSqlConstant.MYSQL.UPDATE_READ_MESSAGE.sql(), batchWithdrawArgs);
+                    // 插入已读回执记录
+                    jdbcTemplate.batchUpdate(JdbcSqlConstant.MYSQL.INSERT_READ_RECEIPT_MESSAGE.sql(), batchInsertReadReceiptArgs);
+                    jdbcTemplate.batchUpdate(JdbcSqlConstant.MYSQL.UPDATE_READ_MESSAGE.sql(), batchUpdateReadReceiptArgs);
                     // 执行mongodb批量更新操作
                     bulkOps.execute();
                 } catch (Exception e) {

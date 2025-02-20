@@ -155,12 +155,30 @@ public class MessageHelper {
         }
         // 异步获取 channel
         Future<Channel> channelFuture = channelPool.acquire();
+        if (channelFuture == null) {
+            // 找不到有以下两种情况：
+            // 1,消息接收端是不在集群中的服务（非法的服务地址）,不予考虑;
+            // 2,消息接收端是后来加入的集群中的服务，在旧的集群中可能由于部分服务之间网络不通导致没有该服务记录保存; 此时的处理方式是路由到其他可用服务上处理
+            // 3,两个服务不直接连通，须通过中间服务做中转
+            log.warn("获取不到消息需要到达的服务: {}", toServerAddress);
+            exceptionHandle(packet, target, sendCallback);
+            return;
+        }
         // 监听是否发送成功
         channelFuture.addListener((FutureListener<Channel>) acquireFuture -> {
             if (acquireFuture.isDone()) {
                 // 判断是否连接成功
                 if (acquireFuture.isSuccess()) {
                     Channel channel = acquireFuture.getNow();
+                    if (channel == null) {
+                        log.error("发送集群消息时，获取channel失败！");
+                        // 发送结果
+                        SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(new MessageException("发送集群消息时，获取channel失败！")).build();
+                        // 发送失败回调
+                        sendCallback.onCallback(sendResult);
+                        // 发布发送失败事件
+                        MessageServerContext.publishEvent(new SendFailEvent(sendResult), true);
+                    }
                     // 给该通道打上标签(如果该通道channel 上有标签则不需要再打标签),打上标签的目的，是为了以后动态回收该channel,保证核心channel数
                     Integer channelPoolHashCode = ChannelAttrUtil.getChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_TAG_POOL);
                     if (channelPoolHashCode == null) {

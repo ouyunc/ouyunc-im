@@ -347,6 +347,13 @@ public enum NativePacketProtocol implements PacketProtocol {
         try {
             //从用户注册表中，获取用户对应的channel然后将消息写出去
             ChannelHandlerContext ctx = MessageServerContext.localClientRegisterTable.get(to);
+            if (ctx == null) {
+                log.error("发送消息时，ctx 不存在； 请检查客户端 {} 是否登录", to);
+                SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(new MessageException("发送消息时，ctx 不存在； 请检查客户端是否登录")).build();
+                sendCallback.onCallback(sendResult);
+                MessageServerContext.publishEvent(new SendFailEvent(sendResult), true);
+                return;
+            }
             Channel channel = ctx.channel();
             if (channel.isActive() && channel.isWritable()) {
                 // 如果channel是活跃的,可写的，高水位低水位，则直接写出去

@@ -56,7 +56,7 @@ public class WithdrawMessageListener implements MessageListener<WithdrawMessageE
             log.debug("撤销消息: {} 从数据库和mongodb 中", packet);
             Message message = packet.getMessage();
             // 获取需要撤销的消息id，（这里使用String类型接收）
-            List<String> withdrawPacketIds = JSON.parseArray(message.getContent(), String.class);
+            List<Long> withdrawPacketIds = JSON.parseArray(message.getContent(), Long.class);
             if (CollectionUtils.isEmpty(withdrawPacketIds)) {
                 log.error("撤销消息异常,撤销消息的消息id为空，packet: {}", packet);
                 return;
@@ -68,7 +68,7 @@ public class WithdrawMessageListener implements MessageListener<WithdrawMessageE
                     List<Object[]> batchWithdrawArgs = Lists.newArrayList();
                     // 创建 BulkOperations 对象，使用 ORDERED 模式，按顺序执行操作
                     BulkOperations bulkOps = mongoTemplate.bulkOps(BulkOperations.BulkMode.ORDERED, MessageEntity.class);
-                    for (String withdrawPacketId : withdrawPacketIds) {
+                    for (Long withdrawPacketId : withdrawPacketIds) {
                         batchWithdrawArgs.add(new Object[]{NumberConstant.NUMBER_1, withdrawPacketId});
                         // 创建查询条件，根据 ID 查找文档
                         Query query = new Query(Criteria.where(MessageEntity.Fields.id).is(withdrawPacketId));

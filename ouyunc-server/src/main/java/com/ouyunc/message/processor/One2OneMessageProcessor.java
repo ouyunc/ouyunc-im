@@ -28,6 +28,9 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
+
+import static com.ouyunc.message.context.MessageServerContext.redissonClient;
 
 
 /**
@@ -57,103 +60,183 @@ public class One2OneMessageProcessor extends AbstractMessageProcessor<Byte>{
         // 校验是否拥有相关权限 permission （对方是否被拉黑，禁用等）
         ctx.fireChannelRead(packet);
     }
-
+    /**
+     * 处理一对一消息
+     */
     @Override
     public void process(ChannelHandlerContext ctx, Packet packet) {
-        log.info("One2OneMessageProcessor 正在处理一对一消息...");
-        AbstractBaseProcessor<? extends Number> contentProcessor = MessageServerContext.messageContentProcessorCache.get(packet.getMessage().getContentType());
-        if (contentProcessor != null) {
-            contentProcessor.process(ctx, packet);
+        log.info("Processing one-to-one message...");
+        // 1. 尝试使用内容处理器
+        if (processWithContentProcessor(ctx, packet)) {
             return;
         }
-        // 发送消息到对方
+        // 2. 保存消息
+        if (!saveMessage(packet)) {
+            return;
+        }
+        // 3. 处理特殊消息类型
+        if (!processSpecialMessageType(packet)) {
+            return;
+        }
+        // 4. 发送消息给接收方
+        deliverMessage(packet);
+    }
+
+    /**
+     * 使用内容处理器处理消息
+     */
+    private boolean processWithContentProcessor(ChannelHandlerContext ctx, Packet packet) {
+        AbstractBaseProcessor<? extends Number> processor = MessageServerContext.messageContentProcessorCache.get(packet.getMessage().getContentType());
+        if (processor != null) {
+            processor.process(ctx, packet);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * 保存消息
+     */
+    private boolean saveMessage(Packet packet) {
+        Message message = packet.getMessage();
+        String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
+        long expireTime = NumberConstant.NUMBER_30 * MessageConstant.DAY_TIMESTAMP;
+        if (!repository().saveMessage(packet, sessionId, expireTime)) {
+            log.error("Failed to save one-to-one message: {}", packet);
+            MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一消息异常!", packet), true);
+            return false;
+        }
+        MessageServerContext.publishEvent(new SaveMessageEvent(packet), true);
+        return true;
+    }
+
+    /**
+     * 处理特殊消息类型
+     */
+    private boolean processSpecialMessageType(Packet packet) {
+        Message message = packet.getMessage();
+        int contentType = message.getContentType();
+        if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
+            return processWithdrawMessage(packet);
+        } else if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {
+            return processReadReceiptMessage(packet);
+        }
+        return true;
+    }
+
+    /**
+     * 处理撤回消息
+     */
+    private boolean processWithdrawMessage(Packet packet) {
+        return processWithLock(packet,
+                () -> repository().withdrawMessage(packet, getSessionId(packet)),
+                ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR,
+                "撤销消息异常",
+                () -> MessageServerContext.publishEvent(new WithdrawMessageEvent(packet), true)
+        );
+    }
+
+    /**
+     * 处理已读回执消息
+     */
+    private boolean processReadReceiptMessage(Packet packet) {
+        long expireTime = NumberConstant.NUMBER_30 * MessageConstant.DAY_TIMESTAMP;
+        return processWithLock(packet,
+                () -> repository().readReceiptMessage(packet, expireTime),
+                ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR,
+                "读已回执消息异常",
+                () -> MessageServerContext.publishEvent(new ReadReceiptMessageEvent(packet), true)
+        );
+    }
+
+    /**
+     * 使用分布式锁处理消息
+     */
+    private boolean processWithLock(Packet packet,
+                                    Supplier<Boolean> processor,
+                                    ExceptionCodeEnum errorCode,
+                                    String errorMessage,
+                                    Runnable afterProcess) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        // 保存消息， 30 天 过期， 后面通过配置文件进行可配置
-        String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
-        if (!repository().saveMessage(packet, sessionId, NumberConstant.NUMBER_30 * MessageConstant.DAY_TIMESTAMP)) {
-            log.error("一对一消息: {} 保存消息异常", packet);
-            MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一消息异常!", packet), true);
-            return;
-        }
-        // 保存到磁盘
-        MessageServerContext.publishEvent(new SaveMessageEvent(packet), true);
+        String sessionId = getSessionId(packet);
 
+        RLock multiLock = createMultiLock(metadata.getAppKey(), sessionId, message.getTo());
 
-        // 可以做额外的业务处理, 比如这里将消息撤回，已读，撤销已读做特殊处理;
-        if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == message.getContentType()) {
-            // 处理撤销消息，这里撤销是删除缓存中的消息，以及离线消息和会话消息
-            // 加锁，防止获取消息的时候出现脏数据,这里使用联锁，因为在对方获取离线数据和会话数据时都可能出现脏数据
-            RLock multiLock = MessageServerContext.redissonClient.getMultiLock(MessageServerContext.redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.SESSION + sessionId),
-                    MessageServerContext.redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + message.getTo()));
-            try {
-                if (multiLock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
-                    if (!repository().withdrawMessage(packet, sessionId)) {
-                        // 未撤销成功
-                        log.error("加锁成功，撤销消息异常，packet: {}", packet);
-                        MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR, "撤销消息异常!", packet), true);
-                        return;
-                    }
-                }else {
-                    log.error("尝试获取锁失败，撤销消息异常，packet: {}", packet);
-                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR, "撤销消息异常!", packet), true);
-                    return;
-                }
-            } catch (Exception e) {
-                log.error("尝试获取锁失败，packet: {}", packet);
-                MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR, "撤销消息异常!", packet), true);
-                return;
-            } finally {
-                if (multiLock.isHeldByCurrentThread()) {
-                    multiLock.unlock();
-                }
+        try {
+            if (!tryLock(multiLock)) {
+                publishLockError(packet, errorCode, errorMessage);
+                return false;
             }
-            // 撤销磁盘的消息，注意：这里可能会出现一种情况，先删除redis 中的数据，后通过异步事件操作删除的持久化的数据；
-            // 假如A正要执行删除缓存中的数据，
-            // B突然上线或者拉取会话中的消息id,
-            // 此时A删除缓存成功，B从缓存查询数据没有查到，然后从持久化中查询，此时B会查到数据（A还没来得及修改的老数据）
-            // 然后将数据添加到缓存中，会导致脏数据；如何解决呢？
-            // 这里提供一种简单的解决方式：可以在持久化修改后再次删除热点消息；存在短暂的脏数据。如果持久化异常，会进行监控池中最后通过人工或者其他流程操作最终一致性；
-            // 也可以通过加锁的方式，在撤销这里加锁，以及获取消息的时候加锁，这样保证数据一致性，但是会增加锁的开销。
-            MessageServerContext.publishEvent(new WithdrawMessageEvent(packet), true);
-        }else if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == message.getContentType()) {
-            // 处理读已回执消息内容
-            // 加锁，防止获取消息的时候出现脏数据,这里使用联锁，因为在对方获取离线数据和会话数据时都可能出现脏数据
-            RLock multiLock = MessageServerContext.redissonClient.getMultiLock(MessageServerContext.redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.SESSION + sessionId),
-                    MessageServerContext.redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + message.getTo()));
-            try {
-                if (multiLock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
-                    if (!repository().readReceiptMessage(packet, NumberConstant.NUMBER_30 * MessageConstant.DAY_TIMESTAMP)) {
-                        // 未撤销成功
-                        log.error("读已回执消息异常，packet: {}", packet);
-                        MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR, "读已回执消息异常!", packet), true);
-                        return;
-                    }
-                }else {
-                    log.error("尝试获取锁失败，已读回执消息异常，packet: {}", packet);
-                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR, "读已回执消息异常!", packet), true);
-                    return;
-                }
-            } catch (Exception e) {
-                log.error("尝试获取锁失败，packet: {}", packet);
-                MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR, "读已回执消息异常!", packet), true);
-                return;
-            } finally {
-                if (multiLock.isHeldByCurrentThread()) {
-                    multiLock.unlock();
-                }
-            }
-            MessageServerContext.publishEvent(new ReadReceiptMessageEvent(packet), true);
-        }
 
-        // 获取对方在线的所有客户端
-        List<LoginClientInfo> toLoginClientInfos = ClientHelper.onlineAll(message.getMetadata().getAppKey(), message.getTo());
-        // 如果不在线的话，先保存到离线消息队列中，然后发送消息到对方
+            if (!processor.get()) {
+                log.error("Failed to process message with lock: {}", packet);
+                MessageServerContext.publishEvent(new ExceptionEvent(errorCode, errorMessage, packet), true);
+                return false;
+            }
+
+            afterProcess.run();
+            return true;
+
+        } catch (Exception e) {
+            log.error("Error while processing message with lock", e);
+            MessageServerContext.publishEvent(new ExceptionEvent(errorCode, errorMessage, packet), true);
+            return false;
+
+        } finally {
+            releaseLock(multiLock);
+        }
+    }
+
+    /**
+     * 发送消息给接收方
+     */
+    private void deliverMessage(Packet packet) {
+        Message message = packet.getMessage();
+        List<LoginClientInfo> toLoginClientInfos =
+                ClientHelper.onlineAll(message.getMetadata().getAppKey(), message.getTo());
+
         if (CollectionUtils.isEmpty(toLoginClientInfos)) {
-            log.warn("发送消息到: {} 失败, 对方不在线!,消息已存储", message.getTo());
+            log.warn("Recipient {} is offline, message stored", message.getTo());
             return;
         }
-        // 异步发送消息
+
         MessageHelper.asyncSendMessage(packet, toLoginClientInfos);
+    }
+
+    /**
+     * 获取sessionId
+     * @param packet
+     * @return
+     */
+    private String getSessionId(Packet packet) {
+        Message message = packet.getMessage();
+        return IdentityUtil.sessionId(message.getFrom(), message.getTo());
+    }
+
+    private RLock createMultiLock(String appKey, String sessionId, String to) {
+        return redissonClient.getMultiLock(
+                redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.SESSION + sessionId),
+                redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.OFFLINE + to)
+        );
+    }
+
+    private boolean tryLock(RLock lock) throws InterruptedException {
+        return lock.tryLock(
+                MessageConstant.LOCK_WAIT_TIME,
+                MessageConstant.LOCK_LEASE_TIME,
+                TimeUnit.SECONDS
+        );
+    }
+
+    private void releaseLock(RLock lock) {
+        if (lock != null && lock.isHeldByCurrentThread()) {
+            lock.unlock();
+        }
+    }
+
+    private void publishLockError(Packet packet, ExceptionCodeEnum code, String message) {
+        log.error("Failed to acquire lock: {}", packet);
+        MessageServerContext.publishEvent(new ExceptionEvent(code, message, packet), true);
     }
 }

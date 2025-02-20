@@ -1,25 +1,11 @@
 package com.ouyunc.core.context;
 
 
-import com.github.benmanes.caffeine.cache.CacheLoader;
-import com.github.benmanes.caffeine.cache.Caffeine;
-import com.ouyunc.base.constant.enums.DeviceType;
-import com.ouyunc.base.model.LoginClientInfo;
-import com.ouyunc.cache.Cache;
-import com.ouyunc.cache.config.CacheFactory;
-import com.ouyunc.cache.distributed.redis.RedisDistributedCache;
-import com.ouyunc.cache.local.caffeine.CaffeineLocalCache;
 import com.ouyunc.core.generator.IdGenerator;
 import com.ouyunc.core.generator.SnowflakeIdGenerator;
 import com.ouyunc.core.listener.MessageEventMulticaster;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.properties.MessageProperties;
-import io.netty.channel.ChannelHandlerContext;
-import org.checkerframework.checker.nullness.qual.Nullable;
-import org.redisson.api.RedissonClient;
-
-import java.util.Map;
-import java.util.Set;
 
 /**
  * @Author fzx
@@ -71,5 +57,14 @@ public class MessageContext {
         if (messageEventMulticaster != null) {
             messageEventMulticaster.multicastEvent(event, async);
         }
+    }
+
+    /**
+     * @Author fzx
+     * @Description 同步发布IM事件
+     * @param event IMEvent事件的子类
+     */
+    public static void publishEvent(MessageEvent event) {
+        publishEvent(event, false);
     }
 }
