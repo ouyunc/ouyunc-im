@@ -175,7 +175,7 @@ public class GroupMessageProcessor extends AbstractMessageProcessor<Byte>{
                 List<LoginClientInfo> groupUserLoginClientInfos = ClientHelper.onlineAll(message.getMetadata().getAppKey(), groupUserIdentity);
                 // 如果不在线的话，先保存到离线消息队列中，然后发送消息到对方
                 if (CollectionUtils.isEmpty(groupUserLoginClientInfos)) {
-                    log.warn("发送消息到: {} 失败, 对方不在线!,消息已存储", message.getTo());
+                    log.warn("发送消息到: {} 失败, 对方不在线!,消息已存储", groupUserIdentity);
                     continue;
                 }
                 // 异步给群成员的每个在线段发送消息
@@ -192,7 +192,7 @@ public class GroupMessageProcessor extends AbstractMessageProcessor<Byte>{
                         List<LoginClientInfo> groupUserLoginClientInfos = ClientHelper.onlineAll(message.getMetadata().getAppKey(), atUserIdentity);
                         // 如果不在线的话，先保存到离线消息队列中，然后发送消息到对方
                         if (CollectionUtils.isEmpty(groupUserLoginClientInfos)) {
-                            log.warn("发送消息到: {} 失败, 对方不在线!,消息已存储", message.getTo());
+                            log.warn("发送消息到: {} 失败, 对方不在线!,消息已存储", atUserIdentity);
                             continue;
                         }
                         // 异步给群成员的每个在线段发送消息

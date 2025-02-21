@@ -63,7 +63,7 @@ class Socket {
         // 初始化心跳检测器和重连管理器
         this.heartbeatManager = new HeartbeatManager(this);
         this.reconnectManager = new ReconnectManager(this);
-        this.snowflake = new Snowflake(1,1);
+        this.snowflake = new Snowflake(1, 1);
         // 初始化WebSocket
         this._initWebSocket();
         console.log(`欢迎使用OUYUNC-IM客户端,如果需要帮助,请联系作者。`);
@@ -73,16 +73,17 @@ class Socket {
     /**
      * 发送消息
      */
-     send(packet) {
+    send(packet) {
         try {
             if (!this.webSocket) {
                 throw new Error('WebSocket connection not established');
             }
 
-            const {message, messageType, deviceType, networkType, encryptType, serializeAlgorithm} =
+            const {binaryPacketId, message, messageType, deviceType, networkType, encryptType, serializeAlgorithm} =
                 this._validatePacket(packet);
 
-            const wrappedMessage =  this._wrapMessage({
+            const wrappedMessage = this._wrapMessage({
+                binaryPacketId,
                 message,
                 messageType,
                 deviceType: deviceType || this.config.deviceType,
@@ -313,10 +314,19 @@ class Socket {
     /**
      * 包装消息
      */
-     _wrapMessage({message, messageType, deviceType, networkType, encryptType, serializeAlgorithm}) {
-        // 生成64位二进制消息ID
-        const binaryMessageId = this._generateBinaryMessageId();
-
+    _wrapMessage({binaryPacketId, message, messageType, deviceType, networkType, encryptType, serializeAlgorithm}) {
+        // 如果消息id为空则内部生成消息id；注意消息id为必须为数字类型，对应java 的long 类型，一般使用雪花id工具生成
+        let binaryMessageId;
+        if (binaryPacketId) {
+            if (typeof binaryPacketId === 'string' && /^[01]{64}$/.test(binaryPacketId)) {
+                binaryMessageId = binaryPacketId;
+            } else {
+                throw new Error('Invalid binaryPacketId format, 自定义的消息id必须为64位二进制字符串: ' + binaryPacketId);
+            }
+        } else {
+            // 生成64位二进制消息ID
+            binaryMessageId = this._generateBinaryMessageId();
+        }
         // 序列化消息内容
         const messageData = this._serializeMessage(message, serializeAlgorithm);
         const messageDataByteLength = messageData.byteLength;
@@ -378,7 +388,7 @@ class Socket {
     /**
      * 解析消息
      */
-     _parseMessage(data) {
+    _parseMessage(data) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => {
@@ -419,7 +429,7 @@ class Socket {
 
                     // 提取消息内容
                     const messageBuffer = buffer.slice(offset, offset + messageLength);
-                    const message =  this._deserializeMessage(messageBuffer, serializeAlgorithm);
+                    const message = this._deserializeMessage(messageBuffer, serializeAlgorithm);
 
                     resolve({
                         messageId,
@@ -439,7 +449,7 @@ class Socket {
     /**
      * 序列化消息
      */
-     _serializeMessage(message, algorithm) {
+    _serializeMessage(message, algorithm) {
         if (algorithm === 6) { // Protobuf
             if (!this.config.Message) {
                 throw new Error('Protobuf Message class is not configured');
@@ -450,7 +460,7 @@ class Socket {
                 if (typeof protoMessage[setterName] === 'function') {
                     protoMessage[setterName](value);
                     // 进行特殊处理
-                }else if (typeof protoMessage[`${setterName}List`] === 'function') {
+                } else if (typeof protoMessage[`${setterName}List`] === 'function') {
                     protoMessage[`${setterName}List`](value);
                 }
             });
@@ -465,7 +475,7 @@ class Socket {
     /**
      * 反序列化消息
      */
-     _deserializeMessage(buffer, algorithm) {
+    _deserializeMessage(buffer, algorithm) {
         if (algorithm === 6) { // Protobuf
             if (!this.config.Message) {
                 throw new Error('Protobuf Message class is not configured');
@@ -482,13 +492,13 @@ class Socket {
                 createTime: message.getCreateTime()
             };
         } else if (algorithm === 2) { // JSON
-			return JSON.parse(Socket.DECODER.decode(buffer), function(key, value) {
-				if (key === "metadata") {
-					// 对于 "metadata" 字段，返回 undefined 以跳过反序列化
-					return undefined;
-				}
-				return value;
-			});
+            return JSON.parse(Socket.DECODER.decode(buffer), function (key, value) {
+                if (key === "metadata") {
+                    // 对于 "metadata" 字段，返回 undefined 以跳过反序列化
+                    return undefined;
+                }
+                return value;
+            });
         } else {
             throw new Error('Unsupported serialization algorithm');
         }
@@ -574,9 +584,9 @@ class HeartbeatManager {
     /**
      * 发送心跳消息
      */
-     _sendHeartbeat() {
+    _sendHeartbeat() {
         try {
-             this.socket.send({
+            this.socket.send({
                 message: {
                     from: this.socket.loginIdentity,
                     to: '',

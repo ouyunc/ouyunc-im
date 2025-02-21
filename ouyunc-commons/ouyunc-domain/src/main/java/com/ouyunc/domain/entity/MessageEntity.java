@@ -127,6 +127,10 @@ public class MessageEntity {
         public static final String id = "id";
         public static final String read = "read";
         public static final String withdrawn = "withdrawn";
+        public static final String from = "from";
+        public static final String to = "to";
+        public static final String messageType = "messageType";
+        public static final String contentType = "contentType";
     }
 
 

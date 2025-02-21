@@ -149,20 +149,21 @@ public enum DefaultRepository implements Repository{
     public boolean batchSaveMessage(Packet packet, Set<String> groupUserIdentitySet, long expireTime) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        List<String> keys = Lists.newArrayList(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.MESSAGE + packet.getPacketId(),
-                CacheConstant.OUYUNC +  CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.SESSION + message.getTo());
+        // 构造参数
+        List<String> offlineKeys = groupUserIdentitySet.stream().map(groupUserIdentity -> CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + groupUserIdentity).toList();
+        List<String> keys = new ArrayList<>();
+        keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.MESSAGE + packet.getPacketId());
+        keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.SESSION + message.getTo());
+        keys.addAll(offlineKeys);
+
         List<Object> args = new ArrayList<>();
-        args.add(packet);                       // ARGV[1]
-        args.add(expireTime);                    // ARGV[2] expireTime
-        args.add(packet.getPacketId());          // ARGV[3] value2
-        args.add(metadata.getServerTime());       // ARGV[4] score
-        args.add(groupUserIdentitySet.size());    // ARGV[5] groupUserCount
-        // ARGV[6]
-        args.addAll(groupUserIdentitySet);
-        return redisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_SAVE_MESSAGE_LUA_SCRIPT, Boolean.class), keys, args);
+        args.add(expireTime);
+        args.add(packet); // 需要实现序列化方法
+        args.add(metadata.getServerTime());
+        args.add(packet.getPacketId());
+        args.add(metadata.getAppKey());
+        args.add(message.getTo());
+        return redisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_SAVE_MESSAGE_LUA_SCRIPT, Boolean.class), keys, args.toArray());
     }
-
-
-
 
 }

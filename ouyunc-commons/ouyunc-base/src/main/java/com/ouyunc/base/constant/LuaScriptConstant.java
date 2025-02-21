@@ -17,8 +17,10 @@ public class LuaScriptConstant {
             "-- ARGV[4]: 服务器时间（分数）\n" +
             "\n" +
             "local setResult\n" +
-            "if tonumber(ARGV[2]) > 0 then\n" +
-            "    setResult = redis.call('SET', KEYS[1], ARGV[1], 'PX', tonumber(ARGV[2]))\n" +
+            "local expireTime = tonumber(ARGV[2])\n " +
+            "local score = tonumber(ARGV[4])\n " +
+            "if expireTime > 0 then\n" +
+            "    setResult = redis.call('SET', KEYS[1], ARGV[1], 'PX', expireTime)\n" +
             "else\n" +
             "    setResult = redis.call('SET', KEYS[1], ARGV[1])\n" +
             "end\n" +
@@ -29,13 +31,13 @@ public class LuaScriptConstant {
             "    return false\n" +
             "end\n" +
             "\n" +
-            "local zadd1 = redis.call('ZADD', KEYS[2], tonumber(ARGV[4]), ARGV[3])\n" +
+            "local zadd1 = redis.call('ZADD', KEYS[2], score, ARGV[3])\n" +
             "if zadd1 ~= 1 then\n" +
             "    redis.call('DEL', KEYS[1])\n" +
             "    return false\n" +
             "end\n" +
             "\n" +
-            "local zadd2 = redis.call('ZADD', KEYS[3], tonumber(ARGV[4]), ARGV[3])\n" +
+            "local zadd2 = redis.call('ZADD', KEYS[3], score, ARGV[3])\n" +
             "if zadd2 ~= 1 then\n" +
             "    redis.call('DEL', KEYS[1])\n" +
             "    redis.call('ZREM', KEYS[2], ARGV[3])\n" +
@@ -55,8 +57,9 @@ public class LuaScriptConstant {
             "-- ARGV[4]: 服务器时间（分数）\n" +
             "\n" +
             "local setResult\n" +
-            "if tonumber(ARGV[2]) > 0 then\n" +
-            "    setResult = redis.call('SET', KEYS[1], ARGV[1], 'PX', tonumber(ARGV[2]))\n" +
+            "local expireTime =  tonumber(ARGV[2])\n" +
+            "if expireTime > 0 then\n" +
+            "    setResult = redis.call('SET', KEYS[1], ARGV[1], 'PX', expireTime)\n" +
             "else\n" +
             "    setResult = redis.call('SET', KEYS[1], ARGV[1])\n" +
             "end\n" +
@@ -80,58 +83,62 @@ public class LuaScriptConstant {
      * 批量保存消息lua 脚本，针对群聊
      */
     public static final String BATCH_SAVE_MESSAGE_LUA_SCRIPT =
-            "local key1 = KEYS[1]\n" +
-            "local key3 = KEYS[2]\n" +
-            "local value1 = ARGV[1]\n" +
-            "local expireTime = tonumber(ARGV[2])\n" +
-            "local value2 = ARGV[3]\n" +
-            "local score = tonumber(ARGV[4])\n" +
-            "local groupUserCount = tonumber(ARGV[5])\n" +
-            "\n" +
-            "-- 参数有效性校验\n" +
-            "if not expireTime or not score or not groupUserCount or groupUserCount < 0 then\n" +
-            "    return false\n" +
-            "end\n" +
-            "\n" +
-            "local rollbackSteps = {}\n" +
-            "local function rollback()\n" +
-            "    redis.call('DEL', key1)\n" +
-            "    for _, groupUser in ipairs(rollbackSteps) do\n" +
-            "        redis.call('ZREM', groupUser, value2)\n" +
-            "    end\n" +
-            "    redis.call('ZREM', key3, value2)\n" +
-            "end\n" +
-            "\n" +
-            "-- 设置key1（带过期时间判断）\n" +
-            "local ok\n" +
-            "if expireTime > 0 then\n" +
-            "    ok = redis.call('SET', key1, value1, 'PX', expireTime)\n" +
-            "else\n" +
-            "    ok = redis.call('SET', key1, value1)\n" +
-            "end\n" +
-            "if type(ok) == 'string' and ok  ~= 'OK'  then return false\n" +
-            "elseif type(ok) == 'table' and ok['ok'] ~= 'OK' then return false\n" +
-            "end\n" +
-            "\n" +
-            "-- 批量添加群组用户ZSet\n" +
-            "for i = 1, groupUserCount do\n" +
-            "    local groupUser = ARGV[5+i]\n" +
-            "    local added = redis.call('ZADD', groupUser, score, value2)\n" +
-            "    if type(added) ~= 'number' then\n" +
-            "        rollback()\n" +
-            "        return false\n" +
-            "    end\n" +
-            "    table.insert(rollbackSteps, groupUser)\n" +
-            "end\n" +
-            "\n" +
-            "-- 添加会话消息ZSet\n" +
-            "local added = redis.call('ZADD', key3, score, value2)\n" +
-            "if type(added) ~= 'number' then\n" +
-            "    rollback()\n" +
-            "    return false\n" +
-            "end\n" +
-            "\n" +
-            "return true" ;
+            "--[[\n" +
+                    "KEYS 与 ARGV 参数同上\n" +
+                    "--]]\n" +
+                    "\n" +
+                    "local msgKey = KEYS[1]\n" +
+                    "local sessionKey = KEYS[2]\n" +
+                    "local offlineKeys = {unpack(KEYS, 3, #KEYS)}\n" +
+                    "local expireTime = tonumber(ARGV[1])\n" +
+                    "local packet = ARGV[2]\n" +
+                    "local serverTime = tonumber(ARGV[3])\n" +
+                    "local packetId = ARGV[4]\n" +
+                    "\n" +
+                    "local rollbackOps = {}\n" +
+                    "\n" +
+                    "-- 定义回滚函数\n" +
+                    "local function rollback()\n" +
+                    "    for i = #rollbackOps, 1, -1 do\n" +
+                    "        local op = rollbackOps[i]\n" +
+                    "        redis.call(unpack(op))\n" +
+                    "    end\n" +
+                    "end\n" +
+                    "\n" +
+                    "-- 1. 设置消息\n" +
+                    "local setResult\n" +
+                    "if expireTime > 0 then\n" +
+                    "    setResult = redis.call('SET', msgKey, packet, 'PX', expireTime)\n" +
+                    "else\n" +
+                    "    setResult = redis.call('SET', msgKey, packet)\n" +
+                    "end\n" +
+                    "\n" +
+                    "if type(setResult) == 'string' and setResult ~= 'OK' then\n" +
+                    "    return false\n" +
+                    "elseif type(setResult) == 'table' and setResult['ok'] ~= 'OK' then\n" +
+                    "    return false\n" +
+                    "end\n" +
+                    "table.insert(rollbackOps, {'DEL', msgKey})\n" +
+                    "\n" +
+                    "-- 2. 添加会话消息\n" +
+                    "local zaddSession = redis.call('ZADD', sessionKey, serverTime, packetId)\n" +
+                    "if zaddSession == nil or type(zaddSession) ~= 'number' then\n" +
+                    "    rollback()\n" +
+                    "    return false\n" +
+                    "end\n" +
+                    "table.insert(rollbackOps, {'ZREM', sessionKey, packetId})\n" +
+                    "\n" +
+                    "-- 3. 批量添加离线消息\n" +
+                    "for _, key in ipairs(offlineKeys) do\n" +
+                    "    local zaddOffline = redis.call('ZADD', key, serverTime, packetId)\n" +
+                    "    if zaddOffline == nil or type(zaddOffline) ~= 'number' then\n" +
+                    "        rollback()\n" +
+                    "        return false\n" +
+                    "    end\n" +
+                    "    table.insert(rollbackOps, {'ZREM', key, packetId})\n" +
+                    "end\n" +
+                    "\n" +
+                    "return true" ;
 
 
     /**

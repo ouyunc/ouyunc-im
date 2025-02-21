@@ -164,7 +164,8 @@ public class ClientHelper {
         }
         // 如果不相等，则将没有查询到的数据通过缓存来获取
         // comboIdentitySet 中排除已经从本地获取结果的key
-        Collection<LoginClientInfo> remoteCacheLoginClientInfos = MessageServerContext.remoteLoginClientInfoCache.getAll(comboIdentitySet);
+        Set<String> remoteLoginClientIdentitySet = comboIdentitySet.parallelStream().map(comboIdentity -> CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + comboIdentity).collect(Collectors.toSet());
+        Collection<LoginClientInfo> remoteCacheLoginClientInfos = MessageServerContext.remoteLoginClientInfoCache.getAll(remoteLoginClientIdentitySet);
         if (CollectionUtils.isNotEmpty(remoteCacheLoginClientInfos)) {
              // 筛选合法的数据
             loginClientInfoList.addAll(remoteCacheLoginClientInfos.stream().filter(loginClientInfo -> loginClientInfo != null && OnlineEnum.ONLINE.equals(loginClientInfo.getOnlineStatus())).collect(Collectors.toList()));
