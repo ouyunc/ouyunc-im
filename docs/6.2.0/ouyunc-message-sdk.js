@@ -63,7 +63,7 @@ class Socket {
         // 初始化心跳检测器和重连管理器
         this.heartbeatManager = new HeartbeatManager(this);
         this.reconnectManager = new ReconnectManager(this);
-        this.snowflake = new Snowflake(1, 1);
+        this.snowflake = new Snowflake(9, 11);
         // 初始化WebSocket
         this._initWebSocket();
         console.log(`欢迎使用OUYUNC-IM客户端,如果需要帮助,请联系作者。`);

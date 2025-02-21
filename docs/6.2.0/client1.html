@@ -82,7 +82,7 @@ socket.onmessage = ({
         document.getElementById('responseMessage').value = document.getElementById('responseMessage').value + "\n" + message.content;
     }
     if (messageType === -7) {
-        document.getElementById('sendMessage').value = document.getElementById('sendMessage').value + "\n" +message.content;
+        //document.getElementById('sendMessage').value = document.getElementById('sendMessage').value + "\n" +message.content;
     }
 
     let packet = socket.send({

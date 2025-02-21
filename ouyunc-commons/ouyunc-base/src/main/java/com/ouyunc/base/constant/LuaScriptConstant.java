@@ -32,13 +32,13 @@ public class LuaScriptConstant {
             "end\n" +
             "\n" +
             "local zadd1 = redis.call('ZADD', KEYS[2], score, ARGV[3])\n" +
-            "if zadd1 == nil or type(zadd1) ~= 'number' then\n" +
+            "if zadd1 ~= 1  then\n" +
             "    redis.call('DEL', KEYS[1])\n" +
             "    return false\n" +
             "end\n" +
             "\n" +
             "local zadd2 = redis.call('ZADD', KEYS[3], score, ARGV[3])\n" +
-            "if zadd2 == nil or type(zadd2) ~= 'number' then\n" +
+            "if zadd2 ~= 1 then\n" +
             "    redis.call('DEL', KEYS[1])\n" +
             "    redis.call('ZREM', KEYS[2], ARGV[3])\n" +
             "    return false\n" +
@@ -71,7 +71,7 @@ public class LuaScriptConstant {
             "end\n" +
             "\n" +
             "local zadd1 = redis.call('ZADD', KEYS[2], tonumber(ARGV[4]), ARGV[3])\n" +
-            "if zadd1 == nil or type(zadd1) ~= 'number' then\n" +
+            "if zadd1 ~= 1 then\n" +
             "    redis.call('DEL', KEYS[1])\n" +
             "    return false\n" +
             "end\n" +
@@ -122,7 +122,7 @@ public class LuaScriptConstant {
                     "\n" +
                     "-- 2. 添加会话消息\n" +
                     "local zaddSession = redis.call('ZADD', sessionKey, serverTime, packetId)\n" +
-                    "if zaddSession == nil or type(zaddSession) ~= 'number' then\n" +
+                    "if zaddSession  ~= 1 then\n" +
                     "    rollback()\n" +
                     "    return false\n" +
                     "end\n" +
@@ -131,7 +131,7 @@ public class LuaScriptConstant {
                     "-- 3. 批量添加离线消息\n" +
                     "for _, key in ipairs(offlineKeys) do\n" +
                     "    local zaddOffline = redis.call('ZADD', key, serverTime, packetId)\n" +
-                    "    if zaddOffline == nil or type(zaddOffline) ~= 'number' then\n" +
+                    "    if zaddOffline ~= 1 then\n" +
                     "        rollback()\n" +
                     "        return false\n" +
                     "    end\n" +
