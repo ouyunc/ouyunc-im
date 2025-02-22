@@ -6,6 +6,11 @@ package com.ouyunc.base.constant;
  **/
 public class MessageConstant {
 
+    /***
+     * ouyunc 公共前缀
+     */
+    public static final String OUYUNC = "ouyunc";
+
     /**
      * 下划线
      */

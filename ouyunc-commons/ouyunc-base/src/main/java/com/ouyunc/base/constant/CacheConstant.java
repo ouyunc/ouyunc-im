@@ -14,7 +14,7 @@ public class CacheConstant {
     /***
      * ouyunc 公共前缀
      */
-    public static final String OUYUNC = "ouyunc:";
+    public static final String OUYUNC = MessageConstant.OUYUNC + COLON;
 
     /***
      * 所有的appKey
