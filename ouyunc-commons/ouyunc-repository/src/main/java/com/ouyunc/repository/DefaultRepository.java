@@ -19,6 +19,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
 
 import java.util.*;
@@ -75,7 +77,9 @@ public enum DefaultRepository implements Repository{
         // 保存消息到磁盘中，这里使用mq来提高吞吐量；如果kafka
         // headers 中可以自定义一些信息做扩展；
         Map<String, Object> headers = new HashMap<>();
-        return kafkaTemplate.send(MqConstant.KAFKA_SAVE_MESSAGE_TOPIC, MessageBuilder.withPayload(packet).copyHeadersIfAbsent(headers).build());
+        headers.put(MessageHeaders.ID, packet.getPacketId());
+        headers.put(KafkaHeaders.TOPIC, MqConstant.KAFKA_SAVE_MESSAGE_TOPIC);
+        return kafkaTemplate.send(MessageBuilder.withPayload(JSON.toJSONString(packet)).copyHeadersIfAbsent(headers).build());
     }
 
     /**

@@ -1,5 +1,6 @@
 package com.ouyunc.message.listener;
 
+import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.core.listener.MessageListener;
@@ -8,6 +9,12 @@ import com.ouyunc.mq.kafka.KafkaFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.MessageHeaders;
+import org.springframework.messaging.support.MessageBuilder;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * @Author fzx
@@ -87,7 +94,10 @@ public class ReadReceiptMessageListener implements MessageListener<ReadReceiptMe
     public void onApplicationEvent(ReadReceiptMessageEvent event) {
         if (event.getSource() instanceof Packet packet) {
             log.debug("发送读已回执消息: {} 到mq中处理", packet);
-            kafkaTemplate.send(MqConstant.KAFKA_READ_RECEIPT_MESSAGE_TOPIC, packet);
+            Map<String, Object> headers = new HashMap<>();
+            headers.put(MessageHeaders.ID, packet.getPacketId());
+            headers.put(KafkaHeaders.TOPIC, MqConstant.KAFKA_READ_RECEIPT_MESSAGE_TOPIC);
+            kafkaTemplate.send(MessageBuilder.withPayload(JSON.toJSONString(packet)).copyHeadersIfAbsent(headers).build());
         }
     }
 }

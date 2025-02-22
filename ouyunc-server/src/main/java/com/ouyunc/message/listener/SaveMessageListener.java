@@ -1,5 +1,6 @@
 package com.ouyunc.message.listener;
 
+import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.core.listener.MessageListener;
@@ -8,6 +9,8 @@ import com.ouyunc.mq.kafka.KafkaFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
 
 import java.util.HashMap;
@@ -68,7 +71,9 @@ public class SaveMessageListener implements MessageListener<SaveMessageEvent> {
         if (event.getSource() instanceof Packet packet) {
             log.debug("保存消息: {} 到mq中处理", packet);
             Map<String, Object> headers = new HashMap<>();
-            kafkaTemplate.send(MqConstant.KAFKA_SAVE_MESSAGE_TOPIC, MessageBuilder.withPayload(packet).copyHeadersIfAbsent(headers).build());
+            headers.put(MessageHeaders.ID, packet.getPacketId());
+            headers.put(KafkaHeaders.TOPIC, MqConstant.KAFKA_SAVE_MESSAGE_TOPIC);
+            kafkaTemplate.send(MessageBuilder.withPayload(JSON.toJSONString(packet)).copyHeadersIfAbsent(headers).build());
         }
     }
 }
