@@ -1,20 +1,27 @@
 package com.ouyunc.repository;
 
 import com.ouyunc.base.constant.CacheConstant;
+import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.model.MqttTopicSubscriptionOption;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.cache.config.CacheFactory;
+import com.ouyunc.mq.kafka.KafkaFactory;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.SessionCallback;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.messaging.support.MessageBuilder;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.Future;
 
 /**
  * mqtt 消息持久化操作, 单例模式
@@ -23,15 +30,21 @@ public enum MqttRepository implements Repository{
     INSTANCE;
 
     private static final RedisTemplate<String, Object> redisTemplate = CacheFactory.REDIS.instance();
+    /**
+     * kafkaTemplate
+     */
+    private static final KafkaTemplate<String, Object> kafkaTemplate = KafkaFactory.KAFKA_TEMPLATE.instance();
 
     /**
      * 保存全量信息
      * @param packet
      */
     @Override
-    public void save(Packet packet) {
+    public Future<?> save(Packet packet) {
         // 直接保存到数据库中，或者influxdb等时序数据库中
-
+        Map<String, Object> headers = new HashMap<>();
+        // 这里是mqtt 的保存，如果想让业务分开，不同的业务可以使用不同的topic来区分
+        return kafkaTemplate.send(MqConstant.KAFKA_SAVE_MESSAGE_TOPIC, MessageBuilder.withPayload(packet).copyHeadersIfAbsent(headers).build());
     }
 
     @Override

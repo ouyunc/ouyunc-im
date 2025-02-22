@@ -15,6 +15,8 @@ public enum ExceptionCodeEnum {
 
     CACHE_PERSISTENCE_ERROR(20002, "缓存持久化错误"),
 
+    MQ_PERSISTENCE_ERROR(20003, "mq持久化错误"),
+
 
     ONE_2_ONE_SEND_ERROR(30001, "持久化错误"),
 

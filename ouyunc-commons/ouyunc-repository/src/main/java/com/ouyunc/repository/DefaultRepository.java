@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSON;
 import com.google.common.collect.Lists;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.LuaScriptConstant;
+import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.QosLevelEnum;
 import com.ouyunc.base.model.Metadata;
@@ -11,16 +12,17 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.core.context.MessageContext;
+import com.ouyunc.mq.kafka.KafkaFactory;
 import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.messaging.support.MessageBuilder;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * @author fzx
@@ -29,12 +31,51 @@ import java.util.Set;
 public enum DefaultRepository implements Repository{
     INSTANCE;
 
-    private static final RedisTemplate<String, ?> redisTemplate = CacheFactory.REDIS.instance();
     private static final Logger log = LoggerFactory.getLogger(DefaultRepository.class);
+    /**
+     * kafkaTemplate
+     */
+    private static final KafkaTemplate<String, Object> kafkaTemplate = KafkaFactory.KAFKA_TEMPLATE.instance();
 
+    /**
+     * redisTemplate
+     */
+    private static final RedisTemplate<String, ?> redisTemplate = CacheFactory.REDIS.instance();
+
+    /**
+     * 保存消息到磁盘中，这里使用mq来提高吞吐量；注意这里mq 消费者执行的逻辑是保存消息（持久化），这里给出一个参考实例：
+     * 如果不想发送mq 可以在该方法中直接使用如下代码,返回值类型是Future，或者使用其他持久化存储逻辑
+     *             log.debug("保存消息: {} 到数据库和mongodb 中", packet);
+     *             // 在事务中执行
+     *             Message message = packet.getMessage();
+     *             Metadata metadata = message.getMetadata();
+     *             Boolean executeResult = JdbcFactory.JDBC_TEMPLATE.withTransaction().execute(status -> {
+     *                 try {
+     *                     String atJson = message.getAt() == null ? null : JSON.toJSONString(message.getAt());
+     *                     jdbcTemplate.update(JdbcSqlConstant.MYSQL.INSERT_MESSAGE.sql(), packet.getPacketId(), packet.getProtocol(), packet.getProtocolVersion(), packet.getDeviceType(), packet.getNetworkType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), packet.getMessageType(), packet.getRetain(), metadata.getClientIp(), message.getFrom(), message.getTo(), message.getContentType(), message.getContent(), message.getExtra(), atJson, message.getQos(), message.getCreateTime(), metadata.getServerTime(), NumberConstant.NUMBER_0, NumberConstant.NUMBER_0);
+     *                     // 保存到mongodb 默认时效三个月，可根据配置文件配置
+     *                     mongoTemplate.insert(new MessageEntity(packet.getPacketId(), packet.getProtocol(), packet.getProtocolVersion(), packet.getDeviceType(), packet.getNetworkType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), packet.getMessageType(), packet.getRetain(), metadata.getClientIp(), message.getFrom(), message.getTo(), message.getContentType(), message.getContent(), message.getQos(), message.getAt(),message.getExtra(), message.getCreateTime(), metadata.getServerTime(), NumberConstant.NUMBER_0, NumberConstant.NUMBER_0, LocalDateTime.now().plusMonths(NumberConstant.NUMBER_3)));
+     *                 } catch (Exception e) {
+     *                     log.error("保存消息到数据库和mongodb 中异常: {}", e.getMessage());
+     *                     status.setRollbackOnly();
+     *                     return false;
+     *                 }
+     *                 return true;
+     *             });
+     *             if (Boolean.FALSE.equals(executeResult)) {
+     *                 log.error("保存消息到数据库和mongodb 中事务异常");
+     *             }
+     *
+     *
+     * @param packet
+     * @return
+     */
     @Override
-    public void save(Packet packet) {
-        // 保存原始消息到influxdb 中
+    public CompletableFuture<?> save(Packet packet) {
+        // 保存消息到磁盘中，这里使用mq来提高吞吐量；如果kafka
+        // headers 中可以自定义一些信息做扩展；
+        Map<String, Object> headers = new HashMap<>();
+        return kafkaTemplate.send(MqConstant.KAFKA_SAVE_MESSAGE_TOPIC, MessageBuilder.withPayload(packet).copyHeadersIfAbsent(headers).build());
     }
 
     /**

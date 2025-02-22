@@ -6,6 +6,10 @@ package com.ouyunc.base.constant;
  **/
 public class MessageConstant {
 
+    /**
+     * 下划线
+     */
+    public static final String UNDERLINE = "_";
 
     /**
      * 0.5
@@ -73,6 +77,16 @@ public class MessageConstant {
     public static final boolean TRUE = true;
 
 
+    /**
+     *  缓存消息热key的过期时间戳，7天,时间戳，单位毫秒
+     */
+    public static final long CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP = NumberConstant.NUMBER_7 * MessageConstant.DAY_TIMESTAMP;
+
+
+    /**
+     *   缓存消息已读回执的过期时间戳，30天,时间戳，单位毫秒
+     */
+    public static final long CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP = NumberConstant.NUMBER_30 * MessageConstant.DAY_TIMESTAMP;
 
 
     /**

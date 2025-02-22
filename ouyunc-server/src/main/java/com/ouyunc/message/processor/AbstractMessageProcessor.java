@@ -1,6 +1,8 @@
 package com.ouyunc.message.processor;
 
+import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.packet.Packet;
+import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.validator.AuthValidator;
 import com.ouyunc.repository.DefaultRepository;
@@ -41,22 +43,28 @@ public abstract class AbstractMessageProcessor<T extends Number> extends Abstrac
      */
     public void preProcess(ChannelHandlerContext ctx, Packet packet) {
         // 异步存储packet（目前只是保存相关信息，不做扩展，以后可以做数据分析使用），这里将该数据存储到时序数据库中
-        messageProcessorExecutor.execute(() -> {
-            repository().save(packet);
-        });
-        if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
-            // 关闭当前 channel，这里会触发 DefaultSocketChannelInitializer 中的关闭逻辑
-            log.error("校验消息: {} 中的发送方登录认证失败,开始关闭channel", packet);
-            ctx.close();
-            return;
-        }
-        // 校验是否拥有相关权限 permission
+        repository().save(packet).whenComplete((saveResult, ex)->{
+            if (ex == null) {
+                // 发送成功，然后校验并传递给下个处理器处理
+                if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
+                    // 关闭当前 channel，这里会触发 DefaultSocketChannelInitializer 中的关闭逻辑
+                    log.error("校验消息: {} 中的发送方登录认证失败,开始关闭channel", packet);
+                    ctx.close();
+                    return;
+                }
+                // 校验是否拥有相关权限 permission
 
-        // 做qos 处理
-        if (MessageServerContext.serverProperties().isQosEnable() && qosPreHandle(ctx, packet)) {
-            return;
-        }
-        ctx.fireChannelRead(packet);
+                // 做qos 处理
+                if (MessageServerContext.serverProperties().isQosEnable() && qosPreHandle(ctx, packet)) {
+                    return;
+                }
+                ctx.fireChannelRead(packet);
+            } else {
+                // 发送失败
+                log.error("Failed to send message: {} " , ex.getMessage());
+                MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "通过发送mq保存消息异常!", packet), true);
+            }
+        });
     }
 
 
