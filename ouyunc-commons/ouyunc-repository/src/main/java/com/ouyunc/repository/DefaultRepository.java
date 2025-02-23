@@ -280,7 +280,8 @@ public enum DefaultRepository implements Repository{
      * 撤销消息，
      * 注意：这里没有做判断，被撤销的消息是否属于发起撤销的客户端，一般情况下是需要做判断的
      */
-    public boolean withdrawMessage(Packet packet, String sessionId) {
+    @SuppressWarnings("unchecked")
+    public boolean withdrawMessage(Packet packet, String sessionId, Set<String> withdrawIdentitySet) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         // 获取需要撤销的消息id，（这里使用String类型接收）
@@ -290,8 +291,10 @@ public enum DefaultRepository implements Repository{
             log.error("撤销消息数量为0或超出限制!");
             return false;
         }
-        // 获取需要撤销的消息的服务端时间戳，这个获取要在会话锁的前提下获取
-        List<Double> messageServerTimeScores = redisTemplate.opsForZSet().score(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON  + CacheConstant.SESSION + sessionId, packetIds.toArray());
+        // 获取需要撤销的消息的服务端时间戳，这个获取要在会话锁的前提下获取,注意批量获取score 的方法是redis 6.2.0 之后的版本才支持,如果不支持请使用其他方式替换，或升级redis版本，这里 就使用lua 脚本 哈哈哈
+
+        // 获取消息在会话中的消息服务端时间戳
+        List<Long> messageServerTimeScores = redisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_SCORE_LUA_SCRIPT, List.class), List.of(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.SESSION + sessionId), packetIds.toArray());
         if (CollectionUtils.isEmpty(messageServerTimeScores) || messageServerTimeScores.parallelStream().filter(Objects::nonNull).count() != packetIds.size()) {
             log.error("会话:{}不存在该消息id: {}, 或消息id 对应会话中的消息数量不相等", sessionId, packetIds);
             return false;
@@ -310,16 +313,18 @@ public enum DefaultRepository implements Repository{
             }
         }
         // 批量撤回消息
-        List<String> keys = Lists.newArrayList();
-        Object[] args = new Object[packetIds.size()];
-        for (int i = 0; i < packetIds.size(); i++) {
-            Long withdrawPacketId = packetIds.get(i);
-            keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.MESSAGE + withdrawPacketId);
-            keys.add(CacheConstant.OUYUNC +  CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.SESSION + sessionId);
-            keys.add(CacheConstant.OUYUNC +  CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + message.getTo());
-            args[i] = withdrawPacketId;
+        List<Object> args = Lists.newArrayList();
+        args.add(withdrawIdentitySet.size());
+        for (Long packetId : packetIds) {
+            // 组装keys
+            args.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.MESSAGE + packetId);
+            args.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.SESSION + sessionId);
+            args.add(packetId);
+            for (String withdrawIdentity : withdrawIdentitySet) {
+                args.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + withdrawIdentity);
+            }
         }
-        return redisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_WITHDRAW_MESSAGE_LUA_SCRIPT, Boolean.class), keys, args);
+        return redisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_WITHDRAW_MESSAGE_LUA_SCRIPT, Boolean.class), Collections.emptyList(), args.toArray());
     }
 
     /**

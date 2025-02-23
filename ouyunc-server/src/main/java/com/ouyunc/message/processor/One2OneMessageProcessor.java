@@ -1,5 +1,6 @@
 package com.ouyunc.message.processor;
 
+import com.google.common.collect.Sets;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
@@ -132,7 +133,7 @@ public class One2OneMessageProcessor extends AbstractMessageProcessor<Byte>{
      */
     private boolean processWithdrawMessage(Packet packet) {
         return processWithLock(packet,
-                () -> repository().withdrawMessage(packet, getSessionId(packet)),
+                () -> repository().withdrawMessage(packet, getSessionId(packet), Sets.newHashSet(packet.getMessage().getTo())),
                 ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR,
                 "撤销消息异常",
                 () -> MessageServerContext.publishEvent(new WithdrawMessageEvent(packet), true)

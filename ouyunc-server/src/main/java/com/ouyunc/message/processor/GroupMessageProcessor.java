@@ -32,7 +32,7 @@ import static com.ouyunc.message.context.MessageServerContext.redissonClient;
 /**
  * 群聊消息处理器
  */
-public class GroupMessageProcessor extends AbstractMessageProcessor<Byte>{
+public class GroupMessageProcessor extends AbstractMessageProcessor<Byte> {
     private static final Logger log = LoggerFactory.getLogger(GroupMessageProcessor.class);
 
 
@@ -44,7 +44,7 @@ public class GroupMessageProcessor extends AbstractMessageProcessor<Byte>{
     @Override
     public void preProcess(ChannelHandlerContext ctx, Packet packet) {
         // 异步存储packet（目前只是保存相关信息，不做扩展，以后可以做数据分析使用），这里将该数据存储到时序数据库中
-        repository().save(packet).whenComplete((sendResult, ex)->{
+        repository().save(packet).whenComplete((sendResult, ex) -> {
             if (ex == null) {
                 if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
                     // 关闭当前 channel，这里会触发 DefaultSocketChannelInitializer 中的关闭逻辑
@@ -57,7 +57,7 @@ public class GroupMessageProcessor extends AbstractMessageProcessor<Byte>{
                 ctx.fireChannelRead(packet);
             } else {
                 // 发送失败
-                log.error("Failed to send message: {} " , ex.getMessage());
+                log.error("Failed to send message: {} ", ex.getMessage());
                 MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "通过发送mq保存消息异常!", packet), true);
             }
         });
@@ -78,13 +78,14 @@ public class GroupMessageProcessor extends AbstractMessageProcessor<Byte>{
             log.error("群组：{}, 不存在群成员！群消息： {}", packet.getMessage().getTo(), packet);
             return;
         }
-
+        // 将groupUserIdentitySet排除掉发送方
+        groupUserIdentitySet.remove(packet.getMessage().getFrom());
         // 2. 保存消息
         if (!saveGroupMessage(packet, groupUserIdentitySet)) {
             return;
         }
         // 3. 处理特殊消息类型
-        if (!processSpecialMessageContentType(packet)) {
+        if (!processSpecialMessageContentType(packet, groupUserIdentitySet)) {
             return;
         }
         // 4. 发送消息给接收方
@@ -105,7 +106,6 @@ public class GroupMessageProcessor extends AbstractMessageProcessor<Byte>{
     }
 
 
-
     /**
      * 保存群组消息
      */
@@ -121,6 +121,7 @@ public class GroupMessageProcessor extends AbstractMessageProcessor<Byte>{
 
     /**
      * 保存Qos消息
+     *
      * @param packet
      * @param groupMembers
      * @return
@@ -135,6 +136,7 @@ public class GroupMessageProcessor extends AbstractMessageProcessor<Byte>{
 
     /**
      * 保存非Qos消息
+     *
      * @param packet
      * @param sessionId
      * @return
@@ -151,12 +153,12 @@ public class GroupMessageProcessor extends AbstractMessageProcessor<Byte>{
     /**
      * 处理特殊消息类型
      */
-    private boolean processSpecialMessageContentType(Packet packet) {
+    private boolean processSpecialMessageContentType(Packet packet, Set<String> groupUserIdentitySet) {
         Message message = packet.getMessage();
         if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == message.getContentType()) {
-            return processWithdrawMessage(packet);
+            return processWithdrawMessage(packet, groupUserIdentitySet);
         } else if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == message.getContentType()) {
-            return processReadReceiptMessage(packet);
+            return processReadReceiptMessage(packet, groupUserIdentitySet);
         }
         return true;
     }
@@ -165,9 +167,9 @@ public class GroupMessageProcessor extends AbstractMessageProcessor<Byte>{
     /**
      * 处理撤回消息
      */
-    private boolean processWithdrawMessage(Packet packet) {
+    private boolean processWithdrawMessage(Packet packet, Set<String> groupUserIdentitySet) {
         return processWithLock(packet,
-                () -> repository().withdrawMessage(packet, getSessionId(packet)),
+                () -> repository().withdrawMessage(packet, getSessionId(packet), groupUserIdentitySet),
                 ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR,
                 "撤销消息异常",
                 () -> MessageServerContext.publishEvent(new WithdrawMessageEvent(packet), true)
@@ -177,7 +179,7 @@ public class GroupMessageProcessor extends AbstractMessageProcessor<Byte>{
     /**
      * 处理已读回执消息
      */
-    private boolean processReadReceiptMessage(Packet packet) {
+    private boolean processReadReceiptMessage(Packet packet, Set<String> groupUserIdentitySet) {
         return processWithLock(packet,
                 () -> repository().readReceiptMessage(packet, packet.getMessage().getTo(), MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP),
                 ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR,
@@ -185,7 +187,6 @@ public class GroupMessageProcessor extends AbstractMessageProcessor<Byte>{
                 () -> MessageServerContext.publishEvent(new ReadReceiptMessageEvent(packet), true)
         );
     }
-
 
 
     /**
@@ -230,6 +231,7 @@ public class GroupMessageProcessor extends AbstractMessageProcessor<Byte>{
 
     /**
      * 获取sessionId
+     *
      * @param packet
      * @return
      */
@@ -271,7 +273,7 @@ public class GroupMessageProcessor extends AbstractMessageProcessor<Byte>{
         Message message = packet.getMessage();
         if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == message.getContentType() || MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == message.getContentType()) {
             deliver2AllGroupMembers(packet, groupMembers);
-        }else {
+        } else {
             List<String> atList = packet.getMessage().getAt();
             if (CollectionUtils.isNotEmpty(atList)) {
                 deliverAtMessage(packet, atList, groupMembers);

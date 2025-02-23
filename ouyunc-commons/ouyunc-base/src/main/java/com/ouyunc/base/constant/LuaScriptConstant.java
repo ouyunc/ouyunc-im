@@ -144,7 +144,7 @@ public class LuaScriptConstant {
     /**
      * 批量撤回消息lua 脚本
      */
-    public static final String BATCH_WITHDRAW_MESSAGE_LUA_SCRIPT = "local all_success = true\n" +
+    public static final String BATCH_WITHDRAW_MESSAGE_LUA_SCRIPT1 = "local all_success = true\n" +
             "for n = 1, #ARGV do\n" +
             "    local key_index = (n - 1) * 3 + 1\n" +
             "    if key_index + 2 <= #KEYS then\n" +
@@ -165,6 +165,23 @@ public class LuaScriptConstant {
             "    end\n" +
             "end\n" +
             "return all_success";
+
+
+    public static final String BATCH_WITHDRAW_MESSAGE_LUA_SCRIPT =
+                    "local groupUsersCount = tonumber(ARGV[1])\n" +
+                    "local keys = {unpack(ARGV, 2, #ARGV)} \n" +
+                    "for i = 1, #keys, (groupUsersCount + 3) do\n" +
+                    "   local xxxKey = keys[i]\n" +
+                    "   local zzzKey = keys[i+1]\n" +
+                    "   local value = keys[i+2]\n" +
+                    "   redis.call('DEL',xxxKey)\n" +
+                    "   redis.call('ZREM', zzzKey, value)\n" +
+                    "    for j = 1, groupUsersCount do\n" +
+                    "        local yyyKey = keys[i + j + 2]\n" +
+                            "redis.call('ZREM', yyyKey, value)\n" +
+                    "    end\n" +
+                    "end\n" +
+                    "return true";
 
 
 
@@ -199,4 +216,17 @@ public class LuaScriptConstant {
             "end\n" +
             "\n" +
             "return result";
+
+
+    /**
+     * zset批量获取分数lua脚本
+     */
+    public static final String BATCH_SCORE_LUA_SCRIPT =
+            "local scores = {}\n" +
+                    "for i = 1, #ARGV do\n" +
+                    "    local member = ARGV[i]\n" +
+                    "    local score = redis.call('ZSCORE', KEYS[1], member)\n" +
+                    "    scores[i] = score\n" +
+                    "end\n" +
+                    "return scores";
 }
