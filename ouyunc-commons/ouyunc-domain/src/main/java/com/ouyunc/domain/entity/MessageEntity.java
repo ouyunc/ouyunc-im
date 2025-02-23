@@ -117,6 +117,10 @@ public class MessageEntity {
      */
     private int withdrawn;
 
+    /**
+     * appKey
+     */
+    private String appKey;
 
     /**
      * 过期时间
@@ -125,12 +129,14 @@ public class MessageEntity {
 
     public static final class Fields {
         public static final String id = "id";
+        public static final String ids = "ids";
         public static final String read = "read";
         public static final String withdrawn = "withdrawn";
         public static final String from = "from";
         public static final String to = "to";
         public static final String messageType = "messageType";
         public static final String contentType = "contentType";
+        public static final String appKey = "appKey";
     }
 
 
@@ -138,7 +144,7 @@ public class MessageEntity {
     // 构造函数、Getter 和 Setter 方法
     public MessageEntity() {}
 
-    public MessageEntity(long id, byte protocol, byte protocolVersion, byte deviceType, byte networkType, byte encryptType, byte serializeAlgorithm, byte messageType, byte retain, String clientIp, String from, String to, int contentType, String content, int qos, List<String> at, String extra, long clientSendTime, long serverArrivalTime, int read, int withdrawn, LocalDateTime expireAt) {
+    public MessageEntity(long id, byte protocol, byte protocolVersion, byte deviceType, byte networkType, byte encryptType, byte serializeAlgorithm, byte messageType, byte retain, String clientIp, String from, String to, int contentType, String content, int qos, List<String> at, String extra, long clientSendTime, long serverArrivalTime, int read, int withdrawn, String appKey, LocalDateTime expireAt) {
         this.id = id;
         this.protocol = protocol;
         this.protocolVersion = protocolVersion;
@@ -160,6 +166,7 @@ public class MessageEntity {
         this.serverArrivalTime = serverArrivalTime;
         this.read = read;
         this.withdrawn = withdrawn;
+        this.appKey = appKey;
         this.expireAt = expireAt;
     }
 
@@ -169,6 +176,14 @@ public class MessageEntity {
 
     public void setId(long id) {
         this.id = id;
+    }
+
+    public String getAppKey() {
+        return appKey;
+    }
+
+    public void setAppKey(String appKey) {
+        this.appKey = appKey;
     }
 
     public byte getProtocol() {

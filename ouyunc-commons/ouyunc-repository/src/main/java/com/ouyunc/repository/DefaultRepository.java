@@ -2,22 +2,29 @@ package com.ouyunc.repository;
 
 import com.alibaba.fastjson2.JSON;
 import com.google.common.collect.Lists;
-import com.ouyunc.base.constant.CacheConstant;
-import com.ouyunc.base.constant.LuaScriptConstant;
-import com.ouyunc.base.constant.MqConstant;
-import com.ouyunc.base.constant.NumberConstant;
+import com.ouyunc.base.constant.*;
 import com.ouyunc.base.constant.enums.QosLevelEnum;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.core.context.MessageContext;
+import com.ouyunc.db.jdbc.JdbcFactory;
+import com.ouyunc.db.mongo.MongodbFactory;
+import com.ouyunc.domain.entity.MessageEntity;
 import com.ouyunc.mq.kafka.KafkaFactory;
 import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.SessionCallback;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.MessageHeaders;
@@ -25,6 +32,9 @@ import org.springframework.messaging.support.MessageBuilder;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * @author fzx
@@ -38,6 +48,17 @@ public enum DefaultRepository implements Repository{
      * kafkaTemplate
      */
     private static final KafkaTemplate<String, Object> kafkaTemplate = KafkaFactory.KAFKA_TEMPLATE.instance();
+
+    /**
+     * jdbcClient
+     */
+    private static final JdbcClient jdbcClient = JdbcFactory.JDBC_CLIENT.instance();
+
+
+    /**
+     * mongoTemplate
+     */
+    private static final MongoTemplate mongoTemplate = MongodbFactory.MONGODB_TEMPLATE.instance();
 
     /**
      * redisTemplate
@@ -96,8 +117,168 @@ public enum DefaultRepository implements Repository{
         return !Objects.isNull(score);
     }
 
+
     /**
-     * 撤销消息
+     * 批量获取消息
+     * @param appKey
+     * @param packetIds
+     * @return
+     */
+    @SuppressWarnings("unchecked")
+    public List<Packet> getPackets(String appKey, List<Long> packetIds) {
+        if (CollectionUtils.isEmpty(packetIds)) {
+            log.warn("packetIds 为空, appKey={}", appKey);
+            return Collections.emptyList(); // 避免返回 null
+        }
+
+        // 1. 从 Redis 批量获取缓存
+        Set<String> redisKeys = packetIds.stream()
+                .map(id -> buildRedisKey(appKey, id))
+                .collect(Collectors.toSet());
+        List<Packet> cachedPackets = (List<Packet>) redisTemplate.opsForValue().multiGet(redisKeys);
+
+        // 过滤有效缓存并收集已存在的 ID
+        Map<Long, Packet> cachedPacketMap = cachedPackets.stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toMap(Packet::getPacketId, Function.identity()));
+        List<Long> cachedIds = new ArrayList<>(cachedPacketMap.keySet());
+
+        // 全部命中缓存则直接返回
+        if (cachedIds.size() == packetIds.size()) {
+            return new ArrayList<>(cachedPacketMap.values());
+        }
+
+        // 2. 收集未命中缓存的 ID
+        List<Long> missingIds = packetIds.stream()
+                .filter(id -> !cachedIds.contains(id))
+                .collect(Collectors.toList());
+
+        // 3. 从 MongoDB 和 MySQL 查询缺失数据 (合并查询逻辑)
+        List<Packet> dbPackets = queryFromDatabases(missingIds);
+
+        // 4. 合并结果并异步更新缓存
+        List<Packet> result = mergeResults(cachedPacketMap, dbPackets);
+        asyncUpdateCache(appKey, dbPackets);
+
+        return result;
+    }
+
+//----------------------------- 辅助方法 -----------------------------
+
+    /**
+     * 构建 Redis Key
+     */
+    private String buildRedisKey(String appKey, Long packetId) {
+        return CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.MESSAGE + packetId;
+    }
+
+    /**
+     * 从 MongoDB 和 MySQL 查询数据 (优先级: MongoDB -> MySQL)
+     */
+    private List<Packet> queryFromDatabases(List<Long> missingIds) {
+        if (CollectionUtils.isEmpty(missingIds)) {
+            return Collections.emptyList();
+        }
+
+        // 优先查询 MongoDB
+        List<MessageEntity> mongoEntities = mongoTemplate.find(
+                Query.query(Criteria.where(MessageEntity.Fields.id).in(missingIds)),
+                MessageEntity.class
+        );
+        List<Packet> dbPackets = convertToPackets(mongoEntities);
+
+        // 检查是否还有缺失
+        Set<Long> foundIds = mongoEntities.stream()
+                .map(MessageEntity::getId)
+                .collect(Collectors.toSet());
+        List<Long> remainingIds = missingIds.stream()
+                .filter(id -> !foundIds.contains(id))
+                .collect(Collectors.toList());
+
+        // 剩余 ID 查询 MySQL
+        if (!CollectionUtils.isEmpty(remainingIds)) {
+            List<MessageEntity> mysqlEntities = jdbcClient.sql(JdbcSqlConstant.MYSQL.SELECT_MESSAGE.sql())
+                    .param(MessageEntity.Fields.ids, remainingIds)
+                    .query(MessageEntity.class)
+                    .list();
+            dbPackets.addAll(convertToPackets(mysqlEntities));
+        }
+
+        return dbPackets;
+    }
+
+    /**
+     * 转换 MessageEntity 到 Packet
+     */
+    private List<Packet> convertToPackets(List<MessageEntity> entities) {
+        return entities.stream()
+                .filter(Objects::nonNull)
+                .map(entity -> new Packet(
+                        entity.getProtocol(),
+                        entity.getProtocolVersion(),
+                        entity.getId(),
+                        entity.getDeviceType(),
+                        entity.getNetworkType(),
+                        entity.getEncryptType(),
+                        entity.getSerializeAlgorithm(),
+                        entity.getMessageType(),
+                        entity.getRetain(),
+                        new Message(
+                                entity.getFrom(),
+                                entity.getTo(),
+                                entity.getContentType(),
+                                entity.getContent(),
+                                entity.getAt(),
+                                entity.getExtra(),
+                                entity.getQos(),
+                                entity.getClientSendTime(),
+                                new Metadata(
+                                        entity.getAppKey(),
+                                        entity.getClientIp(),
+                                        entity.getServerArrivalTime()
+                                )
+                        )
+                ))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 合并缓存和数据库结果
+     */
+    private List<Packet> mergeResults(Map<Long, Packet> cachedPackets, List<Packet> dbPackets) {
+        List<Packet> result = new ArrayList<>(cachedPackets.values());
+        result.addAll(dbPackets);
+        return result;
+    }
+
+    /**
+     * 异步更新缓存 (非阻塞主流程)
+     */
+    @SuppressWarnings("unchecked")
+    private void asyncUpdateCache(String appKey, List<Packet> dbPackets) {
+        if (CollectionUtils.isEmpty(dbPackets)) {
+            return;
+        }
+        CompletableFuture.runAsync(() -> {
+
+            redisTemplate.executePipelined(new SessionCallback<Object>() {
+                @Override
+                public <K, V> Object execute(RedisOperations<K, V> operations) throws DataAccessException {
+                    dbPackets.forEach(packet -> {
+                        operations.opsForValue().set((K) buildRedisKey(appKey, packet.getPacketId()), (V) packet,  MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+                    });
+                    return null;
+                }
+            });
+        }).exceptionally(ex -> {
+            log.error("异步更新缓存失败", ex);
+            return null;
+        });
+    }
+
+    /**
+     * 撤销消息，
+     * 注意：这里没有做判断，被撤销的消息是否属于发起撤销的客户端，一般情况下是需要做判断的
      */
     public boolean withdrawMessage(Packet packet, String sessionId) {
         Message message = packet.getMessage();
@@ -105,8 +286,28 @@ public enum DefaultRepository implements Repository{
         // 获取需要撤销的消息id，（这里使用String类型接收）
         List<Long> packetIds = JSON.parseArray(message.getContent(), Long.class);
         // 如果没有被撤销的消息id，则直接返回false
-        if (CollectionUtils.isEmpty(packetIds)) {
+        if (CollectionUtils.isEmpty(packetIds) || packetIds.size() > MessageConstant.MAX_WITHDRAW_MESSAGE_COUNT) {
+            log.error("撤销消息数量为0或超出限制!");
             return false;
+        }
+        // 获取需要撤销的消息的服务端时间戳，这个获取要在会话锁的前提下获取
+        List<Double> messageServerTimeScores = redisTemplate.opsForZSet().score(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON  + CacheConstant.SESSION + sessionId, packetIds.toArray());
+        if (CollectionUtils.isEmpty(messageServerTimeScores) || messageServerTimeScores.parallelStream().filter(Objects::nonNull).count() != packetIds.size()) {
+            log.error("会话:{}不存在该消息id: {}, 或消息id 对应会话中的消息数量不相等", sessionId, packetIds);
+            return false;
+        }
+        // 获取消息
+        List<Packet> withdrawPackets = getPackets(metadata.getAppKey(), packetIds);
+        if (CollectionUtils.isEmpty(withdrawPackets) || withdrawPackets.size() != packetIds.size()) {
+            log.error("消息id: {} 对应的消息数量不相等！", packetIds);
+            return false;
+        }
+        // 判断需要被撤回的消息是否属于该会话，且都属于发送者
+        for (Packet withDrawPacket : withdrawPackets) {
+            if (withDrawPacket == null || !withDrawPacket.getMessage().getFrom().equals(message.getFrom())) {
+                log.error("被撤销的消息id: {} 对应的消息不属于发送者！", packetIds);
+                return false;
+            }
         }
         // 批量撤回消息
         List<String> keys = Lists.newArrayList();
@@ -124,14 +325,35 @@ public enum DefaultRepository implements Repository{
     /**
      * 处理读已回执消息
      */
-    public boolean readReceiptMessage(Packet packet, long expireTime) {
+    public boolean readReceiptMessage(Packet packet, String sessionId, long expireTime) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         // 已读的消息id，（这里使用String类型接收）
         List<Long> readPacketIds = JSON.parseArray(message.getContent(), Long.class);
         // 如果已读的消息id，则直接返回false
-        if (CollectionUtils.isEmpty(readPacketIds)) {
+        if (CollectionUtils.isEmpty(readPacketIds) || readPacketIds.size() > MessageConstant.MAX_READ_RECEIPT_MESSAGE_COUNT) {
+            log.error("已读回执消息数量为0或超出限制!");
             return false;
+        }
+
+        // 获取需要撤销的消息的服务端时间戳
+        List<Double> messageServerTimeScores = redisTemplate.opsForZSet().score(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON  + CacheConstant.SESSION + sessionId, readPacketIds.toArray());
+        if (CollectionUtils.isEmpty(messageServerTimeScores) || messageServerTimeScores.parallelStream().filter(Objects::nonNull).count() != readPacketIds.size()) {
+            log.error("会话:{}不存在该消息id: {}, 或消息id 对应会话中的消息数量不相等", sessionId, readPacketIds);
+            return false;
+        }
+        // 获取消息
+        List<Packet> readReceiptPackets = getPackets(metadata.getAppKey(), readPacketIds);
+        if (CollectionUtils.isEmpty(readReceiptPackets) || readReceiptPackets.size() != readPacketIds.size()) {
+            log.error("读已回执消息ids: {} 对应的消息数量不相等！", readPacketIds);
+            return false;
+        }
+        // 判断已读的消息是否属于该会话，且不属于发送者
+        for (Packet readReceiptPacket : readReceiptPackets) {
+            if (readReceiptPacket == null || readReceiptPacket.getMessage().getFrom().equals(message.getFrom())) {
+                log.error("已读回执的消息id: {} 对应的消息属于发送者！", readReceiptPacket);
+                return false;
+            }
         }
         // 批量已读回执消息
         List<String> keys = Lists.newArrayList();

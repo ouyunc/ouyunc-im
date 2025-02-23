@@ -143,8 +143,9 @@ public class One2OneMessageProcessor extends AbstractMessageProcessor<Byte>{
      * 处理已读回执消息
      */
     private boolean processReadReceiptMessage(Packet packet) {
+        Message message = packet.getMessage();
         return processWithLock(packet,
-                () -> repository().readReceiptMessage(packet, MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP),
+                () -> repository().readReceiptMessage(packet, IdentityUtil.sessionId(message.getFrom(), message.getTo()), MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP),
                 ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR,
                 "读已回执消息异常",
                 () -> MessageServerContext.publishEvent(new ReadReceiptMessageEvent(packet), true)

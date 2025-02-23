@@ -128,6 +128,12 @@ public class Metadata implements Serializable, Cloneable {
         this.serverTime = serverTime;
     }
 
+    public Metadata(String appKey, String clientIp, long serverTime) {
+        this.appKey = appKey;
+        this.clientIp = clientIp;
+        this.serverTime = serverTime;
+    }
+
     public Metadata() {
     }
 

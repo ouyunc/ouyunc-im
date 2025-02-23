@@ -83,6 +83,16 @@ public class MessageConstant {
 
 
     /**
+     * 最大撤回消息数量，默认50
+     */
+    public static final int MAX_WITHDRAW_MESSAGE_COUNT = 50;
+
+    /**
+     * 最大已读回执消息数量，默认50
+     */
+    public static final int MAX_READ_RECEIPT_MESSAGE_COUNT = 50;
+
+    /**
      *  缓存消息热key的过期时间戳，7天,时间戳，单位毫秒
      */
     public static final long CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP = NumberConstant.NUMBER_7 * MessageConstant.DAY_TIMESTAMP;

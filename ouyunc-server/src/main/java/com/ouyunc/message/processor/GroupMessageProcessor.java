@@ -179,7 +179,7 @@ public class GroupMessageProcessor extends AbstractMessageProcessor<Byte>{
      */
     private boolean processReadReceiptMessage(Packet packet) {
         return processWithLock(packet,
-                () -> repository().readReceiptMessage(packet, MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP),
+                () -> repository().readReceiptMessage(packet, packet.getMessage().getTo(), MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP),
                 ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR,
                 "读已回执消息异常",
                 () -> MessageServerContext.publishEvent(new ReadReceiptMessageEvent(packet), true)

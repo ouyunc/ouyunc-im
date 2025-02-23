@@ -107,6 +107,7 @@ public enum JdbcFactory implements DbOperator {
         }
 
     },
+
     JDBC_CLIENT(NumberConstant.NUMBER_1, "jdbcClient v1.0操作模板") {
         private static volatile JdbcClient jdbcClient;
         /**
