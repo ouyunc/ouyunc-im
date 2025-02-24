@@ -97,12 +97,10 @@ public enum DefaultRepository implements Repository{
     public CompletableFuture<?> save(Packet packet) {
         // 保存消息到磁盘中，这里使用mq来提高吞吐量；如果kafka
         // headers 中可以自定义一些信息做扩展；
-//        Map<String, Object> headers = new HashMap<>();
-//        headers.put(MessageHeaders.ID, packet.getPacketId());
-//        headers.put(KafkaHeaders.TOPIC, MqConstant.KAFKA_SAVE_MESSAGE_TOPIC);
-//        return kafkaTemplate.send(MessageBuilder.withPayload(JSON.toJSONString(packet)).copyHeadersIfAbsent(headers).build());
-
-        return CompletableFuture.runAsync(() -> {});
+        Map<String, Object> headers = new HashMap<>();
+        headers.put(MessageHeaders.ID, packet.getPacketId());
+        headers.put(KafkaHeaders.TOPIC, MqConstant.KAFKA_SAVE_MESSAGE_TOPIC);
+        return kafkaTemplate.send(MessageBuilder.withPayload(JSON.toJSONString(packet)).copyHeadersIfAbsent(headers).build());
     }
 
     /**
