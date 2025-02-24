@@ -168,20 +168,44 @@ public class LuaScriptConstant {
 
 
     public static final String BATCH_WITHDRAW_MESSAGE_LUA_SCRIPT =
-                    "local groupUsersCount = tonumber(ARGV[1])\n" +
-                    "local keys = {unpack(ARGV, 2, #ARGV)} \n" +
-                    "for i = 1, #keys, (groupUsersCount + 3) do\n" +
-                    "   local xxxKey = keys[i]\n" +
-                    "   local zzzKey = keys[i+1]\n" +
-                    "   local value = keys[i+2]\n" +
-                    "   redis.call('DEL',xxxKey)\n" +
-                    "   redis.call('ZREM', zzzKey, value)\n" +
-                    "    for j = 1, groupUsersCount do\n" +
-                    "        local yyyKey = keys[i + j + 2]\n" +
-                            "redis.call('ZREM', yyyKey, value)\n" +
-                    "    end\n" +
-                    "end\n" +
-                    "return true";
+                    "local groupUsersCount = tonumber(KEYS[1])\n" +
+                            "local keys = {unpack(KEYS, 2, #KEYS)}\n" +
+                            "local keysPerItem = 2 + groupUsersCount\n" +
+                            "local numArgs = #ARGV\n" +
+                            "local hasError = false\n" +
+                            "\n" +
+                            "-- 参数校验：检查 KEYS 数量是否匹配\n" +
+                            "if #keys ~= numArgs * keysPerItem then\n" +
+                            "    return false\n" +
+                            "end\n" +
+                            "\n" +
+                            "for i = 1, numArgs do\n" +
+                            "    local base = (i - 1) * keysPerItem\n" +
+                            "    local messageKey = keys[base + 1]\n" +
+                            "    local sessionKey = keys[base + 2]\n" +
+                            "    local value = ARGV[i]\n" +
+                            "\n" +
+                            "    -- 使用 pcall 捕获命令执行错误\n" +
+                            "    local ok\n" +
+                            "\n" +
+                            "    -- 1. 删除消息键\n" +
+                            "    ok = pcall(redis.call, \"UNLINK\", messageKey)\n" +
+                            "    if not ok then hasError = true end\n" +
+                            "\n" +
+                            "    -- 2. 从会话集合移除消息\n" +
+                            "    ok = pcall(redis.call, \"ZREM\", sessionKey, value)\n" +
+                            "    if not ok then hasError = true end\n" +
+                            "\n" +
+                            "    -- 3. 从所有离线队列移除消息\n" +
+                            "    for j = 1, groupUsersCount do\n" +
+                            "        local offlineKey = keys[base + 2 + j]\n" +
+                            "        ok = pcall(redis.call, \"ZREM\", offlineKey, value)\n" +
+                            "        if not ok then hasError = true end\n" +
+                            "    end\n" +
+                            "end\n" +
+                            "\n" +
+                            "-- 返回最终状态（Redis 会将 true 转为 1，false 转为 nil）\n" +
+                            "return not hasError";
 
 
 

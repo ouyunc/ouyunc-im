@@ -133,7 +133,7 @@ public enum DefaultRepository implements Repository{
 
         // 1. 从 Redis 批量获取缓存
         Set<String> redisKeys = packetIds.stream()
-                .map(id -> buildRedisKey(appKey, id))
+                .map(id -> buildMessageRedisKey(appKey, id))
                 .collect(Collectors.toSet());
         List<Packet> cachedPackets = (List<Packet>) redisTemplate.opsForValue().multiGet(redisKeys);
 
@@ -168,7 +168,7 @@ public enum DefaultRepository implements Repository{
     /**
      * 构建 Redis Key
      */
-    private String buildRedisKey(String appKey, Long packetId) {
+    private String buildMessageRedisKey(String appKey, Long packetId) {
         return CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.MESSAGE + packetId;
     }
 
@@ -265,7 +265,7 @@ public enum DefaultRepository implements Repository{
                 @Override
                 public <K, V> Object execute(RedisOperations<K, V> operations) throws DataAccessException {
                     dbPackets.forEach(packet -> {
-                        operations.opsForValue().set((K) buildRedisKey(appKey, packet.getPacketId()), (V) packet,  MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+                        operations.opsForValue().set((K) buildMessageRedisKey(appKey, packet.getPacketId()), (V) packet,  MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
                     });
                     return null;
                 }
@@ -313,18 +313,16 @@ public enum DefaultRepository implements Repository{
             }
         }
         // 批量撤回消息
-        List<Object> args = Lists.newArrayList();
-        args.add(withdrawIdentitySet.size());
+        List<String> keys = Lists.newArrayList();
+        keys.add(String.valueOf(withdrawIdentitySet.size()));
         for (Long packetId : packetIds) {
-            // 组装keys
-            args.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.MESSAGE + packetId);
-            args.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.SESSION + sessionId);
-            args.add(packetId);
+            keys.add(buildMessageRedisKey(metadata.getAppKey(), packetId));
+            keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.SESSION + sessionId);
             for (String withdrawIdentity : withdrawIdentitySet) {
-                args.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + withdrawIdentity);
+                keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + withdrawIdentity);
             }
         }
-        return redisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_WITHDRAW_MESSAGE_LUA_SCRIPT, Boolean.class), Collections.emptyList(), args.toArray());
+        return redisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_WITHDRAW_MESSAGE_LUA_SCRIPT, Boolean.class), keys, packetIds.toArray());
     }
 
     /**
