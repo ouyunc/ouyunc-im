@@ -98,11 +98,12 @@ socket.onmessage = ({
             // 消息接收方唯一标识，这里是登录，接受者是服务器，值可以为空串
             to: '123456',
             // 消息内容类型
-            contentType: -128,
+            contentType: -7,
             at: ['19999999999','18888888888'],
             //qos: 1,
             // 消息内容content 是string 类型9223372036854775807
-            content: '你好我是16666666666',
+            //content: '你好我是16666666666',
+            content: JSON.stringify(['304471782521737216','304471826142498816']),
             createTime: new Date().getTime()
         }
     });

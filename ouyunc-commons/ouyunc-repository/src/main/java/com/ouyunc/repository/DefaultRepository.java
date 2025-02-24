@@ -97,10 +97,12 @@ public enum DefaultRepository implements Repository{
     public CompletableFuture<?> save(Packet packet) {
         // 保存消息到磁盘中，这里使用mq来提高吞吐量；如果kafka
         // headers 中可以自定义一些信息做扩展；
-        Map<String, Object> headers = new HashMap<>();
-        headers.put(MessageHeaders.ID, packet.getPacketId());
-        headers.put(KafkaHeaders.TOPIC, MqConstant.KAFKA_SAVE_MESSAGE_TOPIC);
-        return kafkaTemplate.send(MessageBuilder.withPayload(JSON.toJSONString(packet)).copyHeadersIfAbsent(headers).build());
+//        Map<String, Object> headers = new HashMap<>();
+//        headers.put(MessageHeaders.ID, packet.getPacketId());
+//        headers.put(KafkaHeaders.TOPIC, MqConstant.KAFKA_SAVE_MESSAGE_TOPIC);
+//        return kafkaTemplate.send(MessageBuilder.withPayload(JSON.toJSONString(packet)).copyHeadersIfAbsent(headers).build());
+
+        return CompletableFuture.runAsync(() -> {});
     }
 
     /**
@@ -340,7 +342,7 @@ public enum DefaultRepository implements Repository{
         }
 
         // 获取需要撤销的消息的服务端时间戳
-        List<Double> messageServerTimeScores = redisTemplate.opsForZSet().score(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON  + CacheConstant.SESSION + sessionId, readPacketIds.toArray());
+        List<Long> messageServerTimeScores = redisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_SCORE_LUA_SCRIPT, List.class), List.of(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.SESSION + sessionId), readPacketIds.toArray());
         if (CollectionUtils.isEmpty(messageServerTimeScores) || messageServerTimeScores.parallelStream().filter(Objects::nonNull).count() != readPacketIds.size()) {
             log.error("会话:{}不存在该消息id: {}, 或消息id 对应会话中的消息数量不相等", sessionId, readPacketIds);
             return false;

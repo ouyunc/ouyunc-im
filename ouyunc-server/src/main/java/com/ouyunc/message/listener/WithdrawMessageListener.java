@@ -92,7 +92,7 @@ public class WithdrawMessageListener implements MessageListener<WithdrawMessageE
             Map<String, Object> headers = new HashMap<>();
             headers.put(MessageHeaders.ID, packet.getPacketId());
             headers.put(KafkaHeaders.TOPIC, MqConstant.KAFKA_WITHDRAW_MESSAGE_TOPIC);
-            kafkaTemplate.send(MessageBuilder.withPayload(JSON.toJSONString(packet)).copyHeadersIfAbsent(headers).build());
+            //kafkaTemplate.send(MessageBuilder.withPayload(JSON.toJSONString(packet)).copyHeadersIfAbsent(headers).build());
         }
     }
 }
