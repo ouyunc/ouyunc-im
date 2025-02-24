@@ -1,7 +1,7 @@
 package com.ouyunc.base.constant.enums;
 
 /**
- * 异常码枚举 todo 待完善
+ * 异常码枚举
  */
 public enum ExceptionCodeEnum {
 
@@ -15,15 +15,28 @@ public enum ExceptionCodeEnum {
 
     CACHE_PERSISTENCE_ERROR(20002, "缓存持久化错误"),
 
-    MQ_PERSISTENCE_ERROR(20003, "mq持久化错误"),
+    MQ_PERSISTENCE_ERROR(20003, "MQ持久化错误"),
 
+    LOGIN_AUTH_ERROR(30001, "登录认证错误"),
+    LOGIN_VERIFY_ERROR(30002, "登录校验错误"),
 
-    ONE_2_ONE_SEND_ERROR(30001, "持久化错误"),
 
     WITHDRAW_MESSAGE_ERROR(40001, "撤回消息错误"),
 
 
     READ_RECEIPT_MESSAGE_ERROR(50001, "读已回执消息错误"),
+
+
+    GROUP_MEMBER_NOT_EXIST_ERROR(60001, "群成员不存在"),
+
+
+    UN_BIND_ERROR(70001, "客户端解绑错误"),
+
+    LOGIN_KEEP_ALIVE_ERROR(80001, "登录保活错误"),
+
+    SERVER_SPLIT_BRAIN_ERROR(90001, "集群服务脑裂错误"),
+
+    ILLEGAL_MESSAGE_TYPE_ERROR(100001, "非法消息类型"),
 
     ;
 

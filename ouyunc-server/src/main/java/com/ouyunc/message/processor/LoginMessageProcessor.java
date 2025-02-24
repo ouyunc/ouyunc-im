@@ -22,6 +22,7 @@ import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.ClientLoginEvent;
 import com.ouyunc.core.listener.event.ClientLogoutEvent;
+import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.handler.HeartBeatHandler;
 import com.ouyunc.message.handler.LoginKeepAliveHandler;
@@ -76,6 +77,7 @@ public class LoginMessageProcessor extends AbstractMessageProcessor<Byte> {
         // 根据appKey 获取appSecret 然后拼接
         if (!validate(loginContent)) {
             log.warn("客户端id: {} 登录参数: {}，校验未通过！", ctx.channel().id().asShortText(), Serializer.JSON.serializeToString(loginContent));
+            MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.LOGIN_VERIFY_ERROR, "登录校验未通过", packet), true);
             ctx.close();
             return;
         }
@@ -137,15 +139,17 @@ public class LoginMessageProcessor extends AbstractMessageProcessor<Byte> {
                                     return null;
                                 }
                             });
-
                         } else {
                             log.warn("客户端: {} 解绑登录信息失败,原因：缓存中不存在登录信息或登录地址不匹配", closingLocalloginClientInfo);
+                            MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.UN_BIND_ERROR, "客户端解绑登录信息失败！缓存中不存在登录信息或登录地址不匹配", packet));
                         }
                     } else {
-                        log.error("客户端: {} 绑定登录信息失败,原因：获取分布式锁失败", closingLocalloginClientInfo);
+                        log.error("客户端: {} 解绑登录信息失败,原因：获取分布式锁失败", closingLocalloginClientInfo);
+                        MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.UN_BIND_ERROR, "客户端解绑登录信息失败！获取分布式锁失败", packet));
                     }
                 } catch (Exception e) {
-                    log.error("客户端: {} 绑定登录信息失败,原因：{}", closingLocalloginClientInfo, e.getMessage());
+                    log.error("客户端: {} 解绑登录信息失败,原因：{}", closingLocalloginClientInfo, e.getMessage());
+                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.UN_BIND_ERROR, "客户端解绑登录信息失败！" + e.getMessage(), packet));
                     throw new MessageException(e);
                 } finally {
                     if (lock.isHeldByCurrentThread()) {

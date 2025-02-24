@@ -1,7 +1,9 @@
 package com.ouyunc.message.handler;
 
+import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.packet.Packet;
+import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.processor.AbstractMessageProcessor;
 import io.netty.channel.ChannelHandlerContext;
@@ -30,12 +32,14 @@ public class PacketPreHandler extends SimpleChannelInboundHandler<Packet> {
         AbstractMessageProcessor<? extends Number> messageProcessor = MessageServerContext.messageProcessorCache.get(packet.getMessageType());
         if (messageProcessor == null) {
             log.error("非法消息类型，messageType= {}", packet.getMessageType());
+            MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.ILLEGAL_MESSAGE_TYPE_ERROR, "非法消息类型", packet), true);
             ctx.close();
             return;
         }
         // 判断是否开启外部客户端心跳，如果没开启但是发送了心跳类型的消息，则关闭channel
         if (!MessageServerContext.serverProperties().isClientHeartBeatEnable() && packet.getMessageType() == MessageTypeEnum.PING_PONG.getType()) {
             log.error("外部客户端未开启心跳, 非法消息类型，messageType= {}", packet.getMessageType());
+            MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.ILLEGAL_MESSAGE_TYPE_ERROR, "外部客户端未开启心跳, 非法消息类型", packet), true);
             ctx.close();
             return;
         }

@@ -49,6 +49,7 @@ public class GroupMessageProcessor extends AbstractMessageProcessor<Byte> {
                 if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
                     // 关闭当前 channel，这里会触发 DefaultSocketChannelInitializer 中的关闭逻辑
                     log.error("校验消息: {} 中的发送方登录认证失败,开始关闭channel", packet);
+                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过", packet), true);
                     ctx.close();
                     return;
                 }
@@ -76,6 +77,7 @@ public class GroupMessageProcessor extends AbstractMessageProcessor<Byte> {
         Set<String> groupUserIdentitySet = repository().groupUsersIdentity(packet);
         if (CollectionUtils.isEmpty(groupUserIdentitySet)) {
             log.error("群组：{}, 不存在群成员！群消息： {}", packet.getMessage().getTo(), packet);
+            MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群成员", packet), true);
             return;
         }
         // 将groupUserIdentitySet排除掉发送方

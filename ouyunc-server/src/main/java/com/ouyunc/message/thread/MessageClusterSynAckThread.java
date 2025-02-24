@@ -1,16 +1,14 @@
 package com.ouyunc.message.thread;
 
 import com.ouyunc.base.constant.NumberConstant;
-import com.ouyunc.base.constant.enums.DeviceTypeEnum;
-import com.ouyunc.base.constant.enums.NetworkEnum;
-import com.ouyunc.base.constant.enums.OuyuncMessageContentTypeEnum;
-import com.ouyunc.base.constant.enums.OuyuncMessageTypeEnum;
+import com.ouyunc.base.constant.enums.*;
 import com.ouyunc.base.encrypt.Encrypt;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.serialize.Serializer;
 import com.ouyunc.base.utils.MapUtil;
 import com.ouyunc.base.utils.TimeUtil;
+import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.core.listener.event.ServerOfflineEvent;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.protocol.NativePacketProtocol;
@@ -76,6 +74,7 @@ public class MessageClusterSynAckThread implements Runnable{
         // 判断该服务所在的集群个数是否小于服务列表的半数（用于解决脑裂）, 启动服务30分钟后进行检测是否脑裂,如果满足则系统退出
         if (MessageServerContext.serverProperties().isClusterSplitBrainDetectionEnable() && (MessageServerContext.clusterActiveServerRegistryTableCache.sizeMap() + NumberConstant.NUMBER_1) <= availableGlobalServer.size() / 2 && ChronoUnit.MINUTES.between(beginTime, Instant.now()) >= MessageServerContext.serverProperties().getClusterSplitBrainDetectionDelayTime()) {
             log.error("集群服务脑裂检测中，服务 {} 异常，开始注销...", MessageServerContext.serverProperties().getLocalServerAddress());
+            MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.SERVER_SPLIT_BRAIN_ERROR, "集群服务脑裂检测中，服务异常", null));
             MessageServerContext.server.stop();
         }
     }
