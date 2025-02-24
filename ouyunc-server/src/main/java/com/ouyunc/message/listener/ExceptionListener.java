@@ -28,7 +28,7 @@ public class ExceptionListener implements MessageListener<ExceptionEvent> {
 
     /**
      * @Author fzx
-     * @Description 异常消息处理监听器
+     * @Description 异常消息处理监听器,具体需要哪些数据，后面根据业务在提取
      * @Param [event]
      */
     @Override
