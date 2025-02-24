@@ -163,7 +163,7 @@ public class LuaScriptConstant {
                             "    local ok\n" +
                             "\n" +
                             "    -- 1. 删除消息键\n" +
-                            "    ok = pcall(redis.call, \"UNLINK\", messageKey)\n" +
+                            "    ok = pcall(redis.call, \"DEL\", messageKey)\n" +
                             "    if not ok then hasError = true end\n" +
                             "\n" +
                             "    -- 2. 从会话集合移除消息\n" +

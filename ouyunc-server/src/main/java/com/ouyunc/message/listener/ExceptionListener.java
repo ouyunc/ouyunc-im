@@ -57,7 +57,7 @@ public class ExceptionListener implements MessageListener<ExceptionEvent> {
             errorMessage = ExceptionCodeEnum.UNKNOWN_ERROR.getMessage();
         }
         // 发送到kafka
-        kafkaTemplate.send(MqConstant.KAFKA_EXCEPTION_TOPIC, new MessageException(errorMessage, (ExceptionCodeEnum) source, packet, publishTime));
+        kafkaTemplate.send(MqConstant.KAFKA_EXCEPTION_TOPIC, JSON.toJSONString(new MessageException(errorMessage, (ExceptionCodeEnum) source, packet, publishTime)));
     }
 
 
