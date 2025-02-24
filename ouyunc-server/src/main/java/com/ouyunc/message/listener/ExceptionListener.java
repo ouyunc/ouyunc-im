@@ -1,6 +1,8 @@
 package com.ouyunc.message.listener;
 
 import com.alibaba.fastjson2.JSON;
+import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
+import com.ouyunc.base.packet.Packet;
 import com.ouyunc.core.listener.MessageListener;
 import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.mq.kafka.KafkaFactory;
@@ -30,6 +32,15 @@ public class ExceptionListener implements MessageListener<ExceptionEvent> {
     public void onApplicationEvent(ExceptionEvent event) {
         if (log.isDebugEnabled()) {
             log.error("异常事件监听器正在处理：{}", JSON.toJSONString(event.getSource()));
+        }
+        Object source = event.getSource();
+        Packet packet = event.getPacket();
+        if (source instanceof ExceptionCodeEnum exceptionCode) {
+
+        }else if (source instanceof Throwable throwable){
+
+        }else {
+
         }
         // @todo 发送到kafka
         //kafkaTemplate.send("ouyunc-message-exception", event.getSource());
