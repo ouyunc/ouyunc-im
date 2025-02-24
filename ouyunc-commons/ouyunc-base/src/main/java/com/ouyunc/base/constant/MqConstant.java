@@ -7,6 +7,11 @@ public class MqConstant {
 
 
     /**
+     * kafka 异常 topic
+     */
+    public static final String KAFKA_EXCEPTION_TOPIC = MessageConstant.OUYUNC + MessageConstant.UNDERLINE + "exception";
+
+    /**
      * kafka 保存消息 topic
      */
     public static final String KAFKA_SAVE_MESSAGE_TOPIC = MessageConstant.OUYUNC + MessageConstant.UNDERLINE + "message_save";

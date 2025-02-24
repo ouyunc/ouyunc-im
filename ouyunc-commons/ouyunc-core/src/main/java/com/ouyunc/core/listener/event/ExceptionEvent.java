@@ -34,6 +34,10 @@ public class ExceptionEvent extends MessageEvent {
         this.errorMessage = errorMessage;
     }
 
+    public String getErrorMessage() {
+        return errorMessage;
+    }
+
     public Packet getPacket() {
         return packet;
     }
