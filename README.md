@@ -1,4 +1,4 @@
-# OUYUNC-IM [![version](https://img.shields.io/badge/version-6.1.1-blue)](https://gitee.com/etxync/ouyunc-im)  
+# OUYUNC-IM [![version](https://img.shields.io/badge/version-6.2.0-blue)](https://gitee.com/etxync/ouyunc-im)  
 [![license](https://img.shields.io/badge/license-MIT-brightgreen)](https://www.mit-license.org/)
 <a href='https://gitee.com/etxync/ouyunc-im/stargazers'><img src='https://gitee.com/etxync/ouyunc-im/badge/star.svg?theme=dark' alt='star'></img></a>
 <a href='https://gitee.com/etxync/ouyunc-im/members'><img src='https://gitee.com/etxync/ouyunc-im/badge/fork.svg?theme=dark' alt='fork'></img></a>
@@ -203,10 +203,14 @@ https://gitee.com/etxync/ouyunc-im/wikis/OUYUNC-IM%20v3.x/%E5%AE%A2%E6%88%B7%E7%
 2. 添加qos机制，保证消息可靠性传输
 3. 优化其他代码
 
+#####  **6.1.1 ~ 6.2.0**
+1. 添加一对一聊天，群组聊天处理器，以及消息撤回，已读和@群成员功能
+2. 优化其他代码
+
 #### 最后说明
 由于本人技术有限，项目中可能会有bug或代码不规范的地方，如果对你带来了困扰请跳过本项目。
 并且如果有任何想说的欢迎私信或提issue，咱们一起共同探讨交流。
-最近事情比较多，版本迭代更新缓慢，正在筹备升级到jdk21 ，通过插件的方式添加各种协议处理器，优化代码，敬请期待
+最近事情比较多，版本迭代更新缓慢，已经升级到jdk21 ，通过插件的方式添加各种协议处理器，优化代码，敬请期待
 
 #### 参与贡献
 
