@@ -2,7 +2,9 @@ package com.ouyunc.domain.entity;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -10,7 +12,7 @@ import java.util.List;
  * mongodb message
  */
 @Document(collection = "ouyunc-im-message")
-public class MessageEntity {
+public class MessageEntity implements Serializable {
     /**
      * 主键id
      */
@@ -20,111 +22,133 @@ public class MessageEntity {
     /**
      * 协议
      */
+    @Field("protocol")
     private byte protocol;
 
     /**
      * 协议版本
      */
+    @Field("protocol_version")
     private byte protocolVersion;
 
     /**
      * 设备类型
      */
+    @Field("device_type")
     private byte deviceType;
 
     /**
      * 网络类型
      */
+    @Field("network_type")
     private byte networkType;
 
     /**
      * 加密类型
      */
+    @Field("encrypt_type")
     private byte encryptType;
 
     /**
      * 序列化算法
      */
+    @Field("serialize_algorithm")
     private byte serializeAlgorithm;
 
     /**
      * 消息类型
      */
+    @Field("message_type")
     private byte messageType;
 
     /**
      * 保留字段
      */
+    @Field("retain")
     private byte retain;
 
     /**
      * 客户端ip
      */
+    @Field("client_ip")
     private String clientIp;
 
     /**
      * 发送者
      */
+    @Field("from")
     private String from;
 
     /**
      * 接收者
      */
+    @Field("to")
     private String to;
 
     /**
      * 内容类型
      */
+    @Field("content_type")
     private int contentType;
 
     /**
      * 内容
      */
+    @Field("content")
     private String content;
 
     /**
      * Qos
      */
+    @Field("qos")
     private int qos;
 
     /**
      * 群聊
      */
+    @Field("at")
     private List<String> at;
 
     /**
      * 额外信息
      */
+    @Field("extra")
     private String extra;
 
     /**
      * 客户端发送时间
      */
+    @Field("client_send_time")
     private long clientSendTime;
 
     /**
      * 服务器到达时间
      */
+    @Field("server_arrival_time")
     private long serverArrivalTime;
 
     /**
      * 是否已读
      */
+    @Field("read")
     private int read;
 
     /**
      * 是否撤回
      */
+    @Field("withdrawn")
     private int withdrawn;
 
     /**
      * appKey
      */
+    @Field("app_key")
     private String appKey;
 
     /**
      * 过期时间
      */
+    @Field("expire_at")
     private LocalDateTime expireAt;
 
     public static final class Fields {
