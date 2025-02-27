@@ -321,7 +321,7 @@ class Socket {
             if (typeof binaryPacketId === 'string' && /^[01]{64}$/.test(binaryPacketId)) {
                 binaryMessageId = binaryPacketId;
             } else {
-                throw new Error('Invalid binaryPacketId format, 自定义的消息id必须为64位二进制字符串: ' + binaryPacketId);
+                throw new Error('Invalid binaryPacketId format, 自定义的消息id必须为bigint类型的64位二进制字符串: ' + binaryPacketId);
             }
         } else {
             // 生成64位二进制消息ID

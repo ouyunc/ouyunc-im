@@ -10,6 +10,7 @@
     </parent>
     <artifactId>ouyunc-base</artifactId>
     <name>ouyunc-base</name>
+    <version>${revision}</version>
     <description>基础模块</description>
 
     <dependencies>

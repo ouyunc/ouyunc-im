@@ -10,6 +10,7 @@
     </parent>
     <artifactId>ouyunc-client</artifactId>
     <name>ouyunc-client</name>
+    <version>${revision}</version>
     <description>消息客户端</description>
 
     <dependencies>

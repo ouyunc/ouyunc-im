@@ -10,6 +10,7 @@
   </parent>
   <artifactId>ouyunc-repository</artifactId>
   <name>ouyunc-repository</name>
+  <version>${revision}</version>
   <description>业务数据操作模块</description>
 
   <dependencies>

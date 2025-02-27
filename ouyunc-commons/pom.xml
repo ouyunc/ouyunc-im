@@ -11,6 +11,7 @@
     <artifactId>ouyunc-commons</artifactId>
     <name>ouyunc-commons</name>
     <description>公共模块</description>
+    <version>${revision}</version>
     <packaging>pom</packaging>
     <modules>
         <module>ouyunc-base</module>

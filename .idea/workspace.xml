@@ -9,18 +9,25 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v6.2.0  优化代码,添加群组和一对一聊天业务">
-      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/AppEntity.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/BlacklistEntity.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/FileEntity.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/FriendEntity.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/GroupEntity.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/GroupUserEntity.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/ReadReceiptEntity.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/UserEntity.java" afterDir="false" />
+    <list default="true" id="7fa7ef42-70ab-49a5-a7b9-5ef6d94b4f5d" name="Default Changelist" comment="v6.2.0  优化代码,数据库脚本">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/6.2.0/ouyunc-im-mongodb-v6.2.0.json" beforeDir="false" afterPath="$PROJECT_DIR$/docs/6.2.0/ouyunc-im-mongodb-v6.2.0.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MessageEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MessageEntity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/6.2.0/ouyunc-message-sdk.js" beforeDir="false" afterPath="$PROJECT_DIR$/docs/6.2.0/ouyunc-message-sdk.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-client/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-client/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-ai/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-ai/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-cache/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-cache/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-core/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-core/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-influx/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-influx/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-jdbc/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-jdbc/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mongo/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mongo/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/ouyunc-mq-kafka/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/ouyunc-mq-kafka/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/ouyunc-mq-rocket/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/ouyunc-mq-rocket/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/pom.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -114,10 +121,10 @@
   <component name="MavenImportPreferences">
     <option name="generalSettings">
       <MavenGeneralSettings>
-        <option name="customMavenHome" value="C:\Program Files\apache-maven-3.6.3" />
+        <option name="customMavenHome" value="C:\Program Files\apache-maven-3.9.9" />
         <option name="localRepository" value="D:\repository" />
         <option name="mavenHomeTypeForPersistence" value="CUSTOM" />
-        <option name="userSettingsFile" value="C:\Program Files\apache-maven-3.6.3\conf\ali-settings.xml" />
+        <option name="userSettingsFile" value="C:\Program Files\apache-maven-3.9.9\conf\ali-settings.xml" />
       </MavenGeneralSettings>
     </option>
     <option name="importingSettings">
@@ -1024,7 +1031,7 @@
       <option name="project" value="LOCAL" />
       <updated>1704076343678</updated>
     </task>
-    <option name="localTasksCounter" value="336" />
+    <option name="localTasksCounter" value="337" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1084,7 +1091,6 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
-    <MESSAGE value="v6.0.1  处理mqtt 客户端主动取消主题的订阅" />
     <MESSAGE value="v6.0.1  处理qos" />
     <MESSAGE value="v6.0.1  处理mqtt" />
     <MESSAGE value="v6.0.1  优化绑定代码" />
@@ -1109,7 +1115,8 @@
     <MESSAGE value="v6.1.1  添加 qos received message ack 处理" />
     <MESSAGE value="v6.2.0  优化代码" />
     <MESSAGE value="v6.2.0  优化代码,添加群组和一对一聊天业务" />
-    <option name="LAST_COMMIT_MESSAGE" value="v6.2.0  优化代码,添加群组和一对一聊天业务" />
+    <MESSAGE value="v6.2.0  优化代码,数据库脚本" />
+    <option name="LAST_COMMIT_MESSAGE" value="v6.2.0  优化代码,数据库脚本" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

@@ -9,6 +9,7 @@
     </parent>
     <artifactId>ouyunc-server</artifactId>
     <name>ouyunc-server</name>
+    <version>${revision}</version>
     <description>消息服务端</description>
 
     <dependencies>

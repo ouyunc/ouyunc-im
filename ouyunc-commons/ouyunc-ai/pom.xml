@@ -8,5 +8,6 @@
     </parent>
     <artifactId>ouyunc-ai</artifactId>
     <name>ouyunc-ai</name>
+    <version>${revision}</version>
     <description>ai 模块</description>
 </project>

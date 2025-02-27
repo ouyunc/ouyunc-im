@@ -9,6 +9,7 @@
         <version>${revision}</version>
     </parent>
     <artifactId>ouyunc-db-jdbc</artifactId>
+    <version>${revision}</version>
     <description>mysql模块</description>
 
 

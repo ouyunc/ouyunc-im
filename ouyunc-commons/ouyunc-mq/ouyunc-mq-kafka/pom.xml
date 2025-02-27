@@ -10,6 +10,8 @@
     </parent>
     <description>kafka消息队列</description>
     <artifactId>ouyunc-mq-kafka</artifactId>
+    <version>${revision}</version>
+
 
 
     <dependencies>

@@ -10,6 +10,7 @@
     </parent>
     <artifactId>ouyunc-domain</artifactId>
     <name>ouyunc-domain</name>
+    <version>${revision}</version>
     <description>实体类模块</description>
 
     <dependencies>
