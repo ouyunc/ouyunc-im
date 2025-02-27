@@ -401,6 +401,35 @@
     <!--设置打包名称-->
     <finalName> ${project.artifactId}-${project.version}_${maven.build.timestamp}</finalName>
     <plugins>
+      <!--处理${revision}等占位符，供其他项目可以依赖该模块-->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>flatten-maven-plugin</artifactId>
+        <version>1.3.0</version>
+        <configuration>
+          <!-- 选择处理模式，保留 CI 友好属性 -->
+          <flattenMode>resolveCiFriendliesOnly</flattenMode>
+          <!-- 生成的 flatten 文件包含所有信息 -->
+          <updatePomFile>true</updatePomFile>
+        </configuration>
+        <executions>
+          <execution>
+            <id>flatten</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>flatten</goal>
+            </goals>
+          </execution>
+          <!-- 确保在 install 阶段前执行 -->
+          <execution>
+            <id>flatten.clean</id>
+            <phase>clean</phase>
+            <goals>
+              <goal>clean</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>aspectj-maven-plugin</artifactId>
@@ -446,6 +475,4 @@
       </plugin>
     </plugins>
   </build>
-
-
 </project>
