@@ -7,6 +7,11 @@ public class MqConstant {
 
 
     /**
+     * kafka 发送消息失败异常 topic
+     */
+    public static final String KAFKA_SEND_FAIL_TOPIC = MessageConstant.OUYUNC + MessageConstant.UNDERLINE + "send_fail";
+
+    /**
      * kafka 异常 topic
      */
     public static final String KAFKA_EXCEPTION_TOPIC = MessageConstant.OUYUNC + MessageConstant.UNDERLINE + "exception";
