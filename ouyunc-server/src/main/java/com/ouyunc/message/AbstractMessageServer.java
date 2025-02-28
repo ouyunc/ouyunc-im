@@ -144,7 +144,7 @@ public abstract class AbstractMessageServer implements MessageServer {
         MessageServerContext.addPacketConverterList(PacketPacketConverter.INSTANCE);
         MessageServerContext.addPacketConverterList(BinaryWebSocketFramePacketConverter.INSTANCE);
         MessageServerContext.addPacketConverterList(MqttMessagePacketConverter.INSTANCE);
-        // 添加默认设备类型
+        // 添加默认设备类型，这里可以改成从redis 获取，与appKey 进行绑定，由appKey来自定义所支持的设备类型，如果appKey 没有指定支持的设备类型，则走默认设备类型
         MessageServerContext.addDeviceType(DeviceTypeEnum.class);
         // 设置路由器
         // 打印所有支持的消息类型，以及消息内容类型

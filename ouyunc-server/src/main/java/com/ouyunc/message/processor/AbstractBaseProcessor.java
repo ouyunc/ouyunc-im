@@ -74,6 +74,7 @@ public abstract class AbstractBaseProcessor<T extends Number> implements Process
             // 构造一个ack消息包
             Packet ackPacket = packet.clone();
             Message ackMessage = ackPacket.getMessage();
+            Metadata metadata = ackMessage.getMetadata();
             String from = ackMessage.getFrom();
             ackMessage.setFrom(null);
             ackMessage.setTo(from);
@@ -82,7 +83,7 @@ public abstract class AbstractBaseProcessor<T extends Number> implements Process
             ackMessage.setCreateTime(TimeUtil.currentTimeMillis());
             ackPacket.setPacketId(MessageContext.<Long>idGenerator().generateId());
             ackPacket.setMessageType(MessageTypeEnum.QOS_S2C_ACK.getType());
-            MessageHelper.asyncSendMessage(ackPacket, Target.newBuilder().targetIdentity(from).deviceType(MessageServerContext.deviceTypeCache.get(packet.getDeviceType())).targetServerAddress(MessageServerContext.serverProperties().getLocalServerAddress()).build());
+            MessageHelper.asyncSendMessage(ackPacket, Target.newBuilder().targetIdentity(from).deviceType(MessageServerContext.deviceType(metadata.getAppKey(), packet.getDeviceType())).targetServerAddress(MessageServerContext.serverProperties().getLocalServerAddress()).build());
         }
     }
 }

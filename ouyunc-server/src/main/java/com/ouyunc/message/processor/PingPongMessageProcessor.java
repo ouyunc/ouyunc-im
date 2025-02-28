@@ -5,6 +5,7 @@ import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.MessageType;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
+import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.model.Target;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
@@ -45,6 +46,7 @@ public class PingPongMessageProcessor extends AbstractMessageProcessor<Byte> {
         // 发送pong
         // 处理心跳消息
         Message heartBeatMessage = packet.getMessage();
+        Metadata metadata = heartBeatMessage.getMetadata();
         String from = heartBeatMessage.getFrom();
         heartBeatMessage.setFrom(null);
         heartBeatMessage.setTo(from);
@@ -53,6 +55,6 @@ public class PingPongMessageProcessor extends AbstractMessageProcessor<Byte> {
         heartBeatMessage.setCreateTime(TimeUtil.currentTimeMillis());
         packet.setPacketId(MessageContext.<Long>idGenerator().generateId());
         // 写回的是websocket还是其他类型的数据
-        MessageHelper.asyncSendMessage(packet, Target.newBuilder().targetIdentity(from).deviceType(MessageServerContext.deviceTypeCache.get(packet.getDeviceType())).targetServerAddress(MessageServerContext.serverProperties().getLocalServerAddress()).build());
+        MessageHelper.asyncSendMessage(packet, Target.newBuilder().targetIdentity(from).deviceType(MessageServerContext.deviceType(metadata.getAppKey(), packet.getDeviceType())).targetServerAddress(MessageServerContext.serverProperties().getLocalServerAddress()).build());
     }
 }

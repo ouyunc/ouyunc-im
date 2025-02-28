@@ -103,6 +103,10 @@ public class MessageConstant {
      */
     public static final long CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP = NumberConstant.NUMBER_30 * MessageConstant.DAY_TIMESTAMP;
 
+    /**
+     *  app key  变动 publish topic
+     */
+    public static final String APP_KEY_PUBLISH_TOPIC = "app_key_publish_topic";
 
     /**
      * 自定义协议的魔数6个字节,字节数组 OUYUNC

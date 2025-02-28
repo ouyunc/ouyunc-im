@@ -3,6 +3,7 @@ package com.ouyunc.message.validator;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.OnlineEnum;
 import com.ouyunc.base.model.LoginClientInfo;
+import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.ChannelAttrUtil;
@@ -30,8 +31,9 @@ public enum AuthValidator implements Validator<Packet> {
     public boolean verify(Packet packet, ChannelHandlerContext ctx) {
         byte deviceTypeValue = packet.getDeviceType();
         Message message = packet.getMessage();
+        Metadata metadata = message.getMetadata();
         String from = message.getFrom();
-        String deviceTypeName = MessageServerContext.deviceTypeCache.get(deviceTypeValue).getDeviceTypeName();
+        String deviceTypeName = MessageServerContext.deviceType(metadata.getAppKey(), deviceTypeValue).getDeviceTypeName();
         if (log.isDebugEnabled()) {
             log.debug("正在校验消息发送方 from {} 是否已在设备: {} 登录认证", from, deviceTypeName);
         }

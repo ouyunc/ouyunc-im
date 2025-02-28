@@ -71,7 +71,8 @@ public class LoginMessageProcessor extends AbstractMessageProcessor<Byte> {
         //将消息内容转成message
         LoginContent loginContent = JSON.parseObject(loginMessage.getContent(), LoginContent.class);
         // 设置设备类型
-        loginContent.setDeviceType(MessageServerContext.deviceTypeCache.get(packet.getDeviceType()));
+        DeviceType deviceType = MessageServerContext.deviceType(loginContent.getAppKey(), packet.getDeviceType());
+        loginContent.setDeviceType(deviceType);
         // 做登录参数校验
         //1,进行参数合法校验，校验失败，结束 ；2,进行签名的校验，校验失败，结束，3，进行权限校验，校验失败，结束
         // 根据appKey 获取appSecret 然后拼接
@@ -81,7 +82,6 @@ public class LoginMessageProcessor extends AbstractMessageProcessor<Byte> {
             ctx.close();
             return;
         }
-        DeviceType deviceType = MessageServerContext.deviceTypeCache.get(packet.getDeviceType());
         String comboIdentity = IdentityUtil.generalComboIdentity(loginContent.getAppKey(), loginContent.getIdentity(), deviceType.getDeviceTypeName());
         String clientLoginCacheKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + loginContent.getAppKey() + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + comboIdentity;
         //如果之前已经登录（重复登录请求），这里判断是否已经登录过,同一个账号在同一个设备不能同时登录

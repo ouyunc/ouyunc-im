@@ -29,7 +29,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -132,8 +131,7 @@ public class ClientHelper {
     public static List<LoginClientInfo> onlineAll(String appKey, String identity, DeviceType... excludeDeviceTypeArr) {
         List<LoginClientInfo> loginClientInfoList = new ArrayList<>(NumberConstant.NUMBER_3);
         // 获取所有的实现DeviceType接口的枚举实例
-        ConcurrentMap<Byte, DeviceType> deviceTypeCacheMap = MessageServerContext.deviceTypeCache.asMap();
-        Stream<DeviceType> deviceTypeStream = deviceTypeCacheMap.values().parallelStream();
+        Stream<DeviceType> deviceTypeStream = MessageServerContext.deviceTypeList(appKey).parallelStream();
         if (excludeDeviceTypeArr != null && excludeDeviceTypeArr.length > NumberConstant.NUMBER_0) {
             deviceTypeStream = deviceTypeStream.filter(deviceType -> {
                 boolean contain = false;

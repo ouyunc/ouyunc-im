@@ -95,4 +95,10 @@ public class CacheConstant {
      * topic-list
      */
     public static final String TOPIC_LIST = "topic-list";
+
+
+    /***
+     * 设备 类型device-type
+     */
+    public static final String DEVICE_TYPE = "device-type";
 }

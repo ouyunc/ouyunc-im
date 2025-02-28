@@ -26,16 +26,19 @@ import com.ouyunc.message.router.Router;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.pool.ChannelPool;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.MapUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.redisson.api.RedissonClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * @author fzx
@@ -119,9 +122,9 @@ public class MessageServerContext extends MessageContext {
 
 
     /**
-     * 设备类型缓存
+     * 设备类型缓存，这里可以配置通过redis 缓存获取appKey所支持的设备类型，建议通过mq 或redis 的发布订阅来实现，因为appKey 所支持的设备类型一般不会经常变，在服务启动后获取一次，然后每次改变通过发布订阅来实现就可以了，，如果没有则取默认的
      */
-    public static Cache<Byte, DeviceType> deviceTypeCache = new CaffeineLocalCache<>("deviceTypeCache", Caffeine.newBuilder().build(new CacheLoader<>() {
+    private static final Cache<Byte, DeviceType> defaultDeviceTypeCache = new CaffeineLocalCache<>("deviceTypeCache", Caffeine.newBuilder().build(new CacheLoader<>() {
         /***
          * 获取客户端对应的连接通道，先从缓存中取，如果没有则进行加载走load()方法
          */
@@ -130,6 +133,20 @@ public class MessageServerContext extends MessageContext {
             return null;
         }
     }));
+
+    /**
+     * 设备类型缓存，这里可以配置通过redis 缓存获取appKey所支持的设备类型，建议通过mq 或redis 的发布订阅来实现，因为appKey 所支持的设备类型一般不会经常变，在服务启动后获取一次，然后每次改变通过发布订阅来实现就可以了，，如果没有则取默认的
+     */
+    private static final Cache<String, Map<Byte, DeviceType>> appKeyDeviceTypeCache = new CaffeineLocalCache<>("deviceTypeCache", Caffeine.newBuilder().build(new CacheLoader<>() {
+        /***
+         * 获取客户端对应的连接通道，先从缓存中取，如果没有则进行加载走load()方法
+         */
+        @Override
+        public @Nullable Map<Byte, DeviceType> load(String messageTypeValue) throws Exception {
+            return null;
+        }
+    }));
+
 
     /**
      * 缓存消息处理接口的所有实现类, Number 类型是 Byte
@@ -215,10 +232,55 @@ public class MessageServerContext extends MessageContext {
             DeviceType[] deviceTypeEnumConstants = deviceTypeClass.getEnumConstants();
             if (deviceTypeEnumConstants != null) {
                 for (DeviceType deviceTypeEnumConstant : deviceTypeEnumConstants) {
-                    deviceTypeCache.put(deviceTypeEnumConstant.getDeviceTypeValue(), deviceTypeEnumConstant);
+                    defaultDeviceTypeCache.put(deviceTypeEnumConstant.getDeviceTypeValue(), deviceTypeEnumConstant);
                 }
             }
         }
+    }
+
+    /**
+     * 设置appKey设备类型列表
+     * @param deviceTypes
+     */
+    public static void addAppKeyDeviceType(String appKey,Collection<DeviceType> deviceTypes) {
+        if (StringUtils.isBlank(appKey) || CollectionUtils.isEmpty(deviceTypes)) {
+            log.error("appKey 设备类型列表为空！");
+            return;
+        }
+        appKeyDeviceTypeCache.put(appKey, deviceTypes.stream().collect(Collectors.toMap(DeviceType::getDeviceTypeValue, Function.identity())));
+    }
+
+
+    /**
+     * 获取appKey 设备类型
+     */
+    public static DeviceType deviceType(String appKey, byte deviceTypeValue) {
+        Map<Byte, DeviceType> appKeyDeviceTypeMap = appKeyDeviceTypeCache.get(appKey);
+        if (MapUtils.isNotEmpty(appKeyDeviceTypeMap)) {
+            DeviceType deviceType = appKeyDeviceTypeMap.get(deviceTypeValue);
+            if (deviceType == null) {
+                log.error("appKey暂未支持该设备类型：{} 的登录,请配置后重试！", deviceTypeValue);
+                throw new MessageException("appKey暂未支持该设备类型："+ deviceTypeValue +"的登录,请配置后重试！");
+            }
+        }
+        // 如果appKey 没有单独配置支持的设备类型，则使用全局配置
+        DeviceType deviceType = defaultDeviceTypeCache.get(deviceTypeValue);
+        if (deviceType == null) {
+            log.error("非法设备类型：{}", deviceTypeValue);
+            throw new MessageException("非法设备类型："+ deviceTypeValue);
+        }
+        return deviceType;
+    }
+
+    /**
+     * 获取appKey 设备类型列表
+     */
+    public static Collection<DeviceType> deviceTypeList(String appKey) {
+        Map<Byte, DeviceType> appKeyDeviceTypeMap = appKeyDeviceTypeCache.get(appKey);
+        if (MapUtils.isNotEmpty(appKeyDeviceTypeMap)) {
+            return appKeyDeviceTypeMap.values();
+        }
+        return defaultDeviceTypeCache.asMap().values();
     }
 
     /**
