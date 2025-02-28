@@ -43,7 +43,7 @@ public class SendFailListener implements MessageListener<SendFailEvent> {
             Map<String, Object> headers = new HashMap<>();
             headers.put(MessageHeaders.ID, sendResult.getPacket().getPacketId());
             headers.put(KafkaHeaders.TOPIC, MqConstant.KAFKA_SAVE_MESSAGE_TOPIC);
-            kafkaTemplate.send(MqConstant.KAFKA_SEND_FAIL_TOPIC, MessageBuilder.withPayload(JSON.toJSONString(sendResult)).copyHeadersIfAbsent(headers).build());
+            kafkaTemplate.send(MqConstant.KAFKA_MESSAGE_SEND_FAIL_TOPIC, MessageBuilder.withPayload(JSON.toJSONString(sendResult)).copyHeadersIfAbsent(headers).build());
         }
     }
 }
