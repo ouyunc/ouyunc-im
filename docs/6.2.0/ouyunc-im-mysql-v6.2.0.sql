@@ -64,12 +64,12 @@ CREATE TABLE `ouyunc_im_friend` (
                                     `friend_user_id` bigint DEFAULT NULL COMMENT '好友用户id',
                                     `friend_nick_name` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '好友昵称',
                                     `is_shield` tinyint(1) DEFAULT NULL COMMENT '是否屏蔽该好友，0-未屏蔽，1-屏蔽',
+                                    `session_message_offset` bigint NOT NULL DEFAULT '0' COMMENT '会话消息偏移量，会话消息的接收时间；假如本次读取到会话A点，则下次从A点之后开始读取',
                                     `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
                                     `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
                                     PRIMARY KEY (`id`) USING BTREE,
                                     UNIQUE KEY `user_friend_user_id` (`user_id`,`friend_user_id`) USING BTREE COMMENT '联合唯一索引'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC COMMENT='好友表';
-
 
 -- message.ouyunc_im_group definition
 
@@ -103,6 +103,7 @@ CREATE TABLE `ouyunc_im_group_user` (
                                         `user_nick_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '用户昵称（用户在群里的昵称）',
                                         `is_shield` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否屏蔽群（不会接收到群的信息），0-未屏蔽，1-屏蔽',
                                         `mushin` tinyint(1) NOT NULL DEFAULT '0' COMMENT '用户在群中的状态，0-未被禁言，1-被禁言',
+                                        `session_message_offset` bigint NOT NULL DEFAULT '0' COMMENT '会话消息的偏移量；群成员对群会话的消息读取偏移量，假如这次读取到A点，则下次从A点开始往后拉取数据',
                                         `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
                                         PRIMARY KEY (`id`) USING BTREE,
                                         UNIQUE KEY `group_user_id` (`user_id`,`group_id`) USING BTREE COMMENT '联合唯一索引'
