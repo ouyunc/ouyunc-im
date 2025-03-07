@@ -247,70 +247,35 @@ ouyunc:
   mq:
     # kafka 的配置信息
     kafka:
-      mode: STANDALONE          #STANDALONE（单例），CLUSTER（集群）
-      standalone:
-        bootstrapServers: 192.168.0.106:9092         #common(公共的地址)
-        #生产者配置
-        producer:
-          bootstrapServers: 192.168.0.106:9092          #集群使用逗号隔开
-          batchSize: 16785                                   #一次最多发送数据量
-          retries: 3                                          #发送失败后的重复发送次数
-          bufferMemory: 33554432                             #32M批处理缓冲区
-          ack: -1                                             #消息确认应答模式，0,1，-1（all）三个值
-          lingerMs: 1                                          #在batch时候，吞吐量和延时性能)
-          keySerializer: org.apache.kafka.common.serialization.StringSerializer   #消息key 的序列化方式
-          valueSerializer: org.apache.kafka.common.serialization.StringSerializer #消息体的序列化方式
+      bootstrapServers: 192.168.0.106:9092         #common(公共的地址)
+      #生产者配置
+      producer:
+        bootstrapServers: 192.168.0.106:9092          #集群使用逗号隔开
+        batchSize: 16785                                   #一次最多发送数据量
+        retries: 3                                          #发送失败后的重复发送次数
+        bufferMemory: 33554432                             #32M批处理缓冲区
+        ack: -1                                             #消息确认应答模式，0,1，-1（all）三个值
+        lingerMs: 1                                          #在batch时候，吞吐量和延时性能)
+        keySerializer: org.apache.kafka.common.serialization.StringSerializer   #消息key 的序列化方式
+        valueSerializer: org.apache.kafka.common.serialization.StringSerializer #消息体的序列化方式
 
-        #消费者配置
-        consumer:
-          bootstrapServers: 192.168.0.106:9092          #集群使用逗号隔开
-          groupId: ouyunc-message-consumer-group                        #消费者组
-          autoOffsetReset: latest                           #最早未被消费的offset earliest
-          maxPollRecords: 3100                              #批量消费一次最大拉取的数据量
-          sessionTimeoutMs: 20000                           #连接超时时间,20000
-          enableAutoCommit: false                           #是否开启自动提交
-          autoCommitIntervalMs: 1000                          #自动提交的间隔时间
-          maxPollIntervalMs: 300000                            #手动提交设置与poll的心跳数,如果消息队列中没有消息，等待毫秒后，调用poll()方法。如果队列中有消息，立即消费消息，每次消费的消息的多少可以通过max.poll.records配置。
-          maxPartitionFetchBytes: 15728640                   #设置拉取数据的大小,15M
-          keyDeserializer: org.apache.kafka.common.serialization.StringDeserializer    #消息key值的反序列化
-          valueDeserializer: org.apache.kafka.common.serialization.StringDeserializer  #消息体的反序列化
-        #监听器配置
-        listener:
-          batchListener: true                                #是否开启批量消费，true表示批量消费
-          concurrency: 3                                     #设置消费的线程数
-          pollTimeout: 1500                                 #轮询消费者时使用的超时（以毫秒为单位）
-          ackMode: MANUAL_IMMEDIATE                         #当enable.auto.commit的值设置为false时，该值会生效；为true时不会生效
+      #消费者配置
+      consumer:
+        bootstrapServers: 192.168.0.106:9092          #集群使用逗号隔开
+        groupId: ouyunc-message-consumer-group                        #消费者组
+        autoOffsetReset: latest                           #最早未被消费的offset earliest
+        maxPollRecords: 3100                              #批量消费一次最大拉取的数据量
+        sessionTimeoutMs: 20000                           #连接超时时间,20000
+        enableAutoCommit: false                           #是否开启自动提交
+        autoCommitIntervalMs: 1000                          #自动提交的间隔时间
+        maxPollIntervalMs: 300000                            #手动提交设置与poll的心跳数,如果消息队列中没有消息，等待毫秒后，调用poll()方法。如果队列中有消息，立即消费消息，每次消费的消息的多少可以通过max.poll.records配置。
+        maxPartitionFetchBytes: 15728640                   #设置拉取数据的大小,15M
+        keyDeserializer: org.apache.kafka.common.serialization.StringDeserializer    #消息key值的反序列化
+        valueDeserializer: org.apache.kafka.common.serialization.StringDeserializer  #消息体的反序列化
+      #监听器配置
+      listener:
+        batchListener: true                                #是否开启批量消费，true表示批量消费
+        concurrency: 3                                     #设置消费的线程数
+        pollTimeout: 1500                                 #轮询消费者时使用的超时（以毫秒为单位）
+        ackMode: MANUAL_IMMEDIATE                         #当enable.auto.commit的值设置为false时，该值会生效；为true时不会生效
 
-      #集群配置
-      cluster:
-        bootstrapServers: 192.168.111.128:9092,192.168.111.129:9092,192.168.111.130:9092        #common(公共的地址)
-        #生产者配置
-        producer:
-          #bootstrap-servers: 192.168.111.128:9092          #集群使用逗号隔开
-          batchSize: 16785                                   #一次最多发送数据量
-          retries: 3                                          #发送失败后的重复发送次数
-          bufferMemory: 33554432                             #32M批处理缓冲区
-          ack: -1                                             #消息确认应答模式，0,1，-1（all）三个值
-          lingerMs: 1                                          #在batch时候，吞吐量和延时性能)
-          keySerializer: org.apache.kafka.common.serialization.StringSerializer   #消息key 的序列化方式
-          valueSerializer: org.apache.kafka.common.serialization.StringSerializer #消息体的序列化方式
-
-        #消费者配置
-        consumer:
-          #bootstrap-servers: 192.168.111.128:9092          #集群使用逗号隔开
-          groupId: ouyunc-message-consumer-group               #消费者组
-          autoOffsetReset: latest                           #最早未被消费的offset earliest
-          maxPollRecords: 3100                              #批量消费一次最大拉取的数据量
-          sessionTimeoutMs: 20000                           #连接超时时间,20000
-          enableAutoCommit: false                           #是否开启自动提交
-          autoCommitIntervalMs: 1000                          #自动提交的间隔时间
-          maxPollIntervalMs: 300000                            #手动提交设置与poll的心跳数,如果消息队列中没有消息，等待毫秒后，调用poll()方法。如果队列中有消息，立即消费消息，每次消费的消息的多少可以通过max.poll.records配置。
-          maxPartitionFetchBytes: 15728640                   #设置拉取数据的大小,15M
-          keyDeserializer: org.apache.kafka.common.serialization.StringDeserializer    #消息key值的反序列化
-          valueDeserializer: org.apache.kafka.common.serialization.StringDeserializer  #消息体的反序列化
-        #监听器配置
-        listener:
-          batchListener: true                                #是否开启批量消费，true表示批量消费
-          concurrency: 3                                     #设置消费的线程数
-          pollTimeout: 1500                                 #轮询消费者时使用的超时（以毫秒为单位）
-          ackMode: MANUAL_IMMEDIATE                         #当enable.auto.commit的值设置为false时，该值会生效；为true时不会生效
