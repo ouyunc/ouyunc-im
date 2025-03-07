@@ -55,6 +55,13 @@ public class GroupUserEntity implements Serializable {
     */
     private Integer mushin;
 
+
+    /**
+     * 会话消息偏移量，会话消息的接收时间；假如本次读取到会话A点，则下次从A点之后开始读取
+     */
+    private Long sessionMessageOffset;
+
+
     /**
     * 创建时间
     */
@@ -124,7 +131,13 @@ public class GroupUserEntity implements Serializable {
     }
 
 
+    public Long getSessionMessageOffset() {
+        return sessionMessageOffset;
+    }
 
+    public void setSessionMessageOffset(Long sessionMessageOffset) {
+        this.sessionMessageOffset = sessionMessageOffset;
+    }
 
     /**
     * 主键id
