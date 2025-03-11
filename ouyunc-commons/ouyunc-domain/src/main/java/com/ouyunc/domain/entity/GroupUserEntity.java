@@ -67,77 +67,36 @@ public class GroupUserEntity implements Serializable {
     */
     private LocalDateTime createTime;
 
-    /**
-    * 主键id
-    */
-    private void setId(Long id){
-    this.id = id;
+    public Long getId() {
+        return id;
     }
 
-    /**
-    * 群组id
-    */
-    private void setGroupId(Long groupId){
-    this.groupId = groupId;
+    public void setId(Long id) {
+        this.id = id;
     }
 
-    /**
-    * 群组别名（该用户对这个群起的别名）
-    */
-    private void setGroupNickName(String groupNickName){
-    this.groupNickName = groupNickName;
+    public Long getGroupId() {
+        return groupId;
     }
 
-    /**
-    * 用户id
-    */
-    private void setUserId(Long userId){
-    this.userId = userId;
+    public void setGroupId(Long groupId) {
+        this.groupId = groupId;
     }
 
-
-    /**
-    * 用户在群中的状态，0-未被禁言，1-被禁言
-    */
-    private void setMushin(Integer mushin){
-    this.mushin = mushin;
+    public String getGroupNickName() {
+        return groupNickName;
     }
 
-
-    public Long getSessionMessageOffset() {
-        return sessionMessageOffset;
+    public void setGroupNickName(String groupNickName) {
+        this.groupNickName = groupNickName;
     }
 
-    public void setSessionMessageOffset(Long sessionMessageOffset) {
-        this.sessionMessageOffset = sessionMessageOffset;
+    public Long getUserId() {
+        return userId;
     }
 
-    /**
-    * 主键id
-    */
-    private Long getId(){
-    return this.id;
-    }
-
-    /**
-    * 群组id
-    */
-    private Long getGroupId(){
-    return this.groupId;
-    }
-
-    /**
-    * 群组别名（该用户对这个群起的别名）
-    */
-    private String getGroupNickName(){
-    return this.groupNickName;
-    }
-
-    /**
-    * 用户id
-    */
-    private Long getUserId(){
-    return this.userId;
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 
     public Integer getLeader() {
@@ -172,11 +131,20 @@ public class GroupUserEntity implements Serializable {
         this.shield = shield;
     }
 
-    /**
-    * 用户在群中的状态，0-未被禁言，1-被禁言
-    */
-    private Integer getMushin(){
-    return this.mushin;
+    public Integer getMushin() {
+        return mushin;
+    }
+
+    public void setMushin(Integer mushin) {
+        this.mushin = mushin;
+    }
+
+    public Long getSessionMessageOffset() {
+        return sessionMessageOffset;
+    }
+
+    public void setSessionMessageOffset(Long sessionMessageOffset) {
+        this.sessionMessageOffset = sessionMessageOffset;
     }
 
     public LocalDateTime getCreateTime() {

@@ -75,153 +75,84 @@ public class FileEntity implements Serializable {
     */
     private Integer deleted;
 
-    /**
-    * 主键id
-    */
-    private void setId(Long id){
-    this.id = id;
+    public Long getId() {
+        return id;
     }
 
-    /**
-    * 文件原始名称
-    */
-    private void setFileOriginName(String fileOriginName){
-    this.fileOriginName = fileOriginName;
+    public void setId(Long id) {
+        this.id = id;
     }
 
-    /**
-    * 文件名称，包含后缀名
-    */
-    private void setFileName(String fileName){
-    this.fileName = fileName;
+    public String getFileOriginName() {
+        return fileOriginName;
     }
 
-    /**
-    * 文件网络访问完整路径：http(s)://xxxxx
-    */
-    private void setFileUrl(String fileUrl){
-    this.fileUrl = fileUrl;
+    public void setFileOriginName(String fileOriginName) {
+        this.fileOriginName = fileOriginName;
     }
 
-    /**
-    * 文件半路径，一般为存放目录+文件名
-    */
-    private void setFilePath(String filePath){
-    this.filePath = filePath;
+    public String getFileName() {
+        return fileName;
     }
 
-    /**
-    * 文件类型，标识是哪种业务类型的文件：1-图片文件，2-文档文件，3-声音文件，4-视频文件，5-压缩文件，6-其他
-    */
-    private void setFileType(Integer fileType){
-    this.fileType = fileType;
+    public void setFileName(String fileName) {
+        this.fileName = fileName;
     }
 
-    /**
-    * 文件的md5
-    */
-    private void setFileMd5(String fileMd5){
-    this.fileMd5 = fileMd5;
+    public String getFileUrl() {
+        return fileUrl;
     }
 
-    /**
-    * 文件后缀名
-    */
-    private void setFileSuffix(String fileSuffix){
-    this.fileSuffix = fileSuffix;
+    public void setFileUrl(String fileUrl) {
+        this.fileUrl = fileUrl;
     }
 
-    /**
-    * 文件关联类型：用来标识该业务id的来源
-    */
-    private void setRelationType(Integer relationType){
-    this.relationType = relationType;
+    public String getFilePath() {
+        return filePath;
     }
 
-    /**
-    * 文件关联id
-    */
-    private void setRelationId(String relationId){
-    this.relationId = relationId;
+    public void setFilePath(String filePath) {
+        this.filePath = filePath;
     }
 
-
-    /**
-    * 是否删除：0-未删除，1-已删除
-    */
-    private void setDeleted(Integer deleted){
-    this.deleted = deleted;
+    public Integer getFileType() {
+        return fileType;
     }
 
-
-    /**
-    * 主键id
-    */
-    private Long getId(){
-    return this.id;
+    public void setFileType(Integer fileType) {
+        this.fileType = fileType;
     }
 
-    /**
-    * 文件原始名称
-    */
-    private String getFileOriginName(){
-    return this.fileOriginName;
+    public String getFileMd5() {
+        return fileMd5;
     }
 
-    /**
-    * 文件名称，包含后缀名
-    */
-    private String getFileName(){
-    return this.fileName;
+    public void setFileMd5(String fileMd5) {
+        this.fileMd5 = fileMd5;
     }
 
-    /**
-    * 文件网络访问完整路径：http(s)://xxxxx
-    */
-    private String getFileUrl(){
-    return this.fileUrl;
+    public String getFileSuffix() {
+        return fileSuffix;
     }
 
-    /**
-    * 文件半路径，一般为存放目录+文件名
-    */
-    private String getFilePath(){
-    return this.filePath;
+    public void setFileSuffix(String fileSuffix) {
+        this.fileSuffix = fileSuffix;
     }
 
-    /**
-    * 文件类型，标识是哪种业务类型的文件：1-图片文件，2-文档文件，3-声音文件，4-视频文件，5-压缩文件，6-其他
-    */
-    private Integer getFileType(){
-    return this.fileType;
+    public Integer getRelationType() {
+        return relationType;
     }
 
-    /**
-    * 文件的md5
-    */
-    private String getFileMd5(){
-    return this.fileMd5;
+    public void setRelationType(Integer relationType) {
+        this.relationType = relationType;
     }
 
-    /**
-    * 文件后缀名
-    */
-    private String getFileSuffix(){
-    return this.fileSuffix;
+    public String getRelationId() {
+        return relationId;
     }
 
-    /**
-    * 文件关联类型：用来标识该业务id的来源
-    */
-    private Integer getRelationType(){
-    return this.relationType;
-    }
-
-    /**
-    * 文件关联id
-    */
-    private String getRelationId(){
-    return this.relationId;
+    public void setRelationId(String relationId) {
+        this.relationId = relationId;
     }
 
     public LocalDateTime getCreateTime() {
@@ -240,11 +171,11 @@ public class FileEntity implements Serializable {
         this.updateTime = updateTime;
     }
 
-    /**
-    * 是否删除：0-未删除，1-已删除
-    */
-    private Integer getDeleted(){
-    return this.deleted;
+    public Integer getDeleted() {
+        return deleted;
     }
 
+    public void setDeleted(Integer deleted) {
+        this.deleted = deleted;
+    }
 }

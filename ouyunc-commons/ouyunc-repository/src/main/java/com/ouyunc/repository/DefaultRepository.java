@@ -385,7 +385,11 @@ public enum DefaultRepository implements Repository{
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         // score 存储的是用户加入群的时间戳，毫秒
-        return  (Set<String>) redisTemplate.opsForZSet().range(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_USERS + message.getTo(), NumberConstant.NUMBER_0, NumberConstant.NUMBER_NEGATIVE_1);
+        Set<String> keys = redisTemplate.<String, String>opsForHash().keys(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_USERS + message.getTo());
+        if (CollectionUtils.isEmpty(keys)) {
+            return Set.of();
+        }
+       return keys.parallelStream().filter(Objects::nonNull).collect(Collectors.toSet());
     }
 
 

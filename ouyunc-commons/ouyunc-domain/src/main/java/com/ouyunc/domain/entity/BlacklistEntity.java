@@ -36,34 +36,37 @@ public class BlacklistEntity implements Serializable {
 
     private LocalDateTime createTime;
 
-    /**
-    * 主键id
-    */
-    private void setId(Long id){
-    this.id = id;
+    public Long getId() {
+        return id;
     }
 
-    /**
-    * 群或客户端唯一标识
-    */
-    private void setIdentity(Long identity){
-    this.identity = identity;
+    public void setId(Long id) {
+        this.id = id;
     }
 
-    /**
-    * 客户端id（被加入identity 黑名单）
-    */
-    private void setUserId(Long userId){
-    this.userId = userId;
+    public Long getIdentity() {
+        return identity;
     }
 
-    /**
-    * 唯一标识类型，1-客户端唯一标识（用户），2-群唯一标识
-    */
-    private void setIdentityType(Integer identityType){
-    this.identityType = identityType;
+    public void setIdentity(Long identity) {
+        this.identity = identity;
     }
 
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
+
+    public Integer getIdentityType() {
+        return identityType;
+    }
+
+    public void setIdentityType(Integer identityType) {
+        this.identityType = identityType;
+    }
 
     public LocalDateTime getCreateTime() {
         return createTime;
@@ -72,34 +75,4 @@ public class BlacklistEntity implements Serializable {
     public void setCreateTime(LocalDateTime createTime) {
         this.createTime = createTime;
     }
-
-    /**
-    * 主键id
-    */
-    private Long getId(){
-    return this.id;
-    }
-
-    /**
-    * 群或客户端唯一标识
-    */
-    private Long getIdentity(){
-    return this.identity;
-    }
-
-    /**
-    * 客户端id（被加入identity 黑名单）
-    */
-    private Long getUserId(){
-    return this.userId;
-    }
-
-    /**
-    * 唯一标识类型，1-客户端唯一标识（用户），2-群唯一标识
-    */
-    private Integer getIdentityType(){
-    return this.identityType;
-    }
-
-
 }

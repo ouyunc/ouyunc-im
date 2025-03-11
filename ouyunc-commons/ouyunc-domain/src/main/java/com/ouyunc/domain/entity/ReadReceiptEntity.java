@@ -45,29 +45,21 @@ public class ReadReceiptEntity implements Serializable {
     @Transient
     private LocalDateTime createTime;
 
-    /**
-    * 主键
-    */
-    private void setId(Long id){
-    this.id = id;
+    public Long getId() {
+        return id;
     }
 
-    /**
-    * 消息id,(packetId)
-    */
-    private void setMsgId(Long msgId){
-    this.msgId = msgId;
+    public void setId(Long id) {
+        this.id = id;
     }
 
-
-
-    /**
-    * 已读时间戳
-    */
-    private void setReadTime(Long readTime){
-    this.readTime = readTime;
+    public Long getMsgId() {
+        return msgId;
     }
 
+    public void setMsgId(Long msgId) {
+        this.msgId = msgId;
+    }
 
     public Long getUserId() {
         return userId;
@@ -77,6 +69,14 @@ public class ReadReceiptEntity implements Serializable {
         this.userId = userId;
     }
 
+    public Long getReadTime() {
+        return readTime;
+    }
+
+    public void setReadTime(Long readTime) {
+        this.readTime = readTime;
+    }
+
     public LocalDateTime getCreateTime() {
         return createTime;
     }
@@ -84,29 +84,4 @@ public class ReadReceiptEntity implements Serializable {
     public void setCreateTime(LocalDateTime createTime) {
         this.createTime = createTime;
     }
-
-    /**
-    * 主键
-    */
-    private Long getId(){
-    return this.id;
-    }
-
-    /**
-    * 消息id,(packetId)
-    */
-    private Long getMsgId(){
-    return this.msgId;
-    }
-
-
-
-    /**
-    * 已读时间戳
-    */
-    private Long getReadTime(){
-    return this.readTime;
-    }
-
-
 }

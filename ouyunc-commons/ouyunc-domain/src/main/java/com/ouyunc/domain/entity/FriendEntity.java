@@ -50,34 +50,38 @@ public class FriendEntity implements Serializable {
     */
     private LocalDateTime updateTime;
 
-    /**
-    * 主键id
-    */
-    private void setId(Long id){
-    this.id = id;
+
+    public Long getId() {
+        return id;
     }
 
-    /**
-    * 用户id
-    */
-    private void setUserId(Long userId){
-    this.userId = userId;
+    public void setId(Long id) {
+        this.id = id;
     }
 
-    /**
-    * 好友用户id
-    */
-    private void setFriendUserId(Long friendUserId){
-    this.friendUserId = friendUserId;
+    public Long getUserId() {
+        return userId;
     }
 
-    /**
-    * 好友昵称
-    */
-    private void setFriendNickName(String friendNickName){
-    this.friendNickName = friendNickName;
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 
+    public Long getFriendUserId() {
+        return friendUserId;
+    }
+
+    public void setFriendUserId(Long friendUserId) {
+        this.friendUserId = friendUserId;
+    }
+
+    public String getFriendNickName() {
+        return friendNickName;
+    }
+
+    public void setFriendNickName(String friendNickName) {
+        this.friendNickName = friendNickName;
+    }
 
     public Integer getShield() {
         return shield;
@@ -94,36 +98,6 @@ public class FriendEntity implements Serializable {
     public void setSessionMessageOffset(Long sessionMessageOffset) {
         this.sessionMessageOffset = sessionMessageOffset;
     }
-
-    /**
-    * 主键id
-    */
-    private Long getId(){
-    return this.id;
-    }
-
-    /**
-    * 用户id
-    */
-    private Long getUserId(){
-    return this.userId;
-    }
-
-    /**
-    * 好友用户id
-    */
-    private Long getFriendUserId(){
-    return this.friendUserId;
-    }
-
-    /**
-    * 好友昵称
-    */
-    private String getFriendNickName(){
-    return this.friendNickName;
-    }
-
-
 
     public LocalDateTime getCreateTime() {
         return createTime;

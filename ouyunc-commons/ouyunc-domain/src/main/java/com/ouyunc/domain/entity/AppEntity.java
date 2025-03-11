@@ -59,112 +59,60 @@ public class AppEntity implements Serializable {
     */
     private Integer deleted;
 
-    /**
-    * 主键id
-    */
-    private void setId(Long id){
-    this.id = id;
+    public Long getId() {
+        return id;
     }
 
-    /**
-    * 客户端（外部平台）key  唯一
-    */
-    private void setAppKey(String appKey){
-    this.appKey = appKey;
+    public void setId(Long id) {
+        this.id = id;
     }
 
-    /**
-    * 客户端 （外部平台）secret
-    */
-    private void setAppSecret(String appSecret){
-    this.appSecret = appSecret;
+    public String getAppKey() {
+        return appKey;
     }
 
-    /**
-    * 客户端 （外部平台）name
-    */
-    private void setAppName(String appName){
-    this.appName = appName;
+    public void setAppKey(String appKey) {
+        this.appKey = appKey;
     }
 
-    /**
-    * 用户id，一般是企业的账户
-    */
-    private void setUserId(Long userId){
-    this.userId = userId;
+    public String getAppSecret() {
+        return appSecret;
     }
 
-    /**
-    * IM 最大连接数 大于等于-1： -1 - 无限制，
-    */
-    private void setMaxConnections(Long maxConnections){
-    this.maxConnections = maxConnections;
+    public void setAppSecret(String appSecret) {
+        this.appSecret = appSecret;
     }
 
-    /**
-    * 1-有效，2-禁用/锁定/无效
-    */
-    private void setStatus(Integer status){
-    this.status = status;
+    public String getAppName() {
+        return appName;
     }
 
-
-
-    /**
-    * 是否删除：0-未删除，1-已删除
-    */
-    private void setDeleted(Integer deleted){
-    this.deleted = deleted;
+    public void setAppName(String appName) {
+        this.appName = appName;
     }
 
-
-    /**
-    * 主键id
-    */
-    private Long getId(){
-    return this.id;
+    public Long getUserId() {
+        return userId;
     }
 
-    /**
-    * 客户端（外部平台）key  唯一
-    */
-    private String getAppKey(){
-    return this.appKey;
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 
-    /**
-    * 客户端 （外部平台）secret
-    */
-    private String getAppSecret(){
-    return this.appSecret;
+    public Long getMaxConnections() {
+        return maxConnections;
     }
 
-    /**
-    * 客户端 （外部平台）name
-    */
-    private String getAppName(){
-    return this.appName;
+    public void setMaxConnections(Long maxConnections) {
+        this.maxConnections = maxConnections;
     }
 
-    /**
-    * 用户id，一般是企业的账户
-    */
-    private Long getUserId(){
-    return this.userId;
+    public Integer getStatus() {
+        return status;
     }
 
-    /**
-    * IM 最大连接数 大于等于-1： -1 - 无限制，
-    */
-    private Long getMaxConnections(){
-    return this.maxConnections;
-    }
-
-    /**
-    * 1-有效，2-禁用/锁定/无效
-    */
-    public Integer getStatus(){
-        return this.status;
+    public void setStatus(Integer status) {
+        this.status = status;
     }
 
     public LocalDateTime getCreateTime() {
@@ -183,11 +131,11 @@ public class AppEntity implements Serializable {
         this.updateTime = updateTime;
     }
 
-    /**
-    * 是否删除：0-未删除，1-已删除
-    */
-    private Integer getDeleted(){
-    return this.deleted;
+    public Integer getDeleted() {
+        return deleted;
     }
 
+    public void setDeleted(Integer deleted) {
+        this.deleted = deleted;
+    }
 }

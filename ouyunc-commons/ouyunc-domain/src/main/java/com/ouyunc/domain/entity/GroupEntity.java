@@ -70,139 +70,77 @@ public class GroupEntity implements Serializable {
     */
     private Integer deleted;
 
-    /**
-    * 主键id
-    */
-    private void setId(Long id){
-    this.id = id;
+
+    public Long getId() {
+        return id;
     }
 
-    /**
-    * 群组名称
-    */
-    private void setGroupName(String groupName){
-    this.groupName = groupName;
+    public void setId(Long id) {
+        this.id = id;
     }
 
-    /**
-    * 群组头像
-    */
-    private void setGroupAvatar(String groupAvatar){
-    this.groupAvatar = groupAvatar;
+    public String getGroupName() {
+        return groupName;
     }
 
-    /**
-    * 群组描述
-    */
-    private void setGroupDescription(String groupDescription){
-    this.groupDescription = groupDescription;
+    public void setGroupName(String groupName) {
+        this.groupName = groupName;
     }
 
-    /**
-    * 群组公告
-    */
-    private void setGroupAnnouncement(String groupAnnouncement){
-    this.groupAnnouncement = groupAnnouncement;
+    public String getGroupAvatar() {
+        return groupAvatar;
     }
 
-    /**
-    * 群加入策略：0-加群需要验证，1-加群自动同意
-    */
-    private void setGroupJoinPolicy(Integer groupJoinPolicy){
-    this.groupJoinPolicy = groupJoinPolicy;
+    public void setGroupAvatar(String groupAvatar) {
+        this.groupAvatar = groupAvatar;
     }
 
-    /**
-    * 群状态，1-正常，2-异常（被平台封禁）
-    */
-    private void setStatus(Integer status){
-    this.status = status;
+    public String getGroupDescription() {
+        return groupDescription;
     }
 
-    /**
-    * 是否全体禁言（群主和管理员除外），0-不禁言，1-禁言
-    */
-    private void setMushin(Integer mushin){
-    this.mushin = mushin;
+    public void setGroupDescription(String groupDescription) {
+        this.groupDescription = groupDescription;
     }
 
-    /**
-    * 应用appKey
-    */
-    private void setAppKey(String appKey){
-    this.appKey = appKey;
+    public String getGroupAnnouncement() {
+        return groupAnnouncement;
     }
 
-
-    /**
-    * 是否删除：1-已删除，0-未删除
-    */
-    private void setDeleted(Integer deleted){
-    this.deleted = deleted;
+    public void setGroupAnnouncement(String groupAnnouncement) {
+        this.groupAnnouncement = groupAnnouncement;
     }
 
-
-    /**
-    * 主键id
-    */
-    private Long getId(){
-    return this.id;
+    public Integer getGroupJoinPolicy() {
+        return groupJoinPolicy;
     }
 
-    /**
-    * 群组名称
-    */
-    private String getGroupName(){
-    return this.groupName;
+    public void setGroupJoinPolicy(Integer groupJoinPolicy) {
+        this.groupJoinPolicy = groupJoinPolicy;
     }
 
-    /**
-    * 群组头像
-    */
-    private String getGroupAvatar(){
-    return this.groupAvatar;
+    public Integer getStatus() {
+        return status;
     }
 
-    /**
-    * 群组描述
-    */
-    private String getGroupDescription(){
-    return this.groupDescription;
+    public void setStatus(Integer status) {
+        this.status = status;
     }
 
-    /**
-    * 群组公告
-    */
-    private String getGroupAnnouncement(){
-    return this.groupAnnouncement;
+    public Integer getMushin() {
+        return mushin;
     }
 
-    /**
-    * 群加入策略：0-加群需要验证，1-加群自动同意
-    */
-    private Integer getGroupJoinPolicy(){
-    return this.groupJoinPolicy;
+    public void setMushin(Integer mushin) {
+        this.mushin = mushin;
     }
 
-    /**
-    * 群状态，1-正常，2-异常（被平台封禁）
-    */
-    private Integer getStatus(){
-    return this.status;
+    public String getAppKey() {
+        return appKey;
     }
 
-    /**
-    * 是否全体禁言（群主和管理员除外），0-不禁言，1-禁言
-    */
-    private Integer getMushin(){
-    return this.mushin;
-    }
-
-    /**
-    * 应用appKey
-    */
-    private String getAppKey(){
-    return this.appKey;
+    public void setAppKey(String appKey) {
+        this.appKey = appKey;
     }
 
     public LocalDateTime getCreateTime() {
@@ -221,11 +159,11 @@ public class GroupEntity implements Serializable {
         this.updateTime = updateTime;
     }
 
-    /**
-    * 是否删除：1-已删除，0-未删除
-    */
-    private Integer getDeleted(){
-    return this.deleted;
+    public Integer getDeleted() {
+        return deleted;
     }
 
+    public void setDeleted(Integer deleted) {
+        this.deleted = deleted;
+    }
 }
