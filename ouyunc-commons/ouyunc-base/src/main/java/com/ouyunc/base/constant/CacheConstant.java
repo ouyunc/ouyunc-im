@@ -69,6 +69,18 @@ public class CacheConstant {
 
 
     /***
+     * 群列表
+     */
+    public static final String GROUPS = "groups:";
+
+
+    /***
+     * 群
+     */
+    public static final String GROUP = "group:";
+
+
+    /***
      * 发送方
      */
     public static final String FROM = "from:";
