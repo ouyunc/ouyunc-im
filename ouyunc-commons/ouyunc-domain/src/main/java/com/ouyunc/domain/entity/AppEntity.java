@@ -37,7 +37,7 @@ public class AppEntity implements Serializable {
     /**
     * IM 最大连接数 大于等于-1： -1 - 无限制，
     */
-    private Long imMaxConnections;
+    private Long maxConnections;
 
     /**
     * 1-有效，2-禁用/锁定/无效
@@ -97,8 +97,8 @@ public class AppEntity implements Serializable {
     /**
     * IM 最大连接数 大于等于-1： -1 - 无限制，
     */
-    private void setImMaxConnections(Long imMaxConnections){
-    this.imMaxConnections = imMaxConnections;
+    private void setMaxConnections(Long maxConnections){
+    this.maxConnections = maxConnections;
     }
 
     /**
@@ -156,8 +156,8 @@ public class AppEntity implements Serializable {
     /**
     * IM 最大连接数 大于等于-1： -1 - 无限制，
     */
-    private Long getImMaxConnections(){
-    return this.imMaxConnections;
+    private Long getMaxConnections(){
+    return this.maxConnections;
     }
 
     /**

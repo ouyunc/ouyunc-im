@@ -33,12 +33,12 @@ public class GroupUserEntity implements Serializable {
     /**
     * 是否是群主，0-否，1-是
     */
-    private Integer isLeader;
+    private Integer leader;
 
     /**
     * 是否是群管理员，0-否，1-是
     */
-    private Integer isManager;
+    private Integer manager;
 
     /**
     * 用户昵称（用户在群里的昵称）
@@ -48,7 +48,7 @@ public class GroupUserEntity implements Serializable {
     /**
     * 是否屏蔽群（不会接收到群的信息），0-未屏蔽，1-屏蔽
     */
-    private Integer isShield;
+    private Integer shield;
 
     /**
     * 用户在群中的状态，0-未被禁言，1-被禁言
@@ -95,33 +95,6 @@ public class GroupUserEntity implements Serializable {
     this.userId = userId;
     }
 
-    /**
-    * 是否是群主，0-否，1-是
-    */
-    private void setIsLeader(Integer isLeader){
-    this.isLeader = isLeader;
-    }
-
-    /**
-    * 是否是群管理员，0-否，1-是
-    */
-    private void setIsManager(Integer isManager){
-    this.isManager = isManager;
-    }
-
-    /**
-    * 用户昵称（用户在群里的昵称）
-    */
-    private void setUserNickName(String userNickName){
-    this.userNickName = userNickName;
-    }
-
-    /**
-    * 是否屏蔽群（不会接收到群的信息），0-未屏蔽，1-屏蔽
-    */
-    private void setIsShield(Integer isShield){
-    this.isShield = isShield;
-    }
 
     /**
     * 用户在群中的状态，0-未被禁言，1-被禁言
@@ -167,32 +140,36 @@ public class GroupUserEntity implements Serializable {
     return this.userId;
     }
 
-    /**
-    * 是否是群主，0-否，1-是
-    */
-    private Integer getIsLeader(){
-    return this.isLeader;
+    public Integer getLeader() {
+        return leader;
     }
 
-    /**
-    * 是否是群管理员，0-否，1-是
-    */
-    private Integer getIsManager(){
-    return this.isManager;
+    public void setLeader(Integer leader) {
+        this.leader = leader;
     }
 
-    /**
-    * 用户昵称（用户在群里的昵称）
-    */
-    private String getUserNickName(){
-    return this.userNickName;
+    public Integer getManager() {
+        return manager;
     }
 
-    /**
-    * 是否屏蔽群（不会接收到群的信息），0-未屏蔽，1-屏蔽
-    */
-    private Integer getIsShield(){
-    return this.isShield;
+    public void setManager(Integer manager) {
+        this.manager = manager;
+    }
+
+    public String getUserNickName() {
+        return userNickName;
+    }
+
+    public void setUserNickName(String userNickName) {
+        this.userNickName = userNickName;
+    }
+
+    public Integer getShield() {
+        return shield;
+    }
+
+    public void setShield(Integer shield) {
+        this.shield = shield;
     }
 
     /**

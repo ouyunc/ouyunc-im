@@ -33,7 +33,7 @@ public class FriendEntity implements Serializable {
     /**
     * 是否屏蔽该好友，0-未屏蔽，1-屏蔽
     */
-    private Integer isShield;
+    private Integer shield;
 
     /**
      * 会话消息偏移量，会话消息的接收时间；假如本次读取到会话A点，则下次从A点之后开始读取
@@ -78,13 +78,14 @@ public class FriendEntity implements Serializable {
     this.friendNickName = friendNickName;
     }
 
-    /**
-    * 是否屏蔽该好友，0-未屏蔽，1-屏蔽
-    */
-    private void setIsShield(Integer isShield){
-    this.isShield = isShield;
+
+    public Integer getShield() {
+        return shield;
     }
 
+    public void setShield(Integer shield) {
+        this.shield = shield;
+    }
 
     public Long getSessionMessageOffset() {
         return sessionMessageOffset;
@@ -122,12 +123,7 @@ public class FriendEntity implements Serializable {
     return this.friendNickName;
     }
 
-    /**
-    * 是否屏蔽该好友，0-未屏蔽，1-屏蔽
-    */
-    private Integer getIsShield(){
-    return this.isShield;
-    }
+
 
     public LocalDateTime getCreateTime() {
         return createTime;
