@@ -13,6 +13,7 @@ import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.core.context.MessageContext;
+import com.ouyunc.domain.entity.AppEntity;
 import com.ouyunc.message.context.MessageServerContext;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.collections4.CollectionUtils;
@@ -220,6 +221,18 @@ public class ClientHelper {
         return connections;
     }
 
+    /**
+     * 获取所有appKey
+     * @return
+     *
+     */
+    public static Set<String> appKeys() {
+        RedisTemplate<String, String> redisTemplate = CacheFactory.REDIS.instance();
+        return redisTemplate.<String, AppEntity>opsForHash().keys(CacheConstant.OUYUNC + CacheConstant.APP_KEYS);
+    }
+
+
+
 
     /**
      * 获取所有appKey的连接数总和
@@ -227,11 +240,11 @@ public class ClientHelper {
      */
     @SuppressWarnings("unchecked")
     public static long connections() {
-        RedisTemplate<String, Object> redisTemplate = CacheFactory.REDIS.instance();
-        Set<Object> appKeys = redisTemplate.opsForSet().members(CacheConstant.OUYUNC + CacheConstant.APP_KEYS);
+        Set<String> appKeys = appKeys();
         if (CollectionUtils.isEmpty(appKeys)) {
             return NumberConstant.NUMBER_0;
         }
+        RedisTemplate<String, Object> redisTemplate = CacheFactory.REDIS.instance();
         // 依次获取每个appKey的数据
         long totalConnections = NumberConstant.NUMBER_0;
         List<Object> executedResultList = redisTemplate.executePipelined(new SessionCallback<>() {

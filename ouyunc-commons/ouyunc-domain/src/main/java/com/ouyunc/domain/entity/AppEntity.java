@@ -163,8 +163,8 @@ public class AppEntity implements Serializable {
     /**
     * 1-有效，2-禁用/锁定/无效
     */
-    private Integer getStatus(){
-    return this.status;
+    public Integer getStatus(){
+        return this.status;
     }
 
     public LocalDateTime getCreateTime() {

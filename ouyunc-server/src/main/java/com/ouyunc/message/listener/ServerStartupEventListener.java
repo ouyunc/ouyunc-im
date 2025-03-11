@@ -14,7 +14,6 @@ import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.schedule.ScheduleTimer;
 import com.ouyunc.message.thread.LoginKeepAliveThread;
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.collections4.MapUtils;
 import org.redisson.api.RLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,13 +22,11 @@ import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.serializer.RedisSerializer;
 
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
 
 /**
  * @author fzx
@@ -63,14 +60,12 @@ public class ServerStartupEventListener implements MessageListener<ServerStartup
         return (Set<String>) redisTemplate.opsForSet().members(CacheConstant.OUYUNC + CacheConstant.APP_KEYS);
     }
 
+    @SuppressWarnings("unchecked")
     private void loadAppKeyDeviceTypes(Set<String> appKeys) {
         for (String appKey : appKeys) {
-            Map<Object, Object> appKeyDeviceTypeMap = redisTemplate.opsForHash().entries(
-                    CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.DEVICE_TYPE);
-            if (MapUtils.isNotEmpty(appKeyDeviceTypeMap)) {
-                MessageServerContext.addAppKeyDeviceType(appKey, appKeyDeviceTypeMap.values().stream()
-                        .map(o -> (DeviceType) o)
-                        .collect(Collectors.toSet()));
+            Set<DeviceType> deviceTypeSet = (Set<DeviceType>) redisTemplate.opsForSet().members(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.DEVICE_TYPE);
+            if (CollectionUtils.isNotEmpty(deviceTypeSet)) {
+                MessageServerContext.addAppKeyDeviceType(appKey, deviceTypeSet);
             }
         }
     }

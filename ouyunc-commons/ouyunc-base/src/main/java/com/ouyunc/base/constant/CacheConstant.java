@@ -61,6 +61,13 @@ public class CacheConstant {
      */
     public static final String GROUP_USERS = "group-users:";
 
+
+    /***
+     * 好友列表
+     */
+    public static final String FRIENDS = "friends:";
+
+
     /***
      * 发送方
      */
