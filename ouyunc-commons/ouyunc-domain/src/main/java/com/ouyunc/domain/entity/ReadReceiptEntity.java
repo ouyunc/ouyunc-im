@@ -47,6 +47,24 @@ public class ReadReceiptEntity implements Serializable {
     @Transient
     private LocalDateTime createTime;
 
+    public ReadReceiptEntity() {
+    }
+
+    public ReadReceiptEntity(Long id, Long msgId, Long userId, Long readTime) {
+        this.id = id;
+        this.msgId = msgId;
+        this.userId = userId;
+        this.readTime = readTime;
+    }
+
+    public ReadReceiptEntity(Long id, Long msgId, Long userId, Long readTime, LocalDateTime createTime) {
+        this.id = id;
+        this.msgId = msgId;
+        this.userId = userId;
+        this.readTime = readTime;
+        this.createTime = createTime;
+    }
+
     public Long getId() {
         return id;
     }

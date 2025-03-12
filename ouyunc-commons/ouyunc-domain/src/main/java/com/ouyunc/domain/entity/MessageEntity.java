@@ -1,5 +1,6 @@
 package com.ouyunc.domain.entity;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -74,15 +75,17 @@ public class MessageEntity implements Serializable {
     private String clientIp;
 
     /**
-     * 发送者
+     * 发送者,mysql 关键字段
      */
     @Field("from")
+    @TableField("`from`")
     private String from;
 
     /**
      * 接收者
      */
     @Field("to")
+    @TableField("`to`")
     private String to;
 
     /**
@@ -107,6 +110,7 @@ public class MessageEntity implements Serializable {
      * 群聊
      */
     @Field("at")
+    @TableField("`at`")
     private String at;
 
     /**
@@ -131,6 +135,7 @@ public class MessageEntity implements Serializable {
      * 是否已读
      */
     @Field("read")
+    @TableField("`read`")
     private int read;
 
     /**
@@ -163,6 +168,7 @@ public class MessageEntity implements Serializable {
 
     // 构造函数、Getter 和 Setter 方法
     public MessageEntity() {}
+
 
     public MessageEntity(long id, byte protocol, byte protocolVersion, byte deviceType, byte networkType, byte encryptType, byte serializeAlgorithm, byte messageType, byte retain, String clientIp, String from, String to, int contentType, String content, int qos, String at, String extra, long clientSendTime, long serverArrivalTime, int read, int withdrawn, String appKey) {
         this.id = id;
