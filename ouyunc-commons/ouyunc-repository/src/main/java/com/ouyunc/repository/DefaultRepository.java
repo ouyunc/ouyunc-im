@@ -12,6 +12,7 @@ import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.db.jdbc.JdbcFactory;
 import com.ouyunc.db.mongo.MongodbFactory;
 import com.ouyunc.domain.entity.MessageEntity;
+import com.ouyunc.domain.entity.MongoMessageEntity;
 import com.ouyunc.mq.kafka.KafkaFactory;
 import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
@@ -27,7 +28,6 @@ import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.KafkaHeaders;
-import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
 
 import java.util.*;
@@ -181,9 +181,9 @@ public enum DefaultRepository implements Repository{
         }
 
         // 优先查询 MongoDB
-        List<MessageEntity> mongoEntities = mongoTemplate.find(
-                Query.query(Criteria.where(MessageEntity.Fields.id).in(missingIds)),
-                MessageEntity.class
+        List<MongoMessageEntity> mongoEntities = mongoTemplate.find(
+                Query.query(Criteria.where(MongoMessageEntity.Fields.id).in(missingIds)),
+                MongoMessageEntity.class
         );
         List<Packet> dbPackets = convertToPackets(mongoEntities);
 
@@ -210,7 +210,7 @@ public enum DefaultRepository implements Repository{
     /**
      * 转换 MessageEntity 到 Packet
      */
-    private List<Packet> convertToPackets(List<MessageEntity> entities) {
+    private List<Packet> convertToPackets(List<? extends MessageEntity> entities) {
         return entities.stream()
                 .filter(Objects::nonNull)
                 .map(entity -> new Packet(
@@ -228,7 +228,7 @@ public enum DefaultRepository implements Repository{
                                 entity.getTo(),
                                 entity.getContentType(),
                                 entity.getContent(),
-                                entity.getAt(),
+                                JSON.parseArray(entity.getAt(), String.class),
                                 entity.getExtra(),
                                 entity.getQos(),
                                 entity.getClientSendTime(),

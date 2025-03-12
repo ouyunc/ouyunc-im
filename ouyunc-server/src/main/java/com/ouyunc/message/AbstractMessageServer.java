@@ -148,7 +148,6 @@ public abstract class AbstractMessageServer implements MessageServer {
         MessageServerContext.addDeviceType(DeviceTypeEnum.class);
         // 设置路由器
         // 打印所有支持的消息类型，以及消息内容类型
-
     }
     /***
      * @author fzx
