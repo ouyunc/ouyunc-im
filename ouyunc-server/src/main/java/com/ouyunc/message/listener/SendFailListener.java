@@ -41,9 +41,9 @@ public class SendFailListener implements MessageListener<SendFailEvent> {
         // 这里可以丢到mq中去处理，注意：发送失败的消息可能是重试的或者集群间消息传递，所以可能业务上需要做幂等处理
         if (event.getSource() instanceof SendResult sendResult) {
             Map<String, Object> headers = new HashMap<>();
-            headers.put(MessageHeaders.ID, sendResult.getPacket().getPacketId());
-            headers.put(KafkaHeaders.TOPIC, MqConstant.KAFKA_SAVE_MESSAGE_TOPIC);
-            kafkaTemplate.send(MqConstant.KAFKA_MESSAGE_SEND_FAIL_TOPIC, MessageBuilder.withPayload(JSON.toJSONString(sendResult)).copyHeadersIfAbsent(headers).build());
+            headers.put(KafkaHeaders.CORRELATION_ID, sendResult.getPacket().getPacketId());
+            headers.put(KafkaHeaders.TOPIC, MqConstant.KAFKA_MESSAGE_SEND_FAIL_TOPIC);
+            kafkaTemplate.send(MessageBuilder.withPayload(JSON.toJSONString(sendResult)).copyHeadersIfAbsent(headers).build());
         }
     }
 }

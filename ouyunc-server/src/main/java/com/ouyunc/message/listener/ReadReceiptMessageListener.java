@@ -95,7 +95,7 @@ public class ReadReceiptMessageListener implements MessageListener<ReadReceiptMe
         if (event.getSource() instanceof Packet packet) {
             log.debug("发送读已回执消息: {} 到mq中处理", packet);
             Map<String, Object> headers = new HashMap<>();
-            headers.put(MessageHeaders.ID, packet.getPacketId());
+            headers.put(KafkaHeaders.CORRELATION_ID, packet.getPacketId());
             headers.put(KafkaHeaders.TOPIC, MqConstant.KAFKA_READ_RECEIPT_MESSAGE_TOPIC);
             kafkaTemplate.send(MessageBuilder.withPayload(JSON.toJSONString(packet)).copyHeadersIfAbsent(headers).build());
         }

@@ -1,5 +1,6 @@
 package com.ouyunc.repository;
 
+import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.model.Metadata;
@@ -15,6 +16,7 @@ import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.SessionCallback;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.support.MessageBuilder;
 
 import java.util.HashMap;
@@ -43,8 +45,9 @@ public enum MqttRepository implements Repository{
     public Future<?> save(Packet packet) {
         // 直接保存到数据库中，或者influxdb等时序数据库中
         Map<String, Object> headers = new HashMap<>();
+        headers.put(KafkaHeaders.CORRELATION_ID, packet.getPacketId());
         // 这里是mqtt 的保存，如果想让业务分开，不同的业务可以使用不同的topic来区分
-        return kafkaTemplate.send(MqConstant.KAFKA_SAVE_MESSAGE_TOPIC, MessageBuilder.withPayload(packet).copyHeadersIfAbsent(headers).build());
+        return kafkaTemplate.send(MqConstant.KAFKA_SAVE_MESSAGE_TOPIC, MessageBuilder.withPayload(JSON.toJSONString(packet)).copyHeadersIfAbsent(headers).build());
     }
 
     @Override

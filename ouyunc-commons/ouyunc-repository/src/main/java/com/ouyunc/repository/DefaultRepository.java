@@ -98,7 +98,7 @@ public enum DefaultRepository implements Repository{
         // 保存消息到磁盘中，这里使用mq来提高吞吐量；如果kafka
         // headers 中可以自定义一些信息做扩展；
         Map<String, Object> headers = new HashMap<>();
-        headers.put(MessageHeaders.ID, packet.getPacketId());
+        headers.put(KafkaHeaders.CORRELATION_ID, packet.getPacketId());
         headers.put(KafkaHeaders.TOPIC, MqConstant.KAFKA_SAVE_MESSAGE_TOPIC);
         return kafkaTemplate.send(MessageBuilder.withPayload(JSON.toJSONString(packet)).copyHeadersIfAbsent(headers).build());
     }
@@ -377,6 +377,7 @@ public enum DefaultRepository implements Repository{
 
     /**
      * 获取群组用户列表的用户唯一标识，这里直接从缓存中取，获取不到就失败，不需要再从数据库中获取，如果有需要可以做多级缓存
+     *
      * @param packet
      * @return
      */
@@ -385,11 +386,7 @@ public enum DefaultRepository implements Repository{
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         // score 存储的是用户加入群的时间戳，毫秒
-        Set<String> keys = redisTemplate.<String, String>opsForHash().keys(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_USERS + message.getTo());
-        if (CollectionUtils.isEmpty(keys)) {
-            return Set.of();
-        }
-       return keys.parallelStream().filter(Objects::nonNull).collect(Collectors.toSet());
+        return (Set<String>) redisTemplate.opsForZSet().range(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_USERS + message.getTo(), NumberConstant.NUMBER_0, NumberConstant.NUMBER_NEGATIVE_1);
     }
 
 

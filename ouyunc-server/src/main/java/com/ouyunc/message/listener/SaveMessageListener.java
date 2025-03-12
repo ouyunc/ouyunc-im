@@ -71,7 +71,7 @@ public class SaveMessageListener implements MessageListener<SaveMessageEvent> {
         if (event.getSource() instanceof Packet packet) {
             log.debug("保存消息: {} 到mq中处理", packet);
             Map<String, Object> headers = new HashMap<>();
-            headers.put(MessageHeaders.ID, packet.getPacketId());
+            headers.put(KafkaHeaders.CORRELATION_ID, packet.getPacketId());
             headers.put(KafkaHeaders.TOPIC, MqConstant.KAFKA_SAVE_MESSAGE_TOPIC);
             kafkaTemplate.send(MessageBuilder.withPayload(JSON.toJSONString(packet)).copyHeadersIfAbsent(headers).build());
         }
