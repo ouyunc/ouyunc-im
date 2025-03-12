@@ -12,11 +12,20 @@
   <version>6.2.0</version>
   <name>ouyunc-domain</name>
   <description>实体类模块</description>
+  <properties>
+    <mybatis-plus.version>3.5.7</mybatis-plus.version>
+  </properties>
   <dependencies>
     <dependency>
       <groupId>com.ouyunc</groupId>
       <artifactId>ouyunc-db-mongo</artifactId>
       <version>${revision}</version>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.baomidou</groupId>
+      <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+      <version>${mybatis-plus.version}</version>
       <optional>true</optional>
     </dependency>
   </dependencies>

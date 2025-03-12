@@ -1,6 +1,8 @@
 package com.ouyunc.domain.entity;
 
 
+import com.baomidou.mybatisplus.annotation.TableName;
+
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
@@ -9,6 +11,7 @@ import java.time.LocalDateTime;
  *
  * @TableName ouyunc_im_user
  */
+@TableName(value = "ouyunc_im_user")
 public class UserEntity implements Serializable {
 
     /**

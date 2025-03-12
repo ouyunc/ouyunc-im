@@ -1,5 +1,6 @@
 package com.ouyunc.domain.entity;
 
+import com.baomidou.mybatisplus.annotation.TableName;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
@@ -9,7 +10,8 @@ import java.io.Serializable;
 /**
  * mongodb message
  */
-@Document(collection = "ouyunc-im-message")
+@TableName("ouyunc_im_message")
+@Document(collection = "ouyunc_im_message")
 public class MessageEntity implements Serializable {
     /**
      * 主键id

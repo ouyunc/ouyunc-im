@@ -1,5 +1,6 @@
 package com.ouyunc.domain.entity;
 
+import com.baomidou.mybatisplus.annotation.TableName;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -12,7 +13,8 @@ import java.time.LocalDateTime;
 * 消息已读回执
 * @TableName ouyunc_im_read_receipt
 */
-@Document(collection = "ouyunc-im-read-receipt")
+@TableName("ouyunc_im_read_receipt")
+@Document(collection = "ouyunc_im_read_receipt")
 public class ReadReceiptEntity implements Serializable {
 
     /**

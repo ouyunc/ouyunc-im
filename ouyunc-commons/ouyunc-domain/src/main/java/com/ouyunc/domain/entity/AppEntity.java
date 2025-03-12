@@ -1,5 +1,7 @@
 package com.ouyunc.domain.entity;
 
+import com.baomidou.mybatisplus.annotation.TableName;
+
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
@@ -7,6 +9,7 @@ import java.time.LocalDateTime;
 * im 应用配置
 * @TableName ouyunc_im_app
 */
+@TableName("ouyunc_im_app")
 public class AppEntity implements Serializable {
 
     /**

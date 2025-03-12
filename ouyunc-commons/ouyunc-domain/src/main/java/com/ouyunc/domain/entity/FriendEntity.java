@@ -1,6 +1,8 @@
 package com.ouyunc.domain.entity;
 
 
+import com.baomidou.mybatisplus.annotation.TableName;
+
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
@@ -8,6 +10,7 @@ import java.time.LocalDateTime;
 * 好友表
 * @TableName ouyunc_im_friend
 */
+@TableName("ouyunc_im_friend")
 public class FriendEntity implements Serializable {
 
     /**
