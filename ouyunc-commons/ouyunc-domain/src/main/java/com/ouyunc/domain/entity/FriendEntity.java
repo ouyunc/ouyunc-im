@@ -56,6 +56,21 @@ public class FriendEntity implements Serializable {
     */
     private LocalDateTime updateTime;
 
+    public FriendEntity() {
+    }
+
+
+
+    public FriendEntity(Long id, Long userId, Long friendUserId, String friendNickName, Integer shield, Long sessionMessageOffset, LocalDateTime createTime, LocalDateTime updateTime) {
+        this.id = id;
+        this.userId = userId;
+        this.friendUserId = friendUserId;
+        this.friendNickName = friendNickName;
+        this.shield = shield;
+        this.sessionMessageOffset = sessionMessageOffset;
+        this.createTime = createTime;
+        this.updateTime = updateTime;
+    }
 
     public Long getId() {
         return id;
