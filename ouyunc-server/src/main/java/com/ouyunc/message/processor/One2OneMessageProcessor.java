@@ -87,6 +87,8 @@ public class One2OneMessageProcessor extends AbstractMessageProcessor<Byte>{
         }
         // 4. 发送消息给接收方
         deliverMessage(packet);
+        // 处理成功则转到下个处理器
+        ctx.fireChannelRead(packet);
     }
 
     /**

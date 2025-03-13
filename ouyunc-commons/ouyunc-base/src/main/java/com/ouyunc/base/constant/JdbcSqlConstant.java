@@ -14,8 +14,9 @@ public class JdbcSqlConstant {
         INSERT_MESSAGE("INSERT INTO `ouyunc_im_message`(`id`, `protocol`, `protocol_version`, `device_type`, `network_type`, `encrypt_type`, `serialize_algorithm`, `message_type`, `retain`, `client_ip`, `from`, `to`, `content_type`, `content`, `extra`, `at`, `qos`, `client_send_time`, `server_arrival_time`, `read`, `withdrawn`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", "保存消息"),
         UPDATE_WITHDRAW_MESSAGE("UPDATE `ouyunc_im_message` SET `withdrawn` = ? WHERE id = ? ", "撤回消息"),
         INSERT_READ_RECEIPT_MESSAGE("INSERT INTO `ouyunc_im_read_receipt` (id, msg_id, user_id, read_time) VALUES(?, ?, ?, ?)", "保存读已回执记录"),
-        UPDATE_READ_MESSAGE("UPDATE `ouyunc_im_message` SET `read` = ? WHERE id = ? ", "读已回执消息")
+        UPDATE_READ_MESSAGE("UPDATE `ouyunc_im_message` SET `read` = ? WHERE id = ? ", "读已回执消息"),
 
+        SELECT_FRIEND("SELECT id, user_id, friend_user_id, friend_nick_name, shield, create_time, update_time, session_message_offset FROM ouyunc_im_friend where user_id = ? and friend_user_id = ? ", "查询好友关系")
         ;
 
 

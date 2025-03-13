@@ -63,7 +63,7 @@ CREATE TABLE `ouyunc_im_friend` (
                                     `user_id` bigint DEFAULT NULL COMMENT '用户id',
                                     `friend_user_id` bigint DEFAULT NULL COMMENT '好友用户id',
                                     `friend_nick_name` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '好友昵称',
-                                    `shield` tinyint(1) DEFAULT NULL COMMENT '是否屏蔽该好友，0-未屏蔽，1-屏蔽',
+                                    `shield` tinyint(1) DEFAULT NULL DEFAULT '0' COMMENT '是否屏蔽该好友，0-未屏蔽，1-屏蔽',
                                     `session_message_offset` bigint NOT NULL DEFAULT '0' COMMENT '会话消息偏移量，会话消息的接收时间；假如本次读取到会话A点，则下次从A点之后开始读取',
                                     `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
                                     `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',

@@ -21,6 +21,10 @@ public enum MessageContentTypeEnum implements MessageContentType {
     WITHDRAW_CONTENT(NumberConstant.NUMBER_NEGATIVE_6, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), List.class,  "撤销消息的消息内容"),
     READ_RECEIPT_CONTENT(NumberConstant.NUMBER_NEGATIVE_7, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), ReadReceiptContent.class,  "读已回执消息内容"),
 
+    FRIEND_REQUEST_JOIN_CONTENT(NumberConstant.NUMBER_NEGATIVE_8, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), String.class,  "一对一加好友请求"),
+    FRIEND_REQUEST_AGREE_CONTENT(NumberConstant.NUMBER_NEGATIVE_9, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), String.class,  "一对一同意好友请求"),
+    FRIEND_REQUEST_REFUSE_CONTENT(NumberConstant.NUMBER_NEGATIVE_10, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), String.class,  "一对一拒绝好友请求"),
+
     TEXT_CONTENT(NumberConstant.NUMBER_NEGATIVE_128, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), String.class, "文本内容类型"),
 
     ;

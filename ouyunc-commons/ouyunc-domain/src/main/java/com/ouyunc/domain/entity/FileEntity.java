@@ -1,6 +1,8 @@
 package com.ouyunc.domain.entity;
 
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
 import java.io.Serializable;
@@ -16,6 +18,7 @@ public class FileEntity implements Serializable {
     /**
     * 主键id
     */
+    @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 
     /**

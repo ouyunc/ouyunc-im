@@ -221,7 +221,7 @@ ouyunc:
     # mongodb 配置
     mongo:
       uri: mongodb://localhost:27017
-      defaultDatabase: ouyunc-message
+      defaultDatabase: ouyunc_message
       pool:
         maxIdleTime: 600000
         maxLifeTime: 1800000
@@ -247,10 +247,10 @@ ouyunc:
   mq:
     # kafka 的配置信息
     kafka:
-      bootstrapServers: 192.168.0.106:9092         #common(公共的地址)
+      bootstrapServers: 127.0.0.1:9092         #common(公共的地址)
       #生产者配置
       producer:
-        bootstrapServers: 192.168.0.106:9092          #集群使用逗号隔开
+        bootstrapServers: 127.0.0.1:9092          #集群使用逗号隔开
         batchSize: 16785                                   #一次最多发送数据量
         retries: 3                                          #发送失败后的重复发送次数
         bufferMemory: 33554432                             #32M批处理缓冲区
@@ -261,7 +261,7 @@ ouyunc:
 
       #消费者配置
       consumer:
-        bootstrapServers: 192.168.0.106:9092          #集群使用逗号隔开
+        bootstrapServers: 127.0.0.1:9092          #集群使用逗号隔开
         groupId: ouyunc-message-consumer-group                        #消费者组
         autoOffsetReset: latest                           #最早未被消费的offset earliest
         maxPollRecords: 3100                              #批量消费一次最大拉取的数据量

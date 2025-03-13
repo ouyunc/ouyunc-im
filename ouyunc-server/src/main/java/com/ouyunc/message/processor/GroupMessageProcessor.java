@@ -92,6 +92,8 @@ public class GroupMessageProcessor extends AbstractMessageProcessor<Byte> {
         }
         // 4. 发送消息给接收方
         deliverMessage(packet, groupUserIdentitySet);
+        // 处理成功则转到下个处理器
+        ctx.fireChannelRead(packet);
     }
 
 

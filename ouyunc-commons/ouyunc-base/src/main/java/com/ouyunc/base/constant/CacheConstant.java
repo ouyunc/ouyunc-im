@@ -47,6 +47,11 @@ public class CacheConstant {
     public static final String LOCK = "lock:";
 
     /***
+     * 同意加好友请求
+     */
+    public static final String FRIEND_REQUEST_AGREE = "friend-request-agree:";
+
+    /***
      * 登录
      */
     public static final String LOGIN = "login:";
@@ -66,6 +71,12 @@ public class CacheConstant {
      * 好友列表
      */
     public static final String FRIENDS = "friends:";
+
+
+    /***
+     * 配置， 我的好友或者我的群信息的配置
+     */
+    public static final String FRIENDS_CONFIG = "friends-config:";
 
 
     /***

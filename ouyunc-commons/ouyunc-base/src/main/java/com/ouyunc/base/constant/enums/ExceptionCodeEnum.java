@@ -38,6 +38,10 @@ public enum ExceptionCodeEnum {
 
     ILLEGAL_MESSAGE_TYPE_ERROR(100001, "非法消息类型"),
 
+    ACQUIRE_LOCK_ERROR(200001, "获取锁异常"),
+
+    BIND_FRIEND_ERROR(300001, "绑定好友异常"),
+
     ;
 
     private final int code;

@@ -11,6 +11,7 @@ import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.db.jdbc.JdbcFactory;
 import com.ouyunc.db.mongo.MongodbFactory;
+import com.ouyunc.domain.entity.FriendEntity;
 import com.ouyunc.domain.entity.MessageEntity;
 import com.ouyunc.domain.entity.MongoMessageEntity;
 import com.ouyunc.mq.kafka.KafkaFactory;
@@ -95,11 +96,22 @@ public enum DefaultRepository implements Repository{
      */
     @Override
     public CompletableFuture<?> save(Packet packet) {
+      return savePacket2Mq(MqConstant.KAFKA_SAVE_MESSAGE_TOPIC, packet);
+    }
+
+
+    /**
+     * 将消息保存到mq中
+     * @param topic
+     * @param packet
+     * @return
+     */
+    public CompletableFuture<?> savePacket2Mq(String topic, Packet packet) {
         // 保存消息到磁盘中，这里使用mq来提高吞吐量；如果kafka
         // headers 中可以自定义一些信息做扩展；
         Map<String, Object> headers = new HashMap<>();
         headers.put(KafkaHeaders.CORRELATION_ID, packet.getPacketId());
-        headers.put(KafkaHeaders.TOPIC, MqConstant.KAFKA_SAVE_MESSAGE_TOPIC);
+        headers.put(KafkaHeaders.TOPIC, topic);
         return kafkaTemplate.send(MessageBuilder.withPayload(JSON.toJSONString(packet)).copyHeadersIfAbsent(headers).build());
     }
 
@@ -437,4 +449,70 @@ public enum DefaultRepository implements Repository{
         return redisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_SAVE_MESSAGE_LUA_SCRIPT, Boolean.class), keys, args.toArray());
     }
 
+
+    /**
+     * 判断在appKey 下 from 和 to 是否是好友关系
+     * @param appKey
+     * @param from
+     * @param to
+     * @return
+     */
+    public boolean isFriend(String appKey, String from, String to) {
+        return redisTemplate.opsForZSet().score(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIENDS + from, to) != null;
+    }
+
+
+
+    /**
+     * 获取在appKey 下 from 和 to 的朋友关系
+     * @param appKey
+     * @param from
+     * @param to
+     * @return
+     */
+    public FriendEntity getFriend(String appKey, String from, String to) {
+        // 从redis中获取好友关系
+        FriendEntity friendEntity = redisTemplate.<String, FriendEntity>opsForHash().get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIENDS_CONFIG + from, to);
+        // 如果不为空则返回true，如果为空则从数据库中获取
+        if (friendEntity != null) {
+            return friendEntity;
+        }
+        try {
+            friendEntity = jdbcClient.sql(JdbcSqlConstant.MYSQL.SELECT_FRIEND.sql())
+                    .params(from, to)
+                    .query(FriendEntity.class)
+                    .single();
+        } catch (Exception e) {
+            return null;
+        }
+        return friendEntity;
+    }
+
+
+    /**
+     * 绑定好友关系，在缓存中
+     * @param appKey
+     * @param packet
+     * @return
+     */
+    @SuppressWarnings("unchecked")
+    public boolean bindFriend(String appKey, Packet packet) {
+        Message message = packet.getMessage();
+        String from = message.getFrom();
+        String to = message.getTo();
+        try {
+            redisTemplate.executePipelined(new SessionCallback<>() {
+                @Override
+                public <K, V> Object execute(RedisOperations<K, V> operations) throws DataAccessException {
+                    operations.opsForZSet().add((K) (CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIENDS + from), (V) to, message.getMetadata().getServerTime());
+                    operations.opsForZSet().add((K) (CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIENDS + to), (V) from, message.getMetadata().getServerTime());
+                    return null;
+                }
+            });
+        }catch (Exception e) {
+            log.error("绑定好友关系失败: {}", e.getMessage());
+            return false;
+        }
+        return true;
+    }
 }
