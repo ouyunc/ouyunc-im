@@ -145,7 +145,6 @@ public class ClientHelper {
             });
         }
         Set<String> comboIdentitySet = deviceTypeStream.map(deviceType -> IdentityUtil.generalComboIdentity(appKey, identity, deviceType)).collect(Collectors.toSet());
-        int validComboIdentitySetSize = comboIdentitySet.size();
         // 先从本地注册表获取，如果在同一个服务器上或者不是集群
         Collection<ChannelHandlerContext> allLoginClientChannelHandlerContexts = MessageServerContext.localClientRegisterTable.getAll(comboIdentitySet);
         // 判断comboIdentitySet的size 与结果集的大小是否相等，如果不相等则在从redis获取，如果相等则返回
@@ -158,7 +157,7 @@ public class ClientHelper {
                 comboIdentitySet.remove(IdentityUtil.generalComboIdentity(appKey, identity, loginClientInfo.getDeviceType()));
             }
         });
-        if (validComboIdentitySetSize == loginClientInfoList.size()) {
+        if (comboIdentitySet.size() == loginClientInfoList.size()) {
             return loginClientInfoList;
         }
         // 如果不相等，则将没有查询到的数据通过缓存来获取
@@ -167,7 +166,7 @@ public class ClientHelper {
         Collection<LoginClientInfo> remoteCacheLoginClientInfos = MessageServerContext.remoteLoginClientInfoCache.getAll(remoteLoginClientIdentitySet);
         if (CollectionUtils.isNotEmpty(remoteCacheLoginClientInfos)) {
              // 筛选合法的数据
-            loginClientInfoList.addAll(remoteCacheLoginClientInfos.stream().filter(loginClientInfo -> loginClientInfo != null && OnlineEnum.ONLINE.equals(loginClientInfo.getOnlineStatus())).collect(Collectors.toList()));
+            loginClientInfoList.addAll(remoteCacheLoginClientInfos.stream().filter(loginClientInfo -> loginClientInfo != null && OnlineEnum.ONLINE.equals(loginClientInfo.getOnlineStatus())).toList());
         }
         // 最后返回符合条件的数据
         return loginClientInfoList;

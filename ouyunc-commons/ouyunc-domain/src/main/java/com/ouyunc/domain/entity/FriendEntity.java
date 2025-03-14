@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 /**
 * 好友表
@@ -134,5 +135,17 @@ public class FriendEntity implements Serializable {
 
     public void setUpdateTime(LocalDateTime updateTime) {
         this.updateTime = updateTime;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        FriendEntity that = (FriendEntity) o;
+        return Objects.equals(userId, that.userId) && Objects.equals(friendUserId, that.friendUserId);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(userId, friendUserId);
     }
 }

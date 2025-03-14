@@ -1,6 +1,8 @@
 package com.ouyunc.cache.distributed.redis;
 
+import com.google.common.collect.Lists;
 import com.ouyunc.cache.distributed.AbstractDistributedCache;
+import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -8,8 +10,10 @@ import org.springframework.data.redis.core.SessionCallback;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * @author fzx
@@ -54,7 +58,11 @@ public class RedisDistributedCache<K, V> extends AbstractDistributedCache<K,V> {
 
     @Override
     public List<V> getAll(Set<K> keys) {
-        return redisTemplate.opsForValue().multiGet(keys);
+        List<V> vs = redisTemplate.opsForValue().multiGet(keys);
+        if (CollectionUtils.isEmpty(vs)) {
+            return Lists.newArrayList();
+        }
+        return vs.stream().filter(Objects::nonNull).collect(Collectors.toList());
     }
 
     @Override
@@ -139,5 +147,10 @@ public class RedisDistributedCache<K, V> extends AbstractDistributedCache<K,V> {
     @Override
     public Long sizeZset(K key) {
         return redisTemplate.opsForZSet().zCard(key);
+    }
+
+    @Override
+    public Double scoreZset(K key, Object object) {
+        return redisTemplate.opsForZSet().score(key, object);
     }
 }

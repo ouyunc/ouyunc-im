@@ -1,6 +1,9 @@
 package com.ouyunc.core.context;
 
 
+import com.ouyunc.cache.Cache;
+import com.ouyunc.cache.config.CacheFactory;
+import com.ouyunc.cache.distributed.redis.RedisDistributedCache;
 import com.ouyunc.core.generator.IdGenerator;
 import com.ouyunc.core.generator.SnowflakeIdGenerator;
 import com.ouyunc.core.listener.MessageEventMulticaster;
@@ -24,6 +27,10 @@ public class MessageContext {
     public static MessageProperties messageProperties;
 
 
+    /**
+     * 缓存
+     */
+    public static Cache<String, ?> cache = new RedisDistributedCache<>(CacheFactory.REDIS.instance());
 
 
     /**

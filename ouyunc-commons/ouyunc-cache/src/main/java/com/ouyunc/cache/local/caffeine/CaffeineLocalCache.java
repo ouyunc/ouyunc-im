@@ -2,10 +2,15 @@ package com.ouyunc.cache.local.caffeine;
 
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.ouyunc.cache.local.AbstractLocalCache;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.MapUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
 /**
@@ -92,8 +97,8 @@ public class CaffeineLocalCache<K , V > extends AbstractLocalCache<K, V> {
     @Override
     public Collection<V> getAll(Set<K> keys) {
         Map<K, V> kvMap = loadingCache.getAll(keys);
-        if (kvMap == null) {
-            return null;
+        if (MapUtils.isEmpty(kvMap)) {
+            return CollectionUtils.emptyCollection();
         }
         return kvMap.values();
     }

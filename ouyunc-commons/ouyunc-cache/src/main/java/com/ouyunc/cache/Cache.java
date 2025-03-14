@@ -161,4 +161,15 @@ public interface Cache<K,V> {
         throw new UnsupportedOperationException();
     }
 
+
+    /**
+     * 获取zset 分数
+     * @param key
+     * @param object
+     * @return
+     */
+    default Double scoreZset(K key, Object object) {
+        throw new UnsupportedOperationException();
+    }
+
 }

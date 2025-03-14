@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
@@ -67,7 +68,7 @@ public class MapLocalCache<K,V> extends AbstractLocalCache<K,V> {
 
     @Override
     public List<V> getAll(Set<K> keys) {
-        return keys.parallelStream().map(concurrentMap::get).collect(Collectors.toList());
+        return keys.parallelStream().map(concurrentMap::get).filter(Objects::nonNull).collect(Collectors.toList());
     }
 
     @Override

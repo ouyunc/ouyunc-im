@@ -34,7 +34,7 @@ public class One2OneAgreeFriendRequestMessageContentProcessor extends AbstractBa
 
     @Override
     public MessageContentType type() {
-        return MessageContentTypeEnum.FRIEND_REQUEST_REFUSE_CONTENT;
+        return MessageContentTypeEnum.FRIEND_REQUEST_AGREE_CONTENT;
     }
 
     @SuppressWarnings("unchecked")
