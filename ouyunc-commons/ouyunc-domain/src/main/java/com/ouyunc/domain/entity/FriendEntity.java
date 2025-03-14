@@ -48,6 +48,12 @@ public class FriendEntity implements Serializable {
     private Long sessionMessageOffset;
 
     /**
+     * 成为好友的时间戳
+     */
+    private Long joinTime;
+
+
+    /**
     * 创建时间
     */
     private LocalDateTime createTime;
@@ -60,18 +66,18 @@ public class FriendEntity implements Serializable {
     public FriendEntity() {
     }
 
-
-
-    public FriendEntity(Long id, Long userId, Long friendUserId, String friendNickName, Integer shield, Long sessionMessageOffset, LocalDateTime createTime, LocalDateTime updateTime) {
+    public FriendEntity(Long id, Long userId, Long friendUserId, String friendNickName, Integer shield, Long sessionMessageOffset, Long joinTime, LocalDateTime createTime, LocalDateTime updateTime) {
         this.id = id;
         this.userId = userId;
         this.friendUserId = friendUserId;
         this.friendNickName = friendNickName;
         this.shield = shield;
         this.sessionMessageOffset = sessionMessageOffset;
+        this.joinTime = joinTime;
         this.createTime = createTime;
         this.updateTime = updateTime;
     }
+
 
     public Long getId() {
         return id;
@@ -79,6 +85,14 @@ public class FriendEntity implements Serializable {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public Long getJoinTime() {
+        return joinTime;
+    }
+
+    public void setJoinTime(Long joinTime) {
+        this.joinTime = joinTime;
     }
 
     public Long getUserId() {

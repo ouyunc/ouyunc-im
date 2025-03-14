@@ -67,11 +67,34 @@ public class GroupUserEntity implements Serializable {
      */
     private Long sessionMessageOffset;
 
+    /**
+     * 成为好友的时间戳
+     */
+    private Long joinTime;
+
 
     /**
     * 创建时间
     */
     private LocalDateTime createTime;
+
+    public GroupUserEntity() {
+    }
+
+    public GroupUserEntity(Long id, Long groupId, String groupNickName, Long userId, Integer leader, Integer manager, String userNickName, Integer shield, Integer mushin, Long sessionMessageOffset, Long joinTime, LocalDateTime createTime) {
+        this.id = id;
+        this.groupId = groupId;
+        this.groupNickName = groupNickName;
+        this.userId = userId;
+        this.leader = leader;
+        this.manager = manager;
+        this.userNickName = userNickName;
+        this.shield = shield;
+        this.mushin = mushin;
+        this.sessionMessageOffset = sessionMessageOffset;
+        this.joinTime = joinTime;
+        this.createTime = createTime;
+    }
 
     public Long getId() {
         return id;
@@ -95,6 +118,14 @@ public class GroupUserEntity implements Serializable {
 
     public void setGroupNickName(String groupNickName) {
         this.groupNickName = groupNickName;
+    }
+
+    public Long getJoinTime() {
+        return joinTime;
+    }
+
+    public void setJoinTime(Long joinTime) {
+        this.joinTime = joinTime;
     }
 
     public Long getUserId() {
