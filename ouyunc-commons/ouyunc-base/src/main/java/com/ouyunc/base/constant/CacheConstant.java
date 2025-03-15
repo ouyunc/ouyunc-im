@@ -119,6 +119,11 @@ public class CacheConstant {
     public static final String SESSION = "session:";
 
     /***
+     * 好友请求会话
+     */
+    public static final String FRIEND_REQUEST_SESSION = "friend-request-session:";
+
+    /***
      * mqtt
      */
     public static final String MQTT = "mqtt:";

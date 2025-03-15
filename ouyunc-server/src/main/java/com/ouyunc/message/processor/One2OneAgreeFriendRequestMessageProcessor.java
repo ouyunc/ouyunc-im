@@ -102,7 +102,7 @@ public class One2OneAgreeFriendRequestMessageProcessor extends AbstractMessagePr
                     return;
                 }
                 // 保存消息
-                if (!repository().saveMessage(packet, sessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
+                if (!repository().saveFriendRequestMessage(packet, sessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
                     log.error("Failed to save one-to-one agree friend request message: {}", packet);
                     MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一同意好友请求消息异常!", packet), true);
                     return;

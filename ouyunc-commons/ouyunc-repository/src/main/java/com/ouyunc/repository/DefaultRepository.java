@@ -425,6 +425,27 @@ public enum DefaultRepository implements Repository{
     }
 
     /**
+     * 保存好友请求,
+     * @param packet
+     * @param expireTime 过期时间，单位毫秒，多久后过期
+     * @return
+     */
+    public boolean saveFriendRequestMessage(Packet packet, String sessionId, long expireTime) {
+        Message message = packet.getMessage();
+        Metadata metadata = message.getMetadata();
+        String luaScript = LuaScriptConstant.SAVE_MESSAGE_WITHOUT_OFFLINE_LUA_SCRIPT;
+        List<String> keys = Lists.newArrayList(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.MESSAGE + packet.getPacketId(),
+                CacheConstant.OUYUNC +  CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_SESSION + sessionId);
+        Object[] args = new Object[]{packet, expireTime, packet.getPacketId(), metadata.getServerTime()};
+        // 如果开启qos,并且需要qos
+        if (MessageContext.messageProperties.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
+            keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + message.getTo());
+            luaScript = LuaScriptConstant.SAVE_MESSAGE_WITH_OFFLINE_LUA_SCRIPT;
+        }
+        return redisTemplate.execute(new DefaultRedisScript<>(luaScript, Boolean.class), keys, args);
+    }
+
+    /**
      * 群组批量保存，保存业务消息以及离线消息和会话消息
      * @param packet
      * @param expireTime 过期时间，单位毫秒，多久后过期
