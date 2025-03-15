@@ -58,7 +58,7 @@ public class UserEntity implements Serializable {
     private Integer age;
 
     /**
-     * 性别：0-女，1-男，2-其他
+     * 性别：0-女，1-男
      */
     private Integer sex;
 
