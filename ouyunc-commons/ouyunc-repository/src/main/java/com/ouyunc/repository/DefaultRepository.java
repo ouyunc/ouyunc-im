@@ -352,7 +352,7 @@ public enum DefaultRepository implements Repository{
             return false;
         }
 
-        // 获取需要撤销的消息的服务端时间戳
+        // 获取需要读回执的消息的服务端时间戳
         List<Long> messageServerTimeScores = redisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_SCORE_LUA_SCRIPT, List.class), List.of(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.SESSION + sessionId), readPacketIds.toArray());
         if (CollectionUtils.isEmpty(messageServerTimeScores) || messageServerTimeScores.parallelStream().filter(Objects::nonNull).count() != readPacketIds.size()) {
             log.error("会话:{}不存在该消息id: {}, 或消息id 对应会话中的消息数量不相等", sessionId, readPacketIds);

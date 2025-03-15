@@ -3,7 +3,6 @@ package com.ouyunc.base.constant.enums;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.content.LoginContent;
-import com.ouyunc.base.packet.message.content.ReadReceiptContent;
 
 import java.util.List;
 
@@ -19,7 +18,7 @@ public enum MessageContentTypeEnum implements MessageContentType {
     QOS_DUP_CONTENT(NumberConstant.NUMBER_NEGATIVE_5, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), Packet.class,  "qos  客户端重发消息的消息内容"),
 
     WITHDRAW_CONTENT(NumberConstant.NUMBER_NEGATIVE_6, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), List.class,  "撤销消息的消息内容"),
-    READ_RECEIPT_CONTENT(NumberConstant.NUMBER_NEGATIVE_7, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), ReadReceiptContent.class,  "读已回执消息内容"),
+    READ_RECEIPT_CONTENT(NumberConstant.NUMBER_NEGATIVE_7, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), List.class,  "读已回执消息内容"),
 
 
     TEXT_CONTENT(NumberConstant.NUMBER_NEGATIVE_128, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), String.class, "文本内容类型"),
