@@ -56,12 +56,13 @@ public class MqConstant {
     public static final String KAFKA_READ_RECEIPT_MESSAGE_GROUP =  "message_read_receipt";
 
     /**
-     * kafka 绑定好友 topic
+     * kafka 好友请求（加入/同意/拒绝） topic
      */
-    public static final String KAFKA_BIND_FRIEND_TOPIC =  MessageConstant.OUYUNC + MessageConstant.UNDERLINE + "bind_friend";
+    public static final String KAFKA_FRIEND_REQUEST_TOPIC =  MessageConstant.OUYUNC + MessageConstant.UNDERLINE + "friend_request";
 
     /**
-     * kafka 绑定好友 group
+     * kafka 好友请求（加入/同意/拒绝） group
      */
-    public static final String KAFKA_BIND_FRIEND_GROUP =  "bind_friend";
+    public static final String KAFKA_FRIEND_REQUEST_GROUP =  "friend_request";
+
 }

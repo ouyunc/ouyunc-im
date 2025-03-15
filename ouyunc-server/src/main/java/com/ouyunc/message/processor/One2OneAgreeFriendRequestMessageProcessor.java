@@ -108,7 +108,7 @@ public class One2OneAgreeFriendRequestMessageProcessor extends AbstractMessagePr
                     return;
                 }
                 // 保存消息后，则绑定好友关系,先发送绑定好友的mq消息，发送成功后
-                repository().savePacket2Mq(MqConstant.KAFKA_BIND_FRIEND_TOPIC, packet).whenComplete((result, ex) -> {
+                repository().savePacket2Mq(MqConstant.KAFKA_FRIEND_REQUEST_TOPIC, packet).whenComplete((result, ex) -> {
                     if (ex != null) {
                         log.error("绑定好友关系，发送mq，原因：{}", ex.getMessage());
                         MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "处理一对一同意好友请求绑定异常！" + ex.getMessage(), packet), true);

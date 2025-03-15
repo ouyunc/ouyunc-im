@@ -1,6 +1,7 @@
 package com.ouyunc.message.processor;
 
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.MessageType;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
@@ -80,17 +81,25 @@ public class One2OneJoinFriendRequestMessageProcessor extends AbstractMessagePro
         Message message = packet.getMessage();
         String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
         // 这里不保存到session 缓存中,保存到临时的会话消息中，该好友请求的消息可以对其进行定期清理；
-        if (!repository().saveFriendRequestMessage(packet, sessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
-            log.error("Failed to save one-to-one join friend request message: {}", packet);
-            MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一加好友请求消息异常!", packet), true);
-            return;
-        }
-        // 如果接收方在线，则直接发送消息
-        List<LoginClientInfo> toLoginClientInfos = ClientHelper.onlineAll(message.getMetadata().getAppKey(), message.getTo());
-        if (CollectionUtils.isNotEmpty(toLoginClientInfos)) {
-            MessageHelper.asyncSendMessage(packet, toLoginClientInfos);
-        }
-        // 处理成功则转到下个处理器
-        ctx.fireChannelRead(packet);
+        repository().savePacket2Mq(MqConstant.KAFKA_FRIEND_REQUEST_TOPIC, packet).whenComplete((result, ex) ->{
+            if (ex != null) {
+                log.error("请求添加好友，发送mq异常，原因：{}", ex.getMessage());
+                MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "处理一对一添加好友请求异常！" + ex.getMessage(), packet), true);
+            }else {
+                if (!repository().saveFriendRequestMessage(packet, sessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
+                    log.error("Failed to save one-to-one join friend request message: {}", packet);
+                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一加好友请求消息异常!", packet), true);
+                    return;
+                }
+                // 如果接收方在线，则直接发送消息
+                List<LoginClientInfo> toLoginClientInfos = ClientHelper.onlineAll(message.getMetadata().getAppKey(), message.getTo());
+                if (CollectionUtils.isNotEmpty(toLoginClientInfos)) {
+                    MessageHelper.asyncSendMessage(packet, toLoginClientInfos);
+                }
+                // 处理成功则转到下个处理器
+                ctx.fireChannelRead(packet);
+            }
+        });
+
     }
 }
