@@ -19,6 +19,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -482,9 +483,14 @@ public enum DefaultRepository implements Repository{
                     .params(from, to)
                     .query(FriendEntity.class)
                     .single();
-        } catch (Exception e) {
+        } catch (EmptyResultDataAccessException e) {
             return null;
+        }catch (Exception e) {
+            log.error("从db查询好友关系异常: {}", e.getMessage());
+            throw new RuntimeException(e);
         }
+        // 如果不为空，添加到缓存中
+        redisTemplate.opsForHash().put(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIENDS_CONFIG + from, to, friendEntity);
         return friendEntity;
     }
 

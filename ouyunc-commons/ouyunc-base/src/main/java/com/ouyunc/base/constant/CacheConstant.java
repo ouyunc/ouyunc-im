@@ -101,6 +101,13 @@ public class CacheConstant {
      */
     public static final String TO = "to:";
 
+
+    /***
+     * 黑名单
+     */
+    public static final String BLACKLIST = "blacklist:";
+
+
     /***
      * 离线
      */

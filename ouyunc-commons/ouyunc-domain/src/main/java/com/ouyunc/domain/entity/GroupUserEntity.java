@@ -68,7 +68,7 @@ public class GroupUserEntity implements Serializable {
     private Long sessionMessageOffset;
 
     /**
-     * 成为好友的时间戳
+     * 成为好友的时间戳， 毫秒
      */
     private Long joinTime;
 

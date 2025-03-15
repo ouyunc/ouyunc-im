@@ -16,7 +16,10 @@ public class JdbcSqlConstant {
         INSERT_READ_RECEIPT_MESSAGE("INSERT INTO `ouyunc_im_read_receipt` (id, msg_id, user_id, read_time) VALUES(?, ?, ?, ?)", "保存读已回执记录"),
         UPDATE_READ_MESSAGE("UPDATE `ouyunc_im_message` SET `read` = ? WHERE id = ? ", "读已回执消息"),
 
-        SELECT_FRIEND("SELECT id, user_id, friend_user_id, friend_nick_name, shield, create_time, update_time, session_message_offset FROM ouyunc_im_friend where user_id = ? and friend_user_id = ? ", "查询好友关系")
+        SELECT_FRIEND("SELECT id, user_id, friend_user_id, friend_nick_name, shield, create_time, update_time, session_message_offset FROM ouyunc_im_friend where user_id = ? and friend_user_id = ? ", "查询好友关系"),
+
+
+        SELECT_BLACKLIST("select id, identity, user_id, identity_type, join_time, create_time from  ouyunc_im_blacklist where identity = ? and user_id = ? and identity_type = ? ", "查询黑名单")
         ;
 
 

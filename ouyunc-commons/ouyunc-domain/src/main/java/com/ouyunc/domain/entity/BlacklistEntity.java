@@ -35,10 +35,18 @@ public class BlacklistEntity implements Serializable {
     */
 
     private Integer identityType;
+
+
+    /**
+     * 成为好友的时间戳， 毫秒
+     */
+    private Long joinTime;
+
+
+
     /**
     * 创建时间
     */
-
     private LocalDateTime createTime;
 
     public Long getId() {
@@ -71,6 +79,14 @@ public class BlacklistEntity implements Serializable {
 
     public void setIdentityType(Integer identityType) {
         this.identityType = identityType;
+    }
+
+    public Long getJoinTime() {
+        return joinTime;
+    }
+
+    public void setJoinTime(Long joinTime) {
+        this.joinTime = joinTime;
     }
 
     public LocalDateTime getCreateTime() {

@@ -22,15 +22,16 @@ CREATE TABLE `ouyunc_im_app` (
 -- message.ouyunc_im_blacklist definition
 
 CREATE TABLE `ouyunc_im_blacklist` (
-                                       `id` bigint NOT NULL COMMENT '主键id',
-                                       `identity` bigint NOT NULL COMMENT '群或客户端唯一标识',
-                                       `user_id` bigint NOT NULL COMMENT '客户端id（被加入identity 黑名单）',
+                                       `id` bigint(20) NOT NULL COMMENT '主键id',
+                                       `identity` bigint(20) NOT NULL COMMENT '群或客户端唯一标识',
+                                       `user_id` bigint(20) NOT NULL COMMENT '客户端id（被加入identity 黑名单）',
                                        `identity_type` tinyint(1) NOT NULL COMMENT '唯一标识类型，1-客户端唯一标识（用户），2-群唯一标识',
-                                       `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+                                       `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                                       `join_time` bigint(20) DEFAULT NULL COMMENT '加入黑名单时间戳，毫秒',
                                        PRIMARY KEY (`id`) USING BTREE,
-                                       UNIQUE KEY `identity_userId` (`identity`,`user_id`) USING BTREE COMMENT '关系唯一索引'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC COMMENT='黑名单表';
-
+                                       UNIQUE KEY `identity_userId` (`identity`,`user_id`) USING BTREE COMMENT '关系唯一索引',
+                                       KEY `identity_userId_type` (`identity`,`user_id`,`identity_type`) USING BTREE COMMENT '联合索引'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC COMMENT='黑名单表';
 
 
 -- message.ouyunc_im_file definition
