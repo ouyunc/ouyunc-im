@@ -51,7 +51,6 @@ public class ServerStartupEventListener implements MessageListener<ServerStartup
             startAppKeyConnectionCountRefreshScheduler(appKeys);
         }
         // 启动appKey 下的deviceType 订阅
-        startAppKeyDeviceTypeSubscription();
         // 启动客户端登录信息心跳保活线程
         startClientLoginKeepAliveThread();
     }
@@ -122,17 +121,22 @@ public class ServerStartupEventListener implements MessageListener<ServerStartup
                         minScore.set(maxScore - MessageServerContext.serverProperties().getAppKeyConnectionCountRefreshOffset() * MessageConstant.SECOND_TIMESTAMP);
                     }
                     for (String appKey : appKeys) {
-                        RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + appKey);
-                        try {
-                            if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
-                                refreshAppKeyConnectionCount(redisTemplate, appKey, minScore, maxScore);
+                        // 如果开启集群模式,则加锁保证进程安全
+                        if (MessageServerContext.serverProperties().isClusterEnable()) {
+                            RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + appKey);
+                            try {
+                                if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
+                                    refreshAppKeyConnectionCount(redisTemplate, appKey, minScore, maxScore);
+                                }
+                            } catch (InterruptedException e) {
+                                log.error("appKey-connection-count-refresh-timer 获取锁失败,原因：{}", e.getMessage());
+                            } finally {
+                                if (lock.isHeldByCurrentThread()) {
+                                    lock.unlock();
+                                }
                             }
-                        } catch (InterruptedException e) {
-                            log.error("appKey-connection-count-refresh-timer 获取锁失败,原因：{}", e.getMessage());
-                        } finally {
-                            if (lock.isHeldByCurrentThread()) {
-                                lock.unlock();
-                            }
+                        }else {
+                            refreshAppKeyConnectionCount(redisTemplate, appKey, minScore, maxScore);
                         }
                     }
                 }
