@@ -4,7 +4,7 @@ ouyunc-protobuf-message.js  文件就是使用工具和该文件生成的js 文�
 
 使用步骤：
 文件ouyunc-protobuf-message.js 不是必须的;
-如果不使用protobuf序列化（使用json序列化），不需要引入这个文件；只需引入[ouyunc-protobuf-message.js](ouyunc-message-sdk.js)即可，可参考socket.html
+如果不使用protobuf序列化（使用json序列化），不需要引入这个文件；只需引入[ouyunc-protobuf-message.js](ouyunc-protobuf-message.js)即可，可参考socket.html
 
 1, 单聊: 
   1.1, 会话消息 (文本消息，附件消息（图片，文档，压缩文件，语音消息，视频消息)）
