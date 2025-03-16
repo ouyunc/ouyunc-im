@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 */
 @Document(collection = "ouyunc_im_friend_request_session")
 @TableName("ouyunc_im_friend_request_session")
-public class FriendRequestEntity implements Serializable {
+public class FriendRequestSessionEntity implements Serializable {
 
     /**
     * 主键id
@@ -76,10 +76,10 @@ public class FriendRequestEntity implements Serializable {
         public static final String status = "status";
 
     }
-    public FriendRequestEntity() {
+    public FriendRequestSessionEntity() {
     }
 
-    public FriendRequestEntity(Long id, String from, String to, Long sessionBeginTime, Long sessionEndTime, Integer status, LocalDateTime createTime, LocalDateTime updateTime) {
+    public FriendRequestSessionEntity(Long id, String from, String to, Long sessionBeginTime, Long sessionEndTime, Integer status, LocalDateTime createTime, LocalDateTime updateTime) {
         this.id = id;
         this.from = from;
         this.to = to;

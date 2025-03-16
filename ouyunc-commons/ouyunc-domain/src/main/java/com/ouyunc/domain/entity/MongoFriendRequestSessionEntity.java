@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 * 好友请求
 * @TableName ouyunc_im_friend_request
 */
-public class MongoFriendRequestEntity extends FriendRequestEntity {
+public class MongoFriendRequestSessionEntity extends FriendRequestSessionEntity {
 
     /**
      * 过期时间
@@ -16,10 +16,10 @@ public class MongoFriendRequestEntity extends FriendRequestEntity {
     @Field("expire_at")
     private LocalDateTime expireAt;
 
-    public MongoFriendRequestEntity() {
+    public MongoFriendRequestSessionEntity() {
     }
 
-    public MongoFriendRequestEntity(Long id, String from, String to, Long sessionBeginTime, Long sessionEndTime, Integer status, LocalDateTime createTime, LocalDateTime updateTime, LocalDateTime expireAt) {
+    public MongoFriendRequestSessionEntity(Long id, String from, String to, Long sessionBeginTime, Long sessionEndTime, Integer status, LocalDateTime createTime, LocalDateTime updateTime, LocalDateTime expireAt) {
         super(id, from, to, sessionBeginTime, sessionEndTime, status, createTime, updateTime);
         this.expireAt = expireAt;
     }
