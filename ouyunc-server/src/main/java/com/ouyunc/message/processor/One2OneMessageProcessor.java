@@ -3,6 +3,7 @@ package com.ouyunc.message.processor;
 import com.google.common.collect.Sets;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.MessageType;
@@ -13,8 +14,6 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.core.listener.event.ExceptionEvent;
-import com.ouyunc.core.listener.event.ReadReceiptMessageEvent;
-import com.ouyunc.core.listener.event.WithdrawMessageEvent;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
@@ -88,13 +87,53 @@ public class One2OneMessageProcessor extends AbstractMessageProcessor<Byte>{
             return;
         }
         // 3. 处理特殊消息类型
-        if (!processSpecialMessageContentType(packet)) {
-            return;
+        if (!processSpecialMessageContentType(ctx, packet)) {
+            // 4. 发送消息给接收方
+            deliverMessage(packet);
+            // 处理成功则转到下个处理器
+            ctx.fireChannelRead(packet);
         }
-        // 4. 发送消息给接收方
-        deliverMessage(packet);
-        // 处理成功则转到下个处理器
-        ctx.fireChannelRead(packet);
+    }
+
+    /**
+     * 处理特殊消息类型
+     */
+    private boolean processSpecialMessageContentType(ChannelHandlerContext ctx, Packet packet) {
+        Message message = packet.getMessage();
+        int contentType = message.getContentType();
+        if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
+            repository().savePacket2Mq(MqConstant.KAFKA_WITHDRAW_MESSAGE_TOPIC, packet).whenComplete((result, ex)->{
+                if (ex != null) {
+                    log.error("一对一撤回消息，发送mq异常，原因：{}", ex.getMessage());
+                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "一对一撤销消息发送mq异常!", packet), true);
+                }else  {
+                    if (processWithdrawMessage(packet)) {
+                        // 4. 发送消息给接收方
+                        deliverMessage(packet);
+                        // 处理成功则转到下个处理器
+                        ctx.fireChannelRead(packet);
+                    }
+
+                }
+            });
+            return true;
+        } else if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {
+            repository().savePacket2Mq(MqConstant.KAFKA_READ_RECEIPT_MESSAGE_TOPIC, packet).whenComplete((result, ex)->{
+                if (ex != null) {
+                    log.error("一对一已读消息，发送mq异常，原因：{}", ex.getMessage());
+                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "一对一已读消息发送mq异常!", packet), true);
+                }else  {
+                    if (processReadReceiptMessage(packet)) {
+                        // 4. 发送消息给接收方
+                        deliverMessage(packet);
+                        // 处理成功则转到下个处理器
+                        ctx.fireChannelRead(packet);
+                    }
+                }
+            });
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -123,19 +162,6 @@ public class One2OneMessageProcessor extends AbstractMessageProcessor<Byte>{
         return true;
     }
 
-    /**
-     * 处理特殊消息类型
-     */
-    private boolean processSpecialMessageContentType(Packet packet) {
-        Message message = packet.getMessage();
-        int contentType = message.getContentType();
-        if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
-            return processWithdrawMessage(packet);
-        } else if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {
-            return processReadReceiptMessage(packet);
-        }
-        return true;
-    }
 
     /**
      * 处理撤回消息
@@ -144,8 +170,7 @@ public class One2OneMessageProcessor extends AbstractMessageProcessor<Byte>{
         return processWithLock(packet,
                 () -> repository().withdrawMessage(packet, getSessionId(packet), Sets.newHashSet(packet.getMessage().getTo())),
                 ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR,
-                "撤销消息异常",
-                () -> MessageServerContext.publishEvent(new WithdrawMessageEvent(packet), true)
+                "一对一撤销消息异常"
         );
     }
 
@@ -157,8 +182,7 @@ public class One2OneMessageProcessor extends AbstractMessageProcessor<Byte>{
         return processWithLock(packet,
                 () -> repository().readReceiptMessage(packet, IdentityUtil.sessionId(message.getFrom(), message.getTo()), MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP),
                 ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR,
-                "读已回执消息异常",
-                () -> MessageServerContext.publishEvent(new ReadReceiptMessageEvent(packet), true)
+                "一对一读已回执消息异常"
         );
     }
 
@@ -168,8 +192,7 @@ public class One2OneMessageProcessor extends AbstractMessageProcessor<Byte>{
     private boolean processWithLock(Packet packet,
                                     Supplier<Boolean> processor,
                                     ExceptionCodeEnum errorCode,
-                                    String errorMessage,
-                                    Runnable afterProcess) {
+                                    String errorMessage) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         String sessionId = getSessionId(packet);
@@ -187,15 +210,11 @@ public class One2OneMessageProcessor extends AbstractMessageProcessor<Byte>{
                 MessageServerContext.publishEvent(new ExceptionEvent(errorCode, errorMessage, packet), true);
                 return false;
             }
-
-            afterProcess.run();
             return true;
-
         } catch (Exception e) {
             log.error("Error while processing message with lock", e);
             MessageServerContext.publishEvent(new ExceptionEvent(errorCode, errorMessage, packet), true);
             return false;
-
         } finally {
             releaseLock(multiLock);
         }

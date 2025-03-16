@@ -50,6 +50,13 @@ public class ReadReceiptEntity implements Serializable {
     @Transient
     private LocalDateTime createTime;
 
+    public static final class Fields {
+        public static final String id = "id";
+        public static final String msgId = "msg_id";
+        public static final String userId = "user_id";
+    }
+
+
     public ReadReceiptEntity() {
     }
 

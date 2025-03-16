@@ -14,6 +14,9 @@ public class MongoMessageEntity extends MessageEntity {
     @Field("expire_at")
     private LocalDateTime expireAt;
 
+
+
+
     public MongoMessageEntity() {
     }
 
