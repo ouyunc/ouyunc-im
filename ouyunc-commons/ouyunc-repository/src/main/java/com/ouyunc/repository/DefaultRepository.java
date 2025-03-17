@@ -480,6 +480,7 @@ public enum DefaultRepository implements Repository{
      * @return
      */
     public boolean isFriend(String appKey, String from, String to) {
+        // 这里是否再去查询数据库？没有太大必要，后续如果需要再加
         return redisTemplate.opsForZSet().score(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIENDS + from, to) != null;
     }
 

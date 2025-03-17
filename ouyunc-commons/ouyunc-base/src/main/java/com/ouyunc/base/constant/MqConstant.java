@@ -65,4 +65,14 @@ public class MqConstant {
      */
     public static final String KAFKA_FRIEND_REQUEST_GROUP =  "friend_request";
 
+    /**
+     * kafka 已经存在好友关系 topic
+     */
+    public static final String KAFKA_EXIST_FRIEND_TOPIC =  MessageConstant.OUYUNC + MessageConstant.UNDERLINE + "exist_friend";
+
+    /**
+     * kafka 已经存在好友关系 group
+     */
+    public static final String KAFKA_EXIST_FRIEND_GROUP =  "exist_friend";
+
 }

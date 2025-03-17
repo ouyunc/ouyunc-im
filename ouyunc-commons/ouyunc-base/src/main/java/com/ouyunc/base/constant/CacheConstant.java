@@ -76,7 +76,7 @@ public class CacheConstant {
     /***
      * 配置， 我的好友或者我的群信息的配置
      */
-    public static final String FRIENDS_CONFIG = "friends-config:";
+    public static final String FRIENDS_CONFIG = "friends:config:";
 
 
     /***
@@ -118,16 +118,11 @@ public class CacheConstant {
      */
     public static final String SESSION = "session:";
 
-    /***
-     * 好友请求会话
-     */
-    public static final String FRIEND_REQUEST_SESSION = "friend-request-session:";
-
 
     /***
      * 好友请求
      */
-    public static final String FRIEND_REQUEST = "friend-request:";
+    public static final String FRIEND_REQUEST = "friends:request:";
 
 
     /***

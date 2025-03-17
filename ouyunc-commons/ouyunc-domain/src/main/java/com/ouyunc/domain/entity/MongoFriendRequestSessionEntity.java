@@ -45,7 +45,7 @@ public class MongoFriendRequestSessionEntity implements Serializable {
     private Long sessionEndTime;
 
     /**
-    * 好友请求会话状态：0-待处理， 1-已同意，2-已拒绝，3-已过期
+    * 好友请求会话状态：0-待处理， 1-已同意，2-已拒绝，3-已过期，4-已失效 (如果已经是好友，另一个就是重置时效状态)
     */
     @Field("status")
     private Integer status;
