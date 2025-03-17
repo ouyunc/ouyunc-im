@@ -123,6 +123,13 @@ public class CacheConstant {
      */
     public static final String FRIEND_REQUEST_SESSION = "friend-request-session:";
 
+
+    /***
+     * 好友请求
+     */
+    public static final String FRIEND_REQUEST = "friend-request:";
+
+
     /***
      * mqtt
      */

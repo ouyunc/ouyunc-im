@@ -435,7 +435,7 @@ public enum DefaultRepository implements Repository{
         Metadata metadata = message.getMetadata();
         String luaScript = LuaScriptConstant.SAVE_MESSAGE_WITHOUT_OFFLINE_LUA_SCRIPT;
         List<String> keys = Lists.newArrayList(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.MESSAGE + packet.getPacketId(),
-                CacheConstant.OUYUNC +  CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_SESSION + sessionId);
+                CacheConstant.OUYUNC +  CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST + CacheConstant.SESSION + sessionId);
         Object[] args = new Object[]{packet, expireTime, packet.getPacketId(), metadata.getServerTime()};
         // 如果开启qos,并且需要qos
         if (MessageContext.messageProperties.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {

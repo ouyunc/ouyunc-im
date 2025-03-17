@@ -13,8 +13,7 @@ import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
-import com.ouyunc.message.validator.AuthValidator;
-import com.ouyunc.message.validator.FriendValidator;
+import com.ouyunc.message.validator.*;
 import com.ouyunc.repository.DefaultRepository;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.collections4.CollectionUtils;
@@ -56,10 +55,11 @@ public class One2OneRefuseFriendRequestMessageProcessor extends AbstractMessageP
                 // 校验是否拥有相关权限 permission （是有有单聊，甚至某种内容类型的权限，如不能发语音，视频消息，只能发文本，都可以在这里做校验拦截）
                 // 屏蔽和拉黑的效果目前是一样的功能，都不能将将消息发到对方
                 // 校验是否被拉黑,如果被拉黑 （无论是否是好友，都可以拉黑）
-                if (FriendValidator.INSTANCE.verify(packet, ctx)) {
-                    log.warn("已经是好友了，请知悉。该消息 {} 被忽略", packet);
+                if (PermissionValidator.INSTANCE.negate().or(BlackListValidator.INSTANCE).or(FriendValidator.INSTANCE).or(FriendRequestValidator.INSTANCE.negate()).verify(packet, ctx)) {
+                    log.warn("验证不通过。没有权限/被拉黑/已经是好友/不存在好友请求记录，请知悉。该消息 {} 被忽略", packet);
                     return;
                 }
+                // 校验是否存在好友请求，如果不存在，则忽略
                 ctx.fireChannelRead(packet);
             } else {
                 // 发送失败
