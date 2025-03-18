@@ -4,3 +4,4 @@ target/
 out/
 ouyu-server/src/META-INF/MANIFEST.MF
 *.iml
+/.idea/
