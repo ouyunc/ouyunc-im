@@ -1,4 +1,4 @@
-# OUYUNC-IM [![version](https://img.shields.io/badge/version-6.2.0-blue)](https://gitee.com/etxync/ouyunc-im)  
+# OUYUNC-IM [![version](https://img.shields.io/badge/version-6.3.0-blue)](https://gitee.com/etxync/ouyunc-im)  
 [![license](https://img.shields.io/badge/license-MIT-brightgreen)](https://www.mit-license.org/)
 <a href='https://gitee.com/etxync/ouyunc-im/stargazers'><img src='https://gitee.com/etxync/ouyunc-im/badge/star.svg?theme=dark' alt='star'></img></a>
 <a href='https://gitee.com/etxync/ouyunc-im/members'><img src='https://gitee.com/etxync/ouyunc-im/badge/fork.svg?theme=dark' alt='fork'></img></a>
@@ -139,7 +139,7 @@ https://gitee.com/etxync/ouyunc-im/wikis/OUYUNC-IM%20v3.x/%E5%AE%A2%E6%88%B7%E7%
 7. 集成springboot 以ouyunc-im-spring-boot-starter （已完成）
 8. 打成依赖包放到中央仓库，作为依赖组件来引用
 9. 重构qos消息可靠性到达（已完成）
-10. 优化数据库模块，支持分表分库
+   10. 重构群组相关业务（加群申请、同意加群、拒绝加群、被邀请加群、同意群邀请、拒绝群邀请、踢出群、解散群、屏蔽群、群全体禁言、群成员禁言、群拉黑、平台封禁群等）
 11. 优化其他代码
 
 
@@ -206,6 +206,12 @@ https://gitee.com/etxync/ouyunc-im/wikis/OUYUNC-IM%20v3.x/%E5%AE%A2%E6%88%B7%E7%
 #####  **6.1.1 ~ 6.2.0**
 1. 添加一对一聊天，群组聊天处理器，以及消息撤回，已读和@群成员功能
 2. 优化其他代码
+
+#####  **6.2.0 ~ 6.3.0**
+1. 添加添加好友，拒绝好友，同意好友请求处理
+2. 屏蔽好友，拉黑好友等
+3. 支持会话消息引用，@群成员功能
+4. 优化其他代码
 
 #### 最后说明
 由于本人技术有限，项目中可能会有bug或代码不规范的地方，如果对你带来了困扰请跳过本项目。
