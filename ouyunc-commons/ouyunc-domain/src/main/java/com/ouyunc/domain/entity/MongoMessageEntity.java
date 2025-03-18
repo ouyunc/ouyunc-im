@@ -1,5 +1,6 @@
 package com.ouyunc.domain.entity;
 
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Field;
 
 import java.time.LocalDateTime;
@@ -12,6 +13,7 @@ public class MongoMessageEntity extends MessageEntity {
      * 过期时间
      */
     @Field("expire_at")
+    @Indexed(expireAfter = "0s")
     private LocalDateTime expireAt;
 
 

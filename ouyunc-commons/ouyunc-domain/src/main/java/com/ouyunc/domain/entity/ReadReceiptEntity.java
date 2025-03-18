@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.CompoundIndexes;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
@@ -17,6 +19,9 @@ import java.time.LocalDateTime;
 */
 @TableName("ouyunc_im_read_receipt")
 @Document(collection = "ouyunc_im_read_receipt")
+@CompoundIndexes({
+        @CompoundIndex(name = "msgId_userId_idx", def = "{'msg_id': 1, 'user_id': 1}")
+})
 public class ReadReceiptEntity implements Serializable {
 
     /**

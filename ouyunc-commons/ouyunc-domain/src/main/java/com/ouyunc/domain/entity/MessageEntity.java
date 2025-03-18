@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
@@ -27,6 +28,7 @@ public class MessageEntity implements Serializable {
      * 协议
      */
     @Field("protocol")
+    @Indexed
     private byte protocol;
 
     /**
@@ -39,6 +41,7 @@ public class MessageEntity implements Serializable {
      * 设备类型
      */
     @Field("device_type")
+    @Indexed
     private byte deviceType;
 
     /**
@@ -63,6 +66,7 @@ public class MessageEntity implements Serializable {
      * 消息类型
      */
     @Field("message_type")
+    @Indexed
     private byte messageType;
 
     /**
@@ -75,12 +79,14 @@ public class MessageEntity implements Serializable {
      * 客户端ip
      */
     @Field("client_ip")
+    @Indexed
     private String clientIp;
 
     /**
      * 发送者,mysql 关键字段
      */
     @Field("from")
+    @Indexed
     @TableField("`from`")
     private String from;
 
@@ -88,6 +94,7 @@ public class MessageEntity implements Serializable {
      * 接收者
      */
     @Field("to")
+    @Indexed
     @TableField("`to`")
     private String to;
 
@@ -95,6 +102,7 @@ public class MessageEntity implements Serializable {
      * 内容类型
      */
     @Field("content_type")
+    @Indexed
     private int contentType;
 
     /**
@@ -151,6 +159,7 @@ public class MessageEntity implements Serializable {
      * appKey
      */
     @Field("app_key")
+    @Indexed
     private String appKey;
 
 

@@ -1,6 +1,8 @@
 package com.ouyunc.domain.entity;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.CompoundIndexes;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
@@ -12,6 +14,9 @@ import java.time.LocalDateTime;
 * @TableName ouyunc_im_friend_request_session
 */
 @Document(collection = "ouyunc_im_friend_request_session")
+@CompoundIndexes({
+        @CompoundIndex(name = "from_to_idx", def = "{'from': 1, 'to': 1}")
+})
 public class MongoFriendRequestSessionEntity implements Serializable {
 
     /**
