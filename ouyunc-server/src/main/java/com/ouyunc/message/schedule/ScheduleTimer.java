@@ -1,6 +1,9 @@
 package com.ouyunc.message.schedule;
 
 import com.ouyunc.base.constant.NumberConstant;
+import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
+import com.ouyunc.core.listener.event.ExceptionEvent;
+import com.ouyunc.message.context.MessageServerContext;
 import io.netty.util.HashedWheelTimer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,6 +64,7 @@ public class ScheduleTimer {
         }catch (Exception e) {
             log.error("task 调度异常：{}", e.getMessage());
             // 这里可以做错误日志记录
+            MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.SCHEDULE_TASK_ERROR, "task 调度异常：" + e.getMessage(), null));
         }
     }
 

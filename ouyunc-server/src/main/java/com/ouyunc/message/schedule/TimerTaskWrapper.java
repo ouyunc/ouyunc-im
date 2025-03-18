@@ -3,8 +3,11 @@ package com.ouyunc.message.schedule;
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.ouyunc.base.constant.NumberConstant;
+import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.cache.Cache;
 import com.ouyunc.cache.local.caffeine.CaffeineLocalCache;
+import com.ouyunc.core.listener.event.ExceptionEvent;
+import com.ouyunc.message.context.MessageServerContext;
 import io.netty.util.Timeout;
 import io.netty.util.TimerTask;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -177,6 +180,7 @@ public class TimerTaskWrapper implements TimerTask{
             }else {
                 CompletableFuture.runAsync(() -> runnableTask.accept(this), qosTaskExecutor).exceptionally(ex -> {
                     log.error("执行定时调度任务异常：{}", ex.getMessage());
+                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.SCHEDULE_TASK_ERROR, "业务 task 调度异常：" + ex.getMessage(), null));
                     return null;
                 });
             }

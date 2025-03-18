@@ -42,6 +42,8 @@ public enum ExceptionCodeEnum {
 
     BIND_FRIEND_ERROR(300001, "绑定好友异常"),
 
+    SCHEDULE_TASK_ERROR(400001, "调度任务异常"),
+
     ;
 
     private final int code;
