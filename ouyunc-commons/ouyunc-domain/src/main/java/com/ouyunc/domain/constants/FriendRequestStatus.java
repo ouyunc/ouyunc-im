@@ -11,6 +11,7 @@ public enum FriendRequestStatus {
     REFUSED(2, "已拒绝"),
     EXPIRED(3, "已过期"),
     INVALIDATED(4, "已失效"),
+    AUTO_AGREED(5, "自动同意"),
     ;
 
     private final Integer value;

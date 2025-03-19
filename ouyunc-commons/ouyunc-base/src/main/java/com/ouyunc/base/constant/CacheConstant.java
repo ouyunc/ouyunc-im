@@ -138,6 +138,12 @@ public class CacheConstant {
 
 
     /***
+     * 群用户请求
+     */
+    public static final String GROUP_USER_REQUEST = "group-users:request:";
+
+
+    /***
      * mqtt
      */
     public static final String MQTT = "mqtt:";
