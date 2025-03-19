@@ -5,11 +5,11 @@
   <parent>
     <groupId>com.ouyunc</groupId>
     <artifactId>ouyunc-commons</artifactId>
-    <version>6.3.0</version>
+    <version>6.4.0</version>
   </parent>
   <groupId>com.ouyunc</groupId>
   <artifactId>ouyunc-repository</artifactId>
-  <version>6.3.0</version>
+  <version>6.4.0</version>
   <name>ouyunc-repository</name>
   <description>业务数据操作模块</description>
   <dependencies>
