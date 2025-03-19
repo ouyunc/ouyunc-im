@@ -66,6 +66,11 @@ public class CacheConstant {
      */
     public static final String GROUP_USERS = "group-users:";
 
+    /***
+     * 群成员的信息
+     */
+    public static final String GROUP_USERS_CONFIG = "group-users-config:";
+
 
     /***
      * 好友列表
@@ -83,6 +88,8 @@ public class CacheConstant {
      * 群列表
      */
     public static final String GROUPS = "groups:";
+
+
 
 
     /***
@@ -123,6 +130,11 @@ public class CacheConstant {
      * 好友请求
      */
     public static final String FRIEND_REQUEST = "friends:request:";
+
+    /***
+     * 群请求
+     */
+    public static final String GROUP_REQUEST = "groups:request:";
 
 
     /***

@@ -28,6 +28,7 @@ public enum ExceptionCodeEnum {
 
 
     GROUP_MEMBER_NOT_EXIST_ERROR(60001, "群成员不存在"),
+    GROUP_MEMBER_COUNT_MISMATCH_ERROR(60002, "群成员和群成员关系数量不匹配"),
 
 
     UN_BIND_ERROR(70001, "客户端解绑错误"),

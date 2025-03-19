@@ -21,6 +21,11 @@ public enum MessageTypeEnum implements MessageType {
     ONE_2_ONE_FRIEND_REQUEST_AGREE(NumberConstant.NUMBER_NEGATIVE_9, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), "friend_request_agree",  "一对一同意好友请求"),
     ONE_2_ONE_FRIEND_REQUEST_REFUSE(NumberConstant.NUMBER_NEGATIVE_10, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), "friend_request_refuse",  "一对一拒绝好友请求"),
 
+
+    GROUP_REQUEST_JOIN(NumberConstant.NUMBER_NEGATIVE_11, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), "group_request_join",  "主动加群请求"),
+
+
+
     SERVER_NOTIFY(NumberConstant.NUMBER_NEGATIVE_128, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocol(), "server_notify", "服务端的通知消息"),
 
     ;

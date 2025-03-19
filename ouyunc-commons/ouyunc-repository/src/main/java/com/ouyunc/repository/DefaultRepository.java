@@ -3,15 +3,19 @@ package com.ouyunc.repository;
 import com.alibaba.fastjson2.JSON;
 import com.google.common.collect.Lists;
 import com.ouyunc.base.constant.*;
+import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.QosLevelEnum;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.core.context.MessageContext;
+import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.db.jdbc.JdbcFactory;
 import com.ouyunc.db.mongo.MongodbFactory;
+import com.ouyunc.domain.constants.YesOrNo;
 import com.ouyunc.domain.entity.FriendEntity;
+import com.ouyunc.domain.entity.GroupUserEntity;
 import com.ouyunc.domain.entity.MessageEntity;
 import com.ouyunc.domain.entity.MongoMessageEntity;
 import com.ouyunc.mq.kafka.KafkaFactory;
@@ -402,6 +406,79 @@ public enum DefaultRepository implements Repository{
         return (Set<String>) redisTemplate.opsForZSet().range(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_USERS + message.getTo(), NumberConstant.NUMBER_0, NumberConstant.NUMBER_NEGATIVE_1);
     }
 
+    /**
+     * 获取群成员列表信息
+     *
+     * @param packet
+     * @return
+     */
+    @SuppressWarnings("unchecked")
+    public List<GroupUserEntity> groupUserEntityList(Packet packet) {
+        Message message = packet.getMessage();
+        Metadata metadata = message.getMetadata();
+        Set<String> memberIdSet = (Set<String>) redisTemplate.opsForZSet().range(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUPS + message.getTo(), NumberConstant.NUMBER_0, NumberConstant.NUMBER_NEGATIVE_1);
+        if (CollectionUtils.isEmpty(memberIdSet)) {
+            return List.of();
+        }
+        // 构造groupUserEntity 缓存key 集合
+        Set<String> cacheGroupUserEntityKeyList = memberIdSet.stream().filter(Objects::nonNull).map(memberId -> CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_USERS_CONFIG + memberId + CacheConstant.COLON + message.getTo()).collect(Collectors.toSet());
+        if (CollectionUtils.isEmpty(cacheGroupUserEntityKeyList)) {
+            return List.of();
+        }
+        List<GroupUserEntity> groupUserEntityList = (List<GroupUserEntity>) redisTemplate.opsForValue().multiGet(cacheGroupUserEntityKeyList);
+        if (CollectionUtils.isEmpty(groupUserEntityList)) {
+            return List.of();
+        }
+        // 获取群组用户信息
+        groupUserEntityList = groupUserEntityList.stream().filter(Objects::nonNull).collect(Collectors.toList());
+        // 判断 给定的key 和查询到的数据是否一致,不一致仅发送消息，进行人工介入处理
+        if (cacheGroupUserEntityKeyList.size() != groupUserEntityList.size()) {
+            log.error("群成员和群成员对应的关系数量不匹配！");
+            MessageContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.GROUP_MEMBER_COUNT_MISMATCH_ERROR, "群成员和群成员对应的关系数量不匹配！", packet), true);
+        }
+        return groupUserEntityList;
+    }
+
+
+    /**
+     * 获取群管理员和群主的唯一标识
+     *
+     * @param packet
+     * @return
+     */
+    @SuppressWarnings("unchecked")
+    public Set<String> groupManagerAndLeaderUsersIdentity(Packet packet) {
+        List<GroupUserEntity> groupUserEntityList = groupUserEntityList(packet);
+        // 过滤出管理员和群主
+        return groupUserEntityList.stream().filter(groupUserEntity -> YesOrNo.YES.getCode().equals(groupUserEntity.getLeader()) || YesOrNo.YES.getCode().equals(groupUserEntity.getManager())).map(groupUserEntity -> groupUserEntity.getUserId().toString()).collect(Collectors.toSet());
+    }
+
+    /**
+     * 获取群管理员的唯一标识
+     *
+     * @param packet
+     * @return
+     */
+    @SuppressWarnings("unchecked")
+    public Set<String> groupManagerUsersIdentity(Packet packet) {
+        List<GroupUserEntity> groupUserEntityList = groupUserEntityList(packet);
+        // 过滤出管理员
+        return groupUserEntityList.stream().filter(groupUserEntity -> YesOrNo.YES.getCode().equals(groupUserEntity.getManager())).map(groupUserEntity -> groupUserEntity.getUserId().toString()).collect(Collectors.toSet());
+    }
+
+    /**
+     * 获取群主的唯一标识
+     *
+     * @param packet
+     * @return
+     */
+    @SuppressWarnings("unchecked")
+    public String groupLeaderUsersIdentity(Packet packet) {
+        List<GroupUserEntity> groupUserEntityList = groupUserEntityList(packet);
+        // 过滤出群主
+        return groupUserEntityList.stream().filter(groupUserEntity -> YesOrNo.YES.getCode().equals(groupUserEntity.getLeader())).map(groupUserEntity -> groupUserEntity.getUserId().toString()).findFirst().orElse(null);
+    }
+
 
     /**
      * 保存业务消息以及离线消息和会话消息
@@ -542,5 +619,55 @@ public enum DefaultRepository implements Repository{
             return false;
         }
         return true;
+    }
+
+
+    /**
+     * 保存群组请求消息
+     * @param packet
+     * @param sessionId
+     * @param expireTime
+     * @return
+     */
+    public boolean saveGroupRequestMessage(Packet packet, String sessionId, long expireTime) {
+        Message message = packet.getMessage();
+        Metadata metadata = message.getMetadata();
+        String luaScript = LuaScriptConstant.SAVE_MESSAGE_WITHOUT_OFFLINE_LUA_SCRIPT;
+        List<String> keys = Lists.newArrayList(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.MESSAGE + packet.getPacketId(),
+                CacheConstant.OUYUNC +  CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_REQUEST + CacheConstant.SESSION + sessionId);
+        Object[] args = new Object[]{packet, expireTime, packet.getPacketId(), metadata.getServerTime()};
+        // 如果开启qos,并且需要qos
+        if (MessageContext.messageProperties.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
+            keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + message.getTo());
+            luaScript = LuaScriptConstant.SAVE_MESSAGE_WITH_OFFLINE_LUA_SCRIPT;
+        }
+        return redisTemplate.execute(new DefaultRedisScript<>(luaScript, Boolean.class), keys, args);
+    }
+
+
+    /**
+     * 群组请求消息批量保存
+     * @param packet
+     * @param expireTime 过期时间，单位毫秒，多久后过期
+     * @return
+     */
+    public boolean batchSaveGroupRequestMessage(Packet packet, Set<String> groupUserIdentitySet, long expireTime) {
+        Message message = packet.getMessage();
+        Metadata metadata = message.getMetadata();
+        // 构造参数
+        List<String> offlineKeys = groupUserIdentitySet.stream().map(groupUserIdentity -> CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + groupUserIdentity).toList();
+        List<String> keys = new ArrayList<>();
+        keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.MESSAGE + packet.getPacketId());
+        keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_REQUEST + CacheConstant.SESSION + message.getTo());
+        keys.addAll(offlineKeys);
+
+        List<Object> args = new ArrayList<>();
+        args.add(expireTime);
+        args.add(packet); // 需要实现序列化方法
+        args.add(metadata.getServerTime());
+        args.add(packet.getPacketId());
+        args.add(metadata.getAppKey());
+        args.add(message.getTo());
+        return redisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_SAVE_MESSAGE_LUA_SCRIPT, Boolean.class), keys, args.toArray());
     }
 }

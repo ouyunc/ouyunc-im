@@ -28,6 +28,7 @@ import com.ouyunc.message.handler.HeartBeatHandler;
 import com.ouyunc.message.handler.LoginKeepAliveHandler;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
+import com.ouyunc.message.validator.AppKeyValidator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.timeout.IdleStateHandler;
@@ -76,7 +77,7 @@ public class LoginMessageProcessor extends AbstractMessageProcessor<Byte> {
         // 做登录参数校验
         //1,进行参数合法校验，校验失败，结束 ；2,进行签名的校验，校验失败，结束，3，进行权限校验，校验失败，结束
         // 根据appKey 获取appSecret 然后拼接
-        if (!validate(loginContent)) {
+        if (AppKeyValidator.INSTANCE.negate().verify(loginContent.getAppKey(), ctx) && !validate(loginContent)) {
             log.warn("客户端id: {} 登录参数: {}，校验未通过！", ctx.channel().id().asShortText(), Serializer.JSON.serializeToString(loginContent));
             MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.LOGIN_VERIFY_ERROR, "登录校验未通过", packet), true);
             ctx.close();
@@ -199,6 +200,7 @@ public class LoginMessageProcessor extends AbstractMessageProcessor<Byte> {
      * @description 校验登录信息
      */
     public boolean validate(LoginContent loginContent) {
+
         return true;
     }
 

@@ -66,6 +66,16 @@ public class MqConstant {
     public static final String KAFKA_FRIEND_REQUEST_GROUP =  "friend_request";
 
     /**
+     * kafka 群请求 topic
+     */
+    public static final String KAFKA_GROUP_REQUEST_TOPIC =  MessageConstant.OUYUNC + MessageConstant.UNDERLINE + "group_request";
+
+    /**
+     * kafka 群请求 group
+     */
+    public static final String KAFKA_GROUP_REQUEST_GROUP =  "group_request";
+
+    /**
      * kafka 已经存在好友关系 topic
      */
     public static final String KAFKA_EXIST_FRIEND_TOPIC =  MessageConstant.OUYUNC + MessageConstant.UNDERLINE + "exist_friend";
