@@ -294,41 +294,91 @@ public enum DefaultRepository implements Repository{
     }
 
     /**
+     * 撤回消息校验
+     * @param packet
+     * @param sessionId
+     * @return
+     */
+    public boolean validWithdrawMessage(Packet packet, String sessionId, boolean isValidSender) {
+        return validSpecialMessage(packet, sessionId, (specialPackets)->{
+            // 判断消息是否属于该会话，且都属于发送者； 这里考虑个问题，如果是群主或者管理员，需要让其撤销消息？应该是可以撤销的
+            if (isValidSender) {
+                for (Packet specialPacket : specialPackets) {
+                    if (specialPacket == null || !specialPacket.getMessage().getFrom().equals(packet.getMessage().getFrom())) {
+                        log.error("消息: {} 对应的消息不属于发送者！", packet);
+                        return false;
+                    }
+                }
+            }
+            return true;
+        });
+    }
+
+    /**
+     * 撤回消息校验
+     * @param packet
+     * @param sessionId
+     * @return
+     */
+    public boolean validReadReceiptMessage(Packet packet, String sessionId, boolean isValidSender) {
+        return validSpecialMessage(packet, sessionId, (specialPackets)->{
+            // 判断消息是否属于该会话，且都属于发送者
+            if (isValidSender) {
+                for (Packet specialPacket : specialPackets) {
+                    if (specialPacket == null || specialPacket.getMessage().getFrom().equals(packet.getMessage().getFrom())) {
+                        log.error("消息id: {} 对应的消息属于发送者！", packet);
+                        return false;
+                    }
+                }
+            }
+            return true;
+        });
+    }
+
+    /**
+     * 验证特殊消息，校验通过返回true, 不通过返回false
+     * @param packet
+     * @param sessionId
+     * @return
+     */
+    @SuppressWarnings("unchecked")
+    private boolean validSpecialMessage(Packet packet, String sessionId, Function<List<Packet>, Boolean> function) {
+        Message message = packet.getMessage();
+        Metadata metadata = message.getMetadata();
+        // 获取需要消息id，（这里使用String类型接收）
+        List<Long> packetIds = JSON.parseArray(message.getContent(), Long.class);
+        // 如果没有消息id，则直接返回false
+        if (CollectionUtils.isEmpty(packetIds) || packetIds.size() > MessageConstant.MAX_WITHDRAW_MESSAGE_COUNT) {
+            log.error("消息数量为0或超出限制!");
+            return false;
+        }
+        // 获取需要消息服务端时间戳，这个获取要在会话锁的前提下获取,注意批量获取score 的方法是redis 6.2.0 之后的版本才支持,如果不支持请使用其他方式替换，或升级redis版本，这里 就使用lua 脚本 哈哈哈
+        // 获取消息在会话中的消息服务端时间戳
+        List<Long> messageServerTimeScores = redisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_SCORE_LUA_SCRIPT, List.class), List.of(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.SESSION + sessionId), packetIds.toArray());
+        if (CollectionUtils.isEmpty(messageServerTimeScores) || messageServerTimeScores.parallelStream().filter(Objects::nonNull).count() != packetIds.size()) {
+            log.error("会话:{}不存在该消息id: {}, 或消息id数量与会话中的消息数量不相等", sessionId, packetIds);
+            return false;
+        }
+        // 获取消息
+        List<Packet> specialPackets = getPackets(metadata.getAppKey(), packetIds);
+        if (CollectionUtils.isEmpty(specialPackets) || specialPackets.size() != packetIds.size()) {
+            log.error("消息id: {} 对应的持久化消息数量不相等！", packetIds);
+            return false;
+        }
+        return function.apply(specialPackets);
+    }
+
+
+    /**
      * 撤销消息，
      * 注意：这里没有做判断，被撤销的消息是否属于发起撤销的客户端，一般情况下是需要做判断的
      */
-    @SuppressWarnings("unchecked")
     public boolean withdrawMessage(Packet packet, String sessionId, Set<String> withdrawIdentitySet) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         // 获取需要撤销的消息id，（这里使用String类型接收）
         List<Long> packetIds = JSON.parseArray(message.getContent(), Long.class);
         // 如果没有被撤销的消息id，则直接返回false
-        if (CollectionUtils.isEmpty(packetIds) || packetIds.size() > MessageConstant.MAX_WITHDRAW_MESSAGE_COUNT) {
-            log.error("撤销消息数量为0或超出限制!");
-            return false;
-        }
-        // 获取需要撤销的消息的服务端时间戳，这个获取要在会话锁的前提下获取,注意批量获取score 的方法是redis 6.2.0 之后的版本才支持,如果不支持请使用其他方式替换，或升级redis版本，这里 就使用lua 脚本 哈哈哈
-
-        // 获取消息在会话中的消息服务端时间戳
-        List<Long> messageServerTimeScores = redisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_SCORE_LUA_SCRIPT, List.class), List.of(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.SESSION + sessionId), packetIds.toArray());
-        if (CollectionUtils.isEmpty(messageServerTimeScores) || messageServerTimeScores.parallelStream().filter(Objects::nonNull).count() != packetIds.size()) {
-            log.error("会话:{}不存在该消息id: {}, 或消息id 对应会话中的消息数量不相等", sessionId, packetIds);
-            return false;
-        }
-        // 获取消息
-        List<Packet> withdrawPackets = getPackets(metadata.getAppKey(), packetIds);
-        if (CollectionUtils.isEmpty(withdrawPackets) || withdrawPackets.size() != packetIds.size()) {
-            log.error("消息id: {} 对应的消息数量不相等！", packetIds);
-            return false;
-        }
-        // 判断需要被撤回的消息是否属于该会话，且都属于发送者
-        for (Packet withDrawPacket : withdrawPackets) {
-            if (withDrawPacket == null || !withDrawPacket.getMessage().getFrom().equals(message.getFrom())) {
-                log.error("被撤销的消息id: {} 对应的消息不属于发送者！", packetIds);
-                return false;
-            }
-        }
         // 批量撤回消息
         List<String> keys = Lists.newArrayList();
         keys.add(String.valueOf(withdrawIdentitySet.size()));
@@ -342,39 +392,17 @@ public enum DefaultRepository implements Repository{
         return redisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_WITHDRAW_MESSAGE_LUA_SCRIPT, Boolean.class), keys, packetIds.toArray());
     }
 
+
+
+
     /**
      * 处理读已回执消息
      */
-    public boolean readReceiptMessage(Packet packet, String sessionId, long expireTime) {
+    public boolean readReceiptMessage(Packet packet, long expireTime) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         // 已读的消息id，（这里使用String类型接收）
         List<Long> readPacketIds = JSON.parseArray(message.getContent(), Long.class);
-        // 如果已读的消息id，则直接返回false
-        if (CollectionUtils.isEmpty(readPacketIds) || readPacketIds.size() > MessageConstant.MAX_READ_RECEIPT_MESSAGE_COUNT) {
-            log.error("已读回执消息数量为0或超出限制!");
-            return false;
-        }
-
-        // 获取需要读回执的消息的服务端时间戳
-        List<Long> messageServerTimeScores = redisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_SCORE_LUA_SCRIPT, List.class), List.of(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.SESSION + sessionId), readPacketIds.toArray());
-        if (CollectionUtils.isEmpty(messageServerTimeScores) || messageServerTimeScores.parallelStream().filter(Objects::nonNull).count() != readPacketIds.size()) {
-            log.error("会话:{}不存在该消息id: {}, 或消息id 对应会话中的消息数量不相等", sessionId, readPacketIds);
-            return false;
-        }
-        // 获取消息
-        List<Packet> readReceiptPackets = getPackets(metadata.getAppKey(), readPacketIds);
-        if (CollectionUtils.isEmpty(readReceiptPackets) || readReceiptPackets.size() != readPacketIds.size()) {
-            log.error("读已回执消息ids: {} 对应的消息数量不相等！", readPacketIds);
-            return false;
-        }
-        // 判断已读的消息是否属于该会话，且不属于发送者
-        for (Packet readReceiptPacket : readReceiptPackets) {
-            if (readReceiptPacket == null || readReceiptPacket.getMessage().getFrom().equals(message.getFrom())) {
-                log.error("已读回执的消息id: {} 对应的消息属于发送者！", readReceiptPacket);
-                return false;
-            }
-        }
         // 批量已读回执消息
         List<String> keys = Lists.newArrayList();
         List<Object> args = Lists.newArrayList();

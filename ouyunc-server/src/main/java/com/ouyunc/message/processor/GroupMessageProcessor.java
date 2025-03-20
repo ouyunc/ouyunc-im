@@ -5,9 +5,9 @@ import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.constant.enums.*;
 import com.ouyunc.base.model.LoginClientInfo;
-import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
+import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.message.context.MessageServerContext;
@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
@@ -80,21 +81,113 @@ public class GroupMessageProcessor extends AbstractMessageProcessor<Byte> {
             return;
         }
         // 将groupUserIdentitySet排除掉发送方
-        groupUserIdentitySet.remove(packet.getMessage().getFrom());
-        // 2. 保存消息
+        if (!groupUserIdentitySet.remove(packet.getMessage().getFrom())) {
+            log.error("发送方：{}, 不在群组：{} 中！群消息： {}", packet.getMessage().getFrom(), packet.getMessage().getTo(), packet);
+            MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "发送者不在群组中", packet), true);
+            return;
+        }
+        // 3. 保存消息
         if (!saveGroupMessage(packet, groupUserIdentitySet)) {
             return;
         }
-        // 3. 处理特殊消息类型
-        if (!processSpecialMessageContentType(ctx, packet, groupUserIdentitySet)) {
-            // 4. 发送消息给接收方
-            deliverMessage(packet, groupUserIdentitySet);
-            // 处理成功则转到下个处理器
-            ctx.fireChannelRead(packet);
+        // 4. 处理特殊消息类型
+        int contentType = packet.getMessage().getContentType();
+        if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
+            handleWithdrawMessage(ctx, packet, groupUserIdentitySet);
+        } else if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {
+            handleReadReceipt(ctx, packet, groupUserIdentitySet);
+        } else {
+            deliverAndFireNext(ctx, packet, groupUserIdentitySet);
         }
     }
 
 
+    /**
+     * 处理消息内容类型是撤回消息
+     * @param ctx
+     * @param packet
+     */
+    private void handleReadReceipt(ChannelHandlerContext ctx, Packet packet, Set<String> groupUserIdentitySet) {
+        handleLockedOperation(ctx, packet,groupUserIdentitySet,
+                ()-> repository().validReadReceiptMessage(packet, packet.getMessage().getTo(), true),
+                ()-> repository().savePacket2Mq(MqConstant.KAFKA_READ_RECEIPT_MESSAGE_TOPIC, packet),
+                ()-> repository().readReceiptMessage(packet, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP),
+                "已读回执消息", ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR);
+    }
+
+
+    /**
+     * 处理消息内容类型是撤回消息
+     * @param ctx
+     * @param packet
+     */
+    private void handleWithdrawMessage(ChannelHandlerContext ctx, Packet packet, Set<String> groupUserIdentitySet) {
+        String sessionId = packet.getMessage().getTo();
+        // 获取当前撤销人员是否是群主或者管理员，他们是最大权限可以撤销所有成员的消息，当然也包括自己
+        Set<String> leaderOrManagerIdentitySet = repository().groupManagerAndLeaderUsersIdentity(packet);
+        boolean leaderOrManager = CollectionUtils.isNotEmpty(leaderOrManagerIdentitySet) && leaderOrManagerIdentitySet.contains(packet.getMessage().getFrom());
+        handleLockedOperation(ctx, packet,groupUserIdentitySet,
+                ()-> repository().validWithdrawMessage(packet, sessionId, leaderOrManager),
+                ()-> repository().savePacket2Mq(MqConstant.KAFKA_WITHDRAW_MESSAGE_TOPIC, packet),
+                ()-> repository().withdrawMessage(packet, sessionId, groupUserIdentitySet),
+                "撤回消息", ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR);
+    }
+
+
+    // 定义公共处理模板
+    private void handleLockedOperation(ChannelHandlerContext ctx, Packet packet,Set<String> groupUserIdentitySet,
+                                       Supplier<Boolean>  validator,
+                                       Supplier<CompletableFuture<?>> mqSender,
+                                       Supplier<Boolean>  processor,
+                                       String errorLog, ExceptionCodeEnum errorCode) {
+        Message message = packet.getMessage();
+        String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
+        RLock multiLock = createMultiLock(message.getMetadata().getAppKey(), sessionId, message.getTo());
+        try {
+            if (!tryLock(multiLock)) {
+                log.error("{}获取锁失败: {}", errorLog, packet);
+                publishLockError(packet, errorLog + "获取锁失败");
+                return;
+            }
+            if (!validator.get()) {
+                log.error("{} 校验失败: {}", errorLog, packet);
+                publishExceptionEvent(errorCode,errorLog + "校验失败", packet);
+                return;
+            }
+            mqSender.get().whenComplete((result, ex) -> {
+                if (ex != null) {
+                    log.error("{}发送mq持久化异常: {}", errorLog, ex.getMessage());
+                    publishExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, errorLog + "发送mq持久化异常：" + ex.getMessage(), packet);
+                }else if (!processor.get()) {
+                    log.error("{} 处理失败: {}", errorLog, packet);
+                    publishExceptionEvent(errorCode, errorLog + "处理失败", packet);
+                }
+                // 传递数据
+                deliverAndFireNext(ctx, packet, groupUserIdentitySet);
+            });
+        } catch (Exception e) {
+            log.error("{}处理消息异常: ", errorLog, e);
+            publishExceptionEvent(errorCode,  errorLog + "处理消息异常" + e.getMessage(), packet);
+        } finally {
+            releaseLock(multiLock);
+        }
+    }
+    private void publishExceptionEvent(ExceptionCodeEnum code, String msg, Packet packet) {
+        MessageServerContext.publishEvent(
+                new ExceptionEvent(code, msg, packet), true);
+    }
+
+    /**
+     * 发送消息给接收方
+     * @param packet
+     * @param ctx
+     */
+    private void deliverAndFireNext(ChannelHandlerContext ctx, Packet packet, Set<String> groupUserIdentitySet) {
+        // 4. 发送消息给接收方
+        deliverMessage(packet, groupUserIdentitySet);
+        // 处理成功则转到下个处理器
+        ctx.fireChannelRead(packet);
+    }
     /**
      * 使用内容处理器处理消息
      */
@@ -152,116 +245,6 @@ public class GroupMessageProcessor extends AbstractMessageProcessor<Byte> {
     }
 
 
-    /**
-     * 处理特殊消息类型
-     */
-    private boolean processSpecialMessageContentType(ChannelHandlerContext ctx, Packet packet, Set<String> groupUserIdentitySet) {
-        Message message = packet.getMessage();
-        if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == message.getContentType()) {
-            repository().savePacket2Mq(MqConstant.KAFKA_WITHDRAW_MESSAGE_TOPIC, packet).whenComplete((result, ex)->{
-                if (ex != null) {
-                    log.error("群撤回消息，发送mq异常，原因：{}", ex.getMessage());
-                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "群撤销消息发送mq异常!", packet), true);
-                }else {
-                    if (processWithdrawMessage(packet, groupUserIdentitySet)) {
-                        // 4. 发送消息给接收方
-                        deliverMessage(packet, groupUserIdentitySet);
-                        // 处理成功则转到下个处理器
-                        ctx.fireChannelRead(packet);
-                    }
-                }
-            });
-            return true;
-        } else if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == message.getContentType()) {
-            repository().savePacket2Mq(MqConstant.KAFKA_READ_RECEIPT_MESSAGE_TOPIC, packet).whenComplete((result, ex)->{
-                if (ex != null) {
-                    log.error("群已读消息，发送mq异常，原因：{}", ex.getMessage());
-                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "群已读消息发送mq异常!", packet), true);
-                }else {
-                    if (processReadReceiptMessage(packet, groupUserIdentitySet)) {
-                        // 4. 发送消息给接收方
-                        deliverMessage(packet, groupUserIdentitySet);
-                        // 处理成功则转到下个处理器
-                        ctx.fireChannelRead(packet);
-                    }
-                }
-            });
-            return true;
-        }
-        return false;
-    }
-
-
-    /**
-     * 处理撤回消息
-     */
-    private boolean processWithdrawMessage(Packet packet, Set<String> groupUserIdentitySet) {
-        return processWithLock(packet,
-                () -> repository().withdrawMessage(packet, getSessionId(packet), groupUserIdentitySet),
-                ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR,
-                "群撤销消息异常"
-        );
-    }
-
-    /**
-     * 处理已读回执消息
-     */
-    private boolean processReadReceiptMessage(Packet packet, Set<String> groupUserIdentitySet) {
-        return processWithLock(packet,
-                () -> repository().readReceiptMessage(packet, packet.getMessage().getTo(), MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP),
-                ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR,
-                "群读已回执消息异常"
-        );
-    }
-
-
-    /**
-     * 使用分布式锁处理消息
-     */
-    private boolean processWithLock(Packet packet,
-                                    Supplier<Boolean> processor,
-                                    ExceptionCodeEnum errorCode,
-                                    String errorMessage) {
-        Message message = packet.getMessage();
-        Metadata metadata = message.getMetadata();
-        String sessionId = getSessionId(packet);
-
-        RLock multiLock = createMultiLock(metadata.getAppKey(), sessionId, message.getTo());
-
-        try {
-            if (!tryLock(multiLock)) {
-                publishLockError(packet, errorCode, errorMessage);
-                return false;
-            }
-
-            if (!processor.get()) {
-                log.error("Failed to process message with lock: {}", packet);
-                MessageServerContext.publishEvent(new ExceptionEvent(errorCode, errorMessage, packet), true);
-                return false;
-            }
-            return true;
-
-        } catch (Exception e) {
-            log.error("Error while processing message with lock", e);
-            MessageServerContext.publishEvent(new ExceptionEvent(errorCode, errorMessage, packet), true);
-            return false;
-
-        } finally {
-            releaseLock(multiLock);
-        }
-    }
-
-
-    /**
-     * 获取sessionId
-     *
-     * @param packet
-     * @return
-     */
-    private String getSessionId(Packet packet) {
-        return packet.getMessage().getTo();
-    }
-
     private RLock createMultiLock(String appKey, String sessionId, String to) {
         return redissonClient.getMultiLock(
                 redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.SESSION + sessionId),
@@ -283,9 +266,9 @@ public class GroupMessageProcessor extends AbstractMessageProcessor<Byte> {
         }
     }
 
-    private void publishLockError(Packet packet, ExceptionCodeEnum code, String message) {
+    private void publishLockError(Packet packet, String message) {
         log.error("Failed to acquire lock: {}", packet);
-        MessageServerContext.publishEvent(new ExceptionEvent(code, message, packet), true);
+        MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, message, packet), true);
     }
 
 

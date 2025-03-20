@@ -9,7 +9,6 @@ import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.MessageType;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.model.LoginClientInfo;
-import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.IdentityUtil;
@@ -25,6 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
@@ -82,58 +82,106 @@ public class One2OneMessageProcessor extends AbstractMessageProcessor<Byte>{
         if (processWithContentProcessor(ctx, packet)) {
             return;
         }
-        // 2. 保存消息
+        // 2. 保存消息， 无论什么类型的消息，只要建立起好友关系，都需要往会话中保存一份消息，方便后续使用
         if (!saveMessage(packet)) {
             return;
         }
         // 3. 处理特殊消息类型
-        if (!processSpecialMessageContentType(ctx, packet)) {
-            // 4. 发送消息给接收方
-            deliverMessage(packet);
-            // 处理成功则转到下个处理器
-            ctx.fireChannelRead(packet);
+        int contentType = packet.getMessage().getContentType();
+        if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
+            handleWithdrawMessage(ctx, packet);
+        } else if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {
+            handleReadReceipt(ctx, packet);
+        } else {
+            deliverAndFireNext(ctx, packet);
         }
     }
 
-    /**
-     * 处理特殊消息类型
-     */
-    private boolean processSpecialMessageContentType(ChannelHandlerContext ctx, Packet packet) {
-        Message message = packet.getMessage();
-        int contentType = message.getContentType();
-        if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
-            repository().savePacket2Mq(MqConstant.KAFKA_WITHDRAW_MESSAGE_TOPIC, packet).whenComplete((result, ex)->{
-                if (ex != null) {
-                    log.error("一对一撤回消息，发送mq异常，原因：{}", ex.getMessage());
-                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "一对一撤销消息发送mq异常!", packet), true);
-                }else  {
-                    if (processWithdrawMessage(packet)) {
-                        // 4. 发送消息给接收方
-                        deliverMessage(packet);
-                        // 处理成功则转到下个处理器
-                        ctx.fireChannelRead(packet);
-                    }
 
-                }
-            });
-            return true;
-        } else if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {
-            repository().savePacket2Mq(MqConstant.KAFKA_READ_RECEIPT_MESSAGE_TOPIC, packet).whenComplete((result, ex)->{
+    /**
+     * 处理消息内容类型是撤回消息
+     * @param ctx
+     * @param packet
+     */
+    private void handleWithdrawMessage(ChannelHandlerContext ctx, Packet packet) {
+        String sessionId = IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo());
+        handleLockedOperation(ctx, packet,
+                ()-> repository().validWithdrawMessage(packet, sessionId, true),
+                ()-> repository().savePacket2Mq(MqConstant.KAFKA_WITHDRAW_MESSAGE_TOPIC, packet),
+                ()-> repository().withdrawMessage(packet, sessionId, Sets.newHashSet(packet.getMessage().getTo())),
+                "一对一撤回消息", ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR);
+    }
+
+    /**
+     * 处理消息内容类型是撤回消息
+     * @param ctx
+     * @param packet
+     */
+    private void handleReadReceipt(ChannelHandlerContext ctx, Packet packet) {
+        handleLockedOperation(ctx, packet,
+                ()-> repository().validReadReceiptMessage(packet, IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo()), true),
+                ()-> repository().savePacket2Mq(MqConstant.KAFKA_READ_RECEIPT_MESSAGE_TOPIC, packet),
+                ()-> repository().readReceiptMessage(packet, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP),
+                "一对一已读回执消息", ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR);
+    }
+
+
+
+    // 定义公共处理模板
+    private void handleLockedOperation(ChannelHandlerContext ctx, Packet packet,
+                                       Supplier<Boolean>  validator,
+                                       Supplier<CompletableFuture<?>> mqSender,
+                                       Supplier<Boolean>  processor,
+                                       String errorLog, ExceptionCodeEnum errorCode) {
+        Message message = packet.getMessage();
+        String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
+        RLock multiLock = createMultiLock(message.getMetadata().getAppKey(), sessionId, message.getTo());
+        try {
+            if (!tryLock(multiLock)) {
+                log.error("{}获取锁失败: {}", errorLog, packet);
+                publishLockError(packet, errorLog + "获取锁失败");
+                return;
+            }
+            if (!validator.get()) {
+                log.error("{} 校验失败: {}", errorLog, packet);
+                publishExceptionEvent(errorCode,errorLog + "校验失败", packet);
+                return;
+            }
+            mqSender.get().whenComplete((result, ex) -> {
                 if (ex != null) {
-                    log.error("一对一已读消息，发送mq异常，原因：{}", ex.getMessage());
-                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "一对一已读消息发送mq异常!", packet), true);
-                }else  {
-                    if (processReadReceiptMessage(packet)) {
-                        // 4. 发送消息给接收方
-                        deliverMessage(packet);
-                        // 处理成功则转到下个处理器
-                        ctx.fireChannelRead(packet);
-                    }
+                    log.error("{}发送mq持久化异常: {}", errorLog, ex.getMessage());
+                    publishExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, errorLog + "发送mq持久化异常：" + ex.getMessage(), packet);
+                }else if (!processor.get()) {
+                    log.error("{} 处理失败: {}", errorLog, packet);
+                    publishExceptionEvent(errorCode, errorLog + "处理失败", packet);
                 }
+                // 传递数据
+                deliverAndFireNext(ctx, packet);
             });
-            return true;
+        } catch (Exception e) {
+            log.error("{}处理消息异常: ", errorLog, e);
+            publishExceptionEvent(errorCode,  errorLog + "处理消息异常" + e.getMessage(), packet);
+        } finally {
+            releaseLock(multiLock);
         }
-        return false;
+    }
+
+
+
+
+    private void publishExceptionEvent(ExceptionCodeEnum code, String msg, Packet packet) {
+        MessageServerContext.publishEvent(
+                new ExceptionEvent(code, msg, packet), true);
+    }
+    /**
+     * 发送消息给接收方
+     * @param packet
+     * @param ctx
+     */
+    private void deliverAndFireNext(ChannelHandlerContext ctx, Packet packet) {
+        deliverMessage(packet);
+        // 处理成功则转到下个处理器
+        ctx.fireChannelRead(packet);
     }
 
     /**
@@ -164,63 +212,6 @@ public class One2OneMessageProcessor extends AbstractMessageProcessor<Byte>{
 
 
     /**
-     * 处理撤回消息
-     */
-    private boolean processWithdrawMessage(Packet packet) {
-        return processWithLock(packet,
-                () -> repository().withdrawMessage(packet, getSessionId(packet), Sets.newHashSet(packet.getMessage().getTo())),
-                ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR,
-                "一对一撤销消息异常"
-        );
-    }
-
-    /**
-     * 处理已读回执消息
-     */
-    private boolean processReadReceiptMessage(Packet packet) {
-        Message message = packet.getMessage();
-        return processWithLock(packet,
-                () -> repository().readReceiptMessage(packet, IdentityUtil.sessionId(message.getFrom(), message.getTo()), MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP),
-                ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR,
-                "一对一读已回执消息异常"
-        );
-    }
-
-    /**
-     * 使用分布式锁处理消息
-     */
-    private boolean processWithLock(Packet packet,
-                                    Supplier<Boolean> processor,
-                                    ExceptionCodeEnum errorCode,
-                                    String errorMessage) {
-        Message message = packet.getMessage();
-        Metadata metadata = message.getMetadata();
-        String sessionId = getSessionId(packet);
-
-        RLock multiLock = createMultiLock(metadata.getAppKey(), sessionId, message.getTo());
-
-        try {
-            if (!tryLock(multiLock)) {
-                publishLockError(packet, errorCode, errorMessage);
-                return false;
-            }
-
-            if (!processor.get()) {
-                log.error("Failed to process message with lock: {}", packet);
-                MessageServerContext.publishEvent(new ExceptionEvent(errorCode, errorMessage, packet), true);
-                return false;
-            }
-            return true;
-        } catch (Exception e) {
-            log.error("Error while processing message with lock", e);
-            MessageServerContext.publishEvent(new ExceptionEvent(errorCode, errorMessage, packet), true);
-            return false;
-        } finally {
-            releaseLock(multiLock);
-        }
-    }
-
-    /**
      * 发送消息给接收方
      */
     private void deliverMessage(Packet packet) {
@@ -232,19 +223,9 @@ public class One2OneMessageProcessor extends AbstractMessageProcessor<Byte>{
             log.warn("Recipient {} is offline, message stored", message.getTo());
             return;
         }
-
         MessageHelper.asyncSendMessage(packet, toLoginClientInfos);
     }
 
-    /**
-     * 获取sessionId
-     * @param packet
-     * @return
-     */
-    private String getSessionId(Packet packet) {
-        Message message = packet.getMessage();
-        return IdentityUtil.sessionId(message.getFrom(), message.getTo());
-    }
 
     private RLock createMultiLock(String appKey, String sessionId, String to) {
         return redissonClient.getMultiLock(
@@ -267,8 +248,8 @@ public class One2OneMessageProcessor extends AbstractMessageProcessor<Byte>{
         }
     }
 
-    private void publishLockError(Packet packet, ExceptionCodeEnum code, String message) {
+    private void publishLockError(Packet packet, String message) {
         log.error("Failed to acquire lock: {}", packet);
-        MessageServerContext.publishEvent(new ExceptionEvent(code, message, packet), true);
+        MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, message, packet), true);
     }
 }
