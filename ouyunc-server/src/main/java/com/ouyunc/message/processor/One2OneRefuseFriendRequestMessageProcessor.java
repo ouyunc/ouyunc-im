@@ -62,7 +62,8 @@ public class One2OneRefuseFriendRequestMessageProcessor extends AbstractMessageP
                 if (FriendValidator.INSTANCE.verify(packet, ctx)) {
                     log.warn("验证不通过。已经是好友，请知悉。该消息 {} 被忽略", packet);
                     // 发送存在好友关系，尝试更新mongo 中的状态
-                    repository().savePacket2Mq(MqConstant.KAFKA_EXIST_FRIEND_TOPIC, packet);
+                    Message message = packet.getMessage();
+                    repository().savePacket2Mq(MqConstant.KAFKA_EXIST_FRIEND_TOPIC, IdentityUtil.sessionId(message.getFrom(), message.getTo()), packet);
                     return;
                 }
                 // 校验是否存在好友请求，如果不存在，则忽略
@@ -86,7 +87,7 @@ public class One2OneRefuseFriendRequestMessageProcessor extends AbstractMessageP
         // 1. 保存消息
         Message message = packet.getMessage();
         String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
-        repository().savePacket2Mq(MqConstant.KAFKA_FRIEND_REQUEST_TOPIC, packet).whenComplete((result, ex)->{
+        repository().savePacket2Mq(MqConstant.KAFKA_FRIEND_REQUEST_TOPIC, sessionId, packet).whenComplete((result, ex)->{
             if (ex != null) {
                 log.error("拒绝好友请求，发送mq异常，原因：{}", ex.getMessage());
                 MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "处理一对一拒绝好友请求异常！" + ex.getMessage(), packet), true);

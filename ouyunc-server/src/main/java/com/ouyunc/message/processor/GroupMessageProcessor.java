@@ -108,9 +108,10 @@ public class GroupMessageProcessor extends AbstractMessageProcessor<Byte> {
      * @param packet
      */
     private void handleReadReceipt(ChannelHandlerContext ctx, Packet packet, Set<String> groupUserIdentitySet) {
+        String sessionId = packet.getMessage().getTo();
         handleLockedOperation(ctx, packet,groupUserIdentitySet,
                 ()-> repository().validReadReceiptMessage(packet, packet.getMessage().getTo(), true),
-                ()-> repository().savePacket2Mq(MqConstant.KAFKA_READ_RECEIPT_MESSAGE_TOPIC, packet),
+                ()-> repository().savePacket2Mq(MqConstant.KAFKA_READ_RECEIPT_MESSAGE_TOPIC, sessionId, packet),
                 ()-> repository().readReceiptMessage(packet, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP),
                 "已读回执消息", ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR);
     }
@@ -128,7 +129,7 @@ public class GroupMessageProcessor extends AbstractMessageProcessor<Byte> {
         boolean leaderOrManager = CollectionUtils.isNotEmpty(leaderOrManagerIdentitySet) && leaderOrManagerIdentitySet.contains(packet.getMessage().getFrom());
         handleLockedOperation(ctx, packet,groupUserIdentitySet,
                 ()-> repository().validWithdrawMessage(packet, sessionId, leaderOrManager),
-                ()-> repository().savePacket2Mq(MqConstant.KAFKA_WITHDRAW_MESSAGE_TOPIC, packet),
+                ()-> repository().savePacket2Mq(MqConstant.KAFKA_WITHDRAW_MESSAGE_TOPIC, sessionId, packet),
                 ()-> repository().withdrawMessage(packet, sessionId, groupUserIdentitySet),
                 "撤回消息", ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR);
     }

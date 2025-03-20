@@ -15,7 +15,10 @@ import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
-import com.ouyunc.message.validator.*;
+import com.ouyunc.message.validator.AuthValidator;
+import com.ouyunc.message.validator.BlackListValidator;
+import com.ouyunc.message.validator.FriendRequestValidator;
+import com.ouyunc.message.validator.PermissionValidator;
 import com.ouyunc.repository.DefaultRepository;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.collections4.CollectionUtils;
@@ -64,12 +67,6 @@ public class One2OneAgreeFriendRequestMessageProcessor extends AbstractMessagePr
                     log.warn("验证不通过。没有权限/被拉黑/不存在好友请求记录，请知悉。该消息 {} 被忽略", packet);
                     return;
                 }
-                if (FriendValidator.INSTANCE.verify(packet, ctx)) {
-                    log.warn("验证不通过。已经是好友，请知悉。该消息 {} 被忽略", packet);
-                    // 发送存在好友关系，尝试更新mongo 中的状态
-                    repository().savePacket2Mq(MqConstant.KAFKA_EXIST_FRIEND_TOPIC, packet);
-                    return;
-                }
                 ctx.fireChannelRead(packet);
             } else {
                 // 发送失败
@@ -95,31 +92,27 @@ public class One2OneAgreeFriendRequestMessageProcessor extends AbstractMessagePr
         Metadata metadata = message.getMetadata();
         String appKey = metadata.getAppKey();
         String sessionId = IdentityUtil.sessionId(from, to);
-
         // 处理同意添加逻辑
         // 加锁
         RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_AGREE + sessionId);
         try {
             if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
-                // 判断现在是否是好友如果是好友则直接返回
+                // 再次判断判断现在是否是好友如果是好友则直接返回
                 if (repository().isFriend(appKey, from, to)) {
                     log.warn("{} 和 {} 已经是好友关系，忽略该消息: {}", from, to, packet);
-                    return;
-                }
-                // 保存消息
-                if (!repository().saveFriendRequestMessage(packet, sessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
-                    log.error("Failed to save one-to-one agree friend request message: {}", packet);
-                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一同意好友请求消息异常!", packet), true);
+                    // 发送mq更新请求列表
+                    repository().savePacket2Mq(MqConstant.KAFKA_EXIST_FRIEND_TOPIC, sessionId, packet);
                     return;
                 }
                 // 保存消息后，则绑定好友关系,先发送绑定好友的mq消息，发送成功后
-                repository().savePacket2Mq(MqConstant.KAFKA_FRIEND_REQUEST_TOPIC, packet).whenComplete((result, ex) -> {
+                repository().savePacket2Mq(MqConstant.KAFKA_FRIEND_REQUEST_TOPIC, sessionId, packet).whenComplete((result, ex) -> {
                     if (ex != null) {
                         log.error("绑定好友关系，发送mq，原因：{}", ex.getMessage());
                         MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "处理一对一同意好友请求绑定异常！" + ex.getMessage(), packet), true);
                     } else {
-                        // 开始保存好友关系到redis中
-                        if (!repository().bindFriend(appKey, packet)) {
+                        // 保存消息
+                        // 保存消息&开始保存好友关系到redis中
+                        if (!repository().bindFriend(appKey, packet, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
                             log.error("绑定好友关系异常: {}", packet);
                             MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.BIND_FRIEND_ERROR, "处理一对一同意好友请求绑定异常！", packet), true);
                             return;

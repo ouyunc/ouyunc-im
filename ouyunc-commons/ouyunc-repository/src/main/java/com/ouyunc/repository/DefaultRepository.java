@@ -8,6 +8,7 @@ import com.ouyunc.base.constant.enums.QosLevelEnum;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
+import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.ExceptionEvent;
@@ -20,6 +21,7 @@ import com.ouyunc.domain.entity.MessageEntity;
 import com.ouyunc.domain.entity.MongoMessageEntity;
 import com.ouyunc.mq.kafka.KafkaFactory;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
@@ -101,7 +103,7 @@ public enum DefaultRepository implements Repository{
      */
     @Override
     public CompletableFuture<?> save(Packet packet) {
-      return savePacket2Mq(MqConstant.KAFKA_SAVE_MESSAGE_TOPIC, packet);
+      return savePacket2Mq(MqConstant.KAFKA_SAVE_MESSAGE_TOPIC, null, packet);
     }
 
 
@@ -111,11 +113,15 @@ public enum DefaultRepository implements Repository{
      * @param packet
      * @return
      */
-    public CompletableFuture<?> savePacket2Mq(String topic, Packet packet) {
+    public CompletableFuture<?> savePacket2Mq(String topic, String key, Packet packet) {
         // 保存消息到磁盘中，这里使用mq来提高吞吐量；如果kafka
         // headers 中可以自定义一些信息做扩展；
         Map<String, Object> headers = new HashMap<>();
         headers.put(KafkaHeaders.CORRELATION_ID, packet.getPacketId());
+        // 如果业务逻辑需要mq保证顺序性消费，请使用相同key， 并且在消费者保证单线程消费
+        if (StringUtils.isNotBlank(key)) {
+            headers.put(KafkaHeaders.KEY, key);
+        }
         headers.put(KafkaHeaders.TOPIC, topic);
         return kafkaTemplate.send(MessageBuilder.withPayload(JSON.toJSONString(packet)).copyHeadersIfAbsent(headers).build());
     }
@@ -629,7 +635,7 @@ public enum DefaultRepository implements Repository{
      * @return
      */
     @SuppressWarnings("unchecked")
-    public boolean bindFriend(String appKey, Packet packet) {
+    public boolean bindFriend(String appKey, Packet packet, long expireTime) {
         Message message = packet.getMessage();
         String from = message.getFrom();
         String to = message.getTo();
@@ -637,6 +643,19 @@ public enum DefaultRepository implements Repository{
             redisTemplate.executePipelined(new SessionCallback<>() {
                 @Override
                 public <K, V> Object execute(RedisOperations<K, V> operations) throws DataAccessException {
+                    // 保存消息
+                    String luaScript = LuaScriptConstant.SAVE_MESSAGE_WITHOUT_OFFLINE_LUA_SCRIPT;
+                    List<String> keys = Lists.newArrayList(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.MESSAGE + packet.getPacketId(),
+                            CacheConstant.OUYUNC +  CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST + CacheConstant.SESSION + IdentityUtil.sessionId(from, to));
+                    Object[] args = new Object[]{packet, expireTime, packet.getPacketId(), message.getMetadata().getServerTime()};
+                    // 如果开启qos,并且需要qos
+                    if (MessageContext.messageProperties.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
+                        keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.OFFLINE + message.getTo());
+                        luaScript = LuaScriptConstant.SAVE_MESSAGE_WITH_OFFLINE_LUA_SCRIPT;
+                    }
+                    operations.execute(new DefaultRedisScript<>(luaScript, Boolean.class), (List<K>) keys, args);
+
+                    // 建立好友关系
                     operations.opsForZSet().add((K) (CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIENDS + from), (V) to, message.getMetadata().getServerTime());
                     operations.opsForZSet().add((K) (CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIENDS + to), (V) from, message.getMetadata().getServerTime());
                     return null;

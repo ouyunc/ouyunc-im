@@ -107,7 +107,7 @@ public class One2OneMessageProcessor extends AbstractMessageProcessor<Byte>{
         String sessionId = IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo());
         handleLockedOperation(ctx, packet,
                 ()-> repository().validWithdrawMessage(packet, sessionId, true),
-                ()-> repository().savePacket2Mq(MqConstant.KAFKA_WITHDRAW_MESSAGE_TOPIC, packet),
+                ()-> repository().savePacket2Mq(MqConstant.KAFKA_WITHDRAW_MESSAGE_TOPIC, sessionId, packet),
                 ()-> repository().withdrawMessage(packet, sessionId, Sets.newHashSet(packet.getMessage().getTo())),
                 "一对一撤回消息", ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR);
     }
@@ -118,9 +118,10 @@ public class One2OneMessageProcessor extends AbstractMessageProcessor<Byte>{
      * @param packet
      */
     private void handleReadReceipt(ChannelHandlerContext ctx, Packet packet) {
+        String sessionId = IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo());
         handleLockedOperation(ctx, packet,
-                ()-> repository().validReadReceiptMessage(packet, IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo()), true),
-                ()-> repository().savePacket2Mq(MqConstant.KAFKA_READ_RECEIPT_MESSAGE_TOPIC, packet),
+                ()-> repository().validReadReceiptMessage(packet, sessionId, true),
+                ()-> repository().savePacket2Mq(MqConstant.KAFKA_READ_RECEIPT_MESSAGE_TOPIC, sessionId, packet),
                 ()-> repository().readReceiptMessage(packet, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP),
                 "一对一已读回执消息", ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR);
     }

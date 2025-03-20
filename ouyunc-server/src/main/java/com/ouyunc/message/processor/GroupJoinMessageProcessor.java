@@ -47,7 +47,6 @@ public class GroupJoinMessageProcessor extends AbstractMessageProcessor<Byte> {
                     return;
                 }
                 // 校验是否拥有相关权限 permission （对方是否被拉黑，禁用等）
-
                 ctx.fireChannelRead(packet);
             } else {
                 // 发送失败
@@ -73,7 +72,8 @@ public class GroupJoinMessageProcessor extends AbstractMessageProcessor<Byte> {
             MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群主或群管理员", packet), true);
             return;
         }
-        repository().savePacket2Mq(MqConstant.KAFKA_GROUP_REQUEST_TOPIC, packet).whenComplete((result, ex) -> {
+        String sessionId = packet.getMessage().getTo();
+        repository().savePacket2Mq(MqConstant.KAFKA_GROUP_REQUEST_TOPIC, sessionId, packet).whenComplete((result, ex) -> {
             if (ex != null) {
                 log.error("加群请求，发送mq异常，原因：{}", ex.getMessage());
                 MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "处理加群请求异常！" + ex.getMessage(), packet), true);

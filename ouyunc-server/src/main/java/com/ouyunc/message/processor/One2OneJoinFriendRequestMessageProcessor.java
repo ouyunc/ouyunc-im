@@ -83,7 +83,7 @@ public class One2OneJoinFriendRequestMessageProcessor extends AbstractMessagePro
         Message message = packet.getMessage();
         String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
         // 这里不保存到session 缓存中,保存到临时的会话消息中，该好友请求的消息可以对其进行定期清理；
-        repository().savePacket2Mq(MqConstant.KAFKA_FRIEND_REQUEST_TOPIC, packet).whenComplete((result, ex) ->{
+        repository().savePacket2Mq(MqConstant.KAFKA_FRIEND_REQUEST_TOPIC, sessionId, packet).whenComplete((result, ex) ->{
             if (ex != null) {
                 log.error("请求添加好友，发送mq异常，原因：{}", ex.getMessage());
                 MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "处理一对一添加好友请求异常！" + ex.getMessage(), packet), true);
