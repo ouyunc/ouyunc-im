@@ -87,7 +87,7 @@ socket.onmessage = ({
     if (messageType === -128) {
         let packet = socket.send({
             // 登录消息类型，
-            messageType: -10,
+            messageType: -8,
             // 消息
             message: {
                 // 消息发送方唯一标识，建议使用用户id

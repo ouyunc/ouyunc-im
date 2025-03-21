@@ -26,10 +26,7 @@ import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.SessionCallback;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -132,19 +129,17 @@ public class ClientHelper {
     public static List<LoginClientInfo> onlineAll(String appKey, String identity, DeviceType... excludeDeviceTypeArr) {
         List<LoginClientInfo> loginClientInfoList = new ArrayList<>(NumberConstant.NUMBER_3);
         // 获取所有的实现DeviceType接口的枚举实例
-        Stream<DeviceType> deviceTypeStream = MessageServerContext.deviceTypeList(appKey).parallelStream();
+        Stream<DeviceType> deviceTypeStream = MessageServerContext.deviceTypeList(appKey).stream();
         if (excludeDeviceTypeArr != null && excludeDeviceTypeArr.length > NumberConstant.NUMBER_0) {
-            deviceTypeStream = deviceTypeStream.filter(deviceType -> {
-                boolean contain = false;
-                for (DeviceType excludeDeviceType : excludeDeviceTypeArr) {
-                    if (deviceType.getDeviceTypeName().equals(excludeDeviceType.getDeviceTypeName())) {
-                        contain = true;
-                    }
-                }
-                return contain;
-            });
+            Set<String> excludeNames = Arrays.stream(excludeDeviceTypeArr)
+                    .map(DeviceType::getDeviceTypeName)
+                    .collect(Collectors.toSet());
+            deviceTypeStream = deviceTypeStream.filter(deviceType -> !excludeNames.contains(deviceType.getDeviceTypeName()));
         }
-        Set<String> comboIdentitySet = deviceTypeStream.map(deviceType -> IdentityUtil.generalComboIdentity(appKey, identity, deviceType)).collect(Collectors.toSet());
+        Set<String> comboIdentitySet = deviceTypeStream
+                .map(deviceType -> IdentityUtil.generalComboIdentity(appKey, identity, deviceType))
+                .collect(Collectors.toSet());
+
         // 先从本地注册表获取，如果在同一个服务器上或者不是集群
         Collection<ChannelHandlerContext> allLoginClientChannelHandlerContexts = MessageServerContext.localClientRegisterTable.getAll(comboIdentitySet);
         // 判断comboIdentitySet的size 与结果集的大小是否相等，如果不相等则在从redis获取，如果相等则返回

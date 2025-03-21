@@ -11,6 +11,7 @@ import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.core.listener.MessageListener;
 import com.ouyunc.core.listener.event.ServerStartupEvent;
 import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.schedule.ScheduleTimer;
 import com.ouyunc.message.thread.LoginKeepAliveThread;
 import org.apache.commons.collections4.CollectionUtils;
@@ -43,7 +44,7 @@ public class ServerStartupEventListener implements MessageListener<ServerStartup
      */
     @Override
     public void onApplicationEvent(ServerStartupEvent event) {
-        Set<String> appKeys = fetchAppKeys();
+        Set<String> appKeys = ClientHelper.appKeys();
         if (CollectionUtils.isNotEmpty(appKeys)) {
             // 加载appKey 下的deviceType 配置
             loadAppKeyDeviceTypes(appKeys);
@@ -53,10 +54,6 @@ public class ServerStartupEventListener implements MessageListener<ServerStartup
         // 启动appKey 下的deviceType 订阅
         // 启动客户端登录信息心跳保活线程
         startClientLoginKeepAliveThread();
-    }
-    @SuppressWarnings("unchecked")
-    private Set<String> fetchAppKeys() {
-        return (Set<String>) redisTemplate.opsForSet().members(CacheConstant.OUYUNC + CacheConstant.APP_KEYS);
     }
 
     @SuppressWarnings("unchecked")
