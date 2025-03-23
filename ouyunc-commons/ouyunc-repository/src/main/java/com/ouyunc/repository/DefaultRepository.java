@@ -612,7 +612,7 @@ public enum DefaultRepository implements Repository{
      * @param identity
      * @return
      */
-    public UserEntity getUserEntity(String identity) {
+    public UserEntity getUserEntity(String appKey, String identity) {
         return (UserEntity) redisTemplate.opsForValue().get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.USER + identity);
     }
 
