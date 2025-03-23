@@ -647,8 +647,8 @@ public enum DefaultRepository implements Repository{
                     // 建立好友关系
                     operations.opsForZSet().add((K) (CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIENDS + from), (V) to, message.getMetadata().getServerTime());
                     operations.opsForZSet().add((K) (CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIENDS + to), (V) from, message.getMetadata().getServerTime());
-                    // 设置处理请求标识
-                    operations.opsForValue().setIfAbsent((K) (CacheConstant.OUYUNC + CacheConstant.APP_KEY + message.getMetadata().getAppKey() + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_PROCESSING + from + CacheConstant.COLON + to), (V) 1, expireTime, TimeUnit.SECONDS);
+                    // 设置处理请求标识, 注意这里的过期时间，需要和好友关系过期时间一至默认90 天 todo
+                    operations.opsForValue().setIfAbsent((K) (CacheConstant.OUYUNC + CacheConstant.APP_KEY + message.getMetadata().getAppKey() + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_PROCESSING + from + CacheConstant.COLON + to), MessageConstant.FRIEND_REQUEST_STATUS_AGREEING, expireTime, TimeUnit.SECONDS);
                     return null;
                 }
             });

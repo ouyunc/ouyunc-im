@@ -47,6 +47,22 @@ public class MessageConstant {
      */
     public static final int NUMBER_10000 = 10000;
 
+    /**
+     * 好友请求状态，添加中
+     */
+    public static final int FRIEND_REQUEST_STATUS_JOINING = -1;
+
+
+    /**
+     * 好友请求状态，拒绝中
+     */
+    public static final int FRIEND_REQUEST_STATUS_REFUSEING = 0;
+
+    /**
+     * 好友请求状态，同意中
+     */
+    public static final int FRIEND_REQUEST_STATUS_AGREEING = 1;
+
 
     /**
      * 一天的时间戳 毫秒
