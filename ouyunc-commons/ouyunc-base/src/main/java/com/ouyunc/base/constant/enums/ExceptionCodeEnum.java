@@ -45,6 +45,8 @@ public enum ExceptionCodeEnum {
 
     SCHEDULE_TASK_ERROR(400001, "调度任务异常"),
 
+    USER_NOT_EXIST(500001, "用户不存在"),
+
     ;
 
     private final int code;

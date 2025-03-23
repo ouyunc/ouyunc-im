@@ -47,11 +47,6 @@ public class CacheConstant {
     public static final String LOCK = "lock:";
 
     /***
-     * 同意加好友请求
-     */
-    public static final String FRIEND_REQUEST_AGREE = "friend-request-agree:";
-
-    /***
      * 登录
      */
     public static final String LOGIN = "login:";
@@ -81,7 +76,7 @@ public class CacheConstant {
     /***
      * 配置， 我的好友或者我的群信息的配置
      */
-    public static final String FRIENDS_CONFIG = "friends:config:";
+    public static final String FRIENDS_CONFIG = "friends-config:";
 
 
     /***
@@ -129,18 +124,23 @@ public class CacheConstant {
     /***
      * 好友请求
      */
-    public static final String FRIEND_REQUEST = "friends:request:";
+    public static final String FRIEND_REQUEST = "friend-request:";
+
+    /***
+     * 正在处理中的好友请求
+     */
+    public static final String FRIEND_REQUEST_PROCESSING = "friend-request-processing:";
 
     /***
      * 群请求
      */
-    public static final String GROUP_REQUEST = "groups:request:";
+    public static final String GROUP_REQUEST = "groups-request:";
 
 
     /***
      * 群用户请求
      */
-    public static final String GROUP_USER_REQUEST = "group-users:request:";
+    public static final String GROUP_USER_REQUEST = "group-users-request:";
 
 
     /***

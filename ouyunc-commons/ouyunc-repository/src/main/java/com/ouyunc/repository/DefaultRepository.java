@@ -15,17 +15,13 @@ import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.db.jdbc.JdbcFactory;
 import com.ouyunc.db.mongo.MongodbFactory;
 import com.ouyunc.domain.constants.YesOrNo;
-import com.ouyunc.domain.entity.FriendEntity;
-import com.ouyunc.domain.entity.GroupUserEntity;
-import com.ouyunc.domain.entity.MessageEntity;
-import com.ouyunc.domain.entity.MongoMessageEntity;
+import com.ouyunc.domain.entity.*;
 import com.ouyunc.mq.kafka.KafkaFactory;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
-import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -606,25 +602,18 @@ public enum DefaultRepository implements Repository{
      */
     public FriendEntity getFriend(String appKey, String from, String to) {
         // 从redis中获取好友关系
-        FriendEntity friendEntity = redisTemplate.<String, FriendEntity>opsForHash().get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIENDS_CONFIG + from, to);
-        // 如果不为空则返回true，如果为空则从数据库中获取
-        if (friendEntity != null) {
-            return friendEntity;
-        }
-        try {
-            friendEntity = jdbcClient.sql(JdbcSqlConstant.MYSQL.SELECT_FRIEND.sql())
-                    .params(from, to)
-                    .query(FriendEntity.class)
-                    .single();
-        } catch (EmptyResultDataAccessException e) {
-            return null;
-        }catch (Exception e) {
-            log.error("从db查询好友关系异常: {}", e.getMessage());
-            throw new RuntimeException(e);
-        }
-        // 如果不为空，添加到缓存中
-        redisTemplate.opsForHash().put(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIENDS_CONFIG + from, to, friendEntity);
-        return friendEntity;
+        // 如果不为空则返回true，如果为空则不再从数据库中获取
+        return redisTemplate.<String, FriendEntity>opsForHash().get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIENDS_CONFIG + from, to);
+    }
+
+
+    /**
+     * 获取用户实体, 注意这里直接从缓存获取，不在走数据库，旨在提高性能，要保证缓存中存在该用户实体
+     * @param identity
+     * @return
+     */
+    public UserEntity getUserEntity(String identity) {
+        return (UserEntity) redisTemplate.opsForValue().get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.USER + identity);
     }
 
 
@@ -658,6 +647,8 @@ public enum DefaultRepository implements Repository{
                     // 建立好友关系
                     operations.opsForZSet().add((K) (CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIENDS + from), (V) to, message.getMetadata().getServerTime());
                     operations.opsForZSet().add((K) (CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIENDS + to), (V) from, message.getMetadata().getServerTime());
+                    // 设置处理请求标识
+                    operations.opsForValue().setIfAbsent((K) (CacheConstant.OUYUNC + CacheConstant.APP_KEY + message.getMetadata().getAppKey() + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_PROCESSING + from + CacheConstant.COLON + to), (V) 1, expireTime, TimeUnit.SECONDS);
                     return null;
                 }
             });

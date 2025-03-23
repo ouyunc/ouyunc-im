@@ -39,6 +39,10 @@ public enum FriendRequestValidator implements Validator<Packet> {
                 .and(MongoFriendRequestSessionEntity.Fields.status).is(FriendRequestStatus.PENDING.value())
                 .and(MongoFriendRequestSessionEntity.Fields.expireAt).gt(new Date());
         Query query = new Query(criteria);
-        return mongoTemplate.findOne(query, MongoFriendRequestSessionEntity.class) != null;
+        if (mongoTemplate.findOne(query, MongoFriendRequestSessionEntity.class) == null) {
+            log.info("{}, 和 {} 不存在有效的好友请求记录", message.getFrom(), message.getTo());
+            return false;
+        }
+        return true;
     }
 }

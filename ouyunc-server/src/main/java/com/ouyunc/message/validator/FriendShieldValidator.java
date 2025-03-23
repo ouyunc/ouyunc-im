@@ -33,9 +33,10 @@ public enum FriendShieldValidator implements Validator<Packet> {
         Metadata metadata = message.getMetadata();
         FriendEntity friendEntity = DefaultRepository.INSTANCE.getFriend(metadata.getAppKey(), to, from);
         if (friendEntity != null) {
+            log.info("{} 已经被 {} 屏蔽了", from, to);
             return YesOrNo.YES.getCode().equals(friendEntity.getShield());
         }
-        // 判断是否是好友，有可能mq 延迟消费
+        // 基本不会走到这里，判断是否是好友，有可能mq 延迟消费
         return  !DefaultRepository.INSTANCE.isFriend(metadata.getAppKey(), to, from);
     }
 }

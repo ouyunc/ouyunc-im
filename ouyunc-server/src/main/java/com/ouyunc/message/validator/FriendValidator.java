@@ -30,6 +30,10 @@ public enum FriendValidator implements Validator<Packet> {
         String to = message.getTo();
         Metadata metadata = message.getMetadata();
         // 判断是否是好友，有可能mq 延迟消费
-        return DefaultRepository.INSTANCE.isFriend(metadata.getAppKey(), to, from);
+        if (!DefaultRepository.INSTANCE.isFriend(metadata.getAppKey(), to, from)) {
+            log.info("{} 和 {} 不是好友关系: {}", from, to, packet);
+            return false;
+        }
+        return true;
     }
 }

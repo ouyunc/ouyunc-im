@@ -18,6 +18,7 @@ public class JdbcSqlConstant {
 
         SELECT_FRIEND("SELECT id, user_id, friend_user_id, friend_nick_name, shield, create_time, update_time, session_message_offset FROM ouyunc_im_friend where user_id = ? and friend_user_id = ? ", "查询好友关系"),
 
+        SELECT_USER("SELECT id,open_id,username,`password`,nick_name,avatar,motto,age,sex,email,phone_num,id_card_num,group_invite_policy,friend_join_policy,`status`,app_key,robot,create_time,update_time,deleted FROM ouyunc_im_user WHERE id = ? ", "查询用户"),
 
         SELECT_BLACKLIST("select id, identity, user_id, identity_type, join_time, create_time from  ouyunc_im_blacklist where identity = ? and user_id = ? and identity_type = ? ", "查询黑名单")
         ;
