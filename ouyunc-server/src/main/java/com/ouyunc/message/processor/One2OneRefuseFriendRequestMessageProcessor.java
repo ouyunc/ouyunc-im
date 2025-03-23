@@ -57,7 +57,7 @@ public class One2OneRefuseFriendRequestMessageProcessor extends AbstractMessageP
                 }
                 // 校验是否拥有相关权限 permission （是有有单聊，甚至某种内容类型的权限，如不能发语音，视频消息，只能发文本，都可以在这里做校验拦截）
                 // 屏蔽和拉黑的效果目前是一样的功能，都不能将将消息发到对方
-                // 校验是否被拉黑,如果被拉黑 （无论是否是好友，都可以拉黑）todo 判断是否有记录
+                // 校验是否被拉黑,如果被拉黑 （无论是否是好友，都可以拉黑）这里进行分开查redis,是否可以考虑合并使用管道来发送一次请求查询？最后在优化吧  todo 判断是否有记录
                 if (PermissionValidator.INSTANCE.negate().or(BlackListValidator.INSTANCE).or(FriendRequestProcessingValidator.INSTANCE).or(FriendRequestValidator.INSTANCE.negate()).verify(packet, ctx)) {
                     log.warn("验证不通过。没有权限/被拉黑/存在正在处理的好友请求/不存在好友请求记录，请知悉。该消息 {} 被忽略", packet);
                     return;
