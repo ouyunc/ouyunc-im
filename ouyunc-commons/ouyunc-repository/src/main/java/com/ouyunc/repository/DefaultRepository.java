@@ -571,6 +571,7 @@ public enum DefaultRepository implements Repository{
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         redisTemplate.executePipelined(new SessionCallback<>() {
+            @SuppressWarnings("unchecked")
             @Override
             public <K, V> Object execute(RedisOperations<K, V> operations) throws DataAccessException {
                 String luaScript = LuaScriptConstant.SAVE_MESSAGE_WITHOUT_OFFLINE_LUA_SCRIPT;
@@ -711,6 +712,7 @@ public enum DefaultRepository implements Repository{
      * @param consumer
      * @return
      */
+    @SuppressWarnings("unchecked")
     private boolean bindFriend(String appKey, Packet packet, long expireTime, Consumer<RedisOperations> consumer) {
         Message message = packet.getMessage();
         String from = message.getFrom();
