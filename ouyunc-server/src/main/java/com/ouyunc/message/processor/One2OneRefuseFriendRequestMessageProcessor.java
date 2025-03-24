@@ -82,7 +82,6 @@ public class One2OneRefuseFriendRequestMessageProcessor extends AbstractMessageP
         log.info("One2OneRefuseFriendRequestMessageContentProcessor 正在处理拒绝好友请求 {} ...", packet);
         // 1. 保存消息
         Message message = packet.getMessage();
-        String from = message.getFrom();
         String to = message.getTo();
         String appKey = message.getMetadata().getAppKey();
         String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
