@@ -57,16 +57,9 @@ public class One2OneRefuseFriendRequestMessageProcessor extends AbstractMessageP
                 }
                 // 校验是否拥有相关权限 permission （是有有单聊，甚至某种内容类型的权限，如不能发语音，视频消息，只能发文本，都可以在这里做校验拦截）
                 // 屏蔽和拉黑的效果目前是一样的功能，都不能将将消息发到对方
-                // 校验是否被拉黑,如果被拉黑 （无论是否是好友，都可以拉黑）这里进行分开查redis,是否可以考虑合并使用管道来发送一次请求查询？最后在优化吧  todo 判断是否有记录
-                if (PermissionValidator.INSTANCE.negate().or(BlackListValidator.INSTANCE).or(FriendRequestProcessingValidator.INSTANCE).or(FriendRequestValidator.INSTANCE.negate()).verify(packet, ctx)) {
-                    log.warn("验证不通过。没有权限/被拉黑/存在正在处理的好友请求/不存在好友请求记录，请知悉。该消息 {} 被忽略", packet);
-                    return;
-                }
-                if (FriendValidator.INSTANCE.verify(packet, ctx)) {
-                    log.warn("验证不通过。已经是好友，请知悉。该消息 {} 被忽略", packet);
-                    // 发送存在好友关系，尝试更新mongo 中的状态
-                    Message message = packet.getMessage();
-                    repository().savePacket2Mq(MqConstant.KAFKA_EXIST_FRIEND_TOPIC, IdentityUtil.sessionId(message.getFrom(), message.getTo()), packet);
+                // 校验是否被拉黑,如果被拉黑 （无论是否是好友，都可以拉黑）这里进行分开查redis,是否可以考虑合并使用管道来发送一次请求查询？最后在优化吧
+                if (PermissionValidator.INSTANCE.negate().or(BlackListValidator.INSTANCE).verify(packet, ctx)) {
+                    log.warn("验证不通过。没有权限/被拉黑，请知悉。该消息 {} 被忽略", packet);
                     return;
                 }
                 // 校验是否存在好友请求，如果不存在，则忽略
@@ -89,12 +82,20 @@ public class One2OneRefuseFriendRequestMessageProcessor extends AbstractMessageP
         log.info("One2OneRefuseFriendRequestMessageContentProcessor 正在处理拒绝好友请求 {} ...", packet);
         // 1. 保存消息
         Message message = packet.getMessage();
+        String from = message.getFrom();
+        String to = message.getTo();
+        String appKey = message.getMetadata().getAppKey();
         String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
         // 加锁
-        RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + message.getMetadata().getAppKey() + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST + sessionId);
+        RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST + sessionId);
         try {
             if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
-                if (!repository().saveFriendRequestMessage(packet, sessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
+                // 如果是好友或者处理中或没有好友请求记录，直接返回
+                if (FriendValidator.INSTANCE.or(FriendRequestValidator.INSTANCE.negate()).verify(packet, ctx)) {
+                    log.warn("存在正在处理的好友请求或不存在好友请求记录/已经是好友, 请知悉; {}" ,packet);
+                    return;
+                }
+                if (!repository().saveRefuseFriendRequestMessage(packet, sessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
                     log.error("Failed to save one-to-one refuse friend request message: {}", packet);
                     MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一拒绝好友请求消息异常!", packet), true);
                     return;
@@ -105,7 +106,7 @@ public class One2OneRefuseFriendRequestMessageProcessor extends AbstractMessageP
                         MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "处理一对一拒绝好友请求异常！" + ex.getMessage(), packet), true);
                     }else {
                         // 如果接收方在线，则直接发送消息
-                        List<LoginClientInfo> toLoginClientInfos = ClientHelper.onlineAll(message.getMetadata().getAppKey(), message.getTo());
+                        List<LoginClientInfo> toLoginClientInfos = ClientHelper.onlineAll(appKey, to);
                         if (CollectionUtils.isNotEmpty(toLoginClientInfos)) {
                             MessageHelper.asyncSendMessage(packet, toLoginClientInfos);
                         }

@@ -1,18 +1,14 @@
 package com.ouyunc.message.validator;
 
+import com.ouyunc.base.constant.CacheConstant;
+import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
-import com.ouyunc.db.mongo.MongodbFactory;
-import com.ouyunc.domain.constants.FriendRequestStatus;
-import com.ouyunc.domain.entity.MongoFriendRequestSessionEntity;
+import com.ouyunc.cache.config.CacheFactory;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
-
-import java.util.Date;
+import org.springframework.data.redis.core.RedisTemplate;
 
 /**
  * @author fzx
@@ -24,7 +20,7 @@ public enum FriendRequestValidator implements Validator<Packet> {
 
     private static final Logger log = LoggerFactory.getLogger(FriendRequestValidator.class);
 
-    private static final MongoTemplate mongoTemplate = MongodbFactory.MONGODB_TEMPLATE.instance();
+    private static final RedisTemplate<String, Integer> redisTemplate = CacheFactory.REDIS.instance();
 
     /***
      * @author fzx
@@ -33,14 +29,10 @@ public enum FriendRequestValidator implements Validator<Packet> {
     @Override
     public boolean verify(Packet packet, ChannelHandlerContext ctx) {
         Message message = packet.getMessage();
-        // 判断是存在有效的好友请求记录，如果不存在则
-        Criteria criteria = Criteria.where(MongoFriendRequestSessionEntity.Fields.to).is(message.getFrom())
-                .and(MongoFriendRequestSessionEntity.Fields.from).is(message.getTo())
-                .and(MongoFriendRequestSessionEntity.Fields.status).is(FriendRequestStatus.PENDING.value())
-                .and(MongoFriendRequestSessionEntity.Fields.expireAt).gt(new Date());
-        Query query = new Query(criteria);
-        if (mongoTemplate.findOne(query, MongoFriendRequestSessionEntity.class) == null) {
-            log.info("{}, 和 {} 不存在有效的好友请求记录", message.getFrom(), message.getTo());
+        // 正在处理中的状态，如果为空 则说明没有正在处理中的好友请求，返回false, 如果有值（值为1-同意，2-拒绝），则返回true
+        Integer friendRequestProcessing = redisTemplate.opsForValue().get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + message.getMetadata().getAppKey() + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_PROCESSING + message.getFrom() + CacheConstant.COLON + message.getTo());
+        if (null == friendRequestProcessing || friendRequestProcessing != MessageConstant.FRIEND_REQUEST_STATUS_JOINING) {
+            log.error("不存在加好友请求记录或存在正在处理的好友请求，该消息忽略");
             return false;
         }
         return true;

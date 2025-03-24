@@ -1,6 +1,7 @@
 package com.ouyunc.message.validator;
 
 import com.ouyunc.base.constant.CacheConstant;
+import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.cache.config.CacheFactory;
@@ -29,7 +30,8 @@ public enum FriendRequestProcessingValidator implements Validator<Packet> {
     public boolean verify(Packet packet, ChannelHandlerContext ctx) {
         Message message = packet.getMessage();
         // 正在处理中的状态，如果为空 则说明没有正在处理中的好友请求，返回false, 如果有值（值为1-同意，2-拒绝），则返回true
-        if (null != redisTemplate.opsForValue().get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + message.getMetadata().getAppKey() + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_PROCESSING + message.getFrom() + CacheConstant.COLON + message.getTo())) {
+        Integer friendRequestProcessing = redisTemplate.opsForValue().get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + message.getMetadata().getAppKey() + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_PROCESSING + message.getFrom() + CacheConstant.COLON + message.getTo());
+        if (null != friendRequestProcessing && friendRequestProcessing > MessageConstant.FRIEND_REQUEST_STATUS_JOINING) {
             log.info("{} 和 {} 会话存在正在处理中的好友请求，拒绝和同意还未结束处理", message.getFrom(), message.getTo());
             return true;
         }

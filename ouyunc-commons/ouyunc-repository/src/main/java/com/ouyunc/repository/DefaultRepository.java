@@ -22,6 +22,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
+import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -37,6 +39,7 @@ import org.springframework.messaging.support.MessageBuilder;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -531,25 +534,62 @@ public enum DefaultRepository implements Repository{
         return redisTemplate.execute(new DefaultRedisScript<>(luaScript, Boolean.class), keys, args);
     }
 
+
+    /**
+     * 保存加好友请求,
+     * @param packet
+     * @param expireTime 过期时间，单位毫秒，多久后过期
+     * @return
+     */
+    @SuppressWarnings("unchecked")
+    public boolean saveJoinFriendRequestMessage(Packet packet, String sessionId, long expireTime) {
+        Message message = packet.getMessage();
+        Metadata metadata = message.getMetadata();
+        return saveFriendRequestMessage(packet, sessionId, expireTime, (redisOperations)-> redisOperations.opsForValue().setIfAbsent(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_PROCESSING + message.getFrom() + CacheConstant.COLON + message.getTo(), MessageConstant.FRIEND_REQUEST_STATUS_JOINING, expireTime, TimeUnit.MILLISECONDS));
+    }
+
+    /**
+     * 保存拒绝好友请求,
+     * @param packet
+     * @param sessionId
+     * @param expireTime
+     * @return
+     */
+    @SuppressWarnings("unchecked")
+    public boolean saveRefuseFriendRequestMessage(Packet packet, String sessionId, long expireTime) {
+        Message message = packet.getMessage();
+        return saveFriendRequestMessage(packet, sessionId, expireTime, (redisOperations)-> redisOperations.opsForValue().set(CacheConstant.OUYUNC + CacheConstant.APP_KEY + message.getMetadata().getAppKey() + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_PROCESSING + message.getTo() + CacheConstant.COLON + message.getFrom(), MessageConstant.FRIEND_REQUEST_STATUS_REFUSEING, expireTime, TimeUnit.MILLISECONDS));
+    }
+
     /**
      * 保存好友请求,
      * @param packet
      * @param expireTime 过期时间，单位毫秒，多久后过期
      * @return
      */
-    public boolean saveFriendRequestMessage(Packet packet, String sessionId, long expireTime) {
+    private boolean saveFriendRequestMessage(Packet packet, String sessionId, long expireTime, Consumer<RedisOperations> consumer) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        String luaScript = LuaScriptConstant.SAVE_MESSAGE_WITHOUT_OFFLINE_LUA_SCRIPT;
-        List<String> keys = Lists.newArrayList(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.MESSAGE + packet.getPacketId(),
-                CacheConstant.OUYUNC +  CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST + CacheConstant.SESSION + sessionId);
-        Object[] args = new Object[]{packet, expireTime, packet.getPacketId(), metadata.getServerTime()};
-        // 如果开启qos,并且需要qos
-        if (MessageContext.messageProperties.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
-            keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + message.getTo());
-            luaScript = LuaScriptConstant.SAVE_MESSAGE_WITH_OFFLINE_LUA_SCRIPT;
-        }
-        return redisTemplate.execute(new DefaultRedisScript<>(luaScript, Boolean.class), keys, args);
+        redisTemplate.executePipelined(new SessionCallback<>() {
+            @Override
+            public <K, V> Object execute(RedisOperations<K, V> operations) throws DataAccessException {
+                String luaScript = LuaScriptConstant.SAVE_MESSAGE_WITHOUT_OFFLINE_LUA_SCRIPT;
+                List<String> keys = Lists.newArrayList(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.MESSAGE + packet.getPacketId(),
+                        CacheConstant.OUYUNC +  CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST + CacheConstant.SESSION + sessionId);
+                Object[] args = new Object[]{packet, expireTime, packet.getPacketId(), metadata.getServerTime()};
+                // 如果开启qos,并且需要qos
+                if (MessageContext.messageProperties.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
+                    keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + message.getTo());
+                    luaScript = LuaScriptConstant.SAVE_MESSAGE_WITH_OFFLINE_LUA_SCRIPT;
+                }
+                // 保存好友关系
+                operations.execute(new DefaultRedisScript<>(luaScript, Boolean.class), (List<K>) keys, args);
+                // 保存正在处理数据
+                consumer.accept(operations);
+                return null;
+            }
+        });
+        return true;
     }
 
     /**
@@ -608,12 +648,58 @@ public enum DefaultRepository implements Repository{
 
 
     /**
-     * 获取用户实体, 注意这里直接从缓存获取，不在走数据库，旨在提高性能，要保证缓存中存在该用户实体
+     * 获取用户实体, 注意这里直接从缓存获取，不在走数据库，旨在提高性能，要保证缓存中存在该用户实体， 后来想想还是加上吧，哈哈
      * @param identity
      * @return
      */
     public UserEntity getUserEntity(String appKey, String identity) {
-        return (UserEntity) redisTemplate.opsForValue().get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.USER + identity);
+        UserEntity userEntity = (UserEntity) redisTemplate.opsForValue().get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.USER + identity);
+        if (userEntity != null) {
+            return userEntity;
+        }
+        try {
+            log.info("从数据库中获取用户实体, identity: {}", identity);
+            return jdbcClient.sql(JdbcSqlConstant.MYSQL.SELECT_USER.sql())
+                    .params(identity)
+                    .query(UserEntity.class)
+                    .single();
+        } catch (EmptyResultDataAccessException e) {
+            log.error("用户不存在, identity: {}", identity);
+            return null;
+        } catch (IncorrectResultSizeDataAccessException e) {
+            log.error("同一个identity存在多个用户, identity: {}", identity);
+            throw new RuntimeException("同一个identity存在多个用于, identity: " + identity);
+        }catch (Exception e) {
+            log.error("获取用户实体异常, identity: {}, 原因：{}", identity, e.getMessage());
+            throw new RuntimeException("获取用户实体异常, identity: " + identity);
+        }
+    }
+
+
+    /**
+     * 自动通过绑定好友关系，在缓存中
+     * @param appKey
+     * @param packet
+     * @return
+     */
+    @SuppressWarnings("unchecked")
+    public boolean autoPassBindFriend(String appKey, Packet packet, long expireTime) {
+        Message message = packet.getMessage();
+        // 注意过期时间的设定，与消息 hot key 的过期时间保持一致
+        return bindFriend(appKey, packet, expireTime, (redisOperations)-> redisOperations.opsForValue().setIfAbsent(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_PROCESSING + message.getFrom() + CacheConstant.COLON + message.getTo(), MessageConstant.FRIEND_REQUEST_STATUS_AGREEING, expireTime, TimeUnit.MILLISECONDS));
+    }
+
+    /**
+     * 同意绑定好友关系，在缓存中
+     * @param appKey
+     * @param packet
+     * @return
+     */
+    @SuppressWarnings("unchecked")
+    public boolean agreeBindFriend(String appKey, Packet packet, long expireTime) {
+        Message message = packet.getMessage();
+        // 注意过期时间的设定，与消息 hot key 的过期时间保持一致
+        return bindFriend(appKey, packet, expireTime, (redisOperations)-> redisOperations.opsForValue().set(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_PROCESSING + message.getFrom() + CacheConstant.COLON + message.getTo(), MessageConstant.FRIEND_REQUEST_STATUS_AGREEING, expireTime, TimeUnit.MILLISECONDS));
     }
 
 
@@ -621,10 +707,11 @@ public enum DefaultRepository implements Repository{
      * 绑定好友关系，在缓存中
      * @param appKey
      * @param packet
+     * @param expireTime
+     * @param consumer
      * @return
      */
-    @SuppressWarnings("unchecked")
-    public boolean bindFriend(String appKey, Packet packet, long expireTime) {
+    private boolean bindFriend(String appKey, Packet packet, long expireTime, Consumer<RedisOperations> consumer) {
         Message message = packet.getMessage();
         String from = message.getFrom();
         String to = message.getTo();
@@ -647,8 +734,8 @@ public enum DefaultRepository implements Repository{
                     // 建立好友关系
                     operations.opsForZSet().add((K) (CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIENDS + from), (V) to, message.getMetadata().getServerTime());
                     operations.opsForZSet().add((K) (CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIENDS + to), (V) from, message.getMetadata().getServerTime());
-                    // 设置处理请求标识, 注意这里的过期时间，需要和好友关系过期时间一至默认90 天 todo
-                    operations.opsForValue().setIfAbsent((K) (CacheConstant.OUYUNC + CacheConstant.APP_KEY + message.getMetadata().getAppKey() + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_PROCESSING + from + CacheConstant.COLON + to), MessageConstant.FRIEND_REQUEST_STATUS_AGREEING, expireTime, TimeUnit.SECONDS);
+                    // 设置处理请求标识, 注意这里的过期时间，需要和好友关系过期时间一至默认90 天
+                    consumer.accept(operations);
                     return null;
                 }
             });

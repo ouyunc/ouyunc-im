@@ -60,8 +60,8 @@ public class One2OneJoinFriendRequestMessageProcessor extends AbstractMessagePro
                 // 校验是否拥有相关权限 permission （是有有单聊，甚至某种内容类型的权限，如不能发语音，视频消息，只能发文本，都可以在这里做校验拦截）
                 // 屏蔽和拉黑的效果目前是一样的功能，都不能将将消息发到对方
                 // 校验是否被拉黑,如果被拉黑 （无论是否是好友，都可以拉黑）判断当前会话是否被拒绝和同意中，防止mq 延迟消费
-                if (PermissionValidator.INSTANCE.negate().or(BlackListValidator.INSTANCE).or(FriendValidator.INSTANCE).or(FriendRequestProcessingValidator.INSTANCE).verify(packet, ctx)) {
-                    log.warn("验证不通过。没有权限/被拉黑/存在正在处理的请求/已经是好友，请知悉。该消息 {} 被忽略", packet);
+                if (PermissionValidator.INSTANCE.negate().or(BlackListValidator.INSTANCE).verify(packet, ctx)) {
+                    log.warn("验证不通过。没有权限/被拉黑，请知悉。该消息 {} 被忽略", packet);
                     return;
                 }
                 ctx.fireChannelRead(packet);
@@ -90,8 +90,13 @@ public class One2OneJoinFriendRequestMessageProcessor extends AbstractMessagePro
         RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST + sessionId);
         try {
             if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
+                // 如果是好友或者处理中，直接返回
+                if (FriendValidator.INSTANCE.or(FriendRequestProcessingValidator.INSTANCE).verify(packet, ctx)) {
+                    log.warn("存在正在处理的请求/已经是好友, 请知悉; {}" ,packet);
+                    return;
+                }
                 // 获取当前对方的配置信息,是否是自动同意加好友，
-                UserEntity toUserEntity = repository().getUserEntity(message.getTo());
+                UserEntity toUserEntity = repository().getUserEntity(appKey, message.getTo());
                 if (toUserEntity == null) {
                     log.error("对方:{} 不存在，请检查数据！", message.getTo());
                     MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.USER_NOT_EXIST, message.getTo() + "用户不存在！", packet));
@@ -100,12 +105,12 @@ public class One2OneJoinFriendRequestMessageProcessor extends AbstractMessagePro
                 // 判断对方是否是自动同意加好友
                 if (YesOrNo.YES.getCode().equals(toUserEntity.getFriendJoinPolicy())) {
                     // 是自动添加好友
-                    if (!repository().bindFriend(appKey, packet, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
+                    if (!repository().autoPassBindFriend(appKey, packet, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
                         log.error("自动处理绑定好友失败: {}", packet);
                         MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一自动绑定好友请求消息异常!", packet), true);
                         return;
                     }
-                }else if (!repository().saveFriendRequestMessage(packet, sessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
+                }else if (!repository().saveJoinFriendRequestMessage(packet, sessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
                     log.error("Failed to save one-to-one join friend request message: {}", packet);
                     MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一加好友请求消息异常!", packet), true);
                     return;

@@ -59,9 +59,9 @@ public class One2OneAgreeFriendRequestMessageProcessor extends AbstractMessagePr
                     return;
                 }
                 // 校验是否拥有相关权限 permission （是有有单聊，甚至某种内容类型的权限，如不能发语音，视频消息，只能发文本，都可以在这里做校验拦截）
-                // 校验是否被拉黑,如果被拉黑 （无论是否是好友，都可以拉黑） todo 判断是否有记录？
-                if (PermissionValidator.INSTANCE.negate().or(BlackListValidator.INSTANCE).or(FriendRequestProcessingValidator.INSTANCE).or(FriendRequestValidator.INSTANCE.negate()).verify(packet, ctx)) {
-                    log.warn("验证不通过。没有权限/被拉黑/存在正在处理的好友请求/不存在好友请求记录，请知悉。该消息 {} 被忽略", packet);
+                // 校验是否被拉黑,如果被拉黑 （无论是否是好友，都可以拉黑） 判断是否有记录
+                if (PermissionValidator.INSTANCE.negate().or(BlackListValidator.INSTANCE).verify(packet, ctx)) {
+                    log.warn("验证不通过。没有权限/被拉黑，请知悉。该消息 {} 被忽略", packet);
                     return;
                 }
                 ctx.fireChannelRead(packet);
@@ -94,16 +94,14 @@ public class One2OneAgreeFriendRequestMessageProcessor extends AbstractMessagePr
         RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST + sessionId);
         try {
             if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
-                // 再次判断判断现在是否是好友如果是好友则直接返回
-                if (repository().isFriend(appKey, from, to)) {
-                    log.warn("{} 和 {} 已经是好友关系，忽略该消息: {}", from, to, packet);
-                    // 发送mq更新请求列表
-                    repository().savePacket2Mq(MqConstant.KAFKA_EXIST_FRIEND_TOPIC, sessionId, packet);
+                // 如果是好友或者处理中或没有好友请求记录，直接返回
+                if (FriendValidator.INSTANCE.or(FriendRequestValidator.INSTANCE.negate()).verify(packet, ctx)) {
+                    log.warn("存在正在处理的好友请求或不存在好友请求记录/已经是好友, 请知悉; {}" ,packet);
                     return;
                 }
                 // 保存消息
                 // 保存消息&开始保存好友关系到redis中
-                if (!repository().bindFriend(appKey, packet, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
+                if (!repository().agreeBindFriend(appKey, packet, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
                     log.error("绑定好友关系异常: {}", packet);
                     MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.BIND_FRIEND_ERROR, "处理一对一同意好友请求绑定异常！", packet), true);
                     return;
