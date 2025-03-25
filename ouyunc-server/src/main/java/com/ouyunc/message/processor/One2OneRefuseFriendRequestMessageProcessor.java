@@ -11,10 +11,14 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.core.listener.event.ExceptionEvent;
+import com.ouyunc.domain.base.RequestSession;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
-import com.ouyunc.message.validator.*;
+import com.ouyunc.message.validator.AuthValidator;
+import com.ouyunc.message.validator.BlackListValidator;
+import com.ouyunc.message.validator.FriendValidator;
+import com.ouyunc.message.validator.PermissionValidator;
 import com.ouyunc.repository.DefaultRepository;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.collections4.CollectionUtils;
@@ -90,11 +94,17 @@ public class One2OneRefuseFriendRequestMessageProcessor extends AbstractMessageP
         try {
             if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
                 // 如果是好友或者处理中或没有好友请求记录，直接返回
-                if (FriendValidator.INSTANCE.or(FriendRequestValidator.INSTANCE.negate()).verify(packet, ctx)) {
-                    log.warn("存在正在处理的好友请求或不存在好友请求记录/已经是好友, 请知悉; {}" ,packet);
+                if (FriendValidator.INSTANCE.verify(packet, ctx)) {
+                    log.warn("已经是好友, 请知悉; {}" ,packet);
                     return;
                 }
-                if (!repository().saveRefuseFriendRequestMessage(packet, sessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
+                // 获取请求会话
+                RequestSession requestSession = repository().getRequestSession(appKey, message.getFrom(), message.getTo());
+                if (null == requestSession || requestSession.getProgress() == MessageConstant.FRIEND_REQUEST_PROGRESS_REFUSEING || requestSession.getProgress() == MessageConstant.FRIEND_REQUEST_PROGRESS_AGREEING) {
+                    log.warn("不存在加好友请求记录或存在正在处理的好友请求，该消息忽略");
+                    return;
+                }
+                if (!repository().saveRefuseFriendRequestMessage(packet, sessionId, requestSession.getSessionId(), MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
                     log.error("Failed to save one-to-one refuse friend request message: {}", packet);
                     MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一拒绝好友请求消息异常!", packet), true);
                     return;

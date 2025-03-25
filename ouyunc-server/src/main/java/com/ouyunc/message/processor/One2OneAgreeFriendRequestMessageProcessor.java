@@ -12,6 +12,7 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.core.listener.event.ExceptionEvent;
+import com.ouyunc.domain.base.RequestSession;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
@@ -95,13 +96,19 @@ public class One2OneAgreeFriendRequestMessageProcessor extends AbstractMessagePr
         try {
             if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
                 // 如果是好友或者处理中或没有好友请求记录，直接返回
-                if (FriendValidator.INSTANCE.or(FriendRequestValidator.INSTANCE.negate()).verify(packet, ctx)) {
-                    log.warn("存在正在处理的好友请求或不存在好友请求记录/已经是好友, 请知悉; {}" ,packet);
+                if (FriendValidator.INSTANCE.verify(packet, ctx)) {
+                    log.warn("已经是好友, 请知悉; {}" ,packet);
+                    return;
+                }
+                // 获取请求会话
+                RequestSession requestSession = repository().getRequestSession(appKey, message.getFrom(), message.getTo());
+                if (null == requestSession || requestSession.getProgress() == MessageConstant.FRIEND_REQUEST_PROGRESS_REFUSEING || requestSession.getProgress() == MessageConstant.FRIEND_REQUEST_PROGRESS_AGREEING) {
+                    log.warn("不存在加好友请求记录或存在正在处理的好友请求，该消息忽略");
                     return;
                 }
                 // 保存消息
                 // 保存消息&开始保存好友关系到redis中
-                if (!repository().agreeBindFriend(appKey, packet, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
+                if (!repository().agreeBindFriend(appKey, packet, requestSession.getSessionId(), MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
                     log.error("绑定好友关系异常: {}", packet);
                     MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.BIND_FRIEND_ERROR, "处理一对一同意好友请求绑定异常！", packet), true);
                     return;

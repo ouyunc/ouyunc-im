@@ -5,6 +5,7 @@ import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.cache.config.CacheFactory;
+import com.ouyunc.domain.base.RequestSession;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,7 +21,7 @@ public enum FriendRequestProcessingValidator implements Validator<Packet> {
 
     private static final Logger log = LoggerFactory.getLogger(FriendRequestProcessingValidator.class);
 
-    private static final RedisTemplate<String, Integer> redisTemplate = CacheFactory.REDIS.instance();
+    private static final RedisTemplate<String, RequestSession> redisTemplate = CacheFactory.REDIS.instance();
 
     /***
      * @author fzx
@@ -30,9 +31,9 @@ public enum FriendRequestProcessingValidator implements Validator<Packet> {
     public boolean verify(Packet packet, ChannelHandlerContext ctx) {
         Message message = packet.getMessage();
         // 正在处理中的状态，如果为空 则说明没有正在处理中的好友请求，返回false, 如果有值（值为1-同意，2-拒绝），则返回true
-        Integer friendRequestProcessing = redisTemplate.opsForValue().get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + message.getMetadata().getAppKey() + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_PROCESSING + message.getFrom() + CacheConstant.COLON + message.getTo());
-        if (null != friendRequestProcessing && friendRequestProcessing > MessageConstant.FRIEND_REQUEST_STATUS_JOINING) {
-            log.info("{} 和 {} 会话存在正在处理中的好友请求，拒绝和同意还未结束处理", message.getFrom(), message.getTo());
+        RequestSession requestSession = redisTemplate.opsForValue().get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + message.getMetadata().getAppKey() + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_SESSION + message.getFrom() + CacheConstant.COLON + message.getTo());
+        if (null != requestSession && requestSession.getProgress() > MessageConstant.FRIEND_REQUEST_PROGRESS_JOINING) {
+            log.warn("{} 和 {} 会话存在正在处理中的好友请求，拒绝和同意还未结束处理", message.getFrom(), message.getTo());
             return true;
         }
         return false;

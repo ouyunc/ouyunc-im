@@ -37,6 +37,13 @@ public class MongoFriendRequestSessionEntity implements Serializable {
     @Field("to")
     private String to;
 
+
+    /**
+     * 会话开id
+     */
+    @Field("session_id")
+    private String sessionId;
+
     /**
     * 会话开始时间戳，毫秒
     */
@@ -79,16 +86,20 @@ public class MongoFriendRequestSessionEntity implements Serializable {
         public static final String id = "id";
         public static final String from = "from";
         public static final String to = "to";
+        public static final String sessionId = "session_id";
         public static final String status = "status";
         public static final String expireAt = "expire_at";
+        public static final String sessionBeginTime = "session_begin_time";
+        public static final String sessionEndTime = "session_end_time";
     }
     public MongoFriendRequestSessionEntity() {
     }
 
-    public MongoFriendRequestSessionEntity(Long id, String from, String to, Long sessionBeginTime, Long sessionEndTime, Integer status, LocalDateTime createTime, LocalDateTime updateTime) {
+    public MongoFriendRequestSessionEntity(Long id, String from, String to, String sessionId, Long sessionBeginTime, Long sessionEndTime, Integer status, LocalDateTime createTime, LocalDateTime updateTime) {
         this.id = id;
         this.from = from;
         this.to = to;
+        this.sessionId = sessionId;
         this.sessionBeginTime = sessionBeginTime;
         this.sessionEndTime = sessionEndTime;
         this.status = status;
@@ -96,10 +107,11 @@ public class MongoFriendRequestSessionEntity implements Serializable {
         this.updateTime = updateTime;
     }
 
-    public MongoFriendRequestSessionEntity(Long id, String from, String to, Long sessionBeginTime, Long sessionEndTime, Integer status, LocalDateTime createTime, LocalDateTime updateTime, LocalDateTime expireAt) {
+    public MongoFriendRequestSessionEntity(Long id, String from, String to, String sessionId, Long sessionBeginTime, Long sessionEndTime, Integer status, LocalDateTime createTime, LocalDateTime updateTime, LocalDateTime expireAt) {
         this.id = id;
         this.from = from;
         this.to = to;
+        this.sessionId = sessionId;
         this.sessionBeginTime = sessionBeginTime;
         this.sessionEndTime = sessionEndTime;
         this.status = status;
@@ -162,6 +174,14 @@ public class MongoFriendRequestSessionEntity implements Serializable {
 
     public void setStatus(Integer status) {
         this.status = status;
+    }
+
+    public String getSessionId() {
+        return sessionId;
+    }
+
+    public void setSessionId(String sessionId) {
+        this.sessionId = sessionId;
     }
 
     public LocalDateTime getCreateTime() {

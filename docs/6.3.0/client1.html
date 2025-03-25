@@ -34,7 +34,7 @@ let defaultConfig = {
     };
 var url = 'ws://172.18.62.195:6003/ws'
 var local = 'ws://192.168.0.106:6003/ws'
-const socket = new Socket(local, {
+const socket = new Socket(url, {
     clientType: 1,
     // 2-json序列化，6-protocolbuf 序列化，需要引入两个protobuf文件，且 属性 Message: proto.com.ouyunc.base.packet.message.Message,需要配置
 	serializeAlgorithm: 6,
@@ -87,7 +87,7 @@ socket.onmessage = ({
     if (messageType === -128) {
         let packet = socket.send({
             // 登录消息类型，
-            messageType: -10,
+            messageType: -8,
             // 消息
             message: {
                 // 消息发送方唯一标识，建议使用用户id

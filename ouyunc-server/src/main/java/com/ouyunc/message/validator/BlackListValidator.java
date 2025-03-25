@@ -35,7 +35,7 @@ public enum BlackListValidator implements Validator<Packet> {
         Metadata metadata = message.getMetadata();
         Long joinTimestamp = redisTemplate.<String, Long>opsForHash().get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.BLACKLIST + message.getTo(), message.getFrom());
         if (joinTimestamp != null && joinTimestamp > 0) {
-            log.info("{} 在黑名单中，加入时间：{}", from, joinTimestamp);
+            log.warn("{} 在黑名单中，加入时间：{}", from, joinTimestamp);
             return true;
         }
         // 从数据库查询？可能会影响性能，为了最大提升性能，直接从redis中查询，没有就认为不在黑名单，这个功能不是最重要的

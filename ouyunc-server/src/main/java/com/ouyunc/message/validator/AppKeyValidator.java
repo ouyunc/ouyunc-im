@@ -33,13 +33,13 @@ public enum AppKeyValidator implements Validator<String> {
         RedisTemplate<String, String> redisTemplate = CacheFactory.REDIS.instance();
         Map<String, AppEntity> appKeys = redisTemplate.<String, AppEntity>opsForHash().entries(CacheConstant.OUYUNC + CacheConstant.APP_KEYS);
         if (MapUtils.isEmpty(appKeys) || !appKeys.containsKey(appKey)) {
-            log.error("appKey:{}不存在", appKey);
+            log.warn("appKey:{}不存在", appKey);
             return false;
         }
         // 获取appKey的设置信息，是否停用等
         AppEntity app = appKeys.get(appKey);
         if (app == null || AppStatus.ABNORMAL.value().equals(app.getStatus())) {
-            log.error("appKey:{}已停用", appKey);
+            log.warn("appKey:{}已停用", appKey);
             return false;
         }
         // 获取当前appKey的连接数
@@ -48,7 +48,7 @@ public enum AppKeyValidator implements Validator<String> {
         if (maxConnections != null && (maxConnections == NumberConstant.NUMBER_NEGATIVE_1 || currentConnections < maxConnections)) {
             return true;
         }
-        log.error("appKey:{}连接数已达上限", appKey);
+        log.warn("appKey:{}连接数已达上限", appKey);
         return false;
     }
 }

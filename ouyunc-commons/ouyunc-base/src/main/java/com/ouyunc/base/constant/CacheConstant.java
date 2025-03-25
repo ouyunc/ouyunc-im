@@ -127,9 +127,9 @@ public class CacheConstant {
     public static final String FRIEND_REQUEST = "friend-request:";
 
     /***
-     * 正在处理中的好友请求
+     * 正在处理中的好友请求会话标识
      */
-    public static final String FRIEND_REQUEST_PROCESSING = "friend-request-processing:";
+    public static final String FRIEND_REQUEST_SESSION = "friend-request-session:";
 
     /***
      * 群请求

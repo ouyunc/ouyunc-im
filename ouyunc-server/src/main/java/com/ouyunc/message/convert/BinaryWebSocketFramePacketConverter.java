@@ -3,6 +3,7 @@ package com.ouyunc.message.convert;
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
+import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
@@ -58,7 +59,7 @@ public enum BinaryWebSocketFramePacketConverter implements PacketConverter<Binar
                     if (loginClientInfo == null) {
                         log.error("客户端:{} 未登录，请先登录", message.getFrom());
                         ctx.close();
-                        return null;
+                        throw new MessageException("客户端:"+message.getFrom()+" 未登录，请先登录");
                     }
                     metadata.setAppKey(loginClientInfo.getAppKey());
                 }

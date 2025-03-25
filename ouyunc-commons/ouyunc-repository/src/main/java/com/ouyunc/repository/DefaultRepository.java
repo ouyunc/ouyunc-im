@@ -9,11 +9,13 @@ import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.IdentityUtil;
+import com.ouyunc.base.utils.SnowflakeUtil;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.db.jdbc.JdbcFactory;
 import com.ouyunc.db.mongo.MongodbFactory;
+import com.ouyunc.domain.base.RequestSession;
 import com.ouyunc.domain.constants.YesOrNo;
 import com.ouyunc.domain.entity.*;
 import com.ouyunc.mq.kafka.KafkaFactory;
@@ -70,7 +72,7 @@ public enum DefaultRepository implements Repository{
     /**
      * redisTemplate
      */
-    private static final RedisTemplate<String, ?> redisTemplate = CacheFactory.REDIS.instance();
+    private static final RedisTemplate redisTemplate = CacheFactory.REDIS.instance();
 
     /**
      * 保存消息到磁盘中，这里使用mq来提高吞吐量；注意这里mq 消费者执行的逻辑是保存消息（持久化），这里给出一个参考实例：
@@ -359,7 +361,7 @@ public enum DefaultRepository implements Repository{
         }
         // 获取需要消息服务端时间戳，这个获取要在会话锁的前提下获取,注意批量获取score 的方法是redis 6.2.0 之后的版本才支持,如果不支持请使用其他方式替换，或升级redis版本，这里 就使用lua 脚本 哈哈哈
         // 获取消息在会话中的消息服务端时间戳
-        List<Long> messageServerTimeScores = redisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_SCORE_LUA_SCRIPT, List.class), List.of(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.SESSION + sessionId), packetIds.toArray());
+        List<Long> messageServerTimeScores = (List<Long>) redisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_SCORE_LUA_SCRIPT, List.class), List.of(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.SESSION + sessionId), packetIds.toArray());
         if (CollectionUtils.isEmpty(messageServerTimeScores) || messageServerTimeScores.parallelStream().filter(Objects::nonNull).count() != packetIds.size()) {
             log.error("会话:{}不存在该消息id: {}, 或消息id数量与会话中的消息数量不相等", sessionId, packetIds);
             return false;
@@ -394,7 +396,7 @@ public enum DefaultRepository implements Repository{
                 keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + withdrawIdentity);
             }
         }
-        return redisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_WITHDRAW_MESSAGE_LUA_SCRIPT, Boolean.class), keys, packetIds.toArray());
+        return (boolean) redisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_WITHDRAW_MESSAGE_LUA_SCRIPT, Boolean.class), keys, packetIds.toArray());
     }
 
 
@@ -421,7 +423,7 @@ public enum DefaultRepository implements Repository{
             // 整体过期时间，这里是毫秒
             args.add(expireTime);
         }
-        return redisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_READ_RECEIPT_MESSAGE_LUA_SCRIPT, Boolean.class), keys, args.toArray());
+        return (boolean) redisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_READ_RECEIPT_MESSAGE_LUA_SCRIPT, Boolean.class), keys, args.toArray());
     }
 
 
@@ -531,7 +533,7 @@ public enum DefaultRepository implements Repository{
             keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + message.getTo());
             luaScript = LuaScriptConstant.SAVE_MESSAGE_WITH_OFFLINE_LUA_SCRIPT;
         }
-        return redisTemplate.execute(new DefaultRedisScript<>(luaScript, Boolean.class), keys, args);
+        return (boolean) redisTemplate.execute(new DefaultRedisScript<>(luaScript, Boolean.class), keys, args);
     }
 
 
@@ -545,7 +547,21 @@ public enum DefaultRepository implements Repository{
     public boolean saveJoinFriendRequestMessage(Packet packet, String sessionId, long expireTime) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        return saveFriendRequestMessage(packet, sessionId, expireTime, (redisOperations)-> redisOperations.opsForValue().setIfAbsent(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_PROCESSING + message.getFrom() + CacheConstant.COLON + message.getTo(), MessageConstant.FRIEND_REQUEST_STATUS_JOINING, expireTime, TimeUnit.MILLISECONDS));
+        return saveFriendRequestMessage(packet, sessionId, expireTime, (redisOperations)-> {
+            redisOperations.opsForValue().setIfAbsent(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_SESSION + message.getFrom() + CacheConstant.COLON + message.getTo(), new RequestSession.Builder().sessionId(String.valueOf(SnowflakeUtil.nextId())).progress(MessageConstant.FRIEND_REQUEST_PROGRESS_JOINING).build(), expireTime, TimeUnit.MILLISECONDS);
+        });
+    }
+
+
+    /**
+     * 获取加好友请求会话信息
+     * @param appKey
+     * @param from
+     * @param to
+     * @return
+     */
+    public RequestSession getRequestSession(String appKey, String from, String to) {
+        return  (RequestSession) redisTemplate.opsForValue().get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_SESSION + from + CacheConstant.COLON + to);
     }
 
     /**
@@ -556,9 +572,11 @@ public enum DefaultRepository implements Repository{
      * @return
      */
     @SuppressWarnings("unchecked")
-    public boolean saveRefuseFriendRequestMessage(Packet packet, String sessionId, long expireTime) {
+    public boolean saveRefuseFriendRequestMessage(Packet packet, String sessionId, String friendRequestSessionId,  long expireTime) {
         Message message = packet.getMessage();
-        return saveFriendRequestMessage(packet, sessionId, expireTime, (redisOperations)-> redisOperations.opsForValue().set(CacheConstant.OUYUNC + CacheConstant.APP_KEY + message.getMetadata().getAppKey() + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_PROCESSING + message.getTo() + CacheConstant.COLON + message.getFrom(), MessageConstant.FRIEND_REQUEST_STATUS_REFUSEING, expireTime, TimeUnit.MILLISECONDS));
+        return saveFriendRequestMessage(packet, sessionId, expireTime, (redisOperations)-> {
+            redisOperations.opsForValue().set(CacheConstant.OUYUNC + CacheConstant.APP_KEY + message.getMetadata().getAppKey() + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_SESSION + message.getTo() + CacheConstant.COLON + message.getFrom(), new RequestSession.Builder().sessionId(friendRequestSessionId).progress(MessageConstant.FRIEND_REQUEST_PROGRESS_REFUSEING).build(), expireTime, TimeUnit.MILLISECONDS);
+        });
     }
 
     /**
@@ -616,7 +634,7 @@ public enum DefaultRepository implements Repository{
         args.add(packet.getPacketId());
         args.add(metadata.getAppKey());
         args.add(message.getTo());
-        return redisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_SAVE_MESSAGE_LUA_SCRIPT, Boolean.class), keys, args.toArray());
+        return (boolean) redisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_SAVE_MESSAGE_LUA_SCRIPT, Boolean.class), keys, args.toArray());
     }
 
 
@@ -644,7 +662,7 @@ public enum DefaultRepository implements Repository{
     public FriendEntity getFriend(String appKey, String from, String to) {
         // 从redis中获取好友关系
         // 如果不为空则返回true，如果为空则不再从数据库中获取
-        return redisTemplate.<String, FriendEntity>opsForHash().get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIENDS_CONFIG + from, to);
+        return (FriendEntity) redisTemplate.opsForHash().get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIENDS_CONFIG + from, to);
     }
 
 
@@ -660,10 +678,13 @@ public enum DefaultRepository implements Repository{
         }
         try {
             log.info("从数据库中获取用户实体, identity: {}", identity);
-            return jdbcClient.sql(JdbcSqlConstant.MYSQL.SELECT_USER.sql())
+            userEntity = jdbcClient.sql(JdbcSqlConstant.MYSQL.SELECT_USER.sql())
                     .params(identity)
                     .query(UserEntity.class)
                     .single();
+            // 存到缓存中,30天
+            redisTemplate.opsForValue().set(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.USER + identity, userEntity, NumberConstant.NUMBER_30 * MessageConstant.DAY_TIMESTAMP, TimeUnit.MILLISECONDS);
+            return userEntity;
         } catch (EmptyResultDataAccessException e) {
             log.error("用户不存在, identity: {}", identity);
             return null;
@@ -687,7 +708,7 @@ public enum DefaultRepository implements Repository{
     public boolean autoPassBindFriend(String appKey, Packet packet, long expireTime) {
         Message message = packet.getMessage();
         // 注意过期时间的设定，与消息 hot key 的过期时间保持一致
-        return bindFriend(appKey, packet, expireTime, (redisOperations)-> redisOperations.opsForValue().setIfAbsent(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_PROCESSING + message.getFrom() + CacheConstant.COLON + message.getTo(), MessageConstant.FRIEND_REQUEST_STATUS_AGREEING, expireTime, TimeUnit.MILLISECONDS));
+        return bindFriend(appKey, packet, expireTime, (redisOperations)-> redisOperations.opsForValue().setIfAbsent(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_SESSION + message.getFrom() + CacheConstant.COLON + message.getTo(), new RequestSession.Builder().sessionId(String.valueOf(SnowflakeUtil.nextId())).progress(MessageConstant.FRIEND_REQUEST_PROGRESS_AGREEING).build(), expireTime, TimeUnit.MILLISECONDS));
     }
 
     /**
@@ -697,10 +718,10 @@ public enum DefaultRepository implements Repository{
      * @return
      */
     @SuppressWarnings("unchecked")
-    public boolean agreeBindFriend(String appKey, Packet packet, long expireTime) {
+    public boolean agreeBindFriend(String appKey, Packet packet, String friendRequestSessionId, long expireTime) {
         Message message = packet.getMessage();
         // 注意过期时间的设定，与消息 hot key 的过期时间保持一致
-        return bindFriend(appKey, packet, expireTime, (redisOperations)-> redisOperations.opsForValue().set(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_PROCESSING + message.getTo() + CacheConstant.COLON + message.getFrom(), MessageConstant.FRIEND_REQUEST_STATUS_AGREEING, expireTime, TimeUnit.MILLISECONDS));
+        return bindFriend(appKey, packet, expireTime, (redisOperations)-> redisOperations.opsForValue().set(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_SESSION + message.getTo() + CacheConstant.COLON + message.getFrom(), new RequestSession.Builder().sessionId(friendRequestSessionId).progress(MessageConstant.FRIEND_REQUEST_PROGRESS_AGREEING).build(), expireTime, TimeUnit.MILLISECONDS));
     }
 
 
@@ -768,7 +789,7 @@ public enum DefaultRepository implements Repository{
             keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + message.getTo());
             luaScript = LuaScriptConstant.SAVE_MESSAGE_WITH_OFFLINE_LUA_SCRIPT;
         }
-        return redisTemplate.execute(new DefaultRedisScript<>(luaScript, Boolean.class), keys, args);
+        return (boolean) redisTemplate.execute(new DefaultRedisScript<>(luaScript, Boolean.class), keys, args);
     }
 
 
@@ -795,6 +816,6 @@ public enum DefaultRepository implements Repository{
         args.add(packet.getPacketId());
         args.add(metadata.getAppKey());
         args.add(message.getTo());
-        return redisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_SAVE_MESSAGE_LUA_SCRIPT, Boolean.class), keys, args.toArray());
+        return (boolean) redisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_SAVE_MESSAGE_LUA_SCRIPT, Boolean.class), keys, args.toArray());
     }
 }
