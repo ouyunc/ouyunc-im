@@ -101,7 +101,7 @@ public class One2OneAgreeFriendRequestMessageProcessor extends AbstractMessagePr
                     return;
                 }
                 // 获取请求会话
-                RequestSession requestSession = repository().getRequestSession(appKey, message.getFrom(), message.getTo());
+                RequestSession requestSession = repository().getRequestSession(appKey, message.getTo(), message.getFrom());
                 if (null == requestSession || requestSession.getProgress() == MessageConstant.FRIEND_REQUEST_PROGRESS_REFUSEING || requestSession.getProgress() == MessageConstant.FRIEND_REQUEST_PROGRESS_AGREEING) {
                     log.warn("不存在加好友请求记录或存在正在处理的好友请求，该消息忽略");
                     return;

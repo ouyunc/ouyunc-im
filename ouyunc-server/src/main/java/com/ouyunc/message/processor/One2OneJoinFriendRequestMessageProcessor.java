@@ -10,13 +10,18 @@ import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.IdentityUtil;
+import com.ouyunc.base.utils.SnowflakeUtil;
 import com.ouyunc.core.listener.event.ExceptionEvent;
+import com.ouyunc.domain.base.RequestSession;
 import com.ouyunc.domain.constants.YesOrNo;
 import com.ouyunc.domain.entity.UserEntity;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
-import com.ouyunc.message.validator.*;
+import com.ouyunc.message.validator.AuthValidator;
+import com.ouyunc.message.validator.BlackListValidator;
+import com.ouyunc.message.validator.FriendValidator;
+import com.ouyunc.message.validator.PermissionValidator;
 import com.ouyunc.repository.DefaultRepository;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.collections4.CollectionUtils;
@@ -91,8 +96,14 @@ public class One2OneJoinFriendRequestMessageProcessor extends AbstractMessagePro
         try {
             if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
                 // 如果是好友或者处理中，直接返回
-                if (FriendValidator.INSTANCE.or(FriendRequestProcessingValidator.INSTANCE).verify(packet, ctx)) {
-                    log.warn("存在正在处理的请求/已经是好友, 请知悉; {}" ,packet);
+                if (FriendValidator.INSTANCE.verify(packet, ctx)) {
+                    log.warn("已经是好友, 请知悉; {}" ,packet);
+                    return;
+                }
+                // 获取请求会话
+                RequestSession requestSession = repository().getRequestSession(appKey, message.getFrom(), message.getTo());
+                if (null != requestSession && requestSession.getProgress() > MessageConstant.FRIEND_REQUEST_PROGRESS_JOINING) {
+                    log.warn("{} 和 {} 会话存在正在处理中的好友请求，拒绝和同意还未结束处理", message.getFrom(), message.getTo());
                     return;
                 }
                 // 获取当前对方的配置信息,是否是自动同意加好友，
@@ -105,12 +116,12 @@ public class One2OneJoinFriendRequestMessageProcessor extends AbstractMessagePro
                 // 判断对方是否是自动同意加好友
                 if (YesOrNo.YES.getCode().equals(toUserEntity.getFriendJoinPolicy())) {
                     // 是自动添加好友
-                    if (!repository().autoPassBindFriend(appKey, packet, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
+                    if (!repository().autoPassBindFriend(appKey, packet, requestSession == null ? String.valueOf(SnowflakeUtil.nextId()) : requestSession.getSessionId(), MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
                         log.error("自动处理绑定好友失败: {}", packet);
                         MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一自动绑定好友请求消息异常!", packet), true);
                         return;
                     }
-                }else if (!repository().saveJoinFriendRequestMessage(packet, sessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
+                }else if (!repository().saveJoinFriendRequestMessage(packet, sessionId, requestSession == null ? String.valueOf(SnowflakeUtil.nextId()) : requestSession.getSessionId(), MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
                     log.error("Failed to save one-to-one join friend request message: {}", packet);
                     MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一加好友请求消息异常!", packet), true);
                     return;
