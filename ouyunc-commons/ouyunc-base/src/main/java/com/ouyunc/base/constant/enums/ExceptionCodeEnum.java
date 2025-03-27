@@ -48,6 +48,8 @@ public enum ExceptionCodeEnum {
     USER_NOT_EXIST(500001, "用户不存在"),
 
     REQUEST_SESSION_NOT_EXIST(600001, "请求会话不存在"),
+    REQUEST_SESSION_MISMATCH(600002, "请求会话不匹配"),
+    REQUEST_SESSION_PROGRESS_MISMATCH(600003, "请求会话进度不匹配"),
 
     ;
 
