@@ -47,6 +47,8 @@ public enum ExceptionCodeEnum {
 
     USER_NOT_EXIST(500001, "用户不存在"),
 
+    REQUEST_SESSION_NOT_EXIST(600001, "请求会话不存在"),
+
     ;
 
     private final int code;

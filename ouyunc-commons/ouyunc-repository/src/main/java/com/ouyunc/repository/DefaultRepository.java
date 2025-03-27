@@ -548,7 +548,7 @@ public enum DefaultRepository implements Repository{
         Metadata metadata = message.getMetadata();
         // 获取原来存在的sessionid
         return saveFriendRequestMessage(packet, sessionId, friendRequestSessionId, expireTime, (redisOperations, requestSessionId)-> {
-            redisOperations.opsForValue().setIfAbsent(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_SESSION + message.getFrom() + CacheConstant.COLON + message.getTo(), new RequestSession.Builder().sessionId(requestSessionId).progress(MessageConstant.FRIEND_REQUEST_PROGRESS_JOINING).build(), expireTime, TimeUnit.MILLISECONDS);
+            redisOperations.opsForValue().setIfAbsent(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_SESSION + message.getFrom() + CacheConstant.COLON + message.getTo(), new RequestSession.Builder().sessionId(requestSessionId).progress(MessageConstant.FRIEND_REQUEST_PROGRESS_JOINING).build(), MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
         });
     }
 
@@ -575,7 +575,7 @@ public enum DefaultRepository implements Repository{
     public boolean saveRefuseFriendRequestMessage(Packet packet, String sessionId, String friendRequestSessionId,  long expireTime) {
         Message message = packet.getMessage();
         return saveFriendRequestMessage(packet, sessionId, friendRequestSessionId, expireTime, (redisOperations, requestSessionId)-> {
-            redisOperations.opsForValue().set(CacheConstant.OUYUNC + CacheConstant.APP_KEY + message.getMetadata().getAppKey() + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_SESSION + message.getTo() + CacheConstant.COLON + message.getFrom(), new RequestSession.Builder().sessionId(requestSessionId).progress(MessageConstant.FRIEND_REQUEST_PROGRESS_REFUSEING).build(), expireTime, TimeUnit.MILLISECONDS);
+            redisOperations.opsForValue().set(CacheConstant.OUYUNC + CacheConstant.APP_KEY + message.getMetadata().getAppKey() + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_SESSION + message.getTo() + CacheConstant.COLON + message.getFrom(), new RequestSession.Builder().sessionId(requestSessionId).progress(MessageConstant.FRIEND_REQUEST_PROGRESS_REFUSEING).build(), MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
         });
     }
 
@@ -709,7 +709,7 @@ public enum DefaultRepository implements Repository{
         Message message = packet.getMessage();
         // 获取是否存在sessionId
         // 注意过期时间的设定，与消息 hot key 的过期时间保持一致
-        return bindFriend(appKey, packet, friendRequestSessionId, expireTime, (redisOperations, requestSessionId)-> redisOperations.opsForValue().setIfAbsent(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_SESSION + message.getFrom() + CacheConstant.COLON + message.getTo(), new RequestSession.Builder().sessionId(requestSessionId).progress(MessageConstant.FRIEND_REQUEST_PROGRESS_AGREEING).build(), expireTime, TimeUnit.MILLISECONDS));
+        return bindFriend(appKey, packet, friendRequestSessionId, expireTime, (redisOperations, requestSessionId)-> redisOperations.opsForValue().setIfAbsent(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_SESSION + message.getFrom() + CacheConstant.COLON + message.getTo(), new RequestSession.Builder().sessionId(requestSessionId).progress(MessageConstant.FRIEND_REQUEST_PROGRESS_AGREEING).build(), MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS));
     }
 
     /**
@@ -722,7 +722,7 @@ public enum DefaultRepository implements Repository{
     public boolean agreeBindFriend(String appKey, Packet packet, String friendRequestSessionId, long expireTime) {
         Message message = packet.getMessage();
         // 注意过期时间的设定，与消息 hot key 的过期时间保持一致
-        return bindFriend(appKey, packet, friendRequestSessionId, expireTime, (redisOperations, requestSessionId)-> redisOperations.opsForValue().set(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_SESSION + message.getTo() + CacheConstant.COLON + message.getFrom(), new RequestSession.Builder().sessionId(requestSessionId).progress(MessageConstant.FRIEND_REQUEST_PROGRESS_AGREEING).build(), expireTime, TimeUnit.MILLISECONDS));
+        return bindFriend(appKey, packet, friendRequestSessionId, expireTime, (redisOperations, requestSessionId)-> redisOperations.opsForValue().set(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_SESSION + message.getTo() + CacheConstant.COLON + message.getFrom(), new RequestSession.Builder().sessionId(requestSessionId).progress(MessageConstant.FRIEND_REQUEST_PROGRESS_AGREEING).build(), MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS));
     }
 
 
