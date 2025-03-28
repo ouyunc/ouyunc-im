@@ -16,7 +16,7 @@ import org.slf4j.LoggerFactory;
  * @Author fzx
  * @Description: im内部客户端使用的心跳消息syn-ack处理器
  **/
-public class SynAckMessageProcessor extends AbstractMessageProcessor<Byte> {
+public final class SynAckMessageProcessor extends AbstractMessageProcessor<Byte> {
     private static final Logger log = LoggerFactory.getLogger(SynAckMessageProcessor.class);
 
     @Override

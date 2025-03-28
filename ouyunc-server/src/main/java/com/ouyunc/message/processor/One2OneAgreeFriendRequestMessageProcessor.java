@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * 同意加好友请求
  */
-public class One2OneAgreeFriendRequestMessageProcessor extends AbstractMessageProcessor<Byte> {
+public final class One2OneAgreeFriendRequestMessageProcessor extends AbstractMessageProcessor<Byte> {
     private static final Logger log = LoggerFactory.getLogger(One2OneAgreeFriendRequestMessageProcessor.class);
 
     @Override

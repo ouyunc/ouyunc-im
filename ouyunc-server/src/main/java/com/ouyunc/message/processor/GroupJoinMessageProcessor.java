@@ -26,7 +26,7 @@ import java.util.Set;
 /**
  * 主动加群
  */
-public class GroupJoinMessageProcessor extends AbstractMessageProcessor<Byte> {
+public final class GroupJoinMessageProcessor extends AbstractMessageProcessor<Byte> {
     private static final Logger log = LoggerFactory.getLogger(GroupJoinMessageProcessor.class);
 
     @Override

@@ -16,7 +16,7 @@ import org.slf4j.LoggerFactory;
  * @Author fzx
  * @Description: qos外部客户端已经收到消息,只有开启qos 且在服务端模式下才会处理相关逻辑
  **/
-public class QosC2SMessageProcessor extends AbstractMessageProcessor<Byte> {
+public final class QosC2SMessageProcessor extends AbstractMessageProcessor<Byte> {
     private static final Logger log = LoggerFactory.getLogger(QosC2SMessageProcessor.class);
 
     @Override

@@ -34,7 +34,7 @@ import static com.ouyunc.message.context.MessageServerContext.redissonClient;
 /**
  * 一对一（单聊）消息处理器
  */
-public class One2OneMessageProcessor extends AbstractMessageProcessor<Byte>{
+public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte>{
     private static final Logger log = LoggerFactory.getLogger(One2OneMessageProcessor.class);
 
     @Override

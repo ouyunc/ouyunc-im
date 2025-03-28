@@ -49,7 +49,7 @@ import java.util.function.Consumer;
  * @Author fzx
  * @Description: 登录消息处理器，这个处理类是第一条连接后发送的第一条消息类型，之后才能发送心跳等业务消息
  **/
-public class LoginMessageProcessor extends AbstractMessageProcessor<Byte> {
+public final class LoginMessageProcessor extends AbstractMessageProcessor<Byte> {
     private static final Logger log = LoggerFactory.getLogger(LoginMessageProcessor.class);
 
     @Override

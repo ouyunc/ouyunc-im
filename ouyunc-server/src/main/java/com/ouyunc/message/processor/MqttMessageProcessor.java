@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory;
  * @Author fzx
  * @Description: Mqtt 消息处理器
  **/
-public class MqttMessageProcessor extends AbstractMessageProcessor<Byte> {
+public final class MqttMessageProcessor extends AbstractMessageProcessor<Byte> {
 
 
     private static final Logger log = LoggerFactory.getLogger(MqttMessageProcessor.class);

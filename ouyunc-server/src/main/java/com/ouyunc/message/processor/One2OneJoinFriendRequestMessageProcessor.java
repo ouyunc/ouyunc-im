@@ -35,7 +35,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * 加好友
  */
-public class One2OneJoinFriendRequestMessageProcessor extends AbstractMessageProcessor<Byte> {
+public final class One2OneJoinFriendRequestMessageProcessor extends AbstractMessageProcessor<Byte> {
     private static final Logger log = LoggerFactory.getLogger(One2OneJoinFriendRequestMessageProcessor.class);
 
     @Override

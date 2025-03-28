@@ -32,7 +32,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * 拒绝加好友请求
  */
-public class One2OneRefuseFriendRequestMessageProcessor extends AbstractMessageProcessor<Byte>{
+public final class One2OneRefuseFriendRequestMessageProcessor extends AbstractMessageProcessor<Byte>{
     private static final Logger log = LoggerFactory.getLogger(One2OneRefuseFriendRequestMessageProcessor.class);
 
     @Override

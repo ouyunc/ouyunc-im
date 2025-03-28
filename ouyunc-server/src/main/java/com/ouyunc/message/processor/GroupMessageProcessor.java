@@ -32,7 +32,7 @@ import static com.ouyunc.message.context.MessageServerContext.redissonClient;
 /**
  * 群聊消息处理器
  */
-public class GroupMessageProcessor extends AbstractMessageProcessor<Byte> {
+public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> {
     private static final Logger log = LoggerFactory.getLogger(GroupMessageProcessor.class);
 
 

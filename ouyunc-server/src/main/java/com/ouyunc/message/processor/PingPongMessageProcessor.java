@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory;
  * @Author fzx
  * @Description: 外部客户端心跳消息,这里不做登录的校验？
  **/
-public class PingPongMessageProcessor extends AbstractMessageProcessor<Byte> {
+public final class PingPongMessageProcessor extends AbstractMessageProcessor<Byte> {
     private static final Logger log = LoggerFactory.getLogger(PingPongMessageProcessor.class);
 
     @Override
