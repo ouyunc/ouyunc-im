@@ -1,10 +1,12 @@
 package com.ouyunc.cache.config;
 
 import com.ouyunc.cache.config.redis.builder.AbstractRedisBuilder;
+import com.ouyunc.cache.config.redis.builder.ReactiveRedisTemplateBuilder;
 import com.ouyunc.cache.config.redis.builder.RedisTemplateBuilder;
 import com.ouyunc.cache.config.redis.builder.RedissonClientBuilder;
 import com.ouyunc.cache.config.redis.properties.RedisProperties;
 import org.redisson.api.RedissonClient;
+import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.data.redis.core.RedisTemplate;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -47,6 +49,41 @@ public enum CacheFactory {
                 }
             }
             return  redisTemplateMap.get(database);
+        }
+    },
+
+    // reactive redis  响应式
+    REACTIVE_REDIS {
+        //每一个数据库只有一个ReactiveRedisTemplate 实例
+        private static final ConcurrentHashMap<Integer, ReactiveRedisTemplate<?,?>> reactiveRedisTemplateMap = new ConcurrentHashMap<>();
+        private static RedisProperties existRedisProperties;
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public ReactiveRedisTemplate<?,?> instance(RedisProperties ...redisProperties) {
+            return instance(0, redisProperties);
+        }
+        @SuppressWarnings("unchecked")
+        @Override
+        public ReactiveRedisTemplate<?,?> instance(int database,RedisProperties ...redisProperties) {
+            if (reactiveRedisTemplateMap.get(database) == null) {
+                synchronized (ConcurrentHashMap.class) {
+                    if (reactiveRedisTemplateMap.get(database) == null) {
+                        AbstractRedisBuilder<ReactiveRedisTemplate<?,?>> redisBuilder = new ReactiveRedisTemplateBuilder();
+                        if (redisProperties != null && redisProperties.length > 0) {
+                            redisBuilder.setRedisProperties(redisProperties[0]);
+                            if (existRedisProperties == null) {
+                                existRedisProperties = redisProperties[0];
+                            }
+                        }else if (existRedisProperties != null) {
+                            // 从本地获取
+                            redisBuilder.setRedisProperties(existRedisProperties);
+                        }
+                        reactiveRedisTemplateMap.put(database, redisBuilder.build(database));
+                    }
+                }
+            }
+            return  reactiveRedisTemplateMap.get(database);
         }
     },
 
