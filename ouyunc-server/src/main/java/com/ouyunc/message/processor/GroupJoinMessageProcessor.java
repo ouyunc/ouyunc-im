@@ -14,7 +14,10 @@ import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
-import com.ouyunc.message.validator.*;
+import com.ouyunc.message.validator.AuthValidator;
+import com.ouyunc.message.validator.BlackListValidator;
+import com.ouyunc.message.validator.GroupValidator;
+import com.ouyunc.message.validator.PermissionValidator;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
@@ -87,14 +90,12 @@ public final class GroupJoinMessageProcessor extends AbstractMessageProcessor<By
             return;
         }
         String sessionId = packet.getMessage().getTo();
-
         // 保存消息和离线消息记录
         if (!saveGroupRequestMessage(packet, groupMannerOrLeaderUsersIdentitySet)) {
             log.error("Failed to save  group join request message: {}", packet);
             MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存加群请求消息异常!", packet), true);
             return;
         }
-
         repository().savePacket2Mq(MqConstant.KAFKA_GROUP_REQUEST_TOPIC, sessionId, packet).whenComplete((result, ex) -> {
             if (ex != null) {
                 log.error("加群请求，发送mq异常，原因：{}", ex.getMessage());
