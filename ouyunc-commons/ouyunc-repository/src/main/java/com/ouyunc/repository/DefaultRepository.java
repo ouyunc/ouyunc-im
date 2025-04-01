@@ -625,7 +625,7 @@ public enum DefaultRepository implements Repository{
     public List<GroupUserEntity> groupUserEntityList(Packet packet) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        Set<String> memberIdSet = (Set<String>) redisTemplate.opsForZSet().range(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUPS + message.getTo(), NumberConstant.NUMBER_0, NumberConstant.NUMBER_NEGATIVE_1);
+        Set<String> memberIdSet = (Set<String>) redisTemplate.opsForZSet().range(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_USERS + message.getTo(), NumberConstant.NUMBER_0, NumberConstant.NUMBER_NEGATIVE_1);
         if (CollectionUtils.isEmpty(memberIdSet)) {
             return List.of();
         }

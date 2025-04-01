@@ -36,7 +36,7 @@ public enum GroupValidator implements ReactiveValidator<Packet> {
         String to = message.getTo();
         Metadata metadata = message.getMetadata();
         // 判断是否是好友，有可能mq 延迟消费
-        Mono<Double> scoreMono = reactiveRedisTemplate.opsForZSet().score(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUPS + to, from);
+        Mono<Double> scoreMono = reactiveRedisTemplate.opsForZSet().score(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_USERS + to, from);
         return scoreMono.flatMap(score -> {
                     if (score != null && score > NumberConstant.NUMBER_0) {
                         // 如果有分数，说明是群成员

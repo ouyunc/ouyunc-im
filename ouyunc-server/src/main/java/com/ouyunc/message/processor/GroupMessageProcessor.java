@@ -60,15 +60,15 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
                 // 校验是否拥有相关权限 permission （对方是否被拉黑，禁用等）群是否被封禁，是否全体禁言
                 PermissionValidator.INSTANCE.negate()
                         .or(BlackListValidator.INSTANCE)
-                        .or(GroupValidator.INSTANCE.negate())
                         .or(GroupSilenceValidator.INSTANCE)
+                        .or(GroupValidator.INSTANCE.negate())
                         .verify(packet, ctx)
                         .onErrorResume(error -> {
                             log.error("校验过程中出现异常: {}", error.getMessage());
                             return Mono.just(true); // 出现异常时默认校验不通过
                         }).flatMap(result -> {
                             if (result) {
-                                log.warn("权限不足/在黑名单中/被屏蔽, 请知悉。该消息 {} 被忽略", packet);
+                                log.warn("权限不足/在黑名单中/不是群成员/被禁言, 请知悉。该消息 {} 被忽略", packet);
                                 return Mono.empty(); // 校验不通过，不传递消息
                             }
                             return Mono.just(packet); // 校验通过，继续传递消息

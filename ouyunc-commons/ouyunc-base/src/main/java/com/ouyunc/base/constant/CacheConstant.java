@@ -62,7 +62,7 @@ public class CacheConstant {
     public static final String GROUP_USERS = "group-users:";
 
     /***
-     * 群成员的信息
+     * 群成员的信息配置
      */
     public static final String GROUP_USERS_CONFIG = "group-users-config:";
 
@@ -74,13 +74,13 @@ public class CacheConstant {
 
 
     /***
-     * 配置， 我的好友或者我的群信息的配置
+     * 配置， 我的好友信息的配置
      */
     public static final String FRIENDS_CONFIG = "friends-config:";
 
 
     /***
-     * 群列表
+     * 用户-群列表
      */
     public static final String GROUPS = "groups:";
 
