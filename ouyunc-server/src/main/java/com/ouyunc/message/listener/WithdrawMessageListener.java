@@ -28,17 +28,6 @@ public class WithdrawMessageListener implements MessageListener<WithdrawMessageE
     private static final KafkaTemplate<String, Object> kafkaTemplate = KafkaFactory.KAFKA_TEMPLATE.instance();
 
 
-//    /**
-//     * mongoTemplate
-//     */
-//    private static final MongoTemplate mongoTemplate = MongodbFactory.MONGODB_TEMPLATE.instance();
-//
-//    /**
-//     * jdbcTemplate
-//     */
-//    private static final JdbcTemplate jdbcTemplate = JdbcFactory.JDBC_TEMPLATE.instance();
-
-
     /**
      * @Author fzx
      * @Description  撤销消息监听器， 这里的逻辑需要和SaveMessageListener 的逻辑保持呼应， 下面可以使用mq 来替换，减轻服务压力，提高效率

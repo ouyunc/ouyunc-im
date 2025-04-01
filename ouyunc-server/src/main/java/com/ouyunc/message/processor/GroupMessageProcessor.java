@@ -13,12 +13,15 @@ import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
-import com.ouyunc.message.validator.AuthValidator;
+import com.ouyunc.message.validator.*;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.collections4.CollectionUtils;
-import org.redisson.api.RLock;
+import org.redisson.api.RLockReactive;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.List;
 import java.util.Set;
@@ -26,11 +29,12 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
-import static com.ouyunc.message.context.MessageServerContext.redissonClient;
+import static com.ouyunc.message.context.MessageServerContext.reactiveRedissonClient;
 
 
 /**
  * 群聊消息处理器
+ * 如果在使用过程中存在使用redis 的瓶颈（吞出量） 可以使用 响应式redis 进行改造提高吞吐量 CacheFactory.REACTIVE_REDIS.instance()
  */
 public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> {
     private static final Logger log = LoggerFactory.getLogger(GroupMessageProcessor.class);
@@ -53,9 +57,22 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
                     ctx.close();
                     return;
                 }
-                // 校验是否拥有相关权限 permission （对方是否被拉黑，禁用等）
-
-                ctx.fireChannelRead(packet);
+                // 校验是否拥有相关权限 permission （对方是否被拉黑，禁用等）群是否被封禁，是否全体禁言
+                PermissionValidator.INSTANCE.negate()
+                        .or(BlackListValidator.INSTANCE)
+                        .or(GroupValidator.INSTANCE.negate())
+                        .or(GroupSilenceValidator.INSTANCE)
+                        .verify(packet, ctx)
+                        .onErrorResume(error -> {
+                            log.error("校验过程中出现异常: {}", error.getMessage());
+                            return Mono.just(true); // 出现异常时默认校验不通过
+                        }).flatMap(result -> {
+                            if (result) {
+                                log.warn("权限不足/在黑名单中/被屏蔽, 请知悉。该消息 {} 被忽略", packet);
+                                return Mono.empty(); // 校验不通过，不传递消息
+                            }
+                            return Mono.just(packet); // 校验通过，继续传递消息
+                        }).subscribe(ctx::fireChannelRead);
             } else {
                 // 发送失败
                 log.error("Failed to send message: {} ", ex.getMessage());
@@ -87,18 +104,20 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
             return;
         }
         // 3. 保存消息
-        if (!saveGroupMessage(packet, groupUserIdentitySet)) {
-            return;
-        }
-        // 4. 处理特殊消息类型
-        int contentType = packet.getMessage().getContentType();
-        if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
-            handleWithdrawMessage(ctx, packet, groupUserIdentitySet);
-        } else if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {
-            handleReadReceipt(ctx, packet, groupUserIdentitySet);
-        } else {
-            deliverAndFireNext(ctx, packet, groupUserIdentitySet);
-        }
+        reactiveSaveGroupMessage(packet, groupUserIdentitySet).subscribe(result -> {
+            if (result) {
+                // 4. 处理特殊消息类型
+                int contentType = packet.getMessage().getContentType();
+                if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
+                    handleWithdrawMessage(ctx, packet, groupUserIdentitySet);
+                } else if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {
+                    handleReadReceipt(ctx, packet, groupUserIdentitySet);
+                } else {
+                    deliverAndFireNext(ctx, packet, groupUserIdentitySet);
+                }
+            }
+        });
+
     }
 
 
@@ -109,10 +128,10 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
      */
     private void handleReadReceipt(ChannelHandlerContext ctx, Packet packet, Set<String> groupUserIdentitySet) {
         String sessionId = packet.getMessage().getTo();
-        handleLockedOperation(ctx, packet,groupUserIdentitySet,
-                ()-> repository().validReadReceiptMessage(packet, packet.getMessage().getTo(), true),
+        reactiveHandleLockedOperation(ctx, packet,groupUserIdentitySet,
+                repository().reactiveValidReadReceiptMessage(packet, packet.getMessage().getTo(), true),
                 ()-> repository().savePacket2Mq(MqConstant.KAFKA_READ_RECEIPT_MESSAGE_TOPIC, sessionId, packet),
-                ()-> repository().readReceiptMessage(packet, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP),
+                repository().reactiveReadReceiptMessage(packet, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP),
                 "已读回执消息", ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR);
     }
 
@@ -127,52 +146,61 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
         // 获取当前撤销人员是否是群主或者管理员，他们是最大权限可以撤销所有成员的消息，当然也包括自己
         Set<String> leaderOrManagerIdentitySet = repository().groupManagerAndLeaderUsersIdentity(packet);
         boolean leaderOrManager = CollectionUtils.isNotEmpty(leaderOrManagerIdentitySet) && leaderOrManagerIdentitySet.contains(packet.getMessage().getFrom());
-        handleLockedOperation(ctx, packet,groupUserIdentitySet,
-                ()-> repository().validWithdrawMessage(packet, sessionId, leaderOrManager),
+        reactiveHandleLockedOperation(ctx, packet,groupUserIdentitySet,
+                repository().reactiveValidWithdrawMessage(packet, sessionId, leaderOrManager),
                 ()-> repository().savePacket2Mq(MqConstant.KAFKA_WITHDRAW_MESSAGE_TOPIC, sessionId, packet),
-                ()-> repository().withdrawMessage(packet, sessionId, groupUserIdentitySet),
+                repository().reactiveWithdrawMessage(packet, sessionId, groupUserIdentitySet),
                 "撤回消息", ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR);
     }
 
 
-    // 定义公共处理模板
-    private void handleLockedOperation(ChannelHandlerContext ctx, Packet packet,Set<String> groupUserIdentitySet,
-                                       Supplier<Boolean>  validator,
-                                       Supplier<CompletableFuture<?>> mqSender,
-                                       Supplier<Boolean>  processor,
-                                       String errorLog, ExceptionCodeEnum errorCode) {
+    private void reactiveHandleLockedOperation(ChannelHandlerContext ctx, Packet packet,Set<String> groupUserIdentitySet,
+                                               Mono<Boolean>  validator,
+                                               Supplier<CompletableFuture<?>> mqSender,
+                                               Mono<Boolean>  processor,
+                                               String errorLog, ExceptionCodeEnum errorCode) {
         Message message = packet.getMessage();
         String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
-        RLock multiLock = createMultiLock(message.getMetadata().getAppKey(), sessionId, message.getTo());
-        try {
-            if (!tryLock(multiLock)) {
-                log.error("{}获取锁失败: {}", errorLog, packet);
-                publishLockError(packet, errorLog + "获取锁失败");
-                return;
-            }
-            if (!validator.get()) {
-                log.error("{} 校验失败: {}", errorLog, packet);
-                publishExceptionEvent(errorCode,errorLog + "校验失败", packet);
-                return;
-            }
-            mqSender.get().whenComplete((result, ex) -> {
-                if (ex != null) {
-                    log.error("{}发送mq持久化异常: {}", errorLog, ex.getMessage());
-                    publishExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, errorLog + "发送mq持久化异常：" + ex.getMessage(), packet);
-                }else if (!processor.get()) {
-                    log.error("{} 处理失败: {}", errorLog, packet);
-                    publishExceptionEvent(errorCode, errorLog + "处理失败", packet);
-                }
-                // 传递数据
-                deliverAndFireNext(ctx, packet, groupUserIdentitySet);
-            });
-        } catch (Exception e) {
-            log.error("{}处理消息异常: ", errorLog, e);
-            publishExceptionEvent(errorCode,  errorLog + "处理消息异常" + e.getMessage(), packet);
-        } finally {
-            releaseLock(multiLock);
-        }
+        RLockReactive lock = createMultiLock(message.getMetadata().getAppKey(), sessionId, message.getTo());
+        lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)
+                .flatMap(locked -> {
+                    if (!locked) {
+                        MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, errorLog + "获取锁失败", packet), true);
+                        return Mono.empty();
+                    }
+                    return validator.flatMap(valid -> {
+                        if (!valid) {
+                            MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, errorLog + "验证失败", packet), true);
+                            return Mono.empty();
+                        }
+                        return Mono.fromFuture(mqSender.get())
+                                .onErrorResume(ex -> {
+                                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, errorLog + "发送mq持久化异常：" + ex.getMessage(), packet), true);
+                                    return Mono.empty();
+                                })
+                                .then(processor)
+                                .flatMap(processed -> {
+                                    if (processed) {
+                                        deliverAndFireNext(ctx, packet, groupUserIdentitySet);
+                                    } else {
+                                        MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, errorLog + "业务处理失败", packet), true);
+                                    }
+                                    return Mono.empty();
+                                }).onErrorResume(ex -> {
+                                    publishExceptionEvent(errorCode, errorLog + "处理过程中发生异常", packet);
+                                    return Mono.empty();
+                                });
+                    }).publishOn(Schedulers.boundedElastic()).doFinally(s -> lock.unlock()
+                            .doOnError(e -> log.error("解锁失败", e))
+                            .onErrorResume(e -> {
+                                log.error("解锁异常: {}", e.getMessage());
+                                MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.UN_LOCK_ERROR, errorLog + "解锁失败", packet), true);
+                                return Mono.empty();
+                            }).subscribe());
+                }).subscribe();
     }
+
+
     private void publishExceptionEvent(ExceptionCodeEnum code, String msg, Packet packet) {
         MessageServerContext.publishEvent(
                 new ExceptionEvent(code, msg, packet), true);
@@ -205,15 +233,15 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
     /**
      * 保存群组消息
      */
-    private boolean saveGroupMessage(Packet packet, Set<String> groupMembers) {
+    private Mono<Boolean> reactiveSaveGroupMessage(Packet packet, Set<String> groupMembers) {
         Message message = packet.getMessage();
-        if (MessageContext.messageProperties.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel() ? saveQosMessage(packet, groupMembers) : saveNonQosMessage(packet, message.getTo())) {
-            return true;
+        if (MessageContext.messageProperties.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
+            return reactiveSaveQosMessage(packet, groupMembers);
+        }else {
+             return reactiveSaveNonQosMessage(packet, message.getTo());
         }
-        log.error("Failed to save group message: {}", packet);
-        MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存群组消息异常!", packet), true);
-        return false;
     }
+
 
     /**
      * 保存Qos消息
@@ -222,13 +250,16 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
      * @param groupMembers
      * @return
      */
-    private boolean saveQosMessage(Packet packet, Set<String> groupMembers) {
-        return repository().batchSaveMessage(
+    private Mono<Boolean> reactiveSaveQosMessage(Packet packet, Set<String> groupMembers) {
+        Flux<Boolean> booleanFlux = repository().reactiveBatchSaveMessage(
                 packet,
                 groupMembers,
                 MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP
         );
+        return booleanFlux.all(result -> result)
+                .onErrorReturn(false);
     }
+
 
     /**
      * 保存非Qos消息
@@ -237,40 +268,23 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
      * @param sessionId
      * @return
      */
-    private boolean saveNonQosMessage(Packet packet, String sessionId) {
-        return repository().saveMessage(
+    private Mono<Boolean> reactiveSaveNonQosMessage(Packet packet, String sessionId) {
+        Flux<Boolean> booleanFlux = repository().fluxSaveMessage(
                 packet,
                 sessionId,
                 MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP
         );
+        return booleanFlux.all(result -> result)
+                .onErrorReturn(false);
     }
 
-
-    private RLock createMultiLock(String appKey, String sessionId, String to) {
-        return redissonClient.getMultiLock(
-                redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.SESSION + sessionId),
-                redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.OFFLINE + to)
+    private RLockReactive createMultiLock(String appKey, String sessionId, String to) {
+        return reactiveRedissonClient.getMultiLock(
+                reactiveRedissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.SESSION + sessionId),
+                reactiveRedissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.OFFLINE + to)
         );
     }
 
-    private boolean tryLock(RLock lock) throws InterruptedException {
-        return lock.tryLock(
-                MessageConstant.LOCK_WAIT_TIME,
-                MessageConstant.LOCK_LEASE_TIME,
-                TimeUnit.SECONDS
-        );
-    }
-
-    private void releaseLock(RLock lock) {
-        if (lock != null && lock.isHeldByCurrentThread()) {
-            lock.unlock();
-        }
-    }
-
-    private void publishLockError(Packet packet, String message) {
-        log.error("Failed to acquire lock: {}", packet);
-        MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, message, packet), true);
-    }
 
 
     /**
@@ -289,11 +303,11 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
     }
 
 
-    protected void deliver2AllGroupMembers(Packet packet, Set<String> groupMembers) {
+    private void deliver2AllGroupMembers(Packet packet, Set<String> groupMembers) {
         groupMembers.forEach(member -> deliverToMember(packet, member));
     }
 
-    protected void deliverAtMessage(Packet packet, List<String> atList, Set<String> groupMembers) {
+    private void deliverAtMessage(Packet packet, List<String> atList, Set<String> groupMembers) {
         atList.stream()
                 .filter(groupMembers::contains)
                 .forEach(member -> deliverToMember(packet, member));

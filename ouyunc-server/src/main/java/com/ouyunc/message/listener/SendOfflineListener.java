@@ -13,11 +13,6 @@ import org.slf4j.LoggerFactory;
 public class SendOfflineListener implements MessageListener<SendOfflineEvent> {
     private static final Logger log = LoggerFactory.getLogger(SendOfflineListener.class);
 
-    /**
-     * kafkaTemplate
-     */
-    //private static final KafkaTemplate<String, Object> kafkaTemplate = KafkaFactory.KAFKA_TEMPLATE.instance();
-
 
     /**
      * @Author fzx

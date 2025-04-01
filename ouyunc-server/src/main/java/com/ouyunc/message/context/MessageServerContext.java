@@ -4,6 +4,7 @@ import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.collect.Sets;
 import com.ouyunc.base.constant.enums.DeviceType;
+import com.ouyunc.base.constant.enums.LuaScriptEnum;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
@@ -31,6 +32,7 @@ import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.redisson.api.RedissonClient;
+import org.redisson.api.RedissonReactiveClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -97,6 +99,12 @@ public class MessageServerContext extends MessageContext {
      * 分布式锁redisson
      */
     public static RedissonClient redissonClient = CacheFactory.REDISSON.instance();
+
+
+    /**
+     * 响应式分布式锁redisson
+     */
+    public static RedissonReactiveClient reactiveRedissonClient = CacheFactory.REACTIVE_REDISSON.instance();
 
 
 
@@ -220,6 +228,19 @@ public class MessageServerContext extends MessageContext {
         @Override
         public  AtomicInteger load(String s) throws Exception {
             return new AtomicInteger(0);
+        }
+    }));
+
+
+
+    /**
+     * lua 脚本sha 的映射缓存
+     */
+    public static Cache<LuaScriptEnum, String> luaScriptShaCache = new CaffeineLocalCache<>("luaScriptSha", Caffeine.newBuilder().build(new CacheLoader<LuaScriptEnum, String>() {
+
+        @Override
+        public  String load(LuaScriptEnum s) throws Exception {
+            return null;
         }
     }));
 

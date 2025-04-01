@@ -59,7 +59,7 @@ public class GroupUserEntity implements Serializable {
     /**
     * 用户在群中的状态，0-未被禁言，1-被禁言
     */
-    private Integer mushin;
+    private Integer silence;
 
 
     /**
@@ -81,7 +81,7 @@ public class GroupUserEntity implements Serializable {
     public GroupUserEntity() {
     }
 
-    public GroupUserEntity(Long id, Long groupId, String groupNickName, Long userId, Integer leader, Integer manager, String userNickName, Integer shield, Integer mushin, Long sessionMessageOffset, Long joinTime, LocalDateTime createTime) {
+    public GroupUserEntity(Long id, Long groupId, String groupNickName, Long userId, Integer leader, Integer manager, String userNickName, Integer shield, Integer silence, Long sessionMessageOffset, Long joinTime, LocalDateTime createTime) {
         this.id = id;
         this.groupId = groupId;
         this.groupNickName = groupNickName;
@@ -90,7 +90,7 @@ public class GroupUserEntity implements Serializable {
         this.manager = manager;
         this.userNickName = userNickName;
         this.shield = shield;
-        this.mushin = mushin;
+        this.silence = silence;
         this.sessionMessageOffset = sessionMessageOffset;
         this.joinTime = joinTime;
         this.createTime = createTime;
@@ -168,12 +168,12 @@ public class GroupUserEntity implements Serializable {
         this.shield = shield;
     }
 
-    public Integer getMushin() {
-        return mushin;
+    public Integer getSilence() {
+        return silence;
     }
 
-    public void setMushin(Integer mushin) {
-        this.mushin = mushin;
+    public void setSilence(Integer silence) {
+        this.silence = silence;
     }
 
     public Long getSessionMessageOffset() {

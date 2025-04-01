@@ -1,7 +1,9 @@
 package com.ouyunc.message;
 
 import com.ouyunc.base.constant.enums.DeviceTypeEnum;
+import com.ouyunc.base.constant.enums.LuaScriptEnum;
 import com.ouyunc.base.utils.TimeUtil;
+import com.ouyunc.core.listener.event.PreloadedLuaScriptEvent;
 import com.ouyunc.core.listener.event.ServerStartupEvent;
 import com.ouyunc.core.listener.event.ServerStopEvent;
 import com.ouyunc.message.banner.MessageBanner;
@@ -148,6 +150,9 @@ public abstract class AbstractMessageServer implements MessageServer {
         MessageServerContext.addDeviceType(DeviceTypeEnum.class);
         // 设置路由器
         // 打印所有支持的消息类型，以及消息内容类型
+        // 发布预加载lua脚本事件
+
+        MessageServerContext.publishEvent(new PreloadedLuaScriptEvent(LuaScriptEnum.values()), true);
     }
     /***
      * @author fzx

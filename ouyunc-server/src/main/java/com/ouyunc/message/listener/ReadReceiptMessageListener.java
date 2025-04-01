@@ -10,7 +10,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.KafkaHeaders;
-import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
 
 import java.util.HashMap;
@@ -28,16 +27,6 @@ public class ReadReceiptMessageListener implements MessageListener<ReadReceiptMe
      * kafkaTemplate
      */
     private static final KafkaTemplate<String, Object> kafkaTemplate = KafkaFactory.KAFKA_TEMPLATE.instance();
-
-//    /**
-//     * mongoTemplate
-//     */
-//    private static final MongoTemplate mongoTemplate = MongodbFactory.MONGODB_TEMPLATE.instance();
-//
-//    /**
-//     * jdbcTemplate
-//     */
-//    private static final JdbcTemplate jdbcTemplate = JdbcFactory.JDBC_TEMPLATE.instance();
 
 
     /**

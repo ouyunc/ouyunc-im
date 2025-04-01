@@ -14,20 +14,20 @@ import reactor.core.publisher.Mono;
 
 /**
  * @author fzx
- * @description 好友校验
+ * @description 群成员校验
  */
-public enum FriendValidator implements ReactiveValidator<Packet> {
+public enum GroupValidator implements ReactiveValidator<Packet> {
 
     INSTANCE;
 
-    private static final Logger log = LoggerFactory.getLogger(FriendValidator.class);
+    private static final Logger log = LoggerFactory.getLogger(GroupValidator.class);
 
     private static final ReactiveRedisTemplate<String, ?> reactiveRedisTemplate = CacheFactory.REACTIVE_REDIS.instance();
 
 
     /***
      * @author fzx
-     * @description 校验是否是好友，是好友返回true, 否则返回false
+     * @description 校验是否是在群内，在群中返回true, 否则返回false
      */
     @Override
     public Mono<Boolean> verify(Packet packet, ChannelHandlerContext ctx) {
@@ -36,14 +36,14 @@ public enum FriendValidator implements ReactiveValidator<Packet> {
         String to = message.getTo();
         Metadata metadata = message.getMetadata();
         // 判断是否是好友，有可能mq 延迟消费
-        Mono<Double> scoreMono = reactiveRedisTemplate.opsForZSet().score(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.FRIENDS + to, from);
+        Mono<Double> scoreMono = reactiveRedisTemplate.opsForZSet().score(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUPS + to, from);
         return scoreMono.flatMap(score -> {
                     if (score != null && score > NumberConstant.NUMBER_0) {
-                        // 如果有分数，说明是好友
+                        // 如果有分数，说明是群成员
                         return Mono.just(true);
                     }
                     // 如果为空说明不是好友
-                    log.info("校验好友关系失败，{} 和 {}不是好友关系", from, to);
+                    log.info("校验是否群成员失败，{} 不在群 {} 内", from, to);
                     return Mono.just(false);
                 }).defaultIfEmpty(false);
     }

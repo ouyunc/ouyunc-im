@@ -54,7 +54,7 @@ public class GroupEntity implements Serializable {
     /**
     * 是否全体禁言（群主和管理员除外），0-不禁言，1-禁言
     */
-    private Integer mushin;
+    private Integer silence;
 
     /**
     * 应用appKey
@@ -133,12 +133,12 @@ public class GroupEntity implements Serializable {
         this.status = status;
     }
 
-    public Integer getMushin() {
-        return mushin;
+    public Integer getSilence() {
+        return silence;
     }
 
-    public void setMushin(Integer mushin) {
-        this.mushin = mushin;
+    public void setSilence(Integer silence) {
+        this.silence = silence;
     }
 
     public String getAppKey() {

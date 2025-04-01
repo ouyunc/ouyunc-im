@@ -25,9 +25,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.dao.IncorrectResultSizeDataAccessException;
+import org.springframework.data.domain.Range;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.SessionCallback;
@@ -36,6 +38,9 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.support.MessageBuilder;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -72,6 +77,11 @@ public enum DefaultRepository implements Repository{
      * redisTemplate
      */
     private static final RedisTemplate redisTemplate = CacheFactory.REDIS.instance();
+
+    /**
+     * reactiveRedisTemplate
+     */
+    private static final ReactiveRedisTemplate reactiveRedisTemplate = CacheFactory.REACTIVE_REDIS.instance();
 
     /**
      * 保存消息到磁盘中，这里使用mq来提高吞吐量；注意这里mq 消费者执行的逻辑是保存消息（持久化），这里给出一个参考实例：
@@ -326,6 +336,49 @@ public enum DefaultRepository implements Repository{
      * @param sessionId
      * @return
      */
+    public Mono<Boolean> reactiveValidWithdrawMessage(Packet packet, String sessionId, boolean isValidSender) {
+        return reactiveValidSpecialMessage(packet, sessionId, (specialPackets)->{
+            // 判断消息是否属于该会话，且都属于发送者； 这里考虑个问题，如果是群主或者管理员，需要让其撤销消息？应该是可以撤销的
+            if (isValidSender) {
+                for (Packet specialPacket : specialPackets) {
+                    if (specialPacket == null || !specialPacket.getMessage().getFrom().equals(packet.getMessage().getFrom())) {
+                        log.error("消息: {} 对应的消息不属于发送者！", packet);
+                        return Mono.just(false);
+                    }
+                }
+            }
+            return Mono.just(true);
+        });
+    }
+
+
+    /**
+     * 响应式撤回消息校验
+     * @param packet
+     * @param sessionId
+     * @return
+     */
+    public Mono<Boolean> reactiveValidReadReceiptMessage(Packet packet, String sessionId, boolean isValidSender) {
+        return reactiveValidSpecialMessage(packet, sessionId, (specialPackets)->{
+            // 判断消息是否属于该会话，且都属于发送者
+            if (isValidSender) {
+                for (Packet specialPacket : specialPackets) {
+                    if (specialPacket == null || specialPacket.getMessage().getFrom().equals(packet.getMessage().getFrom())) {
+                        log.error("消息id: {} 对应的消息属于发送者！", packet);
+                        return Mono.just(false);
+                    }
+                }
+            }
+            return Mono.just(true);
+        });
+    }
+
+    /**
+     * 撤回消息校验
+     * @param packet
+     * @param sessionId
+     * @return
+     */
     public boolean validReadReceiptMessage(Packet packet, String sessionId, boolean isValidSender) {
         return validSpecialMessage(packet, sessionId, (specialPackets)->{
             // 判断消息是否属于该会话，且都属于发送者
@@ -341,6 +394,67 @@ public enum DefaultRepository implements Repository{
         });
     }
 
+    /**
+     * 验证特殊消息，校验通过返回true, 不通过返回false
+     * @param packet
+     * @param sessionId
+     * @return
+     */
+    @SuppressWarnings("unchecked")
+    private Mono<Boolean> reactiveValidSpecialMessage(Packet packet, String sessionId, Function<List<Packet>, Mono<Boolean>> function) {
+        Message message = packet.getMessage();
+        Metadata metadata = message.getMetadata();
+        List<Long> packetIds;
+        try {
+            packetIds = JSON.parseArray(message.getContent(), Long.class);
+        } catch (Exception e) {
+            log.error("解析消息内容失败", e);
+            return Mono.just(false);
+        }
+        // 如果没有消息id，则直接返回false
+        if (CollectionUtils.isEmpty(packetIds) || packetIds.size() > MessageConstant.MAX_WITHDRAW_MESSAGE_COUNT) {
+            log.error("消息数量为0或超出限制 {}!", MessageConstant.MAX_WITHDRAW_MESSAGE_COUNT);
+            return Mono.just(false);
+        }
+        // 获取需要消息服务端时间戳，这个获取要在会话锁的前提下获取,注意批量获取score 的方法是redis 6.2.0 之后的版本才支持,如果不支持请使用其他方式替换，或升级redis版本，这里 就使用lua 脚本 哈哈哈
+        // 获取消息在会话中的消息服务端时间戳
+        Flux<Long> scoreFlux = reactiveRedisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_SCORE_LUA_SCRIPT, List.class), List.of(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.SESSION + sessionId), packetIds)
+                .cache(); // 关键：缓存结果避免重复订阅;
+        return scoreFlux
+                .collectList() // 转换为Mono<List<Long>>
+                .flatMap(scores -> {
+                    // 4.1 校验非空结果数量
+                    if (CollectionUtils.isEmpty(scores) || scores.stream().filter(Objects::nonNull).count() != packetIds.size()) {
+                        log.error("会话:{} 不存在该消息id: {}, 或消息id数量与会话中的消息数量不相等", sessionId, packetIds);
+                        return Mono.just(false);
+                    }
+                    // 4.2 获取持久化消息（假设已改造为响应式方法）
+                    return fetchPacketsReactive(metadata.getAppKey(), packetIds)
+                            .flatMap(packets -> {
+                                if (packets.size() != packetIds.size()) {
+                                    log.error("持久化消息数量不匹配 | session={} | expected={} | actual={}",
+                                            sessionId, packetIds.size(), packets.size());
+                                    return Mono.just(false);
+                                }
+                                return function.apply(packets);
+                            });
+                })
+                .onErrorResume(e -> {
+                    log.error("消息处理异常 | session={}", sessionId, e);
+                    return Mono.just(false);
+                });
+    }
+
+    /**
+     * 响应式获取持久化消息
+     * @param appKey
+     * @param packetIds
+     * @return
+     */
+    private Mono<List<Packet>> fetchPacketsReactive(String appKey, List<Long> packetIds) {
+        return Mono.fromCallable(() -> getPackets(appKey, packetIds))
+                .subscribeOn(Schedulers.boundedElastic()); // 阻塞操作在弹性线程池
+    }
     /**
      * 验证特殊消息，校验通过返回true, 不通过返回false
      * @param packet
@@ -376,6 +490,30 @@ public enum DefaultRepository implements Repository{
 
 
     /**
+     * 响应式 撤销消息，
+     * 注意：这里没有做判断，被撤销的消息是否属于发起撤销的客户端，一般情况下是需要做判断的
+     */
+    public Mono<Boolean> reactiveWithdrawMessage(Packet packet, String sessionId, Set<String> withdrawIdentitySet) {
+        Message message = packet.getMessage();
+        Metadata metadata = message.getMetadata();
+        // 获取需要撤销的消息id，（这里使用String类型接收）
+        List<Long> packetIds = JSON.parseArray(message.getContent(), Long.class);
+        // 如果没有被撤销的消息id，则直接返回false
+        // 批量撤回消息
+        List<String> keys = Lists.newArrayList();
+        keys.add(String.valueOf(withdrawIdentitySet.size()));
+        for (Long packetId : packetIds) {
+            keys.add(buildMessageRedisKey(metadata.getAppKey(), packetId));
+            keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.SESSION + sessionId);
+            for (String withdrawIdentity : withdrawIdentitySet) {
+                keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + withdrawIdentity);
+            }
+        }
+        Flux<Boolean> executeResult = reactiveRedisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_WITHDRAW_MESSAGE_LUA_SCRIPT, Boolean.class), keys, packetIds);
+        return executeResult.all(result -> result);
+    }
+
+    /**
      * 撤销消息，
      * 注意：这里没有做判断，被撤销的消息是否属于发起撤销的客户端，一般情况下是需要做判断的
      */
@@ -399,7 +537,30 @@ public enum DefaultRepository implements Repository{
     }
 
 
-
+    /**
+     * 响应式处理读已回执消息
+     */
+    public Mono<Boolean> reactiveReadReceiptMessage(Packet packet, long expireTime) {
+        Message message = packet.getMessage();
+        Metadata metadata = message.getMetadata();
+        // 已读的消息id，（这里使用String类型接收）
+        List<Long> readPacketIds = JSON.parseArray(message.getContent(), Long.class);
+        // 批量已读回执消息
+        List<String> keys = Lists.newArrayList();
+        List<Object> args = Lists.newArrayList();
+        for (Long readPacketId : readPacketIds) {
+            keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.MESSAGE + readPacketId);
+            keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.READ_MESSAGE + readPacketId);
+            // 阅读人
+            args.add(message.getFrom());
+            // 已读时间
+            args.add(metadata.getServerTime());
+            // 整体过期时间，这里是毫秒
+            args.add(expireTime);
+        }
+        Flux<Boolean> executeResult = reactiveRedisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_READ_RECEIPT_MESSAGE_LUA_SCRIPT, Boolean.class), keys, args);
+        return executeResult.all(result -> result);
+    }
 
     /**
      * 处理读已回执消息
@@ -438,6 +599,20 @@ public enum DefaultRepository implements Repository{
         Metadata metadata = message.getMetadata();
         // score 存储的是用户加入群的时间戳，毫秒
         return (Set<String>) redisTemplate.opsForZSet().range(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_USERS + message.getTo(), NumberConstant.NUMBER_0, NumberConstant.NUMBER_NEGATIVE_1);
+    }
+
+    /**
+     * 获取群组用户列表的用户唯一标识，这里直接从缓存中取，获取不到就失败，不需要再从数据库中获取，如果有需要可以做多级缓存
+     *
+     * @param packet
+     * @return
+     */
+    @SuppressWarnings("unchecked")
+    public Flux<String> reactiveGroupUsersIdentity(Packet packet) {
+        Message message = packet.getMessage();
+        Metadata metadata = message.getMetadata();
+        // score 存储的是用户加入群的时间戳，毫秒
+        return reactiveRedisTemplate.opsForZSet().range(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_USERS + message.getTo(), Range.from(Range.Bound.inclusive(NumberConstant.NUMBER_0)).to(Range.Bound.inclusive(NumberConstant.NUMBER_NEGATIVE_1)));
     }
 
     /**
@@ -533,6 +708,28 @@ public enum DefaultRepository implements Repository{
             luaScript = LuaScriptConstant.SAVE_MESSAGE_WITH_OFFLINE_LUA_SCRIPT;
         }
         return (boolean) redisTemplate.execute(new DefaultRedisScript<>(luaScript, Boolean.class), keys, args);
+    }
+
+
+    /**
+     * 保存业务消息以及离线消息和会话消息
+     * @param packet
+     * @param expireTime 过期时间，单位毫秒，多久后过期
+     * @return
+     */
+    public Flux<Boolean> fluxSaveMessage(Packet packet, String sessionId, long expireTime) {
+        Message message = packet.getMessage();
+        Metadata metadata = message.getMetadata();
+        String luaScript = LuaScriptConstant.SAVE_MESSAGE_WITHOUT_OFFLINE_LUA_SCRIPT;
+        List<String> keys = Lists.newArrayList(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.MESSAGE + packet.getPacketId(),
+                CacheConstant.OUYUNC +  CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.SESSION + sessionId);
+
+        // 如果开启qos,并且需要qos
+        if (MessageContext.messageProperties.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
+            keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + message.getTo());
+            luaScript = LuaScriptConstant.SAVE_MESSAGE_WITH_OFFLINE_LUA_SCRIPT;
+        }
+        return reactiveRedisTemplate.execute(new DefaultRedisScript<>(luaScript, Boolean.class), keys, List.of(packet, expireTime, packet.getPacketId(), metadata.getServerTime()));
     }
 
 
@@ -639,6 +836,33 @@ public enum DefaultRepository implements Repository{
 
 
     /**
+     * 群组批量保存，保存业务消息以及离线消息和会话消息
+     * @param packet
+     * @param expireTime 过期时间，单位毫秒，多久后过期
+     * @return
+     */
+    public Flux<Boolean> reactiveBatchSaveMessage(Packet packet, Set<String> groupUserIdentitySet, long expireTime) {
+        Message message = packet.getMessage();
+        Metadata metadata = message.getMetadata();
+        // 构造参数
+        List<String> offlineKeys = groupUserIdentitySet.stream().map(groupUserIdentity -> CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + groupUserIdentity).toList();
+        List<String> keys = new ArrayList<>();
+        keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.MESSAGE + packet.getPacketId());
+        keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.SESSION + message.getTo());
+        keys.addAll(offlineKeys);
+
+        List<Object> args = new ArrayList<>();
+        args.add(expireTime);
+        args.add(packet); // 需要实现序列化方法
+        args.add(metadata.getServerTime());
+        args.add(packet.getPacketId());
+        args.add(metadata.getAppKey());
+        args.add(message.getTo());
+        return reactiveRedisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_SAVE_MESSAGE_LUA_SCRIPT, Boolean.class), keys, args);
+    }
+
+
+    /**
      * 判断在appKey 下 from 和 to 是否是好友关系
      * @param appKey
      * @param from
@@ -662,7 +886,7 @@ public enum DefaultRepository implements Repository{
     public FriendEntity getFriend(String appKey, String from, String to) {
         // 从redis中获取好友关系
         // 如果不为空则返回true，如果为空则不再从数据库中获取
-        return (FriendEntity) redisTemplate.opsForHash().get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIENDS_CONFIG + from, to);
+        return (FriendEntity) redisTemplate.opsForValue().get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIENDS_CONFIG + from + CacheConstant.COLON + to);
     }
 
 

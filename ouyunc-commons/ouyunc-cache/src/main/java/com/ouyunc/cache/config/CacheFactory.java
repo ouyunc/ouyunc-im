@@ -1,11 +1,9 @@
 package com.ouyunc.cache.config;
 
-import com.ouyunc.cache.config.redis.builder.AbstractRedisBuilder;
-import com.ouyunc.cache.config.redis.builder.ReactiveRedisTemplateBuilder;
-import com.ouyunc.cache.config.redis.builder.RedisTemplateBuilder;
-import com.ouyunc.cache.config.redis.builder.RedissonClientBuilder;
+import com.ouyunc.cache.config.redis.builder.*;
 import com.ouyunc.cache.config.redis.properties.RedisProperties;
 import org.redisson.api.RedissonClient;
+import org.redisson.api.RedissonReactiveClient;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.data.redis.core.RedisTemplate;
 
@@ -84,6 +82,39 @@ public enum CacheFactory {
                 }
             }
             return  reactiveRedisTemplateMap.get(database);
+        }
+    },
+
+    // reactive redisson 响应式 redisson
+    REACTIVE_REDISSON {
+        private static final ConcurrentHashMap<Integer, RedissonReactiveClient> reactiveRedissonClientMap = new ConcurrentHashMap<>();
+        private static RedisProperties existRedisProperties;
+        @SuppressWarnings("unchecked")
+        @Override
+        public RedissonReactiveClient instance(int database,RedisProperties ...redisProperties) {
+            if (reactiveRedissonClientMap.get(database) == null) {
+                synchronized (ConcurrentHashMap.class) {
+                    if (reactiveRedissonClientMap.get(database) == null) {
+                        AbstractRedisBuilder<RedissonReactiveClient> redissonBuilder = new ReactiveRedissonClientBuilder();
+                        if (redisProperties != null && redisProperties.length > 0) {
+                            redissonBuilder.setRedisProperties(redisProperties[0]);
+                            if (existRedisProperties == null) {
+                                existRedisProperties = redisProperties[0];
+                            }
+                        }else if (existRedisProperties != null) {
+                            redissonBuilder.setRedisProperties(existRedisProperties);
+                        }
+                        reactiveRedissonClientMap.put(database, redissonBuilder.build(database));
+                    }
+                }
+            }
+            return reactiveRedissonClientMap.get(database);
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public RedissonReactiveClient instance(RedisProperties ...redisProperties) {
+            return instance(0, redisProperties);
         }
     },
 
