@@ -40,6 +40,7 @@
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="ouyunc-core" options="" />
       <module name="ouyunc-message-spring-boot-starter" options="-parameters" />
     </option>
   </component>

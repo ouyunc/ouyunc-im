@@ -4,6 +4,7 @@ import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.collect.Sets;
 import com.ouyunc.base.constant.enums.DeviceType;
+import com.ouyunc.base.constant.enums.DisruptorEventProducerEnum;
 import com.ouyunc.base.constant.enums.LuaScriptEnum;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.model.LoginClientInfo;
@@ -14,6 +15,7 @@ import com.ouyunc.cache.distributed.redis.RedisDistributedCache;
 import com.ouyunc.cache.local.caffeine.CaffeineLocalCache;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.intercept.AbstractMessageInterceptor;
+import com.ouyunc.core.disruptor.DisruptorEventProducer;
 import com.ouyunc.message.MessageServer;
 import com.ouyunc.message.convert.PacketConverter;
 import com.ouyunc.message.dispatcher.ProtocolDispatcherProcessor;
@@ -111,7 +113,18 @@ public class MessageServerContext extends MessageContext {
 
     // ================================================================local=====================================
 
-
+    /**
+     * disruptor事件生产者缓存
+     */
+    public static Cache<DisruptorEventProducerEnum, DisruptorEventProducer<?>> disruptorEventProducerCache = new CaffeineLocalCache<>("disruptorEventProducerCache", Caffeine.newBuilder().build(new CacheLoader<>() {
+        /***
+         * 获取 disruptor事件生产者缓存
+         */
+        @Override
+        public @Nullable DisruptorEventProducer<?> load(DisruptorEventProducerEnum disruptorEventProducer) throws Exception {
+            return null;
+        }
+    }));
 
 
     /**

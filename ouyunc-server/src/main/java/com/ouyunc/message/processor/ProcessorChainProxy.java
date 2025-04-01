@@ -2,6 +2,7 @@ package com.ouyunc.message.processor;
 
 import com.ouyunc.base.constant.enums.Type;
 import com.ouyunc.base.packet.Packet;
+import com.ouyunc.core.processor.Processor;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
@@ -12,7 +13,7 @@ import java.util.List;
 /**
  * 处理器链代理类
  */
-public final class ProcessorChainProxy<T extends Processor<Packet>> extends AbstractMessageProcessor<Number> {
+public final class ProcessorChainProxy<T extends Processor<ChannelHandlerContext, Packet>> extends AbstractMessageProcessor<Number> {
     private static final Logger log = LoggerFactory.getLogger(ProcessorChainProxy.class);
 
     /**

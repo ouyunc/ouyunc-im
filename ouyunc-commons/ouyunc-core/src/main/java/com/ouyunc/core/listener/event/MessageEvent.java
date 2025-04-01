@@ -1,14 +1,13 @@
 package com.ouyunc.core.listener.event;
 
 
-import java.util.EventObject;
 
 /**
  * @Author fzx
- * message 事件抽象类
- * 注意： 这里只是简单实现，事件机制，MessageEvent 及其子类事件是不同的事件
+ * message 消息事件抽象类
+ * 注意： 这里只是简单实现，事件机制，MessageEvent 及其子类事件是不同的事件,这里的messageEvent 不想使用泛型了
  */
-public abstract class MessageEvent extends EventObject {
+public abstract class MessageEvent extends GenericEvent<Object> {
 
     /**
      * 发布时间

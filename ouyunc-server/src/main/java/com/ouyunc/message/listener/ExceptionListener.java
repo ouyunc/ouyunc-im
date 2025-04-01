@@ -2,11 +2,14 @@ package com.ouyunc.message.listener;
 
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.MqConstant;
+import com.ouyunc.base.constant.enums.DisruptorEventProducerEnum;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.packet.Packet;
+import com.ouyunc.core.disruptor.DisruptorEventProducer;
 import com.ouyunc.core.listener.MessageListener;
 import com.ouyunc.core.listener.event.ExceptionEvent;
+import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.mq.kafka.KafkaFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -57,7 +60,21 @@ public class ExceptionListener implements MessageListener<ExceptionEvent> {
             errorMessage = ExceptionCodeEnum.UNKNOWN_ERROR.getMessage();
         }
         // 发送到kafka
-        kafkaTemplate.send(MqConstant.KAFKA_EXCEPTION_TOPIC, JSON.toJSONString(new MessageException(errorMessage, (ExceptionCodeEnum) source, packet, publishTime)));
+
+        kafkaTemplate.send(MqConstant.KAFKA_EXCEPTION_TOPIC, JSON.toJSONString(new MessageException(errorMessage, (ExceptionCodeEnum) source, packet, publishTime))).whenComplete((result, ex) -> {
+           if (ex != null) {
+               log.error("处理异常消息异常，原因：{}", ex.getMessage());
+               // 如果异常发送mq 异常则先发送本地队列，然后从本地队列中，存数mongo或者或据库中或其他
+               DisruptorEventProducer<ExceptionEvent> producer = (DisruptorEventProducer<ExceptionEvent>) MessageServerContext.disruptorEventProducerCache.get(DisruptorEventProducerEnum.EXCEPTION_PRODUCER);
+               if (producer != null) {
+                   producer.publish(event);
+               }else {
+                   // 这里其实可以在存数据库，这里就不存了，后面有需求再说
+                   log.error("注意！注意！注意！未找到异常处理生产者");
+               }
+           }
+        });
+
     }
 
 

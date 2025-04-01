@@ -30,6 +30,7 @@
     <protobuf.version>4.28.0-RC3</protobuf.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <commons-lang3.version>3.14.0</commons-lang3.version>
+    <disruptor.version>4.0.0</disruptor.version>
     <commons-codec.version>1.16.1</commons-codec.version>
     <commons-collections4.version>4.4</commons-collections4.version>
     <caffeine.version>3.1.8</caffeine.version>
@@ -237,6 +238,11 @@
         <artifactId>mysql-connector-j</artifactId>
         <version>${mysql.version}</version>
       </dependency>
+      <dependency>
+        <groupId>com.lmax</groupId>
+        <artifactId>disruptor</artifactId>
+        <version>${disruptor.version}</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
   <dependencies>
@@ -307,6 +313,10 @@
     <dependency>
       <groupId>org.aspectj</groupId>
       <artifactId>aspectjweaver</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.lmax</groupId>
+      <artifactId>disruptor</artifactId>
     </dependency>
   </dependencies>
   <build>

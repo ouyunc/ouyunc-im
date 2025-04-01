@@ -87,17 +87,19 @@ public final class GroupJoinMessageProcessor extends AbstractMessageProcessor<By
             return;
         }
         String sessionId = packet.getMessage().getTo();
+
+        // 保存消息和离线消息记录
+        if (!saveGroupRequestMessage(packet, groupMannerOrLeaderUsersIdentitySet)) {
+            log.error("Failed to save  group join request message: {}", packet);
+            MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存加群请求消息异常!", packet), true);
+            return;
+        }
+
         repository().savePacket2Mq(MqConstant.KAFKA_GROUP_REQUEST_TOPIC, sessionId, packet).whenComplete((result, ex) -> {
             if (ex != null) {
                 log.error("加群请求，发送mq异常，原因：{}", ex.getMessage());
                 MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "处理加群请求异常！" + ex.getMessage(), packet), true);
             } else {
-                // 保存消息和离线消息记录
-                if (!saveGroupRequestMessage(packet, groupMannerOrLeaderUsersIdentitySet)) {
-                    log.error("Failed to save  group join request message: {}", packet);
-                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存加群请求消息异常!", packet), true);
-                    return;
-                }
                 // 如果有群主或群管理员，则发送消息给群主或群管理员
                 for (String groupMannerOrLeaderUserIdentity : groupMannerOrLeaderUsersIdentitySet) {
                     List<LoginClientInfo> toLoginClientInfos = ClientHelper.onlineAll(message.getMetadata().getAppKey(), groupMannerOrLeaderUserIdentity);

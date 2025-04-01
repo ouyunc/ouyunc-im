@@ -38,6 +38,11 @@ public class MessageConstant {
     public static final int NUMBER_1000 = 1000;
 
     /**
+     * 数字1024
+     */
+    public static final int NUMBER_1024 = 1024;
+
+    /**
      * 数字5000
      */
     public static final int NUMBER_5000 = 5000;

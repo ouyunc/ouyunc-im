@@ -11,6 +11,7 @@ import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.qos.Qos;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.MessageHelper;
+import com.ouyunc.core.processor.Processor;
 import com.ouyunc.repository.DefaultRepository;
 import com.ouyunc.repository.Repository;
 import io.netty.channel.ChannelHandlerContext;
@@ -21,7 +22,7 @@ import org.slf4j.LoggerFactory;
  * @Author fzx
  * @Description: 基础抽象处理类
  **/
-public abstract class AbstractBaseProcessor<T extends Number> implements Processor<Packet>, Qos {
+public abstract class AbstractBaseProcessor<T extends Number> implements Processor<ChannelHandlerContext, Packet>, Qos {
     private static final Logger log = LoggerFactory.getLogger(AbstractBaseProcessor.class);
 
     /**
