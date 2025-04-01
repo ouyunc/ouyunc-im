@@ -61,7 +61,7 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
                 PermissionValidator.INSTANCE.negate()
                         .or(BlackListValidator.INSTANCE)
                         .or(GroupSilenceValidator.INSTANCE)
-                        .or(GroupValidator.INSTANCE.negate())
+                        .or(GroupUserValidator.INSTANCE.negate())
                         .verify(packet, ctx)
                         .onErrorResume(error -> {
                             log.error("校验过程中出现异常: {}", error.getMessage());

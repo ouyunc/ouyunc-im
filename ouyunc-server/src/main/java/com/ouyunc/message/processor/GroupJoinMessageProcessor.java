@@ -14,11 +14,12 @@ import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
-import com.ouyunc.message.validator.AuthValidator;
+import com.ouyunc.message.validator.*;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Set;
@@ -46,8 +47,21 @@ public final class GroupJoinMessageProcessor extends AbstractMessageProcessor<By
                     ctx.close();
                     return;
                 }
-                // 校验是否拥有相关权限 permission （对方是否被拉黑，禁用等）
-                ctx.fireChannelRead(packet);
+                // 校验是否拥有相关权限 permission （对方是否被拉黑，禁用等）群是否被封禁，是否全体禁言
+                PermissionValidator.INSTANCE.negate()
+                        .or(BlackListValidator.INSTANCE)
+                        .or(GroupValidator.INSTANCE)
+                        .verify(packet, ctx)
+                        .onErrorResume(error -> {
+                            log.error("校验过程中出现异常: {}", error.getMessage());
+                            return Mono.just(true); // 出现异常时默认校验不通过
+                        }).flatMap(result -> {
+                            if (result) {
+                                log.warn("权限不足/在黑名单中/群异常（被平台封禁）, 请知悉。该消息 {} 被忽略", packet);
+                                return Mono.empty(); // 校验不通过，不传递消息
+                            }
+                            return Mono.just(packet); // 校验通过，继续传递消息
+                        }).subscribe(ctx::fireChannelRead);
             } else {
                 // 发送失败
                 log.error("Failed to send message: {} ", ex.getMessage());
