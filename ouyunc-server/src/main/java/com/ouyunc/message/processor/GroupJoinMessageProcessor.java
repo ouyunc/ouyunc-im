@@ -14,10 +14,7 @@ import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
-import com.ouyunc.message.validator.AuthValidator;
-import com.ouyunc.message.validator.BlackListValidator;
-import com.ouyunc.message.validator.GroupValidator;
-import com.ouyunc.message.validator.PermissionValidator;
+import com.ouyunc.message.validator.*;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
@@ -53,6 +50,7 @@ public final class GroupJoinMessageProcessor extends AbstractMessageProcessor<By
                 // 校验是否拥有相关权限 permission （对方是否被拉黑，禁用等）群是否被封禁，是否全体禁言
                 PermissionValidator.INSTANCE.negate()
                         .or(BlackListValidator.INSTANCE)
+                        .or(GroupUserValidator.INSTANCE)
                         .or(GroupValidator.INSTANCE)
                         .verify(packet, ctx)
                         .onErrorResume(error -> {
@@ -60,7 +58,7 @@ public final class GroupJoinMessageProcessor extends AbstractMessageProcessor<By
                             return Mono.just(true); // 出现异常时默认校验不通过
                         }).flatMap(result -> {
                             if (result) {
-                                log.warn("权限不足/在黑名单中/群异常（被平台封禁）, 请知悉。该消息 {} 被忽略", packet);
+                                log.warn("权限不足/在黑名单中/已经是群成员/群异常（被平台封禁）, 请知悉。该消息 {} 被忽略", packet);
                                 return Mono.empty(); // 校验不通过，不传递消息
                             }
                             return Mono.just(packet); // 校验通过，继续传递消息

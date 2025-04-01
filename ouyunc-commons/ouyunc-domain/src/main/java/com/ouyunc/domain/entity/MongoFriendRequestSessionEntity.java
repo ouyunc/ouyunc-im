@@ -3,6 +3,7 @@ package com.ouyunc.domain.entity;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.index.CompoundIndexes;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
@@ -42,6 +43,7 @@ public class MongoFriendRequestSessionEntity implements Serializable {
      * 会话开id
      */
     @Field("session_id")
+    @Indexed
     private String sessionId;
 
     /**
@@ -89,8 +91,8 @@ public class MongoFriendRequestSessionEntity implements Serializable {
         public static final String sessionId = "session_id";
         public static final String status = "status";
         public static final String expireAt = "expire_at";
-        public static final String createTime = "createTime";
-        public static final String updateTime = "updateTime";
+        public static final String createTime = "create_time";
+        public static final String updateTime = "update_time";
         public static final String sessionBeginTime = "session_begin_time";
         public static final String sessionEndTime = "session_end_time";
     }
