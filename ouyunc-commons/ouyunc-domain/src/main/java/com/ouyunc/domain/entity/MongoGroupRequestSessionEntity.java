@@ -60,7 +60,7 @@ public class MongoGroupRequestSessionEntity implements Serializable {
      * 处理人职位：1-群主，2-管理员  对应枚举 GroupUserPost
      */
     @Field("processor_post")
-    private String processorPost;
+    private Integer processorPost;
 
     /**
      * 会话开id
@@ -90,10 +90,17 @@ public class MongoGroupRequestSessionEntity implements Serializable {
 
 
     /**
-     * 会话session 类型：1-主动加群，2-被动加群（被邀请），3-扫码加群  ......
+     * 会话session 加群方式：1-主动加群，2-被动加群（被邀请），3-扫码加群  ......
      */
-    @Field("type")
-    private Integer type;
+    @Field("way")
+    private Integer way;
+
+
+    /**
+     * 会话渠道，从哪里加入的，预留
+     */
+    @Field("channel")
+    private Integer channel;
 
     /**
     * 创建时间
@@ -123,7 +130,8 @@ public class MongoGroupRequestSessionEntity implements Serializable {
         public static final String groupId = "group_id";
         public static final String processorPost = "processor_post";
         public static final String inviterPost = "inviter_post";
-        public static final String type = "type";
+        public static final String way = "way";
+        public static final String channel = "channel";
         public static final String sessionId = "session_id";
         public static final String status = "status";
         public static final String expireAt = "expire_at";
@@ -135,7 +143,7 @@ public class MongoGroupRequestSessionEntity implements Serializable {
     public MongoGroupRequestSessionEntity() {
     }
 
-    public MongoGroupRequestSessionEntity(Long id, String inviter, Integer inviterPost, String joiner, String groupId, String processor, String processorPost, String sessionId, Long sessionBeginTime, Long sessionEndTime, Integer status, Integer type, LocalDateTime createTime, LocalDateTime updateTime, LocalDateTime expireAt) {
+    public MongoGroupRequestSessionEntity(Long id, String inviter, Integer inviterPost, String joiner, String groupId, String processor, Integer processorPost, String sessionId, Long sessionBeginTime, Long sessionEndTime, Integer status, Integer way, LocalDateTime createTime, LocalDateTime updateTime, LocalDateTime expireAt) {
         this.id = id;
         this.inviter = inviter;
         this.inviterPost = inviterPost;
@@ -147,10 +155,37 @@ public class MongoGroupRequestSessionEntity implements Serializable {
         this.sessionBeginTime = sessionBeginTime;
         this.sessionEndTime = sessionEndTime;
         this.status = status;
-        this.type = type;
+        this.way = way;
         this.createTime = createTime;
         this.updateTime = updateTime;
         this.expireAt = expireAt;
+    }
+
+    public MongoGroupRequestSessionEntity(Long id, String inviter, Integer inviterPost, String joiner, String groupId, String processor, Integer processorPost, String sessionId, Long sessionBeginTime, Long sessionEndTime, Integer status, Integer way, Integer channel, LocalDateTime createTime, LocalDateTime updateTime, LocalDateTime expireAt) {
+        this.id = id;
+        this.inviter = inviter;
+        this.inviterPost = inviterPost;
+        this.joiner = joiner;
+        this.groupId = groupId;
+        this.processor = processor;
+        this.processorPost = processorPost;
+        this.sessionId = sessionId;
+        this.sessionBeginTime = sessionBeginTime;
+        this.sessionEndTime = sessionEndTime;
+        this.status = status;
+        this.way = way;
+        this.channel = channel;
+        this.createTime = createTime;
+        this.updateTime = updateTime;
+        this.expireAt = expireAt;
+    }
+
+    public Integer getChannel() {
+        return channel;
+    }
+
+    public void setChannel(Integer channel) {
+        this.channel = channel;
     }
 
     public Long getId() {
@@ -201,11 +236,11 @@ public class MongoGroupRequestSessionEntity implements Serializable {
         this.processor = processor;
     }
 
-    public String getProcessorPost() {
+    public Integer getProcessorPost() {
         return processorPost;
     }
 
-    public void setProcessorPost(String processorPost) {
+    public void setProcessorPost(Integer processorPost) {
         this.processorPost = processorPost;
     }
 
@@ -241,12 +276,12 @@ public class MongoGroupRequestSessionEntity implements Serializable {
         this.status = status;
     }
 
-    public Integer getType() {
-        return type;
+    public Integer getWay() {
+        return way;
     }
 
-    public void setType(Integer type) {
-        this.type = type;
+    public void setWay(Integer way) {
+        this.way = way;
     }
 
     public LocalDateTime getCreateTime() {

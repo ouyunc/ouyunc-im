@@ -178,7 +178,7 @@ public abstract class AbstractMessageServer implements MessageServer {
                 new DisruptorEventFactory<>(),  // 使用通用工厂
                 MessageConstant.NUMBER_1024, //1024 必须是2的幂
                 DaemonThreadFactory.INSTANCE,  // 使用守护线程
-                ProducerType.SINGLE,           // 支持多生产者
+                ProducerType.SINGLE,           // 支持单生产者
                 new YieldingWaitStrategy()
         );
         // 3. 注册消费者（可多个）

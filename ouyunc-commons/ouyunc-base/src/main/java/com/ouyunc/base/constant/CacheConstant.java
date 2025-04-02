@@ -132,6 +132,11 @@ public class CacheConstant {
     public static final String FRIEND_REQUEST_SESSION = "friend-request-session:";
 
     /***
+     * 正在处理中的群请求会话标识
+     */
+    public static final String GROUP_REQUEST_SESSION = "group-request-session:";
+
+    /***
      * 群请求
      */
     public static final String GROUP_REQUEST = "groups-request:";

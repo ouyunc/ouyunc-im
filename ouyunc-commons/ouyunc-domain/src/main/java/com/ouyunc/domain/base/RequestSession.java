@@ -14,10 +14,10 @@ public class RequestSession implements Serializable {
 
     /**
      * 进度状态：
-     * 好友请求进度
-     * 好友请求进度，添加中 FRIEND_REQUEST_PROGRESS_JOINING = -1;
-     * 好友请求进度，拒绝中 FRIEND_REQUEST_PROGRESS_REFUSEING = 0；
-     * 好友请求进度，同意中 FRIEND_REQUEST_PROGRESS_AGREEING = 1;
+     * 请求进度
+     * 请求进度，添加中 REQUEST_PROGRESS_JOINING = -1;
+     * 请求进度，拒绝中 REQUEST_PROGRESS_REFUSEING = 0；
+     * 请求进度，同意中 REQUEST_PROGRESS_AGREEING = 1;
      */
     private Integer progress;
 

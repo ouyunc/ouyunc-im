@@ -4,6 +4,7 @@ package com.ouyunc.domain.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import org.springframework.data.mongodb.core.mapping.Field;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -63,6 +64,17 @@ public class GroupUserEntity implements Serializable {
 
 
     /**
+     * 会话session 加群方式：1-主动加群，2-被动加群（被邀请），3-扫码加群  ......
+     */
+    private Integer way;
+
+
+    /**
+     * 会话渠道，从哪里加入的，预留
+     */
+    private Integer channel;
+
+    /**
      * 会话消息偏移量，会话消息的接收时间；假如本次读取到会话A点，则下次从A点之后开始读取
      */
     private Long sessionMessageOffset;
@@ -94,6 +106,39 @@ public class GroupUserEntity implements Serializable {
         this.sessionMessageOffset = sessionMessageOffset;
         this.joinTime = joinTime;
         this.createTime = createTime;
+    }
+
+    public GroupUserEntity(Long id, Long groupId, String groupNickName, Long userId, Integer leader, Integer manager, String userNickName, Integer shield, Integer silence, Integer way, Integer channel, Long sessionMessageOffset, Long joinTime, LocalDateTime createTime) {
+        this.id = id;
+        this.groupId = groupId;
+        this.groupNickName = groupNickName;
+        this.userId = userId;
+        this.leader = leader;
+        this.manager = manager;
+        this.userNickName = userNickName;
+        this.shield = shield;
+        this.silence = silence;
+        this.way = way;
+        this.channel = channel;
+        this.sessionMessageOffset = sessionMessageOffset;
+        this.joinTime = joinTime;
+        this.createTime = createTime;
+    }
+
+    public Integer getWay() {
+        return way;
+    }
+
+    public void setWay(Integer way) {
+        this.way = way;
+    }
+
+    public Integer getChannel() {
+        return channel;
+    }
+
+    public void setChannel(Integer channel) {
+        this.channel = channel;
     }
 
     public Long getId() {

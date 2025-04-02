@@ -64,6 +64,20 @@ public class MongoFriendRequestSessionEntity implements Serializable {
     @Field("status")
     private Integer status;
 
+
+    /**
+     * 会话session 加群方式：1-主动加群，2-被动加群（被邀请），3-扫码加群  ......
+     */
+    @Field("way")
+    private Integer way;
+
+
+    /**
+     * 会话渠道，从哪里加入的，预留
+     */
+    @Field("channel")
+    private Integer channel;
+
     /**
     * 创建时间
     */
@@ -90,6 +104,8 @@ public class MongoFriendRequestSessionEntity implements Serializable {
         public static final String to = "to";
         public static final String sessionId = "session_id";
         public static final String status = "status";
+        public static final String way = "way";
+        public static final String channel = "channel";
         public static final String expireAt = "expire_at";
         public static final String createTime = "create_time";
         public static final String updateTime = "update_time";
@@ -111,6 +127,21 @@ public class MongoFriendRequestSessionEntity implements Serializable {
         this.updateTime = updateTime;
     }
 
+    public MongoFriendRequestSessionEntity(Long id, String from, String to, String sessionId, Long sessionBeginTime, Long sessionEndTime, Integer status, Integer way, Integer channel, LocalDateTime createTime, LocalDateTime updateTime, LocalDateTime expireAt) {
+        this.id = id;
+        this.from = from;
+        this.to = to;
+        this.sessionId = sessionId;
+        this.sessionBeginTime = sessionBeginTime;
+        this.sessionEndTime = sessionEndTime;
+        this.status = status;
+        this.way = way;
+        this.channel = channel;
+        this.createTime = createTime;
+        this.updateTime = updateTime;
+        this.expireAt = expireAt;
+    }
+
     public MongoFriendRequestSessionEntity(Long id, String from, String to, String sessionId, Long sessionBeginTime, Long sessionEndTime, Integer status, LocalDateTime createTime, LocalDateTime updateTime, LocalDateTime expireAt) {
         this.id = id;
         this.from = from;
@@ -122,6 +153,22 @@ public class MongoFriendRequestSessionEntity implements Serializable {
         this.createTime = createTime;
         this.updateTime = updateTime;
         this.expireAt = expireAt;
+    }
+
+    public Integer getWay() {
+        return way;
+    }
+
+    public void setWay(Integer way) {
+        this.way = way;
+    }
+
+    public Integer getChannel() {
+        return channel;
+    }
+
+    public void setChannel(Integer channel) {
+        this.channel = channel;
     }
 
     public LocalDateTime getExpireAt() {

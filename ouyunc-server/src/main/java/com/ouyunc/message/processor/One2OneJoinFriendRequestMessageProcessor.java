@@ -107,7 +107,7 @@ public final class One2OneJoinFriendRequestMessageProcessor extends AbstractMess
                     return;
                 }
                 // 获取请求会话
-                RequestSession requestSession = repository().getRequestSession(appKey, message.getFrom(), message.getTo());
+                RequestSession requestSession = repository().getFriendRequestSession(appKey, message.getFrom(), message.getTo());
                 if (null != requestSession && requestSession.getProgress() > MessageConstant.FRIEND_REQUEST_PROGRESS_JOINING) {
                     log.warn("{} 和 {} 会话存在正在处理中的好友请求，拒绝和同意还未结束处理", message.getFrom(), message.getTo());
                     return;
@@ -132,7 +132,7 @@ public final class One2OneJoinFriendRequestMessageProcessor extends AbstractMess
                     MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一加好友请求消息异常!", packet), true);
                     return;
                 }
-                // 这里不保存到session 缓存中,保存到临时的会话消息中，该好友请求的消息可以对其进行定期清理；这里考虑个问题，到底是先发mq还是先等方法处理完再发mq
+                // 这里不保存到session 缓存中,保存到临时的会话消息中，该好友请求的消息可以对其进行定期清理；这里考虑个问题，到底是先发mq还是先等方法处理完再发mq， 这个发消息虽然是异步的但是里面并没有操作资源，所以对锁没影响，不用特别考虑
                 repository().savePacket2Mq(MqConstant.KAFKA_FRIEND_REQUEST_TOPIC, sessionId, packet).whenComplete((result, ex) ->{
                     if (ex != null) {
                         log.error("请求添加好友，发送mq异常，原因：{}", ex.getMessage());

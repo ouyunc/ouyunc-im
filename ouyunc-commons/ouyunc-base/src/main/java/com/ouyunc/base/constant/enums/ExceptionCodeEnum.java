@@ -52,6 +52,9 @@ public enum ExceptionCodeEnum {
     REQUEST_SESSION_MISMATCH(600002, "请求会话不匹配"),
     REQUEST_SESSION_PROGRESS_MISMATCH(600003, "请求会话进度不匹配"),
 
+    BIND_GROUP_ERROR(700001, "绑定群组异常"),
+
+
     ;
 
     private final int code;

@@ -14,6 +14,7 @@ import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.db.jdbc.JdbcFactory;
 import com.ouyunc.db.mongo.MongodbFactory;
+import com.ouyunc.domain.base.GroupRequestSession;
 import com.ouyunc.domain.base.RequestSession;
 import com.ouyunc.domain.constants.YesOrNo;
 import com.ouyunc.domain.entity.*;
@@ -757,8 +758,19 @@ public enum DefaultRepository implements Repository{
      * @param to
      * @return
      */
-    public RequestSession getRequestSession(String appKey, String from, String to) {
+    public RequestSession getFriendRequestSession(String appKey, String from, String to) {
         return  (RequestSession) redisTemplate.opsForValue().get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_SESSION + from + CacheConstant.COLON + to);
+    }
+
+    /**
+     * 获取加好友请求会话信息
+     * @param appKey
+     * @param joiner
+     * @param groupId
+     * @return
+     */
+    public GroupRequestSession getGroupRequestSession(String appKey, String joiner, String groupId) {
+        return  (GroupRequestSession) redisTemplate.opsForValue().get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.GROUP_REQUEST_SESSION + joiner + CacheConstant.COLON + groupId);
     }
 
     /**
@@ -872,6 +884,18 @@ public enum DefaultRepository implements Repository{
     public boolean isFriend(String appKey, String from, String to) {
         // 这里是否再去查询数据库？没有太大必要，后续如果需要再加
         return redisTemplate.opsForZSet().score(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIENDS + from, to) != null;
+    }
+
+    /**
+     * 判断在appKey 下 from 是否已经在群中
+     * @param appKey
+     * @param from
+     * @param groupId
+     * @return
+     */
+    public boolean inGroup(String appKey, String from, String groupId) {
+        // 这里是否再去查询数据库？没有太大必要，后续如果需要再加
+        return redisTemplate.opsForZSet().score(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.GROUP_USERS + groupId, from) != null;
     }
 
 
