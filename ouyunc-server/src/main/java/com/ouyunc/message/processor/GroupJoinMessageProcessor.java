@@ -10,14 +10,20 @@ import com.ouyunc.base.constant.enums.QosLevelEnum;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
+import com.ouyunc.base.utils.SnowflakeUtil;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.domain.base.GroupRequestSession;
-import com.ouyunc.domain.base.RequestSession;
+import com.ouyunc.domain.constants.GroupRequestSessionWay;
+import com.ouyunc.domain.constants.YesOrNo;
+import com.ouyunc.domain.entity.GroupEntity;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
-import com.ouyunc.message.validator.*;
+import com.ouyunc.message.validator.AuthValidator;
+import com.ouyunc.message.validator.BlackListValidator;
+import com.ouyunc.message.validator.GroupValidator;
+import com.ouyunc.message.validator.PermissionValidator;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.collections4.CollectionUtils;
 import org.redisson.api.RLock;
@@ -93,8 +99,17 @@ public final class GroupJoinMessageProcessor extends AbstractMessageProcessor<By
                 }
                 // 获取请求会话
                 GroupRequestSession groupRequestSession = repository().getGroupRequestSession(appKey, message.getFrom(), message.getTo());
-
-
+                if (null != groupRequestSession && groupRequestSession.getProgress() > MessageConstant.REQUEST_PROGRESS_JOINING) {
+                    log.warn("{} 和 {} 会话请求存在正在处理中的群请求，拒绝或同意还未结束处理", message.getFrom(), message.getTo());
+                    return;
+                }
+                // 获取群的配置信息，判断是否自动通过
+                GroupEntity groupEntity = repository().getGroupEntity(appKey, message.getTo());
+                if (groupEntity == null) {
+                    log.error("群组:{} 不存在，请检查数据！", message.getTo());
+                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.GROUP_NOT_EXIST, message.getTo() + "群组不存在！", packet));
+                    return;
+                }
                 // 这里不保存到session 缓存中,保存到临时的会话请求消息中，该好友请求的消息可以对其进行定期清理；
                 // 获取当前群的管理员和群主，进行加群消息的推送
                 Set<String> groupMannerOrLeaderUsersIdentitySet = repository().groupManagerAndLeaderUsersIdentity(packet);
@@ -104,19 +119,21 @@ public final class GroupJoinMessageProcessor extends AbstractMessageProcessor<By
                     MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群主或群管理员", packet), true);
                     return;
                 }
-
-
-
-
-
-                String sessionId = packet.getMessage().getTo();
-                // 保存消息和离线消息记录
-                if (!saveGroupRequestMessage(packet, groupMannerOrLeaderUsersIdentitySet)) {
-                    log.error("Failed to save  group join request message: {}", packet);
+                // 判断对方是否是自动同意加好友
+                if (YesOrNo.YES.getCode().equals(groupEntity.getGroupJoinPolicy())) {
+                    // 群自动同意，不再给群主和管理员保存离线消息
+                    if (!repository().autoPassBindGroup(packet, GroupRequestSessionWay.ACTIVE, groupRequestSession == null ? String.valueOf(SnowflakeUtil.nextId()) : groupRequestSession.getSessionId(), MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
+                        log.error("自动处理绑定群组失败: {}", packet);
+                        MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "自动绑定群组请求消息异常!", packet), true);
+                        return;
+                    }
+                }else if (!saveGroupRequestMessage(packet, groupMannerOrLeaderUsersIdentitySet, groupRequestSession == null ? String.valueOf(SnowflakeUtil.nextId()) : groupRequestSession.getSessionId())) {
+                    log.error("Failed to save  join group request message: {}", packet);
                     MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存加群请求消息异常!", packet), true);
                     return;
                 }
-                repository().savePacket2Mq(MqConstant.KAFKA_GROUP_REQUEST_TOPIC, sessionId, packet).whenComplete((result, ex) -> {
+                // 发送mq
+                repository().savePacket2Mq(MqConstant.KAFKA_GROUP_REQUEST_TOPIC, packet.getMessage().getTo(), packet).whenComplete((result, ex) -> {
                     if (ex != null) {
                         log.error("加群请求，发送mq异常，原因：{}", ex.getMessage());
                         MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "处理加群请求异常！" + ex.getMessage(), packet), true);
@@ -147,48 +164,18 @@ public final class GroupJoinMessageProcessor extends AbstractMessageProcessor<By
     }
 
 
+
     /**
      * 保存群组消息
      */
-    private boolean saveGroupRequestMessage(Packet packet, Set<String> groupMembers) {
+    private boolean saveGroupRequestMessage(Packet packet, Set<String> groupMembers, String groupRequestSessionId) {
         Message message = packet.getMessage();
-        if (MessageContext.messageProperties.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel() ? saveQosMessage(packet, groupMembers) : saveNonQosMessage(packet, message.getTo())) {
-            return true;
+        if (MessageContext.messageProperties.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
+            // 保存需要qos
+            return repository().batchSaveJoinGroupRequestMessage(packet, GroupRequestSessionWay.ACTIVE, groupMembers, groupRequestSessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
         }
-        log.error("Failed to save group join message: {}", packet);
-        MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存到缓存加群消息异常!", packet), true);
-        return false;
-    }
-
-
-    /**
-     * 保存Qos消息
-     *
-     * @param packet
-     * @param groupMembers
-     * @return
-     */
-    private boolean saveQosMessage(Packet packet, Set<String> groupMembers) {
-        return repository().batchSaveGroupRequestMessage(
-                packet,
-                groupMembers,
-                MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP
-        );
-    }
-
-    /**
-     * 保存非Qos消息
-     *
-     * @param packet
-     * @param sessionId
-     * @return
-     */
-    private boolean saveNonQosMessage(Packet packet, String sessionId) {
-        return repository().saveGroupRequestMessage(
-                packet,
-                sessionId,
-                MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP
-        );
+        // 保存，不需要qos
+        return repository().saveJoinGroupRequestMessage(packet, GroupRequestSessionWay.ACTIVE, groupRequestSessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
     }
 
 }

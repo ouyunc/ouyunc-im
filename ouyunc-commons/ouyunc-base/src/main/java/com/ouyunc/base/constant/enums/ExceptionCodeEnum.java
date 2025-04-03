@@ -47,6 +47,7 @@ public enum ExceptionCodeEnum {
     SCHEDULE_TASK_ERROR(400001, "调度任务异常"),
 
     USER_NOT_EXIST(500001, "用户不存在"),
+    GROUP_NOT_EXIST(500002, "群组不存在"),
 
     REQUEST_SESSION_NOT_EXIST(600001, "请求会话不存在"),
     REQUEST_SESSION_MISMATCH(600002, "请求会话不匹配"),

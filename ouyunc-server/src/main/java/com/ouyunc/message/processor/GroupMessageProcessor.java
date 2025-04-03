@@ -269,7 +269,7 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
      * @return
      */
     private Mono<Boolean> reactiveSaveNonQosMessage(Packet packet, String sessionId) {
-        Flux<Boolean> booleanFlux = repository().fluxSaveMessage(
+        Flux<Boolean> booleanFlux = repository().reactiveSaveMessage(
                 packet,
                 sessionId,
                 MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP
