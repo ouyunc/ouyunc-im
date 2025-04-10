@@ -42,6 +42,12 @@ public class GroupRequestSession extends RequestSession{
     private Integer way;
 
 
+    /**
+     * 加群渠道：预留字段，默认1
+     */
+    private Integer channel;
+
+
     public static class Builder {
         private String sessionId;
         private Integer progress;
@@ -52,6 +58,7 @@ public class GroupRequestSession extends RequestSession{
         private String processor;
         private Integer processorPost;
         private Integer way;
+        private Integer channel;
 
         public GroupRequestSession.Builder sessionId(String sessionId) {
             this.sessionId = sessionId;
@@ -98,13 +105,18 @@ public class GroupRequestSession extends RequestSession{
             return this;
         }
 
+        public GroupRequestSession.Builder channel(Integer channel) {
+            this.channel = channel;
+            return this;
+        }
+
         public GroupRequestSession build() {
-            return new GroupRequestSession(sessionId, progress, inviter, inviterPost, joiner, groupId, processor, processorPost, way);
+            return new GroupRequestSession(sessionId, progress, inviter, inviterPost, joiner, groupId, processor, processorPost, way,channel);
         }
     }
 
 
-    public GroupRequestSession(String sessionId, Integer progress, String inviter, Integer inviterPost, String joiner, String groupId, String processor, Integer processorPost, Integer way) {
+    public GroupRequestSession(String sessionId, Integer progress, String inviter, Integer inviterPost, String joiner, String groupId, String processor, Integer processorPost, Integer way, Integer channel) {
         super(sessionId, progress);
         this.inviter = inviter;
         this.inviterPost = inviterPost;
@@ -113,6 +125,7 @@ public class GroupRequestSession extends RequestSession{
         this.processor = processor;
         this.processorPost = processorPost;
         this.way = way;
+        this.channel = channel;
     }
 
     public String getInviter() {
@@ -169,5 +182,13 @@ public class GroupRequestSession extends RequestSession{
 
     public void setWay(Integer way) {
         this.way = way;
+    }
+
+    public Integer getChannel() {
+        return channel;
+    }
+
+    public void setChannel(Integer channel) {
+        this.channel = channel;
     }
 }
