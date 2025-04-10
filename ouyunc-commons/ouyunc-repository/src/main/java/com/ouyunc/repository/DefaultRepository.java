@@ -869,7 +869,7 @@ public enum DefaultRepository implements Repository{
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         return bindGroup(packet, way, groupRequestSessionId, expireTime, (redisOperations, requestSessionId)->{
-            redisOperations.opsForValue().setIfAbsent(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_REQUEST + message.getFrom() + CacheConstant.COLON + message.getTo(), new GroupRequestSession.Builder().sessionId(requestSessionId).progress(MessageConstant.REQUEST_PROGRESS_AGREEING).way(way.value()).groupId(message.getTo()).joiner(message.getFrom()).build(), MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+            redisOperations.opsForValue().set(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_REQUEST_SESSION + message.getFrom() + CacheConstant.COLON + message.getTo(), new GroupRequestSession.Builder().sessionId(requestSessionId).progress(MessageConstant.REQUEST_PROGRESS_AGREEING).way(way.value()).groupId(message.getTo()).joiner(message.getFrom()).channel((int) NumberConstant.NUMBER_1).build(), MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
         });
     }
 
@@ -945,7 +945,7 @@ public enum DefaultRepository implements Repository{
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         return saveGroupRequestMessage(packet, way, groupRequestSessionId, expireTime, (redisOperations, requestSessionId)->{
-            redisOperations.opsForValue().setIfAbsent(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_REQUEST_SESSION + message.getFrom() + CacheConstant.COLON + message.getTo(), new GroupRequestSession.Builder().sessionId(requestSessionId).progress(MessageConstant.REQUEST_PROGRESS_JOINING).way(way.value()).groupId(message.getTo()).joiner(message.getFrom()).build(), MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+            redisOperations.opsForValue().setIfAbsent(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_REQUEST_SESSION + message.getFrom() + CacheConstant.COLON + message.getTo(), new GroupRequestSession.Builder().sessionId(requestSessionId).progress(MessageConstant.REQUEST_PROGRESS_JOINING).way(way.value()).groupId(message.getTo()).joiner(message.getFrom()).channel((int) NumberConstant.NUMBER_1).build(), MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
         });
     }
 
@@ -1009,7 +1009,7 @@ public enum DefaultRepository implements Repository{
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         return batchSaveGroupRequestMessage(packet, way, groupUserIdentitySet, groupRequestSessionId, expireTime, (redisOperations, requestSessionId)->{
-            redisOperations.opsForValue().setIfAbsent(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_REQUEST_SESSION + message.getFrom() + CacheConstant.COLON + message.getTo(), new GroupRequestSession.Builder().sessionId(requestSessionId).progress(MessageConstant.REQUEST_PROGRESS_JOINING).way(way.value()).groupId(message.getTo()).joiner(message.getFrom()).build(), MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+            redisOperations.opsForValue().setIfAbsent(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_REQUEST_SESSION + message.getFrom() + CacheConstant.COLON + message.getTo(), new GroupRequestSession.Builder().sessionId(requestSessionId).progress(MessageConstant.REQUEST_PROGRESS_JOINING).way(way.value()).groupId(message.getTo()).joiner(message.getFrom()).channel((int) NumberConstant.NUMBER_1).build(), MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
         });
     }
 

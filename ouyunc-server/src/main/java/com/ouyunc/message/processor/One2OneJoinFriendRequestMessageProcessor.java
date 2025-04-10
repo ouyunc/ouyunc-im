@@ -152,7 +152,7 @@ public final class One2OneJoinFriendRequestMessageProcessor extends AbstractMess
                 MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, "获取加好友请求锁失败", packet), true);
             }
         } catch (Exception e) {
-            log.error("Failed to handle one-to-one join friend request message: {}", packet);
+            log.error("Failed to handle one-to-one join friend request message: {}", e.getMessage());
             MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.BIND_FRIEND_ERROR, "处理一对一加好友请求异常！" + e.getMessage(), packet), true);
         } finally {
             if (lock.isHeldByCurrentThread()) {

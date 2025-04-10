@@ -116,6 +116,9 @@ public class GroupRequestSession extends RequestSession{
     }
 
 
+    public GroupRequestSession() {
+    }
+
     public GroupRequestSession(String sessionId, Integer progress, String inviter, Integer inviterPost, String joiner, String groupId, String processor, Integer processorPost, Integer way, Integer channel) {
         super(sessionId, progress);
         this.inviter = inviter;

@@ -133,7 +133,7 @@ public final class One2OneRefuseFriendRequestMessageProcessor extends AbstractMe
                 MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, "获取拒绝好友请求锁失败", packet), true);
             }
         } catch (Exception e) {
-            log.error("Failed to handle one-to-one refuse friend request message: {}", packet);
+            log.error("Failed to handle one-to-one refuse friend request message: {}", e.getMessage());
             MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.BIND_FRIEND_ERROR, "处理一对一拒绝好友请求异常！" + e.getMessage(), packet), true);
         } finally {
             if (lock.isHeldByCurrentThread()) {

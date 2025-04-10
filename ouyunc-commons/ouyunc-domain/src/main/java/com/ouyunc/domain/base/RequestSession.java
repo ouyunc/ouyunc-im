@@ -30,10 +30,6 @@ public class RequestSession implements Serializable {
         this.progress = progress;
     }
 
-    public RequestSession(Builder builder) {
-        this.sessionId = builder.sessionId;
-        this.progress = builder.progress;
-    }
 
     public String getSessionId() {
         return sessionId;
@@ -66,7 +62,7 @@ public class RequestSession implements Serializable {
         }
 
         public RequestSession build() {
-            return new RequestSession(this);
+            return new RequestSession(sessionId, progress);
         }
     }
 }

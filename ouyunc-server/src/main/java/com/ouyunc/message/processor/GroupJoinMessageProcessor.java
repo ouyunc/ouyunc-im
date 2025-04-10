@@ -154,7 +154,7 @@ public final class GroupJoinMessageProcessor extends AbstractMessageProcessor<By
                 MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, "主动加群请求锁失败", packet), true);
             }
         } catch (Exception e) {
-            log.error("Failed to handle user join group request message: {}", packet);
+            log.error("Failed to handle user join group request message: {}", e.getMessage());
             MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.BIND_GROUP_ERROR, "处理主动加群请求异常！" + e.getMessage(), packet), true);
         } finally {
             if (lock.isHeldByCurrentThread()) {
