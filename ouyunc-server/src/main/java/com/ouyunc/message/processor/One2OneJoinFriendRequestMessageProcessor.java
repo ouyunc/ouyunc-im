@@ -101,15 +101,15 @@ public final class One2OneJoinFriendRequestMessageProcessor extends AbstractMess
         RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST + sessionId);
         try {
             if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
-                // 如果是好友或者处理中，直接返回
-                if (repository().isFriend(appKey, message.getFrom(), message.getTo())) {
-                    log.warn("已经是好友, 请知悉; {}" ,packet);
-                    return;
-                }
                 // 获取请求会话
                 RequestSession requestSession = repository().getFriendRequestSession(appKey, message.getFrom(), message.getTo());
                 if (null != requestSession && requestSession.getProgress() > MessageConstant.REQUEST_PROGRESS_JOINING) {
                     log.warn("{} 和 {} 会话存在正在处理中的好友请求，拒绝和同意还未结束处理", message.getFrom(), message.getTo());
+                    return;
+                }
+                // 如果是好友或者处理中，直接返回
+                if (repository().isFriend(appKey, message.getFrom(), message.getTo())) {
+                    log.warn("已经是好友, 请知悉; {}" ,packet);
                     return;
                 }
                 // 获取当前对方的配置信息,是否是自动同意加好友，

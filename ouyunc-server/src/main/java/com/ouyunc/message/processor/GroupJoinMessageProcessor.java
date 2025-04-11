@@ -93,14 +93,14 @@ public final class GroupJoinMessageProcessor extends AbstractMessageProcessor<By
         RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.GROUP_REQUEST + message.getFrom() + CacheConstant.COLON + message.getTo());
         try {
             if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
-                if (repository().inGroup(appKey, message.getFrom(), message.getTo())) {
-                    log.warn("该用户 {} 已经加入群组 {}", message.getFrom(), message.getTo());
-                    return;
-                }
                 // 获取请求会话
                 GroupRequestSession groupRequestSession = repository().getGroupRequestSession(appKey, message.getFrom(), message.getTo());
                 if (null != groupRequestSession && groupRequestSession.getProgress() > MessageConstant.REQUEST_PROGRESS_JOINING) {
                     log.warn("{} 和 {} 会话请求存在正在处理中的群请求，拒绝或同意还未结束处理", message.getFrom(), message.getTo());
+                    return;
+                }
+                if (repository().inGroup(appKey, message.getFrom(), message.getTo())) {
+                    log.warn("该用户 {} 已经加入群组 {}", message.getFrom(), message.getTo());
                     return;
                 }
                 // 获取群的配置信息，判断是否自动通过
