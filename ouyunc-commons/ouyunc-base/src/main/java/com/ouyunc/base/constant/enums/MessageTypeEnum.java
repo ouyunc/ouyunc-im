@@ -23,6 +23,9 @@ public enum MessageTypeEnum implements MessageType {
 
 
     GROUP_REQUEST_JOIN(NumberConstant.NUMBER_NEGATIVE_11, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), "group_request_join",  "主动加群请求"),
+    GROUP_REQUEST_INVITE_JOIN(NumberConstant.NUMBER_NEGATIVE_12, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), "group_request_invite_join",  "邀请加群请求"),
+    GROUP_REQUEST_AGREE(NumberConstant.NUMBER_NEGATIVE_13, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), "group_request_agree",  "同意加群请求"),
+    GROUP_REQUEST_REFUSE(NumberConstant.NUMBER_NEGATIVE_14, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), "group_request_refuse",  "拒绝加群请求"),
 
 
 

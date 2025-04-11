@@ -4,11 +4,12 @@ import com.alibaba.fastjson2.JSON;
 import com.google.common.collect.Lists;
 import com.ouyunc.base.constant.*;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
+import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.constant.enums.QosLevelEnum;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
-import com.ouyunc.base.packet.message.content.InviteContent;
+import com.ouyunc.base.packet.message.content.GroupRequestContent;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.core.context.MessageContext;
@@ -526,6 +527,17 @@ public enum DefaultRepository implements Repository{
     }
 
 
+
+    /**
+     * 获取群成员信息
+     * @return
+     */
+    @SuppressWarnings("unchecked")
+    public GroupUserEntity groupUserEntity(String appKey, String groupId, String memberId) {
+        return (GroupUserEntity) redisTemplate.opsForValue().get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.GROUP_USERS_CONFIG + memberId + CacheConstant.COLON + groupId);
+    }
+
+
     /**
      * 获取群管理员和群主的唯一标识
      *
@@ -873,6 +885,18 @@ public enum DefaultRepository implements Repository{
         });
     }
 
+    /**
+     * 手动通过绑定群组关系
+     * @return
+     */
+    public boolean manualPassBindGroup(Packet packet, String joiner, GroupUserEntity processorEntity, GroupRequestSessionWay way,  String groupRequestSessionId, long expireTime) {
+        Message message = packet.getMessage();
+        Metadata metadata = message.getMetadata();
+        return bindGroup(packet, way, groupRequestSessionId, expireTime, (redisOperations, requestSessionId)->{
+            redisOperations.opsForValue().set(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_REQUEST_SESSION + joiner + CacheConstant.COLON + message.getTo(), new GroupRequestSession.Builder().sessionId(requestSessionId).progress(MessageConstant.REQUEST_PROGRESS_AGREEING).way(way.value()).groupId(message.getTo()).joiner(joiner).processor(message.getFrom()).processorPost(YesOrNo.YES.getCode().equals(processorEntity.getLeader()) ? processorEntity.getLeader() : processorEntity.getManager()).channel((int) NumberConstant.NUMBER_1).build(), MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+        });
+    }
+
 
     /**
      * 绑定好友关系，在缓存中
@@ -896,12 +920,12 @@ public enum DefaultRepository implements Repository{
                     if (GroupRequestSessionWay.ACTIVE.equals(way) || GroupRequestSessionWay.SCAN.equals(way))  {
                         joiner = message.getFrom();
                         groupId = message.getTo();
-                    }else if (GroupRequestSessionWay.INVITED.equals(way)) {
+                    }else if (GroupRequestSessionWay.INVITED.equals(way) || MessageTypeEnum.GROUP_REQUEST_AGREE.getType() == packet.getMessageType()) {
                         try {
                             // 解析邀请内容
-                            InviteContent inviteContent = JSON.parseObject(message.getContent(), InviteContent.class);
-                            joiner = message.getTo();
-                            groupId = inviteContent.getGroupId();
+                            GroupRequestContent requestContent = JSON.parseObject(message.getContent(), GroupRequestContent.class);
+                            groupId = message.getTo();
+                            joiner = requestContent.getIdentity();
                         } catch (RuntimeException e) {
                             throw new RuntimeException(e);
                         }
@@ -967,12 +991,12 @@ public enum DefaultRepository implements Repository{
                 if (GroupRequestSessionWay.ACTIVE.equals(way) || GroupRequestSessionWay.SCAN.equals(way))  {
                     joiner = message.getFrom();
                     groupId = message.getTo();
-                }else if (GroupRequestSessionWay.INVITED.equals(way)) {
+                }else if (GroupRequestSessionWay.INVITED.equals(way) || MessageTypeEnum.GROUP_REQUEST_AGREE.getType() == packet.getMessageType()) {
                     try {
                         // 解析邀请内容
-                        InviteContent inviteContent = JSON.parseObject(message.getContent(), InviteContent.class);
+                        GroupRequestContent requestContent = JSON.parseObject(message.getContent(), GroupRequestContent.class);
                         joiner = message.getTo();
-                        groupId = inviteContent.getGroupId();
+                        groupId = requestContent.getIdentity();
                     } catch (RuntimeException e) {
                         throw new RuntimeException(e);
                     }
@@ -1032,12 +1056,12 @@ public enum DefaultRepository implements Repository{
                 if (GroupRequestSessionWay.ACTIVE.equals(way) || GroupRequestSessionWay.SCAN.equals(way))  {
                     joiner = message.getFrom();
                     groupId = message.getTo();
-                }else if (GroupRequestSessionWay.INVITED.equals(way)) {
+                }else if (GroupRequestSessionWay.INVITED.equals(way) || MessageTypeEnum.GROUP_REQUEST_AGREE.getType().equals(packet.getMessageType())) {
                     try {
                         // 解析邀请内容
-                        InviteContent inviteContent = JSON.parseObject(message.getContent(), InviteContent.class);
+                        GroupRequestContent requestContent = JSON.parseObject(message.getContent(), GroupRequestContent.class);
                         joiner = message.getTo();
-                        groupId = inviteContent.getGroupId();
+                        groupId = requestContent.getIdentity();
                     } catch (RuntimeException e) {
                         throw new RuntimeException(e);
                     }
