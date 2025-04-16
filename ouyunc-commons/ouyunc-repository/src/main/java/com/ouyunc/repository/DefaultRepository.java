@@ -637,7 +637,7 @@ public enum DefaultRepository implements Repository{
     }
 
     /**
-     * 获取加好友请求会话信息
+     * 获取好友请求会话信息
      * @param appKey
      * @param joiner
      * @param groupId

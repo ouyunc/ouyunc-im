@@ -5,14 +5,12 @@ import com.google.common.collect.Sets;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
-import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
-import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
-import com.ouyunc.base.constant.enums.MessageType;
-import com.ouyunc.base.constant.enums.MessageTypeEnum;
+import com.ouyunc.base.constant.enums.*;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.packet.message.content.GroupRequestContent;
+import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.domain.base.GroupRequestSession;
 import com.ouyunc.domain.constants.GroupRequestSessionWay;
@@ -33,14 +31,14 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 同意 加/邀请 群
+ * 拒绝 加/邀请 群
  */
-public final class GroupAgreeMessageProcessor extends AbstractMessageProcessor<Byte> {
-    private static final Logger log = LoggerFactory.getLogger(GroupAgreeMessageProcessor.class);
+public final class GroupRefuseMessageProcessor extends AbstractMessageProcessor<Byte> {
+    private static final Logger log = LoggerFactory.getLogger(GroupRefuseMessageProcessor.class);
 
     @Override
     public MessageType type() {
-        return MessageTypeEnum.GROUP_REQUEST_AGREE;
+        return MessageTypeEnum.GROUP_REQUEST_REFUSE;
     }
 
     @Override
@@ -82,9 +80,8 @@ public final class GroupAgreeMessageProcessor extends AbstractMessageProcessor<B
     @Override
     public void process(ChannelHandlerContext ctx, Packet packet) {
         if (log.isDebugEnabled()) {
-            log.debug("GroupJoinMessageProcessor 正在处理外部客户端加群 {} ...", packet);
+            log.debug("GroupRefuseMessageProcessor 正在处理外部客户端拒绝加群 {} ...", packet);
         }
-
         // 1. 保存消息
         Message message = packet.getMessage();
         String from = message.getFrom();
@@ -148,19 +145,18 @@ public final class GroupAgreeMessageProcessor extends AbstractMessageProcessor<B
                     log.error("处理人不是管理员或群主：{} 不允许处理", message.getFrom());
                     return;
                 }
-                // 群自动同意，不再给群主和管理员保存离线消息
-                if (!repository().manualPassBindGroup(packet, content.getIdentity(), fromUserEntity,  way, groupRequestSession.getSessionId(), MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
-                    log.error("手动处理绑定群组失败: {}", packet);
-                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "手动绑定群组请求消息异常!", packet), true);
+                // 保存请求信息
+                if (!saveGroupRequestMessage(packet, groupMannerOrLeaderUsersIdentitySet, groupRequestSession.getSessionId())) {
+                    log.error("Failed to save  refuse group request message: {}", packet);
+                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存拒绝加群请求消息异常!", packet), true);
                     return;
                 }
                 // 发送mq
                 repository().savePacket2Mq(MqConstant.KAFKA_GROUP_REQUEST_TOPIC, packet.getMessage().getTo(), packet).whenComplete((result, ex) -> {
                     if (ex != null) {
-                        log.error("同意加群请求，发送mq异常，原因：{}", ex.getMessage());
-                        MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "处理同意加群请求异常！" + ex.getMessage(), packet), true);
+                        log.error("拒绝加群请求，发送mq异常，原因：{}", ex.getMessage());
+                        MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "处理拒绝加群请求异常！" + ex.getMessage(), packet), true);
                     } else {
-
                         for (String groupMannerOrLeaderUserIdentity : groupMannerOrLeaderUsersIdentitySet) {
                             List<LoginClientInfo> toLoginClientInfos = ClientHelper.onlineAll(message.getMetadata().getAppKey(), groupMannerOrLeaderUserIdentity);
                             if (CollectionUtils.isNotEmpty(toLoginClientInfos)) {
@@ -172,12 +168,12 @@ public final class GroupAgreeMessageProcessor extends AbstractMessageProcessor<B
                     }
                 });
             } else {
-                log.error("Failed to lock user agree group request message: {}", packet);
-                MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, "同意群请求加锁失败", packet), true);
+                log.error("Failed to lock user refuse group request message: {}", packet);
+                MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, "拒绝群请求加锁失败", packet), true);
             }
         } catch (Exception e) {
-            log.error("Failed to handle user agree group request message: {}", e.getMessage());
-            MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.BIND_GROUP_ERROR, "处理同意主动加群/邀请加群请求异常！" + e.getMessage(), packet), true);
+            log.error("Failed to handle user refuse group request message: {}", e.getMessage());
+            MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.BIND_GROUP_ERROR, "处理拒绝主动加群/邀请加群请求异常！" + e.getMessage(), packet), true);
         } finally {
             if (lock.isHeldByCurrentThread()) {
                 lock.unlock();
@@ -185,5 +181,19 @@ public final class GroupAgreeMessageProcessor extends AbstractMessageProcessor<B
         }
     }
 
+
+
+    /**
+     * 保存群组消息
+     */
+    private boolean saveGroupRequestMessage(Packet packet, Set<String> groupMembers, String groupRequestSessionId) {
+        Message message = packet.getMessage();
+        if (MessageContext.messageProperties.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
+            // 保存需要qos
+            return repository().batchSaveJoinGroupRequestMessage(packet, GroupRequestSessionWay.ACTIVE, groupMembers, groupRequestSessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
+        }
+        // 保存，不需要qos
+        return repository().saveJoinGroupRequestMessage(packet, GroupRequestSessionWay.ACTIVE, groupRequestSessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
+    }
 
 }
