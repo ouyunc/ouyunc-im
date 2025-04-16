@@ -14,7 +14,6 @@ import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.domain.base.GroupRequestSession;
 import com.ouyunc.domain.constants.GroupRequestSessionWay;
-import com.ouyunc.domain.constants.YesOrNo;
 import com.ouyunc.domain.entity.GroupUserEntity;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
@@ -123,15 +122,13 @@ public final class GroupAgreeMessageProcessor extends AbstractMessageProcessor<B
                 }
                 // 获取当前群的管理员和群主，进行加群消息的推送
                 Set<String> groupMannerOrLeaderUsersIdentitySet = Sets.newHashSet();
-                List<GroupUserEntity> groupUserEntityList = repository().groupUserEntityList(packet);
+                Set<GroupUserEntity> groupManagerAndLeaderUserEntitySet = repository().groupManagerAndLeaderUserEntity(packet);
                 GroupUserEntity fromUserEntity = null;
-                for (GroupUserEntity groupUserEntity : groupUserEntityList) {
-                    if (YesOrNo.YES.getCode().equals(groupUserEntity.getLeader()) || YesOrNo.YES.getCode().equals(groupUserEntity.getManager())) {
-                        String userIdentity = groupUserEntity.getUserId().toString();
-                        groupMannerOrLeaderUsersIdentitySet.add(userIdentity);
-                        if (from.equals(userIdentity)) {
-                            fromUserEntity = groupUserEntity;
-                        }
+                for (GroupUserEntity groupUserEntity : groupManagerAndLeaderUserEntitySet) {
+                    String userIdentity = groupUserEntity.getUserId().toString();
+                    groupMannerOrLeaderUsersIdentitySet.add(userIdentity);
+                    if (from.equals(userIdentity)) {
+                        fromUserEntity = groupUserEntity;
                     }
                 }
                 if (CollectionUtils.isEmpty(groupMannerOrLeaderUsersIdentitySet)) {

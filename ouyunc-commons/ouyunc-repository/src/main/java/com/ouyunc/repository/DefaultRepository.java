@@ -3,7 +3,6 @@ package com.ouyunc.repository;
 import com.alibaba.fastjson2.JSON;
 import com.google.common.collect.Lists;
 import com.ouyunc.base.constant.*;
-import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.constant.enums.QosLevelEnum;
 import com.ouyunc.base.model.Metadata;
@@ -13,12 +12,12 @@ import com.ouyunc.base.packet.message.content.GroupRequestContent;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.core.context.MessageContext;
-import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.db.jdbc.JdbcFactory;
 import com.ouyunc.db.mongo.MongodbFactory;
 import com.ouyunc.domain.base.GroupRequestSession;
 import com.ouyunc.domain.base.RequestSession;
 import com.ouyunc.domain.constants.GroupRequestSessionWay;
+import com.ouyunc.domain.constants.GroupUserPost;
 import com.ouyunc.domain.constants.YesOrNo;
 import com.ouyunc.domain.entity.*;
 import com.ouyunc.mq.kafka.KafkaFactory;
@@ -496,34 +495,21 @@ public enum DefaultRepository implements Repository{
     /**
      * 获取群成员列表信息
      *
-     * @param packet
      * @return
      */
     @SuppressWarnings("unchecked")
-    public List<GroupUserEntity> groupUserEntityList(Packet packet) {
-        Message message = packet.getMessage();
-        Metadata metadata = message.getMetadata();
-        Set<String> memberIdSet = (Set<String>) redisTemplate.opsForZSet().range(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_USERS + message.getTo(), NumberConstant.NUMBER_0, NumberConstant.NUMBER_NEGATIVE_1);
+    public Set<GroupUserEntity> groupUserEntitySet(String appKey, String groupId, Set<String> memberIdSet) {
         if (CollectionUtils.isEmpty(memberIdSet)) {
-            return List.of();
+            return Set.of();
         }
         // 构造groupUserEntity 缓存key 集合
-        Set<String> cacheGroupUserEntityKeyList = memberIdSet.stream().filter(Objects::nonNull).map(memberId -> CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_USERS_CONFIG + memberId + CacheConstant.COLON + message.getTo()).collect(Collectors.toSet());
-        if (CollectionUtils.isEmpty(cacheGroupUserEntityKeyList)) {
-            return List.of();
-        }
+        Set<String> cacheGroupUserEntityKeyList = memberIdSet.stream().filter(Objects::nonNull).map(memberId -> CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.GROUP_USERS_CONFIG + memberId + CacheConstant.COLON + groupId).collect(Collectors.toSet());
         List<GroupUserEntity> groupUserEntityList = (List<GroupUserEntity>) redisTemplate.opsForValue().multiGet(cacheGroupUserEntityKeyList);
         if (CollectionUtils.isEmpty(groupUserEntityList)) {
-            return List.of();
+            return Set.of();
         }
         // 获取群组用户信息
-        groupUserEntityList = groupUserEntityList.stream().filter(Objects::nonNull).collect(Collectors.toList());
-        // 判断 给定的key 和查询到的数据是否一致,不一致仅发送消息，进行人工介入处理
-        if (cacheGroupUserEntityKeyList.size() != groupUserEntityList.size()) {
-            log.error("群成员和群成员对应的关系数量不匹配！");
-            MessageContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.GROUP_MEMBER_COUNT_MISMATCH_ERROR, "群成员和群成员对应的关系数量不匹配！", packet), true);
-        }
-        return groupUserEntityList;
+        return groupUserEntityList.stream().filter(Objects::nonNull).collect(Collectors.toSet());
     }
 
 
@@ -546,9 +532,25 @@ public enum DefaultRepository implements Repository{
      */
     @SuppressWarnings("unchecked")
     public Set<String> groupManagerAndLeaderUsersIdentity(Packet packet) {
-        List<GroupUserEntity> groupUserEntityList = groupUserEntityList(packet);
-        // 过滤出管理员和群主
-        return groupUserEntityList.stream().filter(groupUserEntity -> YesOrNo.YES.getCode().equals(groupUserEntity.getLeader()) || YesOrNo.YES.getCode().equals(groupUserEntity.getManager())).map(groupUserEntity -> groupUserEntity.getUserId().toString()).collect(Collectors.toSet());
+        return redisTemplate.opsForZSet().rangeByScore(CacheConstant.OUYUNC + CacheConstant.APP_KEY + packet.getMessage().getMetadata().getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_USERS + packet.getMessage().getTo(), GroupUserPost.MANAGER.value(), GroupUserPost.LEADER.value());
+    }
+
+    /**
+     * 获取群管理员和群主的实体配置信息
+     *
+     * @param packet
+     * @return
+     */
+    @SuppressWarnings("unchecked")
+    public Set<GroupUserEntity> groupManagerAndLeaderUserEntity(Packet packet) {
+        Message message = packet.getMessage();
+        String appKey = message.getMetadata().getAppKey();
+        Set<String> groupManagerAndLeaderUsersIdentitySet = redisTemplate.opsForZSet().rangeByScore(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.GROUP_USERS + message.getTo(), GroupUserPost.MANAGER.value(), GroupUserPost.LEADER.value());
+        if (CollectionUtils.isEmpty(groupManagerAndLeaderUsersIdentitySet)) {
+            log.error("群：{} 不存在群主和群成员", message.getTo());
+            return Set.of();
+        }
+        return groupUserEntitySet(appKey, message.getTo(), groupManagerAndLeaderUsersIdentitySet);
     }
 
     /**
@@ -559,9 +561,9 @@ public enum DefaultRepository implements Repository{
      */
     @SuppressWarnings("unchecked")
     public Set<String> groupManagerUsersIdentity(Packet packet) {
-        List<GroupUserEntity> groupUserEntityList = groupUserEntityList(packet);
-        // 过滤出管理员
-        return groupUserEntityList.stream().filter(groupUserEntity -> YesOrNo.YES.getCode().equals(groupUserEntity.getManager())).map(groupUserEntity -> groupUserEntity.getUserId().toString()).collect(Collectors.toSet());
+        Message message = packet.getMessage();
+        String appKey = message.getMetadata().getAppKey();
+        return redisTemplate.opsForZSet().range(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.GROUP_USERS + message.getTo(), GroupUserPost.MANAGER.value(), GroupUserPost.MANAGER.value());
     }
 
     /**
@@ -572,9 +574,14 @@ public enum DefaultRepository implements Repository{
      */
     @SuppressWarnings("unchecked")
     public String groupLeaderUsersIdentity(Packet packet) {
-        List<GroupUserEntity> groupUserEntityList = groupUserEntityList(packet);
-        // 过滤出群主
-        return groupUserEntityList.stream().filter(groupUserEntity -> YesOrNo.YES.getCode().equals(groupUserEntity.getLeader())).map(groupUserEntity -> groupUserEntity.getUserId().toString()).findFirst().orElse(null);
+        Message message = packet.getMessage();
+        String appKey = message.getMetadata().getAppKey();
+        Set<String> leanderIdentitySet = redisTemplate.opsForZSet().range(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.GROUP_USERS + message.getTo(), GroupUserPost.LEADER.value(), GroupUserPost.LEADER.value());
+        if (CollectionUtils.isEmpty(leanderIdentitySet)) {
+            log.warn("群 {} 中不存在管理员", message.getTo());
+            return null;
+        }
+        return leanderIdentitySet.stream().findFirst().orElse(null);
     }
 
 
@@ -941,7 +948,7 @@ public enum DefaultRepository implements Repository{
 
 
                     // 建立群成员关系
-                    operations.opsForZSet().add((K) (CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_USERS + groupId), (V) joiner, message.getMetadata().getServerTime());
+                    operations.opsForZSet().add((K) (CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_USERS + groupId), (V) joiner, GroupUserPost.ORDINARY.value());
                     // 建立我的群关系
                     operations.opsForZSet().add((K) (CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUPS + joiner), (V) groupId, message.getMetadata().getServerTime());
 

@@ -6,9 +6,9 @@ import java.util.Objects;
  * 群用户职位
  */
 public enum GroupUserPost {
-    LEADER(1, "群主"),
-    MANAGER(2, "管理员"),
-    ORDINARY(3, "普通群成员"),
+    ORDINARY(0, "普通群成员"),
+    MANAGER(1, "管理员"),
+    LEADER(2, "群主"),
     ;
 
     private final Integer value;

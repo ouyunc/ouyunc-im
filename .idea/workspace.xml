@@ -6,10 +6,9 @@
   <component name="ChangeListManager">
     <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="v6.4.0  主动加群逻辑">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupJoinMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupJoinMessageProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneAgreeFriendRequestMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneAgreeFriendRequestMessageProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneJoinFriendRequestMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneJoinFriendRequestMessageProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneRefuseFriendRequestMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneRefuseFriendRequestMessageProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/constants/GroupUserPost.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/constants/GroupUserPost.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/DefaultRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/DefaultRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupAgreeMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupAgreeMessageProcessor.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -61,6 +60,7 @@
     "JavaScript Debug.client1.html (1).executor": "Run",
     "JavaScript Debug.client1.html.executor": "Run",
     "JavaScript Debug.client4.html.executor": "Run",
+    "JavaScript Debug.client5.html.executor": "Run",
     "Maven.ouyunc-im [clean].executor": "Run",
     "Maven.ouyunc-im [install].executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
@@ -89,14 +89,14 @@
       <recent name="D:\workspace\ouyunc-im\docs" />
     </key>
     <key name="CopyClassDialog.RECENTS_KEY">
+      <recent name="com.ouyunc.message.processor" />
       <recent name="com.ouyunc.base.packet.message.content" />
       <recent name="com.ouyunc.domain.constants" />
       <recent name="com.ouyunc.domain.entity" />
       <recent name="com.ouyunc.message.validator" />
-      <recent name="com.ouyunc.cache.config.redis.builder" />
     </key>
   </component>
-  <component name="RunManager" selected="Application.App">
+  <component name="RunManager" selected="JavaScript Debug.client5.html">
     <configuration name="App" type="Application" factoryName="Application">
       <option name="MAIN_CLASS_NAME" value="com.ouyunc.message.StartServer" />
       <module name="ouyunc-server" />
@@ -127,6 +127,9 @@
     <configuration name="client4.html" type="JavascriptDebugType" temporary="true" nameIsGenerated="true" uri="http://localhost:63342/ouyunc-im/docs/6.5.0/client4.html" useBuiltInWebServerPort="true">
       <method v="2" />
     </configuration>
+    <configuration name="client5.html" type="JavascriptDebugType" temporary="true" nameIsGenerated="true" uri="http://localhost:63342/ouyunc-im/docs/6.5.0/client5.html" useBuiltInWebServerPort="true">
+      <method v="2" />
+    </configuration>
     <configuration name="OuyuncMessageSpringBootStarterApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
       <module name="ouyunc-message-spring-boot-starter" />
       <option name="SPRING_BOOT_MAIN_CLASS" value="com.ouyunc.ouyuncmessagespringbootstarter.OuyuncMessageSpringBootStarterApplication" />
@@ -144,12 +147,14 @@
     <list>
       <item itemvalue="Application.App" />
       <item itemvalue="JavaScript Debug.client4.html" />
+      <item itemvalue="JavaScript Debug.client5.html" />
       <item itemvalue="JavaScript Debug.client1.html (1)" />
       <item itemvalue="JavaScript Debug.client1.html" />
       <item itemvalue="Spring Boot.OuyuncMessageSpringBootStarterApplication" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="JavaScript Debug.client5.html" />
         <item itemvalue="JavaScript Debug.client4.html" />
         <item itemvalue="JavaScript Debug.client1.html (1)" />
         <item itemvalue="JavaScript Debug.client1.html" />
@@ -212,7 +217,7 @@
       <workItem from="1743470594355" duration="19609000" />
       <workItem from="1743573191011" duration="15735000" />
       <workItem from="1744192725313" duration="92000" />
-      <workItem from="1744262479969" duration="12380000" />
+      <workItem from="1744262479969" duration="26720000" />
     </task>
     <task id="LOCAL-00005" summary="v6.4.0  优化加好友代码">
       <option name="closed" value="true" />
@@ -374,7 +379,23 @@
       <option name="project" value="LOCAL" />
       <updated>1744273769881</updated>
     </task>
-    <option name="localTasksCounter" value="25" />
+    <task id="LOCAL-00025" summary="v6.4.0  主动加群逻辑">
+      <option name="closed" value="true" />
+      <created>1744332267033</created>
+      <option name="number" value="00025" />
+      <option name="presentableId" value="LOCAL-00025" />
+      <option name="project" value="LOCAL" />
+      <updated>1744332267033</updated>
+    </task>
+    <task id="LOCAL-00026" summary="v6.4.0  主动加群逻辑">
+      <option name="closed" value="true" />
+      <created>1744366305996</created>
+      <option name="number" value="00026" />
+      <option name="presentableId" value="LOCAL-00026" />
+      <option name="project" value="LOCAL" />
+      <updated>1744366305996</updated>
+    </task>
+    <option name="localTasksCounter" value="27" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
