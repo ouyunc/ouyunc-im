@@ -82,7 +82,7 @@ public final class GroupAgreeMessageProcessor extends AbstractMessageProcessor<B
     @Override
     public void process(ChannelHandlerContext ctx, Packet packet) {
         if (log.isDebugEnabled()) {
-            log.debug("GroupJoinMessageProcessor 正在处理外部客户端加群 {} ...", packet);
+            log.debug("GroupAgreeMessageProcessor 正在处理外部客户端加群 {} ...", packet);
         }
 
         // 1. 保存消息
