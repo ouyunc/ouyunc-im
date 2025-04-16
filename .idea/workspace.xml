@@ -4,11 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="v6.5.0  拒绝加群或者邀请加群的请求">
-      <change afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupInviteJoinMessageProcessor.java" afterDir="false" />
+    <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="v6.5.0  邀请加群请求">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupAgreeMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupAgreeMessageProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupJoinMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupJoinMessageProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupInviteJoinMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupInviteJoinMessageProcessor.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -89,11 +87,11 @@
       <recent name="D:\workspace\ouyunc-im\docs" />
     </key>
     <key name="CopyClassDialog.RECENTS_KEY">
+      <recent name="com.ouyunc.base.model" />
       <recent name="com.ouyunc.message.processor" />
       <recent name="com.ouyunc.base.packet.message.content" />
       <recent name="com.ouyunc.domain.constants" />
       <recent name="com.ouyunc.domain.entity" />
-      <recent name="com.ouyunc.message.validator" />
     </key>
   </component>
   <component name="RunManager" selected="JavaScript Debug.client5.html">
@@ -217,7 +215,7 @@
       <workItem from="1743470594355" duration="19609000" />
       <workItem from="1743573191011" duration="15735000" />
       <workItem from="1744192725313" duration="92000" />
-      <workItem from="1744262479969" duration="32289000" />
+      <workItem from="1744262479969" duration="38403000" />
     </task>
     <task id="LOCAL-00005" summary="v6.4.0  优化加好友代码">
       <option name="closed" value="true" />
@@ -411,7 +409,23 @@
       <option name="project" value="LOCAL" />
       <updated>1744772670063</updated>
     </task>
-    <option name="localTasksCounter" value="29" />
+    <task id="LOCAL-00029" summary="v6.5.0  邀请加群请求">
+      <option name="closed" value="true" />
+      <created>1744783282622</created>
+      <option name="number" value="00029" />
+      <option name="presentableId" value="LOCAL-00029" />
+      <option name="project" value="LOCAL" />
+      <updated>1744783282623</updated>
+    </task>
+    <task id="LOCAL-00030" summary="v6.5.0  邀请加群请求">
+      <option name="closed" value="true" />
+      <created>1744788741773</created>
+      <option name="number" value="00030" />
+      <option name="presentableId" value="LOCAL-00030" />
+      <option name="project" value="LOCAL" />
+      <updated>1744788741773</updated>
+    </task>
+    <option name="localTasksCounter" value="31" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -437,7 +451,8 @@
     <MESSAGE value="v6.4.0  主动加群逻辑" />
     <MESSAGE value="v6.5.0  定义群主，管理员，普通成员职位" />
     <MESSAGE value="v6.5.0  拒绝加群或者邀请加群的请求" />
-    <option name="LAST_COMMIT_MESSAGE" value="v6.5.0  拒绝加群或者邀请加群的请求" />
+    <MESSAGE value="v6.5.0  邀请加群请求" />
+    <option name="LAST_COMMIT_MESSAGE" value="v6.5.0  邀请加群请求" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
