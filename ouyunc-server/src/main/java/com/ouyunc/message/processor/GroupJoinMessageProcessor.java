@@ -14,8 +14,8 @@ import com.ouyunc.base.utils.SnowflakeUtil;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.domain.base.GroupRequestSession;
+import com.ouyunc.domain.constants.GroupJoinPolicy;
 import com.ouyunc.domain.constants.GroupRequestSessionWay;
-import com.ouyunc.domain.constants.YesOrNo;
 import com.ouyunc.domain.entity.GroupEntity;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
@@ -120,7 +120,7 @@ public final class GroupJoinMessageProcessor extends AbstractMessageProcessor<By
                     return;
                 }
                 // 判断对方是否是自动同意加好友
-                if (YesOrNo.YES.getCode().equals(groupEntity.getGroupJoinPolicy())) {
+                if (GroupJoinPolicy.AUTO_PASS.value().equals(groupEntity.getGroupJoinPolicy())) {
                     // 群自动同意，不再给群主和管理员保存离线消息
                     if (!repository().autoPassBindGroup(packet, GroupRequestSessionWay.ACTIVE, groupRequestSession == null ? String.valueOf(SnowflakeUtil.nextId()) : groupRequestSession.getSessionId(), MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
                         log.error("自动处理绑定群组失败: {}", packet);

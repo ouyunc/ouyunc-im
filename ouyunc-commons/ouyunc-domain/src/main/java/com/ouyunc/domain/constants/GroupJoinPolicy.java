@@ -3,7 +3,7 @@ package com.ouyunc.domain.constants;
 import java.util.Objects;
 
 /**
- * 加好友策略
+ * 加群策略
  */
 public enum GroupJoinPolicy {
     REQUIRED_VERIFY(0, "需要校验"),

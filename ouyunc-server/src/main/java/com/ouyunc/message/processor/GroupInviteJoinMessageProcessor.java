@@ -1,22 +1,23 @@
 package com.ouyunc.message.processor;
 
+import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
-import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
-import com.ouyunc.base.constant.enums.MessageType;
-import com.ouyunc.base.constant.enums.MessageTypeEnum;
-import com.ouyunc.base.constant.enums.QosLevelEnum;
+import com.ouyunc.base.constant.enums.*;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
+import com.ouyunc.base.packet.message.content.GroupRequestContent;
 import com.ouyunc.base.utils.SnowflakeUtil;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.domain.base.GroupRequestSession;
+import com.ouyunc.domain.constants.GroupInvitePolicy;
+import com.ouyunc.domain.constants.GroupJoinPolicy;
 import com.ouyunc.domain.constants.GroupRequestSessionWay;
-import com.ouyunc.domain.constants.YesOrNo;
 import com.ouyunc.domain.entity.GroupEntity;
+import com.ouyunc.domain.entity.UserEntity;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
@@ -91,14 +92,23 @@ public final class GroupInviteJoinMessageProcessor extends AbstractMessageProces
         RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.GROUP_REQUEST + message.getFrom() + CacheConstant.COLON + message.getTo());
         try {
             if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
+
+                Object contentObj = JSON.parseObject(message.getContent(), MessageContentTypeEnum.GROUP_REQUEST_CONTENT.getContentClass());
+                GroupRequestContent content;
+                if (contentObj instanceof GroupRequestContent groupRequestContent) {
+                    content = groupRequestContent;
+                }else {
+                    log.error("消息内容类型:{} 不是群请求类型，请检查消息内容类型是否正确", message.getContentType());
+                    return;
+                }
                 // 获取请求会话
-                GroupRequestSession groupRequestSession = repository().getGroupRequestSession(appKey, message.getFrom(), message.getTo());
+                GroupRequestSession groupRequestSession = repository().getGroupRequestSession(appKey, content.getIdentity(), message.getTo());
                 if (null != groupRequestSession && (groupRequestSession.getProgress() > MessageConstant.REQUEST_PROGRESS_JOINING || !GroupRequestSessionWay.INVITED.value().equals(groupRequestSession.getWay()))) {
                     log.warn("{} 和 {} 会话请求存在正在处理中的群请求，拒绝或同意还未结束处理", message.getFrom(), message.getTo());
                     return;
                 }
-                if (repository().inGroup(appKey, message.getFrom(), message.getTo())) {
-                    log.warn("该用户 {} 已经加入群组 {}", message.getFrom(), message.getTo());
+                if (repository().inGroup(appKey, content.getIdentity(), message.getTo())) {
+                    log.warn("该用户 {} 已经加入群组 {}", content.getIdentity(), message.getTo());
                     return;
                 }
                 // 获取群的配置信息，判断是否自动通过
@@ -117,10 +127,18 @@ public final class GroupInviteJoinMessageProcessor extends AbstractMessageProces
                     MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群主或群管理员", packet), true);
                     return;
                 }
+                // 判断被邀请人，是否自动被加入到群
+                UserEntity userEntity = repository().getUserEntity(appKey, content.getIdentity());
+                if (userEntity == null) {
+                    log.error("用户:{} 不存在，请检查数据！", content.getIdentity());
+                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.USER_NOT_EXIST, content.getIdentity() + "用户不存在！", packet));
+                    return;
+                }
+
                 // 尝试排除自己，自己可能是群主或管理员
-                // 注意：如果是群主或者管理员邀请的会自动通过，无论是否开启群自动同意
+                // 注意：如果是群主或者管理员邀请的会自动通过，无论是否开启群自动同意  todo 被邀请人要同意
                 // 判断对方是否是自动同意加好友
-                if (groupMannerOrLeaderUsersIdentitySet.remove(message.getFrom()) || YesOrNo.YES.getCode().equals(groupEntity.getGroupJoinPolicy())) {
+                if (GroupInvitePolicy.AUTO_PASS.value().equals(userEntity.getGroupInvitePolicy()) && (groupMannerOrLeaderUsersIdentitySet.remove(message.getFrom()) || GroupJoinPolicy.AUTO_PASS.value().equals(groupEntity.getGroupJoinPolicy()))) {
                     // 自动同意，不再给群主和管理员保存离线消息
                     if (!repository().autoPassBindGroup(packet, GroupRequestSessionWay.INVITED, groupRequestSession == null ? String.valueOf(SnowflakeUtil.nextId()) : groupRequestSession.getSessionId(), MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
                         log.error("自动处理绑定群组失败: {}", packet);
@@ -172,10 +190,10 @@ public final class GroupInviteJoinMessageProcessor extends AbstractMessageProces
         Message message = packet.getMessage();
         if (MessageContext.messageProperties.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
             // 保存需要qos
-            return repository().batchSaveJoinGroupRequestMessage(packet, GroupRequestSessionWay.ACTIVE, groupMembers, groupRequestSessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
+            return repository().batchSaveJoinGroupRequestMessage(packet, GroupRequestSessionWay.INVITED, groupMembers, groupRequestSessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
         }
         // 保存，不需要qos
-        return repository().saveJoinGroupRequestMessage(packet, GroupRequestSessionWay.ACTIVE, groupRequestSessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
+        return repository().saveJoinGroupRequestMessage(packet, GroupRequestSessionWay.INVITED, groupRequestSessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
     }
 
 }

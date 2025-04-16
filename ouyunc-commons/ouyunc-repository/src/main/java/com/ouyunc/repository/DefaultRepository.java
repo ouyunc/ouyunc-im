@@ -5,6 +5,7 @@ import com.google.common.collect.Lists;
 import com.ouyunc.base.constant.*;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.constant.enums.QosLevelEnum;
+import com.ouyunc.base.model.KeyValuePair;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
@@ -887,8 +888,13 @@ public enum DefaultRepository implements Repository{
     public boolean autoPassBindGroup(Packet packet, GroupRequestSessionWay way,  String groupRequestSessionId, long expireTime) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        return bindGroup(packet, way, groupRequestSessionId, expireTime, (redisOperations, requestSessionId)->{
-            redisOperations.opsForValue().set(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_REQUEST_SESSION + message.getFrom() + CacheConstant.COLON + message.getTo(), new GroupRequestSession.Builder().sessionId(requestSessionId).progress(MessageConstant.REQUEST_PROGRESS_AGREEING).way(way.value()).groupId(message.getTo()).joiner(message.getFrom()).channel((int) NumberConstant.NUMBER_1).build(), MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+        // 保存消息
+        KeyValuePair<String, String> joinerAndGroupId = getJoinerAndGroupId(packet, way);
+        if (joinerAndGroupId ==null) {
+            return false;
+        }
+        return bindGroup(packet, joinerAndGroupId.getKey(), joinerAndGroupId.getValue(), groupRequestSessionId, expireTime, (redisOperations, requestSessionId)->{
+            redisOperations.opsForValue().set(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_REQUEST_SESSION + joinerAndGroupId.getKey() + CacheConstant.COLON + joinerAndGroupId.getValue(), new GroupRequestSession.Builder().sessionId(requestSessionId).progress(MessageConstant.REQUEST_PROGRESS_AGREEING).way(way.value()).groupId(joinerAndGroupId.getValue()).joiner(joinerAndGroupId.getKey()).channel((int) NumberConstant.NUMBER_1).build(), MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
         });
     }
 
@@ -896,50 +902,67 @@ public enum DefaultRepository implements Repository{
      * 手动通过绑定群组关系
      * @return
      */
-    public boolean manualPassBindGroup(Packet packet, String joiner, GroupUserEntity processorEntity, GroupRequestSessionWay way,  String groupRequestSessionId, long expireTime) {
+    public boolean manualPassBindGroup(Packet packet, GroupUserEntity processorEntity, GroupRequestSessionWay way,  String groupRequestSessionId, long expireTime) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        return bindGroup(packet, way, groupRequestSessionId, expireTime, (redisOperations, requestSessionId)->{
-            redisOperations.opsForValue().set(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_REQUEST_SESSION + joiner + CacheConstant.COLON + message.getTo(), new GroupRequestSession.Builder().sessionId(requestSessionId).progress(MessageConstant.REQUEST_PROGRESS_AGREEING).way(way.value()).groupId(message.getTo()).joiner(joiner).processor(message.getFrom()).processorPost(YesOrNo.YES.getCode().equals(processorEntity.getLeader()) ? processorEntity.getLeader() : processorEntity.getManager()).channel((int) NumberConstant.NUMBER_1).build(), MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+        // 保存消息
+        KeyValuePair<String, String> joinerAndGroupId = getJoinerAndGroupId(packet, way);
+        if (joinerAndGroupId ==null) {
+            return false;
+        }
+        return bindGroup(packet, joinerAndGroupId.getKey(), joinerAndGroupId.getValue(), groupRequestSessionId, expireTime, (redisOperations, requestSessionId)->{
+            redisOperations.opsForValue().set(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_REQUEST_SESSION + joinerAndGroupId.getKey() + CacheConstant.COLON + joinerAndGroupId.getValue(), new GroupRequestSession.Builder().sessionId(requestSessionId).progress(MessageConstant.REQUEST_PROGRESS_AGREEING).way(way.value()).groupId(joinerAndGroupId.getValue()).joiner(joinerAndGroupId.getKey()).processor(message.getFrom()).processorPost(YesOrNo.YES.getCode().equals(processorEntity.getLeader()) ? processorEntity.getLeader() : processorEntity.getManager()).channel((int) NumberConstant.NUMBER_1).build(), MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
         });
+    }
+
+
+    /**
+     * 获取加入者和群id
+     * @param packet
+     * @param way
+     * @return
+     */
+    private KeyValuePair<String, String> getJoinerAndGroupId(Packet packet, GroupRequestSessionWay way) {
+        Message message =packet.getMessage();
+        // 保存消息
+        String joiner;
+        String groupId;
+        if (GroupRequestSessionWay.ACTIVE.equals(way) || GroupRequestSessionWay.SCAN.equals(way))  {
+            joiner = message.getFrom();
+            groupId = message.getTo();
+        }else if (GroupRequestSessionWay.INVITED.equals(way) || MessageTypeEnum.GROUP_REQUEST_AGREE.getType() == packet.getMessageType()) {
+            try {
+                // 解析邀请内容
+                GroupRequestContent requestContent = JSON.parseObject(message.getContent(), GroupRequestContent.class);
+                groupId = message.getTo();
+                joiner = requestContent.getIdentity();
+            } catch (RuntimeException e) {
+                log.error("解析群组请求内容失败: {}", e.getMessage());
+                return null;
+            }
+        }else {
+            log.error("暂不支持加群方式： {}", way);
+            return null;
+        }
+        return new KeyValuePair<>(joiner, groupId);
     }
 
 
     /**
      * 绑定好友关系，在缓存中
      * @param packet
-     * @param way
      * @param expireTime
      * @param consumer
      * @return
      */
     @SuppressWarnings("unchecked")
-    private boolean bindGroup(Packet packet, GroupRequestSessionWay way,  String groupRequestSessionId, long expireTime, BiConsumer<RedisOperations, String> consumer) {
+    private boolean bindGroup(Packet packet, String joiner, String groupId,  String groupRequestSessionId, long expireTime, BiConsumer<RedisOperations, String> consumer) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         try {
             redisTemplate.executePipelined(new SessionCallback<>() {
                 @Override
                 public <K, V> Object execute(RedisOperations<K, V> operations) throws DataAccessException {
-                    // 保存消息
-                    String joiner;
-                    String groupId;
-                    if (GroupRequestSessionWay.ACTIVE.equals(way) || GroupRequestSessionWay.SCAN.equals(way))  {
-                        joiner = message.getFrom();
-                        groupId = message.getTo();
-                    }else if (GroupRequestSessionWay.INVITED.equals(way) || MessageTypeEnum.GROUP_REQUEST_AGREE.getType() == packet.getMessageType()) {
-                        try {
-                            // 解析邀请内容
-                            GroupRequestContent requestContent = JSON.parseObject(message.getContent(), GroupRequestContent.class);
-                            groupId = message.getTo();
-                            joiner = requestContent.getIdentity();
-                        } catch (RuntimeException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }else {
-                        log.error("暂不支持加群方式： {}", way);
-                        return null;
-                    }
                     String luaScript = LuaScriptConstant.SAVE_MESSAGE_WITHOUT_OFFLINE_LUA_SCRIPT;
                     List<String> keys = Lists.newArrayList(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.MESSAGE + packet.getPacketId(),
                             CacheConstant.OUYUNC +  CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_REQUEST + CacheConstant.SESSION + joiner + CacheConstant.COLON + groupId);
@@ -975,8 +998,13 @@ public enum DefaultRepository implements Repository{
     public boolean saveJoinGroupRequestMessage(Packet packet, GroupRequestSessionWay way, String groupRequestSessionId, long expireTime) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        return saveGroupRequestMessage(packet, way, groupRequestSessionId, expireTime, (redisOperations, requestSessionId)->{
-            redisOperations.opsForValue().setIfAbsent(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_REQUEST_SESSION + message.getFrom() + CacheConstant.COLON + message.getTo(), new GroupRequestSession.Builder().sessionId(requestSessionId).progress(MessageConstant.REQUEST_PROGRESS_JOINING).way(way.value()).groupId(message.getTo()).joiner(message.getFrom()).channel((int) NumberConstant.NUMBER_1).build(), MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+        // 保存消息
+        KeyValuePair<String, String> joinerAndGroupId = getJoinerAndGroupId(packet, way);
+        if (joinerAndGroupId ==null) {
+            return false;
+        }
+        return saveGroupRequestMessage(packet,joinerAndGroupId.getKey(), joinerAndGroupId.getValue(), groupRequestSessionId, expireTime, (redisOperations, requestSessionId)->{
+            redisOperations.opsForValue().setIfAbsent(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_REQUEST_SESSION + joinerAndGroupId.getKey() + CacheConstant.COLON + joinerAndGroupId.getValue(), new GroupRequestSession.Builder().sessionId(requestSessionId).progress(MessageConstant.REQUEST_PROGRESS_JOINING).way(way.value()).groupId(joinerAndGroupId.getValue()).joiner(joinerAndGroupId.getKey()).channel((int) NumberConstant.NUMBER_1).build(), MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
         });
     }
 
@@ -987,30 +1015,12 @@ public enum DefaultRepository implements Repository{
      * @param expireTime
      * @return
      */
-    public boolean saveGroupRequestMessage(Packet packet, GroupRequestSessionWay way, String groupRequestSessionId, long expireTime, BiConsumer<RedisOperations, String> consumer) {
+    public boolean saveGroupRequestMessage(Packet packet, String joiner, String groupId, String groupRequestSessionId, long expireTime, BiConsumer<RedisOperations, String> consumer) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         redisTemplate.executePipelined(new SessionCallback<>() {
             @Override
             public <K, V> Object execute(RedisOperations<K, V> operations) throws DataAccessException {
-                String joiner;
-                String groupId;
-                if (GroupRequestSessionWay.ACTIVE.equals(way) || GroupRequestSessionWay.SCAN.equals(way))  {
-                    joiner = message.getFrom();
-                    groupId = message.getTo();
-                }else if (GroupRequestSessionWay.INVITED.equals(way) || MessageTypeEnum.GROUP_REQUEST_AGREE.getType() == packet.getMessageType()) {
-                    try {
-                        // 解析邀请内容
-                        GroupRequestContent requestContent = JSON.parseObject(message.getContent(), GroupRequestContent.class);
-                        joiner = message.getTo();
-                        groupId = requestContent.getIdentity();
-                    } catch (RuntimeException e) {
-                        throw new RuntimeException(e);
-                    }
-                }else {
-                    log.error("暂不支持加群方式： {}", way);
-                    return null;
-                }
                 String luaScript = LuaScriptConstant.SAVE_MESSAGE_WITHOUT_OFFLINE_LUA_SCRIPT;
                 List<String> keys = Lists.newArrayList(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.MESSAGE + packet.getPacketId(),
                         CacheConstant.OUYUNC +  CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_REQUEST + CacheConstant.SESSION + joiner + CacheConstant.COLON + groupId);
@@ -1039,8 +1049,12 @@ public enum DefaultRepository implements Repository{
     public boolean batchSaveJoinGroupRequestMessage(Packet packet, GroupRequestSessionWay way, Set<String> groupUserIdentitySet, String groupRequestSessionId, long expireTime) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        return batchSaveGroupRequestMessage(packet, way, groupUserIdentitySet, groupRequestSessionId, expireTime, (redisOperations, requestSessionId)->{
-            redisOperations.opsForValue().setIfAbsent(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_REQUEST_SESSION + message.getFrom() + CacheConstant.COLON + message.getTo(), new GroupRequestSession.Builder().sessionId(requestSessionId).progress(MessageConstant.REQUEST_PROGRESS_JOINING).way(way.value()).groupId(message.getTo()).joiner(message.getFrom()).channel((int) NumberConstant.NUMBER_1).build(), MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+        KeyValuePair<String, String> joinerAndGroupId = getJoinerAndGroupId(packet, way);
+        if (joinerAndGroupId ==null) {
+            return false;
+        }
+        return batchSaveGroupRequestMessage(packet,joinerAndGroupId.getKey(), joinerAndGroupId.getValue(), groupUserIdentitySet, groupRequestSessionId, expireTime, (redisOperations, requestSessionId)->{
+            redisOperations.opsForValue().setIfAbsent(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_REQUEST_SESSION + joinerAndGroupId.getKey() + CacheConstant.COLON + joinerAndGroupId.getValue(), new GroupRequestSession.Builder().sessionId(requestSessionId).progress(MessageConstant.REQUEST_PROGRESS_JOINING).way(way.value()).groupId(joinerAndGroupId.getValue()).joiner(joinerAndGroupId.getKey()).channel((int) NumberConstant.NUMBER_1).build(), MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
         });
     }
 
@@ -1050,32 +1064,12 @@ public enum DefaultRepository implements Repository{
      * @param expireTime 过期时间，单位毫秒，多久后过期
      * @return
      */
-    public boolean batchSaveGroupRequestMessage(Packet packet, GroupRequestSessionWay way, Set<String> groupUserIdentitySet, String groupRequestSessionId, long expireTime, BiConsumer<RedisOperations, String> consumer) {
+    public boolean batchSaveGroupRequestMessage(Packet packet, String joiner, String groupId, Set<String> groupUserIdentitySet, String groupRequestSessionId, long expireTime, BiConsumer<RedisOperations, String> consumer) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-
-
         redisTemplate.executePipelined(new SessionCallback<>() {
             @Override
             public <K, V> Object execute(RedisOperations<K, V> operations) throws DataAccessException {
-                String joiner;
-                String groupId;
-                if (GroupRequestSessionWay.ACTIVE.equals(way) || GroupRequestSessionWay.SCAN.equals(way))  {
-                    joiner = message.getFrom();
-                    groupId = message.getTo();
-                }else if (GroupRequestSessionWay.INVITED.equals(way) || MessageTypeEnum.GROUP_REQUEST_AGREE.getType().equals(packet.getMessageType())) {
-                    try {
-                        // 解析邀请内容
-                        GroupRequestContent requestContent = JSON.parseObject(message.getContent(), GroupRequestContent.class);
-                        joiner = message.getTo();
-                        groupId = requestContent.getIdentity();
-                    } catch (RuntimeException e) {
-                        throw new RuntimeException(e);
-                    }
-                }else {
-                    log.error("暂不支持加群方式： {}", way);
-                    return null;
-                }
                 // 构造参数
                 List<String> offlineKeys = groupUserIdentitySet.stream().map(groupUserIdentity -> CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + groupUserIdentity).toList();
                 List<String> keys = new ArrayList<>();

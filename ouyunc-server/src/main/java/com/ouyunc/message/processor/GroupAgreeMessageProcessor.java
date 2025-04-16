@@ -149,7 +149,7 @@ public final class GroupAgreeMessageProcessor extends AbstractMessageProcessor<B
                     return;
                 }
                 // 群自动同意，不再给群主和管理员保存离线消息
-                if (!repository().manualPassBindGroup(packet, content.getIdentity(), fromUserEntity,  way, groupRequestSession.getSessionId(), MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
+                if (!repository().manualPassBindGroup(packet, fromUserEntity,  way, groupRequestSession.getSessionId(), MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
                     log.error("手动处理绑定群组失败: {}", packet);
                     MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "手动绑定群组请求消息异常!", packet), true);
                     return;

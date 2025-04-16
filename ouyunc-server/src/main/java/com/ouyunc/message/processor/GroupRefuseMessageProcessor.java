@@ -146,7 +146,7 @@ public final class GroupRefuseMessageProcessor extends AbstractMessageProcessor<
                     return;
                 }
                 // 保存请求信息
-                if (!saveGroupRequestMessage(packet, groupMannerOrLeaderUsersIdentitySet, groupRequestSession.getSessionId())) {
+                if (!saveGroupRequestMessage(packet, way, groupMannerOrLeaderUsersIdentitySet, groupRequestSession.getSessionId())) {
                     log.error("Failed to save  refuse group request message: {}", packet);
                     MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存拒绝加群请求消息异常!", packet), true);
                     return;
@@ -186,14 +186,14 @@ public final class GroupRefuseMessageProcessor extends AbstractMessageProcessor<
     /**
      * 保存群组消息
      */
-    private boolean saveGroupRequestMessage(Packet packet, Set<String> groupMembers, String groupRequestSessionId) {
+    private boolean saveGroupRequestMessage(Packet packet, GroupRequestSessionWay way, Set<String> groupMembers, String groupRequestSessionId) {
         Message message = packet.getMessage();
         if (MessageContext.messageProperties.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
             // 保存需要qos
-            return repository().batchSaveJoinGroupRequestMessage(packet, GroupRequestSessionWay.ACTIVE, groupMembers, groupRequestSessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
+            return repository().batchSaveJoinGroupRequestMessage(packet, way, groupMembers, groupRequestSessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
         }
         // 保存，不需要qos
-        return repository().saveJoinGroupRequestMessage(packet, GroupRequestSessionWay.ACTIVE, groupRequestSessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
+        return repository().saveJoinGroupRequestMessage(packet, way, groupRequestSessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
     }
 
 }
