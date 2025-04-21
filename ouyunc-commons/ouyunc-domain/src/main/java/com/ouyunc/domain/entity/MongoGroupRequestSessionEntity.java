@@ -47,7 +47,7 @@ public class MongoGroupRequestSessionEntity implements Serializable {
      */
     @Field("joiner_process_status")
     @Indexed
-    private String joinerProcessStatus;
+    private Integer joinerProcessStatus;
 
     /**
     * 群id
@@ -190,7 +190,7 @@ public class MongoGroupRequestSessionEntity implements Serializable {
         this.expireAt = expireAt;
     }
 
-    public MongoGroupRequestSessionEntity(Long id, String inviter, Integer inviterPost, String joiner, String joinerProcessStatus, String groupId, String processor, Integer processorPost, String sessionId, Long sessionBeginTime, Long sessionEndTime, Integer status, Integer way, Integer channel, LocalDateTime createTime, LocalDateTime updateTime, LocalDateTime expireAt) {
+    public MongoGroupRequestSessionEntity(Long id, String inviter, Integer inviterPost, String joiner, Integer joinerProcessStatus, String groupId, String processor, Integer processorPost, String sessionId, Long sessionBeginTime, Long sessionEndTime, Integer status, Integer way, Integer channel, LocalDateTime createTime, LocalDateTime updateTime, LocalDateTime expireAt) {
         this.id = id;
         this.inviter = inviter;
         this.inviterPost = inviterPost;
@@ -210,11 +210,11 @@ public class MongoGroupRequestSessionEntity implements Serializable {
         this.expireAt = expireAt;
     }
 
-    public String getJoinerProcessStatus() {
+    public Integer getJoinerProcessStatus() {
         return joinerProcessStatus;
     }
 
-    public void setJoinerProcessStatus(String joinerProcessStatus) {
+    public void setJoinerProcessStatus(Integer joinerProcessStatus) {
         this.joinerProcessStatus = joinerProcessStatus;
     }
 
