@@ -3,12 +3,15 @@ package com.ouyunc.domain.entity;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Field;
 
+import java.io.Serial;
 import java.time.LocalDateTime;
 
 /**
  * mongodb message
  */
 public class MongoMessageEntity extends MessageEntity {
+    @Serial
+    private static final long serialVersionUID = 1L;
     /**
      * 过期时间
      */

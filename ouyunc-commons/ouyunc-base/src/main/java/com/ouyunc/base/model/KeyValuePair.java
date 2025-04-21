@@ -1,11 +1,15 @@
 package com.ouyunc.base.model;
 
+import java.io.Serial;
+import java.io.Serializable;
 import java.util.Objects;
 
 /**
  * key value 的pair
  */
-public class KeyValuePair<K,V>{
+public class KeyValuePair<K,V> implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     private K key;
 

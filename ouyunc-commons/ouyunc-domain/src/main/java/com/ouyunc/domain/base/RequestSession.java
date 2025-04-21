@@ -1,11 +1,14 @@
 package com.ouyunc.domain.base;
 
+import java.io.Serial;
 import java.io.Serializable;
 
 /**
  * 请求会话
  */
 public class RequestSession implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     /**
      * 请求会话id

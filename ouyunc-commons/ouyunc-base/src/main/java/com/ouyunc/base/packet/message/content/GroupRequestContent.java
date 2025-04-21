@@ -1,5 +1,6 @@
 package com.ouyunc.base.packet.message.content;
 
+import java.io.Serial;
 import java.io.Serializable;
 
 /**
@@ -7,6 +8,9 @@ import java.io.Serializable;
  * 群请求内容
  */
 public class GroupRequestContent implements Serializable {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     /**
      * 唯一标识，针对同意/拒绝， 该字段是 申请人或被邀请人的唯一标识，  针对邀请，该字段是 被邀请人的唯一标识

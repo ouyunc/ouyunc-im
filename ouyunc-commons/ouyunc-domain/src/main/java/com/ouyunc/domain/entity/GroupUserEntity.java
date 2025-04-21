@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import org.springframework.data.mongodb.core.mapping.Field;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
@@ -15,7 +16,8 @@ import java.time.LocalDateTime;
 */
 @TableName("ouyunc_im_group_user")
 public class GroupUserEntity implements Serializable {
-
+    @Serial
+    private static final long serialVersionUID = 1L;
     /**
     * 主键id
     */

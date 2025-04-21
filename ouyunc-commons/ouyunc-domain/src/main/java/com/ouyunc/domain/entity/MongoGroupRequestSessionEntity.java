@@ -41,6 +41,14 @@ public class MongoGroupRequestSessionEntity implements Serializable {
     @Indexed
     private String joiner;
 
+
+    /**
+     * 加入方处理状态：0-待处理，1-同意邀请，2-拒绝邀请
+     */
+    @Field("joiner_process_status")
+    @Indexed
+    private String joinerProcessStatus;
+
     /**
     * 群id
     */
@@ -84,6 +92,7 @@ public class MongoGroupRequestSessionEntity implements Serializable {
     /**
     * 好友请求会话状态：0-待处理， 1-已同意，2-已拒绝，3-已过期，4-已失效 (如果已经是好友，另一个就是重置时效状态)，5-自动同意
     */
+    @Indexed
     @Field("status")
     private Integer status;
 
@@ -126,6 +135,7 @@ public class MongoGroupRequestSessionEntity implements Serializable {
         public static final String id = "id";
         public static final String inviter = "inviter";
         public static final String joiner = "joiner";
+        public static final String joinerProcessStatus = "joiner_process_status";
         public static final String processor = "processor";
         public static final String groupId = "group_id";
         public static final String processorPost = "processor_post";
@@ -178,6 +188,34 @@ public class MongoGroupRequestSessionEntity implements Serializable {
         this.createTime = createTime;
         this.updateTime = updateTime;
         this.expireAt = expireAt;
+    }
+
+    public MongoGroupRequestSessionEntity(Long id, String inviter, Integer inviterPost, String joiner, String joinerProcessStatus, String groupId, String processor, Integer processorPost, String sessionId, Long sessionBeginTime, Long sessionEndTime, Integer status, Integer way, Integer channel, LocalDateTime createTime, LocalDateTime updateTime, LocalDateTime expireAt) {
+        this.id = id;
+        this.inviter = inviter;
+        this.inviterPost = inviterPost;
+        this.joiner = joiner;
+        this.joinerProcessStatus = joinerProcessStatus;
+        this.groupId = groupId;
+        this.processor = processor;
+        this.processorPost = processorPost;
+        this.sessionId = sessionId;
+        this.sessionBeginTime = sessionBeginTime;
+        this.sessionEndTime = sessionEndTime;
+        this.status = status;
+        this.way = way;
+        this.channel = channel;
+        this.createTime = createTime;
+        this.updateTime = updateTime;
+        this.expireAt = expireAt;
+    }
+
+    public String getJoinerProcessStatus() {
+        return joinerProcessStatus;
+    }
+
+    public void setJoinerProcessStatus(String joinerProcessStatus) {
+        this.joinerProcessStatus = joinerProcessStatus;
     }
 
     public Integer getChannel() {

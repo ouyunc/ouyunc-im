@@ -10,6 +10,7 @@ import org.springframework.data.mongodb.core.index.CompoundIndexes;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
@@ -23,7 +24,8 @@ import java.time.LocalDateTime;
         @CompoundIndex(name = "msgId_userId_idx", def = "{'msg_id': 1, 'user_id': 1}")
 })
 public class ReadReceiptEntity implements Serializable {
-
+    @Serial
+    private static final long serialVersionUID = 1L;
     /**
     * 主键
     */

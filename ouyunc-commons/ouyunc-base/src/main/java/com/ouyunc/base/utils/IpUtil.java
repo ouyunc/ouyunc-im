@@ -156,12 +156,4 @@ public class IpUtil {
         }
         return ip;
     }
-
-    public static void main(String[] args) {
-        String ipAddress = getLocalHost();
-        System.out.println(ipAddress);
-        String ip = "156.23.56.86";
-        final int i = ip42Int(ip);
-        System.out.println(int2Ip4(-592154744));
-    }
 }

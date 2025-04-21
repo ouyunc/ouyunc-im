@@ -4,6 +4,7 @@ package com.ouyunc.base.model;
 import com.ouyunc.base.constant.enums.SendStatusEnum;
 import com.ouyunc.base.packet.Packet;
 
+import java.io.Serial;
 import java.io.Serializable;
 
 /**
@@ -11,6 +12,8 @@ import java.io.Serializable;
  * @Description: 消息发送结果
  **/
 public class SendResult implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     /**
      * 发送状态

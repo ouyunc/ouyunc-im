@@ -4,6 +4,7 @@ package com.ouyunc.domain.entity;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.io.Serial;
 import java.io.Serializable;
 
 /**
@@ -13,7 +14,8 @@ import java.io.Serializable;
  */
 @Document(collection = "ouyunc_exception")
 public class MongoExceptionEntity implements Serializable {
-
+    @Serial
+    private static final long serialVersionUID = 1L;
     /**
      * 主键id
      */

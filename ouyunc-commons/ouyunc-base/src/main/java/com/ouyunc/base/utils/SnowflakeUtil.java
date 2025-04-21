@@ -3,10 +3,7 @@ package com.ouyunc.base.utils;
 
 import java.net.Inet4Address;
 import java.net.UnknownHostException;
-import java.time.Clock;
-import java.util.HashSet;
 import java.util.Random;
-import java.util.Set;
 
 /**
  * @Author fangzhenxun
@@ -129,13 +126,13 @@ public class SnowflakeUtil {
     }
 
 
-    public static void main(String[] args) {
-        Set ids = new HashSet();
-        long start = TimeUtil.currentTimeMillis();
-        for (int i = 0; i < 5000; i++) {
-            System.out.println(i+ "-->" +nextId());
-        }
-        long end = TimeUtil.currentTimeMillis();
-        System.out.println("共生成id[" + ids.size() + "]个，花费时间[" + (end - start) + "]毫秒");
-    }
+//    public static void main(String[] args) {
+//        Set ids = new HashSet();
+//        long start = TimeUtil.currentTimeMillis();
+//        for (int i = 0; i < 5000; i++) {
+//            System.out.println(i+ "-->" +nextId());
+//        }
+//        long end = TimeUtil.currentTimeMillis();
+//        System.out.println("共生成id[" + ids.size() + "]个，花费时间[" + (end - start) + "]毫秒");
+//    }
 }

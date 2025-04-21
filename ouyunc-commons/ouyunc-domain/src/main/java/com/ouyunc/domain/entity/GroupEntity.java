@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
@@ -14,7 +15,8 @@ import java.time.LocalDateTime;
 */
 @TableName("ouyunc_im_group")
 public class GroupEntity implements Serializable {
-
+    @Serial
+    private static final long serialVersionUID = 1L;
     /**
     * 主键id
     */

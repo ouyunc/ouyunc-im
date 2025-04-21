@@ -1,11 +1,15 @@
 package com.ouyunc.base.model;
 
+import java.io.Serial;
+import java.io.Serializable;
 import java.util.Objects;
 
 /**
  * 协议类型
  */
-public class ProtocolType implements Protocol{
+public class ProtocolType implements Serializable, Protocol{
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     private byte protocol;
 

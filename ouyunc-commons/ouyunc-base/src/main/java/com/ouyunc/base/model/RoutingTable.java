@@ -1,5 +1,6 @@
 package com.ouyunc.base.model;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Objects;
@@ -10,6 +11,8 @@ import java.util.Set;
  * @Description: 消息路由表
  **/
 public class RoutingTable implements Serializable, Cloneable  {
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     /**
      * 当前服务地址 ip:port

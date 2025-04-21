@@ -1,7 +1,5 @@
 package com.ouyunc.base.utils;
 
-import org.apache.commons.lang3.time.StopWatch;
-
 /**
  * 时间工具类
  */
@@ -19,7 +17,7 @@ public class TimeUtil {
 
 
 
-    public static void main(String[] args) {
+/*    public static void main(String[] args) {
 
         for (int t = 0; t < 100; t++) {
             StopWatch stopWatch = StopWatch.createStarted();
@@ -33,5 +31,5 @@ public class TimeUtil {
             System.out.println(stopWatch.getTime());
         }
 
-    }
+    }*/
 }

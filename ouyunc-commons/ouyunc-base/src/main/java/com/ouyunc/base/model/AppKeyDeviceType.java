@@ -2,6 +2,7 @@ package com.ouyunc.base.model;
 
 import com.ouyunc.base.constant.enums.DeviceType;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.Set;
 
@@ -10,6 +11,9 @@ import java.util.Set;
  * appKey与设备类型对应关系
  */
 public class AppKeyDeviceType implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
+
     /**
      * appKey
      */

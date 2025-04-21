@@ -3,12 +3,16 @@ package com.ouyunc.base.model;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.netty.handler.codec.mqtt.MqttSubscriptionOption;
 
+import java.io.Serial;
 import java.io.Serializable;
 
 /**
  * mqtt 主题订阅操作
  */
 public class MqttTopicSubscriptionOption implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
+
     private String topicFilter;
     private MqttQoS qos;
     private boolean noLocal;

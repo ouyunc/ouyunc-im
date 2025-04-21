@@ -9,6 +9,7 @@ import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
+import java.io.Serial;
 import java.io.Serializable;
 
 /**
@@ -17,6 +18,8 @@ import java.io.Serializable;
 @TableName("ouyunc_im_message")
 @Document(collection = "ouyunc_im_message")
 public class MessageEntity implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
     /**
      * 主键id
      */

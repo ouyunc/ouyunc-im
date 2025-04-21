@@ -7,6 +7,7 @@ import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
@@ -19,7 +20,8 @@ import java.time.LocalDateTime;
         @CompoundIndex(name = "from_to_idx", def = "{'from': 1, 'to': 1}")
 })
 public class MongoFriendRequestSessionEntity implements Serializable {
-
+    @Serial
+    private static final long serialVersionUID = 1L;
     /**
     * 主键id
     */

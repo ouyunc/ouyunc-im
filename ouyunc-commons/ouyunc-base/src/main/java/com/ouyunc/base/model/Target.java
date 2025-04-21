@@ -4,12 +4,15 @@ import com.ouyunc.base.constant.enums.DeviceType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Serial;
 import java.io.Serializable;
 
 /**
  * 消息接收的目标
  */
 public class Target implements Serializable, Cloneable{
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     /**
      * 接收者唯一标识

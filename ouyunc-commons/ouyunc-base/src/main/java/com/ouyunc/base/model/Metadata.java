@@ -1,6 +1,7 @@
 package com.ouyunc.base.model;
 
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -10,7 +11,8 @@ import java.util.List;
  * @Description: 扩展消息 message, 额外字段数据，内部使用，不对外开放,集群使用
  **/
 public class Metadata implements Serializable, Cloneable {
-
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     /**
      * 平台唯一标识
