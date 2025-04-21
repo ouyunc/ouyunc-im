@@ -43,7 +43,7 @@ public class MongoGroupRequestSessionEntity implements Serializable {
 
 
     /**
-     * 加入方处理状态：0-待处理，1-同意邀请，2-拒绝邀请
+     * 加入方处理状态 GroupJoinerProcessStatus：0-待处理，1-同意邀请，2-拒绝邀请
      */
     @Field("joiner_process_status")
     @Indexed
