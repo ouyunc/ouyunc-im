@@ -3,13 +3,10 @@ package com.ouyunc.repository;
 import com.alibaba.fastjson2.JSON;
 import com.google.common.collect.Lists;
 import com.ouyunc.base.constant.*;
-import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.constant.enums.QosLevelEnum;
-import com.ouyunc.base.model.KeyValuePair;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
-import com.ouyunc.base.packet.message.content.GroupRequestContent;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.core.context.MessageContext;
@@ -17,9 +14,7 @@ import com.ouyunc.db.jdbc.JdbcFactory;
 import com.ouyunc.db.mongo.MongodbFactory;
 import com.ouyunc.domain.base.GroupRequestSession;
 import com.ouyunc.domain.base.RequestSession;
-import com.ouyunc.domain.constants.GroupRequestSessionWay;
 import com.ouyunc.domain.constants.GroupUserPost;
-import com.ouyunc.domain.constants.YesOrNo;
 import com.ouyunc.domain.entity.*;
 import com.ouyunc.mq.kafka.KafkaFactory;
 import org.apache.commons.collections4.CollectionUtils;
@@ -49,6 +44,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -616,12 +612,12 @@ public enum DefaultRepository implements Repository{
      * @return
      */
     @SuppressWarnings("unchecked")
-    public boolean saveJoinFriendRequestMessage(Packet packet, String sessionId, String friendRequestSessionId, long expireTime) {
+    public boolean saveJoinFriendRequestMessage(Packet packet, RequestSession requestSession, long expireTime) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         // 获取原来存在的sessionid
-        return saveFriendRequestMessage(packet, sessionId, friendRequestSessionId, expireTime, (redisOperations, requestSessionId)-> {
-            redisOperations.opsForValue().setIfAbsent(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_SESSION + message.getFrom() + CacheConstant.COLON + message.getTo(), new RequestSession.Builder().sessionId(requestSessionId).progress(MessageConstant.REQUEST_PROGRESS_JOINING).build(), MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+        return saveFriendRequestMessage(packet, requestSession.getSessionId(), expireTime, (redisOperations, requestSessionId)-> {
+            redisOperations.opsForValue().setIfAbsent(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_SESSION + message.getFrom() + CacheConstant.COLON + message.getTo(), requestSession, MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
         });
     }
 
@@ -651,15 +647,14 @@ public enum DefaultRepository implements Repository{
     /**
      * 保存拒绝好友请求,
      * @param packet
-     * @param sessionId
      * @param expireTime
      * @return
      */
     @SuppressWarnings("unchecked")
-    public boolean saveRefuseFriendRequestMessage(Packet packet, String sessionId, String friendRequestSessionId,  long expireTime) {
+    public boolean saveRefuseFriendRequestMessage(Packet packet, RequestSession requestSession,  long expireTime) {
         Message message = packet.getMessage();
-        return saveFriendRequestMessage(packet, sessionId, friendRequestSessionId, expireTime, (redisOperations, requestSessionId)-> {
-            redisOperations.opsForValue().set(CacheConstant.OUYUNC + CacheConstant.APP_KEY + message.getMetadata().getAppKey() + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_SESSION + message.getTo() + CacheConstant.COLON + message.getFrom(), new RequestSession.Builder().sessionId(requestSessionId).progress(MessageConstant.REQUEST_PROGRESS_REFUSEING).build(), MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+        return saveFriendRequestMessage(packet, requestSession.getSessionId(), expireTime, (redisOperations, requestSessionId)-> {
+            redisOperations.opsForValue().set(CacheConstant.OUYUNC + CacheConstant.APP_KEY + message.getMetadata().getAppKey() + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_SESSION + message.getTo() + CacheConstant.COLON + message.getFrom(), requestSession, MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
         });
     }
 
@@ -669,7 +664,7 @@ public enum DefaultRepository implements Repository{
      * @param expireTime 过期时间，单位毫秒，多久后过期
      * @return
      */
-    private boolean saveFriendRequestMessage(Packet packet, String sessionId, String friendRequestSessionId, long expireTime, BiConsumer<RedisOperations,String> consumer) {
+    private boolean saveFriendRequestMessage(Packet packet, String friendRequestSessionId, long expireTime, BiConsumer<RedisOperations,String> consumer) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         redisTemplate.executePipelined(new SessionCallback<>() {
@@ -678,7 +673,7 @@ public enum DefaultRepository implements Repository{
             public <K, V> Object execute(RedisOperations<K, V> operations) throws DataAccessException {
                 String luaScript = LuaScriptConstant.SAVE_MESSAGE_WITHOUT_OFFLINE_LUA_SCRIPT;
                 List<String> keys = Lists.newArrayList(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.MESSAGE + packet.getPacketId(),
-                        CacheConstant.OUYUNC +  CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST + CacheConstant.SESSION + sessionId + CacheConstant.COLON + friendRequestSessionId);
+                        CacheConstant.OUYUNC +  CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST + CacheConstant.SESSION + IdentityUtil.sessionId(message.getFrom(), message.getTo()) + CacheConstant.COLON + friendRequestSessionId);
                 Object[] args = new Object[]{packet, expireTime, packet.getPacketId(), metadata.getServerTime()};
                 // 如果开启qos,并且需要qos
                 if (MessageContext.messageProperties.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
@@ -814,12 +809,12 @@ public enum DefaultRepository implements Repository{
      * @return
      */
     @SuppressWarnings("unchecked")
-    public boolean autoPassBindFriend(Packet packet, String friendRequestSessionId,  long expireTime) {
+    public boolean autoPassBindFriend(Packet packet, RequestSession requestSession,  long expireTime) {
         Message message = packet.getMessage();
         String appKey = message.getMetadata().getAppKey();
         // 获取是否存在sessionId
         // 注意过期时间的设定，与消息 hot key 的过期时间保持一致
-        return bindFriend(appKey, packet, friendRequestSessionId, expireTime, (redisOperations, requestSessionId)-> redisOperations.opsForValue().setIfAbsent(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_SESSION + message.getFrom() + CacheConstant.COLON + message.getTo(), new RequestSession.Builder().sessionId(requestSessionId).progress(MessageConstant.REQUEST_PROGRESS_AGREEING).build(), MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS));
+        return bindFriend(appKey, packet, requestSession.getSessionId(), expireTime, (redisOperations, requestSessionId)-> redisOperations.opsForValue().setIfAbsent(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_SESSION + message.getFrom() + CacheConstant.COLON + message.getTo(), requestSession, MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS));
     }
 
     /**
@@ -829,10 +824,10 @@ public enum DefaultRepository implements Repository{
      * @return
      */
     @SuppressWarnings("unchecked")
-    public boolean agreeBindFriend(String appKey, Packet packet, String friendRequestSessionId, long expireTime) {
+    public boolean agreeBindFriend(String appKey, Packet packet, RequestSession requestSession, long expireTime) {
         Message message = packet.getMessage();
         // 注意过期时间的设定，与消息 hot key 的过期时间保持一致
-        return bindFriend(appKey, packet, friendRequestSessionId, expireTime, (redisOperations, requestSessionId)-> redisOperations.opsForValue().set(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_SESSION + message.getTo() + CacheConstant.COLON + message.getFrom(), new RequestSession.Builder().sessionId(requestSessionId).progress(MessageConstant.REQUEST_PROGRESS_AGREEING).build(), MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS));
+        return bindFriend(appKey, packet, requestSession.getSessionId(), expireTime, (redisOperations, requestSessionId)-> redisOperations.opsForValue().set(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_SESSION + message.getTo() + CacheConstant.COLON + message.getFrom(), requestSession, MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS));
     }
 
 
@@ -885,16 +880,11 @@ public enum DefaultRepository implements Repository{
      * 自动通过绑定群组关系
      * @return
      */
-    public boolean autoPassBindGroup(Packet packet, GroupRequestSessionWay way,  String groupRequestSessionId, long expireTime) {
+    public boolean autoPassBindGroup(Packet packet, GroupRequestSession groupRequestSession, long expireTime) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        // 保存消息
-        KeyValuePair<String, String> joinerAndGroupId = getJoinerAndGroupId(packet, way);
-        if (joinerAndGroupId ==null) {
-            return false;
-        }
-        return bindGroup(packet, joinerAndGroupId.getKey(), joinerAndGroupId.getValue(), groupRequestSessionId, expireTime, (redisOperations, requestSessionId)->{
-            redisOperations.opsForValue().set(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_REQUEST_SESSION + joinerAndGroupId.getKey() + CacheConstant.COLON + joinerAndGroupId.getValue(), new GroupRequestSession.Builder().sessionId(requestSessionId).progress(MessageConstant.REQUEST_PROGRESS_AGREEING).way(way.value()).groupId(joinerAndGroupId.getValue()).joiner(joinerAndGroupId.getKey()).channel((int) NumberConstant.NUMBER_1).build(), MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+        return bindGroup(packet, groupRequestSession.getJoiner(), groupRequestSession.getGroupId(), expireTime, (redisOperations)->{
+            redisOperations.opsForValue().set(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_REQUEST_SESSION + groupRequestSession.getJoiner() + CacheConstant.COLON + groupRequestSession.getGroupId(), groupRequestSession, MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
         });
     }
 
@@ -902,50 +892,15 @@ public enum DefaultRepository implements Repository{
      * 手动通过绑定群组关系
      * @return
      */
-    public boolean manualPassBindGroup(Packet packet, GroupUserEntity processorEntity, GroupRequestSessionWay way,  String groupRequestSessionId, long expireTime) {
+    public boolean manualPassBindGroup(Packet packet,  GroupRequestSession groupRequestSession, long expireTime) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        // 保存消息
-        KeyValuePair<String, String> joinerAndGroupId = getJoinerAndGroupId(packet, way);
-        if (joinerAndGroupId ==null) {
-            return false;
-        }
-        return bindGroup(packet, joinerAndGroupId.getKey(), joinerAndGroupId.getValue(), groupRequestSessionId, expireTime, (redisOperations, requestSessionId)->{
-            redisOperations.opsForValue().set(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_REQUEST_SESSION + joinerAndGroupId.getKey() + CacheConstant.COLON + joinerAndGroupId.getValue(), new GroupRequestSession.Builder().sessionId(requestSessionId).progress(MessageConstant.REQUEST_PROGRESS_AGREEING).way(way.value()).groupId(joinerAndGroupId.getValue()).joiner(joinerAndGroupId.getKey()).processor(message.getFrom()).processorPost(YesOrNo.YES.getCode().equals(processorEntity.getLeader()) ? processorEntity.getLeader() : processorEntity.getManager()).channel((int) NumberConstant.NUMBER_1).build(), MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+        return bindGroup(packet, groupRequestSession.getJoiner(), groupRequestSession.getGroupId(), expireTime, (redisOperations)->{
+            redisOperations.opsForValue().set(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_REQUEST_SESSION + groupRequestSession.getJoiner() + CacheConstant.COLON + groupRequestSession.getGroupId(), groupRequestSession, MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
         });
     }
 
 
-    /**
-     * 获取加入者和群id
-     * @param packet
-     * @param way
-     * @return
-     */
-    private KeyValuePair<String, String> getJoinerAndGroupId(Packet packet, GroupRequestSessionWay way) {
-        Message message =packet.getMessage();
-        // 保存消息
-        String joiner;
-        String groupId;
-        if (GroupRequestSessionWay.ACTIVE.equals(way) || GroupRequestSessionWay.SCAN.equals(way))  {
-            joiner = message.getFrom();
-            groupId = message.getTo();
-        }else if (GroupRequestSessionWay.INVITED.equals(way) || MessageTypeEnum.GROUP_REQUEST_AGREE.getType() == packet.getMessageType()) {
-            try {
-                // 解析邀请内容
-                GroupRequestContent requestContent = JSON.parseObject(message.getContent(), GroupRequestContent.class);
-                groupId = message.getTo();
-                joiner = requestContent.getIdentity();
-            } catch (RuntimeException e) {
-                log.error("解析群组请求内容失败: {}", e.getMessage());
-                return null;
-            }
-        }else {
-            log.error("暂不支持加群方式： {}", way);
-            return null;
-        }
-        return new KeyValuePair<>(joiner, groupId);
-    }
 
 
     /**
@@ -956,7 +911,7 @@ public enum DefaultRepository implements Repository{
      * @return
      */
     @SuppressWarnings("unchecked")
-    private boolean bindGroup(Packet packet, String joiner, String groupId,  String groupRequestSessionId, long expireTime, BiConsumer<RedisOperations, String> consumer) {
+    private boolean bindGroup(Packet packet, String joiner, String groupId, long expireTime, Consumer<RedisOperations> consumer) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         try {
@@ -976,7 +931,7 @@ public enum DefaultRepository implements Repository{
                     operations.opsForZSet().add((K) (CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUPS + joiner), (V) groupId, message.getMetadata().getServerTime());
 
                     // 保存正在处理数据
-                    consumer.accept(operations, groupRequestSessionId);
+                    consumer.accept(operations);
                     return null;
                 }
             });
@@ -991,31 +946,25 @@ public enum DefaultRepository implements Repository{
     /**
      * 保存群组请求消息
      * @param packet
-     * @param groupRequestSessionId
+     * @param groupRequestSession
      * @param expireTime
      * @return
      */
-    public boolean saveJoinGroupRequestMessage(Packet packet, GroupRequestSessionWay way, String groupRequestSessionId, long expireTime) {
+    public boolean saveJoinGroupRequestMessage(Packet packet, GroupRequestSession groupRequestSession, long expireTime) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        // 保存消息
-        KeyValuePair<String, String> joinerAndGroupId = getJoinerAndGroupId(packet, way);
-        if (joinerAndGroupId ==null) {
-            return false;
-        }
-        return saveGroupRequestMessage(packet,joinerAndGroupId.getKey(), joinerAndGroupId.getValue(), groupRequestSessionId, expireTime, (redisOperations, requestSessionId)->{
-            redisOperations.opsForValue().setIfAbsent(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_REQUEST_SESSION + joinerAndGroupId.getKey() + CacheConstant.COLON + joinerAndGroupId.getValue(), new GroupRequestSession.Builder().sessionId(requestSessionId).progress(MessageConstant.REQUEST_PROGRESS_JOINING).way(way.value()).groupId(joinerAndGroupId.getValue()).joiner(joinerAndGroupId.getKey()).channel((int) NumberConstant.NUMBER_1).build(), MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+        return saveGroupRequestMessage(packet, groupRequestSession.getJoiner(), groupRequestSession.getGroupId(), expireTime, (redisOperations)->{
+            redisOperations.opsForValue().setIfAbsent(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_REQUEST_SESSION + groupRequestSession.getJoiner() + CacheConstant.COLON + groupRequestSession.getGroupId(), groupRequestSession, MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
         });
     }
 
     /**
      * 保存群组请求消息
      * @param packet
-     * @param groupRequestSessionId
      * @param expireTime
      * @return
      */
-    public boolean saveGroupRequestMessage(Packet packet, String joiner, String groupId, String groupRequestSessionId, long expireTime, BiConsumer<RedisOperations, String> consumer) {
+    public boolean saveGroupRequestMessage(Packet packet, String joiner, String groupId, long expireTime, Consumer<RedisOperations> consumer) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         redisTemplate.executePipelined(new SessionCallback<>() {
@@ -1032,7 +981,7 @@ public enum DefaultRepository implements Repository{
                 }
                 operations.execute(new DefaultRedisScript<>(luaScript, Boolean.class), (List<K>) keys, args);
                 // 保存正在处理数据
-                consumer.accept(operations, groupRequestSessionId);
+                consumer.accept(operations);
                 return null;
             }
         });
@@ -1046,15 +995,11 @@ public enum DefaultRepository implements Repository{
      * @param expireTime 过期时间，单位毫秒，多久后过期
      * @return
      */
-    public boolean batchSaveJoinGroupRequestMessage(Packet packet, GroupRequestSessionWay way, Set<String> groupUserIdentitySet, String groupRequestSessionId, long expireTime) {
+    public boolean batchSaveJoinGroupRequestMessage(Packet packet, Set<String> groupUserIdentitySet, GroupRequestSession groupRequestSession, long expireTime) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        KeyValuePair<String, String> joinerAndGroupId = getJoinerAndGroupId(packet, way);
-        if (joinerAndGroupId ==null) {
-            return false;
-        }
-        return batchSaveGroupRequestMessage(packet,joinerAndGroupId.getKey(), joinerAndGroupId.getValue(), groupUserIdentitySet, groupRequestSessionId, expireTime, (redisOperations, requestSessionId)->{
-            redisOperations.opsForValue().setIfAbsent(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_REQUEST_SESSION + joinerAndGroupId.getKey() + CacheConstant.COLON + joinerAndGroupId.getValue(), new GroupRequestSession.Builder().sessionId(requestSessionId).progress(MessageConstant.REQUEST_PROGRESS_JOINING).way(way.value()).groupId(joinerAndGroupId.getValue()).joiner(joinerAndGroupId.getKey()).channel((int) NumberConstant.NUMBER_1).build(), MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+        return batchSaveGroupRequestMessage(packet,groupRequestSession.getJoiner(), groupRequestSession.getGroupId(), groupUserIdentitySet, expireTime, (redisOperations)->{
+            redisOperations.opsForValue().setIfAbsent(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_REQUEST_SESSION + groupRequestSession.getJoiner() + CacheConstant.COLON + groupRequestSession.getGroupId(), groupRequestSession, MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
         });
     }
 
@@ -1064,7 +1009,7 @@ public enum DefaultRepository implements Repository{
      * @param expireTime 过期时间，单位毫秒，多久后过期
      * @return
      */
-    public boolean batchSaveGroupRequestMessage(Packet packet, String joiner, String groupId, Set<String> groupUserIdentitySet, String groupRequestSessionId, long expireTime, BiConsumer<RedisOperations, String> consumer) {
+    public boolean batchSaveGroupRequestMessage(Packet packet, String joiner, String groupId, Set<String> groupUserIdentitySet, long expireTime, Consumer<RedisOperations> consumer) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         redisTemplate.executePipelined(new SessionCallback<>() {
@@ -1085,7 +1030,7 @@ public enum DefaultRepository implements Repository{
                 args.add(metadata.getAppKey());
                 args.add(message.getTo());
                 operations.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_SAVE_MESSAGE_LUA_SCRIPT, Boolean.class), (List<K>) keys, args.toArray());
-                consumer.accept(operations, groupRequestSessionId);
+                consumer.accept(operations);
                 return null;
             }
         });

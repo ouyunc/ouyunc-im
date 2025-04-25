@@ -52,22 +52,6 @@ public class MessageConstant {
      */
     public static final int NUMBER_10000 = 10000;
 
-    /**
-     * 请求进度，添加中
-     */
-    public static final int REQUEST_PROGRESS_JOINING = -1;
-
-
-    /**
-     * 请求进度，拒绝中
-     */
-    public static final int REQUEST_PROGRESS_REFUSEING = 0;
-
-    /**
-     * 请求进度，同意中
-     */
-    public static final int REQUEST_PROGRESS_AGREEING = 1;
-
 
     /**
      * 一天的时间戳 毫秒

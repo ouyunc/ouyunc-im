@@ -16,6 +16,7 @@ import com.ouyunc.base.packet.message.content.GroupRequestContent;
 import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.domain.base.GroupRequestSession;
 import com.ouyunc.domain.constants.GroupRequestSessionWay;
+import com.ouyunc.domain.constants.RequestSessionProgress;
 import com.ouyunc.domain.entity.GroupUserEntity;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
@@ -29,6 +30,7 @@ import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -84,10 +86,8 @@ public final class GroupAgreeMessageProcessor extends AbstractMessageProcessor<B
         if (log.isDebugEnabled()) {
             log.debug("GroupAgreeMessageProcessor 正在处理外部客户端加群 {} ...", packet);
         }
-
         // 1. 保存消息
         Message message = packet.getMessage();
-        String from = message.getFrom();
         // 判断消息内容类型是否是群请求类型
         if (MessageContentTypeEnum.GROUP_REQUEST_CONTENT.getType() != message.getContentType()) {
             log.error("消息内容类型:{} 不是群请求类型，请检查消息内容类型是否正确", message.getContentType());
@@ -108,7 +108,7 @@ public final class GroupAgreeMessageProcessor extends AbstractMessageProcessor<B
             if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
                 // 获取请求会话
                 GroupRequestSession groupRequestSession = repository().getGroupRequestSession(appKey, content.getIdentity(), message.getTo());
-                if (null == groupRequestSession || groupRequestSession.getProgress() != MessageConstant.REQUEST_PROGRESS_JOINING) {
+                if (null == groupRequestSession || !Objects.equals(groupRequestSession.getProgress(), RequestSessionProgress.JOINING.value())) {
                     log.warn("{} 和 {} 会话请求不存在正在处理中的群请求，或者存在有还未结束的同意或拒绝处理", content.getIdentity(), message.getTo());
                     return;
                 }
@@ -125,13 +125,8 @@ public final class GroupAgreeMessageProcessor extends AbstractMessageProcessor<B
                 // 获取当前群的管理员和群主，进行加群消息的推送
                 Set<String> groupMannerOrLeaderUsersIdentitySet = Sets.newHashSet();
                 Set<GroupUserEntity> groupManagerAndLeaderUserEntitySet = repository().groupManagerAndLeaderUserEntity(packet);
-                GroupUserEntity fromUserEntity = null;
                 for (GroupUserEntity groupUserEntity : groupManagerAndLeaderUserEntitySet) {
-                    String userIdentity = groupUserEntity.getUserId().toString();
-                    groupMannerOrLeaderUsersIdentitySet.add(userIdentity);
-                    if (from.equals(userIdentity)) {
-                        fromUserEntity = groupUserEntity;
-                    }
+                    groupMannerOrLeaderUsersIdentitySet.add(groupUserEntity.getUserId().toString());
                 }
                 if (CollectionUtils.isEmpty(groupMannerOrLeaderUsersIdentitySet)) {
                     // 这个群里没有群主或者群管理员，群里面必须有且仅有一个群主
@@ -139,17 +134,15 @@ public final class GroupAgreeMessageProcessor extends AbstractMessageProcessor<B
                     MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群主和群管理员", packet), true);
                     return;
                 }
-                if (fromUserEntity == null) {
-                    log.error("处理人：{} 在群中不是管理员或群主，没有权限处理", from);
-                    return;
-                }
                 // 如果有群主或群管理员，则发送消息给群主或群管理员， 排除自己,如果返回false 说明处理人不是管理员
-                if (groupMannerOrLeaderUsersIdentitySet.remove(message.getFrom())) {
+                if (!groupMannerOrLeaderUsersIdentitySet.remove(message.getFrom())) {
                     log.error("处理人不是管理员或群主：{} 不允许处理", message.getFrom());
                     return;
                 }
+                // 设置进度
+                groupRequestSession.setProgress(RequestSessionProgress.AGREEING.value());
                 // 群自动同意，不再给群主和管理员保存离线消息
-                if (!repository().manualPassBindGroup(packet, fromUserEntity,  way, groupRequestSession.getSessionId(), MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
+                if (!repository().manualPassBindGroup(packet, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
                     log.error("手动处理绑定群组失败: {}", packet);
                     MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "手动绑定群组请求消息异常!", packet), true);
                     return;

@@ -47,6 +47,9 @@ public class GroupRequestSession extends RequestSession{
      */
     private Integer channel;
 
+    public static GroupRequestSession.Builder newGroupBuilder() {
+        return new GroupRequestSession.Builder();
+    }
 
     public static class Builder {
         private String sessionId;

@@ -14,6 +14,7 @@ import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.domain.base.GroupRequestSession;
 import com.ouyunc.domain.constants.GroupRequestSessionWay;
+import com.ouyunc.domain.constants.RequestSessionProgress;
 import com.ouyunc.domain.entity.GroupUserEntity;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
@@ -27,6 +28,7 @@ import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -105,7 +107,7 @@ public final class GroupRefuseMessageProcessor extends AbstractMessageProcessor<
             if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
                 // 获取请求会话
                 GroupRequestSession groupRequestSession = repository().getGroupRequestSession(appKey, content.getIdentity(), message.getTo());
-                if (null == groupRequestSession || groupRequestSession.getProgress() != MessageConstant.REQUEST_PROGRESS_JOINING) {
+                if (null == groupRequestSession || !Objects.equals(groupRequestSession.getProgress(), RequestSessionProgress.JOINING.value())) {
                     log.warn("{} 和 {} 会话请求不存在正在处理中的群请求，或者存在有还未结束的同意或拒绝处理", content.getIdentity(), message.getTo());
                     return;
                 }
@@ -122,13 +124,8 @@ public final class GroupRefuseMessageProcessor extends AbstractMessageProcessor<
                 // 获取当前群的管理员和群主，进行加群消息的推送
                 Set<String> groupMannerOrLeaderUsersIdentitySet = Sets.newHashSet();
                 Set<GroupUserEntity> groupManagerAndLeaderUserEntitySet = repository().groupManagerAndLeaderUserEntity(packet);
-                GroupUserEntity fromUserEntity = null;
                 for (GroupUserEntity groupUserEntity : groupManagerAndLeaderUserEntitySet) {
-                    String userIdentity = groupUserEntity.getUserId().toString();
-                    groupMannerOrLeaderUsersIdentitySet.add(userIdentity);
-                    if (from.equals(userIdentity)) {
-                        fromUserEntity = groupUserEntity;
-                    }
+                    groupMannerOrLeaderUsersIdentitySet.add(groupUserEntity.getUserId().toString());
                 }
                 if (CollectionUtils.isEmpty(groupMannerOrLeaderUsersIdentitySet)) {
                     // 这个群里没有群主或者群管理员，群里面必须有且仅有一个群主
@@ -136,17 +133,15 @@ public final class GroupRefuseMessageProcessor extends AbstractMessageProcessor<
                     MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群主和群管理员", packet), true);
                     return;
                 }
-                if (fromUserEntity == null) {
-                    log.error("处理人：{} 在群中不是管理员或群主，没有权限处理", from);
-                    return;
-                }
                 // 如果有群主或群管理员，则发送消息给群主或群管理员， 排除自己,如果返回false 说明处理人不是管理员
-                if (groupMannerOrLeaderUsersIdentitySet.remove(message.getFrom())) {
+                if (!groupMannerOrLeaderUsersIdentitySet.remove(message.getFrom())) {
                     log.error("处理人不是管理员或群主：{} 不允许处理", message.getFrom());
                     return;
                 }
+                // 设置进度
+                groupRequestSession.setProgress(RequestSessionProgress.REFUSEING.value());
                 // 保存请求信息
-                if (!saveGroupRequestMessage(packet, way, groupMannerOrLeaderUsersIdentitySet, groupRequestSession.getSessionId())) {
+                if (!saveGroupRequestMessage(packet, groupMannerOrLeaderUsersIdentitySet, groupRequestSession)) {
                     log.error("Failed to save  refuse group request message: {}", packet);
                     MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存拒绝加群请求消息异常!", packet), true);
                     return;
@@ -186,14 +181,14 @@ public final class GroupRefuseMessageProcessor extends AbstractMessageProcessor<
     /**
      * 保存群组消息
      */
-    private boolean saveGroupRequestMessage(Packet packet, GroupRequestSessionWay way, Set<String> groupMembers, String groupRequestSessionId) {
+    private boolean saveGroupRequestMessage(Packet packet, Set<String> groupMembers, GroupRequestSession groupRequestSession) {
         Message message = packet.getMessage();
         if (MessageContext.messageProperties.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
             // 保存需要qos
-            return repository().batchSaveJoinGroupRequestMessage(packet, way, groupMembers, groupRequestSessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
+            return repository().batchSaveJoinGroupRequestMessage(packet, groupMembers, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
         }
         // 保存，不需要qos
-        return repository().saveJoinGroupRequestMessage(packet, way, groupRequestSessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
+        return repository().saveJoinGroupRequestMessage(packet, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
     }
 
 }

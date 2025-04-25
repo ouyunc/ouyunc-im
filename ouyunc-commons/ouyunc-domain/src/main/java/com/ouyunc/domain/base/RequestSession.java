@@ -50,6 +50,9 @@ public class RequestSession implements Serializable {
         this.progress = progress;
     }
 
+    public static RequestSession.Builder newBuilder() {
+        return new Builder();
+    }
     public static class Builder {
         private String sessionId;
         private Integer progress;

@@ -12,6 +12,7 @@ import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.domain.base.RequestSession;
+import com.ouyunc.domain.constants.RequestSessionProgress;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
@@ -27,6 +28,7 @@ import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -100,7 +102,7 @@ public final class One2OneRefuseFriendRequestMessageProcessor extends AbstractMe
             if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
                 // 获取请求会话
                 RequestSession requestSession = repository().getFriendRequestSession(appKey, message.getTo(), message.getFrom());
-                if (null == requestSession || requestSession.getProgress() != MessageConstant.REQUEST_PROGRESS_JOINING) {
+                if (null == requestSession || !Objects.equals(requestSession.getProgress(), RequestSessionProgress.JOINING.value())) {
                     log.warn("不存在加好友请求记录或存在正在处理的好友请求，该消息忽略");
                     return;
                 }
@@ -109,7 +111,7 @@ public final class One2OneRefuseFriendRequestMessageProcessor extends AbstractMe
                     log.warn("已经是好友, 请知悉; {}" ,packet);
                     return;
                 }
-                if (!repository().saveRefuseFriendRequestMessage(packet, sessionId, requestSession.getSessionId(), MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
+                if (!repository().saveRefuseFriendRequestMessage(packet, requestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
                     log.error("Failed to save one-to-one refuse friend request message: {}", packet);
                     MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一拒绝好友请求消息异常!", packet), true);
                     return;

@@ -13,6 +13,7 @@ import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.utils.SnowflakeUtil;
 import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.domain.base.RequestSession;
+import com.ouyunc.domain.constants.RequestSessionProgress;
 import com.ouyunc.domain.constants.YesOrNo;
 import com.ouyunc.domain.entity.UserEntity;
 import com.ouyunc.message.context.MessageServerContext;
@@ -103,7 +104,7 @@ public final class One2OneJoinFriendRequestMessageProcessor extends AbstractMess
             if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
                 // 获取请求会话
                 RequestSession requestSession = repository().getFriendRequestSession(appKey, message.getFrom(), message.getTo());
-                if (null != requestSession && requestSession.getProgress() > MessageConstant.REQUEST_PROGRESS_JOINING) {
+                if (null != requestSession && requestSession.getProgress() > RequestSessionProgress.JOINING.value()) {
                     log.warn("{} 和 {} 会话存在正在处理中的好友请求，拒绝和同意还未结束处理", message.getFrom(), message.getTo());
                     return;
                 }
@@ -119,18 +120,26 @@ public final class One2OneJoinFriendRequestMessageProcessor extends AbstractMess
                     MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.USER_NOT_EXIST, message.getTo() + "用户不存在！", packet));
                     return;
                 }
+                // 尝试设置请求会话信息
+                if (requestSession == null) {
+                    requestSession = RequestSession.newBuilder().sessionId(SnowflakeUtil.nextIdStr()).build();
+                }
                 // 判断对方是否是自动同意加好友
                 if (YesOrNo.YES.getCode().equals(toUserEntity.getFriendJoinPolicy())) {
+                    requestSession.setProgress(RequestSessionProgress.AGREEING.value());
                     // 是自动添加好友
-                    if (!repository().autoPassBindFriend(packet, requestSession == null ? String.valueOf(SnowflakeUtil.nextId()) : requestSession.getSessionId(), MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
+                    if (!repository().autoPassBindFriend(packet, requestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
                         log.error("自动处理绑定好友失败: {}", packet);
                         MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一自动绑定好友请求消息异常!", packet), true);
                         return;
                     }
-                }else if (!repository().saveJoinFriendRequestMessage(packet, sessionId, requestSession == null ? String.valueOf(SnowflakeUtil.nextId()) : requestSession.getSessionId(), MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
-                    log.error("Failed to save one-to-one join friend request message: {}", packet);
-                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一加好友请求消息异常!", packet), true);
-                    return;
+                }else {
+                    requestSession.setProgress(RequestSessionProgress.JOINING.value());
+                    if (!repository().saveJoinFriendRequestMessage(packet, requestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
+                        log.error("Failed to save one-to-one join friend request message: {}", packet);
+                        MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一加好友请求消息异常!", packet), true);
+                        return;
+                    }
                 }
                 // 这里不保存到session 缓存中,保存到临时的会话消息中，该好友请求的消息可以对其进行定期清理；这里考虑个问题，到底是先发mq还是先等方法处理完再发mq， 这个发消息虽然是异步的但是里面并没有操作资源，所以对锁没影响，不用特别考虑
                 repository().savePacket2Mq(MqConstant.KAFKA_FRIEND_REQUEST_TOPIC, sessionId, packet).whenComplete((result, ex) ->{

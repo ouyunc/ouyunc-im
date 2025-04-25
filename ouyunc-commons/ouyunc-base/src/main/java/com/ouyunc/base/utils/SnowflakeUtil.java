@@ -79,6 +79,15 @@ public class SnowflakeUtil {
         return ((now - START_TIME) << TIME_LEFT_BIT) | (DATA_ID << DATA_LEFT_BIT) | (WORK_ID << WORK_LEFT_BIT) | LAST_SEQ;
     }
 
+    /**
+     * @Author fangzhenxun
+     * @Description  生成雪花id
+     * @return long
+     **/
+    public static String nextIdStr(){
+        return String.valueOf(nextId());
+    }
+
 
     /**
      * 获取下一不同毫秒的时间戳，不能与最后的时间戳一样
