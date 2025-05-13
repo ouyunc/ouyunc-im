@@ -4,7 +4,6 @@ package com.ouyunc.domain.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import org.springframework.data.mongodb.core.mapping.Field;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -91,6 +90,13 @@ public class GroupUserEntity implements Serializable {
     * 创建时间
     */
     private LocalDateTime createTime;
+
+
+    public static final class Fields {
+        public static final String id = "id";
+        public static final String groupId = "group_id";
+        public static final String userId = "user_id";
+    }
 
     public GroupUserEntity() {
     }

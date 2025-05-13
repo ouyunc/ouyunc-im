@@ -1,7 +1,6 @@
 package com.ouyunc.message.processor;
 
 import com.alibaba.fastjson2.JSON;
-import com.google.common.collect.Sets;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
@@ -15,7 +14,6 @@ import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.domain.base.GroupRequestSession;
 import com.ouyunc.domain.constants.GroupRequestSessionWay;
 import com.ouyunc.domain.constants.RequestSessionProgress;
-import com.ouyunc.domain.entity.GroupUserEntity;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
@@ -122,11 +120,7 @@ public final class GroupRefuseMessageProcessor extends AbstractMessageProcessor<
                     return;
                 }
                 // 获取当前群的管理员和群主，进行加群消息的推送
-                Set<String> groupMannerOrLeaderUsersIdentitySet = Sets.newHashSet();
-                Set<GroupUserEntity> groupManagerAndLeaderUserEntitySet = repository().groupManagerAndLeaderUserEntity(packet);
-                for (GroupUserEntity groupUserEntity : groupManagerAndLeaderUserEntitySet) {
-                    groupMannerOrLeaderUsersIdentitySet.add(groupUserEntity.getUserId().toString());
-                }
+                Set<String> groupMannerOrLeaderUsersIdentitySet = repository().groupManagerAndLeaderUsersIdentity(packet);
                 if (CollectionUtils.isEmpty(groupMannerOrLeaderUsersIdentitySet)) {
                     // 这个群里没有群主或者群管理员，群里面必须有且仅有一个群主
                     log.error("群组：{}, 不存在群主！群消息： {}", packet.getMessage().getTo(), packet);
@@ -135,7 +129,7 @@ public final class GroupRefuseMessageProcessor extends AbstractMessageProcessor<
                 }
                 // 如果有群主或群管理员，则发送消息给群主或群管理员， 排除自己,如果返回false 说明处理人不是管理员
                 if (!groupMannerOrLeaderUsersIdentitySet.remove(message.getFrom())) {
-                    log.error("处理人不是管理员或群主：{} 不允许处理", message.getFrom());
+                    log.warn("处理人不是管理员或群主：{} 不允许处理", message.getFrom());
                     return;
                 }
                 // 设置进度
@@ -185,10 +179,10 @@ public final class GroupRefuseMessageProcessor extends AbstractMessageProcessor<
         Message message = packet.getMessage();
         if (MessageContext.messageProperties.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
             // 保存需要qos
-            return repository().batchSaveJoinGroupRequestMessage(packet, groupMembers, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
+            return repository().batchSaveRefuseGroupRequestMessage(packet, groupMembers, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
         }
         // 保存，不需要qos
-        return repository().saveJoinGroupRequestMessage(packet, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
+        return repository().saveRefuseGroupRequestMessage(packet, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
     }
 
 }

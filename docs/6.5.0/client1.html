@@ -52,14 +52,14 @@ socket.onopen = (e) => {
             // 消息
             message: {
                 // 消息发送方唯一标识，建议使用用户id
-                from: '18888888888',
+                from: '19999999999',
                 // 消息接收方唯一标识，这里是登录，接受者是服务器，值可以为空串
                 to: '',
                 // 消息内容类型
                 contentType: -2,
                 // 消息内容content 是string 类型
                 content: JSON.stringify({
-                    identity: '18888888888',
+                    identity: '19999999999',
                     appKey: 'ouyunc',
                     signatureAlgorithm: 1,//md5
                     signature: '123456',
@@ -87,21 +87,26 @@ socket.onmessage = ({
     if (messageType === -128 && message.contentType === -4) {
         let packet = socket.send({
             // 登录消息类型，
-            messageType: -8,
+            messageType: -14,
             // 消息
             message: {
                 // 消息发送方唯一标识，建议使用用户id
-                from: '18888888888',
+                from: '19999999999',
                 // 消息接收方唯一标识，这里是登录，接受者是服务器，值可以为空串
-                to: '19999999999',
+                to: '123456',
                 // 消息内容类型
-                contentType: -128,
+                contentType: -8,
                 //at: ['18888888888','16666666666'],
                 //ref: ['123','456'],
                 qos: 1,
                 // 消息内容content 是string 类型9223372036854775807
                 //content: JSON.stringify(['304471782521737216','304471826142498816']),
-                content: '我是18888888888，请求添加好友',
+                content: JSON.stringify({
+                    // 加入者
+                    identity: '15555555555',
+                    // 内容
+                    content: '我不同意17777777777的加群申请'
+                }),
                 extra: '我是额外信息',
                 createTime: new Date().getTime()
             }

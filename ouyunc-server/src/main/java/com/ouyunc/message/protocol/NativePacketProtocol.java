@@ -348,6 +348,7 @@ public enum NativePacketProtocol implements PacketProtocol {
             //从用户注册表中，获取用户对应的channel然后将消息写出去
             ChannelHandlerContext ctx = MessageServerContext.localClientRegisterTable.get(to);
             if (ctx == null) {
+                // 注意：如果走到了这里，可能是客户端注销了，qos 在重试，找不到ctx
                 log.error("发送消息时，ctx 不存在； 请检查客户端 {} 是否登录", to);
                 SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(new MessageException("发送消息时，ctx 不存在； 请检查客户端是否登录")).build();
                 sendCallback.onCallback(sendResult);

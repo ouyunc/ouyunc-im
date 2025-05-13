@@ -38,7 +38,7 @@ public enum GroupUserValidator implements ReactiveValidator<Packet> {
         // 判断是否是群成员
         Mono<Double> scoreMono = reactiveRedisTemplate.opsForZSet().score(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_USERS + to, from);
         return scoreMono.flatMap(score -> {
-                    if (score != null && score > NumberConstant.NUMBER_0) {
+                    if (score != null) {
                         // 如果有分数，说明是群成员
                         return Mono.just(true);
                     }

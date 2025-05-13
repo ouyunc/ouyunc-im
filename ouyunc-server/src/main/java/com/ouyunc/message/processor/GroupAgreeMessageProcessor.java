@@ -123,11 +123,7 @@ public final class GroupAgreeMessageProcessor extends AbstractMessageProcessor<B
                     return;
                 }
                 // 获取当前群的管理员和群主，进行加群消息的推送
-                Set<String> groupMannerOrLeaderUsersIdentitySet = Sets.newHashSet();
-                Set<GroupUserEntity> groupManagerAndLeaderUserEntitySet = repository().groupManagerAndLeaderUserEntity(packet);
-                for (GroupUserEntity groupUserEntity : groupManagerAndLeaderUserEntitySet) {
-                    groupMannerOrLeaderUsersIdentitySet.add(groupUserEntity.getUserId().toString());
-                }
+                Set<String> groupMannerOrLeaderUsersIdentitySet = repository().groupManagerAndLeaderUsersIdentity(packet);
                 if (CollectionUtils.isEmpty(groupMannerOrLeaderUsersIdentitySet)) {
                     // 这个群里没有群主或者群管理员，群里面必须有且仅有一个群主
                     log.error("群组：{}, 不存在群主！群消息： {}", packet.getMessage().getTo(), packet);

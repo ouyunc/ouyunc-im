@@ -102,7 +102,7 @@ public final class GroupInviteJoinMessageProcessor extends AbstractMessageProces
                 // 获取请求会话
                 GroupRequestSession groupRequestSession = repository().getGroupRequestSession(appKey, content.getIdentity(), message.getTo());
                 if (null != groupRequestSession && (groupRequestSession.getProgress() > RequestSessionProgress.JOINING.value() || !GroupRequestSessionWay.INVITED.value().equals(groupRequestSession.getWay()))) {
-                    log.warn("{} 和 {} 会话请求存在正在处理中的群请求，拒绝或同意还未结束处理", message.getFrom(), message.getTo());
+                    log.warn("{} 和 {} 存在正在处理中的群会话请求(拒绝或同意还未结束处理)", content.getIdentity(), message.getTo());
                     return;
                 }
                 if (repository().inGroup(appKey, content.getIdentity(), message.getTo())) {
