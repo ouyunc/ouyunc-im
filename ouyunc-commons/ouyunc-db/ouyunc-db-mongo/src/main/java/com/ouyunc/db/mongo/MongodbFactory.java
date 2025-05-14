@@ -13,9 +13,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.data.convert.Jsr310Converters;
 import org.springframework.data.mongodb.MongoDatabaseFactory;
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.SimpleMongoClientDatabaseFactory;
-import org.springframework.data.mongodb.core.WriteResultChecking;
+import org.springframework.data.mongodb.ReactiveMongoDatabaseFactory;
+import org.springframework.data.mongodb.core.*;
 import org.springframework.data.mongodb.core.convert.*;
 import org.springframework.data.mongodb.core.mapping.MongoMappingContext;
 
@@ -31,6 +30,9 @@ import java.util.concurrent.TimeUnit;
  * @description: mongodb 工厂
  */
 public enum MongodbFactory {
+
+
+
 
     MONGODB_TEMPLATE (NumberConstant.NUMBER_1, "mongodb v1.0操作模板"){
         // 默认mongo库名,加载配置文件的时候会有一个默认值来进行初始化，如果不传数据库名称，则使用默认的数据库来操作
@@ -164,12 +166,155 @@ public enum MongodbFactory {
             MappingMongoConverter converter = new MappingMongoConverter(dbRefResolver, mappingContext);
             converter.setCustomConversions(conversions);
             converter.setTypeMapper(new DefaultMongoTypeMapper(null)); // 禁用_class
+            converter.setCodecRegistryProvider(mongoDatabaseFactory);
             converter.afterPropertiesSet();
 
             return converter;
         }
 
+    },
+
+    // 响应式mongodb v1.0操作模板
+    REACTIVE_MONGODB_TEMPLATE (NumberConstant.NUMBER_1, "响应式mongodb v1.0操作模板"){
+        // 默认mongo库名,加载配置文件的时候会有一个默认值来进行初始化，如果不传数据库名称，则使用默认的数据库来操作
+        private static String DEFAULT_DATABASE_NAME = "ouyunc";
+
+        // mongodb 属性配置文件
+        private static final MongodbProperties mongodbProperties;
+
+        // mongodb 库名-操作模板 map
+        private static final ConcurrentHashMap<String, ReactiveMongoTemplate> mongoTemplateMap = new ConcurrentHashMap<>();
+
+        /**
+         * 使用默认的mongodb 数据库名进行操作
+         */
+        @Override
+        public ReactiveMongoTemplate instance() {
+            return instance(DEFAULT_DATABASE_NAME);
+        }
+
+        static {
+            // 判断配置文件中的默认数据库名称是否为空，如果不为空则使用配置文件中的默认数据库名称
+            mongodbProperties = YmlUtil.getActiveProfileValue(PropertiesConfigConstant.GLOBAL_CONFIG_FILE_LOCATION, PropertiesConfigConstant.MONGODB_CONFIG_PROPERTIES_PREFIX, MongodbProperties.class);
+            if (mongodbProperties != null) {
+                if (StringUtils.isNotBlank(mongodbProperties.getDefaultDatabase())) {
+                    DEFAULT_DATABASE_NAME = mongodbProperties.getDefaultDatabase();
+                }
+            }else {
+                throw new RuntimeException("获取mongodb配置文件失败");
+            }
+        }
+        /**
+         * 使用指定的数据库名称来进行操作数据
+         */
+        @Override
+        public ReactiveMongoTemplate instance(String databaseName) {
+            // 进行配置mongoTemplate 的初始化
+            ReactiveMongoTemplate reactiveMongoTemplate = mongoTemplateMap.get(databaseName);
+            if (reactiveMongoTemplate == null) {
+                synchronized (MongodbFactory.class) {
+                    if (mongoTemplateMap.get(databaseName) == null) {
+                        mongoTemplateMap.put(databaseName, reactiveMongoTemplate = createMongoTemplate(databaseName));
+                    }
+                }
+            }
+            if (reactiveMongoTemplate == null) {
+                log.error("template 配置失败");
+                throw new RuntimeException("template 配置失败");
+            }
+            return reactiveMongoTemplate;
+        }
+
+        private ReactiveMongoTemplate createMongoTemplate(String databaseName) {
+            // 创建MongoDB客户端配置
+            MongoClientSettings settings = createMongoClientSettings();
+            com.mongodb.reactivestreams.client.MongoClient mongoClient = com.mongodb.reactivestreams.client.MongoClients.create(settings);
+            // 创建自定义转换器
+            ReactiveMongoDatabaseFactory mongoDatabaseFactory = new SimpleReactiveMongoDatabaseFactory(mongoClient, databaseName);
+            MappingMongoConverter converter = createMongoConverter(mongoDatabaseFactory);
+            // 创建并配置MongoTemplate
+            ReactiveMongoTemplate template = new ReactiveMongoTemplate(mongoDatabaseFactory, converter);
+            // 设置写入关注
+            template.setWriteConcern(WriteConcern.MAJORITY);
+            // 设置读取首选项
+            template.setReadPreference(ReadPreference.primary());
+            // 设置写入结果检查模式
+            template.setWriteResultChecking(WriteResultChecking.EXCEPTION);
+            return template;
+        }
+
+        private static MongoClientSettings createMongoClientSettings() {
+            return MongoClientSettings.builder()
+                    // ===== 基本连接配置 =====
+                    .applyConnectionString(new ConnectionString(mongodbProperties.getUri()))
+
+                    // ===== 连接池配置 =====
+                    .applyToConnectionPoolSettings(builder -> {
+                        builder.maxSize(mongodbProperties.getPool().getMaxSize())
+                                .minSize(mongodbProperties.getPool().getMinSize())
+                                .maxWaitTime(mongodbProperties.getPool().getMaxWaitTime(),
+                                        TimeUnit.MILLISECONDS)
+                                .maxConnectionLifeTime(mongodbProperties.getPool().getMaxLifeTime(),
+                                        TimeUnit.MILLISECONDS)
+                                .maxConnectionIdleTime(mongodbProperties.getPool().getMaxIdleTime(),
+                                        TimeUnit.MILLISECONDS)
+                                .maintenanceInitialDelay(mongodbProperties.getPool().getMaintenanceInitialDelay(), TimeUnit.MILLISECONDS)
+                                .maintenanceFrequency(mongodbProperties.getPool().getMaintenanceFrequency(), TimeUnit.MINUTES)
+                                .maxConnecting(mongodbProperties.getPool().getMaxConnecting());
+                    })
+
+
+                    // ===== 压缩设置 =====
+                    .compressorList(Arrays.asList(
+                            MongoCompressor.createZlibCompressor(),
+                            MongoCompressor.createSnappyCompressor(),
+                            MongoCompressor.createZstdCompressor()
+                    ))
+
+                    // ===== 重试写入设置 =====
+                    .retryWrites(true)
+                    .retryReads(true)
+
+                    // ===== 写入关注 =====
+                    .writeConcern(WriteConcern.MAJORITY
+                            .withJournal(true)
+                            .withWTimeout(1000, TimeUnit.MILLISECONDS))
+
+                    // ===== 读取首选项 =====
+                    .readPreference(ReadPreference.primaryPreferred())
+
+                    // ===== 读取关注 =====
+                    .readConcern(ReadConcern.MAJORITY)
+                    .build();
+        }
+
+        private static MappingMongoConverter createMongoConverter(ReactiveMongoDatabaseFactory mongoDatabaseFactory) {
+            // 创建自定义转换器列表
+            // 时间转换器
+            List<Converter<?, ?>> converters = new ArrayList<>(Jsr310Converters.getConvertersToRegister());
+            // 创建自定义转换服务
+            MongoCustomConversions conversions = new MongoCustomConversions(converters);
+            // 创建映射上下文
+            MongoMappingContext mappingContext = new MongoMappingContext();
+            mappingContext.setSimpleTypeHolder(conversions.getSimpleTypeHolder());
+            mappingContext.setAutoIndexCreation(true);
+            mappingContext.afterPropertiesSet();
+
+            // 创建DbRefResolver
+            // 创建并配置MappingMongoConverter
+            MappingMongoConverter converter = new MappingMongoConverter(NoOpDbRefResolver.INSTANCE, mappingContext);
+            converter.setCustomConversions(conversions);
+            converter.setTypeMapper(new DefaultMongoTypeMapper(null)); // 禁用_class
+            converter.setCodecRegistryProvider(mongoDatabaseFactory);
+            converter.afterPropertiesSet();
+
+            return converter;
+        }
     };
+
+
+
+    ;
     private final int version;
     private final String description;
 
@@ -189,8 +334,8 @@ public enum MongodbFactory {
 
     private static final Logger log = LoggerFactory.getLogger(MongodbFactory.class);
 
-    public abstract MongoTemplate instance();
+    public abstract<T> T instance();
 
-    public abstract MongoTemplate instance(String databaseName);
+    public abstract<T> T instance(String databaseName);
 
 }

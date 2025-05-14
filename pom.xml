@@ -348,9 +348,17 @@
         <version>${spring-mongodb.version}</version>
       </dependency>
 
+      <!--同步-->
       <dependency>
         <groupId>org.mongodb</groupId>
         <artifactId>mongodb-driver-sync</artifactId>
+        <version>${mongodb-driver.version}</version>
+      </dependency>
+      <!--异步-->
+      <!-- https://mvnrepository.com/artifact/org.mongodb/mongodb-driver-reactivestreams -->
+      <dependency>
+        <groupId>org.mongodb</groupId>
+        <artifactId>mongodb-driver-reactivestreams</artifactId>
         <version>${mongodb-driver.version}</version>
       </dependency>
       <!--mongo 压缩-->
