@@ -141,6 +141,7 @@ public final class GroupAgreeMessageProcessor extends AbstractMessageProcessor<B
                     MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, message.getFrom() + "不在群组中！", packet));
                     return;
                 }
+                // todo 判断是否是邀请的同意，如果是的话，再此判断被邀请人是否同意，如果同意了才可以别人来处理添加群请求
                 // 设置进度
                 groupRequestSession.setProgress(RequestSessionProgress.AGREEING.value());
                 // 设置处理人

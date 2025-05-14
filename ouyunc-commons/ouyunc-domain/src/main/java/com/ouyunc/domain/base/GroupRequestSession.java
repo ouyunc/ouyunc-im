@@ -30,6 +30,10 @@ public class GroupRequestSession extends RequestSession{
      */
     private String processor;
 
+    /**
+     * 加入方处理状态，一般只有被邀请的时候才会有值 GroupJoinerProcessStatus：0-待处理，1-同意邀请，2-拒绝邀请
+     */
+    private Integer joinerProcessStatus;
 
     /**
      * 处理人职位：1-群主，2-管理员  对应枚举 GroupUserPost
@@ -57,6 +61,7 @@ public class GroupRequestSession extends RequestSession{
         private String inviter;
         private Integer inviterPost;
         private String joiner;
+        private Integer joinerProcessStatus;
         private String groupId;
         private String processor;
         private Integer processorPost;
@@ -92,7 +97,10 @@ public class GroupRequestSession extends RequestSession{
             this.groupId = groupId;
             return this;
         }
-
+        public GroupRequestSession.Builder joinerProcessStatus(Integer joinerProcessStatus) {
+            this.joinerProcessStatus = joinerProcessStatus;
+            return this;
+        }
         public GroupRequestSession.Builder processor(String processor) {
             this.processor = processor;
             return this;
@@ -114,7 +122,7 @@ public class GroupRequestSession extends RequestSession{
         }
 
         public GroupRequestSession build() {
-            return new GroupRequestSession(sessionId, progress, inviter, inviterPost, joiner, groupId, processor, processorPost, way,channel);
+            return new GroupRequestSession(sessionId, progress, inviter, inviterPost, joiner, joinerProcessStatus, groupId, processor, processorPost, way,channel);
         }
     }
 
@@ -122,11 +130,12 @@ public class GroupRequestSession extends RequestSession{
     public GroupRequestSession() {
     }
 
-    public GroupRequestSession(String sessionId, Integer progress, String inviter, Integer inviterPost, String joiner, String groupId, String processor, Integer processorPost, Integer way, Integer channel) {
+    public GroupRequestSession(String sessionId, Integer progress, String inviter, Integer inviterPost, String joiner, Integer joinerProcessStatus,  String groupId, String processor, Integer processorPost, Integer way, Integer channel) {
         super(sessionId, progress);
         this.inviter = inviter;
         this.inviterPost = inviterPost;
         this.joiner = joiner;
+        this.joinerProcessStatus = joinerProcessStatus;
         this.groupId = groupId;
         this.processor = processor;
         this.processorPost = processorPost;
@@ -180,6 +189,14 @@ public class GroupRequestSession extends RequestSession{
 
     public void setProcessorPost(Integer processorPost) {
         this.processorPost = processorPost;
+    }
+
+    public Integer getJoinerProcessStatus() {
+        return joinerProcessStatus;
+    }
+
+    public void setJoinerProcessStatus(Integer joinerProcessStatus) {
+        this.joinerProcessStatus = joinerProcessStatus;
     }
 
     public Integer getWay() {
