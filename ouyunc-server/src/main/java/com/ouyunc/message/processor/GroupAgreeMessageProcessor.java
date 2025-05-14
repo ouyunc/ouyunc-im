@@ -1,7 +1,6 @@
 package com.ouyunc.message.processor;
 
 import com.alibaba.fastjson2.JSON;
-import com.google.common.collect.Sets;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
@@ -15,6 +14,7 @@ import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.packet.message.content.GroupRequestContent;
 import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.domain.base.GroupRequestSession;
+import com.ouyunc.domain.constants.GroupJoinerProcessStatus;
 import com.ouyunc.domain.constants.GroupRequestSessionWay;
 import com.ouyunc.domain.constants.RequestSessionProgress;
 import com.ouyunc.domain.entity.GroupUserEntity;
@@ -118,6 +118,11 @@ public final class GroupAgreeMessageProcessor extends AbstractMessageProcessor<B
                     log.error("非法群会话请求方式：{}", groupRequestSession.getWay());
                     return;
                 }
+                // 判断是否是邀请的同意，如果是的话，再此判断被邀请人是否同意，如果同意了才可以别人来处理添加群请求
+                if (GroupRequestSessionWay.INVITED.equals(way) && !GroupJoinerProcessStatus.AGREE.value().equals(groupRequestSession.getJoinerProcessStatus())) {
+                    log.error("被邀请人 {} 尚未同意邀请，请等待", groupRequestSession.getJoiner());
+                    return;
+                }
                 if (repository().inGroup(appKey, content.getIdentity(), message.getTo())) {
                     log.warn("该用户 {} 已经加入群组 {}", content.getIdentity(), message.getTo());
                     return;
@@ -141,7 +146,7 @@ public final class GroupAgreeMessageProcessor extends AbstractMessageProcessor<B
                     MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, message.getFrom() + "不在群组中！", packet));
                     return;
                 }
-                // todo 判断是否是邀请的同意，如果是的话，再此判断被邀请人是否同意，如果同意了才可以别人来处理添加群请求
+
                 // 设置进度
                 groupRequestSession.setProgress(RequestSessionProgress.AGREEING.value());
                 // 设置处理人
