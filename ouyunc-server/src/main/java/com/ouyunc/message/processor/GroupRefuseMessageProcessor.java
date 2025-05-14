@@ -14,6 +14,7 @@ import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.domain.base.GroupRequestSession;
 import com.ouyunc.domain.constants.GroupRequestSessionWay;
 import com.ouyunc.domain.constants.RequestSessionProgress;
+import com.ouyunc.domain.entity.GroupUserEntity;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
@@ -132,8 +133,17 @@ public final class GroupRefuseMessageProcessor extends AbstractMessageProcessor<
                     log.warn("处理人不是管理员或群主：{} 不允许处理", message.getFrom());
                     return;
                 }
+                // 获取发送人所属群成员信息
+                GroupUserEntity fromGroupUserEntity = repository().groupUserEntity(appKey, message.getTo(), message.getFrom());
+                if (fromGroupUserEntity == null) {
+                    log.error("群组：{}, 用户：{} 不存在，请检查数据！", message.getTo(), message.getFrom());
+                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, message.getFrom() + "不在群组中！", packet));
+                    return;
+                }
                 // 设置进度
                 groupRequestSession.setProgress(RequestSessionProgress.REFUSEING.value());
+                groupRequestSession.setProcessor(message.getFrom());
+                groupRequestSession.setProcessorPost(fromGroupUserEntity.getPost());
                 // 保存请求信息
                 if (!saveGroupRequestMessage(packet, groupMannerOrLeaderUsersIdentitySet, groupRequestSession)) {
                     log.error("Failed to save  refuse group request message: {}", packet);

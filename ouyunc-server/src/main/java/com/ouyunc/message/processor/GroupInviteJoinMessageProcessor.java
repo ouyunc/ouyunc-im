@@ -15,6 +15,7 @@ import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.domain.base.GroupRequestSession;
 import com.ouyunc.domain.constants.*;
 import com.ouyunc.domain.entity.GroupEntity;
+import com.ouyunc.domain.entity.GroupUserEntity;
 import com.ouyunc.domain.entity.UserEntity;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
@@ -90,7 +91,6 @@ public final class GroupInviteJoinMessageProcessor extends AbstractMessageProces
         RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.GROUP_REQUEST + message.getFrom() + CacheConstant.COLON + message.getTo());
         try {
             if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
-
                 Object contentObj = JSON.parseObject(message.getContent(), MessageContentTypeEnum.GROUP_REQUEST_CONTENT.getContentClass());
                 GroupRequestContent content;
                 if (contentObj instanceof GroupRequestContent groupRequestContent) {
@@ -134,9 +134,17 @@ public final class GroupInviteJoinMessageProcessor extends AbstractMessageProces
                 }
                 // 尝试设置群请求会话
                 if (groupRequestSession == null) {
+                    GroupUserEntity fromGroupUserEntity = repository().groupUserEntity(appKey, message.getTo(), message.getFrom());
+                    if (fromGroupUserEntity == null) {
+                        log.error("群组：{}, 用户：{} 不存在，请检查数据！", message.getTo(), message.getFrom());
+                        MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, message.getFrom() + "不在群组中！", packet));
+                        return;
+                    }
                     groupRequestSession = GroupRequestSession.newGroupBuilder()
                             .sessionId(SnowflakeUtil.nextIdStr())
                             .joiner(content.getIdentity())
+                            .inviter(message.getFrom())
+                            .inviterPost(fromGroupUserEntity.getPost())
                             .groupId(message.getTo())
                             .channel(GroupRequestSessionChannel.OTHER.value())
                             .way(GroupRequestSessionWay.INVITED.value())

@@ -39,14 +39,10 @@ public class GroupUserEntity implements Serializable {
     private Long userId;
 
     /**
-    * 是否是群主，0-否，1-是
+    * 职位，0-普通成员，1-管理员，2-群主
     */
-    private Integer leader;
+    private Integer post;
 
-    /**
-    * 是否是群管理员，0-否，1-是
-    */
-    private Integer manager;
 
     /**
     * 用户昵称（用户在群里的昵称）
@@ -101,13 +97,12 @@ public class GroupUserEntity implements Serializable {
     public GroupUserEntity() {
     }
 
-    public GroupUserEntity(Long id, Long groupId, String groupNickName, Long userId, Integer leader, Integer manager, String userNickName, Integer shield, Integer silence, Long sessionMessageOffset, Long joinTime, LocalDateTime createTime) {
+    public GroupUserEntity(Long id, Long groupId, String groupNickName, Long userId, Integer post, String userNickName, Integer shield, Integer silence, Long sessionMessageOffset, Long joinTime, LocalDateTime createTime) {
         this.id = id;
         this.groupId = groupId;
         this.groupNickName = groupNickName;
         this.userId = userId;
-        this.leader = leader;
-        this.manager = manager;
+        this.post = post;
         this.userNickName = userNickName;
         this.shield = shield;
         this.silence = silence;
@@ -116,13 +111,12 @@ public class GroupUserEntity implements Serializable {
         this.createTime = createTime;
     }
 
-    public GroupUserEntity(Long id, Long groupId, String groupNickName, Long userId, Integer leader, Integer manager, String userNickName, Integer shield, Integer silence, Integer way, Integer channel, Long sessionMessageOffset, Long joinTime, LocalDateTime createTime) {
+    public GroupUserEntity(Long id, Long groupId, String groupNickName, Long userId, Integer post, String userNickName, Integer shield, Integer silence, Integer way, Integer channel, Long sessionMessageOffset, Long joinTime, LocalDateTime createTime) {
         this.id = id;
         this.groupId = groupId;
         this.groupNickName = groupNickName;
         this.userId = userId;
-        this.leader = leader;
-        this.manager = manager;
+        this.post = post;
         this.userNickName = userNickName;
         this.shield = shield;
         this.silence = silence;
@@ -189,20 +183,12 @@ public class GroupUserEntity implements Serializable {
         this.userId = userId;
     }
 
-    public Integer getLeader() {
-        return leader;
+    public Integer getPost() {
+        return post;
     }
 
-    public void setLeader(Integer leader) {
-        this.leader = leader;
-    }
-
-    public Integer getManager() {
-        return manager;
-    }
-
-    public void setManager(Integer manager) {
-        this.manager = manager;
+    public void setPost(Integer post) {
+        this.post = post;
     }
 
     public String getUserNickName() {

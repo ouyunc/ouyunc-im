@@ -135,8 +135,17 @@ public final class GroupAgreeMessageProcessor extends AbstractMessageProcessor<B
                     log.error("处理人不是管理员或群主：{} 不允许处理", message.getFrom());
                     return;
                 }
+                GroupUserEntity fromGroupUserEntity = repository().groupUserEntity(appKey, message.getTo(), message.getFrom());
+                if (fromGroupUserEntity == null) {
+                    log.error("群组：{}, 用户：{} 不存在，请检查数据！", message.getTo(), message.getFrom());
+                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, message.getFrom() + "不在群组中！", packet));
+                    return;
+                }
                 // 设置进度
                 groupRequestSession.setProgress(RequestSessionProgress.AGREEING.value());
+                // 设置处理人
+                groupRequestSession.setProcessor(message.getFrom());
+                groupRequestSession.setProcessorPost(fromGroupUserEntity.getPost());
                 // 群自动同意，不再给群主和管理员保存离线消息
                 if (!repository().manualPassBindGroup(packet, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
                     log.error("手动处理绑定群组失败: {}", packet);
