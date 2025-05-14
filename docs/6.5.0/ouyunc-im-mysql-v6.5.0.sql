@@ -95,19 +95,21 @@ CREATE TABLE `ouyunc_im_group` (
 
 -- message.ouyunc_im_group_user definition
 
+
 CREATE TABLE `ouyunc_im_group_user` (
                                         `id` bigint NOT NULL COMMENT '主键id',
                                         `group_id` bigint NOT NULL COMMENT '群组id',
                                         `group_nick_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '群组别名（该用户对这个群起的别名）',
                                         `user_id` bigint DEFAULT NULL COMMENT '用户id',
-                                        `leader` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否是群主，0-否，1-是',
-                                        `manager` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否是群管理员，0-否，1-是',
+                                        `post` tinyint(1) NOT NULL DEFAULT '0' COMMENT '群职位，0-普通成员，1-管理员，2-群主',
                                         `user_nick_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '用户昵称（用户在群里的昵称）',
                                         `shield` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否屏蔽群（不会接收到群的信息），0-未屏蔽，1-屏蔽',
                                         `silence` tinyint(1) NOT NULL DEFAULT '0' COMMENT '用户在群中的状态，0-未被禁言，1-被禁言',
-                                        `join_time` bigint NOT NULL COMMENT '加入群的时间戳',
-                                        `session_message_offset` bigint NOT NULL DEFAULT '0' COMMENT '会话消息的偏移量；群成员对群会话的消息读取偏移量，假如这次读取到A点，则下次从A点开始往后拉取数据',
                                         `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                                        `session_message_offset` bigint NOT NULL DEFAULT '0' COMMENT '会话消息的偏移量；群成员对群会话的消息读取偏移量，假如这次读取到A点，则下次从A点开始往后拉取数据',
+                                        `join_time` bigint NOT NULL COMMENT '加入时间',
+                                        `way` tinyint NOT NULL DEFAULT '1' COMMENT '加群方式：1-主动加群，2-被动加群（被邀请），3-扫码加群  ......',
+                                        `channel` tinyint NOT NULL DEFAULT '1' COMMENT '加群渠道，预留，默认1',
                                         PRIMARY KEY (`id`) USING BTREE,
                                         UNIQUE KEY `group_user_id` (`user_id`,`group_id`) USING BTREE COMMENT '联合唯一索引'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC COMMENT='群成员表';
