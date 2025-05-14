@@ -19,9 +19,8 @@ public class JdbcSqlConstant {
         SELECT_FRIEND("SELECT id, user_id, friend_user_id, friend_nick_name, shield, create_time, update_time, session_message_offset, join_time FROM ouyunc_im_friend where user_id = ? and friend_user_id = ? ", "查询好友关系"),
 
 
-        SELECT_GROUP_USER("SELECT id, group_id, group_nick_name, user_id, leader, manager, user_nick_name, shield, silence, create_time, session_message_offset, join_time, way, channel FROM ouyunc_im_group_user where group_id = ? and user_id = ? ", "查询群成员"),
-
-        SELECT_ALL_GROUP_USER("SELECT id, group_id, group_nick_name, user_id, leader, manager, user_nick_name, shield, silence, create_time, session_message_offset, join_time, way, channel FROM ouyunc_im_group_user where group_id = ? ", "查询所有群成员"),
+        SELECT_GROUP_USER("SELECT id, group_id, group_nick_name, user_id, post, user_nick_name, shield, silence, create_time, session_message_offset, join_time, way, channel FROM ouyunc_im_group_user where group_id = ? and user_id = ? ", "查询群成员"),
+        SELECT_ALL_GROUP_USER("SELECT id, group_id, group_nick_name, user_id, post, user_nick_name, shield, silence, create_time, session_message_offset, join_time, way, channel FROM ouyunc_im_group_user where group_id = ? ", "查询所有群成员"),
 
         SELECT_USER("SELECT id,open_id,username,`password`,nick_name,avatar,motto,age,sex,email,phone_num,id_card_num,group_invite_policy,friend_join_policy,`status`,app_key,robot,create_time,update_time,deleted FROM ouyunc_im_user WHERE id = ? and deleted = 0", "查询用户"),
 
