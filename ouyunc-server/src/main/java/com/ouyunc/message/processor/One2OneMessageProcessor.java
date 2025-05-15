@@ -68,13 +68,14 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
                         .or(FriendValidator.INSTANCE.negate())
                         .or(BlackListValidator.INSTANCE)
                         .or(FriendShieldValidator.INSTANCE)
+                        .or(FromToValidator.INSTANCE)
                         .verify(packet, ctx)
                         .onErrorResume(error -> {
                             log.error("校验过程中出现异常: {}", error.getMessage());
                             return Mono.just(true); // 出现异常时默认校验不通过
                         }).flatMap(result -> {
                             if (result) {
-                                log.warn("权限不足/不是好友/在黑名单中/被屏蔽, 请知悉。该消息 {} 被忽略", packet);
+                                log.warn("权限不足/不是好友/在黑名单中/被屏蔽/发送方和接收方相同, 请知悉。该消息 {} 被忽略", packet);
                                 return Mono.empty(); // 校验不通过，不传递消息
                             }
                             return Mono.just(packet); // 校验通过，继续传递消息

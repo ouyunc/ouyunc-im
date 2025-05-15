@@ -56,6 +56,7 @@ public final class GroupRefuseMessageProcessor extends AbstractMessageProcessor<
                 }
                 // 校验是否拥有相关权限 permission （对方是否被拉黑，禁用等）群是否被封禁，是否全体禁言
                 PermissionValidator.INSTANCE.negate()
+                        .or(FromToValidator.INSTANCE)
                         .or(BlackListValidator.INSTANCE)
                         .or(GroupValidator.INSTANCE)
                         .or(GroupUserValidator.INSTANCE.negate())
@@ -65,7 +66,7 @@ public final class GroupRefuseMessageProcessor extends AbstractMessageProcessor<
                             return Mono.just(true); // 出现异常时默认校验不通过
                         }).flatMap(result -> {
                             if (result) {
-                                log.warn("权限不足/在黑名单中/群异常（被平台封禁)/不是群成员, 请知悉。该消息 {} 被忽略", packet);
+                                log.warn("权限不足/在黑名单中/群异常（被平台封禁)/不是群成员/接受者和发送者相同, 请知悉。该消息 {} 被忽略", packet);
                                 return Mono.empty(); // 校验不通过，不传递消息
                             }
                             return Mono.just(packet); // 校验通过，继续传递消息
@@ -116,6 +117,13 @@ public final class GroupRefuseMessageProcessor extends AbstractMessageProcessor<
                     log.error("非法群会话请求方式：{}", groupRequestSession.getWay());
                     return;
                 }
+                // 自己不能处理自己
+                if (GroupRequestSessionWay.INVITED.equals(way) && message.getFrom().equals(content.getIdentity())) {
+                    // 如果发送方和加入方相同，则不允许操作
+                    log.warn("发送方: {} 和加入方: {} 相同，忽略 该请求",  message.getFrom(), content.getIdentity());
+                    return;
+                }
+                // 判断是否在群组中
                 if (repository().inGroup(appKey, content.getIdentity(), message.getTo())) {
                     log.warn("该用户 {} 已经加入群组 {}", content.getIdentity(), message.getTo());
                     return;

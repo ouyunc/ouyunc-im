@@ -18,6 +18,7 @@ import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.validator.AuthValidator;
 import com.ouyunc.message.validator.BlackListValidator;
+import com.ouyunc.message.validator.FromToValidator;
 import com.ouyunc.message.validator.PermissionValidator;
 import com.ouyunc.repository.DefaultRepository;
 import io.netty.channel.ChannelHandlerContext;
@@ -64,13 +65,16 @@ public final class One2OneRefuseFriendRequestMessageProcessor extends AbstractMe
                 // 校验是否拥有相关权限 permission （是有有单聊，甚至某种内容类型的权限，如不能发语音，视频消息，只能发文本，都可以在这里做校验拦截）
                 // 屏蔽和拉黑的效果目前是一样的功能，都不能将将消息发到对方
                 // 校验是否被拉黑,如果被拉黑 （无论是否是好友，都可以拉黑）这里进行分开查redis,是否可以考虑合并使用管道来发送一次请求查询？最后在优化吧
-                PermissionValidator.INSTANCE.negate().or(BlackListValidator.INSTANCE).verify(packet, ctx)
+                PermissionValidator.INSTANCE.negate()
+                        .or(FromToValidator.INSTANCE)
+                        .or(BlackListValidator.INSTANCE)
+                        .verify(packet, ctx)
                         .onErrorResume(error -> {
                             log.error("校验过程中出现异常: {}", error.getMessage());
                             return Mono.just(true); // 出现异常时默认校验不通过
                         }).flatMap(result -> {
                             if (result) {
-                                log.warn("验证不通过。没有权限/被拉黑，请知悉。该消息 {} 被忽略", packet);
+                                log.warn("验证不通过。没有权限/被拉黑/发送方和接收方相同，请知悉。该消息 {} 被忽略", packet);
                                 return Mono.empty(); // 校验不通过，不传递消息
                             }
                             return Mono.just(packet); // 校验通过，继续传递消息
