@@ -1,22 +1,19 @@
 package com.ouyunc.message.processor;
 
-import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
-import com.ouyunc.base.constant.enums.*;
+import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
+import com.ouyunc.base.constant.enums.MessageType;
+import com.ouyunc.base.constant.enums.MessageTypeEnum;
+import com.ouyunc.base.constant.enums.QosLevelEnum;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
-import com.ouyunc.base.packet.message.content.GroupRequestContent;
-import com.ouyunc.base.utils.SnowflakeUtil;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.domain.base.GroupRequestSession;
 import com.ouyunc.domain.constants.*;
-import com.ouyunc.domain.entity.GroupEntity;
-import com.ouyunc.domain.entity.GroupUserEntity;
-import com.ouyunc.domain.entity.UserEntity;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
@@ -33,14 +30,16 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 邀请加群
+ * 被邀请人同意加群后，通知群主或管理员进行同意或拒绝， 不通知被邀请人（除非被邀请人是管理员或群主，如果被邀请人是管理员或群主，则被邀请人同意后会自动加群，不用等待其他人去处理加群了）
+ *
+ * 注意这里只有同意请求，目前不需要通知其他人，拒绝直接走api接口改变缓存和mongo状态即可,记得关闭该请求会话
  */
-public final class GroupInviteJoinMessageProcessor extends AbstractMessageProcessor<Byte> {
-    private static final Logger log = LoggerFactory.getLogger(GroupInviteJoinMessageProcessor.class);
+public final class GroupInviteJoinerAgreeMessageProcessor extends AbstractMessageProcessor<Byte> {
+    private static final Logger log = LoggerFactory.getLogger(GroupInviteJoinerAgreeMessageProcessor.class);
 
     @Override
     public MessageType type() {
-        return MessageTypeEnum.GROUP_REQUEST_INVITE_JOIN;
+        return MessageTypeEnum.GROUP_REQUEST_INVITED_JOINER_AGREE;
     }
 
     @Override
@@ -60,14 +59,14 @@ public final class GroupInviteJoinMessageProcessor extends AbstractMessageProces
                         .or(FromToValidator.INSTANCE)
                         .or(BlackListValidator.INSTANCE)
                         .or(GroupValidator.INSTANCE)
-                        .or(GroupUserValidator.INSTANCE.negate())
+                        .or(GroupUserValidator.INSTANCE)
                         .verify(packet, ctx)
                         .onErrorResume(error -> {
                             log.error("校验过程中出现异常: {}", error.getMessage());
                             return Mono.just(true); // 出现异常时默认校验不通过
                         }).flatMap(result -> {
                             if (result) {
-                                log.warn("权限不足/在黑名单中/群异常（被平台封禁）/不是群成员/接受者和发送者相同, 请知悉。该消息 {} 被忽略", packet);
+                                log.warn("权限不足/在黑名单中/群异常（被平台封禁）/已经是群成员/接受者和发送者相同, 请知悉。该消息 {} 被忽略", packet);
                                 return Mono.empty(); // 校验不通过，不传递消息
                             }
                             return Mono.just(packet); // 校验通过，继续传递消息
@@ -83,44 +82,25 @@ public final class GroupInviteJoinMessageProcessor extends AbstractMessageProces
     @Override
     public void process(ChannelHandlerContext ctx, Packet packet) {
         if (log.isDebugEnabled()) {
-            log.debug("GroupInviteJoinMessageProcessor 正在处理外部客户端加群 {} ...", packet);
+            log.debug("GroupInviteJoinerAgreeMessageProcessor 正在处理被邀请加群者同意加群的请求 {} ...", packet);
         }
         // 1. 保存消息
         Message message = packet.getMessage();
+        String joiner = message.getFrom();
         String appKey = message.getMetadata().getAppKey();
-        Object contentObj = JSON.parseObject(message.getContent(), MessageContentTypeEnum.GROUP_REQUEST_CONTENT.getContentClass());
-        GroupRequestContent content;
-        if (contentObj instanceof GroupRequestContent groupRequestContent) {
-            content = groupRequestContent;
-        }else {
-            log.error("消息内容类型:{} 不是群请求类型，请检查消息内容类型是否正确", message.getContentType());
-            return;
-        }
         // 加锁
-        RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.GROUP_REQUEST + content.getIdentity() + CacheConstant.COLON + message.getTo());
+        RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.GROUP_REQUEST + joiner + CacheConstant.COLON + message.getTo());
         try {
             if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
                 // 获取请求会话
-                GroupRequestSession groupRequestSession = repository().getGroupRequestSession(appKey, content.getIdentity(), message.getTo());
-                if (null != groupRequestSession && (groupRequestSession.getProgress() > RequestSessionProgress.JOINING.value() || !GroupRequestSessionWay.INVITED.value().equals(groupRequestSession.getWay()))) {
-                    log.warn("{} 和 {} 存在正在处理中的群会话请求(拒绝或同意还未结束处理)", content.getIdentity(), message.getTo());
-                    return;
-                }
-                // 如果发送方和加入方相同，则不允许操作
-                if (message.getFrom().equals(content.getIdentity())) {
-                    log.warn("发送方: {} 和加入方: {} 相同，忽略 该请求",  message.getFrom(), content.getIdentity());
+                GroupRequestSession groupRequestSession = repository().getGroupRequestSession(appKey, joiner, message.getTo());
+                if (null == groupRequestSession || !GroupRequestSessionWay.INVITED.value().equals(groupRequestSession.getWay()) || groupRequestSession.getProgress() > RequestSessionProgress.JOINING.value()) {
+                    log.warn("{} 和 {} 不存在正在处理中的群会话请求或当前群请求不是邀请或存在拒绝或同意还未结束处理", joiner, message.getTo());
                     return;
                 }
                 // 判断是否已经加入群组
-                if (repository().inGroup(appKey, content.getIdentity(), message.getTo())) {
-                    log.warn("该用户 {} 已经加入群组 {}", content.getIdentity(), message.getTo());
-                    return;
-                }
-                // 获取群的配置信息，判断是否自动通过
-                GroupEntity groupEntity = repository().getGroupEntity(appKey, message.getTo());
-                if (groupEntity == null) {
-                    log.error("群组:{} 不存在，请检查数据！", message.getTo());
-                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.GROUP_NOT_EXIST, message.getTo() + "群组不存在！", packet));
+                if (repository().inGroup(appKey, joiner, message.getTo())) {
+                    log.warn("该用户 {} 已经加入群组 {}", joiner, message.getTo());
                     return;
                 }
                 // 这里不保存到session 缓存中,保存到临时的会话请求消息中，该好友请求的消息可以对其进行定期清理；
@@ -132,36 +112,9 @@ public final class GroupInviteJoinMessageProcessor extends AbstractMessageProces
                     MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群主或群管理员", packet), true);
                     return;
                 }
-                // 判断被邀请人，是否自动被加入到群
-                UserEntity userEntity = repository().getUserEntity(appKey, content.getIdentity());
-                if (userEntity == null) {
-                    log.error("用户:{} 不存在，请检查数据！", content.getIdentity());
-                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.USER_NOT_EXIST, content.getIdentity() + "用户不存在！", packet));
-                    return;
-                }
-                // 尝试设置群请求会话
-                if (groupRequestSession == null) {
-                    GroupUserEntity fromGroupUserEntity = repository().groupUserEntity(appKey, message.getTo(), message.getFrom());
-                    if (fromGroupUserEntity == null) {
-                        log.error("群组：{}, 用户：{} 不存在，请检查数据！", message.getTo(), message.getFrom());
-                        MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, message.getFrom() + "不在群组中！", packet));
-                        return;
-                    }
-                    groupRequestSession = GroupRequestSession.newGroupBuilder()
-                            .sessionId(SnowflakeUtil.nextIdStr())
-                            .joiner(content.getIdentity())
-                            .inviter(message.getFrom())
-                            .inviterPost(fromGroupUserEntity.getPost())
-                            .groupId(message.getTo())
-                            .channel(GroupRequestSessionChannel.OTHER.value())
-                            .way(GroupRequestSessionWay.INVITED.value())
-                            .build();
-                }
-                // 尝试排除自己，自己可能是群主或管理员
-                // 注意：如果是群主或者管理员邀请的会自动通过，无论是否开启群自动同意
-                // 判断对方是否是自动同意加好友
-                if (GroupInvitePolicy.AUTO_PASS.value().equals(userEntity.getGroupInvitePolicy()) && (groupMannerOrLeaderUsersIdentitySet.remove(message.getFrom()) || GroupJoinPolicy.AUTO_PASS.value().equals(groupEntity.getGroupJoinPolicy()))) {
-                    groupRequestSession.setJoinerProcessStatus(GroupJoinerProcessStatus.AGREE.value());
+                // 更新缓存groupRequestSession 的处理状态为同意， mongo 中状态更新通过mq来监听更新, 判断如果邀请人是群主或管理员，则自动同意，添加好友
+                groupRequestSession.setJoinerProcessStatus(GroupJoinerProcessStatus.AGREE.value());
+                if (GroupUserPost.LEADER.value().equals(groupRequestSession.getInviterPost()) || GroupUserPost.MANAGER.value().equals(groupRequestSession.getInviterPost())) {
                     groupRequestSession.setProgress(RequestSessionProgress.AGREEING.value());
                     // 自动同意，不再给群主和管理员保存离线消息
                     if (!repository().autoPassBindGroup(packet, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
@@ -169,11 +122,10 @@ public final class GroupInviteJoinMessageProcessor extends AbstractMessageProces
                         MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "自动绑定群组请求消息异常!", packet), true);
                         return;
                     }
-                }else {
-                    groupRequestSession.setProgress(RequestSessionProgress.JOINING.value());
+                } else {
                     if (!saveGroupRequestMessage(packet, groupMannerOrLeaderUsersIdentitySet, groupRequestSession)) {
-                        log.error("Failed to save invite join group request message: {}", packet);
-                        MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存加群请求消息异常!", packet), true);
+                        log.error("Failed to save invited join group agree request message: {}", packet);
+                        MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存被邀请同意加群请求消息异常!", packet), true);
                         return;
                     }
                 }
@@ -181,7 +133,7 @@ public final class GroupInviteJoinMessageProcessor extends AbstractMessageProces
                 repository().savePacket2Mq(MqConstant.KAFKA_GROUP_REQUEST_TOPIC, packet.getMessage().getTo(), packet).whenComplete((result, ex) -> {
                     if (ex != null) {
                         log.error("邀请加群请求，发送mq异常，原因：{}", ex.getMessage());
-                        MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "处理邀请加群请求异常！" + ex.getMessage(), packet), true);
+                        MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "被邀请人同意邀请加群请求异常！" + ex.getMessage(), packet), true);
                     } else {
                         // 如果有群主或群管理员，则发送消息给群主或群管理员
                         for (String groupMannerOrLeaderUserIdentity : groupMannerOrLeaderUsersIdentitySet) {
@@ -196,11 +148,11 @@ public final class GroupInviteJoinMessageProcessor extends AbstractMessageProces
                 });
             } else {
                 log.error("Failed to lock user invite join group request message: {}", packet);
-                MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, "邀请加群请求锁失败", packet), true);
+                MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, "同意邀请加群请求锁失败", packet), true);
             }
         } catch (Exception e) {
             log.error("Failed to handle user invite join group request message: {}", e.getMessage());
-            MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.BIND_GROUP_ERROR, "处理邀请加群请求异常！" + e.getMessage(), packet), true);
+            MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.BIND_GROUP_ERROR, "处理同意邀请加群请求异常！" + e.getMessage(), packet), true);
         } finally {
             if (lock.isHeldByCurrentThread()) {
                 lock.unlock();
@@ -217,10 +169,10 @@ public final class GroupInviteJoinMessageProcessor extends AbstractMessageProces
         Message message = packet.getMessage();
         if (MessageContext.messageProperties.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
             // 保存需要qos
-            return repository().batchSaveJoinGroupRequestMessage(packet, groupMembers, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
+            return repository().batchSaveGroupRequestMessage(packet, groupMembers, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
         }
         // 保存，不需要qos
-        return repository().saveJoinGroupRequestMessage(packet, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
+        return repository().saveGroupRequestMessage(packet, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
     }
 
 }

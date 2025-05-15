@@ -14,8 +14,8 @@ public enum MessageTypeEnum implements MessageType {
     QOS_DUP(NumberConstant.NUMBER_NEGATIVE_5, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), "dup",  "qos  客户端重发消息"),
 
 
-    ONE_2_ONE(NumberConstant.NUMBER_NEGATIVE_6, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), "one_2_one",  "一对一消息"),
-    GROUP(NumberConstant.NUMBER_NEGATIVE_7, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), "group",  "群组消息"),
+    ONE_2_ONE(NumberConstant.NUMBER_NEGATIVE_6, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), "one_2_one",  "私聊"),
+    GROUP(NumberConstant.NUMBER_NEGATIVE_7, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), "group",  "群聊"),
 
     ONE_2_ONE_FRIEND_REQUEST_JOIN(NumberConstant.NUMBER_NEGATIVE_8, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), "friend_request_join",  "一对一加好友请求"),
     ONE_2_ONE_FRIEND_REQUEST_AGREE(NumberConstant.NUMBER_NEGATIVE_9, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), "friend_request_agree",  "一对一同意好友请求"),
@@ -24,9 +24,10 @@ public enum MessageTypeEnum implements MessageType {
 
     GROUP_REQUEST_JOIN(NumberConstant.NUMBER_NEGATIVE_11, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), "group_request_join",  "主动加群请求"),
     GROUP_REQUEST_INVITE_JOIN(NumberConstant.NUMBER_NEGATIVE_12, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), "group_request_invite_join",  "邀请加群请求"),
-    GROUP_REQUEST_AGREE(NumberConstant.NUMBER_NEGATIVE_13, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), "group_request_agree",  "同意加群请求"),
-    GROUP_REQUEST_REFUSE(NumberConstant.NUMBER_NEGATIVE_14, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), "group_request_refuse",  "拒绝加群请求"),
-
+    GROUP_REQUEST_AGREE(NumberConstant.NUMBER_NEGATIVE_13, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), "group_request_agree",  "处理人同意被人主动加群/被邀请加群请求"),
+    GROUP_REQUEST_REFUSE(NumberConstant.NUMBER_NEGATIVE_14, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), "group_request_refuse",  "处理人拒绝主动加/被邀请加群请求"),
+    GROUP_REQUEST_INVITED_JOINER_AGREE(NumberConstant.NUMBER_NEGATIVE_15, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), "group_request_invited_join_agree",  "被邀请者同意加群"),
+    GROUP_REQUEST_INVITED_JOINER_REFUSE(NumberConstant.NUMBER_NEGATIVE_16, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), "group_request_invited_join_refuse",  "被邀请者拒绝加群"),
 
 
     SERVER_NOTIFY(NumberConstant.NUMBER_NEGATIVE_128, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocol(), "server_notify", "服务端的通知消息"),

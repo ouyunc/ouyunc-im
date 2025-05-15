@@ -35,7 +35,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 同意 加/邀请 群
+ * 处理人同意 加/邀请 群
  */
 public final class GroupAgreeMessageProcessor extends AbstractMessageProcessor<Byte> {
     private static final Logger log = LoggerFactory.getLogger(GroupAgreeMessageProcessor.class);
@@ -109,7 +109,7 @@ public final class GroupAgreeMessageProcessor extends AbstractMessageProcessor<B
             if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
                 // 获取请求会话
                 GroupRequestSession groupRequestSession = repository().getGroupRequestSession(appKey, content.getIdentity(), message.getTo());
-                if (null == groupRequestSession || !Objects.equals(groupRequestSession.getProgress(), RequestSessionProgress.JOINING.value())) {
+                if (null == groupRequestSession || !RequestSessionProgress.JOINING.value().equals(groupRequestSession.getProgress())) {
                     log.warn("{} 和 {} 会话请求不存在正在处理中的群请求，或者存在有还未结束的同意或拒绝处理", content.getIdentity(), message.getTo());
                     return;
                 }

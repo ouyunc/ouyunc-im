@@ -161,7 +161,7 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
                                                Mono<Boolean>  processor,
                                                String errorLog, ExceptionCodeEnum errorCode) {
         Message message = packet.getMessage();
-        String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
+        String sessionId = message.getTo();
         RLockReactive lock = createMultiLock(message.getMetadata().getAppKey(), sessionId, message.getTo());
         lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)
                 .flatMap(locked -> {

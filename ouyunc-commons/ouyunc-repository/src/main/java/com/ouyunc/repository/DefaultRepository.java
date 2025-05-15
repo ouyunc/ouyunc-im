@@ -965,7 +965,7 @@ public enum DefaultRepository implements Repository{
      * @param expireTime
      * @return
      */
-    public boolean saveRefuseGroupRequestMessage(Packet packet, GroupRequestSession groupRequestSession, long expireTime) {
+    public boolean saveGroupRequestMessage(Packet packet, GroupRequestSession groupRequestSession, long expireTime) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         return saveGroupRequestMessage(packet, groupRequestSession.getJoiner(), groupRequestSession.getGroupId(), groupRequestSession.getSessionId(), expireTime, (redisOperations)->{
@@ -1025,7 +1025,7 @@ public enum DefaultRepository implements Repository{
      * @param expireTime 过期时间，单位毫秒，多久后过期
      * @return
      */
-    public boolean batchSaveRefuseGroupRequestMessage(Packet packet, Set<String> groupUserIdentitySet, GroupRequestSession groupRequestSession, long expireTime) {
+    public boolean batchSaveGroupRequestMessage(Packet packet, Set<String> groupUserIdentitySet, GroupRequestSession groupRequestSession, long expireTime) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         return batchSaveGroupRequestMessage(packet,groupRequestSession.getJoiner(), groupRequestSession.getGroupId(), groupRequestSession.getSessionId(), groupUserIdentitySet, expireTime, (redisOperations)->{
