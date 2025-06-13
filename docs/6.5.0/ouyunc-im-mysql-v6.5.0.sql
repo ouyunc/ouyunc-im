@@ -34,26 +34,7 @@ CREATE TABLE `ouyunc_im_blacklist` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC COMMENT='黑名单表';
 
 
--- message.ouyunc_im_file definition
 
-CREATE TABLE `ouyunc_im_file` (
-                                  `id` bigint NOT NULL COMMENT '主键id',
-                                  `file_origin_name` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '文件原始名称',
-                                  `file_name` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '文件名称，包含后缀名',
-                                  `file_url` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '文件网络访问完整路径：http(s)://xxxxx',
-                                  `file_path` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '文件半路径，一般为存放目录+文件名',
-                                  `file_type` tinyint(1) NOT NULL COMMENT '文件类型，标识是哪种业务类型的文件：1-图片文件，2-文档文件，3-声音文件，4-视频文件，5-压缩文件，6-其他',
-                                  `file_md5` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '文件的md5',
-                                  `file_suffix` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '文件后缀名',
-                                  `relation_type` tinyint NOT NULL DEFAULT '1' COMMENT '文件关联类型：用来标识该业务id的来源',
-                                  `relation_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '文件关联id',
-                                  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-                                  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
-                                  `deleted` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否删除：0-未删除，1-已删除',
-                                  PRIMARY KEY (`id`) USING BTREE,
-                                  KEY `idx_relation_id` (`relation_id`) USING BTREE,
-                                  KEY `idx_relation_type_id` (`relation_type`,`relation_id`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC COMMENT='文件表';
 
 
 
