@@ -182,7 +182,7 @@ CREATE TABLE `ouyunc_im_user` (
                                   `sex` tinyint(1) DEFAULT NULL COMMENT '性别：0-女，1-男，2-其他',
                                   `email` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '邮箱',
                                   `phone_num` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '手机号（国内）',
-                                  `id_card_num` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '身份证号码',
+                                  `id_card_no` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '身份证号码',
                                   `group_invite_policy` tinyint(1) NOT NULL DEFAULT '0' COMMENT '群邀请的应答策略：0-需要验证，1-自动通过',
                                   `friend_join_policy` tinyint(1) NOT NULL DEFAULT '0' COMMENT '好友添加的应答策略：0-需要验证，1-自动通过',
                                   `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '用户状态：1-正常，2-异常（被平台封禁）',
@@ -196,6 +196,6 @@ CREATE TABLE `ouyunc_im_user` (
                                   KEY `idx_app_key` (`app_key`) USING BTREE,
                                   KEY `idx_email` (`email`) USING BTREE,
                                   KEY `idx_phone_num` (`phone_num`) USING BTREE,
-                                  KEY `idx_id_card_num` (`id_card_num`) USING BTREE,
+                                  KEY `idx_id_card_no` (`id_card_no`) USING BTREE,
                                   KEY `idx_app_key_username` (`app_key`,`username`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC COMMENT='用户表';

@@ -77,7 +77,7 @@ public class UserEntity implements Serializable {
     /**
      * 身份证号码
      */
-    private String idCardNum;
+    private String idCardNo;
 
     /**
      * 群邀请的应答策略：0-需要验证，1-自动通过
@@ -207,12 +207,12 @@ public class UserEntity implements Serializable {
         this.phoneNum = phoneNum;
     }
 
-    public String getIdCardNum() {
-        return idCardNum;
+    public String getIdCardNo() {
+        return idCardNo;
     }
 
-    public void setIdCardNum(String idCardNum) {
-        this.idCardNum = idCardNum;
+    public void setIdCardNo(String idCardNo) {
+        this.idCardNo = idCardNo;
     }
 
     public Integer getGroupInvitePolicy() {
