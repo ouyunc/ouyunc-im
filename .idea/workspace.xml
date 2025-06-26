@@ -6,6 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="v6.5.0  移除文件表合并到系统文件表中">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/6.5.0/ouyunc-im-mysql-v6.5.0.sql" beforeDir="false" afterPath="$PROJECT_DIR$/docs/6.5.0/ouyunc-im-mysql-v6.5.0.sql" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -31,13 +32,12 @@
   <component name="MavenImportPreferences">
     <option name="generalSettings">
       <MavenGeneralSettings>
-        <option name="customMavenHome" value="C:\Program Files\apache-maven-3.9.9" />
+        <option name="customMavenHome" value="C:\Program Files\apache-maven-3.6.3" />
         <option name="localRepository" value="D:\repository" />
         <option name="mavenHomeTypeForPersistence" value="CUSTOM" />
-        <option name="userSettingsFile" value="C:\Program Files\apache-maven-3.9.9\conf\ali-settings.xml" />
+        <option name="userSettingsFile" value="C:\Program Files\apache-maven-3.6.3\conf\ali-settings.xml" />
       </MavenGeneralSettings>
     </option>
-    <option name="explicitlyDisabledProfiles" value="native" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 0
