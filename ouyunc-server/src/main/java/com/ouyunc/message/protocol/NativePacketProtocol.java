@@ -67,6 +67,7 @@ public enum NativePacketProtocol implements PacketProtocol {
                     // 添加监控处理逻辑
                     .addLast(MessageConstant.MONITOR_HANDLER, new MonitorHandler())
                     // 在业务处理之前可以进行登录认证处理，登录认证处理，如果不需要登录处理，可在配置文件中配置，不需要在这里处理
+                    .addLast(MessageConstant.AUTHENTICATION_HANDLER, new AuthenticationHandler())
                     // 前置处理
                     .addLast(eventExecutorGroup, MessageConstant.PRE_HANDLER, new PacketPreHandler())
                     // 业务处理
@@ -234,6 +235,8 @@ public enum NativePacketProtocol implements PacketProtocol {
                     .addLast(MessageConstant.CONVERT_2_PACKET_HANDLER, new Convert2PacketHandler())
                     // 添加监控处理逻辑
                     .addLast(MessageConstant.MONITOR_HANDLER, new MonitorHandler())
+                    // 登录认证处理器
+                    .addLast(MessageConstant.AUTHENTICATION_HANDLER, new AuthenticationHandler())
                     // 前置处理
                     .addLast(eventExecutorGroup, MessageConstant.PRE_HANDLER, new PacketPreHandler())
                     // 业务处理

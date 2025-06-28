@@ -5,6 +5,7 @@ import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.message.context.MessageServerContext;
 import io.netty.util.HashedWheelTimer;
+import io.netty.util.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,7 +13,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 /**
- * 调度器
+ * 调度器， 如果是在ctx 中优先考虑 ctx.executor().schedule 的定时器
  */
 public class ScheduleTimer {
 
@@ -68,7 +69,38 @@ public class ScheduleTimer {
         }
     }
 
+    /**
+     * 调度一次性定时任务，只执行一次
+     * @return Timeout 可以用于取消任务
+     */
+    public static Timeout scheduleOnce(Runnable task, long delay, TimeUnit timeUnit) {
+        try {
+            // 直接使用timer创建一次性定时任务
+            return timer.newTimeout(timeout -> {
+                try {
+                    task.run();
+                } catch (Exception e) {
+                    log.error("一次性任务执行异常：{}", e.getMessage());
+                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.SCHEDULE_TASK_ERROR, "一次性任务执行异常：" + e.getMessage(), null));
+                }
+            }, delay, timeUnit);
+        }catch (Exception e) {
+            log.error("一次性任务调度异常：{}", e.getMessage());
+            // 这里可以做错误日志记录
+            MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.SCHEDULE_TASK_ERROR, "一次性任务调度异常：" + e.getMessage(), null));
+            return null;
+        }
+    }
 
+    /**
+     * 取消一次性定时任务
+     */
+    public static boolean cancelOnce(Timeout timeout) {
+        if (timeout != null && !timeout.isExpired()) {
+            return timeout.cancel();
+        }
+        return false;
+    }
 
     /**
      * 取消任务

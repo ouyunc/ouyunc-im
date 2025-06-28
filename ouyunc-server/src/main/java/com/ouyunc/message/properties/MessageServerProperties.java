@@ -149,6 +149,19 @@ public class MessageServerProperties extends MessageProperties {
 
 
     /***
+     * 服务端是否开启登录认证，默认开启
+     */
+    @Key(value = "ouyunc.message.server.login.enable", defaultValue = "true")
+    boolean serverLoginEnable;
+
+    /***
+     * 服务端监听客户端的登录超时时间，单位秒，默认值5
+     */
+    @Key(value = "ouyunc.message.server.login.timeout", defaultValue = "5")
+    int serverLoginTimeout;
+
+
+    /***
      * 是否开启qos重试发送机制，默认关闭
      */
     @Key(value = "ouyunc.message.qos.retry.enable", defaultValue = "false")
@@ -550,6 +563,22 @@ public class MessageServerProperties extends MessageProperties {
         this.clientLoginInfoScheduleTimeInterval = clientLoginInfoScheduleTimeInterval;
     }
 
+    public boolean isServerLoginEnable() {
+        return serverLoginEnable;
+    }
+
+    public void setServerLoginEnable(boolean serverLoginEnable) {
+        this.serverLoginEnable = serverLoginEnable;
+    }
+
+    public int getServerLoginTimeout() {
+        return serverLoginTimeout;
+    }
+
+    public void setServerLoginTimeout(int serverLoginTimeout) {
+        this.serverLoginTimeout = serverLoginTimeout;
+    }
+
     /**
      * 获取boss 线程组配置, 这里对其进行组装
      */
@@ -708,6 +737,8 @@ public class MessageServerProperties extends MessageProperties {
                 "\n, clientHeartBeatEnable=" + clientHeartBeatEnable +
                 "\n, clientHeartBeatTimeout=" + clientHeartBeatTimeout +
                 "\n, clientHeartBeatWaitRetry=" + clientHeartBeatWaitRetry +
+                "\n, serverLoginEnable=" + serverLoginEnable +
+                "\n, serverLoginTimeout=" + serverLoginTimeout +
                 "\n, appKeyConnectionCountRefreshEnable=" + appKeyConnectionCountRefreshEnable +
                 "\n, appKeyConnectionCountRefreshInterval=" + appKeyConnectionCountRefreshInterval +
                 "\n, websocketPath='" + websocketPath + '\'' +

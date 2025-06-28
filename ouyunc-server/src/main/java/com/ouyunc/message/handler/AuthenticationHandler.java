@@ -1,5 +1,4 @@
-package com.ouyunc.message.processor;
-
+package com.ouyunc.message.handler;
 
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.CacheConstant;
@@ -24,14 +23,15 @@ import com.ouyunc.core.listener.event.ClientLoginEvent;
 import com.ouyunc.core.listener.event.ClientLogoutEvent;
 import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.message.context.MessageServerContext;
-import com.ouyunc.message.handler.HeartBeatHandler;
-import com.ouyunc.message.handler.LoginKeepAliveHandler;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.validator.AppKeyValidator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.timeout.IdleStateHandler;
+import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.ScheduledFuture;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.redisson.api.RLock;
@@ -47,24 +47,81 @@ import java.util.function.Consumer;
 
 /**
  * @Author fzx
- * @Description: 登录消息处理器，这个处理类是第一条连接后发送的第一条消息类型，之后才能发送心跳等业务消息
+ * @Description: 登录认证处理器
  **/
-public final class LoginMessageProcessor extends AbstractMessageProcessor<Byte> {
-    private static final Logger log = LoggerFactory.getLogger(LoginMessageProcessor.class);
+public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
+    private static final Logger log = LoggerFactory.getLogger(AuthenticationHandler.class);
 
-    @Override
-    public MessageType type() {
-        return MessageTypeEnum.LOGIN;
-    }
 
-    /***
-     * @author fzx
-     * @description 消息前置处理，做登录业务逻辑
+    /**
+     * @param ctx
+     * @param packet
+     * @return void
+     * @Author fangzhenxun
+     * @Description 登录逻辑处理
      */
     @Override
-    public void preProcess(ChannelHandlerContext ctx, Packet packet) {
-        // 这里判断该消息是否需要
-        log.info("正在处理预登录消息...");
+    protected void channelRead0(ChannelHandlerContext ctx, Packet packet) throws Exception {
+        if (!MessageServerContext.serverProperties().isServerLoginEnable()) {
+            ctx.fireChannelRead(packet);
+            return;
+        }
+        LoginContent loginInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
+        // 登录消息
+        if (MessageTypeEnum.LOGIN.getType().equals(packet.getMessageType())) {
+            if (loginInfo != null) {
+                log.warn("重复登录, 正在关闭连接!");
+                ctx.close();
+                return;
+            }
+            doLogin(ctx, packet);
+            return;
+        }
+        // 非登录消息，已经登录放行
+        if (loginInfo == null) {
+            log.warn("请先登录!");
+            ctx.close();
+            return;
+        }
+        ctx.fireChannelRead(packet);
+    }
+
+    @Override
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        ScheduledFuture<?> timeoutFuture = ctx.executor().schedule(() -> {
+            LoginContent loginInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
+            if (loginInfo == null) {
+                log.error("登录超时, 在规定时间：{} s 内未进行登录，现进行关闭连接: {}!", MessageServerContext.serverProperties().getServerLoginTimeout(), ctx.channel().id().asShortText());
+                ctx.close();
+            }
+        }, MessageServerContext.serverProperties().getServerLoginTimeout(), TimeUnit.SECONDS);
+        ctx.channel().attr(AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_LOGIN_TIMEOUT_SCHEDULED_FUTURE)).set(timeoutFuture);
+        super.channelActive(ctx);
+    }
+
+
+    /**
+     * 取消登录超时定时任务
+     * @param ctx
+     * @return boolean
+     */
+    private boolean cancelTimeoutFuture(ChannelHandlerContext ctx) {
+        boolean cancel = false;
+        AttributeKey<ScheduledFuture<?>> attributeKey = AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_LOGIN_TIMEOUT_SCHEDULED_FUTURE);
+        ScheduledFuture<?> timeoutFuture = ctx.channel().attr(attributeKey).get();
+        if (timeoutFuture != null) {
+            cancel = timeoutFuture.cancel(true);
+            ctx.channel().attr(AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_LOGIN_TIMEOUT_SCHEDULED_FUTURE)).set(null);
+        }
+        return cancel;
+    }
+
+    /**
+     * 登录
+     * @param ctx
+     * @param packet
+     */
+    private void doLogin(ChannelHandlerContext ctx, Packet packet) {
         // 构造默认发送的是IM 的消息格式
         long loginTimestamp = TimeUtil.currentTimeMillis();
         // 取出登录消息
@@ -108,6 +165,7 @@ public final class LoginMessageProcessor extends AbstractMessageProcessor<Byte> 
         }
         // 绑定信息
         ClientHelper.bind(ctx, cacheLoginClientInfo = new LoginClientInfo(MessageContext.messageProperties.getLocalServerAddress(), OnlineEnum.ONLINE, null, ClientHelper.calculateClientLoginExpireTime(loginContent.getHeartBeatExpireTime()), ClientHelper.calculateClientHeartBeatTimeout(loginContent.getHeartBeatExpireTime()), loginTimestamp, loginContent.getAppKey(), loginContent.getIdentity(), deviceType, loginContent.getSn(), loginContent.getSignature(), loginContent.getSignatureAlgorithm(), loginContent.getHeartBeatExpireTime(), loginTimestamp));
+
         // 添加channel 关闭后释放资源的钩子, 该逻辑在DefaultSocketChannelInitializer 中进行调用
         Consumer<Channel> channelCloseHook = channel -> {
             //1,从channel中的attrMap取出相关属性
@@ -181,19 +239,14 @@ public final class LoginMessageProcessor extends AbstractMessageProcessor<Byte> 
         message.setContentType(MessageContentTypeEnum.LOGIN_RESPONSE_SUCCESS_CONTENT.getType());
         message.setContent(MessageContentTypeEnum.LOGIN_RESPONSE_SUCCESS_CONTENT.getDescription());
         MessageHelper.syncSendMessage(notifyPacket, Target.newBuilder().targetIdentity(cacheLoginClientInfo.getIdentity()).targetServerAddress(cacheLoginClientInfo.getLoginServerAddress()).deviceType(deviceType).build());
+        // 登录成功，取消定时任务
+        boolean cancelled = cancelTimeoutFuture(ctx);
+        if (!cancelled) {
+            log.warn("客户端: {} 登录成功，取消登录超时定时任务失败", cacheLoginClientInfo);
+        }
         // 发送客户端成功登录事件
         MessageServerContext.publishEvent(new ClientLoginEvent(cacheLoginClientInfo, ctx, loginTimestamp), true);
     }
-
-    /***
-     * @author fzx
-     * @description 业务处理，登录消息不需要做任何处理
-     */
-    @Override
-    public void process(ChannelHandlerContext ctx, Packet packet) {
-        // do nothing
-    }
-
 
     /***
      * @author fzx
@@ -203,5 +256,4 @@ public final class LoginMessageProcessor extends AbstractMessageProcessor<Byte> 
 
         return true;
     }
-
 }

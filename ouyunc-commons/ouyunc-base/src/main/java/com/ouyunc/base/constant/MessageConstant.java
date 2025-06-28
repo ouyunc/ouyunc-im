@@ -194,6 +194,11 @@ public class MessageConstant {
 
 
     /**
+     * channel 的登录超时调度器
+     */
+    public static final String CHANNEL_ATTR_KEY_LOGIN_TIMEOUT_SCHEDULED_FUTURE = "CHANNEL_ATTR_KEY_LOGIN_TIMEOUT_SCHEDULED_FUTURE";
+
+    /**
      * channel 关闭时的钩子标签
      */
     public static final String CHANNEL_ATTR_KEY_CHANNEL_CLOSE_HOOK = "CHANNEL_ATTR_KEY_CHANNEL_CLOSE_HOOK";
@@ -354,7 +359,12 @@ public class MessageConstant {
 
 
     /**
-     * 统一登录处理器
+     * 统一登录认证处理器
+     */
+    public static final String AUTHENTICATION_HANDLER = "AUTHENTICATION_HANDLER";
+
+    /**
+     * 统一前置处理器
      */
     public static final String PRE_HANDLER = "PRE_HANDLER";
 

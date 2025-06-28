@@ -68,7 +68,13 @@ ouyunc:
           step: 10000
           # 偏移量，单位秒，默认值3600， 更具具体情况来调整，如果所有服务器都宕机且时间很长，那么该值可以设置大点，如果服务器宕机时间短，那么该值可以设置小点
           offset: 3600
-
+    # 服务端配置
+    server:
+      login:
+        # 是否开启登录认证，默认开启
+        enable: true
+        # 服务端监听客户端的登录超时时间，单位秒，默认值5，  see AuthenticationHandler
+        timeout: 5
     # 客户端登录信息保存模式， FOREVER-永久， FINITE-有限； 默认值永久
     # 消息监听器包扫描路径
     listeners:
@@ -192,7 +198,7 @@ ouyunc:
     jdbc:
       # 数据库连接基本信息
       driverClassName: com.mysql.cj.jdbc.Driver
-      url: jdbc:mysql://localhost:3306/message?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true
+      url: jdbc:mysql://localhost:3306/ouyunc_message?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true
 #      url: jdbc:mysql://localhost:3306/message?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true
       username: root
       password: root
