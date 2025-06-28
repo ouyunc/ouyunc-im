@@ -62,10 +62,6 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
      */
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Packet packet) throws Exception {
-        if (!MessageServerContext.serverProperties().isServerLoginEnable()) {
-            ctx.fireChannelRead(packet);
-            return;
-        }
         LoginContent loginInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
         // 登录消息
         if (MessageTypeEnum.LOGIN.getType().equals(packet.getMessageType())) {

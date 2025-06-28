@@ -67,7 +67,6 @@ public enum NativePacketProtocol implements PacketProtocol {
                     // 添加监控处理逻辑
                     .addLast(MessageConstant.MONITOR_HANDLER, new MonitorHandler())
                     // 在业务处理之前可以进行登录认证处理，登录认证处理，如果不需要登录处理，可在配置文件中配置，不需要在这里处理
-                    .addLast(MessageConstant.AUTHENTICATION_HANDLER, new AuthenticationHandler())
                     // 前置处理
                     .addLast(eventExecutorGroup, MessageConstant.PRE_HANDLER, new PacketPreHandler())
                     // 业务处理
@@ -79,6 +78,11 @@ public enum NativePacketProtocol implements PacketProtocol {
                     .addLast(MessageConstant.EXCEPTION_HANDLER, new ExceptionHandler())
                     // 移除协议分发器
                     .remove(MessageConstant.HTTP_DISPATCHER_HANDLER);
+            // 如果开启登录则添加登录认证处理器
+            if (MessageServerContext.serverProperties().isServerLoginEnable()) {
+                ctx.pipeline().addBefore(MessageConstant.PRE_HANDLER, MessageConstant.AUTHENTICATION_HANDLER, new AuthenticationHandler());
+                return;
+            }
             // 调用当前handler的下一个handle的active，注意与ctx.pipeline().fireChannelActive()
             ctx.fireChannelActive();
         }
@@ -235,8 +239,6 @@ public enum NativePacketProtocol implements PacketProtocol {
                     .addLast(MessageConstant.CONVERT_2_PACKET_HANDLER, new Convert2PacketHandler())
                     // 添加监控处理逻辑
                     .addLast(MessageConstant.MONITOR_HANDLER, new MonitorHandler())
-                    // 登录认证处理器
-                    .addLast(MessageConstant.AUTHENTICATION_HANDLER, new AuthenticationHandler())
                     // 前置处理
                     .addLast(eventExecutorGroup, MessageConstant.PRE_HANDLER, new PacketPreHandler())
                     // 业务处理
@@ -245,6 +247,11 @@ public enum NativePacketProtocol implements PacketProtocol {
                     .addLast(eventExecutorGroup, MessageConstant.POST_HANDLER, new PacketPostHandler())
                     // 异常处理器
                     .addLast(MessageConstant.EXCEPTION_HANDLER, new ExceptionHandler());
+            // 如果开启登录则添加登录认证处理器
+            if (MessageServerContext.serverProperties().isServerLoginEnable()) {
+                ctx.pipeline().addBefore(MessageConstant.PRE_HANDLER, MessageConstant.AUTHENTICATION_HANDLER, new AuthenticationHandler());
+                return;
+            }
             // 移除掉掉协议分发器
             MqttProtocolDispatcherHandler mqttProtocolDispatcherHandler = pipeline.get(MqttProtocolDispatcherHandler.class);
             if (mqttProtocolDispatcherHandler != null) {
