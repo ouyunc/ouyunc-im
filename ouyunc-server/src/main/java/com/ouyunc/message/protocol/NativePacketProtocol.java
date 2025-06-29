@@ -81,7 +81,6 @@ public enum NativePacketProtocol implements PacketProtocol {
             // 如果开启登录则添加登录认证处理器
             if (MessageServerContext.serverProperties().isServerLoginEnable()) {
                 ctx.pipeline().addBefore(MessageConstant.PRE_HANDLER, MessageConstant.AUTHENTICATION_HANDLER, new AuthenticationHandler());
-                return;
             }
             // 调用当前handler的下一个handle的active，注意与ctx.pipeline().fireChannelActive()
             ctx.fireChannelActive();
@@ -250,7 +249,6 @@ public enum NativePacketProtocol implements PacketProtocol {
             // 如果开启登录则添加登录认证处理器
             if (MessageServerContext.serverProperties().isServerLoginEnable()) {
                 ctx.pipeline().addBefore(MessageConstant.PRE_HANDLER, MessageConstant.AUTHENTICATION_HANDLER, new AuthenticationHandler());
-                return;
             }
             // 移除掉掉协议分发器
             MqttProtocolDispatcherHandler mqttProtocolDispatcherHandler = pipeline.get(MqttProtocolDispatcherHandler.class);
