@@ -24,6 +24,11 @@ public class GroupEntity implements Serializable {
     private Long id;
 
     /**
+    * 群组号码
+    */
+    private String groupCode;
+
+    /**
     * 群组名称
     */
     private String groupName;
@@ -85,6 +90,14 @@ public class GroupEntity implements Serializable {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public String getGroupCode() {
+        return groupCode;
+    }
+
+    public void setGroupCode(String groupCode) {
+        this.groupCode = groupCode;
     }
 
     public String getGroupName() {

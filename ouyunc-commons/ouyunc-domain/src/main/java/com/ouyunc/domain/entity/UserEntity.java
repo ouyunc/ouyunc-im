@@ -30,6 +30,11 @@ public class UserEntity implements Serializable {
     private String openId;
 
     /**
+     * 用户编号
+     */
+    private String code;
+
+    /**
      * 用户名称（对应于身份证）
      */
     private String username;
@@ -125,6 +130,14 @@ public class UserEntity implements Serializable {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public String getCode() {
+        return code;
+    }
+
+    public void setCode(String code) {
+        this.code = code;
     }
 
     public String getOpenId() {
