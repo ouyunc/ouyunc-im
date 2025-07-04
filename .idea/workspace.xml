@@ -5,6 +5,20 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="v6.5.0  移除文件表合并到系统文件表中">
+      <change afterPath="$PROJECT_DIR$/ouyunc-client/.flattened-pom.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-ai/.flattened-pom.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-cache/.flattened-pom.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-core/.flattened-pom.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/.flattened-pom.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-influx/.flattened-pom.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-jdbc/.flattened-pom.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mongo/.flattened-pom.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/.flattened-pom.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/.flattened-pom.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/ouyunc-mq-kafka/.flattened-pom.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/ouyunc-mq-rocket/.flattened-pom.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/.flattened-pom.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-server/.flattened-pom.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -37,7 +51,6 @@
         <option name="userSettingsFile" value="C:\Program Files\apache-maven-3.6.3\conf\ali-settings.xml" />
       </MavenGeneralSettings>
     </option>
-    <option name="explicitlyDisabledProfiles" value="native" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 0

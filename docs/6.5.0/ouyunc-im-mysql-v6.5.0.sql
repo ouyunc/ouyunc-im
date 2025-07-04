@@ -59,6 +59,7 @@ CREATE TABLE `ouyunc_im_friend` (
 CREATE TABLE `ouyunc_im_group` (
                                    `id` bigint NOT NULL COMMENT '主键id',
                                    `group_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '群组名称',
+                                   `group_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '群组编码',
                                    `group_avatar` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '群组头像',
                                    `group_description` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '群组描述',
                                    `group_announcement` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '群组公告',
@@ -156,6 +157,7 @@ CREATE TABLE `ouyunc_im_read_receipt` (
 CREATE TABLE `ouyunc_im_user` (
                                   `id` bigint NOT NULL COMMENT '主键id',
                                   `open_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '开放id',
+                                  `code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '用户编码',
                                   `username` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '用户名称（对应于身份证）',
                                   `password` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '用户名密码',
                                   `nick_name` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '用户别名',
