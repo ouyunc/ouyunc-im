@@ -15,6 +15,7 @@ import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.MessageHelper;
 import io.netty.channel.ChannelHandlerContext;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,6 +49,10 @@ public final class PingPongMessageProcessor extends AbstractMessageProcessor<Byt
         Message heartBeatMessage = packet.getMessage();
         Metadata metadata = heartBeatMessage.getMetadata();
         String from = heartBeatMessage.getFrom();
+        if (StringUtils.isBlank(from)) {
+            log.error("心跳发送方不能为空！{}",  packet);
+            return;
+        }
         heartBeatMessage.setFrom(null);
         heartBeatMessage.setTo(from);
         heartBeatMessage.setContent(null);

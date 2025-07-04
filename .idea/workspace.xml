@@ -4,21 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="v6.5.0  更改登录处理器">
-      <change afterPath="$PROJECT_DIR$/ouyunc-client/.flattened-pom.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-ai/.flattened-pom.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-cache/.flattened-pom.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-core/.flattened-pom.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/.flattened-pom.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-influx/.flattened-pom.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-jdbc/.flattened-pom.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-db/ouyunc-db-mongo/.flattened-pom.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/.flattened-pom.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/.flattened-pom.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/ouyunc-mq-kafka/.flattened-pom.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/ouyunc-mq-rocket/.flattened-pom.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/.flattened-pom.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-server/.flattened-pom.xml" afterDir="false" />
+    <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="v6.5.0  移除文件表合并到系统文件表中">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -51,6 +37,7 @@
         <option name="userSettingsFile" value="C:\Program Files\apache-maven-3.6.3\conf\ali-settings.xml" />
       </MavenGeneralSettings>
     </option>
+    <option name="explicitlyDisabledProfiles" value="native" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 0
@@ -65,7 +52,6 @@
   </component>
   <component name="PropertiesComponent">{
   &quot;keyToString&quot;: {
-    &quot;ASKED_ADD_EXTERNAL_FILES&quot;: &quot;true&quot;,
     &quot;Application.App.executor&quot;: &quot;Debug&quot;,
     &quot;Application.StartServer.executor&quot;: &quot;Debug&quot;,
     &quot;JavaScript Debug.client1.html (1).executor&quot;: &quot;Run&quot;,
@@ -188,6 +174,30 @@
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
+    <task id="LOCAL-00002" summary="v6.4.0  加群逻辑">
+      <option name="closed" value="true" />
+      <created>1742372333422</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1742372333422</updated>
+    </task>
+    <task id="LOCAL-00003" summary="v6.4.0  加群逻辑">
+      <option name="closed" value="true" />
+      <created>1742453458483</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1742453458483</updated>
+    </task>
+    <task id="LOCAL-00004" summary="v6.4.0  加群逻辑">
+      <option name="closed" value="true" />
+      <created>1742472160408</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1742472160408</updated>
+    </task>
     <task active="true" id="Default" summary="Default task">
       <changelist id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="v6.4.0  加群逻辑" />
       <created>1742635013053</created>
@@ -214,9 +224,7 @@
       <workItem from="1747213659404" duration="26189000" />
       <workItem from="1749781467399" duration="1334000" />
       <workItem from="1751030023774" duration="1301000" />
-      <workItem from="1751073210527" duration="18280000" />
-      <workItem from="1751153186678" duration="10162000" />
-      <workItem from="1751286913004" duration="1796000" />
+      <workItem from="1751073210527" duration="18100000" />
     </task>
     <task id="LOCAL-00005" summary="v6.4.0  优化加好友代码">
       <option name="closed" value="true" />
@@ -586,31 +594,7 @@
       <option name="project" value="LOCAL" />
       <updated>1750944958367</updated>
     </task>
-    <task id="LOCAL-00051" summary="v6.5.0  更改登录处理器">
-      <option name="closed" value="true" />
-      <created>1751124053289</created>
-      <option name="number" value="00051" />
-      <option name="presentableId" value="LOCAL-00051" />
-      <option name="project" value="LOCAL" />
-      <updated>1751124053290</updated>
-    </task>
-    <task id="LOCAL-00052" summary="v6.5.0  更改登录处理器">
-      <option name="closed" value="true" />
-      <created>1751153545761</created>
-      <option name="number" value="00052" />
-      <option name="presentableId" value="LOCAL-00052" />
-      <option name="project" value="LOCAL" />
-      <updated>1751153545762</updated>
-    </task>
-    <task id="LOCAL-00053" summary="v6.5.0  更改登录处理器">
-      <option name="closed" value="true" />
-      <created>1751158408852</created>
-      <option name="number" value="00053" />
-      <option name="presentableId" value="LOCAL-00053" />
-      <option name="project" value="LOCAL" />
-      <updated>1751158408852</updated>
-    </task>
-    <option name="localTasksCounter" value="54" />
+    <option name="localTasksCounter" value="51" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -628,7 +612,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
     <MESSAGE value="v6.3.0  添加mongo 索引" />
     <MESSAGE value="v6.4.0  优化加好友代码" />
     <MESSAGE value="v6.4.0  加群逻辑" />
@@ -641,9 +624,7 @@
     <MESSAGE value="v6.5.0  增加序列化标识，防止序列化反序列化问题" />
     <MESSAGE value="v6.5.0  优化代码" />
     <MESSAGE value="v6.5.0  移除文件表合并到系统文件表中" />
-    <MESSAGE value="v6.5.0  更改" />
-    <MESSAGE value="v6.5.0  更改登录处理器" />
-    <option name="LAST_COMMIT_MESSAGE" value="v6.5.0  更改登录处理器" />
+    <option name="LAST_COMMIT_MESSAGE" value="v6.5.0  移除文件表合并到系统文件表中" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -662,11 +643,6 @@
           <url>file://$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/DefaultRepository.java</url>
           <line>953</line>
           <option name="timeStamp" value="48" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/ServerStartupEventListener.java</url>
-          <line>91</line>
-          <option name="timeStamp" value="66" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
