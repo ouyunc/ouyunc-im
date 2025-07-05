@@ -22,6 +22,7 @@ public enum AppKeyValidator implements Validator<String> {
     INSTANCE;
     private static final Logger log = LoggerFactory.getLogger(AppKeyValidator.class);
 
+    private static final RedisTemplate<String, String> redisTemplate = CacheFactory.REDIS.instance();
 
 
     /***
@@ -30,7 +31,6 @@ public enum AppKeyValidator implements Validator<String> {
      */
     @Override
     public boolean verify(String appKey, ChannelHandlerContext ctx) {
-        RedisTemplate<String, String> redisTemplate = CacheFactory.REDIS.instance();
         Map<String, AppEntity> appKeys = redisTemplate.<String, AppEntity>opsForHash().entries(CacheConstant.OUYUNC + CacheConstant.APP_KEYS);
         if (MapUtils.isEmpty(appKeys) || !appKeys.containsKey(appKey)) {
             log.warn("appKey:{}不存在", appKey);
