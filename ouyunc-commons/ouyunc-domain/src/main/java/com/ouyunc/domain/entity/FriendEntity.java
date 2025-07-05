@@ -30,6 +30,11 @@ public class FriendEntity implements Serializable {
     private Long userId;
 
     /**
+    * 好友用户code
+    */
+    private String friendUserCode;
+
+    /**
     * 好友用户id
     */
     private Long friendUserId;
@@ -78,10 +83,11 @@ public class FriendEntity implements Serializable {
     public FriendEntity() {
     }
 
-    public FriendEntity(Long id, Long userId, Long friendUserId, String friendNickName, Integer shield, Long sessionMessageOffset, Long joinTime, LocalDateTime createTime, LocalDateTime updateTime) {
+    public FriendEntity(Long id, Long userId, Long friendUserId, String friendUserCode, String friendNickName, Integer shield, Long sessionMessageOffset, Long joinTime, LocalDateTime createTime, LocalDateTime updateTime) {
         this.id = id;
         this.userId = userId;
         this.friendUserId = friendUserId;
+        this.friendUserCode = friendUserCode;
         this.friendNickName = friendNickName;
         this.shield = shield;
         this.sessionMessageOffset = sessionMessageOffset;
@@ -90,10 +96,11 @@ public class FriendEntity implements Serializable {
         this.updateTime = updateTime;
     }
 
-    public FriendEntity(Long id, Long userId, Long friendUserId, String friendNickName, Integer shield, Integer way, Integer channel, Long sessionMessageOffset, Long joinTime, LocalDateTime createTime, LocalDateTime updateTime) {
+    public FriendEntity(Long id, Long userId, Long friendUserId, String friendUserCode, String friendNickName, Integer shield, Integer way, Integer channel, Long sessionMessageOffset, Long joinTime, LocalDateTime createTime, LocalDateTime updateTime) {
         this.id = id;
         this.userId = userId;
         this.friendUserId = friendUserId;
+        this.friendUserCode = friendUserCode;
         this.friendNickName = friendNickName;
         this.shield = shield;
         this.way = way;
@@ -106,6 +113,14 @@ public class FriendEntity implements Serializable {
 
     public Integer getWay() {
         return way;
+    }
+
+    public String getFriendUserCode() {
+        return friendUserCode;
+    }
+
+    public void setFriendUserCode(String friendUserCode) {
+        this.friendUserCode = friendUserCode;
     }
 
     public void setWay(Integer way) {

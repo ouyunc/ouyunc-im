@@ -38,6 +38,14 @@ public class GroupUserEntity implements Serializable {
     */
     private Long userId;
 
+
+    /**
+    * 用户code
+    */
+    private String userCode;
+
+
+
     /**
     * 职位，0-普通成员，1-管理员，2-群主
     */
@@ -92,16 +100,18 @@ public class GroupUserEntity implements Serializable {
         public static final String id = "id";
         public static final String groupId = "group_id";
         public static final String userId = "user_id";
+        public static final String userCode = "user_code";
     }
 
     public GroupUserEntity() {
     }
 
-    public GroupUserEntity(Long id, Long groupId, String groupNickName, Long userId, Integer post, String userNickName, Integer shield, Integer silence, Long sessionMessageOffset, Long joinTime, LocalDateTime createTime) {
+    public GroupUserEntity(Long id, Long groupId, String groupNickName, Long userId, String userCode, Integer post, String userNickName, Integer shield, Integer silence, Long sessionMessageOffset, Long joinTime, LocalDateTime createTime) {
         this.id = id;
         this.groupId = groupId;
         this.groupNickName = groupNickName;
         this.userId = userId;
+        this.userCode = userCode;
         this.post = post;
         this.userNickName = userNickName;
         this.shield = shield;
@@ -111,11 +121,12 @@ public class GroupUserEntity implements Serializable {
         this.createTime = createTime;
     }
 
-    public GroupUserEntity(Long id, Long groupId, String groupNickName, Long userId, Integer post, String userNickName, Integer shield, Integer silence, Integer way, Integer channel, Long sessionMessageOffset, Long joinTime, LocalDateTime createTime) {
+    public GroupUserEntity(Long id, Long groupId, String groupNickName, Long userId, String userCode,  Integer post, String userNickName, Integer shield, Integer silence, Integer way, Integer channel, Long sessionMessageOffset, Long joinTime, LocalDateTime createTime) {
         this.id = id;
         this.groupId = groupId;
         this.groupNickName = groupNickName;
         this.userId = userId;
+        this.userCode = userCode;
         this.post = post;
         this.userNickName = userNickName;
         this.shield = shield;
@@ -229,5 +240,13 @@ public class GroupUserEntity implements Serializable {
 
     public void setCreateTime(LocalDateTime createTime) {
         this.createTime = createTime;
+    }
+
+    public String getUserCode() {
+        return userCode;
+    }
+
+    public void setUserCode(String userCode) {
+        this.userCode = userCode;
     }
 }
