@@ -82,6 +82,7 @@ CREATE TABLE `ouyunc_im_group` (
 CREATE TABLE `ouyunc_im_group_user` (
                                         `id` bigint NOT NULL COMMENT '主键id',
                                         `group_id` bigint NOT NULL COMMENT '群组id',
+                                        `group_code` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '群组code',
                                         `group_nick_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '群组别名（该用户对这个群起的别名）',
                                         `user_id` bigint DEFAULT NULL COMMENT '用户id',
                                         `user_code` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '用户code',

@@ -29,6 +29,11 @@ public class GroupUserEntity implements Serializable {
     private Long groupId;
 
     /**
+    * 群组code
+    */
+    private String groupCode;
+
+    /**
     * 群组别名（该用户对这个群起的别名）
     */
     private String groupNickName;
@@ -99,6 +104,7 @@ public class GroupUserEntity implements Serializable {
     public static final class Fields {
         public static final String id = "id";
         public static final String groupId = "group_id";
+        public static final String groupCode = "group_code";
         public static final String userId = "user_id";
         public static final String userCode = "user_code";
     }
@@ -106,9 +112,10 @@ public class GroupUserEntity implements Serializable {
     public GroupUserEntity() {
     }
 
-    public GroupUserEntity(Long id, Long groupId, String groupNickName, Long userId, String userCode, Integer post, String userNickName, Integer shield, Integer silence, Long sessionMessageOffset, Long joinTime, LocalDateTime createTime) {
+    public GroupUserEntity(Long id, Long groupId, String groupCode,  String groupNickName, Long userId, String userCode, Integer post, String userNickName, Integer shield, Integer silence, Long sessionMessageOffset, Long joinTime, LocalDateTime createTime) {
         this.id = id;
         this.groupId = groupId;
+        this.groupCode = groupCode;
         this.groupNickName = groupNickName;
         this.userId = userId;
         this.userCode = userCode;
@@ -121,9 +128,10 @@ public class GroupUserEntity implements Serializable {
         this.createTime = createTime;
     }
 
-    public GroupUserEntity(Long id, Long groupId, String groupNickName, Long userId, String userCode,  Integer post, String userNickName, Integer shield, Integer silence, Integer way, Integer channel, Long sessionMessageOffset, Long joinTime, LocalDateTime createTime) {
+    public GroupUserEntity(Long id, Long groupId, String groupCode,  String groupNickName, Long userId, String userCode,  Integer post, String userNickName, Integer shield, Integer silence, Integer way, Integer channel, Long sessionMessageOffset, Long joinTime, LocalDateTime createTime) {
         this.id = id;
         this.groupId = groupId;
+        this.groupCode = groupCode;
         this.groupNickName = groupNickName;
         this.userId = userId;
         this.userCode = userCode;
@@ -248,5 +256,13 @@ public class GroupUserEntity implements Serializable {
 
     public void setUserCode(String userCode) {
         this.userCode = userCode;
+    }
+
+    public String getGroupCode() {
+        return groupCode;
+    }
+
+    public void setGroupCode(String groupCode) {
+        this.groupCode = groupCode;
     }
 }
