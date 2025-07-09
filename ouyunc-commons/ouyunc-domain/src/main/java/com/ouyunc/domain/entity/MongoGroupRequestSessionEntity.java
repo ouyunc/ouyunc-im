@@ -41,6 +41,12 @@ public class MongoGroupRequestSessionEntity implements Serializable {
     @Indexed
     private String joiner;
 
+    /**
+     * 最后一条消息
+     */
+    @Field("last_message")
+    private String lastMessage;
+
 
     /**
      * 加入方处理状态 GroupJoinerProcessStatus：0-待处理，1-同意邀请，2-拒绝邀请
@@ -140,6 +146,7 @@ public class MongoGroupRequestSessionEntity implements Serializable {
         public static final String groupId = "group_id";
         public static final String processorPost = "processor_post";
         public static final String inviterPost = "inviter_post";
+        public static final String lastMessage = "last_message";
         public static final String way = "way";
         public static final String channel = "channel";
         public static final String sessionId = "session_id";
@@ -153,8 +160,9 @@ public class MongoGroupRequestSessionEntity implements Serializable {
     public MongoGroupRequestSessionEntity() {
     }
 
-    public MongoGroupRequestSessionEntity(Long id, String inviter, Integer inviterPost, String joiner, String groupId, String processor, Integer processorPost, String sessionId, Long sessionBeginTime, Long sessionEndTime, Integer status, Integer way, LocalDateTime createTime, LocalDateTime updateTime, LocalDateTime expireAt) {
+    public MongoGroupRequestSessionEntity(Long id, String lastMessage,  String inviter, Integer inviterPost, String joiner, String groupId, String processor, Integer processorPost, String sessionId, Long sessionBeginTime, Long sessionEndTime, Integer status, Integer way, LocalDateTime createTime, LocalDateTime updateTime, LocalDateTime expireAt) {
         this.id = id;
+        this.lastMessage = lastMessage;
         this.inviter = inviter;
         this.inviterPost = inviterPost;
         this.joiner = joiner;
@@ -171,8 +179,9 @@ public class MongoGroupRequestSessionEntity implements Serializable {
         this.expireAt = expireAt;
     }
 
-    public MongoGroupRequestSessionEntity(Long id, String inviter, Integer inviterPost, String joiner, String groupId, String processor, Integer processorPost, String sessionId, Long sessionBeginTime, Long sessionEndTime, Integer status, Integer way, Integer channel, LocalDateTime createTime, LocalDateTime updateTime, LocalDateTime expireAt) {
+    public MongoGroupRequestSessionEntity(Long id, String lastMessage, String inviter, Integer inviterPost, String joiner, String groupId, String processor, Integer processorPost, String sessionId, Long sessionBeginTime, Long sessionEndTime, Integer status, Integer way, Integer channel, LocalDateTime createTime, LocalDateTime updateTime, LocalDateTime expireAt) {
         this.id = id;
+        this.lastMessage = lastMessage;
         this.inviter = inviter;
         this.inviterPost = inviterPost;
         this.joiner = joiner;
@@ -190,8 +199,9 @@ public class MongoGroupRequestSessionEntity implements Serializable {
         this.expireAt = expireAt;
     }
 
-    public MongoGroupRequestSessionEntity(Long id, String inviter, Integer inviterPost, String joiner, Integer joinerProcessStatus, String groupId, String processor, Integer processorPost, String sessionId, Long sessionBeginTime, Long sessionEndTime, Integer status, Integer way, Integer channel, LocalDateTime createTime, LocalDateTime updateTime, LocalDateTime expireAt) {
+    public MongoGroupRequestSessionEntity(Long id, String lastMessage,  String inviter, Integer inviterPost, String joiner, Integer joinerProcessStatus, String groupId, String processor, Integer processorPost, String sessionId, Long sessionBeginTime, Long sessionEndTime, Integer status, Integer way, Integer channel, LocalDateTime createTime, LocalDateTime updateTime, LocalDateTime expireAt) {
         this.id = id;
+        this.lastMessage = lastMessage;
         this.inviter = inviter;
         this.inviterPost = inviterPost;
         this.joiner = joiner;
@@ -344,5 +354,13 @@ public class MongoGroupRequestSessionEntity implements Serializable {
 
     public void setExpireAt(LocalDateTime expireAt) {
         this.expireAt = expireAt;
+    }
+
+    public String getLastMessage() {
+        return lastMessage;
+    }
+
+    public void setLastMessage(String lastMessage) {
+        this.lastMessage = lastMessage;
     }
 }

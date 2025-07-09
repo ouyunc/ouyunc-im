@@ -41,6 +41,14 @@ public class MongoFriendRequestSessionEntity implements Serializable {
     private String to;
 
 
+
+    /**
+     * 最近一条会话文本消息
+     */
+    @Field("last_message")
+    private String lastMessage;
+
+
     /**
      * 会话开id
      */
@@ -104,6 +112,7 @@ public class MongoFriendRequestSessionEntity implements Serializable {
         public static final String id = "id";
         public static final String from = "from";
         public static final String to = "to";
+        public static final String lastMessage = "last_message";
         public static final String sessionId = "session_id";
         public static final String status = "status";
         public static final String way = "way";
@@ -117,10 +126,11 @@ public class MongoFriendRequestSessionEntity implements Serializable {
     public MongoFriendRequestSessionEntity() {
     }
 
-    public MongoFriendRequestSessionEntity(Long id, String from, String to, String sessionId, Long sessionBeginTime, Long sessionEndTime, Integer status, LocalDateTime createTime, LocalDateTime updateTime) {
+    public MongoFriendRequestSessionEntity(Long id, String from, String to, String lastMessage, String sessionId, Long sessionBeginTime, Long sessionEndTime, Integer status, LocalDateTime createTime, LocalDateTime updateTime) {
         this.id = id;
         this.from = from;
         this.to = to;
+        this.lastMessage = lastMessage;
         this.sessionId = sessionId;
         this.sessionBeginTime = sessionBeginTime;
         this.sessionEndTime = sessionEndTime;
@@ -129,10 +139,11 @@ public class MongoFriendRequestSessionEntity implements Serializable {
         this.updateTime = updateTime;
     }
 
-    public MongoFriendRequestSessionEntity(Long id, String from, String to, String sessionId, Long sessionBeginTime, Long sessionEndTime, Integer status, Integer way, Integer channel, LocalDateTime createTime, LocalDateTime updateTime, LocalDateTime expireAt) {
+    public MongoFriendRequestSessionEntity(Long id, String from, String to, String lastMessage, String sessionId, Long sessionBeginTime, Long sessionEndTime, Integer status, Integer way, Integer channel, LocalDateTime createTime, LocalDateTime updateTime, LocalDateTime expireAt) {
         this.id = id;
         this.from = from;
         this.to = to;
+        this.lastMessage = lastMessage;
         this.sessionId = sessionId;
         this.sessionBeginTime = sessionBeginTime;
         this.sessionEndTime = sessionEndTime;
@@ -144,10 +155,11 @@ public class MongoFriendRequestSessionEntity implements Serializable {
         this.expireAt = expireAt;
     }
 
-    public MongoFriendRequestSessionEntity(Long id, String from, String to, String sessionId, Long sessionBeginTime, Long sessionEndTime, Integer status, LocalDateTime createTime, LocalDateTime updateTime, LocalDateTime expireAt) {
+    public MongoFriendRequestSessionEntity(Long id, String from, String to, String lastMessage, String sessionId, Long sessionBeginTime, Long sessionEndTime, Integer status, LocalDateTime createTime, LocalDateTime updateTime, LocalDateTime expireAt) {
         this.id = id;
         this.from = from;
         this.to = to;
+        this.lastMessage = lastMessage;
         this.sessionId = sessionId;
         this.sessionBeginTime = sessionBeginTime;
         this.sessionEndTime = sessionEndTime;
@@ -251,5 +263,13 @@ public class MongoFriendRequestSessionEntity implements Serializable {
 
     public void setUpdateTime(LocalDateTime updateTime) {
         this.updateTime = updateTime;
+    }
+
+    public String getLastMessage() {
+        return lastMessage;
+    }
+
+    public void setLastMessage(String lastMessage) {
+        this.lastMessage = lastMessage;
     }
 }
