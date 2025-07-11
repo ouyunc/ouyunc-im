@@ -7,73 +7,95 @@ public class MqConstant {
 
 
     /**
-     * kafka 发送消息失败异常 topic
-     */
-    public static final String KAFKA_MESSAGE_SEND_FAIL_TOPIC = MessageConstant.OUYUNC + MessageConstant.UNDERLINE + "message_send_fail";
-    /**
      * kafka 发送消息失败异常 group
      */
     public static final String KAFKA_MESSAGE_SEND_FAIL_GROUP = "message_send_fail";
 
+
+
     /**
-     * kafka 异常 topic
+     * kafka 发送消息失败异常 topic
      */
-    public static final String KAFKA_EXCEPTION_TOPIC = MessageConstant.OUYUNC + MessageConstant.UNDERLINE + "exception";
+    public static final String KAFKA_MESSAGE_SEND_FAIL_TOPIC = MessageConstant.OUYUNC + MessageConstant.UNDERLINE + KAFKA_MESSAGE_SEND_FAIL_GROUP;
 
     /**
      * kafka 异常 group
      */
     public static final String KAFKA_EXCEPTION_GROUP = "exception";
 
+
+
     /**
-     * kafka 保存消息 topic
+     * kafka 异常 topic
      */
-    public static final String KAFKA_SAVE_MESSAGE_TOPIC = MessageConstant.OUYUNC + MessageConstant.UNDERLINE + "message_save";
+    public static final String KAFKA_EXCEPTION_TOPIC = MessageConstant.OUYUNC + MessageConstant.UNDERLINE + KAFKA_EXCEPTION_GROUP;
+
+
 
     /**
      * kafka 保存消息 group
      */
     public static final String KAFKA_SAVE_MESSAGE_GROUP = "message_save";
 
+
+
     /**
-     * kafka 撤销消息 topic
+     * kafka 保存消息 topic
      */
-    public static final String KAFKA_WITHDRAW_MESSAGE_TOPIC =  MessageConstant.OUYUNC + MessageConstant.UNDERLINE + "message_withdraw";
+    public static final String KAFKA_SAVE_MESSAGE_TOPIC = MessageConstant.OUYUNC + MessageConstant.UNDERLINE + KAFKA_SAVE_MESSAGE_GROUP;
+
 
     /**
      * kafka 撤销消息 group
      */
     public static final String KAFKA_WITHDRAW_MESSAGE_GROUP =  "message_withdraw";
 
+
+
     /**
-     * kafka 已读回执消息 topic
+     * kafka 撤销消息 topic
      */
-    public static final String KAFKA_READ_RECEIPT_MESSAGE_TOPIC =  MessageConstant.OUYUNC + MessageConstant.UNDERLINE + "message_read_receipt";
+    public static final String KAFKA_WITHDRAW_MESSAGE_TOPIC =  MessageConstant.OUYUNC + MessageConstant.UNDERLINE + KAFKA_WITHDRAW_MESSAGE_GROUP;
+
 
     /**
      * kafka 已读回执消息 group
      */
     public static final String KAFKA_READ_RECEIPT_MESSAGE_GROUP =  "message_read_receipt";
 
+
+
     /**
-     * kafka 好友请求（加入/同意/拒绝） topic
+     * kafka 已读回执消息 topic
      */
-    public static final String KAFKA_FRIEND_REQUEST_TOPIC =  MessageConstant.OUYUNC + MessageConstant.UNDERLINE + "friend_request";
+    public static final String KAFKA_READ_RECEIPT_MESSAGE_TOPIC =  MessageConstant.OUYUNC + MessageConstant.UNDERLINE + KAFKA_READ_RECEIPT_MESSAGE_GROUP;
+
 
     /**
      * kafka 好友请求（加入/同意/拒绝） group
      */
     public static final String KAFKA_FRIEND_REQUEST_GROUP =  "friend_request";
 
+
+
     /**
-     * kafka 群请求 topic
+     * kafka 好友请求（加入/同意/拒绝） topic
      */
-    public static final String KAFKA_GROUP_REQUEST_TOPIC =  MessageConstant.OUYUNC + MessageConstant.UNDERLINE + "group_request";
+    public static final String KAFKA_FRIEND_REQUEST_TOPIC =  MessageConstant.OUYUNC + MessageConstant.UNDERLINE + KAFKA_FRIEND_REQUEST_GROUP;
+
+
 
     /**
      * kafka 群请求 group
      */
     public static final String KAFKA_GROUP_REQUEST_GROUP =  "group_request";
+
+
+    /**
+     * kafka 群请求 topic
+     */
+    public static final String KAFKA_GROUP_REQUEST_TOPIC =  MessageConstant.OUYUNC + MessageConstant.UNDERLINE + KAFKA_GROUP_REQUEST_GROUP;
+
 
 
 }
