@@ -4,10 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="v6.5.0  移除文件表合并到系统文件表中">
+    <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="v6.5.0  添加群的限制">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MongoFriendRequestSessionEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MongoFriendRequestSessionEntity.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MongoGroupRequestSessionEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MongoGroupRequestSessionEntity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/GroupUserEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/GroupUserEntity.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -30,10 +29,10 @@
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="KubernetesApiPersistence"><![CDATA[{}]]></component>
-  <component name="KubernetesApiProvider"><![CDATA[{
-  "isMigrated": true
-}]]></component>
+  <component name="KubernetesApiPersistence">{}</component>
+  <component name="KubernetesApiProvider">{
+  &quot;isMigrated&quot;: true
+}</component>
   <component name="MavenImportPreferences">
     <option name="generalSettings">
       <MavenGeneralSettings>
@@ -96,9 +95,9 @@
       <recent name="D:\workspace\ouyunc-im\docs" />
     </key>
     <key name="CopyClassDialog.RECENTS_KEY">
-      <recent name="com.ouyunc.message.handler" />
-      <recent name="com.ouyunc.message.processor" />
       <recent name="com.ouyunc.message.validator" />
+      <recent name="com.ouyunc.message.processor" />
+      <recent name="com.ouyunc.message.handler" />
       <recent name="com.ouyunc.domain.constants" />
       <recent name="com.ouyunc.base.model" />
     </key>
@@ -209,14 +208,6 @@
       <workItem from="1751073210527" duration="18100000" />
       <workItem from="1751638207937" duration="132000" />
       <workItem from="1751682211270" duration="7902000" />
-    </task>
-    <task id="LOCAL-00005" summary="v6.4.0  优化加好友代码">
-      <option name="closed" value="true" />
-      <created>1742736390476</created>
-      <option name="number" value="00005" />
-      <option name="presentableId" value="LOCAL-00005" />
-      <option name="project" value="LOCAL" />
-      <updated>1742736390476</updated>
     </task>
     <task id="LOCAL-00006" summary="v6.4.0  优化加好友代码">
       <option name="closed" value="true" />
@@ -602,7 +593,15 @@
       <option name="project" value="LOCAL" />
       <updated>1751941132343</updated>
     </task>
-    <option name="localTasksCounter" value="54" />
+    <task id="LOCAL-00054" summary="v6.5.0  添加群的限制">
+      <option name="closed" value="true" />
+      <created>1752222728270</created>
+      <option name="number" value="00054" />
+      <option name="presentableId" value="LOCAL-00054" />
+      <option name="project" value="LOCAL" />
+      <updated>1752222728270</updated>
+    </task>
+    <option name="localTasksCounter" value="55" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -632,7 +631,8 @@
     <MESSAGE value="v6.5.0  增加序列化标识，防止序列化反序列化问题" />
     <MESSAGE value="v6.5.0  优化代码" />
     <MESSAGE value="v6.5.0  移除文件表合并到系统文件表中" />
-    <option name="LAST_COMMIT_MESSAGE" value="v6.5.0  移除文件表合并到系统文件表中" />
+    <MESSAGE value="v6.5.0  添加群的限制" />
+    <option name="LAST_COMMIT_MESSAGE" value="v6.5.0  添加群的限制" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

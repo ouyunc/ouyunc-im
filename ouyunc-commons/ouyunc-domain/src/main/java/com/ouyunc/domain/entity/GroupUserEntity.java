@@ -146,6 +146,23 @@ public class GroupUserEntity implements Serializable {
         this.createTime = createTime;
     }
 
+    public GroupUserEntity(Long id, Long groupId, String groupCode, String groupNickName, Long userId, String userCode, Integer post, String userNickName, Integer shield, Integer silence, Integer way, Integer channel, Long sessionMessageOffset, Long joinTime) {
+        this.id = id;
+        this.groupId = groupId;
+        this.groupCode = groupCode;
+        this.groupNickName = groupNickName;
+        this.userId = userId;
+        this.userCode = userCode;
+        this.post = post;
+        this.userNickName = userNickName;
+        this.shield = shield;
+        this.silence = silence;
+        this.way = way;
+        this.channel = channel;
+        this.sessionMessageOffset = sessionMessageOffset;
+        this.joinTime = joinTime;
+    }
+
     public Integer getWay() {
         return way;
     }
