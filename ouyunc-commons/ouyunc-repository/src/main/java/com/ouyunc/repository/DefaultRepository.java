@@ -604,6 +604,18 @@ public enum DefaultRepository implements Repository{
         return reactiveRedisTemplate.execute(new DefaultRedisScript<>(luaScript, Boolean.class), keys, List.of(packet, expireTime, packet.getPacketId(), metadata.getServerTime()));
     }
 
+    /**
+     * 保存业务消息以及离线消息和会话消息
+     * @param packet
+     * @param to 接受者
+     * @return
+     */
+    public Mono<Boolean> reactiveSaveOfflineMessage(Packet packet, String to) {
+        Message message = packet.getMessage();
+        Metadata metadata = message.getMetadata();
+        return reactiveRedisTemplate.opsForZSet().add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + to, packet.getPacketId(), metadata.getServerTime());
+    }
+
 
     /**
      * 保存加好友请求,

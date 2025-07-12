@@ -30,7 +30,6 @@ import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -171,15 +170,27 @@ public final class GroupAgreeMessageProcessor extends AbstractMessageProcessor<B
                         log.error("同意加群请求，发送mq异常，原因：{}", ex.getMessage());
                         MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "处理同意加群请求异常！" + ex.getMessage(), packet), true);
                     } else {
-
-                        for (String groupMannerOrLeaderUserIdentity : groupMannerOrLeaderUsersIdentitySet) {
-                            List<LoginClientInfo> toLoginClientInfos = ClientHelper.onlineAll(message.getMetadata().getAppKey(), groupMannerOrLeaderUserIdentity);
-                            if (CollectionUtils.isNotEmpty(toLoginClientInfos)) {
-                                MessageHelper.asyncSendMessage(packet, toLoginClientInfos);
+                        repository().reactiveSaveOfflineMessage(packet,  content.getIdentity()).subscribe(saveResult ->  {
+                            if (saveResult) {
+                                // 被邀请者或主动加入者
+                                List<LoginClientInfo> inviterOrJoinerLoginClientInfos = ClientHelper.onlineAll(packet.getMessage().getMetadata().getAppKey(), content.getIdentity());
+                                if (CollectionUtils.isNotEmpty(inviterOrJoinerLoginClientInfos)) {
+                                    MessageHelper.asyncSendMessage(packet, inviterOrJoinerLoginClientInfos);
+                                }
+                                // 如果有群主或群管理员，则发送消息给群主或群管理员
+                                for (String groupMannerOrLeaderUserIdentity : groupMannerOrLeaderUsersIdentitySet) {
+                                    List<LoginClientInfo> toLoginClientInfos = ClientHelper.onlineAll(message.getMetadata().getAppKey(), groupMannerOrLeaderUserIdentity);
+                                    if (CollectionUtils.isNotEmpty(toLoginClientInfos)) {
+                                        MessageHelper.asyncSendMessage(packet, toLoginClientInfos);
+                                    }
+                                }
+                                // 处理成功则转到下个处理器
+                                ctx.fireChannelRead(packet);
+                            } else {
+                                log.error("保存被邀请者或主动加入离线消息失败: {}", packet);
+                                MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.SAVE_OFFLINE_MESSAGE_ERROR, "保存被邀请者或主动加入离线消息失败！", packet), true);
                             }
-                        }
-                        // 处理成功则转到下个处理器
-                        ctx.fireChannelRead(packet);
+                        });
                     }
                 });
             } else {

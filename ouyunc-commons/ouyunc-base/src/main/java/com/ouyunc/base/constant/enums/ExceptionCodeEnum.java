@@ -56,6 +56,9 @@ public enum ExceptionCodeEnum {
     BIND_GROUP_ERROR(700001, "绑定群组异常"),
 
 
+    SAVE_OFFLINE_MESSAGE_ERROR(800001, "保存离线消息异常"),
+
+
     ;
 
     private final int code;
