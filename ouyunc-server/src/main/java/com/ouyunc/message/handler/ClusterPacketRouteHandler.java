@@ -30,7 +30,7 @@ public class ClusterPacketRouteHandler extends SimpleChannelInboundHandler<Packe
         // 判断是否从其他服务路由过来的消息
         if (metadata != null && metadata.isRouted()) {
             log.info("当前服务：{} 接收到集群的消息: {}", MessageContext.messageProperties.getLocalServerAddress(), Serializer.JSON.serializeToString(packet));
-            MessageHelper.asyncSendMessage(packet, metadata.getTarget());
+            MessageHelper.asyncSendMessageWithoutInterceptor(packet, metadata.getTarget());
             return;
         }
         // 交给下个处理器, 如果上面条件没满足，则直接交给下个处理器去处理，一般是syn-ack集群内部心跳才会走这里

@@ -83,7 +83,22 @@ public class MessageHelper {
         }
     }
 
+    /**
+     * @Author fzx
+     * @Description 同步发送消息，不尝试使用拦截器
+     */
+    public static void syncSendMessageWithoutInterceptor(Packet packet, Target target) {
+        doSendMessage(packet, target, (sendResult)->{});
+    }
 
+
+    /**
+     * @Author fzx
+     * @Description 同步发送消息，不尝试使用拦截器
+     */
+    public static void syncSendMessageWithoutInterceptor(Packet packet, Target target, SendCallback sendCallback) {
+        doSendMessage(packet, target, sendCallback);
+    }
 
 
     /**
@@ -93,6 +108,30 @@ public class MessageHelper {
      */
     public static void asyncSendMessage(Packet packet, Target target) {
         asyncSendMessage(packet, target, (sendResult)->{});
+    }
+
+
+
+    /**
+     * @Author fzx
+     * @Description 异步投递消息，添加回调，不尝试使用拦截器
+     * 注意！注意！注意！，异步发送，只是逻辑处理事异步的，但是具体讲消息发送出去的时间不确定，因为最后发送消息的的writeAndFlush()方法，会被封装到channel.eventLoop()单线程的任务队列中；队列里面任务的执行时间可查看相关文档
+     */
+    public static void asyncSendMessageWithoutInterceptor(Packet packet, Target target) {
+        messageSendExecutor.execute(()-> {
+            doSendMessage(packet, target, (sendResult)->{});
+        });
+    }
+
+    /**
+     * @Author fzx
+     * @Description 异步投递消息，添加回调，不尝试使用拦截器
+     * 注意！注意！注意！，异步发送，只是逻辑处理事异步的，但是具体讲消息发送出去的时间不确定，因为最后发送消息的的writeAndFlush()方法，会被封装到channel.eventLoop()单线程的任务队列中；队列里面任务的执行时间可查看相关文档
+     */
+    public static void asyncSendMessageWithoutInterceptor(Packet packet, Target target, SendCallback sendCallback) {
+        messageSendExecutor.execute(()-> {
+            doSendMessage(packet, target, sendCallback);
+        });
     }
 
 
@@ -121,9 +160,6 @@ public class MessageHelper {
             } catch (Exception e) {
                 log.error("同步发送消息过程中发生异常", e);
             }
-
-
-
         });
     }
 
@@ -268,6 +304,6 @@ public class MessageHelper {
         }
         // 设置可用的下个目标服务
         target.setTargetServerAddress(nextAvailableSocketAddress);
-        asyncSendMessage(packet, target, sendCallback);
+        doSendMessage(packet, target, sendCallback);
     }
 }
