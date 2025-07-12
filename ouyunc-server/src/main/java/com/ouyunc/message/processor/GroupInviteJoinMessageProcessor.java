@@ -160,7 +160,7 @@ public final class GroupInviteJoinMessageProcessor extends AbstractMessageProces
                 // 尝试排除自己，自己可能是群主或管理员
                 // 注意：如果是群主或者管理员邀请的会自动通过，无论是否开启群自动同意
                 // 判断对方是否是自动同意加好友
-                if (GroupInvitePolicy.AUTO_PASS.value().equals(userEntity.getGroupInvitePolicy()) && (groupMannerOrLeaderUsersIdentitySet.remove(message.getFrom()) || GroupJoinPolicy.AUTO_PASS.value().equals(groupEntity.getGroupJoinPolicy()))) {
+                if ((groupMannerOrLeaderUsersIdentitySet.remove(message.getFrom()) || GroupJoinPolicy.AUTO_PASS.value().equals(groupEntity.getGroupJoinPolicy())) && GroupInvitePolicy.AUTO_PASS.value().equals(userEntity.getGroupInvitePolicy())) {
                     groupRequestSession.setJoinerProcessStatus(GroupJoinerProcessStatus.AGREE.value());
                     groupRequestSession.setProgress(RequestSessionProgress.AGREEING.value());
                     // 自动同意，不再给群主和管理员保存离线消息

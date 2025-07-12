@@ -14,7 +14,10 @@ import com.ouyunc.base.utils.SnowflakeUtil;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.domain.base.GroupRequestSession;
-import com.ouyunc.domain.constants.*;
+import com.ouyunc.domain.constants.GroupJoinPolicy;
+import com.ouyunc.domain.constants.GroupRequestSessionChannel;
+import com.ouyunc.domain.constants.GroupRequestSessionWay;
+import com.ouyunc.domain.constants.RequestSessionProgress;
 import com.ouyunc.domain.entity.GroupEntity;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
@@ -110,12 +113,13 @@ public final class GroupJoinMessageProcessor extends AbstractMessageProcessor<By
                 // 这里不保存到session 缓存中,保存到临时的会话请求消息中，该好友请求的消息可以对其进行定期清理；
                 // 获取当前群的管理员和群主，进行加群消息的推送
                 Set<String> groupMannerOrLeaderUsersIdentitySet = repository().groupManagerAndLeaderUsersIdentity(packet);
-                if (CollectionUtils.isEmpty(groupMannerOrLeaderUsersIdentitySet)) {
+                if (groupMannerOrLeaderUsersIdentitySet.remove(message.getFrom()) || CollectionUtils.isEmpty(groupMannerOrLeaderUsersIdentitySet)) {
                     // 这个群里没有群主？
-                    log.error("群组：{}, 不存在群主和群管理员！群消息： {}", packet.getMessage().getTo(), packet);
+                    log.error("群组：{}, 不存在群主和群管理员或群消息或已经加入群组： {}", packet.getMessage().getTo(), packet);
                     MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群主或群管理员", packet), true);
                     return;
                 }
+
                 // 尝试构建请求会话信息
                 if (groupRequestSession == null) {
                     groupRequestSession = GroupRequestSession.newGroupBuilder()

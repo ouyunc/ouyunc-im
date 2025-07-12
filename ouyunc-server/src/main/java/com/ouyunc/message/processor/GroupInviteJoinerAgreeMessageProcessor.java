@@ -13,7 +13,10 @@ import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.domain.base.GroupRequestSession;
-import com.ouyunc.domain.constants.*;
+import com.ouyunc.domain.constants.GroupJoinerProcessStatus;
+import com.ouyunc.domain.constants.GroupRequestSessionWay;
+import com.ouyunc.domain.constants.GroupUserPost;
+import com.ouyunc.domain.constants.RequestSessionProgress;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
@@ -110,6 +113,11 @@ public final class GroupInviteJoinerAgreeMessageProcessor extends AbstractMessag
                     // 这个群里没有群主？
                     log.error("群组：{}, 不存在群主和群管理员！群消息： {}", packet.getMessage().getTo(), packet);
                     MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群主或群管理员", packet), true);
+                    return;
+                }
+                // 如果有群主或群管理员，则发送消息给群主或群管理员， 排除自己,如果返回false 说明处理人不是管理员
+                if (!groupMannerOrLeaderUsersIdentitySet.remove(message.getFrom())) {
+                    log.error("处理人不是管理员或群主：{} 不允许处理", message.getFrom());
                     return;
                 }
                 // 更新缓存groupRequestSession 的处理状态为同意， mongo 中状态更新通过mq来监听更新, 判断如果邀请人是群主或管理员，则自动同意，添加好友
