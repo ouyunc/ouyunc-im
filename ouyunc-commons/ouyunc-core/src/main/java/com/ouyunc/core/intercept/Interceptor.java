@@ -1,5 +1,6 @@
 package com.ouyunc.core.intercept;
 
+import com.ouyunc.base.model.Target;
 import com.ouyunc.base.packet.Packet;
 
 /**
@@ -12,10 +13,10 @@ public interface Interceptor {
      *
      * @return
      */
-    boolean preHandle(Packet packet);
+    boolean preHandle(Packet packet, Target target);
 
     /**
      * 后置处理
      */
-    void postHandle(Packet packet);
+    void postHandle(Packet packet, Target target);
 }

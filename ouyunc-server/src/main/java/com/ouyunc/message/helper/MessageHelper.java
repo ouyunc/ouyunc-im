@@ -58,28 +58,33 @@ public class MessageHelper {
         }
     }
 
-
-
     /**
      * @Author fzx
      * @Description 同步发送消息
      */
     public static void syncSendMessage(Packet packet, Target target) {
-        if (CollectionUtils.isNotEmpty(MessageServerContext.messageInterceptorChain)) {
+        if (CollectionUtils.isEmpty(MessageServerContext.messageInterceptorChain)) {
+            doSendMessage(packet, target, (sendResult)->{});
+            return;
+        }
+        try {
             for (AbstractMessageInterceptor messageInterceptor : MessageServerContext.messageInterceptorChain) {
-                if (!messageInterceptor.preHandle(packet)) {
-                    log.warn("消息拦截器 {} 拦截了消息: {}", messageInterceptor.getClass().getName(), packet);
+                if (!messageInterceptor.preHandle(packet, target)) {
+                    log.debug("消息拦截器 {} 拦截了消息: {}", messageInterceptor.getClass().getName(), packet);
                     return;
                 }
             }
             doSendMessage(packet, target, (sendResult)->{});
             for (AbstractMessageInterceptor messageInterceptor : MessageServerContext.messageInterceptorChain) {
-                messageInterceptor.postHandle(packet);
+                messageInterceptor.postHandle(packet, target);
             }
-            return;
+        } catch (Exception e) {
+            log.error("同步发送消息过程中发生异常", e);
         }
-        doSendMessage(packet, target, (sendResult)->{});
     }
+
+
+
 
     /**
      * @Author fzx
@@ -98,20 +103,27 @@ public class MessageHelper {
      */
     public static void asyncSendMessage(Packet packet, Target target, SendCallback sendCallback) {
         messageSendExecutor.execute(()-> {
-            if (CollectionUtils.isNotEmpty(MessageServerContext.messageInterceptorChain)) {
+            if (CollectionUtils.isEmpty(MessageServerContext.messageInterceptorChain)) {
+                doSendMessage(packet, target, sendCallback);
+                return;
+            }
+            try {
                 for (AbstractMessageInterceptor messageInterceptor : MessageServerContext.messageInterceptorChain) {
-                    if (!messageInterceptor.preHandle(packet)) {
-                        log.warn("消息拦截器 {} 拦截了消息: {}", messageInterceptor.getClass().getName(), packet);
+                    if (!messageInterceptor.preHandle(packet, target)) {
+                        log.debug("消息拦截器 {} 拦截了消息: {}", messageInterceptor.getClass().getName(), packet);
                         return;
                     }
                 }
                 doSendMessage(packet, target, sendCallback);
                 for (AbstractMessageInterceptor messageInterceptor : MessageServerContext.messageInterceptorChain) {
-                    messageInterceptor.postHandle(packet);
+                    messageInterceptor.postHandle(packet, target);
                 }
-                return;
+            } catch (Exception e) {
+                log.error("同步发送消息过程中发生异常", e);
             }
-            doSendMessage(packet, target, sendCallback);
+
+
+
         });
     }
 
@@ -137,7 +149,7 @@ public class MessageHelper {
         if (!metadata.isRouted()) {
             // 首次进行传递时，将目标以及目标主机和所登录的设备进行设置
             metadata.setRouted(true);
-            metadata.setTarget(target);
+            metadata.setTarget(target.clone());
         }
         // 将本机地址作为上一个路由服务地址传递过去
         // 先从存活的注册表中查找（防止有新添加集群中的服务），然后再从全局中找到最近的服务;

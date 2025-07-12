@@ -25,12 +25,12 @@ import java.util.concurrent.TimeUnit;
 @Order(NumberConstant.NUMBER_100)
 public class QosRetryMessageInterceptor extends AbstractMessageInterceptor {
     @Override
-    public boolean preHandle(Packet packet) {
+    public boolean preHandle(Packet packet, Target target) {
         return true;
     }
 
     @Override
-    public void postHandle(Packet packet) {
+    public void postHandle(Packet packet, Target target) {
         // 判断是否是服务端模式
         // 判断是否需要qos
         if (MessageServerContext.serverProperties().isQosEnable() && MessageServerContext.serverProperties().isQosRetryEnable()) {
@@ -43,7 +43,7 @@ public class QosRetryMessageInterceptor extends AbstractMessageInterceptor {
                 Packet schedulePackage = packet.clone();
                 ScheduleTimer.scheduleWithFixedDelay(String.valueOf(packet.getPacketId()), taskWrapper -> {
                     // 获取最终目标服务所有端的登录信息并组装成target, 只能在相同的appKey 下发送数据,
-                    List<LoginClientInfo> targetLoginClientInfos = ClientHelper.onlineAll(metadata.getAppKey(), message.getTo());
+                    List<LoginClientInfo> targetLoginClientInfos = ClientHelper.onlineAll(metadata.getAppKey(), target.getTargetIdentity());
                     if (CollectionUtils.isEmpty(targetLoginClientInfos)) {
                         // 这里直接取消，因为消息已经存到离线队列中，等接收方上线后直接从离线消息拉取即可
                         taskWrapper.cancel();
