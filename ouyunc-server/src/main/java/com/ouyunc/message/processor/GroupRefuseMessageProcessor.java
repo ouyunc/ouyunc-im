@@ -148,7 +148,7 @@ public final class GroupRefuseMessageProcessor extends AbstractMessageProcessor<
                     return;
                 }
                 // 设置进度
-                groupRequestSession.setProgress(RequestSessionProgress.REFUSEING.value());
+                groupRequestSession.setProgress(RequestSessionProgress.REFUSING.value());
                 groupRequestSession.setProcessor(message.getFrom());
                 groupRequestSession.setProcessorPost(fromGroupUserEntity.getPost());
                 // 保存请求信息

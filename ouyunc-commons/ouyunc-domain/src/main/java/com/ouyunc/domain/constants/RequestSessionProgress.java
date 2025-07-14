@@ -8,7 +8,7 @@ import java.util.Objects;
  */
 public enum RequestSessionProgress {
     JOINING(-1, "加入中"),
-    REFUSEING(0, "拒绝中"),
+    REFUSING(0, "拒绝中"),
     AGREEING(1, "同意中"),
     ;
 

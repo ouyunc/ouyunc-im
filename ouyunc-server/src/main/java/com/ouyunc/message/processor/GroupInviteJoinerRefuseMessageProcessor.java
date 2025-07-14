@@ -37,8 +37,8 @@ import java.util.concurrent.TimeUnit;
  *
  * 注意这里只有同意请求，目前不需要通知其他人，拒绝直接走api接口改变缓存和mongo状态即可,记得关闭该请求会话
  */
-public final class GroupInviteJoinerAgreeMessageProcessor extends AbstractMessageProcessor<Byte> {
-    private static final Logger log = LoggerFactory.getLogger(GroupInviteJoinerAgreeMessageProcessor.class);
+public final class GroupInviteJoinerRefuseMessageProcessor extends AbstractMessageProcessor<Byte> {
+    private static final Logger log = LoggerFactory.getLogger(GroupInviteJoinerRefuseMessageProcessor.class);
 
     @Override
     public MessageType type() {
@@ -85,7 +85,7 @@ public final class GroupInviteJoinerAgreeMessageProcessor extends AbstractMessag
     @Override
     public void process(ChannelHandlerContext ctx, Packet packet) {
         if (log.isDebugEnabled()) {
-            log.debug("GroupInviteJoinerAgreeMessageProcessor 正在处理被邀请加群者同意加群的请求 {} ...", packet);
+            log.debug("GroupInviteJoinerRefuseMessageProcessor 正在处理被邀请加群者同意加群的请求 {} ...", packet);
         }
         // 1. 保存消息
         Message message = packet.getMessage();
@@ -121,17 +121,17 @@ public final class GroupInviteJoinerAgreeMessageProcessor extends AbstractMessag
                     return;
                 }
                 // 更新缓存groupRequestSession 的处理状态为同意， mongo 中状态更新通过mq来监听更新, 判断如果邀请人是群主或管理员，则自动同意，添加好友
-                groupRequestSession.setJoinerProcessStatus(GroupJoinerProcessStatus.AGREE.value());
+                groupRequestSession.setJoinerProcessStatus(GroupJoinerProcessStatus.REFUSE.value());
                 if (!saveGroupRequestMessage(packet, groupMannerOrLeaderUsersIdentitySet, groupRequestSession)) {
-                    log.error("Failed to save invited join group agree request message: {}", packet);
-                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存被邀请同意加群请求消息异常!", packet), true);
+                    log.error("Failed to save invited join group refuse request message: {}", packet);
+                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存被邀请拒绝加群请求消息异常!", packet), true);
                     return;
                 }
                 // 发送mq
                 repository().savePacket2Mq(MqConstant.KAFKA_GROUP_REQUEST_TOPIC, packet.getMessage().getTo(), packet).whenComplete((result, ex) -> {
                     if (ex != null) {
-                        log.error("邀请加群请求，发送mq异常，原因：{}", ex.getMessage());
-                        MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "被邀请人同意邀请加群请求异常！" + ex.getMessage(), packet), true);
+                        log.error("邀请拒绝加群请求，发送mq异常，原因：{}", ex.getMessage());
+                        MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "被邀请人拒绝邀请加群请求异常！" + ex.getMessage(), packet), true);
                     } else {
                         // 需要给邀请者发送消息？
                         if (groupMannerOrLeaderUsersIdentitySet.contains(groupRequestSession.getInviter())) {
@@ -170,12 +170,12 @@ public final class GroupInviteJoinerAgreeMessageProcessor extends AbstractMessag
                     }
                 });
             } else {
-                log.error("Failed to lock user invite join group request message: {}", packet);
-                MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, "同意邀请加群请求锁失败", packet), true);
+                log.error("Failed to lock user invite join group refuse request message: {}", packet);
+                MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, "拒绝邀请加群请求锁失败", packet), true);
             }
         } catch (Exception e) {
-            log.error("Failed to handle user invite join group request message: {}", e.getMessage());
-            MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.BIND_GROUP_ERROR, "处理同意邀请加群请求异常！" + e.getMessage(), packet), true);
+            log.error("Failed to handle user invite join group refuse request message: {}", e.getMessage());
+            MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.BIND_GROUP_ERROR, "处理拒绝邀请加群请求异常！" + e.getMessage(), packet), true);
         } finally {
             if (lock.isHeldByCurrentThread()) {
                 lock.unlock();
