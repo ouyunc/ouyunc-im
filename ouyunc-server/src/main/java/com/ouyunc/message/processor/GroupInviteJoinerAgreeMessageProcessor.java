@@ -127,14 +127,24 @@ public final class GroupInviteJoinerAgreeMessageProcessor extends AbstractMessag
                     MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存被邀请同意加群请求消息异常!", packet), true);
                     return;
                 }
-                // 发送mq
-                repository().savePacket2Mq(MqConstant.KAFKA_GROUP_REQUEST_TOPIC, packet.getMessage().getTo(), packet).whenComplete((result, ex) -> {
-                    if (ex != null) {
-                        log.error("邀请加群请求，发送mq异常，原因：{}", ex.getMessage());
-                        MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "被邀请人同意邀请加群请求异常！" + ex.getMessage(), packet), true);
-                    } else {
-                        // 需要给邀请者发送消息？
-                        if (groupMannerOrLeaderUsersIdentitySet.contains(groupRequestSession.getInviter())) {
+                if (groupMannerOrLeaderUsersIdentitySet.contains(groupRequestSession.getInviter())) {
+                    // 如果有群主或群管理员，则发送消息给群主或群管理员
+                    for (String groupMannerOrLeaderUserIdentity : groupMannerOrLeaderUsersIdentitySet) {
+                        List<LoginClientInfo> toLoginClientInfos = ClientHelper.onlineAll(message.getMetadata().getAppKey(), groupMannerOrLeaderUserIdentity);
+                        if (CollectionUtils.isNotEmpty(toLoginClientInfos)) {
+                            MessageHelper.asyncSendMessage(packet, toLoginClientInfos);
+                        }
+                    }
+                    // 处理成功则转到下个处理器
+                    ctx.fireChannelRead(packet);
+                }else {
+                    repository().reactiveSaveOfflineMessage(packet,  groupRequestSession.getInviter()).subscribe(saveResult ->  {
+                        if (saveResult) {
+                            // 邀请人
+                            List<LoginClientInfo> inviterLoginClientInfos = ClientHelper.onlineAll(packet.getMessage().getMetadata().getAppKey(), groupRequestSession.getInviter());
+                            if (CollectionUtils.isNotEmpty(inviterLoginClientInfos)) {
+                                MessageHelper.asyncSendMessage(packet, inviterLoginClientInfos);
+                            }
                             // 如果有群主或群管理员，则发送消息给群主或群管理员
                             for (String groupMannerOrLeaderUserIdentity : groupMannerOrLeaderUsersIdentitySet) {
                                 List<LoginClientInfo> toLoginClientInfos = ClientHelper.onlineAll(message.getMetadata().getAppKey(), groupMannerOrLeaderUserIdentity);
@@ -144,31 +154,13 @@ public final class GroupInviteJoinerAgreeMessageProcessor extends AbstractMessag
                             }
                             // 处理成功则转到下个处理器
                             ctx.fireChannelRead(packet);
-                        }else {
-                            repository().reactiveSaveOfflineMessage(packet,  groupRequestSession.getInviter()).subscribe(saveResult ->  {
-                                if (saveResult) {
-                                    // 邀请人
-                                    List<LoginClientInfo> inviterLoginClientInfos = ClientHelper.onlineAll(packet.getMessage().getMetadata().getAppKey(), groupRequestSession.getInviter());
-                                    if (CollectionUtils.isNotEmpty(inviterLoginClientInfos)) {
-                                        MessageHelper.asyncSendMessage(packet, inviterLoginClientInfos);
-                                    }
-                                    // 如果有群主或群管理员，则发送消息给群主或群管理员
-                                    for (String groupMannerOrLeaderUserIdentity : groupMannerOrLeaderUsersIdentitySet) {
-                                        List<LoginClientInfo> toLoginClientInfos = ClientHelper.onlineAll(message.getMetadata().getAppKey(), groupMannerOrLeaderUserIdentity);
-                                        if (CollectionUtils.isNotEmpty(toLoginClientInfos)) {
-                                            MessageHelper.asyncSendMessage(packet, toLoginClientInfos);
-                                        }
-                                    }
-                                    // 处理成功则转到下个处理器
-                                    ctx.fireChannelRead(packet);
-                                } else {
-                                    log.error("保存被邀请者离线消息失败: {}", packet);
-                                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.SAVE_OFFLINE_MESSAGE_ERROR, "保存被邀请者离线消息异常！", packet), true);
-                                }
-                            });
+                        } else {
+                            log.error("保存被邀请者离线消息失败: {}", packet);
+                            MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.SAVE_OFFLINE_MESSAGE_ERROR, "保存被邀请者离线消息异常！", packet), true);
                         }
-                    }
-                });
+                    });
+                }
+
             } else {
                 log.error("Failed to lock user invite join group request message: {}", packet);
                 MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, "同意邀请加群请求锁失败", packet), true);
