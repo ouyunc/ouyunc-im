@@ -34,9 +34,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * 被邀请人同意加群后，通知群主或管理员进行同意或拒绝， 不通知邀请人（除非邀请人是管理员或群主，如果邀请人是管理员或群主，则被邀请人同意后会自动加群，不用等待其他人去处理加群了）
- *
- * 注意这里只有同意请求，目前不需要通知其他人，拒绝直接走api接口改变缓存和mongo状态即可,记得关闭该请求会话
- */
+ * */
 public final class GroupInviteJoinerAgreeMessageProcessor extends AbstractMessageProcessor<Byte> {
     private static final Logger log = LoggerFactory.getLogger(GroupInviteJoinerAgreeMessageProcessor.class);
 
@@ -116,8 +114,8 @@ public final class GroupInviteJoinerAgreeMessageProcessor extends AbstractMessag
                     return;
                 }
                 // 如果有群主或群管理员，则发送消息给群主或群管理员， 排除自己,如果返回false 说明处理人不是管理员
-                if (!groupMannerOrLeaderUsersIdentitySet.remove(message.getFrom())) {
-                    log.error("处理人不是管理员或群主：{} 不允许处理", message.getFrom());
+                if (groupMannerOrLeaderUsersIdentitySet.remove(message.getFrom())) {
+                    log.error("发送者管理员或群主：{} 不允许处理，已经存在群组中了", message.getFrom());
                     return;
                 }
                 // 更新缓存groupRequestSession 的处理状态为同意， mongo 中状态更新通过mq来监听更新, 判断如果邀请人是群主或管理员，则自动同意，添加好友
