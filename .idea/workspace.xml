@@ -4,14 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="v6.5.0  添加群的限制">
-      <change afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupInviteJoinerRefuseMessageProcessor.java" afterDir="false" />
+    <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/enums/MessageTypeEnum.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/enums/MessageTypeEnum.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/constants/RequestSessionProgress.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/constants/RequestSessionProgress.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/AbstractBaseProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/AbstractBaseProcessor.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupInviteJoinerAgreeMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupInviteJoinerAgreeMessageProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupRefuseMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupRefuseMessageProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneRefuseFriendRequestMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneRefuseFriendRequestMessageProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupMessageProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/validator/ReactiveValidator.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/validator/ReactiveValidator.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -62,33 +60,34 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Application.App.executor&quot;: &quot;Debug&quot;,
-    &quot;Application.StartServer.executor&quot;: &quot;Debug&quot;,
-    &quot;JavaScript Debug.client1.html (1).executor&quot;: &quot;Run&quot;,
-    &quot;JavaScript Debug.client1.html (2).executor&quot;: &quot;Run&quot;,
-    &quot;JavaScript Debug.client1.html.executor&quot;: &quot;Run&quot;,
-    &quot;JavaScript Debug.client13333333333.html.executor&quot;: &quot;Run&quot;,
-    &quot;JavaScript Debug.client2.html.executor&quot;: &quot;Run&quot;,
-    &quot;JavaScript Debug.client3.html.executor&quot;: &quot;Run&quot;,
-    &quot;JavaScript Debug.client4.html.executor&quot;: &quot;Run&quot;,
-    &quot;JavaScript Debug.client5.html.executor&quot;: &quot;Run&quot;,
-    &quot;Maven.ouyunc-im [clean].executor&quot;: &quot;Run&quot;,
-    &quot;Maven.ouyunc-im [install].executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;6.5.0&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;D:/workspace/ouyunc-im/docs/6.5.0&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;MavenSettings&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Application.App.executor": "Debug",
+    "Application.ObjectCreationBenchmark.executor": "Run",
+    "Application.StartServer.executor": "Debug",
+    "JavaScript Debug.client1.html (1).executor": "Run",
+    "JavaScript Debug.client1.html (2).executor": "Run",
+    "JavaScript Debug.client1.html.executor": "Run",
+    "JavaScript Debug.client13333333333.html.executor": "Run",
+    "JavaScript Debug.client2.html.executor": "Run",
+    "JavaScript Debug.client3.html.executor": "Run",
+    "JavaScript Debug.client4.html.executor": "Run",
+    "JavaScript Debug.client5.html.executor": "Run",
+    "Maven.ouyunc-im [clean].executor": "Run",
+    "Maven.ouyunc-im [install].executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "6.5.0",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "D:/workspace/ouyunc-im/docs/6.5.0",
+    "node.js.detected.package.eslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "MavenSettings",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="ReactorSettings">
     <option name="notificationShown" value="true" />
   </component>
@@ -99,6 +98,7 @@
       <recent name="D:\workspace\ouyunc-im" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="D:\workspace\ouyunc-im\ouyunc-server\src\main\java\com\ouyunc\message\validator" />
       <recent name="D:\workspace\ouyunc-im\docs" />
     </key>
     <key name="CopyClassDialog.RECENTS_KEY">
@@ -109,7 +109,7 @@
       <recent name="com.ouyunc.base.model" />
     </key>
   </component>
-  <component name="RunManager" selected="Application.App">
+  <component name="RunManager" selected="Application.ObjectCreationBenchmark">
     <configuration name="App" type="Application" factoryName="Application">
       <option name="MAIN_CLASS_NAME" value="com.ouyunc.message.StartServer" />
       <module name="ouyunc-server" />
@@ -124,6 +124,19 @@
       <module name="ouyunc-server" />
       <option name="PROGRAM_PARAMETERS" value="Dlog4j.skipJansi=false" />
       <option name="VM_PARAMETERS" value="-Dlog4j.skipJansi=false" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ObjectCreationBenchmark" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="com.ouyunc.message.validator.ObjectCreationBenchmark" />
+      <module name="ouyunc-server" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.ouyunc.message.validator.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
@@ -138,9 +151,6 @@
       <method v="2" />
     </configuration>
     <configuration name="client3.html" type="JavascriptDebugType" temporary="true" nameIsGenerated="true" uri="http://localhost:63342/ouyunc-im/docs/6.5.0/client3.html" useBuiltInWebServerPort="true">
-      <method v="2" />
-    </configuration>
-    <configuration name="client5.html" type="JavascriptDebugType" temporary="true" nameIsGenerated="true" uri="http://localhost:63342/ouyunc-im/docs/6.5.0/client5.html" useBuiltInWebServerPort="true">
       <method v="2" />
     </configuration>
     <configuration name="OuyuncMessageSpringBootStarterApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
@@ -159,20 +169,20 @@
     </configuration>
     <list>
       <item itemvalue="Application.App" />
+      <item itemvalue="Application.ObjectCreationBenchmark" />
       <item itemvalue="JavaScript Debug.client3.html" />
       <item itemvalue="JavaScript Debug.client2.html" />
       <item itemvalue="JavaScript Debug.client1.html (2)" />
       <item itemvalue="JavaScript Debug.client13333333333.html" />
-      <item itemvalue="JavaScript Debug.client5.html" />
       <item itemvalue="Spring Boot.OuyuncMessageSpringBootStarterApplication" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Application.ObjectCreationBenchmark" />
         <item itemvalue="JavaScript Debug.client1.html (2)" />
         <item itemvalue="JavaScript Debug.client3.html" />
         <item itemvalue="JavaScript Debug.client2.html" />
         <item itemvalue="JavaScript Debug.client13333333333.html" />
-        <item itemvalue="JavaScript Debug.client5.html" />
       </list>
     </recent_temporary>
   </component>
@@ -220,31 +230,9 @@
       <workItem from="1752248051423" duration="1736000" />
       <workItem from="1752288517683" duration="16654000" />
       <workItem from="1752372619189" duration="11631000" />
-      <workItem from="1752494538990" duration="753000" />
-    </task>
-    <task id="LOCAL-00011" summary="v6.4.0  优化代码">
-      <option name="closed" value="true" />
-      <created>1742896715931</created>
-      <option name="number" value="00011" />
-      <option name="presentableId" value="LOCAL-00011" />
-      <option name="project" value="LOCAL" />
-      <updated>1742896715931</updated>
-    </task>
-    <task id="LOCAL-00012" summary="v6.4.0  优化代码">
-      <option name="closed" value="true" />
-      <created>1742965608212</created>
-      <option name="number" value="00012" />
-      <option name="presentableId" value="LOCAL-00012" />
-      <option name="project" value="LOCAL" />
-      <updated>1742965608212</updated>
-    </task>
-    <task id="LOCAL-00013" summary="v6.4.0  优化代码">
-      <option name="closed" value="true" />
-      <created>1742983079032</created>
-      <option name="number" value="00013" />
-      <option name="presentableId" value="LOCAL-00013" />
-      <option name="project" value="LOCAL" />
-      <updated>1742983079032</updated>
+      <workItem from="1752494538990" duration="1797000" />
+      <workItem from="1752970767085" duration="34000" />
+      <workItem from="1753610949080" duration="2259000" />
     </task>
     <task id="LOCAL-00014" summary="v6.4.0  优化代码">
       <option name="closed" value="true" />
@@ -614,7 +602,31 @@
       <option name="project" value="LOCAL" />
       <updated>1752409589072</updated>
     </task>
-    <option name="localTasksCounter" value="60" />
+    <task id="LOCAL-00060" summary="v6.5.0  添加群的限制">
+      <option name="closed" value="true" />
+      <created>1752495306444</created>
+      <option name="number" value="00060" />
+      <option name="presentableId" value="LOCAL-00060" />
+      <option name="project" value="LOCAL" />
+      <updated>1752495306444</updated>
+    </task>
+    <task id="LOCAL-00061" summary="v6.5.0  添加群的限制">
+      <option name="closed" value="true" />
+      <created>1752495411912</created>
+      <option name="number" value="00061" />
+      <option name="presentableId" value="LOCAL-00061" />
+      <option name="project" value="LOCAL" />
+      <updated>1752495411912</updated>
+    </task>
+    <task id="LOCAL-00062" summary="v6.5.0  添加群的限制">
+      <option name="closed" value="true" />
+      <created>1753611791582</created>
+      <option name="number" value="00062" />
+      <option name="presentableId" value="LOCAL-00062" />
+      <option name="project" value="LOCAL" />
+      <updated>1753611791582</updated>
+    </task>
+    <option name="localTasksCounter" value="63" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
