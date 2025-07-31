@@ -5,7 +5,7 @@ import java.util.Objects;
 /**
  * 应用状态 枚举
  */
-public enum RequestStatus {
+public enum RequestSessionStatus {
     PENDING(0, "待处理"),
     AGREED(1, "已同意"),
     REFUSED(2, "已拒绝"),
@@ -17,7 +17,7 @@ public enum RequestStatus {
     private final Integer value;
     private final String desc;
 
-    RequestStatus(Integer value, String desc) {
+    RequestSessionStatus(Integer value, String desc) {
         this.value = value;
         this.desc = desc;
     }
@@ -29,8 +29,8 @@ public enum RequestStatus {
     public String desc() {
         return desc;
     }
-    public static RequestStatus valueOf(Integer value) {
-        for (RequestStatus appStatus : values()) {
+    public static RequestSessionStatus valueOf(Integer value) {
+        for (RequestSessionStatus appStatus : values()) {
             if (Objects.equals(appStatus.value, value)) {
                 return appStatus;
             }
