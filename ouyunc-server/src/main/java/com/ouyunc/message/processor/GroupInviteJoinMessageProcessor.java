@@ -170,6 +170,7 @@ public final class GroupInviteJoinMessageProcessor extends AbstractMessageProces
                         return;
                     }
                 }else {
+                    groupRequestSession.setJoinerProcessStatus(GroupJoinerProcessStatus.PENDING.value());
                     groupRequestSession.setProgress(RequestSessionProgress.JOINING.value());
                     if (!saveGroupRequestMessage(packet, groupMannerOrLeaderUsersIdentitySet, groupRequestSession)) {
                         log.error("Failed to save invite join group request message: {}", packet);

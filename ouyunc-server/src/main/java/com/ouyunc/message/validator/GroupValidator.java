@@ -42,6 +42,14 @@ public enum GroupValidator implements ReactiveValidator<Packet> {
                     }
                     log.warn("{} 已经被平台封禁", to);
                     return Mono.just(true);
+                }).doOnNext(groupEntity -> {
+                    if (groupEntity == null) {
+                        log.warn("群组 {} 不存在或已被删除", to);
+                    }
+                }).doOnSuccess(groupEntity -> {
+                    if (groupEntity == null) {
+                        log.warn("群组 {} 缓存未找到，可能已被删除或不存在", to);
+                    }
                 }).defaultIfEmpty(true);
     }
 }
