@@ -40,7 +40,7 @@ public final class GroupInviteJoinerRefuseMessageProcessor extends AbstractMessa
 
     @Override
     public MessageType type() {
-        return MessageTypeEnum.GROUP_REQUEST_INVITED_JOINER_AGREE;
+        return MessageTypeEnum.GROUP_REQUEST_INVITED_JOINER_REFUSE;
     }
 
     @Override
