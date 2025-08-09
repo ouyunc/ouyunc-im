@@ -94,6 +94,7 @@ CREATE TABLE `ouyunc_im_group_user` (
                                         `session_message_offset` bigint NOT NULL DEFAULT '0' COMMENT '会话消息的偏移量；群成员对群会话的消息读取偏移量，假如这次读取到A点，则下次从A点开始往后拉取数据',
                                         `join_time` bigint NOT NULL COMMENT '加入时间',
                                         `way` tinyint NOT NULL DEFAULT '1' COMMENT '加群方式：1-主动加群，2-被动加群（被邀请），3-扫码加群  ......',
+                                        `group_offset` int(11) NOT NULL COMMENT '在群中的偏移量，加群时就已经确定，也就是排序，后续可以用做bit map',
                                         `channel` tinyint NOT NULL DEFAULT '1' COMMENT '加群渠道，预留，默认1',
                                         PRIMARY KEY (`id`) USING BTREE,
                                         UNIQUE KEY `group_user_id` (`user_id`,`group_id`) USING BTREE COMMENT '联合唯一索引'

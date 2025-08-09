@@ -94,6 +94,11 @@ public class GroupUserEntity implements Serializable {
      */
     private Long joinTime;
 
+    /**
+     * 在群中的偏移量，加群时确定，固定不变
+     */
+    private Integer groupOffset;
+
 
     /**
     * 创建时间
@@ -161,6 +166,24 @@ public class GroupUserEntity implements Serializable {
         this.channel = channel;
         this.sessionMessageOffset = sessionMessageOffset;
         this.joinTime = joinTime;
+    }
+
+    public GroupUserEntity(Long id, Long groupId, String groupCode, String groupNickName, Long userId, String userCode, Integer post, String userNickName, Integer shield, Integer silence, Integer way, Integer channel, Long sessionMessageOffset, Long joinTime, Integer groupOffset) {
+        this.id = id;
+        this.groupId = groupId;
+        this.groupCode = groupCode;
+        this.groupNickName = groupNickName;
+        this.userId = userId;
+        this.userCode = userCode;
+        this.post = post;
+        this.userNickName = userNickName;
+        this.shield = shield;
+        this.silence = silence;
+        this.way = way;
+        this.channel = channel;
+        this.sessionMessageOffset = sessionMessageOffset;
+        this.joinTime = joinTime;
+        this.groupOffset = groupOffset;
     }
 
     public Integer getWay() {
