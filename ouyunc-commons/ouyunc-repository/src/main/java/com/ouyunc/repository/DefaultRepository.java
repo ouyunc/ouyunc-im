@@ -447,7 +447,7 @@ public enum DefaultRepository implements Repository{
 
 
     /**
-     * 响应式处理读已回执消息
+     * 响应式处理读已回执消息  todo 这里换成位图 bitmap 实现，减少存储量
      */
     public Mono<Boolean> reactiveReadReceiptMessage(Packet packet, long expireTime) {
         Message message = packet.getMessage();
