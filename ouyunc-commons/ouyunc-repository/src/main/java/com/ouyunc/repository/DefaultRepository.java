@@ -685,7 +685,7 @@ public enum DefaultRepository implements Repository{
         String messageKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.MESSAGE + packet.getPacketId();
         String requestSessionKey = CacheConstant.OUYUNC +  CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST + CacheConstant.SESSION + IdentityUtil.sessionId(from, to) + CacheConstant.COLON + friendRequestSessionId;
         String offlineKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.OFFLINE + message.getTo();
-        return executeMessageOperations(packet, friendRequestSessionId, expireTime, messageKey, requestSessionKey, offlineKey, consumer, (ops, msg, ak, f, t) -> {});
+        return saveMessageWithSessionOrOffline(packet, friendRequestSessionId, expireTime, messageKey, requestSessionKey, offlineKey, consumer, (ops, msg, ak, f, t) -> {});
     }
 
 
@@ -847,7 +847,7 @@ public enum DefaultRepository implements Repository{
         String messageKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.MESSAGE + packet.getPacketId();
         String requestSessionKey = CacheConstant.OUYUNC +  CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST + CacheConstant.SESSION + IdentityUtil.sessionId(from, to) + CacheConstant.COLON + friendRequestSessionId;
         String offlineKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.OFFLINE + message.getTo();
-        return executeMessageOperations(packet, friendRequestSessionId, expireTime, messageKey, requestSessionKey, offlineKey, consumer,
+        return saveMessageWithSessionOrOffline(packet, friendRequestSessionId, expireTime, messageKey, requestSessionKey, offlineKey, consumer,
                 (ops, msg, ak, f, t) -> {
                     // 建立双向好友关系（仅bindFriend方法需要的逻辑）
                     ZSetOperations<String, Object> zSetOps = ops.opsForZSet();
@@ -862,16 +862,16 @@ public enum DefaultRepository implements Repository{
     /**
      * 公共执行方法：提取重复逻辑，通过函数接口注入差异化操作
      * @param packet 消息包
-     * @param friendRequestSessionId 会话ID
+     * @param sessionId 会话ID
      * @param expireTime 过期时间
      * @param consumer 自定义处理逻辑
      * @param extraOperation 额外操作（差异化逻辑）
      * @return 是否执行成功
      */
-    private boolean executeMessageOperations(Packet packet, String friendRequestSessionId,
-                                             long expireTime, String messageKey, String requestSessionKey, String offlineKey,
-                                             BiConsumer<RedisOperations<String, Object>, String> consumer,
-                                             TriConsumer<RedisOperations<String, Object>, Message, String, String, String> extraOperation) {
+    private boolean saveMessageWithSessionOrOffline(Packet packet, String sessionId,
+                                                    long expireTime, String messageKey, String requestSessionKey, String offlineKey,
+                                                    BiConsumer<RedisOperations<String, Object>, String> consumer,
+                                                    TriConsumer<RedisOperations<String, Object>, Message, String, String, String> extraOperation) {
         try {
             Message message = packet.getMessage();
             Metadata metadata = message.getMetadata();
@@ -907,7 +907,7 @@ public enum DefaultRepository implements Repository{
                     extraOperation.accept(ops, message, appKey, from, to);
 
                     // 5. 执行自定义处理逻辑
-                    consumer.accept(ops, friendRequestSessionId);
+                    consumer.accept(ops, sessionId);
 
                     return null;
                 }
