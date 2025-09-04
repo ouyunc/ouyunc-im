@@ -8,6 +8,7 @@ import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.IdentityUtil;
+import com.ouyunc.base.utils.SnowflakeUtil;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.db.jdbc.JdbcFactory;
@@ -686,7 +687,7 @@ public enum DefaultRepository implements Repository{
                 String luaScript = LuaScriptConstant.SAVE_MESSAGE_WITHOUT_OFFLINE_LUA_SCRIPT;
                 List<String> keys = Lists.newArrayList(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.MESSAGE + packet.getPacketId(),
                         CacheConstant.OUYUNC +  CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST + CacheConstant.SESSION + IdentityUtil.sessionId(message.getFrom(), message.getTo()) + CacheConstant.COLON + friendRequestSessionId);
-                Object[] args = new Object[]{packet, expireTime, packet.getPacketId(), metadata.getServerTime()};
+                Object[] args = new Object[]{packet, expireTime, SnowflakeUtil.formatLong(packet.getPacketId()), NumberConstant.NUMBER_0};
                 // 如果开启qos,并且需要qos
                 if (MessageContext.messageProperties.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
                     keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + message.getTo());
@@ -864,7 +865,7 @@ public enum DefaultRepository implements Repository{
                     String luaScript = LuaScriptConstant.SAVE_MESSAGE_WITHOUT_OFFLINE_LUA_SCRIPT;
                     List<String> keys = Lists.newArrayList(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.MESSAGE + packet.getPacketId(),
                             CacheConstant.OUYUNC +  CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST + CacheConstant.SESSION + IdentityUtil.sessionId(from, to) + CacheConstant.COLON + friendRequestSessionId);
-                    Object[] args = new Object[]{packet, expireTime, packet.getPacketId(), message.getMetadata().getServerTime()};
+                    Object[] args = new Object[]{packet, expireTime, SnowflakeUtil.formatLong(packet.getPacketId()), NumberConstant.NUMBER_0};
                     // 如果开启qos,并且需要qos
                     if (MessageContext.messageProperties.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
                         keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.OFFLINE + message.getTo());

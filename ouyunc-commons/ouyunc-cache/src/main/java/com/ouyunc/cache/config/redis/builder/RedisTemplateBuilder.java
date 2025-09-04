@@ -62,7 +62,7 @@ public class RedisTemplateBuilder extends AbstractRedisBuilder<RedisTemplate<?,?
         objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
         objectMapper.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
         objectMapper.activateDefaultTyping(LaissezFaireSubTypeValidator.instance, ObjectMapper.DefaultTyping.NON_FINAL);
-        // 设置序列化
+        // 设置序列化, 如果需要使用redis 的原生字符串来操作，需要做字符串的转义，比如zset 的操作，对member进行排序，member的排序结果可能会有误
         GenericJackson2JsonRedisSerializer jackson2JsonRedisSerializer = new GenericJackson2JsonRedisSerializer(objectMapper);
         StringRedisSerializer stringRedisSerializer = new StringRedisSerializer();
         //key和hashKey使用String序列化

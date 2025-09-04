@@ -1,6 +1,9 @@
 package com.ouyunc.base.utils;
 
 
+import com.ouyunc.base.constant.NumberConstant;
+import org.apache.commons.lang3.StringUtils;
+
 import java.net.Inet4Address;
 import java.net.UnknownHostException;
 import java.util.Random;
@@ -134,6 +137,17 @@ public class SnowflakeUtil {
         }
     }
 
+    /**
+     * 格式化long为19位,前面补0
+     * @param value
+     * @return
+     */
+    public static String formatLong(long value) {
+        // 1. 将long转为字符串
+        String str = String.valueOf(value);
+        // 2. 左补0到19位：leftPad(原字符串, 目标长度, 补位字符)
+        return StringUtils.leftPad(str, NumberConstant.NUMBER_19, '0');
+    }
 
 //    public static void main(String[] args) {
 //        Set ids = new HashSet();
