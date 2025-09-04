@@ -5,6 +5,7 @@ import com.google.common.collect.Lists;
 import com.ouyunc.base.constant.*;
 import com.ouyunc.base.constant.enums.QosLevelEnum;
 import com.ouyunc.base.model.Metadata;
+import com.ouyunc.base.model.TriConsumer;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.IdentityUtil;
@@ -28,10 +29,7 @@ import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.data.redis.core.ReactiveRedisTemplate;
-import org.springframework.data.redis.core.RedisOperations;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.SessionCallback;
+import org.springframework.data.redis.core.*;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -677,31 +675,11 @@ public enum DefaultRepository implements Repository{
      * @param expireTime 过期时间，单位毫秒，多久后过期
      * @return
      */
-    private boolean saveFriendRequestMessage(Packet packet, String friendRequestSessionId, long expireTime, BiConsumer<RedisOperations,String> consumer) {
-        Message message = packet.getMessage();
-        Metadata metadata = message.getMetadata();
-        redisTemplate.executePipelined(new SessionCallback<>() {
-            @SuppressWarnings("unchecked")
-            @Override
-            public <K, V> Object execute(RedisOperations<K, V> operations) throws DataAccessException {
-                String luaScript = LuaScriptConstant.SAVE_MESSAGE_WITHOUT_OFFLINE_LUA_SCRIPT;
-                List<String> keys = Lists.newArrayList(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.MESSAGE + packet.getPacketId(),
-                        CacheConstant.OUYUNC +  CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST + CacheConstant.SESSION + IdentityUtil.sessionId(message.getFrom(), message.getTo()) + CacheConstant.COLON + friendRequestSessionId);
-                Object[] args = new Object[]{packet, expireTime, SnowflakeUtil.formatLong(packet.getPacketId()), NumberConstant.NUMBER_0};
-                // 如果开启qos,并且需要qos
-                if (MessageContext.messageProperties.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
-                    keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + message.getTo());
-                    luaScript = LuaScriptConstant.SAVE_MESSAGE_WITH_OFFLINE_LUA_SCRIPT;
-                }
-                // 保存好友关系
-                operations.execute(new DefaultRedisScript<>(luaScript, Boolean.class), (List<K>) keys, args);
-                // 保存正在处理数据
-                consumer.accept(operations, friendRequestSessionId);
-                return null;
-            }
-        });
-        return true;
+    private boolean saveFriendRequestMessage(Packet packet, String friendRequestSessionId, long expireTime, BiConsumer<RedisOperations<String, Object>,String> consumer) {
+        // 调用公共方法，传入空的额外操作
+        return executeMessageOperations(packet, friendRequestSessionId, expireTime, consumer, (ops, message, appKey, from, to) -> {});
     }
+
 
 
 
@@ -853,39 +831,97 @@ public enum DefaultRepository implements Repository{
      * @return
      */
     @SuppressWarnings("unchecked")
-    private boolean bindFriend(String appKey, Packet packet, String friendRequestSessionId, long expireTime, BiConsumer<RedisOperations, String> consumer) {
+    private boolean bindFriend(String appKey, Packet packet, String friendRequestSessionId, long expireTime, BiConsumer<RedisOperations<String, Object>, String> consumer) {
         Message message = packet.getMessage();
         String from = message.getFrom();
         String to = message.getTo();
-        try {
-            redisTemplate.executePipelined(new SessionCallback<>() {
-                @Override
-                public <K, V> Object execute(RedisOperations<K, V> operations) throws DataAccessException {
-                    // 保存消息
-                    String luaScript = LuaScriptConstant.SAVE_MESSAGE_WITHOUT_OFFLINE_LUA_SCRIPT;
-                    List<String> keys = Lists.newArrayList(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.MESSAGE + packet.getPacketId(),
-                            CacheConstant.OUYUNC +  CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST + CacheConstant.SESSION + IdentityUtil.sessionId(from, to) + CacheConstant.COLON + friendRequestSessionId);
-                    Object[] args = new Object[]{packet, expireTime, SnowflakeUtil.formatLong(packet.getPacketId()), NumberConstant.NUMBER_0};
-                    // 如果开启qos,并且需要qos
-                    if (MessageContext.messageProperties.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
-                        keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.OFFLINE + message.getTo());
-                        luaScript = LuaScriptConstant.SAVE_MESSAGE_WITH_OFFLINE_LUA_SCRIPT;
-                    }
-                    operations.execute(new DefaultRedisScript<>(luaScript, Boolean.class), (List<K>) keys, args);
+        return executeMessageOperations(packet, friendRequestSessionId, expireTime, consumer,
+                (ops, msg, ak, f, t) -> {
+                    // 建立双向好友关系（仅bindFriend方法需要的逻辑）
+                    ZSetOperations<String, Object> zSetOps = ops.opsForZSet();
+                    String fromFriendKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIENDS + from;
+                    String toFriendKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIENDS + to;
+                    zSetOps.add(fromFriendKey, t, msg.getMetadata().getServerTime());
+                    zSetOps.add(toFriendKey, f, msg.getMetadata().getServerTime());
+                });
+    }
 
-                    // 建立好友关系
-                    operations.opsForZSet().add((K) (CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIENDS + from), (V) to, message.getMetadata().getServerTime());
-                    operations.opsForZSet().add((K) (CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIENDS + to), (V) from, message.getMetadata().getServerTime());
-                    // 设置处理请求标识, 注意这里的过期时间，需要和好友关系过期时间一至默认90 天
-                    consumer.accept(operations, friendRequestSessionId);
+
+    /**
+     * 公共执行方法：提取重复逻辑，通过函数接口注入差异化操作
+     * @param packet 消息包
+     * @param friendRequestSessionId 会话ID
+     * @param expireTime 过期时间
+     * @param consumer 自定义处理逻辑
+     * @param extraOperation 额外操作（差异化逻辑）
+     * @return 是否执行成功
+     */
+    private boolean executeMessageOperations(Packet packet, String friendRequestSessionId,
+                                             long expireTime, BiConsumer<RedisOperations<String, Object>, String> consumer,
+                                             TriConsumer<RedisOperations<String, Object>, Message, String, String, String> extraOperation) {
+        try {
+            Message message = packet.getMessage();
+            Metadata metadata = message.getMetadata();
+            String appKey = metadata.getAppKey();
+            String from = message.getFrom();
+            String to = message.getTo();
+            String formatPacketId = SnowflakeUtil.formatLong(packet.getPacketId());
+            String messageKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.MESSAGE + packet.getPacketId();
+            String requestSessionKey = CacheConstant.OUYUNC +  CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST + CacheConstant.SESSION + IdentityUtil.sessionId(from, to) + CacheConstant.COLON + friendRequestSessionId;
+
+            // 执行Pipeline操作并获取结果
+            List<Object> results = redisTemplate.executePipelined(new SessionCallback<List<Object>>() {
+                @Override
+                @SuppressWarnings("unchecked")
+                public <K, V> List<Object> execute(RedisOperations<K, V> operations) {
+                    // 强制转换为明确的泛型类型，避免重复转换
+                    RedisOperations<String, Object> ops = (RedisOperations<String, Object>) operations;
+
+                    // 1. 保存消息主体
+                    if (expireTime > 0) {
+                        ops.opsForValue().set(messageKey, packet, expireTime, TimeUnit.MILLISECONDS);
+                    } else {
+                        ops.opsForValue().set(messageKey, packet);
+                    }
+
+                    // 2. 保存请求会话消息
+                    ZSetOperations<String, Object> zSetOps = ops.opsForZSet();
+                    zSetOps.add(requestSessionKey, formatPacketId, NumberConstant.NUMBER_0);
+
+                    // 3. 条件保存离线消息
+                    if (MessageContext.messageProperties.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
+                        String offlineKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.OFFLINE + message.getTo();
+                        zSetOps.add(offlineKey, formatPacketId, NumberConstant.NUMBER_0);
+                    }
+
+                    // 4. 执行额外操作（差异化逻辑注入）
+                    extraOperation.accept(ops, message, appKey, from, to);
+
+                    // 5. 执行自定义处理逻辑
+                    consumer.accept(ops, friendRequestSessionId);
+
                     return null;
                 }
             });
-        }catch (Exception e) {
-            log.error("绑定好友关系失败: {}", e.getMessage());
+
+            // 校验所有操作结果是否成功
+            if (results.isEmpty()) {
+                return false;
+            }
+            // 遍历结果，判断所有操作是否成功
+            for (Object result : results) {
+                if (result instanceof Boolean && !(Boolean) result) {
+                    return false; // SET操作失败
+                }
+                if (result instanceof Long && (Long) result < 0) {
+                    return false; // ZADD等操作失败
+                }
+            }
+            return true;
+        } catch (Exception e) {
+            log.error("执行消息操作失败: {}", e.getMessage(), e);
             return false;
         }
-        return true;
     }
 
 
