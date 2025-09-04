@@ -677,7 +677,15 @@ public enum DefaultRepository implements Repository{
      */
     private boolean saveFriendRequestMessage(Packet packet, String friendRequestSessionId, long expireTime, BiConsumer<RedisOperations<String, Object>,String> consumer) {
         // 调用公共方法，传入空的额外操作
-        return executeMessageOperations(packet, friendRequestSessionId, expireTime, consumer, (ops, message, appKey, from, to) -> {});
+        Message message = packet.getMessage();
+        Metadata metadata = message.getMetadata();
+        String appKey = metadata.getAppKey();
+        String from = message.getFrom();
+        String to = message.getTo();
+        String messageKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.MESSAGE + packet.getPacketId();
+        String requestSessionKey = CacheConstant.OUYUNC +  CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST + CacheConstant.SESSION + IdentityUtil.sessionId(from, to) + CacheConstant.COLON + friendRequestSessionId;
+        String offlineKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.OFFLINE + message.getTo();
+        return executeMessageOperations(packet, friendRequestSessionId, expireTime, messageKey, requestSessionKey, offlineKey, consumer, (ops, msg, ak, f, t) -> {});
     }
 
 
@@ -805,7 +813,7 @@ public enum DefaultRepository implements Repository{
         String appKey = message.getMetadata().getAppKey();
         // 获取是否存在sessionId
         // 注意过期时间的设定，与消息 hot key 的过期时间保持一致
-        return bindFriend(appKey, packet, requestSession.getSessionId(), expireTime, (redisOperations, requestSessionId)-> redisOperations.opsForValue().set(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_SESSION + message.getFrom() + CacheConstant.COLON + message.getTo(), requestSession, MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS));
+        return bindFriend(packet, requestSession.getSessionId(), expireTime, (redisOperations, requestSessionId)-> redisOperations.opsForValue().set(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_SESSION + message.getFrom() + CacheConstant.COLON + message.getTo(), requestSession, MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS));
     }
 
     /**
@@ -818,24 +826,28 @@ public enum DefaultRepository implements Repository{
     public boolean agreeBindFriend(String appKey, Packet packet, RequestSession requestSession, long expireTime) {
         Message message = packet.getMessage();
         // 注意过期时间的设定，与消息 hot key 的过期时间保持一致
-        return bindFriend(appKey, packet, requestSession.getSessionId(), expireTime, (redisOperations, requestSessionId)-> redisOperations.opsForValue().set(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_SESSION + message.getTo() + CacheConstant.COLON + message.getFrom(), requestSession, MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS));
+        return bindFriend(packet, requestSession.getSessionId(), expireTime, (redisOperations, requestSessionId)-> redisOperations.opsForValue().set(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_SESSION + message.getTo() + CacheConstant.COLON + message.getFrom(), requestSession, MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS));
     }
 
 
     /**
      * 绑定好友关系，在缓存中
-     * @param appKey
      * @param packet
      * @param expireTime
      * @param consumer
      * @return
      */
     @SuppressWarnings("unchecked")
-    private boolean bindFriend(String appKey, Packet packet, String friendRequestSessionId, long expireTime, BiConsumer<RedisOperations<String, Object>, String> consumer) {
+    private boolean bindFriend(Packet packet, String friendRequestSessionId, long expireTime, BiConsumer<RedisOperations<String, Object>, String> consumer) {
         Message message = packet.getMessage();
+        Metadata metadata = message.getMetadata();
         String from = message.getFrom();
         String to = message.getTo();
-        return executeMessageOperations(packet, friendRequestSessionId, expireTime, consumer,
+        String appKey = metadata.getAppKey();
+        String messageKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.MESSAGE + packet.getPacketId();
+        String requestSessionKey = CacheConstant.OUYUNC +  CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST + CacheConstant.SESSION + IdentityUtil.sessionId(from, to) + CacheConstant.COLON + friendRequestSessionId;
+        String offlineKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.OFFLINE + message.getTo();
+        return executeMessageOperations(packet, friendRequestSessionId, expireTime, messageKey, requestSessionKey, offlineKey, consumer,
                 (ops, msg, ak, f, t) -> {
                     // 建立双向好友关系（仅bindFriend方法需要的逻辑）
                     ZSetOperations<String, Object> zSetOps = ops.opsForZSet();
@@ -857,7 +869,8 @@ public enum DefaultRepository implements Repository{
      * @return 是否执行成功
      */
     private boolean executeMessageOperations(Packet packet, String friendRequestSessionId,
-                                             long expireTime, BiConsumer<RedisOperations<String, Object>, String> consumer,
+                                             long expireTime, String messageKey, String requestSessionKey, String offlineKey,
+                                             BiConsumer<RedisOperations<String, Object>, String> consumer,
                                              TriConsumer<RedisOperations<String, Object>, Message, String, String, String> extraOperation) {
         try {
             Message message = packet.getMessage();
@@ -866,9 +879,6 @@ public enum DefaultRepository implements Repository{
             String from = message.getFrom();
             String to = message.getTo();
             String formatPacketId = SnowflakeUtil.formatLong(packet.getPacketId());
-            String messageKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.MESSAGE + packet.getPacketId();
-            String requestSessionKey = CacheConstant.OUYUNC +  CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST + CacheConstant.SESSION + IdentityUtil.sessionId(from, to) + CacheConstant.COLON + friendRequestSessionId;
-
             // 执行Pipeline操作并获取结果
             List<Object> results = redisTemplate.executePipelined(new SessionCallback<List<Object>>() {
                 @Override
@@ -890,7 +900,6 @@ public enum DefaultRepository implements Repository{
 
                     // 3. 条件保存离线消息
                     if (MessageContext.messageProperties.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
-                        String offlineKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.OFFLINE + message.getTo();
                         zSetOps.add(offlineKey, formatPacketId, NumberConstant.NUMBER_0);
                     }
 
