@@ -37,8 +37,8 @@ public class StringRedisTemplateBuilder extends AbstractRedisBuilder<StringRedis
         stringRedisTemplate.setKeySerializer(stringRedisSerializer);
         stringRedisTemplate.setHashKeySerializer(stringRedisSerializer);
         //value和hashValue使用jackson的字符串序列化
-        stringRedisTemplate.setValueSerializer(new StringRedisSerializer());
-        stringRedisTemplate.setHashValueSerializer(new StringRedisSerializer());
+        stringRedisTemplate.setValueSerializer(stringRedisSerializer);
+        stringRedisTemplate.setHashValueSerializer(stringRedisSerializer);
         //模板初始化，不设置可能会抛出异常
         stringRedisTemplate.afterPropertiesSet();
         return stringRedisTemplate;

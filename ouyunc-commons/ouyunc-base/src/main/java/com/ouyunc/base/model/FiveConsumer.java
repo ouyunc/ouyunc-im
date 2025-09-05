@@ -9,6 +9,6 @@ package com.ouyunc.base.model;
  * @param <E>
  */
 @FunctionalInterface
-public interface TriConsumer<A, B, C, D, E> {
+public interface FiveConsumer<A, B, C, D, E> {
     void accept(A a, B b, C c, D d, E e);
 }

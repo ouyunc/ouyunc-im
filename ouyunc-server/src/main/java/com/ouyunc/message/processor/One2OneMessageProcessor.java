@@ -111,6 +111,8 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
                 } else {
                     deliverAndFireNext(ctx, packet);
                 }
+            }else {
+                log.error("one 2 one 保存消息失败: {}", packet);
             }
         });
     }
@@ -123,11 +125,13 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
      * @param packet
      */
     private void handleWithdrawMessage(ChannelHandlerContext ctx, Packet packet) {
-        String sessionId = IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo());
+        String from = packet.getMessage().getFrom();
+        String to = packet.getMessage().getTo();
+        String sessionId = IdentityUtil.sessionId(from, to);
         reactiveHandleLockedOperation(ctx, packet,
                 repository().reactiveValidWithdrawMessage(packet, sessionId, true),
                 ()-> repository().savePacket2Mq(MqConstant.KAFKA_WITHDRAW_MESSAGE_TOPIC, sessionId, packet),
-                repository().reactiveWithdrawMessage(packet, sessionId, Sets.newHashSet(packet.getMessage().getTo())),
+                repository().reactiveWithdrawMessage(packet, sessionId, Sets.newHashSet(to)),
                 "一对一撤回消息", ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR);
     }
 
@@ -240,10 +244,7 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
     private Mono<Boolean> saveMessage(Packet packet) {
         Message message = packet.getMessage();
         String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
-        Flux<Boolean> booleanFlux = repository().reactiveSaveMessage(packet, sessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
-        return booleanFlux.all(result -> result)
-                .onErrorReturn(false);
-
+        return repository().reactiveSaveMessage(packet, sessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
     }
 
 

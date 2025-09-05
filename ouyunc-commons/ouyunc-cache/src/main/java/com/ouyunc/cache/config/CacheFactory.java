@@ -5,7 +5,9 @@ import com.ouyunc.cache.config.redis.properties.RedisProperties;
 import org.redisson.api.RedissonClient;
 import org.redisson.api.RedissonReactiveClient;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -84,7 +86,74 @@ public enum CacheFactory {
             return  reactiveRedisTemplateMap.get(database);
         }
     },
+    // redis
+    STRING_REDIS {
+        //每一个数据库只有一个StringRedisTemplate 实例
+        private static final ConcurrentHashMap<Integer, StringRedisTemplate> stringRedisTemplateMap = new ConcurrentHashMap<>();
+        private static RedisProperties existRedisProperties;
 
+        @SuppressWarnings("unchecked")
+        @Override
+        public StringRedisTemplate instance(RedisProperties ...redisProperties) {
+            return instance(0, redisProperties);
+        }
+        @SuppressWarnings("unchecked")
+        @Override
+        public StringRedisTemplate instance(int database,RedisProperties ...redisProperties) {
+            if (stringRedisTemplateMap.get(database) == null) {
+                synchronized (ConcurrentHashMap.class) {
+                    if (stringRedisTemplateMap.get(database) == null) {
+                        AbstractRedisBuilder<StringRedisTemplate> redisBuilder = new StringRedisTemplateBuilder();
+                        if (redisProperties != null && redisProperties.length > 0) {
+                            redisBuilder.setRedisProperties(redisProperties[0]);
+                            if (existRedisProperties == null) {
+                                existRedisProperties = redisProperties[0];
+                            }
+                        }else if (existRedisProperties != null) {
+                            // 从本地获取
+                            redisBuilder.setRedisProperties(existRedisProperties);
+                        }
+                        stringRedisTemplateMap.put(database, redisBuilder.build(database));
+                    }
+                }
+            }
+            return  stringRedisTemplateMap.get(database);
+        }
+    },
+    // string redis
+    REACTIVE_STRING_REDIS {
+        //每一个数据库只有一个StringRedisTemplate 实例
+        private static final ConcurrentHashMap<Integer, ReactiveStringRedisTemplate> stringRedisTemplateMap = new ConcurrentHashMap<>();
+        private static RedisProperties existRedisProperties;
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public ReactiveStringRedisTemplate instance(RedisProperties ...redisProperties) {
+            return instance(0, redisProperties);
+        }
+        @SuppressWarnings("unchecked")
+        @Override
+        public ReactiveStringRedisTemplate instance(int database,RedisProperties ...redisProperties) {
+            if (stringRedisTemplateMap.get(database) == null) {
+                synchronized (ConcurrentHashMap.class) {
+                    if (stringRedisTemplateMap.get(database) == null) {
+                        AbstractRedisBuilder<ReactiveStringRedisTemplate> redisBuilder = new ReactiveStringRedisTemplateBuilder();
+                        if (redisProperties != null && redisProperties.length > 0) {
+                            redisBuilder.setRedisProperties(redisProperties[0]);
+                            if (existRedisProperties == null) {
+                                existRedisProperties = redisProperties[0];
+                            }
+                        }else if (existRedisProperties != null) {
+                            // 从本地获取
+                            redisBuilder.setRedisProperties(existRedisProperties);
+                        }
+                        stringRedisTemplateMap.put(database, redisBuilder.build(database));
+                    }
+                }
+            }
+            return  stringRedisTemplateMap.get(database);
+        }
+    },
     // reactive redisson 响应式 redisson
     REACTIVE_REDISSON {
         private static final ConcurrentHashMap<Integer, RedissonReactiveClient> reactiveRedissonClientMap = new ConcurrentHashMap<>();

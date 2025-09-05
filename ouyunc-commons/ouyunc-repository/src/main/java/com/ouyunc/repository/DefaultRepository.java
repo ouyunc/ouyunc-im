@@ -4,8 +4,8 @@ import com.alibaba.fastjson2.JSON;
 import com.google.common.collect.Lists;
 import com.ouyunc.base.constant.*;
 import com.ouyunc.base.constant.enums.QosLevelEnum;
+import com.ouyunc.base.model.FiveConsumer;
 import com.ouyunc.base.model.Metadata;
-import com.ouyunc.base.model.TriConsumer;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.IdentityUtil;
@@ -31,6 +31,7 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.redis.core.*;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.KafkaHeaders;
@@ -75,6 +76,16 @@ public enum DefaultRepository implements Repository{
      * redisTemplate
      */
     private static final RedisTemplate redisTemplate = CacheFactory.REDIS.instance();
+
+    /**
+     * StringRedisTemplate
+     */
+    private static final StringRedisTemplate stringRedisTemplate = CacheFactory.STRING_REDIS.instance();
+
+    /**
+     * ReactiveStringRedisTemplate
+     */
+    private static final ReactiveStringRedisTemplate reactiveStringRedisTemplate = CacheFactory.REACTIVE_STRING_REDIS.instance();
 
     /**
      * reactiveRedisTemplate
@@ -320,7 +331,7 @@ public enum DefaultRepository implements Repository{
             // 判断消息是否属于该会话，且都属于发送者； 这里考虑个问题，如果是群主或者管理员，需要让其撤销消息？应该是可以撤销的
             if (isValidSender) {
                 for (Packet specialPacket : specialPackets) {
-                    if (specialPacket == null || !specialPacket.getMessage().getFrom().equals(packet.getMessage().getFrom())) {
+                    if (specialPacket == null || specialPacket.getMessage() == null || !specialPacket.getMessage().getFrom().equals(packet.getMessage().getFrom())) {
                         log.error("消息: {} 对应的消息不属于发送者！", packet);
                         return Mono.just(false);
                     }
@@ -431,14 +442,16 @@ public enum DefaultRepository implements Repository{
         // 批量撤回消息
         List<String> keys = Lists.newArrayList();
         keys.add(String.valueOf(withdrawIdentitySet.size()));
+        List<String> formatPacketIdArgs = Lists.newArrayList();
         for (Long packetId : packetIds) {
+            formatPacketIdArgs.add(SnowflakeUtil.formatLong(packetId));
             keys.add(buildMessageRedisKey(metadata.getAppKey(), packetId));
             keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.SESSION + sessionId);
             for (String withdrawIdentity : withdrawIdentitySet) {
                 keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + withdrawIdentity);
             }
         }
-        Flux<Boolean> executeResult = reactiveRedisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_WITHDRAW_MESSAGE_LUA_SCRIPT, Boolean.class), keys, packetIds);
+        Flux<Boolean> executeResult = reactiveStringRedisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_WITHDRAW_MESSAGE_LUA_SCRIPT, Boolean.class), keys, formatPacketIdArgs);
         return executeResult.all(result -> result);
     }
 
@@ -446,7 +459,7 @@ public enum DefaultRepository implements Repository{
 
 
     /**
-     * 响应式处理读已回执消息  todo 这里换成位图 bitmap 实现，减少存储量
+     * 响应式处理读已回执消息  todo 这里换成位图 bitmap 实现，减少存储量, 这个已读后续要拿掉，这样针对大数据效率太低，直接使用偏移量来判断已读未读
      */
     public Mono<Boolean> reactiveReadReceiptMessage(Packet packet, long expireTime) {
         Message message = packet.getMessage();
@@ -588,19 +601,21 @@ public enum DefaultRepository implements Repository{
      * @param expireTime 过期时间，单位毫秒，多久后过期
      * @return
      */
-    public Flux<Boolean> reactiveSaveMessage(Packet packet, String sessionId, long expireTime) {
+    public Mono<Boolean> reactiveSaveMessage(Packet packet, String sessionId, long expireTime) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        String luaScript = LuaScriptConstant.SAVE_MESSAGE_WITHOUT_OFFLINE_LUA_SCRIPT;
-        List<String> keys = Lists.newArrayList(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.MESSAGE + packet.getPacketId(),
-                CacheConstant.OUYUNC +  CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.SESSION + sessionId);
-
-        // 如果开启qos,并且需要qos
-        if (MessageContext.messageProperties.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
-            keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + message.getTo());
-            luaScript = LuaScriptConstant.SAVE_MESSAGE_WITH_OFFLINE_LUA_SCRIPT;
-        }
-        return reactiveRedisTemplate.execute(new DefaultRedisScript<>(luaScript, Boolean.class), keys, List.of(packet, expireTime, packet.getPacketId(), metadata.getServerTime()));
+        String messageKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.MESSAGE + packet.getPacketId();
+        String requestSessionKey = CacheConstant.OUYUNC +  CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.SESSION + sessionId;
+        String offlineKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + message.getTo();
+        // 使用Mono.fromCallable将阻塞操作包装为响应式流
+        return Mono.fromCallable(() -> saveMessageWithSessionOrOffline(packet, sessionId, expireTime, messageKey, requestSessionKey, offlineKey, (ops, id) -> {}, (ops, msg, app, f, t) -> {}))
+                // 指定在弹性线程池中执行阻塞操作，避免阻塞Netty事件循环
+                .subscribeOn(Schedulers.boundedElastic())
+                // 响应式错误处理
+                .onErrorResume(e -> {
+                    log.error("Reactive save message failed: {}", e.getMessage(), e);
+                    return Mono.just(false);
+                });
     }
 
     /**
@@ -871,7 +886,7 @@ public enum DefaultRepository implements Repository{
     private boolean saveMessageWithSessionOrOffline(Packet packet, String sessionId,
                                                     long expireTime, String messageKey, String requestSessionKey, String offlineKey,
                                                     BiConsumer<RedisOperations<String, Object>, String> consumer,
-                                                    TriConsumer<RedisOperations<String, Object>, Message, String, String, String> extraOperation) {
+                                                    FiveConsumer<RedisOperations<String, Object>, Message, String, String, String> extraOperation) {
         try {
             Message message = packet.getMessage();
             Metadata metadata = message.getMetadata();
@@ -879,6 +894,9 @@ public enum DefaultRepository implements Repository{
             String from = message.getFrom();
             String to = message.getTo();
             String formatPacketId = SnowflakeUtil.formatLong(packet.getPacketId());
+
+            // 获取字符串序列化器，增加灵活性
+            RedisSerializer<String> stringSerializer = redisTemplate.getStringSerializer();
             // 执行Pipeline操作并获取结果
             List<Object> results = redisTemplate.executePipelined(new SessionCallback<List<Object>>() {
                 @Override
@@ -893,16 +911,19 @@ public enum DefaultRepository implements Repository{
                     } else {
                         ops.opsForValue().set(messageKey, packet);
                     }
+                    ZSetOperations<K, V> zSetOps = operations.opsForZSet();
 
-                    // 2. 保存请求会话消息
-                    ZSetOperations<String, Object> zSetOps = ops.opsForZSet();
-                    zSetOps.add(requestSessionKey, formatPacketId, NumberConstant.NUMBER_0);
-
+                    // 2. 使用字符串序列化器处理ZSet操作（保持原生字符串特性）
+                    // 转换键和值为字符串类型的键
+                    K requestSessionKeyK = (K) stringSerializer.serialize(requestSessionKey);
+                    V formatPacketIdV = (V) stringSerializer.serialize(formatPacketId);
+                    // 保存请求会话消息
+                    zSetOps.add(requestSessionKeyK, formatPacketIdV, NumberConstant.NUMBER_0);
                     // 3. 条件保存离线消息
                     if (MessageContext.messageProperties.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
-                        zSetOps.add(offlineKey, formatPacketId, NumberConstant.NUMBER_0);
+                        K offlineKeyK = (K) stringSerializer.serialize(offlineKey);
+                        zSetOps.add(offlineKeyK, formatPacketIdV, NumberConstant.NUMBER_0);
                     }
-
                     // 4. 执行额外操作（差异化逻辑注入）
                     extraOperation.accept(ops, message, appKey, from, to);
 

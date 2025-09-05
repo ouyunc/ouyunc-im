@@ -122,7 +122,7 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
 
 
     /**
-     * 处理消息内容类型是撤回消息
+     * 处理消息内容类型是已读消息
      * @param ctx
      * @param packet
      */
@@ -147,7 +147,7 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
         Set<String> leaderOrManagerIdentitySet = repository().groupManagerAndLeaderUsersIdentity(packet);
         boolean leaderOrManager = CollectionUtils.isNotEmpty(leaderOrManagerIdentitySet) && leaderOrManagerIdentitySet.contains(packet.getMessage().getFrom());
         reactiveHandleLockedOperation(ctx, packet,groupUserIdentitySet,
-                repository().reactiveValidWithdrawMessage(packet, sessionId, leaderOrManager),
+                repository().reactiveValidWithdrawMessage(packet, sessionId, !leaderOrManager),
                 ()-> repository().savePacket2Mq(MqConstant.KAFKA_WITHDRAW_MESSAGE_TOPIC, sessionId, packet),
                 repository().reactiveWithdrawMessage(packet, sessionId, groupUserIdentitySet),
                 "撤回消息", ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR);
@@ -269,13 +269,11 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
      * @return
      */
     private Mono<Boolean> reactiveSaveNonQosMessage(Packet packet, String sessionId) {
-        Flux<Boolean> booleanFlux = repository().reactiveSaveMessage(
+        return repository().reactiveSaveMessage(
                 packet,
                 sessionId,
                 MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP
         );
-        return booleanFlux.all(result -> result)
-                .onErrorReturn(false);
     }
 
     private RLockReactive createMultiLock(String appKey, String sessionId, String to) {
