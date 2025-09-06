@@ -23,6 +23,7 @@ import java.time.LocalDateTime;
 @CompoundIndexes({
         @CompoundIndex(name = "msgId_userId_idx", def = "{'msg_id': 1, 'user_id': 1}")
 })
+@Deprecated
 public class ReadReceiptEntity implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;

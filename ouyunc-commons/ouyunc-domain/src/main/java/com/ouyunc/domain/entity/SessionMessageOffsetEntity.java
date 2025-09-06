@@ -10,7 +10,7 @@ VALUES (?, ?, ?, ?)
 ON DUPLICATE KEY UPDATE session_message_offset = VALUES(session_message_offset);
 * @TableName ouyunc_im_session_message_offset
 */
-public class SessionMessageOffset implements Serializable {
+public class SessionMessageOffsetEntity implements Serializable {
 
     /**
     * 发送方ID

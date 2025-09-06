@@ -5,8 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/RemoveOfflineListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/RemoveOfflineListener.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MongoSessionMessageOffsetEntity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/SessionMessageOffset.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/SessionMessageOffsetEntity.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -107,11 +107,11 @@
       <recent name="D:\workspace\ouyunc-im\docs" />
     </key>
     <key name="CopyClassDialog.RECENTS_KEY">
+      <recent name="com.ouyunc.domain.entity" />
       <recent name="com.ouyunc.message.processor" />
       <recent name="com.ouyunc.message.validator" />
       <recent name="com.ouyunc.message.handler" />
       <recent name="com.ouyunc.domain.constants" />
-      <recent name="com.ouyunc.base.model" />
     </key>
   </component>
   <component name="RunManager" selected="Application.App">
@@ -247,15 +247,7 @@
       <workItem from="1757076938346" duration="21000" />
       <workItem from="1757076975625" duration="831000" />
       <workItem from="1757079837399" duration="8478000" />
-      <workItem from="1757117417417" duration="12359000" />
-    </task>
-    <task id="LOCAL-00026" summary="v6.4.0  主动加群逻辑">
-      <option name="closed" value="true" />
-      <created>1744366305996</created>
-      <option name="number" value="00026" />
-      <option name="presentableId" value="LOCAL-00026" />
-      <option name="project" value="LOCAL" />
-      <updated>1744366305996</updated>
+      <workItem from="1757117417417" duration="12780000" />
     </task>
     <task id="LOCAL-00027" summary="v6.5.0  定义群主，管理员，普通成员职位">
       <option name="closed" value="true" />
@@ -641,7 +633,15 @@
       <option name="project" value="LOCAL" />
       <updated>1757135721583</updated>
     </task>
-    <option name="localTasksCounter" value="75" />
+    <task id="LOCAL-00075" summary="v6.5.0  添加群的限制">
+      <option name="closed" value="true" />
+      <created>1757138192084</created>
+      <option name="number" value="00075" />
+      <option name="presentableId" value="LOCAL-00075" />
+      <option name="project" value="LOCAL" />
+      <updated>1757138192085</updated>
+    </task>
+    <option name="localTasksCounter" value="76" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
