@@ -455,8 +455,8 @@ public enum DefaultRepository implements Repository{
             return Mono.just(false);
         }
         // 如果没有消息id，则直接返回false
-        if (CollectionUtils.isEmpty(packetIds) || packetIds.size() > MessageConstant.MAX_WITHDRAW_MESSAGE_COUNT) {
-            log.error("消息数量为0或超出限制 {}!", MessageConstant.MAX_WITHDRAW_MESSAGE_COUNT);
+        if (CollectionUtils.isEmpty(packetIds) || packetIds.size() > MessageConstant.MAX_HANDLE_MESSAGE_COUNT) {
+            log.error("消息数量为0或超出限制 {}!", MessageConstant.MAX_HANDLE_MESSAGE_COUNT);
             return Mono.just(false);
         }
         // 获取需要消息服务端时间戳，这个获取要在会话锁的前提下获取,注意批量获取score 的方法是redis 6.2.0 之后的版本才支持,如果不支持请使用其他方式替换，或升级redis版本，这里 就使用lua 脚本 哈哈哈

@@ -47,39 +47,6 @@ public class LuaScriptConstant {
 
 
     /**
-     * 批量读已回执消息lua 脚本
-     */
-    public static final String BATCH_READ_RECEIPT_MESSAGE_LUA_SCRIPT ="-- 假设 KEYS 数组中，奇数索引位置为要删除的 key，偶数索引位置为哈希表的 key\n" +
-            "-- ARGV 数组中，每三个元素一组，分别为 field2、value2 和 expireTime\n" +
-            "local result = true\n" +
-            "for i = 1, #KEYS, 2 do\n" +
-            "    local key = KEYS[i]\n" +
-            "    local key2 = KEYS[i + 1]\n" +
-            "    local field2_index = ((i + 1) / 2 - 1) * 3 + 1\n" +
-            "    local field2 = ARGV[field2_index]\n" +
-            "    local value2 = ARGV[field2_index + 1]\n" +
-            "    local expireTime = tonumber(ARGV[field2_index + 2])\n" +
-            "\n" +
-            "    -- 删除键\n" +
-            "    local del_result = redis.call('DEL', key)\n" +
-            "\n" +
-            "    -- 向哈希表中添加字段值对\n" +
-            "    local hset_result = redis.call('HSET', key2, field2, value2)\n" +
-            "    if hset_result == nil then\n" +
-            "        result = false\n" +
-            "    end\n" +
-            "\n" +
-            "    -- 为哈希表设置过期时间\n" +
-            "    local expire_result = redis.call('PEXPIRE', key2, expireTime)\n" +
-            "    if expire_result == nil or expire_result == 0 then\n" +
-            "        result = false\n" +
-            "    end\n" +
-            "end\n" +
-            "\n" +
-            "return result";
-
-
-    /**
      * zset批量获取分数lua脚本
      */
     public static final String BATCH_SCORE_LUA_SCRIPT =

@@ -86,7 +86,10 @@ public class MessageConstant {
      */
     public static final boolean TRUE = true;
 
-
+    /**
+     * 最大处理消息数量，默认50
+     */
+    public static final int MAX_HANDLE_MESSAGE_COUNT = 50;
     /**
      * 最大撤回消息数量，默认50
      */
