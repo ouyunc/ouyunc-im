@@ -59,10 +59,6 @@ public class FriendEntity implements Serializable {
      * 会话渠道，从哪里加入的，预留
      */
     private Integer channel;
-    /**
-     * 会话消息偏移量，会话消息的接收时间；假如本次读取到会话A点，则下次从A点之后开始读取
-     */
-    private Long sessionMessageOffset;
 
     /**
      * 成为好友的时间戳， 毫秒
@@ -83,20 +79,19 @@ public class FriendEntity implements Serializable {
     public FriendEntity() {
     }
 
-    public FriendEntity(Long id, Long userId, Long friendUserId, String friendUserCode, String friendNickName, Integer shield, Long sessionMessageOffset, Long joinTime, LocalDateTime createTime, LocalDateTime updateTime) {
+    public FriendEntity(Long id, Long userId, Long friendUserId, String friendUserCode, String friendNickName, Integer shield,  Long joinTime, LocalDateTime createTime, LocalDateTime updateTime) {
         this.id = id;
         this.userId = userId;
         this.friendUserId = friendUserId;
         this.friendUserCode = friendUserCode;
         this.friendNickName = friendNickName;
         this.shield = shield;
-        this.sessionMessageOffset = sessionMessageOffset;
         this.joinTime = joinTime;
         this.createTime = createTime;
         this.updateTime = updateTime;
     }
 
-    public FriendEntity(Long id, Long userId, Long friendUserId, String friendUserCode, String friendNickName, Integer shield, Integer way, Integer channel, Long sessionMessageOffset, Long joinTime, LocalDateTime createTime, LocalDateTime updateTime) {
+    public FriendEntity(Long id, Long userId, Long friendUserId, String friendUserCode, String friendNickName, Integer shield, Integer way, Integer channel, Long joinTime, LocalDateTime createTime, LocalDateTime updateTime) {
         this.id = id;
         this.userId = userId;
         this.friendUserId = friendUserId;
@@ -105,7 +100,6 @@ public class FriendEntity implements Serializable {
         this.shield = shield;
         this.way = way;
         this.channel = channel;
-        this.sessionMessageOffset = sessionMessageOffset;
         this.joinTime = joinTime;
         this.createTime = createTime;
         this.updateTime = updateTime;
@@ -183,13 +177,6 @@ public class FriendEntity implements Serializable {
         this.shield = shield;
     }
 
-    public Long getSessionMessageOffset() {
-        return sessionMessageOffset;
-    }
-
-    public void setSessionMessageOffset(Long sessionMessageOffset) {
-        this.sessionMessageOffset = sessionMessageOffset;
-    }
 
     public LocalDateTime getCreateTime() {
         return createTime;

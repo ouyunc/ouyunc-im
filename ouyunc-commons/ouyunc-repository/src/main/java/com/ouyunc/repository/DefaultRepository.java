@@ -408,7 +408,7 @@ public enum DefaultRepository implements Repository{
             return sessionMessageOffset;
         }
         // 获取不到在从mongo 获取
-        MongoSessionMessageOffsetEntity mongoSessionMessageOffsetEntity = mongoTemplate.findOne(new Query(Criteria.where(MongoSessionMessageOffsetEntity.Fields.from).is(from).and(MongoSessionMessageOffsetEntity.Fields.to).is(to).and(MongoSessionMessageOffsetEntity.Fields.type).is(type.getName())).limit(NumberConstant.NUMBER_1), MongoSessionMessageOffsetEntity.class);
+        SessionMessageOffsetEntity mongoSessionMessageOffsetEntity = mongoTemplate.findOne(new Query(Criteria.where(SessionMessageOffsetEntity.Fields.from).is(from).and(SessionMessageOffsetEntity.Fields.to).is(to).and(SessionMessageOffsetEntity.Fields.type).is(type.getName())).limit(NumberConstant.NUMBER_1), SessionMessageOffsetEntity.class);
         if (mongoSessionMessageOffsetEntity != null) {
             return mongoSessionMessageOffsetEntity.getSessionMessageOffset();
         }

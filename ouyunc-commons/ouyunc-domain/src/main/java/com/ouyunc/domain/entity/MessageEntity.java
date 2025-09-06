@@ -146,13 +146,6 @@ public class MessageEntity implements Serializable {
     private long serverArrivalTime;
 
     /**
-     * 是否已读
-     */
-    @Field("read")
-    @TableField("`read`")
-    private int read;
-
-    /**
      * 是否撤回
      */
     @Field("withdrawn")
@@ -185,7 +178,7 @@ public class MessageEntity implements Serializable {
     public MessageEntity() {}
 
 
-    public MessageEntity(long id, byte protocol, byte protocolVersion, byte deviceType, byte networkType, byte encryptType, byte serializeAlgorithm, byte messageType, byte retain, String clientIp, String from, String to, int contentType, String content, int qos, String at, String extra, long clientSendTime, long serverArrivalTime, int read, int withdrawn, String appKey) {
+    public MessageEntity(long id, byte protocol, byte protocolVersion, byte deviceType, byte networkType, byte encryptType, byte serializeAlgorithm, byte messageType, byte retain, String clientIp, String from, String to, int contentType, String content, int qos, String at, String extra, long clientSendTime, long serverArrivalTime, int withdrawn, String appKey) {
         this.id = id;
         this.protocol = protocol;
         this.protocolVersion = protocolVersion;
@@ -205,7 +198,6 @@ public class MessageEntity implements Serializable {
         this.extra = extra;
         this.clientSendTime = clientSendTime;
         this.serverArrivalTime = serverArrivalTime;
-        this.read = read;
         this.withdrawn = withdrawn;
         this.appKey = appKey;
     }
@@ -368,14 +360,6 @@ public class MessageEntity implements Serializable {
 
     public void setServerArrivalTime(long serverArrivalTime) {
         this.serverArrivalTime = serverArrivalTime;
-    }
-
-    public int getRead() {
-        return read;
-    }
-
-    public void setRead(int read) {
-        this.read = read;
     }
 
     public int getWithdrawn() {

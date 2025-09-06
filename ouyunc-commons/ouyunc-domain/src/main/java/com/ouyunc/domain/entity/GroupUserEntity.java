@@ -85,11 +85,6 @@ public class GroupUserEntity implements Serializable {
     private Integer channel;
 
     /**
-     * 会话消息偏移量，会话消息的接收时间；假如本次读取到会话A点，则下次从A点之后开始读取
-     */
-    private Long sessionMessageOffset;
-
-    /**
      * 成为好友的时间戳， 毫秒
      */
     private Long joinTime;
@@ -117,7 +112,7 @@ public class GroupUserEntity implements Serializable {
     public GroupUserEntity() {
     }
 
-    public GroupUserEntity(Long id, Long groupId, String groupCode,  String groupNickName, Long userId, String userCode, Integer post, String userNickName, Integer shield, Integer silence, Long sessionMessageOffset, Long joinTime, LocalDateTime createTime) {
+    public GroupUserEntity(Long id, Long groupId, String groupCode,  String groupNickName, Long userId, String userCode, Integer post, String userNickName, Integer shield, Integer silence,  Long joinTime, LocalDateTime createTime) {
         this.id = id;
         this.groupId = groupId;
         this.groupCode = groupCode;
@@ -128,12 +123,11 @@ public class GroupUserEntity implements Serializable {
         this.userNickName = userNickName;
         this.shield = shield;
         this.silence = silence;
-        this.sessionMessageOffset = sessionMessageOffset;
         this.joinTime = joinTime;
         this.createTime = createTime;
     }
 
-    public GroupUserEntity(Long id, Long groupId, String groupCode,  String groupNickName, Long userId, String userCode,  Integer post, String userNickName, Integer shield, Integer silence, Integer way, Integer channel, Long sessionMessageOffset, Long joinTime, LocalDateTime createTime) {
+    public GroupUserEntity(Long id, Long groupId, String groupCode,  String groupNickName, Long userId, String userCode,  Integer post, String userNickName, Integer shield, Integer silence, Integer way, Integer channel,  Long joinTime, LocalDateTime createTime) {
         this.id = id;
         this.groupId = groupId;
         this.groupCode = groupCode;
@@ -146,12 +140,11 @@ public class GroupUserEntity implements Serializable {
         this.silence = silence;
         this.way = way;
         this.channel = channel;
-        this.sessionMessageOffset = sessionMessageOffset;
         this.joinTime = joinTime;
         this.createTime = createTime;
     }
 
-    public GroupUserEntity(Long id, Long groupId, String groupCode, String groupNickName, Long userId, String userCode, Integer post, String userNickName, Integer shield, Integer silence, Integer way, Integer channel, Long sessionMessageOffset, Long joinTime) {
+    public GroupUserEntity(Long id, Long groupId, String groupCode, String groupNickName, Long userId, String userCode, Integer post, String userNickName, Integer shield, Integer silence, Integer way, Integer channel, Long joinTime) {
         this.id = id;
         this.groupId = groupId;
         this.groupCode = groupCode;
@@ -164,11 +157,10 @@ public class GroupUserEntity implements Serializable {
         this.silence = silence;
         this.way = way;
         this.channel = channel;
-        this.sessionMessageOffset = sessionMessageOffset;
         this.joinTime = joinTime;
     }
 
-    public GroupUserEntity(Long id, Long groupId, String groupCode, String groupNickName, Long userId, String userCode, Integer post, String userNickName, Integer shield, Integer silence, Integer way, Integer channel, Long sessionMessageOffset, Long joinTime, Integer groupOffset) {
+    public GroupUserEntity(Long id, Long groupId, String groupCode, String groupNickName, Long userId, String userCode, Integer post, String userNickName, Integer shield, Integer silence, Integer way, Integer channel,  Long joinTime, Integer groupOffset) {
         this.id = id;
         this.groupId = groupId;
         this.groupCode = groupCode;
@@ -181,7 +173,6 @@ public class GroupUserEntity implements Serializable {
         this.silence = silence;
         this.way = way;
         this.channel = channel;
-        this.sessionMessageOffset = sessionMessageOffset;
         this.joinTime = joinTime;
         this.groupOffset = groupOffset;
     }
@@ -274,13 +265,6 @@ public class GroupUserEntity implements Serializable {
         this.silence = silence;
     }
 
-    public Long getSessionMessageOffset() {
-        return sessionMessageOffset;
-    }
-
-    public void setSessionMessageOffset(Long sessionMessageOffset) {
-        this.sessionMessageOffset = sessionMessageOffset;
-    }
 
     public LocalDateTime getCreateTime() {
         return createTime;
