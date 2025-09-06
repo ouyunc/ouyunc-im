@@ -13,6 +13,7 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.core.listener.event.ExceptionEvent;
+import com.ouyunc.domain.constants.IdentityType;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
@@ -146,7 +147,7 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
         reactiveHandleLockedOperation(ctx, packet,
                 repository().reactiveValidReadReceiptMessage(packet, sessionId, true),
                 () -> repository().savePacket2Mq(MqConstant.KAFKA_READ_RECEIPT_MESSAGE_TOPIC, sessionId, packet),
-                repository().reactiveReadReceiptMessage(packet, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP),
+                repository().reactiveReadReceiptMessage(packet, IdentityType.ONE_2_ONE, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP),
                 "一对一已读回执消息", ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR);
     }
 

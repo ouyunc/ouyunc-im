@@ -6,17 +6,23 @@ import java.util.Objects;
  * 唯一标识类型 枚举
  */
 public enum IdentityType {
-    ONE_2_ONE(1, "一对一"),
+    ONE_2_ONE(1, "one_2_one" , "一对一"),
 
-    GROUP(2, "群组"),
+    GROUP(2,"group" , "群组"),
     ;
 
     private final Integer value;
+    private final String name;
     private final String desc;
 
-    IdentityType(Integer value, String desc) {
+    IdentityType(Integer value, String name, String desc) {
         this.value = value;
+        this.name = name;
         this.desc = desc;
+    }
+
+    public String getName() {
+        return name;
     }
 
     public Integer value() {

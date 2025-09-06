@@ -41,6 +41,11 @@ public class MongoSessionMessageOffsetEntity {
         this.sessionMessageOffset = sessionMessageOffset;
     }
 
+    public static final class Fields {
+        public static final String from = "from";
+        public static final String to = "to";
+        public static final String type = "type";
+    }
     // Getter和Setter方法
     public String getId() {
         return id;

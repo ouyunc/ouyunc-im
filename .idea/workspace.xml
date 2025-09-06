@@ -5,8 +5,15 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MongoSessionMessageOffsetEntity.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/SessionMessageOffset.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/SessionMessageOffsetEntity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/CacheConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/CacheConstant.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/JdbcSqlConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/JdbcSqlConstant.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/constants/IdentityType.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/constants/IdentityType.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MongoSessionMessageOffsetEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MongoSessionMessageOffsetEntity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/SessionMessageOffsetEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/SessionMessageOffsetEntity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/DefaultRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/DefaultRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupMessageProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneMessageProcessor.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -247,23 +254,7 @@
       <workItem from="1757076938346" duration="21000" />
       <workItem from="1757076975625" duration="831000" />
       <workItem from="1757079837399" duration="8478000" />
-      <workItem from="1757117417417" duration="12780000" />
-    </task>
-    <task id="LOCAL-00027" summary="v6.5.0  定义群主，管理员，普通成员职位">
-      <option name="closed" value="true" />
-      <created>1744770125912</created>
-      <option name="number" value="00027" />
-      <option name="presentableId" value="LOCAL-00027" />
-      <option name="project" value="LOCAL" />
-      <updated>1744770125912</updated>
-    </task>
-    <task id="LOCAL-00028" summary="v6.5.0  拒绝加群或者邀请加群的请求">
-      <option name="closed" value="true" />
-      <created>1744772670063</created>
-      <option name="number" value="00028" />
-      <option name="presentableId" value="LOCAL-00028" />
-      <option name="project" value="LOCAL" />
-      <updated>1744772670063</updated>
+      <workItem from="1757117417417" duration="24181000" />
     </task>
     <task id="LOCAL-00029" summary="v6.5.0  邀请加群请求">
       <option name="closed" value="true" />
@@ -641,7 +632,23 @@
       <option name="project" value="LOCAL" />
       <updated>1757138192085</updated>
     </task>
-    <option name="localTasksCounter" value="76" />
+    <task id="LOCAL-00076" summary="v6.5.1 去除消息偏移量限制">
+      <option name="closed" value="true" />
+      <created>1757138491372</created>
+      <option name="number" value="00076" />
+      <option name="presentableId" value="LOCAL-00076" />
+      <option name="project" value="LOCAL" />
+      <updated>1757138491372</updated>
+    </task>
+    <task id="LOCAL-00077" summary="v6.5.1 去除消息偏移量限制">
+      <option name="closed" value="true" />
+      <created>1757138705285</created>
+      <option name="number" value="00077" />
+      <option name="presentableId" value="LOCAL-00077" />
+      <option name="project" value="LOCAL" />
+      <updated>1757138705285</updated>
+    </task>
+    <option name="localTasksCounter" value="78" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -674,7 +681,8 @@
     <MESSAGE value="v6.5.0  优化代码" />
     <MESSAGE value="v6.5.0  移除文件表合并到系统文件表中" />
     <MESSAGE value="v6.5.0  添加群的限制" />
-    <option name="LAST_COMMIT_MESSAGE" value="v6.5.0  添加群的限制" />
+    <MESSAGE value="v6.5.1 去除消息偏移量限制" />
+    <option name="LAST_COMMIT_MESSAGE" value="v6.5.1 去除消息偏移量限制" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

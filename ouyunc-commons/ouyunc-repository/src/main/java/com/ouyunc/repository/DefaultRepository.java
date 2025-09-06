@@ -17,6 +17,7 @@ import com.ouyunc.db.mongo.MongodbFactory;
 import com.ouyunc.domain.base.GroupRequestSession;
 import com.ouyunc.domain.base.RequestSession;
 import com.ouyunc.domain.constants.GroupUserPost;
+import com.ouyunc.domain.constants.IdentityType;
 import com.ouyunc.domain.entity.*;
 import com.ouyunc.mq.kafka.KafkaFactory;
 import org.apache.commons.collections4.CollectionUtils;
@@ -41,11 +42,13 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
@@ -201,7 +204,7 @@ public enum DefaultRepository implements Repository{
         // 3. 从 MongoDB 和 MySQL 查询缺失数据 (合并查询逻辑)
         List<Packet> dbPackets = queryFromDatabases(missingIds);
 
-        // 4. 合并结果并异步更新缓存
+        // 4. 合并结果并异步更新缓存，这里不进行更新mongo 没必要
         List<Packet> result = mergeResults(cachedPacketMap, dbPackets);
         asyncUpdateCache(appKey, dbPackets);
 
@@ -242,11 +245,19 @@ public enum DefaultRepository implements Repository{
 
         // 剩余 ID 查询 MySQL
         if (!CollectionUtils.isEmpty(remainingIds)) {
-            List<MessageEntity> mysqlEntities = jdbcClient.sql(JdbcSqlConstant.MYSQL.SELECT_MESSAGE.sql())
-                    .param(MessageEntity.Fields.ids, remainingIds)
-                    .query(MessageEntity.class)
-                    .list();
-            dbPackets.addAll(convertToPackets(mysqlEntities));
+            try {
+                List<MessageEntity> mysqlEntities = jdbcClient.sql(JdbcSqlConstant.MYSQL.SELECT_MESSAGE.sql())
+                        .param(MessageEntity.Fields.ids, remainingIds)
+                        .query(MessageEntity.class)
+                        .list();
+                dbPackets.addAll(convertToPackets(mysqlEntities));
+            } catch (EmptyResultDataAccessException e) {
+                log.error("message不存在, 原因: {}", e.getMessage());
+                return dbPackets;
+            } catch (Exception e) {
+                log.error("获取消息实体异常, remainingIds: {}, 原因：{}", remainingIds, e.getMessage());
+                return dbPackets;
+            }
         }
 
         return dbPackets;
@@ -341,7 +352,7 @@ public enum DefaultRepository implements Repository{
                 }
             }
             return Mono.just(true);
-        });
+        }, null);
     }
 
 
@@ -363,9 +374,67 @@ public enum DefaultRepository implements Repository{
                 }
             }
             return Mono.just(true);
+        }, (packets)->{
+            // 获取当前会话中用户的最大已读id，如果已读id小于当前用户最大已读id，则返回false,消息已读默认不允许回退，只能往后已读
+            Message message = packet.getMessage();
+            Long sessionMessageOffset = getSessionMaxReadPackageId(message.getMetadata().getAppKey(), message.getFrom(), message.getTo(), IdentityType.ONE_2_ONE);
+            if (sessionMessageOffset == null) {
+                log.error("消息id: {} 对应的消息已读id为空！", packet);
+                return false;
+            }
+            for (Packet readPacket : packets) {
+                // 获取已读id
+                if (readPacket.getPacketId() < sessionMessageOffset) {
+                    log.error("消息id: {} 对应的消息已读id小于当前用户最大已读id: {}！", packet, sessionMessageOffset);
+                    return false;
+                }
+            }
+            return true;
         });
     }
 
+    /**
+     * 获取会话最大已读id
+     * @param from
+     * @param to
+     * @param type
+     * @return
+     */
+    private Long getSessionMaxReadPackageId(String appKey, String from, String to, IdentityType type) {
+        // 先从redis 中获取
+        String sessionMessageOffsetKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.SESSION_READ_MESSAGE_OFFSET + type.getName() + CacheConstant.COLON + from + CacheConstant.COLON + to;
+        Long sessionMessageOffset = (Long) redisTemplate.opsForValue().get(sessionMessageOffsetKey);
+        if (sessionMessageOffset != null) {
+            return sessionMessageOffset;
+        }
+        // 获取不到在从mongo 获取
+        MongoSessionMessageOffsetEntity mongoSessionMessageOffsetEntity = mongoTemplate.findOne(new Query(Criteria.where(MongoSessionMessageOffsetEntity.Fields.from).is(from).and(MongoSessionMessageOffsetEntity.Fields.to).is(to).and(MongoSessionMessageOffsetEntity.Fields.type).is(type.getName())).limit(NumberConstant.NUMBER_1), MongoSessionMessageOffsetEntity.class);
+        if (mongoSessionMessageOffsetEntity != null) {
+            return mongoSessionMessageOffsetEntity.getSessionMessageOffset();
+        }
+        // 最后在从数据库获取
+        try {
+            SessionMessageOffsetEntity sessionMessageOffsetEntity = jdbcClient.sql(JdbcSqlConstant.MYSQL.SELECT_SESSION_MESSAGE_OFFSET.sql())
+                    .param(SessionMessageOffsetEntity.Fields.from, from)
+                    .param(SessionMessageOffsetEntity.Fields.to, to)
+                    .param(SessionMessageOffsetEntity.Fields.type, type)
+                    .query(SessionMessageOffsetEntity.class)
+                    .single();
+            Long maxSessionMessageOffset = sessionMessageOffsetEntity.getSessionMessageOffset();
+            // 缓存会话最大已读id
+            if (maxSessionMessageOffset != null) {
+                // 注意：这里没有放mongo,没必要了
+                redisTemplate.opsForValue().set(sessionMessageOffsetKey, maxSessionMessageOffset);
+            }
+            return maxSessionMessageOffset;
+        }catch (EmptyResultDataAccessException e) {
+            log.error("sessionMessageOffsetEntity 不存在,  from: {}, to:{}, type:{} , 原因: {}", from, to, type, e.getMessage());
+            return null;
+        } catch (Exception e) {
+            log.error("获取会话偏移量实体异常, from: {}, to:{}, type:{} 原因：{}", from, to, type, e.getMessage());
+            return null;
+        }
+    }
 
 
     /**
@@ -375,7 +444,7 @@ public enum DefaultRepository implements Repository{
      * @return
      */
     @SuppressWarnings("unchecked")
-    private Mono<Boolean> reactiveValidSpecialMessage(Packet packet, String sessionId, Function<List<Packet>, Mono<Boolean>> function) {
+    private Mono<Boolean> reactiveValidSpecialMessage(Packet packet, String sessionId, Function<List<Packet>, Mono<Boolean>> function, Predicate<List<Packet>> extraPredicate) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         List<Long> packetIds;
@@ -410,7 +479,16 @@ public enum DefaultRepository implements Repository{
                                             sessionId, packetIds.size(), packets.size());
                                     return Mono.just(false);
                                 }
-                                return function.apply(packets);
+                                return function.apply(packets).flatMap(valid -> {
+                                    if (!valid) return Mono.just(false);
+                                    // 若有额外条件，执行验证
+                                    if (extraPredicate != null) {
+                                        if (!extraPredicate.test(packets)) {
+                                            return Mono.just(false);
+                                        }
+                                    }
+                                    return Mono.just(true);
+                                });
                             });
                 })
                 .onErrorResume(e -> {
@@ -462,28 +540,24 @@ public enum DefaultRepository implements Repository{
 
 
     /**
-     * 响应式处理读已回执消息  todo 这里换成位图 bitmap 实现，减少存储量, 这个已读后续要拿掉，这样针对大数据效率太低，直接使用偏移量来判断已读未读
+     * 响应式处理读已回执消息
      */
-    public Mono<Boolean> reactiveReadReceiptMessage(Packet packet, long expireTime) {
+    public Mono<Boolean> reactiveReadReceiptMessage(Packet packet, IdentityType type,  long expireTime) {
         Message message = packet.getMessage();
+        String from = message.getFrom();
+        String to = message.getTo();
         Metadata metadata = message.getMetadata();
-        // 已读的消息id，（这里使用String类型接收）
+        // 已读的消息id, 一般建议只传递一个数据，如果传递多个则取最大的一个
         List<Long> readPacketIds = JSON.parseArray(message.getContent(), Long.class);
-        // 批量已读回执消息
-        List<String> keys = Lists.newArrayList();
-        List<Object> args = Lists.newArrayList();
-        for (Long readPacketId : readPacketIds) {
-            keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.MESSAGE + readPacketId);
-            keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.READ_MESSAGE + readPacketId);
-            // 阅读人
-            args.add(message.getFrom());
-            // 已读时间
-            args.add(metadata.getServerTime());
-            // 整体过期时间，这里是毫秒
-            args.add(expireTime);
+        Long maxReadPacketId = null;
+        if (CollectionUtils.isNotEmpty(readPacketIds)) {
+            maxReadPacketId = readPacketIds.stream().max(Comparator.comparingLong(Long::longValue)).orElse(null);
         }
-        Flux<Boolean> executeResult = reactiveStringRedisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_READ_RECEIPT_MESSAGE_LUA_SCRIPT, Boolean.class), keys, args);
-        return executeResult.all(result -> result);
+        if (maxReadPacketId == null) {
+            log.error("已读的消息id不能为空 | packet={}", packet);
+            return Mono.just(false);
+        }
+        return reactiveRedisTemplate.opsForValue().set(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.SESSION_READ_MESSAGE_OFFSET + type.getName() + CacheConstant.COLON + from + CacheConstant.COLON + to, maxReadPacketId, Duration.ofMillis(expireTime));
     }
 
 

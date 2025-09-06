@@ -32,60 +32,68 @@ public class SessionMessageOffsetEntity implements Serializable {
     */
     private Long sessionMessageOffset;
 
+
+
+    public static final class Fields {
+        public static final String from = "from";
+        public static final String to = "to";
+        public static final String type = "type";
+    }
+
     /**
     * 发送方ID
     */
-    private void setFrom(Long from){
+    public void setFrom(Long from){
     this.from = from;
     }
 
     /**
     * 接收方ID（用户或群组）
     */
-    private void setTo(Long to){
+    public void setTo(Long to){
     this.to = to;
     }
 
     /**
     * 会话类型：1-一对一，2-群
     */
-    private void setType(Integer type){
+    public void setType(Integer type){
     this.type = type;
     }
+
 
     /**
     * 会话消息偏移量，会话消息的接收时间；假如本次读取到会话A点，则下次从A点之后开始读取
     */
-    private void setSessionMessageOffset(Long sessionMessageOffset){
-    this.sessionMessageOffset = sessionMessageOffset;
+    public void setSessionMessageOffset(Long sessionMessageOffset){
+        this.sessionMessageOffset = sessionMessageOffset;
     }
-
 
     /**
     * 发送方ID
     */
-    private Long getFrom(){
+    public Long getFrom(){
     return this.from;
     }
 
     /**
     * 接收方ID（用户或群组）
     */
-    private Long getTo(){
+    public Long getTo(){
     return this.to;
     }
 
     /**
     * 会话类型：1-一对一，2-群
     */
-    private Integer getType(){
+    public Integer getType(){
     return this.type;
     }
 
     /**
     * 会话消息偏移量，会话消息的接收时间；假如本次读取到会话A点，则下次从A点之后开始读取
     */
-    private Long getSessionMessageOffset(){
+    public Long getSessionMessageOffset(){
     return this.sessionMessageOffset;
     }
 

@@ -37,6 +37,11 @@ public class CacheConstant {
     public static final String READ_MESSAGE = "read-message:";
 
     /***
+     * 会话已读消息偏移量缓存公共前缀
+     */
+    public static final String SESSION_READ_MESSAGE_OFFSET = "session-read-message-offset:";
+
+    /***
      * 平台appKey链接数
      */
     public static final String CONNECTIONS = "connections";
