@@ -13,8 +13,8 @@ import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.utils.SnowflakeUtil;
 import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.domain.base.RequestSession;
+import com.ouyunc.domain.constants.FriendJoinPolicy;
 import com.ouyunc.domain.constants.RequestSessionProgress;
-import com.ouyunc.domain.constants.YesOrNo;
 import com.ouyunc.domain.entity.UserEntity;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
@@ -129,7 +129,7 @@ public final class One2OneJoinFriendRequestMessageProcessor extends AbstractMess
                     requestSession = RequestSession.newBuilder().sessionId(SnowflakeUtil.nextIdStr()).build();
                 }
                 // 判断对方是否是自动同意加好友
-                if (YesOrNo.YES.getCode().equals(toUserEntity.getFriendJoinPolicy())) {
+                if (FriendJoinPolicy.AUTO_PASS.value().equals(toUserEntity.getFriendJoinPolicy())) {
                     requestSession.setProgress(RequestSessionProgress.AGREEING.value());
                     // 是自动添加好友
                     if (!repository().autoPassBindFriend(packet, requestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
