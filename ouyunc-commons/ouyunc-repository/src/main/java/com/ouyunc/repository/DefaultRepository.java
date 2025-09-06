@@ -178,7 +178,10 @@ public enum DefaultRepository implements Repository{
                 .map(id -> buildMessageRedisKey(appKey, id))
                 .collect(Collectors.toSet());
         List<Packet> cachedPackets = (List<Packet>) redisTemplate.opsForValue().multiGet(redisKeys);
-
+        if (cachedPackets == null) {
+            log.warn("cachedPackets 为空, appKey={}", appKey);
+            return Collections.emptyList(); // 避免返回 null
+        }
         // 过滤有效缓存并收集已存在的 ID
         Map<Long, Packet> cachedPacketMap = cachedPackets.stream()
                 .filter(Objects::nonNull)

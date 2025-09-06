@@ -33,8 +33,8 @@ let defaultConfig = {
         }
     };
 var url = 'ws://172.18.62.195:6003/ws'
-var local = 'ws://192.168.0.106:6003/ws'
-const socket = new Socket(url, {
+var local = 'ws://192.168.100.101:6003/ws'
+const socket = new Socket(local, {
     clientType: 1,
     // 2-json序列化，6-protocolbuf 序列化，需要引入两个protobuf文件，且 属性 Message: proto.com.ouyunc.base.packet.message.Message,需要配置
 	serializeAlgorithm: 6,
@@ -52,14 +52,14 @@ socket.onopen = (e) => {
             // 消息
             message: {
                 // 消息发送方唯一标识，建议使用用户id
-                from: '1392092779500212224',
+                from: '1391066871210487808',
                 // 消息接收方唯一标识，这里是登录，接受者是服务器，值可以为空串
                 to: '',
                 // 消息内容类型
                 contentType: -2,
                 // 消息内容content 是string 类型
                 content: JSON.stringify({
-                    identity: '1392092779500212224',
+                    identity: '1391066871210487808',
                     appKey: 'ouyunc',
                     signatureAlgorithm: 1,//md5
                     signature: '123456',
@@ -91,9 +91,9 @@ socket.onmessage = ({
             // 消息
             message: {
                 // 消息发送方唯一标识，建议使用用户id
-                from: '1392092779500212224',
+                from: '1391066871210487808',
                 // 消息接收方唯一标识，这里是登录，接受者是服务器，值可以为空串
-                to: '1400891700976500736',
+                to: '1391067238606352384',
                 // 消息内容类型
                 contentType: -128,
                 //at: ['18888888888','16666666666'],
