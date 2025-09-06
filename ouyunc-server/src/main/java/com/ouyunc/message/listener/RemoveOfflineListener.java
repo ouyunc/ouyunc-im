@@ -9,7 +9,7 @@ import com.ouyunc.core.listener.MessageListener;
 import com.ouyunc.core.listener.event.RemoveOfflineEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 /**
  * 异常离线消息监听器（所有qos > 0 的消息都应该进入每个客户端的离线队列中（待确认队列中），包括群聊和私聊模式的业务，这里将离线队列当做待确认队列使用）
@@ -24,7 +24,7 @@ public class RemoveOfflineListener implements MessageListener<RemoveOfflineEvent
 
     private static final Logger log = LoggerFactory.getLogger(RemoveOfflineListener.class);
 
-    private final RedisTemplate<String, Packet> redisTemplate = CacheFactory.REDIS.instance();
+    private final StringRedisTemplate stringRedisTemplate = CacheFactory.STRING_REDIS.instance();
 
     @Override
     public void onApplicationEvent(RemoveOfflineEvent event) {
@@ -34,7 +34,7 @@ public class RemoveOfflineListener implements MessageListener<RemoveOfflineEvent
             Message message = packet.getMessage();
             String from = message.getFrom();
             Metadata metadata = message.getMetadata();
-            redisTemplate.opsForZSet().remove(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON +  CacheConstant.OFFLINE  +  from, Long.valueOf(message.getContent()));
+            stringRedisTemplate.opsForZSet().remove(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON +  CacheConstant.OFFLINE  +  from, Long.valueOf(message.getContent()));
         }
     }
 
