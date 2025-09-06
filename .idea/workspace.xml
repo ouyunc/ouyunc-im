@@ -6,6 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/LuaScriptConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/LuaScriptConstant.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/DefaultRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/DefaultRepository.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -242,15 +243,7 @@
       <workItem from="1757076938346" duration="21000" />
       <workItem from="1757076975625" duration="831000" />
       <workItem from="1757079837399" duration="8478000" />
-      <workItem from="1757117417417" duration="3287000" />
-    </task>
-    <task id="LOCAL-00022" summary="v6.4.0  主动加群逻辑">
-      <option name="closed" value="true" />
-      <created>1743666568821</created>
-      <option name="number" value="00022" />
-      <option name="presentableId" value="LOCAL-00022" />
-      <option name="project" value="LOCAL" />
-      <updated>1743666568821</updated>
+      <workItem from="1757117417417" duration="8526000" />
     </task>
     <task id="LOCAL-00023" summary="v6.4.0  主动加群逻辑">
       <option name="closed" value="true" />
@@ -636,7 +629,15 @@
       <option name="project" value="LOCAL" />
       <updated>1757086172300</updated>
     </task>
-    <option name="localTasksCounter" value="71" />
+    <task id="LOCAL-00071" summary="v6.5.0  添加群的限制">
+      <option name="closed" value="true" />
+      <created>1757120790083</created>
+      <option name="number" value="00071" />
+      <option name="presentableId" value="LOCAL-00071" />
+      <option name="project" value="LOCAL" />
+      <updated>1757120790083</updated>
+    </task>
+    <option name="localTasksCounter" value="72" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
