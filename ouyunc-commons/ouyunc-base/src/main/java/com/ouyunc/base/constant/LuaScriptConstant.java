@@ -4,69 +4,6 @@ package com.ouyunc.base.constant;
  * lua 脚本
  */
 public class LuaScriptConstant {
-
-    /**
-     * 批量保存消息lua 脚本，针对群聊
-     */
-    public static final String BATCH_SAVE_MESSAGE_LUA_SCRIPT =
-            "--[[\n" +
-                    "KEYS 与 ARGV 参数同上\n" +
-                    "--]]\n" +
-                    "\n" +
-                    "local msgKey = KEYS[1]\n" +
-                    "local sessionKey = KEYS[2]\n" +
-                    "local offlineKeys = {unpack(KEYS, 3, #KEYS)}\n" +
-                    "local expireTime = tonumber(ARGV[1])\n" +
-                    "local packet = ARGV[2]\n" +
-                    "local serverTime = tonumber(ARGV[3])\n" +
-                    "local packetId = ARGV[4]\n" +
-                    "\n" +
-                    "local rollbackOps = {}\n" +
-                    "\n" +
-                    "-- 定义回滚函数\n" +
-                    "local function rollback()\n" +
-                    "    for i = #rollbackOps, 1, -1 do\n" +
-                    "        local op = rollbackOps[i]\n" +
-                    "        redis.call(unpack(op))\n" +
-                    "    end\n" +
-                    "end\n" +
-                    "\n" +
-                    "-- 1. 设置消息\n" +
-                    "local setResult\n" +
-                    "if expireTime > 0 then\n" +
-                    "    setResult = redis.call('SET', msgKey, packet, 'PX', expireTime)\n" +
-                    "else\n" +
-                    "    setResult = redis.call('SET', msgKey, packet)\n" +
-                    "end\n" +
-                    "\n" +
-                    "if type(setResult) == 'string' and setResult ~= 'OK' then\n" +
-                    "    return false\n" +
-                    "elseif type(setResult) == 'table' and setResult['ok'] ~= 'OK' then\n" +
-                    "    return false\n" +
-                    "end\n" +
-                    "table.insert(rollbackOps, {'DEL', msgKey})\n" +
-                    "\n" +
-                    "-- 2. 添加会话消息\n" +
-                    "local zaddSession = redis.call('ZADD', sessionKey, serverTime, packetId)\n" +
-                    "if zaddSession  ~= 1 then\n" +
-                    "    rollback()\n" +
-                    "    return false\n" +
-                    "end\n" +
-                    "table.insert(rollbackOps, {'ZREM', sessionKey, packetId})\n" +
-                    "\n" +
-                    "-- 3. 批量添加离线消息\n" +
-                    "for _, key in ipairs(offlineKeys) do\n" +
-                    "    local zaddOffline = redis.call('ZADD', key, serverTime, packetId)\n" +
-                    "    if zaddOffline ~= 1 then\n" +
-                    "        rollback()\n" +
-                    "        return false\n" +
-                    "    end\n" +
-                    "    table.insert(rollbackOps, {'ZREM', key, packetId})\n" +
-                    "end\n" +
-                    "\n" +
-                    "return true" ;
-
-
     public static final String BATCH_WITHDRAW_MESSAGE_LUA_SCRIPT =
                     "local groupUsersCount = tonumber(KEYS[1])\n" +
                             "local keys = {unpack(KEYS, 2, #KEYS)}\n" +

@@ -709,24 +709,21 @@ public enum DefaultRepository implements Repository{
      * @param expireTime 过期时间，单位毫秒，多久后过期
      * @return
      */
-    public Flux<Boolean> reactiveBatchSaveMessage(Packet packet, Set<String> groupUserIdentitySet, long expireTime) {
+    public Mono<Boolean> reactiveBatchSaveMessage(Packet packet, Set<String> groupUserIdentitySet, long expireTime) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
+        String messageKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.MESSAGE + packet.getPacketId();
+        String requestSessionKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.SESSION + message.getTo();
         // 构造参数
         List<String> offlineKeys = groupUserIdentitySet.stream().map(groupUserIdentity -> CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + groupUserIdentity).toList();
-        List<String> keys = new ArrayList<>();
-        keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.MESSAGE + packet.getPacketId());
-        keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.SESSION + message.getTo());
-        keys.addAll(offlineKeys);
-
-        List<Object> args = new ArrayList<>();
-        args.add(expireTime);
-        args.add(packet); // 需要实现序列化方法
-        args.add(metadata.getServerTime());
-        args.add(packet.getPacketId());
-        args.add(metadata.getAppKey());
-        args.add(message.getTo());
-        return reactiveRedisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_SAVE_MESSAGE_LUA_SCRIPT, Boolean.class), keys, args);
+        return Mono.fromCallable(() -> saveMessageWithSessionOrOffline(packet, expireTime, messageKey, requestSessionKey, offlineKeys, (ops) -> {}, (ops, msg, app, f, t) -> {}))
+                // 指定在弹性线程池中执行阻塞操作，避免阻塞Netty事件循环
+                .subscribeOn(Schedulers.boundedElastic())
+                // 响应式错误处理
+                .onErrorResume(e -> {
+                    log.error("Reactive save message failed: {}", e.getMessage(), e);
+                    return Mono.just(false);
+                });
     }
 
 

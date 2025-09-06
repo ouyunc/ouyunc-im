@@ -18,7 +18,6 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.redisson.api.RLockReactive;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
@@ -236,45 +235,20 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
     private Mono<Boolean> reactiveSaveGroupMessage(Packet packet, Set<String> groupMembers) {
         Message message = packet.getMessage();
         if (MessageContext.messageProperties.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
-            return reactiveSaveQosMessage(packet, groupMembers);
+            return repository().reactiveBatchSaveMessage(
+                    packet,
+                    groupMembers,
+                    MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP
+            );
         }else {
-             return reactiveSaveNonQosMessage(packet, message.getTo());
+             return repository().reactiveSaveMessage(
+                     packet,
+                     message.getTo(),
+                     MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP
+             );
         }
     }
 
-
-    /**
-     * 保存Qos消息
-     *
-     * @param packet
-     * @param groupMembers
-     * @return
-     */
-    private Mono<Boolean> reactiveSaveQosMessage(Packet packet, Set<String> groupMembers) {
-        Flux<Boolean> booleanFlux = repository().reactiveBatchSaveMessage(
-                packet,
-                groupMembers,
-                MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP
-        );
-        return booleanFlux.all(result -> result)
-                .onErrorReturn(false);
-    }
-
-
-    /**
-     * 保存非Qos消息
-     *
-     * @param packet
-     * @param sessionId
-     * @return
-     */
-    private Mono<Boolean> reactiveSaveNonQosMessage(Packet packet, String sessionId) {
-        return repository().reactiveSaveMessage(
-                packet,
-                sessionId,
-                MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP
-        );
-    }
 
     private RLockReactive createMultiLock(String appKey, String sessionId, String to) {
         return reactiveRedissonClient.getMultiLock(
