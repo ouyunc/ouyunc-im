@@ -23,7 +23,6 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.redisson.api.RLockReactive;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
@@ -103,7 +102,7 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
         saveMessage(packet).subscribe(result -> {
             // 保存成功处理后续逻辑
             if (result) {
-                // 3. 处理特殊消息类型
+                // 3. 处理特殊消息类型, 注意这里都采用了无锁的方式
                 int contentType = packet.getMessage().getContentType();
                 if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
                     handleWithdrawMessage(ctx, packet);
@@ -129,11 +128,12 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
         String from = packet.getMessage().getFrom();
         String to = packet.getMessage().getTo();
         String sessionId = IdentityUtil.sessionId(from, to);
-        reactiveHandleLockedOperation(ctx, packet,
+        reactiveHandleOperation(ctx, packet,
                 repository().reactiveValidWithdrawMessage(packet, sessionId, true),
                 ()-> repository().savePacket2Mq(MqConstant.KAFKA_WITHDRAW_MESSAGE_TOPIC, sessionId, packet),
                 repository().reactiveWithdrawMessage(packet, sessionId, Sets.newHashSet(to)),
-                "一对一撤回消息", ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR);
+                "一对一撤回消息", ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR)
+                .subscribe();
     }
 
     /**
@@ -144,11 +144,12 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
      */
     private void handleReadReceipt(ChannelHandlerContext ctx, Packet packet) {
         String sessionId = IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo());
-        reactiveHandleLockedOperation(ctx, packet,
+        reactiveHandleOperation(ctx, packet,
                 repository().reactiveValidReadReceiptMessage(packet, sessionId, true),
                 () -> repository().savePacket2Mq(MqConstant.KAFKA_READ_RECEIPT_MESSAGE_TOPIC, sessionId, packet),
                 repository().reactiveReadReceiptMessage(packet, IdentityType.ONE_2_ONE, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP),
-                "一对一已读回执消息", ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR);
+                "一对一已读回执消息", ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR)
+                .subscribe();
     }
 
 
@@ -163,6 +164,7 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
      * @param errorLog
      * @param errorCode
      */
+    @Deprecated
     private void reactiveHandleLockedOperation(ChannelHandlerContext ctx, Packet packet,
                                                Mono<Boolean> validator,
                                                Supplier<CompletableFuture<?>> mqSender,
@@ -175,30 +177,14 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
                 .flatMap(locked -> {
                     if (!locked) {
                         MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, errorLog + "获取锁失败", packet), true);
-                        return Mono.empty();
+                        return Mono.just( false);
                     }
                     return validator.flatMap(valid -> {
                         if (!valid) {
                             MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, errorLog + "验证失败", packet), true);
-                            return Mono.empty();
+                            return Mono.just(false);
                         }
-                        return Mono.fromFuture(mqSender.get())
-                                .onErrorResume(ex -> {
-                                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, errorLog + "发送mq持久化异常：" + ex.getMessage(), packet), true);
-                                    return Mono.empty();
-                                })
-                                .then(processor)
-                                .flatMap(processed -> {
-                                    if (processed) {
-                                        deliverAndFireNext(ctx, packet);
-                                    } else {
-                                        MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, errorLog + "业务处理失败", packet), true);
-                                    }
-                                    return Mono.empty();
-                                }).onErrorResume(ex -> {
-                                    publishExceptionEvent(errorCode, errorLog + "处理过程中发生异常", packet);
-                                    return Mono.empty();
-                                });
+                        return reactiveHandleOperation(ctx, packet, validator, mqSender, processor, errorLog, errorCode);
                     }).publishOn(Schedulers.boundedElastic()).doFinally(s -> lock.unlock()
                             .doOnError(e -> log.error("解锁失败", e))
                             .onErrorResume(e -> {
@@ -208,6 +194,81 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
                             }).subscribe());
                 }).subscribe();
     }
+
+
+    /**
+     * 响应式处理无锁逻辑
+     *
+     * @param ctx
+     * @param packet
+     * @param validator
+     * @param mqSender
+     * @param processor
+     * @param errorLog
+     * @param errorCode
+     */
+    private Mono<Boolean> reactiveHandleOperation(ChannelHandlerContext ctx, Packet packet,
+                                               Mono<Boolean> validator,
+                                               Supplier<CompletableFuture<?>> mqSender,
+                                               Mono<Boolean> processor,
+                                               String errorLog, ExceptionCodeEnum errorCode) {
+        return validator.flatMap(valid -> {
+            if (!valid) {
+                MessageServerContext.publishEvent(
+                        new ExceptionEvent(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, errorLog + "验证失败", packet),
+                        true
+                );
+                return Mono.just(false);
+            }
+            // 优化后的代码片段，确保MQ发送成功后才执行processor
+            return Mono.fromFuture(mqSender.get())
+                    // 当MQ发送成功时，返回一个表示成功的Mono
+                    .then(Mono.just(true))
+                    .onErrorResume(ex -> {
+                        // MQ发送失败时的处理
+                        MessageServerContext.publishEvent(
+                                new ExceptionEvent(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR,
+                                        errorLog + "发送mq持久化异常：" + ex.getMessage(),
+                                        packet),
+                                true
+                        );
+                        return Mono.just(false); // 明确返回失败标识
+                    })
+                    // 只有当MQ发送成功（上一步返回true）时才执行processor
+                    .flatMap(mqSentSuccessfully -> {
+                        if (mqSentSuccessfully) {
+                            return processor; // MQ发送成功，执行业务处理
+                        } else {
+                            return Mono.just(false); // MQ发送失败，直接返回失败
+                        }
+                    })
+                    .flatMap(processed -> {
+                        if (processed) {
+                            deliverAndFireNext(ctx, packet);
+                            return Mono.just(true); // 处理成功
+                        } else {
+                            MessageServerContext.publishEvent(
+                                    new ExceptionEvent(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR,
+                                            errorLog + "业务处理失败",
+                                            packet),
+                                    true
+                            );
+                            return Mono.just(false); // 处理失败
+                        }
+                    })
+                    .onErrorResume(ex -> {
+                        MessageServerContext.publishEvent(
+                                new ExceptionEvent(errorCode,
+                                        errorLog + "处理过程中发生异常：" + ex.getMessage(),
+                                        packet),
+                                true
+                        );
+                        return Mono.just(false);
+                    });
+        });
+
+    }
+
 
 
     private void publishExceptionEvent(ExceptionCodeEnum code, String msg, Packet packet) {
