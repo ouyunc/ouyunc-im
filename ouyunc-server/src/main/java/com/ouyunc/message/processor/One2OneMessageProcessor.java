@@ -1,7 +1,6 @@
 package com.ouyunc.message.processor;
 
 import com.google.common.collect.Sets;
-import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
@@ -20,18 +19,13 @@ import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.validator.*;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.collections4.CollectionUtils;
-import org.redisson.api.RLockReactive;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
-
-import static com.ouyunc.message.context.MessageServerContext.reactiveRedissonClient;
 
 
 /**
@@ -153,47 +147,6 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
     }
 
 
-    /**
-     * 响应式处理加锁逻辑
-     *
-     * @param ctx
-     * @param packet
-     * @param validator
-     * @param mqSender
-     * @param processor
-     * @param errorLog
-     * @param errorCode
-     */
-    @Deprecated
-    private void reactiveHandleLockedOperation(ChannelHandlerContext ctx, Packet packet,
-                                               Mono<Boolean> validator,
-                                               Supplier<CompletableFuture<?>> mqSender,
-                                               Mono<Boolean> processor,
-                                               String errorLog, ExceptionCodeEnum errorCode) {
-        Message message = packet.getMessage();
-        String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
-        RLockReactive lock = createMultiLock(message.getMetadata().getAppKey(), sessionId, message.getTo());
-        lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)
-                .flatMap(locked -> {
-                    if (!locked) {
-                        MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, errorLog + "获取锁失败", packet), true);
-                        return Mono.just( false);
-                    }
-                    return validator.flatMap(valid -> {
-                        if (!valid) {
-                            MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, errorLog + "验证失败", packet), true);
-                            return Mono.just(false);
-                        }
-                        return reactiveHandleOperation(ctx, packet, validator, mqSender, processor, errorLog, errorCode);
-                    }).publishOn(Schedulers.boundedElastic()).doFinally(s -> lock.unlock()
-                            .doOnError(e -> log.error("解锁失败", e))
-                            .onErrorResume(e -> {
-                                log.error("解锁异常: {}", e.getMessage());
-                                MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.UN_LOCK_ERROR, errorLog + "解锁失败", packet), true);
-                                return Mono.empty();
-                            }).subscribe());
-                }).subscribe();
-    }
 
 
     /**
@@ -271,11 +224,6 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
 
 
 
-    private void publishExceptionEvent(ExceptionCodeEnum code, String msg, Packet packet) {
-        MessageServerContext.publishEvent(
-                new ExceptionEvent(code, msg, packet), true);
-    }
-
     /**
      * 发送消息给接收方
      *
@@ -325,12 +273,5 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
         MessageHelper.asyncSendMessage(packet, toLoginClientInfos);
     }
 
-
-    private RLockReactive createMultiLock(String appKey, String sessionId, String to) {
-        return reactiveRedissonClient.getMultiLock(
-                reactiveRedissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.SESSION + sessionId),
-                reactiveRedissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.OFFLINE + to)
-        );
-    }
 
 }
