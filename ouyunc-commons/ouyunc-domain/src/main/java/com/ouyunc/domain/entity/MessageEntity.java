@@ -152,16 +152,16 @@ public class MessageEntity implements Serializable {
     private int withdrawn;
 
     /**
-     * 撤回时间
+     * 撤回时间戳
      */
     @Field("withdrawn_time")
-    private int withdrawnTime;
+    private Long withdrawnTime;
 
     /**
      * 撤回人id
      */
     @Field("withdrawn_user_id")
-    private int withdrawnUserId;
+    private Long withdrawnUserId;
 
     /**
      * appKey
@@ -216,19 +216,19 @@ public class MessageEntity implements Serializable {
         this.appKey = appKey;
     }
 
-    public int getWithdrawnTime() {
+    public Long getWithdrawnTime() {
         return withdrawnTime;
     }
 
-    public void setWithdrawnTime(int withdrawnTime) {
+    public void setWithdrawnTime(Long withdrawnTime) {
         this.withdrawnTime = withdrawnTime;
     }
 
-    public int getWithdrawnUserId() {
+    public Long getWithdrawnUserId() {
         return withdrawnUserId;
     }
 
-    public void setWithdrawnUserId(int withdrawnUserId) {
+    public void setWithdrawnUserId(Long withdrawnUserId) {
         this.withdrawnUserId = withdrawnUserId;
     }
 

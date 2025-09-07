@@ -4,10 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MessageEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MessageEntity.java" afterDir="false" />
-    </list>
+    <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -249,15 +246,7 @@
       <workItem from="1757079837399" duration="8478000" />
       <workItem from="1757117417417" duration="31675000" />
       <workItem from="1757204080350" duration="6242000" />
-      <workItem from="1757255655932" duration="402000" />
-    </task>
-    <task id="LOCAL-00033" summary="v6.5.0  增加序列化标识，防止序列化反序列化问题">
-      <option name="closed" value="true" />
-      <created>1745204381428</created>
-      <option name="number" value="00033" />
-      <option name="presentableId" value="LOCAL-00033" />
-      <option name="project" value="LOCAL" />
-      <updated>1745204381428</updated>
+      <workItem from="1757255655932" duration="797000" />
     </task>
     <task id="LOCAL-00034" summary="v6.5.0  增加序列化标识，防止序列化反序列化问题">
       <option name="closed" value="true" />
@@ -643,7 +632,15 @@
       <option name="project" value="LOCAL" />
       <updated>1757237300738</updated>
     </task>
-    <option name="localTasksCounter" value="82" />
+    <task id="LOCAL-00082" summary="v6.5.1 去除消息偏移量限制">
+      <option name="closed" value="true" />
+      <created>1757256142813</created>
+      <option name="number" value="00082" />
+      <option name="presentableId" value="LOCAL-00082" />
+      <option name="project" value="LOCAL" />
+      <updated>1757256142814</updated>
+    </task>
+    <option name="localTasksCounter" value="83" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
