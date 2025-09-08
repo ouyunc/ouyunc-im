@@ -7,6 +7,9 @@ import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
+import java.io.Serial;
+import java.io.Serializable;
+
 /**
  * IM会话消息偏移量实体类
  * 对应MongoDB中的文档集合
@@ -17,19 +20,33 @@ import org.springframework.data.mongodb.core.mapping.Field;
 @CompoundIndexes({
         @CompoundIndex(name = "from_to_type_idx", def = "{'from': 1, 'to': 1, 'type': 1}", unique = true)
 })
-public class SessionMessageOffsetEntity {
+public class SessionMessageOffsetEntity implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
 
-    private Long from; // 发送方ID（雪花ID）
+    /**
+     *  发送方ID（雪花ID）
+     */
+    private Long from;
 
-    @Indexed(name = "idx_to") // 对应MySQL中的to字段索引
-    private Long to; // 接收方ID（用户或群组，雪花ID）
+    /**
+     * 接收方ID（用户或群组，雪花ID）
+     * 对应MySQL中的to字段索引
+     */
+    @Indexed(name = "idx_to")
+    private Long to;
 
-    private Integer type; // 会话类型：1-一对一，2-群聊
+    /**
+     *  会话类型：1-一对一，2-群聊, 具体看IdentityType
+     */
+    private Integer type;
 
+    /**
+     *  会话消息偏移量，默认值0
+     */
     @Field("session_message_offset")
-    private Long sessionMessageOffset = 0L; // 会话消息偏移量，默认值0
+    private Long sessionMessageOffset = 0L;
 
-    // 构造方法
     public SessionMessageOffsetEntity() {}
 
     public SessionMessageOffsetEntity(Long from, Long to, Integer type, Long sessionMessageOffset) {

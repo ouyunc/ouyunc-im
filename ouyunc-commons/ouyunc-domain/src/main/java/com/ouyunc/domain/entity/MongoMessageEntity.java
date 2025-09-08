@@ -3,15 +3,12 @@ package com.ouyunc.domain.entity;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Field;
 
-import java.io.Serial;
 import java.time.LocalDateTime;
 
 /**
  * mongodb message
  */
 public class MongoMessageEntity extends MessageEntity {
-    @Serial
-    private static final long serialVersionUID = 1L;
     /**
      * 过期时间
      */
@@ -25,8 +22,8 @@ public class MongoMessageEntity extends MessageEntity {
     public MongoMessageEntity() {
     }
 
-    public MongoMessageEntity(long id, byte protocol, byte protocolVersion, byte deviceType, byte networkType, byte encryptType, byte serializeAlgorithm, byte messageType, byte retain, String clientIp, String from, String to, int contentType, String content, int qos, String at, String extra, long clientSendTime, long serverArrivalTime, int withdrawn, String appKey, LocalDateTime expireAt) {
-        super(id, protocol, protocolVersion, deviceType, networkType, encryptType, serializeAlgorithm, messageType, retain, clientIp, from, to, contentType, content, qos, at, extra, clientSendTime, serverArrivalTime, withdrawn, appKey);
+    public MongoMessageEntity(long id, byte protocol, byte protocolVersion, byte deviceType, byte networkType, byte encryptType, byte serializeAlgorithm, byte messageType, byte retain, String clientIp, String from, String to, int contentType, String content, int qos, String at, String extra, long clientSendTime, long serverArrivalTime, String appKey, LocalDateTime expireAt) {
+        super(id, protocol, protocolVersion, deviceType, networkType, encryptType, serializeAlgorithm, messageType, retain, clientIp, from, to, contentType, content, qos, at, extra, clientSendTime, serverArrivalTime, appKey);
         this.expireAt = expireAt;
     }
 
