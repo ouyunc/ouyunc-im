@@ -125,7 +125,7 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
                 repository().reactiveValidReadReceiptMessage(packet, packet.getMessage().getTo(), IdentityType.GROUP, true),
                 ()-> repository().savePacket2Mq(MqConstant.KAFKA_READ_RECEIPT_MESSAGE_TOPIC, sessionId, packet),
                 repository().reactiveReadReceiptMessage(packet, IdentityType.GROUP, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP),
-                (ctx0,  packet0) -> deliverAndFireNext(ctx0, packet0, groupUserIdentitySet),
+                (ctx0,  packet0) -> {},
                 (exceptionEvent)-> MessageServerContext.publishEvent(exceptionEvent, true),
                 ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR).subscribe();
     }
@@ -156,12 +156,23 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
 
     /**
      * 发送消息给接收方
-     * @param packet
+     *
      * @param ctx
+     * @param packet
      */
     private void deliverAndFireNext(ChannelHandlerContext ctx, Packet packet, Set<String> groupUserIdentitySet) {
+        // 同步发送给自己
+        deliverMessage2Self(packet);
         // 4. 发送消息给接收方
-        deliverMessage(packet, groupUserIdentitySet);
+        Message message = packet.getMessage();
+        if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == message.getContentType() || MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == message.getContentType()) {
+            deliver2AllGroupMembers(packet, groupUserIdentitySet);
+        } else {
+            List<String> atList = packet.getMessage().getAt();
+            if (CollectionUtils.isNotEmpty(atList)) {
+                deliver2AtMessage(packet, atList, groupUserIdentitySet);
+            }
+        }
         // 处理成功则转到下个处理器
         ctx.fireChannelRead(packet);
     }
@@ -183,7 +194,7 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
      */
     private Mono<Boolean> reactiveSaveGroupMessage(Packet packet, Set<String> groupMembers) {
         Message message = packet.getMessage();
-        if (MessageContext.messageProperties.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
+        if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() != message.getContentType() && MessageContext.messageProperties.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
             return repository().reactiveBatchSaveMessage(
                     packet,
                     groupMembers,
@@ -193,43 +204,38 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
              return repository().reactiveSaveMessage(
                      packet,
                      message.getTo(),
-                     MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP
+                     MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP, false
              );
         }
     }
 
 
-    /**
-     * 发送消息给接收方
-     */
-    private void deliverMessage(Packet packet, Set<String> groupMembers) {
+
+    private void deliver2AllGroupMembers(Packet packet, Set<String> groupMembers) {
+        groupMembers.forEach(member -> deliverMessage(packet, member));
+    }
+
+    private void deliver2AtMessage(Packet packet, List<String> atList, Set<String> groupMembers) {
+        atList.stream()
+                .filter(groupMembers::contains)
+                .forEach(member -> deliverMessage(packet, member));
+    }
+
+    private void deliverMessage2Self(Packet packet) {
         Message message = packet.getMessage();
-        if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == message.getContentType() || MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == message.getContentType()) {
-            deliver2AllGroupMembers(packet, groupMembers);
-        } else {
-            List<String> atList = packet.getMessage().getAt();
-            if (CollectionUtils.isNotEmpty(atList)) {
-                deliverAtMessage(packet, atList, groupMembers);
-            }
+        String appKey = message.getMetadata().getAppKey();
+        // 同步发送给自己
+        List<LoginClientInfo> fromSelfLoginClientInfos = ClientHelper.onlineAll(appKey, message.getFrom(), MessageServerContext.deviceType(appKey, packet.getDeviceType()));
+        if (CollectionUtils.isNotEmpty(fromSelfLoginClientInfos)) {
+            MessageHelper.asyncSendMessage(packet, fromSelfLoginClientInfos);
         }
     }
 
-
-    private void deliver2AllGroupMembers(Packet packet, Set<String> groupMembers) {
-        groupMembers.forEach(member -> deliverToMember(packet, member));
-    }
-
-    private void deliverAtMessage(Packet packet, List<String> atList, Set<String> groupMembers) {
-        atList.stream()
-                .filter(groupMembers::contains)
-                .forEach(member -> deliverToMember(packet, member));
-    }
-
-    private void deliverToMember(Packet packet, String memberIdentity) {
-        List<LoginClientInfo> clientInfos = ClientHelper.onlineAll(
-                packet.getMessage().getMetadata().getAppKey(),
-                memberIdentity
-        );
+    private void deliverMessage(Packet packet, String memberIdentity) {
+        Message message = packet.getMessage();
+        String appKey = message.getMetadata().getAppKey();
+        // 发送给他人
+        List<LoginClientInfo> clientInfos = ClientHelper.onlineAll(appKey, memberIdentity);
         if (CollectionUtils.isEmpty(clientInfos)) {
             log.warn("Member {} is offline, message stored", memberIdentity);
             return;

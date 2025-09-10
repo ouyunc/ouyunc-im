@@ -101,6 +101,7 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
                 } else if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {
                     handleReadReceipt(ctx, packet);
                 } else {
+                    // 是否需要发送，除当前登录设备的其他设备需要接收消息
                     deliverAndFireNext(ctx, packet);
                 }
             }else {
@@ -124,7 +125,7 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
                 repository().reactiveValidWithdrawMessage(packet, sessionId, true),
                 ()-> repository().savePacket2Mq(MqConstant.KAFKA_WITHDRAW_MESSAGE_TOPIC, sessionId, packet),
                 repository().reactiveWithdrawMessage(packet, sessionId, Sets.newHashSet(to)),
-                (ctx0, packet0)-> deliverAndFireNext(ctx, packet),
+                this::deliverAndFireNext,
                 (exceptionEvent)-> MessageServerContext.publishEvent(exceptionEvent, true),
                 ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR)
                 .subscribe();
@@ -132,7 +133,7 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
 
     /**
      * 处理消息内容类型是撤回消息
-     *
+     * 已读消息不发送给对方， 离线消息也不用存储
      * @param ctx
      * @param packet
      */
@@ -142,27 +143,40 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
                 repository().reactiveValidReadReceiptMessage(packet, sessionId, IdentityType.ONE_2_ONE, true),
                 () -> repository().savePacket2Mq(MqConstant.KAFKA_READ_RECEIPT_MESSAGE_TOPIC, sessionId, packet),
                 repository().reactiveReadReceiptMessage(packet, IdentityType.ONE_2_ONE, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP),
-                this::deliverAndFireNext,
-                (exceptionEvent)-> MessageServerContext.publishEvent(exceptionEvent, true), ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR)
+                (ctx0, packet0) -> {},
+                (exceptionEvent)-> MessageServerContext.publishEvent(exceptionEvent, true),
+                ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR)
                 .subscribe();
     }
 
 
 
 
-
+    private void deliverMessage2SelfAndFireNext(Packet packet) {
+        Message message = packet.getMessage();
+        String appKey = message.getMetadata().getAppKey();
+        // 同步发送给自己
+        List<LoginClientInfo> fromSelfLoginClientInfos = ClientHelper.onlineAll(appKey, message.getFrom(), MessageServerContext.deviceType(appKey, packet.getDeviceType()));
+        if (CollectionUtils.isNotEmpty(fromSelfLoginClientInfos)) {
+            MessageHelper.asyncSendMessage(packet, fromSelfLoginClientInfos);
+        }
+    }
 
     /**
      * 发送消息给接收方
      *
-     * @param packet
      * @param ctx
+     * @param packet
      */
     private void deliverAndFireNext(ChannelHandlerContext ctx, Packet packet) {
         Message message = packet.getMessage();
-        List<LoginClientInfo> toLoginClientInfos =
-                ClientHelper.onlineAll(message.getMetadata().getAppKey(), message.getTo());
-
+        String appKey = message.getMetadata().getAppKey();
+        // 同步给自己
+        List<LoginClientInfo> fromSelfLoginClientInfos = ClientHelper.onlineAll(appKey, message.getFrom(), MessageServerContext.deviceType(appKey, packet.getDeviceType()));
+        if (CollectionUtils.isNotEmpty(fromSelfLoginClientInfos)) {
+            MessageHelper.asyncSendMessage(packet, fromSelfLoginClientInfos);
+        }
+        List<LoginClientInfo> toLoginClientInfos = ClientHelper.onlineAll(appKey, message.getTo());
         if (CollectionUtils.isEmpty(toLoginClientInfos)) {
             log.warn("Recipient {} is offline, message stored", message.getTo());
             return;
@@ -190,7 +204,7 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
     private Mono<Boolean> saveMessage(Packet packet) {
         Message message = packet.getMessage();
         String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
-        return repository().reactiveSaveMessage(packet, sessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
+        return repository().reactiveSaveMessage(packet, sessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP, MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() != message.getContentType());
     }
 
 
