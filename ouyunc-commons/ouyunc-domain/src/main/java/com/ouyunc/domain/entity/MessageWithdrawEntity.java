@@ -36,6 +36,12 @@ public class MessageWithdrawEntity implements Serializable {
     @Field("withdraw_user_id")
     private Long withdrawUserId;
 
+    /**
+     * 发送方设备类型：具体看 DeviceType,也有可能是用户自定义的
+     */
+    @Field("device_type")
+    private Byte deviceType;
+
 
     private void setId(Long id){
     this.id = id;
@@ -50,7 +56,13 @@ public class MessageWithdrawEntity implements Serializable {
     this.withdrawUserId = withdrawUserId;
     }
 
+    public Byte getDeviceType() {
+        return deviceType;
+    }
 
+    public void setDeviceType(Byte deviceType) {
+        this.deviceType = deviceType;
+    }
 
     private Long getId(){
     return this.id;

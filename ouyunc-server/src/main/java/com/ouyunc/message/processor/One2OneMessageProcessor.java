@@ -139,7 +139,7 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
     private void handleReadReceipt(ChannelHandlerContext ctx, Packet packet) {
         String sessionId = IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo());
         reactiveHandleOperation(ctx, packet,
-                repository().reactiveValidReadReceiptMessage(packet, sessionId, true),
+                repository().reactiveValidReadReceiptMessage(packet, sessionId, IdentityType.ONE_2_ONE, true),
                 () -> repository().savePacket2Mq(MqConstant.KAFKA_READ_RECEIPT_MESSAGE_TOPIC, sessionId, packet),
                 repository().reactiveReadReceiptMessage(packet, IdentityType.ONE_2_ONE, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP),
                 "一对一已读回执消息", ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR)

@@ -129,7 +129,7 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
     private void handleReadReceipt(ChannelHandlerContext ctx, Packet packet, Set<String> groupUserIdentitySet) {
         String sessionId = packet.getMessage().getTo();
         reactiveHandleLockedOperation(ctx, packet,groupUserIdentitySet,
-                repository().reactiveValidReadReceiptMessage(packet, packet.getMessage().getTo(), true),
+                repository().reactiveValidReadReceiptMessage(packet, packet.getMessage().getTo(), IdentityType.GROUP, true),
                 ()-> repository().savePacket2Mq(MqConstant.KAFKA_READ_RECEIPT_MESSAGE_TOPIC, sessionId, packet),
                 repository().reactiveReadReceiptMessage(packet, IdentityType.GROUP, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP),
                 "已读回执消息", ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR);

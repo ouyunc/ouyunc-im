@@ -3,7 +3,6 @@ package com.ouyunc.domain.entity;
 import com.baomidou.mybatisplus.annotation.TableName;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.index.CompoundIndexes;
-import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
@@ -18,7 +17,7 @@ import java.io.Serializable;
 @Document(collection = "ouyunc_im_session_message_offset")
 // 创建复合索引，对应MySQL中的复合主键，确保唯一性
 @CompoundIndexes({
-        @CompoundIndex(name = "from_to_type_idx", def = "{'from': 1, 'to': 1, 'type': 1}", unique = true)
+        @CompoundIndex(name = "from_to_type_idx", def = "{'from': 1, 'to': 1, 'type': 1, 'device_type': 1}", unique = true)
 })
 public class SessionMessageOffsetEntity implements Serializable {
     @Serial
@@ -30,10 +29,15 @@ public class SessionMessageOffsetEntity implements Serializable {
     private Long from;
 
     /**
+     * 发送方设备类型：具体看 DeviceType,也有可能是用户自定义的
+     */
+    @Field("device_type")
+    private Byte deviceType;
+
+    /**
      * 接收方ID（用户或群组，雪花ID）
      * 对应MySQL中的to字段索引
      */
-    @Indexed(name = "idx_to")
     private Long to;
 
     /**
@@ -49,8 +53,9 @@ public class SessionMessageOffsetEntity implements Serializable {
 
     public SessionMessageOffsetEntity() {}
 
-    public SessionMessageOffsetEntity(Long from, Long to, Integer type, Long sessionMessageOffset) {
+    public SessionMessageOffsetEntity(Long from, Byte deviceType, Long to, Integer type, Long sessionMessageOffset) {
         this.from = from;
+        this.deviceType = deviceType;
         this.to = to;
         this.type = type;
         this.sessionMessageOffset = sessionMessageOffset;
@@ -58,11 +63,19 @@ public class SessionMessageOffsetEntity implements Serializable {
 
     public static final class Fields {
         public static final String from = "from";
+        public static final String deviceType = "device_type";
         public static final String to = "to";
         public static final String type = "type";
         public static final String sessionMessageOffset = "session_message_offset";
     }
 
+    public Byte getDeviceType() {
+        return deviceType;
+    }
+
+    public void setDeviceType(Byte deviceType) {
+        this.deviceType = deviceType;
+    }
 
     public Long getFrom() {
         return from;

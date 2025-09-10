@@ -362,7 +362,7 @@ public enum DefaultRepository implements Repository{
      * @param sessionId
      * @return
      */
-    public Mono<Boolean> reactiveValidReadReceiptMessage(Packet packet, String sessionId, boolean isValidSender) {
+    public Mono<Boolean> reactiveValidReadReceiptMessage(Packet packet, String sessionId, IdentityType type,  boolean isValidSender) {
         return reactiveValidSpecialMessage(packet, sessionId, (specialPackets)->{
             // 判断消息是否属于该会话，且都属于发送者
             if (isValidSender) {
@@ -377,7 +377,7 @@ public enum DefaultRepository implements Repository{
         }, (packets)->{
             // 获取当前会话中用户的最大已读id，如果已读id小于当前用户最大已读id，则返回false,消息已读默认不允许回退，只能往后已读
             Message message = packet.getMessage();
-            Long sessionMessageOffset = getSessionMaxReadPackageId(message.getMetadata().getAppKey(), message.getFrom(), message.getTo(), IdentityType.ONE_2_ONE);
+            Long sessionMessageOffset = getSessionMaxReadPackageId(message.getMetadata().getAppKey(), message.getFrom(), message.getTo(), type, packet.getDeviceType());
             if (sessionMessageOffset == null) {
                 log.error("消息id: {} 对应的消息已读id为空！", packet);
                 return false;
@@ -400,15 +400,15 @@ public enum DefaultRepository implements Repository{
      * @param type
      * @return
      */
-    private Long getSessionMaxReadPackageId(String appKey, String from, String to, IdentityType type) {
+    private Long getSessionMaxReadPackageId(String appKey, String from, String to, IdentityType type, Byte deviceType) {
         // 先从redis 中获取
-        String sessionMessageOffsetKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.SESSION_READ_MESSAGE_OFFSET + type.getName() + CacheConstant.COLON + from + CacheConstant.COLON + to;
+        String sessionMessageOffsetKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.SESSION_READ_MESSAGE_OFFSET + type.value() + CacheConstant.COLON + from + CacheConstant.COLON + to;
         Long sessionMessageOffset = (Long) redisTemplate.opsForValue().get(sessionMessageOffsetKey);
         if (sessionMessageOffset != null) {
             return sessionMessageOffset;
         }
         // 获取不到在从mongo 获取
-        SessionMessageOffsetEntity mongoSessionMessageOffsetEntity = mongoTemplate.findOne(new Query(Criteria.where(SessionMessageOffsetEntity.Fields.from).is(from).and(SessionMessageOffsetEntity.Fields.to).is(to).and(SessionMessageOffsetEntity.Fields.type).is(type.getName())).limit(NumberConstant.NUMBER_1), SessionMessageOffsetEntity.class);
+        SessionMessageOffsetEntity mongoSessionMessageOffsetEntity = mongoTemplate.findOne(new Query(Criteria.where(SessionMessageOffsetEntity.Fields.from).is(from).and(SessionMessageOffsetEntity.Fields.to).is(to).and(SessionMessageOffsetEntity.Fields.type).is(type.value()).and(SessionMessageOffsetEntity.Fields.deviceType).is(deviceType)).limit(NumberConstant.NUMBER_1), SessionMessageOffsetEntity.class);
         if (mongoSessionMessageOffsetEntity != null) {
             return mongoSessionMessageOffsetEntity.getSessionMessageOffset();
         }
@@ -417,7 +417,8 @@ public enum DefaultRepository implements Repository{
             SessionMessageOffsetEntity sessionMessageOffsetEntity = jdbcClient.sql(JdbcSqlConstant.MYSQL.SELECT_SESSION_MESSAGE_OFFSET.sql())
                     .param(SessionMessageOffsetEntity.Fields.from, from)
                     .param(SessionMessageOffsetEntity.Fields.to, to)
-                    .param(SessionMessageOffsetEntity.Fields.type, type)
+                    .param(SessionMessageOffsetEntity.Fields.type, type.value())
+                    .param(SessionMessageOffsetEntity.Fields.deviceType, deviceType)
                     .query(SessionMessageOffsetEntity.class)
                     .single();
             Long maxSessionMessageOffset = sessionMessageOffsetEntity.getSessionMessageOffset();
