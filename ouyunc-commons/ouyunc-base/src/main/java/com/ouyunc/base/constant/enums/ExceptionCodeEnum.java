@@ -6,25 +6,25 @@ package com.ouyunc.base.constant.enums;
 public enum ExceptionCodeEnum {
 
 
-    UNKNOWN_ERROR(10001, "未知错误"),
-
+    UNKNOWN_ERROR(10000, "未知错误"),
 
 
     PERSISTENCE_ERROR(20001, "持久化错误"),
-
-
     CACHE_PERSISTENCE_ERROR(20002, "缓存持久化错误"),
-
     MQ_PERSISTENCE_ERROR(20003, "MQ持久化错误"),
+
+
 
     LOGIN_AUTH_ERROR(30001, "登录认证错误"),
     LOGIN_VERIFY_ERROR(30002, "登录校验错误"),
 
 
     WITHDRAW_MESSAGE_ERROR(40001, "撤回消息错误"),
+    WITHDRAW_MESSAGE_VERIFY_ERROR(40002, "撤回消息校验错误"),
 
 
     READ_RECEIPT_MESSAGE_ERROR(50001, "读已回执消息错误"),
+    READ_RECEIPT_MESSAGE_VERIFY_ERROR(50002, "读已回执消息校验错误"),
 
 
     GROUP_MEMBER_NOT_EXIST_ERROR(60001, "群成员不存在"),

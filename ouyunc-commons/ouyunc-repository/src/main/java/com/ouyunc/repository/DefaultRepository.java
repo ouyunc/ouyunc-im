@@ -3,6 +3,7 @@ package com.ouyunc.repository;
 import com.alibaba.fastjson2.JSON;
 import com.google.common.collect.Lists;
 import com.ouyunc.base.constant.*;
+import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.QosLevelEnum;
 import com.ouyunc.base.model.FiveConsumer;
 import com.ouyunc.base.model.Metadata;
@@ -12,6 +13,7 @@ import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.utils.SnowflakeUtil;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.core.context.MessageContext;
+import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.db.jdbc.JdbcFactory;
 import com.ouyunc.db.mongo.MongodbFactory;
 import com.ouyunc.domain.base.GroupRequestSession;
@@ -20,6 +22,7 @@ import com.ouyunc.domain.constants.GroupUserPost;
 import com.ouyunc.domain.constants.IdentityType;
 import com.ouyunc.domain.entity.*;
 import com.ouyunc.mq.kafka.KafkaFactory;
+import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -46,9 +49,7 @@ import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Predicate;
+import java.util.function.*;
 import java.util.stream.Collectors;
 
 /**
@@ -356,6 +357,61 @@ public enum DefaultRepository implements Repository{
     }
 
 
+
+    /**
+     * 响应式处理无锁逻辑
+     *
+     * @param ctx
+     * @param packet
+     * @param validator
+     * @param mqSender
+     * @param processor
+     */
+    public Mono<Boolean> reactiveHandleOperation(ChannelHandlerContext ctx, Packet packet,
+                                                 Mono<Boolean> validator,
+                                                 Supplier<CompletableFuture<?>> mqSender,
+                                                 Mono<Boolean> processor,
+                                                 BiConsumer<ChannelHandlerContext, Packet> processorAfter,
+                                                 Consumer<ExceptionEvent> exceptionConsumer,
+                                                 ExceptionCodeEnum exceptionCode) {
+        return validator.flatMap(valid -> {
+            if (!valid) {
+                exceptionConsumer.accept(new ExceptionEvent(exceptionCode, packet));
+                return Mono.just(false);
+            }
+            // 优化后的代码片段，确保MQ发送成功后才执行processor
+            return Mono.fromFuture(mqSender.get())
+                    // 当MQ发送成功时，返回一个表示成功的Mono
+                    .thenReturn(true)
+                    .onErrorResume(ex -> {
+                        // MQ发送失败时的处理
+                        exceptionConsumer.accept(new ExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR,  ex.getMessage(), packet));
+                        return Mono.just(false); // 明确返回失败标识
+                    })
+                    // 只有当MQ发送成功（上一步返回true）时才执行processor
+                    .flatMap(mqSentSuccessfully -> {
+                        if (mqSentSuccessfully) {
+                            return processor; // MQ发送成功，执行业务处理
+                        } else {
+                            return Mono.just(false); // MQ发送失败，直接返回失败
+                        }
+                    })
+                    .doOnNext(processed -> {
+                        if (processed) {
+                            processorAfter.accept(ctx, packet);
+                        } else {
+                            exceptionConsumer.accept(new ExceptionEvent(ExceptionCodeEnum.UNKNOWN_ERROR,  "撤销或已读异常", packet));
+                        }
+                    })
+                    .onErrorResume(ex -> {
+                        exceptionConsumer.accept(new ExceptionEvent(ExceptionCodeEnum.UNKNOWN_ERROR,  ex.getMessage(), packet));
+                        return Mono.just(false);
+                    });
+        });
+
+    }
+
+
     /**
      * 响应式撤回消息校验
      * @param packet
@@ -402,7 +458,7 @@ public enum DefaultRepository implements Repository{
      */
     private Long getSessionMaxReadPackageId(String appKey, String from, String to, IdentityType type, Byte deviceType) {
         // 先从redis 中获取
-        String sessionMessageOffsetKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.SESSION_READ_MESSAGE_OFFSET + type.value() + CacheConstant.COLON + from + CacheConstant.COLON + to;
+        String sessionMessageOffsetKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.SESSION_READ_MESSAGE_OFFSET + type.value() + CacheConstant.COLON + from + CacheConstant.COLON  + deviceType + CacheConstant.COLON + to;
         Long sessionMessageOffset = (Long) redisTemplate.opsForValue().get(sessionMessageOffsetKey);
         if (sessionMessageOffset != null) {
             return sessionMessageOffset;
@@ -558,7 +614,7 @@ public enum DefaultRepository implements Repository{
             log.error("已读的消息id不能为空 | packet={}", packet);
             return Mono.just(false);
         }
-        return reactiveRedisTemplate.opsForValue().set(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.SESSION_READ_MESSAGE_OFFSET + type.getName() + CacheConstant.COLON + from + CacheConstant.COLON + to, maxReadPacketId, Duration.ofMillis(expireTime));
+        return reactiveRedisTemplate.opsForValue().set(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.SESSION_READ_MESSAGE_OFFSET + type.value() + CacheConstant.COLON + from + CacheConstant.COLON + packet.getDeviceType() + CacheConstant.COLON + to, maxReadPacketId, Duration.ofMillis(expireTime));
     }
 
 

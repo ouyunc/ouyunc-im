@@ -24,8 +24,6 @@ import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Supplier;
 
 
 /**
@@ -122,11 +120,13 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
         String from = packet.getMessage().getFrom();
         String to = packet.getMessage().getTo();
         String sessionId = IdentityUtil.sessionId(from, to);
-        reactiveHandleOperation(ctx, packet,
+        repository().reactiveHandleOperation(ctx, packet,
                 repository().reactiveValidWithdrawMessage(packet, sessionId, true),
                 ()-> repository().savePacket2Mq(MqConstant.KAFKA_WITHDRAW_MESSAGE_TOPIC, sessionId, packet),
                 repository().reactiveWithdrawMessage(packet, sessionId, Sets.newHashSet(to)),
-                "一对一撤回消息", ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR)
+                (ctx0, packet0)-> deliverAndFireNext(ctx, packet),
+                (exceptionEvent)-> MessageServerContext.publishEvent(exceptionEvent, true),
+                ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR)
                 .subscribe();
     }
 
@@ -138,89 +138,17 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
      */
     private void handleReadReceipt(ChannelHandlerContext ctx, Packet packet) {
         String sessionId = IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo());
-        reactiveHandleOperation(ctx, packet,
+        repository().reactiveHandleOperation(ctx, packet,
                 repository().reactiveValidReadReceiptMessage(packet, sessionId, IdentityType.ONE_2_ONE, true),
                 () -> repository().savePacket2Mq(MqConstant.KAFKA_READ_RECEIPT_MESSAGE_TOPIC, sessionId, packet),
                 repository().reactiveReadReceiptMessage(packet, IdentityType.ONE_2_ONE, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP),
-                "一对一已读回执消息", ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR)
+                this::deliverAndFireNext,
+                (exceptionEvent)-> MessageServerContext.publishEvent(exceptionEvent, true), ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR)
                 .subscribe();
     }
 
 
 
-
-    /**
-     * 响应式处理无锁逻辑
-     *
-     * @param ctx
-     * @param packet
-     * @param validator
-     * @param mqSender
-     * @param processor
-     * @param errorLog
-     * @param errorCode
-     */
-    private Mono<Boolean> reactiveHandleOperation(ChannelHandlerContext ctx, Packet packet,
-                                               Mono<Boolean> validator,
-                                               Supplier<CompletableFuture<?>> mqSender,
-                                               Mono<Boolean> processor,
-                                               String errorLog, ExceptionCodeEnum errorCode) {
-        return validator.flatMap(valid -> {
-            if (!valid) {
-                MessageServerContext.publishEvent(
-                        new ExceptionEvent(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, errorLog + "验证失败", packet),
-                        true
-                );
-                return Mono.just(false);
-            }
-            // 优化后的代码片段，确保MQ发送成功后才执行processor
-            return Mono.fromFuture(mqSender.get())
-                    // 当MQ发送成功时，返回一个表示成功的Mono
-                    .then(Mono.just(true))
-                    .onErrorResume(ex -> {
-                        // MQ发送失败时的处理
-                        MessageServerContext.publishEvent(
-                                new ExceptionEvent(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR,
-                                        errorLog + "发送mq持久化异常：" + ex.getMessage(),
-                                        packet),
-                                true
-                        );
-                        return Mono.just(false); // 明确返回失败标识
-                    })
-                    // 只有当MQ发送成功（上一步返回true）时才执行processor
-                    .flatMap(mqSentSuccessfully -> {
-                        if (mqSentSuccessfully) {
-                            return processor; // MQ发送成功，执行业务处理
-                        } else {
-                            return Mono.just(false); // MQ发送失败，直接返回失败
-                        }
-                    })
-                    .flatMap(processed -> {
-                        if (processed) {
-                            deliverAndFireNext(ctx, packet);
-                            return Mono.just(true); // 处理成功
-                        } else {
-                            MessageServerContext.publishEvent(
-                                    new ExceptionEvent(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR,
-                                            errorLog + "业务处理失败",
-                                            packet),
-                                    true
-                            );
-                            return Mono.just(false); // 处理失败
-                        }
-                    })
-                    .onErrorResume(ex -> {
-                        MessageServerContext.publishEvent(
-                                new ExceptionEvent(errorCode,
-                                        errorLog + "处理过程中发生异常：" + ex.getMessage(),
-                                        packet),
-                                true
-                        );
-                        return Mono.just(false);
-                    });
-        });
-
-    }
 
 
 
@@ -231,7 +159,15 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
      * @param ctx
      */
     private void deliverAndFireNext(ChannelHandlerContext ctx, Packet packet) {
-        deliverMessage(packet);
+        Message message = packet.getMessage();
+        List<LoginClientInfo> toLoginClientInfos =
+                ClientHelper.onlineAll(message.getMetadata().getAppKey(), message.getTo());
+
+        if (CollectionUtils.isEmpty(toLoginClientInfos)) {
+            log.warn("Recipient {} is offline, message stored", message.getTo());
+            return;
+        }
+        MessageHelper.asyncSendMessage(packet, toLoginClientInfos);
         // 处理成功则转到下个处理器
         ctx.fireChannelRead(packet);
     }
@@ -257,21 +193,6 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
         return repository().reactiveSaveMessage(packet, sessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
     }
 
-
-    /**
-     * 发送消息给接收方
-     */
-    private void deliverMessage(Packet packet) {
-        Message message = packet.getMessage();
-        List<LoginClientInfo> toLoginClientInfos =
-                ClientHelper.onlineAll(message.getMetadata().getAppKey(), message.getTo());
-
-        if (CollectionUtils.isEmpty(toLoginClientInfos)) {
-            log.warn("Recipient {} is offline, message stored", message.getTo());
-            return;
-        }
-        MessageHelper.asyncSendMessage(packet, toLoginClientInfos);
-    }
 
 
 }

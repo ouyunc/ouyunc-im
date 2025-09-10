@@ -1,6 +1,5 @@
 package com.ouyunc.message.processor;
 
-import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.constant.enums.*;
@@ -16,19 +15,12 @@ import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.validator.*;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.collections4.CollectionUtils;
-import org.redisson.api.RLockReactive;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
-
-import static com.ouyunc.message.context.MessageServerContext.reactiveRedissonClient;
 
 
 /**
@@ -126,13 +118,16 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
      * @param ctx
      * @param packet
      */
+
     private void handleReadReceipt(ChannelHandlerContext ctx, Packet packet, Set<String> groupUserIdentitySet) {
         String sessionId = packet.getMessage().getTo();
-        reactiveHandleLockedOperation(ctx, packet,groupUserIdentitySet,
+        repository().reactiveHandleOperation(ctx, packet,
                 repository().reactiveValidReadReceiptMessage(packet, packet.getMessage().getTo(), IdentityType.GROUP, true),
                 ()-> repository().savePacket2Mq(MqConstant.KAFKA_READ_RECEIPT_MESSAGE_TOPIC, sessionId, packet),
                 repository().reactiveReadReceiptMessage(packet, IdentityType.GROUP, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP),
-                "已读回执消息", ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR);
+                (ctx0,  packet0) -> deliverAndFireNext(ctx0, packet0, groupUserIdentitySet),
+                (exceptionEvent)-> MessageServerContext.publishEvent(exceptionEvent, true),
+                ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR).subscribe();
     }
 
 
@@ -141,70 +136,23 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
      * @param ctx
      * @param packet
      */
+
     private void handleWithdrawMessage(ChannelHandlerContext ctx, Packet packet, Set<String> groupUserIdentitySet) {
         String sessionId = packet.getMessage().getTo();
         // 获取当前撤销人员是否是群主或者管理员，他们是最大权限可以撤销所有成员的消息，当然也包括自己
         Set<String> leaderOrManagerIdentitySet = repository().groupManagerAndLeaderUsersIdentity(packet);
         boolean leaderOrManager = CollectionUtils.isNotEmpty(leaderOrManagerIdentitySet) && leaderOrManagerIdentitySet.contains(packet.getMessage().getFrom());
-        reactiveHandleLockedOperation(ctx, packet,groupUserIdentitySet,
+        repository().reactiveHandleOperation(ctx, packet,
                 repository().reactiveValidWithdrawMessage(packet, sessionId, !leaderOrManager),
                 ()-> repository().savePacket2Mq(MqConstant.KAFKA_WITHDRAW_MESSAGE_TOPIC, sessionId, packet),
                 repository().reactiveWithdrawMessage(packet, sessionId, groupUserIdentitySet),
-                "撤回消息", ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR);
+                (ctx0, packet0) -> deliverAndFireNext(ctx0, packet0, groupUserIdentitySet),
+                (exceptionEvent)-> MessageServerContext.publishEvent(exceptionEvent, true),
+                ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR)
+                .subscribe();
     }
 
 
-    private void reactiveHandleLockedOperation(ChannelHandlerContext ctx, Packet packet,Set<String> groupUserIdentitySet,
-                                               Mono<Boolean>  validator,
-                                               Supplier<CompletableFuture<?>> mqSender,
-                                               Mono<Boolean>  processor,
-                                               String errorLog, ExceptionCodeEnum errorCode) {
-        Message message = packet.getMessage();
-        String sessionId = message.getTo();
-        RLockReactive lock = createMultiLock(message.getMetadata().getAppKey(), sessionId, message.getTo());
-        lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)
-                .flatMap(locked -> {
-                    if (!locked) {
-                        MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, errorLog + "获取锁失败", packet), true);
-                        return Mono.empty();
-                    }
-                    return validator.flatMap(valid -> {
-                        if (!valid) {
-                            MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, errorLog + "验证失败", packet), true);
-                            return Mono.empty();
-                        }
-                        return Mono.fromFuture(mqSender.get())
-                                .onErrorResume(ex -> {
-                                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, errorLog + "发送mq持久化异常：" + ex.getMessage(), packet), true);
-                                    return Mono.empty();
-                                })
-                                .then(processor)
-                                .flatMap(processed -> {
-                                    if (processed) {
-                                        deliverAndFireNext(ctx, packet, groupUserIdentitySet);
-                                    } else {
-                                        MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, errorLog + "业务处理失败", packet), true);
-                                    }
-                                    return Mono.empty();
-                                }).onErrorResume(ex -> {
-                                    publishExceptionEvent(errorCode, errorLog + "处理过程中发生异常", packet);
-                                    return Mono.empty();
-                                });
-                    }).publishOn(Schedulers.boundedElastic()).doFinally(s -> lock.unlock()
-                            .doOnError(e -> log.error("解锁失败", e))
-                            .onErrorResume(e -> {
-                                log.error("解锁异常: {}", e.getMessage());
-                                MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.UN_LOCK_ERROR, errorLog + "解锁失败", packet), true);
-                                return Mono.empty();
-                            }).subscribe());
-                }).subscribe();
-    }
-
-
-    private void publishExceptionEvent(ExceptionCodeEnum code, String msg, Packet packet) {
-        MessageServerContext.publishEvent(
-                new ExceptionEvent(code, msg, packet), true);
-    }
 
     /**
      * 发送消息给接收方
@@ -249,15 +197,6 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
              );
         }
     }
-
-
-    private RLockReactive createMultiLock(String appKey, String sessionId, String to) {
-        return reactiveRedissonClient.getMultiLock(
-                reactiveRedissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.SESSION + sessionId),
-                reactiveRedissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.OFFLINE + to)
-        );
-    }
-
 
 
     /**
