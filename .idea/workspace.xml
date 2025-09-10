@@ -6,11 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="v6.5.0  添加群的限制">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MessageWithdrawEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MessageWithdrawEntity.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/SessionMessageOffsetEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/SessionMessageOffsetEntity.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/DefaultRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/DefaultRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupMessageProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneMessageProcessor.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -256,23 +252,7 @@
       <workItem from="1757204080350" duration="6242000" />
       <workItem from="1757255655932" duration="1484000" />
       <workItem from="1757343835693" duration="996000" />
-      <workItem from="1757471924044" duration="3851000" />
-    </task>
-    <task id="LOCAL-00035" summary="v6.5.0  优化代码">
-      <option name="closed" value="true" />
-      <created>1745563317060</created>
-      <option name="number" value="00035" />
-      <option name="presentableId" value="LOCAL-00035" />
-      <option name="project" value="LOCAL" />
-      <updated>1745563317060</updated>
-    </task>
-    <task id="LOCAL-00036" summary="v6.5.0  优化代码">
-      <option name="closed" value="true" />
-      <created>1745844822300</created>
-      <option name="number" value="00036" />
-      <option name="presentableId" value="LOCAL-00036" />
-      <option name="project" value="LOCAL" />
-      <updated>1745844822300</updated>
+      <workItem from="1757471924044" duration="12499000" />
     </task>
     <task id="LOCAL-00037" summary="v6.5.0  优化代码">
       <option name="closed" value="true" />
@@ -650,7 +630,23 @@
       <option name="project" value="LOCAL" />
       <updated>1757256531294</updated>
     </task>
-    <option name="localTasksCounter" value="84" />
+    <task id="LOCAL-00084" summary="v6.5.0  添加群的限制">
+      <option name="closed" value="true" />
+      <created>1757485398621</created>
+      <option name="number" value="00084" />
+      <option name="presentableId" value="LOCAL-00084" />
+      <option name="project" value="LOCAL" />
+      <updated>1757485398621</updated>
+    </task>
+    <task id="LOCAL-00085" summary="v6.5.0  添加群的限制">
+      <option name="closed" value="true" />
+      <created>1757493429265</created>
+      <option name="number" value="00085" />
+      <option name="presentableId" value="LOCAL-00085" />
+      <option name="project" value="LOCAL" />
+      <updated>1757493429265</updated>
+    </task>
+    <option name="localTasksCounter" value="86" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -682,9 +678,9 @@
     <MESSAGE value="v6.5.0  增加序列化标识，防止序列化反序列化问题" />
     <MESSAGE value="v6.5.0  优化代码" />
     <MESSAGE value="v6.5.0  移除文件表合并到系统文件表中" />
-    <MESSAGE value="v6.5.0  添加群的限制" />
     <MESSAGE value="v6.5.1 去除消息偏移量限制" />
-    <option name="LAST_COMMIT_MESSAGE" value="v6.5.1 去除消息偏移量限制" />
+    <MESSAGE value="v6.5.0  添加群的限制" />
+    <option name="LAST_COMMIT_MESSAGE" value="v6.5.0  添加群的限制" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

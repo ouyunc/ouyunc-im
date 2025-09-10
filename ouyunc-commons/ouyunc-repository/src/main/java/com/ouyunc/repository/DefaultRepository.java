@@ -81,10 +81,6 @@ public enum DefaultRepository implements Repository{
      */
     private static final RedisTemplate redisTemplate = CacheFactory.REDIS.instance();
 
-    /**
-     * StringRedisTemplate
-     */
-    private static final StringRedisTemplate stringRedisTemplate = CacheFactory.STRING_REDIS.instance();
 
     /**
      * ReactiveStringRedisTemplate
@@ -154,6 +150,7 @@ public enum DefaultRepository implements Repository{
      * @param packet
      * @return
      */
+    @SuppressWarnings("unchecked")
     @Override
     public boolean checkDup(Packet packet) {
         Message message = packet.getMessage();
@@ -456,6 +453,7 @@ public enum DefaultRepository implements Repository{
      * @param type
      * @return
      */
+    @SuppressWarnings("unchecked")
     private Long getSessionMaxReadPackageId(String appKey, String from, String to, IdentityType type, Byte deviceType) {
         // 先从redis 中获取
         String sessionMessageOffsetKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.SESSION_READ_MESSAGE_OFFSET + type.value() + CacheConstant.COLON + from + CacheConstant.COLON  + deviceType + CacheConstant.COLON + to;
@@ -599,6 +597,7 @@ public enum DefaultRepository implements Repository{
     /**
      * 响应式处理读已回执消息
      */
+    @SuppressWarnings("unchecked")
     public Mono<Boolean> reactiveReadReceiptMessage(Packet packet, IdentityType type,  long expireTime) {
         Message message = packet.getMessage();
         String from = message.getFrom();
@@ -661,7 +660,6 @@ public enum DefaultRepository implements Repository{
      * 获取群成员信息
      * @return
      */
-    @SuppressWarnings("unchecked")
     public GroupUserEntity groupUserEntity(String appKey, String groupId, String memberId) {
         return (GroupUserEntity) redisTemplate.opsForValue().get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.GROUP_USERS_CONFIG + memberId + CacheConstant.COLON + groupId);
     }
@@ -758,6 +756,7 @@ public enum DefaultRepository implements Repository{
      * @param to 接受者
      * @return
      */
+    @SuppressWarnings("unchecked")
     public Mono<Boolean> reactiveSaveOfflineMessage(Packet packet, String to) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
@@ -771,7 +770,6 @@ public enum DefaultRepository implements Repository{
      * @param expireTime 过期时间，单位毫秒，多久后过期
      * @return
      */
-    @SuppressWarnings("unchecked")
     public boolean saveJoinFriendRequestMessage(Packet packet, RequestSession requestSession, long expireTime) {
         Message message = packet.getMessage();
         // 获取原来存在的sessionid
@@ -809,7 +807,6 @@ public enum DefaultRepository implements Repository{
      * @param expireTime
      * @return
      */
-    @SuppressWarnings("unchecked")
     public boolean saveRefuseFriendRequestMessage(Packet packet, RequestSession requestSession,  long expireTime) {
         Message message = packet.getMessage();
         return saveFriendRequestMessage(packet, requestSession.getSessionId(), expireTime, (redisOperations)-> redisOperations.opsForValue().set(CacheConstant.OUYUNC + CacheConstant.APP_KEY + message.getMetadata().getAppKey() + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST_SESSION + message.getTo() + CacheConstant.COLON + message.getFrom(), requestSession, MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS));
@@ -868,6 +865,7 @@ public enum DefaultRepository implements Repository{
      * @param to
      * @return
      */
+    @SuppressWarnings("unchecked")
     public boolean isFriend(String appKey, String from, String to) {
         // 这里是否再去查询数据库？没有太大必要，后续如果需要再加
         return redisTemplate.opsForZSet().score(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIENDS + from, to) != null;
@@ -880,6 +878,7 @@ public enum DefaultRepository implements Repository{
      * @param groupId
      * @return
      */
+    @SuppressWarnings("unchecked")
     public boolean inGroup(String appKey, String from, String groupId) {
         // 这里是否再去查询数据库？没有太大必要，后续如果需要再加
         return redisTemplate.opsForZSet().score(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.GROUP_USERS + groupId, from) != null;
@@ -918,6 +917,7 @@ public enum DefaultRepository implements Repository{
      * @param identity
      * @return
      */
+    @SuppressWarnings("unchecked")
     public UserEntity getUserEntity(String appKey, String identity) {
         UserEntity userEntity = (UserEntity) redisTemplate.opsForValue().get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.USER + identity);
         if (userEntity != null) {
@@ -950,7 +950,6 @@ public enum DefaultRepository implements Repository{
      * @param packet
      * @return
      */
-    @SuppressWarnings("unchecked")
     public boolean autoPassBindFriend(Packet packet, RequestSession requestSession,  long expireTime) {
         Message message = packet.getMessage();
         String appKey = message.getMetadata().getAppKey();
@@ -965,7 +964,6 @@ public enum DefaultRepository implements Repository{
      * @param packet
      * @return
      */
-    @SuppressWarnings("unchecked")
     public boolean agreeBindFriend(String appKey, Packet packet, RequestSession requestSession, long expireTime) {
         Message message = packet.getMessage();
         // 注意过期时间的设定，与消息 hot key 的过期时间保持一致
@@ -980,7 +978,6 @@ public enum DefaultRepository implements Repository{
      * @param consumer
      * @return
      */
-    @SuppressWarnings("unchecked")
     private<K,V> boolean bindFriend(Packet packet, String friendRequestSessionId, long expireTime, Consumer<RedisOperations<K, V>> consumer) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
@@ -1020,6 +1017,7 @@ public enum DefaultRepository implements Repository{
      * @param extraOperation 额外操作（差异化逻辑）
      * @return 是否执行成功
      */
+    @SuppressWarnings("unchecked")
     private<K, V> boolean saveMessageWithSessionOrOffline(Packet packet, long expireTime, String messageKey, String sessionKey, List<String> offlineKeys, Consumer<RedisOperations<K, V>> consumer, FiveConsumer<RedisOperations<K, V>, Message, String, String, String> extraOperation) {
         try {
             Message message = packet.getMessage();
