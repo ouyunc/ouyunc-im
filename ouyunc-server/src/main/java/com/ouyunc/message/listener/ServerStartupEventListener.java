@@ -48,6 +48,7 @@ public class ServerStartupEventListener implements MessageListener<ServerStartup
         if (CollectionUtils.isNotEmpty(appKeys)) {
             // 加载appKey 下的deviceType 配置
             loadAppKeyDeviceTypes(appKeys);
+            startAppKeyDeviceTypeSubscription();
             // 启动appKey 下的连接数刷新任务
             startAppKeyConnectionCountRefreshScheduler(appKeys);
         }
@@ -66,6 +67,9 @@ public class ServerStartupEventListener implements MessageListener<ServerStartup
         }
     }
 
+    /**
+     * 这里可以监听appKey级别或者appKey 下某个客户端的设备类型（按道理来讲客户端所能使用的设备类型必须是appKey所支持类型的子集）
+     */
     @SuppressWarnings("unchecked")
     private void startAppKeyDeviceTypeSubscription() {
         RedisSerializer<AppKeyDeviceType> valueSerializer = (RedisSerializer<AppKeyDeviceType>) redisTemplate.getValueSerializer();
@@ -75,6 +79,15 @@ public class ServerStartupEventListener implements MessageListener<ServerStartup
             t.setDaemon(true);
             return t;
         }));
+        // 监听appKey下的设备类型
+        container.addMessageListener((message, pattern) -> {
+            AppKeyDeviceType appKeyDeviceType = valueSerializer.deserialize(message.getBody());
+            if (appKeyDeviceType != null) {
+                MessageServerContext.addAppKeyDeviceType(appKeyDeviceType.getAppKey(), appKeyDeviceType.getDeviceTypes());
+            }
+            // 添加进入appKey对应的设备类型集合中
+        }, new ChannelTopic(MessageConstant.APP_KEY_PUBLISH_TOPIC));
+        // 监听单个appKey下的某个客户端所支持的设备类型
         container.addMessageListener((message, pattern) -> {
             AppKeyDeviceType appKeyDeviceType = valueSerializer.deserialize(message.getBody());
             if (appKeyDeviceType != null) {

@@ -1,7 +1,7 @@
 package com.ouyunc.message.channel;
 
 import com.ouyunc.base.constant.MessageConstant;
-import com.ouyunc.base.packet.message.content.LoginContent;
+import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.SSLUtil;
 import com.ouyunc.message.context.MessageServerContext;
@@ -61,7 +61,7 @@ public class DefaultSocketChannelInitializer extends SocketChannelInitializer {
             public void operationComplete(ChannelFuture future) throws Exception {
                 if (future.isDone()) {
                     if (future.isSuccess()) {
-                        LoginContent loginContent = ChannelAttrUtil.getChannelAttribute(socketChannel, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
+                        LoginClientInfo loginContent = ChannelAttrUtil.getChannelAttribute(socketChannel, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
                         if (loginContent != null) {
                             log.warn("================客户端:{} 在 appKey: {} 下所绑定的设备类型: {} 注销了,正在处理客户端 channel id:  {}==================",loginContent.getIdentity(), loginContent.getAppKey(), loginContent.getDeviceType(), socketChannel.id().asShortText());
                         }else {

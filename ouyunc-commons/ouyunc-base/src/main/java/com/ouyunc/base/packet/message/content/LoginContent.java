@@ -1,10 +1,9 @@
 package com.ouyunc.base.packet.message.content;
 
 
-import com.ouyunc.base.constant.enums.DeviceType;
-
 import java.io.Serial;
 import java.io.Serializable;
+import java.util.List;
 
 /**
  * @Author fzx
@@ -22,17 +21,16 @@ public class LoginContent implements Serializable {
 
     private String appKey;
 
+    /**
+     * 当前客户端所支持的可登录的设备类型，可以为空，如果为空则取该客户端所属appKey下的设备类型，注意，如果所支持的设备类型不为空，会进行校验，且值只能是appKey 下所支持设备类型的子集
+     */
+    private List<Byte> supportDeviceTypes;
 
     /**
      * 用户唯一标识：设备号 + 手机号，邮箱，身份证号码，token等，不为空
      */
 
     private String identity;
-
-    /**
-     * 设备类型
-     */
-    private DeviceType deviceType;
 
     /**
      * 设备序列号
@@ -103,6 +101,14 @@ public class LoginContent implements Serializable {
         this.signatureAlgorithm = signatureAlgorithm;
     }
 
+    public List<Byte> getSupportDeviceTypes() {
+        return supportDeviceTypes;
+    }
+
+    public void setSupportDeviceTypes(List<Byte> supportDeviceTypes) {
+        this.supportDeviceTypes = supportDeviceTypes;
+    }
+
     public String getSn() {
         return sn;
     }
@@ -119,21 +125,14 @@ public class LoginContent implements Serializable {
         this.heartBeatExpireTime = heartBeatExpireTime;
     }
 
-    public DeviceType getDeviceType() {
-        return deviceType;
-    }
-
-    public void setDeviceType(DeviceType deviceType) {
-        this.deviceType = deviceType;
-    }
 
     public LoginContent() {
     }
 
-    public LoginContent(String appKey, String identity, DeviceType deviceType,String sn, String signature, byte signatureAlgorithm, int heartBeatExpireTime,  long createTime) {
+    public LoginContent(String appKey, String identity, List<Byte> supportDeviceTypes,  String sn, String signature, byte signatureAlgorithm, int heartBeatExpireTime,  long createTime) {
         this.appKey = appKey;
         this.identity = identity;
-        this.deviceType = deviceType;
+        this.supportDeviceTypes = supportDeviceTypes;
         this.sn = sn;
         this.signature = signature;
         this.signatureAlgorithm = signatureAlgorithm;
@@ -146,7 +145,6 @@ public class LoginContent implements Serializable {
         return "LoginContent{" +
                 "  appKey='" + appKey + '\'' +
                 ", identity='" + identity + '\'' +
-                ", deviceType=" + deviceType +
                 ", sn=" + sn +
                 ", signature='" + signature + '\'' +
                 ", signatureAlgorithm=" + signatureAlgorithm +

@@ -3,6 +3,8 @@ package com.ouyunc.base.model;
 import com.ouyunc.base.constant.enums.DeviceType;
 import com.ouyunc.base.constant.enums.OnlineEnum;
 
+import java.util.List;
+
 /**
  * mqtt 登录客户端登录信息
  */
@@ -117,8 +119,8 @@ public class MqttLoginClientInfo extends LoginClientInfo{
     public MqttLoginClientInfo() {
     }
 
-    public MqttLoginClientInfo(String loginServerAddress, OnlineEnum onlineStatus, String authorizationScope, long loginExpireTime, int heartBeatTimeout, long lastLoginTime, String appKey, String identity, DeviceType deviceType,String sn,  String signature, byte signatureAlgorithm, int heartBeatExpireTime, long createTime, int enableWill, int qos, byte version, int isWillRetain, String willMessage, String willTopic, int cleanSession, int sessionExpiryInterval) {
-        super(loginServerAddress, onlineStatus, authorizationScope, loginExpireTime, heartBeatTimeout, lastLoginTime, appKey, identity, deviceType, sn, signature, signatureAlgorithm, heartBeatExpireTime, createTime);
+    public MqttLoginClientInfo(String loginServerAddress, OnlineEnum onlineStatus, String authorizationScope, long loginExpireTime, int heartBeatTimeout, long lastLoginTime, String appKey, String identity, DeviceType deviceType, List<Byte> supportDeviceTypes, String sn, String signature, byte signatureAlgorithm, int heartBeatExpireTime, long createTime, int enableWill, int qos, byte version, int isWillRetain, String willMessage, String willTopic, int cleanSession, int sessionExpiryInterval) {
+        super(loginServerAddress, onlineStatus, authorizationScope, loginExpireTime, heartBeatTimeout, lastLoginTime, appKey, identity, deviceType, supportDeviceTypes, sn, signature, signatureAlgorithm, heartBeatExpireTime, createTime);
         this.enableWill = enableWill;
         this.qos = qos;
         this.version = version;

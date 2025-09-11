@@ -2,20 +2,23 @@ package com.ouyunc.message.context;
 
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.DeviceType;
 import com.ouyunc.base.constant.enums.DisruptorEventProducerEnum;
 import com.ouyunc.base.constant.enums.LuaScriptEnum;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
+import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.cache.Cache;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.cache.distributed.redis.RedisDistributedCache;
 import com.ouyunc.cache.local.caffeine.CaffeineLocalCache;
 import com.ouyunc.core.context.MessageContext;
-import com.ouyunc.core.intercept.AbstractMessageInterceptor;
 import com.ouyunc.core.disruptor.DisruptorEventProducer;
+import com.ouyunc.core.intercept.AbstractMessageInterceptor;
 import com.ouyunc.message.MessageServer;
 import com.ouyunc.message.convert.PacketConverter;
 import com.ouyunc.message.dispatcher.ProtocolDispatcherProcessor;
@@ -286,7 +289,7 @@ public class MessageServerContext extends MessageContext {
 
 
     /**
-     * 获取appKey 设备类型
+     * 获取 设备类型在appKey下所支持的设备类型
      */
     public static DeviceType deviceType(String appKey, byte deviceTypeValue) {
         Map<Byte, DeviceType> appKeyDeviceTypeMap = appKeyDeviceTypeCache.get(appKey);
@@ -296,6 +299,7 @@ public class MessageServerContext extends MessageContext {
                 log.error("appKey暂未支持该设备类型：{} 的登录,请配置后重试！", deviceTypeValue);
                 throw new MessageException("appKey暂未支持该设备类型："+ deviceTypeValue +"的登录,请配置后重试！");
             }
+            return deviceType;
         }
         // 如果appKey 没有单独配置支持的设备类型，则使用全局配置
         DeviceType deviceType = defaultDeviceTypeCache.get(deviceTypeValue);
@@ -306,8 +310,31 @@ public class MessageServerContext extends MessageContext {
         return deviceType;
     }
 
+
     /**
-     * 获取appKey 设备类型列表
+     * 获取identity在 appKey 下所支持的设备类型列表
+     */
+    public static Collection<DeviceType> deviceTypeList(String appKey, String identity) {
+        if (StringUtils.isNotBlank(identity)) {
+            LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
+            if (loginClientInfo == null) {
+                log.error("channel: {} 在 appKey:{} 下未登录！", ctx.channel().id().asShortText(), appKey);
+            }else {
+                List<Byte> supportDeviceTypes = loginClientInfo.getSupportDeviceTypes();
+                if (CollectionUtils.isNotEmpty(supportDeviceTypes)) {
+                    Collection<DeviceType> deviceTypes = Lists.newArrayList();
+                    for (Byte supportDeviceType : supportDeviceTypes) {
+                        deviceTypes.add(deviceType(appKey, supportDeviceType));
+                    }
+                    return deviceTypes;
+                }
+            }
+        }
+        return deviceTypeList(appKey);
+    }
+
+    /**
+     * 获取appKey 下所支持的设备类型列表
      */
     public static Collection<DeviceType> deviceTypeList(String appKey) {
         Map<Byte, DeviceType> appKeyDeviceTypeMap = appKeyDeviceTypeCache.get(appKey);

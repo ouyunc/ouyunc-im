@@ -32,6 +32,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.ScheduledFuture;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.redisson.api.RLock;
@@ -42,8 +43,12 @@ import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.SessionCallback;
 
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 /**
  * @Author fzx
@@ -126,11 +131,10 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         LoginContent loginContent = JSON.parseObject(loginMessage.getContent(), LoginContent.class);
         // 设置设备类型
         DeviceType deviceType = MessageServerContext.deviceType(loginContent.getAppKey(), packet.getDeviceType());
-        loginContent.setDeviceType(deviceType);
         // 做登录参数校验
         //1,进行参数合法校验，校验失败，结束 ；2,进行签名的校验，校验失败，结束，3，进行权限校验，校验失败，结束
         // 根据appKey 获取appSecret 然后拼接
-        if (AppKeyValidator.INSTANCE.negate().verify(loginContent.getAppKey(), ctx) && !validate(loginContent)) {
+        if (AppKeyValidator.INSTANCE.negate().verify(loginContent.getAppKey(), ctx) || !validate(loginContent)) {
             log.warn("客户端id: {} 登录参数: {}，校验未通过！", ctx.channel().id().asShortText(), Serializer.JSON.serializeToString(loginContent));
             MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.LOGIN_VERIFY_ERROR, "登录校验未通过", packet), true);
             ctx.close();
@@ -160,7 +164,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
             bindCtx.close();
         }
         // 绑定信息
-        ClientHelper.bind(ctx, cacheLoginClientInfo = new LoginClientInfo(MessageContext.messageProperties.getLocalServerAddress(), OnlineEnum.ONLINE, null, ClientHelper.calculateClientLoginExpireTime(loginContent.getHeartBeatExpireTime()), ClientHelper.calculateClientHeartBeatTimeout(loginContent.getHeartBeatExpireTime()), loginTimestamp, loginContent.getAppKey(), loginContent.getIdentity(), deviceType, loginContent.getSn(), loginContent.getSignature(), loginContent.getSignatureAlgorithm(), loginContent.getHeartBeatExpireTime(), loginTimestamp));
+        ClientHelper.bind(ctx, cacheLoginClientInfo = new LoginClientInfo(MessageContext.messageProperties.getLocalServerAddress(), OnlineEnum.ONLINE, null, ClientHelper.calculateClientLoginExpireTime(loginContent.getHeartBeatExpireTime()), ClientHelper.calculateClientHeartBeatTimeout(loginContent.getHeartBeatExpireTime()), loginTimestamp, loginContent.getAppKey(), loginContent.getIdentity(), deviceType, loginContent.getSupportDeviceTypes(), loginContent.getSn(), loginContent.getSignature(), loginContent.getSignatureAlgorithm(), loginContent.getHeartBeatExpireTime(), loginTimestamp));
 
         // 添加channel 关闭后释放资源的钩子, 该逻辑在DefaultSocketChannelInitializer 中进行调用
         Consumer<Channel> channelCloseHook = channel -> {
@@ -249,7 +253,16 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
      * @description 校验登录信息
      */
     public boolean validate(LoginContent loginContent) {
-
+        List<Byte> supportDeviceTypes = loginContent.getSupportDeviceTypes();
+        // 获取合法设备类型并提取其值到Set中
+        Set<Byte> validDeviceTypeValues = MessageServerContext.deviceTypeList(loginContent.getAppKey()).stream().map(DeviceType::getDeviceTypeValue).collect(Collectors.toSet());
+        // 验证每个设备类型
+        for (Byte supportDeviceType : supportDeviceTypes) {
+            if (!validDeviceTypeValues.contains(supportDeviceType)) {
+                log.warn("客户端: {} 登录失败,原因：所传递的设备类型: {} 不在appKey: {} 下的合法设备类型列表中", loginContent.getIdentity(), supportDeviceType, loginContent.getAppKey());
+                return false;
+            }
+        }
         return true;
     }
 }

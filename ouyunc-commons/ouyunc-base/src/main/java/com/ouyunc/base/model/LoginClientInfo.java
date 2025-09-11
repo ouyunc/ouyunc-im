@@ -5,6 +5,7 @@ import com.ouyunc.base.constant.enums.DeviceType;
 import com.ouyunc.base.constant.enums.OnlineEnum;
 import com.ouyunc.base.packet.message.content.LoginContent;
 
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -23,6 +24,10 @@ public class LoginClientInfo extends LoginContent {
      */
     private OnlineEnum onlineStatus;
 
+    /**
+     * 当前登录的设备类型
+     */
+    private DeviceType deviceType;
 
     /**
      * 授权域，多个以逗号隔开，暂时不设计
@@ -43,6 +48,14 @@ public class LoginClientInfo extends LoginContent {
      * 最近一次登录时间戳
      */
     private long lastLoginTime;
+
+    public DeviceType getDeviceType() {
+        return deviceType;
+    }
+
+    public void setDeviceType(DeviceType deviceType) {
+        this.deviceType = deviceType;
+    }
 
     public int getHeartBeatTimeout() {
         return heartBeatTimeout;
@@ -108,8 +121,9 @@ public class LoginClientInfo extends LoginContent {
     public LoginClientInfo() {
     }
 
-    public LoginClientInfo(String loginServerAddress, OnlineEnum onlineStatus, String authorizationScope, long loginExpireTime, int heartBeatTimeout, long lastLoginTime, String appKey, String identity, DeviceType deviceType, String sn, String signature, byte signatureAlgorithm, int heartBeatExpireTime, long createTime) {
-        super(appKey, identity, deviceType, sn, signature, signatureAlgorithm, heartBeatExpireTime, createTime);
+    public LoginClientInfo(String loginServerAddress, OnlineEnum onlineStatus, String authorizationScope, long loginExpireTime, int heartBeatTimeout, long lastLoginTime, String appKey, String identity, DeviceType deviceType, List<Byte> supportDeviceTypes, String sn, String signature, byte signatureAlgorithm, int heartBeatExpireTime, long createTime) {
+        super(appKey, identity, supportDeviceTypes, sn, signature, signatureAlgorithm, heartBeatExpireTime, createTime);
+        this.deviceType = deviceType;
         this.loginServerAddress = loginServerAddress;
         this.onlineStatus = onlineStatus;
         this.authorizationScope = authorizationScope;

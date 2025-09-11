@@ -128,8 +128,8 @@ public class ClientHelper {
      */
     public static List<LoginClientInfo> onlineAll(String appKey, String identity, DeviceType... excludeDeviceTypeArr) {
         List<LoginClientInfo> loginClientInfoList = new ArrayList<>(NumberConstant.NUMBER_3);
-        // 获取所有的实现DeviceType接口的枚举实例
-        Stream<DeviceType> deviceTypeStream = MessageServerContext.deviceTypeList(appKey).stream();
+        // 获取所有的实现DeviceType接口的枚举实例,先找定制化的客户所支持的设备类型
+        Stream<DeviceType> deviceTypeStream = MessageServerContext.deviceTypeList(appKey, identity).stream();
         if (excludeDeviceTypeArr != null && excludeDeviceTypeArr.length > NumberConstant.NUMBER_0) {
             Set<String> excludeNames = Arrays.stream(excludeDeviceTypeArr)
                     .map(DeviceType::getDeviceTypeName)
