@@ -146,7 +146,7 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
                 repository().reactiveValidWithdrawMessage(packet, sessionId, !leaderOrManager),
                 ()-> repository().savePacket2Mq(MqConstant.KAFKA_WITHDRAW_MESSAGE_TOPIC, sessionId, packet),
                 repository().reactiveWithdrawMessage(packet, sessionId, groupUserIdentitySet),
-                (ctx0, packet0) -> deliverAndFireNext(ctx0, packet0, groupUserIdentitySet),
+                (ctx0, packet0) -> deliverWithdrawMessageAndFireNext(ctx0, packet0, groupUserIdentitySet),
                 (exceptionEvent)-> MessageServerContext.publishEvent(exceptionEvent, true),
                 ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR)
                 .subscribe();
@@ -160,22 +160,50 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
      * @param ctx
      * @param packet
      */
+    private void deliverWithdrawMessageAndFireNext(ChannelHandlerContext ctx, Packet packet, Set<String> groupUserIdentitySet) {
+        // 同步发送给自己
+        deliver2SelfAndFireNext(packet);
+        // 发送给他人
+        deliver2AllGroupMembers(packet, groupUserIdentitySet);
+        // 处理成功则转到下个处理器
+        ctx.fireChannelRead(packet);
+    }
+
+
+    /**
+     * 发送消息给接收方
+     *
+     * @param ctx
+     * @param packet
+     */
     private void deliverAndFireNext(ChannelHandlerContext ctx, Packet packet, Set<String> groupUserIdentitySet) {
         // 同步发送给自己
-        deliverMessage2Self(packet);
-        // 4. 发送消息给接收方
-        Message message = packet.getMessage();
-        if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == message.getContentType() || MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == message.getContentType()) {
-            deliver2AllGroupMembers(packet, groupUserIdentitySet);
-        } else {
-            List<String> atList = packet.getMessage().getAt();
-            if (CollectionUtils.isNotEmpty(atList)) {
-                deliver2AtMessage(packet, atList, groupUserIdentitySet);
-            }
+        deliver2SelfAndFireNext(packet);
+        // 发送给@ 的人
+        List<String> atList = packet.getMessage().getAt();
+        if (CollectionUtils.isNotEmpty(atList)) {
+            deliver2AtMessage(packet, atList, groupUserIdentitySet);
         }
         // 处理成功则转到下个处理器
         ctx.fireChannelRead(packet);
     }
+
+    /**
+     * 发送消息给自己的其他客戶端
+     *
+     * @param packet
+     */
+    private void deliver2SelfAndFireNext(Packet packet) {
+        // 同步发送给自己
+        Message message = packet.getMessage();
+        String appKey = message.getMetadata().getAppKey();
+        // 同步发送给自己
+        List<LoginClientInfo> fromSelfLoginClientInfos = ClientHelper.onlineAll(appKey, message.getFrom(), MessageServerContext.deviceType(appKey, packet.getDeviceType()));
+        if (CollectionUtils.isNotEmpty(fromSelfLoginClientInfos)) {
+            MessageHelper.asyncSendMessage(packet, fromSelfLoginClientInfos);
+        }
+    }
+
     /**
      * 使用内容处理器处理消息
      */
@@ -221,15 +249,6 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
                 .forEach(member -> deliverMessage(packet, member));
     }
 
-    private void deliverMessage2Self(Packet packet) {
-        Message message = packet.getMessage();
-        String appKey = message.getMetadata().getAppKey();
-        // 同步发送给自己
-        List<LoginClientInfo> fromSelfLoginClientInfos = ClientHelper.onlineAll(appKey, message.getFrom(), MessageServerContext.deviceType(appKey, packet.getDeviceType()));
-        if (CollectionUtils.isNotEmpty(fromSelfLoginClientInfos)) {
-            MessageHelper.asyncSendMessage(packet, fromSelfLoginClientInfos);
-        }
-    }
 
     private void deliverMessage(Packet packet, String memberIdentity) {
         Message message = packet.getMessage();

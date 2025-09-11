@@ -5,7 +5,6 @@ import com.google.common.collect.Lists;
 import com.ouyunc.base.constant.*;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
-import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.constant.enums.QosLevelEnum;
 import com.ouyunc.base.model.FiveConsumer;
 import com.ouyunc.base.model.Metadata;
@@ -353,15 +352,11 @@ public enum DefaultRepository implements Repository{
             }
             return Mono.just(true);
         }, (packets)->{
+            // 如果可以调用该方法的，一定是群聊或者私聊类型
             for (Packet readPacket : packets) {
                 Message message = readPacket.getMessage();
-                // 获取已读id
-                if (MessageTypeEnum.ONE_2_ONE.getType() != packet.getMessageType() && MessageTypeEnum.GROUP.getType() != packet.getMessageType()) {
-                    log.error("消息: {} 对应的消息不属于群聊或者单聊！", packet);
-                    return false;
-                }
                 if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == message.getContentType() || MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == message.getContentType()) {
-                    log.error("消息: {} 对应的消息内容类型错误！，不允许撤回撤回消息和已读消息", packet);
+                    log.error("消息: {} 对应的消息内容类型：{} 错误！，不允许撤回撤回消息或已读消息", packet, message.getContentType());
                     return false;
                 }
             }
