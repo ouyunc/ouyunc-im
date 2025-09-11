@@ -6,6 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="v6.5.0  添加群的限制">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MessageWithdrawEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MessageWithdrawEntity.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/DefaultRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/DefaultRepository.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -252,23 +253,7 @@
       <workItem from="1757204080350" duration="6242000" />
       <workItem from="1757255655932" duration="1484000" />
       <workItem from="1757343835693" duration="996000" />
-      <workItem from="1757471924044" duration="12499000" />
-    </task>
-    <task id="LOCAL-00037" summary="v6.5.0  优化代码">
-      <option name="closed" value="true" />
-      <created>1747123467150</created>
-      <option name="number" value="00037" />
-      <option name="presentableId" value="LOCAL-00037" />
-      <option name="project" value="LOCAL" />
-      <updated>1747123467150</updated>
-    </task>
-    <task id="LOCAL-00038" summary="v6.5.0  优化代码">
-      <option name="closed" value="true" />
-      <created>1747199947095</created>
-      <option name="number" value="00038" />
-      <option name="presentableId" value="LOCAL-00038" />
-      <option name="project" value="LOCAL" />
-      <updated>1747199947095</updated>
+      <workItem from="1757471924044" duration="18858000" />
     </task>
     <task id="LOCAL-00039" summary="v6.5.0  优化代码">
       <option name="closed" value="true" />
@@ -646,7 +631,23 @@
       <option name="project" value="LOCAL" />
       <updated>1757493429265</updated>
     </task>
-    <option name="localTasksCounter" value="86" />
+    <task id="LOCAL-00086" summary="v6.5.0  添加群的限制">
+      <option name="closed" value="true" />
+      <created>1757495422104</created>
+      <option name="number" value="00086" />
+      <option name="presentableId" value="LOCAL-00086" />
+      <option name="project" value="LOCAL" />
+      <updated>1757495422104</updated>
+    </task>
+    <task id="LOCAL-00087" summary="v6.5.0  添加群的限制">
+      <option name="closed" value="true" />
+      <created>1757554259358</created>
+      <option name="number" value="00087" />
+      <option name="presentableId" value="LOCAL-00087" />
+      <option name="project" value="LOCAL" />
+      <updated>1757554259358</updated>
+    </task>
+    <option name="localTasksCounter" value="88" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

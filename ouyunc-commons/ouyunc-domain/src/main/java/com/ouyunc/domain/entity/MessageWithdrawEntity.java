@@ -2,6 +2,8 @@ package com.ouyunc.domain.entity;
 
 import com.baomidou.mybatisplus.annotation.TableName;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.CompoundIndexes;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
@@ -14,6 +16,11 @@ import java.io.Serializable;
 */
 @TableName("ouyunc_im_message_withdraw")
 @Document(collection = "ouyunc_im_message_withdraw")
+// 添加联合索引：withdrawUserId和deviceType
+@CompoundIndexes({
+        @CompoundIndex(name = "idx_withdraw_user_id_device_type",
+                def = "{'withdraw_user_id': 1, 'device_type': 1}")
+})
 public class MessageWithdrawEntity implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
@@ -42,6 +49,24 @@ public class MessageWithdrawEntity implements Serializable {
     @Field("device_type")
     private Byte deviceType;
 
+    public MessageWithdrawEntity() {
+    }
+
+    public static final class Fields {
+        public static final String id = "id";
+        public static final String withdrawnTime = "withdrawn_time";
+        public static final String withdrawUserId = "withdraw_user_id";
+        public static final String deviceType = "device_type";
+
+    }
+
+
+    public MessageWithdrawEntity(Long id, Long withdrawnTime, Long withdrawUserId, Byte deviceType) {
+        this.id = id;
+        this.withdrawnTime = withdrawnTime;
+        this.withdrawUserId = withdrawUserId;
+        this.deviceType = deviceType;
+    }
 
     private void setId(Long id){
     this.id = id;

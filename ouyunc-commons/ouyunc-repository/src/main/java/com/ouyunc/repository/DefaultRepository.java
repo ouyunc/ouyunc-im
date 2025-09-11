@@ -334,7 +334,7 @@ public enum DefaultRepository implements Repository{
 
 
     /**
-     * 撤回消息校验,其实撤回消息的校验，应该加上，只能撤回某种类型的消息，比如私聊和群聊消息
+     * 撤回消息校验,其实撤回消息的校验，应该加上，只能撤回某种类型的消息，比如私聊和群聊消息，重复撤回某个消息目前也没有做校验，不过在第一次撤回的时候会将被撤回的消息从会话中剔除，后面的重复撤回自然查不到该数据也就不存在多次撤回了，下游数据按道理也不会接收到
      * @param packet
      * @param sessionId
      * @return
@@ -421,7 +421,7 @@ public enum DefaultRepository implements Repository{
 
 
     /**
-     * 响应式撤回消息校验
+     * 响应式撤回消息校验, 这里没有校验重复已读某个消息，如果有需求，后续可以加上，因为会增加额外的查询耗时
      * @param packet
      * @param sessionId
      * @return
