@@ -316,9 +316,10 @@ public class MessageServerContext extends MessageContext {
      */
     public static Collection<DeviceType> deviceTypeList(String appKey, String identity) {
         if (StringUtils.isNotBlank(identity)) {
-            LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
+            //LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(null, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
+            LoginClientInfo loginClientInfo = null;
             if (loginClientInfo == null) {
-                log.error("channel: {} 在 appKey:{} 下未登录！", ctx.channel().id().asShortText(), appKey);
+                //log.error("channel: {} 在 appKey:{} 下未登录！", ctx.channel().id().asShortText(), appKey);
             }else {
                 List<Byte> supportDeviceTypes = loginClientInfo.getSupportDeviceTypes();
                 if (CollectionUtils.isNotEmpty(supportDeviceTypes)) {
