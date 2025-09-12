@@ -121,6 +121,10 @@ public class MessageConstant {
      *  app key  变动 publish topic
      */
     public static final String APP_KEY_PUBLISH_TOPIC = "app_key_publish_topic";
+    /**
+     *  客户端 的 app key  变动 publish topic
+     */
+    public static final String CLIENT_APP_KEY_PUBLISH_TOPIC = "client_app_key_publish_topic";
 
     /**
      * 自定义协议的魔数6个字节,字节数组 OUYUNC

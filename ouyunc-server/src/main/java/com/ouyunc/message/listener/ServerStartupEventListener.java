@@ -6,6 +6,7 @@ import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.DeviceType;
 import com.ouyunc.base.constant.enums.SaveModeEnum;
 import com.ouyunc.base.model.AppKeyDeviceType;
+import com.ouyunc.base.model.ClientAppKeyDeviceType;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.core.listener.MessageListener;
@@ -72,7 +73,8 @@ public class ServerStartupEventListener implements MessageListener<ServerStartup
      */
     @SuppressWarnings("unchecked")
     private void startAppKeyDeviceTypeSubscription() {
-        RedisSerializer<AppKeyDeviceType> valueSerializer = (RedisSerializer<AppKeyDeviceType>) redisTemplate.getValueSerializer();
+        RedisSerializer<AppKeyDeviceType> appKeyDeviceTypeRedisSerializer = (RedisSerializer<AppKeyDeviceType>) redisTemplate.getValueSerializer();
+        RedisSerializer<ClientAppKeyDeviceType> clientAppKeyDeviceTypeRedisSerializer = (RedisSerializer<ClientAppKeyDeviceType>) redisTemplate.getValueSerializer();
         RedisMessageListenerContainer container = createRedisMessageListenerContainer();
         container.setTaskExecutor(Executors.newSingleThreadExecutor(r -> {
             Thread t = new Thread(r, "redis-pubsub-listener");
@@ -81,20 +83,22 @@ public class ServerStartupEventListener implements MessageListener<ServerStartup
         }));
         // 监听appKey下的设备类型
         container.addMessageListener((message, pattern) -> {
-            AppKeyDeviceType appKeyDeviceType = valueSerializer.deserialize(message.getBody());
+            AppKeyDeviceType appKeyDeviceType = appKeyDeviceTypeRedisSerializer.deserialize(message.getBody());
             if (appKeyDeviceType != null) {
+                log.info("正在处理appKey下的设备类型 {} ...", appKeyDeviceType);
                 MessageServerContext.addAppKeyDeviceType(appKeyDeviceType.getAppKey(), appKeyDeviceType.getDeviceTypes());
             }
             // 添加进入appKey对应的设备类型集合中
         }, new ChannelTopic(MessageConstant.APP_KEY_PUBLISH_TOPIC));
         // 监听单个appKey下的某个客户端所支持的设备类型
         container.addMessageListener((message, pattern) -> {
-            AppKeyDeviceType appKeyDeviceType = valueSerializer.deserialize(message.getBody());
-            if (appKeyDeviceType != null) {
-                MessageServerContext.addAppKeyDeviceType(appKeyDeviceType.getAppKey(), appKeyDeviceType.getDeviceTypes());
+            ClientAppKeyDeviceType clientAppKeyDeviceType = clientAppKeyDeviceTypeRedisSerializer.deserialize(message.getBody());
+            if (clientAppKeyDeviceType != null) {
+                log.info("正在处理appKey下的客户端所支持的设备类型 {} ...", clientAppKeyDeviceType);
+                // todo 添加进入appKey对应的设备类型集合中,是否需要主动关闭相关链接？还是在发送消息鉴权的时候进行校验？
             }
             // 添加进入appKey对应的设备类型集合中
-        }, new ChannelTopic(MessageConstant.APP_KEY_PUBLISH_TOPIC));
+        }, new ChannelTopic(MessageConstant.CLIENT_APP_KEY_PUBLISH_TOPIC));
         // 一定不要忘记了这句
         container.afterPropertiesSet();
         container.start();
