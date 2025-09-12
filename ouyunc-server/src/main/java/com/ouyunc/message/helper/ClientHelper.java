@@ -127,6 +127,8 @@ public class ClientHelper {
      * @Description 判断客户端是否在线, 如果在线返回该客户端所有在线连接的登录信息，支持多端登录
      */
     public static List<LoginClientInfo> onlineAll(String appKey, String identity, DeviceType... excludeDeviceTypeArr) {
+        // 判断identity在该appKey下是否支持loginDeviceType该设备类型
+
         List<LoginClientInfo> loginClientInfoList = new ArrayList<>(NumberConstant.NUMBER_3);
         // 获取所有的实现DeviceType接口的枚举实例,先找定制化的客户所支持的设备类型
         Stream<DeviceType> deviceTypeStream = MessageServerContext.deviceTypeList(appKey, identity).stream();
@@ -174,6 +176,7 @@ public class ClientHelper {
      * @return
      */
     public static LoginClientInfo online(String appKey, String identity, DeviceType loginDeviceType) {
+        // 判断identity在该appKey下是否支持loginDeviceType该设备类型
        return online(appKey, identity, loginDeviceType.getDeviceTypeName());
     }
     /**

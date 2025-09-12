@@ -27,6 +27,11 @@ public class CacheConstant {
     public static final String APP_KEY = "app-key:";
 
     /***
+     * appKey 下的identity 的 客户端信息
+     */
+    public static final String CLIENT_INFO = "client-info:";
+
+    /***
      * 消息缓存公共前缀
      */
     public static final String MESSAGE = "message:";

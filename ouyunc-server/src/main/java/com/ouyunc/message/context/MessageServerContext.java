@@ -4,11 +4,14 @@ import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.DeviceType;
 import com.ouyunc.base.constant.enums.DisruptorEventProducerEnum;
 import com.ouyunc.base.constant.enums.LuaScriptEnum;
 import com.ouyunc.base.exception.MessageException;
+import com.ouyunc.base.model.ClientInfo;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.utils.ChannelAttrUtil;
@@ -41,8 +44,10 @@ import org.redisson.api.RedissonReactiveClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Serializable;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -139,6 +144,20 @@ public class MessageServerContext extends MessageContext {
          */
         @Override
         public @Nullable ChannelHandlerContext load(String messageTypeValue) throws Exception {
+            return null;
+        }
+    }));
+
+
+    /**
+     * 存储客户端的信息，所有客户端设备的信息都共享，生命周期与最后长的设备连接一致，设置为过期时间, 这个过期时间根据实际业务来调整，避免避免长时间不过期，占用过大内存
+     */
+    public static Cache<String, Serializable> localClientInfoCache = new CaffeineLocalCache<>("localClientInfoCache", Caffeine.newBuilder().expireAfterWrite(NumberConstant.NUMBER_30, TimeUnit.DAYS).build(new CacheLoader<>() {
+        /***
+         * 获取客户端对应的客户端信息
+         */
+        @Override
+        public @Nullable Serializable load(String appKeyIdentity) throws Exception {
             return null;
         }
     }));
@@ -310,25 +329,48 @@ public class MessageServerContext extends MessageContext {
         return deviceType;
     }
 
+    /**
+     * 获取本地客户（连接在该服务器上的）端信息， 这里需要有一个类似布隆过滤器的概念，如果首次本地缓存没中，则去redis中获取，无论是否获取到，都存入本地缓存，如果获取到，则真实值存入，如果获取不到则存入一个空值或者进行标记，并设置过期时间，这样在过期时间内再次获取时，就不用请求redis了，直接走本地缓存。除非手动触发更新本地缓存（通过发布订阅）
+        在过期后再次请求本地缓存，如果没有值或者标记则请求redis 然后重复以上步骤
+     * @param appKey
+     * @param identity
+     * @return
+     */
+    public static ClientInfo localClientInfo(String appKey, String identity) {
+        if (StringUtils.isNotBlank(identity)) {
+            Serializable cacheData = localClientInfoCache.get(appKey + CacheConstant.COLON + identity);
+            if (cacheData instanceof ClientInfo clientInfo) {
+                return clientInfo;
+            }else if (cacheData instanceof Boolean) {
+                return null;
+            }else {
+                // 未缓存过，则去redis中获取
+                Object obj = cache.get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.CLIENT_INFO + identity);
+                if (obj instanceof ClientInfo clientInfo) {
+                    localClientInfoCache.put(appKey + CacheConstant.COLON + identity, clientInfo);
+                    return clientInfo;
+                }else {
+                    localClientInfoCache.put(appKey + CacheConstant.COLON + identity, Boolean.TRUE);
+                    log.warn("客户端: {} 登录信息未缓存,或类型转换异常：{}", identity, obj);
+                }
+            }
+        }
+        return null;
+    }
+
 
     /**
      * 获取identity在 appKey 下所支持的设备类型列表
      */
     public static Collection<DeviceType> deviceTypeList(String appKey, String identity) {
         if (StringUtils.isNotBlank(identity)) {
-            //LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(null, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
-            LoginClientInfo loginClientInfo = null;
-            if (loginClientInfo == null) {
-                //log.error("channel: {} 在 appKey:{} 下未登录！", ctx.channel().id().asShortText(), appKey);
-            }else {
-                List<Byte> supportDeviceTypes = loginClientInfo.getSupportDeviceTypes();
-                if (CollectionUtils.isNotEmpty(supportDeviceTypes)) {
-                    Collection<DeviceType> deviceTypes = Lists.newArrayList();
-                    for (Byte supportDeviceType : supportDeviceTypes) {
-                        deviceTypes.add(deviceType(appKey, supportDeviceType));
-                    }
-                    return deviceTypes;
+            ClientInfo clientInfo = localClientInfo(appKey, identity);
+            if (clientInfo != null && CollectionUtils.isNotEmpty(clientInfo.getSupportDeviceTypes())) {
+                Collection<DeviceType> deviceTypes = Lists.newArrayList();
+                for (Byte supportDeviceType :  clientInfo.getSupportDeviceTypes()) {
+                    deviceTypes.add(deviceType(appKey, supportDeviceType));
                 }
+                return deviceTypes;
             }
         }
         return deviceTypeList(appKey);

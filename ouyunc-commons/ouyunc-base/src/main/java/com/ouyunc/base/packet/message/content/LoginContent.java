@@ -1,36 +1,16 @@
 package com.ouyunc.base.packet.message.content;
 
 
-import java.io.Serial;
-import java.io.Serializable;
+import com.ouyunc.base.model.ClientInfo;
+
 import java.util.List;
 
 /**
  * @Author fzx
  * @Description: 登录消息内容, 在登录的时候做校验
  **/
-public class LoginContent implements Serializable {
-    @Serial
-    private static final long serialVersionUID = 1000L;
+public class LoginContent extends ClientInfo {
 
-
-
-    /**
-     * 平台签发的appKey,每个平台唯一标识，用来做认证，校验用户是否合法，不为空
-     */
-
-    private String appKey;
-
-    /**
-     * 当前客户端所支持的可登录的设备类型，可以为空，如果为空则取该客户端所属appKey下的设备类型，注意，如果所支持的设备类型不为空，会进行校验，且值只能是appKey 下所支持设备类型的子集
-     */
-    private List<Byte> supportDeviceTypes;
-
-    /**
-     * 用户唯一标识：设备号 + 手机号，邮箱，身份证号码，token等，不为空
-     */
-
-    private String identity;
 
     /**
      * 设备序列号
@@ -60,21 +40,6 @@ public class LoginContent implements Serializable {
 
     private long  createTime;
 
-    public String getIdentity() {
-        return identity;
-    }
-
-    public void setIdentity(String identity) {
-        this.identity = identity;
-    }
-
-    public String getAppKey() {
-        return appKey;
-    }
-
-    public void setAppKey(String appKey) {
-        this.appKey = appKey;
-    }
 
     public String getSignature() {
         return signature;
@@ -101,13 +66,7 @@ public class LoginContent implements Serializable {
         this.signatureAlgorithm = signatureAlgorithm;
     }
 
-    public List<Byte> getSupportDeviceTypes() {
-        return supportDeviceTypes;
-    }
 
-    public void setSupportDeviceTypes(List<Byte> supportDeviceTypes) {
-        this.supportDeviceTypes = supportDeviceTypes;
-    }
 
     public String getSn() {
         return sn;
@@ -129,10 +88,8 @@ public class LoginContent implements Serializable {
     public LoginContent() {
     }
 
-    public LoginContent(String appKey, String identity, List<Byte> supportDeviceTypes,  String sn, String signature, byte signatureAlgorithm, int heartBeatExpireTime,  long createTime) {
-        this.appKey = appKey;
-        this.identity = identity;
-        this.supportDeviceTypes = supportDeviceTypes;
+    public LoginContent(String appKey, String identity,  List<Byte>  supportDeviceTypes  ,String sn, String signature, byte signatureAlgorithm, int heartBeatExpireTime,  long createTime) {
+        super(appKey, identity, supportDeviceTypes);
         this.sn = sn;
         this.signature = signature;
         this.signatureAlgorithm = signatureAlgorithm;
@@ -143,8 +100,9 @@ public class LoginContent implements Serializable {
     @Override
     public String toString() {
         return "LoginContent{" +
-                "  appKey='" + appKey + '\'' +
-                ", identity='" + identity + '\'' +
+                "  appKey='" + super.getAppKey() + '\'' +
+                ", identity='" + super.getIdentity() + '\'' +
+                ", supportDeviceTypes='" + super.getSupportDeviceTypes() + '\'' +
                 ", sn=" + sn +
                 ", signature='" + signature + '\'' +
                 ", signatureAlgorithm=" + signatureAlgorithm +
