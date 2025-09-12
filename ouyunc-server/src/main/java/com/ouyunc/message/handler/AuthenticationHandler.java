@@ -130,7 +130,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         // 做登录参数校验
         //1,进行参数合法校验，校验失败，结束 ；2,进行签名的校验，校验失败，结束，3，进行权限校验，校验失败，结束
         // 根据appKey 获取appSecret 然后拼接
-        if (AppKeyValidator.INSTANCE.negate().verify(loginContent.getAppKey(), ctx) || DeviceValidator.INSTANCE.verify(packet, ctx) || !validate(loginContent)) {
+        if (AppKeyValidator.INSTANCE.negate().verify(loginContent.getAppKey(), ctx) || DeviceValidator.INSTANCE.negate().verify(packet, ctx) || !validate(loginContent)) {
             log.warn("客户端id: {} 登录参数: {}，校验未通过！", ctx.channel().id().asShortText(), Serializer.JSON.serializeToString(loginContent));
             MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.LOGIN_VERIFY_ERROR, "登录校验未通过", packet), true);
             ctx.close();

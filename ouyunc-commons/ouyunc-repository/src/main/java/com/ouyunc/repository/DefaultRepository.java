@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSON;
 import com.google.common.collect.Lists;
 import com.ouyunc.base.constant.*;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
+import com.ouyunc.base.constant.enums.LuaScriptEnum;
 import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.QosLevelEnum;
 import com.ouyunc.base.model.FiveConsumer;
@@ -527,7 +528,7 @@ public enum DefaultRepository implements Repository{
         }
         // 获取需要消息服务端时间戳，这个获取要在会话锁的前提下获取,注意批量获取score 的方法是redis 6.2.0 之后的版本才支持,如果不支持请使用其他方式替换，或升级redis版本，这里 就使用lua 脚本 哈哈哈
         // 获取消息在会话中的消息服务端时间戳
-        Flux<Long> scoreFlux = reactiveRedisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_SCORE_LUA_SCRIPT, List.class), List.of(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.SESSION + sessionId), packetIds)
+        Flux<Long> scoreFlux = reactiveRedisTemplate.execute(new DefaultRedisScript<>(LuaScriptEnum.BATCH_SCORE_LUA_SCRIPT.getScript(), List.class), List.of(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.SESSION + sessionId), packetIds)
                 .cache(); // 关键：缓存结果避免重复订阅;
         return scoreFlux
                 .collectList() // 转换为Mono<List<Long>>
@@ -598,7 +599,7 @@ public enum DefaultRepository implements Repository{
                 keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + withdrawIdentity);
             }
         }
-        Flux<Boolean> executeResult = reactiveStringRedisTemplate.execute(new DefaultRedisScript<>(LuaScriptConstant.BATCH_WITHDRAW_MESSAGE_LUA_SCRIPT, Boolean.class), keys, formatPacketIdArgs);
+        Flux<Boolean> executeResult = reactiveStringRedisTemplate.execute(new DefaultRedisScript<>(LuaScriptEnum.BATCH_WITHDRAW_MESSAGE_LUA_SCRIPT.getScript(), Boolean.class), keys, formatPacketIdArgs);
         return executeResult.all(result -> result);
     }
 
