@@ -142,7 +142,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         //1,从分布式缓存取出该登录用户
         LoginClientInfo cacheLoginClientInfo = MessageServerContext.remoteLoginClientInfoCache.get(clientLoginCacheKey);
         //2,从本地用户注册表中取出该用户的channel
-        ChannelHandlerContext bindCtx = MessageServerContext.localClientRegisterTable.get(comboIdentity);
+        ChannelHandlerContext bindCtx = MessageServerContext.localLoginClientRegisterTable.get(comboIdentity);
         // 重复登录请求(1，不同的设备远程登录，2，同一设备重复发送登录请求)，向原有的连接发送通知，有其他客户端登录，并将其连接下线
         // 下面如论是否开启支持清除公共注册表的相关信息
         Message message = new Message(null, loginContent.getIdentity(), MessageContentTypeEnum.TEXT_CONTENT.getType(), Serializer.JSON.serializeToString(new ServerNotifyContent(String.format(MessageConstant.REMOTE_LOGIN_NOTIFICATIONS, loginMessage.getMetadata().getClientIp()))), loginTimestamp, loginMessage.getMetadata());
@@ -171,7 +171,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                 String clientLoginDeviceName = closingLocalloginClientInfo.getDeviceType().getDeviceTypeName();
                 String closingComboIdentity = IdentityUtil.generalComboIdentity(closingLocalloginClientInfo.getAppKey(), closingLocalloginClientInfo.getIdentity(), clientLoginDeviceName);
                 // 登录信息一致,才进行解绑，删除缓存信息
-                MessageServerContext.localClientRegisterTable.delete(closingComboIdentity);
+                MessageServerContext.localLoginClientRegisterTable.delete(closingComboIdentity);
                 String loginClientInfoCacheKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + closingLocalloginClientInfo.getAppKey() + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + closingComboIdentity;
                 // 获取分布式锁, 这里使用锁的目的，可以参考登录处理器的分布式锁，防止重复解绑 LoginMessageProcessor
                 RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + closingLocalloginClientInfo.getAppKey() + CacheConstant.COLON + closingComboIdentity);

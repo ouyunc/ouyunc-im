@@ -5,7 +5,6 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.ouyunc.base.constant.CacheConstant;
-import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.DeviceType;
 import com.ouyunc.base.constant.enums.DisruptorEventProducerEnum;
@@ -14,7 +13,6 @@ import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.model.ClientInfo;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
-import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.cache.Cache;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.cache.distributed.redis.RedisDistributedCache;
@@ -138,7 +136,7 @@ public class MessageServerContext extends MessageContext {
     /**
      * 外部（本地）用户的通道channel缓存，该缓存中不包含集群中的内置客户端的channel, 这里的key 可以是手机号/身份证/token 等唯一标识用户的字段
      */
-    public static Cache<String, ChannelHandlerContext> localClientRegisterTable = new CaffeineLocalCache<>("clientLocalRegisterTable", Caffeine.newBuilder().build(new CacheLoader<>() {
+    public static Cache<String, ChannelHandlerContext> localLoginClientRegisterTable = new CaffeineLocalCache<>("clientLocalRegisterTable", Caffeine.newBuilder().build(new CacheLoader<>() {
         /***
          * 获取客户端对应的连接通道，先从缓存中取，如果没有则进行加载走load()方法
          */

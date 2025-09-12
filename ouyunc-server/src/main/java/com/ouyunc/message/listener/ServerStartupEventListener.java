@@ -7,6 +7,7 @@ import com.ouyunc.base.constant.enums.DeviceType;
 import com.ouyunc.base.constant.enums.SaveModeEnum;
 import com.ouyunc.base.model.AppKeyDeviceType;
 import com.ouyunc.base.model.ClientAppKeyDeviceType;
+import com.ouyunc.base.model.ClientInfo;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.core.listener.MessageListener;
@@ -29,6 +30,7 @@ import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 /**
  * @author fzx
@@ -95,7 +97,23 @@ public class ServerStartupEventListener implements MessageListener<ServerStartup
             ClientAppKeyDeviceType clientAppKeyDeviceType = clientAppKeyDeviceTypeRedisSerializer.deserialize(message.getBody());
             if (clientAppKeyDeviceType != null) {
                 log.info("正在处理appKey下的客户端所支持的设备类型 {} ...", clientAppKeyDeviceType);
-                // todo 添加进入appKey对应的设备类型集合中,是否需要主动关闭相关链接？还是在发送消息鉴权的时候进行校验？
+                //  添加进入appKey对应的设备类型集合中,是否需要主动关闭相关链接？还是在发送消息鉴权的时候进行校验
+                // 需要校验下，单独设置的必须要再appKey下的设备类型集合中
+                Set<DeviceType> deviceTypes = clientAppKeyDeviceType.getDeviceTypes();
+                if (CollectionUtils.isNotEmpty(deviceTypes)) {
+                    boolean flag = true;
+                    for (DeviceType deviceType : deviceTypes) {
+                        if (!MessageServerContext.deviceTypeList(clientAppKeyDeviceType.getAppKey()).contains(deviceType)) {
+                            log.error("非法设备类型：{}", deviceType);
+                            flag = false;
+                            break;
+                        }
+                    }
+                    if (flag) {
+                        log.info("{} 添加进入appKey对应的设备类型集合中", deviceTypes);
+                        MessageServerContext.localClientInfoCache.put(clientAppKeyDeviceType.getAppKey() + CacheConstant.COLON + clientAppKeyDeviceType.getIdentity(), new ClientInfo(clientAppKeyDeviceType.getAppKey(), clientAppKeyDeviceType.getIdentity(), clientAppKeyDeviceType.getDeviceTypes().stream().map(DeviceType::getDeviceTypeValue).collect(Collectors.toList())));
+                    }
+                }
             }
             // 添加进入appKey对应的设备类型集合中
         }, new ChannelTopic(MessageConstant.CLIENT_APP_KEY_PUBLISH_TOPIC));

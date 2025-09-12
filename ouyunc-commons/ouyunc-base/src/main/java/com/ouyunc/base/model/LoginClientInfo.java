@@ -5,7 +5,7 @@ import com.ouyunc.base.constant.enums.DeviceType;
 import com.ouyunc.base.constant.enums.OnlineEnum;
 import com.ouyunc.base.packet.message.content.LoginContent;
 
-import java.util.List;
+import java.util.Collection;
 import java.util.Objects;
 
 /**
@@ -121,7 +121,7 @@ public class LoginClientInfo extends LoginContent {
     public LoginClientInfo() {
     }
 
-    public LoginClientInfo(String loginServerAddress, OnlineEnum onlineStatus, String authorizationScope, long loginExpireTime, int heartBeatTimeout, long lastLoginTime, String appKey, String identity, DeviceType deviceType, List<Byte> supportDeviceTypes, String sn, String signature, byte signatureAlgorithm, int heartBeatExpireTime, long createTime) {
+    public LoginClientInfo(String loginServerAddress, OnlineEnum onlineStatus, String authorizationScope, long loginExpireTime, int heartBeatTimeout, long lastLoginTime, String appKey, String identity, DeviceType deviceType, Collection<Byte> supportDeviceTypes, String sn, String signature, byte signatureAlgorithm, int heartBeatExpireTime, long createTime) {
         super(appKey, identity, supportDeviceTypes, sn, signature, signatureAlgorithm, heartBeatExpireTime, createTime);
         this.deviceType = deviceType;
         this.loginServerAddress = loginServerAddress;

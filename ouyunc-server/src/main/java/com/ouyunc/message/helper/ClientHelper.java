@@ -50,7 +50,7 @@ public class ClientHelper {
         ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LAST_HEARTBEAT_TIMESTAMP ,loginClientInfo.getLastLoginTime());
         // 存入本地用户注册表
         String comboIdentity = IdentityUtil.generalComboIdentity(loginClientInfo.getAppKey(), loginClientInfo.getIdentity(), loginClientInfo.getDeviceType());
-        MessageServerContext.localClientRegisterTable.put(comboIdentity, ctx);
+        MessageServerContext.localLoginClientRegisterTable.put(comboIdentity, ctx);
         // 使用分布式锁来处理重复登录
         RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + loginClientInfo.getAppKey() + CacheConstant.COLON + comboIdentity);
         try {
@@ -143,7 +143,7 @@ public class ClientHelper {
                 .collect(Collectors.toSet());
 
         // 先从本地注册表获取，如果在同一个服务器上或者不是集群
-        Collection<ChannelHandlerContext> allLoginClientChannelHandlerContexts = MessageServerContext.localClientRegisterTable.getAll(comboIdentitySet);
+        Collection<ChannelHandlerContext> allLoginClientChannelHandlerContexts = MessageServerContext.localLoginClientRegisterTable.getAll(comboIdentitySet);
         // 判断comboIdentitySet的size 与结果集的大小是否相等，如果不相等则在从redis获取，如果相等则返回
         // 从ctx上下文获取客户端登录信息
         allLoginClientChannelHandlerContexts.forEach(ctx -> {
@@ -188,7 +188,7 @@ public class ClientHelper {
     private static LoginClientInfo online(String appKey, String identity, String loginDeviceTypeName) {
         String comboIdentity = IdentityUtil.generalComboIdentity(appKey, identity, loginDeviceTypeName);
         // 先从本地注册表获取，如果在同一个服务器上或者不是集群
-        ChannelHandlerContext ctx = MessageServerContext.localClientRegisterTable.get(comboIdentity);
+        ChannelHandlerContext ctx = MessageServerContext.localLoginClientRegisterTable.get(comboIdentity);
         if (ctx != null) {
             LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
             if (loginClientInfo != null && OnlineEnum.ONLINE.equals(loginClientInfo.getOnlineStatus()) && MessageContext.messageProperties.getLocalServerAddress().equals(loginClientInfo.getLoginServerAddress())) {

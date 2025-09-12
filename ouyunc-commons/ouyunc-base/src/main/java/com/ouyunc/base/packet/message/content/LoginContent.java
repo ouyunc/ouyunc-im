@@ -3,6 +3,7 @@ package com.ouyunc.base.packet.message.content;
 
 import com.ouyunc.base.model.ClientInfo;
 
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -88,7 +89,7 @@ public class LoginContent extends ClientInfo {
     public LoginContent() {
     }
 
-    public LoginContent(String appKey, String identity,  List<Byte>  supportDeviceTypes  ,String sn, String signature, byte signatureAlgorithm, int heartBeatExpireTime,  long createTime) {
+    public LoginContent(String appKey, String identity, Collection<Byte> supportDeviceTypes  , String sn, String signature, byte signatureAlgorithm, int heartBeatExpireTime, long createTime) {
         super(appKey, identity, supportDeviceTypes);
         this.sn = sn;
         this.signature = signature;

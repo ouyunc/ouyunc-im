@@ -3,7 +3,7 @@ package com.ouyunc.base.model;
 
 import java.io.Serial;
 import java.io.Serializable;
-import java.util.List;
+import java.util.Collection;
 
 /**
  * @author fzx
@@ -28,17 +28,16 @@ public class ClientInfo implements Serializable {
     private String identity;
 
 
-
     /**
      * 当前客户端所支持的可登录的设备类型，可以为空，如果为空则取该客户端所属appKey下的设备类型，注意，如果所支持的设备类型不为空，会进行校验，且值只能是appKey 下所支持设备类型的子集
      */
-    private List<Byte> supportDeviceTypes;
+    private Collection<Byte> supportDeviceTypes;
 
 
     public ClientInfo() {
     }
 
-    public ClientInfo(String appKey, String identity, List<Byte> supportDeviceTypes) {
+    public ClientInfo(String appKey, String identity, Collection<Byte> supportDeviceTypes) {
         this.appKey = appKey;
         this.identity = identity;
         this.supportDeviceTypes = supportDeviceTypes;
@@ -60,11 +59,11 @@ public class ClientInfo implements Serializable {
         this.identity = identity;
     }
 
-    public List<Byte> getSupportDeviceTypes() {
+    public Collection<Byte> getSupportDeviceTypes() {
         return supportDeviceTypes;
     }
 
-    public void setSupportDeviceTypes(List<Byte> supportDeviceTypes) {
+    public void setSupportDeviceTypes(Collection<Byte> supportDeviceTypes) {
         this.supportDeviceTypes = supportDeviceTypes;
     }
 }
