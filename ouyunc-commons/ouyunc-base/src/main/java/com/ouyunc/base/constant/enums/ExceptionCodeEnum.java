@@ -38,6 +38,7 @@ public enum ExceptionCodeEnum {
     SERVER_SPLIT_BRAIN_ERROR(90001, "集群服务脑裂错误"),
 
     ILLEGAL_MESSAGE_TYPE_ERROR(100001, "非法消息类型"),
+    ILLEGAL_DEVICE_TYPE_ERROR(100002, "非法设备类型"),
 
     ACQUIRE_LOCK_ERROR(200001, "获取锁异常"),
     UN_LOCK_ERROR(200002, "解锁异常"),
