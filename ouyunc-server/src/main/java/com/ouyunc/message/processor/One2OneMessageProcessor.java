@@ -1,6 +1,5 @@
 package com.ouyunc.message.processor;
 
-import com.google.common.collect.Sets;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
