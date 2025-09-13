@@ -26,8 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -163,7 +162,7 @@ public final class GroupRefuseMessageProcessor extends AbstractMessageProcessor<
                         log.error("拒绝加群请求，发送mq异常，原因：{}", ex.getMessage());
                         MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "处理拒绝加群请求异常！" + ex.getMessage(), packet), true);
                     } else {
-                        repository().reactiveSaveOfflineMessage(packet,  content.getIdentity()).subscribe(saveResult ->  {
+                        repository().reactiveSaveOfflineMessage(packet,  content.getIdentity(), MessageServerContext.deviceTypeList(appKey, content.getIdentity())).subscribe(saveResult ->  {
                             if (saveResult) {
                                 // 被邀请者或主动加入者
                                 List<LoginClientInfo> inviterOrJoinerLoginClientInfos = ClientHelper.onlineAll(packet.getMessage().getMetadata().getAppKey(), content.getIdentity());
@@ -210,7 +209,11 @@ public final class GroupRefuseMessageProcessor extends AbstractMessageProcessor<
         Message message = packet.getMessage();
         if (MessageContext.messageProperties.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
             // 保存需要qos
-            return repository().batchSaveGroupRequestMessage(packet, groupMembers, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
+            Map<String, Collection<DeviceType>> groupMemberDeviceTypes = new HashMap<>();
+            for (String groupMember : groupMembers) {
+                groupMemberDeviceTypes.put(groupMember, MessageServerContext.deviceTypeList(message.getMetadata().getAppKey(), groupMember));
+            }
+            return repository().batchSaveGroupRequestMessage(packet, groupMemberDeviceTypes, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
         }
         // 保存，不需要qos
         return repository().saveGroupRequestMessage(packet, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);

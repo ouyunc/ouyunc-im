@@ -3,10 +3,7 @@ package com.ouyunc.message.processor;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
-import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
-import com.ouyunc.base.constant.enums.MessageType;
-import com.ouyunc.base.constant.enums.MessageTypeEnum;
-import com.ouyunc.base.constant.enums.QosLevelEnum;
+import com.ouyunc.base.constant.enums.*;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
@@ -27,8 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -186,7 +182,11 @@ public final class GroupJoinMessageProcessor extends AbstractMessageProcessor<By
         Message message = packet.getMessage();
         if (MessageContext.messageProperties.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
             // 保存需要qos
-            return repository().batchSaveJoinGroupRequestMessage(packet, groupMembers, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
+            Map<String, Collection<DeviceType>> groupMemberDeviceTypes = new HashMap<>();
+            for (String groupMember : groupMembers) {
+                groupMemberDeviceTypes.put(groupMember, MessageServerContext.deviceTypeList(message.getMetadata().getAppKey(), groupMember));
+            }
+            return repository().batchSaveJoinGroupRequestMessage(packet, groupMemberDeviceTypes, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
         }
         // 保存，不需要qos
         return repository().saveJoinGroupRequestMessage(packet, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);

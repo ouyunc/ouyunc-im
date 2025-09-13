@@ -3,10 +3,7 @@ package com.ouyunc.message.processor;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
-import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
-import com.ouyunc.base.constant.enums.MessageType;
-import com.ouyunc.base.constant.enums.MessageTypeEnum;
-import com.ouyunc.base.constant.enums.QosLevelEnum;
+import com.ouyunc.base.constant.enums.*;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
@@ -27,9 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -143,7 +138,7 @@ public final class GroupInviteJoinerRefuseMessageProcessor extends AbstractMessa
                             // 处理成功则转到下个处理器
                             ctx.fireChannelRead(packet);
                         }else {
-                            repository().reactiveSaveOfflineMessage(packet,  groupRequestSession.getInviter()).subscribe(saveResult ->  {
+                            repository().reactiveSaveOfflineMessage(packet,  groupRequestSession.getInviter(), MessageServerContext.deviceTypeList(message.getMetadata().getAppKey(), groupRequestSession.getInviter())).subscribe(saveResult ->  {
                                 if (saveResult) {
                                     // 邀请人
                                     List<LoginClientInfo> inviterLoginClientInfos = ClientHelper.onlineAll(packet.getMessage().getMetadata().getAppKey(), groupRequestSession.getInviter());
@@ -190,7 +185,12 @@ public final class GroupInviteJoinerRefuseMessageProcessor extends AbstractMessa
         Message message = packet.getMessage();
         if (MessageContext.messageProperties.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
             // 保存需要qos
-            return repository().batchSaveGroupRequestMessage(packet, groupMembers, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
+            // 保存需要qos
+            Map<String, Collection<DeviceType>> groupMemberDeviceTypes = new HashMap<>();
+            for (String groupMember : groupMembers) {
+                groupMemberDeviceTypes.put(groupMember, MessageServerContext.deviceTypeList(message.getMetadata().getAppKey(), groupMember));
+            }
+            return repository().batchSaveGroupRequestMessage(packet, groupMemberDeviceTypes, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
         }
         // 保存，不需要qos
         return repository().saveGroupRequestMessage(packet, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);

@@ -170,7 +170,7 @@ public final class GroupAgreeMessageProcessor extends AbstractMessageProcessor<B
                         log.error("同意加群请求，发送mq异常，原因：{}", ex.getMessage());
                         MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "处理同意加群请求异常！" + ex.getMessage(), packet), true);
                     } else {
-                        repository().reactiveSaveOfflineMessage(packet,  content.getIdentity()).subscribe(saveResult ->  {
+                        repository().reactiveSaveOfflineMessage(packet,  content.getIdentity(), MessageServerContext.deviceTypeList(appKey, content.getIdentity())).subscribe(saveResult ->  {
                             if (saveResult) {
                                 // 被邀请者或主动加入者
                                 List<LoginClientInfo> inviterOrJoinerLoginClientInfos = ClientHelper.onlineAll(packet.getMessage().getMetadata().getAppKey(), content.getIdentity());
