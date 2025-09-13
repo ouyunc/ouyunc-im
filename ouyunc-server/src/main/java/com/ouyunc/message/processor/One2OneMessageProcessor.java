@@ -204,7 +204,7 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
     private Mono<Boolean> saveMessage(Packet packet) {
         Message message = packet.getMessage();
         String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
-        return repository().reactiveSaveMessage(packet, sessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP, MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() != message.getContentType());
+        return repository().reactiveSaveMessage(packet, sessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP, MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() != message.getContentType(), MessageServerContext.deviceTypeList(message.getMetadata().getAppKey(), message.getTo()));
     }
 
 

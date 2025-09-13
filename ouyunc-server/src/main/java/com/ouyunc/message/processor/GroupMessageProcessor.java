@@ -19,8 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 
 /**
@@ -223,17 +222,20 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
     private Mono<Boolean> reactiveSaveGroupMessage(Packet packet, Set<String> groupMembers) {
         Message message = packet.getMessage();
         if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() != message.getContentType() && MessageContext.messageProperties.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
+            Map<String, Collection<DeviceType>> groupDeviceTypes = new HashMap<>();
+            for (String groupMember : groupMembers) {
+                groupDeviceTypes.put(groupMember, MessageServerContext.deviceTypeList(message.getMetadata().getAppKey(), groupMember));
+            }
             return repository().reactiveBatchSaveMessage(
                     packet,
-                    groupMembers,
+                    groupDeviceTypes,
                     MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP
             );
         }else {
              return repository().reactiveSaveMessage(
                      packet,
                      message.getTo(),
-                     MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP, false
-             );
+                     MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP, false, CollectionUtils.emptyCollection());
         }
     }
 
