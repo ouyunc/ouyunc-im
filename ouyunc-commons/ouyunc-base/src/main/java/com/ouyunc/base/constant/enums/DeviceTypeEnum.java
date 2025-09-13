@@ -10,7 +10,7 @@ import com.ouyunc.base.constant.NumberConstant;
  **/
 public enum DeviceTypeEnum implements DeviceType {
 
-    OTHER(NumberConstant.NUMBER_0, "other", "其他设备"),
+//    OTHER(NumberConstant.NUMBER_0, "other", "其他设备"),
 
     /**
      * 移动端
@@ -45,7 +45,7 @@ public enum DeviceTypeEnum implements DeviceType {
 
 
     // 可以扩展其他iot 等设备类型，如不同的品牌的设备对应相同的名称
-    IOT(NumberConstant.NUMBER_21, "iot", "iot设备"),
+//    IOT(NumberConstant.NUMBER_21, "iot", "iot设备"),
 
 
     ;
