@@ -434,6 +434,7 @@ class Socket {
                     resolve({
                         messageId,
                         messageType,
+                        withDraw: retain,
                         message
                     });
                 } catch (error) {

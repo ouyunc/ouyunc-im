@@ -124,7 +124,7 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
         repository().reactiveHandleOperation(ctx, packet,
                 repository().reactiveValidWithdrawMessage(packet, sessionId, true),
                 ()-> repository().savePacket2Mq(MqConstant.KAFKA_WITHDRAW_MESSAGE_TOPIC, sessionId, packet),
-                repository().reactiveWithdrawMessage(packet, sessionId, Sets.newHashSet(to)),
+                Mono.just(true),
                 this::deliverAndFireNext,
                 (exceptionEvent)-> MessageServerContext.publishEvent(exceptionEvent, true),
                 ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR)
@@ -150,17 +150,6 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
     }
 
 
-
-
-    private void deliverMessage2SelfAndFireNext(Packet packet) {
-        Message message = packet.getMessage();
-        String appKey = message.getMetadata().getAppKey();
-        // 同步发送给自己
-        List<LoginClientInfo> fromSelfLoginClientInfos = ClientHelper.onlineAll(appKey, message.getFrom(), MessageServerContext.deviceType(appKey, packet.getDeviceType()));
-        if (CollectionUtils.isNotEmpty(fromSelfLoginClientInfos)) {
-            MessageHelper.asyncSendMessage(packet, fromSelfLoginClientInfos);
-        }
-    }
 
     /**
      * 发送消息给接收方

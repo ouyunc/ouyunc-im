@@ -144,7 +144,7 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
         repository().reactiveHandleOperation(ctx, packet,
                 repository().reactiveValidWithdrawMessage(packet, sessionId, !leaderOrManager),
                 ()-> repository().savePacket2Mq(MqConstant.KAFKA_WITHDRAW_MESSAGE_TOPIC, sessionId, packet),
-                repository().reactiveWithdrawMessage(packet, sessionId, groupUserIdentitySet),
+                Mono.just(true),
                 (ctx0, packet0) -> deliverWithdrawMessageAndFireNext(ctx0, packet0, groupUserIdentitySet),
                 (exceptionEvent)-> MessageServerContext.publishEvent(exceptionEvent, true),
                 ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR)

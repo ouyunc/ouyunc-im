@@ -24,7 +24,6 @@ import com.ouyunc.mq.kafka.KafkaFactory;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
@@ -33,15 +32,10 @@ import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.data.redis.connection.ReactiveKeyCommands;
-import org.springframework.data.redis.connection.ReactiveRedisConnection;
-import org.springframework.data.redis.connection.ReactiveZSetCommands;
 import org.springframework.data.redis.connection.RedisConnection;
-import org.springframework.data.redis.connection.zset.DefaultTuple;
 import org.springframework.data.redis.core.*;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.serializer.RedisSerializer;
-import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.KafkaHeaders;
@@ -49,7 +43,6 @@ import org.springframework.messaging.support.MessageBuilder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
-import reactor.util.function.Tuples;
 
 import java.nio.ByteBuffer;
 import java.time.Duration;
@@ -243,6 +236,7 @@ public enum DefaultRepository implements Repository{
                 Query.query(Criteria.where(MongoMessageEntity.Fields.id).in(missingIds)),
                 MongoMessageEntity.class
         );
+        // 在查询 撤销消息表，如果查到了就设置到packet的retain保留字段中作为撤销标记，算了不在这里查了，尽量减少im服务和持久化层的交互逻辑，在http 服务来做这个，不如拉取会话或离线消息时处理
         List<Packet> dbPackets = convertToPackets(mongoEntities);
 
         // 检查是否还有缺失
@@ -350,6 +344,7 @@ public enum DefaultRepository implements Repository{
      * @param sessionId
      * @return
      */
+    @SuppressWarnings("unchecked")
     public Mono<Boolean> reactiveValidWithdrawMessage(Packet packet, String sessionId, boolean isValidSender) {
         return reactiveValidSpecialMessage(packet, sessionId, (specialPackets)->{
             // 判断消息是否属于该会话，且都属于发送者； 这里考虑个问题，如果是群主或者管理员，需要让其撤销消息？应该是可以撤销的
@@ -364,13 +359,25 @@ public enum DefaultRepository implements Repository{
             return Mono.just(true);
         }, (packets)->{
             // 如果可以调用该方法的，一定是群聊或者私聊类型
-            for (Packet readPacket : packets) {
-                Message message = readPacket.getMessage();
+            for (Packet withdrawPacket : packets) {
+                Message message = withdrawPacket.getMessage();
                 if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == message.getContentType() || MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == message.getContentType()) {
                     log.error("消息: {} 对应的消息内容类型：{} 错误！，不允许撤回撤回消息或已读消息", packet, message.getContentType());
                     return false;
                 }
             }
+            // 校验通过后，直接设置packet 的retain 保留字段作为撤回消息的标志，1 撤回，0 不撤回,并设置到redis 缓存中
+            redisTemplate.executePipelined(new SessionCallback<>() {
+                @Override
+                public <K, V> Object execute(RedisOperations<K, V> operations) throws DataAccessException {
+                    for (Packet withdrawPacket : packets) {
+                        withdrawPacket.setRetain(NumberConstant.NUMBER_1);
+                        String messageKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + withdrawPacket.getMessage().getMetadata().getAppKey() + CacheConstant.COLON + CacheConstant.MESSAGE + withdrawPacket.getPacketId();
+                        operations.opsForValue().set((K) messageKey, (V) withdrawPacket, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+                    }
+                    return null;
+                }
+            });
             return true;
         });
     }
