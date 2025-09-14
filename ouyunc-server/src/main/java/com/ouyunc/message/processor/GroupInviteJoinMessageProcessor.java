@@ -23,6 +23,7 @@ import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.validator.*;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.MapUtils;
 import org.redisson.api.RLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -124,8 +125,8 @@ public final class GroupInviteJoinMessageProcessor extends AbstractMessageProces
                 }
                 // 这里不保存到session 缓存中,保存到临时的会话请求消息中，该好友请求的消息可以对其进行定期清理；
                 // 获取当前群的管理员和群主，进行加群消息的推送
-                Set<String> groupMannerOrLeaderUsersIdentitySet = repository().groupManagerAndLeaderUsersIdentity(packet);
-                if (CollectionUtils.isEmpty(groupMannerOrLeaderUsersIdentitySet)) {
+                Map<String, Double> groupMannerOrLeaderUsersIdentityAndPostMap = repository().groupManagerAndLeaderUsersIdentityAndPost(packet);
+                if (MapUtils.isEmpty(groupMannerOrLeaderUsersIdentityAndPostMap)) {
                     // 这个群里没有群主？
                     log.error("群组：{}, 不存在群主和群管理员！群消息： {}", packet.getMessage().getTo(), packet);
                     MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群主或群管理员", packet), true);
@@ -139,27 +140,35 @@ public final class GroupInviteJoinMessageProcessor extends AbstractMessageProces
                     return;
                 }
                 // 尝试设置群请求会话
+                boolean inviterIsMannerOrLeader = false;
                 if (groupRequestSession == null) {
+                    groupRequestSession = GroupRequestSession.newGroupBuilder()
+                            .sessionId(SnowflakeUtil.nextIdStr())
+                            .joiner(content.getIdentity())
+                            .inviter(message.getFrom())
+                            .groupId(message.getTo())
+                            .channel(GroupRequestSessionChannel.OTHER.value())
+                            .way(GroupRequestSessionWay.INVITED.value())
+                            .build();
+                }
+                // 尝试移除自己
+                Double inviterPost = groupMannerOrLeaderUsersIdentityAndPostMap.remove(message.getFrom());
+                if (inviterPost == null) {
                     GroupUserEntity fromGroupUserEntity = repository().groupUserEntity(appKey, message.getTo(), message.getFrom());
                     if (fromGroupUserEntity == null) {
                         log.error("群组：{}, 用户：{} 不存在，请检查数据！", message.getTo(), message.getFrom());
                         MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, message.getFrom() + "不在群组中！", packet));
                         return;
                     }
-                    groupRequestSession = GroupRequestSession.newGroupBuilder()
-                            .sessionId(SnowflakeUtil.nextIdStr())
-                            .joiner(content.getIdentity())
-                            .inviter(message.getFrom())
-                            .inviterPost(fromGroupUserEntity.getPost())
-                            .groupId(message.getTo())
-                            .channel(GroupRequestSessionChannel.OTHER.value())
-                            .way(GroupRequestSessionWay.INVITED.value())
-                            .build();
+                    groupRequestSession.setInviterPost(fromGroupUserEntity.getPost());
+                }else {
+                    inviterIsMannerOrLeader = true;
+                    groupRequestSession.setInviterPost(inviterPost.intValue());
                 }
                 // 尝试排除自己，自己可能是群主或管理员
                 // 注意：如果是群主或者管理员邀请的会自动通过，无论是否开启群自动同意
                 // 判断对方是否是自动同意加好友
-                if ((groupMannerOrLeaderUsersIdentitySet.remove(message.getFrom()) || GroupJoinPolicy.AUTO_PASS.value().equals(groupEntity.getGroupJoinPolicy())) && GroupInvitePolicy.AUTO_PASS.value().equals(userEntity.getGroupInvitePolicy())) {
+                if ((inviterIsMannerOrLeader || GroupJoinPolicy.AUTO_PASS.value().equals(groupEntity.getGroupJoinPolicy())) && GroupInvitePolicy.AUTO_PASS.value().equals(userEntity.getGroupInvitePolicy())) {
                     groupRequestSession.setJoinerProcessStatus(GroupJoinerProcessStatus.AGREE.value());
                     groupRequestSession.setProgress(RequestSessionProgress.AGREEING.value());
                     // 自动同意，不再给群主和管理员保存离线消息
@@ -171,7 +180,7 @@ public final class GroupInviteJoinMessageProcessor extends AbstractMessageProces
                 }else {
                     groupRequestSession.setJoinerProcessStatus(GroupJoinerProcessStatus.PENDING.value());
                     groupRequestSession.setProgress(RequestSessionProgress.JOINING.value());
-                    if (!saveGroupRequestMessage(packet, groupMannerOrLeaderUsersIdentitySet, groupRequestSession)) {
+                    if (!saveGroupRequestMessage(packet, groupMannerOrLeaderUsersIdentityAndPostMap.keySet(), groupRequestSession)) {
                         log.error("Failed to save invite join group request message: {}", packet);
                         MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存加群请求消息异常!", packet), true);
                         return;
@@ -192,12 +201,12 @@ public final class GroupInviteJoinMessageProcessor extends AbstractMessageProces
                                     MessageHelper.asyncSendMessage(packet, inviterLoginClientInfos);
                                 }
                                 // 如果有群主或群管理员，则发送消息给群主或群管理员
-                                for (String groupMannerOrLeaderUserIdentity : groupMannerOrLeaderUsersIdentitySet) {
+                                groupMannerOrLeaderUsersIdentityAndPostMap.forEach((groupMannerOrLeaderUserIdentity, groupMannerOrLeaderUserPost) -> {
                                     List<LoginClientInfo> toLoginClientInfos = ClientHelper.onlineAll(message.getMetadata().getAppKey(), groupMannerOrLeaderUserIdentity);
                                     if (CollectionUtils.isNotEmpty(toLoginClientInfos)) {
                                         MessageHelper.asyncSendMessage(packet, toLoginClientInfos);
                                     }
-                                }
+                                });
                                 // 处理成功则转到下个处理器
                                 ctx.fireChannelRead(packet);
                             } else {
@@ -217,6 +226,9 @@ public final class GroupInviteJoinMessageProcessor extends AbstractMessageProces
         } finally {
             if (lock.isHeldByCurrentThread()) {
                 lock.unlock();
+            }else {
+                log.error("Failed to unlock user invite join group request message: {}", packet);
+                MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.UN_LOCK_ERROR, "释放锁失败", packet), true);
             }
         }
     }

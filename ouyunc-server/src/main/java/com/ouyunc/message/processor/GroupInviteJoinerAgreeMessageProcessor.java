@@ -171,6 +171,9 @@ public final class GroupInviteJoinerAgreeMessageProcessor extends AbstractMessag
         } finally {
             if (lock.isHeldByCurrentThread()) {
                 lock.unlock();
+            }else {
+                log.error("Failed to unlock user invite join group request message: {}", packet);
+                MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.UN_LOCK_ERROR, "同意邀请加群请求锁释放失败", packet), true);
             }
         }
     }
