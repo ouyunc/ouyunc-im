@@ -156,6 +156,7 @@ public final class One2OneAgreeFriendRequestMessageProcessor extends AbstractMes
                 lock.unlock();
             }else {
                 log.error("Failed to unlock one-to-one agree friend request message: {}", packet);
+                MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.UN_LOCK_ERROR, "同意加好友请求解锁失败", packet), true);
             }
         }
 

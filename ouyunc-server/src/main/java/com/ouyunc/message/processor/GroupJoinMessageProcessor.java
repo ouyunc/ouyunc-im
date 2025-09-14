@@ -169,6 +169,9 @@ public final class GroupJoinMessageProcessor extends AbstractMessageProcessor<By
         } finally {
             if (lock.isHeldByCurrentThread()) {
                 lock.unlock();
+            }else {
+                log.error("Failed to unlock user join group request message: {}", packet);
+                MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.UN_LOCK_ERROR, "加群请求解锁失败", packet), true);
             }
         }
     }

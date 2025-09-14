@@ -679,6 +679,23 @@ public enum DefaultRepository implements Repository{
     public Set<String> groupManagerAndLeaderUsersIdentity(Packet packet) {
         return redisTemplate.opsForZSet().rangeByScore(CacheConstant.OUYUNC + CacheConstant.APP_KEY + packet.getMessage().getMetadata().getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_USERS + packet.getMessage().getTo(), GroupUserPost.MANAGER.value(), GroupUserPost.LEADER.value());
     }
+    /**
+     * 获取群管理员和群主的唯一标识
+     *
+     * @param packet
+     * @return
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Double> groupManagerAndLeaderUsersIdentityAndPost(Packet packet) {
+        Map<String, Double>  groupManagerAndLeaderUsersIdentityAndPost = new HashMap<>();
+        Set<ZSetOperations.TypedTuple<String>> tuples = redisTemplate.opsForZSet().rangeByScoreWithScores(CacheConstant.OUYUNC + CacheConstant.APP_KEY + packet.getMessage().getMetadata().getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_USERS + packet.getMessage().getTo(), GroupUserPost.MANAGER.value(), GroupUserPost.LEADER.value());
+        if (tuples != null && !tuples.isEmpty()) {
+            for (ZSetOperations.TypedTuple<String> tuple : tuples) {
+                groupManagerAndLeaderUsersIdentityAndPost.put(tuple.getValue(), tuple.getScore());
+            }
+        }
+        return groupManagerAndLeaderUsersIdentityAndPost;
+    }
 
     /**
      * 获取群管理员和群主的实体配置信息

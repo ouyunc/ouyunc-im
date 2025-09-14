@@ -147,6 +147,7 @@ public final class One2OneRefuseFriendRequestMessageProcessor extends AbstractMe
                 lock.unlock();
             }else {
                 log.error("one-to-one refuse friend request message lock is not held by current thread: {}", packet);
+                MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.UN_LOCK_ERROR, "拒绝加好友请求解锁失败", packet), true);
             }
         }
     }

@@ -172,6 +172,7 @@ public final class One2OneJoinFriendRequestMessageProcessor extends AbstractMess
                 lock.unlock();
             }else {
                 log.error("one-to-one join friend request message lock is not held by current thread: {}", packet);
+                MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.UN_LOCK_ERROR, "加好友请求解锁失败", packet), true);
             }
         }
 

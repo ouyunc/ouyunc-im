@@ -14,13 +14,13 @@ import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.domain.base.GroupRequestSession;
 import com.ouyunc.domain.constants.GroupRequestSessionWay;
 import com.ouyunc.domain.constants.RequestSessionProgress;
-import com.ouyunc.domain.entity.GroupUserEntity;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.validator.*;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.MapUtils;
 import org.redisson.api.RLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -127,31 +127,25 @@ public final class GroupRefuseMessageProcessor extends AbstractMessageProcessor<
                     return;
                 }
                 // 获取当前群的管理员和群主，进行加群消息的推送
-                Set<String> groupMannerOrLeaderUsersIdentitySet = repository().groupManagerAndLeaderUsersIdentity(packet);
-                if (CollectionUtils.isEmpty(groupMannerOrLeaderUsersIdentitySet)) {
+                Map<String, Double> groupMannerOrLeaderUsersIdentityAndPostMap = repository().groupManagerAndLeaderUsersIdentityAndPost(packet);
+                if (MapUtils.isEmpty(groupMannerOrLeaderUsersIdentityAndPostMap)) {
                     // 这个群里没有群主或者群管理员，群里面必须有且仅有一个群主
                     log.error("群组：{}, 不存在群主！群消息： {}", packet.getMessage().getTo(), packet);
                     MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群主和群管理员", packet), true);
                     return;
                 }
                 // 如果有群主或群管理员，则发送消息给群主或群管理员， 排除自己,如果返回false 说明处理人不是管理员
-                if (!groupMannerOrLeaderUsersIdentitySet.remove(message.getFrom())) {
+                if (!groupMannerOrLeaderUsersIdentityAndPostMap.containsKey(message.getFrom())) {
                     log.warn("处理人不是管理员或群主：{} 不允许处理", message.getFrom());
                     return;
                 }
-                // 获取发送人所属群成员信息
-                GroupUserEntity fromGroupUserEntity = repository().groupUserEntity(appKey, message.getTo(), message.getFrom());
-                if (fromGroupUserEntity == null) {
-                    log.error("群组：{}, 用户：{} 不存在，请检查数据！", message.getTo(), message.getFrom());
-                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, message.getFrom() + "不在群组中！", packet));
-                    return;
-                }
+                Double processorPost = groupMannerOrLeaderUsersIdentityAndPostMap.remove(message.getFrom());
                 // 设置进度
                 groupRequestSession.setProgress(RequestSessionProgress.REFUSING.value());
                 groupRequestSession.setProcessor(message.getFrom());
-                groupRequestSession.setProcessorPost(fromGroupUserEntity.getPost());
+                groupRequestSession.setProcessorPost(processorPost.intValue());
                 // 保存请求信息
-                if (!saveGroupRequestMessage(packet, groupMannerOrLeaderUsersIdentitySet, groupRequestSession)) {
+                if (!saveGroupRequestMessage(packet, groupMannerOrLeaderUsersIdentityAndPostMap.keySet(), groupRequestSession)) {
                     log.error("Failed to save  refuse group request message: {}", packet);
                     MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存拒绝加群请求消息异常!", packet), true);
                     return;
@@ -170,12 +164,12 @@ public final class GroupRefuseMessageProcessor extends AbstractMessageProcessor<
                                     MessageHelper.asyncSendMessage(packet, inviterOrJoinerLoginClientInfos);
                                 }
                                 // 如果有群主或群管理员，则发送消息给群主或群管理员
-                                for (String groupMannerOrLeaderUserIdentity : groupMannerOrLeaderUsersIdentitySet) {
+                                groupMannerOrLeaderUsersIdentityAndPostMap.forEach((groupMannerOrLeaderUserIdentity, post) -> {
                                     List<LoginClientInfo> toLoginClientInfos = ClientHelper.onlineAll(message.getMetadata().getAppKey(), groupMannerOrLeaderUserIdentity);
                                     if (CollectionUtils.isNotEmpty(toLoginClientInfos)) {
                                         MessageHelper.asyncSendMessage(packet, toLoginClientInfos);
                                     }
-                                }
+                                });
                                 // 处理成功则转到下个处理器
                                 ctx.fireChannelRead(packet);
                             } else {
@@ -196,6 +190,9 @@ public final class GroupRefuseMessageProcessor extends AbstractMessageProcessor<
         } finally {
             if (lock.isHeldByCurrentThread()) {
                 lock.unlock();
+            }else {
+                log.error("Failed to unlock user refuse group request message: {}", packet);
+                MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.UN_LOCK_ERROR, "处理拒绝加群请求解锁异常！", packet), true);
             }
         }
     }
