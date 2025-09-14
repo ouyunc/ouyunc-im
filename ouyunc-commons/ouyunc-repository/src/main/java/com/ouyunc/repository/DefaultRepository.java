@@ -972,7 +972,7 @@ public enum DefaultRepository implements Repository{
             redisTemplate.opsForValue().set(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.USER + identity, userEntity, NumberConstant.NUMBER_30 * MessageConstant.DAY_TIMESTAMP, TimeUnit.MILLISECONDS);
             return userEntity;
         } catch (EmptyResultDataAccessException e) {
-            log.error("用户不存在, identity: {}", identity);
+            log.warn("用户不存在, identity: {}", identity);
             return null;
         } catch (IncorrectResultSizeDataAccessException e) {
             log.error("同一个identity存在多个用户, identity: {}", identity);

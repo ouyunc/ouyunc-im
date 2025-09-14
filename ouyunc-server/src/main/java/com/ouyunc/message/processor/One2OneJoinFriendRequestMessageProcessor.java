@@ -170,6 +170,8 @@ public final class One2OneJoinFriendRequestMessageProcessor extends AbstractMess
         } finally {
             if (lock.isHeldByCurrentThread()) {
                 lock.unlock();
+            }else {
+                log.error("one-to-one join friend request message lock is not held by current thread: {}", packet);
             }
         }
 

@@ -29,6 +29,12 @@ public class ClientInfo implements Serializable {
 
 
     /**
+     * 消息设备间是否同步自己发送的消息，默认为false
+     */
+    private Boolean selfSync;
+
+
+    /**
      * 当前客户端所支持的可登录的设备类型，可以为空，如果为空则取该客户端所属appKey下的设备类型，注意，如果所支持的设备类型不为空，会进行校验，且值只能是appKey 下所支持设备类型的子集
      */
     private Collection<Byte> supportDeviceTypes;
@@ -41,6 +47,21 @@ public class ClientInfo implements Serializable {
         this.appKey = appKey;
         this.identity = identity;
         this.supportDeviceTypes = supportDeviceTypes;
+    }
+
+    public ClientInfo(String appKey, String identity, Boolean selfSync, Collection<Byte> supportDeviceTypes) {
+        this.appKey = appKey;
+        this.identity = identity;
+        this.selfSync = selfSync;
+        this.supportDeviceTypes = supportDeviceTypes;
+    }
+
+    public Boolean getSelfSync() {
+        return selfSync;
+    }
+
+    public void setSelfSync(Boolean selfSync) {
+        this.selfSync = selfSync;
     }
 
     public String getAppKey() {

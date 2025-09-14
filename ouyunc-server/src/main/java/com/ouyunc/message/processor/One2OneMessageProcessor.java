@@ -6,6 +6,7 @@ import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.MessageType;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
+import com.ouyunc.base.model.ClientInfo;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
@@ -159,10 +160,13 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
     private void deliverAndFireNext(ChannelHandlerContext ctx, Packet packet) {
         Message message = packet.getMessage();
         String appKey = message.getMetadata().getAppKey();
-        // 同步给自己
-        List<LoginClientInfo> fromSelfLoginClientInfos = ClientHelper.onlineAll(appKey, message.getFrom(), MessageServerContext.deviceType(appKey, packet.getDeviceType()));
-        if (CollectionUtils.isNotEmpty(fromSelfLoginClientInfos)) {
-            MessageHelper.asyncSendMessage(packet, fromSelfLoginClientInfos);
+        // 同步给自己,可以设置配置开关是否自我同步
+        ClientInfo clientInfo = MessageServerContext.localClientInfo(appKey, message.getFrom());
+        if (clientInfo != null && clientInfo.getSelfSync()) {
+            List<LoginClientInfo> fromSelfLoginClientInfos = ClientHelper.onlineAll(appKey, message.getFrom(), MessageServerContext.deviceType(appKey, packet.getDeviceType()));
+            if (CollectionUtils.isNotEmpty(fromSelfLoginClientInfos)) {
+                MessageHelper.asyncSendMessage(packet, fromSelfLoginClientInfos);
+            }
         }
         List<LoginClientInfo> toLoginClientInfos = ClientHelper.onlineAll(appKey, message.getTo());
         if (CollectionUtils.isEmpty(toLoginClientInfos)) {

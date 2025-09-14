@@ -116,7 +116,7 @@ public final class One2OneAgreeFriendRequestMessageProcessor extends AbstractMes
                     log.warn("不存在加好友请求记录或存在正在处理的好友请求，该消息忽略");
                     return;
                 }
-                // 如果是好友或者处理中或没有好友请求记录，直接返回
+                // 如果是好友或者处理中或没有好友请求记录，直接返回? 是否需要把缓存以及后续的逻辑走完,暂时不做清理
                 if (repository().isFriend(appKey, message.getFrom(), message.getTo())) {
                     log.warn("已经是好友, 请知悉; {}" ,packet);
                     return;
@@ -154,6 +154,8 @@ public final class One2OneAgreeFriendRequestMessageProcessor extends AbstractMes
         } finally {
             if (lock.isHeldByCurrentThread()) {
                 lock.unlock();
+            }else {
+                log.error("Failed to unlock one-to-one agree friend request message: {}", packet);
             }
         }
 

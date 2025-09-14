@@ -432,9 +432,15 @@ class Socket {
                     const message = this._deserializeMessage(messageBuffer, serializeAlgorithm);
 
                     resolve({
+                        protocol: protocol,
+                        version: version,
+                        deviceType: deviceType,
+                        networkType: networkType,
+                        encryptType: encryptType,
+                        serializeAlgorithm: serializeAlgorithm,
                         messageId,
                         messageType,
-                        withDraw: retain,
+                        retain: retain,
                         message
                     });
                 } catch (error) {
