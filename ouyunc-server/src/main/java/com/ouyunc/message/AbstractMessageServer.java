@@ -322,6 +322,7 @@ public abstract class AbstractMessageServer implements MessageServer {
             // 3 不能在这里调用System.exit()
             // 优雅关闭
             log.error("Message server 正在注销......");
+            MessageServerContext.publishEvent(new ServerStopEvent(this), false);
             if (bossGroup != null && workerGroup != null) {
                 bossGroup.shutdownGracefully();
                 workerGroup.shutdownGracefully();
