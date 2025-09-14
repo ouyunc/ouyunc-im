@@ -13,7 +13,7 @@ public class ServerStopEventListener implements MessageListener<ServerStopEvent>
     private static final Logger log = LoggerFactory.getLogger(ServerStopEventListener.class);
 
     /**
-     * 服务启动成功事件,
+     * 服务注销事件,
      * @param event
      */
     @Override
