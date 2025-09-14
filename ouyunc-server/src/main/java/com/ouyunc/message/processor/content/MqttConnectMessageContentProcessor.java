@@ -123,7 +123,7 @@ public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<In
             if (sessionExpiryIntervalProperty != null) {
                 sessionExpiryInterval = sessionExpiryIntervalProperty.value();
             }
-            MqttLoginClientInfo mqttLoginClientInfo = new MqttLoginClientInfo(MessageContext.messageProperties.getLocalServerAddress(), OnlineEnum.ONLINE, null, ClientHelper.calculateClientLoginExpireTime(keepAlive), ClientHelper.calculateClientHeartBeatTimeout(keepAlive), loginTimestamp, appKey, mqttConnectPayload.clientIdentifier(), DeviceTypeEnum.IOT, null, mqttConnectPayload.clientIdentifier(), signature, Encrypt.AsymmetricEncrypt.MD5.getValue(), keepAlive, loginTimestamp, enableWill, qos, version, isWillRetain, willMessage, willTopic, cleanSession, sessionExpiryInterval);
+            MqttLoginClientInfo mqttLoginClientInfo = new MqttLoginClientInfo(MessageContext.messageProperties.getLocalServerAddress(), OnlineEnum.ONLINE, null, ClientHelper.calculateClientLoginExpireTime(keepAlive), ClientHelper.calculateClientHeartBeatTimeout(keepAlive), loginTimestamp, appKey, mqttConnectPayload.clientIdentifier(), DeviceTypeEnum.M, null, mqttConnectPayload.clientIdentifier(), signature, Encrypt.AsymmetricEncrypt.MD5.getValue(), keepAlive, loginTimestamp, enableWill, qos, version, isWillRetain, willMessage, willTopic, cleanSession, sessionExpiryInterval);
             if (!validate(mqttLoginClientInfo)) {
                 MqttMessage connAckMessage = MqttMessageFactory.newMessage(
                         new MqttFixedHeader(MqttMessageType.CONNACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
@@ -132,7 +132,7 @@ public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<In
                 ctx.close();
                 return;
             }
-            String comboIdentity = IdentityUtil.generalComboIdentity(mqttLoginClientInfo.getAppKey(), mqttLoginClientInfo.getIdentity(), DeviceTypeEnum.IOT);
+            String comboIdentity = IdentityUtil.generalComboIdentity(mqttLoginClientInfo.getAppKey(), mqttLoginClientInfo.getIdentity(), DeviceTypeEnum.M);
             String clientLoginCacheKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + mqttLoginClientInfo.getAppKey() + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + comboIdentity;
             //如果之前已经登录（重复登录请求），这里判断是否已经登录过,同一个账号在同一个设备不能同时登录
             //1,从分布式缓存取出该登录用户

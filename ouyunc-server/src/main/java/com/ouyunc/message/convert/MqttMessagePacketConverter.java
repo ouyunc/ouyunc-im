@@ -96,7 +96,7 @@ public enum MqttMessagePacketConverter implements PacketConverter<MqttMessage>{
             }
             // 根据消息类型设置from 和 to
             Message message = new Message(from, MessageServerContext.serverProperties().getLocalServerAddress(), mqttMessageContentType.getType(), mqttMessageBase64Content , mqttFixedHeader.qosLevel().value(), TimeUtil.currentTimeMillis(), metadata);
-            return new Packet(protocolValue, protocolVersion, MessageServerContext.<Long>idGenerator().generateId(), DeviceTypeEnum.IOT.getValue(), NetworkEnum.NET_4G.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(), MqttMessageTypeEnum.MQTT.getType(), mqttVersion.protocolLevel(), message);
+            return new Packet(protocolValue, protocolVersion, MessageServerContext.<Long>idGenerator().generateId(), DeviceTypeEnum.M.getValue(), NetworkEnum.NET_4G.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(), MqttMessageTypeEnum.MQTT.getType(), mqttVersion.protocolLevel(), message);
         }
         return null;
     }

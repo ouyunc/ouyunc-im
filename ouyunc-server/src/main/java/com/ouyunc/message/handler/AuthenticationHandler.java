@@ -243,6 +243,8 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         }
         // 发送客户端成功登录事件
         MessageServerContext.publishEvent(new ClientLoginEvent(cacheLoginClientInfo, ctx, loginTimestamp), true);
+        // 取消该handle
+        ctx.pipeline().remove(this);
     }
 
     /***
