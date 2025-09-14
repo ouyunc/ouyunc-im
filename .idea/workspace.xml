@@ -4,7 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="" />
+    <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/QosC2SMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/QosC2SMessageProcessor.java" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -95,6 +98,7 @@
   </component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="D:\workspace\ouyunc-im\docs\6.5.1\sql" />
       <recent name="D:\workspace\ouyunc-im\docs\6.5.0" />
       <recent name="D:\workspace\ouyunc-im\docs\sql" />
       <recent name="D:\workspace\ouyunc-im" />
@@ -252,15 +256,7 @@
       <workItem from="1757640908287" duration="137000" />
       <workItem from="1757664340561" duration="6764000" />
       <workItem from="1757746480597" duration="21626000" />
-      <workItem from="1757833274628" duration="1384000" />
-    </task>
-    <task id="LOCAL-00053" summary="v6.5.0  移除文件表合并到系统文件表中">
-      <option name="closed" value="true" />
-      <created>1751941132343</created>
-      <option name="number" value="00053" />
-      <option name="presentableId" value="LOCAL-00053" />
-      <option name="project" value="LOCAL" />
-      <updated>1751941132343</updated>
+      <workItem from="1757833274628" duration="2982000" />
     </task>
     <task id="LOCAL-00054" summary="v6.5.0  添加群的限制">
       <option name="closed" value="true" />
@@ -646,7 +642,15 @@
       <option name="project" value="LOCAL" />
       <updated>1757834293610</updated>
     </task>
-    <option name="localTasksCounter" value="102" />
+    <task id="LOCAL-00102" summary="v6.5.0  添加群的限制1">
+      <option name="closed" value="true" />
+      <created>1757834808163</created>
+      <option name="number" value="00102" />
+      <option name="presentableId" value="LOCAL-00102" />
+      <option name="project" value="LOCAL" />
+      <updated>1757834808163</updated>
+    </task>
+    <option name="localTasksCounter" value="103" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
