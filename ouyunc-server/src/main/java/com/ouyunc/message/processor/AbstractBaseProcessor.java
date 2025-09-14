@@ -50,7 +50,7 @@ public abstract class AbstractBaseProcessor<T extends Number> implements Process
             // 如果是客户端模式，判断是否需要拦截（是否是重发消息），如果是重发消息且已经发送过（存储到离线消息中），则直接返回ack，否则构造正常消息，往下传递
             Packet dupPacket = JSON.parseObject(message.getContent(), Packet.class);
             // 判断是否已经在离线消息中, 如果已经发送过，返回true,否则返回false
-            if (repository().checkDup(dupPacket)) {
+            if (repository().checkDup(dupPacket, MessageServerContext.deviceType(message.getMetadata().getAppKey(), packet.getDeviceType()))) {
                 return true;
             }
             // 将元数据放入重发消息的packet中，否则会丢失相关信息

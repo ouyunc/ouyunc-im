@@ -149,6 +149,17 @@ public class SnowflakeUtil {
         return StringUtils.leftPad(str, NumberConstant.NUMBER_19, '0');
     }
 
+
+    /**
+     * 格式化long为19位,前面补0
+     * @param
+     * @return
+     */
+    public static String formatLong(String str) {
+        // 2. 左补0到19位：leftPad(原字符串, 目标长度, 补位字符)
+        return StringUtils.leftPad(str, NumberConstant.NUMBER_19, '0');
+    }
+
 //    public static void main(String[] args) {
 //        Set ids = new HashSet();
 //        long start = TimeUtil.currentTimeMillis();

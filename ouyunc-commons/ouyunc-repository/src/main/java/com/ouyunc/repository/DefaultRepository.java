@@ -157,10 +157,10 @@ public enum DefaultRepository implements Repository{
      */
     @SuppressWarnings("unchecked")
     @Override
-    public boolean checkDup(Packet packet) {
+    public boolean checkDup(Packet packet, DeviceType deviceType) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        Double score = redisTemplate.opsForZSet().score(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON  + CacheConstant.OFFLINE + message.getTo(), packet.getPacketId());
+        Double score = redisTemplate.opsForZSet().score(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON  + CacheConstant.OFFLINE + message.getTo() + CacheConstant.COLON + deviceType.getDeviceTypeName(), SnowflakeUtil.formatLong(packet.getPacketId()));
         // 如果分数不为 null，则表示值存在
         return !Objects.isNull(score);
     }
@@ -594,31 +594,6 @@ public enum DefaultRepository implements Repository{
 
 
 
-    /**
-     * 响应式 撤销消息，
-     * 注意：这里没有做判断，被撤销的消息是否属于发起撤销的客户端，一般情况下是需要做判断的
-     */
-    public Mono<Boolean> reactiveWithdrawMessage(Packet packet, String sessionId, Set<String> withdrawIdentitySet) {
-        Message message = packet.getMessage();
-        Metadata metadata = message.getMetadata();
-        // 获取需要撤销的消息id，（这里使用String类型接收）
-        List<Long> packetIds = JSON.parseArray(message.getContent(), Long.class);
-        // 如果没有被撤销的消息id，则直接返回false
-        // 批量撤回消息
-        List<String> keys = Lists.newArrayList();
-        keys.add(String.valueOf(withdrawIdentitySet.size()));
-        List<String> formatPacketIdArgs = Lists.newArrayList();
-        for (Long packetId : packetIds) {
-            formatPacketIdArgs.add(SnowflakeUtil.formatLong(packetId));
-            keys.add(buildMessageRedisKey(metadata.getAppKey(), packetId));
-            keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.SESSION + sessionId);
-            for (String withdrawIdentity : withdrawIdentitySet) {
-                keys.add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + withdrawIdentity);
-            }
-        }
-        Flux<Boolean> executeResult = reactiveStringRedisTemplate.execute(new DefaultRedisScript<>(LuaScriptEnum.BATCH_WITHDRAW_MESSAGE_LUA_SCRIPT.getScript(), Boolean.class), keys, formatPacketIdArgs);
-        return executeResult.all(result -> result);
-    }
 
 
 
@@ -799,9 +774,7 @@ public enum DefaultRepository implements Repository{
             List<Mono<Boolean>> operations = new ArrayList<>();
 
             for (DeviceType deviceType : toSupportDeviceTypes) {
-                String key = CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() +
-                        CacheConstant.COLON + CacheConstant.OFFLINE + to +
-                        CacheConstant.COLON + deviceType.getDeviceTypeName();
+                String key = CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + to + CacheConstant.COLON + deviceType.getDeviceTypeName();
 
                 byte[] keyBytes = stringSerializer.serialize(key);
                 byte[] valueBytes = stringSerializer.serialize(packetId);

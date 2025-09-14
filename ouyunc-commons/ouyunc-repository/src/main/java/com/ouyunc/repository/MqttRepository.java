@@ -3,10 +3,12 @@ package com.ouyunc.repository;
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MqConstant;
+import com.ouyunc.base.constant.enums.DeviceType;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.model.MqttTopicSubscriptionOption;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
+import com.ouyunc.base.utils.SnowflakeUtil;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.mq.kafka.KafkaFactory;
 import io.netty.handler.codec.mqtt.MqttMessage;
@@ -51,10 +53,10 @@ public enum MqttRepository implements Repository{
     }
 
     @Override
-    public boolean checkDup(Packet packet) {
+    public boolean checkDup(Packet packet, DeviceType deviceType) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        Double score = redisTemplate.opsForZSet().score(CacheConstant.OUYUNC  + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + message.getTo(), packet.getPacketId());
+        Double score = redisTemplate.opsForZSet().score(CacheConstant.OUYUNC  + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + message.getTo() + CacheConstant.COLON + deviceType.getDeviceTypeName(), SnowflakeUtil.formatLong(packet.getPacketId()));
         // 如果分数不为 null，则表示值存在
         return !Objects.isNull(score);
     }
