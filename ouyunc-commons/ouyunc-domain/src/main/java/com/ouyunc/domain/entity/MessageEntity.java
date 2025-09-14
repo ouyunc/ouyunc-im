@@ -24,7 +24,6 @@ public class MessageEntity implements Serializable {
      * 主键id
      */
     @Id
-    @TableId(type = IdType.ASSIGN_ID)
     private long id;
 
     /**
