@@ -102,7 +102,7 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
                     handleReadReceipt(ctx, packet);
                 } else {
                     // 是否需要发送，除当前登录设备的其他设备需要接收消息
-                    deliverAndFireNext(ctx, packet);
+                    deliverAndFireNext(ctx, packet, false);
                 }
             }else {
                 log.error("one 2 one 保存消息失败: {}", packet);
@@ -125,7 +125,7 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
                 repository().reactiveValidWithdrawMessage(packet, sessionId, true),
                 ()-> repository().savePacket2Mq(MqConstant.KAFKA_WITHDRAW_MESSAGE_TOPIC, sessionId, packet),
                 Mono.just(true),
-                this::deliverAndFireNext,
+                (ctx0, packet0)-> deliverAndFireNext(ctx0, packet0, true),
                 (exceptionEvent)-> MessageServerContext.publishEvent(exceptionEvent, true),
                 ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR)
                 .subscribe();
@@ -157,12 +157,12 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
      * @param ctx
      * @param packet
      */
-    private void deliverAndFireNext(ChannelHandlerContext ctx, Packet packet) {
+    private void deliverAndFireNext(ChannelHandlerContext ctx, Packet packet, Boolean forceSelfSync) {
         Message message = packet.getMessage();
         String appKey = message.getMetadata().getAppKey();
         // 同步给自己,可以设置配置开关是否自我同步
         ClientInfo clientInfo = MessageServerContext.localClientInfo(appKey, message.getFrom());
-        if (clientInfo != null && clientInfo.getSelfSync()) {
+        if (forceSelfSync || (clientInfo != null && clientInfo.getSelfSync())) {
             List<LoginClientInfo> fromSelfLoginClientInfos = ClientHelper.onlineAll(appKey, message.getFrom(), MessageServerContext.deviceType(appKey, packet.getDeviceType()));
             if (CollectionUtils.isNotEmpty(fromSelfLoginClientInfos)) {
                 MessageHelper.asyncSendMessage(packet, fromSelfLoginClientInfos);

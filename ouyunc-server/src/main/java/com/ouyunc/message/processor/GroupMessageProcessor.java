@@ -3,6 +3,7 @@ package com.ouyunc.message.processor;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.constant.enums.*;
+import com.ouyunc.base.model.ClientInfo;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
@@ -176,10 +177,14 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
      * @param packet
      */
     private void deliverAndFireNext(ChannelHandlerContext ctx, Packet packet, Set<String> groupUserIdentitySet) {
+        Message message = packet.getMessage();
         // 同步发送给自己
-        deliver2SelfAndFireNext(packet);
+        ClientInfo clientInfo = MessageServerContext.localClientInfo(message.getMetadata().getAppKey(), message.getFrom());
+        if (clientInfo != null && clientInfo.getSelfSync()) {
+            deliver2SelfAndFireNext(packet);
+        }
         // 发送给@ 的人
-        List<String> atList = packet.getMessage().getAt();
+        List<String> atList = message.getAt();
         if (CollectionUtils.isNotEmpty(atList)) {
             deliver2AtMessage(packet, atList, groupUserIdentitySet);
         }
