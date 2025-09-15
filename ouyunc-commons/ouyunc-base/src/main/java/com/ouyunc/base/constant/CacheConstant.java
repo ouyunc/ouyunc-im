@@ -130,6 +130,11 @@ public class CacheConstant {
      */
     public static final String SESSION = "session:";
 
+    /***
+     * 聊天会话
+     */
+    public static final String CHAT_SESSION = "chat-session:";
+
 
     /***
      * 好友请求
