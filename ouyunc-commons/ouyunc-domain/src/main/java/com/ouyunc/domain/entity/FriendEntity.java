@@ -5,8 +5,6 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
-import java.io.Serial;
-import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
@@ -15,9 +13,8 @@ import java.util.Objects;
 * @TableName ouyunc_im_friend
 */
 @TableName("ouyunc_im_friend")
-public class FriendEntity implements Serializable {
-    @Serial
-    private static final long serialVersionUID = 1L;
+public class FriendEntity extends SessionEntity {
+
     /**
     * 主键id
     */
@@ -96,6 +93,21 @@ public class FriendEntity implements Serializable {
         this.userId = userId;
         this.friendUserId = friendUserId;
         this.friendUserCode = friendUserCode;
+        this.friendNickName = friendNickName;
+        this.shield = shield;
+        this.way = way;
+        this.channel = channel;
+        this.joinTime = joinTime;
+        this.createTime = createTime;
+        this.updateTime = updateTime;
+    }
+
+    public FriendEntity(Long userId, String friendUserCode, Long friendUserId, String friendNickName, Integer shield, Integer way, Integer channel, Long joinTime, LocalDateTime createTime, LocalDateTime updateTime, Integer isTop, Integer isMute, Long id) {
+        super(isTop, isMute);
+        this.id = id;
+        this.userId = userId;
+        this.friendUserCode = friendUserCode;
+        this.friendUserId = friendUserId;
         this.friendNickName = friendNickName;
         this.shield = shield;
         this.way = way;
