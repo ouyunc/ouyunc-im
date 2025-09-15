@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
+import java.io.Serial;
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
@@ -12,8 +14,9 @@ import java.time.LocalDateTime;
 * @TableName ouyunc_im_group_user
 */
 @TableName("ouyunc_im_group_user")
-public class GroupUserEntity extends SessionEntity {
-
+public class GroupUserEntity implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
     /**
     * 主键id
     */
@@ -174,24 +177,6 @@ public class GroupUserEntity extends SessionEntity {
         this.groupOffset = groupOffset;
     }
 
-    public GroupUserEntity(Long id, Long groupId, String groupCode, String groupNickName, Long userId, String userCode, Integer post, String userNickName, Integer shield, Integer silence, Integer way, Integer channel, Long joinTime, Integer groupOffset, LocalDateTime createTime, Integer isTop, Integer isMute) {
-        super(isTop, isMute);
-        this.id = id;
-        this.groupId = groupId;
-        this.groupCode = groupCode;
-        this.groupNickName = groupNickName;
-        this.userId = userId;
-        this.userCode = userCode;
-        this.post = post;
-        this.userNickName = userNickName;
-        this.shield = shield;
-        this.silence = silence;
-        this.way = way;
-        this.channel = channel;
-        this.joinTime = joinTime;
-        this.groupOffset = groupOffset;
-        this.createTime = createTime;
-    }
 
     public Integer getWay() {
         return way;
