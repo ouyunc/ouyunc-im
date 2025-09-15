@@ -177,6 +177,7 @@ public class GroupUserEntity implements Serializable {
         this.groupOffset = groupOffset;
     }
 
+
     public Integer getWay() {
         return way;
     }
@@ -265,6 +266,13 @@ public class GroupUserEntity implements Serializable {
         this.silence = silence;
     }
 
+    public Integer getGroupOffset() {
+        return groupOffset;
+    }
+
+    public void setGroupOffset(Integer groupOffset) {
+        this.groupOffset = groupOffset;
+    }
 
     public LocalDateTime getCreateTime() {
         return createTime;

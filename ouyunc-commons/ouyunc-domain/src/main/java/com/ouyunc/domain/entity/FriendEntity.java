@@ -105,6 +105,8 @@ public class FriendEntity implements Serializable {
         this.updateTime = updateTime;
     }
 
+
+
     public Integer getWay() {
         return way;
     }

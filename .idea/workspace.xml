@@ -4,8 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="">
+    <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="v6.5.0  添加群的限制1">
+      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/SessionEntity.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/FriendEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/FriendEntity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/GroupUserEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/GroupUserEntity.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -23,7 +26,7 @@
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="6.5.0" />
+        <entry key="$PROJECT_DIR$" value="6.5.2" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -35,12 +38,13 @@
   <component name="MavenImportPreferences">
     <option name="generalSettings">
       <MavenGeneralSettings>
-        <option name="customMavenHome" value="C:\Program Files\apache-maven-3.6.3" />
+        <option name="customMavenHome" value="C:\Program Files\apache-maven-3.9.9" />
         <option name="localRepository" value="D:\repository" />
         <option name="mavenHomeTypeForPersistence" value="CUSTOM" />
-        <option name="userSettingsFile" value="C:\Program Files\apache-maven-3.6.3\conf\ali-settings.xml" />
+        <option name="userSettingsFile" value="C:\Program Files\apache-maven-3.9.9\conf\ali-settings.xml" />
       </MavenGeneralSettings>
     </option>
+    <option name="explicitlyEnabledProfiles" value="native" />
   </component>
   <component name="MavenRunner">
     <option name="skipTests" value="true" />
@@ -183,11 +187,11 @@
     </list>
     <recent_temporary>
       <list>
-        <item itemvalue="Application.ObjectCreationBenchmark" />
-        <item itemvalue="JavaScript Debug.client1.html (2)" />
         <item itemvalue="JavaScript Debug.client3.html" />
         <item itemvalue="JavaScript Debug.client2.html" />
+        <item itemvalue="JavaScript Debug.client1.html (2)" />
         <item itemvalue="JavaScript Debug.client13333333333.html" />
+        <item itemvalue="Application.ObjectCreationBenchmark" />
       </list>
     </recent_temporary>
   </component>
@@ -255,8 +259,7 @@
       <workItem from="1757640908287" duration="137000" />
       <workItem from="1757664340561" duration="6764000" />
       <workItem from="1757746480597" duration="21626000" />
-      <workItem from="1757833274628" duration="16816000" />
-      <workItem from="1757939873196" duration="2111000" />
+      <workItem from="1757833274628" duration="16496000" />
     </task>
     <task id="LOCAL-00063" summary="v6.5.0  添加群的限制">
       <option name="closed" value="true" />
@@ -644,11 +647,11 @@
     </task>
     <task id="LOCAL-00111" summary="v6.5.0  添加群的限制1">
       <option name="closed" value="true" />
-      <created>1757856610126</created>
+      <created>1757924464237</created>
       <option name="number" value="00111" />
       <option name="presentableId" value="LOCAL-00111" />
       <option name="project" value="LOCAL" />
-      <updated>1757856610127</updated>
+      <updated>1757924464237</updated>
     </task>
     <option name="localTasksCounter" value="112" />
     <servers />
