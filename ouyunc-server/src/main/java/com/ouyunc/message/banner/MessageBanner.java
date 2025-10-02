@@ -17,7 +17,7 @@ public class MessageBanner {
             "             |___/                                                       |___/      ";
 
 
-    private static final String VERSION = "\n OUYUNC-MESSAGE::v6.5.0 \n";
+    private static final String VERSION = "\n OUYUNC-MESSAGE::v6.5.1 \n";
 
     public static void printBanner(PrintStream printStream) {
         printStream.println(BANNER);
