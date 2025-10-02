@@ -1270,4 +1270,17 @@ public enum DefaultRepository implements Repository{
         });
         return saveMessageWithSessionOrOffline(packet, expireTime, messageKey, sessionKey, true,  offlineKeys,  (redisOperations)-> redisOperations.opsForValue().set(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_REQUEST_SESSION + groupRequestSession.getJoiner() + CacheConstant.COLON + groupRequestSession.getGroupId(), groupRequestSession, MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS), (ops, msg, ak, f, t) -> {});
     }
+
+
+
+    /**
+     * 设置最后一条消息为该会话
+     * @param sessionId
+     * @param lastPacket
+     */
+    @SuppressWarnings("unchecked")
+    public void saveLastMessageForSession(String sessionId, Packet lastPacket, long expireTime, TimeUnit timeUnit) {
+        // 获取会话中的最后一条消息id,这里不直接存packet，是为了节省redis 内存考虑，这里只存packetId
+        redisTemplate.opsForValue().set(CacheConstant.OUYUNC + CacheConstant.APP_KEY + lastPacket.getMessage().getMetadata().getAppKey() + CacheConstant.COLON + CacheConstant.SESSION + sessionId + CacheConstant.COLON + CacheConstant.LAST_MESSAGE, lastPacket.getPacketId(), expireTime, timeUnit);
+    }
 }

@@ -107,6 +107,12 @@ public class MessageConstant {
 
 
     /**
+     *  缓存最后一条会话消息key 过期时间默认30 天
+     */
+    public static final long CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP = NumberConstant.NUMBER_30 * MessageConstant.DAY_TIMESTAMP;
+
+
+    /**
      *  缓存请求会话key 过期时间默认30 天，与mongo 保持一致
      */
     public static final long CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP = NumberConstant.NUMBER_30 * MessageConstant.DAY_TIMESTAMP;

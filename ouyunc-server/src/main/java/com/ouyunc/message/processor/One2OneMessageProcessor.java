@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 
 /**
@@ -97,11 +98,13 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
                 // 3. 处理特殊消息类型, 注意这里都采用了无锁的方式
                 int contentType = packet.getMessage().getContentType();
                 if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
+                    repository().saveLastMessageForSession(IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo()),  packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
                     handleWithdrawMessage(ctx, packet);
                 } else if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {
                     handleReadReceipt(ctx, packet);
                 } else {
                     // 是否需要发送，除当前登录设备的其他设备需要接收消息
+                    repository().saveLastMessageForSession(IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo()),  packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
                     deliverAndFireNext(ctx, packet, false);
                 }
             }else {

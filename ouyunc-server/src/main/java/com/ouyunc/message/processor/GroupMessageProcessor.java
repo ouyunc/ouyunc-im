@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 
 /**
@@ -101,10 +102,12 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
                 // 4. 处理特殊消息类型
                 int contentType = packet.getMessage().getContentType();
                 if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
+                    repository().saveLastMessageForSession(packet.getMessage().getTo(),  packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
                     handleWithdrawMessage(ctx, packet, groupUserIdentitySet);
                 } else if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {
                     handleReadReceipt(ctx, packet, groupUserIdentitySet);
                 } else {
+                    repository().saveLastMessageForSession(packet.getMessage().getTo(),  packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
                     deliverAndFireNext(ctx, packet, groupUserIdentitySet);
                 }
             }

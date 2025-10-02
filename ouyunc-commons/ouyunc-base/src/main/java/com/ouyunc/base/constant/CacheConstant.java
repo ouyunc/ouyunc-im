@@ -183,4 +183,9 @@ public class CacheConstant {
      * 设备 类型device-type
      */
     public static final String DEVICE_TYPE = "device-type";
+
+    /***
+     * 最后一条消息
+     */
+    public static final String LAST_MESSAGE = "last-message";
 }
