@@ -43,11 +43,8 @@ public enum GroupSilenceValidator implements ReactiveValidator<Packet> {
         // 获取群组的信息
         Mono<GroupEntity> groupEntityMono = (Mono<GroupEntity>) reactiveRedisTemplate.opsForValue().get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.GROUP + to);
         return groupEntityMono
+                .switchIfEmpty(DefaultRepository.INSTANCE.getGroupEntityFromDatabasesReactive(appKey, to))
                 .flatMap(groupEntity -> {
-                    if (groupEntity == null) {
-                        // 从数据库在查一次吧
-                        groupEntity = DefaultRepository.INSTANCE.getGroupEntityFromDatabases(appKey, to);
-                    }
                     if (groupEntity == null) {
                         log.warn("群组 {} 不存在", to);
                         return Mono.just(true);
