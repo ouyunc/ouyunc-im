@@ -9,6 +9,7 @@ import com.ouyunc.domain.constants.GroupStatus;
 import com.ouyunc.domain.constants.YesOrNo;
 import com.ouyunc.domain.entity.GroupEntity;
 import com.ouyunc.domain.entity.GroupUserEntity;
+import com.ouyunc.repository.DefaultRepository;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,16 +44,22 @@ public enum GroupSilenceValidator implements ReactiveValidator<Packet> {
         Mono<GroupEntity> groupEntityMono = (Mono<GroupEntity>) reactiveRedisTemplate.opsForValue().get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.GROUP + to);
         return groupEntityMono
                 .flatMap(groupEntity -> {
-                    if (groupEntity != null) {
-                        if (GroupStatus.ABNORMAL.value().equals(groupEntity.getStatus())) {
-                            log.warn("{} 已经被平台封禁", to);
-                            return Mono.just(true);
-                        }else if (YesOrNo.YES.getCode().equals(groupEntity.getSilence())) {
-                            log.warn("该群 {} 已经全部禁言", to);
-                            return Mono.just(true);
-                        }
+                    if (groupEntity == null) {
+                        // 从数据库在查一次吧
+                        groupEntity = DefaultRepository.INSTANCE.getGroupEntityFromDatabases(appKey, to);
                     }
-                    // 在潘墩中获取群组用户信息，是否被单独禁言
+                    if (groupEntity == null) {
+                        log.warn("群组 {} 不存在", to);
+                        return Mono.just(true);
+                    }
+                    if (GroupStatus.ABNORMAL.value().equals(groupEntity.getStatus())) {
+                        log.warn("{} 已经被平台封禁", to);
+                        return Mono.just(true);
+                    }else if (YesOrNo.YES.getCode().equals(groupEntity.getSilence())) {
+                        log.warn("该群 {} 已经全部禁言", to);
+                        return Mono.just(true);
+                    }
+                    // 在缓存中获取群组用户信息，是否被单独禁言
                     Mono<GroupUserEntity> groupUserEntityMono = (Mono<GroupUserEntity>) reactiveRedisTemplate.opsForValue().get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_USERS_CONFIG + from + CacheConstant.COLON + message.getTo());
                     return groupUserEntityMono.flatMap(groupUserEntity -> {
                         if (groupUserEntity != null && YesOrNo.YES.getCode().equals(groupUserEntity.getSilence())) {

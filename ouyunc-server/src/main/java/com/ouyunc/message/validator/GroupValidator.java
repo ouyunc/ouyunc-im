@@ -7,6 +7,7 @@ import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.domain.constants.GroupStatus;
 import com.ouyunc.domain.entity.GroupEntity;
+import com.ouyunc.repository.DefaultRepository;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,20 +37,25 @@ public enum GroupValidator implements ReactiveValidator<Packet> {
         String to = message.getTo();
         Metadata metadata = message.getMetadata();
         Mono<GroupEntity> groupEntityMono = (Mono<GroupEntity>) reactiveRedisTemplate.opsForValue().get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP + to);
-        return groupEntityMono.flatMap(groupEntity -> {
-                    if (groupEntity != null && GroupStatus.NORMAL.value().equals(groupEntity.getStatus())) {
-                        return Mono.just(false);
+        return groupEntityMono
+                .switchIfEmpty(DefaultRepository.INSTANCE.getGroupEntityFromDatabasesReactive(metadata.getAppKey(), to))
+                .flatMap(groupEntity -> {
+                    if (groupEntity == null) {
+                        log.warn("群组 {}（appKey:{}）不存在或已被删除", to, metadata.getAppKey());
+                        return Mono.just(true);
                     }
-                    log.warn("{} 已经被平台封禁", to);
+                    // 处理 status 为 null 的场景，默认判定为封禁
+                    if (groupEntity.getStatus() == null || !GroupStatus.NORMAL.value().equals(groupEntity.getStatus())) {
+                        log.warn("群组 {}（appKey:{}）已被平台封禁，当前状态：{}", to, metadata.getAppKey(), groupEntity.getStatus());
+                        return Mono.just(true);
+                    }
+                    return Mono.just(false);
+                })
+                // 仅捕获流错误（如数据库查询失败），返回默认拦截结果
+                .onErrorResume(e -> {
+                    log.error("校验群组 {}（appKey:{}）封禁状态时发生异常", to, metadata.getAppKey(), e);
                     return Mono.just(true);
-                }).doOnNext(groupEntity -> {
-                    if (groupEntity == null) {
-                        log.warn("群组 {} 不存在或已被删除", to);
-                    }
-                }).doOnSuccess(groupEntity -> {
-                    if (groupEntity == null) {
-                        log.warn("群组 {} 缓存未找到，可能已被删除或不存在", to);
-                    }
-                }).defaultIfEmpty(true);
+                })
+                .defaultIfEmpty(true);
     }
 }

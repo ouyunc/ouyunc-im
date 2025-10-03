@@ -48,6 +48,8 @@ import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.*;
 import java.util.stream.Collectors;
@@ -58,6 +60,8 @@ import java.util.stream.Collectors;
  */
 public enum DefaultRepository implements Repository{
     INSTANCE;
+
+    private static final Executor dbExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
     private static final Logger log = LoggerFactory.getLogger(DefaultRepository.class);
     /**
@@ -968,9 +972,20 @@ public enum DefaultRepository implements Repository{
         if (groupEntity != null) {
             return groupEntity;
         }
+
+        return getGroupEntityFromDatabases(appKey, groupId );
+    }
+
+    /**
+     * 从数据库中获取群组实体
+     * @param appKey
+     * @param groupId
+     * @return
+     */
+    public GroupEntity getGroupEntityFromDatabases(String appKey, String groupId) {
         try {
             log.info("从数据库中获取群组实体, groupId: {}", groupId);
-            groupEntity = jdbcClient.sql(JdbcSqlConstant.MYSQL.SELECT_GROUP.sql())
+            GroupEntity groupEntity = jdbcClient.sql(JdbcSqlConstant.MYSQL.SELECT_GROUP.sql())
                     .params(groupId)
                     .query(GroupEntity.class)
                     .single();
@@ -988,6 +1003,38 @@ public enum DefaultRepository implements Repository{
         }
     }
 
+    /**
+     * 响应式封装：将同步数据库查询转换为 Mono<GroupEntity>
+     * 核心：通过 publishOn 切换到专用线程池执行同步任务，避免阻塞核心线程
+     */
+    public Mono<GroupEntity> getGroupEntityFromDatabasesReactive(String appKey, String groupId) {
+        // 1. 入参校验（提前拦截无效请求，避免线程池资源浪费）
+        if (StringUtils.isBlank(appKey) || StringUtils.isBlank(groupId)) {
+            log.warn("响应式查询群组：appKey 或 groupId 为空，appKey:{}, groupId:{}", appKey, groupId);
+            return Mono.empty(); // 空参数返回空流
+        }
+
+        // 2. 将同步方法封装为 Supplier（供给型函数，无参有返回值）
+        // 注意：Supplier 中的逻辑会在 publishOn 指定的线程池中执行
+        return Mono.fromSupplier(() -> getGroupEntityFromDatabases(appKey, groupId))
+                // 3. 切换到专用线程池执行同步任务（关键：避免阻塞 Reactor 核心线程）
+                .publishOn(Schedulers.fromExecutor(dbExecutor))
+                // 4. 响应式异常处理：将同步方法抛出的 RuntimeException 转换为响应式错误信号
+                .onErrorResume(e -> {
+                    log.error("响应式查询群组异常, appKey:{}, groupId:{}", appKey, groupId, e);
+                    // 返回错误信号，上游可通过 onError 捕获
+                    return Mono.error(new RuntimeException("响应式查询群组失败, groupId: " + groupId, e));
+                })
+                // 5. 日志记录：打印响应式流的结果（可选，用于调试）
+                .doOnSuccess(groupEntity -> {
+                    if (groupEntity == null) {
+                        log.debug("响应式查询群组：未找到群组, appKey:{}, groupId:{}", appKey, groupId);
+                    } else {
+                        log.debug("响应式查询群组：成功获取群组, appKey:{}, groupId:{}, 状态:{}",
+                                appKey, groupId, groupEntity.getStatus());
+                    }
+                });
+    }
 
     /**
      * 获取用户实体, 注意这里直接从缓存获取，不在走数据库，旨在提高性能，要保证缓存中存在该用户实体， 后来想想还是加上吧，哈哈
