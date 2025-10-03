@@ -964,7 +964,28 @@ public enum DefaultRepository implements Repository{
     public GroupEntity getGroupEntity(String appKey, String groupId) {
         // 从redis中获取群信息
         // 如果不为空则返回true，如果为空则不再从数据库中获取
-        return (GroupEntity) redisTemplate.opsForValue().get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.GROUP + groupId);
+        GroupEntity groupEntity =  (GroupEntity) redisTemplate.opsForValue().get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.GROUP + groupId);
+        if (groupEntity != null) {
+            return groupEntity;
+        }
+        try {
+            log.info("从数据库中获取群组实体, groupId: {}", groupId);
+            groupEntity = jdbcClient.sql(JdbcSqlConstant.MYSQL.SELECT_GROUP.sql())
+                    .params(groupId)
+                    .query(GroupEntity.class)
+                    .single();
+            redisTemplate.opsForValue().set(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.GROUP + groupEntity, groupEntity);
+            return groupEntity;
+        } catch (EmptyResultDataAccessException e) {
+            log.warn("群组不存在, groupId: {}", groupId);
+            return null;
+        } catch (IncorrectResultSizeDataAccessException e) {
+            log.error("同一个groupId存在多个群组, groupId: {}", groupId);
+            throw new RuntimeException("同一个groupIdy存在多个用于, groupId: " + groupId);
+        }catch (Exception e) {
+            log.error("获取群组实体异常, groupId: {}, 原因：{}", groupId, e.getMessage());
+            throw new RuntimeException("获取群组实体异常, groupId: " + groupId);
+        }
     }
 
 
