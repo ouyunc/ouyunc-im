@@ -31,7 +31,7 @@ public enum AppKeyValidator implements Validator<String> {
      */
     @Override
     public boolean verify(String appKey, ChannelHandlerContext ctx) {
-        Map<String, AppEntity> appKeys = redisTemplate.<String, AppEntity>opsForHash().entries(CacheConstant.OUYUNC + CacheConstant.APP_KEYS);
+        Map<String, AppEntity> appKeys = redisTemplate.<String, AppEntity>opsForHash().entries(CacheConstant.buildAppKeysCacheKey());
         if (MapUtils.isEmpty(appKeys) || !appKeys.containsKey(appKey)) {
             log.warn("appKey:{}不存在", appKey);
             return false;

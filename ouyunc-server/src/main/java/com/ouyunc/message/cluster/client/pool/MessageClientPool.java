@@ -73,7 +73,7 @@ public class MessageClientPool {
         for (String node : nodes) {
             // 如果将本机的ip+port写在配置文件中，则排除本身
             // 获取本机ip与端口号
-            String localServerAddress = loopBackAddress + MessageConstant.COLON_SPLIT + serverProperties.getPort();
+            String localServerAddress = loopBackAddress + MessageConstant.COLON + serverProperties.getPort();
             // 排除本机,将集群服务存放到服务注册表中
             if (!localServerAddress.equals(node) && !serverProperties.getLocalServerAddress().equals(node)) {
                 // 获取准备好的 channel pool，添加channel 池到缓存，此时还没有连接

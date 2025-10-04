@@ -157,7 +157,7 @@ public class MessageConstant {
     /**
      * 冒号分割符
      */
-    public static final String COLON_SPLIT = ":";
+    public static final String COLON = ":";
 
     /**
      * 请求头 X_REAL_IP key

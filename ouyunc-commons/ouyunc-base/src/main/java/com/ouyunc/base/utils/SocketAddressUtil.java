@@ -21,7 +21,7 @@ public class SocketAddressUtil {
         if (socketAddress == null) {
             return null;
         }
-        return socketAddress.getAddress().getHostAddress() + MessageConstant.COLON_SPLIT + socketAddress.getPort();
+        return socketAddress.getAddress().getHostAddress() + MessageConstant.COLON + socketAddress.getPort();
     }
 
     /**
@@ -34,7 +34,7 @@ public class SocketAddressUtil {
         if (hostPort == null) {
             return null;
         }
-        final String[] hostPortArr = hostPort.trim().split(MessageConstant.COLON_SPLIT);
+        final String[] hostPortArr = hostPort.trim().split(MessageConstant.COLON);
         // 封装成网络地址,远端地址
         return new InetSocketAddress(hostPortArr[0], Integer.parseInt(hostPortArr[1]));
     }

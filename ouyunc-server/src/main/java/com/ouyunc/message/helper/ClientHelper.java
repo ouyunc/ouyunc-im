@@ -61,16 +61,17 @@ public class ClientHelper {
                     @SuppressWarnings("unchecked")
                     @Override
                     public <K, V> Object execute(@NotNull RedisOperations<K, V> operations) throws DataAccessException {
-                        String key = CacheConstant.OUYUNC + CacheConstant.APP_KEY + loginClientInfo.getAppKey() + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + comboIdentity;
+                        String loginCacheKey = CacheConstant.buildLoginCacheKey(loginClientInfo.getAppKey(), comboIdentity);
                         long loginExpireTime = loginClientInfo.getLoginExpireTime();
+                        String appKeyConnectionsCacheKey = CacheConstant.buildConnectionsCacheKey(loginClientInfo.getAppKey());
                         if (loginExpireTime <= 0) {
-                            operations.opsForValue().set((K) key, (V) loginClientInfo);
+                            operations.opsForValue().set((K) loginCacheKey, (V) loginClientInfo);
                             // appKey 连接信息的score 如果是小于0 也就是 -1 则证明是不需要进行保活，一致保留到缓存中
-                            operations.opsForZSet().add((K) (CacheConstant.OUYUNC  + CacheConstant.APP_KEY + loginClientInfo.getAppKey() + CacheConstant.COLON + CacheConstant.CONNECTIONS), (V) comboIdentity, NumberConstant.NUMBER_NEGATIVE_1);
+                            operations.opsForZSet().add((K) (appKeyConnectionsCacheKey), (V) comboIdentity, NumberConstant.NUMBER_NEGATIVE_1);
                         }else {
-                            operations.opsForValue().set((K) key, (V) loginClientInfo, loginExpireTime, TimeUnit.SECONDS);
+                            operations.opsForValue().set((K) loginCacheKey, (V) loginClientInfo, loginExpireTime, TimeUnit.SECONDS);
                             // 添加appKey统计信息
-                            operations.opsForZSet().add((K) (CacheConstant.OUYUNC  + CacheConstant.APP_KEY + loginClientInfo.getAppKey() + CacheConstant.COLON + CacheConstant.CONNECTIONS), (V) comboIdentity, TimeUtil.currentTimeMillis() + loginExpireTime*MessageConstant.NUMBER_1000);
+                            operations.opsForZSet().add((K) (appKeyConnectionsCacheKey), (V) comboIdentity, TimeUtil.currentTimeMillis() + loginExpireTime*MessageConstant.NUMBER_1000);
                         }
                         return null;
                     }
@@ -159,7 +160,7 @@ public class ClientHelper {
         }
         // 如果不相等，则将没有查询到的数据通过缓存来获取
         // comboIdentitySet 中排除已经从本地获取结果的key
-        Set<String> remoteLoginClientIdentitySet = comboIdentitySet.parallelStream().map(comboIdentity -> CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + comboIdentity).collect(Collectors.toSet());
+        Set<String> remoteLoginClientIdentitySet = comboIdentitySet.parallelStream().map(comboIdentity -> CacheConstant.buildLoginCacheKey(appKey, comboIdentity)).collect(Collectors.toSet());
         Collection<LoginClientInfo> remoteCacheLoginClientInfos = MessageServerContext.remoteLoginClientInfoCache.getAll(remoteLoginClientIdentitySet);
         if (CollectionUtils.isNotEmpty(remoteCacheLoginClientInfos)) {
              // 筛选合法的数据
@@ -196,7 +197,7 @@ public class ClientHelper {
             }
         }
         // 从redis 获取登录信息
-        LoginClientInfo loginClientInfo = MessageServerContext.remoteLoginClientInfoCache.get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + comboIdentity);
+        LoginClientInfo loginClientInfo = MessageServerContext.remoteLoginClientInfoCache.get(CacheConstant.buildLoginCacheKey(appKey, comboIdentity));
         if (loginClientInfo != null && OnlineEnum.ONLINE.equals(loginClientInfo.getOnlineStatus())) {
             return loginClientInfo;
         }
@@ -211,7 +212,7 @@ public class ClientHelper {
      */
     public static long connections(String appKey) {
         RedisTemplate<String, Object> redisTemplate = CacheFactory.REDIS.instance();
-        Long connections = redisTemplate.opsForZSet().zCard(CacheConstant.OUYUNC  + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.CONNECTIONS);
+        Long connections = redisTemplate.opsForZSet().zCard(CacheConstant.buildConnectionsCacheKey(appKey));
         if (connections == null) {
             return NumberConstant.NUMBER_0;
         }
@@ -225,7 +226,7 @@ public class ClientHelper {
      */
     public static Set<String> appKeys() {
         RedisTemplate<String, String> redisTemplate = CacheFactory.REDIS.instance();
-        return redisTemplate.<String, AppEntity>opsForHash().keys(CacheConstant.OUYUNC + CacheConstant.APP_KEYS);
+        return redisTemplate.<String, AppEntity>opsForHash().keys(CacheConstant.buildAppKeysCacheKey());
     }
 
 
@@ -247,8 +248,8 @@ public class ClientHelper {
         List<Object> executedResultList = redisTemplate.executePipelined(new SessionCallback<>() {
             @Override
             public <K, V> Object execute(@NotNull RedisOperations<K, V> operations) throws DataAccessException {
-                for (Object appKey : appKeys) {
-                    operations.opsForZSet().zCard((K) (CacheConstant.OUYUNC  + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.CONNECTIONS));
+                for (String appKey : appKeys) {
+                    operations.opsForZSet().zCard((K) CacheConstant.buildConnectionsCacheKey(appKey));
                 }
                 return null;
             }

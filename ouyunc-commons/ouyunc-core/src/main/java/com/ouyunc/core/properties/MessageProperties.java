@@ -94,7 +94,7 @@ public class MessageProperties {
     }
 
     public String getLocalServerAddress() {
-        return getIp()  + MessageConstant.COLON_SPLIT + port;
+        return getIp()  + MessageConstant.COLON + port;
     }
 
     public void setIp(String ip) {

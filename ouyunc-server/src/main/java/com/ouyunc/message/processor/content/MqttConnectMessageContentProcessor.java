@@ -133,10 +133,9 @@ public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<In
                 return;
             }
             String comboIdentity = IdentityUtil.generalComboIdentity(mqttLoginClientInfo.getAppKey(), mqttLoginClientInfo.getIdentity(), DeviceTypeEnum.M);
-            String clientLoginCacheKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + mqttLoginClientInfo.getAppKey() + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + comboIdentity;
             //如果之前已经登录（重复登录请求），这里判断是否已经登录过,同一个账号在同一个设备不能同时登录
             //1,从分布式缓存取出该登录用户
-            LoginClientInfo cacheLoginClientInfo = MessageServerContext.remoteLoginClientInfoCache.get(clientLoginCacheKey);
+            LoginClientInfo cacheLoginClientInfo = MessageServerContext.remoteLoginClientInfoCache.get(CacheConstant.buildLoginCacheKey(mqttLoginClientInfo.getAppKey(), comboIdentity));
             //2,从本地用户注册表中取出该用户的channel
             ChannelHandlerContext bindCtx = MessageServerContext.localLoginClientRegisterTable.get(comboIdentity);
             // 如果还在当前服务登录的话，先关闭之前的连接(这里没有强制去通知让原来的连接进行跨服务下线，只是通过心跳让其自动感知下线)， 如果不在该服务器再次登录，也是需要关闭之前的channel,否则，如果当前登录绑定了信息，后面另外的channel 在关闭然后触发关闭事件，导致删除失败就会把缓存的登录信息给删掉
@@ -163,7 +162,7 @@ public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<In
                     String closingComboIdentity = IdentityUtil.generalComboIdentity(closingLocalLoginClientInfo.getAppKey(), closingLocalLoginClientInfo.getIdentity(), clientLoginDeviceName);
                     // 登录信息一致,才进行解绑，删除缓存信息
                     MessageServerContext.localLoginClientRegisterTable.delete(closingComboIdentity);
-                    String loginClientInfoCacheKey = CacheConstant.OUYUNC + CacheConstant.APP_KEY + closingLocalLoginClientInfo.getAppKey() + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + closingComboIdentity;
+                    String loginClientInfoCacheKey = CacheConstant.buildLoginCacheKey(closingLocalLoginClientInfo.getAppKey(), closingComboIdentity);
                     // 获取分布式锁, 这里使用锁的目的，可以参考登录处理器的分布式锁，防止重复解绑 LoginMessageProcessor
                     RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + closingLocalLoginClientInfo.getAppKey() + CacheConstant.COLON + closingComboIdentity);
                     try {

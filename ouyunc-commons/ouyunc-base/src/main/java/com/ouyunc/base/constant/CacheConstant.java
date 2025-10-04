@@ -188,4 +188,82 @@ public class CacheConstant {
      * 最后一条消息
      */
     public static final String LAST_MESSAGE = "last-message";
+
+
+    /**
+     * 构建基础 缓存key
+     */
+    private static String buildBaseCacheKey(String appKey) {
+        return OUYUNC + APP_KEY + appKey + COLON;
+    }
+
+    /**
+     * 构建appKeys 缓存key
+     */
+    public static String buildAppKeysCacheKey() {
+        return OUYUNC + APP_KEYS;
+    }
+
+    /**
+     * 构建appKey 下的identity 的客户端设置信息
+     */
+    public static String buildAppKeyClientInfoCacheKey(String appKey, String identity) {
+        return buildBaseCacheKey(appKey) + CLIENT_INFO + identity;
+    }
+
+
+
+    /**
+     * 构建 消息message  cache Key
+     */
+    public static String buildMessageCacheKey(String appKey, Long packetId) {
+        return buildBaseCacheKey(appKey) + MESSAGE + packetId;
+    }
+
+
+    /**
+     * 构建 会话中已读消息偏移量 cache key
+     */
+    public static String buildSessionReadMessageOffsetCacheKey(String appKey, Integer identityType, String from,  Byte deviceType, String to) {
+        return buildBaseCacheKey(appKey) + SESSION_READ_MESSAGE_OFFSET + identityType + COLON + from + COLON  + deviceType + COLON + to;
+    }
+
+    /**
+     * 构建 平台appKey链接数 cache key
+     */
+    public static String buildConnectionsCacheKey(String appKey) {
+        return buildBaseCacheKey(appKey) + CONNECTIONS;
+    }
+
+    /**
+     * 构建 appKey 登录 cache key
+     */
+    public static String buildLoginCacheKey(String appKey, String comboIdentity) {
+        return buildBaseCacheKey(appKey) + LOGIN + USER + comboIdentity;
+    }
+
+    /**
+     * 构建 user 用户 cache key
+     */
+    public static String buildUserCacheKey(String appKey, String identity) {
+        return buildBaseCacheKey(appKey) + USER + identity;
+    }
+
+    /**
+     * 构建 群组成员 cache key
+     */
+    public static String buildGroupUserCacheKey(String appKey, String groupId) {
+        return buildBaseCacheKey(appKey) + GROUP_USERS + groupId;
+    }
+
+    /**
+     * 构建 群组成员设置信息 cache key
+     */
+    public static String buildGroupUserConfigCacheKey(String appKey, String memberId, String groupId) {
+        return buildBaseCacheKey(appKey) + GROUP_USERS_CONFIG + memberId + COLON + groupId;
+    }
+
+
+
+
 }

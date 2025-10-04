@@ -343,7 +343,7 @@ public class MessageServerContext extends MessageContext {
                 return null;
             }else {
                 // 未缓存过，则去redis中获取
-                Object obj = cache.get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.CLIENT_INFO + identity);
+                Object obj = cache.get(CacheConstant.buildAppKeyClientInfoCacheKey(appKey,  identity));
                 if (obj instanceof ClientInfo clientInfo) {
                     localClientInfoCache.put(appKey + CacheConstant.COLON + identity, clientInfo);
                     return clientInfo;

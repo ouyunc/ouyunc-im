@@ -57,7 +57,7 @@ public enum GroupSilenceValidator implements ReactiveValidator<Packet> {
                         return Mono.just(true);
                     }
                     // 在缓存中获取群组用户信息，是否被单独禁言
-                    Mono<GroupUserEntity> groupUserEntityMono = (Mono<GroupUserEntity>) reactiveRedisTemplate.opsForValue().get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_USERS_CONFIG + from + CacheConstant.COLON + message.getTo());
+                    Mono<GroupUserEntity> groupUserEntityMono = (Mono<GroupUserEntity>) reactiveRedisTemplate.opsForValue().get(CacheConstant.buildGroupUserConfigCacheKey(appKey, from, to));
                     return groupUserEntityMono.flatMap(groupUserEntity -> {
                         if (groupUserEntity != null && YesOrNo.YES.getCode().equals(groupUserEntity.getSilence())) {
                             log.warn("{} 已经被 {} 禁言", from, to);

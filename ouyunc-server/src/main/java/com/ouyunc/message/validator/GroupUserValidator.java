@@ -36,7 +36,7 @@ public enum GroupUserValidator implements ReactiveValidator<Packet> {
         String to = message.getTo();
         Metadata metadata = message.getMetadata();
         // 判断是否是群成员
-        Mono<Double> scoreMono = reactiveRedisTemplate.opsForZSet().score(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP_USERS + to, from);
+        Mono<Double> scoreMono = reactiveRedisTemplate.opsForZSet().score(CacheConstant.buildGroupUserCacheKey(metadata.getAppKey(), to), from);
         return scoreMono.flatMap(score -> {
                     if (score != null) {
                         // 如果有分数，说明是群成员

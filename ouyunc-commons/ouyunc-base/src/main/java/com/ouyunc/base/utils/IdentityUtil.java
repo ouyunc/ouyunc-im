@@ -26,7 +26,7 @@ public class IdentityUtil {
      * 生成客户端绑定的组合唯一标识,如果设备名称为空则直接返回identity
      */
     public static String generalComboIdentity(String appKey, String identity, String deviceName) {
-        return appKey + MessageConstant.COLON_SPLIT + identity + MessageConstant.COLON_SPLIT + deviceName;
+        return appKey + MessageConstant.COLON + identity + MessageConstant.COLON + deviceName;
     }
     /**
      * 恢复原始id标识
@@ -36,7 +36,7 @@ public class IdentityUtil {
             log.error("恢复原始绑定标识失败!");
             throw new MessageException("恢复原始绑定标识失败！");
         }
-        return comboIdentity.split(MessageConstant.COLON_SPLIT, 3)[0];
+        return comboIdentity.split(MessageConstant.COLON, 3)[0];
     }
     /**
      * 恢复原始id标识
@@ -46,7 +46,7 @@ public class IdentityUtil {
             log.error("恢复原始绑定标识失败!");
             throw new MessageException("恢复原始绑定标识失败！");
         }
-        return comboIdentity.split(MessageConstant.COLON_SPLIT, 3)[1];
+        return comboIdentity.split(MessageConstant.COLON, 3)[1];
     }
 
 
@@ -58,7 +58,7 @@ public class IdentityUtil {
             log.error("恢复原始绑定标识失败!");
             throw new MessageException("恢复原始绑定标识失败！");
         }
-        return comboIdentity.split(MessageConstant.COLON_SPLIT, 3)[2];
+        return comboIdentity.split(MessageConstant.COLON, 3)[2];
     }
 
 
@@ -67,7 +67,7 @@ public class IdentityUtil {
      */
     public static String sessionId(String str1, String str2) {
         if (str1 != null && str2 != null) {
-            return str1.compareTo(str2) >= 0 ? str1 + MessageConstant.COLON_SPLIT + str2 : str2 + MessageConstant.COLON_SPLIT + str1;
+            return str1.compareTo(str2) >= 0 ? str1 + MessageConstant.COLON + str2 : str2 + MessageConstant.COLON + str1;
         }
         log.error("组合有序的字符串{} , {} 失败！", str1, str2);
         throw new MessageException("组合有序的字符串失败！");

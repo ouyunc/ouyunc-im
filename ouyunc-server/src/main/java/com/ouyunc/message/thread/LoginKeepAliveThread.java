@@ -53,8 +53,8 @@ public class LoginKeepAliveThread implements Runnable{
                                 if (loginClientInfo != null) {
                                     String comboIdentity = IdentityUtil.generalComboIdentity(loginClientInfo.getAppKey(), loginClientInfo.getIdentity(), loginClientInfo.getDeviceType());
                                     long loginExpireTime = loginClientInfo.getLoginExpireTime();
-                                    operations.expire((K) (CacheConstant.OUYUNC + CacheConstant.APP_KEY + loginClientInfo.getAppKey() + CacheConstant.COLON + CacheConstant.LOGIN + CacheConstant.USER + comboIdentity), loginExpireTime, TimeUnit.SECONDS);
-                                    operations.opsForZSet().add((K) (CacheConstant.OUYUNC  + CacheConstant.APP_KEY + loginClientInfo.getAppKey() + CacheConstant.COLON + CacheConstant.CONNECTIONS), (V) comboIdentity, TimeUtil.currentTimeMillis() + loginExpireTime* MessageConstant.NUMBER_1000);
+                                    operations.expire((K) CacheConstant.buildLoginCacheKey(loginClientInfo.getAppKey(), comboIdentity), loginExpireTime, TimeUnit.SECONDS);
+                                    operations.opsForZSet().add((K) CacheConstant.buildConnectionsCacheKey(loginClientInfo.getAppKey()), (V) comboIdentity, TimeUtil.currentTimeMillis() + loginExpireTime* MessageConstant.NUMBER_1000);
                                 }
                             }
                             return null;

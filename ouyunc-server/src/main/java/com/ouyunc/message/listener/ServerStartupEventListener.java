@@ -187,9 +187,7 @@ public class ServerStartupEventListener implements MessageListener<ServerStartup
     private void refreshAppKeyConnectionCount(RedisTemplate<String, Object> redisTemplate, String appKey, AtomicLong minScore, long maxScore) {
         while (minScore.get() < maxScore) {
             long currentMaxScore = Math.min(minScore.get() + MessageServerContext.serverProperties().getAppKeyConnectionCountRefreshStep(), maxScore);
-            redisTemplate.opsForZSet().removeRangeByScore(
-                    CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.CONNECTIONS,
-                    minScore.get(), currentMaxScore);
+            redisTemplate.opsForZSet().removeRangeByScore(CacheConstant.buildConnectionsCacheKey(appKey), minScore.get(), currentMaxScore);
             minScore.set(currentMaxScore);
         }
     }
