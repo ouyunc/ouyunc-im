@@ -306,7 +306,7 @@ public class CacheConstant {
     }
 
     /**
-     * 构建 群组成员设置信息 cache key
+     * 构建 群组成员在群中的配置信息 cache key
      */
     public static String buildGroupUserConfigCacheKey(String appKey, String memberId, String groupId) {
         return buildBaseCacheKey(appKey) + GROUP_USERS_CONFIG + memberId + COLON + groupId;
@@ -341,10 +341,10 @@ public class CacheConstant {
     }
 
     /**
-     * 构建 from 的黑名单 cache key
+     * 构建 identity 的黑名单 cache key
      */
-    public static String buildBlacklistCacheKey(String appKey, String from) {
-        return buildBaseCacheKey(appKey) + BLACKLIST + from;
+    public static String buildBlacklistCacheKey(String appKey, String identity) {
+        return buildBaseCacheKey(appKey) + BLACKLIST + identity;
     }
 
     /**
