@@ -9,6 +9,7 @@ import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.utils.MqttCodecUtil;
+import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.processor.AbstractBaseProcessor;
 import com.ouyunc.repository.MqttRepository;
 import io.netty.channel.ChannelHandlerContext;
@@ -55,7 +56,11 @@ public class MqttUnSubscribeMessageContentProcessor extends AbstractBaseProcesso
             MqttUnsubAckMessage unsubAckMessage = (MqttUnsubAckMessage) MqttMessageFactory.newMessage(
                     new MqttFixedHeader(MqttMessageType.UNSUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
                     MqttMessageIdVariableHeader.from(mqttUnsubscribeMessage.variableHeader().messageId()), null);
-            ctx.writeAndFlush(unsubAckMessage);
+            if (ctx.channel().eventLoop().inEventLoop()) {
+                MessageHelper.tryWriteObject(ctx.channel(), unsubAckMessage, packet, sendResult -> {});
+            } else {
+                ctx.channel().eventLoop().execute(() -> MessageHelper.tryWriteObject(ctx.channel(), unsubAckMessage, packet, sendResult -> {}));
+            }
         }else {
             log.error("MqttUnSubscribeMessageContentProcessor 取消订阅失败！");
         }

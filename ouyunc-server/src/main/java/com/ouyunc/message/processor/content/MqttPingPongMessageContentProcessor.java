@@ -5,6 +5,7 @@ import com.ouyunc.base.constant.enums.MessageContentType;
 import com.ouyunc.base.constant.enums.MqttMessageContentTypeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.utils.ChannelAttrUtil;
+import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.processor.AbstractBaseProcessor;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttFixedHeader;
@@ -35,6 +36,10 @@ public class MqttPingPongMessageContentProcessor extends AbstractBaseProcessor<I
         final MqttMessage mqttPongMessage = new MqttMessage(new MqttFixedHeader(MqttMessageType.PINGRESP, false,
                 MqttQoS.AT_MOST_ONCE, false, 0));
         // 发送pong
-        ctx.writeAndFlush(mqttPongMessage);
+        if (ctx.channel().eventLoop().inEventLoop()) {
+            MessageHelper.tryWriteObject(ctx.channel(), mqttPongMessage, packet, sendResult -> {});
+        } else {
+            ctx.channel().eventLoop().execute(() -> MessageHelper.tryWriteObject(ctx.channel(), mqttPongMessage, packet, sendResult -> {}));
+        }
     }
 }

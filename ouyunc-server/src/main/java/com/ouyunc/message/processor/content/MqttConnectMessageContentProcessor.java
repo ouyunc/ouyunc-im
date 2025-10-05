@@ -24,6 +24,7 @@ import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.handler.HeartBeatHandler;
 import com.ouyunc.message.handler.LoginKeepAliveHandler;
 import com.ouyunc.message.helper.ClientHelper;
+import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.processor.AbstractBaseProcessor;
 import com.ouyunc.repository.MqttRepository;
 import io.netty.channel.Channel;
@@ -75,7 +76,13 @@ public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<In
                     MqttMessage connAckMessage = MqttMessageFactory.newMessage(
                             new MqttFixedHeader(MqttMessageType.CONNACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
                             new MqttConnAckVariableHeader(MqttConnectReturnCode.CONNECTION_REFUSED_UNACCEPTABLE_PROTOCOL_VERSION, false), null);
-                    ctx.writeAndFlush(connAckMessage);
+                    if (ctx.channel().eventLoop().inEventLoop()) {
+                        if (!MessageHelper.tryWriteObject(ctx.channel(), connAckMessage, packet, (sendResult)->{})) {
+                            return;
+                        }
+                    } else {
+                        ctx.channel().eventLoop().execute(() -> MessageHelper.tryWriteObject(ctx.channel(), connAckMessage, packet,  (sendResult)->{}));
+                    }
                     ctx.close();
                     return;
                 } else if (cause instanceof MqttIdentifierRejectedException) {
@@ -83,7 +90,13 @@ public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<In
                     MqttMessage connAckMessage = MqttMessageFactory.newMessage(
                             new MqttFixedHeader(MqttMessageType.CONNACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
                             new MqttConnAckVariableHeader(MqttConnectReturnCode.CONNECTION_REFUSED_IDENTIFIER_REJECTED, false), null);
-                    ctx.writeAndFlush(connAckMessage);
+                    if (ctx.channel().eventLoop().inEventLoop()) {
+                        if (!MessageHelper.tryWriteObject(ctx.channel(), connAckMessage, packet, (sendResult)->{})) {
+                            return;
+                        }
+                    } else {
+                        ctx.channel().eventLoop().execute(() -> MessageHelper.tryWriteObject(ctx.channel(), connAckMessage, packet, (sendResult)->{}));
+                    }
                     ctx.close();
                     return;
                 }
@@ -95,7 +108,13 @@ public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<In
                 MqttMessage connAckMessage = MqttMessageFactory.newMessage(
                         new MqttFixedHeader(MqttMessageType.CONNACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
                         new MqttConnAckVariableHeader(MqttConnectReturnCode.CONNECTION_REFUSED_IDENTIFIER_REJECTED, false), null);
-                ctx.writeAndFlush(connAckMessage);
+                if (ctx.channel().eventLoop().inEventLoop()) {
+                    if (!MessageHelper.tryWriteObject(ctx.channel(), connAckMessage, packet , (sendResult)->{})) {
+                        return;
+                    }
+                } else {
+                    ctx.channel().eventLoop().execute(() -> MessageHelper.tryWriteObject(ctx.channel(), connAckMessage, packet, (sendResult)->{}));
+                }
                 ctx.close();
                 return;
             }
@@ -128,7 +147,13 @@ public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<In
                 MqttMessage connAckMessage = MqttMessageFactory.newMessage(
                         new MqttFixedHeader(MqttMessageType.CONNACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
                         new MqttConnAckVariableHeader(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED, false), null);
-                ctx.writeAndFlush(connAckMessage);
+                if (ctx.channel().eventLoop().inEventLoop()) {
+                    if (!MessageHelper.tryWriteObject(ctx.channel(), connAckMessage, packet, (sendResult)->{})) {
+                        return;
+                    }
+                } else {
+                    ctx.channel().eventLoop().execute(() -> MessageHelper.tryWriteObject(ctx.channel(), connAckMessage, packet, sendResult -> {}));
+                }
                 ctx.close();
                 return;
             }

@@ -11,6 +11,7 @@ import com.ouyunc.core.intercept.AbstractMessageInterceptor;
 import com.ouyunc.core.listener.event.SendFailEvent;
 import com.ouyunc.message.context.MessageServerContext;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoop;
 import io.netty.channel.pool.ChannelPool;
@@ -237,9 +238,9 @@ public class MessageHelper {
                     // 客户端将数据写出到中介管道中
                     EventLoop eventLoop = channel.eventLoop();
                     if (eventLoop.inEventLoop()) {
-                        writeAndFlush(channel, packet, sendCallback);
+                        tryWritePacket(channel, packet, sendCallback);
                     } else if (!eventLoop.isTerminated() && !eventLoop.isShutdown() && !eventLoop.isShuttingDown()) {
-                        eventLoop.execute(() -> writeAndFlush(channel, packet, sendCallback));
+                        eventLoop.execute(() -> tryWritePacket(channel, packet, sendCallback));
                     }else {
                         log.error("发送消息时，channel.eventLoop 被终止或关闭！");
                         // 发送结果
@@ -258,34 +259,81 @@ public class MessageHelper {
                     // 重新选择一个新的集群中的服务去路由，直到找到通的或没有任何一个连通的结束
                     exceptionHandle(packet, target, sendCallback);
                 }
-
+            }else {
+                log.error("发送消息时，获取channel异常！");
             }
         });
     }
 
 
     /**
-     * 写消息和刷新
-     * @param channel
-     * @param packet
-     * @param sendCallback
+     * 在写入前进行背压检查；当不可写时快速失败（Packet 版本，兼容旧调用）
      */
-    private static void writeAndFlush(Channel channel, Packet packet, SendCallback sendCallback) {
-        channel.writeAndFlush(packet).addListener((ChannelFutureListener) future -> {
-            if (future.isDone()) {
-                if (future.isSuccess()) {
-                    sendCallback.onCallback(SendResult.builder().sendStatus(SendStatusEnum.SEND_OK).packet(packet).build());
-                }else {
-                    // 发送结果
-                    SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(future.cause()).build();
-                    // 发送失败回调
-                    sendCallback.onCallback(sendResult);
-                    // 发布发送失败事件
-                    MessageServerContext.publishEvent(new SendFailEvent(sendResult), true);
-                }
-            }
-        });;
+    public static void tryWritePacket(Channel channel, Packet packet, SendCallback sendCallback) {
+        if (!validateWritable(channel, packet, sendCallback)) {
+            return;
+        }
+        addWriteListener(channel.writeAndFlush(packet), packet, sendCallback);
     }
+
+
+    /**
+     * 对任意出站对象执行写入（如已转换的 WS 帧），带背压检查与回调。
+     */
+    public static boolean tryWriteObject(Channel channel, Object msg, Packet packet, SendCallback sendCallback) {
+        if (!validateWritable(channel, packet, sendCallback)) {
+            return false;
+        }
+        addWriteListener(channel.writeAndFlush(msg), packet, sendCallback);
+        return true;
+    }
+
+    /**
+     * 通用校验：通道可用且可写
+     */
+    private static boolean validateWritable(Channel channel, Packet packet, SendCallback sendCallback) {
+        if (channel == null) {
+            SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(new MessageException("channel 为空，无法写入")).build();
+            sendCallback.onCallback(sendResult);
+            MessageServerContext.publishEvent(new SendFailEvent(sendResult), true);
+            return false;
+        }
+        if (!channel.isActive()) {
+            SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(new MessageException("channel 未激活，无法写入")).build();
+            sendCallback.onCallback(sendResult);
+            MessageServerContext.publishEvent(new SendFailEvent(sendResult), true);
+            return false;
+        }
+        if (!channel.isWritable()) {
+            log.warn("channel 不可写，丢弃或等待上层重试: {}", channel);
+            SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(new MessageException("channel 当前不可写")).build();
+            sendCallback.onCallback(sendResult);
+            MessageServerContext.publishEvent(new SendFailEvent(sendResult), true);
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * 统一写入回调封装
+     */
+    private static void addWriteListener(ChannelFuture future, Packet packet, SendCallback sendCallback) {
+        future.addListener((ChannelFutureListener) f -> {
+            if (!f.isDone()) {
+                log.error("写入失败，请检查写入通道是否正常！");
+                return;
+            }
+            if (f.isSuccess()) {
+                sendCallback.onCallback(SendResult.builder().sendStatus(SendStatusEnum.SEND_OK).packet(packet).build());
+            } else {
+                SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(f.cause()).build();
+                sendCallback.onCallback(sendResult);
+                MessageServerContext.publishEvent(new SendFailEvent(sendResult), true);
+            }
+        });
+    }
+
+
     /**
      * @Author fzx
      * @Description 异常数据的处理

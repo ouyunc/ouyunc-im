@@ -86,6 +86,17 @@ public class MessageConstant {
      */
     public static final boolean TRUE = true;
 
+
+    /**
+     * 默认的websocket 缓存大小
+     */
+    public static final int MAX_WEBSOCKET_FRAME_SIZE = 2 * 1024 * 1024; // 2MB
+
+    /**
+     * 默认的websocket 压缩阈值
+     */
+    public static final int WEBSOCKET_COMPRESSION_THRESHOLD = 4 * 1024; // 4KB
+
     /**
      * 最大处理消息数量，默认50
      */

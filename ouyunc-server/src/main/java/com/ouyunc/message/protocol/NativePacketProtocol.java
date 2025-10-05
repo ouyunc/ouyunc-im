@@ -16,11 +16,19 @@ import com.ouyunc.message.cluster.client.pool.MessageClientPool;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.convert.PacketConverter;
 import com.ouyunc.message.handler.*;
-import io.netty.channel.*;
+import com.ouyunc.message.helper.MessageHelper;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoop;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.handler.codec.http.websocketx.WebSocketFrameAggregator;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
-import io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketServerCompressionHandler;
+import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter;
+import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilterProvider;
+import io.netty.handler.codec.http.websocketx.extensions.WebSocketServerExtensionHandler;
+import io.netty.handler.codec.http.websocketx.extensions.compression.DeflateFrameServerExtensionHandshaker;
+import io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageDeflateServerExtensionHandshaker;
 import io.netty.handler.codec.mqtt.MqttDecoder;
 import io.netty.handler.codec.mqtt.MqttEncoder;
 import io.netty.util.AttributeKey;
@@ -43,7 +51,6 @@ public enum NativePacketProtocol implements PacketProtocol {
     // 处理ws/wss,这里相当于关键入口
     WS(ProtocolTypeEnum.WS.getProtocol(), ProtocolTypeEnum.WS.getProtocolVersion(), "websocket 协议，版本号为1") {
         private final EventExecutorGroup eventExecutorGroup = new DefaultEventExecutorGroup(Runtime.getRuntime().availableProcessors()* NumberConstant.NUMBER_2, new BasicThreadFactory.Builder().namingPattern("Ws-Protocol-Pool-%d").build());
-
         @Override
         public void doDispatcher(ChannelHandlerContext ctx, Map<String, Object> queryParamsMap) {
             // 这里可以根据业务提前做appKey 的验证和appKey下连接数的统计，直接从queryParamsMap 这里面取值即可
@@ -56,12 +63,28 @@ public enum NativePacketProtocol implements PacketProtocol {
             }
             ctx.channel().attr(protocolAttrKey).set(this);
             ctx.pipeline()
-                    //10 * 1024 * 1024
-                    .addLast(MessageConstant.WS_FRAME_AGGREGATOR_HANDLER, new WebSocketFrameAggregator(Integer.MAX_VALUE))
+                    // 限制最大聚合帧，避免大包拖垮内存
+                    .addLast(MessageConstant.WS_FRAME_AGGREGATOR_HANDLER, new WebSocketFrameAggregator(MessageConstant.MAX_WEBSOCKET_FRAME_SIZE))
                     // 开启压缩
-                    .addLast(MessageConstant.WS_COMPRESSION_HANDLER, new WebSocketServerCompressionHandler())
+                    .addLast(MessageConstant.WS_COMPRESSION_HANDLER, new WebSocketServerExtensionHandler(new PerMessageDeflateServerExtensionHandshaker(
+                            NumberConstant.NUMBER_6,      // 压缩等级：1(快)~9(高压缩)，6折中
+                            true,   // allowServerWindowSize: 允许协商窗口大小
+                            NumberConstant.NUMBER_15,     // preferredServerWindowSize: 2^15
+                            true,   // allowServerNoContext: 允许无上下文（更少内存）
+                            false,  // preferredServerNoContext: 默认保留上下文（压缩率更好）
+                            new WebSocketExtensionFilterProvider() {
+                                @Override
+                                public WebSocketExtensionFilter encoderFilter() {
+                                    return frame -> frame.content() != null && frame.content().readableBytes() < MessageConstant.WEBSOCKET_COMPRESSION_THRESHOLD; // 小于阈值跳过压缩
+                                }
+                                @Override
+                                public WebSocketExtensionFilter decoderFilter() {
+                                    return WebSocketExtensionFilter.NEVER_SKIP; // 总是解压
+                                }
+                            } // 小帧跳过压缩
+                    ),new DeflateFrameServerExtensionHandshaker()))
                     //10485760
-                    .addLast(MessageConstant.WS_SERVER_PROTOCOL_HANDLER, new WebSocketServerProtocolHandler(MessageServerContext.serverProperties().getWebsocketPath(), null, true, Integer.MAX_VALUE))
+                    .addLast(MessageConstant.WS_SERVER_PROTOCOL_HANDLER, new WebSocketServerProtocolHandler(MessageServerContext.serverProperties().getWebsocketPath(), null, true, MessageConstant.MAX_WEBSOCKET_FRAME_SIZE))
                     // 转换成包packet,内部消息传递都是以packet 进行处理
                     .addLast(MessageConstant.CONVERT_2_PACKET_HANDLER, new Convert2PacketHandler())
                     // 添加监控处理逻辑
@@ -185,9 +208,9 @@ public enum NativePacketProtocol implements PacketProtocol {
                         EventLoop eventLoop = channel.eventLoop();
                         if (eventLoop.inEventLoop()) {
                             // 如果当前线程是 EventLoop 线程，直接写入
-                            writeAndFlush(channel, packet, sendCallback);
+                            MessageHelper.tryWritePacket(channel, packet, sendCallback);
                         } else if (!eventLoop.isTerminated() && !eventLoop.isShutdown() && !eventLoop.isShuttingDown()) {
-                            eventLoop.execute(() -> writeAndFlush(channel, packet, sendCallback));
+                            eventLoop.execute(() -> MessageHelper.tryWritePacket(channel, packet, sendCallback));
                         }else {
                             log.error("发送消息时，channel.eventLoop 被终止或关闭； channelId: {}", channel.id().asShortText());
                             sendCallback.onCallback(SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(new MessageException("发送消息时，channel.eventLoop 被终止或关闭!")).build());
@@ -204,23 +227,6 @@ public enum NativePacketProtocol implements PacketProtocol {
             });
         }
 
-        /**
-         * 写入数据到channel中
-         * @param channel
-         * @param packet
-         * @param sendCallback
-         */
-        private void writeAndFlush(Channel channel, Packet packet, SendCallback sendCallback) {
-            channel.writeAndFlush(packet).addListener((ChannelFutureListener) future -> {
-                if (future.isDone()) {
-                    if (future.isSuccess()) {
-                        sendCallback.onCallback(SendResult.builder().sendStatus(SendStatusEnum.SEND_OK).packet(packet).build());
-                    } else {
-                        sendCallback.onCallback(SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(future.cause()).build());
-                    }
-                }
-            });
-        }
     },
 
 
@@ -373,12 +379,12 @@ public enum NativePacketProtocol implements PacketProtocol {
                         // 将消息写到channel,避免线程安全问题
                         EventLoop eventLoop = channel.eventLoop();
                         if (eventLoop.inEventLoop()) {
-                            // 如果当前线程是 EventLoop 线程，直接写入
-                            writeAndFlush(channel, msg, packet, sendCallback);
+                            MessageHelper.tryWriteObject(channel, msg, packet, sendCallback);
                         } else if (!eventLoop.isTerminated() && !eventLoop.isShutdown() && !eventLoop.isShuttingDown()) {
                             // 如果不是 EventLoop 线程，将任务提交到 EventLoop 线程中执行；
-                            // 注意：在 Netty 中使用 ctx.channel().eventLoop().execute() 向 EventLoop 提交任务时，队列里的任务并不一定非要等当前正在执行的方法结束后才开始执行，这取决于当前线程是否为 EventLoop 线程以及 EventLoop 的状态；具体可查看文档
-                            eventLoop.execute(() -> writeAndFlush(channel, msg, packet, sendCallback));
+                            eventLoop.execute(() -> {
+                                MessageHelper.tryWriteObject(channel, msg, packet, sendCallback);
+                            });
                         }else {
                             log.error("发送消息时，channel.eventLoop 被终止或关闭； channelId: {}", channel.id().asShortText());
                             SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(new MessageException("发送消息时，channel.eventLoop 被终止或关闭！")).build();
@@ -406,28 +412,5 @@ public enum NativePacketProtocol implements PacketProtocol {
             MessageServerContext.publishEvent(new SendFailEvent(sendResult), true);
         }
     }
-
-
-    /**
-     * 将消息写到channel
-     * @param channel
-     * @param msg
-     * @param packet
-     * @param sendCallback
-     */
-    private void writeAndFlush(Channel channel, Object msg, Packet packet, SendCallback sendCallback) {
-        channel.writeAndFlush(msg).addListener(future -> {
-            if (future.isDone()) {
-                if (future.isSuccess()) {
-                    // 回调成功
-                    sendCallback.onCallback(SendResult.builder().sendStatus(SendStatusEnum.SEND_OK).packet(packet).build());
-                } else {
-                    // 回调失败
-                    SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(future.cause()).build();
-                    sendCallback.onCallback(sendResult);
-                    MessageServerContext.publishEvent(new SendFailEvent(sendResult), true);
-                }
-            }
-        });
-    }
+    
 }

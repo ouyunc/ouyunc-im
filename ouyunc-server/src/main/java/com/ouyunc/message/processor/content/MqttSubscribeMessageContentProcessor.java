@@ -10,6 +10,7 @@ import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.utils.MqttCodecUtil;
+import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.processor.AbstractBaseProcessor;
 import com.ouyunc.repository.MqttRepository;
 import io.netty.channel.ChannelHandlerContext;
@@ -72,7 +73,11 @@ public class MqttSubscribeMessageContentProcessor extends AbstractBaseProcessor<
                         new MqttFixedHeader(MqttMessageType.SUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
                         MqttMessageIdVariableHeader.from(mqttSubscribeMessage.variableHeader().messageId()),
                         new MqttSubAckPayload(mqttQoSList));
-                ctx.writeAndFlush(subAckMessage);
+                if (ctx.channel().eventLoop().inEventLoop()) {
+                    MessageHelper.tryWriteObject(ctx.channel(), subAckMessage, packet, sendResult -> {});
+                } else {
+                    ctx.channel().eventLoop().execute(() -> MessageHelper.tryWriteObject(ctx.channel(), subAckMessage, packet, sendResult -> {}));
+                }
                 // 发布保留消息
                 topicSubscriptions.forEach(topicSubscription -> {
                     String topicFilter = topicSubscription.topicFilter();
@@ -87,7 +92,11 @@ public class MqttSubscribeMessageContentProcessor extends AbstractBaseProcessor<
                         new MqttFixedHeader(MqttMessageType.SUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
                         MqttMessageIdVariableHeader.from(mqttSubscribeMessage.variableHeader().messageId()),
                         new MqttSubAckPayload(MqttReasonCodes.SubAck.TOPIC_FILTER_INVALID));
-                ctx.writeAndFlush(subAckMessage);
+                if (ctx.channel().eventLoop().inEventLoop()) {
+                    MessageHelper.tryWriteObject(ctx.channel(), subAckMessage, packet, sendResult -> {});
+                } else {
+                    ctx.channel().eventLoop().execute(() -> MessageHelper.tryWriteObject(ctx.channel(), subAckMessage, packet, sendResult -> {}));
+                }
                 ctx.close();
             }
         }else {
