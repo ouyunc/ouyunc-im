@@ -101,7 +101,7 @@ public final class One2OneRefuseFriendRequestMessageProcessor extends AbstractMe
         String appKey = message.getMetadata().getAppKey();
         String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
         // 加锁
-        RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIEND_REQUEST + sessionId);
+        RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.buildFriendRequestLockCacheKey(appKey, sessionId));
         try {
             if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
                 // 获取请求会话

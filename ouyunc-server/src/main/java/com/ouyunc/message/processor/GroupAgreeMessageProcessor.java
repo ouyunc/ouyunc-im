@@ -104,7 +104,7 @@ public final class GroupAgreeMessageProcessor extends AbstractMessageProcessor<B
         }
         String appKey = message.getMetadata().getAppKey();
         // 加锁
-        RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.GROUP_REQUEST + content.getIdentity() + CacheConstant.COLON + message.getTo());
+        RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.buildGroupRequestLockCacheKey(appKey, content.getIdentity(), message.getTo()));
         try {
             if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
                 // 获取请求会话

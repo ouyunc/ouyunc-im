@@ -5,6 +5,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.ouyunc.base.constant.CacheConstant;
+import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.DeviceType;
 import com.ouyunc.base.constant.enums.DisruptorEventProducerEnum;
@@ -336,19 +337,19 @@ public class MessageServerContext extends MessageContext {
      */
     public static ClientInfo localClientInfo(String appKey, String identity) {
         if (StringUtils.isNotBlank(identity)) {
-            Serializable cacheData = localClientInfoCache.get(appKey + CacheConstant.COLON + identity);
+            Serializable cacheData = localClientInfoCache.get(CacheConstant.buildLocalClientInfoCacheKey(appKey, identity));
             if (cacheData instanceof ClientInfo clientInfo) {
                 return clientInfo;
             }else if (cacheData instanceof Boolean) {
                 return null;
             }else {
                 // 未缓存过，则去redis中获取
-                Object obj = cache.get(CacheConstant.buildAppKeyClientInfoCacheKey(appKey,  identity));
+                Object obj = cache.get(CacheConstant.buildRemoteClientInfoCacheKey(appKey,  identity));
                 if (obj instanceof ClientInfo clientInfo) {
-                    localClientInfoCache.put(appKey + CacheConstant.COLON + identity, clientInfo);
+                    localClientInfoCache.put(CacheConstant.buildLocalClientInfoCacheKey(appKey, identity), clientInfo);
                     return clientInfo;
                 }else {
-                    localClientInfoCache.put(appKey + CacheConstant.COLON + identity, Boolean.TRUE);
+                    localClientInfoCache.put(CacheConstant.buildLocalClientInfoCacheKey(appKey, identity), Boolean.TRUE);
                     log.warn("客户端: {} 登录信息未缓存,或类型转换异常：{}", identity, obj);
                 }
             }

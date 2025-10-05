@@ -52,7 +52,7 @@ public class ClientHelper {
         String comboIdentity = IdentityUtil.generalComboIdentity(loginClientInfo.getAppKey(), loginClientInfo.getIdentity(), loginClientInfo.getDeviceType());
         MessageServerContext.localLoginClientRegisterTable.put(comboIdentity, ctx);
         // 使用分布式锁来处理重复登录
-        RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + loginClientInfo.getAppKey() + CacheConstant.COLON + comboIdentity);
+        RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.buildIdentityBindOrUnbindLockCacheKey(loginClientInfo.getAppKey(), comboIdentity));
         try {
             if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
                 // 客户端登录信息存入缓存

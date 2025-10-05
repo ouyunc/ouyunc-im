@@ -174,7 +174,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                 MessageServerContext.localLoginClientRegisterTable.delete(closingComboIdentity);
                 String loginClientInfoCacheKey = CacheConstant.buildLoginCacheKey(closingLocalloginClientInfo.getAppKey(), closingComboIdentity);
                 // 获取分布式锁, 这里使用锁的目的，可以参考登录处理器的分布式锁，防止重复解绑 LoginMessageProcessor
-                RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.OUYUNC + CacheConstant.LOCK + CacheConstant.APP_KEY + closingLocalloginClientInfo.getAppKey() + CacheConstant.COLON + closingComboIdentity);
+                RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.buildIdentityBindOrUnbindLockCacheKey(closingLocalloginClientInfo.getAppKey(), closingComboIdentity));
                 try {
                     if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
                         LoginClientInfo closingRemoteLoginClientInfo = MessageServerContext.remoteLoginClientInfoCache.get(loginClientInfoCacheKey);

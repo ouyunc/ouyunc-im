@@ -31,12 +31,13 @@ public enum GroupValidator implements ReactiveValidator<Packet> {
      * @author fzx
      * @description 校验是否是在群是否被封禁，平台封禁返回true, 否则返回false
      */
+    @SuppressWarnings("unchecked")
     @Override
     public Mono<Boolean> verify(Packet packet, ChannelHandlerContext ctx) {
         Message message = packet.getMessage();
         String to = message.getTo();
         Metadata metadata = message.getMetadata();
-        Mono<GroupEntity> groupEntityMono = (Mono<GroupEntity>) reactiveRedisTemplate.opsForValue().get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.GROUP + to);
+        Mono<GroupEntity> groupEntityMono = (Mono<GroupEntity>) reactiveRedisTemplate.opsForValue().get(CacheConstant.buildGroupCacheKey(metadata.getAppKey(), to));
         return groupEntityMono
                 .switchIfEmpty(DefaultRepository.INSTANCE.getGroupEntityFromDatabasesReactive(metadata.getAppKey(), to))
                 .flatMap(groupEntity -> {

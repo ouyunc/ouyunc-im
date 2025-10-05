@@ -56,7 +56,7 @@ public enum MqttRepository implements Repository{
     public boolean checkDup(Packet packet, DeviceType deviceType) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        Double score = redisTemplate.opsForZSet().score(CacheConstant.OUYUNC  + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.OFFLINE + message.getTo() + CacheConstant.COLON + deviceType.getDeviceTypeName(), SnowflakeUtil.formatLong(packet.getPacketId()));
+        Double score = redisTemplate.opsForZSet().score(CacheConstant.buildOfflineCacheKey(metadata.getAppKey(), message.getTo(), deviceType.getDeviceTypeName()), SnowflakeUtil.formatLong(packet.getPacketId()));
         // 如果分数不为 null，则表示值存在
         return !Objects.isNull(score);
     }
@@ -84,7 +84,7 @@ public enum MqttRepository implements Repository{
             @Override
             public <K, V> Object execute(RedisOperations<K, V> operations) throws DataAccessException {
                 // 删除订阅关系
-                topicFilterList.forEach(topicFilter -> operations.opsForHash().delete((K) (CacheConstant.OUYUNC +  CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.MQTT + CacheConstant.TOPIC + topicFilter),  comboIdentity));
+                topicFilterList.forEach(topicFilter -> operations.opsForHash().delete((K) (CacheConstant.buildMqttTopicFilterCacheKey(appKey, topicFilter)),  comboIdentity));
                 return null;
             }
         });
@@ -100,12 +100,12 @@ public enum MqttRepository implements Repository{
             return;
         }
         String[] topicFilterArray = topicSubscriptionOptionList.parallelStream().map(MqttTopicSubscriptionOption::getTopicFilter).toArray(String[]::new);
-        redisTemplate.opsForSet().add(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.MQTT + CacheConstant.TOPIC_LIST, topicFilterArray);
+        redisTemplate.opsForSet().add(CacheConstant.buildMqttTopicListCacheKey(appKey), topicFilterArray);
         redisTemplate.executePipelined(new SessionCallback<>() {
             @Override
             public <K, V> Object execute(RedisOperations<K, V> operations) throws DataAccessException {
                 // 保存订阅关系
-                topicSubscriptionOptionList.forEach(topicSubscriptionOption -> operations.opsForHash().putIfAbsent((K) (CacheConstant.OUYUNC +  CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.MQTT + CacheConstant.TOPIC + topicSubscriptionOption.getTopicFilter()),  comboIdentity, topicSubscriptionOption));
+                topicSubscriptionOptionList.forEach(topicSubscriptionOption -> operations.opsForHash().putIfAbsent((K) (CacheConstant.buildMqttTopicFilterCacheKey(appKey, topicSubscriptionOption.getTopicFilter())),  comboIdentity, topicSubscriptionOption));
                 return null;
             }
         });

@@ -38,7 +38,7 @@ public class RemoveOfflineListener implements MessageListener<RemoveOfflineEvent
             String from = message.getFrom();
             Metadata metadata = message.getMetadata();
             DeviceType deviceType = MessageServerContext.deviceType(metadata.getAppKey(), packet.getDeviceType());
-            stringRedisTemplate.opsForZSet().remove(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON +  CacheConstant.OFFLINE  +  from + CacheConstant.COLON + deviceType.getDeviceTypeName(), SnowflakeUtil.formatLong(message.getContent()));
+            stringRedisTemplate.opsForZSet().remove(CacheConstant.buildOfflineCacheKey(metadata.getAppKey(), from, deviceType.getDeviceTypeName()), SnowflakeUtil.formatLong(message.getContent()));
         }
     }
 

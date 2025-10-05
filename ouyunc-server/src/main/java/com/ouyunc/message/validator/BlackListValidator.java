@@ -34,7 +34,7 @@ public enum BlackListValidator implements ReactiveValidator<Packet> {
         Message message = packet.getMessage();
         String from = message.getFrom();
         Metadata metadata = message.getMetadata();
-        Mono<Long> joinTimestampMono = reactiveRedisTemplate.<String, Long>opsForHash().get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + metadata.getAppKey() + CacheConstant.COLON + CacheConstant.BLACKLIST + message.getTo(), message.getFrom());
+        Mono<Long> joinTimestampMono = reactiveRedisTemplate.<String, Long>opsForHash().get(CacheConstant.buildBlacklistCacheKey(metadata.getAppKey(), message.getTo()), message.getFrom());
         return joinTimestampMono
                 .map(joinTimestamp -> {
                     if (joinTimestamp != null && joinTimestamp > 0) {

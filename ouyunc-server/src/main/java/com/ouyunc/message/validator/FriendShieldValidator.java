@@ -36,7 +36,7 @@ public enum FriendShieldValidator implements ReactiveValidator<Packet> {
         String to = message.getTo();
         Metadata metadata = message.getMetadata();
         String appKey = metadata.getAppKey();
-        Mono<FriendEntity> friendEntityMono = reactiveRedisTemplate.opsForValue().get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.FRIENDS_CONFIG + from + CacheConstant.COLON + to);
+        Mono<FriendEntity> friendEntityMono = reactiveRedisTemplate.opsForValue().get(CacheConstant.buildFriendsConfigCacheKey(appKey, from, to));
         return friendEntityMono
                 .flatMap(friendEntity -> {
                     if (friendEntity != null && YesOrNo.YES.getCode().equals(friendEntity.getShield())) {

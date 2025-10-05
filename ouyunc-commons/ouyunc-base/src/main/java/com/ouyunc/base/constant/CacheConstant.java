@@ -9,90 +9,90 @@ public class CacheConstant {
     /***
      * 冒号
      */
-    public static final String COLON  = ":";
+    private static final String COLON  = ":";
 
     /***
      * ouyunc 公共前缀
      */
-    public static final String OUYUNC = MessageConstant.OUYUNC + COLON;
+    private static final String OUYUNC = MessageConstant.OUYUNC + COLON;
 
     /***
      * 所有的appKey
      */
-    public static final String APP_KEYS = "app-keys";
+    private static final String APP_KEYS = "app-keys";
 
     /***
      * 平台的 唯一标识key 公共前缀
      */
-    public static final String APP_KEY = "app-key:";
+    private static final String APP_KEY = "app-key:";
 
     /***
      * appKey 下的identity 的 客户端信息
      */
-    public static final String CLIENT_INFO = "client-info:";
+    private static final String CLIENT_INFO = "client-info:";
 
     /***
      * 消息缓存公共前缀
      */
-    public static final String MESSAGE = "message:";
+    private static final String MESSAGE = "message:";
 
     /***
      * 已读消息缓存公共前缀
      */
-    public static final String READ_MESSAGE = "read-message:";
+    private static final String READ_MESSAGE = "read-message:";
 
     /***
      * 会话已读消息偏移量缓存公共前缀
      */
-    public static final String SESSION_READ_MESSAGE_OFFSET = "session-read-message-offset:";
+    private static final String SESSION_READ_MESSAGE_OFFSET = "session-read-message-offset:";
 
     /***
      * 平台appKey链接数
      */
-    public static final String CONNECTIONS = "connections";
+    private static final String CONNECTIONS = "connections";
 
     /***
      * 锁
      */
-    public static final String LOCK = "lock:";
+    private static final String LOCK = "lock:";
 
     /***
      * 登录
      */
-    public static final String LOGIN = "login:";
+    private static final String LOGIN = "login:";
 
     /***
      * 用户
      */
-    public static final String USER = "user:";
+    private static final String USER = "user:";
 
     /***
      * 群组绑定的用户
      */
-    public static final String GROUP_USERS = "group-users:";
+    private static final String GROUP_USERS = "group-users:";
 
     /***
      * 群成员的信息配置
      */
-    public static final String GROUP_USERS_CONFIG = "group-users-config:";
+    private static final String GROUP_USERS_CONFIG = "group-users-config:";
 
 
     /***
      * 好友列表
      */
-    public static final String FRIENDS = "friends:";
+    private static final String FRIENDS = "friends:";
 
 
     /***
      * 配置， 我的好友信息的配置
      */
-    public static final String FRIENDS_CONFIG = "friends-config:";
+    private static final String FRIENDS_CONFIG = "friends-config:";
 
 
     /***
      * 用户-群列表
      */
-    public static final String GROUPS = "groups:";
+    private static final String GROUPS = "groups:";
 
 
 
@@ -100,94 +100,94 @@ public class CacheConstant {
     /***
      * 群
      */
-    public static final String GROUP = "group:";
+    private static final String GROUP = "group:";
 
 
     /***
      * 发送方
      */
-    public static final String FROM = "from:";
+    private static final String FROM = "from:";
 
     /***
      * 接收方
      */
-    public static final String TO = "to:";
+    private static final String TO = "to:";
 
 
     /***
      * 黑名单
      */
-    public static final String BLACKLIST = "blacklist:";
+    private static final String BLACKLIST = "blacklist:";
 
 
     /***
      * 离线
      */
-    public static final String OFFLINE = "offline:";
+    private static final String OFFLINE = "offline:";
 
     /***
      * 会话
      */
-    public static final String SESSION = "session:";
+    private static final String SESSION = "session:";
 
     /***
      * 聊天会话
      */
-    public static final String CHAT_SESSION = "chat-session:";
+    private static final String CHAT_SESSION = "chat-session:";
 
 
     /***
      * 好友请求
      */
-    public static final String FRIEND_REQUEST = "friend-request:";
+    private static final String FRIEND_REQUEST = "friend-request:";
 
     /***
      * 正在处理中的好友请求会话标识
      */
-    public static final String FRIEND_REQUEST_SESSION = "friend-request-session:";
+    private static final String FRIEND_REQUEST_SESSION = "friend-request-session:";
 
     /***
      * 正在处理中的群请求会话标识
      */
-    public static final String GROUP_REQUEST_SESSION = "group-request-session:";
+    private static final String GROUP_REQUEST_SESSION = "group-request-session:";
 
     /***
      * 群请求
      */
-    public static final String GROUP_REQUEST = "groups-request:";
+    private static final String GROUP_REQUEST = "groups-request:";
 
 
     /***
      * 群用户请求
      */
-    public static final String GROUP_USER_REQUEST = "group-users-request:";
+    private static final String GROUP_USER_REQUEST = "group-users-request:";
 
 
     /***
      * mqtt
      */
-    public static final String MQTT = "mqtt:";
+    private static final String MQTT = "mqtt:";
 
     /***
      * topic
      */
-    public static final String TOPIC = "topic:";
+    private static final String TOPIC = "topic:";
 
     /***
      * topic-list
      */
-    public static final String TOPIC_LIST = "topic-list";
+    private static final String TOPIC_LIST = "topic-list";
 
 
     /***
      * 设备 类型device-type
      */
-    public static final String DEVICE_TYPE = "device-type";
+    private static final String DEVICE_TYPE = "device-type";
 
     /***
      * 最后一条消息
      */
-    public static final String LAST_MESSAGE = "last-message";
+    private static final String LAST_MESSAGE = "last-message";
 
 
     /**
@@ -198,6 +198,32 @@ public class CacheConstant {
     }
 
     /**
+     * 构建基础 锁 缓存key
+     */
+    public static String buildBaseLockCacheKey(String appKey) {
+        return OUYUNC + LOCK + APP_KEY + appKey;
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+    /**
+     * 构建appKey 下所有设备类型 缓存key
+     */
+    public static String buildAppKeyDeviceTypeCacheKey(String appKey) {
+        return buildBaseCacheKey(appKey) + DEVICE_TYPE;
+    }
+
+    /**
      * 构建appKeys 缓存key
      */
     public static String buildAppKeysCacheKey() {
@@ -205,13 +231,39 @@ public class CacheConstant {
     }
 
     /**
-     * 构建appKey 下的identity 的客户端设置信息
+     * 构建appKey identity 关闭连接的分布式锁key
      */
-    public static String buildAppKeyClientInfoCacheKey(String appKey, String identity) {
+    public static String buildIdentityBindOrUnbindLockCacheKey(String appKey, String comboIdentity) {
+        return buildBaseLockCacheKey(appKey)  + COLON + comboIdentity;
+    }
+
+    /**
+     * 构建appKey 下的好友请求/同意/拒绝的分布式锁key
+     */
+    public static String buildFriendRequestLockCacheKey(String appKey, String sessionId) {
+        return buildBaseLockCacheKey(appKey)  + COLON + FRIEND_REQUEST + sessionId;
+    }
+
+    /**
+     * 构建appKey 下的群请求的分布式锁key
+     */
+    public static String buildGroupRequestLockCacheKey(String appKey, String joiner, String sessionId) {
+        return buildBaseLockCacheKey(appKey) + COLON + GROUP_REQUEST + joiner + COLON + sessionId;
+    }
+
+    /**
+     * 构建appKey 下的identity 的远端客户端设置信息
+     */
+    public static String buildRemoteClientInfoCacheKey(String appKey, String identity) {
         return buildBaseCacheKey(appKey) + CLIENT_INFO + identity;
     }
 
-
+    /**
+     * 构建 本地客户端信息设置 cache key
+     */
+    public static String buildLocalClientInfoCacheKey(String appKey, String identity) {
+        return appKey + COLON + identity;
+    }
 
     /**
      * 构建 消息message  cache Key
@@ -262,6 +314,102 @@ public class CacheConstant {
     public static String buildGroupUserConfigCacheKey(String appKey, String memberId, String groupId) {
         return buildBaseCacheKey(appKey) + GROUP_USERS_CONFIG + memberId + COLON + groupId;
     }
+
+    /**
+     * 构建 好友关系 cache key
+     */
+    public static String buildFriendsCacheKey(String appKey, String identity) {
+        return buildBaseCacheKey(appKey) + FRIENDS + identity;
+    }
+
+    /**
+     * 构建 好友关系配置信息 cache key
+     */
+    public static String buildFriendsConfigCacheKey(String appKey, String from, String to) {
+        return buildBaseCacheKey(appKey) + FRIENDS_CONFIG + from + COLON + to;
+    }
+
+    /**
+     * 构建 用户所加入的群组 cache key
+     */
+    public static String buildUserGroupsCacheKey(String appKey, String userId) {
+        return buildBaseCacheKey(appKey) + GROUPS + userId;
+    }
+
+    /**
+     * 构建 群组信息 cache key
+     */
+    public static String buildGroupCacheKey(String appKey, String groupId) {
+        return buildBaseCacheKey(appKey) + GROUP + groupId;
+    }
+
+    /**
+     * 构建 from 的黑名单 cache key
+     */
+    public static String buildBlacklistCacheKey(String appKey, String from) {
+        return buildBaseCacheKey(appKey) + BLACKLIST + from;
+    }
+
+    /**
+     * 构建 离线消息 cache key
+     */
+    public static String buildOfflineCacheKey(String appKey, String identity, String deviceTypeName) {
+        return buildBaseCacheKey(appKey) + OFFLINE + identity + COLON + deviceTypeName;
+    }
+
+    /**
+     * 构建 会话session cache key
+     */
+    public static String buildSessionCacheKey(String appKey, String sessionId) {
+        return buildBaseCacheKey(appKey) + SESSION + sessionId;
+    }
+
+    /**
+     * 构建 好友请求会话session cache key
+     */
+    public static String buildFriendRequestSessionCacheKey(String appKey, String sessionId, String friendRequestSessionId) {
+        return buildBaseCacheKey(appKey) + FRIEND_REQUEST + SESSION + sessionId + COLON + friendRequestSessionId;
+    }
+
+    /**
+     * 构建 好友请求 cache key
+     */
+    public static String buildFriendRequestCacheKey(String appKey, String from, String to) {
+        return buildBaseCacheKey(appKey) + FRIEND_REQUEST_SESSION + from + COLON + to;
+    }
+
+    /**
+     * 构建 群组请求会话session cache key
+     */
+    public static String buildGroupRequestSessionCacheKey(String appKey, String joiner, String groupRequestSessionId) {
+        return buildBaseCacheKey(appKey) + GROUP_REQUEST + SESSION + joiner + COLON + groupRequestSessionId;
+    }
+
+    /**
+     * 构建 群组请求 cache key
+     */
+    public static String buildGroupRequestCacheKey(String appKey, String joiner, String groupId) {
+        return buildBaseCacheKey(appKey) + GROUP_REQUEST_SESSION + joiner + COLON + groupId;
+    }
+    /**
+     * 构建 会话最后一条信息 cache key
+     */
+    public static String buildSessionLastMessageCacheKey(String appKey, String sessionId) {
+        return buildBaseCacheKey(appKey) + SESSION + sessionId + COLON + LAST_MESSAGE;
+    }
+    /**
+     * 构建 mqtt topic  cache key
+     */
+    public static String buildMqttTopicFilterCacheKey(String appKey, String topicFilter) {
+        return buildBaseCacheKey(appKey) + MQTT + TOPIC + topicFilter;
+    }
+    /**
+     * 构建 mqtt topic list cache key
+     */
+    public static String buildMqttTopicListCacheKey(String appKey) {
+        return buildBaseCacheKey(appKey) + MQTT + TOPIC_LIST;
+    }
+
 
 
 

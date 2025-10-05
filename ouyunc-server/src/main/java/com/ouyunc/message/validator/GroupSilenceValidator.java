@@ -41,7 +41,7 @@ public enum GroupSilenceValidator implements ReactiveValidator<Packet> {
         Metadata metadata = message.getMetadata();
         String appKey = metadata.getAppKey();
         // 获取群组的信息
-        Mono<GroupEntity> groupEntityMono = (Mono<GroupEntity>) reactiveRedisTemplate.opsForValue().get(CacheConstant.OUYUNC + CacheConstant.APP_KEY + appKey + CacheConstant.COLON + CacheConstant.GROUP + to);
+        Mono<GroupEntity> groupEntityMono = (Mono<GroupEntity>) reactiveRedisTemplate.opsForValue().get(CacheConstant.buildGroupCacheKey(appKey, to));
         return groupEntityMono
                 .switchIfEmpty(DefaultRepository.INSTANCE.getGroupEntityFromDatabasesReactive(appKey, to))
                 .flatMap(groupEntity -> {
