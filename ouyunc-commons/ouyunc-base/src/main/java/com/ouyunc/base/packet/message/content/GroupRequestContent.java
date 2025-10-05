@@ -13,7 +13,7 @@ public class GroupRequestContent implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
-     * 唯一标识，针对同意/拒绝， 该字段是 申请人或被邀请人的唯一标识，  针对邀请，该字段是 被邀请人的唯一标识
+     * 唯一标识，针对同意/拒绝， 该字段是 申请人或被邀请人的唯一标识，  针对邀请，该字段是 被邀请人的唯一标识，总之就是最终要加入群的唯一标识
      */
     private String identity;
 

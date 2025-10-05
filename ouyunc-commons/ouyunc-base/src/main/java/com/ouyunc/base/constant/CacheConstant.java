@@ -190,6 +190,8 @@ public class CacheConstant {
     private static final String LAST_MESSAGE = "last-message";
 
 
+    //==============================================对外缓存方法==================================================
+
     /**
      * 构建基础 缓存key
      */
@@ -197,21 +199,35 @@ public class CacheConstant {
         return OUYUNC + APP_KEY + appKey + COLON;
     }
 
+
+    // ============================================分布式锁==================================================
     /**
-     * 构建基础 锁 缓存key
+     * 构建基础 appKey锁 缓存key
      */
-    public static String buildBaseLockCacheKey(String appKey) {
+    public static String buildAppKeyLockCacheKey(String appKey) {
         return OUYUNC + LOCK + APP_KEY + appKey;
     }
 
+    /**
+     * 构建appKey identity 关闭连接的分布式锁key
+     */
+    public static String buildIdentityBindOrUnbindLockCacheKey(String appKey, String comboIdentity) {
+        return buildAppKeyLockCacheKey(appKey)  + COLON + comboIdentity;
+    }
 
+    /**
+     * 构建appKey 下的好友请求/同意/拒绝的分布式锁key
+     */
+    public static String buildFriendRequestLockCacheKey(String appKey, String sessionId) {
+        return buildAppKeyLockCacheKey(appKey)  + COLON + FRIEND_REQUEST + sessionId;
+    }
 
-
-
-
-
-
-
+    /**
+     * 构建appKey 下的群请求的分布式锁key
+     */
+    public static String buildGroupRequestLockCacheKey(String appKey, String joiner, String sessionId) {
+        return buildAppKeyLockCacheKey(appKey) + COLON + GROUP_REQUEST + joiner + COLON + sessionId;
+    }
 
 
 
@@ -224,32 +240,13 @@ public class CacheConstant {
     }
 
     /**
-     * 构建appKeys 缓存key
+     * 构建所有appKeyEntity 缓存key
      */
     public static String buildAppKeysCacheKey() {
         return OUYUNC + APP_KEYS;
     }
 
-    /**
-     * 构建appKey identity 关闭连接的分布式锁key
-     */
-    public static String buildIdentityBindOrUnbindLockCacheKey(String appKey, String comboIdentity) {
-        return buildBaseLockCacheKey(appKey)  + COLON + comboIdentity;
-    }
 
-    /**
-     * 构建appKey 下的好友请求/同意/拒绝的分布式锁key
-     */
-    public static String buildFriendRequestLockCacheKey(String appKey, String sessionId) {
-        return buildBaseLockCacheKey(appKey)  + COLON + FRIEND_REQUEST + sessionId;
-    }
-
-    /**
-     * 构建appKey 下的群请求的分布式锁key
-     */
-    public static String buildGroupRequestLockCacheKey(String appKey, String joiner, String sessionId) {
-        return buildBaseLockCacheKey(appKey) + COLON + GROUP_REQUEST + joiner + COLON + sessionId;
-    }
 
     /**
      * 构建appKey 下的identity 的远端客户端设置信息

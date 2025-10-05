@@ -39,6 +39,8 @@ public class ClientHelper {
 
     private static final Logger log = LoggerFactory.getLogger(ClientHelper.class);
 
+    private  static final RedisTemplate<String, Object> redisTemplate = CacheFactory.REDIS.instance();
+
     /***
      * @author fzx
      * @description 客户端绑定登录信息
@@ -56,7 +58,6 @@ public class ClientHelper {
         try {
             if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
                 // 客户端登录信息存入缓存
-                RedisTemplate<String, Object> redisTemplate = CacheFactory.REDIS.instance();
                 redisTemplate.executePipelined(new SessionCallback<>() {
                     @SuppressWarnings("unchecked")
                     @Override
@@ -211,7 +212,6 @@ public class ClientHelper {
      * @return
      */
     public static long connections(String appKey) {
-        RedisTemplate<String, Object> redisTemplate = CacheFactory.REDIS.instance();
         Long connections = redisTemplate.opsForZSet().zCard(CacheConstant.buildConnectionsCacheKey(appKey));
         if (connections == null) {
             return NumberConstant.NUMBER_0;
@@ -225,7 +225,6 @@ public class ClientHelper {
      *
      */
     public static Set<String> appKeys() {
-        RedisTemplate<String, String> redisTemplate = CacheFactory.REDIS.instance();
         return redisTemplate.<String, AppEntity>opsForHash().keys(CacheConstant.buildAppKeysCacheKey());
     }
 
@@ -242,7 +241,6 @@ public class ClientHelper {
         if (CollectionUtils.isEmpty(appKeys)) {
             return NumberConstant.NUMBER_0;
         }
-        RedisTemplate<String, Object> redisTemplate = CacheFactory.REDIS.instance();
         // 依次获取每个appKey的数据
         long totalConnections = NumberConstant.NUMBER_0;
         List<Object> executedResultList = redisTemplate.executePipelined(new SessionCallback<>() {

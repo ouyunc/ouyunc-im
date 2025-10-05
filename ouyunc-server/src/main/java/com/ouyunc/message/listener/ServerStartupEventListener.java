@@ -1,5 +1,6 @@
 package com.ouyunc.message.listener;
 
+import com.google.common.collect.Lists;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.NumberConstant;
@@ -20,11 +21,15 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.redisson.api.RLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
+import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.SessionCallback;
 import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.serializer.RedisSerializer;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Executors;
@@ -50,7 +55,7 @@ public class ServerStartupEventListener implements MessageListener<ServerStartup
         Set<String> appKeys = ClientHelper.appKeys();
         if (CollectionUtils.isNotEmpty(appKeys)) {
             // 加载appKey 下的deviceType 配置
-            loadAppKeyDeviceTypes(appKeys);
+            loadAppKeyDeviceTypes(Lists.newArrayList(appKeys));
             startAppKeyDeviceTypeSubscription();
             // 启动appKey 下的连接数刷新任务
             startAppKeyConnectionCountRefreshScheduler(appKeys);
@@ -61,9 +66,19 @@ public class ServerStartupEventListener implements MessageListener<ServerStartup
     }
 
     @SuppressWarnings("unchecked")
-    private void loadAppKeyDeviceTypes(Set<String> appKeys) {
-        for (String appKey : appKeys) {
-            Set<DeviceType> deviceTypeSet = (Set<DeviceType>) redisTemplate.opsForSet().members(CacheConstant.buildAppKeyDeviceTypeCacheKey(appKey));
+    private void loadAppKeyDeviceTypes(List<String> appKeys) {
+        List<Object> results = redisTemplate.executePipelined(new SessionCallback<>() {
+            @Override
+            public <K, V> Object execute(RedisOperations<K, V> operations) throws DataAccessException {
+                for (String appKey : appKeys) {
+                    operations.opsForSet().members((K) CacheConstant.buildAppKeyDeviceTypeCacheKey(appKey));
+                }
+                return null;
+            }
+        });
+        for (int i = 0; i < appKeys.size(); i++) {
+            String appKey = appKeys.get(i);
+            Set<DeviceType> deviceTypeSet = (Set<DeviceType>) results.get(i);
             if (CollectionUtils.isNotEmpty(deviceTypeSet)) {
                 MessageServerContext.addAppKeyDeviceType(appKey, deviceTypeSet);
             }
@@ -111,7 +126,7 @@ public class ServerStartupEventListener implements MessageListener<ServerStartup
                     }
                     if (flag) {
                         log.info("{} 添加进入appKey对应的设备类型集合中", deviceTypes);
-                        MessageServerContext.localClientInfoCache.put(CacheConstant.buildLocalClientInfoCacheKey(clientAppKeyDeviceType.getAppKey(), clientAppKeyDeviceType.getIdentity()), new ClientInfo(clientAppKeyDeviceType.getAppKey(), clientAppKeyDeviceType.getIdentity(), clientAppKeyDeviceType.getDeviceTypes().stream().map(DeviceType::getDeviceTypeValue).collect(Collectors.toList())));
+                        MessageServerContext.localClientInfoCache.put(CacheConstant.buildLocalClientInfoCacheKey(clientAppKeyDeviceType.getAppKey(), clientAppKeyDeviceType.getIdentity()), new ClientInfo(clientAppKeyDeviceType.getAppKey(), clientAppKeyDeviceType.getIdentity(), clientAppKeyDeviceType.getDeviceTypes().stream().filter(Objects::nonNull).map(DeviceType::getDeviceTypeValue).collect(Collectors.toList())));
                     }
                 }
             }
@@ -155,7 +170,7 @@ public class ServerStartupEventListener implements MessageListener<ServerStartup
                     for (String appKey : appKeys) {
                         // 如果开启集群模式,则加锁保证进程安全
                         if (MessageServerContext.serverProperties().isClusterEnable()) {
-                            RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.buildBaseLockCacheKey(appKey));
+                            RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.buildAppKeyLockCacheKey(appKey));
                             try {
                                 if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
                                     refreshAppKeyConnectionCount(redisTemplate, appKey, minScore, maxScore);

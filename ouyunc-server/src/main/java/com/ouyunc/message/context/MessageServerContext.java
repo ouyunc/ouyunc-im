@@ -5,7 +5,6 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.ouyunc.base.constant.CacheConstant;
-import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.DeviceType;
 import com.ouyunc.base.constant.enums.DisruptorEventProducerEnum;
@@ -302,7 +301,7 @@ public class MessageServerContext extends MessageContext {
             log.error("appKey 设备类型列表为空！");
             return;
         }
-        appKeyDeviceTypeCache.put(appKey, deviceTypes.stream().collect(Collectors.toMap(DeviceType::getDeviceTypeValue, Function.identity())));
+        appKeyDeviceTypeCache.put(appKey, deviceTypes.stream().filter(Objects::nonNull).collect(Collectors.toMap(DeviceType::getDeviceTypeValue, Function.identity())));
     }
 
 
