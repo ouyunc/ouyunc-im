@@ -349,7 +349,6 @@ public class MessageServerContext extends MessageContext {
                     return clientInfo;
                 }else {
                     localClientInfoCache.put(CacheConstant.buildLocalClientInfoCacheKey(appKey, identity), Boolean.TRUE);
-                    log.warn("客户端: {} 登录信息未缓存,或类型转换异常：{}", identity, obj);
                 }
             }
         }

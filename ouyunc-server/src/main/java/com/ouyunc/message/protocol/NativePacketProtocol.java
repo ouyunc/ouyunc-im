@@ -48,9 +48,24 @@ import java.util.Map;
  **/
 public enum NativePacketProtocol implements PacketProtocol {
 
+
     // 处理ws/wss,这里相当于关键入口
     WS(ProtocolTypeEnum.WS.getProtocol(), ProtocolTypeEnum.WS.getProtocolVersion(), "websocket 协议，版本号为1") {
         private final EventExecutorGroup eventExecutorGroup = new DefaultEventExecutorGroup(Runtime.getRuntime().availableProcessors()* NumberConstant.NUMBER_2, new BasicThreadFactory.Builder().namingPattern("Ws-Protocol-Pool-%d").build());
+        // WS 压缩过滤器：小于阈值不压缩，入站总是解压
+        private static final WebSocketExtensionFilterProvider WS_FILTER_PROVIDER = new WebSocketExtensionFilterProvider() {
+            private final WebSocketExtensionFilter thresholdFilter = frame -> frame.content() != null && frame.content().readableBytes() < MessageConstant.WEBSOCKET_COMPRESSION_THRESHOLD;
+
+            @Override
+            public WebSocketExtensionFilter encoderFilter() {
+                return thresholdFilter; // 小于阈值跳过压缩
+            }
+
+            @Override
+            public WebSocketExtensionFilter decoderFilter() {
+                return WebSocketExtensionFilter.NEVER_SKIP; // 总是解压
+            }
+        };
         @Override
         public void doDispatcher(ChannelHandlerContext ctx, Map<String, Object> queryParamsMap) {
             // 这里可以根据业务提前做appKey 的验证和appKey下连接数的统计，直接从queryParamsMap 这里面取值即可
@@ -66,22 +81,14 @@ public enum NativePacketProtocol implements PacketProtocol {
                     // 限制最大聚合帧，避免大包拖垮内存
                     .addLast(MessageConstant.WS_FRAME_AGGREGATOR_HANDLER, new WebSocketFrameAggregator(MessageConstant.MAX_WEBSOCKET_FRAME_SIZE))
                     // 开启压缩
-                    .addLast(MessageConstant.WS_COMPRESSION_HANDLER, new WebSocketServerExtensionHandler(new PerMessageDeflateServerExtensionHandshaker(
+                    .addLast(MessageConstant.WS_COMPRESSION_HANDLER, new WebSocketServerExtensionHandler(
+                            new PerMessageDeflateServerExtensionHandshaker(
                             NumberConstant.NUMBER_6,      // 压缩等级：1(快)~9(高压缩)，6折中
                             true,   // allowServerWindowSize: 允许协商窗口大小
                             NumberConstant.NUMBER_15,     // preferredServerWindowSize: 2^15
                             true,   // allowServerNoContext: 允许无上下文（更少内存）
                             false,  // preferredServerNoContext: 默认保留上下文（压缩率更好）
-                            new WebSocketExtensionFilterProvider() {
-                                @Override
-                                public WebSocketExtensionFilter encoderFilter() {
-                                    return frame -> frame.content() != null && frame.content().readableBytes() < MessageConstant.WEBSOCKET_COMPRESSION_THRESHOLD; // 小于阈值跳过压缩
-                                }
-                                @Override
-                                public WebSocketExtensionFilter decoderFilter() {
-                                    return WebSocketExtensionFilter.NEVER_SKIP; // 总是解压
-                                }
-                            } // 小帧跳过压缩
+                            WS_FILTER_PROVIDER // 小帧跳过压缩
                     ),new DeflateFrameServerExtensionHandshaker()))
                     //10485760
                     .addLast(MessageConstant.WS_SERVER_PROTOCOL_HANDLER, new WebSocketServerProtocolHandler(MessageServerContext.serverProperties().getWebsocketPath(), null, true, MessageConstant.MAX_WEBSOCKET_FRAME_SIZE))
@@ -192,7 +199,7 @@ public enum NativePacketProtocol implements PacketProtocol {
             }
             final ChannelPool finalChannelPool = channelPool;
             // 从连接池中获取一个连接
-            Future<Channel> channelFuture = finalChannelPool.acquire();
+            Future<Channel> channelFuture = channelPool.acquire();
             channelFuture.addListener((FutureListener<Channel>) acquireFuture -> {
                 if (acquireFuture.isDone()) {
                     // 判断是否连接成功
@@ -204,19 +211,18 @@ public enum NativePacketProtocol implements PacketProtocol {
                         if (channelPoolHashCode == null) {
                             ChannelAttrUtil.setChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_TAG_POOL, finalChannelPool.hashCode());
                         }
-                        // 客户端将数据写出到中介管道中
+                        // 客户端将数据写出到中介管道中；在写完成后再归还 channel
+                        Runnable releaseChannel = () -> finalChannelPool.release(channel);
                         EventLoop eventLoop = channel.eventLoop();
                         if (eventLoop.inEventLoop()) {
-                            // 如果当前线程是 EventLoop 线程，直接写入
-                            MessageHelper.tryWritePacket(channel, packet, sendCallback);
+                            MessageHelper.tryWritePacketAndThen(channel, packet, sendCallback, releaseChannel);
                         } else if (!eventLoop.isTerminated() && !eventLoop.isShutdown() && !eventLoop.isShuttingDown()) {
-                            eventLoop.execute(() -> MessageHelper.tryWritePacket(channel, packet, sendCallback));
-                        }else {
+                            eventLoop.execute(() -> MessageHelper.tryWritePacketAndThen(channel, packet, sendCallback, releaseChannel));
+                        } else {
+                            releaseChannel.run();
                             log.error("发送消息时，channel.eventLoop 被终止或关闭； channelId: {}", channel.id().asShortText());
                             sendCallback.onCallback(SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(new MessageException("发送消息时，channel.eventLoop 被终止或关闭!")).build());
                         }
-                        // 用完后进行释放掉
-                        finalChannelPool.release(channel);
                     } else {
                         // 获取失败
                         Throwable e = acquireFuture.cause();

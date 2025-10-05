@@ -227,7 +227,9 @@ public class MessageHelper {
                         sendCallback.onCallback(sendResult);
                         // 发布发送失败事件
                         MessageServerContext.publishEvent(new SendFailEvent(sendResult), true);
+                        return;
                     }
+
                     // 给该通道打上标签(如果该通道channel 上有标签则不需要再打标签),打上标签的目的，是为了以后动态回收该channel,保证核心channel数
                     Integer channelPoolHashCode = ChannelAttrUtil.getChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_TAG_POOL);
                     if (channelPoolHashCode == null) {
@@ -237,11 +239,13 @@ public class MessageHelper {
                     metadata.setFromServerAddress(MessageServerContext.serverProperties().getLocalServerAddress());
                     // 客户端将数据写出到中介管道中
                     EventLoop eventLoop = channel.eventLoop();
+                    Runnable releaseChannel = () -> channelPool.release(channel);
                     if (eventLoop.inEventLoop()) {
-                        tryWritePacket(channel, packet, sendCallback);
+                        tryWritePacketAndThen(channel, packet, sendCallback, releaseChannel);
                     } else if (!eventLoop.isTerminated() && !eventLoop.isShutdown() && !eventLoop.isShuttingDown()) {
-                        eventLoop.execute(() -> tryWritePacket(channel, packet, sendCallback));
+                        eventLoop.execute(() ->  tryWritePacketAndThen(channel, packet, sendCallback, releaseChannel));
                     }else {
+                        releaseChannel.run();
                         log.error("发送消息时，channel.eventLoop 被终止或关闭！");
                         // 发送结果
                         SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(new MessageException("集群间发送消息时，channel.eventLoop 被终止或关闭!")).build();
@@ -250,8 +254,6 @@ public class MessageHelper {
                         // 发布发送失败事件
                         MessageServerContext.publishEvent(new SendFailEvent(sendResult), true);
                     }
-                    // 用完后进行释放掉
-                    channelPool.release(channel);
                 } else {
                     // 获取失败
                     Throwable cause = acquireFuture.cause();
@@ -267,13 +269,20 @@ public class MessageHelper {
 
 
     /**
-     * 在写入前进行背压检查；当不可写时快速失败（Packet 版本，兼容旧调用）
+     * 与连接池配合：写入完成后执行 afterComplete（用于归还 Channel 等）。
      */
-    public static void tryWritePacket(Channel channel, Packet packet, SendCallback sendCallback) {
+    public static void tryWritePacketAndThen(Channel channel, Packet packet, SendCallback sendCallback, Runnable afterComplete) {
         if (!validateWritable(channel, packet, sendCallback)) {
+            if (afterComplete != null) {
+                afterComplete.run();
+            }
             return;
         }
-        addWriteListener(channel.writeAndFlush(packet), packet, sendCallback);
+        ChannelFuture future = channel.writeAndFlush(packet);
+        addWriteListener(future, packet, sendCallback);
+        if (afterComplete != null) {
+            future.addListener(f -> afterComplete.run());
+        }
     }
 
 
@@ -319,10 +328,6 @@ public class MessageHelper {
      */
     private static void addWriteListener(ChannelFuture future, Packet packet, SendCallback sendCallback) {
         future.addListener((ChannelFutureListener) f -> {
-            if (!f.isDone()) {
-                log.error("写入失败，请检查写入通道是否正常！");
-                return;
-            }
             if (f.isSuccess()) {
                 sendCallback.onCallback(SendResult.builder().sendStatus(SendStatusEnum.SEND_OK).packet(packet).build());
             } else {
