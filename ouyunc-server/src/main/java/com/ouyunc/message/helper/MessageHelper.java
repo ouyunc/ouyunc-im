@@ -171,17 +171,17 @@ public class MessageHelper {
      * @Description 同步投递消息,不对外暴漏
      */
     private static void doSendMessage(Packet originPacket, Target target, SendCallback sendCallback) {
-        Packet packet = originPacket.clone();
-        log.debug("开始给 {} 传递消息packet: {} ", target, packet);
-        // 获取消息元数据消息
-        Metadata metadata = packet.getMessage().getMetadata();
+        log.debug("开始给 {} 传递消息packet: {} ", target, originPacket);
         // 需要发送到的服务器地址
         String toServerAddress = target.getTargetServerAddress();
         // 如果是单服务实例或者如果目标主机是本机，则直接发送处理
         if (!MessageServerContext.serverProperties().isClusterEnable() || MessageServerContext.serverProperties().getLocalServerAddress().equals(toServerAddress)) {
-            MessageServerContext.findProtocol(packet.getProtocol(), packet.getProtocolVersion()).doSendMessage(packet, IdentityUtil.generalComboIdentity(metadata.getAppKey(), target.getTargetIdentity(), target.getDeviceType()), sendCallback);
+            MessageServerContext.findProtocol(originPacket.getProtocol(), originPacket.getProtocolVersion()).doSendMessage(originPacket, IdentityUtil.generalComboIdentity(originPacket.getMessage().getMetadata().getAppKey(), target.getTargetIdentity(), target.getDeviceType()), sendCallback);
             return;
         }
+        Packet packet = originPacket.clone();
+        // 获取消息元数据消息
+        Metadata metadata = packet.getMessage().getMetadata();
         // 判断是否是首次在集群间传递消息
         if (!metadata.isRouted()) {
             // 首次进行传递时，将目标以及目标主机和所登录的设备进行设置
