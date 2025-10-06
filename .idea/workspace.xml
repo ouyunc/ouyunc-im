@@ -4,11 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="v6.5.1  整理缓存key">
+    <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/context/MessageServerContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/context/MessageServerContext.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/MessageHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/MessageHelper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/protocol/NativePacketProtocol.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/protocol/NativePacketProtocol.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/CacheConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/CacheConstant.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -59,42 +57,43 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Application.App.executor&quot;: &quot;Debug&quot;,
-    &quot;Application.ObjectCreationBenchmark.executor&quot;: &quot;Debug&quot;,
-    &quot;Application.StartServer.executor&quot;: &quot;Debug&quot;,
-    &quot;JavaScript Debug.client1.html (1).executor&quot;: &quot;Run&quot;,
-    &quot;JavaScript Debug.client1.html (2).executor&quot;: &quot;Run&quot;,
-    &quot;JavaScript Debug.client1.html.executor&quot;: &quot;Run&quot;,
-    &quot;JavaScript Debug.client13333333333.html.executor&quot;: &quot;Run&quot;,
-    &quot;JavaScript Debug.client2.html.executor&quot;: &quot;Run&quot;,
-    &quot;JavaScript Debug.client3.html.executor&quot;: &quot;Run&quot;,
-    &quot;JavaScript Debug.client4.html.executor&quot;: &quot;Run&quot;,
-    &quot;JavaScript Debug.client5.html.executor&quot;: &quot;Run&quot;,
-    &quot;Maven.ouyunc-im [clean].executor&quot;: &quot;Run&quot;,
-    &quot;Maven.ouyunc-im [install].executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;6.5.1&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;D:/workspace/ouyunc-im/docs/6.5.1/sql&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;project.structure.last.edited&quot;: &quot;Libraries&quot;,
-    &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
-    &quot;project.structure.side.proportion&quot;: &quot;0.0&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;MavenSettings&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Application.App.executor": "Debug",
+    "Application.ObjectCreationBenchmark.executor": "Debug",
+    "Application.StartServer.executor": "Debug",
+    "Application.WebSocketLoadTester.executor": "Run",
+    "JavaScript Debug.client1.html (1).executor": "Run",
+    "JavaScript Debug.client1.html (2).executor": "Run",
+    "JavaScript Debug.client1.html.executor": "Run",
+    "JavaScript Debug.client13333333333.html.executor": "Run",
+    "JavaScript Debug.client2.html.executor": "Run",
+    "JavaScript Debug.client3.html.executor": "Run",
+    "JavaScript Debug.client4.html.executor": "Run",
+    "JavaScript Debug.client5.html.executor": "Run",
+    "Maven.ouyunc-im [clean].executor": "Run",
+    "Maven.ouyunc-im [install].executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "6.5.1",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "D:/workspace/ouyunc-im/docs/6.5.1/sql",
+    "node.js.detected.package.eslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "project.structure.last.edited": "Libraries",
+    "project.structure.proportion": "0.0",
+    "project.structure.side.proportion": "0.0",
+    "settings.editor.selected.configurable": "MavenSettings",
+    "vue.rearranger.settings.migration": "true"
   },
-  &quot;keyToStringList&quot;: {
-    &quot;DatabaseDriversLRU&quot;: [
-      &quot;mysql&quot;
+  "keyToStringList": {
+    "DatabaseDriversLRU": [
+      "mysql"
     ]
   }
-}</component>
+}]]></component>
   <component name="ReactorSettings">
     <option name="notificationShown" value="true" />
   </component>
@@ -117,7 +116,7 @@
       <recent name="com.ouyunc.message.processor" />
     </key>
   </component>
-  <component name="RunManager" selected="Application.App">
+  <component name="RunManager" selected="Application.WebSocketLoadTester">
     <configuration name="App" type="Application" factoryName="Application">
       <option name="MAIN_CLASS_NAME" value="com.ouyunc.message.StartServer" />
       <module name="ouyunc-server" />
@@ -136,12 +135,12 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="ObjectCreationBenchmark" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
-      <option name="MAIN_CLASS_NAME" value="com.ouyunc.message.validator.ObjectCreationBenchmark" />
-      <module name="ouyunc-server" />
+    <configuration name="WebSocketLoadTester" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="com.ouyunc.client.loadtest.WebSocketLoadTester" />
+      <module name="ouyunc-client" />
       <extension name="coverage">
         <pattern>
-          <option name="PATTERN" value="com.ouyunc.message.validator.*" />
+          <option name="PATTERN" value="com.ouyunc.client.loadtest.*" />
           <option name="ENABLED" value="true" />
         </pattern>
       </extension>
@@ -177,7 +176,7 @@
     </configuration>
     <list>
       <item itemvalue="Application.App" />
-      <item itemvalue="Application.ObjectCreationBenchmark" />
+      <item itemvalue="Application.WebSocketLoadTester" />
       <item itemvalue="JavaScript Debug.client13333333333.html" />
       <item itemvalue="JavaScript Debug.client1.html (2)" />
       <item itemvalue="JavaScript Debug.client2.html" />
@@ -186,11 +185,11 @@
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Application.WebSocketLoadTester" />
         <item itemvalue="JavaScript Debug.client3.html" />
         <item itemvalue="JavaScript Debug.client2.html" />
         <item itemvalue="JavaScript Debug.client1.html (2)" />
         <item itemvalue="JavaScript Debug.client13333333333.html" />
-        <item itemvalue="Application.ObjectCreationBenchmark" />
       </list>
     </recent_temporary>
   </component>
@@ -265,15 +264,8 @@
       <workItem from="1759459807683" duration="3800000" />
       <workItem from="1759482341609" duration="1923000" />
       <workItem from="1759626477468" duration="20634000" />
-      <workItem from="1759665824763" duration="7080000" />
-    </task>
-    <task id="LOCAL-00071" summary="v6.5.0  添加群的限制">
-      <option name="closed" value="true" />
-      <created>1757120790083</created>
-      <option name="number" value="00071" />
-      <option name="presentableId" value="LOCAL-00071" />
-      <option name="project" value="LOCAL" />
-      <updated>1757120790083</updated>
+      <workItem from="1759665824763" duration="14245000" />
+      <workItem from="1759713326082" duration="4348000" />
     </task>
     <task id="LOCAL-00072" summary="v6.5.0  添加群的限制">
       <option name="closed" value="true" />
@@ -659,7 +651,15 @@
       <option name="project" value="LOCAL" />
       <updated>1759669772649</updated>
     </task>
-    <option name="localTasksCounter" value="120" />
+    <task id="LOCAL-00120" summary="v6.5.1  整理缓存key">
+      <option name="closed" value="true" />
+      <created>1759672999314</created>
+      <option name="number" value="00120" />
+      <option name="presentableId" value="LOCAL-00120" />
+      <option name="project" value="LOCAL" />
+      <updated>1759672999314</updated>
+    </task>
+    <option name="localTasksCounter" value="121" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -725,6 +725,11 @@
           <url>jar://$PROJECT_DIR$/../../repository/org/springframework/data/spring-data-redis/3.3.3/spring-data-redis-3.3.3.jar!/org/springframework/data/redis/core/script/DefaultScriptExecutor.class</url>
           <line>27</line>
           <option name="timeStamp" value="68" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-client/src/main/java/com/ouyunc/client/loadtest/WebSocketLoadTester.java</url>
+          <line>169</line>
+          <option name="timeStamp" value="73" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>

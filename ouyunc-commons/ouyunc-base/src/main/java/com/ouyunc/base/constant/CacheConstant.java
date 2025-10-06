@@ -37,11 +37,6 @@ public class CacheConstant {
     private static final String MESSAGE = "message:";
 
     /***
-     * 已读消息缓存公共前缀
-     */
-    private static final String READ_MESSAGE = "read-message:";
-
-    /***
      * 会话已读消息偏移量缓存公共前缀
      */
     private static final String SESSION_READ_MESSAGE_OFFSET = "session-read-message-offset:";
@@ -103,16 +98,6 @@ public class CacheConstant {
     private static final String GROUP = "group:";
 
 
-    /***
-     * 发送方
-     */
-    private static final String FROM = "from:";
-
-    /***
-     * 接收方
-     */
-    private static final String TO = "to:";
-
 
     /***
      * 黑名单
@@ -155,12 +140,6 @@ public class CacheConstant {
      * 群请求
      */
     private static final String GROUP_REQUEST = "groups-request:";
-
-
-    /***
-     * 群用户请求
-     */
-    private static final String GROUP_USER_REQUEST = "group-users-request:";
 
 
     /***
@@ -393,6 +372,12 @@ public class CacheConstant {
      */
     public static String buildSessionLastMessageCacheKey(String appKey, String sessionId) {
         return buildBaseCacheKey(appKey) + SESSION + sessionId + COLON + LAST_MESSAGE;
+    }
+    /**
+     * 构建 聊天消息会话 cache key
+     */
+    public static String buildChatSessionCacheKey(String appKey, String identity, Byte deviceType) {
+        return buildBaseCacheKey(appKey) + CHAT_SESSION + identity + COLON + deviceType;
     }
     /**
      * 构建 mqtt topic  cache key
