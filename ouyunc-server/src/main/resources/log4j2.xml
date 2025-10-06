@@ -225,7 +225,10 @@
         <logger name="org.springframework" level="INFO" additivity="false">
             <AppenderRef ref="Async"/>
         </logger>
-
+        <Logger name="io.netty" level="WARN" additivity="false">
+                <AppenderRef ref="Async"/>
+        </Logger>
+        <Logger name="com.ouyunc" level="${output_log_level}"/>
         <logger name="org.springframework.jdbc.core.JdbcTemplate" level="DEBUG" additivity="false">
             <AppenderRef ref="Async"/>
         </logger>
