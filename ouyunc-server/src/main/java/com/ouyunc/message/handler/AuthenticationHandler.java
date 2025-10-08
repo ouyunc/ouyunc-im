@@ -137,7 +137,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
             ctx.close();
             return;
         }
-        String comboIdentity = IdentityUtil.generalComboIdentity(loginContent.getAppKey(), loginContent.getIdentity(), deviceType.getDeviceTypeName());
+        String comboIdentity = IdentityUtil.generalComboIdentity(loginContent.getAppKey(), loginContent.getIdentity(), deviceType.getDeviceTypeValue());
         //如果之前已经登录（重复登录请求），这里判断是否已经登录过,同一个账号在同一个设备不能同时登录
         //1,从分布式缓存取出该登录用户
         LoginClientInfo cacheLoginClientInfo = MessageServerContext.remoteLoginClientInfoCache.get(CacheConstant.buildLoginCacheKey(loginContent.getAppKey(), comboIdentity));
@@ -168,8 +168,8 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
             final LoginClientInfo closingLocalloginClientInfo = ChannelAttrUtil.getChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
             if (closingLocalloginClientInfo != null) {
                 // 这里不进行判空了，到这里肯定不为空（登录信息里面一定要有登录设备的类型）
-                String clientLoginDeviceName = closingLocalloginClientInfo.getDeviceType().getDeviceTypeName();
-                String closingComboIdentity = IdentityUtil.generalComboIdentity(closingLocalloginClientInfo.getAppKey(), closingLocalloginClientInfo.getIdentity(), clientLoginDeviceName);
+                Byte clientLoginDeviceValue = closingLocalloginClientInfo.getDeviceType().getDeviceTypeValue();
+                String closingComboIdentity = IdentityUtil.generalComboIdentity(closingLocalloginClientInfo.getAppKey(), closingLocalloginClientInfo.getIdentity(), clientLoginDeviceValue);
                 // 登录信息一致,才进行解绑，删除缓存信息
                 MessageServerContext.localLoginClientRegisterTable.delete(closingComboIdentity);
                 String loginClientInfoCacheKey = CacheConstant.buildLoginCacheKey(closingLocalloginClientInfo.getAppKey(), closingComboIdentity);

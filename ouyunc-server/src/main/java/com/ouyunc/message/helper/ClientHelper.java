@@ -135,10 +135,10 @@ public class ClientHelper {
         // 获取所有的实现DeviceType接口的枚举实例,先找定制化的客户所支持的设备类型
         Stream<DeviceType> deviceTypeStream = MessageServerContext.deviceTypeList(appKey, identity).stream();
         if (excludeDeviceTypeArr != null && excludeDeviceTypeArr.length > NumberConstant.NUMBER_0) {
-            Set<String> excludeNames = Arrays.stream(excludeDeviceTypeArr)
-                    .map(DeviceType::getDeviceTypeName)
+            Set<Byte> excludeNames = Arrays.stream(excludeDeviceTypeArr)
+                    .map(DeviceType::getDeviceTypeValue)
                     .collect(Collectors.toSet());
-            deviceTypeStream = deviceTypeStream.filter(deviceType -> !excludeNames.contains(deviceType.getDeviceTypeName()));
+            deviceTypeStream = deviceTypeStream.filter(deviceType -> !excludeNames.contains(deviceType.getDeviceTypeValue()));
         }
         Set<String> comboIdentitySet = deviceTypeStream
                 .map(deviceType -> IdentityUtil.generalComboIdentity(appKey, identity, deviceType))
@@ -179,16 +179,16 @@ public class ClientHelper {
      */
     public static LoginClientInfo online(String appKey, String identity, DeviceType loginDeviceType) {
         // 判断identity在该appKey下是否支持loginDeviceType该设备类型
-       return online(appKey, identity, loginDeviceType.getDeviceTypeName());
+       return online(appKey, identity, loginDeviceType.getDeviceTypeValue());
     }
     /**
      * 获取某个端的登录信息,不暴露该接口
      * @param identity 客户端唯一标识
-     * @param loginDeviceTypeName 客户端登录的设备类型名称
+     * @param loginDeviceTypeValue 客户端登录的设备类型值
      * @return
      */
-    private static LoginClientInfo online(String appKey, String identity, String loginDeviceTypeName) {
-        String comboIdentity = IdentityUtil.generalComboIdentity(appKey, identity, loginDeviceTypeName);
+    private static LoginClientInfo online(String appKey, String identity, Byte loginDeviceTypeValue) {
+        String comboIdentity = IdentityUtil.generalComboIdentity(appKey, identity, loginDeviceTypeValue);
         // 先从本地注册表获取，如果在同一个服务器上或者不是集群
         ChannelHandlerContext ctx = MessageServerContext.localLoginClientRegisterTable.get(comboIdentity);
         if (ctx != null) {

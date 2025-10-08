@@ -329,8 +329,8 @@ public class CacheConstant {
     /**
      * 构建 离线消息 cache key
      */
-    public static String buildOfflineCacheKey(String appKey, String identity, String deviceTypeName) {
-        return buildBaseCacheKey(appKey) + OFFLINE + identity + COLON + deviceTypeName;
+    public static String buildOfflineCacheKey(String appKey, String identity, Byte deviceTypeValue) {
+        return buildBaseCacheKey(appKey) + OFFLINE + identity + COLON + deviceTypeValue;
     }
 
     /**

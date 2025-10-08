@@ -3,12 +3,10 @@ package com.ouyunc.message.validator;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.OnlineEnum;
 import com.ouyunc.base.model.LoginClientInfo;
-import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.core.context.MessageContext;
-import com.ouyunc.message.context.MessageServerContext;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,11 +29,9 @@ public enum AuthValidator implements Validator<Packet> {
     public boolean verify(Packet packet, ChannelHandlerContext ctx) {
         byte deviceTypeValue = packet.getDeviceType();
         Message message = packet.getMessage();
-        Metadata metadata = message.getMetadata();
         String from = message.getFrom();
-        String deviceTypeName = MessageServerContext.deviceType(metadata.getAppKey(), deviceTypeValue).getDeviceTypeName();
         if (log.isDebugEnabled()) {
-            log.debug("正在校验消息发送方 from {} 是否已在设备: {} 登录认证", from, deviceTypeName);
+            log.debug("正在校验消息发送方 from {} 是否已在设备: {} 登录认证", from, deviceTypeValue);
         }
         //1,判断用户是否登录, 2024-09-21 这里修改不从redis取登录信息，减少Redis的压力
         LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);

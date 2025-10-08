@@ -109,12 +109,12 @@ public class LoginClientInfo extends LoginContent {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof LoginClientInfo that)) return false;
-        return Objects.equals(getAppKey(), that.getAppKey()) &&  Objects.equals(getIdentity(), that.getIdentity()) && Objects.equals(getDeviceType().getDeviceTypeName(), that.getDeviceType().getDeviceTypeName());
+        return Objects.equals(getAppKey(), that.getAppKey()) &&  Objects.equals(getIdentity(), that.getIdentity()) && Objects.equals(getDeviceType().getDeviceTypeValue(), that.getDeviceType().getDeviceTypeValue());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getAppKey(), getIdentity(), getDeviceType().getDeviceTypeName());
+        return Objects.hash(getAppKey(), getIdentity(), getDeviceType().getDeviceTypeValue());
     }
 
 

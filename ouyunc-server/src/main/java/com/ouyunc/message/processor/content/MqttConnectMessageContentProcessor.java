@@ -183,8 +183,8 @@ public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<In
                 final LoginClientInfo closingLocalLoginClientInfo = ChannelAttrUtil.getChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
                 if (closingLocalLoginClientInfo != null) {
                     // 这里不进行判空了，到这里肯定不为空（登录信息里面一定要有登录设备的类型）
-                    String clientLoginDeviceName = closingLocalLoginClientInfo.getDeviceType().getDeviceTypeName();
-                    String closingComboIdentity = IdentityUtil.generalComboIdentity(closingLocalLoginClientInfo.getAppKey(), closingLocalLoginClientInfo.getIdentity(), clientLoginDeviceName);
+                    Byte clientLoginDeviceValue = closingLocalLoginClientInfo.getDeviceType().getDeviceTypeValue();
+                    String closingComboIdentity = IdentityUtil.generalComboIdentity(closingLocalLoginClientInfo.getAppKey(), closingLocalLoginClientInfo.getIdentity(), clientLoginDeviceValue);
                     // 登录信息一致,才进行解绑，删除缓存信息
                     MessageServerContext.localLoginClientRegisterTable.delete(closingComboIdentity);
                     String loginClientInfoCacheKey = CacheConstant.buildLoginCacheKey(closingLocalLoginClientInfo.getAppKey(), closingComboIdentity);

@@ -56,7 +56,7 @@ public enum MqttRepository implements Repository{
     public boolean checkDup(Packet packet, DeviceType deviceType) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        Double score = redisTemplate.opsForZSet().score(CacheConstant.buildOfflineCacheKey(metadata.getAppKey(), message.getTo(), deviceType.getDeviceTypeName()), SnowflakeUtil.formatLong(packet.getPacketId()));
+        Double score = redisTemplate.opsForZSet().score(CacheConstant.buildOfflineCacheKey(metadata.getAppKey(), message.getTo(), deviceType.getDeviceTypeValue()), SnowflakeUtil.formatLong(packet.getPacketId()));
         // 如果分数不为 null，则表示值存在
         return !Objects.isNull(score);
     }

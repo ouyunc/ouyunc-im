@@ -19,14 +19,14 @@ public class IdentityUtil {
      * 三个参数都不为空，这里就不进行校验了
      */
     public static String generalComboIdentity(String appKey, String identity, DeviceType deviceType) {
-        return generalComboIdentity(appKey, identity, deviceType.getDeviceTypeName());
+        return generalComboIdentity(appKey, identity, deviceType.getDeviceTypeValue());
     }
 
     /**
      * 生成客户端绑定的组合唯一标识,如果设备名称为空则直接返回identity
      */
-    public static String generalComboIdentity(String appKey, String identity, String deviceName) {
-        return appKey + MessageConstant.COLON + identity + MessageConstant.COLON + deviceName;
+    public static String generalComboIdentity(String appKey, String identity, Byte deviceValue) {
+        return appKey + MessageConstant.COLON + identity + MessageConstant.COLON + deviceValue;
     }
     /**
      * 恢复原始id标识
@@ -53,12 +53,12 @@ public class IdentityUtil {
     /**
      * 恢复原始设备名称
      */
-    public static String revertDeviceType(String comboIdentity) {
+    public static Byte revertDeviceType(String comboIdentity) {
         if (comboIdentity == null) {
             log.error("恢复原始绑定标识失败!");
             throw new MessageException("恢复原始绑定标识失败！");
         }
-        return comboIdentity.split(MessageConstant.COLON, 3)[2];
+        return Byte.valueOf(comboIdentity.split(MessageConstant.COLON, 3)[2]);
     }
 
 
