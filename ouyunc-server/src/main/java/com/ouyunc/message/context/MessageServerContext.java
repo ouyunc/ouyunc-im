@@ -407,8 +407,16 @@ public class MessageServerContext extends MessageContext {
      * 协议类型列表
      * @param packetConverter packet 转换器
      */
-    public static void addPacketConverterList(PacketConverter<?> packetConverter) {
+    public static void addPacketConverter(PacketConverter<?> packetConverter) {
         packetConverterList.add(packetConverter);
+    }
+
+    /**
+     * 协议类型列表
+     * @param packetConverters packet 转换器
+     */
+    public static void addPacketConverterList(List<PacketConverter<?>> packetConverters) {
+        packetConverterList.addAll(packetConverters);
     }
 
     /**

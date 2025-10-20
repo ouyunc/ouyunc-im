@@ -41,6 +41,7 @@ import org.objenesis.ObjenesisStd;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -152,9 +153,7 @@ public abstract class AbstractMessageServer implements MessageServer {
      */
     void beforeInitServer() {
         // 添加协议包转换器
-        MessageServerContext.addPacketConverterList(PacketPacketConverter.INSTANCE);
-        MessageServerContext.addPacketConverterList(BinaryWebSocketFramePacketConverter.INSTANCE);
-        MessageServerContext.addPacketConverterList(MqttMessagePacketConverter.INSTANCE);
+        MessageServerContext.addPacketConverterList(List.of(PacketPacketConverter.INSTANCE, BinaryWebSocketFramePacketConverter.INSTANCE,MqttMessagePacketConverter.INSTANCE));
         // 添加默认设备类型，这里可以改成从redis 获取，与appKey 进行绑定，由appKey来自定义所支持的设备类型，如果appKey 没有指定支持的设备类型，则走默认设备类型
         MessageServerContext.addDeviceType(DeviceTypeEnum.class);
         // 初始化disruptor
