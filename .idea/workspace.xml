@@ -5,9 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/AbstractMessageServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/AbstractMessageServer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/context/MessageServerContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/context/MessageServerContext.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/CacheConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/CacheConstant.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -23,12 +23,15 @@
     </option>
   </component>
   <component name="Git.Settings">
+    <option name="PREVIEW_PUSH_ON_COMMIT_AND_PUSH" value="false" />
+    <option name="PUSH_AUTO_UPDATE" value="true" />
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
         <entry key="$PROJECT_DIR$" value="6.5.2" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+    <option name="WARN_ABOUT_LARGE_FILES_LIMIT_MB" value="500" />
   </component>
   <component name="KubernetesApiPersistence">{}</component>
   <component name="KubernetesApiProvider">{
@@ -58,43 +61,43 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Application.App.executor": "Debug",
-    "Application.ObjectCreationBenchmark.executor": "Debug",
-    "Application.StartServer.executor": "Debug",
-    "Application.WebSocketLoadTester.executor": "Run",
-    "JavaScript Debug.client1.html (1).executor": "Run",
-    "JavaScript Debug.client1.html (2).executor": "Run",
-    "JavaScript Debug.client1.html.executor": "Run",
-    "JavaScript Debug.client13333333333.html.executor": "Run",
-    "JavaScript Debug.client2.html.executor": "Run",
-    "JavaScript Debug.client3.html.executor": "Run",
-    "JavaScript Debug.client4.html.executor": "Run",
-    "JavaScript Debug.client5.html.executor": "Run",
-    "Maven.ouyunc-im [clean].executor": "Run",
-    "Maven.ouyunc-im [install].executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "6.5.1",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "D:/workspace/ouyunc-im",
-    "node.js.detected.package.eslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "project.structure.last.edited": "Libraries",
-    "project.structure.proportion": "0.0",
-    "project.structure.side.proportion": "0.0",
-    "settings.editor.selected.configurable": "preferences.pluginManager",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Application.App.executor&quot;: &quot;Debug&quot;,
+    &quot;Application.ObjectCreationBenchmark.executor&quot;: &quot;Debug&quot;,
+    &quot;Application.StartServer.executor&quot;: &quot;Debug&quot;,
+    &quot;Application.WebSocketLoadTester.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript Debug.client1.html (1).executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript Debug.client1.html (2).executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript Debug.client1.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript Debug.client13333333333.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript Debug.client2.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript Debug.client3.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript Debug.client4.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript Debug.client5.html.executor&quot;: &quot;Run&quot;,
+    &quot;Maven.ouyunc-im [clean].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.ouyunc-im [install].executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;6.5.1&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;D:/workspace/ouyunc-im&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Libraries&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.0&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;vcs.Git&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   },
-  "keyToStringList": {
-    "DatabaseDriversLRU": [
-      "mysql"
+  &quot;keyToStringList&quot;: {
+    &quot;DatabaseDriversLRU&quot;: [
+      &quot;mysql&quot;
     ]
   }
-}]]></component>
+}</component>
   <component name="ReactorSettings">
     <option name="notificationShown" value="true" />
   </component>
@@ -117,7 +120,7 @@
       <recent name="com.ouyunc.message.processor" />
     </key>
   </component>
-  <component name="RunManager" selected="Application.WebSocketLoadTester">
+  <component name="RunManager" selected="Application.App">
     <configuration name="App" type="Application" factoryName="Application">
       <option name="MAIN_CLASS_NAME" value="com.ouyunc.message.StartServer" />
       <module name="ouyunc-server" />
@@ -186,11 +189,11 @@
     </list>
     <recent_temporary>
       <list>
-        <item itemvalue="Application.WebSocketLoadTester" />
         <item itemvalue="JavaScript Debug.client3.html" />
         <item itemvalue="JavaScript Debug.client2.html" />
         <item itemvalue="JavaScript Debug.client1.html (2)" />
         <item itemvalue="JavaScript Debug.client13333333333.html" />
+        <item itemvalue="Application.WebSocketLoadTester" />
       </list>
     </recent_temporary>
   </component>
@@ -275,6 +278,9 @@
       <workItem from="1760539273757" duration="214000" />
       <workItem from="1760964585823" duration="180000" />
       <workItem from="1760964793996" duration="1352000" />
+      <workItem from="1761049499348" duration="658000" />
+      <workItem from="1761052140857" duration="542000" />
+      <workItem from="1761055023513" duration="824000" />
     </task>
     <task id="LOCAL-00076" summary="v6.5.1 去除消息偏移量限制">
       <option name="closed" value="true" />
