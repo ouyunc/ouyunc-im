@@ -112,9 +112,9 @@ public class MessageConstant {
     public static final int MAX_READ_RECEIPT_MESSAGE_COUNT = 50;
 
     /**
-     *  缓存消息热key的过期时间戳，7天,时间戳，单位毫秒
+     *  缓存消息热key的过期时间戳，3天,时间戳，单位毫秒
      */
-    public static final long CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP = NumberConstant.NUMBER_7 * MessageConstant.DAY_TIMESTAMP;
+    public static final long CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP = NumberConstant.NUMBER_3 * MessageConstant.DAY_TIMESTAMP;
 
 
     /**

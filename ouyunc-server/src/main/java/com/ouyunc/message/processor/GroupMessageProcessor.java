@@ -127,7 +127,7 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
         repository().reactiveHandleOperation(ctx, packet,
                 repository().reactiveValidReadReceiptMessage(packet, packet.getMessage().getTo(), IdentityType.GROUP, true),
                 ()-> repository().savePacket2Mq(MqConstant.KAFKA_READ_RECEIPT_MESSAGE_TOPIC, sessionId, packet),
-                repository().reactiveReadReceiptMessage(packet, IdentityType.GROUP, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP),
+                repository().reactiveReadReceiptMessage(packet, IdentityType.GROUP, MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP),
                 (ctx0,  packet0) -> {},
                 (exceptionEvent)-> MessageServerContext.publishEvent(exceptionEvent, true),
                 ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR).subscribe();
