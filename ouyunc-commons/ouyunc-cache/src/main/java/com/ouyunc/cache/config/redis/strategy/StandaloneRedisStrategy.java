@@ -9,6 +9,8 @@ import org.springframework.data.redis.connection.RedisPassword;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.util.StringUtils;
 
+import java.util.List;
+
 /**
  * @author fzx
  * @description 单例redis配置,作为默认策略(至少有一个生效)
@@ -46,7 +48,7 @@ public class StandaloneRedisStrategy extends AbstractRedisStrategy {
         Config config = new Config();
         RedisProperties.Pool pool = redisProperties.getLettuce().getPool();
         SingleServerConfig singleServerConfig = config.useSingleServer()
-                .setAddress("redis://" + redisProperties.getHost() + ":" + redisProperties.getPort())
+                .setAddress(getFormattedNodes(List.of(redisProperties.getHost() + ":" + redisProperties.getPort())).getFirst())
                 .setDatabase(redisProperties.getDatabase())
                 .setConnectTimeout((int)redisProperties.getConnectTimeout().toMillis())
                 .setTimeout((int)redisProperties.getTimeout().toMillis())

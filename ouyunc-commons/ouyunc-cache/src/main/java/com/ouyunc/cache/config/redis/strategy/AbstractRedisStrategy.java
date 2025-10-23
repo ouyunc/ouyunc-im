@@ -1,5 +1,6 @@
 package com.ouyunc.cache.config.redis.strategy;
 
+import com.google.common.collect.Lists;
 import com.ouyunc.cache.config.redis.properties.RedisProperties;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.redisson.config.Config;
@@ -9,11 +10,17 @@ import org.springframework.data.redis.connection.lettuce.LettuceClientConfigurat
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.connection.lettuce.LettucePoolingClientConfiguration;
 
+import java.util.List;
+
 /**
  * 抽象的redis 策略
  */
 public abstract class AbstractRedisStrategy implements RedisStrategy {
-
+    /**
+     * 协议常量
+     */
+    private static final String REDIS_PREFIX = "redis://";
+    private static final String REDISS_PREFIX = "rediss://";
     /**
      * redis单例模式的配置
      */
@@ -78,6 +85,30 @@ public abstract class AbstractRedisStrategy implements RedisStrategy {
                 .poolConfig(genericObjectPoolConfig())
                 .commandTimeout(redisProperties.getTimeout())
                 .build();
+    }
+
+
+    /***
+     * @author fzx
+     * @description 格式化节点信息
+     */
+    protected List<String> getFormattedNodes(List<String> rawNodes) {
+        if (rawNodes == null || rawNodes.isEmpty()) {
+            return null;
+        }
+        List<String> nodes = Lists.newArrayList();
+        // 使用ssl
+        if (redisProperties.getSsl() != null && redisProperties.getSsl().isEnabled()) {
+            for (String rawNode : rawNodes) {
+                nodes.add(REDISS_PREFIX + rawNode);
+            }
+        }else {
+            // 未使用ssl
+            for (String rawNode : rawNodes) {
+                nodes.add(REDIS_PREFIX + rawNode);
+            }
+        }
+        return nodes;
     }
 
     /***

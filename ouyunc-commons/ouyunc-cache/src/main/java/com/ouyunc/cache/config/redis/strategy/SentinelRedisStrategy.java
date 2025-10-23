@@ -54,7 +54,7 @@ public class SentinelRedisStrategy extends AbstractRedisStrategy {
         SentinelServersConfig sentinelServersConfig = config.useSentinelServers()
                 .setDatabase(redisProperties.getDatabase())
                 .setMasterName(redisProperties.getSentinel().getMaster())
-                .addSentinelAddress(redisProperties.getSentinel().getNodes().toArray(new String[0]))
+                .addSentinelAddress(getFormattedNodes(redisProperties.getSentinel().getNodes()).toArray(new String[0]))
                 //设置只读节点
                 .setReadMode(ReadMode.SLAVE)
                 .setConnectTimeout((int)redisProperties.getConnectTimeout().toMillis())
@@ -63,7 +63,7 @@ public class SentinelRedisStrategy extends AbstractRedisStrategy {
                 .setMasterConnectionPoolSize(pool.getMaxIdle())
                 .setSlaveConnectionPoolSize(pool.getMaxIdle());
         //如果密码不为空则设置密码
-        if (!StringUtils.hasLength(redisProperties.getPassword())) {
+        if (StringUtils.hasLength(redisProperties.getPassword())) {
             sentinelServersConfig.setPassword(redisProperties.getPassword());
         }
         if (0 <= database && database <= 16) {
