@@ -1,0 +1,108 @@
+# Kafka 单节点配置文件
+# 适用于开发环境和小规模应用
+
+# 应用配置
+ouyunc:
+  # 消息队列配置
+  mq:
+    # Kafka 配置信息
+    kafka:
+      # 公共连接地址
+      bootstrapServers: 
+        - localhost:9092
+      
+      # 生产者配置
+      producer:
+        # 生产者连接地址
+        bootstrapServers: 
+          - localhost:9092
+        # 消息确认应答模式
+        # 0: 不等待确认
+        # 1: 等待leader确认
+        # all/-1: 等待所有副本确认
+        ack: "all"
+        # 批量发送的消息数量（字节）
+        batchSize: 16384
+        # 发送失败后的重复发送次数
+        retries: 3
+        # 生产者缓冲区大小（字节）
+        bufferMemory: 33554432
+        # 批量发送延迟时间（毫秒）
+        lingerMs: 1
+        # 客户端ID
+        clientId: "ouyunc-producer"
+        # 压缩类型
+        compressionType: "snappy"
+        # 消息key序列化器
+        keySerializer: "org.apache.kafka.common.serialization.StringSerializer"
+        # 消息value序列化器
+        valueSerializer: "org.apache.kafka.common.serialization.StringSerializer"
+
+      # 消费者配置
+      consumer:
+        # 消费者连接地址
+        bootstrapServers:
+          - localhost:9092
+        # 消费者组ID
+        groupId: "ouyunc-message-consumer-group"
+        # 自动偏移重置策略
+        # earliest: 从最早开始消费
+        # latest: 从最新开始消费
+        # none: 如果没有偏移量则抛出异常
+        autoOffsetReset: "latest"
+        # 批量消费一次最大拉取的数据量
+        maxPollRecords: 500
+        # 连接超时时间（毫秒）
+        sessionTimeoutMs: 30000
+        # 是否开启自动提交
+        enableAutoCommit: false
+        # 自动提交间隔时间（毫秒）
+        autoCommitIntervalMs: 1000
+        # 最大轮询间隔时间（毫秒）
+        maxPollIntervalMs: 300000
+        # 设置拉取数据的大小（字节）
+        maxPartitionFetchBytes: 1048576
+        # 客户端ID
+        clientId: "ouyunc-consumer"
+        # 心跳间隔时间（毫秒）
+        heartbeatInterval: 3000
+        # 获取数据最小字节数
+        fetchMinSize: 1
+        # 获取数据最大等待时间（毫秒）
+        fetchMaxWait: 500
+        # 消息key反序列化器
+        keyDeserializer: "org.apache.kafka.common.serialization.StringDeserializer"
+        # 消息value反序列化器
+        valueDeserializer: "org.apache.kafka.common.serialization.StringDeserializer"
+
+      # 监听器配置
+      listener:
+        # 是否开启批量消费
+        batchListener: true
+        # 设置消费的线程数
+        concurrency: 3
+        # 轮询消费者时使用的超时（毫秒）
+        pollTimeout: 1500
+        # 确认模式
+        # RECORD: 逐条确认
+        # BATCH: 批量确认
+        # TIME: 按时间确认
+        # COUNT: 按数量确认
+        # MANUAL: 手动确认
+        # MANUAL_IMMEDIATE: 立即手动确认
+        ackMode: "MANUAL_IMMEDIATE"
+        # 客户端ID
+        clientId: "ouyunc-listener"
+        # 确认数量（当ackMode为COUNT或COUNT_TIME时）
+        ackCount: 100
+        # 确认时间（当ackMode为TIME或COUNT_TIME时，毫秒）
+        ackTime: 1000
+        # 空闲事件间隔（毫秒）
+        idleEventInterval: 30000
+        # 监控间隔（毫秒）
+        monitorInterval: 10000
+        # 是否记录容器配置
+        logContainerConfig: true
+        # 无轮询阈值
+        noPollThreshold: 0.5
+
