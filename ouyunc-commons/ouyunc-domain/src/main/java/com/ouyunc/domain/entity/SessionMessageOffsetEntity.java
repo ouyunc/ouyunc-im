@@ -1,5 +1,6 @@
 package com.ouyunc.domain.entity;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.index.CompoundIndexes;
@@ -26,6 +27,7 @@ public class SessionMessageOffsetEntity implements Serializable {
     /**
      *  发送方ID（雪花ID）
      */
+    @TableField("`from`")
     private Long from;
 
     /**
@@ -38,6 +40,7 @@ public class SessionMessageOffsetEntity implements Serializable {
      * 接收方ID（用户或群组，雪花ID）
      * 对应MySQL中的to字段索引
      */
+    @TableField("`to`")
     private Long to;
 
     /**

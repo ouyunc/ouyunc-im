@@ -4,9 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/model/FromToPair.java" afterDir="false" />
+    <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="优化">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/SessionMessageOffsetEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/SessionMessageOffsetEntity.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -112,8 +112,8 @@
       <recent name="D:\workspace\ouyunc-im\docs" />
     </key>
     <key name="CopyClassDialog.RECENTS_KEY">
-      <recent name="com.ouyunc.message.listener" />
       <recent name="com.ouyunc.base.model" />
+      <recent name="com.ouyunc.message.listener" />
       <recent name="com.ouyunc.message.validator" />
       <recent name="com.ouyunc.domain.entity" />
       <recent name="com.ouyunc.message.processor" />
@@ -285,23 +285,7 @@
       <workItem from="1761375966153" duration="3593000" />
       <workItem from="1761469754773" duration="160000" />
       <workItem from="1762011587949" duration="733000" />
-      <workItem from="1762049334298" duration="3552000" />
-    </task>
-    <task id="LOCAL-00076" summary="v6.5.1 去除消息偏移量限制">
-      <option name="closed" value="true" />
-      <created>1757138491372</created>
-      <option name="number" value="00076" />
-      <option name="presentableId" value="LOCAL-00076" />
-      <option name="project" value="LOCAL" />
-      <updated>1757138491372</updated>
-    </task>
-    <task id="LOCAL-00077" summary="v6.5.1 去除消息偏移量限制">
-      <option name="closed" value="true" />
-      <created>1757138705285</created>
-      <option name="number" value="00077" />
-      <option name="presentableId" value="LOCAL-00077" />
-      <option name="project" value="LOCAL" />
-      <updated>1757138705285</updated>
+      <workItem from="1762049334298" duration="5173000" />
     </task>
     <task id="LOCAL-00078" summary="v6.5.1 去除消息偏移量限制">
       <option name="closed" value="true" />
@@ -679,7 +663,23 @@
       <option name="project" value="LOCAL" />
       <updated>1759900747678</updated>
     </task>
-    <option name="localTasksCounter" value="125" />
+    <task id="LOCAL-00125" summary="优化">
+      <option name="closed" value="true" />
+      <created>1762056065962</created>
+      <option name="number" value="00125" />
+      <option name="presentableId" value="LOCAL-00125" />
+      <option name="project" value="LOCAL" />
+      <updated>1762056065963</updated>
+    </task>
+    <task id="LOCAL-00126" summary="优化">
+      <option name="closed" value="true" />
+      <created>1762056172123</created>
+      <option name="number" value="00126" />
+      <option name="presentableId" value="LOCAL-00126" />
+      <option name="project" value="LOCAL" />
+      <updated>1762056172124</updated>
+    </task>
+    <option name="localTasksCounter" value="127" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -716,7 +716,8 @@
     <MESSAGE value="v6.5.0  添加群的限制1" />
     <MESSAGE value="v6.5.1  保存最后一条消息 为会话" />
     <MESSAGE value="v6.5.1  整理缓存key" />
-    <option name="LAST_COMMIT_MESSAGE" value="v6.5.1  整理缓存key" />
+    <MESSAGE value="优化" />
+    <option name="LAST_COMMIT_MESSAGE" value="优化" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
