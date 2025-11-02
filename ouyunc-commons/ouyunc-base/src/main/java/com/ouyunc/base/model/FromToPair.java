@@ -2,6 +2,7 @@ package com.ouyunc.base.model;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.util.Objects;
 
 /**
  * from to 的pair
@@ -37,5 +38,17 @@ public class FromToPair implements Serializable {
 
     public void setTo(String to) {
         this.to = to;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        FromToPair that = (FromToPair) o;
+        return Objects.equals(from, that.from) && Objects.equals(to, that.to);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(from, to);
     }
 }
