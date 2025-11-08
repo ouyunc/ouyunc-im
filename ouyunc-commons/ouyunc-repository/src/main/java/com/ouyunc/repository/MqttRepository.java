@@ -17,6 +17,7 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.SessionCallback;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.support.MessageBuilder;
@@ -34,6 +35,8 @@ public enum MqttRepository implements Repository{
     INSTANCE;
 
     private static final RedisTemplate<String, Object> redisTemplate = CacheFactory.REDIS.instance();
+
+    private static final StringRedisTemplate stringRedisTemplate = CacheFactory.STRING_REDIS.instance();
     /**
      * kafkaTemplate
      */
@@ -56,7 +59,7 @@ public enum MqttRepository implements Repository{
     public boolean checkDup(Packet packet, DeviceType deviceType) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        Double score = redisTemplate.opsForZSet().score(CacheConstant.buildOfflineCacheKey(metadata.getAppKey(), message.getTo(), deviceType.getDeviceTypeValue()), SnowflakeUtil.formatLong(packet.getPacketId()));
+        Double score = stringRedisTemplate.opsForZSet().score(CacheConstant.buildOfflineCacheKey(metadata.getAppKey(), message.getTo(), deviceType.getDeviceTypeValue()), SnowflakeUtil.formatLong(packet.getPacketId()));
         // 如果分数不为 null，则表示值存在
         return !Objects.isNull(score);
     }

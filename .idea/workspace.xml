@@ -6,7 +6,15 @@
   <component name="ChangeListManager">
     <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="优化">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/SessionMessageOffsetEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/SessionMessageOffsetEntity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-cache/src/main/java/com/ouyunc/cache/distributed/redis/RedisDistributedCache.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-cache/src/main/java/com/ouyunc/cache/distributed/redis/RedisDistributedCache.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-core/src/main/java/com/ouyunc/core/context/MessageContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-core/src/main/java/com/ouyunc/core/context/MessageContext.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/DefaultRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/DefaultRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/MqttRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/MqttRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/context/MessageServerContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/context/MessageServerContext.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/ClientHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/ClientHelper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/validator/FriendValidator.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/validator/FriendValidator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/validator/GroupUserValidator.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/validator/GroupUserValidator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server.yml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -285,15 +293,11 @@
       <workItem from="1761375966153" duration="3593000" />
       <workItem from="1761469754773" duration="160000" />
       <workItem from="1762011587949" duration="733000" />
-      <workItem from="1762049334298" duration="5173000" />
-    </task>
-    <task id="LOCAL-00078" summary="v6.5.1 去除消息偏移量限制">
-      <option name="closed" value="true" />
-      <created>1757158434979</created>
-      <option name="number" value="00078" />
-      <option name="presentableId" value="LOCAL-00078" />
-      <option name="project" value="LOCAL" />
-      <updated>1757158434979</updated>
+      <workItem from="1762049334298" duration="6960000" />
+      <workItem from="1762171426797" duration="3270000" />
+      <workItem from="1762349155088" duration="596000" />
+      <workItem from="1762432598863" duration="132000" />
+      <workItem from="1762566032929" duration="6400000" />
     </task>
     <task id="LOCAL-00079" summary="v6.5.1 去除消息偏移量限制">
       <option name="closed" value="true" />
@@ -679,7 +683,15 @@
       <option name="project" value="LOCAL" />
       <updated>1762056172124</updated>
     </task>
-    <option name="localTasksCounter" value="127" />
+    <task id="LOCAL-00127" summary="优化">
+      <option name="closed" value="true" />
+      <created>1762085407184</created>
+      <option name="number" value="00127" />
+      <option name="presentableId" value="LOCAL-00127" />
+      <option name="project" value="LOCAL" />
+      <updated>1762085407184</updated>
+    </task>
+    <option name="localTasksCounter" value="128" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -751,6 +763,81 @@
           <url>file://$PROJECT_DIR$/ouyunc-commons/ouyunc-cache/src/main/java/com/ouyunc/cache/config/redis/strategy/ClusterRedisStrategy.java</url>
           <line>30</line>
           <option name="timeStamp" value="72" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneMessageProcessor.java</url>
+          <line>88</line>
+          <option name="timeStamp" value="73" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneMessageProcessor.java</url>
+          <line>45</line>
+          <option name="timeStamp" value="74" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneMessageProcessor.java</url>
+          <line>70</line>
+          <option name="timeStamp" value="75" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/validator/FriendValidator.java</url>
+          <line>40</line>
+          <option name="timeStamp" value="78" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/validator/FriendValidator.java</url>
+          <line>38</line>
+          <option name="timeStamp" value="79" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/validator/BlackListValidator.java</url>
+          <line>36</line>
+          <option name="timeStamp" value="80" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/validator/BlackListValidator.java</url>
+          <line>39</line>
+          <option name="timeStamp" value="81" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/validator/FriendShieldValidator.java</url>
+          <line>38</line>
+          <option name="timeStamp" value="82" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/validator/FriendShieldValidator.java</url>
+          <line>40</line>
+          <option name="timeStamp" value="83" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/validator/FromToValidator.java</url>
+          <line>22</line>
+          <option name="timeStamp" value="84" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneMessageProcessor.java</url>
+          <line>48</line>
+          <option name="timeStamp" value="85" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/validator/FriendValidator.java</url>
+          <line>46</line>
+          <option name="timeStamp" value="86" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/validator/FriendValidator.java</url>
+          <line>45</line>
+          <option name="timeStamp" value="87" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/validator/FriendValidator.java</url>
+          <line>42</line>
+          <option name="timeStamp" value="88" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/validator/FriendValidator.java</url>
+          <line>39</line>
+          <option name="timeStamp" value="89" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>

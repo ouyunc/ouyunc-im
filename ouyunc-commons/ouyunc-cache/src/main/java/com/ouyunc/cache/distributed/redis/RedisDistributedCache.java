@@ -7,6 +7,7 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.SessionCallback;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 import java.util.List;
 import java.util.Map;
@@ -25,9 +26,15 @@ public class RedisDistributedCache<K, V> extends AbstractDistributedCache<K,V> {
      */
     private final RedisTemplate<K, V> redisTemplate;
 
+    /**
+     * redis 缓存模板
+     */
+    private final StringRedisTemplate stringRedisTemplate;
 
-    public RedisDistributedCache(RedisTemplate<K, V> redisTemplate) {
+
+    public RedisDistributedCache(RedisTemplate<K, V> redisTemplate, StringRedisTemplate stringRedisTemplate) {
         this.redisTemplate = redisTemplate;
+        this.stringRedisTemplate = stringRedisTemplate;
     }
 
     @SuppressWarnings("unchecked")
@@ -141,16 +148,16 @@ public class RedisDistributedCache<K, V> extends AbstractDistributedCache<K,V> {
 
     @Override
     public Boolean addZset(K key, V value, double score) {
-        return redisTemplate.opsForZSet().add(key, value, score);
+        return stringRedisTemplate.opsForZSet().add((String) key, (String) value, score);
     }
 
     @Override
     public Long sizeZset(K key) {
-        return redisTemplate.opsForZSet().zCard(key);
+        return stringRedisTemplate.opsForZSet().zCard((String) key);
     }
 
     @Override
     public Double scoreZset(K key, Object object) {
-        return redisTemplate.opsForZSet().score(key, object);
+        return stringRedisTemplate.opsForZSet().score((String) key, object);
     }
 }

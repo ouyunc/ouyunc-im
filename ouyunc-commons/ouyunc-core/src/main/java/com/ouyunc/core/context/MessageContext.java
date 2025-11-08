@@ -30,7 +30,7 @@ public class MessageContext {
     /**
      * 缓存
      */
-    public static Cache<String, ?> cache = new RedisDistributedCache<>(CacheFactory.REDIS.instance());
+    public static Cache<String, ?> cache = new RedisDistributedCache<>(CacheFactory.REDIS.instance(), CacheFactory.STRING_REDIS.instance());
 
 
     /**

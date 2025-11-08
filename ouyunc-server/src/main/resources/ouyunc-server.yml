@@ -226,7 +226,7 @@ ouyunc:
 
     # mongodb 配置
     mongo:
-      uri: mongodb://admin:admin@1.117.67.129:27017/admin
+      uri: mongodb://admin:admin@47.92.113.112:27017/admin
       defaultDatabase: ouyunc_message
       pool:
         maxIdleTime: 600000
@@ -253,10 +253,10 @@ ouyunc:
   mq:
     # kafka 的配置信息
     kafka:
-      bootstrapServers: 1.117.67.129:9092         #common(公共的地址)
+      bootstrapServers: 47.92.113.112:9092         #common(公共的地址)
       #生产者配置
       producer:
-        bootstrapServers: 1.117.67.129:9092          #集群使用逗号隔开
+        bootstrapServers: 47.92.113.112:9092          #集群使用逗号隔开
         batchSize: 16785                                   #一次最多发送数据量
         retries: 3                                          #发送失败后的重复发送次数
         bufferMemory: 33554432                             #32M批处理缓冲区

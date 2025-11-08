@@ -1,7 +1,6 @@
 package com.ouyunc.message.validator;
 
 import com.ouyunc.base.constant.CacheConstant;
-import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
@@ -9,7 +8,7 @@ import com.ouyunc.cache.config.CacheFactory;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.redis.core.ReactiveRedisTemplate;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import reactor.core.publisher.Mono;
 
 /**
@@ -22,7 +21,7 @@ public enum GroupUserValidator implements ReactiveValidator<Packet> {
 
     private static final Logger log = LoggerFactory.getLogger(GroupUserValidator.class);
 
-    private static final ReactiveRedisTemplate<String, ?> reactiveRedisTemplate = CacheFactory.REACTIVE_REDIS.instance();
+    private static final ReactiveStringRedisTemplate reactiveStringRedisTemplate = CacheFactory.REACTIVE_STRING_REDIS.instance();
 
 
     /***
@@ -36,7 +35,7 @@ public enum GroupUserValidator implements ReactiveValidator<Packet> {
         String to = message.getTo();
         Metadata metadata = message.getMetadata();
         // 判断是否是群成员
-        Mono<Double> scoreMono = reactiveRedisTemplate.opsForZSet().score(CacheConstant.buildGroupUserCacheKey(metadata.getAppKey(), to), from);
+        Mono<Double> scoreMono = reactiveStringRedisTemplate.opsForZSet().score(CacheConstant.buildGroupUserCacheKey(metadata.getAppKey(), to), from);
         return scoreMono.flatMap(score -> {
                     if (score != null) {
                         // 如果有分数，说明是群成员

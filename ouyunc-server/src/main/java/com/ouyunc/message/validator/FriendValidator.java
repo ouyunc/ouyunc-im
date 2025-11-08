@@ -9,7 +9,7 @@ import com.ouyunc.cache.config.CacheFactory;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.redis.core.ReactiveRedisTemplate;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import reactor.core.publisher.Mono;
 
 /**
@@ -22,7 +22,7 @@ public enum FriendValidator implements ReactiveValidator<Packet> {
 
     private static final Logger log = LoggerFactory.getLogger(FriendValidator.class);
 
-    private static final ReactiveRedisTemplate<String, ?> reactiveRedisTemplate = CacheFactory.REACTIVE_REDIS.instance();
+    private static final ReactiveStringRedisTemplate reactiveStringRedisTemplate = CacheFactory.REACTIVE_STRING_REDIS.instance();
 
 
     /***
@@ -36,14 +36,14 @@ public enum FriendValidator implements ReactiveValidator<Packet> {
         String to = message.getTo();
         Metadata metadata = message.getMetadata();
         // 判断是否是好友，有可能mq 延迟消费
-        Mono<Double> scoreMono = reactiveRedisTemplate.opsForZSet().score(CacheConstant.buildFriendsCacheKey(metadata.getAppKey(),  to), from);
+        Mono<Double> scoreMono = reactiveStringRedisTemplate.opsForZSet().score(CacheConstant.buildFriendsCacheKey(metadata.getAppKey(),  to), from);
         return scoreMono.flatMap(score -> {
                     if (score != null && score > NumberConstant.NUMBER_0) {
                         // 如果有分数，说明是好友
                         return Mono.just(true);
                     }
                     // 如果为空说明不是好友
-                    log.info("校验好友关系失败，{} 和 {}不是好友关系", from, to);
+                    log.warn("校验好友关系失败，{} 和 {}不是好友关系", from, to);
                     return Mono.just(false);
                 }).defaultIfEmpty(false);
     }

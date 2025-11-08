@@ -25,6 +25,7 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.SessionCallback;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -40,6 +41,8 @@ public class ClientHelper {
     private static final Logger log = LoggerFactory.getLogger(ClientHelper.class);
 
     private  static final RedisTemplate<String, Object> redisTemplate = CacheFactory.REDIS.instance();
+
+    private  static final StringRedisTemplate stringRedisTemplate = CacheFactory.STRING_REDIS.instance();
 
     /***
      * @author fzx

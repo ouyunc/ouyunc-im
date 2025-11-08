@@ -164,7 +164,7 @@ public enum DefaultRepository implements Repository{
     public boolean checkDup(Packet packet, DeviceType deviceType) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        Double score = redisTemplate.opsForZSet().score(CacheConstant.buildOfflineCacheKey(metadata.getAppKey(), message.getTo(), deviceType.getDeviceTypeValue()), SnowflakeUtil.formatLong(packet.getPacketId()));
+        Double score = stringRedisTemplate.opsForZSet().score(CacheConstant.buildOfflineCacheKey(metadata.getAppKey(), message.getTo(), deviceType.getDeviceTypeValue()), SnowflakeUtil.formatLong(packet.getPacketId()));
         // 如果分数不为 null，则表示值存在
         return !Objects.isNull(score);
     }
@@ -632,7 +632,7 @@ public enum DefaultRepository implements Repository{
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         // score 存储的是用户加入群的时间戳，毫秒
-        return (Set<String>) redisTemplate.opsForZSet().range(CacheConstant.buildGroupUserCacheKey(metadata.getAppKey(), message.getTo()), NumberConstant.NUMBER_0, NumberConstant.NUMBER_NEGATIVE_1);
+        return stringRedisTemplate.opsForZSet().range(CacheConstant.buildGroupUserCacheKey(metadata.getAppKey(), message.getTo()), NumberConstant.NUMBER_0, NumberConstant.NUMBER_NEGATIVE_1);
     }
 
 
@@ -675,7 +675,7 @@ public enum DefaultRepository implements Repository{
      */
     @SuppressWarnings("unchecked")
     public Set<String> groupManagerAndLeaderUsersIdentity(Packet packet) {
-        return redisTemplate.opsForZSet().rangeByScore(CacheConstant.buildGroupUserCacheKey(packet.getMessage().getMetadata().getAppKey(), packet.getMessage().getTo()), GroupUserPost.MANAGER.value(), GroupUserPost.LEADER.value());
+        return stringRedisTemplate.opsForZSet().rangeByScore(CacheConstant.buildGroupUserCacheKey(packet.getMessage().getMetadata().getAppKey(), packet.getMessage().getTo()), GroupUserPost.MANAGER.value(), GroupUserPost.LEADER.value());
     }
     /**
      * 获取群管理员和群主的唯一标识
@@ -686,7 +686,7 @@ public enum DefaultRepository implements Repository{
     @SuppressWarnings("unchecked")
     public Map<String, Double> groupManagerAndLeaderUsersIdentityAndPost(Packet packet) {
         Map<String, Double>  groupManagerAndLeaderUsersIdentityAndPost = new HashMap<>();
-        Set<ZSetOperations.TypedTuple<String>> tuples = redisTemplate.opsForZSet().rangeByScoreWithScores(CacheConstant.buildGroupUserCacheKey(packet.getMessage().getMetadata().getAppKey(), packet.getMessage().getTo()), GroupUserPost.MANAGER.value(), GroupUserPost.LEADER.value());
+        Set<ZSetOperations.TypedTuple<String>> tuples = stringRedisTemplate.opsForZSet().rangeByScoreWithScores(CacheConstant.buildGroupUserCacheKey(packet.getMessage().getMetadata().getAppKey(), packet.getMessage().getTo()), GroupUserPost.MANAGER.value(), GroupUserPost.LEADER.value());
         if (tuples != null && !tuples.isEmpty()) {
             for (ZSetOperations.TypedTuple<String> tuple : tuples) {
                 groupManagerAndLeaderUsersIdentityAndPost.put(tuple.getValue(), tuple.getScore());
@@ -705,7 +705,7 @@ public enum DefaultRepository implements Repository{
     public Set<GroupUserEntity> groupManagerAndLeaderUserEntity(Packet packet) {
         Message message = packet.getMessage();
         String appKey = message.getMetadata().getAppKey();
-        Set<String> groupManagerAndLeaderUsersIdentitySet = redisTemplate.opsForZSet().rangeByScore(CacheConstant.buildGroupUserCacheKey(appKey, message.getTo()), GroupUserPost.MANAGER.value(), GroupUserPost.LEADER.value());
+        Set<String> groupManagerAndLeaderUsersIdentitySet = stringRedisTemplate.opsForZSet().rangeByScore(CacheConstant.buildGroupUserCacheKey(appKey, message.getTo()), GroupUserPost.MANAGER.value(), GroupUserPost.LEADER.value());
         if (CollectionUtils.isEmpty(groupManagerAndLeaderUsersIdentitySet)) {
             log.error("群：{} 不存在群主和群成员", message.getTo());
             return Set.of();
@@ -723,7 +723,7 @@ public enum DefaultRepository implements Repository{
     public Set<String> groupManagerUsersIdentity(Packet packet) {
         Message message = packet.getMessage();
         String appKey = message.getMetadata().getAppKey();
-        return redisTemplate.opsForZSet().range(CacheConstant.buildGroupUserCacheKey(appKey, message.getTo()), GroupUserPost.MANAGER.value(), GroupUserPost.MANAGER.value());
+        return stringRedisTemplate.opsForZSet().range(CacheConstant.buildGroupUserCacheKey(appKey, message.getTo()), GroupUserPost.MANAGER.value(), GroupUserPost.MANAGER.value());
     }
 
     /**
@@ -736,7 +736,7 @@ public enum DefaultRepository implements Repository{
     public String groupLeaderUsersIdentity(Packet packet) {
         Message message = packet.getMessage();
         String appKey = message.getMetadata().getAppKey();
-        Set<String> leanderIdentitySet = redisTemplate.opsForZSet().range(CacheConstant.buildGroupUserCacheKey(appKey, message.getTo()), GroupUserPost.LEADER.value(), GroupUserPost.LEADER.value());
+        Set<String> leanderIdentitySet = stringRedisTemplate.opsForZSet().range(CacheConstant.buildGroupUserCacheKey(appKey, message.getTo()), GroupUserPost.LEADER.value(), GroupUserPost.LEADER.value());
         if (CollectionUtils.isEmpty(leanderIdentitySet)) {
             log.warn("群 {} 中不存在管理员", message.getTo());
             return null;
@@ -912,7 +912,7 @@ public enum DefaultRepository implements Repository{
     @SuppressWarnings("unchecked")
     public boolean isFriend(String appKey, String from, String to) {
         // 这里是否再去查询数据库？没有太大必要，后续如果需要再加
-        return redisTemplate.opsForZSet().score(CacheConstant.buildFriendsCacheKey(appKey, from), to) != null;
+        return stringRedisTemplate.opsForZSet().score(CacheConstant.buildFriendsCacheKey(appKey, from), to) != null;
     }
 
     /**
@@ -925,7 +925,7 @@ public enum DefaultRepository implements Repository{
     @SuppressWarnings("unchecked")
     public boolean inGroup(String appKey, String from, String groupId) {
         // 这里是否再去查询数据库？没有太大必要，后续如果需要再加
-        return redisTemplate.opsForZSet().score(CacheConstant.buildGroupUserCacheKey(appKey, groupId), from) != null;
+        return stringRedisTemplate.opsForZSet().score(CacheConstant.buildGroupUserCacheKey(appKey, groupId), from) != null;
     }
 
 
