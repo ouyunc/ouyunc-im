@@ -156,8 +156,8 @@ public class MessageEntity implements Serializable {
         public static final String ids = "ids";
         public static final String from = "from";
         public static final String to = "to";
-        public static final String messageType = "messageType";
-        public static final String contentType = "contentType";
+        public static final String messageType = "message_type";
+        public static final String contentType = "content_type";
         public static final String appKey = "appKey";
     }
 
