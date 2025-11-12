@@ -1,9 +1,12 @@
 package com.ouyunc.domain.entity;
 
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.CompoundIndexes;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -13,40 +16,50 @@ import java.time.LocalDateTime;
 * 群成员表
 * @TableName ouyunc_im_group_user
 */
-@TableName("ouyunc_im_group_user")
-public class GroupUserEntity implements Serializable {
+@Document(collection = "ouyunc_im_group_user")
+@CompoundIndexes({
+        @CompoundIndex(name = "user_group_idx", def = "{'user_id': 1, 'group_id': 1}", unique = true)
+})
+public class MongoGroupUserEntity implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
     /**
     * 主键id
     */
-    @TableId(type = IdType.ASSIGN_ID)
+    @Id
     private Long id;
 
     /**
     * 群组id
     */
+    @Field("group_id")
     private Long groupId;
 
     /**
     * 群组code
     */
+    @Indexed
+    @Field("group_code")
     private String groupCode;
 
     /**
     * 群组别名（该用户对这个群起的别名）
     */
+    @Field("group_nick_name")
     private String groupNickName;
 
     /**
     * 用户id
     */
+    @Field("user_id")
     private Long userId;
 
 
     /**
     * 用户code
     */
+    @Indexed
+    @Field("user_code")
     private String userCode;
 
 
@@ -60,6 +73,7 @@ public class GroupUserEntity implements Serializable {
     /**
     * 用户昵称（用户在群里的昵称）
     */
+    @Field("user_nick_name")
     private String userNickName;
 
     /**
@@ -87,12 +101,14 @@ public class GroupUserEntity implements Serializable {
     /**
      * 成为好友的时间戳， 毫秒
      */
+    @Field("join_time")
     private Long joinTime;
 
 
     /**
     * 创建时间
     */
+    @Field("create_time")
     private LocalDateTime createTime;
 
 
@@ -104,10 +120,10 @@ public class GroupUserEntity implements Serializable {
         public static final String userCode = "user_code";
     }
 
-    public GroupUserEntity() {
+    public MongoGroupUserEntity() {
     }
 
-    public GroupUserEntity(Long id, Long groupId, String groupCode,  String groupNickName, Long userId, String userCode, Integer post, String userNickName, Integer shield, Integer silence,  Long joinTime, LocalDateTime createTime) {
+    public MongoGroupUserEntity(Long id, Long groupId, String groupCode, String groupNickName, Long userId, String userCode, Integer post, String userNickName, Integer shield, Integer silence, Long joinTime, LocalDateTime createTime) {
         this.id = id;
         this.groupId = groupId;
         this.groupCode = groupCode;
@@ -122,7 +138,7 @@ public class GroupUserEntity implements Serializable {
         this.createTime = createTime;
     }
 
-    public GroupUserEntity(Long id, Long groupId, String groupCode,  String groupNickName, Long userId, String userCode,  Integer post, String userNickName, Integer shield, Integer silence, Integer way, Integer channel,  Long joinTime, LocalDateTime createTime) {
+    public MongoGroupUserEntity(Long id, Long groupId, String groupCode, String groupNickName, Long userId, String userCode, Integer post, String userNickName, Integer shield, Integer silence, Integer way, Integer channel, Long joinTime, LocalDateTime createTime) {
         this.id = id;
         this.groupId = groupId;
         this.groupCode = groupCode;
@@ -139,7 +155,7 @@ public class GroupUserEntity implements Serializable {
         this.createTime = createTime;
     }
 
-    public GroupUserEntity(Long id, Long groupId, String groupCode, String groupNickName, Long userId, String userCode, Integer post, String userNickName, Integer shield, Integer silence, Integer way, Integer channel, Long joinTime) {
+    public MongoGroupUserEntity(Long id, Long groupId, String groupCode, String groupNickName, Long userId, String userCode, Integer post, String userNickName, Integer shield, Integer silence, Integer way, Integer channel, Long joinTime) {
         this.id = id;
         this.groupId = groupId;
         this.groupCode = groupCode;
