@@ -112,6 +112,15 @@ public class MongoGroupUserEntity implements Serializable {
     private LocalDateTime createTime;
 
 
+    /**
+     * 过期时间
+     */
+    @Field("expire_at")
+    @Indexed(expireAfter = "0s")
+    private LocalDateTime expireAt;
+
+
+
     public static final class Fields {
         public static final String id = "id";
         public static final String groupId = "group_id";
@@ -171,8 +180,31 @@ public class MongoGroupUserEntity implements Serializable {
         this.joinTime = joinTime;
     }
 
+    public MongoGroupUserEntity(Long id, Long groupId, String groupCode, String groupNickName, Long userId, String userCode, Integer post, String userNickName, Integer shield, Integer silence, Integer way, Integer channel, Long joinTime, LocalDateTime createTime, LocalDateTime expireAt) {
+        this.id = id;
+        this.groupId = groupId;
+        this.groupCode = groupCode;
+        this.groupNickName = groupNickName;
+        this.userId = userId;
+        this.userCode = userCode;
+        this.post = post;
+        this.userNickName = userNickName;
+        this.shield = shield;
+        this.silence = silence;
+        this.way = way;
+        this.channel = channel;
+        this.joinTime = joinTime;
+        this.createTime = createTime;
+        this.expireAt = expireAt;
+    }
 
+    public LocalDateTime getExpireAt() {
+        return expireAt;
+    }
 
+    public void setExpireAt(LocalDateTime expireAt) {
+        this.expireAt = expireAt;
+    }
 
     public Integer getWay() {
         return way;

@@ -5,10 +5,15 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="优化">
-      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MongoFriendEntity.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/6.5.0/client1.html" beforeDir="false" afterPath="$PROJECT_DIR$/docs/6.5.0/client1.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MessageEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MessageEntity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/JdbcSqlConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/JdbcSqlConstant.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/MessageConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/MessageConstant.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/MqConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/MqConstant.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/FriendEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/FriendEntity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MongoFriendEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MongoFriendEntity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MongoFriendRequestSessionEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MongoFriendRequestSessionEntity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MongoGroupRequestSessionEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MongoGroupRequestSessionEntity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MongoGroupUserEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MongoGroupUserEntity.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -41,13 +46,12 @@
   <component name="MavenImportPreferences">
     <option name="generalSettings">
       <MavenGeneralSettings>
-        <option name="customMavenHome" value="C:\Program Files\apache-maven-3.9.9" />
+        <option name="customMavenHome" value="C:\Program Files\apache-maven-3.6.3" />
         <option name="localRepository" value="D:\repository" />
         <option name="mavenHomeTypeForPersistence" value="CUSTOM" />
-        <option name="userSettingsFile" value="C:\Program Files\apache-maven-3.9.9\conf\ali-settings.xml" />
+        <option name="userSettingsFile" value="C:\Program Files\apache-maven-3.6.3\conf\ali-settings.xml" />
       </MavenGeneralSettings>
     </option>
-    <option name="explicitlyEnabledProfiles" value="native" />
   </component>
   <component name="MavenRunner">
     <option name="skipTests" value="true" />
@@ -56,50 +60,50 @@
   &quot;associatedIndex&quot;: 0
 }</component>
   <component name="ProjectId" id="2ufM82eHzwWazomtA8rAeEDAhv6" />
-  <component name="ProjectLevelVcsManager" settingsEditedManually="true">
+  <component name="ProjectLevelVcsManager">
     <ConfirmationsSetting value="2" id="Add" />
   </component>
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Application.App.executor": "Debug",
-    "Application.ObjectCreationBenchmark.executor": "Debug",
-    "Application.StartServer.executor": "Debug",
-    "Application.WebSocketLoadTester.executor": "Run",
-    "JavaScript Debug.client1.html (1).executor": "Run",
-    "JavaScript Debug.client1.html (2).executor": "Run",
-    "JavaScript Debug.client1.html.executor": "Run",
-    "JavaScript Debug.client13333333333.html.executor": "Run",
-    "JavaScript Debug.client2.html.executor": "Run",
-    "JavaScript Debug.client3.html.executor": "Run",
-    "JavaScript Debug.client4.html.executor": "Run",
-    "JavaScript Debug.client5.html.executor": "Run",
-    "Maven.ouyunc-im [clean].executor": "Run",
-    "Maven.ouyunc-im [install].executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "6.5.1",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "D:/workspace/ouyunc-im",
-    "node.js.detected.package.eslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "project.structure.last.edited": "Libraries",
-    "project.structure.proportion": "0.0",
-    "project.structure.side.proportion": "0.0",
-    "settings.editor.selected.configurable": "MavenSettings",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Application.App.executor&quot;: &quot;Debug&quot;,
+    &quot;Application.ObjectCreationBenchmark.executor&quot;: &quot;Debug&quot;,
+    &quot;Application.StartServer.executor&quot;: &quot;Debug&quot;,
+    &quot;Application.WebSocketLoadTester.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript Debug.client1.html (1).executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript Debug.client1.html (2).executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript Debug.client1.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript Debug.client13333333333.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript Debug.client2.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript Debug.client3.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript Debug.client4.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript Debug.client5.html.executor&quot;: &quot;Run&quot;,
+    &quot;Maven.ouyunc-im [clean].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.ouyunc-im [install].executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;6.5.1&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;D:/workspace/ouyunc-im&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Libraries&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.0&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;MavenSettings&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   },
-  "keyToStringList": {
-    "DatabaseDriversLRU": [
-      "mysql"
+  &quot;keyToStringList&quot;: {
+    &quot;DatabaseDriversLRU&quot;: [
+      &quot;mysql&quot;
     ]
   }
-}]]></component>
+}</component>
   <component name="ReactorSettings">
     <option name="notificationShown" value="true" />
   </component>
@@ -293,14 +297,7 @@
       <workItem from="1762349155088" duration="596000" />
       <workItem from="1762432598863" duration="132000" />
       <workItem from="1762566032929" duration="6400000" />
-    </task>
-    <task id="LOCAL-00079" summary="v6.5.1 去除消息偏移量限制">
-      <option name="closed" value="true" />
-      <created>1757163221842</created>
-      <option name="number" value="00079" />
-      <option name="presentableId" value="LOCAL-00079" />
-      <option name="project" value="LOCAL" />
-      <updated>1757163221843</updated>
+      <workItem from="1762951658956" duration="8110000" />
     </task>
     <task id="LOCAL-00080" summary="v6.5.1 去除消息偏移量限制">
       <option name="closed" value="true" />
@@ -686,7 +683,15 @@
       <option name="project" value="LOCAL" />
       <updated>1762085407184</updated>
     </task>
-    <option name="localTasksCounter" value="128" />
+    <task id="LOCAL-00128" summary="优化">
+      <option name="closed" value="true" />
+      <created>1762954973861</created>
+      <option name="number" value="00128" />
+      <option name="presentableId" value="LOCAL-00128" />
+      <option name="project" value="LOCAL" />
+      <updated>1762954973862</updated>
+    </task>
+    <option name="localTasksCounter" value="129" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -793,16 +798,6 @@
           <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/validator/BlackListValidator.java</url>
           <line>39</line>
           <option name="timeStamp" value="81" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/validator/FriendShieldValidator.java</url>
-          <line>38</line>
-          <option name="timeStamp" value="82" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/validator/FriendShieldValidator.java</url>
-          <line>40</line>
-          <option name="timeStamp" value="83" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/validator/FromToValidator.java</url>

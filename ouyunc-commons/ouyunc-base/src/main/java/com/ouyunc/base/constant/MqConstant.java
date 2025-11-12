@@ -98,4 +98,31 @@ public class MqConstant {
 
 
 
+    /**
+     * kafka 保存好友配置 group
+     */
+    public static final String KAFKA_SAVE_FRIEND_CONFIG_GROUP = "friend_config_save";
+
+
+
+    /**
+     * kafka 保存好友配置 topic
+     */
+    public static final String KAFKA_SAVE_FRIEND_CONFIG_TOPIC = MessageConstant.OUYUNC + MessageConstant.UNDERLINE + KAFKA_SAVE_FRIEND_CONFIG_GROUP;
+
+
+
+    /**
+     * kafka 保存群成员配置 group
+     */
+    public static final String KAFKA_SAVE_GROUP_USER_CONFIG_GROUP = "group_user_config_save";
+
+
+
+    /**
+     * kafka 保存群成员配置 topic
+     */
+    public static final String KAFKA_SAVE_GROUP_USER_CONFIG_TOPIC = MessageConstant.OUYUNC + MessageConstant.UNDERLINE + KAFKA_SAVE_GROUP_USER_CONFIG_GROUP;
+
+
 }

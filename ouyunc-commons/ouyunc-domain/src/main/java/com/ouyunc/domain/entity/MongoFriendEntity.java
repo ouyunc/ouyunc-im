@@ -4,6 +4,7 @@ package com.ouyunc.domain.entity;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.index.CompoundIndexes;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
@@ -88,6 +89,14 @@ public class MongoFriendEntity implements Serializable {
     @Field("update_time")
     private LocalDateTime updateTime;
 
+    /**
+     * 过期时间
+     */
+    @Field("expire_at")
+    @Indexed(expireAfter = "0s")
+    private LocalDateTime expireAt;
+
+
 
     public static final class Fields {
         public static final String id = "id";
@@ -133,7 +142,28 @@ public class MongoFriendEntity implements Serializable {
         this.updateTime = updateTime;
     }
 
+    public MongoFriendEntity(Long id, Long userId, String friendUserCode, Long friendUserId, String friendNickName, Integer shield, Integer way, Integer channel, Long joinTime, LocalDateTime createTime, LocalDateTime updateTime, LocalDateTime expireAt) {
+        this.id = id;
+        this.userId = userId;
+        this.friendUserCode = friendUserCode;
+        this.friendUserId = friendUserId;
+        this.friendNickName = friendNickName;
+        this.shield = shield;
+        this.way = way;
+        this.channel = channel;
+        this.joinTime = joinTime;
+        this.createTime = createTime;
+        this.updateTime = updateTime;
+        this.expireAt = expireAt;
+    }
 
+    public LocalDateTime getExpireAt() {
+        return expireAt;
+    }
+
+    public void setExpireAt(LocalDateTime expireAt) {
+        this.expireAt = expireAt;
+    }
 
     public Integer getWay() {
         return way;

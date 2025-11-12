@@ -132,11 +132,11 @@ public class MongoGroupRequestSessionEntity implements Serializable {
     private LocalDateTime updateTime;
 
 
-
     /**
      * 过期时间
      */
     @Field("expire_at")
+    @Indexed(expireAfter = "0s")
     private LocalDateTime expireAt;
 
     public static final class Fields {

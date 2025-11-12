@@ -134,6 +134,28 @@ public class MessageConstant {
      */
     public static final long CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP = NumberConstant.NUMBER_30 * MessageConstant.DAY_TIMESTAMP;
 
+
+
+    /**
+     *   缓存好友配置信息的过期时间戳，30天,时间戳，单位毫秒
+     */
+    public static final long CACHE_FRIENDS_CONFIG_KEY_EXPIRE_TIMESTAMP = NumberConstant.NUMBER_30 * MessageConstant.DAY_TIMESTAMP;
+
+
+
+    /**
+     *   mongo好友配置信息的过期时间戳，90天,时间戳，单位毫秒
+     */
+    public static final long MONGO_FRIENDS_CONFIG_KEY_EXPIRE_DAY = NumberConstant.NUMBER_90;
+
+
+
+    /**
+     *   缓存群成员配置信息的过期时间戳，30天,时间戳，单位毫秒
+     */
+    public static final long CACHE_GROUP_USER_CONFIG_KEY_EXPIRE_TIMESTAMP = NumberConstant.NUMBER_30 * MessageConstant.DAY_TIMESTAMP;
+
+
     /**
      *  app key  变动 publish topic
      */
