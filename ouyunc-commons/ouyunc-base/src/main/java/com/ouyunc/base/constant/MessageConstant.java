@@ -52,6 +52,11 @@ public class MessageConstant {
      */
     public static final int NUMBER_10000 = 10000;
 
+    /**
+     * 本地缓存最大容量120万
+     */
+    public static final long LOCAL_CACHE_MAX_SIZE = 1_200_000;
+
 
     /**
      * 一天的时间戳 毫秒
