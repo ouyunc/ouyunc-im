@@ -21,15 +21,20 @@ public interface ReactiveValidator<T> {
     Mono<Boolean> verify(T t, ChannelHandlerContext ctx);
 
     /**
-     * 组合两个验证器，使用逻辑与操作
+     * 组合两个验证器，使用逻辑与操作（优化：短路逻辑，第一个为false时不执行第二个）
      * @param other 另一个验证器
      * @return 组合后的验证器
      */
     default ReactiveValidator<T> and(ReactiveValidator<? super T> other) {
         Objects.requireNonNull(other);
         return (t, ctx) -> this.verify(t, ctx)
-                .flatMap(result1 -> other.verify(t, ctx)
-                        .map(result2 -> result1 && result2));
+                .flatMap(result1 -> {
+                    if (!result1) {
+                        // 短路逻辑：第一个为false时直接返回，不执行第二个验证器
+                        return Mono.just(false);
+                    }
+                    return other.verify(t, ctx);
+                });
     }
 
     /**
@@ -41,7 +46,7 @@ public interface ReactiveValidator<T> {
     }
 
     /**
-     * 组合两个验证器，使用逻辑或操作
+     * 组合两个验证器，使用逻辑或操作（优化：短路逻辑，第一个为true时不执行第二个）
      * @param other 另一个验证器
      * @return 组合后的验证器
      */
@@ -50,6 +55,7 @@ public interface ReactiveValidator<T> {
         return (t, ctx) -> this.verify(t, ctx)
                 .flatMap(result1 -> {
                     if (result1) {
+                        // 短路逻辑：第一个为true时直接返回，不执行第二个验证器
                         return Mono.just(true);
                     }
                     return other.verify(t, ctx);

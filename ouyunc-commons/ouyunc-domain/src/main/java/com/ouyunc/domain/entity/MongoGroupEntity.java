@@ -1,9 +1,10 @@
 package com.ouyunc.domain.entity;
 
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -13,44 +14,51 @@ import java.time.LocalDateTime;
 * 群信息表
 * @TableName ouyunc_im_group
 */
-@TableName("ouyunc_im_group")
-public class GroupEntity implements Serializable {
+@Document(collection = "ouyunc_im_group")
+public class MongoGroupEntity implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
     /**
     * 主键id
     */
-    @TableId(type = IdType.ASSIGN_ID)
+    @Id
     private Long id;
 
     /**
     * 群组号码
     */
+    @Indexed
+    @Field("group_code")
     private String groupCode;
 
     /**
     * 群组名称
     */
+    @Field("group_name")
     private String groupName;
 
     /**
     * 群组头像
     */
+    @Field("group_avatar")
     private String groupAvatar;
 
     /**
     * 群组描述
     */
+    @Field("group_description")
     private String groupDescription;
 
     /**
     * 群组公告
     */
+    @Field("group_announcement")
     private String groupAnnouncement;
 
     /**
     * 群加入策略：0-加群需要验证，1-加群自动同意
     */
+    @Field("group_join_policy")
     private Integer groupJoinPolicy;
 
     /**
@@ -66,16 +74,20 @@ public class GroupEntity implements Serializable {
     /**
     * 应用appKey
     */
+    @Indexed
+    @Field("app_key")
     private String appKey;
 
     /**
     * 创建时间
     */
+    @Field("create_time")
     private LocalDateTime createTime;
 
     /**
     * 修改时间
     */
+    @Field("update_time")
     private LocalDateTime updateTime;
 
     /**
@@ -83,12 +95,57 @@ public class GroupEntity implements Serializable {
     */
     private Integer deleted;
 
+    /**
+     * 过期时间
+     */
+    @Field("expire_at")
+    @Indexed(expireAfter = "0s")
+    private LocalDateTime expireAt;
+
+
     public static final class Fields {
         public static final String id = "id";
         public static final String groupCode = "group_code";
         public static final String appKey = "app_key";
         public static final String deleted = "deleted";
     }
+
+    public MongoGroupEntity() {
+    }
+
+    public MongoGroupEntity(Long id, String groupCode, String groupName, String groupAvatar, String groupDescription, String groupAnnouncement, Integer groupJoinPolicy, Integer status, Integer silence, String appKey, LocalDateTime createTime, LocalDateTime updateTime, Integer deleted) {
+        this.id = id;
+        this.groupCode = groupCode;
+        this.groupName = groupName;
+        this.groupAvatar = groupAvatar;
+        this.groupDescription = groupDescription;
+        this.groupAnnouncement = groupAnnouncement;
+        this.groupJoinPolicy = groupJoinPolicy;
+        this.status = status;
+        this.silence = silence;
+        this.appKey = appKey;
+        this.createTime = createTime;
+        this.updateTime = updateTime;
+        this.deleted = deleted;
+    }
+
+    public MongoGroupEntity(Long id, String groupCode, String groupName, String groupAvatar, String groupDescription, String groupAnnouncement, Integer groupJoinPolicy, Integer status, Integer silence, String appKey, LocalDateTime createTime, LocalDateTime updateTime, Integer deleted, LocalDateTime expireAt) {
+        this.id = id;
+        this.groupCode = groupCode;
+        this.groupName = groupName;
+        this.groupAvatar = groupAvatar;
+        this.groupDescription = groupDescription;
+        this.groupAnnouncement = groupAnnouncement;
+        this.groupJoinPolicy = groupJoinPolicy;
+        this.status = status;
+        this.silence = silence;
+        this.appKey = appKey;
+        this.createTime = createTime;
+        this.updateTime = updateTime;
+        this.deleted = deleted;
+        this.expireAt = expireAt;
+    }
+
     public Long getId() {
         return id;
     }
@@ -192,4 +249,13 @@ public class GroupEntity implements Serializable {
     public void setDeleted(Integer deleted) {
         this.deleted = deleted;
     }
+
+    public LocalDateTime getExpireAt() {
+        return expireAt;
+    }
+
+    public void setExpireAt(LocalDateTime expireAt) {
+        this.expireAt = expireAt;
+    }
 }
+

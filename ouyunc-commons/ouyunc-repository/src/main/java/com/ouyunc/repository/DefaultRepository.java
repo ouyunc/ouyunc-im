@@ -30,6 +30,7 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.redis.connection.RedisConnection;
@@ -47,10 +48,7 @@ import reactor.core.scheduler.Schedulers;
 import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.function.*;
 import java.util.stream.Collectors;
 
@@ -79,6 +77,11 @@ public enum DefaultRepository implements Repository{
      * mongoTemplate
      */
     private static final MongoTemplate mongoTemplate = MongodbFactory.MONGODB_TEMPLATE.instance();
+
+    /**
+     * reactiveMongoTemplate
+     */
+    private static final ReactiveMongoTemplate reactiveMongoTemplate = MongodbFactory.REACTIVE_MONGODB_TEMPLATE.instance();
 
     /**
      * redisTemplate
@@ -171,7 +174,7 @@ public enum DefaultRepository implements Repository{
 
 
     /**
-     * 批量获取消息
+     * 批量获取消息（同步版本，保留兼容性）
      * @param appKey
      * @param packetIds
      * @return
@@ -180,7 +183,7 @@ public enum DefaultRepository implements Repository{
     public List<Packet> getPackets(String appKey, List<Long> packetIds) {
         if (CollectionUtils.isEmpty(packetIds)) {
             log.warn("packetIds 为空, appKey={}", appKey);
-            return Collections.emptyList(); // 避免返回 null
+            return Collections.emptyList();
         }
 
         // 1. 从 Redis 批量获取缓存
@@ -190,7 +193,7 @@ public enum DefaultRepository implements Repository{
         List<Packet> cachedPackets = (List<Packet>) redisTemplate.opsForValue().multiGet(redisKeys);
         if (cachedPackets == null) {
             log.warn("cachedPackets 为空, appKey={}", appKey);
-            return Collections.emptyList(); // 避免返回 null
+            return Collections.emptyList();
         }
         // 过滤有效缓存并收集已存在的 ID
         Map<Long, Packet> cachedPacketMap = cachedPackets.stream()
@@ -208,14 +211,68 @@ public enum DefaultRepository implements Repository{
                 .filter(id -> !cachedIds.contains(id))
                 .collect(Collectors.toList());
 
-        // 3. 从 MongoDB 和 MySQL 查询缺失数据 (合并查询逻辑)
-        List<Packet> dbPackets = queryFromDatabases(missingIds);
+        // 3. 从 MongoDB 和 MySQL 查询缺失数据
+        List<Packet> dbPackets = queryPacketsFromDatabases(missingIds);
 
-        // 4. 合并结果并异步更新缓存，这里不进行更新mongo 没必要
+        // 4. 合并结果并异步更新缓存
         List<Packet> result = mergeResults(cachedPacketMap, dbPackets);
-        asyncUpdateCache(appKey, dbPackets);
+        asyncUpdatePacketCache(appKey, dbPackets);
 
         return result;
+    }
+
+    /**
+     * 响应式批量获取消息（优化版本：非阻塞、高并发）
+     * @param appKey
+     * @param packetIds
+     * @return
+     */
+    @SuppressWarnings("unchecked")
+    public Mono<List<Packet>> getPacketsReactive(String appKey, List<Long> packetIds) {
+        if (CollectionUtils.isEmpty(packetIds)) {
+            return Mono.just(Collections.emptyList());
+        }
+
+        // 1. 从 Redis 批量获取缓存（响应式）
+        Set<String> redisKeys = packetIds.stream()
+                .map(id -> CacheConstant.buildMessageCacheKey(appKey, id))
+                .collect(Collectors.toSet());
+        
+        return Flux.fromIterable(redisKeys)
+                .flatMap(key -> reactiveRedisTemplate.opsForValue().get(key)
+                        .cast(Packet.class)
+                        .onErrorResume(e -> Mono.empty()))
+                .collectMap(packet -> ((Packet) packet).getPacketId(), Function.identity(), HashMap::new)
+                .cast(Map.class)
+                .flatMap(cachedPacketMapObj -> {
+                    @SuppressWarnings("unchecked")
+                    Map<Long, Packet> cachedPacketMap = (Map<Long, Packet>) cachedPacketMapObj;
+                    List<Long> cachedIds = new ArrayList<>(cachedPacketMap.keySet());
+                    
+                    // 全部命中缓存则直接返回
+                    if (cachedIds.size() == packetIds.size()) {
+                        return Mono.just(new ArrayList<>(cachedPacketMap.values()));
+                    }
+                    
+                    // 2. 收集未命中缓存的 ID
+                    List<Long> missingIds = packetIds.stream()
+                            .filter(id -> !cachedIds.contains(id))
+                            .collect(Collectors.toList());
+                    
+                    // 3. 从 MongoDB 和 MySQL 查询缺失数据（响应式）
+                    return queryPacketsFromDatabasesReactive(missingIds)
+                            .collectList()
+                            .map(dbPackets -> {
+                                // 4. 合并结果并异步更新缓存
+                                List<Packet> result = mergeResults(cachedPacketMap, dbPackets);
+                                asyncUpdateCachePacketReactive(appKey, dbPackets);
+                                return result;
+                            });
+                })
+                .onErrorResume(e -> {
+                    log.error("响应式批量获取消息异常, appKey: {}, packetIds: {}", appKey, packetIds, e);
+                    return Mono.just(Collections.emptyList());
+                });
     }
 
 //----------------------------- 辅助方法 -----------------------------
@@ -223,9 +280,9 @@ public enum DefaultRepository implements Repository{
 
 
     /**
-     * 从 MongoDB 和 MySQL 查询数据 (优先级: MongoDB -> MySQL)
+     * 从 MongoDB 和 MySQL 查询数据 (优先级: MongoDB -> MySQL) - 同步版本
      */
-    private List<Packet> queryFromDatabases(List<Long> missingIds) {
+    private List<Packet> queryPacketsFromDatabases(List<Long> missingIds) {
         if (CollectionUtils.isEmpty(missingIds)) {
             return Collections.emptyList();
         }
@@ -235,7 +292,6 @@ public enum DefaultRepository implements Repository{
                 Query.query(Criteria.where(MongoMessageEntity.Fields.id).in(missingIds)),
                 MongoMessageEntity.class
         );
-        // 在查询 撤销消息表，如果查到了就设置到packet的retain保留字段中作为撤销标记，算了不在这里查了，尽量减少im服务和持久化层的交互逻辑，在http 服务来做这个，不如拉取会话或离线消息时处理
         List<Packet> dbPackets = convertToPackets(mongoEntities);
 
         // 检查是否还有缺失
@@ -264,6 +320,91 @@ public enum DefaultRepository implements Repository{
         }
 
         return dbPackets;
+    }
+
+    /**
+     * 响应式从 MongoDB 和 MySQL 查询数据 (优先级: MongoDB -> MySQL) - 优化版本
+     */
+    private Flux<Packet> queryPacketsFromDatabasesReactive(List<Long> missingIds) {
+        if (CollectionUtils.isEmpty(missingIds)) {
+            return Flux.empty();
+        }
+
+        // 优先查询 MongoDB（响应式）
+        return reactiveMongoTemplate.find(
+                Query.query(Criteria.where(MongoMessageEntity.Fields.id).in(missingIds)),
+                MongoMessageEntity.class
+        )
+        .map(this::convertToPacket)
+        .collectList()
+        .flatMapMany(mongoPackets -> {
+            // 检查是否还有缺失
+            Set<Long> foundIds = mongoPackets.stream()
+                    .map(Packet::getPacketId)
+                    .collect(Collectors.toSet());
+            List<Long> remainingIds = missingIds.stream()
+                    .filter(id -> !foundIds.contains(id))
+                    .collect(Collectors.toList());
+
+            // 剩余 ID 查询 MySQL
+            if (CollectionUtils.isEmpty(remainingIds)) {
+                return Flux.fromIterable(mongoPackets);
+            }
+
+            return Flux.fromIterable(mongoPackets)
+                    .concatWith(
+                            Mono.fromCallable(() -> {
+                                try {
+                                    List<MessageEntity> mysqlEntities = jdbcClient.sql(JdbcSqlConstant.MYSQL.SELECT_MESSAGE.sql())
+                                            .param(MessageEntity.Fields.ids, remainingIds)
+                                            .query(MessageEntity.class)
+                                            .list();
+                                    return convertToPackets(mysqlEntities);
+                                } catch (Exception e) {
+                                    log.error("从MySQL查询消息异常, remainingIds: {}", remainingIds, e);
+                                    return Collections.<Packet>emptyList();
+                                }
+                            })
+                            .subscribeOn(Schedulers.fromExecutor(dbExecutor))
+                            .flatMapMany(Flux::fromIterable)
+                    );
+        })
+        .onErrorResume(e -> {
+            log.error("响应式查询消息异常, missingIds: {}", missingIds, e);
+            return Flux.empty();
+        });
+    }
+
+    /**
+     * 转换单个 MessageEntity 到 Packet（用于响应式流）
+     */
+    private Packet convertToPacket(MessageEntity entity) {
+        return new Packet(
+                entity.getProtocol(),
+                entity.getProtocolVersion(),
+                entity.getId(),
+                entity.getDeviceType(),
+                entity.getNetworkType(),
+                entity.getEncryptType(),
+                entity.getSerializeAlgorithm(),
+                entity.getMessageType(),
+                entity.getRetain(),
+                new Message(
+                        entity.getFrom(),
+                        entity.getTo(),
+                        entity.getContentType(),
+                        entity.getContent(),
+                        JSON.parseArray(entity.getAt(), String.class),
+                        entity.getExtra(),
+                        entity.getQos(),
+                        entity.getClientSendTime(),
+                        new Metadata(
+                                entity.getAppKey(),
+                                entity.getClientIp(),
+                                entity.getServerArrivalTime()
+                        )
+                )
+        );
     }
 
     /**
@@ -311,15 +452,14 @@ public enum DefaultRepository implements Repository{
     }
 
     /**
-     * 异步更新缓存 (非阻塞主流程)
+     * 异步更新缓存 (非阻塞主流程) - 同步版本
      */
     @SuppressWarnings("unchecked")
-    private void asyncUpdateCache(String appKey, List<Packet> dbPackets) {
+    private void asyncUpdatePacketCache(String appKey, List<Packet> dbPackets) {
         if (CollectionUtils.isEmpty(dbPackets)) {
             return;
         }
         CompletableFuture.runAsync(() -> {
-
             redisTemplate.executePipelined(new SessionCallback<>() {
                 @Override
                 public <K, V> Object execute(RedisOperations<K, V> operations) throws DataAccessException {
@@ -329,12 +469,210 @@ public enum DefaultRepository implements Repository{
                     return null;
                 }
             });
-        }).exceptionally(ex -> {
+        }, dbExecutor).exceptionally(ex -> {
             log.error("异步更新缓存失败", ex);
             return null;
         });
     }
 
+    /**
+     * 响应式异步更新缓存 (非阻塞、高并发) - 优化版本
+     */
+    @SuppressWarnings("unchecked")
+    private void asyncUpdateCachePacketReactive(String appKey, List<Packet> dbPackets) {
+        if (CollectionUtils.isEmpty(dbPackets)) {
+            return;
+        }
+        // 使用响应式方式批量更新缓存，提高性能
+        Flux.fromIterable(dbPackets)
+                .flatMap(packet -> {
+                    String cacheKey = CacheConstant.buildMessageCacheKey(appKey, packet.getPacketId());
+                    return reactiveRedisTemplate.opsForValue()
+                            .set(cacheKey, packet, Duration.ofMillis(MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP))
+                            .onErrorResume(e -> {
+                                log.debug("更新缓存失败, cacheKey: {}", cacheKey, e);
+                                return Mono.just(false);
+                            });
+                })
+                .subscribe(
+                        result -> {},
+                        error -> log.error("响应式批量更新缓存异常", error),
+                        () -> log.debug("响应式批量更新缓存完成, count: {}", dbPackets.size())
+                );
+    }
+
+    private Mono<Set<GroupUserEntity>> fetchGroupUsersFromLowerTiers(String appKey, String groupId, Set<String> remainingMemberIds, Set<GroupUserEntity> acc) {
+        if (CollectionUtils.isEmpty(remainingMemberIds)) {
+            return Mono.just(acc);
+        }
+
+        Long groupIdLong = parseLongSafely(groupId);
+        List<Long> userIdList = remainingMemberIds.stream()
+                .map(this::parseLongSafely)
+                .filter(Objects::nonNull)
+                .toList();
+
+        if (groupIdLong == null || userIdList.isEmpty()) {
+            return Mono.just(acc);
+        }
+
+        return reactiveMongoTemplate.find(
+                        Query.query(Criteria.where(MongoGroupUserEntity.Fields.groupId).is(groupIdLong)
+                                .and(MongoGroupUserEntity.Fields.userId).in(userIdList)),
+                        MongoGroupUserEntity.class)
+                .map(this::convertMongoGroupUserToGroupUser)
+                .collectList()
+                .flatMap(mongoEntities -> {
+                    Set<String> remaining = new HashSet<>(remainingMemberIds);
+                    for (GroupUserEntity entity : mongoEntities) {
+                        if (entity == null || entity.getUserId() == null) {
+                            continue;
+                        }
+                        String userKey = String.valueOf(entity.getUserId());
+                        remaining.remove(userKey);
+                        updateGroupUserCache(CacheConstant.buildGroupUserConfigCacheKey(appKey, userKey, groupId), entity);
+                        acc.add(entity);
+                    }
+
+                    if (CollectionUtils.isEmpty(remaining)) {
+                        return Mono.just(acc);
+                    }
+
+                    return Mono.fromCallable(() -> getGroupUsersFromDatabases(groupId, remaining))
+                            .subscribeOn(Schedulers.fromExecutor(dbExecutor))
+                            .map(dbEntities -> {
+                                for (GroupUserEntity entity : dbEntities) {
+                                    if (entity == null || entity.getUserId() == null) {
+                                        continue;
+                                    }
+                                    String userKey = String.valueOf(entity.getUserId());
+                                    updateGroupUserCache(CacheConstant.buildGroupUserConfigCacheKey(appKey, userKey, groupId), entity);
+                                    acc.add(entity);
+                                }
+                                return acc;
+                            })
+                            .onErrorResume(e -> {
+                                log.error("批量查询群成员数据库异常, appKey: {}, groupId: {}, memberIds: {}", appKey, groupId, remaining, e);
+                                return Mono.just(acc);
+                            })
+                            .defaultIfEmpty(acc);
+                })
+                .defaultIfEmpty(acc);
+    }
+
+    /**
+     * 同步方式从MongoDB和MySQL批量查询群成员（通过修改resultMap返回结果）
+     * @param appKey 应用key
+     * @param groupId 群组ID
+     * @param remainingMemberIds 待查询的成员ID集合
+     * @param memberIdCacheKeyMap 成员ID到缓存key的映射
+     * @param resultMap 结果Map（会被修改，查询到的群成员会添加到这个Map中）
+     */
+    private void fetchGroupUsersFromLowerTiersSync(String appKey, String groupId, Set<String> remainingMemberIds,
+                                                   Map<String, String> memberIdCacheKeyMap,
+                                                   Map<String, GroupUserEntity> resultMap) {
+        if (CollectionUtils.isEmpty(remainingMemberIds)) {
+            return;
+        }
+
+        Long groupIdLong = parseLongSafely(groupId);
+        List<Long> userIdList = remainingMemberIds.stream()
+                .map(this::parseLongSafely)
+                .filter(Objects::nonNull)
+                .toList();
+
+        if (groupIdLong == null || userIdList.isEmpty()) {
+            return;
+        }
+
+        // MongoDB
+        List<MongoGroupUserEntity> mongoEntities = mongoTemplate.find(
+                Query.query(Criteria.where(MongoGroupUserEntity.Fields.groupId).is(groupIdLong)
+                        .and(MongoGroupUserEntity.Fields.userId).in(userIdList)),
+                MongoGroupUserEntity.class);
+
+        Set<String> remaining = new HashSet<>(remainingMemberIds);
+        if (CollectionUtils.isNotEmpty(mongoEntities)) {
+            for (MongoGroupUserEntity mongoEntity : mongoEntities) {
+                GroupUserEntity entity = convertMongoGroupUserToGroupUser(mongoEntity);
+                if (entity == null || entity.getUserId() == null) {
+                    continue;
+                }
+                String memberId = String.valueOf(entity.getUserId());
+                String cacheKey = memberIdCacheKeyMap.get(memberId);
+                updateGroupUserCache(cacheKey, entity);
+                resultMap.put(memberId, entity);
+                remaining.remove(memberId);
+            }
+        }
+
+        if (CollectionUtils.isEmpty(remaining)) {
+            return;
+        }
+
+        // MySQL
+        List<GroupUserEntity> dbEntities = getGroupUsersFromDatabases(groupId, remaining);
+        if (CollectionUtils.isNotEmpty(dbEntities)) {
+            for (GroupUserEntity entity : dbEntities) {
+                if (entity == null || entity.getUserId() == null) {
+                    continue;
+                }
+                String memberId = String.valueOf(entity.getUserId());
+                String cacheKey = memberIdCacheKeyMap.get(memberId);
+                updateGroupUserCache(cacheKey, entity);
+                resultMap.put(memberId, entity);
+                remaining.remove(memberId);
+            }
+        }
+
+        // 剩余的成员（若有）保持未命中状态
+    }
+
+    private List<GroupUserEntity> getGroupUsersFromDatabases(String groupId, Set<String> memberIds) {
+        if (CollectionUtils.isEmpty(memberIds)) {
+            return Collections.emptyList();
+        }
+
+        Long groupIdLong = parseLongSafely(groupId);
+        if (groupIdLong == null) {
+            return Collections.emptyList();
+        }
+
+        List<Long> userIdList = memberIds.stream()
+                .map(this::parseLongSafely)
+                .filter(Objects::nonNull)
+                .toList();
+
+        if (userIdList.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        try {
+            return jdbcClient.sql(JdbcSqlConstant.MYSQL.SELECT_GROUP_USER_BATCH.sql())
+                    .param(GroupUserEntity.Fields.groupId, groupIdLong)
+                    .param(GroupUserEntity.Fields.userIds, userIdList)
+                    .query(GroupUserEntity.class)
+                    .list();
+        } catch (EmptyResultDataAccessException e) {
+            log.warn("批量查询群成员为空, groupId: {}, memberIds: {}", groupId, memberIds);
+            return Collections.emptyList();
+        } catch (Exception e) {
+            log.error("批量查询群成员异常, groupId: {}, memberIds: {}", groupId, memberIds, e);
+            return Collections.emptyList();
+        }
+    }
+
+    private Long parseLongSafely(String value) {
+        if (StringUtils.isBlank(value)) {
+            return null;
+        }
+        try {
+            return Long.parseLong(value);
+        } catch (NumberFormatException e) {
+            log.warn("无法解析为Long类型，值: {}", value);
+            return null;
+        }
+    }
 
 
     /**
@@ -637,33 +975,336 @@ public enum DefaultRepository implements Repository{
 
 
     /**
-     * 获取群成员列表信息
+     * 获取群成员列表信息（同步版本，保留兼容性）
      *
      * @return
      */
-    @SuppressWarnings("unchecked")
     public Set<GroupUserEntity> groupUserEntitySet(String appKey, String groupId, Set<String> memberIdSet) {
         if (CollectionUtils.isEmpty(memberIdSet)) {
             return Set.of();
         }
-        // 构造groupUserEntity 缓存key 集合
-        Set<String> cacheGroupUserEntityKeyList = memberIdSet.stream().filter(Objects::nonNull).map(memberId -> CacheConstant.buildGroupUserConfigCacheKey(appKey, memberId, groupId)).collect(Collectors.toSet());
-        List<GroupUserEntity> groupUserEntityList = (List<GroupUserEntity>) redisTemplate.opsForValue().multiGet(cacheGroupUserEntityKeyList);
-        if (CollectionUtils.isEmpty(groupUserEntityList)) {
+
+        Set<String> candidateMemberIds = memberIdSet.stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        if (CollectionUtils.isEmpty(candidateMemberIds)) {
             return Set.of();
         }
-        // 获取群组用户信息
-        return groupUserEntityList.stream().filter(Objects::nonNull).collect(Collectors.toSet());
+
+        Map<String, GroupUserEntity> resultMap = new HashMap<>();
+        Map<String, String> memberIdCacheKeyMap = new HashMap<>();
+        Map<String, String> cacheKeyMemberIdMap = new HashMap<>();
+        for (String memberId : candidateMemberIds) {
+            String cacheKey = CacheConstant.buildGroupUserConfigCacheKey(appKey, memberId, groupId);
+            memberIdCacheKeyMap.put(memberId, cacheKey);
+            cacheKeyMemberIdMap.put(cacheKey, memberId);
+        }
+
+        // 1. 本地缓存（批量获取）
+        Set<String> cacheKeys = new LinkedHashSet<>(memberIdCacheKeyMap.values());
+        Map<String, GroupUserEntity> localCacheMap = new HashMap<>();
+        Map<String, GroupUserEntity> initialLocalHits = MessageContext.groupUserEntityCache.getAllMap(cacheKeys);
+        if (initialLocalHits != null) {
+            localCacheMap.putAll(initialLocalHits);
+        }
+        Set<String> pendingCacheKeys = new LinkedHashSet<>(cacheKeys);
+        if (!localCacheMap.isEmpty()) {
+            for (Map.Entry<String, GroupUserEntity> entry : localCacheMap.entrySet()) {
+                GroupUserEntity entity = entry.getValue();
+                if (entity == null) {
+                    continue;
+                }
+                String cacheKey = entry.getKey();
+                String memberId = cacheKeyMemberIdMap.get(cacheKey);
+                if (memberId != null) {
+                    resultMap.put(memberId, entity);
+                    pendingCacheKeys.remove(cacheKey);
+                }
+            }
+        }
+
+        if (pendingCacheKeys.isEmpty()) {
+            return new HashSet<>(resultMap.values());
+        }
+
+        // 2. Redis缓存
+        List<String> redisCacheKeys = new ArrayList<>(pendingCacheKeys);
+        if (CollectionUtils.isNotEmpty(redisCacheKeys)) {
+            List<Object> redisEntities = redisTemplate.opsForValue().multiGet(redisCacheKeys);
+            if (CollectionUtils.isNotEmpty(redisEntities)) {
+                for (int i = 0; i < redisEntities.size(); i++) {
+                    GroupUserEntity redisEntity = (GroupUserEntity) redisEntities.get(i);
+                    String cacheKey = redisCacheKeys.get(i);
+                    String memberId = cacheKeyMemberIdMap.get(cacheKey);
+                    if (memberId != null && redisEntity != null) {
+                        updateGroupUserCache(cacheKey, redisEntity);
+                        resultMap.put(memberId, redisEntity);
+                        pendingCacheKeys.remove(cacheKey);
+                    }
+                }
+            }
+        }
+
+        if (pendingCacheKeys.isEmpty()) {
+            return new HashSet<>(resultMap.values());
+        }
+
+        Set<String> missingMemberIds = pendingCacheKeys.stream()
+                .map(cacheKeyMemberIdMap::get)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        if (CollectionUtils.isEmpty(missingMemberIds)) {
+            return new HashSet<>(resultMap.values());
+        }
+
+        // 3. MongoDB + MySQL 兜底
+        fetchGroupUsersFromLowerTiersSync(appKey, groupId, missingMemberIds, memberIdCacheKeyMap, resultMap);
+
+        return new HashSet<>(resultMap.values());
+    }
+
+    /**
+     * 响应式获取群成员列表信息（优化版本：支持多级缓存、非阻塞）
+     *
+     * @param appKey
+     * @param groupId
+     * @param memberIdSet
+     * @return
+     */
+    @SuppressWarnings("unchecked")
+    public Mono<Set<GroupUserEntity>> groupUserEntitySetReactive(String appKey, String groupId, Set<String> memberIdSet) {
+        if (CollectionUtils.isEmpty(memberIdSet)) {
+            return Mono.just(Set.of());
+        }
+        
+        Map<String, String> cacheKeyMemberIdMap = memberIdSet.stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toMap(
+                        memberId -> CacheConstant.buildGroupUserConfigCacheKey(appKey, memberId, groupId),
+                        Function.identity(),
+                        (existing, replacement) -> existing,
+                        LinkedHashMap::new));
+
+        Set<String> cacheKeys = new LinkedHashSet<>(cacheKeyMemberIdMap.keySet());
+
+        // 1. 先检查本地缓存（批量获取）
+        Map<String, GroupUserEntity> localCacheMap = new HashMap<>();
+        Map<String, GroupUserEntity> initialLocalMap = MessageContext.groupUserEntityCache.getAllMap(cacheKeys);
+        if (initialLocalMap != null) {
+            localCacheMap.putAll(initialLocalMap);
+        }
+        Set<String> remainingCacheKeys = new LinkedHashSet<>(cacheKeys);
+        if (!localCacheMap.isEmpty()) {
+            remainingCacheKeys.removeAll(localCacheMap.keySet());
+        }
+
+        // 全部命中本地缓存
+        if (remainingCacheKeys.isEmpty()) {
+            return Mono.just(new HashSet<>(localCacheMap.values()));
+        }
+
+        // 2. 从 Redis 批量获取（响应式）
+        List<String> redisKeys = new ArrayList<>(remainingCacheKeys);
+        Set<String> pendingCacheKeys = new LinkedHashSet<>(remainingCacheKeys);
+        return Flux.fromIterable(redisKeys)
+                .concatMap(key -> reactiveRedisTemplate.opsForValue().get(key)
+                        .cast(GroupUserEntity.class)
+                        .doOnNext(entity -> {
+                            if (entity != null) {
+                                MessageContext.groupUserEntityCache.put(key, (GroupUserEntity) entity);
+                                localCacheMap.put(key, (GroupUserEntity) entity);
+                                pendingCacheKeys.remove(key);
+                            }
+                        })
+                        .onErrorResume(e -> {
+                            log.warn("从Redis获取群成员异常, cacheKey: {}", key, e);
+                            return Mono.empty();
+                        }))
+                .then(Mono.defer(() -> {
+                    if (pendingCacheKeys.isEmpty()) {
+                        return Mono.just(new HashSet<>(localCacheMap.values()));
+                    }
+
+                    Set<String> remainingMemberIds = pendingCacheKeys.stream()
+                            .map(cacheKeyMemberIdMap::get)
+                            .filter(Objects::nonNull)
+                            .collect(Collectors.toCollection(LinkedHashSet::new));
+
+                    if (CollectionUtils.isEmpty(remainingMemberIds)) {
+                        return Mono.just(new HashSet<>(localCacheMap.values()));
+                    }
+
+                    return fetchGroupUsersFromLowerTiers(appKey, groupId, remainingMemberIds, new HashSet<>(localCacheMap.values()));
+                }))
+                .onErrorResume(e -> {
+                    log.error("响应式获取群成员列表异常, appKey: {}, groupId: {}", appKey, groupId, e);
+                    return Mono.just(Set.<GroupUserEntity>of());
+                });
     }
 
 
 
     /**
-     * 获取群成员信息
+     * 获取群成员信息（同步版本，多级缓存：本地缓存 -> Redis -> MongoDB -> MySQL）
+     * @param appKey
+     * @param groupId
+     * @param memberId
      * @return
      */
     public GroupUserEntity groupUserEntity(String appKey, String groupId, String memberId) {
-        return (GroupUserEntity) redisTemplate.opsForValue().get(CacheConstant.buildGroupUserConfigCacheKey(appKey, memberId, groupId));
+        String cacheKey = CacheConstant.buildGroupUserConfigCacheKey(appKey, memberId, groupId);
+        
+        // 1. 本地缓存
+        GroupUserEntity groupUserEntity = MessageContext.groupUserEntityCache.get(cacheKey);
+        if (groupUserEntity != null) {
+            return groupUserEntity;
+        }
+        
+        // 2. Redis缓存
+        groupUserEntity = (GroupUserEntity) redisTemplate.opsForValue().get(cacheKey);
+        if (groupUserEntity != null) {
+            updateGroupUserCache(cacheKey, groupUserEntity);
+            return groupUserEntity;
+        }
+        
+        // 3. MongoDB
+        try {
+            MongoGroupUserEntity mongoGroupUser = mongoTemplate.findOne(
+                    Query.query(Criteria.where(MongoGroupUserEntity.Fields.userId).is(Long.parseLong(memberId))
+                            .and(MongoGroupUserEntity.Fields.groupId).is(Long.parseLong(groupId))),
+                    MongoGroupUserEntity.class);
+            if (mongoGroupUser != null) {
+                groupUserEntity = convertMongoGroupUserToGroupUser(mongoGroupUser);
+                updateGroupUserCache(cacheKey, groupUserEntity);
+                return groupUserEntity;
+            }
+        } catch (Exception e) {
+            log.warn("从MongoDB查询群成员异常, appKey: {}, groupId: {}, memberId: {}", appKey, groupId, memberId, e);
+        }
+        
+        // 4. MySQL
+        return queryGroupUserEntityFromDataBase(cacheKey, appKey, groupId, memberId);
+    }
+
+
+    /**
+     * 从数据库查询群成员信息
+     * @param appKey
+     * @param groupId
+     * @param memberId
+     * @return
+     */
+    private GroupUserEntity queryGroupUserEntityFromDataBase(String cacheKey, String appKey, String groupId, String memberId) {
+        try {
+            GroupUserEntity groupUserEntity = jdbcClient.sql(JdbcSqlConstant.MYSQL.SELECT_GROUP_USER.sql())
+                    .param(GroupUserEntity.Fields.userId, memberId)
+                    .param(GroupUserEntity.Fields.groupId, groupId)
+                    .query(GroupUserEntity.class)
+                    .optional()
+                    .orElse(null);
+            if (groupUserEntity != null) {
+                updateGroupUserCache(cacheKey, groupUserEntity);
+            }
+            return groupUserEntity;
+        } catch (Exception e) {
+            log.error("从MySQL查询群成员异常, appKey: {}, groupId: {}, memberId: {}", appKey, groupId, memberId, e);
+            return null;
+        }
+    }
+
+    /**
+     * 响应式获取群成员信息（多级缓存：本地缓存 -> Redis -> MongoDB -> MySQL）
+     * @param appKey
+     * @param groupId
+     * @param memberId
+     * @return
+     */
+    @SuppressWarnings("unchecked")
+    public Mono<GroupUserEntity> groupUserEntityReactive(String appKey, String groupId, String memberId) {
+        String cacheKey = CacheConstant.buildGroupUserConfigCacheKey(appKey, memberId, groupId);
+        
+        // 1. 本地缓存
+        GroupUserEntity localCached = MessageContext.groupUserEntityCache.get(cacheKey);
+        if (localCached != null) {
+            return Mono.just(localCached);
+        }
+        
+        // 2. Redis缓存（响应式）
+        return reactiveRedisTemplate.opsForValue().get(cacheKey)
+                .cast(GroupUserEntity.class)
+                .doOnNext((Object groupUserEntity) -> {
+                    if (groupUserEntity != null) {
+                        updateGroupUserCache(cacheKey, (GroupUserEntity) groupUserEntity);
+                    }
+                })
+                .switchIfEmpty(
+                        // 3. MongoDB（响应式）
+                        reactiveMongoTemplate.findOne(
+                                Query.query(Criteria.where(MongoGroupUserEntity.Fields.userId).is(Long.parseLong(memberId))
+                                        .and(MongoGroupUserEntity.Fields.groupId).is(Long.parseLong(groupId))),
+                                MongoGroupUserEntity.class)
+                                .map(this::convertMongoGroupUserToGroupUser)
+                                .doOnNext(groupUserEntity -> updateGroupUserCache(cacheKey, groupUserEntity))
+                                .switchIfEmpty(
+                                        // 4. MySQL（响应式）
+                                        Mono.fromCallable(() -> {
+                                            try {
+                                                return jdbcClient.sql(JdbcSqlConstant.MYSQL.SELECT_GROUP_USER.sql())
+                                                        .param(GroupUserEntity.Fields.userId, memberId)
+                                                        .param(GroupUserEntity.Fields.groupId, groupId)
+                                                        .query(GroupUserEntity.class)
+                                                        .optional()
+                                                        .orElse(null);
+                                            } catch (Exception e) {
+                                                log.error("从MySQL查询群成员异常, appKey: {}, groupId: {}, memberId: {}", appKey, groupId, memberId, e);
+                                                return null;
+                                            }
+                                        })
+                                        .subscribeOn(Schedulers.fromExecutor(dbExecutor))
+                                        .doOnNext(groupUserEntity -> {
+                                            if (groupUserEntity != null) {
+                                                updateGroupUserCache(cacheKey, groupUserEntity);
+                                            }
+                                        })
+                                )
+                )
+                .onErrorResume(e -> {
+                    log.error("响应式查询群成员异常, appKey: {}, groupId: {}, memberId: {}", appKey, groupId, memberId, e);
+                    return Mono.empty();
+                });
+    }
+
+    /**
+     * 更新群成员缓存（本地缓存和Redis）
+     */
+    private void updateGroupUserCache(String cacheKey, GroupUserEntity groupUserEntity) {
+        if (groupUserEntity != null) {
+            MessageContext.groupUserEntityCache.put(cacheKey, groupUserEntity);
+            redisTemplate.opsForValue().set(cacheKey, groupUserEntity);
+        }
+    }
+
+    /**
+     * 转换MongoDB群成员实体为MySQL群成员实体
+     */
+    private GroupUserEntity convertMongoGroupUserToGroupUser(MongoGroupUserEntity mongoGroupUser) {
+        if (mongoGroupUser == null) {
+            return null;
+        }
+        GroupUserEntity groupUserEntity = new GroupUserEntity();
+        groupUserEntity.setId(mongoGroupUser.getId());
+        groupUserEntity.setGroupId(mongoGroupUser.getGroupId());
+        groupUserEntity.setGroupCode(mongoGroupUser.getGroupCode());
+        groupUserEntity.setGroupNickName(mongoGroupUser.getGroupNickName());
+        groupUserEntity.setUserId(mongoGroupUser.getUserId());
+        groupUserEntity.setUserCode(mongoGroupUser.getUserCode());
+        groupUserEntity.setPost(mongoGroupUser.getPost());
+        groupUserEntity.setSilence(mongoGroupUser.getSilence());
+        groupUserEntity.setUserNickName(mongoGroupUser.getUserNickName());
+        groupUserEntity.setShield(mongoGroupUser.getShield());
+        groupUserEntity.setCreateTime(mongoGroupUser.getCreateTime());
+        return groupUserEntity;
     }
 
 
@@ -931,33 +1572,278 @@ public enum DefaultRepository implements Repository{
 
 
     /**
-     * 获取在appKey 下 from 和 to 的朋友关系
+     * 获取在appKey 下 from 和 to 的朋友关系（同步版本，多级缓存：本地缓存 -> Redis -> MongoDB -> MySQL）
      * @param appKey
      * @param from
      * @param to
      * @return
      */
     public FriendEntity getFriend(String appKey, String from, String to) {
-        // 从redis中获取好友关系
-        // 如果不为空则返回true，如果为空则不再从数据库中获取
-        return (FriendEntity) redisTemplate.opsForValue().get(CacheConstant.buildFriendsConfigCacheKey(appKey, from, to));
+        String cacheKey = CacheConstant.buildFriendsConfigCacheKey(appKey, from, to);
+        
+        // 1. 本地缓存
+        FriendEntity friendEntity = MessageContext.friendEntityCache.get(cacheKey);
+        if (friendEntity != null) {
+            return friendEntity;
+        }
+        
+        // 2. Redis缓存
+        friendEntity = (FriendEntity) redisTemplate.opsForValue().get(cacheKey);
+        if (friendEntity != null) {
+            updateFriendCache(cacheKey, friendEntity);
+            return friendEntity;
+        }
+        
+        // 3. MongoDB
+        try {
+            MongoFriendEntity mongoFriend = mongoTemplate.findOne(
+                    Query.query(Criteria.where(MongoFriendEntity.Fields.userId).is(Long.parseLong(from))
+                            .and(MongoFriendEntity.Fields.friendUserId).is(Long.parseLong(to))),
+                    MongoFriendEntity.class);
+            if (mongoFriend != null) {
+                friendEntity = convertMongoFriendToFriend(mongoFriend);
+                updateFriendCache(cacheKey, friendEntity);
+                return friendEntity;
+            }
+        } catch (Exception e) {
+            log.warn("从MongoDB查询好友关系异常, appKey: {}, from: {}, to: {}", appKey, from, to, e);
+        }
+        
+        // 4. MySQL
+        try {
+            friendEntity = jdbcClient.sql(JdbcSqlConstant.MYSQL.SELECT_FRIEND.sql())
+                    .param(FriendEntity.Fields.userId, from)
+                    .param(FriendEntity.Fields.friendUserId, to)
+                    .query(FriendEntity.class)
+                    .optional()
+                    .orElse(null);
+            if (friendEntity != null) {
+                updateFriendCache(cacheKey, friendEntity);
+            }
+        } catch (Exception e) {
+            log.error("从MySQL查询好友关系异常, appKey: {}, from: {}, to: {}", appKey, from, to, e);
+        }
+        
+        return friendEntity;
     }
 
     /**
-     * 获取在appKey 下 from 和 to 的朋友关系
+     * 响应式获取好友关系（多级缓存：本地缓存 -> Redis -> MongoDB -> MySQL）
+     * @param appKey
+     * @param from
+     * @param to
+     * @return
+     */
+    @SuppressWarnings("unchecked")
+    public Mono<FriendEntity> getFriendReactive(String appKey, String from, String to) {
+        String cacheKey = CacheConstant.buildFriendsConfigCacheKey(appKey, from, to);
+        
+        // 1. 本地缓存
+        FriendEntity localCached = MessageContext.friendEntityCache.get(cacheKey);
+        if (localCached != null) {
+            return Mono.just(localCached);
+        }
+        
+        // 2. Redis缓存（响应式）
+        return reactiveRedisTemplate.opsForValue().get(cacheKey)
+                .cast(FriendEntity.class)
+                .doOnNext((Object friendEntity) -> {
+                    if (friendEntity != null) {
+                        updateFriendCache(cacheKey, (FriendEntity) friendEntity);
+                    }
+                })
+                .switchIfEmpty(
+                        // 3. MongoDB（响应式）
+                        reactiveMongoTemplate.findOne(
+                                Query.query(Criteria.where(MongoFriendEntity.Fields.userId).is(Long.parseLong(from))
+                                        .and(MongoFriendEntity.Fields.friendUserId).is(Long.parseLong(to))),
+                                MongoFriendEntity.class)
+                                .map(this::convertMongoFriendToFriend)
+                                .doOnNext(friendEntity -> updateFriendCache(cacheKey, friendEntity))
+                                .switchIfEmpty(
+                                        // 4. MySQL（响应式）
+                                        Mono.fromCallable(() -> {
+                                            try {
+                                                return jdbcClient.sql(JdbcSqlConstant.MYSQL.SELECT_FRIEND.sql())
+                                                        .param(FriendEntity.Fields.userId, from)
+                                                        .param(FriendEntity.Fields.friendUserId, to)
+                                                        .query(FriendEntity.class)
+                                                        .optional()
+                                                        .orElse(null);
+                                            } catch (Exception e) {
+                                                log.error("从MySQL查询好友关系异常, appKey: {}, from: {}, to: {}", appKey, from, to, e);
+                                                return null;
+                                            }
+                                        })
+                                        .subscribeOn(Schedulers.fromExecutor(dbExecutor))
+                                        .doOnNext(friendEntity -> {
+                                            if (friendEntity != null) {
+                                                updateFriendCache(cacheKey, friendEntity);
+                                            }
+                                        })
+                                )
+                )
+                .onErrorResume(e -> {
+                    log.error("响应式查询好友关系异常, appKey: {}, from: {}, to: {}", appKey, from, to, e);
+                    return Mono.empty();
+                });
+    }
+
+    /**
+     * 更新好友缓存（本地缓存和Redis）
+     */
+    private void updateFriendCache(String cacheKey, FriendEntity friendEntity) {
+        if (friendEntity != null) {
+            MessageContext.friendEntityCache.put(cacheKey, friendEntity);
+            redisTemplate.opsForValue().set(cacheKey, friendEntity);
+        }
+    }
+
+    /**
+     * 转换MongoDB好友实体为MySQL好友实体
+     */
+    private FriendEntity convertMongoFriendToFriend(MongoFriendEntity mongoFriend) {
+        if (mongoFriend == null) {
+            return null;
+        }
+        FriendEntity friendEntity = new FriendEntity();
+        friendEntity.setId(mongoFriend.getId());
+        friendEntity.setUserId(mongoFriend.getUserId());
+        friendEntity.setFriendUserId(mongoFriend.getFriendUserId());
+        friendEntity.setFriendUserCode(mongoFriend.getFriendUserCode());
+        friendEntity.setFriendNickName(mongoFriend.getFriendNickName());
+        friendEntity.setShield(mongoFriend.getShield());
+        friendEntity.setCreateTime(mongoFriend.getCreateTime());
+        friendEntity.setUpdateTime(mongoFriend.getUpdateTime());
+        return friendEntity;
+    }
+
+    /**
+     * 获取在appKey 下 from 和 to 的朋友关系（同步版本，多级缓存：本地缓存 -> Redis -> MongoDB -> MySQL）
      * @param appKey
      * @param groupId
      * @return
      */
     public GroupEntity getGroupEntity(String appKey, String groupId) {
-        // 从redis中获取群信息
-        // 如果不为空则返回true，如果为空则不再从数据库中获取
-        GroupEntity groupEntity =  (GroupEntity) redisTemplate.opsForValue().get(CacheConstant.buildGroupCacheKey(appKey, groupId));
+        String cacheKey = CacheConstant.buildGroupCacheKey(appKey, groupId);
+        
+        // 1. 本地缓存
+        GroupEntity groupEntity = MessageContext.groupEntityCache.get(cacheKey);
         if (groupEntity != null) {
             return groupEntity;
         }
+        
+        // 2. Redis缓存
+        groupEntity = (GroupEntity) redisTemplate.opsForValue().get(cacheKey);
+        if (groupEntity != null) {
+            updateGroupCache(cacheKey, groupEntity);
+            return groupEntity;
+        }
+        
+        // 3. MongoDB
+        try {
+            MongoGroupEntity mongoGroup = mongoTemplate.findOne(
+                    Query.query(Criteria.where(MongoGroupEntity.Fields.id).is(Long.parseLong(groupId))
+                            .and(MongoGroupEntity.Fields.deleted).is(NumberConstant.NUMBER_0)),
+                    MongoGroupEntity.class);
+            if (mongoGroup != null) {
+                groupEntity = convertMongoGroupToGroup(mongoGroup);
+                updateGroupCache(cacheKey, groupEntity);
+                return groupEntity;
+            }
+        } catch (Exception e) {
+            log.warn("从MongoDB查询群组异常, appKey: {}, groupId: {}", appKey, groupId, e);
+        }
+        
+        // 4. MySQL
+        groupEntity = getGroupEntityFromDatabases(appKey, groupId);
+        if (groupEntity != null) {
+            updateGroupCache(cacheKey, groupEntity);
+        }
+        
+        return groupEntity;
+    }
 
-        return getGroupEntityFromDatabases(appKey, groupId );
+    /**
+     * 响应式获取群组实体（多级缓存：本地缓存 -> Redis -> MongoDB -> MySQL）
+     * @param appKey
+     * @param groupId
+     * @return
+     */
+    @SuppressWarnings("unchecked")
+    public Mono<GroupEntity> getGroupEntityReactive(String appKey, String groupId) {
+        String cacheKey = CacheConstant.buildGroupCacheKey(appKey, groupId);
+        
+        // 1. 本地缓存
+        GroupEntity localCached = MessageContext.groupEntityCache.get(cacheKey);
+        if (localCached != null) {
+            return Mono.just(localCached);
+        }
+        
+        // 2. Redis缓存（响应式）
+        return reactiveRedisTemplate.opsForValue().get(cacheKey)
+                .cast(GroupEntity.class)
+                .doOnNext((Object groupEntity) -> {
+                    if (groupEntity != null) {
+                        updateGroupCache(cacheKey, (GroupEntity) groupEntity);
+                    }
+                })
+                .switchIfEmpty(
+                        // 3. MongoDB（响应式）
+                        reactiveMongoTemplate.findOne(
+                                Query.query(Criteria.where(MongoGroupEntity.Fields.id).is(Long.parseLong(groupId))
+                                        .and(MongoGroupEntity.Fields.deleted).is(NumberConstant.NUMBER_0)),
+                                MongoGroupEntity.class)
+                                .map(this::convertMongoGroupToGroup)
+                                .doOnNext(groupEntity -> updateGroupCache(cacheKey, groupEntity))
+                                .switchIfEmpty(
+                                        // 4. MySQL（响应式）
+                                        getGroupEntityFromDatabasesReactive(appKey, groupId)
+                                                .doOnNext(groupEntity -> {
+                                                    if (groupEntity != null) {
+                                                        updateGroupCache(cacheKey, groupEntity);
+                                                    }
+                                                })
+                                )
+                )
+                .onErrorResume(e -> {
+                    log.error("响应式查询群组异常, appKey: {}, groupId: {}", appKey, groupId, e);
+                    return Mono.empty();
+                });
+    }
+
+    /**
+     * 更新群组缓存（本地缓存和Redis）
+     */
+    private void updateGroupCache(String cacheKey, GroupEntity groupEntity) {
+        if (groupEntity != null) {
+            MessageContext.groupEntityCache.put(cacheKey, groupEntity);
+            redisTemplate.opsForValue().set(cacheKey, groupEntity);
+        }
+    }
+
+    /**
+     * 转换MongoDB群组实体为MySQL群组实体
+     */
+    private GroupEntity convertMongoGroupToGroup(MongoGroupEntity mongoGroup) {
+        if (mongoGroup == null) {
+            return null;
+        }
+        GroupEntity groupEntity = new GroupEntity();
+        groupEntity.setId(mongoGroup.getId());
+        groupEntity.setGroupCode(mongoGroup.getGroupCode());
+        groupEntity.setGroupName(mongoGroup.getGroupName());
+        groupEntity.setGroupAvatar(mongoGroup.getGroupAvatar());
+        groupEntity.setGroupDescription(mongoGroup.getGroupDescription());
+        groupEntity.setGroupAnnouncement(mongoGroup.getGroupAnnouncement());
+        groupEntity.setGroupJoinPolicy(mongoGroup.getGroupJoinPolicy());
+        groupEntity.setStatus(mongoGroup.getStatus());
+        groupEntity.setSilence(mongoGroup.getSilence());
+        groupEntity.setAppKey(mongoGroup.getAppKey());
+        groupEntity.setCreateTime(mongoGroup.getCreateTime());
+        groupEntity.setUpdateTime(mongoGroup.getUpdateTime());
+        groupEntity.setDeleted(mongoGroup.getDeleted());
+        return groupEntity;
     }
 
     /**
@@ -1022,17 +1908,44 @@ public enum DefaultRepository implements Repository{
     }
 
     /**
-     * 获取用户实体, 注意这里直接从缓存获取，不在走数据库，旨在提高性能，要保证缓存中存在该用户实体， 后来想想还是加上吧，哈哈
-     * @param identity
+     * 获取用户实体（同步版本，多级缓存：本地缓存 -> Redis -> MongoDB -> MySQL）
+     * @param appKey
+     * @param identity 用户ID
      * @return
      */
     @SuppressWarnings("unchecked")
     public UserEntity getUserEntity(String appKey, String identity) {
         String userCacheKey = CacheConstant.buildUserCacheKey(appKey, identity);
-        UserEntity userEntity = (UserEntity) redisTemplate.opsForValue().get(userCacheKey);
+        
+        // 1. 本地缓存
+        UserEntity userEntity = MessageContext.userEntityCache.get(userCacheKey);
         if (userEntity != null) {
             return userEntity;
         }
+        
+        // 2. Redis缓存
+        userEntity = (UserEntity) redisTemplate.opsForValue().get(userCacheKey);
+        if (userEntity != null) {
+            updateUserCache(userCacheKey, userEntity);
+            return userEntity;
+        }
+        
+        // 3. MongoDB
+        try {
+            MongoUserEntity mongoUser = mongoTemplate.findOne(
+                    Query.query(Criteria.where(MongoUserEntity.Fields.id).is(Long.parseLong(identity))
+                            .and(MongoUserEntity.Fields.deleted).is(NumberConstant.NUMBER_0)),
+                    MongoUserEntity.class);
+            if (mongoUser != null) {
+                userEntity = convertMongoUserToUser(mongoUser);
+                updateUserCache(userCacheKey, userEntity);
+                return userEntity;
+            }
+        } catch (Exception e) {
+            log.warn("从MongoDB查询用户异常, appKey: {}, identity: {}", appKey, identity, e);
+        }
+        
+        // 4. MySQL
         try {
             log.info("从数据库中获取用户实体, identity: {}", identity);
             userEntity = jdbcClient.sql(JdbcSqlConstant.MYSQL.SELECT_USER.sql())
@@ -1040,7 +1953,7 @@ public enum DefaultRepository implements Repository{
                     .query(UserEntity.class)
                     .single();
             // 存到缓存中,30天
-            redisTemplate.opsForValue().set(userCacheKey, userEntity, NumberConstant.NUMBER_30 * MessageConstant.DAY_TIMESTAMP, TimeUnit.MILLISECONDS);
+            updateUserCache(userCacheKey, userEntity);
             return userEntity;
         } catch (EmptyResultDataAccessException e) {
             log.warn("用户不存在, identity: {}", identity);
@@ -1052,6 +1965,110 @@ public enum DefaultRepository implements Repository{
             log.error("获取用户实体异常, identity: {}, 原因：{}", identity, e.getMessage());
             throw new RuntimeException("获取用户实体异常, identity: " + identity);
         }
+    }
+
+    /**
+     * 响应式获取用户实体（多级缓存：本地缓存 -> Redis -> MongoDB -> MySQL）
+     * @param appKey
+     * @param identity 用户ID
+     * @return
+     */
+    @SuppressWarnings("unchecked")
+    public Mono<UserEntity> getUserEntityReactive(String appKey, String identity) {
+        String userCacheKey = CacheConstant.buildUserCacheKey(appKey, identity);
+        
+        // 1. 本地缓存
+        UserEntity localCached = MessageContext.userEntityCache.get(userCacheKey);
+        if (localCached != null) {
+            return Mono.just(localCached);
+        }
+        
+        // 2. Redis缓存（响应式）
+        return reactiveRedisTemplate.opsForValue().get(userCacheKey)
+                .cast(UserEntity.class)
+                .doOnNext((Object userEntity) -> {
+                    if (userEntity != null) {
+                        updateUserCache(userCacheKey, (UserEntity) userEntity);
+                    }
+                })
+                .switchIfEmpty(
+                        // 3. MongoDB（响应式）
+                        reactiveMongoTemplate.findOne(
+                                Query.query(Criteria.where(MongoUserEntity.Fields.id).is(Long.parseLong(identity))
+                                        .and(MongoUserEntity.Fields.deleted).is(NumberConstant.NUMBER_0)),
+                                MongoUserEntity.class)
+                                .map(this::convertMongoUserToUser)
+                                .doOnNext(userEntity -> updateUserCache(userCacheKey, userEntity))
+                                .switchIfEmpty(
+                                        // 4. MySQL（响应式）
+                                        Mono.fromCallable(() -> {
+                                            try {
+                                                return jdbcClient.sql(JdbcSqlConstant.MYSQL.SELECT_USER.sql())
+                                                        .params(identity)
+                                                        .query(UserEntity.class)
+                                                        .single();
+                                            } catch (EmptyResultDataAccessException e) {
+                                                log.warn("用户不存在, identity: {}", identity);
+                                                return null;
+                                            } catch (Exception e) {
+                                                log.error("从MySQL查询用户异常, appKey: {}, identity: {}", appKey, identity, e);
+                                                return null;
+                                            }
+                                        })
+                                        .subscribeOn(Schedulers.fromExecutor(dbExecutor))
+                                        .doOnNext(userEntity -> {
+                                            if (userEntity != null) {
+                                                updateUserCache(userCacheKey, userEntity);
+                                            }
+                                        })
+                                )
+                )
+                .onErrorResume(e -> {
+                    log.error("响应式查询用户异常, appKey: {}, identity: {}", appKey, identity, e);
+                    return Mono.empty();
+                });
+    }
+
+    /**
+     * 更新用户缓存（本地缓存和Redis）
+     */
+    private void updateUserCache(String cacheKey, UserEntity userEntity) {
+        if (userEntity != null) {
+            MessageContext.userEntityCache.put(cacheKey, userEntity);
+            redisTemplate.opsForValue().set(cacheKey, userEntity, NumberConstant.NUMBER_30 * MessageConstant.DAY_TIMESTAMP, TimeUnit.MILLISECONDS);
+        }
+    }
+
+    /**
+     * 转换MongoDB用户实体为MySQL用户实体
+     */
+    private UserEntity convertMongoUserToUser(MongoUserEntity mongoUser) {
+        if (mongoUser == null) {
+            return null;
+        }
+        UserEntity userEntity = new UserEntity();
+        userEntity.setId(mongoUser.getId());
+        userEntity.setOpenId(mongoUser.getOpenId());
+        userEntity.setCode(mongoUser.getCode());
+        userEntity.setUsername(mongoUser.getUsername());
+        userEntity.setPassword(mongoUser.getPassword());
+        userEntity.setNickName(mongoUser.getNickName());
+        userEntity.setAvatar(mongoUser.getAvatar());
+        userEntity.setMotto(mongoUser.getMotto());
+        userEntity.setAge(mongoUser.getAge());
+        userEntity.setSex(mongoUser.getSex());
+        userEntity.setEmail(mongoUser.getEmail());
+        userEntity.setPhoneNum(mongoUser.getPhoneNum());
+        userEntity.setIdCardNo(mongoUser.getIdCardNo());
+        userEntity.setGroupInvitePolicy(mongoUser.getGroupInvitePolicy());
+        userEntity.setFriendJoinPolicy(mongoUser.getFriendJoinPolicy());
+        userEntity.setStatus(mongoUser.getStatus());
+        userEntity.setAppKey(mongoUser.getAppKey());
+        userEntity.setRobot(mongoUser.getRobot());
+        userEntity.setCreateTime(mongoUser.getCreateTime());
+        userEntity.setUpdateTime(mongoUser.getUpdateTime());
+        userEntity.setDeleted(mongoUser.getDeleted());
+        return userEntity;
     }
 
 

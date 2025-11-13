@@ -1,17 +1,13 @@
 package com.ouyunc.message.validator;
 
-import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
-import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.domain.constants.GroupStatus;
-import com.ouyunc.domain.entity.GroupEntity;
 import com.ouyunc.repository.DefaultRepository;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import reactor.core.publisher.Mono;
 
 /**
@@ -24,22 +20,20 @@ public enum GroupValidator implements ReactiveValidator<Packet> {
 
     private static final Logger log = LoggerFactory.getLogger(GroupValidator.class);
 
-    private static final ReactiveRedisTemplate<String, ?> reactiveRedisTemplate = CacheFactory.REACTIVE_REDIS.instance();
-
 
     /***
      * @author fzx
      * @description 校验是否是在群是否被封禁，平台封禁返回true, 否则返回false
+     * 优化：使用多级缓存查询，提高性能
      */
-    @SuppressWarnings("unchecked")
     @Override
     public Mono<Boolean> verify(Packet packet, ChannelHandlerContext ctx) {
         Message message = packet.getMessage();
         String to = message.getTo();
         Metadata metadata = message.getMetadata();
-        Mono<GroupEntity> groupEntityMono = (Mono<GroupEntity>) reactiveRedisTemplate.opsForValue().get(CacheConstant.buildGroupCacheKey(metadata.getAppKey(), to));
-        return groupEntityMono
-                .switchIfEmpty(DefaultRepository.INSTANCE.getGroupEntityFromDatabasesReactive(metadata.getAppKey(), to))
+        
+        // 使用响应式多级缓存查询群组信息
+        return DefaultRepository.INSTANCE.getGroupEntityReactive(metadata.getAppKey(), to)
                 .flatMap(groupEntity -> {
                     if (groupEntity == null) {
                         log.warn("群组 {}（appKey:{}）不存在或已被删除", to, metadata.getAppKey());

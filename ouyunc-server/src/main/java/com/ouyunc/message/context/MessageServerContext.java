@@ -2,12 +2,9 @@ package com.ouyunc.message.context;
 
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.github.benmanes.caffeine.cache.Expiry;
-import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.ouyunc.base.constant.CacheConstant;
-import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.DeviceType;
 import com.ouyunc.base.constant.enums.DisruptorEventProducerEnum;
@@ -23,9 +20,6 @@ import com.ouyunc.cache.local.caffeine.CaffeineLocalCache;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.disruptor.DisruptorEventProducer;
 import com.ouyunc.core.intercept.AbstractMessageInterceptor;
-import com.ouyunc.domain.entity.FriendEntity;
-import com.ouyunc.domain.entity.GroupEntity;
-import com.ouyunc.domain.entity.GroupUserEntity;
 import com.ouyunc.message.MessageServer;
 import com.ouyunc.message.convert.PacketConverter;
 import com.ouyunc.message.dispatcher.ProtocolDispatcherProcessor;
@@ -39,7 +33,6 @@ import com.ouyunc.message.router.Router;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.pool.ChannelPool;
-import io.netty.util.internal.ThreadLocalRandom;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -284,184 +277,6 @@ public class MessageServerContext extends MessageContext {
         }
     }));
 
-
-    /**
-     * 好友配置的映射缓存
-     */
-    public static Cache<String, FriendEntity> friendEntityCache = new CaffeineLocalCache<>("friendEntity", Caffeine.newBuilder()
-            // 最大条目数：100万（预留20%冗余，避免频繁淘汰）
-            .maximumSize(MessageConstant.LOCAL_CACHE_MAX_SIZE)
-            // 淘汰策略：LRU（最近最少使用）→ 适合热点数据集中的场景
-            // 若热点分散，可改用 LFU（最少频率使用）：.expireAfterWrite(...) + .weigher(...)
-            .evictionListener((key, value, cause) -> {
-                // 监控淘汰原因（如容量满、过期），用于调优
-                if (cause == RemovalCause.SIZE) {
-                    // 容量满导致淘汰：可能需要扩容或优化数据大小
-                    log.warn("好友缓存因容量满被淘汰，key={}, cause={}", key, cause);
-                } else if (cause == RemovalCause.EXPIRED) {
-                    // 过期淘汰：正常现象，无需告警
-                    log.debug("好友缓存过期淘汰，key={}", key);
-                }
-            })
-            // 过期时间：区分数据类型（如好友5分钟，群成员10分钟）
-            .expireAfter(new Expiry<String, FriendEntity>() {
-
-                // 1. 新条目创建后：基础5分钟 + 随机偏移（避免雪崩）
-                @Override
-                public long expireAfterCreate(String key, FriendEntity value, long currentTime) {
-                    return getRandomExpireNanos(); // 5分钟基础时间
-                }
-
-                // 2. 条目更新后：重置为5分钟 + 随机偏移（更新后延长有效期）
-                @Override
-                public long expireAfterUpdate(String key, FriendEntity value, long currentTime, long currentDuration) {
-                    return getRandomExpireNanos(); // 更新后重新计算过期时间
-                }
-
-                // 3. 条目读取后：不改变过期时间（读操作不续期）
-                @Override
-                public long expireAfterRead(String key, FriendEntity value, long currentTime, long currentDuration) {
-                    return currentDuration; // 保持原剩余过期时间
-                }
-
-                // 工具方法：生成带随机偏移的过期时间（单位：纳秒）
-                private long getRandomExpireNanos() {
-                    long baseNanos = TimeUnit.MINUTES.toNanos(NumberConstant.NUMBER_5);
-                    // 随机±30秒偏移
-                    long randomNanos = TimeUnit.SECONDS.toNanos(ThreadLocalRandom.current().nextLong(NumberConstant.NUMBER_NEGATIVE_30, NumberConstant.NUMBER_31));
-                    return baseNanos + randomNanos;
-                }
-            })
-            // 记录统计信息（命中率、淘汰数等）
-            .recordStats()
-            // 加载函数：缓存未命中时的加载逻辑（如查Redis/DB）
-            .build(new CacheLoader<String, FriendEntity>() {
-                @Override
-                public @Nullable FriendEntity load(String s) throws Exception {
-                    return null;
-                }
-            }));
-
-
-
-
-
-    /**
-     * 群组配置的映射缓存
-     */
-    public static Cache<String, GroupEntity> groupEntityCache = new CaffeineLocalCache<>("groupEntity", Caffeine.newBuilder()
-            // 最大条目数：100万（预留20%冗余，避免频繁淘汰）
-            .maximumSize(MessageConstant.LOCAL_CACHE_MAX_SIZE)
-            // 淘汰策略：LRU（最近最少使用）→ 适合热点数据集中的场景
-            // 若热点分散，可改用 LFU（最少频率使用）：.expireAfterWrite(...) + .weigher(...)
-            .evictionListener((key, value, cause) -> {
-                // 监控淘汰原因（如容量满、过期），用于调优
-                if (cause == RemovalCause.SIZE) {
-                    // 容量满导致淘汰：可能需要扩容或优化数据大小
-                    log.warn("群缓存因容量满被淘汰，key={}, cause={}", key, cause);
-                } else if (cause == RemovalCause.EXPIRED) {
-                    // 过期淘汰：正常现象，无需告警
-                    log.debug("群缓存过期淘汰，key={}", key);
-                }
-            })
-            // 过期时间：区分数据类型（群成员10分钟）
-            .expireAfter(new Expiry<String, GroupEntity>() {
-
-                // 1. 新条目创建后：基础10分钟 + 随机偏移（避免雪崩）
-                @Override
-                public long expireAfterCreate(String key, GroupEntity value, long currentTime) {
-                    return getRandomExpireNanos(); // 5分钟基础时间
-                }
-
-                // 2. 条目更新后：重置为10分钟 + 随机偏移（更新后延长有效期）
-                @Override
-                public long expireAfterUpdate(String key, GroupEntity value, long currentTime, long currentDuration) {
-                    return getRandomExpireNanos(); // 更新后重新计算过期时间
-                }
-
-                // 3. 条目读取后：不改变过期时间（读操作不续期）
-                @Override
-                public long expireAfterRead(String key, GroupEntity value, long currentTime, long currentDuration) {
-                    return currentDuration; // 保持原剩余过期时间
-                }
-
-                // 工具方法：生成带随机偏移的过期时间（单位：纳秒）
-                private long getRandomExpireNanos() {
-                    long baseNanos = TimeUnit.MINUTES.toNanos(NumberConstant.NUMBER_10);
-                    // 随机±30秒偏移
-                    long randomNanos = TimeUnit.SECONDS.toNanos(ThreadLocalRandom.current().nextLong(NumberConstant.NUMBER_NEGATIVE_30, NumberConstant.NUMBER_31));
-                    return baseNanos + randomNanos;
-                }
-            })
-            // 记录统计信息（命中率、淘汰数等）
-            .recordStats()
-            // 加载函数：缓存未命中时的加载逻辑（如查Redis/DB）
-            .build(new CacheLoader<String, GroupEntity>() {
-                @Override
-                public @Nullable GroupEntity load(String s) throws Exception {
-                    return null;
-                }
-            }));
-
-
-
-
-    /**
-     * 群成员配置的映射缓存
-     */
-    public static Cache<String, GroupUserEntity> groupUserEntityCache = new CaffeineLocalCache<>("groupUserEntity", Caffeine.newBuilder()
-            // 最大条目数：100万（预留20%冗余，避免频繁淘汰）
-            .maximumSize(MessageConstant.LOCAL_CACHE_MAX_SIZE)
-            // 淘汰策略：LRU（最近最少使用）→ 适合热点数据集中的场景
-            // 若热点分散，可改用 LFU（最少频率使用）：.expireAfterWrite(...) + .weigher(...)
-            .evictionListener((key, value, cause) -> {
-                // 监控淘汰原因（如容量满、过期），用于调优
-                if (cause == RemovalCause.SIZE) {
-                    // 容量满导致淘汰：可能需要扩容或优化数据大小
-                    log.warn("群成员缓存因容量满被淘汰，key={}, cause={}", key, cause);
-                } else if (cause == RemovalCause.EXPIRED) {
-                    // 过期淘汰：正常现象，无需告警
-                    log.debug("群成员缓存过期淘汰，key={}", key);
-                }
-            })
-            // 过期时间：区分数据类型（群成员10分钟）
-            .expireAfter(new Expiry<String, GroupUserEntity>() {
-
-                // 1. 新条目创建后：基础10分钟 + 随机偏移（避免雪崩）
-                @Override
-                public long expireAfterCreate(String key, GroupUserEntity value, long currentTime) {
-                    return getRandomExpireNanos(); // 5分钟基础时间
-                }
-
-                // 2. 条目更新后：重置为10分钟 + 随机偏移（更新后延长有效期）
-                @Override
-                public long expireAfterUpdate(String key, GroupUserEntity value, long currentTime, long currentDuration) {
-                    return getRandomExpireNanos(); // 更新后重新计算过期时间
-                }
-
-                // 3. 条目读取后：不改变过期时间（读操作不续期）
-                @Override
-                public long expireAfterRead(String key, GroupUserEntity value, long currentTime, long currentDuration) {
-                    return currentDuration; // 保持原剩余过期时间
-                }
-
-                // 工具方法：生成带随机偏移的过期时间（单位：纳秒）
-                private long getRandomExpireNanos() {
-                    long baseNanos = TimeUnit.MINUTES.toNanos(NumberConstant.NUMBER_10);
-                    // 随机±30秒偏移
-                    long randomNanos = TimeUnit.SECONDS.toNanos(ThreadLocalRandom.current().nextLong(NumberConstant.NUMBER_NEGATIVE_30, NumberConstant.NUMBER_31));
-                    return baseNanos + randomNanos;
-                }
-            })
-            // 记录统计信息（命中率、淘汰数等）
-            .recordStats()
-            // 加载函数：缓存未命中时的加载逻辑（如查Redis/DB）
-            .build(new CacheLoader<String, GroupUserEntity>() {
-                @Override
-                public @Nullable GroupUserEntity load(String s) throws Exception {
-                    return null;
-                }
-            }));
 
 
 

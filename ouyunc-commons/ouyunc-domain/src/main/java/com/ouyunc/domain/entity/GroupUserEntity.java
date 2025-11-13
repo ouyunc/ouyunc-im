@@ -101,6 +101,7 @@ public class GroupUserEntity implements Serializable {
         public static final String groupId = "group_id";
         public static final String groupCode = "group_code";
         public static final String userId = "user_id";
+        public static final String userIds = "userIds";
         public static final String userCode = "user_code";
     }
 

@@ -72,6 +72,16 @@ public class MapLocalCache<K,V> extends AbstractLocalCache<K,V> {
     }
 
     @Override
+    public Map<K, V> getAllMap(Set<K> keys) {
+        return keys.stream()
+                .filter(concurrentMap::containsKey)
+                .collect(Collectors.toMap(
+                        key -> key,
+                        concurrentMap::get
+                ));
+    }
+
+    @Override
     public void delete(K key) {
         concurrentMap.remove(key);
     }

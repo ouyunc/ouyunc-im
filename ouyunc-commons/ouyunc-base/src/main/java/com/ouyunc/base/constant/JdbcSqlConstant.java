@@ -18,8 +18,9 @@ public class JdbcSqlConstant {
 
         SELECT_GROUP("SELECT id,group_code,group_name,group_avatar,group_description,group_announcement,group_join_policy,`status`,silence,app_key,create_time,update_time,deleted FROM ouyunc_im_group WHERE id = ? and deleted = 0 ", "查询群组"),
 
-        SELECT_GROUP_USER("SELECT id, group_id, group_code, group_nick_name, user_id, user_code, post, user_nick_name, shield, silence, way, channel create_time, join_time FROM ouyunc_im_group_user where  user_id = ? and group_id = ? ", "查询群成员"),
-        SELECT_ALL_GROUP_USER("SELECT id, group_id, group_code, group_nick_name, user_id, user_code, post, user_nick_name, shield, silence, way, channel create_time, join_time  FROM ouyunc_im_group_user where group_id = ? ", "查询所有群成员"),
+        SELECT_GROUP_USER("SELECT id, group_id, group_code, group_nick_name, user_id, user_code, post, user_nick_name, shield, silence, way, channel, create_time, join_time FROM ouyunc_im_group_user WHERE user_id = ? AND group_id = ? ", "查询群成员"),
+        SELECT_GROUP_USER_BATCH("SELECT id, group_id, group_code, group_nick_name, user_id, user_code, post, user_nick_name, shield, silence, way, channel, create_time, join_time FROM ouyunc_im_group_user WHERE group_id = :group_id AND user_id IN (:userIds)", "批量查询群成员"),
+        SELECT_ALL_GROUP_USER("SELECT id, group_id, group_code, group_nick_name, user_id, user_code, post, user_nick_name, shield, silence, way, channel, create_time, join_time  FROM ouyunc_im_group_user where group_id = ? ", "查询所有群成员"),
 
         SELECT_USER("SELECT id,open_id, code, username,`password`,nick_name,avatar,motto,age,sex,email,phone_num,id_card_no,group_invite_policy,friend_join_policy,`status`,app_key,robot,create_time,update_time,deleted FROM ouyunc_im_user WHERE id = ? and deleted = 0", "查询用户"),
 

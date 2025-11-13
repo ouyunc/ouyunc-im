@@ -48,6 +48,12 @@ public interface Cache<K,V> {
      */
     Collection<V> getAll(Set<K> keys);
 
+
+    /**
+     * 获取所有数据Map
+     */
+    Map<K, V> getAllMap(Set<K> keys);
+
     /**
      * 删除数据
      */

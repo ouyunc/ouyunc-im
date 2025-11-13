@@ -118,19 +118,6 @@ public class FriendEntity implements Serializable {
         this.updateTime = updateTime;
     }
 
-    public FriendEntity(Long id, Long userId, String friendUserCode, Long friendUserId, String friendNickName, Integer shield, Integer way, Integer channel, Long joinTime, LocalDateTime createTime, LocalDateTime updateTime) {
-        this.id = id;
-        this.userId = userId;
-        this.friendUserCode = friendUserCode;
-        this.friendUserId = friendUserId;
-        this.friendNickName = friendNickName;
-        this.shield = shield;
-        this.way = way;
-        this.channel = channel;
-        this.joinTime = joinTime;
-        this.createTime = createTime;
-        this.updateTime = updateTime;
-    }
 
     public Integer getWay() {
         return way;

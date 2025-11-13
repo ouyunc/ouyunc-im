@@ -7,10 +7,7 @@ import org.apache.commons.collections4.MapUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collection;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentMap;
 
 /**
@@ -101,6 +98,19 @@ public class CaffeineLocalCache<K , V > extends AbstractLocalCache<K, V> {
             return CollectionUtils.emptyCollection();
         }
         return kvMap.values();
+    }
+
+    /**
+     * @Author fzx
+     * @Description 获取多个key对应的值
+     */
+    @Override
+    public Map<K, V> getAllMap(Set<K> keys) {
+        Map<K, V> kvMap = loadingCache.getAll(keys);
+        if (MapUtils.isEmpty(kvMap)) {
+            return new HashMap<>();
+        }
+        return kvMap;
     }
 
     /**

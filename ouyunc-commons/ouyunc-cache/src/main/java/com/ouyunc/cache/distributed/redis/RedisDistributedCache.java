@@ -1,6 +1,7 @@
 package com.ouyunc.cache.distributed.redis;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.ouyunc.cache.distributed.AbstractDistributedCache;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.dao.DataAccessException;
@@ -9,10 +10,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.SessionCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -70,6 +68,30 @@ public class RedisDistributedCache<K, V> extends AbstractDistributedCache<K,V> {
             return Lists.newArrayList();
         }
         return vs.stream().filter(Objects::nonNull).collect(Collectors.toList());
+    }
+
+    /**
+     * @Author fzx
+     * @Description 获取多个key对应的值
+     */
+    @Override
+    public Map<K, V> getAllMap(Set<K> keys) {
+        List<V> values = redisTemplate.opsForValue().multiGet(keys);
+        if (CollectionUtils.isEmpty(values) || keys.isEmpty()) {
+            return new HashMap<>();
+        }
+        Map<K, V> resultMap = Maps.newHashMap();
+        Iterator<K> keyIterator = keys.iterator();
+        Iterator<V> valueIterator = values.iterator();
+
+        while (keyIterator.hasNext() && valueIterator.hasNext()) {
+            K key = keyIterator.next();
+            V value = valueIterator.next();
+            if (value != null) {
+                resultMap.put(key, value);
+            }
+        }
+        return resultMap;
     }
 
     @Override
