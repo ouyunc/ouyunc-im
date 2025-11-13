@@ -3,6 +3,7 @@ package com.ouyunc.message.schedule;
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.ouyunc.base.constant.NumberConstant;
+import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.cache.Cache;
 import com.ouyunc.cache.local.caffeine.CaffeineLocalCache;
@@ -15,8 +16,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -27,11 +26,6 @@ import java.util.function.Consumer;
 public class TimerTaskWrapper implements TimerTask{
     private static final Logger log = LoggerFactory.getLogger(TimerTaskWrapper.class);
 
-
-    /**
-     * 线程池
-     */
-    protected static final ExecutorService qosTaskExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
     /***
      * 任务缓存
@@ -178,7 +172,7 @@ public class TimerTaskWrapper implements TimerTask{
             if (sync) {
                 runnableTask.accept(this);
             }else {
-                CompletableFuture.runAsync(() -> runnableTask.accept(this), qosTaskExecutor).exceptionally(ex -> {
+                CompletableFuture.runAsync(() -> runnableTask.accept(this), ThreadPoolManager.qosTaskExecutor()).exceptionally(ex -> {
                     log.error("执行定时调度任务异常：{}", ex.getMessage());
                     MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.SCHEDULE_TASK_ERROR, "业务 task 调度异常：" + ex.getMessage(), null));
                     return null;

@@ -16,9 +16,6 @@ import io.netty.util.concurrent.FutureListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
 /**
  * @author fzx
  * @description 客户端操作模板
@@ -27,9 +24,6 @@ public class MessageClientTemplate {
 
 
     private static final Logger log = LoggerFactory.getLogger(MessageClientTemplate.class);
-
-    private static final ExecutorService messageSendExecutor= Executors.newVirtualThreadPerTaskExecutor();
-
 
     /**
      * @Author fzx

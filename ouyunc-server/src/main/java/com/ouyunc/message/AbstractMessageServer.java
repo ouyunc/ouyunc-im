@@ -6,6 +6,7 @@ import com.lmax.disruptor.dsl.Disruptor;
 import com.lmax.disruptor.dsl.ProducerType;
 import com.lmax.disruptor.util.DaemonThreadFactory;
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.constant.enums.DeviceTypeEnum;
 import com.ouyunc.base.constant.enums.DisruptorEventProducerEnum;
 import com.ouyunc.base.constant.enums.LuaScriptEnum;
@@ -234,6 +235,7 @@ public abstract class AbstractMessageServer implements MessageServer {
         log.error("IM server 开始注销程序...");
         // 系统关闭进行事件通知,可以进行释放资源等一些处理
         MessageServerContext.publishEvent(new ServerStopEvent(this), false);
+        ThreadPoolManager.shutdownAll();
         // 系统退出，会触发服务关闭钩子，从而释放资源并关闭程序
         System.exit(0);
     }
@@ -330,6 +332,7 @@ public abstract class AbstractMessageServer implements MessageServer {
             if (MessageServerContext.serverProperties().isClusterEnable()) {
                 messageClient.stop();
             }
+            ThreadPoolManager.shutdownAll();
             log.error("Message server注销完成");
         }));
     }

@@ -1,10 +1,10 @@
 package com.ouyunc.message.router;
 
+import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.packet.Packet;
 
 import javax.annotation.Nullable;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * @author fzx
@@ -15,7 +15,9 @@ public abstract class AbstractMessageRouter implements Router<String, Packet, St
     /***
      * 消息路由器的虚拟线程池
      */
-    protected static final ExecutorService routerExecutor = Executors.newVirtualThreadPerTaskExecutor();
+    protected ExecutorService routerExecutor() {
+        return ThreadPoolManager.routerExecutor();
+    }
 
 
     /***

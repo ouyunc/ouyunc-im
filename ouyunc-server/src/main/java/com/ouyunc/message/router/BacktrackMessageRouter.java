@@ -94,7 +94,7 @@ public class BacktrackMessageRouter extends AbstractMessageRouter {
             }
         }
         // 将需要处理的重试消息，放到任务队列中, 使用netty中的线程池以及队列，在第一次调用execute时会启动java线程，其实是个死循环来循环处理任务
-        routerExecutor.execute(new MessageClusterRouteFailureThread(packet));
+        routerExecutor().execute(new MessageClusterRouteFailureThread(packet));
         // 返回空
         return null;
     }

@@ -54,7 +54,7 @@ public final class SynAckMessageProcessor extends AbstractMessageProcessor<Byte>
                 synAckMessage.setContentType(OuyuncMessageContentTypeEnum.SYN_CONTENT.getType());
                 packet.setPacketId(MessageServerContext.<Long>idGenerator().generateId());
                 // 内部客户端连接池异步传递消息 syn ,尝试所有的路径去保持连通
-                messageProcessorExecutor.submit(()-> MessageServerContext.findProtocol(packet.getProtocol(), packet.getProtocolVersion()).doSendMessage(packet, remoteServerAddress, (sendResult)->{}));
+                messageProcessorExecutor().submit(() -> MessageServerContext.findProtocol(packet.getProtocol(), packet.getProtocolVersion()).doSendMessage(packet, remoteServerAddress, sendResult -> {}));
             }
         }else if (OuyuncMessageContentTypeEnum.ACK_CONTENT.getType() == contentType) {
             // 收到回应则添加新的服务到集群

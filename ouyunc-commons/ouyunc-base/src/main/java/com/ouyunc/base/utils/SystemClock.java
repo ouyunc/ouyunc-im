@@ -1,8 +1,8 @@
 package com.ouyunc.base.utils;
 
+import com.ouyunc.base.executor.ThreadPoolManager;
+
 import java.sql.Timestamp;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -33,12 +33,7 @@ public class SystemClock {
     }
 
     private void scheduleClockUpdating() {
-        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(runnable -> {
-            Thread thread = new Thread(runnable, "System-Clock");
-            thread.setDaemon(true);
-            return thread;
-        });
-        scheduler.scheduleAtFixedRate(() -> now.set(System.currentTimeMillis()), period, period, TimeUnit.MILLISECONDS);
+        ThreadPoolManager.systemClockScheduler().scheduleAtFixedRate(() -> now.set(System.currentTimeMillis()), period, period, TimeUnit.MILLISECONDS);
     }
 
     private long currentTimeMillis() {

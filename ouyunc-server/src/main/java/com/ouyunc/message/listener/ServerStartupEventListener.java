@@ -6,6 +6,7 @@ import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.DeviceType;
 import com.ouyunc.base.constant.enums.SaveModeEnum;
+import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.model.AppKeyDeviceType;
 import com.ouyunc.base.model.ClientAppKeyDeviceType;
 import com.ouyunc.base.model.ClientInfo;
@@ -32,7 +33,6 @@ import org.springframework.data.redis.serializer.RedisSerializer;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
@@ -93,11 +93,7 @@ public class ServerStartupEventListener implements MessageListener<ServerStartup
         RedisSerializer<AppKeyDeviceType> appKeyDeviceTypeRedisSerializer = (RedisSerializer<AppKeyDeviceType>) redisTemplate.getValueSerializer();
         RedisSerializer<ClientAppKeyDeviceType> clientAppKeyDeviceTypeRedisSerializer = (RedisSerializer<ClientAppKeyDeviceType>) redisTemplate.getValueSerializer();
         RedisMessageListenerContainer container = createRedisMessageListenerContainer();
-        container.setTaskExecutor(Executors.newSingleThreadExecutor(r -> {
-            Thread t = new Thread(r, "redis-pubsub-listener");
-            t.setDaemon(true);
-            return t;
-        }));
+        container.setTaskExecutor(ThreadPoolManager.redisPubSubExecutor());
         // 监听appKey下的设备类型
         container.addMessageListener((message, pattern) -> {
             AppKeyDeviceType appKeyDeviceType = appKeyDeviceTypeRedisSerializer.deserialize(message.getBody());

@@ -5,10 +5,13 @@ import com.ouyunc.base.constant.enums.MessageContentType;
 import com.ouyunc.base.constant.enums.MessageType;
 import com.ouyunc.base.model.ProtocolType;
 import com.ouyunc.base.packet.Packet;
+import com.ouyunc.base.executor.ThreadPoolConfig;
+import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.utils.ClassScannerUtil;
 import com.ouyunc.base.utils.IpUtil;
 import com.ouyunc.base.utils.OrderSortUtil;
 import com.ouyunc.base.utils.ReflectUtil;
+import com.ouyunc.base.utils.YmlUtil;
 import com.ouyunc.core.engine.LoadPropertiesEngine;
 import com.ouyunc.core.intercept.AbstractMessageInterceptor;
 import com.ouyunc.core.intercept.Interceptor;
@@ -31,8 +34,8 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 /**
@@ -59,6 +62,17 @@ public class StandardMessageServer extends AbstractMessageServer {
         log.debug("配置信息加载完成：{}", MessageServerContext.serverProperties().toString());
     }
 
+    @Override
+    void afterPropertiesSet() {
+        super.afterPropertiesSet();
+        log.debug("开始初始化线程池配置...");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> threadPoolSection = YmlUtil.getValue("ouyunc-server.yml", "ouyunc.message.thread-pool", Map.class);
+        ThreadPoolConfig config = ThreadPoolConfig.fromYaml(threadPoolSection);
+        ThreadPoolManager.initialise(config);
+        log.debug("线程池配置初始化完成");
+    }
+
 
     /***
      * @author fzx
@@ -79,7 +93,7 @@ public class StandardMessageServer extends AbstractMessageServer {
         // 排除不是直接实现该接口的
         SimpleMessageEventMulticaster messageEventMulticaster = new SimpleMessageEventMulticaster();
         // 这里配置线程池来处理，如果同步发送事件可以注释下面一行
-        messageEventMulticaster.setTaskExecutor(Executors.newVirtualThreadPerTaskExecutor());
+        messageEventMulticaster.setTaskExecutor(ThreadPoolManager.eventListenerExecutor());
         for (Class<?> messageListenerClazz : messageListenerClazzSet) {
             if (MessageListener.class.isAssignableFrom(messageListenerClazz)) {
                 // 排除自身以及抽象类

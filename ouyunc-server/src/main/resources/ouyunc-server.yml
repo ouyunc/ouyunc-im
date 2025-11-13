@@ -96,6 +96,45 @@ ouyunc:
       scan-package-paths:
         - com.ouyunc.message.intercept
 
+    # 线程池配置（精简版，仅保留必要参数）
+    thread-pool:
+      # 虚拟线程池（I/O密集型任务，无需配置大小参数）
+      message-send:
+        type: VIRTUAL
+        thread-name-prefix: message-send
+      message-processor:
+        type: VIRTUAL
+        thread-name-prefix: message-processor
+      qos-task:
+        type: VIRTUAL
+        thread-name-prefix: qos-task
+      router:
+        type: VIRTUAL
+        thread-name-prefix: router
+      repository:
+        type: VIRTUAL
+        thread-name-prefix: repository
+      event-listener:
+        type: VIRTUAL
+        thread-name-prefix: event-listener
+      # 调度线程池（仅需配置核心线程数）
+      client-heartbeat:
+        type: SCHEDULED
+        core-size: 4
+        thread-name-prefix: client-heartbeat
+      cluster-client-heartbeat:
+        type: SCHEDULED
+        core-size: 1
+        thread-name-prefix: cluster-client-heartbeat
+      system-clock:
+        type: SCHEDULED
+        core-size: 1
+        thread-name-prefix: system-clock
+      # 单线程池（无需配置大小参数）
+      redis-pubsub:
+        type: SINGLE
+        thread-name-prefix: redis-pubsub-listener
+
     # Netty 线程组线程数配置
     boss:
       # boss 线程组的线程个数 1

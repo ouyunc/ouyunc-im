@@ -1,11 +1,7 @@
 package com.ouyunc.client;
 
-import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 
 /**
  * @Author fzx
@@ -13,14 +9,6 @@ import java.util.concurrent.ScheduledExecutorService;
  **/
 public class DefaultMessageClient extends AbstractMessageClient {
     private static final Logger log = LoggerFactory.getLogger(DefaultMessageClient.class);
-
-    /***
-     * 定时任务事件执行器
-     */
-    private static final ScheduledExecutorService SCHEDULED_EVENT_EXECUTORS = Executors.newScheduledThreadPool(16, new BasicThreadFactory.Builder().namingPattern("client-heart-hart-pool-%d").build());
-
-
-
     /**
      * @Author fzx
      * @Description 做一些初始化后的处理，客户端心跳

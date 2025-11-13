@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSON;
 import com.google.common.collect.Lists;
 import com.ouyunc.base.constant.*;
 import com.ouyunc.base.constant.enums.*;
+import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.model.FiveConsumer;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
@@ -59,7 +60,9 @@ import java.util.stream.Collectors;
 public enum DefaultRepository implements Repository{
     INSTANCE;
 
-    private static final Executor dbExecutor = Executors.newVirtualThreadPerTaskExecutor();
+    private static Executor dbExecutor() {
+        return ThreadPoolManager.repositoryExecutor();
+    }
 
     private static final Logger log = LoggerFactory.getLogger(DefaultRepository.class);
     /**
@@ -365,7 +368,7 @@ public enum DefaultRepository implements Repository{
                                     return Collections.<Packet>emptyList();
                                 }
                             })
-                            .subscribeOn(Schedulers.fromExecutor(dbExecutor))
+                            .subscribeOn(Schedulers.fromExecutor(dbExecutor()))
                             .flatMapMany(Flux::fromIterable)
                     );
         })
@@ -469,7 +472,7 @@ public enum DefaultRepository implements Repository{
                     return null;
                 }
             });
-        }, dbExecutor).exceptionally(ex -> {
+        }, dbExecutor()).exceptionally(ex -> {
             log.error("异步更新缓存失败", ex);
             return null;
         });
@@ -539,7 +542,7 @@ public enum DefaultRepository implements Repository{
                     }
 
                     return Mono.fromCallable(() -> getGroupUsersFromDatabases(groupId, remaining))
-                            .subscribeOn(Schedulers.fromExecutor(dbExecutor))
+                            .subscribeOn(Schedulers.fromExecutor(dbExecutor()))
                             .map(dbEntities -> {
                                 for (GroupUserEntity entity : dbEntities) {
                                     if (entity == null || entity.getUserId() == null) {
@@ -1261,7 +1264,7 @@ public enum DefaultRepository implements Repository{
                                                 return null;
                                             }
                                         })
-                                        .subscribeOn(Schedulers.fromExecutor(dbExecutor))
+                                        .subscribeOn(Schedulers.fromExecutor(dbExecutor()))
                                         .doOnNext(groupUserEntity -> {
                                             if (groupUserEntity != null) {
                                                 updateGroupUserCache(cacheKey, groupUserEntity);
@@ -1675,7 +1678,7 @@ public enum DefaultRepository implements Repository{
                                                 return null;
                                             }
                                         })
-                                        .subscribeOn(Schedulers.fromExecutor(dbExecutor))
+                                        .subscribeOn(Schedulers.fromExecutor(dbExecutor()))
                                         .doOnNext(friendEntity -> {
                                             if (friendEntity != null) {
                                                 updateFriendCache(cacheKey, friendEntity);
@@ -1889,7 +1892,7 @@ public enum DefaultRepository implements Repository{
         // 注意：Supplier 中的逻辑会在 publishOn 指定的线程池中执行
         return Mono.fromSupplier(() -> getGroupEntityFromDatabases(appKey, groupId))
                 // 3. 切换到专用线程池执行同步任务（关键：避免阻塞 Reactor 核心线程）
-                .publishOn(Schedulers.fromExecutor(dbExecutor))
+                .publishOn(Schedulers.fromExecutor(dbExecutor()))
                 // 4. 响应式异常处理：将同步方法抛出的 RuntimeException 转换为响应式错误信号
                 .onErrorResume(e -> {
                     log.error("响应式查询群组异常, appKey:{}, groupId:{}", appKey, groupId, e);
@@ -2015,7 +2018,7 @@ public enum DefaultRepository implements Repository{
                                                 return null;
                                             }
                                         })
-                                        .subscribeOn(Schedulers.fromExecutor(dbExecutor))
+                                        .subscribeOn(Schedulers.fromExecutor(dbExecutor()))
                                         .doOnNext(userEntity -> {
                                             if (userEntity != null) {
                                                 updateUserCache(userCacheKey, userEntity);

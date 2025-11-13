@@ -1,6 +1,7 @@
 package com.ouyunc.message.processor;
 
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
+import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.message.context.MessageServerContext;
@@ -11,7 +12,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.function.BiConsumer;
 
 /**
@@ -25,10 +25,9 @@ public abstract class AbstractMessageProcessor<T extends Number> extends Abstrac
     /**
      * 线程池事件执行器
      */
-    public static final ExecutorService messageProcessorExecutor =  Executors.newVirtualThreadPerTaskExecutor();
-
-
-
+    protected ExecutorService messageProcessorExecutor() {
+        return ThreadPoolManager.messageProcessorExecutor();
+    }
     /**
      * 获取数据存储实现类, 子类可以重写来实现自定义存储实现
      */
