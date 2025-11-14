@@ -235,7 +235,7 @@ public final class ResourceMonitor {
         log.info("【缓存监控】");
         metrics.forEach((name, m) -> {
             double hitRate = m.hitRate();
-            log.info("  {}: 大小={}, 命中率={:.2f}%, 命中={}, 未命中={}, 加载={}, 淘汰={}, 加载耗时={}ms",
+            log.info("  {}: 大小={}, 命中率={}%, 命中={}, 未命中={}, 加载={}, 淘汰={}, 加载耗时={}ms",
                     name,
                     m.size(),
                     hitRate * 100,
