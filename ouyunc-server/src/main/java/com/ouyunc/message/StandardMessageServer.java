@@ -3,25 +3,22 @@ package com.ouyunc.message;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.MessageContentType;
 import com.ouyunc.base.constant.enums.MessageType;
-import com.ouyunc.base.model.ProtocolType;
-import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.executor.ThreadPoolConfig;
 import com.ouyunc.base.executor.ThreadPoolManager;
-import com.ouyunc.base.utils.ClassScannerUtil;
-import com.ouyunc.base.utils.IpUtil;
-import com.ouyunc.base.utils.OrderSortUtil;
-import com.ouyunc.base.utils.ReflectUtil;
-import com.ouyunc.base.utils.YmlUtil;
+import com.ouyunc.base.model.ProtocolType;
+import com.ouyunc.base.packet.Packet;
+import com.ouyunc.base.utils.*;
 import com.ouyunc.core.engine.LoadPropertiesEngine;
 import com.ouyunc.core.intercept.AbstractMessageInterceptor;
 import com.ouyunc.core.intercept.Interceptor;
 import com.ouyunc.core.listener.MessageListener;
 import com.ouyunc.core.listener.SimpleMessageEventMulticaster;
 import com.ouyunc.core.listener.event.MessageEvent;
+import com.ouyunc.core.processor.Processor;
 import com.ouyunc.core.properties.CommandLineArgs;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.dispatcher.ProtocolDispatcherProcessor;
-import com.ouyunc.core.processor.Processor;
+import com.ouyunc.message.monitor.MonitorInitializer;
 import com.ouyunc.message.processor.*;
 import com.ouyunc.message.properties.MessageServerProperties;
 import io.netty.channel.ChannelHandlerContext;
@@ -31,11 +28,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -71,6 +64,9 @@ public class StandardMessageServer extends AbstractMessageServer {
         ThreadPoolConfig config = ThreadPoolConfig.fromYaml(threadPoolSection);
         ThreadPoolManager.initialise(config);
         log.debug("线程池配置初始化完成");
+        
+        // 初始化资源监控（注册缓存实例）
+        MonitorInitializer.initialize();
     }
 
 

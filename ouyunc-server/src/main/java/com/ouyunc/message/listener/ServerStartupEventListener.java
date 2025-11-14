@@ -16,6 +16,7 @@ import com.ouyunc.core.listener.MessageListener;
 import com.ouyunc.core.listener.event.ServerStartupEvent;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
+import com.ouyunc.message.monitor.MonitorInitializer;
 import com.ouyunc.message.schedule.ScheduleTimer;
 import com.ouyunc.message.thread.LoginKeepAliveThread;
 import org.apache.commons.collections4.CollectionUtils;
@@ -63,6 +64,9 @@ public class ServerStartupEventListener implements MessageListener<ServerStartup
         // 启动appKey 下的deviceType 订阅
         // 启动客户端登录信息心跳保活线程
         startClientLoginKeepAliveThread();
+        
+        // 启动资源监控
+        MonitorInitializer.startMonitoring();
     }
 
     @SuppressWarnings("unchecked")
