@@ -1555,6 +1555,12 @@ public enum DefaultRepository implements Repository{
      */
     @SuppressWarnings("unchecked")
     public boolean isFriend(String appKey, String from, String to) {
+        String cacheKey = CacheConstant.buildFriendsConfigCacheKey(appKey, from, to);
+        // 1. 本地缓存
+        FriendEntity friendEntity = MessageContext.friendEntityCache.get(cacheKey);
+        if (friendEntity != null) {
+            return true;
+        }
         // 这里是否再去查询数据库？没有太大必要，后续如果需要再加
         return stringRedisTemplate.opsForZSet().score(CacheConstant.buildFriendsCacheKey(appKey, from), to) != null;
     }
@@ -1568,6 +1574,12 @@ public enum DefaultRepository implements Repository{
      */
     @SuppressWarnings("unchecked")
     public boolean inGroup(String appKey, String from, String groupId) {
+        String cacheKey = CacheConstant.buildGroupUserConfigCacheKey(appKey, from, groupId);
+        // 1. 本地缓存
+        GroupUserEntity groupUserEntity = MessageContext.groupUserEntityCache.get(cacheKey);
+        if (groupUserEntity != null) {
+            return true;
+        }
         // 这里是否再去查询数据库？没有太大必要，后续如果需要再加
         return stringRedisTemplate.opsForZSet().score(CacheConstant.buildGroupUserCacheKey(appKey, groupId), from) != null;
     }
