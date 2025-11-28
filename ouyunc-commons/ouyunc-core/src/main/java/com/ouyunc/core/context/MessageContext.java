@@ -34,6 +34,9 @@ import java.util.concurrent.TimeUnit;
 public class MessageContext {
     private static final Logger log = LoggerFactory.getLogger(MessageContext.class);
 
+    private MessageContext() {
+    }
+
     /**
      * message 事件多播器
      * */
@@ -48,7 +51,7 @@ public class MessageContext {
     /**
      * 缓存
      */
-    public static Cache<String, ?> cache = new RedisDistributedCache<>(CacheFactory.REDIS.instance(), CacheFactory.STRING_REDIS.instance());
+    public static final Cache<String, ?> cache = new RedisDistributedCache<>(CacheFactory.REDIS.instance(), CacheFactory.STRING_REDIS.instance());
 
 
     /**
@@ -100,7 +103,7 @@ public class MessageContext {
     /**
      * 好友配置的映射缓存
      */
-    public static Cache<String, FriendEntity> friendEntityCache = new CaffeineLocalCache<>("friendEntity", Caffeine.newBuilder()
+    public static final Cache<String, FriendEntity> friendEntityCache = new CaffeineLocalCache<>("friendEntity", Caffeine.newBuilder()
             // 最大条目数：100万（预留20%冗余，避免频繁淘汰）
             .maximumSize(MessageConstant.LOCAL_CACHE_MAX_SIZE)
             // 淘汰策略：LRU（最近最少使用）→ 适合热点数据集中的场景
@@ -161,7 +164,7 @@ public class MessageContext {
     /**
      * 群组配置的映射缓存
      */
-    public static Cache<String, GroupEntity> groupEntityCache = new CaffeineLocalCache<>("groupEntity", Caffeine.newBuilder()
+    public static final Cache<String, GroupEntity> groupEntityCache = new CaffeineLocalCache<>("groupEntity", Caffeine.newBuilder()
             // 最大条目数：100万（预留20%冗余，避免频繁淘汰）
             .maximumSize(MessageConstant.LOCAL_CACHE_MAX_SIZE)
             // 淘汰策略：LRU（最近最少使用）→ 适合热点数据集中的场景
@@ -221,7 +224,7 @@ public class MessageContext {
     /**
      * 群成员配置的映射缓存
      */
-    public static Cache<String, GroupUserEntity> groupUserEntityCache = new CaffeineLocalCache<>("groupUserEntity", Caffeine.newBuilder()
+    public static final Cache<String, GroupUserEntity> groupUserEntityCache = new CaffeineLocalCache<>("groupUserEntity", Caffeine.newBuilder()
             // 最大条目数：100万（预留20%冗余，避免频繁淘汰）
             .maximumSize(MessageConstant.LOCAL_CACHE_MAX_SIZE)
             // 淘汰策略：LRU（最近最少使用）→ 适合热点数据集中的场景
@@ -279,7 +282,7 @@ public class MessageContext {
     /**
      * 用户实体的映射缓存
      */
-    public static Cache<String, UserEntity> userEntityCache = new CaffeineLocalCache<>("userEntity", Caffeine.newBuilder()
+    public static final Cache<String, UserEntity> userEntityCache = new CaffeineLocalCache<>("userEntity", Caffeine.newBuilder()
             // 最大条目数：100万（预留20%冗余，避免频繁淘汰）
             .maximumSize(MessageConstant.LOCAL_CACHE_MAX_SIZE)
             // 淘汰策略：LRU（最近最少使用）→ 适合热点数据集中的场景

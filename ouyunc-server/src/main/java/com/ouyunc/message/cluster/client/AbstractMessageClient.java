@@ -20,7 +20,7 @@ public abstract class AbstractMessageClient implements MessageClient {
      void initClient(MessageServerProperties messageServerProperties) {
          // 初始化客户端连接池
          MessageClientPool.init(messageServerProperties);
-     };
+     }
 
     /**
      * @Author fzx
