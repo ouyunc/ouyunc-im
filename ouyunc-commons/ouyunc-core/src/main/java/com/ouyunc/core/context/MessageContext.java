@@ -34,8 +34,6 @@ import java.util.concurrent.TimeUnit;
 public class MessageContext {
     private static final Logger log = LoggerFactory.getLogger(MessageContext.class);
 
-    private MessageContext() {
-    }
 
     /**
      * message 事件多播器

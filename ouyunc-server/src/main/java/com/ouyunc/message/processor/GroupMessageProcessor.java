@@ -2,6 +2,7 @@ package com.ouyunc.message.processor;
 
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
+import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.*;
 import com.ouyunc.base.model.ClientInfo;
 import com.ouyunc.base.model.LoginClientInfo;
@@ -164,8 +165,12 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
      * @param packet
      */
     private void deliverWithdrawMessageAndFireNext(ChannelHandlerContext ctx, Packet packet, Set<String> groupUserIdentitySet) {
+        Message message = packet.getMessage();
         // 同步发送给自己
-        deliver2SelfAndFireNext(packet);
+        ClientInfo clientInfo = MessageServerContext.localClientInfo(message.getMetadata().getAppKey(), message.getFrom());
+        if (clientInfo != null && clientInfo.getSelfSync()) {
+            deliver2SelfAndFireNext(packet);
+        }
         // 发送给他人
         deliver2AllGroupMembers(packet, groupUserIdentitySet);
         // 处理成功则转到下个处理器
@@ -186,10 +191,29 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
         if (clientInfo != null && clientInfo.getSelfSync()) {
             deliver2SelfAndFireNext(packet);
         }
-        // 发送给@ 的人
-        List<String> atList = message.getAt();
-        if (CollectionUtils.isNotEmpty(atList)) {
-            deliver2AtMessage(packet, atList, groupUserIdentitySet);
+        // 判断群消息的推送模式 推送还是拉取还是混合模式
+        if (GroupMessagePushModeEnum.PUSH.equals(MessageServerContext.serverProperties().getGroupMessagePushMode())) {
+            deliver2AllGroupMembers(packet, groupUserIdentitySet);
+        }else if (GroupMessagePushModeEnum.PULL.equals(MessageServerContext.serverProperties().getGroupMessagePushMode())) {
+            // 发送给@ 的人
+            List<String> atList = message.getAt();
+            if (CollectionUtils.isNotEmpty(atList)) {
+                deliver2AtMessage(packet, atList, groupUserIdentitySet);
+            }
+        }else if (GroupMessagePushModeEnum.PULL_PUSH.equals(MessageServerContext.serverProperties().getGroupMessagePushMode())) {
+            // 混合模式(推拉模式)
+            if (groupUserIdentitySet.size() + NumberConstant.NUMBER_1 > MessageServerContext.serverProperties().getGroupMessageThreshold()) {
+                // 发送给@ 的人
+                List<String> atList = message.getAt();
+                if (CollectionUtils.isNotEmpty(atList)) {
+                    deliver2AtMessage(packet, atList, groupUserIdentitySet);
+                }
+            }else {
+                // 发送全体成员
+                deliver2AllGroupMembers(packet, groupUserIdentitySet);
+            }
+        }else {
+            log.warn("暂不支持该消息推送模式:{}, 消息：{}", MessageServerContext.serverProperties().getGroupMessagePushMode(), packet);
         }
         // 处理成功则转到下个处理器
         ctx.fireChannelRead(packet);

@@ -1,5 +1,6 @@
 package com.ouyunc.message.properties;
 
+import com.ouyunc.base.constant.enums.GroupMessagePushModeEnum;
 import com.ouyunc.base.constant.enums.SaveModeEnum;
 import com.ouyunc.core.properties.MessageProperties;
 import com.ouyunc.core.properties.annotation.Key;
@@ -159,6 +160,20 @@ public class MessageServerProperties extends MessageProperties {
      */
     @Key(value = "ouyunc.message.server.login.timeout", defaultValue = "5")
     int serverLoginTimeout;
+
+
+    /***
+     * 服务端群消息推送模式，PUSH-推送模式，PULL-拉取模式 PULL_PUSH-拉取推送模式
+     */
+    @Key(value = "ouyunc.message.server.group-message.mode", defaultValue = "PUSH")
+    GroupMessagePushModeEnum groupMessagePushMode;
+
+
+    /***
+     * 群成员数量阈值，超过该值则切换为拉取模式，在推拉模式下，该配置生效，大于改值的群消息，则切换为拉取模式，小于等于该值则切换为推送模式
+     */
+    @Key(value = "ouyunc.message.server.group-message.threshold", defaultValue = "500")
+    int groupMessageThreshold;
 
 
     /***
@@ -451,6 +466,22 @@ public class MessageServerProperties extends MessageProperties {
         this.messageListenersScanPackagePaths = messageListenersScanPackagePaths;
     }
 
+    public GroupMessagePushModeEnum getGroupMessagePushMode() {
+        return groupMessagePushMode;
+    }
+
+    public void setGroupMessagePushMode(GroupMessagePushModeEnum groupMessagePushMode) {
+        this.groupMessagePushMode = groupMessagePushMode;
+    }
+
+    public int getGroupMessageThreshold() {
+        return groupMessageThreshold;
+    }
+
+    public void setGroupMessageThreshold(int groupMessageThreshold) {
+        this.groupMessageThreshold = groupMessageThreshold;
+    }
+
     public long getAppKeyConnectionCountRefreshStep() {
         return appKeyConnectionCountRefreshStep;
     }
@@ -739,6 +770,8 @@ public class MessageServerProperties extends MessageProperties {
                 "\n, clientHeartBeatWaitRetry=" + clientHeartBeatWaitRetry +
                 "\n, serverLoginEnable=" + serverLoginEnable +
                 "\n, serverLoginTimeout=" + serverLoginTimeout +
+                "\n, groupMessagePushMode=" + groupMessagePushMode +
+                "\n, groupMessageThreshold=" + groupMessageThreshold +
                 "\n, appKeyConnectionCountRefreshEnable=" + appKeyConnectionCountRefreshEnable +
                 "\n, appKeyConnectionCountRefreshInterval=" + appKeyConnectionCountRefreshInterval +
                 "\n, websocketPath='" + websocketPath + '\'' +
