@@ -24,12 +24,12 @@
 
         <!-- 控制台默认输出格式,"%-5level":日志级别,"%l":输出完整的错误位置,是小写的L,因为有行号显示,所以影响日志输出的性能 -->
         <!--        <property name="console_log_pattern">%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight[%-5level] %l - %m%n</property>-->
-        <property name="console_log_pattern">%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight{[${logFileName}]} %highlight{[${sys:local-server-address:-127.0.0.1}]} %highlight{[trace-id:%X{trace-id}]} %highlight{[span-id:%X{span-id}]} %highlight{%-5level} [%t] %c{1.} %highlight{%l}: %msg%n</property>
+        <property name="console_log_pattern">%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight{[${logFileName}]} %highlight{[${sys:local-server-address:-127.0.0.1}]} %highlight{[trace-id:%X{trace-id}]} %highlight{[span-id:%X{span-id}]} %highlight{%-5level} [%t] %c %highlight{%l}: %msg%n</property>
         <!--        <property name="console_log_pattern">%highlight{%-5level}  %X{requestId}|%date{yyyy-MM-dd HH:mm:ss}|[%t]|%highlight{%l}|%m%n</property>-->
         <!-- 日志文件默认输出格式,不带行号输出(行号显示会影响日志输出性能);%C:大写,类名;%M:方法名;%m:错误信息;%n:换行 -->
         <!-- <property name="log_pattern">%d{yyyy-MM-dd HH:mm:ss.SSS} [%-5level] %C.%M - %m%n</property> -->
         <!-- 日志文件默认输出格式,另类带行号输出(对日志输出性能未知);%C:大写,类名;%M:方法名;%L:行号;%m:错误信息;%n:换行 -->
-        <property name="log_pattern">%d{yyyy-MM-dd HH:mm:ss.SSS} [${logFileName}] [${sys:local-server-address:-127.0.0.1}] [trace-id:%X{trace-id}] [span-id:%X{span-id}]  [%-5level] [%t] %c{1.} -> %msg%n</property>
+        <property name="log_pattern">%d{yyyy-MM-dd HH:mm:ss.SSS} [${logFileName}] [${sys:local-server-address:-127.0.0.1}] [trace-id:%X{trace-id}] [span-id:%X{span-id}]  [%-5level] [%t] %c -> %msg%n</property>
 
         <!-- 日志默认切割的最小单位 -->
         <property name="every_file_size">20MB</property>
@@ -226,8 +226,20 @@
             <AppenderRef ref="Async"/>
         </logger>
         <Logger name="io.netty" level="WARN" additivity="false">
-                <AppenderRef ref="Async"/>
+            <AppenderRef ref="Async"/>
         </Logger>
+        <!-- 关键配置：Netty核心包路径，设置级别为INFO（高于Debug，禁用Debug输出） -->
+        <Logger name="io.lettuce" level="INFO" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="RollingFileInfo"/>
+        </Logger>
+        <!-- 关键配置：Netty核心包路径，设置级别为INFO（高于Debug，禁用Debug输出） -->
+        <Logger name="org.mongodb" level="INFO" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="RollingFileInfo"/>
+        </Logger>
+
+
         <Logger name="com.ouyunc" level="${output_log_level}"/>
         <logger name="org.springframework.jdbc.core.JdbcTemplate" level="DEBUG" additivity="false">
             <AppenderRef ref="Async"/>
