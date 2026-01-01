@@ -36,6 +36,17 @@ public class LoginContent extends ClientInfo {
     private int heartBeatExpireTime;
 
     /**
+     * 是否启用遗嘱: 1-启用，0-不启用，可以认为只要真实离线，并开启遗嘱就会发送遗嘱消息，与cleanSession无关
+     */
+    private int enableWill;
+
+    /**
+     * 遗嘱消息，客户端下线后，根据具体业务推送将该信息推送给相关联的人，可以是json格式字符串，具体看业务
+     */
+    private String willMessage;
+
+
+    /**
      * 创建时间戳（毫秒）
      */
 
@@ -68,6 +79,21 @@ public class LoginContent extends ClientInfo {
     }
 
 
+    public int getEnableWill() {
+        return enableWill;
+    }
+
+    public void setEnableWill(int enableWill) {
+        this.enableWill = enableWill;
+    }
+
+    public String getWillMessage() {
+        return willMessage;
+    }
+
+    public void setWillMessage(String willMessage) {
+        this.willMessage = willMessage;
+    }
 
     public String getSn() {
         return sn;
@@ -89,13 +115,15 @@ public class LoginContent extends ClientInfo {
     public LoginContent() {
     }
 
-    public LoginContent(String appKey, String identity, Collection<Byte> supportDeviceTypes  , String sn, String signature, byte signatureAlgorithm, int heartBeatExpireTime, long createTime) {
+    public LoginContent(String appKey, String identity, Collection<Byte> supportDeviceTypes  , String sn, String signature, byte signatureAlgorithm, int heartBeatExpireTime, long createTime, int enableWill, String willMessage) {
         super(appKey, identity, supportDeviceTypes);
         this.sn = sn;
         this.signature = signature;
         this.signatureAlgorithm = signatureAlgorithm;
         this.heartBeatExpireTime = heartBeatExpireTime;
         this.createTime = createTime;
+        this.enableWill = enableWill;
+        this.willMessage = willMessage;
     }
 
     @Override
@@ -109,6 +137,8 @@ public class LoginContent extends ClientInfo {
                 ", signatureAlgorithm=" + signatureAlgorithm +
                 ", heartBeatExpireTime=" + heartBeatExpireTime +
                 ", createTime=" + createTime +
+                ", enableWill=" + enableWill +
+                ", willMessage='" + willMessage + '\'' +
                 '}';
     }
 }

@@ -2,12 +2,14 @@ package com.ouyunc.message.listener;
 
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.MqttMessageContentTypeEnum;
+import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.model.MqttLoginClientInfo;
 import com.ouyunc.core.listener.MessageListener;
 import com.ouyunc.core.listener.event.ClientLogoutEvent;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.processor.AbstractBaseProcessor;
 import com.ouyunc.message.processor.content.MqttPublishMessageContentProcessor;
+import com.ouyunc.repository.DefaultRepository;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.codec.mqtt.*;
 import io.netty.util.CharsetUtil;
@@ -36,8 +38,12 @@ public class ClientLogoutListener implements MessageListener<ClientLogoutEvent> 
         if (source == null) {
             return;
         }
-        // 处理mqtt遗嘱信息
-        if (source instanceof MqttLoginClientInfo mqttLoginClientInfo && mqttLoginClientInfo.getEnableWill() == NumberConstant.NUMBER_1 && StringUtils.isNoneBlank(mqttLoginClientInfo.getWillMessage())) {
+        if (source instanceof LoginClientInfo loginClientInfo && loginClientInfo.getEnableWill() == NumberConstant.NUMBER_1) {
+            // 这里其实也可以设置是否开启遗嘱消息，来推送给客户端
+
+
+        }else if (source instanceof MqttLoginClientInfo mqttLoginClientInfo && mqttLoginClientInfo.getEnableWill() == NumberConstant.NUMBER_1 && StringUtils.isNoneBlank(mqttLoginClientInfo.getWillMessage())) {
+            // 处理mqtt遗嘱信息
             log.info("客户端离线，发送遗嘱消息：{}", mqttLoginClientInfo);
             MqttMessage willMqttMessage = MqttMessageFactory.newMessage(
                     new MqttFixedHeader(MqttMessageType.PUBLISH, false, MqttQoS.valueOf(mqttLoginClientInfo.getQos()), mqttLoginClientInfo.getIsWillRetain() == NumberConstant.NUMBER_1, NumberConstant.NUMBER_0),

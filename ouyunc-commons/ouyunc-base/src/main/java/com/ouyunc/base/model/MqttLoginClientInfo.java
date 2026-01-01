@@ -9,10 +9,6 @@ import java.util.Collection;
  * mqtt 登录客户端登录信息
  */
 public class MqttLoginClientInfo extends LoginClientInfo{
-    /**
-     * 是否启用遗嘱: 1-启用，0-不启用，可以认为只要真实离线，并开启遗嘱就会发送遗嘱消息，与cleanSession无关
-     */
-    private int enableWill;
 
     /**
      * 消息服务质量等级，0-至多一次，1-至少一次，2- exactly once，；如果开启了遗嘱，这里指遗嘱信息消息质量等级
@@ -28,11 +24,6 @@ public class MqttLoginClientInfo extends LoginClientInfo{
      * 是否保留遗嘱消息，0-不保留，1-保留
      */
     private int isWillRetain;
-
-    /**
-     * 遗嘱消息，客户端下线后，根据具体业务推送将该信息推送给相关联的人，可以是json格式字符串，具体看业务
-     */
-    private String willMessage;
 
 
     /**
@@ -52,21 +43,6 @@ public class MqttLoginClientInfo extends LoginClientInfo{
      */
     private int sessionExpiryInterval;
 
-    public int getEnableWill() {
-        return enableWill;
-    }
-
-    public void setEnableWill(int enableWill) {
-        this.enableWill = enableWill;
-    }
-
-    public String getWillMessage() {
-        return willMessage;
-    }
-
-    public void setWillMessage(String willMessage) {
-        this.willMessage = willMessage;
-    }
 
     public String getWillTopic() {
         return willTopic;
@@ -120,12 +96,10 @@ public class MqttLoginClientInfo extends LoginClientInfo{
     }
 
     public MqttLoginClientInfo(String loginServerAddress, OnlineEnum onlineStatus, String authorizationScope, long loginExpireTime, int heartBeatTimeout, long lastLoginTime, String appKey, String identity, DeviceType deviceType, Collection<Byte> supportDeviceTypes, String sn, String signature, byte signatureAlgorithm, int heartBeatExpireTime, long createTime, int enableWill, int qos, byte version, int isWillRetain, String willMessage, String willTopic, int cleanSession, int sessionExpiryInterval) {
-        super(loginServerAddress, onlineStatus, authorizationScope, loginExpireTime, heartBeatTimeout, lastLoginTime, appKey, identity, deviceType, supportDeviceTypes, sn, signature, signatureAlgorithm, heartBeatExpireTime, createTime);
-        this.enableWill = enableWill;
+        super(loginServerAddress, onlineStatus, authorizationScope, loginExpireTime, heartBeatTimeout, lastLoginTime, appKey, identity, deviceType, supportDeviceTypes, sn, signature, signatureAlgorithm, heartBeatExpireTime, createTime, enableWill, willMessage);
         this.qos = qos;
         this.version = version;
         this.isWillRetain = isWillRetain;
-        this.willMessage = willMessage;
         this.willTopic = willTopic;
         this.cleanSession = cleanSession;
         this.sessionExpiryInterval = sessionExpiryInterval;

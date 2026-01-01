@@ -225,7 +225,7 @@
         <logger name="org.springframework" level="INFO" additivity="false">
             <AppenderRef ref="Async"/>
         </logger>
-        <Logger name="io.netty" level="WARN" additivity="false">
+        <Logger name="io.netty" level="INFO" additivity="false">
             <AppenderRef ref="Async"/>
         </Logger>
         <!-- 关键配置：Netty核心包路径，设置级别为INFO（高于Debug，禁用Debug输出） -->
