@@ -31,6 +31,7 @@
         <module name="ouyunc-mq-rocket" />
         <module name="ouyunc-db-influx" />
         <module name="ouyunc-server" />
+        <module name="ouyunc-id" />
         <module name="ouyu-core" />
         <module name="ouyunc-mq-kafka" />
         <module name="ouyunc-repository" />

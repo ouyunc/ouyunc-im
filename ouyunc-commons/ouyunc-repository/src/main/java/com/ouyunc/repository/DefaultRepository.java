@@ -49,7 +49,9 @@ import reactor.core.scheduler.Schedulers;
 import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 import java.util.function.*;
 import java.util.stream.Collectors;
 
@@ -1585,6 +1587,13 @@ public enum DefaultRepository implements Repository{
     }
 
 
+    /**
+     * 获取在appKey 下 from 的所有好友
+     * @return
+     */
+    public Collection<String> getFriendIds(String appKey, String from) {
+       return stringRedisTemplate.opsForZSet().range(CacheConstant.buildFriendsCacheKey(appKey, from), NumberConstant.NUMBER_0, NumberConstant.NUMBER_NEGATIVE_1);
+    }
 
     /**
      * 获取在appKey 下 from 和 to 的朋友关系（同步版本，多级缓存：本地缓存 -> Redis -> MongoDB -> MySQL）

@@ -4,7 +4,6 @@ package com.ouyunc.base.packet.message.content;
 import com.ouyunc.base.model.ClientInfo;
 
 import java.util.Collection;
-import java.util.List;
 
 /**
  * @Author fzx

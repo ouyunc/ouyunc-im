@@ -77,6 +77,7 @@
     <kafka.version>3.3.1</kafka.version>
     <!--disruptor-->
     <disruptor.version>4.0.0</disruptor.version>
+    <cosid.version>3.0.2</cosid.version>
   </properties>
 
   <!--依赖-->
@@ -416,6 +417,11 @@
         <artifactId>disruptor</artifactId>
         <version>${disruptor.version}</version>
       </dependency>
+        <dependency>
+            <groupId>me.ahoo.cosid</groupId>
+            <artifactId>cosid-core</artifactId>
+            <version>${cosid.version}</version>
+        </dependency>
     </dependencies>
   </dependencyManagement>
 

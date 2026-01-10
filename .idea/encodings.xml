@@ -23,6 +23,8 @@
     <file url="file://$PROJECT_DIR$/ouyunc-commons/ouyunc-db/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/ouyunc-commons/ouyunc-id/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/ouyunc-commons/ouyunc-id/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/ouyunc-mq-kafka/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/ouyunc-mq-kafka/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/ouyunc-mq-rocket/src/main/java" charset="UTF-8" />
