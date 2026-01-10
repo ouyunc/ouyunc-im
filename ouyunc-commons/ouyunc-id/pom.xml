@@ -21,16 +21,6 @@
             <artifactId>cosid-core</artifactId>
         </dependency>
         <dependency>
-            <groupId>me.ahoo.cosid</groupId>
-            <artifactId>cosid-spring-redis</artifactId>
-            <version>3.0.2</version>
-        </dependency>
-        <dependency>
-            <groupId>me.ahoo.cosid</groupId>
-            <artifactId>cosid-spring-boot-starter</artifactId>
-            <version>${cosid.version}</version>
-        </dependency>
-        <dependency>
             <groupId>com.ouyunc</groupId>
             <artifactId>ouyunc-cache</artifactId>
             <version>${revision}</version>
