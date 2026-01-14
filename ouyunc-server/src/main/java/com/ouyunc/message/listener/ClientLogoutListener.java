@@ -62,7 +62,7 @@ public class ClientLogoutListener implements MessageListener<ClientLogoutEvent> 
                 List<LoginClientInfo> loginClientInfos = ClientHelper.onlineAll(appKey, friendId);
                 if (CollectionUtils.isNotEmpty(loginClientInfos)) {
                     Message message = new Message(MessageContext.idGenerator().generateIdStr(),identity, friendId, MessageContentTypeEnum.TEXT_CONTENT.getType(), loginClientInfo.getWillMessage(), TimeUtil.currentTimeMillis());
-                    Packet packet = new Packet(NativePacketProtocol.OUYUNC.getProtocol(), NativePacketProtocol.OUYUNC.getProtocolVersion(), MessageServerContext.idGenerator().generateId(), DeviceTypeEnum.PC.getValue(), NetworkEnum.OTHER.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(), MessageTypeEnum.CLIENT_LOGOUT.getType(), message);
+                    Packet packet = new Packet(NativePacketProtocol.OUYUNC.getProtocol(), NativePacketProtocol.OUYUNC.getProtocolVersion(), MessageContext.idGenerator().generateId(), DeviceTypeEnum.PC.getValue(), NetworkEnum.OTHER.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(), MessageTypeEnum.CLIENT_LOGOUT.getType(), message);
                     MessageHelper.asyncSendMessage(packet, loginClientInfos);
                 }
             }

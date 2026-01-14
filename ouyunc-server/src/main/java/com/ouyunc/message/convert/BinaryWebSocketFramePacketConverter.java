@@ -13,6 +13,7 @@ import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.IpUtil;
 import com.ouyunc.base.utils.PacketReaderWriterUtil;
 import com.ouyunc.base.utils.TimeUtil;
+import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.message.protocol.NativePacketProtocol;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -69,6 +70,8 @@ public enum BinaryWebSocketFramePacketConverter implements PacketConverter<Binar
                 metadata.setServerTime(TimeUtil.currentTimeMillis());
             }
             message.setMetadata(metadata);
+            // 设置服务端生成的消息id，以服务端的主键为准
+            packet.setPacketId(MessageContext.idGenerator().generateId());
             return packet;
         }
         return null;

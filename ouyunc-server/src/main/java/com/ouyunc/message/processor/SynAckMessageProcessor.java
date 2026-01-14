@@ -6,6 +6,7 @@ import com.ouyunc.base.constant.enums.OuyuncMessageTypeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.TimeUtil;
+import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.message.cluster.client.pool.MessageClientPool;
 import com.ouyunc.message.context.MessageServerContext;
 import io.netty.channel.ChannelHandlerContext;
@@ -39,11 +40,12 @@ public final class SynAckMessageProcessor extends AbstractMessageProcessor<Byte>
         log.info("SynAckMessageProcessor 集群模式下,远端Message服务：remoteServerAddress = {} 正在发起的contentType = {} 请求", remoteServerAddress, contentType);
         // syn 可能是经过其他服务转发的，回去的ack可能是经过其他服务转发的
         if (OuyuncMessageContentTypeEnum.SYN_CONTENT.getType() == contentType) {
+            synAckMessage.setId(MessageContext.idGenerator().generateIdStr());
             synAckMessage.setContentType(OuyuncMessageContentTypeEnum.ACK_CONTENT.getType());
             synAckMessage.setFrom(MessageServerContext.serverProperties().getLocalServerAddress());
             synAckMessage.setTo(remoteServerAddress);
             synAckMessage.setCreateTime(TimeUtil.currentTimeMillis());
-            packet.setPacketId(MessageServerContext.idGenerator().generateId());
+            packet.setPacketId(MessageContext.idGenerator().generateId());
             MessageServerContext.findProtocol(packet.getProtocol(), packet.getProtocolVersion()).doSendMessage(packet, remoteServerAddress, (sendResult)->{});
             // 下面是解决集群中原有服务是如何发现新加入集群的服务的
             // 判断发到syn的服务是否在 全局服务注册表中，如果不在判断该服务的合法性，如果合法，尝试发送给对方syn进行探测，如果成功则将新加入集群中的服务添加到激活的路由表中
@@ -52,7 +54,7 @@ public final class SynAckMessageProcessor extends AbstractMessageProcessor<Byte>
                 // 2,判断服务的合法性， 这里不做太多的验证，认为只要加入集群中的服务都是合法的，如果后期需要，在加入校验规则
                 // 3,给对方发送syn心跳，去探测是否连通
                 synAckMessage.setContentType(OuyuncMessageContentTypeEnum.SYN_CONTENT.getType());
-                packet.setPacketId(MessageServerContext.idGenerator().generateId());
+                packet.setPacketId(MessageContext.idGenerator().generateId());
                 // 内部客户端连接池异步传递消息 syn ,尝试所有的路径去保持连通
                 messageProcessorExecutor().submit(() -> MessageServerContext.findProtocol(packet.getProtocol(), packet.getProtocolVersion()).doSendMessage(packet, remoteServerAddress, sendResult -> {}));
             }

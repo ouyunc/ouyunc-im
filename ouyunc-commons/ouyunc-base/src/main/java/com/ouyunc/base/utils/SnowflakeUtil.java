@@ -5,7 +5,9 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.net.Inet4Address;
 import java.net.UnknownHostException;
+import java.util.HashSet;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -197,11 +199,11 @@ public class SnowflakeUtil {
 //    public static void main(String[] args) {
 //        Set<Long> ids = new HashSet<>();
 //        long start = TimeUtil.currentTimeMillis();
-//        for (int i = 0; i < 100000; i++) {
+//        for (int i = 0; i < 1000000; i++) {
 //            long id = nextId();
 //            ids.add(id);
 //            // 每10000个打印一次进度
-//            if (i % 10000 == 0) {
+//            if (i % 100000 == 0) {
 //                System.out.println("生成进度：" + i + "，当前ID：" + id);
 //            }
 //        }

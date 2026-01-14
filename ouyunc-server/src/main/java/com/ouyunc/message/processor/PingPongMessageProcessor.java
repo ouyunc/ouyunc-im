@@ -53,6 +53,7 @@ public final class PingPongMessageProcessor extends AbstractMessageProcessor<Byt
             log.error("心跳发送方不能为空！{}",  packet);
             return;
         }
+        heartBeatMessage.setId(MessageContext.idGenerator().generateIdStr());
         heartBeatMessage.setFrom(null);
         heartBeatMessage.setTo(from);
         heartBeatMessage.setContent(null);

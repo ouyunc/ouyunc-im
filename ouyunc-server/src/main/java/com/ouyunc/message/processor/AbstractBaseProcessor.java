@@ -77,9 +77,10 @@ public abstract class AbstractBaseProcessor<T extends Number> implements Process
             Message ackMessage = ackPacket.getMessage();
             Metadata metadata = ackMessage.getMetadata();
             String from = ackMessage.getFrom();
+            ackMessage.setId(MessageContext.idGenerator().generateIdStr());
             ackMessage.setFrom(null);
             ackMessage.setTo(from);
-            ackMessage.setContent(String.valueOf(packet.getPacketId()));
+            ackMessage.setContent(ackMessage.getId());
             ackMessage.setContentType(MessageContentTypeEnum.TEXT_CONTENT.getType());
             ackMessage.setCreateTime(TimeUtil.currentTimeMillis());
             ackPacket.setPacketId(MessageContext.idGenerator().generateId());
