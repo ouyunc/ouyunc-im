@@ -15,7 +15,6 @@ import com.ouyunc.base.packet.message.content.ServerNotifyContent;
 import com.ouyunc.base.serialize.Serializer;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.IdentityUtil;
-import com.ouyunc.base.utils.SnowflakeUtil;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.core.context.MessageContext;

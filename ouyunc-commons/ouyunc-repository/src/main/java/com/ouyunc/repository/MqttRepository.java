@@ -8,8 +8,8 @@ import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.model.MqttTopicSubscriptionOption;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
-import com.ouyunc.base.utils.SnowflakeUtil;
 import com.ouyunc.cache.config.CacheFactory;
+import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.mq.kafka.KafkaFactory;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import org.apache.commons.collections4.CollectionUtils;
@@ -59,7 +59,7 @@ public enum MqttRepository implements Repository{
     public boolean checkDup(Packet packet, DeviceType deviceType) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        Double score = stringRedisTemplate.opsForZSet().score(CacheConstant.buildOfflineCacheKey(metadata.getAppKey(), message.getTo(), deviceType.getDeviceTypeValue()), SnowflakeUtil.formatLong(packet.getPacketId()));
+        Double score = stringRedisTemplate.opsForZSet().score(CacheConstant.buildOfflineCacheKey(metadata.getAppKey(), message.getTo(), deviceType.getDeviceTypeValue()), MessageContext.idGenerator().formatLong(packet.getPacketId()));
         // 如果分数不为 null，则表示值存在
         return !Objects.isNull(score);
     }

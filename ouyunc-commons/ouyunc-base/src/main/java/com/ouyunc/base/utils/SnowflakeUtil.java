@@ -2,12 +2,12 @@ package com.ouyunc.base.utils;
 
 import com.ouyunc.base.constant.NumberConstant;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.net.Inet4Address;
+import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.HashSet;
 import java.util.Random;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -16,7 +16,11 @@ import java.util.concurrent.TimeUnit;
  * @Author fangzhenxun
  * @Description 雪花算法工具类
  */
-public class SnowflakeUtil {
+public final  class SnowflakeUtil {
+
+    private static final Logger log = LoggerFactory.getLogger(SnowflakeUtil.class);
+
+
     // ======================== 雪花算法核心常量（64位ID分段）========================
     /** 时间部分所占长度：41位，可支持约69年 */
     private static final int TIME_LEN = 41;
@@ -65,7 +69,7 @@ public class SnowflakeUtil {
      */
     private static long initDataId() {
         try {
-            return getHostId(Inet4Address.getLocalHost().getHostName(), DATA_MAX_NUM);
+            return getHostId(InetAddress.getLocalHost().getHostName(), DATA_MAX_NUM);
         } catch (UnknownHostException e) {
             // 异常时随机生成0-31的数
             return new Random().nextInt(DATA_RANDOM);
@@ -77,7 +81,7 @@ public class SnowflakeUtil {
      */
     private static long initWorkId() {
         try {
-            return getHostId(Inet4Address.getLocalHost().getHostAddress(), WORK_MAX_NUM);
+            return getHostId(InetAddress.getLocalHost().getHostAddress(), WORK_MAX_NUM);
         } catch (UnknownHostException e) {
             // 异常时随机生成0-31的数
             return new Random().nextInt(WORK_RANDOM);
@@ -190,6 +194,7 @@ public class SnowflakeUtil {
      */
     public static String formatLong(String str) {
         if (StringUtils.isBlank(str)) {
+            log.error("格式化ID失败，ID为空！");
             return StringUtils.leftPad("", NumberConstant.NUMBER_19, '0');
         }
         return StringUtils.leftPad(str, NumberConstant.NUMBER_19, '0');

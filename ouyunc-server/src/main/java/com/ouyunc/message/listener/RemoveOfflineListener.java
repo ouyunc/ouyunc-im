@@ -5,8 +5,8 @@ import com.ouyunc.base.constant.enums.DeviceType;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
-import com.ouyunc.base.utils.SnowflakeUtil;
 import com.ouyunc.cache.config.CacheFactory;
+import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.MessageListener;
 import com.ouyunc.core.listener.event.RemoveOfflineEvent;
 import com.ouyunc.message.context.MessageServerContext;
@@ -38,7 +38,7 @@ public class RemoveOfflineListener implements MessageListener<RemoveOfflineEvent
             String from = message.getFrom();
             Metadata metadata = message.getMetadata();
             DeviceType deviceType = MessageServerContext.deviceType(metadata.getAppKey(), packet.getDeviceType());
-            stringRedisTemplate.opsForZSet().remove(CacheConstant.buildOfflineCacheKey(metadata.getAppKey(), from, deviceType.getDeviceTypeValue()), SnowflakeUtil.formatLong(message.getContent()));
+            stringRedisTemplate.opsForZSet().remove(CacheConstant.buildOfflineCacheKey(metadata.getAppKey(), from, deviceType.getDeviceTypeValue()), MessageContext.idGenerator().formatLong(message.getContent()));
         }
     }
 

@@ -1,13 +1,13 @@
 package com.ouyunc.client;
 
-import com.alibaba.fastjson2.JSON;
-import com.ouyunc.base.constant.enums.*;
+import com.ouyunc.base.constant.enums.DeviceTypeEnum;
+import com.ouyunc.base.constant.enums.NetworkEnum;
+import com.ouyunc.base.constant.enums.OuyuncMessageContentTypeEnum;
+import com.ouyunc.base.constant.enums.OuyuncMessageTypeEnum;
 import com.ouyunc.base.encrypt.Encrypt;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
-import com.ouyunc.base.packet.message.content.LoginContent;
 import com.ouyunc.base.serialize.Serializer;
-import com.ouyunc.base.utils.SnowflakeUtil;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.core.codec.PacketCodec;
 import io.netty.bootstrap.Bootstrap;
@@ -18,10 +18,8 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.logging.LoggingHandler;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 
-import java.time.Clock;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 /**
  * @author fzx

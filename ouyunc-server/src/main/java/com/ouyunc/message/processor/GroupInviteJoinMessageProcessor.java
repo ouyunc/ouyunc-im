@@ -9,7 +9,6 @@ import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.packet.message.content.GroupRequestContent;
-import com.ouyunc.base.utils.SnowflakeUtil;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.domain.base.GroupRequestSession;
@@ -143,7 +142,7 @@ public final class GroupInviteJoinMessageProcessor extends AbstractMessageProces
                 boolean inviterIsMannerOrLeader = false;
                 if (groupRequestSession == null) {
                     groupRequestSession = GroupRequestSession.newGroupBuilder()
-                            .sessionId(SnowflakeUtil.nextIdStr())
+                            .sessionId(MessageContext.idGenerator().generateIdStr())
                             .joiner(content.getIdentity())
                             .inviter(message.getFrom())
                             .groupId(message.getTo())

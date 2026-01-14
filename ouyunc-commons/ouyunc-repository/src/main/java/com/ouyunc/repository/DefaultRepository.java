@@ -10,7 +10,6 @@ import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.IdentityUtil;
-import com.ouyunc.base.utils.SnowflakeUtil;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.ExceptionEvent;
@@ -172,7 +171,7 @@ public enum DefaultRepository implements Repository{
     public boolean checkDup(Packet packet, DeviceType deviceType) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        Double score = stringRedisTemplate.opsForZSet().score(CacheConstant.buildOfflineCacheKey(metadata.getAppKey(), message.getTo(), deviceType.getDeviceTypeValue()), SnowflakeUtil.formatLong(packet.getPacketId()));
+        Double score = stringRedisTemplate.opsForZSet().score(CacheConstant.buildOfflineCacheKey(metadata.getAppKey(), message.getTo(), deviceType.getDeviceTypeValue()), MessageContext.idGenerator().formatLong(packet.getPacketId()));
         // 如果分数不为 null，则表示值存在
         return !Objects.isNull(score);
     }
@@ -1426,7 +1425,7 @@ public enum DefaultRepository implements Repository{
     public Mono<Boolean> reactiveSaveOfflineMessage(Packet packet, String to, Collection<DeviceType> toSupportDeviceTypes) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        String packetId = SnowflakeUtil.formatLong(packet.getPacketId()); // 转换为字符串
+        String packetId = MessageContext.idGenerator().formatLong(packet.getPacketId()); // 转换为字符串
         double score = NumberConstant.NUMBER_0; // 分数
         RedisSerializer<String> stringSerializer = RedisSerializer.string();
 
@@ -2174,7 +2173,7 @@ public enum DefaultRepository implements Repository{
             String appKey = metadata.getAppKey();
             String from = message.getFrom();
             String to = message.getTo();
-            String formatPacketId = SnowflakeUtil.formatLong(packet.getPacketId());
+            String formatPacketId = MessageContext.idGenerator().formatLong(packet.getPacketId());
 
             // 获取字符串序列化器，增加灵活性
             RedisSerializer<String> stringSerializer = redisTemplate.getStringSerializer();

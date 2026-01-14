@@ -7,7 +7,6 @@ import com.ouyunc.base.constant.enums.*;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
-import com.ouyunc.base.utils.SnowflakeUtil;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.domain.base.GroupRequestSession;
@@ -116,7 +115,7 @@ public final class GroupJoinMessageProcessor extends AbstractMessageProcessor<By
                 // 尝试构建请求会话信息
                 if (groupRequestSession == null) {
                     groupRequestSession = GroupRequestSession.newGroupBuilder()
-                            .sessionId(SnowflakeUtil.nextIdStr())
+                            .sessionId(MessageContext.idGenerator().generateIdStr())
                             .joinerProcessStatus(GroupJoinerProcessStatus.AGREE.value())
                             .joiner(message.getFrom())
                             .groupId(message.getTo())

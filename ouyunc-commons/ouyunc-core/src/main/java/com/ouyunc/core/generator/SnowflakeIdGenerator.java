@@ -18,4 +18,14 @@ public enum SnowflakeIdGenerator implements IdGenerator{
     public String generateIdStr() {
         return SnowflakeUtil.nextIdStr();
     }
+
+    @Override
+    public String formatLong(long id) {
+        return SnowflakeUtil.formatLong(id);
+    }
+
+    @Override
+    public String formatLong(String id) {
+        return SnowflakeUtil.formatLong(id);
+    }
 }
