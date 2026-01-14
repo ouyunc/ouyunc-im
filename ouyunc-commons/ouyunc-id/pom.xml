@@ -21,6 +21,10 @@
             <artifactId>cosid-core</artifactId>
         </dependency>
         <dependency>
+            <groupId>me.ahoo.cosid</groupId>
+            <artifactId>cosid-redis</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.ouyunc</groupId>
             <artifactId>ouyunc-cache</artifactId>
             <version>${revision}</version>
