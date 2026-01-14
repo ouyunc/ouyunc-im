@@ -395,6 +395,7 @@ public enum DefaultRepository implements Repository{
                 entity.getMessageType(),
                 entity.getRetain(),
                 new Message(
+                        entity.getMessageId(),
                         entity.getFrom(),
                         entity.getTo(),
                         entity.getContentType(),
@@ -429,6 +430,7 @@ public enum DefaultRepository implements Repository{
                         entity.getMessageType(),
                         entity.getRetain(),
                         new Message(
+                                entity.getMessageId(),
                                 entity.getFrom(),
                                 entity.getTo(),
                                 entity.getContentType(),

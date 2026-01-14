@@ -184,6 +184,14 @@ public class Message implements Serializable, Cloneable {
         this.metadata = metadata;
     }
 
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
     public List<String> getRef() {
         return ref;
     }

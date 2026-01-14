@@ -85,6 +85,13 @@ public class MessageEntity implements Serializable {
     /**
      * 发送者,mysql 关键字段
      */
+    @Field("message_id")
+    @Indexed
+    private String messageId;
+
+    /**
+     * 发送者,mysql 关键字段
+     */
     @Field("from")
     @Indexed
     @TableField("`from`")
@@ -156,6 +163,7 @@ public class MessageEntity implements Serializable {
         public static final String ids = "ids";
         public static final String from = "from";
         public static final String to = "to";
+        public static final String messageId = "message_id";
         public static final String messageType = "message_type";
         public static final String contentType = "content_type";
         public static final String appKey = "appKey";
@@ -167,7 +175,7 @@ public class MessageEntity implements Serializable {
     public MessageEntity() {}
 
 
-    public MessageEntity(long id, byte protocol, byte protocolVersion, byte deviceType, byte networkType, byte encryptType, byte serializeAlgorithm, byte messageType, byte retain, String clientIp, String from, String to, int contentType, String content, int qos, String at, String extra, long clientSendTime, long serverArrivalTime,  String appKey) {
+    public MessageEntity(long id, byte protocol, byte protocolVersion, byte deviceType, byte networkType, byte encryptType, byte serializeAlgorithm, byte messageType, byte retain, String clientIp, String messageId, String from, String to, int contentType, String content, int qos, String at, String extra, long clientSendTime, long serverArrivalTime,  String appKey) {
         this.id = id;
         this.protocol = protocol;
         this.protocolVersion = protocolVersion;
@@ -178,6 +186,7 @@ public class MessageEntity implements Serializable {
         this.messageType = messageType;
         this.retain = retain;
         this.clientIp = clientIp;
+        this.messageId = messageId;
         this.from = from;
         this.to = to;
         this.contentType = contentType;
@@ -277,6 +286,14 @@ public class MessageEntity implements Serializable {
 
     public void setClientIp(String clientIp) {
         this.clientIp = clientIp;
+    }
+
+    public String getMessageId() {
+        return messageId;
+    }
+
+    public void setMessageId(String messageId) {
+        this.messageId = messageId;
     }
 
     public String getFrom() {
