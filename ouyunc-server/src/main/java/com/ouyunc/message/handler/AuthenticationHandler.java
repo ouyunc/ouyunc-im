@@ -145,9 +145,9 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         ChannelHandlerContext bindCtx = MessageServerContext.localLoginClientRegisterTable.get(comboIdentity);
         // 重复登录请求(1，不同的设备远程登录，2，同一设备重复发送登录请求)，向原有的连接发送通知，有其他客户端登录，并将其连接下线
         // 下面如论是否开启支持清除公共注册表的相关信息
-        Message message = new Message(null, loginContent.getIdentity(), MessageContentTypeEnum.TEXT_CONTENT.getType(), Serializer.JSON.serializeToString(new ServerNotifyContent(String.format(MessageConstant.REMOTE_LOGIN_NOTIFICATIONS, loginMessage.getMetadata().getClientIp()))), loginTimestamp, loginMessage.getMetadata());
+        Message message = new Message(String.valueOf(MessageContext.idGenerator().generateId()),null, loginContent.getIdentity(), MessageContentTypeEnum.TEXT_CONTENT.getType(), Serializer.JSON.serializeToString(new ServerNotifyContent(String.format(MessageConstant.REMOTE_LOGIN_NOTIFICATIONS, loginMessage.getMetadata().getClientIp()))), loginTimestamp, loginMessage.getMetadata());
         // 注意： 这里的原来的连接使用的序列化方式，应该是和新连接上的序列化方式一致，这里当成一致，当然不一致也可以做，后面遇到再改造
-        Packet notifyPacket = new Packet(packet.getProtocol(), packet.getProtocolVersion(), SnowflakeUtil.nextId(), DeviceTypeEnum.PC.getValue(), NetworkEnum.OTHER.getValue(), packet.getEncryptType(), packet.getSerializeAlgorithm(), MessageTypeEnum.SERVER_NOTIFY.getType(), message);
+        Packet notifyPacket = new Packet(packet.getProtocol(), packet.getProtocolVersion(), MessageContext.idGenerator().generateId(), DeviceTypeEnum.PC.getValue(), NetworkEnum.OTHER.getValue(), packet.getEncryptType(), packet.getSerializeAlgorithm(), MessageTypeEnum.SERVER_NOTIFY.getType(), message);
         // 记录设备号如果是同一个设备则不发送，否则发送通知
         if (cacheLoginClientInfo != null && (StringUtils.isBlank(cacheLoginClientInfo.getSn()) || !cacheLoginClientInfo.getSn().equals(loginContent.getSn()))) {
             // 给原有连接发送通知消息，并将其下线，添加新的连接登录,覆盖之前的登录信息

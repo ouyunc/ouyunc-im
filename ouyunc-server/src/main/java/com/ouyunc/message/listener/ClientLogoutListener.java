@@ -9,6 +9,7 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.serialize.Serializer;
 import com.ouyunc.base.utils.TimeUtil;
+import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.MessageListener;
 import com.ouyunc.core.listener.event.ClientLogoutEvent;
 import com.ouyunc.domain.constants.YesOrNo;
@@ -60,8 +61,8 @@ public class ClientLogoutListener implements MessageListener<ClientLogoutEvent> 
             for (String friendId : friendIds) {
                 List<LoginClientInfo> loginClientInfos = ClientHelper.onlineAll(appKey, friendId);
                 if (CollectionUtils.isNotEmpty(loginClientInfos)) {
-                    Message message = new Message(identity, friendId, MessageContentTypeEnum.TEXT_CONTENT.getType(), loginClientInfo.getWillMessage(), TimeUtil.currentTimeMillis());
-                    Packet packet = new Packet(NativePacketProtocol.OUYUNC.getProtocol(), NativePacketProtocol.OUYUNC.getProtocolVersion(), MessageServerContext.<Long>idGenerator().generateId(), DeviceTypeEnum.PC.getValue(), NetworkEnum.OTHER.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(), MessageTypeEnum.CLIENT_LOGOUT.getType(), message);
+                    Message message = new Message(MessageContext.idGenerator().generateIdStr(),identity, friendId, MessageContentTypeEnum.TEXT_CONTENT.getType(), loginClientInfo.getWillMessage(), TimeUtil.currentTimeMillis());
+                    Packet packet = new Packet(NativePacketProtocol.OUYUNC.getProtocol(), NativePacketProtocol.OUYUNC.getProtocolVersion(), MessageServerContext.idGenerator().generateId(), DeviceTypeEnum.PC.getValue(), NetworkEnum.OTHER.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(), MessageTypeEnum.CLIENT_LOGOUT.getType(), message);
                     MessageHelper.asyncSendMessage(packet, loginClientInfos);
                 }
             }

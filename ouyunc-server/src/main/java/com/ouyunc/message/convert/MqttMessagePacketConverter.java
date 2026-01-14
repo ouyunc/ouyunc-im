@@ -16,6 +16,7 @@ import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.IpUtil;
 import com.ouyunc.base.utils.MqttCodecUtil;
 import com.ouyunc.base.utils.TimeUtil;
+import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.protocol.NativePacketProtocol;
 import io.netty.channel.ChannelHandlerContext;
@@ -95,8 +96,8 @@ public enum MqttMessagePacketConverter implements PacketConverter<MqttMessage>{
                 return null;
             }
             // 根据消息类型设置from 和 to
-            Message message = new Message(from, MessageServerContext.serverProperties().getLocalServerAddress(), mqttMessageContentType.getType(), mqttMessageBase64Content , mqttFixedHeader.qosLevel().value(), TimeUtil.currentTimeMillis(), metadata);
-            return new Packet(protocolValue, protocolVersion, MessageServerContext.<Long>idGenerator().generateId(), DeviceTypeEnum.M.getValue(), NetworkEnum.NET_4G.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(), MqttMessageTypeEnum.MQTT.getType(), mqttVersion.protocolLevel(), message);
+            Message message = new Message(String.valueOf(MessageContext.idGenerator().generateId()), from, MessageServerContext.serverProperties().getLocalServerAddress(), mqttMessageContentType.getType(), mqttMessageBase64Content , mqttFixedHeader.qosLevel().value(), TimeUtil.currentTimeMillis(), metadata);
+            return new Packet(protocolValue, protocolVersion, MessageContext.idGenerator().generateId(), DeviceTypeEnum.M.getValue(), NetworkEnum.NET_4G.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(), MqttMessageTypeEnum.MQTT.getType(), mqttVersion.protocolLevel(), message);
         }
         return null;
     }

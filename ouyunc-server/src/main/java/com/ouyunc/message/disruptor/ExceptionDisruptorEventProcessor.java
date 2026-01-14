@@ -25,6 +25,6 @@ public class ExceptionDisruptorEventProcessor implements Processor<ExceptionEven
     @Override
     public void process(ExceptionEvent exception, Long timestamp) {
         // 直接保存到mongo 中
-        mongoTemplate.insert(new MongoExceptionEntity(MessageServerContext.<Long>idGenerator().generateId(), JSON.toJSONString(exception), timestamp));
+        mongoTemplate.insert(new MongoExceptionEntity(MessageServerContext.idGenerator().generateId(), JSON.toJSONString(exception), timestamp));
     }
 }

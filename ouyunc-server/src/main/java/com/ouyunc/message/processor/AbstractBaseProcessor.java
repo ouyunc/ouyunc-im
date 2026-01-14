@@ -82,7 +82,7 @@ public abstract class AbstractBaseProcessor<T extends Number> implements Process
             ackMessage.setContent(String.valueOf(packet.getPacketId()));
             ackMessage.setContentType(MessageContentTypeEnum.TEXT_CONTENT.getType());
             ackMessage.setCreateTime(TimeUtil.currentTimeMillis());
-            ackPacket.setPacketId(MessageContext.<Long>idGenerator().generateId());
+            ackPacket.setPacketId(MessageContext.idGenerator().generateId());
             ackPacket.setMessageType(MessageTypeEnum.QOS_S2C_ACK.getType());
             MessageHelper.asyncSendMessage(ackPacket, Target.newBuilder().targetIdentity(from).deviceType(MessageServerContext.deviceType(metadata.getAppKey(), packet.getDeviceType())).targetServerAddress(MessageServerContext.serverProperties().getLocalServerAddress()).build());
         }

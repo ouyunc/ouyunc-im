@@ -55,20 +55,20 @@ public class MessageContext {
     /**
      * 全局 id 生成器
      */
-    private static IdGenerator<?> idGenerator = SnowflakeIdGenerator.INSTANCE;
+    private static IdGenerator idGenerator = SnowflakeIdGenerator.INSTANCE;
 
     /**
      * 获取全局 id 生成器
      */
     @SuppressWarnings("unchecked")
-    public static<T> IdGenerator<T> idGenerator () {
-        return (IdGenerator<T>) idGenerator;
+    public static IdGenerator idGenerator () {
+        return idGenerator;
     }
 
     /**
      * 设置全局 id 生成器
      */
-    public static<T> void setIdGenerator (IdGenerator<T> newIdGenerator) {
+    public static void setIdGenerator (IdGenerator newIdGenerator) {
         idGenerator = newIdGenerator;
     }
 

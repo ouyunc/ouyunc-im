@@ -8,6 +8,7 @@ import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.serialize.Serializer;
 import com.ouyunc.base.utils.MapUtil;
 import com.ouyunc.base.utils.TimeUtil;
+import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.core.listener.event.ServerOfflineEvent;
 import com.ouyunc.message.context.MessageServerContext;
@@ -48,7 +49,7 @@ public class MessageClusterSynAckThread implements Runnable{
         for (Map.Entry<String, ChannelPool> socketAddressChannelPoolEntry : availableGlobalServer) {
             String targetServerAddress = socketAddressChannelPoolEntry.getKey();
             // 给暂未连接的的服务（不在注册表中）进行重试连接发送syn去握手，需要回复ack
-            Message message = new Message(MessageServerContext.serverProperties().getLocalServerAddress(), targetServerAddress, OuyuncMessageContentTypeEnum.SYN_CONTENT.getType(), TimeUtil.currentTimeMillis());
+            Message message = new Message(MessageContext.idGenerator().generateIdStr(), MessageServerContext.serverProperties().getLocalServerAddress(), targetServerAddress, OuyuncMessageContentTypeEnum.SYN_CONTENT.getType(), TimeUtil.currentTimeMillis());
             //  ==============针对以上packet 几种序列化对比: string = SYN=========
             //     packet            message
             // protoStuff 150b         80b  内部心跳只用protoStuff序列化/反序列化
@@ -59,7 +60,7 @@ public class MessageClusterSynAckThread implements Runnable{
             // hessian    430b         235b
             // fst        650b         315b
             // jdk        500b         346b
-            Packet packet = new Packet(NativePacketProtocol.OUYUNC.getProtocol(), NativePacketProtocol.OUYUNC.getProtocolVersion(), MessageServerContext.<Long>idGenerator().generateId(), DeviceTypeEnum.PC.getValue(), NetworkEnum.OTHER.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(), OuyuncMessageTypeEnum.SYN_ACK.getType(), message);
+            Packet packet = new Packet(NativePacketProtocol.OUYUNC.getProtocol(), NativePacketProtocol.OUYUNC.getProtocolVersion(), MessageContext.idGenerator().generateId(), DeviceTypeEnum.PC.getValue(), NetworkEnum.OTHER.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(), OuyuncMessageTypeEnum.SYN_ACK.getType(), message);
             // 先获取给目标服务toInetSocketAddress 发送syn,没有回复ack的次数，默认从0开始
             AtomicInteger missAckTimes = MessageServerContext.clusterClientMissAckTimesCache.get(targetServerAddress);
             // 判断次数是否到达规定的次数，默认3次（也就是说给目标服务器连续发送3次syn,没有一次得到响应ack）则进行服务下线处理，从活着的服务注册表移除该服务
