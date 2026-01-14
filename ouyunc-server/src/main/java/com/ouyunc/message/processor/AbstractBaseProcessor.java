@@ -6,6 +6,7 @@ import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.model.Target;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
+import com.ouyunc.base.packet.message.content.QosAckContent;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.processor.Processor;
@@ -80,7 +81,7 @@ public abstract class AbstractBaseProcessor<T extends Number> implements Process
             ackMessage.setId(MessageContext.idGenerator().generateIdStr());
             ackMessage.setFrom(null);
             ackMessage.setTo(from);
-            ackMessage.setContent(ackMessage.getId());
+            ackMessage.setContent(JSON.toJSONString(new QosAckContent(String.valueOf(ackPacket.getPacketId()), ackMessage.getId())));
             ackMessage.setContentType(MessageContentTypeEnum.TEXT_CONTENT.getType());
             ackMessage.setCreateTime(TimeUtil.currentTimeMillis());
             ackPacket.setPacketId(MessageContext.idGenerator().generateId());
