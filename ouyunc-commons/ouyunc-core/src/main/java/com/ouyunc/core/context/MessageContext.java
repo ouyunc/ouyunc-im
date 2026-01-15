@@ -11,8 +11,6 @@ import com.ouyunc.cache.Cache;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.cache.distributed.redis.RedisDistributedCache;
 import com.ouyunc.cache.local.caffeine.CaffeineLocalCache;
-import com.ouyunc.core.generator.IdGenerator;
-import com.ouyunc.core.generator.SnowflakeIdGenerator;
 import com.ouyunc.core.listener.MessageEventMulticaster;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.properties.MessageProperties;
@@ -20,6 +18,9 @@ import com.ouyunc.domain.entity.FriendEntity;
 import com.ouyunc.domain.entity.GroupEntity;
 import com.ouyunc.domain.entity.GroupUserEntity;
 import com.ouyunc.domain.entity.UserEntity;
+
+import com.ouyunc.id.CosIdSnowflakeIdGenerator;
+import com.ouyunc.id.IdGenerator;
 import io.netty.util.internal.ThreadLocalRandom;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
@@ -55,12 +56,11 @@ public class MessageContext {
     /**
      * 全局 id 生成器
      */
-    private static IdGenerator idGenerator = SnowflakeIdGenerator.INSTANCE;
+    private static IdGenerator idGenerator = CosIdSnowflakeIdGenerator.INSTANCE;
 
     /**
      * 获取全局 id 生成器
      */
-    @SuppressWarnings("unchecked")
     public static IdGenerator idGenerator () {
         return idGenerator;
     }

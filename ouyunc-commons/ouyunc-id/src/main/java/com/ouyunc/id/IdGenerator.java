@@ -1,4 +1,4 @@
-package com.ouyunc.core.generator;
+package com.ouyunc.id;
 
 /**
  * 全局唯一 id生成器

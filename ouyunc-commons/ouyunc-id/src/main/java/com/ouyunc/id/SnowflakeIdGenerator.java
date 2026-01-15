@@ -1,4 +1,5 @@
-package com.ouyunc.core.generator;
+package com.ouyunc.id;
+
 
 import com.ouyunc.base.utils.SnowflakeUtil;
 
