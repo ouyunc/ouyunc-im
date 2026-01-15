@@ -22,7 +22,7 @@
         </dependency>
         <dependency>
             <groupId>me.ahoo.cosid</groupId>
-            <artifactId>cosid-redis</artifactId>
+            <artifactId>cosid-spring-redis</artifactId>
         </dependency>
         <dependency>
             <groupId>com.ouyunc</groupId>

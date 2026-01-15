@@ -5,7 +5,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="全局唯一id生成器">
+      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-id/src/main/java/com/ouyunc/id/config/CosIdRedisConfiguration.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-id/src/main/java/com/ouyunc/id/config/MachineIdGuardian.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-id/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-id/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-id/src/main/java/com/ouyunc/id/IdGenerateProvider.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -61,46 +66,46 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Application.App.executor": "Debug",
-    "Application.ObjectCreationBenchmark.executor": "Debug",
-    "Application.SnowflakeUtil.executor": "Debug",
-    "Application.StartServer.executor": "Debug",
-    "Application.WebSocketLoadTester.executor": "Run",
-    "JavaScript Debug.client1.html (1).executor": "Run",
-    "JavaScript Debug.client1.html (2).executor": "Run",
-    "JavaScript Debug.client1.html.executor": "Run",
-    "JavaScript Debug.client13333333333.html.executor": "Run",
-    "JavaScript Debug.client2.html.executor": "Run",
-    "JavaScript Debug.client3.html.executor": "Run",
-    "JavaScript Debug.client4.html.executor": "Run",
-    "JavaScript Debug.client5.html.executor": "Run",
-    "Maven.ouyunc-im [clean].executor": "Run",
-    "Maven.ouyunc-im [install].executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "SONARLINT_PRECOMMIT_ANALYSIS": "true",
-    "git-widget-placeholder": "6.5.2",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "D:/workspace/CosId",
-    "node.js.detected.package.eslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "onboarding.tips.debug.path": "D:/workspace/ouyunc-im/ouyunc-commons/ouyunc-id/src/main/java/com/ouyunc/Main.java",
-    "project.structure.last.edited": "Libraries",
-    "project.structure.proportion": "0.0",
-    "project.structure.side.proportion": "0.0",
-    "settings.editor.selected.configurable": "MavenSettings",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Application.App.executor&quot;: &quot;Debug&quot;,
+    &quot;Application.ObjectCreationBenchmark.executor&quot;: &quot;Debug&quot;,
+    &quot;Application.SnowflakeUtil.executor&quot;: &quot;Debug&quot;,
+    &quot;Application.StartServer.executor&quot;: &quot;Debug&quot;,
+    &quot;Application.WebSocketLoadTester.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript Debug.client1.html (1).executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript Debug.client1.html (2).executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript Debug.client1.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript Debug.client13333333333.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript Debug.client2.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript Debug.client3.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript Debug.client4.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript Debug.client5.html.executor&quot;: &quot;Run&quot;,
+    &quot;Maven.ouyunc-im [clean].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.ouyunc-im [install].executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;SONARLINT_PRECOMMIT_ANALYSIS&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;6.5.2&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;D:/workspace/CosId&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;onboarding.tips.debug.path&quot;: &quot;D:/workspace/ouyunc-im/ouyunc-commons/ouyunc-id/src/main/java/com/ouyunc/Main.java&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Libraries&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.0&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;MavenSettings&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   },
-  "keyToStringList": {
-    "DatabaseDriversLRU": [
-      "mysql"
+  &quot;keyToStringList&quot;: {
+    &quot;DatabaseDriversLRU&quot;: [
+      &quot;mysql&quot;
     ]
   }
-}]]></component>
+}</component>
   <component name="ReactorSettings">
     <option name="notificationShown" value="true" />
   </component>
@@ -207,8 +212,8 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-jdk-9823dce3aa75-bf35d07a577b-intellij.indexing.shared.core-IU-252.26830.84" />
-        <option value="bundled-js-predefined-d6986cc7102b-3aa1da707db6-JavaScript-IU-252.26830.84" />
+        <option value="bundled-jdk-9823dce3aa75-fdfe4dae3a2d-intellij.indexing.shared.core-IU-243.21565.193" />
+        <option value="bundled-js-predefined-d6986cc7102b-e768b9ed790e-JavaScript-IU-243.21565.193" />
       </set>
     </attachedChunks>
   </component>
@@ -304,14 +309,7 @@
       <workItem from="1767256248610" duration="3000" />
       <workItem from="1767256589483" duration="3623000" />
       <workItem from="1768038007211" duration="18752000" />
-    </task>
-    <task id="LOCAL-00095" summary="v6.5.0  添加群的限制1">
-      <option name="closed" value="true" />
-      <created>1757747945270</created>
-      <option name="number" value="00095" />
-      <option name="presentableId" value="LOCAL-00095" />
-      <option name="project" value="LOCAL" />
-      <updated>1757747945271</updated>
+      <workItem from="1768441095185" duration="3785000" />
     </task>
     <task id="LOCAL-00096" summary="v6.5.0  添加群的限制1">
       <option name="closed" value="true" />
@@ -697,7 +695,15 @@
       <option name="project" value="LOCAL" />
       <updated>1768375045640</updated>
     </task>
-    <option name="localTasksCounter" value="144" />
+    <task id="LOCAL-00144" summary="全局唯一id生成器">
+      <option name="closed" value="true" />
+      <created>1768379441419</created>
+      <option name="number" value="00144" />
+      <option name="presentableId" value="LOCAL-00144" />
+      <option name="project" value="LOCAL" />
+      <updated>1768379441419</updated>
+    </task>
+    <option name="localTasksCounter" value="145" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

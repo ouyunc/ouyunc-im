@@ -78,7 +78,7 @@
     <!--disruptor-->
     <disruptor.version>4.0.0</disruptor.version>
     <cosid.version>3.0.2</cosid.version>
-    <cosid-redis.version>2.0.5</cosid-redis.version>
+    <cosid-redis.version>3.0.2</cosid-redis.version>
   </properties>
 
   <!--依赖-->
@@ -426,7 +426,7 @@
       <!-- Source: https://mvnrepository.com/artifact/me.ahoo.cosid/cosid-redis -->
       <dependency>
         <groupId>me.ahoo.cosid</groupId>
-        <artifactId>cosid-redis</artifactId>
+        <artifactId>cosid-spring-redis</artifactId>
         <version>${cosid-redis.version}</version>
       </dependency>
     </dependencies>
