@@ -9,7 +9,7 @@ class Socket {
     static HEADER_LENGTH = 26;
     static PROTOCOL = 1;
     static PROTOCOL_VERSION = 1;
-    static VERSION = '6.2.0';
+    static VERSION = '6.5.2';
     static MESSAGE_TYPES = {
         HEARTBEAT: -1,
         LOGIN: -2
@@ -316,17 +316,19 @@ class Socket {
      */
     _wrapMessage({binaryPacketId, message, messageType, deviceType, networkType, encryptType, serializeAlgorithm}) {
         // 如果消息id为空则内部生成消息id；注意消息id为必须为数字类型，对应java 的long 类型，一般使用雪花id工具生成
-        let binaryMessageId;
-        if (binaryPacketId) {
-            if (typeof binaryPacketId === 'string' && /^[01]{64}$/.test(binaryPacketId)) {
-                binaryMessageId = binaryPacketId;
-            } else {
-                throw new Error('Invalid binaryPacketId format, 自定义的消息id必须为bigint类型的64位二进制字符串: ' + binaryPacketId);
-            }
-        } else {
-            // 生成64位二进制消息ID
-            binaryMessageId = this._generateBinaryMessageId();
-        }
+        // let binaryMessageId;
+        // if (binaryPacketId) {
+        //     if (typeof binaryPacketId === 'string' && /^[01]{64}$/.test(binaryPacketId)) {
+        //         binaryMessageId = binaryPacketId;
+        //     } else {
+        //         throw new Error('Invalid binaryPacketId format, 自定义的消息id必须为bigint类型的64位二进制字符串: ' + binaryPacketId);
+        //     }
+        // } else {
+        //     // 生成64位二进制消息ID
+        //     binaryMessageId = this._generateBinaryMessageId();
+        // }
+        // message 是否存在messageId,如果不存在则使用雪花id给定
+        message.messageId = message.messageId || this.snowflake.nextIdStr();
         // 序列化消息内容
         const messageData = this._serializeMessage(message, serializeAlgorithm);
         const messageDataByteLength = messageData.byteLength;
@@ -345,9 +347,13 @@ class Socket {
         headerView.setInt8(offset++, 1); // 协议类型
 
         // 写入消息ID (8字节)
-        const idBytes = this._splitBinaryMessageId(binaryMessageId);
-        headerView.setUint32(offset, idBytes.high);
-        headerView.setUint32(offset + 4, idBytes.low);
+        //const idBytes = this._splitBinaryMessageId(binaryMessageId);
+        //headerView.setUint32(offset, idBytes.high);
+        //headerView.setUint32(offset + 4, idBytes.low);
+        // 全写0 无效数据
+        //headerView.setUint32(offset, 0);
+        //headerView.setUint32(offset + 4, 0);
+        // 跳过消息id，服务端维护
         offset += 8;
 
         // 写入其他字段
@@ -372,7 +378,7 @@ class Socket {
                 magic: Socket.MAGIC,
                 protocol: Socket.PROTOCOL,
                 protocolVersion: Socket.PROTOCOL_VERSION,
-                packetId: Snowflake.binaryToDecimalStr(binaryMessageId),
+                //packetId: Snowflake.binaryToDecimalStr(binaryMessageId),
                 deviceType: deviceType,
                 networkType: networkType,
                 encryptType: encryptType,
@@ -410,9 +416,9 @@ class Socket {
                     const version = dataView.getInt8(offset++);
 
                     // 读取消息ID
-                    const messageIdHigh = dataView.getUint32(offset);
-                    const messageIdLow = dataView.getUint32(offset + 4);
-                    const messageId = this._combineMessageId(messageIdHigh, messageIdLow);
+                    const packetIdHigh = dataView.getUint32(offset);
+                    const packetIdLow = dataView.getUint32(offset + 4);
+                    const packetId = this._combineMessageId(packetIdHigh, packetIdLow);
                     offset += 8;
 
                     // 读取其他字段
@@ -432,13 +438,13 @@ class Socket {
                     const message = this._deserializeMessage(messageBuffer, serializeAlgorithm);
 
                     resolve({
+                        packetId: packetId,
                         protocol: protocol,
                         version: version,
                         deviceType: deviceType,
                         networkType: networkType,
                         encryptType: encryptType,
                         serializeAlgorithm: serializeAlgorithm,
-                        messageId,
                         messageType,
                         retain: retain,
                         message
@@ -489,11 +495,13 @@ class Socket {
             }
             const message = this.config.Message.deserializeBinary(buffer);
             return {
+                id: message.getId(),
                 from: message.getFrom(),
                 to: message.getTo(),
                 contentType: message.getContentType(),
                 content: message.getContent(),
                 at: message.getAtList(),
+                ref: message.getRefList(),
                 qos: message.getQos(),
                 extra: message.getExtra(),
                 createTime: message.getCreateTime()
@@ -595,6 +603,7 @@ class HeartbeatManager {
         try {
             this.socket.send({
                 message: {
+                    id: this.socket.snowflake.nextIdStr(),
                     from: this.socket.loginIdentity,
                     to: '',
                     contentType: Socket.MESSAGE_CONTENT_TYPES.HEARTBEAT,

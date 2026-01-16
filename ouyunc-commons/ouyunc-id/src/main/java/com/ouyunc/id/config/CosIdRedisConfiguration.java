@@ -118,7 +118,7 @@ public class CosIdRedisConfiguration {
                 12,  // 序列号位数
                 machineState.getMachineId()
         );
-        ClockSyncSnowflakeId clockSyncSnowflakeId = new ClockSyncSnowflakeId(
+        StrongClockSyncSnowflakeId clockSyncSnowflakeId = new StrongClockSyncSnowflakeId(
                 snowflakeId,
                 new DefaultClockBackwardsSynchronizer(10, 2000)
         );

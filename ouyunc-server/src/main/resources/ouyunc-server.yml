@@ -2,7 +2,7 @@
 ouyunc:
   message:
     # 服务端口
-    port: 6004
+    port: 6003
     # 服务名称
     name: ouyunc-message
     # server提供的暴露ip(可以理解为主动设置本机ip),如果不指定则使用本地网卡ip，一般为内网ip; 注意如果开启集群，要注意集群服务的地址和该服务所在ip的网络是否连通

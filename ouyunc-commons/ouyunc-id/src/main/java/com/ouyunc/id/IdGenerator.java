@@ -17,13 +17,24 @@ public interface IdGenerator {
     String generateIdStr();
 
     /**
-     * 将long id 格式化转换成字符串， 如果不足19位则填充0
+     * id， 如果不足19位则填充0
      */
-    String formatLong(long id);
+    String generateId19Str();
 
     /**
      * 将long str id 格式化转换成字符串， 如果不足19位则填充0
      */
-    String formatLong(String id);
+    String formatLongId19Str(String id);
+
+
+    /**
+     * 将long str id 格式化转换成字符串， 如果不足19位则填充0
+     */
+    String formatLongId19Str(long id);
+
+    /**
+     * 将str id 转换成long
+     */
+    long formatStrIdAsLong(String id);
 
 }

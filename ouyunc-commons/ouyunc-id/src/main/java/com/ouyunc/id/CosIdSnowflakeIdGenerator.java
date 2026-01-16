@@ -1,8 +1,11 @@
 package com.ouyunc.id;
 
-import com.ouyunc.base.utils.SnowflakeUtil;
+import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.id.config.CosIdRedisConfiguration;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * 雪花id生成器
@@ -11,6 +14,7 @@ public enum CosIdSnowflakeIdGenerator implements IdGenerator{
     INSTANCE
     ;
     private static final me.ahoo.cosid.IdGenerator idGenerator;
+    private static final Logger log = LoggerFactory.getLogger(CosIdSnowflakeIdGenerator.class);
 
     static {
         // 启动 CosId Redis 配置
@@ -24,16 +28,31 @@ public enum CosIdSnowflakeIdGenerator implements IdGenerator{
 
     @Override
     public String generateIdStr() {
+        return String.valueOf(idGenerator.generate());
+    }
+
+
+    @Override
+    public String generateId19Str() {
         return idGenerator.generateAsString();
     }
 
     @Override
-    public String formatLong(long id) {
-        return SnowflakeUtil.formatLong(id);
+    public String formatLongId19Str(String id) {
+        if (StringUtils.isBlank(id)) {
+            log.error("格式化ID失败，ID为空！");
+            return StringUtils.leftPad("", NumberConstant.NUMBER_19, '0');
+        }
+        return StringUtils.leftPad(id, NumberConstant.NUMBER_19, '0');
     }
 
     @Override
-    public String formatLong(String id) {
-        return SnowflakeUtil.formatLong(id);
+    public String formatLongId19Str(long id) {
+        return idGenerator.idConverter().asString(id);
+    }
+
+    @Override
+    public long formatStrIdAsLong(String id) {
+        return idGenerator.idConverter().asLong(id);
     }
 }
