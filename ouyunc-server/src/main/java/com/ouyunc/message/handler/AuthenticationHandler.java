@@ -7,6 +7,7 @@ import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.*;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.model.LoginClientInfo;
+import com.ouyunc.base.model.Protocol;
 import com.ouyunc.base.model.Target;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
@@ -24,6 +25,7 @@ import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
+import com.ouyunc.message.protocol.NativePacketProtocol;
 import com.ouyunc.message.validator.AppKeyValidator;
 import com.ouyunc.message.validator.DeviceValidator;
 import io.netty.channel.Channel;
@@ -151,16 +153,19 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         if (cacheLoginClientInfo != null && (StringUtils.isBlank(cacheLoginClientInfo.getSn()) || !cacheLoginClientInfo.getSn().equals(loginContent.getSn()))) {
             // 给原有连接发送通知消息，并将其下线，添加新的连接登录,覆盖之前的登录信息
             // 异步发送给已经在线的通知
-            MessageHelper.asyncSendMessage(notifyPacket, Target.newBuilder().targetIdentity(cacheLoginClientInfo.getIdentity()).targetServerAddress(cacheLoginClientInfo.getLoginServerAddress()).deviceType(deviceType).build());
+            MessageHelper.asyncSendMessage(notifyPacket, Target.newBuilder().targetIdentity(cacheLoginClientInfo.getIdentity()).targetServerAddress(cacheLoginClientInfo.getLoginServerAddress()).deviceType(deviceType).protocol(cacheLoginClientInfo.getProtocol()).protocolVersion(cacheLoginClientInfo.getProtocolVersion()).build());
         }
         // 如果还在当前服务登录的话，先关闭之前的连接(这里没有强制去通知让原来的连接进行跨服务下线，只是通过心跳让其自动感知下线)， 如果不在该服务器再次登录，也是需要关闭之前的channel,否则，如果当前登录绑定了信息，后面另外的channel 在关闭然后触发关闭事件，导致删除失败就会把缓存的登录信息给删掉
         if (bindCtx != null) {
             // 如果之前有绑定信息，且不为空，这里会触发close 监听事件，进而会删除本地缓存和远端缓存，注意这里是异步执行，可能会影响绑定的信息
             bindCtx.close();
         }
+        // 获取使用的协议
+        Protocol protocol = ctx.channel().attr(NativePacketProtocol.protocolAttrKey).get();
+        byte protocolValue = protocol.getProtocol();
+        byte protocolVersion = protocol.getProtocolVersion();
         // 绑定信息
-        ClientHelper.bind(ctx, cacheLoginClientInfo = new LoginClientInfo(MessageContext.messageProperties.getLocalServerAddress(), OnlineEnum.ONLINE, null, ClientHelper.calculateClientLoginExpireTime(loginContent.getHeartBeatExpireTime()), ClientHelper.calculateClientHeartBeatTimeout(loginContent.getHeartBeatExpireTime()), loginTimestamp, loginContent.getAppKey(), loginContent.getIdentity(), deviceType, loginContent.getSupportDeviceTypes(), loginContent.getSn(), loginContent.getSignature(), loginContent.getSignatureAlgorithm(), loginContent.getHeartBeatExpireTime(), loginTimestamp,loginContent.getEnableWill(), loginContent.getWillMessage(), loginContent.getEnableAlive(), loginContent.getAliveMessage()));
-
+        ClientHelper.bind(ctx, cacheLoginClientInfo = new LoginClientInfo(protocolValue, protocolVersion, MessageContext.messageProperties.getLocalServerAddress(), OnlineEnum.ONLINE, null, ClientHelper.calculateClientLoginExpireTime(loginContent.getHeartBeatExpireTime()), ClientHelper.calculateClientHeartBeatTimeout(loginContent.getHeartBeatExpireTime()), loginTimestamp, loginContent.getAppKey(), loginContent.getIdentity(), deviceType, loginContent.getSupportDeviceTypes(), loginContent.getSn(), loginContent.getSignature(), loginContent.getSignatureAlgorithm(), loginContent.getHeartBeatExpireTime(), loginTimestamp,loginContent.getEnableWill(), loginContent.getWillMessage(), loginContent.getEnableAlive(), loginContent.getAliveMessage()));
         // 添加channel 关闭后释放资源的钩子, 该逻辑在DefaultSocketChannelInitializer 中进行调用
         Consumer<Channel> channelCloseHook = channel -> {
             //1,从channel中的attrMap取出相关属性
@@ -233,7 +238,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         // 同步发送登录成功消息给客户端
         message.setContentType(MessageContentTypeEnum.LOGIN_RESPONSE_SUCCESS_CONTENT.getType());
         message.setContent(MessageContentTypeEnum.LOGIN_RESPONSE_SUCCESS_CONTENT.getDescription());
-        MessageHelper.syncSendMessage(notifyPacket, Target.newBuilder().targetIdentity(cacheLoginClientInfo.getIdentity()).targetServerAddress(cacheLoginClientInfo.getLoginServerAddress()).deviceType(deviceType).build());
+        MessageHelper.syncSendMessage(notifyPacket, Target.newBuilder().targetIdentity(cacheLoginClientInfo.getIdentity()).targetServerAddress(cacheLoginClientInfo.getLoginServerAddress()).deviceType(deviceType).protocol(packet.getProtocol()).protocolVersion(packet.getProtocolVersion()).build());
         // 登录成功，取消定时任务
         boolean cancelled = cancelTimeoutFuture(ctx);
         if (!cancelled) {

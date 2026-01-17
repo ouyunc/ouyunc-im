@@ -61,6 +61,6 @@ public final class PingPongMessageProcessor extends AbstractMessageProcessor<Byt
         heartBeatMessage.setCreateTime(TimeUtil.currentTimeMillis());
         packet.setPacketId(MessageContext.idGenerator().generateId());
         // 写回的是websocket还是其他类型的数据
-        MessageHelper.asyncSendMessage(packet, Target.newBuilder().targetIdentity(from).deviceType(MessageServerContext.deviceType(metadata.getAppKey(), packet.getDeviceType())).targetServerAddress(MessageServerContext.serverProperties().getLocalServerAddress()).build());
+        MessageHelper.asyncSendMessage(packet, Target.newBuilder().targetIdentity(from).deviceType(MessageServerContext.deviceType(metadata.getAppKey(), packet.getDeviceType())).targetServerAddress(MessageServerContext.serverProperties().getLocalServerAddress()).protocol(packet.getProtocol()).protocolVersion(packet.getProtocolVersion()).build());
     }
 }

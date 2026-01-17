@@ -10,7 +10,7 @@ import java.io.Serializable;
 /**
  * 消息接收的目标
  */
-public class Target implements Serializable, Cloneable{
+public class Target implements Serializable, Cloneable, Protocol{
     @Serial
     private static final long serialVersionUID = 1L;
 
@@ -28,6 +28,10 @@ public class Target implements Serializable, Cloneable{
      * 接收者当前所使用的的登录设备类型,需要在一开始调用方法的时候设置进来
      */
     private DeviceType deviceType;
+
+    private byte protocol;
+
+    private byte protocolVersion;
 
     public String getTargetIdentity() {
         return targetIdentity;
@@ -53,6 +57,13 @@ public class Target implements Serializable, Cloneable{
         this.targetServerAddress = targetServerAddress;
     }
 
+    public void setProtocol(byte protocol) {
+        this.protocol = protocol;
+    }
+
+    public void setProtocolVersion(byte protocolVersion) {
+        this.protocolVersion = protocolVersion;
+    }
 
     private Target() {
     }
@@ -69,6 +80,16 @@ public class Target implements Serializable, Cloneable{
         } catch (CloneNotSupportedException e) {
             throw new AssertionError();
         }
+    }
+
+    @Override
+    public byte getProtocol() {
+        return protocol;
+    }
+
+    @Override
+    public byte getProtocolVersion() {
+        return protocolVersion;
     }
 
     public static class Builder {
@@ -89,7 +110,15 @@ public class Target implements Serializable, Cloneable{
          */
         private DeviceType deviceType;
 
+        /**
+         * 协议类型
+         */
+        private byte protocol;
 
+        /**
+         * 协议版本号
+         */
+        private byte protocolVersion;
 
         public Builder targetIdentity(String targetIdentity) {
             this.targetIdentity = targetIdentity;
@@ -109,11 +138,23 @@ public class Target implements Serializable, Cloneable{
             return this;
         }
 
+        public Builder protocol(byte protocol) {
+            this.protocol = protocol;
+            return this;
+        }
+
+        public Builder protocolVersion(byte protocolVersion) {
+            this.protocolVersion = protocolVersion;
+            return this;
+        }
+
         public Target build() {
             Target target = new Target();
             target.targetIdentity=this.targetIdentity;
             target.targetServerAddress = this.targetServerAddress;
             target.deviceType=this.deviceType;
+            target.protocol=this.protocol;
+            target.protocolVersion=this.protocolVersion;
             return target;
         }
     }
@@ -124,6 +165,8 @@ public class Target implements Serializable, Cloneable{
                 "targetIdentity='" + targetIdentity + '\'' +
                 ", targetServerAddress='" + targetServerAddress + '\'' +
                 ", deviceType=" + deviceType +
+                ", protocol=" + protocol +
+                ", protocolVersion=" + protocolVersion +
                 '}';
     }
 }

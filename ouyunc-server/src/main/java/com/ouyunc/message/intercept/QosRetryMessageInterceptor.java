@@ -51,7 +51,7 @@ public class QosRetryMessageInterceptor extends AbstractMessageInterceptor {
                     }
                     // 这里给所有端都重试发送？这里需要考虑一个题，针对多端的发送，一条数据如果某一个端或某几个端接收到了数据，是否要重复发送？这里只要有一个端发送成功则不再重试发送，会将待确认消息剔除，但是可能会出现数据重复发送的情况，需要做幂等
                     for (LoginClientInfo targetLoginClientInfo : targetLoginClientInfos) {
-                        MessageHelper.asyncSendMessage(schedulePackage, Target.newBuilder().targetIdentity(targetLoginClientInfo.getIdentity()).deviceType(targetLoginClientInfo.getDeviceType()).targetServerAddress(targetLoginClientInfo.getLoginServerAddress()).build());
+                        MessageHelper.asyncSendMessage(schedulePackage, Target.newBuilder().targetIdentity(targetLoginClientInfo.getIdentity()).deviceType(targetLoginClientInfo.getDeviceType()).targetServerAddress(targetLoginClientInfo.getLoginServerAddress()).protocol(targetLoginClientInfo.getProtocol()).protocolVersion(targetLoginClientInfo.getProtocolVersion()).build());
                     }
                 }, MessageServerContext.serverProperties().getQosRetryInitialDelay(), MessageServerContext.serverProperties().getQosRetryPeriod(), TimeUnit.SECONDS, MessageServerContext.serverProperties().getQosRetryMaxLoops());
             }

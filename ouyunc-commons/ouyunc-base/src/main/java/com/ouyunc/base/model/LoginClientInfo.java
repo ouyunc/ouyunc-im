@@ -12,7 +12,7 @@ import java.util.Objects;
  * @author fzx
  * @description 登录的客户端信息
  */
-public class LoginClientInfo extends LoginContent {
+public class LoginClientInfo extends LoginContent implements Protocol{
 
     /**
      * 登录的服务地址：host + port
@@ -48,6 +48,26 @@ public class LoginClientInfo extends LoginContent {
      * 最近一次登录时间戳
      */
     private long lastLoginTime;
+
+    /**
+     * 协议类型
+     */
+    private byte protocol;
+
+    /**
+     * 协议版本号
+     */
+    private byte protocolVersion;
+
+    @Override
+    public byte getProtocol() {
+        return protocol;
+    }
+
+    @Override
+    public byte getProtocolVersion() {
+        return protocolVersion;
+    }
 
     public DeviceType getDeviceType() {
         return deviceType;
@@ -105,6 +125,14 @@ public class LoginClientInfo extends LoginContent {
         this.loginExpireTime = loginExpireTime;
     }
 
+    public void setProtocol(byte protocol) {
+        this.protocol = protocol;
+    }
+
+    public void setProtocolVersion(byte protocolVersion) {
+        this.protocolVersion = protocolVersion;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -121,8 +149,10 @@ public class LoginClientInfo extends LoginContent {
     public LoginClientInfo() {
     }
 
-    public LoginClientInfo(String loginServerAddress, OnlineEnum onlineStatus, String authorizationScope, long loginExpireTime, int heartBeatTimeout, long lastLoginTime, String appKey, String identity, DeviceType deviceType, Collection<Byte> supportDeviceTypes, String sn, String signature, byte signatureAlgorithm, int heartBeatExpireTime, long createTime,  int enableWill, String willMessage,  int enableAlive, String aliveMessage) {
+    public LoginClientInfo(byte protocol, byte protocolVersion, String loginServerAddress, OnlineEnum onlineStatus, String authorizationScope, long loginExpireTime, int heartBeatTimeout, long lastLoginTime, String appKey, String identity, DeviceType deviceType, Collection<Byte> supportDeviceTypes, String sn, String signature, byte signatureAlgorithm, int heartBeatExpireTime, long createTime,  int enableWill, String willMessage,  int enableAlive, String aliveMessage) {
         super(appKey, identity, supportDeviceTypes, sn, signature, signatureAlgorithm, heartBeatExpireTime, createTime, enableWill, willMessage, enableAlive, aliveMessage);
+        this.protocol = protocol;
+        this.protocolVersion = protocolVersion;
         this.deviceType = deviceType;
         this.loginServerAddress = loginServerAddress;
         this.onlineStatus = onlineStatus;
@@ -131,4 +161,5 @@ public class LoginClientInfo extends LoginContent {
         this.heartBeatTimeout = heartBeatTimeout;
         this.lastLoginTime = lastLoginTime;
     }
+
 }

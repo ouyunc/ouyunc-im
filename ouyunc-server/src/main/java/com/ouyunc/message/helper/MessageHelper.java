@@ -1,27 +1,16 @@
 package com.ouyunc.message.helper;
 
-import java.util.Collection;
-
-import org.apache.commons.collections4.CollectionUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.SendStatusEnum;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.executor.ThreadPoolManager;
-import com.ouyunc.base.model.LoginClientInfo;
-import com.ouyunc.base.model.Metadata;
-import com.ouyunc.base.model.SendCallback;
-import com.ouyunc.base.model.SendResult;
-import com.ouyunc.base.model.Target;
+import com.ouyunc.base.model.*;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.core.intercept.AbstractMessageInterceptor;
 import com.ouyunc.core.listener.event.SendFailEvent;
 import com.ouyunc.message.context.MessageServerContext;
-
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -29,6 +18,11 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
+import org.apache.commons.collections4.CollectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Collection;
 
 /**
  * @Author fzx
@@ -45,7 +39,7 @@ public class MessageHelper {
         // 转发给某个客户端的各个在线设备端
         for (LoginClientInfo loginClientInfo : loginClientInfos) {
             // 走消息传递,设置登录设备类型
-            syncSendMessage(packet, Target.newBuilder().targetIdentity(loginClientInfo.getIdentity()).targetServerAddress(loginClientInfo.getLoginServerAddress()).deviceType(loginClientInfo.getDeviceType()).build());
+            syncSendMessage(packet, Target.newBuilder().targetIdentity(loginClientInfo.getIdentity()).targetServerAddress(loginClientInfo.getLoginServerAddress()).deviceType(loginClientInfo.getDeviceType()).protocol(loginClientInfo.getProtocol()).protocolVersion(loginClientInfo.getProtocolVersion()).build());
         }
     }
 
@@ -57,7 +51,7 @@ public class MessageHelper {
         // 转发给某个客户端的各个在线设备端
         for (LoginClientInfo loginClientInfo : loginClientInfos) {
             // 走消息传递,设置登录设备类型
-            asyncSendMessage(packet, Target.newBuilder().targetIdentity(loginClientInfo.getIdentity()).targetServerAddress(loginClientInfo.getLoginServerAddress()).deviceType(loginClientInfo.getDeviceType()).build());
+            asyncSendMessage(packet, Target.newBuilder().targetIdentity(loginClientInfo.getIdentity()).targetServerAddress(loginClientInfo.getLoginServerAddress()).deviceType(loginClientInfo.getDeviceType()).protocol(loginClientInfo.getProtocol()).protocolVersion(loginClientInfo.getProtocolVersion()).build());
         }
     }
 
@@ -143,7 +137,7 @@ public class MessageHelper {
      * @Description 异步投递消息，添加回调
      * 注意！注意！注意！，异步发送，只是逻辑处理事异步的，但是具体讲消息发送出去的时间不确定，因为最后发送消息的的writeAndFlush()方法，会被封装到channel.eventLoop()单线程的任务队列中；队列里面任务的执行时间可查看相关文档
      */
-    public static void asyncSendMessage(Packet packet, Target target, SendCallback sendCallback) {
+    private static void asyncSendMessage(Packet packet, Target target, SendCallback sendCallback) {
         ThreadPoolManager.messageSendExecutor().execute(()-> {
             if (CollectionUtils.isEmpty(MessageServerContext.messageInterceptorChain)) {
                 doSendMessage(packet, target, sendCallback);
@@ -178,7 +172,7 @@ public class MessageHelper {
         String toServerAddress = target.getTargetServerAddress();
         // 如果是单服务实例或者如果目标主机是本机，则直接发送处理
         if (!MessageServerContext.serverProperties().isClusterEnable() || MessageServerContext.serverProperties().getLocalServerAddress().equals(toServerAddress)) {
-            MessageServerContext.findProtocol(originPacket.getProtocol(), originPacket.getProtocolVersion()).doSendMessage(originPacket, IdentityUtil.generalComboIdentity(originPacket.getMessage().getMetadata().getAppKey(), target.getTargetIdentity(), target.getDeviceType()), sendCallback);
+            MessageServerContext.findProtocol(target.getProtocol(), target.getProtocolVersion()).doSendMessage(originPacket, IdentityUtil.generalComboIdentity(originPacket.getMessage().getMetadata().getAppKey(), target.getTargetIdentity(), target.getDeviceType()), sendCallback);
             return;
         }
         Packet packet = originPacket.clone();

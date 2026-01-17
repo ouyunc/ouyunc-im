@@ -11,6 +11,7 @@ import com.ouyunc.base.encrypt.Encrypt;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.model.MqttLoginClientInfo;
+import com.ouyunc.base.model.Protocol;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.packet.message.content.LoginContent;
@@ -27,6 +28,7 @@ import com.ouyunc.message.handler.LoginKeepAliveHandler;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.processor.AbstractBaseProcessor;
+import com.ouyunc.message.protocol.NativePacketProtocol;
 import com.ouyunc.repository.MqttRepository;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -143,7 +145,10 @@ public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<In
             if (sessionExpiryIntervalProperty != null) {
                 sessionExpiryInterval = sessionExpiryIntervalProperty.value();
             }
-            MqttLoginClientInfo mqttLoginClientInfo = new MqttLoginClientInfo(MessageContext.messageProperties.getLocalServerAddress(), OnlineEnum.ONLINE, null, ClientHelper.calculateClientLoginExpireTime(keepAlive), ClientHelper.calculateClientHeartBeatTimeout(keepAlive), loginTimestamp, appKey, mqttConnectPayload.clientIdentifier(), DeviceTypeEnum.M, null, mqttConnectPayload.clientIdentifier(), signature, Encrypt.AsymmetricEncrypt.MD5.getValue(), keepAlive, loginTimestamp, enableWill, qos, version, isWillRetain, willMessage, willTopic, cleanSession, sessionExpiryInterval, YesOrNo.NO.getCode(), null);
+            Protocol protocol = ctx.channel().attr(NativePacketProtocol.protocolAttrKey).get();
+            byte protocolValue = protocol.getProtocol();
+            byte protocolVersion = protocol.getProtocolVersion();
+            MqttLoginClientInfo mqttLoginClientInfo = new MqttLoginClientInfo(protocolValue, protocolVersion, MessageContext.messageProperties.getLocalServerAddress(), OnlineEnum.ONLINE, null, ClientHelper.calculateClientLoginExpireTime(keepAlive), ClientHelper.calculateClientHeartBeatTimeout(keepAlive), loginTimestamp, appKey, mqttConnectPayload.clientIdentifier(), DeviceTypeEnum.M, null, mqttConnectPayload.clientIdentifier(), signature, Encrypt.AsymmetricEncrypt.MD5.getValue(), keepAlive, loginTimestamp, enableWill, qos, version, isWillRetain, willMessage, willTopic, cleanSession, sessionExpiryInterval, YesOrNo.NO.getCode(), null);
             if (!validate(mqttLoginClientInfo)) {
                 MqttMessage connAckMessage = MqttMessageFactory.newMessage(
                         new MqttFixedHeader(MqttMessageType.CONNACK, false, MqttQoS.AT_MOST_ONCE, false, 0),

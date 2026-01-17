@@ -223,7 +223,7 @@ public class MessageConstant {
     public static final String BOOTSTRAP_ATTR_KEY_TAG_CLUSTER_CLIENT_VALUE = "OUYUNC_CLUSTER_CLIENT";
 
     /**
-     * ctx 的协议类型标签
+     * ctx 的协议类型标签,这个非常关键
      */
     public static final String CHANNEL_ATTR_KEY_TAG_PROTOCOL_TYPE = "PROTOCOL_TYPE";
 
