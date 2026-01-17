@@ -6,7 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="全局唯一id生成器">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/6.5.1/ouyunc-message-sdk.js" beforeDir="false" afterPath="$PROJECT_DIR$/docs/6.5.1/ouyunc-message-sdk.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -78,6 +77,7 @@
     "JavaScript Debug.client5.html.executor": "Run",
     "Maven.ouyunc-im [clean].executor": "Run",
     "Maven.ouyunc-im [install].executor": "Run",
+    "Maven.ouyunc-im [validate].executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
     "SONARLINT_PRECOMMIT_ANALYSIS": "true",
@@ -305,22 +305,6 @@
       <workItem from="1767256589483" duration="3623000" />
       <workItem from="1768038007211" duration="18752000" />
       <workItem from="1768441095185" duration="3785000" />
-    </task>
-    <task id="LOCAL-00103" summary="v6.5.0  添加群的限制1">
-      <option name="closed" value="true" />
-      <created>1757836265251</created>
-      <option name="number" value="00103" />
-      <option name="presentableId" value="LOCAL-00103" />
-      <option name="project" value="LOCAL" />
-      <updated>1757836265251</updated>
-    </task>
-    <task id="LOCAL-00104" summary="v6.5.0  添加群的限制1">
-      <option name="closed" value="true" />
-      <created>1757837055530</created>
-      <option name="number" value="00104" />
-      <option name="presentableId" value="LOCAL-00104" />
-      <option name="project" value="LOCAL" />
-      <updated>1757837055530</updated>
     </task>
     <task id="LOCAL-00105" summary="v6.5.0  添加群的限制1">
       <option name="closed" value="true" />
@@ -698,7 +682,23 @@
       <option name="project" value="LOCAL" />
       <updated>1768638887287</updated>
     </task>
-    <option name="localTasksCounter" value="152" />
+    <task id="LOCAL-00152" summary="全局唯一id生成器">
+      <option name="closed" value="true" />
+      <created>1768649302660</created>
+      <option name="number" value="00152" />
+      <option name="presentableId" value="LOCAL-00152" />
+      <option name="project" value="LOCAL" />
+      <updated>1768649302660</updated>
+    </task>
+    <task id="LOCAL-00153" summary="全局唯一id生成器">
+      <option name="closed" value="true" />
+      <created>1768650078881</created>
+      <option name="number" value="00153" />
+      <option name="presentableId" value="LOCAL-00153" />
+      <option name="project" value="LOCAL" />
+      <updated>1768650078881</updated>
+    </task>
+    <option name="localTasksCounter" value="154" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
