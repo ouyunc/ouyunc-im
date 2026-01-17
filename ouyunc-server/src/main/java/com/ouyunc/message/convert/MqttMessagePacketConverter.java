@@ -9,6 +9,7 @@ import com.ouyunc.base.encrypt.Encrypt;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.model.Protocol;
+import com.ouyunc.base.model.Target;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.serialize.Serializer;
@@ -105,7 +106,8 @@ public enum MqttMessagePacketConverter implements PacketConverter<MqttMessage>{
     @Override
     public MqttMessage convertFromPacket(Packet packet) {
         // 如果该包是内部协议的包，则进行逻辑处理
-        if (NativePacketProtocol.MQTT.getProtocol() == packet.getProtocol() && NativePacketProtocol.MQTT.getProtocolVersion() == packet.getProtocolVersion()) {
+        Target target = packet.getMessage().getMetadata().getTarget();
+        if (target != null && target.getProtocol() == NativePacketProtocol.MQTT.getProtocol() && target.getProtocolVersion() == NativePacketProtocol.MQTT.getProtocolVersion()) {
             MqttVersion mqttVersion = MqttCodecUtil.getMqttVersion(packet.getRetain());
             if (mqttVersion == null) {
                 log.error("暂不支持该协议：protocol={}", mqttVersion);

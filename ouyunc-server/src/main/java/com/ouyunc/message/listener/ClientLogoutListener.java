@@ -62,6 +62,7 @@ public class ClientLogoutListener implements MessageListener<ClientLogoutEvent> 
             for (String friendId : friendIds) {
                 List<LoginClientInfo> loginClientInfos = ClientHelper.onlineAll(appKey, friendId);
                 if (CollectionUtils.isNotEmpty(loginClientInfos)) {
+                    // todo 通过享元模式创建消息
                     Metadata metadata = new Metadata();
                     metadata.setAppKey(appKey);
                     Message message = new Message(MessageContext.idGenerator().generateIdStr(), null, friendId, MessageContentTypeEnum.TEXT_CONTENT.getType(), loginClientInfo.getWillMessage(), TimeUtil.currentTimeMillis(), metadata);

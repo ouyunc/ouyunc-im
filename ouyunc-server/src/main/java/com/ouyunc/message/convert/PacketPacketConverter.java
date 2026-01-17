@@ -1,5 +1,6 @@
 package com.ouyunc.message.convert;
 
+import com.ouyunc.base.model.Target;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.message.protocol.NativePacketProtocol;
 import io.netty.channel.ChannelHandlerContext;
@@ -26,7 +27,8 @@ public enum PacketPacketConverter implements PacketConverter<Packet>{
     @Override
     public Packet convertFromPacket(Packet packet) {
         // 这里涉及到集群内部的传递，所以不对元数据信息做清空处理
-        if (NativePacketProtocol.OUYUNC.getProtocol() == packet.getProtocol() && NativePacketProtocol.OUYUNC.getProtocolVersion() == packet.getProtocolVersion()) {
+        Target target = packet.getMessage().getMetadata().getTarget();
+        if (target != null && target.getProtocol() == NativePacketProtocol.OUYUNC.getProtocol() && target.getProtocolVersion() == NativePacketProtocol.OUYUNC.getProtocolVersion()) {
             return packet;
         }
         return null;

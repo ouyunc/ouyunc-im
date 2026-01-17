@@ -6,6 +6,7 @@ import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.model.Metadata;
+import com.ouyunc.base.model.Target;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.packet.message.content.LoginContent;
@@ -84,8 +85,8 @@ public enum BinaryWebSocketFramePacketConverter implements PacketConverter<Binar
     @Override
     public BinaryWebSocketFrame convertFromPacket(Packet packet) {
         // 将packet 的元数据信息清空（内部辅助数据，不对客户端暴漏）
-        // 如果该包是内部协议的包，则进行逻辑处理
-        if (NativePacketProtocol.WS.getProtocol() == packet.getProtocol() && NativePacketProtocol.WS.getProtocolVersion() == packet.getProtocolVersion()) {
+        Target target = packet.getMessage().getMetadata().getTarget();
+        if (target != null && target.getProtocol() == NativePacketProtocol.WS.getProtocol() && target.getProtocolVersion() == NativePacketProtocol.WS.getProtocolVersion()) {
             // 暂存元数据信息
             Message message = packet.getMessage();
             Metadata metadata = message.getMetadata();

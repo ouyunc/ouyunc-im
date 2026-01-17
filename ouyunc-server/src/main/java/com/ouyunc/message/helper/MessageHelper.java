@@ -168,6 +168,11 @@ public class MessageHelper {
      */
     private static void doSendMessage(Packet originPacket, Target target, SendCallback sendCallback) {
         log.debug("开始给 {} 传递消息packet: {} ", target, originPacket);
+        // 设置target,只设置一次
+        Metadata originMetadata = originPacket.getMessage().getMetadata();
+        if (originMetadata.getTarget() == null) {
+            originMetadata.setTarget(target);
+        }
         // 需要发送到的服务器地址
         String toServerAddress = target.getTargetServerAddress();
         // 如果是单服务实例或者如果目标主机是本机，则直接发送处理
@@ -182,7 +187,6 @@ public class MessageHelper {
         if (!metadata.isRouted()) {
             // 首次进行传递时，将目标以及目标主机和所登录的设备进行设置
             metadata.setRouted(true);
-            metadata.setTarget(target.clone());
         }
         // 将本机地址作为上一个路由服务地址传递过去
         // 先从存活的注册表中查找（防止有新添加集群中的服务），然后再从全局中找到最近的服务;
