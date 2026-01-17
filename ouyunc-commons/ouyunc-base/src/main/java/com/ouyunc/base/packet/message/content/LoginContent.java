@@ -139,7 +139,7 @@ public class LoginContent extends ClientInfo {
     public LoginContent() {
     }
 
-    public LoginContent(String appKey, String identity, Collection<Byte> supportDeviceTypes  , String sn, String signature, byte signatureAlgorithm, int heartBeatExpireTime, long createTime, int enableWill, String willMessage) {
+    public LoginContent(String appKey, String identity, Collection<Byte> supportDeviceTypes  , String sn, String signature, byte signatureAlgorithm, int heartBeatExpireTime, long createTime, int enableWill, String willMessage, int enableAlive, String aliveMessage) {
         super(appKey, identity, supportDeviceTypes);
         this.sn = sn;
         this.signature = signature;
@@ -148,6 +148,8 @@ public class LoginContent extends ClientInfo {
         this.createTime = createTime;
         this.enableWill = enableWill;
         this.willMessage = willMessage;
+        this.enableAlive = enableAlive;
+        this.aliveMessage = aliveMessage;
     }
 
     @Override
