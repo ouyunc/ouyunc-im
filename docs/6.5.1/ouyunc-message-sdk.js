@@ -12,10 +12,21 @@ class Socket {
     static VERSION = '6.5.2';
     static MESSAGE_TYPES = {
         HEARTBEAT: -1,
-        LOGIN: -2
+        LOGIN: -2,
+        // 收到服务端接收到消息的回复
+        QOS_S2C_ACK: -3,
+        // 收到对方消息后，回复服务端
+        QOS_C2S_ACK: -4,
     };
     static MESSAGE_CONTENT_TYPES = {
         HEARTBEAT: -1,
+        TEXT_CONTENT: -128,
+    };
+    static QOS_LEVEL = {
+        QOS_0: 0,
+        QOS_1: 1,
+        QOS_2: 2,
+        QOS_3: 3,
     };
 
     // 文本编解码器
@@ -201,6 +212,7 @@ class Socket {
         ws.onmessage = async (e) => {
             try {
                 const message = await this._parseMessage(e.data);
+                this._handleQosReceived(message);
                 this.heartbeatManager.reset();
                 this.onmessage?.(message);
             } catch (error) {
@@ -236,6 +248,7 @@ class Socket {
         ws.onMessage(async (res) => {
             try {
                 const message = await this._parseMessage(res.data);
+                this._handleQosReceived(message);
                 this.heartbeatManager.reset();
                 this.onmessage?.(message);
             } catch (error) {
@@ -255,6 +268,38 @@ class Socket {
         });
     }
 
+    /**
+     * 回复qos 消息
+     */
+    _handleQosReceived(packet) {
+        // 异常防护：校验核心字段是否存在
+        if (!packet || !packet.packetId || !packet.message) {
+            console.warn('Invalid packet for QoS ACK:', packet);
+            return;
+        }
+        // 提取QoS等级（默认0，避免undefined）
+        const qos = Number(packet.message.qos) || 0;
+        if (qos > 0) {
+            try {
+                this.send({
+                    // 登录消息类型，
+                    messageType: Socket.MESSAGE_TYPES.QOS_C2S_ACK,
+                    // 消息
+                    message: {
+                        id: this.snowflake.nextIdStr(),
+                        from: this.loginIdentity,
+                        to: '',
+                        contentType: Socket.MESSAGE_CONTENT_TYPES.TEXT_CONTENT,
+                        content: String(packet.packetId),
+                        qos: Socket.QOS_LEVEL.QOS_1,
+                        createTime: Date.now()
+                    },
+                });
+            }catch (error) {
+                console.error('Failed to send QoS ACK:', error);
+            }
+        }
+    }
     /**
      * 处理连接关闭
      */
