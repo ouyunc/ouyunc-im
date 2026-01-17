@@ -5,18 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="全局唯一id生成器">
-      <change afterPath="$PROJECT_DIR$/docs/6.5.1/client.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-id/src/main/java/com/ouyunc/id/config/StrongClockSyncSnowflakeId.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/6.5.1/ouyunc-message-sdk.js" beforeDir="false" afterPath="$PROJECT_DIR$/docs/6.5.1/ouyunc-message-sdk.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-id/src/main/java/com/ouyunc/id/CosIdSnowflakeIdGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-id/src/main/java/com/ouyunc/id/CosIdSnowflakeIdGenerator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-id/src/main/java/com/ouyunc/id/IdGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-id/src/main/java/com/ouyunc/id/IdGenerator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-id/src/main/java/com/ouyunc/id/SnowflakeIdGenerator.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-id/src/main/java/com/ouyunc/id/config/CosIdRedisConfiguration.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-id/src/main/java/com/ouyunc/id/config/CosIdRedisConfiguration.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/DefaultRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/DefaultRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/MqttRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/MqttRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/RemoveOfflineListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/RemoveOfflineListener.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/enums/MessageTypeEnum.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/enums/MessageTypeEnum.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/packet/message/content/LoginContent.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/packet/message/content/LoginContent.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/ClientLoginListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/ClientLoginListener.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -315,14 +307,6 @@
       <workItem from="1767256589483" duration="3623000" />
       <workItem from="1768038007211" duration="18752000" />
       <workItem from="1768441095185" duration="3785000" />
-    </task>
-    <task id="LOCAL-00096" summary="v6.5.0  添加群的限制1">
-      <option name="closed" value="true" />
-      <created>1757750588489</created>
-      <option name="number" value="00096" />
-      <option name="presentableId" value="LOCAL-00096" />
-      <option name="project" value="LOCAL" />
-      <updated>1757750588489</updated>
     </task>
     <task id="LOCAL-00097" summary="v6.5.0  添加群的限制1">
       <option name="closed" value="true" />
@@ -708,7 +692,15 @@
       <option name="project" value="LOCAL" />
       <updated>1768379441419</updated>
     </task>
-    <option name="localTasksCounter" value="145" />
+    <task id="LOCAL-00145" summary="全局唯一id生成器">
+      <option name="closed" value="true" />
+      <created>1768578431431</created>
+      <option name="number" value="00145" />
+      <option name="presentableId" value="LOCAL-00145" />
+      <option name="project" value="LOCAL" />
+      <updated>1768578431431</updated>
+    </task>
+    <option name="localTasksCounter" value="146" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -754,54 +746,9 @@
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-commons/ouyunc-cache/src/main/java/com/ouyunc/cache/config/redis/strategy/ClusterRedisStrategy.java</url>
-          <line>30</line>
-          <option name="timeStamp" value="72" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/validator/FriendValidator.java</url>
-          <line>40</line>
-          <option name="timeStamp" value="78" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/validator/FriendValidator.java</url>
-          <line>38</line>
-          <option name="timeStamp" value="79" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/validator/FriendValidator.java</url>
-          <line>46</line>
-          <option name="timeStamp" value="86" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/validator/FriendValidator.java</url>
-          <line>45</line>
-          <option name="timeStamp" value="87" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/validator/FriendValidator.java</url>
-          <line>42</line>
-          <option name="timeStamp" value="88" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/validator/FriendValidator.java</url>
-          <line>39</line>
-          <option name="timeStamp" value="89" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/AbstractBaseProcessor.java</url>
-          <line>73</line>
-          <option name="timeStamp" value="96" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/PingPongMessageProcessor.java</url>
-          <line>55</line>
-          <option name="timeStamp" value="97" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/PingPongMessageProcessor.java</url>
-          <line>61</line>
-          <option name="timeStamp" value="98" />
+          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/ClientLogoutListener.java</url>
+          <line>50</line>
+          <option name="timeStamp" value="103" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>

@@ -44,6 +44,16 @@ public class LoginContent extends ClientInfo {
      */
     private String willMessage;
 
+    /**
+     * 是否启用存活通知: 1-启用，0-不启用，在上线时推送该信息给所有关联的人
+     */
+    private int enableAlive;
+
+    /**
+     * 存活消息，客户端上线后，根据具体业务推送将该信息推送给相关联的人，可以是json格式字符串，具体看业务
+     */
+    private String aliveMessage;
+
 
     /**
      * 创建时间戳（毫秒）
@@ -77,6 +87,21 @@ public class LoginContent extends ClientInfo {
         this.signatureAlgorithm = signatureAlgorithm;
     }
 
+    public int getEnableAlive() {
+        return enableAlive;
+    }
+
+    public void setEnableAlive(int enableAlive) {
+        this.enableAlive = enableAlive;
+    }
+
+    public String getAliveMessage() {
+        return aliveMessage;
+    }
+
+    public void setAliveMessage(String aliveMessage) {
+        this.aliveMessage = aliveMessage;
+    }
 
     public int getEnableWill() {
         return enableWill;
@@ -138,6 +163,8 @@ public class LoginContent extends ClientInfo {
                 ", createTime=" + createTime +
                 ", enableWill=" + enableWill +
                 ", willMessage='" + willMessage + '\'' +
+                ", enableAlive='" + enableAlive + '\'' +
+                ", aliveMessage='" + aliveMessage + '\'' +
                 '}';
     }
 }
