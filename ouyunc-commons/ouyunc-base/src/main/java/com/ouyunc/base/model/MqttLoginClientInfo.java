@@ -95,8 +95,8 @@ public class MqttLoginClientInfo extends LoginClientInfo{
     public MqttLoginClientInfo() {
     }
 
-    public MqttLoginClientInfo(String loginServerAddress, OnlineEnum onlineStatus, String authorizationScope, long loginExpireTime, int heartBeatTimeout, long lastLoginTime, String appKey, String identity, DeviceType deviceType, Collection<Byte> supportDeviceTypes, String sn, String signature, byte signatureAlgorithm, int heartBeatExpireTime, long createTime, int enableWill, int qos, byte version, int isWillRetain, String willMessage, String willTopic, int cleanSession, int sessionExpiryInterval) {
-        super(loginServerAddress, onlineStatus, authorizationScope, loginExpireTime, heartBeatTimeout, lastLoginTime, appKey, identity, deviceType, supportDeviceTypes, sn, signature, signatureAlgorithm, heartBeatExpireTime, createTime, enableWill, willMessage);
+    public MqttLoginClientInfo(String loginServerAddress, OnlineEnum onlineStatus, String authorizationScope, long loginExpireTime, int heartBeatTimeout, long lastLoginTime, String appKey, String identity, DeviceType deviceType, Collection<Byte> supportDeviceTypes, String sn, String signature, byte signatureAlgorithm, int heartBeatExpireTime, long createTime, int enableWill, int qos, byte version, int isWillRetain, String willMessage, String willTopic, int cleanSession, int sessionExpiryInterval, int enableAlive, String aliveMessage) {
+        super(loginServerAddress, onlineStatus, authorizationScope, loginExpireTime, heartBeatTimeout, lastLoginTime, appKey, identity, deviceType, supportDeviceTypes, sn, signature, signatureAlgorithm, heartBeatExpireTime, createTime, enableWill, willMessage, enableAlive, aliveMessage);
         this.qos = qos;
         this.version = version;
         this.isWillRetain = isWillRetain;
