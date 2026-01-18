@@ -110,7 +110,7 @@ public class ScheduleTimer {
         if (qosTimerTask != null) {
             return qosTimerTask.cancel();
         }else {
-            log.error("qos取消任务失败，任务不存在,id：{}", taskId);
+            log.warn("qos取消任务失败，任务不存在,id：{}", taskId);
         }
         return false;
     }

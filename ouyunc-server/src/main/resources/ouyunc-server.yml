@@ -28,11 +28,11 @@ ouyunc:
       # 是否开启qos，默认关闭
       enable: true
       # 模式，CLIENT-客户端模式，SERVER-服务端模式, 默认客户端（需要客户端配合实现，对服务端压力小，且服务端是无状态的），服务端模式则是服务端保存消息，然后定时发送给接收方，会影响性能，且服务端变成有状态服务
-      mode: CLIENT
+      mode: SERVER
       # 模式是服务端模式时生效
       retry:
         # 是否开启重试，默认否
-        enable: false
+        enable: true
         # 定时循环初始延迟时间，模式是服务端模式时生效,单位秒
         initial-delay: 3
         # qos 循环周期时间间隔，单位秒

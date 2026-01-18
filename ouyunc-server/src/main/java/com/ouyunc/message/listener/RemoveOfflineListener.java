@@ -27,7 +27,7 @@ public class RemoveOfflineListener implements MessageListener<RemoveOfflineEvent
 
     private static final Logger log = LoggerFactory.getLogger(RemoveOfflineListener.class);
 
-    private final StringRedisTemplate stringRedisTemplate = CacheFactory.STRING_REDIS.instance();
+    private static final StringRedisTemplate stringRedisTemplate = CacheFactory.STRING_REDIS.instance();
 
     @Override
     public void onApplicationEvent(RemoveOfflineEvent event) {

@@ -81,6 +81,8 @@ public abstract class AbstractBaseProcessor<T extends Number> implements Process
             ackMessage.setId(MessageContext.idGenerator().generateIdStr());
             ackMessage.setFrom(null);
             ackMessage.setTo(from);
+            // 设置qos为0，不需要发送端再次回复了
+            ackMessage.setQos(QosLevelEnum.QOS_0.getLevel());
             ackMessage.setContent(JSON.toJSONString(new QosAckContent(String.valueOf(ackPacket.getPacketId()), ackMessage.getId())));
             ackMessage.setContentType(MessageContentTypeEnum.TEXT_CONTENT.getType());
             ackMessage.setCreateTime(TimeUtil.currentTimeMillis());

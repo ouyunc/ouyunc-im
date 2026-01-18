@@ -100,13 +100,13 @@ public class MessageServerContext extends MessageContext {
     /**
      * 客户端登录信息redis缓存,使用0号库
      */
-    public static Cache<String, LoginClientInfo> remoteLoginClientInfoCache = new RedisDistributedCache<>(CacheFactory.REDIS.instance(), CacheFactory.STRING_REDIS.instance());
+    public static final Cache<String, LoginClientInfo> remoteLoginClientInfoCache = new RedisDistributedCache<>(CacheFactory.REDIS.instance(), CacheFactory.STRING_REDIS.instance());
 
 
     /**
      * 分布式锁redisson
      */
-    public static RedissonClient redissonClient = CacheFactory.REDISSON.instance();
+    public static final RedissonClient redissonClient = CacheFactory.REDISSON.instance();
 
 
     /**
