@@ -46,12 +46,14 @@ public abstract class AbstractBaseProcessor<T extends Number> implements Process
     public boolean qosPreHandle(ChannelHandlerContext ctx, Packet packet) {
         // 判断是否是需要qos以及是否是客户端模式
         Message message = packet.getMessage();
-        // 判断是否是客户端模式
-        if (QosModeEnum.CLIENT.equals(MessageServerContext.serverProperties().getQosMode()) && packet.getMessageType() == MessageTypeEnum.QOS_DUP.getType() && message.getContentType() == MessageContentTypeEnum.QOS_DUP_CONTENT.getType()) {
+        // 判断是否开启qos
+        if (MessageServerContext.serverProperties().isQosEnable() && packet.getMessageType() == MessageTypeEnum.QOS_DUP.getType() && message.getContentType() == MessageContentTypeEnum.QOS_DUP_CONTENT.getType()) {
             // 如果是客户端模式，判断是否需要拦截（是否是重发消息），如果是重发消息且已经发送过（存储到离线消息中），则直接返回ack，否则构造正常消息，往下传递
             Packet dupPacket = JSON.parseObject(message.getContent(), Packet.class);
-            // 判断是否已经在离线消息中, 如果已经发送过，返回true,否则返回false
+            // 判断是否已经在离线消息中, 如果已经发送过，返回true,否则返回false,且发送qosAck, 防止再次返送重试消息
+            // 离线消息，要和客户端的消息id做唯一映射
             if (repository().checkDup(dupPacket, MessageServerContext.deviceType(message.getMetadata().getAppKey(), packet.getDeviceType()))) {
+                qosPostHandle(ctx, packet);
                 return true;
             }
             // 将元数据放入重发消息的packet中，否则会丢失相关信息

@@ -9,6 +9,7 @@ public enum QosModeEnum {
     /**
      * 客户端模式
      */
+    @Deprecated
     CLIENT(NumberConstant.NUMBER_1),
 
     /**
