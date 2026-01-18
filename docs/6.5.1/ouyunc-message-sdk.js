@@ -26,7 +26,6 @@ class Socket {
         QOS_0: 0,
         QOS_1: 1,
         QOS_2: 2,
-        QOS_3: 3,
     };
 
     // 文本编解码器
@@ -75,6 +74,8 @@ class Socket {
         this.heartbeatManager = new HeartbeatManager(this);
         this.reconnectManager = new ReconnectManager(this);
         this.snowflake = new Snowflake(9, 11);
+        // 初始化已发送ACK的packetId集合，用于去重
+        this.sentAckPacketIds = new Set();
         // 初始化WebSocket
         this._initWebSocket();
         console.log(`欢迎使用OUYUNC-IM客户端,如果需要帮助,请联系作者。`);
@@ -277,10 +278,27 @@ class Socket {
             console.warn('Invalid packet for QoS ACK:', packet);
             return;
         }
+        
+        // 检查是否已经发送过ACK，避免重复发送
+        const packetIdStr = String(packet.packetId);
+        if (this.sentAckPacketIds.has(packetIdStr)) {
+            console.log('QoS ACK already sent for packetId:', packetIdStr, 'skipping duplicate ACK');
+            return;
+        }
+        
         // 提取QoS等级（默认0，避免undefined）
         const qos = Number(packet.message.qos) || 0;
         if (qos > 0) {
             try {
+                // 记录已发送的ACK
+                this.sentAckPacketIds.add(packetIdStr);
+                
+                // 限制集合大小，避免内存泄漏（保留最近1000条记录）
+                if (this.sentAckPacketIds.size > 1000) {
+                    const firstId = this.sentAckPacketIds.values().next().value;
+                    this.sentAckPacketIds.delete(firstId);
+                }
+                
                 this.send({
                     // 登录消息类型，
                     messageType: Socket.MESSAGE_TYPES.QOS_C2S_ACK,
@@ -295,7 +313,10 @@ class Socket {
                         createTime: Date.now()
                     },
                 });
+                console.log('QoS ACK sent for packetId:', packetIdStr);
             }catch (error) {
+                // 如果发送失败，从集合中移除，允许重试
+                this.sentAckPacketIds.delete(packetIdStr);
                 console.error('Failed to send QoS ACK:', error);
             }
         }
@@ -373,7 +394,7 @@ class Socket {
         //     binaryMessageId = this._generateBinaryMessageId();
         // }
         // message 是否存在messageId,如果不存在则使用雪花id给定
-        message.messageId = message.messageId || this.snowflake.nextIdStr();
+        message.id = message.id || this.snowflake.nextIdStr();
         // 序列化消息内容
         const messageData = this._serializeMessage(message, serializeAlgorithm);
         const messageDataByteLength = messageData.byteLength;
