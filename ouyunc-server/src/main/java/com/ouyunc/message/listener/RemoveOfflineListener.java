@@ -67,59 +67,47 @@ public class RemoveOfflineListener implements MessageListener<RemoveOfflineEvent
                 RedisSerializer<String> stringSerializer = redisTemplate.getStringSerializer();
 
                 // 使用SessionCallback执行批量原子操作，返回操作结果
-                redisTemplate.execute(new SessionCallback<>() {
+                redisTemplate.executePipelined(new SessionCallback<>() {
                     @Override
                     public <K, V> Boolean execute(RedisOperations<K, V> operations) throws DataAccessException {
-                        RedisConnection conn = null;
-                        try {
-                            // ========== 1. 构建并序列化所有Key/Value ==========
-                            // ZSet相关
-                            String zSetKey = CacheConstant.buildToOfflineCacheKey(metadata.getAppKey(), from, deviceType.getDeviceTypeValue());
-                            String zSetValue = MessageContext.idGenerator().formatLongId19Str(qosAckContent.getAckId());
-                            byte[] zSetKeyBytes = stringSerializer.serialize(zSetKey);
-                            byte[] zSetValueBytes = stringSerializer.serialize(zSetValue);
 
-                            // Hash相关
-                            String hashKey = CacheConstant.buildFromOfflineCacheKey(metadata.getAppKey(), from);
-                            String hashField = qosAckContent.getMessageId();
+                        // ========== 1. 构建并序列化所有Key/Value ==========
+                        // ZSet相关
+                        String zSetKey = CacheConstant.buildToOfflineCacheKey(metadata.getAppKey(), from, deviceType.getDeviceTypeValue());
+                        String zSetValue = MessageContext.idGenerator().formatLongId19Str(qosAckContent.getAckId());
+                        byte[] zSetKeyBytes = stringSerializer.serialize(zSetKey);
+                        byte[] zSetValueBytes = stringSerializer.serialize(zSetValue);
 
-                            // 空值校验：序列化失败直接返回false
-                            if (zSetKeyBytes == null || zSetValueBytes == null || hashKey == null || hashField == null) {
-                                log.warn("移除离线消息失败：序列化为空，zSetKey={}, zSetValue={}, hashKey={}, hashField={}",
-                                        zSetKey, zSetValue, hashKey, hashField);
-                                return false;
-                            }
+                        // Hash相关
+                        String hashKey = CacheConstant.buildFromOfflineCacheKey(metadata.getAppKey(), from);
+                        String hashField = qosAckContent.getMessageId();
 
-                            // ========== 2. 执行ZSet删除操作 ==========
-                            conn = Objects.requireNonNull(redisTemplate.getConnectionFactory()).getConnection();
-                            Long zRemCount = conn.zSetCommands().zRem(zSetKeyBytes, zSetValueBytes);
-                            boolean zSetDeleted = zRemCount != null && zRemCount > 0;
-                            if (!zSetDeleted) {
-                                log.info("ZSet元素不存在或删除失败，key={}, value={}", zSetKey, zSetValue);
-                            }
-
-                            // ========== 3. 执行Hash删除操作 ==========
-                            boolean hashDeleted = operations.opsForHash().delete((K) hashKey, hashField) > 0;
-                            if (!hashDeleted) {
-                                log.info("Hash字段不存在或删除失败，key={}, field={}", hashKey, hashField);
-                            }
-
-                            // 返回整体结果：两个操作至少有一个成功（或根据业务需求改为"都成功"）
-                            return zSetDeleted || hashDeleted;
-
-                        } catch (Exception e) {
-                            log.error("移除离线消息Redis操作异常", e);
+                        // 空值校验：序列化失败直接返回false
+                        if (zSetKeyBytes == null || zSetValueBytes == null || hashKey == null || hashField == null) {
+                            log.warn("移除离线消息失败：序列化为空，zSetKey={}, zSetValue={}, hashKey={}, hashField={}",
+                                    zSetKey, zSetValue, hashKey, hashField);
                             return false;
-                        } finally {
-                            // ========== 4. 务必关闭手动获取的连接 ==========
-                            if (conn != null) {
-                                try {
-                                    conn.close();
-                                } catch (Exception e) {
-                                    log.error("关闭Redis连接异常", e);
-                                }
-                            }
                         }
+
+                        RedisTemplate redisTemplate = (RedisTemplate) operations;
+                        // ========== 2. 执行ZSet删除操作 ==========
+                        RedisConnection conn = Objects.requireNonNull(redisTemplate.getConnectionFactory()).getConnection();
+                        Long zRemCount = conn.zSetCommands().zRem(zSetKeyBytes, zSetValueBytes);
+                        boolean zSetDeleted = zRemCount != null && zRemCount > 0;
+                        if (!zSetDeleted) {
+                            log.info("ZSet元素不存在或删除失败，key={}, value={}", zSetKey, zSetValue);
+                        }
+
+                        // ========== 3. 执行Hash删除操作 ==========
+                        boolean hashDeleted = operations.opsForHash().delete((K) hashKey, hashField) > 0;
+                        if (!hashDeleted) {
+                            log.info("Hash字段不存在或删除失败，key={}, field={}", hashKey, hashField);
+                        }
+
+                        // 返回整体结果：两个操作至少有一个成功（或根据业务需求改为"都成功"）
+                        return zSetDeleted || hashDeleted;
+
+
                     }
                 });
             } catch (Exception e) {
