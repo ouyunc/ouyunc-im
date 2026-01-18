@@ -22,6 +22,6 @@ public interface Repository {
      * @param packet
      * @return
      */
-    boolean checkDup(Packet packet, DeviceType deviceType);
+    boolean checkDup(Packet packet);
 
 }

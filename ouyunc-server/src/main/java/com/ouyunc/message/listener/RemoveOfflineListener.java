@@ -1,10 +1,12 @@
 package com.ouyunc.message.listener;
 
+import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.enums.DeviceType;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
+import com.ouyunc.base.packet.message.content.QosAckContent;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.MessageListener;
@@ -12,7 +14,14 @@ import com.ouyunc.core.listener.event.RemoveOfflineEvent;
 import com.ouyunc.message.context.MessageServerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.dao.DataAccessException;
+import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.core.RedisOperations;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.SessionCallback;
+import org.springframework.data.redis.serializer.RedisSerializer;
+
+import java.util.Objects;
 
 /**
  * 异常离线消息监听器（所有qos > 0 的消息都应该进入每个客户端的离线队列中（待确认队列中），包括群聊和私聊模式的业务，这里将离线队列当做待确认队列使用）
@@ -27,18 +36,95 @@ public class RemoveOfflineListener implements MessageListener<RemoveOfflineEvent
 
     private static final Logger log = LoggerFactory.getLogger(RemoveOfflineListener.class);
 
-    private static final StringRedisTemplate stringRedisTemplate = CacheFactory.STRING_REDIS.instance();
+    private static final RedisTemplate redisTemplate = CacheFactory.REDIS.instance();
 
+    @SuppressWarnings("unchecked")
     @Override
     public void onApplicationEvent(RemoveOfflineEvent event) {
         Object source = event.getSource();
         log.debug("移除离线消息监听器正在处理：{}", event.getSource());
         if (source instanceof Packet packet) {
-            Message message = packet.getMessage();
-            String from = message.getFrom();
-            Metadata metadata = message.getMetadata();
-            DeviceType deviceType = MessageServerContext.deviceType(metadata.getAppKey(), packet.getDeviceType());
-            stringRedisTemplate.opsForZSet().remove(CacheConstant.buildOfflineCacheKey(metadata.getAppKey(), from, deviceType.getDeviceTypeValue()), MessageContext.idGenerator().formatLongId19Str(message.getContent()));
+            try {
+                Message message = packet.getMessage();
+                String from = message.getFrom();
+                // 空值校验：核心参数为空直接返回
+                if (from == null || message.getContent() == null || message.getMetadata() == null) {
+                    log.warn("移除离线消息失败：核心参数为空，packet={}", packet);
+                    return;
+                }
+
+                QosAckContent qosAckContent = JSON.parseObject(message.getContent(), QosAckContent.class);
+                // 校验反序列化结果
+                if (qosAckContent == null || qosAckContent.getAckId() == null || qosAckContent.getMessageId() == null) {
+                    log.warn("移除离线消息失败：QosAckContent解析异常，content={}", message.getContent());
+                    return;
+                }
+
+                Metadata metadata = message.getMetadata();
+                DeviceType deviceType = MessageServerContext.deviceType(metadata.getAppKey(), packet.getDeviceType());
+                // 校验设备类型
+
+                RedisSerializer<String> stringSerializer = redisTemplate.getStringSerializer();
+
+                // 使用SessionCallback执行批量原子操作，返回操作结果
+                redisTemplate.execute(new SessionCallback<>() {
+                    @Override
+                    public <K, V> Boolean execute(RedisOperations<K, V> operations) throws DataAccessException {
+                        RedisConnection conn = null;
+                        try {
+                            // ========== 1. 构建并序列化所有Key/Value ==========
+                            // ZSet相关
+                            String zSetKey = CacheConstant.buildToOfflineCacheKey(metadata.getAppKey(), from, deviceType.getDeviceTypeValue());
+                            String zSetValue = MessageContext.idGenerator().formatLongId19Str(qosAckContent.getAckId());
+                            byte[] zSetKeyBytes = stringSerializer.serialize(zSetKey);
+                            byte[] zSetValueBytes = stringSerializer.serialize(zSetValue);
+
+                            // Hash相关
+                            String hashKey = CacheConstant.buildFromOfflineCacheKey(metadata.getAppKey(), from);
+                            String hashField = qosAckContent.getMessageId();
+
+                            // 空值校验：序列化失败直接返回false
+                            if (zSetKeyBytes == null || zSetValueBytes == null || hashKey == null || hashField == null) {
+                                log.warn("移除离线消息失败：序列化为空，zSetKey={}, zSetValue={}, hashKey={}, hashField={}",
+                                        zSetKey, zSetValue, hashKey, hashField);
+                                return false;
+                            }
+
+                            // ========== 2. 执行ZSet删除操作 ==========
+                            conn = Objects.requireNonNull(redisTemplate.getConnectionFactory()).getConnection();
+                            Long zRemCount = conn.zSetCommands().zRem(zSetKeyBytes, zSetValueBytes);
+                            boolean zSetDeleted = zRemCount != null && zRemCount > 0;
+                            if (!zSetDeleted) {
+                                log.info("ZSet元素不存在或删除失败，key={}, value={}", zSetKey, zSetValue);
+                            }
+
+                            // ========== 3. 执行Hash删除操作 ==========
+                            boolean hashDeleted = operations.opsForHash().delete((K) hashKey, hashField) > 0;
+                            if (!hashDeleted) {
+                                log.info("Hash字段不存在或删除失败，key={}, field={}", hashKey, hashField);
+                            }
+
+                            // 返回整体结果：两个操作至少有一个成功（或根据业务需求改为"都成功"）
+                            return zSetDeleted || hashDeleted;
+
+                        } catch (Exception e) {
+                            log.error("移除离线消息Redis操作异常", e);
+                            return false;
+                        } finally {
+                            // ========== 4. 务必关闭手动获取的连接 ==========
+                            if (conn != null) {
+                                try {
+                                    conn.close();
+                                } catch (Exception e) {
+                                    log.error("关闭Redis连接异常", e);
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (Exception e) {
+                log.error("移除离线消息整体流程异常", e);
+            }
         }
     }
 

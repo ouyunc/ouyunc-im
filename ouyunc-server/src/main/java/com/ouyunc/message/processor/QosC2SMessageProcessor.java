@@ -1,11 +1,13 @@
 package com.ouyunc.message.processor;
 
+import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.MessageType;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.constant.enums.QosModeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
+import com.ouyunc.base.packet.message.content.QosAckContent;
 import com.ouyunc.core.listener.event.ExceptionEvent;
 import com.ouyunc.core.listener.event.RemoveOfflineEvent;
 import com.ouyunc.message.context.MessageServerContext;
@@ -69,14 +71,13 @@ public final class QosC2SMessageProcessor extends AbstractMessageProcessor<Byte>
     public void process(ChannelHandlerContext ctx, Packet packet) {
         if (MessageServerContext.serverProperties().isQosEnable() && QosModeEnum.SERVER.equals(MessageServerContext.serverProperties().getQosMode())) {
             Message message = packet.getMessage();
-            String receivedPackageId = message.getContent();
-            log.info("QosC2SMessageProcessor 外部客户端接收到消息id: {}", receivedPackageId);
+            log.info("QosC2SMessageProcessor 外部客户端接收到消息id: {}", message.getContent());
             // 可以判断这个receivedPackageId是否合法，不是自己发送的，以及消息类型是合法的，这里不做过多的判断
-
+            QosAckContent qosAckContent = JSON.parseObject(message.getContent(), QosAckContent.class);
             // 移除离线消息,通过异步发送移除离线消息事件
             MessageServerContext.publishEvent(new RemoveOfflineEvent(packet), true);
             // 停止本地的qos定时任务
-            ScheduleTimer.cancel(receivedPackageId);
+            ScheduleTimer.cancel(qosAckContent.getAckId());
         }else {
             log.warn("QosC2SMessageProcessor qos未开启或者qos模式不是服务端模式,忽略处理");
         }

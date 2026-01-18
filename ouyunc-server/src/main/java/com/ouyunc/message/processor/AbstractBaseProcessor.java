@@ -52,13 +52,15 @@ public abstract class AbstractBaseProcessor<T extends Number> implements Process
             Packet dupPacket = JSON.parseObject(message.getContent(), Packet.class);
             // 判断是否已经在离线消息中, 如果已经发送过，返回true,否则返回false,且发送qosAck, 防止再次返送重试消息
             // 离线消息，要和客户端的消息id做唯一映射
-            if (repository().checkDup(dupPacket, MessageServerContext.deviceType(message.getMetadata().getAppKey(), packet.getDeviceType()))) {
+            if (repository().checkDup(dupPacket)) {
                 qosPostHandle(ctx, packet);
                 return true;
             }
+            // 走到这可以认定，该消息没在离线队列中，将不认定为重发消息，认定为新消息，进行传递发送
             // 将元数据放入重发消息的packet中，否则会丢失相关信息
             Metadata metadata = message.getMetadata();
             dupPacket.getMessage().setMetadata(metadata);
+            dupPacket.setPacketId(MessageContext.idGenerator().generateId());
             // 将重发消息的packet替换成原来的packet
             packet = dupPacket;
             log.info("qos 客户端模式正在处理客户端重发消息, 重发消息为: {}", packet);

@@ -335,10 +335,18 @@ public class CacheConstant {
     }
 
     /**
-     * 构建 离线消息 cache key - 集群优化
+     * 构建 接收方离线消息 cache key - 集群优化
      */
-    public static String buildOfflineCacheKey(String appKey, String identity, Byte deviceTypeValue) {
-        return buildBaseCacheKey(appKey) + OFFLINE + withHashTag(identity) + COLON + deviceTypeValue;
+    public static String buildToOfflineCacheKey(String appKey, String to, Byte deviceTypeValue) {
+        return buildBaseCacheKey(appKey) + OFFLINE + withHashTag(to) + COLON + deviceTypeValue;
+    }
+
+
+    /**
+     * 构建 发送方离线消息 cache key - 集群优化
+     */
+    public static String buildFromOfflineCacheKey(String appKey, String from) {
+        return buildBaseCacheKey(appKey) + OFFLINE + withHashTag(from);
     }
 
     /**
