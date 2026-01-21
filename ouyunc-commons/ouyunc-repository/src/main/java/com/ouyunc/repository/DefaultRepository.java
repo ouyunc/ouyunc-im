@@ -34,8 +34,11 @@ import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.connection.RedisStringCommands;
 import org.springframework.data.redis.core.*;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.data.redis.core.types.Expiration;
 import org.springframework.data.redis.serializer.RedisElementWriter;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -108,6 +111,17 @@ public enum DefaultRepository implements Repository{
      * stringRedisTemplate
      */
     private static final StringRedisTemplate stringRedisTemplate = CacheFactory.STRING_REDIS.instance();
+
+
+    /**
+     * redisSerializer
+     */
+    private static final RedisSerializer<String> stringSerializer = redisTemplate.getStringSerializer();
+
+    /**
+     * valueSerializer
+     */
+    private static final RedisSerializer<Object> valueSerializer = redisTemplate.getValueSerializer();
 
     /**
      * 保存消息到磁盘中，这里使用mq来提高吞吐量；注意这里mq 消费者执行的逻辑是保存消息（持久化），这里给出一个参考实例：
@@ -1453,8 +1467,8 @@ public enum DefaultRepository implements Repository{
             }
 
             byte[] keyBytes = stringSerializer.serialize(CacheConstant.buildFromOfflineCacheKey(metadata.getAppKey(), to));
-            connection.hashCommands().hSet(ByteBuffer.wrap(keyBytes), hashKeyWriter.write(message.getId()), hashValueWriter.write(packetId));
-
+            Mono<Boolean> setOperation = connection.hashCommands().hSet(ByteBuffer.wrap(keyBytes), hashKeyWriter.write(message.getId()), hashValueWriter.write(packetId));
+            operations.add(setOperation);
             // 返回Flux<Boolean>，每个元素是单个操作的结果
             return Flux.fromIterable(operations).concatMap(mono -> mono);
         });
@@ -1475,7 +1489,12 @@ public enum DefaultRepository implements Repository{
     public boolean saveJoinFriendRequestMessage(Packet packet, RequestSession requestSession, long expireTime, Collection<DeviceType> toSupportDeviceTypes) {
         Message message = packet.getMessage();
         // 获取原来存在的sessionid
-        return saveFriendRequestMessage(packet, requestSession.getSessionId(), expireTime,toSupportDeviceTypes,  (redisOperations)-> redisOperations.opsForValue().setIfAbsent(CacheConstant.buildFriendRequestCacheKey(message.getMetadata().getAppKey(), message.getFrom(), message.getTo()), requestSession, MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS));
+        return saveFriendRequestMessage(packet, requestSession.getSessionId(), expireTime,toSupportDeviceTypes,  (redisConnection)-> {
+            String friendRequestCacheKey = CacheConstant.buildFriendRequestCacheKey(message.getMetadata().getAppKey(), message.getFrom(), message.getTo());
+            byte[] keyBytes = serializeOrNull(valueSerializer, friendRequestCacheKey);
+            byte[] valueBytes = serializeOrNull(valueSerializer, requestSession);
+            redisConnection.commands().set(keyBytes, valueBytes, Expiration.milliseconds(MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP), RedisStringCommands.SetOption.SET_IF_ABSENT);
+        });
     }
 
 
@@ -1509,7 +1528,12 @@ public enum DefaultRepository implements Repository{
      */
     public boolean saveRefuseFriendRequestMessage(Packet packet, RequestSession requestSession,  long expireTime, Collection<DeviceType> toSupportDeviceTypes) {
         Message message = packet.getMessage();
-        return saveFriendRequestMessage(packet, requestSession.getSessionId(), expireTime, toSupportDeviceTypes, (redisOperations)-> redisOperations.opsForValue().set(CacheConstant.buildFriendRequestCacheKey(message.getMetadata().getAppKey(), message.getTo(), message.getFrom()), requestSession, MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS));
+        return saveFriendRequestMessage(packet, requestSession.getSessionId(), expireTime, toSupportDeviceTypes, (redisConnection)-> {
+            String friendRequestCacheKey = CacheConstant.buildFriendRequestCacheKey(message.getMetadata().getAppKey(), message.getTo(), message.getFrom());
+            byte[] keyBytes = serializeOrNull(stringSerializer, friendRequestCacheKey);
+            byte[] valueBytes = serializeOrNull(valueSerializer, requestSession);
+            redisConnection.commands().set(keyBytes, valueBytes, Expiration.milliseconds(MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP), RedisStringCommands.SetOption.UPSERT);
+        });
     }
 
     /**
@@ -1518,7 +1542,7 @@ public enum DefaultRepository implements Repository{
      * @param expireTime 过期时间，单位毫秒，多久后过期
      * @return
      */
-    private<K,V> boolean saveFriendRequestMessage(Packet packet, String friendRequestSessionId, long expireTime, Collection<DeviceType> toSupportDeviceTypes,Consumer<RedisOperations<K, V>> consumer) {
+    private<K,V> boolean saveFriendRequestMessage(Packet packet, String friendRequestSessionId, long expireTime, Collection<DeviceType> toSupportDeviceTypes,Consumer<RedisConnection> consumer) {
         // 调用公共方法，传入空的额外操作
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
@@ -2113,7 +2137,12 @@ public enum DefaultRepository implements Repository{
         String appKey = message.getMetadata().getAppKey();
         // 获取是否存在sessionId
         // 注意过期时间的设定，与消息 hot key 的过期时间保持一致
-        return bindFriend(packet, requestSession.getSessionId(), expireTime, toSupportDeviceTypes, (redisOperations)-> redisOperations.opsForValue().set(CacheConstant.buildFriendRequestCacheKey(appKey, message.getFrom(), message.getTo()), requestSession, MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS));
+        return bindFriend(packet, requestSession.getSessionId(), expireTime, toSupportDeviceTypes, (redisConnection)-> {
+            String friendRequestCacheKey = CacheConstant.buildFriendRequestCacheKey(appKey, message.getFrom(), message.getTo());
+            byte[] keyBytes = serializeOrNull(stringSerializer, friendRequestCacheKey);
+            byte[] valueBytes = serializeOrNull(valueSerializer, requestSession);
+            redisConnection.commands().set(keyBytes, valueBytes, Expiration.milliseconds(MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP), RedisStringCommands.SetOption.UPSERT);
+        });
     }
 
     /**
@@ -2125,7 +2154,12 @@ public enum DefaultRepository implements Repository{
     public boolean agreeBindFriend(String appKey, Packet packet, RequestSession requestSession, long expireTime, Collection<DeviceType> toSupportDeviceTypes) {
         Message message = packet.getMessage();
         // 注意过期时间的设定，与消息 hot key 的过期时间保持一致
-        return bindFriend(packet, requestSession.getSessionId(), expireTime, toSupportDeviceTypes, (redisOperations)-> redisOperations.opsForValue().set(CacheConstant.buildFriendRequestCacheKey(appKey, message.getTo(), message.getFrom()), requestSession, MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS));
+        return bindFriend(packet, requestSession.getSessionId(), expireTime, toSupportDeviceTypes, (redisConnection)-> {
+            String friendRequestCacheKey = CacheConstant.buildFriendRequestCacheKey(appKey, message.getTo(), message.getFrom());
+            byte[] keyBytes = serializeOrNull(stringSerializer, friendRequestCacheKey);
+            byte[] valueBytes = serializeOrNull(valueSerializer, requestSession);
+            redisConnection.commands().set(keyBytes, valueBytes, Expiration.milliseconds(MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP), RedisStringCommands.SetOption.UPSERT);
+        });
     }
 
 
@@ -2136,7 +2170,7 @@ public enum DefaultRepository implements Repository{
      * @param consumer
      * @return
      */
-    private<K,V> boolean bindFriend(Packet packet, String friendRequestSessionId, long expireTime, Collection<DeviceType>  toSupportDeviceTypes, Consumer<RedisOperations<K, V>> consumer) {
+    private<K,V> boolean bindFriend(Packet packet, String friendRequestSessionId, long expireTime, Collection<DeviceType>  toSupportDeviceTypes, Consumer<RedisConnection> consumer) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         String from = message.getFrom();
@@ -2172,64 +2206,153 @@ public enum DefaultRepository implements Repository{
      * @return 是否执行成功
      */
     @SuppressWarnings("unchecked")
-    private<K, V> boolean saveMessageWithSessionOrOffline(Packet packet, long expireTime, String messageKey, String sessionKey, boolean saveOfflineMessage, List<String> offlineKeys, Consumer<RedisOperations<K, V>> consumer, FiveConsumer<RedisOperations<K, V>, Message, String, String, String> extraOperation) {
-        try {
+    private<K, V> boolean saveMessageWithSessionOrOffline(Packet packet, long expireTime, String messageKey, String sessionKey, boolean saveOfflineMessage, List<String> offlineKeys, Consumer<RedisConnection> consumer, FiveConsumer<RedisConnection, Message, String, String, String> extraOperation) {
+        if (packet == null || redisTemplate.getConnectionFactory() == null) {
+            log.error("Packet 或 RedisConnectionFactory 为空");
+            return false;
+        }
+
+
+        RedisConnectionFactory connectionFactory = redisTemplate.getConnectionFactory();
+
+        try (RedisConnection conn = connectionFactory.getConnection()) {
+            log.debug("获取 Redis 连接成功: {}", conn.hashCode());
+
+            conn.openPipeline();
+            log.debug("Pipeline 已开启");
+
+            // === 解析业务参数 ===
             Message message = packet.getMessage();
-            Metadata metadata = message.getMetadata();
+            Metadata metadata = message != null ? message.getMetadata() : null;
+            if (message == null || metadata == null) {
+                log.error("消息或元数据为空");
+                return false;
+            }
+
             String appKey = metadata.getAppKey();
             String from = message.getFrom();
             String to = message.getTo();
             String formatPacketId = MessageContext.idGenerator().formatLongId19Str(packet.getPacketId());
 
-            // 获取字符串序列化器，增加灵活性
-            RedisSerializer<String> stringSerializer = redisTemplate.getStringSerializer();
-            // 执行Pipeline操作并获取结果
-            redisTemplate.executePipelined(new SessionCallback<List<Object>>() {
-                @Override
-                @SuppressWarnings("unchecked")
-                public <K1, V1> List<Object> execute(RedisOperations<K1, V1> operations) {
-                    // 强制转换为明确的泛型类型，避免重复转换
-                    // 1. 强制转换为 RedisTemplate（获取连接的关键）
-                    if (!(operations instanceof RedisTemplate)) {
-                        throw new IllegalStateException("RedisOperations 不是 RedisTemplate 实例，无法获取连接");
-                    }
-                    RedisTemplate redisTemplate = (RedisTemplate) operations;
-                    // 2. 获取 Redis 连接（通过 RedisTemplate 的底层方法）
-                    RedisConnection conn = Objects.requireNonNull(redisTemplate.getConnectionFactory()).getConnection();
+            byte[] packetIdBytes = serializeOrThrow(stringSerializer, formatPacketId, "PacketId");
+            byte[] msgKeyBytes = serializeOrNull(stringSerializer, messageKey);
+            byte[] packetBytes = serializeOrNull(valueSerializer, packet);
 
-                    // 获取 Redis 底层连接（支持字节数组操作）
-                    // 1. 保存消息主体
-                    if (expireTime > 0) {
-                        operations.opsForValue().set((K1) messageKey, (V1) packet, expireTime, TimeUnit.MILLISECONDS);
-                    } else {
-                        operations.opsForValue().set((K1) messageKey, (V1) packet);
-                    }
-                    // 2. 使用字符串序列化器处理ZSet操作（保持原生字符串特性）
-                    // 转换键和值为字符串类型的键
-                    byte[] formatPacketIdV = stringSerializer.serialize(formatPacketId);
-                    // 保存请求会话消息
-                    conn.zAdd(stringSerializer.serialize(sessionKey), NumberConstant.NUMBER_0, formatPacketIdV);
-                    // 3. 条件保存离线消息
-                    if (saveOfflineMessage && MessageContext.messageProperties.isQosEnable()  && message.getQos() > QosLevelEnum.QOS_0.getLevel() && CollectionUtils.isNotEmpty(offlineKeys)) {
-                        for (String offlineKey : offlineKeys) {
-                            conn.zAdd(stringSerializer.serialize(offlineKey), NumberConstant.NUMBER_0, formatPacketIdV);
-                        }
-                        // 5. 保存发送方离线消息标识，可以在客户端重发消息时进行校验，避免重复保存离线消息
-                        operations.opsForHash().put((K1) CacheConstant.buildFromOfflineCacheKey(appKey, from), message.getId(), packet.getPacketId());
-                    }
-                    // 4. 执行额外操作（差异化逻辑注入）
-                    extraOperation.accept(redisTemplate, message, appKey, from, to);
-
-                    // 5. 执行自定义处理逻辑
-                    consumer.accept(redisTemplate);
-
-                    return null;
+            // === 步骤6：保存消息主体 SET + PEXPIRE ===
+            if (msgKeyBytes != null && packetBytes != null) {
+                conn.commands().set(msgKeyBytes, packetBytes);
+                if (expireTime > 0) {
+                    conn.keyCommands().pExpire(msgKeyBytes, expireTime);
                 }
-            });
+                log.debug("消息主体命令入队: {}", messageKey);
+            } else {
+                log.warn("消息主体序列化失败，跳过");
+            }
+
+            // === 步骤7：会话 ZSet 添加 ZADD ===
+            byte[] sessionKeyBytes = serializeOrNull(stringSerializer, sessionKey);
+            if (sessionKeyBytes != null) {
+                conn.zAdd(sessionKeyBytes, NumberConstant.NUMBER_0, packetIdBytes);
+                log.debug("会话ZSet命令入队: {}", sessionKey);
+            }
+
+            // === 步骤8：离线消息处理 ===
+            if (saveOfflineMessage &&
+                    MessageContext.messageProperties.isQosEnable() &&
+                    message.getQos() > QosLevelEnum.QOS_0.getLevel() &&
+                    CollectionUtils.isNotEmpty(offlineKeys)) {
+
+                for (String key : offlineKeys) {
+                    byte[] keyBytes = serializeOrNull(stringSerializer, key);
+                    if (keyBytes != null) {
+                        conn.zSetCommands().zAdd(keyBytes, NumberConstant.NUMBER_0, packetIdBytes);
+                        log.debug("离线ZADD入队: {}", key);
+                    }
+                }
+
+                // 离线 Hash 标识 HSET
+                String hashKey = CacheConstant.buildFromOfflineCacheKey(appKey, from);
+                String hashField = message.getId();
+                String hashValue = String.valueOf(packet.getPacketId());
+
+                byte[] hKey = serializeOrNull(stringSerializer, hashKey);
+                byte[] hField = serializeOrNull(stringSerializer, hashField);
+                byte[] hVal = serializeOrNull(stringSerializer, hashValue);
+
+                if (allNotNull(hKey, hField, hVal)) {
+                    conn.hashCommands().hSet(hKey, hField, hVal);
+                    log.debug("离线Hash标识入队: {}", hashKey);
+                } else {
+                    log.warn("离线Hash参数序列化失败，跳过HSET");
+                }
+            }
+
+            // === 步骤9：额外差异化操作 ===
+            if (extraOperation != null) {
+                safelyExecute(() -> extraOperation.accept(conn, message, appKey, from, to), "额外操作");
+            }
+
+            // === 步骤10：自定义逻辑 ===
+            if (consumer != null) {
+                safelyExecute(() -> consumer.accept(conn), "自定义逻辑");
+            }
+
+            // === 步骤11：关闭 Pipeline 并获取结果 ===
+            List<Object> results;
+            try {
+                results = conn.closePipeline();
+                log.debug("Pipeline 关闭成功，结果数量: {}", results.size());
+            } catch (Exception e) {
+                log.error("Pipeline 执行失败: ", e);
+                forceClosePipeline(conn);
+                return false;
+            }
+
             return true;
+
         } catch (Exception e) {
-            log.error("执行消息操作失败: {}", e.getMessage(), e);
+            log.error("Redis Pipeline 操作异常: ", e);
             return false;
+        }
+    }
+    private <T> byte[] serializeOrNull(RedisSerializer<T> serializer, T value) {
+        try {
+            return serializer.serialize(value);
+        } catch (Exception e) {
+            log.warn("序列化失败: {}", value, e);
+            return null;
+        }
+    }
+
+    private <T> byte[] serializeOrThrow(RedisSerializer<T> serializer, T value, String fieldName) {
+        byte[] bytes = serializeOrNull(serializer, value);
+        if (bytes == null) throw new IllegalArgumentException(fieldName + " 序列化失败: " + value);
+        return bytes;
+    }
+
+    private boolean allNotNull(byte[]... arrays) {
+        for (byte[] arr : arrays) {
+            if (arr == null) return false;
+        }
+        return true;
+    }
+
+    private void safelyExecute(Runnable runnable, String opName) {
+        try {
+            runnable.run();
+            log.debug("{} 执行完成", opName);
+        } catch (Exception e) {
+            log.error("{} 执行失败: {}", opName, e.getMessage(), e);
+        }
+    }
+
+    private void forceClosePipeline(RedisConnection conn) {
+        try {
+            if (!conn.isClosed()) {
+                conn.closePipeline();
+            }
+        } catch (Exception e) {
+            log.error("强制关闭Pipeline失败", e);
         }
     }
 
@@ -2241,7 +2364,12 @@ public enum DefaultRepository implements Repository{
     public boolean autoPassBindGroup(Packet packet, GroupRequestSession groupRequestSession, long expireTime) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        return bindGroup(packet, groupRequestSession.getJoiner(), groupRequestSession.getGroupId(), groupRequestSession.getSessionId(), expireTime, (redisOperations)-> redisOperations.opsForValue().set(CacheConstant.buildGroupRequestCacheKey(metadata.getAppKey(), groupRequestSession.getJoiner(), groupRequestSession.getGroupId()), groupRequestSession, MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS));
+        return bindGroup(packet, groupRequestSession.getJoiner(), groupRequestSession.getGroupId(), groupRequestSession.getSessionId(), expireTime, (redisConnection)-> {
+            String groupRequestCacheKey = CacheConstant.buildGroupRequestCacheKey(metadata.getAppKey(), groupRequestSession.getJoiner(), groupRequestSession.getGroupId());
+            byte[] keyBytes = serializeOrNull(stringSerializer, groupRequestCacheKey);
+            byte[] valueBytes = serializeOrNull(valueSerializer, groupRequestSession);
+            redisConnection.commands().set(keyBytes, valueBytes, Expiration.milliseconds(MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP), RedisStringCommands.SetOption.UPSERT);
+        });
     }
 
     /**
@@ -2251,7 +2379,12 @@ public enum DefaultRepository implements Repository{
     public boolean manualPassBindGroup(Packet packet,  GroupRequestSession groupRequestSession, long expireTime) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        return bindGroup(packet, groupRequestSession.getJoiner(), groupRequestSession.getGroupId(), groupRequestSession.getSessionId(),  expireTime, (redisOperations)-> redisOperations.opsForValue().set(CacheConstant.buildGroupRequestCacheKey(metadata.getAppKey(), groupRequestSession.getJoiner(), groupRequestSession.getGroupId()), groupRequestSession, MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS));
+        return bindGroup(packet, groupRequestSession.getJoiner(), groupRequestSession.getGroupId(), groupRequestSession.getSessionId(),  expireTime, (redisConnection)-> {
+            String groupRequestCacheKey = CacheConstant.buildGroupRequestCacheKey(metadata.getAppKey(), groupRequestSession.getJoiner(), groupRequestSession.getGroupId());
+            byte[] keyBytes = serializeOrNull(stringSerializer, groupRequestCacheKey);
+            byte[] valueBytes = serializeOrNull(valueSerializer, groupRequestSession);
+            redisConnection.commands().set(keyBytes, valueBytes, Expiration.milliseconds(MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP), RedisStringCommands.SetOption.UPSERT);
+        });
     }
 
 
@@ -2265,7 +2398,7 @@ public enum DefaultRepository implements Repository{
      * @return
      */
     @SuppressWarnings("unchecked")
-    private<K,V> boolean bindGroup(Packet packet, String joiner, String groupId, String requestSessionId, long expireTime, Consumer<RedisOperations<K,V>> consumer) {
+    private<K,V> boolean bindGroup(Packet packet, String joiner, String groupId, String requestSessionId, long expireTime, Consumer<RedisConnection> consumer) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         return saveMessageWithSessionOrOffline(packet, expireTime, CacheConstant.buildMessageCacheKey(metadata.getAppKey(), packet.getPacketId()), CacheConstant.buildGroupRequestSessionCacheKey(metadata.getAppKey(), groupId, requestSessionId), false, null, consumer, (ops, msg, ak, f, t) -> {
@@ -2298,7 +2431,12 @@ public enum DefaultRepository implements Repository{
     public boolean saveJoinGroupRequestMessage(Packet packet, GroupRequestSession groupRequestSession, long expireTime) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        return saveGroupRequestMessage(packet, groupRequestSession.getGroupId(), groupRequestSession.getSessionId(), expireTime, (redisOperations)-> redisOperations.opsForValue().setIfAbsent(CacheConstant.buildGroupRequestCacheKey(metadata.getAppKey(), groupRequestSession.getJoiner(), groupRequestSession.getGroupId()), groupRequestSession, MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS));
+        return saveGroupRequestMessage(packet, groupRequestSession.getGroupId(), groupRequestSession.getSessionId(), expireTime, (redisConnection)-> {
+            String groupRequestCacheKey = CacheConstant.buildGroupRequestCacheKey(metadata.getAppKey(), groupRequestSession.getJoiner(), groupRequestSession.getGroupId());
+            byte[] keyBytes = serializeOrNull(stringSerializer, groupRequestCacheKey);
+            byte[] valueBytes = serializeOrNull(valueSerializer, groupRequestSession);
+            redisConnection.commands().set(keyBytes, valueBytes, Expiration.milliseconds(MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP), RedisStringCommands.SetOption.SET_IF_ABSENT);
+        });
     }
 
     /**
@@ -2311,7 +2449,12 @@ public enum DefaultRepository implements Repository{
     public boolean saveGroupRequestMessage(Packet packet, GroupRequestSession groupRequestSession, long expireTime) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        return saveGroupRequestMessage(packet, groupRequestSession.getGroupId(), groupRequestSession.getSessionId(), expireTime, (redisOperations)-> redisOperations.opsForValue().set(CacheConstant.buildGroupRequestCacheKey(metadata.getAppKey(), groupRequestSession.getJoiner(), groupRequestSession.getGroupId()), groupRequestSession, MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS));
+        return saveGroupRequestMessage(packet, groupRequestSession.getGroupId(), groupRequestSession.getSessionId(), expireTime, (redisConnection)-> {
+            String groupRequestCacheKey = CacheConstant.buildGroupRequestCacheKey(metadata.getAppKey(), groupRequestSession.getJoiner(), groupRequestSession.getGroupId());
+            byte[] keyBytes = serializeOrNull(stringSerializer, groupRequestCacheKey);
+            byte[] valueBytes = serializeOrNull(valueSerializer, groupRequestSession);
+            redisConnection.commands().set(keyBytes, valueBytes, Expiration.milliseconds(MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP), RedisStringCommands.SetOption.UPSERT);
+        });
     }
 
 
@@ -2321,7 +2464,7 @@ public enum DefaultRepository implements Repository{
      * @param expireTime
      * @return
      */
-    public<K,V> boolean saveGroupRequestMessage(Packet packet, String groupId, String requestSessionId, long expireTime, Consumer<RedisOperations<K,V>> consumer) {
+    public<K,V> boolean saveGroupRequestMessage(Packet packet, String groupId, String requestSessionId, long expireTime, Consumer<RedisConnection> consumer) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         return saveMessageWithSessionOrOffline(packet, expireTime, CacheConstant.buildMessageCacheKey(metadata.getAppKey(), packet.getPacketId()), CacheConstant.buildGroupRequestSessionCacheKey(metadata.getAppKey(), groupId, requestSessionId), false, null, consumer, (ops, msg, ak, f, t) -> {});
@@ -2341,7 +2484,12 @@ public enum DefaultRepository implements Repository{
         groupUserIdentityDeviceTypeMap.forEach((groupUserIdentity, deviceTypeCollection) -> {
             offlineKeys.addAll(deviceTypeCollection.stream().map(deviceType -> CacheConstant.buildToOfflineCacheKey(metadata.getAppKey(), groupUserIdentity, deviceType.getDeviceTypeValue())).toList());
         });
-        return saveMessageWithSessionOrOffline(packet, expireTime, CacheConstant.buildMessageCacheKey(metadata.getAppKey(), packet.getPacketId()), CacheConstant.buildGroupRequestSessionCacheKey(metadata.getAppKey(), groupRequestSession.getGroupId(), groupRequestSession.getSessionId()), true,  offlineKeys, (redisOperations)-> redisOperations.opsForValue().setIfAbsent(CacheConstant.buildGroupRequestCacheKey(metadata.getAppKey(), groupRequestSession.getJoiner(), groupRequestSession.getGroupId()), groupRequestSession, MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS), (ops, msg, ak, f, t) -> {});
+        return saveMessageWithSessionOrOffline(packet, expireTime, CacheConstant.buildMessageCacheKey(metadata.getAppKey(), packet.getPacketId()), CacheConstant.buildGroupRequestSessionCacheKey(metadata.getAppKey(), groupRequestSession.getGroupId(), groupRequestSession.getSessionId()), true,  offlineKeys, (redisConnection)-> {
+            String groupRequestCacheKey = CacheConstant.buildGroupRequestCacheKey(metadata.getAppKey(), groupRequestSession.getJoiner(), groupRequestSession.getGroupId());
+            byte[] keyBytes = serializeOrNull(stringSerializer, groupRequestCacheKey);
+            byte[] valueBytes = serializeOrNull(valueSerializer, groupRequestSession);
+            redisConnection.commands().set(keyBytes, valueBytes, Expiration.milliseconds(MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP), RedisStringCommands.SetOption.SET_IF_ABSENT);
+        }, (ops, msg, ak, f, t) -> {});
 
     }
 
@@ -2358,7 +2506,12 @@ public enum DefaultRepository implements Repository{
         groupUserIdentityDeviceTypeMap.forEach((groupUserIdentity, deviceTypeCollection) -> {
             offlineKeys.addAll(deviceTypeCollection.stream().map(deviceType -> CacheConstant.buildToOfflineCacheKey(metadata.getAppKey(), groupUserIdentity, deviceType.getDeviceTypeValue())).toList());
         });
-        return saveMessageWithSessionOrOffline(packet, expireTime, CacheConstant.buildMessageCacheKey(metadata.getAppKey(), packet.getPacketId()), CacheConstant.buildGroupRequestSessionCacheKey(metadata.getAppKey(), groupRequestSession.getGroupId(), groupRequestSession.getSessionId()), true,  offlineKeys,  (redisOperations)-> redisOperations.opsForValue().set(CacheConstant.buildGroupRequestCacheKey(metadata.getAppKey(), groupRequestSession.getJoiner(), groupRequestSession.getGroupId()), groupRequestSession, MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS), (ops, msg, ak, f, t) -> {});
+        return saveMessageWithSessionOrOffline(packet, expireTime, CacheConstant.buildMessageCacheKey(metadata.getAppKey(), packet.getPacketId()), CacheConstant.buildGroupRequestSessionCacheKey(metadata.getAppKey(), groupRequestSession.getGroupId(), groupRequestSession.getSessionId()), true,  offlineKeys,  (redisConnection)-> {
+            String groupRequestCacheKey = CacheConstant.buildGroupRequestCacheKey(metadata.getAppKey(), groupRequestSession.getJoiner(), groupRequestSession.getGroupId());
+            byte[] keyBytes = serializeOrNull(stringSerializer, groupRequestCacheKey);
+            byte[] valueBytes = serializeOrNull(valueSerializer, groupRequestSession);
+            redisConnection.commands().set(keyBytes, valueBytes, Expiration.milliseconds(MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP), RedisStringCommands.SetOption.UPSERT);
+        }, (ops, msg, ak, f, t) -> {});
     }
 
 
