@@ -2178,21 +2178,13 @@ public enum DefaultRepository implements Repository{
         String appKey = metadata.getAppKey();
         List<String> offlineKeys = toSupportDeviceTypes.stream().map(deviceType -> CacheConstant.buildToOfflineCacheKey(appKey, to, deviceType.getDeviceTypeValue())).toList();
         return saveMessageWithSessionOrOffline(packet, expireTime, CacheConstant.buildMessageCacheKey(appKey, packet.getPacketId()), CacheConstant.buildFriendRequestSessionCacheKey(appKey, IdentityUtil.sessionId(from, to), friendRequestSessionId), true, offlineKeys, consumer,
-                (ops, msg, ak, f, t) -> {
+                (redisConnection, msg, ak, f, t) -> {
                     // 1. 获取 String 序列化器（与前文保持一致，确保序列化规则统一）
-                    // 1. 强制转换为 RedisTemplate（获取连接的关键）
-                    if (!(ops instanceof RedisTemplate)) {
-                        throw new IllegalStateException("RedisOperations 不是 RedisTemplate 实例，无法获取连接");
-                    }
-                    RedisTemplate<K, V> redisTemplate = (RedisTemplate<K, V>) ops;
-                    // 2. 获取 Redis 连接（通过 RedisTemplate 的底层方法）
-                    RedisConnection conn = Objects.requireNonNull(redisTemplate.getConnectionFactory()).getConnection();
-                    RedisSerializer<String> stringSerializer = redisTemplate.getStringSerializer();
                     // 建立双向好友关系（仅bindFriend方法需要的逻辑）
                     // 2. 使用字符串序列化器处理ZSet操作（保持原生字符串特性）
                     // 转换键和值为字符串类型的键
-                    conn.zAdd(stringSerializer.serialize(CacheConstant.buildFriendsCacheKey(appKey, from)), msg.getMetadata().getServerTime() , stringSerializer.serialize(t));
-                    conn.zAdd(stringSerializer.serialize(CacheConstant.buildFriendsCacheKey(appKey, to)), msg.getMetadata().getServerTime(), stringSerializer.serialize(f));
+                    redisConnection.zSetCommands().zAdd(stringSerializer.serialize(CacheConstant.buildFriendsCacheKey(appKey, from)), msg.getMetadata().getServerTime() , stringSerializer.serialize(t));
+                    redisConnection.zSetCommands().zAdd(stringSerializer.serialize(CacheConstant.buildFriendsCacheKey(appKey, to)), msg.getMetadata().getServerTime(), stringSerializer.serialize(f));
                 });
     }
 
@@ -2401,22 +2393,14 @@ public enum DefaultRepository implements Repository{
     private<K,V> boolean bindGroup(Packet packet, String joiner, String groupId, String requestSessionId, long expireTime, Consumer<RedisConnection> consumer) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        return saveMessageWithSessionOrOffline(packet, expireTime, CacheConstant.buildMessageCacheKey(metadata.getAppKey(), packet.getPacketId()), CacheConstant.buildGroupRequestSessionCacheKey(metadata.getAppKey(), groupId, requestSessionId), false, null, consumer, (ops, msg, ak, f, t) -> {
+        return saveMessageWithSessionOrOffline(packet, expireTime, CacheConstant.buildMessageCacheKey(metadata.getAppKey(), packet.getPacketId()), CacheConstant.buildGroupRequestSessionCacheKey(metadata.getAppKey(), groupId, requestSessionId), false, null, consumer, (redisConnection, msg, ak, f, t) -> {
                     // 1. 获取 String 序列化器（与前文保持一致，确保序列化规则统一）
-                    // 1. 强制转换为 RedisTemplate（获取连接的关键）
-                    if (!(ops instanceof RedisTemplate)) {
-                        throw new IllegalStateException("RedisOperations 不是 RedisTemplate 实例，无法获取连接");
-                    }
-                    RedisTemplate redisTemplate = (RedisTemplate) ops;
-                    // 2. 获取 Redis 连接（通过 RedisTemplate 的底层方法）
-                    RedisConnection conn = Objects.requireNonNull(redisTemplate.getConnectionFactory()).getConnection();
-                    RedisSerializer<String> stringSerializer = redisTemplate.getStringSerializer();
                     // 建立双向好友关系（仅bindFriend方法需要的逻辑）
                     // 2. 使用字符串序列化器处理ZSet操作（保持原生字符串特性）
                     // 2. 使用字符串序列化器处理ZSet操作（保持原生字符串特性）
                     // 转换键和值为字符串类型的键
-                    conn.zAdd(stringSerializer.serialize(CacheConstant.buildGroupUserCacheKey(metadata.getAppKey(), groupId)), GroupUserPost.ORDINARY.value() , stringSerializer.serialize(joiner));
-                    conn.zAdd(stringSerializer.serialize(CacheConstant.buildUserGroupsCacheKey(metadata.getAppKey(), joiner)), msg.getMetadata().getServerTime(), stringSerializer.serialize(groupId));
+                    redisConnection.zSetCommands().zAdd(stringSerializer.serialize(CacheConstant.buildGroupUserCacheKey(metadata.getAppKey(), groupId)), GroupUserPost.ORDINARY.value() , stringSerializer.serialize(joiner));
+                    redisConnection.zSetCommands().zAdd(stringSerializer.serialize(CacheConstant.buildUserGroupsCacheKey(metadata.getAppKey(), joiner)), msg.getMetadata().getServerTime(), stringSerializer.serialize(groupId));
                 });
     }
 
