@@ -162,6 +162,11 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         }
         // 获取使用的协议
         Protocol protocol = ctx.channel().attr(NativePacketProtocol.protocolAttrKey).get();
+        if (protocol == null) {
+            log.warn("Protocol not set on channel, closing connection: {}", ctx.channel().id().asShortText());
+            ctx.close();
+            return;
+        }
         byte protocolValue = protocol.getProtocol();
         byte protocolVersion = protocol.getProtocolVersion();
         // 绑定信息

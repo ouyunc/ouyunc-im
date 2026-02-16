@@ -1,6 +1,8 @@
 package com.ouyunc.base.utils;
 
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
@@ -15,6 +17,8 @@ import java.util.*;
  * @Description 反射工具类
  **/
 public class ReflectUtil {
+
+    private static final Logger log = LoggerFactory.getLogger(ReflectUtil.class);
 
     /**
      * 根据属性名获取属性
@@ -533,18 +537,13 @@ public class ReflectUtil {
             return null;
         }
         Field[] fields = obj.getClass().getDeclaredFields();
-        for (int i = 0; i < fields.length; i++) {
+        for (Field f : fields) {
             try {
-                Field f = obj.getClass().getDeclaredField(fields[i].getName());
                 f.setAccessible(true);
                 Object o = f.get(obj);
                 list.add(o);
-            } catch (NoSuchFieldException e) {
-                e.printStackTrace();
-            } catch (IllegalArgumentException e) {
-                e.printStackTrace();
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
+            } catch (IllegalArgumentException | IllegalAccessException e) {
+                log.warn("convertObjToList failed for field: {}", f.getName(), e);
             }
         }
         return list;

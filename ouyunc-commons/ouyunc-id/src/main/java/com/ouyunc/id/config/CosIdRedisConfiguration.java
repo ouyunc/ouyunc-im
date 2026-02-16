@@ -7,11 +7,11 @@ import me.ahoo.cosid.machine.LocalMachineStateStorage;
 import me.ahoo.cosid.machine.MachineState;
 import me.ahoo.cosid.provider.DefaultIdGeneratorProvider;
 import me.ahoo.cosid.provider.IdGeneratorProvider;
-import me.ahoo.cosid.snowflake.ClockSyncSnowflakeId;
 import me.ahoo.cosid.snowflake.MillisecondSnowflakeId;
 import me.ahoo.cosid.spring.redis.SpringRedisMachineIdDistributor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
@@ -174,12 +174,13 @@ public class CosIdRedisConfiguration {
             log.error("Failed to revert machineId for instance: " + this.instanceId, e);
         }
 
-        // 3. 关闭 Redis 连接
+        // 3. 关闭 Redis 连接（getConnection 可能返回 null，close 前做判空）
         if (redisTemplate != null && redisTemplate.getConnectionFactory() != null) {
             try {
                 RedisConnectionFactory connectionFactory = redisTemplate.getConnectionFactory();
                 if (connectionFactory != null) {
-                    connectionFactory.getConnection().close();
+                    RedisConnection connection = connectionFactory.getConnection();
+                    connection.close();
                     log.info("Redis connection closed");
                 }
             } catch (Exception e) {

@@ -491,7 +491,7 @@ public enum DefaultRepository implements Repository{
                 }
             });
         }, dbExecutor()).exceptionally(ex -> {
-            log.error("异步更新缓存失败", ex);
+            log.error("异步更新缓存失败, appKey={}, packetSize={}", appKey, dbPackets.size(), ex);
             return null;
         });
     }

@@ -20,6 +20,7 @@ public enum CacheFactory {
     // redis
     REDIS {
         //每一个数据库只有一个redisTemplate 实例
+        private static final Object LOCK = new Object();
         private static final ConcurrentHashMap<Integer, RedisTemplate<?,?>> redisTemplateMap = new ConcurrentHashMap<>();
         private static RedisProperties existRedisProperties;
 
@@ -32,7 +33,7 @@ public enum CacheFactory {
         @Override
         public RedisTemplate<?,?> instance(int database,RedisProperties ...redisProperties) {
             if (redisTemplateMap.get(database) == null) {
-                synchronized (ConcurrentHashMap.class) {
+                synchronized (LOCK) {
                     if (redisTemplateMap.get(database) == null) {
                         AbstractRedisBuilder<RedisTemplate<?,?>> redisBuilder = new RedisTemplateBuilder();
                         if (redisProperties != null && redisProperties.length > 0) {
@@ -55,6 +56,7 @@ public enum CacheFactory {
     // reactive redis  响应式
     REACTIVE_REDIS {
         //每一个数据库只有一个ReactiveRedisTemplate 实例
+        private static final Object LOCK = new Object();
         private static final ConcurrentHashMap<Integer, ReactiveRedisTemplate<?,?>> reactiveRedisTemplateMap = new ConcurrentHashMap<>();
         private static RedisProperties existRedisProperties;
 
@@ -67,7 +69,7 @@ public enum CacheFactory {
         @Override
         public ReactiveRedisTemplate<?,?> instance(int database,RedisProperties ...redisProperties) {
             if (reactiveRedisTemplateMap.get(database) == null) {
-                synchronized (ConcurrentHashMap.class) {
+                synchronized (LOCK) {
                     if (reactiveRedisTemplateMap.get(database) == null) {
                         AbstractRedisBuilder<ReactiveRedisTemplate<?,?>> redisBuilder = new ReactiveRedisTemplateBuilder();
                         if (redisProperties != null && redisProperties.length > 0) {
@@ -89,6 +91,7 @@ public enum CacheFactory {
     // redis
     STRING_REDIS {
         //每一个数据库只有一个StringRedisTemplate 实例
+        private static final Object LOCK = new Object();
         private static final ConcurrentHashMap<Integer, StringRedisTemplate> stringRedisTemplateMap = new ConcurrentHashMap<>();
         private static RedisProperties existRedisProperties;
 
@@ -101,7 +104,7 @@ public enum CacheFactory {
         @Override
         public StringRedisTemplate instance(int database,RedisProperties ...redisProperties) {
             if (stringRedisTemplateMap.get(database) == null) {
-                synchronized (ConcurrentHashMap.class) {
+                synchronized (LOCK) {
                     if (stringRedisTemplateMap.get(database) == null) {
                         AbstractRedisBuilder<StringRedisTemplate> redisBuilder = new StringRedisTemplateBuilder();
                         if (redisProperties != null && redisProperties.length > 0) {
@@ -123,6 +126,7 @@ public enum CacheFactory {
     // string redis
     REACTIVE_STRING_REDIS {
         //每一个数据库只有一个StringRedisTemplate 实例
+        private static final Object LOCK = new Object();
         private static final ConcurrentHashMap<Integer, ReactiveStringRedisTemplate> stringRedisTemplateMap = new ConcurrentHashMap<>();
         private static RedisProperties existRedisProperties;
 
@@ -135,7 +139,7 @@ public enum CacheFactory {
         @Override
         public ReactiveStringRedisTemplate instance(int database,RedisProperties ...redisProperties) {
             if (stringRedisTemplateMap.get(database) == null) {
-                synchronized (ConcurrentHashMap.class) {
+                synchronized (LOCK) {
                     if (stringRedisTemplateMap.get(database) == null) {
                         AbstractRedisBuilder<ReactiveStringRedisTemplate> redisBuilder = new ReactiveStringRedisTemplateBuilder();
                         if (redisProperties != null && redisProperties.length > 0) {
@@ -156,13 +160,14 @@ public enum CacheFactory {
     },
     // reactive redisson 响应式 redisson
     REACTIVE_REDISSON {
+        private static final Object LOCK = new Object();
         private static final ConcurrentHashMap<Integer, RedissonReactiveClient> reactiveRedissonClientMap = new ConcurrentHashMap<>();
         private static RedisProperties existRedisProperties;
         @SuppressWarnings("unchecked")
         @Override
         public RedissonReactiveClient instance(int database,RedisProperties ...redisProperties) {
             if (reactiveRedissonClientMap.get(database) == null) {
-                synchronized (ConcurrentHashMap.class) {
+                synchronized (LOCK) {
                     if (reactiveRedissonClientMap.get(database) == null) {
                         AbstractRedisBuilder<RedissonReactiveClient> redissonBuilder = new ReactiveRedissonClientBuilder();
                         if (redisProperties != null && redisProperties.length > 0) {
@@ -189,13 +194,14 @@ public enum CacheFactory {
 
     // redisson
     REDISSON {
+        private static final Object LOCK = new Object();
         private static final ConcurrentHashMap<Integer, RedissonClient> redissonClientMap = new ConcurrentHashMap<>();
         private static RedisProperties existRedisProperties;
         @SuppressWarnings("unchecked")
         @Override
         public RedissonClient instance(int database,RedisProperties ...redisProperties) {
             if (redissonClientMap.get(database) == null) {
-                synchronized (ConcurrentHashMap.class) {
+                synchronized (LOCK) {
                     if (redissonClientMap.get(database) == null) {
                         AbstractRedisBuilder<RedissonClient> redissonBuilder = new RedissonClientBuilder();
                         if (redisProperties != null && redisProperties.length > 0) {

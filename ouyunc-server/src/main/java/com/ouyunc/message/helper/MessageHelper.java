@@ -23,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
+import java.util.Objects;
 
 /**
  * @Author fzx
@@ -176,7 +177,7 @@ public class MessageHelper {
         // 需要发送到的服务器地址
         String toServerAddress = target.getTargetServerAddress();
         // 如果是单服务实例或者如果目标主机是本机，则直接发送处理
-        if (!MessageServerContext.serverProperties().isClusterEnable() || MessageServerContext.serverProperties().getLocalServerAddress().equals(toServerAddress)) {
+        if (!MessageServerContext.serverProperties().isClusterEnable() || Objects.equals(MessageServerContext.serverProperties().getLocalServerAddress(), toServerAddress)) {
             MessageServerContext.findProtocol(target.getProtocol(), target.getProtocolVersion()).doSendMessage(originPacket, IdentityUtil.generalComboIdentity(originPacket.getMessage().getMetadata().getAppKey(), target.getTargetIdentity(), target.getDeviceType()), sendCallback);
             return;
         }

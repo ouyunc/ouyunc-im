@@ -50,6 +50,10 @@ public enum MqttMessagePacketConverter implements PacketConverter<MqttMessage>{
                 return null;
             }
             Protocol protocol = ctx.channel().attr(NativePacketProtocol.protocolAttrKey).get();
+            if (protocol == null) {
+                log.warn("Protocol not set on channel, skip convert");
+                return null;
+            }
             byte protocolValue = protocol.getProtocol();
             byte protocolVersion = protocol.getProtocolVersion();
             // 将mqttMessage 转换成 byte[]

@@ -146,6 +146,11 @@ public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<In
                 sessionExpiryInterval = sessionExpiryIntervalProperty.value();
             }
             Protocol protocol = ctx.channel().attr(NativePacketProtocol.protocolAttrKey).get();
+            if (protocol == null) {
+                log.warn("Protocol not set on channel, closing MQTT connection");
+                ctx.close();
+                return;
+            }
             byte protocolValue = protocol.getProtocol();
             byte protocolVersion = protocol.getProtocolVersion();
             MqttLoginClientInfo mqttLoginClientInfo = new MqttLoginClientInfo(protocolValue, protocolVersion, MessageContext.messageProperties.getLocalServerAddress(), OnlineEnum.ONLINE, null, ClientHelper.calculateClientLoginExpireTime(keepAlive), ClientHelper.calculateClientHeartBeatTimeout(keepAlive), loginTimestamp, appKey, mqttConnectPayload.clientIdentifier(), DeviceTypeEnum.M, null, mqttConnectPayload.clientIdentifier(), signature, Encrypt.AsymmetricEncrypt.MD5.getValue(), keepAlive, loginTimestamp, enableWill, qos, version, isWillRetain, willMessage, willTopic, cleanSession, sessionExpiryInterval, YesOrNo.NO.getCode(), null);

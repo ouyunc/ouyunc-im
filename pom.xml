@@ -65,7 +65,7 @@
     <aspectjweaver.version>1.9.22.1</aspectjweaver.version>
     <!--jdbc-->
     <mysql.version>9.0.0</mysql.version>
-    <sprig-jdbc.version>6.2.1</sprig-jdbc.version>
+    <spring-jdbc.version>6.2.1</spring-jdbc.version>
     <hikari.version>6.2.1</hikari.version>
     <!--mongodb-->
     <spring-mongodb.version>4.4.1</spring-mongodb.version>
@@ -401,7 +401,7 @@
       <dependency>
         <groupId>org.springframework</groupId>
         <artifactId>spring-jdbc</artifactId>
-        <version>${sprig-jdbc.version}</version>
+        <version>${spring-jdbc.version}</version>
       </dependency>
 
       <!-- MySQL驱动 -->
