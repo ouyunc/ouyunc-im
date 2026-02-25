@@ -6,6 +6,7 @@ import com.lmax.disruptor.dsl.Disruptor;
 import com.lmax.disruptor.dsl.ProducerType;
 import com.lmax.disruptor.util.DaemonThreadFactory;
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.constant.enums.DeviceTypeEnum;
 import com.ouyunc.base.constant.enums.DisruptorEventProducerEnum;
@@ -57,7 +58,7 @@ public abstract class AbstractMessageServer implements MessageServer {
     /**
      * 服务启动对象
      */
-    private final static ServerBootstrap bootstrap = new ServerBootstrap();
+    private static final ServerBootstrap bootstrap = new ServerBootstrap();
 
     /**
      * boss 线程组
@@ -120,7 +121,7 @@ public abstract class AbstractMessageServer implements MessageServer {
      * @author fzx
      * @description 预留方法，用于在属性初始化后执行一些操作
      */
-    void afterPropertiesSet() {};
+    void afterPropertiesSet() {}
 
     /***
      * @author fzx
@@ -294,7 +295,7 @@ public abstract class AbstractMessageServer implements MessageServer {
                         log.debug("IM server启动成功，其绑定地址:{} 端口号:{} 共花费:{} ms.", MessageServerContext.serverProperties().getIp(), MessageServerContext.serverProperties().getPort(), (TimeUtil.currentTimeMillis() - startTimeStamp));
                     } else {
                         log.error("IM server 启动失败！原因: {}", bindFuture.cause().getMessage());
-                        throw new Exception(bindFuture.cause().getMessage());
+                        throw new MessageException(bindFuture.cause().getMessage());
                     }
                 }
             });

@@ -1,10 +1,7 @@
 package com.ouyunc.id.config;
 
 import me.ahoo.cosid.CosId;
-import me.ahoo.cosid.machine.DefaultClockBackwardsSynchronizer;
-import me.ahoo.cosid.machine.InstanceId;
-import me.ahoo.cosid.machine.LocalMachineStateStorage;
-import me.ahoo.cosid.machine.MachineState;
+import me.ahoo.cosid.machine.*;
 import me.ahoo.cosid.provider.DefaultIdGeneratorProvider;
 import me.ahoo.cosid.provider.IdGeneratorProvider;
 import me.ahoo.cosid.snowflake.MillisecondSnowflakeId;
@@ -62,7 +59,7 @@ public class CosIdRedisConfiguration {
         this.namespace = namespace;
 
         // 1. 初始化机器号分发器
-        LocalMachineStateStorage stateStorage = new LocalMachineStateStorage("./cosid-machine-state/");
+        MachineStateStorage stateStorage = new InMemoryMachineStateStorage();
         DefaultClockBackwardsSynchronizer clockSync = new DefaultClockBackwardsSynchronizer(10, 2000);
         this.machineIdDistributor = new SpringRedisMachineIdDistributor(
                 redisTemplate,

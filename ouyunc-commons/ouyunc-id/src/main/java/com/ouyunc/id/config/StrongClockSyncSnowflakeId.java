@@ -10,9 +10,6 @@ import org.jspecify.annotations.NonNull;
 
 /**
  * 加强版雪花ID生成器
- *
- * @author ahoo wang
- * @since 1.0.0
  */
 public class StrongClockSyncSnowflakeId extends ClockSyncSnowflakeId {
     public StrongClockSyncSnowflakeId(SnowflakeId actual) {
