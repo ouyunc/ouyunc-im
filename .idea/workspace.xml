@@ -5,10 +5,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="全局唯一id生成器">
+      <change afterPath="$PROJECT_DIR$/docs/6.5.2/Message.proto" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/6.5.2/client.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/6.5.2/export.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/6.5.2/ouyunc-message-sdk.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/6.5.2/proto-command.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/6.5.2/sql/ouyunc_message.sql" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-id/src/main/java/com/ouyunc/id/config/CosIdRedisConfiguration.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-id/src/main/java/com/ouyunc/id/config/CosIdRedisConfiguration.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-id/src/main/java/com/ouyunc/id/config/StrongClockSyncSnowflakeId.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-id/src/main/java/com/ouyunc/id/config/StrongClockSyncSnowflakeId.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/AbstractMessageServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/AbstractMessageServer.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -48,7 +51,6 @@
         <option name="userSettingsFile" value="C:\Program Files\apache-maven-3.6.3\conf\ali-settings.xml" />
       </MavenGeneralSettings>
     </option>
-    <option name="explicitlyEnabledProfiles" value="native" />
   </component>
   <component name="MavenRunner">
     <option name="skipTests" value="true" />
@@ -57,7 +59,7 @@
   &quot;associatedIndex&quot;: 0
 }</component>
   <component name="ProjectId" id="2ufM82eHzwWazomtA8rAeEDAhv6" />
-  <component name="ProjectLevelVcsManager" settingsEditedManually="true">
+  <component name="ProjectLevelVcsManager">
     <ConfirmationsSetting value="2" id="Add" />
   </component>
   <component name="ProjectViewState">
@@ -66,7 +68,7 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
-    "Application.App.executor": "Debug",
+    "Application.App.executor": "Run",
     "Application.ObjectCreationBenchmark.executor": "Debug",
     "Application.SnowflakeUtil.executor": "Debug",
     "Application.StartServer.executor": "Debug",
@@ -87,7 +89,7 @@
     "SONARLINT_PRECOMMIT_ANALYSIS": "true",
     "git-widget-placeholder": "6.5.2",
     "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "D:/workspace/ouyunc-im/docs/6.5.1",
+    "last_opened_file_path": "D:/workspace/ouyunc-im/docs",
     "node.js.detected.package.eslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
     "node.js.selected.package.tslint": "(autodetect)",
@@ -96,7 +98,7 @@
     "project.structure.last.edited": "Libraries",
     "project.structure.proportion": "0.0",
     "project.structure.side.proportion": "0.0",
-    "settings.editor.selected.configurable": "MavenSettings",
+    "settings.editor.selected.configurable": "editor.preferences.inline.completion",
     "vue.rearranger.settings.migration": "true"
   },
   "keyToStringList": {
@@ -113,11 +115,11 @@
       <recent name="com.ouyunc.message.context" />
     </key>
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="D:\workspace\ouyunc-im\docs" />
       <recent name="D:\workspace\ouyunc-im\docs\6.5.1" />
       <recent name="D:\workspace\ouyunc-im\docs\6.5.1\sql" />
       <recent name="D:\workspace\ouyunc-im\docs\6.5.0" />
       <recent name="D:\workspace\ouyunc-im\docs\sql" />
-      <recent name="D:\workspace\ouyunc-im" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="D:\workspace\ouyunc-im\ouyunc-server\src\main\java\com\ouyunc\message\validator" />
