@@ -563,7 +563,9 @@ class Socket {
             return {
                 id: message.getId(),
                 from: message.getFrom(),
+                fromType: message.getFromType(),
                 to: message.getTo(),
+                toType: message.getToType(),
                 contentType: message.getContentType(),
                 content: message.getContent(),
                 at: message.getAtList(),

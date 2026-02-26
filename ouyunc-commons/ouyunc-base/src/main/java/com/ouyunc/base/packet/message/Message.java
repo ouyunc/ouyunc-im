@@ -30,43 +30,56 @@ public class Message implements Serializable, Cloneable {
 
 
     /**
-     * 接收者，唯一标识
+     * 发送者类型
      */
     @Tag(3)
+    private int fromType;
+
+
+    /**
+     * 接收者，唯一标识
+     */
+    @Tag(4)
     private String to;
+
+    /**
+     * 接收者，唯一标识
+     */
+    @Tag(5)
+    private int toType;
 
 
 
     /**
      * 内容类型，如果登录的内容类型，聊天的消息内容类型（文本，语音，图片，视频...），webrtc 的信令内容类型
      */
-    @Tag(4)
+    @Tag(6)
     private int contentType;
 
 
     /**
      * 具体内容json str
      */
-    @Tag(5)
+    @Tag(7)
     private String content;
 
 
     /**
      * @xxx, 功能的实现，存放群聊的@人员所登录绑定的唯一标识集合
      */
-    @Tag(6)
+    @Tag(8)
     private List<String> at;
 
     /**
      * 引用消息id 集合
      */
-    @Tag(7)
+    @Tag(9)
     private List<String> ref;
 
     /**
      * 客户端扩展/附加字段，客户端自定义数据字段，如：消息发送时间、消息发送者昵称、消息发送者头像、消息发送者设备类型、消息发送者网络类型、消息发送者客户端版本、消息发送者客户端语言、消息发送者客户端平台、消息发送者客户端IP、消息发送者客户端MAC地址、消息发送者客户端操作系统、消息发送者客户端浏览器、消息发送者客户端浏览器版本、消息发送者客户端浏览器语言、消息发送
      */
-    @Tag(8)
+    @Tag(10)
     private String extra;
 
     /**
@@ -75,20 +88,20 @@ public class Message implements Serializable, Cloneable {
      * QoS 1：至少一次，at least once；发送方发送一条消息，接收方至少能接收到一次。即发送方完成消息发送之后，若发送失败，则继续重发直到接受方接收到消息为止。这种模式下可能会导致接收方收到重复的消息。
      * QoS 2：确保一次：exactly once；发送方发送一条消息，接收方一定且只能收到一次。即发送方完成消息发送之后，若发送失败，则继续重发直到接收方接收到消息为止，在这一过程中同时保证接收方不会因为消息重传而收到重复的消息。
      */
-    @Tag(9)
+    @Tag(11)
     private int qos;
 
     /**
      * 客户端消息创建时间戳（毫秒）
      */
-    @Tag(10)
+    @Tag(12)
     private long createTime;
 
 
     /**
      * 元数据，对内访问
      */
-    @Tag(11)
+    @Tag(13)
     private Metadata metadata;
 
 
@@ -174,6 +187,22 @@ public class Message implements Serializable, Cloneable {
         this.id = id;
         this.from = from;
         this.to = to;
+        this.contentType = contentType;
+        this.content = content;
+        this.at = at;
+        this.ref = ref;
+        this.extra = extra;
+        this.qos = qos;
+        this.createTime = createTime;
+        this.metadata = metadata;
+    }
+
+    public Message(String id, String from, int fromType, String to, int toType, int contentType, String content, List<String> at, List<String> ref, String extra, int qos, long createTime, Metadata metadata) {
+        this.id = id;
+        this.from = from;
+        this.fromType = fromType;
+        this.to = to;
+        this.toType = toType;
         this.contentType = contentType;
         this.content = content;
         this.at = at;
@@ -272,6 +301,22 @@ public class Message implements Serializable, Cloneable {
         this.qos = qos;
     }
 
+    public int getFromType() {
+        return fromType;
+    }
+
+    public void setFromType(int fromType) {
+        this.fromType = fromType;
+    }
+
+    public int getToType() {
+        return toType;
+    }
+
+    public void setToType(int toType) {
+        this.toType = toType;
+    }
+
     @Override
     public Message clone() {
         try {
@@ -288,10 +333,15 @@ public class Message implements Serializable, Cloneable {
     @Override
     public String toString() {
         return "Message{" +
-                "from='" + from + '\'' +
+                "  id='" + id + '\'' +
+                ", from='" + from + '\'' +
+                ", fromType='" + fromType + '\'' +
                 ", to='" + to + '\'' +
+                ", toType='" + toType + '\'' +
                 ", contentType=" + contentType +
                 ", content='" + content + '\'' +
+                ", at='" + at + '\'' +
+                ", ref='" + ref + '\'' +
                 ", extra='" + extra + '\'' +
                 ", qos=" + qos +
                 ", createTime=" + createTime +
