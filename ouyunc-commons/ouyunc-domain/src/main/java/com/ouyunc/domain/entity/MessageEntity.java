@@ -97,6 +97,14 @@ public class MessageEntity implements Serializable {
     @TableField("`from`")
     private String from;
 
+
+    /**
+     * 发送者类型
+     */
+    @Field("from_type")
+    @Indexed
+    private int fromType;
+
     /**
      * 接收者
      */
@@ -104,6 +112,14 @@ public class MessageEntity implements Serializable {
     @Indexed
     @TableField("`to`")
     private String to;
+
+
+    /**
+     * 接收者类型
+     */
+    @Field("to_type")
+    @Indexed
+    private int toType;
 
     /**
      * 内容类型
@@ -162,7 +178,9 @@ public class MessageEntity implements Serializable {
         public static final String id = "id";
         public static final String ids = "ids";
         public static final String from = "from";
+        public static final String fromType = "from_type";
         public static final String to = "to";
+        public static final String toType = "to_type";
         public static final String messageId = "message_id";
         public static final String messageType = "message_type";
         public static final String contentType = "content_type";
@@ -199,6 +217,31 @@ public class MessageEntity implements Serializable {
         this.appKey = appKey;
     }
 
+    public MessageEntity(long id, byte protocol, byte protocolVersion, byte deviceType, byte networkType, byte encryptType, byte serializeAlgorithm, byte messageType, byte retain, String clientIp, String messageId, String from, int fromType, String to, int toType, int contentType, String content, int qos, String at, String extra, long clientSendTime, long serverArrivalTime, String appKey) {
+        this.id = id;
+        this.protocol = protocol;
+        this.protocolVersion = protocolVersion;
+        this.deviceType = deviceType;
+        this.networkType = networkType;
+        this.encryptType = encryptType;
+        this.serializeAlgorithm = serializeAlgorithm;
+        this.messageType = messageType;
+        this.retain = retain;
+        this.clientIp = clientIp;
+        this.messageId = messageId;
+        this.from = from;
+        this.fromType = fromType;
+        this.to = to;
+        this.toType = toType;
+        this.contentType = contentType;
+        this.content = content;
+        this.qos = qos;
+        this.at = at;
+        this.extra = extra;
+        this.clientSendTime = clientSendTime;
+        this.serverArrivalTime = serverArrivalTime;
+        this.appKey = appKey;
+    }
 
     public long getId() {
         return id;
@@ -368,5 +411,19 @@ public class MessageEntity implements Serializable {
         this.serverArrivalTime = serverArrivalTime;
     }
 
+    public int getFromType() {
+        return fromType;
+    }
 
+    public void setFromType(int fromType) {
+        this.fromType = fromType;
+    }
+
+    public int getToType() {
+        return toType;
+    }
+
+    public void setToType(int toType) {
+        this.toType = toType;
+    }
 }

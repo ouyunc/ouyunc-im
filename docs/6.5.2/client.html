@@ -55,8 +55,10 @@ socket.onopen = (e) => {
                 id: new Date().getTime(),
                 // 消息发送方唯一标识，建议使用用户id
                 from: '15555555555',
+                fromType: 1,
                 // 消息接收方唯一标识，这里是登录，接受者是服务器，值可以为空串
                 to: '',
+                toType: 1,
                 // 消息内容类型
                 contentType: -2,
                 // 消息内容content 是string 类型
