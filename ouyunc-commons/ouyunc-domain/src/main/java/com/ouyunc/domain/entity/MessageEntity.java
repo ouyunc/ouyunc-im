@@ -147,6 +147,14 @@ public class MessageEntity implements Serializable {
     @TableField("`at`")
     private String at;
 
+
+    /**
+     * 群聊
+     */
+    @Field("ref")
+    @TableField("ref")
+    private String ref;
+
     /**
      * 额外信息
      */
@@ -217,7 +225,7 @@ public class MessageEntity implements Serializable {
         this.appKey = appKey;
     }
 
-    public MessageEntity(long id, byte protocol, byte protocolVersion, byte deviceType, byte networkType, byte encryptType, byte serializeAlgorithm, byte messageType, byte retain, String clientIp, String messageId, String from, int fromType, String to, int toType, int contentType, String content, int qos, String at, String extra, long clientSendTime, long serverArrivalTime, String appKey) {
+    public MessageEntity(long id, byte protocol, byte protocolVersion, byte deviceType, byte networkType, byte encryptType, byte serializeAlgorithm, byte messageType, byte retain, String clientIp, String messageId, String from, int fromType, String to, int toType, int contentType, String content, int qos, String at, String ref, String extra, long clientSendTime, long serverArrivalTime, String appKey) {
         this.id = id;
         this.protocol = protocol;
         this.protocolVersion = protocolVersion;
@@ -237,10 +245,19 @@ public class MessageEntity implements Serializable {
         this.content = content;
         this.qos = qos;
         this.at = at;
+        this.ref = ref;
         this.extra = extra;
         this.clientSendTime = clientSendTime;
         this.serverArrivalTime = serverArrivalTime;
         this.appKey = appKey;
+    }
+
+    public String getRef() {
+        return ref;
+    }
+
+    public void setRef(String ref) {
+        this.ref = ref;
     }
 
     public long getId() {

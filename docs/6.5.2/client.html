@@ -33,7 +33,7 @@ let defaultConfig = {
         }
     };
 var url = 'ws://172.18.62.195:6003/ws'
-var local = 'ws://192.168.1.4:6003/ws'
+var local = 'ws://192.168.1.6:6003/ws'
 const socket = new Socket(local, {
     clientType: 1,
     // 2-json序列化，6-protocolbuf 序列化，需要引入两个protobuf文件，且 属性 Message: proto.com.ouyunc.base.packet.message.Message,需要配置
@@ -51,8 +51,6 @@ socket.onopen = (e) => {
             messageType: -2,
             // 消息
             message: {
-                // 业务唯一id，可使用雪花id
-                id: new Date().getTime(),
                 // 消息发送方唯一标识，建议使用用户id
                 from: '15555555555',
                 fromType: 1,

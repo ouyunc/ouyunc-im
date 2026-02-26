@@ -411,10 +411,13 @@ public enum DefaultRepository implements Repository{
                 new Message(
                         entity.getMessageId(),
                         entity.getFrom(),
+                        entity.getFromType(),
                         entity.getTo(),
+                        entity.getToType(),
                         entity.getContentType(),
                         entity.getContent(),
                         JSON.parseArray(entity.getAt(), String.class),
+                        JSON.parseArray(entity.getRef(), String.class),
                         entity.getExtra(),
                         entity.getQos(),
                         entity.getClientSendTime(),
@@ -433,33 +436,7 @@ public enum DefaultRepository implements Repository{
     private List<Packet> convertToPackets(List<? extends MessageEntity> entities) {
         return entities.stream()
                 .filter(Objects::nonNull)
-                .map(entity -> new Packet(
-                        entity.getProtocol(),
-                        entity.getProtocolVersion(),
-                        entity.getId(),
-                        entity.getDeviceType(),
-                        entity.getNetworkType(),
-                        entity.getEncryptType(),
-                        entity.getSerializeAlgorithm(),
-                        entity.getMessageType(),
-                        entity.getRetain(),
-                        new Message(
-                                entity.getMessageId(),
-                                entity.getFrom(),
-                                entity.getTo(),
-                                entity.getContentType(),
-                                entity.getContent(),
-                                JSON.parseArray(entity.getAt(), String.class),
-                                entity.getExtra(),
-                                entity.getQos(),
-                                entity.getClientSendTime(),
-                                new Metadata(
-                                        entity.getAppKey(),
-                                        entity.getClientIp(),
-                                        entity.getServerArrivalTime()
-                                )
-                        )
-                ))
+                .map(this::convertToPacket)
                 .collect(Collectors.toList());
     }
 
