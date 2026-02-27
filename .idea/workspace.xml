@@ -4,7 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="全局唯一id生成器" />
+    <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="全局唯一id生成器">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -308,15 +310,7 @@
       <workItem from="1769942606928" duration="1181000" />
       <workItem from="1771228335980" duration="618000" />
       <workItem from="1772105836351" duration="6366000" />
-      <workItem from="1772194503466" duration="568000" />
-    </task>
-    <task id="LOCAL-00114" summary="v6.5.1  保存最后一条消息 为会话">
-      <option name="closed" value="true" />
-      <created>1759483016862</created>
-      <option name="number" value="00114" />
-      <option name="presentableId" value="LOCAL-00114" />
-      <option name="project" value="LOCAL" />
-      <updated>1759483016862</updated>
+      <workItem from="1772194503466" duration="1417000" />
     </task>
     <task id="LOCAL-00115" summary="v6.5.1  保存最后一条消息 为会话">
       <option name="closed" value="true" />
@@ -702,7 +696,15 @@
       <option name="project" value="LOCAL" />
       <updated>1772108682834</updated>
     </task>
-    <option name="localTasksCounter" value="163" />
+    <task id="LOCAL-00163" summary="全局唯一id生成器">
+      <option name="closed" value="true" />
+      <created>1772195111333</created>
+      <option name="number" value="00163" />
+      <option name="presentableId" value="LOCAL-00163" />
+      <option name="project" value="LOCAL" />
+      <updated>1772195111333</updated>
+    </task>
+    <option name="localTasksCounter" value="164" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
