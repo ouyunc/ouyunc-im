@@ -5,19 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="全局唯一id生成器">
+      <change afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/CustomerServiceMessageProcessor.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/AppEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/AppEntity.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/BlacklistEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/BlacklistEntity.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/FriendEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/FriendEntity.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/GroupEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/GroupEntity.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/GroupUserEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/GroupUserEntity.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MessageWithdrawEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MessageWithdrawEntity.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MongoFriendEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MongoFriendEntity.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MongoGroupEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MongoGroupEntity.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MongoGroupUserEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MongoGroupUserEntity.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MongoUserEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MongoUserEntity.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/SessionMessageOffsetEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/SessionMessageOffsetEntity.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/UserEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/UserEntity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/6.5.2/sql/ouyunc_message.sql" beforeDir="false" afterPath="$PROJECT_DIR$/docs/6.5.2/sql/ouyunc_message.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/enums/MessageTypeEnum.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/enums/MessageTypeEnum.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -324,14 +315,7 @@
       <workItem from="1772105836351" duration="6366000" />
       <workItem from="1772194503466" duration="2451000" />
       <workItem from="1772199944314" duration="2147000" />
-    </task>
-    <task id="LOCAL-00116" summary="v6.5.1  整理缓存key">
-      <option name="closed" value="true" />
-      <created>1759632788491</created>
-      <option name="number" value="00116" />
-      <option name="presentableId" value="LOCAL-00116" />
-      <option name="project" value="LOCAL" />
-      <updated>1759632788492</updated>
+      <workItem from="1772335879275" duration="3335000" />
     </task>
     <task id="LOCAL-00117" summary="v6.5.1  整理缓存key">
       <option name="closed" value="true" />
@@ -717,7 +701,15 @@
       <option name="project" value="LOCAL" />
       <updated>1772196157480</updated>
     </task>
-    <option name="localTasksCounter" value="165" />
+    <task id="LOCAL-00165" summary="全局唯一id生成器">
+      <option name="closed" value="true" />
+      <created>1772335912107</created>
+      <option name="number" value="00165" />
+      <option name="presentableId" value="LOCAL-00165" />
+      <option name="project" value="LOCAL" />
+      <updated>1772335912108</updated>
+    </task>
+    <option name="localTasksCounter" value="166" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
