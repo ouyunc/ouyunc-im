@@ -20,6 +20,7 @@ ouyunc:
         # nameServers:
         #   - 127.0.0.1:9876
 
+      # 发送：RocketFactory.ROCKET_TEMPLATE.instance() 获取 RocketMQTemplate（与 KafkaTemplate 用法一致）
       # 消费者配置（用于 RocketConsumerBuilder 构建 DefaultMQPushConsumer）
       consumer:
         consumerGroup: ouyunc-consumer-group

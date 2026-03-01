@@ -15,7 +15,7 @@ public class RocketProperties {
     /**
      * Name Server 地址列表，多个用逗号或分号隔开，与 Kafka bootstrapServers 风格一致
      */
-    private List<String> nameServers = new ArrayList<>();
+    private final List<String> nameServers = new ArrayList<>();
 
     /**
      * 生产者属性
@@ -26,6 +26,19 @@ public class RocketProperties {
      * 消费者属性
      */
     private Consumer consumer;
+
+    /**
+     * 消息字符集（可选），用于 RocketMQTemplate 序列化/反序列化，默认不设置时模板使用 UTF-8
+     */
+    private String charset;
+
+    public String getCharset() {
+        return charset;
+    }
+
+    public void setCharset(String charset) {
+        this.charset = charset;
+    }
 
     public List<String> getNameServers() {
         return nameServers;
@@ -113,7 +126,7 @@ public class RocketProperties {
         /**
          * Name Server 地址（可覆盖全局），多个用分号隔开
          */
-        private List<String> nameServers = new ArrayList<>();
+        private final List<String> nameServers = new ArrayList<>();
 
         public String getProducerGroup() {
             return producerGroup;
@@ -239,7 +252,7 @@ public class RocketProperties {
         /**
          * Name Server 地址（可覆盖全局）
          */
-        private List<String> nameServers = new ArrayList<>();
+        private final List<String> nameServers = new ArrayList<>();
 
         public String getConsumerGroup() {
             return consumerGroup;

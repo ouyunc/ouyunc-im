@@ -10,7 +10,7 @@
     </parent>
     <artifactId>ouyunc-mq-rocket</artifactId>
     <version>${revision}</version>
-    <description>rocketmq消息队列</description>
+    <description>RocketMQ 消息队列（基于 rocketmq-spring-boot-starter，发送使用 RocketMQTemplate）</description>
 
     <dependencies>
         <dependency>
@@ -21,7 +21,7 @@
         </dependency>
         <dependency>
             <groupId>org.apache.rocketmq</groupId>
-            <artifactId>rocketmq-client</artifactId>
+            <artifactId>rocketmq-spring-boot-starter</artifactId>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
