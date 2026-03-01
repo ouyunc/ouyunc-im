@@ -28,7 +28,7 @@ public class SessionMessageOffsetEntity implements Serializable {
      *  发送方ID（雪花ID）
      */
     @TableField("`from`")
-    private Long from;
+    private String from;
 
     /**
      * 发送方设备类型：具体看 DeviceType,也有可能是用户自定义的
@@ -41,7 +41,7 @@ public class SessionMessageOffsetEntity implements Serializable {
      * 对应MySQL中的to字段索引
      */
     @TableField("`to`")
-    private Long to;
+    private String to;
 
     /**
      *  会话类型：1-一对一，2-群聊, 具体看IdentityType
@@ -56,7 +56,7 @@ public class SessionMessageOffsetEntity implements Serializable {
 
     public SessionMessageOffsetEntity() {}
 
-    public SessionMessageOffsetEntity(Long from, Byte deviceType, Long to, Integer type, Long sessionMessageOffset) {
+    public SessionMessageOffsetEntity(String from, Byte deviceType, String to, Integer type, Long sessionMessageOffset) {
         this.from = from;
         this.deviceType = deviceType;
         this.to = to;
@@ -80,19 +80,19 @@ public class SessionMessageOffsetEntity implements Serializable {
         this.deviceType = deviceType;
     }
 
-    public Long getFrom() {
+    public String getFrom() {
         return from;
     }
 
-    public void setFrom(Long from) {
+    public void setFrom(String from) {
         this.from = from;
     }
 
-    public Long getTo() {
+    public String getTo() {
         return to;
     }
 
-    public void setTo(Long to) {
+    public void setTo(String to) {
         this.to = to;
     }
 

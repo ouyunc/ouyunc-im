@@ -4,6 +4,10 @@ package com.ouyunc.domain.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -14,6 +18,7 @@ import java.time.LocalDateTime;
  *
  * @TableName ouyunc_im_user
  */
+@Document(collection = "ouyunc_im_user")
 @TableName(value = "ouyunc_im_user")
 public class UserEntity implements Serializable {
     @Serial
@@ -21,114 +26,179 @@ public class UserEntity implements Serializable {
     /**
      * 主键id
      */
+    @Id
     @TableId(type = IdType.ASSIGN_ID)
-    private Long id;
+    private String id;
+
 
     /**
      * 开放id
      */
+    @Indexed
+    @Field("open_id")
     private String openId;
 
     /**
      * 用户编号
      */
+    @Indexed
+    @Field("code")
     private String code;
 
     /**
      * 用户名称（对应于身份证）
      */
+    @Field("username")
     private String username;
 
     /**
      * 用户名密码
      */
+    @Field("password")
     private String password;
 
     /**
      * 用户别名
      */
+    @Field("nick_name")
     private String nickName;
 
     /**
      * 用户头像url
      */
+    @Field("avatar")
     private String avatar;
 
     /**
      * 座右铭/格言
      */
+    @Field("motto")
     private String motto;
 
     /**
      * 年龄
      */
+    @Field("age")
     private Integer age;
 
     /**
      * 性别：0-女，1-男
      */
+    @Field("sex")
     private Integer sex;
 
     /**
      * 邮箱
      */
+    @Indexed
+    @Field("email")
     private String email;
 
     /**
      * 手机号（国内）
      */
+    @Indexed
+    @Field("phone_num")
     private String phoneNum;
 
     /**
      * 身份证号码
      */
+    @Indexed
+    @Field("id_card_no")
     private String idCardNo;
 
     /**
      * 群邀请的应答策略：0-需要验证，1-自动通过
      */
+    @Field("group_invite_policy")
     private Integer groupInvitePolicy;
 
     /**
      * 好友添加的应答策略：0-需要验证，1-自动通过
      */
+    @Field("friend_join_policy")
     private Integer friendJoinPolicy;
 
     /**
      * 用户状态：1-正常，2-异常（被平台封禁）
      */
+    @Field("status")
     private Integer status;
 
     /**
      * 应用appKey
      */
+    @Indexed
+    @Field("app_key")
     private String appKey;
 
     /**
      * 是否是机器人：0-不是，1-是
      */
+    @Field("robot")
     private Integer robot;
 
     /**
      * 创建时间
      */
+    @Field("create_time")
     private LocalDateTime createTime;
 
     /**
      * 修改时间
      */
+    @Field("update_time")
     private LocalDateTime updateTime;
 
     /**
      * 是否删除，1-已删除，0-未删除
      */
+    @Field("deleted")
     private Integer deleted;
 
-    public Long getId() {
+
+
+    public static final class Fields {
+        public static final String id = "id";
+        public static final String code = "code";
+        public static final String openId = "open_id";
+        public static final String appKey = "app_key";
+        public static final String deleted = "deleted";
+    }
+
+    public UserEntity() {
+    }
+
+    public UserEntity(String id, String openId, String code, String username, String password, String nickName, String avatar, String motto, Integer age, Integer sex, String email, String phoneNum, String idCardNo, Integer groupInvitePolicy, Integer friendJoinPolicy, Integer status, String appKey, Integer robot, LocalDateTime createTime, LocalDateTime updateTime, Integer deleted) {
+        this.id = id;
+        this.openId = openId;
+        this.code = code;
+        this.username = username;
+        this.password = password;
+        this.nickName = nickName;
+        this.avatar = avatar;
+        this.motto = motto;
+        this.age = age;
+        this.sex = sex;
+        this.email = email;
+        this.phoneNum = phoneNum;
+        this.idCardNo = idCardNo;
+        this.groupInvitePolicy = groupInvitePolicy;
+        this.friendJoinPolicy = friendJoinPolicy;
+        this.status = status;
+        this.appKey = appKey;
+        this.robot = robot;
+        this.createTime = createTime;
+        this.updateTime = updateTime;
+        this.deleted = deleted;
+    }
+
+    public String getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id = id;
     }
 

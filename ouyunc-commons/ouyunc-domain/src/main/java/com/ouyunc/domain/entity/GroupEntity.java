@@ -4,6 +4,10 @@ package com.ouyunc.domain.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -13,6 +17,7 @@ import java.time.LocalDateTime;
 * 群信息表
 * @TableName ouyunc_im_group
 */
+@Document(collection = "ouyunc_im_group")
 @TableName("ouyunc_im_group")
 public class GroupEntity implements Serializable {
     @Serial
@@ -20,67 +25,80 @@ public class GroupEntity implements Serializable {
     /**
     * 主键id
     */
+    @Id
     @TableId(type = IdType.ASSIGN_ID)
-    private Long id;
+    private String id;
+
 
     /**
-    * 群组号码
-    */
+     * 群组号码
+     */
+    @Indexed
+    @Field("group_code")
     private String groupCode;
 
     /**
-    * 群组名称
-    */
+     * 群组名称
+     */
+    @Field("group_name")
     private String groupName;
 
     /**
-    * 群组头像
-    */
+     * 群组头像
+     */
+    @Field("group_avatar")
     private String groupAvatar;
 
     /**
-    * 群组描述
-    */
+     * 群组描述
+     */
+    @Field("group_description")
     private String groupDescription;
 
     /**
-    * 群组公告
-    */
+     * 群组公告
+     */
+    @Field("group_announcement")
     private String groupAnnouncement;
 
     /**
-    * 群加入策略：0-加群需要验证，1-加群自动同意
-    */
+     * 群加入策略：0-加群需要验证，1-加群自动同意
+     */
+    @Field("group_join_policy")
     private Integer groupJoinPolicy;
 
     /**
-    * 群状态，1-正常，2-异常（被平台封禁）
-    */
+     * 群状态，1-正常，2-异常（被平台封禁）
+     */
     private Integer status;
 
     /**
-    * 是否全体禁言（群主和管理员除外），0-不禁言，1-禁言
-    */
+     * 是否全体禁言（群主和管理员除外），0-不禁言，1-禁言
+     */
     private Integer silence;
 
     /**
-    * 应用appKey
-    */
+     * 应用appKey
+     */
+    @Indexed
+    @Field("app_key")
     private String appKey;
 
     /**
-    * 创建时间
-    */
+     * 创建时间
+     */
+    @Field("create_time")
     private LocalDateTime createTime;
 
     /**
-    * 修改时间
-    */
+     * 修改时间
+     */
+    @Field("update_time")
     private LocalDateTime updateTime;
 
     /**
-    * 是否删除：1-已删除，0-未删除
-    */
+     * 是否删除：1-已删除，0-未删除
+     */
     private Integer deleted;
 
     public static final class Fields {
@@ -89,11 +107,31 @@ public class GroupEntity implements Serializable {
         public static final String appKey = "app_key";
         public static final String deleted = "deleted";
     }
-    public Long getId() {
+
+    public GroupEntity() {
+    }
+
+    public GroupEntity(String id, String groupCode, String groupName, String groupAvatar, String groupDescription, String groupAnnouncement, Integer groupJoinPolicy, Integer status, Integer silence, String appKey, LocalDateTime createTime, LocalDateTime updateTime, Integer deleted) {
+        this.id = id;
+        this.groupCode = groupCode;
+        this.groupName = groupName;
+        this.groupAvatar = groupAvatar;
+        this.groupDescription = groupDescription;
+        this.groupAnnouncement = groupAnnouncement;
+        this.groupJoinPolicy = groupJoinPolicy;
+        this.status = status;
+        this.silence = silence;
+        this.appKey = appKey;
+        this.createTime = createTime;
+        this.updateTime = updateTime;
+        this.deleted = deleted;
+    }
+
+    public String getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id = id;
     }
 

@@ -4,6 +4,11 @@ package com.ouyunc.domain.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.CompoundIndexes;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -14,6 +19,10 @@ import java.util.Objects;
 * 好友表
 * @TableName ouyunc_im_friend
 */
+@Document(collection = "ouyunc_im_friend")
+@CompoundIndexes({
+        @CompoundIndex(name = "user_friend_idx", def = "{'user_id': 1, 'friend_user_id': 1}", unique = true)
+})
 @TableName("ouyunc_im_friend")
 public class FriendEntity implements Serializable {
     @Serial
@@ -21,32 +30,38 @@ public class FriendEntity implements Serializable {
     /**
     * 主键id
     */
+    @Id
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 
-    /**
-    * 用户id
-    */
-    private Long userId;
 
     /**
-    * 好友用户code
-    */
+     * 用户id
+     */
+    @Field("user_id")
+    private String userId;
+
+    /**
+     * 好友用户code
+     */
+    @Field("friend_user_code")
     private String friendUserCode;
 
     /**
-    * 好友用户id
-    */
-    private Long friendUserId;
+     * 好友用户id
+     */
+    @Field("friend_user_id")
+    private String friendUserId;
 
     /**
-    * 好友昵称
-    */
+     * 好友昵称
+     */
+    @Field("friend_nick_name")
     private String friendNickName;
 
     /**
-    * 是否屏蔽该好友，0-未屏蔽，1-屏蔽
-    */
+     * 是否屏蔽该好友，0-未屏蔽，1-屏蔽
+     */
     private Integer shield;
 
     /**
@@ -63,19 +78,21 @@ public class FriendEntity implements Serializable {
     /**
      * 成为好友的时间戳， 毫秒
      */
+    @Field("join_time")
     private Long joinTime;
 
 
     /**
-    * 创建时间
-    */
+     * 创建时间
+     */
+    @Field("create_time")
     private LocalDateTime createTime;
 
     /**
-    * 修改时间
-    */
+     * 修改时间
+     */
+    @Field("update_time")
     private LocalDateTime updateTime;
-
 
     public static final class Fields {
         public static final String id = "id";
@@ -92,7 +109,7 @@ public class FriendEntity implements Serializable {
     public FriendEntity() {
     }
 
-    public FriendEntity(Long id, Long userId, Long friendUserId, String friendUserCode, String friendNickName, Integer shield,  Long joinTime, LocalDateTime createTime, LocalDateTime updateTime) {
+    public FriendEntity(Long id, String userId, String friendUserId, String friendUserCode, String friendNickName, Integer shield,  Long joinTime, LocalDateTime createTime, LocalDateTime updateTime) {
         this.id = id;
         this.userId = userId;
         this.friendUserId = friendUserId;
@@ -104,7 +121,7 @@ public class FriendEntity implements Serializable {
         this.updateTime = updateTime;
     }
 
-    public FriendEntity(Long id, Long userId, Long friendUserId, String friendUserCode, String friendNickName, Integer shield, Integer way, Integer channel, Long joinTime, LocalDateTime createTime, LocalDateTime updateTime) {
+    public FriendEntity(Long id, String userId, String friendUserId, String friendUserCode, String friendNickName, Integer shield, Integer way, Integer channel, Long joinTime, LocalDateTime createTime, LocalDateTime updateTime) {
         this.id = id;
         this.userId = userId;
         this.friendUserId = friendUserId;
@@ -159,19 +176,19 @@ public class FriendEntity implements Serializable {
         this.joinTime = joinTime;
     }
 
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 
-    public Long getFriendUserId() {
+    public String getFriendUserId() {
         return friendUserId;
     }
 
-    public void setFriendUserId(Long friendUserId) {
+    public void setFriendUserId(String friendUserId) {
         this.friendUserId = friendUserId;
     }
 

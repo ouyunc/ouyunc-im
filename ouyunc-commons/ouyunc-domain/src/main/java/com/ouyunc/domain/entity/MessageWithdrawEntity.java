@@ -41,7 +41,7 @@ public class MessageWithdrawEntity implements Serializable {
     * 撤回人id
     */
     @Field("withdraw_user_id")
-    private Long withdrawUserId;
+    private String withdrawUserId;
 
     /**
      * 发送方设备类型：具体看 DeviceType,也有可能是用户自定义的
@@ -61,7 +61,7 @@ public class MessageWithdrawEntity implements Serializable {
     }
 
 
-    public MessageWithdrawEntity(Long id, Long withdrawnTime, Long withdrawUserId, Byte deviceType) {
+    public MessageWithdrawEntity(Long id, Long withdrawnTime, String withdrawUserId, Byte deviceType) {
         this.id = id;
         this.withdrawnTime = withdrawnTime;
         this.withdrawUserId = withdrawUserId;
@@ -77,7 +77,7 @@ public class MessageWithdrawEntity implements Serializable {
     }
 
 
-    private void setWithdrawUserId(Long withdrawUserId){
+    private void setWithdrawUserId(String withdrawUserId){
     this.withdrawUserId = withdrawUserId;
     }
 
@@ -99,7 +99,7 @@ public class MessageWithdrawEntity implements Serializable {
     }
 
 
-    private Long getWithdrawUserId(){
+    private String getWithdrawUserId(){
     return this.withdrawUserId;
     }
 

@@ -26,12 +26,12 @@ public class BlacklistEntity implements Serializable {
     * 群或客户端唯一标识
     */
 
-    private Long identity;
+    private String identity;
     /**
     * 客户端id（被加入identity 黑名单）
     */
 
-    private Long userId;
+    private String userId;
     /**
     * 唯一标识类型，1-客户端唯一标识（用户），2-群唯一标识
     */
@@ -59,19 +59,19 @@ public class BlacklistEntity implements Serializable {
         this.id = id;
     }
 
-    public Long getIdentity() {
+    public String getIdentity() {
         return identity;
     }
 
-    public void setIdentity(Long identity) {
+    public void setIdentity(String identity) {
         this.identity = identity;
     }
 
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 

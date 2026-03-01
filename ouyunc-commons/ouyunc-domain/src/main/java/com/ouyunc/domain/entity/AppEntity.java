@@ -41,7 +41,7 @@ public class AppEntity implements Serializable {
     /**
     * 用户id，一般是企业的账户
     */
-    private Long userId;
+    private String userId;
 
     /**
     * IM 最大连接数 大于等于-1： -1 - 无限制，
@@ -100,11 +100,11 @@ public class AppEntity implements Serializable {
         this.appName = appName;
     }
 
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 
