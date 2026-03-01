@@ -330,3 +330,23 @@ ouyunc:
 #        pollTimeout: 1500                                 #轮询消费者时使用的超时（以毫秒为单位）
 #        ackMode: MANUAL_IMMEDIATE                         #当enable.auto.commit的值设置为false时，该值会生效；为true时不会生效
 
+    # RocketMQ 配置（与 Kafka 并列，按需启用）
+    # 单节点：nameServers 配一个；集群：nameServers 配多个，客户端自动故障切换，详见 docs/conf/rocket-config-cluster.yml
+#    rocket:
+#      nameServers:                                        # 单节点一个；集群多个（如 rocketmq-ns1:9876, rocketmq-ns2:9876）
+#        - 127.0.0.1:9876
+#      producer:
+#        producerGroup: ouyunc-producer-group
+#        sendMsgTimeout: 3000
+#        compressMsgBodyOverHowmuch: 4096
+#        retryTimesWhenSendFailed: 2
+#        retryTimesWhenSendAsyncFailed: 2
+#        maxMessageSize: 4194304
+#      consumer:
+#        consumerGroup: ouyunc-consumer-group
+#        consumeThreadMin: 20
+#        consumeThreadMax: 64
+#        messageModel: CLUSTERING
+#        consumeFromWhere: CONSUME_FROM_LAST_OFFSET
+#        consumeMessageBatchMaxSize: 1
+

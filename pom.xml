@@ -75,6 +75,8 @@
     <influxdb.version>7.2.0</influxdb.version>
     <!--kafka-->
     <kafka.version>3.3.1</kafka.version>
+    <!--rocketmq-->
+    <rocketmq.version>5.2.0</rocketmq.version>
     <!--disruptor-->
     <disruptor.version>4.0.0</disruptor.version>
     <cosid.version>3.0.2</cosid.version>
@@ -389,6 +391,13 @@
         <groupId>org.springframework.kafka</groupId>
         <artifactId>spring-kafka</artifactId>
         <version>${kafka.version}</version>
+      </dependency>
+      <!--rocketmq-->
+      <!-- https://mvnrepository.com/artifact/org.apache.rocketmq/rocketmq-client -->
+      <dependency>
+        <groupId>org.apache.rocketmq</groupId>
+        <artifactId>rocketmq-client</artifactId>
+        <version>${rocketmq.version}</version>
       </dependency>
       <!-- HikariCP -->
       <dependency>

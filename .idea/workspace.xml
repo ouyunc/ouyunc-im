@@ -5,10 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="全局唯一id生成器">
-      <change afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/CustomerServiceMessageProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/6.5.2/sql/ouyunc_message.sql" beforeDir="false" afterPath="$PROJECT_DIR$/docs/6.5.2/sql/ouyunc_message.sql" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/enums/MessageTypeEnum.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/enums/MessageTypeEnum.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/PropertiesConfigConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/PropertiesConfigConstant.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/ouyunc-mq-rocket/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/ouyunc-mq-rocket/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/ouyunc-mq-rocket/src/main/java/com/ouyunc/Main.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -315,15 +316,7 @@
       <workItem from="1772105836351" duration="6366000" />
       <workItem from="1772194503466" duration="2451000" />
       <workItem from="1772199944314" duration="2147000" />
-      <workItem from="1772335879275" duration="3335000" />
-    </task>
-    <task id="LOCAL-00117" summary="v6.5.1  整理缓存key">
-      <option name="closed" value="true" />
-      <created>1759635167746</created>
-      <option name="number" value="00117" />
-      <option name="presentableId" value="LOCAL-00117" />
-      <option name="project" value="LOCAL" />
-      <updated>1759635167746</updated>
+      <workItem from="1772335879275" duration="4496000" />
     </task>
     <task id="LOCAL-00118" summary="v6.5.1  整理缓存key">
       <option name="closed" value="true" />
@@ -709,7 +702,15 @@
       <option name="project" value="LOCAL" />
       <updated>1772335912108</updated>
     </task>
-    <option name="localTasksCounter" value="166" />
+    <task id="LOCAL-00166" summary="全局唯一id生成器">
+      <option name="closed" value="true" />
+      <created>1772340544454</created>
+      <option name="number" value="00166" />
+      <option name="presentableId" value="LOCAL-00166" />
+      <option name="project" value="LOCAL" />
+      <updated>1772340544454</updated>
+    </task>
+    <option name="localTasksCounter" value="167" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

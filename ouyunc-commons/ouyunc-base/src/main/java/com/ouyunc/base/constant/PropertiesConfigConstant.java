@@ -34,4 +34,9 @@ public class PropertiesConfigConstant {
      */
     public static final String  KAFKA_CONFIG_PROPERTIES_PREFIX = "ouyunc.mq.kafka";
 
+    /**
+     * mq rocket 配置属性前缀
+     */
+    public static final String ROCKET_CONFIG_PROPERTIES_PREFIX = "ouyunc.mq.rocket";
+
 }

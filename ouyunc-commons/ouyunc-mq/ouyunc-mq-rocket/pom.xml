@@ -12,5 +12,20 @@
     <version>${revision}</version>
     <description>rocketmq消息队列</description>
 
-
+    <dependencies>
+        <dependency>
+            <groupId>com.ouyunc</groupId>
+            <artifactId>ouyunc-base</artifactId>
+            <version>${revision}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.rocketmq</groupId>
+            <artifactId>rocketmq-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-collections4</artifactId>
+        </dependency>
+    </dependencies>
 </project>
