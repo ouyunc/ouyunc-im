@@ -18,6 +18,7 @@ import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.convert.PacketConverter;
 import com.ouyunc.message.handler.*;
 import com.ouyunc.message.helper.MessageHelper;
+import com.ouyunc.message.http.HttpRequestDispatcher;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
@@ -167,9 +168,10 @@ public enum NativePacketProtocol implements PacketProtocol {
         @Override
         public void doDispatcher(ChannelHandlerContext ctx,  Object msg) {
             ctx.channel().attr(protocolAttrKey).set(this);
-            // todo 可参考spring 的 DispatcherServlet 来实现http的处理
+            if (msg instanceof FullHttpRequest request) {
+                HttpRequestDispatcher.getInstance().dispatch(ctx, request);
+            }
         }
-
     },
 
 

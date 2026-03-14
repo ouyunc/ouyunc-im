@@ -47,6 +47,11 @@ public class MessageServerProperties extends MessageProperties {
     @Key("ouyunc.message.interceptor.scan-package-paths")
     List<String> messageInterceptorScanPackagePaths;
 
+    /**
+     * HTTP 控制器/Handler 扫描包路径，未配置时默认扫描 com.ouyunc.message.http
+     */
+    @Key("ouyunc.message.http.processor-scan-package-paths")
+    List<String> httpProcessorScanPackagePaths;
 
     /**
      * boss 线程组个数,默认与netty保持一致
@@ -336,6 +341,14 @@ public class MessageServerProperties extends MessageProperties {
 
     public void setMessageInterceptorScanPackagePaths(List<String> messageInterceptorScanPackagePaths) {
         this.messageInterceptorScanPackagePaths = messageInterceptorScanPackagePaths;
+    }
+
+    public List<String> getHttpProcessorScanPackagePaths() {
+        return httpProcessorScanPackagePaths;
+    }
+
+    public void setHttpProcessorScanPackagePaths(List<String> httpProcessorScanPackagePaths) {
+        this.httpProcessorScanPackagePaths = httpProcessorScanPackagePaths;
     }
 
     public long getQosRetryInitialDelay() {
@@ -750,8 +763,9 @@ public class MessageServerProperties extends MessageProperties {
                 "\n, messageListenersScanPackagePaths=" + messageListenersScanPackagePaths +
                 "\n, messageProcessorScanPackagePaths=" + messageProcessorScanPackagePaths +
                 "\n, messageProtocolProcessorScanPackagePaths=" + messageProtocolProcessorScanPackagePaths +
-                "\n, messageInterceptorEnable=" + messageInterceptorEnable +
+                "\n, httpProcessorScanPackagePaths=" + httpProcessorScanPackagePaths +
                 "\n, messageInterceptorScanPackagePaths=" + messageInterceptorScanPackagePaths +
+                "\n, messageInterceptorEnable=" + messageInterceptorEnable +
                 "\n, bossThreads=" + bossThreads +
                 "\n, bossOptionConnectTimeoutMillis=" + bossOptionConnectTimeoutMillis +
                 "\n, bossOptionSoBacklog=" + bossOptionSoBacklog +

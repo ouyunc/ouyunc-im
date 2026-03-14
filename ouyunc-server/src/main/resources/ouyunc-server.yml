@@ -102,6 +102,11 @@ ouyunc:
       scan-package-paths:
         - com.ouyunc.message.intercept
 
+    # HTTP 控制器/Handler 扫描包路径，未配置时默认扫描 com.ouyunc.message.http
+    http:
+      processor-scan-package-paths:
+        - com.ouyunc.message.processor.http
+
     # 线程池配置（精简版，仅保留必要参数）
     thread-pool:
       # 虚拟线程池（I/O密集型任务，无需配置大小参数）

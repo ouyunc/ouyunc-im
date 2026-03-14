@@ -81,6 +81,17 @@ public class ClassScannerUtil implements Serializable {
 		return new ClassScannerUtil(packageName, clazz -> superClass.isAssignableFrom(clazz) && !superClass.equals(clazz)).scan();
 	}
 
+	/**
+	 * 扫描指定包路径下满足过滤条件的所有类
+	 *
+	 * @param packageName 包路径
+	 * @param classFilter  类过滤器，返回 true 的类会被加入结果
+	 * @return 类集合
+	 */
+	public static Set<Class<?>> scanPackage(String packageName, Function<Class<?>, Boolean> classFilter) throws IOException {
+		return new ClassScannerUtil(packageName, classFilter != null ? classFilter : clazz -> true).scan();
+	}
+
 
 
 	/**
