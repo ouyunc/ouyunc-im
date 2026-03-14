@@ -1,7 +1,6 @@
 package com.ouyunc.message.handler;
 
 import com.ouyunc.base.constant.MessageConstant;
-import com.ouyunc.base.utils.MapUtil;
 import com.ouyunc.core.codec.MqttWebSocketCodec;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.protocol.NativePacketProtocol;
@@ -18,7 +17,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.URI;
-import java.util.Map;
 
 
 /**
@@ -42,7 +40,6 @@ public class HttpProtocolDispatcherHandler extends SimpleChannelInboundHandler<O
             log.info("当前请求路径uri：{}", uriStr);
             URI uri = new URI(uriStr);
             //封装参数传
-            Map<String, Object> queryParamsMap = MapUtil.wrapParams2Map(uri.getQuery());
             // 判断是否是websocket 的101 升级请求，如果是则升级为websocket协议
             if (isUpgradeToWebSocket(request)) {
                 //重设uri,去除请求param参数,否则ws会报错
@@ -59,15 +56,15 @@ public class HttpProtocolDispatcherHandler extends SimpleChannelInboundHandler<O
                             .addLast(MessageConstant.WS_SERVER_PROTOCOL_HANDLER, new WebSocketServerProtocolHandler(MessageServerContext.serverProperties().getWebsocketPath(), MessageConstant.MQTT_WEBSOCKET_SUB_PROTOCOLS, true, Integer.MAX_VALUE))
                             // mqtt websocket 编解码器
                             .addLast(MessageConstant.MQTT_WEBSOCKET_CODEC_HANDLER, new MqttWebSocketCodec());
-                    MessageServerContext.findProtocol(NativePacketProtocol.MQTT.getProtocol(), NativePacketProtocol.MQTT.getProtocolVersion()).doDispatcher(ctx, queryParamsMap);
+                    MessageServerContext.findProtocol(NativePacketProtocol.MQTT.getProtocol(), NativePacketProtocol.MQTT.getProtocolVersion()).doDispatcher(ctx, request);
                 } else {
-                    MessageServerContext.findProtocol(NativePacketProtocol.WS.getProtocol(), NativePacketProtocol.WS.getProtocolVersion()).doDispatcher(ctx, queryParamsMap);
+                    MessageServerContext.findProtocol(NativePacketProtocol.WS.getProtocol(), NativePacketProtocol.WS.getProtocolVersion()).doDispatcher(ctx, request);
                 }
                 //如果请求是一次升级了的 WebSocket 请求，则递增引用计数器（retain）并且将它传递给在 ChannelPipeline 中的下个 ChannelInboundHandler
                 ctx.fireChannelRead(request.retain());
             } else {
                 // 处理http 通用请求
-                MessageServerContext.findProtocol(NativePacketProtocol.HTTP.getProtocol(), NativePacketProtocol.HTTP.getProtocolVersion()).doDispatcher(ctx, queryParamsMap);
+                MessageServerContext.findProtocol(NativePacketProtocol.HTTP.getProtocol(), NativePacketProtocol.HTTP.getProtocolVersion()).doDispatcher(ctx, request);
             }
         }
         // websocket消息，直接传到下面一个handler去处理

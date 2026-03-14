@@ -11,6 +11,7 @@ import com.ouyunc.base.model.SendCallback;
 import com.ouyunc.base.model.SendResult;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.utils.ChannelAttrUtil;
+import com.ouyunc.base.utils.HttpUtil;
 import com.ouyunc.core.listener.event.SendFailEvent;
 import com.ouyunc.message.cluster.client.pool.MessageClientPool;
 import com.ouyunc.message.context.MessageServerContext;
@@ -22,6 +23,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.pool.ChannelPool;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.websocketx.WebSocketFrameAggregator;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionFilter;
@@ -40,6 +42,8 @@ import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Map;
 
 /**
@@ -67,53 +71,69 @@ public enum NativePacketProtocol implements PacketProtocol {
             }
         };
         @Override
-        public void doDispatcher(ChannelHandlerContext ctx, Map<String, Object> queryParamsMap) {
-            // 这里可以根据业务提前做appKey 的验证和appKey下连接数的统计，直接从queryParamsMap 这里面取值即可
-            // 如果这里提前做校验签名了，登录那边可校验可不校验；为什么在这里提前做签名验证？因为读写空闲的开启默认在登录成功后才开启，如果外部客户端或非法客户端通过ws协议只连接不做登录，那么就是无用的连接且会占用连接资源，所以这里提前做签名验证，如果签名验证失败，直接断开连接，这样连接资源会减少，同时不会占用连接资源；fast-fail
-            // appKey的连接数统计，为什么在这里做链接数的统计？因为为了防止签名验证通过后，外部或非法客户端不发送登录信息，则无法真实统计该客户端的真实连接数，无法对外部客户端提前做连接限制，可能造成非法连接过多，从而造成资源浪费，增加服务器压力；
-            if (!preVerifySignature(queryParamsMap) || !preVerifyAppKeyConnects(queryParamsMap)) {
-                log.error("客户端连接失败,原因：签名验证失败或验证统计AppKey连接数超过允许的最大值！");
-                // 关闭连接
-                ctx.close();
+        public void doDispatcher(ChannelHandlerContext ctx, Object msg) {
+            if (msg instanceof FullHttpRequest request) {
+                // 获取真实ip 并设置
+                String uriStr = request.uri();
+                log.info("当前请求路径uri：{}", uriStr);
+                try {
+                    URI uri = new URI(uriStr);
+                    //封装参数传
+                    Map<String, Object> queryParamsMap = HttpUtil.wrapParams2Map(uri.getQuery());
+                    // 这里可以根据业务提前做appKey 的验证和appKey下连接数的统计，直接从queryParamsMap 这里面取值即可
+                    // 如果这里提前做校验签名了，登录那边可校验可不校验；为什么在这里提前做签名验证？因为读写空闲的开启默认在登录成功后才开启，如果外部客户端或非法客户端通过ws协议只连接不做登录，那么就是无用的连接且会占用连接资源，所以这里提前做签名验证，如果签名验证失败，直接断开连接，这样连接资源会减少，同时不会占用连接资源；fast-fail
+                    // appKey的连接数统计，为什么在这里做链接数的统计？因为为了防止签名验证通过后，外部或非法客户端不发送登录信息，则无法真实统计该客户端的真实连接数，无法对外部客户端提前做连接限制，可能造成非法连接过多，从而造成资源浪费，增加服务器压力；
+                    if (!preVerifySignature(queryParamsMap) || !preVerifyAppKeyConnects(queryParamsMap)) {
+                        log.error("客户端连接失败,原因：签名验证失败或验证统计AppKey连接数超过允许的最大值！");
+                        // 关闭连接
+                        ctx.close();
+                    }
+                } catch (URISyntaxException e) {
+                    log.error("客户端连接失败,原因：uri解析失败！正在关闭channel :{}", ctx.channel().id().asShortText());
+                    ctx.channel().close();
+                }
+                ctx.channel().attr(protocolAttrKey).set(this);
+                ctx.pipeline()
+                        // 限制最大聚合帧，避免大包拖垮内存
+                        .addLast(MessageConstant.WS_FRAME_AGGREGATOR_HANDLER, new WebSocketFrameAggregator(MessageConstant.MAX_WEBSOCKET_FRAME_SIZE))
+                        // 开启压缩
+                        .addLast(MessageConstant.WS_COMPRESSION_HANDLER, new WebSocketServerExtensionHandler(
+                                new PerMessageDeflateServerExtensionHandshaker(
+                                        NumberConstant.NUMBER_6,      // 压缩等级：1(快)~9(高压缩)，6折中
+                                        true,   // allowServerWindowSize: 允许协商窗口大小
+                                        NumberConstant.NUMBER_15,     // preferredServerWindowSize: 2^15
+                                        true,   // allowServerNoContext: 允许无上下文（更少内存）
+                                        false,  // preferredServerNoContext: 默认保留上下文（压缩率更好）
+                                        WS_FILTER_PROVIDER // 小帧跳过压缩
+                                ),new DeflateFrameServerExtensionHandshaker()))
+                        //10485760
+                        .addLast(MessageConstant.WS_SERVER_PROTOCOL_HANDLER, new WebSocketServerProtocolHandler(MessageServerContext.serverProperties().getWebsocketPath(), null, true, MessageConstant.MAX_WEBSOCKET_FRAME_SIZE))
+                        // 转换成包packet,内部消息传递都是以packet 进行处理
+                        .addLast(MessageConstant.CONVERT_2_PACKET_HANDLER, new Convert2PacketHandler())
+                        // 添加监控处理逻辑
+                        .addLast(MessageConstant.MONITOR_HANDLER, new MonitorHandler())
+                        // 在业务处理之前可以进行登录认证处理，登录认证处理，如果不需要登录处理，可在配置文件中配置，不需要在这里处理
+                        // 前置处理
+                        .addLast(eventExecutorGroup, MessageConstant.PRE_HANDLER, new PacketPreHandler())
+                        // 业务处理
+                        .addLast(eventExecutorGroup, MessageConstant.WS_HANDLER, new PacketHandler())
+                        // 后置处理
+                        .addLast(eventExecutorGroup, MessageConstant.POST_HANDLER, new PacketPostHandler())
+                        // 判断是否需要开启客户端心跳如果需要则开启客户端心跳，由于心跳消息不需要登录就可以，所以放在登录认证处理器前面
+                        // 在最后添加异常处理器
+                        .addLast(MessageConstant.EXCEPTION_HANDLER, new ExceptionHandler())
+                        // 移除协议分发器
+                        .remove(MessageConstant.HTTP_DISPATCHER_HANDLER);
+                // 如果开启登录则添加登录认证处理器
+                if (MessageServerContext.serverProperties().isServerLoginEnable()) {
+                    ctx.pipeline().addBefore(MessageConstant.PRE_HANDLER, MessageConstant.AUTHENTICATION_HANDLER, new AuthenticationHandler());
+                }
+                // 调用当前handler的下一个handle的active，注意与ctx.pipeline().fireChannelActive()
+                ctx.fireChannelActive();
+            }else {
+                log.error("当前请求不是http 请求,正在关闭channel:{}", ctx.channel().id().asShortText());
             }
-            ctx.channel().attr(protocolAttrKey).set(this);
-            ctx.pipeline()
-                    // 限制最大聚合帧，避免大包拖垮内存
-                    .addLast(MessageConstant.WS_FRAME_AGGREGATOR_HANDLER, new WebSocketFrameAggregator(MessageConstant.MAX_WEBSOCKET_FRAME_SIZE))
-                    // 开启压缩
-                    .addLast(MessageConstant.WS_COMPRESSION_HANDLER, new WebSocketServerExtensionHandler(
-                            new PerMessageDeflateServerExtensionHandshaker(
-                            NumberConstant.NUMBER_6,      // 压缩等级：1(快)~9(高压缩)，6折中
-                            true,   // allowServerWindowSize: 允许协商窗口大小
-                            NumberConstant.NUMBER_15,     // preferredServerWindowSize: 2^15
-                            true,   // allowServerNoContext: 允许无上下文（更少内存）
-                            false,  // preferredServerNoContext: 默认保留上下文（压缩率更好）
-                            WS_FILTER_PROVIDER // 小帧跳过压缩
-                    ),new DeflateFrameServerExtensionHandshaker()))
-                    //10485760
-                    .addLast(MessageConstant.WS_SERVER_PROTOCOL_HANDLER, new WebSocketServerProtocolHandler(MessageServerContext.serverProperties().getWebsocketPath(), null, true, MessageConstant.MAX_WEBSOCKET_FRAME_SIZE))
-                    // 转换成包packet,内部消息传递都是以packet 进行处理
-                    .addLast(MessageConstant.CONVERT_2_PACKET_HANDLER, new Convert2PacketHandler())
-                    // 添加监控处理逻辑
-                    .addLast(MessageConstant.MONITOR_HANDLER, new MonitorHandler())
-                    // 在业务处理之前可以进行登录认证处理，登录认证处理，如果不需要登录处理，可在配置文件中配置，不需要在这里处理
-                    // 前置处理
-                    .addLast(eventExecutorGroup, MessageConstant.PRE_HANDLER, new PacketPreHandler())
-                    // 业务处理
-                    .addLast(eventExecutorGroup, MessageConstant.WS_HANDLER, new PacketHandler())
-                    // 后置处理
-                    .addLast(eventExecutorGroup, MessageConstant.POST_HANDLER, new PacketPostHandler())
-                    // 判断是否需要开启客户端心跳如果需要则开启客户端心跳，由于心跳消息不需要登录就可以，所以放在登录认证处理器前面
-                    // 在最后添加异常处理器
-                    .addLast(MessageConstant.EXCEPTION_HANDLER, new ExceptionHandler())
-                    // 移除协议分发器
-                    .remove(MessageConstant.HTTP_DISPATCHER_HANDLER);
-            // 如果开启登录则添加登录认证处理器
-            if (MessageServerContext.serverProperties().isServerLoginEnable()) {
-                ctx.pipeline().addBefore(MessageConstant.PRE_HANDLER, MessageConstant.AUTHENTICATION_HANDLER, new AuthenticationHandler());
-            }
-            // 调用当前handler的下一个handle的active，注意与ctx.pipeline().fireChannelActive()
-            ctx.fireChannelActive();
+
         }
 
 
@@ -145,9 +165,9 @@ public enum NativePacketProtocol implements PacketProtocol {
     //处理 http/https
     HTTP(ProtocolTypeEnum.HTTP.getProtocol(), ProtocolTypeEnum.HTTP.getProtocolVersion(), "http协议，版本号为1") {
         @Override
-        public void doDispatcher(ChannelHandlerContext ctx, Map<String, Object> queryParamsMap) {
+        public void doDispatcher(ChannelHandlerContext ctx,  Object msg) {
             ctx.channel().attr(protocolAttrKey).set(this);
-
+            // todo 可参考spring 的 DispatcherServlet 来实现http的处理
         }
 
     },
@@ -157,7 +177,7 @@ public enum NativePacketProtocol implements PacketProtocol {
     OUYUNC(ProtocolTypeEnum.OUYUNC.getProtocol(), ProtocolTypeEnum.OUYUNC.getProtocolVersion(), "自定义ouyunc协议，版本号为1") {
         private final EventExecutorGroup eventExecutorGroup = new DefaultEventExecutorGroup(Runtime.getRuntime().availableProcessors()* NumberConstant.NUMBER_2, new BasicThreadFactory.Builder().namingPattern("Ouyunc-Protocol-Pool-%d").build());
         @Override
-        public void doDispatcher(ChannelHandlerContext ctx, Map<String, Object> queryParamsMap) {
+        public void doDispatcher(ChannelHandlerContext ctx,  Object msg) {
             ctx.channel().attr(protocolAttrKey).set(this);
             ctx.pipeline()
                     // 上一个packet编解码处理器，处理后，会在这里交给包转换器来转换
@@ -242,7 +262,7 @@ public enum NativePacketProtocol implements PacketProtocol {
         private final EventExecutorGroup eventExecutorGroup = new DefaultEventExecutorGroup(Runtime.getRuntime().availableProcessors()* NumberConstant.NUMBER_2,new BasicThreadFactory.Builder().namingPattern("Mqtt-Protocol-Pool-%d").build());
 
         @Override
-        public void doDispatcher(ChannelHandlerContext ctx, Map<String, Object> queryParamsMap) {
+        public void doDispatcher(ChannelHandlerContext ctx,  Object msg) {
             ctx.channel().attr(protocolAttrKey).set(this);
             ChannelPipeline pipeline = ctx.pipeline();
             pipeline.addLast(MessageConstant.MQTT_DECODER_HANDLER, new MqttDecoder())
@@ -345,13 +365,13 @@ public enum NativePacketProtocol implements PacketProtocol {
 
     /**
      * @param ctx
-     * @param queryParamsMap 请求参数
+     * @param msg 请求参数
      * @return void
      * @Author fzx
      * @Description 协议分发器
      */
     @Override
-    public void doDispatcher(ChannelHandlerContext ctx, Map<String, Object> queryParamsMap) {
+    public void doDispatcher(ChannelHandlerContext ctx,  Object msg) {
 
     }
     /**

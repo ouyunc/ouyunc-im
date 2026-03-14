@@ -13,7 +13,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 public class MqttProtocolDispatcherHandler extends SimpleChannelInboundHandler<Object> {
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
-        MessageServerContext.findProtocol(NativePacketProtocol.MQTT.getProtocol(), NativePacketProtocol.MQTT.getProtocolVersion()).doDispatcher(ctx, null);
+        MessageServerContext.findProtocol(NativePacketProtocol.MQTT.getProtocol(), NativePacketProtocol.MQTT.getProtocolVersion()).doDispatcher(ctx, msg);
         ctx.fireChannelRead(((ByteBuf) msg).retain());
     }
 }

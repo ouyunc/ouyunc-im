@@ -5,8 +5,6 @@ import com.ouyunc.base.model.SendCallback;
 import com.ouyunc.base.packet.Packet;
 import io.netty.channel.ChannelHandlerContext;
 
-import java.util.Map;
-
 /**
  * @author fzx
  * @description 协议接口
@@ -18,10 +16,10 @@ public interface PacketProtocol extends Protocol {
      * @Author fzx
      * @Description 协议分发器
      * @param ctx
-     * @param queryParamsMap 请求参数
+     * @param msg 请求参数
      * @return void
      */
-    void doDispatcher(ChannelHandlerContext ctx, Map<String, Object> queryParamsMap);
+    void doDispatcher(ChannelHandlerContext ctx, Object msg);
 
     /**
      * @Author fzx

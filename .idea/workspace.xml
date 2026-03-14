@@ -5,13 +5,14 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="全局唯一id生成器">
-      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/ouyunc-mq-rocket/src/main/java/com/ouyunc/mq/rocket/builder/RocketMQTemplateBuilder.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/utils/HttpUtil.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/conf/rocket-config-standalone.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docs/conf/rocket-config-standalone.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/ouyunc-mq-rocket/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/ouyunc-mq-rocket/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/ouyunc-mq-rocket/src/main/java/com/ouyunc/mq/rocket/RocketFactory.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/ouyunc-mq-rocket/src/main/java/com/ouyunc/mq/rocket/RocketFactory.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/ouyunc-mq-rocket/src/main/java/com/ouyunc/mq/rocket/properties/RocketProperties.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/ouyunc-mq-rocket/src/main/java/com/ouyunc/mq/rocket/properties/RocketProperties.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/utils/MapUtil.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/utils/MapUtil.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/handler/HttpProtocolDispatcherHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/handler/HttpProtocolDispatcherHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/handler/MqttProtocolDispatcherHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/handler/MqttProtocolDispatcherHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/handler/PacketProtocolDispatcherHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/handler/PacketProtocolDispatcherHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/protocol/NativePacketProtocol.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/protocol/NativePacketProtocol.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/protocol/PacketProtocol.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/protocol/PacketProtocol.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -319,14 +320,6 @@
       <workItem from="1772194503466" duration="2451000" />
       <workItem from="1772199944314" duration="2147000" />
       <workItem from="1772335879275" duration="4496000" />
-    </task>
-    <task id="LOCAL-00118" summary="v6.5.1  整理缓存key">
-      <option name="closed" value="true" />
-      <created>1759647791800</created>
-      <option name="number" value="00118" />
-      <option name="presentableId" value="LOCAL-00118" />
-      <option name="project" value="LOCAL" />
-      <updated>1759647791800</updated>
     </task>
     <task id="LOCAL-00119" summary="v6.5.1  整理缓存key">
       <option name="closed" value="true" />
@@ -712,7 +705,15 @@
       <option name="project" value="LOCAL" />
       <updated>1772340544454</updated>
     </task>
-    <option name="localTasksCounter" value="167" />
+    <task id="LOCAL-00167" summary="系统推送">
+      <option name="closed" value="true" />
+      <created>1773451310019</created>
+      <option name="number" value="00167" />
+      <option name="presentableId" value="LOCAL-00167" />
+      <option name="project" value="LOCAL" />
+      <updated>1773451310019</updated>
+    </task>
+    <option name="localTasksCounter" value="168" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -752,7 +753,8 @@
     <MESSAGE value="优化" />
     <MESSAGE value="增加群组推送模式" />
     <MESSAGE value="全局唯一id生成器" />
-    <option name="LAST_COMMIT_MESSAGE" value="全局唯一id生成器" />
+    <MESSAGE value="系统推送" />
+    <option name="LAST_COMMIT_MESSAGE" value="系统推送" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

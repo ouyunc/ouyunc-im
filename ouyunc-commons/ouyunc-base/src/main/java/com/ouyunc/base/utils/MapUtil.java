@@ -1,10 +1,8 @@
 package com.ouyunc.base.utils;
 
-import org.apache.commons.lang3.StringUtils;
 import org.objenesis.Objenesis;
 import org.objenesis.ObjenesisStd;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -22,28 +20,7 @@ public class MapUtil {
     }
 
 
-    /**
-     * 将uri 特殊字符串转成map
-     */
-    public static Map<String, Object> wrapParams2Map(String queryParamsStr) {
-        if (StringUtils.isBlank(queryParamsStr)) {
-            return null;
-        }
-        Map<String, Object> result = new HashMap<>();
-        String[] splitParams = queryParamsStr.split("[&]");
-        for (String splitParam : splitParams) {
-            String[] paramKeyValue = splitParam.split("[=]");
-            //解析出键值
-            if (paramKeyValue.length > 1) {
-                //正确解析
-                result.put(paramKeyValue[0], paramKeyValue[1]);
-            } else if (paramKeyValue.length == 1 && StringUtils.isNoneBlank(paramKeyValue[0])) {
-                //只有参数没有值，不加入
-                result.put(paramKeyValue[0], "");
-            }
-        }
-        return result;
-    }
+
 
     /**
      * @return java.util.Map
