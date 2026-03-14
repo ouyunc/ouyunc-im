@@ -5,10 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="系统推送">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/utils/HttpUtil.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/utils/HttpUtil.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/PushHttpProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/PushHttpProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/http/HttpRequestDispatcher.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/http/HttpRequestDispatcher.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -318,23 +315,7 @@
       <workItem from="1772194503466" duration="2451000" />
       <workItem from="1772199944314" duration="2147000" />
       <workItem from="1772335879275" duration="4496000" />
-      <workItem from="1773452679005" duration="12376000" />
-    </task>
-    <task id="LOCAL-00123" summary="v6.5.1  整理缓存key">
-      <option name="closed" value="true" />
-      <created>1759763532007</created>
-      <option name="number" value="00123" />
-      <option name="presentableId" value="LOCAL-00123" />
-      <option name="project" value="LOCAL" />
-      <updated>1759763532008</updated>
-    </task>
-    <task id="LOCAL-00124" summary="v6.5.1  整理缓存key">
-      <option name="closed" value="true" />
-      <created>1759900747678</created>
-      <option name="number" value="00124" />
-      <option name="presentableId" value="LOCAL-00124" />
-      <option name="project" value="LOCAL" />
-      <updated>1759900747678</updated>
+      <workItem from="1773452679005" duration="12897000" />
     </task>
     <task id="LOCAL-00125" summary="优化">
       <option name="closed" value="true" />
@@ -712,7 +693,23 @@
       <option name="project" value="LOCAL" />
       <updated>1773494466491</updated>
     </task>
-    <option name="localTasksCounter" value="172" />
+    <task id="LOCAL-00172" summary="系统推送">
+      <option name="closed" value="true" />
+      <created>1773497081771</created>
+      <option name="number" value="00172" />
+      <option name="presentableId" value="LOCAL-00172" />
+      <option name="project" value="LOCAL" />
+      <updated>1773497081771</updated>
+    </task>
+    <task id="LOCAL-00173" summary="系统推送">
+      <option name="closed" value="true" />
+      <created>1773497160866</created>
+      <option name="number" value="00173" />
+      <option name="presentableId" value="LOCAL-00173" />
+      <option name="project" value="LOCAL" />
+      <updated>1773497160866</updated>
+    </task>
+    <option name="localTasksCounter" value="174" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -822,16 +819,6 @@
           <url>jar://$PROJECT_DIR$/../../repository/me/ahoo/cosid/cosid-core/3.0.2/cosid-core-3.0.2.jar!/me/ahoo/cosid/machine/LocalMachineStateStorage.class</url>
           <line>91</line>
           <option name="timeStamp" value="11" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/PushHttpProcessor.java</url>
-          <line>23</line>
-          <option name="timeStamp" value="17" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/http/HttpRequestDispatcher.java</url>
-          <line>53</line>
-          <option name="timeStamp" value="18" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>

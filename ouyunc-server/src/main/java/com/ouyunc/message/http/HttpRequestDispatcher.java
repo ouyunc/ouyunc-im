@@ -62,8 +62,6 @@ public class HttpRequestDispatcher {
         } catch (Exception e) {
             log.error("HTTP dispatch error, uri={}", request.uri(), e);
             HttpUtil.writeJsonResponse(ctx, request, HttpResponseStatus.INTERNAL_SERVER_ERROR, HttpResponseResult.error(HttpResponseCodeEnum.INTERNAL_SERVER_ERROR, e.getMessage()));
-        } finally {
-            request.release();
         }
     }
 

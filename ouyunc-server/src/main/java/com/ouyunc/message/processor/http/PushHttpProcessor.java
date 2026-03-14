@@ -17,7 +17,7 @@ public class PushHttpProcessor implements HttpRequestProcessor {
 
 
     /**
-     * IM消息推送处理请求,注意需要进行鉴权，可考虑统一鉴权
+     * IM消息推送处理请求,注意需要进行鉴权，可考虑统一鉴权,最后如果又返回数据，需要自行返回
      */
     @Override
     public void process(ChannelHandlerContext ctx, FullHttpRequest request) {
