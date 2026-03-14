@@ -1,16 +1,19 @@
 package com.ouyunc.base.utils;
 
 import com.alibaba.fastjson2.JSON;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.*;
+import io.netty.util.CharsetUtil;
 import org.apache.commons.lang3.StringUtils;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -24,6 +27,41 @@ public final class HttpUtil {
     private HttpUtil() {
     }
 
+
+    /**
+     * 获取文本格式的请求体（最常用，如 JSON/XML/普通文本）
+     * @param request FullHttpRequest 对象
+     * @return 字符串格式的请求体，空请求体返回空字符串
+     */
+    public static String getBodyAsString(FullHttpRequest request) {
+        // 1. 校验参数，避免空指针
+        if (request == null || !request.content().isReadable()) {
+            return "";
+        }
+
+        // 2. 获取 ByteBuf 并转换为字符串（默认 UTF-8，适配 IM 推送的 JSON 格式）
+        ByteBuf content = request.content();
+
+
+        return content.toString(CharsetUtil.UTF_8);
+    }
+
+    /**
+     * 获取字节数组格式的请求体（适用于二进制数据，如文件/图片）
+     * @param request FullHttpRequest 对象
+     * @return 字节数组，空请求体返回空数组
+     */
+    public static byte[] getBodyAsBytes(FullHttpRequest request) {
+        if (request == null || !request.content().isReadable()) {
+            return new byte[0];
+        }
+
+        ByteBuf content = request.content();
+        byte[] bytes = new byte[content.readableBytes()];
+        content.readBytes(bytes);
+
+        return bytes;
+    }
     /**
      * 从请求 URI 中取 path（不含 query、fragment）。
      *
@@ -108,6 +146,50 @@ public final class HttpUtil {
             return decodeQuery(value);
         }
         return null;
+    }
+
+    /**
+     * 从请求 URI 的 query 中获取全部参数，以 Map 返回（key、value 均已 URL 解码）。
+     * 同 key 多次出现时后者覆盖前者。
+     *
+     * @param request 请求，可为 null
+     * @return 参数 Map，无 query 或 request 为 null 时返回空 Map，不返回 null
+     */
+    public static Map<String, String> getQueryParams(FullHttpRequest request) {
+        if (request == null) {
+            return Collections.emptyMap();
+        }
+        String uri = request.uri();
+        if (uri == null) {
+            return Collections.emptyMap();
+        }
+        int q = uri.indexOf('?');
+        if (q < 0) {
+            return Collections.emptyMap();
+        }
+        String query = uri.substring(q + 1);
+        if (StringUtils.isBlank(query)) {
+            return Collections.emptyMap();
+        }
+        Map<String, String> result = new HashMap<>();
+        for (String pair : query.split("&")) {
+            int eq = pair.indexOf('=');
+            String key;
+            String value;
+            if (eq > 0) {
+                key = decodeQuery(pair.substring(0, eq).trim());
+                value = decodeQuery(pair.substring(eq + 1).trim());
+            } else if (eq == 0) {
+                continue;
+            } else {
+                key = decodeQuery(pair.trim());
+                value = "";
+            }
+            if (StringUtils.isNotEmpty(key)) {
+                result.put(key, value);
+            }
+        }
+        return result;
     }
 
     private static String decodeQuery(String s) {
