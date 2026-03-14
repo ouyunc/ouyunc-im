@@ -42,7 +42,7 @@ public class HttpRequestDispatcher {
         return INSTANCE;
     }
 
-    public void register(String method, String path, HttpRequestProcessor handler) {
+    public void register(String method, String path, HttpRequestProcessor<?> handler) {
         registrar.register(method, path, handler);
     }
 
@@ -53,12 +53,12 @@ public class HttpRequestDispatcher {
         try {
             String path = HttpUtil.pathFromUri(request.uri());
             String method = request.method().name();
-            HttpRequestProcessor processor = registrar.find(method, path);
+            HttpRequestProcessor<?> processor = registrar.find(method, path);
             if (processor == null) {
                 HttpUtil.writeJsonResponse(ctx, request, HttpResponseStatus.NOT_FOUND, HttpResponseResult.fail(HttpResponseCodeEnum.NOT_FOUND));
                 return;
             }
-            processor.process(ctx, request);
+            HttpUtil.writeJsonResponse(ctx, request, HttpResponseStatus.OK, HttpResponseResult.success(processor.process(ctx, request)));
         } catch (Exception e) {
             log.error("HTTP dispatch error, uri={}", request.uri(), e);
             HttpUtil.writeJsonResponse(ctx, request, HttpResponseStatus.INTERNAL_SERVER_ERROR, HttpResponseResult.error(HttpResponseCodeEnum.INTERNAL_SERVER_ERROR, e.getMessage()));

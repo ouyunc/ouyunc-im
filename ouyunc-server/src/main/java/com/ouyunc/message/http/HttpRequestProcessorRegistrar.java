@@ -17,15 +17,15 @@ public class HttpRequestProcessorRegistrar {
     private static final Logger log = LoggerFactory.getLogger(HttpRequestProcessorRegistrar.class);
 
     /** key: "METHOD path" */
-    private final Map<String, HttpRequestProcessor> processors = new ConcurrentHashMap<>();
+    private final Map<String, HttpRequestProcessor<?>> processors = new ConcurrentHashMap<>();
 
-    public void register(String method, String path, HttpRequestProcessor handler) {
+    public void register(String method, String path, HttpRequestProcessor<?> handler) {
         String key = key(method, path);
         processors.put(key, handler);
         log.info("Registered HTTP {} {}", method, path);
     }
 
-    public HttpRequestProcessor find(String method, String path) {
+    public HttpRequestProcessor<?> find(String method, String path) {
         return processors.get(key(method, path));
     }
 
@@ -65,7 +65,7 @@ public class HttpRequestProcessorRegistrar {
                 }
                 if (httpMethod == null || path == null || path.isEmpty()) continue;
                 try {
-                    HttpRequestProcessor handler = (HttpRequestProcessor) clazz.getDeclaredConstructor().newInstance();
+                    HttpRequestProcessor<?> handler = (HttpRequestProcessor<?>) clazz.getDeclaredConstructor().newInstance();
                     register(httpMethod, path, handler);
                 } catch (Exception e) {
                     log.warn("Failed to instantiate HTTP processor {}: {}", clazz.getName(), e.getMessage());
