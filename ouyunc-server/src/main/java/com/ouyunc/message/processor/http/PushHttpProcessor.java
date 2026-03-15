@@ -8,7 +8,6 @@ import io.netty.handler.codec.http.FullHttpRequest;
 
 /**
  * POST /api/im/push 推送接口：实现 HttpRequestProcessor，类上 @PostHttpRequest 即可。
- * 必须在本方法内写入响应，否则客户端会一直等待导致阻塞。
  */
 @PostHttpRequest(HttpRequestConstant.HTTP_PUSH_API_PATH)
 public class PushHttpProcessor implements HttpRequestProcessor<Object> {
@@ -21,7 +20,7 @@ public class PushHttpProcessor implements HttpRequestProcessor<Object> {
      */
     @Override
     public Object process(ChannelHandlerContext ctx, FullHttpRequest request) {
-        // TODO: 解析 body、鉴权、调用 MessagePushService 并返回 PushResult
+        // TODO: 解析 body、鉴权、封装消息并推送
         return null;
     }
 }

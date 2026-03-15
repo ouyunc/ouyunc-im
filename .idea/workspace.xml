@@ -5,7 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="系统推送">
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/http/HttpRequestDispatcher.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/http/HttpRequestDispatcher.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/PushHttpProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/PushHttpProcessor.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -315,23 +316,7 @@
       <workItem from="1772194503466" duration="2451000" />
       <workItem from="1772199944314" duration="2147000" />
       <workItem from="1772335879275" duration="4496000" />
-      <workItem from="1773452679005" duration="12897000" />
-    </task>
-    <task id="LOCAL-00125" summary="优化">
-      <option name="closed" value="true" />
-      <created>1762056065962</created>
-      <option name="number" value="00125" />
-      <option name="presentableId" value="LOCAL-00125" />
-      <option name="project" value="LOCAL" />
-      <updated>1762056065963</updated>
-    </task>
-    <task id="LOCAL-00126" summary="优化">
-      <option name="closed" value="true" />
-      <created>1762056172123</created>
-      <option name="number" value="00126" />
-      <option name="presentableId" value="LOCAL-00126" />
-      <option name="project" value="LOCAL" />
-      <updated>1762056172124</updated>
+      <workItem from="1773452679005" duration="16650000" />
     </task>
     <task id="LOCAL-00127" summary="优化">
       <option name="closed" value="true" />
@@ -709,7 +694,23 @@
       <option name="project" value="LOCAL" />
       <updated>1773497160866</updated>
     </task>
-    <option name="localTasksCounter" value="174" />
+    <task id="LOCAL-00174" summary="系统推送">
+      <option name="closed" value="true" />
+      <created>1773497709308</created>
+      <option name="number" value="00174" />
+      <option name="presentableId" value="LOCAL-00174" />
+      <option name="project" value="LOCAL" />
+      <updated>1773497709308</updated>
+    </task>
+    <task id="LOCAL-00175" summary="系统推送">
+      <option name="closed" value="true" />
+      <created>1773500151450</created>
+      <option name="number" value="00175" />
+      <option name="presentableId" value="LOCAL-00175" />
+      <option name="project" value="LOCAL" />
+      <updated>1773500151450</updated>
+    </task>
+    <option name="localTasksCounter" value="176" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
