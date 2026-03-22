@@ -11,5 +11,5 @@ public interface HttpRequestProcessor<R>{
      * @Author fzx
      * @Description 核心业务逻辑处理
      */
-    R process(ChannelHandlerContext context, FullHttpRequest request);
+    R process(ChannelHandlerContext context, FullHttpRequest request) throws Exception;
 }

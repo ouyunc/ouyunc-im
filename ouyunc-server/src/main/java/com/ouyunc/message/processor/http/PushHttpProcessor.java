@@ -19,7 +19,7 @@ public class PushHttpProcessor implements HttpRequestProcessor<Object> {
      * @param request 完整 HTTP 请求
      */
     @Override
-    public Object process(ChannelHandlerContext ctx, FullHttpRequest request) {
+    public Object process(ChannelHandlerContext ctx, FullHttpRequest request) throws  Exception{
         // TODO: 解析 body、鉴权、封装消息并推送
         return null;
     }
