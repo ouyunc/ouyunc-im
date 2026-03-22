@@ -6,7 +6,7 @@ import java.util.EventListener;
 
 /**
  * @Author fzx
- * message 事件监听器
+ * message 事件监听器。实现类可标注 {@link com.ouyunc.base.model.Order}，值越小越先被调用（与拦截器约定一致）。
  */
 @FunctionalInterface
 public interface MessageListener<E extends MessageEvent> extends EventListener {

@@ -1,18 +1,20 @@
 package com.ouyunc.message;
 
+import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.MessageContentType;
 import com.ouyunc.base.constant.enums.MessageType;
 import com.ouyunc.base.executor.ThreadPoolConfig;
 import com.ouyunc.base.executor.ThreadPoolManager;
+import com.ouyunc.base.model.Order;
 import com.ouyunc.base.model.ProtocolType;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.utils.*;
 import com.ouyunc.core.engine.LoadPropertiesEngine;
 import com.ouyunc.core.intercept.AbstractMessageInterceptor;
 import com.ouyunc.core.intercept.Interceptor;
+import com.ouyunc.core.listener.DisruptorMessageEventMulticaster;
 import com.ouyunc.core.listener.MessageListener;
-import com.ouyunc.core.listener.SimpleMessageEventMulticaster;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.processor.Processor;
 import com.ouyunc.core.properties.CommandLineArgs;
@@ -87,10 +89,11 @@ public class StandardMessageServer extends AbstractMessageServer {
             log.error("扫描事件监听器失败: {}", e.getMessage());
         }
         // 排除不是直接实现该接口的
-        SimpleMessageEventMulticaster messageEventMulticaster = new SimpleMessageEventMulticaster();
-        // 这里配置线程池来处理，如果同步发送事件可以注释下面一行
-        messageEventMulticaster.setTaskExecutor(ThreadPoolManager.eventListenerExecutor());
-        for (Class<?> messageListenerClazz : messageListenerClazzSet) {
+        DisruptorMessageEventMulticaster messageEventMulticaster = new DisruptorMessageEventMulticaster(MessageConstant.NUMBER_1024);
+        // 扫描结果为 HashSet 无序；按 @Order（值小优先）再按类名排序后注册，保证同事件类型多 listener 调用顺序稳定
+        List<Class<?>> orderedListenerClasses = new ArrayList<>(messageListenerClazzSet);
+        orderedListenerClasses.sort(Comparator.comparingInt(StandardMessageServer::messageListenerOrder).thenComparing(Class::getName));
+        for (Class<?> messageListenerClazz : orderedListenerClasses) {
             if (MessageListener.class.isAssignableFrom(messageListenerClazz)) {
                 // 排除自身以及抽象类
                 if (!MessageListener.class.equals(messageListenerClazz) && !Modifier.isAbstract(messageListenerClazz.getModifiers())) {
@@ -286,5 +289,10 @@ public class StandardMessageServer extends AbstractMessageServer {
             }
         }
         return commandLineArgs;
+    }
+
+    private static int messageListenerOrder(Class<?> listenerClass) {
+        Order order = listenerClass.getAnnotation(Order.class);
+        return order != null ? order.value() : Integer.MAX_VALUE;
     }
 }

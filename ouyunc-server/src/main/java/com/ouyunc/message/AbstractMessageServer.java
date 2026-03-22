@@ -15,6 +15,7 @@ import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.core.disruptor.DisruptorEventFactory;
 import com.ouyunc.core.disruptor.DisruptorEventHandler;
 import com.ouyunc.core.disruptor.DisruptorEventProducer;
+import com.ouyunc.core.listener.DisruptorMessageEventMulticaster;
 import com.ouyunc.core.listener.event.*;
 import com.ouyunc.message.banner.MessageBanner;
 import com.ouyunc.message.channel.DefaultServerChannelInitializer;
@@ -45,6 +46,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @Author fzx
@@ -85,6 +87,11 @@ public abstract class AbstractMessageServer implements MessageServer {
      * 集群内置客户端初始化, 默认内置客户端实现类
      */
     private  MessageClient messageClient = new DefaultMessageClient();
+
+    /**
+     * {@link #stop()} 与 JVM shutdown hook 可能先后触发，整段优雅关闭只执行一次。
+     */
+    private final AtomicBoolean gracefulShutdownDone = new AtomicBoolean(false);
 
     /***
      * @author fzx
@@ -168,8 +175,33 @@ public abstract class AbstractMessageServer implements MessageServer {
     }
 
     /**
-     * 初始化disruptor
+     * 统一优雅关闭：ServerStop、消息多播 Disruptor、Netty、集群内置客户端、全局线程池。
+     *
+     * @return 本次调用是否实际执行了关闭序列（已被其它路径执行过则返回 false）
      */
+    private boolean runGracefulShutdownOnce() {
+        if (!gracefulShutdownDone.compareAndSet(false, true)) {
+            return false;
+        }
+        try {
+            MessageServerContext.publishEvent(new ServerStopEvent(this), false);
+            if (MessageServerContext.messageEventMulticaster instanceof DisruptorMessageEventMulticaster d) {
+                d.shutdown();
+            }
+            if (bossGroup != null && workerGroup != null) {
+                bossGroup.shutdownGracefully();
+                workerGroup.shutdownGracefully();
+            }
+            if (MessageServerContext.serverProperties().isClusterEnable()) {
+                messageClient.stop();
+            }
+            ThreadPoolManager.shutdownAll();
+        } catch (Throwable t) {
+            log.error("优雅关闭过程异常: {}", t.getMessage(), t);
+        }
+        return true;
+    }
+
     private void initDisruptor() {
         // 1. 初始化配置
         // 1. 配置参数
@@ -179,7 +211,7 @@ public abstract class AbstractMessageServer implements MessageServer {
                 new DisruptorEventFactory<>(),  // 使用通用工厂
                 MessageConstant.NUMBER_1024, //1024 必须是2的幂
                 DaemonThreadFactory.INSTANCE,  // 使用守护线程
-                ProducerType.SINGLE,           // 支持单生产者
+                ProducerType.MULTI,           // 支持单生产者
                 new YieldingWaitStrategy()
         );
         // 3. 注册消费者（可多个）
@@ -234,10 +266,10 @@ public abstract class AbstractMessageServer implements MessageServer {
     @Override
     public void stop() {
         log.error("IM server 开始注销程序...");
-        // 系统关闭进行事件通知,可以进行释放资源等一些处理
-        MessageServerContext.publishEvent(new ServerStopEvent(this), false);
-        ThreadPoolManager.shutdownAll();
-        // 系统退出，会触发服务关闭钩子，从而释放资源并关闭程序
+        if (runGracefulShutdownOnce()) {
+            log.error("IM server 注销流程已完成, 即将退出");
+        }
+        // 会触发 shutdown hook；其中 runGracefulShutdownOnce 已为幂等，不会重复收尾
         System.exit(0);
     }
 
@@ -317,24 +349,11 @@ public abstract class AbstractMessageServer implements MessageServer {
     private void registerShutdownHook() {
         // 注册关闭钩子
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            // 在关闭钩子中执行收尾工作
-            // 注意事项：
-            // 1.在这里执行的动作不能耗时太久
-            // 2.不能在这里再执行注册，移除关闭钩子的操作
-            // 3 不能在这里调用System.exit()
-            // 优雅关闭
-            log.error("Message server 正在注销......");
-            MessageServerContext.publishEvent(new ServerStopEvent(this), false);
-            if (bossGroup != null && workerGroup != null) {
-                bossGroup.shutdownGracefully();
-                workerGroup.shutdownGracefully();
+            // 注意事项：1.不宜耗时过久 2.勿再注册/移除钩子 3.勿调用 System.exit
+            log.error("Message server shutdown hook 触发");
+            if (runGracefulShutdownOnce()) {
+                log.error("Message server 注销完成");
             }
-            // 停止内部消息客户端
-            if (MessageServerContext.serverProperties().isClusterEnable()) {
-                messageClient.stop();
-            }
-            ThreadPoolManager.shutdownAll();
-            log.error("Message server注销完成");
         }));
     }
 
