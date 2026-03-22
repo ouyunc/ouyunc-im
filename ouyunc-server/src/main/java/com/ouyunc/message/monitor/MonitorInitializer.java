@@ -1,6 +1,5 @@
 package com.ouyunc.message.monitor;
 
-import com.ouyunc.base.monitor.ResourceMonitor;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.schedule.TimerTaskWrapper;
@@ -25,7 +24,6 @@ public class MonitorInitializer {
         log.debug("开始初始化资源监控...");
 
         // 注册 MessageServerContext 中的缓存
-        registerCache(MessageServerContext.disruptorEventProducerCache);
         registerCache(MessageServerContext.localLoginClientRegisterTable);
         registerCache(MessageServerContext.localClientInfoCache);
         registerCache(MessageServerContext.messageProcessorCache);

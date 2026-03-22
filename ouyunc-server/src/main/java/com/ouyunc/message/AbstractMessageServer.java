@@ -1,21 +1,11 @@
 package com.ouyunc.message;
 
-import com.lmax.disruptor.RingBuffer;
-import com.lmax.disruptor.YieldingWaitStrategy;
-import com.lmax.disruptor.dsl.Disruptor;
-import com.lmax.disruptor.dsl.ProducerType;
-import com.lmax.disruptor.util.DaemonThreadFactory;
-import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.constant.enums.DeviceTypeEnum;
-import com.ouyunc.base.constant.enums.DisruptorEventProducerEnum;
 import com.ouyunc.base.constant.enums.LuaScriptEnum;
 import com.ouyunc.base.utils.TimeUtil;
-import com.ouyunc.core.disruptor.DisruptorEventFactory;
-import com.ouyunc.core.disruptor.DisruptorEventHandler;
-import com.ouyunc.core.disruptor.DisruptorEventProducer;
-import com.ouyunc.core.listener.DisruptorMessageEventMulticaster;
+import com.ouyunc.core.listener.DefaultMessageEventMulticaster;
 import com.ouyunc.core.listener.event.*;
 import com.ouyunc.message.banner.MessageBanner;
 import com.ouyunc.message.channel.DefaultServerChannelInitializer;
@@ -28,7 +18,6 @@ import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.convert.BinaryWebSocketFramePacketConverter;
 import com.ouyunc.message.convert.MqttMessagePacketConverter;
 import com.ouyunc.message.convert.PacketPacketConverter;
-import com.ouyunc.message.disruptor.ExceptionDisruptorEventProcessor;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -165,8 +154,6 @@ public abstract class AbstractMessageServer implements MessageServer {
         MessageServerContext.addPacketConverterList(List.of(PacketPacketConverter.INSTANCE, BinaryWebSocketFramePacketConverter.INSTANCE,MqttMessagePacketConverter.INSTANCE));
         // 添加默认设备类型，这里可以改成从redis 获取，与appKey 进行绑定，由appKey来自定义所支持的设备类型，如果appKey 没有指定支持的设备类型，则走默认设备类型
         MessageServerContext.addDeviceType(DeviceTypeEnum.class);
-        // 初始化disruptor
-        initDisruptor();
         // 发布预加载lua脚本事件
         MessageServerContext.publishEvent(new PreloadedLuaScriptEvent(LuaScriptEnum.values()), true);
 
@@ -185,7 +172,7 @@ public abstract class AbstractMessageServer implements MessageServer {
         }
         try {
             MessageServerContext.publishEvent(new ServerStopEvent(this), false);
-            if (MessageServerContext.messageEventMulticaster instanceof DisruptorMessageEventMulticaster d) {
+            if (MessageServerContext.messageEventMulticaster instanceof DefaultMessageEventMulticaster d) {
                 d.shutdown();
             }
             if (bossGroup != null && workerGroup != null) {
@@ -202,29 +189,6 @@ public abstract class AbstractMessageServer implements MessageServer {
         return true;
     }
 
-    private void initDisruptor() {
-        // 1. 初始化配置
-        // 1. 配置参数
-        // 2. 创建Disruptor
-        log.debug("正在初始化disruptor......");
-        Disruptor<GenericEvent<ExceptionEvent>> exceptionDisruptor = new Disruptor<>(
-                new DisruptorEventFactory<>(),  // 使用通用工厂
-                MessageConstant.NUMBER_1024, //1024 必须是2的幂
-                DaemonThreadFactory.INSTANCE,  // 使用守护线程
-                ProducerType.MULTI,           // 支持单生产者
-                new YieldingWaitStrategy()
-        );
-        // 3. 注册消费者（可多个）
-        exceptionDisruptor.handleEventsWith(new DisruptorEventHandler<>(new ExceptionDisruptorEventProcessor()));
-        // 4. 启动
-        RingBuffer<GenericEvent<ExceptionEvent>> ringBuffer = exceptionDisruptor.start();
-        // 5. 创建生产者
-        DisruptorEventProducer<ExceptionEvent> producer = new DisruptorEventProducer<>(ringBuffer);
-
-        // 6 将生产者保存到上下文中
-        MessageServerContext.disruptorEventProducerCache.put(DisruptorEventProducerEnum.EXCEPTION_PRODUCER, producer);
-        log.debug("disruptor初始化完成.");
-    }
     /***
      * @author fzx
      * @description 开始服务

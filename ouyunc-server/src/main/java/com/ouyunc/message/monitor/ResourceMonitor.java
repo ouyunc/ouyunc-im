@@ -1,4 +1,4 @@
-package com.ouyunc.base.monitor;
+package com.ouyunc.message.monitor;
 
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;

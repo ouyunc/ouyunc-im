@@ -19,17 +19,17 @@ import java.util.concurrent.ThreadFactory;
  *
  * @see com.ouyunc.base.model.Order
  */
-public class DisruptorMessageEventMulticaster extends AbstractMessageEventMulticaster {
+public class DefaultMessageEventMulticaster extends AbstractMessageEventMulticaster {
 
     private final Disruptor<GenericEvent<MessageEvent>> disruptor;
     private final RingBuffer<GenericEvent<MessageEvent>> ringBuffer;
 
-    public DisruptorMessageEventMulticaster(int bufferSize) {
+    public DefaultMessageEventMulticaster(int bufferSize) {
         this(bufferSize, DaemonThreadFactory.INSTANCE, ProducerType.MULTI, new com.lmax.disruptor.YieldingWaitStrategy());
     }
 
-    public DisruptorMessageEventMulticaster(int bufferSize, ThreadFactory threadFactory, ProducerType producerType,
-                                            WaitStrategy waitStrategy) {
+    public DefaultMessageEventMulticaster(int bufferSize, ThreadFactory threadFactory, ProducerType producerType,
+                                          WaitStrategy waitStrategy) {
         Objects.requireNonNull(threadFactory, "threadFactory");
         Objects.requireNonNull(waitStrategy, "waitStrategy");
         Disruptor<GenericEvent<MessageEvent>> d = new Disruptor<>(
@@ -39,6 +39,7 @@ public class DisruptorMessageEventMulticaster extends AbstractMessageEventMultic
                 producerType,
                 waitStrategy
         );
+        // 消费者
         EventHandler<GenericEvent<MessageEvent>> handler = (event, sequence, endOfBatch) -> {
             try {
                 MessageEvent payload = event.getSource();

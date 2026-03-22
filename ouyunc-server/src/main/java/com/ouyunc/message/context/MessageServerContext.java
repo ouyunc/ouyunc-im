@@ -7,7 +7,6 @@ import com.google.common.collect.Sets;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.DeviceType;
-import com.ouyunc.base.constant.enums.DisruptorEventProducerEnum;
 import com.ouyunc.base.constant.enums.LuaScriptEnum;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.model.ClientInfo;
@@ -18,7 +17,6 @@ import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.cache.distributed.redis.RedisDistributedCache;
 import com.ouyunc.cache.local.caffeine.CaffeineLocalCache;
 import com.ouyunc.core.context.MessageContext;
-import com.ouyunc.core.disruptor.DisruptorEventProducer;
 import com.ouyunc.core.intercept.AbstractMessageInterceptor;
 import com.ouyunc.message.MessageServer;
 import com.ouyunc.message.convert.PacketConverter;
@@ -118,20 +116,6 @@ public class MessageServerContext extends MessageContext {
 
 
     // ================================================================local=====================================
-
-    /**
-     * disruptor事件生产者缓存
-     */
-    public static Cache<DisruptorEventProducerEnum, DisruptorEventProducer<?>> disruptorEventProducerCache = new CaffeineLocalCache<>("disruptorEventProducerCache", Caffeine.newBuilder().build(new CacheLoader<>() {
-        /***
-         * 获取 disruptor事件生产者缓存
-         */
-        @Override
-        public @Nullable DisruptorEventProducer<?> load(DisruptorEventProducerEnum disruptorEventProducer) throws Exception {
-            return null;
-        }
-    }));
-
 
     /**
      * 外部（本地）用户的通道channel缓存，该缓存中不包含集群中的内置客户端的channel, 这里的key 可以是手机号/身份证/token 等唯一标识用户的字段

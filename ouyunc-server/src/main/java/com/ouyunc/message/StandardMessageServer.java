@@ -13,7 +13,7 @@ import com.ouyunc.base.utils.*;
 import com.ouyunc.core.engine.LoadPropertiesEngine;
 import com.ouyunc.core.intercept.AbstractMessageInterceptor;
 import com.ouyunc.core.intercept.Interceptor;
-import com.ouyunc.core.listener.DisruptorMessageEventMulticaster;
+import com.ouyunc.core.listener.DefaultMessageEventMulticaster;
 import com.ouyunc.core.listener.MessageListener;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.processor.Processor;
@@ -89,7 +89,7 @@ public class StandardMessageServer extends AbstractMessageServer {
             log.error("扫描事件监听器失败: {}", e.getMessage());
         }
         // 排除不是直接实现该接口的
-        DisruptorMessageEventMulticaster messageEventMulticaster = new DisruptorMessageEventMulticaster(MessageConstant.NUMBER_1024);
+        DefaultMessageEventMulticaster messageEventMulticaster = new DefaultMessageEventMulticaster(MessageConstant.NUMBER_1024);
         // 扫描结果为 HashSet 无序；按 @Order（值小优先）再按类名排序后注册，保证同事件类型多 listener 调用顺序稳定
         List<Class<?>> orderedListenerClasses = new ArrayList<>(messageListenerClazzSet);
         orderedListenerClasses.sort(Comparator.comparingInt(StandardMessageServer::messageListenerOrder).thenComparing(Class::getName));
