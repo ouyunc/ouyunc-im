@@ -6,7 +6,6 @@ import com.lmax.disruptor.WaitStrategy;
 import com.lmax.disruptor.dsl.Disruptor;
 import com.lmax.disruptor.dsl.ProducerType;
 import com.lmax.disruptor.util.DaemonThreadFactory;
-import com.ouyunc.core.disruptor.DisruptorEventFactory;
 import com.ouyunc.core.listener.event.GenericEvent;
 import com.ouyunc.core.listener.event.MessageEvent;
 
@@ -19,17 +18,17 @@ import java.util.concurrent.ThreadFactory;
  *
  * @see com.ouyunc.base.model.Order
  */
-public class DefaultMessageEventMulticaster extends AbstractMessageEventMulticaster {
+public class DisruptorMessageEventMulticaster extends AbstractMessageEventMulticaster {
 
     private final Disruptor<GenericEvent<MessageEvent>> disruptor;
     private final RingBuffer<GenericEvent<MessageEvent>> ringBuffer;
 
-    public DefaultMessageEventMulticaster(int bufferSize) {
+    public DisruptorMessageEventMulticaster(int bufferSize) {
         this(bufferSize, DaemonThreadFactory.INSTANCE, ProducerType.MULTI, new com.lmax.disruptor.YieldingWaitStrategy());
     }
 
-    public DefaultMessageEventMulticaster(int bufferSize, ThreadFactory threadFactory, ProducerType producerType,
-                                          WaitStrategy waitStrategy) {
+    public DisruptorMessageEventMulticaster(int bufferSize, ThreadFactory threadFactory, ProducerType producerType,
+                                            WaitStrategy waitStrategy) {
         Objects.requireNonNull(threadFactory, "threadFactory");
         Objects.requireNonNull(waitStrategy, "waitStrategy");
         Disruptor<GenericEvent<MessageEvent>> d = new Disruptor<>(

@@ -5,7 +5,7 @@ import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.constant.enums.DeviceTypeEnum;
 import com.ouyunc.base.constant.enums.LuaScriptEnum;
 import com.ouyunc.base.utils.TimeUtil;
-import com.ouyunc.core.listener.DefaultMessageEventMulticaster;
+import com.ouyunc.core.listener.DisruptorMessageEventMulticaster;
 import com.ouyunc.core.listener.event.*;
 import com.ouyunc.message.banner.MessageBanner;
 import com.ouyunc.message.channel.DefaultServerChannelInitializer;
@@ -172,7 +172,7 @@ public abstract class AbstractMessageServer implements MessageServer {
         }
         try {
             MessageServerContext.publishEvent(new ServerStopEvent(this), false);
-            if (MessageServerContext.messageEventMulticaster instanceof DefaultMessageEventMulticaster d) {
+            if (MessageServerContext.messageEventMulticaster instanceof DisruptorMessageEventMulticaster d) {
                 d.shutdown();
             }
             if (bossGroup != null && workerGroup != null) {

@@ -1,4 +1,4 @@
-package com.ouyunc.core.disruptor;
+package com.ouyunc.core.listener;
 
 import com.lmax.disruptor.EventFactory;
 import com.ouyunc.core.listener.event.GenericEvent;
