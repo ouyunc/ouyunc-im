@@ -19,9 +19,9 @@ public abstract class AbstractMessageEventMulticaster implements MessageEventMul
     protected final Logger log = LoggerFactory.getLogger(getClass());
 
     /**
-     * 监听器（按事件类型分组，组内顺序为注册顺序）
+     * 监听器（按事件类型分组，组内顺序为注册顺序）；每实例独立，便于组合多播器委托。
      */
-    private static final SetMultimap<Class<?>, MessageListener<MessageEvent>> messageListeners = LinkedHashMultimap.create();
+    private final SetMultimap<Class<?>, MessageListener<MessageEvent>> messageListeners = LinkedHashMultimap.create();
 
 
     /**

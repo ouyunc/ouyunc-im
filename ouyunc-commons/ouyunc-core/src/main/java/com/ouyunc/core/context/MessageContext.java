@@ -37,8 +37,8 @@ public class MessageContext {
 
 
     /**
-     * message 事件多播器
-     * */
+     * 消息事件多播器（由服务端通过 {@link com.ouyunc.core.listener.MessageEventMulticasterFactory} 创建，实现为 {@link com.ouyunc.core.listener.SimpleMessageEventMulticaster}）。
+     */
     public static MessageEventMulticaster messageEventMulticaster;
 
     /**
@@ -74,9 +74,8 @@ public class MessageContext {
 
 
     /**
-     * @Author fzx
-     * @Description 发布IM事件
-     * @param event IMEvent事件的子类
+     * 业务侧统一发布入口；由 {@link com.ouyunc.core.listener.MessageEventMulticasterFactory} 注入 {@link com.ouyunc.core.listener.SimpleMessageEventMulticaster}。
+     *
      * @param async 是否异步发布事件 true-异步，false-同步
      */
     public static void publishEvent(MessageEvent event, boolean async) {

@@ -1,6 +1,5 @@
 package com.ouyunc.message;
 
-import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.MessageContentType;
 import com.ouyunc.base.constant.enums.MessageType;
@@ -13,7 +12,8 @@ import com.ouyunc.base.utils.*;
 import com.ouyunc.core.engine.LoadPropertiesEngine;
 import com.ouyunc.core.intercept.AbstractMessageInterceptor;
 import com.ouyunc.core.intercept.Interceptor;
-import com.ouyunc.core.listener.DisruptorMessageEventMulticaster;
+import com.ouyunc.core.listener.MessageEventMulticaster;
+import com.ouyunc.core.listener.MessageEventMulticasterFactory;
 import com.ouyunc.core.listener.MessageListener;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.processor.Processor;
@@ -88,8 +88,10 @@ public class StandardMessageServer extends AbstractMessageServer {
         } catch (IOException e) {
             log.error("扫描事件监听器失败: {}", e.getMessage());
         }
-        // 排除不是直接实现该接口的
-        DisruptorMessageEventMulticaster messageEventMulticaster = new DisruptorMessageEventMulticaster(MessageConstant.NUMBER_1024);
+        // 排除不是直接实现该接口的（SimpleMessageEventMulticaster + event-listener 线程池）
+        MessageEventMulticaster messageEventMulticaster =
+                MessageEventMulticasterFactory.create(ThreadPoolManager.eventListenerExecutor());
+        log.debug("事件多播器: SimpleMessageEventMulticaster");
         // 扫描结果为 HashSet 无序；按 @Order（值小优先）再按类名排序后注册，保证同事件类型多 listener 调用顺序稳定
         List<Class<?>> orderedListenerClasses = new ArrayList<>(messageListenerClazzSet);
         orderedListenerClasses.sort(Comparator.comparingInt(StandardMessageServer::messageListenerOrder).thenComparing(Class::getName));

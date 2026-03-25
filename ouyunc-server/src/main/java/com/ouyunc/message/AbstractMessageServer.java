@@ -5,7 +5,6 @@ import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.constant.enums.DeviceTypeEnum;
 import com.ouyunc.base.constant.enums.LuaScriptEnum;
 import com.ouyunc.base.utils.TimeUtil;
-import com.ouyunc.core.listener.DisruptorMessageEventMulticaster;
 import com.ouyunc.core.listener.event.*;
 import com.ouyunc.message.banner.MessageBanner;
 import com.ouyunc.message.channel.DefaultServerChannelInitializer;
@@ -162,7 +161,7 @@ public abstract class AbstractMessageServer implements MessageServer {
     }
 
     /**
-     * 统一优雅关闭：ServerStop、消息多播 Disruptor、Netty、集群内置客户端、全局线程池。
+     * 统一优雅关闭：ServerStop、Netty、集群内置客户端、全局线程池。
      *
      * @return 本次调用是否实际执行了关闭序列（已被其它路径执行过则返回 false）
      */
@@ -172,9 +171,6 @@ public abstract class AbstractMessageServer implements MessageServer {
         }
         try {
             MessageServerContext.publishEvent(new ServerStopEvent(this), false);
-            if (MessageServerContext.messageEventMulticaster instanceof DisruptorMessageEventMulticaster d) {
-                d.shutdown();
-            }
             if (bossGroup != null && workerGroup != null) {
                 bossGroup.shutdownGracefully();
                 workerGroup.shutdownGracefully();
