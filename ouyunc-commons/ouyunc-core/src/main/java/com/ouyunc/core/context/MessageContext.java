@@ -37,7 +37,8 @@ public class MessageContext {
 
 
     /**
-     * 消息事件多播器（由服务端通过 {@link com.ouyunc.core.listener.MessageEventMulticasterFactory} 创建，实现为 {@link com.ouyunc.core.listener.SimpleMessageEventMulticaster}）。
+     * 消息事件多播器（由服务端直接创建并注入；
+     * 当前实现为 {@link com.ouyunc.core.listener.DisruptorMessageEventMulticaster}）。
      */
     public static MessageEventMulticaster messageEventMulticaster;
 
@@ -74,9 +75,9 @@ public class MessageContext {
 
 
     /**
-     * 业务侧统一发布入口；由 {@link com.ouyunc.core.listener.MessageEventMulticasterFactory} 注入 {@link com.ouyunc.core.listener.SimpleMessageEventMulticaster}。
+     * 业务侧统一发布入口；由服务端启动阶段注入事件多播器。
      *
-     * @param async 是否异步发布事件 true-异步，false-同步
+     * @param async 是否异步发布事件 true-异步（走 Disruptor），false-同步
      */
     public static void publishEvent(MessageEvent event, boolean async) {
         if (messageEventMulticaster != null) {

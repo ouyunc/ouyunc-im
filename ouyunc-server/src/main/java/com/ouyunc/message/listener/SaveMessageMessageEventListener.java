@@ -5,7 +5,8 @@ import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.constant.enums.EventType;
 import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.packet.Packet;
-import com.ouyunc.core.listener.MessageListener;
+import com.ouyunc.core.listener.MessageEventListener;
+import com.ouyunc.core.listener.EventListener;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.mq.kafka.KafkaFactory;
 import org.slf4j.Logger;
@@ -20,9 +21,10 @@ import java.util.Map;
 /**
  * @Author fzx
  * @Description: 保存消息监听器
- **/
-public class SaveMessageListener implements MessageListener<MessageEvent> {
-    private static final Logger log = LoggerFactory.getLogger(SaveMessageListener.class);
+ */
+@EventListener(order = 30)
+class SaveMessageMessageEventListener implements MessageEventListener<MessageEvent> {
+    private static final Logger log = LoggerFactory.getLogger(SaveMessageMessageEventListener.class);
 
     /**
      * kafkaTemplate

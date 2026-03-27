@@ -11,7 +11,8 @@ import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.serialize.Serializer;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.core.context.MessageContext;
-import com.ouyunc.core.listener.MessageListener;
+import com.ouyunc.core.listener.MessageEventListener;
+import com.ouyunc.core.listener.EventListener;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.domain.constants.YesOrNo;
 import com.ouyunc.message.context.MessageServerContext;
@@ -35,9 +36,10 @@ import java.util.List;
 /**
  * @Author fzx
  * @Description: 离线监听器
- **/
-public class ClientLogoutListener implements MessageListener<MessageEvent> {
-    private static final Logger log = LoggerFactory.getLogger(ClientLogoutListener.class);
+ */
+@EventListener(order = 15)
+class ClientLogoutMessageEventListener implements MessageEventListener<MessageEvent> {
+    private static final Logger log = LoggerFactory.getLogger(ClientLogoutMessageEventListener.class);
 
 
     /**

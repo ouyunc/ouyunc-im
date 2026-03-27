@@ -3,7 +3,8 @@ package com.ouyunc.message.listener;
 import com.ouyunc.base.constant.enums.EventType;
 import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.packet.Packet;
-import com.ouyunc.core.listener.MessageListener;
+import com.ouyunc.core.listener.MessageEventListener;
+import com.ouyunc.core.listener.EventListener;
 import com.ouyunc.core.listener.event.MessageEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,9 +12,10 @@ import org.slf4j.LoggerFactory;
 /**
  * @Author fzx
  * @Description: 消息发送离线事件监听器，将离线消息发送到mq来处理
- **/
-public class SendOfflineListener implements MessageListener<MessageEvent> {
-    private static final Logger log = LoggerFactory.getLogger(SendOfflineListener.class);
+ */
+@EventListener(order = 35)
+class SendOfflineMessageEventListener implements MessageEventListener<MessageEvent> {
+    private static final Logger log = LoggerFactory.getLogger(SendOfflineMessageEventListener.class);
 
 
     /**

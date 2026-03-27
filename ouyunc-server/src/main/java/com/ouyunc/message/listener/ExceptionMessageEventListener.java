@@ -2,12 +2,14 @@ package com.ouyunc.message.listener;
 
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.MqConstant;
+import com.ouyunc.base.constant.enums.EventRingEnum;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.EventType;
 import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.packet.Packet;
-import com.ouyunc.core.listener.MessageListener;
+import com.ouyunc.core.listener.MessageEventListener;
+import com.ouyunc.core.listener.EventListener;
 import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.message.context.MessageServerContext;
@@ -20,9 +22,10 @@ import org.springframework.kafka.core.KafkaTemplate;
 /**
  * @Author fzx
  * @Description: 异常消息处理监听器，原则上所有异常消息进mq来处理
- **/
-public class ExceptionListener implements MessageListener<MessageEvent> {
-    private static final Logger log = LoggerFactory.getLogger(ExceptionListener.class);
+ */
+@EventListener(order = 100, ring = EventRingEnum.SLOW)
+class ExceptionMessageEventListener implements MessageEventListener<MessageEvent> {
+    private static final Logger log = LoggerFactory.getLogger(ExceptionMessageEventListener.class);
 
     /**
      * kafkaTemplate

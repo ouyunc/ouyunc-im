@@ -14,7 +14,8 @@ import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.serialize.Serializer;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.core.context.MessageContext;
-import com.ouyunc.core.listener.MessageListener;
+import com.ouyunc.core.listener.MessageEventListener;
+import com.ouyunc.core.listener.EventListener;
 import com.ouyunc.core.listener.event.payload.ClientLoginEventPayload;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.domain.constants.YesOrNo;
@@ -32,10 +33,11 @@ import java.util.List;
 /**
  * @Author fzx
  * @Description: 客户端登录成功事件监听器
- **/
-public class ClientLoginListener implements MessageListener<MessageEvent> {
+ */
+@EventListener(order = 10)
+class ClientLoginMessageEventListener implements MessageEventListener<MessageEvent> {
 
-    private static final Logger log = LoggerFactory.getLogger(ClientLoginListener.class);
+    private static final Logger log = LoggerFactory.getLogger(ClientLoginMessageEventListener.class);
 
 
     /**

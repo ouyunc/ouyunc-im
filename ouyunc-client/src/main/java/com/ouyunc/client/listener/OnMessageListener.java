@@ -2,14 +2,16 @@ package com.ouyunc.client.listener;
 
 import com.ouyunc.base.constant.enums.EventType;
 import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
-import com.ouyunc.core.listener.MessageListener;
+import com.ouyunc.core.listener.MessageEventListener;
+import com.ouyunc.core.listener.EventListener;
 import com.ouyunc.core.listener.event.MessageEvent;
 
 /**
  * @author fzx
  * @description 消息监听器
  */
-public class OnMessageListener implements MessageListener<MessageEvent> {
+@EventListener(order = 20)
+class OnMessageListenerImpl implements MessageEventListener<MessageEvent> {
     @Override
     public EventType type() {
         return MessageEventTypeEnum.ON_MESSAGE;

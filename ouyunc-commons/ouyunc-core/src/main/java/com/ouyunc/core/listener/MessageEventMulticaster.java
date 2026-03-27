@@ -14,20 +14,20 @@ public interface MessageEventMulticaster {
      * @Author fzx
      * @Description 添加某个监听器
      */
-    void addMessageListener(MessageListener<MessageEvent> listener);
+    void addMessageListener(MessageEventListener<MessageEvent> listener);
 
 
     /**
      * @Author fzx
      * @Description 获取事件的所有监听器
      */
-    Collection<MessageListener<MessageEvent>> getMessageListeners(MessageEvent event);
+    Collection<MessageEventListener<MessageEvent>> getMessageListeners(MessageEvent event);
 
     /**
      * @Author fzx
      * @Description 移除某个监听器
      */
-    void removeMessageListener(MessageListener<MessageEvent> listener);
+    void removeMessageListener(MessageEventListener<MessageEvent> listener);
 
     /**
      * @Author fzx

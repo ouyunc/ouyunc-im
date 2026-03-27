@@ -5,16 +5,16 @@ import com.ouyunc.base.constant.enums.MessageContentType;
 import com.ouyunc.base.constant.enums.MessageType;
 import com.ouyunc.base.executor.ThreadPoolConfig;
 import com.ouyunc.base.executor.ThreadPoolManager;
-import com.ouyunc.base.model.Order;
 import com.ouyunc.base.model.ProtocolType;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.utils.*;
 import com.ouyunc.core.engine.LoadPropertiesEngine;
 import com.ouyunc.core.intercept.AbstractMessageInterceptor;
 import com.ouyunc.core.intercept.Interceptor;
+import com.ouyunc.core.listener.DisruptorMessageEventMulticaster;
 import com.ouyunc.core.listener.MessageEventMulticaster;
-import com.ouyunc.core.listener.MessageEventMulticasterFactory;
-import com.ouyunc.core.listener.MessageListener;
+import com.ouyunc.core.listener.MessageEventListener;
+import com.ouyunc.core.listener.EventListener;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.processor.Processor;
 import com.ouyunc.core.properties.CommandLineArgs;
@@ -83,28 +83,28 @@ public class StandardMessageServer extends AbstractMessageServer {
         Set<Class<?>> messageListenerClazzSet = new HashSet<>();
         try {
             for (String messageListenersScanPackagePath : MessageServerContext.serverProperties().getMessageListenersScanPackagePaths()) {
-                messageListenerClazzSet.addAll(ClassScannerUtil.scanPackageBySuper(messageListenersScanPackagePath, MessageListener.class));
+                messageListenerClazzSet.addAll(ClassScannerUtil.scanPackageBySuper(messageListenersScanPackagePath, MessageEventListener.class));
             }
         } catch (IOException e) {
             log.error("扫描事件监听器失败: {}", e.getMessage());
         }
-        // 排除不是直接实现该接口的（SimpleMessageEventMulticaster + event-listener 线程池）
+        // 排除不是直接实现该接口的（DisruptorMessageEventMulticaster + event-listener 线程池）
         MessageEventMulticaster messageEventMulticaster =
-                MessageEventMulticasterFactory.create(ThreadPoolManager.eventListenerExecutor());
-        log.debug("事件多播器: SimpleMessageEventMulticaster");
+                new DisruptorMessageEventMulticaster();
+        log.debug("事件多播器: DisruptorMessageEventMulticaster");
         // 扫描结果为 HashSet 无序；按 @Order（值小优先）再按类名排序后注册，保证同事件类型多 listener 调用顺序稳定
         List<Class<?>> orderedListenerClasses = new ArrayList<>(messageListenerClazzSet);
         orderedListenerClasses.sort(Comparator.comparingInt(StandardMessageServer::messageListenerOrder).thenComparing(Class::getName));
         for (Class<?> messageListenerClazz : orderedListenerClasses) {
-            if (MessageListener.class.isAssignableFrom(messageListenerClazz)) {
+            if (MessageEventListener.class.isAssignableFrom(messageListenerClazz)) {
                 // 排除自身以及抽象类
-                if (!MessageListener.class.equals(messageListenerClazz) && !Modifier.isAbstract(messageListenerClazz.getModifiers())) {
-                    MessageListener<MessageEvent> messageListener = (MessageListener<MessageEvent>) objenesis.newInstance(messageListenerClazz);
+                if (!MessageEventListener.class.equals(messageListenerClazz) && !Modifier.isAbstract(messageListenerClazz.getModifiers())) {
+                    MessageEventListener<MessageEvent> messageListener = (MessageEventListener<MessageEvent>) objenesis.newInstance(messageListenerClazz);
                     messageEventMulticaster.addMessageListener(messageListener);
                     log.debug("事件监听器： {}", messageListener);
                 }
-            }else {
-                log.error("{} 不是MessageListener 的实现类", messageListenerClazz.getName());
+            } else {
+                log.error("{} 不是MessageEventListener 的实现类", messageListenerClazz.getName());
             }
         }
         MessageServerContext.messageEventMulticaster = messageEventMulticaster;
@@ -294,7 +294,7 @@ public class StandardMessageServer extends AbstractMessageServer {
     }
 
     private static int messageListenerOrder(Class<?> listenerClass) {
-        Order order = listenerClass.getAnnotation(Order.class);
-        return order != null ? order.value() : Integer.MAX_VALUE;
+        EventListener eventListener = listenerClass.getAnnotation(EventListener.class);
+        return eventListener != null ? eventListener.order() : Integer.MAX_VALUE;
     }
 }

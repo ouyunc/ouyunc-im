@@ -14,7 +14,8 @@ import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.base.constant.enums.EventType;
 import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
-import com.ouyunc.core.listener.MessageListener;
+import com.ouyunc.core.listener.MessageEventListener;
+import com.ouyunc.core.listener.EventListener;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
@@ -44,8 +45,9 @@ import java.util.stream.Collectors;
  * @author fzx
  * @description 服务启动成功事件
  */
-public class ServerStartupEventListener implements MessageListener<MessageEvent> {
-    private static final Logger log = LoggerFactory.getLogger(ServerStartupEventListener.class);
+@EventListener(order = 90)
+class ServerStartupEventMessageEventListener implements MessageEventListener<MessageEvent> {
+    private static final Logger log = LoggerFactory.getLogger(ServerStartupEventMessageEventListener.class);
 
     private static final RedisTemplate<String, ?> redisTemplate = CacheFactory.REDIS.instance();
 
