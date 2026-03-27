@@ -46,6 +46,6 @@ public class WsProtocolHandler extends SimpleChannelInboundHandler<Object> {
 //            ctx.channel().attr(AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN)).set(ProtocolTypeEnum.WS);
 //        }
 //        // 然后发布事件（成功事件/接收消息事件），发送消息和接收消息都被解耦
-//        MessageContext.publishEvent(new OnMessageEvent(packet), true);
+//        MessageContext.publishEvent(new MessageEvent(packet, MessageEventTypeEnum.ON_MESSAGE), true);
     }
 }

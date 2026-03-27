@@ -76,7 +76,7 @@ public class StartClient {    private static final ScheduledExecutorService SCHE
                                 // hessian    430b         235b
                                 // fst        650b         315b
                                 // jdk        500b         346b
-                                Packet packet = new Packet((byte) 3, (byte) 1, 123L, DeviceTypeEnum.PC.getValue(), NetworkEnum.OTHER.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(), OuyuncMessageTypeEnum.SYN_ACK.getType(), message);
+                                Packet packet = new Packet((byte) 3, (byte) 1, 123L, DeviceTypeEnum.PC.getType(), NetworkEnum.OTHER.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(), OuyuncMessageTypeEnum.SYN_ACK.getType(), message);
 
                                 ctx.writeAndFlush(packet);
                             }

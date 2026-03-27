@@ -46,5 +46,5 @@ public interface MessageEventMulticaster {
      * @Author fzx
      * @Description 多播事件
      */
-    void multicastEvent(MessageEvent event, boolean sync);
+    void multicastEvent(MessageEvent event, boolean async);
 }

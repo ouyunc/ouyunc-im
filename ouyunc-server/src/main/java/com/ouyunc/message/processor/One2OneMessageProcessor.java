@@ -3,6 +3,7 @@ package com.ouyunc.message.processor;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
+import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.MessageType;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
@@ -11,7 +12,8 @@ import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.IdentityUtil;
-import com.ouyunc.core.listener.event.ExceptionEvent;
+import com.ouyunc.core.listener.event.MessageEvent;
+import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.domain.constants.IdentityType;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
@@ -49,7 +51,7 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
                 if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
                     // 关闭当前 channel，这里会触发 DefaultSocketChannelInitializer 中的关闭逻辑
                     log.error("校验消息失败: {} 认证未通过,开始关闭channel", packet);
-                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过!", packet), true);
+                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过!", packet), MessageEventTypeEnum.EXCEPTION), true);
                     ctx.close();
                     return;
                 }
@@ -76,7 +78,7 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
             } else {
                 // 发送失败
                 log.error("Failed to send message: {} ", ex.getMessage());
-                MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "通过发送mq保存消息异常!", packet), true);
+                MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "通过发送mq保存消息异常!", packet), MessageEventTypeEnum.EXCEPTION), true);
             }
         });
     }

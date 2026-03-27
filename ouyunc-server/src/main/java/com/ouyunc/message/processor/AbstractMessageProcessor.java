@@ -1,10 +1,12 @@
 package com.ouyunc.message.processor;
 
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
+import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.core.context.MessageContext;
-import com.ouyunc.core.listener.event.ExceptionEvent;
+import com.ouyunc.core.listener.event.MessageEvent;
+import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.validator.AuthValidator;
 import com.ouyunc.repository.DefaultRepository;
@@ -49,7 +51,7 @@ public abstract class AbstractMessageProcessor<T extends Number> extends Abstrac
                 if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
                     // 关闭当前 channel，这里会触发 DefaultSocketChannelInitializer 中的关闭逻辑
                     log.error("校验消息: {} 中的发送方登录认证失败,开始关闭channel", packet);
-                    MessageContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过", packet), true);
+                    MessageContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过", packet), MessageEventTypeEnum.EXCEPTION), true);
                     ctx.close();
                     return;
                 }
@@ -63,7 +65,7 @@ public abstract class AbstractMessageProcessor<T extends Number> extends Abstrac
             } else {
                 // 发送失败
                 log.error("Failed to send message: {} " , ex.getMessage());
-                MessageContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "通过发送mq保存消息异常!", packet), true);
+                MessageContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "通过发送mq保存消息异常!", packet), MessageEventTypeEnum.EXCEPTION), true);
             }
         });
     }

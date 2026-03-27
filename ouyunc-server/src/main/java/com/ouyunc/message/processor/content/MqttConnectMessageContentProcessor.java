@@ -6,6 +6,7 @@ import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.DeviceTypeEnum;
 import com.ouyunc.base.constant.enums.MessageContentType;
 import com.ouyunc.base.constant.enums.MqttMessageContentTypeEnum;
+import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.constant.enums.OnlineEnum;
 import com.ouyunc.base.encrypt.Encrypt;
 import com.ouyunc.base.exception.MessageException;
@@ -20,7 +21,7 @@ import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.utils.MqttCodecUtil;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.core.context.MessageContext;
-import com.ouyunc.core.listener.event.ClientLogoutEvent;
+import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.domain.constants.YesOrNo;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.handler.HeartBeatHandler;
@@ -194,7 +195,7 @@ public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<In
                 final LoginClientInfo closingLocalLoginClientInfo = ChannelAttrUtil.getChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
                 if (closingLocalLoginClientInfo != null) {
                     // 这里不进行判空了，到这里肯定不为空（登录信息里面一定要有登录设备的类型）
-                    Byte clientLoginDeviceValue = closingLocalLoginClientInfo.getDeviceType().getDeviceTypeValue();
+                    Byte clientLoginDeviceValue = closingLocalLoginClientInfo.getDeviceType().getType();
                     String closingComboIdentity = IdentityUtil.generalComboIdentity(closingLocalLoginClientInfo.getAppKey(), closingLocalLoginClientInfo.getIdentity(), clientLoginDeviceValue);
                     // 登录信息一致,才进行解绑，删除缓存信息
                     MessageServerContext.localLoginClientRegisterTable.delete(closingComboIdentity);
@@ -231,7 +232,7 @@ public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<In
                         }
                     }
                     // 发送客户端离线事件， 可以处理发送遗嘱等客户端关闭后的操作逻辑
-                    MessageServerContext.publishEvent(new ClientLogoutEvent(closingLocalLoginClientInfo), true);
+                    MessageServerContext.publishEvent(new MessageEvent(closingLocalLoginClientInfo, MessageEventTypeEnum.CLIENT_LOGOUT), true);
                 }
             };
             // 设置channel关闭后的钩子

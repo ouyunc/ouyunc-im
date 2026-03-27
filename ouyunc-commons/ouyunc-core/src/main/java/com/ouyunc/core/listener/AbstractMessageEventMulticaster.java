@@ -3,7 +3,7 @@ package com.ouyunc.core.listener;
 
 import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.SetMultimap;
-import com.ouyunc.base.utils.ObjectUtil;
+import com.ouyunc.base.constant.enums.EventType;
 import com.ouyunc.core.listener.event.MessageEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,7 +21,7 @@ public abstract class AbstractMessageEventMulticaster implements MessageEventMul
     /**
      * 监听器（按事件类型分组，组内顺序为注册顺序）；每实例独立，便于组合多播器委托。
      */
-    private final SetMultimap<Class<?>, MessageListener<MessageEvent>> messageListeners = LinkedHashMultimap.create();
+    private final SetMultimap<EventType, MessageListener<MessageEvent>> messageListeners = LinkedHashMultimap.create();
 
 
     /**
@@ -31,9 +31,12 @@ public abstract class AbstractMessageEventMulticaster implements MessageEventMul
     @Override
     public void addMessageListener(MessageListener<MessageEvent> listener) {
         if (listener != null) {
-            // 获取该listener 的泛型
-            Class<?> eventTypeClass = ObjectUtil.getInterfaceGenerics(listener);
-            messageListeners.put(eventTypeClass, listener);
+            EventType eventType = listener.type();
+            if (eventType == null) {
+                log.warn("message 监听器 {} 未声明 type()，忽略注册", listener);
+                return;
+            }
+            messageListeners.put(eventType, listener);
         }
     }
 
@@ -43,10 +46,10 @@ public abstract class AbstractMessageEventMulticaster implements MessageEventMul
      */
     @Override
     public Collection<MessageListener<MessageEvent>> getMessageListeners(MessageEvent event) {
-        if (event == null) {
+        if (event == null || event.getType() == null) {
             return null;
         }
-        return messageListeners.get(event.getClass());
+        return messageListeners.get(event.getType());
     }
 
     /**
@@ -56,8 +59,10 @@ public abstract class AbstractMessageEventMulticaster implements MessageEventMul
     @Override
     public void removeMessageListener(MessageListener<MessageEvent> listener) {
         if (listener != null) {
-            Class<?> eventTypeClass = ObjectUtil.getInterfaceGenerics(listener);
-            messageListeners.remove(eventTypeClass, listener);
+            EventType eventType = listener.type();
+            if (eventType != null) {
+                messageListeners.remove(eventType, listener);
+            }
         }
     }
 
@@ -68,8 +73,8 @@ public abstract class AbstractMessageEventMulticaster implements MessageEventMul
      */
     @Override
     public void removeMessageListener(MessageEvent event) {
-        if (event != null) {
-            messageListeners.removeAll(event.getClass());
+        if (event != null && event.getType() != null) {
+            messageListeners.removeAll(event.getType());
         }
     }
 
@@ -88,7 +93,7 @@ public abstract class AbstractMessageEventMulticaster implements MessageEventMul
      */
     protected void invokeListener(MessageListener<MessageEvent> listener, MessageEvent event) {
         try {
-            listener.onApplicationEvent(event);
+            listener.onEvent(event);
         } catch (Throwable err) {
             log.error("message 监听器 {} 执行事件 {} 失败：{}", listener, event, err.getMessage());
         }

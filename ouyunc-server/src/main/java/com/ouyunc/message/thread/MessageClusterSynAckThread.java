@@ -1,5 +1,6 @@
 package com.ouyunc.message.thread;
 
+import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.*;
 import com.ouyunc.base.encrypt.Encrypt;
@@ -9,8 +10,8 @@ import com.ouyunc.base.serialize.Serializer;
 import com.ouyunc.base.utils.MapUtil;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.core.context.MessageContext;
-import com.ouyunc.core.listener.event.ExceptionEvent;
-import com.ouyunc.core.listener.event.ServerOfflineEvent;
+import com.ouyunc.core.listener.event.MessageEvent;
+import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.protocol.NativePacketProtocol;
 import io.netty.channel.pool.ChannelPool;
@@ -60,14 +61,14 @@ public class MessageClusterSynAckThread implements Runnable{
             // hessian    430b         235b
             // fst        650b         315b
             // jdk        500b         346b
-            Packet packet = new Packet(NativePacketProtocol.OUYUNC.getProtocol(), NativePacketProtocol.OUYUNC.getProtocolVersion(), MessageContext.idGenerator().generateId(), DeviceTypeEnum.PC.getValue(), NetworkEnum.OTHER.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(), OuyuncMessageTypeEnum.SYN_ACK.getType(), message);
+            Packet packet = new Packet(NativePacketProtocol.OUYUNC.getProtocol(), NativePacketProtocol.OUYUNC.getProtocolVersion(), MessageContext.idGenerator().generateId(), DeviceTypeEnum.PC.getType(), NetworkEnum.OTHER.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(), OuyuncMessageTypeEnum.SYN_ACK.getType(), message);
             // 先获取给目标服务toInetSocketAddress 发送syn,没有回复ack的次数，默认从0开始
             AtomicInteger missAckTimes = MessageServerContext.clusterClientMissAckTimesCache.get(targetServerAddress);
             // 判断次数是否到达规定的次数，默认3次（也就是说给目标服务器连续发送3次syn,没有一次得到响应ack）则进行服务下线处理，从活着的服务注册表移除该服务
             if (MessageServerContext.clusterActiveServerRegistryTableCache.asMap().containsKey(targetServerAddress) && missAckTimes.incrementAndGet() > MessageServerContext.serverProperties().getClusterClientHeartbeatWaitRetry()) {
                 MessageServerContext.clusterActiveServerRegistryTableCache.delete(targetServerAddress);
                 // 发送服务离线事件
-                MessageServerContext.publishEvent(new ServerOfflineEvent(targetServerAddress), true);
+                MessageServerContext.publishEvent(new MessageEvent(targetServerAddress, MessageEventTypeEnum.SERVER_OFFLINE), true);
             }
             // 内部客户端连接池传递消息syn ,尝试所有的路径去保持连通
             MessageServerContext.findProtocol(packet.getProtocol(), packet.getProtocolVersion()).doSendMessage(packet, targetServerAddress, (sendResult)->{});
@@ -75,7 +76,7 @@ public class MessageClusterSynAckThread implements Runnable{
         // 判断该服务所在的集群个数是否小于服务列表的半数（用于解决脑裂）, 启动服务30分钟后进行检测是否脑裂,如果满足则系统退出
         if (MessageServerContext.serverProperties().isClusterSplitBrainDetectionEnable() && (MessageServerContext.clusterActiveServerRegistryTableCache.sizeMap() + NumberConstant.NUMBER_1) <= availableGlobalServer.size() / 2 && ChronoUnit.MINUTES.between(beginTime, Instant.now()) >= MessageServerContext.serverProperties().getClusterSplitBrainDetectionDelayTime()) {
             log.error("集群服务脑裂检测中，服务 {} 异常，开始注销...", MessageServerContext.serverProperties().getLocalServerAddress());
-            MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.SERVER_SPLIT_BRAIN_ERROR, "集群服务脑裂检测中，服务异常", null));
+            MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.SERVER_SPLIT_BRAIN_ERROR, "集群服务脑裂检测中，服务异常", null), MessageEventTypeEnum.EXCEPTION));
             MessageServerContext.server.stop();
         }
     }

@@ -2,15 +2,16 @@ package com.ouyunc.message.listener;
 
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.MqConstant;
+import com.ouyunc.base.constant.enums.EventType;
+import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.model.SendResult;
 import com.ouyunc.core.listener.MessageListener;
-import com.ouyunc.core.listener.event.SendFailEvent;
+import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.mq.kafka.KafkaFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.KafkaHeaders;
-import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
 
 import java.util.HashMap;
@@ -20,7 +21,7 @@ import java.util.Map;
  * @Author fzx
  * @Description: 消息发送失败监听器， 可以做消息日志的记录，重发等操作
  **/
-public class SendFailListener implements MessageListener<SendFailEvent> {
+public class SendFailListener implements MessageListener<MessageEvent> {
     private static final Logger log = LoggerFactory.getLogger(SendFailListener.class);
 
     /**
@@ -34,7 +35,15 @@ public class SendFailListener implements MessageListener<SendFailEvent> {
      * @Description 处理发送消息失败的事件
      */
     @Override
-    public void onApplicationEvent(SendFailEvent event) {
+    public EventType type() {
+        return MessageEventTypeEnum.SEND_FAIL;
+    }
+
+    @Override
+    public void onEvent(MessageEvent event) {
+        if (event.getType() != MessageEventTypeEnum.SEND_FAIL) {
+            return;
+        }
         if (log.isDebugEnabled()) {
             log.error("消息发送失败事件监听器正在处理：{}", JSON.toJSONString(event.getSource()));
         }

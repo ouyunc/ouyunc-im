@@ -1,5 +1,6 @@
 package com.ouyunc.message.processor;
 
+import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
@@ -8,7 +9,8 @@ import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.core.context.MessageContext;
-import com.ouyunc.core.listener.event.ExceptionEvent;
+import com.ouyunc.core.listener.event.MessageEvent;
+import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.domain.base.GroupRequestSession;
 import com.ouyunc.domain.constants.GroupJoinerProcessStatus;
 import com.ouyunc.domain.constants.GroupRequestSessionWay;
@@ -46,7 +48,7 @@ public final class GroupInviteJoinerRefuseMessageProcessor extends AbstractMessa
                 if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
                     // 关闭当前 channel，这里会触发 DefaultSocketChannelInitializer 中的关闭逻辑
                     log.error("校验消息: {} 中的发送方登录认证失败,开始关闭channel", packet);
-                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过", packet), true);
+                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过", packet), MessageEventTypeEnum.EXCEPTION), true);
                     ctx.close();
                     return;
                 }
@@ -70,7 +72,7 @@ public final class GroupInviteJoinerRefuseMessageProcessor extends AbstractMessa
             } else {
                 // 发送失败
                 log.error("Failed to send message: {} ", ex.getMessage());
-                MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "通过发送mq保存消息异常!", packet), true);
+                MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "通过发送mq保存消息异常!", packet), MessageEventTypeEnum.EXCEPTION), true);
             }
         });
     }
@@ -105,7 +107,7 @@ public final class GroupInviteJoinerRefuseMessageProcessor extends AbstractMessa
                 if (CollectionUtils.isEmpty(groupMannerOrLeaderUsersIdentitySet)) {
                     // 这个群里没有群主？
                     log.error("群组：{}, 不存在群主和群管理员！群消息： {}", packet.getMessage().getTo(), packet);
-                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群主或群管理员", packet), true);
+                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群主或群管理员", packet), MessageEventTypeEnum.EXCEPTION), true);
                     return;
                 }
                 // 如果有群主或群管理员，则发送消息给群主或群管理员， 排除自己,如果返回false 说明处理人不是管理员
@@ -117,14 +119,14 @@ public final class GroupInviteJoinerRefuseMessageProcessor extends AbstractMessa
                 groupRequestSession.setJoinerProcessStatus(GroupJoinerProcessStatus.REFUSE.value());
                 if (!saveGroupRequestMessage(packet, groupMannerOrLeaderUsersIdentitySet, groupRequestSession)) {
                     log.error("Failed to save invited join group refuse request message: {}", packet);
-                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存被邀请拒绝加群请求消息异常!", packet), true);
+                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存被邀请拒绝加群请求消息异常!", packet), MessageEventTypeEnum.EXCEPTION), true);
                     return;
                 }
                 // 发送mq
                 repository().savePacket2Mq(MqConstant.KAFKA_GROUP_REQUEST_TOPIC, packet.getMessage().getTo(), packet).whenComplete((result, ex) -> {
                     if (ex != null) {
                         log.error("邀请拒绝加群请求，发送mq异常，原因：{}", ex.getMessage());
-                        MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "被邀请人拒绝邀请加群请求异常！" + ex.getMessage(), packet), true);
+                        MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "被邀请人拒绝邀请加群请求异常！" + ex.getMessage(), packet), MessageEventTypeEnum.EXCEPTION), true);
                     } else {
                         // 需要给邀请者发送消息？
                         if (groupMannerOrLeaderUsersIdentitySet.contains(groupRequestSession.getInviter())) {
@@ -156,7 +158,7 @@ public final class GroupInviteJoinerRefuseMessageProcessor extends AbstractMessa
                                     ctx.fireChannelRead(packet);
                                 } else {
                                     log.error("保存被邀请者离线消息失败: {}", packet);
-                                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.SAVE_OFFLINE_MESSAGE_ERROR, "保存被邀请者离线消息异常！", packet), true);
+                                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.SAVE_OFFLINE_MESSAGE_ERROR, "保存被邀请者离线消息异常！", packet), MessageEventTypeEnum.EXCEPTION), true);
                                 }
                             });
                         }
@@ -164,17 +166,17 @@ public final class GroupInviteJoinerRefuseMessageProcessor extends AbstractMessa
                 });
             } else {
                 log.error("Failed to lock user invite join group refuse request message: {}", packet);
-                MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, "拒绝邀请加群请求锁失败", packet), true);
+                MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, "拒绝邀请加群请求锁失败", packet), MessageEventTypeEnum.EXCEPTION), true);
             }
         } catch (Exception e) {
             log.error("Failed to handle user invite join group refuse request message: {}", e.getMessage());
-            MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.BIND_GROUP_ERROR, "处理拒绝邀请加群请求异常！" + e.getMessage(), packet), true);
+            MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.BIND_GROUP_ERROR, "处理拒绝邀请加群请求异常！" + e.getMessage(), packet), MessageEventTypeEnum.EXCEPTION), true);
         } finally {
             if (lock.isHeldByCurrentThread()) {
                 lock.unlock();
             }else {
                 log.error("Failed to unlock user invite join group refuse request message: {}", packet);
-                MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.UN_LOCK_ERROR, "处理拒绝邀请加群请求锁失败", packet), true);
+                MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.UN_LOCK_ERROR, "处理拒绝邀请加群请求锁失败", packet), MessageEventTypeEnum.EXCEPTION), true);
             }
         }
     }

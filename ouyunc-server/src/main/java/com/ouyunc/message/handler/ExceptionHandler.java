@@ -1,6 +1,7 @@
 package com.ouyunc.message.handler;
 
-import com.ouyunc.core.listener.event.ExceptionEvent;
+import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
+import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.message.context.MessageServerContext;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -21,6 +22,6 @@ public class ExceptionHandler extends ChannelDuplexHandler {
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         log.error("通道 channelId: {} 发生了异常: {} ", ctx.channel().id(), cause.getMessage());
         // 发送事件，统一交给事件再推送mq, 记录日志，发送邮件或短信进行通知
-        MessageServerContext.publishEvent(new ExceptionEvent(cause, null), true);
+        MessageServerContext.publishEvent(new MessageEvent(cause, MessageEventTypeEnum.EXCEPTION), true);
     }
 }

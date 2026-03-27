@@ -4,12 +4,14 @@ package com.ouyunc.message.thread;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
+import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.message.content.LoginContent;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.cache.config.CacheFactory;
-import com.ouyunc.core.listener.event.ExceptionEvent;
+import com.ouyunc.core.listener.event.MessageEvent;
+import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.message.context.MessageServerContext;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -64,7 +66,7 @@ public class LoginKeepAliveThread implements Runnable{
                 }
             } catch (Exception e) {
                 log.error("客户端登录保活线程异常中断，原因：{}", e.getMessage());
-                MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.LOGIN_KEEP_ALIVE_ERROR, "客户端登录保活线程异常中断,原因" + e.getMessage(), null));
+                MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_KEEP_ALIVE_ERROR, "客户端登录保活线程异常中断, 原因" + e.getMessage(), null), MessageEventTypeEnum.EXCEPTION));
             }
 
         }

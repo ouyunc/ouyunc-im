@@ -9,7 +9,8 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.core.intercept.AbstractMessageInterceptor;
-import com.ouyunc.core.listener.event.SendFailEvent;
+import com.ouyunc.core.listener.event.MessageEvent;
+import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.message.context.MessageServerContext;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -227,7 +228,7 @@ public class MessageHelper {
                         // 发送失败回调
                         sendCallback.onCallback(sendResult);
                         // 发布发送失败事件
-                        MessageServerContext.publishEvent(new SendFailEvent(sendResult), true);
+                        MessageServerContext.publishEvent(new MessageEvent(sendResult, MessageEventTypeEnum.SEND_FAIL), true);
                         return;
                     }
 
@@ -253,7 +254,7 @@ public class MessageHelper {
                         // 发送失败回调
                         sendCallback.onCallback(sendResult);
                         // 发布发送失败事件
-                        MessageServerContext.publishEvent(new SendFailEvent(sendResult), true);
+                        MessageServerContext.publishEvent(new MessageEvent(sendResult, MessageEventTypeEnum.SEND_FAIL), true);
                     }
                 } else {
                     // 获取失败
@@ -305,20 +306,20 @@ public class MessageHelper {
         if (channel == null) {
             SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(new MessageException("channel 为空，无法写入")).build();
             sendCallback.onCallback(sendResult);
-            MessageServerContext.publishEvent(new SendFailEvent(sendResult), true);
+            MessageServerContext.publishEvent(new MessageEvent(sendResult, MessageEventTypeEnum.SEND_FAIL), true);
             return false;
         }
         if (!channel.isActive()) {
             SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(new MessageException("channel 未激活，无法写入")).build();
             sendCallback.onCallback(sendResult);
-            MessageServerContext.publishEvent(new SendFailEvent(sendResult), true);
+            MessageServerContext.publishEvent(new MessageEvent(sendResult, MessageEventTypeEnum.SEND_FAIL), true);
             return false;
         }
         if (!channel.isWritable()) {
             log.warn("channel 不可写，丢弃或等待上层重试: {}", channel);
             SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(new MessageException("channel 当前不可写")).build();
             sendCallback.onCallback(sendResult);
-            MessageServerContext.publishEvent(new SendFailEvent(sendResult), true);
+            MessageServerContext.publishEvent(new MessageEvent(sendResult, MessageEventTypeEnum.SEND_FAIL), true);
             return false;
         }
         return true;
@@ -334,7 +335,7 @@ public class MessageHelper {
             } else {
                 SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(f.cause()).build();
                 sendCallback.onCallback(sendResult);
-                MessageServerContext.publishEvent(new SendFailEvent(sendResult), true);
+                MessageServerContext.publishEvent(new MessageEvent(sendResult, MessageEventTypeEnum.SEND_FAIL), true);
             }
         });
     }
@@ -353,7 +354,7 @@ public class MessageHelper {
             // 发送失败回调
             sendCallback.onCallback(sendResult);
             // 发布发送失败事件
-            MessageServerContext.publishEvent(new SendFailEvent(sendResult), true);
+            MessageServerContext.publishEvent(new MessageEvent(sendResult, MessageEventTypeEnum.SEND_FAIL), true);
             return;
         }
         // 设置可用的下个目标服务

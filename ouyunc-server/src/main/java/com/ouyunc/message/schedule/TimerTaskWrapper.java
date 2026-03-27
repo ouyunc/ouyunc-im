@@ -5,9 +5,11 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
+import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.cache.Cache;
 import com.ouyunc.cache.local.caffeine.CaffeineLocalCache;
-import com.ouyunc.core.listener.event.ExceptionEvent;
+import com.ouyunc.core.listener.event.MessageEvent;
+import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.message.context.MessageServerContext;
 import io.netty.util.Timeout;
 import io.netty.util.TimerTask;
@@ -174,7 +176,7 @@ public class TimerTaskWrapper implements TimerTask{
             }else {
                 CompletableFuture.runAsync(() -> runnableTask.accept(this), ThreadPoolManager.qosTaskExecutor()).exceptionally(ex -> {
                     log.error("执行定时调度任务异常：{}", ex.getMessage());
-                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.SCHEDULE_TASK_ERROR, "业务 task 调度异常：" + ex.getMessage(), null));
+                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.SCHEDULE_TASK_ERROR, "业务 task 调度异常：" + ex.getMessage(), null), MessageEventTypeEnum.EXCEPTION));
                     return null;
                 });
             }

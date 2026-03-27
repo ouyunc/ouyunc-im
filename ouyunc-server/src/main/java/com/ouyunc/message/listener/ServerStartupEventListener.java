@@ -12,8 +12,10 @@ import com.ouyunc.base.model.ClientAppKeyDeviceType;
 import com.ouyunc.base.model.ClientInfo;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.cache.config.CacheFactory;
+import com.ouyunc.base.constant.enums.EventType;
+import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.core.listener.MessageListener;
-import com.ouyunc.core.listener.event.ServerStartupEvent;
+import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.monitor.MonitorInitializer;
@@ -42,17 +44,24 @@ import java.util.stream.Collectors;
  * @author fzx
  * @description 服务启动成功事件
  */
-public class ServerStartupEventListener implements MessageListener<ServerStartupEvent> {
+public class ServerStartupEventListener implements MessageListener<MessageEvent> {
     private static final Logger log = LoggerFactory.getLogger(ServerStartupEventListener.class);
 
     private static final RedisTemplate<String, ?> redisTemplate = CacheFactory.REDIS.instance();
 
     /**
      * 服务启动成功事件,
-     * @param event
      */
     @Override
-    public void onApplicationEvent(ServerStartupEvent event) {
+    public EventType type() {
+        return MessageEventTypeEnum.SERVER_STARTUP;
+    }
+
+    @Override
+    public void onEvent(MessageEvent event) {
+        if (event.getType() != MessageEventTypeEnum.SERVER_STARTUP) {
+            return;
+        }
         Set<String> appKeys = ClientHelper.appKeys();
         if (CollectionUtils.isNotEmpty(appKeys)) {
             // 加载appKey 下的deviceType 配置
@@ -126,7 +135,7 @@ public class ServerStartupEventListener implements MessageListener<ServerStartup
                     }
                     if (flag) {
                         log.info("{} 添加进入appKey对应的设备类型集合中", deviceTypes);
-                        MessageServerContext.localClientInfoCache.put(CacheConstant.buildLocalClientInfoCacheKey(clientAppKeyDeviceType.getAppKey(), clientAppKeyDeviceType.getIdentity()), new ClientInfo(clientAppKeyDeviceType.getAppKey(), clientAppKeyDeviceType.getIdentity(), clientAppKeyDeviceType.getDeviceTypes().stream().filter(Objects::nonNull).map(DeviceType::getDeviceTypeValue).collect(Collectors.toList())));
+                        MessageServerContext.localClientInfoCache.put(CacheConstant.buildLocalClientInfoCacheKey(clientAppKeyDeviceType.getAppKey(), clientAppKeyDeviceType.getIdentity()), new ClientInfo(clientAppKeyDeviceType.getAppKey(), clientAppKeyDeviceType.getIdentity(), clientAppKeyDeviceType.getDeviceTypes().stream().filter(Objects::nonNull).map(DeviceType::getType).collect(Collectors.toList())));
                     }
                 }
             }

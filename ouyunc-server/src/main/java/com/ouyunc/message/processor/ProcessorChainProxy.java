@@ -1,6 +1,6 @@
 package com.ouyunc.message.processor;
 
-import com.ouyunc.base.constant.enums.Type;
+import com.ouyunc.base.constant.enums.ProtocolType;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.core.processor.Processor;
 import io.netty.channel.ChannelHandlerContext;
@@ -19,7 +19,7 @@ public final class ProcessorChainProxy<T extends Processor<ChannelHandlerContext
     /**
      * 类型标识
      */
-    private final Type<? extends Number> type;
+    private final ProtocolType<? extends Number> type;
 
 
     /**
@@ -27,14 +27,14 @@ public final class ProcessorChainProxy<T extends Processor<ChannelHandlerContext
      */
     private final List<ProcessorChain<T>> processorChains;
 
-    public ProcessorChainProxy(List<ProcessorChain<T>> processorChains, Type<? extends Number> type) {
+    public ProcessorChainProxy(List<ProcessorChain<T>> processorChains, ProtocolType<? extends Number> type) {
         this.type = type;
         this.processorChains = processorChains;
     }
 
 
     @Override
-    public Type<? extends Number> type() {
+    public ProtocolType<? extends Number> type() {
         return type;
     }
     /**

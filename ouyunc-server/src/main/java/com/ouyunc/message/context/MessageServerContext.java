@@ -274,7 +274,7 @@ public class MessageServerContext extends MessageContext {
             DeviceType[] deviceTypeEnumConstants = deviceTypeClass.getEnumConstants();
             if (deviceTypeEnumConstants != null) {
                 for (DeviceType deviceTypeEnumConstant : deviceTypeEnumConstants) {
-                    defaultDeviceTypeCache.put(deviceTypeEnumConstant.getDeviceTypeValue(), deviceTypeEnumConstant);
+                    defaultDeviceTypeCache.put(deviceTypeEnumConstant.getType(), deviceTypeEnumConstant);
                 }
             }
         }
@@ -289,7 +289,7 @@ public class MessageServerContext extends MessageContext {
             log.error("appKey 设备类型列表为空！");
             return;
         }
-        appKeyDeviceTypeCache.put(appKey, deviceTypes.stream().filter(Objects::nonNull).collect(Collectors.toMap(DeviceType::getDeviceTypeValue, Function.identity())));
+        appKeyDeviceTypeCache.put(appKey, deviceTypes.stream().filter(Objects::nonNull).collect(Collectors.toMap(DeviceType::getType, Function.identity())));
     }
 
 

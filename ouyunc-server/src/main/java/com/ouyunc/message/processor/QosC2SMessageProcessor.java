@@ -8,8 +8,9 @@ import com.ouyunc.base.constant.enums.QosModeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.packet.message.content.QosAckContent;
-import com.ouyunc.core.listener.event.ExceptionEvent;
-import com.ouyunc.core.listener.event.RemoveOfflineEvent;
+import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
+import com.ouyunc.core.listener.event.MessageEvent;
+import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.schedule.ScheduleTimer;
 import com.ouyunc.message.validator.AuthValidator;
@@ -40,7 +41,7 @@ public final class QosC2SMessageProcessor extends AbstractMessageProcessor<Byte>
                 if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
                     // 关闭当前 channel，这里会触发 DefaultSocketChannelInitializer 中的关闭逻辑
                     log.error("校验消息失败: {} 认证未通过,开始关闭channel", packet);
-                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过!", packet), true);
+                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过!", packet), MessageEventTypeEnum.EXCEPTION), true);
                     ctx.close();
                     return;
                 }
@@ -60,7 +61,7 @@ public final class QosC2SMessageProcessor extends AbstractMessageProcessor<Byte>
             } else {
                 // 发送失败
                 log.error("Failed to send message: {} ", ex.getMessage());
-                MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "通过发送mq保存消息异常!", packet), true);
+                MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "通过发送mq保存消息异常!", packet), MessageEventTypeEnum.EXCEPTION), true);
             }
         });
     }
@@ -75,7 +76,7 @@ public final class QosC2SMessageProcessor extends AbstractMessageProcessor<Byte>
             // 可以判断这个receivedPackageId是否合法，不是自己发送的，以及消息类型是合法的，这里不做过多的判断
             QosAckContent qosAckContent = JSON.parseObject(message.getContent(), QosAckContent.class);
             // 移除离线消息,通过异步发送移除离线消息事件
-            MessageServerContext.publishEvent(new RemoveOfflineEvent(packet), true);
+            MessageServerContext.publishEvent(new MessageEvent(packet, MessageEventTypeEnum.REMOVE_OFFLINE), true);
             // 停止本地的qos定时任务
             ScheduleTimer.cancel(qosAckContent.getAckId());
         }else {

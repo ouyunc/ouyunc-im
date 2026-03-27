@@ -139,9 +139,9 @@ public class ClientHelper {
         Stream<DeviceType> deviceTypeStream = MessageServerContext.deviceTypeList(appKey, identity).stream();
         if (excludeDeviceTypeArr != null && excludeDeviceTypeArr.length > NumberConstant.NUMBER_0) {
             Set<Byte> excludeNames = Arrays.stream(excludeDeviceTypeArr)
-                    .map(DeviceType::getDeviceTypeValue)
+                    .map(DeviceType::getType)
                     .collect(Collectors.toSet());
-            deviceTypeStream = deviceTypeStream.filter(deviceType -> !excludeNames.contains(deviceType.getDeviceTypeValue()));
+            deviceTypeStream = deviceTypeStream.filter(deviceType -> !excludeNames.contains(deviceType.getType()));
         }
         Set<String> comboIdentitySet = deviceTypeStream
                 .map(deviceType -> IdentityUtil.generalComboIdentity(appKey, identity, deviceType))
@@ -182,7 +182,7 @@ public class ClientHelper {
      */
     public static LoginClientInfo online(String appKey, String identity, DeviceType loginDeviceType) {
         // 判断identity在该appKey下是否支持loginDeviceType该设备类型
-       return online(appKey, identity, loginDeviceType.getDeviceTypeValue());
+       return online(appKey, identity, loginDeviceType.getType());
     }
     /**
      * 获取某个端的登录信息,不暴露该接口

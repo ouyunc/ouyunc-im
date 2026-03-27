@@ -19,7 +19,7 @@ public class IdentityUtil {
      * 三个参数都不为空，这里就不进行校验了
      */
     public static String generalComboIdentity(String appKey, String identity, DeviceType deviceType) {
-        return generalComboIdentity(appKey, identity, deviceType.getDeviceTypeValue());
+        return generalComboIdentity(appKey, identity, deviceType.getType());
     }
 
     /**

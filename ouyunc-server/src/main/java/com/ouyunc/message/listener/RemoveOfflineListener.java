@@ -9,8 +9,10 @@ import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.packet.message.content.QosAckContent;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.core.context.MessageContext;
+import com.ouyunc.base.constant.enums.EventType;
+import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.core.listener.MessageListener;
-import com.ouyunc.core.listener.event.RemoveOfflineEvent;
+import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.message.context.MessageServerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,7 +34,7 @@ import java.util.Objects;
  * 离线消息使用redis 的zset 数据结构来存储，目前只存储单聊的消息（推模式），对于群组类的业务（一般使用拉取模式，按需拉取）数据不进行存储，
  * 离线消息一般存储是有时间限制的，比如存储在离线消息的过期时间是7天，所以要启动一个定时任务定时去删除过期的离线消息
  */
-public class RemoveOfflineListener implements MessageListener<RemoveOfflineEvent> {
+public class RemoveOfflineListener implements MessageListener<MessageEvent> {
 
     private static final Logger log = LoggerFactory.getLogger(RemoveOfflineListener.class);
 
@@ -40,7 +42,15 @@ public class RemoveOfflineListener implements MessageListener<RemoveOfflineEvent
 
     @SuppressWarnings("unchecked")
     @Override
-    public void onApplicationEvent(RemoveOfflineEvent event) {
+    public EventType type() {
+        return MessageEventTypeEnum.REMOVE_OFFLINE;
+    }
+
+    @Override
+    public void onEvent(MessageEvent event) {
+        if (event.getType() != MessageEventTypeEnum.REMOVE_OFFLINE) {
+            return;
+        }
         Object source = event.getSource();
         log.debug("移除离线消息监听器正在处理：{}", event.getSource());
         if (source instanceof Packet packet) {
@@ -73,7 +83,7 @@ public class RemoveOfflineListener implements MessageListener<RemoveOfflineEvent
 
                         // ========== 1. 构建并序列化所有Key/Value ==========
                         // ZSet相关
-                        String zSetKey = CacheConstant.buildToOfflineCacheKey(metadata.getAppKey(), from, deviceType.getDeviceTypeValue());
+                        String zSetKey = CacheConstant.buildToOfflineCacheKey(metadata.getAppKey(), from, deviceType.getType());
                         String zSetValue = MessageContext.idGenerator().formatLongId19Str(qosAckContent.getAckId());
                         byte[] zSetKeyBytes = stringSerializer.serialize(zSetKey);
                         byte[] zSetValueBytes = stringSerializer.serialize(zSetValue);

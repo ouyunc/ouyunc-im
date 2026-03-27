@@ -12,7 +12,8 @@ import com.ouyunc.base.model.SendResult;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.HttpUtil;
-import com.ouyunc.core.listener.event.SendFailEvent;
+import com.ouyunc.core.listener.event.MessageEvent;
+import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.message.cluster.client.pool.MessageClientPool;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.convert.PacketConverter;
@@ -394,7 +395,7 @@ public enum NativePacketProtocol implements PacketProtocol {
                 log.error("发送消息时，ctx 不存在； 请检查客户端 {} 是否登录", to);
                 SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(new MessageException("发送消息时，ctx 不存在； 请检查客户端是否登录")).build();
                 sendCallback.onCallback(sendResult);
-                MessageServerContext.publishEvent(new SendFailEvent(sendResult), true);
+                MessageServerContext.publishEvent(new MessageEvent(sendResult, MessageEventTypeEnum.SEND_FAIL), true);
                 return;
             }
             Channel channel = ctx.channel();
@@ -417,7 +418,7 @@ public enum NativePacketProtocol implements PacketProtocol {
                             log.error("发送消息时，channel.eventLoop 被终止或关闭； channelId: {}", channel.id().asShortText());
                             SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(new MessageException("发送消息时，channel.eventLoop 被终止或关闭！")).build();
                             sendCallback.onCallback(sendResult);
-                            MessageServerContext.publishEvent(new SendFailEvent(sendResult), true);
+                            MessageServerContext.publishEvent(new MessageEvent(sendResult, MessageEventTypeEnum.SEND_FAIL), true);
                         }
                         return;
                     }
@@ -425,19 +426,19 @@ public enum NativePacketProtocol implements PacketProtocol {
                 log.error("发送消息时，packet: {} 转换其他协议发生异常,找不到匹配的协议转换器！", packet);
                 SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(new MessageException("发送消息时，packet转换其他协议发生异常,找不到匹配的协议转换器！")).build();
                 sendCallback.onCallback(sendResult);
-                MessageServerContext.publishEvent(new SendFailEvent(sendResult), true);
+                MessageServerContext.publishEvent(new MessageEvent(sendResult, MessageEventTypeEnum.SEND_FAIL), true);
             } else {
                 log.error("通道channel：{} 不可用或不可写, 使得消息packet: {} 发送给用户: {} 失败!", channel.id().asShortText(), packet, to);
                 SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(new MessageException("发送消息时，通道channel：" + channel.id().asShortText() + " 不可用或不可写！")).build();
                 sendCallback.onCallback(sendResult);
-                MessageServerContext.publishEvent(new SendFailEvent(sendResult), true);
+                MessageServerContext.publishEvent(new MessageEvent(sendResult, MessageEventTypeEnum.SEND_FAIL), true);
             }
         } catch (Exception e) {
             log.error("消息packet: {} 发送给用户: {} 失败!", packet, to);
             // 消息丢失
             SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(e).build();
             sendCallback.onCallback(sendResult);
-            MessageServerContext.publishEvent(new SendFailEvent(sendResult), true);
+            MessageServerContext.publishEvent(new MessageEvent(sendResult, MessageEventTypeEnum.SEND_FAIL), true);
         }
     }
     

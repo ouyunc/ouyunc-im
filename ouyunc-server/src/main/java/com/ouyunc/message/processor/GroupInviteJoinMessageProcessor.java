@@ -1,5 +1,6 @@
 package com.ouyunc.message.processor;
 
+import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
@@ -10,7 +11,8 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.packet.message.content.GroupRequestContent;
 import com.ouyunc.core.context.MessageContext;
-import com.ouyunc.core.listener.event.ExceptionEvent;
+import com.ouyunc.core.listener.event.MessageEvent;
+import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.domain.base.GroupRequestSession;
 import com.ouyunc.domain.constants.*;
 import com.ouyunc.domain.entity.GroupEntity;
@@ -50,7 +52,7 @@ public final class GroupInviteJoinMessageProcessor extends AbstractMessageProces
                 if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
                     // 关闭当前 channel，这里会触发 DefaultSocketChannelInitializer 中的关闭逻辑
                     log.error("校验消息: {} 中的发送方登录认证失败,开始关闭channel", packet);
-                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过", packet), true);
+                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过", packet), MessageEventTypeEnum.EXCEPTION), true);
                     ctx.close();
                     return;
                 }
@@ -74,7 +76,7 @@ public final class GroupInviteJoinMessageProcessor extends AbstractMessageProces
             } else {
                 // 发送失败
                 log.error("Failed to send message: {} ", ex.getMessage());
-                MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "通过发送mq保存消息异常!", packet), true);
+                MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "通过发送mq保存消息异常!", packet), MessageEventTypeEnum.EXCEPTION), true);
             }
         });
     }
@@ -119,7 +121,7 @@ public final class GroupInviteJoinMessageProcessor extends AbstractMessageProces
                 GroupEntity groupEntity = repository().getGroupEntity(appKey, message.getTo());
                 if (groupEntity == null) {
                     log.error("群组:{} 不存在，请检查数据！", message.getTo());
-                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.GROUP_NOT_EXIST, message.getTo() + "群组不存在！", packet));
+                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.GROUP_NOT_EXIST, message.getTo() + "群组不存在！", packet), MessageEventTypeEnum.EXCEPTION));
                     return;
                 }
                 // 这里不保存到session 缓存中,保存到临时的会话请求消息中，该好友请求的消息可以对其进行定期清理；
@@ -128,14 +130,14 @@ public final class GroupInviteJoinMessageProcessor extends AbstractMessageProces
                 if (MapUtils.isEmpty(groupMannerOrLeaderUsersIdentityAndPostMap)) {
                     // 这个群里没有群主？
                     log.error("群组：{}, 不存在群主和群管理员！群消息： {}", packet.getMessage().getTo(), packet);
-                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群主或群管理员", packet), true);
+                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群主或群管理员", packet), MessageEventTypeEnum.EXCEPTION), true);
                     return;
                 }
                 // 判断被邀请人，是否自动被加入到群
                 UserEntity userEntity = repository().getUserEntity(appKey, content.getIdentity());
                 if (userEntity == null) {
                     log.error("用户:{} 不存在，请检查数据！", content.getIdentity());
-                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.USER_NOT_EXIST, content.getIdentity() + "用户不存在！", packet));
+                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.USER_NOT_EXIST, content.getIdentity() + "用户不存在！", packet), MessageEventTypeEnum.EXCEPTION));
                     return;
                 }
                 // 尝试设置群请求会话
@@ -156,7 +158,7 @@ public final class GroupInviteJoinMessageProcessor extends AbstractMessageProces
                     GroupUserEntity fromGroupUserEntity = repository().groupUserEntity(appKey, message.getTo(), message.getFrom());
                     if (fromGroupUserEntity == null) {
                         log.error("群组：{}, 用户：{} 不存在，请检查数据！", message.getTo(), message.getFrom());
-                        MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, message.getFrom() + "不在群组中！", packet));
+                        MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, message.getFrom() + "不在群组中！", packet), MessageEventTypeEnum.EXCEPTION));
                         return;
                     }
                     groupRequestSession.setInviterPost(fromGroupUserEntity.getPost());
@@ -173,7 +175,7 @@ public final class GroupInviteJoinMessageProcessor extends AbstractMessageProces
                     // 自动同意，不再给群主和管理员保存离线消息
                     if (!repository().autoPassBindGroup(packet, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
                         log.error("自动处理绑定群组失败: {}", packet);
-                        MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "自动绑定群组请求消息异常!", packet), true);
+                        MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "自动绑定群组请求消息异常!", packet), MessageEventTypeEnum.EXCEPTION), true);
                         return;
                     }
                 }else {
@@ -181,7 +183,7 @@ public final class GroupInviteJoinMessageProcessor extends AbstractMessageProces
                     groupRequestSession.setProgress(RequestSessionProgress.JOINING.value());
                     if (!saveGroupRequestMessage(packet, groupMannerOrLeaderUsersIdentityAndPostMap.keySet(), groupRequestSession)) {
                         log.error("Failed to save invite join group request message: {}", packet);
-                        MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存加群请求消息异常!", packet), true);
+                        MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存加群请求消息异常!", packet), MessageEventTypeEnum.EXCEPTION), true);
                         return;
                     }
                 }
@@ -189,7 +191,7 @@ public final class GroupInviteJoinMessageProcessor extends AbstractMessageProces
                 repository().savePacket2Mq(MqConstant.KAFKA_GROUP_REQUEST_TOPIC, packet.getMessage().getTo(), packet).whenComplete((result, ex) -> {
                     if (ex != null) {
                         log.error("邀请加群请求，发送mq异常，原因：{}", ex.getMessage());
-                        MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "处理邀请加群请求异常！" + ex.getMessage(), packet), true);
+                        MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "处理邀请加群请求异常！" + ex.getMessage(), packet), MessageEventTypeEnum.EXCEPTION), true);
                     } else {
                         // 发送给被邀请人
                         repository().reactiveSaveOfflineMessage(packet,  content.getIdentity(), MessageServerContext.deviceTypeList(message.getMetadata().getAppKey(), content.getIdentity())).subscribe(saveResult ->  {
@@ -210,24 +212,24 @@ public final class GroupInviteJoinMessageProcessor extends AbstractMessageProces
                                 ctx.fireChannelRead(packet);
                             } else {
                                 log.error("保存被邀请者离线消息失败: {}", packet);
-                                MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.SAVE_OFFLINE_MESSAGE_ERROR, "保存被邀请者离线消息异常！", packet), true);
+                                MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.SAVE_OFFLINE_MESSAGE_ERROR, "保存被邀请者离线消息异常！", packet), MessageEventTypeEnum.EXCEPTION), true);
                             }
                         });
                     }
                 });
             } else {
                 log.error("Failed to lock user invite join group request message: {}", packet);
-                MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, "邀请加群请求锁失败", packet), true);
+                MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, "邀请加群请求锁失败", packet), MessageEventTypeEnum.EXCEPTION), true);
             }
         } catch (Exception e) {
             log.error("Failed to handle user invite join group request message: {}", e.getMessage());
-            MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.BIND_GROUP_ERROR, "处理邀请加群请求异常！" + e.getMessage(), packet), true);
+            MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.BIND_GROUP_ERROR, "处理邀请加群请求异常！" + e.getMessage(), packet), MessageEventTypeEnum.EXCEPTION), true);
         } finally {
             if (lock.isHeldByCurrentThread()) {
                 lock.unlock();
             }else {
                 log.error("Failed to unlock user invite join group request message: {}", packet);
-                MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.UN_LOCK_ERROR, "释放锁失败", packet), true);
+                MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.UN_LOCK_ERROR, "释放锁失败", packet), MessageEventTypeEnum.EXCEPTION), true);
             }
         }
     }

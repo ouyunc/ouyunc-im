@@ -29,7 +29,7 @@ public abstract class AbstractBaseProcessor<T extends Number> implements Process
     /**
      * 类型
      */
-    public abstract Type<? extends T> type();
+    public abstract ProtocolType<? extends T> type();
 
     /**
      * 获取数据存储实现类, 子类可以重写来实现自定义存储实现

@@ -1,7 +1,9 @@
 package com.ouyunc.message.listener;
 
+import com.ouyunc.base.constant.enums.EventType;
+import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.core.listener.MessageListener;
-import com.ouyunc.core.listener.event.ServerStopEvent;
+import com.ouyunc.core.listener.event.MessageEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -9,15 +11,22 @@ import org.slf4j.LoggerFactory;
  * @author fzx
  * @description 服务注销事件
  */
-public class ServerStopEventListener implements MessageListener<ServerStopEvent> {
+public class ServerStopEventListener implements MessageListener<MessageEvent> {
     private static final Logger log = LoggerFactory.getLogger(ServerStopEventListener.class);
 
     /**
      * 服务注销事件,
-     * @param event
      */
     @Override
-    public void onApplicationEvent(ServerStopEvent event) {
+    public EventType type() {
+        return MessageEventTypeEnum.SERVER_STOP;
+    }
+
+    @Override
+    public void onEvent(MessageEvent event) {
+        if (event.getType() != MessageEventTypeEnum.SERVER_STOP) {
+            return;
+        }
         log.info("服务:{} 正在注销...", event);
         // 发送邮件？mq?
     }

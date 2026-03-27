@@ -4,13 +4,15 @@ import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
+import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.constant.enums.MessageType;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.IdentityUtil;
-import com.ouyunc.core.listener.event.ExceptionEvent;
+import com.ouyunc.core.listener.event.MessageEvent;
+import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.domain.base.RequestSession;
 import com.ouyunc.domain.constants.RequestSessionProgress;
 import com.ouyunc.message.context.MessageServerContext;
@@ -58,7 +60,7 @@ public final class One2OneRefuseFriendRequestMessageProcessor extends AbstractMe
                 if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
                     // 关闭当前 channel，这里会触发 DefaultSocketChannelInitializer 中的关闭逻辑
                     log.error("校验消息失败: {} 认证未通过,开始关闭channel", packet);
-                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过!", packet), true);
+                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过!", packet), MessageEventTypeEnum.EXCEPTION), true);
                     ctx.close();
                     return;
                 }
@@ -82,7 +84,7 @@ public final class One2OneRefuseFriendRequestMessageProcessor extends AbstractMe
             } else {
                 // 发送失败
                 log.error("Failed to send message: {} " , ex.getMessage());
-                MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "通过发送mq保存消息异常!", packet), true);
+                MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "通过发送mq保存消息异常!", packet), MessageEventTypeEnum.EXCEPTION), true);
             }
         });
     }
@@ -118,13 +120,13 @@ public final class One2OneRefuseFriendRequestMessageProcessor extends AbstractMe
                 requestSession.setProgress(RequestSessionProgress.REFUSING.value());
                 if (!repository().saveRefuseFriendRequestMessage(packet, requestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP, MessageServerContext.deviceTypeList(appKey, to))) {
                     log.error("Failed to save one-to-one refuse friend request message: {}", packet);
-                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一拒绝好友请求消息异常!", packet), true);
+                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一拒绝好友请求消息异常!", packet), MessageEventTypeEnum.EXCEPTION), true);
                     return;
                 }
                 repository().savePacket2Mq(MqConstant.KAFKA_FRIEND_REQUEST_TOPIC, sessionId, packet).whenComplete((result, ex)->{
                     if (ex != null) {
                         log.error("拒绝好友请求，发送mq异常，原因：{}", ex.getMessage());
-                        MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "处理一对一拒绝好友请求异常！" + ex.getMessage(), packet), true);
+                        MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "处理一对一拒绝好友请求异常！" + ex.getMessage(), packet), MessageEventTypeEnum.EXCEPTION), true);
                     }else {
                         // 如果接收方在线，则直接发送消息
                         List<LoginClientInfo> toLoginClientInfos = ClientHelper.onlineAll(appKey, to);
@@ -137,17 +139,17 @@ public final class One2OneRefuseFriendRequestMessageProcessor extends AbstractMe
                 });
             } else {
                 log.error("Failed to lock one-to-one refuse friend request message: {}", packet);
-                MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, "获取拒绝好友请求锁失败", packet), true);
+                MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, "获取拒绝好友请求锁失败", packet), MessageEventTypeEnum.EXCEPTION), true);
             }
         } catch (Exception e) {
             log.error("Failed to handle one-to-one refuse friend request message: {}", e.getMessage());
-            MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.BIND_FRIEND_ERROR, "处理一对一拒绝好友请求异常！" + e.getMessage(), packet), true);
+            MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.BIND_FRIEND_ERROR, "处理一对一拒绝好友请求异常！" + e.getMessage(), packet), MessageEventTypeEnum.EXCEPTION), true);
         } finally {
             if (lock.isHeldByCurrentThread()) {
                 lock.unlock();
             }else {
                 log.error("one-to-one refuse friend request message lock is not held by current thread: {}", packet);
-                MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.UN_LOCK_ERROR, "拒绝加好友请求解锁失败", packet), true);
+                MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.UN_LOCK_ERROR, "拒绝加好友请求解锁失败", packet), MessageEventTypeEnum.EXCEPTION), true);
             }
         }
     }

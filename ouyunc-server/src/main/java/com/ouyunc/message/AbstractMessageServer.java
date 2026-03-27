@@ -4,8 +4,9 @@ import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.constant.enums.DeviceTypeEnum;
 import com.ouyunc.base.constant.enums.LuaScriptEnum;
+import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.utils.TimeUtil;
-import com.ouyunc.core.listener.event.*;
+import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.message.banner.MessageBanner;
 import com.ouyunc.message.channel.DefaultServerChannelInitializer;
 import com.ouyunc.message.channel.DefaultSocketChannelInitializer;
@@ -154,7 +155,7 @@ public abstract class AbstractMessageServer implements MessageServer {
         // 添加默认设备类型，这里可以改成从redis 获取，与appKey 进行绑定，由appKey来自定义所支持的设备类型，如果appKey 没有指定支持的设备类型，则走默认设备类型
         MessageServerContext.addDeviceType(DeviceTypeEnum.class);
         // 发布预加载lua脚本事件
-        MessageServerContext.publishEvent(new PreloadedLuaScriptEvent(LuaScriptEnum.values()), true);
+        MessageServerContext.publishEvent(new MessageEvent(LuaScriptEnum.values(), MessageEventTypeEnum.PRELOAD_LUA_SCRIPT), true);
 
 
 
@@ -170,7 +171,7 @@ public abstract class AbstractMessageServer implements MessageServer {
             return false;
         }
         try {
-            MessageServerContext.publishEvent(new ServerStopEvent(this), false);
+            MessageServerContext.publishEvent(new MessageEvent(this, MessageEventTypeEnum.SERVER_STOP), false);
             if (bossGroup != null && workerGroup != null) {
                 bossGroup.shutdownGracefully();
                 workerGroup.shutdownGracefully();
@@ -283,7 +284,7 @@ public abstract class AbstractMessageServer implements MessageServer {
                             messageClient.configure(MessageServerContext.serverProperties());
                         }
                         log.debug("核心message服务初始化完成");
-                        MessageServerContext.publishEvent(new ServerStartupEvent(MessageServerContext.serverProperties().getLocalServerAddress()), true);
+                        MessageServerContext.publishEvent(new MessageEvent(MessageServerContext.serverProperties().getLocalServerAddress(), MessageEventTypeEnum.SERVER_STARTUP), true);
                         log.debug("IM server启动成功，其绑定地址:{} 端口号:{} 共花费:{} ms.", MessageServerContext.serverProperties().getIp(), MessageServerContext.serverProperties().getPort(), (TimeUtil.currentTimeMillis() - startTimeStamp));
                     } else {
                         log.error("IM server 启动失败！原因: {}", bindFuture.cause().getMessage());

@@ -29,6 +29,6 @@ public enum DeviceValidator implements Validator<Packet> {
         Message message = packet.getMessage();
         String from = message.getFrom();
         String appKey = message.getMetadata().getAppKey();
-        return MessageServerContext.deviceTypeList(appKey, from).stream().map(DeviceType::getDeviceTypeValue).collect(Collectors.toSet()).contains(packet.getDeviceType());
+        return MessageServerContext.deviceTypeList(appKey, from).stream().map(DeviceType::getType).collect(Collectors.toSet()).contains(packet.getDeviceType());
     }
 }

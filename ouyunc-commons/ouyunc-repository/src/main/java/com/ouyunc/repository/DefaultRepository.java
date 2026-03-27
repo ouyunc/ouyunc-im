@@ -1,5 +1,6 @@
 package com.ouyunc.repository;
 
+import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.alibaba.fastjson2.JSON;
 import com.google.common.collect.Lists;
 import com.ouyunc.base.constant.*;
@@ -12,7 +13,8 @@ import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.core.context.MessageContext;
-import com.ouyunc.core.listener.event.ExceptionEvent;
+import com.ouyunc.core.listener.event.MessageEvent;
+import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.db.jdbc.JdbcFactory;
 import com.ouyunc.db.mongo.MongodbFactory;
 import com.ouyunc.domain.base.GroupRequestSession;
@@ -732,11 +734,11 @@ public enum DefaultRepository implements Repository{
                                                  Supplier<CompletableFuture<?>> mqSender,
                                                  Mono<Boolean> processor,
                                                  BiConsumer<ChannelHandlerContext, Packet> processorAfter,
-                                                 Consumer<ExceptionEvent> exceptionConsumer,
+                                                 Consumer<MessageEvent> exceptionConsumer,
                                                  ExceptionCodeEnum exceptionCode) {
         return validator.flatMap(valid -> {
             if (!valid) {
-                exceptionConsumer.accept(new ExceptionEvent(exceptionCode, packet));
+                exceptionConsumer.accept(new MessageEvent(ExceptionEventPayload.of(exceptionCode, null, packet), MessageEventTypeEnum.EXCEPTION));
                 return Mono.just(false);
             }
             // 优化后的代码片段，确保MQ发送成功后才执行processor
@@ -745,7 +747,7 @@ public enum DefaultRepository implements Repository{
                     .thenReturn(true)
                     .onErrorResume(ex -> {
                         // MQ发送失败时的处理
-                        exceptionConsumer.accept(new ExceptionEvent(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR,  ex.getMessage(), packet));
+                        exceptionConsumer.accept(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, ex.getMessage(), packet), MessageEventTypeEnum.EXCEPTION));
                         return Mono.just(false); // 明确返回失败标识
                     })
                     // 只有当MQ发送成功（上一步返回true）时才执行processor
@@ -760,11 +762,11 @@ public enum DefaultRepository implements Repository{
                         if (processed) {
                             processorAfter.accept(ctx, packet);
                         } else {
-                            exceptionConsumer.accept(new ExceptionEvent(ExceptionCodeEnum.UNKNOWN_ERROR,  "撤销或已读异常", packet));
+                            exceptionConsumer.accept(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.UNKNOWN_ERROR, "撤销或已读异常", packet), MessageEventTypeEnum.EXCEPTION));
                         }
                     })
                     .onErrorResume(ex -> {
-                        exceptionConsumer.accept(new ExceptionEvent(ExceptionCodeEnum.UNKNOWN_ERROR,  ex.getMessage(), packet));
+                        exceptionConsumer.accept(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.UNKNOWN_ERROR, ex.getMessage(), packet), MessageEventTypeEnum.EXCEPTION));
                         return Mono.just(false);
                     });
         });
@@ -1394,7 +1396,7 @@ public enum DefaultRepository implements Repository{
     public Mono<Boolean> reactiveSaveMessage(Packet packet, String sessionId, long expireTime, boolean saveOfflineMessage, Collection<DeviceType> toSupportDeviceTypes) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        List<String> offlineKeys = toSupportDeviceTypes.stream().map(deviceType -> CacheConstant.buildToOfflineCacheKey(metadata.getAppKey(), message.getTo(), deviceType.getDeviceTypeValue())).toList();
+        List<String> offlineKeys = toSupportDeviceTypes.stream().map(deviceType -> CacheConstant.buildToOfflineCacheKey(metadata.getAppKey(), message.getTo(), deviceType.getType())).toList();
         // 使用Mono.fromCallable将阻塞操作包装为响应式流
         return Mono.fromCallable(() -> saveMessageWithSessionOrOffline(packet, expireTime, CacheConstant.buildMessageCacheKey(metadata.getAppKey(), packet.getPacketId()), CacheConstant.buildSessionCacheKey(metadata.getAppKey(), sessionId), saveOfflineMessage, offlineKeys, (ops) -> {}, (ops, msg, app, f, t) -> {}))
                 // 指定在弹性线程池中执行阻塞操作，避免阻塞Netty事件循环
@@ -1428,7 +1430,7 @@ public enum DefaultRepository implements Repository{
             List<Mono<Boolean>> operations = new ArrayList<>();
 
             for (DeviceType deviceType : toSupportDeviceTypes) {
-                byte[] keyBytes = stringSerializer.serialize(CacheConstant.buildToOfflineCacheKey(metadata.getAppKey(), to, deviceType.getDeviceTypeValue()));
+                byte[] keyBytes = stringSerializer.serialize(CacheConstant.buildToOfflineCacheKey(metadata.getAppKey(), to, deviceType.getType()));
                 byte[] valueBytes = stringSerializer.serialize(packetId);
 
                 if (keyBytes == null || valueBytes == null) {
@@ -1526,7 +1528,7 @@ public enum DefaultRepository implements Repository{
         String appKey = metadata.getAppKey();
         String from = message.getFrom();
         String to = message.getTo();
-        List<String> offlineKeys = toSupportDeviceTypes.stream().map(deviceType -> CacheConstant.buildToOfflineCacheKey(appKey, to, deviceType.getDeviceTypeValue())).toList();
+        List<String> offlineKeys = toSupportDeviceTypes.stream().map(deviceType -> CacheConstant.buildToOfflineCacheKey(appKey, to, deviceType.getType())).toList();
         return saveMessageWithSessionOrOffline(packet, expireTime, CacheConstant.buildMessageCacheKey(appKey, packet.getPacketId()), CacheConstant.buildFriendRequestSessionCacheKey(appKey, IdentityUtil.sessionId(from, to), friendRequestSessionId), true, offlineKeys, consumer, (ops, msg, ak, f, t) -> {});
     }
 
@@ -1544,7 +1546,7 @@ public enum DefaultRepository implements Repository{
         Metadata metadata = message.getMetadata();
         // 构造参数
         List<String> offlineKeys = Lists.newArrayList();
-        groupUserIdentityDeviceTypeMap.forEach((groupUserIdentity, deviceTypes) -> offlineKeys.addAll(deviceTypes.stream().map(deviceType -> CacheConstant.buildToOfflineCacheKey(metadata.getAppKey(), message.getTo(), deviceType.getDeviceTypeValue())).toList()));
+        groupUserIdentityDeviceTypeMap.forEach((groupUserIdentity, deviceTypes) -> offlineKeys.addAll(deviceTypes.stream().map(deviceType -> CacheConstant.buildToOfflineCacheKey(metadata.getAppKey(), message.getTo(), deviceType.getType())).toList()));
         return Mono.fromCallable(() -> saveMessageWithSessionOrOffline(packet, expireTime, CacheConstant.buildMessageCacheKey(metadata.getAppKey(), packet.getPacketId()), CacheConstant.buildSessionCacheKey(metadata.getAppKey(), message.getTo()), true, offlineKeys, (ops) -> {}, (ops, msg, app, f, t) -> {}))
                 // 指定在弹性线程池中执行阻塞操作，避免阻塞Netty事件循环
                 .subscribeOn(Schedulers.boundedElastic())
@@ -2153,7 +2155,7 @@ public enum DefaultRepository implements Repository{
         String from = message.getFrom();
         String to = message.getTo();
         String appKey = metadata.getAppKey();
-        List<String> offlineKeys = toSupportDeviceTypes.stream().map(deviceType -> CacheConstant.buildToOfflineCacheKey(appKey, to, deviceType.getDeviceTypeValue())).toList();
+        List<String> offlineKeys = toSupportDeviceTypes.stream().map(deviceType -> CacheConstant.buildToOfflineCacheKey(appKey, to, deviceType.getType())).toList();
         return saveMessageWithSessionOrOffline(packet, expireTime, CacheConstant.buildMessageCacheKey(appKey, packet.getPacketId()), CacheConstant.buildFriendRequestSessionCacheKey(appKey, IdentityUtil.sessionId(from, to), friendRequestSessionId), true, offlineKeys, consumer,
                 (redisConnection, msg, ak, f, t) -> {
                     // 1. 获取 String 序列化器（与前文保持一致，确保序列化规则统一）
@@ -2443,7 +2445,7 @@ public enum DefaultRepository implements Repository{
         Metadata metadata = message.getMetadata();
         List<String> offlineKeys = Lists.newArrayList();
         groupUserIdentityDeviceTypeMap.forEach((groupUserIdentity, deviceTypeCollection) -> {
-            offlineKeys.addAll(deviceTypeCollection.stream().map(deviceType -> CacheConstant.buildToOfflineCacheKey(metadata.getAppKey(), groupUserIdentity, deviceType.getDeviceTypeValue())).toList());
+            offlineKeys.addAll(deviceTypeCollection.stream().map(deviceType -> CacheConstant.buildToOfflineCacheKey(metadata.getAppKey(), groupUserIdentity, deviceType.getType())).toList());
         });
         return saveMessageWithSessionOrOffline(packet, expireTime, CacheConstant.buildMessageCacheKey(metadata.getAppKey(), packet.getPacketId()), CacheConstant.buildGroupRequestSessionCacheKey(metadata.getAppKey(), groupRequestSession.getGroupId(), groupRequestSession.getSessionId()), true,  offlineKeys, (redisConnection)-> {
             String groupRequestCacheKey = CacheConstant.buildGroupRequestCacheKey(metadata.getAppKey(), groupRequestSession.getJoiner(), groupRequestSession.getGroupId());
@@ -2465,7 +2467,7 @@ public enum DefaultRepository implements Repository{
         Metadata metadata = message.getMetadata();
         List<String> offlineKeys = Lists.newArrayList();
         groupUserIdentityDeviceTypeMap.forEach((groupUserIdentity, deviceTypeCollection) -> {
-            offlineKeys.addAll(deviceTypeCollection.stream().map(deviceType -> CacheConstant.buildToOfflineCacheKey(metadata.getAppKey(), groupUserIdentity, deviceType.getDeviceTypeValue())).toList());
+            offlineKeys.addAll(deviceTypeCollection.stream().map(deviceType -> CacheConstant.buildToOfflineCacheKey(metadata.getAppKey(), groupUserIdentity, deviceType.getType())).toList());
         });
         return saveMessageWithSessionOrOffline(packet, expireTime, CacheConstant.buildMessageCacheKey(metadata.getAppKey(), packet.getPacketId()), CacheConstant.buildGroupRequestSessionCacheKey(metadata.getAppKey(), groupRequestSession.getGroupId(), groupRequestSession.getSessionId()), true,  offlineKeys,  (redisConnection)-> {
             String groupRequestCacheKey = CacheConstant.buildGroupRequestCacheKey(metadata.getAppKey(), groupRequestSession.getJoiner(), groupRequestSession.getGroupId());

@@ -90,7 +90,9 @@ public class MessageContext {
      * @param event IMEvent事件的子类
      */
     public static void publishEvent(MessageEvent event) {
-        publishEvent(event, false);
+        if (messageEventMulticaster != null) {
+            messageEventMulticaster.multicastEvent(event, false);
+        }
     }
 
 

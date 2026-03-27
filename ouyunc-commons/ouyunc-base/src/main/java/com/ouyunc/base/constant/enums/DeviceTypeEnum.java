@@ -50,22 +50,22 @@ public enum DeviceTypeEnum implements DeviceType {
 
     ;
 
-    private byte value;
+    private byte type;
     private String name;
     private String description;
 
     DeviceTypeEnum(byte value, String name, String description) {
-        this.value = value;
+        this.type = value;
         this.name = name;
         this.description = description;
     }
 
-    public byte getValue() {
-        return value;
+    public Byte getType() {
+        return type;
     }
 
-    public void setValue(byte value) {
-        this.value = value;
+    public void setType(byte type) {
+        this.type = type;
     }
 
     public String getName() {
@@ -84,23 +84,13 @@ public enum DeviceTypeEnum implements DeviceType {
         this.description = description;
     }
 
-    public static DeviceTypeEnum getDeviceEnumByValue(byte value) {
+    public static DeviceTypeEnum getDeviceEnumByType(byte type) {
         for (DeviceTypeEnum deviceEnum : DeviceTypeEnum.values()) {
-            if (deviceEnum.value == value) {
+            if (deviceEnum.type == type) {
                 return deviceEnum;
             }
         }
         return null;
     }
 
-
-    @Override
-    public byte getDeviceTypeValue() {
-        return value;
-    }
-
-    @Override
-    public String getDeviceTypeName() {
-        return name;
-    }
 }

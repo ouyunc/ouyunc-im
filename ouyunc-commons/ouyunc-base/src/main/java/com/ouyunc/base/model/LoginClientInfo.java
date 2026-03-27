@@ -137,12 +137,12 @@ public class LoginClientInfo extends LoginContent implements Protocol{
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof LoginClientInfo that)) return false;
-        return Objects.equals(getAppKey(), that.getAppKey()) &&  Objects.equals(getIdentity(), that.getIdentity()) && Objects.equals(getDeviceType().getDeviceTypeValue(), that.getDeviceType().getDeviceTypeValue());
+        return Objects.equals(getAppKey(), that.getAppKey()) &&  Objects.equals(getIdentity(), that.getIdentity()) && Objects.equals(getDeviceType().getType(), that.getDeviceType().getType());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getAppKey(), getIdentity(), getDeviceType().getDeviceTypeValue());
+        return Objects.hash(getAppKey(), getIdentity(), getDeviceType().getType());
     }
 
 

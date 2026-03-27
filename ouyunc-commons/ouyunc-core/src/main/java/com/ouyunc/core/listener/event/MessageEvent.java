@@ -1,31 +1,73 @@
 package com.ouyunc.core.listener.event;
 
+import com.ouyunc.base.constant.enums.EventType;
+import com.ouyunc.base.utils.SnowflakeUtil;
 
+import java.util.Objects;
 
 /**
- * @Author fzx
- * message 消息事件抽象类
- * 注意： 这里只是简单实现，事件机制，MessageEvent 及其子类事件是不同的事件,这里的messageEvent 不想使用泛型了
+ * 统一消息事件：通过 {@link #getType()} 区分语义，业务数据放在 {@link GenericEvent#getSource()}。
  */
-public abstract class MessageEvent extends GenericEvent<Object> {
+public final class MessageEvent extends GenericEvent<Object> {
+
+    private String id;
 
     /**
-     * 发布时间
+     * 事件类型，必传
      */
-    private final long publishTime;
+    private EventType type;
 
-    public MessageEvent(Object source) {
+
+
+    public MessageEvent(Object source, EventType type) {
         super(source);
-        // 这里时间使用
-        this.publishTime = System.currentTimeMillis();
+        this.id = SnowflakeUtil.nextIdStr();
+        this.type = Objects.requireNonNull(type, "type");
     }
 
-    public MessageEvent(Object source, long publishTime) {
-        super(source);
-        this.publishTime = publishTime;
+    public MessageEvent(Object source, EventType type, long publishTime) {
+        super(source, publishTime);
+        this.id = SnowflakeUtil.nextIdStr();
+        this.type = Objects.requireNonNull(type, "type");
     }
 
-    public final long getPublishTime() {
-        return this.publishTime;
+
+    public MessageEvent(String id, Object source, EventType type) {
+        super(source);
+        this.id = id;
+        this.type = Objects.requireNonNull(type, "type");
+    }
+
+    public MessageEvent(String id, Object source, EventType type, long publishTime) {
+        super(source, publishTime);
+        this.id = id;
+        this.type = Objects.requireNonNull(type, "type");
+    }
+
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public EventType getType() {
+        return type;
+    }
+
+    public void setType(EventType type) {
+        this.type = type;
+    }
+
+    public long getPublishTime() {
+        return getTimestamp();
+    }
+
+    public void clear() {
+        super.clear();
+        this.id = null;
+        this.type = null;
     }
 }

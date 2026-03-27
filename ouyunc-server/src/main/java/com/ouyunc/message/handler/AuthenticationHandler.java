@@ -1,5 +1,6 @@
 package com.ouyunc.message.handler;
 
+import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
@@ -19,9 +20,9 @@ import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.core.context.MessageContext;
-import com.ouyunc.core.listener.event.ClientLoginEvent;
-import com.ouyunc.core.listener.event.ClientLogoutEvent;
-import com.ouyunc.core.listener.event.ExceptionEvent;
+import com.ouyunc.core.listener.event.payload.ClientLoginEventPayload;
+import com.ouyunc.core.listener.event.MessageEvent;
+import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
@@ -134,11 +135,11 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         // 根据appKey 获取appSecret 然后拼接
         if (AppKeyValidator.INSTANCE.negate().verify(loginContent.getAppKey(), ctx) || DeviceValidator.INSTANCE.negate().verify(packet, ctx) || !validate(loginContent)) {
             log.warn("客户端id: {} 登录参数: {}，校验未通过！", ctx.channel().id().asShortText(), Serializer.JSON.serializeToString(loginContent));
-            MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.LOGIN_VERIFY_ERROR, "登录校验未通过", packet), true);
+            MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_VERIFY_ERROR, "登录校验未通过", packet), MessageEventTypeEnum.EXCEPTION), true);
             ctx.close();
             return;
         }
-        String comboIdentity = IdentityUtil.generalComboIdentity(loginContent.getAppKey(), loginContent.getIdentity(), deviceType.getDeviceTypeValue());
+        String comboIdentity = IdentityUtil.generalComboIdentity(loginContent.getAppKey(), loginContent.getIdentity(), deviceType.getType());
         //如果之前已经登录（重复登录请求），这里判断是否已经登录过,同一个账号在同一个设备不能同时登录
         //1,从分布式缓存取出该登录用户
         LoginClientInfo cacheLoginClientInfo = MessageServerContext.remoteLoginClientInfoCache.get(CacheConstant.buildLoginCacheKey(loginContent.getAppKey(), comboIdentity));
@@ -148,7 +149,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         // 下面如论是否开启支持清除公共注册表的相关信息
         Message message = new Message(MessageContext.idGenerator().generateIdStr(),null, loginContent.getIdentity(), MessageContentTypeEnum.TEXT_CONTENT.getType(), Serializer.JSON.serializeToString(new ServerNotifyContent(String.format(MessageConstant.REMOTE_LOGIN_NOTIFICATIONS, loginMessage.getMetadata().getClientIp()))), loginTimestamp, loginMessage.getMetadata());
         // 注意： 这里的原来的连接使用的序列化方式，应该是和新连接上的序列化方式一致，这里当成一致，当然不一致也可以做，后面遇到再改造
-        Packet notifyPacket = new Packet(packet.getProtocol(), packet.getProtocolVersion(), MessageContext.idGenerator().generateId(), DeviceTypeEnum.PC.getValue(), NetworkEnum.OTHER.getValue(), packet.getEncryptType(), packet.getSerializeAlgorithm(), MessageTypeEnum.SERVER_NOTIFY.getType(), message);
+        Packet notifyPacket = new Packet(packet.getProtocol(), packet.getProtocolVersion(), MessageContext.idGenerator().generateId(), DeviceTypeEnum.PC.getType(), NetworkEnum.OTHER.getValue(), packet.getEncryptType(), packet.getSerializeAlgorithm(), MessageTypeEnum.SERVER_NOTIFY.getType(), message);
         // 记录设备号如果是同一个设备则不发送，否则发送通知
         if (cacheLoginClientInfo != null && (StringUtils.isBlank(cacheLoginClientInfo.getSn()) || !cacheLoginClientInfo.getSn().equals(loginContent.getSn()))) {
             // 给原有连接发送通知消息，并将其下线，添加新的连接登录,覆盖之前的登录信息
@@ -177,7 +178,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
             final LoginClientInfo closingLocalloginClientInfo = ChannelAttrUtil.getChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
             if (closingLocalloginClientInfo != null) {
                 // 这里不进行判空了，到这里肯定不为空（登录信息里面一定要有登录设备的类型）
-                Byte clientLoginDeviceValue = closingLocalloginClientInfo.getDeviceType().getDeviceTypeValue();
+                Byte clientLoginDeviceValue = closingLocalloginClientInfo.getDeviceType().getType();
                 String closingComboIdentity = IdentityUtil.generalComboIdentity(closingLocalloginClientInfo.getAppKey(), closingLocalloginClientInfo.getIdentity(), clientLoginDeviceValue);
                 // 登录信息一致,才进行解绑，删除缓存信息
                 MessageServerContext.localLoginClientRegisterTable.delete(closingComboIdentity);
@@ -205,15 +206,15 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                             });
                         } else {
                             log.warn("客户端: {} 解绑登录信息失败,原因：缓存中不存在登录信息或登录地址不匹配", closingLocalloginClientInfo);
-                            MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.UN_BIND_ERROR, "客户端解绑登录信息失败！缓存中不存在登录信息或登录地址不匹配", packet));
+                            MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.UN_BIND_ERROR, "客户端解绑登录信息失败！缓存中不存在登录信息或登录地址不匹配", packet), MessageEventTypeEnum.EXCEPTION));
                         }
                     } else {
                         log.error("客户端: {} 解绑登录信息失败,原因：获取分布式锁失败", closingLocalloginClientInfo);
-                        MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.UN_BIND_ERROR, "客户端解绑登录信息失败！获取分布式锁失败", packet));
+                        MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.UN_BIND_ERROR, "客户端解绑登录信息失败！获取分布式锁失败", packet), MessageEventTypeEnum.EXCEPTION));
                     }
                 } catch (Exception e) {
                     log.error("客户端: {} 解绑登录信息失败,原因：{}", closingLocalloginClientInfo, e.getMessage());
-                    MessageServerContext.publishEvent(new ExceptionEvent(ExceptionCodeEnum.UN_BIND_ERROR, "客户端解绑登录信息失败！" + e.getMessage(), packet));
+                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.UN_BIND_ERROR, "客户端解绑登录信息失败！" + e.getMessage(), packet), MessageEventTypeEnum.EXCEPTION));
                     throw new MessageException(e);
                 } finally {
                     if (lock.isHeldByCurrentThread()) {
@@ -221,7 +222,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                     }
                 }
                 // 发送客户端离线事件， 可以处理发送遗嘱等客户端关闭后的操作逻辑
-                MessageServerContext.publishEvent(new ClientLogoutEvent(closingLocalloginClientInfo), true);
+                MessageServerContext.publishEvent(new MessageEvent(closingLocalloginClientInfo, MessageEventTypeEnum.CLIENT_LOGOUT), true);
             }
         };
         // 设置channel 关闭后的回调
@@ -250,7 +251,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
             log.warn("客户端: {} 登录成功，取消登录超时定时任务失败", cacheLoginClientInfo);
         }
         // 发送客户端成功登录事件
-        MessageServerContext.publishEvent(new ClientLoginEvent(cacheLoginClientInfo, ctx, loginTimestamp), true);
+        MessageServerContext.publishEvent(new MessageEvent(new ClientLoginEventPayload(cacheLoginClientInfo, ctx), MessageEventTypeEnum.CLIENT_LOGIN, loginTimestamp), true);
         // 取消该handle
         ctx.pipeline().remove(this);
     }
