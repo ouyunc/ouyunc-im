@@ -25,9 +25,6 @@ public class PreloadedLuaScriptListener implements MessageListener<MessageEvent>
 
     @Override
     public void onEvent(MessageEvent event) {
-        if (event.getType() != MessageEventTypeEnum.PRELOAD_LUA_SCRIPT) {
-            return;
-        }
         if (event.getSource() instanceof LuaScriptEnum[] luaScripts) {
             for (LuaScriptEnum luaScript : luaScripts) {
                 log.debug("预加载lua脚本: {}", luaScript.getScript());

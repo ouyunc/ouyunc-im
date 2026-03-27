@@ -48,9 +48,6 @@ public class RemoveOfflineListener implements MessageListener<MessageEvent> {
 
     @Override
     public void onEvent(MessageEvent event) {
-        if (event.getType() != MessageEventTypeEnum.REMOVE_OFFLINE) {
-            return;
-        }
         Object source = event.getSource();
         log.debug("移除离线消息监听器正在处理：{}", event.getSource());
         if (source instanceof Packet packet) {

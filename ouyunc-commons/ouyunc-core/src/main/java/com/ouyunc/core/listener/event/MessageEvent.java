@@ -10,12 +10,12 @@ import java.util.Objects;
  */
 public final class MessageEvent extends GenericEvent<Object> {
 
-    private String id;
+    private final String id;
 
     /**
      * 事件类型，必传
      */
-    private EventType type;
+    private final EventType type;
 
 
 
@@ -49,25 +49,26 @@ public final class MessageEvent extends GenericEvent<Object> {
         return id;
     }
 
-    public void setId(String id) {
-        this.id = id;
-    }
-
     public EventType getType() {
         return type;
-    }
-
-    public void setType(EventType type) {
-        this.type = type;
     }
 
     public long getPublishTime() {
         return getTimestamp();
     }
 
+    @Override
+    public void setSource(Object source) {
+        throw new UnsupportedOperationException("MessageEvent is immutable");
+    }
+
+    @Override
+    public void setTimestamp(long timestamp) {
+        throw new UnsupportedOperationException("MessageEvent is immutable");
+    }
+
+    @Override
     public void clear() {
-        super.clear();
-        this.id = null;
-        this.type = null;
+        throw new UnsupportedOperationException("MessageEvent is immutable");
     }
 }

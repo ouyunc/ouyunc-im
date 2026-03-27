@@ -49,9 +49,6 @@ public class ClientLoginListener implements MessageListener<MessageEvent> {
 
     @Override
     public void onEvent(MessageEvent event) {
-        if (event.getType() != MessageEventTypeEnum.CLIENT_LOGIN) {
-            return;
-        }
         if (log.isDebugEnabled()) {
             log.debug("客户端上线事件监听器正在处理：{}", event);
         }

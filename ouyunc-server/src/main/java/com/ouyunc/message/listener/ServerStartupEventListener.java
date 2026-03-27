@@ -59,9 +59,6 @@ public class ServerStartupEventListener implements MessageListener<MessageEvent>
 
     @Override
     public void onEvent(MessageEvent event) {
-        if (event.getType() != MessageEventTypeEnum.SERVER_STARTUP) {
-            return;
-        }
         Set<String> appKeys = ClientHelper.appKeys();
         if (CollectionUtils.isNotEmpty(appKeys)) {
             // 加载appKey 下的deviceType 配置

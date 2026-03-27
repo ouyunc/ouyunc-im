@@ -21,9 +21,6 @@ public class ServerOfflineEventListener implements MessageListener<MessageEvent>
 
     @Override
     public void onEvent(MessageEvent event) {
-        if (event.getType() != MessageEventTypeEnum.SERVER_OFFLINE) {
-            return;
-        }
         log.error("集群中服务离线事件监听器正在处理：{}", event);
     }
 }

@@ -42,9 +42,6 @@ public class ExceptionListener implements MessageListener<MessageEvent> {
 
     @Override
     public void onEvent(MessageEvent event) {
-        if (event.getType() != MessageEventTypeEnum.EXCEPTION) {
-            return;
-        }
         if (log.isDebugEnabled()) {
             log.error("异常事件监听器正在处理：{}", JSON.toJSONString(event.getSource()));
         }

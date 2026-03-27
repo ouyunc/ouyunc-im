@@ -41,9 +41,6 @@ public class SendFailListener implements MessageListener<MessageEvent> {
 
     @Override
     public void onEvent(MessageEvent event) {
-        if (event.getType() != MessageEventTypeEnum.SEND_FAIL) {
-            return;
-        }
         if (log.isDebugEnabled()) {
             log.error("消息发送失败事件监听器正在处理：{}", JSON.toJSONString(event.getSource()));
         }

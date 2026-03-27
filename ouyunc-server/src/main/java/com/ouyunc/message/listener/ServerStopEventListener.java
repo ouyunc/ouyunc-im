@@ -24,9 +24,6 @@ public class ServerStopEventListener implements MessageListener<MessageEvent> {
 
     @Override
     public void onEvent(MessageEvent event) {
-        if (event.getType() != MessageEventTypeEnum.SERVER_STOP) {
-            return;
-        }
         log.info("服务:{} 正在注销...", event);
         // 发送邮件？mq?
     }

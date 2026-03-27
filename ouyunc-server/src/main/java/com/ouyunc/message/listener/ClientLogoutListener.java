@@ -51,9 +51,6 @@ public class ClientLogoutListener implements MessageListener<MessageEvent> {
 
     @Override
     public void onEvent(MessageEvent event) {
-        if (event.getType() != MessageEventTypeEnum.CLIENT_LOGOUT) {
-            return;
-        }
         if (log.isDebugEnabled()) {
             log.warn("离线事件监听器正在处理：{}", event);
         }

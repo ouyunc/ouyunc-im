@@ -17,9 +17,6 @@ public class OnMessageListener implements MessageListener<MessageEvent> {
 
     @Override
     public void onEvent(MessageEvent event) {
-        if (event.getType() != MessageEventTypeEnum.ON_MESSAGE) {
-            return;
-        }
         // 这里根据协议进行策略来处理
         System.out.println(event);
     }

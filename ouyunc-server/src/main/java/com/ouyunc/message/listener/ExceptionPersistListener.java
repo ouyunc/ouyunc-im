@@ -24,9 +24,6 @@ public class ExceptionPersistListener implements MessageListener<MessageEvent> {
 
     @Override
     public void onEvent(MessageEvent event) {
-        if (event.getType() != MessageEventTypeEnum.EXCEPTION_PERSIST) {
-            return;
-        }
         MessageEvent inner = (MessageEvent) event.getSource();
         long ts = event.getTimestamp();
         mongoTemplate.insert(new MongoExceptionEntity(MessageContext.idGenerator().generateId(), JSON.toJSONString(inner), ts));

@@ -27,9 +27,6 @@ public class SendOfflineListener implements MessageListener<MessageEvent> {
 
     @Override
     public void onEvent(MessageEvent event) {
-        if (event.getType() != MessageEventTypeEnum.SEND_OFFLINE) {
-            return;
-        }
         if (log.isDebugEnabled()) {
             log.debug("离线消息发送事件监听器正在处理：{}", event);
         }
