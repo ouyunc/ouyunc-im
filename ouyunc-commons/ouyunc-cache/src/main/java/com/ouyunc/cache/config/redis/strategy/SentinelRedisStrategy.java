@@ -7,6 +7,7 @@ import org.redisson.config.Config;
 import org.redisson.config.ReadMode;
 import org.redisson.config.SentinelServersConfig;
 import org.springframework.data.redis.connection.RedisConfiguration;
+import org.springframework.data.redis.connection.RedisPassword;
 import org.springframework.data.redis.connection.RedisSentinelConfiguration;
 import org.springframework.util.StringUtils;
 
@@ -39,7 +40,10 @@ public class SentinelRedisStrategy extends AbstractRedisStrategy {
         redisSentinelConfiguration.setDatabase(redisProperties.getDatabase());
         //如果密码不为空则设置密码
         if (StringUtils.hasLength(redisProperties.getPassword())) {
-            redisSentinelConfiguration.setPassword(redisProperties.getPassword());
+            redisSentinelConfiguration.setPassword(RedisPassword.of(redisProperties.getPassword()));
+        }
+        if (StringUtils.hasLength(redisProperties.getUsername())) {
+            redisSentinelConfiguration.setUsername(redisProperties.getUsername());
         }
         if (0 <= database && database <= 16) {
             redisSentinelConfiguration.setDatabase(database);
@@ -65,6 +69,9 @@ public class SentinelRedisStrategy extends AbstractRedisStrategy {
         //如果密码不为空则设置密码
         if (StringUtils.hasLength(redisProperties.getPassword())) {
             sentinelServersConfig.setPassword(redisProperties.getPassword());
+        }
+        if (StringUtils.hasLength(redisProperties.getUsername())) {
+            sentinelServersConfig.setUsername(redisProperties.getUsername());
         }
         if (0 <= database && database <= 16) {
             sentinelServersConfig.setDatabase(database);

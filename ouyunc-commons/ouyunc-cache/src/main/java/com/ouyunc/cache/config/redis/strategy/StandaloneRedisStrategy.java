@@ -37,6 +37,9 @@ public class StandaloneRedisStrategy extends AbstractRedisStrategy {
         if (StringUtils.hasLength(redisProperties.getPassword())) {
             redisStandaloneConfiguration.setPassword(RedisPassword.of(redisProperties.getPassword()));
         }
+        if (StringUtils.hasLength(redisProperties.getUsername())) {
+            redisStandaloneConfiguration.setUsername(redisProperties.getUsername());
+        }
         if (0 <= database && database <= 16) {
             redisStandaloneConfiguration.setDatabase(database);
         }
@@ -57,6 +60,9 @@ public class StandaloneRedisStrategy extends AbstractRedisStrategy {
         //如果密码不为空则设置密码
         if (StringUtils.hasLength(redisProperties.getPassword())) {
             singleServerConfig.setPassword(redisProperties.getPassword());
+        }
+        if (StringUtils.hasLength(redisProperties.getUsername())) {
+            singleServerConfig.setUsername(redisProperties.getUsername());
         }
         if (0 <= database && database <= 16) {
             singleServerConfig.setDatabase(database);

@@ -34,6 +34,9 @@ public class ClusterRedisStrategy extends AbstractRedisStrategy {
         if (StringUtils.hasLength(redisProperties.getPassword())) {
             redisClusterConfiguration.setPassword(redisProperties.getPassword());
         }
+        if (StringUtils.hasLength(redisProperties.getUsername())) {
+            redisClusterConfiguration.setUsername(redisProperties.getUsername());
+        }
         return redisClusterConfiguration;
     }
 
@@ -52,6 +55,9 @@ public class ClusterRedisStrategy extends AbstractRedisStrategy {
         //如果密码不为空则设置密码
         if (StringUtils.hasLength(redisProperties.getPassword())) {
             clusterServersConfig.setPassword(redisProperties.getPassword());
+        }
+        if (StringUtils.hasLength(redisProperties.getUsername())) {
+            clusterServersConfig.setUsername(redisProperties.getUsername());
         }
         return config;
     }
