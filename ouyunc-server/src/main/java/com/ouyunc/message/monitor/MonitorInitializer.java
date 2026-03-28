@@ -1,6 +1,7 @@
 package com.ouyunc.message.monitor;
 
 import com.ouyunc.core.context.MessageContext;
+import com.ouyunc.core.listener.MessageEventMulticaster;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.schedule.TimerTaskWrapper;
 import org.slf4j.Logger;
@@ -44,6 +45,13 @@ public class MonitorInitializer {
         registerCache(TimerTaskWrapper.timerTaskCaffeine);
 
         log.info("资源监控初始化完成，已注册 {} 个缓存", ResourceMonitor.getRegisteredCacheNames().size());
+    }
+
+    /**
+     * 在事件多播器创建完成后注册 Disruptor 指标拉取（与缓存注册分离，因 multicaster 在 loadEventListener 中创建）。
+     */
+    public static void registerDisruptorMetrics(MessageEventMulticaster multicaster) {
+        ResourceMonitor.registerDisruptorMetrics(multicaster);
     }
 
     /**

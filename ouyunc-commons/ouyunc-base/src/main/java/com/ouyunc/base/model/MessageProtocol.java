@@ -7,7 +7,7 @@ import java.util.Objects;
 /**
  * 协议类型
  */
-public class ProtocolType implements Serializable, Protocol{
+public class MessageProtocol implements Serializable, Protocol{
     @Serial
     private static final long serialVersionUID = 1L;
 
@@ -33,7 +33,7 @@ public class ProtocolType implements Serializable, Protocol{
         this.protocolVersion = protocolVersion;
     }
 
-    public ProtocolType(byte protocol, byte protocolVersion) {
+    public MessageProtocol(byte protocol, byte protocolVersion) {
         this.protocol = protocol;
         this.protocolVersion = protocolVersion;
     }
@@ -42,7 +42,7 @@ public class ProtocolType implements Serializable, Protocol{
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        ProtocolType that = (ProtocolType) o;
+        MessageProtocol that = (MessageProtocol) o;
         return protocol == that.protocol && protocolVersion == that.protocolVersion;
     }
 

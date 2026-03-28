@@ -5,17 +5,21 @@ import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.ouyunc.base.executor.ThreadPoolId;
 import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.executor.ThreadPoolManager.ThreadPoolMetrics;
+import com.ouyunc.core.listener.MessageEventMulticaster;
+import com.ouyunc.core.listener.metrics.DisruptorListenerExecSnapshot;
+import com.ouyunc.core.listener.metrics.DisruptorRingMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.function.Supplier;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
  * 资源监控管理器
- * 统一监控线程池和 Caffeine 缓存的运行状态
+ * 统一监控线程池、Caffeine 缓存及事件 Disruptor（RingBuffer + 监听器耗时）的运行状态
  *
  * @author fzx
  */
@@ -37,6 +41,11 @@ public final class ResourceMonitor {
      * 是否已启动监控
      */
     private static volatile boolean monitoring = false;
+
+    /**
+     * Disruptor RingBuffer 指标（由 {@link #registerDisruptorMetrics(MessageEventMulticaster)} 注入，默认空）
+     */
+    private static volatile Supplier<List<DisruptorRingMetrics>> disruptorMetricsSupplier = Collections::emptyList;
 
     private ResourceMonitor() {
         throw new AssertionError("Instantiation not supported");
@@ -111,10 +120,22 @@ public final class ResourceMonitor {
     }
 
     /**
+     * 注册事件多播器，用于定期输出 Disruptor 指标（RingBuffer 快照 + 各监听器累计耗时/错误；监听器侧仅在异步消费路径增加 nanoTime 与原子累加）。
+     */
+    public static void registerDisruptorMetrics(MessageEventMulticaster multicaster) {
+        if (multicaster == null) {
+            disruptorMetricsSupplier = Collections::emptyList;
+            return;
+        }
+        disruptorMetricsSupplier = multicaster::snapshotDisruptorMetrics;
+        log.debug("已注册 Disruptor 事件环监控");
+    }
+
+    /**
      * 启动定期监控（默认每5分钟输出一次）
      */
     public static void startMonitoring() {
-        startMonitoring(5, TimeUnit.MINUTES);
+        startMonitoring(1, TimeUnit.MINUTES);
     }
 
     /**
@@ -177,13 +198,27 @@ public final class ResourceMonitor {
     }
 
     /**
-     * 获取所有资源指标（线程池 + 缓存）
+     * 获取所有资源指标（线程池 + 缓存 + Disruptor）
      */
     public static ResourceMetricsSnapshot getAllMetrics() {
         return new ResourceMetricsSnapshot(
                 getThreadPoolMetrics(),
-                getCacheMetrics()
+                getCacheMetrics(),
+                getDisruptorMetrics()
         );
+    }
+
+    /**
+     * 当前已懒加载创建的 Disruptor 环指标快照
+     */
+    public static List<DisruptorRingMetrics> getDisruptorMetrics() {
+        try {
+            List<DisruptorRingMetrics> list = disruptorMetricsSupplier.get();
+            return list == null ? List.of() : List.copyOf(list);
+        } catch (Exception e) {
+            log.warn("获取 Disruptor 指标失败: {}", e.getMessage());
+            return List.of();
+        }
     }
 
     /**
@@ -193,7 +228,59 @@ public final class ResourceMonitor {
         log.info("========== 资源监控报告 ==========");
         logThreadPoolMetrics();
         logCacheMetrics();
+        logDisruptorMetrics();
         log.info("==================================");
+    }
+
+    /**
+     * 输出 Disruptor RingBuffer 指标（仅已创建的多播路由）
+     */
+    public static void logDisruptorMetrics() {
+        List<DisruptorRingMetrics> metrics = getDisruptorMetrics();
+        if (metrics.isEmpty()) {
+            log.info("【事件 Disruptor】暂无已创建的 Ring（未异步发布过对应事件或尚未懒加载）");
+            return;
+        }
+        log.info("【事件 Disruptor】");
+        for (DisruptorRingMetrics m : metrics) {
+            log.info(
+                    "  [环] eventType={}, ring={}, bufferSize={}槽, cursor={}序号, minGating={}序号, pending≈{}序号, remaining={}槽, published={}次, started={}",
+                    m.eventTypeName(),
+                    m.ringName(),
+                    m.bufferSize(),
+                    m.cursor(),
+                    m.minimumGatingSequence(),
+                    m.pendingSequences(),
+                    m.remainingCapacity(),
+                    m.publishedEvents(),
+                    m.disruptorStarted()
+            );
+            List<DisruptorListenerExecSnapshot> listeners = m.listenerStats();
+            if (listeners == null || listeners.isEmpty()) {
+                log.info("    （无监听器统计）");
+                continue;
+            }
+            boolean any = false;
+            for (DisruptorListenerExecSnapshot s : listeners) {
+                if (s.invocations() == 0) {
+                    continue;
+                }
+                any = true;
+                log.info(
+                        "    [监听器] order={}, class={}, invocations={}次, errors={}次, avg={}ms, max={}ms, total={}ms",
+                        s.order(),
+                        s.listenerClassName(),
+                        s.invocations(),
+                        s.errors(),
+                        String.format("%.3f", s.avgMs()),
+                        String.format("%.3f", s.maxMs()),
+                        String.format("%.3f", s.totalNanos() / 1_000_000.0)
+                );
+            }
+            if (!any) {
+                log.info("    （本周期各监听器尚无消费次数，或事件尚未异步发布到本环）");
+            }
+        }
     }
 
     /**
@@ -208,13 +295,13 @@ public final class ResourceMonitor {
         log.info("【线程池监控】");
         metrics.forEach((id, m) -> {
             if (m.activeThreads() >= 0) {
-                log.info("  {}: 活跃线程={}, 池大小={}, 已完成任务={}, 总任务={}, 队列大小={}, 状态={}",
+                log.info("  {}: 活跃线程={}个, 池大小={}个, 已完成任务={}个, 总任务={}个, 队列大小={}, 状态={}",
                         id.getConfigKey(),
                         m.activeThreads(),
                         m.poolSize(),
                         m.completedTaskCount(),
                         m.taskCount(),
-                        m.queueSize() >= 0 ? m.queueSize() : "N/A",
+                        m.queueSize() >= 0 ? m.queueSize() + "个" : "N/A",
                         m.shutdown() ? "已关闭" : (m.terminated() ? "已终止" : "运行中")
                 );
             } else {
@@ -235,7 +322,7 @@ public final class ResourceMonitor {
         log.info("【缓存监控】");
         metrics.forEach((name, m) -> {
             double hitRate = m.hitRate();
-            log.info("  {}: 大小={}, 命中率={}%, 命中={}, 未命中={}, 加载={}, 淘汰={}, 加载耗时={}ms",
+            log.info("  {}: 大小={}条, 命中率={}%, 命中={}次, 未命中={}次, 加载={}次, 淘汰={}次, 加载耗时={}ms",
                     name,
                     m.size(),
                     hitRate * 100,
@@ -281,6 +368,43 @@ public final class ResourceMonitor {
             }
         });
 
+        for (DisruptorRingMetrics m : getDisruptorMetrics()) {
+            int buf = m.bufferSize();
+            if (buf > 0 && m.pendingSequences() * 10 > buf * 8L) {
+                result.addWarning(String.format(
+                        "事件 Disruptor 积压偏高: eventType=%s ring=%s pending≈%d序号 buffer=%d槽 remaining=%d槽",
+                        m.eventTypeName(), m.ringName(), m.pendingSequences(), buf, m.remainingCapacity()));
+            }
+            if (m.remainingCapacity() <= 0 && buf > 0) {
+                result.addWarning(String.format(
+                        "事件 Disruptor Ring 剩余容量为 0: eventType=%s ring=%s",
+                        m.eventTypeName(), m.ringName()));
+            }
+            List<DisruptorListenerExecSnapshot> listeners = m.listenerStats();
+            if (listeners != null) {
+                for (DisruptorListenerExecSnapshot s : listeners) {
+                    if (s.invocations() == 0) {
+                        continue;
+                    }
+                    if (s.errors() > 0) {
+                        result.addWarning(String.format(
+                                "事件监听器执行失败次数>0: eventType=%s ring=%s order=%d class=%s errors=%d次/%d次",
+                                m.eventTypeName(), m.ringName(), s.order(), s.listenerClassName(), s.errors(), s.invocations()));
+                    }
+                    if (s.avgMs() > 2_000.0) {
+                        result.addWarning(String.format(
+                                "事件监听器平均耗时过高(>2s): eventType=%s ring=%s order=%d class=%s avg=%.2fms",
+                                m.eventTypeName(), m.ringName(), s.order(), s.listenerClassName(), s.avgMs()));
+                    }
+                    if (s.maxMs() > 30_000.0) {
+                        result.addWarning(String.format(
+                                "事件监听器单次最大耗时过高(>30s): eventType=%s ring=%s order=%d class=%s max=%.2fms",
+                                m.eventTypeName(), m.ringName(), s.order(), s.listenerClassName(), s.maxMs()));
+                    }
+                }
+            }
+        }
+
         return result;
     }
 
@@ -322,7 +446,8 @@ public final class ResourceMonitor {
      */
     public record ResourceMetricsSnapshot(
             Map<ThreadPoolId, ThreadPoolMetrics> threadPools,
-            Map<String, CacheMetrics> caches
+            Map<String, CacheMetrics> caches,
+            List<DisruptorRingMetrics> disruptorRings
     ) {
         @Override
         public String toString() {
@@ -330,6 +455,7 @@ public final class ResourceMonitor {
             sb.append("ResourceMetricsSnapshot{\n");
             sb.append("  threadPools=").append(threadPools.size()).append("个\n");
             sb.append("  caches=").append(caches.size()).append("个\n");
+            sb.append("  disruptorRings=").append(disruptorRings.size()).append("个\n");
             sb.append("}");
             return sb.toString();
         }

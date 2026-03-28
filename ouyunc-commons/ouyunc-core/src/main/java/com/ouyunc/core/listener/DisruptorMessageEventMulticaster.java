@@ -3,12 +3,15 @@ package com.ouyunc.core.listener;
 import com.lmax.disruptor.*;
 import com.lmax.disruptor.dsl.Disruptor;
 import com.lmax.disruptor.dsl.EventHandlerGroup;
-import com.lmax.disruptor.dsl.ProducerType;
 import com.ouyunc.base.constant.enums.EventRingEnum;
 import com.ouyunc.base.constant.enums.EventType;
 import com.ouyunc.core.listener.event.MessageEvent;
+import com.ouyunc.core.listener.metrics.DisruptorListenerExecSnapshot;
+import com.ouyunc.core.listener.metrics.DisruptorRingMetrics;
+import com.ouyunc.core.listener.metrics.ListenerExecutionStats;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.List;
@@ -18,6 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.LongAdder;
 
 /**
  * 使用 Disruptor 原生 DSL 按监听器注解进行事件分发：
@@ -63,6 +67,16 @@ public class DisruptorMessageEventMulticaster extends AbstractMessageEventMultic
         listenersByRingCache.clear();
         dispatchRoutes.forEach((eventType, route) -> route.shutdown());
         dispatchRoutes.clear();
+    }
+
+    @Override
+    public List<DisruptorRingMetrics> snapshotDisruptorMetrics() {
+        if (dispatchRoutes.isEmpty()) {
+            return List.of();
+        }
+        List<DisruptorRingMetrics> list = new ArrayList<>();
+        dispatchRoutes.values().forEach(route -> route.appendRingMetrics(list));
+        return Collections.unmodifiableList(list);
     }
 
     @Override
@@ -124,12 +138,13 @@ public class DisruptorMessageEventMulticaster extends AbstractMessageEventMultic
                 createWaitStrategy(ring)
         );
         Map<Integer, List<MessageEventListener<MessageEvent>>> byOrder = groupListenersByOrder(ringListeners);
-        EventHandlerGroupBuilder groupBuilder = new EventHandlerGroupBuilder(disruptor);
-        byOrder.forEach((order, listeners) -> groupBuilder.addStage(listeners));
+        List<ListenerExecutionStats> handlerStats = new ArrayList<>();
+        EventHandlerGroupBuilder groupBuilder = new EventHandlerGroupBuilder(disruptor, handlerStats);
+        byOrder.forEach(groupBuilder::addStage);
         disruptor.start();
         RingBuffer<DisruptorEvent> ringBuffer = disruptor.getRingBuffer();
         log.info("Disruptor dispatcher initialized, eventType={}, ring={}, stages={}", eventType.getType(), ring, byOrder.size());
-        return new RingDispatcher(disruptor, ringBuffer);
+        return new RingDispatcher(disruptor, ringBuffer, handlerStats);
     }
 
     private Map<Integer, List<MessageEventListener<MessageEvent>>> groupListenersByOrder(List<MessageEventListener<MessageEvent>> listeners) {
@@ -145,31 +160,38 @@ public class DisruptorMessageEventMulticaster extends AbstractMessageEventMultic
     private final class ListenerHandler implements EventHandler<DisruptorEvent> {
 
         private final MessageEventListener<MessageEvent> listener;
+        private final ListenerExecutionStats stats;
 
-        private ListenerHandler(MessageEventListener<MessageEvent> listener) {
+        private ListenerHandler(MessageEventListener<MessageEvent> listener, ListenerExecutionStats stats) {
             this.listener = listener;
+            this.stats = stats;
         }
 
         @Override
         public void onEvent(DisruptorEvent holder, long sequence, boolean endOfBatch) {
-            invokeListener(listener, holder.event);
+            invokeListener(listener, holder.event, (elapsedNanos, error) -> stats.record(elapsedNanos, error));
         }
     }
 
     private final class EventHandlerGroupBuilder {
 
         private final Disruptor<DisruptorEvent> disruptor;
+        private final List<ListenerExecutionStats> handlerStats;
         private EventHandlerGroup<DisruptorEvent> current;
 
-        private EventHandlerGroupBuilder(Disruptor<DisruptorEvent> disruptor) {
+        private EventHandlerGroupBuilder(Disruptor<DisruptorEvent> disruptor, List<ListenerExecutionStats> handlerStats) {
             this.disruptor = disruptor;
+            this.handlerStats = handlerStats;
         }
 
-        private void addStage(List<MessageEventListener<MessageEvent>> listeners) {
+        private void addStage(int order, List<MessageEventListener<MessageEvent>> listeners) {
             @SuppressWarnings("unchecked")
             EventHandler<DisruptorEvent>[] handlers = new EventHandler[listeners.size()];
             for (int i = 0; i < listeners.size(); i++) {
-                handlers[i] = new ListenerHandler(listeners.get(i));
+                MessageEventListener<MessageEvent> l = listeners.get(i);
+                ListenerExecutionStats stats = new ListenerExecutionStats(l.getClass().getName(), order);
+                handlerStats.add(stats);
+                handlers[i] = new ListenerHandler(l, stats);
             }
             if (handlers.length == 0) {
                 return;
@@ -192,18 +214,47 @@ public class DisruptorMessageEventMulticaster extends AbstractMessageEventMultic
     private static final class RingDispatcher {
         private final Disruptor<DisruptorEvent> disruptor;
         private final RingBuffer<DisruptorEvent> ringBuffer;
+        private final List<ListenerExecutionStats> listenerStats;
+        private final LongAdder publishedEvents = new LongAdder();
 
-        private RingDispatcher(Disruptor<DisruptorEvent> disruptor, RingBuffer<DisruptorEvent> ringBuffer) {
+        private RingDispatcher(
+                Disruptor<DisruptorEvent> disruptor,
+                RingBuffer<DisruptorEvent> ringBuffer,
+                List<ListenerExecutionStats> listenerStats) {
             this.disruptor = disruptor;
             this.ringBuffer = ringBuffer;
+            this.listenerStats = listenerStats;
         }
 
         private void publish(MessageEvent event) {
+            publishedEvents.increment();
             ringBuffer.publishEvent(DisruptorEvent.TRANSLATOR, event);
         }
 
         private void shutdown() {
             disruptor.shutdown();
+        }
+
+        private DisruptorRingMetrics snapshot(EventType eventType, EventRingEnum ring) {
+            long cursor = ringBuffer.getCursor();
+            long minGating = ringBuffer.getMinimumGatingSequence();
+            long pending = cursor >= minGating ? cursor - minGating : 0L;
+            List<DisruptorListenerExecSnapshot> execSnapshots = new ArrayList<>(listenerStats.size());
+            for (ListenerExecutionStats s : listenerStats) {
+                execSnapshots.add(s.snapshot());
+            }
+            return new DisruptorRingMetrics(
+                    String.valueOf(eventType.getType()),
+                    ring.name(),
+                    ringBuffer.getBufferSize(),
+                    cursor,
+                    minGating,
+                    pending,
+                    ringBuffer.remainingCapacity(),
+                    publishedEvents.sum(),
+                    disruptor.hasStarted(),
+                    List.copyOf(execSnapshots)
+            );
         }
     }
 
@@ -270,6 +321,15 @@ public class DisruptorMessageEventMulticaster extends AbstractMessageEventMultic
             for (RingDispatcher dispatcher : dispatchers) {
                 if (dispatcher != null) {
                     dispatcher.shutdown();
+                }
+            }
+        }
+
+        private void appendRingMetrics(List<DisruptorRingMetrics> out) {
+            for (int i = 0; i < rings.length; i++) {
+                RingDispatcher dispatcher = dispatchers[i];
+                if (dispatcher != null) {
+                    out.add(dispatcher.snapshot(eventType, rings[i]));
                 }
             }
         }

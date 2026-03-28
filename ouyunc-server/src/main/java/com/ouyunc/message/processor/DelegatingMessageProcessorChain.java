@@ -1,6 +1,6 @@
 package com.ouyunc.message.processor;
 
-import com.ouyunc.base.model.ProtocolType;
+import com.ouyunc.base.model.MessageProtocol;
 import com.ouyunc.base.packet.Packet;
 
 import java.util.List;
@@ -10,12 +10,12 @@ import java.util.List;
  */
 public final class DelegatingMessageProcessorChain implements ProcessorChain<AbstractMessageProcessor<? extends Number>> {
 
-    private final ProtocolType protocolType;
+    private final MessageProtocol messageProtocol;
 
     private final List<AbstractMessageProcessor<? extends Number>> delegates;
 
-    public DelegatingMessageProcessorChain(ProtocolType protocolType, List<AbstractMessageProcessor<? extends Number>> processors) {
-        this.protocolType = protocolType;
+    public DelegatingMessageProcessorChain(MessageProtocol messageProtocol, List<AbstractMessageProcessor<? extends Number>> processors) {
+        this.messageProtocol = messageProtocol;
         this.delegates = processors;
     }
 
@@ -25,7 +25,7 @@ public final class DelegatingMessageProcessorChain implements ProcessorChain<Abs
      */
     @Override
     public boolean matches(Packet packet) {
-        return this.protocolType.getProtocol() == packet.getProtocol() && this.protocolType.getProtocolVersion() == packet.getProtocolVersion();
+        return this.messageProtocol.getProtocol() == packet.getProtocol() && this.messageProtocol.getProtocolVersion() == packet.getProtocolVersion();
     }
 
     @Override

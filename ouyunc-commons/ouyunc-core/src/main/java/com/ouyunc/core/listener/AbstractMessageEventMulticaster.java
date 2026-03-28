@@ -118,11 +118,36 @@ public abstract class AbstractMessageEventMulticaster implements MessageEventMul
      * 执行单个监听器（异常吞掉仅打日志）。
      */
     protected void invokeListener(MessageEventListener<MessageEvent> listener, MessageEvent event) {
+        invokeListener(listener, event, null);
+    }
+
+    /**
+     * 执行单个监听器；{@code timingCallback} 非空时在异步路径上统计单次耗时（同步路径应传 null，避免 nanoTime 开销）。
+     */
+    protected void invokeListener(
+            MessageEventListener<MessageEvent> listener,
+            MessageEvent event,
+            ListenerTimingCallback timingCallback) {
+        long t0 = timingCallback != null ? System.nanoTime() : 0L;
         try {
             listener.onEvent(event);
+            if (timingCallback != null) {
+                timingCallback.onComplete(System.nanoTime() - t0, null);
+            }
         } catch (Throwable err) {
+            if (timingCallback != null) {
+                timingCallback.onComplete(System.nanoTime() - t0, err);
+            }
             log.error("message 监听器 {} 执行事件 {} 失败：{}", listener, event, err.getMessage());
         }
+    }
+
+    /**
+     * Disruptor 异步消费路径上用于记录单次监听耗时（成功或失败均回调一次）。
+     */
+    @FunctionalInterface
+    protected interface ListenerTimingCallback {
+        void onComplete(long elapsedNanos, Throwable error);
     }
 
     protected int resolveListenerOrder(MessageEventListener<MessageEvent> listener) {

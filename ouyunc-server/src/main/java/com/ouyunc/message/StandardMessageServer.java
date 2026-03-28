@@ -5,7 +5,7 @@ import com.ouyunc.base.constant.enums.MessageContentType;
 import com.ouyunc.base.constant.enums.MessageType;
 import com.ouyunc.base.executor.ThreadPoolConfig;
 import com.ouyunc.base.executor.ThreadPoolManager;
-import com.ouyunc.base.model.ProtocolType;
+import com.ouyunc.base.model.MessageProtocol;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.utils.*;
 import com.ouyunc.core.engine.LoadPropertiesEngine;
@@ -108,6 +108,7 @@ public class StandardMessageServer extends AbstractMessageServer {
             }
         }
         MessageServerContext.messageEventMulticaster = messageEventMulticaster;
+        MonitorInitializer.registerDisruptorMetrics(messageEventMulticaster);
         // 可以通过spi 来进行加载,这里设计是为了以后扩展打包成boot-starter 时可以通过spi 的方式进行扩展监听器， 可以重写该方法自行实现
         log.debug("事件监听器加载完成");
     }
@@ -183,7 +184,7 @@ public class StandardMessageServer extends AbstractMessageServer {
             }else if (messageProcessorSize > NumberConstant.NUMBER_1) {
                 List<ProcessorChain<AbstractMessageProcessor<? extends Number>>> processorChains = new ArrayList<>();
                 // 如果大于1，则转换为代理
-                messageProcessors.stream().collect(Collectors.groupingBy(processor -> new ProtocolType(processor.type().getProtocol(), processor.type().getProtocolVersion()))).forEach((protocolType, protocolTypeProcessors)->{
+                messageProcessors.stream().collect(Collectors.groupingBy(processor -> new MessageProtocol(processor.type().getProtocol(), processor.type().getProtocolVersion()))).forEach((protocolType, protocolTypeProcessors)->{
                     // 排序
                     OrderSortUtil.sort(protocolTypeProcessors);
                     // 构建代理
@@ -206,7 +207,7 @@ public class StandardMessageServer extends AbstractMessageServer {
             }else if (messageContentProcessorSize > NumberConstant.NUMBER_1) {
                 List<ProcessorChain<AbstractBaseProcessor<? extends Number>>> processorChains = new ArrayList<>();
                 // 如果大于1，则转换为代理
-                messageContentProcessors.stream().collect(Collectors.groupingBy(processor -> new ProtocolType(processor.type().getProtocol(), processor.type().getProtocolVersion()))).forEach((protocolType, protocolTypeProcessors)->{
+                messageContentProcessors.stream().collect(Collectors.groupingBy(processor -> new MessageProtocol(processor.type().getProtocol(), processor.type().getProtocolVersion()))).forEach((protocolType, protocolTypeProcessors)->{
                     // 排序
                     OrderSortUtil.sort(protocolTypeProcessors);
                     // 构建代理

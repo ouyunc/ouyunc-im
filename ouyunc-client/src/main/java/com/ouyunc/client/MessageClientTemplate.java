@@ -2,7 +2,7 @@ package com.ouyunc.client;
 
 import com.ouyunc.base.constant.enums.SendStatusEnum;
 import com.ouyunc.base.exception.MessageException;
-import com.ouyunc.base.model.ProtocolType;
+import com.ouyunc.base.model.MessageProtocol;
 import com.ouyunc.base.model.SendCallback;
 import com.ouyunc.base.model.SendResult;
 import com.ouyunc.base.packet.Packet;
@@ -47,7 +47,7 @@ public class MessageClientTemplate {
         // 从容器中获取
         // 通过packet 构造 ClientChannelPool, 作为key 获取ChannelPool, 获取某一个channel 去发送信息
 
-        ChannelPoolKey clientChannelPool = new ChannelPoolKey(new ProtocolType(packet.getProtocol(), packet.getProtocolVersion()), "192.168.0.113:8083");
+        ChannelPoolKey clientChannelPool = new ChannelPoolKey(new MessageProtocol(packet.getProtocol(), packet.getProtocolVersion()), "192.168.0.113:8083");
         SimpleChannelPool channelPool = MessageClientPool.clientSimpleChannelPoolMap.get(clientChannelPool);
         if (channelPool == null) {
             log.error("获取不到channelPool, 请检查是否已经调用了init方法");

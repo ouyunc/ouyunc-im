@@ -1,8 +1,10 @@
 package com.ouyunc.core.listener;
 
 import com.ouyunc.core.listener.event.MessageEvent;
+import com.ouyunc.core.listener.metrics.DisruptorRingMetrics;
 
 import java.util.Collection;
+import java.util.List;
 
 /**
  * @Author fzx
@@ -47,4 +49,11 @@ public interface MessageEventMulticaster {
      * @Description 多播事件
      */
     void multicastEvent(MessageEvent event, boolean async);
+
+    /**
+     * 拉取当前各事件类型、各 Ring 上已创建 Disruptor 的 RingBuffer 指标（懒加载未创建的环不会出现）。
+     */
+    default List<DisruptorRingMetrics> snapshotDisruptorMetrics() {
+        return List.of();
+    }
 }
