@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * @Author fzx
@@ -158,6 +159,44 @@ public abstract class AbstractMessageEventMulticaster implements MessageEventMul
         return resolveListenerMeta(listener).ring();
     }
 
+    /**
+     * 指定事件类型当前注册的监听器所涉及的物理环（用于异步 publish fan-out）。
+     */
+    protected Set<EventRingEnum> ringsForEventType(EventType eventType) {
+        if (eventType == null) {
+            return Set.of();
+        }
+        synchronized (listenersMonitor) {
+            Collection<MessageEventListener<MessageEvent>> listeners = messageListeners.get(eventType);
+            if (listeners.isEmpty()) {
+                return Set.of();
+            }
+            return listeners.stream()
+                    .map(this::resolveListenerRing)
+                    .collect(Collectors.toUnmodifiableSet());
+        }
+    }
+
+    /**
+     * 全量多播器内、挂到指定物理环上的监听器（跨事件类型），遍历顺序为各类型注册顺序。
+     */
+    protected List<MessageEventListener<MessageEvent>> listenersOnRingGlobally(EventRingEnum ring) {
+        if (ring == null) {
+            return List.of();
+        }
+        synchronized (listenersMonitor) {
+            List<MessageEventListener<MessageEvent>> out = new ArrayList<>();
+            for (EventType type : messageListeners.keySet()) {
+                for (MessageEventListener<MessageEvent> listener : messageListeners.get(type)) {
+                    if (resolveListenerRing(listener) == ring) {
+                        out.add(listener);
+                    }
+                }
+            }
+            return List.copyOf(out);
+        }
+    }
+
     private ListenerMeta resolveListenerMeta(MessageEventListener<MessageEvent> listener) {
         return listenerMetaCache.computeIfAbsent(listener.getClass(), ignored -> {
             EventListener annotation = listener.getClass().getAnnotation(EventListener.class);
@@ -210,7 +249,7 @@ public abstract class AbstractMessageEventMulticaster implements MessageEventMul
             return;
         }
         if (size == 1) {
-            invokeListener(orderedListeners.get(0), event);
+            invokeListener(orderedListeners.getFirst(), event);
             return;
         }
         for (MessageEventListener<MessageEvent> listener : orderedListeners) {
