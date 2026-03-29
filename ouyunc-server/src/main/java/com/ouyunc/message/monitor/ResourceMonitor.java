@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
@@ -232,8 +233,16 @@ public final class ResourceMonitor {
         log.info("==================================");
     }
 
+    /** pending 超过约 80% 槽位视为背压偏高（与 {@link #collectDisruptorWarnings} 一致） */
+    private static final int RING_PENDING_WARN_NUMERATOR = 8;
+    private static final int RING_PENDING_WARN_DENOMINATOR = 10;
+    /** 监听器平均耗时超过该值（毫秒）打预警 */
+    private static final double LISTENER_AVG_MS_WARN = 2_000.0;
+    /** 监听器单次最大耗时超过该值（毫秒）打预警 */
+    private static final double LISTENER_MAX_MS_WARN = 30_000.0;
+
     /**
-     * 输出 Disruptor RingBuffer 指标（仅已创建的多播路由）
+     * 输出 Disruptor RingBuffer 指标（仅已创建的多播路由），并对背压/失败/耗时打 {@link Logger#warn} 级别预警行。
      */
     public static void logDisruptorMetrics() {
         List<DisruptorRingMetrics> metrics = getDisruptorMetrics();
@@ -242,6 +251,7 @@ public final class ResourceMonitor {
             return;
         }
         log.info("【事件 Disruptor】");
+        int warnCount = 0;
         for (DisruptorRingMetrics m : metrics) {
             log.info(
                     "  [环] eventType={}, ring={}, bufferSize={}槽, cursor={}序号, minGating={}序号, pending≈{}序号, remaining={}槽, published={}次, started={}",
@@ -258,27 +268,92 @@ public final class ResourceMonitor {
             List<DisruptorListenerExecSnapshot> listeners = m.listenerStats();
             if (listeners == null || listeners.isEmpty()) {
                 log.info("    （无监听器统计）");
+            } else {
+                boolean any = false;
+                for (DisruptorListenerExecSnapshot s : listeners) {
+                    if (s.invocations() == 0) {
+                        continue;
+                    }
+                    any = true;
+                    log.info(
+                            "    [监听器] order={}, class={}, invocations={}次, errors={}次, avg={}ms, max={}ms, total={}ms",
+                            s.order(),
+                            s.listenerClassName(),
+                            s.invocations(),
+                            s.errors(),
+                            String.format("%.3f", s.avgMs()),
+                            String.format("%.3f", s.maxMs()),
+                            String.format("%.3f", s.totalNanos() / 1_000_000.0)
+                    );
+                }
+                if (!any) {
+                    log.info("    （本周期各监听器尚无消费次数，或事件尚未异步发布到本环）");
+                }
+            }
+            List<String> ringWarnings = new ArrayList<>();
+            collectDisruptorWarnings(m, ringWarnings::add);
+            for (String msg : ringWarnings) {
+                log.warn("[事件Disruptor预警] {}", msg);
+            }
+            warnCount += ringWarnings.size();
+        }
+        if (warnCount > 0) {
+            log.warn("【事件 Disruptor】本周期共 {} 条预警（关键字 [事件Disruptor预警] 便于检索）", warnCount);
+        }
+    }
+
+    /**
+     * 事件环与监听器预警规则（与 {@link #checkHealth()} 共用）。
+     */
+    private static void collectDisruptorWarnings(DisruptorRingMetrics m, Consumer<String> out) {
+        int buf = m.bufferSize();
+        long pending = m.pendingSequences();
+        long rem = m.remainingCapacity();
+        if (!m.disruptorStarted() && (m.publishedEvents() > 0 || m.cursor() > 0)) {
+            out.accept(String.format(
+                    "[严重] eventType=%s ring=%s Disruptor 未处于 started 状态但已有 cursor/published",
+                    m.eventTypeName(), m.ringName()));
+        }
+        if (buf > 0) {
+            if (rem <= 0) {
+                out.accept(String.format(
+                        "[严重] eventType=%s ring=%s Ring 已满或剩余容量=%d publish 可能阻塞 pending≈%d buffer=%d",
+                        m.eventTypeName(), m.ringName(), rem, pending, buf));
+            } else {
+                if (pending * RING_PENDING_WARN_DENOMINATOR > buf * (long) RING_PENDING_WARN_NUMERATOR) {
+                    out.accept(String.format(
+                            "[背压] eventType=%s ring=%s pending≈%d 已超过约 %d%% 槽位 buffer=%d remaining=%d",
+                            m.eventTypeName(), m.ringName(), pending,
+                            RING_PENDING_WARN_NUMERATOR * 100 / RING_PENDING_WARN_DENOMINATOR, buf, rem));
+                } else if (rem < buf / 10L) {
+                    out.accept(String.format(
+                            "[背压] eventType=%s ring=%s 剩余槽位不足 10%% remaining=%d buffer=%d pending≈%d",
+                            m.eventTypeName(), m.ringName(), rem, buf, pending));
+                }
+            }
+        }
+        List<DisruptorListenerExecSnapshot> listeners = m.listenerStats();
+        if (listeners == null) {
+            return;
+        }
+        for (DisruptorListenerExecSnapshot s : listeners) {
+            if (s.invocations() == 0) {
                 continue;
             }
-            boolean any = false;
-            for (DisruptorListenerExecSnapshot s : listeners) {
-                if (s.invocations() == 0) {
-                    continue;
-                }
-                any = true;
-                log.info(
-                        "    [监听器] order={}, class={}, invocations={}次, errors={}次, avg={}ms, max={}ms, total={}ms",
-                        s.order(),
-                        s.listenerClassName(),
-                        s.invocations(),
-                        s.errors(),
-                        String.format("%.3f", s.avgMs()),
-                        String.format("%.3f", s.maxMs()),
-                        String.format("%.3f", s.totalNanos() / 1_000_000.0)
-                );
+            if (s.errors() > 0) {
+                out.accept(String.format(
+                        "[失败] eventType=%s ring=%s order=%d class=%s errors=%d / invocations=%d",
+                        m.eventTypeName(), m.ringName(), s.order(), s.listenerClassName(), s.errors(), s.invocations()));
             }
-            if (!any) {
-                log.info("    （本周期各监听器尚无消费次数，或事件尚未异步发布到本环）");
+            if (s.avgMs() > LISTENER_AVG_MS_WARN) {
+                out.accept(String.format(
+                        "[耗时] eventType=%s ring=%s order=%d class=%s 平均耗时 %.2fms > %.0fms",
+                        m.eventTypeName(), m.ringName(), s.order(), s.listenerClassName(), s.avgMs(), LISTENER_AVG_MS_WARN));
+            }
+            if (s.maxMs() > LISTENER_MAX_MS_WARN) {
+                out.accept(String.format(
+                        "[耗时] eventType=%s ring=%s order=%d class=%s 单次最大耗时 %.2fms > %.0fms",
+                        m.eventTypeName(), m.ringName(), s.order(), s.listenerClassName(), s.maxMs(), LISTENER_MAX_MS_WARN));
             }
         }
     }
@@ -369,40 +444,7 @@ public final class ResourceMonitor {
         });
 
         for (DisruptorRingMetrics m : getDisruptorMetrics()) {
-            int buf = m.bufferSize();
-            if (buf > 0 && m.pendingSequences() * 10 > buf * 8L) {
-                result.addWarning(String.format(
-                        "事件 Disruptor 积压偏高: eventType=%s ring=%s pending≈%d序号 buffer=%d槽 remaining=%d槽",
-                        m.eventTypeName(), m.ringName(), m.pendingSequences(), buf, m.remainingCapacity()));
-            }
-            if (m.remainingCapacity() <= 0 && buf > 0) {
-                result.addWarning(String.format(
-                        "事件 Disruptor Ring 剩余容量为 0: eventType=%s ring=%s",
-                        m.eventTypeName(), m.ringName()));
-            }
-            List<DisruptorListenerExecSnapshot> listeners = m.listenerStats();
-            if (listeners != null) {
-                for (DisruptorListenerExecSnapshot s : listeners) {
-                    if (s.invocations() == 0) {
-                        continue;
-                    }
-                    if (s.errors() > 0) {
-                        result.addWarning(String.format(
-                                "事件监听器执行失败次数>0: eventType=%s ring=%s order=%d class=%s errors=%d次/%d次",
-                                m.eventTypeName(), m.ringName(), s.order(), s.listenerClassName(), s.errors(), s.invocations()));
-                    }
-                    if (s.avgMs() > 2_000.0) {
-                        result.addWarning(String.format(
-                                "事件监听器平均耗时过高(>2s): eventType=%s ring=%s order=%d class=%s avg=%.2fms",
-                                m.eventTypeName(), m.ringName(), s.order(), s.listenerClassName(), s.avgMs()));
-                    }
-                    if (s.maxMs() > 30_000.0) {
-                        result.addWarning(String.format(
-                                "事件监听器单次最大耗时过高(>30s): eventType=%s ring=%s order=%d class=%s max=%.2fms",
-                                m.eventTypeName(), m.ringName(), s.order(), s.listenerClassName(), s.maxMs()));
-                    }
-                }
-            }
+            collectDisruptorWarnings(m, result::addWarning);
         }
 
         return result;
