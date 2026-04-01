@@ -3,6 +3,7 @@ package com.ouyunc.message.listener;
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.enums.DeviceType;
+import com.ouyunc.base.constant.enums.EventRingEnum;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
@@ -35,7 +36,7 @@ import java.util.Objects;
  * 离线消息使用redis 的zset 数据结构来存储，目前只存储单聊的消息（推模式），对于群组类的业务（一般使用拉取模式，按需拉取）数据不进行存储，
  * 离线消息一般存储是有时间限制的，比如存储在离线消息的过期时间是7天，所以要启动一个定时任务定时去删除过期的离线消息
  */
-@EventListener(order = 40)
+@EventListener(ring = EventRingEnum.REMOVE_OFFLINE_MESSAGE)
 class RemoveOfflineMessageEventListener implements MessageEventListener<MessageEvent> {
 
     private static final Logger log = LoggerFactory.getLogger(RemoveOfflineMessageEventListener.class);

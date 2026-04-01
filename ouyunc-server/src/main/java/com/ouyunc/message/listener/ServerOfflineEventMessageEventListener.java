@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory;
  * @author fzx
  * @description 集群中服务离线事件
  */
-@EventListener(order = 92)
+@EventListener
 class ServerOfflineEventMessageEventListener implements MessageEventListener<MessageEvent> {
     private static final Logger log = LoggerFactory.getLogger(ServerOfflineEventMessageEventListener.class);
 

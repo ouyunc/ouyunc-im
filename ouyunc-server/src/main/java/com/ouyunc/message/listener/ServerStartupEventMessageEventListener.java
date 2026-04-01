@@ -45,7 +45,7 @@ import java.util.stream.Collectors;
  * @author fzx
  * @description 服务启动成功事件
  */
-@EventListener(order = 90)
+@EventListener
 class ServerStartupEventMessageEventListener implements MessageEventListener<MessageEvent> {
     private static final Logger log = LoggerFactory.getLogger(ServerStartupEventMessageEventListener.class);
 

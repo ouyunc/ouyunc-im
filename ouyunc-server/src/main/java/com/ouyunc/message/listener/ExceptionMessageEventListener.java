@@ -23,7 +23,7 @@ import org.springframework.kafka.core.KafkaTemplate;
  * @Author fzx
  * @Description: 异常消息处理监听器，原则上所有异常消息进mq来处理
  */
-@EventListener(order = 100, ring = EventRingEnum.SLOW)
+@EventListener(ring = EventRingEnum.SLOW)
 class ExceptionMessageEventListener implements MessageEventListener<MessageEvent> {
     private static final Logger log = LoggerFactory.getLogger(ExceptionMessageEventListener.class);
 

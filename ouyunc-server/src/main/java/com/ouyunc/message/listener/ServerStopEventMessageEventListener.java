@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory;
  * @author fzx
  * @description 服务注销事件
  */
-@EventListener(order = 91)
+@EventListener
 class ServerStopEventMessageEventListener implements MessageEventListener<MessageEvent> {
     private static final Logger log = LoggerFactory.getLogger(ServerStopEventMessageEventListener.class);
 

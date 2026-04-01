@@ -37,7 +37,7 @@ import java.util.List;
  * @Author fzx
  * @Description: 离线监听器
  */
-@EventListener(order = 15)
+@EventListener(ring = EventRingEnum.CLIENT_LOGOUT)
 class ClientLogoutMessageEventListener implements MessageEventListener<MessageEvent> {
     private static final Logger log = LoggerFactory.getLogger(ClientLogoutMessageEventListener.class);
 

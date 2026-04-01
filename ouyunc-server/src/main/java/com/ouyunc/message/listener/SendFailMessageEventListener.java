@@ -2,6 +2,7 @@ package com.ouyunc.message.listener;
 
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.MqConstant;
+import com.ouyunc.base.constant.enums.EventRingEnum;
 import com.ouyunc.base.constant.enums.EventType;
 import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.model.SendResult;
@@ -22,7 +23,7 @@ import java.util.Map;
  * @Author fzx
  * @Description: 消息发送失败监听器， 可以做消息日志的记录，重发等操作
  */
-@EventListener(order = 45)
+@EventListener(ring = EventRingEnum.SEND_FAIL_MESSAGE)
 class SendFailMessageEventListener implements MessageEventListener<MessageEvent> {
     private static final Logger log = LoggerFactory.getLogger(SendFailMessageEventListener.class);
 

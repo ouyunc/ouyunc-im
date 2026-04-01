@@ -1,11 +1,6 @@
 package com.ouyunc.message.listener;
 
-import com.ouyunc.base.constant.enums.DeviceTypeEnum;
-import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
-import com.ouyunc.base.constant.enums.EventType;
-import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
-import com.ouyunc.base.constant.enums.MessageTypeEnum;
-import com.ouyunc.base.constant.enums.NetworkEnum;
+import com.ouyunc.base.constant.enums.*;
 import com.ouyunc.base.encrypt.Encrypt;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.model.Metadata;
@@ -34,7 +29,7 @@ import java.util.List;
  * @Author fzx
  * @Description: 客户端登录成功事件监听器
  */
-@EventListener(order = 10)
+@EventListener( ring = EventRingEnum.CLIENT_LOGIN)
 class ClientLoginMessageEventListener implements MessageEventListener<MessageEvent> {
 
     private static final Logger log = LoggerFactory.getLogger(ClientLoginMessageEventListener.class);

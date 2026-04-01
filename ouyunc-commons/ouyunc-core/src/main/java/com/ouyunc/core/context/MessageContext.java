@@ -97,6 +97,28 @@ public class MessageContext {
     }
 
 
+    /**
+     * @Author fzx
+     * @Description 同步发布IM事件
+     * @param event IMEvent事件的子类
+     */
+    public static void publishEventWithExecutor(MessageEvent event) {
+        if (messageEventMulticaster != null) {
+            messageEventMulticaster.multicastEventWithExecutor(event, false);
+        }
+    }
+
+    /**
+     * @Author fzx
+     * @Description 同步发布IM事件
+     * @param event IMEvent事件的子类
+     */
+    public static void publishEventWithExecutor(MessageEvent event, boolean async) {
+        if (messageEventMulticaster != null) {
+            messageEventMulticaster.multicastEventWithExecutor(event, async);
+        }
+    }
+
 
 
 

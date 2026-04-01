@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory;
 /**
  * 预加载Lua脚本监听器
  */
-@EventListener(order = 70)
+@EventListener
 class PreloadedLuaScriptMessageEventListener implements MessageEventListener<MessageEvent> {
     private static final Logger log = LoggerFactory.getLogger(PreloadedLuaScriptMessageEventListener.class);
 

@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory;
  * @Author fzx
  * @Description: 消息发送离线事件监听器，将离线消息发送到mq来处理
  */
-@EventListener(order = 35)
+@EventListener
 class SendOfflineMessageEventListener implements MessageEventListener<MessageEvent> {
     private static final Logger log = LoggerFactory.getLogger(SendOfflineMessageEventListener.class);
 

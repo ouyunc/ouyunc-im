@@ -10,17 +10,10 @@ import com.ouyunc.core.listener.metrics.DisruptorListenerExecSnapshot;
 import com.ouyunc.core.listener.metrics.DisruptorRingMetrics;
 import com.ouyunc.core.listener.metrics.ListenerExecutionStats;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
@@ -37,6 +30,12 @@ import java.util.concurrent.atomic.LongAdder;
  * </ul>
  */
 public class DisruptorMessageEventMulticaster extends AbstractMessageEventMulticaster {
+    /**
+     * 监听器事件执行器
+     */
+    private Executor taskExecutor;
+
+
 
     /** 每个物理环当前活跃的 Disruptor 派发器（懒创建；重建环时替换并 shutdown 旧实例） */
     private final ConcurrentMap<EventRingEnum, RingDispatcher> globalRingDispatchers = new ConcurrentHashMap<>();
@@ -45,6 +44,31 @@ public class DisruptorMessageEventMulticaster extends AbstractMessageEventMultic
      * 任意环 {@link #invalidateGlobalRing} 时整表清空，避免持有已 shutdown 的实例。
      */
     private final ConcurrentMap<EventType, Set<RingDispatcher>> dispatchersByEventType = new ConcurrentHashMap<>();
+
+
+    public DisruptorMessageEventMulticaster() {
+    }
+
+    public DisruptorMessageEventMulticaster(Executor taskExecutor) {
+        this.taskExecutor = taskExecutor;
+    }
+
+
+    /**
+     * Return the current task executor for this multicaster.
+     */
+    protected Executor getTaskExecutor() {
+        return this.taskExecutor;
+    }
+    /**
+     * @Author fzx
+     * @Description 设置任务执行器
+     * @param taskExecutor
+     * @return void
+     */
+    public void setTaskExecutor(Executor taskExecutor) {
+        this.taskExecutor = taskExecutor;
+    }
 
     @Override
     public void addMessageListener(MessageEventListener<MessageEvent> listener) {
@@ -335,5 +359,41 @@ public class DisruptorMessageEventMulticaster extends AbstractMessageEventMultic
             return new BusySpinWaitStrategy();
         }
         return new BlockingWaitStrategy();
+    }
+
+
+
+
+
+    /**
+     * @Author fzx
+     * @Description 多播事件
+     * @param event
+     * @param async 是否异步执行事件 true-异步， false-同步
+     */
+    @Override
+    public void multicastEventWithExecutor(MessageEvent event, boolean async) {
+        Executor executor = getTaskExecutor();
+        // 遍历所有的事件监听器
+        for (MessageEventListener<MessageEvent> listener : getMessageListeners(event)) {
+            if (async && executor != null) {
+                executor.execute(() -> invokeListener(listener, event));
+            } else {
+                invokeListener(listener, event);
+            }
+        }
+    }
+
+
+    /**
+     * 对给定的事件执行监听器
+     */
+    protected void invokeListener(MessageEventListener<MessageEvent> listener, MessageEvent event) {
+        try {
+            listener.onEvent(event);
+        } catch (Throwable err) {
+            // 这里不进行抛出异常，只记录
+            log.error("message 监听器 {} 执行事件 {} 失败：{}", listener, event, err.getMessage());
+        }
     }
 }

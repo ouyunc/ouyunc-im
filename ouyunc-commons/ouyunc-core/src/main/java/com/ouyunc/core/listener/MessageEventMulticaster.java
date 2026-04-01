@@ -50,6 +50,15 @@ public interface MessageEventMulticaster {
      */
     void multicastEvent(MessageEvent event, boolean async);
 
+
+
+    /**
+     * @Author fzx
+     * @Description 多播事件
+     */
+    void multicastEventWithExecutor(MessageEvent event, boolean async);
+
+
     /**
      * 拉取当前各事件类型、各 Ring 上已创建 Disruptor 的 RingBuffer 指标（懒加载未创建的环不会出现）。
      */

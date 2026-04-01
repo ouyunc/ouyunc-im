@@ -90,7 +90,7 @@ public class StandardMessageServer extends AbstractMessageServer {
         }
         // 排除不是直接实现该接口的（DisruptorMessageEventMulticaster + event-listener 线程池）
         MessageEventMulticaster messageEventMulticaster =
-                new DisruptorMessageEventMulticaster();
+                new DisruptorMessageEventMulticaster(ThreadPoolManager.eventListenerExecutor());
         log.debug("事件多播器: DisruptorMessageEventMulticaster");
         // 扫描结果为 HashSet 无序；按 @Order（值小优先）再按类名排序后注册，保证同事件类型多 listener 调用顺序稳定
         List<Class<?>> orderedListenerClasses = new ArrayList<>(messageListenerClazzSet);

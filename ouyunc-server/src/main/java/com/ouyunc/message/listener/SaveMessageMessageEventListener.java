@@ -2,6 +2,7 @@ package com.ouyunc.message.listener;
 
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.MqConstant;
+import com.ouyunc.base.constant.enums.EventRingEnum;
 import com.ouyunc.base.constant.enums.EventType;
 import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.packet.Packet;
@@ -22,7 +23,7 @@ import java.util.Map;
  * @Author fzx
  * @Description: 保存消息监听器
  */
-@EventListener(order = 30)
+@EventListener(ring = EventRingEnum.SAVE_MESSAGE)
 class SaveMessageMessageEventListener implements MessageEventListener<MessageEvent> {
     private static final Logger log = LoggerFactory.getLogger(SaveMessageMessageEventListener.class);
 
