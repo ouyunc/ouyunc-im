@@ -27,7 +27,8 @@
     <maven.compiler.source>21</maven.compiler.source>
     <maven.compiler.target>21</maven.compiler.target>
     <maven.compiler.release>21</maven.compiler.release>
-    <netty-all.version>4.1.117.Final</netty-all.version>
+    <!-- Redis 栈：spring-data-redis 4.1 + Lettuce 7 + Netty 4.2 须同升同降，勿混用 4.1/6.x -->
+    <netty.version>4.2.12.Final</netty.version>
     <!--yaml 相关依赖-->
     <yaml.version>2.2</yaml.version>
     <!--ttl threadlocal 相关依赖-->
@@ -49,10 +50,11 @@
     <!--cache-->
     <caffeine.version>3.1.8</caffeine.version>
     <google-guava.version>33.2.1-jre</google-guava.version>
-    <redis.version>3.3.3</redis.version>
-    <redisson.version>3.34.1</redisson.version>
-    <lettuce.version>6.3.2.RELEASE</lettuce.version>
-    <commons-pool2.version>2.11.1</commons-pool2.version>
+    <!-- spring-data-redis 与 lettuce 版本须匹配（4.1.x → Lettuce 7） -->
+    <redis.version>4.1.0-M2</redis.version>
+    <redisson.version>4.3.0</redisson.version>
+    <lettuce.version>7.5.0.RELEASE</lettuce.version>
+    <commons-pool2.version>2.13.1</commons-pool2.version>
     <jackson.version>2.17.2</jackson.version>
     <!--reactor-->
     <reactor.version>3.6.9</reactor.version>
@@ -179,11 +181,13 @@
   <!--依赖管理-->
   <dependencyManagement>
     <dependencies>
-      <!-- https://mvnrepository.com/artifact/io.netty/netty-all -->
+      <!-- netty-bom：统一 io.netty 各模块版本，避免与 Lettuce 7 混用旧 Netty -->
       <dependency>
         <groupId>io.netty</groupId>
-        <artifactId>netty-all</artifactId>
-        <version>${netty-all.version}</version>
+        <artifactId>netty-bom</artifactId>
+        <version>${netty.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
       </dependency>
       <!--Yml / yaml 文件解析-->
       <!-- https://mvnrepository.com/artifact/org.yaml/snakeyaml -->

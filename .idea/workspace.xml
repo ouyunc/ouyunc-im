@@ -7,27 +7,21 @@
     <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="类型">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/enums/EventRingEnum.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/enums/EventRingEnum.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-cache/src/main/java/com/ouyunc/cache/config/redis/strategy/AbstractRedisStrategy.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-cache/src/main/java/com/ouyunc/cache/config/redis/strategy/AbstractRedisStrategy.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-core/src/main/java/com/ouyunc/core/listener/DisruptorMessageEventMulticaster.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-core/src/main/java/com/ouyunc/core/listener/DisruptorMessageEventMulticaster.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-core/src/main/java/com/ouyunc/core/listener/MessageEventMulticaster.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-core/src/main/java/com/ouyunc/core/listener/MessageEventMulticaster.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-core/src/main/java/com/ouyunc/core/listener/SimpleMessageEventMulticaster.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/AbstractMessageServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/AbstractMessageServer.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/StandardMessageServer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/StandardMessageServer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/ClientLoginMessageEventListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/ClientLoginMessageEventListener.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/ClientLogoutMessageEventListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/ClientLogoutMessageEventListener.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/ExceptionMessageEventListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/ExceptionMessageEventListener.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/ExceptionPersistMessageEventListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/ExceptionPersistMessageEventListener.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/PreloadedLuaScriptMessageEventListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/PreloadedLuaScriptMessageEventListener.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/RemoveOfflineMessageEventListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/RemoveOfflineMessageEventListener.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/SaveMessageMessageEventListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/SaveMessageMessageEventListener.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/SendFailMessageEventListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/SendFailMessageEventListener.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/SendOfflineMessageEventListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/SendOfflineMessageEventListener.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/ServerOfflineEventMessageEventListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/ServerOfflineEventMessageEventListener.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/ServerStartupEventMessageEventListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/ServerStartupEventMessageEventListener.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/ServerStopEventMessageEventListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/ServerStopEventMessageEventListener.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/monitor/ResourceMonitor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/monitor/ResourceMonitor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="DependenciesAnalyzeManager">
+    <option name="forwardDirection" value="false" />
   </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
@@ -340,15 +334,7 @@
       <workItem from="1772335879275" duration="4496000" />
       <workItem from="1773452679005" duration="16650000" />
       <workItem from="1774084625631" duration="6880000" />
-      <workItem from="1775051421027" duration="2305000" />
-    </task>
-    <task id="LOCAL-00133" summary="增加群组推送模式">
-      <option name="closed" value="true" />
-      <created>1766833537201</created>
-      <option name="number" value="00133" />
-      <option name="presentableId" value="LOCAL-00133" />
-      <option name="project" value="LOCAL" />
-      <updated>1766833537201</updated>
+      <workItem from="1775051421027" duration="6763000" />
     </task>
     <task id="LOCAL-00134" summary="增加群组推送模式">
       <option name="closed" value="true" />
@@ -734,7 +720,15 @@
       <option name="project" value="LOCAL" />
       <updated>1774770360185</updated>
     </task>
-    <option name="localTasksCounter" value="182" />
+    <task id="LOCAL-00182" summary="类型">
+      <option name="closed" value="true" />
+      <created>1775053978928</created>
+      <option name="number" value="00182" />
+      <option name="presentableId" value="LOCAL-00182" />
+      <option name="project" value="LOCAL" />
+      <updated>1775053978928</updated>
+    </task>
+    <option name="localTasksCounter" value="183" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

@@ -2,6 +2,7 @@ package com.ouyunc.cache.config.redis.strategy;
 
 import com.google.common.collect.Lists;
 import com.ouyunc.cache.config.redis.properties.RedisProperties;
+import io.lettuce.core.api.StatefulConnection;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.redisson.config.Config;
 import org.springframework.data.redis.connection.RedisConfiguration;
@@ -55,12 +56,12 @@ public abstract class AbstractRedisStrategy implements RedisStrategy {
 
     /**
      * @author fzx
-     * @description  连接池配置信息（如果不用连接池可以省略这一步）
-     * 按照特定的格式可以自动读入配置文件内容到该配置信息中，prefix，表示从配置文件读取以前缀开头的信息，注入到GenericObjectPoolConfig中
-     *      * 对象连接池的配置，注意该属性的顺序，genericObjectPoolConfig 在lettuceClientConfiguration的上面，因为有依赖关系，否则会出错
-     **/
-    public GenericObjectPoolConfig<?> genericObjectPoolConfig() {
-        GenericObjectPoolConfig<?> genericObjectPoolConfig = new GenericObjectPoolConfig<>();
+     * @description 连接池配置（不用连接池可省略）。配置项来自 {@code spring.redis.lettuce.pool}。
+     * 泛型须为 {@code GenericObjectPoolConfig<StatefulConnection<?, ?>>}，与 Lettuce 池化客户端一致。
+     * 注意：{@code genericObjectPoolConfig} 须在 {@link #lettuceClientConfiguration()} 之前可用（依赖顺序）。
+     */
+    public GenericObjectPoolConfig<StatefulConnection<?, ?>> genericObjectPoolConfig() {
+        GenericObjectPoolConfig<StatefulConnection<?, ?>> genericObjectPoolConfig = new GenericObjectPoolConfig<>();
         RedisProperties.Lettuce lettuce = redisProperties.getLettuce();
         if (lettuce != null) {
             RedisProperties.Pool pool = lettuce.getPool();
