@@ -4,6 +4,7 @@ import com.ouyunc.base.constant.enums.HttpResponseCodeEnum;
 import com.ouyunc.base.model.HttpResponseResult;
 import com.ouyunc.base.utils.HttpUtil;
 import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.message.http.annotation.HttpRestController;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -15,7 +16,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * HTTP 请求分发：按 method + path 查表调用 HttpRequestProcessor，404/异常时写 JSON，统一 release request。
+ * HTTP 请求分发：按 method + path 查表调用路由（{@link HttpRestController} 方法或旧版 {@link HttpRequestProcessor}），404/异常时写 JSON。
  */
 public class HttpRequestDispatcher {
     private static final Logger log = LoggerFactory.getLogger(HttpRequestDispatcher.class);
@@ -23,7 +24,7 @@ public class HttpRequestDispatcher {
 
     private static final HttpRequestDispatcher INSTANCE = new HttpRequestDispatcher();
 
-    private final HttpRequestProcessorRegistrar registrar = new HttpRequestProcessorRegistrar();
+    private final HttpRouteRegistry routeRegistry = new HttpRouteRegistry();
 
     private HttpRequestDispatcher() {
         List<String> packages = null;
@@ -34,7 +35,7 @@ public class HttpRequestDispatcher {
             packages = Collections.singletonList(DEFAULT_HTTP_HANDLER_SCAN_PACKAGE);
         }
         for (String basePackage : packages) {
-            registrar.scanAndRegister(basePackage.trim());
+            routeRegistry.scanAndRegister(basePackage.trim());
         }
     }
 
@@ -43,7 +44,7 @@ public class HttpRequestDispatcher {
     }
 
     public void register(String method, String path, HttpRequestProcessor<?> handler) {
-        registrar.register(method, path, handler);
+        routeRegistry.registerLegacy(method, path, handler);
     }
 
     /**
@@ -53,12 +54,15 @@ public class HttpRequestDispatcher {
         try {
             String path = HttpUtil.pathFromUri(request.uri());
             String method = request.method().name();
-            HttpRequestProcessor<?> processor = registrar.find(method, path);
-            if (processor == null) {
+            HttpRouteMatch match = routeRegistry.find(method, path);
+            if (match == null) {
                 HttpUtil.writeJsonResponse(ctx, request, HttpResponseStatus.NOT_FOUND, HttpResponseResult.fail(HttpResponseCodeEnum.NOT_FOUND));
                 return;
             }
-            HttpUtil.writeJsonResponse(ctx, request, HttpResponseStatus.OK, HttpResponseResult.success(processor.process(ctx, request)));
+            HttpContext httpContext = HttpRequestPipeline.prepare(ctx, request, match.getRoute().getDescriptor(), match.getPathVariables());
+            HttpUtil.writeJsonResponse(ctx, request, HttpResponseStatus.OK, HttpResponseResult.success(match.getRoute().getProcessor().process(httpContext)));
+        } catch (HttpPipelineException e) {
+            HttpUtil.writeJsonResponse(ctx, request, e.getStatus(), HttpResponseResult.fail(e.getCodeEnum(), e.getMessage()));
         } catch (Exception e) {
             log.error("HTTP dispatch error, uri={}", request.uri(), e);
             HttpUtil.writeJsonResponse(ctx, request, HttpResponseStatus.INTERNAL_SERVER_ERROR, HttpResponseResult.error(HttpResponseCodeEnum.INTERNAL_SERVER_ERROR, e.getMessage()));

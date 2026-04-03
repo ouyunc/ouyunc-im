@@ -1,4 +1,4 @@
-package com.ouyunc.message.http;
+package com.ouyunc.message.http.annotation;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -8,7 +8,7 @@ import java.lang.annotation.Target;
 /**
  * HTTP 路由：方法 + 路径
  */
-@Target(ElementType.TYPE)
+@Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface HttpRequest {
     /**
