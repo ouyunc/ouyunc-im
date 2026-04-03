@@ -9,10 +9,13 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * 扫描并注册 HTTP 路由：旧版 {@link HttpRequestProcessor} 与 {@link HttpRestController} 方法映射。
@@ -24,6 +27,9 @@ public class HttpRouteRegistry {
     private final Map<String, HttpRegisteredRoute> exactRoutes = new ConcurrentHashMap<>();
 
     private final HttpPatternRouteTrie patternTrie = new HttpPatternRouteTrie();
+
+    /** 启动扫描阶段登记的路由行，用于一次性汇总日志 */
+    private final List<String> startupRouteLines = new ArrayList<>();
 
     /**
      * 先查精确路径，再在路径模板前缀树中匹配（字面量优先于 {@code {var}}）。
@@ -52,16 +58,30 @@ public class HttpRouteRegistry {
         HttpRegisteredRoute route = new HttpRegisteredRoute(descriptor, processor);
         if (HttpPathTemplate.isTemplate(np)) {
             patternTrie.add(httpMethod, np, route);
-            log.info("Registered HTTP {} {} (path template)", httpMethod, np);
+            startupRouteLines.add(httpMethod.toUpperCase() + " " + np);
+            log.debug("Registered HTTP {} {} (path template)", httpMethod, np);
             return;
         }
         String k = key(httpMethod, np);
         HttpRegisteredRoute prev = exactRoutes.put(k, route);
         if (prev != null) {
             log.warn("HTTP route {} {} 被覆盖注册", httpMethod, np);
-        } else {
-            log.info("Registered HTTP {} {}", httpMethod, np);
         }
+        startupRouteLines.add(httpMethod.toUpperCase() + " " + np);
+        log.debug("Registered HTTP {} {}", httpMethod, np);
+    }
+
+    /**
+     * 打印当前已登记的全部 HTTP 路由（method + path），一般在完成包扫描后调用一次。
+     */
+    public void logStartupRouteSummary() {
+        if (startupRouteLines.isEmpty()) {
+            log.info("已注册 HTTP 接口: 无");
+            return;
+        }
+        List<String> sorted = startupRouteLines.stream().sorted().toList();
+        String lines = sorted.stream().map(l -> "  " + l).collect(Collectors.joining("\n"));
+        log.info("已注册 HTTP 接口 (共 {} 个):\n{}", sorted.size(), lines);
     }
 
     public void scanAndRegister(String basePackage) {

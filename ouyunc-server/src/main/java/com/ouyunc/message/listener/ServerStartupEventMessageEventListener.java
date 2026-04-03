@@ -18,6 +18,7 @@ import com.ouyunc.core.listener.MessageEventListener;
 import com.ouyunc.core.listener.EventListener;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.message.http.HttpRequestDispatcher;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.monitor.MonitorInitializer;
 import com.ouyunc.message.schedule.ScheduleTimer;
@@ -61,6 +62,7 @@ class ServerStartupEventMessageEventListener implements MessageEventListener<Mes
 
     @Override
     public void onEvent(MessageEvent event) {
+        HttpRequestDispatcher.logRegisteredHttpRoutesOnStartup();
         Set<String> appKeys = ClientHelper.appKeys();
         if (CollectionUtils.isNotEmpty(appKeys)) {
             // 加载appKey 下的deviceType 配置

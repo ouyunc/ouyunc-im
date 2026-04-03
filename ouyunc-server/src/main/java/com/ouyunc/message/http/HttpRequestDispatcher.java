@@ -4,7 +4,6 @@ import com.ouyunc.base.constant.enums.HttpResponseCodeEnum;
 import com.ouyunc.base.model.HttpResponseResult;
 import com.ouyunc.base.utils.HttpUtil;
 import com.ouyunc.message.context.MessageServerContext;
-import com.ouyunc.message.http.annotation.HttpRestController;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -37,6 +36,13 @@ public class HttpRequestDispatcher {
         for (String basePackage : packages) {
             routeRegistry.scanAndRegister(basePackage.trim());
         }
+    }
+
+    /**
+     * 在服务启动完成时显式调用一次，打印已扫描注册的 HTTP 路由；不在类加载或首次 HTTP 请求时打印。
+     */
+    public static void logRegisteredHttpRoutesOnStartup() {
+        getInstance().routeRegistry.logStartupRouteSummary();
     }
 
     public static HttpRequestDispatcher getInstance() {
