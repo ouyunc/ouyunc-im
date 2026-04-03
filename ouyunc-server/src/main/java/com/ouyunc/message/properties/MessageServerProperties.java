@@ -54,6 +54,12 @@ public class MessageServerProperties extends MessageProperties {
     List<String> httpProcessorScanPackagePaths;
 
     /**
+     * HTTP 请求体（聚合后）最大字节数，与 Netty {@link io.netty.handler.codec.http.HttpObjectAggregator} 上限一致；默认 1MB。
+     */
+    @Key(value = "ouyunc.message.http.max-content-length", defaultValue = "1048576")
+    int httpMaxContentLength;
+
+    /**
      * boss 线程组个数,默认与netty保持一致
      */
     @Key(value = "ouyunc.message.boss.threads", defaultValue = "1")
@@ -349,6 +355,14 @@ public class MessageServerProperties extends MessageProperties {
 
     public void setHttpProcessorScanPackagePaths(List<String> httpProcessorScanPackagePaths) {
         this.httpProcessorScanPackagePaths = httpProcessorScanPackagePaths;
+    }
+
+    public int getHttpMaxContentLength() {
+        return httpMaxContentLength;
+    }
+
+    public void setHttpMaxContentLength(int httpMaxContentLength) {
+        this.httpMaxContentLength = httpMaxContentLength;
     }
 
     public long getQosRetryInitialDelay() {
@@ -764,6 +778,7 @@ public class MessageServerProperties extends MessageProperties {
                 "\n, messageProcessorScanPackagePaths=" + messageProcessorScanPackagePaths +
                 "\n, messageProtocolProcessorScanPackagePaths=" + messageProtocolProcessorScanPackagePaths +
                 "\n, httpProcessorScanPackagePaths=" + httpProcessorScanPackagePaths +
+                "\n, httpMaxContentLength=" + httpMaxContentLength +
                 "\n, messageInterceptorScanPackagePaths=" + messageInterceptorScanPackagePaths +
                 "\n, messageInterceptorEnable=" + messageInterceptorEnable +
                 "\n, bossThreads=" + bossThreads +

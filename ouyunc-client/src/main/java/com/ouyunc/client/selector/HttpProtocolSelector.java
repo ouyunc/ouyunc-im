@@ -1,5 +1,6 @@
 package com.ouyunc.client.selector;
 
+import com.ouyunc.base.constant.HttpRequestConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.ProtocolTypeEnum;
 import com.ouyunc.base.model.Protocol;
@@ -35,7 +36,7 @@ public class HttpProtocolSelector implements ProtocolSelector<Protocol, Channel>
         channel.pipeline()
                 .addLast(MessageConstant.HTTP_SERVER_CODEC_HANDLER, new HttpServerCodec())
                 .addLast(MessageConstant.CHUNKED_WRITE_HANDLER, new ChunkedWriteHandler())
-                .addLast(MessageConstant.HTTP_OBJECT_AGGREGATOR_HANDLER, new HttpObjectAggregator(Integer.MAX_VALUE))
+                .addLast(MessageConstant.HTTP_OBJECT_AGGREGATOR_HANDLER, new HttpObjectAggregator(HttpRequestConstant.DEFAULT_MAX_HTTP_CONTENT_LENGTH))
                 // 这一步没有加自定义编解码器，是因为上面的处理器已经处理了消息编解码
                 // http 协议处理器
                 .addLast(MessageConstant.HTTP_DISPATCHER_HANDLER, new HttpProtocolHandler());

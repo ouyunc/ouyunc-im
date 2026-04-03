@@ -104,6 +104,8 @@ ouyunc:
 
     # HTTP 控制器/Handler 扫描包路径，未配置时默认扫描 com.ouyunc.message.http
     http:
+      # 请求体最大字节（与 Netty HttpObjectAggregator 一致），默认 1MB
+      max-content-length: 1048576
       processor-scan-package-paths:
         - com.ouyunc.message.processor.http
 

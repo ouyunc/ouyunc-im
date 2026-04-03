@@ -25,6 +25,13 @@ public final class HttpRequestPipeline {
      */
     public static HttpContext prepare(ChannelHandlerContext ctx, FullHttpRequest request, HttpRouteDescriptor descriptor,
                                       Map<String, String> pathVariables) throws HttpPipelineException {
+        int maxBytes = HttpContentLengthLimits.maxBytes();
+        int readable = request.content().readableBytes();
+        if (readable > maxBytes) {
+            throw new HttpPipelineException(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, HttpResponseCodeEnum.PAYLOAD_TOO_LARGE,
+                    "请求体超过限制: " + maxBytes + " 字节");
+        }
+
         String rawBody = HttpUtil.getBodyAsString(request);
         HttpContext httpContext = new HttpContext(ctx, request, rawBody);
         if (pathVariables != null && !pathVariables.isEmpty()) {

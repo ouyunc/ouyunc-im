@@ -324,6 +324,11 @@ public class MessageConstant {
     public static final String HTTP_OBJECT_AGGREGATOR_HANDLER = "HTTP_OBJECT_AGGREGATOR_HANDLER";
 
     /**
+     * HttpObjectAggregator 超长等异常转 413 JSON（紧接在聚合器之后）
+     */
+    public static final String HTTP_AGGREGATOR_EXCEPTION_HANDLER = "HTTP_AGGREGATOR_EXCEPTION_HANDLER";
+
+    /**
      * http 调度处理器
      */
     public static final String HTTP_DISPATCHER_HANDLER = "HTTP_DISPATCHER_HANDLER";

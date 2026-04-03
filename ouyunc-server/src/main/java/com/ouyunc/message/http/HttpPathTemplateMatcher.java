@@ -11,6 +11,24 @@ public final class HttpPathTemplateMatcher {
     }
 
     /**
+     * 将已规范化路径按 {@code /} 分段（与模板、真实路径规则一致）。
+     */
+    public static String[] segments(String normalizedPath) {
+        return splitSegments(normalizedPath);
+    }
+
+    public static boolean isVariableSegment(String segment) {
+        return segment != null
+                && segment.length() >= 3
+                && segment.charAt(0) == '{'
+                && segment.charAt(segment.length() - 1) == '}';
+    }
+
+    public static String variableName(String variableSegment) {
+        return variableSegment.substring(1, variableSegment.length() - 1).trim();
+    }
+
+    /**
      * @param patternPath 已规范化路径，如 {@code /api/user/{id}/item}
      * @param actualPath    请求路径，已规范化
      * @param out           输出路径变量，匹配成功时写入
@@ -27,8 +45,8 @@ public final class HttpPathTemplateMatcher {
         }
         for (int i = 0; i < ps.length; i++) {
             String p = ps[i];
-            if (p.length() >= 3 && p.charAt(0) == '{' && p.charAt(p.length() - 1) == '}') {
-                String name = p.substring(1, p.length() - 1).trim();
+            if (isVariableSegment(p)) {
+                String name = variableName(p);
                 if (name.isEmpty()) {
                     return false;
                 }

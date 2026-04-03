@@ -10,11 +10,9 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * 扫描并注册 HTTP 路由：旧版 {@link HttpRequestProcessor} 与 {@link HttpRestController} 方法映射。
@@ -25,10 +23,10 @@ public class HttpRouteRegistry {
 
     private final Map<String, HttpRegisteredRoute> exactRoutes = new ConcurrentHashMap<>();
 
-    private final List<PatternRouteEntry> patternRoutes = new CopyOnWriteArrayList<>();
+    private final HttpPatternRouteTrie patternTrie = new HttpPatternRouteTrie();
 
     /**
-     * 先查精确路径，再按注册顺序匹配路径模板。
+     * 先查精确路径，再在路径模板前缀树中匹配（字面量优先于 {@code {var}}）。
      */
     public HttpRouteMatch find(String method, String path) {
         String npath = normalizePath(path);
@@ -36,14 +34,10 @@ public class HttpRouteRegistry {
         if (exact != null) {
             return HttpRouteMatch.of(exact);
         }
-        for (PatternRouteEntry e : patternRoutes) {
-            if (!e.httpMethod.equalsIgnoreCase(method)) {
-                continue;
-            }
-            Map<String, String> vars = new HashMap<>();
-            if (HttpPathTemplateMatcher.match(e.patternPath, npath, vars)) {
-                return HttpRouteMatch.of(e.route, vars);
-            }
+        Map<String, String> vars = new HashMap<>();
+        HttpRegisteredRoute matched = patternTrie.match(method, HttpPathTemplateMatcher.segments(npath), vars);
+        if (matched != null) {
+            return HttpRouteMatch.of(matched, vars);
         }
         return null;
     }
@@ -57,7 +51,7 @@ public class HttpRouteRegistry {
         String np = normalizePath(path);
         HttpRegisteredRoute route = new HttpRegisteredRoute(descriptor, processor);
         if (HttpPathTemplate.isTemplate(np)) {
-            patternRoutes.add(new PatternRouteEntry(httpMethod, np, route));
+            patternTrie.add(httpMethod, np, route);
             log.info("Registered HTTP {} {} (path template)", httpMethod, np);
             return;
         }
@@ -208,18 +202,6 @@ public class HttpRouteRegistry {
         Route(String httpMethod, String path) {
             this.httpMethod = httpMethod;
             this.path = path;
-        }
-    }
-
-    private static final class PatternRouteEntry {
-        final String httpMethod;
-        final String patternPath;
-        final HttpRegisteredRoute route;
-
-        PatternRouteEntry(String httpMethod, String patternPath, HttpRegisteredRoute route) {
-            this.httpMethod = httpMethod;
-            this.patternPath = patternPath;
-            this.route = route;
         }
     }
 }

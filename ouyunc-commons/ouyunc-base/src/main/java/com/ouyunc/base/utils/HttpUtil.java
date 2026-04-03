@@ -2,11 +2,16 @@ package com.ouyunc.base.utils;
 
 import com.alibaba.fastjson2.JSON;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.ByteBufOutputStream;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.*;
 import io.netty.util.CharsetUtil;
+
+import static io.netty.handler.codec.http.HttpUtil.isKeepAlive;
+import static io.netty.handler.codec.http.HttpUtil.setContentLength;
+import static io.netty.handler.codec.http.HttpUtil.setKeepAlive;
 import org.apache.commons.lang3.StringUtils;
 
 import java.net.URI;
@@ -204,7 +209,12 @@ public final class HttpUtil {
     }
 
     /**
-     * 写 JSON 响应。若请求未声明 Keep-Alive 或 request 为 null，则写完后关闭连接。
+     * 写 JSON 响应。
+     * <ul>
+     *   <li>序列化：优先写入 {@link ChannelHandlerContext#alloc()} 分配的 {@link ByteBuf}，减少额外 {@code byte[]} 拷贝（超高 QPS 下更友好）。</li>
+     *   <li>Keep-Alive：遵循 Netty {@link io.netty.handler.codec.http.HttpUtil#isKeepAlive(HttpMessage)}（HTTP/1.1 默认持久连接，除非 {@code Connection: close}）。</li>
+     * </ul>
+     * request 为 null 时按非 Keep-Alive 处理，写完后关闭连接。
      *
      * @param ctx     channel 上下文
      * @param request 当前请求，可为 null
@@ -212,18 +222,23 @@ public final class HttpUtil {
      * @param body    响应体，将序列化为 JSON
      */
     public static void writeJsonResponse(ChannelHandlerContext ctx, FullHttpRequest request, HttpResponseStatus status, Object body) {
-        byte[] bytes = JSON.toJSONBytes(body);
-        FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, Unpooled.wrappedBuffer(bytes));
-        response.headers()
-                .set(HttpHeaderNames.CONTENT_TYPE, "application/json; charset=UTF-8")
-                .set(HttpHeaderNames.CONTENT_LENGTH, bytes.length);
-        String connection = request != null ? request.headers().get(HttpHeaderNames.CONNECTION) : null;
-        boolean keepAlive = connection != null && "keep-alive".equalsIgnoreCase(connection.trim());
-        if (keepAlive) {
-            response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
-            ctx.writeAndFlush(response);
-        } else {
-            ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
+        ByteBuf content = ctx.alloc().buffer();
+        try {
+            try (java.io.OutputStream out = new ByteBufOutputStream(content)) {
+                JSON.writeTo(out, body);
+            }
+        } catch (Exception e) {
+            content.release();
+            throw new RuntimeException("JSON 序列化失败", e);
+        }
+        FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, content);
+        response.headers().set(HttpHeaderNames.CONTENT_TYPE, "application/json; charset=UTF-8");
+        setContentLength(response, content.readableBytes());
+        boolean alive = request != null && isKeepAlive(request);
+        setKeepAlive(response, alive);
+        ChannelFuture future = ctx.writeAndFlush(response);
+        if (!alive) {
+            future.addListener(ChannelFutureListener.CLOSE);
         }
     }
 }

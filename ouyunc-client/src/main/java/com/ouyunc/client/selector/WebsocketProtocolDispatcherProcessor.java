@@ -1,5 +1,6 @@
 package com.ouyunc.client.selector;
 
+import com.ouyunc.base.constant.HttpRequestConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.ProtocolTypeEnum;
 import com.ouyunc.base.model.Protocol;
@@ -29,8 +30,8 @@ public class WebsocketProtocolDispatcherProcessor extends HttpProtocolSelector {
         channel.pipeline()
                 .addLast(MessageConstant.HTTP_SERVER_CODEC_HANDLER, new HttpClientCodec())
                 .addLast(MessageConstant.CHUNKED_WRITE_HANDLER, new ChunkedWriteHandler())
-                .addLast(MessageConstant.HTTP_OBJECT_AGGREGATOR_HANDLER, new HttpObjectAggregator(Integer.MAX_VALUE))
-                .addLast(WebSocketClientCompressionHandler.INSTANCE)
+                .addLast(MessageConstant.HTTP_OBJECT_AGGREGATOR_HANDLER, new HttpObjectAggregator(HttpRequestConstant.DEFAULT_MAX_HTTP_CONTENT_LENGTH))
+                .addLast(new WebSocketClientCompressionHandler(HttpRequestConstant.DEFAULT_MAX_HTTP_CONTENT_LENGTH))
                 .addLast(MessageConstant.WS_HANDLER, new WsProtocolHandler());
 
         // 握手

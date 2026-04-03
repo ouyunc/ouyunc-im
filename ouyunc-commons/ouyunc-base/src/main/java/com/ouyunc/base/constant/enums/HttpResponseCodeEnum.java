@@ -15,6 +15,7 @@ public enum HttpResponseCodeEnum {
     NOT_FOUND(404, "服务找不到"),
     METHOD_NOT_ALLOWED(405, "方法不允许"),
     NOT_ACCEPTABLE(406, "请求不接受"),
+    PAYLOAD_TOO_LARGE(413, "请求体过大"),
     UNSUPPORTED_MEDIA_TYPE(415, "不支持媒体类型"),
     INTERNAL_SERVER_ERROR(500, "服务器内部错误"),
     SERVICE_UNAVAILABLE(503, "服务不可用");
