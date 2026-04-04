@@ -364,7 +364,7 @@ public final class HttpUtil {
         ctx.write(region);
         ChannelFuture last = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
         last.addListener((ChannelFuture f) -> {
-            region.release();
+            // DefaultFileRegion 由 Netty 写出路径在传输结束后自行 release，不可在此处再次 release（会 refCnt:0 异常）
             if (!alive) {
                 ctx.close();
             }

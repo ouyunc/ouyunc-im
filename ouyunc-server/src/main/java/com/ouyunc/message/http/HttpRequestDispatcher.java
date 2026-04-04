@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * HTTP 请求分发：按 method + path 查表调用路由（{@link HttpRestController} 方法或旧版 {@link HttpRequestProcessor}），404/异常时写 JSON。
@@ -56,13 +57,17 @@ public class HttpRequestDispatcher {
     }
 
     /**
-     * 分发 FullHttpRequest：仅当 msg 为 FullHttpRequest 时调用
+     * 分发 FullHttpRequest：仅当 msg 为 FullHttpRequest 时调用。
+     * <p>
+     * 每次调用在 {@code finally} 中，若本方法入口 {@code log.isDebugEnabled()} 为 true 则打 DEBUG：HTTP 方法、path（不含 query）、耗时（自进入到本次线程内写出提交完成，非对端收齐响应的 RTT）。
      */
     public void dispatch(ChannelHandlerContext ctx, FullHttpRequest request) {
         HttpContext httpContext = null;
+        final boolean logTiming = log.isDebugEnabled();
+        final long startNanos = logTiming ? System.nanoTime() : 0L;
+        final String method = request.method().name();
+        final String path = HttpUtil.pathFromUri(request.uri());
         try {
-            String path = HttpUtil.pathFromUri(request.uri());
-            String method = request.method().name();
             HttpRouteMatch match = routeRegistry.find(method, path);
             if (match == null) {
                 HttpUtil.writeJsonResponse(ctx, request, HttpResponseStatus.NOT_FOUND, HttpResponseResult.fail(HttpResponseCodeEnum.NOT_FOUND));
@@ -83,6 +88,10 @@ public class HttpRequestDispatcher {
             log.error("HTTP dispatch error, uri={}", request.uri(), e);
             HttpUtil.writeJsonResponse(ctx, request, HttpResponseStatus.INTERNAL_SERVER_ERROR, HttpResponseResult.error(HttpResponseCodeEnum.INTERNAL_SERVER_ERROR, e.getMessage()));
         } finally {
+            if (logTiming) {
+                long costMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNanos);
+                log.debug("HTTP {} {} 耗时 {} ms", method, path, costMs);
+            }
             if (httpContext != null) {
                 httpContext.releaseResources();
             }
