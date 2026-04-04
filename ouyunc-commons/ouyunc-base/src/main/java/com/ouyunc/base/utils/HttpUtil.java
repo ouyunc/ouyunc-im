@@ -1,6 +1,7 @@
 package com.ouyunc.base.utils;
 
 import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONWriter;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.channel.ChannelFuture;
@@ -225,7 +226,8 @@ public final class HttpUtil {
         ByteBuf content = ctx.alloc().buffer();
         try {
             try (java.io.OutputStream out = new ByteBufOutputStream(content)) {
-                JSON.writeTo(out, body);
+                // 默认会省略值为 null 的字段；开启 WriteNulls 后输出 "field":null，避免业务方认为键「丢失」
+                JSON.writeTo(out, body, JSONWriter.Feature.WriteNulls);
             }
         } catch (Exception e) {
             content.release();

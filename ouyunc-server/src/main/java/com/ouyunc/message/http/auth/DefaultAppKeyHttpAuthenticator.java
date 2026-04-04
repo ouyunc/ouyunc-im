@@ -1,7 +1,10 @@
-package com.ouyunc.message.http;
+package com.ouyunc.message.http.auth;
 
 import com.ouyunc.base.constant.HttpRequestConstant;
 import com.ouyunc.base.constant.enums.HttpResponseCodeEnum;
+import com.ouyunc.message.http.HttpContext;
+import com.ouyunc.message.http.HttpPipelineException;
+import com.ouyunc.message.http.HttpRequestAuthenticator;
 import com.ouyunc.message.validator.AppKeyValidator;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.commons.lang3.StringUtils;

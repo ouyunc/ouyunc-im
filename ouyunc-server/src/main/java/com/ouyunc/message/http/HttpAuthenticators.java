@@ -1,5 +1,7 @@
 package com.ouyunc.message.http;
 
+import com.ouyunc.message.http.auth.DefaultAppKeyHttpAuthenticator;
+
 /**
  * 全局唯一 HTTP 鉴权器：业务通过 {@link #setGlobal(HttpRequestAuthenticator)} 注入（如 Token、appKey、签名等），
  * 未设置时默认为 {@link DefaultAppKeyHttpAuthenticator}。
