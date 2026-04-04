@@ -4,12 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="类型">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/http/DefaultAppKeyHttpAuthenticator.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/http/auth/DefaultAppKeyHttpAuthenticator.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/http/HttpAuthenticators.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/http/HttpAuthenticators.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/MessagePushController.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/MessagePushController.java" afterDir="false" />
-    </list>
+    <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="类型" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -333,14 +328,6 @@
       <workItem from="1774084625631" duration="6880000" />
       <workItem from="1775051421027" duration="8129000" />
       <workItem from="1775221741891" duration="12947000" />
-    </task>
-    <task id="LOCAL-00139" summary="全局唯一id生成器">
-      <option name="closed" value="true" />
-      <created>1768357815286</created>
-      <option name="number" value="00139" />
-      <option name="presentableId" value="LOCAL-00139" />
-      <option name="project" value="LOCAL" />
-      <updated>1768357815286</updated>
     </task>
     <task id="LOCAL-00140" summary="全局唯一id生成器">
       <option name="closed" value="true" />
@@ -726,7 +713,15 @@
       <option name="project" value="LOCAL" />
       <updated>1775268899784</updated>
     </task>
-    <option name="localTasksCounter" value="188" />
+    <task id="LOCAL-00188" summary="类型">
+      <option name="closed" value="true" />
+      <created>1775293922018</created>
+      <option name="number" value="00188" />
+      <option name="presentableId" value="LOCAL-00188" />
+      <option name="project" value="LOCAL" />
+      <updated>1775293922018</updated>
+    </task>
+    <option name="localTasksCounter" value="189" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -805,7 +800,7 @@
       <breakpoints>
         <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/MessagePushController.java</url>
-          <line>24</line>
+          <line>23</line>
           <option name="timeStamp" value="6" />
         </line-breakpoint>
       </breakpoints>

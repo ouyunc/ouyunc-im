@@ -2,6 +2,7 @@ package com.ouyunc.message.processor.http;
 
 import com.ouyunc.domain.http.MessagePushRequest;
 import com.ouyunc.message.http.HttpContext;
+import com.ouyunc.message.http.HttpPipelineException;
 import com.ouyunc.message.http.annotation.HttpRequestMapping;
 import com.ouyunc.message.http.annotation.HttpRestController;
 import com.ouyunc.message.http.annotation.PostHttpRequest;
@@ -19,7 +20,7 @@ public class MessagePushController {
     private static final Logger log = LoggerFactory.getLogger(MessagePushController.class);
 
     @PostHttpRequest("/push")
-    public Object push(@RequestBody MessagePushRequest body, HttpContext httpContext) {
+    public Object push(@RequestBody MessagePushRequest body, HttpContext httpContext) throws HttpPipelineException {
         // @todo 待实现
         return null;
     }
