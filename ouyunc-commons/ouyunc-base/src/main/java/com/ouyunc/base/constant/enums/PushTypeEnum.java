@@ -5,7 +5,7 @@ package com.ouyunc.base.constant.enums;
  */
 public enum PushTypeEnum {
     /** 广播 */
-    BROADCAST(0, MessageTypeEnum.SERVER_NOTIFY, MessageContentTypeEnum.TEXT_CONTENT),
+    BROADCAST_SERVER_NOTIFY_TEXT_CONTENT(0, MessageTypeEnum.SERVER_NOTIFY, MessageContentTypeEnum.TEXT_CONTENT),
 
     ;
 
