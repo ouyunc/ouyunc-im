@@ -12,8 +12,13 @@ public class HttpRequestConstant extends HttpConstant{
     public static final String HTTP_PUSH_API_PATH = "/api/im/push";
 
     /**
-     * 请求头：应用 appKey（与 JSON body 中 appKey 二选一或同时提供，解析时优先取 Header）
+     * 请求头：应用 appKey（HTTP 推送等接口必填，不再从 JSON body 读取）
      */
     public static final String HTTP_HEADER_APP_KEY = "X-App-Key";
+
+    /**
+     * 请求头：调用方链路追踪 ID，服务端写入 MDC（可在 logback 使用 %X{requestId}）
+     */
+    public static final String HTTP_HEADER_REQUEST_ID = "X-Request-Id";
 
 }
