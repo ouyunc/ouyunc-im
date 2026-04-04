@@ -2,10 +2,11 @@ package com.ouyunc.base.constant.enums;
 
 /**
  * 推送类型：目标维度 +（HTTP 推送场景下）与内线 {@link MessageTypeEnum} 绑定。
+ * 内部推送（OUYUNC）/厂商推送(HUAWEI/XIAOMI/APPLE...)
  */
 public enum PushTypeEnum {
-    /** 广播 */
-    BROADCAST_SERVER_NOTIFY_TEXT_CONTENT(0, MessageTypeEnum.SERVER_NOTIFY, MessageContentTypeEnum.TEXT_CONTENT),
+    /** 内部广播 */
+    OUYUNC_BROADCAST_SERVER_NOTIFY_TEXT_CONTENT(0, MessageTypeEnum.SERVER_NOTIFY, MessageContentTypeEnum.TEXT_CONTENT),
 
     ;
 
