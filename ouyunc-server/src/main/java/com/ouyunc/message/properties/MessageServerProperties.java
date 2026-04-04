@@ -67,6 +67,14 @@ public class MessageServerProperties extends MessageProperties {
     int httpMultipartMaxContentLength;
 
     /**
+     * HTTP 业务线程数：{@code >0} 时在独立线程执行 {@link com.ouyunc.message.http.HttpRequestPipeline#prepare}
+     * 与 {@link com.ouyunc.message.http.HttpRequestProcessor#process}，写出仍在对应 Channel 的 EventLoop；
+     * {@code 0}（默认）表示与 Netty Worker 同线程同步处理，行为与改造前一致。
+     */
+    @Key(value = "ouyunc.message.http.business-executor-threads", defaultValue = "0")
+    int httpBusinessExecutorThreads;
+
+    /**
      * boss 线程组个数,默认与netty保持一致
      */
     @Key(value = "ouyunc.message.boss.threads", defaultValue = "1")
@@ -378,6 +386,14 @@ public class MessageServerProperties extends MessageProperties {
 
     public void setHttpMultipartMaxContentLength(int httpMultipartMaxContentLength) {
         this.httpMultipartMaxContentLength = httpMultipartMaxContentLength;
+    }
+
+    public int getHttpBusinessExecutorThreads() {
+        return httpBusinessExecutorThreads;
+    }
+
+    public void setHttpBusinessExecutorThreads(int httpBusinessExecutorThreads) {
+        this.httpBusinessExecutorThreads = httpBusinessExecutorThreads;
     }
 
     public long getQosRetryInitialDelay() {
@@ -795,6 +811,7 @@ public class MessageServerProperties extends MessageProperties {
                 "\n, httpProcessorScanPackagePaths=" + httpProcessorScanPackagePaths +
                 "\n, httpMaxContentLength=" + httpMaxContentLength +
                 "\n, httpMultipartMaxContentLength=" + httpMultipartMaxContentLength +
+                "\n, httpBusinessExecutorThreads=" + httpBusinessExecutorThreads +
                 "\n, messageInterceptorScanPackagePaths=" + messageInterceptorScanPackagePaths +
                 "\n, messageInterceptorEnable=" + messageInterceptorEnable +
                 "\n, bossThreads=" + bossThreads +

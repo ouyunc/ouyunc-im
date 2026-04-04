@@ -8,6 +8,8 @@ import java.util.Map;
 
 /**
  * HTTP 接口层上下文：包含 Netty 上下文与原始请求，以及分发器填充的 rawBody、反序列化 body、鉴权得到的 appKey、路径变量等。
+ * <p>
+ * 若路由使用 {@code @RequestBody} 且 JSON 自字节数组解析，则 {@link #getRawBody()} 可能为空字符串（请使用 {@link #getBody()}）。
  */
 public final class HttpContext {
 

@@ -15,6 +15,7 @@ import com.ouyunc.message.channel.SocketChannelInitializer;
 import com.ouyunc.message.cluster.client.DefaultMessageClient;
 import com.ouyunc.message.cluster.client.MessageClient;
 import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.message.http.HttpRequestDispatcher;
 import com.ouyunc.message.convert.BinaryWebSocketFramePacketConverter;
 import com.ouyunc.message.convert.MqttMessagePacketConverter;
 import com.ouyunc.message.convert.PacketPacketConverter;
@@ -172,6 +173,7 @@ public abstract class AbstractMessageServer implements MessageServer {
         }
         try {
             MessageServerContext.publishEvent(new MessageEvent(this, MessageEventTypeEnum.SERVER_STOP), false);
+            HttpRequestDispatcher.shutdownHttpBusinessExecutor();
             if (bossGroup != null && workerGroup != null) {
                 bossGroup.shutdownGracefully();
                 workerGroup.shutdownGracefully();

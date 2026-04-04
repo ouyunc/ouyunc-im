@@ -33,7 +33,15 @@ public final class HttpRequestPipeline {
                     "请求体超过连接允许的最大长度: " + aggregatorLimit + " 字节");
         }
 
-        String rawBody = descriptor.isMultipart() ? "" : HttpUtil.getBodyAsString(request);
+        final String rawBody;
+        if (descriptor.isMultipart()) {
+            rawBody = "";
+        } else if (descriptor.getRequestBodyClass() != null) {
+            // JSON 自字节解析，避免整段 String（UTF-16）分配；原始 JSON 文本见 getBody()
+            rawBody = "";
+        } else {
+            rawBody = HttpUtil.getBodyAsString(request);
+        }
         HttpContext httpContext = new HttpContext(ctx, request, rawBody);
         if (pathVariables != null && !pathVariables.isEmpty()) {
             httpContext.setPathVariables(pathVariables);
@@ -63,11 +71,12 @@ public final class HttpRequestPipeline {
                 httpContext.setFormUrlEncodedParams(Collections.emptyMap());
             }
             if (bodyClass != null) {
-                if (StringUtils.isBlank(rawBody)) {
+                byte[] bodyBytes = HttpUtil.copyBodyToByteArrayWithoutConsuming(request);
+                if (bodyBytes.length == 0) {
                     throw new HttpPipelineException(HttpResponseStatus.BAD_REQUEST, HttpResponseCodeEnum.BAD_REQUEST, "请求体不能为空");
                 }
                 try {
-                    Object parsed = JSON.parseObject(rawBody, bodyClass);
+                    Object parsed = JSON.parseObject(bodyBytes, bodyClass);
                     httpContext.setBody(parsed);
                 } catch (Exception e) {
                     throw new HttpPipelineException(HttpResponseStatus.BAD_REQUEST, HttpResponseCodeEnum.BAD_REQUEST, "JSON 解析失败: " + e.getMessage());

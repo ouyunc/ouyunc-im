@@ -79,6 +79,20 @@ public final class HttpUtil {
 
         return bytes;
     }
+
+    /**
+     * 拷贝请求体为 UTF-8 字节数组，不移动 {@link ByteBuf#readerIndex()}，可供多次读取或 JSON 直接从字节解析。
+     */
+    public static byte[] copyBodyToByteArrayWithoutConsuming(FullHttpRequest request) {
+        if (request == null || !request.content().isReadable()) {
+            return new byte[0];
+        }
+        ByteBuf content = request.content();
+        int n = content.readableBytes();
+        byte[] bytes = new byte[n];
+        content.getBytes(content.readerIndex(), bytes);
+        return bytes;
+    }
     /**
      * 从请求 URI 中取 path（不含 query、fragment）。
      *

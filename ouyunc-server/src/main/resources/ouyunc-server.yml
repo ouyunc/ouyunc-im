@@ -108,6 +108,8 @@ ouyunc:
       max-content-length: 1048576
       # multipart 上传最大字节，默认 10MB；0 表示与 max-content-length 相同。聚合器上限 = max(二者)
       multipart-max-content-length: 10485760
+      # HTTP 业务线程数：0 表示在 Netty Worker 线程同步处理（默认）；>0 时 prepare+process 在独立线程，写出仍在 EventLoop
+      business-executor-threads: 0
       processor-scan-package-paths:
         - com.ouyunc.message.processor.http
 
