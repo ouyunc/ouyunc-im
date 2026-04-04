@@ -5,8 +5,6 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="类型">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/enums/HttpPushChannelEnum.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/enums/PushChannelEnum.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/enums/PushTypeEnum.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/enums/PushTypeEnum.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -332,22 +330,6 @@
       <workItem from="1774084625631" duration="6880000" />
       <workItem from="1775051421027" duration="8129000" />
       <workItem from="1775221741891" duration="12947000" />
-    </task>
-    <task id="LOCAL-00144" summary="全局唯一id生成器">
-      <option name="closed" value="true" />
-      <created>1768379441419</created>
-      <option name="number" value="00144" />
-      <option name="presentableId" value="LOCAL-00144" />
-      <option name="project" value="LOCAL" />
-      <updated>1768379441419</updated>
-    </task>
-    <task id="LOCAL-00145" summary="全局唯一id生成器">
-      <option name="closed" value="true" />
-      <created>1768578431431</created>
-      <option name="number" value="00145" />
-      <option name="presentableId" value="LOCAL-00145" />
-      <option name="project" value="LOCAL" />
-      <updated>1768578431431</updated>
     </task>
     <task id="LOCAL-00146" summary="全局唯一id生成器">
       <option name="closed" value="true" />
@@ -725,7 +707,23 @@
       <option name="project" value="LOCAL" />
       <updated>1775301716124</updated>
     </task>
-    <option name="localTasksCounter" value="193" />
+    <task id="LOCAL-00193" summary="类型">
+      <option name="closed" value="true" />
+      <created>1775302458297</created>
+      <option name="number" value="00193" />
+      <option name="presentableId" value="LOCAL-00193" />
+      <option name="project" value="LOCAL" />
+      <updated>1775302458297</updated>
+    </task>
+    <task id="LOCAL-00194" summary="类型">
+      <option name="closed" value="true" />
+      <created>1775302605484</created>
+      <option name="number" value="00194" />
+      <option name="presentableId" value="LOCAL-00194" />
+      <option name="project" value="LOCAL" />
+      <updated>1775302605484</updated>
+    </task>
+    <option name="localTasksCounter" value="195" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

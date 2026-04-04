@@ -2,6 +2,7 @@ package com.ouyunc.base.constant.enums;
 
 /**
  * HTTP 触发推送时的渠道：决定后续是否走长连接 IM、厂商推送等（当前仅实现 IM）。
+ * HUAWEI/APPLE...
  */
 public enum PushChannelEnum {
 
