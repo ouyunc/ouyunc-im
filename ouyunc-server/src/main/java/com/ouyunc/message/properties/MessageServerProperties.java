@@ -60,6 +60,13 @@ public class MessageServerProperties extends MessageProperties {
     int httpMaxContentLength;
 
     /**
+     * {@code multipart/form-data} 上传请求体最大字节数（业务层限制，可与 {@link #httpMaxContentLength} 独立配置）。
+     * 实际 TCP 聚合上限为 {@code max(httpMaxContentLength, 有效 multipart 上限)}。≤0 时与 {@link #httpMaxContentLength} 相同。默认 10MB。
+     */
+    @Key(value = "ouyunc.message.http.multipart-max-content-length", defaultValue = "10485760")
+    int httpMultipartMaxContentLength;
+
+    /**
      * boss 线程组个数,默认与netty保持一致
      */
     @Key(value = "ouyunc.message.boss.threads", defaultValue = "1")
@@ -363,6 +370,14 @@ public class MessageServerProperties extends MessageProperties {
 
     public void setHttpMaxContentLength(int httpMaxContentLength) {
         this.httpMaxContentLength = httpMaxContentLength;
+    }
+
+    public int getHttpMultipartMaxContentLength() {
+        return httpMultipartMaxContentLength;
+    }
+
+    public void setHttpMultipartMaxContentLength(int httpMultipartMaxContentLength) {
+        this.httpMultipartMaxContentLength = httpMultipartMaxContentLength;
     }
 
     public long getQosRetryInitialDelay() {
@@ -779,6 +794,7 @@ public class MessageServerProperties extends MessageProperties {
                 "\n, messageProtocolProcessorScanPackagePaths=" + messageProtocolProcessorScanPackagePaths +
                 "\n, httpProcessorScanPackagePaths=" + httpProcessorScanPackagePaths +
                 "\n, httpMaxContentLength=" + httpMaxContentLength +
+                "\n, httpMultipartMaxContentLength=" + httpMultipartMaxContentLength +
                 "\n, messageInterceptorScanPackagePaths=" + messageInterceptorScanPackagePaths +
                 "\n, messageInterceptorEnable=" + messageInterceptorEnable +
                 "\n, bossThreads=" + bossThreads +

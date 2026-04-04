@@ -6,14 +6,20 @@ import com.ouyunc.message.http.annotation.PathVariable;
 import com.ouyunc.message.http.annotation.RequestBody;
 import com.ouyunc.message.http.annotation.RequestHeader;
 import com.ouyunc.message.http.annotation.RequestParam;
+import com.ouyunc.message.http.annotation.RequestPart;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.multipart.Attribute;
+import io.netty.handler.codec.http.multipart.FileUpload;
+import io.netty.handler.codec.http.multipart.HttpData;
 import org.apache.commons.lang3.StringUtils;
 
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.nio.charset.StandardCharsets;
 
 /**
  * 将 {@link HttpContext} 解析为控制器方法参数并调用（类似 Spring MVC 参数解析）。
@@ -60,7 +66,7 @@ public final class HttpControllerMethodInvoker {
             if (p.isAnnotationPresent(RequestParam.class)) {
                 RequestParam rp = p.getAnnotation(RequestParam.class);
                 String name = HttpParamConverter.resolveName(p, rp.value());
-                String raw = HttpUtil.getQueryParam(httpContext.getRequest(), name);
+                String raw = HttpUtil.getRequestParam(httpContext.getRequest(), name, httpContext.getFormUrlEncodedParams());
                 if (raw == null && StringUtils.isNotEmpty(rp.defaultValue())) {
                     raw = rp.defaultValue();
                 }
@@ -75,6 +81,63 @@ public final class HttpControllerMethodInvoker {
                 }
                 continue;
             }
+            if (p.isAnnotationPresent(RequestPart.class)) {
+                RequestPart rp = p.getAnnotation(RequestPart.class);
+                String name = HttpParamConverter.resolveName(p, rp.value());
+                HttpMultipartHolder holder = httpContext.getMultipart();
+                if (holder == null) {
+                    throw new IllegalStateException("路由未开启 multipart 解析却使用 @RequestPart: " + method);
+                }
+                var data = holder.getData(name);
+                if (data == null) {
+                    if (rp.required()) {
+                        throw new HttpPipelineException(HttpResponseStatus.BAD_REQUEST, HttpResponseCodeEnum.BAD_REQUEST,
+                                "缺少 multipart 表单项: " + name);
+                    }
+                    args[i] = HttpParamConverter.missingOptionalValue(t);
+                    continue;
+                }
+                if (t == FileUpload.class || FileUpload.class.isAssignableFrom(t)) {
+                    if (data instanceof FileUpload fu) {
+                        args[i] = fu;
+                    } else {
+                        throw new HttpPipelineException(HttpResponseStatus.BAD_REQUEST, HttpResponseCodeEnum.BAD_REQUEST,
+                                "表单项 " + name + " 不是文件域");
+                    }
+                    continue;
+                }
+                if (t == byte[].class) {
+                    if (data instanceof HttpData hd) {
+                        try {
+                            args[i] = hd.get();
+                        } catch (IOException ex) {
+                            throw new HttpPipelineException(HttpResponseStatus.BAD_REQUEST, HttpResponseCodeEnum.BAD_REQUEST,
+                                    "读取表单项失败: " + name + " — " + ex.getMessage());
+                        }
+                    } else {
+                        throw new HttpPipelineException(HttpResponseStatus.BAD_REQUEST, HttpResponseCodeEnum.BAD_REQUEST,
+                                "表单项 " + name + " 无法转为 byte[]");
+                    }
+                    continue;
+                }
+                if (t == String.class) {
+                    try {
+                        if (data instanceof Attribute attr) {
+                            args[i] = attr.getValue();
+                        } else if (data instanceof FileUpload fu) {
+                            args[i] = new String(fu.get(), StandardCharsets.UTF_8);
+                        } else {
+                            throw new HttpPipelineException(HttpResponseStatus.BAD_REQUEST, HttpResponseCodeEnum.BAD_REQUEST,
+                                    "表单项 " + name + " 无法转为 String");
+                        }
+                    } catch (IOException ex) {
+                        throw new HttpPipelineException(HttpResponseStatus.BAD_REQUEST, HttpResponseCodeEnum.BAD_REQUEST,
+                                "读取表单项失败: " + name + " — " + ex.getMessage());
+                    }
+                    continue;
+                }
+                throw new IllegalStateException("不支持的 @RequestPart 参数类型: " + t.getName());
+            }
             if (p.isAnnotationPresent(RequestBody.class)) {
                 args[i] = httpContext.getBody();
                 continue;
@@ -84,7 +147,7 @@ public final class HttpControllerMethodInvoker {
                 args[i] = httpContext.getRequest().headers().get(name);
                 continue;
             }
-            throw new IllegalStateException("不支持的参数: " + p + "，请使用 HttpContext、ChannelHandlerContext、FullHttpRequest、@PathVariable、@RequestParam、@RequestBody、@RequestHeader");
+            throw new IllegalStateException("不支持的参数: " + p + "，请使用 HttpContext、ChannelHandlerContext、FullHttpRequest、@PathVariable、@RequestParam、@RequestPart、@RequestBody、@RequestHeader");
         }
         try {
             return method.invoke(controller, args);

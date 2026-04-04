@@ -21,7 +21,7 @@ public final class HttpServerHandlerPipeline {
     }
 
     /**
-     * @param maxContentLength 与配置 {@code ouyunc.message.http.max-content-length} 一致
+     * @param maxContentLength 与 {@link com.ouyunc.message.http.HttpContentLengthLimits#aggregatorMaxBytes()} 一致
      */
     public static void addSharedHttpDecoding(ChannelPipeline pipeline, int maxContentLength) {
         pipeline.addLast(MessageConstant.HTTP_SERVER_CODEC_HANDLER, new HttpServerCodec())

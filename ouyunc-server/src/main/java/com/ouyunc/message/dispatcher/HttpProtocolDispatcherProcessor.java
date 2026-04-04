@@ -29,7 +29,7 @@ public class HttpProtocolDispatcherProcessor implements ProtocolDispatcherProces
      */
     @Override
     public void process(ChannelHandlerContext ctx, ByteBuf in) {
-        HttpServerHandlerPipeline.addSharedHttpDecoding(ctx.pipeline(), HttpContentLengthLimits.maxBytes());
+        HttpServerHandlerPipeline.addSharedHttpDecoding(ctx.pipeline(), HttpContentLengthLimits.aggregatorMaxBytes());
         ctx.pipeline()
                 .addLast(MessageConstant.REMOTE_CLIENT_REAL_IP_HANDLER, new EphemeralRemoteClientRealIpHandler())
                 // 这一步没有加自定义编解码器，是因为上面的处理器已经处理了消息编解码

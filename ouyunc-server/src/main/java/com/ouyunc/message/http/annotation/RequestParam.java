@@ -6,7 +6,13 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 绑定 URI query 参数（类似 Spring {@code @RequestParam}）。
+ * 绑定请求参数（类似 Spring {@code @RequestParam}）。
+ * <ul>
+ *   <li>优先 URI <strong>query</strong>（{@code ?a=1&b=2}）</li>
+ *   <li>若无，且 Content-Type 为 {@code application/x-www-form-urlencoded}、且<strong>未</strong>使用
+ *       {@link RequestBody} 占满 body，则从 <strong>表单字段</strong>取值</li>
+ *   <li>与 {@link RequestBody}（JSON）同用时 body 仅作 JSON，此时一般只从 <strong>query</strong> 取参</li>
+ * </ul>
  */
 @Target(ElementType.PARAMETER)
 @Retention(RetentionPolicy.RUNTIME)

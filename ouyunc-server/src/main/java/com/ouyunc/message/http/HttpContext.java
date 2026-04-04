@@ -23,6 +23,11 @@ public final class HttpContext {
 
     private Map<String, String> pathVariables = Collections.emptyMap();
 
+    private HttpMultipartHolder multipart;
+
+    /** {@code application/x-www-form-urlencoded} 解析结果，供 {@code @RequestParam} 与 query 合并查找 */
+    private Map<String, String> formUrlEncodedParams = Collections.emptyMap();
+
     public HttpContext(ChannelHandlerContext channelContext, FullHttpRequest request, String rawBody) {
         this.channelContext = channelContext;
         this.request = request;
@@ -68,5 +73,31 @@ public final class HttpContext {
 
     public String getPathVariable(String name) {
         return pathVariables.get(name);
+    }
+
+    public HttpMultipartHolder getMultipart() {
+        return multipart;
+    }
+
+    public void setMultipart(HttpMultipartHolder multipart) {
+        this.multipart = multipart;
+    }
+
+    /**
+     * 释放 multipart 临时文件等资源；由分发器在单次请求结束时调用。
+     */
+    public void releaseResources() {
+        if (multipart != null) {
+            multipart.destroy();
+            multipart = null;
+        }
+    }
+
+    public Map<String, String> getFormUrlEncodedParams() {
+        return formUrlEncodedParams;
+    }
+
+    public void setFormUrlEncodedParams(Map<String, String> formUrlEncodedParams) {
+        this.formUrlEncodedParams = formUrlEncodedParams == null ? Collections.emptyMap() : Map.copyOf(formUrlEncodedParams);
     }
 }

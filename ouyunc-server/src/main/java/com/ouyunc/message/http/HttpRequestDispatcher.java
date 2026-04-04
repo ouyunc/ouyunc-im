@@ -1,6 +1,8 @@
 package com.ouyunc.message.http;
 
 import com.ouyunc.base.constant.enums.HttpResponseCodeEnum;
+import com.ouyunc.base.model.HttpFileResponse;
+import com.ouyunc.base.model.HttpRawResponse;
 import com.ouyunc.base.model.HttpResponseResult;
 import com.ouyunc.base.utils.HttpUtil;
 import com.ouyunc.message.context.MessageServerContext;
@@ -57,6 +59,7 @@ public class HttpRequestDispatcher {
      * 分发 FullHttpRequest：仅当 msg 为 FullHttpRequest 时调用
      */
     public void dispatch(ChannelHandlerContext ctx, FullHttpRequest request) {
+        HttpContext httpContext = null;
         try {
             String path = HttpUtil.pathFromUri(request.uri());
             String method = request.method().name();
@@ -65,13 +68,24 @@ public class HttpRequestDispatcher {
                 HttpUtil.writeJsonResponse(ctx, request, HttpResponseStatus.NOT_FOUND, HttpResponseResult.fail(HttpResponseCodeEnum.NOT_FOUND));
                 return;
             }
-            HttpContext httpContext = HttpRequestPipeline.prepare(ctx, request, match.getRoute().getDescriptor(), match.getPathVariables());
-            HttpUtil.writeJsonResponse(ctx, request, HttpResponseStatus.OK, HttpResponseResult.success(match.getRoute().getProcessor().process(httpContext)));
+            httpContext = HttpRequestPipeline.prepare(ctx, request, match.getRoute().getDescriptor(), match.getPathVariables());
+            Object result = match.getRoute().getProcessor().process(httpContext);
+            if (result instanceof HttpRawResponse raw) {
+                HttpUtil.writeRawResponse(ctx, request, raw);
+            } else if (result instanceof HttpFileResponse file) {
+                HttpUtil.writeFileResponse(ctx, request, file);
+            } else {
+                HttpUtil.writeJsonResponse(ctx, request, HttpResponseStatus.OK, HttpResponseResult.success(result));
+            }
         } catch (HttpPipelineException e) {
             HttpUtil.writeJsonResponse(ctx, request, e.getStatus(), HttpResponseResult.fail(e.getCodeEnum(), e.getMessage()));
         } catch (Exception e) {
             log.error("HTTP dispatch error, uri={}", request.uri(), e);
             HttpUtil.writeJsonResponse(ctx, request, HttpResponseStatus.INTERNAL_SERVER_ERROR, HttpResponseResult.error(HttpResponseCodeEnum.INTERNAL_SERVER_ERROR, e.getMessage()));
+        } finally {
+            if (httpContext != null) {
+                httpContext.releaseResources();
+            }
         }
     }
 

@@ -2,11 +2,17 @@ package com.ouyunc.base.utils;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONWriter;
+import com.ouyunc.base.constant.enums.HttpResponseCodeEnum;
+import com.ouyunc.base.model.HttpFileResponse;
+import com.ouyunc.base.model.HttpRawResponse;
+import com.ouyunc.base.model.HttpResponseResult;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.DefaultFileRegion;
 import io.netty.handler.codec.http.*;
 import io.netty.util.CharsetUtil;
 
@@ -15,12 +21,17 @@ import static io.netty.handler.codec.http.HttpUtil.setContentLength;
 import static io.netty.handler.codec.http.HttpUtil.setKeepAlive;
 import org.apache.commons.lang3.StringUtils;
 
+import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -155,6 +166,61 @@ public final class HttpUtil {
     }
 
     /**
+     * 是否为 {@code application/x-www-form-urlencoded}（忽略 charset 等后缀参数）。
+     */
+    public static boolean isApplicationFormUrlEncoded(FullHttpRequest request) {
+        if (request == null) {
+            return false;
+        }
+        String ct = request.headers().get(HttpHeaderNames.CONTENT_TYPE);
+        if (ct == null) {
+            return false;
+        }
+        String s = ct.trim().toLowerCase(Locale.ROOT);
+        int semi = s.indexOf(';');
+        if (semi > 0) {
+            s = s.substring(0, semi).trim();
+        }
+        return "application/x-www-form-urlencoded".equals(s);
+    }
+
+    /**
+     * 解析 URL 编码的表单体（与 query 串格式相同）；同名字段多次出现时取<strong>最后一次</strong>。
+     */
+    public static Map<String, String> parseFormUrlEncodedBody(String rawBody) {
+        if (StringUtils.isBlank(rawBody)) {
+            return Collections.emptyMap();
+        }
+        QueryStringDecoder decoder = new QueryStringDecoder("?" + rawBody, StandardCharsets.UTF_8, false);
+        Map<String, List<String>> src = decoder.parameters();
+        if (src.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        Map<String, String> out = new LinkedHashMap<>();
+        for (Map.Entry<String, List<String>> e : src.entrySet()) {
+            List<String> list = e.getValue();
+            if (list != null && !list.isEmpty()) {
+                out.put(e.getKey(), list.get(list.size() - 1));
+            }
+        }
+        return out;
+    }
+
+    /**
+     * 合并 query 与表单：先查 URI query，没有再查 {@code application/x-www-form-urlencoded} 解析表。
+     */
+    public static String getRequestParam(FullHttpRequest request, String name, Map<String, String> formBody) {
+        String q = getQueryParam(request, name);
+        if (q != null) {
+            return q;
+        }
+        if (formBody == null || formBody.isEmpty()) {
+            return null;
+        }
+        return formBody.get(name);
+    }
+
+    /**
      * 从请求 URI 的 query 中获取全部参数，以 Map 返回（key、value 均已 URL 解码）。
      * 同 key 多次出现时后者覆盖前者。
      *
@@ -242,5 +308,66 @@ public final class HttpUtil {
         if (!alive) {
             future.addListener(ChannelFutureListener.CLOSE);
         }
+    }
+
+    /**
+     * 写出 {@link HttpRawResponse}：单帧 {@link FullHttpResponse}，适合已聚合在内存/缓冲中的负载。
+     */
+    public static void writeRawResponse(ChannelHandlerContext ctx, FullHttpRequest request, HttpRawResponse raw) {
+        ByteBuf body = raw.getBody();
+        if (body == null) {
+            body = Unpooled.EMPTY_BUFFER;
+        } else if (!raw.isReleaseBodyAfterWrite()) {
+            body.retain();
+        }
+        String ct = StringUtils.isNotBlank(raw.getContentType()) ? raw.getContentType() : "application/octet-stream";
+        FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, raw.getStatus(), body);
+        response.headers().set(HttpHeaderNames.CONTENT_TYPE, ct);
+        if (StringUtils.isNotBlank(raw.getContentDisposition())) {
+            response.headers().set(HttpHeaderNames.CONTENT_DISPOSITION, raw.getContentDisposition());
+        }
+        setContentLength(response, body.readableBytes());
+        boolean alive = request != null && isKeepAlive(request);
+        setKeepAlive(response, alive);
+        ChannelFuture future = ctx.writeAndFlush(response);
+        if (!alive) {
+            future.addListener(ChannelFutureListener.CLOSE);
+        }
+    }
+
+    /**
+     * 文件下载：{@link DefaultFileRegion} + {@link LastHttpContent}，大文件不占用与文件等大的 JVM 堆。
+     */
+    public static void writeFileResponse(ChannelHandlerContext ctx, FullHttpRequest request, HttpFileResponse fileResponse) throws IOException {
+        var path = fileResponse.getPath();
+        if (path == null || !Files.isRegularFile(path)) {
+            writeJsonResponse(ctx, request, HttpResponseStatus.NOT_FOUND,
+                    HttpResponseResult.fail(HttpResponseCodeEnum.NOT_FOUND));
+            return;
+        }
+        long len = Files.size(path);
+        DefaultFileRegion region = new DefaultFileRegion(path.toFile(), 0, len);
+
+        HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, fileResponse.getStatus());
+        String ct = StringUtils.isNotBlank(fileResponse.getContentType())
+                ? fileResponse.getContentType() : "application/octet-stream";
+        response.headers().set(HttpHeaderNames.CONTENT_TYPE, ct);
+        if (StringUtils.isNotBlank(fileResponse.getDownloadFileName())) {
+            String fn = fileResponse.getDownloadFileName().replace("\"", "'");
+            response.headers().set(HttpHeaderNames.CONTENT_DISPOSITION, "attachment; filename=\"" + fn + "\"");
+        }
+        setContentLength(response, len);
+        boolean alive = request != null && isKeepAlive(request);
+        setKeepAlive(response, alive);
+
+        ctx.write(response);
+        ctx.write(region);
+        ChannelFuture last = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+        last.addListener((ChannelFuture f) -> {
+            region.release();
+            if (!alive) {
+                ctx.close();
+            }
+        });
     }
 }

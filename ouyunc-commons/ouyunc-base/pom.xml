@@ -14,6 +14,12 @@
     <description>基础模块</description>
 
     <dependencies>
+        <!-- HTTP 工具（JSON 响应、文件下载、与 Netty FullHttpRequest 协作） -->
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-codec-http</artifactId>
+        </dependency>
+
         <!--Yml / yaml 文件解析-->
         <!-- https://mvnrepository.com/artifact/org.yaml/snakeyaml -->
         <dependency>

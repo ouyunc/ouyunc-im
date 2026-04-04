@@ -8,10 +8,11 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.commons.lang3.StringUtils;
 
+import java.util.Collections;
 import java.util.Map;
 
 /**
- * HTTP 统一前置：鉴权（{@link HttpRequestAuthenticator}）、JSON body 解析。
+ * HTTP 统一前置：鉴权（{@link HttpRequestAuthenticator}）、JSON body 或 {@code multipart/form-data} 解析。
  */
 public final class HttpRequestPipeline {
 
@@ -25,14 +26,14 @@ public final class HttpRequestPipeline {
      */
     public static HttpContext prepare(ChannelHandlerContext ctx, FullHttpRequest request, HttpRouteDescriptor descriptor,
                                       Map<String, String> pathVariables) throws HttpPipelineException {
-        int maxBytes = HttpContentLengthLimits.maxBytes();
+        int aggregatorLimit = HttpContentLengthLimits.aggregatorMaxBytes();
         int readable = request.content().readableBytes();
-        if (readable > maxBytes) {
+        if (readable > aggregatorLimit) {
             throw new HttpPipelineException(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, HttpResponseCodeEnum.PAYLOAD_TOO_LARGE,
-                    "请求体超过限制: " + maxBytes + " 字节");
+                    "请求体超过连接允许的最大长度: " + aggregatorLimit + " 字节");
         }
 
-        String rawBody = HttpUtil.getBodyAsString(request);
+        String rawBody = descriptor.isMultipart() ? "" : HttpUtil.getBodyAsString(request);
         HttpContext httpContext = new HttpContext(ctx, request, rawBody);
         if (pathVariables != null && !pathVariables.isEmpty()) {
             httpContext.setPathVariables(pathVariables);
@@ -42,16 +43,35 @@ public final class HttpRequestPipeline {
             HttpAuthenticators.getGlobal().authenticate(httpContext);
         }
 
-        Class<?> bodyClass = descriptor.getRequestBodyClass();
-        if (bodyClass != null) {
-            if (StringUtils.isBlank(rawBody)) {
-                throw new HttpPipelineException(HttpResponseStatus.BAD_REQUEST, HttpResponseCodeEnum.BAD_REQUEST, "请求体不能为空");
+        if (descriptor.isMultipart()) {
+            int mpLimit = HttpContentLengthLimits.multipartMaxBytes();
+            if (readable > mpLimit) {
+                throw new HttpPipelineException(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, HttpResponseCodeEnum.PAYLOAD_TOO_LARGE,
+                        "multipart 请求体超过限制: " + mpLimit + " 字节");
             }
-            try {
-                Object parsed = JSON.parseObject(rawBody, bodyClass);
-                httpContext.setBody(parsed);
-            } catch (Exception e) {
-                throw new HttpPipelineException(HttpResponseStatus.BAD_REQUEST, HttpResponseCodeEnum.BAD_REQUEST, "JSON 解析失败: " + e.getMessage());
+            httpContext.setMultipart(HttpMultipartHolder.parse(request, mpLimit));
+        } else {
+            int generalLimit = HttpContentLengthLimits.maxBytes();
+            if (readable > generalLimit) {
+                throw new HttpPipelineException(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, HttpResponseCodeEnum.PAYLOAD_TOO_LARGE,
+                        "请求体超过限制: " + generalLimit + " 字节");
+            }
+            Class<?> bodyClass = descriptor.getRequestBodyClass();
+            if (bodyClass == null && HttpUtil.isApplicationFormUrlEncoded(request) && StringUtils.isNotBlank(rawBody)) {
+                httpContext.setFormUrlEncodedParams(HttpUtil.parseFormUrlEncodedBody(rawBody));
+            } else {
+                httpContext.setFormUrlEncodedParams(Collections.emptyMap());
+            }
+            if (bodyClass != null) {
+                if (StringUtils.isBlank(rawBody)) {
+                    throw new HttpPipelineException(HttpResponseStatus.BAD_REQUEST, HttpResponseCodeEnum.BAD_REQUEST, "请求体不能为空");
+                }
+                try {
+                    Object parsed = JSON.parseObject(rawBody, bodyClass);
+                    httpContext.setBody(parsed);
+                } catch (Exception e) {
+                    throw new HttpPipelineException(HttpResponseStatus.BAD_REQUEST, HttpResponseCodeEnum.BAD_REQUEST, "JSON 解析失败: " + e.getMessage());
+                }
             }
         }
 

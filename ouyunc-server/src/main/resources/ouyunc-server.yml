@@ -104,8 +104,10 @@ ouyunc:
 
     # HTTP 控制器/Handler 扫描包路径，未配置时默认扫描 com.ouyunc.message.http
     http:
-      # 请求体最大字节（与 Netty HttpObjectAggregator 一致），默认 1MB
+      # 普通请求体最大字节（JSON、form-urlencoded 等，不含 multipart 单独策略时与其共用聚合上限计算）
       max-content-length: 1048576
+      # multipart 上传最大字节，默认 10MB；0 表示与 max-content-length 相同。聚合器上限 = max(二者)
+      multipart-max-content-length: 10485760
       processor-scan-package-paths:
         - com.ouyunc.message.processor.http
 
