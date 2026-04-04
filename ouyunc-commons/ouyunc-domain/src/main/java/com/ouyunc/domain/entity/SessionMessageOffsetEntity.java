@@ -44,7 +44,7 @@ public class SessionMessageOffsetEntity implements Serializable {
     private String to;
 
     /**
-     *  会话类型：1-一对一，2-群聊, 具体看IdentityType
+     *  会话类型：1-一对一 2-群聊，见 {@link com.ouyunc.domain.constants.IdentityType}
      */
     private Integer type;
 

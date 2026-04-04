@@ -33,7 +33,7 @@ public class MessagePushRequest implements java.io.Serializable{
 
 
     /**
-     * 发送方业务标识
+     * 发送方标识类型，见 { com.ouyunc.base.constant.enums.MessageFromToTypeEnum}；缺省为 1（用户）
      */
     private Integer fromType;
 
@@ -45,7 +45,7 @@ public class MessagePushRequest implements java.io.Serializable{
 
 
     /**
-     * 接收方业务标识
+     * 接收方标识类型，见 { com.ouyunc.base.constant.enums.MessageFromToTypeEnum}
      */
     private Integer toType;
 

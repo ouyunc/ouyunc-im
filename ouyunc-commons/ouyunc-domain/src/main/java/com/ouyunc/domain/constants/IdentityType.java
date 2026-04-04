@@ -3,12 +3,14 @@ package com.ouyunc.domain.constants;
 import java.util.Objects;
 
 /**
- * 唯一标识类型 枚举
+ * 会话 / 已读偏移等存储与缓存键上的「会话形态」：仅区分一对一私聊与群聊。
  */
 public enum IdentityType {
-    ONE_2_ONE(1, "one_2_one" , "一对一"),
 
-    GROUP(2,"group" , "群组"),
+    ONE_2_ONE(1, "one_2_one", "一对一"),
+
+    GROUP(2, "group", "群聊"),
+
     ;
 
     private final Integer value;
@@ -32,10 +34,14 @@ public enum IdentityType {
     public String desc() {
         return desc;
     }
+
     public static IdentityType valueOf(Integer value) {
-        for (IdentityType appStatus : values()) {
-            if (Objects.equals(appStatus.value, value)) {
-                return appStatus;
+        if (value == null) {
+            return null;
+        }
+        for (IdentityType e : values()) {
+            if (Objects.equals(e.value, value)) {
+                return e;
             }
         }
         return null;

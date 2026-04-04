@@ -30,7 +30,7 @@ public class Message implements Serializable, Cloneable {
 
 
     /**
-     * 发送者类型
+     * 发送者标识类型，com.ouyunc.base.constant.enums.MessageFromToTypeEnum
      */
     @Tag(3)
     private int fromType;
@@ -43,7 +43,7 @@ public class Message implements Serializable, Cloneable {
     private String to;
 
     /**
-     * 接收者，唯一标识
+     * 接收者标识类型，见 {@link com.ouyunc.domain.constants.MessageFromToType}
      */
     @Tag(5)
     private int toType;
