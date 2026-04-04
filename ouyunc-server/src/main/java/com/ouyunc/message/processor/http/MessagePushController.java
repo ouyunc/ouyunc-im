@@ -17,7 +17,7 @@ public class MessagePushController {
     private static final Logger log = LoggerFactory.getLogger(MessagePushController.class);
 
     @PostHttpRequest("/message/push")
-    public Object push(@RequestBody MessagePushRequest body, @RequestParam("s") String s,@RequestParam("t") String t, HttpContext httpContext) throws HttpPipelineException {
+    public Object push(@RequestBody MessagePushRequest body, HttpContext httpContext) throws HttpPipelineException {
         // @todo 待实现
         return null;
     }
