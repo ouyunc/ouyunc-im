@@ -75,6 +75,19 @@ public class MessageServerProperties extends MessageProperties {
     int httpBusinessExecutorThreads;
 
     /**
+     * multipart 上传落盘目录（绝对路径或相对路径，相对则相对进程工作目录）；空则使用 {@code ${user.dir}/http-uploads}。
+     */
+    @Key("ouyunc.message.http.upload-local-directory")
+    String httpUploadLocalDirectory;
+
+    /**
+     * 是否在接入 Channel 上安装 {@link com.ouyunc.message.handler.MessageLoggingHandler}。
+     * 关闭后不再按「每次 socket 读」打日志；大流量下每次 {@code channelRead} 一条，极易刷屏。
+     */
+    @Key(value = "ouyunc.message.netty-pipeline-logging-enabled", defaultValue = "true")
+    boolean nettyPipelineLoggingEnabled;
+
+    /**
      * boss 线程组个数,默认与netty保持一致
      */
     @Key(value = "ouyunc.message.boss.threads", defaultValue = "1")
@@ -394,6 +407,22 @@ public class MessageServerProperties extends MessageProperties {
 
     public void setHttpBusinessExecutorThreads(int httpBusinessExecutorThreads) {
         this.httpBusinessExecutorThreads = httpBusinessExecutorThreads;
+    }
+
+    public String getHttpUploadLocalDirectory() {
+        return httpUploadLocalDirectory;
+    }
+
+    public void setHttpUploadLocalDirectory(String httpUploadLocalDirectory) {
+        this.httpUploadLocalDirectory = httpUploadLocalDirectory;
+    }
+
+    public boolean isNettyPipelineLoggingEnabled() {
+        return nettyPipelineLoggingEnabled;
+    }
+
+    public void setNettyPipelineLoggingEnabled(boolean nettyPipelineLoggingEnabled) {
+        this.nettyPipelineLoggingEnabled = nettyPipelineLoggingEnabled;
     }
 
     public long getQosRetryInitialDelay() {
@@ -812,6 +841,8 @@ public class MessageServerProperties extends MessageProperties {
                 "\n, httpMaxContentLength=" + httpMaxContentLength +
                 "\n, httpMultipartMaxContentLength=" + httpMultipartMaxContentLength +
                 "\n, httpBusinessExecutorThreads=" + httpBusinessExecutorThreads +
+                "\n, httpUploadLocalDirectory='" + httpUploadLocalDirectory + '\'' +
+                "\n, nettyPipelineLoggingEnabled=" + nettyPipelineLoggingEnabled +
                 "\n, messageInterceptorScanPackagePaths=" + messageInterceptorScanPackagePaths +
                 "\n, messageInterceptorEnable=" + messageInterceptorEnable +
                 "\n, bossThreads=" + bossThreads +

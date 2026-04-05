@@ -298,11 +298,12 @@ public final class HttpUtil {
      * request 为 null 时按非 Keep-Alive 处理，写完后关闭连接。
      *
      * @param ctx     channel 上下文
-     * @param request 当前请求，可为 null
+     * @param request 当前请求（任意 {@link HttpMessage}，一般为 {@link FullHttpRequest}），可为 null
      * @param status  响应状态
      * @param body    响应体，将序列化为 JSON
+     * @return 写出 {@link FullHttpResponse} 的 future，便于调用方追加失败时关闭等监听
      */
-    public static void writeJsonResponse(ChannelHandlerContext ctx, FullHttpRequest request, HttpResponseStatus status, Object body) {
+    public static ChannelFuture writeJsonResponse(ChannelHandlerContext ctx, HttpMessage request, HttpResponseStatus status, Object body) {
         ByteBuf content = ctx.alloc().buffer();
         try {
             try (java.io.OutputStream out = new ByteBufOutputStream(content)) {
@@ -322,6 +323,7 @@ public final class HttpUtil {
         if (!alive) {
             future.addListener(ChannelFutureListener.CLOSE);
         }
+        return future;
     }
 
     /**

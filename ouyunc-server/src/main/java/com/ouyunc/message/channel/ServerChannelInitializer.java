@@ -2,7 +2,9 @@ package com.ouyunc.message.channel;
 
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.handler.MessageLoggingHandler;
+import com.ouyunc.message.properties.MessageServerProperties;
 import io.netty.channel.ChannelInitializer;
+import io.netty.handler.logging.LogLevel;
 import io.netty.channel.ServerChannel;
 
 /**
@@ -24,8 +26,10 @@ public abstract class ServerChannelInitializer extends ChannelInitializer<Server
      */
     @Override
     protected void initChannel(ServerChannel serverChannel) throws Exception {
-        // 设置日志
-        serverChannel.pipeline().addLast(new MessageLoggingHandler(MessageServerContext.serverProperties().getLogLevel()));
+        MessageServerProperties props = MessageServerContext.serverProperties();
+        if (props == null || props.isNettyPipelineLoggingEnabled()) {
+            serverChannel.pipeline().addLast(new MessageLoggingHandler(props != null ? props.getLogLevel() : LogLevel.INFO));
+        }
         initServerChannel(serverChannel);
     }
 }

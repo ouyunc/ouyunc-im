@@ -312,7 +312,6 @@ public class MessageConstant {
      */
     public static final String HTTP_SERVER_CODEC_HANDLER = "HTTP_SERVER_CODEC_HANDLER";
 
-
     /**
      * 分块向客户端写数据
      */

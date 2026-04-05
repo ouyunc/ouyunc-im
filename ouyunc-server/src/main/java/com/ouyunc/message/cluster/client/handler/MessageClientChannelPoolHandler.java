@@ -6,12 +6,13 @@ import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.SSLUtil;
 import com.ouyunc.core.codec.PacketCodec;
 import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.message.properties.MessageServerProperties;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.pool.AbstractChannelPoolHandler;
-import io.netty.handler.logging.LoggingHandler;
+import com.ouyunc.message.handler.MessageLoggingHandler;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.timeout.IdleStateHandler;
 import org.slf4j.Logger;
@@ -48,13 +49,13 @@ public class MessageClientChannelPoolHandler extends AbstractChannelPoolHandler 
                 pipeline.addFirst(new SslHandler(sslEngine));
             }, channel);
         }
-        // 添加消息处理器链
-        pipeline.addLast(MessageConstant.LOG_HANDLER, new LoggingHandler(MessageServerContext.serverProperties().getLogLevel()))
-                // 编解码
+        MessageServerProperties props = MessageServerContext.serverProperties();
+        if (props.isNettyPipelineLoggingEnabled()) {
+            pipeline.addLast(MessageConstant.LOG_HANDLER, new MessageLoggingHandler(props.getLogLevel()));
+        }
+        pipeline
                 .addLast(MessageConstant.CLIENT_PACKET_CODEC_HANDLER, new PacketCodec())
-                // 开启Netty自带的心跳处理器，每5秒发送一次心跳，用来做动态channel池处理
-                .addLast(MessageConstant.CLIENT_IDLE_HANDLER, new IdleStateHandler(MessageServerContext.serverProperties().getClusterClientIdleReadTimeout(), MessageServerContext.serverProperties().getClusterClientIdleWriteTimeout(), MessageServerContext.serverProperties().getClusterClientIdleReadWriteTimeout(), TimeUnit.SECONDS))
-                // 心跳检测（动态channel）
+                .addLast(MessageConstant.CLIENT_IDLE_HANDLER, new IdleStateHandler(props.getClusterClientIdleReadTimeout(), props.getClusterClientIdleWriteTimeout(), props.getClusterClientIdleReadWriteTimeout(), TimeUnit.SECONDS))
                 .addLast(MessageConstant.CLIENT_HEART_BEAT_HANDLER, new MessageClientHeartBeatHandler());
 
         // 添加监听器,如果有内部客户端channel 关闭，则移除channel，（包括动态关闭核心channel）

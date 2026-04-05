@@ -7,7 +7,9 @@ import com.ouyunc.base.utils.SSLUtil;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.dispatcher.ProtocolDispatcher;
 import com.ouyunc.message.handler.MessageLoggingHandler;
+import com.ouyunc.message.properties.MessageServerProperties;
 import io.netty.channel.Channel;
+import io.netty.handler.logging.LogLevel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPipeline;
@@ -47,8 +49,10 @@ public class DefaultSocketChannelInitializer extends SocketChannelInitializer {
                 channel.pipeline().addFirst(MessageConstant.SSL_HANDLER, new SslHandler(sslEngine));
             }, socketChannel);
         }
-        // 日志处理器
-        pipeline.addLast(MessageConstant.LOG_HANDLER, new MessageLoggingHandler(MessageServerContext.serverProperties().getLogLevel()));
+        MessageServerProperties props = MessageServerContext.serverProperties();
+        if (props == null || props.isNettyPipelineLoggingEnabled()) {
+            pipeline.addLast(MessageConstant.LOG_HANDLER, new MessageLoggingHandler(props != null ? props.getLogLevel() : LogLevel.INFO));
+        }
         // 协议分发器
         pipeline.addLast(MessageConstant.PROTOCOL_DISPATCHER_HANDLER, new ProtocolDispatcher());
         // 每一个客户端连接都会走这里的逻辑，且被监听关闭事件，并作出相关处理逻辑

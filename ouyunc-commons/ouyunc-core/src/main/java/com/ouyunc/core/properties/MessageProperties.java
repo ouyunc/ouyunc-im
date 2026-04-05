@@ -36,7 +36,8 @@ public class MessageProperties {
     private String localHost;
 
     /**
-     * 日志级别,默认INFO; TRACE, DEBUG, INFO, WARN, ERROR
+     * Netty {@link io.netty.handler.logging.LoggingHandler} 级别（与 Log4j 根级别无关），默认 INFO。
+     * 服务端对 DEBUG/TRACE 使用完整 ByteBuf hex 转储，INFO 及以上仅记录读写字节数等摘要。
      */
     @Key(value = "ouyunc.message.log.level", defaultValue = "INFO")
     private LogLevel logLevel;

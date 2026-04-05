@@ -151,19 +151,16 @@ public class HttpDemoController {
     }
 
     /**
-     * POST + {@code multipart/form-data}：文件域 {@code file}，可选文本域 {@code note}。
+     * POST + {@code multipart/form-data}：文件域 {@code file}，可选文本域 {@code note}；文件写入本地目录（与 {@code POST /upload} 相同规则）。
      */
     @PostHttpRequest("/upload")
     public Map<String, Object> upload(@RequestPart("file") FileUpload file,
                                       @RequestPart(value = "note", required = false) String note) throws IOException {
-        byte[] bytes = file.get();
-        log.info("demo upload: name={}, len={}, note={}", file.getFilename(), bytes.length, note);
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("kind", "post-multipart");
-        m.put("filename", file.getFilename());
-        m.put("contentType", file.getContentType());
-        m.put("size", bytes.length);
-        m.put("note", note);
+        m.put("path", "/api/demo/upload");
+        m.putAll(LocalHttpUploadSaver.save(file, note));
+        log.info("demo upload saved: path={}, name={}, size={}", m.get("savedPath"), m.get("filename"), m.get("size"));
         return m;
     }
 

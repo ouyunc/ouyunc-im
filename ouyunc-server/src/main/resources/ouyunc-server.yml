@@ -21,8 +21,10 @@ ouyunc:
       privateKey: ssl/m.ouyunc.com_pkcs8.key
     # 日志信息
     log:
-      # 日志级别
-      level: DEBUG
+      # Netty 管道 LoggingHandler 级别：DEBUG/TRACE 会打完整 ByteBuf hex（极占日志）；生产建议 INFO 或 WARN
+      level: INFO
+    # 管道级 I/O 日志：true 则每次 socket 读/写各打一行（大流量下「READ: 65536B」会非常多）；排障时可临时 true
+    netty-pipeline-logging-enabled: false
     # QOS 消息服务质量配置
     qos:
       # 是否开启qos，默认关闭
@@ -110,6 +112,8 @@ ouyunc:
       multipart-max-content-length: 10485760
       # HTTP 业务线程数：0 表示在 Netty Worker 线程同步处理（默认）；>0 时 prepare+process 在独立线程，写出仍在 EventLoop
       business-executor-threads: 0
+      # multipart 上传保存目录；不配置则使用进程工作目录下 http-uploads
+      # upload-local-directory: D:/data/ouyunc-uploads
       processor-scan-package-paths:
         - com.ouyunc.message.processor.http
 
