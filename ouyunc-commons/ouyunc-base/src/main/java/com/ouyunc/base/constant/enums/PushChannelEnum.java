@@ -10,22 +10,22 @@ public enum PushChannelEnum {
 
     ;
 
-    private final int code;
-    private final String alias;
+    private final Integer code;
+    private final String name;
     private final String description;
 
-    PushChannelEnum(int code, String alias, String description) {
+    PushChannelEnum(Integer code, String name, String description) {
         this.code = code;
-        this.alias = alias;
+        this.name = name;
         this.description = description;
     }
 
-    public int getCode() {
+    public Integer getCode() {
         return code;
     }
 
-    public String getAlias() {
-        return alias;
+    public String getName() {
+        return name;
     }
 
     public String getDescription() {
@@ -33,14 +33,11 @@ public enum PushChannelEnum {
     }
 
     /**
-     * @param code 与 JSON 字段 pushChannel 对应，省略时默认 {@link #IM}
+     * @param code 与 JSON 字段 pushChannel 对应，
      */
-    public static PushChannelEnum resolve(Integer code) {
-        if (code == null) {
-            return IM;
-        }
+    public static PushChannelEnum getPushChannelEnum(Integer code) {
         for (PushChannelEnum e : values()) {
-            if (e.code == code) {
+            if (e.getCode().equals(code)) {
                 return e;
             }
         }
