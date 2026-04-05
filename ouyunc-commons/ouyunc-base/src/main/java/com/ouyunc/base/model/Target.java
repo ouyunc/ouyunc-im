@@ -1,8 +1,6 @@
 package com.ouyunc.base.model;
 
 import com.ouyunc.base.constant.enums.DeviceType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -93,7 +91,6 @@ public class Target implements Serializable, Cloneable, Protocol{
     }
 
     public static class Builder {
-        private static final Logger log = LoggerFactory.getLogger(Builder.class);
 
         /**
          * 最终接收者唯一标识
