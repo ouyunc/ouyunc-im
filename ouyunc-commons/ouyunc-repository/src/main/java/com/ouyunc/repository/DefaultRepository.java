@@ -326,7 +326,7 @@ public enum DefaultRepository implements Repository{
         // 剩余 ID 查询 MySQL
         if (!CollectionUtils.isEmpty(remainingIds)) {
             try {
-                List<MessageEntity> mysqlEntities = jdbcClient.sql(JdbcSqlConstant.MYSQL.SELECT_MESSAGE.sql())
+                List<MessageEntity> mysqlEntities = jdbcClient.sql(JdbcSqlDialectHolder.selectMessage())
                         .param(MessageEntity.Fields.ids, remainingIds)
                         .query(MessageEntity.class)
                         .list();
@@ -376,7 +376,7 @@ public enum DefaultRepository implements Repository{
                     .concatWith(
                             Mono.fromCallable(() -> {
                                 try {
-                                    List<MessageEntity> mysqlEntities = jdbcClient.sql(JdbcSqlConstant.MYSQL.SELECT_MESSAGE.sql())
+                                    List<MessageEntity> mysqlEntities = jdbcClient.sql(JdbcSqlDialectHolder.selectMessage())
                                             .param(MessageEntity.Fields.ids, remainingIds)
                                             .query(MessageEntity.class)
                                             .list();
@@ -648,7 +648,7 @@ public enum DefaultRepository implements Repository{
         }
 
         try {
-            return jdbcClient.sql(JdbcSqlConstant.MYSQL.SELECT_GROUP_USER_BATCH.sql())
+            return jdbcClient.sql(JdbcSqlDialectHolder.selectGroupUserBatch())
                     .param(GroupUserEntity.Fields.groupId, groupIdLong)
                     .param(GroupUserEntity.Fields.userIds, userIdList)
                     .query(GroupUserEntity.class)
@@ -833,7 +833,7 @@ public enum DefaultRepository implements Repository{
         }
         // 最后在从数据库获取
         try {
-            SessionMessageOffsetEntity sessionMessageOffsetEntity = jdbcClient.sql(JdbcSqlConstant.MYSQL.SELECT_SESSION_MESSAGE_OFFSET.sql())
+            SessionMessageOffsetEntity sessionMessageOffsetEntity = jdbcClient.sql(JdbcSqlDialectHolder.selectSessionMessageOffset())
                     .param(SessionMessageOffsetEntity.Fields.from, from)
                     .param(SessionMessageOffsetEntity.Fields.to, to)
                     .param(SessionMessageOffsetEntity.Fields.type, identityType.value())
@@ -1197,7 +1197,7 @@ public enum DefaultRepository implements Repository{
      */
     private GroupUserEntity queryGroupUserEntityFromDataBase(String cacheKey, String appKey, String groupId, String memberId) {
         try {
-            GroupUserEntity groupUserEntity = jdbcClient.sql(JdbcSqlConstant.MYSQL.SELECT_GROUP_USER.sql())
+            GroupUserEntity groupUserEntity = jdbcClient.sql(JdbcSqlDialectHolder.selectGroupUser())
                     .param(GroupUserEntity.Fields.userId, memberId)
                     .param(GroupUserEntity.Fields.groupId, groupId)
                     .query(GroupUserEntity.class)
@@ -1250,7 +1250,7 @@ public enum DefaultRepository implements Repository{
                                         // 4. MySQL（响应式）
                                         Mono.fromCallable(() -> {
                                             try {
-                                                return jdbcClient.sql(JdbcSqlConstant.MYSQL.SELECT_GROUP_USER.sql())
+                                                return jdbcClient.sql(JdbcSqlDialectHolder.selectGroupUser())
                                                         .param(GroupUserEntity.Fields.userId, memberId)
                                                         .param(GroupUserEntity.Fields.groupId, groupId)
                                                         .query(GroupUserEntity.class)
@@ -1645,7 +1645,7 @@ public enum DefaultRepository implements Repository{
         
         // 4. MySQL
         try {
-            friendEntity = jdbcClient.sql(JdbcSqlConstant.MYSQL.SELECT_FRIEND.sql())
+            friendEntity = jdbcClient.sql(JdbcSqlDialectHolder.selectFriend())
                     .param(FriendEntity.Fields.userId, from)
                     .param(FriendEntity.Fields.friendUserId, to)
                     .query(FriendEntity.class)
@@ -1698,7 +1698,7 @@ public enum DefaultRepository implements Repository{
                                         // 4. MySQL（响应式）
                                         Mono.fromCallable(() -> {
                                             try {
-                                                return jdbcClient.sql(JdbcSqlConstant.MYSQL.SELECT_FRIEND.sql())
+                                                return jdbcClient.sql(JdbcSqlDialectHolder.selectFriend())
                                                         .param(FriendEntity.Fields.userId, from)
                                                         .param(FriendEntity.Fields.friendUserId, to)
                                                         .query(FriendEntity.class)
@@ -1889,7 +1889,7 @@ public enum DefaultRepository implements Repository{
     public GroupEntity getGroupEntityFromDatabases(String appKey, String groupId) {
         try {
             log.info("从数据库中获取群组实体, groupId: {}", groupId);
-            GroupEntity groupEntity = jdbcClient.sql(JdbcSqlConstant.MYSQL.SELECT_GROUP.sql())
+            GroupEntity groupEntity = jdbcClient.sql(JdbcSqlDialectHolder.selectGroup())
                     .params(groupId)
                     .query(GroupEntity.class)
                     .single();
@@ -1982,7 +1982,7 @@ public enum DefaultRepository implements Repository{
         // 4. MySQL
         try {
             log.info("从数据库中获取用户实体, identity: {}", identity);
-            userEntity = jdbcClient.sql(JdbcSqlConstant.MYSQL.SELECT_USER.sql())
+            userEntity = jdbcClient.sql(JdbcSqlDialectHolder.selectUser())
                     .params(identity)
                     .query(UserEntity.class)
                     .single();
@@ -2037,7 +2037,7 @@ public enum DefaultRepository implements Repository{
                                         // 4. MySQL（响应式）
                                         Mono.fromCallable(() -> {
                                             try {
-                                                return jdbcClient.sql(JdbcSqlConstant.MYSQL.SELECT_USER.sql())
+                                                return jdbcClient.sql(JdbcSqlDialectHolder.selectUser())
                                                         .params(identity)
                                                         .query(UserEntity.class)
                                                         .single();

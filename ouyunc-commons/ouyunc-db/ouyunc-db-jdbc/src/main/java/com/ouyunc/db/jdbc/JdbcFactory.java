@@ -1,5 +1,6 @@
 package com.ouyunc.db.jdbc;
 
+import com.ouyunc.base.constant.JdbcSqlDialectHolder;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.PropertiesConfigConstant;
 import com.ouyunc.base.utils.YmlUtil;
@@ -290,6 +291,8 @@ public enum JdbcFactory implements DbOperator {
         }
         // 连接泄露检测阈值（毫秒）
         config.setLeakDetectionThreshold(jdbcProperties.getHikariPool().getLeakDetectionThreshold());
+
+        JdbcSqlDialectHolder.configure(jdbcProperties.getDialect(), jdbcProperties.getUrl());
         return new HikariDataSource(config);
     }
 

@@ -23,6 +23,11 @@ public class JdbcProperties {
      */
     private String password;
 
+    /**
+     * 关系型方言：{@code mysql}（默认）、{@code postgresql}、{@code oracle}；为空时根据 jdbc url 自动判断。
+     */
+    private String dialect;
+
     private HikariPool hikariPool;
 
     public JdbcProperties() {
@@ -67,6 +72,14 @@ public class JdbcProperties {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getDialect() {
+        return dialect;
+    }
+
+    public void setDialect(String dialect) {
+        this.dialect = dialect;
     }
 
     public HikariPool getHikariPool() {

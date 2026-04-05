@@ -260,6 +260,14 @@ ouyunc:
       driverClassName: com.mysql.cj.jdbc.Driver
       url: jdbc:mysql://localhost:3306/ouyunc_message?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true
 #      url: jdbc:mysql://localhost:3306/message?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true
+      # mysql | postgresql（pgsql、postgres）| oracle（ora）；省略时按 url 识别 jdbc:postgresql / jdbc:oracle
+      dialect: mysql
+#      driverClassName: org.postgresql.Driver
+#      url: jdbc:postgresql://localhost:5432/ouyunc_message
+#      dialect: postgresql
+#      driverClassName: oracle.jdbc.OracleDriver
+#      url: jdbc:oracle:thin:@//localhost:1521/XEPDB1
+#      dialect: oracle
       username: root
       password: root
       hikariPool:
