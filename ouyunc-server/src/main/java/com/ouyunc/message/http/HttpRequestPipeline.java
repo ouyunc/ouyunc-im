@@ -7,6 +7,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.Map;
@@ -15,6 +17,7 @@ import java.util.Map;
  * HTTP 统一前置：鉴权（{@link HttpRequestAuthenticator}）、JSON body 或 {@code multipart/form-data} 解析。
  */
 public final class HttpRequestPipeline {
+    private static final Logger log = LoggerFactory.getLogger(HttpRequestPipeline.class);
 
     private HttpRequestPipeline() {
     }
@@ -54,15 +57,17 @@ public final class HttpRequestPipeline {
         if (descriptor.isMultipart()) {
             int mpLimit = HttpContentLengthLimits.multipartMaxBytes();
             if (readable > mpLimit) {
+                log.error("multipart 请求体超过连接允许的最大长度: {} 字节", mpLimit);
                 throw new HttpPipelineException(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, HttpResponseCodeEnum.PAYLOAD_TOO_LARGE,
-                        "multipart 请求体超过限制: " + mpLimit + " 字节");
+                        "Request Entity Too Large");
             }
             httpContext.setMultipart(HttpMultipartHolder.parse(request, mpLimit));
         } else {
             int generalLimit = HttpContentLengthLimits.maxBytes();
             if (readable > generalLimit) {
+                log.error("请求体超过限制: {} 字节", generalLimit);
                 throw new HttpPipelineException(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, HttpResponseCodeEnum.PAYLOAD_TOO_LARGE,
-                        "请求体超过限制: " + generalLimit + " 字节");
+                        "Request Entity Too Large");
             }
             Class<?> bodyClass = descriptor.getRequestBodyClass();
             if (bodyClass == null && HttpUtil.isApplicationFormUrlEncoded(request) && StringUtils.isNotBlank(rawBody)) {
