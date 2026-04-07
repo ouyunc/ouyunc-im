@@ -239,6 +239,9 @@ INSERT INTO `ouyunc_im_user` VALUES (1391067238606352384, '1391067238576992256',
 -- ----------------------------
 -- Table structure for ouyunc_im_consultation_ticket
 -- ----------------------------
+-- ----------------------------
+-- Table structure for ouyunc_im_consultation_ticket
+-- ----------------------------
 CREATE TABLE `ouyunc_im_consultation_ticket` (
                                                  `id` bigint(20) NOT NULL COMMENT '主键id',
                                                  `app_key` varchar(64) NOT NULL COMMENT '应用 appKey',
@@ -248,8 +251,13 @@ CREATE TABLE `ouyunc_im_consultation_ticket` (
                                                  `status` tinyint(4) NOT NULL DEFAULT 1 COMMENT '状态：1-进行中，2-已关闭，3-已转接（仅记录，当前接待以 assignee 为准）',
                                                  `assignee_id` varchar(64) NULL DEFAULT NULL COMMENT '当前接待的客服人员 id（坐席 identity），转接时更新',
                                                  `assignee_name` varchar(64) NULL DEFAULT NULL COMMENT '当前接待客服昵称/工号，冗余便于展示',
-                                                 `start_time` datetime NULL DEFAULT NULL COMMENT '本次咨询开始时间（进线时间），毫秒时间戳',
-                                                 `end_time` datetime NULL DEFAULT NULL COMMENT '本次咨询结束时间（关单时间），毫秒时间戳',
+                                                 `is_robot` tinyint(1) NULL DEFAULT 0 COMMENT '当前是否机器人接待：0-人工 1-机器人',
+                                                 `channel` varchar(32) NULL DEFAULT NULL COMMENT '进线渠道：APP、MINIAPP、H5、WEB、PC',
+                                                 `queue_id` varchar(64) NULL DEFAULT NULL COMMENT '来源队列ID（如 app123_pre_sale）',
+                                                 `queue_in_time` datetime NULL DEFAULT NULL COMMENT '进入队列时间',
+                                                 `queue_status` tinyint(4) NULL DEFAULT 0 COMMENT '排队状态：0-未排队 1-已分配 2-超时',
+                                                 `start_time` datetime NULL DEFAULT NULL COMMENT '本次咨询开始时间（进线时间）',
+                                                 `end_time` datetime NULL DEFAULT NULL COMMENT '本次咨询结束时间（关单时间）',
                                                  `remark` varchar(500) NULL DEFAULT NULL COMMENT '备注（如关单原因、转接原因）',
                                                  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
                                                  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
@@ -261,31 +269,35 @@ CREATE TABLE `ouyunc_im_consultation_ticket` (
                                                  INDEX `idx_assignee_status` (`app_key`, `assignee_id`, `status`) USING BTREE COMMENT '按坐席与状态查待处理/进行中',
                                                  INDEX `idx_start_time` (`app_key`, `start_time`) USING BTREE COMMENT '按进线时间范围查询'
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '咨询单表（客服多次进线拆分维度）' ROW_FORMAT = Dynamic;
-
+-- ----------------------------
+-- 咨询记录表（咨询单流转明细：每次转接/接入/关单生成一条，用于时间线与处理人维度查询）
+-- ----------------------------
 -- ----------------------------
 -- 咨询记录表（咨询单流转明细：每次转接/接入/关单生成一条，用于时间线与处理人维度查询）
 -- ----------------------------
 CREATE TABLE `ouyunc_im_consultation_ticket_log` (
-                                                 `id` bigint(20) NOT NULL COMMENT '主键id',
-                                                 `app_key` varchar(64) NOT NULL COMMENT '应用 appKey',
-                                                 `ticket_id` bigint(20) NOT NULL COMMENT '咨询单 id，关联 ouyunc_im_consultation_ticket.id',
-                                                 `record_type` tinyint(4) NOT NULL COMMENT '记录类型：1-首次接入，2-转接转入，3-转出（结束本次接待），4-关单',
-                                                 `assignee_id` varchar(64) NOT NULL COMMENT '本段处理人 id（坐席 identity）',
-                                                 `assignee_name` varchar(64) NULL DEFAULT NULL COMMENT '本段处理人昵称/工号',
-                                                 `start_time` bigint(20) NOT NULL COMMENT '本段开始时间，毫秒时间戳',
-                                                 `end_time` bigint(20) NULL DEFAULT NULL COMMENT '本段结束时间（转出或关单时填），毫秒时间戳',
-                                                 `from_assignee_id` varchar(64) NULL DEFAULT NULL COMMENT '转接时：转出方坐席 id（record_type=2 时可选填）',
-                                                 `from_assignee_name` varchar(64) NULL DEFAULT NULL COMMENT '转接时：转出方坐席名称',
-                                                 `to_assignee_id` varchar(64) NULL DEFAULT NULL COMMENT '转接时：转入方坐席 id（record_type=3 时可选填）',
-                                                 `to_assignee_name` varchar(64) NULL DEFAULT NULL COMMENT '转接时：转入方坐席名称',
-                                                 `remark` varchar(500) NULL DEFAULT NULL COMMENT '备注（转接原因、关单原因等）',
-                                                 `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-                                                 `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
-                                                 `deleted` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否删除：0-未删除，1-已删除',
-                                                 PRIMARY KEY (`id`) USING BTREE,
-                                                 INDEX `idx_ticket_id` (`app_key`, `ticket_id`) USING BTREE COMMENT '按咨询单查流转时间线',
-                                                 INDEX `idx_assignee_time` (`app_key`, `assignee_id`, `start_time`) USING BTREE COMMENT '按处理人+时间查其接待记录',
-                                                 INDEX `idx_start_time` (`app_key`, `start_time`) USING BTREE COMMENT '按时间范围统计'
+                                                     `id` bigint(20) NOT NULL COMMENT '主键id',
+                                                     `app_key` varchar(64) NOT NULL COMMENT '应用 appKey',
+                                                     `ticket_id` bigint(20) NOT NULL COMMENT '咨询单 id，关联 ouyunc_im_consultation_ticket.id',
+                                                     `record_type` tinyint(4) NOT NULL COMMENT '记录类型：1-首次接入，2-转接转入，3-转出（结束本次接待），4-关单',
+                                                     `assignee_id` varchar(64) NOT NULL COMMENT '本段处理人 id（坐席 identity）',
+                                                     `assignee_name` varchar(64) NULL DEFAULT NULL COMMENT '本段处理人昵称/工号',
+                                                     `is_robot` tinyint(1) NULL DEFAULT 0 COMMENT '本段接待是否机器人：0-人工 1-机器人',
+                                                     `satisfaction` tinyint(4) NULL DEFAULT NULL COMMENT '本段满意度：1-非常不满意 2-不满意 3-一般 4-满意 5-非常满意',
+                                                     `start_time` bigint(20) NOT NULL COMMENT '本段开始时间，毫秒时间戳',
+                                                     `end_time` bigint(20) NULL DEFAULT NULL COMMENT '本段结束时间（转出或关单时填），毫秒时间戳',
+                                                     `from_assignee_id` varchar(64) NULL DEFAULT NULL COMMENT '转接时：转出方坐席 id（record_type=2 时可选填）',
+                                                     `from_assignee_name` varchar(64) NULL DEFAULT NULL COMMENT '转接时：转出方坐席名称',
+                                                     `to_assignee_id` varchar(64) NULL DEFAULT NULL COMMENT '转接时：转入方坐席 id（record_type=3 时可选填）',
+                                                     `to_assignee_name` varchar(64) NULL DEFAULT NULL COMMENT '转接时：转入方坐席名称',
+                                                     `remark` varchar(500) NULL DEFAULT NULL COMMENT '备注（转接原因、关单原因等）',
+                                                     `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                                                     `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
+                                                     `deleted` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否删除：0-未删除，1-已删除',
+                                                     PRIMARY KEY (`id`) USING BTREE,
+                                                     INDEX `idx_ticket_id` (`app_key`, `ticket_id`) USING BTREE COMMENT '按咨询单查流转时间线',
+                                                     INDEX `idx_assignee_time` (`app_key`, `assignee_id`, `start_time`) USING BTREE COMMENT '按处理人+时间查其接待记录',
+                                                     INDEX `idx_start_time` (`app_key`, `start_time`) USING BTREE COMMENT '按时间范围统计'
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '咨询记录表（咨询单流转，每次转接/接入/关单一条）' ROW_FORMAT = Dynamic;
 
 SET FOREIGN_KEY_CHECKS = 1;
