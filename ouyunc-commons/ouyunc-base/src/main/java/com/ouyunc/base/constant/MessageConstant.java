@@ -171,6 +171,11 @@ public class MessageConstant {
     public static final String CLIENT_APP_KEY_PUBLISH_TOPIC = "client_app_key_publish_topic";
 
     /**
+     * appKey 连接数 ZSet 过期清理定时任务 id（与 ScheduleTimer 注册 id 一致）
+     */
+    public static final String APP_KEY_CONNECTION_COUNT_REFRESH_TASK_ID = "appKey-connection-count-refresh-timer";
+
+    /**
      * 自定义协议的魔数6个字节,字节数组 OUYUNC
      */
     public static final byte[] PACKET_MAGIC_BYTES = {

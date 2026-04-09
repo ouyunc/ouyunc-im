@@ -15,11 +15,13 @@ import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.core.listener.MessageEventListener;
 import com.ouyunc.core.listener.EventListener;
 import com.ouyunc.core.listener.event.MessageEvent;
+import com.ouyunc.message.context.AppKeyConnectionCleanupRegistry;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.http.HttpRequestDispatcher;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.monitor.MonitorInitializer;
 import com.ouyunc.message.schedule.ScheduleTimer;
+import com.ouyunc.message.schedule.TimerTaskWrapper;
 import org.apache.commons.collections4.CollectionUtils;
 import org.redisson.api.RLock;
 import org.slf4j.Logger;
@@ -36,6 +38,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 /**
@@ -48,6 +52,16 @@ class ServerStartupEventMessageEventListener implements MessageEventListener<Mes
 
     private static final RedisTemplate<String, ?> redisTemplate = CacheFactory.REDIS.instance();
 
+    private static final AtomicLong APP_KEY_CONNECTION_REFRESH_RUN = new AtomicLong();
+
+    private static final AtomicBoolean APP_KEY_DEVICE_TYPE_SUBSCRIPTION_STARTED = new AtomicBoolean(false);
+
+    private static final AtomicBoolean APP_KEY_CONNECTION_SCHEDULER_STARTED = new AtomicBoolean(false);
+
+    private static final AtomicBoolean RUNTIME_RESOURCES_SHUTDOWN_DONE = new AtomicBoolean(false);
+
+    private static volatile RedisMessageListenerContainer appKeyDeviceTypeListenerContainer;
+
     /**
      * 服务启动成功事件,
      */
@@ -59,15 +73,16 @@ class ServerStartupEventMessageEventListener implements MessageEventListener<Mes
     @Override
     public void onEvent(MessageEvent event) {
         HttpRequestDispatcher.logRegisteredHttpRoutesOnStartup();
+        AppKeyConnectionCleanupRegistry.initFromRedis();
         Set<String> appKeys = ClientHelper.appKeys();
         if (CollectionUtils.isNotEmpty(appKeys)) {
             // 加载appKey 下的deviceType 配置
             loadAppKeyDeviceTypes(Lists.newArrayList(appKeys));
-            startAppKeyDeviceTypeSubscription();
-            // 启动appKey 下的连接数刷新任务
-            startAppKeyConnectionCountRefreshScheduler(appKeys);
         }
-        // 启动appKey 下的deviceType 订阅
+        // 无论当前 Redis 是否已有 appKey，均启动订阅，避免启动时空集合导致后续无法收到设备类型/增量 track
+        startAppKeyDeviceTypeSubscription();
+        // 使用可增量更新的 appKey 集合，避免仅依赖启动快照导致新 appKey 不参与 ZSet 清理
+        startAppKeyConnectionCountRefreshScheduler();
         // 启动资源监控
         MonitorInitializer.startMonitoring();
     }
@@ -93,10 +108,50 @@ class ServerStartupEventMessageEventListener implements MessageEventListener<Mes
     }
 
     /**
+     * 释放 appKey 设备类型订阅与连接数清理定时任务；在 {@link MessageEventTypeEnum#SERVER_STOP} 中同步调用。
+     */
+    static void shutdownRuntimeResources() {
+        if (!RUNTIME_RESOURCES_SHUTDOWN_DONE.compareAndSet(false, true)) {
+            return;
+        }
+        RedisMessageListenerContainer container = appKeyDeviceTypeListenerContainer;
+        appKeyDeviceTypeListenerContainer = null;
+        if (container != null) {
+            try {
+                container.stop();
+            } catch (Exception e) {
+                log.warn("停止 appKey 设备类型 Redis 订阅容器异常: {}", e.getMessage());
+            }
+            try {
+                container.destroy();
+            } catch (Exception e) {
+                log.warn("销毁 appKey 设备类型 Redis 订阅容器异常: {}", e.getMessage());
+            }
+        }
+        TimerTaskWrapper task = TimerTaskWrapper.timerTaskCaffeine.get(MessageConstant.APP_KEY_CONNECTION_COUNT_REFRESH_TASK_ID);
+        if (task != null) {
+            task.cancel();
+        }
+    }
+
+    /**
      * 这里可以监听appKey级别或者appKey 下某个客户端的设备类型（按道理来讲客户端所能使用的设备类型必须是appKey所支持类型的子集）
      */
-    @SuppressWarnings("unchecked")
     private void startAppKeyDeviceTypeSubscription() {
+        if (!APP_KEY_DEVICE_TYPE_SUBSCRIPTION_STARTED.compareAndSet(false, true)) {
+            log.debug("appKey 设备类型 Redis 订阅已初始化，跳过重复启动");
+            return;
+        }
+        try {
+            doStartAppKeyDeviceTypeSubscription();
+        } catch (RuntimeException e) {
+            APP_KEY_DEVICE_TYPE_SUBSCRIPTION_STARTED.set(false);
+            throw e;
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void doStartAppKeyDeviceTypeSubscription() {
         RedisSerializer<AppKeyDeviceType> appKeyDeviceTypeRedisSerializer = (RedisSerializer<AppKeyDeviceType>) redisTemplate.getValueSerializer();
         RedisSerializer<ClientAppKeyDeviceType> clientAppKeyDeviceTypeRedisSerializer = (RedisSerializer<ClientAppKeyDeviceType>) redisTemplate.getValueSerializer();
         RedisMessageListenerContainer container = createRedisMessageListenerContainer();
@@ -106,6 +161,7 @@ class ServerStartupEventMessageEventListener implements MessageEventListener<Mes
             AppKeyDeviceType appKeyDeviceType = appKeyDeviceTypeRedisSerializer.deserialize(message.getBody());
             if (appKeyDeviceType != null) {
                 log.info("正在处理appKey下的设备类型 {} ...", appKeyDeviceType);
+                AppKeyConnectionCleanupRegistry.track(appKeyDeviceType.getAppKey());
                 MessageServerContext.addAppKeyDeviceType(appKeyDeviceType.getAppKey(), appKeyDeviceType.getDeviceTypes());
             }
             // 添加进入appKey对应的设备类型集合中
@@ -114,6 +170,7 @@ class ServerStartupEventMessageEventListener implements MessageEventListener<Mes
         container.addMessageListener((message, pattern) -> {
             ClientAppKeyDeviceType clientAppKeyDeviceType = clientAppKeyDeviceTypeRedisSerializer.deserialize(message.getBody());
             if (clientAppKeyDeviceType != null) {
+                AppKeyConnectionCleanupRegistry.track(clientAppKeyDeviceType.getAppKey());
                 log.info("正在处理appKey下的客户端所支持的设备类型 {} ...", clientAppKeyDeviceType);
                 //  添加进入appKey对应的设备类型集合中,是否需要主动关闭相关链接？还是在发送消息鉴权的时候进行校验,被动关闭吧
                 // 需要校验下，单独设置的必须要再appKey下的设备类型集合中
@@ -138,6 +195,7 @@ class ServerStartupEventMessageEventListener implements MessageEventListener<Mes
         // 一定不要忘记了这句
         container.afterPropertiesSet();
         container.start();
+        appKeyDeviceTypeListenerContainer = container;
     }
 
     private RedisMessageListenerContainer createRedisMessageListenerContainer() {
@@ -146,33 +204,51 @@ class ServerStartupEventMessageEventListener implements MessageEventListener<Mes
         return container;
     }
 
-    private void startAppKeyConnectionCountRefreshScheduler(Set<String> appKeys) {
-        if (isAppKeyConnectionCountRefreshEnabled()) {
-            RedisTemplate<String, Object> redisTemplate = CacheFactory.REDIS.instance();
-            ScheduleTimer.scheduleAtFixedRate("appKey-connection-count-refresh-timer", (taskWrapper) -> {
-                if (CollectionUtils.isNotEmpty(appKeys)) {
-                    long maxScore = TimeUtil.currentTimeMillis();
-                    for (String appKey : appKeys) {
-                        // 如果开启集群模式,则加锁保证进程安全
-                        if (MessageServerContext.serverProperties().isClusterEnable()) {
-                            RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.buildAppKeyLockCacheKey(appKey));
-                            try {
-                                if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
-                                    refreshAppKeyConnectionCount(redisTemplate, appKey, maxScore);
-                                }
-                            } catch (InterruptedException e) {
-                                log.error("appKey-connection-count-refresh-timer 获取锁失败,原因：{}", e.getMessage());
-                            } finally {
-                                if (lock.isHeldByCurrentThread()) {
-                                    lock.unlock();
-                                }
-                            }
-                        }else {
-                            refreshAppKeyConnectionCount(redisTemplate, appKey, maxScore);
+    private void startAppKeyConnectionCountRefreshScheduler() {
+        if (!isAppKeyConnectionCountRefreshEnabled()) {
+            return;
+        }
+        if (!APP_KEY_CONNECTION_SCHEDULER_STARTED.compareAndSet(false, true)) {
+            log.debug("appKey 连接数 ZSet 清理定时任务已初始化，跳过重复启动");
+            return;
+        }
+        RedisTemplate<String, Object> connectionCountRedis = CacheFactory.REDIS.instance();
+        try {
+            ScheduleTimer.scheduleAtFixedRate(MessageConstant.APP_KEY_CONNECTION_COUNT_REFRESH_TASK_ID, (taskWrapper) -> {
+            int fullSyncEvery = MessageServerContext.serverProperties().getAppKeyConnectionCountRefreshFullSyncEveryRuns();
+            if (fullSyncEvery > 0) {
+                long run = APP_KEY_CONNECTION_REFRESH_RUN.incrementAndGet();
+                if (run % fullSyncEvery == 0) {
+                    AppKeyConnectionCleanupRegistry.mergeAllFromRedis();
+                }
+            }
+            if (AppKeyConnectionCleanupRegistry.isEmpty()) {
+                return;
+            }
+            long maxScore = TimeUtil.currentTimeMillis();
+            AppKeyConnectionCleanupRegistry.eachTracked(appKey -> {
+                if (MessageServerContext.serverProperties().isClusterEnable()) {
+                    RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.buildAppKeyLockCacheKey(appKey));
+                    try {
+                        if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
+                            refreshAppKeyConnectionCount(connectionCountRedis, appKey, maxScore);
+                        }
+                    } catch (InterruptedException e) {
+                        log.error("{} 获取锁失败,原因：{}", MessageConstant.APP_KEY_CONNECTION_COUNT_REFRESH_TASK_ID, e.getMessage());
+                        Thread.currentThread().interrupt();
+                    } finally {
+                        if (lock.isHeldByCurrentThread()) {
+                            lock.unlock();
                         }
                     }
+                } else {
+                    refreshAppKeyConnectionCount(connectionCountRedis, appKey, maxScore);
                 }
-            }, getRefreshInterval(), getRefreshInterval(), TimeUnit.SECONDS);
+            });
+        }, getRefreshInterval(), getRefreshInterval(), TimeUnit.SECONDS);
+        } catch (RuntimeException e) {
+            APP_KEY_CONNECTION_SCHEDULER_STARTED.set(false);
+            throw e;
         }
     }
 

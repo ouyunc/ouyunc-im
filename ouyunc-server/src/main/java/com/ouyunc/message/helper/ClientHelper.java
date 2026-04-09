@@ -14,6 +14,7 @@ import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.domain.entity.AppEntity;
+import com.ouyunc.message.context.AppKeyConnectionCleanupRegistry;
 import com.ouyunc.message.context.MessageServerContext;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.collections4.CollectionUtils;
@@ -80,6 +81,7 @@ public class ClientHelper {
                         return null;
                     }
                 });
+                AppKeyConnectionCleanupRegistry.track(loginClientInfo.getAppKey());
 
             }else {
                 log.error("客户端: {} 绑定登录信息失败,原因：获取分布式锁失败", loginClientInfo);

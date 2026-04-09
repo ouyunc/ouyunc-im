@@ -282,6 +282,12 @@ public class MessageServerProperties extends MessageProperties {
     @Key(value = "ouyunc.message.client.app-key.refresh-connection.max-batches-per-run", defaultValue = "10")
     int appKeyConnectionCountRefreshMaxBatchesPerRun;
 
+    /**
+     * 连接数清理定时任务每执行多少轮与 Redis appKey 注册表对账一次（merge 全量 appKey）；≤0 表示不做周期对账，仅依赖启动加载与增量 track。
+     */
+    @Key(value = "ouyunc.message.client.app-key.refresh-connection.full-sync-every-runs", defaultValue = "10")
+    int appKeyConnectionCountRefreshFullSyncEveryRuns;
+
     /***
      # 偏移量，单位秒，默认值3600， 更具具体情况来调整，如果所有服务器都宕机且时间很长，那么该值可以设置大点，如果服务器宕机时间短，那么该值可以设置小点
      */
@@ -609,6 +615,14 @@ public class MessageServerProperties extends MessageProperties {
         this.appKeyConnectionCountRefreshMaxBatchesPerRun = appKeyConnectionCountRefreshMaxBatchesPerRun;
     }
 
+    public int getAppKeyConnectionCountRefreshFullSyncEveryRuns() {
+        return appKeyConnectionCountRefreshFullSyncEveryRuns;
+    }
+
+    public void setAppKeyConnectionCountRefreshFullSyncEveryRuns(int appKeyConnectionCountRefreshFullSyncEveryRuns) {
+        this.appKeyConnectionCountRefreshFullSyncEveryRuns = appKeyConnectionCountRefreshFullSyncEveryRuns;
+    }
+
     public List<String> getMessageProcessorScanPackagePaths() {
         return messageProcessorScanPackagePaths;
     }
@@ -928,6 +942,7 @@ public class MessageServerProperties extends MessageProperties {
                 "\n, appKeyConnectionCountRefreshInterval=" + appKeyConnectionCountRefreshInterval +
                 "\n, appKeyConnectionCountRefreshStep=" + appKeyConnectionCountRefreshStep +
                 "\n, appKeyConnectionCountRefreshMaxBatchesPerRun=" + appKeyConnectionCountRefreshMaxBatchesPerRun +
+                "\n, appKeyConnectionCountRefreshFullSyncEveryRuns=" + appKeyConnectionCountRefreshFullSyncEveryRuns +
                 "\n, websocketPath='" + websocketPath + '\'' +
                 "\n, clusterEnable=" + clusterEnable +
                 "\n, nodes=" + nodes +
