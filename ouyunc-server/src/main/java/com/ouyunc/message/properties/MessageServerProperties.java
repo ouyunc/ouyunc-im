@@ -277,6 +277,12 @@ public class MessageServerProperties extends MessageProperties {
     long appKeyConnectionCountRefreshStep;
 
     /***
+     * appKey 连接数过期清理：每轮最大批次数，默认10
+     */
+    @Key(value = "ouyunc.message.client.app-key.refresh-connection.max-batches-per-run", defaultValue = "10")
+    int appKeyConnectionCountRefreshMaxBatchesPerRun;
+
+    /***
      # 偏移量，单位秒，默认值3600， 更具具体情况来调整，如果所有服务器都宕机且时间很长，那么该值可以设置大点，如果服务器宕机时间短，那么该值可以设置小点
      */
     @Key(value = "ouyunc.message.client.app-key.refresh-connection.offset", defaultValue = "3600")
@@ -593,6 +599,14 @@ public class MessageServerProperties extends MessageProperties {
 
     public void setAppKeyConnectionCountRefreshStep(long appKeyConnectionCountRefreshStep) {
         this.appKeyConnectionCountRefreshStep = appKeyConnectionCountRefreshStep;
+    }
+
+    public int getAppKeyConnectionCountRefreshMaxBatchesPerRun() {
+        return appKeyConnectionCountRefreshMaxBatchesPerRun;
+    }
+
+    public void setAppKeyConnectionCountRefreshMaxBatchesPerRun(int appKeyConnectionCountRefreshMaxBatchesPerRun) {
+        this.appKeyConnectionCountRefreshMaxBatchesPerRun = appKeyConnectionCountRefreshMaxBatchesPerRun;
     }
 
     public List<String> getMessageProcessorScanPackagePaths() {
@@ -912,6 +926,8 @@ public class MessageServerProperties extends MessageProperties {
                 "\n, groupMessageThreshold=" + groupMessageThreshold +
                 "\n, appKeyConnectionCountRefreshEnable=" + appKeyConnectionCountRefreshEnable +
                 "\n, appKeyConnectionCountRefreshInterval=" + appKeyConnectionCountRefreshInterval +
+                "\n, appKeyConnectionCountRefreshStep=" + appKeyConnectionCountRefreshStep +
+                "\n, appKeyConnectionCountRefreshMaxBatchesPerRun=" + appKeyConnectionCountRefreshMaxBatchesPerRun +
                 "\n, websocketPath='" + websocketPath + '\'' +
                 "\n, clusterEnable=" + clusterEnable +
                 "\n, nodes=" + nodes +

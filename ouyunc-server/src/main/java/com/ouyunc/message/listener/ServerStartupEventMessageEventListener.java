@@ -3,7 +3,6 @@ package com.ouyunc.message.listener;
 import com.google.common.collect.Lists;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
-import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.DeviceType;
 import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.model.AppKeyDeviceType;
@@ -37,7 +36,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 /**
@@ -151,20 +149,16 @@ class ServerStartupEventMessageEventListener implements MessageEventListener<Mes
     private void startAppKeyConnectionCountRefreshScheduler(Set<String> appKeys) {
         if (isAppKeyConnectionCountRefreshEnabled()) {
             RedisTemplate<String, Object> redisTemplate = CacheFactory.REDIS.instance();
-            AtomicLong minScore = new AtomicLong(NumberConstant.NUMBER_0);
             ScheduleTimer.scheduleAtFixedRate("appKey-connection-count-refresh-timer", (taskWrapper) -> {
                 if (CollectionUtils.isNotEmpty(appKeys)) {
                     long maxScore = TimeUtil.currentTimeMillis();
-                    if (minScore.get() == NumberConstant.NUMBER_0 || minScore.get() >= maxScore) {
-                        minScore.set(maxScore - MessageServerContext.serverProperties().getAppKeyConnectionCountRefreshOffset() * MessageConstant.SECOND_TIMESTAMP);
-                    }
                     for (String appKey : appKeys) {
                         // 如果开启集群模式,则加锁保证进程安全
                         if (MessageServerContext.serverProperties().isClusterEnable()) {
                             RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.buildAppKeyLockCacheKey(appKey));
                             try {
                                 if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
-                                    refreshAppKeyConnectionCount(redisTemplate, appKey, minScore, maxScore);
+                                    refreshAppKeyConnectionCount(redisTemplate, appKey, maxScore);
                                 }
                             } catch (InterruptedException e) {
                                 log.error("appKey-connection-count-refresh-timer 获取锁失败,原因：{}", e.getMessage());
@@ -174,7 +168,7 @@ class ServerStartupEventMessageEventListener implements MessageEventListener<Mes
                                 }
                             }
                         }else {
-                            refreshAppKeyConnectionCount(redisTemplate, appKey, minScore, maxScore);
+                            refreshAppKeyConnectionCount(redisTemplate, appKey, maxScore);
                         }
                     }
                 }
@@ -190,11 +184,19 @@ class ServerStartupEventMessageEventListener implements MessageEventListener<Mes
         return MessageServerContext.serverProperties().getAppKeyConnectionCountRefreshInterval();
     }
 
-    private void refreshAppKeyConnectionCount(RedisTemplate<String, Object> redisTemplate, String appKey, AtomicLong minScore, long maxScore) {
-        while (minScore.get() < maxScore) {
-            long currentMaxScore = Math.min(minScore.get() + MessageServerContext.serverProperties().getAppKeyConnectionCountRefreshStep(), maxScore);
-            redisTemplate.opsForZSet().removeRangeByScore(CacheConstant.buildConnectionsCacheKey(appKey), minScore.get(), currentMaxScore);
-            minScore.set(currentMaxScore);
+    private void refreshAppKeyConnectionCount(RedisTemplate<String, Object> redisTemplate, String appKey, long nowScore) {
+        String connectionsCacheKey = CacheConstant.buildConnectionsCacheKey(appKey);
+        int batchSize = (int) Math.max(1L, MessageServerContext.serverProperties().getAppKeyConnectionCountRefreshStep());
+        int maxBatchesPerRun = Math.max(1, MessageServerContext.serverProperties().getAppKeyConnectionCountRefreshMaxBatchesPerRun());
+        for (int i = 0; i < maxBatchesPerRun; i++) {
+            Set<Object> expiredMembers = redisTemplate.opsForZSet().rangeByScore(connectionsCacheKey, Double.NEGATIVE_INFINITY, nowScore, 0, batchSize);
+            if (CollectionUtils.isEmpty(expiredMembers)) {
+                break;
+            }
+            redisTemplate.opsForZSet().remove(connectionsCacheKey, expiredMembers.toArray());
+            if (expiredMembers.size() < batchSize) {
+                break;
+            }
         }
     }
 

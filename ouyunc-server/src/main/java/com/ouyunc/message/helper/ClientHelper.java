@@ -215,7 +215,8 @@ public class ClientHelper {
      * @return
      */
     public static long connections(String appKey) {
-        Long connections = redisTemplate.opsForZSet().zCard(CacheConstant.buildConnectionsCacheKey(appKey));
+        long now = TimeUtil.currentTimeMillis();
+        Long connections = redisTemplate.opsForZSet().count(CacheConstant.buildConnectionsCacheKey(appKey), now, Double.POSITIVE_INFINITY);
         if (connections == null) {
             return NumberConstant.NUMBER_0;
         }
@@ -246,11 +247,12 @@ public class ClientHelper {
         }
         // 依次获取每个appKey的数据
         long totalConnections = NumberConstant.NUMBER_0;
+        long now = TimeUtil.currentTimeMillis();
         List<Object> executedResultList = redisTemplate.executePipelined(new SessionCallback<>() {
             @Override
             public <K, V> Object execute(@NotNull RedisOperations<K, V> operations) throws DataAccessException {
                 for (String appKey : appKeys) {
-                    operations.opsForZSet().zCard((K) CacheConstant.buildConnectionsCacheKey(appKey));
+                    operations.opsForZSet().count((K) CacheConstant.buildConnectionsCacheKey(appKey), now, Double.POSITIVE_INFINITY);
                 }
                 return null;
             }
