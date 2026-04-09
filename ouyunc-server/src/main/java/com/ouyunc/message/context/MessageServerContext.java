@@ -42,7 +42,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
 import java.util.*;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
@@ -59,12 +58,6 @@ public class MessageServerContext extends MessageContext {
      * message 服务实例
      */
     public static MessageServer server;
-
-    /**
-     * 客户端登录保活队列，这个是无界队列，可以根据业务场景和使用方式调整，注意内存和垃圾回收相关
-     */
-    public static final ConcurrentLinkedQueue<LoginClientInfo> clientKeepAliveQueue = new ConcurrentLinkedQueue<>();
-
 
     /**
      * Message 协议分发处理器

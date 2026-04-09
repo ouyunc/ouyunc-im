@@ -46,6 +46,12 @@ ouyunc:
         timeout: 15
         # 外部客户端，心跳重试等待次数，默认3次，超过3次没有心跳则关闭外部客户端channel  不能为负数
         wait-retry: 3
+        # 登录保活刷新节流窗口计算除数：窗口=clamp(timeout/divisor, min-interval, max-interval)
+        refresh-throttle-divisor: 3
+        # 登录保活刷新节流最小间隔，单位毫秒
+        refresh-throttle-min-interval: 1000
+        # 登录保活刷新节流最大间隔，单位毫秒（控制在线状态可见延迟上限）
+        refresh-throttle-max-interval: 10000
     # 客户端登录信息保存模式， FOREVER-永久， FINITE-有限； 默认值永久
     # 消息监听器包扫描路径
     listeners:

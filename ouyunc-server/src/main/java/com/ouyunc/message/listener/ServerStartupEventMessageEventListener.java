@@ -5,7 +5,6 @@ import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.DeviceType;
-import com.ouyunc.base.constant.enums.SaveModeEnum;
 import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.model.AppKeyDeviceType;
 import com.ouyunc.base.model.ClientAppKeyDeviceType;
@@ -22,7 +21,6 @@ import com.ouyunc.message.http.HttpRequestDispatcher;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.monitor.MonitorInitializer;
 import com.ouyunc.message.schedule.ScheduleTimer;
-import com.ouyunc.message.thread.LoginKeepAliveThread;
 import org.apache.commons.collections4.CollectionUtils;
 import org.redisson.api.RLock;
 import org.slf4j.Logger;
@@ -72,9 +70,6 @@ class ServerStartupEventMessageEventListener implements MessageEventListener<Mes
             startAppKeyConnectionCountRefreshScheduler(appKeys);
         }
         // 启动appKey 下的deviceType 订阅
-        // 启动客户端登录信息心跳保活线程
-        startClientLoginKeepAliveThread();
-        
         // 启动资源监控
         MonitorInitializer.startMonitoring();
     }
@@ -151,20 +146,6 @@ class ServerStartupEventMessageEventListener implements MessageEventListener<Mes
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(Objects.requireNonNull(redisTemplate.getConnectionFactory()));
         return container;
-    }
-
-    private void startClientLoginKeepAliveThread() {
-        if (isClientHeartBeatEnabled()) {
-            Thread clientLoginKeepAliveThread = new Thread(new LoginKeepAliveThread());
-            clientLoginKeepAliveThread.setName("client-login-keep-alive-thread");
-            clientLoginKeepAliveThread.setDaemon(true);
-            clientLoginKeepAliveThread.start();
-        }
-    }
-
-    private boolean isClientHeartBeatEnabled() {
-        return MessageServerContext.serverProperties().isClientHeartBeatEnable() &&
-                SaveModeEnum.FINITE.equals(MessageServerContext.serverProperties().getClientLoginInfoSaveMode());
     }
 
     private void startAppKeyConnectionCountRefreshScheduler(Set<String> appKeys) {

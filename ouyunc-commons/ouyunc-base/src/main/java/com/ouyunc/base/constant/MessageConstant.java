@@ -264,6 +264,11 @@ public class MessageConstant {
      */
     public static final String CHANNEL_ATTR_KEY_TAG_HEARTBEAT_TIMEOUT = "CHANNEL_ATTR_KEY_TAG_HEARTBEAT_TIME";
 
+    /**
+     * channel 下一次允许执行保活刷新的时间戳（毫秒）
+     */
+    public static final String CHANNEL_ATTR_KEY_TAG_NEXT_KEEP_ALIVE_REFRESH_TIMESTAMP = "CHANNEL_ATTR_KEY_TAG_NEXT_KEEP_ALIVE_REFRESH_TIMESTAMP";
+
 
     /**
      * channel 客户端读超时的次数标签

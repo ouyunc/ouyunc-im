@@ -33,6 +33,8 @@ public enum MessageEventTypeEnum implements EventType {
     EXCEPTION_PERSIST(13, "异常持久化事件"),
     /** source: {@code Packet} */
     ON_MESSAGE(14, "客户端收消息事件"),
+    /** source: {@code LoginClientInfo} */
+    CLIENT_KEEP_ALIVE_REFRESH(15, "客户端登录保活刷新事件"),
     ;
 
     private final int type;

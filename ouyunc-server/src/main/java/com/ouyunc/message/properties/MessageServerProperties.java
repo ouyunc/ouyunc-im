@@ -187,6 +187,24 @@ public class MessageServerProperties extends MessageProperties {
     @Key(value = "ouyunc.message.client.heart-beat.wait-retry", defaultValue = "3")
     int clientHeartBeatWaitRetry;
 
+    /**
+     * 登录保活刷新节流：窗口计算除数，窗口 = clamp(heartBeatTimeout / divisor, minInterval, maxInterval)
+     */
+    @Key(value = "ouyunc.message.client.heart-beat.refresh-throttle-divisor", defaultValue = "3")
+    int clientHeartBeatRefreshThrottleDivisor;
+
+    /**
+     * 登录保活刷新节流：最小时间间隔，单位毫秒
+     */
+    @Key(value = "ouyunc.message.client.heart-beat.refresh-throttle-min-interval", defaultValue = "1000")
+    long clientHeartBeatRefreshThrottleMinInterval;
+
+    /**
+     * 登录保活刷新节流：最大时间间隔，单位毫秒
+     */
+    @Key(value = "ouyunc.message.client.heart-beat.refresh-throttle-max-interval", defaultValue = "10000")
+    long clientHeartBeatRefreshThrottleMaxInterval;
+
 
     /***
      * 服务端是否开启登录认证，默认开启
@@ -808,6 +826,30 @@ public class MessageServerProperties extends MessageProperties {
         this.clientHeartBeatWaitRetry = clientHeartBeatWaitRetry;
     }
 
+    public int getClientHeartBeatRefreshThrottleDivisor() {
+        return clientHeartBeatRefreshThrottleDivisor;
+    }
+
+    public void setClientHeartBeatRefreshThrottleDivisor(int clientHeartBeatRefreshThrottleDivisor) {
+        this.clientHeartBeatRefreshThrottleDivisor = clientHeartBeatRefreshThrottleDivisor;
+    }
+
+    public long getClientHeartBeatRefreshThrottleMinInterval() {
+        return clientHeartBeatRefreshThrottleMinInterval;
+    }
+
+    public void setClientHeartBeatRefreshThrottleMinInterval(long clientHeartBeatRefreshThrottleMinInterval) {
+        this.clientHeartBeatRefreshThrottleMinInterval = clientHeartBeatRefreshThrottleMinInterval;
+    }
+
+    public long getClientHeartBeatRefreshThrottleMaxInterval() {
+        return clientHeartBeatRefreshThrottleMaxInterval;
+    }
+
+    public void setClientHeartBeatRefreshThrottleMaxInterval(long clientHeartBeatRefreshThrottleMaxInterval) {
+        this.clientHeartBeatRefreshThrottleMaxInterval = clientHeartBeatRefreshThrottleMaxInterval;
+    }
+
     public int getClientLoginInfoBatchExpireSize() {
         return clientLoginInfoBatchExpireSize;
     }
@@ -861,6 +903,9 @@ public class MessageServerProperties extends MessageProperties {
                 "\n, clientHeartBeatEnable=" + clientHeartBeatEnable +
                 "\n, clientHeartBeatTimeout=" + clientHeartBeatTimeout +
                 "\n, clientHeartBeatWaitRetry=" + clientHeartBeatWaitRetry +
+                "\n, clientHeartBeatRefreshThrottleDivisor=" + clientHeartBeatRefreshThrottleDivisor +
+                "\n, clientHeartBeatRefreshThrottleMinInterval=" + clientHeartBeatRefreshThrottleMinInterval +
+                "\n, clientHeartBeatRefreshThrottleMaxInterval=" + clientHeartBeatRefreshThrottleMaxInterval +
                 "\n, serverLoginEnable=" + serverLoginEnable +
                 "\n, serverLoginTimeout=" + serverLoginTimeout +
                 "\n, groupMessagePushMode=" + groupMessagePushMode +
