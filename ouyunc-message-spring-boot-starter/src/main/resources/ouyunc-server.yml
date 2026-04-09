@@ -1,5 +1,7 @@
 # 消息服务端配置信息
 ouyunc:
+  profiles:
+    active: dev
   message:
     # 服务端口
     port: 6003
@@ -130,31 +132,8 @@ ouyunc:
           enable: true
           # 检测延迟时间（服务启动后多久后开始检测），默认10分钟，单位分钟
           delay-time: 10
-  # 缓存配置， 注意这里没有使用横划线，如果使用可以做下处理
-  cache:
-    redis:
-      # Redis数据库索引（默认为0）
-      database: 0
-      # 超时时间 30 s
-      timeout: PT30S
-      # 连接超时时间 1分钟
-      connectTimeout: PT1M
-      # Redis服务器地址
-#      host: 192.168.10.102
-      host: 127.0.0.1
-      # Redis服务器连接端　
-      port: 6379
-      # Redis服务器连接密码（默认为空）　
-#      password: 123456
-      # redis lettuce 设置
-      lettuce:
-        # 连接池最大连接数（使用负值表示没有限制）　
-        pool:
-          enabled: true
-          maxActive: 8
-          # 连接池最大阻塞等待时间（使用负值表示没有限制）
-          maxWait: PT-0.001S
-          # 连接池中的最大空闲连接
-          maxIdle: 8
-          # 连接池中的最小空闲连接
-          minIdle: 0
+## 中间件配置已迁移至环境文件：
+## - ouyunc-server-dev.yml
+## - ouyunc-server-test.yml
+## - ouyunc-server-pre.yml
+## - ouyunc-server-prod.yml
