@@ -32,6 +32,9 @@ public enum EventRingEnum {
     /** 高优先级、延迟敏感的事件（登录、支付等核心链路） */
     SEND_FAIL_MESSAGE(1048576, WaitStrategyMode.YIELDING, ProducerType.MULTI),
 
+    /** 客户端登录保活刷新事件专用 RingBuffer（与登录/登出链路隔离） */
+    CLIENT_KEEP_ALIVE_REFRESH(1048576, WaitStrategyMode.YIELDING, ProducerType.SINGLE),
+
     ;
     /**
      * RingBuffer 大小（必须是 2 的幂）

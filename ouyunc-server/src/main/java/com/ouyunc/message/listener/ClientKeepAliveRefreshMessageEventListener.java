@@ -2,6 +2,7 @@ package com.ouyunc.message.listener;
 
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.enums.EventRingEnum;
 import com.ouyunc.base.constant.enums.EventType;
 import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.model.LoginClientInfo;
@@ -20,7 +21,7 @@ import java.time.Duration;
 /**
  * 客户端登录保活刷新监听器（异步事件）。
  */
-@EventListener
+@EventListener(ring = EventRingEnum.CLIENT_KEEP_ALIVE_REFRESH)
 class ClientKeepAliveRefreshMessageEventListener implements MessageEventListener<MessageEvent> {
     private static final Logger log = LoggerFactory.getLogger(ClientKeepAliveRefreshMessageEventListener.class);
     private static final RedisTemplate<String, Object> redisTemplate = CacheFactory.REDIS.instance();
