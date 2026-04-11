@@ -35,6 +35,8 @@ public enum MessageEventTypeEnum implements EventType {
     ON_MESSAGE(14, "客户端收消息事件"),
     /** source: {@code LoginClientInfo} */
     CLIENT_KEEP_ALIVE_REFRESH(15, "客户端登录保活刷新事件"),
+    /** source: {@code LoginClientInfo}，业务空闲（无业务消息超过阈值） */
+    CLIENT_BUSINESS_SESSION_IDLE(16, "客户端业务会话空闲事件"),
     ;
 
     private final int type;

@@ -1,0 +1,18 @@
+ouyunc:
+  message:
+    log:
+      level: WARN
+  cache:
+    redis:
+      database: 0
+      timeout: PT30S
+      connectTimeout: PT1M
+      host: 127.0.0.1
+      port: 6379
+      lettuce:
+        pool:
+          enabled: true
+          maxActive: 8
+          maxWait: PT-0.001S
+          maxIdle: 8
+          minIdle: 0

@@ -280,7 +280,10 @@ public class MessageConstant {
      */
     public static final String CHANNEL_ATTR_KEY_TAG_READ_TIMEOUT_TIMES = "CHANNEL_ATTR_KEY_TAG_CLIENT_READ_TIMEOUT_TIMES";
 
-
+    /**
+     * 读空闲关闭连接前的最大重试次数（与全局 {@code client.heart-beat.wait-retry} 同语义）；登录传入 {@code heartBeatWaitRetry>0} 时写入并覆盖全局，否则由 {@link com.ouyunc.message.handler.HeartBeatHandler} 仅用服务端配置
+     */
+    public static final String CHANNEL_ATTR_KEY_TAG_HEARTBEAT_WAIT_RETRY = "CHANNEL_ATTR_KEY_TAG_HEARTBEAT_WAIT_RETRY";
 
 
     // ==============================================handler tag=====================================
@@ -405,9 +408,14 @@ public class MessageConstant {
     public static final String MQTT_WEBSOCKET_CODEC_HANDLER = "MQTT_WEBSOCKET_CODEC_HANDLER";
 
     /**
-     * 心跳空闲处理器
+     * 心跳读空闲：第一个 {@link io.netty.handler.timeout.IdleStateHandler}（连接/心跳周期）
      */
     public static final String HEART_BEAT_IDLE_HANDLER = "HEART_BEAT_IDLE_HANDLER";
+
+    /**
+     * 业务读空闲：{@code PingAwareBusinessIdleStateHandler}（继承 IdleStateHandler，登录 {@code businessIdleSeconds}），紧接在 {@link #HEART_BEAT_HANDLER} 之后，或紧接 {@link #CONVERT_2_PACKET_HANDLER}（无全局心跳时）
+     */
+    public static final String BUSINESS_READ_IDLE_HANDLER = "BUSINESS_READ_IDLE_HANDLER";
 
     /**
      * 心跳处理器

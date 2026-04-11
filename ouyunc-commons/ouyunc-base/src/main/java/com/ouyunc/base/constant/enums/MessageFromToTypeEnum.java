@@ -23,6 +23,12 @@ public enum MessageFromToTypeEnum implements Type<Integer>{
     /** 6：频道 */
     CHANNEL(6, "channel", "频道"),
 
+    /** 7：客服座席（与 {@link LoginScopeEnum#CS_AGENT} 语义一致，用于 fromType/toType） */
+    CS_AGENT(7, "cs_agent", "客服"),
+
+    /** 8：客户（客服场景下的访客/客户，与 {@link LoginScopeEnum#CS_VISITOR} 语义一致） */
+    CS_VISITOR(8, "cs_visitor", "客户"),
+
     ;
 
     private final int type;

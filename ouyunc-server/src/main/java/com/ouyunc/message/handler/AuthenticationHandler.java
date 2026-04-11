@@ -171,7 +171,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         byte protocolValue = protocol.getProtocol();
         byte protocolVersion = protocol.getProtocolVersion();
         // 绑定信息
-        ClientHelper.bind(ctx, cacheLoginClientInfo = new LoginClientInfo(protocolValue, protocolVersion, MessageContext.messageProperties.getLocalServerAddress(), OnlineEnum.ONLINE, null, ClientHelper.calculateClientLoginExpireTime(loginContent.getHeartBeatExpireTime()), ClientHelper.calculateClientHeartBeatTimeout(loginContent.getHeartBeatExpireTime()), loginTimestamp, loginContent.getAppKey(), loginContent.getIdentity(), deviceType, loginContent.getSupportDeviceTypes(), loginContent.getSn(), loginContent.getSignature(), loginContent.getSignatureAlgorithm(), loginContent.getHeartBeatExpireTime(), loginTimestamp,loginContent.getEnableWill(), loginContent.getWillMessage(), loginContent.getEnableAlive(), loginContent.getAliveMessage()));
+        ClientHelper.bind(ctx, cacheLoginClientInfo = new LoginClientInfo(protocolValue, protocolVersion, MessageContext.messageProperties.getLocalServerAddress(), OnlineEnum.ONLINE, null, ClientHelper.calculateClientLoginExpireTime(loginContent.getHeartBeatExpireTime()), ClientHelper.calculateClientHeartBeatTimeout(loginContent.getHeartBeatExpireTime()), loginTimestamp, loginContent.getAppKey(), loginContent.getIdentity(), deviceType, loginContent.getSupportDeviceTypes(), loginContent.getSn(), loginContent.getSignature(), loginContent.getSignatureAlgorithm(), loginContent.getHeartBeatExpireTime(), loginTimestamp, loginContent.getEnableWill(), loginContent.getWillMessage(), loginContent.getEnableAlive(), loginContent.getAliveMessage(), loginContent.getScope(), loginContent.getBusinessIdleSeconds(), loginContent.getHeartBeatWaitRetry()));
         // 添加channel 关闭后释放资源的钩子, 该逻辑在DefaultSocketChannelInitializer 中进行调用
         Consumer<Channel> channelCloseHook = channel -> {
             //1,从channel中的attrMap取出相关属性
@@ -227,19 +227,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         };
         // 设置channel 关闭后的回调
         ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_CHANNEL_CLOSE_HOOK, channelCloseHook);
-
-        // 判断是否加入读写空闲,只要服务端开启支持心跳，才会可能加入心跳处理，这里可以根据自己的协议或业务逻辑进行调整，为什么要放到登录处理器后面呢？因为有些业务可能不需要心跳，比如信令服务等
-        Integer heartbeatExpireTime = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_HEARTBEAT_TIMEOUT);
-        if (MessageServerContext.serverProperties().isClientHeartBeatEnable() && heartbeatExpireTime != null) {
-            // 判断是否开启客户端心跳
-            ctx.pipeline()
-                    // 客户端登录保活处理器
-                    .addAfter(MessageConstant.CONVERT_2_PACKET_HANDLER, MessageConstant.CLIENT_LOGIN_KEEP_ALIVE_HANDLER, new LoginKeepAliveHandler())
-                    // 添加读写空闲处理器， 添加后，下条消息就可以接收心跳消息了
-                    .addAfter(MessageConstant.CLIENT_LOGIN_KEEP_ALIVE_HANDLER, MessageConstant.HEART_BEAT_IDLE_HANDLER, new IdleStateHandler(heartbeatExpireTime, NumberConstant.NUMBER_0, NumberConstant.NUMBER_0))
-                    // 处理心跳的以及相关逻辑都放在这里处理
-                    .addAfter(MessageConstant.HEART_BEAT_IDLE_HANDLER, MessageConstant.HEART_BEAT_HANDLER, new HeartBeatHandler());
-        }
+        installLoginIdlePipeline(ctx, loginContent);
         // 接收端回应登录设备登录成功信息
         // 同步发送登录成功消息给客户端
         message.setContentType(MessageContentTypeEnum.LOGIN_RESPONSE_SUCCESS_CONTENT.getType());
@@ -256,12 +244,36 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         ctx.pipeline().remove(this);
     }
 
+    /**
+     * 登录成功后安装管道：心跳读空闲（第一个 {@link IdleStateHandler} + {@link HeartBeatHandler}，可选）；
+     * 业务读空闲为 {@link PingAwareBusinessIdleStateHandler}（继承 {@link IdleStateHandler}，合并 PING 与读空闲事件处理，少一层 handler）。
+     */
+    private void installLoginIdlePipeline(ChannelHandlerContext ctx, LoginContent loginContent) {
+        String pipelineAnchor = MessageConstant.CONVERT_2_PACKET_HANDLER;
+        Integer heartbeatExpireTime = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_HEARTBEAT_TIMEOUT);
+        boolean heartbeatInstalled = MessageServerContext.serverProperties().isClientHeartBeatEnable() && heartbeatExpireTime != null;
+        if (heartbeatInstalled) {
+            if (loginContent.getHeartBeatWaitRetry() > 0) {
+                ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_HEARTBEAT_WAIT_RETRY, loginContent.getHeartBeatWaitRetry());
+            }
+            ctx.pipeline()
+                    .addAfter(pipelineAnchor, MessageConstant.CLIENT_LOGIN_KEEP_ALIVE_HANDLER, new LoginKeepAliveHandler())
+                    .addAfter(MessageConstant.CLIENT_LOGIN_KEEP_ALIVE_HANDLER, MessageConstant.HEART_BEAT_IDLE_HANDLER, new IdleStateHandler(heartbeatExpireTime, NumberConstant.NUMBER_0, NumberConstant.NUMBER_0, TimeUnit.SECONDS))
+                    .addAfter(MessageConstant.HEART_BEAT_IDLE_HANDLER, MessageConstant.HEART_BEAT_HANDLER, new HeartBeatHandler());
+            pipelineAnchor = MessageConstant.HEART_BEAT_HANDLER;
+        }
+        if (!LoginScopeEnum.isCustomerService(loginContent.getScope()) || loginContent.getBusinessIdleSeconds() <= 0) {
+            return;
+        }
+        int bizSec = loginContent.getBusinessIdleSeconds();
+        ctx.pipeline().addAfter(pipelineAnchor, MessageConstant.BUSINESS_READ_IDLE_HANDLER, new PingAwareBusinessIdleStateHandler(bizSec));
+    }
+
     /***
      * @author fzx
-     * @description 校验登录信息
+     * @description 校验登录信息；{@code scope} 必须为 {@link LoginScopeEnum} 已定义取值，否则拒绝登录
      */
     public boolean validate(LoginContent loginContent) {
-
-        return true;
+        return LoginScopeEnum.isDefinedType(loginContent.getScope());
     }
 }

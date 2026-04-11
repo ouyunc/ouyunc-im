@@ -6,6 +6,7 @@ import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.DeviceTypeEnum;
 import com.ouyunc.base.constant.enums.MessageContentType;
 import com.ouyunc.base.constant.enums.MqttMessageContentTypeEnum;
+import com.ouyunc.base.constant.enums.LoginScopeEnum;
 import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.constant.enums.OnlineEnum;
 import com.ouyunc.base.encrypt.Encrypt;
@@ -273,9 +274,9 @@ public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<In
 
     /***
      * @author fzx
-     * @description 校验登录信息
+     * @description 校验登录信息；{@code scope} 必须为 {@link LoginScopeEnum} 已定义取值
      */
     public boolean validate(LoginContent loginContent) {
-        return true;
+        return LoginScopeEnum.isDefinedType(loginContent.getScope());
     }
 }

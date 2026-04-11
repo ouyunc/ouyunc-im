@@ -61,6 +61,21 @@ public class LoginContent extends ClientInfo {
 
     private long  createTime;
 
+    /**
+     * 登录场景：0 普通；1 客服座席；2 客服访客。见 {@link com.ouyunc.base.constant.enums.LoginScopeEnum}
+     */
+    private int scope;
+
+    /**
+     * 业务空闲：无业务消息（非 PING）持续秒数；仅当 {@link #scope} 为客服且 {@code >0} 时安装业务空闲处理器。0 表示不启用。
+     */
+    private int businessIdleSeconds;
+
+    /**
+     * 读空闲侧关闭连接前的重试次数（与全局 heart-beat.wait-retry 同语义）；0 表示使用服务端全局 {@code ouyunc.message.client.heart-beat.wait-retry}
+     */
+    private int heartBeatWaitRetry;
+
 
     public String getSignature() {
         return signature;
@@ -135,11 +150,35 @@ public class LoginContent extends ClientInfo {
         this.heartBeatExpireTime = heartBeatExpireTime;
     }
 
+    public int getScope() {
+        return scope;
+    }
+
+    public void setScope(int scope) {
+        this.scope = scope;
+    }
+
+    public int getBusinessIdleSeconds() {
+        return businessIdleSeconds;
+    }
+
+    public void setBusinessIdleSeconds(int businessIdleSeconds) {
+        this.businessIdleSeconds = businessIdleSeconds;
+    }
+
+    public int getHeartBeatWaitRetry() {
+        return heartBeatWaitRetry;
+    }
+
+    public void setHeartBeatWaitRetry(int heartBeatWaitRetry) {
+        this.heartBeatWaitRetry = heartBeatWaitRetry;
+    }
+
 
     public LoginContent() {
     }
 
-    public LoginContent(String appKey, String identity, Collection<Byte> supportDeviceTypes  , String sn, String signature, byte signatureAlgorithm, int heartBeatExpireTime, long createTime, int enableWill, String willMessage, int enableAlive, String aliveMessage) {
+    public LoginContent(String appKey, String identity, Collection<Byte> supportDeviceTypes, String sn, String signature, byte signatureAlgorithm, int heartBeatExpireTime, long createTime, int enableWill, String willMessage, int enableAlive, String aliveMessage, int scope, int businessIdleSeconds, int heartBeatWaitRetry) {
         super(appKey, identity, supportDeviceTypes);
         this.sn = sn;
         this.signature = signature;
@@ -150,6 +189,9 @@ public class LoginContent extends ClientInfo {
         this.willMessage = willMessage;
         this.enableAlive = enableAlive;
         this.aliveMessage = aliveMessage;
+        this.scope = scope;
+        this.businessIdleSeconds = businessIdleSeconds;
+        this.heartBeatWaitRetry = heartBeatWaitRetry;
     }
 
     @Override
@@ -167,6 +209,9 @@ public class LoginContent extends ClientInfo {
                 ", willMessage='" + willMessage + '\'' +
                 ", enableAlive='" + enableAlive + '\'' +
                 ", aliveMessage='" + aliveMessage + '\'' +
+                ", scope=" + scope +
+                ", businessIdleSeconds=" + businessIdleSeconds +
+                ", heartBeatWaitRetry=" + heartBeatWaitRetry +
                 '}';
     }
 }

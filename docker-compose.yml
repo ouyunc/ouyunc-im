@@ -1,0 +1,109 @@
+# 消息服务 + 可选依赖（按 profile 启用中间件）
+# 用法：
+#   默认只起消息服务：docker compose up -d
+#   带 Redis：docker compose --profile with-redis up -d
+#   中间件全开（开发联调）：docker compose --profile full up -d
+#
+# 注意：ouyunc-server.yml 在 jar 内 classpath；与 compose 联用时需把
+#   redis/mysql/mongo/kafka 的 host 改成服务名（redis、mysql、mongo、kafka）并重建镜像，
+#   或另做配置注入方案。
+
+services:
+  ouyunc-message:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ouyunc-im:latest
+    container_name: ouyunc-message
+    ports:
+      - "6003:6003"
+    environment:
+      TZ: Asia/Shanghai
+      # 固定堆 10G（宿主机约 16G、单服务场景）；改内存时请同步调整 -Xms/-Xmx
+      JAVA_OPTS: >-
+        -XX:+UseContainerSupport
+        -Xms10g
+        -Xmx10g
+        -XX:+UseG1GC
+        -XX:MaxGCPauseMillis=200
+        -Djava.net.preferIPv4Stack=true
+        -Dfile.encoding=UTF-8
+        -Dstdout.encoding=UTF-8
+        -Dstderr.encoding=UTF-8
+    # 高并发时可提高文件描述符
+    ulimits:
+      nofile:
+        soft: 1048576
+        hard: 1048576
+    restart: unless-stopped
+    networks:
+      - ouyunc-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: ouyunc-redis
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    restart: unless-stopped
+    networks:
+      - ouyunc-net
+    profiles:
+      - with-redis
+      - full
+
+  mysql:
+    image: mysql:8.4
+    container_name: ouyunc-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: ouyunc_message
+    ports:
+      - "3306:3306"
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    restart: unless-stopped
+    networks:
+      - ouyunc-net
+    profiles:
+      - with-mysql
+      - full
+
+  mongo:
+    image: mongo:7
+    container_name: ouyunc-mongo
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin
+    restart: unless-stopped
+    networks:
+      - ouyunc-net
+    profiles:
+      - with-mongo
+      - full
+
+  kafka:
+    image: bitnami/kafka:3.7
+    container_name: ouyunc-kafka
+    ports:
+      - "9092:9092"
+    environment:
+      # KRaft 单节点（开发用）；生产请使用正式集群配置
+      KAFKA_CFG_NODE_ID: "0"
+      KAFKA_CFG_PROCESS_ROLES: controller,broker
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 0@kafka:9093
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+    restart: unless-stopped
+    networks:
+      - ouyunc-net
+    profiles:
+      - with-kafka
+      - full
+
+networks:
+  ouyunc-net:
+    driver: bridge
