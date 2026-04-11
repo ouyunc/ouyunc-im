@@ -76,6 +76,11 @@ public class LoginContent extends ClientInfo {
      */
     private int heartBeatWaitRetry;
 
+    /**
+     * 连续业务空闲达到第几次时在管道内关闭连接：{@code <=0}（含未传的默认 0）表示不因次数关连；{@code >=1} 表示第 N 次关连。
+     */
+    private int businessIdleCloseStrike;
+
 
     public String getSignature() {
         return signature;
@@ -174,11 +179,19 @@ public class LoginContent extends ClientInfo {
         this.heartBeatWaitRetry = heartBeatWaitRetry;
     }
 
+    public int getBusinessIdleCloseStrike() {
+        return businessIdleCloseStrike;
+    }
+
+    public void setBusinessIdleCloseStrike(int businessIdleCloseStrike) {
+        this.businessIdleCloseStrike = businessIdleCloseStrike;
+    }
+
 
     public LoginContent() {
     }
 
-    public LoginContent(String appKey, String identity, Collection<Byte> supportDeviceTypes, String sn, String signature, byte signatureAlgorithm, int heartBeatExpireTime, long createTime, int enableWill, String willMessage, int enableAlive, String aliveMessage, int scope, int businessIdleSeconds, int heartBeatWaitRetry) {
+    public LoginContent(String appKey, String identity, Collection<Byte> supportDeviceTypes, String sn, String signature, byte signatureAlgorithm, int heartBeatExpireTime, long createTime, int enableWill, String willMessage, int enableAlive, String aliveMessage, int scope, int businessIdleSeconds, int heartBeatWaitRetry, int businessIdleCloseStrike) {
         super(appKey, identity, supportDeviceTypes);
         this.sn = sn;
         this.signature = signature;
@@ -192,6 +205,7 @@ public class LoginContent extends ClientInfo {
         this.scope = scope;
         this.businessIdleSeconds = businessIdleSeconds;
         this.heartBeatWaitRetry = heartBeatWaitRetry;
+        this.businessIdleCloseStrike = businessIdleCloseStrike;
     }
 
     @Override
@@ -212,6 +226,7 @@ public class LoginContent extends ClientInfo {
                 ", scope=" + scope +
                 ", businessIdleSeconds=" + businessIdleSeconds +
                 ", heartBeatWaitRetry=" + heartBeatWaitRetry +
+                ", businessIdleCloseStrike=" + businessIdleCloseStrike +
                 '}';
     }
 }

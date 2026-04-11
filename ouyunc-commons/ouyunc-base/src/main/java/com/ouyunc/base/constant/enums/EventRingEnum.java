@@ -35,6 +35,9 @@ public enum EventRingEnum {
     /** 客户端登录保活刷新事件专用 RingBuffer（与登录/登出链路隔离） */
     CLIENT_KEEP_ALIVE_REFRESH(1048576, WaitStrategyMode.YIELDING, ProducerType.MULTI),
 
+    /** 客户端业务会话空闲（CLIENT_BUSINESS_SESSION_IDLE）专用 RingBuffer，与其它事件隔离 */
+    CLIENT_BUSINESS_SESSION_IDLE(1048576, WaitStrategyMode.YIELDING, ProducerType.MULTI),
+
     ;
     /**
      * RingBuffer 大小（必须是 2 的幂）

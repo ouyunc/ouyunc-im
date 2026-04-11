@@ -149,8 +149,8 @@ public class LoginClientInfo extends LoginContent implements Protocol{
     public LoginClientInfo() {
     }
 
-    public LoginClientInfo(byte protocol, byte protocolVersion, String loginServerAddress, OnlineEnum onlineStatus, String authorizationScope, long loginExpireTime, int heartBeatTimeout, long lastLoginTime, String appKey, String identity, DeviceType deviceType, Collection<Byte> supportDeviceTypes, String sn, String signature, byte signatureAlgorithm, int heartBeatExpireTime, long createTime, int enableWill, String willMessage, int enableAlive, String aliveMessage, int scope, int businessIdleSeconds, int heartBeatWaitRetry) {
-        super(appKey, identity, supportDeviceTypes, sn, signature, signatureAlgorithm, heartBeatExpireTime, createTime, enableWill, willMessage, enableAlive, aliveMessage, scope, businessIdleSeconds, heartBeatWaitRetry);
+    public LoginClientInfo(byte protocol, byte protocolVersion, String loginServerAddress, OnlineEnum onlineStatus, String authorizationScope, long loginExpireTime, int heartBeatTimeout, long lastLoginTime, String appKey, String identity, DeviceType deviceType, Collection<Byte> supportDeviceTypes, String sn, String signature, byte signatureAlgorithm, int heartBeatExpireTime, long createTime, int enableWill, String willMessage, int enableAlive, String aliveMessage, int scope, int businessIdleSeconds, int heartBeatWaitRetry, int businessIdleCloseStrike) {
+        super(appKey, identity, supportDeviceTypes, sn, signature, signatureAlgorithm, heartBeatExpireTime, createTime, enableWill, willMessage, enableAlive, aliveMessage, scope, businessIdleSeconds, heartBeatWaitRetry, businessIdleCloseStrike);
         this.protocol = protocol;
         this.protocolVersion = protocolVersion;
         this.deviceType = deviceType;

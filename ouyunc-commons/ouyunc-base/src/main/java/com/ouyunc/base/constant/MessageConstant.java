@@ -285,6 +285,11 @@ public class MessageConstant {
      */
     public static final String CHANNEL_ATTR_KEY_TAG_HEARTBEAT_WAIT_RETRY = "CHANNEL_ATTR_KEY_TAG_HEARTBEAT_WAIT_RETRY";
 
+    /**
+     * 连续业务读空闲档次数（非 PING 业务上行时清零）；用于提示 / 托管 / 关连三档
+     */
+    public static final String CHANNEL_ATTR_KEY_TAG_BUSINESS_IDLE_STRIKE = "CHANNEL_ATTR_KEY_TAG_BUSINESS_IDLE_STRIKE";
+
 
     // ==============================================handler tag=====================================
 
