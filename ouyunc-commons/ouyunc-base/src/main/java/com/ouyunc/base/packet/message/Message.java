@@ -341,6 +341,14 @@ public class Message implements Serializable, Cloneable {
         this.toType = toType;
     }
 
+    public String getCorrelationId() {
+        return correlationId;
+    }
+
+    public void setCorrelationId(String correlationId) {
+        this.correlationId = correlationId;
+    }
+
     @Override
     public Message clone() {
         try {
@@ -369,6 +377,7 @@ public class Message implements Serializable, Cloneable {
                 ", extra='" + extra + '\'' +
                 ", qos=" + qos +
                 ", createTime=" + createTime +
+                ", correlationId=" + correlationId +
                 ", metadata=" + metadata +
                 '}';
     }
