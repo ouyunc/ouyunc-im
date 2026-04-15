@@ -28,7 +28,6 @@ public class LoginKeepAliveHandler extends SimpleChannelInboundHandler<Packet> {
      */
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Packet packet) throws Exception {
-        log.debug("客户端登录保活...");
         // 每次有消息数据进来, 从ctx上次心跳时间，从登录信息中解析心跳间隔时间
         // 获取该channel 上次的心跳时间戳
         if (!MessageServerContext.serverProperties().isClientHeartBeatEnable() || !SaveModeEnum.FINITE.equals(MessageServerContext.serverProperties().getClientLoginInfoSaveMode())) {

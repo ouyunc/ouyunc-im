@@ -39,9 +39,6 @@ public class HeartBeatHandler extends SimpleChannelInboundHandler<Packet> {
             ctx.fireChannelRead(packet);
             return;
         }
-        if (log.isDebugEnabled()) {
-            log.debug("HeartBeatHandler 正在处理客户端心跳...");
-        }
         // 如果是外部客户端的心跳消息则直接掉用心跳消息处理器来进行处理,然后就结束了，不会往下面透传消息
         MessageServerContext.messageProcessorCache.get(MessageTypeEnum.PING_PONG.getType()).process(ctx, packet);
     }

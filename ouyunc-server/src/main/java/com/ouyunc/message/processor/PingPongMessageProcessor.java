@@ -39,9 +39,6 @@ public final class PingPongMessageProcessor extends AbstractMessageProcessor<Byt
      */
     @Override
     public void process(ChannelHandlerContext ctx, Packet packet) {
-        if (log.isDebugEnabled()) {
-            log.debug("PingPongMessageProcessor 正在处理外部客户端心跳 {} ...", packet);
-        }
         // 可能在三次之内再次发起心跳，此时需要清除 之前心跳超时次数的历史记录
         ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_READ_TIMEOUT_TIMES, null);
         // 发送pong
