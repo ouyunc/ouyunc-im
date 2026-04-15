@@ -155,7 +155,7 @@ CREATE TABLE `ouyunc_im_message` (
                                      `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '默认删除，1-已删除，0-未删除',
                                      PRIMARY KEY (`id`) USING BTREE,
                                      KEY `idx_message_type` (`message_type`) USING BTREE COMMENT '消息类型索引',
-                                     KEY `idx_correlation_id` (`correlation_id`) USING BTREE COMMENT '业务id索引',
+                                     KEY `idx_app_key_correlation_id` (`app_key`,`correlation_id`) USING BTREE COMMENT '业务id索引',
                                      KEY `idx_client_send_time` (`client_send_time`) USING BTREE COMMENT '客户端发送时间索引',
                                      KEY `idx_server_arrival_time` (`server_arrival_time`) USING BTREE COMMENT '服务端到达时间索引',
                                      KEY `idx_message_content_type` (`content_type`) USING BTREE COMMENT '消息内容类型索引',

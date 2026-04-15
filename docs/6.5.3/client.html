@@ -33,7 +33,7 @@ let defaultConfig = {
         }
     };
 var url = 'ws://172.18.62.195:6003/ws'
-var local = 'ws://192.168.1.6:6003/ws'
+var local = 'ws://192.168.1.4:6003/ws'
 const socket = new Socket(local, {
     clientType: 1,
     // 2-json序列化，6-protocolbuf 序列化，需要引入两个protobuf文件，且 属性 Message: proto.com.ouyunc.base.packet.message.Message,需要配置
@@ -57,6 +57,7 @@ socket.onopen = (e) => {
                 // 消息接收方唯一标识，这里是登录，接受者是服务器，值可以为空串
                 to: '',
                 toType: 1,
+                correlationId: '12222222',
                 // 消息内容类型
                 contentType: -2,
                 // 消息内容content 是string 类型

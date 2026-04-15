@@ -160,7 +160,11 @@ public class MessageEntity implements Serializable {
      */
     @Field("extra")
     private String extra;
-
+    /**
+     * 额外信息
+     */
+    @Field("correlation_id")
+    private String correlationId;
     /**
      * 客户端发送时间
      */
@@ -192,6 +196,7 @@ public class MessageEntity implements Serializable {
         public static final String messageId = "message_id";
         public static final String messageType = "message_type";
         public static final String contentType = "content_type";
+        public static final String correlationId = "correlation_id";
         public static final String appKey = "appKey";
     }
 
@@ -202,7 +207,7 @@ public class MessageEntity implements Serializable {
 
 
 
-    public MessageEntity(long id, byte protocol, byte protocolVersion, byte deviceType, byte networkType, byte encryptType, byte serializeAlgorithm, byte messageType, byte retain, String clientIp, String messageId, String from, int fromType, String to, int toType, int contentType, String content, int qos, String at, String ref, String extra, long clientSendTime, long serverArrivalTime, String appKey) {
+    public MessageEntity(long id, byte protocol, byte protocolVersion, byte deviceType, byte networkType, byte encryptType, byte serializeAlgorithm, byte messageType, byte retain, String clientIp, String messageId, String from, int fromType, String to, int toType, int contentType, String content, int qos, String at, String ref, String extra, String correlationId, long clientSendTime, long serverArrivalTime, String appKey) {
         this.id = id;
         this.protocol = protocol;
         this.protocolVersion = protocolVersion;
@@ -224,6 +229,7 @@ public class MessageEntity implements Serializable {
         this.at = at;
         this.ref = ref;
         this.extra = extra;
+        this.correlationId = correlationId;
         this.clientSendTime = clientSendTime;
         this.serverArrivalTime = serverArrivalTime;
         this.appKey = appKey;
@@ -419,5 +425,13 @@ public class MessageEntity implements Serializable {
 
     public void setToType(int toType) {
         this.toType = toType;
+    }
+
+    public String getCorrelationId() {
+        return correlationId;
+    }
+
+    public void setCorrelationId(String correlationId) {
+        this.correlationId = correlationId;
     }
 }

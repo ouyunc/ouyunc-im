@@ -23,8 +23,8 @@ public class MongoMessageEntity extends MessageEntity {
     }
 
 
-    public MongoMessageEntity(long id, byte protocol, byte protocolVersion, byte deviceType, byte networkType, byte encryptType, byte serializeAlgorithm, byte messageType, byte retain, String clientIp, String messageId, String from, int fromType, String to, int toType, int contentType, String content, int qos, String at, String ref, String extra, long clientSendTime, long serverArrivalTime, String appKey, LocalDateTime expireAt) {
-        super(id, protocol, protocolVersion, deviceType, networkType, encryptType, serializeAlgorithm, messageType, retain, clientIp, messageId, from, fromType, to, toType, contentType, content, qos, at, ref, extra, clientSendTime, serverArrivalTime, appKey);
+    public MongoMessageEntity(long id, byte protocol, byte protocolVersion, byte deviceType, byte networkType, byte encryptType, byte serializeAlgorithm, byte messageType, byte retain, String clientIp, String messageId, String from, int fromType, String to, int toType, int contentType, String content, int qos, String at, String ref, String extra, String correlationId, long clientSendTime, long serverArrivalTime, String appKey, LocalDateTime expireAt) {
+        super(id, protocol, protocolVersion, deviceType, networkType, encryptType, serializeAlgorithm, messageType, retain, clientIp, messageId, from, fromType, to, toType, contentType, content, qos, at, ref, extra, correlationId, clientSendTime, serverArrivalTime, appKey);
         this.expireAt = expireAt;
     }
 
