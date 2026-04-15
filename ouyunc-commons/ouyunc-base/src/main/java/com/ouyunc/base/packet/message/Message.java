@@ -99,9 +99,16 @@ public class Message implements Serializable, Cloneable {
 
 
     /**
-     * 元数据，对内访问
+     * 业务关联id,非必填
      */
     @Tag(13)
+    private String correlationId;
+
+
+    /**
+     * 元数据，对内访问
+     */
+    @Tag(14)
     private Metadata metadata;
 
 
@@ -210,6 +217,23 @@ public class Message implements Serializable, Cloneable {
         this.extra = extra;
         this.qos = qos;
         this.createTime = createTime;
+        this.metadata = metadata;
+    }
+
+    public Message(String id, String from, int fromType, String to, int toType, int contentType, String content, List<String> at, List<String> ref, String extra, int qos, long createTime, String correlationId, Metadata metadata) {
+        this.id = id;
+        this.from = from;
+        this.fromType = fromType;
+        this.to = to;
+        this.toType = toType;
+        this.contentType = contentType;
+        this.content = content;
+        this.at = at;
+        this.ref = ref;
+        this.extra = extra;
+        this.qos = qos;
+        this.createTime = createTime;
+        this.correlationId = correlationId;
         this.metadata = metadata;
     }
 
