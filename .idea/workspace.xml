@@ -6,8 +6,10 @@
   <component name="ChangeListManager">
     <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="类型">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/6.5.3/sql/ouyunc_message.sql" beforeDir="false" afterPath="$PROJECT_DIR$/docs/6.5.3/sql/ouyunc_message.sql" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/packet/message/Message.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/packet/message/Message.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/6.5.3/Message_pb.js" beforeDir="false" afterPath="$PROJECT_DIR$/docs/6.5.3/Message_pb.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/6.5.3/export.js" beforeDir="false" afterPath="$PROJECT_DIR$/docs/6.5.3/exports.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/6.5.3/ouyunc-protobuf-message.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/6.5.3/proto-command.txt" beforeDir="false" afterPath="$PROJECT_DIR$/docs/6.5.3/proto-command.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -61,7 +63,7 @@
   &quot;associatedIndex&quot;: 0
 }</component>
   <component name="ProjectId" id="2ufM82eHzwWazomtA8rAeEDAhv6" />
-  <component name="ProjectLevelVcsManager" settingsEditedManually="true">
+  <component name="ProjectLevelVcsManager">
     <ConfirmationsSetting value="2" id="Add" />
   </component>
   <component name="ProjectViewState">

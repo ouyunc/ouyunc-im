@@ -93,7 +93,8 @@ atList: (f = jspb.Message.getRepeatedField(msg, 8)) == null ? undefined : f,
 refList: (f = jspb.Message.getRepeatedField(msg, 9)) == null ? undefined : f,
 extra: jspb.Message.getFieldWithDefault(msg, 10, ""),
 qos: jspb.Message.getFieldWithDefault(msg, 11, 0),
-createTime: jspb.Message.getFieldWithDefault(msg, 12, 0)
+createTime: jspb.Message.getFieldWithDefault(msg, 12, 0),
+correlationId: jspb.Message.getFieldWithDefault(msg, 13, "")
   };
 
   if (includeInstance) {
@@ -177,6 +178,10 @@ proto.com.ouyunc.base.packet.message.Message.deserializeBinaryFromReader = funct
     case 12:
       var value = /** @type {number} */ (reader.readUint64());
       msg.setCreateTime(value);
+      break;
+    case 13:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setCorrelationId(value);
       break;
     default:
       reader.skipField();
@@ -288,6 +293,13 @@ proto.com.ouyunc.base.packet.message.Message.serializeBinaryToWriter = function(
   if (f !== 0) {
     writer.writeUint64(
       12,
+      f
+    );
+  }
+  f = message.getCorrelationId();
+  if (f.length > 0) {
+    writer.writeString(
+      13,
       f
     );
   }
@@ -545,6 +557,24 @@ proto.com.ouyunc.base.packet.message.Message.prototype.getCreateTime = function(
  */
 proto.com.ouyunc.base.packet.message.Message.prototype.setCreateTime = function(value) {
   return jspb.Message.setProto3IntField(this, 12, value);
+};
+
+
+/**
+ * optional string correlation_id = 13;
+ * @return {string}
+ */
+proto.com.ouyunc.base.packet.message.Message.prototype.getCorrelationId = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 13, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.com.ouyunc.base.packet.message.Message} returns this
+ */
+proto.com.ouyunc.base.packet.message.Message.prototype.setCorrelationId = function(value) {
+  return jspb.Message.setProto3StringField(this, 13, value);
 };
 
 
