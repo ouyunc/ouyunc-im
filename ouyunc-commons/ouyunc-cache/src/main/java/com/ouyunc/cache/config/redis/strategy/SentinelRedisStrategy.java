@@ -5,7 +5,6 @@ import com.ouyunc.cache.config.constant.ModeEnum;
 import com.ouyunc.cache.config.redis.properties.RedisProperties;
 import org.redisson.config.Config;
 import org.redisson.config.ReadMode;
-import org.redisson.config.SentinelServersConfig;
 import org.springframework.data.redis.connection.RedisConfiguration;
 import org.springframework.data.redis.connection.RedisPassword;
 import org.springframework.data.redis.connection.RedisSentinelConfiguration;
@@ -37,7 +36,6 @@ public class SentinelRedisStrategy extends AbstractRedisStrategy {
     @Override
     public RedisConfiguration redisConfiguration(int database) {
         RedisSentinelConfiguration redisSentinelConfiguration = new RedisSentinelConfiguration(redisProperties.getSentinel().getMaster(), new HashSet<>(redisProperties.getSentinel().getNodes()));
-        redisSentinelConfiguration.setDatabase(redisProperties.getDatabase());
         //如果密码不为空则设置密码
         if (StringUtils.hasLength(redisProperties.getPassword())) {
             redisSentinelConfiguration.setPassword(RedisPassword.of(redisProperties.getPassword()));
@@ -45,9 +43,7 @@ public class SentinelRedisStrategy extends AbstractRedisStrategy {
         if (StringUtils.hasLength(redisProperties.getUsername())) {
             redisSentinelConfiguration.setUsername(redisProperties.getUsername());
         }
-        if (0 <= database && database <= 16) {
-            redisSentinelConfiguration.setDatabase(database);
-        }
+        redisSentinelConfiguration.setDatabase(database);
         return redisSentinelConfiguration;
     }
 
@@ -55,26 +51,24 @@ public class SentinelRedisStrategy extends AbstractRedisStrategy {
     public Config redissonConfiguration(int database) {
         Config config = new Config();
         RedisProperties.Pool pool = redisProperties.getLettuce().getPool();
-        SentinelServersConfig sentinelServersConfig = config.useSentinelServers()
-                .setDatabase(redisProperties.getDatabase())
+        config.useSentinelServers()
+                .setDatabase(database)
                 .setMasterName(redisProperties.getSentinel().getMaster())
                 .addSentinelAddress(getFormattedNodes(redisProperties.getSentinel().getNodes()).toArray(new String[0]))
                 //设置只读节点
                 .setReadMode(ReadMode.SLAVE)
-                .setConnectTimeout((int)redisProperties.getConnectTimeout().toMillis())
-                .setTimeout((int)redisProperties.getTimeout().toMillis())
+                // 使用抽象类超时兜底，避免 NPE
+                .setConnectTimeout((int) getConnectTimeout().toMillis())
+                .setTimeout((int) getTimeout().toMillis())
                 .setMasterConnectionMinimumIdleSize(pool.getMinIdle())
                 .setMasterConnectionPoolSize(pool.getMaxIdle())
                 .setSlaveConnectionPoolSize(pool.getMaxIdle());
         //如果密码不为空则设置密码
         if (StringUtils.hasLength(redisProperties.getPassword())) {
-            sentinelServersConfig.setPassword(redisProperties.getPassword());
+            config.setPassword(redisProperties.getPassword());
         }
         if (StringUtils.hasLength(redisProperties.getUsername())) {
-            sentinelServersConfig.setUsername(redisProperties.getUsername());
-        }
-        if (0 <= database && database <= 16) {
-            sentinelServersConfig.setDatabase(database);
+            config.setUsername(redisProperties.getUsername());
         }
         return config;
     }

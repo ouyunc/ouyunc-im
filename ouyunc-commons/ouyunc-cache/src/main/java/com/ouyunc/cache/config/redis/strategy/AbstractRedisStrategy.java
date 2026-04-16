@@ -11,6 +11,8 @@ import org.springframework.data.redis.connection.lettuce.LettuceClientConfigurat
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.connection.lettuce.LettucePoolingClientConfiguration;
 
+import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -84,7 +86,8 @@ public abstract class AbstractRedisStrategy implements RedisStrategy {
         return LettucePoolingClientConfiguration
                 .builder()
                 .poolConfig(genericObjectPoolConfig())
-                .commandTimeout(redisProperties.getTimeout())
+                // 对于未配置超时的情况，给出一个合理默认值，避免 NPE
+                .commandTimeout(getTimeout())
                 .build();
     }
 
@@ -95,7 +98,7 @@ public abstract class AbstractRedisStrategy implements RedisStrategy {
      */
     protected List<String> getFormattedNodes(List<String> rawNodes) {
         if (rawNodes == null || rawNodes.isEmpty()) {
-            return null;
+            return Collections.emptyList();
         }
         List<String> nodes = Lists.newArrayList();
         // 使用ssl
@@ -110,6 +113,22 @@ public abstract class AbstractRedisStrategy implements RedisStrategy {
             }
         }
         return nodes;
+    }
+
+    /**
+     * 超时兜底，避免 redisson/lettuce 配置时出现 NPE。
+     */
+    protected Duration getTimeout() {
+        Duration timeout = redisProperties.getTimeout();
+        return timeout != null ? timeout : Duration.ofSeconds(60);
+    }
+
+    /**
+     * 连接超时兜底，避免 redisson/lettuce 配置时出现 NPE。
+     */
+    protected Duration getConnectTimeout() {
+        Duration connectTimeout = redisProperties.getConnectTimeout();
+        return connectTimeout != null ? connectTimeout : Duration.ofSeconds(10);
     }
 
     /***

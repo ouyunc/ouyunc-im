@@ -47,17 +47,19 @@ public class ClusterRedisStrategy extends AbstractRedisStrategy {
         RedisProperties.Pool pool = redisProperties.getLettuce().getPool();
         ClusterServersConfig clusterServersConfig = config.useClusterServers()
                 .addNodeAddress(nodes.toArray(new String[0]))
-                .setConnectTimeout((int)redisProperties.getConnectTimeout().toMillis())
-                .setTimeout((int)redisProperties.getTimeout().toMillis())
+                // 使用抽象类超时兜底，避免 NPE
+                .setConnectTimeout((int) getConnectTimeout().toMillis())
+                .setTimeout((int) getTimeout().toMillis())
                 .setMasterConnectionPoolSize(pool.getMaxIdle())
-                .setSlaveConnectionPoolSize(pool.getMaxIdle())
-                .setKeepAlive(true);
+                .setSlaveConnectionPoolSize(pool.getMaxIdle());
+
+        config.setTcpKeepAlive(true);
         //如果密码不为空则设置密码
         if (StringUtils.hasLength(redisProperties.getPassword())) {
-            clusterServersConfig.setPassword(redisProperties.getPassword());
+            config.setPassword(redisProperties.getPassword());
         }
         if (StringUtils.hasLength(redisProperties.getUsername())) {
-            clusterServersConfig.setUsername(redisProperties.getUsername());
+            config.setUsername(redisProperties.getUsername());
         }
         return config;
     }

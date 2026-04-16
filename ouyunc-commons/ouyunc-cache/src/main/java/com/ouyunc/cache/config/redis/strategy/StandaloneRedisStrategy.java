@@ -3,7 +3,6 @@ package com.ouyunc.cache.config.redis.strategy;
 import com.ouyunc.cache.config.constant.ModeEnum;
 import com.ouyunc.cache.config.redis.properties.RedisProperties;
 import org.redisson.config.Config;
-import org.redisson.config.SingleServerConfig;
 import org.springframework.data.redis.connection.RedisConfiguration;
 import org.springframework.data.redis.connection.RedisPassword;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
@@ -31,7 +30,6 @@ public class StandaloneRedisStrategy extends AbstractRedisStrategy {
     public RedisConfiguration redisConfiguration(int database) {
         RedisStandaloneConfiguration redisStandaloneConfiguration = new RedisStandaloneConfiguration();
         redisStandaloneConfiguration.setPort(redisProperties.getPort());
-        redisStandaloneConfiguration.setDatabase(redisProperties.getDatabase());
         redisStandaloneConfiguration.setHostName(redisProperties.getHost());
         //如果密码不为空则设置密码
         if (StringUtils.hasLength(redisProperties.getPassword())) {
@@ -40,9 +38,7 @@ public class StandaloneRedisStrategy extends AbstractRedisStrategy {
         if (StringUtils.hasLength(redisProperties.getUsername())) {
             redisStandaloneConfiguration.setUsername(redisProperties.getUsername());
         }
-        if (0 <= database && database <= 16) {
-            redisStandaloneConfiguration.setDatabase(database);
-        }
+        redisStandaloneConfiguration.setDatabase(database);
         return redisStandaloneConfiguration;
     }
 
@@ -50,22 +46,20 @@ public class StandaloneRedisStrategy extends AbstractRedisStrategy {
     public Config redissonConfiguration(int database) {
         Config config = new Config();
         RedisProperties.Pool pool = redisProperties.getLettuce().getPool();
-        SingleServerConfig singleServerConfig = config.useSingleServer()
+        config.useSingleServer()
                 .setAddress(getFormattedNodes(List.of(redisProperties.getHost() + ":" + redisProperties.getPort())).getFirst())
-                .setDatabase(redisProperties.getDatabase())
-                .setConnectTimeout((int)redisProperties.getConnectTimeout().toMillis())
-                .setTimeout((int)redisProperties.getTimeout().toMillis())
+                .setDatabase(database)
+                // 使用抽象类超时兜底，避免 NPE
+                .setConnectTimeout((int) getConnectTimeout().toMillis())
+                .setTimeout((int) getTimeout().toMillis())
                 .setConnectionMinimumIdleSize(pool.getMinIdle())
                 .setConnectionPoolSize(pool.getMaxIdle());
         //如果密码不为空则设置密码
         if (StringUtils.hasLength(redisProperties.getPassword())) {
-            singleServerConfig.setPassword(redisProperties.getPassword());
+            config.setPassword(redisProperties.getPassword());
         }
         if (StringUtils.hasLength(redisProperties.getUsername())) {
-            singleServerConfig.setUsername(redisProperties.getUsername());
-        }
-        if (0 <= database && database <= 16) {
-            singleServerConfig.setDatabase(database);
+            config.setUsername(redisProperties.getUsername());
         }
         return config;
     }
