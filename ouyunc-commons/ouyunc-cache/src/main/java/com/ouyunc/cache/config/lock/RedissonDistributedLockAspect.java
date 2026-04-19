@@ -45,7 +45,6 @@ public class RedissonDistributedLockAspect {
             Signature signature = proceedingJoinPoint.getSignature();
             lockName = signature.toLongString();
         }
-        log.info("线程：" + currentThreadName + "开始获取分布式锁");
         //获取锁
         RLock lock = redissonClient.getLock(lockName);
         try {
@@ -75,7 +74,6 @@ public class RedissonDistributedLockAspect {
                     throw new RuntimeException(lockName + " 获取锁失败!");
                 }
             }
-            log.info("线程：" + currentThreadName + "成功获取分布式锁");
             //执行目标方法
             return proceedingJoinPoint.proceed();
         } catch (Exception e) {

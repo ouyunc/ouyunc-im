@@ -33,7 +33,6 @@ public final class MqttMessageProcessor extends AbstractMessageProcessor<Byte> {
      */
     @Override
     public void preProcess(ChannelHandlerContext ctx, Packet packet) {
-        log.info("正在预处理mqtt消息...");
         // 异步存储packet（目前只是保存相关信息，不做扩展，以后可以做数据分析使用），这里将该数据存储到时序数据库中
         messageProcessorExecutor().execute(() -> {
             repository().save(packet);

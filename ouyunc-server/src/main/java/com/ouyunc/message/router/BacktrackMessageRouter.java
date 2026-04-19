@@ -25,7 +25,6 @@ public class BacktrackMessageRouter extends AbstractMessageRouter {
      */
     @Override
     public String route(Packet packet, String toServerAddress) {
-        log.info("正在使用回溯路由算法查找可用服务... ");
         // 获得消息
         Metadata metadata = packet.getMessage().getMetadata();
         // 获取消息中的路由表

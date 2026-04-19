@@ -99,7 +99,6 @@ public final class One2OneAgreeFriendRequestMessageProcessor extends AbstractMes
      */
     @Override
     public void process(ChannelHandlerContext ctx, Packet packet) {
-        log.info("One2OneAgreeFriendRequestMessageContentProcessor 正在处理同意好友请求 {} ...", packet);
         // 1. 保存消息
         Message message = packet.getMessage();
         String from = message.getFrom();

@@ -1888,7 +1888,6 @@ public enum DefaultRepository implements Repository{
      */
     public GroupEntity getGroupEntityFromDatabases(String appKey, String groupId) {
         try {
-            log.info("从数据库中获取群组实体, groupId: {}", groupId);
             GroupEntity groupEntity = jdbcClient.sql(JdbcSqlDialectHolder.selectGroup())
                     .params(groupId)
                     .query(GroupEntity.class)
@@ -1981,7 +1980,6 @@ public enum DefaultRepository implements Repository{
         
         // 4. MySQL
         try {
-            log.info("从数据库中获取用户实体, identity: {}", identity);
             userEntity = jdbcClient.sql(JdbcSqlDialectHolder.selectUser())
                     .params(identity)
                     .query(UserEntity.class)

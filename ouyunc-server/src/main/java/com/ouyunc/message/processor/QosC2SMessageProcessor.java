@@ -72,7 +72,6 @@ public final class QosC2SMessageProcessor extends AbstractMessageProcessor<Byte>
     public void process(ChannelHandlerContext ctx, Packet packet) {
         if (MessageServerContext.serverProperties().isQosEnable() && QosModeEnum.SERVER.equals(MessageServerContext.serverProperties().getQosMode())) {
             Message message = packet.getMessage();
-            log.info("QosC2SMessageProcessor 外部客户端接收到消息id: {}", message.getContent());
             // 可以判断这个receivedPackageId是否合法，不是自己发送的，以及消息类型是合法的，这里不做过多的判断
             QosAckContent qosAckContent = JSON.parseObject(message.getContent(), QosAckContent.class);
             // 移除离线消息,通过异步发送移除离线消息事件

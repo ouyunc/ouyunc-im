@@ -160,7 +160,6 @@ public class HttpDemoController {
         m.put("kind", "post-multipart");
         m.put("path", "/api/demo/upload");
         m.putAll(LocalHttpUploadSaver.save(file, note));
-        log.info("demo upload saved: path={}, name={}, size={}", m.get("savedPath"), m.get("filename"), m.get("size"));
         return m;
     }
 

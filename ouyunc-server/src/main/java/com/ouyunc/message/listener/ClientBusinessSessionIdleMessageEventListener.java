@@ -41,7 +41,7 @@ class ClientBusinessSessionIdleMessageEventListener implements MessageEventListe
         }
         String chId = ctx.channel().id().asShortText();
         if (log.isInfoEnabled()) {
-            log.info("业务会话空闲: appKey={}, identity={}, strike={}, channel={}", loginInfo.getAppKey(), loginInfo.getIdentity(), strike, chId);
+            log.debug("业务会话空闲: appKey={}, identity={}, strike={}, channel={}", loginInfo.getAppKey(), loginInfo.getIdentity(), strike, chId);
         }
         switch (strike) {
             case 1 -> onPrompt(payload);

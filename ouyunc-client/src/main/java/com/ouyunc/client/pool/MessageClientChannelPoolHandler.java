@@ -33,7 +33,6 @@ public class MessageClientChannelPoolHandler extends AbstractChannelPoolHandler 
      */
     @Override
     public void channelCreated(Channel channel) throws Exception {
-        log.info("内部客户端channel池，创建通道channel: {}", channel.id().asShortText());
         // 获取这个管道应该所属的协议
         Protocol protocol = channel.attr(AttributeKey.<Protocol>valueOf(MessageConstant.BOOTSTRAP_ATTR_KEY_TAG_CLIENT)).get();
         // 获取到协议，添加协议处理器

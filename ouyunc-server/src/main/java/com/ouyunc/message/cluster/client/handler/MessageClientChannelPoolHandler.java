@@ -36,7 +36,6 @@ public class MessageClientChannelPoolHandler extends AbstractChannelPoolHandler 
      */
     @Override
     public void channelCreated(Channel channel) throws Exception {
-        log.info("内部客户端channel池，创建通道channel: {}", channel.id().asShortText());
         ChannelPipeline pipeline = channel.pipeline();
         if (MessageServerContext.serverProperties().isSslEnable()) {
             // 这个处理器需要放到第一位

@@ -105,13 +105,13 @@ class RemoveOfflineMessageEventListener implements MessageEventListener<MessageE
                         Long zRemCount = conn.zSetCommands().zRem(zSetKeyBytes, zSetValueBytes);
                         boolean zSetDeleted = zRemCount != null && zRemCount > 0;
                         if (!zSetDeleted) {
-                            log.info("ZSet元素不存在或删除失败，key={}, value={}", zSetKey, zSetValue);
+                            log.error("ZSet元素不存在或删除失败，key={}, value={}", zSetKey, zSetValue);
                         }
 
                         // ========== 3. 执行Hash删除操作 ==========
                         boolean hashDeleted = operations.opsForHash().delete((K) hashKey, hashField) > 0;
                         if (!hashDeleted) {
-                            log.info("Hash字段不存在或删除失败，key={}, field={}", hashKey, hashField);
+                            log.error("Hash字段不存在或删除失败，key={}, field={}", hashKey, hashField);
                         }
 
                         // 返回整体结果：两个操作至少有一个成功（或根据业务需求改为"都成功"）

@@ -27,7 +27,6 @@ public class EphemeralRemoteClientRealIpHandler extends SimpleChannelInboundHand
     protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof HAProxyMessage proxyMessage) {
             // only save client real ip
-            log.info("proxy message is : {}", msg);
             String clientRealIp = proxyMessage.sourceAddress();
             // 存入ctx 中，注意不能跨服务从ctx 获取该值，后面会解析处理存到packet中传递
             if (StringUtils.isNoneBlank(clientRealIp)) {

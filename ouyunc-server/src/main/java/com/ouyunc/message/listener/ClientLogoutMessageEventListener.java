@@ -77,7 +77,6 @@ class ClientLogoutMessageEventListener implements MessageEventListener<MessageEv
             }
             case MqttLoginClientInfo mqttLoginClientInfo when mqttLoginClientInfo.getEnableWill() == YesOrNo.YES.getCode() && StringUtils.isNoneBlank(mqttLoginClientInfo.getWillMessage()) -> {
                 // 处理mqtt遗嘱信息
-                log.info("客户端离线，发送遗嘱消息：{}", mqttLoginClientInfo);
                 MqttMessage willMqttMessage = MqttMessageFactory.newMessage(
                         new MqttFixedHeader(MqttMessageType.PUBLISH, false, MqttQoS.valueOf(mqttLoginClientInfo.getQos()), mqttLoginClientInfo.getIsWillRetain() == YesOrNo.YES.getCode(), NumberConstant.NUMBER_0),
                         new MqttPublishVariableHeader(mqttLoginClientInfo.getWillTopic(), NumberConstant.NUMBER_0), ByteBufAllocator.DEFAULT.buffer().writeBytes(mqttLoginClientInfo.getWillMessage().getBytes(CharsetUtil.UTF_8)));

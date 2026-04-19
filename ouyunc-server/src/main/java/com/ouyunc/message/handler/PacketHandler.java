@@ -26,7 +26,6 @@ public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
      */
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Packet packet) throws Exception {
-        log.info("消息逻辑处理器正在处理相关packet：{} ", packet);
         // 需要判断消息类型，转到对应的去处理
         AbstractMessageProcessor<? extends Number> messageProcessor = MessageServerContext.messageProcessorCache.get(packet.getMessageType());
         if (messageProcessor == null) {

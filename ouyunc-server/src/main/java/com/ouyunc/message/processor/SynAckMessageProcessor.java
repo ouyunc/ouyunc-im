@@ -37,7 +37,6 @@ public final class SynAckMessageProcessor extends AbstractMessageProcessor<Byte>
         int contentType = synAckMessage.getContentType();
         // 发送端服务器地址：ip:port
         String remoteServerAddress = synAckMessage.getFrom();
-        log.info("SynAckMessageProcessor 集群模式下,远端Message服务：remoteServerAddress = {} 正在发起的contentType = {} 请求", remoteServerAddress, contentType);
         // syn 可能是经过其他服务转发的，回去的ack可能是经过其他服务转发的
         if (OuyuncMessageContentTypeEnum.SYN_CONTENT.getType() == contentType) {
             synAckMessage.setId(MessageContext.idGenerator().generateIdStr());

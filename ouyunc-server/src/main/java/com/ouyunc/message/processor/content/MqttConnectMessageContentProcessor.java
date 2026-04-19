@@ -63,7 +63,6 @@ public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<In
     }
     @Override
     public void process(ChannelHandlerContext ctx, Packet packet) {
-        log.info("MqttConnectMessageProcessor connect 正在处理mqtt 连接消息...");
         long loginTimestamp = TimeUtil.currentTimeMillis();
         Message connectMessage = packet.getMessage();
         MqttVersion mqttVersion = MqttCodecUtil.getMqttVersion(packet.getRetain());

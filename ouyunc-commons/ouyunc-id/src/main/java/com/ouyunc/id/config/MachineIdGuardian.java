@@ -91,7 +91,6 @@ public class MachineIdGuardian {
             Thread.currentThread().interrupt();
         }
 
-        log.info("MachineIdGuardian stopped for instance: {}", instanceId);
     }
 
     /**
@@ -124,11 +123,9 @@ public class MachineIdGuardian {
      */
     public void registerShutdownHook() {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            log.info("Shutting down MachineIdGuardian for instance: {}", instanceId);
             stop();
             try {
                 machineIdDistributor.revert(namespace, instanceId);
-                log.info("MachineId reverted for instance: {}", instanceId);
             } catch (Exception e) {
                 log.error("Failed to revert machineId for instance: " + instanceId, e);
             }

@@ -96,7 +96,6 @@ public final class One2OneRefuseFriendRequestMessageProcessor extends AbstractMe
      */
     @Override
     public void process(ChannelHandlerContext ctx, Packet packet) {
-        log.info("One2OneRefuseFriendRequestMessageContentProcessor 正在处理拒绝好友请求 {} ...", packet);
         // 1. 保存消息
         Message message = packet.getMessage();
         String to = message.getTo();

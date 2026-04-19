@@ -160,7 +160,6 @@ class ServerStartupEventMessageEventListener implements MessageEventListener<Mes
         container.addMessageListener((message, pattern) -> {
             AppKeyDeviceType appKeyDeviceType = appKeyDeviceTypeRedisSerializer.deserialize(message.getBody());
             if (appKeyDeviceType != null) {
-                log.info("正在处理appKey下的设备类型 {} ...", appKeyDeviceType);
                 AppKeyConnectionCleanupRegistry.track(appKeyDeviceType.getAppKey());
                 MessageServerContext.addAppKeyDeviceType(appKeyDeviceType.getAppKey(), appKeyDeviceType.getDeviceTypes());
             }
@@ -171,7 +170,6 @@ class ServerStartupEventMessageEventListener implements MessageEventListener<Mes
             ClientAppKeyDeviceType clientAppKeyDeviceType = clientAppKeyDeviceTypeRedisSerializer.deserialize(message.getBody());
             if (clientAppKeyDeviceType != null) {
                 AppKeyConnectionCleanupRegistry.track(clientAppKeyDeviceType.getAppKey());
-                log.info("正在处理appKey下的客户端所支持的设备类型 {} ...", clientAppKeyDeviceType);
                 //  添加进入appKey对应的设备类型集合中,是否需要主动关闭相关链接？还是在发送消息鉴权的时候进行校验,被动关闭吧
                 // 需要校验下，单独设置的必须要再appKey下的设备类型集合中
                 Set<DeviceType> deviceTypes = clientAppKeyDeviceType.getDeviceTypes();
@@ -185,7 +183,6 @@ class ServerStartupEventMessageEventListener implements MessageEventListener<Mes
                         }
                     }
                     if (flag) {
-                        log.info("{} 添加进入appKey对应的设备类型集合中", deviceTypes);
                         MessageServerContext.localClientInfoCache.put(CacheConstant.buildLocalClientInfoCacheKey(clientAppKeyDeviceType.getAppKey(), clientAppKeyDeviceType.getIdentity()), new ClientInfo(clientAppKeyDeviceType.getAppKey(), clientAppKeyDeviceType.getIdentity(), clientAppKeyDeviceType.getDeviceTypes().stream().filter(Objects::nonNull).map(DeviceType::getType).collect(Collectors.toList())));
                     }
                 }

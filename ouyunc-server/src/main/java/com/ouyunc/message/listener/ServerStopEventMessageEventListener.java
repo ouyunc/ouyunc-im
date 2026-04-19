@@ -26,7 +26,7 @@ class ServerStopEventMessageEventListener implements MessageEventListener<Messag
 
     @Override
     public void onEvent(MessageEvent event) {
-        log.info("服务:{} 正在注销...", event);
+        log.warn("服务:{} 正在注销...", event);
         ServerStartupEventMessageEventListener.shutdownRuntimeResources();
         // 发送邮件？mq?
     }

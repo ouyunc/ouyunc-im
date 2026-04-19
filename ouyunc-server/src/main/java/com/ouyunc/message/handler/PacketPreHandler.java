@@ -30,7 +30,6 @@ public class PacketPreHandler extends SimpleChannelInboundHandler<Packet> {
      */
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Packet packet) throws Exception {
-        log.info("消息前置处理器 PacketPreHandler 正在处理packet= {} ...", packet);
         // 先在这里判断是否支持设备类型
         if (DeviceValidator.INSTANCE.negate().verify(packet,ctx)) {
             log.error("设备类型不支持，deviceType= {}, appKey:{}", packet.getDeviceType(), packet.getMessage().getMetadata().getAppKey());
