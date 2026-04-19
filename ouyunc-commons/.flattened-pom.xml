@@ -5,11 +5,11 @@
   <parent>
     <groupId>com.ouyunc</groupId>
     <artifactId>ouyunc-im</artifactId>
-    <version>6.5.2</version>
+    <version>6.5.3</version>
   </parent>
   <groupId>com.ouyunc</groupId>
   <artifactId>ouyunc-commons</artifactId>
-  <version>6.5.2</version>
+  <version>6.5.3</version>
   <packaging>pom</packaging>
   <name>ouyunc-commons</name>
   <description>公共模块</description>

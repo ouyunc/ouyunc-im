@@ -5,11 +5,11 @@
   <parent>
     <groupId>com.ouyunc</groupId>
     <artifactId>ouyunc-db</artifactId>
-    <version>6.5.2</version>
+    <version>6.5.3</version>
   </parent>
   <groupId>com.ouyunc</groupId>
   <artifactId>ouyunc-db-jdbc</artifactId>
-  <version>6.5.2</version>
+  <version>6.5.3</version>
   <description>mysql模块</description>
   <dependencies>
     <dependency>

@@ -57,7 +57,7 @@ public abstract class AbstractMessageProcessor<T extends Number> extends Abstrac
                 }
                 // 校验是否拥有相关权限 permission
 
-                // 做qos 处理
+                // 做qos 处理（QOS_DUP 展开时在同一 packet 引用上原地更新）
                 if (MessageServerContext.serverProperties().isQosEnable() && qosPreHandle(ctx, packet)) {
                     return;
                 }

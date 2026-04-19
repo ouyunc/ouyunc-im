@@ -317,7 +317,7 @@ public class MessageServerProperties extends MessageProperties {
     /**
      * 集群中消息重试次数，消息如果不通，会进行重试三次
      */
-    @Key(value = "ouyunc.message.cluster.message-retry", defaultValue = "false")
+    @Key(value = "ouyunc.message.cluster.message-retry", defaultValue = "3")
     int clusterMessageRetry;
 
 

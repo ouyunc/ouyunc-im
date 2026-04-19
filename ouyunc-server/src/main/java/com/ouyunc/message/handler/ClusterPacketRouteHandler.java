@@ -2,8 +2,6 @@ package com.ouyunc.message.handler;
 
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
-import com.ouyunc.base.serialize.Serializer;
-import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.message.helper.MessageHelper;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -25,11 +23,9 @@ public class ClusterPacketRouteHandler extends SimpleChannelInboundHandler<Packe
      */
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Packet packet) throws Exception {
-        log.info("集群路由处理器PacketClusterRouterHandler正在处理packet= {} ...", packet);
         Metadata metadata = packet.getMessage().getMetadata();
         // 判断是否从其他服务路由过来的消息
         if (metadata != null && metadata.isRouted()) {
-            log.info("当前服务：{} 接收到集群的消息: {}", MessageContext.messageProperties.getLocalServerAddress(), Serializer.JSON.serializeToString(packet));
             MessageHelper.asyncSendMessageWithoutInterceptor(packet, metadata.getTarget());
             return;
         }

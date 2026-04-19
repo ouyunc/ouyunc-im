@@ -61,9 +61,11 @@ public abstract class AbstractBaseProcessor<T extends Number> implements Process
             Metadata metadata = message.getMetadata();
             dupPacket.getMessage().setMetadata(metadata);
             dupPacket.setPacketId(MessageContext.idGenerator().generateId());
-            // 将重发消息的packet替换成原来的packet
-            packet = dupPacket;
-            log.info("qos 客户端模式正在处理客户端重发消息, 重发消息为: {}", packet);
+            // 原地写回同一 Packet 引用，保证上游 fireChannelRead(packet) 拿到展开后的业务包
+            packet.copyFrom(dupPacket);
+            if (log.isDebugEnabled()) {
+                log.debug("qos 客户端模式正在处理客户端重发消息, 重发消息为: {}", packet);
+            }
         }
         return false;
     }

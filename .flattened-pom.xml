@@ -4,7 +4,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.ouyunc</groupId>
   <artifactId>ouyunc-im</artifactId>
-  <version>6.5.2</version>
+  <version>6.5.3</version>
   <packaging>pom</packaging>
   <name>ouyunc-message</name>
   <description>偶云客消息服务</description>
@@ -49,7 +49,7 @@
     <snappy-java.version>1.1.10.7</snappy-java.version>
     <lettuce.version>7.5.0.RELEASE</lettuce.version>
     <kafka.version>3.3.1</kafka.version>
-    <revision>6.5.2</revision>
+    <revision>6.5.3</revision>
     <maven.compiler.target>21</maven.compiler.target>
     <mongodb-driver.version>5.2.1</mongodb-driver.version>
     <rocketmq-spring.version>2.3.5</rocketmq-spring.version>

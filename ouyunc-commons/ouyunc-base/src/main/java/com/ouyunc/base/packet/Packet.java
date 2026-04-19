@@ -8,6 +8,7 @@ import io.protostuff.Tag;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.Objects;
 
 /**
@@ -273,5 +274,31 @@ public class Packet implements Serializable, Cloneable{
         } catch (CloneNotSupportedException e) {
             throw new AssertionError();
         }
+    }
+
+    /**
+     * 将 {@code source} 的协议头与消息体复制到本实例，保持 {@code Packet} 对象引用不变（例如 QOS_DUP 展开后原地写回）。
+     * {@link Message} 使用 {@link Message#clone()} 拷贝，避免与 {@code source} 共享同一条消息引用。
+     *
+     * @param source 源包，为 {@code null} 时不修改本实例
+     */
+    public void copyFrom(Packet source) {
+        if (source == null) {
+            return;
+        }
+        byte[] srcMagic = source.getMagic();
+        this.magic = srcMagic != null ? Arrays.copyOf(srcMagic, srcMagic.length) : MessageConstant.PACKET_MAGIC_BYTES;
+        this.protocol = source.getProtocol();
+        this.protocolVersion = source.getProtocolVersion();
+        this.packetId = source.getPacketId();
+        this.deviceType = source.getDeviceType();
+        this.networkType = source.getNetworkType();
+        this.encryptType = source.getEncryptType();
+        this.serializeAlgorithm = source.getSerializeAlgorithm();
+        this.messageType = source.getMessageType();
+        this.retain = source.getRetain();
+        this.messageLength = source.getMessageLength();
+        Message srcMsg = source.getMessage();
+        this.message = srcMsg != null ? srcMsg.clone() : null;
     }
 }

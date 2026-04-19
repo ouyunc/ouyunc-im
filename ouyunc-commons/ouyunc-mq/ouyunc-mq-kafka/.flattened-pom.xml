@@ -5,11 +5,11 @@
   <parent>
     <groupId>com.ouyunc</groupId>
     <artifactId>ouyunc-mq</artifactId>
-    <version>6.5.2</version>
+    <version>6.5.3</version>
   </parent>
   <groupId>com.ouyunc</groupId>
   <artifactId>ouyunc-mq-kafka</artifactId>
-  <version>6.5.2</version>
+  <version>6.5.3</version>
   <description>kafka消息队列</description>
   <dependencies>
     <dependency>
