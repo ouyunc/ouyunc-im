@@ -80,8 +80,7 @@ public class HttpRouteRegistry {
             return;
         }
         List<String> sorted = startupRouteLines.stream().sorted().toList();
-        String lines = sorted.stream().map(l -> "  " + l).collect(Collectors.joining("\n"));
-        log.info("已注册 HTTP 接口 (共 {} 个):\n{}", sorted.size(), lines);
+        log.info("已注册 HTTP 接口 (共 {} 个)", sorted.size());
     }
 
     public void scanAndRegister(String basePackage) {
