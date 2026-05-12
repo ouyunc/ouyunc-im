@@ -99,6 +99,15 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         super.channelActive(ctx);
     }
 
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        // 取消登录超时定时任务，避免资源泄漏
+        boolean cancelled = cancelTimeoutFuture(ctx);
+        if (cancelled) {
+            log.debug("客户端: {} 连接关闭，已取消登录超时定时任务", ctx.channel().id().asShortText());
+        }
+        super.channelInactive(ctx);
+    }
 
     /**
      * 取消登录超时定时任务
