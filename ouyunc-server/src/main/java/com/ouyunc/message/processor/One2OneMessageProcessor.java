@@ -137,10 +137,8 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
     }
 
     /**
-     * 处理消息内容类型是撤回消息
-     * 已读消息不发送给对方， 离线消息也不用存储
-     * @param ctx
-     * @param packet
+     * 处理已读回执：不落库为对端「聊天消息」，但需推送给 {@link Message#getTo()}（消息发送方），
+     * 以便发送方多端将己方气泡更新为「已读」。阅读方 {@link Message#getFrom()} 不再重复投递。
      */
     private void handleReadReceipt(ChannelHandlerContext ctx, Packet packet) {
         String sessionId = IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo());
@@ -148,10 +146,20 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
                 repository().reactiveValidReadReceiptMessage(packet, sessionId, IdentityType.ONE_2_ONE, true),
                 () -> repository().savePacket2Mq(MqConstant.KAFKA_READ_RECEIPT_MESSAGE_TOPIC, sessionId, packet),
                 repository().reactiveReadReceiptMessage(packet, IdentityType.ONE_2_ONE, MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP),
-                (ctx0, packet0) -> {},
+                (ctx0, packet0) -> deliverReadReceiptToSender(packet0),
                 (exceptionEvent)-> MessageServerContext.publishEvent(exceptionEvent, true),
                 ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR)
                 .subscribe();
+    }
+
+    /** 将已读回执推送给会话中的消息发送方（packet.message.to），与私聊普通消息投递 to 一致 */
+    private void deliverReadReceiptToSender(Packet packet) {
+        Message message = packet.getMessage();
+        String appKey = message.getMetadata().getAppKey();
+        List<LoginClientInfo> senderClients = ClientHelper.onlineAll(appKey, message.getTo());
+        if (CollectionUtils.isNotEmpty(senderClients)) {
+            MessageHelper.asyncSendMessage(packet, senderClients);
+        }
     }
 
 

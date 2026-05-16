@@ -111,10 +111,20 @@ public final class CustomerServiceMessageProcessor extends AbstractMessageProces
                 repository().reactiveValidReadReceiptMessage(packet, sessionId, IdentityType.ONE_2_ONE, true),
                 () -> repository().savePacket2Mq(MqConstant.KAFKA_READ_RECEIPT_MESSAGE_TOPIC, sessionId, packet),
                 repository().reactiveReadReceiptMessage(packet, IdentityType.ONE_2_ONE, MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP),
-                (ctx0, packet0) -> {},
+                (ctx0, packet0) -> deliverReadReceiptToSender(packet0),
                 (exceptionEvent) -> MessageServerContext.publishEvent(exceptionEvent, true),
                 ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR)
                 .subscribe();
+    }
+
+    /** 已读回执推送给消息发送方（message.to），便于发送方 UI 展示「已读」 */
+    private void deliverReadReceiptToSender(Packet packet) {
+        Message message = packet.getMessage();
+        String appKey = message.getMetadata().getAppKey();
+        List<LoginClientInfo> senderClients = ClientHelper.onlineAll(appKey, message.getTo());
+        if (CollectionUtils.isNotEmpty(senderClients)) {
+            MessageHelper.asyncSendMessage(packet, senderClients);
+        }
     }
 
     /**

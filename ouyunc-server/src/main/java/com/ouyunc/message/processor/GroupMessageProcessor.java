@@ -125,15 +125,29 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
      * @param packet
      */
 
+    /**
+     * 群已读回执：仅校验并写入 Redis/MQ（{@code SessionMessageOffset}），不向群成员广播，避免每人读一次产生 (N-1) 次推送风暴。
+     * 发送方「已读」展示应走 HTTP 拉取各成员 offset 或产品层不做群聊逐条已读（见业务文档）。
+     * 阅读方多端同步仍可通过 selfSync 投递给自己其它终端。
+     */
     private void handleReadReceipt(ChannelHandlerContext ctx, Packet packet, Set<String> groupUserIdentitySet) {
         String sessionId = packet.getMessage().getTo();
         repository().reactiveHandleOperation(ctx, packet,
                 repository().reactiveValidReadReceiptMessage(packet, packet.getMessage().getTo(), IdentityType.GROUP, true),
                 ()-> repository().savePacket2Mq(MqConstant.KAFKA_READ_RECEIPT_MESSAGE_TOPIC, sessionId, packet),
                 repository().reactiveReadReceiptMessage(packet, IdentityType.GROUP, MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP),
-                (ctx0,  packet0) -> {},
+                (ctx0, packet0) -> deliverGroupReadReceiptSelfSyncOnly(packet0),
                 (exceptionEvent)-> MessageServerContext.publishEvent(exceptionEvent, true),
                 ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR).subscribe();
+    }
+
+    /** 群已读不回推全员，仅 selfSync 时同步阅读方其它设备 */
+    private void deliverGroupReadReceiptSelfSyncOnly(Packet packet) {
+        Message message = packet.getMessage();
+        ClientInfo clientInfo = MessageServerContext.localClientInfo(message.getMetadata().getAppKey(), message.getFrom());
+        if (clientInfo != null && clientInfo.getSelfSync()) {
+            deliver2SelfAndFireNext(packet);
+        }
     }
 
 

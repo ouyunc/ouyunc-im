@@ -5,11 +5,11 @@
   <parent>
     <groupId>com.ouyunc</groupId>
     <artifactId>ouyunc-mq</artifactId>
-    <version>6.5.2</version>
+    <version>6.5.3</version>
   </parent>
   <groupId>com.ouyunc</groupId>
   <artifactId>ouyunc-mq-rocket</artifactId>
-  <version>6.5.2</version>
+  <version>6.5.3</version>
   <description>RocketMQ 消息队列（基于 rocketmq-spring-boot-starter，发送使用 RocketMQTemplate）</description>
   <dependencies>
     <dependency>
