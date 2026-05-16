@@ -23,6 +23,7 @@ import com.ouyunc.domain.constants.GroupUserPost;
 import com.ouyunc.domain.constants.IdentityType;
 import com.ouyunc.domain.entity.*;
 import com.ouyunc.mq.kafka.KafkaFactory;
+import com.ouyunc.repository.support.QosIdempotencyHelper;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -39,9 +40,7 @@ import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisStringCommands;
 import org.springframework.data.redis.core.*;
-import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.types.Expiration;
-import org.springframework.data.redis.serializer.RedisElementWriter;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -179,18 +178,29 @@ public enum DefaultRepository implements Repository{
     }
 
     /**
-     * 检查消息是否重复,是否持久化到缓存，这里是离线队列中
-     * @param packet
-     * @return
+     * 检查 QoS 重发是否已处理：先 packetId 幂等键，再通道身份 + 客户端 messageId
      */
     @SuppressWarnings("unchecked")
     @Override
-    public boolean checkDup(Packet packet) {
+    public boolean checkDup(Packet packet, String channelLoginIdentity) {
+        if (packet == null || packet.getMessage() == null) {
+            return false;
+        }
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        Object packetIdObj = redisTemplate.opsForHash().get(CacheConstant.buildFromOfflineCacheKey(metadata.getAppKey(), message.getFrom()), message.getId());
-        // 如果不为 null，则表示值存在
-        return !Objects.isNull(packetIdObj);
+        if (metadata == null || metadata.getAppKey() == null) {
+            return false;
+        }
+        String appKey = metadata.getAppKey();
+        long packetId = packet.getPacketId();
+        if (packetId > 0 && Boolean.TRUE.equals(redisTemplate.hasKey(CacheConstant.buildQosIdempotencyPacketKey(appKey, packetId)))) {
+            return true;
+        }
+        if (StringUtils.isNotBlank(channelLoginIdentity) && StringUtils.isNotBlank(message.getId())) {
+            return Boolean.TRUE.equals(redisTemplate.hasKey(
+                    CacheConstant.buildQosIdempotencyClientKey(appKey, channelLoginIdentity, message.getId())));
+        }
+        return false;
     }
 
 
@@ -863,7 +873,6 @@ public enum DefaultRepository implements Repository{
      * @param sessionId
      * @return
      */
-    @SuppressWarnings("unchecked")
     private Mono<Boolean> reactiveValidSpecialMessage(Packet packet, String sessionId, Function<List<Packet>, Mono<Boolean>> function, Predicate<List<Packet>> extraPredicate) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
@@ -879,19 +888,19 @@ public enum DefaultRepository implements Repository{
             log.error("消息数量为0或超出限制 {}!", MessageConstant.MAX_HANDLE_MESSAGE_COUNT);
             return Mono.just(false);
         }
-        // 获取需要消息服务端时间戳，这个获取要在会话锁的前提下获取,注意批量获取score 的方法是redis 6.2.0 之后的版本才支持,如果不支持请使用其他方式替换，或升级redis版本，这里 就使用lua 脚本 哈哈哈
-        // 获取消息在会话中的消息服务端时间戳
-        Flux<Long> scoreFlux = reactiveRedisTemplate.execute(new DefaultRedisScript<>(LuaScriptEnum.BATCH_SCORE_LUA_SCRIPT.getScript(), List.class), List.of(CacheConstant.buildSessionCacheKey(metadata.getAppKey(), sessionId)), packetIds)
-                .cache(); // 关键：缓存结果避免重复订阅;
-        return scoreFlux
-                .collectList() // 转换为Mono<List<Long>>
+        // 会话 ZSet member 须与入库一致（19 位格式化 packetId）
+        List<String> zsetMembers = packetIds.stream()
+                .map(MessageContext.idGenerator()::formatLongId19Str)
+                .toList();
+        String sessionCacheKey = CacheConstant.buildSessionCacheKey(metadata.getAppKey(), sessionId);
+        return Mono.fromCallable(() -> batchZSetScoresPipelined(sessionCacheKey, zsetMembers))
+                .subscribeOn(Schedulers.boundedElastic())
                 .flatMap(scores -> {
-                    // 4.1 校验非空结果数量
-                    if (CollectionUtils.isEmpty(scores) || scores.stream().filter(Objects::nonNull).count() != packetIds.size()) {
+                    int presentCount = countPresentZSetScores(scores);
+                    if (scores.isEmpty() || presentCount != packetIds.size()) {
                         log.error("会话:{} 不存在该消息id: {}, 或消息id数量与会话中的消息数量不相等", sessionId, packetIds);
                         return Mono.just(false);
                     }
-                    // 4.2 获取持久化消息（假设已改造为响应式方法）
                     return fetchPacketsReactive(metadata.getAppKey(), packetIds)
                             .flatMap(packets -> {
                                 if (packets.size() != packetIds.size()) {
@@ -915,6 +924,46 @@ public enum DefaultRepository implements Repository{
                     log.error("消息处理异常 | session={}", sessionId, e);
                     return Mono.just(false);
                 });
+    }
+
+    /**
+     * 管道批量 ZSCORE，一次 RTT；与 packetIds 等长，不存在为 null。
+     */
+    @SuppressWarnings("unchecked")
+    private List<Object> batchZSetScoresPipelined(String zsetKey, List<String> members) {
+        if (CollectionUtils.isEmpty(members)) {
+            return Collections.emptyList();
+        }
+        return stringRedisTemplate.executePipelined(new SessionCallback<>() {
+            @Override
+            public <K, V> Object execute(RedisOperations<K, V> operations) throws DataAccessException {
+                ZSetOperations<K, V> zSetOps = operations.opsForZSet();
+                for (String member : members) {
+                    zSetOps.score((K) zsetKey, (V) member);
+                }
+                return null;
+            }
+        });
+    }
+
+    private static boolean isZSetScorePresent(Object score) {
+        if (score == null) {
+            return false;
+        }
+        if (score instanceof Boolean boolScore) {
+            return boolScore;
+        }
+        return true;
+    }
+
+    private static int countPresentZSetScores(List<Object> scores) {
+        int count = 0;
+        for (Object score : scores) {
+            if (isZSetScorePresent(score)) {
+                count++;
+            }
+        }
+        return count;
     }
 
     /**
@@ -1419,11 +1468,12 @@ public enum DefaultRepository implements Repository{
     public Mono<Boolean> reactiveSaveOfflineMessage(Packet packet, String to, Collection<DeviceType> toSupportDeviceTypes) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        String packetId = MessageContext.idGenerator().formatLongId19Str(packet.getPacketId()); // 转换为字符串
+        String zsetMember = MessageContext.idGenerator().formatLongId19Str(packet.getPacketId());
+        String sender = message.getFrom();
         double score = NumberConstant.NUMBER_0; // 分数
         RedisSerializer<String> stringSerializer = RedisSerializer.string();
-        RedisElementWriter hashKeyWriter = reactiveRedisTemplate.getSerializationContext().getHashKeySerializationPair().getWriter();
-        RedisElementWriter hashValueWriter = reactiveRedisTemplate.getSerializationContext().getHashValueSerializationPair().getWriter();
+        boolean markQosIdem = MessageContext.messageProperties.isQosEnable()
+                && message.getQos() > QosLevelEnum.QOS_0.getLevel();
 
         // 适配返回Flux<Boolean>的execute方法
         Flux<Boolean> executeResult = reactiveRedisTemplate.execute((ReactiveRedisCallback<Boolean>) connection -> {
@@ -1431,12 +1481,7 @@ public enum DefaultRepository implements Repository{
 
             for (DeviceType deviceType : toSupportDeviceTypes) {
                 byte[] keyBytes = stringSerializer.serialize(CacheConstant.buildToOfflineCacheKey(metadata.getAppKey(), to, deviceType.getType()));
-                byte[] valueBytes = stringSerializer.serialize(packetId);
-
-                if (keyBytes == null || valueBytes == null) {
-                    operations.add(Mono.just(false));
-                    continue;
-                }
+                byte[] valueBytes = stringSerializer.serialize(zsetMember);
 
                 Mono<Boolean> addOperation = connection.zSetCommands()
                         .zAdd(ByteBuffer.wrap(keyBytes), score, ByteBuffer.wrap(valueBytes))
@@ -1445,17 +1490,29 @@ public enum DefaultRepository implements Repository{
                 operations.add(addOperation);
             }
 
-            byte[] keyBytes = stringSerializer.serialize(CacheConstant.buildFromOfflineCacheKey(metadata.getAppKey(), to));
-            Mono<Boolean> setOperation = connection.hashCommands().hSet(ByteBuffer.wrap(keyBytes), hashKeyWriter.write(message.getId()), hashValueWriter.write(packetId));
-            operations.add(setOperation);
             // 返回Flux<Boolean>，每个元素是单个操作的结果
             return Flux.fromIterable(operations).concatMap(mono -> mono);
         });
 
         // 关键：将Flux<Boolean>转换为Mono<Boolean>，判断所有结果是否都为true
-        return executeResult.collectList()
+        Mono<Boolean> saved = executeResult.collectList()
                 .map(results -> results.stream().allMatch(Boolean::booleanValue))
                 .onErrorReturn(false);
+        if (!markQosIdem) {
+            return saved;
+        }
+        String appKey = metadata.getAppKey();
+        Duration pktTtl = Duration.ofMillis(MessageConstant.CACHE_QOS_IDEM_PACKET_EXPIRE_TIMESTAMP);
+        Duration cliTtl = Duration.ofMillis(MessageConstant.CACHE_QOS_IDEM_CLIENT_EXPIRE_TIMESTAMP);
+        Mono<Boolean> markPkt = reactiveRedisTemplate.opsForValue()
+                .set(CacheConstant.buildQosIdempotencyPacketKey(appKey, packet.getPacketId()), "1", pktTtl)
+                .thenReturn(true);
+        Mono<Boolean> markCli = StringUtils.isNotBlank(sender) && StringUtils.isNotBlank(message.getId())
+                ? reactiveRedisTemplate.opsForValue()
+                .set(CacheConstant.buildQosIdempotencyClientKey(appKey, sender, message.getId()), "1", cliTtl)
+                .thenReturn(true)
+                : Mono.just(true);
+        return saved.flatMap(ok -> ok ? markPkt.then(markCli).thenReturn(true) : Mono.just(false));
     }
 
 
@@ -2225,7 +2282,11 @@ public enum DefaultRepository implements Repository{
                 log.debug("会话ZSet命令入队: {}", sessionKey);
             }
 
-            // === 步骤8：离线消息处理 ===
+            // === 步骤8：QoS 幂等 + 离线消息 ===
+            if (MessageContext.messageProperties.isQosEnable() &&
+                    message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
+                QosIdempotencyHelper.markOnConnection(conn, stringSerializer, appKey, packet.getPacketId(), from, message.getId());
+            }
             if (saveOfflineMessage &&
                     MessageContext.messageProperties.isQosEnable() &&
                     message.getQos() > QosLevelEnum.QOS_0.getLevel() &&
@@ -2237,22 +2298,6 @@ public enum DefaultRepository implements Repository{
                         conn.zSetCommands().zAdd(keyBytes, NumberConstant.NUMBER_0, packetIdBytes);
                         log.debug("离线ZADD入队: {}", key);
                     }
-                }
-
-                // 离线 Hash 标识 HSET
-                String hashKey = CacheConstant.buildFromOfflineCacheKey(appKey, from);
-                String hashField = message.getId();
-                String hashValue = String.valueOf(packet.getPacketId());
-
-                byte[] hKey = serializeOrNull(stringSerializer, hashKey);
-                byte[] hField = serializeOrNull(stringSerializer, hashField);
-                byte[] hVal = serializeOrNull(stringSerializer, hashValue);
-
-                if (allNotNull(hKey, hField, hVal)) {
-                    conn.hashCommands().hSet(hKey, hField, hVal);
-                    log.debug("离线Hash标识入队: {}", hashKey);
-                } else {
-                    log.warn("离线Hash参数序列化失败，跳过HSET");
                 }
             }
 
@@ -2487,4 +2532,5 @@ public enum DefaultRepository implements Repository{
         // 获取会话中的最后一条消息id,这里不直接存packet，是为了节省redis 内存考虑，这里只存packetId
         redisTemplate.opsForValue().set(CacheConstant.buildSessionLastMessageCacheKey(lastPacket.getMessage().getMetadata().getAppKey(), sessionId), lastPacket.getPacketId(), expireTime, timeUnit);
     }
+
 }

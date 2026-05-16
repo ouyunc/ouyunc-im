@@ -18,10 +18,11 @@ public interface Repository {
     Future<?> save(Packet packet);
 
     /**
-     * 检查消息是否重复发送（也就是是否已经持久化）
-     * @param packet
-     * @return
+     * 检查 QoS 重发是否重复（packetId 优先，其次通道身份 + 客户端 messageId）
+     *
+     * @param packet 待检消息（含内嵌 packetId 或客户端 messageId）
+     * @param channelLoginIdentity 当前连接登录身份，用于 cli 层幂等，可为 null
      */
-    boolean checkDup(Packet packet);
+    boolean checkDup(Packet packet, String channelLoginIdentity);
 
 }

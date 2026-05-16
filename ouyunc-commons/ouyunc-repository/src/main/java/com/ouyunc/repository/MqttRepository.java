@@ -3,12 +3,11 @@ package com.ouyunc.repository;
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MqConstant;
-import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.model.MqttTopicSubscriptionOption;
 import com.ouyunc.base.packet.Packet;
-import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.mq.kafka.KafkaFactory;
+import com.ouyunc.repository.support.QosIdempotencyHelper;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.dao.DataAccessException;
@@ -23,7 +22,6 @@ import org.springframework.messaging.support.MessageBuilder;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.Future;
 
 /**
@@ -54,12 +52,8 @@ public enum MqttRepository implements Repository{
     }
 
     @Override
-    public boolean checkDup(Packet packet) {
-        Message message = packet.getMessage();
-        Metadata metadata = message.getMetadata();
-        Object packetIdObj = redisTemplate.opsForHash().get(CacheConstant.buildFromOfflineCacheKey(metadata.getAppKey(), message.getFrom()), message.getId());
-        // 如果分数不为 null，则表示值存在
-        return !Objects.isNull(packetIdObj);
+    public boolean checkDup(Packet packet, String channelLoginIdentity) {
+        return QosIdempotencyHelper.isDuplicate(redisTemplate, packet, channelLoginIdentity);
     }
 
 

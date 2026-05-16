@@ -10,7 +10,7 @@ public class QosAckContent implements Serializable {
     private static final long serialVersionUID = -1L;
 
     /**
-     * ackId, 原始消息的id
+     * 服务端原始消息的 packetId（十进制字符串，对外协议）
      */
     private String ackId;
 

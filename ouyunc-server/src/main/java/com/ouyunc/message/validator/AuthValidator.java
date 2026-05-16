@@ -8,6 +8,7 @@ import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.core.context.MessageContext;
 import io.netty.channel.ChannelHandlerContext;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,19 +24,37 @@ public enum AuthValidator implements Validator<Packet> {
 
     /***
      * @author fzx
-     * @description 校验发送方是否登录，只在消息首次接收的服务器上做校验，集群传递消息不做权限验证
+     * @description 校验连接已登录，并将 {@link Message#getFrom()} 绑定为 Channel 登录身份（不信任客户端 from）。
+     * 只在消息首次接收的服务器上做校验，集群传递消息不做权限验证。
      */
     @Override
     public boolean verify(Packet packet, ChannelHandlerContext ctx) {
+        if (packet == null || packet.getMessage() == null) {
+            return false;
+        }
         byte deviceTypeValue = packet.getDeviceType();
         Message message = packet.getMessage();
-        String from = message.getFrom();
-        if (log.isDebugEnabled()) {
-            log.debug("正在校验消息发送方 from {} 是否已在设备: {} 登录认证", from, deviceTypeValue);
-        }
-        //1,判断用户是否登录, 2024-09-21 这里修改不从redis取登录信息，减少Redis的压力
+        String clientFrom = message.getFrom();
         LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
-        // 判断是否在线， 也可以进行扩展进行给客户端发送登录认证失败的消息
-        return loginClientInfo != null && OnlineEnum.ONLINE.equals(loginClientInfo.getOnlineStatus()) && MessageContext.messageProperties.getLocalServerAddress().equals(loginClientInfo.getLoginServerAddress());
+        if (loginClientInfo == null
+                || !OnlineEnum.ONLINE.equals(loginClientInfo.getOnlineStatus())
+                || !MessageContext.messageProperties.getLocalServerAddress().equals(loginClientInfo.getLoginServerAddress())) {
+            return false;
+        }
+        String verifiedSender = loginClientInfo.getIdentity();
+        if (StringUtils.isBlank(verifiedSender)) {
+            log.warn("登录态 identity 为空，拒绝消息，deviceType={}", deviceTypeValue);
+            return false;
+        }
+        if (StringUtils.isNotBlank(clientFrom) && !verifiedSender.equals(clientFrom)) {
+            log.warn("消息 from 与登录身份不一致，拒绝。clientFrom={}, verifiedSender={}, deviceType={}",
+                    clientFrom, verifiedSender, deviceTypeValue);
+            return false;
+        }
+        message.setFrom(verifiedSender);
+        if (log.isDebugEnabled()) {
+            log.debug("发送方已绑定为登录用户 {}，deviceType={}", verifiedSender, deviceTypeValue);
+        }
+        return true;
     }
 }

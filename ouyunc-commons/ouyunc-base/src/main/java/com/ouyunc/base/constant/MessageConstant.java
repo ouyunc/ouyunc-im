@@ -33,6 +33,16 @@ public class MessageConstant {
 
 
     /**
+     * 0 字符串
+     */
+    public static final String ZERO_STR = "0";
+
+    /**
+     * 1 字符串
+     */
+    public static final String ONE_STR = "1";
+
+    /**
      * 数字1000
      */
     public static final int NUMBER_1000 = 1000;
@@ -120,6 +130,16 @@ public class MessageConstant {
      *  缓存消息热key的过期时间戳，3天,时间戳，单位毫秒
      */
     public static final long CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP = NumberConstant.NUMBER_3 * MessageConstant.DAY_TIMESTAMP;
+
+    /**
+     * QoS 幂等（packetId）缓存过期时间，默认 30 分钟
+     */
+    public static final long CACHE_QOS_IDEM_PACKET_EXPIRE_TIMESTAMP = NumberConstant.NUMBER_30 * MessageConstant.MINUTE_TIMESTAMP;
+
+    /**
+     * QoS 幂等（客户端 messageId）缓存过期时间，默认 5 分钟
+     */
+    public static final long CACHE_QOS_IDEM_CLIENT_EXPIRE_TIMESTAMP = NumberConstant.NUMBER_5 * MessageConstant.MINUTE_TIMESTAMP;
 
 
     /**
@@ -281,7 +301,7 @@ public class MessageConstant {
     public static final String CHANNEL_ATTR_KEY_TAG_READ_TIMEOUT_TIMES = "CHANNEL_ATTR_KEY_TAG_CLIENT_READ_TIMEOUT_TIMES";
 
     /**
-     * 读空闲关闭连接前的最大重试次数（与全局 {@code client.heart-beat.wait-retry} 同语义）；登录传入 {@code heartBeatWaitRetry>0} 时写入并覆盖全局，否则由 {@link com.ouyunc.message.handler.HeartBeatHandler} 仅用服务端配置
+     * 读空闲关闭连接前的最大重试次数（与全局 {@code client.heart-beat.wait-retry} 同语义）；登录传入 {@code heartBeatWaitRetry>0} 时写入并覆盖全局，否则由  仅用服务端配置
      */
     public static final String CHANNEL_ATTR_KEY_TAG_HEARTBEAT_WAIT_RETRY = "CHANNEL_ATTR_KEY_TAG_HEARTBEAT_WAIT_RETRY";
 

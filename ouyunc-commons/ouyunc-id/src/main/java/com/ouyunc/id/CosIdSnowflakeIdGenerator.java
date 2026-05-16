@@ -41,9 +41,9 @@ public enum CosIdSnowflakeIdGenerator implements IdGenerator{
     public String formatLongId19Str(String id) {
         if (StringUtils.isBlank(id)) {
             log.error("格式化ID失败，ID为空！");
-            return StringUtils.leftPad("", NumberConstant.NUMBER_19, '0');
+            return formatLongId19Str(NumberConstant.NUMBER_0);
         }
-        return StringUtils.leftPad(id, NumberConstant.NUMBER_19, '0');
+        return formatLongId19Str(Long.parseLong(id));
     }
 
     @Override

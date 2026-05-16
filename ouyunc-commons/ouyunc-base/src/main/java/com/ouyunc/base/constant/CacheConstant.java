@@ -110,6 +110,11 @@ public class CacheConstant {
     private static final String OFFLINE = "off:";
 
     /***
+     * QoS 幂等
+     */
+    private static final String QOS_IDEM = "qos:idem:";
+
+    /***
      * 会话
      */
     private static final String SESSION = "s:";
@@ -341,12 +346,18 @@ public class CacheConstant {
         return buildBaseCacheKey(appKey) + OFFLINE + withHashTag(to) + COLON + deviceTypeValue;
     }
 
+    /**
+     * QoS 幂等：服务端 packetId
+     */
+    public static String buildQosIdempotencyPacketKey(String appKey, long packetId) {
+        return buildBaseCacheKey(appKey) + QOS_IDEM + "pkt:" + withHashTag(String.valueOf(packetId));
+    }
 
     /**
-     * 构建 发送方离线消息 cache key - 集群优化
+     * QoS 幂等：通道登录身份 + 客户端 messageId
      */
-    public static String buildFromOfflineCacheKey(String appKey, String from) {
-        return buildBaseCacheKey(appKey) + OFFLINE + withHashTag(from);
+    public static String buildQosIdempotencyClientKey(String appKey, String loginIdentity, String clientMessageId) {
+        return buildBaseCacheKey(appKey) + QOS_IDEM + "cli:" + withHashTag(loginIdentity) + COLON + clientMessageId;
     }
 
     /**

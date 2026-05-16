@@ -1,13 +1,11 @@
 package com.ouyunc.message.processor;
 
-import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.MessageType;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.constant.enums.QosModeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
-import com.ouyunc.base.packet.message.content.QosAckContent;
 import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
@@ -15,6 +13,8 @@ import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.schedule.ScheduleTimer;
 import com.ouyunc.message.validator.AuthValidator;
 import com.ouyunc.message.validator.PermissionValidator;
+import com.ouyunc.repository.support.QosAckContentParser;
+import org.apache.commons.lang3.StringUtils;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,11 +73,11 @@ public final class QosC2SMessageProcessor extends AbstractMessageProcessor<Byte>
         if (MessageServerContext.serverProperties().isQosEnable() && QosModeEnum.SERVER.equals(MessageServerContext.serverProperties().getQosMode())) {
             Message message = packet.getMessage();
             // 可以判断这个receivedPackageId是否合法，不是自己发送的，以及消息类型是合法的，这里不做过多的判断
-            QosAckContent qosAckContent = JSON.parseObject(message.getContent(), QosAckContent.class);
-            // 移除离线消息,通过异步发送移除离线消息事件
             MessageServerContext.publishEvent(new MessageEvent(packet, MessageEventTypeEnum.REMOVE_OFFLINE), true);
-            // 停止本地的qos定时任务
-            ScheduleTimer.cancel(qosAckContent.getAckId());
+            String ackId = QosAckContentParser.resolveAckId(message.getContent());
+            if (StringUtils.isNotBlank(ackId)) {
+                ScheduleTimer.cancel(ackId);
+            }
         }else {
             log.warn("QosC2SMessageProcessor qos未开启或者qos模式不是服务端模式,忽略处理");
         }

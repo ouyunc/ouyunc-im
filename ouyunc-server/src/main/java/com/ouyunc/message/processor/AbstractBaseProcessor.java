@@ -1,8 +1,11 @@
 package com.ouyunc.message.processor;
 
 import com.alibaba.fastjson2.JSON;
+import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.*;
+import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.model.Metadata;
+import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.model.Target;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
@@ -48,15 +51,14 @@ public abstract class AbstractBaseProcessor<T extends Number> implements Process
         Message message = packet.getMessage();
         // 判断是否开启qos
         if (MessageServerContext.serverProperties().isQosEnable() && packet.getMessageType() == MessageTypeEnum.QOS_DUP.getType() && message.getContentType() == MessageContentTypeEnum.QOS_DUP_CONTENT.getType()) {
-            // 如果是客户端模式，判断是否需要拦截（是否是重发消息），如果是重发消息且已经发送过（存储到离线消息中），则直接返回ack，否则构造正常消息，往下传递
             Packet dupPacket = JSON.parseObject(message.getContent(), Packet.class);
-            // 判断是否已经在离线消息中, 如果已经发送过，返回true,否则返回false,且发送qosAck, 防止再次返送重试消息
-            // 离线消息，要和客户端的消息id做唯一映射
-            if (repository().checkDup(dupPacket)) {
+            LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
+            String channelLoginIdentity = loginClientInfo != null ? loginClientInfo.getIdentity() : null;
+            if (repository().checkDup(dupPacket, channelLoginIdentity)) {
                 qosPostHandle(ctx, packet);
                 return true;
             }
-            // 走到这可以认定，该消息没在离线队列中，将不认定为重发消息，认定为新消息，进行传递发送
+            // 未命中幂等键，按新消息展开处理
             // 将元数据放入重发消息的packet中，否则会丢失相关信息
             Metadata metadata = message.getMetadata();
             dupPacket.getMessage().setMetadata(metadata);
@@ -75,21 +77,30 @@ public abstract class AbstractBaseProcessor<T extends Number> implements Process
      */
     @Override
     public void qosPostHandle(ChannelHandlerContext ctx, Packet packet) {
-        // 这里使用默认的ack
-        // 如果消息qos的级别不等于0, 目前qos = 1,2,3 没做区分
         if (packet.getMessage().getQos() > QosLevelEnum.QOS_0.getLevel()) {
-            // 发送ack
-            // 构造一个ack消息包
             Packet ackPacket = packet.clone();
             Message ackMessage = ackPacket.getMessage();
             Metadata metadata = ackMessage.getMetadata();
             String from = ackMessage.getFrom();
+
+            long serverPacketId;
+            String originalClientMessageId;
+            if (packet.getMessageType() == MessageTypeEnum.QOS_DUP.getType()) {
+                Packet dupPacket = JSON.parseObject(packet.getMessage().getContent(), Packet.class);
+                serverPacketId = dupPacket.getPacketId();
+                originalClientMessageId = dupPacket.getMessage() != null ? dupPacket.getMessage().getId() : null;
+            } else {
+                serverPacketId = packet.getPacketId();
+                originalClientMessageId = packet.getMessage().getId();
+            }
+
             ackMessage.setId(MessageContext.idGenerator().generateIdStr());
             ackMessage.setFrom(null);
             ackMessage.setTo(from);
-            // 设置qos为0，不需要发送端再次回复了
             ackMessage.setQos(QosLevelEnum.QOS_0.getLevel());
-            ackMessage.setContent(JSON.toJSONString(new QosAckContent(String.valueOf(ackPacket.getPacketId()), ackMessage.getId())));
+            // 对外 ackId 为裸 packetId；19 位 CosId 仅用于 Redis ZSet 等内部存储
+            ackMessage.setContent(JSON.toJSONString(new QosAckContent(
+                    String.valueOf(serverPacketId), originalClientMessageId)));
             ackMessage.setContentType(MessageContentTypeEnum.TEXT_CONTENT.getType());
             ackMessage.setCreateTime(TimeUtil.currentTimeMillis());
             ackPacket.setPacketId(MessageContext.idGenerator().generateId());
