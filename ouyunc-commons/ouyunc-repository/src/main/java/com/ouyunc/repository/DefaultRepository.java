@@ -6,6 +6,7 @@ import com.google.common.collect.Lists;
 import com.ouyunc.base.constant.*;
 import com.ouyunc.base.constant.enums.*;
 import com.ouyunc.base.executor.ThreadPoolManager;
+import com.ouyunc.base.constant.enums.DeviceType;
 import com.ouyunc.base.model.FiveConsumer;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
@@ -39,6 +40,8 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisStringCommands;
+import org.springframework.data.domain.Range;
+import org.springframework.data.redis.connection.Limit;
 import org.springframework.data.redis.core.*;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.types.Expiration;
@@ -725,6 +728,25 @@ public enum DefaultRepository implements Repository{
                     return null;
                 }
             });
+            if (isOneToOneSession(sessionId, withdrawMsg.getFrom(), withdrawMsg.getTo())) {
+                int decr = 0;
+                for (Packet withdrawPacket : packets) {
+                    if (withdrawPacket == null || withdrawPacket.getMessage() == null) {
+                        continue;
+                    }
+                    Message withdrawn = withdrawPacket.getMessage();
+                    if (!withdrawMsg.getFrom().equals(withdrawn.getFrom())) {
+                        continue;
+                    }
+                    if (isCountablePeerUnreadContentType(withdrawn.getContentType())) {
+                        decr++;
+                    }
+                }
+                if (decr > 0) {
+                    decrSessionPeerUnread(appKey, withdrawMsg.getTo(), sessionId, decr,
+                            MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP);
+                }
+            }
             return true;
         });
     }
@@ -869,14 +891,34 @@ public enum DefaultRepository implements Repository{
     private long resolveMaxReadOffsetAllDevices(String appKey, IdentityType identityType, String from, String to) {
         long max = 0L;
         boolean found = false;
-        for (DeviceTypeEnum deviceTypeEnum : DeviceTypeEnum.values()) {
-            Long offset = getSessionMaxReadPackageId(appKey, identityType, from, deviceTypeEnum.getType(), to);
+        for (Byte deviceType : resolveDeviceTypeBytes(appKey)) {
+            Long offset = getSessionMaxReadPackageId(appKey, identityType, from, deviceType, to);
             if (offset != null) {
                 found = true;
                 max = Math.max(max, offset);
             }
         }
         return found ? max : 0L;
+    }
+
+    /**
+     * 与 im-service {@code getAllDeviceTypes} 一致：优先 Redis 配置的 appKey 设备类型，否则默认枚举。
+     */
+    @SuppressWarnings("unchecked")
+    private List<Byte> resolveDeviceTypeBytes(String appKey) {
+        Set<Object> configured = redisTemplate.opsForSet().members(CacheConstant.buildAppKeyDeviceTypeCacheKey(appKey));
+        if (CollectionUtils.isNotEmpty(configured)) {
+            List<Byte> types = new ArrayList<>();
+            for (Object item : configured) {
+                if (item instanceof DeviceType deviceType) {
+                    types.add(deviceType.getType());
+                }
+            }
+            if (!types.isEmpty()) {
+                return types.stream().distinct().toList();
+            }
+        }
+        return Arrays.stream(DeviceTypeEnum.values()).map(DeviceTypeEnum::getType).distinct().toList();
     }
 
 
@@ -1023,13 +1065,101 @@ public enum DefaultRepository implements Repository{
                             List.of(offsetKey),
                             List.of(String.valueOf(incomingOffset), String.valueOf(expireTime)));
                     if (identityType == IdentityType.ONE_2_ONE) {
-                        String sessionId = IdentityUtil.sessionId(from, to);
-                        String peerUnreadKey = CacheConstant.buildSessionPeerUnreadCacheKey(appKey, from, sessionId);
-                        redisTemplate.opsForValue().set(peerUnreadKey, 0L, expireTime, TimeUnit.MILLISECONDS);
+                        refreshSessionPeerUnreadAfterRead(appKey, from, to, expireTime);
                     }
                     return Boolean.TRUE;
                 })
                 .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    /**
+     * 单聊已读后按多端合并游标重算他人未读计数（支持部分已读，不再一律清零）。
+     */
+    private void refreshSessionPeerUnreadAfterRead(String appKey, String viewerId, String peerUserId, long expireMs) {
+        String sessionId = IdentityUtil.sessionId(viewerId, peerUserId);
+        long readOffset = resolveMaxReadOffsetAllDevices(appKey, IdentityType.ONE_2_ONE, viewerId, peerUserId);
+        Object lastObj = redisTemplate.opsForValue().get(CacheConstant.buildSessionLastMessageCacheKey(appKey, sessionId));
+        long lastMsgId = lastObj instanceof Number n ? n.longValue() : 0L;
+        String peerUnreadKey = CacheConstant.buildSessionPeerUnreadCacheKey(appKey, viewerId, sessionId);
+        if (lastMsgId <= readOffset) {
+            redisTemplate.opsForValue().set(peerUnreadKey, 0L, expireMs, TimeUnit.MILLISECONDS);
+            return;
+        }
+        int peerUnread = countPeerUnreadInSessionRange(appKey,
+                CacheConstant.buildSessionCacheKey(appKey, sessionId), viewerId, readOffset, lastMsgId);
+        redisTemplate.opsForValue().set(peerUnreadKey, (long) peerUnread, expireMs, TimeUnit.MILLISECONDS);
+    }
+
+    private int countPeerUnreadInSessionRange(String appKey, String sessionRedisKey, String viewerUserId,
+                                              long readOffsetExclusive, long lastMsgIdInclusive) {
+        int maxScan = MessageConstant.SESSION_UNREAD_PEER_SCAN_LIMIT;
+        Range<String> range = Range.of(
+                Range.Bound.exclusive(MessageContext.idGenerator().formatLongId19Str(readOffsetExclusive)),
+                Range.Bound.inclusive(MessageContext.idGenerator().formatLongId19Str(lastMsgIdInclusive)));
+        Set<String> members = stringRedisTemplate.opsForZSet().reverseRangeByLex(sessionRedisKey, range, Limit.limit().count(maxScan));
+        if (CollectionUtils.isEmpty(members)) {
+            return 0;
+        }
+        List<Long> packetIds = members.stream()
+                .map(m -> {
+                    try {
+                        return Long.parseLong(m.trim());
+                    } catch (NumberFormatException e) {
+                        return 0L;
+                    }
+                })
+                .filter(id -> id > 0)
+                .toList();
+        if (packetIds.isEmpty()) {
+            return 0;
+        }
+        List<Packet> packets = getPackets(appKey, packetIds);
+        int peerCount = 0;
+        for (Packet packet : packets) {
+            if (packet == null || packet.getMessage() == null) {
+                continue;
+            }
+            Message message = packet.getMessage();
+            if (viewerUserId.equals(message.getFrom())) {
+                continue;
+            }
+            if (!isCountablePeerUnreadContentType(message.getContentType())) {
+                continue;
+            }
+            peerCount++;
+        }
+        return peerCount;
+    }
+
+    private static boolean isCountablePeerUnreadContentType(int contentType) {
+        return contentType != MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType()
+                && contentType != MessageContentTypeEnum.WITHDRAW_CONTENT.getType()
+                && contentType != MessageContentTypeEnum.PING_PONG_CONTENT.getType()
+                && contentType != MessageContentTypeEnum.LOGIN_REQUEST_CONTENT.getType()
+                && contentType != MessageContentTypeEnum.LOGIN_RESPONSE_FAIL_CONTENT.getType()
+                && contentType != MessageContentTypeEnum.LOGIN_RESPONSE_SUCCESS_CONTENT.getType()
+                && contentType != MessageContentTypeEnum.QOS_DUP_CONTENT.getType()
+                && contentType != MessageContentTypeEnum.GROUP_REQUEST_CONTENT.getType();
+    }
+
+    private static boolean isOneToOneSession(String sessionId, String from, String to) {
+        return StringUtils.isNoneBlank(sessionId, from, to) && sessionId.equals(IdentityUtil.sessionId(from, to));
+    }
+
+    private void decrSessionPeerUnread(String appKey, String viewerId, String sessionId, int count, long expireMs) {
+        if (count <= 0) {
+            return;
+        }
+        String key = CacheConstant.buildSessionPeerUnreadCacheKey(appKey, viewerId, sessionId);
+        Long remaining = redisTemplate.opsForValue().decrement(key, count);
+        if (remaining == null) {
+            return;
+        }
+        if (remaining < 0) {
+            redisTemplate.opsForValue().set(key, 0L, expireMs, TimeUnit.MILLISECONDS);
+        } else if (expireMs > 0) {
+            redisTemplate.expire(key, Duration.ofMillis(expireMs));
+        }
     }
 
     private static long resolveReadOffsetValue(Object existing) {
@@ -1046,13 +1176,12 @@ public enum DefaultRepository implements Repository{
      * 单聊：接收方他人消息未读 +1（群聊 sessionKey 为群 id，跳过）。
      */
     private void maybeIncrSessionPeerUnread(RedisConnection conn, Message message, String appKey,
-                                            String sessionKey, long expireMs) {
-        if (message == null || StringUtils.isBlank(appKey) || StringUtils.isBlank(sessionKey)) {
+                                            String sessionRedisKey, long expireMs) {
+        if (message == null || StringUtils.isBlank(appKey) || StringUtils.isBlank(sessionRedisKey)) {
             return;
         }
         int contentType = message.getContentType();
-        if (contentType == MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType()
-                || contentType == MessageContentTypeEnum.WITHDRAW_CONTENT.getType()) {
+        if (!isCountablePeerUnreadContentType(contentType)) {
             return;
         }
         String from = message.getFrom();
@@ -1060,11 +1189,15 @@ public enum DefaultRepository implements Repository{
         if (StringUtils.equals(from, to)) {
             return;
         }
-        if (StringUtils.equals(sessionKey, CacheConstant.buildSessionCacheKey(appKey, to))) {
+        if (StringUtils.equals(sessionRedisKey, CacheConstant.buildSessionCacheKey(appKey, to))) {
+            return;
+        }
+        String sessionId = IdentityUtil.sessionId(from, to);
+        if (!StringUtils.equals(sessionRedisKey, CacheConstant.buildSessionCacheKey(appKey, sessionId))) {
             return;
         }
         byte[] peerUnreadKeyBytes = serializeOrNull(stringSerializer,
-                CacheConstant.buildSessionPeerUnreadCacheKey(appKey, to, sessionKey));
+                CacheConstant.buildSessionPeerUnreadCacheKey(appKey, to, sessionId));
         if (peerUnreadKeyBytes == null) {
             return;
         }
