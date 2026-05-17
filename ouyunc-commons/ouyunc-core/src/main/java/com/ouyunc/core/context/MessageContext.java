@@ -47,6 +47,13 @@ public class MessageContext {
      * */
     public static MessageProperties messageProperties;
 
+    /**
+     * QoS 是否开启（仓库与处理器统一入口）
+     */
+    public static boolean isQosEnable() {
+        return messageProperties != null && messageProperties.isQosEnable();
+    }
+
 
     /**
      * 缓存

@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * 客服会话消息处理器（MessageType=CUSTOMER_SERVICE）。
- * 免好友校验；支持撤回、已读；与单聊共用会话/离线 key，不单独区分缓存。
+ * 免好友校验；支持撤回、已读；与单聊共用会话索引，不单独区分缓存。
  */
 public final class CustomerServiceMessageProcessor extends AbstractMessageProcessor<Byte> {
     private static final Logger log = LoggerFactory.getLogger(CustomerServiceMessageProcessor.class);
@@ -54,8 +54,7 @@ public final class CustomerServiceMessageProcessor extends AbstractMessageProces
                 ctx.close();
                 return;
             }
-            // 可以校验from 或 to 必须有一个在客服唯一标识，这里先不做校验
-            if (MessageServerContext.serverProperties().isQosEnable() && qosPreHandle(ctx, packet)) {
+            if (qosPreHandleIfEnabled(ctx, packet)) {
                 return;
             }
             ctx.fireChannelRead(packet);
@@ -66,28 +65,28 @@ public final class CustomerServiceMessageProcessor extends AbstractMessageProces
     public void process(ChannelHandlerContext ctx, Packet packet) {
         log.debug("Processing customer service message...");
         Message message = packet.getMessage();
-        String from = message.getFrom();
-        String to = message.getTo();
-        String sessionId = IdentityUtil.sessionId(from, to);
+        String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
         int contentType = message.getContentType();
 
-        // 与单聊一致：撤回、已读、普通消息均先保存到会话，再按 contentType 分支处理
+        if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {
+            handleReadReceipt(ctx, packet);
+            return;
+        }
+
         saveMessage(packet).subscribe(result -> {
             if (!result) {
-                log.error("客服会话保存消息失败: {}", packet);
-                ctx.fireChannelRead(packet);
+                log.error("客服会话索引写入失败: {}", packet);
+                publishCachePersistenceError(packet, "客服消息写入会话失败");
                 return;
             }
             if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
                 repository().saveLastMessageForSession(sessionId, packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
                 handleWithdrawMessage(ctx, packet);
-            } else if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {
-                handleReadReceipt(ctx, packet);
             } else {
                 repository().saveLastMessageForSession(sessionId, packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
-                deliverToUserAndService(ctx, packet, false);
+                deliverToUserAndService(packet, false);
+                ctx.fireChannelRead(packet);
             }
-            ctx.fireChannelRead(packet);
         });
     }
 
@@ -99,7 +98,10 @@ public final class CustomerServiceMessageProcessor extends AbstractMessageProces
                 repository().reactiveValidWithdrawMessage(packet, sessionId, true),
                 () -> repository().savePacket2Mq(MqConstant.KAFKA_WITHDRAW_MESSAGE_TOPIC, sessionId, packet),
                 Mono.just(true),
-                (ctx0, packet0) -> deliverToUserAndService(ctx0, packet0, true),
+                (ctx0, packet0) -> {
+                    deliverToUserAndService(packet0, true);
+                    ctx0.fireChannelRead(packet0);
+                },
                 (exceptionEvent) -> MessageServerContext.publishEvent(exceptionEvent, true),
                 ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR)
                 .subscribe();
@@ -111,13 +113,12 @@ public final class CustomerServiceMessageProcessor extends AbstractMessageProces
                 repository().reactiveValidReadReceiptMessage(packet, sessionId, IdentityType.ONE_2_ONE, true),
                 () -> repository().savePacket2Mq(MqConstant.KAFKA_READ_RECEIPT_MESSAGE_TOPIC, sessionId, packet),
                 repository().reactiveReadReceiptMessage(packet, IdentityType.ONE_2_ONE, MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP),
-                (ctx0, packet0) -> deliverReadReceiptToSender(packet0),
+                (ctx0, packet0) -> completeReadReceipt(ctx0, packet0, () -> deliverReadReceiptToSender(packet0)),
                 (exceptionEvent) -> MessageServerContext.publishEvent(exceptionEvent, true),
                 ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR)
                 .subscribe();
     }
 
-    /** 已读回执推送给消息发送方（message.to），便于发送方 UI 展示「已读」 */
     private void deliverReadReceiptToSender(Packet packet) {
         Message message = packet.getMessage();
         String appKey = message.getMetadata().getAppKey();
@@ -127,11 +128,7 @@ public final class CustomerServiceMessageProcessor extends AbstractMessageProces
         }
     }
 
-    /**
-     * 投递到用户多端与客服端（与单聊 deliver 逻辑一致）
-     */
-    @SuppressWarnings("unused")
-    private void deliverToUserAndService(ChannelHandlerContext ctx, Packet packet, boolean forceSelfSync) {
+    private void deliverToUserAndService(Packet packet, boolean forceSelfSync) {
         Message message = packet.getMessage();
         String appKey = message.getMetadata().getAppKey();
         ClientInfo clientInfo = MessageServerContext.localClientInfo(appKey, message.getFrom());
@@ -145,15 +142,13 @@ public final class CustomerServiceMessageProcessor extends AbstractMessageProces
         if (CollectionUtils.isNotEmpty(toLoginList)) {
             MessageHelper.asyncSendMessage(packet, toLoginList);
         } else {
-            log.debug("客服端 offline, message stored for to={}", message.getTo());
+            log.debug("客服接收方 {} 不在线，已写入会话索引，上线后拉取", message.getTo());
         }
     }
 
     private Mono<Boolean> saveMessage(Packet packet) {
         Message message = packet.getMessage();
         String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
-        return repository().reactiveSaveMessage(packet, sessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP,
-                MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() != message.getContentType(),
-                MessageServerContext.deviceTypeList(message.getMetadata().getAppKey(), message.getTo()));
+        return repository().reactiveSaveMessage(packet, sessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
     }
 }

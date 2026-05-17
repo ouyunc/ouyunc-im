@@ -9,6 +9,7 @@ import com.ouyunc.base.model.Order;
 import com.ouyunc.base.model.Target;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
+import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.intercept.AbstractMessageInterceptor;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
@@ -33,7 +34,7 @@ public class QosRetryMessageInterceptor extends AbstractMessageInterceptor {
     public void postHandle(Packet packet, Target target) {
         // 判断是否是服务端模式
         // 判断是否需要qos
-        if (MessageServerContext.serverProperties().isQosEnable() && MessageServerContext.serverProperties().isQosRetryEnable()) {
+        if (MessageContext.isQosEnable() && MessageServerContext.serverProperties().isQosRetryEnable()) {
             Message message = packet.getMessage();
             Metadata metadata = message.getMetadata();
             int qos = message.getQos();
@@ -45,11 +46,11 @@ public class QosRetryMessageInterceptor extends AbstractMessageInterceptor {
                     // 获取最终目标服务所有端的登录信息并组装成target, 只能在相同的appKey 下发送数据,
                     List<LoginClientInfo> targetLoginClientInfos = ClientHelper.onlineAll(metadata.getAppKey(), target.getTargetIdentity());
                     if (CollectionUtils.isEmpty(targetLoginClientInfos)) {
-                        // 这里直接取消，因为消息已经存到离线队列中，等接收方上线后直接从离线消息拉取即可
+                        // 接收方全部离线时取消重试；上线后通过会话 ZSet + HTTP 分页拉取补数
                         taskWrapper.cancel();
                         return;
                     }
-                    // 这里给所有端都重试发送？这里需要考虑一个题，针对多端的发送，一条数据如果某一个端或某几个端接收到了数据，是否要重复发送？这里只要有一个端发送成功则不再重试发送，会将待确认消息剔除，但是可能会出现数据重复发送的情况，需要做幂等
+                    // 向所有在线端重试推送，直至任一端回 QOS_C2S_ACK（ScheduleTimer.cancel）或达到最大次数；客户端须按 packetId 幂等
                     for (LoginClientInfo targetLoginClientInfo : targetLoginClientInfos) {
                         MessageHelper.asyncSendMessage(schedulePackage, Target.newBuilder().targetIdentity(targetLoginClientInfo.getIdentity()).deviceType(targetLoginClientInfo.getDeviceType()).targetServerAddress(targetLoginClientInfo.getLoginServerAddress()).protocol(targetLoginClientInfo.getProtocol()).protocolVersion(targetLoginClientInfo.getProtocolVersion()).build());
                     }

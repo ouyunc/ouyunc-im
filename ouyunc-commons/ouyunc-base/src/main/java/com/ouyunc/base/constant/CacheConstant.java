@@ -50,6 +50,11 @@ public class CacheConstant {
     private static final String SESSION_READ_MESSAGE_OFFSET = "sro:";
 
     /***
+     * 会话他人消息未读计数（单聊 O(1)）
+     */
+    private static final String SESSION_PEER_UNREAD = "spu:";
+
+    /***
      * 平台appKey链接数
      */
     private static final String CONNECTIONS = "conn";
@@ -258,12 +263,19 @@ public class CacheConstant {
     /**
      * 构建 会话中已读消息偏移量 cache key - 集群优化
      */
-    public static String buildSessionReadMessageOffsetCacheKey(String appKey, Integer identityType, 
+    public static String buildSessionReadMessageOffsetCacheKey(String appKey, Integer identityType,
                                                              String from, Byte deviceType, String to) {
         // 使用from和to的组合作为哈希标签，确保同一会话的数据在同一个slot
         String sessionTag = withHashTag(from + MessageConstant.UNDERLINE + to);
-        return buildBaseCacheKey(appKey) + SESSION_READ_MESSAGE_OFFSET + identityType + COLON + 
+        return buildBaseCacheKey(appKey) + SESSION_READ_MESSAGE_OFFSET + identityType + COLON +
                sessionTag + COLON + deviceType;
+    }
+
+    /**
+     * 单聊会话：viewer 维度的他人消息未读计数
+     */
+    public static String buildSessionPeerUnreadCacheKey(String appKey, String viewerId, String sessionId) {
+        return buildBaseCacheKey(appKey) + SESSION_PEER_UNREAD + withHashTag(viewerId) + COLON + withHashTag(sessionId);
     }
 
     /**
@@ -340,8 +352,9 @@ public class CacheConstant {
     }
 
     /**
-     * 构建 接收方离线消息 cache key - 集群优化
+     * @deprecated ToOffline 队列已废弃，仅用于历史 Redis 数据清理
      */
+    @Deprecated
     public static String buildToOfflineCacheKey(String appKey, String to, Byte deviceTypeValue) {
         return buildBaseCacheKey(appKey) + OFFLINE + withHashTag(to) + COLON + deviceTypeValue;
     }

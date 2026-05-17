@@ -125,7 +125,7 @@ public final class One2OneAgreeFriendRequestMessageProcessor extends AbstractMes
                 // 保存消息
                 // 保存消息&开始保存好友关系到redis中
                 requestSession.setProgress(RequestSessionProgress.AGREEING.value());
-                if (!repository().agreeBindFriend(appKey, packet, requestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP, MessageServerContext.deviceTypeList(appKey, message.getTo()))) {
+                if (!repository().agreeBindFriend(appKey, packet, requestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
                     log.error("绑定好友关系异常: {}", packet);
                     MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.BIND_FRIEND_ERROR, "处理一对一同意好友请求绑定异常！", packet), MessageEventTypeEnum.EXCEPTION), true);
                     return;

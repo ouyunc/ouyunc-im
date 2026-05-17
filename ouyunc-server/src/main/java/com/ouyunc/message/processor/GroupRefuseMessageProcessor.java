@@ -158,28 +158,9 @@ public final class GroupRefuseMessageProcessor extends AbstractMessageProcessor<
                         log.error("拒绝加群请求，发送mq异常，原因：{}", ex.getMessage());
                         MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "处理拒绝加群请求异常！" + ex.getMessage(), packet), MessageEventTypeEnum.EXCEPTION), true);
                     } else {
-                        repository().reactiveSaveOfflineMessage(packet,  content.getIdentity(), MessageServerContext.deviceTypeList(appKey, content.getIdentity())).subscribe(saveResult ->  {
-                            if (saveResult) {
-                                // 被邀请者或主动加入者
-                                List<LoginClientInfo> inviterOrJoinerLoginClientInfos = ClientHelper.onlineAll(packet.getMessage().getMetadata().getAppKey(), content.getIdentity());
-                                if (CollectionUtils.isNotEmpty(inviterOrJoinerLoginClientInfos)) {
-                                    MessageHelper.asyncSendMessage(packet, inviterOrJoinerLoginClientInfos);
-                                }
-                                // 如果有群主或群管理员，则发送消息给群主或群管理员
-                                groupMannerOrLeaderUsersIdentityAndPostMap.forEach((groupMannerOrLeaderUserIdentity, post) -> {
-                                    List<LoginClientInfo> toLoginClientInfos = ClientHelper.onlineAll(message.getMetadata().getAppKey(), groupMannerOrLeaderUserIdentity);
-                                    if (CollectionUtils.isNotEmpty(toLoginClientInfos)) {
-                                        MessageHelper.asyncSendMessage(packet, toLoginClientInfos);
-                                    }
-                                });
-                                // 处理成功则转到下个处理器
-                                ctx.fireChannelRead(packet);
-                            } else {
-                                log.error("保存被邀请者或主动加入离线消息失败: {}", packet);
-                                MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.SAVE_OFFLINE_MESSAGE_ERROR, "保存被邀请者或主动加入离线消息失败！", packet), MessageEventTypeEnum.EXCEPTION), true);
-                            }
-                        });
-
+                        List<String> notifyIdentities = new ArrayList<>(groupMannerOrLeaderUsersIdentityAndPostMap.keySet());
+                        notifyIdentities.add(content.getIdentity());
+                        deliverOnlineAndFireNext(ctx, packet, appKey, notifyIdentities);
                     }
                 });
             } else {
@@ -205,16 +186,6 @@ public final class GroupRefuseMessageProcessor extends AbstractMessageProcessor<
      * 保存群组消息
      */
     private boolean saveGroupRequestMessage(Packet packet, Set<String> groupMembers, GroupRequestSession groupRequestSession) {
-        Message message = packet.getMessage();
-        if (MessageContext.messageProperties.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
-            // 保存需要qos
-            Map<String, Collection<DeviceType>> groupMemberDeviceTypes = new HashMap<>();
-            for (String groupMember : groupMembers) {
-                groupMemberDeviceTypes.put(groupMember, MessageServerContext.deviceTypeList(message.getMetadata().getAppKey(), groupMember));
-            }
-            return repository().batchSaveGroupRequestMessage(packet, groupMemberDeviceTypes, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
-        }
-        // 保存，不需要qos
         return repository().saveGroupRequestMessage(packet, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
     }
 

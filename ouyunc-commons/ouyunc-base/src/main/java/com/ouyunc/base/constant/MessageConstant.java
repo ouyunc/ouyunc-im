@@ -127,9 +127,19 @@ public class MessageConstant {
     public static final int MAX_READ_RECEIPT_MESSAGE_COUNT = 50;
 
     /**
-     *  缓存消息热key的过期时间戳，3天,时间戳，单位毫秒
+     * 会话列表未读：ZSet 扫描他人消息上限（超过则 lexCount 兜底并标记 capped）
      */
-    public static final long CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP = NumberConstant.NUMBER_3 * MessageConstant.DAY_TIMESTAMP;
+    public static final int SESSION_UNREAD_PEER_SCAN_LIMIT = 500;
+
+    /**
+     *  缓存最后一条会话消息 key / 会话 ZSet / 消息热 key 过期时间，默认 30 天，单位毫秒
+     */
+    public static final long CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP = NumberConstant.NUMBER_30 * MessageConstant.DAY_TIMESTAMP;
+
+    /**
+     *  缓存消息热 key 过期时间（与会话 ZSet 一致）
+     */
+    public static final long CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP = CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP;
 
     /**
      * QoS 幂等（packetId）缓存过期时间，默认 30 分钟
@@ -140,12 +150,6 @@ public class MessageConstant {
      * QoS 幂等（客户端 messageId）缓存过期时间，默认 5 分钟
      */
     public static final long CACHE_QOS_IDEM_CLIENT_EXPIRE_TIMESTAMP = NumberConstant.NUMBER_5 * MessageConstant.MINUTE_TIMESTAMP;
-
-
-    /**
-     *  缓存最后一条会话消息key 过期时间默认30 天
-     */
-    public static final long CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP = NumberConstant.NUMBER_30 * MessageConstant.DAY_TIMESTAMP;
 
 
     /**

@@ -183,16 +183,6 @@ public final class GroupJoinMessageProcessor extends AbstractMessageProcessor<By
      * 保存群组消息
      */
     private boolean saveGroupRequestMessage(Packet packet, Set<String> groupMembers, GroupRequestSession groupRequestSession) {
-        Message message = packet.getMessage();
-        if (MessageContext.messageProperties.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
-            // 保存需要qos
-            Map<String, Collection<DeviceType>> groupMemberDeviceTypes = new HashMap<>();
-            for (String groupMember : groupMembers) {
-                groupMemberDeviceTypes.put(groupMember, MessageServerContext.deviceTypeList(message.getMetadata().getAppKey(), groupMember));
-            }
-            return repository().batchSaveJoinGroupRequestMessage(packet, groupMemberDeviceTypes, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
-        }
-        // 保存，不需要qos
         return repository().saveJoinGroupRequestMessage(packet, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
     }
 

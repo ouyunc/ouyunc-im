@@ -19,6 +19,7 @@ import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.repository.DefaultRepository;
 import com.ouyunc.repository.Repository;
 import io.netty.channel.ChannelHandlerContext;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,8 +51,12 @@ public abstract class AbstractBaseProcessor<T extends Number> implements Process
         // 判断是否是需要qos以及是否是客户端模式
         Message message = packet.getMessage();
         // 判断是否开启qos
-        if (MessageServerContext.serverProperties().isQosEnable() && packet.getMessageType() == MessageTypeEnum.QOS_DUP.getType() && message.getContentType() == MessageContentTypeEnum.QOS_DUP_CONTENT.getType()) {
+        if (MessageContext.isQosEnable() && packet.getMessageType() == MessageTypeEnum.QOS_DUP.getType() && message.getContentType() == MessageContentTypeEnum.QOS_DUP_CONTENT.getType()) {
             Packet dupPacket = JSON.parseObject(message.getContent(), Packet.class);
+            if (dupPacket == null || dupPacket.getMessage() == null) {
+                log.warn("QOS_DUP 内容解析失败，按新消息处理: {}", message.getContent());
+                return false;
+            }
             LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
             String channelLoginIdentity = loginClientInfo != null ? loginClientInfo.getIdentity() : null;
             if (repository().checkDup(dupPacket, channelLoginIdentity)) {
@@ -82,11 +87,20 @@ public abstract class AbstractBaseProcessor<T extends Number> implements Process
             Message ackMessage = ackPacket.getMessage();
             Metadata metadata = ackMessage.getMetadata();
             String from = ackMessage.getFrom();
+            if (packet.getMessageType() == MessageTypeEnum.QOS_DUP.getType() && StringUtils.isBlank(from)) {
+                LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
+                if (loginClientInfo != null) {
+                    from = loginClientInfo.getIdentity();
+                }
+            }
 
             long serverPacketId;
             String originalClientMessageId;
             if (packet.getMessageType() == MessageTypeEnum.QOS_DUP.getType()) {
                 Packet dupPacket = JSON.parseObject(packet.getMessage().getContent(), Packet.class);
+                if (dupPacket == null) {
+                    return;
+                }
                 serverPacketId = dupPacket.getPacketId();
                 originalClientMessageId = dupPacket.getMessage() != null ? dupPacket.getMessage().getId() : null;
             } else {

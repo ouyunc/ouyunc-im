@@ -49,10 +49,12 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
             if (ex == null) {
                 // 两个都校验通过才放行
                 if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
-                    // 关闭当前 channel，这里会触发 DefaultSocketChannelInitializer 中的关闭逻辑
                     log.error("校验消息失败: {} 认证未通过,开始关闭channel", packet);
                     MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过!", packet), MessageEventTypeEnum.EXCEPTION), true);
                     ctx.close();
+                    return;
+                }
+                if (qosPreHandleIfEnabled(ctx, packet)) {
                     return;
                 }
                 // 校验是否拥有相关权限 permission （是有有单聊，甚至某种内容类型的权限，如不能发语音，视频消息，只能发文本，都可以在这里做校验拦截）
@@ -93,24 +95,23 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
         if (processWithContentProcessor(ctx, packet)) {
             return;
         }
-        // 2. 保存消息， 无论什么类型的消息，只要建立起好友关系，都需要往会话中保存一份消息，方便后续使用
+        int contentType = packet.getMessage().getContentType();
+        if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {
+            handleReadReceipt(ctx, packet);
+            return;
+        }
         saveMessage(packet).subscribe(result -> {
-            // 保存成功处理后续逻辑
-            if (result) {
-                // 3. 处理特殊消息类型, 注意这里都采用了无锁的方式
-                int contentType = packet.getMessage().getContentType();
-                if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
-                    repository().saveLastMessageForSession(IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo()),  packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
-                    handleWithdrawMessage(ctx, packet);
-                } else if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {
-                    handleReadReceipt(ctx, packet);
-                } else {
-                    // 是否需要发送，除当前登录设备的其他设备需要接收消息
-                    repository().saveLastMessageForSession(IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo()),  packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
-                    deliverAndFireNext(ctx, packet, false);
-                }
-            }else {
-                log.error("one 2 one 保存消息失败: {}", packet);
+            if (!result) {
+                log.error("单聊会话索引写入失败: {}", packet);
+                publishCachePersistenceError(packet, "单聊消息写入会话失败");
+                return;
+            }
+            if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
+                repository().saveLastMessageForSession(IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo()), packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+                handleWithdrawMessage(ctx, packet);
+            } else {
+                repository().saveLastMessageForSession(IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo()), packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+                deliverAndFireNext(ctx, packet, false);
             }
         });
     }
@@ -146,7 +147,7 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
                 repository().reactiveValidReadReceiptMessage(packet, sessionId, IdentityType.ONE_2_ONE, true),
                 () -> repository().savePacket2Mq(MqConstant.KAFKA_READ_RECEIPT_MESSAGE_TOPIC, sessionId, packet),
                 repository().reactiveReadReceiptMessage(packet, IdentityType.ONE_2_ONE, MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP),
-                (ctx0, packet0) -> deliverReadReceiptToSender(packet0),
+                (ctx0, packet0) -> completeReadReceipt(ctx0, packet0, () -> deliverReadReceiptToSender(packet0)),
                 (exceptionEvent)-> MessageServerContext.publishEvent(exceptionEvent, true),
                 ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR)
                 .subscribe();
@@ -183,11 +184,10 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
         }
         List<LoginClientInfo> toLoginClientInfos = ClientHelper.onlineAll(appKey, message.getTo());
         if (CollectionUtils.isEmpty(toLoginClientInfos)) {
-            log.warn("Recipient {} is offline, message stored", message.getTo());
-            return;
+            log.debug("接收方 {} 不在线，已写入会话索引，上线后拉取", message.getTo());
+        } else {
+            MessageHelper.asyncSendMessage(packet, toLoginClientInfos);
         }
-        MessageHelper.asyncSendMessage(packet, toLoginClientInfos);
-        // 处理成功则转到下个处理器
         ctx.fireChannelRead(packet);
     }
 
@@ -209,7 +209,7 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
     private Mono<Boolean> saveMessage(Packet packet) {
         Message message = packet.getMessage();
         String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
-        return repository().reactiveSaveMessage(packet, sessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP, MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() != message.getContentType(), MessageServerContext.deviceTypeList(message.getMetadata().getAppKey(), message.getTo()));
+        return repository().reactiveSaveMessage(packet, sessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
     }
 
 

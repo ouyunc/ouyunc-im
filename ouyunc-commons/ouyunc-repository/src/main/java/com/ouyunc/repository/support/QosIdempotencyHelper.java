@@ -6,20 +6,18 @@ import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.connection.RedisStringCommands;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.types.Expiration;
 import org.springframework.data.redis.serializer.RedisSerializer;
 
 import java.util.List;
-import java.util.Objects;
 
 /**
  * QoS 幂等（packetId + 通道身份/客户端 messageId）读写
  */
 public final class QosIdempotencyHelper {
-
-    private static final byte[] MARK_VALUE = "1".getBytes();
 
     private QosIdempotencyHelper() {
     }
@@ -70,27 +68,43 @@ public final class QosIdempotencyHelper {
         return false;
     }
 
-    public static void markOnConnection(RedisConnection conn, RedisSerializer<String> stringSerializer,
-                                        String appKey, long packetId, String loginIdentity, String clientMessageId) {
-        byte[] pktKey = serialize(stringSerializer, CacheConstant.buildQosIdempotencyPacketKey(appKey, packetId));
-        if (pktKey != null) {
-            conn.commands().set(pktKey, MARK_VALUE);
-            conn.keyCommands().pExpire(pktKey, MessageConstant.CACHE_QOS_IDEM_PACKET_EXPIRE_TIMESTAMP);
+    /**
+     * 抢占幂等键（SET NX）。packet 层失败则视为重复；cli 层失败不阻断（packet 已占位）。
+     */
+    public static boolean tryClaim(RedisTemplate<String, ?> redisTemplate, String appKey, long packetId,
+                                   String loginIdentity, String clientMessageId) {
+        RedisSerializer<String> stringSerializer = redisTemplate.getStringSerializer();
+        byte[] pktKey = stringSerializer.serialize(CacheConstant.buildQosIdempotencyPacketKey(appKey, packetId));
+        byte[] pktValue = stringSerializer.serialize(MessageConstant.ONE_STR);
+        if (pktKey == null || pktValue == null) {
+            return false;
+        }
+        Boolean pktClaimed = redisTemplate.execute((RedisCallback<Boolean>) connection ->
+                connection.stringCommands().set(pktKey, pktValue,
+                        Expiration.milliseconds(MessageConstant.CACHE_QOS_IDEM_PACKET_EXPIRE_TIMESTAMP),
+                        RedisStringCommands.SetOption.SET_IF_ABSENT));
+        if (!Boolean.TRUE.equals(pktClaimed)) {
+            return false;
         }
         if (StringUtils.isNotBlank(loginIdentity) && StringUtils.isNotBlank(clientMessageId)) {
-            byte[] cliKey = serialize(stringSerializer,
+            byte[] cliKey = stringSerializer.serialize(
                     CacheConstant.buildQosIdempotencyClientKey(appKey, loginIdentity, clientMessageId));
-            if (cliKey != null) {
-                conn.commands().set(cliKey, MARK_VALUE);
-                conn.keyCommands().pExpire(cliKey, MessageConstant.CACHE_QOS_IDEM_CLIENT_EXPIRE_TIMESTAMP);
+            byte[] cliValue = stringSerializer.serialize(MessageConstant.ONE_STR);
+            if (cliKey != null && cliValue != null) {
+                redisTemplate.execute((RedisCallback<Boolean>) connection ->
+                        connection.stringCommands().set(cliKey, cliValue,
+                                Expiration.milliseconds(MessageConstant.CACHE_QOS_IDEM_CLIENT_EXPIRE_TIMESTAMP),
+                                RedisStringCommands.SetOption.SET_IF_ABSENT));
             }
         }
+        return true;
     }
 
-    private static byte[] serialize(RedisSerializer<String> serializer, String key) {
-        if (key == null) {
-            return null;
+    public static void releaseClaim(RedisTemplate<String, ?> redisTemplate, String appKey, long packetId,
+                                    String loginIdentity, String clientMessageId) {
+        redisTemplate.delete(CacheConstant.buildQosIdempotencyPacketKey(appKey, packetId));
+        if (StringUtils.isNotBlank(loginIdentity) && StringUtils.isNotBlank(clientMessageId)) {
+            redisTemplate.delete(CacheConstant.buildQosIdempotencyClientKey(appKey, loginIdentity, clientMessageId));
         }
-        return Objects.requireNonNullElse(serializer.serialize(key), null);
     }
 }

@@ -117,7 +117,7 @@ public final class One2OneRefuseFriendRequestMessageProcessor extends AbstractMe
                     return;
                 }
                 requestSession.setProgress(RequestSessionProgress.REFUSING.value());
-                if (!repository().saveRefuseFriendRequestMessage(packet, requestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP, MessageServerContext.deviceTypeList(appKey, to))) {
+                if (!repository().saveRefuseFriendRequestMessage(packet, requestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
                     log.error("Failed to save one-to-one refuse friend request message: {}", packet);
                     MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一拒绝好友请求消息异常!", packet), MessageEventTypeEnum.EXCEPTION), true);
                     return;

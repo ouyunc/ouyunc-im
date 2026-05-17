@@ -46,10 +46,12 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
         repository().save(packet).whenComplete((sendResult, ex) -> {
             if (ex == null) {
                 if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
-                    // 关闭当前 channel，这里会触发 DefaultSocketChannelInitializer 中的关闭逻辑
                     log.error("校验消息: {} 中的发送方登录认证失败,开始关闭channel", packet);
                     MessageContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过", packet), MessageEventTypeEnum.EXCEPTION), true);
                     ctx.close();
+                    return;
+                }
+                if (qosPreHandleIfEnabled(ctx, packet)) {
                     return;
                 }
                 // 校验是否拥有相关权限 permission （对方是否被拉黑，禁用等）群是否被封禁，是否全体禁言
@@ -99,20 +101,23 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
             MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "发送者不在群组中", packet), MessageEventTypeEnum.EXCEPTION), true);
             return;
         }
-        // 3. 保存消息
-        reactiveSaveGroupMessage(packet, groupUserIdentitySet).subscribe(result -> {
-            if (result) {
-                // 4. 处理特殊消息类型
-                int contentType = packet.getMessage().getContentType();
-                if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
-                    repository().saveLastMessageForSession(packet.getMessage().getTo(),  packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
-                    handleWithdrawMessage(ctx, packet, groupUserIdentitySet);
-                } else if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {
-                    handleReadReceipt(ctx, packet, groupUserIdentitySet);
-                } else {
-                    repository().saveLastMessageForSession(packet.getMessage().getTo(),  packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
-                    deliverAndFireNext(ctx, packet, groupUserIdentitySet);
-                }
+        int contentType = packet.getMessage().getContentType();
+        if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {
+            handleReadReceipt(ctx, packet, groupUserIdentitySet);
+            return;
+        }
+        reactiveSaveGroupMessage(packet).subscribe(result -> {
+            if (!result) {
+                log.error("群聊会话索引写入失败: {}", packet);
+                publishCachePersistenceError(packet, "群聊消息写入会话失败");
+                return;
+            }
+            if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
+                repository().saveLastMessageForSession(packet.getMessage().getTo(), packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+                handleWithdrawMessage(ctx, packet, groupUserIdentitySet);
+            } else {
+                repository().saveLastMessageForSession(packet.getMessage().getTo(), packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+                deliverAndFireNext(ctx, packet, groupUserIdentitySet);
             }
         });
 
@@ -136,7 +141,7 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
                 repository().reactiveValidReadReceiptMessage(packet, packet.getMessage().getTo(), IdentityType.GROUP, true),
                 ()-> repository().savePacket2Mq(MqConstant.KAFKA_READ_RECEIPT_MESSAGE_TOPIC, sessionId, packet),
                 repository().reactiveReadReceiptMessage(packet, IdentityType.GROUP, MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP),
-                (ctx0, packet0) -> deliverGroupReadReceiptSelfSyncOnly(packet0),
+                (ctx0, packet0) -> completeReadReceipt(ctx0, packet0, () -> deliverGroupReadReceiptSelfSyncOnly(packet0)),
                 (exceptionEvent)-> MessageServerContext.publishEvent(exceptionEvent, true),
                 ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR).subscribe();
     }
@@ -267,24 +272,9 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
     /**
      * 保存群组消息
      */
-    private Mono<Boolean> reactiveSaveGroupMessage(Packet packet, Set<String> groupMembers) {
+    private Mono<Boolean> reactiveSaveGroupMessage(Packet packet) {
         Message message = packet.getMessage();
-        if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() != message.getContentType() && MessageContext.messageProperties.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
-            Map<String, Collection<DeviceType>> groupDeviceTypes = new HashMap<>();
-            for (String groupMember : groupMembers) {
-                groupDeviceTypes.put(groupMember, MessageServerContext.deviceTypeList(message.getMetadata().getAppKey(), groupMember));
-            }
-            return repository().reactiveBatchSaveMessage(
-                    packet,
-                    groupDeviceTypes,
-                    MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP
-            );
-        }else {
-             return repository().reactiveSaveMessage(
-                     packet,
-                     message.getTo(),
-                     MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP, false, CollectionUtils.emptyCollection());
-        }
+        return repository().reactiveSaveMessage(packet, message.getTo(), MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
     }
 
 
@@ -306,7 +296,7 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
         // 发送给他人
         List<LoginClientInfo> clientInfos = ClientHelper.onlineAll(appKey, memberIdentity);
         if (CollectionUtils.isEmpty(clientInfos)) {
-            log.warn("Member {} is offline, message stored", memberIdentity);
+            log.debug("群成员 {} 不在线，已写入群会话索引，上线后拉取", memberIdentity);
             return;
         }
         MessageHelper.asyncSendMessage(packet, clientInfos);

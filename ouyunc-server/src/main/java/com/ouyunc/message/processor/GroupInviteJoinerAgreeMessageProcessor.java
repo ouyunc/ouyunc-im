@@ -128,39 +128,11 @@ public final class GroupInviteJoinerAgreeMessageProcessor extends AbstractMessag
                         log.error("同意邀请加群请求，发送mq异常，原因：{}", ex.getMessage());
                         MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "被邀请人同意邀请加群请求异常！" + ex.getMessage(), packet), MessageEventTypeEnum.EXCEPTION), true);
                     } else {
-                        if (groupMannerOrLeaderUsersIdentitySet.contains(groupRequestSession.getInviter())) {
-                            // 如果有群主或群管理员，则发送消息给群主或群管理员
-                            for (String groupMannerOrLeaderUserIdentity : groupMannerOrLeaderUsersIdentitySet) {
-                                List<LoginClientInfo> toLoginClientInfos = ClientHelper.onlineAll(message.getMetadata().getAppKey(), groupMannerOrLeaderUserIdentity);
-                                if (CollectionUtils.isNotEmpty(toLoginClientInfos)) {
-                                    MessageHelper.asyncSendMessage(packet, toLoginClientInfos);
-                                }
-                            }
-                            // 处理成功则转到下个处理器
-                            ctx.fireChannelRead(packet);
-                        }else {
-                            repository().reactiveSaveOfflineMessage(packet,  groupRequestSession.getInviter(), MessageServerContext.deviceTypeList(message.getMetadata().getAppKey(), groupRequestSession.getInviter())).subscribe(saveResult ->  {
-                                if (saveResult) {
-                                    // 邀请人
-                                    List<LoginClientInfo> inviterLoginClientInfos = ClientHelper.onlineAll(packet.getMessage().getMetadata().getAppKey(), groupRequestSession.getInviter());
-                                    if (CollectionUtils.isNotEmpty(inviterLoginClientInfos)) {
-                                        MessageHelper.asyncSendMessage(packet, inviterLoginClientInfos);
-                                    }
-                                    // 如果有群主或群管理员，则发送消息给群主或群管理员
-                                    for (String groupMannerOrLeaderUserIdentity : groupMannerOrLeaderUsersIdentitySet) {
-                                        List<LoginClientInfo> toLoginClientInfos = ClientHelper.onlineAll(message.getMetadata().getAppKey(), groupMannerOrLeaderUserIdentity);
-                                        if (CollectionUtils.isNotEmpty(toLoginClientInfos)) {
-                                            MessageHelper.asyncSendMessage(packet, toLoginClientInfos);
-                                        }
-                                    }
-                                    // 处理成功则转到下个处理器
-                                    ctx.fireChannelRead(packet);
-                                } else {
-                                    log.error("保存被邀请者离线消息失败: {}", packet);
-                                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.SAVE_OFFLINE_MESSAGE_ERROR, "保存被邀请者离线消息异常！", packet), MessageEventTypeEnum.EXCEPTION), true);
-                                }
-                            });
+                        List<String> notifyIdentities = new ArrayList<>(groupMannerOrLeaderUsersIdentitySet);
+                        if (!notifyIdentities.contains(groupRequestSession.getInviter())) {
+                            notifyIdentities.add(groupRequestSession.getInviter());
                         }
+                        deliverOnlineAndFireNext(ctx, packet, message.getMetadata().getAppKey(), notifyIdentities);
                     }
                 });
             } else {
@@ -186,16 +158,6 @@ public final class GroupInviteJoinerAgreeMessageProcessor extends AbstractMessag
      * 保存群组消息
      */
     private boolean saveGroupRequestMessage(Packet packet, Set<String> groupMembers, GroupRequestSession groupRequestSession) {
-        Message message = packet.getMessage();
-        if (MessageContext.messageProperties.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
-            // 保存需要qos
-            Map<String, Collection<DeviceType>> groupMemberDeviceTypes = new HashMap<>();
-            for (String groupMember : groupMembers) {
-                groupMemberDeviceTypes.put(groupMember, MessageServerContext.deviceTypeList(message.getMetadata().getAppKey(), groupMember));
-            }
-            return repository().batchSaveGroupRequestMessage(packet, groupMemberDeviceTypes, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
-        }
-        // 保存，不需要qos
         return repository().saveGroupRequestMessage(packet, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
     }
 

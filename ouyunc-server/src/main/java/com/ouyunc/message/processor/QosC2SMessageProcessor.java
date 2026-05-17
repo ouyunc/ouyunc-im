@@ -7,6 +7,7 @@ import com.ouyunc.base.constant.enums.QosModeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
+import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.message.context.MessageServerContext;
@@ -70,10 +71,8 @@ public final class QosC2SMessageProcessor extends AbstractMessageProcessor<Byte>
      */
     @Override
     public void process(ChannelHandlerContext ctx, Packet packet) {
-        if (MessageServerContext.serverProperties().isQosEnable() && QosModeEnum.SERVER.equals(MessageServerContext.serverProperties().getQosMode())) {
+        if (MessageContext.isQosEnable() && QosModeEnum.SERVER.equals(MessageServerContext.serverProperties().getQosMode())) {
             Message message = packet.getMessage();
-            // 可以判断这个receivedPackageId是否合法，不是自己发送的，以及消息类型是合法的，这里不做过多的判断
-            MessageServerContext.publishEvent(new MessageEvent(packet, MessageEventTypeEnum.REMOVE_OFFLINE), true);
             String ackId = QosAckContentParser.resolveAckId(message.getContent());
             if (StringUtils.isNotBlank(ackId)) {
                 ScheduleTimer.cancel(ackId);

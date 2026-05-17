@@ -133,14 +133,14 @@ public final class One2OneJoinFriendRequestMessageProcessor extends AbstractMess
                 if (FriendJoinPolicy.AUTO_PASS.value().equals(toUserEntity.getFriendJoinPolicy())) {
                     requestSession.setProgress(RequestSessionProgress.AGREEING.value());
                     // 是自动添加好友
-                    if (!repository().autoPassBindFriend(packet, requestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP, MessageServerContext.deviceTypeList(appKey, message.getTo()))) {
+                    if (!repository().autoPassBindFriend(packet, requestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
                         log.error("自动处理绑定好友失败: {}", packet);
                         MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一自动绑定好友请求消息异常!", packet), MessageEventTypeEnum.EXCEPTION), true);
                         return;
                     }
                 }else {
                     requestSession.setProgress(RequestSessionProgress.JOINING.value());
-                    if (!repository().saveJoinFriendRequestMessage(packet, requestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP, MessageServerContext.deviceTypeList(appKey, message.getTo()))) {
+                    if (!repository().saveJoinFriendRequestMessage(packet, requestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
                         log.error("Failed to save one-to-one join friend request message: {}", packet);
                         MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一加好友请求消息异常!", packet), MessageEventTypeEnum.EXCEPTION), true);
                         return;
