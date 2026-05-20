@@ -115,7 +115,7 @@ public class HttpRequestDispatcher {
         } catch (Exception e) {
             log.error("HTTP dispatch error, uri={}", request.uri(), e);
             HttpUtil.writeJsonResponse(ctx, request, HttpResponseStatus.INTERNAL_SERVER_ERROR,
-                    HttpResponseResult.error(HttpResponseCodeEnum.INTERNAL_SERVER_ERROR, e.getMessage()));
+                    HttpResponseResult.error(HttpResponseCodeEnum.INTERNAL_SERVER_ERROR, "Internal Server Error"));
         } finally {
             logTimingLine(logTiming, startNanos, method, path);
             if (httpContext != null) {
@@ -140,7 +140,7 @@ public class HttpRequestDispatcher {
                     } catch (Exception e) {
                         log.error("HTTP write response error, uri={}", request.uri(), e);
                         HttpUtil.writeJsonResponse(ctx, request, HttpResponseStatus.INTERNAL_SERVER_ERROR,
-                                HttpResponseResult.error(HttpResponseCodeEnum.INTERNAL_SERVER_ERROR, e.getMessage()));
+                                HttpResponseResult.error(HttpResponseCodeEnum.INTERNAL_SERVER_ERROR, "Internal Server Error"));
                     }
                 });
             } catch (HttpPipelineException e) {
@@ -152,7 +152,7 @@ public class HttpRequestDispatcher {
                 runOnChannelEventLoop(ctx, request, hc, logTiming, startNanos, method, path, () -> {
                     log.error("HTTP dispatch error, uri={}", request.uri(), e);
                     HttpUtil.writeJsonResponse(ctx, request, HttpResponseStatus.INTERNAL_SERVER_ERROR,
-                            HttpResponseResult.error(HttpResponseCodeEnum.INTERNAL_SERVER_ERROR, e.getMessage()));
+                            HttpResponseResult.error(HttpResponseCodeEnum.INTERNAL_SERVER_ERROR, "Internal Server Error"));
                 });
             }
         });

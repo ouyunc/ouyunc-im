@@ -11,6 +11,7 @@ import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.constant.enums.OnlineEnum;
 import com.ouyunc.base.encrypt.Encrypt;
 import com.ouyunc.base.exception.MessageException;
+import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.model.MqttLoginClientInfo;
 import com.ouyunc.base.model.Protocol;
@@ -187,53 +188,61 @@ public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<In
             // sessionPresent
             boolean sessionPresent = cacheLoginClientInfo != null && !mqttConnectMessage.variableHeader().isCleanSession();
             ClientHelper.bind(ctx, mqttLoginClientInfo);
-            // 处理回调信息
+            // 处理回调信息（channel close 在 EventLoop 上触发，分布式锁与 Redis I/O 必须移到业务线程池执行）
             Consumer<Channel> channelConsumer = channel -> {
                 log.warn("客户端断开连接, 触发回调, comboIdentity: {}, channel: {}", comboIdentity, channel);
-                // 处理掉线事件
-                //1,从channel中的attrMap取出相关属性
                 final LoginClientInfo closingLocalLoginClientInfo = ChannelAttrUtil.getChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
-                if (closingLocalLoginClientInfo != null) {
-                    // 这里不进行判空了，到这里肯定不为空（登录信息里面一定要有登录设备的类型）
-                    Byte clientLoginDeviceValue = closingLocalLoginClientInfo.getDeviceType().getType();
-                    String closingComboIdentity = IdentityUtil.generalComboIdentity(closingLocalLoginClientInfo.getAppKey(), closingLocalLoginClientInfo.getIdentity(), clientLoginDeviceValue);
-                    // 登录信息一致,才进行解绑，删除缓存信息
-                    MessageServerContext.localLoginClientRegisterTable.delete(closingComboIdentity);
+                if (closingLocalLoginClientInfo == null) {
+                    return;
+                }
+                Byte clientLoginDeviceValue = closingLocalLoginClientInfo.getDeviceType().getType();
+                String closingComboIdentity = IdentityUtil.generalComboIdentity(closingLocalLoginClientInfo.getAppKey(), closingLocalLoginClientInfo.getIdentity(), clientLoginDeviceValue);
+                // 本地注册表立即移除（无需异步、无锁）
+                MessageServerContext.localLoginClientRegisterTable.delete(closingComboIdentity);
+
+                // 分布式状态清理与事件发布异步执行，避免阻塞 EventLoop
+                ThreadPoolManager.messageProcessorExecutor().execute(() -> {
                     String loginClientInfoCacheKey = CacheConstant.buildLoginCacheKey(closingLocalLoginClientInfo.getAppKey(), closingComboIdentity);
-                    // 获取分布式锁, 这里使用锁的目的，可以参考登录处理器的分布式锁，防止重复解绑 LoginMessageProcessor
                     RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.buildIdentityBindOrUnbindLockCacheKey(closingLocalLoginClientInfo.getAppKey(), closingComboIdentity));
                     try {
                         if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
-                            LoginClientInfo closingRemoteLoginClientInfo =  MessageServerContext.remoteLoginClientInfoCache.get(loginClientInfoCacheKey);
-                            if (closingRemoteLoginClientInfo instanceof MqttLoginClientInfo closingRemoteMqttLoginClientInfo) {
-                                // 这里比较两个登录服务器地址是否一致的目的是因为，无论集群还是单服务 在ctx异步关闭时,有可能存在关闭的执行顺序比绑定客户端的方法执行的慢，导致缓存被覆盖，结果又给删除了缓存信息，导致数据错乱。
-                                if (closingLocalLoginClientInfo.getLoginServerAddress().equals(closingRemoteMqttLoginClientInfo.getLoginServerAddress()) && closingRemoteMqttLoginClientInfo.getLastLoginTime() == closingLocalLoginClientInfo.getLastLoginTime()) {
-                                    // 缓存中有没有登录信息都进行设置下线,如果开启cleanSession 则进行下线处理，如果没有开启则直接删除
-                                    if (closingRemoteMqttLoginClientInfo.getCleanSession() == NumberConstant.NUMBER_0) {
-                                        MessageServerContext.remoteLoginClientInfoCache.delete(loginClientInfoCacheKey);
-                                    }else if (closingRemoteMqttLoginClientInfo.getCleanSession() == NumberConstant.NUMBER_1) {
-                                        closingRemoteMqttLoginClientInfo.setOnlineStatus(OnlineEnum.OFFLINE);
-                                        MessageServerContext.remoteLoginClientInfoCache.put(loginClientInfoCacheKey, closingRemoteMqttLoginClientInfo, closingRemoteMqttLoginClientInfo.getSessionExpiryInterval(), TimeUnit.SECONDS);
+                            try {
+                                LoginClientInfo closingRemoteLoginClientInfo = MessageServerContext.remoteLoginClientInfoCache.get(loginClientInfoCacheKey);
+                                if (closingRemoteLoginClientInfo instanceof MqttLoginClientInfo closingRemoteMqttLoginClientInfo) {
+                                    // 比较登录服务器地址 + 时间戳，避免新连接的状态被旧 close 回调覆盖删除
+                                    if (closingLocalLoginClientInfo.getLoginServerAddress().equals(closingRemoteMqttLoginClientInfo.getLoginServerAddress())
+                                            && closingRemoteMqttLoginClientInfo.getLastLoginTime() == closingLocalLoginClientInfo.getLastLoginTime()) {
+                                        // 按 MQTT 3.1.1 规范处理 cleanSession：
+                                        //   cleanSession = 1：临时会话，断开时清除所有会话状态
+                                        //   cleanSession = 0：持久会话，断开时仅标记离线，保留会话用于下次重连
+                                        if (closingRemoteMqttLoginClientInfo.getCleanSession() == NumberConstant.NUMBER_1) {
+                                            MessageServerContext.remoteLoginClientInfoCache.delete(loginClientInfoCacheKey);
+                                        } else if (closingRemoteMqttLoginClientInfo.getCleanSession() == NumberConstant.NUMBER_0) {
+                                            closingRemoteMqttLoginClientInfo.setOnlineStatus(OnlineEnum.OFFLINE);
+                                            MessageServerContext.remoteLoginClientInfoCache.put(loginClientInfoCacheKey, closingRemoteMqttLoginClientInfo, closingRemoteMqttLoginClientInfo.getSessionExpiryInterval(), TimeUnit.SECONDS);
+                                        }
+                                    } else {
+                                        log.warn("mqtt客户端: {} 解绑登录信息跳过,原因：登录地址或时间戳不匹配（新连接已覆盖）", closingLocalLoginClientInfo);
                                     }
-                                }else {
-                                    log.warn("mqtt客户端: {} 解绑登录信息失败,原因：缓存中不存在登录信息或登录地址不匹配", closingLocalLoginClientInfo);
+                                }
+                            } finally {
+                                if (lock.isHeldByCurrentThread()) {
+                                    lock.unlock();
                                 }
                             }
-
-                        }else {
-                            log.error("mqtt客户端: {} 绑定登录信息失败,原因：获取分布式锁失败", closingLocalLoginClientInfo);
+                        } else {
+                            log.error("mqtt客户端: {} 解绑登录信息失败,原因：获取分布式锁超时", closingLocalLoginClientInfo);
                         }
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        log.warn("mqtt客户端: {} 解绑登录信息被中断", closingLocalLoginClientInfo);
                     } catch (Exception e) {
-                        log.error("mqtt客户端: {} 绑定登录信息失败,原因：{}", closingLocalLoginClientInfo, e.getMessage());
-                        throw new MessageException(e);
+                        log.error("mqtt客户端: {} 解绑登录信息异常,原因：{}", closingLocalLoginClientInfo, e.getMessage(), e);
                     } finally {
-                        if (lock.isHeldByCurrentThread()) {
-                            lock.unlock();
-                        }
+                        // 发送客户端离线事件（无论分布式状态清理成功与否都要触发）
+                        MessageServerContext.publishEvent(new MessageEvent(closingLocalLoginClientInfo, MessageEventTypeEnum.CLIENT_LOGOUT), true);
                     }
-                    // 发送客户端离线事件， 可以处理发送遗嘱等客户端关闭后的操作逻辑
-                    MessageServerContext.publishEvent(new MessageEvent(closingLocalLoginClientInfo, MessageEventTypeEnum.CLIENT_LOGOUT), true);
-                }
+                });
             };
             // 设置channel关闭后的钩子
             ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_CHANNEL_CLOSE_HOOK, channelConsumer);

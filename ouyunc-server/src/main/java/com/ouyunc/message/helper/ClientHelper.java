@@ -7,6 +7,7 @@ import com.ouyunc.base.constant.enums.DeviceType;
 import com.ouyunc.base.constant.enums.OnlineEnum;
 import com.ouyunc.base.constant.enums.SaveModeEnum;
 import com.ouyunc.base.exception.MessageException;
+import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.IdentityUtil;
@@ -29,6 +30,7 @@ import org.springframework.data.redis.core.SessionCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -47,52 +49,70 @@ public class ClientHelper {
 
     /***
      * @author fzx
-     * @description 客户端绑定登录信息
+     * @description 客户端绑定登录信息（兼容入口，内部调用异步版本）。
+     *              本地状态同步绑定，分布式锁与 Redis 写入异步执行，避免阻塞 Netty EventLoop。
      */
     public static void bind(ChannelHandlerContext ctx, LoginClientInfo loginClientInfo) {
-        ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN ,loginClientInfo);
-        // 将心跳设置到ctx 中
-        ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_HEARTBEAT_TIMEOUT , loginClientInfo.getHeartBeatTimeout());
-        ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LAST_HEARTBEAT_TIMESTAMP ,loginClientInfo.getLastLoginTime());
-        // 存入本地用户注册表
+        bindAsync(ctx, loginClientInfo);
+    }
+
+    /***
+     * @author fzx
+     * @description 客户端绑定登录信息（异步版本，推荐使用）。
+     *              返回 CompletableFuture 以便调用方在分布式状态写入完成后做后续动作（例如发送 CONNACK）。
+     */
+    public static CompletableFuture<Void> bindAsync(ChannelHandlerContext ctx, LoginClientInfo loginClientInfo) {
+        // 1. 本地状态绑定（无锁、无阻塞，立即生效）
+        ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN, loginClientInfo);
+        ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_HEARTBEAT_TIMEOUT, loginClientInfo.getHeartBeatTimeout());
+        ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LAST_HEARTBEAT_TIMESTAMP, loginClientInfo.getLastLoginTime());
         String comboIdentity = IdentityUtil.generalComboIdentity(loginClientInfo.getAppKey(), loginClientInfo.getIdentity(), loginClientInfo.getDeviceType());
         MessageServerContext.localLoginClientRegisterTable.put(comboIdentity, ctx);
-        // 使用分布式锁来处理重复登录
-        RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.buildIdentityBindOrUnbindLockCacheKey(loginClientInfo.getAppKey(), comboIdentity));
+
+        // 2. 分布式状态写入异步执行（锁等待 + Redis Pipeline 不再阻塞 EventLoop）
+        return CompletableFuture.runAsync(() -> doBindRemote(loginClientInfo, comboIdentity),
+                ThreadPoolManager.messageProcessorExecutor());
+    }
+
+    private static void doBindRemote(LoginClientInfo loginClientInfo, String comboIdentity) {
+        RLock lock = MessageServerContext.redissonClient.getLock(
+                CacheConstant.buildIdentityBindOrUnbindLockCacheKey(loginClientInfo.getAppKey(), comboIdentity));
         try {
             if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
-                // 客户端登录信息存入缓存
-                redisTemplate.executePipelined(new SessionCallback<>() {
-                    @SuppressWarnings("unchecked")
-                    @Override
-                    public <K, V> Object execute(@NotNull RedisOperations<K, V> operations) throws DataAccessException {
-                        String loginCacheKey = CacheConstant.buildLoginCacheKey(loginClientInfo.getAppKey(), comboIdentity);
-                        long loginExpireTime = loginClientInfo.getLoginExpireTime();
-                        String appKeyConnectionsCacheKey = CacheConstant.buildConnectionsCacheKey(loginClientInfo.getAppKey());
-                        if (loginExpireTime <= 0) {
-                            operations.opsForValue().set((K) loginCacheKey, (V) loginClientInfo);
-                            // appKey 连接信息的score 如果是小于0 也就是 -1 则证明是不需要进行保活，一致保留到缓存中
-                            operations.opsForZSet().add((K) (appKeyConnectionsCacheKey), (V) comboIdentity, NumberConstant.NUMBER_NEGATIVE_1);
-                        }else {
-                            operations.opsForValue().set((K) loginCacheKey, (V) loginClientInfo, loginExpireTime, TimeUnit.SECONDS);
-                            // 添加appKey统计信息
-                            operations.opsForZSet().add((K) (appKeyConnectionsCacheKey), (V) comboIdentity, TimeUtil.currentTimeMillis() + loginExpireTime*MessageConstant.NUMBER_1000);
+                try {
+                    redisTemplate.executePipelined(new SessionCallback<>() {
+                        @SuppressWarnings("unchecked")
+                        @Override
+                        public <K, V> Object execute(@NotNull RedisOperations<K, V> operations) throws DataAccessException {
+                            String loginCacheKey = CacheConstant.buildLoginCacheKey(loginClientInfo.getAppKey(), comboIdentity);
+                            long loginExpireTime = loginClientInfo.getLoginExpireTime();
+                            String appKeyConnectionsCacheKey = CacheConstant.buildConnectionsCacheKey(loginClientInfo.getAppKey());
+                            if (loginExpireTime <= 0) {
+                                operations.opsForValue().set((K) loginCacheKey, (V) loginClientInfo);
+                                operations.opsForZSet().add((K) (appKeyConnectionsCacheKey), (V) comboIdentity, NumberConstant.NUMBER_NEGATIVE_1);
+                            } else {
+                                operations.opsForValue().set((K) loginCacheKey, (V) loginClientInfo, loginExpireTime, TimeUnit.SECONDS);
+                                operations.opsForZSet().add((K) (appKeyConnectionsCacheKey), (V) comboIdentity, TimeUtil.currentTimeMillis() + loginExpireTime * MessageConstant.NUMBER_1000);
+                            }
+                            return null;
                         }
-                        return null;
+                    });
+                    AppKeyConnectionCleanupRegistry.track(loginClientInfo.getAppKey());
+                } finally {
+                    if (lock.isHeldByCurrentThread()) {
+                        lock.unlock();
                     }
-                });
-                AppKeyConnectionCleanupRegistry.track(loginClientInfo.getAppKey());
-
-            }else {
-                log.error("客户端: {} 绑定登录信息失败,原因：获取分布式锁失败", loginClientInfo);
+                }
+            } else {
+                log.error("客户端: {} 绑定登录信息失败,原因：获取分布式锁超时", loginClientInfo);
             }
-        } catch (Exception e) {
-            log.error("客户端绑定登录信息失败,原因：{}", e.getMessage());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("客户端绑定登录信息被中断: {}", loginClientInfo, e);
             throw new MessageException(e);
-        } finally {
-            if (lock.isHeldByCurrentThread()) {
-                lock.unlock();
-            }
+        } catch (Exception e) {
+            log.error("客户端绑定登录信息失败,原因：{}", e.getMessage(), e);
+            throw new MessageException(e);
         }
     }
 

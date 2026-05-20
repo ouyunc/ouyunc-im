@@ -1,12 +1,9 @@
 package com.ouyunc.repository;
 
-import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.alibaba.fastjson2.JSON;
-import com.google.common.collect.Lists;
 import com.ouyunc.base.constant.*;
 import com.ouyunc.base.constant.enums.*;
 import com.ouyunc.base.executor.ThreadPoolManager;
-import com.ouyunc.base.constant.enums.DeviceType;
 import com.ouyunc.base.model.FiveConsumer;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
@@ -33,15 +30,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.dao.IncorrectResultSizeDataAccessException;
+import org.springframework.data.domain.Range;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.redis.connection.Limit;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisStringCommands;
-import org.springframework.data.domain.Range;
-import org.springframework.data.redis.connection.Limit;
 import org.springframework.data.redis.core.*;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.types.Expiration;
@@ -54,7 +51,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -218,9 +214,10 @@ public enum DefaultRepository implements Repository{
         }
 
         // 1. 从 Redis 批量获取缓存
-        Set<String> redisKeys = packetIds.stream()
+        // 使用 List 而非 Set，保证 multiGet 顺序与 packetIds 一致，避免去重导致结果错位
+        List<String> redisKeys = packetIds.stream()
                 .map(id -> CacheConstant.buildMessageCacheKey(appKey, id))
-                .collect(Collectors.toSet());
+                .collect(Collectors.toList());
         List<Packet> cachedPackets = (List<Packet>) redisTemplate.opsForValue().multiGet(redisKeys);
         if (cachedPackets == null) {
             log.warn("cachedPackets 为空, appKey={}", appKey);
@@ -229,15 +226,15 @@ public enum DefaultRepository implements Repository{
         // 过滤有效缓存并收集已存在的 ID
         Map<Long, Packet> cachedPacketMap = cachedPackets.stream()
                 .filter(Objects::nonNull)
-                .collect(Collectors.toMap(Packet::getPacketId, Function.identity()));
-        List<Long> cachedIds = new ArrayList<>(cachedPacketMap.keySet());
+                .collect(Collectors.toMap(Packet::getPacketId, Function.identity(), (a, b) -> a));
+        Set<Long> cachedIds = cachedPacketMap.keySet();
 
         // 全部命中缓存则直接返回
         if (cachedIds.size() == packetIds.size()) {
             return new ArrayList<>(cachedPacketMap.values());
         }
 
-        // 2. 收集未命中缓存的 ID
+        // 2. 收集未命中缓存的 ID（使用 Set 提升 contains 性能 O(1)）
         List<Long> missingIds = packetIds.stream()
                 .filter(id -> !cachedIds.contains(id))
                 .collect(Collectors.toList());
@@ -250,60 +247,6 @@ public enum DefaultRepository implements Repository{
         asyncUpdatePacketCache(appKey, dbPackets);
 
         return result;
-    }
-
-    /**
-     * 响应式批量获取消息（优化版本：非阻塞、高并发）
-     * @param appKey
-     * @param packetIds
-     * @return
-     */
-    @SuppressWarnings("unchecked")
-    public Mono<List<Packet>> getPacketsReactive(String appKey, List<Long> packetIds) {
-        if (CollectionUtils.isEmpty(packetIds)) {
-            return Mono.just(Collections.emptyList());
-        }
-
-        // 1. 从 Redis 批量获取缓存（响应式）
-        Set<String> redisKeys = packetIds.stream()
-                .map(id -> CacheConstant.buildMessageCacheKey(appKey, id))
-                .collect(Collectors.toSet());
-        
-        return Flux.fromIterable(redisKeys)
-                .flatMap(key -> reactiveRedisTemplate.opsForValue().get(key)
-                        .cast(Packet.class)
-                        .onErrorResume(e -> Mono.empty()))
-                .collectMap(packet -> ((Packet) packet).getPacketId(), Function.identity(), HashMap::new)
-                .cast(Map.class)
-                .flatMap(cachedPacketMapObj -> {
-                    @SuppressWarnings("unchecked")
-                    Map<Long, Packet> cachedPacketMap = (Map<Long, Packet>) cachedPacketMapObj;
-                    List<Long> cachedIds = new ArrayList<>(cachedPacketMap.keySet());
-                    
-                    // 全部命中缓存则直接返回
-                    if (cachedIds.size() == packetIds.size()) {
-                        return Mono.just(new ArrayList<>(cachedPacketMap.values()));
-                    }
-                    
-                    // 2. 收集未命中缓存的 ID
-                    List<Long> missingIds = packetIds.stream()
-                            .filter(id -> !cachedIds.contains(id))
-                            .collect(Collectors.toList());
-                    
-                    // 3. 从 MongoDB 和 MySQL 查询缺失数据（响应式）
-                    return queryPacketsFromDatabasesReactive(missingIds)
-                            .collectList()
-                            .map(dbPackets -> {
-                                // 4. 合并结果并异步更新缓存
-                                List<Packet> result = mergeResults(cachedPacketMap, dbPackets);
-                                asyncUpdateCachePacketReactive(appKey, dbPackets);
-                                return result;
-                            });
-                })
-                .onErrorResume(e -> {
-                    log.error("响应式批量获取消息异常, appKey: {}, packetIds: {}", appKey, packetIds, e);
-                    return Mono.just(Collections.emptyList());
-                });
     }
 
 //----------------------------- 辅助方法 -----------------------------
@@ -873,7 +816,8 @@ public enum DefaultRepository implements Repository{
             // 缓存会话最大已读id
             if (maxSessionMessageOffset != null) {
                 // 注意：这里没有放mongo,没必要了
-                redisTemplate.opsForValue().set(sessionMessageOffsetKey, maxSessionMessageOffset);
+                redisTemplate.opsForValue().set(sessionMessageOffsetKey, maxSessionMessageOffset,
+                        MessageConstant.CACHE_ENTITY_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
             }
             return maxSessionMessageOffset;
         }catch (EmptyResultDataAccessException e) {
@@ -887,11 +831,38 @@ public enum DefaultRepository implements Repository{
 
     /**
      * 已读校验/合并：同一用户在同一会话下多端游标取 max。
+     * 性能优化：Pipeline 一次性获取所有设备的 Redis 偏移量，仅当 Redis 缺失时才回退到 Mongo/MySQL。
      */
     private long resolveMaxReadOffsetAllDevices(String appKey, IdentityType identityType, String from, String to) {
+        List<Byte> deviceTypes = resolveDeviceTypeBytes(appKey);
+        if (CollectionUtils.isEmpty(deviceTypes)) {
+            return 0L;
+        }
+
+        // Step 1: Pipeline 批量从 Redis 获取所有设备 offset（1 次 RTT 替代 N 次）
+        List<String> redisKeys = new ArrayList<>(deviceTypes.size());
+        for (Byte deviceType : deviceTypes) {
+            redisKeys.add(CacheConstant.buildSessionReadMessageOffsetCacheKey(appKey, identityType.value(), from, deviceType, to));
+        }
+        @SuppressWarnings("unchecked")
+        List<Object> cached = redisTemplate.opsForValue().multiGet(redisKeys);
+
         long max = 0L;
         boolean found = false;
-        for (Byte deviceType : resolveDeviceTypeBytes(appKey)) {
+        // Step 2: 收集 Redis 命中数据，记录缺失的 deviceType
+        List<Byte> missingDeviceTypes = new ArrayList<>();
+        for (int i = 0; i < deviceTypes.size(); i++) {
+            Object value = cached != null && i < cached.size() ? cached.get(i) : null;
+            if (value instanceof Long offset) {
+                found = true;
+                max = Math.max(max, offset);
+            } else {
+                missingDeviceTypes.add(deviceTypes.get(i));
+            }
+        }
+
+        // Step 3: 仅对 Redis 缺失的设备回退到 Mongo/MySQL（保持原行为兼容）
+        for (Byte deviceType : missingDeviceTypes) {
             Long offset = getSessionMaxReadPackageId(appKey, identityType, from, deviceType, to);
             if (offset != null) {
                 found = true;
@@ -1532,7 +1503,8 @@ public enum DefaultRepository implements Repository{
     private void updateGroupUserCache(String cacheKey, GroupUserEntity groupUserEntity) {
         if (groupUserEntity != null) {
             MessageContext.groupUserEntityCache.put(cacheKey, groupUserEntity);
-            redisTemplate.opsForValue().set(cacheKey, groupUserEntity);
+            redisTemplate.opsForValue().set(cacheKey, groupUserEntity,
+                    MessageConstant.CACHE_ENTITY_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -1615,7 +1587,10 @@ public enum DefaultRepository implements Repository{
     public Set<String> groupManagerUsersIdentity(Packet packet) {
         Message message = packet.getMessage();
         String appKey = message.getMetadata().getAppKey();
-        return stringRedisTemplate.opsForZSet().range(CacheConstant.buildGroupUserCacheKey(appKey, message.getTo()), GroupUserPost.MANAGER.value(), GroupUserPost.MANAGER.value());
+        // 修正：score 存储的是角色值（GroupUserPost），需用 rangeByScore 而非 range（后者按 rank 索引）
+        return stringRedisTemplate.opsForZSet().rangeByScore(
+                CacheConstant.buildGroupUserCacheKey(appKey, message.getTo()),
+                GroupUserPost.MANAGER.value(), GroupUserPost.MANAGER.value());
     }
 
     /**
@@ -1628,12 +1603,14 @@ public enum DefaultRepository implements Repository{
     public String groupLeaderUsersIdentity(Packet packet) {
         Message message = packet.getMessage();
         String appKey = message.getMetadata().getAppKey();
-        Set<String> leanderIdentitySet = stringRedisTemplate.opsForZSet().range(CacheConstant.buildGroupUserCacheKey(appKey, message.getTo()), GroupUserPost.LEADER.value(), GroupUserPost.LEADER.value());
+        Set<String> leanderIdentitySet = stringRedisTemplate.opsForZSet().rangeByScore(
+                CacheConstant.buildGroupUserCacheKey(appKey, message.getTo()),
+                GroupUserPost.LEADER.value(), GroupUserPost.LEADER.value());
         if (CollectionUtils.isEmpty(leanderIdentitySet)) {
-            log.warn("群 {} 中不存在管理员", message.getTo());
+            log.warn("群 {} 中不存在群主", message.getTo());
             return null;
         }
-        return leanderIdentitySet.stream().findFirst().orElse(null);
+        return leanderIdentitySet.iterator().next();
     }
 
 
@@ -1668,7 +1645,8 @@ public enum DefaultRepository implements Repository{
         Message message = packet.getMessage();
         return saveFriendRequestMessage(packet, requestSession.getSessionId(), expireTime, (redisConnection)-> {
             String friendRequestCacheKey = CacheConstant.buildFriendRequestCacheKey(message.getMetadata().getAppKey(), message.getFrom(), message.getTo());
-            byte[] keyBytes = serializeOrNull(valueSerializer, friendRequestCacheKey);
+            // 修复：key 必须用 stringSerializer，与 saveRefuseFriendRequestMessage 保持一致，否则后续读取时无法命中
+            byte[] keyBytes = serializeOrNull(stringSerializer, friendRequestCacheKey);
             byte[] valueBytes = serializeOrNull(valueSerializer, requestSession);
             redisConnection.commands().set(keyBytes, valueBytes, Expiration.milliseconds(MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP), RedisStringCommands.SetOption.SET_IF_ABSENT);
         });
@@ -1901,7 +1879,8 @@ public enum DefaultRepository implements Repository{
     private void updateFriendCache(String cacheKey, FriendEntity friendEntity) {
         if (friendEntity != null) {
             MessageContext.friendEntityCache.put(cacheKey, friendEntity);
-            redisTemplate.opsForValue().set(cacheKey, friendEntity);
+            redisTemplate.opsForValue().set(cacheKey, friendEntity,
+                    MessageConstant.CACHE_ENTITY_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -2024,7 +2003,8 @@ public enum DefaultRepository implements Repository{
     private void updateGroupCache(String cacheKey, GroupEntity groupEntity) {
         if (groupEntity != null) {
             MessageContext.groupEntityCache.put(cacheKey, groupEntity);
-            redisTemplate.opsForValue().set(cacheKey, groupEntity);
+            redisTemplate.opsForValue().set(cacheKey, groupEntity,
+                    MessageConstant.CACHE_ENTITY_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -2065,7 +2045,8 @@ public enum DefaultRepository implements Repository{
                     .query(GroupEntity.class)
                     .single();
             // 走不到这里就会进异常
-            redisTemplate.opsForValue().set(CacheConstant.buildGroupCacheKey(appKey, groupId), groupEntity);
+            redisTemplate.opsForValue().set(CacheConstant.buildGroupCacheKey(appKey, groupId), groupEntity,
+                    MessageConstant.CACHE_ENTITY_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
             return groupEntity;
         } catch (EmptyResultDataAccessException e) {
             log.warn("群组不存在, groupId: {}", groupId);
@@ -2403,6 +2384,8 @@ public enum DefaultRepository implements Repository{
                 if (sessionZSetExpireMs > 0) {
                     conn.keyCommands().pExpire(sessionKeyBytes, sessionZSetExpireMs);
                 }
+                // 裁剪超过上限的最老条目，防止 ZSet 无界增长（保留最新 SESSION_ZSET_MAX_SIZE 条）
+                conn.zSetCommands().zRemRange(sessionKeyBytes, 0, -(MessageConstant.SESSION_ZSET_MAX_SIZE + 1L));
                 log.debug("会话ZSet命令入队: {}", sessionKey);
                 maybeIncrSessionPeerUnread(conn, message, appKey, sessionKey, sessionZSetExpireMs);
             }
@@ -2437,23 +2420,55 @@ public enum DefaultRepository implements Repository{
                 }
                 return SaveMessageOutcome.FAILED;
             }
-            if (!Boolean.TRUE.equals(redisTemplate.hasKey(messageKey))) {
-                log.error("消息热 key 写入校验失败: {}", messageKey);
-                if (qosSave) {
-                    QosIdempotencyHelper.releaseClaim(redisTemplate, appKey, packet.getPacketId(), from, message.getId());
-                }
-                return SaveMessageOutcome.FAILED;
-            }
+            // Pipeline 内的 SET 已通过 closePipeline() 的结果保证执行，无需额外 EXISTS 验证（消除多余 RTT）
             return SaveMessageOutcome.SUCCESS;
 
         } catch (Exception e) {
             log.error("Redis Pipeline 操作异常: ", e);
+            // 兜底释放 QoS 占位（外层异常通常发生在获取连接/参数解析阶段，claim 可能尚未写入；
+            // 但若已 tryClaim 成功后才抛错，则必须释放避免后续重试被判定为重复而永久丢失）
+            try {
+                Message message = packet != null ? packet.getMessage() : null;
+                Metadata metadata = message != null ? message.getMetadata() : null;
+                if (metadata != null && MessageContext.isQosEnable()
+                        && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
+                    QosIdempotencyHelper.releaseClaim(redisTemplate, metadata.getAppKey(),
+                            packet.getPacketId(), message.getFrom(), message.getId());
+                }
+            } catch (Exception ignored) {
+                // 释放失败不影响主流程，仅记录日志
+                log.warn("释放 QoS 占位异常", ignored);
+            }
             return SaveMessageOutcome.FAILED;
         }
     }
 
     private static boolean isSaveAccepted(SaveMessageOutcome outcome) {
         return outcome == SaveMessageOutcome.SUCCESS || outcome == SaveMessageOutcome.DUPLICATE;
+    }
+
+    /**
+     * 释放 QoS 幂等占位键。当持久化成功但下游（Kafka/MQ/业务逻辑）失败时，
+     * 处理器应调用此方法释放 claim，否则客户端重试会被判定为重复消息导致永久丢失。
+     *
+     * @param packet 消息包
+     */
+    public void releaseQosClaim(Packet packet) {
+        if (packet == null || packet.getMessage() == null) {
+            return;
+        }
+        Message message = packet.getMessage();
+        Metadata metadata = message.getMetadata();
+        if (metadata == null || !MessageContext.isQosEnable()
+                || message.getQos() <= QosLevelEnum.QOS_0.getLevel()) {
+            return;
+        }
+        try {
+            QosIdempotencyHelper.releaseClaim(redisTemplate, metadata.getAppKey(),
+                    packet.getPacketId(), message.getFrom(), message.getId());
+        } catch (Exception e) {
+            log.warn("释放 QoS 占位异常: packetId={}", packet.getPacketId(), e);
+        }
     }
 
     private <T> byte[] serializeOrNull(RedisSerializer<T> serializer, T value) {

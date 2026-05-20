@@ -25,14 +25,12 @@ import com.ouyunc.message.validator.PermissionValidator;
 import com.ouyunc.repository.DefaultRepository;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.collections4.CollectionUtils;
-import org.redisson.api.RLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 拒绝加好友请求
@@ -96,60 +94,40 @@ public final class One2OneRefuseFriendRequestMessageProcessor extends AbstractMe
      */
     @Override
     public void process(ChannelHandlerContext ctx, Packet packet) {
-        // 1. 保存消息
         Message message = packet.getMessage();
         String to = message.getTo();
         String appKey = message.getMetadata().getAppKey();
         String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
-        // 加锁
-        RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.buildFriendRequestLockCacheKey(appKey, sessionId));
-        try {
-            if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
-                // 获取请求会话
-                RequestSession requestSession = repository().getFriendRequestSession(appKey, message.getTo(), message.getFrom());
-                if (null == requestSession || !Objects.equals(requestSession.getProgress(), RequestSessionProgress.JOINING.value())) {
-                    log.warn("不存在加好友请求记录或存在正在处理的好友请求，该消息忽略");
-                    return;
-                }
-                // 如果是好友或者处理中或没有好友请求记录，直接返回
-                if (repository().isFriend(appKey, message.getFrom(), message.getTo())) {
-                    log.warn("已经是好友, 请知悉; {}" ,packet);
-                    return;
-                }
-                requestSession.setProgress(RequestSessionProgress.REFUSING.value());
-                if (!repository().saveRefuseFriendRequestMessage(packet, requestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
-                    log.error("Failed to save one-to-one refuse friend request message: {}", packet);
-                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一拒绝好友请求消息异常!", packet), MessageEventTypeEnum.EXCEPTION), true);
-                    return;
-                }
-                repository().savePacket2Mq(MqConstant.KAFKA_FRIEND_REQUEST_TOPIC, sessionId, packet).whenComplete((result, ex)->{
-                    if (ex != null) {
-                        log.error("拒绝好友请求，发送mq异常，原因：{}", ex.getMessage());
-                        MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "处理一对一拒绝好友请求异常！" + ex.getMessage(), packet), MessageEventTypeEnum.EXCEPTION), true);
-                    }else {
-                        // 如果接收方在线，则直接发送消息
-                        List<LoginClientInfo> toLoginClientInfos = ClientHelper.onlineAll(appKey, to);
-                        if (CollectionUtils.isNotEmpty(toLoginClientInfos)) {
-                            MessageHelper.asyncSendMessage(packet, toLoginClientInfos);
-                        }
-                        // 处理成功则转到下个处理器
-                        ctx.fireChannelRead(packet);
-                    }
-                });
-            } else {
-                log.error("Failed to lock one-to-one refuse friend request message: {}", packet);
-                MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, "获取拒绝好友请求锁失败", packet), MessageEventTypeEnum.EXCEPTION), true);
+        String lockKey = CacheConstant.buildFriendRequestLockCacheKey(appKey, sessionId);
+
+        runWithDistributedLock(ctx, packet, lockKey, ExceptionCodeEnum.BIND_FRIEND_ERROR, () -> {
+            RequestSession requestSession = repository().getFriendRequestSession(appKey, message.getTo(), message.getFrom());
+            if (null == requestSession || !Objects.equals(requestSession.getProgress(), RequestSessionProgress.JOINING.value())) {
+                log.warn("不存在加好友请求记录或存在正在处理的好友请求，该消息忽略");
+                return;
             }
-        } catch (Exception e) {
-            log.error("Failed to handle one-to-one refuse friend request message: {}", e.getMessage());
-            MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.BIND_FRIEND_ERROR, "处理一对一拒绝好友请求异常！" + e.getMessage(), packet), MessageEventTypeEnum.EXCEPTION), true);
-        } finally {
-            if (lock.isHeldByCurrentThread()) {
-                lock.unlock();
-            }else {
-                log.error("one-to-one refuse friend request message lock is not held by current thread: {}", packet);
-                MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.UN_LOCK_ERROR, "拒绝加好友请求解锁失败", packet), MessageEventTypeEnum.EXCEPTION), true);
+            if (repository().isFriend(appKey, message.getFrom(), message.getTo())) {
+                log.warn("已经是好友, 请知悉; {}", packet);
+                return;
             }
-        }
+            requestSession.setProgress(RequestSessionProgress.REFUSING.value());
+            if (!repository().saveRefuseFriendRequestMessage(packet, requestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
+                log.error("Failed to save one-to-one refuse friend request message: {}", packet);
+                MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一拒绝好友请求消息异常!", packet), MessageEventTypeEnum.EXCEPTION), true);
+                return;
+            }
+            repository().savePacket2Mq(MqConstant.KAFKA_FRIEND_REQUEST_TOPIC, sessionId, packet).whenComplete((result, ex) -> {
+                if (ex != null) {
+                    log.error("拒绝好友请求，发送mq异常，原因：{}", ex.getMessage());
+                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "处理一对一拒绝好友请求异常！" + ex.getMessage(), packet), MessageEventTypeEnum.EXCEPTION), true);
+                    return;
+                }
+                List<LoginClientInfo> toLoginClientInfos = ClientHelper.onlineAll(appKey, to);
+                if (CollectionUtils.isNotEmpty(toLoginClientInfos)) {
+                    MessageHelper.asyncSendMessage(packet, toLoginClientInfos);
+                }
+                ctx.channel().eventLoop().execute(() -> ctx.fireChannelRead(packet));
+            });
+        });
     }
 }

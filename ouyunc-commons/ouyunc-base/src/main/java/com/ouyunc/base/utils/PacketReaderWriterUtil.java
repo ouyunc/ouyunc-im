@@ -28,12 +28,12 @@ public class PacketReaderWriterUtil {
     public static Packet readByteBuf2Packet(ByteBuf in) {
         if (in == null || !in.isReadable()) {
             log.error("定长解码器LengthFieldBasedFrameDecoder===>packetCodec中缓冲区不可读！");
-            throw new RuntimeException("定长解码器LengthFieldBasedFrameDecoder===>packetCodec中缓冲区不可读！");
+            throw new MessageException("定长解码器LengthFieldBasedFrameDecoder===>packetCodec中缓冲区不可读！");
         }
         // 判断可读长度必须大于基本长度，如果可读字节小于协议基础长度16个字节，则说明出现半包，上面的定长解码器有问题
         if (in.readableBytes() < MessageConstant.PACKET_BASE_LENGTH) {
             log.error("定长解码器LengthFieldBasedFrameDecoder===>在协议分发时出现异常！");
-            throw new RuntimeException("定长解码器LengthFieldBasedFrameDecoder===>在协议分发时出现异常！");
+            throw new MessageException("定长解码器LengthFieldBasedFrameDecoder===>在协议分发时出现异常！");
         }
         // 读取魔数判断是否是符合要求
         byte[] magicBytes = new byte[MessageConstant.MAGIC_BYTE_LENGTH];
@@ -62,6 +62,16 @@ public class PacketReaderWriterUtil {
         final byte retain = in.readByte();
         //加密后的消息长度.4个字节
         final int messageLength = in.readInt();
+        // 防御：消息长度上限校验，防止恶意客户端发送超大值触发 OOM
+        if (messageLength < 0 || messageLength > MessageConstant.MAX_MESSAGE_CONTENT_LENGTH) {
+            log.error("非法消息长度: {}, 上限: {}", messageLength, MessageConstant.MAX_MESSAGE_CONTENT_LENGTH);
+            throw new MessageException("非法消息长度: " + messageLength);
+        }
+        // 防御：剩余可读字节必须 >= 声明长度，避免 readBytes 读到不属于该包的数据
+        if (in.readableBytes() < messageLength) {
+            log.error("消息内容字节不足: 声明={}, 实际可读={}", messageLength, in.readableBytes());
+            throw new MessageException("消息内容字节不足");
+        }
         byte[] messageContentBytes = new byte[messageLength];
         //将消息内容n个字节读到字节数组中
         in.readBytes(messageContentBytes);

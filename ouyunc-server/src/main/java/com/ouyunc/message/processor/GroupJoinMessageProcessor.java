@@ -20,13 +20,11 @@ import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.validator.*;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.collections4.CollectionUtils;
-import org.redisson.api.RLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 主动加群
@@ -80,43 +78,34 @@ public final class GroupJoinMessageProcessor extends AbstractMessageProcessor<By
         if (log.isDebugEnabled()) {
             log.debug("GroupJoinMessageProcessor 正在处理外部客户端加群 {} ...", packet);
         }
-        // 1. 保存消息
         Message message = packet.getMessage();
         String appKey = message.getMetadata().getAppKey();
-        // 加锁
-        RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.buildGroupRequestLockCacheKey(appKey, message.getFrom(), message.getTo()));
-        try {
-            if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
-                // 获取请求会话
-                GroupRequestSession groupRequestSession = repository().getGroupRequestSession(appKey, message.getFrom(), message.getTo());
-                if (null != groupRequestSession && (groupRequestSession.getProgress() > RequestSessionProgress.JOINING.value() || !GroupRequestSessionWay.ACTIVE.value().equals(groupRequestSession.getWay()))) {
-                    log.warn("{} 和 {} 会话请求存在正在处理中的群请求，拒绝或同意还未结束处理", message.getFrom(), message.getTo());
-                    return;
-                }
-                if (repository().inGroup(appKey, message.getFrom(), message.getTo())) {
-                    log.warn("该用户 {} 已经加入群组 {}", message.getFrom(), message.getTo());
-                    return;
-                }
-                // 获取群的配置信息，判断是否自动通过
-                GroupEntity groupEntity = repository().getGroupEntity(appKey, message.getTo());
-                if (groupEntity == null) {
-                    log.error("群组:{} 不存在，请检查数据！", message.getTo());
-                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.GROUP_NOT_EXIST, message.getTo() + "群组不存在！", packet), MessageEventTypeEnum.EXCEPTION));
-                    return;
-                }
-                // 这里不保存到session 缓存中,保存到临时的会话请求消息中，该好友请求的消息可以对其进行定期清理；
-                // 获取当前群的管理员和群主，进行加群消息的推送
-                Set<String> groupMannerOrLeaderUsersIdentitySet = repository().groupManagerAndLeaderUsersIdentity(packet);
-                if (groupMannerOrLeaderUsersIdentitySet.remove(message.getFrom()) || CollectionUtils.isEmpty(groupMannerOrLeaderUsersIdentitySet)) {
-                    // 这个群里没有群主？
-                    log.error("群组：{}, 不存在群主和群管理员或群消息或已经加入群组： {}", packet.getMessage().getTo(), packet);
-                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群主或群管理员", packet), MessageEventTypeEnum.EXCEPTION), true);
-                    return;
-                }
+        String lockKey = CacheConstant.buildGroupRequestLockCacheKey(appKey, message.getFrom(), message.getTo());
 
-                // 尝试构建请求会话信息
-                if (groupRequestSession == null) {
-                    groupRequestSession = GroupRequestSession.newGroupBuilder()
+        runWithDistributedLock(ctx, packet, lockKey, ExceptionCodeEnum.BIND_GROUP_ERROR, () -> {
+            GroupRequestSession existingSession = repository().getGroupRequestSession(appKey, message.getFrom(), message.getTo());
+            if (null != existingSession && (existingSession.getProgress() > RequestSessionProgress.JOINING.value() || !GroupRequestSessionWay.ACTIVE.value().equals(existingSession.getWay()))) {
+                log.warn("{} 和 {} 会话请求存在正在处理中的群请求，拒绝或同意还未结束处理", message.getFrom(), message.getTo());
+                return;
+            }
+            if (repository().inGroup(appKey, message.getFrom(), message.getTo())) {
+                log.warn("该用户 {} 已经加入群组 {}", message.getFrom(), message.getTo());
+                return;
+            }
+            GroupEntity groupEntity = repository().getGroupEntity(appKey, message.getTo());
+            if (groupEntity == null) {
+                log.error("群组:{} 不存在，请检查数据！", message.getTo());
+                MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.GROUP_NOT_EXIST, message.getTo() + "群组不存在！", packet), MessageEventTypeEnum.EXCEPTION));
+                return;
+            }
+            Set<String> groupMannerOrLeaderUsersIdentitySet = repository().groupManagerAndLeaderUsersIdentity(packet);
+            if (groupMannerOrLeaderUsersIdentitySet.remove(message.getFrom()) || CollectionUtils.isEmpty(groupMannerOrLeaderUsersIdentitySet)) {
+                log.error("群组：{}, 不存在群主和群管理员或群消息或已经加入群组： {}", packet.getMessage().getTo(), packet);
+                MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群主或群管理员", packet), MessageEventTypeEnum.EXCEPTION), true);
+                return;
+            }
+            GroupRequestSession groupRequestSession = existingSession != null ? existingSession
+                    : GroupRequestSession.newGroupBuilder()
                             .sessionId(MessageContext.idGenerator().generateIdStr())
                             .joinerProcessStatus(GroupJoinerProcessStatus.AGREE.value())
                             .joiner(message.getFrom())
@@ -124,57 +113,37 @@ public final class GroupJoinMessageProcessor extends AbstractMessageProcessor<By
                             .channel(GroupRequestSessionChannel.OTHER.value())
                             .way(GroupRequestSessionWay.ACTIVE.value())
                             .build();
+
+            if (GroupJoinPolicy.AUTO_PASS.value().equals(groupEntity.getGroupJoinPolicy())) {
+                groupRequestSession.setProgress(RequestSessionProgress.AGREEING.value());
+                if (!repository().autoPassBindGroup(packet, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
+                    log.error("自动处理绑定群组失败: {}", packet);
+                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "自动绑定群组请求消息异常!", packet), MessageEventTypeEnum.EXCEPTION), true);
+                    return;
                 }
-                // 判断对方是否是自动同意加好友
-                if (GroupJoinPolicy.AUTO_PASS.value().equals(groupEntity.getGroupJoinPolicy())) {
-                    // 设置请求session 标识，相当于快照
-                    groupRequestSession.setProgress(RequestSessionProgress.AGREEING.value());
-                    // 群自动同意，不再给群主和管理员保存离线消息
-                    if (!repository().autoPassBindGroup(packet, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
-                        log.error("自动处理绑定群组失败: {}", packet);
-                        MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "自动绑定群组请求消息异常!", packet), MessageEventTypeEnum.EXCEPTION), true);
-                        return;
-                    }
-                }else {
-                    groupRequestSession.setProgress(RequestSessionProgress.JOINING.value());
-                    if (!saveGroupRequestMessage(packet, groupMannerOrLeaderUsersIdentitySet, groupRequestSession)) {
-                        log.error("Failed to save  join group request message: {}", packet);
-                        MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存加群请求消息异常!", packet), MessageEventTypeEnum.EXCEPTION), true);
-                        return;
-                    }
-                }
-                // 发送mq
-                repository().savePacket2Mq(MqConstant.KAFKA_GROUP_REQUEST_TOPIC, packet.getMessage().getTo(), packet).whenComplete((result, ex) -> {
-                    if (ex != null) {
-                        log.error("加群请求，发送mq异常，原因：{}", ex.getMessage());
-                        MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "处理加群请求异常！" + ex.getMessage(), packet), MessageEventTypeEnum.EXCEPTION), true);
-                    } else {
-                        // 如果有群主或群管理员，则发送消息给群主或群管理员
-                        for (String groupMannerOrLeaderUserIdentity : groupMannerOrLeaderUsersIdentitySet) {
-                            List<LoginClientInfo> toLoginClientInfos = ClientHelper.onlineAll(message.getMetadata().getAppKey(), groupMannerOrLeaderUserIdentity);
-                            if (CollectionUtils.isNotEmpty(toLoginClientInfos)) {
-                                MessageHelper.asyncSendMessage(packet, toLoginClientInfos);
-                            }
-                        }
-                        // 处理成功则转到下个处理器
-                        ctx.fireChannelRead(packet);
-                    }
-                });
             } else {
-                log.error("Failed to lock user join group request message: {}", packet);
-                MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, "主动加群请求锁失败", packet), MessageEventTypeEnum.EXCEPTION), true);
+                groupRequestSession.setProgress(RequestSessionProgress.JOINING.value());
+                if (!saveGroupRequestMessage(packet, groupMannerOrLeaderUsersIdentitySet, groupRequestSession)) {
+                    log.error("Failed to save  join group request message: {}", packet);
+                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存加群请求消息异常!", packet), MessageEventTypeEnum.EXCEPTION), true);
+                    return;
+                }
             }
-        } catch (Exception e) {
-            log.error("Failed to handle user join group request message: {}", e.getMessage());
-            MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.BIND_GROUP_ERROR, "处理主动加群请求异常！" + e.getMessage(), packet), MessageEventTypeEnum.EXCEPTION), true);
-        } finally {
-            if (lock.isHeldByCurrentThread()) {
-                lock.unlock();
-            }else {
-                log.error("Failed to unlock user join group request message: {}", packet);
-                MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.UN_LOCK_ERROR, "加群请求解锁失败", packet), MessageEventTypeEnum.EXCEPTION), true);
-            }
-        }
+            repository().savePacket2Mq(MqConstant.KAFKA_GROUP_REQUEST_TOPIC, packet.getMessage().getTo(), packet).whenComplete((result, ex) -> {
+                if (ex != null) {
+                    log.error("加群请求，发送mq异常，原因：{}", ex.getMessage());
+                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "处理加群请求异常！" + ex.getMessage(), packet), MessageEventTypeEnum.EXCEPTION), true);
+                    return;
+                }
+                for (String groupMannerOrLeaderUserIdentity : groupMannerOrLeaderUsersIdentitySet) {
+                    List<LoginClientInfo> toLoginClientInfos = ClientHelper.onlineAll(message.getMetadata().getAppKey(), groupMannerOrLeaderUserIdentity);
+                    if (CollectionUtils.isNotEmpty(toLoginClientInfos)) {
+                        MessageHelper.asyncSendMessage(packet, toLoginClientInfos);
+                    }
+                }
+                ctx.channel().eventLoop().execute(() -> ctx.fireChannelRead(packet));
+            });
+        });
     }
 
 

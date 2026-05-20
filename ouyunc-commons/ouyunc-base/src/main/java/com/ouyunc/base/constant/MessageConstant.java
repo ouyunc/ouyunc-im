@@ -184,6 +184,19 @@ public class MessageConstant {
      */
     public static final long CACHE_GROUP_USER_CONFIG_KEY_EXPIRE_TIMESTAMP = NumberConstant.NUMBER_30 * MessageConstant.DAY_TIMESTAMP;
 
+    /**
+     *  通用实体缓存（friend/group/groupUser/sessionOffset）的 TTL，30 天，单位毫秒
+     *  Why: 防止 Redis Key 永不过期导致内存无界增长
+     */
+    public static final long CACHE_ENTITY_KEY_EXPIRE_TIMESTAMP = NumberConstant.NUMBER_30 * MessageConstant.DAY_TIMESTAMP;
+
+    /**
+     *  会话 ZSet 最大保留消息数（按 packetId LEX 排序，仅保留最新 N 条）
+     *  Why: 防止活跃会话 ZSet 无界增长（每条消息 ZADD 一次，30 天 TTL 每次写入刷新）
+     *  How: 写入后执行 ZREMRANGEBYRANK key 0 -(MAX+1) 裁剪较老条目
+     */
+    public static final int SESSION_ZSET_MAX_SIZE = 5000;
+
 
     /**
      *  app key  变动 publish topic
@@ -622,6 +635,12 @@ public class MessageConstant {
      * 协议基础长度
      */
     public static final int PACKET_BASE_LENGTH = LENGTH_FIELD_OFFSET + LENGTH_FIELD_LENGTH;
+
+    /**
+     * 单条消息内容最大长度（字节）：10MB
+     * Why: 防止恶意客户端发送超大 messageLength 触发 OOM
+     */
+    public static final int MAX_MESSAGE_CONTENT_LENGTH = 10 * 1024 * 1024;
 
 
 

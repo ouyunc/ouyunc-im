@@ -7,12 +7,9 @@ import com.ouyunc.domain.constants.AppStatus;
 import com.ouyunc.domain.entity.AppEntity;
 import com.ouyunc.message.helper.ClientHelper;
 import io.netty.channel.ChannelHandlerContext;
-import org.apache.commons.collections4.MapUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.RedisTemplate;
-
-import java.util.Map;
 
 /**
  * @author fzx
@@ -28,27 +25,31 @@ public enum AppKeyValidator implements Validator<String> {
     /***
      * @author fzx
      * @description 校验appKey是否合法, 返回true -合法， 返回false-不合法
+     *
+     * <p>性能优化：使用 opsForHash().get() 精确查询单个 appKey，
+     * 而非 entries() 全量拉取所有 appKey（避免 O(N) Redis 传输 + 内存开销）。</p>
      */
     @Override
     public boolean verify(String appKey, ChannelHandlerContext ctx) {
-        Map<String, AppEntity> appKeys = redisTemplate.<String, AppEntity>opsForHash().entries(CacheConstant.buildAppKeysCacheKey());
-        if (MapUtils.isEmpty(appKeys) || !appKeys.containsKey(appKey)) {
+        AppEntity app = redisTemplate.<String, AppEntity>opsForHash().get(CacheConstant.buildAppKeysCacheKey(), appKey);
+        if (app == null) {
             log.warn("appKey:{}不存在", appKey);
             return false;
         }
-        // 获取appKey的设置信息，是否停用等
-        AppEntity app = appKeys.get(appKey);
-        if (app == null || AppStatus.ABNORMAL.value().equals(app.getStatus())) {
+        if (AppStatus.ABNORMAL.value().equals(app.getStatus())) {
             log.warn("appKey:{}已停用", appKey);
             return false;
         }
-        // 获取当前appKey的连接数
-        long currentConnections = ClientHelper.connections(appKey);
         Long maxConnections = app.getMaxConnections();
-        if (maxConnections != null && (maxConnections == NumberConstant.NUMBER_NEGATIVE_1 || currentConnections < maxConnections)) {
+        // maxConnections == null 视为无限制（兼容未配置场景）
+        if (maxConnections == null || maxConnections == NumberConstant.NUMBER_NEGATIVE_1) {
             return true;
         }
-        log.warn("appKey:{}连接数已达上限", appKey);
+        long currentConnections = ClientHelper.connections(appKey);
+        if (currentConnections < maxConnections) {
+            return true;
+        }
+        log.warn("appKey:{}连接数已达上限, 当前:{}, 上限:{}", appKey, currentConnections, maxConnections);
         return false;
     }
 }

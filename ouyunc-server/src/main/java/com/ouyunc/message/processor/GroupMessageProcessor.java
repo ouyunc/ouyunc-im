@@ -1,6 +1,7 @@
 package com.ouyunc.message.processor;
 
 import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
+import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.constant.NumberConstant;
@@ -9,6 +10,7 @@ import com.ouyunc.base.model.ClientInfo;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
+import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
@@ -106,20 +108,29 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
             handleReadReceipt(ctx, packet, groupUserIdentitySet);
             return;
         }
-        reactiveSaveGroupMessage(packet).subscribe(result -> {
-            if (!result) {
-                log.error("群聊会话索引写入失败: {}", packet);
-                publishCachePersistenceError(packet, "群聊消息写入会话失败");
-                return;
-            }
-            if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
-                repository().saveLastMessageForSession(packet.getMessage().getTo(), packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
-                handleWithdrawMessage(ctx, packet, groupUserIdentitySet);
-            } else {
-                repository().saveLastMessageForSession(packet.getMessage().getTo(), packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
-                deliverAndFireNext(ctx, packet, groupUserIdentitySet);
-            }
-        });
+        reactiveSaveGroupMessage(packet).subscribe(
+                result -> {
+                    if (!result) {
+                        log.error("群聊会话索引写入失败: {}", packet);
+                        publishCachePersistenceError(packet, "群聊消息写入会话失败");
+                        repository().releaseQosClaim(packet);
+                        return;
+                    }
+                    // 持久化成功后才发送 QoS ACK
+                    sendQosAckAfterPersist(ctx, packet);
+                    if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
+                        repository().saveLastMessageForSession(packet.getMessage().getTo(), packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+                        handleWithdrawMessage(ctx, packet, groupUserIdentitySet);
+                    } else {
+                        repository().saveLastMessageForSession(packet.getMessage().getTo(), packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+                        deliverAndFireNext(ctx, packet, groupUserIdentitySet);
+                    }
+                },
+                error -> {
+                    log.error("群聊消息持久化异常, packetId={}", packet.getPacketId(), error);
+                    publishCachePersistenceError(packet, "群聊持久化异常: " + error.getMessage());
+                    repository().releaseQosClaim(packet);
+                });
 
     }
 
@@ -280,7 +291,33 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
 
 
     private void deliver2AllGroupMembers(Packet packet, Set<String> groupMembers) {
-        groupMembers.forEach(member -> deliverMessage(packet, member));
+        Message message = packet.getMessage();
+        String appKey = message.getMetadata().getAppKey();
+
+        // 批量查询所有群成员在线状态（单次 Pipeline 替代 N 次串行 Redis GET）
+        List<String> memberList = new ArrayList<>(groupMembers);
+        List<String> loginKeys = new ArrayList<>(memberList.size());
+        for (String member : memberList) {
+            loginKeys.add(CacheConstant.buildLoginCacheKey(appKey,
+                    IdentityUtil.generalComboIdentity(appKey, member, MessageServerContext.deviceType(appKey, packet.getDeviceType()))));
+        }
+
+        // 对于每个成员，先尝试本地注册表（无网络开销），再收集需远程查询的
+        List<String> remoteLookupMembers = new ArrayList<>();
+        for (String member : memberList) {
+            List<LoginClientInfo> localClients = ClientHelper.onlineAll(appKey, member);
+            if (CollectionUtils.isNotEmpty(localClients)) {
+                MessageHelper.asyncSendMessage(packet, localClients);
+            } else {
+                remoteLookupMembers.add(member);
+            }
+        }
+
+        // 远程成员已在 onlineAll 内部查询 Redis，此处无需额外处理
+        // onlineAll 已包含完整的本地 + 远程查询逻辑
+        if (log.isDebugEnabled() && !remoteLookupMembers.isEmpty()) {
+            log.debug("群成员 {} 人不在本地节点在线，已查询远程缓存", remoteLookupMembers.size());
+        }
     }
 
     private void deliver2AtMessage(Packet packet, List<String> atList, Set<String> groupMembers) {

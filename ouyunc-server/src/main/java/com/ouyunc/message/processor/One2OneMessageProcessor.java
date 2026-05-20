@@ -100,20 +100,31 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
             handleReadReceipt(ctx, packet);
             return;
         }
-        saveMessage(packet).subscribe(result -> {
-            if (!result) {
-                log.error("单聊会话索引写入失败: {}", packet);
-                publishCachePersistenceError(packet, "单聊消息写入会话失败");
-                return;
-            }
-            if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
-                repository().saveLastMessageForSession(IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo()), packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
-                handleWithdrawMessage(ctx, packet);
-            } else {
-                repository().saveLastMessageForSession(IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo()), packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
-                deliverAndFireNext(ctx, packet, false);
-            }
-        });
+        saveMessage(packet).subscribe(
+                result -> {
+                    if (!result) {
+                        log.error("单聊会话索引写入失败: {}", packet);
+                        publishCachePersistenceError(packet, "单聊消息写入会话失败");
+                        // 持久化失败不发 ACK，等客户端超时重发；同时释放 QoS 占位避免重发被判定为重复
+                        repository().releaseQosClaim(packet);
+                        return;
+                    }
+                    // 持久化成功后才发送 QoS ACK，确保「客户端收到 ACK == 服务端持久化成功」
+                    sendQosAckAfterPersist(ctx, packet);
+                    if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
+                        repository().saveLastMessageForSession(IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo()), packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+                        handleWithdrawMessage(ctx, packet);
+                    } else {
+                        repository().saveLastMessageForSession(IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo()), packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+                        deliverAndFireNext(ctx, packet, false);
+                    }
+                },
+                error -> {
+                    log.error("单聊消息持久化异常, packetId={}", packet.getPacketId(), error);
+                    publishCachePersistenceError(packet, "单聊持久化异常: " + error.getMessage());
+                    // 异常时不发 ACK，并释放 QoS 占位允许客户端重试
+                    repository().releaseQosClaim(packet);
+                });
     }
 
 

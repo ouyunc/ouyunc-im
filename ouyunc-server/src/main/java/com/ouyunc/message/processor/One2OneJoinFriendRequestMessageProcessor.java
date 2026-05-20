@@ -28,13 +28,11 @@ import com.ouyunc.message.validator.PermissionValidator;
 import com.ouyunc.repository.DefaultRepository;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.collections4.CollectionUtils;
-import org.redisson.api.RLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 加好友
@@ -103,79 +101,63 @@ public final class One2OneJoinFriendRequestMessageProcessor extends AbstractMess
         String appKey = message.getMetadata().getAppKey();
         String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
 
-        // 加锁
-        RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.buildFriendRequestLockCacheKey(appKey, sessionId));
-        try {
-            if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
-                // 获取请求会话
-                RequestSession requestSession = repository().getFriendRequestSession(appKey, message.getFrom(), message.getTo());
-                if (null != requestSession && requestSession.getProgress() > RequestSessionProgress.JOINING.value()) {
-                    log.warn("{} 和 {} 会话存在正在处理中的好友请求，拒绝和同意还未结束处理", message.getFrom(), message.getTo());
+        // 分布式锁保护的业务逻辑统一调度到业务线程池，避免阻塞 Netty EventLoop
+        String lockKey = CacheConstant.buildFriendRequestLockCacheKey(appKey, sessionId);
+        runWithDistributedLock(ctx, packet, lockKey, ExceptionCodeEnum.BIND_FRIEND_ERROR, () -> {
+            // 获取请求会话
+            RequestSession requestSession = repository().getFriendRequestSession(appKey, message.getFrom(), message.getTo());
+            if (null != requestSession && requestSession.getProgress() > RequestSessionProgress.JOINING.value()) {
+                log.warn("{} 和 {} 会话存在正在处理中的好友请求，拒绝和同意还未结束处理", message.getFrom(), message.getTo());
+                return;
+            }
+            // 如果已经是好友，直接返回
+            if (repository().isFriend(appKey, message.getFrom(), message.getTo())) {
+                log.warn("已经是好友, 请知悉; {}", packet);
+                return;
+            }
+            // 获取当前对方的配置信息
+            UserEntity toUserEntity = repository().getUserEntity(appKey, message.getTo());
+            if (toUserEntity == null) {
+                log.error("对方:{} 不存在，请检查数据！", message.getTo());
+                MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.USER_NOT_EXIST, message.getTo() + "用户不存在！", packet), MessageEventTypeEnum.EXCEPTION));
+                return;
+            }
+            // 尝试设置请求会话信息
+            RequestSession session = requestSession != null ? requestSession
+                    : RequestSession.newBuilder().sessionId(MessageContext.idGenerator().generateIdStr()).build();
+
+            // 判断对方是否是自动同意加好友
+            if (FriendJoinPolicy.AUTO_PASS.value().equals(toUserEntity.getFriendJoinPolicy())) {
+                session.setProgress(RequestSessionProgress.AGREEING.value());
+                if (!repository().autoPassBindFriend(packet, session, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
+                    log.error("自动处理绑定好友失败: {}", packet);
+                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一自动绑定好友请求消息异常!", packet), MessageEventTypeEnum.EXCEPTION), true);
                     return;
                 }
-                // 如果是好友或者处理中，直接返回
-                if (repository().isFriend(appKey, message.getFrom(), message.getTo())) {
-                    log.warn("已经是好友, 请知悉; {}" ,packet);
+            } else {
+                session.setProgress(RequestSessionProgress.JOINING.value());
+                if (!repository().saveJoinFriendRequestMessage(packet, session, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
+                    log.error("Failed to save one-to-one join friend request message: {}", packet);
+                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一加好友请求消息异常!", packet), MessageEventTypeEnum.EXCEPTION), true);
                     return;
                 }
-                // 获取当前对方的配置信息,是否是自动同意加好友，
-                UserEntity toUserEntity = repository().getUserEntity(appKey, message.getTo());
-                if (toUserEntity == null) {
-                    log.error("对方:{} 不存在，请检查数据！", message.getTo());
-                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.USER_NOT_EXIST, message.getTo() + "用户不存在！", packet), MessageEventTypeEnum.EXCEPTION));
-                    return;
-                }
-                // 尝试设置请求会话信息
-                if (requestSession == null) {
-                    requestSession = RequestSession.newBuilder().sessionId(MessageContext.idGenerator().generateIdStr()).build();
-                }
-                // 判断对方是否是自动同意加好友
-                if (FriendJoinPolicy.AUTO_PASS.value().equals(toUserEntity.getFriendJoinPolicy())) {
-                    requestSession.setProgress(RequestSessionProgress.AGREEING.value());
-                    // 是自动添加好友
-                    if (!repository().autoPassBindFriend(packet, requestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
-                        log.error("自动处理绑定好友失败: {}", packet);
-                        MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一自动绑定好友请求消息异常!", packet), MessageEventTypeEnum.EXCEPTION), true);
-                        return;
-                    }
-                }else {
-                    requestSession.setProgress(RequestSessionProgress.JOINING.value());
-                    if (!repository().saveJoinFriendRequestMessage(packet, requestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
-                        log.error("Failed to save one-to-one join friend request message: {}", packet);
-                        MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一加好友请求消息异常!", packet), MessageEventTypeEnum.EXCEPTION), true);
-                        return;
-                    }
-                }
-                // 这里不保存到session 缓存中,保存到临时的会话消息中，该好友请求的消息可以对其进行定期清理；这里考虑个问题，到底是先发mq还是先等方法处理完再发mq， 这个发消息虽然是异步的但是里面并没有操作资源，所以对锁没影响，不用特别考虑
-                repository().savePacket2Mq(MqConstant.KAFKA_FRIEND_REQUEST_TOPIC, sessionId, packet).whenComplete((result, ex) ->{
-                    if (ex != null) {
-                        log.error("请求添加好友，发送mq异常，原因：{}", ex.getMessage());
-                        MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "处理一对一添加好友请求异常！" + ex.getMessage(), packet), MessageEventTypeEnum.EXCEPTION), true);
-                    }else {
-                        // 如果接收方在线，则直接发送消息
+            }
+
+            // MQ 发送 + 在线通知（不在锁内，避免锁持有时间过长）
+            repository().savePacket2Mq(MqConstant.KAFKA_FRIEND_REQUEST_TOPIC, sessionId, packet)
+                    .whenComplete((result, ex) -> {
+                        if (ex != null) {
+                            log.error("请求添加好友，发送mq异常，原因：{}", ex.getMessage());
+                            MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "处理一对一添加好友请求异常！" + ex.getMessage(), packet), MessageEventTypeEnum.EXCEPTION), true);
+                            return;
+                        }
                         List<LoginClientInfo> toLoginClientInfos = ClientHelper.onlineAll(message.getMetadata().getAppKey(), message.getTo());
                         if (CollectionUtils.isNotEmpty(toLoginClientInfos)) {
                             MessageHelper.asyncSendMessage(packet, toLoginClientInfos);
                         }
-                        // 处理成功则转到下个处理器
-                        ctx.fireChannelRead(packet);
-                    }
-                });
-            } else {
-                log.error("Failed to lock one-to-one join friend request message: {}", packet);
-                MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, "获取加好友请求锁失败", packet), MessageEventTypeEnum.EXCEPTION), true);
-            }
-        } catch (Exception e) {
-            log.error("Failed to handle one-to-one join friend request message: {}", e.getMessage());
-            MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.BIND_FRIEND_ERROR, "处理一对一加好友请求异常！" + e.getMessage(), packet), MessageEventTypeEnum.EXCEPTION), true);
-        } finally {
-            if (lock.isHeldByCurrentThread()) {
-                lock.unlock();
-            }else {
-                log.error("one-to-one join friend request message lock is not held by current thread: {}", packet);
-                MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.UN_LOCK_ERROR, "加好友请求解锁失败", packet), MessageEventTypeEnum.EXCEPTION), true);
-            }
-        }
-
+                        // 在 EventLoop 上 fire 下个 handler，确保 pipeline 线程安全
+                        ctx.channel().eventLoop().execute(() -> ctx.fireChannelRead(packet));
+                    });
+        });
     }
 }
