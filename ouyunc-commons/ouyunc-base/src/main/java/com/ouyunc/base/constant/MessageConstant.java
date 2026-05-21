@@ -328,6 +328,12 @@ public class MessageConstant {
     public static final String CHANNEL_ATTR_KEY_TAG_BUSINESS_IDLE_STRIKE = "CHANNEL_ATTR_KEY_TAG_BUSINESS_IDLE_STRIKE";
 
 
+    /**
+     * qos dup 的原始packet
+     */
+    public static final String CHANNEL_ATTR_KEY_QOS_DUP_ORIGINAL_PACKET = "CHANNEL_ATTR_KEY_QOS_DUP_ORIGINAL_PACKET";
+
+
     // ==============================================handler tag=====================================
 
 

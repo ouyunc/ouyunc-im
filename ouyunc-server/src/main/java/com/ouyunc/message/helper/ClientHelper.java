@@ -146,6 +146,49 @@ public class ClientHelper {
         return expireTime;
     }
 
+    public static Map<String, List<LoginClientInfo>> onlineAllBatch(String appKey, Set<String> identities) {
+        Map<String, List<LoginClientInfo>> result = new HashMap<>(identities.size());
+        Set<String> remoteKeys = new HashSet<>();
+
+        // Phase 1: 本地注册表查询（零网络开销）
+        for (String identity : identities) {
+            List<LoginClientInfo> localHits = new ArrayList<>();
+            Collection<DeviceType> deviceTypes = MessageServerContext.deviceTypeList(appKey, identity);
+            for (DeviceType dt : deviceTypes) {
+                String comboId = IdentityUtil.generalComboIdentity(appKey, identity, dt);
+                ChannelHandlerContext ctx = MessageServerContext.localLoginClientRegisterTable.get(comboId);
+                if (ctx != null) {
+                    LoginClientInfo info = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
+                    if (info != null && OnlineEnum.ONLINE.equals(info.getOnlineStatus())) {
+                        localHits.add(info);
+                        continue;
+                    }
+                }
+                remoteKeys.add(CacheConstant.buildLoginCacheKey(appKey, comboId));
+            }
+            if (!localHits.isEmpty()) {
+                result.put(identity, localHits);
+            }
+        }
+
+        // Phase 2: 未命中本地的 → 一次 MGET 批量查 Redis
+        if (!remoteKeys.isEmpty()) {
+            List<String> keyList = new ArrayList<>(remoteKeys);
+            List<Object> cached = redisTemplate.opsForValue().multiGet(keyList);
+            if (cached != null) {
+                for (int i = 0; i < cached.size(); i++) {
+                    if (cached.get(i) instanceof LoginClientInfo info
+                            && OnlineEnum.ONLINE.equals(info.getOnlineStatus())) {
+                        result.computeIfAbsent(info.getIdentity(), k -> new ArrayList<>()).add(info);
+                    }
+                }
+            }
+        }
+        return result;
+    }
+
+
+
     /**
      * @param identity          用户登录唯一标识，手机号，邮箱，身份证号码等
      * @param excludeDeviceTypeArr 需要排除的设备类型数组

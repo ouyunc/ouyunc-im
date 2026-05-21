@@ -65,44 +65,49 @@ public enum MqttRepository implements Repository{
 
     }
 
-    /**
-     * 取消订阅
-     * @param topicFilterList
-     * @param comboIdentity
-     */
-    @SuppressWarnings("unchecked")
-    public void unSubscribe(String appKey, String comboIdentity, List<String> topicFilterList) {
-        if (CollectionUtils.isEmpty(topicFilterList)) {
-            return;
-        }
+    public void subscribe(String appKey, String comboIdentity, List<MqttTopicSubscriptionOption> list) {
+        String topicListKey = CacheConstant.buildMqttTopicListCacheKey(appKey);
+        String[] topicFilterArray = list.stream()
+                .map(MqttTopicSubscriptionOption::getTopicFilter)
+                .toArray(String[]::new);
+
+        // 全部在同一 Pipeline 中执行，保证原子性
         redisTemplate.executePipelined(new SessionCallback<>() {
             @Override
-            public <K, V> Object execute(RedisOperations<K, V> operations) throws DataAccessException {
-                // 删除订阅关系
-                topicFilterList.forEach(topicFilter -> operations.opsForHash().delete((K) (CacheConstant.buildMqttTopicFilterCacheKey(appKey, topicFilter)),  comboIdentity));
+            public <K, V> Object execute(RedisOperations<K, V> ops) throws DataAccessException {
+                ops.opsForSet().add((K) topicListKey, (V[]) topicFilterArray);
+                for (MqttTopicSubscriptionOption opt : list) {
+                    String topicKey = CacheConstant.buildMqttTopicFilterCacheKey(appKey, opt.getTopicFilter());
+                    ops.opsForHash().putIfAbsent((K) topicKey, comboIdentity, opt.getQos());
+                }
                 return null;
             }
         });
     }
-    /**
-     * 订阅 主题
-     * @param topicSubscriptionOptionList
-     * @param comboIdentity
-     */
-    @SuppressWarnings("unchecked")
-    public void subscribe(String appKey, String comboIdentity,  List<MqttTopicSubscriptionOption> topicSubscriptionOptionList) {
-        if (CollectionUtils.isEmpty(topicSubscriptionOptionList)) {
-            return;
-        }
-        String[] topicFilterArray = topicSubscriptionOptionList.parallelStream().map(MqttTopicSubscriptionOption::getTopicFilter).toArray(String[]::new);
-        redisTemplate.opsForSet().add(CacheConstant.buildMqttTopicListCacheKey(appKey), topicFilterArray);
+
+    public void unSubscribe(String appKey, String comboIdentity, List<String> topicFilters) {
+        String topicListKey = CacheConstant.buildMqttTopicListCacheKey(appKey);
         redisTemplate.executePipelined(new SessionCallback<>() {
             @Override
-            public <K, V> Object execute(RedisOperations<K, V> operations) throws DataAccessException {
-                // 保存订阅关系
-                topicSubscriptionOptionList.forEach(topicSubscriptionOption -> operations.opsForHash().putIfAbsent((K) (CacheConstant.buildMqttTopicFilterCacheKey(appKey, topicSubscriptionOption.getTopicFilter())),  comboIdentity, topicSubscriptionOption));
+            public <K, V> Object execute(RedisOperations<K, V> ops) throws DataAccessException {
+                for (String topicFilter : topicFilters) {
+                    String topicKey = CacheConstant.buildMqttTopicFilterCacheKey(appKey, topicFilter);
+                    ops.opsForHash().delete((K) topicKey, comboIdentity);
+                    // 删后检查：若该 topic 无订阅者则从全局 Set 移除
+                    // 注意：Pipeline 内无法读取结果做条件判断，改为后置清理
+                }
                 return null;
             }
         });
+        // 后置清理无订阅者的 topic（非事务，最终一致即可）
+        for (String topicFilter : topicFilters) {
+            String topicKey = CacheConstant.buildMqttTopicFilterCacheKey(appKey, topicFilter);
+            Long size = redisTemplate.opsForHash().size(topicKey);
+            if (size != null && size == 0) {
+                redisTemplate.opsForSet().remove(topicListKey, topicFilter);
+                redisTemplate.delete(topicKey);
+            }
+        }
     }
+
 }

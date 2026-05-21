@@ -57,6 +57,9 @@ public abstract class AbstractBaseProcessor<T extends Number> implements Process
                 log.warn("QOS_DUP 内容解析失败，按新消息处理: {}", message.getContent());
                 return false;
             }
+            // 缓存原始 dupPacket 供 qosPostHandle 使用
+            ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_QOS_DUP_ORIGINAL_PACKET, dupPacket);
+
             LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
             String channelLoginIdentity = loginClientInfo != null ? loginClientInfo.getIdentity() : null;
             if (repository().checkDup(dupPacket, channelLoginIdentity)) {
@@ -97,7 +100,12 @@ public abstract class AbstractBaseProcessor<T extends Number> implements Process
             long serverPacketId;
             String originalClientMessageId;
             if (packet.getMessageType() == MessageTypeEnum.QOS_DUP.getType()) {
-                Packet dupPacket = JSON.parseObject(packet.getMessage().getContent(), Packet.class);
+                Packet dupPacket = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_QOS_DUP_ORIGINAL_PACKET);
+                if (dupPacket == null) {
+                    dupPacket = JSON.parseObject(packet.getMessage().getContent(), Packet.class);
+                }
+                // 用完清除
+                ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_QOS_DUP_ORIGINAL_PACKET, null);
                 if (dupPacket == null) {
                     return;
                 }
