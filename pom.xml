@@ -86,6 +86,7 @@
     <disruptor.version>4.0.0</disruptor.version>
     <cosid.version>3.0.2</cosid.version>
     <cosid-redis.version>3.0.2</cosid-redis.version>
+    <bcprov.version>1.78.1</bcprov.version>
   </properties>
 
   <!--依赖-->
@@ -456,7 +457,16 @@
         <artifactId>cosid-spring-redis</artifactId>
         <version>${cosid-redis.version}</version>
       </dependency>
+
+      <!-- 国密 SM4 等算法 -->
+      <dependency>
+        <groupId>org.bouncycastle</groupId>
+        <artifactId>bcprov-jdk18on</artifactId>
+        <version>${bcprov.version}</version>
+      </dependency>
     </dependencies>
+
+
   </dependencyManagement>
 
   <build>

@@ -4,7 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="类型" />
+    <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="类型">
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/encrypt/Encrypt.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/encrypt/Encrypt.java" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -63,7 +66,7 @@
   &quot;associatedIndex&quot;: 0
 }</component>
   <component name="ProjectId" id="2ufM82eHzwWazomtA8rAeEDAhv6" />
-  <component name="ProjectLevelVcsManager">
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true">
     <ConfirmationsSetting value="2" id="Add" />
   </component>
   <component name="ProjectViewState">
@@ -395,15 +398,7 @@
       <workItem from="1779269711665" duration="3000" />
       <workItem from="1779287133935" duration="4690000" />
       <workItem from="1779321680610" duration="721000" />
-      <workItem from="1779350101051" duration="4731000" />
-    </task>
-    <task id="LOCAL-00171" summary="系统推送">
-      <option name="closed" value="true" />
-      <created>1773494466491</created>
-      <option name="number" value="00171" />
-      <option name="presentableId" value="LOCAL-00171" />
-      <option name="project" value="LOCAL" />
-      <updated>1773494466491</updated>
+      <workItem from="1779350101051" duration="8900000" />
     </task>
     <task id="LOCAL-00172" summary="系统推送">
       <option name="closed" value="true" />
@@ -789,7 +784,15 @@
       <option name="project" value="LOCAL" />
       <updated>1778996601238</updated>
     </task>
-    <option name="localTasksCounter" value="220" />
+    <task id="LOCAL-00220" summary="类型">
+      <option name="closed" value="true" />
+      <created>1779363143698</created>
+      <option name="number" value="00220" />
+      <option name="presentableId" value="LOCAL-00220" />
+      <option name="project" value="LOCAL" />
+      <updated>1779363143698</updated>
+    </task>
+    <option name="localTasksCounter" value="221" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
