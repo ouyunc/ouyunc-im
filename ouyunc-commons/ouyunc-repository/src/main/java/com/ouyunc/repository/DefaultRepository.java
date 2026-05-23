@@ -2041,7 +2041,7 @@ public enum DefaultRepository implements Repository{
     public GroupEntity getGroupEntityFromDatabases(String appKey, String groupId) {
         try {
             GroupEntity groupEntity = jdbcClient.sql(JdbcSqlDialectHolder.selectGroup())
-                    .params(groupId)
+                    .param(GroupEntity.Fields.id, groupId)
                     .query(GroupEntity.class)
                     .single();
             // 走不到这里就会进异常
@@ -2134,7 +2134,7 @@ public enum DefaultRepository implements Repository{
         // 4. MySQL
         try {
             userEntity = jdbcClient.sql(JdbcSqlDialectHolder.selectUser())
-                    .params(identity)
+                    .param(UserEntity.Fields.id, identity)
                     .query(UserEntity.class)
                     .single();
             // 存到缓存中,30天
@@ -2189,7 +2189,7 @@ public enum DefaultRepository implements Repository{
                                         Mono.fromCallable(() -> {
                                             try {
                                                 return jdbcClient.sql(JdbcSqlDialectHolder.selectUser())
-                                                        .params(identity)
+                                                        .param(UserEntity.Fields.id, identity)
                                                         .query(UserEntity.class)
                                                         .single();
                                             } catch (EmptyResultDataAccessException e) {
