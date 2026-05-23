@@ -13,28 +13,38 @@ import org.slf4j.LoggerFactory;
 public enum CosIdSnowflakeIdGenerator implements IdGenerator{
     INSTANCE
     ;
-    private static final me.ahoo.cosid.IdGenerator idGenerator;
+    private static volatile me.ahoo.cosid.IdGenerator idGenerator;
     private static final Logger log = LoggerFactory.getLogger(CosIdSnowflakeIdGenerator.class);
 
-    static {
-        // 启动 CosId Redis 配置
-        CosIdRedisConfiguration cosIdRedisConfiguration = new CosIdRedisConfiguration(CacheFactory.STRING_REDIS.instance(), "OUYUNC");
-        idGenerator = cosIdRedisConfiguration.getIdGeneratorProvider().getShare();
+    private static me.ahoo.cosid.IdGenerator snowflakeGenerator() {
+        me.ahoo.cosid.IdGenerator gen = idGenerator;
+        if (gen != null) {
+            return gen;
+        }
+        synchronized (CosIdSnowflakeIdGenerator.class) {
+            if (idGenerator == null) {
+                CosIdRedisConfiguration cosIdRedisConfiguration =
+                        new CosIdRedisConfiguration(CacheFactory.STRING_REDIS.instance(), "OUYUNC");
+                idGenerator = cosIdRedisConfiguration.getIdGeneratorProvider().getShare();
+            }
+            return idGenerator;
+        }
     }
+
     @Override
     public long generateId() {
-        return idGenerator.generate();
+        return snowflakeGenerator().generate();
     }
 
     @Override
     public String generateIdStr() {
-        return String.valueOf(idGenerator.generate());
+        return String.valueOf(snowflakeGenerator().generate());
     }
 
 
     @Override
     public String generateId19Str() {
-        return idGenerator.generateAsString();
+        return snowflakeGenerator().generateAsString();
     }
 
     @Override
@@ -48,11 +58,11 @@ public enum CosIdSnowflakeIdGenerator implements IdGenerator{
 
     @Override
     public String formatLongId19Str(long id) {
-        return idGenerator.idConverter().asString(id);
+        return snowflakeGenerator().idConverter().asString(id);
     }
 
     @Override
     public long formatStrIdAsLong(String id) {
-        return idGenerator.idConverter().asLong(id);
+        return snowflakeGenerator().idConverter().asLong(id);
     }
 }

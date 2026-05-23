@@ -41,6 +41,7 @@
     <log4j2.version>2.23.1</log4j2.version>
     <objenesis.version>3.3</objenesis.version>
     <java.version>21</java.version>
+    <bcprov.version>1.78.1</bcprov.version>
     <maven.compiler.source>21</maven.compiler.source>
     <reactor.version>3.6.9</reactor.version>
     <redis.version>4.1.0-M2</redis.version>
@@ -280,6 +281,11 @@
         <groupId>me.ahoo.cosid</groupId>
         <artifactId>cosid-spring-redis</artifactId>
         <version>${cosid-redis.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.bouncycastle</groupId>
+        <artifactId>bcprov-jdk18on</artifactId>
+        <version>${bcprov.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
