@@ -730,6 +730,7 @@ public enum DefaultRepository implements Repository{
                         }
                     })
                     .onErrorResume(ex -> {
+                        log.error("操作处理异常 | packet={}", packet, ex);
                         exceptionConsumer.accept(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.UNKNOWN_ERROR, ex.getMessage(), packet), MessageEventTypeEnum.EXCEPTION));
                         return Mono.just(false);
                     });
@@ -782,7 +783,11 @@ public enum DefaultRepository implements Repository{
         // 先从redis 中获取
 
         String sessionMessageOffsetKey = CacheConstant.buildSessionReadMessageOffsetCacheKey(appKey, identityType.value(), from, deviceType, to);
-        Long sessionMessageOffset = (Long) redisTemplate.opsForValue().get(sessionMessageOffsetKey);
+        Long sessionMessageOffset = null;
+        Object cachedOffset = redisTemplate.opsForValue().get(sessionMessageOffsetKey);
+        if (cachedOffset instanceof Number n) {
+            sessionMessageOffset = n.longValue();
+        }
         if (sessionMessageOffset != null) {
             return sessionMessageOffset;
         }
@@ -841,9 +846,9 @@ public enum DefaultRepository implements Repository{
         List<Byte> missingDeviceTypes = new ArrayList<>();
         for (int i = 0; i < deviceTypes.size(); i++) {
             Object value = cached != null && i < cached.size() ? cached.get(i) : null;
-            if (value instanceof Long offset) {
+            if (value instanceof Number offset) {
                 found = true;
-                max = Math.max(max, offset);
+                max = Math.max(max, offset.longValue());
             } else {
                 missingDeviceTypes.add(deviceTypes.get(i));
             }
@@ -1020,14 +1025,17 @@ public enum DefaultRepository implements Repository{
         final long incomingOffset = maxReadPacketId;
         final String appKey = metadata.getAppKey();
         return Mono.fromCallable(() -> {
-                    redisTemplate.execute(new DefaultRedisScript<>(LuaScriptEnum.READ_OFFSET_MAX_SCRIPT.getScript()),
-                            List.of(offsetKey),
-                            List.of(String.valueOf(incomingOffset), String.valueOf(expireTime)));
+                    // ARGV 必须传 Long 等数值类型：String 经 Jackson 会序列化为 "123"（带引号），Lua tonumber 失败导致 SET 不执行
+                    DefaultRedisScript<Long> readOffsetScript = new DefaultRedisScript<>(
+                            LuaScriptEnum.READ_OFFSET_MAX_SCRIPT.getScript(), Long.class);
+                    redisTemplate.execute(readOffsetScript, List.of(offsetKey), incomingOffset, expireTime);
                     if (identityType == IdentityType.ONE_2_ONE) {
                         refreshSessionPeerUnreadAfterRead(appKey, from, to, expireTime);
                     }
                     return Boolean.TRUE;
                 })
+                .doOnError(e -> log.error("已读回执 Redis 更新失败 | offsetKey={}, incomingOffset={}, expireTime={}",
+                        offsetKey, incomingOffset, expireTime, e))
                 .subscribeOn(Schedulers.boundedElastic());
     }
 
