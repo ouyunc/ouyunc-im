@@ -66,18 +66,6 @@ import java.util.stream.Collectors;
 public enum DefaultRepository implements Repository{
     INSTANCE;
 
-    private static final DefaultRedisScript<Long> READ_OFFSET_MAX_SCRIPT = new DefaultRedisScript<>("""
-            local cur = redis.call('GET', KEYS[1])
-            local inc = tonumber(ARGV[1])
-            local ttl = tonumber(ARGV[2])
-            local merged = inc
-            if cur then
-              local c = tonumber(cur)
-              if c and c > merged then merged = c end
-            end
-            redis.call('SET', KEYS[1], tostring(merged), 'PX', ttl)
-            return merged
-            """, Long.class);
 
     private static Executor dbExecutor() {
         return ThreadPoolManager.repositoryExecutor();
@@ -1032,7 +1020,7 @@ public enum DefaultRepository implements Repository{
         final long incomingOffset = maxReadPacketId;
         final String appKey = metadata.getAppKey();
         return Mono.fromCallable(() -> {
-                    redisTemplate.execute(READ_OFFSET_MAX_SCRIPT,
+                    redisTemplate.execute(new DefaultRedisScript<>(LuaScriptEnum.READ_OFFSET_MAX_SCRIPT.getScript()),
                             List.of(offsetKey),
                             List.of(String.valueOf(incomingOffset), String.valueOf(expireTime)));
                     if (identityType == IdentityType.ONE_2_ONE) {
