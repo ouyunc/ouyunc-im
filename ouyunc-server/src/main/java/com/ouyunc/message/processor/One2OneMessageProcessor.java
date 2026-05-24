@@ -16,6 +16,7 @@ import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.domain.constants.IdentityType;
 import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.message.helper.AtMentionHelper;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.validator.*;
@@ -93,6 +94,11 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
         log.debug("Processing one-to-one message...");
         // 1. 尝试使用内容处理器
         if (processWithContentProcessor(ctx, packet)) {
+            return;
+        }
+        AtMentionHelper.clearAtIfPresent(packet.getMessage());
+        if (!normalizeMessageRefOrReject(packet)) {
+            repository().releaseQosClaim(packet);
             return;
         }
         int contentType = packet.getMessage().getContentType();

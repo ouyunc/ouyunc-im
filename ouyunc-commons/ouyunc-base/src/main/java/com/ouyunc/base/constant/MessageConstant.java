@@ -127,6 +127,16 @@ public class MessageConstant {
     public static final int MAX_READ_RECEIPT_MESSAGE_COUNT = 50;
 
     /**
+     * 群聊 @ 人数上限（含 @全体成员 占位符计 1 个）
+     */
+    public static final int MAX_AT_TARGET_COUNT = 50;
+
+    /**
+     * 单条消息引用（ref）条数上限
+     */
+    public static final int MAX_REF_COUNT = 5;
+
+    /**
      * 会话列表未读：ZSet 扫描他人消息上限（超过则 lexCount 兜底并标记 capped）
      */
     public static final int SESSION_UNREAD_PEER_SCAN_LIMIT = 500;

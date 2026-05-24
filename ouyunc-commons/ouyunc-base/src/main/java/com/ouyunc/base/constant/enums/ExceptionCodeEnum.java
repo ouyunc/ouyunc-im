@@ -21,6 +21,7 @@ public enum ExceptionCodeEnum {
 
     WITHDRAW_MESSAGE_ERROR(40001, "撤回消息错误"),
     WITHDRAW_MESSAGE_VERIFY_ERROR(40002, "撤回消息校验错误"),
+    MESSAGE_REF_INVALID_ERROR(40003, "引用消息无效或超过上限"),
 
 
     READ_RECEIPT_MESSAGE_ERROR(50001, "读已回执消息错误"),
@@ -29,6 +30,7 @@ public enum ExceptionCodeEnum {
 
     GROUP_MEMBER_NOT_EXIST_ERROR(60001, "群成员不存在"),
     GROUP_MEMBER_COUNT_MISMATCH_ERROR(60002, "群成员和群成员关系数量不匹配"),
+    GROUP_AT_MENTION_INVALID_ERROR(60003, "群@成员无效或超过上限"),
 
 
     UN_BIND_ERROR(70001, "客户端解绑错误"),

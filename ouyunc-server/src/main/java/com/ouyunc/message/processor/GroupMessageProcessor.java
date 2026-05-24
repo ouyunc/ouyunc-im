@@ -13,6 +13,7 @@ import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.domain.constants.IdentityType;
 import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.message.helper.AtMentionHelper;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.validator.*;
@@ -22,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -105,6 +107,16 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
         int contentType = packet.getMessage().getContentType();
         if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {
             handleReadReceipt(ctx, packet, groupUserIdentitySet);
+            return;
+        }
+        Set<String> allGroupMembers = new HashSet<>(groupUserIdentitySet);
+        allGroupMembers.add(packet.getMessage().getFrom());
+        if (!normalizeGroupAtOrReject(packet, allGroupMembers)) {
+            repository().releaseQosClaim(packet);
+            return;
+        }
+        if (!normalizeMessageRefOrReject(packet)) {
+            repository().releaseQosClaim(packet);
             return;
         }
         reactiveSaveGroupMessage(packet).subscribe(
@@ -301,9 +313,29 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
     }
 
     private void deliver2AtMessage(Packet packet, List<String> atList, Set<String> groupMembers) {
-        atList.stream()
-                .filter(groupMembers::contains)
-                .forEach(member -> deliverMessage(packet, member));
+        Set<String> targets = AtMentionHelper.resolveDeliveryTargets(atList, groupMembers);
+        targets.forEach(member -> deliverMessage(packet, member));
+    }
+
+    /**
+     * 校验并规范化群 @ 列表；失败时发布异常事件并返回 false。
+     */
+    private boolean normalizeGroupAtOrReject(Packet packet, Set<String> allGroupMembers) {
+        Message message = packet.getMessage();
+        List<String> at = message.getAt();
+        if (CollectionUtils.isEmpty(at)) {
+            return true;
+        }
+        try {
+            message.setAt(AtMentionHelper.normalizeAndValidate(at, allGroupMembers));
+            return true;
+        } catch (IllegalArgumentException ex) {
+            log.warn("群@校验失败: {} | packet={}", ex.getMessage(), packet);
+            MessageServerContext.publishEvent(new MessageEvent(
+                    ExceptionEventPayload.of(ExceptionCodeEnum.GROUP_AT_MENTION_INVALID_ERROR, ex.getMessage(), packet),
+                    MessageEventTypeEnum.EXCEPTION), true);
+            return false;
+        }
     }
 
 

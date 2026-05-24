@@ -7,12 +7,14 @@ import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
+import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
+import com.ouyunc.message.helper.MessageRefHelper;
 import com.ouyunc.message.validator.AuthValidator;
 import com.ouyunc.repository.DefaultRepository;
 import io.netty.channel.ChannelHandlerContext;
@@ -200,5 +202,23 @@ public abstract class AbstractMessageProcessor<T extends Number> extends Abstrac
                         MessageEventTypeEnum.EXCEPTION), true);
             }
         });
+    }
+
+    /** 校验 message.ref（packetId 列表，最多 {@link MessageConstant#MAX_REF_COUNT} 条） */
+    protected boolean normalizeMessageRefOrReject(Packet packet) {
+        Message message = packet.getMessage();
+        if (message == null || CollectionUtils.isEmpty(message.getRef())) {
+            return true;
+        }
+        try {
+            message.setRef(MessageRefHelper.normalizeAndValidate(message.getRef()));
+            return true;
+        } catch (IllegalArgumentException ex) {
+            log.warn("消息引用校验失败: {} | packet={}", ex.getMessage(), packet);
+            MessageServerContext.publishEvent(new MessageEvent(
+                    ExceptionEventPayload.of(ExceptionCodeEnum.MESSAGE_REF_INVALID_ERROR, ex.getMessage(), packet),
+                    MessageEventTypeEnum.EXCEPTION), true);
+            return false;
+        }
     }
 }
