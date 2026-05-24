@@ -1,6 +1,5 @@
 package com.ouyunc.repository;
 
-import com.ouyunc.base.constant.enums.DeviceType;
 import com.ouyunc.base.packet.Packet;
 
 import java.util.concurrent.Future;

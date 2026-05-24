@@ -1,7 +1,5 @@
 package com.ouyunc.base.model;
 
-import com.ouyunc.base.constant.enums.DeviceType;
-
 import java.io.Serial;
 import java.io.Serializable;
 
@@ -25,7 +23,7 @@ public class Target implements Serializable, Cloneable, Protocol{
     /**
      * 接收者当前所使用的的登录设备类型,需要在一开始调用方法的时候设置进来
      */
-    private DeviceType deviceType;
+    private byte deviceType;
 
     private byte protocol;
 
@@ -39,11 +37,11 @@ public class Target implements Serializable, Cloneable, Protocol{
         return targetServerAddress;
     }
 
-    public DeviceType getDeviceType() {
+    public byte getDeviceType() {
         return deviceType;
     }
 
-    public void setDeviceType(DeviceType deviceType) {
+    public void setDeviceType(byte deviceType) {
         this.deviceType = deviceType;
     }
 
@@ -105,7 +103,7 @@ public class Target implements Serializable, Cloneable, Protocol{
         /**
          * 最终接收者当前所使用的的登录设备类型,需要在一开始调用方法的时候设置进来
          */
-        private DeviceType deviceType;
+        private byte deviceType;
 
         /**
          * 协议类型
@@ -130,7 +128,7 @@ public class Target implements Serializable, Cloneable, Protocol{
         }
 
 
-        public Builder deviceType(DeviceType deviceType) {
+        public Builder deviceType(byte deviceType) {
             this.deviceType = deviceType;
             return this;
         }

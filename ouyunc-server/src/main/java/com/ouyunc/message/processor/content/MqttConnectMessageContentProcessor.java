@@ -155,7 +155,7 @@ public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<In
             }
             byte protocolValue = protocol.getProtocol();
             byte protocolVersion = protocol.getProtocolVersion();
-            MqttLoginClientInfo mqttLoginClientInfo = new MqttLoginClientInfo(protocolValue, protocolVersion, MessageContext.messageProperties.getLocalServerAddress(), OnlineEnum.ONLINE, null, ClientHelper.calculateClientLoginExpireTime(keepAlive), ClientHelper.calculateClientHeartBeatTimeout(keepAlive), loginTimestamp, appKey, mqttConnectPayload.clientIdentifier(), DeviceTypeEnum.M, null, mqttConnectPayload.clientIdentifier(), signature, Encrypt.AsymmetricEncrypt.MD5.getValue(), keepAlive, loginTimestamp, enableWill, qos, version, isWillRetain, willMessage, willTopic, cleanSession, sessionExpiryInterval, YesOrNo.NO.getCode(), null);
+            MqttLoginClientInfo mqttLoginClientInfo = new MqttLoginClientInfo(protocolValue, protocolVersion, MessageContext.messageProperties.getLocalServerAddress(), OnlineEnum.ONLINE, null, ClientHelper.calculateClientLoginExpireTime(keepAlive), ClientHelper.calculateClientHeartBeatTimeout(keepAlive), loginTimestamp, appKey, mqttConnectPayload.clientIdentifier(), DeviceTypeEnum.M.getType(), null, mqttConnectPayload.clientIdentifier(), signature, Encrypt.AsymmetricEncrypt.MD5.getValue(), keepAlive, loginTimestamp, enableWill, qos, version, isWillRetain, willMessage, willTopic, cleanSession, sessionExpiryInterval, YesOrNo.NO.getCode(), null);
             if (!validate(mqttLoginClientInfo)) {
                 MqttMessage connAckMessage = MqttMessageFactory.newMessage(
                         new MqttFixedHeader(MqttMessageType.CONNACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
@@ -170,7 +170,7 @@ public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<In
                 ctx.close();
                 return;
             }
-            String comboIdentity = IdentityUtil.generalComboIdentity(mqttLoginClientInfo.getAppKey(), mqttLoginClientInfo.getIdentity(), DeviceTypeEnum.M);
+            String comboIdentity = IdentityUtil.generalComboIdentity(mqttLoginClientInfo.getAppKey(), mqttLoginClientInfo.getIdentity(), DeviceTypeEnum.M.getType());
             //如果之前已经登录（重复登录请求），这里判断是否已经登录过,同一个账号在同一个设备不能同时登录
             //1,从分布式缓存取出该登录用户
             LoginClientInfo cacheLoginClientInfo = MessageServerContext.remoteLoginClientInfoCache.get(CacheConstant.buildLoginCacheKey(mqttLoginClientInfo.getAppKey(), comboIdentity));
@@ -195,7 +195,7 @@ public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<In
                 if (closingLocalLoginClientInfo == null) {
                     return;
                 }
-                Byte clientLoginDeviceValue = closingLocalLoginClientInfo.getDeviceType().getType();
+                Byte clientLoginDeviceValue = closingLocalLoginClientInfo.getDeviceType();
                 String closingComboIdentity = IdentityUtil.generalComboIdentity(closingLocalLoginClientInfo.getAppKey(), closingLocalLoginClientInfo.getIdentity(), clientLoginDeviceValue);
                 // 本地注册表立即移除（无需异步、无锁）
                 MessageServerContext.localLoginClientRegisterTable.delete(closingComboIdentity);

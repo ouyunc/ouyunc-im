@@ -1,6 +1,5 @@
 package com.ouyunc.message.validator;
 
-import com.ouyunc.base.constant.enums.DeviceType;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.message.context.MessageServerContext;
@@ -8,6 +7,7 @@ import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashSet;
 import java.util.stream.Collectors;
 
 /**
@@ -29,6 +29,6 @@ public enum DeviceValidator implements Validator<Packet> {
         Message message = packet.getMessage();
         String from = message.getFrom();
         String appKey = message.getMetadata().getAppKey();
-        return MessageServerContext.deviceTypeList(appKey, from).stream().map(DeviceType::getType).collect(Collectors.toSet()).contains(packet.getDeviceType());
+        return new HashSet<>(MessageServerContext.deviceTypeList(appKey, from)).contains(packet.getDeviceType());
     }
 }

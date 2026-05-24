@@ -138,7 +138,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         //将消息内容转成message
         LoginContent loginContent = JSON.parseObject(loginMessage.getContent(), LoginContent.class);
         // 设置设备类型
-        DeviceType deviceType = MessageServerContext.deviceType(loginContent.getAppKey(), packet.getDeviceType());
+        byte deviceType = MessageServerContext.deviceType(loginContent.getAppKey(), packet.getDeviceType());
         // 做登录参数校验
         //1,进行参数合法校验，校验失败，结束 ；2,进行签名的校验，校验失败，结束，3，进行权限校验，校验失败，结束
         // 根据appKey 获取appSecret 然后拼接
@@ -148,7 +148,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
             ctx.close();
             return;
         }
-        String comboIdentity = IdentityUtil.generalComboIdentity(loginContent.getAppKey(), loginContent.getIdentity(), deviceType.getType());
+        String comboIdentity = IdentityUtil.generalComboIdentity(loginContent.getAppKey(), loginContent.getIdentity(), deviceType);
         //如果之前已经登录（重复登录请求），这里判断是否已经登录过,同一个账号在同一个设备不能同时登录
         //1,从分布式缓存取出该登录用户
         LoginClientInfo cacheLoginClientInfo = MessageServerContext.remoteLoginClientInfoCache.get(CacheConstant.buildLoginCacheKey(loginContent.getAppKey(), comboIdentity));
@@ -187,7 +187,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
             final LoginClientInfo closingLocalloginClientInfo = ChannelAttrUtil.getChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
             if (closingLocalloginClientInfo != null) {
                 // 这里不进行判空了，到这里肯定不为空（登录信息里面一定要有登录设备的类型）
-                Byte clientLoginDeviceValue = closingLocalloginClientInfo.getDeviceType().getType();
+                Byte clientLoginDeviceValue = closingLocalloginClientInfo.getDeviceType();
                 String closingComboIdentity = IdentityUtil.generalComboIdentity(closingLocalloginClientInfo.getAppKey(), closingLocalloginClientInfo.getIdentity(), clientLoginDeviceValue);
                 // 登录信息一致,才进行解绑，删除缓存信息
                 MessageServerContext.localLoginClientRegisterTable.delete(closingComboIdentity);

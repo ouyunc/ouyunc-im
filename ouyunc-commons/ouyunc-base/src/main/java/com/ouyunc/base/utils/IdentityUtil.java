@@ -2,7 +2,6 @@ package com.ouyunc.base.utils;
 
 
 import com.ouyunc.base.constant.MessageConstant;
-import com.ouyunc.base.constant.enums.DeviceType;
 import com.ouyunc.base.exception.MessageException;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -14,13 +13,7 @@ import org.slf4j.LoggerFactory;
 public class IdentityUtil {
     private static final Logger log = LoggerFactory.getLogger(IdentityUtil.class);
 
-    /**
-     * 生成客户端绑定的组合唯一标识
-     * 三个参数都不为空，这里就不进行校验了
-     */
-    public static String generalComboIdentity(String appKey, String identity, DeviceType deviceType) {
-        return generalComboIdentity(appKey, identity, deviceType.getType());
-    }
+
 
     /**
      * 生成客户端绑定的组合唯一标识,如果设备名称为空则直接返回identity

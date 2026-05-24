@@ -1,6 +1,7 @@
 package com.ouyunc.repository;
 
 import com.alibaba.fastjson2.JSON;
+import com.google.common.collect.Lists;
 import com.ouyunc.base.constant.*;
 import com.ouyunc.base.constant.enums.*;
 import com.ouyunc.base.executor.ThreadPoolManager;
@@ -827,14 +828,14 @@ public enum DefaultRepository implements Repository{
      * 性能优化：Pipeline 一次性获取所有设备的 Redis 偏移量，仅当 Redis 缺失时才回退到 Mongo/MySQL。
      */
     private long resolveMaxReadOffsetAllDevices(String appKey, IdentityType identityType, String from, String to) {
-        List<Byte> deviceTypes = resolveDeviceTypeBytes(appKey);
+        Collection<Byte> deviceTypes = MessageContext.deviceTypeList(appKey, from);
         if (CollectionUtils.isEmpty(deviceTypes)) {
             return 0L;
         }
-
+        List<Byte> deviceTypeList = Lists.newArrayList(deviceTypes);
         // Step 1: Pipeline 批量从 Redis 获取所有设备 offset（1 次 RTT 替代 N 次）
-        List<String> redisKeys = new ArrayList<>(deviceTypes.size());
-        for (Byte deviceType : deviceTypes) {
+        List<String> redisKeys = new ArrayList<>(deviceTypeList.size());
+        for (Byte deviceType : deviceTypeList) {
             redisKeys.add(CacheConstant.buildSessionReadMessageOffsetCacheKey(appKey, identityType.value(), from, deviceType, to));
         }
         @SuppressWarnings("unchecked")
@@ -844,13 +845,13 @@ public enum DefaultRepository implements Repository{
         boolean found = false;
         // Step 2: 收集 Redis 命中数据，记录缺失的 deviceType
         List<Byte> missingDeviceTypes = new ArrayList<>();
-        for (int i = 0; i < deviceTypes.size(); i++) {
+        for (int i = 0; i < deviceTypeList.size(); i++) {
             Object value = cached != null && i < cached.size() ? cached.get(i) : null;
             if (value instanceof Number offset) {
                 found = true;
                 max = Math.max(max, offset.longValue());
             } else {
-                missingDeviceTypes.add(deviceTypes.get(i));
+                missingDeviceTypes.add(deviceTypeList.get(i));
             }
         }
 
@@ -863,26 +864,6 @@ public enum DefaultRepository implements Repository{
             }
         }
         return found ? max : 0L;
-    }
-
-    /**
-     * 与 im-service {@code getAllDeviceTypes} 一致：优先 Redis 配置的 appKey 设备类型，否则默认枚举。
-     */
-    @SuppressWarnings("unchecked")
-    private List<Byte> resolveDeviceTypeBytes(String appKey) {
-        Set<Object> configured = redisTemplate.opsForSet().members(CacheConstant.buildAppKeyDeviceTypeCacheKey(appKey));
-        if (CollectionUtils.isNotEmpty(configured)) {
-            List<Byte> types = new ArrayList<>();
-            for (Object item : configured) {
-                if (item instanceof DeviceType deviceType) {
-                    types.add(deviceType.getType());
-                }
-            }
-            if (!types.isEmpty()) {
-                return types.stream().distinct().toList();
-            }
-        }
-        return Arrays.stream(DeviceTypeEnum.values()).map(DeviceTypeEnum::getType).distinct().toList();
     }
 
 

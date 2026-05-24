@@ -1,7 +1,5 @@
 package com.ouyunc.base.model;
 
-import com.ouyunc.base.constant.enums.DeviceType;
-
 import java.io.Serial;
 import java.io.Serializable;
 import java.util.Set;
@@ -22,13 +20,13 @@ public class AppKeyDeviceType implements Serializable {
     /**
      * 设备类型
      */
-    private Set<DeviceType> deviceTypes;
+    private Set<Byte> deviceTypes;
 
 
     public AppKeyDeviceType() {
     }
 
-    public AppKeyDeviceType(String appKey, Set<DeviceType> deviceTypes) {
+    public AppKeyDeviceType(String appKey, Set<Byte> deviceTypes) {
         this.appKey = appKey;
         this.deviceTypes = deviceTypes;
     }
@@ -41,11 +39,11 @@ public class AppKeyDeviceType implements Serializable {
         this.appKey = appKey;
     }
 
-    public Set<DeviceType> getDeviceTypes() {
+    public Set<Byte> getDeviceTypes() {
         return deviceTypes;
     }
 
-    public void setDeviceTypes(Set<DeviceType> deviceTypes) {
+    public void setDeviceTypes(Set<Byte> deviceTypes) {
         this.deviceTypes = deviceTypes;
     }
 }

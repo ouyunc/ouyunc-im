@@ -1,6 +1,8 @@
 package com.ouyunc.base.packet;
 
+import com.alibaba.fastjson2.JSONWriter;
 import com.alibaba.fastjson2.annotation.JSONField;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.packet.message.Message;
@@ -42,7 +44,8 @@ public class Packet implements Serializable, Cloneable{
      * 协议包id 8个字节 使用雪花id
      */
     @Tag(4)
-    @JSONField(serializeUsing = ToStringSerializer.class)
+    @JSONField(serializeFeatures = JSONWriter.Feature.WriteLongAsString)
+    @JsonSerialize(using = ToStringSerializer.class)
     private long packetId;
 
     /**

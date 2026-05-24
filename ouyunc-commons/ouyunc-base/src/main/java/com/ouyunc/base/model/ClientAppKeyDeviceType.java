@@ -1,7 +1,5 @@
 package com.ouyunc.base.model;
 
-import com.ouyunc.base.constant.enums.DeviceType;
-
 import java.util.Set;
 
 /**
@@ -17,7 +15,7 @@ public class ClientAppKeyDeviceType extends AppKeyDeviceType {
 
     public ClientAppKeyDeviceType() {
     }
-    public ClientAppKeyDeviceType(String appKey, String identity, Set<DeviceType> deviceTypes) {
+    public ClientAppKeyDeviceType(String appKey, String identity, Set<Byte> deviceTypes) {
         super(appKey, deviceTypes);
         this.identity = identity;
     }

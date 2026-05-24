@@ -3,7 +3,6 @@ package com.ouyunc.message.helper;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.NumberConstant;
-import com.ouyunc.base.constant.enums.DeviceType;
 import com.ouyunc.base.constant.enums.OnlineEnum;
 import com.ouyunc.base.constant.enums.SaveModeEnum;
 import com.ouyunc.base.exception.MessageException;
@@ -153,8 +152,8 @@ public class ClientHelper {
         // Phase 1: 本地注册表查询（零网络开销）
         for (String identity : identities) {
             List<LoginClientInfo> localHits = new ArrayList<>();
-            Collection<DeviceType> deviceTypes = MessageServerContext.deviceTypeList(appKey, identity);
-            for (DeviceType dt : deviceTypes) {
+            Collection<Byte> deviceTypes = MessageServerContext.deviceTypeList(appKey, identity);
+            for (Byte dt : deviceTypes) {
                 String comboId = IdentityUtil.generalComboIdentity(appKey, identity, dt);
                 ChannelHandlerContext ctx = MessageServerContext.localLoginClientRegisterTable.get(comboId);
                 if (ctx != null) {
@@ -196,17 +195,17 @@ public class ClientHelper {
      * @Author fzx
      * @Description 判断客户端是否在线, 如果在线返回该客户端所有在线连接的登录信息，支持多端登录
      */
-    public static List<LoginClientInfo> onlineAll(String appKey, String identity, DeviceType... excludeDeviceTypeArr) {
+    public static List<LoginClientInfo> onlineAll(String appKey, String identity, Byte... excludeDeviceTypeArr) {
         // 判断identity在该appKey下是否支持loginDeviceType该设备类型
 
         List<LoginClientInfo> loginClientInfoList = new ArrayList<>(NumberConstant.NUMBER_3);
         // 获取所有的实现DeviceType接口的枚举实例,先找定制化的客户所支持的设备类型
-        Stream<DeviceType> deviceTypeStream = MessageServerContext.deviceTypeList(appKey, identity).stream();
+        Stream<Byte> deviceTypeStream = MessageServerContext.deviceTypeList(appKey, identity).stream();
         if (excludeDeviceTypeArr != null && excludeDeviceTypeArr.length > NumberConstant.NUMBER_0) {
             Set<Byte> excludeNames = Arrays.stream(excludeDeviceTypeArr)
-                    .map(DeviceType::getType)
+                    .map(Byte::byteValue)
                     .collect(Collectors.toSet());
-            deviceTypeStream = deviceTypeStream.filter(deviceType -> !excludeNames.contains(deviceType.getType()));
+            deviceTypeStream = deviceTypeStream.filter(deviceType -> !excludeNames.contains(deviceType));
         }
         Set<String> comboIdentitySet = deviceTypeStream
                 .map(deviceType -> IdentityUtil.generalComboIdentity(appKey, identity, deviceType))
@@ -239,16 +238,7 @@ public class ClientHelper {
         return loginClientInfoList;
     }
 
-    /**
-     * 获取某个端的登录信息
-     * @param identity 客户端唯一标识
-     * @param loginDeviceType 客户端登录的设备类型 不为空
-     * @return
-     */
-    public static LoginClientInfo online(String appKey, String identity, DeviceType loginDeviceType) {
-        // 判断identity在该appKey下是否支持loginDeviceType该设备类型
-       return online(appKey, identity, loginDeviceType.getType());
-    }
+
     /**
      * 获取某个端的登录信息,不暴露该接口
      * @param identity 客户端唯一标识

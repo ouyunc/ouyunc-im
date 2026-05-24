@@ -5,8 +5,13 @@ import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.Expiry;
 import com.github.benmanes.caffeine.cache.RemovalCause;
+import com.google.common.collect.Lists;
+import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.NumberConstant;
+import com.ouyunc.base.constant.enums.DeviceType;
+import com.ouyunc.base.exception.MessageException;
+import com.ouyunc.base.model.ClientInfo;
 import com.ouyunc.cache.Cache;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.cache.distributed.redis.RedisDistributedCache;
@@ -18,15 +23,23 @@ import com.ouyunc.domain.entity.FriendEntity;
 import com.ouyunc.domain.entity.GroupEntity;
 import com.ouyunc.domain.entity.GroupUserEntity;
 import com.ouyunc.domain.entity.UserEntity;
-
 import com.ouyunc.id.CosIdSnowflakeIdGenerator;
 import com.ouyunc.id.IdGenerator;
 import io.netty.util.internal.ThreadLocalRandom;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.MapUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Serializable;
+import java.util.Collection;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * @Author fzx
@@ -79,6 +92,154 @@ public class MessageContext {
     public static void setIdGenerator (IdGenerator newIdGenerator) {
         idGenerator = newIdGenerator;
     }
+
+
+
+    /**
+     * 存储客户端的信息，所有客户端设备的信息都共享，生命周期与最后长的设备连接一致，设置为过期时间, 这个过期时间根据实际业务来调整，避免避免长时间不过期，占用过大内存
+     */
+    public static Cache<String, Serializable> localClientInfoCache = new CaffeineLocalCache<>("localClientInfoCache", Caffeine.newBuilder().expireAfterWrite(NumberConstant.NUMBER_30, TimeUnit.DAYS).build(new CacheLoader<>() {
+        /***
+         * 获取客户端对应的客户端信息
+         */
+        @Override
+        public @Nullable Serializable load(String appKeyIdentity) throws Exception {
+            return null;
+        }
+    }));
+
+    /**
+     * 获取本地客户（连接在该服务器上的）端信息， 这里需要有一个类似布隆过滤器的概念，如果首次本地缓存没中，则去redis中获取，无论是否获取到，都存入本地缓存，如果获取到，则真实值存入，如果获取不到则存入一个空值或者进行标记，并设置过期时间，这样在过期时间内再次获取时，就不用请求redis了，直接走本地缓存。除非手动触发更新本地缓存（通过发布订阅）
+     在过期后再次请求本地缓存，如果没有值或者标记则请求redis 然后重复以上步骤
+     * @param appKey
+     * @param identity
+     * @return
+     */
+    public static ClientInfo localClientInfo(String appKey, String identity) {
+        if (StringUtils.isNotBlank(identity)) {
+            Serializable cacheData = localClientInfoCache.get(CacheConstant.buildLocalClientInfoCacheKey(appKey, identity));
+            if (cacheData instanceof ClientInfo clientInfo) {
+                return clientInfo;
+            }else if (cacheData instanceof Boolean) {
+                return null;
+            }else {
+                // 未缓存过，则去redis中获取
+                Object obj = cache.get(CacheConstant.buildRemoteClientInfoCacheKey(appKey,  identity));
+                if (obj instanceof ClientInfo clientInfo) {
+                    localClientInfoCache.put(CacheConstant.buildLocalClientInfoCacheKey(appKey, identity), clientInfo);
+                    return clientInfo;
+                }else {
+                    localClientInfoCache.put(CacheConstant.buildLocalClientInfoCacheKey(appKey, identity), Boolean.TRUE);
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 设置设备类型列表
+     * @param deviceTypeClass 设备类型枚举类
+     */
+    public static void addDeviceType(Class<? extends DeviceType> deviceTypeClass) {
+        if (deviceTypeClass.isEnum()) {
+            DeviceType[] deviceTypeEnumConstants = deviceTypeClass.getEnumConstants();
+            if (deviceTypeEnumConstants != null) {
+                for (DeviceType deviceTypeEnumConstant : deviceTypeEnumConstants) {
+                    defaultDeviceTypeCache.put(deviceTypeEnumConstant.getType(), deviceTypeEnumConstant.getType());
+                }
+            }
+        }
+    }
+
+
+    /**
+     * 设置appKey设备类型列表
+     * @param deviceTypes
+     */
+    public static void addAppKeyDeviceType(String appKey,Collection<Byte> deviceTypes) {
+        if (StringUtils.isBlank(appKey) || CollectionUtils.isEmpty(deviceTypes)) {
+            log.error("appKey 设备类型列表为空！");
+            return;
+        }
+        appKeyDeviceTypeCache.put(appKey, deviceTypes.stream().filter(Objects::nonNull).collect(Collectors.toMap(Byte::byteValue, Function.identity())));
+    }
+
+
+    /**
+     * 获取 设备类型在appKey下所支持的设备类型
+     */
+    public static Byte deviceType(String appKey, byte deviceTypeValue) {
+        Map<Byte, Byte> appKeyDeviceTypeMap = appKeyDeviceTypeCache.get(appKey);
+        if (MapUtils.isNotEmpty(appKeyDeviceTypeMap)) {
+            Byte deviceType = appKeyDeviceTypeMap.get(deviceTypeValue);
+            if (deviceType == null) {
+                log.error("appKey暂未支持该设备类型：{} 的登录,请配置后重试！", deviceTypeValue);
+                throw new MessageException("appKey暂未支持该设备类型："+ deviceTypeValue +"的登录,请配置后重试！");
+            }
+            return deviceType;
+        }
+        // 如果appKey 没有单独配置支持的设备类型，则使用全局配置
+        Byte deviceType = defaultDeviceTypeCache.get(deviceTypeValue);
+        if (deviceType == null) {
+            log.error("非法设备类型：{}", deviceTypeValue);
+            throw new MessageException("非法设备类型："+ deviceTypeValue);
+        }
+        return deviceType;
+    }
+    /**
+     * 设备类型缓存，这里可以配置通过redis 缓存获取appKey所支持的设备类型，建议通过mq 或redis 的发布订阅来实现，因为appKey 所支持的设备类型一般不会经常变，在服务启动后获取一次，然后每次改变通过发布订阅来实现就可以了，，如果没有则取默认的
+     */
+    private static final Cache<Byte, Byte> defaultDeviceTypeCache = new CaffeineLocalCache<>("deviceTypeCache", Caffeine.newBuilder().build(new CacheLoader<>() {
+        /***
+         * 获取客户端对应的连接通道，先从缓存中取，如果没有则进行加载走load()方法
+         */
+        @Override
+        public @Nullable Byte load(Byte messageTypeValue) throws Exception {
+            return null;
+        }
+    }));
+
+    /**
+     * 设备类型缓存，这里可以配置通过redis 缓存获取appKey所支持的设备类型，建议通过mq 或redis 的发布订阅来实现，因为appKey 所支持的设备类型一般不会经常变，在服务启动后获取一次，然后每次改变通过发布订阅来实现就可以了，，如果没有则取默认的
+     */
+    private static final Cache<String, Map<Byte, Byte>> appKeyDeviceTypeCache = new CaffeineLocalCache<>("deviceTypeCache", Caffeine.newBuilder().build(new CacheLoader<>() {
+        /***
+         * 获取客户端对应的连接通道，先从缓存中取，如果没有则进行加载走load()方法
+         */
+        @Override
+        public @Nullable Map<Byte, Byte> load(String messageTypeValue) throws Exception {
+            return null;
+        }
+    }));
+
+    /**
+     * 获取identity在 appKey 下所支持的设备类型列表
+     */
+    public static Collection<Byte> deviceTypeList(String appKey, String identity) {
+        if (StringUtils.isNotBlank(identity)) {
+            ClientInfo clientInfo = localClientInfo(appKey, identity);
+            if (clientInfo != null && CollectionUtils.isNotEmpty(clientInfo.getSupportDeviceTypes())) {
+                Collection<Byte> deviceTypes = Lists.newArrayList();
+                for (Byte supportDeviceType :  clientInfo.getSupportDeviceTypes()) {
+                    deviceTypes.add(deviceType(appKey, supportDeviceType));
+                }
+                return deviceTypes;
+            }
+        }
+        return deviceTypeList(appKey);
+    }
+
+    /**
+     * 获取appKey 下所支持的设备类型列表
+     */
+    public static Collection<Byte> deviceTypeList(String appKey) {
+        Map<Byte, Byte> appKeyDeviceTypeMap = appKeyDeviceTypeCache.get(appKey);
+        if (MapUtils.isNotEmpty(appKeyDeviceTypeMap)) {
+            return appKeyDeviceTypeMap.values();
+        }
+        return defaultDeviceTypeCache.asMap().values();
+    }
+
 
 
     /**

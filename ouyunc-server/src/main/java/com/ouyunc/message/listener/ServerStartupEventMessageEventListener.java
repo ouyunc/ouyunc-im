@@ -3,22 +3,21 @@ package com.ouyunc.message.listener;
 import com.google.common.collect.Lists;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
-import com.ouyunc.base.constant.enums.DeviceType;
+import com.ouyunc.base.constant.enums.EventType;
+import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.model.AppKeyDeviceType;
 import com.ouyunc.base.model.ClientAppKeyDeviceType;
 import com.ouyunc.base.model.ClientInfo;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.cache.config.CacheFactory;
-import com.ouyunc.base.constant.enums.EventType;
-import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
-import com.ouyunc.core.listener.MessageEventListener;
 import com.ouyunc.core.listener.EventListener;
+import com.ouyunc.core.listener.MessageEventListener;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.message.context.AppKeyConnectionCleanupRegistry;
 import com.ouyunc.message.context.MessageServerContext;
-import com.ouyunc.message.http.HttpRequestDispatcher;
 import com.ouyunc.message.helper.ClientHelper;
+import com.ouyunc.message.http.HttpRequestDispatcher;
 import com.ouyunc.message.monitor.MonitorInitializer;
 import com.ouyunc.message.schedule.ScheduleTimer;
 import com.ouyunc.message.schedule.TimerTaskWrapper;
@@ -100,7 +99,7 @@ class ServerStartupEventMessageEventListener implements MessageEventListener<Mes
         });
         for (int i = 0; i < appKeys.size(); i++) {
             String appKey = appKeys.get(i);
-            Set<DeviceType> deviceTypeSet = (Set<DeviceType>) results.get(i);
+            Set<Byte> deviceTypeSet = (Set<Byte>) results.get(i);
             if (CollectionUtils.isNotEmpty(deviceTypeSet)) {
                 MessageServerContext.addAppKeyDeviceType(appKey, deviceTypeSet);
             }
@@ -172,10 +171,10 @@ class ServerStartupEventMessageEventListener implements MessageEventListener<Mes
                 AppKeyConnectionCleanupRegistry.track(clientAppKeyDeviceType.getAppKey());
                 //  添加进入appKey对应的设备类型集合中,是否需要主动关闭相关链接？还是在发送消息鉴权的时候进行校验,被动关闭吧
                 // 需要校验下，单独设置的必须要再appKey下的设备类型集合中
-                Set<DeviceType> deviceTypes = clientAppKeyDeviceType.getDeviceTypes();
+                Set<Byte> deviceTypes = clientAppKeyDeviceType.getDeviceTypes();
                 if (CollectionUtils.isNotEmpty(deviceTypes)) {
                     boolean flag = true;
-                    for (DeviceType deviceType : deviceTypes) {
+                    for (Byte deviceType : deviceTypes) {
                         if (!MessageServerContext.deviceTypeList(clientAppKeyDeviceType.getAppKey()).contains(deviceType)) {
                             log.error("非法设备类型：{}", deviceType);
                             flag = false;
@@ -183,7 +182,7 @@ class ServerStartupEventMessageEventListener implements MessageEventListener<Mes
                         }
                     }
                     if (flag) {
-                        MessageServerContext.localClientInfoCache.put(CacheConstant.buildLocalClientInfoCacheKey(clientAppKeyDeviceType.getAppKey(), clientAppKeyDeviceType.getIdentity()), new ClientInfo(clientAppKeyDeviceType.getAppKey(), clientAppKeyDeviceType.getIdentity(), clientAppKeyDeviceType.getDeviceTypes().stream().filter(Objects::nonNull).map(DeviceType::getType).collect(Collectors.toList())));
+                        MessageServerContext.localClientInfoCache.put(CacheConstant.buildLocalClientInfoCacheKey(clientAppKeyDeviceType.getAppKey(), clientAppKeyDeviceType.getIdentity()), new ClientInfo(clientAppKeyDeviceType.getAppKey(), clientAppKeyDeviceType.getIdentity(), clientAppKeyDeviceType.getDeviceTypes().stream().filter(Objects::nonNull).collect(Collectors.toList())));
                     }
                 }
             }

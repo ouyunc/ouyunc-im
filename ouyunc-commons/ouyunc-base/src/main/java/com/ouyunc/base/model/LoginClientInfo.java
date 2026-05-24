@@ -1,7 +1,6 @@
 package com.ouyunc.base.model;
 
 
-import com.ouyunc.base.constant.enums.DeviceType;
 import com.ouyunc.base.constant.enums.OnlineEnum;
 import com.ouyunc.base.packet.message.content.LoginContent;
 
@@ -27,7 +26,7 @@ public class LoginClientInfo extends LoginContent implements Protocol{
     /**
      * 当前登录的设备类型
      */
-    private DeviceType deviceType;
+    private byte deviceType;
 
     /**
      * 授权域，多个以逗号隔开，暂时不设计
@@ -69,11 +68,11 @@ public class LoginClientInfo extends LoginContent implements Protocol{
         return protocolVersion;
     }
 
-    public DeviceType getDeviceType() {
+    public byte getDeviceType() {
         return deviceType;
     }
 
-    public void setDeviceType(DeviceType deviceType) {
+    public void setDeviceType(byte deviceType) {
         this.deviceType = deviceType;
     }
 
@@ -137,19 +136,19 @@ public class LoginClientInfo extends LoginContent implements Protocol{
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof LoginClientInfo that)) return false;
-        return Objects.equals(getAppKey(), that.getAppKey()) &&  Objects.equals(getIdentity(), that.getIdentity()) && Objects.equals(getDeviceType().getType(), that.getDeviceType().getType());
+        return Objects.equals(getAppKey(), that.getAppKey()) &&  Objects.equals(getIdentity(), that.getIdentity()) && Objects.equals(getDeviceType(), that.getDeviceType());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getAppKey(), getIdentity(), getDeviceType().getType());
+        return Objects.hash(getAppKey(), getIdentity(), getDeviceType());
     }
 
 
     public LoginClientInfo() {
     }
 
-    public LoginClientInfo(byte protocol, byte protocolVersion, String loginServerAddress, OnlineEnum onlineStatus, String authorizationScope, long loginExpireTime, int heartBeatTimeout, long lastLoginTime, String appKey, String identity, DeviceType deviceType, Collection<Byte> supportDeviceTypes, String sn, String signature, byte signatureAlgorithm, int heartBeatExpireTime, long createTime, int enableWill, String willMessage, int enableAlive, String aliveMessage, int scope, int businessIdleSeconds, int heartBeatWaitRetry, int businessIdleCloseStrike) {
+    public LoginClientInfo(byte protocol, byte protocolVersion, String loginServerAddress, OnlineEnum onlineStatus, String authorizationScope, long loginExpireTime, int heartBeatTimeout, long lastLoginTime, String appKey, String identity, byte deviceType, Collection<Byte> supportDeviceTypes, String sn, String signature, byte signatureAlgorithm, int heartBeatExpireTime, long createTime, int enableWill, String willMessage, int enableAlive, String aliveMessage, int scope, int businessIdleSeconds, int heartBeatWaitRetry, int businessIdleCloseStrike) {
         super(appKey, identity, supportDeviceTypes, sn, signature, signatureAlgorithm, heartBeatExpireTime, createTime, enableWill, willMessage, enableAlive, aliveMessage, scope, businessIdleSeconds, heartBeatWaitRetry, businessIdleCloseStrike);
         this.protocol = protocol;
         this.protocolVersion = protocolVersion;
