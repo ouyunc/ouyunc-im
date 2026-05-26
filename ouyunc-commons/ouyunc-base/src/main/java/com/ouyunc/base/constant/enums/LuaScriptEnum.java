@@ -7,14 +7,17 @@ public enum LuaScriptEnum {
 
     READ_OFFSET_MAX_SCRIPT("0", """
             local cur = redis.call('GET', KEYS[1])
-            local inc = tonumber(ARGV[1])
+            local inc = ARGV[1]
             local ttl = tonumber(ARGV[2])
             local merged = inc
             if cur then
-              local c = tonumber(cur)
-              if c and c > merged then merged = c end
+                if #cur > #inc then
+                    merged = cur
+                elseif #cur == #inc and cur > inc then
+                    merged = cur
+                end
             end
-            redis.call('SET', KEYS[1], tostring(merged), 'PX', ttl)
+            redis.call('SET', KEYS[1], merged, 'PX', ttl)
             return merged
             """, "已读会话偏移量");
     private final String version;
