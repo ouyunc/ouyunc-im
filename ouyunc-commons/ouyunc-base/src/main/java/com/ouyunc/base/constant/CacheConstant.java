@@ -50,11 +50,6 @@ public class CacheConstant {
     private static final String SESSION_READ_MESSAGE_OFFSET = "sro:";
 
     /***
-     * 会话他人消息未读计数（单聊 O(1)）
-     */
-    private static final String SESSION_PEER_UNREAD = "spu:";
-
-    /***
      * 平台appKey链接数
      */
     private static final String CONNECTIONS = "conn";
@@ -279,13 +274,6 @@ public class CacheConstant {
         String sessionTag = withHashTag(from + MessageConstant.UNDERLINE + to);
         return buildBaseCacheKey(appKey) + SESSION_READ_MESSAGE_OFFSET + identityType + COLON +
                sessionTag + COLON + deviceType;
-    }
-
-    /**
-     * 单聊会话：viewer 维度的他人消息未读计数
-     */
-    public static String buildSessionPeerUnreadCacheKey(String appKey, String viewerId, String sessionId) {
-        return buildBaseCacheKey(appKey) + SESSION_PEER_UNREAD + withHashTag(viewerId) + COLON + withHashTag(sessionId);
     }
 
     /**

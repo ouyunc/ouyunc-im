@@ -31,12 +31,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.dao.IncorrectResultSizeDataAccessException;
-import org.springframework.data.domain.Range;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.data.redis.connection.Limit;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisStringCommands;
@@ -51,7 +49,6 @@ import org.springframework.messaging.support.MessageBuilder;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -398,25 +395,6 @@ public enum DefaultRepository implements Repository{
                     return null;
                 }
             });
-            if (isOneToOneSession(sessionId, withdrawMsg.getFrom(), withdrawMsg.getTo())) {
-                int decr = 0;
-                for (Packet withdrawPacket : packets) {
-                    if (withdrawPacket == null || withdrawPacket.getMessage() == null) {
-                        continue;
-                    }
-                    Message withdrawn = withdrawPacket.getMessage();
-                    if (!withdrawMsg.getFrom().equals(withdrawn.getFrom())) {
-                        continue;
-                    }
-                    if (isCountablePeerUnreadContentType(withdrawn.getContentType())) {
-                        decr++;
-                    }
-                }
-                if (decr > 0) {
-                    decrSessionPeerUnread(appKey, withdrawMsg.getTo(), sessionId, decr,
-                            MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP);
-                }
-            }
             return true;
         });
     }
@@ -742,150 +720,16 @@ public enum DefaultRepository implements Repository{
         }
         String offsetKey = CacheConstant.buildSessionReadMessageOffsetCacheKey(metadata.getAppKey(), identityType.value(), from, packet.getDeviceType(), to);
         final long incomingOffset = maxReadPacketId;
-        final String appKey = metadata.getAppKey();
         return Mono.fromCallable(() -> {
-                    // ARGV 必须传 Long 等数值类型：String 经 Jackson 会序列化为 "123"（带引号），Lua tonumber 失败导致 SET 不执行
                     DefaultRedisScript<Long> readOffsetScript = new DefaultRedisScript<>(
                             LuaScriptEnum.READ_OFFSET_MAX_SCRIPT.getScript(), Long.class);
                     redisTemplate.execute(readOffsetScript, List.of(offsetKey), incomingOffset, expireTime);
-                    if (identityType == IdentityType.ONE_2_ONE) {
-                        refreshSessionPeerUnreadAfterRead(appKey, from, to, expireTime);
-                    }
                     return Boolean.TRUE;
                 })
                 .doOnError(e -> log.error("已读回执 Redis 更新失败 | offsetKey={}, incomingOffset={}, expireTime={}",
                         offsetKey, incomingOffset, expireTime, e))
                 .subscribeOn(Schedulers.boundedElastic());
     }
-
-    /**
-     * 单聊已读后按多端合并游标重算他人未读计数（支持部分已读，不再一律清零）。
-     */
-    private void refreshSessionPeerUnreadAfterRead(String appKey, String viewerId, String peerUserId, long expireMs) {
-        String sessionId = IdentityUtil.sessionId(viewerId, peerUserId);
-        long readOffset = resolveMaxReadOffsetAllDevices(appKey, IdentityType.ONE_2_ONE, viewerId, peerUserId);
-        Object lastObj = redisTemplate.opsForValue().get(CacheConstant.buildSessionLastMessageCacheKey(appKey, sessionId));
-        long lastMsgId = lastObj instanceof Number n ? n.longValue() : 0L;
-        String peerUnreadKey = CacheConstant.buildSessionPeerUnreadCacheKey(appKey, viewerId, sessionId);
-        if (lastMsgId <= readOffset) {
-            redisTemplate.opsForValue().set(peerUnreadKey, 0L, expireMs, TimeUnit.MILLISECONDS);
-            return;
-        }
-        int peerUnread = countPeerUnreadInSessionRange(appKey,
-                CacheConstant.buildSessionCacheKey(appKey, sessionId), viewerId, readOffset, lastMsgId);
-        redisTemplate.opsForValue().set(peerUnreadKey, (long) peerUnread, expireMs, TimeUnit.MILLISECONDS);
-    }
-
-    private int countPeerUnreadInSessionRange(String appKey, String sessionRedisKey, String viewerUserId,
-                                              long readOffsetExclusive, long lastMsgIdInclusive) {
-        int maxScan = MessageConstant.SESSION_UNREAD_PEER_SCAN_LIMIT;
-        Range<String> range = Range.of(
-                Range.Bound.exclusive(MessageContext.idGenerator().formatLongId19Str(readOffsetExclusive)),
-                Range.Bound.inclusive(MessageContext.idGenerator().formatLongId19Str(lastMsgIdInclusive)));
-        Set<String> members = stringRedisTemplate.opsForZSet().reverseRangeByLex(sessionRedisKey, range, Limit.limit().count(maxScan));
-        if (CollectionUtils.isEmpty(members)) {
-            return 0;
-        }
-        List<Long> packetIds = members.stream()
-                .map(m -> {
-                    try {
-                        return Long.parseLong(m.trim());
-                    } catch (NumberFormatException e) {
-                        return 0L;
-                    }
-                })
-                .filter(id -> id > 0)
-                .toList();
-        if (packetIds.isEmpty()) {
-            return 0;
-        }
-        List<Packet> packets = getPackets(appKey, packetIds);
-        int peerCount = 0;
-        for (Packet packet : packets) {
-            if (packet == null || packet.getMessage() == null) {
-                continue;
-            }
-            Message message = packet.getMessage();
-            if (viewerUserId.equals(message.getFrom())) {
-                continue;
-            }
-            if (!isCountablePeerUnreadContentType(message.getContentType())) {
-                continue;
-            }
-            peerCount++;
-        }
-        return peerCount;
-    }
-
-    private static boolean isCountablePeerUnreadContentType(int contentType) {
-        return contentType != MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType()
-                && contentType != MessageContentTypeEnum.WITHDRAW_CONTENT.getType()
-                && contentType != MessageContentTypeEnum.PING_PONG_CONTENT.getType()
-                && contentType != MessageContentTypeEnum.LOGIN_REQUEST_CONTENT.getType()
-                && contentType != MessageContentTypeEnum.LOGIN_RESPONSE_FAIL_CONTENT.getType()
-                && contentType != MessageContentTypeEnum.LOGIN_RESPONSE_SUCCESS_CONTENT.getType()
-                && contentType != MessageContentTypeEnum.QOS_DUP_CONTENT.getType()
-                && contentType != MessageContentTypeEnum.GROUP_REQUEST_CONTENT.getType();
-    }
-
-    private static boolean isOneToOneSession(String sessionId, String from, String to) {
-        return StringUtils.isNoneBlank(sessionId, from, to) && sessionId.equals(IdentityUtil.sessionId(from, to));
-    }
-
-    private void decrSessionPeerUnread(String appKey, String viewerId, String sessionId, int count, long expireMs) {
-        if (count <= 0) {
-            return;
-        }
-        String key = CacheConstant.buildSessionPeerUnreadCacheKey(appKey, viewerId, sessionId);
-        Long remaining = redisTemplate.opsForValue().decrement(key, count);
-        if (remaining == null) {
-            return;
-        }
-        if (remaining < 0) {
-            redisTemplate.opsForValue().set(key, 0L, expireMs, TimeUnit.MILLISECONDS);
-        } else if (expireMs > 0) {
-            redisTemplate.expire(key, Duration.ofMillis(expireMs));
-        }
-    }
-
-
-    /**
-     * 单聊：接收方他人消息未读 +1（群聊 sessionKey 为群 id，跳过）。
-     */
-    private void maybeIncrSessionPeerUnread(RedisConnection conn, Message message, String appKey,
-                                            String sessionRedisKey, long expireMs) {
-        if (message == null || StringUtils.isBlank(appKey) || StringUtils.isBlank(sessionRedisKey)) {
-            return;
-        }
-        int contentType = message.getContentType();
-        if (!isCountablePeerUnreadContentType(contentType)) {
-            return;
-        }
-        String from = message.getFrom();
-        String to = message.getTo();
-        if (StringUtils.equals(from, to)) {
-            return;
-        }
-        if (StringUtils.equals(sessionRedisKey, CacheConstant.buildSessionCacheKey(appKey, to))) {
-            return;
-        }
-        String sessionId = IdentityUtil.sessionId(from, to);
-        if (!StringUtils.equals(sessionRedisKey, CacheConstant.buildSessionCacheKey(appKey, sessionId))) {
-            return;
-        }
-        byte[] peerUnreadKeyBytes = serializeOrNull(stringSerializer,
-                CacheConstant.buildSessionPeerUnreadCacheKey(appKey, to, sessionId));
-        if (peerUnreadKeyBytes == null) {
-            return;
-        }
-        conn.commands().incr(peerUnreadKeyBytes);
-        if (expireMs > 0) {
-            conn.keyCommands().pExpire(peerUnreadKeyBytes, expireMs);
-        }
-    }
-
-
-
 
     /**
      * 获取群组用户列表的用户唯一标识，这里直接从缓存中取，获取不到就失败，不需要再从数据库中获取，如果有需要可以做多级缓存
@@ -1757,7 +1601,6 @@ public enum DefaultRepository implements Repository{
                 // 裁剪超过上限的最老条目，防止 ZSet 无界增长（保留最新 SESSION_ZSET_MAX_SIZE 条）
                 conn.zSetCommands().zRemRange(sessionKeyBytes, 0, -(MessageConstant.SESSION_ZSET_MAX_SIZE + 1L));
                 log.debug("会话ZSet命令入队: {}", sessionKey);
-                maybeIncrSessionPeerUnread(conn, message, appKey, sessionKey, sessionZSetExpireMs);
             }
 
             // === 步骤8：额外差异化操作 ===
@@ -1790,7 +1633,6 @@ public enum DefaultRepository implements Repository{
                 }
                 return SaveMessageOutcome.FAILED;
             }
-            // Pipeline 内的 SET 已通过 closePipeline() 的结果保证执行，无需额外 EXISTS 验证（消除多余 RTT）
             return SaveMessageOutcome.SUCCESS;
 
         } catch (Exception e) {

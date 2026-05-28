@@ -137,11 +137,6 @@ public class MessageConstant {
     public static final int MAX_REF_COUNT = 5;
 
     /**
-     * 会话列表未读：ZSet 扫描他人消息上限（超过则 lexCount 兜底并标记 capped）
-     */
-    public static final int SESSION_UNREAD_PEER_SCAN_LIMIT = 500;
-
-    /**
      *  缓存最后一条会话消息 key / 会话 ZSet / 消息热 key 过期时间，默认 30 天，单位毫秒
      */
     public static final long CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP = NumberConstant.NUMBER_30 * MessageConstant.DAY_TIMESTAMP;

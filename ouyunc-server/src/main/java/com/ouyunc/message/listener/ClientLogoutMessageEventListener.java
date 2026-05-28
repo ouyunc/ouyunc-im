@@ -58,12 +58,28 @@ class ClientLogoutMessageEventListener implements MessageEventListener<MessageEv
         }
         Object source = event.getSource();
         switch (source) {
-            case LoginClientInfo loginClientInfo when loginClientInfo.getEnableWill() == YesOrNo.YES.getCode() -> {
-                // 这里其实也可以设置是否开启遗嘱消息，来推送给客户端,找到当前好友的所有在线好友，然后推给所有在线好友
+            case MqttLoginClientInfo mqttLoginClientInfo -> {
+                if (mqttLoginClientInfo.getEnableWill() != YesOrNo.YES.getCode()
+                        || StringUtils.isBlank(mqttLoginClientInfo.getWillMessage())) {
+                    break;
+                }
+                // 处理mqtt遗嘱信息
+                MqttMessage willMqttMessage = MqttMessageFactory.newMessage(
+                        new MqttFixedHeader(MqttMessageType.PUBLISH, false, MqttQoS.valueOf(mqttLoginClientInfo.getQos()), mqttLoginClientInfo.getIsWillRetain() == YesOrNo.YES.getCode(), NumberConstant.NUMBER_0),
+                        new MqttPublishVariableHeader(mqttLoginClientInfo.getWillTopic(), NumberConstant.NUMBER_0), ByteBufAllocator.DEFAULT.buffer().writeBytes(mqttLoginClientInfo.getWillMessage().getBytes(CharsetUtil.UTF_8)));
+                // 发送遗嘱消息到willTopic
+                AbstractBaseProcessor<? extends Number> baseProcessor = MessageServerContext.messageContentProcessorCache.get(MqttMessageContentTypeEnum.MQTT_PUBLISH.getType());
+                if (baseProcessor instanceof MqttPublishMessageContentProcessor mqttPublishMessageContentProcessor) {
+                    mqttPublishMessageContentProcessor.doPublishMessage(willMqttMessage);
+                }
+            }
+            case LoginClientInfo loginClientInfo -> {
                 String identity = loginClientInfo.getIdentity();
                 String appKey = loginClientInfo.getAppKey();
+                if (loginClientInfo.getEnableWill() != YesOrNo.YES.getCode()) {
+                    break;
+                }
                 Collection<String> friendIds = DefaultRepository.INSTANCE.getFriendIds(appKey, identity);
-                // 获取在线的好友向其发送退出登录的消息
                 for (String friendId : friendIds) {
                     List<LoginClientInfo> loginClientInfos = ClientHelper.onlineAll(appKey, friendId);
                     if (CollectionUtils.isNotEmpty(loginClientInfos)) {
@@ -73,17 +89,6 @@ class ClientLogoutMessageEventListener implements MessageEventListener<MessageEv
                         Packet packet = new Packet(NativePacketProtocol.OUYUNC.getProtocol(), NativePacketProtocol.OUYUNC.getProtocolVersion(), MessageContext.idGenerator().generateId(), DeviceTypeEnum.PC.getType(), NetworkEnum.OTHER.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(), MessageTypeEnum.CLIENT_LOGOUT.getType(), message);
                         MessageHelper.asyncSendMessage(packet, loginClientInfos);
                     }
-                }
-            }
-            case MqttLoginClientInfo mqttLoginClientInfo when mqttLoginClientInfo.getEnableWill() == YesOrNo.YES.getCode() && StringUtils.isNoneBlank(mqttLoginClientInfo.getWillMessage()) -> {
-                // 处理mqtt遗嘱信息
-                MqttMessage willMqttMessage = MqttMessageFactory.newMessage(
-                        new MqttFixedHeader(MqttMessageType.PUBLISH, false, MqttQoS.valueOf(mqttLoginClientInfo.getQos()), mqttLoginClientInfo.getIsWillRetain() == YesOrNo.YES.getCode(), NumberConstant.NUMBER_0),
-                        new MqttPublishVariableHeader(mqttLoginClientInfo.getWillTopic(), NumberConstant.NUMBER_0), ByteBufAllocator.DEFAULT.buffer().writeBytes(mqttLoginClientInfo.getWillMessage().getBytes(CharsetUtil.UTF_8)));
-                // 发送遗嘱消息到willTopic
-                AbstractBaseProcessor<? extends Number> baseProcessor = MessageServerContext.messageContentProcessorCache.get(MqttMessageContentTypeEnum.MQTT_PUBLISH.getType());
-                if (baseProcessor instanceof MqttPublishMessageContentProcessor mqttPublishMessageContentProcessor) {
-                    mqttPublishMessageContentProcessor.doPublishMessage(willMqttMessage);
                 }
             }
             case null, default -> {
