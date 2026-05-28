@@ -145,11 +145,12 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
         String to = packet.getMessage().getTo();
         String sessionId = IdentityUtil.sessionId(from, to);
         repository().reactiveHandleOperation(ctx, packet,
-                repository().reactiveValidWithdrawMessage(packet, sessionId, true),
-                ()-> repository().savePacket2Mq(MqConstant.KAFKA_WITHDRAW_MESSAGE_TOPIC, sessionId, packet),
-                Mono.just(true),
-                (ctx0, packet0)-> deliverAndFireNext(ctx0, packet0, true),
-                (exceptionEvent)-> MessageServerContext.publishEvent(exceptionEvent, true),
+                repository().reactiveLoadWithdrawTargetPackets(packet, sessionId, true),
+                ExceptionCodeEnum.WITHDRAW_MESSAGE_VERIFY_ERROR,
+                () -> repository().savePacket2Mq(MqConstant.KAFKA_WITHDRAW_MESSAGE_TOPIC, sessionId, packet),
+                packets -> repository().reactiveWithdrawMessage(packet, sessionId, packets),
+                (ctx0, packet0) -> deliverAndFireNext(ctx0, packet0, true),
+                (exceptionEvent) -> MessageServerContext.publishEvent(exceptionEvent, true),
                 ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR)
                 .subscribe();
     }

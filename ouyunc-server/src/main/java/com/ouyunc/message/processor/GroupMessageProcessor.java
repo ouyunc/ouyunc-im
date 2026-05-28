@@ -190,11 +190,12 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
         Set<String> leaderOrManagerIdentitySet = repository().groupManagerAndLeaderUsersIdentity(packet);
         boolean leaderOrManager = CollectionUtils.isNotEmpty(leaderOrManagerIdentitySet) && leaderOrManagerIdentitySet.contains(packet.getMessage().getFrom());
         repository().reactiveHandleOperation(ctx, packet,
-                repository().reactiveValidWithdrawMessage(packet, sessionId, !leaderOrManager),
-                ()-> repository().savePacket2Mq(MqConstant.KAFKA_WITHDRAW_MESSAGE_TOPIC, sessionId, packet),
-                Mono.just(true),
+                repository().reactiveLoadWithdrawTargetPackets(packet, sessionId, !leaderOrManager),
+                ExceptionCodeEnum.WITHDRAW_MESSAGE_VERIFY_ERROR,
+                () -> repository().savePacket2Mq(MqConstant.KAFKA_WITHDRAW_MESSAGE_TOPIC, sessionId, packet),
+                packets -> repository().reactiveWithdrawMessage(packet, sessionId, packets),
                 (ctx0, packet0) -> deliverWithdrawMessageAndFireNext(ctx0, packet0, groupUserIdentitySet),
-                (exceptionEvent)-> MessageServerContext.publishEvent(exceptionEvent, true),
+                (exceptionEvent) -> MessageServerContext.publishEvent(exceptionEvent, true),
                 ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR)
                 .subscribe();
     }

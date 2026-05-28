@@ -353,52 +353,69 @@ public enum DefaultRepository implements Repository{
     }
 
     /**
-     * 撤回消息校验,其实撤回消息的校验，应该加上，只能撤回某种类型的消息，比如私聊和群聊消息，重复撤回某个消息目前也没有做校验，不过在第一次撤回的时候会将被撤回的消息从会话中剔除，后面的重复撤回自然查不到该数据也就不存在多次撤回了，下游数据按道理也不会接收到
-     * @param packet
-     * @param sessionId
-     * @return
+     * 撤回：校验并加载目标 Packet（单次 getPackets），失败返回 {@link Mono#empty()}。
      */
-    @SuppressWarnings("unchecked")
-    public Mono<Boolean> reactiveValidWithdrawMessage(Packet packet, String sessionId, boolean isValidSender) {
-        return reactiveValidSpecialMessage(packet, sessionId, (specialPackets)->{
-            // 判断消息是否属于该会话，且都属于发送者； 这里考虑个问题，如果是群主或者管理员，需要让其撤销消息？应该是可以撤销的
+    public Mono<List<Packet>> reactiveLoadWithdrawTargetPackets(Packet packet, String sessionId, boolean isValidSender) {
+        return reactiveLoadValidatedSpecialPackets(packet, sessionId, (specialPackets) -> {
             if (isValidSender) {
                 for (Packet specialPacket : specialPackets) {
-                    if (specialPacket == null || specialPacket.getMessage() == null || !specialPacket.getMessage().getFrom().equals(packet.getMessage().getFrom())) {
+                    if (specialPacket == null || specialPacket.getMessage() == null
+                            || !specialPacket.getMessage().getFrom().equals(packet.getMessage().getFrom())) {
                         log.error("消息: {} 对应的消息不属于发送者！", packet);
                         return Mono.just(false);
                     }
                 }
             }
             return Mono.just(true);
-        }, (packets)->{
-            // 如果可以调用该方法的，一定是群聊或者私聊类型
-            for (Packet withdrawPacket : packets) {
-                Message message = withdrawPacket.getMessage();
-                if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == message.getContentType() || MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == message.getContentType()) {
-                    log.error("消息: {} 对应的消息内容类型：{} 错误！，不允许撤回撤回消息或已读消息", packet, message.getContentType());
-                    return false;
-                }
+        }, packets -> {
+            if (!isWithdrawTargetPacketsValid(packets)) {
+                log.error("撤回目标消息内容类型错误，不允许撤回撤回消息或已读消息");
+                return false;
             }
-            Message withdrawMsg = packet.getMessage();
-            String appKey = withdrawMsg.getMetadata().getAppKey();
-            String sessionCacheKey = CacheConstant.buildSessionCacheKey(appKey, sessionId);
-            redisTemplate.executePipelined(new SessionCallback<>() {
-                @Override
-                public <K, V> Object execute(RedisOperations<K, V> operations) throws DataAccessException {
-                    for (Packet withdrawPacket : packets) {
-                        withdrawPacket.setRetain(NumberConstant.NUMBER_1);
-                        operations.opsForValue().set((K) CacheConstant.buildMessageCacheKey(appKey, withdrawPacket.getPacketId()), (V) withdrawPacket, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
-                        String member = MessageContext.idGenerator().formatLongId19Str(withdrawPacket.getPacketId());
-                        operations.opsForZSet().remove((K) sessionCacheKey, (V) member);
-                    }
-                    return null;
-                }
-            });
             return true;
         });
     }
 
+    private static boolean isWithdrawTargetPacketsValid(List<Packet> packets) {
+        for (Packet withdrawPacket : packets) {
+            if (withdrawPacket == null || withdrawPacket.getMessage() == null) {
+                return false;
+            }
+            int contentType = withdrawPacket.getMessage().getContentType();
+            if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType
+                    || MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * 撤回 Redis 副作用（SET retain + ZREM 会话），目标列表由 {@link #reactiveLoadWithdrawTargetPackets} 传入。
+     */
+    @SuppressWarnings("unchecked")
+    public Mono<Boolean> reactiveWithdrawMessage(Packet packet, String sessionId, List<Packet> targetPackets) {
+        String appKey = packet.getMessage().getMetadata().getAppKey();
+        return Mono.fromCallable(() -> {
+                    String sessionCacheKey = CacheConstant.buildSessionCacheKey(appKey, sessionId);
+                    redisTemplate.executePipelined(new SessionCallback<>() {
+                        @Override
+                        public <K, V> Object execute(RedisOperations<K, V> operations) throws DataAccessException {
+                            for (Packet withdrawPacket : targetPackets) {
+                                withdrawPacket.setRetain(NumberConstant.NUMBER_1);
+                                operations.opsForValue().set((K) CacheConstant.buildMessageCacheKey(appKey, withdrawPacket.getPacketId()),
+                                        (V) withdrawPacket, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+                                String member = MessageContext.idGenerator().formatLongId19Str(withdrawPacket.getPacketId());
+                                operations.opsForZSet().remove((K) sessionCacheKey, (V) member);
+                            }
+                            return null;
+                        }
+                    });
+                    return Boolean.TRUE;
+                })
+                .doOnError(e -> log.error("撤回 Redis 更新失败 | appKey={}, sessionId={}", appKey, sessionId, e))
+                .subscribeOn(Schedulers.boundedElastic());
+    }
 
 
     /**
@@ -453,6 +470,29 @@ public enum DefaultRepository implements Repository{
                     });
         });
 
+    }
+
+    /**
+     * 带「准备阶段」的响应式编排：preparer 产出 T（如撤回目标列表），再 MQ → processor(T)。
+     * preparer 为空时发布 {@code verifyExceptionCode}，不再执行 MQ / processor。
+     */
+    public <T> Mono<Boolean> reactiveHandleOperation(ChannelHandlerContext ctx, Packet packet,
+                                                   Mono<T> preparer,
+                                                   ExceptionCodeEnum verifyExceptionCode,
+                                                   Supplier<CompletableFuture<?>> mqSender,
+                                                   Function<T, Mono<Boolean>> processor,
+                                                   BiConsumer<ChannelHandlerContext, Packet> processorAfter,
+                                                   Consumer<MessageEvent> exceptionConsumer,
+                                                   ExceptionCodeEnum processExceptionCode) {
+        return preparer
+                .flatMap(data -> reactiveHandleOperation(ctx, packet, Mono.just(true), mqSender,
+                        processor.apply(data), processorAfter, exceptionConsumer, processExceptionCode))
+                .switchIfEmpty(Mono.defer(() -> {
+                    exceptionConsumer.accept(new MessageEvent(
+                            ExceptionEventPayload.of(verifyExceptionCode, null, packet),
+                            MessageEventTypeEnum.EXCEPTION));
+                    return Mono.just(false);
+                }));
     }
 
 
@@ -584,12 +624,21 @@ public enum DefaultRepository implements Repository{
 
 
     /**
-     * 验证特殊消息，校验通过返回true, 不通过返回false
-     * @param packet
-     * @param sessionId
-     * @return
+     * 验证特殊消息，校验通过返回 true，不通过返回 false。
      */
-    private Mono<Boolean> reactiveValidSpecialMessage(Packet packet, String sessionId, Function<List<Packet>, Mono<Boolean>> function, Predicate<List<Packet>> extraPredicate) {
+    private Mono<Boolean> reactiveValidSpecialMessage(Packet packet, String sessionId,
+                                                     Function<List<Packet>, Mono<Boolean>> function,
+                                                     Predicate<List<Packet>> extraPredicate) {
+        return reactiveLoadValidatedSpecialPackets(packet, sessionId, function, extraPredicate)
+                .hasElement();
+    }
+
+    /**
+     * 加载并校验特殊消息引用的目标 Packet；校验失败返回 {@link Mono#empty()}。
+     */
+    private Mono<List<Packet>> reactiveLoadValidatedSpecialPackets(Packet packet, String sessionId,
+                                                                 Function<List<Packet>, Mono<Boolean>> function,
+                                                                 Predicate<List<Packet>> extraPredicate) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         List<Long> packetIds;
@@ -597,14 +646,12 @@ public enum DefaultRepository implements Repository{
             packetIds = JSON.parseArray(message.getContent(), Long.class);
         } catch (Exception e) {
             log.error("解析消息内容失败", e);
-            return Mono.just(false);
+            return Mono.empty();
         }
-        // 如果没有消息id，则直接返回false
         if (CollectionUtils.isEmpty(packetIds) || packetIds.size() > MessageConstant.MAX_HANDLE_MESSAGE_COUNT) {
             log.error("消息数量为0或超出限制 {}!", MessageConstant.MAX_HANDLE_MESSAGE_COUNT);
-            return Mono.just(false);
+            return Mono.empty();
         }
-        // 会话 ZSet member 须与入库一致（19 位格式化 packetId）
         List<String> zsetMembers = packetIds.stream()
                 .map(MessageContext.idGenerator()::formatLongId19Str)
                 .toList();
@@ -615,30 +662,29 @@ public enum DefaultRepository implements Repository{
                     int presentCount = countPresentZSetScores(scores);
                     if (scores.isEmpty() || presentCount != packetIds.size()) {
                         log.error("会话:{} 不存在该消息id: {}, 或消息id数量与会话中的消息数量不相等", sessionId, packetIds);
-                        return Mono.just(false);
+                        return Mono.empty();
                     }
                     return fetchPacketsReactive(metadata.getAppKey(), packetIds)
                             .flatMap(packets -> {
                                 if (packets.size() != packetIds.size()) {
                                     log.error("持久化消息数量不匹配 | session={} | expected={} | actual={}",
                                             sessionId, packetIds.size(), packets.size());
-                                    return Mono.just(false);
+                                    return Mono.empty();
                                 }
                                 return function.apply(packets).flatMap(valid -> {
-                                    if (!valid) return Mono.just(false);
-                                    // 若有额外条件，执行验证
-                                    if (extraPredicate != null) {
-                                        if (!extraPredicate.test(packets)) {
-                                            return Mono.just(false);
-                                        }
+                                    if (!valid) {
+                                        return Mono.empty();
                                     }
-                                    return Mono.just(true);
+                                    if (extraPredicate != null && !extraPredicate.test(packets)) {
+                                        return Mono.empty();
+                                    }
+                                    return Mono.just(packets);
                                 });
                             });
                 })
                 .onErrorResume(e -> {
                     log.error("消息处理异常 | session={}", sessionId, e);
-                    return Mono.just(false);
+                    return Mono.empty();
                 });
     }
 

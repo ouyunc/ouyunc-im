@@ -95,9 +95,10 @@ public final class CustomerServiceMessageProcessor extends AbstractMessageProces
         String to = packet.getMessage().getTo();
         String sessionId = IdentityUtil.sessionId(from, to);
         repository().reactiveHandleOperation(ctx, packet,
-                repository().reactiveValidWithdrawMessage(packet, sessionId, true),
+                repository().reactiveLoadWithdrawTargetPackets(packet, sessionId, true),
+                ExceptionCodeEnum.WITHDRAW_MESSAGE_VERIFY_ERROR,
                 () -> repository().savePacket2Mq(MqConstant.KAFKA_WITHDRAW_MESSAGE_TOPIC, sessionId, packet),
-                Mono.just(true),
+                packets -> repository().reactiveWithdrawMessage(packet, sessionId, packets),
                 (ctx0, packet0) -> {
                     deliverToUserAndService(packet0, true);
                     ctx0.fireChannelRead(packet0);
