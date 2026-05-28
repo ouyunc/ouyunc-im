@@ -1,432 +1,62 @@
 package com.ouyunc.repository;
 
-import com.alibaba.fastjson2.JSON;
-import com.google.common.collect.Lists;
-import com.ouyunc.base.constant.*;
-import com.ouyunc.base.constant.enums.*;
-import com.ouyunc.base.executor.ThreadPoolManager;
-import com.ouyunc.base.model.FiveConsumer;
-import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
-import com.ouyunc.base.packet.message.Message;
-import com.ouyunc.base.utils.IdentityUtil;
-import com.ouyunc.cache.config.CacheFactory;
-import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.MessageEvent;
-import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
-import com.ouyunc.db.jdbc.JdbcFactory;
-import com.ouyunc.db.mongo.MongodbFactory;
 import com.ouyunc.domain.base.GroupRequestSession;
 import com.ouyunc.domain.base.RequestSession;
-import com.ouyunc.domain.constants.GroupUserPost;
 import com.ouyunc.domain.constants.IdentityType;
-import com.ouyunc.domain.entity.*;
-import com.ouyunc.mq.kafka.KafkaFactory;
-import com.ouyunc.repository.support.QosIdempotencyHelper;
+import com.ouyunc.domain.entity.FriendEntity;
+import com.ouyunc.domain.entity.GroupEntity;
+import com.ouyunc.domain.entity.GroupUserEntity;
+import com.ouyunc.domain.entity.UserEntity;
+import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
+import com.ouyunc.repository.support.RepositorySupports;
 import io.netty.channel.ChannelHandlerContext;
-import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.dao.DataAccessException;
-import org.springframework.dao.EmptyResultDataAccessException;
-import org.springframework.dao.IncorrectResultSizeDataAccessException;
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.data.redis.connection.RedisConnection;
-import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.connection.RedisStringCommands;
-import org.springframework.data.redis.core.*;
-import org.springframework.data.redis.core.script.DefaultRedisScript;
-import org.springframework.data.redis.core.types.Expiration;
-import org.springframework.data.redis.serializer.RedisSerializer;
-import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.kafka.support.KafkaHeaders;
-import org.springframework.messaging.support.MessageBuilder;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
-import java.util.function.*;
-import java.util.stream.Collectors;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
- * @author fzx
- * @description 默认持久化仓库实现,注意如果子类不进行覆盖，则使用默认的操作器来处理数据
+ * 默认持久化仓库门面：对外 API 不变，实现委托至 {@link com.ouyunc.repository.support} 各模块。
  */
-public enum DefaultRepository implements Repository{
+public enum DefaultRepository implements Repository {
     INSTANCE;
 
-
-    private static Executor dbExecutor() {
-        return ThreadPoolManager.repositoryExecutor();
-    }
-
-    private static final Logger log = LoggerFactory.getLogger(DefaultRepository.class);
-    /**
-     * kafkaTemplate
-     */
-    private static final KafkaTemplate<String, Object> kafkaTemplate = KafkaFactory.KAFKA_TEMPLATE.instance();
-
-    /**
-     * jdbcClient
-     */
-    private static final JdbcClient jdbcClient = JdbcFactory.JDBC_CLIENT.instance();
-
-
-    /**
-     * mongoTemplate
-     */
-    private static final MongoTemplate mongoTemplate = MongodbFactory.MONGODB_TEMPLATE.instance();
-
-    /**
-     * reactiveMongoTemplate
-     */
-    private static final ReactiveMongoTemplate reactiveMongoTemplate = MongodbFactory.REACTIVE_MONGODB_TEMPLATE.instance();
-
-    /**
-     * redisTemplate
-     */
-    private static final RedisTemplate redisTemplate = CacheFactory.REDIS.instance();
-
-
-    /**
-     * ReactiveStringRedisTemplate
-     */
-    private static final ReactiveStringRedisTemplate reactiveStringRedisTemplate = CacheFactory.REACTIVE_STRING_REDIS.instance();
-
-    /**
-     * reactiveRedisTemplate
-     */
-    private static final ReactiveRedisTemplate reactiveRedisTemplate = CacheFactory.REACTIVE_REDIS.instance();
-
-    /**
-     * stringRedisTemplate
-     */
-    private static final StringRedisTemplate stringRedisTemplate = CacheFactory.STRING_REDIS.instance();
-
-
-    /**
-     * redisSerializer
-     */
-    private static final RedisSerializer<String> stringSerializer = redisTemplate.getStringSerializer();
-
-    /**
-     * valueSerializer
-     */
-    private static final RedisSerializer<Object> valueSerializer = redisTemplate.getValueSerializer();
-
-    /**
-     * 保存消息到磁盘中，这里使用mq来提高吞吐量；注意这里mq 消费者执行的逻辑是保存消息（持久化），这里给出一个参考实例：
-     * 如果不想发送mq 可以在该方法中直接使用如下代码,返回值类型是Future，或者使用其他持久化存储逻辑
-     *             log.debug("保存消息: {} 到数据库和mongodb 中", packet);
-     *             // 在事务中执行
-     *             Message message = packet.getMessage();
-     *             Metadata metadata = message.getMetadata();
-     *             Boolean executeResult = JdbcFactory.JDBC_TEMPLATE.withTransaction().execute(status -> {
-     *                 try {
-     *                     String atJson = message.getAt() == null ? null : JSON.toJSONString(message.getAt());
-     *                     jdbcTemplate.update(JdbcSqlConstant.MYSQL.INSERT_MESSAGE.sql(), packet.getPacketId(), packet.getProtocol(), packet.getProtocolVersion(), packet.getDeviceType(), packet.getNetworkType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), packet.getMessageType(), packet.getRetain(), metadata.getClientIp(), message.getFrom(), message.getTo(), message.getContentType(), message.getContent(), message.getExtra(), atJson, message.getQos(), message.getCreateTime(), metadata.getServerTime(), NumberConstant.NUMBER_0, NumberConstant.NUMBER_0);
-     *                     // 保存到mongodb 默认时效三个月，可根据配置文件配置
-     *                     mongoTemplate.insert(new MessageEntity(packet.getPacketId(), packet.getProtocol(), packet.getProtocolVersion(), packet.getDeviceType(), packet.getNetworkType(), packet.getEncryptType(), packet.getSerializeAlgorithm(), packet.getMessageType(), packet.getRetain(), metadata.getClientIp(), message.getFrom(), message.getTo(), message.getContentType(), message.getContent(), message.getQos(), message.getAt(),message.getExtra(), message.getCreateTime(), metadata.getServerTime(), NumberConstant.NUMBER_0, NumberConstant.NUMBER_0, LocalDateTime.now().plusMonths(NumberConstant.NUMBER_3)));
-     *                 } catch (Exception e) {
-     *                     log.error("保存消息到数据库和mongodb 中异常: {}", e.getMessage());
-     *                     status.setRollbackOnly();
-     *                     return false;
-     *                 }
-     *                 return true;
-     *             });
-     *             if (Boolean.FALSE.equals(executeResult)) {
-     *                 log.error("保存消息到数据库和mongodb 中事务异常");
-     *             }
-     *
-     *
-     * @param packet
-     * @return
-     */
     @Override
     public CompletableFuture<?> save(Packet packet) {
-      return savePacket2Mq(MqConstant.KAFKA_SAVE_MESSAGE_TOPIC, null, packet);
+        return RepositorySupports.MQ.save(packet);
     }
 
-
-    /**
-     * 将消息保存到mq中
-     * @param topic
-     * @param packet
-     * @return
-     */
     public CompletableFuture<?> savePacket2Mq(String topic, String key, Packet packet) {
-        // 保存消息到磁盘中，这里使用mq来提高吞吐量；如果kafka
-        // headers 中可以自定义一些信息做扩展；
-        Map<String, Object> headers = new HashMap<>();
-        headers.put(KafkaHeaders.CORRELATION_ID, packet.getPacketId());
-        // 如果业务逻辑需要mq保证顺序性消费，请使用相同key， 并且在消费者保证单线程消费
-        if (StringUtils.isNotBlank(key)) {
-            headers.put(KafkaHeaders.KEY, key);
-        }
-        headers.put(KafkaHeaders.TOPIC, topic);
-        return kafkaTemplate.send(MessageBuilder.withPayload(JSON.toJSONString(packet)).copyHeadersIfAbsent(headers).build());
+        return RepositorySupports.MQ.savePacket2Mq(topic, key, packet);
     }
 
-    /**
-     * 检查 QoS 重发是否已处理：先 packetId 幂等键，再通道身份 + 客户端 messageId
-     */
-    @SuppressWarnings("unchecked")
     @Override
     public boolean checkDup(Packet packet, String channelLoginIdentity) {
-        return QosIdempotencyHelper.isDuplicate(redisTemplate, packet, channelLoginIdentity);
+        return RepositorySupports.QOS.checkDup(packet, channelLoginIdentity);
     }
 
-
-    /**
-     * 批量获取消息（同步版本，保留兼容性）
-     * @param appKey
-     * @param packetIds
-     * @return
-     */
-    @SuppressWarnings("unchecked")
     public List<Packet> getPackets(String appKey, List<Long> packetIds) {
-        if (CollectionUtils.isEmpty(packetIds)) {
-            log.warn("packetIds 为空, appKey={}", appKey);
-            return Collections.emptyList();
-        }
-
-        // 1. 从 Redis 批量获取缓存
-        // 使用 List 而非 Set，保证 multiGet 顺序与 packetIds 一致，避免去重导致结果错位
-        List<String> redisKeys = packetIds.stream()
-                .map(id -> CacheConstant.buildMessageCacheKey(appKey, id))
-                .collect(Collectors.toList());
-        List<Packet> cachedPackets = (List<Packet>) redisTemplate.opsForValue().multiGet(redisKeys);
-        if (cachedPackets == null) {
-            log.warn("cachedPackets 为空, appKey={}", appKey);
-            return Collections.emptyList();
-        }
-        // 过滤有效缓存并收集已存在的 ID
-        Map<Long, Packet> cachedPacketMap = cachedPackets.stream()
-                .filter(Objects::nonNull)
-                .collect(Collectors.toMap(Packet::getPacketId, Function.identity(), (a, b) -> a));
-        Set<Long> cachedIds = cachedPacketMap.keySet();
-
-        // 全部命中缓存则直接返回
-        if (cachedIds.size() == packetIds.size()) {
-            return new ArrayList<>(cachedPacketMap.values());
-        }
-
-        // 2. 收集未命中缓存的 ID（使用 Set 提升 contains 性能 O(1)）
-        List<Long> missingIds = packetIds.stream()
-                .filter(id -> !cachedIds.contains(id))
-                .collect(Collectors.toList());
-
-        // 3. 从 MongoDB 和 MySQL 查询缺失数据
-        List<Packet> dbPackets = queryPacketsFromDatabases(missingIds);
-
-        // 4. 合并结果并异步更新缓存
-        List<Packet> result = new ArrayList<>(cachedPacketMap.values());
-        result.addAll(dbPackets);
-        asyncUpdatePacketCache(appKey, dbPackets);
-        return result;
+        return RepositorySupports.MESSAGE_PACKET_QUERY.getPackets(appKey, packetIds);
     }
 
-//----------------------------- 辅助方法 -----------------------------
-
-
-
-    /**
-     * 从 MongoDB 和 MySQL 查询数据 (优先级: MongoDB -> MySQL) - 同步版本
-     */
-    private List<Packet> queryPacketsFromDatabases(List<Long> missingIds) {
-        if (CollectionUtils.isEmpty(missingIds)) {
-            return Collections.emptyList();
-        }
-
-        // 优先查询 MongoDB
-        List<MongoMessageEntity> mongoEntities = mongoTemplate.find(
-                Query.query(Criteria.where(MongoMessageEntity.Fields.id).in(missingIds)),
-                MongoMessageEntity.class
-        );
-        List<Packet> dbPackets = convertToPackets(mongoEntities);
-
-        // 检查是否还有缺失
-        Set<Long> foundIds = mongoEntities.stream()
-                .map(MessageEntity::getId)
-                .collect(Collectors.toSet());
-        List<Long> remainingIds = missingIds.stream()
-                .filter(id -> !foundIds.contains(id))
-                .collect(Collectors.toList());
-
-        // 剩余 ID 查询 MySQL
-        if (!CollectionUtils.isEmpty(remainingIds)) {
-            try {
-                List<MessageEntity> mysqlEntities = jdbcClient.sql(JdbcSqlDialectHolder.selectMessage())
-                        .param(MessageEntity.Fields.ids, remainingIds)
-                        .query(MessageEntity.class)
-                        .list();
-                dbPackets.addAll(convertToPackets(mysqlEntities));
-            } catch (EmptyResultDataAccessException e) {
-                log.error("message不存在, 原因: {}", e.getMessage());
-                return dbPackets;
-            } catch (Exception e) {
-                log.error("获取消息实体异常, remainingIds: {}, 原因：{}", remainingIds, e.getMessage());
-                return dbPackets;
-            }
-        }
-
-        return dbPackets;
-    }
-
-
-    /**
-     * 转换单个 MessageEntity 到 Packet（用于响应式流）
-     */
-    private Packet convertToPacket(MessageEntity entity) {
-        return new Packet(
-                entity.getProtocol(),
-                entity.getProtocolVersion(),
-                entity.getId(),
-                entity.getDeviceType(),
-                entity.getNetworkType(),
-                entity.getEncryptType(),
-                entity.getSerializeAlgorithm(),
-                entity.getMessageType(),
-                entity.getRetain(),
-                new Message(
-                        entity.getMessageId(),
-                        entity.getFrom(),
-                        entity.getFromType(),
-                        entity.getTo(),
-                        entity.getToType(),
-                        entity.getContentType(),
-                        entity.getContent(),
-                        JSON.parseArray(entity.getAt(), String.class),
-                        JSON.parseArray(entity.getRef(), String.class),
-                        entity.getExtra(),
-                        entity.getQos(),
-                        entity.getClientSendTime(),
-                        new Metadata(
-                                entity.getAppKey(),
-                                entity.getClientIp(),
-                                entity.getServerArrivalTime()
-                        )
-                )
-        );
-    }
-
-    /**
-     * 转换 MessageEntity 到 Packet
-     */
-    private List<Packet> convertToPackets(List<? extends MessageEntity> entities) {
-        return entities.stream()
-                .filter(Objects::nonNull)
-                .map(this::convertToPacket)
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * 异步更新缓存 (非阻塞主流程) - 同步版本
-     */
-    @SuppressWarnings("unchecked")
-    private void asyncUpdatePacketCache(String appKey, List<Packet> dbPackets) {
-        if (CollectionUtils.isEmpty(dbPackets)) {
-            return;
-        }
-        CompletableFuture.runAsync(() -> {
-            redisTemplate.executePipelined(new SessionCallback<>() {
-                @Override
-                public <K, V> Object execute(RedisOperations<K, V> operations) throws DataAccessException {
-                    dbPackets.forEach(packet -> {
-                        operations.opsForValue().set((K) CacheConstant.buildMessageCacheKey(appKey, packet.getPacketId()), (V) packet, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
-                    });
-                    return null;
-                }
-            });
-        }, dbExecutor()).exceptionally(ex -> {
-            log.error("异步更新缓存失败, appKey={}, packetSize={}", appKey, dbPackets.size(), ex);
-            return null;
-        });
-    }
-
-    /**
-     * 撤回：校验并加载目标 Packet（单次 getPackets），失败返回 {@link Mono#empty()}。
-     */
     public Mono<List<Packet>> reactiveLoadWithdrawTargetPackets(Packet packet, String sessionId, boolean isValidSender) {
-        return reactiveLoadValidatedSpecialPackets(packet, sessionId, (specialPackets) -> {
-            if (isValidSender) {
-                for (Packet specialPacket : specialPackets) {
-                    if (specialPacket == null || specialPacket.getMessage() == null
-                            || !specialPacket.getMessage().getFrom().equals(packet.getMessage().getFrom())) {
-                        log.error("消息: {} 对应的消息不属于发送者！", packet);
-                        return Mono.just(false);
-                    }
-                }
-            }
-            return Mono.just(true);
-        }, packets -> {
-            if (!isWithdrawTargetPacketsValid(packets)) {
-                log.error("撤回目标消息内容类型错误，不允许撤回撤回消息或已读消息");
-                return false;
-            }
-            return true;
-        });
+        return RepositorySupports.WITHDRAW.reactiveLoadWithdrawTargetPackets(packet, sessionId, isValidSender);
     }
 
-    private static boolean isWithdrawTargetPacketsValid(List<Packet> packets) {
-        for (Packet withdrawPacket : packets) {
-            if (withdrawPacket == null || withdrawPacket.getMessage() == null) {
-                return false;
-            }
-            int contentType = withdrawPacket.getMessage().getContentType();
-            if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType
-                    || MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /**
-     * 撤回 Redis 副作用（SET retain + ZREM 会话），目标列表由 {@link #reactiveLoadWithdrawTargetPackets} 传入。
-     */
-    @SuppressWarnings("unchecked")
     public Mono<Boolean> reactiveWithdrawMessage(Packet packet, String sessionId, List<Packet> targetPackets) {
-        String appKey = packet.getMessage().getMetadata().getAppKey();
-        return Mono.fromCallable(() -> {
-                    String sessionCacheKey = CacheConstant.buildSessionCacheKey(appKey, sessionId);
-                    redisTemplate.executePipelined(new SessionCallback<>() {
-                        @Override
-                        public <K, V> Object execute(RedisOperations<K, V> operations) throws DataAccessException {
-                            for (Packet withdrawPacket : targetPackets) {
-                                withdrawPacket.setRetain(NumberConstant.NUMBER_1);
-                                operations.opsForValue().set((K) CacheConstant.buildMessageCacheKey(appKey, withdrawPacket.getPacketId()),
-                                        (V) withdrawPacket, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
-                                String member = MessageContext.idGenerator().formatLongId19Str(withdrawPacket.getPacketId());
-                                operations.opsForZSet().remove((K) sessionCacheKey, (V) member);
-                            }
-                            return null;
-                        }
-                    });
-                    return Boolean.TRUE;
-                })
-                .doOnError(e -> log.error("撤回 Redis 更新失败 | appKey={}, sessionId={}", appKey, sessionId, e))
-                .subscribeOn(Schedulers.boundedElastic());
+        return RepositorySupports.WITHDRAW.reactiveWithdrawMessage(packet, sessionId, targetPackets);
     }
 
-
-    /**
-     * 响应式处理无锁逻辑
-     *
-     * @param ctx
-     * @param packet
-     * @param validator
-     * @param mqSender
-     * @param processor
-     */
     public Mono<Boolean> reactiveHandleOperation(ChannelHandlerContext ctx, Packet packet,
                                                  Mono<Boolean> validator,
                                                  Supplier<CompletableFuture<?>> mqSender,
@@ -434,48 +64,10 @@ public enum DefaultRepository implements Repository{
                                                  BiConsumer<ChannelHandlerContext, Packet> processorAfter,
                                                  Consumer<MessageEvent> exceptionConsumer,
                                                  ExceptionCodeEnum exceptionCode) {
-        return validator.flatMap(valid -> {
-            if (!valid) {
-                exceptionConsumer.accept(new MessageEvent(ExceptionEventPayload.of(exceptionCode, null, packet), MessageEventTypeEnum.EXCEPTION));
-                return Mono.just(false);
-            }
-            // 优化后的代码片段，确保MQ发送成功后才执行processor
-            return Mono.fromFuture(mqSender.get())
-                    // 当MQ发送成功时，返回一个表示成功的Mono
-                    .thenReturn(true)
-                    .onErrorResume(ex -> {
-                        // MQ发送失败时的处理
-                        exceptionConsumer.accept(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, ex.getMessage(), packet), MessageEventTypeEnum.EXCEPTION));
-                        return Mono.just(false); // 明确返回失败标识
-                    })
-                    // 只有当MQ发送成功（上一步返回true）时才执行processor
-                    .flatMap(mqSentSuccessfully -> {
-                        if (mqSentSuccessfully) {
-                            return processor; // MQ发送成功，执行业务处理
-                        } else {
-                            return Mono.just(false); // MQ发送失败，直接返回失败
-                        }
-                    })
-                    .doOnNext(processed -> {
-                        if (processed) {
-                            processorAfter.accept(ctx, packet);
-                        } else {
-                            exceptionConsumer.accept(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.UNKNOWN_ERROR, "撤销或已读异常", packet), MessageEventTypeEnum.EXCEPTION));
-                        }
-                    })
-                    .onErrorResume(ex -> {
-                        log.error("操作处理异常 | packet={}", packet, ex);
-                        exceptionConsumer.accept(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.UNKNOWN_ERROR, ex.getMessage(), packet), MessageEventTypeEnum.EXCEPTION));
-                        return Mono.just(false);
-                    });
-        });
-
+        return RepositorySupports.REACTIVE_OPERATION.reactiveHandleOperation(ctx, packet, validator, mqSender,
+                processor, processorAfter, exceptionConsumer, exceptionCode);
     }
 
-    /**
-     * 带「准备阶段」的响应式编排：preparer 产出 T（如撤回目标列表），再 MQ → processor(T)。
-     * preparer 为空时发布 {@code verifyExceptionCode}，不再执行 MQ / processor。
-     */
     public <T> Mono<Boolean> reactiveHandleOperation(ChannelHandlerContext ctx, Packet packet,
                                                    Mono<T> preparer,
                                                    ExceptionCodeEnum verifyExceptionCode,
@@ -484,1402 +76,129 @@ public enum DefaultRepository implements Repository{
                                                    BiConsumer<ChannelHandlerContext, Packet> processorAfter,
                                                    Consumer<MessageEvent> exceptionConsumer,
                                                    ExceptionCodeEnum processExceptionCode) {
-        return preparer
-                .flatMap(data -> reactiveHandleOperation(ctx, packet, Mono.just(true), mqSender,
-                        processor.apply(data), processorAfter, exceptionConsumer, processExceptionCode))
-                .switchIfEmpty(Mono.defer(() -> {
-                    exceptionConsumer.accept(new MessageEvent(
-                            ExceptionEventPayload.of(verifyExceptionCode, null, packet),
-                            MessageEventTypeEnum.EXCEPTION));
-                    return Mono.just(false);
-                }));
+        return RepositorySupports.REACTIVE_OPERATION.reactiveHandleOperation(ctx, packet, preparer, verifyExceptionCode,
+                mqSender, processor, processorAfter, exceptionConsumer, processExceptionCode);
     }
 
-
-    /**
-     * 响应式撤回消息校验, 这里没有校验重复已读某个消息，如果有需求，后续可以加上，因为会增加额外的查询耗时
-     * @param packet
-     * @param sessionId
-     * @return
-     */
-    public Mono<Boolean> reactiveValidReadReceiptMessage(Packet packet, String sessionId, IdentityType identityType,  boolean isValidSender) {
-        return reactiveValidSpecialMessage(packet, sessionId, (specialPackets)->{
-            // 判断消息是否属于该会话，且都属于发送者
-            if (isValidSender) {
-                for (Packet specialPacket : specialPackets) {
-                    if (specialPacket == null || specialPacket.getMessage().getFrom().equals(packet.getMessage().getFrom())) {
-                        log.error("消息id: {} 对应的消息属于发送者！", packet);
-                        return Mono.just(false);
-                    }
-                }
-            }
-            return Mono.just(true);
-        }, (packets)->{
-            // 获取当前会话中用户的最大已读id，如果已读id小于当前用户最大已读id，则返回false,消息已读默认不允许回退，只能往后已读
-            Message message = packet.getMessage();
-            long storedOffset = resolveMaxReadOffsetAllDevices(
-                    message.getMetadata().getAppKey(), identityType, message.getFrom(), message.getTo());
-            for (Packet readPacket : packets) {
-                if (readPacket.getPacketId() < storedOffset) {
-                    log.error("消息id: {} 对应的消息已读id小于当前用户最大已读id: {}！", packet, storedOffset);
-                    return false;
-                }
-            }
-            return true;
-        });
+    public Mono<Boolean> reactiveValidReadReceiptMessage(Packet packet, String sessionId, IdentityType identityType,
+                                                         boolean isValidSender) {
+        return RepositorySupports.READ_RECEIPT.reactiveValidReadReceiptMessage(packet, sessionId, identityType, isValidSender);
     }
 
-    /**
-     * 获取会话最大已读id
-     * @param from
-     * @param to
-     * @return
-     */
-    @SuppressWarnings("unchecked")
-    private Long getSessionMaxReadPackageId(String appKey, IdentityType identityType, String from, Byte deviceType, String to) {
-        // 先从redis 中获取
-
-        String sessionMessageOffsetKey = CacheConstant.buildSessionReadMessageOffsetCacheKey(appKey, identityType.value(), from, deviceType, to);
-        Long sessionMessageOffset = null;
-        Object cachedOffset = redisTemplate.opsForValue().get(sessionMessageOffsetKey);
-        if (cachedOffset instanceof Number n) {
-            sessionMessageOffset = n.longValue();
-        }
-        if (sessionMessageOffset != null) {
-            return sessionMessageOffset;
-        }
-        // 获取不到在从mongo 获取
-        SessionMessageOffsetEntity mongoSessionMessageOffsetEntity = mongoTemplate.findOne(new Query(Criteria.where(SessionMessageOffsetEntity.Fields.from).is(from).and(SessionMessageOffsetEntity.Fields.to).is(to).and(SessionMessageOffsetEntity.Fields.type).is(identityType.value()).and(SessionMessageOffsetEntity.Fields.deviceType).is(deviceType)).limit(NumberConstant.NUMBER_1), SessionMessageOffsetEntity.class);
-        if (mongoSessionMessageOffsetEntity != null) {
-            return mongoSessionMessageOffsetEntity.getSessionMessageOffset();
-        }
-        // 最后在从数据库获取
-        try {
-            SessionMessageOffsetEntity sessionMessageOffsetEntity = jdbcClient.sql(JdbcSqlDialectHolder.selectSessionMessageOffset())
-                    .param(SessionMessageOffsetEntity.Fields.from, from)
-                    .param(SessionMessageOffsetEntity.Fields.to, to)
-                    .param(SessionMessageOffsetEntity.Fields.type, identityType.value())
-                    .param(SessionMessageOffsetEntity.Fields.deviceType, deviceType)
-                    .query(SessionMessageOffsetEntity.class)
-                    .single();
-            Long maxSessionMessageOffset = sessionMessageOffsetEntity.getSessionMessageOffset();
-            // 缓存会话最大已读id
-            if (maxSessionMessageOffset != null) {
-                // 注意：这里没有放mongo,没必要了
-                redisTemplate.opsForValue().set(sessionMessageOffsetKey, maxSessionMessageOffset,
-                        MessageConstant.CACHE_ENTITY_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
-            }
-            return maxSessionMessageOffset;
-        }catch (EmptyResultDataAccessException e) {
-            log.debug("sessionMessageOffsetEntity 不存在, from: {}, to: {}, type: {}", from, to, identityType);
-            return null;
-        } catch (Exception e) {
-            log.error("获取会话偏移量实体异常, from: {}, to:{}, type:{} 原因：{}", from, to, identityType, e.getMessage());
-            return null;
-        }
+    public Mono<Boolean> reactiveReadReceiptMessage(Packet packet, IdentityType identityType, long expireTime) {
+        return RepositorySupports.READ_RECEIPT.reactiveReadReceiptMessage(packet, identityType, expireTime);
     }
 
-    /**
-     * 已读校验/合并：同一用户在同一会话下多端游标取 max。
-     * 性能优化：Pipeline 一次性获取所有设备的 Redis 偏移量，仅当 Redis 缺失时才回退到 Mongo/MySQL。
-     */
-    private long resolveMaxReadOffsetAllDevices(String appKey, IdentityType identityType, String from, String to) {
-        Collection<Byte> deviceTypes = MessageContext.deviceTypeList(appKey, from);
-        if (CollectionUtils.isEmpty(deviceTypes)) {
-            return 0L;
-        }
-        List<Byte> deviceTypeList = Lists.newArrayList(deviceTypes);
-        // Step 1: Pipeline 批量从 Redis 获取所有设备 offset（1 次 RTT 替代 N 次）
-        List<String> redisKeys = new ArrayList<>(deviceTypeList.size());
-        for (Byte deviceType : deviceTypeList) {
-            redisKeys.add(CacheConstant.buildSessionReadMessageOffsetCacheKey(appKey, identityType.value(), from, deviceType, to));
-        }
-        @SuppressWarnings("unchecked")
-        List<Object> cached = redisTemplate.opsForValue().multiGet(redisKeys);
-
-        long max = 0L;
-        boolean found = false;
-        // Step 2: 收集 Redis 命中数据，记录缺失的 deviceType
-        List<Byte> missingDeviceTypes = new ArrayList<>();
-        for (int i = 0; i < deviceTypeList.size(); i++) {
-            Object value = cached != null && i < cached.size() ? cached.get(i) : null;
-            if (value instanceof Number offset) {
-                found = true;
-                max = Math.max(max, offset.longValue());
-            } else {
-                missingDeviceTypes.add(deviceTypeList.get(i));
-            }
-        }
-
-        // Step 3: 仅对 Redis 缺失的设备回退到 Mongo/MySQL（保持原行为兼容）
-        for (Byte deviceType : missingDeviceTypes) {
-            Long offset = getSessionMaxReadPackageId(appKey, identityType, from, deviceType, to);
-            if (offset != null) {
-                found = true;
-                max = Math.max(max, offset);
-            }
-        }
-        return found ? max : 0L;
-    }
-
-
-    /**
-     * 验证特殊消息，校验通过返回 true，不通过返回 false。
-     */
-    private Mono<Boolean> reactiveValidSpecialMessage(Packet packet, String sessionId,
-                                                     Function<List<Packet>, Mono<Boolean>> function,
-                                                     Predicate<List<Packet>> extraPredicate) {
-        return reactiveLoadValidatedSpecialPackets(packet, sessionId, function, extraPredicate)
-                .hasElement();
-    }
-
-    /**
-     * 加载并校验特殊消息引用的目标 Packet；校验失败返回 {@link Mono#empty()}。
-     */
-    private Mono<List<Packet>> reactiveLoadValidatedSpecialPackets(Packet packet, String sessionId,
-                                                                 Function<List<Packet>, Mono<Boolean>> function,
-                                                                 Predicate<List<Packet>> extraPredicate) {
-        Message message = packet.getMessage();
-        Metadata metadata = message.getMetadata();
-        List<Long> packetIds;
-        try {
-            packetIds = JSON.parseArray(message.getContent(), Long.class);
-        } catch (Exception e) {
-            log.error("解析消息内容失败", e);
-            return Mono.empty();
-        }
-        if (CollectionUtils.isEmpty(packetIds) || packetIds.size() > MessageConstant.MAX_HANDLE_MESSAGE_COUNT) {
-            log.error("消息数量为0或超出限制 {}!", MessageConstant.MAX_HANDLE_MESSAGE_COUNT);
-            return Mono.empty();
-        }
-        List<String> zsetMembers = packetIds.stream()
-                .map(MessageContext.idGenerator()::formatLongId19Str)
-                .toList();
-        String sessionCacheKey = CacheConstant.buildSessionCacheKey(metadata.getAppKey(), sessionId);
-        return Mono.fromCallable(() -> batchZSetScoresPipelined(sessionCacheKey, zsetMembers))
-                .subscribeOn(Schedulers.boundedElastic())
-                .flatMap(scores -> {
-                    int presentCount = countPresentZSetScores(scores);
-                    if (scores.isEmpty() || presentCount != packetIds.size()) {
-                        log.error("会话:{} 不存在该消息id: {}, 或消息id数量与会话中的消息数量不相等", sessionId, packetIds);
-                        return Mono.empty();
-                    }
-                    return fetchPacketsReactive(metadata.getAppKey(), packetIds)
-                            .flatMap(packets -> {
-                                if (packets.size() != packetIds.size()) {
-                                    log.error("持久化消息数量不匹配 | session={} | expected={} | actual={}",
-                                            sessionId, packetIds.size(), packets.size());
-                                    return Mono.empty();
-                                }
-                                return function.apply(packets).flatMap(valid -> {
-                                    if (!valid) {
-                                        return Mono.empty();
-                                    }
-                                    if (extraPredicate != null && !extraPredicate.test(packets)) {
-                                        return Mono.empty();
-                                    }
-                                    return Mono.just(packets);
-                                });
-                            });
-                })
-                .onErrorResume(e -> {
-                    log.error("消息处理异常 | session={}", sessionId, e);
-                    return Mono.empty();
-                });
-    }
-
-    /**
-     * 管道批量 ZSCORE，一次 RTT；与 packetIds 等长，不存在为 null。
-     */
-    @SuppressWarnings("unchecked")
-    private List<Object> batchZSetScoresPipelined(String zsetKey, List<String> members) {
-        if (CollectionUtils.isEmpty(members)) {
-            return Collections.emptyList();
-        }
-        return stringRedisTemplate.executePipelined(new SessionCallback<>() {
-            @Override
-            public <K, V> Object execute(RedisOperations<K, V> operations) throws DataAccessException {
-                ZSetOperations<K, V> zSetOps = operations.opsForZSet();
-                for (String member : members) {
-                    zSetOps.score((K) zsetKey, (V) member);
-                }
-                return null;
-            }
-        });
-    }
-
-    private static boolean isZSetScorePresent(Object score) {
-        if (score == null) {
-            return false;
-        }
-        if (score instanceof Boolean boolScore) {
-            return boolScore;
-        }
-        return true;
-    }
-
-    private static int countPresentZSetScores(List<Object> scores) {
-        int count = 0;
-        for (Object score : scores) {
-            if (isZSetScorePresent(score)) {
-                count++;
-            }
-        }
-        return count;
-    }
-
-    /**
-     * 响应式获取持久化消息
-     * @param appKey
-     * @param packetIds
-     * @return
-     */
-    private Mono<List<Packet>> fetchPacketsReactive(String appKey, List<Long> packetIds) {
-        return Mono.fromCallable(() -> getPackets(appKey, packetIds))
-                .subscribeOn(Schedulers.boundedElastic()); // 阻塞操作在弹性线程池
-    }
-
-
-
-
-
-
-
-    /**
-     * 响应式处理读已回执消息
-     */
-    @SuppressWarnings("unchecked")
-    public Mono<Boolean> reactiveReadReceiptMessage(Packet packet, IdentityType identityType,  long expireTime) {
-        Message message = packet.getMessage();
-        String from = message.getFrom();
-        String to = message.getTo();
-        Metadata metadata = message.getMetadata();
-        // 已读的消息id, 一般建议只传递一个数据，如果传递多个则取最大的一个
-        List<Long> readPacketIds = JSON.parseArray(message.getContent(), Long.class);
-        Long maxReadPacketId = null;
-        if (CollectionUtils.isNotEmpty(readPacketIds)) {
-            maxReadPacketId = readPacketIds.stream().max(Comparator.comparingLong(Long::longValue)).orElse(null);
-        }
-        if (maxReadPacketId == null) {
-            log.error("已读的消息id不能为空 | packet={}", packet);
-            return Mono.just(false);
-        }
-        String offsetKey = CacheConstant.buildSessionReadMessageOffsetCacheKey(metadata.getAppKey(), identityType.value(), from, packet.getDeviceType(), to);
-        final long incomingOffset = maxReadPacketId;
-        return Mono.fromCallable(() -> {
-                    DefaultRedisScript<Long> readOffsetScript = new DefaultRedisScript<>(
-                            LuaScriptEnum.READ_OFFSET_MAX_SCRIPT.getScript(), Long.class);
-                    redisTemplate.execute(readOffsetScript, List.of(offsetKey), incomingOffset, expireTime);
-                    return Boolean.TRUE;
-                })
-                .doOnError(e -> log.error("已读回执 Redis 更新失败 | offsetKey={}, incomingOffset={}, expireTime={}",
-                        offsetKey, incomingOffset, expireTime, e))
-                .subscribeOn(Schedulers.boundedElastic());
-    }
-
-    /**
-     * 获取群组用户列表的用户唯一标识，这里直接从缓存中取，获取不到就失败，不需要再从数据库中获取，如果有需要可以做多级缓存
-     *
-     * @param packet
-     * @return
-     */
-    @SuppressWarnings("unchecked")
     public Set<String> groupUsersIdentity(Packet packet) {
-        Message message = packet.getMessage();
-        Metadata metadata = message.getMetadata();
-        // score 存储的是用户加入群的时间戳，毫秒
-        return stringRedisTemplate.opsForZSet().range(CacheConstant.buildGroupUserCacheKey(metadata.getAppKey(), message.getTo()), NumberConstant.NUMBER_0, NumberConstant.NUMBER_NEGATIVE_1);
+        return RepositorySupports.GROUP.groupUsersIdentity(packet);
     }
 
-
-
-
-
-    /**
-     * 获取群成员信息（同步版本，多级缓存：本地缓存 -> Redis -> MongoDB -> MySQL）
-     * @param appKey
-     * @param groupId
-     * @param memberId
-     * @return
-     */
     public GroupUserEntity groupUserEntity(String appKey, String groupId, String memberId) {
-        String cacheKey = CacheConstant.buildGroupUserConfigCacheKey(appKey, memberId, groupId);
-        
-        // 1. 本地缓存
-        GroupUserEntity groupUserEntity = MessageContext.groupUserEntityCache.get(cacheKey);
-        if (groupUserEntity != null) {
-            return groupUserEntity;
-        }
-        
-        // 2. Redis缓存
-        groupUserEntity = (GroupUserEntity) redisTemplate.opsForValue().get(cacheKey);
-        if (groupUserEntity != null) {
-            updateGroupUserCache(cacheKey, groupUserEntity);
-            return groupUserEntity;
-        }
-        
-        // 3. MongoDB
-        try {
-            MongoGroupUserEntity mongoGroupUser = mongoTemplate.findOne(
-                    Query.query(Criteria.where(MongoGroupUserEntity.Fields.userId).is(Long.parseLong(memberId))
-                            .and(MongoGroupUserEntity.Fields.groupId).is(Long.parseLong(groupId))),
-                    MongoGroupUserEntity.class);
-            if (mongoGroupUser != null) {
-                groupUserEntity = convertMongoGroupUserToGroupUser(mongoGroupUser);
-                updateGroupUserCache(cacheKey, groupUserEntity);
-                return groupUserEntity;
-            }
-        } catch (Exception e) {
-            log.warn("从MongoDB查询群成员异常, appKey: {}, groupId: {}, memberId: {}", appKey, groupId, memberId, e);
-        }
-        
-        // 4. MySQL
-        return queryGroupUserEntityFromDataBase(cacheKey, appKey, groupId, memberId);
+        return RepositorySupports.GROUP.groupUserEntity(appKey, groupId, memberId);
     }
 
-
-    /**
-     * 从数据库查询群成员信息
-     * @param appKey
-     * @param groupId
-     * @param memberId
-     * @return
-     */
-    private GroupUserEntity queryGroupUserEntityFromDataBase(String cacheKey, String appKey, String groupId, String memberId) {
-        try {
-            GroupUserEntity groupUserEntity = jdbcClient.sql(JdbcSqlDialectHolder.selectGroupUser())
-                    .param(GroupUserEntity.Fields.userId, memberId)
-                    .param(GroupUserEntity.Fields.groupId, groupId)
-                    .query(GroupUserEntity.class)
-                    .optional()
-                    .orElse(null);
-            if (groupUserEntity != null) {
-                updateGroupUserCache(cacheKey, groupUserEntity);
-            }
-            return groupUserEntity;
-        } catch (Exception e) {
-            log.error("从MySQL查询群成员异常, appKey: {}, groupId: {}, memberId: {}", appKey, groupId, memberId, e);
-            return null;
-        }
-    }
-
-    /**
-     * 响应式获取群成员信息（多级缓存：本地缓存 -> Redis -> MongoDB -> MySQL）
-     * @param appKey
-     * @param groupId
-     * @param memberId
-     * @return
-     */
-    @SuppressWarnings("unchecked")
     public Mono<GroupUserEntity> groupUserEntityReactive(String appKey, String groupId, String memberId) {
-        String cacheKey = CacheConstant.buildGroupUserConfigCacheKey(appKey, memberId, groupId);
-        
-        // 1. 本地缓存
-        GroupUserEntity localCached = MessageContext.groupUserEntityCache.get(cacheKey);
-        if (localCached != null) {
-            return Mono.just(localCached);
-        }
-        
-        // 2. Redis缓存（响应式）
-        return reactiveRedisTemplate.opsForValue().get(cacheKey)
-                .cast(GroupUserEntity.class)
-                .doOnNext((Object groupUserEntity) -> {
-                    if (groupUserEntity != null) {
-                        updateGroupUserCache(cacheKey, (GroupUserEntity) groupUserEntity);
-                    }
-                })
-                .switchIfEmpty(
-                        // 3. MongoDB（响应式）
-                        reactiveMongoTemplate.findOne(
-                                Query.query(Criteria.where(MongoGroupUserEntity.Fields.userId).is(Long.parseLong(memberId))
-                                        .and(MongoGroupUserEntity.Fields.groupId).is(Long.parseLong(groupId))),
-                                MongoGroupUserEntity.class)
-                                .map(this::convertMongoGroupUserToGroupUser)
-                                .doOnNext(groupUserEntity -> updateGroupUserCache(cacheKey, groupUserEntity))
-                                .switchIfEmpty(
-                                        // 4. MySQL（响应式）
-                                        Mono.fromCallable(() -> {
-                                            try {
-                                                return jdbcClient.sql(JdbcSqlDialectHolder.selectGroupUser())
-                                                        .param(GroupUserEntity.Fields.userId, memberId)
-                                                        .param(GroupUserEntity.Fields.groupId, groupId)
-                                                        .query(GroupUserEntity.class)
-                                                        .optional()
-                                                        .orElse(null);
-                                            } catch (Exception e) {
-                                                log.error("从MySQL查询群成员异常, appKey: {}, groupId: {}, memberId: {}", appKey, groupId, memberId, e);
-                                                return null;
-                                            }
-                                        })
-                                        .subscribeOn(Schedulers.fromExecutor(dbExecutor()))
-                                        .doOnNext(groupUserEntity -> {
-                                            if (groupUserEntity != null) {
-                                                updateGroupUserCache(cacheKey, groupUserEntity);
-                                            }
-                                        })
-                                )
-                )
-                .onErrorResume(e -> {
-                    log.error("响应式查询群成员异常, appKey: {}, groupId: {}, memberId: {}", appKey, groupId, memberId, e);
-                    return Mono.empty();
-                });
+        return RepositorySupports.GROUP.groupUserEntityReactive(appKey, groupId, memberId);
     }
 
-    /**
-     * 更新群成员缓存（本地缓存和Redis）
-     */
-    private void updateGroupUserCache(String cacheKey, GroupUserEntity groupUserEntity) {
-        if (groupUserEntity != null) {
-            MessageContext.groupUserEntityCache.put(cacheKey, groupUserEntity);
-            redisTemplate.opsForValue().set(cacheKey, groupUserEntity,
-                    MessageConstant.CACHE_ENTITY_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
-        }
-    }
-
-    /**
-     * 转换MongoDB群成员实体为MySQL群成员实体
-     */
-    private GroupUserEntity convertMongoGroupUserToGroupUser(MongoGroupUserEntity mongoGroupUser) {
-        if (mongoGroupUser == null) {
-            return null;
-        }
-        GroupUserEntity groupUserEntity = new GroupUserEntity();
-        groupUserEntity.setId(mongoGroupUser.getId());
-        groupUserEntity.setGroupId(mongoGroupUser.getGroupId());
-        groupUserEntity.setGroupCode(mongoGroupUser.getGroupCode());
-        groupUserEntity.setGroupNickName(mongoGroupUser.getGroupNickName());
-        groupUserEntity.setUserId(mongoGroupUser.getUserId());
-        groupUserEntity.setUserCode(mongoGroupUser.getUserCode());
-        groupUserEntity.setPost(mongoGroupUser.getPost());
-        groupUserEntity.setSilence(mongoGroupUser.getSilence());
-        groupUserEntity.setUserNickName(mongoGroupUser.getUserNickName());
-        groupUserEntity.setShield(mongoGroupUser.getShield());
-        groupUserEntity.setCreateTime(mongoGroupUser.getCreateTime());
-        return groupUserEntity;
-    }
-
-
-    /**
-     * 获取群管理员和群主的唯一标识
-     *
-     * @param packet
-     * @return
-     */
-    @SuppressWarnings("unchecked")
     public Set<String> groupManagerAndLeaderUsersIdentity(Packet packet) {
-        return stringRedisTemplate.opsForZSet().rangeByScore(CacheConstant.buildGroupUserCacheKey(packet.getMessage().getMetadata().getAppKey(), packet.getMessage().getTo()), GroupUserPost.MANAGER.value(), GroupUserPost.LEADER.value());
+        return RepositorySupports.GROUP.groupManagerAndLeaderUsersIdentity(packet);
     }
-    /**
-     * 获取群管理员和群主的唯一标识
-     *
-     * @param packet
-     * @return
-     */
-    @SuppressWarnings("unchecked")
+
     public Map<String, Double> groupManagerAndLeaderUsersIdentityAndPost(Packet packet) {
-        Map<String, Double>  groupManagerAndLeaderUsersIdentityAndPost = new HashMap<>();
-        Set<ZSetOperations.TypedTuple<String>> tuples = stringRedisTemplate.opsForZSet().rangeByScoreWithScores(CacheConstant.buildGroupUserCacheKey(packet.getMessage().getMetadata().getAppKey(), packet.getMessage().getTo()), GroupUserPost.MANAGER.value(), GroupUserPost.LEADER.value());
-        if (tuples != null && !tuples.isEmpty()) {
-            for (ZSetOperations.TypedTuple<String> tuple : tuples) {
-                groupManagerAndLeaderUsersIdentityAndPost.put(tuple.getValue(), tuple.getScore());
-            }
-        }
-        return groupManagerAndLeaderUsersIdentityAndPost;
+        return RepositorySupports.GROUP.groupManagerAndLeaderUsersIdentityAndPost(packet);
     }
 
-
-
-
-
-
-    /**
-     * 保存业务消息热 key 与会话 ZSet 索引
-     * @param packet
-     * @param expireTime 过期时间，单位毫秒，多久后过期
-     * @return
-     */
     public Mono<Boolean> reactiveSaveMessage(Packet packet, String sessionId, long expireTime) {
-        Message message = packet.getMessage();
-        Metadata metadata = message.getMetadata();
-        return Mono.fromCallable(() -> saveMessageWithSession(packet, expireTime, CacheConstant.buildMessageCacheKey(metadata.getAppKey(), packet.getPacketId()), CacheConstant.buildSessionCacheKey(metadata.getAppKey(), sessionId), (ops) -> {}, (ops, msg, app, f, t) -> {}))
-                // 指定在弹性线程池中执行阻塞操作，避免阻塞Netty事件循环
-                .subscribeOn(Schedulers.boundedElastic())
-                // 响应式错误处理
-                .onErrorResume(e -> {
-                    log.error("Reactive save message failed: {}", e.getMessage(), e);
-                    return Mono.just(false);
-                });
+        return RepositorySupports.SESSION.reactiveSaveMessage(packet, sessionId, expireTime);
     }
 
-
-    /**
-     * 保存加好友请求,
-     * @param packet
-     * @param expireTime 过期时间，单位毫秒，多久后过期
-     * @return
-     */
     public boolean saveJoinFriendRequestMessage(Packet packet, RequestSession requestSession, long expireTime) {
-        Message message = packet.getMessage();
-        return saveFriendRequestMessage(packet, requestSession.getSessionId(), expireTime, (redisConnection)-> {
-            String friendRequestCacheKey = CacheConstant.buildFriendRequestCacheKey(message.getMetadata().getAppKey(), message.getFrom(), message.getTo());
-            // 修复：key 必须用 stringSerializer，与 saveRefuseFriendRequestMessage 保持一致，否则后续读取时无法命中
-            byte[] keyBytes = serializeOrNull(stringSerializer, friendRequestCacheKey);
-            byte[] valueBytes = serializeOrNull(valueSerializer, requestSession);
-            redisConnection.commands().set(keyBytes, valueBytes, Expiration.milliseconds(MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP), RedisStringCommands.SetOption.SET_IF_ABSENT);
-        });
+        return RepositorySupports.FRIEND.saveJoinFriendRequestMessage(packet, requestSession, expireTime);
     }
 
-
-    /**
-     * 获取加好友请求会话信息
-     * @param appKey
-     * @param from
-     * @param to
-     * @return
-     */
     public RequestSession getFriendRequestSession(String appKey, String from, String to) {
-        return  (RequestSession) redisTemplate.opsForValue().get(CacheConstant.buildFriendRequestCacheKey(appKey, from, to));
+        return RepositorySupports.FRIEND.getFriendRequestSession(appKey, from, to);
     }
 
-    /**
-     * 获取好友请求会话信息
-     * @param appKey
-     * @param joiner
-     * @param groupId
-     * @return
-     */
     public GroupRequestSession getGroupRequestSession(String appKey, String joiner, String groupId) {
-        return  (GroupRequestSession) redisTemplate.opsForValue().get(CacheConstant.buildGroupRequestCacheKey(appKey, joiner, groupId));
+        return RepositorySupports.GROUP.getGroupRequestSession(appKey, joiner, groupId);
     }
 
-    /**
-     * 保存拒绝好友请求,
-     * @param packet
-     * @param expireTime
-     * @return
-     */
     public boolean saveRefuseFriendRequestMessage(Packet packet, RequestSession requestSession, long expireTime) {
-        Message message = packet.getMessage();
-        return saveFriendRequestMessage(packet, requestSession.getSessionId(), expireTime, (redisConnection)-> {
-            String friendRequestCacheKey = CacheConstant.buildFriendRequestCacheKey(message.getMetadata().getAppKey(), message.getTo(), message.getFrom());
-            byte[] keyBytes = serializeOrNull(stringSerializer, friendRequestCacheKey);
-            byte[] valueBytes = serializeOrNull(valueSerializer, requestSession);
-            redisConnection.commands().set(keyBytes, valueBytes, Expiration.milliseconds(MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP), RedisStringCommands.SetOption.UPSERT);
-        });
+        return RepositorySupports.FRIEND.saveRefuseFriendRequestMessage(packet, requestSession, expireTime);
     }
 
-    /**
-     * 保存好友请求,
-     * @param packet
-     * @param expireTime 过期时间，单位毫秒，多久后过期
-     * @return
-     */
-    private<K,V> boolean saveFriendRequestMessage(Packet packet, String friendRequestSessionId, long expireTime, Consumer<RedisConnection> consumer) {
-        // 调用公共方法，传入空的额外操作
-        Message message = packet.getMessage();
-        Metadata metadata = message.getMetadata();
-        String appKey = metadata.getAppKey();
-        String from = message.getFrom();
-        String to = message.getTo();
-        return saveMessageWithSession(packet, expireTime, CacheConstant.buildMessageCacheKey(appKey, packet.getPacketId()), CacheConstant.buildFriendRequestSessionCacheKey(appKey, IdentityUtil.sessionId(from, to), friendRequestSessionId), consumer, (ops, msg, ak, f, t) -> {});
-    }
-
-
-    /**
-     * 判断在appKey 下 from 和 to 是否是好友关系
-     * @param appKey
-     * @param from
-     * @param to
-     * @return
-     */
-    @SuppressWarnings("unchecked")
     public boolean isFriend(String appKey, String from, String to) {
-        String cacheKey = CacheConstant.buildFriendsConfigCacheKey(appKey, from, to);
-        // 1. 本地缓存
-        FriendEntity friendEntity = MessageContext.friendEntityCache.get(cacheKey);
-        if (friendEntity != null) {
-            return true;
-        }
-        // 这里是否再去查询数据库？没有太大必要，后续如果需要再加
-        return stringRedisTemplate.opsForZSet().score(CacheConstant.buildFriendsCacheKey(appKey, from), to) != null;
+        return RepositorySupports.FRIEND.isFriend(appKey, from, to);
     }
 
-    /**
-     * 判断在appKey 下 from 是否已经在群中
-     * @param appKey
-     * @param from
-     * @param groupId
-     * @return
-     */
-    @SuppressWarnings("unchecked")
     public boolean inGroup(String appKey, String from, String groupId) {
-        String cacheKey = CacheConstant.buildGroupUserConfigCacheKey(appKey, from, groupId);
-        // 1. 本地缓存
-        GroupUserEntity groupUserEntity = MessageContext.groupUserEntityCache.get(cacheKey);
-        if (groupUserEntity != null) {
-            return true;
-        }
-        // 这里是否再去查询数据库？没有太大必要，后续如果需要再加
-        return stringRedisTemplate.opsForZSet().score(CacheConstant.buildGroupUserCacheKey(appKey, groupId), from) != null;
+        return RepositorySupports.GROUP.inGroup(appKey, from, groupId);
     }
 
-
-    /**
-     * 获取在appKey 下 from 的所有好友
-     * @return
-     */
     public Collection<String> getFriendIds(String appKey, String from) {
-       return stringRedisTemplate.opsForZSet().range(CacheConstant.buildFriendsCacheKey(appKey, from), NumberConstant.NUMBER_0, NumberConstant.NUMBER_NEGATIVE_1);
+        return RepositorySupports.FRIEND.getFriendIds(appKey, from);
     }
 
-
-    /**
-     * 响应式获取好友关系（多级缓存：本地缓存 -> Redis -> MongoDB -> MySQL）
-     * @param appKey
-     * @param from
-     * @param to
-     * @return
-     */
-    @SuppressWarnings("unchecked")
     public Mono<FriendEntity> getFriendReactive(String appKey, String from, String to) {
-        String cacheKey = CacheConstant.buildFriendsConfigCacheKey(appKey, from, to);
-        
-        // 1. 本地缓存
-        FriendEntity localCached = MessageContext.friendEntityCache.get(cacheKey);
-        if (localCached != null) {
-            return Mono.just(localCached);
-        }
-        
-        // 2. Redis缓存（响应式）
-        return reactiveRedisTemplate.opsForValue().get(cacheKey)
-                .cast(FriendEntity.class)
-                .doOnNext((Object friendEntity) -> {
-                    if (friendEntity != null) {
-                        updateFriendCache(cacheKey, (FriendEntity) friendEntity);
-                    }
-                })
-                .switchIfEmpty(
-                        // 3. MongoDB（响应式）
-                        reactiveMongoTemplate.findOne(
-                                Query.query(Criteria.where(MongoFriendEntity.Fields.userId).is(Long.parseLong(from))
-                                        .and(MongoFriendEntity.Fields.friendUserId).is(Long.parseLong(to))),
-                                MongoFriendEntity.class)
-                                .map(this::convertMongoFriendToFriend)
-                                .doOnNext(friendEntity -> updateFriendCache(cacheKey, friendEntity))
-                                .switchIfEmpty(
-                                        // 4. MySQL（响应式）
-                                        Mono.fromCallable(() -> {
-                                            try {
-                                                return jdbcClient.sql(JdbcSqlDialectHolder.selectFriend())
-                                                        .param(FriendEntity.Fields.userId, from)
-                                                        .param(FriendEntity.Fields.friendUserId, to)
-                                                        .query(FriendEntity.class)
-                                                        .optional()
-                                                        .orElse(null);
-                                            } catch (Exception e) {
-                                                log.error("从MySQL查询好友关系异常, appKey: {}, from: {}, to: {}", appKey, from, to, e);
-                                                return null;
-                                            }
-                                        })
-                                        .subscribeOn(Schedulers.fromExecutor(dbExecutor()))
-                                        .doOnNext(friendEntity -> {
-                                            if (friendEntity != null) {
-                                                updateFriendCache(cacheKey, friendEntity);
-                                            }
-                                        })
-                                )
-                )
-                .onErrorResume(e -> {
-                    log.error("响应式查询好友关系异常, appKey: {}, from: {}, to: {}", appKey, from, to, e);
-                    return Mono.empty();
-                });
+        return RepositorySupports.FRIEND.getFriendReactive(appKey, from, to);
     }
 
-    /**
-     * 更新好友缓存（本地缓存和Redis）
-     */
-    private void updateFriendCache(String cacheKey, FriendEntity friendEntity) {
-        if (friendEntity != null) {
-            MessageContext.friendEntityCache.put(cacheKey, friendEntity);
-            redisTemplate.opsForValue().set(cacheKey, friendEntity,
-                    MessageConstant.CACHE_ENTITY_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
-        }
-    }
-
-    /**
-     * 转换MongoDB好友实体为MySQL好友实体
-     */
-    private FriendEntity convertMongoFriendToFriend(MongoFriendEntity mongoFriend) {
-        if (mongoFriend == null) {
-            return null;
-        }
-        FriendEntity friendEntity = new FriendEntity();
-        friendEntity.setId(mongoFriend.getId());
-        friendEntity.setUserId(mongoFriend.getUserId());
-        friendEntity.setFriendUserId(mongoFriend.getFriendUserId());
-        friendEntity.setFriendUserCode(mongoFriend.getFriendUserCode());
-        friendEntity.setFriendNickName(mongoFriend.getFriendNickName());
-        friendEntity.setShield(mongoFriend.getShield());
-        friendEntity.setCreateTime(mongoFriend.getCreateTime());
-        friendEntity.setUpdateTime(mongoFriend.getUpdateTime());
-        return friendEntity;
-    }
-
-    /**
-     * 获取在appKey 下 from 和 to 的朋友关系（同步版本，多级缓存：本地缓存 -> Redis -> MongoDB -> MySQL）
-     * @param appKey
-     * @param groupId
-     * @return
-     */
     public GroupEntity getGroupEntity(String appKey, String groupId) {
-        String cacheKey = CacheConstant.buildGroupCacheKey(appKey, groupId);
-        
-        // 1. 本地缓存
-        GroupEntity groupEntity = MessageContext.groupEntityCache.get(cacheKey);
-        if (groupEntity != null) {
-            return groupEntity;
-        }
-        
-        // 2. Redis缓存
-        groupEntity = (GroupEntity) redisTemplate.opsForValue().get(cacheKey);
-        if (groupEntity != null) {
-            updateGroupCache(cacheKey, groupEntity);
-            return groupEntity;
-        }
-        
-        // 3. MongoDB
-        try {
-            MongoGroupEntity mongoGroup = mongoTemplate.findOne(
-                    Query.query(Criteria.where(MongoGroupEntity.Fields.id).is(Long.parseLong(groupId))
-                            .and(MongoGroupEntity.Fields.deleted).is(NumberConstant.NUMBER_0)),
-                    MongoGroupEntity.class);
-            if (mongoGroup != null) {
-                groupEntity = convertMongoGroupToGroup(mongoGroup);
-                updateGroupCache(cacheKey, groupEntity);
-                return groupEntity;
-            }
-        } catch (Exception e) {
-            log.warn("从MongoDB查询群组异常, appKey: {}, groupId: {}", appKey, groupId, e);
-        }
-        
-        // 4. MySQL
-        groupEntity = getGroupEntityFromDatabases(appKey, groupId);
-        if (groupEntity != null) {
-            updateGroupCache(cacheKey, groupEntity);
-        }
-        
-        return groupEntity;
+        return RepositorySupports.GROUP.getGroupEntity(appKey, groupId);
     }
 
-    /**
-     * 响应式获取群组实体（多级缓存：本地缓存 -> Redis -> MongoDB -> MySQL）
-     * @param appKey
-     * @param groupId
-     * @return
-     */
-    @SuppressWarnings("unchecked")
     public Mono<GroupEntity> getGroupEntityReactive(String appKey, String groupId) {
-        String cacheKey = CacheConstant.buildGroupCacheKey(appKey, groupId);
-        
-        // 1. 本地缓存
-        GroupEntity localCached = MessageContext.groupEntityCache.get(cacheKey);
-        if (localCached != null) {
-            return Mono.just(localCached);
-        }
-        
-        // 2. Redis缓存（响应式）
-        return reactiveRedisTemplate.opsForValue().get(cacheKey)
-                .cast(GroupEntity.class)
-                .doOnNext((Object groupEntity) -> {
-                    if (groupEntity != null) {
-                        updateGroupCache(cacheKey, (GroupEntity) groupEntity);
-                    }
-                })
-                .switchIfEmpty(
-                        // 3. MongoDB（响应式）
-                        reactiveMongoTemplate.findOne(
-                                Query.query(Criteria.where(MongoGroupEntity.Fields.id).is(Long.parseLong(groupId))
-                                        .and(MongoGroupEntity.Fields.deleted).is(NumberConstant.NUMBER_0)),
-                                MongoGroupEntity.class)
-                                .map(this::convertMongoGroupToGroup)
-                                .doOnNext(groupEntity -> updateGroupCache(cacheKey, groupEntity))
-                                .switchIfEmpty(
-                                        // 4. MySQL（响应式）
-                                        getGroupEntityFromDatabasesReactive(appKey, groupId)
-                                                .doOnNext(groupEntity -> {
-                                                    if (groupEntity != null) {
-                                                        updateGroupCache(cacheKey, groupEntity);
-                                                    }
-                                                })
-                                )
-                )
-                .onErrorResume(e -> {
-                    log.error("响应式查询群组异常, appKey: {}, groupId: {}", appKey, groupId, e);
-                    return Mono.empty();
-                });
+        return RepositorySupports.GROUP.getGroupEntityReactive(appKey, groupId);
     }
 
-    /**
-     * 更新群组缓存（本地缓存和Redis）
-     */
-    private void updateGroupCache(String cacheKey, GroupEntity groupEntity) {
-        if (groupEntity != null) {
-            MessageContext.groupEntityCache.put(cacheKey, groupEntity);
-            redisTemplate.opsForValue().set(cacheKey, groupEntity,
-                    MessageConstant.CACHE_ENTITY_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
-        }
-    }
-
-    /**
-     * 转换MongoDB群组实体为MySQL群组实体
-     */
-    private GroupEntity convertMongoGroupToGroup(MongoGroupEntity mongoGroup) {
-        if (mongoGroup == null) {
-            return null;
-        }
-        GroupEntity groupEntity = new GroupEntity();
-        groupEntity.setId(mongoGroup.getId());
-        groupEntity.setGroupCode(mongoGroup.getGroupCode());
-        groupEntity.setGroupName(mongoGroup.getGroupName());
-        groupEntity.setGroupAvatar(mongoGroup.getGroupAvatar());
-        groupEntity.setGroupDescription(mongoGroup.getGroupDescription());
-        groupEntity.setGroupAnnouncement(mongoGroup.getGroupAnnouncement());
-        groupEntity.setGroupJoinPolicy(mongoGroup.getGroupJoinPolicy());
-        groupEntity.setStatus(mongoGroup.getStatus());
-        groupEntity.setSilence(mongoGroup.getSilence());
-        groupEntity.setAppKey(mongoGroup.getAppKey());
-        groupEntity.setCreateTime(mongoGroup.getCreateTime());
-        groupEntity.setUpdateTime(mongoGroup.getUpdateTime());
-        groupEntity.setDeleted(mongoGroup.getDeleted());
-        return groupEntity;
-    }
-
-    /**
-     * 从数据库中获取群组实体
-     * @param appKey
-     * @param groupId
-     * @return
-     */
     public GroupEntity getGroupEntityFromDatabases(String appKey, String groupId) {
-        try {
-            GroupEntity groupEntity = jdbcClient.sql(JdbcSqlDialectHolder.selectGroup())
-                    .param(GroupEntity.Fields.id, groupId)
-                    .query(GroupEntity.class)
-                    .single();
-            // 走不到这里就会进异常
-            redisTemplate.opsForValue().set(CacheConstant.buildGroupCacheKey(appKey, groupId), groupEntity,
-                    MessageConstant.CACHE_ENTITY_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
-            return groupEntity;
-        } catch (EmptyResultDataAccessException e) {
-            log.warn("群组不存在, groupId: {}", groupId);
-            return null;
-        } catch (IncorrectResultSizeDataAccessException e) {
-            log.error("同一个groupId存在多个群组, groupId: {}", groupId);
-            throw new RuntimeException("同一个groupIdy存在多个用于, groupId: " + groupId);
-        }catch (Exception e) {
-            log.error("获取群组实体异常, groupId: {}, 原因：{}", groupId, e.getMessage());
-            throw new RuntimeException("获取群组实体异常, groupId: " + groupId);
-        }
+        return RepositorySupports.GROUP.getGroupEntityFromDatabases(appKey, groupId);
     }
 
-    /**
-     * 响应式封装：将同步数据库查询转换为 Mono<GroupEntity>
-     * 核心：通过 publishOn 切换到专用线程池执行同步任务，避免阻塞核心线程
-     */
     public Mono<GroupEntity> getGroupEntityFromDatabasesReactive(String appKey, String groupId) {
-        // 1. 入参校验（提前拦截无效请求，避免线程池资源浪费）
-        if (StringUtils.isBlank(appKey) || StringUtils.isBlank(groupId)) {
-            log.warn("响应式查询群组：appKey 或 groupId 为空，appKey:{}, groupId:{}", appKey, groupId);
-            return Mono.empty(); // 空参数返回空流
-        }
-
-        // 2. 将同步方法封装为 Supplier（供给型函数，无参有返回值）
-        // 注意：Supplier 中的逻辑会在 publishOn 指定的线程池中执行
-        return Mono.fromSupplier(() -> getGroupEntityFromDatabases(appKey, groupId))
-                // 3. 切换到专用线程池执行同步任务（关键：避免阻塞 Reactor 核心线程）
-                .publishOn(Schedulers.fromExecutor(dbExecutor()))
-                // 4. 响应式异常处理：将同步方法抛出的 RuntimeException 转换为响应式错误信号
-                .onErrorResume(e -> {
-                    log.error("响应式查询群组异常, appKey:{}, groupId:{}", appKey, groupId, e);
-                    // 返回错误信号，上游可通过 onError 捕获
-                    return Mono.error(new RuntimeException("响应式查询群组失败, groupId: " + groupId, e));
-                })
-                // 5. 日志记录：打印响应式流的结果（可选，用于调试）
-                .doOnSuccess(groupEntity -> {
-                    if (groupEntity == null) {
-                        log.debug("响应式查询群组：未找到群组, appKey:{}, groupId:{}", appKey, groupId);
-                    } else {
-                        log.debug("响应式查询群组：成功获取群组, appKey:{}, groupId:{}, 状态:{}",
-                                appKey, groupId, groupEntity.getStatus());
-                    }
-                });
+        return RepositorySupports.GROUP.getGroupEntityFromDatabasesReactive(appKey, groupId);
     }
 
-    /**
-     * 获取用户实体（同步版本，多级缓存：本地缓存 -> Redis -> MongoDB -> MySQL）
-     * @param appKey
-     * @param identity 用户ID
-     * @return
-     */
-    @SuppressWarnings("unchecked")
     public UserEntity getUserEntity(String appKey, String identity) {
-        String userCacheKey = CacheConstant.buildUserCacheKey(appKey, identity);
-        
-        // 1. 本地缓存
-        UserEntity userEntity = MessageContext.userEntityCache.get(userCacheKey);
-        if (userEntity != null) {
-            return userEntity;
-        }
-        
-        // 2. Redis缓存
-        userEntity = (UserEntity) redisTemplate.opsForValue().get(userCacheKey);
-        if (userEntity != null) {
-            updateUserCache(userCacheKey, userEntity);
-            return userEntity;
-        }
-        
-        // 3. MongoDB
-        try {
-            MongoUserEntity mongoUser = mongoTemplate.findOne(
-                    Query.query(Criteria.where(MongoUserEntity.Fields.id).is(Long.parseLong(identity))
-                            .and(MongoUserEntity.Fields.deleted).is(NumberConstant.NUMBER_0)),
-                    MongoUserEntity.class);
-            if (mongoUser != null) {
-                userEntity = convertMongoUserToUser(mongoUser);
-                updateUserCache(userCacheKey, userEntity);
-                return userEntity;
-            }
-        } catch (Exception e) {
-            log.warn("从MongoDB查询用户异常, appKey: {}, identity: {}", appKey, identity, e);
-        }
-        
-        // 4. MySQL
-        try {
-            userEntity = jdbcClient.sql(JdbcSqlDialectHolder.selectUser())
-                    .param(UserEntity.Fields.id, identity)
-                    .query(UserEntity.class)
-                    .single();
-            // 存到缓存中,30天
-            updateUserCache(userCacheKey, userEntity);
-            return userEntity;
-        } catch (EmptyResultDataAccessException e) {
-            log.warn("用户不存在, identity: {}", identity);
-            return null;
-        } catch (IncorrectResultSizeDataAccessException e) {
-            log.error("同一个identity存在多个用户, identity: {}", identity);
-            throw new RuntimeException("同一个identity存在多个用于, identity: " + identity);
-        }catch (Exception e) {
-            log.error("获取用户实体异常, identity: {}, 原因：{}", identity, e.getMessage());
-            throw new RuntimeException("获取用户实体异常, identity: " + identity);
-        }
+        return RepositorySupports.USER.getUserEntity(appKey, identity);
     }
 
-    /**
-     * 更新用户缓存（本地缓存和Redis）
-     */
-    private void updateUserCache(String cacheKey, UserEntity userEntity) {
-        if (userEntity != null) {
-            MessageContext.userEntityCache.put(cacheKey, userEntity);
-            redisTemplate.opsForValue().set(cacheKey, userEntity, NumberConstant.NUMBER_30 * MessageConstant.DAY_TIMESTAMP, TimeUnit.MILLISECONDS);
-        }
-    }
-
-    /**
-     * 转换MongoDB用户实体为MySQL用户实体
-     */
-    private UserEntity convertMongoUserToUser(MongoUserEntity mongoUser) {
-        if (mongoUser == null) {
-            return null;
-        }
-        UserEntity userEntity = new UserEntity();
-        userEntity.setId(mongoUser.getId());
-        userEntity.setOpenId(mongoUser.getOpenId());
-        userEntity.setCode(mongoUser.getCode());
-        userEntity.setUsername(mongoUser.getUsername());
-        userEntity.setPassword(mongoUser.getPassword());
-        userEntity.setNickName(mongoUser.getNickName());
-        userEntity.setAvatar(mongoUser.getAvatar());
-        userEntity.setMotto(mongoUser.getMotto());
-        userEntity.setAge(mongoUser.getAge());
-        userEntity.setSex(mongoUser.getSex());
-        userEntity.setEmail(mongoUser.getEmail());
-        userEntity.setPhoneNum(mongoUser.getPhoneNum());
-        userEntity.setIdCardNo(mongoUser.getIdCardNo());
-        userEntity.setGroupInvitePolicy(mongoUser.getGroupInvitePolicy());
-        userEntity.setFriendJoinPolicy(mongoUser.getFriendJoinPolicy());
-        userEntity.setStatus(mongoUser.getStatus());
-        userEntity.setAppKey(mongoUser.getAppKey());
-        userEntity.setRobot(mongoUser.getRobot());
-        userEntity.setCreateTime(mongoUser.getCreateTime());
-        userEntity.setUpdateTime(mongoUser.getUpdateTime());
-        userEntity.setDeleted(mongoUser.getDeleted());
-        return userEntity;
-    }
-
-
-    /**
-     * 自动通过绑定好友关系，在缓存中
-     * @param packet
-     * @return
-     */
     public boolean autoPassBindFriend(Packet packet, RequestSession requestSession, long expireTime) {
-        Message message = packet.getMessage();
-        String appKey = message.getMetadata().getAppKey();
-        return bindFriend(packet, requestSession.getSessionId(), expireTime, (redisConnection)-> {
-            String friendRequestCacheKey = CacheConstant.buildFriendRequestCacheKey(appKey, message.getFrom(), message.getTo());
-            byte[] keyBytes = serializeOrNull(stringSerializer, friendRequestCacheKey);
-            byte[] valueBytes = serializeOrNull(valueSerializer, requestSession);
-            redisConnection.commands().set(keyBytes, valueBytes, Expiration.milliseconds(MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP), RedisStringCommands.SetOption.UPSERT);
-        });
+        return RepositorySupports.FRIEND.autoPassBindFriend(packet, requestSession, expireTime);
     }
 
-    /**
-     * 同意绑定好友关系，在缓存中
-     * @param appKey
-     * @param packet
-     * @return
-     */
     public boolean agreeBindFriend(String appKey, Packet packet, RequestSession requestSession, long expireTime) {
-        Message message = packet.getMessage();
-        return bindFriend(packet, requestSession.getSessionId(), expireTime, (redisConnection)-> {
-            String friendRequestCacheKey = CacheConstant.buildFriendRequestCacheKey(appKey, message.getTo(), message.getFrom());
-            byte[] keyBytes = serializeOrNull(stringSerializer, friendRequestCacheKey);
-            byte[] valueBytes = serializeOrNull(valueSerializer, requestSession);
-            redisConnection.commands().set(keyBytes, valueBytes, Expiration.milliseconds(MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP), RedisStringCommands.SetOption.UPSERT);
-        });
+        return RepositorySupports.FRIEND.agreeBindFriend(appKey, packet, requestSession, expireTime);
     }
 
-
-    /**
-     * 绑定好友关系，在缓存中
-     * @param packet
-     * @param expireTime
-     * @param consumer
-     * @return
-     */
-    private<K,V> boolean bindFriend(Packet packet, String friendRequestSessionId, long expireTime, Consumer<RedisConnection> consumer) {
-        Message message = packet.getMessage();
-        Metadata metadata = message.getMetadata();
-        String from = message.getFrom();
-        String to = message.getTo();
-        String appKey = metadata.getAppKey();
-        return saveMessageWithSession(packet, expireTime, CacheConstant.buildMessageCacheKey(appKey, packet.getPacketId()), CacheConstant.buildFriendRequestSessionCacheKey(appKey, IdentityUtil.sessionId(from, to), friendRequestSessionId), consumer,
-                (redisConnection, msg, ak, f, t) -> {
-                    // 1. 获取 String 序列化器（与前文保持一致，确保序列化规则统一）
-                    // 建立双向好友关系（仅bindFriend方法需要的逻辑）
-                    // 2. 使用字符串序列化器处理ZSet操作（保持原生字符串特性）
-                    // 转换键和值为字符串类型的键
-                    redisConnection.zSetCommands().zAdd(stringSerializer.serialize(CacheConstant.buildFriendsCacheKey(appKey, from)), msg.getMetadata().getServerTime() , stringSerializer.serialize(t));
-                    redisConnection.zSetCommands().zAdd(stringSerializer.serialize(CacheConstant.buildFriendsCacheKey(appKey, to)), msg.getMetadata().getServerTime(), stringSerializer.serialize(f));
-                });
-    }
-
-
-    /**
-     * 公共执行方法：提取重复逻辑，通过函数接口注入差异化操作
-     * @param packet 消息包
-     * @param expireTime 过期时间
-     * @param consumer 自定义处理逻辑
-     * @param extraOperation 额外操作（差异化逻辑）
-     * @return 是否执行成功
-     */
-    @SuppressWarnings("unchecked")
-    private<K, V> boolean saveMessageWithSession(Packet packet, long expireTime, String messageKey, String sessionKey, Consumer<RedisConnection> consumer, FiveConsumer<RedisConnection, Message, String, String, String> extraOperation) {
-        return isSaveAccepted(saveMessageWithSessionOutcome(packet, expireTime, messageKey, sessionKey, consumer, extraOperation));
-    }
-
-    @SuppressWarnings("unchecked")
-    private<K, V> SaveMessageOutcome saveMessageWithSessionOutcome(Packet packet, long expireTime, String messageKey, String sessionKey, Consumer<RedisConnection> consumer, FiveConsumer<RedisConnection, Message, String, String, String> extraOperation) {
-        if (packet == null || redisTemplate.getConnectionFactory() == null) {
-            log.error("Packet 或 RedisConnectionFactory 为空");
-            return SaveMessageOutcome.FAILED;
-        }
-
-
-        RedisConnectionFactory connectionFactory = redisTemplate.getConnectionFactory();
-
-        try (RedisConnection conn = connectionFactory.getConnection()) {
-            log.debug("获取 Redis 连接成功: {}", conn.hashCode());
-
-            conn.openPipeline();
-            log.debug("Pipeline 已开启");
-
-            // === 解析业务参数 ===
-            Message message = packet.getMessage();
-            Metadata metadata = message != null ? message.getMetadata() : null;
-            if (message == null || metadata == null) {
-                log.error("消息或元数据为空");
-                return SaveMessageOutcome.FAILED;
-            }
-
-            String appKey = metadata.getAppKey();
-            String from = message.getFrom();
-            String to = message.getTo();
-            boolean qosSave = MessageContext.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel();
-            if (qosSave && !QosIdempotencyHelper.tryClaim(redisTemplate, appKey, packet.getPacketId(), from, message.getId())) {
-                return SaveMessageOutcome.DUPLICATE;
-            }
-            String formatPacketId = MessageContext.idGenerator().formatLongId19Str(packet.getPacketId());
-
-            byte[] packetIdBytes = serializeOrThrow(stringSerializer, formatPacketId, "PacketId");
-            byte[] msgKeyBytes = serializeOrNull(stringSerializer, messageKey);
-            byte[] packetBytes = serializeOrNull(valueSerializer, packet);
-
-            // === 步骤6：保存消息主体 SET + PEXPIRE ===
-            if (msgKeyBytes != null && packetBytes != null) {
-                conn.commands().set(msgKeyBytes, packetBytes);
-                if (expireTime > 0) {
-                    conn.keyCommands().pExpire(msgKeyBytes, expireTime);
-                }
-                log.debug("消息主体命令入队: {}", messageKey);
-            } else {
-                log.warn("消息主体序列化失败，跳过");
-            }
-
-            // === 步骤7：会话 ZSet 添加 ZADD ===
-            byte[] sessionKeyBytes = serializeOrNull(stringSerializer, sessionKey);
-            if (sessionKeyBytes != null) {
-                conn.zAdd(sessionKeyBytes, NumberConstant.NUMBER_0, packetIdBytes);
-                long sessionZSetExpireMs = MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP;
-                if (sessionZSetExpireMs > 0) {
-                    conn.keyCommands().pExpire(sessionKeyBytes, sessionZSetExpireMs);
-                }
-                // 裁剪超过上限的最老条目，防止 ZSet 无界增长（保留最新 SESSION_ZSET_MAX_SIZE 条）
-                conn.zSetCommands().zRemRange(sessionKeyBytes, 0, -(MessageConstant.SESSION_ZSET_MAX_SIZE + 1L));
-                log.debug("会话ZSet命令入队: {}", sessionKey);
-            }
-
-            // === 步骤8：额外差异化操作 ===
-            if (extraOperation != null) {
-                safelyExecute(() -> extraOperation.accept(conn, message, appKey, from, to), "额外操作");
-            }
-
-            // === 步骤10：自定义逻辑 ===
-            if (consumer != null) {
-                safelyExecute(() -> consumer.accept(conn), "自定义逻辑");
-            }
-
-            // === 步骤11：关闭 Pipeline 并获取结果 ===
-            List<Object> results;
-            try {
-                results = conn.closePipeline();
-                log.debug("Pipeline 关闭成功，结果数量: {}", results.size());
-            } catch (Exception e) {
-                log.error("Pipeline 执行失败: ", e);
-                forceClosePipeline(conn);
-                if (qosSave) {
-                    QosIdempotencyHelper.releaseClaim(redisTemplate, appKey, packet.getPacketId(), from, message.getId());
-                }
-                return SaveMessageOutcome.FAILED;
-            }
-
-            if (CollectionUtils.isEmpty(results)) {
-                if (qosSave) {
-                    QosIdempotencyHelper.releaseClaim(redisTemplate, appKey, packet.getPacketId(), from, message.getId());
-                }
-                return SaveMessageOutcome.FAILED;
-            }
-            return SaveMessageOutcome.SUCCESS;
-
-        } catch (Exception e) {
-            log.error("Redis Pipeline 操作异常: ", e);
-            // 兜底释放 QoS 占位（外层异常通常发生在获取连接/参数解析阶段，claim 可能尚未写入；
-            // 但若已 tryClaim 成功后才抛错，则必须释放避免后续重试被判定为重复而永久丢失）
-            try {
-                Message message = packet != null ? packet.getMessage() : null;
-                Metadata metadata = message != null ? message.getMetadata() : null;
-                if (metadata != null && MessageContext.isQosEnable()
-                        && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
-                    QosIdempotencyHelper.releaseClaim(redisTemplate, metadata.getAppKey(),
-                            packet.getPacketId(), message.getFrom(), message.getId());
-                }
-            } catch (Exception ignored) {
-                // 释放失败不影响主流程，仅记录日志
-                log.warn("释放 QoS 占位异常", ignored);
-            }
-            return SaveMessageOutcome.FAILED;
-        }
-    }
-
-    private static boolean isSaveAccepted(SaveMessageOutcome outcome) {
-        return outcome == SaveMessageOutcome.SUCCESS || outcome == SaveMessageOutcome.DUPLICATE;
-    }
-
-    /**
-     * 释放 QoS 幂等占位键。当持久化成功但下游（Kafka/MQ/业务逻辑）失败时，
-     * 处理器应调用此方法释放 claim，否则客户端重试会被判定为重复消息导致永久丢失。
-     *
-     * @param packet 消息包
-     */
     public void releaseQosClaim(Packet packet) {
-        if (packet == null || packet.getMessage() == null) {
-            return;
-        }
-        Message message = packet.getMessage();
-        Metadata metadata = message.getMetadata();
-        if (metadata == null || !MessageContext.isQosEnable()
-                || message.getQos() <= QosLevelEnum.QOS_0.getLevel()) {
-            return;
-        }
-        try {
-            QosIdempotencyHelper.releaseClaim(redisTemplate, metadata.getAppKey(),
-                    packet.getPacketId(), message.getFrom(), message.getId());
-        } catch (Exception e) {
-            log.warn("释放 QoS 占位异常: packetId={}", packet.getPacketId(), e);
-        }
+        RepositorySupports.QOS.releaseQosClaim(packet);
     }
 
-    private <T> byte[] serializeOrNull(RedisSerializer<T> serializer, T value) {
-        try {
-            return serializer.serialize(value);
-        } catch (Exception e) {
-            log.warn("序列化失败: {}", value, e);
-            return null;
-        }
-    }
-
-    private <T> byte[] serializeOrThrow(RedisSerializer<T> serializer, T value, String fieldName) {
-        byte[] bytes = serializeOrNull(serializer, value);
-        if (bytes == null) throw new IllegalArgumentException(fieldName + " 序列化失败: " + value);
-        return bytes;
-    }
-
-
-    private void safelyExecute(Runnable runnable, String opName) {
-        try {
-            runnable.run();
-            log.debug("{} 执行完成", opName);
-        } catch (Exception e) {
-            log.error("{} 执行失败: {}", opName, e.getMessage(), e);
-        }
-    }
-
-    private void forceClosePipeline(RedisConnection conn) {
-        try {
-            if (!conn.isClosed()) {
-                conn.closePipeline();
-            }
-        } catch (Exception e) {
-            log.error("强制关闭Pipeline失败", e);
-        }
-    }
-
-
-    /**
-     * 自动通过绑定群组关系
-     * @return
-     */
     public boolean autoPassBindGroup(Packet packet, GroupRequestSession groupRequestSession, long expireTime) {
-        Message message = packet.getMessage();
-        Metadata metadata = message.getMetadata();
-        return bindGroup(packet, groupRequestSession.getJoiner(), groupRequestSession.getGroupId(), groupRequestSession.getSessionId(), expireTime, (redisConnection)-> {
-            String groupRequestCacheKey = CacheConstant.buildGroupRequestCacheKey(metadata.getAppKey(), groupRequestSession.getJoiner(), groupRequestSession.getGroupId());
-            byte[] keyBytes = serializeOrNull(stringSerializer, groupRequestCacheKey);
-            byte[] valueBytes = serializeOrNull(valueSerializer, groupRequestSession);
-            redisConnection.commands().set(keyBytes, valueBytes, Expiration.milliseconds(MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP), RedisStringCommands.SetOption.UPSERT);
-        });
+        return RepositorySupports.GROUP.autoPassBindGroup(packet, groupRequestSession, expireTime);
     }
 
-    /**
-     * 手动通过绑定群组关系
-     * @return
-     */
-    public boolean manualPassBindGroup(Packet packet,  GroupRequestSession groupRequestSession, long expireTime) {
-        Message message = packet.getMessage();
-        Metadata metadata = message.getMetadata();
-        return bindGroup(packet, groupRequestSession.getJoiner(), groupRequestSession.getGroupId(), groupRequestSession.getSessionId(),  expireTime, (redisConnection)-> {
-            String groupRequestCacheKey = CacheConstant.buildGroupRequestCacheKey(metadata.getAppKey(), groupRequestSession.getJoiner(), groupRequestSession.getGroupId());
-            byte[] keyBytes = serializeOrNull(stringSerializer, groupRequestCacheKey);
-            byte[] valueBytes = serializeOrNull(valueSerializer, groupRequestSession);
-            redisConnection.commands().set(keyBytes, valueBytes, Expiration.milliseconds(MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP), RedisStringCommands.SetOption.UPSERT);
-        });
+    public boolean manualPassBindGroup(Packet packet, GroupRequestSession groupRequestSession, long expireTime) {
+        return RepositorySupports.GROUP.manualPassBindGroup(packet, groupRequestSession, expireTime);
     }
 
-
-
-
-    /**
-     * 绑定好友关系，在缓存中
-     * @param packet
-     * @param expireTime
-     * @param consumer
-     * @return
-     */
-    @SuppressWarnings("unchecked")
-    private<K,V> boolean bindGroup(Packet packet, String joiner, String groupId, String requestSessionId, long expireTime, Consumer<RedisConnection> consumer) {
-        Message message = packet.getMessage();
-        Metadata metadata = message.getMetadata();
-        return saveMessageWithSession(packet, expireTime, CacheConstant.buildMessageCacheKey(metadata.getAppKey(), packet.getPacketId()), CacheConstant.buildGroupRequestSessionCacheKey(metadata.getAppKey(), groupId, requestSessionId), consumer, (redisConnection, msg, ak, f, t) -> {
-                    // 1. 获取 String 序列化器（与前文保持一致，确保序列化规则统一）
-                    // 建立双向好友关系（仅bindFriend方法需要的逻辑）
-                    // 2. 使用字符串序列化器处理ZSet操作（保持原生字符串特性）
-                    // 2. 使用字符串序列化器处理ZSet操作（保持原生字符串特性）
-                    // 转换键和值为字符串类型的键
-                    redisConnection.zSetCommands().zAdd(stringSerializer.serialize(CacheConstant.buildGroupUserCacheKey(metadata.getAppKey(), groupId)), GroupUserPost.ORDINARY.value() , stringSerializer.serialize(joiner));
-                    redisConnection.zSetCommands().zAdd(stringSerializer.serialize(CacheConstant.buildUserGroupsCacheKey(metadata.getAppKey(), joiner)), msg.getMetadata().getServerTime(), stringSerializer.serialize(groupId));
-                });
-    }
-
-
-    /**
-     * 保存群组请求消息
-     * @param packet
-     * @param groupRequestSession
-     * @param expireTime
-     * @return
-     */
     public boolean saveJoinGroupRequestMessage(Packet packet, GroupRequestSession groupRequestSession, long expireTime) {
-        Message message = packet.getMessage();
-        Metadata metadata = message.getMetadata();
-        return saveGroupRequestMessage(packet, groupRequestSession.getGroupId(), groupRequestSession.getSessionId(), expireTime, (redisConnection)-> {
-            String groupRequestCacheKey = CacheConstant.buildGroupRequestCacheKey(metadata.getAppKey(), groupRequestSession.getJoiner(), groupRequestSession.getGroupId());
-            byte[] keyBytes = serializeOrNull(stringSerializer, groupRequestCacheKey);
-            byte[] valueBytes = serializeOrNull(valueSerializer, groupRequestSession);
-            redisConnection.commands().set(keyBytes, valueBytes, Expiration.milliseconds(MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP), RedisStringCommands.SetOption.SET_IF_ABSENT);
-        });
+        return RepositorySupports.GROUP.saveJoinGroupRequestMessage(packet, groupRequestSession, expireTime);
     }
 
-    /**
-     * 保存群组拒绝请求消息
-     * @param packet
-     * @param groupRequestSession
-     * @param expireTime
-     * @return
-     */
     public boolean saveGroupRequestMessage(Packet packet, GroupRequestSession groupRequestSession, long expireTime) {
-        Message message = packet.getMessage();
-        Metadata metadata = message.getMetadata();
-        return saveGroupRequestMessage(packet, groupRequestSession.getGroupId(), groupRequestSession.getSessionId(), expireTime, (redisConnection)-> {
-            String groupRequestCacheKey = CacheConstant.buildGroupRequestCacheKey(metadata.getAppKey(), groupRequestSession.getJoiner(), groupRequestSession.getGroupId());
-            byte[] keyBytes = serializeOrNull(stringSerializer, groupRequestCacheKey);
-            byte[] valueBytes = serializeOrNull(valueSerializer, groupRequestSession);
-            redisConnection.commands().set(keyBytes, valueBytes, Expiration.milliseconds(MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP), RedisStringCommands.SetOption.UPSERT);
-        });
+        return RepositorySupports.GROUP.saveGroupRequestMessage(packet, groupRequestSession, expireTime);
     }
 
-
-    /**
-     * 保存群组请求消息
-     * @param packet
-     * @param expireTime
-     * @return
-     */
-    public<K,V> boolean saveGroupRequestMessage(Packet packet, String groupId, String requestSessionId, long expireTime, Consumer<RedisConnection> consumer) {
-        Message message = packet.getMessage();
-        Metadata metadata = message.getMetadata();
-        return saveMessageWithSession(packet, expireTime, CacheConstant.buildMessageCacheKey(metadata.getAppKey(), packet.getPacketId()), CacheConstant.buildGroupRequestSessionCacheKey(metadata.getAppKey(), groupId, requestSessionId), consumer, (ops, msg, ak, f, t) -> {});
+    public boolean saveGroupRequestMessage(Packet packet, String groupId, String requestSessionId, long expireTime,
+                                           Consumer<org.springframework.data.redis.connection.RedisConnection> consumer) {
+        return RepositorySupports.GROUP.saveGroupRequestMessage(packet, groupId, requestSessionId, expireTime, consumer);
     }
 
-
-    /**
-     * 设置最后一条消息为该会话
-     * @param sessionId
-     * @param lastPacket
-     */
-    @SuppressWarnings("unchecked")
     public void saveLastMessageForSession(String sessionId, Packet lastPacket, long expireTime, TimeUnit timeUnit) {
-        // 获取会话中的最后一条消息id,这里不直接存packet，是为了节省redis 内存考虑，这里只存packetId
-        redisTemplate.opsForValue().set(CacheConstant.buildSessionLastMessageCacheKey(lastPacket.getMessage().getMetadata().getAppKey(), sessionId), lastPacket.getPacketId(), expireTime, timeUnit);
+        RepositorySupports.SESSION.saveLastMessageForSession(sessionId, lastPacket, expireTime, timeUnit);
     }
-
 }
