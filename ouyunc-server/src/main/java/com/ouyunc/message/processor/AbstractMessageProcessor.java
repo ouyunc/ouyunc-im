@@ -158,6 +158,7 @@ public abstract class AbstractMessageProcessor<T extends Number> extends Abstrac
 
     /**
      * 发送方在本会话发出消息后，静默推进本端已读 offset 至该消息 packetId（不向对方投递已读回执）。
+     * <p>对端可通过比较聊天消息 packetId 与己方消息 id 推断已读，见 {@code docs/read-receipt-session-offset.md}。</p>
      */
     protected void advanceSenderReadOffsetOnSend(Packet packet, IdentityType identityType) {
         repository().reactiveAdvanceSenderReadOffsetOnSend(

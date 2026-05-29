@@ -20,3 +20,5 @@ ouyunc-protobuf-message.js  文件就是使用工具和该文件生成的js 文�
 3，拉取消息（按需拉取，全量拉取，定时拉取）：
    3.1 拉取会话消息 （记录会话的offset, 单聊和群聊都会有）
    3.2 拉取离线消息
+
+4，已读回执与会话 offset（单聊/群聊、静默推进、对端已读展示）详见：[read-receipt-session-offset.md](../6.5.3/read-receipt-session-offset.md)

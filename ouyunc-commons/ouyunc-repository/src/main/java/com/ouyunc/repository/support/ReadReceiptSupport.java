@@ -31,6 +31,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * 已读回执校验与 readOffset 更新。
  * <p>会话偏移量按设备独立存储；校验仅与本端已存 offset 比较，各端可独立推进。</p>
+ * <p>协议说明见 {@code docs/read-receipt-session-offset.md}。</p>
  */
 public final class ReadReceiptSupport {
 
