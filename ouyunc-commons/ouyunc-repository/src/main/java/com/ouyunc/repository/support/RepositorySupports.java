@@ -17,8 +17,10 @@ public final class RepositorySupports {
             new SpecialMessageLoader(MESSAGE_PACKET_QUERY);
     public static final WithdrawMessageSupport WITHDRAW =
             new WithdrawMessageSupport(SPECIAL_MESSAGE_LOADER, INFRA.redisTemplate);
+    public static final UnreadIndexSupport UNREAD = new UnreadIndexSupport(INFRA);
     public static final ReadReceiptSupport READ_RECEIPT =
-            new ReadReceiptSupport(SPECIAL_MESSAGE_LOADER, INFRA.redisTemplate, INFRA.mongoTemplate, INFRA.jdbcClient);
+            new ReadReceiptSupport(SPECIAL_MESSAGE_LOADER, INFRA.redisTemplate, INFRA.mongoTemplate, INFRA.jdbcClient,
+                    UNREAD);
     public static final ReactiveMessageOperationSupport REACTIVE_OPERATION = new ReactiveMessageOperationSupport();
     public static final GroupMembershipSupport GROUP = new GroupMembershipSupport(INFRA, SESSION);
     public static final FriendRepositorySupport FRIEND = new FriendRepositorySupport(INFRA, SESSION);

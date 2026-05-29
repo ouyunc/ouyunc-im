@@ -179,6 +179,9 @@ public class CacheConstant {
      */
     private static final String LAST_MESSAGE = "lm";
 
+    /** 用户设备单聊未读 Hash 前缀（群聊不在此存储） */
+    private static final String USER_DEVICE_UNREAD = "ur:";
+
     // ============================================ 集群优化方法 ============================================
 
     /**
@@ -424,6 +427,13 @@ public class CacheConstant {
      */
     public static String buildChatSessionCacheKey(String appKey, String identity, Byte deviceType) {
         return buildBaseCacheKey(appKey) + CHAT_SESSION + withHashTag(identity) + COLON + deviceType;
+    }
+
+    /**
+     * 用户在某设备上的单聊未读 Hash（群聊未读不在此 key 维护）。
+     */
+    public static String buildUserDeviceUnreadCacheKey(String appKey, String userId, Byte deviceType) {
+        return buildBaseCacheKey(appKey) + USER_DEVICE_UNREAD + withHashTag(userId) + COLON + deviceType;
     }
 
     /**

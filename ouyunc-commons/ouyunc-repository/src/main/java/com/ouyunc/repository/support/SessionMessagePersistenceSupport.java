@@ -52,6 +52,32 @@ public final class SessionMessagePersistenceSupport {
                 });
     }
 
+    /**
+     * 单聊/客服消息持久化，并在成功后对收件人维护 ur 未读 Hash。
+     */
+    public Mono<Boolean> reactiveSaveOne2OneMessage(Packet packet, String sessionId, long expireTime,
+                                                    UnreadIndexSupport unreadIndexSupport) {
+        Message message = packet.getMessage();
+        Metadata metadata = message.getMetadata();
+        return Mono.fromCallable(() -> {
+                    SaveMessageOutcome outcome = saveMessageWithSessionOutcome(packet, expireTime,
+                            CacheConstant.buildMessageCacheKey(metadata.getAppKey(), packet.getPacketId()),
+                            CacheConstant.buildSessionCacheKey(metadata.getAppKey(), sessionId),
+                            (ops) -> {
+                            }, (ops, msg, app, f, t) -> {
+                            });
+                    if (outcome == SaveMessageOutcome.SUCCESS && unreadIndexSupport != null) {
+                        unreadIndexSupport.incrOne2OneOnMessage(packet);
+                    }
+                    return isSaveAccepted(outcome);
+                })
+                .subscribeOn(Schedulers.boundedElastic())
+                .onErrorResume(e -> {
+                    log.error("Reactive save one2one message failed: {}", e.getMessage(), e);
+                    return Mono.just(false);
+                });
+    }
+
     public boolean saveMessageWithSession(Packet packet, long expireTime, String messageKey, String sessionKey,
                                           Consumer<RedisConnection> consumer,
                                           FiveConsumer<RedisConnection, Message, String, String, String> extraOperation) {

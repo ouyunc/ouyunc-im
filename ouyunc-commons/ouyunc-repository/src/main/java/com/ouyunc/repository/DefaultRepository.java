@@ -117,6 +117,11 @@ public enum DefaultRepository implements Repository {
         return RepositorySupports.SESSION.reactiveSaveMessage(packet, sessionId, expireTime);
     }
 
+    public Mono<Boolean> reactiveSaveOne2OneMessage(Packet packet, String sessionId, long expireTime) {
+        return RepositorySupports.SESSION.reactiveSaveOne2OneMessage(packet, sessionId, expireTime,
+                RepositorySupports.UNREAD);
+    }
+
     public boolean saveJoinFriendRequestMessage(Packet packet, RequestSession requestSession, long expireTime) {
         return RepositorySupports.FRIEND.saveJoinFriendRequestMessage(packet, requestSession, expireTime);
     }

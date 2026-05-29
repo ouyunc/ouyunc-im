@@ -169,6 +169,24 @@ public class MessageConstant {
      */
     public static final long CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP = NumberConstant.NUMBER_30 * MessageConstant.DAY_TIMESTAMP;
 
+    /** 单聊未读 Hash 存储上限（超过视为 capped） */
+    public static final int SESSION_UNREAD_STORE_MAX = 1000;
+
+    /** 单聊未读展示上限 */
+    public static final int SESSION_UNREAD_DISPLAY_CAP = 99;
+
+    /** 单聊未读 ZSet 扫描降级上限（冷路径） */
+    public static final int SESSION_UNREAD_PEER_SCAN_LIMIT = 200;
+
+    /** @deprecated 使用 {@link #SESSION_UNREAD_STORE_MAX} */
+    public static final int SESSION_PEER_UNREAD_INDEX_MAX_SIZE = SESSION_UNREAD_STORE_MAX;
+
+    /** @deprecated 使用 {@link #SESSION_UNREAD_DISPLAY_CAP} */
+    public static final int SESSION_PEER_UNREAD_DISPLAY_CAP = SESSION_UNREAD_DISPLAY_CAP;
+
+    /** 用户设备单聊未读 Hash TTL，与热会话一致 */
+    public static final long CACHE_USER_DEVICE_UNREAD_EXPIRE_TIMESTAMP = CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP;
+
 
 
     /**

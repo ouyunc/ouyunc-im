@@ -41,13 +41,16 @@ public final class ReadReceiptSupport {
     private final RedisTemplate redisTemplate;
     private final MongoTemplate mongoTemplate;
     private final JdbcClient jdbcClient;
+    private final UnreadIndexSupport unreadIndexSupport;
 
     public ReadReceiptSupport(SpecialMessageLoader specialMessageLoader, RedisTemplate redisTemplate,
-                              MongoTemplate mongoTemplate, JdbcClient jdbcClient) {
+                              MongoTemplate mongoTemplate, JdbcClient jdbcClient,
+                              UnreadIndexSupport unreadIndexSupport) {
         this.specialMessageLoader = specialMessageLoader;
         this.redisTemplate = redisTemplate;
         this.mongoTemplate = mongoTemplate;
         this.jdbcClient = jdbcClient;
+        this.unreadIndexSupport = unreadIndexSupport;
     }
 
     public Mono<Boolean> reactiveValidReadReceiptMessage(Packet packet, String sessionId, IdentityType identityType,
@@ -132,6 +135,15 @@ public final class ReadReceiptSupport {
     private Mono<Boolean> reactiveUpdateSessionReadOffset(String appKey, IdentityType identityType, String from,
                                                           Byte deviceType, String to, long incomingOffset,
                                                           long expireTime) {
+        if (identityType == IdentityType.ONE_2_ONE) {
+            return Mono.fromCallable(() -> {
+                        unreadIndexSupport.clearOne2OneOnRead(appKey, from, deviceType, to, incomingOffset, expireTime);
+                        return Boolean.TRUE;
+                    })
+                    .doOnError(e -> log.error("单聊已读 offset+未读 更新失败 | reader={}, peer={}, incomingOffset={}",
+                            from, to, incomingOffset, e))
+                    .subscribeOn(Schedulers.boundedElastic());
+        }
         String offsetKey = CacheConstant.buildSessionReadMessageOffsetCacheKey(
                 appKey, identityType.value(), from, deviceType, to);
         return Mono.fromCallable(() -> {
