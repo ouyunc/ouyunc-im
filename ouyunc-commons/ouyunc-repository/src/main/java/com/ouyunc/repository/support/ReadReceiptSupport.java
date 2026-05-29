@@ -52,10 +52,13 @@ public final class ReadReceiptSupport {
 
     public Mono<Boolean> reactiveValidReadReceiptMessage(Packet packet, String sessionId, IdentityType identityType,
                                                          boolean isValidSender) {
-        return specialMessageLoader.reactiveValidSpecialMessage(packet, sessionId, (specialPackets) -> {
+        return specialMessageLoader.reactiveValidSpecialMessage(
+                packet, sessionId, MessageConstant.MAX_READ_RECEIPT_MESSAGE_COUNT,
+                (specialPackets) -> {
             if (isValidSender) {
                 for (Packet specialPacket : specialPackets) {
-                    if (specialPacket == null || specialPacket.getMessage().getFrom().equals(packet.getMessage().getFrom())) {
+                    if (specialPacket == null || specialPacket.getMessage() == null
+                            || specialPacket.getMessage().getFrom().equals(packet.getMessage().getFrom())) {
                         log.error("消息id: {} 对应的消息属于发送者！", packet);
                         return Mono.just(false);
                     }
@@ -63,6 +66,13 @@ public final class ReadReceiptSupport {
             }
             return Mono.just(true);
         }, (packets) -> {
+            for (Packet readPacket : packets) {
+                if (!SpecialMessageTargetValidator.isChatTargetMessage(readPacket)) {
+                    log.error("已读回执目标消息内容类型不允许 | packetId={} | contentType={}",
+                            readPacket.getPacketId(), readPacket.getMessage().getContentType());
+                    return false;
+                }
+            }
             Message message = packet.getMessage();
             Long deviceStoredOffset = getSessionMaxReadPackageId(
                     message.getMetadata().getAppKey(), identityType, message.getFrom(),

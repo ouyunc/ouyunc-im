@@ -1,7 +1,6 @@
 package com.ouyunc.repository.support;
 
 import com.alibaba.fastjson2.JSON;
-import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
@@ -12,7 +11,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -30,17 +31,23 @@ public final class SpecialMessageLoader {
         this.messagePacketQuery = messagePacketQuery;
     }
 
-    public Mono<Boolean> reactiveValidSpecialMessage(Packet packet, String sessionId,
+
+    public Mono<Boolean> reactiveValidSpecialMessage(Packet packet, String sessionId, int maxCount,
                                                      Function<List<Packet>, Mono<Boolean>> function,
                                                      Predicate<List<Packet>> extraPredicate) {
-        return reactiveLoadValidatedSpecialPackets(packet, sessionId, function, extraPredicate)
+        return reactiveLoadValidatedSpecialPackets(packet, sessionId, maxCount, function, extraPredicate)
                 .hasElement();
     }
 
-    public Mono<List<Packet>> reactiveLoadValidatedSpecialPackets(Packet packet, String sessionId,
+
+    public Mono<List<Packet>> reactiveLoadValidatedSpecialPackets(Packet packet, String sessionId, int maxCount,
                                                                   Function<List<Packet>, Mono<Boolean>> function,
                                                                   Predicate<List<Packet>> extraPredicate) {
         Message message = packet.getMessage();
+        if (message == null || message.getMetadata() == null) {
+            log.error("消息或元数据为空");
+            return Mono.empty();
+        }
         Metadata metadata = message.getMetadata();
         List<Long> packetIds;
         try {
@@ -49,8 +56,8 @@ public final class SpecialMessageLoader {
             log.error("解析消息内容失败", e);
             return Mono.empty();
         }
-        if (CollectionUtils.isEmpty(packetIds) || packetIds.size() > MessageConstant.MAX_HANDLE_MESSAGE_COUNT) {
-            log.error("消息数量为0或超出限制 {}!", MessageConstant.MAX_HANDLE_MESSAGE_COUNT);
+        if (CollectionUtils.isEmpty(packetIds) || packetIds.size() > maxCount) {
+            log.error("消息数量为0或超出限制 {}!", maxCount);
             return Mono.empty();
         }
         String expectedAppKey = metadata.getAppKey();
@@ -70,6 +77,14 @@ public final class SpecialMessageLoader {
         if (packets.size() != packetIds.size()) {
             log.error("持久化消息数量不匹配 | session={} | expected={} | actual={}",
                     sessionId, packetIds.size(), packets.size());
+            return Mono.empty();
+        }
+        Set<Long> loadedPacketIds = new HashSet<>();
+        for (Packet targetPacket : packets) {
+            loadedPacketIds.add(targetPacket.getPacketId());
+        }
+        if (!loadedPacketIds.containsAll(packetIds)) {
+            log.error("持久化消息 id 与请求不匹配 | session={} | packetIds={}", sessionId, packetIds);
             return Mono.empty();
         }
         for (Packet targetPacket : packets) {
