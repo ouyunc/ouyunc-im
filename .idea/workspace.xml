@@ -6,7 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="拆分repository">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/WithdrawMessageSupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/WithdrawMessageSupport.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/ReadReceiptSupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/ReadReceiptSupport.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -407,23 +407,7 @@
       <workItem from="1779589475203" duration="1168000" />
       <workItem from="1779712685529" duration="4511000" />
       <workItem from="1779886421327" duration="1819000" />
-      <workItem from="1780031554219" duration="7792000" />
-    </task>
-    <task id="LOCAL-00184" summary="类型">
-      <option name="closed" value="true" />
-      <created>1775228798953</created>
-      <option name="number" value="00184" />
-      <option name="presentableId" value="LOCAL-00184" />
-      <option name="project" value="LOCAL" />
-      <updated>1775228798954</updated>
-    </task>
-    <task id="LOCAL-00185" summary="类型">
-      <option name="closed" value="true" />
-      <created>1775232292495</created>
-      <option name="number" value="00185" />
-      <option name="presentableId" value="LOCAL-00185" />
-      <option name="project" value="LOCAL" />
-      <updated>1775232292495</updated>
+      <workItem from="1780031554219" duration="9001000" />
     </task>
     <task id="LOCAL-00186" summary="类型">
       <option name="closed" value="true" />
@@ -801,7 +785,23 @@
       <option name="project" value="LOCAL" />
       <updated>1780041001844</updated>
     </task>
-    <option name="localTasksCounter" value="233" />
+    <task id="LOCAL-00233" summary="拆分repository">
+      <option name="closed" value="true" />
+      <created>1780041315439</created>
+      <option name="number" value="00233" />
+      <option name="presentableId" value="LOCAL-00233" />
+      <option name="project" value="LOCAL" />
+      <updated>1780041315439</updated>
+    </task>
+    <task id="LOCAL-00234" summary="拆分repository">
+      <option name="closed" value="true" />
+      <created>1780041985319</created>
+      <option name="number" value="00234" />
+      <option name="presentableId" value="LOCAL-00234" />
+      <option name="project" value="LOCAL" />
+      <updated>1780041985319</updated>
+    </task>
+    <option name="localTasksCounter" value="235" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

@@ -65,27 +65,29 @@ public final class ReadReceiptSupport {
                 }
             }
             return Mono.just(true);
-        }, (packets) -> {
-            for (Packet readPacket : packets) {
-                if (!SpecialMessageTargetValidator.isChatTargetMessage(readPacket)) {
-                    log.error("已读回执目标消息内容类型不允许 | packetId={} | contentType={}",
-                            readPacket.getPacketId(), readPacket.getMessage().getContentType());
-                    return false;
-                }
+        }, packets -> isReadReceiptTargetPacketsValid(packet, packets, identityType));
+    }
+
+    private boolean isReadReceiptTargetPacketsValid(Packet packet, List<Packet> packets, IdentityType identityType) {
+        Message message = packet.getMessage();
+        Long deviceStoredOffset = getSessionMaxReadPackageId(
+                message.getMetadata().getAppKey(), identityType, message.getFrom(),
+                packet.getDeviceType(), message.getTo());
+        long storedOffset = deviceStoredOffset != null ? deviceStoredOffset : 0L;
+        for (Packet readPacket : packets) {
+            if (!SpecialMessageTargetValidator.isChatTargetMessage(readPacket)) {
+                log.error("已读回执目标消息内容类型不允许 | packetId={} | contentType={}",
+                        readPacket == null ? null : readPacket.getPacketId(),
+                        readPacket == null || readPacket.getMessage() == null
+                                ? null : readPacket.getMessage().getContentType());
+                return false;
             }
-            Message message = packet.getMessage();
-            Long deviceStoredOffset = getSessionMaxReadPackageId(
-                    message.getMetadata().getAppKey(), identityType, message.getFrom(),
-                    packet.getDeviceType(), message.getTo());
-            long storedOffset = deviceStoredOffset != null ? deviceStoredOffset : 0L;
-            for (Packet readPacket : packets) {
-                if (readPacket.getPacketId() < storedOffset) {
-                    log.error("消息id: {} 对应的消息已读id小于当前设备最大已读id: {}！", packet, storedOffset);
-                    return false;
-                }
+            if (readPacket.getPacketId() < storedOffset) {
+                log.error("消息id: {} 对应的消息已读id小于当前设备最大已读id: {}！", packet, storedOffset);
+                return false;
             }
-            return true;
-        });
+        }
+        return true;
     }
 
     /**
