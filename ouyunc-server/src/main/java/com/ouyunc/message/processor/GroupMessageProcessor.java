@@ -129,11 +129,10 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
                     }
                     // 持久化成功后才发送 QoS ACK
                     sendQosAckAfterPersist(ctx, packet);
+                    repository().saveLastMessageForSession(packet.getMessage().getTo(), packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
                     if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
-                        repository().saveLastMessageForSession(packet.getMessage().getTo(), packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
                         handleWithdrawMessage(ctx, packet, groupUserIdentitySet);
                     } else {
-                        repository().saveLastMessageForSession(packet.getMessage().getTo(), packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
                         deliverAndFireNext(ctx, packet, groupUserIdentitySet);
                     }
                 },
@@ -160,7 +159,7 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
     private void handleReadReceipt(ChannelHandlerContext ctx, Packet packet, Set<String> groupUserIdentitySet) {
         String sessionId = packet.getMessage().getTo();
         repository().reactiveHandleOperation(ctx, packet,
-                repository().reactiveValidReadReceiptMessage(packet, packet.getMessage().getTo(), IdentityType.GROUP, true),
+                repository().reactiveValidReadReceiptMessage(packet, packet.getMessage().getTo(), IdentityType.GROUP, false),
                 ()-> repository().savePacket2Mq(MqConstant.KAFKA_READ_RECEIPT_MESSAGE_TOPIC, sessionId, packet),
                 repository().reactiveReadReceiptMessage(packet, IdentityType.GROUP, MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP),
                 (ctx0, packet0) -> completeReadReceipt(ctx0, packet0, () -> deliverGroupReadReceiptSelfSyncOnly(packet0)),

@@ -111,7 +111,7 @@ public final class CustomerServiceMessageProcessor extends AbstractMessageProces
     private void handleReadReceipt(ChannelHandlerContext ctx, Packet packet) {
         String sessionId = IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo());
         repository().reactiveHandleOperation(ctx, packet,
-                repository().reactiveValidReadReceiptMessage(packet, sessionId, IdentityType.ONE_2_ONE, true),
+                repository().reactiveValidReadReceiptMessage(packet, sessionId, IdentityType.ONE_2_ONE, false),
                 () -> repository().savePacket2Mq(MqConstant.KAFKA_READ_RECEIPT_MESSAGE_TOPIC, sessionId, packet),
                 repository().reactiveReadReceiptMessage(packet, IdentityType.ONE_2_ONE, MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP),
                 (ctx0, packet0) -> completeReadReceipt(ctx0, packet0, () -> deliverReadReceiptToSender(packet0)),

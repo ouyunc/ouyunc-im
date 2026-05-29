@@ -1,7 +1,6 @@
 package com.ouyunc.repository.support;
 
 import com.alibaba.fastjson2.JSON;
-import com.google.common.collect.Lists;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.JdbcSqlDialectHolder;
 import com.ouyunc.base.constant.MessageConstant;
@@ -10,7 +9,6 @@ import com.ouyunc.base.constant.enums.LuaScriptEnum;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
-import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.domain.constants.IdentityType;
 import com.ouyunc.domain.entity.SessionMessageOffsetEntity;
 import org.apache.commons.collections4.CollectionUtils;
@@ -26,14 +24,13 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
  * 已读回执校验与 readOffset 更新。
+ * <p>会话偏移量按设备独立存储；校验仅与本端已存 offset 比较，各端可独立推进。</p>
  */
 public final class ReadReceiptSupport {
 
@@ -66,11 +63,13 @@ public final class ReadReceiptSupport {
             return Mono.just(true);
         }, (packets) -> {
             Message message = packet.getMessage();
-            long storedOffset = resolveMaxReadOffsetAllDevices(
-                    message.getMetadata().getAppKey(), identityType, message.getFrom(), message.getTo());
+            Long deviceStoredOffset = getSessionMaxReadPackageId(
+                    message.getMetadata().getAppKey(), identityType, message.getFrom(),
+                    packet.getDeviceType(), message.getTo());
+            long storedOffset = deviceStoredOffset != null ? deviceStoredOffset : 0L;
             for (Packet readPacket : packets) {
                 if (readPacket.getPacketId() < storedOffset) {
-                    log.error("消息id: {} 对应的消息已读id小于当前用户最大已读id: {}！", packet, storedOffset);
+                    log.error("消息id: {} 对应的消息已读id小于当前设备最大已读id: {}！", packet, storedOffset);
                     return false;
                 }
             }
@@ -149,41 +148,5 @@ public final class ReadReceiptSupport {
             log.error("获取会话偏移量实体异常, from: {}, to:{}, type:{} 原因：{}", from, to, identityType, e.getMessage());
             return null;
         }
-    }
-
-    private long resolveMaxReadOffsetAllDevices(String appKey, IdentityType identityType, String from, String to) {
-        Collection<Byte> deviceTypes = MessageContext.deviceTypeList(appKey, from);
-        if (CollectionUtils.isEmpty(deviceTypes)) {
-            return 0L;
-        }
-        List<Byte> deviceTypeList = Lists.newArrayList(deviceTypes);
-        List<String> redisKeys = new ArrayList<>(deviceTypeList.size());
-        for (Byte deviceType : deviceTypeList) {
-            redisKeys.add(CacheConstant.buildSessionReadMessageOffsetCacheKey(appKey, identityType.value(), from, deviceType, to));
-        }
-        @SuppressWarnings("unchecked")
-        List<Object> cached = redisTemplate.opsForValue().multiGet(redisKeys);
-
-        long max = 0L;
-        boolean found = false;
-        List<Byte> missingDeviceTypes = new ArrayList<>();
-        for (int i = 0; i < deviceTypeList.size(); i++) {
-            Object value = cached != null && i < cached.size() ? cached.get(i) : null;
-            if (value instanceof Number offset) {
-                found = true;
-                max = Math.max(max, offset.longValue());
-            } else {
-                missingDeviceTypes.add(deviceTypeList.get(i));
-            }
-        }
-
-        for (Byte deviceType : missingDeviceTypes) {
-            Long offset = getSessionMaxReadPackageId(appKey, identityType, from, deviceType, to);
-            if (offset != null) {
-                found = true;
-                max = Math.max(max, offset);
-            }
-        }
-        return found ? max : 0L;
     }
 }

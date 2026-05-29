@@ -117,11 +117,10 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
                     }
                     // 持久化成功后才发送 QoS ACK，确保「客户端收到 ACK == 服务端持久化成功」
                     sendQosAckAfterPersist(ctx, packet);
+                    repository().saveLastMessageForSession(IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo()), packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
                     if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
-                        repository().saveLastMessageForSession(IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo()), packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
                         handleWithdrawMessage(ctx, packet);
                     } else {
-                        repository().saveLastMessageForSession(IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo()), packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
                         deliverAndFireNext(ctx, packet, false);
                     }
                 },
@@ -162,7 +161,7 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
     private void handleReadReceipt(ChannelHandlerContext ctx, Packet packet) {
         String sessionId = IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo());
         repository().reactiveHandleOperation(ctx, packet,
-                repository().reactiveValidReadReceiptMessage(packet, sessionId, IdentityType.ONE_2_ONE, true),
+                repository().reactiveValidReadReceiptMessage(packet, sessionId, IdentityType.ONE_2_ONE, false),
                 () -> repository().savePacket2Mq(MqConstant.KAFKA_READ_RECEIPT_MESSAGE_TOPIC, sessionId, packet),
                 repository().reactiveReadReceiptMessage(packet, IdentityType.ONE_2_ONE, MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP),
                 (ctx0, packet0) -> completeReadReceipt(ctx0, packet0, () -> deliverReadReceiptToSender(packet0)),
