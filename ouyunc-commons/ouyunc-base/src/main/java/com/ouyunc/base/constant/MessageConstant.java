@@ -122,6 +122,11 @@ public class MessageConstant {
     public static final int MAX_WITHDRAW_MESSAGE_COUNT = 50;
 
     /**
+     * 允许撤回的消息时间窗口，默认 2 分钟，单位毫秒（以服务端到达时间为准）
+     */
+    public static final long WITHDRAW_MESSAGE_TIME_WINDOW_MS = 2 * MINUTE_TIMESTAMP;
+
+    /**
      * 最大已读回执消息数量，默认50
      */
     public static final int MAX_READ_RECEIPT_MESSAGE_COUNT = 50;

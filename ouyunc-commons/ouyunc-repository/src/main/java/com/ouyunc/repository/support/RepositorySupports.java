@@ -14,7 +14,7 @@ public final class RepositorySupports {
     public static final MessagePacketQuerySupport MESSAGE_PACKET_QUERY =
             new MessagePacketQuerySupport(INFRA.redisTemplate, INFRA.mongoTemplate, INFRA.jdbcClient);
     public static final SpecialMessageLoader SPECIAL_MESSAGE_LOADER =
-            new SpecialMessageLoader(SESSION_INDEX, MESSAGE_PACKET_QUERY);
+            new SpecialMessageLoader(MESSAGE_PACKET_QUERY);
     public static final WithdrawMessageSupport WITHDRAW =
             new WithdrawMessageSupport(SPECIAL_MESSAGE_LOADER, INFRA.redisTemplate);
     public static final ReadReceiptSupport READ_RECEIPT =

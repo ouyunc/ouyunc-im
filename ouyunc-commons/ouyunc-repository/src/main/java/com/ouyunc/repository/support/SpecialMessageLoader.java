@@ -1,17 +1,16 @@
 package com.ouyunc.repository.support;
 
 import com.alibaba.fastjson2.JSON;
-import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
-import com.ouyunc.core.context.MessageContext;
+import com.ouyunc.base.utils.IdentityUtil;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 import java.util.List;
 import java.util.function.Function;
@@ -19,16 +18,15 @@ import java.util.function.Predicate;
 
 /**
  * 特殊消息（撤回 / 已读等）引用的目标 Packet 加载与校验。
+ * <p>加载消息体后统一校验 appKey 与会话归属（from/to 或 sessionId）。</p>
  */
 public final class SpecialMessageLoader {
 
     private static final Logger log = LoggerFactory.getLogger(SpecialMessageLoader.class);
 
-    private final SessionIndexSupport sessionIndex;
     private final MessagePacketQuerySupport messagePacketQuery;
 
-    public SpecialMessageLoader(SessionIndexSupport sessionIndex, MessagePacketQuerySupport messagePacketQuery) {
-        this.sessionIndex = sessionIndex;
+    public SpecialMessageLoader(MessagePacketQuerySupport messagePacketQuery) {
         this.messagePacketQuery = messagePacketQuery;
     }
 
@@ -55,39 +53,67 @@ public final class SpecialMessageLoader {
             log.error("消息数量为0或超出限制 {}!", MessageConstant.MAX_HANDLE_MESSAGE_COUNT);
             return Mono.empty();
         }
-        List<String> zsetMembers = packetIds.stream()
-                .map(MessageContext.idGenerator()::formatLongId19Str)
-                .toList();
-        String sessionCacheKey = CacheConstant.buildSessionCacheKey(metadata.getAppKey(), sessionId);
-        return Mono.fromCallable(() -> sessionIndex.batchZSetScoresPipelined(sessionCacheKey, zsetMembers))
-                .subscribeOn(Schedulers.boundedElastic())
-                .flatMap(scores -> {
-                    int presentCount = SessionIndexSupport.countPresentZSetScores(scores);
-                    if (scores.isEmpty() || presentCount != packetIds.size()) {
-                        log.error("会话:{} 不存在该消息id: {}, 或消息id数量与会话中的消息数量不相等", sessionId, packetIds);
-                        return Mono.empty();
-                    }
-                    return messagePacketQuery.fetchPacketsReactive(metadata.getAppKey(), packetIds)
-                            .flatMap(packets -> {
-                                if (packets.size() != packetIds.size()) {
-                                    log.error("持久化消息数量不匹配 | session={} | expected={} | actual={}",
-                                            sessionId, packetIds.size(), packets.size());
-                                    return Mono.empty();
-                                }
-                                return function.apply(packets).flatMap(valid -> {
-                                    if (!valid) {
-                                        return Mono.empty();
-                                    }
-                                    if (extraPredicate != null && !extraPredicate.test(packets)) {
-                                        return Mono.empty();
-                                    }
-                                    return Mono.just(packets);
-                                });
-                            });
-                })
+        String expectedAppKey = metadata.getAppKey();
+        return messagePacketQuery.fetchPacketsReactive(expectedAppKey, packetIds)
+                .flatMap(packets -> validateLoadedPackets(
+                        sessionId, expectedAppKey, packetIds, packets, function, extraPredicate))
                 .onErrorResume(e -> {
                     log.error("消息处理异常 | session={}", sessionId, e);
                     return Mono.empty();
                 });
+    }
+
+    private Mono<List<Packet>> validateLoadedPackets(String sessionId, String expectedAppKey, List<Long> packetIds,
+                                                     List<Packet> packets,
+                                                     Function<List<Packet>, Mono<Boolean>> function,
+                                                     Predicate<List<Packet>> extraPredicate) {
+        if (packets.size() != packetIds.size()) {
+            log.error("持久化消息数量不匹配 | session={} | expected={} | actual={}",
+                    sessionId, packetIds.size(), packets.size());
+            return Mono.empty();
+        }
+        for (Packet targetPacket : packets) {
+            if (!isPacketAppKeyMatch(targetPacket, expectedAppKey)) {
+                log.error("消息 appKey 与会话不匹配 | session={} | packetId={} | expectedAppKey={}",
+                        sessionId, targetPacket.getPacketId(), expectedAppKey);
+                return Mono.empty();
+            }
+            if (!belongsToSession(targetPacket, sessionId)) {
+                log.error("会话:{} 消息 id:{} 会话归属校验失败", sessionId, targetPacket.getPacketId());
+                return Mono.empty();
+            }
+        }
+        return function.apply(packets).flatMap(valid -> {
+            if (!valid) {
+                return Mono.empty();
+            }
+            if (extraPredicate != null && !extraPredicate.test(packets)) {
+                return Mono.empty();
+            }
+            return Mono.just(packets);
+        });
+    }
+
+    /**
+     * 单聊：sessionId 为 {@link IdentityUtil#sessionId(String, String)}；
+     * 群聊：sessionId 为群 ID，与目标消息 {@code to} 一致。
+     */
+    static boolean belongsToSession(Packet targetPacket, String sessionId) {
+        Message targetMessage = targetPacket.getMessage();
+        if (targetMessage == null || StringUtils.isAnyBlank(targetMessage.getFrom(), targetMessage.getTo(), sessionId)) {
+            return false;
+        }
+        if (sessionId.equals(IdentityUtil.sessionId(targetMessage.getFrom(), targetMessage.getTo()))) {
+            return true;
+        }
+        return sessionId.equals(targetMessage.getTo());
+    }
+
+    private static boolean isPacketAppKeyMatch(Packet targetPacket, String expectedAppKey) {
+        Message targetMessage = targetPacket.getMessage();
+        if (targetMessage == null || targetMessage.getMetadata() == null || StringUtils.isBlank(expectedAppKey)) {
+            return false;
+        }
+        return expectedAppKey.equals(targetMessage.getMetadata().getAppKey());
     }
 }
