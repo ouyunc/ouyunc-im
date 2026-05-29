@@ -6,6 +6,7 @@ import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
+import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.core.context.MessageContext;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -48,20 +49,7 @@ public final class WithdrawMessageSupport {
                 }
             }
             return Mono.just(true);
-        }, packets -> {
-            if (!isWithdrawTargetPacketsValid(packets)) {
-                log.error("撤回目标消息内容类型错误，不允许撤回撤回消息或已读消息");
-                return false;
-            }
-            for (Packet targetPacket : packets) {
-                if (!isWithinWithdrawTimeWindow(targetPacket)) {
-                    log.error("撤回目标消息已超过允许撤回时间窗口 | packetId={} | windowMs={}",
-                            targetPacket.getPacketId(), MessageConstant.WITHDRAW_MESSAGE_TIME_WINDOW_MS);
-                    return false;
-                }
-            }
-            return true;
-        });
+        }, this::isWithdrawTargetPacketsValid);
     }
 
     @SuppressWarnings("unchecked")
@@ -81,6 +69,26 @@ public final class WithdrawMessageSupport {
                 .subscribeOn(Schedulers.boundedElastic());
     }
 
+    private boolean isWithdrawTargetPacketsValid(List<Packet> packets) {
+        for (Packet targetPacket : packets) {
+            if (targetPacket == null || targetPacket.getMessage() == null) {
+                return false;
+            }
+            int contentType = targetPacket.getMessage().getContentType();
+            if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType
+                    || MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {
+                log.error("撤回目标消息内容类型错误，不允许撤回撤回消息或已读消息 | packetId={}", targetPacket.getPacketId());
+                return false;
+            }
+            if (!isWithinWithdrawTimeWindow(targetPacket)) {
+                log.error("撤回目标消息已超过允许撤回时间窗口 | packetId={} | windowMs={}",
+                        targetPacket.getPacketId(), MessageConstant.WITHDRAW_MESSAGE_TIME_WINDOW_MS);
+                return false;
+            }
+        }
+        return true;
+    }
+
     private static boolean isWithinWithdrawTimeWindow(Packet targetPacket) {
         if (targetPacket == null || targetPacket.getMessage() == null) {
             return false;
@@ -96,21 +104,7 @@ public final class WithdrawMessageSupport {
         if (sendTime <= 0L) {
             return false;
         }
-        return System.currentTimeMillis() - sendTime <= MessageConstant.WITHDRAW_MESSAGE_TIME_WINDOW_MS;
-    }
-
-    private static boolean isWithdrawTargetPacketsValid(List<Packet> packets) {
-        for (Packet withdrawPacket : packets) {
-            if (withdrawPacket == null || withdrawPacket.getMessage() == null) {
-                return false;
-            }
-            int contentType = withdrawPacket.getMessage().getContentType();
-            if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType
-                    || MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {
-                return false;
-            }
-        }
-        return true;
+        return TimeUtil.currentTimeMillis() - sendTime <= MessageConstant.WITHDRAW_MESSAGE_TIME_WINDOW_MS;
     }
 
     @SuppressWarnings("unchecked")

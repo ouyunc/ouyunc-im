@@ -6,11 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="拆分repository">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/6.5.0/readme.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/6.5.0/readme.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/ReadReceiptSupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/ReadReceiptSupport.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/AbstractMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/AbstractMessageProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneMessageProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/WithdrawMessageSupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/WithdrawMessageSupport.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -77,57 +73,58 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Application.App.executor&quot;: &quot;Debug&quot;,
-    &quot;Application.CosIdSnowflakeIdGenerator.executor&quot;: &quot;Run&quot;,
-    &quot;Application.GroupInviteJoinMessageProcessor.executor&quot;: &quot;Debug&quot;,
-    &quot;Application.ObjectCreationBenchmark.executor&quot;: &quot;Debug&quot;,
-    &quot;Application.SnowflakeUtil.executor&quot;: &quot;Debug&quot;,
-    &quot;Application.StartServer.executor&quot;: &quot;Debug&quot;,
-    &quot;Application.WebSocketLoadTester.executor&quot;: &quot;Run&quot;,
-    &quot;Docker.docker-compose.yml.kafka: Compose Deployment.executor&quot;: &quot;Run&quot;,
-    &quot;Docker.docker-compose.yml.mongo: Compose Deployment.executor&quot;: &quot;Run&quot;,
-    &quot;JavaScript Debug.client1.html (1).executor&quot;: &quot;Run&quot;,
-    &quot;JavaScript Debug.client1.html (2).executor&quot;: &quot;Run&quot;,
-    &quot;JavaScript Debug.client1.html.executor&quot;: &quot;Run&quot;,
-    &quot;JavaScript Debug.client13333333333.html.executor&quot;: &quot;Run&quot;,
-    &quot;JavaScript Debug.client2.html.executor&quot;: &quot;Run&quot;,
-    &quot;JavaScript Debug.client3.html.executor&quot;: &quot;Run&quot;,
-    &quot;JavaScript Debug.client4.html.executor&quot;: &quot;Run&quot;,
-    &quot;JavaScript Debug.client5.html.executor&quot;: &quot;Run&quot;,
-    &quot;Maven.ouyunc-base [clean].executor&quot;: &quot;Run&quot;,
-    &quot;Maven.ouyunc-base [install].executor&quot;: &quot;Run&quot;,
-    &quot;Maven.ouyunc-im [clean].executor&quot;: &quot;Run&quot;,
-    &quot;Maven.ouyunc-im [compile].executor&quot;: &quot;Run&quot;,
-    &quot;Maven.ouyunc-im [install].executor&quot;: &quot;Run&quot;,
-    &quot;Maven.ouyunc-im [package].executor&quot;: &quot;Run&quot;,
-    &quot;Maven.ouyunc-im [validate].executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;SONARLINT_PRECOMMIT_ANALYSIS&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;6.5.3&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;D:/workspace/ouyunc-im/ouyunc-commons/ouyunc-core/src/main/java/com/ouyunc/core/listener/event/payload&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;onboarding.tips.debug.path&quot;: &quot;D:/workspace/ouyunc-im/ouyunc-commons/ouyunc-id/src/main/java/com/ouyunc/Main.java&quot;,
-    &quot;project.structure.last.edited&quot;: &quot;Artifacts&quot;,
-    &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
-    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;MavenSettings&quot;,
-    &quot;ts.external.directory.path&quot;: &quot;D:\\workspace\\ouyunc-im\\ouyunc-im-rn\\node_modules\\typescript\\lib&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Application.App.executor": "Debug",
+    "Application.CosIdSnowflakeIdGenerator.executor": "Run",
+    "Application.GroupInviteJoinMessageProcessor.executor": "Debug",
+    "Application.ObjectCreationBenchmark.executor": "Debug",
+    "Application.SnowflakeUtil.executor": "Debug",
+    "Application.StartServer.executor": "Debug",
+    "Application.WebSocketLoadTester.executor": "Run",
+    "Docker.docker-compose.yml.kafka: Compose Deployment.executor": "Run",
+    "Docker.docker-compose.yml.mongo: Compose Deployment.executor": "Run",
+    "JavaScript Debug.client1.html (1).executor": "Run",
+    "JavaScript Debug.client1.html (2).executor": "Run",
+    "JavaScript Debug.client1.html.executor": "Run",
+    "JavaScript Debug.client13333333333.html.executor": "Run",
+    "JavaScript Debug.client2.html.executor": "Run",
+    "JavaScript Debug.client3.html.executor": "Run",
+    "JavaScript Debug.client4.html.executor": "Run",
+    "JavaScript Debug.client5.html.executor": "Run",
+    "Maven.ouyunc-base [clean].executor": "Run",
+    "Maven.ouyunc-base [install].executor": "Run",
+    "Maven.ouyunc-im [clean].executor": "Run",
+    "Maven.ouyunc-im [compile].executor": "Run",
+    "Maven.ouyunc-im [install].executor": "Run",
+    "Maven.ouyunc-im [package].executor": "Run",
+    "Maven.ouyunc-im [validate].executor": "Run",
+    "Maven.ouyunc-im [verify].executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "SONARLINT_PRECOMMIT_ANALYSIS": "true",
+    "git-widget-placeholder": "6.5.3",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "D:/workspace/ouyunc-im/ouyunc-commons/ouyunc-core/src/main/java/com/ouyunc/core/listener/event/payload",
+    "node.js.detected.package.eslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "onboarding.tips.debug.path": "D:/workspace/ouyunc-im/ouyunc-commons/ouyunc-id/src/main/java/com/ouyunc/Main.java",
+    "project.structure.last.edited": "Artifacts",
+    "project.structure.proportion": "0.0",
+    "project.structure.side.proportion": "0.2",
+    "settings.editor.selected.configurable": "MavenSettings",
+    "ts.external.directory.path": "D:\\workspace\\ouyunc-im\\ouyunc-im-rn\\node_modules\\typescript\\lib",
+    "vue.rearranger.settings.migration": "true"
   },
-  &quot;keyToStringList&quot;: {
-    &quot;DatabaseDriversLRU&quot;: [
-      &quot;mysql&quot;
+  "keyToStringList": {
+    "DatabaseDriversLRU": [
+      "mysql"
     ]
   }
-}</component>
+}]]></component>
   <component name="ReactorSettings">
     <option name="notificationShown" value="true" />
   </component>
@@ -143,6 +140,7 @@
       <recent name="D:\workspace\ouyunc-im\docs\6.5.0" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="D:\workspace\ouyunc-im\docs\6.5.3" />
       <recent name="D:\workspace\ouyunc-im\ouyunc-commons\ouyunc-core\src\main\java\com\ouyunc\core" />
       <recent name="D:\workspace\ouyunc-im\ouyunc-commons\ouyunc-core" />
       <recent name="D:\workspace\ouyunc-im\ouyunc-server\src\main\java\com\ouyunc\message\validator" />
@@ -409,23 +407,7 @@
       <workItem from="1779589475203" duration="1168000" />
       <workItem from="1779712685529" duration="4511000" />
       <workItem from="1779886421327" duration="1819000" />
-      <workItem from="1780031554219" duration="5570000" />
-    </task>
-    <task id="LOCAL-00182" summary="类型">
-      <option name="closed" value="true" />
-      <created>1775053978928</created>
-      <option name="number" value="00182" />
-      <option name="presentableId" value="LOCAL-00182" />
-      <option name="project" value="LOCAL" />
-      <updated>1775053978928</updated>
-    </task>
-    <task id="LOCAL-00183" summary="类型">
-      <option name="closed" value="true" />
-      <created>1775138652709</created>
-      <option name="number" value="00183" />
-      <option name="presentableId" value="LOCAL-00183" />
-      <option name="project" value="LOCAL" />
-      <updated>1775138652709</updated>
+      <workItem from="1780031554219" duration="7792000" />
     </task>
     <task id="LOCAL-00184" summary="类型">
       <option name="closed" value="true" />
@@ -803,7 +785,23 @@
       <option name="project" value="LOCAL" />
       <updated>1780037502905</updated>
     </task>
-    <option name="localTasksCounter" value="231" />
+    <task id="LOCAL-00231" summary="拆分repository">
+      <option name="closed" value="true" />
+      <created>1780038504848</created>
+      <option name="number" value="00231" />
+      <option name="presentableId" value="LOCAL-00231" />
+      <option name="project" value="LOCAL" />
+      <updated>1780038504848</updated>
+    </task>
+    <task id="LOCAL-00232" summary="拆分repository">
+      <option name="closed" value="true" />
+      <created>1780041001844</created>
+      <option name="number" value="00232" />
+      <option name="presentableId" value="LOCAL-00232" />
+      <option name="project" value="LOCAL" />
+      <updated>1780041001844</updated>
+    </task>
+    <option name="localTasksCounter" value="233" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
