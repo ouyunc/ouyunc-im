@@ -11,6 +11,7 @@ import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
+import com.ouyunc.domain.constants.IdentityType;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
@@ -153,6 +154,17 @@ public abstract class AbstractMessageProcessor<T extends Number> extends Abstrac
             delivery.run();
         }
         ctx.fireChannelRead(packet);
+    }
+
+    /**
+     * 发送方在本会话发出消息后，静默推进本端已读 offset 至该消息 packetId（不向对方投递已读回执）。
+     */
+    protected void advanceSenderReadOffsetOnSend(Packet packet, IdentityType identityType) {
+        repository().reactiveAdvanceSenderReadOffsetOnSend(
+                        packet, identityType, MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
+                .subscribe(
+                        ignored -> { },
+                        e -> log.warn("发送消息静默更新本端已读 offset 失败, packetId={}", packet.getPacketId(), e));
     }
 
     /**

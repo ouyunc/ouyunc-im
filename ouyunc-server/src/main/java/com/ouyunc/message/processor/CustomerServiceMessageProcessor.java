@@ -79,11 +79,11 @@ public final class CustomerServiceMessageProcessor extends AbstractMessageProces
                 publishCachePersistenceError(packet, "客服消息写入会话失败");
                 return;
             }
+            repository().saveLastMessageForSession(sessionId, packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+            advanceSenderReadOffsetOnSend(packet, IdentityType.ONE_2_ONE);
             if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
-                repository().saveLastMessageForSession(sessionId, packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
                 handleWithdrawMessage(ctx, packet);
             } else {
-                repository().saveLastMessageForSession(sessionId, packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
                 deliverToUserAndService(packet, false);
                 ctx.fireChannelRead(packet);
             }

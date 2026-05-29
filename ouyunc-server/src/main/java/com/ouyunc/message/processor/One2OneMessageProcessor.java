@@ -118,6 +118,7 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
                     // 持久化成功后才发送 QoS ACK，确保「客户端收到 ACK == 服务端持久化成功」
                     sendQosAckAfterPersist(ctx, packet);
                     repository().saveLastMessageForSession(IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo()), packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+                    advanceSenderReadOffsetOnSend(packet, IdentityType.ONE_2_ONE);
                     if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
                         handleWithdrawMessage(ctx, packet);
                     } else {

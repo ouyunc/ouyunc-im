@@ -77,6 +77,25 @@ public final class ReadReceiptSupport {
         });
     }
 
+    /**
+     * 发送方在本会话发出聊天消息后，静默将本端已读 offset 推进到该消息 packetId（不投递已读回执）。
+     */
+    public Mono<Boolean> reactiveAdvanceSenderReadOffsetOnSend(Packet packet, IdentityType identityType, long expireTime) {
+        Message message = packet.getMessage();
+        if (message == null || message.getMetadata() == null) {
+            log.warn("发送消息静默更新 offset 失败，消息或元数据为空 | packet={}", packet);
+            return Mono.just(false);
+        }
+        return reactiveUpdateSessionReadOffset(
+                message.getMetadata().getAppKey(),
+                identityType,
+                message.getFrom(),
+                packet.getDeviceType(),
+                message.getTo(),
+                packet.getPacketId(),
+                expireTime);
+    }
+
     @SuppressWarnings("unchecked")
     public Mono<Boolean> reactiveReadReceiptMessage(Packet packet, IdentityType identityType, long expireTime) {
         Message message = packet.getMessage();
@@ -92,16 +111,23 @@ public final class ReadReceiptSupport {
             log.error("已读的消息id不能为空 | packet={}", packet);
             return Mono.just(false);
         }
+        return reactiveUpdateSessionReadOffset(
+                metadata.getAppKey(), identityType, from, packet.getDeviceType(), to, maxReadPacketId, expireTime);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Mono<Boolean> reactiveUpdateSessionReadOffset(String appKey, IdentityType identityType, String from,
+                                                          Byte deviceType, String to, long incomingOffset,
+                                                          long expireTime) {
         String offsetKey = CacheConstant.buildSessionReadMessageOffsetCacheKey(
-                metadata.getAppKey(), identityType.value(), from, packet.getDeviceType(), to);
-        final long incomingOffset = maxReadPacketId;
+                appKey, identityType.value(), from, deviceType, to);
         return Mono.fromCallable(() -> {
                     DefaultRedisScript<Long> readOffsetScript = new DefaultRedisScript<>(
                             LuaScriptEnum.READ_OFFSET_MAX_SCRIPT.getScript(), Long.class);
                     redisTemplate.execute(readOffsetScript, List.of(offsetKey), incomingOffset, expireTime);
                     return Boolean.TRUE;
                 })
-                .doOnError(e -> log.error("已读回执 Redis 更新失败 | offsetKey={}, incomingOffset={}, expireTime={}",
+                .doOnError(e -> log.error("会话已读 offset Redis 更新失败 | offsetKey={}, incomingOffset={}, expireTime={}",
                         offsetKey, incomingOffset, expireTime, e))
                 .subscribeOn(Schedulers.boundedElastic());
     }

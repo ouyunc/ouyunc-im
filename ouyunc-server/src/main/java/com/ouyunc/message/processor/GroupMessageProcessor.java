@@ -130,6 +130,7 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
                     // 持久化成功后才发送 QoS ACK
                     sendQosAckAfterPersist(ctx, packet);
                     repository().saveLastMessageForSession(packet.getMessage().getTo(), packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+                    advanceSenderReadOffsetOnSend(packet, IdentityType.GROUP);
                     if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
                         handleWithdrawMessage(ctx, packet, groupUserIdentitySet);
                     } else {

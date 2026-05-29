@@ -89,6 +89,10 @@ public enum DefaultRepository implements Repository {
         return RepositorySupports.READ_RECEIPT.reactiveReadReceiptMessage(packet, identityType, expireTime);
     }
 
+    public Mono<Boolean> reactiveAdvanceSenderReadOffsetOnSend(Packet packet, IdentityType identityType, long expireTime) {
+        return RepositorySupports.READ_RECEIPT.reactiveAdvanceSenderReadOffsetOnSend(packet, identityType, expireTime);
+    }
+
     public Set<String> groupUsersIdentity(Packet packet) {
         return RepositorySupports.GROUP.groupUsersIdentity(packet);
     }
