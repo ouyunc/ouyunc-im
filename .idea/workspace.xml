@@ -4,18 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="拆分repository">
+    <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="类型">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/CacheConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/CacheConstant.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/MessageConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/MessageConstant.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/enums/LuaScriptEnum.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/enums/LuaScriptEnum.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/constants/IdentityType.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/constants/IdentityType.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/DefaultRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/DefaultRepository.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/ReadReceiptSupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/ReadReceiptSupport.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/RepositorySupports.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/RepositorySupports.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/SessionMessagePersistenceSupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/SessionMessagePersistenceSupport.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/CustomerServiceMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/CustomerServiceMessageProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneMessageProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneMessageProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/UnreadIndexSupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/UnreadIndexSupport.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -71,6 +65,65 @@
   <component name="MavenRunner">
     <option name="skipTests" value="true" />
   </component>
+  <component name="NextEditCompletionFeaturesState">
+    <decayedCancelled>
+      <entry key="MS100" value="2.176429584459903" />
+      <entry key="MS500" value="2.8151365996759905" />
+      <entry key="S2" value="3.315339863539741" />
+      <entry key="S5" value="3.6492677773075104" />
+      <entry key="S10" value="3.8082094884669564" />
+      <entry key="S30" value="3.93200236402785" />
+      <entry key="S60" value="3.9656364274193385" />
+      <entry key="M2" value="4.007470180788154" />
+      <entry key="M5" value="4.510904163734566" />
+      <entry key="M10" value="5.44007593288431" />
+      <entry key="M15" value="6.070963617266748" />
+      <entry key="M30" value="7.240344810638449" />
+      <entry key="H1" value="8.465980020004135" />
+      <entry key="H2" value="9.509660200828169" />
+      <entry key="H4" value="10.389653469065122" />
+      <entry key="D1" value="12.238277131195375" />
+      <entry key="W1" value="12.876699302420263" />
+    </decayedCancelled>
+    <decayedSelected>
+      <entry key="MS100" value="0.0" />
+      <entry key="MS500" value="0.0" />
+      <entry key="S2" value="0.0" />
+      <entry key="S5" value="1.0256573015E-313" />
+      <entry key="S10" value="3.7626470705089226E-157" />
+      <entry key="S30" value="1.0757816360242937E-52" />
+      <entry key="S60" value="1.4537665466193347E-26" />
+      <entry key="M2" value="1.701282030223256E-13" />
+      <entry key="M5" value="1.1821998520222492E-5" />
+      <entry key="M10" value="0.004862065506924377" />
+      <entry key="M15" value="0.03615888735928134" />
+      <entry key="M30" value="0.2689169156677791" />
+      <entry key="H1" value="0.733369690788411" />
+      <entry key="H2" value="1.2110893945899173" />
+      <entry key="H4" value="1.556334803736613" />
+      <entry key="D1" value="1.9181187547446406" />
+      <entry key="W1" value="1.988092078458154" />
+    </decayedSelected>
+    <decayedShown>
+      <entry key="MS100" value="1.72239497275855" />
+      <entry key="MS500" value="2.5986905543185483" />
+      <entry key="S2" value="3.249344347437964" />
+      <entry key="S5" value="3.621455009521792" />
+      <entry key="S10" value="3.794026586136856" />
+      <entry key="S30" value="3.9272083227806998" />
+      <entry key="S60" value="3.963229450341374" />
+      <entry key="M2" value="4.006181878672709" />
+      <entry key="M5" value="4.509795863230993" />
+      <entry key="M10" value="5.443761978822998" />
+      <entry key="M15" value="6.1057872071456405" />
+      <entry key="M30" value="7.507220981425453" />
+      <entry key="H1" value="9.197063904553145" />
+      <entry key="H2" value="10.718965485499709" />
+      <entry key="H4" value="11.944860212128678" />
+      <entry key="D1" value="14.156161892611326" />
+      <entry key="W1" value="14.86475647761874" />
+    </decayedShown>
+  </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 0
 }</component>
@@ -112,10 +165,12 @@
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
     &quot;SONARLINT_PRECOMMIT_ANALYSIS&quot;: &quot;true&quot;,
+    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
     &quot;git-widget-placeholder&quot;: &quot;6.5.3&quot;,
     &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;D:/workspace/ouyunc-im/ouyunc-commons/ouyunc-core/src/main/java/com/ouyunc/core/listener/event/payload&quot;,
+    &quot;last_opened_file_path&quot;: &quot;D:/workspace/ouyunc-im&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
     &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
@@ -168,7 +223,7 @@
       <option name="MAIN_CLASS_NAME" value="com.ouyunc.message.StartServer" />
       <module name="ouyunc-server" />
       <option name="PROGRAM_PARAMETERS" value="Dlog4j.skipJansi=false" />
-      <option name="VM_PARAMETERS" value="-Dlog4j.skipJansi=false -Douyunc.env=dev -Xms512m -Xmx2048m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+ParallelRefProcEnabled" />
+      <option name="VM_PARAMETERS" value="-Dlog4j.skipJansi=false -Douyunc.env=dev -Xms512m -Xmx1024m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+ParallelRefProcEnabled" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
@@ -289,8 +344,8 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-jdk-9823dce3aa75-fdfe4dae3a2d-intellij.indexing.shared.core-IU-243.21565.193" />
-        <option value="bundled-js-predefined-d6986cc7102b-e768b9ed790e-JavaScript-IU-243.21565.193" />
+        <option value="bundled-jdk-30f59d01ecdd-37e91769500f-intellij.indexing.shared.core-IU-261.24374.151" />
+        <option value="bundled-js-predefined-d6986cc7102b-31caf2ab9e3c-JavaScript-IU-261.24374.151" />
       </set>
     </attachedChunks>
   </component>
@@ -417,14 +472,9 @@
       <workItem from="1779712685529" duration="4511000" />
       <workItem from="1779886421327" duration="1819000" />
       <workItem from="1780031554219" duration="9001000" />
-    </task>
-    <task id="LOCAL-00186" summary="类型">
-      <option name="closed" value="true" />
-      <created>1775232928944</created>
-      <option name="number" value="00186" />
-      <option name="presentableId" value="LOCAL-00186" />
-      <option name="project" value="LOCAL" />
-      <updated>1775232928944</updated>
+      <workItem from="1780144949143" duration="64000" />
+      <workItem from="1780145144361" duration="643000" />
+      <workItem from="1780146060615" duration="12403000" />
     </task>
     <task id="LOCAL-00187" summary="类型">
       <option name="closed" value="true" />
@@ -810,7 +860,15 @@
       <option name="project" value="LOCAL" />
       <updated>1780041985319</updated>
     </task>
-    <option name="localTasksCounter" value="235" />
+    <task id="LOCAL-00235" summary="类型">
+      <option name="closed" value="true" />
+      <created>1780065586755</created>
+      <option name="number" value="00235" />
+      <option name="presentableId" value="LOCAL-00235" />
+      <option name="project" value="LOCAL" />
+      <updated>1780065586756</updated>
+    </task>
+    <option name="localTasksCounter" value="236" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -881,9 +939,9 @@
     <MESSAGE value="增加群组推送模式" />
     <MESSAGE value="全局唯一id生成器" />
     <MESSAGE value="系统推送" />
-    <MESSAGE value="类型" />
     <MESSAGE value="拆分repository" />
-    <option name="LAST_COMMIT_MESSAGE" value="拆分repository" />
+    <MESSAGE value="类型" />
+    <option name="LAST_COMMIT_MESSAGE" value="类型" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -922,6 +980,41 @@
           <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/AbstractMessageServer.java</url>
           <line>218</line>
           <option name="timeStamp" value="58" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneMessageProcessor.java</url>
+          <line>118</line>
+          <option name="timeStamp" value="60" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/ReadReceiptSupport.java</url>
+          <line>99</line>
+          <option name="timeStamp" value="61" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/ReadReceiptSupport.java</url>
+          <line>137</line>
+          <option name="timeStamp" value="62" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/UnreadIndexSupport.java</url>
+          <line>117</line>
+          <option name="timeStamp" value="64" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/SessionMessagePersistenceSupport.java</url>
+          <line>69</line>
+          <option name="timeStamp" value="65" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/UnreadIndexSupport.java</url>
+          <line>41</line>
+          <option name="timeStamp" value="66" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/UnreadIndexSupport.java</url>
+          <line>87</line>
+          <option name="timeStamp" value="67" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>

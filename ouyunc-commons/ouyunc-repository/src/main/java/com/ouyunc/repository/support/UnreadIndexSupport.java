@@ -2,15 +2,20 @@ package com.ouyunc.repository.support;
 
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.LuaScriptEnum;
+import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.core.context.MessageContext;
+import com.ouyunc.core.listener.event.MessageEvent;
+import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.domain.constants.IdentityType;
 import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.SessionCallback;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 
 import java.util.Collection;
@@ -23,10 +28,10 @@ public final class UnreadIndexSupport {
 
     private static final Logger log = LoggerFactory.getLogger(UnreadIndexSupport.class);
 
-    private final RedisTemplate redisTemplate;
+    private final StringRedisTemplate stringRedisTemplate;
 
     public UnreadIndexSupport(RepositoryInfrastructure infra) {
-        this.redisTemplate = infra.redisTemplate;
+        this.stringRedisTemplate = infra.stringRedisTemplate;
     }
 
     /**
@@ -47,12 +52,17 @@ public final class UnreadIndexSupport {
         if (senderId == null || recipientId == null || senderId.equals(recipientId)) {
             return;
         }
+        long packetId = packet.getPacketId();
+        if (packetId <= 0L) {
+            log.warn("incrOne2OneOnMessage skip invalid packetId={} recipient={}", packetId, recipientId);
+            return;
+        }
         Collection<Byte> deviceTypes = resolveDeviceTypes(appKey, recipientId);
         if (CollectionUtils.isEmpty(deviceTypes)) {
             return;
         }
         String field = IdentityType.ONE_2_ONE.unreadField(senderId);
-        String packetIdArg = String.valueOf(packet.getPacketId());
+        String packetIdArg = String.valueOf(packetId);
         long ttl = MessageConstant.CACHE_USER_DEVICE_UNREAD_EXPIRE_TIMESTAMP;
         int storeMax = MessageConstant.SESSION_UNREAD_STORE_MAX;
 
@@ -60,16 +70,29 @@ public final class UnreadIndexSupport {
                 LuaScriptEnum.UNREAD_INCR_ONE2ONE_SCRIPT.getScript(), Long.class);
 
         try {
-            for (Byte deviceType : deviceTypes) {
-                String urKey = CacheConstant.buildUserDeviceUnreadCacheKey(appKey, recipientId, deviceType);
-                String sroKey = CacheConstant.buildSessionReadMessageOffsetCacheKey(
-                        appKey, IdentityType.ONE_2_ONE.value(), recipientId, deviceType, senderId);
-                redisTemplate.execute(script, List.of(urKey, sroKey),
-                        field, packetIdArg, "1", String.valueOf(storeMax), String.valueOf(ttl));
-            }
+            stringRedisTemplate.executePipelined(new SessionCallback<>() {
+                @Override
+                @SuppressWarnings({"unchecked", "rawtypes"})
+                public Object execute(org.springframework.data.redis.core.RedisOperations operations) {
+                    for (Byte deviceType : deviceTypes) {
+                        String urKey = CacheConstant.buildUserDeviceUnreadCacheKey(appKey, recipientId, deviceType);
+                        String sroKey = CacheConstant.buildSessionReadMessageOffsetCacheKey(
+                                appKey, IdentityType.ONE_2_ONE.value(), recipientId, deviceType, senderId);
+                        operations.execute(script, List.of(urKey, sroKey),
+                                field, packetIdArg, "1", String.valueOf(storeMax), String.valueOf(ttl));
+                    }
+                    return null;
+                }
+            });
         } catch (Exception e) {
-            log.warn("incrOne2OneOnMessage failed appKey={} recipient={} sender={}",
-                    appKey, recipientId, senderId, e);
+            log.error("incrOne2OneOnMessage failed appKey={} recipient={} sender={} packetId={}",
+                    appKey, recipientId, senderId, packetId, e);
+            MessageContext.publishEvent(new MessageEvent(
+                    ExceptionEventPayload.of(
+                            ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
+                            "单聊未读索引更新失败: " + e.getMessage(),
+                            packet),
+                    MessageEventTypeEnum.EXCEPTION), true);
         }
     }
 
@@ -89,10 +112,17 @@ public final class UnreadIndexSupport {
         try {
             DefaultRedisScript<String> script = new DefaultRedisScript<>(
                     LuaScriptEnum.UNREAD_CLEAR_ONE2ONE_ON_READ_SCRIPT.getScript(), String.class);
-            redisTemplate.execute(script, List.of(urKey, sroKey),
+            stringRedisTemplate.execute(script, List.of(urKey, sroKey),
                     field, String.valueOf(incomingOffset), String.valueOf(expireTimeMs));
         } catch (Exception e) {
-            log.warn("clearOne2OneOnRead failed reader={} peer={} deviceType={}", readerId, peerId, deviceType, e);
+            log.error("clearOne2OneOnRead failed appKey={} reader={} peer={} deviceType={} offset={}",
+                    appKey, readerId, peerId, deviceType, incomingOffset, e);
+            MessageContext.publishEvent(new MessageEvent(
+                    ExceptionEventPayload.of(
+                            ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
+                            "单聊已读 offset+未读清索引失败: " + e.getMessage(),
+                            null),
+                    MessageEventTypeEnum.EXCEPTION), true);
         }
     }
 

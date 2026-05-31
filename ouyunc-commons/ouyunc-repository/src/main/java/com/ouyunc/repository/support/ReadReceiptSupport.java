@@ -18,7 +18,7 @@ import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import reactor.core.publisher.Mono;
@@ -38,16 +38,16 @@ public final class ReadReceiptSupport {
     private static final Logger log = LoggerFactory.getLogger(ReadReceiptSupport.class);
 
     private final SpecialMessageLoader specialMessageLoader;
-    private final RedisTemplate redisTemplate;
+    private final StringRedisTemplate stringRedisTemplate;
     private final MongoTemplate mongoTemplate;
     private final JdbcClient jdbcClient;
     private final UnreadIndexSupport unreadIndexSupport;
 
-    public ReadReceiptSupport(SpecialMessageLoader specialMessageLoader, RedisTemplate redisTemplate,
+    public ReadReceiptSupport(SpecialMessageLoader specialMessageLoader, StringRedisTemplate stringRedisTemplate,
                               MongoTemplate mongoTemplate, JdbcClient jdbcClient,
                               UnreadIndexSupport unreadIndexSupport) {
         this.specialMessageLoader = specialMessageLoader;
-        this.redisTemplate = redisTemplate;
+        this.stringRedisTemplate = stringRedisTemplate;
         this.mongoTemplate = mongoTemplate;
         this.jdbcClient = jdbcClient;
         this.unreadIndexSupport = unreadIndexSupport;
@@ -147,9 +147,10 @@ public final class ReadReceiptSupport {
         String offsetKey = CacheConstant.buildSessionReadMessageOffsetCacheKey(
                 appKey, identityType.value(), from, deviceType, to);
         return Mono.fromCallable(() -> {
-                    DefaultRedisScript<Long> readOffsetScript = new DefaultRedisScript<>(
-                            LuaScriptEnum.READ_OFFSET_MAX_SCRIPT.getScript(), Long.class);
-                    redisTemplate.execute(readOffsetScript, List.of(offsetKey), incomingOffset, expireTime);
+                    DefaultRedisScript<String> readOffsetScript = new DefaultRedisScript<>(
+                            LuaScriptEnum.READ_OFFSET_MAX_SCRIPT.getScript(), String.class);
+                    stringRedisTemplate.execute(readOffsetScript, List.of(offsetKey),
+                            String.valueOf(incomingOffset), String.valueOf(expireTime));
                     return Boolean.TRUE;
                 })
                 .doOnError(e -> log.error("会话已读 offset Redis 更新失败 | offsetKey={}, incomingOffset={}, expireTime={}",
@@ -157,14 +158,13 @@ public final class ReadReceiptSupport {
                 .subscribeOn(Schedulers.boundedElastic());
     }
 
-    @SuppressWarnings("unchecked")
     private Long getSessionMaxReadPackageId(String appKey, IdentityType identityType, String from, Byte deviceType, String to) {
         String sessionMessageOffsetKey = CacheConstant.buildSessionReadMessageOffsetCacheKey(
                 appKey, identityType.value(), from, deviceType, to);
         Long sessionMessageOffset = null;
-        Object cachedOffset = redisTemplate.opsForValue().get(sessionMessageOffsetKey);
-        if (cachedOffset instanceof Number n) {
-            sessionMessageOffset = n.longValue();
+        String sessionMessageOffsetStr = stringRedisTemplate.opsForValue().get(sessionMessageOffsetKey);
+        if (sessionMessageOffsetStr != null && !sessionMessageOffsetStr.isBlank()) {
+            sessionMessageOffset =  Long.parseLong(sessionMessageOffsetStr.trim());
         }
         if (sessionMessageOffset != null) {
             return sessionMessageOffset;
@@ -188,7 +188,8 @@ public final class ReadReceiptSupport {
                     .single();
             Long maxSessionMessageOffset = sessionMessageOffsetEntity.getSessionMessageOffset();
             if (maxSessionMessageOffset != null) {
-                redisTemplate.opsForValue().set(sessionMessageOffsetKey, maxSessionMessageOffset,
+                stringRedisTemplate.opsForValue().set(sessionMessageOffsetKey,
+                        Long.toString(maxSessionMessageOffset),
                         MessageConstant.CACHE_ENTITY_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
             }
             return maxSessionMessageOffset;
