@@ -198,6 +198,7 @@ public class MessageEntity implements Serializable {
         public static final String contentType = "content_type";
         public static final String correlationId = "correlation_id";
         public static final String appKey = "appKey";
+        public static final String retain = "retain";
     }
 
 

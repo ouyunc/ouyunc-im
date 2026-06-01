@@ -68,17 +68,28 @@ public class MessageWithdrawEntity implements Serializable {
         this.deviceType = deviceType;
     }
 
-    private void setId(Long id){
-    this.id = id;
+    public Long getId() {
+        return id;
     }
 
-    private void setWithdrawnTime(Long withdrawnTime){
-    this.withdrawnTime = withdrawnTime;
+    public void setId(Long id) {
+        this.id = id;
     }
 
+    public Long getWithdrawnTime() {
+        return withdrawnTime;
+    }
 
-    private void setWithdrawUserId(String withdrawUserId){
-    this.withdrawUserId = withdrawUserId;
+    public void setWithdrawnTime(Long withdrawnTime) {
+        this.withdrawnTime = withdrawnTime;
+    }
+
+    public String getWithdrawUserId() {
+        return withdrawUserId;
+    }
+
+    public void setWithdrawUserId(String withdrawUserId) {
+        this.withdrawUserId = withdrawUserId;
     }
 
     public Byte getDeviceType() {
@@ -87,20 +98,6 @@ public class MessageWithdrawEntity implements Serializable {
 
     public void setDeviceType(Byte deviceType) {
         this.deviceType = deviceType;
-    }
-
-    private Long getId(){
-    return this.id;
-    }
-
-
-    private Long getWithdrawnTime(){
-    return this.withdrawnTime;
-    }
-
-
-    private String getWithdrawUserId(){
-    return this.withdrawUserId;
     }
 
 }
