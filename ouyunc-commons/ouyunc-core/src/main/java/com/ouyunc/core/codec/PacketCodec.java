@@ -4,6 +4,7 @@ package com.ouyunc.core.codec;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.utils.PacketReaderWriterUtil;
+import com.ouyunc.base.utils.PacketVerifier;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageCodec;
@@ -43,18 +44,10 @@ public class PacketCodec extends ByteToMessageCodec<Packet> {
 
 
     /**
-     * @Author fzx
-     * @Description 校验协议包字段参数,可以调用校验器来校验 @todo 待完善
+     * 校验协议包字段参数（魔数、协议、消息类型、加密/序列化算法、消息体等）。
      */
     protected boolean verify(Packet packet, ChannelHandlerContext ctx) {
-        // 校验魔数
-        // 校验协议包id
-        // 校验设备类型
-        // 校验消息类型
-        // 校验加密方式
-        // 校验序列化方式
-        // 校验权限
-        return true;
+        return PacketVerifier.verify(packet);
     }
 
     /**
@@ -67,7 +60,13 @@ public class PacketCodec extends ByteToMessageCodec<Packet> {
      */
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-        out.add(PacketReaderWriterUtil.readByteBuf2Packet(in));
+        Packet packet = PacketReaderWriterUtil.readByteBuf2Packet(in);
+        if (!verify(packet, ctx)) {
+            log.error("协议包:{} 解码后校验失败,开始关闭通道channel.", packet);
+            ctx.close();
+            return;
+        }
+        out.add(packet);
     }
 
 }
