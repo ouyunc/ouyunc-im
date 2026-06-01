@@ -16,7 +16,9 @@ import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.domain.entity.AppEntity;
 import com.ouyunc.message.context.AppKeyConnectionCleanupRegistry;
 import com.ouyunc.message.context.MessageServerContext;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.EventLoop;
 import org.apache.commons.collections4.CollectionUtils;
 import org.jetbrains.annotations.NotNull;
 import org.redisson.api.RLock;
@@ -48,8 +50,7 @@ public class ClientHelper {
 
     /***
      * @author fzx
-     * @description 客户端绑定登录信息（兼容入口，内部调用异步版本）。
-     *              本地状态同步绑定，分布式锁与 Redis 写入异步执行，避免阻塞 Netty EventLoop。
+     * @description 客户端绑定登录信息（兼容入口，内部调用 {@link #bindAsync}）。
      */
     public static void bind(ChannelHandlerContext ctx, LoginClientInfo loginClientInfo) {
         bindAsync(ctx, loginClientInfo);
@@ -57,20 +58,56 @@ public class ClientHelper {
 
     /***
      * @author fzx
-     * @description 客户端绑定登录信息（异步版本，推荐使用）。
-     *              返回 CompletableFuture 以便调用方在分布式状态写入完成后做后续动作（例如发送 CONNACK）。
+     * @description 客户端绑定登录信息：先写 Redis，成功后再注册本地表与 Channel 属性。
+     *              返回 CompletableFuture，在集群可见且本机可路由后完成（调用方再发登录成功 ACK）。
      */
     public static CompletableFuture<Void> bindAsync(ChannelHandlerContext ctx, LoginClientInfo loginClientInfo) {
-        // 1. 本地状态绑定（无锁、无阻塞，立即生效）
-        ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN, loginClientInfo);
-        ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_HEARTBEAT_TIMEOUT, loginClientInfo.getHeartBeatTimeout());
-        ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LAST_HEARTBEAT_TIMESTAMP, loginClientInfo.getLastLoginTime());
-        String comboIdentity = IdentityUtil.generalComboIdentity(loginClientInfo.getAppKey(), loginClientInfo.getIdentity(), loginClientInfo.getDeviceType());
-        MessageServerContext.localLoginClientRegisterTable.put(comboIdentity, ctx);
+        String comboIdentity = IdentityUtil.generalComboIdentity(
+                loginClientInfo.getAppKey(), loginClientInfo.getIdentity(), loginClientInfo.getDeviceType());
+        Channel channel = ctx.channel();
+        return CompletableFuture.runAsync(() -> {
+                    doBindRemote(loginClientInfo, comboIdentity);
+                    MessageServerContext.localLoginClientRegisterTable.put(comboIdentity, ctx);
+                }, ThreadPoolManager.messageProcessorExecutor())
+                .thenCompose(unused -> runOnEventLoop(channel, () -> {
+                    ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN, loginClientInfo);
+                    ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_HEARTBEAT_TIMEOUT,
+                            loginClientInfo.getHeartBeatTimeout());
+                    ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LAST_HEARTBEAT_TIMESTAMP,
+                            loginClientInfo.getLastLoginTime());
+                }))
+                .whenComplete((unused, ex) -> {
+                    if (ex != null) {
+                        MessageServerContext.localLoginClientRegisterTable.delete(comboIdentity);
+                    }
+                });
+    }
 
-        // 2. 分布式状态写入异步执行（锁等待 + Redis Pipeline 不再阻塞 EventLoop）
-        return CompletableFuture.runAsync(() -> doBindRemote(loginClientInfo, comboIdentity),
-                ThreadPoolManager.messageProcessorExecutor());
+    public static void unbindLocalRegisterTable(LoginClientInfo loginClientInfo) {
+        String comboIdentity = IdentityUtil.generalComboIdentity(
+                loginClientInfo.getAppKey(), loginClientInfo.getIdentity(), loginClientInfo.getDeviceType());
+        MessageServerContext.localLoginClientRegisterTable.delete(comboIdentity);
+    }
+
+    private static CompletableFuture<Void> runOnEventLoop(Channel channel, Runnable action) {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        EventLoop eventLoop = channel.eventLoop();
+        Runnable task = () -> {
+            try {
+                action.run();
+                future.complete(null);
+            } catch (Exception e) {
+                future.completeExceptionally(e);
+            }
+        };
+        if (eventLoop.inEventLoop()) {
+            task.run();
+        } else if (!eventLoop.isTerminated() && !eventLoop.isShutdown() && !eventLoop.isShuttingDown()) {
+            eventLoop.execute(task);
+        } else {
+            future.completeExceptionally(new MessageException("channel.eventLoop 已终止或关闭，无法完成登录绑定"));
+        }
+        return future;
     }
 
     private static void doBindRemote(LoginClientInfo loginClientInfo, String comboIdentity) {
@@ -104,6 +141,7 @@ public class ClientHelper {
                 }
             } else {
                 log.error("客户端: {} 绑定登录信息失败,原因：获取分布式锁超时", loginClientInfo);
+                throw new MessageException("客户端绑定登录信息失败：获取分布式锁超时");
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();

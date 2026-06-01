@@ -10,7 +10,6 @@ import com.ouyunc.base.constant.enums.LoginScopeEnum;
 import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.constant.enums.OnlineEnum;
 import com.ouyunc.base.encrypt.Encrypt;
-import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.model.MqttLoginClientInfo;
@@ -187,7 +186,7 @@ public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<In
             }
             // sessionPresent
             boolean sessionPresent = cacheLoginClientInfo != null && !mqttConnectMessage.variableHeader().isCleanSession();
-            ClientHelper.bind(ctx, mqttLoginClientInfo);
+            final MqttLoginClientInfo loginClientInfo = mqttLoginClientInfo;
             // 处理回调信息（channel close 在 EventLoop 上触发，分布式锁与 Redis I/O 必须移到业务线程池执行）
             Consumer<Channel> channelConsumer = channel -> {
                 log.warn("客户端断开连接, 触发回调, comboIdentity: {}, channel: {}", comboIdentity, channel);
@@ -246,38 +245,49 @@ public class MqttConnectMessageContentProcessor extends AbstractBaseProcessor<In
             };
             // 设置channel关闭后的钩子
             ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_CHANNEL_CLOSE_HOOK, channelConsumer);
-            // 判断是否加入读写空闲,只要服务端开启支持心跳，才会可能加入心跳处理，这里可以根据自己的协议或业务逻辑进行调整
-            Integer heartbeatExpireTime = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_HEARTBEAT_TIMEOUT);
-            if (MessageServerContext.serverProperties().isClientHeartBeatEnable() && heartbeatExpireTime != null) {
-                // 判断是否开启客户端心跳
-                ctx.pipeline()
-                        // 客户端登录保活处理器
-                        .addAfter(MessageConstant.CONVERT_2_PACKET_HANDLER, MessageConstant.CLIENT_LOGIN_KEEP_ALIVE_HANDLER, new LoginKeepAliveHandler())
-                        // 添加读写空闲处理器， 添加后，下条消息就可以接收心跳消息了
-                        .addAfter(MessageConstant.CLIENT_LOGIN_KEEP_ALIVE_HANDLER, MessageConstant.HEART_BEAT_IDLE_HANDLER, new IdleStateHandler(heartbeatExpireTime, NumberConstant.NUMBER_0, NumberConstant.NUMBER_0))
-                        // 处理心跳的以及相关逻辑都放在这里处理
-                        .addAfter(MessageConstant.HEART_BEAT_IDLE_HANDLER, MessageConstant.HEART_BEAT_HANDLER, new HeartBeatHandler());
-            }
-            // 发送成功给到客户端
-            MqttMessage mqttConnAckMessage = MqttMessageFactory.newMessage(
-                    new MqttFixedHeader(MqttMessageType.CONNACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
-                    new MqttConnAckVariableHeader(MqttConnectReturnCode.CONNECTION_ACCEPTED, sessionPresent), null);
-            ctx.writeAndFlush(mqttConnAckMessage);
-            log.debug("CONNECT - clientId: {}, cleanSession: {}", mqttConnectMessage.payload().clientIdentifier(), mqttConnectMessage.variableHeader().isCleanSession());
-            // @todo 如果cleanSession为0, 需要重发同一clientId存储的未完成的QoS1和QoS2的DUP消息
-//            if (cleanSession == NumberConstant.NUMBER_1) {
-//                List<DupPublishMessageStore> dupPublishMessageStoreList = dupPublishMessageStoreService.get(msg.payload().clientIdentifier());
-//                // qos 1 消息重发
-//                dupPublishMessageList.forEach(dupPublishMessageStore -> {
-//                    MqttPublishMessage publishMessage = (MqttPublishMessage) MqttMessageFactory.newMessage(
-//                            new MqttFixedHeader(MqttMessageType.PUBLISH, true, MqttQoS.valueOf(dupPublishMessageStore.getMqttQoS()), false, 0),
-//                            new MqttPublishVariableHeader(dupPublishMessageStore.getTopic(), dupPublishMessageStore.getMessageId()), ByteBufAllocator.DEFAULT.buffer().writeBytes(dupPublishMessageStore.getMessageBytes()));
-//                    ctx.writeAndFlush(publishMessage);
-//                });
-//            }
+            ClientHelper.bindAsync(ctx, loginClientInfo).whenComplete((unused, ex) ->
+                    ctx.executor().execute(() ->
+                            completeMqttConnectAfterRemoteBind(ctx, packet, mqttConnectMessage, sessionPresent, loginClientInfo, ex)));
         }else {
             log.error("mqtt 非法连接connect 消息！");
         }
+    }
+
+    /**
+     * Redis 与本地注册表绑定成功后发送 CONNACK 并安装心跳管道。
+     */
+    private void completeMqttConnectAfterRemoteBind(ChannelHandlerContext ctx, Packet packet,
+                                                    MqttConnectMessage mqttConnectMessage, boolean sessionPresent,
+                                                    MqttLoginClientInfo loginClientInfo, Throwable bindError) {
+        if (!ctx.channel().isActive()) {
+            ClientHelper.unbindLocalRegisterTable(loginClientInfo);
+            return;
+        }
+        if (bindError != null) {
+            log.error("mqtt 客户端: {} 登录绑定失败", loginClientInfo.getIdentity(), bindError);
+            MqttMessage connAckMessage = MqttMessageFactory.newMessage(
+                    new MqttFixedHeader(MqttMessageType.CONNACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
+                    new MqttConnAckVariableHeader(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE, false),
+                    null);
+            MessageHelper.tryWriteObject(ctx.channel(), connAckMessage, packet, sendResult -> {});
+            ctx.close();
+            return;
+        }
+        int heartbeatExpireTime = loginClientInfo.getHeartBeatTimeout();
+        if (MessageServerContext.serverProperties().isClientHeartBeatEnable() && heartbeatExpireTime > 0) {
+            ctx.pipeline()
+                    .addAfter(MessageConstant.CONVERT_2_PACKET_HANDLER, MessageConstant.CLIENT_LOGIN_KEEP_ALIVE_HANDLER, new LoginKeepAliveHandler())
+                    .addAfter(MessageConstant.CLIENT_LOGIN_KEEP_ALIVE_HANDLER, MessageConstant.HEART_BEAT_IDLE_HANDLER,
+                            new IdleStateHandler(heartbeatExpireTime, NumberConstant.NUMBER_0, NumberConstant.NUMBER_0))
+                    .addAfter(MessageConstant.HEART_BEAT_IDLE_HANDLER, MessageConstant.HEART_BEAT_HANDLER, new HeartBeatHandler());
+        }
+        MqttMessage mqttConnAckMessage = MqttMessageFactory.newMessage(
+                new MqttFixedHeader(MqttMessageType.CONNACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
+                new MqttConnAckVariableHeader(MqttConnectReturnCode.CONNECTION_ACCEPTED, sessionPresent), null);
+        ctx.writeAndFlush(mqttConnAckMessage);
+        log.debug("CONNECT - clientId: {}, cleanSession: {}", mqttConnectMessage.payload().clientIdentifier(),
+                mqttConnectMessage.variableHeader().isCleanSession());
+        // @todo 如果cleanSession为0, 需要重发同一clientId存储的未完成的QoS1和QoS2的DUP消息
     }
 
     /***

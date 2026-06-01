@@ -179,8 +179,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         }
         byte protocolValue = protocol.getProtocol();
         byte protocolVersion = protocol.getProtocolVersion();
-        // 绑定信息
-        ClientHelper.bind(ctx, cacheLoginClientInfo = new LoginClientInfo(protocolValue, protocolVersion, MessageContext.messageProperties.getLocalServerAddress(), OnlineEnum.ONLINE, null, ClientHelper.calculateClientLoginExpireTime(loginContent.getHeartBeatExpireTime()), ClientHelper.calculateClientHeartBeatTimeout(loginContent.getHeartBeatExpireTime()), loginTimestamp, loginContent.getAppKey(), loginContent.getIdentity(), deviceType, loginContent.getSupportDeviceTypes(), loginContent.getSn(), loginContent.getSignature(), loginContent.getSignatureAlgorithm(), loginContent.getHeartBeatExpireTime(), loginTimestamp, loginContent.getEnableWill(), loginContent.getWillMessage(), loginContent.getEnableAlive(), loginContent.getAliveMessage(), loginContent.getScope(), loginContent.getBusinessIdleSeconds(), loginContent.getHeartBeatWaitRetry(), loginContent.getBusinessIdleCloseStrike()));
+        LoginClientInfo newLoginClientInfo = new LoginClientInfo(protocolValue, protocolVersion, MessageContext.messageProperties.getLocalServerAddress(), OnlineEnum.ONLINE, null, ClientHelper.calculateClientLoginExpireTime(loginContent.getHeartBeatExpireTime()), ClientHelper.calculateClientHeartBeatTimeout(loginContent.getHeartBeatExpireTime()), loginTimestamp, loginContent.getAppKey(), loginContent.getIdentity(), deviceType, loginContent.getSupportDeviceTypes(), loginContent.getSn(), loginContent.getSignature(), loginContent.getSignatureAlgorithm(), loginContent.getHeartBeatExpireTime(), loginTimestamp, loginContent.getEnableWill(), loginContent.getWillMessage(), loginContent.getEnableAlive(), loginContent.getAliveMessage(), loginContent.getScope(), loginContent.getBusinessIdleSeconds(), loginContent.getHeartBeatWaitRetry(), loginContent.getBusinessIdleCloseStrike());
         // 添加channel 关闭后释放资源的钩子, 该逻辑在DefaultSocketChannelInitializer 中进行调用
         Consumer<Channel> channelCloseHook = channel -> {
             //1,从channel中的attrMap取出相关属性
@@ -236,20 +235,48 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         };
         // 设置channel 关闭后的回调
         ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_CHANNEL_CLOSE_HOOK, channelCloseHook);
+        ClientHelper.bindAsync(ctx, newLoginClientInfo).whenComplete((unused, ex) ->
+                ctx.executor().execute(() ->
+                        completeLoginAfterRemoteBind(ctx, packet, loginContent, loginMessage, message, notifyPacket,
+                                deviceType, newLoginClientInfo, loginTimestamp, ex)));
+    }
+
+    /**
+     * Redis 与本地注册表绑定成功后，在 EventLoop 上完成登录 ACK 与管道安装。
+     */
+    private void completeLoginAfterRemoteBind(ChannelHandlerContext ctx, Packet packet, LoginContent loginContent,
+                                              Message loginMessage, Message message, Packet notifyPacket,
+                                              byte deviceType, LoginClientInfo loginClientInfo, long loginTimestamp,
+                                              Throwable bindError) {
+        if (!ctx.channel().isActive()) {
+            ClientHelper.unbindLocalRegisterTable(loginClientInfo);
+            return;
+        }
+        if (bindError != null) {
+            log.error("客户端: {} 登录绑定失败", loginClientInfo, bindError);
+            MessageServerContext.publishEvent(new MessageEvent(
+                    ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_VERIFY_ERROR,
+                            "登录绑定失败: " + bindError.getMessage(), packet),
+                    MessageEventTypeEnum.EXCEPTION), true);
+            ctx.close();
+            return;
+        }
         installLoginIdlePipeline(ctx, loginContent);
-        // 接收端回应登录设备登录成功信息
-        // 同步发送登录成功消息给客户端
         message.setContentType(MessageContentTypeEnum.LOGIN_RESPONSE_SUCCESS_CONTENT.getType());
         message.setContent(MessageContentTypeEnum.LOGIN_RESPONSE_SUCCESS_CONTENT.getDescription());
-        MessageHelper.syncSendMessage(notifyPacket, Target.newBuilder().targetIdentity(cacheLoginClientInfo.getIdentity()).targetServerAddress(cacheLoginClientInfo.getLoginServerAddress()).deviceType(deviceType).protocol(packet.getProtocol()).protocolVersion(packet.getProtocolVersion()).build());
-        // 登录成功，取消定时任务
-        boolean cancelled = cancelTimeoutFuture(ctx);
-        if (!cancelled) {
-            log.warn("客户端: {} 登录成功，取消登录超时定时任务失败", cacheLoginClientInfo);
+        MessageHelper.syncSendMessage(notifyPacket, Target.newBuilder()
+                .targetIdentity(loginClientInfo.getIdentity())
+                .targetServerAddress(loginClientInfo.getLoginServerAddress())
+                .deviceType(deviceType)
+                .protocol(packet.getProtocol())
+                .protocolVersion(packet.getProtocolVersion())
+                .build());
+        if (!cancelTimeoutFuture(ctx)) {
+            log.warn("客户端: {} 登录成功，取消登录超时定时任务失败", loginClientInfo);
         }
-        // 发送客户端成功登录事件
-        MessageServerContext.publishEvent(new MessageEvent(new ClientLoginEventPayload(cacheLoginClientInfo, ctx), MessageEventTypeEnum.CLIENT_LOGIN, loginTimestamp), true);
-        // 取消该handle
+        MessageServerContext.publishEvent(
+                new MessageEvent(new ClientLoginEventPayload(loginClientInfo, ctx), MessageEventTypeEnum.CLIENT_LOGIN, loginTimestamp),
+                true);
         ctx.pipeline().remove(this);
     }
 
