@@ -4,16 +4,12 @@ package com.ouyunc.message.protocol;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.ProtocolTypeEnum;
-import com.ouyunc.base.constant.enums.SendStatusEnum;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.model.Protocol;
 import com.ouyunc.base.model.SendCallback;
-import com.ouyunc.base.model.SendResult;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.HttpUtil;
-import com.ouyunc.core.listener.event.MessageEvent;
-import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.message.cluster.client.pool.MessageClientPool;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.convert.PacketConverter;
@@ -36,11 +32,8 @@ import io.netty.handler.codec.http.websocketx.extensions.compression.PerMessageD
 import io.netty.handler.codec.mqtt.MqttDecoder;
 import io.netty.handler.codec.mqtt.MqttEncoder;
 import io.netty.util.AttributeKey;
-import io.netty.util.concurrent.DefaultEventExecutorGroup;
-import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
-import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,7 +50,6 @@ public enum NativePacketProtocol implements PacketProtocol {
 
     // 处理ws/wss,这里相当于关键入口
     WS(ProtocolTypeEnum.WS.getProtocol(), ProtocolTypeEnum.WS.getProtocolVersion(), "websocket 协议，版本号为1") {
-        private final EventExecutorGroup eventExecutorGroup = new DefaultEventExecutorGroup(Runtime.getRuntime().availableProcessors()* NumberConstant.NUMBER_2, new BasicThreadFactory.Builder().namingPattern("Ws-Protocol-Pool-%d").build());
         // WS 压缩过滤器：小于阈值不压缩，入站总是解压
         private static final WebSocketExtensionFilterProvider WS_FILTER_PROVIDER = new WebSocketExtensionFilterProvider() {
             private final WebSocketExtensionFilter thresholdFilter = frame -> frame.content() != null && frame.content().readableBytes() < MessageConstant.WEBSOCKET_COMPRESSION_THRESHOLD;
@@ -105,8 +97,9 @@ public enum NativePacketProtocol implements PacketProtocol {
                                         NumberConstant.NUMBER_15,     // preferredServerWindowSize: 2^15
                                         true,   // allowServerNoContext: 允许无上下文（更少内存）
                                         false,  // preferredServerNoContext: 默认保留上下文（压缩率更好）
-                                        WS_FILTER_PROVIDER // 小帧跳过压缩
-                                ),new DeflateFrameServerExtensionHandshaker()))
+                                        WS_FILTER_PROVIDER, // 小帧跳过压缩
+                                        NumberConstant.NUMBER_0
+                                ),new DeflateFrameServerExtensionHandshaker(DeflateFrameServerExtensionHandshaker.DEFAULT_COMPRESSION_LEVEL,NumberConstant.NUMBER_0)))
                         //10485760
                         .addLast(MessageConstant.WS_SERVER_PROTOCOL_HANDLER, new WebSocketServerProtocolHandler(MessageServerContext.serverProperties().getWebsocketPath(), null, true, MessageConstant.MAX_WEBSOCKET_FRAME_SIZE))
                         // 转换成包packet,内部消息传递都是以packet 进行处理
@@ -115,11 +108,11 @@ public enum NativePacketProtocol implements PacketProtocol {
                         .addLast(MessageConstant.MONITOR_HANDLER, new MonitorHandler())
                         // 在业务处理之前可以进行登录认证处理，登录认证处理，如果不需要登录处理，可在配置文件中配置，不需要在这里处理
                         // 前置处理
-                        .addLast(eventExecutorGroup, MessageConstant.PRE_HANDLER, new PacketPreHandler())
+                        .addLast(MessageConstant.PRE_HANDLER, new PacketPreHandler())
                         // 业务处理
-                        .addLast(eventExecutorGroup, MessageConstant.WS_HANDLER, new PacketHandler())
+                        .addLast(MessageConstant.WS_HANDLER, new PacketHandler())
                         // 后置处理
-                        .addLast(eventExecutorGroup, MessageConstant.POST_HANDLER, new PacketPostHandler())
+                        .addLast(MessageConstant.POST_HANDLER, new PacketPostHandler())
                         // 判断是否需要开启客户端心跳如果需要则开启客户端心跳，由于心跳消息不需要登录就可以，所以放在登录认证处理器前面
                         // 在最后添加异常处理器
                         .addLast(MessageConstant.EXCEPTION_HANDLER, new ExceptionHandler())
@@ -177,7 +170,6 @@ public enum NativePacketProtocol implements PacketProtocol {
 
     // 目前该协议不对外开放只作为集群内部协议使用，可以对接jt 818,或者其他物联网的通信，字节扩充，
     OUYUNC(ProtocolTypeEnum.OUYUNC.getProtocol(), ProtocolTypeEnum.OUYUNC.getProtocolVersion(), "自定义ouyunc协议，版本号为1") {
-        private final EventExecutorGroup eventExecutorGroup = new DefaultEventExecutorGroup(Runtime.getRuntime().availableProcessors()* NumberConstant.NUMBER_2, new BasicThreadFactory.Builder().namingPattern("Ouyunc-Protocol-Pool-%d").build());
         @Override
         public void doDispatcher(ChannelHandlerContext ctx,  Object msg) {
             ctx.channel().attr(protocolAttrKey).set(this);
@@ -188,7 +180,7 @@ public enum NativePacketProtocol implements PacketProtocol {
                     // 添加一个集群中处理消息路由的处理器，这样就不需要在业务处理器中都写一下了
                     .addLast(MessageConstant.PACKET_CLUSTER_ROUTER_HANDLER, new ClusterPacketRouteHandler())
                     // 集群内部/外部业务处理
-                    .addLast(eventExecutorGroup, MessageConstant.OUYUNC_HANDLER, new PacketHandler())
+                    .addLast(MessageConstant.OUYUNC_HANDLER, new PacketHandler())
                     // 在最后添加异常处理器
                     .addLast(MessageConstant.EXCEPTION_HANDLER, new ExceptionHandler())
                     // 移除协议分发器
@@ -243,13 +235,13 @@ public enum NativePacketProtocol implements PacketProtocol {
                         } else {
                             releaseChannel.run();
                             log.error("发送消息时，channel.eventLoop 被终止或关闭； channelId: {}", channel.id().asShortText());
-                            sendCallback.onCallback(SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(new MessageException("发送消息时，channel.eventLoop 被终止或关闭!")).build());
+                            MessageHelper.notifySendFail(packet, "发送消息时，channel.eventLoop 被终止或关闭!", sendCallback);
                         }
                     } else {
                         // 获取失败
                         Throwable e = acquireFuture.cause();
                         log.error("获取集群中远端channel失败：{}", e.getMessage());
-                        sendCallback.onCallback(SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(e).build());
+                        MessageHelper.notifySendFail(packet, e, sendCallback);
                     }
                 }
             });
@@ -261,8 +253,6 @@ public enum NativePacketProtocol implements PacketProtocol {
     //mqtt
     MQTT(ProtocolTypeEnum.MQTT.getProtocol(), ProtocolTypeEnum.MQTT.getProtocolVersion(), "mqtt协议，版本号为v3.1/v3.1.1/v5.0") {
 
-        private final EventExecutorGroup eventExecutorGroup = new DefaultEventExecutorGroup(Runtime.getRuntime().availableProcessors()* NumberConstant.NUMBER_2,new BasicThreadFactory.Builder().namingPattern("Mqtt-Protocol-Pool-%d").build());
-
         @Override
         public void doDispatcher(ChannelHandlerContext ctx,  Object msg) {
             ctx.channel().attr(protocolAttrKey).set(this);
@@ -273,11 +263,11 @@ public enum NativePacketProtocol implements PacketProtocol {
                     // 添加监控处理逻辑
                     .addLast(MessageConstant.MONITOR_HANDLER, new MonitorHandler())
                     // 前置处理
-                    .addLast(eventExecutorGroup, MessageConstant.PRE_HANDLER, new PacketPreHandler())
+                    .addLast(MessageConstant.PRE_HANDLER, new PacketPreHandler())
                     // 业务处理
-                    .addLast(eventExecutorGroup, MessageConstant.MQTT_SERVER_HANDLER, new PacketHandler())
+                    .addLast(MessageConstant.MQTT_SERVER_HANDLER, new PacketHandler())
                     // 后置处理
-                    .addLast(eventExecutorGroup, MessageConstant.POST_HANDLER, new PacketPostHandler())
+                    .addLast(MessageConstant.POST_HANDLER, new PacketPostHandler())
                     // 异常处理器
                     .addLast(MessageConstant.EXCEPTION_HANDLER, new ExceptionHandler());
             // 如果开启登录则添加登录认证处理器
@@ -392,9 +382,7 @@ public enum NativePacketProtocol implements PacketProtocol {
             if (ctx == null) {
                 // 注意：如果走到了这里，可能是客户端注销了，qos 在重试，找不到ctx
                 log.error("发送消息时，ctx 不存在； 请检查客户端 {} 是否登录", to);
-                SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(new MessageException("发送消息时，ctx 不存在； 请检查客户端是否登录")).build();
-                sendCallback.onCallback(sendResult);
-                MessageServerContext.publishEvent(new MessageEvent(sendResult, MessageEventTypeEnum.SEND_FAIL), true);
+                MessageHelper.notifySendFail(packet, "发送消息时，ctx 不存在； 请检查客户端是否登录", sendCallback);
                 return;
             }
             Channel channel = ctx.channel();
@@ -415,29 +403,21 @@ public enum NativePacketProtocol implements PacketProtocol {
                             });
                         }else {
                             log.error("发送消息时，channel.eventLoop 被终止或关闭； channelId: {}", channel.id().asShortText());
-                            SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(new MessageException("发送消息时，channel.eventLoop 被终止或关闭！")).build();
-                            sendCallback.onCallback(sendResult);
-                            MessageServerContext.publishEvent(new MessageEvent(sendResult, MessageEventTypeEnum.SEND_FAIL), true);
+                            MessageHelper.notifySendFail(packet, "发送消息时，channel.eventLoop 被终止或关闭！", sendCallback);
                         }
                         return;
                     }
                 }
                 log.error("发送消息时，packet: {} 转换其他协议发生异常,找不到匹配的协议转换器！", packet);
-                SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(new MessageException("发送消息时，packet转换其他协议发生异常,找不到匹配的协议转换器！")).build();
-                sendCallback.onCallback(sendResult);
-                MessageServerContext.publishEvent(new MessageEvent(sendResult, MessageEventTypeEnum.SEND_FAIL), true);
+                MessageHelper.notifySendFail(packet, "发送消息时，packet转换其他协议发生异常,找不到匹配的协议转换器！", sendCallback);
             } else {
                 log.error("通道channel：{} 不可用或不可写, 使得消息packet: {} 发送给用户: {} 失败!", channel.id().asShortText(), packet, to);
-                SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(new MessageException("发送消息时，通道channel：" + channel.id().asShortText() + " 不可用或不可写！")).build();
-                sendCallback.onCallback(sendResult);
-                MessageServerContext.publishEvent(new MessageEvent(sendResult, MessageEventTypeEnum.SEND_FAIL), true);
+                MessageHelper.notifySendFail(packet, "发送消息时，通道channel：" + channel.id().asShortText() + " 不可用或不可写！", sendCallback);
             }
         } catch (Exception e) {
             log.error("消息packet: {} 发送给用户: {} 失败!", packet, to);
             // 消息丢失
-            SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(e).build();
-            sendCallback.onCallback(sendResult);
-            MessageServerContext.publishEvent(new MessageEvent(sendResult, MessageEventTypeEnum.SEND_FAIL), true);
+            MessageHelper.notifySendFail(packet, e, sendCallback);
         }
     }
     

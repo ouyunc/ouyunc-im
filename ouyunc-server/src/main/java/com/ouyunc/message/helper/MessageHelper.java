@@ -223,12 +223,7 @@ public class MessageHelper {
                     Channel channel = acquireFuture.getNow();
                     if (channel == null) {
                         log.error("发送集群消息时，获取channel失败！");
-                        // 发送结果
-                        SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(new MessageException("发送集群消息时，获取channel失败！")).build();
-                        // 发送失败回调
-                        sendCallback.onCallback(sendResult);
-                        // 发布发送失败事件
-                        MessageServerContext.publishEvent(new MessageEvent(sendResult, MessageEventTypeEnum.SEND_FAIL), true);
+                        notifySendFail(packet, "发送集群消息时，获取channel失败！", sendCallback);
                         return;
                     }
 
@@ -249,12 +244,7 @@ public class MessageHelper {
                     }else {
                         releaseChannel.run();
                         log.error("发送消息时，channel.eventLoop 被终止或关闭！");
-                        // 发送结果
-                        SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(new MessageException("集群间发送消息时，channel.eventLoop 被终止或关闭!")).build();
-                        // 发送失败回调
-                        sendCallback.onCallback(sendResult);
-                        // 发布发送失败事件
-                        MessageServerContext.publishEvent(new MessageEvent(sendResult, MessageEventTypeEnum.SEND_FAIL), true);
+                        notifySendFail(packet, "集群间发送消息时，channel.eventLoop 被终止或关闭!", sendCallback);
                     }
                 } else {
                     // 获取失败
@@ -269,6 +259,23 @@ public class MessageHelper {
         });
     }
 
+
+    /**
+     * 发送失败：回调 + 发布 {@link MessageEventTypeEnum#SEND_FAIL} 事件。
+     */
+    public static void notifySendFail(Packet packet, Throwable cause, SendCallback sendCallback) {
+        SendResult sendResult = SendResult.builder()
+                .sendStatus(SendStatusEnum.SEND_FAIL)
+                .packet(packet)
+                .exception(cause)
+                .build();
+        sendCallback.onCallback(sendResult);
+        MessageServerContext.publishEvent(new MessageEvent(sendResult, MessageEventTypeEnum.SEND_FAIL), true);
+    }
+
+    public static void notifySendFail(Packet packet, String message, SendCallback sendCallback) {
+        notifySendFail(packet, new MessageException(message), sendCallback);
+    }
 
     /**
      * 与连接池配合：写入完成后执行 afterComplete（用于归还 Channel 等）。
@@ -304,22 +311,16 @@ public class MessageHelper {
      */
     private static boolean validateWritable(Channel channel, Packet packet, SendCallback sendCallback) {
         if (channel == null) {
-            SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(new MessageException("channel 为空，无法写入")).build();
-            sendCallback.onCallback(sendResult);
-            MessageServerContext.publishEvent(new MessageEvent(sendResult, MessageEventTypeEnum.SEND_FAIL), true);
+            notifySendFail(packet, "channel 为空，无法写入", sendCallback);
             return false;
         }
         if (!channel.isActive()) {
-            SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(new MessageException("channel 未激活，无法写入")).build();
-            sendCallback.onCallback(sendResult);
-            MessageServerContext.publishEvent(new MessageEvent(sendResult, MessageEventTypeEnum.SEND_FAIL), true);
+            notifySendFail(packet, "channel 未激活，无法写入", sendCallback);
             return false;
         }
         if (!channel.isWritable()) {
             log.warn("channel 不可写，丢弃或等待上层重试: {}", channel);
-            SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(new MessageException("channel 当前不可写")).build();
-            sendCallback.onCallback(sendResult);
-            MessageServerContext.publishEvent(new MessageEvent(sendResult, MessageEventTypeEnum.SEND_FAIL), true);
+            notifySendFail(packet, "channel 当前不可写", sendCallback);
             return false;
         }
         return true;
@@ -333,9 +334,7 @@ public class MessageHelper {
             if (f.isSuccess()) {
                 sendCallback.onCallback(SendResult.builder().sendStatus(SendStatusEnum.SEND_OK).packet(packet).build());
             } else {
-                SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(f.cause()).build();
-                sendCallback.onCallback(sendResult);
-                MessageServerContext.publishEvent(new MessageEvent(sendResult, MessageEventTypeEnum.SEND_FAIL), true);
+                notifySendFail(packet, f.cause(), sendCallback);
             }
         });
     }
@@ -349,12 +348,7 @@ public class MessageHelper {
         // 通过路由助手，找到一个可用的服务连接，如果找不到最后会这里处理，重试，下线，等操作
         String nextAvailableSocketAddress = MessageServerContext.messageRouter.route(packet, target.getTargetServerAddress());
         if (nextAvailableSocketAddress == null) {
-            // 发送结果
-            SendResult sendResult = SendResult.builder().sendStatus(SendStatusEnum.SEND_FAIL).packet(packet).exception(new MessageException("消息id: " + packet.getPacketId() + " 尝试路由多次，都没有找到可用的服务！")).build();
-            // 发送失败回调
-            sendCallback.onCallback(sendResult);
-            // 发布发送失败事件
-            MessageServerContext.publishEvent(new MessageEvent(sendResult, MessageEventTypeEnum.SEND_FAIL), true);
+            notifySendFail(packet, "消息id: " + packet.getPacketId() + " 尝试路由多次，都没有找到可用的服务！", sendCallback);
             return;
         }
         // 设置可用的下个目标服务
