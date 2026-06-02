@@ -5,6 +5,7 @@ import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.constant.enums.*;
+import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.core.listener.event.MessageEvent;
@@ -13,6 +14,9 @@ import com.ouyunc.domain.base.GroupRequestSession;
 import com.ouyunc.domain.constants.GroupJoinerProcessStatus;
 import com.ouyunc.domain.constants.GroupRequestSessionWay;
 import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.message.helper.ClientHelper;
+import com.ouyunc.message.helper.DistributedLockHelper;
+import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.validator.*;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.collections4.CollectionUtils;
@@ -81,7 +85,7 @@ public final class GroupInviteJoinerAgreeMessageProcessor extends AbstractMessag
         String appKey = message.getMetadata().getAppKey();
         String lockKey = CacheConstant.buildGroupRequestLockCacheKey(appKey, joiner, message.getTo());
 
-        runWithDistributedLock(ctx, packet, lockKey, ExceptionCodeEnum.BIND_GROUP_ERROR, () -> {
+        DistributedLockHelper.runWithLock(packet, lockKey, ExceptionCodeEnum.BIND_GROUP_ERROR, () -> {
             GroupRequestSession groupRequestSession = repository().getGroupRequestSession(appKey, joiner, message.getTo());
             if (null == groupRequestSession || !GroupRequestSessionWay.INVITED.value().equals(groupRequestSession.getWay()) || StringUtils.isBlank(groupRequestSession.getInviter()) || !Objects.equals(groupRequestSession.getJoinerProcessStatus(), GroupJoinerProcessStatus.PENDING.value())) {
                 log.warn("{} 和 {} 不存在正在处理中的群会话请求或当前群请求不是邀请或邀请人为空或存在拒绝或同意还未结束处理", joiner, message.getTo());
@@ -117,7 +121,20 @@ public final class GroupInviteJoinerAgreeMessageProcessor extends AbstractMessag
                 if (!notifyIdentities.contains(groupRequestSession.getInviter())) {
                     notifyIdentities.add(groupRequestSession.getInviter());
                 }
-                ctx.channel().eventLoop().execute(() -> deliverOnlineAndFireNext(ctx, packet, message.getMetadata().getAppKey(), notifyIdentities));
+                ctx.channel().eventLoop().execute(() -> {
+                    if (CollectionUtils.isNotEmpty(notifyIdentities)) {
+                        for (String identity : notifyIdentities) {
+                            if (StringUtils.isBlank(identity)) {
+                                continue;
+                            }
+                            List<LoginClientInfo> clients = ClientHelper.onlineAll(appKey, identity);
+                            if (CollectionUtils.isNotEmpty(clients)) {
+                                MessageHelper.asyncSendMessage(packet, clients);
+                            }
+                        }
+                    }
+                    ctx.fireChannelRead(packet);
+                });
             });
         });
     }

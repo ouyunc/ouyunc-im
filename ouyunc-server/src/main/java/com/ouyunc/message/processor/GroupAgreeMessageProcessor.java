@@ -9,6 +9,7 @@ import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.MessageType;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
+import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.packet.message.content.GroupRequestContent;
@@ -19,9 +20,14 @@ import com.ouyunc.domain.constants.GroupJoinerProcessStatus;
 import com.ouyunc.domain.constants.GroupRequestSessionWay;
 import com.ouyunc.domain.constants.RequestSessionProgress;
 import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.message.helper.ClientHelper;
+import com.ouyunc.message.helper.DistributedLockHelper;
+import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.validator.*;
 import io.netty.channel.ChannelHandlerContext;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
@@ -100,7 +106,7 @@ public final class GroupAgreeMessageProcessor extends AbstractMessageProcessor<B
         String appKey = message.getMetadata().getAppKey();
         String lockKey = CacheConstant.buildGroupRequestLockCacheKey(appKey, content.getIdentity(), message.getTo());
 
-        runWithDistributedLock(ctx, packet, lockKey, ExceptionCodeEnum.BIND_GROUP_ERROR, () -> {
+        DistributedLockHelper.runWithLock(packet, lockKey, ExceptionCodeEnum.BIND_GROUP_ERROR, () -> {
             GroupRequestSession groupRequestSession = repository().getGroupRequestSession(appKey, content.getIdentity(), message.getTo());
             if (null == groupRequestSession || !RequestSessionProgress.JOINING.value().equals(groupRequestSession.getProgress())) {
                 log.warn("{} 和 {} 会话请求不存在正在处理中的群请求，或者存在有还未结束的同意或拒绝处理", content.getIdentity(), message.getTo());
@@ -150,7 +156,20 @@ public final class GroupAgreeMessageProcessor extends AbstractMessageProcessor<B
                 }
                 List<String> notifyIdentities = new ArrayList<>(groupMannerOrLeaderUsersIdentityAndPostMap.keySet());
                 notifyIdentities.add(content.getIdentity());
-                ctx.channel().eventLoop().execute(() -> deliverOnlineAndFireNext(ctx, packet, appKey, notifyIdentities));
+                ctx.channel().eventLoop().execute(() -> {
+                    if (CollectionUtils.isNotEmpty(notifyIdentities)) {
+                        for (String identity : notifyIdentities) {
+                            if (StringUtils.isBlank(identity)) {
+                                continue;
+                            }
+                            List<LoginClientInfo> clients = ClientHelper.onlineAll(appKey, identity);
+                            if (CollectionUtils.isNotEmpty(clients)) {
+                                MessageHelper.asyncSendMessage(packet, clients);
+                            }
+                        }
+                    }
+                    ctx.fireChannelRead(packet);
+                });
             });
         });
     }

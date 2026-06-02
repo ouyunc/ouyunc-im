@@ -12,6 +12,7 @@ import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.IdentityUtil;
+import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.domain.constants.IdentityType;
@@ -54,7 +55,7 @@ public final class CustomerServiceMessageProcessor extends AbstractMessageProces
                 ctx.close();
                 return;
             }
-            if (qosPreHandleIfEnabled(ctx, packet)) {
+            if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
                 return;
             }
             ctx.fireChannelRead(packet);
@@ -73,21 +74,38 @@ public final class CustomerServiceMessageProcessor extends AbstractMessageProces
             return;
         }
 
-        saveMessage(packet).subscribe(result -> {
-            if (!result) {
-                log.error("客服会话索引写入失败: {}", packet);
-                publishCachePersistenceError(packet, "客服消息写入会话失败");
-                return;
-            }
-            repository().saveLastMessageForSession(sessionId, packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
-            advanceSenderReadOffsetOnSend(packet, IdentityType.ONE_2_ONE);
-            if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
-                handleWithdrawMessage(ctx, packet);
-            } else {
-                deliverToUserAndService(packet, false);
-                ctx.fireChannelRead(packet);
-            }
-        });
+        saveMessage(packet).subscribe(
+                result -> {
+                    if (!result) {
+                        log.error("客服会话索引写入失败: {}", packet);
+                        MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "客服消息写入会话失败", packet), MessageEventTypeEnum.EXCEPTION), true);
+                        // 持久化失败不发 ACK，等客户端超时重发；同时释放 QoS 占位避免重发被判定为重复
+                        repository().releaseQosClaim(packet);
+                        return;
+                    }
+                    // 持久化成功后才发送 QoS ACK，确保「客户端收到 ACK == 服务端持久化成功」
+                    if (MessageContext.isQosEnable()) {
+                        qosPostHandle(ctx, packet);
+                    }
+                    repository().saveLastMessageForSession(sessionId, packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+                    repository().reactiveAdvanceSenderReadOffsetOnSend(
+                                    packet, IdentityType.ONE_2_ONE, MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
+                            .subscribe(
+                                    ignored -> { },
+                                    e -> log.warn("发送消息静默更新本端已读 offset 失败, packetId={}", packet.getPacketId(), e));
+                    if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
+                        handleWithdrawMessage(ctx, packet);
+                    } else {
+                        deliverToUserAndService(packet, false);
+                        ctx.fireChannelRead(packet);
+                    }
+                },
+                error -> {
+                    log.error("客服消息持久化异常, packetId={}", packet.getPacketId(), error);
+                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "客服持久化异常: " + error.getMessage(), packet), MessageEventTypeEnum.EXCEPTION), true);
+                    // 异常时不发 ACK，并释放 QoS 占位允许客户端重试
+                    repository().releaseQosClaim(packet);
+                });
     }
 
     private void handleWithdrawMessage(ChannelHandlerContext ctx, Packet packet) {
@@ -114,7 +132,10 @@ public final class CustomerServiceMessageProcessor extends AbstractMessageProces
                 repository().reactiveValidReadReceiptMessage(packet, sessionId, IdentityType.ONE_2_ONE, false),
                 () -> repository().savePacket2Mq(MqConstant.KAFKA_READ_RECEIPT_MESSAGE_TOPIC, sessionId, packet),
                 repository().reactiveReadReceiptMessage(packet, IdentityType.ONE_2_ONE, MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP),
-                (ctx0, packet0) -> completeReadReceipt(ctx0, packet0, () -> deliverReadReceiptToSender(packet0)),
+                (ctx0, packet0) -> {
+                    deliverReadReceiptToSender(packet0);
+                    ctx0.fireChannelRead(packet0);
+                },
                 (exceptionEvent) -> MessageServerContext.publishEvent(exceptionEvent, true),
                 ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR)
                 .subscribe();

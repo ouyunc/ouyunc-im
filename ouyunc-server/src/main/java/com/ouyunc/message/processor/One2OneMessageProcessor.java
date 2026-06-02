@@ -12,6 +12,7 @@ import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.IdentityUtil;
+import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.domain.constants.IdentityType;
@@ -19,6 +20,7 @@ import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.AtMentionHelper;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
+import com.ouyunc.message.helper.MessageRefHelper;
 import com.ouyunc.message.validator.*;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.collections4.CollectionUtils;
@@ -55,7 +57,7 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
                     ctx.close();
                     return;
                 }
-                if (qosPreHandleIfEnabled(ctx, packet)) {
+                if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
                     return;
                 }
                 // 校验是否拥有相关权限 permission （是有有单聊，甚至某种内容类型的权限，如不能发语音，视频消息，只能发文本，都可以在这里做校验拦截）
@@ -97,7 +99,7 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
             return;
         }
         AtMentionHelper.clearAtIfPresent(packet.getMessage());
-        if (!normalizeMessageRefOrReject(packet)) {
+        if (!MessageRefHelper.normalizeMessageRefOrReject(packet)) {
             repository().releaseQosClaim(packet);
             return;
         }
@@ -110,15 +112,21 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
                 result -> {
                     if (!result) {
                         log.error("单聊会话索引写入失败: {}", packet);
-                        publishCachePersistenceError(packet, "单聊消息写入会话失败");
+                        MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "单聊消息写入会话失败", packet), MessageEventTypeEnum.EXCEPTION), true);
                         // 持久化失败不发 ACK，等客户端超时重发；同时释放 QoS 占位避免重发被判定为重复
                         repository().releaseQosClaim(packet);
                         return;
                     }
                     // 持久化成功后才发送 QoS ACK，确保「客户端收到 ACK == 服务端持久化成功」
-                    sendQosAckAfterPersist(ctx, packet);
+                    if (MessageContext.isQosEnable()) {
+                        qosPostHandle(ctx, packet);
+                    }
                     repository().saveLastMessageForSession(IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo()), packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
-                    advanceSenderReadOffsetOnSend(packet, IdentityType.ONE_2_ONE);
+                    repository().reactiveAdvanceSenderReadOffsetOnSend(
+                                    packet, IdentityType.ONE_2_ONE, MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
+                            .subscribe(
+                                    ignored -> { },
+                                    e -> log.warn("发送消息静默更新本端已读 offset 失败, packetId={}", packet.getPacketId(), e));
                     if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
                         handleWithdrawMessage(ctx, packet);
                     } else {
@@ -127,7 +135,7 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
                 },
                 error -> {
                     log.error("单聊消息持久化异常, packetId={}", packet.getPacketId(), error);
-                    publishCachePersistenceError(packet, "单聊持久化异常: " + error.getMessage());
+                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "单聊持久化异常: " + error.getMessage(), packet), MessageEventTypeEnum.EXCEPTION), true);
                     // 异常时不发 ACK，并释放 QoS 占位允许客户端重试
                     repository().releaseQosClaim(packet);
                 });
@@ -166,7 +174,10 @@ public final class One2OneMessageProcessor extends AbstractMessageProcessor<Byte
                 repository().reactiveValidReadReceiptMessage(packet, sessionId, IdentityType.ONE_2_ONE, false),
                 () -> repository().savePacket2Mq(MqConstant.KAFKA_READ_RECEIPT_MESSAGE_TOPIC, sessionId, packet),
                 repository().reactiveReadReceiptMessage(packet, IdentityType.ONE_2_ONE, MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP),
-                (ctx0, packet0) -> completeReadReceipt(ctx0, packet0, () -> deliverReadReceiptToSender(packet0)),
+                (ctx0, packet0) -> {
+                    deliverReadReceiptToSender(packet0);
+                    ctx0.fireChannelRead(packet0);
+                },
                 (exceptionEvent)-> MessageServerContext.publishEvent(exceptionEvent, true),
                 ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR)
                 .subscribe();

@@ -6,6 +6,7 @@ import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.constant.enums.*;
+import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.packet.message.content.GroupRequestContent;
@@ -18,9 +19,14 @@ import com.ouyunc.domain.entity.GroupEntity;
 import com.ouyunc.domain.entity.GroupUserEntity;
 import com.ouyunc.domain.entity.UserEntity;
 import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.message.helper.ClientHelper;
+import com.ouyunc.message.helper.DistributedLockHelper;
+import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.validator.*;
 import io.netty.channel.ChannelHandlerContext;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
@@ -92,7 +98,7 @@ public final class GroupInviteJoinMessageProcessor extends AbstractMessageProces
         }
         String lockKey = CacheConstant.buildGroupRequestLockCacheKey(appKey, content.getIdentity(), message.getTo());
 
-        runWithDistributedLock(ctx, packet, lockKey, ExceptionCodeEnum.BIND_GROUP_ERROR, () -> {
+        DistributedLockHelper.runWithLock(packet, lockKey, ExceptionCodeEnum.BIND_GROUP_ERROR, () -> {
             GroupRequestSession existingSession = repository().getGroupRequestSession(appKey, content.getIdentity(), message.getTo());
             if (null != existingSession && (existingSession.getProgress() > RequestSessionProgress.JOINING.value() || !GroupRequestSessionWay.INVITED.value().equals(existingSession.getWay()))) {
                 log.warn("{} 和 {} 存在正在处理中的群会话请求(拒绝或同意还未结束处理)", content.getIdentity(), message.getTo());
@@ -173,7 +179,20 @@ public final class GroupInviteJoinMessageProcessor extends AbstractMessageProces
                 }
                 List<String> notifyIdentities = new ArrayList<>(groupMannerOrLeaderUsersIdentityAndPostMap.keySet());
                 notifyIdentities.add(content.getIdentity());
-                ctx.channel().eventLoop().execute(() -> deliverOnlineAndFireNext(ctx, packet, message.getMetadata().getAppKey(), notifyIdentities));
+                ctx.channel().eventLoop().execute(() -> {
+                    if (CollectionUtils.isNotEmpty(notifyIdentities)) {
+                        for (String identity : notifyIdentities) {
+                            if (StringUtils.isBlank(identity)) {
+                                continue;
+                            }
+                            List<LoginClientInfo> clients = ClientHelper.onlineAll(appKey, identity);
+                            if (CollectionUtils.isNotEmpty(clients)) {
+                                MessageHelper.asyncSendMessage(packet, clients);
+                            }
+                        }
+                    }
+                    ctx.fireChannelRead(packet);
+                });
             });
         });
     }

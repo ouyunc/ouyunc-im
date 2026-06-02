@@ -1,8 +1,17 @@
 package com.ouyunc.message.helper;
 
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
+import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
+import com.ouyunc.base.packet.Packet;
+import com.ouyunc.base.packet.message.Message;
+import com.ouyunc.core.listener.event.MessageEvent;
+import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
+import com.ouyunc.message.context.MessageServerContext;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -13,7 +22,27 @@ import java.util.List;
  */
 public final class MessageRefHelper {
 
+    private static final Logger log = LoggerFactory.getLogger(MessageRefHelper.class);
+
     private MessageRefHelper() {
+    }
+
+    /** 校验 message.ref（packetId 列表，最多 {@link MessageConstant#MAX_REF_COUNT} 条） */
+    public static boolean normalizeMessageRefOrReject(Packet packet) {
+        Message message = packet.getMessage();
+        if (message == null || CollectionUtils.isEmpty(message.getRef())) {
+            return true;
+        }
+        try {
+            message.setRef(normalizeAndValidate(message.getRef()));
+            return true;
+        } catch (IllegalArgumentException ex) {
+            log.warn("消息引用校验失败: {} | packet={}", ex.getMessage(), packet);
+            MessageServerContext.publishEvent(new MessageEvent(
+                    ExceptionEventPayload.of(ExceptionCodeEnum.MESSAGE_REF_INVALID_ERROR, ex.getMessage(), packet),
+                    MessageEventTypeEnum.EXCEPTION), true);
+            return false;
+        }
     }
 
     /**

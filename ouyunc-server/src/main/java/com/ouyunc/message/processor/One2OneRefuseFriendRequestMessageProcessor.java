@@ -17,6 +17,7 @@ import com.ouyunc.domain.base.RequestSession;
 import com.ouyunc.domain.constants.RequestSessionProgress;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
+import com.ouyunc.message.helper.DistributedLockHelper;
 import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.validator.AuthValidator;
 import com.ouyunc.message.validator.BlackListValidator;
@@ -100,7 +101,7 @@ public final class One2OneRefuseFriendRequestMessageProcessor extends AbstractMe
         String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
         String lockKey = CacheConstant.buildFriendRequestLockCacheKey(appKey, sessionId);
 
-        runWithDistributedLock(ctx, packet, lockKey, ExceptionCodeEnum.BIND_FRIEND_ERROR, () -> {
+        DistributedLockHelper.runWithLock(packet, lockKey, ExceptionCodeEnum.BIND_FRIEND_ERROR, () -> {
             RequestSession requestSession = repository().getFriendRequestSession(appKey, message.getTo(), message.getFrom());
             if (null == requestSession || !Objects.equals(requestSession.getProgress(), RequestSessionProgress.JOINING.value())) {
                 log.warn("不存在加好友请求记录或存在正在处理的好友请求，该消息忽略");

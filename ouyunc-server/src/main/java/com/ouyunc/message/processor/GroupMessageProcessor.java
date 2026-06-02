@@ -16,6 +16,7 @@ import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.AtMentionHelper;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
+import com.ouyunc.message.helper.MessageRefHelper;
 import com.ouyunc.message.validator.*;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.collections4.CollectionUtils;
@@ -54,7 +55,7 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
                     ctx.close();
                     return;
                 }
-                if (qosPreHandleIfEnabled(ctx, packet)) {
+                if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
                     return;
                 }
                 // 校验是否拥有相关权限 permission （对方是否被拉黑，禁用等）群是否被封禁，是否全体禁言
@@ -115,7 +116,7 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
             repository().releaseQosClaim(packet);
             return;
         }
-        if (!normalizeMessageRefOrReject(packet)) {
+        if (!MessageRefHelper.normalizeMessageRefOrReject(packet)) {
             repository().releaseQosClaim(packet);
             return;
         }
@@ -123,14 +124,20 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
                 result -> {
                     if (!result) {
                         log.error("群聊会话索引写入失败: {}", packet);
-                        publishCachePersistenceError(packet, "群聊消息写入会话失败");
+                        MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "群聊消息写入会话失败", packet), MessageEventTypeEnum.EXCEPTION), true);
                         repository().releaseQosClaim(packet);
                         return;
                     }
                     // 持久化成功后才发送 QoS ACK
-                    sendQosAckAfterPersist(ctx, packet);
+                    if (MessageContext.isQosEnable()) {
+                        qosPostHandle(ctx, packet);
+                    }
                     repository().saveLastMessageForSession(packet.getMessage().getTo(), packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
-                    advanceSenderReadOffsetOnSend(packet, IdentityType.GROUP);
+                    repository().reactiveAdvanceSenderReadOffsetOnSend(
+                                    packet, IdentityType.GROUP, MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
+                            .subscribe(
+                                    ignored -> { },
+                                    e -> log.warn("发送消息静默更新本端已读 offset 失败, packetId={}", packet.getPacketId(), e));
                     if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
                         handleWithdrawMessage(ctx, packet, groupUserIdentitySet);
                     } else {
@@ -139,7 +146,7 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
                 },
                 error -> {
                     log.error("群聊消息持久化异常, packetId={}", packet.getPacketId(), error);
-                    publishCachePersistenceError(packet, "群聊持久化异常: " + error.getMessage());
+                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "群聊持久化异常: " + error.getMessage(), packet), MessageEventTypeEnum.EXCEPTION), true);
                     repository().releaseQosClaim(packet);
                 });
 
@@ -163,7 +170,10 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
                 repository().reactiveValidReadReceiptMessage(packet, packet.getMessage().getTo(), IdentityType.GROUP, false),
                 ()-> repository().savePacket2Mq(MqConstant.KAFKA_READ_RECEIPT_MESSAGE_TOPIC, sessionId, packet),
                 repository().reactiveReadReceiptMessage(packet, IdentityType.GROUP, MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP),
-                (ctx0, packet0) -> completeReadReceipt(ctx0, packet0, () -> deliverGroupReadReceiptSelfSyncOnly(packet0)),
+                (ctx0, packet0) -> {
+                    deliverGroupReadReceiptSelfSyncOnly(packet0);
+                    ctx0.fireChannelRead(packet0);
+                },
                 (exceptionEvent)-> MessageServerContext.publishEvent(exceptionEvent, true),
                 ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR).subscribe();
     }

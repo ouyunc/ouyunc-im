@@ -20,6 +20,7 @@ import com.ouyunc.domain.constants.RequestSessionProgress;
 import com.ouyunc.domain.entity.UserEntity;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
+import com.ouyunc.message.helper.DistributedLockHelper;
 import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.validator.AuthValidator;
 import com.ouyunc.message.validator.BlackListValidator;
@@ -103,7 +104,7 @@ public final class One2OneJoinFriendRequestMessageProcessor extends AbstractMess
 
         // 分布式锁保护的业务逻辑统一调度到业务线程池，避免阻塞 Netty EventLoop
         String lockKey = CacheConstant.buildFriendRequestLockCacheKey(appKey, sessionId);
-        runWithDistributedLock(ctx, packet, lockKey, ExceptionCodeEnum.BIND_FRIEND_ERROR, () -> {
+        DistributedLockHelper.runWithLock(packet, lockKey, ExceptionCodeEnum.BIND_FRIEND_ERROR, () -> {
             // 获取请求会话
             RequestSession requestSession = repository().getFriendRequestSession(appKey, message.getFrom(), message.getTo());
             if (null != requestSession && requestSession.getProgress() > RequestSessionProgress.JOINING.value()) {
