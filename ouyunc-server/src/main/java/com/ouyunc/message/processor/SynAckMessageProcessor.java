@@ -3,6 +3,7 @@ package com.ouyunc.message.processor;
 import com.ouyunc.base.constant.enums.MessageType;
 import com.ouyunc.base.constant.enums.OuyuncMessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.OuyuncMessageTypeEnum;
+import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.TimeUtil;
@@ -55,7 +56,7 @@ public final class SynAckMessageProcessor extends AbstractMessageProcessor<Byte>
                 synAckMessage.setContentType(OuyuncMessageContentTypeEnum.SYN_CONTENT.getType());
                 packet.setPacketId(MessageContext.idGenerator().generateId());
                 // 内部客户端连接池异步传递消息 syn ,尝试所有的路径去保持连通
-                messageProcessorExecutor().submit(() -> MessageServerContext.findProtocol(packet.getProtocol(), packet.getProtocolVersion()).doSendMessage(packet, remoteServerAddress, sendResult -> {}));
+                ThreadPoolManager.messageProcessorExecutor().submit(() -> MessageServerContext.findProtocol(packet.getProtocol(), packet.getProtocolVersion()).doSendMessage(packet, remoteServerAddress, sendResult -> {}));
             }
         }else if (OuyuncMessageContentTypeEnum.ACK_CONTENT.getType() == contentType) {
             // 收到回应则添加新的服务到集群

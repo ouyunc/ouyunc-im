@@ -2,7 +2,6 @@ package com.ouyunc.message.processor;
 
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
-import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.MessageEvent;
@@ -13,8 +12,6 @@ import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.ExecutorService;
-
 /**
  * @Author fzx
  * @Description: 消息抽象处理类
@@ -22,12 +19,6 @@ import java.util.concurrent.ExecutorService;
 public abstract class AbstractMessageProcessor<T extends Number> extends AbstractBaseProcessor<T> {
     private static final Logger log = LoggerFactory.getLogger(AbstractMessageProcessor.class);
 
-    /**
-     * 线程池事件执行器
-     */
-    protected ExecutorService messageProcessorExecutor() {
-        return ThreadPoolManager.messageProcessorExecutor();
-    }
 
     /**
      * 获取数据存储实现类, 子类可以重写来实现自定义存储实现
