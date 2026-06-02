@@ -24,9 +24,6 @@ public enum EventRingEnum {
     CLIENT_LOGOUT(1048576, WaitStrategyMode.YIELDING, ProducerType.MULTI),
 
     /** 高优先级、延迟敏感的事件（登录、支付等核心链路） */
-    SAVE_MESSAGE(1048576, WaitStrategyMode.YIELDING, ProducerType.MULTI),
-
-    /** 高优先级、延迟敏感的事件（登录、支付等核心链路） */
     REMOVE_OFFLINE_MESSAGE(1048576, WaitStrategyMode.YIELDING, ProducerType.MULTI),
 
     /** 高优先级、延迟敏感的事件（登录、支付等核心链路） */

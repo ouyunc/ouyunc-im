@@ -20,8 +20,6 @@ public enum MessageEventTypeEnum implements EventType {
     /** source: {@code SendResult} */
     SEND_FAIL(7, "消息发送失败事件"),
     /** source: {@code Packet} */
-    SAVE_MESSAGE(8, "消息持久化事件"),
-    /** source: {@code Packet} */
     SEND_OFFLINE(9, "发送离线消息事件"),
     /** source: {@code Packet} */
     REMOVE_OFFLINE(10, "移除离线消息事件"),
