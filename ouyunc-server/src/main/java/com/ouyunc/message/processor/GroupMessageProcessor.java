@@ -1,5 +1,6 @@
 package com.ouyunc.message.processor;
 
+import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.constant.NumberConstant;
@@ -47,40 +48,43 @@ public final class GroupMessageProcessor extends AbstractMessageProcessor<Byte> 
     @Override
     public void preProcess(ChannelHandlerContext ctx, Packet packet) {
         // 异步存储packet（目前只是保存相关信息，不做扩展，以后可以做数据分析使用），这里将该数据存储到时序数据库中
-        repository().save(packet).whenComplete((sendResult, ex) -> {
-            if (ex == null) {
-                if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
-                    log.error("校验消息: {} 中的发送方登录认证失败,开始关闭channel", packet);
-                    MessageContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过", packet), MessageEventTypeEnum.EXCEPTION), true);
-                    ctx.close();
-                    return;
-                }
-                if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
-                    return;
-                }
-                // 校验是否拥有相关权限 permission （对方是否被拉黑，禁用等）群是否被封禁，是否全体禁言
-                PermissionValidator.INSTANCE.negate()
-                        .or(FromToValidator.INSTANCE)
-                        .or(BlackListValidator.INSTANCE)
-                        .or(GroupSilenceValidator.INSTANCE)
-                        .or(GroupUserValidator.INSTANCE.negate())
-                        .verify(packet, ctx)
-                        .onErrorResume(error -> {
-                            log.error("校验过程中出现异常: {}", error.getMessage());
-                            return Mono.just(true); // 出现异常时默认校验不通过
-                        }).flatMap(result -> {
-                            if (result) {
-                                log.warn("权限不足/在黑名单中/不是群成员/被禁言/发送方和接收方相同, 请知悉。该消息 {} 被忽略", packet);
-                                return Mono.empty(); // 校验不通过，不传递消息
-                            }
-                            return Mono.just(packet); // 校验通过，继续传递消息
-                        }).subscribe(ctx::fireChannelRead);
-            } else {
-                // 发送失败
-                log.error("Failed to send message: {} ", ex.getMessage());
-                MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "通过发送mq保存消息异常!", packet), MessageEventTypeEnum.EXCEPTION), true);
-            }
-        });
+        ThreadPoolManager.messageProcessorExecutor().execute(() ->
+                repository().save(packet).whenComplete((ignored, ex) -> {
+                    if (ex != null) {
+                        log.warn("异步归档 packet 到 MQ 失败, packetId={}, 原因: {}",
+                                packet.getPacketId(), ex.getMessage(), ex);
+                        MessageContext.publishEvent(new MessageEvent(
+                                ExceptionEventPayload.of(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR,
+                                        "异步归档消息到 MQ 失败: " + ex.getMessage(), packet),
+                                MessageEventTypeEnum.EXCEPTION), true);
+                    }
+                }));
+        if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
+            log.error("校验消息: {} 中的发送方登录认证失败,开始关闭channel", packet);
+            MessageContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过", packet), MessageEventTypeEnum.EXCEPTION), true);
+            ctx.close();
+            return;
+        }
+        if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
+            return;
+        }
+        // 校验是否拥有相关权限 permission （对方是否被拉黑，禁用等）群是否被封禁，是否全体禁言
+        PermissionValidator.INSTANCE.negate()
+                    .or(FromToValidator.INSTANCE)
+                    .or(BlackListValidator.INSTANCE)
+                    .or(GroupSilenceValidator.INSTANCE)
+                    .or(GroupUserValidator.INSTANCE.negate())
+                    .verify(packet, ctx)
+                    .onErrorResume(error -> {
+                        log.error("校验过程中出现异常: {}", error.getMessage());
+                        return Mono.just(true); // 出现异常时默认校验不通过
+                    }).flatMap(result -> {
+                        if (result) {
+                            log.warn("权限不足/在黑名单中/不是群成员/被禁言/发送方和接收方相同, 请知悉。该消息 {} 被忽略", packet);
+                            return Mono.empty(); // 校验不通过，不传递消息
+                        }
+                        return Mono.just(packet); // 校验通过，继续传递消息
+                    }).subscribe(ctx::fireChannelRead);
 
     }
 

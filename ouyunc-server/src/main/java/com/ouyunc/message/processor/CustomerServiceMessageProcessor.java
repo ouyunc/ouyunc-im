@@ -1,5 +1,6 @@
 package com.ouyunc.message.processor;
 
+import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
@@ -43,23 +44,28 @@ public final class CustomerServiceMessageProcessor extends AbstractMessageProces
 
     @Override
     public void preProcess(ChannelHandlerContext ctx, Packet packet) {
-        repository().save(packet).whenComplete((sendResult, ex) -> {
-            if (ex != null) {
-                log.error("Failed to save packet: {}", ex.getMessage());
-                MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "通过发送mq保存消息异常!", packet), MessageEventTypeEnum.EXCEPTION), true);
-                return;
-            }
-            if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
-                log.error("客服消息校验失败: {} 认证未通过, 关闭 channel", packet);
-                MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过!", packet), MessageEventTypeEnum.EXCEPTION), true);
-                ctx.close();
-                return;
-            }
-            if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
-                return;
-            }
-            ctx.fireChannelRead(packet);
-        });
+        // 异步存储packet（目前只是保存相关信息，不做扩展，以后可以做数据分析使用），这里将该数据存储到时序数据库中
+        ThreadPoolManager.messageProcessorExecutor().execute(() ->
+                repository().save(packet).whenComplete((ignored, ex) -> {
+                    if (ex != null) {
+                        log.warn("异步归档 packet 到 MQ 失败, packetId={}, 原因: {}",
+                                packet.getPacketId(), ex.getMessage(), ex);
+                        MessageServerContext.publishEvent(new MessageEvent(
+                                ExceptionEventPayload.of(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR,
+                                        "异步归档消息到 MQ 失败: " + ex.getMessage(), packet),
+                                MessageEventTypeEnum.EXCEPTION), true);
+                    }
+                }));
+        if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
+            log.error("客服消息校验失败: {} 认证未通过, 关闭 channel", packet);
+            MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过!", packet), MessageEventTypeEnum.EXCEPTION), true);
+            ctx.close();
+            return;
+        }
+        if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
+            return;
+        }
+        ctx.fireChannelRead(packet);
     }
 
     @Override
