@@ -1,0 +1,104 @@
+package com.ouyunc.message.convert;
+
+import com.alibaba.fastjson2.JSON;
+import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.enums.IngressSourceEnum;
+import com.ouyunc.base.constant.enums.MessageTypeEnum;
+import com.ouyunc.base.exception.MessageException;
+import com.ouyunc.base.model.LoginClientInfo;
+import com.ouyunc.base.model.Metadata;
+import com.ouyunc.base.model.Target;
+import com.ouyunc.base.packet.Packet;
+import com.ouyunc.base.packet.message.Message;
+import com.ouyunc.base.packet.message.content.LoginContent;
+import com.ouyunc.base.utils.ChannelAttrUtil;
+import com.ouyunc.base.utils.IpUtil;
+import com.ouyunc.base.utils.PacketReaderWriterUtil;
+import com.ouyunc.base.utils.TimeUtil;
+import com.ouyunc.core.context.MessageContext;
+import com.ouyunc.message.protocol.NativePacketProtocol;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * @author fzx
+ * @description websocket协议 二进制帧转换成packet
+ */
+public enum BinaryWebSocketFramePacketConverter implements PacketConverter<BinaryWebSocketFrame>{
+    INSTANCE
+    ;
+    private static final Logger log = LoggerFactory.getLogger(BinaryWebSocketFramePacketConverter.class);
+
+    /***
+     * @author fzx
+     * @description 需要处理 消息元数据的初始化
+     */
+    @Override
+    public Packet convertToPacket(ChannelHandlerContext ctx, Object msg) {
+        if (msg instanceof BinaryWebSocketFrame binaryWebSocketFrame) {
+            Packet packet = PacketReaderWriterUtil.readByteBuf2Packet(binaryWebSocketFrame.content());
+            // 获取消息
+            Message message = packet.getMessage();
+            // 获取元数据
+            Metadata metadata = message.getMetadata();
+            // 处理元数据
+            if (metadata == null) {
+                metadata = new Metadata();
+            }
+            // 判断如果不是集群中的传递消息，则进行以下处理
+            if (!metadata.isRouted()) {
+                // 设置该消息发送者当前登录所属的平台 appKey
+                // 设置默认的appKey
+                if (MessageTypeEnum.LOGIN.getType() == packet.getMessageType()) {
+                    LoginContent loginContent = JSON.parseObject(message.getContent(), LoginContent.class);
+                    metadata.setAppKey(loginContent.getAppKey());
+                }else {
+                    // 不是登录类型的消息，说明该客户端已经登录，可以从当前通道获取用户appKey
+                    LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
+                    if (loginClientInfo == null) {
+                        log.error("客户端:{} 未登录，请先登录", message.getFrom());
+                        ctx.close();
+                        throw new MessageException("客户端:"+message.getFrom()+" 未登录，请先登录");
+                    }
+                    metadata.setAppKey(loginClientInfo.getAppKey());
+                }
+                // 获取客户端真实ip
+                metadata.setClientIp(IpUtil.getIp(ctx));
+                // 设置服务器时间
+                metadata.setServerTime(TimeUtil.currentTimeMillis());
+                metadata.setIngressSource(IngressSourceEnum.IM.getCode());
+            }
+            message.setMetadata(metadata);
+            // 设置服务端生成的消息id，以服务端的主键为准
+            packet.setPacketId(MessageContext.idGenerator().generateId());
+            return packet;
+        }
+        return null;
+    }
+
+    /***
+     * @author fzx
+     * @description 将packet转换成BinaryWebSocketFrame
+     */
+    @Override
+    public BinaryWebSocketFrame convertFromPacket(Packet packet) {
+        // 将packet 的元数据信息清空（内部辅助数据，不对客户端暴漏）
+        Target target = packet.getMessage().getMetadata().getTarget();
+        if (target != null && target.getProtocol() == NativePacketProtocol.WS.getProtocol() && target.getProtocolVersion() == NativePacketProtocol.WS.getProtocolVersion()) {
+            // 暂存元数据信息
+            Message message = packet.getMessage();
+            Metadata metadata = message.getMetadata();
+            message.setMetadata(null);
+            ByteBuf byteBuf = ByteBufAllocator.DEFAULT.buffer();
+            PacketReaderWriterUtil.writePacketInByteBuf(packet, byteBuf);
+            // 在将该元数据设置进去
+            message.setMetadata(metadata);
+            return new BinaryWebSocketFrame(byteBuf);
+        }
+        return null;
+    }
+}

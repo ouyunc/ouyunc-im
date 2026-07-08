@@ -1,0 +1,17 @@
+# Git / IDE
+.git
+.gitignore
+.idea
+*.iml
+.vscode
+
+# 构建产物（由镜像内 mvn 生成）
+**/target/
+.flattened-pom.xml
+**/.flattened-pom.xml
+
+# 杂项
+*.md
+**/docs/
+**/*.log
+**/.LCK*

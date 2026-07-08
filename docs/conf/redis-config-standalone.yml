@@ -1,0 +1,57 @@
+# Redis 单例模式配置文件
+# 适用于单节点Redis部署，适合开发环境和小规模应用
+
+# 应用配置
+ouyunc:
+  # 缓存配置
+  cache:
+    redis:
+      # Redis数据库索引（默认为0）
+      database: 0
+      # 超时时间 30秒
+      timeout: PT30S
+      # 连接超时时间 1分钟
+      connectTimeout: PT1M
+      # Redis服务器地址
+      host: 127.0.0.1
+      # Redis服务器连接端口
+      port: 6379
+      # Redis服务器连接密码（默认为空）
+      password: 
+      # 客户端名称
+      clientName: ouyunc-im-client
+      # 客户端类型
+      clientType: LETTUCE
+      # SSL配置
+      ssl:
+        enabled: false
+        bundle: 
+      # Lettuce连接池配置
+      lettuce:
+        # 关闭超时时间
+        shutdownTimeout: PT100MS
+        # 连接池配置
+        pool:
+          # 是否启用连接池
+          enabled: true
+          # 连接池最大连接数
+          maxActive: 64
+          # 连接池最大阻塞等待时间（使用负值表示没有限制）
+          maxWait: PT-0.001S
+          # 连接池中的最大空闲连接
+          maxIdle: 32
+          # 连接池中的最小空闲连接
+          minIdle: 8
+          # 空闲对象回收线程运行间隔时间
+          timeBetweenEvictionRuns: PT30S
+        # 集群配置（单例模式下不使用）
+        cluster:
+          refresh:
+            # 是否动态刷新源
+            dynamicRefreshSources: true
+            # 集群拓扑刷新周期
+            period: PT30S
+            # 是否使用自适应拓扑刷新
+            adaptive: true
+
+

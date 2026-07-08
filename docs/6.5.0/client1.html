@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>测试websocket</title>
+	<link rel="icon" href="data:image/ico;base64,aWNv">
+
+</head>
+
+
+
+<script src="ouyunc-protobuf-message.js"></script>
+<script type="module">
+import Socket from './ouyunc-message-sdk.js';
+// 默认配置文件，可以进行覆盖
+let defaultConfig = {
+        clientType: 1, // 1-web, 2-uniapp
+        Message: null, // protobuf Message 对象
+        deviceType: 0,
+        networkType: 0,
+        encryptType: 0,
+        serializeAlgorithm: 6, // 6-protobuf, 2-json
+        heartbeat: {
+            enable: true,
+            maxWait: 3,
+            interval: 10000,
+            timeout: 5000
+        },
+        reconnect: {
+            enable: true,
+            maxTimes: -1,
+            delay: 2000
+        }
+    };
+var url = 'ws://172.18.62.195:6003/ws'
+var local = 'ws://192.168.1.7:6003/ws'
+const socket = new Socket(url, {
+    clientType: 1,
+    // 2-json序列化，6-protocolbuf 序列化，需要引入两个protobuf文件，且 属性 Message: proto.com.ouyunc.base.packet.message.Message,需要配置
+	serializeAlgorithm: 6,
+    deviceType: 1,
+	Message: proto.com.ouyunc.base.packet.message.Message,
+    heartbeat: {
+        enable: true,
+        interval: 5000
+    }
+});
+socket.onopen = (e) => {
+	let packet = socket.send({
+            // 登录消息类型，
+            messageType: -2,
+            // 消息
+            message: {
+                // 消息发送方唯一标识，建议使用用户id
+                from: '1391066871210487808',
+                // 消息接收方唯一标识，这里是登录，接受者是服务器，值可以为空串
+                to: '',
+                // 消息内容类型
+                contentType: -2,
+                // 消息内容content 是string 类型
+                content: JSON.stringify({
+                    identity: '1391066871210487808',
+                    appKey: 'ouyunc',
+                    signatureAlgorithm: 1,//md5
+                    signature: '123456',
+                    createTime: new Date().getTime()
+                }),
+                createTime: new Date().getTime()
+            }
+        });
+	//console.log(packet)
+};
+socket.onmessage = ({
+                        messageId,
+                        messageType,
+                        message
+                    }) => {
+    console.log('messageId:', messageId);
+	console.log('messageType:', messageType);
+	console.log('message:', message);
+    if (messageType === -6) {
+        document.getElementById('responseMessage').value = document.getElementById('responseMessage').value + "\n" + message.content;
+    }
+    if (messageType === -7) {
+        document.getElementById('sendMessage').value = document.getElementById('sendMessage').value + "\n" +message.content;
+    }
+    if (messageType === -128 && message.contentType === -4) {
+        let packet = socket.send({
+            // 登录消息类型，
+            messageType: -8,
+            // 消息
+            message: {
+                // 消息发送方唯一标识，建议使用用户id
+                from: '1391066871210487808',
+                // 消息接收方唯一标识，这里是登录，接受者是服务器，值可以为空串
+                to: '1391067238606352384',
+                // 消息内容类型
+                contentType: -128,
+                //at: ['18888888888','16666666666'],
+                //ref: ['123','456'],
+                qos: 1,
+                // 消息内容content 是string 类型9223372036854775807
+                content: '我是李四，请求加好友',
+                // content: JSON.stringify({
+                //     // 加入者
+                //     identity: '15555555555',
+                //     // 内容
+                //     content: '我不同意17777777777的加群申请'
+                // }),
+                extra: '我是额外信息',
+                createTime: new Date().getTime()
+            }
+        });
+    }
+
+
+
+    console.log('发送私聊')
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</script>
+<body>
+
+    <form onsubmit="return false">
+        单
+        <textarea  id="responseMessage" style="height: 300px; width: 100px"></textarea>
+<!--        <input type="button" onclick="document.getElementById('responseMessage').value = ''" value="清空内容"/>-->
+        群
+        <textarea id="sendMessage" name="sendMessage" style="height: 300px; width: 100px"></textarea>
+<!--        <input type="button" onclick="send(this.form.sendMessage.value)" value="发送消息" />-->
+
+
+<!--        <input type="text" name="add" />-->
+<!--        <input type="button" onclick="addFriend(this.form.add.value)" value="添加好友" />-->
+
+    </form>
+
+
+</body>
+</html>

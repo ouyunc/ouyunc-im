@@ -1,0 +1,41 @@
+package com.ouyunc.message.processor;
+
+import com.ouyunc.base.model.MessageProtocol;
+import com.ouyunc.base.packet.Packet;
+
+import java.util.List;
+
+/**
+ * 委派消息内容处理器链
+ */
+public final class DelegatingMessageContentProcessorChain implements ProcessorChain<AbstractBaseBiProcessor<? extends Number>> {
+
+
+    private final MessageProtocol messageProtocol;
+
+
+    private final List<AbstractBaseBiProcessor<? extends Number>> delegates;
+
+    public DelegatingMessageContentProcessorChain(MessageProtocol messageProtocol, List<AbstractBaseBiProcessor<? extends Number>> processors) {
+        this.messageProtocol = messageProtocol;
+        this.delegates = processors;
+    }
+
+
+    /**
+     * 匹配器
+     */
+    @Override
+    public boolean matches(Packet packet) {
+        return this.messageProtocol.getProtocol() == packet.getProtocol() && this.messageProtocol.getProtocolVersion() == packet.getProtocolVersion();
+    }
+
+    /**
+     * 获取相同协议的所有消息内容处理器
+     */
+    @Override
+    public List<AbstractBaseBiProcessor<? extends Number>> getProcessors() {
+        return this.delegates;
+    }
+
+}

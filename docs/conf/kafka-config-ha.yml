@@ -1,0 +1,216 @@
+# Kafka 高可用配置文件
+# 适用于生产环境，支持多副本、故障转移和高可用性
+
+# 应用配置
+ouyunc:
+  # 消息队列配置
+  mq:
+    # Kafka 配置信息
+    kafka:
+      # 公共连接地址（高可用集群节点列表）
+      bootstrapServers: 
+        - kafka-ha-node1:9092
+        - kafka-ha-node2:9092
+        - kafka-ha-node3:9092
+        - kafka-ha-node4:9092
+        - kafka-ha-node5:9092
+        - kafka-ha-node6:9092
+      
+      # 生产者配置（高可用优化）
+      producer:
+        # 生产者连接地址
+        bootstrapServers: 
+          - kafka-ha-node1:9092
+          - kafka-ha-node2:9092
+          - kafka-ha-node3:9092
+          - kafka-ha-node4:9092
+          - kafka-ha-node5:9092
+          - kafka-ha-node6:9092
+        # 消息确认应答模式（高可用必须使用all）
+        ack: "all"
+        # 批量发送的消息数量（字节）
+        batchSize: 65536
+        # 发送失败后的重复发送次数（高可用环境增加重试）
+        retries: 10
+        # 生产者缓冲区大小（字节）
+        bufferMemory: 134217728
+        # 批量发送延迟时间（毫秒）
+        lingerMs: 10
+        # 客户端ID
+        clientId: "ouyunc-ha-producer"
+        # 压缩类型（高可用环境建议使用lz4）
+        compressionType: "lz4"
+        # 消息key序列化器
+        keySerializer: "org.apache.kafka.common.serialization.StringSerializer"
+        # 消息value序列化器
+        valueSerializer: "org.apache.kafka.common.serialization.StringSerializer"
+        # 请求超时时间（毫秒）
+        requestTimeoutMs: 60000
+        # 重试退避时间（毫秒）
+        retryBackoffMs: 200
+        # 元数据最大年龄（毫秒）
+        metadataMaxAgeMs: 600000
+        # 分区器类
+        partitionerClass: "org.apache.kafka.clients.producer.internals.DefaultPartitioner"
+        # 拦截器类列表
+        interceptorClasses: []
+        # 幂等性（高可用环境必须启用）
+        enableIdempotence: true
+        # 事务ID（用于事务性消息）
+        transactionalId: "ouyunc-ha-transactional-producer"
+        # 事务超时时间（毫秒）
+        transactionTimeoutMs: 300000
+        # 最大阻塞时间（毫秒）
+        maxBlockMs: 60000
+        # 发送超时时间（毫秒）
+        deliveryTimeoutMs: 120000
+        # 启用幂等性的重试次数
+        enableIdempotenceRetries: 5
+
+      # 消费者配置（高可用优化）
+#      consumer:
+#        # 消费者连接地址
+#        bootstrapServers:
+#          - kafka-ha-node1:9092
+#          - kafka-ha-node2:9092
+#          - kafka-ha-node3:9092
+#          - kafka-ha-node4:9092
+#          - kafka-ha-node5:9092
+#          - kafka-ha-node6:9092
+#        # 消费者组ID
+#        groupId: "ouyunc-ha-consumer-group"
+#        # 自动偏移重置策略
+#        autoOffsetReset: "latest"
+#        # 批量消费一次最大拉取的数据量
+#        maxPollRecords: 2000
+#        # 连接超时时间（毫秒）
+#        sessionTimeoutMs: 45000
+#        # 是否开启自动提交
+#        enableAutoCommit: false
+#        # 自动提交间隔时间（毫秒）
+#        autoCommitIntervalMs: 2000
+#        # 最大轮询间隔时间（毫秒）
+#        maxPollIntervalMs: 600000
+#        # 设置拉取数据的大小（字节）
+#        maxPartitionFetchBytes: 4194304
+#        # 客户端ID
+#        clientId: "ouyunc-ha-consumer"
+#        # 心跳间隔时间（毫秒）
+#        heartbeatInterval: 5000
+#        # 获取数据最小字节数
+#        fetchMinSize: 1
+#        # 获取数据最大等待时间（毫秒）
+#        fetchMaxWait: 1000
+#        # 消息key反序列化器
+#        keyDeserializer: "org.apache.kafka.common.serialization.StringDeserializer"
+#        # 消息value反序列化器
+#        valueDeserializer: "org.apache.kafka.common.serialization.StringDeserializer"
+#        # 请求超时时间（毫秒）
+#        requestTimeoutMs: 60000
+#        # 重试退避时间（毫秒）
+#        retryBackoffMs: 200
+#        # 元数据最大年龄（毫秒）
+#        metadataMaxAgeMs: 600000
+#        # 分区分配策略（高可用环境建议使用StickyAssignor）
+#        partitionAssignmentStrategy: "org.apache.kafka.clients.consumer.StickyAssignor"
+#        # 隔离级别（高可用环境建议使用read_committed）
+#        isolationLevel: "read_committed"
+#        # 允许自动创建主题
+#        allowAutoCreateTopics: true
+#        # 检查CRC32
+#        checkCrcs: true
+#        # 客户端机架
+#        clientRack: null
+#        # 消费者组协议类型
+#        groupProtocolType: "consumer"
+#        # 消费者组实例ID
+#        groupInstanceId: null
+#        # 消费者组会话超时
+#        groupSessionTimeoutMs: 45000
+#        # 消费者组重平衡超时
+#        groupRebalanceTimeoutMs: 300000
+#        # 消费者组重平衡延迟
+#        groupRebalanceDelayMs: 0
+#        # 消费者组重平衡最大重试次数
+#        groupRebalanceMaxRetries: 5
+#        # 消费者组重平衡重试退避时间
+#        groupRebalanceRetryBackoffMs: 200
+#
+#      # 监听器配置（高可用优化）
+#      listener:
+#        # 是否开启批量消费
+#        batchListener: true
+#        # 设置消费的线程数（高可用环境可以设置更多线程）
+#        concurrency: 12
+#        # 轮询消费者时使用的超时（毫秒）
+#        pollTimeout: 5000
+#        # 确认模式
+#        ackMode: "MANUAL_IMMEDIATE"
+#        # 客户端ID
+#        clientId: "ouyunc-ha-listener"
+#        # 确认数量（当ackMode为COUNT或COUNT_TIME时）
+#        ackCount: 500
+#        # 确认时间（当ackMode为TIME或COUNT_TIME时，毫秒）
+#        ackTime: 5000
+#        # 空闲事件间隔（毫秒）
+#        idleEventInterval: 60000
+#        # 监控间隔（毫秒）
+#        monitorInterval: 30000
+#        # 是否记录容器配置
+#        logContainerConfig: true
+#        # 无轮询阈值
+#        noPollThreshold: 0.3
+#        # 监听器容器属性
+#        containerProperties:
+#          # 是否记录容器配置
+#          logContainerConfig: true
+#          # 空闲事件间隔
+#          idleEventInterval: 60000
+#          # 监控间隔
+#          monitorInterval: 30000
+#          # 无轮询阈值
+#          noPollThreshold: 0.3
+#          # 消费者组重平衡超时
+#          groupRebalanceTimeoutMs: 300000
+#          # 消费者组会话超时
+#          groupSessionTimeoutMs: 45000
+#          # 消费者组心跳间隔
+#          groupHeartbeatIntervalMs: 5000
+#          # 消费者组重平衡延迟
+#          groupRebalanceDelayMs: 0
+#          # 消费者组重平衡最大重试次数
+#          groupRebalanceMaxRetries: 5
+#          # 消费者组重平衡重试退避时间
+#          groupRebalanceRetryBackoffMs: 200
+
+
+# Kafka高可用部署说明
+# 1. 需要部署至少6个Kafka节点（推荐奇数个节点）
+# 2. 每个节点需要不同的broker.id
+# 3. 需要配置Zookeeper集群或KRaft模式
+# 4. 必须配置多副本（replication-factor >= 3）
+# 5. 建议配置多分区（partitions >= 6）
+# 6. 配置监控和告警系统
+# 7. 配置备份和恢复策略
+# 8. 配置安全认证和授权
+
+# 高可用集群节点配置示例
+# 节点1: kafka-ha-node1:9092 (broker.id=1, rack=rack1)
+# 节点2: kafka-ha-node2:9092 (broker.id=2, rack=rack1)
+# 节点3: kafka-ha-node3:9092 (broker.id=3, rack=rack2)
+# 节点4: kafka-ha-node4:9092 (broker.id=4, rack=rack2)
+# 节点5: kafka-ha-node5:9092 (broker.id=5, rack=rack3)
+# 节点6: kafka-ha-node6:9092 (broker.id=6, rack=rack3)
+
+# 主题配置示例
+# 创建高可用主题：
+# kafka-topics.sh --create --topic ouyunc-message-topic \
+#   --bootstrap-server kafka-ha-node1:9092 \
+#   --partitions 12 \
+#   --replication-factor 3 \
+#   --config min.insync.replicas=2 \
+#   --config unclean.leader.election.enable=false \
+#   --config compression.type=lz4 \
+#   --config retention.ms=604800000 \
+#   --config segment.ms=3600000 \
+#   --config cleanup.policy=delete

@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>个人设置 · Mock</title>
+  <link rel="icon" href="data:image/ico;base64,aWNv" />
+  <link rel="stylesheet" href="cs-shared.css" />
+  <style>
+    .shortcut-badge {
+      font-family: ui-monospace, monospace; font-size: 11px; background: #f5f5f5;
+      padding: 2px 6px; border-radius: 4px; color: #595959;
+    }
+    .filter-bar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+    .filter-bar select { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <header class="cs-header">
+    <a class="cs-logo" href="cs-lobby.html">偶遇云 · 客服</a>
+    <span class="mock-badge">MOCK API</span>
+    <div class="header-spacer"></div>
+    <nav class="header-nav">
+      <a href="cs-lobby.html">大厅</a>
+      <a href="cs-agent.html">工作台</a>
+      <a href="cs-tickets.html">咨询单</a>
+      <a href="cs-admin-settings.html">系统配置</a>
+      <a href="cs-profile.html" class="active">个人设置</a>
+      <a href="cs-visitor.html" target="_blank">访客端 ↗</a>
+    </nav>
+  </header>
+
+  <div class="settings-shell">
+    <aside class="settings-sidebar">
+      <h3>个人中心</h3>
+      <nav class="settings-nav">
+        <a href="#profile" data-section="profile" class="active">基本信息</a>
+        <a href="#quick-replies" data-section="quick-replies">常用语</a>
+        <a href="#translate" data-section="translate">翻译偏好</a>
+        <a href="#notify" data-section="notify">通知设置</a>
+      </nav>
+    </aside>
+
+    <main class="settings-main">
+      <!-- 基本信息 -->
+      <section id="sec-profile">
+        <h1>基本信息</h1>
+        <p class="settings-desc">展示在客户侧与会话记录中的坐席身份信息。</p>
+        <div class="profile-header">
+          <div class="profile-avatar" id="profileAvatar">👤</div>
+          <div>
+            <div style="font-size:18px;font-weight:600" id="profileDisplayName">—</div>
+            <div style="font-size:13px;color:var(--muted);margin-top:4px" id="profileMeta">—</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">账号资料</div>
+          <div class="form-grid">
+            <div class="field">
+              <label>显示名称</label>
+              <input id="displayName" />
+              <div class="field-hint">客户看到的客服称呼</div>
+            </div>
+            <div class="field">
+              <label>工号</label>
+              <input id="jobNo" disabled />
+            </div>
+            <div class="field">
+              <label>邮箱</label>
+              <input id="email" type="email" />
+            </div>
+            <div class="field">
+              <label>手机</label>
+              <input id="phone" />
+            </div>
+            <div class="field" style="grid-column:1/-1">
+              <label>个性签名</label>
+              <input id="signature" placeholder="简短服务承诺或座右铭" />
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="saveProfileBtn">保存资料</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 常用语 -->
+      <section id="sec-quick-replies" style="display:none">
+        <h1>常用语</h1>
+        <p class="settings-desc">快捷回复模板，支持快捷键；在工作台输入框可一键插入（如 <span class="shortcut-badge">/hi</span>）。</p>
+        <div class="card">
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+            <span>我的常用语</span>
+            <button class="btn btn-secondary btn-sm" id="addQrBtn">+ 新增</button>
+          </div>
+          <div class="filter-bar">
+            <select id="qrCategoryFilter">
+              <option value="">全部分类</option>
+              <option value="greeting">问候</option>
+              <option value="closing">结束</option>
+              <option value="faq">常见问题</option>
+              <option value="other">其他</option>
+            </select>
+          </div>
+          <div class="qr-list" id="qrList"></div>
+        </div>
+      </section>
+
+      <!-- 翻译偏好 -->
+      <section id="sec-translate" style="display:none">
+        <h1>翻译偏好</h1>
+        <p class="settings-desc">与工作台语言栏联动，保存后在工作台初始化时自动应用。</p>
+        <div class="card">
+          <div class="card-title">默认语言</div>
+          <div class="form-grid">
+            <div class="field">
+              <label>我的服务语言（坐席语言）</label>
+              <select id="agentLocale">
+                <option value="zh">中文</option>
+                <option value="en">English</option>
+                <option value="ja">日本語</option>
+                <option value="ko">한국어</option>
+              </select>
+            </div>
+          </div>
+          <label class="chk-row" style="margin-top:16px"><input type="checkbox" id="autoTranslateIn" /> 入站消息自动翻译为我的语言</label>
+          <label class="chk-row"><input type="checkbox" id="autoTranslateOut" /> 发送前自动翻译为客户语言</label>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="saveTranslateBtn">保存翻译偏好</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 通知设置 -->
+      <section id="sec-notify" style="display:none">
+        <h1>通知设置</h1>
+        <p class="settings-desc">控制新会话、排队接入等桌面提醒（浏览器需授权通知权限）。</p>
+        <div class="card">
+          <div class="card-title">提醒方式</div>
+          <label class="chk-row"><input type="checkbox" id="notifySound" /> 新消息提示音</label>
+          <label class="chk-row"><input type="checkbox" id="notifyDesktop" /> 浏览器桌面通知</label>
+          <label class="chk-row"><input type="checkbox" id="notifyNewSession" /> 新客户进线时强提醒</label>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="saveNotifyBtn">保存通知设置</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- 常用语编辑 -->
+  <div class="modal-mask" id="qrModal">
+    <div class="modal">
+      <h2 id="qrModalTitle">编辑常用语</h2>
+      <input type="hidden" id="qrEditId" />
+      <div class="form-grid single">
+        <div class="field"><label>标题</label><input id="qrTitle" placeholder="如：开场问候" /></div>
+        <div class="field">
+          <label>快捷键（可选）</label>
+          <input id="qrShortcut" placeholder="/hi" />
+          <div class="field-hint">工作台输入框输入后 Tab 或点击可展开</div>
+        </div>
+        <div class="field">
+          <label>分类</label>
+          <select id="qrCategory">
+            <option value="greeting">问候</option>
+            <option value="closing">结束</option>
+            <option value="faq">常见问题</option>
+            <option value="other">其他</option>
+          </select>
+        </div>
+        <div class="field"><label>内容</label><textarea id="qrContent" rows="4"></textarea></div>
+        <div class="field"><label>排序</label><input type="number" id="qrSort" min="1" value="1" /></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" id="qrCancelBtn">取消</button>
+        <button class="btn btn-primary" id="qrSaveBtn">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <button class="api-log-toggle" id="logToggle">API 日志</button>
+  <div class="api-log" id="apiLog"></div>
+
+  <script src="mock-api.js"></script>
+  <script>
+    const api = window.CsMockApi;
+    const AGENT_ID = 'agent-001';
+    let quickReplies = [];
+
+    function toast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      setTimeout(function () { el.classList.remove('show'); }, 2500);
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function showSection(name) {
+      ['profile', 'quick-replies', 'translate', 'notify'].forEach(function (s) {
+        document.getElementById('sec-' + s).style.display = s === name ? 'block' : 'none';
+      });
+      document.querySelectorAll('.settings-nav a').forEach(function (a) {
+        a.classList.toggle('active', a.dataset.section === name);
+      });
+      location.hash = name;
+    }
+
+    document.querySelectorAll('.settings-nav a').forEach(function (a) {
+      a.onclick = function (e) {
+        e.preventDefault();
+        showSection(a.dataset.section);
+      };
+    });
+
+    async function loadProfile() {
+      const agent = api.getAgentInfo(AGENT_ID);
+      const profile = await api.getAgentProfile(AGENT_ID);
+      document.getElementById('profileDisplayName').textContent = profile.displayName;
+      document.getElementById('profileMeta').textContent = agent.jobNo + ' · ' + AGENT_ID;
+      document.getElementById('displayName').value = profile.displayName;
+      document.getElementById('jobNo').value = agent.jobNo;
+      document.getElementById('email').value = profile.email || '';
+      document.getElementById('phone').value = profile.phone || '';
+      document.getElementById('signature').value = profile.signature || '';
+      document.getElementById('agentLocale').value = profile.agentLocale || 'zh';
+      document.getElementById('autoTranslateIn').checked = profile.autoTranslateIn !== false;
+      document.getElementById('autoTranslateOut').checked = profile.autoTranslateOut !== false;
+      document.getElementById('notifySound').checked = profile.notifySound !== false;
+      document.getElementById('notifyDesktop').checked = profile.notifyDesktop !== false;
+      document.getElementById('notifyNewSession').checked = profile.notifyNewSession !== false;
+    }
+
+    document.getElementById('saveProfileBtn').onclick = async function () {
+      await api.saveAgentProfile(AGENT_ID, {
+        displayName: document.getElementById('displayName').value,
+        email: document.getElementById('email').value,
+        phone: document.getElementById('phone').value,
+        signature: document.getElementById('signature').value,
+      });
+      toast('资料已保存');
+      loadProfile();
+    };
+
+    document.getElementById('saveTranslateBtn').onclick = async function () {
+      await api.saveAgentProfile(AGENT_ID, {
+        agentLocale: document.getElementById('agentLocale').value,
+        autoTranslateIn: document.getElementById('autoTranslateIn').checked,
+        autoTranslateOut: document.getElementById('autoTranslateOut').checked,
+      });
+      localStorage.setItem('cs-agent-lang', JSON.stringify({
+        agentLang: document.getElementById('agentLocale').value,
+        autoTranslateIn: document.getElementById('autoTranslateIn').checked,
+        autoTranslateOut: document.getElementById('autoTranslateOut').checked,
+      }));
+      toast('翻译偏好已保存，工作台刷新后生效');
+    };
+
+    document.getElementById('saveNotifyBtn').onclick = async function () {
+      await api.saveAgentProfile(AGENT_ID, {
+        notifySound: document.getElementById('notifySound').checked,
+        notifyDesktop: document.getElementById('notifyDesktop').checked,
+        notifyNewSession: document.getElementById('notifyNewSession').checked,
+      });
+      toast('通知设置已保存');
+    };
+
+    function renderQuickReplies() {
+      const filter = document.getElementById('qrCategoryFilter').value;
+      const list = quickReplies.filter(function (q) { return !filter || q.category === filter; });
+      const catLabels = api.QUICK_REPLY_CATEGORY_LABELS;
+      document.getElementById('qrList').innerHTML = list.length ? list.map(function (q) {
+        return '<div class="qr-item"><div class="qr-item-body">' +
+          '<div class="qr-item-title">' + escapeHtml(q.title) +
+          (q.shortcut ? ' <span class="shortcut-badge">' + escapeHtml(q.shortcut) + '</span>' : '') + '</div>' +
+          '<div class="qr-item-meta">' + (catLabels[q.category] || q.category) + ' · 排序 ' + q.sort + '</div>' +
+          '<div class="qr-item-content">' + escapeHtml(q.content) + '</div></div>' +
+          '<div class="qr-item-actions">' +
+          '<button class="btn btn-secondary btn-sm" data-edit-qr="' + q.id + '">编辑</button>' +
+          '<button class="btn btn-danger btn-sm" data-del-qr="' + q.id + '">删除</button></div></div>';
+      }).join('') : '<div style="color:var(--muted);font-size:13px;padding:12px 0">暂无常用语，点击右上角新增</div>';
+
+      document.querySelectorAll('[data-edit-qr]').forEach(function (btn) {
+        btn.onclick = function () { openQrModal(btn.dataset.editQr); };
+      });
+      document.querySelectorAll('[data-del-qr]').forEach(function (btn) {
+        btn.onclick = async function () {
+          if (!confirm('确定删除？')) return;
+          await api.deleteQuickReply(AGENT_ID, btn.dataset.delQr);
+          await loadQuickReplies();
+          toast('已删除');
+        };
+      });
+    }
+
+    async function loadQuickReplies() {
+      const res = await api.listQuickReplies(AGENT_ID);
+      quickReplies = res.items || [];
+      renderQuickReplies();
+    }
+
+    function openQrModal(id) {
+      const q = id ? quickReplies.find(function (x) { return x.id === id; }) : null;
+      document.getElementById('qrModalTitle').textContent = q ? '编辑常用语' : '新增常用语';
+      document.getElementById('qrEditId').value = q ? q.id : '';
+      document.getElementById('qrTitle').value = q ? q.title : '';
+      document.getElementById('qrShortcut').value = q ? q.shortcut : '';
+      document.getElementById('qrCategory').value = q ? q.category : 'greeting';
+      document.getElementById('qrContent').value = q ? q.content : '';
+      document.getElementById('qrSort').value = q ? q.sort : quickReplies.length + 1;
+      document.getElementById('qrModal').classList.add('open');
+    }
+
+    document.getElementById('addQrBtn').onclick = function () { openQrModal(null); };
+    document.getElementById('qrCancelBtn').onclick = function () { document.getElementById('qrModal').classList.remove('open'); };
+    document.getElementById('qrCategoryFilter').onchange = renderQuickReplies;
+    document.getElementById('qrSaveBtn').onclick = async function () {
+      const id = document.getElementById('qrEditId').value;
+      const body = {
+        title: document.getElementById('qrTitle').value,
+        shortcut: document.getElementById('qrShortcut').value,
+        category: document.getElementById('qrCategory').value,
+        content: document.getElementById('qrContent').value,
+        sort: +document.getElementById('qrSort').value,
+      };
+      if (id) await api.saveQuickReply(AGENT_ID, id, body);
+      else await api.createQuickReply(AGENT_ID, body);
+      document.getElementById('qrModal').classList.remove('open');
+      await loadQuickReplies();
+      toast('常用语已保存');
+    };
+
+    document.getElementById('logToggle').onclick = function () {
+      const el = document.getElementById('apiLog');
+      el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    };
+
+    (async function init() {
+      await loadProfile();
+      await loadQuickReplies();
+      const hash = (location.hash || '#profile').slice(1);
+      showSection(['profile', 'quick-replies', 'translate', 'notify'].includes(hash) ? hash : 'profile');
+    })();
+  </script>
+</body>
+</html>

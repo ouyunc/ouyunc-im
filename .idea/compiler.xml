@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AjcSettings">
+    <option name="ajcPath" value="$PROJECT_DIR$/../../repository/org/aspectj/aspectjtools/1.9.22.1/aspectjtools-1.9.22.1.jar" />
+    <option name="cmdLineParams" value="-Xlint:ignore -showWeaveInfo" />
+    <option name="delegateToJavac" value="true" />
+    <option name="aptOptionsEnabled" value="true" />
+  </component>
+  <component name="CompilerConfiguration">
+    <excludeFromCompile>
+      <directory url="file://$PROJECT_DIR$/ouyunc-commons/ouyunc-ai/src/main/resources/archetype-resources" includeSubdirectories="true" />
+    </excludeFromCompile>
+    <annotationProcessing>
+      <profile name="Maven default annotation processors profile" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <module name="ouyunc-domain" />
+        <module name="ouyunc-client" />
+        <module name="ouyu-server" />
+        <module name="ouyunc-db-influx" />
+        <module name="ouyunc-base" />
+        <module name="ouyunc-db-jdbc" />
+        <module name="ouyunc-ai" />
+        <module name="ouyunc-mq-core" />
+        <module name="ouyunc-mq-rocket" />
+        <module name="ouyunc-server" />
+        <module name="ouyunc-id" />
+        <module name="ouyu-core" />
+        <module name="ouyunc-mq-kafka" />
+        <module name="ouyunc-message-spring-boot-starter" />
+        <module name="ouyu-cache" />
+        <module name="ouyunc-cache" />
+        <module name="ouyunc-db-mongo" />
+        <module name="ouyu-db" />
+        <module name="ouyu-client" />
+        <module name="ouyunc-core" />
+        <module name="ouyunc-repository" />
+      </profile>
+    </annotationProcessing>
+    <bytecodeTargetLevel target="21">
+      <module name="ouyunc-apidoc-spring-boot-starter" target="21" />
+      <module name="ouyunc-audit-spring-boot-starter" target="21" />
+      <module name="ouyunc-boot-starters" target="1.5" />
+      <module name="ouyunc-business" target="1.5" />
+      <module name="ouyunc-cache-spring-boot-starter" target="21" />
+      <module name="ouyunc-common-spring-boot-starter" target="21" />
+      <module name="ouyunc-config-spring-boot-starter" target="21" />
+      <module name="ouyunc-consumer" target="1.5" />
+      <module name="ouyunc-cs-consumer" target="21" />
+      <module name="ouyunc-cs-service" target="21" />
+      <module name="ouyunc-cs-service-api" target="21" />
+      <module name="ouyunc-cs-web" target="21" />
+      <module name="ouyunc-file-spring-boot-starter" target="21" />
+      <module name="ouyunc-gateway" target="21" />
+      <module name="ouyunc-idempotency-spring-boot-starter" target="21" />
+      <module name="ouyunc-im-consumer" target="21" />
+      <module name="ouyunc-im-service" target="21" />
+      <module name="ouyunc-im-service-api" target="21" />
+      <module name="ouyunc-im-web" target="21" />
+      <module name="ouyunc-job" target="21" />
+      <module name="ouyunc-loadbalancer-spring-boot-starter" target="21" />
+      <module name="ouyunc-logging-spring-boot-starter" target="21" />
+      <module name="ouyunc-message-spring-boot-starter (1)" target="21" />
+      <module name="ouyunc-micro-cloud-platform" target="1.5" />
+      <module name="ouyunc-mongodb-spring-boot-starter" target="21" />
+      <module name="ouyunc-mq-core-spring-boot-starter" target="21" />
+      <module name="ouyunc-mq-kafka-spring-boot-starter" target="21" />
+      <module name="ouyunc-mq-rocketmq-spring-boot-starter" target="21" />
+      <module name="ouyunc-mq-spring-boot-starter" target="1.5" />
+      <module name="ouyunc-oauth" target="21" />
+      <module name="ouyunc-observability-spring-boot-starter" target="21" />
+      <module name="ouyunc-register-spring-boot-starter" target="21" />
+      <module name="ouyunc-repository-spring-boot-starter" target="21" />
+      <module name="ouyunc-rpc-spring-boot-starter" target="21" />
+      <module name="ouyunc-seata-spring-boot-starter" target="21" />
+      <module name="ouyunc-security-spring-boot-starter" target="21" />
+      <module name="ouyunc-service" target="1.5" />
+      <module name="ouyunc-service-api" target="1.5" />
+      <module name="ouyunc-sms-spring-boot-starter" target="21" />
+      <module name="ouyunc-task-spring-boot-starter" target="21" />
+      <module name="ouyunc-transaction-spring-boot-starter" target="21" />
+      <module name="ouyunc-user-service" target="21" />
+      <module name="ouyunc-user-service-api" target="21" />
+      <module name="ouyunc-user-web" target="21" />
+      <module name="ouyunc-web" target="1.5" />
+      <module name="ouyunc-web-spring-boot-starter" target="21" />
+      <module name="ouyunc-workflow" target="21" />
+    </bytecodeTargetLevel>
+  </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="ouyunc-apidoc-spring-boot-starter" options="-parameters" />
+      <module name="ouyunc-audit-spring-boot-starter" options="-parameters" />
+      <module name="ouyunc-cache-spring-boot-starter" options="-parameters" />
+      <module name="ouyunc-common-spring-boot-starter" options="-parameters" />
+      <module name="ouyunc-config-spring-boot-starter" options="-parameters" />
+      <module name="ouyunc-core" options="" />
+      <module name="ouyunc-cs-consumer" options="-parameters" />
+      <module name="ouyunc-cs-service" options="-parameters" />
+      <module name="ouyunc-cs-service-api" options="-parameters" />
+      <module name="ouyunc-cs-web" options="-parameters" />
+      <module name="ouyunc-file-spring-boot-starter" options="-parameters" />
+      <module name="ouyunc-gateway" options="-parameters" />
+      <module name="ouyunc-idempotency-spring-boot-starter" options="-parameters" />
+      <module name="ouyunc-im-consumer" options="-parameters" />
+      <module name="ouyunc-im-service" options="-parameters" />
+      <module name="ouyunc-im-service-api" options="-parameters" />
+      <module name="ouyunc-im-web" options="-parameters" />
+      <module name="ouyunc-job" options="-parameters" />
+      <module name="ouyunc-loadbalancer-spring-boot-starter" options="-parameters" />
+      <module name="ouyunc-logging-spring-boot-starter" options="-parameters" />
+      <module name="ouyunc-message-spring-boot-starter" options="-parameters" />
+      <module name="ouyunc-message-spring-boot-starter (1)" options="-parameters" />
+      <module name="ouyunc-mongodb-spring-boot-starter" options="-parameters" />
+      <module name="ouyunc-mq-core-spring-boot-starter" options="-parameters" />
+      <module name="ouyunc-mq-kafka-spring-boot-starter" options="-parameters" />
+      <module name="ouyunc-mq-rocketmq-spring-boot-starter" options="-parameters" />
+      <module name="ouyunc-oauth" options="-parameters" />
+      <module name="ouyunc-observability-spring-boot-starter" options="-parameters" />
+      <module name="ouyunc-register-spring-boot-starter" options="-parameters" />
+      <module name="ouyunc-repository-spring-boot-starter" options="-parameters" />
+      <module name="ouyunc-rpc-spring-boot-starter" options="-parameters" />
+      <module name="ouyunc-seata-spring-boot-starter" options="-parameters" />
+      <module name="ouyunc-security-spring-boot-starter" options="-parameters" />
+      <module name="ouyunc-sms-spring-boot-starter" options="-parameters" />
+      <module name="ouyunc-task-spring-boot-starter" options="-parameters" />
+      <module name="ouyunc-transaction-spring-boot-starter" options="-parameters" />
+      <module name="ouyunc-user-service" options="-parameters" />
+      <module name="ouyunc-user-service-api" options="-parameters" />
+      <module name="ouyunc-user-web" options="-parameters" />
+      <module name="ouyunc-web-spring-boot-starter" options="-parameters" />
+      <module name="ouyunc-workflow" options="-parameters" />
+    </option>
+  </component>
+</project>

@@ -1,0 +1,18 @@
+protoc --plugin=protoc-gen-js="D:\protobuf-javascript-3.21.4-win64\bin\protoc-gen-js.exe"  --js_out=import_style=commonjs,binary:. Message.proto
+
+npm install -g require
+安装打包成前端使用的js文件
+
+ npm install -g browserify
+安装protobuf的库文件
+
+npm install google-protobuf@3.21.2 --save
+打包js文件export.js
+
+  var student= require('./student_pb');
+  module.exports = {
+      DataProto: student
+  }
+
+
+browserify exports.js -o  ouyunc-protobuf-message.js

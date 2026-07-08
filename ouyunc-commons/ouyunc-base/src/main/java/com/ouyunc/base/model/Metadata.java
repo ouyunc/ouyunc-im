@@ -1,0 +1,217 @@
+package com.ouyunc.base.model;
+
+
+import java.io.Serial;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * @Author fzx
+ * @Description: 扩展消息 message, 额外字段数据，内部使用，不对外开放,集群使用
+ **/
+public class Metadata implements Serializable, Cloneable {
+    @Serial
+    private static final long serialVersionUID = 1L;
+
+    /**
+     * 平台唯一标识
+     */
+    private String appKey;
+
+    /**
+     * 该消息是否通过集群内路由传递
+     */
+    private boolean routed;
+
+    /**
+     * 当前消息投递重试次数,默认0
+     */
+    private int currentRetry;
+
+     /**
+      * 消息发送者所在服务器地址,如果是消息在服务之间转发，则该地址是上个消息所经过的服务地址：ip:port
+      */
+     private String fromServerAddress;
+
+    /**
+     * 发送消息的目标信息,(消息最终接收方的信息)
+     */
+    private Target target;
+
+    /**
+     * 消息路由表
+     */
+    private List<RoutingTable> routingTables;
+
+    /**
+     * 消息客户端真实ip
+     */
+    private String clientIp;
+
+    /**
+     * 消息首次到达服务时间戳
+     */
+    private long serverTime;
+
+    /**
+     * 消息入口来源，见 {@link com.ouyunc.base.constant.enums.IngressSourceEnum#getCode()}。
+     */
+    private String ingressSource;
+
+    /**
+     * HTTP 推送时的 pushType 原值，便于 Processor 区分广播等场景。
+     */
+    private Integer httpPushType;
+
+    /**
+     * 客服已读回执：阅读者真实 userId（访客 userId 或坐席 assigneeId），供 MQ 落库 offset 使用。
+     */
+    private String csReaderId;
+
+
+    public String getAppKey() {
+        return appKey;
+    }
+
+    public void setAppKey(String appKey) {
+        this.appKey = appKey;
+    }
+
+    public Target getTarget() {
+        return target;
+    }
+
+    public void setTarget(Target target) {
+        this.target = target;
+    }
+
+    public int getCurrentRetry() {
+        return currentRetry;
+    }
+
+    public void setCurrentRetry(int currentRetry) {
+        this.currentRetry = currentRetry;
+    }
+
+    public List<RoutingTable> getRoutingTables() {
+        return routingTables == null ? new ArrayList<>(): routingTables;
+    }
+
+    public void setRoutingTables(List<RoutingTable> routingTables) {
+        this.routingTables = routingTables;
+    }
+
+    public boolean isRouted() {
+        return routed;
+    }
+
+    public void setRouted(boolean routed) {
+        this.routed = routed;
+    }
+
+    public String getFromServerAddress() {
+        return fromServerAddress;
+    }
+
+    public void setFromServerAddress(String fromServerAddress) {
+        this.fromServerAddress = fromServerAddress;
+    }
+
+    public long getServerTime() {
+        return serverTime;
+    }
+
+    public void setServerTime(long serverTime) {
+        this.serverTime = serverTime;
+    }
+
+    public String getClientIp() {
+        return clientIp;
+    }
+
+    public void setClientIp(String clientIp) {
+        this.clientIp = clientIp;
+    }
+
+    public String getIngressSource() {
+        return ingressSource;
+    }
+
+    public void setIngressSource(String ingressSource) {
+        this.ingressSource = ingressSource;
+    }
+
+    public Integer getHttpPushType() {
+        return httpPushType;
+    }
+
+    public void setHttpPushType(Integer httpPushType) {
+        this.httpPushType = httpPushType;
+    }
+
+    public String getCsReaderId() {
+        return csReaderId;
+    }
+
+    public void setCsReaderId(String csReaderId) {
+        this.csReaderId = csReaderId;
+    }
+
+    public Metadata(String appKey, boolean routed, int currentRetry, String fromServerAddress, Target target, List<RoutingTable> routingTables, String clientIp, long serverTime) {
+        this.appKey = appKey;
+        this.routed = routed;
+        this.currentRetry = currentRetry;
+        this.fromServerAddress = fromServerAddress;
+        this.target = target;
+        this.routingTables = routingTables;
+        this.clientIp = clientIp;
+        this.serverTime = serverTime;
+    }
+
+    public Metadata(String appKey, String clientIp, long serverTime) {
+        this.appKey = appKey;
+        this.clientIp = clientIp;
+        this.serverTime = serverTime;
+    }
+
+    public Metadata() {
+    }
+
+    @Override
+    public Metadata clone() {
+        try {
+            Metadata metadata = (Metadata) super.clone();
+            if (this.target != null) {
+                metadata.setTarget(this.target.clone());
+            }
+            if (this.routingTables != null) {
+                List<RoutingTable> routingTableList = new ArrayList<>();
+                for (RoutingTable routingTable : this.routingTables) {
+                    routingTableList.add(routingTable.clone());
+                }
+                metadata.setRoutingTables(routingTableList);
+            }
+            return metadata;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError();
+        }
+    }
+
+    @Override
+    public String toString() {
+        return "Metadata{" +
+                "appKey='" + appKey + '\'' +
+                ", routed=" + routed +
+                ", currentRetry=" + currentRetry +
+                ", fromServerAddress='" + fromServerAddress + '\'' +
+                ", target=" + target +
+                ", routingTables=" + routingTables +
+                ", clientIp='" + clientIp + '\'' +
+                ", serverTime=" + serverTime +
+                ", ingressSource='" + ingressSource + '\'' +
+                ", httpPushType=" + httpPushType +
+                ", csReaderId='" + csReaderId + '\'' +
+                '}';
+    }
+}

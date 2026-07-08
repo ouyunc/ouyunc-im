@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>咨询单中心 · Mock</title>
+  <link rel="icon" href="data:image/ico;base64,aWNv" />
+  <link rel="stylesheet" href="cs-shared.css" />
+  <style>
+    .tickets-layout { display: flex; min-height: calc(100vh - 56px); }
+    .tickets-list-pane {
+      width: 42%; min-width: 320px; max-width: 520px; background: #fff;
+      border-right: 1px solid var(--border); display: flex; flex-direction: column;
+    }
+    .tickets-detail-pane { flex: 1; overflow-y: auto; padding: 24px; background: var(--bg); }
+    .list-toolbar { padding: 16px; border-bottom: 1px solid var(--border); }
+    .filter-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+    .filter-row select, .filter-row input {
+      padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px;
+    }
+    .filter-row input { flex: 1; min-width: 120px; }
+    .status-tabs { display: flex; gap: 6px; }
+    .status-tab {
+      padding: 4px 12px; border-radius: 16px; font-size: 12px; cursor: pointer;
+      border: 1px solid var(--border); background: #fff;
+    }
+    .status-tab.active { background: #e6f4ff; border-color: var(--primary); color: var(--primary); font-weight: 500; }
+
+    .ticket-rows { flex: 1; overflow-y: auto; }
+    .ticket-row {
+      padding: 14px 16px; border-bottom: 1px solid #f5f5f5; cursor: pointer;
+    }
+    .ticket-row:hover { background: #fafafa; }
+    .ticket-row.selected { background: #e6f4ff; border-left: 3px solid var(--primary); }
+    .ticket-row-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 4px; }
+    .ticket-row-id { font-family: ui-monospace, monospace; font-size: 12px; color: var(--muted); }
+    .ticket-row-title { font-weight: 500; font-size: 14px; }
+    .ticket-row-sub { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+    .detail-empty {
+      display: flex; align-items: center; justify-content: center; height: 100%;
+      color: var(--muted); font-size: 14px;
+    }
+    .detail-header { margin-bottom: 20px; }
+    .detail-header h1 { font-size: 18px; font-family: ui-monospace, monospace; margin-bottom: 8px; }
+    .detail-meta { display: flex; flex-wrap: wrap; gap: 8px; font-size: 13px; color: var(--muted); }
+    .detail-actions { margin-top: 12px; display: flex; gap: 8px; }
+
+    .flow-section { margin-top: 8px; }
+    .flow-section-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+
+    .flow-record {
+      background: #fff; border: 1px solid var(--border); border-radius: 10px;
+      margin-bottom: 10px; overflow: hidden;
+    }
+    .flow-record-head {
+      padding: 12px 16px; cursor: pointer; display: flex; align-items: flex-start; gap: 12px;
+      user-select: none;
+    }
+    .flow-record-head:hover { background: #fafafa; }
+    .flow-record-icon {
+      width: 28px; height: 28px; border-radius: 50%; background: #e6f4ff; color: var(--primary);
+      display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0;
+    }
+    .flow-record-icon.event { background: #f5f5f5; color: var(--muted); }
+    .flow-record-icon.close { background: #f6ffed; color: #389e0d; }
+    .flow-record-icon.transfer { background: #fff7e6; color: #d48806; }
+    .flow-record-body { flex: 1; min-width: 0; }
+    .flow-record-title { font-weight: 500; font-size: 14px; }
+    .flow-record-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .flow-record-badge { font-size: 11px; color: var(--primary); margin-left: auto; flex-shrink: 0; }
+
+    .flow-chat {
+      border-top: 1px solid #f0f0f0; padding: 12px 16px; background: #fafafa;
+      display: none; max-height: 320px; overflow-y: auto;
+    }
+    .flow-record.expanded .flow-chat { display: block; }
+    .flow-record.expanded .flow-expand-hint::after { content: ' ▴'; }
+
+    .chat-bubble {
+      max-width: 85%; margin-bottom: 8px; padding: 8px 12px; border-radius: 8px;
+      font-size: 13px; line-height: 1.5;
+    }
+    .chat-bubble.in { background: #fff; border: 1px solid var(--border); margin-right: auto; }
+    .chat-bubble.out { background: #e6f4ff; margin-left: auto; }
+    .chat-bubble-meta { font-size: 10px; color: var(--muted); margin-bottom: 3px; }
+    .chat-empty { font-size: 12px; color: var(--muted); padding: 8px 0; font-style: italic; }
+
+    @media (max-width: 900px) {
+      .tickets-layout { flex-direction: column; }
+      .tickets-list-pane { width: 100%; max-width: none; max-height: 45vh; }
+    }
+  </style>
+</head>
+<body>
+  <header class="cs-header">
+    <a class="cs-logo" href="cs-lobby.html">偶遇云 · 客服</a>
+    <span class="mock-badge">MOCK API</span>
+    <div class="header-spacer"></div>
+    <nav class="header-nav">
+      <a href="cs-lobby.html">大厅</a>
+      <a href="cs-agent.html">工作台</a>
+      <a href="cs-tickets.html" class="active">咨询单</a>
+      <a href="cs-admin-settings.html">系统配置</a>
+      <a href="cs-profile.html">个人设置</a>
+    </nav>
+  </header>
+
+  <div class="tickets-layout">
+    <aside class="tickets-list-pane">
+      <div class="list-toolbar">
+        <div class="status-tabs" id="statusTabs">
+          <span class="status-tab active" data-status="">全部</span>
+          <span class="status-tab" data-status="1">进行中</span>
+          <span class="status-tab" data-status="2">已关闭</span>
+          <span class="status-tab" data-status="3">已转接</span>
+        </div>
+        <div class="filter-row" style="margin-top:10px">
+          <input type="search" id="keywordInput" placeholder="单号 / 客户 / 摘要…" />
+          <select id="skillFilter">
+            <option value="">全部技能</option>
+            <option value="GENERAL">通用</option>
+            <option value="REFUND">售后</option>
+            <option value="TECH_SUPPORT">技术支持</option>
+          </select>
+        </div>
+        <div class="filter-row">
+          <select id="assigneeFilter">
+            <option value="">全部坐席</option>
+          </select>
+          <button class="btn btn-secondary btn-sm" id="searchBtn">查询</button>
+        </div>
+      </div>
+      <div class="ticket-rows" id="ticketRows">
+        <div style="padding:24px;color:var(--muted);font-size:13px">加载中…</div>
+      </div>
+    </aside>
+
+    <main class="tickets-detail-pane" id="detailPane">
+      <div class="detail-empty" id="detailEmpty">← 选择左侧咨询单查看流转与聊天记录</div>
+      <div id="detailContent" style="display:none"></div>
+    </main>
+  </div>
+
+  <button class="api-log-toggle" id="logToggle">API 日志</button>
+  <div class="api-log" id="apiLog"></div>
+
+  <script src="mock-api.js"></script>
+  <script>
+    const api = window.CsMockApi;
+    const AGENT_ID = 'agent-001';
+    let currentStatus = '';
+    let selectedTicketId = null;
+    let listItems = [];
+
+    function logApi(label, res) {
+      const el = document.getElementById('apiLog');
+      el.style.display = 'block';
+      el.textContent = '[' + new Date().toLocaleTimeString() + '] ' + label + '\n' + JSON.stringify(res).slice(0, 800) + '\n\n' + el.textContent.slice(0, 1200);
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function statusBadgeClass(status) {
+      if (status === 1) return 'green';
+      if (status === 3) return '';
+      return 'off';
+    }
+
+    function flowIconClass(recordType) {
+      if (recordType === 3) return 'transfer';
+      if (recordType === 4) return 'close';
+      if (recordType === 1 || recordType === 2) return '';
+      return 'event';
+    }
+
+    function flowIconText(recordType) {
+      if (recordType === 1) return '接';
+      if (recordType === 2) return '入';
+      if (recordType === 3) return '转';
+      if (recordType === 4) return '结';
+      return '·';
+    }
+
+    function flowRecordTitle(log) {
+      if (log.recordType === 2 && log.fromAssigneeName) {
+        return '转接转入 · 自 ' + log.fromAssigneeName;
+      }
+      if (log.recordType === 3 && log.toAssigneeName) {
+        return '转出 → ' + log.toAssigneeName;
+      }
+      if (log.recordType === 1) {
+        return '首次接入 · ' + (log.assigneeName || '—');
+      }
+      if (log.recordType === 4) {
+        return '关单 · ' + (log.assigneeName || '—');
+      }
+      return log.recordTypeLabel;
+    }
+
+    function renderChatBubbles(messages) {
+      if (!messages || !messages.length) {
+        return '<div class="chat-empty">本段无聊天内容（系统事件或未归档消息）</div>';
+      }
+      return messages.map(function (m) {
+        const who = m.dir === 'in' ? '客户' : (m.assigneeName || '坐席');
+        return '<div class="chat-bubble ' + m.dir + '">' +
+          '<div class="chat-bubble-meta">' + escapeHtml(who) + ' · ' + escapeHtml(m.time || '') + '</div>' +
+          escapeHtml(m.text) + '</div>';
+      }).join('');
+    }
+
+    async function loadList() {
+      const params = {
+        status: currentStatus,
+        keyword: document.getElementById('keywordInput').value.trim(),
+        skill: document.getElementById('skillFilter').value,
+        assigneeId: document.getElementById('assigneeFilter').value,
+      };
+      const res = await api.listConsultationTickets(params);
+      logApi('GET /consultation/tickets', res);
+      listItems = res.items || [];
+      renderList();
+      if (selectedTicketId && listItems.some(function (t) { return t.id === selectedTicketId; })) {
+        selectTicket(selectedTicketId, false);
+      } else if (listItems.length && !selectedTicketId) {
+        const urlId = new URLSearchParams(location.search).get('id');
+        if (urlId && listItems.some(function (t) { return t.id === urlId; })) {
+          selectTicket(urlId, false);
+        }
+      }
+    }
+
+    function renderList() {
+      const el = document.getElementById('ticketRows');
+      if (!listItems.length) {
+        el.innerHTML = '<div style="padding:24px;color:var(--muted);font-size:13px">无匹配咨询单</div>';
+        return;
+      }
+      el.innerHTML = listItems.map(function (t) {
+        const sel = t.id === selectedTicketId ? ' selected' : '';
+        return '<div class="ticket-row' + sel + '" data-id="' + escapeHtml(t.id) + '">' +
+          '<div class="ticket-row-head">' +
+          '<span class="ticket-row-title">' + escapeHtml(t.preview || '—') + '</span>' +
+          '<span class="tag ' + statusBadgeClass(t.status) + '">' + escapeHtml(t.statusLabel) + '</span></div>' +
+          '<div class="ticket-row-id">' + escapeHtml(t.id) + '</div>' +
+          '<div class="ticket-row-sub">' + escapeHtml(t.customerName) + ' · ' + escapeHtml(t.skillLabel) +
+          ' · ' + escapeHtml(t.assigneeName || '—') + ' · ' + escapeHtml(t.startTime) +
+          ' · 流转 ' + t.flowCount + ' 条</div></div>';
+      }).join('');
+      el.querySelectorAll('.ticket-row').forEach(function (row) {
+        row.onclick = function () { selectTicket(row.dataset.id, true); };
+      });
+    }
+
+    async function selectTicket(ticketId, updateUrl) {
+      selectedTicketId = ticketId;
+      renderList();
+      if (updateUrl) {
+        const u = new URL(location.href);
+        u.searchParams.set('id', ticketId);
+        history.replaceState(null, '', u.pathname + u.search);
+      }
+      document.getElementById('detailEmpty').style.display = 'none';
+      const content = document.getElementById('detailContent');
+      content.style.display = 'block';
+      content.innerHTML = '<div style="color:var(--muted);padding:20px">加载详情…</div>';
+
+      const res = await api.getConsultationTicketDetail(ticketId);
+      logApi('GET /consultation/' + ticketId + '/detail', res);
+      if (!res.success) {
+        content.innerHTML = '<div class="detail-empty">咨询单不存在</div>';
+        return;
+      }
+      renderDetail(res);
+    }
+
+    function renderDetail(res) {
+      const t = res.ticket;
+      const isActive = t.status === 1;
+      const woHtml = (res.workOrders || []).length
+        ? res.workOrders.map(function (w) {
+          return '<span class="tag">' + escapeHtml(w.id) + ' ' + escapeHtml(w.title) + '</span>';
+        }).join(' ')
+        : '<span style="color:var(--muted);font-size:13px">无</span>';
+
+      const timelineHtml = (res.timeline || []).map(function (log, idx) {
+        const hasChat = log.messageCount > 0;
+        const expanded = hasChat ? ' expanded' : '';
+        const expandHint = hasChat
+          ? '<span class="flow-record-badge flow-expand-hint">' + log.messageCount + ' 条消息</span>'
+          : '';
+        return '<div class="flow-record' + expanded + '" data-flow-idx="' + idx + '">' +
+          '<div class="flow-record-head">' +
+          '<div class="flow-record-icon ' + flowIconClass(log.recordType) + '">' + flowIconText(log.recordType) + '</div>' +
+          '<div class="flow-record-body">' +
+          '<div class="flow-record-title">' + escapeHtml(flowRecordTitle(log)) + '</div>' +
+          '<div class="flow-record-sub">' + escapeHtml(log.time) +
+          (log.remark ? ' · ' + escapeHtml(log.remark) : '') +
+          (log.satisfactionLabel ? ' · 满意度：' + escapeHtml(log.satisfactionLabel) : '') +
+          '</div></div>' + expandHint + '</div>' +
+          '<div class="flow-chat">' + renderChatBubbles(log.messages) + '</div></div>';
+      }).join('');
+
+      document.getElementById('detailContent').innerHTML =
+        '<div class="detail-header">' +
+        '<h1>' + escapeHtml(t.id) + ' <span class="tag ' + statusBadgeClass(t.status) + '">' + escapeHtml(t.statusLabel) + '</span></h1>' +
+        '<div class="detail-meta">' +
+        '<span>客户：' + escapeHtml(t.customerName) + '（' + escapeHtml(t.userId) + '）</span>' +
+        '<span>技能：' + escapeHtml(t.skillLabel) + '</span>' +
+        '<span>渠道：' + escapeHtml(t.channel) + '</span>' +
+        '<span>接待：' + escapeHtml(t.assigneeName || '—') + '</span>' +
+        '<span>进线：' + escapeHtml(t.startTime) + '</span>' +
+        (t.endTime ? '<span>结束：' + escapeHtml(t.endTime) + '</span>' : '') +
+        '<span>共 ' + res.messageCount + ' 条消息</span></div>' +
+        (t.remark ? '<div style="margin-top:8px;font-size:13px;color:#ad6800">备注：' + escapeHtml(t.remark) + '</div>' : '') +
+        '<div class="detail-actions">' +
+        (isActive ? '<a class="btn btn-primary" href="cs-agent.html">进入工作台接待</a>' : '') +
+        '<button class="btn btn-secondary" id="expandAllBtn">展开全部聊天</button>' +
+        '<button class="btn btn-secondary" id="collapseAllBtn">收起全部</button>' +
+        '</div></div>' +
+        '<div class="card"><div class="card-title">关联工单</div>' + woHtml + '</div>' +
+        '<div class="flow-section"><div class="flow-section-title">流转记录与聊天内容</div>' +
+        '<p style="font-size:12px;color:var(--muted);margin-bottom:12px">点击各流转节点可展开该阶段的聊天记录。转接案例推荐查看 <code>ticket-0998</code>。</p>' +
+        timelineHtml + '</div>';
+
+      document.querySelectorAll('.flow-record-head').forEach(function (head) {
+        head.onclick = function () {
+          head.parentElement.classList.toggle('expanded');
+        };
+      });
+      document.getElementById('expandAllBtn').onclick = function () {
+        document.querySelectorAll('.flow-record').forEach(function (el) { el.classList.add('expanded'); });
+      };
+      document.getElementById('collapseAllBtn').onclick = function () {
+        document.querySelectorAll('.flow-record').forEach(function (el) { el.classList.remove('expanded'); });
+      };
+    }
+
+    function initAssigneeFilter() {
+      const sel = document.getElementById('assigneeFilter');
+      api.agents.forEach(function (a) {
+        const opt = document.createElement('option');
+        opt.value = a.agentId;
+        opt.textContent = a.agentName + ' (' + a.jobNo + ')';
+        sel.appendChild(opt);
+      });
+      sel.value = '';
+    }
+
+    document.querySelectorAll('#statusTabs .status-tab').forEach(function (tab) {
+      tab.onclick = function () {
+        document.querySelectorAll('#statusTabs .status-tab').forEach(function (t) { t.classList.remove('active'); });
+        tab.classList.add('active');
+        currentStatus = tab.dataset.status;
+        loadList();
+      };
+    });
+
+    document.getElementById('searchBtn').onclick = loadList;
+    document.getElementById('keywordInput').onkeydown = function (e) {
+      if (e.key === 'Enter') loadList();
+    };
+    document.getElementById('logToggle').onclick = function () {
+      const el = document.getElementById('apiLog');
+      el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    };
+
+    (async function init() {
+      initAssigneeFilter();
+      await loadList();
+    })();
+  </script>
+</body>
+</html>

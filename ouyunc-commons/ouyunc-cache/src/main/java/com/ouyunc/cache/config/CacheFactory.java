@@ -1,0 +1,241 @@
+package com.ouyunc.cache.config;
+
+import com.ouyunc.cache.config.redis.builder.*;
+import com.ouyunc.cache.config.redis.properties.RedisProperties;
+import org.redisson.api.RedissonClient;
+import org.redisson.api.RedissonReactiveClient;
+import org.springframework.data.redis.core.ReactiveRedisTemplate;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
+
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * @Author fzx
+ * @Description: 单例模式
+ **/
+public enum CacheFactory {
+
+    // redis
+    REDIS {
+        //每一个数据库只有一个redisTemplate 实例
+        private static final Object LOCK = new Object();
+        private static final ConcurrentHashMap<Integer, RedisTemplate<?,?>> redisTemplateMap = new ConcurrentHashMap<>();
+        private static RedisProperties existRedisProperties;
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public RedisTemplate<?,?> instance(RedisProperties ...redisProperties) {
+            return instance(0, redisProperties);
+        }
+        @SuppressWarnings("unchecked")
+        @Override
+        public RedisTemplate<?,?> instance(int database,RedisProperties ...redisProperties) {
+            if (redisTemplateMap.get(database) == null) {
+                synchronized (LOCK) {
+                    if (redisTemplateMap.get(database) == null) {
+                        AbstractRedisBuilder<RedisTemplate<?,?>> redisBuilder = new RedisTemplateBuilder();
+                        if (redisProperties != null && redisProperties.length > 0) {
+                            redisBuilder.setRedisProperties(redisProperties[0]);
+                            if (existRedisProperties == null) {
+                                existRedisProperties = redisProperties[0];
+                            }
+                        }else if (existRedisProperties != null) {
+                            // 从本地获取
+                            redisBuilder.setRedisProperties(existRedisProperties);
+                        }
+                        redisTemplateMap.put(database, redisBuilder.build(database));
+                    }
+                }
+            }
+            return  redisTemplateMap.get(database);
+        }
+    },
+
+    // reactive redis  响应式
+    REACTIVE_REDIS {
+        //每一个数据库只有一个ReactiveRedisTemplate 实例
+        private static final Object LOCK = new Object();
+        private static final ConcurrentHashMap<Integer, ReactiveRedisTemplate<?,?>> reactiveRedisTemplateMap = new ConcurrentHashMap<>();
+        private static RedisProperties existRedisProperties;
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public ReactiveRedisTemplate<?,?> instance(RedisProperties ...redisProperties) {
+            return instance(0, redisProperties);
+        }
+        @SuppressWarnings("unchecked")
+        @Override
+        public ReactiveRedisTemplate<?,?> instance(int database,RedisProperties ...redisProperties) {
+            if (reactiveRedisTemplateMap.get(database) == null) {
+                synchronized (LOCK) {
+                    if (reactiveRedisTemplateMap.get(database) == null) {
+                        AbstractRedisBuilder<ReactiveRedisTemplate<?,?>> redisBuilder = new ReactiveRedisTemplateBuilder();
+                        if (redisProperties != null && redisProperties.length > 0) {
+                            redisBuilder.setRedisProperties(redisProperties[0]);
+                            if (existRedisProperties == null) {
+                                existRedisProperties = redisProperties[0];
+                            }
+                        }else if (existRedisProperties != null) {
+                            // 从本地获取
+                            redisBuilder.setRedisProperties(existRedisProperties);
+                        }
+                        reactiveRedisTemplateMap.put(database, redisBuilder.build(database));
+                    }
+                }
+            }
+            return  reactiveRedisTemplateMap.get(database);
+        }
+    },
+    // redis
+    STRING_REDIS {
+        //每一个数据库只有一个StringRedisTemplate 实例
+        private static final Object LOCK = new Object();
+        private static final ConcurrentHashMap<Integer, StringRedisTemplate> stringRedisTemplateMap = new ConcurrentHashMap<>();
+        private static RedisProperties existRedisProperties;
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public StringRedisTemplate instance(RedisProperties ...redisProperties) {
+            return instance(0, redisProperties);
+        }
+        @SuppressWarnings("unchecked")
+        @Override
+        public StringRedisTemplate instance(int database,RedisProperties ...redisProperties) {
+            if (stringRedisTemplateMap.get(database) == null) {
+                synchronized (LOCK) {
+                    if (stringRedisTemplateMap.get(database) == null) {
+                        AbstractRedisBuilder<StringRedisTemplate> redisBuilder = new StringRedisTemplateBuilder();
+                        if (redisProperties != null && redisProperties.length > 0) {
+                            redisBuilder.setRedisProperties(redisProperties[0]);
+                            if (existRedisProperties == null) {
+                                existRedisProperties = redisProperties[0];
+                            }
+                        }else if (existRedisProperties != null) {
+                            // 从本地获取
+                            redisBuilder.setRedisProperties(existRedisProperties);
+                        }
+                        stringRedisTemplateMap.put(database, redisBuilder.build(database));
+                    }
+                }
+            }
+            return  stringRedisTemplateMap.get(database);
+        }
+    },
+    // string redis
+    REACTIVE_STRING_REDIS {
+        //每一个数据库只有一个StringRedisTemplate 实例
+        private static final Object LOCK = new Object();
+        private static final ConcurrentHashMap<Integer, ReactiveStringRedisTemplate> stringRedisTemplateMap = new ConcurrentHashMap<>();
+        private static RedisProperties existRedisProperties;
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public ReactiveStringRedisTemplate instance(RedisProperties ...redisProperties) {
+            return instance(0, redisProperties);
+        }
+        @SuppressWarnings("unchecked")
+        @Override
+        public ReactiveStringRedisTemplate instance(int database,RedisProperties ...redisProperties) {
+            if (stringRedisTemplateMap.get(database) == null) {
+                synchronized (LOCK) {
+                    if (stringRedisTemplateMap.get(database) == null) {
+                        AbstractRedisBuilder<ReactiveStringRedisTemplate> redisBuilder = new ReactiveStringRedisTemplateBuilder();
+                        if (redisProperties != null && redisProperties.length > 0) {
+                            redisBuilder.setRedisProperties(redisProperties[0]);
+                            if (existRedisProperties == null) {
+                                existRedisProperties = redisProperties[0];
+                            }
+                        }else if (existRedisProperties != null) {
+                            // 从本地获取
+                            redisBuilder.setRedisProperties(existRedisProperties);
+                        }
+                        stringRedisTemplateMap.put(database, redisBuilder.build(database));
+                    }
+                }
+            }
+            return  stringRedisTemplateMap.get(database);
+        }
+    },
+    // reactive redisson 响应式 redisson
+    REACTIVE_REDISSON {
+        private static final Object LOCK = new Object();
+        private static final ConcurrentHashMap<Integer, RedissonReactiveClient> reactiveRedissonClientMap = new ConcurrentHashMap<>();
+        private static RedisProperties existRedisProperties;
+        @SuppressWarnings("unchecked")
+        @Override
+        public RedissonReactiveClient instance(int database,RedisProperties ...redisProperties) {
+            if (reactiveRedissonClientMap.get(database) == null) {
+                synchronized (LOCK) {
+                    if (reactiveRedissonClientMap.get(database) == null) {
+                        AbstractRedisBuilder<RedissonReactiveClient> redissonBuilder = new ReactiveRedissonClientBuilder();
+                        if (redisProperties != null && redisProperties.length > 0) {
+                            redissonBuilder.setRedisProperties(redisProperties[0]);
+                            if (existRedisProperties == null) {
+                                existRedisProperties = redisProperties[0];
+                            }
+                        }else if (existRedisProperties != null) {
+                            redissonBuilder.setRedisProperties(existRedisProperties);
+                        }
+                        reactiveRedissonClientMap.put(database, redissonBuilder.build(database));
+                    }
+                }
+            }
+            return reactiveRedissonClientMap.get(database);
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public RedissonReactiveClient instance(RedisProperties ...redisProperties) {
+            return instance(0, redisProperties);
+        }
+    },
+
+    // redisson
+    REDISSON {
+        private static final Object LOCK = new Object();
+        private static final ConcurrentHashMap<Integer, RedissonClient> redissonClientMap = new ConcurrentHashMap<>();
+        private static RedisProperties existRedisProperties;
+        @SuppressWarnings("unchecked")
+        @Override
+        public RedissonClient instance(int database,RedisProperties ...redisProperties) {
+            if (redissonClientMap.get(database) == null) {
+                synchronized (LOCK) {
+                    if (redissonClientMap.get(database) == null) {
+                        AbstractRedisBuilder<RedissonClient> redissonBuilder = new RedissonClientBuilder();
+                        if (redisProperties != null && redisProperties.length > 0) {
+                            redissonBuilder.setRedisProperties(redisProperties[0]);
+                            if (existRedisProperties == null) {
+                                existRedisProperties = redisProperties[0];
+                            }
+                        }else if (existRedisProperties != null) {
+                            redissonBuilder.setRedisProperties(existRedisProperties);
+                        }
+                        redissonClientMap.put(database, redissonBuilder.build(database));
+                    }
+                }
+            }
+            return redissonClientMap.get(database);
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public RedissonClient instance(RedisProperties ...redisProperties) {
+            return instance(0, redisProperties);
+        }
+    };
+
+
+    /**
+     * @Author fzx
+     * @Description 获取实例
+     */
+    public abstract <T> T instance(int database, RedisProperties ...redisProperties);
+
+    /**
+     * @Author fzx
+     * @Description 获取实例
+     */
+    public abstract <T> T instance(RedisProperties ...redisProperties);
+}

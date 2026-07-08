@@ -1,0 +1,1108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="http">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/6.5.4/sql/ouyunc_message.sql" beforeDir="false" afterPath="$PROJECT_DIR$/docs/6.5.4/sql/ouyunc_message.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/CacheConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/CacheConstant.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/enums/IdentityType.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/enums/IdentityType.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/enums/LuaScriptEnum.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/enums/LuaScriptEnum.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/model/Metadata.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/model/Metadata.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/SessionMessageOffsetEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/SessionMessageOffsetEntity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/DefaultRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/DefaultRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/RepositorySupports.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/RepositorySupports.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/SpecialMessageLoader.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/SpecialMessageLoader.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/WithdrawMessageSupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/WithdrawMessageSupport.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/CsSessionMessageHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/CsSessionMessageHelper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/CsMessageBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/CsMessageBiProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupMessageBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupMessageBiProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneMessageBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneMessageBiProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/push/delivery/CustomerServiceHttpPushDeliveryStrategy.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/push/delivery/CustomerServiceHttpPushDeliveryStrategy.java" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="DependenciesAnalyzeManager">
+    <option name="forwardDirection" value="false" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Class" />
+        <option value="Enum" />
+        <option value="Interface" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Merge.Settings">
+    <option name="BRANCH" value="6.5.2" />
+  </component>
+  <component name="Git.Settings">
+    <option name="PREVIEW_PUSH_ON_COMMIT_AND_PUSH" value="false" />
+    <option name="PUSH_AUTO_UPDATE" value="true" />
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="6.5.3" />
+      </map>
+    </option>
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+    <option name="WARN_ABOUT_LARGE_FILES_LIMIT_MB" value="500" />
+  </component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="jrt://C:/Program Files/Java/jdk-21!/java.base/java/lang/Long.class" root0="SKIP_INSPECTION" />
+    <setting file="jar://$PROJECT_DIR$/../../repository/io/netty/netty-common/4.2.12.Final/netty-common-4.2.12.Final.jar!/io/netty/util/HashedWheelTimer.class" root0="SKIP_INSPECTION" />
+    <setting file="jar://$PROJECT_DIR$/../../repository/org/springframework/data/spring-data-redis/4.1.0-M2/spring-data-redis-4.1.0-M2.jar!/org/springframework/data/redis/core/ValueOperations.class" root0="SKIP_INSPECTION" />
+    <setting file="jar://$PROJECT_DIR$/../../repository/org/springframework/data/spring-data-redis/4.1.0-M2/spring-data-redis-4.1.0-M2.jar!/org/springframework/data/redis/core/types/Expiration.class" root0="SKIP_INSPECTION" />
+  </component>
+  <component name="KubernetesApiPersistence">{}</component>
+  <component name="KubernetesApiProvider">{
+  &quot;isMigrated&quot;: true
+}</component>
+  <component name="MavenImportPreferences">
+    <option name="generalSettings">
+      <MavenGeneralSettings>
+        <option name="customMavenHome" value="C:\Program Files\apache-maven-3.6.3" />
+        <option name="localRepository" value="D:\repository" />
+        <option name="mavenHomeTypeForPersistence" value="CUSTOM" />
+        <option name="userSettingsFile" value="C:\Program Files\apache-maven-3.6.3\conf\ali-settings.xml" />
+      </MavenGeneralSettings>
+    </option>
+  </component>
+  <component name="MavenRunner">
+    <option name="skipTests" value="true" />
+  </component>
+  <component name="NextEditCompletionFeaturesState">
+    <decayedCancelled>
+      <entry key="MS100" value="1.2554480852908086E-25" />
+      <entry key="MS500" value="1.0465494450306674E-5" />
+      <entry key="S2" value="0.05687742650505618" />
+      <entry key="S5" value="0.31766983333552357" />
+      <entry key="S10" value="0.5636220660473857" />
+      <entry key="S30" value="0.8260303336515207" />
+      <entry key="S60" value="0.9088621092616418" />
+      <entry key="M2" value="0.9533425980525793" />
+      <entry key="M5" value="0.9810691052100267" />
+      <entry key="M10" value="0.9904893261464388" />
+      <entry key="M15" value="0.9936494577205925" />
+      <entry key="M30" value="0.9968196716163675" />
+      <entry key="H1" value="0.998411231892552" />
+      <entry key="H2" value="1.0084215234771166" />
+      <entry key="H4" value="1.6443337432833074" />
+      <entry key="D1" value="32.28900065873" />
+      <entry key="W1" value="73.04977565502433" />
+    </decayedCancelled>
+    <decayedSelected>
+      <entry key="MS100" value="1.000004895881262" />
+      <entry key="MS500" value="1.0869862810988324" />
+      <entry key="S2" value="1.6738747547849804" />
+      <entry key="S5" value="2.2269300417220244" />
+      <entry key="S10" value="2.5511419726029523" />
+      <entry key="S30" value="2.8334536051409405" />
+      <entry key="S60" value="2.914381755359889" />
+      <entry key="M2" value="2.95658582535721" />
+      <entry key="M5" value="2.9824866399044883" />
+      <entry key="M10" value="2.9912184953407115" />
+      <entry key="M15" value="2.994140131344399" />
+      <entry key="M30" value="2.997067295644605" />
+      <entry key="H1" value="2.998534343785773" />
+      <entry key="H2" value="3.004049034792375" />
+      <entry key="H4" value="3.3179788172418347" />
+      <entry key="D1" value="16.353963007164033" />
+      <entry key="W1" value="33.12238343084849" />
+    </decayedSelected>
+    <decayedShown>
+      <entry key="MS100" value="0.00156458960466846" />
+      <entry key="MS500" value="0.27577617599950677" />
+      <entry key="S2" value="1.0165429649639004" />
+      <entry key="S5" value="2.015472176398248" />
+      <entry key="S10" value="2.772383064065386" />
+      <entry key="S30" value="3.5217844602343593" />
+      <entry key="S60" value="3.7509401661754556" />
+      <entry key="M2" value="3.8728696837703676" />
+      <entry key="M5" value="3.948508790002663" />
+      <entry key="M10" value="3.97414660610235" />
+      <entry key="M15" value="3.9827403555926266" />
+      <entry key="M30" value="3.991358129620813" />
+      <entry key="H1" value="3.9956800983118286" />
+      <entry key="H2" value="4.011835009435278" />
+      <entry key="H4" value="4.96191515246428" />
+      <entry key="D1" value="48.642350415664346" />
+      <entry key="W1" value="106.17196181167304" />
+    </decayedShown>
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 0
+}</component>
+  <component name="ProjectId" id="2ufM82eHzwWazomtA8rAeEDAhv6" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Application.App.executor&quot;: &quot;Debug&quot;,
+    &quot;Application.CosIdSnowflakeIdGenerator.executor&quot;: &quot;Run&quot;,
+    &quot;Application.GroupInviteJoinMessageProcessor.executor&quot;: &quot;Debug&quot;,
+    &quot;Application.ObjectCreationBenchmark.executor&quot;: &quot;Debug&quot;,
+    &quot;Application.SnowflakeUtil.executor&quot;: &quot;Debug&quot;,
+    &quot;Application.StartServer.executor&quot;: &quot;Debug&quot;,
+    &quot;Application.WebSocketLoadTester.executor&quot;: &quot;Run&quot;,
+    &quot;Docker.docker-compose.yml.kafka: Compose Deployment.executor&quot;: &quot;Run&quot;,
+    &quot;Docker.docker-compose.yml.mongo: Compose Deployment.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript Debug.client1.html (1).executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript Debug.client1.html (2).executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript Debug.client1.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript Debug.client13333333333.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript Debug.client2.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript Debug.client3.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript Debug.client4.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript Debug.client5.html.executor&quot;: &quot;Run&quot;,
+    &quot;Maven.ouyunc-base [clean].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.ouyunc-base [install].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.ouyunc-im [clean].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.ouyunc-im [compile].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.ouyunc-im [install].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.ouyunc-im [package].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.ouyunc-im [validate].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.ouyunc-im [verify].executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;SONARLINT_PRECOMMIT_ANALYSIS&quot;: &quot;true&quot;,
+    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;6.5.4&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;D:/workspace/ouyunc-im/ouyunc-server/src/main/resources&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;onboarding.tips.debug.path&quot;: &quot;D:/workspace/ouyunc-im/ouyunc-commons/ouyunc-id/src/main/java/com/ouyunc/Main.java&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Artifacts&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
+    &quot;run.configurations.included.in.services&quot;: &quot;true&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;MavenSettings&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;D:\\workspace\\ouyunc-im\\ouyunc-im-rn\\node_modules\\typescript\\lib&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  },
+  &quot;keyToStringList&quot;: {
+    &quot;DatabaseDriversLRU&quot;: [
+      &quot;mysql&quot;
+    ]
+  }
+}</component>
+  <component name="ReactorSettings">
+    <option name="notificationShown" value="true" />
+  </component>
+  <component name="RecentsManager">
+    <key name="CreateClassDialog.RecentsKey">
+      <recent name="com.ouyunc.message.context" />
+    </key>
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="D:\workspace\ouyunc-im\ouyunc-server\src\main\resources" />
+      <recent name="D:\workspace\ouyunc-im\docs" />
+      <recent name="D:\workspace\ouyunc-im\ouyunc-commons\ouyunc-core\src\main\java\com\ouyunc\core\listener\event\payload" />
+      <recent name="D:\workspace\ouyunc-im\docs\6.5.1" />
+      <recent name="D:\workspace\ouyunc-im\docs\6.5.1\sql" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="D:\workspace\ouyunc-im\docs\6.5.3" />
+      <recent name="D:\workspace\ouyunc-im\ouyunc-commons\ouyunc-core\src\main\java\com\ouyunc\core" />
+      <recent name="D:\workspace\ouyunc-im\ouyunc-commons\ouyunc-core" />
+      <recent name="D:\workspace\ouyunc-im\ouyunc-server\src\main\java\com\ouyunc\message\validator" />
+      <recent name="D:\workspace\ouyunc-im\docs" />
+    </key>
+    <key name="CopyClassDialog.RECENTS_KEY">
+      <recent name="com.ouyunc.core.processor" />
+      <recent name="com.ouyunc.message.processor.http.push" />
+      <recent name="com.ouyunc.base.constant.enums" />
+      <recent name="com.ouyunc.base.model" />
+      <recent name="com.ouyunc.domain.entity" />
+    </key>
+  </component>
+  <component name="RunDashboard">
+    <option name="configurationTypes">
+      <set>
+        <option value="KtorApplicationConfigurationType" />
+        <option value="MicronautRunConfigurationType" />
+        <option value="QuarkusRunConfigurationType" />
+        <option value="SpringBootApplicationConfigurationType" />
+      </set>
+    </option>
+  </component>
+  <component name="RunManager" selected="Application.App">
+    <configuration name="App" type="Application" factoryName="Application">
+      <option name="MAIN_CLASS_NAME" value="com.ouyunc.message.StartServer" />
+      <module name="ouyunc-server" />
+      <option name="PROGRAM_PARAMETERS" value="Dlog4j.skipJansi=false" />
+      <option name="VM_PARAMETERS" value="-Dlog4j.skipJansi=false -Douyunc.env=dev -Xms512m -Xmx1024m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+ParallelRefProcEnabled" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="App" type="Application" factoryName="Application">
+      <option name="MAIN_CLASS_NAME" value="com.ouyunc.message.StartServer" />
+      <module name="ouyunc-server" />
+      <option name="PROGRAM_PARAMETERS" value="Dlog4j.skipJansi=false" />
+      <option name="VM_PARAMETERS" value="-Dlog4j.skipJansi=false" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="CosIdSnowflakeIdGenerator" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="com.ouyunc.id.CosIdSnowflakeIdGenerator" />
+      <module name="ouyunc-id" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.ouyunc.id.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="GroupInviteJoinMessageBiProcessor" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="com.ouyunc.message.processor.GroupInviteJoinMessageBiProcessor" />
+      <module name="ouyunc-server" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.ouyunc.message.processor.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="SnowflakeUtil" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="com.ouyunc.base.utils.SnowflakeUtil" />
+      <module name="ouyunc-base" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="com.ouyunc.base.utils.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="CsConsumerApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="ouyunc-cs-consumer" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.ouyunc.cs.consumer.CsConsumerApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="CsWebApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="ouyunc-cs-web" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.ouyunc.cs.web.CsWebApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="GatewayApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="ouyunc-gateway" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.ouyunc.gateway.GatewayApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ImConsumerApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="ouyunc-im-consumer" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.ouyunc.im.consumer.ImConsumerApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ImWebApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="ouyunc-im-web" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.ouyunc.im.web.ImWebApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="OauthApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="ouyunc-oauth" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.ouyunc.oauth.OauthApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="OuyuncJobApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="ouyunc-job" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.ouyunc.job.OuyuncJobApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="OuyuncMessageSpringBootStarterApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="ouyunc-message-spring-boot-starter" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.ouyunc.ouyuncmessagespringbootstarter.OuyuncMessageSpringBootStarterApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="OuyuncMessageSpringBootStarterApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="ouyunc-message-spring-boot-starter" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.ouyunc.ouyuncmessagespringbootstarter.OuyuncMessageSpringBootStarterApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="OuyuncWorkflowApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="ouyunc-workflow" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.ouyunc.workflow.OuyuncWorkflowApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="UserWebApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="ouyunc-user-web" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.ouyunc.user.web.UserWebApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="docker-deploy" factoryName="docker-compose.yml" temporary="true">
+      <deployment type="docker-compose.yml">
+        <settings />
+      </deployment>
+      <method v="2" />
+    </configuration>
+    <configuration name="docker-compose.yml.kafka: Compose Deployment" type="docker-deploy" factoryName="docker-compose.yml" temporary="true" server-name="Docker">
+      <deployment type="docker-compose.yml">
+        <settings>
+          <option name="services">
+            <list>
+              <option value="kafka" />
+            </list>
+          </option>
+          <option name="sourceFilePath" value="docker-compose.yml" />
+        </settings>
+      </deployment>
+      <method v="2" />
+    </configuration>
+    <configuration name="docker-compose.yml.mongo: Compose Deployment" type="docker-deploy" factoryName="docker-compose.yml" temporary="true" server-name="Docker">
+      <deployment type="docker-compose.yml">
+        <settings>
+          <option name="services">
+            <list>
+              <option value="mongo" />
+            </list>
+          </option>
+          <option name="sourceFilePath" value="docker-compose.yml" />
+        </settings>
+      </deployment>
+      <method v="2" />
+    </configuration>
+    <list>
+      <item itemvalue="Application.App" />
+      <item itemvalue="Application.CosIdSnowflakeIdGenerator" />
+      <item itemvalue="Application.GroupInviteJoinMessageBiProcessor" />
+      <item itemvalue="Application.SnowflakeUtil" />
+      <item itemvalue="Docker.docker-compose.yml.kafka: Compose Deployment" />
+      <item itemvalue="Docker.docker-compose.yml.mongo: Compose Deployment" />
+      <item itemvalue="Spring Boot.CsConsumerApplication" />
+      <item itemvalue="Spring Boot.CsWebApplication" />
+      <item itemvalue="Spring Boot.GatewayApplication" />
+      <item itemvalue="Spring Boot.ImConsumerApplication" />
+      <item itemvalue="Spring Boot.ImWebApplication" />
+      <item itemvalue="Spring Boot.OauthApplication" />
+      <item itemvalue="Spring Boot.OuyuncJobApplication" />
+      <item itemvalue="Spring Boot.OuyuncWorkflowApplication" />
+      <item itemvalue="Spring Boot.UserWebApplication" />
+      <item itemvalue="Spring Boot.OuyuncMessageSpringBootStarterApplication" />
+    </list>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Application.CosIdSnowflakeIdGenerator" />
+        <item itemvalue="Application.GroupInviteJoinMessageBiProcessor" />
+        <item itemvalue="Docker.docker-compose.yml.mongo: Compose Deployment" />
+        <item itemvalue="Docker.docker-compose.yml.kafka: Compose Deployment" />
+        <item itemvalue="Application.SnowflakeUtil" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-30f59d01ecdd-37e91769500f-intellij.indexing.shared.core-IU-261.24374.151" />
+        <option value="bundled-js-predefined-d6986cc7102b-31caf2ab9e3c-JavaScript-IU-261.24374.151" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="v6.4.0  加群逻辑" />
+      <created>1742635013053</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1742635013053</updated>
+      <workItem from="1742635014430" duration="7955000" />
+      <workItem from="1742691028618" duration="9435000" />
+      <workItem from="1742982831049" duration="14189000" />
+      <workItem from="1743294893626" duration="4366000" />
+      <workItem from="1743411717571" duration="7678000" />
+      <workItem from="1743470594355" duration="19609000" />
+      <workItem from="1743573191011" duration="15735000" />
+      <workItem from="1744192725313" duration="92000" />
+      <workItem from="1744262479969" duration="38403000" />
+      <workItem from="1744884144871" duration="153000" />
+      <workItem from="1745200081539" duration="4944000" />
+      <workItem from="1745205935797" duration="6274000" />
+      <workItem from="1745226238156" duration="10369000" />
+      <workItem from="1745842819535" duration="2677000" />
+      <workItem from="1746522116721" duration="4865000" />
+      <workItem from="1747036502762" duration="1247000" />
+      <workItem from="1747097477860" duration="18740000" />
+      <workItem from="1747213659404" duration="26189000" />
+      <workItem from="1749781467399" duration="1334000" />
+      <workItem from="1751030023774" duration="1301000" />
+      <workItem from="1751073210527" duration="18100000" />
+      <workItem from="1751638207937" duration="132000" />
+      <workItem from="1751682211270" duration="7902000" />
+      <workItem from="1752241221186" duration="473000" />
+      <workItem from="1752241924267" duration="27000" />
+      <workItem from="1752248051423" duration="1736000" />
+      <workItem from="1752288517683" duration="16654000" />
+      <workItem from="1752372619189" duration="11631000" />
+      <workItem from="1752494538990" duration="1797000" />
+      <workItem from="1752970767085" duration="34000" />
+      <workItem from="1753610949080" duration="2259000" />
+      <workItem from="1753931031208" duration="8517000" />
+      <workItem from="1755523871454" duration="13000" />
+      <workItem from="1756903729915" duration="1636000" />
+      <workItem from="1757076553528" duration="60000" />
+      <workItem from="1757076789617" duration="4000" />
+      <workItem from="1757076805506" duration="16000" />
+      <workItem from="1757076938346" duration="21000" />
+      <workItem from="1757076975625" duration="831000" />
+      <workItem from="1757079837399" duration="8478000" />
+      <workItem from="1757117417417" duration="31675000" />
+      <workItem from="1757204080350" duration="6242000" />
+      <workItem from="1757255655932" duration="1484000" />
+      <workItem from="1757343835693" duration="996000" />
+      <workItem from="1757471924044" duration="38263000" />
+      <workItem from="1757640908287" duration="137000" />
+      <workItem from="1757664340561" duration="6764000" />
+      <workItem from="1757746480597" duration="21626000" />
+      <workItem from="1757833274628" duration="16496000" />
+      <workItem from="1758366392128" duration="382000" />
+      <workItem from="1758639414497" duration="664000" />
+      <workItem from="1759394925475" duration="12567000" />
+      <workItem from="1759459807683" duration="3800000" />
+      <workItem from="1759482341609" duration="1923000" />
+      <workItem from="1759626477468" duration="20634000" />
+      <workItem from="1759665824763" duration="14245000" />
+      <workItem from="1759713326082" duration="18438000" />
+      <workItem from="1759763237333" duration="1256000" />
+      <workItem from="1759885780260" duration="5493000" />
+      <workItem from="1760195099006" duration="528000" />
+      <workItem from="1760233132448" duration="1872000" />
+      <workItem from="1760358690510" duration="384000" />
+      <workItem from="1760539273757" duration="214000" />
+      <workItem from="1760964585823" duration="180000" />
+      <workItem from="1760964793996" duration="1352000" />
+      <workItem from="1761049499348" duration="658000" />
+      <workItem from="1761052140857" duration="542000" />
+      <workItem from="1761055023513" duration="824000" />
+      <workItem from="1761308710867" duration="5995000" />
+      <workItem from="1761357105923" duration="1552000" />
+      <workItem from="1761375966153" duration="3593000" />
+      <workItem from="1761469754773" duration="160000" />
+      <workItem from="1762011587949" duration="733000" />
+      <workItem from="1762049334298" duration="6960000" />
+      <workItem from="1762171426797" duration="3270000" />
+      <workItem from="1762349155088" duration="596000" />
+      <workItem from="1762432598863" duration="132000" />
+      <workItem from="1762566032929" duration="6400000" />
+      <workItem from="1762951658956" duration="8110000" />
+      <workItem from="1763123274724" duration="1482000" />
+      <workItem from="1764312561006" duration="2930000" />
+      <workItem from="1767256248610" duration="3000" />
+      <workItem from="1767256589483" duration="3623000" />
+      <workItem from="1768038007211" duration="18752000" />
+      <workItem from="1768441095185" duration="3785000" />
+      <workItem from="1768996888621" duration="6156000" />
+      <workItem from="1769256810012" duration="9499000" />
+      <workItem from="1769942606928" duration="1181000" />
+      <workItem from="1771228335980" duration="618000" />
+      <workItem from="1772105836351" duration="6366000" />
+      <workItem from="1772194503466" duration="2451000" />
+      <workItem from="1772199944314" duration="2147000" />
+      <workItem from="1772335879275" duration="4496000" />
+      <workItem from="1773452679005" duration="16650000" />
+      <workItem from="1774084625631" duration="6880000" />
+      <workItem from="1775051421027" duration="8129000" />
+      <workItem from="1775221741891" duration="12947000" />
+      <workItem from="1775441482615" duration="5409000" />
+      <workItem from="1775567439337" duration="2991000" />
+      <workItem from="1775656059128" duration="12606000" />
+      <workItem from="1776344375035" duration="5786000" />
+      <workItem from="1778921433547" duration="10665000" />
+      <workItem from="1778999844810" duration="1467000" />
+      <workItem from="1779263523291" duration="3754000" />
+      <workItem from="1779269711665" duration="3000" />
+      <workItem from="1779287133935" duration="4690000" />
+      <workItem from="1779321680610" duration="721000" />
+      <workItem from="1779350101051" duration="8900000" />
+      <workItem from="1779451473710" duration="2315000" />
+      <workItem from="1779457226622" duration="2048000" />
+      <workItem from="1779501910940" duration="4534000" />
+      <workItem from="1779589475203" duration="1168000" />
+      <workItem from="1779712685529" duration="4511000" />
+      <workItem from="1779886421327" duration="1819000" />
+      <workItem from="1780031554219" duration="9001000" />
+      <workItem from="1780144949143" duration="64000" />
+      <workItem from="1780145144361" duration="643000" />
+      <workItem from="1780146060615" duration="12403000" />
+      <workItem from="1780914634571" duration="1689000" />
+      <workItem from="1780965428937" duration="165000" />
+      <workItem from="1780982070023" duration="3901000" />
+      <workItem from="1781057881608" duration="1846000" />
+      <workItem from="1781094694409" duration="3935000" />
+      <workItem from="1781329430469" duration="7682000" />
+      <workItem from="1781659468049" duration="477000" />
+      <workItem from="1781660320958" duration="23948000" />
+      <workItem from="1782098235044" duration="3152000" />
+      <workItem from="1782479947630" duration="736000" />
+      <workItem from="1783132647488" duration="3303000" />
+      <workItem from="1783174610263" duration="2112000" />
+      <workItem from="1783217181483" duration="5635000" />
+      <workItem from="1783429181708" duration="4947000" />
+    </task>
+    <task id="LOCAL-00252" summary="类型">
+      <option name="closed" value="true" />
+      <created>1780713727388</created>
+      <option name="number" value="00252" />
+      <option name="presentableId" value="LOCAL-00252" />
+      <option name="project" value="LOCAL" />
+      <updated>1780713727388</updated>
+    </task>
+    <task id="LOCAL-00253" summary="类型">
+      <option name="closed" value="true" />
+      <created>1780748540180</created>
+      <option name="number" value="00253" />
+      <option name="presentableId" value="LOCAL-00253" />
+      <option name="project" value="LOCAL" />
+      <updated>1780748540180</updated>
+    </task>
+    <task id="LOCAL-00254" summary="类型">
+      <option name="closed" value="true" />
+      <created>1780751936653</created>
+      <option name="number" value="00254" />
+      <option name="presentableId" value="LOCAL-00254" />
+      <option name="project" value="LOCAL" />
+      <updated>1780751936653</updated>
+    </task>
+    <task id="LOCAL-00255" summary="类型">
+      <option name="closed" value="true" />
+      <created>1780753595842</created>
+      <option name="number" value="00255" />
+      <option name="presentableId" value="LOCAL-00255" />
+      <option name="project" value="LOCAL" />
+      <updated>1780753595842</updated>
+    </task>
+    <task id="LOCAL-00256" summary="类型">
+      <option name="closed" value="true" />
+      <created>1780757613898</created>
+      <option name="number" value="00256" />
+      <option name="presentableId" value="LOCAL-00256" />
+      <option name="project" value="LOCAL" />
+      <updated>1780757613898</updated>
+    </task>
+    <task id="LOCAL-00257" summary="类型">
+      <option name="closed" value="true" />
+      <created>1780757739681</created>
+      <option name="number" value="00257" />
+      <option name="presentableId" value="LOCAL-00257" />
+      <option name="project" value="LOCAL" />
+      <updated>1780757739681</updated>
+    </task>
+    <task id="LOCAL-00258" summary="类型">
+      <option name="closed" value="true" />
+      <created>1780758831688</created>
+      <option name="number" value="00258" />
+      <option name="presentableId" value="LOCAL-00258" />
+      <option name="project" value="LOCAL" />
+      <updated>1780758831688</updated>
+    </task>
+    <task id="LOCAL-00259" summary="类型">
+      <option name="closed" value="true" />
+      <created>1780796441728</created>
+      <option name="number" value="00259" />
+      <option name="presentableId" value="LOCAL-00259" />
+      <option name="project" value="LOCAL" />
+      <updated>1780796441728</updated>
+    </task>
+    <task id="LOCAL-00260" summary="类型">
+      <option name="closed" value="true" />
+      <created>1780796791188</created>
+      <option name="number" value="00260" />
+      <option name="presentableId" value="LOCAL-00260" />
+      <option name="project" value="LOCAL" />
+      <updated>1780796791189</updated>
+    </task>
+    <task id="LOCAL-00261" summary="类型">
+      <option name="closed" value="true" />
+      <created>1780798792319</created>
+      <option name="number" value="00261" />
+      <option name="presentableId" value="LOCAL-00261" />
+      <option name="project" value="LOCAL" />
+      <updated>1780798792319</updated>
+    </task>
+    <task id="LOCAL-00262" summary="类型">
+      <option name="closed" value="true" />
+      <created>1780799058632</created>
+      <option name="number" value="00262" />
+      <option name="presentableId" value="LOCAL-00262" />
+      <option name="project" value="LOCAL" />
+      <updated>1780799058632</updated>
+    </task>
+    <task id="LOCAL-00263" summary="类型">
+      <option name="closed" value="true" />
+      <created>1780828561685</created>
+      <option name="number" value="00263" />
+      <option name="presentableId" value="LOCAL-00263" />
+      <option name="project" value="LOCAL" />
+      <updated>1780828561685</updated>
+    </task>
+    <task id="LOCAL-00264" summary="类型">
+      <option name="closed" value="true" />
+      <created>1780829804400</created>
+      <option name="number" value="00264" />
+      <option name="presentableId" value="LOCAL-00264" />
+      <option name="project" value="LOCAL" />
+      <updated>1780829804400</updated>
+    </task>
+    <task id="LOCAL-00265" summary="类型">
+      <option name="closed" value="true" />
+      <created>1780832018667</created>
+      <option name="number" value="00265" />
+      <option name="presentableId" value="LOCAL-00265" />
+      <option name="project" value="LOCAL" />
+      <updated>1780832018667</updated>
+    </task>
+    <task id="LOCAL-00266" summary="类型">
+      <option name="closed" value="true" />
+      <created>1780835012952</created>
+      <option name="number" value="00266" />
+      <option name="presentableId" value="LOCAL-00266" />
+      <option name="project" value="LOCAL" />
+      <updated>1780835012952</updated>
+    </task>
+    <task id="LOCAL-00267" summary="mq">
+      <option name="closed" value="true" />
+      <created>1780896408716</created>
+      <option name="number" value="00267" />
+      <option name="presentableId" value="LOCAL-00267" />
+      <option name="project" value="LOCAL" />
+      <updated>1780896408716</updated>
+    </task>
+    <task id="LOCAL-00268" summary="mq">
+      <option name="closed" value="true" />
+      <created>1781097158122</created>
+      <option name="number" value="00268" />
+      <option name="presentableId" value="LOCAL-00268" />
+      <option name="project" value="LOCAL" />
+      <updated>1781097158122</updated>
+    </task>
+    <task id="LOCAL-00269" summary="mq">
+      <option name="closed" value="true" />
+      <created>1781313247989</created>
+      <option name="number" value="00269" />
+      <option name="presentableId" value="LOCAL-00269" />
+      <option name="project" value="LOCAL" />
+      <updated>1781313247989</updated>
+    </task>
+    <task id="LOCAL-00270" summary="mq">
+      <option name="closed" value="true" />
+      <created>1781318045955</created>
+      <option name="number" value="00270" />
+      <option name="presentableId" value="LOCAL-00270" />
+      <option name="project" value="LOCAL" />
+      <updated>1781318045955</updated>
+    </task>
+    <task id="LOCAL-00271" summary="mq">
+      <option name="closed" value="true" />
+      <created>1781321818959</created>
+      <option name="number" value="00271" />
+      <option name="presentableId" value="LOCAL-00271" />
+      <option name="project" value="LOCAL" />
+      <updated>1781321818960</updated>
+    </task>
+    <task id="LOCAL-00272" summary="mq">
+      <option name="closed" value="true" />
+      <created>1781322056346</created>
+      <option name="number" value="00272" />
+      <option name="presentableId" value="LOCAL-00272" />
+      <option name="project" value="LOCAL" />
+      <updated>1781322056346</updated>
+    </task>
+    <task id="LOCAL-00273" summary="mq">
+      <option name="closed" value="true" />
+      <created>1781332947251</created>
+      <option name="number" value="00273" />
+      <option name="presentableId" value="LOCAL-00273" />
+      <option name="project" value="LOCAL" />
+      <updated>1781332947252</updated>
+    </task>
+    <task id="LOCAL-00274" summary="mq">
+      <option name="closed" value="true" />
+      <created>1781332952234</created>
+      <option name="number" value="00274" />
+      <option name="presentableId" value="LOCAL-00274" />
+      <option name="project" value="LOCAL" />
+      <updated>1781332952234</updated>
+    </task>
+    <task id="LOCAL-00275" summary="mq">
+      <option name="closed" value="true" />
+      <created>1781333829030</created>
+      <option name="number" value="00275" />
+      <option name="presentableId" value="LOCAL-00275" />
+      <option name="project" value="LOCAL" />
+      <updated>1781333829030</updated>
+    </task>
+    <task id="LOCAL-00276" summary="http">
+      <option name="closed" value="true" />
+      <created>1781570371177</created>
+      <option name="number" value="00276" />
+      <option name="presentableId" value="LOCAL-00276" />
+      <option name="project" value="LOCAL" />
+      <updated>1781570371177</updated>
+    </task>
+    <task id="LOCAL-00277" summary="http">
+      <option name="closed" value="true" />
+      <created>1781575651844</created>
+      <option name="number" value="00277" />
+      <option name="presentableId" value="LOCAL-00277" />
+      <option name="project" value="LOCAL" />
+      <updated>1781575651844</updated>
+    </task>
+    <task id="LOCAL-00278" summary="http">
+      <option name="closed" value="true" />
+      <created>1781575745323</created>
+      <option name="number" value="00278" />
+      <option name="presentableId" value="LOCAL-00278" />
+      <option name="project" value="LOCAL" />
+      <updated>1781575745323</updated>
+    </task>
+    <task id="LOCAL-00279" summary="http">
+      <option name="closed" value="true" />
+      <created>1781576903529</created>
+      <option name="number" value="00279" />
+      <option name="presentableId" value="LOCAL-00279" />
+      <option name="project" value="LOCAL" />
+      <updated>1781576903529</updated>
+    </task>
+    <task id="LOCAL-00280" summary="http">
+      <option name="closed" value="true" />
+      <created>1781577212069</created>
+      <option name="number" value="00280" />
+      <option name="presentableId" value="LOCAL-00280" />
+      <option name="project" value="LOCAL" />
+      <updated>1781577212069</updated>
+    </task>
+    <task id="LOCAL-00281" summary="http">
+      <option name="closed" value="true" />
+      <created>1781601387043</created>
+      <option name="number" value="00281" />
+      <option name="presentableId" value="LOCAL-00281" />
+      <option name="project" value="LOCAL" />
+      <updated>1781601387043</updated>
+    </task>
+    <task id="LOCAL-00282" summary="http">
+      <option name="closed" value="true" />
+      <created>1781688878020</created>
+      <option name="number" value="00282" />
+      <option name="presentableId" value="LOCAL-00282" />
+      <option name="project" value="LOCAL" />
+      <updated>1781688878021</updated>
+    </task>
+    <task id="LOCAL-00283" summary="http">
+      <option name="closed" value="true" />
+      <created>1781697398607</created>
+      <option name="number" value="00283" />
+      <option name="presentableId" value="LOCAL-00283" />
+      <option name="project" value="LOCAL" />
+      <updated>1781697398607</updated>
+    </task>
+    <task id="LOCAL-00284" summary="http">
+      <option name="closed" value="true" />
+      <created>1781742219085</created>
+      <option name="number" value="00284" />
+      <option name="presentableId" value="LOCAL-00284" />
+      <option name="project" value="LOCAL" />
+      <updated>1781742219085</updated>
+    </task>
+    <task id="LOCAL-00285" summary="http">
+      <option name="closed" value="true" />
+      <created>1781745541360</created>
+      <option name="number" value="00285" />
+      <option name="presentableId" value="LOCAL-00285" />
+      <option name="project" value="LOCAL" />
+      <updated>1781745541360</updated>
+    </task>
+    <task id="LOCAL-00286" summary="http">
+      <option name="closed" value="true" />
+      <created>1781747482469</created>
+      <option name="number" value="00286" />
+      <option name="presentableId" value="LOCAL-00286" />
+      <option name="project" value="LOCAL" />
+      <updated>1781747482469</updated>
+    </task>
+    <task id="LOCAL-00287" summary="http">
+      <option name="closed" value="true" />
+      <created>1781752198279</created>
+      <option name="number" value="00287" />
+      <option name="presentableId" value="LOCAL-00287" />
+      <option name="project" value="LOCAL" />
+      <updated>1781752198279</updated>
+    </task>
+    <task id="LOCAL-00288" summary="http">
+      <option name="closed" value="true" />
+      <created>1782221996371</created>
+      <option name="number" value="00288" />
+      <option name="presentableId" value="LOCAL-00288" />
+      <option name="project" value="LOCAL" />
+      <updated>1782221996372</updated>
+    </task>
+    <task id="LOCAL-00289" summary="http">
+      <option name="closed" value="true" />
+      <created>1782484778944</created>
+      <option name="number" value="00289" />
+      <option name="presentableId" value="LOCAL-00289" />
+      <option name="project" value="LOCAL" />
+      <updated>1782484778944</updated>
+    </task>
+    <task id="LOCAL-00290" summary="http">
+      <option name="closed" value="true" />
+      <created>1782484847487</created>
+      <option name="number" value="00290" />
+      <option name="presentableId" value="LOCAL-00290" />
+      <option name="project" value="LOCAL" />
+      <updated>1782484847487</updated>
+    </task>
+    <task id="LOCAL-00291" summary="http">
+      <option name="closed" value="true" />
+      <created>1782485145175</created>
+      <option name="number" value="00291" />
+      <option name="presentableId" value="LOCAL-00291" />
+      <option name="project" value="LOCAL" />
+      <updated>1782485145175</updated>
+    </task>
+    <task id="LOCAL-00292" summary="http">
+      <option name="closed" value="true" />
+      <created>1782527169634</created>
+      <option name="number" value="00292" />
+      <option name="presentableId" value="LOCAL-00292" />
+      <option name="project" value="LOCAL" />
+      <updated>1782527169634</updated>
+    </task>
+    <task id="LOCAL-00293" summary="http">
+      <option name="closed" value="true" />
+      <created>1782528964940</created>
+      <option name="number" value="00293" />
+      <option name="presentableId" value="LOCAL-00293" />
+      <option name="project" value="LOCAL" />
+      <updated>1782528964940</updated>
+    </task>
+    <task id="LOCAL-00294" summary="http">
+      <option name="closed" value="true" />
+      <created>1782564210326</created>
+      <option name="number" value="00294" />
+      <option name="presentableId" value="LOCAL-00294" />
+      <option name="project" value="LOCAL" />
+      <updated>1782564210326</updated>
+    </task>
+    <task id="LOCAL-00295" summary="http">
+      <option name="closed" value="true" />
+      <created>1782564381903</created>
+      <option name="number" value="00295" />
+      <option name="presentableId" value="LOCAL-00295" />
+      <option name="project" value="LOCAL" />
+      <updated>1782564381903</updated>
+    </task>
+    <task id="LOCAL-00296" summary="http">
+      <option name="closed" value="true" />
+      <created>1782565429590</created>
+      <option name="number" value="00296" />
+      <option name="presentableId" value="LOCAL-00296" />
+      <option name="project" value="LOCAL" />
+      <updated>1782565429590</updated>
+    </task>
+    <task id="LOCAL-00297" summary="http">
+      <option name="closed" value="true" />
+      <created>1782616568173</created>
+      <option name="number" value="00297" />
+      <option name="presentableId" value="LOCAL-00297" />
+      <option name="project" value="LOCAL" />
+      <updated>1782616568176</updated>
+    </task>
+    <task id="LOCAL-00298" summary="http">
+      <option name="closed" value="true" />
+      <created>1783166751189</created>
+      <option name="number" value="00298" />
+      <option name="presentableId" value="LOCAL-00298" />
+      <option name="project" value="LOCAL" />
+      <updated>1783166751189</updated>
+    </task>
+    <task id="LOCAL-00299" summary="http">
+      <option name="closed" value="true" />
+      <created>1783220153050</created>
+      <option name="number" value="00299" />
+      <option name="presentableId" value="LOCAL-00299" />
+      <option name="project" value="LOCAL" />
+      <updated>1783220153051</updated>
+    </task>
+    <task id="LOCAL-00300" summary="http">
+      <option name="closed" value="true" />
+      <created>1783222854484</created>
+      <option name="number" value="00300" />
+      <option name="presentableId" value="LOCAL-00300" />
+      <option name="project" value="LOCAL" />
+      <updated>1783222854484</updated>
+    </task>
+    <option name="localTasksCounter" value="301" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="OPEN_GENERIC_TABS">
+      <map>
+        <entry key="7e0d4515-4f81-4458-b7a5-6e8b77fbdaa2" value="TOOL_WINDOW" />
+      </map>
+    </option>
+    <option name="TAB_STATES">
+      <map>
+        <entry key="7e0d4515-4f81-4458-b7a5-6e8b77fbdaa2">
+          <value>
+            <State>
+              <option name="FILTERS">
+                <map>
+                  <entry key="branch">
+                    <value>
+                      <list>
+                        <option value="HEAD" />
+                      </list>
+                    </value>
+                  </entry>
+                  <entry key="roots">
+                    <value>
+                      <list>
+                        <option value="$PROJECT_DIR$" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+              <option name="SHOW_ONLY_AFFECTED_CHANGES" value="true" />
+            </State>
+          </value>
+        </entry>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <option name="CHECK_CODE_SMELLS_BEFORE_PROJECT_COMMIT" value="false" />
+    <option name="CHECK_NEW_TODO" value="false" />
+    <MESSAGE value="v6.3.0  添加mongo 索引" />
+    <MESSAGE value="v6.4.0  优化加好友代码" />
+    <MESSAGE value="v6.4.0  加群逻辑" />
+    <MESSAGE value="v6.4.0  优化代码" />
+    <MESSAGE value="v6.4.0  优化代码，添加响应式，提高吞吐量" />
+    <MESSAGE value="v6.4.0  主动加群逻辑" />
+    <MESSAGE value="v6.5.0  定义群主，管理员，普通成员职位" />
+    <MESSAGE value="v6.5.0  拒绝加群或者邀请加群的请求" />
+    <MESSAGE value="v6.5.0  邀请加群请求" />
+    <MESSAGE value="v6.5.0  增加序列化标识，防止序列化反序列化问题" />
+    <MESSAGE value="v6.5.0  优化代码" />
+    <MESSAGE value="v6.5.0  移除文件表合并到系统文件表中" />
+    <MESSAGE value="v6.5.1 去除消息偏移量限制" />
+    <MESSAGE value="v6.5.0  添加群的限制" />
+    <MESSAGE value="v6.5.0  添加群的限制1" />
+    <MESSAGE value="v6.5.1  保存最后一条消息 为会话" />
+    <MESSAGE value="v6.5.1  整理缓存key" />
+    <MESSAGE value="优化" />
+    <MESSAGE value="增加群组推送模式" />
+    <MESSAGE value="全局唯一id生成器" />
+    <MESSAGE value="系统推送" />
+    <MESSAGE value="拆分repository" />
+    <MESSAGE value="类型" />
+    <MESSAGE value="mq" />
+    <MESSAGE value="http" />
+    <option name="LAST_COMMIT_MESSAGE" value="http" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/protocol/NativePacketProtocol.java</url>
+          <line>410</line>
+          <option name="timeStamp" value="11" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupRefuseMessageBiProcessor.java</url>
+          <line>93</line>
+          <option name="timeStamp" value="13" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupRefuseMessageBiProcessor.java</url>
+          <line>123</line>
+          <option name="timeStamp" value="14" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupRefuseMessageBiProcessor.java</url>
+          <line>129</line>
+          <option name="timeStamp" value="17" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/channel/DefaultSocketChannelInitializer.java</url>
+          <line>71</line>
+          <option name="timeStamp" value="23" />
+        </line-breakpoint>
+      </breakpoints>
+      <breakpoints-dialog>
+        <breakpoints-dialog>
+          <selected-grouping-rules>
+            <grouping-rule id="XBreakpointGroupingByPackageRule" />
+          </selected-grouping-rules>
+        </breakpoints-dialog>
+      </breakpoints-dialog>
+    </breakpoint-manager>
+    <pin-to-top-manager>
+      <pinned-members>
+        <PinnedItemInfo />
+        <PinnedItemInfo parentTag="io.netty.handler.codec.mqtt.MqttConnectMessage" memberName="variableHeader" />
+        <PinnedItemInfo parentTag="com.im.cache.l1.local.caffeine.CaffeineLocalL1Cache" memberName="loadingCache" />
+        <PinnedItemInfo parentTag="com.im.cache.l1.local.caffeine.CaffeineLocalL1Cache" memberName="cacheName" />
+        <PinnedItemInfo parentTag="com.github.benmanes.caffeine.cache.UnboundedLocalCache$UnboundedLocalLoadingCache" memberName="cache" />
+        <PinnedItemInfo parentTag="io.netty.channel.DefaultChannelHandlerContext" memberName="prev" />
+        <PinnedItemInfo parentTag="io.netty.handler.codec.DefaultHeadersImpl" memberName="entries" />
+        <PinnedItemInfo parentTag="io.netty.handler.codec.mqtt.MqttConnectMessage" memberName="mqttFixedHeader" />
+        <PinnedItemInfo parentTag="com.ouyunc.cache.local.caffeine.CaffeineLocalCache" memberName="cacheName" />
+        <PinnedItemInfo parentTag="com.ouyunc.cache.local.caffeine.CaffeineLocalCache" memberName="loadingCache" />
+      </pinned-members>
+    </pin-to-top-manager>
+  </component>
+</project>

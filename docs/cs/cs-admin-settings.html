@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>客服系统配置 · Mock</title>
+  <link rel="icon" href="data:image/ico;base64,aWNv" />
+  <link rel="stylesheet" href="cs-shared.css" />
+</head>
+<body>
+  <header class="cs-header">
+    <a class="cs-logo" href="cs-lobby.html">偶遇云 · 客服</a>
+    <span class="mock-badge">MOCK API</span>
+    <span class="admin-badge">管理员</span>
+    <div class="header-spacer"></div>
+    <nav class="header-nav">
+      <a href="cs-lobby.html">大厅</a>
+      <a href="cs-agent.html">工作台</a>
+      <a href="cs-tickets.html">咨询单</a>
+      <a href="cs-admin-settings.html" class="active">系统配置</a>
+      <a href="cs-profile.html">个人设置</a>
+      <a href="cs-visitor.html" target="_blank">访客端 ↗</a>
+    </nav>
+  </header>
+
+  <div class="settings-shell">
+    <aside class="settings-sidebar">
+      <h3>客服配置</h3>
+      <nav class="settings-nav">
+        <a href="#general" data-section="general" class="active">通用配置</a>
+        <a href="#skills" data-section="skills">技能组</a>
+        <a href="#agents" data-section="agents">坐席管理</a>
+        <a href="#schedules" data-section="schedules">排班计划</a>
+        <a href="#routing" data-section="routing">分配规则</a>
+      </nav>
+    </aside>
+
+    <main class="settings-main">
+      <!-- 通用配置 -->
+      <section id="sec-general">
+        <h1>通用配置</h1>
+        <p class="settings-desc">队列、欢迎语、满意度等业务级默认参数（对应 ouyunc-cs-service 全局配置）。</p>
+        <div class="card">
+          <div class="card-title">营业与队列</div>
+          <div class="form-grid">
+            <div class="field">
+              <label>营业开始</label>
+              <input type="time" id="bhStart" />
+            </div>
+            <div class="field">
+              <label>营业结束</label>
+              <input type="time" id="bhEnd" />
+            </div>
+            <div class="field">
+              <label>时区</label>
+              <select id="bhTimezone">
+                <option value="Asia/Shanghai">Asia/Shanghai (UTC+8)</option>
+                <option value="Asia/Tokyo">Asia/Tokyo</option>
+                <option value="America/New_York">America/New_York</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>排队超时（秒）</label>
+              <input type="number" id="queueTimeout" min="60" />
+            </div>
+            <div class="field">
+              <label>会话自动关闭（分钟）</label>
+              <input type="number" id="sessionAutoClose" min="5" />
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">文案模板</div>
+          <div class="form-grid single">
+            <div class="field">
+              <label>排队提示语</label>
+              <textarea id="queueMessage"></textarea>
+            </div>
+            <div class="field">
+              <label>欢迎语（接入后首条）</label>
+              <textarea id="welcomeMessage"></textarea>
+            </div>
+            <div class="field">
+              <label>非营业时间留言</label>
+              <textarea id="offlineMessage"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">满意度与功能开关</div>
+          <label class="chk-row"><input type="checkbox" id="satisfactionEnabled" /> 会话结束后发起满意度评价</label>
+          <div class="field" style="margin-top:12px">
+            <label>满意度提示语</label>
+            <input type="text" id="satisfactionPrompt" />
+          </div>
+          <label class="chk-row" style="margin-top:12px"><input type="checkbox" id="transferEnabled" /> 启用会话转接（二期）</label>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="saveGeneralBtn">保存通用配置</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 技能组 -->
+      <section id="sec-skills" style="display:none">
+        <h1>技能组</h1>
+        <p class="settings-desc">定义咨询类型与坐席能力标签，进线路由时按技能匹配可用坐席。</p>
+        <div class="card">
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+            <span>技能组列表</span>
+            <button class="btn btn-secondary btn-sm" id="addSkillBtn">+ 新增技能组</button>
+          </div>
+          <table class="data-table" id="skillsTable">
+            <thead><tr><th>名称</th><th>代码</th><th>说明</th><th>坐席数</th><th>状态</th><th>操作</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 坐席管理 -->
+      <section id="sec-agents" style="display:none">
+        <h1>坐席管理</h1>
+        <p class="settings-desc">维护坐席账号、技能绑定与最大并发接待数。</p>
+        <div class="card">
+          <div class="card-title">坐席列表</div>
+          <table class="data-table" id="agentsTable">
+            <thead><tr><th>姓名</th><th>工号</th><th>技能</th><th>最大并发</th><th>当前状态</th><th>操作</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 排班计划 -->
+      <section id="sec-schedules" style="display:none">
+        <h1>排班计划</h1>
+        <p class="settings-desc">按时段控制哪些坐席可签入接待；非排班时段进线走离线策略。</p>
+        <div class="card">
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+            <span>排班列表</span>
+            <button class="btn btn-secondary btn-sm" id="addScheduleBtn">+ 新增排班</button>
+          </div>
+          <table class="data-table" id="schedulesTable">
+            <thead><tr><th>名称</th><th>周期</th><th>时段</th><th>坐席</th><th>状态</th><th>操作</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 分配规则 -->
+      <section id="sec-routing" style="display:none">
+        <h1>分配规则</h1>
+        <p class="settings-desc">控制进线如何匹配坐席：技能优先、负载均衡、VIP 优先等。</p>
+        <div class="card">
+          <div class="card-title">路由策略</div>
+          <div class="form-grid">
+            <div class="field">
+              <label>分配策略</label>
+              <select id="routeStrategy">
+                <option value="SKILL_THEN_LEAST_LOAD">技能匹配 → 最少负载</option>
+                <option value="SKILL_ONLY">仅技能匹配</option>
+                <option value="ROUND_ROBIN">轮询</option>
+                <option value="LEAST_LOAD">最少负载</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>离线兜底</label>
+              <select id="offlineFallback">
+                <option value="QUEUE">进入排队</option>
+                <option value="BOT">机器人应答</option>
+                <option value="MESSAGE">留言</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>单坐席最大并发</label>
+              <input type="number" id="maxConcurrent" min="1" max="20" />
+            </div>
+            <div class="field">
+              <label>最大排队等待（秒）</label>
+              <input type="number" id="maxQueueWait" min="60" />
+            </div>
+          </div>
+          <label class="chk-row" style="margin-top:12px"><input type="checkbox" id="skillMatchRequired" /> 必须技能完全匹配（否则排队）</label>
+          <label class="chk-row"><input type="checkbox" id="allowOverflowGeneral" /> 无匹配技能时溢出到「通用」组</label>
+          <label class="chk-row"><input type="checkbox" id="vipPriority" /> VIP 客户优先接入</label>
+          <div class="field" id="vipBoostField" style="margin-top:8px">
+            <label>VIP 排队权重加成</label>
+            <input type="number" id="vipQueueBoost" min="1" max="10" />
+            <div class="field-hint">数值越大越优先出队</div>
+          </div>
+          <label class="chk-row" style="margin-top:12px"><input type="checkbox" id="stickyAgent" /> 启用粘性坐席（同一客户 N 小时内优先原坐席）</label>
+          <div class="field">
+            <label>粘性时长（小时）</label>
+            <input type="number" id="stickyHours" min="1" max="72" />
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="saveRoutingBtn">保存分配规则</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- 技能组编辑弹窗 -->
+  <div class="modal-mask" id="skillModal">
+    <div class="modal">
+      <h2 id="skillModalTitle">编辑技能组</h2>
+      <input type="hidden" id="skillEditId" />
+      <div class="field" style="margin-bottom:12px"><label>名称</label><input id="skillName" /></div>
+      <div class="field" style="margin-bottom:12px"><label>代码（英文大写）</label><input id="skillCode" placeholder="GENERAL" /></div>
+      <div class="field" style="margin-bottom:12px"><label>说明</label><textarea id="skillDesc"></textarea></div>
+      <label class="chk-row"><input type="checkbox" id="skillEnabled" checked /> 启用</label>
+      <div class="field" style="margin-top:12px">
+        <label>绑定坐席</label>
+        <div class="skill-chips" id="skillAgentChips"></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" id="skillCancelBtn">取消</button>
+        <button class="btn btn-primary" id="skillSaveBtn">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 坐席编辑弹窗 -->
+  <div class="modal-mask" id="agentModal">
+    <div class="modal">
+      <h2>编辑坐席</h2>
+      <input type="hidden" id="agentEditId" />
+      <div class="field" style="margin-bottom:12px"><label>显示名称</label><input id="agentName" /></div>
+      <div class="field" style="margin-bottom:12px"><label>工号</label><input id="agentJobNo" /></div>
+      <div class="field" style="margin-bottom:12px"><label>邮箱</label><input id="agentEmail" type="email" /></div>
+      <div class="field" style="margin-bottom:12px"><label>最大并发</label><input id="agentMaxConcurrent" type="number" min="1" max="20" /></div>
+      <div class="field">
+        <label>技能</label>
+        <div class="skill-chips" id="agentSkillChips"></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" id="agentCancelBtn">取消</button>
+        <button class="btn btn-primary" id="agentSaveBtn">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 排班编辑弹窗 -->
+  <div class="modal-mask" id="scheduleModal">
+    <div class="modal">
+      <h2 id="scheduleModalTitle">编辑排班</h2>
+      <input type="hidden" id="scheduleEditId" />
+      <div class="field" style="margin-bottom:12px"><label>名称</label><input id="schName" /></div>
+      <div class="field" style="margin-bottom:12px">
+        <label>重复周期</label>
+        <div class="day-chips" id="schDays">
+          <div class="day-chip" data-day="1">一</div>
+          <div class="day-chip" data-day="2">二</div>
+          <div class="day-chip" data-day="3">三</div>
+          <div class="day-chip" data-day="4">四</div>
+          <div class="day-chip" data-day="5">五</div>
+          <div class="day-chip" data-day="6">六</div>
+          <div class="day-chip" data-day="0">日</div>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="field"><label>开始</label><input type="time" id="schStart" /></div>
+        <div class="field"><label>结束</label><input type="time" id="schEnd" /></div>
+      </div>
+      <label class="chk-row" style="margin-top:12px"><input type="checkbox" id="schEnabled" checked /> 启用</label>
+      <div class="field" style="margin-top:12px">
+        <label>参与坐席</label>
+        <div class="skill-chips" id="schAgentChips"></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" id="schCancelBtn">取消</button>
+        <button class="btn btn-primary" id="schSaveBtn">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <button class="api-log-toggle" id="logToggle">API 日志</button>
+  <div class="api-log" id="apiLog"></div>
+
+  <script src="mock-api.js"></script>
+  <script>
+    const api = window.CsMockApi;
+    const DAY_LABELS = ['日', '一', '二', '三', '四', '五', '六'];
+    let allAgents = [];
+    let allSkills = [];
+
+    function logApi(label, req, res) {
+      const el = document.getElementById('apiLog');
+      el.style.display = 'block';
+      el.textContent = '[' + new Date().toLocaleTimeString() + '] ' + label + '\n' + JSON.stringify(res) + '\n\n' + el.textContent.slice(0, 1500);
+    }
+
+    function toast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      setTimeout(function () { el.classList.remove('show'); }, 2500);
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function showSection(name) {
+      ['general', 'skills', 'agents', 'schedules', 'routing'].forEach(function (s) {
+        document.getElementById('sec-' + s).style.display = s === name ? 'block' : 'none';
+      });
+      document.querySelectorAll('.settings-nav a').forEach(function (a) {
+        a.classList.toggle('active', a.dataset.section === name);
+      });
+      location.hash = name;
+    }
+
+    document.querySelectorAll('.settings-nav a').forEach(function (a) {
+      a.onclick = function (e) {
+        e.preventDefault();
+        showSection(a.dataset.section);
+      };
+    });
+
+    async function loadGeneral() {
+      const cfg = await api.getGeneralConfig();
+      logApi('GET /admin/config/general', {}, cfg);
+      document.getElementById('bhStart').value = cfg.businessHours.start;
+      document.getElementById('bhEnd').value = cfg.businessHours.end;
+      document.getElementById('bhTimezone').value = cfg.businessHours.timezone;
+      document.getElementById('queueTimeout').value = cfg.queueTimeoutSeconds;
+      document.getElementById('sessionAutoClose').value = cfg.sessionAutoCloseMinutes;
+      document.getElementById('queueMessage').value = cfg.queueMessage;
+      document.getElementById('welcomeMessage').value = cfg.welcomeMessage;
+      document.getElementById('offlineMessage').value = cfg.offlineMessage;
+      document.getElementById('satisfactionEnabled').checked = cfg.satisfactionEnabled;
+      document.getElementById('satisfactionPrompt').value = cfg.satisfactionPrompt;
+      document.getElementById('transferEnabled').checked = cfg.transferEnabled;
+    }
+
+    document.getElementById('saveGeneralBtn').onclick = async function () {
+      const body = {
+        businessHours: {
+          start: document.getElementById('bhStart').value,
+          end: document.getElementById('bhEnd').value,
+          timezone: document.getElementById('bhTimezone').value,
+        },
+        queueTimeoutSeconds: +document.getElementById('queueTimeout').value,
+        sessionAutoCloseMinutes: +document.getElementById('sessionAutoClose').value,
+        queueMessage: document.getElementById('queueMessage').value,
+        welcomeMessage: document.getElementById('welcomeMessage').value,
+        offlineMessage: document.getElementById('offlineMessage').value,
+        satisfactionEnabled: document.getElementById('satisfactionEnabled').checked,
+        satisfactionPrompt: document.getElementById('satisfactionPrompt').value,
+        transferEnabled: document.getElementById('transferEnabled').checked,
+      };
+      const res = await api.saveGeneralConfig(body);
+      logApi('PUT /admin/config/general', body, res);
+      toast('通用配置已保存');
+    };
+
+    async function loadSkills() {
+      const res = await api.listSkillGroups();
+      allSkills = res.items;
+      const tbody = document.querySelector('#skillsTable tbody');
+      tbody.innerHTML = allSkills.map(function (sk) {
+        return '<tr><td>' + escapeHtml(sk.name) + '</td><td><code>' + escapeHtml(sk.code) + '</code></td>' +
+          '<td>' + escapeHtml(sk.description) + '</td><td>' + sk.agentIds.length + '</td>' +
+          '<td><span class="tag' + (sk.enabled ? ' green' : ' off') + '">' + (sk.enabled ? '启用' : '停用') + '</span></td>' +
+          '<td><button class="btn btn-secondary btn-sm" data-edit-skill="' + sk.id + '">编辑</button> ' +
+          '<button class="btn btn-danger btn-sm" data-del-skill="' + sk.id + '">删除</button></td></tr>';
+      }).join('');
+      tbody.querySelectorAll('[data-edit-skill]').forEach(function (btn) {
+        btn.onclick = function () { openSkillModal(btn.dataset.editSkill); };
+      });
+      tbody.querySelectorAll('[data-del-skill]').forEach(function (btn) {
+        btn.onclick = async function () {
+          if (!confirm('确定删除该技能组？')) return;
+          await api.deleteSkillGroup(btn.dataset.delSkill);
+          toast('已删除');
+          loadSkills();
+        };
+      });
+    }
+
+    function renderAgentChips(containerId, selectedIds, onToggle) {
+      const el = document.getElementById(containerId);
+      el.innerHTML = allAgents.map(function (a) {
+        const on = selectedIds.includes(a.agentId) ? ' on' : '';
+        return '<span class="skill-chip' + on + '" data-aid="' + a.agentId + '">' + escapeHtml(a.agentName) + '</span>';
+      }).join('');
+      el.querySelectorAll('.skill-chip').forEach(function (chip) {
+        chip.onclick = function () {
+          chip.classList.toggle('on');
+          if (onToggle) onToggle(chip.dataset.aid, chip.classList.contains('on'));
+        };
+      });
+    }
+
+    function getSelectedAgentIds(containerId) {
+      return Array.from(document.querySelectorAll('#' + containerId + ' .skill-chip.on')).map(function (c) { return c.dataset.aid; });
+    }
+
+    function openSkillModal(id) {
+      const sk = id ? allSkills.find(function (s) { return s.id === id; }) : null;
+      document.getElementById('skillModalTitle').textContent = sk ? '编辑技能组' : '新增技能组';
+      document.getElementById('skillEditId').value = sk ? sk.id : '';
+      document.getElementById('skillName').value = sk ? sk.name : '';
+      document.getElementById('skillCode').value = sk ? sk.code : '';
+      document.getElementById('skillDesc').value = sk ? sk.description : '';
+      document.getElementById('skillEnabled').checked = sk ? sk.enabled : true;
+      renderAgentChips('skillAgentChips', sk ? sk.agentIds : []);
+      document.getElementById('skillModal').classList.add('open');
+    }
+
+    document.getElementById('addSkillBtn').onclick = function () { openSkillModal(null); };
+    document.getElementById('skillCancelBtn').onclick = function () { document.getElementById('skillModal').classList.remove('open'); };
+    document.getElementById('skillSaveBtn').onclick = async function () {
+      const id = document.getElementById('skillEditId').value;
+      const body = {
+        name: document.getElementById('skillName').value,
+        code: document.getElementById('skillCode').value.toUpperCase(),
+        description: document.getElementById('skillDesc').value,
+        enabled: document.getElementById('skillEnabled').checked,
+        agentIds: getSelectedAgentIds('skillAgentChips'),
+      };
+      if (id) await api.saveSkillGroup(id, body);
+      else await api.createSkillGroup(body);
+      document.getElementById('skillModal').classList.remove('open');
+      toast('技能组已保存');
+      loadSkills();
+    };
+
+    async function loadAgents() {
+      const res = await api.listAdminAgents();
+      allAgents = res.items;
+      const statusMap = { online: '在线', away: '暂离', dnd: '勿扰', offline: '离线' };
+      const tbody = document.querySelector('#agentsTable tbody');
+      tbody.innerHTML = allAgents.map(function (a) {
+        const skills = (a.skills || []).map(function (c) { return '<span class="tag">' + api.normalizeSkill(c) + '</span>'; }).join('');
+        return '<tr><td>' + escapeHtml(a.agentName) + '</td><td>' + escapeHtml(a.jobNo) + '</td>' +
+          '<td>' + skills + '</td><td>' + a.maxConcurrent + '</td>' +
+          '<td>' + (statusMap[a.status] || a.status) + '</td>' +
+          '<td><button class="btn btn-secondary btn-sm" data-edit-agent="' + a.agentId + '">编辑</button></td></tr>';
+      }).join('');
+      tbody.querySelectorAll('[data-edit-agent]').forEach(function (btn) {
+        btn.onclick = function () { openAgentModal(btn.dataset.editAgent); };
+      });
+    }
+
+    function openAgentModal(agentId) {
+      const a = allAgents.find(function (x) { return x.agentId === agentId; });
+      if (!a) return;
+      document.getElementById('agentEditId').value = a.agentId;
+      document.getElementById('agentName').value = a.agentName;
+      document.getElementById('agentJobNo').value = a.jobNo;
+      document.getElementById('agentEmail').value = a.email || '';
+      document.getElementById('agentMaxConcurrent').value = a.maxConcurrent || 5;
+      const chips = document.getElementById('agentSkillChips');
+      chips.innerHTML = allSkills.map(function (sk) {
+        const on = (a.skills || []).includes(sk.code) ? ' on' : '';
+        return '<span class="skill-chip' + on + '" data-code="' + sk.code + '">' + escapeHtml(sk.name) + '</span>';
+      }).join('');
+      chips.querySelectorAll('.skill-chip').forEach(function (c) { c.onclick = function () { c.classList.toggle('on'); }; });
+      document.getElementById('agentModal').classList.add('open');
+    }
+
+    document.getElementById('agentCancelBtn').onclick = function () { document.getElementById('agentModal').classList.remove('open'); };
+    document.getElementById('agentSaveBtn').onclick = async function () {
+      const id = document.getElementById('agentEditId').value;
+      const skills = Array.from(document.querySelectorAll('#agentSkillChips .skill-chip.on')).map(function (c) { return c.dataset.code; });
+      const body = {
+        agentName: document.getElementById('agentName').value,
+        jobNo: document.getElementById('agentJobNo').value,
+        email: document.getElementById('agentEmail').value,
+        maxConcurrent: +document.getElementById('agentMaxConcurrent').value,
+        skills: skills,
+      };
+      await api.saveAdminAgent(id, body);
+      document.getElementById('agentModal').classList.remove('open');
+      toast('坐席信息已保存');
+      loadAgents();
+      loadSkills();
+    };
+
+    function formatDays(days) {
+      return (days || []).sort(function (a, b) { return a - b; }).map(function (d) { return '周' + DAY_LABELS[d]; }).join(' ');
+    }
+
+    async function loadSchedules() {
+      const res = await api.listSchedules();
+      const tbody = document.querySelector('#schedulesTable tbody');
+      tbody.innerHTML = res.items.map(function (sch) {
+        const agents = sch.agentIds.map(function (id) {
+          const a = allAgents.find(function (x) { return x.agentId === id; });
+          return a ? a.agentName : id;
+        }).join('、');
+        return '<tr><td>' + escapeHtml(sch.name) + '</td><td>' + formatDays(sch.days) + '</td>' +
+          '<td>' + sch.startTime + ' – ' + sch.endTime + '</td><td>' + escapeHtml(agents) + '</td>' +
+          '<td><span class="tag' + (sch.enabled ? ' green' : ' off') + '">' + (sch.enabled ? '启用' : '停用') + '</span></td>' +
+          '<td><button class="btn btn-secondary btn-sm" data-edit-sch="' + sch.id + '">编辑</button> ' +
+          '<button class="btn btn-danger btn-sm" data-del-sch="' + sch.id + '">删除</button></td></tr>';
+      }).join('');
+      window._schedules = res.items;
+      tbody.querySelectorAll('[data-edit-sch]').forEach(function (btn) {
+        btn.onclick = function () { openScheduleModal(btn.dataset.editSch); };
+      });
+      tbody.querySelectorAll('[data-del-sch]').forEach(function (btn) {
+        btn.onclick = async function () {
+          if (!confirm('确定删除该排班？')) return;
+          await api.deleteSchedule(btn.dataset.delSch);
+          toast('已删除');
+          loadSchedules();
+        };
+      });
+    }
+
+    function setSchDays(days) {
+      document.querySelectorAll('#schDays .day-chip').forEach(function (c) {
+        c.classList.toggle('on', (days || []).includes(+c.dataset.day));
+      });
+    }
+
+    function getSchDays() {
+      return Array.from(document.querySelectorAll('#schDays .day-chip.on')).map(function (c) { return +c.dataset.day; });
+    }
+
+    function openScheduleModal(id) {
+      const sch = id ? (window._schedules || []).find(function (s) { return s.id === id; }) : null;
+      document.getElementById('scheduleModalTitle').textContent = sch ? '编辑排班' : '新增排班';
+      document.getElementById('scheduleEditId').value = sch ? sch.id : '';
+      document.getElementById('schName').value = sch ? sch.name : '';
+      document.getElementById('schStart').value = sch ? sch.startTime : '09:00';
+      document.getElementById('schEnd').value = sch ? sch.endTime : '18:00';
+      document.getElementById('schEnabled').checked = sch ? sch.enabled : true;
+      setSchDays(sch ? sch.days : [1, 2, 3, 4, 5]);
+      renderAgentChips('schAgentChips', sch ? sch.agentIds : []);
+      document.querySelectorAll('#schDays .day-chip').forEach(function (c) {
+        c.onclick = function () { c.classList.toggle('on'); };
+      });
+      document.getElementById('scheduleModal').classList.add('open');
+    }
+
+    document.getElementById('addScheduleBtn').onclick = function () { openScheduleModal(null); };
+    document.getElementById('schCancelBtn').onclick = function () { document.getElementById('scheduleModal').classList.remove('open'); };
+    document.getElementById('schSaveBtn').onclick = async function () {
+      const id = document.getElementById('scheduleEditId').value;
+      const body = {
+        name: document.getElementById('schName').value,
+        days: getSchDays(),
+        startTime: document.getElementById('schStart').value,
+        endTime: document.getElementById('schEnd').value,
+        enabled: document.getElementById('schEnabled').checked,
+        agentIds: getSelectedAgentIds('schAgentChips'),
+      };
+      if (id) await api.saveSchedule(id, body);
+      else await api.createSchedule(body);
+      document.getElementById('scheduleModal').classList.remove('open');
+      toast('排班已保存');
+      loadSchedules();
+    };
+
+    async function loadRouting() {
+      const rules = await api.getRoutingRules();
+      document.getElementById('routeStrategy').value = rules.strategy;
+      document.getElementById('offlineFallback').value = rules.offlineFallback;
+      document.getElementById('maxConcurrent').value = rules.maxConcurrentPerAgent;
+      document.getElementById('maxQueueWait').value = rules.maxQueueWaitSeconds;
+      document.getElementById('skillMatchRequired').checked = rules.skillMatchRequired;
+      document.getElementById('allowOverflowGeneral').checked = rules.allowOverflowToGeneral;
+      document.getElementById('vipPriority').checked = rules.vipPriority;
+      document.getElementById('vipQueueBoost').value = rules.vipQueueBoost;
+      document.getElementById('stickyAgent').checked = rules.stickyAgent;
+      document.getElementById('stickyHours').value = rules.stickyHours;
+    }
+
+    document.getElementById('saveRoutingBtn').onclick = async function () {
+      const body = {
+        strategy: document.getElementById('routeStrategy').value,
+        offlineFallback: document.getElementById('offlineFallback').value,
+        maxConcurrentPerAgent: +document.getElementById('maxConcurrent').value,
+        maxQueueWaitSeconds: +document.getElementById('maxQueueWait').value,
+        skillMatchRequired: document.getElementById('skillMatchRequired').checked,
+        allowOverflowToGeneral: document.getElementById('allowOverflowGeneral').checked,
+        vipPriority: document.getElementById('vipPriority').checked,
+        vipQueueBoost: +document.getElementById('vipQueueBoost').value,
+        stickyAgent: document.getElementById('stickyAgent').checked,
+        stickyHours: +document.getElementById('stickyHours').value,
+      };
+      await api.saveRoutingRules(body);
+      toast('分配规则已保存');
+    };
+
+    document.getElementById('logToggle').onclick = function () {
+      const el = document.getElementById('apiLog');
+      el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    };
+
+    (async function init() {
+      await loadGeneral();
+      await loadAgents();
+      await loadSkills();
+      await loadSchedules();
+      await loadRouting();
+      const hash = (location.hash || '#general').slice(1);
+      showSection(['general', 'skills', 'agents', 'schedules', 'routing'].includes(hash) ? hash : 'general');
+    })();
+  </script>
+</body>
+</html>

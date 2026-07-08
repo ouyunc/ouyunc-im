@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.ouyunc</groupId>
+    <artifactId>ouyunc-commons</artifactId>
+    <version>6.5.4</version>
+  </parent>
+  <groupId>com.ouyunc</groupId>
+  <artifactId>ouyunc-id</artifactId>
+  <version>6.5.4</version>
+  <name>ouyunc-id</name>
+  <description>全局递增唯一id生成模块</description>
+  <dependencies>
+    <dependency>
+      <groupId>me.ahoo.cosid</groupId>
+      <artifactId>cosid-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>me.ahoo.cosid</groupId>
+      <artifactId>cosid-spring-redis</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.ouyunc</groupId>
+      <artifactId>ouyunc-base</artifactId>
+      <version>${revision}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.ouyunc</groupId>
+      <artifactId>ouyunc-cache</artifactId>
+      <version>${revision}</version>
+    </dependency>
+  </dependencies>
+</project>

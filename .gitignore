@@ -1,0 +1,8 @@
+/logs/
+target/
+.idea/
+out/
+ouyu-server/src/META-INF/MANIFEST.MF
+*.iml
+/.idea/
+resources/ouyunc-server-prod.yml

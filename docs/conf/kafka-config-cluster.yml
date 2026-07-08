@@ -1,0 +1,165 @@
+# Kafka 集群配置文件
+# 适用于生产环境，支持高可用和水平扩展
+
+# 应用配置
+ouyunc:
+  # 消息队列配置
+  mq:
+    # Kafka 配置信息
+    kafka:
+      # 公共连接地址（集群节点列表）
+      bootstrapServers: 
+        - kafka-node1:9092
+        - kafka-node2:9092
+        - kafka-node3:9092
+        - kafka-node4:9092
+        - kafka-node5:9092
+      
+      # 生产者配置
+      producer:
+        # 生产者连接地址（集群节点列表）
+        bootstrapServers: 
+          - kafka-node1:9092
+          - kafka-node2:9092
+          - kafka-node3:9092
+          - kafka-node4:9092
+          - kafka-node5:9092
+        # 消息确认应答模式（集群环境建议使用all）
+        ack: "all"
+        # 批量发送的消息数量（字节）
+        batchSize: 32768
+        # 发送失败后的重复发送次数
+        retries: 5
+        # 生产者缓冲区大小（字节）
+        bufferMemory: 67108864
+        # 批量发送延迟时间（毫秒）
+        lingerMs: 5
+        # 客户端ID
+        clientId: "ouyunc-cluster-producer"
+        # 压缩类型（集群环境建议使用lz4或snappy）
+        compressionType: "lz4"
+        # 消息key序列化器
+        keySerializer: "org.apache.kafka.common.serialization.StringSerializer"
+        # 消息value序列化器
+        valueSerializer: "org.apache.kafka.common.serialization.StringSerializer"
+        # 请求超时时间（毫秒）
+        requestTimeoutMs: 30000
+        # 重试退避时间（毫秒）
+        retryBackoffMs: 100
+        # 元数据最大年龄（毫秒）
+        metadataMaxAgeMs: 300000
+        # 分区器类
+        partitionerClass: "org.apache.kafka.clients.producer.internals.DefaultPartitioner"
+        # 拦截器类列表
+        interceptorClasses: []
+        # 幂等性
+        enableIdempotence: true
+        # 事务ID（用于事务性消息）
+        transactionalId: null
+        # 事务超时时间（毫秒）
+        transactionTimeoutMs: 60000
+#
+#      # 消费者配置
+#      consumer:
+#        # 消费者连接地址（集群节点列表）
+#        bootstrapServers:
+#          - kafka-node1:9092
+#          - kafka-node2:9092
+#          - kafka-node3:9092
+#          - kafka-node4:9092
+#          - kafka-node5:9092
+#        # 消费者组ID
+#        groupId: "ouyunc-cluster-consumer-group"
+#        # 自动偏移重置策略
+#        autoOffsetReset: "latest"
+#        # 批量消费一次最大拉取的数据量
+#        maxPollRecords: 1000
+#        # 连接超时时间（毫秒）
+#        sessionTimeoutMs: 30000
+#        # 是否开启自动提交
+#        enableAutoCommit: false
+#        # 自动提交间隔时间（毫秒）
+#        autoCommitIntervalMs: 1000
+#        # 最大轮询间隔时间（毫秒）
+#        maxPollIntervalMs: 300000
+#        # 设置拉取数据的大小（字节）
+#        maxPartitionFetchBytes: 2097152
+#        # 客户端ID
+#        clientId: "ouyunc-cluster-consumer"
+#        # 心跳间隔时间（毫秒）
+#        heartbeatInterval: 3000
+#        # 获取数据最小字节数
+#        fetchMinSize: 1
+#        # 获取数据最大等待时间（毫秒）
+#        fetchMaxWait: 500
+#        # 消息key反序列化器
+#        keyDeserializer: "org.apache.kafka.common.serialization.StringDeserializer"
+#        # 消息value反序列化器
+#        valueDeserializer: "org.apache.kafka.common.serialization.StringDeserializer"
+#        # 请求超时时间（毫秒）
+#        requestTimeoutMs: 30000
+#        # 重试退避时间（毫秒）
+#        retryBackoffMs: 100
+#        # 元数据最大年龄（毫秒）
+#        metadataMaxAgeMs: 300000
+#        # 分区分配策略
+#        partitionAssignmentStrategy: "org.apache.kafka.clients.consumer.RangeAssignor"
+#        # 隔离级别
+#        isolationLevel: "read_uncommitted"
+#        # 允许自动创建主题
+#        allowAutoCreateTopics: true
+#        # 检查CRC32
+#        checkCrcs: true
+#        # 客户端机架
+#        clientRack: null
+#
+#      # 监听器配置
+#      listener:
+#        # 是否开启批量消费
+#        batchListener: true
+#        # 设置消费的线程数（集群环境可以设置更多线程）
+#        concurrency: 6
+#        # 轮询消费者时使用的超时（毫秒）
+#        pollTimeout: 3000
+#        # 确认模式
+#        ackMode: "MANUAL_IMMEDIATE"
+#        # 客户端ID
+#        clientId: "ouyunc-cluster-listener"
+#        # 确认数量（当ackMode为COUNT或COUNT_TIME时）
+#        ackCount: 200
+#        # 确认时间（当ackMode为TIME或COUNT_TIME时，毫秒）
+#        ackTime: 2000
+#        # 空闲事件间隔（毫秒）
+#        idleEventInterval: 30000
+#        # 监控间隔（毫秒）
+#        monitorInterval: 10000
+#        # 是否记录容器配置
+#        logContainerConfig: true
+#        # 无轮询阈值
+#        noPollThreshold: 0.5
+#        # 监听器容器属性
+#        containerProperties:
+#          # 是否记录容器配置
+#          logContainerConfig: true
+#          # 空闲事件间隔
+#          idleEventInterval: 30000
+#          # 监控间隔
+#          monitorInterval: 10000
+#          # 无轮询阈值
+#          noPollThreshold: 0.5
+
+
+# Kafka集群部署说明
+# 1. 需要部署至少3个Kafka节点（推荐5个节点）
+# 2. 每个节点需要不同的broker.id
+# 3. 需要配置Zookeeper集群或KRaft模式
+# 4. 建议配置多副本（replication-factor >= 3）
+# 5. 建议配置多分区（partitions >= 3）
+# 6. 配置监控和告警系统
+
+# 集群节点配置示例
+# 节点1: kafka-node1:9092 (broker.id=1)
+# 节点2: kafka-node2:9092 (broker.id=2)
+# 节点3: kafka-node3:9092 (broker.id=3)
+# 节点4: kafka-node4:9092 (broker.id=4)
+# 节点5: kafka-node5:9092 (broker.id=5)

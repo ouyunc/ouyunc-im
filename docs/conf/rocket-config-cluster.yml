@@ -1,0 +1,44 @@
+# RocketMQ 集群配置文件
+# 适用于生产环境，多 Name Server 高可用，客户端自动发现 Broker 集群
+
+ouyunc:
+  mq:
+    rocket:
+      # 公共 Name Server 地址（集群：多个节点，用分号或逗号隔开；客户端自动故障切换）
+      nameServers:
+        - rocketmq-ns1:9876
+        - rocketmq-ns2:9876
+        - rocketmq-ns3:9876
+
+      # 生产者配置（集群环境推荐）
+      producer:
+        producerGroup: ouyunc-cluster-producer-group
+        sendMsgTimeout: 5000
+        compressMsgBodyOverHowmuch: 4096
+        retryTimesWhenSendFailed: 3
+        retryTimesWhenSendAsyncFailed: 3
+        maxMessageSize: 4194304
+        # 可选：生产者单独指定 Name Server
+        # nameServers:
+        #   - rocketmq-ns1:9876
+        #   - rocketmq-ns2:9876
+        #   - rocketmq-ns3:9876
+
+      # 消费者配置（集群环境推荐）
+      consumer:
+        consumerGroup: ouyunc-cluster-consumer-group
+        consumeThreadMin: 20
+        consumeThreadMax: 128
+        messageModel: CLUSTERING
+        consumeFromWhere: CONSUME_FROM_LAST_OFFSET
+        consumeMessageBatchMaxSize: 1
+        # 可选：消费者单独指定 Name Server
+        # nameServers:
+        #   - rocketmq-ns1:9876
+        #   - rocketmq-ns2:9876
+        #   - rocketmq-ns3:9876
+
+# RocketMQ 集群部署说明
+# 1. Name Server：建议至少 2 个节点（奇数台可配合 DLedger 选主），客户端配置多个地址即可实现高可用
+# 2. Broker：主从或多副本部署，由 Name Server 注册发现，客户端无需配置 Broker 地址
+# 3. 将本配置合并到 application-xxx.yml 或 ouyunc-server.yml 的 ouyunc.mq.rocket 下即可开启集群

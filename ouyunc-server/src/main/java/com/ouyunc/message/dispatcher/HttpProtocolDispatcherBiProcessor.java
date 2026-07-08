@@ -1,0 +1,61 @@
+package com.ouyunc.message.dispatcher;
+
+import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.NumberConstant;
+import com.ouyunc.message.handler.EphemeralRemoteClientRealIpHandler;
+import com.ouyunc.message.handler.HttpProtocolDispatcherHandler;
+import com.ouyunc.message.handler.HttpServerHandlerPipeline;
+import com.ouyunc.message.http.HttpContentLengthLimits;
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandlerContext;
+
+/**
+ * @author fzx
+ * @description http 协议
+ */
+public class HttpProtocolDispatcherBiProcessor implements ProtocolDispatcherBiProcessor {
+
+    @Override
+    public boolean match(ByteBuf in) {
+        // 判断是何种协议,注意这里不可以使用  in.readByte();
+        final byte magic1 = in.getByte(NumberConstant.NUMBER_0);
+        final byte magic2 = in.getByte(NumberConstant.NUMBER_0 + NumberConstant.NUMBER_1);
+        return isHttp(magic1, magic2);
+    }
+
+    /**
+     * @Author fzx
+     * @Description 处理该协议对应的handler
+     */
+    @Override
+    public void process(ChannelHandlerContext ctx, ByteBuf in) {
+        HttpServerHandlerPipeline.addSharedHttpDecoding(ctx.pipeline(), HttpContentLengthLimits.aggregatorMaxBytes());
+        ctx.pipeline()
+                .addLast(MessageConstant.REMOTE_CLIENT_REAL_IP_HANDLER, new EphemeralRemoteClientRealIpHandler())
+                // 这一步没有加自定义编解码器，是因为上面的处理器已经处理了消息编解码
+                // http 协议分发处理器（内部再分 WS / MQTT / 普通 HTTP）
+                .addLast(MessageConstant.HTTP_DISPATCHER_HANDLER, new HttpProtocolDispatcherHandler());
+        // 移除协议分发器，如果不移除在处理业务消息时还是会进行消息分发处理
+        ctx.pipeline().remove(MessageConstant.PROTOCOL_DISPATCHER_HANDLER);
+        // 调用下一个handle
+        ctx.fireChannelRead(in.retain());
+    }
+
+
+    /**
+     * @Author fzx
+     * @Description 判断是否是http类型协议
+     */
+    private static boolean isHttp(byte magic1, byte magic2) {
+        return
+                magic1 == 'G' && magic2 == 'E' || // GET
+                        magic1 == 'P' && magic2 == 'O' || // POST
+                        magic1 == 'P' && magic2 == 'U' || // PUT
+                        magic1 == 'H' && magic2 == 'E' || // HEAD
+                        magic1 == 'O' && magic2 == 'P' || // OPTIONS
+                        magic1 == 'P' && magic2 == 'A' || // PATCH
+                        magic1 == 'D' && magic2 == 'E' || // DELETE
+                        magic1 == 'T' && magic2 == 'R' || // TRACE
+                        magic1 == 'C' && magic2 == 'O';   // CONNECT
+    }
+}

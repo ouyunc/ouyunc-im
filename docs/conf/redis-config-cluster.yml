@@ -1,0 +1,96 @@
+# Redis 集群模式配置文件
+# 适用于大规模Redis部署，提供数据分片和水平扩展功能
+
+# 应用配置
+ouyunc:
+  # 缓存配置
+  cache:
+    redis:
+      # Redis数据库索引（集群模式下固定为0）
+      database: 0
+      # 超时时间 30秒
+      timeout: PT30S
+      # 连接超时时间 1分钟
+      connectTimeout: PT1M
+      # Redis服务器地址（集群模式下此配置会被忽略）
+      host: 127.0.0.1
+      # Redis服务器连接端口（集群模式下此配置会被忽略）
+      port: 6379
+      # Redis服务器连接密码
+      password: your-redis-password
+      # 客户端名称
+      clientName: ouyunc-im-cluster-client
+      # 客户端类型
+      clientType: LETTUCE
+      # SSL配置
+      ssl:
+        enabled: false
+        bundle: 
+      # 集群配置
+      cluster:
+        # 集群节点列表（至少需要3个主节点）
+        nodes:
+          - 192.168.1.100:7000
+          - 192.168.1.100:7001
+          - 192.168.1.100:7002
+          - 192.168.1.101:7000
+          - 192.168.1.101:7001
+          - 192.168.1.101:7002
+          - 192.168.1.102:7000
+          - 192.168.1.102:7001
+          - 192.168.1.102:7002
+        # 最大重定向次数
+        maxRedirects: 3
+      # Lettuce连接池配置
+      lettuce:
+        # 关闭超时时间
+        shutdownTimeout: PT0.1S
+        # 连接池配置
+        pool:
+          # 是否启用连接池
+          enabled: true
+          # 连接池最大连接数
+          maxActive: 64
+          # 连接池最大阻塞等待时间（使用负值表示没有限制）
+          maxWait: PT-0.001S
+          # 连接池中的最大空闲连接
+          maxIdle: 32
+          # 连接池中的最小空闲连接
+          minIdle: 8
+          # 空闲对象回收线程运行间隔时间
+          timeBetweenEvictionRuns: PT30S
+        # 集群拓扑刷新配置
+        cluster:
+          refresh:
+            # 是否动态刷新源（发现和查询所有集群节点）
+            dynamicRefreshSources: true
+            # 集群拓扑刷新周期
+            period: PT30S
+            # 是否使用自适应拓扑刷新
+            adaptive: true
+      # Jedis配置（如果使用Jedis客户端）
+      jedis:
+        pool:
+          enabled: true
+          maxActive: 64
+          maxWait: PT-0.001S
+          maxIdle: 32
+          minIdle: 8
+          timeBetweenEvictionRuns: PT30S
+
+
+# 集群模式部署说明
+# 1. 需要部署至少3个主节点和3个从节点（推荐6个节点）
+# 2. 每个节点需要不同的端口（如7000-7005）
+# 3. 集群会自动进行数据分片（16384个槽位）
+# 4. 支持水平扩展，可以动态添加节点
+# 5. 客户端通过集群节点获取完整的集群拓扑信息
+# 6. 支持故障转移，当主节点故障时从节点会自动提升为主节点
+
+# Redis集群节点配置示例
+# 节点1: 192.168.1.100:7000 (主)
+# 节点2: 192.168.1.100:7001 (主)  
+# 节点3: 192.168.1.100:7002 (主)
+# 节点4: 192.168.1.101:7000 (从)
+# 节点5: 192.168.1.101:7001 (从)
+# 节点6: 192.168.1.101:7002 (从)

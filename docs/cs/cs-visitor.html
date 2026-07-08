@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>客服访客端 · Mock</title>
+  <link rel="icon" href="data:image/ico;base64,aWNv" />
+  <style>
+    :root {
+      --primary: #1677ff;
+      --primary-dark: #0958d9;
+      --bg: #f5f7fa;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: linear-gradient(135deg, #eef2ff 0%, #f0fdf4 100%);
+      min-height: 100vh;
+      color: var(--text);
+    }
+    .demo-page { max-width: 960px; margin: 0 auto; padding: 48px 24px 120px; }
+    .demo-page h1 { font-size: 28px; margin-bottom: 8px; }
+    .demo-page p { color: var(--muted); line-height: 1.6; }
+    .demo-card {
+      margin-top: 24px;
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.06);
+      font-size: 13px;
+      line-height: 1.8;
+      color: #4b5563;
+    }
+    .demo-card code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+    .mock-badge {
+      display: inline-block;
+      background: #fef3c7;
+      color: #92400e;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-left: 8px;
+      font-weight: 600;
+    }
+    .api-log {
+      margin-top: 16px;
+      max-height: 160px;
+      overflow-y: auto;
+      background: #111827;
+      color: #a7f3d0;
+      padding: 12px;
+      border-radius: 8px;
+      font-family: ui-monospace, monospace;
+      font-size: 11px;
+      line-height: 1.6;
+    }
+
+    .cs-fab {
+      position: fixed; right: 24px; bottom: 24px;
+      width: 56px; height: 56px; border-radius: 50%;
+      background: var(--primary); color: #fff; border: none; cursor: pointer;
+      box-shadow: 0 8px 24px rgba(22,119,255,.4); font-size: 24px; z-index: 1000;
+    }
+    .cs-fab:hover { transform: scale(1.05); }
+
+    .cs-panel {
+      position: fixed; right: 24px; bottom: 96px;
+      width: 400px; max-width: calc(100vw - 32px);
+      height: 580px; max-height: calc(100vh - 120px);
+      background: #fff; border-radius: 16px;
+      box-shadow: 0 12px 48px rgba(0,0,0,.15);
+      display: none; flex-direction: column; overflow: hidden; z-index: 999;
+    }
+    .cs-panel.open { display: flex; }
+
+    .cs-header {
+      background: var(--primary); color: #fff; padding: 16px 20px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .cs-header-avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: rgba(255,255,255,.2);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .cs-header-info h3 { font-size: 15px; font-weight: 600; }
+    .cs-header-info span { font-size: 12px; opacity: .85; }
+    .cs-header-close { margin-left: auto; background: none; border: none; color: #fff; font-size: 20px; cursor: pointer; }
+
+    .cs-body { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+
+    .cs-prechat { padding: 24px 20px; display: flex; flex-direction: column; gap: 16px; }
+    .cs-prechat label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 6px; }
+    .cs-prechat input, .cs-prechat textarea, .cs-prechat select {
+      width: 100%; padding: 10px 12px; border: 1px solid var(--border);
+      border-radius: 8px; font-size: 14px;
+    }
+    .cs-prechat textarea { resize: vertical; min-height: 80px; }
+    .cs-btn-primary {
+      background: var(--primary); color: #fff; border: none;
+      padding: 12px; border-radius: 8px; font-size: 15px; cursor: pointer;
+    }
+    .cs-btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+
+    .cs-queue {
+      flex: 1; display: none; flex-direction: column; align-items: center;
+      justify-content: center; padding: 32px; text-align: center; background: var(--bg);
+    }
+    .cs-queue.show { display: flex; }
+    .cs-queue-spinner {
+      width: 48px; height: 48px; border: 3px solid var(--border);
+      border-top-color: var(--primary); border-radius: 50%;
+      animation: spin 1s linear infinite; margin-bottom: 20px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .cs-queue-pos { font-size: 32px; font-weight: 700; color: var(--primary); }
+    .cs-queue-hint { font-size: 13px; color: var(--muted); margin-top: 8px; }
+    .cs-btn-ghost {
+      margin-top: 20px; background: #fff; border: 1px solid var(--border);
+      padding: 8px 20px; border-radius: 8px; cursor: pointer; font-size: 13px;
+    }
+
+    .cs-messages { flex: 1; overflow-y: auto; padding: 16px; background: var(--bg); display: none; }
+    .cs-messages.show { display: block; }
+    .cs-msg { display: flex; margin-bottom: 12px; }
+    .cs-msg.me { justify-content: flex-end; }
+    .cs-msg-bubble {
+      max-width: 75%; padding: 10px 14px; border-radius: 12px;
+      font-size: 14px; line-height: 1.5; word-break: break-word;
+    }
+    .cs-msg.other .cs-msg-bubble { background: #fff; border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+    .cs-msg.me .cs-msg-bubble { background: var(--primary); color: #fff; border-bottom-right-radius: 4px; }
+    .cs-msg-wrap { display: flex; flex-direction: column; align-items: center; margin: 8px 0; }
+    .cs-system {
+      font-size: 12px; color: var(--muted); padding: 4px 12px;
+      background: rgba(0,0,0,.04); border-radius: 12px;
+    }
+
+    .cs-input-bar {
+      display: none; padding: 12px; border-top: 1px solid var(--border);
+      background: #fff; gap: 8px;
+    }
+    .cs-input-bar.show { display: flex; }
+    .cs-input-bar input {
+      flex: 1; padding: 10px 14px; border: 1px solid var(--border);
+      border-radius: 20px; font-size: 14px; outline: none;
+    }
+    .cs-send-btn {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: var(--primary); color: #fff; border: none; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="demo-page">
+    <h1>官网演示页 <span class="mock-badge">MOCK API</span></h1>
+    <p>右下角打开客服 Widget。所有接口走 <code>mock-api.js</code>，形状与 <code>ouyunc-cs-web</code> 一致。</p>
+    <div class="demo-card">
+      <strong>Mock 接口：</strong><br />
+      POST <code>/api/cs/route</code> · GET <code>/api/cs/queue/status</code> · POST <code>/api/cs/queue/leave</code><br />
+      IM 登录 mock：scope=6 (cs_visitor) · 消息 messageType=-17
+      <div class="api-log" id="apiLog">等待操作…</div>
+    </div>
+  </div>
+
+  <button class="cs-fab" id="fab" title="联系客服">💬</button>
+
+  <div class="cs-panel" id="panel">
+    <div class="cs-header">
+      <div class="cs-header-avatar">客</div>
+      <div class="cs-header-info">
+        <h3 id="headerTitle">在线客服</h3>
+        <span id="headerSub">Mock · 通常几分钟内回复</span>
+      </div>
+      <button class="cs-header-close" id="closeBtn">×</button>
+    </div>
+    <div class="cs-body">
+      <div class="cs-prechat" id="prechat">
+        <div>
+          <label>客户 ID（Mock identity）</label>
+          <input type="text" id="customerIdInput" value="visitor-demo-001" />
+        </div>
+        <div>
+          <label>您的称呼</label>
+          <input type="text" id="nameInput" value="访客小明" />
+        </div>
+        <div>
+          <label>咨询类型 → requiredSkill</label>
+          <select id="skillSelect">
+            <option value="GENERAL">GENERAL · 通用</option>
+            <option value="REFUND">REFUND · 售后</option>
+            <option value="TECH_SUPPORT">TECH_SUPPORT · 技术支持</option>
+          </select>
+        </div>
+        <div>
+          <label>首句 message</label>
+          <textarea id="msgInput">我想了解一下产品套餐价格</textarea>
+        </div>
+        <button class="cs-btn-primary" id="startBtn">开始咨询</button>
+      </div>
+
+      <div class="cs-queue" id="queueView">
+        <div class="cs-queue-spinner"></div>
+        <div>正在为您分配客服</div>
+        <div class="cs-queue-pos" id="queuePos">第 — 位</div>
+        <div class="cs-queue-hint" id="queueHint">轮询 queue/status…</div>
+        <button class="cs-btn-ghost" id="leaveQueueBtn">取消排队</button>
+      </div>
+
+      <div class="cs-messages" id="messages"></div>
+      <div class="cs-input-bar" id="inputBar">
+        <input type="text" id="chatInput" placeholder="输入消息…" />
+        <button class="cs-send-btn" id="sendBtn">➤</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="mock-api.js"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const api = window.CsMockApi;
+
+    const state = {
+      customerId: 'visitor-demo-001',
+      agentId: null,
+      queueTimer: null,
+    };
+
+    function logApi(label, req, res) {
+      const el = $('apiLog');
+      const line = '[' + new Date().toLocaleTimeString() + '] ' + label + '\n→ ' + JSON.stringify(req) + '\n← ' + JSON.stringify(res) + '\n\n';
+      el.textContent = line + el.textContent.slice(0, 2000);
+    }
+
+    function showPhase(phase) {
+      $('prechat').style.display = phase === 'prechat' ? 'flex' : 'none';
+      $('queueView').classList.toggle('show', phase === 'queue');
+      $('messages').classList.toggle('show', phase === 'chat');
+      $('inputBar').classList.toggle('show', phase === 'chat');
+    }
+
+    function addSystem(text) {
+      const wrap = document.createElement('div');
+      wrap.className = 'cs-msg-wrap';
+      wrap.innerHTML = '<div class="cs-system">' + text + '</div>';
+      $('messages').appendChild(wrap);
+      $('messages').scrollTop = $('messages').scrollHeight;
+    }
+
+    function addMsg(text, me) {
+      const div = document.createElement('div');
+      div.className = 'cs-msg ' + (me ? 'me' : 'other');
+      div.innerHTML = '<div class="cs-msg-bubble">' + escapeHtml(text) + '</div>';
+      $('messages').appendChild(div);
+      $('messages').scrollTop = $('messages').scrollHeight;
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function stopQueuePoll() {
+      if (state.queueTimer) {
+        clearInterval(state.queueTimer);
+        state.queueTimer = null;
+      }
+    }
+
+    async function connectAgent(agentId, firstMsg) {
+      stopQueuePoll();
+      state.agentId = agentId;
+      const agent = api.getAgentInfo(agentId);
+      const imLogin = api.buildImLoginMock(6, state.customerId);
+      const imTo = api.buildCsMessageMock(state.customerId, agentId, firstMsg);
+      logApi('IM login (mock)', imLogin, { ok: true });
+      logApi('IM send CUSTOMER_SERVICE (mock)', imTo, { ok: true });
+
+      showPhase('chat');
+      $('headerTitle').textContent = agent.agentName;
+      $('headerSub').textContent = '在线 · ' + agent.jobNo + ' · ' + agentId;
+      $('messages').innerHTML = '';
+      addSystem('已接入 ' + agent.agentName + '（Mock route 成功）');
+      addMsg(firstMsg, true);
+      setTimeout(() => {
+        addMsg('您好，我是' + agent.agentName + '，工号 ' + agent.jobNo + '，请问有什么可以帮您？', false);
+      }, 600);
+    }
+
+    function startQueuePoll() {
+      showPhase('queue');
+      $('headerSub').textContent = '排队中…';
+      stopQueuePoll();
+      state.queueTimer = setInterval(async () => {
+        try {
+          const res = await api.queueStatus(state.customerId);
+          logApi('GET /queue/status', { customerId: state.customerId }, res);
+          if (!res.inQueue) {
+            if (res.message && res.message.includes('已分配')) {
+              const agentId = res.message.replace(/.*已分配坐席\s*/, '').trim();
+              const firstMsg = $('msgInput').value.trim();
+              await connectAgent(agentId, firstMsg);
+            }
+            return;
+          }
+          $('queuePos').textContent = '第 ' + res.queuePosition + ' 位';
+          $('queueHint').textContent = '已等待 ' + res.waitedSeconds + ' 秒' + (res.timedOut ? ' · 已超时' : '');
+        } catch (e) {
+          logApi('queue/status ERROR', {}, { error: e.message });
+        }
+      }, 2000);
+    }
+
+    async function startConsult() {
+      const customerId = $('customerIdInput').value.trim();
+      const message = $('msgInput').value.trim();
+      const requiredSkill = $('skillSelect').value;
+      const customerName = $('nameInput').value.trim();
+      if (!customerId || !message) {
+        alert('请填写客户 ID 和咨询内容');
+        return;
+      }
+      state.customerId = customerId;
+      $('startBtn').disabled = true;
+
+      const req = { customerId, message, channel: 'web', appKey: 'default', requiredSkill, customerName };
+      try {
+        const res = await api.route(req);
+        logApi('POST /route', req, res);
+        if (res.success && res.agentId) {
+          await connectAgent(res.agentId, message);
+        } else if (res.queued) {
+          $('queuePos').textContent = '第 ' + res.queuePosition + ' 位';
+          $('queueHint').textContent = res.message || '已入队';
+          startQueuePoll();
+        } else {
+          alert(res.message || '分配失败');
+          showPhase('prechat');
+        }
+      } catch (e) {
+        logApi('route ERROR', req, { error: e.message });
+        alert('请求失败: ' + e.message);
+      } finally {
+        $('startBtn').disabled = false;
+      }
+    }
+
+    $('fab').onclick = () => { $('panel').classList.add('open'); $('fab').style.display = 'none'; };
+    $('closeBtn').onclick = () => { $('panel').classList.remove('open'); $('fab').style.display = 'block'; stopQueuePoll(); };
+    $('startBtn').onclick = startConsult;
+
+    $('leaveQueueBtn').onclick = async () => {
+      stopQueuePoll();
+      const res = await api.leaveQueue(state.customerId);
+      logApi('POST /queue/leave', { customerId: state.customerId }, res);
+      showPhase('prechat');
+      $('headerSub').textContent = 'Mock · 通常几分钟内回复';
+    };
+
+    $('sendBtn').onclick = async () => {
+      const t = $('chatInput').value.trim();
+      if (!t || !state.agentId) return;
+      addMsg(t, true);
+      $('chatInput').value = '';
+      const pkt = api.buildCsMessageMock(state.customerId, state.agentId, t);
+      logApi('IM send (mock)', pkt, { ok: true });
+      const res = await api.sendVisitorMessage(t);
+      if (res.autoReply) {
+        setTimeout(() => addMsg(res.autoReply, false), 500);
+      }
+    };
+    $('chatInput').onkeydown = (e) => { if (e.key === 'Enter') $('sendBtn').click(); };
+  </script>
+</body>
+</html>

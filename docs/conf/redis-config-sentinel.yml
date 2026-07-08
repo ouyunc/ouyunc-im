@@ -1,0 +1,85 @@
+# Redis 哨兵模式配置文件
+# 适用于高可用Redis部署，提供主从切换和故障转移功能
+
+# 应用配置
+ouyunc:
+  # 缓存配置
+  cache:
+    redis:
+      # Redis数据库索引（默认为0）
+      database: 0
+      # 超时时间 30秒
+      timeout: PT30S
+      # 连接超时时间 1分钟
+      connectTimeout: PT1M
+      # Redis服务器地址（哨兵模式下此配置会被忽略）
+      host: 127.0.0.1
+      # Redis服务器连接端口（哨兵模式下此配置会被忽略）
+      port: 6379
+      # Redis服务器连接密码
+      password: your-redis-password
+      # 客户端名称
+      clientName: ouyunc-im-sentinel-client
+      # 客户端类型
+      clientType: LETTUCE
+      # SSL配置
+      ssl:
+        enabled: false
+        bundle: 
+      # 哨兵配置
+      sentinel:
+        # 主服务器名称
+        master: mymaster
+        # 哨兵节点列表
+        nodes:
+          - 192.168.1.100:26379
+          - 192.168.1.101:26379
+          - 192.168.1.102:26379
+        # 哨兵认证用户名（可选）
+        username: 
+        # 哨兵认证密码（可选）
+        password: 
+      # Lettuce连接池配置
+      lettuce:
+        # 关闭超时时间
+        shutdownTimeout: PT100MS
+        # 连接池配置
+        pool:
+          # 是否启用连接池
+          enabled: true
+          # 连接池最大连接数
+          maxActive: 64
+          # 连接池最大阻塞等待时间（使用负值表示没有限制）
+          maxWait: PT-0.001S
+          # 连接池中的最大空闲连接
+          maxIdle: 32
+          # 连接池中的最小空闲连接
+          minIdle: 8
+          # 空闲对象回收线程运行间隔时间
+          timeBetweenEvictionRuns: PT30S
+        # 集群配置（哨兵模式下不使用）
+        cluster:
+          refresh:
+            # 是否动态刷新源
+            dynamicRefreshSources: true
+            # 集群拓扑刷新周期
+            period: PT30S
+            # 是否使用自适应拓扑刷新
+            adaptive: true
+      # Jedis配置（如果使用Jedis客户端）
+      jedis:
+        pool:
+          enabled: true
+          maxActive: 64
+          maxWait: PT-0.001S
+          maxIdle: 32
+          minIdle: 8
+          timeBetweenEvictionRuns: PT30S
+
+
+# 哨兵模式部署说明
+# 1. 需要部署Redis主从复制集群
+# 2. 需要部署Redis哨兵集群（通常3个或5个哨兵节点）
+# 3. 哨兵节点监控主从节点状态
+# 4. 当主节点故障时，哨兵会自动选举新的主节点
+# 5. 客户端通过哨兵节点获取当前主节点地址
