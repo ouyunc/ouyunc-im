@@ -8,13 +8,14 @@ import com.ouyunc.core.listener.EventListener;
 import com.ouyunc.core.listener.MessageEventListener;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.event.payload.ClientBusinessSessionIdlePayload;
+import com.ouyunc.message.handler.BusinessIdleStateHandler;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * 客户端业务会话空闲：按 {@link ClientBusinessSessionIdlePayload#strike()} 做提示 / 托管等；关连由
- * {@link com.ouyunc.message.handler.PingAwareBusinessIdleStateHandler} 在 {@link com.ouyunc.base.packet.message.content.LoginContent#getBusinessIdleCloseStrike()} {@code >=1} 且达到次数时关连；{@code <=0} 不关。
+ * {@link BusinessIdleStateHandler} 在 {@link com.ouyunc.base.packet.message.content.LoginContent#getBusinessIdleCloseStrike()} {@code >=1} 且达到次数时关连；{@code <=0} 不关。
  */
 @EventListener(order = 100, ring = EventRingEnum.CLIENT_BUSINESS_SESSION_IDLE)
 class ClientBusinessSessionIdleMessageEventListener implements MessageEventListener<MessageEvent> {

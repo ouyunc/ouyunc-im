@@ -5,15 +5,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="http">
-      <change beforePath="$PROJECT_DIR$/docs/6.5.4/message-delivery-channel.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/6.5.4/message-delivery-channel.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/.flattened-pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/.flattened-pom.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/ouyunc-mq-rocket/.flattened-pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/ouyunc-mq-rocket/.flattened-pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/cs/CsImSessionRoute.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/cs/CsImSessionRoute.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/cs/CsImSessionRouteFields.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/cs/CsImSessionRouteFields.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/cs/CsImSessionRouteReader.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/cs/CsImSessionRouteReader.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/DeliveryChannelSupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/DeliveryChannelSupport.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/CsMessageDeliveryRouter.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/CsMessageDeliveryRouter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/MessageDeliveryRouter.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/MessageDeliveryRouter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/handler/AuthenticationHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/handler/AuthenticationHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/handler/PingAwareBusinessIdleStateHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/handler/BusinessIdleStateHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/ClientBusinessSessionIdleMessageEventListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/ClientBusinessSessionIdleMessageEventListener.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -59,10 +56,10 @@
   <component name="MavenImportPreferences">
     <option name="generalSettings">
       <MavenGeneralSettings>
-        <option name="customMavenHome" value="C:\Program Files\apache-maven-3.9.9" />
+        <option name="customMavenHome" value="C:\Program Files\apache-maven-3.6.3" />
         <option name="localRepository" value="D:\repository" />
         <option name="mavenHomeTypeForPersistence" value="CUSTOM" />
-        <option name="userSettingsFile" value="C:\Program Files\apache-maven-3.9.9\conf\ali-settings.xml" />
+        <option name="userSettingsFile" value="C:\Program Files\apache-maven-3.6.3\conf\ali-settings.xml" />
       </MavenGeneralSettings>
     </option>
   </component>
@@ -71,68 +68,68 @@
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.2554480852908086E-25" />
-      <entry key="MS500" value="1.0465494450306674E-5" />
-      <entry key="S2" value="0.05687742650505618" />
-      <entry key="S5" value="0.31766983333552357" />
-      <entry key="S10" value="0.5636220660473857" />
-      <entry key="S30" value="0.8260303336515207" />
-      <entry key="S60" value="0.9088621092616418" />
-      <entry key="M2" value="0.9533425980525793" />
-      <entry key="M5" value="0.9810691052100267" />
-      <entry key="M10" value="0.9904893261464388" />
-      <entry key="M15" value="0.9936494577205925" />
-      <entry key="M30" value="0.9968196716163675" />
-      <entry key="H1" value="0.998411231892552" />
-      <entry key="H2" value="1.0084215234771166" />
-      <entry key="H4" value="1.6443337432833074" />
-      <entry key="D1" value="32.28900065873" />
-      <entry key="W1" value="73.04977565502433" />
+      <entry key="MS100" value="1.0" />
+      <entry key="MS500" value="1.0" />
+      <entry key="S2" value="1.0" />
+      <entry key="S5" value="1.0" />
+      <entry key="S10" value="1.0" />
+      <entry key="S30" value="1.0000000000015936" />
+      <entry key="S60" value="1.0000012623849428" />
+      <entry key="M2" value="1.0011235590517458" />
+      <entry key="M5" value="1.0661056167057164" />
+      <entry key="M10" value="1.257110125638249" />
+      <entry key="M15" value="1.4043394540751102" />
+      <entry key="M30" value="1.6358769173947296" />
+      <entry key="H1" value="1.7974210360445295" />
+      <entry key="H2" value="1.9012208311975582" />
+      <entry key="H4" value="2.554477808683174" />
+      <entry key="D1" value="32.98799578439357" />
+      <entry key="W1" value="73.9521010953695" />
     </decayedCancelled>
     <decayedSelected>
-      <entry key="MS100" value="1.000004895881262" />
-      <entry key="MS500" value="1.0869862810988324" />
-      <entry key="S2" value="1.6738747547849804" />
-      <entry key="S5" value="2.2269300417220244" />
-      <entry key="S10" value="2.5511419726029523" />
-      <entry key="S30" value="2.8334536051409405" />
-      <entry key="S60" value="2.914381755359889" />
-      <entry key="M2" value="2.95658582535721" />
-      <entry key="M5" value="2.9824866399044883" />
-      <entry key="M10" value="2.9912184953407115" />
-      <entry key="M15" value="2.994140131344399" />
-      <entry key="M30" value="2.997067295644605" />
-      <entry key="H1" value="2.998534343785773" />
-      <entry key="H2" value="3.004049034792375" />
-      <entry key="H4" value="3.3179788172418347" />
-      <entry key="D1" value="16.353963007164033" />
-      <entry key="W1" value="33.12238343084849" />
+      <entry key="MS100" value="0.0" />
+      <entry key="MS500" value="0.0" />
+      <entry key="S2" value="3.1954880330572236E-176" />
+      <entry key="S5" value="1.148238933455919E-70" />
+      <entry key="S10" value="1.831881915341628E-35" />
+      <entry key="S30" value="5.466429125255211E-12" />
+      <entry key="S60" value="4.047997609241146E-6" />
+      <entry key="M2" value="0.0034844753325083324" />
+      <entry key="M5" value="0.20096353824661328" />
+      <entry key="M10" value="0.7764571942845971" />
+      <entry key="M15" value="1.2183864004810834" />
+      <entry key="M30" value="1.9118462119520612" />
+      <entry key="H1" value="2.3948993026693848" />
+      <entry key="H2" value="2.684702284773518" />
+      <entry key="H4" value="3.1366652068968928" />
+      <entry key="D1" value="16.20150791473481" />
+      <entry key="W1" value="33.078095625891976" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="0.00156458960466846" />
-      <entry key="MS500" value="0.27577617599950677" />
-      <entry key="S2" value="1.0165429649639004" />
-      <entry key="S5" value="2.015472176398248" />
-      <entry key="S10" value="2.772383064065386" />
-      <entry key="S30" value="3.5217844602343593" />
-      <entry key="S60" value="3.7509401661754556" />
-      <entry key="M2" value="3.8728696837703676" />
-      <entry key="M5" value="3.948508790002663" />
-      <entry key="M10" value="3.97414660610235" />
-      <entry key="M15" value="3.9827403555926266" />
-      <entry key="M30" value="3.991358129620813" />
-      <entry key="H1" value="3.9956800983118286" />
-      <entry key="H2" value="4.011835009435278" />
-      <entry key="H4" value="4.96191515246428" />
-      <entry key="D1" value="48.642350415664346" />
-      <entry key="W1" value="106.17196181167304" />
+      <entry key="MS100" value="0.0040440036087553794" />
+      <entry key="MS500" value="0.33217145352412786" />
+      <entry key="S2" value="0.7591726901037946" />
+      <entry key="S5" value="0.8956456700908493" />
+      <entry key="S10" value="0.9463855821444287" />
+      <entry key="S30" value="0.9817992706016768" />
+      <entry key="S60" value="0.9908630557604519" />
+      <entry key="M2" value="0.9999827864177115" />
+      <entry key="M5" value="1.2642201189425153" />
+      <entry key="M10" value="2.0306865895862654" />
+      <entry key="M15" value="2.6200591094888037" />
+      <entry key="M30" value="3.545803876336802" />
+      <entry key="H1" value="4.191156556347292" />
+      <entry key="H2" value="4.585278597361934" />
+      <entry key="H4" value="5.690729057432633" />
+      <entry key="D1" value="49.18888978785025" />
+      <entry key="W1" value="107.02999879970568" />
     </decayedShown>
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 0
 }</component>
   <component name="ProjectId" id="2ufM82eHzwWazomtA8rAeEDAhv6" />
-  <component name="ProjectLevelVcsManager" settingsEditedManually="true">
+  <component name="ProjectLevelVcsManager">
     <ConfirmationsSetting value="2" id="Add" />
   </component>
   <component name="ProjectViewState">

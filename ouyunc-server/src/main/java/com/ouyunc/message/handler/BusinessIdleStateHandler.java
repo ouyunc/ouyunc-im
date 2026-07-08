@@ -24,9 +24,9 @@ import java.util.concurrent.TimeUnit;
  * 是否关连由登录 {@link com.ouyunc.base.packet.message.content.LoginContent#getBusinessIdleCloseStrike()} 决定（{@code <=0} 不关，{@code >=1} 为第 N 次关），达到次数时在本 handler 内 {@link ChannelHandlerContext#close()}。
  * 非 PING 业务上行会清零 {@code strike} 并重新计时。
  */
-public class PingAwareBusinessIdleStateHandler extends IdleStateHandler {
+public class BusinessIdleStateHandler extends IdleStateHandler {
 
-    public PingAwareBusinessIdleStateHandler(long businessIdleSeconds) {
+    public BusinessIdleStateHandler(long businessIdleSeconds) {
         super(businessIdleSeconds, 0L, 0L, TimeUnit.SECONDS);
     }
 

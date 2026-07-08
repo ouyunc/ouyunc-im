@@ -344,7 +344,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
 
     /**
      * 登录成功后安装管道：心跳读空闲（第一个 {@link IdleStateHandler} + {@link HeartBeatHandler}，可选）；
-     * 业务读空闲为 {@link PingAwareBusinessIdleStateHandler}（继承 {@link IdleStateHandler}，合并 PING 与读空闲事件处理，少一层 handler）。
+     * 业务读空闲为 {@link BusinessIdleStateHandler}（继承 {@link IdleStateHandler}，合并 PING 与读空闲事件处理，少一层 handler）。
      */
     private void installLoginIdlePipeline(ChannelHandlerContext ctx, LoginContent loginContent) {
         String pipelineAnchor = MessageConstant.CONVERT_2_PACKET_HANDLER;
@@ -364,7 +364,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
             return;
         }
         int bizSec = loginContent.getBusinessIdleSeconds();
-        ctx.pipeline().addAfter(pipelineAnchor, MessageConstant.BUSINESS_READ_IDLE_HANDLER, new PingAwareBusinessIdleStateHandler(bizSec));
+        ctx.pipeline().addAfter(pipelineAnchor, MessageConstant.BUSINESS_READ_IDLE_HANDLER, new BusinessIdleStateHandler(bizSec));
     }
 
     /***
