@@ -27,7 +27,7 @@ public final class MessageDeliveryRouter {
     }
 
     /**
-     * 单聊/客服：发送方多设备同步 + 按接收方 channel 投递。
+     * 单聊：发送方多设备同步 + 按接收方好友 channel 投递。
      */
     public static void deliverPeerMessage(Packet packet, boolean forceSelfSync) {
         Message message = packet.getMessage();
@@ -38,7 +38,7 @@ public final class MessageDeliveryRouter {
         String recipientId = message.getTo();
         MessageDeliveryChannelEnum channel =
                 DefaultRepository.INSTANCE.resolveFriendDeliveryChannel(appKey, senderId, recipientId);
-        routeToRecipient(packet, recipientId, channel, "单聊/客服");
+        routeToRecipient(packet, recipientId, channel, "单聊");
     }
 
     /**

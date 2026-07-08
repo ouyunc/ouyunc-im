@@ -9,9 +9,15 @@ public record CsImSessionRoute(
         String userId,
         String serviceIdentity,
         String assigneeId,
-        Integer status) {
+        Integer status,
+        String channel) {
 
     public boolean isActive(int inProgressStatus) {
         return status == null || status == inProgressStatus;
+    }
+
+    /** 访客是否外渠进线（whatsapp / telegram / line）。 */
+    public boolean isExternalVisitorChannel() {
+        return CsDeliveryChannelHelper.isExternalVisitorRoute(this);
     }
 }

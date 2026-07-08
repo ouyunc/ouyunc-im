@@ -32,10 +32,8 @@ public final class DeliveryChannelSupport {
     }
 
     /**
-     * 发送方视角：对端好友（{@code friendUserId=peerUserId}）的投递渠道。
-     * <p>
-     * 客服场景通常只维护坐席→客户的好友记录（channel=WHATSAPP）；客户上行推坐席时
-     * 无反向记录则默认 IM。
+     * 发送方视角：对端好友（{@code friendUserId=peerUserId}）的投递渠道（单聊等场景）。
+     * <p>客服会话见 {@link com.ouyunc.message.helper.CsMessageDeliveryRouter}，不查好友表。</p>
      */
     public MessageDeliveryChannelEnum resolveFriendDeliveryChannel(String appKey, String ownerUserId, String peerUserId) {
         FriendEntity friend = friendSupport.getFriendEntity(appKey, ownerUserId, peerUserId);

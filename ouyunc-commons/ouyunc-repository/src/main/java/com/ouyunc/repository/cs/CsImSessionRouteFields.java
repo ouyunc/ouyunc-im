@@ -14,10 +14,12 @@ public final class CsImSessionRouteFields {
     public static final String SERVICE_IDENTITY = "serviceIdentity";
     public static final String ASSIGNEE_ID = "assigneeId";
     public static final String STATUS = "status";
+    /** 进线渠道，与 CS {@code CsSessionRouteHashFields.CHANNEL} 对齐 */
+    public static final String CHANNEL = "channel";
 
     /** IM 消息投递所需 field 顺序（与 {@link #multiGetFieldOrder()} 一致）。 */
     public static final List<String> READ_FIELDS =
-            List.of(TICKET_ID, SESSION_ID, USER_ID, SERVICE_IDENTITY, ASSIGNEE_ID, STATUS);
+            List.of(TICKET_ID, SESSION_ID, USER_ID, SERVICE_IDENTITY, ASSIGNEE_ID, STATUS, CHANNEL);
 
     private CsImSessionRouteFields() {}
 }

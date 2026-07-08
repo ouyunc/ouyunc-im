@@ -7,6 +7,7 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.repository.DefaultRepository;
+import com.ouyunc.repository.cs.CsDeliveryChannelHelper;
 import com.ouyunc.repository.cs.CsImSessionRoute;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -16,7 +17,7 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 
 /**
- * 客服 IM 投递：{@code service_identity} 解析为当前 {@code assigneeId} 的在线 Channel。
+ * 客服 IM 投递：{@code service_identity} 解析为当前 {@code assigneeId}；外渠访客按 route.channel 走 Kafka 出站。
  */
 public final class CsMessageDeliveryRouter {
 
@@ -39,11 +40,12 @@ public final class CsMessageDeliveryRouter {
             log.debug("客服消息暂无 IM 投递目标 to={}, 已落库", message.getTo());
             return;
         }
-        MessageDeliveryChannelEnum channel = DefaultRepository.INSTANCE.resolveFriendDeliveryChannel(
-                appKey, message.getFrom(), recipientId);
+        MessageDeliveryChannelEnum channel = resolveCsRecipientDeliveryChannel(route, recipientId);
         if (channel.isIm()) {
             pushImUserIfOnline(packet, appKey, recipientId);
         } else {
+            log.debug("客服外渠下行, ticketId={}, to={}, channel={}, packetId={}",
+                    route.ticketId(), recipientId, channel.getKey(), packet.getPacketId());
             DefaultRepository.INSTANCE.publishExternalChannelOutbound(packet, recipientId, channel);
         }
     }
@@ -60,10 +62,15 @@ public final class CsMessageDeliveryRouter {
             log.debug("已读回执暂无投递目标 to={}", message.getTo());
             return;
         }
-        List<LoginClientInfo> senderClients = ClientHelper.onlineAll(appKey, recipientId);
-        if (CollectionUtils.isNotEmpty(senderClients)) {
-            MessageHelper.asyncSendMessage(packet, senderClients);
+        MessageDeliveryChannelEnum channel = resolveCsRecipientDeliveryChannel(route, recipientId);
+        if (channel.isIm()) {
+            List<LoginClientInfo> senderClients = ClientHelper.onlineAll(appKey, recipientId);
+            if (CollectionUtils.isNotEmpty(senderClients)) {
+                MessageHelper.asyncSendMessage(packet, senderClients);
+            }
+            return;
         }
+        DefaultRepository.INSTANCE.publishExternalChannelOutbound(packet, recipientId, channel);
     }
 
     public static String resolveImRecipientId(String recipientId, CsImSessionRoute route) {
@@ -74,6 +81,11 @@ public final class CsMessageDeliveryRouter {
             return route.assigneeId();
         }
         return recipientId;
+    }
+
+    static MessageDeliveryChannelEnum resolveCsRecipientDeliveryChannel(
+            CsImSessionRoute route, String recipientId) {
+        return CsDeliveryChannelHelper.resolveRecipientChannel(route, recipientId);
     }
 
     private static void pushImUserIfOnline(Packet packet, String appKey, String userId) {

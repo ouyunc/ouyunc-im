@@ -15,11 +15,16 @@
 
 持久化成功后：
 
-1. 单聊/客服：`MessageDeliveryRouter.deliverPeerMessage`
+1. 单聊：`MessageDeliveryRouter.deliverPeerMessage`
    - 查 `friend(sender, recipient).channel`
    - `IM` → 长连接推送到 recipient 所有在线设备
    - 外渠 → Kafka `ouyunc_external_channel_outbound`（`ExternalChannelOutboundPayload`）
-2. 群聊：按成员 `GroupUserEntity.channel` 分别 IM 推送或外渠 Kafka
+2. 客服：`CsMessageDeliveryRouter.deliverCustomerServiceMessage`
+   - **不查好友表**；坐席始终 IM 长连接
+   - 访客按 Redis route Hash 的 `channel`（与 `cs_consultation_ticket.channel` 对齐）：
+     - `im` / `web` / `app` / `h5` / `pc` → IM
+     - `whatsapp` / `telegram` / `line` → Kafka `ouyunc_external_channel_outbound`
+3. 群聊：按成员 `GroupUserEntity.channel` 分别 IM 推送或外渠 Kafka
 
 ## 防回声
 
@@ -34,6 +39,15 @@
 - `ingressChannel`: `whatsapp` / `telegram` → 设置 `metadata.ingressSource`
 - `externalMessageId`: 厂商消息 ID
 
-## 客服绑定
+## 客服投递
 
-通常只维护 `friend(坐席, 客户).channel=WHATSAPP`；客户上行推坐席时无反向好友记录，默认 `IM`。
+客服会话与好友关系解耦。CS 分配坐席写入 Redis route Hash 时带上 `channel` 字段；IM 读 `CsImSessionRoute.channel` 决定访客下行渠道。
+
+| ticket.channel | 访客下行 |
+|----------------|----------|
+| im / web / app / h5 / pc | IM 长连接 |
+| whatsapp | Kafka → WhatsApp 适配 |
+| telegram | Kafka → Telegram 适配 |
+| line | Kafka → Line 适配 |
+
+坐席侧始终 IM。已部署环境若 route 缺 `channel`，需重新分配/绑定 route 或等 ticket 关闭后新建。

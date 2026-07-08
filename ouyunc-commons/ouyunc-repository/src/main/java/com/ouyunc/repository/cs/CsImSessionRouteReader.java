@@ -43,7 +43,8 @@ public final class CsImSessionRouteReader {
                 userId,
                 serviceIdentity,
                 assigneeId,
-                parseStatus(map.get(CsImSessionRouteFields.STATUS)));
+                parseStatus(map.get(CsImSessionRouteFields.STATUS)),
+                map.get(CsImSessionRouteFields.CHANNEL));
     }
 
     private static Integer parseStatus(String raw) {
