@@ -19,11 +19,11 @@ import java.util.Set;
 /**
  * 按好友/群成员 {@code channel} 路由下行：IM 多设备推送或外部渠道 Kafka 出站。
  */
-public final class MessageDeliveryRouter {
+public final class MessageDeliveryRouteHelper {
 
-    private static final Logger log = LoggerFactory.getLogger(MessageDeliveryRouter.class);
+    private static final Logger log = LoggerFactory.getLogger(MessageDeliveryRouteHelper.class);
 
-    private MessageDeliveryRouter() {
+    private MessageDeliveryRouteHelper() {
     }
 
     /**

@@ -2,6 +2,10 @@ ouyunc:
   message:
     log:
       level: DEBUG
+    cs:
+      ticket-activity:
+        enabled: true
+        topic: ouyunc-cs-ticket-activity
   cache:
     redis:
       database: 0

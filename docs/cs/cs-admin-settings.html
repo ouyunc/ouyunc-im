@@ -32,6 +32,7 @@
         <a href="#agents" data-section="agents">坐席管理</a>
         <a href="#schedules" data-section="schedules">排班计划</a>
         <a href="#routing" data-section="routing">分配规则</a>
+        <a href="#idle" data-section="idle">空闲/托管</a>
       </nav>
     </aside>
 
@@ -193,6 +194,54 @@
           </div>
           <div class="btn-row">
             <button class="btn btn-primary" id="saveRoutingBtn">保存分配规则</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 空闲 / 托管策略 -->
+      <section id="sec-idle" style="display:none">
+        <h1>空闲 / 托管策略</h1>
+        <p class="settings-desc">平台级默认 SLA：访客沉默、坐席未回复、双桶并发（active + hosted）。对应 <code>POST /api/cs/admin/idle-policies</code>。</p>
+        <div class="card">
+          <div class="card-title">平台默认（scopeType=0, scopeId=*）</div>
+          <div class="form-grid">
+            <div class="field">
+              <label>访客沉默提醒（秒）</label>
+              <input type="number" id="visitorIdleWarn" min="30" />
+            </div>
+            <div class="field">
+              <label>访客沉默托管（秒）</label>
+              <input type="number" id="visitorIdleHost" min="60" />
+            </div>
+            <div class="field">
+              <label>访客沉默关单（秒）</label>
+              <input type="number" id="visitorIdleClose" min="60" />
+            </div>
+            <div class="field">
+              <label>坐席未回复提醒（秒）</label>
+              <input type="number" id="agentReplyWarn" min="30" />
+            </div>
+            <div class="field">
+              <label>坐席未回复托管（秒）</label>
+              <input type="number" id="agentReplyHost" min="60" />
+            </div>
+            <div class="field">
+              <label>托管槽比例（相对 maxConcurrent）</label>
+              <input type="number" id="maxHostedRatio" min="0.1" max="2" step="0.1" />
+            </div>
+            <div class="field">
+              <label>托管槽绝对上限</label>
+              <input type="number" id="maxHostedAbsolute" min="1" />
+            </div>
+            <div class="field">
+              <label>托管最长空闲（秒）</label>
+              <input type="number" id="hostedMaxIdle" min="300" />
+            </div>
+          </div>
+          <label class="chk-row" style="margin-top:12px"><input type="checkbox" id="visitorIdleCloseEnabled" /> 访客沉默自动关单</label>
+          <label class="chk-row"><input type="checkbox" id="resumeOnVisitorMessage" /> 访客发消息自动恢复托管</label>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="saveIdleBtn">保存空闲策略</button>
           </div>
         </div>
       </section>
@@ -587,6 +636,41 @@
       toast('分配规则已保存');
     };
 
+    async function loadIdlePolicy() {
+      const list = await api.listIdlePolicies();
+      const p = (list || []).find(function (x) { return x.scopeType === 0; }) || list[0] || {};
+      document.getElementById('visitorIdleWarn').value = p.visitorIdleWarnSec ?? 120;
+      document.getElementById('visitorIdleHost').value = p.visitorIdleHostSec ?? 180;
+      document.getElementById('visitorIdleClose').value = p.visitorIdleCloseSec ?? 300;
+      document.getElementById('agentReplyWarn').value = p.agentReplyWarnSec ?? 60;
+      document.getElementById('agentReplyHost').value = p.agentReplyHostSec ?? 120;
+      document.getElementById('maxHostedRatio').value = p.maxHostedRatio ?? 0.5;
+      document.getElementById('maxHostedAbsolute').value = p.maxHostedAbsolute ?? 3;
+      document.getElementById('hostedMaxIdle').value = p.hostedMaxIdleSec ?? 86400;
+      document.getElementById('visitorIdleCloseEnabled').checked = p.visitorIdleCloseEnabled !== false;
+      document.getElementById('resumeOnVisitorMessage').checked = p.resumeOnVisitorMessage !== false;
+    }
+
+    document.getElementById('saveIdleBtn').onclick = async function () {
+      const dto = {
+        scopeType: 0,
+        scopeId: '*',
+        enabled: true,
+        visitorIdleWarnSec: +document.getElementById('visitorIdleWarn').value,
+        visitorIdleHostSec: +document.getElementById('visitorIdleHost').value,
+        visitorIdleCloseSec: +document.getElementById('visitorIdleClose').value,
+        visitorIdleCloseEnabled: document.getElementById('visitorIdleCloseEnabled').checked,
+        agentReplyWarnSec: +document.getElementById('agentReplyWarn').value,
+        agentReplyHostSec: +document.getElementById('agentReplyHost').value,
+        maxHostedRatio: +document.getElementById('maxHostedRatio').value,
+        maxHostedAbsolute: +document.getElementById('maxHostedAbsolute').value,
+        hostedMaxIdleSec: +document.getElementById('hostedMaxIdle').value,
+        resumeOnVisitorMessage: document.getElementById('resumeOnVisitorMessage').checked,
+      };
+      await api.saveIdlePolicy(dto);
+      toast('空闲/托管策略已保存');
+    };
+
     document.getElementById('logToggle').onclick = function () {
       const el = document.getElementById('apiLog');
       el.style.display = el.style.display === 'none' ? 'block' : 'none';
@@ -598,8 +682,9 @@
       await loadSkills();
       await loadSchedules();
       await loadRouting();
+      await loadIdlePolicy();
       const hash = (location.hash || '#general').slice(1);
-      showSection(['general', 'skills', 'agents', 'schedules', 'routing'].includes(hash) ? hash : 'general');
+      showSection(['general', 'skills', 'agents', 'schedules', 'routing', 'idle'].includes(hash) ? hash : 'general');
     })();
   </script>
 </body>

@@ -12,6 +12,11 @@ public class MessageConstant {
     public static final String OUYUNC = "ouyunc";
 
     /**
+     * 租户 appKey 默认值（metadata / 请求未传时使用）。
+     */
+    public static final String DEFAULT_APP_KEY = OUYUNC;
+
+    /**
      * 下划线
      */
     public static final String UNDERLINE = "_";
@@ -699,5 +704,21 @@ public class MessageConstant {
      * 同一设备类型，异设备（sn 不同）远程登录通知
      */
     public static final String REMOTE_LOGIN_NOTIFICATIONS = "你的ouyunc账号在另一台设备(ip: %s)上登录，你已被迫下线。如果本人不知晓，请立即冻结账号，并及时修改相关密码。";
+
+    /** 客服座席：首次业务读空闲提示（scope=cs_agent） */
+    public static final String BUSINESS_IDLE_PROMPT_CS_AGENT =
+            "您已有一段时间未操作，会话仍保持连接；请继续处理咨询或发送消息以保持在线。";
+
+    /** 客服访客：首次业务读空闲提示（scope=cs_visitor） */
+    public static final String BUSINESS_IDLE_PROMPT_CS_VISITOR =
+            "您已有一段时间未发送消息，如需继续咨询请直接输入。";
+
+    /** 第 2 次业务空闲且仍将关连：%d 为 {@code businessIdleSeconds} */
+    public static final String BUSINESS_IDLE_PRE_CLOSE =
+            "长时间无操作，若 %d 秒内仍无消息，连接将自动断开。";
+
+    /** 第 2 次业务空闲但不关连（{@code businessIdleCloseStrike <= 0} 或已达末档前） */
+    public static final String BUSINESS_IDLE_REPEAT_PROMPT =
+            "长时间无操作，请发送任意消息以保持连接。";
 
 }

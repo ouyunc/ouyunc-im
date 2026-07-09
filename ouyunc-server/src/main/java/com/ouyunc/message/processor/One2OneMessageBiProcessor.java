@@ -19,7 +19,7 @@ import com.ouyunc.base.constant.enums.IdentityType;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.AtMentionHelper;
 import com.ouyunc.message.helper.ClientHelper;
-import com.ouyunc.message.helper.MessageDeliveryRouter;
+import com.ouyunc.message.helper.MessageDeliveryRouteHelper;
 import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.helper.MessageRefHelper;
 import com.ouyunc.message.validator.*;
@@ -234,7 +234,7 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
      * @param packet
      */
     private void deliverAndFireNext(ChannelHandlerContext ctx, Packet packet, Boolean forceSelfSync) {
-        MessageDeliveryRouter.deliverPeerMessage(packet, Boolean.TRUE.equals(forceSelfSync));
+        MessageDeliveryRouteHelper.deliverPeerMessage(packet, Boolean.TRUE.equals(forceSelfSync));
         ctx.fireChannelRead(packet);
     }
 

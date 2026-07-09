@@ -16,7 +16,7 @@ import com.ouyunc.base.constant.enums.IdentityType;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.AtMentionHelper;
 import com.ouyunc.message.helper.ClientHelper;
-import com.ouyunc.message.helper.MessageDeliveryRouter;
+import com.ouyunc.message.helper.MessageDeliveryRouteHelper;
 import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.helper.MessageRefHelper;
 import com.ouyunc.message.processor.http.push.IngressPacketHelper;
@@ -31,7 +31,6 @@ import reactor.core.publisher.Mono;
 
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -353,7 +352,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
 
 
     private void deliver2AllGroupMembers(Packet packet, Set<String> groupMembers) {
-        MessageDeliveryRouter.deliverGroupMembers(packet, groupMembers);
+        MessageDeliveryRouteHelper.deliverGroupMembers(packet, groupMembers);
     }
 
     private void deliver2AtMessage(Packet packet, List<String> atList, Set<String> groupMembers) {
@@ -385,6 +384,6 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
 
     private void deliverMessage(Packet packet, String memberIdentity) {
         Message message = packet.getMessage();
-        MessageDeliveryRouter.deliverGroupMember(packet, message.getTo(), memberIdentity);
+        MessageDeliveryRouteHelper.deliverGroupMember(packet, message.getTo(), memberIdentity);
     }
 }

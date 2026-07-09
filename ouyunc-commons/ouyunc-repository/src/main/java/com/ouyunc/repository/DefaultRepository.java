@@ -51,6 +51,10 @@ public enum DefaultRepository implements Repository {
         RepositorySupports.MQ.publishArchiveAsync(packet);
     }
 
+    public void publishJsonAsync(String topic, String key, String jsonBody, String failureContext) {
+        RepositorySupports.MQ.publishJsonAsync(topic, key, jsonBody, failureContext);
+    }
+
     @Override
     public boolean checkDup(Packet packet, String channelLoginIdentity) {
         return RepositorySupports.QOS.checkDup(packet, channelLoginIdentity);

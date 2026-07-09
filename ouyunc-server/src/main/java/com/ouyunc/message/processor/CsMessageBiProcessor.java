@@ -18,8 +18,9 @@ import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.message.context.MessageServerContext;
-import com.ouyunc.message.helper.CsMessageDeliveryRouter;
+import com.ouyunc.message.helper.CsMessageDeliveryRouteHelper;
 import com.ouyunc.message.helper.CsSessionMessageHelper;
+import com.ouyunc.message.helper.CsTicketActivityNotifyHelper;
 import com.ouyunc.message.helper.CsSessionMessageHelper.PrepareOutcome;
 import com.ouyunc.message.helper.MessageRefHelper;
 import com.ouyunc.message.validator.AuthValidator;
@@ -86,6 +87,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
                     }
                     if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() != contentType) {
                         CsCustomerServiceLastMessageHelper.saveChatLastMessage(repository(), route, packet);
+                        CsTicketActivityNotifyHelper.notifyAfterSave(packet, route);
                     }
                     if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() != contentType) {
                         repository().reactiveAdvanceCsSenderReadOffsetOnSend(
@@ -99,7 +101,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
                     if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
                         handleWithdrawMessage(ctx, packet, route);
                     } else {
-                        CsMessageDeliveryRouter.deliverCustomerServiceMessage(packet, route, false);
+                        CsMessageDeliveryRouteHelper.deliverCustomerServiceMessage(packet, route, false);
                         ctx.fireChannelRead(packet);
                     }
                 },
@@ -157,7 +159,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
                                 packet, ticketScopeId, MessageIndexScope.CS_TICKET, packets),
                         (ctx0, packet0) -> {
                             qosAckOnSuccess(ctx0, packet0);
-                            CsMessageDeliveryRouter.deliverCustomerServiceMessage(packet0, route, true);
+                            CsMessageDeliveryRouteHelper.deliverCustomerServiceMessage(packet0, route, true);
                             if (StringUtils.isNoneBlank(ticketScopeId, appKey)) {
                                 repository().refreshCsTicketLastMessageAfterWithdraw(appKey, ticketScopeId);
                             }
@@ -188,7 +190,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
                                 MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP),
                         (ctx0, packet0) -> {
                             qosAckOnSuccess(ctx0, packet0);
-                            CsMessageDeliveryRouter.deliverReadReceiptToOriginalSender(packet0, route);
+                            CsMessageDeliveryRouteHelper.deliverReadReceiptToOriginalSender(packet0, route);
                             ctx0.fireChannelRead(packet0);
                         },
                         (exceptionEvent) -> MessageServerContext.publishEvent(exceptionEvent, true),

@@ -13,7 +13,7 @@ import com.ouyunc.base.constant.enums.IdentityType;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.AtMentionHelper;
 import com.ouyunc.message.helper.ClientHelper;
-import com.ouyunc.message.helper.MessageDeliveryRouter;
+import com.ouyunc.message.helper.MessageDeliveryRouteHelper;
 import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.helper.MessageRefHelper;
 import com.ouyunc.message.processor.http.push.IngressPacketHelper;
@@ -124,14 +124,14 @@ public enum GroupHttpPushDeliveryStrategy implements HttpProcessor {
     }
 
     private static void deliverToAllGroupMembers(Packet packet, Set<String> groupMembers) {
-        MessageDeliveryRouter.deliverGroupMembers(packet, groupMembers);
+        MessageDeliveryRouteHelper.deliverGroupMembers(packet, groupMembers);
     }
 
     private static void deliverToAtMembers(Packet packet, List<String> atList, Set<String> groupMembers) {
         Set<String> targets = AtMentionHelper.resolveDeliveryTargets(atList, groupMembers);
         Message message = packet.getMessage();
         String groupId = message.getTo();
-        targets.forEach(member -> MessageDeliveryRouter.deliverGroupMember(packet, groupId, member));
+        targets.forEach(member -> MessageDeliveryRouteHelper.deliverGroupMember(packet, groupId, member));
     }
 
     private static boolean normalizeGroupAtOrReject(Packet packet, Set<String> allGroupMembers) {

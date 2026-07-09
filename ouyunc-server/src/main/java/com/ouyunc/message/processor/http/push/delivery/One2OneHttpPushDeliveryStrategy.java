@@ -8,7 +8,7 @@ import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.constant.enums.IdentityType;
 import com.ouyunc.message.helper.AtMentionHelper;
-import com.ouyunc.message.helper.MessageDeliveryRouter;
+import com.ouyunc.message.helper.MessageDeliveryRouteHelper;
 import com.ouyunc.message.helper.MessageRefHelper;
 import com.ouyunc.repository.DefaultRepository;
 import org.slf4j.Logger;
@@ -54,7 +54,7 @@ public enum One2OneHttpPushDeliveryStrategy implements HttpProcessor {
                                             MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
                                     .subscribe(ignored -> { }, e -> log.warn(
                                             "HTTP 推送更新单聊已读 offset 失败, packetId={}", packet.getPacketId(), e));
-                            MessageDeliveryRouter.deliverPeerMessage(packet, false);
+                            MessageDeliveryRouteHelper.deliverPeerMessage(packet, false);
                         },
                         error -> {
                             log.error("HTTP 推送单聊落库异常, packetId={}", packet.getPacketId(), error);

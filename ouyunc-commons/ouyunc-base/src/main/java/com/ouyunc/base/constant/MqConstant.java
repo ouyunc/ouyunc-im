@@ -136,4 +136,12 @@ public class MqConstant {
     public static final String MQ_EXTERNAL_CHANNEL_OUTBOUND_TOPIC =
             MessageConstant.OUYUNC + MessageConstant.UNDERLINE + MQ_EXTERNAL_CHANNEL_OUTBOUND_GROUP;
 
+    /**
+     * 客服 ticket 活动通知（IM → CS），与 {@code CsKafkaTopics#TICKET_ACTIVITY} 一致。
+     */
+    public static final String MQ_CS_TICKET_ACTIVITY_GROUP = "cs_ticket_activity";
+
+    public static final String MQ_CS_TICKET_ACTIVITY_TOPIC =
+            "ouyunc-cs-ticket-activity";
+
 }

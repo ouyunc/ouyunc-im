@@ -11,7 +11,7 @@ public final class HttpPushProcessorStrategies {
         register(One2OneHttpPushDeliveryStrategy.INSTANCE);
         register(GroupHttpPushDeliveryStrategy.INSTANCE);
         register(ServerNotifyHttpPushDeliveryStrategy.INSTANCE);
-        register(CustomerServiceHttpPushDeliveryStrategy.INSTANCE);
+        register(CsHttpPushDeliveryStrategy.INSTANCE);
     }
 
     private HttpPushProcessorStrategies() {

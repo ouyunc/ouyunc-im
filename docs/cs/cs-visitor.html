@@ -156,11 +156,11 @@
 <body>
   <div class="demo-page">
     <h1>官网演示页 <span class="mock-badge">MOCK API</span></h1>
-    <p>右下角打开客服 Widget。所有接口走 <code>mock-api.js</code>，形状与 <code>ouyunc-cs-web</code> 一致。</p>
+    <p>右下角打开客服 Widget。默认联调真实 <code>ouyunc-cs-web</code>；演示 Mock 请加 URL 参数 <code>?mock=1</code>。</p>
     <div class="demo-card">
-      <strong>Mock 接口：</strong><br />
-      POST <code>/api/cs/route</code> · GET <code>/api/cs/queue/status</code> · POST <code>/api/cs/queue/leave</code><br />
-      IM 登录 mock：scope=6 (cs_visitor) · 消息 messageType=-17
+      <strong>接口：</strong><br />
+      POST <code>/api/cs/route/guest</code> · GET <code>/api/cs/queue/status?sessionScopeId=</code> · POST <code>/api/cs/queue/leave</code><br />
+      IM 登录 scope=6 (cs_visitor) · 消息 messageType=CUSTOMER_SERVICE
       <div class="api-log" id="apiLog">等待操作…</div>
     </div>
   </div>
@@ -179,8 +179,16 @@
     <div class="cs-body">
       <div class="cs-prechat" id="prechat">
         <div>
-          <label>客户 ID（Mock identity）</label>
-          <input type="text" id="customerIdInput" value="visitor-demo-001" />
+          <label>商家 merchantId</label>
+          <input type="text" id="merchantInput" value="merchant-default" />
+        </div>
+        <div>
+          <label>入口 entryCode</label>
+          <input type="text" id="entryInput" value="web" />
+        </div>
+        <div>
+          <label>客户 ID（可选，首次留空由服务端分配）</label>
+          <input type="text" id="customerIdInput" value="" placeholder="guest_xxx 或留空" />
         </div>
         <div>
           <label>您的称呼</label>
@@ -223,9 +231,13 @@
     const api = window.CsMockApi;
 
     const state = {
-      customerId: 'visitor-demo-001',
+      customerId: '',
+      sessionId: null,
+      ticketId: null,
+      serviceIdentity: null,
       agentId: null,
       queueTimer: null,
+      routePayload: null,
     };
 
     function logApi(label, req, res) {
@@ -268,24 +280,41 @@
       }
     }
 
-    async function connectAgent(agentId, firstMsg) {
+    async function connectAssigned(routeRes, firstMsg) {
       stopQueuePoll();
-      state.agentId = agentId;
-      const agent = api.getAgentInfo(agentId);
+      state.customerId = routeRes.customerId || state.customerId;
+      state.sessionId = routeRes.sessionId;
+      state.ticketId = routeRes.ticketId;
+      state.serviceIdentity = routeRes.serviceIdentity;
+      state.agentId = routeRes.agentId;
+      if (state.customerId) $('customerIdInput').value = state.customerId;
+
+      const agent = api.getAgentInfo(routeRes.agentId);
       const imLogin = api.buildImLoginMock(6, state.customerId);
-      const imTo = api.buildCsMessageMock(state.customerId, agentId, firstMsg);
-      logApi('IM login (mock)', imLogin, { ok: true });
-      logApi('IM send CUSTOMER_SERVICE (mock)', imTo, { ok: true });
+      const imTo = api.buildCsMessageMock(state.customerId, routeRes.serviceIdentity || routeRes.agentId, firstMsg);
+      logApi('IM login', imLogin, { ok: true, ticketId: state.ticketId, sessionId: state.sessionId });
+      logApi('IM send CUSTOMER_SERVICE', imTo, { correlationId: state.ticketId });
 
       showPhase('chat');
-      $('headerTitle').textContent = agent.agentName;
-      $('headerSub').textContent = '在线 · ' + agent.jobNo + ' · ' + agentId;
+      $('headerTitle').textContent = agent.agentName || '在线客服';
+      $('headerSub').textContent =
+        '已接入 · ticket ' + (state.ticketId || '—') + ' · ' + (routeRes.agentId || '');
       $('messages').innerHTML = '';
-      addSystem('已接入 ' + agent.agentName + '（Mock route 成功）');
+      addSystem('已接入客服（ticketId=' + (state.ticketId || '—') + '）');
       addMsg(firstMsg, true);
-      setTimeout(() => {
-        addMsg('您好，我是' + agent.agentName + '，工号 ' + agent.jobNo + '，请问有什么可以帮您？', false);
-      }, 600);
+    }
+
+    async function tryReconnectAfterQueue() {
+      if (!state.routePayload) return;
+      try {
+        const res = await api.routeGuest(state.routePayload);
+        logApi('POST /route/guest (re-check)', state.routePayload, res);
+        if (res.success && res.agentId) {
+          await connectAssigned(res, state.routePayload.message);
+        }
+      } catch (e) {
+        logApi('route re-check ERROR', {}, { error: e.message });
+      }
     }
 
     function startQueuePoll() {
@@ -293,23 +322,24 @@
       $('headerSub').textContent = '排队中…';
       stopQueuePoll();
       state.queueTimer = setInterval(async () => {
+        if (!state.sessionId) return;
         try {
-          const res = await api.queueStatus(state.customerId);
-          logApi('GET /queue/status', { customerId: state.customerId }, res);
+          const res = await api.queueStatus(state.sessionId);
+          logApi('GET /queue/status', { sessionScopeId: state.sessionId }, res);
           if (!res.inQueue) {
-            if (res.message && res.message.includes('已分配')) {
-              const agentId = res.message.replace(/.*已分配坐席\s*/, '').trim();
-              const firstMsg = $('msgInput').value.trim();
-              await connectAgent(agentId, firstMsg);
-            }
+            stopQueuePoll();
+            await tryReconnectAfterQueue();
             return;
           }
           $('queuePos').textContent = '第 ' + res.queuePosition + ' 位';
-          $('queueHint').textContent = '已等待 ' + res.waitedSeconds + ' 秒' + (res.timedOut ? ' · 已超时' : '');
+          $('queueHint').textContent =
+            '已等待 ' + res.waitedSeconds + ' 秒' +
+            (res.estimatedWaitSeconds ? ' · 预计 ' + res.estimatedWaitSeconds + 's' : '') +
+            (res.timedOut ? ' · 已超时' : '');
         } catch (e) {
           logApi('queue/status ERROR', {}, { error: e.message });
         }
-      }, 2000);
+      }, 2500);
     }
 
     async function startConsult() {
@@ -317,19 +347,37 @@
       const message = $('msgInput').value.trim();
       const requiredSkill = $('skillSelect').value;
       const customerName = $('nameInput').value.trim();
-      if (!customerId || !message) {
-        alert('请填写客户 ID 和咨询内容');
+      const merchantId = $('merchantInput').value.trim();
+      const entryCode = $('entryInput').value.trim();
+      if (!message) {
+        alert('请填写咨询内容');
         return;
       }
-      state.customerId = customerId;
       $('startBtn').disabled = true;
 
-      const req = { customerId, message, channel: 'web', appKey: 'default', requiredSkill, customerName };
+      const req = {
+        customerId: customerId || undefined,
+        message,
+        channel: 'web',
+        appKey: (typeof CsMockApi !== 'undefined' && CsMockApi.DEFAULT_APP_KEY) || 'ouyunc',
+        merchantId,
+        entryCode,
+        customerName,
+        requiredSkill,
+      };
+      state.routePayload = req;
       try {
-        const res = await api.route(req);
-        logApi('POST /route', req, res);
+        const res = await api.routeGuest(req);
+        logApi('POST /route/guest', req, res);
+        if (res.customerId) {
+          state.customerId = res.customerId;
+          $('customerIdInput').value = res.customerId;
+        }
+        state.sessionId = res.sessionId;
+        state.ticketId = res.ticketId;
+        state.serviceIdentity = res.serviceIdentity;
         if (res.success && res.agentId) {
-          await connectAgent(res.agentId, message);
+          await connectAssigned(res, message);
         } else if (res.queued) {
           $('queuePos').textContent = '第 ' + res.queuePosition + ' 位';
           $('queueHint').textContent = res.message || '已入队';
@@ -352,10 +400,12 @@
 
     $('leaveQueueBtn').onclick = async () => {
       stopQueuePoll();
-      const res = await api.leaveQueue(state.customerId);
-      logApi('POST /queue/leave', { customerId: state.customerId }, res);
+      if (state.sessionId) {
+        const res = await api.leaveQueue(state.sessionId);
+        logApi('POST /queue/leave', { sessionScopeId: state.sessionId }, res);
+      }
       showPhase('prechat');
-      $('headerSub').textContent = 'Mock · 通常几分钟内回复';
+      $('headerSub').textContent = api.MOCK_ENABLED ? 'Mock · 通常几分钟内回复' : '在线客服';
     };
 
     $('sendBtn').onclick = async () => {

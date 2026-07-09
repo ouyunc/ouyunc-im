@@ -365,9 +365,9 @@
       </nav>
       <div class="agent-info" id="agentInfo">坐席一 · NO001 · agent-001</div>
       <div class="stats">
-        <span>进行中 <strong id="statActive">0</strong></span>
+        <span>进行中 <strong id="statActive">0</strong>/<strong id="statMaxActive">—</strong></span>
+        <span>托管 <strong id="statHosted">0</strong>/<strong id="statMaxHosted">—</strong></span>
         <span>排队 <strong id="statQueue">0</strong></span>
-        <span>今日接待 <strong id="statToday">0</strong></span>
       </div>
       <div class="status-group">
         <button class="status-btn nav-btn" id="backLobbyBtn" title="签出并返回大厅">返回大厅</button>
@@ -382,6 +382,8 @@
       <aside class="session-list">
         <div class="session-tabs">
           <div class="session-tab active" data-tab="active">进行中<span class="badge" id="badgeActive">0</span></div>
+          <div class="session-tab" data-tab="hosted">托管中<span class="badge" id="badgeHosted">0</span></div>
+          <div class="session-tab" data-tab="pendingResume">待恢复<span class="badge" id="badgePending">0</span></div>
           <div class="session-tab" data-tab="queue">进线队列<span class="badge" id="badgeQueue">0</span></div>
         </div>
         <div class="session-items" id="sessionItems"></div>
@@ -400,6 +402,8 @@
             </div>
             <div class="chat-actions">
               <button disabled title="二期">转接</button>
+              <button id="suspendBtn" title="挂起托管，释放进行中槽位">挂起托管</button>
+              <button id="resumeBtn" title="恢复托管会话" style="display:none">恢复接待</button>
               <button id="refreshBtn">刷新</button>
               <button class="primary" id="closeSessionBtn">结束会话</button>
             </div>
@@ -562,7 +566,6 @@
 
     let currentTab = 'active';
     let currentSession = null;
-    let sessionsData = { active: [], queue: [], stats: {} };
     let currentCtxTab = 'customer';
     let quotedMessageText = '';
     let msgMenuTarget = null;
@@ -828,28 +831,87 @@
       if (name === 'customer' && currentSession) loadCustomerContext(currentSession);
     }
 
-    async function loadSessions() {
-      const res = await api.getAgentSessions(AGENT_ID);
-      logApi('GET /agent/sessions (mock)', { agentId: AGENT_ID }, res);
-      sessionsData = res;
-      document.getElementById('statActive').textContent = res.stats.activeCount;
-      document.getElementById('statQueue').textContent = res.stats.queueCount;
-      document.getElementById('statToday').textContent = res.stats.todayServed;
-      document.getElementById('badgeActive').textContent = res.stats.activeCount;
-      document.getElementById('badgeQueue').textContent = res.stats.queueCount;
-      renderSessions();
-      if (currentSession) {
-        const found = res.active.find((s) => s.id === currentSession.id);
-        if (found) await openSession(found, false);
-        else resetChatView();
+    let sessionsData = { active: [], hosted: [], pendingResume: [], queue: [], stats: {} };
+    let agentCapacity = null;
+
+    async function loadCapacity() {
+      try {
+        agentCapacity = await api.getAgentCapacity(AGENT_ID);
+        document.getElementById('statMaxActive').textContent = agentCapacity.maxActive ?? '—';
+        document.getElementById('statMaxHosted').textContent = agentCapacity.maxHosted ?? '—';
+      } catch (e) {
+        agentCapacity = null;
       }
     }
 
+    function updateSuspendResumeButtons() {
+      const suspendBtn = document.getElementById('suspendBtn');
+      const resumeBtn = document.getElementById('resumeBtn');
+      if (!currentSession) {
+        suspendBtn.style.display = '';
+        resumeBtn.style.display = 'none';
+        suspendBtn.disabled = true;
+        return;
+      }
+      const state = currentSession.serviceState;
+      const bucket = currentSession.bucket || currentTab;
+      if (bucket === 'active' || state === 1) {
+        suspendBtn.style.display = '';
+        resumeBtn.style.display = 'none';
+        suspendBtn.disabled = false;
+      } else if (bucket === 'hosted' || bucket === 'pendingResume' || state === 2 || state === 3) {
+        suspendBtn.style.display = 'none';
+        resumeBtn.style.display = '';
+        resumeBtn.disabled = false;
+      } else {
+        suspendBtn.style.display = '';
+        resumeBtn.style.display = 'none';
+        suspendBtn.disabled = true;
+      }
+    }
+
+    async function loadSessions() {
+      const res = await api.getAgentSessions(AGENT_ID);
+      logApi('GET /agent/sessions', { agentId: AGENT_ID }, res);
+      sessionsData = res;
+      document.getElementById('statActive').textContent = res.stats.activeCount;
+      document.getElementById('statHosted').textContent = res.stats.hostedCount || 0;
+      document.getElementById('statQueue').textContent = res.stats.queueCount;
+      document.getElementById('badgeActive').textContent = res.stats.activeCount;
+      document.getElementById('badgeHosted').textContent = res.stats.hostedCount || 0;
+      document.getElementById('badgePending').textContent = res.stats.pendingCount || 0;
+      document.getElementById('badgeQueue').textContent = res.stats.queueCount;
+      await loadCapacity();
+      renderSessions();
+      if (currentSession) {
+        const all = []
+          .concat(res.active || [])
+          .concat(res.hosted || [])
+          .concat(res.pendingResume || []);
+        const found = all.find((s) => s.id === currentSession.id || s.ticketId === currentSession.ticketId);
+        if (found) await openSession(found, false);
+        else resetChatView();
+      }
+      updateSuspendResumeButtons();
+    }
+
     function renderSessions() {
-      const list = currentTab === 'active' ? sessionsData.active : sessionsData.queue;
+      const tabMap = {
+        active: sessionsData.active,
+        hosted: sessionsData.hosted,
+        pendingResume: sessionsData.pendingResume,
+        queue: sessionsData.queue,
+      };
+      const tabLabels = {
+        active: '进行中',
+        hosted: '托管',
+        pendingResume: '待恢复',
+        queue: '排队',
+      };
+      const list = tabMap[currentTab] || [];
       const el = document.getElementById('sessionItems');
       if (!list.length) {
-        el.innerHTML = '<div style="padding:24px;text-align:center;color:#8c8c8c;font-size:13px;">暂无' + (currentTab === 'active' ? '进行中' : '排队') + '会话</div>';
+        el.innerHTML = '<div style="padding:24px;text-align:center;color:#8c8c8c;font-size:13px;">暂无' + (tabLabels[currentTab] || '') + '会话</div>';
         return;
       }
       el.innerHTML = list.map((s, i) => {
@@ -857,11 +919,13 @@
         const preview = s.preview || '—';
         const time = s.startTime || (s.waitSeconds != null ? '等待 ' + s.waitSeconds + 's' : '—');
         const skill = api.normalizeSkill(s.skill);
+        const stateTag = s.serviceState ? api.serviceStateLabel(s.serviceState) : '';
         const active = currentSession && (currentSession.id === s.id || currentSession.customerId === s.customerId);
         return '<div class="session-item' + (active ? ' active' : '') + '" data-idx="' + i + '">' +
           '<div class="session-item-head"><span class="session-item-name">' + escapeHtml(name) + '</span>' +
           '<span class="session-item-time">' + escapeHtml(time) + '</span></div>' +
           '<div class="session-item-preview">' + escapeHtml(preview) + '</div>' +
+          (stateTag ? '<span class="session-item-tag">' + escapeHtml(stateTag) + '</span> ' : '') +
           (skill ? '<span class="session-item-tag">' + escapeHtml(skill) + '</span>' : '') +
           '</div>';
       }).join('');
@@ -876,14 +940,15 @@
 
     async function pickupQueueSession(q) {
       try {
-        const res = await api.pickupFromQueue(q.customerId, AGENT_ID);
-        logApi('POST /agent/queue/pickup (mock)', { customerId: q.customerId, agentId: AGENT_ID }, res);
-        if (!res.success || !res.session) { alert(res.message || '接入失败'); return; }
+        const scopeId = q.sessionScopeId || q.sessionId || q.customerId;
+        const res = await api.pickupFromQueue(scopeId, AGENT_ID);
+        logApi('POST /agent/queue/pickup', { sessionScopeId: scopeId, agentId: AGENT_ID }, res);
+        if (res && res.success === false) { alert(res.message || '接入失败'); return; }
         await loadSessions();
         currentTab = 'active';
         document.querySelectorAll('.session-tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === 'active'));
         renderSessions();
-        openSessionAsync(res.session, true);
+        if (res && res.session) openSessionAsync(res.session, true);
       } catch (e) {
         alert('接入失败: ' + e.message);
       }
@@ -1195,7 +1260,9 @@
       document.getElementById('customerLang').value = custLang;
 
       document.getElementById('chatTitle').textContent = s.customerName || s.customerId;
-      document.getElementById('chatSub').textContent = (s.channel || 'WEB') + ' · ' + api.normalizeSkill(s.skill) + ' · ' + api.langLabel(custLang);
+      document.getElementById('chatSub').textContent =
+        (s.channel || 'WEB') + ' · ' + api.normalizeSkill(s.skill) + ' · ' + api.langLabel(custLang) +
+        (s.serviceState ? ' · ' + api.serviceStateLabel(s.serviceState) : '');
       document.getElementById('cId').textContent = s.customerId;
       document.getElementById('cLocale').textContent = api.langLabel(custLang);
       document.getElementById('cChannel').textContent = s.channel || '—';
@@ -1211,6 +1278,7 @@
       document.getElementById('agentInput').value = '';
       document.getElementById('composePreview').classList.add('is-empty');
       lastComposePreview = '';
+      updateSuspendResumeButtons();
     }
 
     document.querySelectorAll('.session-tab').forEach((tab) => {
@@ -1347,7 +1415,25 @@
 
     document.getElementById('closeSessionBtn').onclick = async () => {
       if (!currentSession || !confirm('确认结束会话？')) return;
-      await api.releaseSession(currentSession.customerId);
+      const ticketId = currentSession.ticketId || currentSession.id;
+      await api.closeConsultation(ticketId);
+      resetChatView();
+      await loadSessions();
+    };
+
+    document.getElementById('suspendBtn').onclick = async () => {
+      if (!currentSession) return;
+      const ticketId = currentSession.ticketId || currentSession.id;
+      if (!confirm('挂起后释放进行中槽位，访客消息可触发恢复。确认挂起？')) return;
+      await api.suspendConsultation(ticketId, '坐席手动挂起');
+      resetChatView();
+      await loadSessions();
+    };
+
+    document.getElementById('resumeBtn').onclick = async () => {
+      if (!currentSession) return;
+      const ticketId = currentSession.ticketId || currentSession.id;
+      await api.resumeConsultation(ticketId);
       resetChatView();
       await loadSessions();
     };

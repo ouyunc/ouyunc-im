@@ -5,8 +5,13 @@
 (function (global) {
   'use strict';
 
-  const MOCK_ENABLED = true;
-  const API_BASE = '/api/cs';
+  const MOCK_ENABLED =
+    typeof location !== 'undefined' && new URLSearchParams(location.search).get('mock') === '1';
+  const API_BASE =
+    (typeof localStorage !== 'undefined' && localStorage.getItem('cs_api_base')) || '/api/cs';
+  const DEFAULT_APP_KEY = 'ouyunc';
+  const DEFAULT_MERCHANT_ID = 'merchant-default';
+  const DEFAULT_ENTRY_CODE = 'web';
   const MOCK_DELAY_MS = 400;
 
   /** @type {Map<string, { agentId?: string, inQueue?: boolean, queuePosition?: number, enqueueAt?: number, skill?: string, message?: string }>} */
@@ -56,7 +61,7 @@
   };
 
   let generalConfig = {
-    appKey: 'default',
+    appKey: DEFAULT_APP_KEY,
     businessHours: { start: '09:00', end: '22:00', timezone: 'Asia/Shanghai' },
     queueTimeoutSeconds: 300,
     queueMessage: '当前坐席繁忙，请稍候…',
@@ -277,6 +282,8 @@
       ],
     },
   ];
+
+  let hostedSessions = [];
 
   /** @type {Array<{customerId:string,customerName:string,preview:string,skill:string,waitSeconds:number}>} */
   let queueList = [
@@ -697,6 +704,61 @@
     return map[code] || code || '通用';
   }
 
+  function formatTicketTime(iso) {
+    if (!iso) return '—';
+    if (typeof iso === 'string' && iso.includes('T')) {
+      return iso.replace('T', ' ').slice(0, 16);
+    }
+    return String(iso);
+  }
+
+  /** 后端 ConsultationSummaryDto → 工作台 session 结构 */
+  function mapConsultationToSession(dto, bucket) {
+    const id = dto.ticketId || dto.id;
+    return {
+      id,
+      ticketId: id,
+      customerId: dto.customerId,
+      customerName: dto.customerName || dto.customerId,
+      preview: dto.preview || '',
+      skill: dto.skillCode || dto.skill,
+      channel: dto.channel || 'WEB',
+      startTime: formatTicketTime(dto.startTime),
+      sessionId: dto.sessionId,
+      serviceIdentity: dto.serviceIdentity,
+      serviceState: dto.serviceState,
+      hostingMode: dto.hostingMode,
+      pendingResume: dto.pendingResume,
+      bucket,
+      messages: dto.messages || [],
+    };
+  }
+
+  async function normalizeAgentSessions(raw) {
+    if (!raw || raw.stats) return raw;
+    const active = (raw.active || []).map((d) => mapConsultationToSession(d, 'active'));
+    const hosted = (raw.hosted || []).map((d) => mapConsultationToSession(d, 'hosted'));
+    const pendingResume = (raw.pendingResume || []).map((d) => mapConsultationToSession(d, 'pendingResume'));
+    return {
+      active,
+      hosted,
+      pendingResume,
+      queue: raw.queue || [],
+      stats: {
+        activeCount: active.length,
+        hostedCount: hosted.length,
+        pendingCount: pendingResume.length,
+        queueCount: (raw.queue || []).length,
+        todayServed: raw.todayServed || 0,
+      },
+    };
+  }
+
+  function serviceStateLabel(state) {
+    const map = { 1: '进行中', 2: '托管中', 3: '待恢复' };
+    return map[state] || '—';
+  }
+
   async function fetchJson(path, options = {}) {
     if (!MOCK_ENABLED) {
       const res = await fetch(API_BASE + path, {
@@ -871,13 +933,82 @@
     if (method === 'GET' && url.pathname === '/agent/sessions') {
       return delay({
         active: activeSessions,
+        hosted: [],
+        pendingResume: [],
         queue: queueList,
         stats: {
           activeCount: activeSessions.length,
+          hostedCount: 0,
+          pendingCount: 0,
           queueCount: queueList.length,
           todayServed: todayServedCount,
         },
       });
+    }
+
+    // POST /consultation/:id/suspend | resume (mock)
+    const suspendMatch = url.pathname.match(/^\/consultation\/([^/]+)\/suspend$/);
+    if (method === 'POST' && suspendMatch) {
+      const sid = suspendMatch[1];
+      const s = activeSessions.find((x) => x.id === sid || x.ticketId === sid);
+      if (s) {
+        activeSessions = activeSessions.filter((x) => x !== s);
+        s.bucket = 'hosted';
+        s.serviceState = 2;
+        if (!hostedSessions) hostedSessions = [];
+        hostedSessions.unshift(s);
+      }
+      return delay({ ok: true });
+    }
+    const resumeMatch = url.pathname.match(/^\/consultation\/([^/]+)\/resume$/);
+    if (method === 'POST' && resumeMatch) {
+      const sid = resumeMatch[1];
+      const s = (hostedSessions || []).find((x) => x.id === sid || x.ticketId === sid);
+      if (s) {
+        hostedSessions = hostedSessions.filter((x) => x !== s);
+        s.bucket = 'active';
+        s.serviceState = 1;
+        activeSessions.unshift(s);
+      }
+      return delay({ ok: true });
+    }
+
+    // GET /consultation/agent/:id/capacity (mock)
+    const capMatch = url.pathname.match(/^\/consultation\/agent\/([^/]+)\/capacity$/);
+    if (method === 'GET' && capMatch) {
+      const aid = capMatch[1];
+      return delay({
+        agentId: aid,
+        activeSessions: activeSessions.filter((s) => s.agentId === aid || !s.agentId).length,
+        hostedSessions: (hostedSessions || []).length,
+        maxActive: 5,
+        maxHosted: 2,
+        pendingResumeCount: 0,
+      });
+    }
+
+    // GET /admin/idle-policies (mock)
+    if (method === 'GET' && url.pathname === '/admin/idle-policies') {
+      return delay([
+        {
+          appKey: DEFAULT_APP_KEY,
+          scopeType: 0,
+          scopeId: '*',
+          enabled: true,
+          visitorIdleWarnSec: 120,
+          visitorIdleHostSec: 180,
+          visitorIdleCloseSec: 300,
+          visitorIdleCloseEnabled: true,
+          agentReplyWarnSec: 60,
+          agentReplyHostSec: 120,
+          maxHostedRatio: 0.5,
+          maxHostedAbsolute: 3,
+          resumeOnVisitorMessage: true,
+        },
+      ]);
+    }
+    if (method === 'PUT' && url.pathname === '/admin/idle-policies') {
+      return delay({ ok: true });
     }
 
     // POST /agent/sessions/:id/message (mock 扩展)
@@ -985,11 +1116,13 @@
       return delay(buildCustomerContext(ticketId, customerId));
     }
 
-    // POST /agent/queue/pickup (mock 扩展：坐席主动接入排队客户)
+    // POST /agent/queue/pickup
     if (method === 'POST' && url.pathname === '/agent/queue/pickup') {
-      const customerId = body.customerId;
-      const agentId = body.agentId || 'agent-001';
-      const idx = queueList.findIndex((q) => q.customerId === customerId);
+      const sessionScopeId = params.get('sessionScopeId') || body.sessionScopeId;
+      const agentId = params.get('agentId') || body.agentId || 'agent-001';
+      const idx = queueList.findIndex(
+        (q) => q.sessionScopeId === sessionScopeId || q.customerId === sessionScopeId
+      );
       if (idx < 0) {
         return delay({ success: false, message: '客户不在队列中' });
       }
@@ -1180,6 +1313,7 @@
   const CsMockApi = {
     MOCK_ENABLED,
     API_BASE,
+    DEFAULT_APP_KEY,
     agents,
     LANG_LABELS,
     normalizeSkill,
@@ -1197,35 +1331,126 @@
       return LANG_LABELS[normalizeLang(code)] || code;
     },
 
+    serviceStateLabel,
+
     route(body) {
-      return fetchJson('/route', { method: 'POST', body: JSON.stringify(body) });
+      return this.routeGuest(body);
     },
 
-    queueStatus(customerId, appKey = 'default') {
-      return fetchJson('/queue/status?customerId=' + encodeURIComponent(customerId) + '&appKey=' + appKey);
+    routeGuest(body) {
+      const payload = {
+        customerId: body.customerId,
+        merchantId: body.merchantId || DEFAULT_MERCHANT_ID,
+        entryCode: body.entryCode || DEFAULT_ENTRY_CODE,
+        message: body.message,
+        channel: body.channel || 'web',
+        customerName: body.customerName,
+        preferredLanguage: body.preferredLanguage,
+        appKey: body.appKey || DEFAULT_APP_KEY,
+      };
+      if (body.requiredSkill) payload.requiredSkill = body.requiredSkill;
+      return fetchJson('/route/guest', { method: 'POST', body: JSON.stringify(payload) });
     },
 
-    leaveQueue(customerId, appKey = 'default') {
-      return fetchJson('/queue/leave?customerId=' + encodeURIComponent(customerId) + '&appKey=' + appKey, {
-        method: 'POST',
-      });
+    routeMember(body) {
+      const payload = {
+        customerId: body.customerId,
+        merchantId: body.merchantId || DEFAULT_MERCHANT_ID,
+        entryCode: body.entryCode || DEFAULT_ENTRY_CODE,
+        message: body.message,
+        channel: body.channel || 'web',
+        customerName: body.customerName,
+        appKey: body.appKey || DEFAULT_APP_KEY,
+      };
+      if (body.requiredSkill) payload.requiredSkill = body.requiredSkill;
+      return fetchJson('/route/member', { method: 'POST', body: JSON.stringify(payload) });
     },
 
-    releaseSession(customerId, appKey = 'default') {
-      return fetchJson('/session/release?customerId=' + encodeURIComponent(customerId) + '&appKey=' + appKey, {
-        method: 'POST',
-      });
-    },
-
-    setAgentStatus(agentId, status, appKey = 'default') {
+    queueStatus(sessionScopeId, appKey = DEFAULT_APP_KEY) {
       return fetchJson(
-        '/agent/' + encodeURIComponent(agentId) + '/' + status + '?appKey=' + appKey,
+        '/queue/status?sessionScopeId=' +
+          encodeURIComponent(sessionScopeId) +
+          '&appKey=' +
+          encodeURIComponent(appKey)
+      );
+    },
+
+    leaveQueue(sessionScopeId, appKey = DEFAULT_APP_KEY) {
+      return fetchJson(
+        '/queue/leave?sessionScopeId=' +
+          encodeURIComponent(sessionScopeId) +
+          '&appKey=' +
+          encodeURIComponent(appKey),
         { method: 'POST' }
       );
     },
 
-    getAgentSessions(agentId) {
-      return fetchJson('/agent/sessions?agentId=' + encodeURIComponent(agentId));
+    releaseSession(customerId, appKey = DEFAULT_APP_KEY) {
+      return this.closeConsultation(customerId, appKey);
+    },
+
+    closeConsultation(ticketId, appKey = DEFAULT_APP_KEY, closeType, remark) {
+      let q = '/consultation/' + encodeURIComponent(ticketId) + '/close?appKey=' + encodeURIComponent(appKey);
+      if (closeType != null) q += '&closeType=' + encodeURIComponent(closeType);
+      if (remark) q += '&remark=' + encodeURIComponent(remark);
+      return fetchJson(q, { method: 'POST' });
+    },
+
+    suspendConsultation(ticketId, reason, appKey = DEFAULT_APP_KEY) {
+      let q =
+        '/consultation/' +
+        encodeURIComponent(ticketId) +
+        '/suspend?appKey=' +
+        encodeURIComponent(appKey);
+      if (reason) q += '&reason=' + encodeURIComponent(reason);
+      return fetchJson(q, { method: 'POST' });
+    },
+
+    resumeConsultation(ticketId, appKey = DEFAULT_APP_KEY) {
+      return fetchJson(
+        '/consultation/' +
+          encodeURIComponent(ticketId) +
+          '/resume?appKey=' +
+          encodeURIComponent(appKey),
+        { method: 'POST' }
+      );
+    },
+
+    getAgentCapacity(agentId, appKey = DEFAULT_APP_KEY) {
+      return fetchJson(
+        '/consultation/agent/' +
+          encodeURIComponent(agentId) +
+          '/capacity?appKey=' +
+          encodeURIComponent(appKey)
+      );
+    },
+
+    listIdlePolicies(appKey = DEFAULT_APP_KEY) {
+      return fetchJson('/admin/idle-policies?appKey=' + encodeURIComponent(appKey));
+    },
+
+    saveIdlePolicy(dto, appKey = DEFAULT_APP_KEY) {
+      return fetchJson('/admin/idle-policies?appKey=' + encodeURIComponent(appKey), {
+        method: 'PUT',
+        body: JSON.stringify(dto),
+      });
+    },
+
+    deleteIdlePolicy(scopeType, scopeId, appKey = DEFAULT_APP_KEY) {
+      return fetchJson(
+        '/admin/idle-policies?appKey=' +
+          encodeURIComponent(appKey) +
+          '&scopeType=' +
+          encodeURIComponent(scopeType) +
+          '&scopeId=' +
+          encodeURIComponent(scopeId),
+        { method: 'DELETE' }
+      );
+    },
+
+    async getAgentSessions(agentId) {
+      const raw = await fetchJson('/agent/sessions?agentId=' + encodeURIComponent(agentId));
+      return normalizeAgentSessions(raw);
     },
 
     sendAgentMessage(sessionId, payload) {
@@ -1240,11 +1465,21 @@
       return fetchJson('/visitor/message', { method: 'POST', body: JSON.stringify({ text }) });
     },
 
-    pickupFromQueue(customerId, agentId) {
-      return fetchJson('/agent/queue/pickup', {
-        method: 'POST',
-        body: JSON.stringify({ customerId, agentId }),
-      });
+    setAgentStatus(agentId, status, appKey = DEFAULT_APP_KEY) {
+      return fetchJson(
+        '/agent/' + encodeURIComponent(agentId) + '/' + status + '?appKey=' + appKey,
+        { method: 'POST' }
+      );
+    },
+
+    pickupFromQueue(sessionScopeId, agentId) {
+      return fetchJson(
+        '/agent/queue/pickup?agentId=' +
+          encodeURIComponent(agentId) +
+          '&sessionScopeId=' +
+          encodeURIComponent(sessionScopeId),
+        { method: 'POST' }
+      );
     },
 
     listWorkOrders(consultationTicketId, customerId) {
@@ -1323,14 +1558,14 @@
     },
 
     async signIn(agentId) {
-      await fetchJson('/agent/' + encodeURIComponent(agentId) + '/online?appKey=default', { method: 'POST' });
+      await fetchJson('/agent/' + encodeURIComponent(agentId) + '/online?appKey=' + encodeURIComponent(DEFAULT_APP_KEY), { method: 'POST' });
       writeSignedInSession({ signedIn: true, agentId, signedInAt: Date.now(), status: 'online' });
       agentStatus.set(agentId, 'online');
       return { success: true, agentId };
     },
 
     async signOut(agentId) {
-      await fetchJson('/agent/' + encodeURIComponent(agentId) + '/offline?appKey=default', { method: 'POST' });
+      await fetchJson('/agent/' + encodeURIComponent(agentId) + '/offline?appKey=' + encodeURIComponent(DEFAULT_APP_KEY), { method: 'POST' });
       writeSignedInSession(null);
       agentStatus.set(agentId, 'offline');
       return { success: true };
@@ -1344,7 +1579,7 @@
         messageType: -2,
         scope,
         identity,
-        appKey: 'default',
+        appKey: DEFAULT_APP_KEY,
         note: scope === 6 ? 'cs_visitor' : scope === 5 ? 'cs_agent' : 'normal',
       };
     },

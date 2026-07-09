@@ -99,6 +99,18 @@ public class MessageServerProperties extends MessageProperties {
     long httpPushIdempotentTtlSeconds;
 
     /**
+     * 客服 ticket 消息保存后是否投递 CS ticket-activity MQ。
+     */
+    @Key(value = "ouyunc.message.cs.ticket-activity.enabled", defaultValue = "true")
+    boolean csTicketActivityEnabled;
+
+    /**
+     * CS ticket-activity Kafka/Rocket topic，默认 {@code ouyunc-cs-ticket-activity}。
+     */
+    @Key(value = "ouyunc.message.cs.ticket-activity.topic", defaultValue = "ouyunc-cs-ticket-activity")
+    String csTicketActivityTopic;
+
+    /**
      * 系统/BOT 代发私聊时是否跳过好友校验。
      */
     @Key(value = "ouyunc.message.http-push.skip-friend-check-for-system", defaultValue = "true")
@@ -560,6 +572,22 @@ public class MessageServerProperties extends MessageProperties {
 
     public void setHttpPushIdempotentTtlSeconds(long httpPushIdempotentTtlSeconds) {
         this.httpPushIdempotentTtlSeconds = httpPushIdempotentTtlSeconds;
+    }
+
+    public boolean isCsTicketActivityEnabled() {
+        return csTicketActivityEnabled;
+    }
+
+    public void setCsTicketActivityEnabled(boolean csTicketActivityEnabled) {
+        this.csTicketActivityEnabled = csTicketActivityEnabled;
+    }
+
+    public String getCsTicketActivityTopic() {
+        return csTicketActivityTopic;
+    }
+
+    public void setCsTicketActivityTopic(String csTicketActivityTopic) {
+        this.csTicketActivityTopic = csTicketActivityTopic;
     }
 
     public boolean isHttpPushSkipFriendCheckForSystem() {

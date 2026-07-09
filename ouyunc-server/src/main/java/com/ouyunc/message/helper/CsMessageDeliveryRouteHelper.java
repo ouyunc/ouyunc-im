@@ -19,11 +19,11 @@ import java.util.List;
 /**
  * 客服 IM 投递：{@code service_identity} 解析为当前 {@code assigneeId}；外渠访客按 route.channel 走 Kafka 出站。
  */
-public final class CsMessageDeliveryRouter {
+public final class CsMessageDeliveryRouteHelper {
 
-    private static final Logger log = LoggerFactory.getLogger(CsMessageDeliveryRouter.class);
+    private static final Logger log = LoggerFactory.getLogger(CsMessageDeliveryRouteHelper.class);
 
-    private CsMessageDeliveryRouter() {
+    private CsMessageDeliveryRouteHelper() {
     }
 
     public static void deliverCustomerServiceMessage(Packet packet, CsImSessionRoute route, boolean forceSelfSync) {

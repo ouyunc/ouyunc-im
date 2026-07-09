@@ -8,14 +8,16 @@ import com.ouyunc.core.listener.EventListener;
 import com.ouyunc.core.listener.MessageEventListener;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.event.payload.ClientBusinessSessionIdlePayload;
+import com.ouyunc.message.helper.BusinessIdleNotifyHelper;
 import com.ouyunc.message.handler.BusinessIdleStateHandler;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * 客户端业务会话空闲：按 {@link ClientBusinessSessionIdlePayload#strike()} 做提示 / 托管等；关连由
+ * 客户端业务会话空闲：按 {@link ClientBusinessSessionIdlePayload#strike()} 向本连接下行 IM 提示；关连由
  * {@link BusinessIdleStateHandler} 在 {@link com.ouyunc.base.packet.message.content.LoginContent#getBusinessIdleCloseStrike()} {@code >=1} 且达到次数时关连；{@code <=0} 不关。
+ * <p>不通知 CS；ticket SLA 仍由 CS Scanner 负责。</p>
  */
 @EventListener(order = 100, ring = EventRingEnum.CLIENT_BUSINESS_SESSION_IDLE)
 class ClientBusinessSessionIdleMessageEventListener implements MessageEventListener<MessageEvent> {
@@ -53,17 +55,13 @@ class ClientBusinessSessionIdleMessageEventListener implements MessageEventListe
         }
     }
 
-    /**
-     * 第 1 次连续业务空闲：提示（可扩展为下行通知客户端等）。
-     */
+    /** 第 1 次连续业务空闲：IM 下行提示。 */
     protected void onPrompt(ClientBusinessSessionIdlePayload payload) {
-        // 默认仅依赖 info 日志；业务可继承本类重写
+        BusinessIdleNotifyHelper.notifyIdle(payload.ctx(), payload.loginInfo(), payload.strike());
     }
 
-    /**
-     * 第 2 次连续业务空闲：托管（可扩展为会话转托管、MQ 等）。
-     */
+    /** 第 2 次连续业务空闲：即将断开预警（若配置了关连档位数）。 */
     protected void onEscrow(ClientBusinessSessionIdlePayload payload) {
-        // 默认仅依赖 info 日志；业务可继承本类重写
+        BusinessIdleNotifyHelper.notifyIdle(payload.ctx(), payload.loginInfo(), payload.strike());
     }
 }
