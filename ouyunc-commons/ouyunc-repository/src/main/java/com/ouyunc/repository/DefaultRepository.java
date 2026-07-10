@@ -267,10 +267,6 @@ public enum DefaultRepository implements Repository {
         RepositorySupports.CS_TICKET_LAST_MESSAGE.refreshAfterWithdraw(appKey, ticketId);
     }
 
-    public void deleteCsTicketImState(String appKey, String ticketId) {
-        RepositorySupports.CS_TICKET_LAST_MESSAGE.deleteAllTicketImState(appKey, ticketId);
-    }
-
     public MessageDeliveryChannelEnum resolveFriendDeliveryChannel(String appKey, String ownerUserId, String peerUserId) {
         return RepositorySupports.DELIVERY_CHANNEL.resolveFriendDeliveryChannel(appKey, ownerUserId, peerUserId);
     }
