@@ -1,29 +1,21 @@
 package com.ouyunc.message.processor;
 
-import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
-import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
-import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
-import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
-import com.ouyunc.base.constant.enums.MessageType;
-import com.ouyunc.base.constant.enums.MessageTypeEnum;
-import com.ouyunc.message.helper.CsCustomerServiceLastMessageHelper;
-import com.ouyunc.repository.cs.CsImSessionRoute;
-import com.ouyunc.repository.cs.CsMessageScopeHelper;
-import com.ouyunc.repository.support.MessageIndexScope;
+import com.ouyunc.base.constant.enums.*;
+import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.message.context.MessageServerContext;
-import com.ouyunc.message.helper.CsMessageDeliveryRouteHelper;
-import com.ouyunc.message.helper.CsSessionMessageHelper;
-import com.ouyunc.message.helper.CsTicketActivityNotifyHelper;
+import com.ouyunc.message.helper.*;
 import com.ouyunc.message.helper.CsSessionMessageHelper.PrepareOutcome;
-import com.ouyunc.message.helper.MessageRefHelper;
 import com.ouyunc.message.validator.AuthValidator;
+import com.ouyunc.repository.cs.CsImSessionRoute;
+import com.ouyunc.repository.cs.CsMessageScopeHelper;
+import com.ouyunc.repository.support.MessageIndexScope;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -63,6 +55,9 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
     @Override
     public void process(ChannelHandlerContext ctx, Packet packet) {
         log.debug("Processing customer service message...");
+        if (processWithContentProcessor(ctx, packet)) {
+            return;
+        }
         PrepareOutcome prepared = validateAndPrepare(packet);
         if (!prepared.accepted()) {
             return;
@@ -205,5 +200,15 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
     private Mono<Boolean> saveMessage(Packet packet, CsImSessionRoute route) {
         return repository().reactiveSaveCsTicketMessage(
                 packet, route, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
+    }
+
+    private boolean processWithContentProcessor(ChannelHandlerContext ctx, Packet packet) {
+        AbstractBaseBiProcessor<? extends Number> processor =
+                MessageServerContext.messageContentProcessorCache.get(packet.getMessage().getContentType());
+        if (processor != null) {
+            processor.process(ctx, packet);
+            return true;
+        }
+        return false;
     }
 }

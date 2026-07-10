@@ -21,6 +21,8 @@ public class ExternalChannelOutboundPayload implements Serializable {
     private Integer contentType;
     private String content;
     private String extra;
+    /** 客服 ticketId，与 {@code Message.correlationId} 一致。 */
+    private String ticketId;
     private Long createTime;
 
     public String getAppKey() {
@@ -101,6 +103,14 @@ public class ExternalChannelOutboundPayload implements Serializable {
 
     public void setExtra(String extra) {
         this.extra = extra;
+    }
+
+    public String getTicketId() {
+        return ticketId;
+    }
+
+    public void setTicketId(String ticketId) {
+        this.ticketId = ticketId;
     }
 
     public Long getCreateTime() {

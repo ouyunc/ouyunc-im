@@ -67,6 +67,7 @@ public final class DeliveryChannelSupport {
         payload.setContentType(message.getContentType());
         payload.setContent(message.getContent());
         payload.setExtra(message.getExtra());
+        payload.setTicketId(message.getCorrelationId());
         payload.setCreateTime(message.getCreateTime());
 
         String partitionKey = StringUtils.defaultIfBlank(message.getFrom(), recipientId);

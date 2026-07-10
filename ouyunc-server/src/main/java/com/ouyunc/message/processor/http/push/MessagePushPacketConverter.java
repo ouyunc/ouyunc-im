@@ -48,6 +48,7 @@ public final class MessagePushPacketConverter {
         metadata.setHttpPushType(request.getPushType());
 
         Message message = buildMessage(request, resolved, metadata, now, fromType, toType, httpContext);
+        applyRequestContentType(request, message);
         return new Packet(
                 ProtocolTypeEnum.HTTP.getProtocol(),
                 ProtocolTypeEnum.HTTP.getProtocolVersion(),
@@ -163,6 +164,17 @@ public final class MessagePushPacketConverter {
                     "无法解析 pushType，请显式指定 pushType（0-4：系统通知/私聊/群聊/客服/广播）");
         }
         return new ResolvedPushType(null, derived, MessageContentTypeEnum.TEXT_CONTENT);
+    }
+
+    private static void applyRequestContentType(MessagePushRequest request, Message message) {
+        if (request.getContentType() == null || message == null) {
+            return;
+        }
+        MessageContentTypeEnum type = MessageContentTypeEnum.getByType(request.getContentType());
+        if (type == null) {
+            return;
+        }
+        message.setContentType(type.getType());
     }
 
     private static MessageType deriveMessageType(int fromType, int toType) {

@@ -301,7 +301,27 @@
         '已接入 · ticket ' + (state.ticketId || '—') + ' · ' + (routeRes.agentId || '');
       $('messages').innerHTML = '';
       addSystem('已接入客服（ticketId=' + (state.ticketId || '—') + '）');
-      addMsg(firstMsg, true);
+
+      const sessionStub = {
+        ticketId: state.ticketId,
+        customerId: state.customerId,
+        serviceIdentity: state.serviceIdentity,
+        messages: [],
+      };
+      await api.hydrateSessionMessages(sessionStub, state.customerId, api.DEFAULT_DEVICE_TYPE || 0, 'visitor');
+      if (sessionStub.messages.length) {
+        sessionStub.messages.forEach((m) => addMsg(m.text, m.dir === 'out'));
+      } else {
+        addMsg(firstMsg, true);
+      }
+
+      try {
+        const imState = await api.getTicketImState(state.ticketId, state.customerId, api.DEFAULT_DEVICE_TYPE || 0);
+        logApi('GET /ticket/im/state', { ticketId: state.ticketId }, imState);
+        if (imState && imState.unreadCount > 0) {
+          $('headerSub').textContent += ' · 未读 ' + imState.unreadCount;
+        }
+      } catch (_) { /* mock/后端未就绪 */ }
     }
 
     async function tryReconnectAfterQueue() {

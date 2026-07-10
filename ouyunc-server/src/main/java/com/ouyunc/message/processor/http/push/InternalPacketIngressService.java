@@ -3,9 +3,12 @@ package com.ouyunc.message.processor.http.push;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
+import com.ouyunc.base.constant.enums.MessageTypeEnum;
+import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.model.HttpResponseResult;
 import com.ouyunc.base.packet.Packet;
+import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.base.model.MessagePushRequest;
@@ -13,6 +16,9 @@ import com.ouyunc.base.model.MessagePushResponse;
 import com.ouyunc.base.constant.enums.MessagePushStatusEnum;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
+import com.ouyunc.message.helper.CsMessageDeliveryRouteHelper;
+import com.ouyunc.repository.DefaultRepository;
+import com.ouyunc.repository.cs.CsImSessionRoute;
 import com.ouyunc.message.http.HttpContext;
 import com.ouyunc.message.http.HttpPipelineException;
 import org.apache.commons.collections4.CollectionUtils;
@@ -74,7 +80,25 @@ public final class InternalPacketIngressService {
         if (MessageConstant.SPLAT.equals(to)) {
             return ClientHelper.connections(appKey) > 0 ? Boolean.TRUE : Boolean.FALSE;
         }
-        return CollectionUtils.isNotEmpty(ClientHelper.onlineAll(appKey, to));
+        String recipientId = resolveRecipientId(appKey, packet, to);
+        return CollectionUtils.isNotEmpty(ClientHelper.onlineAll(appKey, recipientId));
+    }
+
+    /** 客服消息 to 可能是 serviceIdentity，需经 Route 解析为 assigneeId。 */
+    private static String resolveRecipientId(String appKey, Packet packet, String to) {
+        if (packet.getMessageType() != MessageTypeEnum.CUSTOMER_SERVICE.getType()) {
+            return to;
+        }
+        Message message = packet.getMessage();
+        if (StringUtils.isAnyBlank(message.getFrom(), appKey)) {
+            return to;
+        }
+        String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
+        CsImSessionRoute route = DefaultRepository.INSTANCE.getCsImSessionRoute(appKey, sessionId);
+        if (route == null) {
+            return to;
+        }
+        return StringUtils.defaultIfBlank(CsMessageDeliveryRouteHelper.resolveImRecipientId(to, route), to);
     }
 
     private static MessagePushResponse buildResponse(String messageId, String packetId,

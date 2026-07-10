@@ -6,25 +6,15 @@
   <component name="ChangeListManager">
     <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="css">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/cs/cs-admin-settings.html" beforeDir="false" afterPath="$PROJECT_DIR$/docs/cs/cs-admin-settings.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/cs/cs-agent.html" beforeDir="false" afterPath="$PROJECT_DIR$/docs/cs/cs-agent.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/cs/cs-visitor.html" beforeDir="false" afterPath="$PROJECT_DIR$/docs/cs/cs-visitor.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/cs/mock-api.js" beforeDir="false" afterPath="$PROJECT_DIR$/docs/cs/mock-api.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/MessageConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/MessageConstant.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/MqConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/MqConstant.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/DefaultRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/DefaultRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/CsCustomerServiceLastMessageHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/CsCustomerServiceLastMessageHelper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/CsMessageDeliveryRouter.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/CsMessageDeliveryRouteHelper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/MessageDeliveryRouter.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/MessageDeliveryRouteHelper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/ClientBusinessSessionIdleMessageEventListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/ClientBusinessSessionIdleMessageEventListener.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/model/ExternalChannelOutboundPayload.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/model/ExternalChannelOutboundPayload.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/model/MessagePushRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/model/MessagePushRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/DeliveryChannelSupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/DeliveryChannelSupport.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/CsMessageBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/CsMessageBiProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupMessageBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupMessageBiProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneMessageBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneMessageBiProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/push/delivery/CustomerServiceHttpPushDeliveryStrategy.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/push/delivery/CustomerServiceHttpPushDeliveryStrategy.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/push/delivery/GroupHttpPushDeliveryStrategy.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/push/delivery/GroupHttpPushDeliveryStrategy.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/push/delivery/One2OneHttpPushDeliveryStrategy.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/push/delivery/One2OneHttpPushDeliveryStrategy.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/properties/MessageServerProperties.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/properties/MessageServerProperties.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server-dev.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server-dev.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/push/HttpPushSupportedTypes.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/push/HttpPushSupportedTypes.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/push/InternalPacketIngressService.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/push/InternalPacketIngressService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/push/MessagePushPacketConverter.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/push/MessagePushPacketConverter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/push/delivery/CsHttpPushDeliveryStrategy.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/push/delivery/CsHttpPushDeliveryStrategy.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -83,22 +73,22 @@
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
       <entry key="MS100" value="1.0" />
-      <entry key="MS500" value="1.0000000000005538" />
-      <entry key="S2" value="1.0008729266160785" />
-      <entry key="S5" value="1.0695984184382417" />
-      <entry key="S10" value="1.3444934381721314" />
-      <entry key="S30" value="2.0898886136993755" />
-      <entry key="S60" value="2.472419861032606" />
-      <entry key="M2" value="2.7148883036536446" />
-      <entry key="M5" value="2.880361918044249" />
-      <entry key="M10" value="2.9392058100101064" />
-      <entry key="M15" value="2.959250538147746" />
-      <entry key="M30" value="2.979514430374609" />
-      <entry key="H1" value="2.9897294469375524" />
-      <entry key="H2" value="2.995305391315554" />
-      <entry key="H4" value="3.036626691345518" />
-      <entry key="D1" value="19.444014225253323" />
-      <entry key="W1" value="69.95132168826954" />
+      <entry key="MS500" value="1.0" />
+      <entry key="S2" value="1.0" />
+      <entry key="S5" value="1.0000000297418419" />
+      <entry key="S10" value="1.0002241982619" />
+      <entry key="S30" value="1.1150308488563878" />
+      <entry key="S60" value="1.5800531853293465" />
+      <entry key="M2" value="2.3149970019549144" />
+      <entry key="M5" value="3.155341935438337" />
+      <entry key="M10" value="3.5425210469043265" />
+      <entry key="M15" value="3.686610914459348" />
+      <entry key="M30" value="3.8389452224971063" />
+      <entry key="H1" value="3.918351833835991" />
+      <entry key="H2" value="3.959334029477324" />
+      <entry key="H4" value="4.018337816827076" />
+      <entry key="D1" value="20.424447292031054" />
+      <entry key="W1" value="70.9412611296354" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
@@ -108,35 +98,35 @@
       <entry key="S10" value="0.0" />
       <entry key="S30" value="0.0" />
       <entry key="S60" value="0.0" />
-      <entry key="M2" value="7.238919939148459E-221" />
-      <entry key="M5" value="1.698759193569184E-88" />
-      <entry key="M10" value="2.257484588272803E-44" />
-      <entry key="M15" value="1.1520108250130013E-29" />
-      <entry key="M30" value="5.878800378928895E-15" />
-      <entry key="H1" value="1.328021593999319E-7" />
-      <entry key="H2" value="6.322008451018521E-4" />
-      <entry key="H4" value="0.048133521514189426" />
-      <entry key="D1" value="8.076416033081776" />
-      <entry key="W1" value="29.946738713042045" />
+      <entry key="M2" value="3.506279799637125E-221" />
+      <entry key="M5" value="1.2711621081968582E-88" />
+      <entry key="M10" value="1.952807135586743E-44" />
+      <entry key="M15" value="1.0458745605204734E-29" />
+      <entry key="M30" value="5.6014470276205416E-15" />
+      <entry key="H1" value="1.2963160456514247E-7" />
+      <entry key="H2" value="6.246085890936574E-4" />
+      <entry key="H4" value="0.04784362485431594" />
+      <entry key="D1" value="8.068288560464042" />
+      <entry key="W1" value="29.94243170477611" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="0.9659363289248456" />
-      <entry key="MS500" value="0.9930924954375828" />
-      <entry key="S2" value="0.9991384218036812" />
-      <entry key="S5" value="1.0686519044523153" />
-      <entry key="S10" value="1.343099136335238" />
-      <entry key="S30" value="2.0882589581613242" />
-      <entry key="S60" value="2.471264325102948" />
-      <entry key="M2" value="2.7141980813836346" />
-      <entry key="M5" value="2.8800544783702513" />
-      <entry key="M10" value="2.9390464583289524" />
-      <entry key="M15" value="2.959143020362334" />
-      <entry key="M30" value="2.979460021694512" />
-      <entry key="H1" value="2.9897022113493144" />
-      <entry key="H2" value="2.9959237150345173" />
-      <entry key="H4" value="3.0847469874895097" />
-      <entry key="D1" value="27.520123077978873" />
-      <entry key="W1" value="99.8978810522304" />
+      <entry key="MS100" value="0.9592641193252643" />
+      <entry key="MS500" value="0.9917167307382933" />
+      <entry key="S2" value="0.9979227189990506" />
+      <entry key="S5" value="0.9991685989291296" />
+      <entry key="S10" value="0.999808163919159" />
+      <entry key="S30" value="1.114802530152762" />
+      <entry key="S60" value="1.5797127733077725" />
+      <entry key="M2" value="2.314628025653898" />
+      <entry key="M5" value="3.155098018993095" />
+      <entry key="M10" value="3.542376270395876" />
+      <entry key="M15" value="3.6865086814576458" />
+      <entry key="M30" value="3.8388910702523935" />
+      <entry key="H1" value="3.9183240932329526" />
+      <entry key="H2" value="3.9599443499716287" />
+      <entry key="H4" value="4.066168007153144" />
+      <entry key="D1" value="28.492428933125904" />
+      <entry key="W1" value="100.88351350424824" />
     </decayedShown>
   </component>
   <component name="ProjectColorInfo">{
@@ -588,14 +578,6 @@
       <workItem from="1783217181483" duration="5635000" />
       <workItem from="1783429181708" duration="4947000" />
     </task>
-    <task id="LOCAL-00253" summary="类型">
-      <option name="closed" value="true" />
-      <created>1780748540180</created>
-      <option name="number" value="00253" />
-      <option name="presentableId" value="LOCAL-00253" />
-      <option name="project" value="LOCAL" />
-      <updated>1780748540180</updated>
-    </task>
     <task id="LOCAL-00254" summary="类型">
       <option name="closed" value="true" />
       <created>1780751936653</created>
@@ -980,7 +962,15 @@
       <option name="project" value="LOCAL" />
       <updated>1783519301269</updated>
     </task>
-    <option name="localTasksCounter" value="302" />
+    <task id="LOCAL-00302" summary="css">
+      <option name="closed" value="true" />
+      <created>1783606211340</created>
+      <option name="number" value="00302" />
+      <option name="presentableId" value="LOCAL-00302" />
+      <option name="project" value="LOCAL" />
+      <updated>1783606211340</updated>
+    </task>
+    <option name="localTasksCounter" value="303" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

@@ -59,6 +59,12 @@ public class MessagePushRequest implements java.io.Serializable{
     private String content;
 
     /**
+     * 消息内容类型，见 {@link com.ouyunc.base.constant.enums.MessageContentTypeEnum}。
+     * 客服场景可传图片/文件等；未传时由 pushType 推导（默认文本）。
+     */
+    private Integer contentType;
+
+    /**
      * 扩展字段（可选），见 {@link MessagePushExtra}。
      */
     private MessagePushExtra extra;
@@ -127,6 +133,14 @@ public class MessagePushRequest implements java.io.Serializable{
 
     public void setContent(String content) {
         this.content = content;
+    }
+
+    public Integer getContentType() {
+        return contentType;
+    }
+
+    public void setContentType(Integer contentType) {
+        this.contentType = contentType;
     }
 
     public MessagePushExtra getExtra() {

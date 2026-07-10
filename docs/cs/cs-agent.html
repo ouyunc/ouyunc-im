@@ -80,6 +80,10 @@
     .session-item-name { font-weight: 500; font-size: 14px; }
     .session-item-time { font-size: 11px; color: var(--muted); }
     .session-item-preview { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .session-unread {
+      display: inline-block; min-width: 18px; padding: 0 6px; height: 18px; line-height: 18px;
+      border-radius: 9px; background: var(--danger); color: #fff; font-size: 11px; text-align: center; margin-left: 6px;
+    }
     .session-item-tag { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 4px; background: #fff7e6; color: #d48806; margin-top: 4px; }
 
     .chat-area { flex: 1; display: flex; flex-direction: column; background: #fafafa; min-width: 0; min-height: 0; position: relative; }
@@ -563,6 +567,7 @@
   <script>
     const api = window.CsMockApi;
     const AGENT_ID = 'agent-001';
+    const DEVICE_TYPE = api.DEFAULT_DEVICE_TYPE != null ? api.DEFAULT_DEVICE_TYPE : 0;
 
     let currentTab = 'active';
     let currentSession = null;
@@ -871,8 +876,8 @@
     }
 
     async function loadSessions() {
-      const res = await api.getAgentSessions(AGENT_ID);
-      logApi('GET /agent/sessions', { agentId: AGENT_ID }, res);
+      const res = await api.getAgentSessions(AGENT_ID, DEVICE_TYPE, true);
+      logApi('GET /agent/sessions', { agentId: AGENT_ID, includeUnread: true }, res);
       sessionsData = res;
       document.getElementById('statActive').textContent = res.stats.activeCount;
       document.getElementById('statHosted').textContent = res.stats.hostedCount || 0;
@@ -920,9 +925,10 @@
         const time = s.startTime || (s.waitSeconds != null ? '等待 ' + s.waitSeconds + 's' : '—');
         const skill = api.normalizeSkill(s.skill);
         const stateTag = s.serviceState ? api.serviceStateLabel(s.serviceState) : '';
+        const unread = s.unreadCount > 0 ? '<span class="session-unread">' + (s.unreadCount > 99 ? '99+' : s.unreadCount) + '</span>' : '';
         const active = currentSession && (currentSession.id === s.id || currentSession.customerId === s.customerId);
         return '<div class="session-item' + (active ? ' active' : '') + '" data-idx="' + i + '">' +
-          '<div class="session-item-head"><span class="session-item-name">' + escapeHtml(name) + '</span>' +
+          '<div class="session-item-head"><span class="session-item-name">' + escapeHtml(name) + unread + '</span>' +
           '<span class="session-item-time">' + escapeHtml(time) + '</span></div>' +
           '<div class="session-item-preview">' + escapeHtml(preview) + '</div>' +
           (stateTag ? '<span class="session-item-tag">' + escapeHtml(stateTag) + '</span> ' : '') +
@@ -1249,6 +1255,7 @@
 
     async function openSessionAsync(s, logIm) {
       if (!s) return;
+      await api.hydrateSessionMessages(s, AGENT_ID, DEVICE_TYPE, 'agent');
       currentSession = s;
       document.getElementById('emptyChat').classList.add('is-hidden');
       document.getElementById('chatContent').classList.add('is-open');
@@ -1262,7 +1269,8 @@
       document.getElementById('chatTitle').textContent = s.customerName || s.customerId;
       document.getElementById('chatSub').textContent =
         (s.channel || 'WEB') + ' · ' + api.normalizeSkill(s.skill) + ' · ' + api.langLabel(custLang) +
-        (s.serviceState ? ' · ' + api.serviceStateLabel(s.serviceState) : '');
+        (s.serviceState ? ' · ' + api.serviceStateLabel(s.serviceState) : '') +
+        (s.unreadCount > 0 ? ' · 未读 ' + s.unreadCount : '');
       document.getElementById('cId').textContent = s.customerId;
       document.getElementById('cLocale').textContent = api.langLabel(custLang);
       document.getElementById('cChannel').textContent = s.channel || '—';

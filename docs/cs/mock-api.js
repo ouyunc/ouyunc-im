@@ -729,9 +729,44 @@
       serviceState: dto.serviceState,
       hostingMode: dto.hostingMode,
       pendingResume: dto.pendingResume,
+      unreadCount: dto.unreadCount != null ? dto.unreadCount : 0,
+      readOffset: dto.readOffset != null ? dto.readOffset : 0,
       bucket,
       messages: dto.messages || [],
     };
+  }
+
+  function mapTicketMessageItemToUi(item, session, role) {
+    const text = item.content || '';
+    let dir = 'in';
+    if (role === 'agent') {
+      dir = item.from === session.serviceIdentity ? 'out' : 'in';
+    } else {
+      dir = item.from === session.customerId ? 'out' : 'in';
+    }
+    return {
+      dir,
+      text,
+      time: item.createTime ? new Date(item.createTime).toLocaleTimeString() : '',
+      lang: detectLang(text),
+      packetId: item.packetId,
+    };
+  }
+
+  async function hydrateSessionMessages(session, readerId, deviceType, role) {
+    if (MOCK_ENABLED || !session || !session.ticketId) return session;
+    try {
+      const page = await getTicketMessages(session.ticketId, readerId, null, 50);
+      session.messages = (page.messages || []).map((m) =>
+        mapTicketMessageItemToUi(m, session, role || 'agent')
+      );
+      if (page.messages && page.messages.length) {
+        session.preview = session.messages[session.messages.length - 1].text.slice(0, 80);
+      }
+    } catch (_) {
+      /* 热缓存未就绪时保留空列表 */
+    }
+    return session;
   }
 
   async function normalizeAgentSessions(raw) {
@@ -927,6 +962,63 @@
     const dashMatch = url.pathname.match(/^\/agent\/([^/]+)\/dashboard$/);
     if (method === 'GET' && dashMatch) {
       return delay(buildAgentDashboard(dashMatch[1]));
+    }
+
+    // GET /agent/im/unread (mock)
+    if (method === 'GET' && url.pathname === '/agent/im/unread') {
+      const agentId = params.get('agentId');
+      const list = activeSessions.map((s) => ({
+        ticketId: s.ticketId || s.id,
+        readerId: agentId,
+        deviceType: 0,
+        unreadCount: (s.messages || []).filter((m) => m.dir === 'in').length,
+        unreadCountCapped: false,
+        readOffset: 0,
+        lastPacketId: null,
+      }));
+      return delay(list);
+    }
+
+    // GET /ticket/:id/im/state (mock)
+    const imStateMatch = url.pathname.match(/^\/ticket\/([^/]+)\/im\/state$/);
+    if (method === 'GET' && imStateMatch) {
+      const tid = imStateMatch[1];
+      const readerId = params.get('readerId');
+      const sess = activeSessions.find((s) => String(s.ticketId || s.id) === tid);
+      const unread = sess ? (sess.messages || []).filter((m) => m.dir === 'in').length : 0;
+      return delay({
+        ticketId: tid,
+        readerId,
+        deviceType: Number(params.get('deviceType') || 0),
+        unreadCount: unread,
+        unreadCountCapped: false,
+        readOffset: 0,
+        lastPacketId: null,
+      });
+    }
+
+    // GET /ticket/:id/messages (mock)
+    const msgMatch = url.pathname.match(/^\/ticket\/([^/]+)\/messages$/);
+    if (method === 'GET' && msgMatch) {
+      const tid = msgMatch[1];
+      const sess = activeSessions.find((s) => String(s.ticketId || s.id) === tid);
+      const items = (sess?.messages || []).map((m, i) => ({
+        packetId: i + 1,
+        messageId: 'mock-' + tid + '-' + i,
+        from: m.dir === 'out' ? sess.serviceIdentity || sess.customerId : sess.customerId,
+        fromType: m.dir === 'out' ? 5 : 6,
+        to: m.dir === 'out' ? sess.customerId : sess.serviceIdentity,
+        contentType: -128,
+        content: m.text,
+        createTime: Date.now() - (sess.messages.length - i) * 60000,
+        correlationId: tid,
+      }));
+      return delay({
+        ticketId: tid,
+        messages: items,
+        nextBeforePacketId: items.length ? items[0].packetId : null,
+        hasMore: false,
+      });
     }
 
     // GET /agent/sessions (mock 扩展)
@@ -1314,11 +1406,14 @@
     MOCK_ENABLED,
     API_BASE,
     DEFAULT_APP_KEY,
+    DEFAULT_DEVICE_TYPE: 0,
     agents,
     LANG_LABELS,
     normalizeSkill,
     normalizeLang,
     detectLang,
+    mapTicketMessageItemToUi,
+    hydrateSessionMessages,
 
     translate(text, sourceLang, targetLang) {
       return fetchJson('/translate', {
@@ -1448,9 +1543,56 @@
       );
     },
 
-    async getAgentSessions(agentId) {
-      const raw = await fetchJson('/agent/sessions?agentId=' + encodeURIComponent(agentId));
+    async getAgentSessions(agentId, deviceType = 0, includeUnread = false) {
+      let q =
+        '/agent/sessions?agentId=' +
+        encodeURIComponent(agentId) +
+        '&deviceType=' +
+        encodeURIComponent(deviceType) +
+        '&includeUnread=' +
+        (includeUnread ? 'true' : 'false');
+      const raw = await fetchJson(q);
       return normalizeAgentSessions(raw);
+    },
+
+    getTicketImState(ticketId, readerId, deviceType = 0, appKey = DEFAULT_APP_KEY) {
+      return fetchJson(
+        '/ticket/' +
+          encodeURIComponent(ticketId) +
+          '/im/state?readerId=' +
+          encodeURIComponent(readerId) +
+          '&deviceType=' +
+          encodeURIComponent(deviceType) +
+          '&appKey=' +
+          encodeURIComponent(appKey)
+      );
+    },
+
+    getTicketMessages(ticketId, readerId, beforePacketId, limit = 20, appKey = DEFAULT_APP_KEY) {
+      let q =
+        '/ticket/' +
+        encodeURIComponent(ticketId) +
+        '/messages?readerId=' +
+        encodeURIComponent(readerId) +
+        '&limit=' +
+        encodeURIComponent(limit) +
+        '&appKey=' +
+        encodeURIComponent(appKey);
+      if (beforePacketId != null && beforePacketId > 0) {
+        q += '&beforePacketId=' + encodeURIComponent(beforePacketId);
+      }
+      return fetchJson(q);
+    },
+
+    getAgentImUnread(agentId, deviceType = 0, appKey = DEFAULT_APP_KEY) {
+      return fetchJson(
+        '/agent/im/unread?agentId=' +
+          encodeURIComponent(agentId) +
+          '&deviceType=' +
+          encodeURIComponent(deviceType) +
+          '&appKey=' +
+          encodeURIComponent(appKey)
+      );
     },
 
     sendAgentMessage(sessionId, payload) {
