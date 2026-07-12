@@ -1,7 +1,8 @@
 /*
  客服（CS）模块表结构
- Target Schema: ouyunc_message（与 IM 核心表同库）
+ Target Schema: ouyunc_system（与 sys_user 等同库）
  MySQL 8.0+ / utf8mb4_0900_ai_ci
+ 完整脚本（含扩展表）见 cs_schema_full.sql
 */
 
 SET NAMES utf8mb4;
@@ -169,7 +170,7 @@ CREATE TABLE IF NOT EXISTS `cs_consultation_ticket_log` (
 CREATE TABLE IF NOT EXISTS `cs_agent` (
     `id` bigint(20) NOT NULL COMMENT '主键ID',
     `app_key` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '应用Key（多租户隔离）',
-    `agent_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '坐席唯一标识，全局业务身份ID',
+    `agent_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '坐席标识，等于 sys_user.id（字符串）',
     `agent_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '坐席昵称/姓名',
     `job_no` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '员工工号',
     `avatar` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '坐席头像链接',

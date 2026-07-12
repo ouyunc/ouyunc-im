@@ -5,10 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="css">
+      <change afterPath="$PROJECT_DIR$/docs/6.5.4/sql/ouyunc_system_cs.sql" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/6.5.4/sql/ouyunc_system_user.sql" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/DefaultRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/DefaultRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/CsTicketLastMessageSupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/CsTicketLastMessageSupport.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/DeliveryChannelSupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/DeliveryChannelSupport.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/sql/cs_tables.sql" beforeDir="false" afterPath="$PROJECT_DIR$/docs/sql/cs_tables.sql" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -409,9 +409,9 @@
       <item itemvalue="Spring Boot.ImWebApplication" />
       <item itemvalue="Spring Boot.OauthApplication" />
       <item itemvalue="Spring Boot.OuyuncJobApplication" />
+      <item itemvalue="Spring Boot.OuyuncMessageSpringBootStarterApplication" />
       <item itemvalue="Spring Boot.OuyuncWorkflowApplication" />
       <item itemvalue="Spring Boot.UserWebApplication" />
-      <item itemvalue="Spring Boot.OuyuncMessageSpringBootStarterApplication" />
     </list>
     <recent_temporary>
       <list>
@@ -571,14 +571,7 @@
       <workItem from="1783174610263" duration="2112000" />
       <workItem from="1783217181483" duration="5635000" />
       <workItem from="1783429181708" duration="4947000" />
-    </task>
-    <task id="LOCAL-00255" summary="类型">
-      <option name="closed" value="true" />
-      <created>1780753595842</created>
-      <option name="number" value="00255" />
-      <option name="presentableId" value="LOCAL-00255" />
-      <option name="project" value="LOCAL" />
-      <updated>1780753595842</updated>
+      <workItem from="1783839405338" duration="582000" />
     </task>
     <task id="LOCAL-00256" summary="类型">
       <option name="closed" value="true" />
@@ -964,7 +957,15 @@
       <option name="project" value="LOCAL" />
       <updated>1783688726034</updated>
     </task>
-    <option name="localTasksCounter" value="304" />
+    <task id="LOCAL-00304" summary="css">
+      <option name="closed" value="true" />
+      <created>1783690762320</created>
+      <option name="number" value="00304" />
+      <option name="presentableId" value="LOCAL-00304" />
+      <option name="project" value="LOCAL" />
+      <updated>1783690762320</updated>
+    </task>
+    <option name="localTasksCounter" value="305" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
