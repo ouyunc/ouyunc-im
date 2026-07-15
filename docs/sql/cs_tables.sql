@@ -1,6 +1,6 @@
 /*
  客服（CS）模块表结构
- Target Schema: ouyunc_system（与 sys_user 等同库）
+ Target Schema: ouyunc_cs（用户在 ouyunc_system，IM 在 ouyunc_message）
  MySQL 8.0+ / utf8mb4_0900_ai_ci
  完整脚本（含扩展表）见 cs_schema_full.sql
 */

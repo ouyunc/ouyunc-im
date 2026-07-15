@@ -1,9 +1,17 @@
 /*
  客服（CS）模块 — 完整建表脚本（合并所有增量）
- Target Schema: ouyunc_system（与 sys_user 等同库）
+ Target Schema: ouyunc_cs
+ 库边界：ouyunc_system（用户）/ ouyunc_message（IM）/ ouyunc_cs（客服）
+ 跨库约定：cs_agent.agent_id = ouyunc_system.sys_user.id（逻辑关联）
  MySQL 8.0+ / utf8mb4_0900_ai_ci
- 表数量：18（登录复用 sys_user，无 cs_agent_credential）
+ 表数量：18（登录走 OAuth system-user，无 cs_agent_credential）
 */
+
+CREATE DATABASE IF NOT EXISTS `ouyunc_cs`
+  DEFAULT CHARACTER SET utf8mb4
+  COLLATE utf8mb4_0900_ai_ci;
+
+USE `ouyunc_cs`;
 
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
