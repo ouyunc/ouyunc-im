@@ -3,7 +3,6 @@ package com.ouyunc.message.listener;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.*;
 import com.ouyunc.base.encrypt.Encrypt;
-import com.ouyunc.base.model.CsAgentPresenceNotifyPayload;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.model.MqttLoginClientInfo;
@@ -18,7 +17,6 @@ import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.base.constant.enums.YesOrNo;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
-import com.ouyunc.message.helper.CsAgentPresenceNotifyHelper;
 import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.processor.AbstractBaseBiProcessor;
 import com.ouyunc.message.processor.content.MqttPublishMessageContentBiProcessor;
@@ -37,7 +35,8 @@ import java.util.List;
 
 /**
  * @Author fzx
- * @Description: 离线监听器。坐席（CS_AGENT）通道关闭时投递 MQ，供 CS 踢技能池。
+ * @Description: 离线监听器（遗嘱 / 好友下线通知）。坐席 CHANNEL_CLOSE 由
+ * {@link CsAgentPresenceLogoutMessageEventListener} 投递。
  */
 @EventListener(ring = EventRingEnum.CLIENT_LOGOUT)
 class ClientLogoutMessageEventListener implements MessageEventListener<MessageEvent> {
@@ -93,10 +92,6 @@ class ClientLogoutMessageEventListener implements MessageEventListener<MessageEv
     }
 
     private void handleNativeLogout(MessageEvent event, LoginClientInfo loginClientInfo, long consumeLagMs) {
-        // 坐席通道关闭（业务空闲关连 / 心跳超时 / 杀进程等）→ CS 踢技能池；与 will 无关
-        CsAgentPresenceNotifyHelper.notifyIfCsAgent(
-                loginClientInfo, CsAgentPresenceNotifyPayload.REASON_CHANNEL_CLOSE);
-
         String identity = loginClientInfo.getIdentity();
         String appKey = loginClientInfo.getAppKey();
         if (loginClientInfo.getEnableWill() != YesOrNo.YES.getCode()) {

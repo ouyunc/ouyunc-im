@@ -6,14 +6,10 @@
   <component name="ChangeListManager">
     <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="css">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/MqConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/MqConstant.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/.flattened-pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/.flattened-pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/ouyunc-mq-rocket/.flattened-pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/ouyunc-mq-rocket/.flattened-pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/model/CsAgentPresenceNotifyPayload.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/model/CsAgentPresenceNotifyPayload.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/handler/AuthenticationHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/handler/AuthenticationHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/ClientBusinessSessionIdleMessageEventListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/ClientBusinessSessionIdleMessageEventListener.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/CsAgentPresenceNotifyHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/CsAgentPresenceNotifyHelper.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/ClientLogoutMessageEventListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/ClientLogoutMessageEventListener.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/properties/MessageServerProperties.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/properties/MessageServerProperties.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server-dev.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server-dev.yml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -581,15 +577,9 @@
       <workItem from="1784012569154" duration="7709000" />
       <workItem from="1784270853312" duration="587000" />
       <workItem from="1784505650827" duration="411000" />
-      <workItem from="1784631834510" duration="5110000" />
-    </task>
-    <task id="LOCAL-00257" summary="类型">
-      <option name="closed" value="true" />
-      <created>1780757739681</created>
-      <option name="number" value="00257" />
-      <option name="presentableId" value="LOCAL-00257" />
-      <option name="project" value="LOCAL" />
-      <updated>1780757739681</updated>
+      <workItem from="1784631834510" duration="10724000" />
+      <workItem from="1784715315258" duration="113000" />
+      <workItem from="1784722983300" duration="903000" />
     </task>
     <task id="LOCAL-00258" summary="类型">
       <option name="closed" value="true" />
@@ -975,7 +965,15 @@
       <option name="project" value="LOCAL" />
       <updated>1784120026902</updated>
     </task>
-    <option name="localTasksCounter" value="306" />
+    <task id="LOCAL-00306" summary="css">
+      <option name="closed" value="true" />
+      <created>1784689232175</created>
+      <option name="number" value="00306" />
+      <option name="presentableId" value="LOCAL-00306" />
+      <option name="project" value="LOCAL" />
+      <updated>1784689232175</updated>
+    </task>
+    <option name="localTasksCounter" value="307" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

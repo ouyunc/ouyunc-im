@@ -15,7 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * 客服坐席 IM 通道关闭后通过 MQ 通知 CS，强制 offline 并剔除技能池。
+ * 客服坐席 IM 通道 OPEN/CLOSE 后通过 MQ 通知 CS（技能池与 presence grace）。
  */
 public final class CsAgentPresenceNotifyHelper {
 
@@ -24,7 +24,7 @@ public final class CsAgentPresenceNotifyHelper {
     private CsAgentPresenceNotifyHelper() {
     }
 
-    public static void notifyIfCsAgent(LoginClientInfo loginInfo, String reason) {
+    public static void notifyIfCsAgent(LoginClientInfo loginInfo, String eventType, String reason) {
         if (loginInfo == null || StringUtils.isBlank(loginInfo.getIdentity())) {
             return;
         }
@@ -42,15 +42,18 @@ public final class CsAgentPresenceNotifyHelper {
                 loginInfo.getScope(),
                 loginInfo.getDeviceType(),
                 reason,
-                TimeUtil.currentTimeMillis());
+                TimeUtil.currentTimeMillis(),
+                eventType);
         String topic = MqConstant.MQ_CS_AGENT_PRESENCE_TOPIC;
         String key = CsAgentPresenceNotifyPayload.messageKey(appKey, loginInfo.getIdentity());
         String json = JSON.toJSONString(body);
         DefaultRepository.INSTANCE.publishJsonAsync(
-                topic, key, json, "CS agent-presence MQ, agentId=" + loginInfo.getIdentity() + ", reason=" + reason);
+                topic, key, json,
+                "CS agent-presence MQ, agentId=" + loginInfo.getIdentity()
+                        + ", eventType=" + eventType + ", reason=" + reason);
         if (log.isDebugEnabled()) {
-            log.debug("CS agent-presence 已投递 MQ, topic={}, agentId={}, reason={}",
-                    topic, loginInfo.getIdentity(), reason);
+            log.debug("CS agent-presence 已投递 MQ, topic={}, agentId={}, eventType={}, reason={}",
+                    topic, loginInfo.getIdentity(), eventType, reason);
         }
     }
 
