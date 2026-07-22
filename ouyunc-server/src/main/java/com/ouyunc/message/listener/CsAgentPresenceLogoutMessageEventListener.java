@@ -1,9 +1,9 @@
 package com.ouyunc.message.listener;
 
+import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.EventRingEnum;
 import com.ouyunc.base.constant.enums.EventType;
 import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
-import com.ouyunc.base.model.CsAgentPresenceNotifyPayload;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.core.listener.EventListener;
 import com.ouyunc.core.listener.MessageEventListener;
@@ -30,7 +30,7 @@ class CsAgentPresenceLogoutMessageEventListener implements MessageEventListener<
         }
         CsAgentPresenceNotifyHelper.notifyIfCsAgent(
                 loginClientInfo,
-                CsAgentPresenceNotifyPayload.EVENT_CHANNEL_CLOSE,
-                CsAgentPresenceNotifyPayload.REASON_CHANNEL_CLOSE);
+                MessageConstant.CS_AGENT_PRESENCE_CHANNEL_CLOSE,
+                MessageConstant.CS_AGENT_PRESENCE_CHANNEL_CLOSE);
     }
 }

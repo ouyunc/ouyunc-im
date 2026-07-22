@@ -14,21 +14,13 @@ public class CsAgentPresenceNotifyPayload implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    public static final String EVENT_CHANNEL_CLOSE = "CHANNEL_CLOSE";
-    public static final String EVENT_CHANNEL_OPEN = "CHANNEL_OPEN";
-
-    /** 通道关闭 / CLIENT_LOGOUT（含业务空闲关连、心跳超时、杀进程等） */
-    public static final String REASON_CHANNEL_CLOSE = "CHANNEL_CLOSE";
-    /** 坐席 IM 登录 bind 成功 */
-    public static final String REASON_CHANNEL_OPEN = "CHANNEL_OPEN";
-
     private String appKey;
     private String agentId;
     private Integer scope;
     private Byte deviceType;
     private String reason;
     private Long serverTimeMs;
-    /** CHANNEL_CLOSE | CHANNEL_OPEN */
+    /** {@link MessageConstant#CS_AGENT_PRESENCE_CHANNEL_OPEN} / {@link MessageConstant#CS_AGENT_PRESENCE_CHANNEL_CLOSE} */
     private String eventType;
 
     public CsAgentPresenceNotifyPayload() {

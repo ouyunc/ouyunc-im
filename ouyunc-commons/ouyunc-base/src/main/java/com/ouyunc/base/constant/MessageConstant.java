@@ -731,4 +731,13 @@ public class MessageConstant {
     public static final String BUSINESS_IDLE_REPEAT_PROMPT =
             "长时间无操作，请发送任意消息以保持连接。";
 
+    /**
+     * IM → CS 坐席通道 presence 事件类型（Kafka {@code ouyunc-cs-agent-presence}），
+     * 与 CS 侧 {@code CsAgentPresenceEventTypes} 取值一致。
+     */
+    public static final String CS_AGENT_PRESENCE_CHANNEL_CLOSE = "CHANNEL_CLOSE";
+
+    /** 坐席 IM 通道打开 / 登录 bind 成功 */
+    public static final String CS_AGENT_PRESENCE_CHANNEL_OPEN = "CHANNEL_OPEN";
+
 }
