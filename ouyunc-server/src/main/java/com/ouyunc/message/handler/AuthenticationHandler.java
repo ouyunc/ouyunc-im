@@ -1,11 +1,11 @@
 package com.ouyunc.message.handler;
 
-import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.*;
+import com.ouyunc.base.encrypt.Encrypt;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.model.Protocol;
@@ -17,12 +17,14 @@ import com.ouyunc.base.packet.message.content.ServerNotifyContent;
 import com.ouyunc.base.serialize.Serializer;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.IdentityUtil;
+import com.ouyunc.base.utils.LoginSignatureUtil;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.core.context.MessageContext;
-import com.ouyunc.core.listener.event.payload.ClientLoginEventPayload;
 import com.ouyunc.core.listener.event.MessageEvent;
+import com.ouyunc.core.listener.event.payload.ClientLoginEventPayload;
 import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
+import com.ouyunc.domain.entity.AppEntity;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
@@ -369,9 +371,38 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
 
     /***
      * @author fzx
-     * @description 校验登录信息；{@code scope} 必须为 {@link LoginScopeEnum} 已定义取值，否则拒绝登录
+     * @description 校验登录信息；{@code scope} 必须为 {@link LoginScopeEnum} 已定义取值；
+     * 签名为 {@code MD5(appKey&identity&createTime_appSecret)}，createTime 允许
+     * {@link MessageConstant#LOGIN_SIGNATURE_CREATE_TIME_SKEW_MS} 偏差。
      */
     public boolean validate(LoginContent loginContent) {
-        return LoginScopeEnum.isDefinedType(loginContent.getScope());
+        if (loginContent == null || !LoginScopeEnum.isDefinedType(loginContent.getScope())) {
+            return false;
+        }
+        if (StringUtils.isAnyBlank(loginContent.getAppKey(), loginContent.getIdentity(), loginContent.getSignature())) {
+            return false;
+        }
+        @SuppressWarnings("unchecked")
+        RedisTemplate<String, Object> redisTemplate = CacheFactory.REDIS.instance();
+        AppEntity app = redisTemplate.<String, AppEntity>opsForHash()
+                .get(CacheConstant.buildAppKeysCacheKey(), loginContent.getAppKey());
+        if (app == null || StringUtils.isBlank(app.getAppSecret())) {
+            log.warn("登录签名校验失败：appKey={} 不存在或无 appSecret", loginContent.getAppKey());
+            return false;
+        }
+        String secret = app.getAppSecret();
+        long createTime = loginContent.getCreateTime();
+        if (!LoginSignatureUtil.isCreateTimeValid(createTime, TimeUtil.currentTimeMillis())) {
+            log.warn("登录签名校验失败：createTime 无效或过期 appKey={} identity={}",
+                    loginContent.getAppKey(), loginContent.getIdentity());
+            return false;
+        }
+        String raw = LoginSignatureUtil.buildRaw(
+                loginContent.getAppKey(), loginContent.getIdentity(), createTime, secret);
+        Encrypt.AsymmetricEncrypt algo = Encrypt.AsymmetricEncrypt.prototype(loginContent.getSignatureAlgorithm());
+        if (algo == null) {
+            algo = Encrypt.AsymmetricEncrypt.MD5;
+        }
+        return algo.validate(raw, loginContent.getSignature());
     }
 }

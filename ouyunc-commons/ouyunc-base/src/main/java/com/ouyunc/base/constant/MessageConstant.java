@@ -280,6 +280,16 @@ public class MessageConstant {
     public static final String COLON = ":";
 
     /**
+     * 登录签名字段分隔符：{@code appKey & identity & createTime_appSecret}
+     */
+    public static final String LOGIN_SIGNATURE_FIELD_SEPARATOR = "&";
+
+    /**
+     * 登录签名 createTime 允许的时钟偏差（毫秒），默认 ±5 分钟
+     */
+    public static final long LOGIN_SIGNATURE_CREATE_TIME_SKEW_MS = 5L * 60L * 1000L;
+
+    /**
      * 广播接收方占位符（全员 SERVER_NOTIFY）
      */
     public static final String SPLAT = "*";

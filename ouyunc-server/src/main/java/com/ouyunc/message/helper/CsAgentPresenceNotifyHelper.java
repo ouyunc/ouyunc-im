@@ -6,6 +6,7 @@ import com.ouyunc.base.constant.enums.LoginScopeEnum;
 import com.ouyunc.base.model.CsAgentPresenceNotifyPayload;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.utils.AppKeyUtil;
+import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.properties.MessageServerProperties;
 import com.ouyunc.repository.DefaultRepository;
@@ -41,7 +42,7 @@ public final class CsAgentPresenceNotifyHelper {
                 loginInfo.getScope(),
                 loginInfo.getDeviceType(),
                 reason,
-                System.currentTimeMillis());
+                TimeUtil.currentTimeMillis());
         String topic = MqConstant.MQ_CS_AGENT_PRESENCE_TOPIC;
         String key = CsAgentPresenceNotifyPayload.messageKey(appKey, loginInfo.getIdentity());
         String json = JSON.toJSONString(body);
