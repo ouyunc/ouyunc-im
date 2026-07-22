@@ -144,4 +144,11 @@ public class MqConstant {
     public static final String MQ_CS_TICKET_ACTIVITY_TOPIC =
             "ouyunc-cs-ticket-activity";
 
+    /**
+     * 客服坐席 IM 通道关闭通知（IM → CS 踢技能池），与 {@code CsKafkaTopics#AGENT_PRESENCE} 一致。
+     */
+    public static final String MQ_CS_AGENT_PRESENCE_GROUP = "cs_agent_presence";
+
+    public static final String MQ_CS_AGENT_PRESENCE_TOPIC = "ouyunc-cs-agent-presence";
+
 }

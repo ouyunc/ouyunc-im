@@ -17,7 +17,7 @@ import org.slf4j.LoggerFactory;
 /**
  * 客户端业务会话空闲：按 {@link ClientBusinessSessionIdlePayload#strike()} 向本连接下行 IM 提示；关连由
  * {@link BusinessIdleStateHandler} 在 {@link com.ouyunc.base.packet.message.content.LoginContent#getBusinessIdleCloseStrike()} {@code >=1} 且达到次数时关连；{@code <=0} 不关。
- * <p>不通知 CS；ticket SLA 仍由 CS Scanner 负责。</p>
+ * <p>不通知 CS；通道关闭后由 {@link ClientLogoutMessageEventListener} 投递 MQ。ticket SLA 仍由 CS Scanner 负责。</p>
  */
 @EventListener(order = 100, ring = EventRingEnum.CLIENT_BUSINESS_SESSION_IDLE)
 class ClientBusinessSessionIdleMessageEventListener implements MessageEventListener<MessageEvent> {

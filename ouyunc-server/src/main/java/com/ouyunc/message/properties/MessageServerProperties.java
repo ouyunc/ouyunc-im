@@ -105,10 +105,10 @@ public class MessageServerProperties extends MessageProperties {
     boolean csTicketActivityEnabled;
 
     /**
-     * CS ticket-activity Kafka/Rocket topic，默认 {@code ouyunc-cs-ticket-activity}。
+     * 客服坐席通道关闭后是否投递 CS agent-presence MQ（踢技能池）。
      */
-    @Key(value = "ouyunc.message.cs.ticket-activity.topic", defaultValue = "ouyunc-cs-ticket-activity")
-    String csTicketActivityTopic;
+    @Key(value = "ouyunc.message.cs.agent-presence.enabled", defaultValue = "true")
+    boolean csAgentPresenceEnabled;
 
     /**
      * 系统/BOT 代发私聊时是否跳过好友校验。
@@ -582,12 +582,12 @@ public class MessageServerProperties extends MessageProperties {
         this.csTicketActivityEnabled = csTicketActivityEnabled;
     }
 
-    public String getCsTicketActivityTopic() {
-        return csTicketActivityTopic;
+    public boolean isCsAgentPresenceEnabled() {
+        return csAgentPresenceEnabled;
     }
 
-    public void setCsTicketActivityTopic(String csTicketActivityTopic) {
-        this.csTicketActivityTopic = csTicketActivityTopic;
+    public void setCsAgentPresenceEnabled(boolean csAgentPresenceEnabled) {
+        this.csAgentPresenceEnabled = csAgentPresenceEnabled;
     }
 
     public boolean isHttpPushSkipFriendCheckForSystem() {

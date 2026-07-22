@@ -45,7 +45,7 @@ public final class CsTicketActivityNotifyHelper {
         CsTicketActivityNotifyPayload body = new CsTicketActivityNotifyPayload(
                 appKey, ticketId, packet.getPacketId(), message.getFromType(),
                 serverTime != null ? serverTime : System.currentTimeMillis());
-        String topic = resolveTopic(props);
+        String topic = MqConstant.MQ_CS_TICKET_ACTIVITY_TOPIC;
         String key = CsTicketActivityNotifyPayload.messageKey(appKey, ticketId);
         String json = JSON.toJSONString(body);
         DefaultRepository.INSTANCE.publishJsonAsync(topic, key, json, "CS ticket-activity MQ, ticketId=" + ticketId);
@@ -53,11 +53,6 @@ public final class CsTicketActivityNotifyHelper {
             log.debug("CS ticket-activity 已投递 MQ, topic={}, ticketId={}, packetId={}",
                     topic, ticketId, packet.getPacketId());
         }
-    }
-
-    private static String resolveTopic(MessageServerProperties props) {
-        String configured = StringUtils.trimToEmpty(props.getCsTicketActivityTopic());
-        return StringUtils.isNotBlank(configured) ? configured : MqConstant.MQ_CS_TICKET_ACTIVITY_TOPIC;
     }
 
     private static MessageServerProperties serverProperties() {

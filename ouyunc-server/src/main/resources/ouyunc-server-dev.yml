@@ -5,7 +5,8 @@ ouyunc:
     cs:
       ticket-activity:
         enabled: true
-        topic: ouyunc-cs-ticket-activity
+      agent-presence:
+        enabled: true
   cache:
     redis:
       database: 0

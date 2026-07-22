@@ -5,10 +5,15 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="css">
-      <change afterPath="$PROJECT_DIR$/docs/6.5.4/sql/ouyunc_system_cs.sql" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/6.5.4/sql/ouyunc_system_user.sql" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/sql/cs_tables.sql" beforeDir="false" afterPath="$PROJECT_DIR$/docs/sql/cs_tables.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/MqConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/MqConstant.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/.flattened-pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/.flattened-pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/ouyunc-mq-rocket/.flattened-pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/ouyunc-mq-rocket/.flattened-pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/handler/AuthenticationHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/handler/AuthenticationHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/ClientBusinessSessionIdleMessageEventListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/ClientBusinessSessionIdleMessageEventListener.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/ClientLogoutMessageEventListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/ClientLogoutMessageEventListener.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/properties/MessageServerProperties.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/properties/MessageServerProperties.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server-dev.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server-dev.yml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -54,10 +59,10 @@
   <component name="MavenImportPreferences">
     <option name="generalSettings">
       <MavenGeneralSettings>
-        <option name="customMavenHome" value="C:\Program Files\apache-maven-3.6.3" />
+        <option name="customMavenHome" value="C:\Program Files\apache-maven-3.9.9" />
         <option name="localRepository" value="D:\repository" />
         <option name="mavenHomeTypeForPersistence" value="CUSTOM" />
-        <option name="userSettingsFile" value="C:\Program Files\apache-maven-3.6.3\conf\ali-settings.xml" />
+        <option name="userSettingsFile" value="C:\Program Files\apache-maven-3.9.9\conf\ali-settings.xml" />
       </MavenGeneralSettings>
     </option>
   </component>
@@ -127,7 +132,7 @@
   &quot;associatedIndex&quot;: 0
 }</component>
   <component name="ProjectId" id="2ufM82eHzwWazomtA8rAeEDAhv6" />
-  <component name="ProjectLevelVcsManager">
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true">
     <ConfirmationsSetting value="2" id="Add" />
   </component>
   <component name="ProjectViewState">
@@ -426,8 +431,8 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-jdk-30f59d01ecdd-37e91769500f-intellij.indexing.shared.core-IU-261.24374.151" />
-        <option value="bundled-js-predefined-d6986cc7102b-31caf2ab9e3c-JavaScript-IU-261.24374.151" />
+        <option value="bundled-jdk-9823dce3aa75-fdfe4dae3a2d-intellij.indexing.shared.core-IU-243.21565.193" />
+        <option value="bundled-js-predefined-d6986cc7102b-e768b9ed790e-JavaScript-IU-243.21565.193" />
       </set>
     </attachedChunks>
   </component>
@@ -572,14 +577,11 @@
       <workItem from="1783217181483" duration="5635000" />
       <workItem from="1783429181708" duration="4947000" />
       <workItem from="1783839405338" duration="582000" />
-    </task>
-    <task id="LOCAL-00256" summary="类型">
-      <option name="closed" value="true" />
-      <created>1780757613898</created>
-      <option name="number" value="00256" />
-      <option name="presentableId" value="LOCAL-00256" />
-      <option name="project" value="LOCAL" />
-      <updated>1780757613898</updated>
+      <workItem from="1783989716756" duration="69000" />
+      <workItem from="1784012569154" duration="7709000" />
+      <workItem from="1784270853312" duration="587000" />
+      <workItem from="1784505650827" duration="411000" />
+      <workItem from="1784631834510" duration="5110000" />
     </task>
     <task id="LOCAL-00257" summary="类型">
       <option name="closed" value="true" />
@@ -965,7 +967,15 @@
       <option name="project" value="LOCAL" />
       <updated>1783690762320</updated>
     </task>
-    <option name="localTasksCounter" value="305" />
+    <task id="LOCAL-00305" summary="css">
+      <option name="closed" value="true" />
+      <created>1784120026901</created>
+      <option name="number" value="00305" />
+      <option name="presentableId" value="LOCAL-00305" />
+      <option name="project" value="LOCAL" />
+      <updated>1784120026902</updated>
+    </task>
+    <option name="localTasksCounter" value="306" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1064,11 +1074,6 @@
           <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupRefuseMessageBiProcessor.java</url>
           <line>129</line>
           <option name="timeStamp" value="17" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/channel/DefaultSocketChannelInitializer.java</url>
-          <line>71</line>
-          <option name="timeStamp" value="23" />
         </line-breakpoint>
       </breakpoints>
       <breakpoints-dialog>
