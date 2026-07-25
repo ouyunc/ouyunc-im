@@ -25,9 +25,9 @@ import reactor.core.publisher.Mono;
 /**
  * 客服会话消息处理器（MessageType=CUSTOMER_SERVICE）。
  *
- * <p>通道 scope：{@code channelSessionId = sessionId(user_id, service_identity)}，用于 Route 查找。</p>
+ * <p>路由主键 = {@code ticketId}（消息 {@code correlationId}）。</p>
+ * <p>通道语义 sessionId = {@code sessionId(userId, serviceIdentity)}，存在路由 Hash 字段中。</p>
  * <p>消息 scope：{@code ticketMessageScopeId = ticketId}，用于 msgs ZSet / 撤回 / 已读 / lm。</p>
- * <p>每条聊天消息 {@code correlationId = ticketId}。</p>
  */
 public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte> {
     private static final Logger log = LoggerFactory.getLogger(CsMessageBiProcessor.class);

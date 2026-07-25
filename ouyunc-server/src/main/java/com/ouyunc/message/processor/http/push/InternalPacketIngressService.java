@@ -4,7 +4,6 @@ import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
-import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.model.HttpResponseResult;
 import com.ouyunc.base.packet.Packet;
@@ -90,11 +89,11 @@ public final class InternalPacketIngressService {
             return to;
         }
         Message message = packet.getMessage();
-        if (StringUtils.isAnyBlank(message.getFrom(), appKey)) {
+        if (message == null || StringUtils.isAnyBlank(appKey, message.getCorrelationId())) {
             return to;
         }
-        String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
-        CsImSessionRoute route = DefaultRepository.INSTANCE.getCsImSessionRoute(appKey, sessionId);
+        CsImSessionRoute route =
+                DefaultRepository.INSTANCE.getCsImSessionRoute(appKey, message.getCorrelationId());
         if (route == null) {
             return to;
         }

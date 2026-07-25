@@ -12,7 +12,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import java.util.List;
 
 /**
- * IM 只读 CS 会话路由 Redis Hash（{@link CsImSessionRouteFields#READ_FIELDS}）。
+ * IM 只读 CS 会话路由：主键 {@code ticketId}。
  */
 public final class CsImSessionRouteSupport {
 
@@ -24,17 +24,18 @@ public final class CsImSessionRouteSupport {
         this.stringRedisTemplate = stringRedisTemplate;
     }
 
-    public CsImSessionRoute getRoute(String appKey, String sessionId) {
-        if (StringUtils.isAnyBlank(appKey, sessionId)) {
+    /** @param ticketId 咨询单 ID（与消息 correlationId 一致） */
+    public CsImSessionRoute getRoute(String appKey, String ticketId) {
+        if (StringUtils.isAnyBlank(appKey, ticketId)) {
             return null;
         }
         try {
-            String key = CacheConstant.buildCsSessionRouteCacheKey(appKey, sessionId);
+            String key = CacheConstant.buildCsSessionRouteCacheKey(appKey, ticketId.trim());
             List<String> fields = CsImSessionRouteFields.READ_FIELDS;
             List<Object> values = stringRedisTemplate.opsForHash().multiGet(key, List.copyOf(fields));
             return CsImSessionRouteReader.read(fields, values);
         } catch (Exception e) {
-            log.warn("读取客服会话路由 Hash 失败 appKey={} sessionId={}: {}", appKey, sessionId, e.getMessage());
+            log.warn("读取客服会话路由 Hash 失败 appKey={} ticketId={}: {}", appKey, ticketId, e.getMessage());
             return null;
         }
     }

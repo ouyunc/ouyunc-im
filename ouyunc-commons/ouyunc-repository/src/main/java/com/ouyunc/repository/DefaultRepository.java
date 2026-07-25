@@ -279,8 +279,8 @@ public enum DefaultRepository implements Repository {
         RepositorySupports.DELIVERY_CHANNEL.publishExternalOutbound(packet, recipientId, channel);
     }
 
-    /** 读取 CS 写入的会话路由 Redis Hash（IM 只读子集 field）。 */
-    public CsImSessionRoute getCsImSessionRoute(String appKey, String sessionId) {
-        return RepositorySupports.CS_IM_SESSION_ROUTE.getRoute(appKey, sessionId);
+    /** 读取 CS 写入的客服会话路由（主键 ticketId = 消息 correlationId）。 */
+    public CsImSessionRoute getCsImSessionRoute(String appKey, String ticketId) {
+        return RepositorySupports.CS_IM_SESSION_ROUTE.getRoute(appKey, ticketId);
     }
 }
