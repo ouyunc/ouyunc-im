@@ -12,7 +12,8 @@ ouyunc:
       database: 0
       timeout: PT30S
       connectTimeout: PT1M
-      host: 127.0.0.1
+      host: 124.223.209.230
+      password: Ouyunc@123
       port: 6379
       lettuce:
         pool:
@@ -24,10 +25,10 @@ ouyunc:
   db:
     jdbc:
       driverClassName: com.mysql.cj.jdbc.Driver
-      url: jdbc:mysql://localhost:3306/ouyunc_message?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true
+      url: jdbc:mysql://124.223.209.230:3306/ouyunc_message?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true
       dialect: mysql
-      username: root
-      password: root
+      username: ouyunc
+      password: Ouyunc@123
       hikariPool:
         poolName: ouyunc-hikari-pool
         maximumPoolSize: 10
@@ -45,7 +46,8 @@ ouyunc:
         registerMbeans: false
         leakDetectionThreshold: 60000
     mongo:
-      uri: mongodb://admin:admin@47.92.113.112:27017/admin
+      # 密码含 @ 必须 URL 编码为 %40，否则 ConnectionString 直接抛 IllegalArgumentException
+      uri: mongodb://admin:Ouyunc%402024!@124.223.209.230:27017/admin
       defaultDatabase: ouyunc_message
       pool:
         maxIdleTime: 600000
@@ -63,9 +65,9 @@ ouyunc:
   mq:
     type: kafka
     kafka:
-      bootstrapServers: 47.92.113.112:9092
+      bootstrapServers: 124.223.209.230:9092
       producer:
-        bootstrapServers: 47.92.113.112:9092
+        bootstrapServers: 124.223.209.230:9092
         batchSize: 16785
         retries: 3
         bufferMemory: 33554432

@@ -394,8 +394,8 @@ public class DisruptorMessageEventMulticaster extends AbstractMessageEventMultic
         try {
             listener.onEvent(event);
         } catch (Throwable err) {
-            // 这里不进行抛出异常，只记录
-            log.error("message 监听器 {} 执行事件 {} 失败：{}", listener, event, err.getMessage());
+            // 必须传入 throwable，否则 ExceptionInInitializerError 的 getMessage() 常为 null，根因丢失
+            log.error("message 监听器 {} 执行事件 {} 失败：{}", listener, event, err.toString(), err);
         }
     }
 }

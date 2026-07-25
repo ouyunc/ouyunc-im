@@ -52,7 +52,9 @@ public final class CsSessionMessageHelper {
         if (StringUtils.isAnyBlank(route.ticketId(), route.userId(), route.serviceIdentity(), route.sessionId())) {
             return PrepareOutcome.reject("会话路由数据不完整");
         }
-        if (!StringUtils.equals(route.sessionId(), sessionId)) {
+        // 坐席上行可能命中 CS 写入的 assignee 通道别名键，此时 route.sessionId 仍是 (userId,serviceIdentity)
+        if (!StringUtils.equals(route.sessionId(), sessionId)
+                && !matchesSessionEndpoints(from, to, route)) {
             return PrepareOutcome.reject("会话路由 sessionId 与 from/to 不一致");
         }
         if (!route.isActive(YesOrNo.YES.getCode())) {
