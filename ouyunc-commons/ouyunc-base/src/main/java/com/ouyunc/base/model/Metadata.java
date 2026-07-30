@@ -64,11 +64,6 @@ public class Metadata implements Serializable, Cloneable {
      */
     private Integer httpPushType;
 
-    /**
-     * 客服已读回执：阅读者真实 userId（访客 userId 或坐席 assigneeId），供 MQ 落库 offset 使用。
-     */
-    private String csReaderId;
-
 
     public String getAppKey() {
         return appKey;
@@ -150,14 +145,6 @@ public class Metadata implements Serializable, Cloneable {
         this.httpPushType = httpPushType;
     }
 
-    public String getCsReaderId() {
-        return csReaderId;
-    }
-
-    public void setCsReaderId(String csReaderId) {
-        this.csReaderId = csReaderId;
-    }
-
     public Metadata(String appKey, boolean routed, int currentRetry, String fromServerAddress, Target target, List<RoutingTable> routingTables, String clientIp, long serverTime) {
         this.appKey = appKey;
         this.routed = routed;
@@ -211,7 +198,6 @@ public class Metadata implements Serializable, Cloneable {
                 ", serverTime=" + serverTime +
                 ", ingressSource='" + ingressSource + '\'' +
                 ", httpPushType=" + httpPushType +
-                ", csReaderId='" + csReaderId + '\'' +
                 '}';
     }
 }

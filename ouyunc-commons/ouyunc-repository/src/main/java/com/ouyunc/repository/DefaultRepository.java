@@ -97,13 +97,17 @@ public enum DefaultRepository implements Repository {
                 mqSender, processor, processorAfter, exceptionConsumer, processExceptionCode);
     }
 
-    public Mono<Boolean> reactiveValidReadReceiptMessage(Packet packet, String sessionId, IdentityType identityType,
-                                                         boolean isValidSender) {
-        return RepositorySupports.READ_RECEIPT.reactiveValidReadReceiptMessage(packet, sessionId, identityType, isValidSender);
+    public Mono<List<Packet>> reactiveLoadValidatedReadReceiptPackets(Packet packet, String sessionId,
+                                                                      IdentityType identityType,
+                                                                      boolean isValidSender) {
+        return RepositorySupports.READ_RECEIPT.reactiveLoadValidatedReadReceiptPackets(
+                packet, sessionId, identityType, isValidSender);
     }
 
-    public Mono<Boolean> reactiveReadReceiptMessage(Packet packet, IdentityType identityType, long expireTime) {
-        return RepositorySupports.READ_RECEIPT.reactiveReadReceiptMessage(packet, identityType, expireTime);
+    public Mono<Boolean> reactiveReadReceiptMessage(Packet packet, IdentityType identityType, long expireTime,
+                                                    List<Packet> targetPackets) {
+        return RepositorySupports.READ_RECEIPT.reactiveReadReceiptMessage(
+                packet, identityType, expireTime, targetPackets);
     }
 
     public Mono<Boolean> reactiveAdvanceSenderReadOffsetOnSend(Packet packet, IdentityType identityType, long expireTime) {
@@ -248,13 +252,16 @@ public enum DefaultRepository implements Repository {
         return RepositorySupports.CS_TICKET_MESSAGE.reactiveSaveCsTicketMessage(packet, route, expireTime);
     }
 
-    public Mono<Boolean> reactiveValidCsReadReceiptMessage(Packet packet, CsImSessionRoute route, byte deviceType) {
-        return RepositorySupports.CS_TICKET_READ_RECEIPT.reactiveValidCsReadReceiptMessage(packet, route, deviceType);
+    public Mono<List<Packet>> reactiveLoadValidatedCsReadReceiptPackets(Packet packet, CsImSessionRoute route,
+                                                                        byte deviceType) {
+        return RepositorySupports.CS_TICKET_READ_RECEIPT.reactiveLoadValidatedCsReadReceiptPackets(
+                packet, route, deviceType);
     }
 
     public Mono<Boolean> reactiveCsReadReceiptMessage(Packet packet, CsImSessionRoute route, byte deviceType,
-                                                      long expireTime) {
-        return RepositorySupports.CS_TICKET_READ_RECEIPT.reactiveCsReadReceiptMessage(packet, route, deviceType, expireTime);
+                                                      long expireTime, List<Packet> targetPackets) {
+        return RepositorySupports.CS_TICKET_READ_RECEIPT.reactiveCsReadReceiptMessage(
+                packet, route, deviceType, expireTime, targetPackets);
     }
 
     public Mono<Boolean> reactiveAdvanceCsSenderReadOffsetOnSend(Packet packet, CsImSessionRoute route, byte deviceType,

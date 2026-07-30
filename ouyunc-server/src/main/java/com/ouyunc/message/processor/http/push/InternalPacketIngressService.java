@@ -15,7 +15,7 @@ import com.ouyunc.base.model.MessagePushResponse;
 import com.ouyunc.base.constant.enums.MessagePushStatusEnum;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
-import com.ouyunc.message.helper.CsMessageDeliveryRouteHelper;
+import com.ouyunc.message.helper.CsHelper;
 import com.ouyunc.repository.DefaultRepository;
 import com.ouyunc.repository.cs.CsImSessionRoute;
 import com.ouyunc.message.http.HttpContext;
@@ -97,7 +97,7 @@ public final class InternalPacketIngressService {
         if (route == null) {
             return to;
         }
-        return StringUtils.defaultIfBlank(CsMessageDeliveryRouteHelper.resolveImRecipientId(to, route), to);
+        return StringUtils.defaultIfBlank(CsHelper.resolveImRecipientId(to, route), to);
     }
 
     private static MessagePushResponse buildResponse(String messageId, String packetId,

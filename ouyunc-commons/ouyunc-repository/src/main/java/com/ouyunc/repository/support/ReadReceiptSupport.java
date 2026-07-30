@@ -1,6 +1,5 @@
 package com.ouyunc.repository.support;
 
-import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.JdbcSqlDialectHolder;
 import com.ouyunc.base.constant.MessageConstant;
@@ -53,9 +52,10 @@ public final class ReadReceiptSupport {
         this.unreadIndexSupport = unreadIndexSupport;
     }
 
-    public Mono<Boolean> reactiveValidReadReceiptMessage(Packet packet, String sessionId, IdentityType identityType,
-                                                         boolean isValidSender) {
-        return specialMessageLoader.reactiveValidSpecialMessage(
+    public Mono<List<Packet>> reactiveLoadValidatedReadReceiptPackets(Packet packet, String sessionId,
+                                                                      IdentityType identityType,
+                                                                      boolean isValidSender) {
+        return specialMessageLoader.reactiveLoadValidatedSpecialPackets(
                 packet, sessionId, MessageConstant.MAX_READ_RECEIPT_MESSAGE_COUNT,
                 (specialPackets) -> {
             if (isValidSender) {
@@ -112,16 +112,18 @@ public final class ReadReceiptSupport {
                 expireTime);
     }
 
-    @SuppressWarnings("unchecked")
-    public Mono<Boolean> reactiveReadReceiptMessage(Packet packet, IdentityType identityType, long expireTime) {
+    public Mono<Boolean> reactiveReadReceiptMessage(Packet packet, IdentityType identityType, long expireTime,
+                                                    List<Packet> targetPackets) {
         Message message = packet.getMessage();
         String from = message.getFrom();
         String to = message.getTo();
         Metadata metadata = message.getMetadata();
-        List<Long> readPacketIds = JSON.parseArray(message.getContent(), Long.class);
         Long maxReadPacketId = null;
-        if (CollectionUtils.isNotEmpty(readPacketIds)) {
-            maxReadPacketId = readPacketIds.stream().max(Comparator.comparingLong(Long::longValue)).orElse(null);
+        if (CollectionUtils.isNotEmpty(targetPackets)) {
+            maxReadPacketId = targetPackets.stream()
+                    .map(Packet::getPacketId)
+                    .max(Comparator.comparingLong(Long::longValue))
+                    .orElse(null);
         }
         if (maxReadPacketId == null) {
             log.error("已读的消息id不能为空 | packet={}", packet);

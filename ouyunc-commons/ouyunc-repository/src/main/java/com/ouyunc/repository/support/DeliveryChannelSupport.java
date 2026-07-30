@@ -33,7 +33,7 @@ public final class DeliveryChannelSupport {
 
     /**
      * 发送方视角：对端好友（{@code friendUserId=peerUserId}）的投递渠道（单聊等场景）。
-     * <p>客服会话见 {@link com.ouyunc.message.helper.CsMessageDeliveryRouteHelper}，不查好友表。</p>
+     * <p>客服会话见 {@link com.ouyunc.message.helper.CsHelper}，不查好友表。</p>
      */
     public MessageDeliveryChannelEnum resolveFriendDeliveryChannel(String appKey, String ownerUserId, String peerUserId) {
         FriendEntity friend = friendSupport.getFriendEntity(appKey, ownerUserId, peerUserId);

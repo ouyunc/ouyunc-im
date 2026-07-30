@@ -70,7 +70,7 @@ public final class SpecialMessageLoader {
         String expectedAppKey = metadata.getAppKey();
         return messagePacketQuery.fetchPacketsReactive(expectedAppKey, packetIds)
                 .flatMap(packets -> validateLoadedPackets(
-                        scopeId, scope, expectedAppKey, packetIds, packets, function, extraPredicate))
+                        scopeId, scope, packetIds, packets, function, extraPredicate))
                 .onErrorResume(e -> {
                     log.error("消息处理异常 | scope={} scopeId={}", scope, scopeId, e);
                     return Mono.empty();
@@ -86,7 +86,7 @@ public final class SpecialMessageLoader {
                 packet, sessionId, MessageIndexScope.CHANNEL_SESSION, maxCount, function, extraPredicate);
     }
 
-    private Mono<List<Packet>> validateLoadedPackets(String scopeId, MessageIndexScope scope, String expectedAppKey,
+    private Mono<List<Packet>> validateLoadedPackets(String scopeId, MessageIndexScope scope,
                                                      List<Long> packetIds, List<Packet> packets,
                                                      Function<List<Packet>, Mono<Boolean>> function,
                                                      Predicate<List<Packet>> extraPredicate) {
@@ -104,10 +104,6 @@ public final class SpecialMessageLoader {
             return Mono.empty();
         }
         for (Packet targetPacket : packets) {
-            if (!isPacketAppKeyMatch(targetPacket, expectedAppKey)) {
-                log.error("消息 appKey 不匹配 | scopeId={} | packetId={}", scopeId, targetPacket.getPacketId());
-                return Mono.empty();
-            }
             if (!belongsToScope(targetPacket, scopeId, scope)) {
                 log.error("消息归属校验失败 | scope={} scopeId={} packetId={}", scope, scopeId, targetPacket.getPacketId());
                 return Mono.empty();
@@ -147,13 +143,5 @@ public final class SpecialMessageLoader {
             return true;
         }
         return sessionId.equals(targetMessage.getTo());
-    }
-
-    private static boolean isPacketAppKeyMatch(Packet targetPacket, String expectedAppKey) {
-        Message targetMessage = targetPacket.getMessage();
-        if (targetMessage == null || targetMessage.getMetadata() == null || StringUtils.isBlank(expectedAppKey)) {
-            return false;
-        }
-        return expectedAppKey.equals(targetMessage.getMetadata().getAppKey());
     }
 }

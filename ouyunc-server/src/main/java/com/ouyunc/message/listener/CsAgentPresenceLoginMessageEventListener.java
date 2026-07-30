@@ -9,7 +9,7 @@ import com.ouyunc.core.listener.EventListener;
 import com.ouyunc.core.listener.MessageEventListener;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.event.payload.ClientLoginEventPayload;
-import com.ouyunc.message.helper.CsAgentPresenceNotifyHelper;
+import com.ouyunc.message.helper.CsHelper;
 
 /**
  * 坐席 IM 登录成功 → CS CHANNEL_OPEN。与 {@link CsAgentPresenceLogoutMessageEventListener} 对称；
@@ -33,7 +33,7 @@ class CsAgentPresenceLoginMessageEventListener implements MessageEventListener<M
         if (!(login instanceof LoginClientInfo loginClientInfo)) {
             return;
         }
-        CsAgentPresenceNotifyHelper.notifyIfCsAgent(
+        CsHelper.notifyIfCsAgent(
                 loginClientInfo,
                 MessageConstant.CS_AGENT_PRESENCE_CHANNEL_OPEN,
                 MessageConstant.CS_AGENT_PRESENCE_CHANNEL_OPEN);

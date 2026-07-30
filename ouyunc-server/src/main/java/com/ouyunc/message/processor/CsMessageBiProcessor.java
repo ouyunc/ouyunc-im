@@ -11,10 +11,9 @@ import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.*;
-import com.ouyunc.message.helper.CsSessionMessageHelper.PrepareOutcome;
+import com.ouyunc.message.helper.CsHelper.PrepareOutcome;
 import com.ouyunc.message.validator.AuthValidator;
 import com.ouyunc.repository.cs.CsImSessionRoute;
-import com.ouyunc.repository.cs.CsMessageScopeHelper;
 import com.ouyunc.repository.support.MessageIndexScope;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.lang3.StringUtils;
@@ -77,14 +76,14 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
                         releaseQosOnFailure(packet);
                         return;
                     }
-                    if (MessageContext.isQosEnable() && MessageContentTypeEnum.WITHDRAW_CONTENT.getType() != contentType) {
-                        qosPostHandle(ctx, packet);
-                    }
-                    if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() != contentType) {
-                        CsCustomerServiceLastMessageHelper.saveChatLastMessage(repository(), route, packet);
-                        CsTicketActivityNotifyHelper.notifyAfterSave(packet, route);
-                    }
-                    if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() != contentType) {
+                    if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
+                        handleWithdrawMessage(ctx, packet, route);
+                    } else {
+                        if (MessageContext.isQosEnable()) {
+                            qosPostHandle(ctx, packet);
+                        }
+                        CsHelper.saveChatLastMessage(repository(), route, packet);
+                        CsHelper.notifyAfterSave(packet, route);
                         repository().reactiveAdvanceCsSenderReadOffsetOnSend(
                                         packet, route, packet.getDeviceType(),
                                         MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
@@ -92,11 +91,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
                                         ignored -> {
                                         },
                                         e -> log.warn("客服发消息静默更新 ticket 已读 offset 失败, packetId={}", packet.getPacketId(), e));
-                    }
-                    if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
-                        handleWithdrawMessage(ctx, packet, route);
-                    } else {
-                        CsMessageDeliveryRouteHelper.deliverCustomerServiceMessage(packet, route, false);
+                        CsHelper.deliverMessage(packet, route, false);
                         ctx.fireChannelRead(packet);
                     }
                 },
@@ -114,17 +109,10 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
             releaseQosOnFailure(packet);
             return PrepareOutcome.reject("引用校验失败");
         }
-        Message message = packet.getMessage();
-        if (message == null || StringUtils.isAnyBlank(message.getFrom(), message.getTo())
-                || StringUtils.equals(message.getFrom(), message.getTo())) {
-            log.warn("客服消息 from/to 无效或与相同, packetId={}", packet.getPacketId());
-            releaseQosOnFailure(packet);
-            return PrepareOutcome.reject("from/to 无效");
-        }
-        PrepareOutcome outcome = CsSessionMessageHelper.prepare(packet);
+        PrepareOutcome outcome = CsHelper.prepare(packet);
         if (!outcome.accepted()) {
             log.warn("客服会话路由校验失败: {} | packetId={}", outcome.rejectReason(), packet.getPacketId());
-            CsSessionMessageHelper.publishReject(packet, outcome.rejectReason());
+            CsHelper.publishReject(packet, outcome.rejectReason());
             releaseQosOnFailure(packet);
         }
         return outcome;
@@ -143,7 +131,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
     }
 
     private void handleWithdrawMessage(ChannelHandlerContext ctx, Packet packet, CsImSessionRoute route) {
-        String ticketScopeId = CsMessageScopeHelper.ticketMessageScopeId(route);
+        String ticketScopeId = CsHelper.ticketMessageScopeId(route);
         String appKey = packet.getMessage().getMetadata().getAppKey();
         repository().reactiveHandleOperation(ctx, packet,
                         repository().reactiveLoadWithdrawTargetPackets(
@@ -154,7 +142,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
                                 packet, ticketScopeId, MessageIndexScope.CS_TICKET, packets),
                         (ctx0, packet0) -> {
                             qosAckOnSuccess(ctx0, packet0);
-                            CsMessageDeliveryRouteHelper.deliverCustomerServiceMessage(packet0, route, true);
+                            CsHelper.deliverMessage(packet0, route, true);
                             if (StringUtils.isNoneBlank(ticketScopeId, appKey)) {
                                 repository().refreshCsTicketLastMessageAfterWithdraw(appKey, ticketScopeId);
                             }
@@ -172,20 +160,18 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
 
 
     private void handleReadReceipt(ChannelHandlerContext ctx, Packet packet, CsImSessionRoute route) {
-        String ticketScopeId = CsMessageScopeHelper.ticketMessageScopeId(route);
-        if (packet.getMessage().getMetadata() != null) {
-            packet.getMessage().getMetadata().setCsReaderId(
-                    CsMessageScopeHelper.resolveReaderId(packet.getMessage(), route));
-        }
+        String ticketScopeId = CsHelper.ticketMessageScopeId(route);
         repository().reactiveHandleOperation(ctx, packet,
-                        repository().reactiveValidCsReadReceiptMessage(packet, route, packet.getDeviceType()),
+                        repository().reactiveLoadValidatedCsReadReceiptPackets(
+                                packet, route, packet.getDeviceType()),
+                        ExceptionCodeEnum.READ_RECEIPT_MESSAGE_VERIFY_ERROR,
                         () -> repository().savePacket2Mq(MqConstant.MQ_READ_RECEIPT_MESSAGE_TOPIC, ticketScopeId, packet),
-                        repository().reactiveCsReadReceiptMessage(
+                        packets -> repository().reactiveCsReadReceiptMessage(
                                 packet, route, packet.getDeviceType(),
-                                MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP),
+                                MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP, packets),
                         (ctx0, packet0) -> {
                             qosAckOnSuccess(ctx0, packet0);
-                            CsMessageDeliveryRouteHelper.deliverReadReceiptToOriginalSender(packet0, route);
+                            CsHelper.deliverMessage(packet0, route);
                             ctx0.fireChannelRead(packet0);
                         },
                         (exceptionEvent) -> MessageServerContext.publishEvent(exceptionEvent, true),

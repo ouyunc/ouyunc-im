@@ -184,9 +184,13 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
     private void handleReadReceipt(ChannelHandlerContext ctx, Packet packet, Set<String> groupUserIdentitySet) {
         String sessionId = packet.getMessage().getTo();
         repository().reactiveHandleOperation(ctx, packet,
-                repository().reactiveValidReadReceiptMessage(packet, packet.getMessage().getTo(), IdentityType.GROUP, false),
+                repository().reactiveLoadValidatedReadReceiptPackets(
+                        packet, packet.getMessage().getTo(), IdentityType.GROUP, false),
+                ExceptionCodeEnum.READ_RECEIPT_MESSAGE_VERIFY_ERROR,
                 ()-> repository().savePacket2Mq(MqConstant.MQ_READ_RECEIPT_MESSAGE_TOPIC, sessionId, packet),
-                repository().reactiveReadReceiptMessage(packet, IdentityType.GROUP, MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP),
+                packets -> repository().reactiveReadReceiptMessage(
+                        packet, IdentityType.GROUP,
+                        MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP, packets),
                 (ctx0, packet0) -> {
                     qosAckOnSuccess(ctx0, packet0);
                     deliverGroupReadReceiptSelfSyncOnly(packet0);

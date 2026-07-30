@@ -1,6 +1,6 @@
 package com.ouyunc.repository.support;
 
-import com.alibaba.fastjson2.JSON;
+import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.JdbcSqlDialectHolder;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.IdentityType;
@@ -51,26 +51,26 @@ public final class CsTicketReadReceiptSupport {
         this.jdbcClient = jdbcClient;
     }
 
-    public Mono<Boolean> reactiveValidCsReadReceiptMessage(Packet packet, CsImSessionRoute route, byte deviceType) {
+    public Mono<List<Packet>> reactiveLoadValidatedCsReadReceiptPackets(Packet packet, CsImSessionRoute route,
+                                                                        byte deviceType) {
         if (route == null || StringUtils.isBlank(route.ticketId())) {
-            return Mono.just(false);
+            return Mono.empty();
         }
         Message message = packet.getMessage();
         if (message == null || message.getMetadata() == null) {
-            return Mono.just(false);
+            return Mono.empty();
         }
         String readerId = CsMessageScopeHelper.resolveReaderId(message, route);
         if (StringUtils.isBlank(readerId)) {
-            return Mono.just(false);
+            return Mono.empty();
         }
         String ticketId = route.ticketId().trim();
         String appKey = message.getMetadata().getAppKey();
         return specialMessageLoader.reactiveLoadValidatedSpecialPackets(
-                        packet, ticketId, MessageIndexScope.CS_TICKET,
-                        MessageConstant.MAX_READ_RECEIPT_MESSAGE_COUNT,
-                        (specialPackets) -> Mono.just(true),
-                        packets -> isReadReceiptTargetPacketsValid(appKey, ticketId, readerId, deviceType, packets))
-                .hasElement();
+                packet, ticketId, MessageIndexScope.CS_TICKET,
+                MessageConstant.MAX_READ_RECEIPT_MESSAGE_COUNT,
+                (specialPackets) -> Mono.just(true),
+                packets -> isReadReceiptTargetPacketsValid(appKey, ticketId, readerId, deviceType, packets));
     }
 
     private boolean isReadReceiptTargetPacketsValid(String appKey, String ticketId, String readerId, byte deviceType,
@@ -90,7 +90,7 @@ public final class CsTicketReadReceiptSupport {
     }
 
     public Mono<Boolean> reactiveCsReadReceiptMessage(Packet packet, CsImSessionRoute route, byte deviceType,
-                                                      long expireTime) {
+                                                      long expireTime, List<Packet> targetPackets) {
         if (route == null || packet == null || packet.getMessage() == null) {
             return Mono.just(false);
         }
@@ -103,10 +103,12 @@ public final class CsTicketReadReceiptSupport {
         if (StringUtils.isBlank(readerId)) {
             return Mono.just(false);
         }
-        List<Long> readPacketIds = JSON.parseArray(message.getContent(), Long.class);
         Long maxReadPacketId = null;
-        if (CollectionUtils.isNotEmpty(readPacketIds)) {
-            maxReadPacketId = readPacketIds.stream().max(Comparator.comparingLong(Long::longValue)).orElse(null);
+        if (CollectionUtils.isNotEmpty(targetPackets)) {
+            maxReadPacketId = targetPackets.stream()
+                    .map(Packet::getPacketId)
+                    .max(Comparator.comparingLong(Long::longValue))
+                    .orElse(null);
         }
         if (maxReadPacketId == null) {
             log.error("已读的消息 id 不能为空 | packet={}", packet);
@@ -150,9 +152,9 @@ public final class CsTicketReadReceiptSupport {
         if (StringUtils.isAnyBlank(appKey, ticketId, readerId)) {
             return 0L;
         }
-        String field = com.ouyunc.base.constant.CacheConstant.buildCsTicketReaderDeviceField(readerId, deviceType);
+        String field = CacheConstant.buildCsTicketReaderDeviceField(readerId, deviceType);
         Object rawObj = stringRedisTemplate.opsForHash().get(
-                com.ouyunc.base.constant.CacheConstant.buildCsTicketReadOffsetHashCacheKey(appKey, ticketId.trim()),
+                CacheConstant.buildCsTicketReadOffsetHashCacheKey(appKey, ticketId.trim()),
                 field);
         String raw = rawObj == null ? null : rawObj.toString();
         if (StringUtils.isNotBlank(raw)) {
