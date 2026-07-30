@@ -11,17 +11,16 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.packet.message.content.ServerNotifyContent;
 import com.ouyunc.base.serialize.Serializer;
+import com.ouyunc.base.utils.IpUtil;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.message.http.HttpContext;
 import com.ouyunc.message.http.HttpPipelineException;
 import com.ouyunc.message.http.auth.HttpAuthPrincipal;
-import io.netty.channel.Channel;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.commons.lang3.StringUtils;
 
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.Map;
 
 /**
@@ -195,24 +194,16 @@ public final class MessagePushPacketConverter {
     }
 
     private static String resolveClientIp(HttpContext httpContext) {
-        if (httpContext.getRequest() == null || httpContext.getRequest().headers() == null) {
-            return null;
-        }
-        String forwarded = httpContext.getRequest().headers().get("X-Forwarded-For");
-        if (StringUtils.isNotBlank(forwarded)) {
-            return forwarded.split(",")[0].trim();
-        }
-        if (httpContext.getChannelContext() != null && httpContext.getChannelContext().channel() != null
-                && httpContext.getChannelContext().channel().remoteAddress() != null) {
-            Channel channel = httpContext.getChannelContext().channel();
-            SocketAddress socketAddr = channel.remoteAddress();
-            if (socketAddr instanceof InetSocketAddress) {
-                return ((InetSocketAddress) socketAddr).getHostString();
+        if (httpContext.getRequest() != null && httpContext.getRequest().headers() != null) {
+            String ip = IpUtil.getIpFromHttpHeaders(httpContext.getRequest().headers());
+            if (StringUtils.isNotBlank(ip)) {
+                return ip.trim();
             }
-            // 兜底处理 /ip:port 字符串
-            String raw = socketAddr.toString();
-            raw = raw.startsWith("/") ? raw.substring(1) : raw;
-            return raw.split(":")[0];
+        }
+        if (httpContext.getChannelContext() != null
+                && httpContext.getChannelContext().channel().remoteAddress() instanceof InetSocketAddress socketAddress
+                && socketAddress.getAddress() != null) {
+            return socketAddress.getAddress().getHostAddress();
         }
         return null;
     }

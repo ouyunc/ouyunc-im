@@ -1,17 +1,10 @@
 package com.ouyunc.message.processor.http.push;
 
-import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.constant.enums.PushTypeEnum;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
-import com.ouyunc.message.context.MessageServerContext;
-import com.ouyunc.message.validator.BlackListValidator;
-import com.ouyunc.message.validator.FriendShieldValidator;
-import com.ouyunc.message.validator.FriendValidator;
 import com.ouyunc.message.validator.FromToValidator;
 import com.ouyunc.message.validator.GroupInviteSelfValidator;
-import com.ouyunc.message.validator.GroupSilenceValidator;
-import com.ouyunc.message.validator.GroupUserValidator;
 import com.ouyunc.message.validator.PermissionValidator;
 import com.ouyunc.message.validator.ReactiveValidator;
 import io.netty.channel.ChannelHandlerContext;

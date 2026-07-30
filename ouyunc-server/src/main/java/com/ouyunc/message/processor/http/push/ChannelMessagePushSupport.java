@@ -29,7 +29,7 @@ public final class ChannelMessagePushSupport {
                 metadata.setIngressSource(ingress.getCode());
             }
         }
-        Object ingressSource = extensions.get("ingressSource");
+        Object ingressSource = extensions.get(ChannelMessageExtraKeys.INGRESS_SOURCE);
         if (ingressSource != null && StringUtils.isNotBlank(String.valueOf(ingressSource))) {
             metadata.setIngressSource(String.valueOf(ingressSource));
         }
