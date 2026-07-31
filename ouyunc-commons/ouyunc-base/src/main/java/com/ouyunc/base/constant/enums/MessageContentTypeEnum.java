@@ -6,7 +6,14 @@ import com.ouyunc.base.packet.message.content.ChatFileContent;
 import com.ouyunc.base.packet.message.content.GroupRequestContent;
 import com.ouyunc.base.packet.message.content.ImageContent;
 import com.ouyunc.base.packet.message.content.ImageTextContent;
+import com.ouyunc.base.packet.message.content.LocationContent;
 import com.ouyunc.base.packet.message.content.LoginContent;
+import com.ouyunc.base.packet.message.content.LogisticsCardContent;
+import com.ouyunc.base.packet.message.content.OrderCardContent;
+import com.ouyunc.base.packet.message.content.PostcardContent;
+import com.ouyunc.base.packet.message.content.ProductCardContent;
+import com.ouyunc.base.packet.message.content.ProfileCardContent;
+import com.ouyunc.base.packet.message.content.RecommendItemContent;
 import com.ouyunc.base.packet.message.content.VideoCallContent;
 import com.ouyunc.base.packet.message.content.VideoContent;
 import com.ouyunc.base.packet.message.content.VoiceCallContent;
@@ -49,6 +56,21 @@ public enum MessageContentTypeEnum implements MessageContentType {
     VIDEO_CALL_CONTENT(NumberConstant.NUMBER_NEGATIVE_125, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), VideoCallContent.class, "视频通话记录内容"),
     /** 视频消息 */
     VIDEO_CONTENT(NumberConstant.NUMBER_NEGATIVE_126, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), VideoContent.class, "视频消息内容"),
+
+    /** 地图/位置消息 */
+    LOCATION_CONTENT(NumberConstant.NUMBER_NEGATIVE_119, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), LocationContent.class, "地图位置消息内容"),
+    /** 明信片/贺卡消息 */
+    POSTCARD_CONTENT(NumberConstant.NUMBER_NEGATIVE_118, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), PostcardContent.class, "明信片贺卡消息内容"),
+    /** 商品卡片（可带 recommendText 表示推荐商品） */
+    PRODUCT_CARD_CONTENT(NumberConstant.NUMBER_NEGATIVE_117, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), ProductCardContent.class, "商品卡片消息内容"),
+    /** 订单卡片 */
+    ORDER_CARD_CONTENT(NumberConstant.NUMBER_NEGATIVE_116, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), OrderCardContent.class, "订单卡片消息内容"),
+    /** 物流卡片 */
+    LOGISTICS_CARD_CONTENT(NumberConstant.NUMBER_NEGATIVE_115, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), LogisticsCardContent.class, "物流卡片消息内容"),
+    /** 推荐人/名片卡片 */
+    PROFILE_CARD_CONTENT(NumberConstant.NUMBER_NEGATIVE_114, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), ProfileCardContent.class, "推荐人名片消息内容"),
+    /** 通用推荐物（文章/门店/优惠券等，非商品） */
+    RECOMMEND_ITEM_CONTENT(NumberConstant.NUMBER_NEGATIVE_113, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), RecommendItemContent.class, "通用推荐物消息内容"),
 
     TEXT_CONTENT(NumberConstant.NUMBER_NEGATIVE_128, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), String.class, "通用文本内容类型"),
 
