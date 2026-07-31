@@ -1,4 +1,4 @@
-package com.ouyunc.base.packet.message.content;
+package com.ouyunc.base.constant.enums;
 
 /**
  * 通话结果状态（与前端 {@code CALL_STATUS} 的 code 对齐）。
