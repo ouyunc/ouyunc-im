@@ -46,7 +46,7 @@ public final class CsHttpPushDeliveryStrategy implements HttpProcessor {
             throw HttpPushFailures.forbidden(packet, ExceptionCodeEnum.CS_SESSION_ROUTE_ERROR,
                     prepared.rejectReason() != null ? prepared.rejectReason() : "客服会话路由校验失败");
         }
-        // process 复用，不再二次 prepare / getRoute
+        // process 复用，不再二次 prepare / getRoute 使用缓存即可
         HttpPushDeliverySupport.stashCsRoute(packet, prepared.route());
     }
 
