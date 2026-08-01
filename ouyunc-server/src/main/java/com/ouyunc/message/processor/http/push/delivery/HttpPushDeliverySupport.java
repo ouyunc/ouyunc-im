@@ -1,5 +1,9 @@
 package com.ouyunc.message.processor.http.push.delivery;
 
+import com.github.benmanes.caffeine.cache.CacheLoader;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.model.ClientInfo;
@@ -7,6 +11,8 @@ import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
+import com.ouyunc.cache.Cache;
+import com.ouyunc.cache.local.caffeine.CaffeineLocalCache;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.message.context.MessageServerContext;
@@ -18,14 +24,17 @@ import com.ouyunc.message.processor.http.push.HttpPushFailures;
 import com.ouyunc.message.processor.http.push.PushIdempotencySupport;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.ouyunc.repository.cs.CsImSessionRoute;
 import reactor.core.publisher.Mono;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * HTTP 推送投递公共能力。
@@ -35,10 +44,24 @@ public final class HttpPushDeliverySupport {
     private static final Logger log = LoggerFactory.getLogger(HttpPushDeliverySupport.class);
 
     /** preProcess 准备好的客服路由，供同请求 process 复用（避免二次 prepare）。 */
-    private static final ConcurrentHashMap<Long, CsImSessionRoute> CS_ROUTE_BY_PACKET_ID = new ConcurrentHashMap<>();
+    private static final Cache<Long, CsImSessionRoute> CS_ROUTE_BY_PACKET_ID =  new CaffeineLocalCache<>("localClientInfoCache", Caffeine.newBuilder()
+    .expireAfterWrite(NumberConstant.NUMBER_30, TimeUnit.SECONDS)
+    .build(new CacheLoader<>() {
+        @Override
+        public @Nullable CsImSessionRoute load(Long packetId) throws Exception {
+            return null;
+        }
+    }));
 
     /** preProcess 校验过的群成员，供同请求 process 复用（以受理时刻为准）。 */
-    private static final ConcurrentHashMap<Long, Set<String>> GROUP_MEMBERS_BY_PACKET_ID = new ConcurrentHashMap<>();
+    private static final Cache<Long, Set<String>> GROUP_MEMBERS_BY_PACKET_ID =  new CaffeineLocalCache<>("localClientInfoCache", Caffeine.newBuilder()
+    .expireAfterWrite(NumberConstant.NUMBER_30, TimeUnit.SECONDS)
+    .build(new CacheLoader<>() {
+        @Override
+        public @Nullable Set<String> load(Long packetId) throws Exception {
+            return null;
+        }
+    }));
 
     private HttpPushDeliverySupport() {
     }
@@ -55,7 +78,7 @@ public final class HttpPushDeliverySupport {
         if (packet == null) {
             return null;
         }
-        return CS_ROUTE_BY_PACKET_ID.remove(packet.getPacketId());
+        return CS_ROUTE_BY_PACKET_ID.asMap().remove(packet.getPacketId());
     }
 
     public static void stashGroupMembers(Packet packet, Set<String> members) {
@@ -70,7 +93,7 @@ public final class HttpPushDeliverySupport {
         if (packet == null) {
             return null;
         }
-        return GROUP_MEMBERS_BY_PACKET_ID.remove(packet.getPacketId());
+        return GROUP_MEMBERS_BY_PACKET_ID.asMap().remove(packet.getPacketId());
     }
 
     /** 占位失败或未进入 process 时丢弃 preProcess 缓存，避免泄漏。 */
