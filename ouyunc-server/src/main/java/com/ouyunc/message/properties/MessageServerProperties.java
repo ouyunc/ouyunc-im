@@ -69,9 +69,9 @@ public class MessageServerProperties extends MessageProperties {
     /**
      * HTTP 业务线程数：{@code >0} 时在独立线程执行 {@link com.ouyunc.message.http.HttpRequestPipeline#prepare}
      * 与 {@link com.ouyunc.message.http.HttpRequestProcessor#process}，写出仍在对应 Channel 的 EventLoop；
-     * {@code 0}（默认）表示与 Netty Worker 同线程同步处理，行为与改造前一致。
+     * {@code 0} 表示与 Netty Worker 同线程同步处理（HTTP 推送开启时禁止，会阻塞 EventLoop）。
      */
-    @Key(value = "ouyunc.message.http.business-executor-threads", defaultValue = "0")
+    @Key(value = "ouyunc.message.http.business-executor-threads", defaultValue = "16")
     int httpBusinessExecutorThreads;
 
     /**
@@ -85,12 +85,6 @@ public class MessageServerProperties extends MessageProperties {
      */
     @Key(value = "ouyunc.message.http-push.enabled", defaultValue = "true")
     boolean httpPushEnabled;
-
-    /**
-     * HTTP 推送是否异步执行 Processor（快速返回 ACCEPTED）。
-     */
-    @Key(value = "ouyunc.message.http-push.async", defaultValue = "true")
-    boolean httpPushAsync;
 
     /**
      * HTTP 推送幂等键 TTL，单位秒。
@@ -127,6 +121,12 @@ public class MessageServerProperties extends MessageProperties {
      */
     @Key("ouyunc.message.http-push.jwt.secret")
     String httpPushJwtSecret;
+
+    /**
+     * 是否允许使用内置 demo JWT secret（仅本地开发）。生产环境务必 false，并配置独立 secret。
+     */
+    @Key(value = "ouyunc.message.http-push.jwt.allow-demo-secret", defaultValue = "true")
+    boolean httpPushJwtAllowDemoSecret;
 
     /**
      * JWT issuer 校验，空则跳过。
@@ -558,14 +558,6 @@ public class MessageServerProperties extends MessageProperties {
         this.httpPushEnabled = httpPushEnabled;
     }
 
-    public boolean isHttpPushAsync() {
-        return httpPushAsync;
-    }
-
-    public void setHttpPushAsync(boolean httpPushAsync) {
-        this.httpPushAsync = httpPushAsync;
-    }
-
     public long getHttpPushIdempotentTtlSeconds() {
         return httpPushIdempotentTtlSeconds;
     }
@@ -612,6 +604,14 @@ public class MessageServerProperties extends MessageProperties {
 
     public void setHttpPushJwtSecret(String httpPushJwtSecret) {
         this.httpPushJwtSecret = httpPushJwtSecret;
+    }
+
+    public boolean isHttpPushJwtAllowDemoSecret() {
+        return httpPushJwtAllowDemoSecret;
+    }
+
+    public void setHttpPushJwtAllowDemoSecret(boolean httpPushJwtAllowDemoSecret) {
+        this.httpPushJwtAllowDemoSecret = httpPushJwtAllowDemoSecret;
     }
 
     public String getHttpPushJwtIssuer() {
@@ -1140,11 +1140,11 @@ public class MessageServerProperties extends MessageProperties {
                 ", httpBusinessExecutorThreads=" + httpBusinessExecutorThreads +
                 ", httpUploadLocalDirectory='" + httpUploadLocalDirectory + '\'' +
                 ", httpPushEnabled=" + httpPushEnabled +
-                ", httpPushAsync=" + httpPushAsync +
                 ", httpPushIdempotentTtlSeconds=" + httpPushIdempotentTtlSeconds +
                 ", httpPushSkipFriendCheckForSystem=" + httpPushSkipFriendCheckForSystem +
                 ", httpPushJwtEnabled=" + httpPushJwtEnabled +
                 ", httpPushJwtSecret='" + httpPushJwtSecret + '\'' +
+                ", httpPushJwtAllowDemoSecret=" + httpPushJwtAllowDemoSecret +
                 ", httpPushJwtIssuer='" + httpPushJwtIssuer + '\'' +
                 ", httpPushJwtIdentityClaim='" + httpPushJwtIdentityClaim + '\'' +
                 ", httpPushJwtAppKeyClaim='" + httpPushJwtAppKeyClaim + '\'' +

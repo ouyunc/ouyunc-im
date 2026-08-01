@@ -17,8 +17,15 @@ public final class ChannelMessagePushSupport {
     private ChannelMessagePushSupport() {
     }
 
-    public static void applyExtensions(Metadata metadata, Map<String, Object> extensions) {
+    /**
+     * @param preserveHttpPushIngress {@code true} 时不覆盖已标记的 HTTP_PUSH（HTTP 入口鉴权依赖该标记）
+     */
+    public static void applyExtensions(Metadata metadata, Map<String, Object> extensions,
+                                       boolean preserveHttpPushIngress) {
         if (metadata == null || extensions == null || extensions.isEmpty()) {
+            return;
+        }
+        if (preserveHttpPushIngress && IngressSourceEnum.isHttpPush(metadata.getIngressSource())) {
             return;
         }
         Object ingressChannel = extensions.get(ChannelMessageExtraKeys.INGRESS_CHANNEL);
@@ -33,6 +40,10 @@ public final class ChannelMessagePushSupport {
         if (ingressSource != null && StringUtils.isNotBlank(String.valueOf(ingressSource))) {
             metadata.setIngressSource(String.valueOf(ingressSource));
         }
+    }
+
+    public static void applyExtensions(Metadata metadata, Map<String, Object> extensions) {
+        applyExtensions(metadata, extensions, false);
     }
 
     private static IngressSourceEnum mapIngressSource(String channelKey) {

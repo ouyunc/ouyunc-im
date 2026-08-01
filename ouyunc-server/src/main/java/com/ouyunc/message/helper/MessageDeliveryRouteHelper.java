@@ -1,8 +1,10 @@
 package com.ouyunc.message.helper;
 
+import com.ouyunc.base.constant.enums.IngressSourceEnum;
 import com.ouyunc.base.constant.enums.MessageDeliveryChannelEnum;
 import com.ouyunc.base.model.ClientInfo;
 import com.ouyunc.base.model.LoginClientInfo;
+import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.message.context.MessageServerContext;
@@ -112,14 +114,29 @@ public final class MessageDeliveryRouteHelper {
     private static void syncSenderDevices(Packet packet, boolean forceSelfSync) {
         Message message = packet.getMessage();
         String appKey = message.getMetadata().getAppKey();
-        ClientInfo clientInfo = MessageServerContext.localClientInfo(appKey, message.getFrom());
-        if (!forceSelfSync && (clientInfo == null || !clientInfo.getSelfSync())) {
-            return;
+        boolean httpPush = isHttpPush(message.getMetadata());
+        if (!forceSelfSync) {
+            ClientInfo clientInfo = MessageServerContext.localClientInfo(appKey, message.getFrom());
+            if (httpPush) {
+                // HTTP：无本地登录默认多端同步；有登录配置则尊重 selfSync
+                if (clientInfo != null && !Boolean.TRUE.equals(clientInfo.getSelfSync())) {
+                    return;
+                }
+            } else if (clientInfo == null || !clientInfo.getSelfSync()) {
+                return;
+            }
         }
-        List<LoginClientInfo> senderDevices = ClientHelper.onlineAll(
-                appKey, message.getFrom(), MessageServerContext.deviceType(appKey, packet.getDeviceType()));
+        // HTTP 无真实 deviceType，同步时不排除设备
+        List<LoginClientInfo> senderDevices = httpPush
+                ? ClientHelper.onlineAll(appKey, message.getFrom())
+                : ClientHelper.onlineAll(appKey, message.getFrom(),
+                MessageServerContext.deviceType(appKey, packet.getDeviceType()));
         if (CollectionUtils.isNotEmpty(senderDevices)) {
             MessageHelper.asyncSendMessage(packet, senderDevices);
         }
+    }
+
+    private static boolean isHttpPush(Metadata metadata) {
+        return metadata != null && IngressSourceEnum.isHttpPush(metadata.getIngressSource());
     }
 }

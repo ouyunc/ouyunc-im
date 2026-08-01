@@ -1,32 +1,26 @@
 package com.ouyunc.message.processor.http.push;
 
-import com.ouyunc.base.constant.MessageConstant;
-import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
-import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
-import com.ouyunc.base.constant.enums.MessageTypeEnum;
+import com.ouyunc.base.constant.enums.HttpResponseCodeEnum;
+import com.ouyunc.base.constant.enums.MessagePushStatusEnum;
 import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.model.HttpResponseResult;
-import com.ouyunc.base.packet.Packet;
-import com.ouyunc.base.packet.message.Message;
-import com.ouyunc.core.listener.event.MessageEvent;
-import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.base.model.MessagePushRequest;
 import com.ouyunc.base.model.MessagePushResponse;
-import com.ouyunc.base.constant.enums.MessagePushStatusEnum;
-import com.ouyunc.message.context.MessageServerContext;
-import com.ouyunc.message.helper.ClientHelper;
-import com.ouyunc.message.helper.CsHelper;
-import com.ouyunc.repository.DefaultRepository;
-import com.ouyunc.repository.cs.CsImSessionRoute;
+import com.ouyunc.base.packet.Packet;
 import com.ouyunc.message.http.HttpContext;
 import com.ouyunc.message.http.HttpPipelineException;
-import org.apache.commons.collections4.CollectionUtils;
+import com.ouyunc.message.processor.http.push.delivery.HttpPushDeliverySupport;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.CompletableFuture;
+
 /**
- * HTTP 推送统一入口：前置校验 → 幂等 → {@link HttpPushProcessorDelegate} 落库并推送。
+ * HTTP 推送入口（方案 1）：校验通过后再幂等占位，状态仅「无 / 已成功」。
+ * <p>{@code ACCEPTED}/{@code DUPLICATE} 视为成功；占位冲突且尚无成功记录时 {@code PROCESSING}（可重试）。
+ * preProcess 与触发投递均在 {@link ThreadPoolManager#httpPushVerifyExecutor()} 执行。</p>
  */
 public final class InternalPacketIngressService {
 
@@ -35,78 +29,79 @@ public final class InternalPacketIngressService {
     private InternalPacketIngressService() {
     }
 
-    public static HttpResponseResult<MessagePushResponse> push(MessagePushRequest request, HttpContext httpContext)
-            throws HttpPipelineException {
+    /**
+     * @return 同步 {@link HttpResponseResult}（已幂等），或 verify 池异步时的 {@link CompletableFuture}
+     */
+    public static Object push(MessagePushRequest request, HttpContext httpContext) throws HttpPipelineException {
         Packet packet = HttpPushValidator.validateAndPrepare(request, httpContext);
 
         String appKey = httpContext.getAppKey();
         String messageId = request.getMessageId();
         String packetIdStr = String.valueOf(packet.getPacketId());
+
+        String existing = PushIdempotencySupport.getPacketId(appKey, messageId);
+        if (existing != null) {
+            return HttpResponseResult.success(buildResponse(messageId, existing, MessagePushStatusEnum.DUPLICATE, null));
+        }
+
+        CompletableFuture<HttpResponseResult<MessagePushResponse>> future = new CompletableFuture<>();
+        try {
+            ThreadPoolManager.httpPushVerifyExecutor().execute(() -> {
+                try {
+                    future.complete(acceptAfterPreProcess(packet, appKey, messageId, packetIdStr));
+                } catch (HttpPipelineException ex) {
+                    future.completeExceptionally(ex);
+                } catch (Throwable t) {
+                    log.error("HTTP 推送 verify 阶段异常, messageId={}", messageId, t);
+                    future.completeExceptionally(new HttpPipelineException(HttpResponseStatus.INTERNAL_SERVER_ERROR,
+                            HttpResponseCodeEnum.INTERNAL_SERVER_ERROR, "HTTP 推送受理失败"));
+                }
+            });
+        } catch (RuntimeException ex) {
+            log.error("HTTP 推送提交 verify 池失败, messageId={}", messageId, ex);
+            throw new HttpPipelineException(HttpResponseStatus.INTERNAL_SERVER_ERROR,
+                    HttpResponseCodeEnum.INTERNAL_SERVER_ERROR, "HTTP 推送受理失败：verify 任务提交异常");
+        }
+        return future;
+    }
+
+    private static HttpResponseResult<MessagePushResponse> acceptAfterPreProcess(
+            Packet packet, String appKey, String messageId, String packetIdStr) throws HttpPipelineException {
+        HttpPushProcessorDelegate.preProcessOrThrow(packet);
+
         if (!PushIdempotencySupport.tryClaim(appKey, messageId, packetIdStr)) {
-            String existingPacketId = PushIdempotencySupport.findClaimedPacketId(appKey, messageId);
-            return HttpResponseResult.success(buildResponse(messageId,
-                    existingPacketId != null ? existingPacketId : packetIdStr,
-                    MessagePushStatusEnum.DUPLICATE,
-                    probeRecipientOnline(appKey, packet)));
-        }
-
-        MessagePushResponse response = buildResponse(messageId, packetIdStr, MessagePushStatusEnum.ACCEPTED,
-                probeRecipientOnline(appKey, packet));
-
-        Runnable task = () -> {
-            try {
-                HttpPushProcessorDelegate.delegate(packet);
-            } catch (Exception ex) {
-                log.error("HTTP 推送投递异常, messageId={}", packet.getMessage().getId(), ex);
-                MessageServerContext.publishEvent(new MessageEvent(
-                        ExceptionEventPayload.of(ExceptionCodeEnum.UNKNOWN_ERROR, ex.getMessage(), packet),
-                        MessageEventTypeEnum.EXCEPTION), true);
+            HttpPushDeliverySupport.discardStashed(packet);
+            String claimed = PushIdempotencySupport.getPacketId(appKey, messageId);
+            if (StringUtils.isNotBlank(claimed)) {
+                return HttpResponseResult.success(buildResponse(messageId, claimed,
+                        MessagePushStatusEnum.DUPLICATE, null));
             }
-        };
-        if (MessageServerContext.serverProperties().isHttpPushAsync()) {
-            ThreadPoolManager.messageProcessorExecutor().execute(task);
-        } else {
-            task.run();
+            return HttpResponseResult.success(buildResponse(messageId, packetIdStr,
+                    MessagePushStatusEnum.PROCESSING, "同 messageId 受理冲突，请稍后重试"));
         }
-        return HttpResponseResult.success(response);
-    }
 
-    private static Boolean probeRecipientOnline(String appKey, Packet packet) {
-        if (packet.getMessage() == null || StringUtils.isBlank(packet.getMessage().getTo())) {
-            return null;
+        // 与 preProcess 同在 http-push-verify 池执行；delegate 内部已异步投递，不再二次跳池
+        try {
+            HttpPushProcessorDelegate.delegate(packet);
+        } catch (RuntimeException ex) {
+            HttpPushDeliverySupport.discardStashed(packet);
+            HttpPushDeliverySupport.forceReleaseIdempotencyClaim(packet);
+            log.error("HTTP 推送投递触发失败, messageId={}", messageId, ex);
+            throw new HttpPipelineException(HttpResponseStatus.INTERNAL_SERVER_ERROR,
+                    HttpResponseCodeEnum.INTERNAL_SERVER_ERROR, "HTTP 推送受理失败：投递触发异常");
         }
-        String to = packet.getMessage().getTo();
-        if (MessageConstant.SPLAT.equals(to)) {
-            return ClientHelper.connections(appKey) > 0 ? Boolean.TRUE : Boolean.FALSE;
-        }
-        String recipientId = resolveRecipientId(appKey, packet, to);
-        return CollectionUtils.isNotEmpty(ClientHelper.onlineAll(appKey, recipientId));
-    }
 
-    /** 客服消息 to 可能是 serviceIdentity，需经 Route 解析为 assigneeId。 */
-    private static String resolveRecipientId(String appKey, Packet packet, String to) {
-        if (packet.getMessageType() != MessageTypeEnum.CUSTOMER_SERVICE.getType()) {
-            return to;
-        }
-        Message message = packet.getMessage();
-        if (message == null || StringUtils.isAnyBlank(appKey, message.getCorrelationId())) {
-            return to;
-        }
-        CsImSessionRoute route =
-                DefaultRepository.INSTANCE.getCsImSessionRoute(appKey, message.getCorrelationId());
-        if (route == null) {
-            return to;
-        }
-        return StringUtils.defaultIfBlank(CsHelper.resolveImRecipientId(to, route), to);
+        return HttpResponseResult.success(buildResponse(messageId, packetIdStr,
+                MessagePushStatusEnum.ACCEPTED, null));
     }
 
     private static MessagePushResponse buildResponse(String messageId, String packetId,
-                                                     MessagePushStatusEnum status, Boolean recipientOnline) {
+                                                     MessagePushStatusEnum status, String errorMessage) {
         MessagePushResponse response = new MessagePushResponse();
         response.setMessageId(messageId);
         response.setPacketId(packetId);
         response.setStatus(status.getCode());
-        response.setRecipientOnline(recipientOnline);
+        response.setErrorMessage(errorMessage);
         return response;
     }
 }

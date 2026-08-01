@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
+import com.ouyunc.base.constant.enums.IngressSourceEnum;
 import com.ouyunc.base.constant.enums.LoginScopeEnum;
 import com.ouyunc.base.constant.enums.MessageDeliveryChannelEnum;
 import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
@@ -134,7 +135,10 @@ public final class CsHelper {
         }
 
         if (fromType == MessageFromToTypeEnum.CS_AGENT.getType()) {
-            if (!StringUtils.equals(from, route.assigneeId())) {
+            // 允许 assigneeId（首次）或已改写的 serviceIdentity（preProcess prepare 后 from 会被改写）
+            boolean senderOk = StringUtils.equals(from, route.assigneeId())
+                    || StringUtils.equals(from, route.serviceIdentity());
+            if (!senderOk) {
                 return PrepareOutcome.reject("当前坐席无权在该会话发消息");
             }
             if (!StringUtils.equals(to, route.userId())) {
@@ -227,12 +231,22 @@ public final class CsHelper {
         if (StringUtils.isBlank(syncIdentity)) {
             return;
         }
-        ClientInfo clientInfo = MessageServerContext.localClientInfo(appKey, syncIdentity);
-        if (!forceSelfSync && (clientInfo == null || !clientInfo.getSelfSync())) {
-            return;
+        boolean httpPush = message.getMetadata() != null
+                && IngressSourceEnum.isHttpPush(message.getMetadata().getIngressSource());
+        if (!forceSelfSync) {
+            ClientInfo clientInfo = MessageServerContext.localClientInfo(appKey, syncIdentity);
+            if (httpPush) {
+                if (clientInfo != null && !Boolean.TRUE.equals(clientInfo.getSelfSync())) {
+                    return;
+                }
+            } else if (clientInfo == null || !clientInfo.getSelfSync()) {
+                return;
+            }
         }
-        List<LoginClientInfo> senderDevices = ClientHelper.onlineAll(
-                appKey, syncIdentity, MessageServerContext.deviceType(appKey, packet.getDeviceType()));
+        List<LoginClientInfo> senderDevices = httpPush
+                ? ClientHelper.onlineAll(appKey, syncIdentity)
+                : ClientHelper.onlineAll(appKey, syncIdentity,
+                MessageServerContext.deviceType(appKey, packet.getDeviceType()));
         if (CollectionUtils.isNotEmpty(senderDevices)) {
             MessageHelper.asyncSendMessage(packet, senderDevices);
         }

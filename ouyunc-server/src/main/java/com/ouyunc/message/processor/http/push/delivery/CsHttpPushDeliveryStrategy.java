@@ -7,26 +7,30 @@ import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
-import com.ouyunc.core.listener.event.MessageEvent;
-import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.CsHelper;
 import com.ouyunc.message.helper.CsHelper.PrepareOutcome;
-import com.ouyunc.message.helper.MessageRefHelper;
+import com.ouyunc.message.http.HttpPipelineException;
+import com.ouyunc.message.processor.http.push.HttpPushFailures;
+import com.ouyunc.message.processor.http.push.HttpPushValidatorChain;
 import com.ouyunc.repository.DefaultRepository;
 import com.ouyunc.repository.cs.CsImSessionRoute;
 import com.ouyunc.repository.support.MessageIndexScope;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.core.publisher.Mono;
 
 /**
  * HTTP 推送：客服会话投递（ticket 消息 scope），与 {@link com.ouyunc.message.processor.CsMessageBiProcessor} 行为对齐。
  */
-public enum CsHttpPushDeliveryStrategy implements HttpProcessor {
+public final class CsHttpPushDeliveryStrategy implements HttpProcessor {
 
-    INSTANCE;
+    public static final CsHttpPushDeliveryStrategy INSTANCE = new CsHttpPushDeliveryStrategy();
 
     private static final Logger log = LoggerFactory.getLogger(CsHttpPushDeliveryStrategy.class);
+
+    private CsHttpPushDeliveryStrategy() {
+    }
 
     @Override
     public MessageTypeEnum messageType() {
@@ -34,62 +38,94 @@ public enum CsHttpPushDeliveryStrategy implements HttpProcessor {
     }
 
     @Override
-    public void process(Packet packet) {
-        if (!MessageRefHelper.normalizeMessageRefOrReject(packet)) {
-            return;
-        }
+    public void preProcess(Packet packet) throws HttpPipelineException {
+        HttpPushValidatorChain.verifyCustomerService(packet);
+        HttpPushDeliverySupport.requireValidMessageRef(packet);
         PrepareOutcome prepared = CsHelper.prepare(packet);
         if (!prepared.accepted()) {
-            log.warn("HTTP 推送客服路由校验失败: {}", prepared.rejectReason());
-            HttpPushDeliverySupport.publishException(ExceptionCodeEnum.CS_SESSION_ROUTE_ERROR, prepared.rejectReason(), packet);
-            return;
+            throw HttpPushFailures.forbidden(packet, ExceptionCodeEnum.CS_SESSION_ROUTE_ERROR,
+                    prepared.rejectReason() != null ? prepared.rejectReason() : "客服会话路由校验失败");
         }
-        CsImSessionRoute route = prepared.route();
+        // process 复用，不再二次 prepare / getRoute
+        HttpPushDeliverySupport.stashCsRoute(packet, prepared.route());
+    }
+
+    @Override
+    public void process(Packet packet) {
+        HttpPushDeliverySupport.subscribeDelivery(packet, doProcess(packet));
+    }
+
+    private Mono<Boolean> doProcess(Packet packet) {
+        CsImSessionRoute route = HttpPushDeliverySupport.takeCsRoute(packet);
+        if (route == null) {
+            log.error("HTTP 推送客服缺少 preProcess 缓存的路由, packetId={}", packet.getPacketId());
+            HttpPushDeliverySupport.publishException(ExceptionCodeEnum.CS_SESSION_ROUTE_ERROR,
+                    "客服会话路由丢失", packet);
+            return Mono.just(false);
+        }
         Message message = packet.getMessage();
         int contentType = message.getContentType();
         if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {
-            handleReadReceipt(packet, route);
-            return;
+            return handleReadReceipt(packet, route);
         }
         if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
-            handleWithdraw(packet, route);
-            return;
+            return saveThenWithdraw(packet, route);
         }
-        saveAndDeliverChat(packet, route);
+        return saveAndDeliverChat(packet, route);
     }
 
-    private void saveAndDeliverChat(Packet packet, CsImSessionRoute route) {
-        DefaultRepository.INSTANCE.reactiveSaveCsTicketMessage(packet, route,
+    private Mono<Boolean> saveAndDeliverChat(Packet packet, CsImSessionRoute route) {
+        return DefaultRepository.INSTANCE.reactiveSaveCsTicketMessage(packet, route,
                         MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)
-                .subscribe(
-                        saved -> {
-                            if (!Boolean.TRUE.equals(saved)) {
-                                log.error("HTTP 推送客服消息落库失败: {}", packet);
-                                HttpPushDeliverySupport.publishException(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
-                                        "客服消息写入 ticket 失败", packet);
-                                return;
-                            }
-                            CsHelper.saveChatLastMessage(
-                                    DefaultRepository.INSTANCE, route, packet);
-                            CsHelper.notifyAfterSave(packet, route);
-                            DefaultRepository.INSTANCE.reactiveAdvanceCsSenderReadOffsetOnSend(
-                                            packet, route, packet.getDeviceType(),
-                                            MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
-                                    .subscribe(ignored -> { }, e -> log.warn(
-                                            "HTTP 推送更新客服 ticket 已读 offset 失败, packetId={}", packet.getPacketId(), e));
-                            CsHelper.deliverMessage(packet, route, false);
-                        },
-                        error -> {
-                            log.error("HTTP 推送客服落库异常, packetId={}", packet.getPacketId(), error);
-                            HttpPushDeliverySupport.publishException(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
-                                    "客服持久化异常: " + error.getMessage(), packet);
-                        });
+                .flatMap(saved -> {
+                    if (!Boolean.TRUE.equals(saved)) {
+                        log.error("HTTP 推送客服消息落库失败: {}", packet);
+                        HttpPushDeliverySupport.publishException(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
+                                "客服消息写入 ticket 失败", packet);
+                        return Mono.just(false);
+                    }
+                    CsHelper.saveChatLastMessage(DefaultRepository.INSTANCE, route, packet);
+                    CsHelper.notifyAfterSave(packet, route);
+                    DefaultRepository.INSTANCE.reactiveAdvanceCsSenderReadOffsetOnSend(
+                                    packet, route, packet.getDeviceType(),
+                                    MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
+                            .subscribe(ignored -> { }, e -> log.warn(
+                                    "HTTP 推送更新客服 ticket 已读 offset 失败, packetId={}", packet.getPacketId(), e));
+                    CsHelper.deliverMessage(packet, route, false);
+                    return Mono.just(true);
+                })
+                .onErrorResume(error -> {
+                    log.error("HTTP 推送客服落库异常, packetId={}", packet.getPacketId(), error);
+                    HttpPushDeliverySupport.publishException(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
+                            "客服持久化异常: " + error.getMessage(), packet);
+                    return Mono.just(false);
+                });
     }
 
-    private void handleWithdraw(Packet packet, CsImSessionRoute route) {
+    private Mono<Boolean> saveThenWithdraw(Packet packet, CsImSessionRoute route) {
+        return DefaultRepository.INSTANCE.reactiveSaveCsTicketMessage(packet, route,
+                        MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)
+                .flatMap(saved -> {
+                    if (!Boolean.TRUE.equals(saved)) {
+                        log.error("HTTP 推送客服撤回消息落库失败: {}", packet);
+                        HttpPushDeliverySupport.publishException(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
+                                "客服撤回消息写入 ticket 失败", packet);
+                        return Mono.just(false);
+                    }
+                    return handleWithdraw(packet, route);
+                })
+                .onErrorResume(error -> {
+                    log.error("HTTP 推送客服撤回落库异常, packetId={}", packet.getPacketId(), error);
+                    HttpPushDeliverySupport.publishException(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
+                            "客服撤回持久化异常: " + error.getMessage(), packet);
+                    return Mono.just(false);
+                });
+    }
+
+    private Mono<Boolean> handleWithdraw(Packet packet, CsImSessionRoute route) {
         String ticketScopeId = CsHelper.ticketMessageScopeId(route);
         String appKey = packet.getMessage().getMetadata().getAppKey();
-        DefaultRepository.INSTANCE.reactiveHandleOperation(null, packet,
+        return DefaultRepository.INSTANCE.reactiveHandleOperation(null, packet,
                         DefaultRepository.INSTANCE.reactiveLoadWithdrawTargetPackets(
                                 packet, ticketScopeId, MessageIndexScope.CS_TICKET, true),
                         ExceptionCodeEnum.WITHDRAW_MESSAGE_VERIFY_ERROR,
@@ -102,14 +138,14 @@ public enum CsHttpPushDeliveryStrategy implements HttpProcessor {
                                 DefaultRepository.INSTANCE.refreshCsTicketLastMessageAfterWithdraw(appKey, ticketScopeId);
                             }
                         },
-                        CsHttpPushDeliveryStrategy::publishExceptionEvent,
+                        HttpPushDeliverySupport::publishExceptionEvent,
                         ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR)
-                .subscribe();
+                .map(Boolean.TRUE::equals);
     }
 
-    private void handleReadReceipt(Packet packet, CsImSessionRoute route) {
+    private Mono<Boolean> handleReadReceipt(Packet packet, CsImSessionRoute route) {
         String ticketScopeId = CsHelper.ticketMessageScopeId(route);
-        DefaultRepository.INSTANCE.reactiveHandleOperation(null, packet,
+        return DefaultRepository.INSTANCE.reactiveHandleOperation(null, packet,
                         DefaultRepository.INSTANCE.reactiveLoadValidatedCsReadReceiptPackets(
                                 packet, route, packet.getDeviceType()),
                         ExceptionCodeEnum.READ_RECEIPT_MESSAGE_VERIFY_ERROR,
@@ -118,12 +154,8 @@ public enum CsHttpPushDeliveryStrategy implements HttpProcessor {
                                 packet, route, packet.getDeviceType(),
                                 MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP, packets),
                         (ctx, packet0) -> CsHelper.deliverMessage(packet0, route),
-                        CsHttpPushDeliveryStrategy::publishExceptionEvent,
+                        HttpPushDeliverySupport::publishExceptionEvent,
                         ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR)
-                .subscribe();
-    }
-
-    private static void publishExceptionEvent(MessageEvent event) {
-        MessageServerContext.publishEvent(event, true);
+                .map(Boolean.TRUE::equals);
     }
 }

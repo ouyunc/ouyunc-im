@@ -4,8 +4,10 @@ import com.google.common.collect.Sets;
 import com.ouyunc.base.constant.HttpRequestConstant;
 import com.ouyunc.base.constant.enums.HttpResponseCodeEnum;
 import com.ouyunc.base.constant.enums.MessageFromToTypeEnum;
+import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.constant.enums.PushTypeEnum;
 import com.ouyunc.base.model.MessagePushRequest;
+import com.ouyunc.base.packet.Packet;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.http.HttpContext;
 import com.ouyunc.message.http.HttpPipelineException;
@@ -37,12 +39,21 @@ public final class HttpPushJwtAuth {
 
     private static final Logger log = LoggerFactory.getLogger(HttpPushJwtAuth.class);
 
+    /** 管理员：放行全部 pushType。 */
     static final String SCOPE_ADMIN = "im:push:admin";
+    /** 通用推送：单聊 / 群聊 / 客服（不含系统通知）。 */
     static final String SCOPE_PUSH = "im:push";
+    /** 系统通知（含广播）。 */
     static final String SCOPE_SYSTEM = "im:push:system";
+    /** 单聊推送。 */
     static final String SCOPE_ONE2ONE = "im:push:one2one";
+    /** 群聊推送。 */
     static final String SCOPE_GROUP = "im:push:group";
+    /** 客服推送。 */
     static final String SCOPE_CS = "im:push:cs";
+
+    /** 与 ouyunc-server.yml 默认 demo 密钥一致；生产禁止使用。 */
+    static final String DEMO_JWT_SECRET = "ouyunc-http-push-jwt-secret-demo-32b";
 
     private HttpPushJwtAuth() {
     }
@@ -58,6 +69,12 @@ public final class HttpPushJwtAuth {
                     HttpResponseCodeEnum.INTERNAL_SERVER_ERROR,
                     "HTTP 推送 JWT 已开启但未配置 ouyunc.message.http-push.jwt.secret");
         }
+        if (DEMO_JWT_SECRET.equals(props.getHttpPushJwtSecret()) && !props.isHttpPushJwtAllowDemoSecret()) {
+            throw new HttpPipelineException(HttpResponseStatus.INTERNAL_SERVER_ERROR,
+                    HttpResponseCodeEnum.INTERNAL_SERVER_ERROR,
+                    "禁止使用 demo JWT secret，请配置 ouyunc.message.http-push.jwt.secret，"
+                            + "并将 http-push.jwt.allow-demo-secret=false");
+        }
         String token = extractBearerToken(httpContext);
         if (StringUtils.isBlank(token)) {
             throw new HttpPipelineException(HttpResponseStatus.UNAUTHORIZED, HttpResponseCodeEnum.UNAUTHORIZED,
@@ -66,6 +83,45 @@ public final class HttpPushJwtAuth {
         HttpAuthPrincipal principal = parsePrincipal(token, httpContext.getAppKey(), props);
         validatePushScope(principal, request.getPushType());
         httpContext.setAuthPrincipal(principal);
+    }
+
+    /**
+     * Packet 构建后二次校验：未显式传 pushType 时按实际 messageType 校验 scope，
+     * 避免 SYSTEM/BOT 省略 pushType 仅凭 {@code im:push} 绕过 {@code im:push:system}。
+     */
+    public static void validateResolvedPacketScope(HttpContext httpContext, MessagePushRequest request, Packet packet)
+            throws HttpPipelineException {
+        if (request.getPushType() != null) {
+            return;
+        }
+        HttpAuthPrincipal principal = httpContext.getAuthPrincipal();
+        if (principal == null || principal.hasScope(SCOPE_ADMIN)) {
+            return;
+        }
+        byte messageType = packet.getMessageType();
+        if (messageType == MessageTypeEnum.SERVER_NOTIFY.getType()) {
+            if (!principal.hasScope(SCOPE_SYSTEM)) {
+                throw forbidden("JWT 缺少系统通知推送权限（需要 scope: " + SCOPE_SYSTEM + "）");
+            }
+            return;
+        }
+        if (messageType == MessageTypeEnum.ONE_2_ONE.getType()) {
+            if (!principal.hasScope(SCOPE_ONE2ONE) && !principal.hasScope(SCOPE_PUSH)) {
+                throw forbidden("JWT 缺少单聊推送权限");
+            }
+            return;
+        }
+        if (messageType == MessageTypeEnum.GROUP.getType()) {
+            if (!principal.hasScope(SCOPE_GROUP) && !principal.hasScope(SCOPE_PUSH)) {
+                throw forbidden("JWT 缺少群聊推送权限");
+            }
+            return;
+        }
+        if (messageType == MessageTypeEnum.CUSTOMER_SERVICE.getType()) {
+            if (!principal.hasScope(SCOPE_CS) && !principal.hasScope(SCOPE_PUSH)) {
+                throw forbidden("JWT 缺少客服推送权限");
+            }
+        }
     }
 
     private static HttpAuthPrincipal parsePrincipal(String token, String headerAppKey, MessageServerProperties props)

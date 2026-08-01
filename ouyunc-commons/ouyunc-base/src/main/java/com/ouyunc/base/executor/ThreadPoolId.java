@@ -12,7 +12,9 @@ public enum ThreadPoolId {
     EVENT_LISTENER("event-listener"),
     CLUSTER_CLIENT_HEARTBEAT("cluster-client-heartbeat"),
     SYSTEM_CLOCK("system-clock"),
-    REDIS_PUBSUB("redis-pubsub");
+    REDIS_PUBSUB("redis-pubsub"),
+    /** HTTP 推送 preProcess / 受理（不占用 HTTP 业务线程） */
+    HTTP_PUSH_VERIFY("http-push-verify");
 
     private final String configKey;
 

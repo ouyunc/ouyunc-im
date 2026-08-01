@@ -5,6 +5,9 @@ import java.io.Serializable;
 
 /**
  * POST /api/im/message/push 响应体 data 部分。
+ * <p>{@code ACCEPTED}/{@code DUPLICATE} 均表示调用成功（已受理）；{@code PROCESSING} 表示同 messageId 尚未成功，可重试。
+ * 均不等于已投递。</p>
+ * <p>{@code errorMessage} 仅在 {@code PROCESSING} 时有文案；成功态为 {@code null}。</p>
  */
 public class MessagePushResponse implements Serializable {
     @Serial
@@ -13,7 +16,8 @@ public class MessagePushResponse implements Serializable {
     private String messageId;
     private String packetId;
     private String status;
-    private Boolean recipientOnline;
+    /** 仅 PROCESSING 使用；ACCEPTED/DUPLICATE 为 null。 */
+    private String errorMessage;
 
     public String getMessageId() {
         return messageId;
@@ -39,11 +43,11 @@ public class MessagePushResponse implements Serializable {
         this.status = status;
     }
 
-    public Boolean getRecipientOnline() {
-        return recipientOnline;
+    public String getErrorMessage() {
+        return errorMessage;
     }
 
-    public void setRecipientOnline(Boolean recipientOnline) {
-        this.recipientOnline = recipientOnline;
+    public void setErrorMessage(String errorMessage) {
+        this.errorMessage = errorMessage;
     }
 }

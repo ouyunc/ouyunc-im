@@ -1,30 +1,20 @@
 package com.ouyunc.message.processor.http.push;
 
-import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.HttpResponseCodeEnum;
-import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.constant.enums.PushChannelEnum;
 import com.ouyunc.base.packet.Packet;
-import com.ouyunc.core.listener.event.MessageEvent;
-import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.base.model.MessagePushRequest;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.http.HttpContext;
 import com.ouyunc.message.http.HttpPipelineException;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import reactor.core.publisher.Mono;
-
-import java.time.Duration;
 
 /**
- * HTTP 推送前置校验：请求参数、JWT、类型白名单、入口鉴权、业务规则，全部通过后返回可投递的 {@link Packet}。
+ * HTTP 推送前置校验：开关、请求参数、JWT、类型白名单、入口鉴权。
+ * <p>好友/群成员/客服路由等业务规则由各投递策略自行校验。</p>
  */
 public final class HttpPushValidator {
-
-    private static final Logger log = LoggerFactory.getLogger(HttpPushValidator.class);
 
     private HttpPushValidator() {
     }
@@ -39,9 +29,9 @@ public final class HttpPushValidator {
         validateRequest(request, httpContext);
         HttpPushJwtAuth.authenticate(httpContext, request);
         Packet packet = MessagePushPacketConverter.convert(request, httpContext);
+        HttpPushJwtAuth.validateResolvedPacketScope(httpContext, request, packet);
         HttpPushSupportedTypes.validate(packet);
         verifyIngress(packet, httpContext);
-        verifyBusinessRules(packet);
         return packet;
     }
 
@@ -49,6 +39,12 @@ public final class HttpPushValidator {
         if (!MessageServerContext.serverProperties().isHttpPushEnabled()) {
             throw new HttpPipelineException(HttpResponseStatus.NOT_FOUND, HttpResponseCodeEnum.NOT_FOUND,
                     "HTTP 推送未开启");
+        }
+        if (MessageServerContext.serverProperties().getHttpBusinessExecutorThreads() <= 0) {
+            throw new HttpPipelineException(HttpResponseStatus.INTERNAL_SERVER_ERROR,
+                    HttpResponseCodeEnum.INTERNAL_SERVER_ERROR,
+                    "HTTP 推送已开启但 ouyunc.message.http.business-executor-threads<=0，"
+                            + "请配置 >0（建议 16）以免阻塞 Netty EventLoop");
         }
     }
 
@@ -88,40 +84,5 @@ public final class HttpPushValidator {
             throw new HttpPipelineException(HttpResponseStatus.UNAUTHORIZED, HttpResponseCodeEnum.UNAUTHORIZED,
                     "HTTP 推送鉴权失败");
         }
-    }
-
-    private static void verifyBusinessRules(Packet packet) throws HttpPipelineException {
-        HttpPushVerifyResult verifyResult = HttpPushValidatorChain.verify(packet, null)
-                .timeout(Duration.ofSeconds(10))
-                .onErrorResume(error -> {
-                    log.error("HTTP 推送校验超时或异常: {}", error.getMessage(), error);
-                    return Mono.just(HttpPushVerifyResult.error(HttpPushValidatorChain.formatError(error)));
-                })
-                .block();
-        if (verifyResult == null || verifyResult.isError()) {
-            String message = resolveVerifyMessage(verifyResult, "HTTP 推送校验异常");
-            log.error("HTTP 推送校验失败, messageId={}, reason={}", packet.getMessage().getId(), message);
-            MessageServerContext.publishEvent(new MessageEvent(
-                    ExceptionEventPayload.of(ExceptionCodeEnum.UNKNOWN_ERROR, message, packet),
-                    MessageEventTypeEnum.EXCEPTION), true);
-            throw new HttpPipelineException(HttpResponseStatus.INTERNAL_SERVER_ERROR,
-                    HttpResponseCodeEnum.INTERNAL_SERVER_ERROR, message);
-        }
-        if (verifyResult.isReject()) {
-            String message = resolveVerifyMessage(verifyResult, "HTTP 推送业务校验未通过");
-            log.warn("HTTP 推送业务校验未通过, messageId={}, reason={}, packet={}",
-                    packet.getMessage().getId(), message, packet);
-            MessageServerContext.publishEvent(new MessageEvent(
-                    ExceptionEventPayload.of(ExceptionCodeEnum.UNKNOWN_ERROR, message, packet),
-                    MessageEventTypeEnum.EXCEPTION), true);
-            throw new HttpPipelineException(HttpResponseStatus.FORBIDDEN, HttpResponseCodeEnum.FORBIDDEN, message);
-        }
-    }
-
-    private static String resolveVerifyMessage(HttpPushVerifyResult verifyResult, String defaultMessage) {
-        if (verifyResult != null && StringUtils.isNotBlank(verifyResult.getMessage())) {
-            return verifyResult.getMessage();
-        }
-        return defaultMessage;
     }
 }

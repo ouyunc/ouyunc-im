@@ -122,21 +122,22 @@ ouyunc:
       max-content-length: 1048576
       # multipart 上传最大字节，默认 10MB；0 表示与 max-content-length 相同。聚合器上限 = max(二者)
       multipart-max-content-length: 10485760
-      # HTTP 业务线程数：0 表示在 Netty Worker 线程同步处理（默认）；>0 时 prepare+process 在独立线程，写出仍在 EventLoop
-      business-executor-threads: 0
+      # HTTP 业务线程数：>0 时 prepare+process 在独立线程，写出仍在 EventLoop；HTTP 推送开启时禁止为 0
+      business-executor-threads: 16
       # multipart 上传保存目录；不配置则使用进程工作目录下 http-uploads
       # upload-local-directory: D:/data/ouyunc-uploads
       processor-scan-package-paths:
         - com.ouyunc.message.processor.http
 
-    # HTTP 外部消息推送（POST /api/im/message/push）
+    # HTTP 外部消息推送（POST /api/im/message/push）：校验通过后始终异步受理（ACCEPTED），不表示已投递
     http-push:
       enabled: true
-      async: true
       idempotent-ttl-seconds: 86400
       skip-friend-check-for-system: true
       jwt:
+        # 生产务必改为独立密钥，并将 allow-demo-secret 设为 false
         secret: ouyunc-http-push-jwt-secret-demo-32b
+        allow-demo-secret: true
 
     # 线程池配置（精简版，仅保留必要参数）
     thread-pool:
@@ -147,6 +148,10 @@ ouyunc:
       message-processor:
         type: VIRTUAL
         thread-name-prefix: message-processor
+      # HTTP 推送 preProcess / 受理（不占用 HTTP 业务线程）
+      http-push-verify:
+        type: VIRTUAL
+        thread-name-prefix: http-push-verify
       qos-task:
         type: VIRTUAL
         thread-name-prefix: qos-task

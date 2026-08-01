@@ -52,13 +52,29 @@ public final class MessagePushPacketConverter {
                 ProtocolTypeEnum.HTTP.getProtocol(),
                 ProtocolTypeEnum.HTTP.getProtocolVersion(),
                 MessageContext.idGenerator().generateId(),
-                NumberConstant.NUMBER_0,
+                resolveDeviceType(request),
                 NetworkEnum.OTHER.getValue(),
                 NumberConstant.NUMBER_0,
                 Serializer.JSON.getValue(),
                 resolved.messageType().getType(),
                 message
         );
+    }
+
+    /**
+     * HTTP 推送设备类型：请求显式传入且合法则用之；否则默认 PC，
+     * 避免 deviceType=0（已废弃 OTHER）导致客服已读 offset 与真实会话不一致。
+     */
+    private static byte resolveDeviceType(MessagePushRequest request) throws HttpPipelineException {
+        if (request.getDeviceType() != null) {
+            byte value = request.getDeviceType().byteValue();
+            if (DeviceTypeEnum.getDeviceEnumByType(value) == null) {
+                throw new HttpPipelineException(HttpResponseStatus.BAD_REQUEST, HttpResponseCodeEnum.BAD_REQUEST,
+                        "不支持的 deviceType=" + request.getDeviceType() + "，可选：1(移动端)、11(PC)");
+            }
+            return value;
+        }
+        return DeviceTypeEnum.PC.getType();
     }
 
     private static Message buildMessage(MessagePushRequest request, ResolvedPushType resolved,
@@ -83,6 +99,9 @@ public final class MessagePushPacketConverter {
         );
         message.setFromType(fromType);
         message.setToType(toType);
+        if (StringUtils.isNotBlank(request.getCorrelationId())) {
+            message.setCorrelationId(request.getCorrelationId().trim());
+        }
 
         MessagePushExtra extra = request.getExtra();
         if (extra != null) {
@@ -97,7 +116,8 @@ public final class MessagePushPacketConverter {
             }
             Map<String, Object> extensions = extra.getExtensions();
             if (extensions != null && !extensions.isEmpty()) {
-                ChannelMessagePushSupport.applyExtensions(metadata, extensions);
+                // 渠道提示仅写入 Message.extra；ingressSource 保持 HTTP_PUSH，供入口鉴权识别
+                ChannelMessagePushSupport.applyExtensions(metadata, extensions, true);
                 message.setExtra(JSON.toJSONString(extensions));
             }
         }
@@ -165,13 +185,15 @@ public final class MessagePushPacketConverter {
         return new ResolvedPushType(null, derived, MessageContentTypeEnum.TEXT_CONTENT);
     }
 
-    private static void applyRequestContentType(MessagePushRequest request, Message message) {
+    private static void applyRequestContentType(MessagePushRequest request, Message message)
+            throws HttpPipelineException {
         if (request.getContentType() == null || message == null) {
             return;
         }
         MessageContentTypeEnum type = MessageContentTypeEnum.getByType(request.getContentType());
         if (type == null) {
-            return;
+            throw new HttpPipelineException(HttpResponseStatus.BAD_REQUEST, HttpResponseCodeEnum.BAD_REQUEST,
+                    "不支持的 contentType=" + request.getContentType());
         }
         message.setContentType(type.getType());
     }

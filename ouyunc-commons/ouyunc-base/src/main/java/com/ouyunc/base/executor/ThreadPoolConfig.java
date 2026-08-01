@@ -81,6 +81,11 @@ public final class ThreadPoolConfig {
                 .threadNamePrefix("redis-pubsub")
                 .daemon(true)
                 .build());
+        defaults.put(ThreadPoolId.HTTP_PUSH_VERIFY, PoolConfig.builder()
+                .type(ThreadPoolType.VIRTUAL)
+                .threadNamePrefix("http-push-verify")
+                .daemon(true)
+                .build());
         return new ThreadPoolConfig(defaults);
     }
 

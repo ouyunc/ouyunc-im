@@ -23,6 +23,7 @@ public enum ExceptionCodeEnum {
     WITHDRAW_MESSAGE_VERIFY_ERROR(40002, "撤回消息校验错误"),
     MESSAGE_REF_INVALID_ERROR(40003, "引用消息无效或超过上限"),
     CS_SESSION_ROUTE_ERROR(40004, "客服会话路由校验失败"),
+    HTTP_PUSH_BUSINESS_REJECT(40005, "HTTP推送业务校验未通过"),
 
 
     READ_RECEIPT_MESSAGE_ERROR(50001, "读已回执消息错误"),

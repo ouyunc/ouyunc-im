@@ -148,6 +148,10 @@ public final class ThreadPoolManager {
         return getExecutor(ThreadPoolId.REDIS_PUBSUB);
     }
 
+    public static ExecutorService httpPushVerifyExecutor() {
+        return getExecutor(ThreadPoolId.HTTP_PUSH_VERIFY);
+    }
+
     private static ExecutorService getExecutor(ThreadPoolId id) {
         ManagedExecutor managed = EXECUTORS.get(id);
         if (managed == null) {

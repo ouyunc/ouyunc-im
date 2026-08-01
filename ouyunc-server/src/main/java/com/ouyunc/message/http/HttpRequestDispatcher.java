@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -27,6 +28,7 @@ import java.util.concurrent.TimeUnit;
  * <p>
  * 可通过 {@code ouyunc.message.http.business-executor-threads} 将 prepare + process 放到业务线程池，避免阻塞 Netty EventLoop；
  * 响应写入始终在 Channel 的 EventLoop 上执行。
+ * 若 {@code process} 返回 {@link CompletionStage}，则在完成后再写响应（便于 HTTP 推送 verify 异步化）。
  */
 public class HttpRequestDispatcher {
     private static final Logger log = LoggerFactory.getLogger(HttpRequestDispatcher.class);
@@ -106,9 +108,19 @@ public class HttpRequestDispatcher {
     private void dispatchSync(ChannelHandlerContext ctx, FullHttpRequest request, HttpRouteMatch match,
                               boolean logTiming, long startNanos, String method, String path) {
         HttpContext httpContext = null;
+        boolean deferred = false;
         try {
             httpContext = HttpRequestPipeline.prepare(ctx, request, match.getRoute().getDescriptor(), match.getPathVariables());
             Object result = match.getRoute().getProcessor().process(httpContext);
+            if (result instanceof CompletionStage<?> stage) {
+                // 异步完成前保留 request；httpContext 所有权交给完成回调
+                request.retain();
+                final HttpContext hc = httpContext;
+                httpContext = null;
+                deferred = true;
+                completeWhenReady(ctx, request, hc, stage, logTiming, startNanos, method, path);
+                return;
+            }
             writeDispatchResult(ctx, request, result);
         } catch (HttpPipelineException e) {
             HttpUtil.writeJsonResponse(ctx, request, e.getStatus(), HttpResponseResult.fail(e.getCodeEnum(), e.getMessage()));
@@ -117,9 +129,11 @@ public class HttpRequestDispatcher {
             HttpUtil.writeJsonResponse(ctx, request, HttpResponseStatus.INTERNAL_SERVER_ERROR,
                     HttpResponseResult.error(HttpResponseCodeEnum.INTERNAL_SERVER_ERROR, "Internal Server Error"));
         } finally {
-            logTimingLine(logTiming, startNanos, method, path);
-            if (httpContext != null) {
-                httpContext.releaseResources();
+            if (!deferred) {
+                if (httpContext != null) {
+                    httpContext.releaseResources();
+                }
+                logTimingLine(logTiming, startNanos, method, path);
             }
         }
     }
@@ -133,10 +147,14 @@ public class HttpRequestDispatcher {
                 httpContext = HttpRequestPipeline.prepare(ctx, request, match.getRoute().getDescriptor(), match.getPathVariables());
                 Object result = match.getRoute().getProcessor().process(httpContext);
                 final HttpContext hc = httpContext;
-                final Object fr = result;
+                httpContext = null;
+                if (result instanceof CompletionStage<?> stage) {
+                    completeWhenReady(ctx, request, hc, stage, logTiming, startNanos, method, path);
+                    return;
+                }
                 runOnChannelEventLoop(ctx, request, hc, logTiming, startNanos, method, path, () -> {
                     try {
-                        writeDispatchResult(ctx, request, fr);
+                        writeDispatchResult(ctx, request, result);
                     } catch (Exception e) {
                         log.error("HTTP write response error, uri={}", request.uri(), e);
                         HttpUtil.writeJsonResponse(ctx, request, HttpResponseStatus.INTERNAL_SERVER_ERROR,
@@ -156,6 +174,41 @@ public class HttpRequestDispatcher {
                 });
             }
         });
+    }
+
+    private static void completeWhenReady(ChannelHandlerContext ctx, FullHttpRequest request, HttpContext httpContext,
+                                          CompletionStage<?> stage, boolean logTiming, long startNanos,
+                                          String method, String path) {
+        stage.whenComplete((result, error) ->
+                runOnChannelEventLoop(ctx, request, httpContext, logTiming, startNanos, method, path, () -> {
+                    if (error != null) {
+                        writeDispatchError(ctx, request, error);
+                        return;
+                    }
+                    try {
+                        writeDispatchResult(ctx, request, result);
+                    } catch (Exception e) {
+                        log.error("HTTP write response error, uri={}", request.uri(), e);
+                        HttpUtil.writeJsonResponse(ctx, request, HttpResponseStatus.INTERNAL_SERVER_ERROR,
+                                HttpResponseResult.error(HttpResponseCodeEnum.INTERNAL_SERVER_ERROR, "Internal Server Error"));
+                    }
+                }));
+    }
+
+    private static void writeDispatchError(ChannelHandlerContext ctx, FullHttpRequest request, Throwable error) {
+        Throwable cause = error;
+        while (cause.getCause() != null
+                && (cause instanceof java.util.concurrent.CompletionException
+                || cause instanceof java.util.concurrent.ExecutionException)) {
+            cause = cause.getCause();
+        }
+        if (cause instanceof HttpPipelineException e) {
+            HttpUtil.writeJsonResponse(ctx, request, e.getStatus(), HttpResponseResult.fail(e.getCodeEnum(), e.getMessage()));
+            return;
+        }
+        log.error("HTTP async dispatch error, uri={}", request.uri(), cause);
+        HttpUtil.writeJsonResponse(ctx, request, HttpResponseStatus.INTERNAL_SERVER_ERROR,
+                HttpResponseResult.error(HttpResponseCodeEnum.INTERNAL_SERVER_ERROR, "Internal Server Error"));
     }
 
     private static void runOnChannelEventLoop(ChannelHandlerContext ctx, FullHttpRequest request, HttpContext httpContext,

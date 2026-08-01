@@ -8,6 +8,7 @@ import com.ouyunc.base.constant.enums.PushTypeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.message.http.HttpPipelineException;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -48,6 +49,8 @@ public final class HttpPushSupportedTypes {
         Set<Integer> one2oneGroup = new HashSet<>();
         one2oneGroup.add(MessageContentTypeEnum.TEXT_CONTENT.getType());
         one2oneGroup.addAll(BUSINESS_CARD_CONTENT_TYPES);
+        one2oneGroup.add(MessageContentTypeEnum.WITHDRAW_CONTENT.getType());
+        one2oneGroup.add(MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType());
         ONE2ONE_GROUP_SUPPORTED_CONTENT_TYPES = Set.copyOf(one2oneGroup);
 
         Set<Integer> cs = new HashSet<>();
@@ -118,6 +121,10 @@ public final class HttpPushSupportedTypes {
         }
         byte messageType = packet.getMessageType();
         if (messageType == MessageTypeEnum.CUSTOMER_SERVICE.getType()) {
+            if (StringUtils.isBlank(packet.getMessage().getCorrelationId())) {
+                throw new HttpPipelineException(HttpResponseStatus.BAD_REQUEST, HttpResponseCodeEnum.BAD_REQUEST,
+                        "客服推送必须传 correlationId（ticketId）");
+            }
             if (!isSupportedCsContent(packet)) {
                 throw new HttpPipelineException(HttpResponseStatus.BAD_REQUEST, HttpResponseCodeEnum.BAD_REQUEST,
                         "HTTP 推送客服不支持 contentType=" + packet.getMessage().getContentType());
@@ -129,7 +136,7 @@ public final class HttpPushSupportedTypes {
             if (!isSupportedOne2OneOrGroupContent(packet)) {
                 throw new HttpPipelineException(HttpResponseStatus.BAD_REQUEST, HttpResponseCodeEnum.BAD_REQUEST,
                         "HTTP 推送单聊/群不支持 contentType=" + packet.getMessage().getContentType()
-                                + "，仅支持文本与业务卡片");
+                                + "，仅支持文本、业务卡片、撤回与已读回执");
             }
             return;
         }
