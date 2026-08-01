@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 /**
  * HTTP 推送入口（方案 1）：校验通过后再幂等占位，状态仅「无 / 已成功」。
@@ -30,9 +31,10 @@ public final class InternalPacketIngressService {
     }
 
     /**
-     * @return 同步 {@link HttpResponseResult}（已幂等），或 verify 池异步时的 {@link CompletableFuture}
+     * @return 已完成的 Future（如 DUPLICATE），或 verify 池异步完成后的 Future
      */
-    public static Object push(MessagePushRequest request, HttpContext httpContext) throws HttpPipelineException {
+    public static CompletionStage<HttpResponseResult<MessagePushResponse>> push(
+            MessagePushRequest request, HttpContext httpContext) throws HttpPipelineException {
         Packet packet = HttpPushValidator.validateAndPrepare(request, httpContext);
 
         String appKey = httpContext.getAppKey();
@@ -41,7 +43,8 @@ public final class InternalPacketIngressService {
 
         String existing = PushIdempotencySupport.getPacketId(appKey, messageId);
         if (existing != null) {
-            return HttpResponseResult.success(buildResponse(messageId, existing, MessagePushStatusEnum.DUPLICATE, null));
+            return CompletableFuture.completedFuture(HttpResponseResult.success(
+                    buildResponse(messageId, existing, MessagePushStatusEnum.DUPLICATE, null)));
         }
 
         CompletableFuture<HttpResponseResult<MessagePushResponse>> future = new CompletableFuture<>();
@@ -80,7 +83,6 @@ public final class InternalPacketIngressService {
                     MessagePushStatusEnum.PROCESSING, "同 messageId 受理冲突，请稍后重试"));
         }
 
-        // 与 preProcess 同在 http-push-verify 池执行；delegate 内部已异步投递，不再二次跳池
         try {
             HttpPushProcessorDelegate.delegate(packet);
         } catch (RuntimeException ex) {
