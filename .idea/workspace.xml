@@ -6,9 +6,23 @@
   <component name="ChangeListManager">
     <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="css">
       <change afterPath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server-dev.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.flattened-pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.flattened-pom.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/MessagePushController.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/MessagePushController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/push/InternalPacketIngressService.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/push/InternalPacketIngressService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/cs/cs-admin-settings.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/cs/cs-agent.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/cs/cs-lobby.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/cs/cs-profile.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/cs/cs-shared.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/cs/cs-tickets.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/cs/cs-visitor.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/cs/mock-api.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/CacheConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/CacheConstant.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/model/CsTicketActivityNotifyPayload.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/model/CsTicketActivityNotifyPayload.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/cs/CsDeliveryChannelHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/cs/CsDeliveryChannelHelper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/cs/CsImSessionRoute.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/cs/CsImSessionRoute.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/cs/CsImSessionRouteFields.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/cs/CsImSessionRouteFields.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/cs/CsImSessionRouteReader.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/cs/CsImSessionRouteReader.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/CsHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/CsHelper.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -582,6 +596,9 @@
       <workItem from="1784943614372" duration="17992000" />
       <workItem from="1785397244323" duration="22301000" />
       <workItem from="1785502202338" duration="8490000" />
+      <workItem from="1785997744242" duration="57000" />
+      <workItem from="1786174468643" duration="3015000" />
+      <workItem from="1786539115961" duration="2084000" />
     </task>
     <task id="LOCAL-00270" summary="mq">
       <option name="closed" value="true" />

@@ -195,6 +195,17 @@ public final class CsHelper {
             log.debug("客服投递暂无目标 to={}, 已落库, packetId={}", message.getTo(), packet.getPacketId());
             return;
         }
+        // 机器人/虚拟客服不挂长连：跳过对 assignee 的 IM 推送（入站靠 ticket-activity MQ）
+        if (StringUtils.equals(recipientId, route.assigneeId())
+                && !route.assigneeRequiresImLongConnection()) {
+            log.debug(
+                    "坐席非长连类型跳过 IM 推送, ticketId={}, assigneeId={}, agentType={}, packetId={}",
+                    route.ticketId(),
+                    route.assigneeId(),
+                    route.agentType(),
+                    packet.getPacketId());
+            return;
+        }
         MessageDeliveryChannelEnum channel = resolveRecipientChannel(route, recipientId);
         if (channel.isIm()) {
             pushImUserIfOnline(packet, appKey, recipientId);
@@ -298,8 +309,12 @@ public final class CsHelper {
                 message.getMetadata() != null ? message.getMetadata().getAppKey() : null);
         Long serverTime = message.getMetadata() != null ? message.getMetadata().getServerTime() : null;
         CsTicketActivityNotifyPayload body = new CsTicketActivityNotifyPayload(
-                appKey, ticketId, packet.getPacketId(), message.getFromType(),
-                serverTime != null ? serverTime : System.currentTimeMillis());
+                appKey,
+                ticketId,
+                packet.getPacketId(),
+                message.getFromType(),
+                serverTime != null ? serverTime : System.currentTimeMillis(),
+                route.agentType());
         String topic = MqConstant.MQ_CS_TICKET_ACTIVITY_TOPIC;
         String key = CsTicketActivityNotifyPayload.messageKey(appKey, ticketId);
         String json = JSON.toJSONString(body);

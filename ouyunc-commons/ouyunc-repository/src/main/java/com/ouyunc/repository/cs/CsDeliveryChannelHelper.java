@@ -12,7 +12,8 @@ public final class CsDeliveryChannelHelper {
     }
 
     /**
-     * 解析接收方下行渠道：坐席始终 IM；访客按 ticket 进线渠道（whatsapp/telegram/line → 外渠 Kafka）。
+     * 解析接收方下行渠道：需长连的坐席始终 IM；访客按 ticket 进线渠道（whatsapp/telegram/line → 外渠 Kafka）。
+     * <p>机器人/虚拟客服不走坐席长连，由调用方在投递前短路。</p>
      */
     public static MessageDeliveryChannelEnum resolveRecipientChannel(CsImSessionRoute route, String recipientId) {
         if (route == null || StringUtils.isBlank(recipientId)) {

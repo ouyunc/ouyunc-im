@@ -469,7 +469,7 @@ public class CacheConstant {
     private static final String CS_TICKET = "cs:ticket:";
 
     /**
-     * 客服会话路由（主键 = ticketId）：Hash 含 sessionId / serviceIdentity / assigneeId / channel。
+     * 客服会话路由（主键 = ticketId）：Hash 含 sessionId / serviceIdentity / assigneeId / agentType / channel。
      * {@code ouyunc:ak:{appKey}:cs:session:route:{ticketId}}
      */
     public static String buildCsSessionRouteCacheKey(String appKey, String ticketId) {

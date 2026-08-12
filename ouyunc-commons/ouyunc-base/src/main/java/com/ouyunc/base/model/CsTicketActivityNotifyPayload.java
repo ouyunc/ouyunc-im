@@ -19,15 +19,33 @@ public class CsTicketActivityNotifyPayload implements Serializable {
     private Integer fromType;
     private Long serverTimeMs;
 
+    /**
+     * 当前接待坐席类型：1人工 2机器人 3虚拟（与路由 Hash agentType 对齐）。
+     * <p>历史消息可能为空。</p>
+     */
+    private Integer agentType;
+
     public CsTicketActivityNotifyPayload() {
     }
 
-    public CsTicketActivityNotifyPayload(String appKey, Long ticketId, Long packetId, Integer fromType, Long serverTimeMs) {
+    public CsTicketActivityNotifyPayload(
+            String appKey, Long ticketId, Long packetId, Integer fromType, Long serverTimeMs) {
+        this(appKey, ticketId, packetId, fromType, serverTimeMs, null);
+    }
+
+    public CsTicketActivityNotifyPayload(
+            String appKey,
+            Long ticketId,
+            Long packetId,
+            Integer fromType,
+            Long serverTimeMs,
+            Integer agentType) {
         this.appKey = appKey;
         this.ticketId = ticketId;
         this.packetId = packetId;
         this.fromType = fromType;
         this.serverTimeMs = serverTimeMs;
+        this.agentType = agentType;
     }
 
     public static String messageKey(String appKey, long ticketId) {
@@ -72,5 +90,13 @@ public class CsTicketActivityNotifyPayload implements Serializable {
 
     public void setServerTimeMs(Long serverTimeMs) {
         this.serverTimeMs = serverTimeMs;
+    }
+
+    public Integer getAgentType() {
+        return agentType;
+    }
+
+    public void setAgentType(Integer agentType) {
+        this.agentType = agentType;
     }
 }
