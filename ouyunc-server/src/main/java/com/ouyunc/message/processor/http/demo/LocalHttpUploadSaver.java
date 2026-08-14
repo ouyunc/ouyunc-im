@@ -1,5 +1,6 @@
 package com.ouyunc.message.processor.http.demo;
 
+import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.properties.MessageServerProperties;
 import io.netty.handler.codec.http.multipart.FileUpload;
@@ -29,7 +30,7 @@ public final class LocalHttpUploadSaver {
         Files.createDirectories(dir);
 
         String safeName = sanitizeFilename(file.getFilename());
-        String unique = System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 8) + "_" + safeName;
+        String unique = TimeUtil.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 8) + "_" + safeName;
         Path dest = dir.resolve(unique).normalize();
         if (!dest.startsWith(dir.normalize())) {
             throw new IOException("非法保存路径");

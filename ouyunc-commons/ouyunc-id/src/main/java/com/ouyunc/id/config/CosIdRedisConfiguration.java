@@ -1,5 +1,6 @@
 package com.ouyunc.id.config;
 
+import com.ouyunc.base.utils.TimeUtil;
 import me.ahoo.cosid.CosId;
 import me.ahoo.cosid.machine.*;
 import me.ahoo.cosid.provider.DefaultIdGeneratorProvider;
@@ -145,7 +146,7 @@ public class CosIdRedisConfiguration {
         }
 
         // 3. 使用时间戳作为后备方案
-        return "instance-" + System.currentTimeMillis();
+        return "instance-" + TimeUtil.currentTimeMillis();
     }
 
 

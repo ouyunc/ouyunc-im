@@ -11,11 +11,23 @@ public record CsImSessionRoute(
         String assigneeId,
         Integer status,
         String channel,
-        /** 当前接待坐席类型：1人工 2机器人 3虚拟；历史路由可能为 null（按人工兼容） */
-        Integer agentType) {
+        /** 当前接待坐席类型：1人工 2机器人 3虚拟，必填 */
+        Integer agentType,
+        /** 改派世代，从 1 起；缺省或 &lt; 1 视为无效路由 */
+        Long epoch) {
 
     public boolean isActive(int inProgressStatus) {
-        return status == null || status == inProgressStatus;
+        return status != null && status == inProgressStatus;
+    }
+
+    /** 投递契约：epoch / agentType / status / assignee 必须齐全且合法。 */
+    public boolean hasRequiredDeliveryFields() {
+        return epoch != null
+                && epoch >= 1L
+                && CsAgentType.isKnown(agentType)
+                && status != null
+                && assigneeId != null
+                && !assigneeId.isBlank();
     }
 
     /** 访客是否外渠进线（whatsapp / telegram / line）。 */

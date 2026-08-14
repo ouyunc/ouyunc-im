@@ -19,6 +19,11 @@ public final class CsImSessionRouteFields {
     /** 坐席类型，与 CS {@code CsSessionRouteHashFields.AGENT_TYPE} 对齐 */
     public static final String AGENT_TYPE = "agentType";
 
+    /**
+     * 路由世代：CS 每次改派/绑定 HINCRBY，从 1 起。IM 读不到合法 epoch 则拒收。
+     */
+    public static final String EPOCH = "epoch";
+
     /** IM 消息投递所需 field（与 CS 写入的 Hash field 名对齐）。 */
     public static final List<String> READ_FIELDS =
             List.of(
@@ -29,7 +34,12 @@ public final class CsImSessionRouteFields {
                     ASSIGNEE_ID,
                     STATUS,
                     CHANNEL,
-                    AGENT_TYPE);
+                    AGENT_TYPE,
+                    EPOCH);
+
+    /** 投递前热校验：只读会变的字段，避免整 Hash 二次 HMGET。 */
+    public static final List<String> DELIVERY_FIELDS =
+            List.of(ASSIGNEE_ID, EPOCH, AGENT_TYPE, STATUS);
 
     private CsImSessionRouteFields() {}
 }

@@ -127,25 +127,21 @@ public final class CsHelper {
         if (StringUtils.isAnyBlank(route.ticketId(), route.userId(), route.serviceIdentity(), route.sessionId())) {
             return PrepareOutcome.reject("会话路由数据不完整");
         }
+        if (!route.hasRequiredDeliveryFields()) {
+            return PrepareOutcome.reject("会话路由缺少 epoch/agentType/status/assignee");
+        }
         if (!route.isActive(YesOrNo.YES.getCode())) {
             return PrepareOutcome.reject("咨询单已关闭或不可收发消息");
         }
-        if (StringUtils.isBlank(route.assigneeId())) {
-            return PrepareOutcome.reject("咨询单尚未分配坐席");
-        }
 
         if (fromType == MessageFromToTypeEnum.CS_AGENT.getType()) {
-            // 允许 assigneeId（首次）或已改写的 serviceIdentity（preProcess prepare 后 from 会被改写）
-            boolean senderOk = StringUtils.equals(from, route.assigneeId())
-                    || StringUtils.equals(from, route.serviceIdentity());
-            if (!senderOk) {
+            if (!StringUtils.equals(from, route.assigneeId())) {
                 return PrepareOutcome.reject("当前坐席无权在该会话发消息");
             }
             if (!StringUtils.equals(to, route.userId())) {
                 return PrepareOutcome.reject("坐席 to 必须为访客 userId");
             }
-            // 投递/外渠按入口 identity；对外通道语义仍是访客↔入口
-            message.setFrom(route.serviceIdentity());
+            // from 改写推迟到 refreshDelivery 之后，以便转接窗口用真实 assignee 校验发送方
         } else {
             if (!StringUtils.equals(from, route.userId()) || !StringUtils.equals(to, route.serviceIdentity())) {
                 return PrepareOutcome.reject("访客 from/to 与咨询单不一致（须访客→入口）");
@@ -157,6 +153,57 @@ public final class CsHelper {
         }
 
         return PrepareOutcome.ok(route);
+    }
+
+    /**
+     * 投递前二次读 assignee/epoch。转接发生在 prepare 之后时改打新座席；关单则拒绝。
+     * 坐席侧若已不是当前 assignee，拒绝发送，避免旧座席在转接窗口继续发言。
+     */
+    public static PrepareOutcome refreshDelivery(Packet packet, CsImSessionRoute snapshot) {
+        if (packet == null || packet.getMessage() == null || snapshot == null) {
+            return PrepareOutcome.reject("投递刷新缺少路由快照");
+        }
+        String appKey = packet.getMessage().getMetadata() != null
+                ? packet.getMessage().getMetadata().getAppKey()
+                : null;
+        CsImSessionRoute live = DefaultRepository.INSTANCE.mergeCsImSessionRouteDelivery(appKey, snapshot);
+        if (live == null || !live.hasRequiredDeliveryFields()) {
+            return PrepareOutcome.reject("咨询单路由已关闭或字段不完整（须含 epoch）");
+        }
+        if (!live.isActive(YesOrNo.YES.getCode())) {
+            return PrepareOutcome.reject("咨询单已关闭或不可收发消息");
+        }
+        Message message = packet.getMessage();
+        if (message.getFromType() == MessageFromToTypeEnum.CS_AGENT.getType()) {
+            if (!StringUtils.equals(message.getFrom(), live.assigneeId())) {
+                return PrepareOutcome.reject("当前坐席无权在该会话发消息（可能已转接）");
+            }
+        }
+        if (log.isDebugEnabled() && !live.epoch().equals(snapshot.epoch())) {
+            log.debug(
+                    "客服路由 epoch 已前进, ticketId={}, {} -> {}, assignee {} -> {}",
+                    live.ticketId(),
+                    snapshot.epoch(),
+                    live.epoch(),
+                    snapshot.assigneeId(),
+                    live.assigneeId());
+        }
+        return PrepareOutcome.ok(live);
+    }
+
+    /**
+     * 坐席发消息对外 from 改为入口 identity；须在 {@link #refreshDelivery} 通过之后调用。
+     */
+    public static void rewriteAgentFrom(Packet packet, CsImSessionRoute route) {
+        if (packet == null || packet.getMessage() == null || route == null) {
+            return;
+        }
+        if (packet.getMessage().getFromType() != MessageFromToTypeEnum.CS_AGENT.getType()) {
+            return;
+        }
+        if (StringUtils.isNotBlank(route.serviceIdentity())) {
+            packet.getMessage().setFrom(route.serviceIdentity());
+        }
     }
 
     public static void publishReject(Packet packet, String reason) {
@@ -313,7 +360,7 @@ public final class CsHelper {
                 ticketId,
                 packet.getPacketId(),
                 message.getFromType(),
-                serverTime != null ? serverTime : System.currentTimeMillis(),
+                serverTime != null ? serverTime : TimeUtil.currentTimeMillis(),
                 route.agentType());
         String topic = MqConstant.MQ_CS_TICKET_ACTIVITY_TOPIC;
         String key = CsTicketActivityNotifyPayload.messageKey(appKey, ticketId);
@@ -345,6 +392,10 @@ public final class CsHelper {
         if (loginInfo == null || StringUtils.isBlank(loginInfo.getIdentity())) {
             return;
         }
+        if (StringUtils.isBlank(eventType)) {
+            log.warn("CS agent-presence 跳过：eventType 为空 agentId={}", loginInfo.getIdentity());
+            return;
+        }
         if (LoginScopeEnum.fromType(loginInfo.getScope()) != LoginScopeEnum.CS_AGENT) {
             return;
         }
@@ -361,6 +412,7 @@ public final class CsHelper {
                 reason,
                 TimeUtil.currentTimeMillis(),
                 eventType);
+        body.setLoginServerAddress(loginInfo.getLoginServerAddress());
         String topic = MqConstant.MQ_CS_AGENT_PRESENCE_TOPIC;
         String key = CsAgentPresenceNotifyPayload.messageKey(appKey, loginInfo.getIdentity());
         String json = JSON.toJSONString(body);

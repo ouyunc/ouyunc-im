@@ -1,5 +1,6 @@
 package com.ouyunc.message.processor.http.demo;
 
+import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.base.constant.HttpRequestConstant;
 import com.ouyunc.base.model.HttpFileResponse;
 import com.ouyunc.base.model.HttpRawResponse;
@@ -196,7 +197,7 @@ public class HttpDemoController {
             Path dir = Path.of(System.getProperty("java.io.tmpdir"), "ouyunc-http-demo");
             Files.createDirectories(dir);
             Path f = dir.resolve("sample-download.txt");
-            String text = "OUYUNC HTTP demo — file download\n生成时间(ms): " + System.currentTimeMillis() + "\n";
+            String text = "OUYUNC HTTP demo — file download\n生成时间(ms): " + TimeUtil.currentTimeMillis() + "\n";
             Files.writeString(f, text, StandardCharsets.UTF_8);
             cachedDownloadFile = f;
             return f;

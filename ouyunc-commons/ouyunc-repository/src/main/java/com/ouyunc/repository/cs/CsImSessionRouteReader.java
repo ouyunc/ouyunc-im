@@ -34,7 +34,14 @@ public final class CsImSessionRouteReader {
         String userId = map.get(CsImSessionRouteFields.USER_ID);
         String serviceIdentity = map.get(CsImSessionRouteFields.SERVICE_IDENTITY);
         String assigneeId = map.get(CsImSessionRouteFields.ASSIGNEE_ID);
-        if (StringUtils.isAllBlank(ticketId, sessionId, userId, serviceIdentity, assigneeId)) {
+        Integer status = parseInt(map.get(CsImSessionRouteFields.STATUS));
+        Integer agentType = parseInt(map.get(CsImSessionRouteFields.AGENT_TYPE));
+        Long epoch = parseLong(map.get(CsImSessionRouteFields.EPOCH));
+        if (StringUtils.isAnyBlank(ticketId, sessionId, userId, serviceIdentity, assigneeId)
+                || status == null
+                || !CsAgentType.isKnown(agentType)
+                || epoch == null
+                || epoch < 1L) {
             return null;
         }
         return new CsImSessionRoute(
@@ -43,17 +50,29 @@ public final class CsImSessionRouteReader {
                 userId,
                 serviceIdentity,
                 assigneeId,
-                parseInt(map.get(CsImSessionRouteFields.STATUS)),
+                status,
                 map.get(CsImSessionRouteFields.CHANNEL),
-                parseInt(map.get(CsImSessionRouteFields.AGENT_TYPE)));
+                agentType,
+                epoch);
     }
 
-    private static Integer parseInt(String raw) {
+    public static Integer parseInt(String raw) {
         if (StringUtils.isBlank(raw)) {
             return null;
         }
         try {
             return Integer.parseInt(raw.trim());
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    public static Long parseLong(String raw) {
+        if (StringUtils.isBlank(raw)) {
+            return null;
+        }
+        try {
+            return Long.parseLong(raw.trim());
         } catch (NumberFormatException ex) {
             return null;
         }

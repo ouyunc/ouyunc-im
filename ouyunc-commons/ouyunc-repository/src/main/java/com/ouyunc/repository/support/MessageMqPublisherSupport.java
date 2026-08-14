@@ -68,6 +68,10 @@ public final class MessageMqPublisherSupport {
             if (ex != null) {
                 log.warn("MQ JSON 投递失败, topic={}, key={}, context={}, 原因: {}",
                         topic, key, failureContext, ex.getMessage(), ex);
+                MessageContext.publishEvent(new MessageEvent(
+                        ExceptionEventPayload.of(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR,
+                                failureContext + ": " + ex.getMessage(), null),
+                        MessageEventTypeEnum.EXCEPTION), true);
             }
         });
     }

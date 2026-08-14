@@ -38,7 +38,7 @@ public class GenericEvent<T> {
 
     public void setSource(T source) {
         this.source = source;
-        this.timestamp = System.currentTimeMillis();
+        this.timestamp = TimeUtil.currentTimeMillis();
     }
 
     public void setTimestamp(long timestamp) {

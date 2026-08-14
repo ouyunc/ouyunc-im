@@ -38,13 +38,14 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
 
     @Override
     public void preProcess(ChannelHandlerContext ctx, Packet packet) {
-        ThreadPoolManager.messageProcessorExecutor().execute(() -> repository().publishArchiveAsync(packet));
         if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
             log.error("客服消息校验失败: {} 认证未通过, 关闭 channel", packet);
             MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过!", packet), MessageEventTypeEnum.EXCEPTION), true);
             ctx.close();
             return;
         }
+        // 认证通过后再归档，避免未登录/非法包进入数仓
+        ThreadPoolManager.messageProcessorExecutor().execute(() -> repository().publishArchiveAsync(packet));
         if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
             return;
         }
@@ -53,6 +54,18 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
 
     @Override
     public void process(ChannelHandlerContext ctx, Packet packet) {
+        // 同步 Redis 路由校验不能堵在 Netty EventLoop
+        ThreadPoolManager.messageProcessorExecutor().execute(() -> {
+            try {
+                processOffloaded(ctx, packet);
+            } catch (Exception e) {
+                log.error("客服消息处理异常, packetId={}", packet.getPacketId(), e);
+                releaseQosOnFailure(packet);
+            }
+        });
+    }
+
+    private void processOffloaded(ChannelHandlerContext ctx, Packet packet) {
         log.debug("Processing customer service message...");
         if (processWithContentProcessor(ctx, packet)) {
             return;
@@ -61,7 +74,15 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
         if (!prepared.accepted()) {
             return;
         }
-        CsImSessionRoute route = prepared.route();
+        PrepareOutcome live = CsHelper.refreshDelivery(packet, prepared.route());
+        if (!live.accepted()) {
+            log.warn("客服投递前路由刷新失败: {} | packetId={}", live.rejectReason(), packet.getPacketId());
+            CsHelper.publishReject(packet, live.rejectReason());
+            releaseQosOnFailure(packet);
+            return;
+        }
+        CsImSessionRoute route = live.route();
+        CsHelper.rewriteAgentFrom(packet, route);
         Message message = packet.getMessage();
         int contentType = message.getContentType();
         if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {
@@ -92,7 +113,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
                                         },
                                         e -> log.warn("客服发消息静默更新 ticket 已读 offset 失败, packetId={}", packet.getPacketId(), e));
                         CsHelper.deliverMessage(packet, route, false);
-                        ctx.fireChannelRead(packet);
+                        fireReadOnEventLoop(ctx, packet);
                     }
                 },
                 error -> {
@@ -101,6 +122,15 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
                     releaseQosOnFailure(packet);
                 });
 
+    }
+
+    /** 后续 pipeline 必须回到该连接的 EventLoop，避免跨线程 fireChannelRead。 */
+    private static void fireReadOnEventLoop(ChannelHandlerContext ctx, Packet packet) {
+        if (ctx.executor().inEventLoop()) {
+            ctx.fireChannelRead(packet);
+            return;
+        }
+        ctx.executor().execute(() -> ctx.fireChannelRead(packet));
     }
 
 
@@ -146,7 +176,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
                             if (StringUtils.isNoneBlank(ticketScopeId, appKey)) {
                                 repository().refreshCsTicketLastMessageAfterWithdraw(appKey, ticketScopeId);
                             }
-                            ctx0.fireChannelRead(packet0);
+                            fireReadOnEventLoop(ctx0, packet0);
                         },
                         (exceptionEvent) -> MessageServerContext.publishEvent(exceptionEvent, true),
                         ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR)
@@ -172,7 +202,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
                         (ctx0, packet0) -> {
                             qosAckOnSuccess(ctx0, packet0);
                             CsHelper.deliverMessage(packet0, route);
-                            ctx0.fireChannelRead(packet0);
+                            fireReadOnEventLoop(ctx0, packet0);
                         },
                         (exceptionEvent) -> MessageServerContext.publishEvent(exceptionEvent, true),
                         ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR)

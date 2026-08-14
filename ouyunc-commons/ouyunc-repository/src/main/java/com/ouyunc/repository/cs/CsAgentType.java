@@ -18,15 +18,16 @@ public final class CsAgentType {
     private CsAgentType() {
     }
 
+    public static boolean isKnown(Integer agentType) {
+        return agentType != null
+                && (agentType == HUMAN || agentType == ROBOT || agentType == VIRTUAL);
+    }
+
     /**
-     * 是否需要对 assignee 做 IM 长连推送。
-     * <p>{@code null}/未知按人工，兼容历史路由未写 agentType。</p>
+     * 是否需要对 assignee 做 IM 长连推送。仅人工为 true。
      */
     public static boolean requiresImLongConnection(Integer agentType) {
-        if (agentType == null) {
-            return true;
-        }
-        return agentType == HUMAN;
+        return agentType != null && agentType == HUMAN;
     }
 
     public static boolean isRobot(Integer agentType) {

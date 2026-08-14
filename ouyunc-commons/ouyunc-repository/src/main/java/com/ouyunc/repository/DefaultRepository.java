@@ -290,4 +290,11 @@ public enum DefaultRepository implements Repository {
     public CsImSessionRoute getCsImSessionRoute(String appKey, String ticketId) {
         return RepositorySupports.CS_IM_SESSION_ROUTE.getRoute(appKey, ticketId);
     }
+
+    /**
+     * 投递前用 Redis 最新 assignee/epoch 覆盖快照；路由已删返回 null。
+     */
+    public CsImSessionRoute mergeCsImSessionRouteDelivery(String appKey, CsImSessionRoute snapshot) {
+        return RepositorySupports.CS_IM_SESSION_ROUTE.mergeLiveDelivery(appKey, snapshot);
+    }
 }

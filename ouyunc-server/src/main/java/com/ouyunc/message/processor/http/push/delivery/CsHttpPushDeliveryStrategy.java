@@ -63,6 +63,14 @@ public final class CsHttpPushDeliveryStrategy implements HttpProcessor {
                     "客服会话路由丢失", packet);
             return Mono.just(false);
         }
+        PrepareOutcome live = CsHelper.refreshDelivery(packet, route);
+        if (!live.accepted()) {
+            HttpPushDeliverySupport.publishException(ExceptionCodeEnum.CS_SESSION_ROUTE_ERROR,
+                    live.rejectReason() != null ? live.rejectReason() : "客服会话路由已失效", packet);
+            return Mono.just(false);
+        }
+        route = live.route();
+        CsHelper.rewriteAgentFrom(packet, route);
         Message message = packet.getMessage();
         int contentType = message.getContentType();
         if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {

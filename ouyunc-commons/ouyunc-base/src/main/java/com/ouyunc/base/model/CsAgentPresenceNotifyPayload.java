@@ -20,8 +20,13 @@ public class CsAgentPresenceNotifyPayload implements Serializable {
     private Byte deviceType;
     private String reason;
     private Long serverTimeMs;
-    /** {@link MessageConstant#CS_AGENT_PRESENCE_CHANNEL_OPEN} / {@link MessageConstant#CS_AGENT_PRESENCE_CHANNEL_CLOSE} */
+    /**
+     * {@link MessageConstant#CS_AGENT_PRESENCE_CHANNEL_OPEN} /
+     * {@link MessageConstant#CS_AGENT_PRESENCE_CHANNEL_CLOSE}
+     */
     private String eventType;
+    /** IM 登录节点地址（host:port），OPEN/CLOSE 透传，供排查 */
+    private String loginServerAddress;
 
     public CsAgentPresenceNotifyPayload() {
     }
@@ -101,5 +106,13 @@ public class CsAgentPresenceNotifyPayload implements Serializable {
 
     public void setEventType(String eventType) {
         this.eventType = eventType;
+    }
+
+    public String getLoginServerAddress() {
+        return loginServerAddress;
+    }
+
+    public void setLoginServerAddress(String loginServerAddress) {
+        this.loginServerAddress = loginServerAddress;
     }
 }
