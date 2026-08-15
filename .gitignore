@@ -6,3 +6,4 @@ ouyu-server/src/META-INF/MANIFEST.MF
 *.iml
 /.idea/
 resources/ouyunc-server-prod.yml
+/ouyunc-server/src/main/resources/ouyunc-server-dev.yml
