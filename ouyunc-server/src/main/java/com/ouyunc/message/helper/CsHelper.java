@@ -128,7 +128,7 @@ public final class CsHelper {
             return PrepareOutcome.reject("会话路由数据不完整");
         }
         if (!route.hasRequiredDeliveryFields()) {
-            return PrepareOutcome.reject("会话路由缺少 epoch/agentType/status/assignee");
+            return PrepareOutcome.reject("尚未分配坐席或机器人，不能发消息");
         }
         if (!route.isActive(YesOrNo.YES.getCode())) {
             return PrepareOutcome.reject("咨询单已关闭或不可收发消息");
@@ -168,7 +168,7 @@ public final class CsHelper {
                 : null;
         CsImSessionRoute live = DefaultRepository.INSTANCE.mergeCsImSessionRouteDelivery(appKey, snapshot);
         if (live == null || !live.hasRequiredDeliveryFields()) {
-            return PrepareOutcome.reject("咨询单路由已关闭或字段不完整（须含 epoch）");
+            return PrepareOutcome.reject("咨询单尚未分配坐席或机器人，或路由已关闭");
         }
         if (!live.isActive(YesOrNo.YES.getCode())) {
             return PrepareOutcome.reject("咨询单已关闭或不可收发消息");

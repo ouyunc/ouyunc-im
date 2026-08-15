@@ -58,7 +58,7 @@ public final class CsImSessionRouteSupport {
             if (values == null || values.stream().allMatch(v -> v == null)) {
                 return null;
             }
-            String assignee = valueAt(values, 0);
+            String assignee = blankToNull(valueAt(values, 0));
             Long epoch = CsImSessionRouteReader.parseLong(valueAt(values, 1));
             Integer agentType = CsImSessionRouteReader.parseInt(valueAt(values, 2));
             Integer status = CsImSessionRouteReader.parseInt(valueAt(values, 3));
@@ -91,5 +91,9 @@ public final class CsImSessionRouteSupport {
             return null;
         }
         return values.get(index).toString();
+    }
+
+    private static String blankToNull(String raw) {
+        return StringUtils.isBlank(raw) ? null : raw;
     }
 }

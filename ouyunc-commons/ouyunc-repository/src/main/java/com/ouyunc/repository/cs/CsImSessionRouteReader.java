@@ -33,7 +33,7 @@ public final class CsImSessionRouteReader {
         String sessionId = map.get(CsImSessionRouteFields.SESSION_ID);
         String userId = map.get(CsImSessionRouteFields.USER_ID);
         String serviceIdentity = map.get(CsImSessionRouteFields.SERVICE_IDENTITY);
-        String assigneeId = map.get(CsImSessionRouteFields.ASSIGNEE_ID);
+        String assigneeId = blankToNull(map.get(CsImSessionRouteFields.ASSIGNEE_ID));
         Integer status = parseInt(map.get(CsImSessionRouteFields.STATUS));
         Integer agentType = parseInt(map.get(CsImSessionRouteFields.AGENT_TYPE));
         Long epoch = parseLong(map.get(CsImSessionRouteFields.EPOCH));
@@ -54,6 +54,10 @@ public final class CsImSessionRouteReader {
                 map.get(CsImSessionRouteFields.CHANNEL),
                 agentType,
                 epoch);
+    }
+
+    private static String blankToNull(String raw) {
+        return StringUtils.isBlank(raw) ? null : raw;
     }
 
     public static Integer parseInt(String raw) {

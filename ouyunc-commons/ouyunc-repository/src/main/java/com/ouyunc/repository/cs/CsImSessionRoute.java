@@ -20,14 +20,17 @@ public record CsImSessionRoute(
         return status != null && status == inProgressStatus;
     }
 
-    /** 投递契约：epoch / agentType / status / assignee 必须齐全且合法。 */
+    /** 投递契约：须已分配坐席或机器人（epoch / agentType / status / assignee）。 */
     public boolean hasRequiredDeliveryFields() {
         return epoch != null
                 && epoch >= 1L
                 && CsAgentType.isKnown(agentType)
                 && status != null
-                && assigneeId != null
-                && !assigneeId.isBlank();
+                && hasAssignee();
+    }
+
+    public boolean hasAssignee() {
+        return assigneeId != null && !assigneeId.isBlank();
     }
 
     /** 访客是否外渠进线（whatsapp / telegram / line）。 */
