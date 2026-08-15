@@ -469,11 +469,32 @@ public class CacheConstant {
     private static final String CS_TICKET = "cs:ticket:";
 
     /**
+     * 客服 ticket 维 key 前缀：appKey 只做命名空间，<strong>不加 hash tag</strong>。
+     * <p>Cluster 唯一 tag 是后续的 {@code {ticketId}}，避免大租户 route/msgs/sro/ur/lm 全部打到 {@code {appKey}} 单槽。
+     * 同一 ticket 的 Lua（未读+已读等）KEYS 仍同槽。</p>
+     */
+    private static String buildCsTicketKeyPrefix(String appKey) {
+        return OUYUNC + APP_KEY + sanitizeAppKeyToken(appKey) + COLON;
+    }
+
+    private static String sanitizeAppKeyToken(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return MessageConstant.DEFAULT_APP_KEY;
+        }
+        return stripHashTagChars(raw.trim());
+    }
+
+    /** 去掉花括号，避免片段本身变成 Cluster hash tag。 */
+    private static String stripHashTagChars(String raw) {
+        return raw.replace('{', '_').replace('}', '_');
+    }
+
+    /**
      * 客服会话路由（主键 = ticketId）：Hash 含 sessionId / serviceIdentity / assigneeId / agentType / channel。
-     * {@code ouyunc:ak:{appKey}:cs:session:route:{ticketId}}
+     * {@code ouyunc:ak:appKey:cs:session:route:{ticketId}}
      */
     public static String buildCsSessionRouteCacheKey(String appKey, String ticketId) {
-        return buildBaseCacheKey(appKey) + CS_SESSION_ROUTE + withHashTag(ticketId);
+        return buildCsTicketKeyPrefix(appKey) + CS_SESSION_ROUTE + withHashTag(stripHashTagChars(ticketId.trim()));
     }
 
     /**
@@ -481,7 +502,7 @@ public class CacheConstant {
      * <p>SLA 扫描应读本 key；写入使用 Lua max-merge 保证并发安全。</p>
      */
     public static String buildCsTicketLastMessageCacheKey(String appKey, String ticketId) {
-        return buildBaseCacheKey(appKey) + CS_TICKET + withHashTag(ticketId) + COLON + LAST_MESSAGE;
+        return buildCsTicketKeyPrefix(appKey) + CS_TICKET + withHashTag(stripHashTagChars(ticketId.trim())) + COLON + LAST_MESSAGE;
     }
 
     /** 客服咨询单消息 ZSet 索引（ticket 维度，与 channel sessionId 分离）。 */
@@ -491,21 +512,21 @@ public class CacheConstant {
      * 客服咨询单消息会话 ZSet：member=packetId，score=0。
      */
     public static String buildCsTicketMessageSessionCacheKey(String appKey, String ticketId) {
-        return buildBaseCacheKey(appKey) + CS_TICKET + withHashTag(ticketId) + COLON + MSGS;
+        return buildCsTicketKeyPrefix(appKey) + CS_TICKET + withHashTag(stripHashTagChars(ticketId.trim())) + COLON + MSGS;
     }
 
     /** ticket 维度已读 offset Hash：field={@code readerId:deviceType}，value=max packetId。 */
     private static final String CS_TICKET_SRO = "sro";
 
     public static String buildCsTicketReadOffsetHashCacheKey(String appKey, String ticketId) {
-        return buildBaseCacheKey(appKey) + CS_TICKET + withHashTag(ticketId) + COLON + CS_TICKET_SRO;
+        return buildCsTicketKeyPrefix(appKey) + CS_TICKET + withHashTag(stripHashTagChars(ticketId.trim())) + COLON + CS_TICKET_SRO;
     }
 
     /** ticket 维度未读 Hash：field={@code readerId:deviceType}，value=未读计数。 */
     private static final String CS_TICKET_UR = "ur";
 
     public static String buildCsTicketUnreadHashCacheKey(String appKey, String ticketId) {
-        return buildBaseCacheKey(appKey) + CS_TICKET + withHashTag(ticketId) + COLON + CS_TICKET_UR;
+        return buildCsTicketKeyPrefix(appKey) + CS_TICKET + withHashTag(stripHashTagChars(ticketId.trim())) + COLON + CS_TICKET_UR;
     }
 
     /** ticket 已读/未读 Hash field：{@code readerId + ":" + deviceType}。 */
