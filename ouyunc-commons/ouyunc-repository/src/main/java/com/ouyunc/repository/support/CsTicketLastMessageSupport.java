@@ -182,4 +182,4 @@ public final class CsTicketLastMessageSupport {
         return fromType == MessageFromToTypeEnum.CS_VISITOR.getType();
     }
 }
-
+
