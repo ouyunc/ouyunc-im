@@ -10,7 +10,7 @@ CREATE TABLE `ouyunc_im_app` (
                                  `status` tinyint NOT NULL DEFAULT '1' COMMENT '1-有效，2-禁用/锁定/无效',
                                  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
                                  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
-                                 `deleted` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否删除：0-未删除，1-已删除',
+                                 `del_flag` bigint NOT NULL DEFAULT '0' COMMENT '软删除：0-未删除；非0-已删除（毫秒时间戳）',
                                  PRIMARY KEY (`id`) USING BTREE,
                                  KEY `idx_app_key` (`app_key`) USING BTREE,
                                  KEY `idx_user_id_app_key` (`user_id`,`app_key`) USING BTREE
@@ -49,7 +49,7 @@ CREATE TABLE `ouyunc_im_file` (
                                   `relation_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '文件关联id',
                                   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
                                   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
-                                  `deleted` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否删除：0-未删除，1-已删除',
+                                  `del_flag` bigint NOT NULL DEFAULT '0' COMMENT '软删除：0-未删除；非0-已删除（毫秒时间戳）',
                                   PRIMARY KEY (`id`) USING BTREE,
                                   KEY `idx_relation_id` (`relation_id`) USING BTREE,
                                   KEY `idx_relation_type_id` (`relation_type`,`relation_id`) USING BTREE
@@ -87,7 +87,7 @@ CREATE TABLE `ouyunc_im_group` (
                                    `app_key` varchar(64) COLLATE utf8mb4_general_ci NOT NULL COMMENT '应用appKey',
                                    `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
                                    `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
-                                   `deleted` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否删除：1-已删除，0-未删除',
+                                   `del_flag` bigint NOT NULL DEFAULT '0' COMMENT '软删除：0-未删除；非0-已删除（毫秒时间戳）',
                                    PRIMARY KEY (`id`) USING BTREE,
                                    KEY `idx_app_key_group_name` (`app_key`,`group_name`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC COMMENT='群信息表';
@@ -141,7 +141,7 @@ CREATE TABLE `ouyunc_im_message` (
                                      `withdrawn` bit(1) NOT NULL DEFAULT b'0' COMMENT '已撤回：0-未撤回，1-已撤回',
                                      `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
                                      `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
-                                     `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '默认删除，1-已删除，0-未删除',
+                                     `del_flag` bigint NOT NULL DEFAULT 0 COMMENT '软删除：0-未删除；非0-已删除（毫秒时间戳）',
                                      PRIMARY KEY (`id`) USING BTREE,
                                      KEY `idx_from_to` (`from`,`to`) USING BTREE COMMENT 'from_to组合索引',
                                      KEY `idx_message_type` (`message_type`) USING BTREE COMMENT '消息类型索引',
@@ -190,7 +190,7 @@ CREATE TABLE `ouyunc_im_user` (
                                   `robot` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否是机器人：0-不是，1-是',
                                   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
                                   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
-                                  `deleted` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否删除，1-已删除，0-未删除',
+                                  `del_flag` bigint NOT NULL DEFAULT '0' COMMENT '软删除：0-未删除；非0-已删除（毫秒时间戳）',
                                   PRIMARY KEY (`id`) USING BTREE,
                                   UNIQUE KEY `idx_open_id` (`open_id`) USING BTREE,
                                   KEY `idx_app_key` (`app_key`) USING BTREE,

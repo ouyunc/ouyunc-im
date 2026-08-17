@@ -50,7 +50,7 @@ public final class UserRepositorySupport {
         try {
             MongoUserEntity mongoUser = infra.mongoTemplate.findOne(
                     Query.query(Criteria.where(MongoUserEntity.Fields.id).is(Long.parseLong(identity))
-                            .and(MongoUserEntity.Fields.deleted).is(NumberConstant.NUMBER_0)),
+                            .and(MongoUserEntity.Fields.delFlag).is(0L)),
                     MongoUserEntity.class);
             if (mongoUser != null) {
                 userEntity = convertMongoUserToUser(mongoUser);
@@ -114,7 +114,7 @@ public final class UserRepositorySupport {
         userEntity.setType(mongoUser.getType());
         userEntity.setCreateTime(mongoUser.getCreateTime());
         userEntity.setUpdateTime(mongoUser.getUpdateTime());
-        userEntity.setDeleted(mongoUser.getDeleted());
+        userEntity.setDelFlag(mongoUser.getDelFlag());
         return userEntity;
     }
 }

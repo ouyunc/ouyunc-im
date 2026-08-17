@@ -214,7 +214,7 @@ public final class GroupMembershipSupport {
         try {
             MongoGroupEntity mongoGroup = infra.mongoTemplate.findOne(
                     Query.query(Criteria.where(MongoGroupEntity.Fields.id).is(Long.parseLong(groupId))
-                            .and(MongoGroupEntity.Fields.deleted).is(NumberConstant.NUMBER_0)),
+                            .and(MongoGroupEntity.Fields.delFlag).is(0L)),
                     MongoGroupEntity.class);
             if (mongoGroup != null) {
                 groupEntity = convertMongoGroupToGroup(mongoGroup);
@@ -256,7 +256,7 @@ public final class GroupMembershipSupport {
                         // 3. MongoDB（响应式）
                         infra.reactiveMongoTemplate.findOne(
                                         Query.query(Criteria.where(MongoGroupEntity.Fields.id).is(Long.parseLong(groupId))
-                                                .and(MongoGroupEntity.Fields.deleted).is(NumberConstant.NUMBER_0)),
+                                                .and(MongoGroupEntity.Fields.delFlag).is(0L)),
                                         MongoGroupEntity.class)
                                 .map(this::convertMongoGroupToGroup)
                                 .doOnNext(groupEntity -> updateGroupCache(cacheKey, groupEntity))
@@ -452,7 +452,7 @@ public final class GroupMembershipSupport {
         groupEntity.setAppKey(mongoGroup.getAppKey());
         groupEntity.setCreateTime(mongoGroup.getCreateTime());
         groupEntity.setUpdateTime(mongoGroup.getUpdateTime());
-        groupEntity.setDeleted(mongoGroup.getDeleted());
+        groupEntity.setDelFlag(mongoGroup.getDelFlag());
         return groupEntity;
     }
 }

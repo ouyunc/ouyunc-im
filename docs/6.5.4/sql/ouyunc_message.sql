@@ -30,7 +30,7 @@ CREATE TABLE `ouyunc_im_app`  (
                                   `status` tinyint NOT NULL DEFAULT 1 COMMENT '1-有效，2-禁用/锁定/无效',
                                   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
                                   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
-                                  `deleted` tinyint NOT NULL DEFAULT 0 COMMENT '是否删除：0-未删除，1-已删除',
+                                  `del_flag` bigint NOT NULL DEFAULT 0 COMMENT '软删除：0-未删除；非0-已删除（毫秒时间戳）',
                                   PRIMARY KEY (`id`) USING BTREE,
                                   INDEX `idx_app_key`(`app_key`) USING BTREE,
                                   INDEX `idx_user_id_app_key`(`user_id`, `app_key`) USING BTREE
@@ -91,7 +91,7 @@ CREATE TABLE `ouyunc_im_group`  (
                                     `app_key` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '应用appKey',
                                     `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
                                     `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
-                                    `deleted` tinyint NOT NULL DEFAULT 0 COMMENT '是否删除：1-已删除，0-未删除',
+                                    `del_flag` bigint NOT NULL DEFAULT 0 COMMENT '软删除：0-未删除；非0-已删除（毫秒时间戳）',
                                     PRIMARY KEY (`id`) USING BTREE,
                                     INDEX `idx_app_key_group_name`(`app_key`, `group_name`) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '群信息表' ROW_FORMAT = Dynamic;
@@ -151,7 +151,7 @@ CREATE TABLE `ouyunc_im_message` (
                                      `client_send_time` bigint(20) NOT NULL COMMENT '消息发送时间戳',
                                      `server_arrival_time` bigint(20) NOT NULL COMMENT '消息首次到达服务端时间戳',
                                      `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-                                     `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '默认删除，1-已删除，0-未删除',
+                                     `del_flag` bigint NOT NULL DEFAULT 0 COMMENT '软删除：0-未删除；非0-已删除（毫秒时间戳）',
                                      PRIMARY KEY (`id`) USING BTREE,
                                      KEY `idx_message_type` (`message_type`) USING BTREE COMMENT '消息类型索引',
                                      KEY `idx_app_key_correlation_id` (`app_key`,`correlation_id`) USING BTREE COMMENT '业务id索引',
@@ -219,7 +219,7 @@ CREATE TABLE `ouyunc_im_user`  (
                                    `type` tinyint NOT NULL DEFAULT 1 COMMENT '用户类型：-1-系统，0-机器人bot, 1-真实用户',
                                    `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
                                    `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
-                                   `deleted` tinyint NOT NULL DEFAULT 0 COMMENT '是否删除，1-已删除，0-未删除',
+                                   `del_flag` bigint NOT NULL DEFAULT 0 COMMENT '软删除：0-未删除；非0-已删除（毫秒时间戳）',
                                    PRIMARY KEY (`id`) USING BTREE,
                                    UNIQUE INDEX `idx_open_id`(`open_id`) USING BTREE,
                                    INDEX `idx_app_key`(`app_key`) USING BTREE,

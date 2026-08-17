@@ -16,13 +16,13 @@ public class JdbcSqlConstant {
 
         SELECT_FRIEND("SELECT id, user_id, friend_user_code, friend_user_id, friend_nick_name, shield, way, channel, join_time, create_time, update_time FROM ouyunc_im_friend where user_id = :user_id and friend_user_id = :friend_user_id ", "查询好友关系"),
 
-        SELECT_GROUP("SELECT id,group_code,group_name,group_avatar,group_description,group_announcement,group_join_policy,`status`,silence,app_key,create_time,update_time,deleted FROM ouyunc_im_group WHERE id = :id and deleted = 0 ", "查询群组"),
+        SELECT_GROUP("SELECT id,group_code,group_name,group_avatar,group_description,group_announcement,group_join_policy,`status`,silence,app_key,create_time,update_time,del_flag FROM ouyunc_im_group WHERE id = :id and del_flag = 0 ", "查询群组"),
 
         SELECT_GROUP_USER("SELECT id, group_id, group_code, group_nick_name, user_id, user_code, post, user_nick_name, shield, silence, way, channel, create_time, join_time FROM ouyunc_im_group_user WHERE user_id = :user_id AND group_id = :group_id ", "查询群成员"),
         SELECT_GROUP_USER_BATCH("SELECT id, group_id, group_code, group_nick_name, user_id, user_code, post, user_nick_name, shield, silence, way, channel, create_time, join_time FROM ouyunc_im_group_user WHERE group_id = :group_id AND user_id IN (:userIds)", "批量查询群成员"),
         SELECT_ALL_GROUP_USER("SELECT id, group_id, group_code, group_nick_name, user_id, user_code, post, user_nick_name, shield, silence, way, channel, create_time, join_time  FROM ouyunc_im_group_user where group_id = :group_id ", "查询所有群成员"),
 
-        SELECT_USER("SELECT id,open_id, code, username,`password`,nick_name,avatar,motto,age,sex,email,phone_num,id_card_no,group_invite_policy,friend_join_policy,`status`,app_key,type,external_id,union_id,create_time,update_time,deleted FROM ouyunc_im_user WHERE id = :id and deleted = 0", "查询用户"),
+        SELECT_USER("SELECT id,open_id, code, username,`password`,nick_name,avatar,motto,age,sex,email,phone_num,id_card_no,group_invite_policy,friend_join_policy,`status`,app_key,type,external_id,union_id,create_time,update_time,del_flag FROM ouyunc_im_user WHERE id = :id and del_flag = 0", "查询用户"),
 
         SELECT_BLACKLIST("select id, identity, user_id, identity_type, join_time, create_time from  ouyunc_im_blacklist where identity = :identity and user_id = :user_id and identity_type = :identity_type ", "查询黑名单")
         ;
@@ -77,13 +77,13 @@ public class JdbcSqlConstant {
 
         SELECT_FRIEND("SELECT id, user_id, friend_user_code, friend_user_id, friend_nick_name, shield, way, channel, join_time, create_time, update_time FROM ouyunc_im_friend where user_id = :user_id and friend_user_id = :friend_user_id ", "查询好友关系"),
 
-        SELECT_GROUP("SELECT id,group_code,group_name,group_avatar,group_description,group_announcement,group_join_policy,\"status\",silence,app_key,create_time,update_time,deleted FROM ouyunc_im_group WHERE id = :id and deleted = 0 ", "查询群组"),
+        SELECT_GROUP("SELECT id,group_code,group_name,group_avatar,group_description,group_announcement,group_join_policy,\"status\",silence,app_key,create_time,update_time,del_flag FROM ouyunc_im_group WHERE id = :id and del_flag = 0 ", "查询群组"),
 
         SELECT_GROUP_USER("SELECT id, group_id, group_code, group_nick_name, user_id, user_code, post, user_nick_name, shield, silence, way, channel, create_time, join_time FROM ouyunc_im_group_user WHERE user_id = :user_id AND group_id = :group_id ", "查询群成员"),
         SELECT_GROUP_USER_BATCH("SELECT id, group_id, group_code, group_nick_name, user_id, user_code, post, user_nick_name, shield, silence, way, channel, create_time, join_time FROM ouyunc_im_group_user WHERE group_id = :group_id AND user_id IN (:userIds)", "批量查询群成员"),
         SELECT_ALL_GROUP_USER("SELECT id, group_id, group_code, group_nick_name, user_id, user_code, post, user_nick_name, shield, silence, way, channel, create_time, join_time  FROM ouyunc_im_group_user where group_id = :group_id ", "查询所有群成员"),
 
-        SELECT_USER("SELECT id,open_id, code, username,\"password\",nick_name,avatar,motto,age,sex,email,phone_num,id_card_no,group_invite_policy,friend_join_policy,\"status\",app_key,type,external_id,union_id,create_time,update_time,deleted FROM ouyunc_im_user WHERE id = :id and deleted = 0", "查询用户"),
+        SELECT_USER("SELECT id,open_id, code, username,\"password\",nick_name,avatar,motto,age,sex,email,phone_num,id_card_no,group_invite_policy,friend_join_policy,\"status\",app_key,type,external_id,union_id,create_time,update_time,del_flag FROM ouyunc_im_user WHERE id = :id and del_flag = 0", "查询用户"),
 
         SELECT_BLACKLIST("select id, \"identity\", user_id, identity_type, join_time, create_time from  ouyunc_im_blacklist where \"identity\" = :identity and user_id = :user_id and identity_type = :identity_type ", "查询黑名单")
         ;

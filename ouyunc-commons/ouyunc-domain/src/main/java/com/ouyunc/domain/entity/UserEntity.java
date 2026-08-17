@@ -2,6 +2,7 @@ package com.ouyunc.domain.entity;
 
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import org.springframework.data.annotation.Id;
@@ -166,10 +167,11 @@ public class UserEntity implements Serializable {
     private LocalDateTime updateTime;
 
     /**
-     * 是否删除，1-已删除，0-未删除
+     * 软删除：0-未删除；非0-已删除（毫秒时间戳）。MySQL / Mongo 统一键名 del_flag。
      */
-    @Field("deleted")
-    private Integer deleted;
+    @Field("del_flag")
+    @TableField("del_flag")
+    private Long delFlag;
 
 
 
@@ -181,13 +183,14 @@ public class UserEntity implements Serializable {
         public static final String type = "type";
         public static final String externalId = "external_id";
         public static final String unionId = "union_id";
-        public static final String deleted = "deleted";
+        /** Mongo / 查询字段名，对应文档键 del_flag */
+        public static final String delFlag = "del_flag";
     }
 
     public UserEntity() {
     }
 
-    public UserEntity(String id, String openId, String code, String username, String password, String nickName, String avatar, String motto, Integer age, Integer sex, String email, String phoneNum, String idCardNo, Integer groupInvitePolicy, Integer friendJoinPolicy, Integer status, String appKey, Integer type, String externalId, String unionId, LocalDateTime createTime, LocalDateTime updateTime, Integer deleted) {
+    public UserEntity(String id, String openId, String code, String username, String password, String nickName, String avatar, String motto, Integer age, Integer sex, String email, String phoneNum, String idCardNo, Integer groupInvitePolicy, Integer friendJoinPolicy, Integer status, String appKey, Integer type, String externalId, String unionId, LocalDateTime createTime, LocalDateTime updateTime, Long delFlag) {
         this.id = id;
         this.openId = openId;
         this.code = code;
@@ -210,7 +213,7 @@ public class UserEntity implements Serializable {
         this.unionId = unionId;
         this.createTime = createTime;
         this.updateTime = updateTime;
-        this.deleted = deleted;
+        this.delFlag = delFlag;
     }
 
     public String getId() {
@@ -389,11 +392,11 @@ public class UserEntity implements Serializable {
         this.updateTime = updateTime;
     }
 
-    public Integer getDeleted() {
-        return deleted;
+    public Long getDelFlag() {
+        return delFlag;
     }
 
-    public void setDeleted(Integer deleted) {
-        this.deleted = deleted;
+    public void setDelFlag(Long delFlag) {
+        this.delFlag = delFlag;
     }
 }

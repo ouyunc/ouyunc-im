@@ -6,6 +6,19 @@
   <component name="ChangeListManager">
     <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="css">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/6.5.4/sql/ouyunc_message.sql" beforeDir="false" afterPath="$PROJECT_DIR$/docs/6.5.4/sql/ouyunc_message.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/6.5.4/sql/ouyunc_system_cs.sql" beforeDir="false" afterPath="$PROJECT_DIR$/docs/6.5.4/sql/ouyunc_system_cs.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/sql/cs_schema_full.sql" beforeDir="false" afterPath="$PROJECT_DIR$/docs/sql/cs_schema_full.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/sql/cs_tables.sql" beforeDir="false" afterPath="$PROJECT_DIR$/docs/sql/cs_tables.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/sql/ouyunc-im-mysql-v6.5.0.sql" beforeDir="false" afterPath="$PROJECT_DIR$/docs/sql/ouyunc-im-mysql-v6.5.0.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/JdbcSqlConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/JdbcSqlConstant.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/AppEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/AppEntity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/GroupEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/GroupEntity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MongoGroupEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MongoGroupEntity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MongoUserEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/MongoUserEntity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/UserEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/src/main/java/com/ouyunc/domain/entity/UserEntity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/GroupMembershipSupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/GroupMembershipSupport.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/UserRepositorySupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/UserRepositorySupport.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server-uat.yml" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -583,23 +596,8 @@
       <workItem from="1785997744242" duration="57000" />
       <workItem from="1786174468643" duration="3015000" />
       <workItem from="1786539115961" duration="3982000" />
-      <workItem from="1786710150986" duration="7054000" />
-    </task>
-    <task id="LOCAL-00277" summary="http">
-      <option name="closed" value="true" />
-      <created>1781575651844</created>
-      <option name="number" value="00277" />
-      <option name="presentableId" value="LOCAL-00277" />
-      <option name="project" value="LOCAL" />
-      <updated>1781575651844</updated>
-    </task>
-    <task id="LOCAL-00278" summary="http">
-      <option name="closed" value="true" />
-      <created>1781575745323</created>
-      <option name="number" value="00278" />
-      <option name="presentableId" value="LOCAL-00278" />
-      <option name="project" value="LOCAL" />
-      <updated>1781575745323</updated>
+      <workItem from="1786710150986" duration="8862000" />
+      <workItem from="1786932022678" duration="6869000" />
     </task>
     <task id="LOCAL-00279" summary="http">
       <option name="closed" value="true" />
@@ -977,7 +975,23 @@
       <option name="project" value="LOCAL" />
       <updated>1786779556551</updated>
     </task>
-    <option name="localTasksCounter" value="326" />
+    <task id="LOCAL-00326" summary="css">
+      <option name="closed" value="true" />
+      <created>1786790921806</created>
+      <option name="number" value="00326" />
+      <option name="presentableId" value="LOCAL-00326" />
+      <option name="project" value="LOCAL" />
+      <updated>1786790921806</updated>
+    </task>
+    <task id="LOCAL-00327" summary="css">
+      <option name="closed" value="true" />
+      <created>1786948710043</created>
+      <option name="number" value="00327" />
+      <option name="presentableId" value="LOCAL-00327" />
+      <option name="project" value="LOCAL" />
+      <updated>1786948710043</updated>
+    </task>
+    <option name="localTasksCounter" value="328" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

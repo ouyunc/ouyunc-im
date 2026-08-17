@@ -32,8 +32,8 @@ public class MongoUserEntity extends UserEntity {
     public MongoUserEntity() {
     }
 
-    public MongoUserEntity(String id, String openId, String code, String username, String password, String nickName, String avatar, String motto, Integer age, Integer sex, String email, String phoneNum, String idCardNo, Integer groupInvitePolicy, Integer friendJoinPolicy, Integer status, String appKey, Integer type, String externalId, String unionId, LocalDateTime createTime, LocalDateTime updateTime, Integer deleted, LocalDateTime expireAt) {
-        super(id, openId, code, username, password, nickName, avatar, motto, age, sex, email, phoneNum, idCardNo, groupInvitePolicy, friendJoinPolicy, status, appKey, type, externalId, unionId, createTime, updateTime, deleted);
+    public MongoUserEntity(String id, String openId, String code, String username, String password, String nickName, String avatar, String motto, Integer age, Integer sex, String email, String phoneNum, String idCardNo, Integer groupInvitePolicy, Integer friendJoinPolicy, Integer status, String appKey, Integer type, String externalId, String unionId, LocalDateTime createTime, LocalDateTime updateTime, Long delFlag, LocalDateTime expireAt) {
+        super(id, openId, code, username, password, nickName, avatar, motto, age, sex, email, phoneNum, idCardNo, groupInvitePolicy, friendJoinPolicy, status, appKey, type, externalId, unionId, createTime, updateTime, delFlag);
         this.expireAt = expireAt;
     }
 }

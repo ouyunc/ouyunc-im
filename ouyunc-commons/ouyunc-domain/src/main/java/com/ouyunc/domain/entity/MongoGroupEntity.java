@@ -31,8 +31,8 @@ public class MongoGroupEntity extends GroupEntity {
     public MongoGroupEntity() {
     }
 
-    public MongoGroupEntity(String id, String groupCode, String groupName, String groupAvatar, String groupDescription, String groupAnnouncement, Integer groupJoinPolicy, Integer status, Integer silence, String appKey, LocalDateTime createTime, LocalDateTime updateTime, Integer deleted, LocalDateTime expireAt) {
-        super(id, groupCode, groupName, groupAvatar, groupDescription, groupAnnouncement, groupJoinPolicy, status, silence, appKey, createTime, updateTime, deleted);
+    public MongoGroupEntity(String id, String groupCode, String groupName, String groupAvatar, String groupDescription, String groupAnnouncement, Integer groupJoinPolicy, Integer status, Integer silence, String appKey, LocalDateTime createTime, LocalDateTime updateTime, Long delFlag, LocalDateTime expireAt) {
+        super(id, groupCode, groupName, groupAvatar, groupDescription, groupAnnouncement, groupJoinPolicy, status, silence, appKey, createTime, updateTime, delFlag);
         this.expireAt = expireAt;
     }
 }

@@ -64,9 +64,9 @@ public class AppEntity implements Serializable {
     private LocalDateTime updateTime;
 
     /**
-    * 软删除：0-未删除；非0-已删除（毫秒时间戳）
+    * 软删除（列名 del_flag）：0-未删除；非0-已删除（毫秒时间戳）
     */
-    private Long deleted;
+    private Long delFlag;
 
     public Long getId() {
         return id;
@@ -140,11 +140,11 @@ public class AppEntity implements Serializable {
         this.updateTime = updateTime;
     }
 
-    public Long getDeleted() {
-        return deleted;
+    public Long getDelFlag() {
+        return delFlag;
     }
 
-    public void setDeleted(Long deleted) {
-        this.deleted = deleted;
+    public void setDelFlag(Long delFlag) {
+        this.delFlag = delFlag;
     }
 }

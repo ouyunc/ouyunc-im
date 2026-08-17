@@ -1,4 +1,4 @@
-/*
+﻿/*
  客服（CS）模块表结构
  Target Schema: ouyunc_cs（用户在 ouyunc_system，IM 在 ouyunc_message）
  MySQL 8.0+ / utf8mb4_0900_ai_ci
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS `cs_customer` (
     `channel` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '首次进线渠道',
     `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    `deleted` tinyint NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    `del_flag` bigint NOT NULL DEFAULT 0 COMMENT '软删除：0-未删除；非0-已删除（毫秒时间戳）',
     PRIMARY KEY (`id`) USING BTREE,
     UNIQUE KEY `uk_app_customer` (`app_key`, `customer_id`) USING BTREE,
     INDEX `idx_app_member` (`app_key`, `member_id`) USING BTREE
@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS `cs_merchant` (
     `enabled` tinyint NOT NULL DEFAULT 1 COMMENT '1-启用 0-停用',
     `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    `deleted` tinyint NOT NULL DEFAULT 0,
+    `del_flag` bigint NOT NULL DEFAULT 0 COMMENT '软删除：0-未删除；非0-已删除（毫秒时间戳）',
     PRIMARY KEY (`id`) USING BTREE,
     UNIQUE KEY `uk_app_merchant` (`app_key`, `merchant_id`) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '客服商家主数据' ROW_FORMAT = Dynamic;
@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS `cs_merchant_entry` (
     `enabled` tinyint NOT NULL DEFAULT 1 COMMENT '1-启用 0-停用',
     `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    `deleted` tinyint NOT NULL DEFAULT 0,
+    `del_flag` bigint NOT NULL DEFAULT 0 COMMENT '软删除：0-未删除；非0-已删除（毫秒时间戳）',
     PRIMARY KEY (`id`) USING BTREE,
     UNIQUE KEY `uk_merchant_entry` (`app_key`, `merchant_id`, `entry_code`) USING BTREE,
     UNIQUE KEY `uk_app_service_identity` (`app_key`, `service_identity`) USING BTREE,
@@ -108,8 +108,8 @@ CREATE TABLE IF NOT EXISTS `cs_consultation_ticket` (
     `remark` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '备注（关单/转接原因）',
     `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
-    `deleted` tinyint NOT NULL DEFAULT 0 COMMENT '是否删除：0-未删除，1-已删除',
-    `active_guard` tinyint GENERATED ALWAYS AS (IF(`deleted` = 0 AND `status` = 1, 1, NULL)) STORED COMMENT '进行中占位：1=占用唯一槽',
+    `del_flag` bigint NOT NULL DEFAULT 0 COMMENT '软删除：0-未删除；非0-已删除（毫秒时间戳）',
+    `active_guard` tinyint GENERATED ALWAYS AS (IF(`del_flag` = 0 AND `status` = 1, 1, NULL)) STORED COMMENT '进行中占位：1=占用唯一槽',
     PRIMARY KEY (`id`) USING BTREE,
     INDEX `idx_app_key` (`app_key`) USING BTREE,
     INDEX `idx_app_session` (`app_key`, `session_id`) USING BTREE COMMENT '按会话查咨询单',
@@ -155,7 +155,7 @@ CREATE TABLE IF NOT EXISTS `cs_consultation_ticket_log` (
     `remark` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '备注（转接原因、关单原因等）',
     `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '记录创建时间',
     `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '记录更新时间',
-    `deleted` tinyint NOT NULL DEFAULT 0 COMMENT '是否删除：0-未删除，1-已删除',
+    `del_flag` bigint NOT NULL DEFAULT 0 COMMENT '软删除：0-未删除；非0-已删除（毫秒时间戳）',
     PRIMARY KEY (`id`) USING BTREE,
     INDEX `idx_app_ticket` (`app_key`, `ticket_id`) USING BTREE COMMENT '按咨询单查完整流转时间线',
     INDEX `idx_app_assignee_time` (`app_key`, `assignee_id`, `start_time`) USING BTREE COMMENT '坐席接待明细+时间统计',
@@ -184,7 +184,7 @@ CREATE TABLE IF NOT EXISTS `cs_agent` (
     `enabled` tinyint(1) NOT NULL DEFAULT 1 COMMENT '账号启用状态：0禁用 1启用',
     `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    `deleted` tinyint(1) NOT NULL DEFAULT 0 COMMENT '逻辑删除：0未删除 1已删除',
+    `del_flag` bigint NOT NULL DEFAULT 0 COMMENT '软删除：0-未删除；非0-已删除（毫秒时间戳）',
     PRIMARY KEY (`id`) USING BTREE,
     UNIQUE KEY `uk_app_agent` (`app_key`, `agent_id`) USING BTREE,
     INDEX `idx_app_jobno` (`app_key`, `job_no`) USING BTREE
@@ -207,7 +207,7 @@ CREATE TABLE IF NOT EXISTS `cs_skill` (
     `status` tinyint(1) NOT NULL DEFAULT 1 COMMENT '启用状态：0禁用 1启用',
     `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    `deleted` tinyint(1) NOT NULL DEFAULT 0 COMMENT '逻辑删除：0未删除 1已删除',
+    `del_flag` bigint NOT NULL DEFAULT 0 COMMENT '软删除：0-未删除；非0-已删除（毫秒时间戳）',
     PRIMARY KEY (`id`) USING BTREE,
     UNIQUE KEY `uk_app_skill` (`app_key`, `skill_code`) USING BTREE COMMENT '租户内队列编码唯一',
     INDEX `idx_app_name` (`app_key`, `skill_name`) USING BTREE COMMENT '按队列名称模糊查询'
@@ -229,7 +229,7 @@ CREATE TABLE IF NOT EXISTS `cs_skill_rule` (
     `status` tinyint(1) NOT NULL DEFAULT 1 COMMENT '规则状态：0禁用 1启用',
     `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    `deleted` tinyint(1) NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    `del_flag` bigint NOT NULL DEFAULT 0 COMMENT '软删除：0-未删除；非0-已删除（毫秒时间戳）',
     PRIMARY KEY (`id`) USING BTREE,
     INDEX `idx_app_skill` (`app_key`, `skill_code`) USING BTREE COMMENT '根据队列查所有分流规则'
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '队列分流匹配规则表' ROW_FORMAT = Dynamic;
@@ -246,11 +246,11 @@ CREATE TABLE IF NOT EXISTS `cs_agent_skill_rel` (
     `enabled` tinyint NOT NULL DEFAULT 1 COMMENT '该队列权限是否生效：0禁用 1启用',
     `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '绑定创建时间',
     `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '绑定更新时间',
-    `deleted` tinyint NOT NULL DEFAULT 0 COMMENT '逻辑删除：0未删除 1已解绑',
+    `del_flag` bigint NOT NULL DEFAULT 0 COMMENT '软删除：0-未删除；非0-已删除（毫秒时间戳）',
     PRIMARY KEY (`id`) USING BTREE,
     UNIQUE KEY `uk_app_agent_skill` (`app_key`, `agent_id`, `skill_code`) USING BTREE,
-    INDEX `idx_app_skill_agent` (`app_key`, `skill_code`, `enabled`, `deleted`) USING BTREE,
-    INDEX `idx_app_agent_skill` (`app_key`, `agent_id`, `enabled`, `deleted`) USING BTREE
+    INDEX `idx_app_skill_agent` (`app_key`, `skill_code`, `enabled`, `del_flag`) USING BTREE,
+    INDEX `idx_app_agent_skill` (`app_key`, `agent_id`, `enabled`, `del_flag`) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '坐席-技能/队列权限关联中间表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
@@ -268,7 +268,7 @@ CREATE TABLE IF NOT EXISTS `cs_schedule_template` (
     `status` tinyint(1) NOT NULL DEFAULT 1 COMMENT '启用状态：0禁用 1启用',
     `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    `deleted` tinyint(1) NOT NULL DEFAULT 0 COMMENT '逻辑删除：0未删除 1已删除',
+    `del_flag` bigint NOT NULL DEFAULT 0 COMMENT '软删除：0-未删除；非0-已删除（毫秒时间戳）',
     PRIMARY KEY (`id`) USING BTREE,
     UNIQUE KEY `uk_app_template` (`app_key`, `template_code`) USING BTREE COMMENT '租户内班次编码唯一',
     INDEX `idx_app_status` (`app_key`, `status`) USING BTREE COMMENT '查询租户内所有启用的班次模板'
@@ -290,7 +290,7 @@ CREATE TABLE IF NOT EXISTS `cs_agent_schedule` (
     `status` tinyint(1) NOT NULL DEFAULT 1 COMMENT '排班启用状态：0禁用 1启用',
     `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    `deleted` tinyint(1) NOT NULL DEFAULT 0 COMMENT '逻辑删除：0未删除 1已删除',
+    `del_flag` bigint NOT NULL DEFAULT 0 COMMENT '软删除：0-未删除；非0-已删除（毫秒时间戳）',
     PRIMARY KEY (`id`) USING BTREE,
     INDEX `idx_app_agent_effective` (`app_key`, `agent_id`, `status`, `effective_start_date`, `effective_end_date`) USING BTREE,
     INDEX `idx_app_template` (`app_key`, `template_code`) USING BTREE

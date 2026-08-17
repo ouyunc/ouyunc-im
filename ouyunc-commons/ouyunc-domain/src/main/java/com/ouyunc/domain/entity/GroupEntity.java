@@ -2,6 +2,7 @@ package com.ouyunc.domain.entity;
 
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import org.springframework.data.annotation.Id;
@@ -97,21 +98,24 @@ public class GroupEntity implements Serializable {
     private LocalDateTime updateTime;
 
     /**
-     * 是否删除：1-已删除，0-未删除
+     * 软删除：0-未删除；非0-已删除（毫秒时间戳）。MySQL / Mongo 统一键名 del_flag。
      */
-    private Integer deleted;
+    @Field("del_flag")
+    @TableField("del_flag")
+    private Long delFlag;
 
     public static final class Fields {
         public static final String id = "id";
         public static final String groupCode = "group_code";
         public static final String appKey = "app_key";
-        public static final String deleted = "deleted";
+        /** Mongo / 查询字段名，对应文档键 del_flag */
+        public static final String delFlag = "del_flag";
     }
 
     public GroupEntity() {
     }
 
-    public GroupEntity(String id, String groupCode, String groupName, String groupAvatar, String groupDescription, String groupAnnouncement, Integer groupJoinPolicy, Integer status, Integer silence, String appKey, LocalDateTime createTime, LocalDateTime updateTime, Integer deleted) {
+    public GroupEntity(String id, String groupCode, String groupName, String groupAvatar, String groupDescription, String groupAnnouncement, Integer groupJoinPolicy, Integer status, Integer silence, String appKey, LocalDateTime createTime, LocalDateTime updateTime, Long delFlag) {
         this.id = id;
         this.groupCode = groupCode;
         this.groupName = groupName;
@@ -124,7 +128,7 @@ public class GroupEntity implements Serializable {
         this.appKey = appKey;
         this.createTime = createTime;
         this.updateTime = updateTime;
-        this.deleted = deleted;
+        this.delFlag = delFlag;
     }
 
     public String getId() {
@@ -223,11 +227,11 @@ public class GroupEntity implements Serializable {
         this.updateTime = updateTime;
     }
 
-    public Integer getDeleted() {
-        return deleted;
+    public Long getDelFlag() {
+        return delFlag;
     }
 
-    public void setDeleted(Integer deleted) {
-        this.deleted = deleted;
+    public void setDelFlag(Long delFlag) {
+        this.delFlag = delFlag;
     }
 }
