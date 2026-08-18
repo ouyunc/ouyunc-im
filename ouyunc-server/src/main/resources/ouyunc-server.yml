@@ -89,6 +89,14 @@ ouyunc:
         enable: true
         # 服务端监听客户端的登录超时时间，单位秒，默认值5，  see AuthenticationHandler
         timeout: 5
+      # 启动后是否默认接受新登录；滚动升级可 POST /admin/drain 或优雅关闭时自动翻转
+      accept-new-connections: true
+      drain:
+        # 停机时：通知客户端主动断开后的等待秒数，超时仍在线则强制关闭；0 表示通知后立即强制关残留
+        wait-seconds: 30
+      shutdown:
+        # 停机前是否踢掉本机全部已登录长连接（关闭钩子清理本节点 Redis 会话）
+        kick-clients: true
       # 服务端群消息处理模式
       group-message:
         # 消息模式，PUSH-推送模式，PULL-拉取模式，PULL_PUSH 推拉模式，（在超大规模群，比如直播间，）  默认推送模式

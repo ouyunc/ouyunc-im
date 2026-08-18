@@ -3,11 +3,19 @@ package com.ouyunc.message.helper;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.NumberConstant;
+import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
+import com.ouyunc.base.constant.enums.MessageTypeEnum;
+import com.ouyunc.base.constant.enums.NetworkEnum;
 import com.ouyunc.base.constant.enums.OnlineEnum;
 import com.ouyunc.base.constant.enums.SaveModeEnum;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.model.LoginClientInfo;
+import com.ouyunc.base.model.Target;
+import com.ouyunc.base.packet.Packet;
+import com.ouyunc.base.packet.message.Message;
+import com.ouyunc.base.packet.message.content.ServerNotifyContent;
+import com.ouyunc.base.serialize.Serializer;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.utils.TimeUtil;
@@ -359,5 +367,119 @@ public class ClientHelper {
             }
         }
         return totalConnections;
+    }
+
+    /**
+     * 通知本机全部已登录客户端：请主动断开并重连其他节点。
+     * <p>服务端不 close 连接；由客户端收到 {@link MessageTypeEnum#SERVER_NOTIFY} 后自行断开重连。
+     *
+     * @return 成功下发通知的连接数
+     */
+    public static int notifyAllLocalClientsToReconnect() {
+        Map<String, ChannelHandlerContext> snapshot =
+                new HashMap<>(MessageServerContext.localLoginClientRegisterTable.asMap());
+        if (snapshot.isEmpty()) {
+            return NumberConstant.NUMBER_0;
+        }
+        long now = TimeUtil.currentTimeMillis();
+        int notified = NumberConstant.NUMBER_0;
+        for (Map.Entry<String, ChannelHandlerContext> entry : snapshot.entrySet()) {
+            ChannelHandlerContext ctx = entry.getValue();
+            if (ctx == null || !ctx.channel().isActive()) {
+                continue;
+            }
+            LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(
+                    ctx.channel(), MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
+            if (loginClientInfo == null) {
+                continue;
+            }
+            notifyLocalClientServerDrain(loginClientInfo, now);
+            notified++;
+        }
+        log.warn("notifyAllLocalClientsToReconnect 完成, notified={}, registryKey={}",
+                notified, snapshot.size());
+        return notified;
+    }
+
+    /**
+     * 强制关闭本机仍存活的长连接（仅用于进程退出兜底；日常运维踢线请用 {@link #notifyAllLocalClientsToReconnect()}）。
+     *
+     * @return 尝试关闭的连接数
+     */
+    public static int forceCloseAllLocalClients() {
+        Map<String, ChannelHandlerContext> snapshot =
+                new HashMap<>(MessageServerContext.localLoginClientRegisterTable.asMap());
+        if (snapshot.isEmpty()) {
+            return NumberConstant.NUMBER_0;
+        }
+        List<Channel> closing = new ArrayList<>(snapshot.size());
+        for (ChannelHandlerContext ctx : snapshot.values()) {
+            if (ctx == null || !ctx.channel().isActive()) {
+                continue;
+            }
+            closing.add(ctx.channel());
+            ctx.close();
+        }
+        awaitChannelsClosed(closing, 5_000L);
+        log.warn("forceCloseAllLocalClients 完成, attempted={}, registryKey={}", closing.size(), snapshot.size());
+        return closing.size();
+    }
+
+    /**
+     * 向本机在线会话发送「请主动重连」维护通知（不关闭连接）。
+     */
+    private static void notifyLocalClientServerDrain(LoginClientInfo loginClientInfo, long timestamp) {
+        try {
+            Message notifyMessage = new Message(
+                    MessageContext.idGenerator().generateIdStr(),
+                    null,
+                    loginClientInfo.getIdentity(),
+                    MessageContentTypeEnum.REMOTE_LOGIN_CONTENT.getType(),
+                    Serializer.JSON.serializeToString(
+                            new ServerNotifyContent(MessageConstant.SERVER_DRAIN_KICK_NOTIFICATION)),
+                    timestamp,
+                    null);
+            Packet notifyPacket = new Packet(
+                    loginClientInfo.getProtocol(),
+                    loginClientInfo.getProtocolVersion(),
+                    MessageContext.idGenerator().generateId(),
+                    loginClientInfo.getDeviceType(),
+                    NetworkEnum.OTHER.getValue(),
+                    NumberConstant.NUMBER_0,
+                    Serializer.JSON.getValue(),
+                    MessageTypeEnum.SERVER_NOTIFY.getType(),
+                    notifyMessage);
+            Target kickTarget = Target.newBuilder()
+                    .appKey(loginClientInfo.getAppKey())
+                    .targetIdentity(loginClientInfo.getIdentity())
+                    .targetServerAddress(loginClientInfo.getLoginServerAddress())
+                    .deviceType(loginClientInfo.getDeviceType())
+                    .protocol(loginClientInfo.getProtocol())
+                    .protocolVersion(loginClientInfo.getProtocolVersion())
+                    .build();
+            MessageHelper.syncSendMessageWithoutInterceptor(notifyPacket, kickTarget);
+        } catch (Exception e) {
+            log.warn("发送维护重连通知失败 identity={}: {}", loginClientInfo.getIdentity(), e.getMessage());
+        }
+    }
+
+    private static void awaitChannelsClosed(List<Channel> channels, long timeoutMillis) {
+        if (channels.isEmpty()) {
+            return;
+        }
+        long deadline = System.currentTimeMillis() + timeoutMillis;
+        for (Channel channel : channels) {
+            long remain = deadline - System.currentTimeMillis();
+            if (remain <= 0) {
+                break;
+            }
+            try {
+                channel.closeFuture().await(remain, TimeUnit.MILLISECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.warn("等待 channel 关闭被中断");
+                break;
+            }
+        }
     }
 }

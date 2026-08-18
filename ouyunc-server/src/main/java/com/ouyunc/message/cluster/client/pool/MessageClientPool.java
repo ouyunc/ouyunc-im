@@ -19,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @Author fzx
@@ -93,7 +94,16 @@ public class MessageClientPool {
      * @Description 注销内置客户端
      */
     public static void stop() {
-        if (workGroup != null) {
+        if (workGroup == null) {
+            return;
+        }
+        try {
+            if (!workGroup.shutdownGracefully().await(15, TimeUnit.SECONDS)) {
+                log.warn("集群客户端 EventLoopGroup 在超时内未完全关闭");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("等待集群客户端 EventLoopGroup 关闭被中断");
             workGroup.shutdownGracefully();
         }
     }

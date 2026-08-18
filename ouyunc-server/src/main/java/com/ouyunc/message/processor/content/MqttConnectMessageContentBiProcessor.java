@@ -70,6 +70,23 @@ public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcesso
             log.error("MqttConnectMessageProcessor connect 消息解码失败，请检查协议版本是否正确！");
             return;
         }
+        // 摘流 / 拒绝新连接：滚动升级窗口内不再接受 MQTT CONNECT
+        if (!MessageServerContext.isAcceptingNewConnections()) {
+            log.warn("MQTT CONNECT 被拒绝：服务摘流中, channel={}", ctx.channel().id().asShortText());
+            MqttMessage connAckMessage = MqttMessageFactory.newMessage(
+                    new MqttFixedHeader(MqttMessageType.CONNACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
+                    new MqttConnAckVariableHeader(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE, false), null);
+            if (ctx.channel().eventLoop().inEventLoop()) {
+                MessageHelper.tryWriteObject(ctx.channel(), connAckMessage, packet, (sendResult) -> {
+                });
+            } else {
+                ctx.channel().eventLoop().execute(() ->
+                        MessageHelper.tryWriteObject(ctx.channel(), connAckMessage, packet, (sendResult) -> {
+                        }));
+            }
+            ctx.close();
+            return;
+        }
         MqttMessage mqttMessage = MqttCodecUtil.decode(mqttVersion, connectMessage.getContent());
         if (mqttMessage instanceof MqttConnectMessage mqttConnectMessage) {
             // 消息解码器出现异常

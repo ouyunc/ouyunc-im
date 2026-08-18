@@ -6,6 +6,7 @@ import com.ouyunc.base.constant.enums.DeviceTypeEnum;
 import com.ouyunc.base.constant.enums.LuaScriptEnum;
 import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.utils.TimeUtil;
+import com.ouyunc.core.listener.MessageEventMulticaster;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.message.banner.MessageBanner;
 import com.ouyunc.message.channel.DefaultServerChannelInitializer;
@@ -19,6 +20,8 @@ import com.ouyunc.message.http.HttpRequestDispatcher;
 import com.ouyunc.message.convert.BinaryWebSocketFramePacketConverter;
 import com.ouyunc.message.convert.MqttMessagePacketConverter;
 import com.ouyunc.message.convert.PacketPacketConverter;
+import com.ouyunc.message.monitor.ResourceMonitor;
+import com.ouyunc.message.schedule.ScheduleTimer;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -26,6 +29,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.util.concurrent.Future;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.netty.util.internal.logging.Log4J2LoggerFactory;
 import org.apache.commons.collections4.MapUtils;
@@ -36,6 +40,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -163,7 +168,12 @@ public abstract class AbstractMessageServer implements MessageServer {
     }
 
     /**
-     * 统一优雅关闭：ServerStop、Netty、集群内置客户端、全局线程池。
+     * EventLoopGroup 优雅关闭等待上限（秒）
+     */
+    private static final long NETTY_SHUTDOWN_AWAIT_SECONDS = 15L;
+
+    /**
+     * 统一优雅关闭：摘流、SERVER_STOP、监控/时间轮、HTTP、Netty、集群客户端、Disruptor 环、全局线程池。
      *
      * @return 本次调用是否实际执行了关闭序列（已被其它路径执行过则返回 false）
      */
@@ -172,20 +182,66 @@ public abstract class AbstractMessageServer implements MessageServer {
             return false;
         }
         try {
+            // 1. 摘流：拒绝新登录，/ready → 503
+            MessageServerContext.enterDrainMode();
+            // 2. SERVER_STOP（同步）：通知客户端主动断开 → 宽限期 → 强制关残留 → Redis 订阅/连接数定时任务清理
             MessageServerContext.publishEvent(new MessageEvent(this, MessageEventTypeEnum.SERVER_STOP), false);
+            // 3. 停止资源监控（调度任务随 ThreadPoolManager 一并结束）
+            ResourceMonitor.stopMonitoring();
+            // 4. 停止 QoS 等 HashedWheelTimer，取消未完成超时
+            ScheduleTimer.stop();
+            // 5. HTTP 业务线程池
             HttpRequestDispatcher.shutdownHttpBusinessExecutor();
-            if (bossGroup != null && workerGroup != null) {
-                bossGroup.shutdownGracefully();
-                workerGroup.shutdownGracefully();
-            }
-            if (MessageServerContext.serverProperties().isClusterEnable()) {
+            // 6. 对外 Netty，等待关闭完成
+            awaitEventLoopGroupShutdown(bossGroup, "bossGroup");
+            awaitEventLoopGroupShutdown(workerGroup, "workerGroup");
+            // 7. 集群内置客户端连接池
+            if (MessageServerContext.serverProperties().isClusterEnable() && messageClient != null) {
                 messageClient.stop();
             }
+            // 8. Disruptor 环形队列（须在 ThreadPoolManager 之前，环有独立消费线程）
+            shutdownEventMulticaster();
+            // 9. 全局业务线程池
             ThreadPoolManager.shutdownAll();
         } catch (Throwable t) {
             log.error("优雅关闭过程异常: {}", t.getMessage(), t);
         }
         return true;
+    }
+
+    /**
+     * 关闭事件多播器并释放各等级 Disruptor RingBuffer。
+     */
+    private static void shutdownEventMulticaster() {
+        MessageEventMulticaster multicaster = MessageServerContext.messageEventMulticaster;
+        if (multicaster == null) {
+            return;
+        }
+        try {
+            multicaster.removeAllMessageListeners();
+            log.warn("事件多播器 / Disruptor 环形队列已关闭");
+        } catch (Exception e) {
+            log.warn("关闭事件多播器异常: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 等待 Netty EventLoopGroup 优雅关闭。
+     */
+    private void awaitEventLoopGroupShutdown(EventLoopGroup group, String name) {
+        if (group == null) {
+            return;
+        }
+        try {
+            Future<?> future = group.shutdownGracefully();
+            if (!future.await(NETTY_SHUTDOWN_AWAIT_SECONDS, TimeUnit.SECONDS)) {
+                log.warn("Netty {} 在 {}s 内未完全关闭", name, NETTY_SHUTDOWN_AWAIT_SECONDS);
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("等待 Netty {} 关闭被中断", name);
+            group.shutdownGracefully();
+        }
     }
 
     /***

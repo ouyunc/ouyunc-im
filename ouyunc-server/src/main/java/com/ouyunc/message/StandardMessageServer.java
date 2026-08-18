@@ -69,6 +69,10 @@ public class StandardMessageServer extends AbstractMessageServer {
         
         // 初始化资源监控（注册缓存实例）
         MonitorInitializer.initialize();
+        // 运行期接受新连接开关与 YAML 初始值对齐
+        MessageServerContext.ACCEPT_NEW_CONNECTIONS.set(
+                MessageServerContext.serverProperties().isAcceptNewConnections());
+        MessageServerContext.DRAINING.set(false);
     }
 
 

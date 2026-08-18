@@ -121,6 +121,11 @@ https://gitee.com/etxync/ouyunc-im/wikis/OUYUNC-IM%20v3.x/%E5%AE%A2%E6%88%B7%E7%
  https://gitee.com/etxync/ouyunc-im/wikis/%E5%81%B6%E4%BA%91%E5%AE%A2-IM%20v3.x/%E5%AE%89%E8%A3%85%E9%83%A8%E7%BD%B2
  ```
 
+#### 集群滚动升级（本仓库文档）
+
+- [docs/ops/im-cluster-rolling-upgrade.md](docs/ops/im-cluster-rolling-upgrade.md)
+- [docs/conf/nginx-im-stream.conf.example](docs/conf/nginx-im-stream.conf.example)
+
 #### 联系方式
 
    qq群:664955628 <a target="_blank" href="https://qm.qq.com/cgi-bin/qm/qr?k=FFFe8sCs4e11KOD89XK6vVrK14NCBb5x&jump_from=webapi&authKey=Y1JeElm7/HUi4cESA9FJgyl51JhCwQ2bDv1uOydLvMvo25+cqe93GUMxPEyB8xND"><img border="0" src="https://pub.idqqimg.com/wpa/images/group.png" alt="偶遇-IM" title="偶遇-IM"></a>  (打广告太多，加群请附加信息)

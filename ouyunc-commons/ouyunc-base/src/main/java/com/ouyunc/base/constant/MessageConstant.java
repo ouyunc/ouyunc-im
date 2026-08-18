@@ -715,6 +715,11 @@ public class MessageConstant {
      */
     public static final String REMOTE_LOGIN_NOTIFICATIONS = "你的ouyunc账号在另一台设备(ip: %s)上登录，你已被迫下线。如果本人不知晓，请立即冻结账号，并及时修改相关密码。";
 
+    /**
+     * 服务滚动升级：通知客户端主动断开并重连其他节点（服务端不主动 close）
+     */
+    public static final String SERVER_DRAIN_KICK_NOTIFICATION = "服务节点正在维护升级，请主动断开当前连接并重连；重连成功前请暂停发送消息。";
+
     /** 客服座席：首次业务读空闲提示（scope=cs_agent） */
     public static final String BUSINESS_IDLE_PROMPT_CS_AGENT =
             "您已有一段时间未操作，会话仍保持连接；请继续处理咨询或发送消息以保持在线。";

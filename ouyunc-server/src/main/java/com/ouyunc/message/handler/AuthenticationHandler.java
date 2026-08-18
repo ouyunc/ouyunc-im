@@ -142,6 +142,15 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
             ctx.close();
             return;
         }
+        // 摘流 / 拒绝新连接：滚动升级窗口内不再接受新登录
+        if (!MessageServerContext.isAcceptingNewConnections()) {
+            log.warn("客户端id: {} 登录被拒绝：服务摘流中", ctx.channel().id().asShortText());
+            MessageServerContext.publishEvent(new MessageEvent(
+                    ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_REFUSED_DRAIN, "服务摘流中，拒绝登录", packet),
+                    MessageEventTypeEnum.EXCEPTION), true);
+            ctx.close();
+            return;
+        }
         //将消息内容转成message
         LoginContent loginContent = JSON.parseObject(loginMessage.getContent(), LoginContent.class);
         loginContent.setScope(LoginScopeEnum.normalizeScope(loginContent.getScope()));

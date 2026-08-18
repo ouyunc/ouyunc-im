@@ -11,7 +11,9 @@ import io.netty.util.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 /**
@@ -20,6 +22,8 @@ import java.util.function.Consumer;
 public class ScheduleTimer {
 
     private static final Logger log = LoggerFactory.getLogger(ScheduleTimer.class);
+
+    private static final AtomicBoolean STOPPED = new AtomicBoolean(false);
 
     // 时间轮触发器
     protected static final HashedWheelTimer timer = new HashedWheelTimer(r -> {
@@ -115,5 +119,21 @@ public class ScheduleTimer {
             log.warn("qos取消任务失败，任务不存在,id：{}", taskId);
         }
         return false;
+    }
+
+    /**
+     * 停止时间轮并取消所有未完成超时任务（优雅关闭时调用，幂等）。
+     */
+    public static void stop() {
+        if (!STOPPED.compareAndSet(false, true)) {
+            return;
+        }
+        try {
+            Set<Timeout> unfinished = timer.stop();
+            int size = unfinished == null ? 0 : unfinished.size();
+            log.warn("ScheduleTimer 已停止, unfinishedTimeouts={}", size);
+        } catch (Exception e) {
+            log.warn("ScheduleTimer 停止异常: {}", e.getMessage());
+        }
     }
 }

@@ -176,10 +176,11 @@ public final class ResourceMonitor {
     }
 
     /**
-     * 停止监控
+     * 停止监控（不再输出指标；调度器由 {@link ThreadPoolManager#shutdownAll()} 统一关闭）
      */
     public static void stopMonitoring() {
         monitoring = false;
+        scheduler = null;
         log.info("资源监控已停止");
     }
 
@@ -247,6 +248,9 @@ public final class ResourceMonitor {
      * 输出所有指标到日志
      */
     public static void logAllMetrics() {
+        if (!monitoring) {
+            return;
+        }
         log.info("========== 资源监控报告 ==========");
         logThreadPoolMetrics();
         logCacheMetrics();

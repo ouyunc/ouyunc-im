@@ -12,6 +12,31 @@ public class HttpRequestConstant extends HttpConstant{
     public static final String HTTP_PUSH_API_PATH = "/api/im/push";
 
     /**
+     * LB 存活探活（进程在即 200，无需鉴权）
+     */
+    public static final String HTTP_HEALTH_PATH = "/health";
+
+    /**
+     * LB 就绪探活（摘流或不健康时 HTTP 503，无需鉴权）
+     */
+    public static final String HTTP_READY_PATH = "/ready";
+
+    /**
+     * 运维摘流：拒绝新登录并使 /ready 返回 503（需 X-App-Key）
+     */
+    public static final String HTTP_ADMIN_DRAIN_PATH = "/admin/drain";
+
+    /**
+     * 运维取消摘流（需 X-App-Key）
+     */
+    public static final String HTTP_ADMIN_UNDRAIN_PATH = "/admin/undrain";
+
+    /**
+     * 运维通知本机在线客户端主动断开并重连（需 X-App-Key）；会先进入摘流，服务端不主动 close
+     */
+    public static final String HTTP_ADMIN_KICK_CLIENTS_PATH = "/admin/kick-clients";
+
+    /**
      * 请求头：应用 appKey（HTTP 推送等接口必填，不再从 JSON body 读取）
      */
     public static final String HTTP_HEADER_APP_KEY = "X-App-Key";

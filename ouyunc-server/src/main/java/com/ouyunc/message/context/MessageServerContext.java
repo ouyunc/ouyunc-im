@@ -36,6 +36,7 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -250,6 +251,41 @@ public class MessageServerContext extends MessageContext {
      */
     public static void addPacketConverterList(List<PacketConverter<?>> packetConverters) {
         packetConverterList.addAll(packetConverters);
+    }
+
+    /**
+     * 是否处于摘流/排空模式（对外 /ready 应返回 503，并拒绝新登录）
+     */
+    public static final AtomicBoolean DRAINING = new AtomicBoolean(false);
+
+    /**
+     * 是否接受新登录连接；与 {@link #DRAINING} 配合，升级窗口由运维或优雅关闭流程翻转
+     */
+    public static final AtomicBoolean ACCEPT_NEW_CONNECTIONS = new AtomicBoolean(true);
+
+    /**
+     * 进入摘流：拒绝新登录，并使就绪探活失败，便于 LB 摘除本节点
+     */
+    public static void enterDrainMode() {
+        DRAINING.set(true);
+        ACCEPT_NEW_CONNECTIONS.set(false);
+        log.warn("IM 节点已进入摘流模式, localAddress={}", serverProperties().getLocalServerAddress());
+    }
+
+    /**
+     * 退出摘流：恢复接受新登录（误操作恢复或探针恢复用）
+     */
+    public static void exitDrainMode() {
+        DRAINING.set(false);
+        ACCEPT_NEW_CONNECTIONS.set(serverProperties().isAcceptNewConnections());
+        log.warn("IM 节点已退出摘流模式, localAddress={}", serverProperties().getLocalServerAddress());
+    }
+
+    /**
+     * 当前是否允许新登录（摘流或配置关闭时返回 false）
+     */
+    public static boolean isAcceptingNewConnections() {
+        return ACCEPT_NEW_CONNECTIONS.get() && !DRAINING.get();
     }
 
     /**

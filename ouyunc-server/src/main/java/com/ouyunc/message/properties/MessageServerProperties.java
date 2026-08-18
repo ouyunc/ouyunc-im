@@ -297,6 +297,24 @@ public class MessageServerProperties extends MessageProperties {
     @Key(value = "ouyunc.message.server.login.timeout", defaultValue = "5")
     int serverLoginTimeout;
 
+    /**
+     * 启动后是否默认接受新登录；运行期可通过摘流接口或优雅关闭翻转
+     */
+    @Key(value = "ouyunc.message.server.accept-new-connections", defaultValue = "true")
+    boolean acceptNewConnections;
+
+    /**
+     * 停机时通知客户端主动断开后的等待秒数；超时仍在线则强制关闭残留连接；0 表示通知后立即强制关
+     */
+    @Key(value = "ouyunc.message.server.drain.wait-seconds", defaultValue = "15")
+    int drainWaitSeconds;
+
+    /**
+     * 优雅关闭时是否踢掉本机全部已登录长连接（关闭钩子会清理本节点 Redis 会话）
+     */
+    @Key(value = "ouyunc.message.server.shutdown.kick-clients", defaultValue = "true")
+    boolean shutdownKickClients;
+
 
     /***
      * 服务端群消息推送模式，PUSH-推送模式，PULL-拉取模式 PULL_PUSH-拉取推送模式
@@ -982,6 +1000,30 @@ public class MessageServerProperties extends MessageProperties {
         this.serverLoginTimeout = serverLoginTimeout;
     }
 
+    public boolean isAcceptNewConnections() {
+        return acceptNewConnections;
+    }
+
+    public void setAcceptNewConnections(boolean acceptNewConnections) {
+        this.acceptNewConnections = acceptNewConnections;
+    }
+
+    public int getDrainWaitSeconds() {
+        return drainWaitSeconds;
+    }
+
+    public void setDrainWaitSeconds(int drainWaitSeconds) {
+        this.drainWaitSeconds = drainWaitSeconds;
+    }
+
+    public boolean isShutdownKickClients() {
+        return shutdownKickClients;
+    }
+
+    public void setShutdownKickClients(boolean shutdownKickClients) {
+        this.shutdownKickClients = shutdownKickClients;
+    }
+
     /**
      * 获取boss 线程组配置, 这里对其进行组装
      */
@@ -1172,6 +1214,9 @@ public class MessageServerProperties extends MessageProperties {
                 ", clientHeartBeatRefreshThrottleMaxInterval=" + clientHeartBeatRefreshThrottleMaxInterval +
                 ", serverLoginEnable=" + serverLoginEnable +
                 ", serverLoginTimeout=" + serverLoginTimeout +
+                ", acceptNewConnections=" + acceptNewConnections +
+                ", drainWaitSeconds=" + drainWaitSeconds +
+                ", shutdownKickClients=" + shutdownKickClients +
                 ", groupMessagePushMode=" + groupMessagePushMode +
                 ", groupMessageThreshold=" + groupMessageThreshold +
                 ", qosRetryEnable=" + qosRetryEnable +

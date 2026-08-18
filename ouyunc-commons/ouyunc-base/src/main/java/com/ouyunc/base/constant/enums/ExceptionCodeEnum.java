@@ -17,6 +17,7 @@ public enum ExceptionCodeEnum {
 
     LOGIN_AUTH_ERROR(30001, "登录认证错误"),
     LOGIN_VERIFY_ERROR(30002, "登录校验错误"),
+    LOGIN_REFUSED_DRAIN(30003, "服务摘流中，拒绝登录"),
 
 
     WITHDRAW_MESSAGE_ERROR(40001, "撤回消息错误"),
