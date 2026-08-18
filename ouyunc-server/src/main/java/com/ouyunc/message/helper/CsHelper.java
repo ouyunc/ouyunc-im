@@ -63,17 +63,17 @@ public final class CsHelper {
     }
 
     /**
-     * 解析接收方下行渠道：坐席始终 IM；访客按 ticket 进线渠道（whatsapp/telegram/line → 外渠 Kafka）。
+     * 解析接收方下行渠道：坐席始终 IM；访客按 route.channelType（whatsapp/telegram/line → 外渠 Kafka）。
      */
     public static MessageDeliveryChannelEnum resolveRecipientChannel(CsImSessionRoute route, String recipientId) {
         return CsDeliveryChannelHelper.resolveRecipientChannel(route, recipientId);
     }
 
     /**
-     * CS ticket.channel → IM 投递枚举。im/web/app/h5/pc 等自有终端走长连接；外渠走 Kafka 出站。
+     * CS ticket.channelType → IM 投递枚举。im 走长连接；whatsapp/telegram/line 走 Kafka 出站。
      */
-    public static MessageDeliveryChannelEnum fromTicketChannel(String ticketChannel) {
-        return CsDeliveryChannelHelper.fromTicketChannel(ticketChannel);
+    public static MessageDeliveryChannelEnum fromChannelType(String channelType) {
+        return CsDeliveryChannelHelper.fromChannelType(channelType);
     }
 
     public static boolean isExternalVisitorRoute(CsImSessionRoute route) {

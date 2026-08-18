@@ -77,6 +77,7 @@ public final class CsImSessionRouteSupport {
                     assignee,
                     status,
                     snapshot.channel(),
+                    snapshot.channelType(),
                     agentType,
                     epoch);
         } catch (Exception e) {

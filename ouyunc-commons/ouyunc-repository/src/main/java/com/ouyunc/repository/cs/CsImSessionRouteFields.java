@@ -14,8 +14,10 @@ public final class CsImSessionRouteFields {
     public static final String SERVICE_IDENTITY = "serviceIdentity";
     public static final String ASSIGNEE_ID = "assigneeId";
     public static final String STATUS = "status";
-    /** 进线渠道，与 CS {@code CsSessionRouteHashFields.CHANNEL} 对齐 */
+    /** 进线渠道实例编码，与 CS ticket.channel 对齐（whatsapp_a / im） */
     public static final String CHANNEL = "channel";
+    /** 进线协议，与 CS ticket.channelType 对齐（whatsapp / telegram / line / im） */
+    public static final String CHANNEL_TYPE = "channelType";
     /** 坐席类型，与 CS {@code CsSessionRouteHashFields.AGENT_TYPE} 对齐 */
     public static final String AGENT_TYPE = "agentType";
 
@@ -34,6 +36,7 @@ public final class CsImSessionRouteFields {
                     ASSIGNEE_ID,
                     STATUS,
                     CHANNEL,
+                    CHANNEL_TYPE,
                     AGENT_TYPE,
                     EPOCH);
 

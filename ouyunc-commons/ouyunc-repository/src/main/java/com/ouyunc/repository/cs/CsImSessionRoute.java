@@ -11,6 +11,8 @@ public record CsImSessionRoute(
         String assigneeId,
         Integer status,
         String channel,
+        /** 进线协议，与 CS ticket.channelType 对齐（whatsapp / telegram / line / im） */
+        String channelType,
         /** 当前接待坐席类型：1人工 2机器人 3虚拟，必填 */
         Integer agentType,
         /** 改派世代，从 1 起；缺省或 &lt; 1 视为无效路由 */
@@ -33,7 +35,7 @@ public record CsImSessionRoute(
         return assigneeId != null && !assigneeId.isBlank();
     }
 
-    /** 访客是否外渠进线（whatsapp / telegram / line）。 */
+    /** 访客是否外渠进线（whatsapp / telegram / line），看 channelType 不看实例编码。 */
     public boolean isExternalVisitorChannel() {
         return CsDeliveryChannelHelper.isExternalVisitorRoute(this);
     }

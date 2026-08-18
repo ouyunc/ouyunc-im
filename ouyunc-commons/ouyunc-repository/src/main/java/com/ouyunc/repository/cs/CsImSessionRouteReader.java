@@ -38,6 +38,7 @@ public final class CsImSessionRouteReader {
         Integer agentType = parseInt(map.get(CsImSessionRouteFields.AGENT_TYPE));
         Long epoch = parseLong(map.get(CsImSessionRouteFields.EPOCH));
         if (StringUtils.isAnyBlank(ticketId, sessionId, userId, serviceIdentity, assigneeId)
+                || StringUtils.isBlank(map.get(CsImSessionRouteFields.CHANNEL_TYPE))
                 || status == null
                 || !CsAgentType.isKnown(agentType)
                 || epoch == null
@@ -52,6 +53,7 @@ public final class CsImSessionRouteReader {
                 assigneeId,
                 status,
                 map.get(CsImSessionRouteFields.CHANNEL),
+                map.get(CsImSessionRouteFields.CHANNEL_TYPE),
                 agentType,
                 epoch);
     }
