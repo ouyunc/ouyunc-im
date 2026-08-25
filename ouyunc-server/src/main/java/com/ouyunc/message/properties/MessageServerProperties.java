@@ -123,12 +123,6 @@ public class MessageServerProperties extends MessageProperties {
     String httpPushJwtSecret;
 
     /**
-     * 是否允许使用内置 demo JWT secret（仅本地开发）。生产环境务必 false，并配置独立 secret。
-     */
-    @Key(value = "ouyunc.message.http-push.jwt.allow-demo-secret", defaultValue = "true")
-    boolean httpPushJwtAllowDemoSecret;
-
-    /**
      * JWT issuer 校验，空则跳过。
      */
     @Key("ouyunc.message.http-push.jwt.issuer")
@@ -622,14 +616,6 @@ public class MessageServerProperties extends MessageProperties {
 
     public void setHttpPushJwtSecret(String httpPushJwtSecret) {
         this.httpPushJwtSecret = httpPushJwtSecret;
-    }
-
-    public boolean isHttpPushJwtAllowDemoSecret() {
-        return httpPushJwtAllowDemoSecret;
-    }
-
-    public void setHttpPushJwtAllowDemoSecret(boolean httpPushJwtAllowDemoSecret) {
-        this.httpPushJwtAllowDemoSecret = httpPushJwtAllowDemoSecret;
     }
 
     public String getHttpPushJwtIssuer() {
@@ -1186,7 +1172,6 @@ public class MessageServerProperties extends MessageProperties {
                 ", httpPushSkipFriendCheckForSystem=" + httpPushSkipFriendCheckForSystem +
                 ", httpPushJwtEnabled=" + httpPushJwtEnabled +
                 ", httpPushJwtSecret='" + httpPushJwtSecret + '\'' +
-                ", httpPushJwtAllowDemoSecret=" + httpPushJwtAllowDemoSecret +
                 ", httpPushJwtIssuer='" + httpPushJwtIssuer + '\'' +
                 ", httpPushJwtIdentityClaim='" + httpPushJwtIdentityClaim + '\'' +
                 ", httpPushJwtAppKeyClaim='" + httpPushJwtAppKeyClaim + '\'' +

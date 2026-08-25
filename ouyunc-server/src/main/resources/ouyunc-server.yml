@@ -143,9 +143,7 @@ ouyunc:
       idempotent-ttl-seconds: 86400
       skip-friend-check-for-system: true
       jwt:
-        # 生产务必改为独立密钥，并将 allow-demo-secret 设为 false
         secret: ouyunc-http-push-jwt-secret-demo-32b
-        allow-demo-secret: true
 
     # 线程池配置（精简版，仅保留必要参数）
     thread-pool:

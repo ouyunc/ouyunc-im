@@ -52,9 +52,6 @@ public final class HttpPushJwtAuth {
     /** 客服推送。 */
     static final String SCOPE_CS = "im:push:cs";
 
-    /** 与 ouyunc-server.yml 默认 demo 密钥一致；生产禁止使用。 */
-    static final String DEMO_JWT_SECRET = "ouyunc-http-push-jwt-secret-demo-32b";
-
     private HttpPushJwtAuth() {
     }
 
@@ -68,12 +65,6 @@ public final class HttpPushJwtAuth {
             throw new HttpPipelineException(HttpResponseStatus.INTERNAL_SERVER_ERROR,
                     HttpResponseCodeEnum.INTERNAL_SERVER_ERROR,
                     "HTTP 推送 JWT 已开启但未配置 ouyunc.message.http-push.jwt.secret");
-        }
-        if (DEMO_JWT_SECRET.equals(props.getHttpPushJwtSecret()) && !props.isHttpPushJwtAllowDemoSecret()) {
-            throw new HttpPipelineException(HttpResponseStatus.INTERNAL_SERVER_ERROR,
-                    HttpResponseCodeEnum.INTERNAL_SERVER_ERROR,
-                    "禁止使用 demo JWT secret，请配置 ouyunc.message.http-push.jwt.secret，"
-                            + "并将 http-push.jwt.allow-demo-secret=false");
         }
         String token = extractBearerToken(httpContext);
         if (StringUtils.isBlank(token)) {
