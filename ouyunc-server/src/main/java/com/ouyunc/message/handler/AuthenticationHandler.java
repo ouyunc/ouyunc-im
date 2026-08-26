@@ -31,6 +31,7 @@ import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.protocol.NativePacketProtocol;
 import com.ouyunc.message.validator.AppKeyValidator;
 import com.ouyunc.message.validator.DeviceValidator;
+import com.ouyunc.message.validator.LoginUserValidator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -381,6 +382,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
     /***
      * @author fzx
      * @description 校验登录信息；{@code scope} 必须为 {@link LoginScopeEnum} 已定义取值；
+     * identity 在客服 scope 下须在 {@code ouyunc_im_user} 存在且属于该 appKey；
      * 签名为 {@code MD5(appKey&identity&createTime_appSecret)}，createTime 允许
      * {@link MessageConstant#LOGIN_SIGNATURE_CREATE_TIME_SKEW_MS} 偏差。
      */
@@ -389,6 +391,11 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
             return false;
         }
         if (StringUtils.isAnyBlank(loginContent.getAppKey(), loginContent.getIdentity(), loginContent.getSignature())) {
+            return false;
+        }
+        // 客服坐席/访客：identity 必须已是本应用 ouyunc_im_user（签名不能代替建档）
+        if (LoginScopeEnum.isCustomerService(loginContent.getScope())
+                && !LoginUserValidator.userExists(loginContent.getAppKey(), loginContent.getIdentity())) {
             return false;
         }
         @SuppressWarnings("unchecked")
