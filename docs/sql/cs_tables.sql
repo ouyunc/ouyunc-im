@@ -2,7 +2,7 @@
  客服（CS）模块表结构
  Target Schema: ouyunc_cs（用户在 ouyunc_system，IM 在 ouyunc_message）
  MySQL 8.0+ / utf8mb4_0900_ai_ci
- 完整脚本（含扩展表）见 cs_schema_full.sql
+ 完整脚本（含扩展表，20 表）见 cs_schema_full.sql；本文件仅作早期核心表摘录，新建库请只跑 cs_schema_full.sql。
 */
 
 SET NAMES utf8mb4;

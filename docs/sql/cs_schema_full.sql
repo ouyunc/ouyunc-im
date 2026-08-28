@@ -4,8 +4,8 @@
  库边界：ouyunc_system（用户）/ ouyunc_message（IM）/ ouyunc_cs（客服）
  跨库约定：cs_agent.agent_id = ouyunc_system.sys_user.id（逻辑关联）
  MySQL 8.0+ / utf8mb4_0900_ai_ci
- 表数量：17（登录走 OAuth system-user，无 cs_agent_credential；不含已废弃的 cs_skill_rule）
- 权威脚本（20 表，含离线留言/回访/附件）：micro-cloud-platform ouyunc-cs-service cs_schema_full.sql
+  表数量：20（登录走 OAuth system-user，无 cs_agent_credential；不含已废弃的 cs_skill_rule）
+  含离线留言 / 回访 / 附件。权威脚本仍以 micro-cloud-platform ouyunc-cs-service cs_schema_full.sql 为准。
 */
 
 CREATE DATABASE IF NOT EXISTS `ouyunc_cs`
@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS `cs_merchant_entry` (
     `entry_code` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '入口编码，如 main/luxury',
     `entry_name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '入口展示名',
     `service_identity` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'IM 虚拟客服 identity，租户内唯一',
+    `routing_override_json` text NULL COMMENT '分配规则覆盖(JSON)，null/空=继承 appKey 默认',
     `is_default` tinyint NOT NULL DEFAULT 0 COMMENT '是否默认入口：1-是',
     `enabled` tinyint NOT NULL DEFAULT 1 COMMENT '1-启用 0-停用',
     `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -97,6 +98,7 @@ CREATE TABLE IF NOT EXISTS `cs_consultation_ticket` (
     `pending_resume` tinyint NOT NULL DEFAULT 0 COMMENT '待恢复标记',
     `assignee_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '当前接待坐席id',
     `assignee_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '当前接待客服昵称/工号',
+    `auth_keys` json NULL COMMENT '参与坐席 agentId 列表 JSON 数组',
     `origin_assignee_id` varchar(64) NULL DEFAULT NULL COMMENT '首次分配坐席ID',
     `transfer_count` tinyint NOT NULL DEFAULT 0 COMMENT '转接次数',
     `is_robot` tinyint NULL DEFAULT 0 COMMENT '0-人工 1-机器人',
@@ -135,7 +137,8 @@ CREATE TABLE IF NOT EXISTS `cs_consultation_ticket` (
     INDEX `idx_app_start_time` (`app_key`, `start_time`) USING BTREE,
     INDEX `idx_app_channel` (`app_key`, `channel`) USING BTREE,
     INDEX `idx_app_biz_order` (`app_key`, `biz_order_no`) USING BTREE,
-    INDEX `idx_app_country` (`app_key`, `country_code`) USING BTREE
+    INDEX `idx_app_country` (`app_key`, `country_code`) USING BTREE,
+    INDEX `idx_ticket_auth_keys` ((CAST(`auth_keys` AS CHAR(64) ARRAY)))
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '咨询单表' ROW_FORMAT = Dynamic;
 
 CREATE TABLE IF NOT EXISTS `cs_consultation_ticket_log` (
@@ -194,6 +197,29 @@ CREATE TABLE IF NOT EXISTS `cs_work_order` (
     INDEX `idx_app_ticket` (`app_key`, `ticket_id`) USING BTREE,
     INDEX `idx_app_customer` (`app_key`, `customer_id`) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '业务工单（跟进单）' ROW_FORMAT = Dynamic;
+
+CREATE TABLE IF NOT EXISTS `cs_offline_message` (
+    `id` bigint(20) NOT NULL COMMENT '主键',
+    `app_key` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+    `customer_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+    `customer_name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
+    `content` varchar(2000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+    `contact` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
+    `channel` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
+    `merchant_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
+    `entry_code` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
+    `status` tinyint NOT NULL DEFAULT 0 COMMENT '0待处理 1已处理',
+    `handler_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
+    `ticket_id` bigint(20) NULL DEFAULT NULL COMMENT '关联咨询单，可空',
+    `work_order_id` bigint(20) NULL DEFAULT NULL COMMENT '关联跟进工单，可空',
+    `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `del_flag` bigint NOT NULL DEFAULT 0,
+    PRIMARY KEY (`id`) USING BTREE,
+    INDEX `idx_app_status_time` (`app_key`, `status`, `create_time`) USING BTREE,
+    INDEX `idx_app_ticket` (`app_key`, `ticket_id`) USING BTREE,
+    INDEX `idx_app_work_order` (`app_key`, `work_order_id`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '非服务时间访客留言' ROW_FORMAT = Dynamic;
 
 -- =============================================================================
 -- 3. 坐席 / 路由 / 排班
@@ -402,6 +428,47 @@ CREATE TABLE IF NOT EXISTS `cs_knowledge_article` (
     PRIMARY KEY (`id`) USING BTREE,
     INDEX `idx_app_title` (`app_key`, `title`(64)) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '知识库文章' ROW_FORMAT = Dynamic;
+
+CREATE TABLE IF NOT EXISTS `cs_satisfaction_callback` (
+    `id` bigint(20) NOT NULL COMMENT '主键',
+    `app_key` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '租户',
+    `ticket_id` bigint(20) NOT NULL COMMENT '咨询单',
+    `customer_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '访客 IM 用户 id',
+    `score` int NOT NULL COMMENT '评价 1-5',
+    `comment` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '评价留言',
+    `status` tinyint NOT NULL DEFAULT 0 COMMENT '0待回访 1已完成 2已取消',
+    `due_time` datetime NOT NULL COMMENT '到期时间',
+    `assignee_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '处理坐席',
+    `remark` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '回访备注',
+    `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `del_flag` bigint NOT NULL DEFAULT 0 COMMENT '软删除：0未删除',
+    PRIMARY KEY (`id`) USING BTREE,
+    UNIQUE KEY `uk_app_ticket` (`app_key`, `ticket_id`) USING BTREE,
+    INDEX `idx_app_status_due` (`app_key`, `status`, `due_time`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='低分评价回访';
+
+CREATE TABLE IF NOT EXISTS `cs_attachment_audit` (
+    `id` bigint(20) NOT NULL COMMENT '主键',
+    `app_key` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '租户',
+    `ticket_id` bigint(20) NOT NULL COMMENT '咨询单',
+    `customer_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '访客',
+    `file_url` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '文件地址',
+    `file_name` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '文件名',
+    `content_type` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'MIME',
+    `file_size` bigint DEFAULT NULL COMMENT '字节',
+    `status` tinyint NOT NULL DEFAULT 0 COMMENT '0待审 1通过 2拒绝 3已投递',
+    `submitter_type` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'guest/agent',
+    `submitter_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '提交人',
+    `reviewer_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '审核坐席',
+    `review_remark` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '审核意见',
+    `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `del_flag` bigint NOT NULL DEFAULT 0 COMMENT '软删除：0未删除',
+    PRIMARY KEY (`id`) USING BTREE,
+    INDEX `idx_app_status` (`app_key`, `status`) USING BTREE,
+    INDEX `idx_app_ticket_submitter` (`app_key`, `ticket_id`, `submitter_id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='聊天附件审核';
 
 SET FOREIGN_KEY_CHECKS = 1;
 

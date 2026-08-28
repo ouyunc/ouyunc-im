@@ -27,6 +27,7 @@ import com.ouyunc.repository.DefaultRepository;
 import com.ouyunc.repository.cs.CsDeliveryChannelHelper;
 import com.ouyunc.repository.cs.CsImSessionRoute;
 import com.ouyunc.repository.cs.CsMessageScopeHelper;
+import com.ouyunc.message.processor.http.push.HttpPushSupportedTypes;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -118,6 +119,9 @@ public final class CsHelper {
         String ticketId = message.getCorrelationId();
         if (StringUtils.isBlank(ticketId)) {
             return PrepareOutcome.reject("客服消息必须携带 ticketId(correlationId)");
+        }
+        if (!HttpPushSupportedTypes.isSupportedCsContent(packet)) {
+            return PrepareOutcome.reject("客服不支持该消息类型 contentType=" + message.getContentType());
         }
 
         CsImSessionRoute route = DefaultRepository.INSTANCE.getCsImSessionRoute(appKey, ticketId);
