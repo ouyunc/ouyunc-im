@@ -11,6 +11,7 @@ import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.message.banner.MessageBanner;
 import com.ouyunc.message.channel.DefaultServerChannelInitializer;
 import com.ouyunc.message.channel.DefaultSocketChannelInitializer;
+import com.ouyunc.message.channel.NativeIoTransport;
 import com.ouyunc.message.channel.ServerChannelInitializer;
 import com.ouyunc.message.channel.SocketChannelInitializer;
 import com.ouyunc.message.cluster.client.DefaultMessageClient;
@@ -27,8 +28,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.util.concurrent.Future;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.netty.util.internal.logging.Log4J2LoggerFactory;
@@ -303,14 +302,16 @@ public abstract class AbstractMessageServer implements MessageServer {
         final long startTimeStamp = TimeUtil.currentTimeMillis();
         // 集成log4j2
         InternalLoggerFactory.setDefaultFactory(Log4J2LoggerFactory.INSTANCE);
-        // 配置boss 线程组&工作线程组
-        bossGroup = new NioEventLoopGroup(MessageServerContext.serverProperties().getBossThreads());
-        workerGroup = new NioEventLoopGroup(MessageServerContext.serverProperties().getWorkThreads());
+        NativeIoTransport ioTransport = NativeIoTransport.initialize(
+                MessageServerContext.serverProperties().isServerNativeIoEnable());
+        int bossThreads = MessageServerContext.serverProperties().getBossThreads();
+        int workerThreads = MessageServerContext.serverProperties().getWorkThreads();
+        bossGroup = ioTransport.newGroup(bossThreads, "im-boss");
+        workerGroup = ioTransport.newGroup(workerThreads, "im-worker");
         try {
             // 设置相关属性
             bootstrap.group(bossGroup, workerGroup)
-                    // 通过反射拿到对应的处理通道类型
-                    .channel(NioServerSocketChannel.class)
+                    .channel(ioTransport.serverChannelClass())
                     // boss 线程组处理器,handler在初始化时就会执行
                     .handler(serverChannelInitializer)
                     // 本地地址
@@ -331,6 +332,7 @@ public abstract class AbstractMessageServer implements MessageServer {
                     bootstrap.childOption(childChannelOptionEntry.getKey(), childChannelOptionEntry.getValue());
                 }
             }
+            ioTransport.enhanceServerBootstrap(bootstrap, bossThreads);
             // 因为bind() 是异步的，这里不用 bind().sync(); 而是添加监听器的方式进行回调
             ChannelFuture channelFuture = bootstrap.bind();
             // 添加监听器来监听是否启动成功,做额外工作

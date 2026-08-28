@@ -4,6 +4,7 @@ package com.ouyunc.message.cluster.client.pool;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.utils.SocketAddressUtil;
+import com.ouyunc.message.channel.NativeIoTransport;
 import com.ouyunc.message.cluster.client.handler.MessageClientChannelPoolHandler;
 import com.ouyunc.message.cluster.topology.ClusterTopologyView;
 import com.ouyunc.message.context.MessageServerContext;
@@ -11,9 +12,7 @@ import com.ouyunc.message.properties.MessageServerProperties;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.pool.*;
-import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.AttributeKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,8 +29,8 @@ public class MessageClientPool {
 
     private static final String loopBackAddress = "127.0.0.1";
 
-    private static final Bootstrap bootstrap;
-    private static final EventLoopGroup workGroup;
+    private static Bootstrap bootstrap;
+    private static EventLoopGroup workGroup;
     public static final ChannelPoolMap<String, SimpleChannelPool> clientSimpleChannelPoolMap = new AbstractChannelPoolMap<>() {
         @Override
         protected SimpleChannelPool newPool(String remoteHostPort) {
@@ -49,27 +48,13 @@ public class MessageClientPool {
         }
     };
 
-    // 初始化
-    static {
-        bootstrap = new Bootstrap();
-        workGroup = new NioEventLoopGroup(Runtime.getRuntime().availableProcessors()* NumberConstant.NUMBER_2);
-        AttributeKey<String> clusterClientTagKey = AttributeKey.valueOf(MessageConstant.BOOTSTRAP_ATTR_KEY_TAG_CLIENT);;
-        bootstrap.group(workGroup)
-                .channel(NioSocketChannel.class)
-                .option(ChannelOption.SO_REUSEADDR, MessageConstant.TRUE)
-                .option(ChannelOption.SO_KEEPALIVE, MessageConstant.TRUE)
-                .option(ChannelOption.TCP_NODELAY, MessageConstant.TRUE)
-                .attr(clusterClientTagKey, MessageConstant.BOOTSTRAP_ATTR_KEY_TAG_CLUSTER_CLIENT_VALUE)
-        ;
-
-    }
-
     /**
      * @Author fzx
      * @Description 使用连接池初始化内置客户端，动态扩容缩容连接
      */
     public static void init(MessageServerProperties serverProperties) {
         log.info("IM内置客户端开始启动......");
+        ensureBootstrap();
         Set<String> nodes = serverProperties.getNodes();
         ClusterTopologyView topologyView = MessageServerContext.clusterTopologyView;
         for (String node : nodes) {
@@ -86,6 +71,28 @@ public class MessageClientPool {
             MessageServerContext.clusterActiveServerRegistryTableCache.put(node, simpleChannelPool);
         }
         log.info("IM内置客户端初始化完成");
+    }
+
+    /**
+     * 与接入服务端共用 {@link NativeIoTransport}，避免集群转发一端 epoll、一端 NIO。
+     */
+    private static synchronized void ensureBootstrap() {
+        if (bootstrap != null) {
+            return;
+        }
+        NativeIoTransport ioTransport = NativeIoTransport.current();
+        workGroup = ioTransport.newGroup(
+                Runtime.getRuntime().availableProcessors() * NumberConstant.NUMBER_2, "im-cluster-client");
+        AttributeKey<String> clusterClientTagKey = AttributeKey.valueOf(MessageConstant.BOOTSTRAP_ATTR_KEY_TAG_CLIENT);
+        bootstrap = new Bootstrap();
+        bootstrap.group(workGroup)
+                .channel(ioTransport.socketChannelClass())
+                .option(ChannelOption.SO_REUSEADDR, MessageConstant.TRUE)
+                .option(ChannelOption.SO_KEEPALIVE, MessageConstant.TRUE)
+                .option(ChannelOption.TCP_NODELAY, MessageConstant.TRUE)
+                .attr(clusterClientTagKey, MessageConstant.BOOTSTRAP_ATTR_KEY_TAG_CLUSTER_CLIENT_VALUE);
+        ioTransport.enhanceClientBootstrap(bootstrap);
+        log.info("集群内置客户端 IO 传输: {}", ioTransport.kind());
     }
 
 

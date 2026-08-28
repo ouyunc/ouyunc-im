@@ -309,6 +309,12 @@ public class MessageServerProperties extends MessageProperties {
     @Key(value = "ouyunc.message.server.shutdown.kick-clients", defaultValue = "true")
     boolean shutdownKickClients;
 
+    /**
+     * 是否启用 Linux epoll / macOS kqueue 原生传输；false 则强制 JDK NIO（排障或 Windows 开发可关）。
+     */
+    @Key(value = "ouyunc.message.server.native-io.enable", defaultValue = "true")
+    boolean serverNativeIoEnable;
+
 
     /***
      * 服务端群消息推送模式，PUSH-推送模式，PULL-拉取模式 PULL_PUSH-拉取推送模式
@@ -1008,6 +1014,14 @@ public class MessageServerProperties extends MessageProperties {
 
     public void setShutdownKickClients(boolean shutdownKickClients) {
         this.shutdownKickClients = shutdownKickClients;
+    }
+
+    public boolean isServerNativeIoEnable() {
+        return serverNativeIoEnable;
+    }
+
+    public void setServerNativeIoEnable(boolean serverNativeIoEnable) {
+        this.serverNativeIoEnable = serverNativeIoEnable;
     }
 
     /**

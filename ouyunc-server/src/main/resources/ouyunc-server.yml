@@ -97,6 +97,9 @@ ouyunc:
       shutdown:
         # 停机前是否踢掉本机全部已登录长连接（关闭钩子清理本节点 Redis 会话）
         kick-clients: true
+      # Linux 优先 epoll，macOS 优先 kqueue；不可用（如 Windows）或 false 则 JDK NIO
+      native-io:
+        enable: true
       # 服务端群消息处理模式
       group-message:
         # 消息模式，PUSH-推送模式，PULL-拉取模式，PULL_PUSH 推拉模式，（在超大规模群，比如直播间，）  默认推送模式
@@ -201,7 +204,7 @@ ouyunc:
         # 地址复用，默认值False
         so-reuseaddr: true
     work:
-      # worker 线程数：100 万连接为事件驱动，非 1 连接 1 线程；建议 CPU 核数 × 2（32 核机常用 64）
+      # worker 线程数：事件驱动，非 1 连接 1 线程；建议 CPU 核数 × 2。Linux 开启 native-io 后同一线程可扛更多连接
       threads: 64
       # 置连接活动保持连接状态
       child-option:
