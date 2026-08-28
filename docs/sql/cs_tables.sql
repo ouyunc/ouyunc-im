@@ -87,7 +87,7 @@ CREATE TABLE IF NOT EXISTS `cs_consultation_ticket` (
     `transfer_count` tinyint NOT NULL DEFAULT 0 COMMENT '转接次数',
     `is_robot` tinyint NULL DEFAULT 0 COMMENT '当前是否机器人接待：0-人工 1-机器人',
     `is_robot_transfer` tinyint NOT NULL DEFAULT 0 COMMENT '是否机器人转人工：0否1是',
-    `channel` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '进线渠道：whatsapp/telegram/line/im/400_call',
+    `channel` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '进线渠道：whatsapp/telegram/line/im',
     `terminal_type` varchar(16) NULL DEFAULT NULL COMMENT '自有终端类型，仅 channel=im 时有值：APP/MINIAPP/H5/WEB/PC',
     `client_ip` varchar(64) NULL DEFAULT NULL COMMENT '客户真实IP',
     `device_info` varchar(256) NULL DEFAULT NULL COMMENT '设备信息：系统/机型/浏览器',
@@ -132,7 +132,7 @@ CREATE TABLE IF NOT EXISTS `cs_consultation_ticket_log` (
     `ticket_id` bigint(20) NOT NULL COMMENT '咨询单 id，关联 cs_consultation_ticket.id',
     `session_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'IM会话ID，冗余存储，减少联查',
     `user_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '客户IM身份ID，冗余',
-    `channel` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '进线渠道，冗余：whatsapp/telegram/line/im/400_call',
+    `channel` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '进线渠道，冗余：whatsapp/telegram/line/im',
     `record_type` tinyint NOT NULL COMMENT '记录类型：1-首次接入，2-转接转入，3-转出（结束本次接待），4-关单',
     `operate_type` tinyint NULL DEFAULT NULL COMMENT '操作细分：1正常接待 2人工主动转接 3超时关闭 4客户离线关闭 5系统强制关单',
     `assignee_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '本段处理人 id（坐席 identity）',
@@ -179,7 +179,7 @@ CREATE TABLE IF NOT EXISTS `cs_agent` (
     `agent_type` tinyint NOT NULL DEFAULT 1 COMMENT '坐席类型：1人工坐席 2机器人坐席 3虚拟客服',
     `max_concurrent` int NOT NULL DEFAULT 5 COMMENT '最大并发接待会话数，路由限流使用',
     `languages` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '支持语种，多语种逗号分隔：CN,EN,SG,TH',
-    `receive_channel` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '可接待渠道，逗号分隔：im,whatsapp,telegram,line,400_call',
+    `receive_channel` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '可接待渠道，逗号分隔：im,whatsapp,telegram,line',
     `is_auto_distribute` tinyint NOT NULL DEFAULT 1 COMMENT '是否允许系统自动分配会话：0否 1是',
     `enabled` tinyint(1) NOT NULL DEFAULT 1 COMMENT '账号启用状态：0禁用 1启用',
     `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -212,27 +212,6 @@ CREATE TABLE IF NOT EXISTS `cs_skill` (
     UNIQUE KEY `uk_app_skill` (`app_key`, `skill_code`) USING BTREE COMMENT '租户内队列编码唯一',
     INDEX `idx_app_name` (`app_key`, `skill_name`) USING BTREE COMMENT '按队列名称模糊查询'
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '技能/队列基础信息表' ROW_FORMAT = Dynamic;
-
--- ----------------------------
--- 队列分流匹配规则表，一个 skill_code 可多条规则
--- ----------------------------
-CREATE TABLE IF NOT EXISTS `cs_skill_rule` (
-    `id` bigint(20) NOT NULL COMMENT '主键ID',
-    `app_key` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '应用Key',
-    `skill_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '关联队列编码，关联 cs_skill.skill_code',
-    `rule_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '规则名称',
-    `sort` int NOT NULL DEFAULT 1 COMMENT '规则匹配顺序，数字越小越先匹配',
-    `allow_channel` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '允许进线渠道，逗号分隔：im,whatsapp,telegram,line,400_call；空不限制',
-    `allow_country_code` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '允许国家二字码，逗号分隔：CN,US,SG,TH；空不限制',
-    `customer_tag` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '客户业务标签匹配，逗号分隔；空不限制',
-    `match_logic` tinyint NOT NULL DEFAULT 1 COMMENT '多条件逻辑：1全部满足AND 2任一满足OR',
-    `status` tinyint(1) NOT NULL DEFAULT 1 COMMENT '规则状态：0禁用 1启用',
-    `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    `del_flag` bigint NOT NULL DEFAULT 0 COMMENT '软删除：0-未删除；非0-已删除（毫秒时间戳）',
-    PRIMARY KEY (`id`) USING BTREE,
-    INDEX `idx_app_skill` (`app_key`, `skill_code`) USING BTREE COMMENT '根据队列查所有分流规则'
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '队列分流匹配规则表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- 坐席与技能/队列的权限关联中间表（多对多）

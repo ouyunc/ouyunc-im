@@ -4,7 +4,8 @@
  库边界：ouyunc_system（用户）/ ouyunc_message（IM）/ ouyunc_cs（客服）
  跨库约定：cs_agent.agent_id = ouyunc_system.sys_user.id（逻辑关联）
  MySQL 8.0+ / utf8mb4_0900_ai_ci
- 表数量：18（登录走 OAuth system-user，无 cs_agent_credential）
+ 表数量：17（登录走 OAuth system-user，无 cs_agent_credential；不含已废弃的 cs_skill_rule）
+ 权威脚本（20 表，含离线留言/回访/附件）：micro-cloud-platform ouyunc-cs-service cs_schema_full.sql
 */
 
 CREATE DATABASE IF NOT EXISTS `ouyunc_cs`
@@ -100,8 +101,8 @@ CREATE TABLE IF NOT EXISTS `cs_consultation_ticket` (
     `transfer_count` tinyint NOT NULL DEFAULT 0 COMMENT '转接次数',
     `is_robot` tinyint NULL DEFAULT 0 COMMENT '0-人工 1-机器人',
     `is_robot_transfer` tinyint NOT NULL DEFAULT 0 COMMENT '是否机器人转人工',
-    `channel` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '渠道实例：whatsapp_a / im / 400_call',
-    `channel_type` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '协议：whatsapp/telegram/line/im/400_call',
+    `channel` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '渠道实例：whatsapp_a / im',
+    `channel_type` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '协议：whatsapp/telegram/line/im',
     `terminal_type` varchar(16) NULL DEFAULT NULL COMMENT 'APP/MINIAPP/H5/WEB/PC（channel_type=im）',
     `client_ip` varchar(64) NULL DEFAULT NULL COMMENT '客户真实IP',
     `device_info` varchar(256) NULL DEFAULT NULL COMMENT '设备信息',
@@ -242,24 +243,6 @@ CREATE TABLE IF NOT EXISTS `cs_skill` (
     UNIQUE KEY `uk_app_skill` (`app_key`, `skill_code`) USING BTREE,
     INDEX `idx_app_name` (`app_key`, `skill_name`) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '技能/队列配置' ROW_FORMAT = Dynamic;
-
-CREATE TABLE IF NOT EXISTS `cs_skill_rule` (
-    `id` bigint(20) NOT NULL COMMENT '主键ID',
-    `app_key` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
-    `skill_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
-    `rule_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
-    `sort` int NOT NULL DEFAULT 1,
-    `allow_channel` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
-    `allow_country_code` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
-    `customer_tag` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
-    `match_logic` tinyint NOT NULL DEFAULT 1 COMMENT '1AND 2OR',
-    `status` tinyint(1) NOT NULL DEFAULT 1,
-    `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    `del_flag` bigint NOT NULL DEFAULT 0 COMMENT '软删除：0-未删除；非0-已删除（毫秒时间戳）',
-    PRIMARY KEY (`id`) USING BTREE,
-    INDEX `idx_app_skill` (`app_key`, `skill_code`) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '队列分流规则' ROW_FORMAT = Dynamic;
 
 CREATE TABLE IF NOT EXISTS `cs_agent_skill_rel` (
     `id` bigint(20) NOT NULL COMMENT '主键ID',
