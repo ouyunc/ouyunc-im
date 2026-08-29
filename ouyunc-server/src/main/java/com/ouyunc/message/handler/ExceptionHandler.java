@@ -20,7 +20,7 @@ public class ExceptionHandler extends ChannelDuplexHandler {
      */
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        log.error("通道 channelId: {} 发生了异常: {} ", ctx.channel().id(), cause.getMessage());
+        log.error("通道 channelId: {} 发生了异常", ctx.channel().id(), cause);
         // 发送事件，统一交给事件再推送mq, 记录日志，发送邮件或短信进行通知
         MessageServerContext.publishEvent(new MessageEvent(cause, MessageEventTypeEnum.EXCEPTION), true);
     }

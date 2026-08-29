@@ -21,6 +21,7 @@ import com.ouyunc.message.http.HttpRequestDispatcher;
 import com.ouyunc.message.monitor.MonitorInitializer;
 import com.ouyunc.message.schedule.ScheduleTimer;
 import com.ouyunc.message.schedule.TimerTaskWrapper;
+import com.ouyunc.repository.DefaultRepository;
 import org.apache.commons.collections4.CollectionUtils;
 import org.redisson.api.RLock;
 import org.slf4j.Logger;
@@ -73,7 +74,24 @@ class ServerStartupEventMessageEventListener implements MessageEventListener<Mes
     public void onEvent(MessageEvent event) {
         HttpRequestDispatcher.logRegisteredHttpRoutesOnStartup();
         AppKeyConnectionCleanupRegistry.initFromRedis();
-        Set<String> appKeys = ClientHelper.appKeys();
+        // 先从 ouyunc_im_app 预热 Redis Hash，避免 Redis 空缓存时登录全部报 appKey 不存在
+        List<String> warmedAppKeys;
+        try {
+            warmedAppKeys = DefaultRepository.INSTANCE.warmupAppKeys();
+        } catch (Exception e) {
+            log.error("预热 app-keys 失败", e);
+            warmedAppKeys = List.of();
+        }
+        Set<String> appKeys;
+        try {
+            appKeys = ClientHelper.appKeys();
+        } catch (Exception e) {
+            log.error("启动读取 Redis app-keys 失败，使用预热列表兜底", e);
+            appKeys = Set.of();
+        }
+        if (CollectionUtils.isEmpty(appKeys) && CollectionUtils.isNotEmpty(warmedAppKeys)) {
+            appKeys = Set.copyOf(warmedAppKeys);
+        }
         if (CollectionUtils.isNotEmpty(appKeys)) {
             // 加载appKey 下的deviceType 配置
             loadAppKeyDeviceTypes(Lists.newArrayList(appKeys));

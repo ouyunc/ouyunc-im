@@ -32,6 +32,7 @@ import com.ouyunc.message.protocol.NativePacketProtocol;
 import com.ouyunc.message.validator.AppKeyValidator;
 import com.ouyunc.message.validator.DeviceValidator;
 import com.ouyunc.message.validator.LoginUserValidator;
+import com.ouyunc.repository.DefaultRepository;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -398,10 +399,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                 && !LoginUserValidator.userExists(loginContent.getAppKey(), loginContent.getIdentity())) {
             return false;
         }
-        @SuppressWarnings("unchecked")
-        RedisTemplate<String, Object> redisTemplate = CacheFactory.REDIS.instance();
-        AppEntity app = redisTemplate.<String, AppEntity>opsForHash()
-                .get(CacheConstant.buildAppKeysCacheKey(), loginContent.getAppKey());
+        AppEntity app = DefaultRepository.INSTANCE.getAppEntity(loginContent.getAppKey());
         if (app == null || StringUtils.isBlank(app.getAppSecret())) {
             log.warn("登录签名校验失败：appKey={} 不存在或无 appSecret", loginContent.getAppKey());
             return false;

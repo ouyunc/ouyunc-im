@@ -27,6 +27,7 @@ public final class RepositorySupports {
     public static final GroupMembershipSupport GROUP = new GroupMembershipSupport(INFRA, SESSION);
     public static final FriendRepositorySupport FRIEND = new FriendRepositorySupport(INFRA, SESSION);
     public static final UserRepositorySupport USER = new UserRepositorySupport(INFRA);
+    public static final AppRepositorySupport APP = new AppRepositorySupport(INFRA);
     public static final DeliveryChannelSupport DELIVERY_CHANNEL =
             new DeliveryChannelSupport(FRIEND, GROUP, MQ);
     public static final CsImSessionRouteSupport CS_IM_SESSION_ROUTE =

@@ -12,6 +12,7 @@ import com.ouyunc.domain.entity.FriendEntity;
 import com.ouyunc.domain.entity.GroupEntity;
 import com.ouyunc.domain.entity.GroupUserEntity;
 import com.ouyunc.domain.entity.UserEntity;
+import com.ouyunc.domain.entity.AppEntity;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.repository.support.RepositorySupports;
 import io.netty.channel.ChannelHandlerContext;
@@ -193,6 +194,20 @@ public enum DefaultRepository implements Repository {
 
     public UserEntity getUserEntity(String appKey, String identity) {
         return RepositorySupports.USER.getUserEntity(appKey, identity);
+    }
+
+    /**
+     * 按 appKey 查 IM 应用：Redis Hash miss / 断连时回源库并回写。
+     */
+    public AppEntity getAppEntity(String appKey) {
+        return RepositorySupports.APP.getAppEntity(appKey);
+    }
+
+    /**
+     * 启动时从 {@code ouyunc_im_app} 预热 Redis {@code ouyunc:app-keys}。
+     */
+    public List<String> warmupAppKeys() {
+        return RepositorySupports.APP.warmupAppKeys();
     }
 
     public boolean autoPassBindFriend(Packet packet, RequestSession requestSession, long expireTime) {

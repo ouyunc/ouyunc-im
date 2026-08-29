@@ -86,6 +86,14 @@ public final class JdbcSqlDialectHolder {
         return pick(JdbcSqlConstant.POSTGRESQL.SELECT_BLACKLIST, JdbcSqlConstant.ORACLE.SELECT_BLACKLIST, JdbcSqlConstant.MYSQL.SELECT_BLACKLIST);
     }
 
+    public static String selectApp() {
+        return pick(JdbcSqlConstant.POSTGRESQL.SELECT_APP, JdbcSqlConstant.ORACLE.SELECT_APP, JdbcSqlConstant.MYSQL.SELECT_APP);
+    }
+
+    public static String selectAllApps() {
+        return pick(JdbcSqlConstant.POSTGRESQL.SELECT_ALL_APPS, JdbcSqlConstant.ORACLE.SELECT_ALL_APPS, JdbcSqlConstant.MYSQL.SELECT_ALL_APPS);
+    }
+
     private static String pick(JdbcSqlConstant.POSTGRESQL pg, JdbcSqlConstant.ORACLE ora, JdbcSqlConstant.MYSQL my) {
         return switch (current) {
             case POSTGRESQL -> pg.sql();
