@@ -27,7 +27,7 @@ public enum CacheFactory {
         @SuppressWarnings("unchecked")
         @Override
         public RedisTemplate<?,?> instance(RedisProperties ...redisProperties) {
-            return instance(0, redisProperties);
+            return instance(resolveDefaultDatabase(existRedisProperties, redisProperties), redisProperties);
         }
         @SuppressWarnings("unchecked")
         @Override
@@ -63,7 +63,7 @@ public enum CacheFactory {
         @SuppressWarnings("unchecked")
         @Override
         public ReactiveRedisTemplate<?,?> instance(RedisProperties ...redisProperties) {
-            return instance(0, redisProperties);
+            return instance(resolveDefaultDatabase(existRedisProperties, redisProperties), redisProperties);
         }
         @SuppressWarnings("unchecked")
         @Override
@@ -98,7 +98,7 @@ public enum CacheFactory {
         @SuppressWarnings("unchecked")
         @Override
         public StringRedisTemplate instance(RedisProperties ...redisProperties) {
-            return instance(0, redisProperties);
+            return instance(resolveDefaultDatabase(existRedisProperties, redisProperties), redisProperties);
         }
         @SuppressWarnings("unchecked")
         @Override
@@ -133,7 +133,7 @@ public enum CacheFactory {
         @SuppressWarnings("unchecked")
         @Override
         public ReactiveStringRedisTemplate instance(RedisProperties ...redisProperties) {
-            return instance(0, redisProperties);
+            return instance(resolveDefaultDatabase(existRedisProperties, redisProperties), redisProperties);
         }
         @SuppressWarnings("unchecked")
         @Override
@@ -188,7 +188,7 @@ public enum CacheFactory {
         @SuppressWarnings("unchecked")
         @Override
         public RedissonReactiveClient instance(RedisProperties ...redisProperties) {
-            return instance(0, redisProperties);
+            return instance(resolveDefaultDatabase(existRedisProperties, redisProperties), redisProperties);
         }
     },
 
@@ -222,20 +222,39 @@ public enum CacheFactory {
         @SuppressWarnings("unchecked")
         @Override
         public RedissonClient instance(RedisProperties ...redisProperties) {
-            return instance(0, redisProperties);
+            return instance(resolveDefaultDatabase(existRedisProperties, redisProperties), redisProperties);
         }
     };
 
 
     /**
      * @Author fzx
-     * @Description 获取实例
+     * @Description 获取指定库号的实例；显式库号优先于 YAML database。
      */
     public abstract <T> T instance(int database, RedisProperties ...redisProperties);
 
     /**
      * @Author fzx
-     * @Description 获取实例
+     * @Description 获取默认实例，库号来自 {@link #resolveDefaultDatabase}（YAML {@code ouyunc.cache.redis.database}）。
      */
     public abstract <T> T instance(RedisProperties ...redisProperties);
+
+    /**
+     * 无参 instance() 的默认库号。优先级：调用方传入的 RedisProperties.database
+     * &gt; 已缓存的 properties &gt; YAML {@code ouyunc.cache.redis.database} &gt; 0。
+     * 注意：Redis Cluster 不支持 SELECT，cluster 模式下该值会被策略忽略。
+     */
+    static int resolveDefaultDatabase(RedisProperties cachedProperties, RedisProperties... redisProperties) {
+        RedisProperties chosen = null;
+        if (redisProperties != null && redisProperties.length > 0) {
+            chosen = redisProperties[0];
+        }
+        if (chosen == null) {
+            chosen = cachedProperties;
+        }
+        if (chosen == null) {
+            chosen = AbstractRedisBuilder.getRedisProperties();
+        }
+        return chosen != null ? chosen.getDatabase() : 0;
+    }
 }

@@ -41,6 +41,14 @@ public abstract class AbstractRedisBuilder<T> implements RedisBuilder<T>{
 
     }
 
+    /**
+     * YAML {@code ouyunc.cache.redis} 绑定结果，供 {@link com.ouyunc.cache.config.CacheFactory} 无参 instance() 读取默认 database。
+     * 类加载时已从配置文件初始化，可能为 null（无配置文件时）。
+     */
+    public static RedisProperties getRedisProperties() {
+        return redisProperties;
+    }
+
     public void setRedisProperties(RedisProperties redisProperties) {
         AbstractRedisBuilder.redisProperties = redisProperties;
         initModeAndStrategy();
