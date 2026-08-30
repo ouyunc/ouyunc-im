@@ -5,7 +5,6 @@ import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.constant.enums.QosLevelEnum;
-import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.model.Target;
 import com.ouyunc.base.packet.Packet;
@@ -14,7 +13,6 @@ import com.ouyunc.base.packet.message.content.QosAckContent;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.core.context.MessageContext;
-import com.ouyunc.message.context.MessageServerContext;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -41,9 +39,10 @@ public final class QosAckHelper {
         Packet ackPacket = packet.clone();
         Message ackMessage = ackPacket.getMessage();
         Metadata metadata = ackMessage.getMetadata();
-        Target ackTarget = buildQosAckTarget(ctx, packet, metadata, ackMessage.getFrom());
+        // 优先 Channel 登录身份，避免 CS 入口号改写 from 后 ACK 投错人
+        Target ackTarget = PacketChannelWriter.resolveReplyTarget(ctx, packet, ackMessage.getFrom());
         String ackTo = ackTarget != null ? ackTarget.getTargetIdentity() : ackMessage.getFrom();
-        if (StringUtils.isBlank(ackTo) && !MessageHelper.isChannelSendable(ctx)) {
+        if (StringUtils.isBlank(ackTo) && !PacketChannelWriter.isSendable(ctx)) {
             log.warn("QoS S2C ACK 无法确定接收方，跳过发送, packetId={}", packet.getPacketId());
             return;
         }
@@ -84,8 +83,7 @@ public final class QosAckHelper {
             metadata.setTarget(ackTarget);
         }
 
-        if (MessageHelper.isChannelSendable(ctx)) {
-            MessageHelper.sendOnChannel(ctx, ackPacket, sendResult -> {});
+        if (PacketChannelWriter.tryReplyOnChannel(ctx, ackPacket)) {
             return;
         }
         if (ackTarget == null) {
@@ -93,41 +91,5 @@ public final class QosAckHelper {
             return;
         }
         MessageHelper.asyncSendMessage(ackPacket, ackTarget);
-    }
-
-    /**
-     * 解析 QoS S2C ACK 投递目标：优先 Channel 登录身份，其次报文 from。
-     */
-    static Target buildQosAckTarget(ChannelHandlerContext ctx, Packet packet, Metadata metadata, String messageFrom) {
-        LoginClientInfo loginClientInfo = ctx != null
-                ? ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN)
-                : null;
-        if (loginClientInfo != null && StringUtils.isNotBlank(loginClientInfo.getIdentity())) {
-            String appKey = StringUtils.isNotBlank(loginClientInfo.getAppKey())
-                    ? loginClientInfo.getAppKey()
-                    : (metadata != null ? metadata.getAppKey() : null);
-            String serverAddress = StringUtils.isNotBlank(loginClientInfo.getLoginServerAddress())
-                    ? loginClientInfo.getLoginServerAddress()
-                    : MessageServerContext.serverProperties().getLocalServerAddress();
-            return Target.newBuilder()
-                    .appKey(appKey)
-                    .targetIdentity(loginClientInfo.getIdentity())
-                    .deviceType(loginClientInfo.getDeviceType())
-                    .targetServerAddress(serverAddress)
-                    .protocol(loginClientInfo.getProtocol())
-                    .protocolVersion(loginClientInfo.getProtocolVersion())
-                    .build();
-        }
-        if (StringUtils.isBlank(messageFrom) || metadata == null) {
-            return null;
-        }
-        return Target.newBuilder()
-                .appKey(metadata.getAppKey())
-                .targetIdentity(messageFrom)
-                .deviceType(MessageServerContext.deviceType(metadata.getAppKey(), packet.getDeviceType()))
-                .targetServerAddress(MessageServerContext.serverProperties().getLocalServerAddress())
-                .protocol(packet.getProtocol())
-                .protocolVersion(packet.getProtocolVersion())
-                .build();
     }
 }

@@ -6,15 +6,14 @@ import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.MessageType;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.model.LoginClientInfo;
-import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.model.Target;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.core.context.MessageContext;
-import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.MessageHelper;
+import com.ouyunc.message.helper.PacketChannelWriter;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -45,7 +44,6 @@ public final class PingPongMessageBiProcessor extends AbstractMessageBiProcessor
         // 发送pong
         // 处理心跳消息
         Message heartBeatMessage = packet.getMessage();
-        Metadata metadata = heartBeatMessage.getMetadata();
         LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
         String from = loginClientInfo != null && StringUtils.isNotBlank(loginClientInfo.getIdentity())
                 ? loginClientInfo.getIdentity()
@@ -62,24 +60,14 @@ public final class PingPongMessageBiProcessor extends AbstractMessageBiProcessor
         heartBeatMessage.setCreateTime(TimeUtil.currentTimeMillis());
         packet.setPacketId(MessageContext.idGenerator().generateId());
         // Pong 写回当前连接，避免按 from 查表时连接已换绑或 identity 不一致
-        if (MessageHelper.isChannelSendable(ctx)) {
-            MessageHelper.sendOnChannel(ctx, packet, sendResult -> {});
+        if (PacketChannelWriter.tryReplyOnChannel(ctx, packet)) {
             return;
         }
-        if (metadata == null) {
-            log.error("心跳元数据为空，无法投递 pong: {}", packet);
+        Target pongTarget = PacketChannelWriter.resolveReplyTarget(ctx, packet, from);
+        if (pongTarget == null) {
+            log.error("心跳无法确定投递目标: {}", packet);
             return;
         }
-        MessageHelper.asyncSendMessage(packet, Target.newBuilder()
-                .appKey(metadata.getAppKey())
-                .targetIdentity(from)
-                .deviceType(loginClientInfo != null ? loginClientInfo.getDeviceType()
-                        : MessageServerContext.deviceType(metadata.getAppKey(), packet.getDeviceType()))
-                .targetServerAddress(loginClientInfo != null && StringUtils.isNotBlank(loginClientInfo.getLoginServerAddress())
-                        ? loginClientInfo.getLoginServerAddress()
-                        : MessageServerContext.serverProperties().getLocalServerAddress())
-                .protocol(packet.getProtocol())
-                .protocolVersion(packet.getProtocolVersion())
-                .build());
+        MessageHelper.asyncSendMessage(packet, pongTarget);
     }
 }

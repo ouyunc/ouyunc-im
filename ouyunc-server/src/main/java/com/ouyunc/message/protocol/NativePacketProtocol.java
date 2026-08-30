@@ -14,11 +14,11 @@ import com.ouyunc.message.cluster.client.pool.MessageClientPool;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.handler.*;
 import com.ouyunc.message.helper.MessageHelper;
+import com.ouyunc.message.helper.PacketChannelWriter;
 import com.ouyunc.message.http.HttpRequestDispatcher;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.EventLoop;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.websocketx.WebSocketFrameAggregator;
@@ -226,16 +226,9 @@ public enum NativePacketProtocol implements PacketProtocol {
                         }
                         // 客户端将数据写出到中介管道中；在写完成后再归还 channel
                         Runnable releaseChannel = () -> finalChannelPool.release(channel);
-                        EventLoop eventLoop = channel.eventLoop();
-                        if (eventLoop.inEventLoop()) {
-                            MessageHelper.tryWritePacketAndThen(channel, packet, sendCallback, releaseChannel);
-                        } else if (!eventLoop.isTerminated() && !eventLoop.isShutdown() && !eventLoop.isShuttingDown()) {
-                            eventLoop.execute(() -> MessageHelper.tryWritePacketAndThen(channel, packet, sendCallback, releaseChannel));
-                        } else {
-                            releaseChannel.run();
-                            log.error("发送消息时，channel.eventLoop 被终止或关闭； channelId: {}", channel.id().asShortText());
-                            MessageHelper.notifySendFail(packet, "发送消息时，channel.eventLoop 被终止或关闭!", sendCallback);
-                        }
+                        PacketChannelWriter.runOnEventLoop(channel, packet, sendCallback,
+                                () -> PacketChannelWriter.tryWritePacketAndThen(channel, packet, sendCallback, releaseChannel),
+                                releaseChannel);
                     } else {
                         // 获取失败
                         Throwable e = acquireFuture.cause();
@@ -385,7 +378,7 @@ public enum NativePacketProtocol implements PacketProtocol {
                 return;
             }
             Channel channel = ctx.channel();
-            MessageHelper.writeConvertedPacket(channel, packet, sendCallback);
+            PacketChannelWriter.writeConverted(channel, packet, sendCallback);
         } catch (Exception e) {
             log.error("消息packet: {} 发送给用户: {} 失败!", packet, to);
             // 消息丢失

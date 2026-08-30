@@ -1,23 +1,14 @@
 package com.ouyunc.message.helper;
 
 import com.ouyunc.base.constant.MessageConstant;
-import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
-import com.ouyunc.base.constant.enums.SendStatusEnum;
-import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.model.*;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.core.intercept.AbstractMessageInterceptor;
-import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.message.context.MessageServerContext;
-import com.ouyunc.message.convert.PacketConverter;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.EventLoop;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
@@ -30,7 +21,7 @@ import java.util.Objects;
 
 /**
  * @Author fzx
- * @Description: 消息的传递/发送/读取
+ * @Description: 消息路由/拦截器/集群投递。已知 Channel 上的协议转换与写出见 {@link PacketChannelWriter}。
  **/
 public class MessageHelper {
 
@@ -240,18 +231,10 @@ public class MessageHelper {
                     }
                     // 当获取channel 成功的时候才将from进行设置进去
                     metadata.setFromServerAddress(MessageServerContext.serverProperties().getLocalServerAddress());
-                    // 客户端将数据写出到中介管道中
-                    EventLoop eventLoop = channel.eventLoop();
                     Runnable releaseChannel = () -> channelPool.release(channel);
-                    if (eventLoop.inEventLoop()) {
-                        tryWritePacketAndThen(channel, packet, sendCallback, releaseChannel);
-                    } else if (!eventLoop.isTerminated() && !eventLoop.isShutdown() && !eventLoop.isShuttingDown()) {
-                        eventLoop.execute(() ->  tryWritePacketAndThen(channel, packet, sendCallback, releaseChannel));
-                    }else {
-                        releaseChannel.run();
-                        log.error("发送消息时，channel.eventLoop 被终止或关闭！");
-                        notifySendFail(packet, "集群间发送消息时，channel.eventLoop 被终止或关闭!", sendCallback);
-                    }
+                    PacketChannelWriter.runOnEventLoop(channel, packet, sendCallback,
+                            () -> PacketChannelWriter.tryWritePacketAndThen(channel, packet, sendCallback, releaseChannel),
+                            releaseChannel);
                 } else {
                     // 获取失败
                     Throwable cause = acquireFuture.cause();
@@ -266,152 +249,19 @@ public class MessageHelper {
     }
 
 
-    /**
-     * 发送失败：回调 + 发布 {@link MessageEventTypeEnum#SEND_FAIL} 事件。
-     */
+    /** 发送失败回调与事件，实现见 {@link PacketChannelWriter#notifySendFail}。 */
     public static void notifySendFail(Packet packet, Throwable cause, SendCallback sendCallback) {
-        SendResult sendResult = SendResult.builder()
-                .sendStatus(SendStatusEnum.SEND_FAIL)
-                .packet(packet)
-                .exception(cause)
-                .build();
-        sendCallback.onCallback(sendResult);
-        MessageServerContext.publishEvent(new MessageEvent(sendResult, MessageEventTypeEnum.SEND_FAIL), true);
+        PacketChannelWriter.notifySendFail(packet, cause, sendCallback);
     }
 
     public static void notifySendFail(Packet packet, String message, SendCallback sendCallback) {
-        notifySendFail(packet, new MessageException(message), sendCallback);
+        PacketChannelWriter.notifySendFail(packet, message, sendCallback);
     }
 
-    /**
-     * 与连接池配合：写入完成后执行 afterComplete（用于归还 Channel 等）。
-     */
-    public static void tryWritePacketAndThen(Channel channel, Packet packet, SendCallback sendCallback, Runnable afterComplete) {
-        if (!validateWritable(channel, packet, sendCallback)) {
-            if (afterComplete != null) {
-                afterComplete.run();
-            }
-            return;
-        }
-        ChannelFuture future = channel.writeAndFlush(packet);
-        addWriteListener(future, packet, sendCallback);
-        if (afterComplete != null) {
-            future.addListener(f -> afterComplete.run());
-        }
-    }
-
-
-    /**
-     * 对任意出站对象执行写入（如已转换的 WS 帧），带背压检查与回调。
-     */
+    /** MQTT 控制报文等已转换对象写出，实现见 {@link PacketChannelWriter#tryWriteObject}。 */
     public static boolean tryWriteObject(Channel channel, Object msg, Packet packet, SendCallback sendCallback) {
-        if (!validateWritable(channel, packet, sendCallback)) {
-            return false;
-        }
-        addWriteListener(channel.writeAndFlush(msg), packet, sendCallback);
-        return true;
+        return PacketChannelWriter.tryWriteObject(channel, msg, packet, sendCallback);
     }
-
-    /**
-     * 将 Packet 按协议转换成出站对象后写入指定 Channel，不查登录注册表。
-     * 使用场景：QoS S2C ACK / Pong 必须写回当前入站连接，避免 from 被改写后按虚拟号查不到 ctx。
-     */
-    public static void writeConvertedPacket(Channel channel, Packet packet, SendCallback sendCallback) {
-        if (!validateWritable(channel, packet, sendCallback)) {
-            return;
-        }
-        for (PacketConverter<?> packetConverter : MessageServerContext.packetConverterList) {
-            Object msg = packetConverter.convertFromPacket(packet);
-            if (msg == null) {
-                continue;
-            }
-            EventLoop eventLoop = channel.eventLoop();
-            if (eventLoop.inEventLoop()) {
-                tryWriteObject(channel, msg, packet, sendCallback);
-            } else if (!eventLoop.isTerminated() && !eventLoop.isShutdown() && !eventLoop.isShuttingDown()) {
-                eventLoop.execute(() -> tryWriteObject(channel, msg, packet, sendCallback));
-            } else {
-                log.error("发送消息时，channel.eventLoop 被终止或关闭； channelId: {}", channel.id().asShortText());
-                notifySendFail(packet, "发送消息时，channel.eventLoop 被终止或关闭！", sendCallback);
-            }
-            return;
-        }
-        log.error("发送消息时，packet: {} 转换其他协议发生异常,找不到匹配的协议转换器！", packet);
-        notifySendFail(packet, "发送消息时，packet转换其他协议发生异常,找不到匹配的协议转换器！", sendCallback);
-    }
-
-    public static boolean isChannelSendable(ChannelHandlerContext ctx) {
-        return ctx != null && ctx.channel() != null && ctx.channel().isActive() && ctx.channel().isWritable();
-    }
-
-    public static void sendOnChannel(ChannelHandlerContext ctx, Packet packet, SendCallback sendCallback) {
-        if (!isChannelSendable(ctx)) {
-            notifySendFail(packet, "发送消息时，入站 ctx 不可用或不可写", sendCallback);
-            return;
-        }
-        // 转换器按 metadata.target.protocol 选型；原先 asyncSendMessage 会 setTarget，这里必须补上否则 WS/MQTT 转换全 miss
-        ensureOutboundTarget(ctx, packet);
-        writeConvertedPacket(ctx.channel(), packet, sendCallback);
-    }
-
-    private static void ensureOutboundTarget(ChannelHandlerContext ctx, Packet packet) {
-        if (packet == null || packet.getMessage() == null || packet.getMessage().getMetadata() == null) {
-            return;
-        }
-        Metadata metadata = packet.getMessage().getMetadata();
-        if (metadata.getTarget() != null) {
-            return;
-        }
-        LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
-        Target.Builder builder = Target.newBuilder()
-                .protocol(packet.getProtocol())
-                .protocolVersion(packet.getProtocolVersion());
-        if (loginClientInfo != null) {
-            builder.appKey(loginClientInfo.getAppKey())
-                    .targetIdentity(loginClientInfo.getIdentity())
-                    .deviceType(loginClientInfo.getDeviceType())
-                    .targetServerAddress(loginClientInfo.getLoginServerAddress())
-                    .protocol(loginClientInfo.getProtocol())
-                    .protocolVersion(loginClientInfo.getProtocolVersion());
-        } else {
-            builder.appKey(metadata.getAppKey()).targetIdentity(packet.getMessage().getTo());
-        }
-        metadata.setTarget(builder.build());
-    }
-
-    /**
-     * 通用校验：通道可用且可写
-     */
-    private static boolean validateWritable(Channel channel, Packet packet, SendCallback sendCallback) {
-        if (channel == null) {
-            notifySendFail(packet, "channel 为空，无法写入", sendCallback);
-            return false;
-        }
-        if (!channel.isActive()) {
-            notifySendFail(packet, "channel 未激活，无法写入", sendCallback);
-            return false;
-        }
-        if (!channel.isWritable()) {
-            log.warn("channel 不可写，丢弃或等待上层重试: {}", channel);
-            notifySendFail(packet, "channel 当前不可写", sendCallback);
-            return false;
-        }
-        return true;
-    }
-
-    /**
-     * 统一写入回调封装
-     */
-    private static void addWriteListener(ChannelFuture future, Packet packet, SendCallback sendCallback) {
-        future.addListener((ChannelFutureListener) f -> {
-            if (f.isSuccess()) {
-                sendCallback.onCallback(SendResult.builder().sendStatus(SendStatusEnum.SEND_OK).packet(packet).build());
-            } else {
-                notifySendFail(packet, f.cause(), sendCallback);
-            }
-        });
-    }
-
 
     /**
      * @Author fzx

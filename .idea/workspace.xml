@@ -5,30 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="0cb1d27c-9a6e-4dbe-b172-aecc23ba2be2" name="Changes" comment="css">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/model/Metadata.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/model/Metadata.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/.flattened-pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/.flattened-pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/ouyunc-mq-rocket/.flattened-pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-mq/ouyunc-mq-rocket/.flattened-pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/QosRepositorySupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/QosRepositorySupport.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/SessionMessagePersistenceSupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/SessionMessagePersistenceSupport.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/.flattened-pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/.flattened-pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/CsHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/CsHelper.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/MessageHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/MessageHelper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/RequestNotifyHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/RequestNotifyHelper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/AbstractBaseBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/AbstractBaseBiProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/AbstractMessageBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/AbstractMessageBiProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupAgreeMessageBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupAgreeMessageBiProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupInviteJoinMessageBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupInviteJoinMessageBiProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupInviteJoinerAgreeMessageBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupInviteJoinerAgreeMessageBiProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupInviteJoinerRefuseMessageBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupInviteJoinerRefuseMessageBiProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupJoinMessageBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupJoinMessageBiProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupRefuseMessageBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupRefuseMessageBiProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneAgreeFriendRequestMessageBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneAgreeFriendRequestMessageBiProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneJoinFriendRequestMessageBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneJoinFriendRequestMessageBiProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneRefuseFriendRequestMessageBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneRefuseFriendRequestMessageBiProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/QosAckHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/QosAckHelper.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/PingPongMessageBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/PingPongMessageBiProcessor.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/protocol/NativePacketProtocol.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/protocol/NativePacketProtocol.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/validator/AuthValidator.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/validator/AuthValidator.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -55,7 +35,7 @@
     <option name="PUSH_AUTO_UPDATE" value="true" />
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="6.5.3" />
+        <entry key="$PROJECT_DIR$" value="6.5.4" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -89,20 +69,20 @@
       <entry key="MS100" value="1.0" />
       <entry key="MS500" value="1.0" />
       <entry key="S2" value="1.0" />
-      <entry key="S5" value="1.0000000297418419" />
-      <entry key="S10" value="1.0002241982619" />
-      <entry key="S30" value="1.1150308488563878" />
-      <entry key="S60" value="1.5800531853293465" />
-      <entry key="M2" value="2.3149970019549144" />
-      <entry key="M5" value="3.155341935438337" />
-      <entry key="M10" value="3.5425210469043265" />
-      <entry key="M15" value="3.686610914459348" />
-      <entry key="M30" value="3.8389452224971063" />
-      <entry key="H1" value="3.918351833835991" />
-      <entry key="H2" value="3.959334029477324" />
-      <entry key="H4" value="4.018337816827076" />
-      <entry key="D1" value="20.424447292031054" />
-      <entry key="W1" value="70.9412611296354" />
+      <entry key="S5" value="1.0" />
+      <entry key="S10" value="1.0" />
+      <entry key="S30" value="1.0" />
+      <entry key="S60" value="1.0" />
+      <entry key="M2" value="1.0" />
+      <entry key="M5" value="1.0" />
+      <entry key="M10" value="1.0" />
+      <entry key="M15" value="1.0" />
+      <entry key="M30" value="1.0000000000017575" />
+      <entry key="H1" value="1.0000026512352342" />
+      <entry key="H2" value="1.0032568260215668" />
+      <entry key="H4" value="1.1152478024351462" />
+      <entry key="D1" value="12.300075563271262" />
+      <entry key="W1" value="66.18906721544924" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
@@ -112,35 +92,35 @@
       <entry key="S10" value="0.0" />
       <entry key="S30" value="0.0" />
       <entry key="S60" value="0.0" />
-      <entry key="M2" value="3.506279799637125E-221" />
-      <entry key="M5" value="1.2711621081968582E-88" />
-      <entry key="M10" value="1.952807135586743E-44" />
-      <entry key="M15" value="1.0458745605204734E-29" />
-      <entry key="M30" value="5.6014470276205416E-15" />
-      <entry key="H1" value="1.2963160456514247E-7" />
-      <entry key="H2" value="6.246085890936574E-4" />
-      <entry key="H4" value="0.04784362485431594" />
-      <entry key="D1" value="8.068288560464042" />
-      <entry key="W1" value="29.94243170477611" />
+      <entry key="M2" value="0.0" />
+      <entry key="M5" value="1.1704124711716742E-162" />
+      <entry key="M10" value="1.8738220898116989E-81" />
+      <entry key="M15" value="2.1920927895275749E-54" />
+      <entry key="M30" value="2.5644243988369706E-27" />
+      <entry key="H1" value="8.771133682453186E-14" />
+      <entry key="H2" value="5.137837553258789E-7" />
+      <entry key="H4" value="0.0013721774714663666" />
+      <entry key="D1" value="4.463879442901409" />
+      <entry key="W1" value="27.514582654934543" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="0.9592641193252643" />
-      <entry key="MS500" value="0.9917167307382933" />
-      <entry key="S2" value="0.9979227189990506" />
-      <entry key="S5" value="0.9991685989291296" />
-      <entry key="S10" value="0.999808163919159" />
-      <entry key="S30" value="1.114802530152762" />
-      <entry key="S60" value="1.5797127733077725" />
-      <entry key="M2" value="2.314628025653898" />
-      <entry key="M5" value="3.155098018993095" />
-      <entry key="M10" value="3.542376270395876" />
-      <entry key="M15" value="3.6865086814576458" />
-      <entry key="M30" value="3.8388910702523935" />
-      <entry key="H1" value="3.9183240932329526" />
-      <entry key="H2" value="3.9599443499716287" />
-      <entry key="H4" value="4.066168007153144" />
-      <entry key="D1" value="28.492428933125904" />
-      <entry key="W1" value="100.88351350424824" />
+      <entry key="MS100" value="0.8526348917679567" />
+      <entry key="MS500" value="0.9686181892266277" />
+      <entry key="S2" value="0.9920604931322485" />
+      <entry key="S5" value="0.9968166007640673" />
+      <entry key="S10" value="0.9984070316078845" />
+      <entry key="S30" value="0.9994687283363647" />
+      <entry key="S60" value="0.9997343288776097" />
+      <entry key="M2" value="0.9998671556149895" />
+      <entry key="M5" value="0.99994686012813" />
+      <entry key="M10" value="0.999973429711075" />
+      <entry key="M15" value="0.9999822863956067" />
+      <entry key="M30" value="0.999991143160339" />
+      <entry key="H1" value="0.9999982227859496" />
+      <entry key="H2" value="1.0032551138346675" />
+      <entry key="H4" value="1.1166184874886103" />
+      <entry key="D1" value="16.763785014755083" />
+      <entry key="W1" value="93.70348505464925" />
     </decayedShown>
   </component>
   <component name="ProjectColorInfo">{
@@ -154,61 +134,62 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Application.App.executor&quot;: &quot;Debug&quot;,
-    &quot;Application.CosIdSnowflakeIdGenerator.executor&quot;: &quot;Run&quot;,
-    &quot;Application.GroupInviteJoinMessageProcessor.executor&quot;: &quot;Debug&quot;,
-    &quot;Application.ObjectCreationBenchmark.executor&quot;: &quot;Debug&quot;,
-    &quot;Application.SnowflakeUtil.executor&quot;: &quot;Debug&quot;,
-    &quot;Application.StartServer.executor&quot;: &quot;Debug&quot;,
-    &quot;Application.WebSocketLoadTester.executor&quot;: &quot;Run&quot;,
-    &quot;Docker.docker-compose.yml.kafka: Compose Deployment.executor&quot;: &quot;Run&quot;,
-    &quot;Docker.docker-compose.yml.mongo: Compose Deployment.executor&quot;: &quot;Run&quot;,
-    &quot;JavaScript Debug.client1.html (1).executor&quot;: &quot;Run&quot;,
-    &quot;JavaScript Debug.client1.html (2).executor&quot;: &quot;Run&quot;,
-    &quot;JavaScript Debug.client1.html.executor&quot;: &quot;Run&quot;,
-    &quot;JavaScript Debug.client13333333333.html.executor&quot;: &quot;Run&quot;,
-    &quot;JavaScript Debug.client2.html.executor&quot;: &quot;Run&quot;,
-    &quot;JavaScript Debug.client3.html.executor&quot;: &quot;Run&quot;,
-    &quot;JavaScript Debug.client4.html.executor&quot;: &quot;Run&quot;,
-    &quot;JavaScript Debug.client5.html.executor&quot;: &quot;Run&quot;,
-    &quot;Maven.ouyunc-base [clean].executor&quot;: &quot;Run&quot;,
-    &quot;Maven.ouyunc-base [install].executor&quot;: &quot;Run&quot;,
-    &quot;Maven.ouyunc-im [clean].executor&quot;: &quot;Run&quot;,
-    &quot;Maven.ouyunc-im [compile].executor&quot;: &quot;Run&quot;,
-    &quot;Maven.ouyunc-im [install].executor&quot;: &quot;Run&quot;,
-    &quot;Maven.ouyunc-im [package].executor&quot;: &quot;Run&quot;,
-    &quot;Maven.ouyunc-im [validate].executor&quot;: &quot;Run&quot;,
-    &quot;Maven.ouyunc-im [verify].executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
-    &quot;SONARLINT_PRECOMMIT_ANALYSIS&quot;: &quot;true&quot;,
-    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;6.5.4&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;D:/workspace/ouyunc-im/ouyunc-server/src/main/resources&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;onboarding.tips.debug.path&quot;: &quot;D:/workspace/ouyunc-im/ouyunc-commons/ouyunc-id/src/main/java/com/ouyunc/Main.java&quot;,
-    &quot;project.structure.last.edited&quot;: &quot;Artifacts&quot;,
-    &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
-    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
-    &quot;run.configurations.included.in.services&quot;: &quot;true&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;MavenSettings&quot;,
-    &quot;ts.external.directory.path&quot;: &quot;D:\\workspace\\ouyunc-im\\ouyunc-im-rn\\node_modules\\typescript\\lib&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Application.App.executor": "Debug",
+    "Application.CosIdSnowflakeIdGenerator.executor": "Run",
+    "Application.GroupInviteJoinMessageProcessor.executor": "Debug",
+    "Application.ObjectCreationBenchmark.executor": "Debug",
+    "Application.SnowflakeUtil.executor": "Debug",
+    "Application.StartServer.executor": "Debug",
+    "Application.WebSocketLoadTester.executor": "Run",
+    "Docker.docker-compose.yml.kafka: Compose Deployment.executor": "Run",
+    "Docker.docker-compose.yml.mongo: Compose Deployment.executor": "Run",
+    "JavaScript Debug.client1.html (1).executor": "Run",
+    "JavaScript Debug.client1.html (2).executor": "Run",
+    "JavaScript Debug.client1.html.executor": "Run",
+    "JavaScript Debug.client13333333333.html.executor": "Run",
+    "JavaScript Debug.client2.html.executor": "Run",
+    "JavaScript Debug.client3.html.executor": "Run",
+    "JavaScript Debug.client4.html.executor": "Run",
+    "JavaScript Debug.client5.html.executor": "Run",
+    "Maven.ouyunc-base [clean].executor": "Run",
+    "Maven.ouyunc-base [install].executor": "Run",
+    "Maven.ouyunc-im [clean].executor": "Run",
+    "Maven.ouyunc-im [compile].executor": "Run",
+    "Maven.ouyunc-im [install].executor": "Run",
+    "Maven.ouyunc-im [package].executor": "Run",
+    "Maven.ouyunc-im [validate].executor": "Run",
+    "Maven.ouyunc-im [verify].executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "SONARLINT_PRECOMMIT_ANALYSIS": "true",
+    "codeWithMe.voiceChat.enabledByDefault": "false",
+    "git-widget-placeholder": "6.5.5",
+    "git.auto.fetch.suggestion.counter": "1",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "D:/workspace/ouyunc-im/ouyunc-server/src/main/resources",
+    "node.js.detected.package.eslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "onboarding.tips.debug.path": "D:/workspace/ouyunc-im/ouyunc-commons/ouyunc-id/src/main/java/com/ouyunc/Main.java",
+    "project.structure.last.edited": "Artifacts",
+    "project.structure.proportion": "0.0",
+    "project.structure.side.proportion": "0.2",
+    "run.configurations.included.in.services": "true",
+    "settings.editor.selected.configurable": "MavenSettings",
+    "ts.external.directory.path": "D:\\workspace\\ouyunc-im\\ouyunc-im-rn\\node_modules\\typescript\\lib",
+    "vue.rearranger.settings.migration": "true"
   },
-  &quot;keyToStringList&quot;: {
-    &quot;DatabaseDriversLRU&quot;: [
-      &quot;mysql&quot;
+  "keyToStringList": {
+    "DatabaseDriversLRU": [
+      "mysql"
     ]
   }
-}</component>
+}]]></component>
   <component name="ReactorSettings">
     <option name="notificationShown" value="true" />
   </component>
@@ -608,14 +589,6 @@
       <workItem from="1786710150986" duration="8862000" />
       <workItem from="1786932022678" duration="6869000" />
     </task>
-    <task id="LOCAL-00279" summary="http">
-      <option name="closed" value="true" />
-      <created>1781576903529</created>
-      <option name="number" value="00279" />
-      <option name="presentableId" value="LOCAL-00279" />
-      <option name="project" value="LOCAL" />
-      <updated>1781576903529</updated>
-    </task>
     <task id="LOCAL-00280" summary="http">
       <option name="closed" value="true" />
       <created>1781577212069</created>
@@ -1000,7 +973,15 @@
       <option name="project" value="LOCAL" />
       <updated>1786948710043</updated>
     </task>
-    <option name="localTasksCounter" value="328" />
+    <task id="LOCAL-00328" summary="css">
+      <option name="closed" value="true" />
+      <created>1788054151063</created>
+      <option name="number" value="00328" />
+      <option name="presentableId" value="LOCAL-00328" />
+      <option name="project" value="LOCAL" />
+      <updated>1788054151063</updated>
+    </task>
+    <option name="localTasksCounter" value="329" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
