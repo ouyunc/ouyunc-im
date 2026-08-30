@@ -18,6 +18,7 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.AppKeyUtil;
 import com.ouyunc.base.utils.IdentityUtil;
+import com.ouyunc.base.utils.QosClaimIdentities;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
@@ -197,6 +198,7 @@ public final class CsHelper {
 
     /**
      * 坐席发消息对外 from 改为入口 identity；须在 {@link #refreshDelivery} 通过之后调用。
+     * 改写前会把真实发送方记入 metadata.qosClaimIdentity，供 QoS 幂等键使用。
      */
     public static void rewriteAgentFrom(Packet packet, CsImSessionRoute route) {
         if (packet == null || packet.getMessage() == null || route == null) {
@@ -206,6 +208,8 @@ public final class CsHelper {
             return;
         }
         if (StringUtils.isNotBlank(route.serviceIdentity())) {
+            // HTTP 推送无 AuthValidator：改写前记下真实发送方，供 QoS claim 对齐登录身份
+            QosClaimIdentities.rememberIfAbsent(packet.getMessage(), packet.getMessage().getFrom());
             packet.getMessage().setFrom(route.serviceIdentity());
         }
     }

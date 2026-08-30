@@ -62,6 +62,9 @@ public final class One2OneAgreeFriendRequestMessageBiProcessor extends AbstractM
             ctx.close();
             return;
         }
+        if (qosDupAlreadyHandled(ctx, packet)) {
+            return;
+        }
         // 校验是否拥有相关权限 permission （是有有单聊，甚至某种内容类型的权限，如不能发语音，视频消息，只能发文本，都可以在这里做校验拦截）
         // 校验是否被拉黑,如果被拉黑 （无论是否是好友，都可以拉黑） 判断是否有记录
         PermissionValidator.INSTANCE.negate()

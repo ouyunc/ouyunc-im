@@ -8,6 +8,7 @@ import com.ouyunc.base.model.FiveConsumer;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
+import com.ouyunc.base.utils.QosClaimIdentities;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.repository.SaveMessageOutcome;
 import org.apache.commons.collections4.CollectionUtils;
@@ -113,8 +114,9 @@ public final class SessionMessagePersistenceSupport {
             String appKey = metadata.getAppKey();
             String from = message.getFrom();
             String to = message.getTo();
+            String qosClaimIdentity = QosClaimIdentities.resolve(message);
             boolean qosSave = MessageContext.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel();
-            if (qosSave && !QosIdempotencyHelper.tryClaim(infra.redisTemplate, appKey, packet.getPacketId(), from, message.getId())) {
+            if (qosSave && !QosIdempotencyHelper.tryClaim(infra.redisTemplate, appKey, packet.getPacketId(), qosClaimIdentity, message.getId())) {
                 return SaveMessageOutcome.DUPLICATE;
             }
             String formatPacketId = MessageContext.idGenerator().formatLongId19Str(packet.getPacketId());
@@ -160,14 +162,14 @@ public final class SessionMessagePersistenceSupport {
                 log.error("Pipeline 执行失败: ", e);
                 forceClosePipeline(conn);
                 if (qosSave) {
-                    QosIdempotencyHelper.releaseClaim(infra.redisTemplate, appKey, packet.getPacketId(), from, message.getId());
+                    QosIdempotencyHelper.releaseClaim(infra.redisTemplate, appKey, packet.getPacketId(), qosClaimIdentity, message.getId());
                 }
                 return SaveMessageOutcome.FAILED;
             }
 
             if (CollectionUtils.isEmpty(results)) {
                 if (qosSave) {
-                    QosIdempotencyHelper.releaseClaim(infra.redisTemplate, appKey, packet.getPacketId(), from, message.getId());
+                    QosIdempotencyHelper.releaseClaim(infra.redisTemplate, appKey, packet.getPacketId(), qosClaimIdentity, message.getId());
                 }
                 return SaveMessageOutcome.FAILED;
             }
@@ -181,7 +183,7 @@ public final class SessionMessagePersistenceSupport {
                 if (metadata != null && MessageContext.isQosEnable()
                         && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
                     QosIdempotencyHelper.releaseClaim(infra.redisTemplate, metadata.getAppKey(),
-                            packet.getPacketId(), message.getFrom(), message.getId());
+                            packet.getPacketId(), QosClaimIdentities.resolve(message), message.getId());
                 }
             } catch (Exception ignored) {
                 log.warn("释放 QoS 占位异常", ignored);

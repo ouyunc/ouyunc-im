@@ -7,6 +7,7 @@ import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.ChannelAttrUtil;
+import com.ouyunc.base.utils.QosClaimIdentities;
 import com.ouyunc.core.context.MessageContext;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.lang3.StringUtils;
@@ -54,6 +55,7 @@ public enum AuthValidator implements Validator<Packet> {
             return false;
         }
         message.setFrom(verifiedSender);
+        QosClaimIdentities.rememberIfAbsent(message, verifiedSender);
         // 长连接：发送方类型一律以登录 scope 为准（普通用户、客服座席、访客均同）
         message.setFromType(LoginScopeEnum.normalizeScope(loginClientInfo.getScope()));
         if (log.isDebugEnabled()) {

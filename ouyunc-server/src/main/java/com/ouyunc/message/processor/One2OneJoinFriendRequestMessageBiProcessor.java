@@ -60,6 +60,9 @@ public final class One2OneJoinFriendRequestMessageBiProcessor extends AbstractMe
             ctx.close();
             return;
         }
+        if (qosDupAlreadyHandled(ctx, packet)) {
+            return;
+        }
         // 校验是否拥有相关权限 permission （是有有单聊，甚至某种内容类型的权限，如不能发语音，视频消息，只能发文本，都可以在这里做校验拦截）
         // 屏蔽和拉黑的效果目前是一样的功能，都不能将将消息发到对方
         // 校验是否被拉黑,如果被拉黑 （无论是否是好友，都可以拉黑）判断当前会话是否被拒绝和同意中，防止mq 延迟消费

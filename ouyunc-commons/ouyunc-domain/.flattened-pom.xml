@@ -28,8 +28,8 @@
       <version>${mybatis-plus.version}</version>
       <exclusions>
         <exclusion>
-          <groupId>org.springframework.boot</groupId>
           <artifactId>spring-boot-starter-logging</artifactId>
+          <groupId>org.springframework.boot</groupId>
         </exclusion>
       </exclusions>
       <optional>true</optional>

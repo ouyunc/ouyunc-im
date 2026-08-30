@@ -64,6 +64,12 @@ public class Metadata implements Serializable, Cloneable {
      */
     private Integer httpPushType;
 
+    /**
+     * QoS 幂等 client 键使用的发送方登录身份。
+     * 客服会把 {@code message.from} 改写成入口 serviceIdentity，claim/release 不能用改写后的 from。
+     */
+    private String qosClaimIdentity;
+
 
     public String getAppKey() {
         return appKey;
@@ -145,6 +151,14 @@ public class Metadata implements Serializable, Cloneable {
         this.httpPushType = httpPushType;
     }
 
+    public String getQosClaimIdentity() {
+        return qosClaimIdentity;
+    }
+
+    public void setQosClaimIdentity(String qosClaimIdentity) {
+        this.qosClaimIdentity = qosClaimIdentity;
+    }
+
     public Metadata(String appKey, boolean routed, int currentRetry, String fromServerAddress, Target target, List<RoutingTable> routingTables, String clientIp, long serverTime) {
         this.appKey = appKey;
         this.routed = routed;
@@ -198,6 +212,7 @@ public class Metadata implements Serializable, Cloneable {
                 ", serverTime=" + serverTime +
                 ", ingressSource='" + ingressSource + '\'' +
                 ", httpPushType=" + httpPushType +
+                ", qosClaimIdentity='" + qosClaimIdentity + '\'' +
                 '}';
     }
 }

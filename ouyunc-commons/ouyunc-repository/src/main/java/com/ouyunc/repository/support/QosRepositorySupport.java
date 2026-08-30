@@ -4,6 +4,7 @@ import com.ouyunc.base.constant.enums.QosLevelEnum;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
+import com.ouyunc.base.utils.QosClaimIdentities;
 import com.ouyunc.core.context.MessageContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,7 +39,7 @@ public final class QosRepositorySupport {
         }
         try {
             QosIdempotencyHelper.releaseClaim(infra.redisTemplate, metadata.getAppKey(),
-                    packet.getPacketId(), message.getFrom(), message.getId());
+                    packet.getPacketId(), QosClaimIdentities.resolve(message), message.getId());
         } catch (Exception e) {
             log.warn("释放 QoS 占位异常: packetId={}", packet.getPacketId(), e);
         }

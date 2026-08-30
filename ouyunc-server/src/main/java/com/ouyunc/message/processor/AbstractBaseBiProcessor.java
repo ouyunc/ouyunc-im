@@ -6,20 +6,15 @@ import com.ouyunc.base.constant.enums.*;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.utils.ChannelAttrUtil;
-import com.ouyunc.base.model.Target;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
-import com.ouyunc.base.packet.message.content.QosAckContent;
-import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.processor.BiProcessor;
 import com.ouyunc.core.qos.Qos;
-import com.ouyunc.message.context.MessageServerContext;
-import com.ouyunc.message.helper.MessageHelper;
+import com.ouyunc.message.helper.QosAckHelper;
 import com.ouyunc.repository.DefaultRepository;
 import com.ouyunc.repository.Repository;
 import io.netty.channel.ChannelHandlerContext;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -85,49 +80,6 @@ public abstract class AbstractBaseBiProcessor<T extends Number> implements BiPro
      */
     @Override
     public void qosPostHandle(ChannelHandlerContext ctx, Packet packet) {
-        if (packet.getMessage().getQos() > QosLevelEnum.QOS_0.getLevel()) {
-            Packet ackPacket = packet.clone();
-            Message ackMessage = ackPacket.getMessage();
-            Metadata metadata = ackMessage.getMetadata();
-            String from = ackMessage.getFrom();
-            if (packet.getMessageType() == MessageTypeEnum.QOS_DUP.getType() && StringUtils.isBlank(from)) {
-                LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
-                if (loginClientInfo != null) {
-                    from = loginClientInfo.getIdentity();
-                }
-            }
-
-            long serverPacketId;
-            String originalClientMessageId;
-            if (packet.getMessageType() == MessageTypeEnum.QOS_DUP.getType()) {
-                Packet dupPacket = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_QOS_DUP_ORIGINAL_PACKET);
-                if (dupPacket == null) {
-                    dupPacket = JSON.parseObject(packet.getMessage().getContent(), Packet.class);
-                }
-                // 用完清除
-                ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_QOS_DUP_ORIGINAL_PACKET, null);
-                if (dupPacket == null) {
-                    return;
-                }
-                serverPacketId = dupPacket.getPacketId();
-                originalClientMessageId = dupPacket.getMessage() != null ? dupPacket.getMessage().getId() : null;
-            } else {
-                serverPacketId = packet.getPacketId();
-                originalClientMessageId = packet.getMessage().getId();
-            }
-
-            ackMessage.setId(MessageContext.idGenerator().generateIdStr());
-            ackMessage.setFrom(null);
-            ackMessage.setTo(from);
-            ackMessage.setQos(QosLevelEnum.QOS_0.getLevel());
-            // 对外 ackId 为裸 packetId；19 位 CosId 仅用于 Redis ZSet 等内部存储
-            ackMessage.setContent(JSON.toJSONString(new QosAckContent(
-                    String.valueOf(serverPacketId), originalClientMessageId)));
-            ackMessage.setContentType(MessageContentTypeEnum.TEXT_CONTENT.getType());
-            ackMessage.setCreateTime(TimeUtil.currentTimeMillis());
-            ackPacket.setPacketId(MessageContext.idGenerator().generateId());
-            ackPacket.setMessageType(MessageTypeEnum.QOS_S2C_ACK.getType());
-            MessageHelper.asyncSendMessage(ackPacket, Target.newBuilder().appKey(metadata.getAppKey()).targetIdentity(from).deviceType(MessageServerContext.deviceType(metadata.getAppKey(), packet.getDeviceType())).targetServerAddress(MessageServerContext.serverProperties().getLocalServerAddress()).protocol(packet.getProtocol()).protocolVersion(packet.getProtocolVersion()).build());
-        }
+        QosAckHelper.sendS2cAck(ctx, packet);
     }
 }

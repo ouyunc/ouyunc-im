@@ -54,6 +54,11 @@ public abstract class AbstractMessageBiProcessor<T extends Number> extends Abstr
         ctx.fireChannelRead(packet);
     }
 
+    /** QOS_DUP 已命中幂等并回 ACK 时返回 true，调用方应中止后续业务。 */
+    protected boolean qosDupAlreadyHandled(ChannelHandlerContext ctx, Packet packet) {
+        return MessageContext.isQosEnable() && qosPreHandle(ctx, packet);
+    }
+
     /**
      * @Author fzx
      * @Description 做后置处理：仅传递给下个 handler。

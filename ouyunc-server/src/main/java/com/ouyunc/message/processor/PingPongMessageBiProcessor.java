@@ -5,6 +5,7 @@ import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.MessageType;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
+import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.model.Target;
 import com.ouyunc.base.packet.Packet;
@@ -45,7 +46,10 @@ public final class PingPongMessageBiProcessor extends AbstractMessageBiProcessor
         // 处理心跳消息
         Message heartBeatMessage = packet.getMessage();
         Metadata metadata = heartBeatMessage.getMetadata();
-        String from = heartBeatMessage.getFrom();
+        LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
+        String from = loginClientInfo != null && StringUtils.isNotBlank(loginClientInfo.getIdentity())
+                ? loginClientInfo.getIdentity()
+                : heartBeatMessage.getFrom();
         if (StringUtils.isBlank(from)) {
             log.error("心跳发送方不能为空！{}",  packet);
             return;
@@ -57,7 +61,25 @@ public final class PingPongMessageBiProcessor extends AbstractMessageBiProcessor
         heartBeatMessage.setContentType(MessageContentTypeEnum.PING_PONG_CONTENT.getType());
         heartBeatMessage.setCreateTime(TimeUtil.currentTimeMillis());
         packet.setPacketId(MessageContext.idGenerator().generateId());
-        // 写回的是websocket还是其他类型的数据
-        MessageHelper.asyncSendMessage(packet, Target.newBuilder().appKey(metadata.getAppKey()).targetIdentity(from).deviceType(MessageServerContext.deviceType(metadata.getAppKey(), packet.getDeviceType())).targetServerAddress(MessageServerContext.serverProperties().getLocalServerAddress()).protocol(packet.getProtocol()).protocolVersion(packet.getProtocolVersion()).build());
+        // Pong 写回当前连接，避免按 from 查表时连接已换绑或 identity 不一致
+        if (MessageHelper.isChannelSendable(ctx)) {
+            MessageHelper.sendOnChannel(ctx, packet, sendResult -> {});
+            return;
+        }
+        if (metadata == null) {
+            log.error("心跳元数据为空，无法投递 pong: {}", packet);
+            return;
+        }
+        MessageHelper.asyncSendMessage(packet, Target.newBuilder()
+                .appKey(metadata.getAppKey())
+                .targetIdentity(from)
+                .deviceType(loginClientInfo != null ? loginClientInfo.getDeviceType()
+                        : MessageServerContext.deviceType(metadata.getAppKey(), packet.getDeviceType()))
+                .targetServerAddress(loginClientInfo != null && StringUtils.isNotBlank(loginClientInfo.getLoginServerAddress())
+                        ? loginClientInfo.getLoginServerAddress()
+                        : MessageServerContext.serverProperties().getLocalServerAddress())
+                .protocol(packet.getProtocol())
+                .protocolVersion(packet.getProtocolVersion())
+                .build());
     }
 }

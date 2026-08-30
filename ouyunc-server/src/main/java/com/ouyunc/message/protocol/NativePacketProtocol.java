@@ -12,7 +12,6 @@ import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.HttpUtil;
 import com.ouyunc.message.cluster.client.pool.MessageClientPool;
 import com.ouyunc.message.context.MessageServerContext;
-import com.ouyunc.message.convert.PacketConverter;
 import com.ouyunc.message.handler.*;
 import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.http.HttpRequestDispatcher;
@@ -386,34 +385,7 @@ public enum NativePacketProtocol implements PacketProtocol {
                 return;
             }
             Channel channel = ctx.channel();
-            if (channel.isActive() && channel.isWritable()) {
-                // 如果channel是活跃的,可写的，高水位低水位，则直接写出去
-                for (PacketConverter<?> packetConverter : MessageServerContext.packetConverterList) {
-                    // 注意：这里转换后，不要将metadata 置空，但是发送出去的消息，建议不要带元数据
-                    Object msg = packetConverter.convertFromPacket(packet);
-                    if (msg != null) {
-                        // 将消息写到channel,避免线程安全问题
-                        EventLoop eventLoop = channel.eventLoop();
-                        if (eventLoop.inEventLoop()) {
-                            MessageHelper.tryWriteObject(channel, msg, packet, sendCallback);
-                        } else if (!eventLoop.isTerminated() && !eventLoop.isShutdown() && !eventLoop.isShuttingDown()) {
-                            // 如果不是 EventLoop 线程，将任务提交到 EventLoop 线程中执行；
-                            eventLoop.execute(() -> {
-                                MessageHelper.tryWriteObject(channel, msg, packet, sendCallback);
-                            });
-                        }else {
-                            log.error("发送消息时，channel.eventLoop 被终止或关闭； channelId: {}", channel.id().asShortText());
-                            MessageHelper.notifySendFail(packet, "发送消息时，channel.eventLoop 被终止或关闭！", sendCallback);
-                        }
-                        return;
-                    }
-                }
-                log.error("发送消息时，packet: {} 转换其他协议发生异常,找不到匹配的协议转换器！", packet);
-                MessageHelper.notifySendFail(packet, "发送消息时，packet转换其他协议发生异常,找不到匹配的协议转换器！", sendCallback);
-            } else {
-                log.error("通道channel：{} 不可用或不可写, 使得消息packet: {} 发送给用户: {} 失败!", channel.id().asShortText(), packet, to);
-                MessageHelper.notifySendFail(packet, "发送消息时，通道channel：" + channel.id().asShortText() + " 不可用或不可写！", sendCallback);
-            }
+            MessageHelper.writeConvertedPacket(channel, packet, sendCallback);
         } catch (Exception e) {
             log.error("消息packet: {} 发送给用户: {} 失败!", packet, to);
             // 消息丢失

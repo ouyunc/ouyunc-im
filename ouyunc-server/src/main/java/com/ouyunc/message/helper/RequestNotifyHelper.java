@@ -53,10 +53,12 @@ public final class RequestNotifyHelper {
 
     public static void dispatch(ChannelHandlerContext ctx, Packet packet, String appKey, Collection<String> identities) {
         if (CollectionUtils.isEmpty(identities)) {
+            QosAckHelper.sendS2cAck(ctx, packet);
             ctx.fireChannelRead(packet);
             return;
         }
         ctx.channel().eventLoop().execute(() -> {
+            QosAckHelper.sendS2cAck(ctx, packet);
             for (String identity : identities) {
                 if (StringUtils.isBlank(identity)) {
                     continue;

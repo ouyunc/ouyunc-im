@@ -46,6 +46,9 @@ public final class GroupJoinMessageBiProcessor extends AbstractMessageBiProcesso
             ctx.close();
             return;
         }
+        if (qosDupAlreadyHandled(ctx, packet)) {
+            return;
+        }
         // 校验是否拥有相关权限 permission （对方是否被拉黑，禁用等）群是否被封禁，是否全体禁言
         PermissionValidator.INSTANCE.negate()
                 .or(FromToValidator.INSTANCE)

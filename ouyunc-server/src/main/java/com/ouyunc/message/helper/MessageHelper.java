@@ -12,9 +12,11 @@ import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.core.intercept.AbstractMessageInterceptor;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.message.convert.PacketConverter;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.EventLoop;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.util.concurrent.Future;
@@ -308,6 +310,73 @@ public class MessageHelper {
         }
         addWriteListener(channel.writeAndFlush(msg), packet, sendCallback);
         return true;
+    }
+
+    /**
+     * 将 Packet 按协议转换成出站对象后写入指定 Channel，不查登录注册表。
+     * 使用场景：QoS S2C ACK / Pong 必须写回当前入站连接，避免 from 被改写后按虚拟号查不到 ctx。
+     */
+    public static void writeConvertedPacket(Channel channel, Packet packet, SendCallback sendCallback) {
+        if (!validateWritable(channel, packet, sendCallback)) {
+            return;
+        }
+        for (PacketConverter<?> packetConverter : MessageServerContext.packetConverterList) {
+            Object msg = packetConverter.convertFromPacket(packet);
+            if (msg == null) {
+                continue;
+            }
+            EventLoop eventLoop = channel.eventLoop();
+            if (eventLoop.inEventLoop()) {
+                tryWriteObject(channel, msg, packet, sendCallback);
+            } else if (!eventLoop.isTerminated() && !eventLoop.isShutdown() && !eventLoop.isShuttingDown()) {
+                eventLoop.execute(() -> tryWriteObject(channel, msg, packet, sendCallback));
+            } else {
+                log.error("发送消息时，channel.eventLoop 被终止或关闭； channelId: {}", channel.id().asShortText());
+                notifySendFail(packet, "发送消息时，channel.eventLoop 被终止或关闭！", sendCallback);
+            }
+            return;
+        }
+        log.error("发送消息时，packet: {} 转换其他协议发生异常,找不到匹配的协议转换器！", packet);
+        notifySendFail(packet, "发送消息时，packet转换其他协议发生异常,找不到匹配的协议转换器！", sendCallback);
+    }
+
+    public static boolean isChannelSendable(ChannelHandlerContext ctx) {
+        return ctx != null && ctx.channel() != null && ctx.channel().isActive() && ctx.channel().isWritable();
+    }
+
+    public static void sendOnChannel(ChannelHandlerContext ctx, Packet packet, SendCallback sendCallback) {
+        if (!isChannelSendable(ctx)) {
+            notifySendFail(packet, "发送消息时，入站 ctx 不可用或不可写", sendCallback);
+            return;
+        }
+        // 转换器按 metadata.target.protocol 选型；原先 asyncSendMessage 会 setTarget，这里必须补上否则 WS/MQTT 转换全 miss
+        ensureOutboundTarget(ctx, packet);
+        writeConvertedPacket(ctx.channel(), packet, sendCallback);
+    }
+
+    private static void ensureOutboundTarget(ChannelHandlerContext ctx, Packet packet) {
+        if (packet == null || packet.getMessage() == null || packet.getMessage().getMetadata() == null) {
+            return;
+        }
+        Metadata metadata = packet.getMessage().getMetadata();
+        if (metadata.getTarget() != null) {
+            return;
+        }
+        LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
+        Target.Builder builder = Target.newBuilder()
+                .protocol(packet.getProtocol())
+                .protocolVersion(packet.getProtocolVersion());
+        if (loginClientInfo != null) {
+            builder.appKey(loginClientInfo.getAppKey())
+                    .targetIdentity(loginClientInfo.getIdentity())
+                    .deviceType(loginClientInfo.getDeviceType())
+                    .targetServerAddress(loginClientInfo.getLoginServerAddress())
+                    .protocol(loginClientInfo.getProtocol())
+                    .protocolVersion(loginClientInfo.getProtocolVersion());
+        } else {
+            builder.appKey(metadata.getAppKey()).targetIdentity(packet.getMessage().getTo());
+        }
+        metadata.setTarget(builder.build());
     }
 
     /**
