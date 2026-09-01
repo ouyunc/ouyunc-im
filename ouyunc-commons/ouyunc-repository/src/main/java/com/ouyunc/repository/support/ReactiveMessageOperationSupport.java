@@ -10,11 +10,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 /**
  * 特殊消息响应式编排：校验 / preparer → Redis 处理 → after；MQ 旁路异步投递。
@@ -25,7 +23,7 @@ public final class ReactiveMessageOperationSupport {
 
     public Mono<Boolean> reactiveHandleOperation(ChannelHandlerContext ctx, Packet packet,
                                                  Mono<Boolean> validator,
-                                                 Supplier<CompletableFuture<?>> mqSender,
+                                                 String mqTopic, String mqKey,
                                                  Mono<Boolean> processor,
                                                  BiConsumer<ChannelHandlerContext, Packet> processorAfter,
                                                  Consumer<MessageEvent> exceptionConsumer,
@@ -35,7 +33,7 @@ public final class ReactiveMessageOperationSupport {
                 exceptionConsumer.accept(new MessageEvent(ExceptionEventPayload.of(exceptionCode, null, packet), MessageEventTypeEnum.EXCEPTION));
                 return Mono.just(false);
             }
-            publishMqAsync(mqSender, packet, exceptionConsumer);
+            RepositorySupports.MQ.publishPacketAsync(mqTopic, mqKey, packet, "MQ 旁路投递 topic=" + mqTopic);
             return processor
                     .doOnNext(processed -> {
                         if (processed) {
@@ -55,13 +53,13 @@ public final class ReactiveMessageOperationSupport {
     public <T> Mono<Boolean> reactiveHandleOperation(ChannelHandlerContext ctx, Packet packet,
                                                    Mono<T> preparer,
                                                    ExceptionCodeEnum verifyExceptionCode,
-                                                   Supplier<CompletableFuture<?>> mqSender,
+                                                   String mqTopic, String mqKey,
                                                    Function<T, Mono<Boolean>> processor,
                                                    BiConsumer<ChannelHandlerContext, Packet> processorAfter,
                                                    Consumer<MessageEvent> exceptionConsumer,
                                                    ExceptionCodeEnum processExceptionCode) {
         return preparer
-                .flatMap(data -> reactiveHandleOperation(ctx, packet, Mono.just(true), mqSender,
+                .flatMap(data -> reactiveHandleOperation(ctx, packet, Mono.just(true), mqTopic, mqKey,
                         processor.apply(data), processorAfter, exceptionConsumer, processExceptionCode))
                 .switchIfEmpty(Mono.defer(() -> {
                     exceptionConsumer.accept(new MessageEvent(
@@ -69,26 +67,5 @@ public final class ReactiveMessageOperationSupport {
                             MessageEventTypeEnum.EXCEPTION));
                     return Mono.just(false);
                 }));
-    }
-
-    private static void publishMqAsync(Supplier<CompletableFuture<?>> mqSender, Packet packet,
-                                       Consumer<MessageEvent> exceptionConsumer) {
-        try {
-            mqSender.get().whenComplete((ignored, ex) -> {
-                if (ex != null) {
-                    log.warn("MQ 旁路投递失败, packetId={}, 原因: {}", packet.getPacketId(), ex.getMessage(), ex);
-                    exceptionConsumer.accept(new MessageEvent(
-                            ExceptionEventPayload.of(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR,
-                                    "MQ 旁路投递失败: " + ex.getMessage(), packet),
-                            MessageEventTypeEnum.EXCEPTION));
-                }
-            });
-        } catch (Exception ex) {
-            log.warn("MQ 旁路投递启动失败, packetId={}, 原因: {}", packet.getPacketId(), ex.getMessage(), ex);
-            exceptionConsumer.accept(new MessageEvent(
-                    ExceptionEventPayload.of(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR,
-                            "MQ 旁路投递启动失败: " + ex.getMessage(), packet),
-                    MessageEventTypeEnum.EXCEPTION));
-        }
     }
 }

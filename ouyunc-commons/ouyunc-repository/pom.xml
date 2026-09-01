@@ -69,4 +69,19 @@
       <optional>true</optional>
     </dependency>
   </dependencies>
+
+  <build>
+    <plugins>
+      <!-- 本模块无 @Aspect。父 POM 全局启用 AJC 后，会对 enum 实现接口做增量织入，
+           可能把 Repository.checkDup 再写进 DefaultRepository.class，JVM 报
+           Duplicate method name "checkDup"（ClassFormatError）。 -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>aspectj-maven-plugin</artifactId>
+        <configuration>
+          <skip>true</skip>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 </project>

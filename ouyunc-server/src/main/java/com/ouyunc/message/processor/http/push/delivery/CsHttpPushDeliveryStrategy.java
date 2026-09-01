@@ -137,7 +137,7 @@ public final class CsHttpPushDeliveryStrategy implements HttpProcessor {
                         DefaultRepository.INSTANCE.reactiveLoadWithdrawTargetPackets(
                                 packet, ticketScopeId, MessageIndexScope.CS_TICKET, true),
                         ExceptionCodeEnum.WITHDRAW_MESSAGE_VERIFY_ERROR,
-                        () -> DefaultRepository.INSTANCE.savePacket2Mq(MqConstant.MQ_WITHDRAW_MESSAGE_TOPIC, ticketScopeId, packet),
+                        MqConstant.MQ_WITHDRAW_MESSAGE_TOPIC, ticketScopeId,
                         packets -> DefaultRepository.INSTANCE.reactiveWithdrawMessage(
                                 packet, ticketScopeId, MessageIndexScope.CS_TICKET, packets),
                         (ctx, packet0) -> {
@@ -157,7 +157,7 @@ public final class CsHttpPushDeliveryStrategy implements HttpProcessor {
                         DefaultRepository.INSTANCE.reactiveLoadValidatedCsReadReceiptPackets(
                                 packet, route, packet.getDeviceType()),
                         ExceptionCodeEnum.READ_RECEIPT_MESSAGE_VERIFY_ERROR,
-                        () -> DefaultRepository.INSTANCE.savePacket2Mq(MqConstant.MQ_READ_RECEIPT_MESSAGE_TOPIC, ticketScopeId, packet),
+                        MqConstant.MQ_READ_RECEIPT_MESSAGE_TOPIC, ticketScopeId,
                         packets -> DefaultRepository.INSTANCE.reactiveCsReadReceiptMessage(
                                 packet, route, packet.getDeviceType(),
                                 MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP, packets),

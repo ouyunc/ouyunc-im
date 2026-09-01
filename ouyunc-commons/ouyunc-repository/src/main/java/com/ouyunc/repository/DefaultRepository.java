@@ -27,39 +27,43 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 /**
- * 默认持久化仓库门面：对外 API 不变，实现委托至 {@link com.ouyunc.repository.support} 各模块。
+ * 默认持久化仓库门面：实现委托至 {@link com.ouyunc.repository.support} 各模块。
  */
 public enum DefaultRepository implements Repository {
     INSTANCE;
 
+
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public CompletableFuture<?> save(Packet packet) {
         return RepositorySupports.MQ.save(packet);
-    }
-
-    public CompletableFuture<?> savePacket2Mq(String topic, String key, Packet packet) {
-        return RepositorySupports.MQ.savePacket2Mq(topic, key, packet);
-    }
-
-    public void publishPacketAsync(String topic, String key, Packet packet, String failureContext) {
-        RepositorySupports.MQ.publishPacketAsync(topic, key, packet, failureContext);
-    }
-
-    public void publishArchiveAsync(Packet packet) {
-        RepositorySupports.MQ.publishArchiveAsync(packet);
-    }
-
-    public void publishJsonAsync(String topic, String key, String jsonBody, String failureContext) {
-        RepositorySupports.MQ.publishJsonAsync(topic, key, jsonBody, failureContext);
     }
 
     @Override
     public boolean checkDup(Packet packet, String channelLoginIdentity) {
         return RepositorySupports.QOS.checkDup(packet, channelLoginIdentity);
     }
+
+
+    /**
+     * 旁路异步投递协议包到指定 topic。
+     */
+    public void publishPacketAsync(String topic, String key, Packet packet, String failureContext) {
+        RepositorySupports.MQ.publishPacketAsync(topic, key, packet, failureContext);
+    }
+
+
+    /**
+     * 旁路异步投递 JSON 负载。
+     */
+    public void publishJsonAsync(String topic, String key, String jsonBody, String failureContext) {
+        RepositorySupports.MQ.publishJsonAsync(topic, key, jsonBody, failureContext);
+    }
+
 
     public List<Packet> getPackets(String appKey, List<Long> packetIds) {
         return RepositorySupports.MESSAGE_PACKET_QUERY.getPackets(appKey, packetIds);
@@ -77,25 +81,25 @@ public enum DefaultRepository implements Repository {
 
     public Mono<Boolean> reactiveHandleOperation(ChannelHandlerContext ctx, Packet packet,
                                                  Mono<Boolean> validator,
-                                                 Supplier<CompletableFuture<?>> mqSender,
+                                                 String mqTopic, String mqKey,
                                                  Mono<Boolean> processor,
                                                  BiConsumer<ChannelHandlerContext, Packet> processorAfter,
                                                  Consumer<MessageEvent> exceptionConsumer,
                                                  ExceptionCodeEnum exceptionCode) {
-        return RepositorySupports.REACTIVE_OPERATION.reactiveHandleOperation(ctx, packet, validator, mqSender,
+        return RepositorySupports.REACTIVE_OPERATION.reactiveHandleOperation(ctx, packet, validator, mqTopic, mqKey,
                 processor, processorAfter, exceptionConsumer, exceptionCode);
     }
 
     public <T> Mono<Boolean> reactiveHandleOperation(ChannelHandlerContext ctx, Packet packet,
                                                    Mono<T> preparer,
                                                    ExceptionCodeEnum verifyExceptionCode,
-                                                   Supplier<CompletableFuture<?>> mqSender,
+                                                   String mqTopic, String mqKey,
                                                    Function<T, Mono<Boolean>> processor,
                                                    BiConsumer<ChannelHandlerContext, Packet> processorAfter,
                                                    Consumer<MessageEvent> exceptionConsumer,
                                                    ExceptionCodeEnum processExceptionCode) {
         return RepositorySupports.REACTIVE_OPERATION.reactiveHandleOperation(ctx, packet, preparer, verifyExceptionCode,
-                mqSender, processor, processorAfter, exceptionConsumer, processExceptionCode);
+                mqTopic, mqKey, processor, processorAfter, exceptionConsumer, processExceptionCode);
     }
 
     public Mono<List<Packet>> reactiveLoadValidatedReadReceiptPackets(Packet packet, String sessionId,

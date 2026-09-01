@@ -10,9 +10,13 @@ import java.util.concurrent.Future;
  */
 public interface Repository {
 
-    /***
-     * @author fzx
-     * @description 异步全局保存协议包，保存成功返回true,失败返回false
+    /**
+     * 异步全局保存协议包（旁路投递到归档 MQ）。
+     * <p>不阻塞调用方，返回值可忽略；失败仍记日志并发布异常事件。
+     * 需要等待发送结果时再对返回的 {@link Future} 取结果或挂回调。</p>
+     *
+     * @param packet 待归档协议包
+     * @return MQ 发送 Future；启动发送即失败时为已完成的异常 Future
      */
     Future<?> save(Packet packet);
 

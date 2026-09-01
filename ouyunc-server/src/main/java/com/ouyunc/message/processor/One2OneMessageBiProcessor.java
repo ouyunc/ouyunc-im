@@ -52,7 +52,7 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
     @Override
     public void preProcess(ChannelHandlerContext ctx, Packet packet) {
         // 异步存储packet（目前只是保存相关信息，不做扩展，以后可以做数据分析使用），这里将该数据存储到时序数据库中
-        ThreadPoolManager.messageProcessorExecutor().execute(() -> repository().publishArchiveAsync(packet));
+        ThreadPoolManager.messageProcessorExecutor().execute(() -> repository().save(packet));
         // 两个都校验通过才放行
         if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
             log.error("校验消息失败: {} 认证未通过,开始关闭channel", packet);
@@ -167,7 +167,7 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
                 repository().reactiveLoadWithdrawTargetPackets(
                         packet, sessionId, MessageIndexScope.CHANNEL_SESSION, true),
                 ExceptionCodeEnum.WITHDRAW_MESSAGE_VERIFY_ERROR,
-                () -> repository().savePacket2Mq(MqConstant.MQ_WITHDRAW_MESSAGE_TOPIC, sessionId, packet),
+                MqConstant.MQ_WITHDRAW_MESSAGE_TOPIC, sessionId,
                 packets -> repository().reactiveWithdrawMessage(
                         packet, sessionId, MessageIndexScope.CHANNEL_SESSION, packets),
                 (ctx0, packet0) -> {
@@ -201,7 +201,7 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
                 repository().reactiveLoadValidatedReadReceiptPackets(
                         packet, sessionId, IdentityType.ONE_2_ONE, false),
                 ExceptionCodeEnum.READ_RECEIPT_MESSAGE_VERIFY_ERROR,
-                () -> repository().savePacket2Mq(MqConstant.MQ_READ_RECEIPT_MESSAGE_TOPIC, sessionId, packet),
+                MqConstant.MQ_READ_RECEIPT_MESSAGE_TOPIC, sessionId,
                 packets -> repository().reactiveReadReceiptMessage(
                         packet, IdentityType.ONE_2_ONE,
                         MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP, packets),

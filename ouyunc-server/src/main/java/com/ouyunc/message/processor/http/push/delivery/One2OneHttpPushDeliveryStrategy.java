@@ -130,7 +130,7 @@ public final class One2OneHttpPushDeliveryStrategy implements HttpProcessor {
                         DefaultRepository.INSTANCE.reactiveLoadWithdrawTargetPackets(
                                 packet, sessionId, MessageIndexScope.CHANNEL_SESSION, true),
                         ExceptionCodeEnum.WITHDRAW_MESSAGE_VERIFY_ERROR,
-                        () -> DefaultRepository.INSTANCE.savePacket2Mq(MqConstant.MQ_WITHDRAW_MESSAGE_TOPIC, sessionId, packet),
+                        MqConstant.MQ_WITHDRAW_MESSAGE_TOPIC, sessionId,
                         packets -> DefaultRepository.INSTANCE.reactiveWithdrawMessage(
                                 packet, sessionId, MessageIndexScope.CHANNEL_SESSION, packets),
                         (ctx, packet0) -> {
@@ -154,7 +154,7 @@ public final class One2OneHttpPushDeliveryStrategy implements HttpProcessor {
                         DefaultRepository.INSTANCE.reactiveLoadValidatedReadReceiptPackets(
                                 packet, sessionId, IdentityType.ONE_2_ONE, false),
                         ExceptionCodeEnum.READ_RECEIPT_MESSAGE_VERIFY_ERROR,
-                        () -> DefaultRepository.INSTANCE.savePacket2Mq(MqConstant.MQ_READ_RECEIPT_MESSAGE_TOPIC, sessionId, packet),
+                        MqConstant.MQ_READ_RECEIPT_MESSAGE_TOPIC, sessionId,
                         packets -> DefaultRepository.INSTANCE.reactiveReadReceiptMessage(
                                 packet, IdentityType.ONE_2_ONE,
                                 MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP, packets),

@@ -42,7 +42,7 @@ public final class HttpPushProcessorDelegate {
         if (packet == null || packet.getMessage() == null) {
             return;
         }
-        DefaultRepository.INSTANCE.publishArchiveAsync(packet);
+        DefaultRepository.INSTANCE.save(packet);
         HttpProcessor strategy = HttpPushProcessorStrategies.get(packet.getMessageType());
         if (strategy == null) {
             log.error("HTTP 推送投递不支持 messageType={}", packet.getMessageType());

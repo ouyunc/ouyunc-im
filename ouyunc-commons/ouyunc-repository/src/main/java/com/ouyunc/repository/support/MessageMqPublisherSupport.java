@@ -18,11 +18,14 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * 消息 MQ 投递。
+ * 消息 MQ 投递：协议包与 JSON 共用同一套发送与失败回调，对外只保留旁路异步方法。
  */
 public final class MessageMqPublisherSupport {
 
     private static final Logger log = LoggerFactory.getLogger(MessageMqPublisherSupport.class);
+
+    /** 全量归档失败上下文，与历史日志保持一致。 */
+    private static final String ARCHIVE_FAILURE_CONTEXT = "异步归档消息到 MQ";
 
     private final RepositoryInfrastructure infra;
 
@@ -30,12 +33,11 @@ public final class MessageMqPublisherSupport {
         this.infra = infra;
     }
 
-    public CompletableFuture<?> save(Packet packet) {
-        return savePacket2Mq(MqConstant.MQ_SAVE_MESSAGE_TOPIC, null, packet);
-    }
-
-    public CompletableFuture<?> savePacket2Mq(String topic, String key, Packet packet) {
-        Map<String, Object> headers = new HashMap<>();
+    /**
+     * 发送协议包。headers 固定带 packetId；有 key 时再带 MESSAGE_KEY。
+     */
+    private CompletableFuture<?> sendPacket(String topic, String key, Packet packet) {
+        Map<String, Object> headers = new HashMap<>(2);
         headers.put(MqHeaderKeys.CORRELATION_ID, packet.getPacketId());
         if (StringUtils.isNotBlank(key)) {
             headers.put(MqHeaderKeys.MESSAGE_KEY, key);
@@ -44,35 +46,66 @@ public final class MessageMqPublisherSupport {
     }
 
     /**
-     * 异步旁路投递 MQ：不阻塞调用方；失败时记录日志并发布异常事件。
+     * 旁路异步投递协议包：不阻塞调用方；失败记日志并发布异常事件。
      */
     public void publishPacketAsync(String topic, String key, Packet packet, String failureContext) {
-        savePacket2Mq(topic, key, packet).whenComplete((ignored, ex) -> {
-            if (ex != null) {
-                log.warn("MQ 旁路投递失败, topic={}, packetId={}, context={}, 原因: {}",
-                        topic, packet.getPacketId(), failureContext, ex.getMessage(), ex);
-                MessageContext.publishEvent(new MessageEvent(
-                        ExceptionEventPayload.of(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR,
-                                failureContext + ": " + ex.getMessage(), packet),
-                        MessageEventTypeEnum.EXCEPTION), true);
-            }
-        });
+        publishPacket(topic, key, packet, failureContext);
     }
 
-    public void publishArchiveAsync(Packet packet) {
-        publishPacketAsync(MqConstant.MQ_SAVE_MESSAGE_TOPIC, null, packet, "异步归档消息到 MQ");
+    /**
+     * 全量归档到 {@link MqConstant#MQ_SAVE_MESSAGE_TOPIC}，对应 {@link com.ouyunc.repository.Repository#save}。
+     */
+    public CompletableFuture<?> save(Packet packet) {
+        return publishPacket(MqConstant.MQ_SAVE_MESSAGE_TOPIC, null, packet, ARCHIVE_FAILURE_CONTEXT);
     }
 
+    /**
+     * 发送协议包并挂失败回调；同步异常转为已完成的失败 Future。
+     */
+    private CompletableFuture<?> publishPacket(String topic, String key, Packet packet, String failureContext) {
+        try {
+            CompletableFuture<?> future = sendPacket(topic, key, packet);
+            attachFailure(future, topic, key, packet.getPacketId(), packet, failureContext);
+            return future;
+        } catch (Exception ex) {
+            handleFailure(topic, key, packet.getPacketId(), packet, failureContext, ex);
+            return CompletableFuture.failedFuture(ex);
+        }
+    }
+
+    /**
+     * 旁路异步投递 JSON 负载（客服活动、坐席 presence、外渠下行等）。
+     */
     public void publishJsonAsync(String topic, String key, String jsonBody, String failureContext) {
-        infra.mqPublisher.send(topic, key, jsonBody, null).whenComplete((ignored, ex) -> {
+        try {
+            attachFailure(infra.mqPublisher.send(topic, key, jsonBody, null), topic, key, null, null, failureContext);
+        } catch (Exception ex) {
+            handleFailure(topic, key, null, null, failureContext, ex);
+        }
+    }
+
+    /**
+     * Future 完成后的失败回调。
+     */
+    private void attachFailure(CompletableFuture<?> future, String topic, String key,
+                               Long packetId, Packet packet, String failureContext) {
+        future.whenComplete((ignored, ex) -> {
             if (ex != null) {
-                log.warn("MQ JSON 投递失败, topic={}, key={}, context={}, 原因: {}",
-                        topic, key, failureContext, ex.getMessage(), ex);
-                MessageContext.publishEvent(new MessageEvent(
-                        ExceptionEventPayload.of(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR,
-                                failureContext + ": " + ex.getMessage(), null),
-                        MessageEventTypeEnum.EXCEPTION), true);
+                handleFailure(topic, key, packetId, packet, failureContext, ex);
             }
         });
+    }
+
+    /**
+     * Packet / JSON 发送失败：打 warn 并发布 {@link ExceptionCodeEnum#MQ_PERSISTENCE_ERROR}。
+     */
+    private void handleFailure(String topic, String key, Long packetId, Packet packet,
+                               String failureContext, Throwable ex) {
+        log.warn("MQ 旁路投递失败, topic={}, key={}, packetId={}, context={}, 原因: {}",
+                topic, key, packetId, failureContext, ex.getMessage(), ex);
+        MessageContext.publishEvent(new MessageEvent(
+                ExceptionEventPayload.of(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR,
+                        failureContext + ": " + ex.getMessage(), packet),
+                MessageEventTypeEnum.EXCEPTION), true);
     }
 }

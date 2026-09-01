@@ -21,9 +21,10 @@
    - 外渠 → Kafka `ouyunc_external_channel_outbound`（`ExternalChannelOutboundPayload`）
 2. 客服：`CsMessageDeliveryRouter.deliverCustomerServiceMessage`
    - **不查好友表**；坐席始终 IM 长连接
-   - 访客按 Redis route Hash 的 `channel`（与 `cs_consultation_ticket.channel` 对齐）：
-     - `im` / `web` / `app` / `h5` / `pc` → IM
+   - 访客按 Redis route Hash 的 `channelType`（与 `cs_consultation_ticket.channel_type` 对齐）：
+     - `im` → IM 长连接
      - `whatsapp` / `telegram` / `line` → Kafka `ouyunc_external_channel_outbound`
+   - `channel` 只标识实例（`whatsapp_a`），不参与协议识别
 3. 群聊：按成员 `GroupUserEntity.channel` 分别 IM 推送或外渠 Kafka
 
 ## 防回声
@@ -41,13 +42,15 @@
 
 ## 客服投递
 
-客服会话与好友关系解耦。CS 分配坐席写入 Redis route Hash 时带上 `channel` 字段；IM 读 `CsImSessionRoute.channel` 决定访客下行渠道。
+客服会话与好友关系解耦。CS 分配坐席写入 Redis route Hash 时带上 `channel`（实例）和 `channelType`（协议）；IM 读 `CsImSessionRoute.channelType` 决定访客下行渠道。
 
-| ticket.channel | 访客下行 |
-|----------------|----------|
-| im / web / app / h5 / pc | IM 长连接 |
+| ticket.channelType | 访客下行 |
+|--------------------|----------|
+| im | IM 长连接 |
 | whatsapp | Kafka → WhatsApp 适配 |
 | telegram | Kafka → Telegram 适配 |
 | line | Kafka → Line 适配 |
 
-坐席侧始终 IM。已部署环境若 route 缺 `channel`，需重新分配/绑定 route 或等 ticket 关闭后新建。
+`ticket.channel` / `route.channel` 为实例编码（如 `whatsapp_a`），下行取 token 时按实例查配置。
+
+坐席侧始终 IM。`channelType` 缺失则路由无效，消息拒收。

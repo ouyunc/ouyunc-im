@@ -153,7 +153,7 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
                         DefaultRepository.INSTANCE.reactiveLoadWithdrawTargetPackets(
                                 packet, sessionId, MessageIndexScope.CHANNEL_SESSION, !leaderOrManager),
                         ExceptionCodeEnum.WITHDRAW_MESSAGE_VERIFY_ERROR,
-                        () -> DefaultRepository.INSTANCE.savePacket2Mq(MqConstant.MQ_WITHDRAW_MESSAGE_TOPIC, sessionId, packet),
+                        MqConstant.MQ_WITHDRAW_MESSAGE_TOPIC, sessionId,
                         packets -> DefaultRepository.INSTANCE.reactiveWithdrawMessage(
                                 packet, sessionId, MessageIndexScope.CHANNEL_SESSION, packets),
                         (ctx, packet0) -> {
@@ -177,7 +177,7 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
                         DefaultRepository.INSTANCE.reactiveLoadValidatedReadReceiptPackets(
                                 packet, sessionId, IdentityType.GROUP, false),
                         ExceptionCodeEnum.READ_RECEIPT_MESSAGE_VERIFY_ERROR,
-                        () -> DefaultRepository.INSTANCE.savePacket2Mq(MqConstant.MQ_READ_RECEIPT_MESSAGE_TOPIC, sessionId, packet),
+                        MqConstant.MQ_READ_RECEIPT_MESSAGE_TOPIC, sessionId,
                         packets -> DefaultRepository.INSTANCE.reactiveReadReceiptMessage(
                                 packet, IdentityType.GROUP,
                                 MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP, packets),

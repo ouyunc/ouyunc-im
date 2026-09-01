@@ -51,7 +51,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
     @Override
     public void preProcess(ChannelHandlerContext ctx, Packet packet) {
         // 异步存储packet（目前只是保存相关信息，不做扩展，以后可以做数据分析使用），这里将该数据存储到时序数据库中
-        ThreadPoolManager.messageProcessorExecutor().execute(() -> repository().publishArchiveAsync(packet));
+        ThreadPoolManager.messageProcessorExecutor().execute(() -> repository().save(packet));
         if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
             log.error("校验消息: {} 中的发送方登录认证失败,开始关闭channel", packet);
             MessageContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过", packet), MessageEventTypeEnum.EXCEPTION), true);
@@ -187,7 +187,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
                 repository().reactiveLoadValidatedReadReceiptPackets(
                         packet, packet.getMessage().getTo(), IdentityType.GROUP, false),
                 ExceptionCodeEnum.READ_RECEIPT_MESSAGE_VERIFY_ERROR,
-                ()-> repository().savePacket2Mq(MqConstant.MQ_READ_RECEIPT_MESSAGE_TOPIC, sessionId, packet),
+                MqConstant.MQ_READ_RECEIPT_MESSAGE_TOPIC, sessionId,
                 packets -> repository().reactiveReadReceiptMessage(
                         packet, IdentityType.GROUP,
                         MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP, packets),
@@ -230,7 +230,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
                 repository().reactiveLoadWithdrawTargetPackets(
                         packet, sessionId, MessageIndexScope.CHANNEL_SESSION, !leaderOrManager),
                 ExceptionCodeEnum.WITHDRAW_MESSAGE_VERIFY_ERROR,
-                () -> repository().savePacket2Mq(MqConstant.MQ_WITHDRAW_MESSAGE_TOPIC, sessionId, packet),
+                MqConstant.MQ_WITHDRAW_MESSAGE_TOPIC, sessionId,
                 packets -> repository().reactiveWithdrawMessage(
                         packet, sessionId, MessageIndexScope.CHANNEL_SESSION, packets),
                 (ctx0, packet0) -> {

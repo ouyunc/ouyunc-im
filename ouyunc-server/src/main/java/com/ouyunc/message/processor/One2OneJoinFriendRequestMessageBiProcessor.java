@@ -51,7 +51,7 @@ public final class One2OneJoinFriendRequestMessageBiProcessor extends AbstractMe
     @Override
     public void preProcess(ChannelHandlerContext ctx, Packet packet) {
         // 异步存储packet（目前只是保存相关信息，不做扩展，以后可以做数据分析使用），这里将该数据存储到时序数据库中
-        ThreadPoolManager.messageProcessorExecutor().execute(() -> repository().publishArchiveAsync(packet));
+        ThreadPoolManager.messageProcessorExecutor().execute(() -> repository().save(packet));
         // 两个都校验通过才放行
         if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
             // 关闭当前 channel，这里会触发 DefaultSocketChannelInitializer 中的关闭逻辑

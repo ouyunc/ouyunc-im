@@ -45,7 +45,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
             return;
         }
         // 认证通过后再归档，避免未登录/非法包进入数仓
-        ThreadPoolManager.messageProcessorExecutor().execute(() -> repository().publishArchiveAsync(packet));
+        ThreadPoolManager.messageProcessorExecutor().execute(() -> repository().save(packet));
         if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
             return;
         }
@@ -167,7 +167,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
                         repository().reactiveLoadWithdrawTargetPackets(
                                 packet, ticketScopeId, MessageIndexScope.CS_TICKET, true),
                         ExceptionCodeEnum.WITHDRAW_MESSAGE_VERIFY_ERROR,
-                        () -> repository().savePacket2Mq(MqConstant.MQ_WITHDRAW_MESSAGE_TOPIC, ticketScopeId, packet),
+                        MqConstant.MQ_WITHDRAW_MESSAGE_TOPIC, ticketScopeId,
                         packets -> repository().reactiveWithdrawMessage(
                                 packet, ticketScopeId, MessageIndexScope.CS_TICKET, packets),
                         (ctx0, packet0) -> {
@@ -195,7 +195,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
                         repository().reactiveLoadValidatedCsReadReceiptPackets(
                                 packet, route, packet.getDeviceType()),
                         ExceptionCodeEnum.READ_RECEIPT_MESSAGE_VERIFY_ERROR,
-                        () -> repository().savePacket2Mq(MqConstant.MQ_READ_RECEIPT_MESSAGE_TOPIC, ticketScopeId, packet),
+                        MqConstant.MQ_READ_RECEIPT_MESSAGE_TOPIC, ticketScopeId,
                         packets -> repository().reactiveCsReadReceiptMessage(
                                 packet, route, packet.getDeviceType(),
                                 MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP, packets),

@@ -1,26 +1,19 @@
 package com.ouyunc.repository;
 
-import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.CacheConstant;
-import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.model.MqttTopicSubscriptionOption;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.cache.config.CacheFactory;
-import com.ouyunc.mq.core.MqFactory;
-import com.ouyunc.mq.core.MqHeaderKeys;
-import com.ouyunc.mq.core.api.MqPublisher;
 import com.ouyunc.repository.support.QosIdempotencyHelper;
+import com.ouyunc.repository.support.RepositorySupports;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.SessionCallback;
-import org.springframework.data.redis.core.StringRedisTemplate;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Future;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * mqtt 消息持久化操作, 单例模式
@@ -30,18 +23,9 @@ public enum MqttRepository implements Repository{
 
     private static final RedisTemplate<String, Object> redisTemplate = CacheFactory.REDIS.instance();
 
-    private static final StringRedisTemplate stringRedisTemplate = CacheFactory.STRING_REDIS.instance();
-    private static final MqPublisher mqPublisher = MqFactory.PUBLISHER.instance();
-
-    /**
-     * 保存全量信息
-     * @param packet
-     */
     @Override
-    public Future<?> save(Packet packet) {
-        Map<String, Object> headers = new HashMap<>();
-        headers.put(MqHeaderKeys.CORRELATION_ID, packet.getPacketId());
-        return mqPublisher.send(MqConstant.MQ_SAVE_MESSAGE_TOPIC, null, JSON.toJSONString(packet), headers);
+    public CompletableFuture<?> save(Packet packet) {
+        return RepositorySupports.MQ.save(packet);
     }
 
     @Override
