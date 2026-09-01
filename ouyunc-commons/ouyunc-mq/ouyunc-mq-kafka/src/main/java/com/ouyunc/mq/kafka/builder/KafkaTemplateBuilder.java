@@ -1,5 +1,6 @@
 package com.ouyunc.mq.kafka.builder;
 
+import com.ouyunc.mq.kafka.properties.KafkaProperties;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
@@ -71,6 +72,11 @@ public class KafkaTemplateBuilder extends AbstractKafkaBuilder<KafkaTemplate<?,?
         //#指定消息key和消息体的编解码方式
         producerPropertiesMap.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, kafkaProperties.getProducer().getKeySerializer());
         producerPropertiesMap.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, kafkaProperties.getProducer().getValueSerializer());
+        // extra 放在 typed 字段之后：可追加 SASL 等，也可按需覆盖同名项
+        KafkaProperties.mergeClientProperties(producerPropertiesMap, kafkaProperties.getProperties());
+        if (kafkaProperties.getProducer() != null) {
+            KafkaProperties.mergeClientProperties(producerPropertiesMap, kafkaProperties.getProducer().getProperties());
+        }
         return producerPropertiesMap;
     }
 

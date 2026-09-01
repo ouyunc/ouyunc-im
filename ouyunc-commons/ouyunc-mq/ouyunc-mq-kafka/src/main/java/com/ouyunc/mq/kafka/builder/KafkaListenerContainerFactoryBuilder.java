@@ -1,5 +1,6 @@
 package com.ouyunc.mq.kafka.builder;
 
+import com.ouyunc.mq.kafka.properties.KafkaProperties;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
@@ -104,6 +105,11 @@ public class KafkaListenerContainerFactoryBuilder extends AbstractKafkaBuilder<K
         //指定消息key和消息体的编解码方式
         consumerPropertiesMap.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, kafkaProperties.getConsumer().getKeyDeserializer());
         consumerPropertiesMap.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, kafkaProperties.getConsumer().getValueDeserializer());
+        // extra 放在 typed 字段之后：可追加 SASL 等，也可按需覆盖同名项
+        KafkaProperties.mergeClientProperties(consumerPropertiesMap, kafkaProperties.getProperties());
+        if (kafkaProperties.getConsumer() != null) {
+            KafkaProperties.mergeClientProperties(consumerPropertiesMap, kafkaProperties.getConsumer().getProperties());
+        }
         return consumerPropertiesMap;
     }
 

@@ -6,6 +6,8 @@ import com.ouyunc.mq.kafka.properties.KafkaProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Set;
+
 /**
  * @description: 抽象kafka 构建者
  * @author fzx
@@ -34,6 +36,11 @@ public abstract class AbstractKafkaBuilder<T> implements KafkaMqBuilder<T> {
         kafkaProperties = YmlUtil.getActiveProfileValue(PropertiesConfigConstant.GLOBAL_CONFIG_FILE_LOCATION, PropertiesConfigConstant.KAFKA_CONFIG_PROPERTIES_PREFIX ,KafkaProperties.class);
         if (kafkaProperties == null) {
             throw new RuntimeException("加载kafka属性配置文件失败");
+        }
+        // 只打印转换后的 key，避免 jaas 密码进日志
+        Set<String> extraKeys = kafkaProperties.resolvedExtraConfigKeys();
+        if (!extraKeys.isEmpty()) {
+            log.info("已加载 Kafka extra properties（驼峰已转点分）: {}", extraKeys);
         }
     }
 }

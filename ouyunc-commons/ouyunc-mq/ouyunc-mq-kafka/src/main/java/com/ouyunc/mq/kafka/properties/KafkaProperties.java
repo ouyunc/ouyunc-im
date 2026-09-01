@@ -2,11 +2,15 @@ package com.ouyunc.mq.kafka.properties;
 
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.MapUtils;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * @description: kafka 属性配置文件
@@ -22,7 +26,13 @@ public class KafkaProperties {
      **/
     private List<String> bootstrapServers = new ArrayList<>();
 
-
+    /**
+     * 透传给 Kafka 客户端的公共 extra 配置，合并进 producer / consumer / admin。
+     * YAML 使用驼峰 key（避免点号 key 必须加引号），运行时转成 Kafka 点分配置：
+     * securityProtocol -> security.protocol，saslJaasConfig -> sasl.jaas.config。
+     * 注意：值里若含密码，日志只打印转换后的 key，不打印 value。
+     **/
+    private Map<String, Object> properties;
 
     /**
      * 生产属性设置
@@ -38,6 +48,14 @@ public class KafkaProperties {
      * 消费监听器属性设置
      **/
     private KafkaProperties.Listener listener;
+
+    public Map<String, Object> getProperties() {
+        return properties;
+    }
+
+    public void setProperties(Map<String, Object> properties) {
+        this.properties = properties;
+    }
 
     public KafkaProperties.Producer getProducer() {
         return producer;
@@ -84,6 +102,84 @@ public class KafkaProperties {
                 }
             }
         }
+    }
+
+    /**
+     * 将 YAML extra properties 合并进 Kafka 客户端配置 Map。
+     * 驼峰 key 转点分；已含 '.' 的 key 原样透传。null value 跳过，避免客户端 NPE。
+     * 后写入的覆盖先写入的（producer/consumer 私有 properties 覆盖公共 properties）。
+     **/
+    public static void mergeClientProperties(Map<String, Object> target, Map<String, Object> extraProperties) {
+        if (target == null || MapUtils.isEmpty(extraProperties)) {
+            return;
+        }
+        for (Map.Entry<String, Object> entry : extraProperties.entrySet()) {
+            String rawKey = entry.getKey();
+            Object value = entry.getValue();
+            if (rawKey == null || rawKey.isBlank() || value == null) {
+                continue;
+            }
+            target.put(toKafkaConfigKey(rawKey), value);
+        }
+    }
+
+    /**
+     * 收集转换后的 Kafka 配置 key，仅用于启动日志核对是否加载，禁止附带 value。
+     **/
+    public static void collectKafkaConfigKeys(Set<String> targetKeys, Map<String, Object> extraProperties) {
+        if (targetKeys == null || MapUtils.isEmpty(extraProperties)) {
+            return;
+        }
+        for (Map.Entry<String, Object> entry : extraProperties.entrySet()) {
+            String rawKey = entry.getKey();
+            if (rawKey == null || rawKey.isBlank() || entry.getValue() == null) {
+                continue;
+            }
+            targetKeys.add(toKafkaConfigKey(rawKey));
+        }
+    }
+
+    /**
+     * 汇总公共 + producer + consumer extra 配置转换后的 key，供启动日志使用。
+     **/
+    public Set<String> resolvedExtraConfigKeys() {
+        Set<String> keys = new LinkedHashSet<>();
+        collectKafkaConfigKeys(keys, properties);
+        if (producer != null) {
+            collectKafkaConfigKeys(keys, producer.getProperties());
+        }
+        if (consumer != null) {
+            collectKafkaConfigKeys(keys, consumer.getProperties());
+        }
+        return keys;
+    }
+
+    /**
+     * YAML 驼峰 key 转 Kafka 客户端点分 key。
+     * 例：saslJaasConfig -> sasl.jaas.config；securityProtocol -> security.protocol。
+     * 已含 '.' 则视为已经是 Kafka 原生 key，不再转换。
+     **/
+    public static String toKafkaConfigKey(String key) {
+        if (key == null) {
+            return null;
+        }
+        String trimmed = key.trim();
+        if (trimmed.isEmpty() || trimmed.indexOf('.') >= 0) {
+            return trimmed;
+        }
+        StringBuilder dottedKey = new StringBuilder(trimmed.length() + 8);
+        for (int i = 0; i < trimmed.length(); i++) {
+            char current = trimmed.charAt(i);
+            if (Character.isUpperCase(current)) {
+                if (dottedKey.length() > 0) {
+                    dottedKey.append('.');
+                }
+                dottedKey.append(Character.toLowerCase(current));
+            } else {
+                dottedKey.append(current);
+            }
+        }
+        return dottedKey.toString();
     }
 
     /**
@@ -143,6 +239,11 @@ public class KafkaProperties {
          **/
         private Class<?> keySerializer = StringSerializer.class;
         private Class<?> valueSerializer = StringSerializer.class;
+
+        /**
+         * 生产者 extra 配置，覆盖公共 properties 中的同名项（同样使用驼峰 key）。
+         **/
+        private Map<String, Object> properties;
 
         public String getAck() {
             return ack;
@@ -223,6 +324,14 @@ public class KafkaProperties {
 
         public void setValueSerializer(Class<?> valueSerializer) {
             this.valueSerializer = valueSerializer;
+        }
+
+        public Map<String, Object> getProperties() {
+            return properties;
+        }
+
+        public void setProperties(Map<String, Object> properties) {
+            this.properties = properties;
         }
     }
 
@@ -309,6 +418,11 @@ public class KafkaProperties {
          * 值的反序列化器类，实现类实现了接口org.apache.kafka.common.serialization.Deserializer
          **/
         private Class<?> valueDeserializer = StringDeserializer.class;
+
+        /**
+         * 消费者 extra 配置，覆盖公共 properties 中的同名项（同样使用驼峰 key）。
+         **/
+        private Map<String, Object> properties;
 
         public Integer getAutoCommitIntervalMs() {
             return autoCommitIntervalMs;
@@ -429,6 +543,14 @@ public class KafkaProperties {
 
         public void setValueDeserializer(Class<?> valueDeserializer) {
             this.valueDeserializer = valueDeserializer;
+        }
+
+        public Map<String, Object> getProperties() {
+            return properties;
+        }
+
+        public void setProperties(Map<String, Object> properties) {
+            this.properties = properties;
         }
     }
 

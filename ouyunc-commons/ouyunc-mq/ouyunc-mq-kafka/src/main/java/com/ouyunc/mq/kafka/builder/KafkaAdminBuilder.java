@@ -1,5 +1,6 @@
 package com.ouyunc.mq.kafka.builder;
 
+import com.ouyunc.mq.kafka.properties.KafkaProperties;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.springframework.kafka.core.KafkaAdmin;
 
@@ -22,9 +23,10 @@ public class KafkaAdminBuilder extends AbstractKafkaBuilder<KafkaAdmin>{
      */
     @Override
     public KafkaAdmin build() {
-        Map<String, Object> props = new HashMap<>(1);
+        Map<String, Object> props = new HashMap<>(4);
         //配置Kafka实例的连接地址
         props.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaProperties.getBootstrapServers());
+        KafkaProperties.mergeClientProperties(props, kafkaProperties.getProperties());
         return new KafkaAdmin(props);
     }
 }

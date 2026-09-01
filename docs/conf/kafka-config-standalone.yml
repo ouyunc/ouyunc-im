@@ -10,6 +10,11 @@ ouyunc:
       # 公共连接地址
       bootstrapServers: 
         - localhost:9092
+      # 透传给 Kafka 客户端的 extra 配置（YAML 用驼峰，启动时转成点分 key）
+      # properties:
+      #   securityProtocol: SASL_PLAINTEXT
+      #   saslMechanism: PLAIN
+      #   saslJaasConfig: 'org.apache.kafka.common.security.plain.PlainLoginModule required username="ouyunc" password="******";'
       
       # 生产者配置
       producer:
