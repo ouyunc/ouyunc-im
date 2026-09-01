@@ -10,17 +10,13 @@ import com.ouyunc.db.mongo.properties.MongodbProperties;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.convert.converter.Converter;
-import org.springframework.data.convert.Jsr310Converters;
 import org.springframework.data.mongodb.MongoDatabaseFactory;
 import org.springframework.data.mongodb.ReactiveMongoDatabaseFactory;
 import org.springframework.data.mongodb.core.*;
 import org.springframework.data.mongodb.core.convert.*;
 import org.springframework.data.mongodb.core.mapping.MongoMappingContext;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -148,11 +144,10 @@ public enum MongodbFactory {
         }
 
         private static MappingMongoConverter createMongoConverter(MongoDatabaseFactory mongoDatabaseFactory) {
-            // 创建自定义转换器列表
-            // 时间转换器
-            List<Converter<?, ?>> converters = new ArrayList<>(Jsr310Converters.getConvertersToRegister());
-            // 创建自定义转换服务
-            MongoCustomConversions conversions = new MongoCustomConversions(converters);
+            // Spring Data Mongo 已内置 Date <-> LocalDateTime/Instant 等存储转换。
+            // 不要把 Jsr310Converters（LocalDateTime <-> Instant 这类 Java 类型互转）注册进 MongoCustomConversions，
+            // 源类型不是 Mongo store type，会被当成 reading converter 并打 WARN。
+            MongoCustomConversions conversions = MongoCustomConversions.create(config -> { });
             // 创建映射上下文
             MongoMappingContext mappingContext = new MongoMappingContext();
             mappingContext.setSimpleTypeHolder(conversions.getSimpleTypeHolder());
@@ -289,11 +284,8 @@ public enum MongodbFactory {
         }
 
         private static MappingMongoConverter createMongoConverter(ReactiveMongoDatabaseFactory mongoDatabaseFactory) {
-            // 创建自定义转换器列表
-            // 时间转换器
-            List<Converter<?, ?>> converters = new ArrayList<>(Jsr310Converters.getConvertersToRegister());
-            // 创建自定义转换服务
-            MongoCustomConversions conversions = new MongoCustomConversions(converters);
+            // 同同步模板：只用 Mongo 内置 JSR-310 存储转换，避免 Jsr310Converters 误注册 WARN
+            MongoCustomConversions conversions = MongoCustomConversions.create(config -> { });
             // 创建映射上下文
             MongoMappingContext mappingContext = new MongoMappingContext();
             mappingContext.setSimpleTypeHolder(conversions.getSimpleTypeHolder());
