@@ -1,6 +1,5 @@
 package com.ouyunc.message.processor;
 
-import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
@@ -11,6 +10,7 @@ import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.IdentityUtil;
+import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.base.model.RequestSession;
@@ -50,7 +50,7 @@ public final class One2OneRefuseFriendRequestMessageBiProcessor extends Abstract
     @Override
     public void preProcess(ChannelHandlerContext ctx, Packet packet) {
         // 异步存储packet（目前只是保存相关信息，不做扩展，以后可以做数据分析使用），这里将该数据存储到时序数据库中
-        ThreadPoolManager.messageProcessorExecutor().execute(() -> repository().save(packet));
+        repository().save(packet);
         // 两个都校验通过才放行
         if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
             // 关闭当前 channel，这里会触发 DefaultSocketChannelInitializer 中的关闭逻辑
@@ -59,7 +59,7 @@ public final class One2OneRefuseFriendRequestMessageBiProcessor extends Abstract
             ctx.close();
             return;
         }
-        if (qosDupAlreadyHandled(ctx, packet)) {
+        if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
             return;
         }
         // 校验是否拥有相关权限 permission （是有有单聊，甚至某种内容类型的权限，如不能发语音，视频消息，只能发文本，都可以在这里做校验拦截）

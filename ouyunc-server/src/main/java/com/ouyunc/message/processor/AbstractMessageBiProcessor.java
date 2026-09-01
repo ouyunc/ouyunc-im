@@ -2,7 +2,6 @@ package com.ouyunc.message.processor;
 
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
-import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.MessageEvent;
@@ -35,7 +34,7 @@ public abstract class AbstractMessageBiProcessor<T extends Number> extends Abstr
      */
     public void preProcess(ChannelHandlerContext ctx, Packet packet) {
         // 异步存储packet（目前只是保存相关信息，不做扩展，以后可以做数据分析使用），这里将该数据存储到时序数据库中
-        ThreadPoolManager.messageProcessorExecutor().execute(() -> repository().save(packet));
+        repository().save(packet);
         if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
             // 关闭当前 channel，这里会触发 DefaultSocketChannelInitializer 中的关闭逻辑
             log.error("校验消息: {} 中的发送方登录认证失败,开始关闭channel", packet);
@@ -52,11 +51,6 @@ public abstract class AbstractMessageBiProcessor<T extends Number> extends Abstr
             return;
         }
         ctx.fireChannelRead(packet);
-    }
-
-    /** QOS_DUP 已命中幂等并回 ACK 时返回 true，调用方应中止后续业务。 */
-    protected boolean qosDupAlreadyHandled(ChannelHandlerContext ctx, Packet packet) {
-        return MessageContext.isQosEnable() && qosPreHandle(ctx, packet);
     }
 
     /**

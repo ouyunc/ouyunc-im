@@ -54,9 +54,29 @@ public final class MessageMqPublisherSupport {
 
     /**
      * 全量归档到 {@link MqConstant#MQ_SAVE_MESSAGE_TOPIC}，对应 {@link com.ouyunc.repository.Repository#save}。
+     * <p>调用线程先 {@link Packet#clone()}，再把 JSON 序列化丢到仓库线程池，避免与后续 QoS {@code copyFrom} / 业务改包并发。</p>
      */
     public CompletableFuture<?> save(Packet packet) {
-        return publishPacket(MqConstant.MQ_SAVE_MESSAGE_TOPIC, null, packet, ARCHIVE_FAILURE_CONTEXT);
+        if (packet == null) {
+            return CompletableFuture.completedFuture(null);
+        }
+        Packet snapshot = packet.clone();
+        CompletableFuture<Object> result = new CompletableFuture<>();
+        try {
+            infra.dbExecutor().execute(() -> publishPacket(MqConstant.MQ_SAVE_MESSAGE_TOPIC, null, snapshot,
+                    ARCHIVE_FAILURE_CONTEXT).whenComplete((value, ex) -> {
+                if (ex != null) {
+                    result.completeExceptionally(ex);
+                } else {
+                    result.complete(value);
+                }
+            }));
+        } catch (Exception ex) {
+            handleFailure(MqConstant.MQ_SAVE_MESSAGE_TOPIC, null, snapshot.getPacketId(), snapshot,
+                    ARCHIVE_FAILURE_CONTEXT, ex);
+            return CompletableFuture.failedFuture(ex);
+        }
+        return result;
     }
 
     /**

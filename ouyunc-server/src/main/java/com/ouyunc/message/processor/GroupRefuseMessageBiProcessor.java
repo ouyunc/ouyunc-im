@@ -5,10 +5,10 @@ import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.constant.enums.*;
-import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.packet.message.content.GroupRequestContent;
+import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.base.model.GroupRequestSession;
@@ -41,7 +41,7 @@ public final class GroupRefuseMessageBiProcessor extends AbstractMessageBiProces
     @Override
     public void preProcess(ChannelHandlerContext ctx, Packet packet) {
         // 异步存储packet（目前只是保存相关信息，不做扩展，以后可以做数据分析使用），这里将该数据存储到时序数据库中
-        ThreadPoolManager.messageProcessorExecutor().execute(() -> repository().save(packet));
+        repository().save(packet);
         if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
             // 关闭当前 channel，这里会触发 DefaultSocketChannelInitializer 中的关闭逻辑
             log.error("校验消息: {} 中的发送方登录认证失败,开始关闭channel", packet);
@@ -49,7 +49,7 @@ public final class GroupRefuseMessageBiProcessor extends AbstractMessageBiProces
             ctx.close();
             return;
         }
-        if (qosDupAlreadyHandled(ctx, packet)) {
+        if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
             return;
         }
         // 校验是否拥有相关权限 permission （对方是否被拉黑，禁用等）群是否被封禁，是否全体禁言

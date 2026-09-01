@@ -45,7 +45,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
             return;
         }
         // 认证通过后再归档，避免未登录/非法包进入数仓
-        ThreadPoolManager.messageProcessorExecutor().execute(() -> repository().save(packet));
+        repository().save(packet);
         if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
             return;
         }

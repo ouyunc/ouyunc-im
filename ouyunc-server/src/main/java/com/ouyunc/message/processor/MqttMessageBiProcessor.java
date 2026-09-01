@@ -4,7 +4,6 @@ package com.ouyunc.message.processor;
 import com.ouyunc.base.constant.enums.MessageType;
 import com.ouyunc.base.constant.enums.MqttMessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.MqttMessageTypeEnum;
-import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.validator.AuthValidator;
@@ -35,7 +34,7 @@ public final class MqttMessageBiProcessor extends AbstractMessageBiProcessor<Byt
     @Override
     public void preProcess(ChannelHandlerContext ctx, Packet packet) {
         // 异步存储packet（目前只是保存相关信息，不做扩展，以后可以做数据分析使用），这里将该数据存储到时序数据库中
-        ThreadPoolManager.messageProcessorExecutor().execute(() -> repository().save(packet));
+        repository().save(packet);
         // 只处理鉴权消息，如果是不是连接connect则进行鉴权，鉴权通过往下走，是connect直接往下走
         if (MqttMessageContentTypeEnum.MQTT_CONNECT.getType() == packet.getMessage().getContentType()) {
             ctx.fireChannelRead(packet);
