@@ -38,7 +38,7 @@
         <dependency>
             <groupId>com.ouyunc</groupId>
             <artifactId>ouyunc-server</artifactId>
-            <version>6.5.1</version>
+            <version>6.5.5</version>
         </dependency>
 
         <dependency>
