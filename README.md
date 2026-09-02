@@ -1,4 +1,4 @@
-# OUYUNC-IM [![version](https://img.shields.io/badge/version-6.5.3-blue)](https://gitee.com/etxync/ouyunc-im)  
+# OUYUNC-IM [![version](https://img.shields.io/badge/version-6.5.5-blue)](https://gitee.com/etxync/ouyunc-im)  
 [![license](https://img.shields.io/badge/license-MIT-brightgreen)](https://www.mit-license.org/)
 <a href='https://gitee.com/etxync/ouyunc-im/stargazers'><img src='https://gitee.com/etxync/ouyunc-im/badge/star.svg?theme=dark' alt='star'></img></a>
 <a href='https://gitee.com/etxync/ouyunc-im/members'><img src='https://gitee.com/etxync/ouyunc-im/badge/fork.svg?theme=dark' alt='fork'></img></a>
@@ -234,6 +234,11 @@ https://gitee.com/etxync/ouyunc-im/wikis/OUYUNC-IM%20v3.x/%E5%AE%A2%E6%88%B7%E7%
 3. 增加外部服务推送接口，用来推送消息;
 4. 增加AI以及RAG增强IM聊天；
 5. 已读回执与会话 offset 协议说明见 [docs/read-receipt-session-offset.md](docs/6.5.3/read-receipt-session-offset.md)
+
+#####  **6.5.3 ~ 6.5.5**
+1. 完善客服处理逻辑；
+2. 优化其他代码；
+
 
 
 #### 最后说明
