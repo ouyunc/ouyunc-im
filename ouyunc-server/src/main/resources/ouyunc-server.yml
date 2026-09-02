@@ -146,7 +146,7 @@ ouyunc:
       idempotent-ttl-seconds: 86400
       skip-friend-check-for-system: true
       jwt:
-        secret: ouyunc
+        secret: ouyunc-local-http-push-jwt-secret-32
 
     # 线程池配置（精简版，仅保留必要参数）
     thread-pool:

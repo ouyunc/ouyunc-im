@@ -229,6 +229,10 @@
         <logger name="org.springframework.jdbc.core.JdbcTemplate" level="DEBUG" additivity="false">
             <AppenderRef ref="Async"/>
         </logger>
+        <!-- JDK 25 下 kafka-clients 3.9.x 会先试 Subject.getSubject() 再回退，DEBUG 会打完整堆栈，不是认证失败 -->
+        <logger name="org.apache.kafka" level="INFO" additivity="false">
+            <AppenderRef ref="Async"/>
+        </logger>
 
         <logger name="com.ouyunc" level="DEBUG" additivity="false">
             <AppenderRef ref="Async"/>
