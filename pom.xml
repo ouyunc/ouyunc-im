@@ -77,8 +77,9 @@
     <snappy-java.version>1.1.10.7</snappy-java.version>
     <zstd-jni.version>1.5.6-9</zstd-jni.version>
     <influxdb.version>7.2.0</influxdb.version>
-    <!--kafka-->
+    <!--kafka：kafka.version 实际是 spring-kafka；kafka-clients 必须单独钉到 3.9.1+，否则 JDK 24/25 下 SASL 会因 Subject.getSubject() 抛 UnsupportedOperationException-->
     <kafka.version>3.3.1</kafka.version>
+    <kafka-clients.version>3.9.1</kafka-clients.version>
     <!--rocketmq-->
     <rocketmq.version>5.2.0</rocketmq.version>
     <rocketmq-spring.version>2.3.5</rocketmq-spring.version>
@@ -401,6 +402,12 @@
         <groupId>org.springframework.kafka</groupId>
         <artifactId>spring-kafka</artifactId>
         <version>${kafka.version}</version>
+      </dependency>
+      <!--覆盖 spring-kafka 3.3.1 自带的 kafka-clients 3.8.x：3.8 仍调用 Subject.getSubject()，JDK 24+ 已禁用该方法（KAFKA-17078 / 3.9.1）-->
+      <dependency>
+        <groupId>org.apache.kafka</groupId>
+        <artifactId>kafka-clients</artifactId>
+        <version>${kafka-clients.version}</version>
       </dependency>
       <!--rocketmq：使用 spring-boot-starter，自动配置 RocketMQTemplate，兼容 RocketMQ 5.2-->
       <dependency>
