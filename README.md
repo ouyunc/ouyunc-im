@@ -27,7 +27,7 @@
 
 ```
 
-#### [官网地址](http://www.ouyunc.com(http://124.223.209.230)) (暂未开放)
+#### [官网地址](http://www.ouyunc.com(http://124.223.209.230))
 ```
 http://www.ouyunc.com(http://124.223.209.230)
 ```
