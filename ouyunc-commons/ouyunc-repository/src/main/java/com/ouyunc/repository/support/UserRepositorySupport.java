@@ -112,6 +112,9 @@ public final class UserRepositorySupport {
         userEntity.setStatus(mongoUser.getStatus());
         userEntity.setAppKey(mongoUser.getAppKey());
         userEntity.setType(mongoUser.getType());
+        userEntity.setUnionId(mongoUser.getUnionId());
+        userEntity.setLanguage(mongoUser.getLanguage());
+        userEntity.setAutoTranslateIn(mongoUser.getAutoTranslateIn());
         userEntity.setCreateTime(mongoUser.getCreateTime());
         userEntity.setUpdateTime(mongoUser.getUpdateTime());
         userEntity.setDelFlag(mongoUser.getDelFlag());

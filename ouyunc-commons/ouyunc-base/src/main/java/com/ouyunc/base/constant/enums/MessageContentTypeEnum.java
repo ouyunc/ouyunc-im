@@ -14,6 +14,7 @@ import com.ouyunc.base.packet.message.content.PostcardContent;
 import com.ouyunc.base.packet.message.content.ProductCardContent;
 import com.ouyunc.base.packet.message.content.ProfileCardContent;
 import com.ouyunc.base.packet.message.content.RecommendItemContent;
+import com.ouyunc.base.packet.message.content.TranslationReadyContent;
 import com.ouyunc.base.packet.message.content.VideoCallContent;
 import com.ouyunc.base.packet.message.content.VideoContent;
 import com.ouyunc.base.packet.message.content.VoiceCallContent;
@@ -71,6 +72,8 @@ public enum MessageContentTypeEnum implements MessageContentType {
     PROFILE_CARD_CONTENT(NumberConstant.NUMBER_NEGATIVE_114, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), ProfileCardContent.class, "推荐人名片消息内容"),
     /** 通用推荐物（文章/门店/优惠券等，非商品） */
     RECOMMEND_ITEM_CONTENT(NumberConstant.NUMBER_NEGATIVE_113, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), RecommendItemContent.class, "通用推荐物消息内容"),
+    /** 译文就绪 overlay，配合 SERVER_NOTIFY；禁止当聊天消息落会话 */
+    TRANSLATION_READY_CONTENT(NumberConstant.NUMBER_NEGATIVE_112, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), TranslationReadyContent.class, "消息译文就绪"),
 
     TEXT_CONTENT(NumberConstant.NUMBER_NEGATIVE_128, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), String.class, "通用文本内容类型"),
 

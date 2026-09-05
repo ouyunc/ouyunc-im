@@ -151,4 +151,9 @@ public class MqConstant {
 
     public static final String MQ_CS_AGENT_PRESENCE_TOPIC = "ouyunc-cs-agent-presence";
 
+    /**
+     * 消息自动预译消费组，与 {@link #MQ_SAVE_MESSAGE_GROUP} 共用归档 topic，位移独立。
+     */
+    public static final String MQ_TRANSLATE_MESSAGE_GROUP = "message_translate";
+
 }

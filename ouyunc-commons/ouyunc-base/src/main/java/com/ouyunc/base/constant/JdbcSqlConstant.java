@@ -22,7 +22,7 @@ public class JdbcSqlConstant {
         SELECT_GROUP_USER_BATCH("SELECT id, group_id, group_code, group_nick_name, user_id, user_code, post, user_nick_name, shield, silence, way, channel, create_time, join_time FROM ouyunc_im_group_user WHERE group_id = :group_id AND user_id IN (:userIds)", "批量查询群成员"),
         SELECT_ALL_GROUP_USER("SELECT id, group_id, group_code, group_nick_name, user_id, user_code, post, user_nick_name, shield, silence, way, channel, create_time, join_time  FROM ouyunc_im_group_user where group_id = :group_id ", "查询所有群成员"),
 
-        SELECT_USER("SELECT id,open_id, code, username,`password`,nick_name,avatar,motto,age,sex,email,phone_num,id_card_no,group_invite_policy,friend_join_policy,`status`,app_key,type,external_id,union_id,create_time,update_time,del_flag FROM ouyunc_im_user WHERE id = :id and del_flag = 0", "查询用户"),
+        SELECT_USER("SELECT id,open_id, code, username,`password`,nick_name,avatar,motto,age,sex,email,phone_num,id_card_no,group_invite_policy,friend_join_policy,`status`,app_key,type,external_id,union_id,language,auto_translate_in,create_time,update_time,del_flag FROM ouyunc_im_user WHERE id = :id and del_flag = 0", "查询用户"),
 
         SELECT_BLACKLIST("select id, identity, user_id, identity_type, join_time, create_time from  ouyunc_im_blacklist where identity = :identity and user_id = :user_id and identity_type = :identity_type ", "查询黑名单"),
 
@@ -87,7 +87,7 @@ public class JdbcSqlConstant {
         SELECT_GROUP_USER_BATCH("SELECT id, group_id, group_code, group_nick_name, user_id, user_code, post, user_nick_name, shield, silence, way, channel, create_time, join_time FROM ouyunc_im_group_user WHERE group_id = :group_id AND user_id IN (:userIds)", "批量查询群成员"),
         SELECT_ALL_GROUP_USER("SELECT id, group_id, group_code, group_nick_name, user_id, user_code, post, user_nick_name, shield, silence, way, channel, create_time, join_time  FROM ouyunc_im_group_user where group_id = :group_id ", "查询所有群成员"),
 
-        SELECT_USER("SELECT id,open_id, code, username,\"password\",nick_name,avatar,motto,age,sex,email,phone_num,id_card_no,group_invite_policy,friend_join_policy,\"status\",app_key,type,external_id,union_id,create_time,update_time,del_flag FROM ouyunc_im_user WHERE id = :id and del_flag = 0", "查询用户"),
+        SELECT_USER("SELECT id,open_id, code, username,\"password\",nick_name,avatar,motto,age,sex,email,phone_num,id_card_no,group_invite_policy,friend_join_policy,\"status\",app_key,type,external_id,union_id,language,auto_translate_in,create_time,update_time,del_flag FROM ouyunc_im_user WHERE id = :id and del_flag = 0", "查询用户"),
 
         SELECT_BLACKLIST("select id, \"identity\", user_id, identity_type, join_time, create_time from  ouyunc_im_blacklist where \"identity\" = :identity and user_id = :user_id and identity_type = :identity_type ", "查询黑名单"),
 
@@ -143,7 +143,7 @@ public class JdbcSqlConstant {
         SELECT_GROUP_USER_BATCH("SELECT ID, GROUP_ID, GROUP_CODE, GROUP_NICK_NAME, USER_ID, USER_CODE, POST, USER_NICK_NAME, SHIELD, SILENCE, WAY, CHANNEL, CREATE_TIME, JOIN_TIME FROM OUYUNC_IM_GROUP_USER WHERE GROUP_ID = :group_id AND USER_ID IN (:userIds)", "批量查询群成员"),
         SELECT_ALL_GROUP_USER("SELECT ID, GROUP_ID, GROUP_CODE, GROUP_NICK_NAME, USER_ID, USER_CODE, POST, USER_NICK_NAME, SHIELD, SILENCE, WAY, CHANNEL, CREATE_TIME, JOIN_TIME FROM OUYUNC_IM_GROUP_USER WHERE GROUP_ID = :group_id", "查询所有群成员"),
 
-        SELECT_USER("SELECT ID, OPEN_ID, CODE, USERNAME, \"PASSWORD\", NICK_NAME, AVATAR, MOTTO, AGE, SEX, EMAIL, PHONE_NUM, ID_CARD_NO, GROUP_INVITE_POLICY, FRIEND_JOIN_POLICY, STATUS, APP_KEY, \"TYPE\", CREATE_TIME, UPDATE_TIME, DELETED FROM OUYUNC_IM_USER WHERE ID = :id AND DELETED = 0", "查询用户"),
+        SELECT_USER("SELECT ID, OPEN_ID, CODE, USERNAME, \"PASSWORD\", NICK_NAME, AVATAR, MOTTO, AGE, SEX, EMAIL, PHONE_NUM, ID_CARD_NO, GROUP_INVITE_POLICY, FRIEND_JOIN_POLICY, STATUS, APP_KEY, \"TYPE\", LANGUAGE, AUTO_TRANSLATE_IN, CREATE_TIME, UPDATE_TIME, DELETED FROM OUYUNC_IM_USER WHERE ID = :id AND DELETED = 0", "查询用户"),
 
         SELECT_BLACKLIST("SELECT ID, \"IDENTITY\", USER_ID, IDENTITY_TYPE, JOIN_TIME, CREATE_TIME FROM OUYUNC_IM_BLACKLIST WHERE \"IDENTITY\" = :identity AND USER_ID = :user_id AND IDENTITY_TYPE = :identity_type", "查询黑名单"),
 

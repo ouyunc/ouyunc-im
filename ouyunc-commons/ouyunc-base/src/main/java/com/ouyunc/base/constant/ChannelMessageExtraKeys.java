@@ -10,8 +10,6 @@ public final class ChannelMessageExtraKeys {
     /** 入站来源渠道 key（whatsapp / telegram），HTTP Push 时映射为 metadata.ingressSource */
     public static final String INGRESS_CHANNEL = "ingressChannel";
     public static final String INGRESS_SOURCE = "ingressSource";
-    /** 厂商侧消息 ID，幂等/对账 */
-    public static final String EXTERNAL_MESSAGE_ID = "externalMessageId";
 
     private ChannelMessageExtraKeys() {
     }

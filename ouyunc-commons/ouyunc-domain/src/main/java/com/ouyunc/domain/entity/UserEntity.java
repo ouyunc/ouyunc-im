@@ -155,6 +155,20 @@ public class UserEntity implements Serializable {
     private String unionId;
 
     /**
+     * 用户偏好展示语种（canonical code，清单见配置 ouyunc.translate.languages）。
+     * 客服进线语言走咨询单 preferred_language，不读本字段。
+     */
+    @Field("language")
+    private String language;
+
+    /**
+     * 单聊/群聊入站自动预译：1 开 0 关；空则有 language 视为开。
+     */
+    @Field("auto_translate_in")
+    @TableField("auto_translate_in")
+    private Integer autoTranslateIn;
+
+    /**
      * 创建时间
      */
     @Field("create_time")
@@ -183,6 +197,8 @@ public class UserEntity implements Serializable {
         public static final String type = "type";
         public static final String externalId = "external_id";
         public static final String unionId = "union_id";
+        public static final String language = "language";
+        public static final String autoTranslateIn = "auto_translate_in";
         /** Mongo / 查询字段名，对应文档键 del_flag */
         public static final String delFlag = "del_flag";
     }
@@ -374,6 +390,22 @@ public class UserEntity implements Serializable {
 
     public void setUnionId(String unionId) {
         this.unionId = unionId;
+    }
+
+    public String getLanguage() {
+        return language;
+    }
+
+    public void setLanguage(String language) {
+        this.language = language;
+    }
+
+    public Integer getAutoTranslateIn() {
+        return autoTranslateIn;
+    }
+
+    public void setAutoTranslateIn(Integer autoTranslateIn) {
+        this.autoTranslateIn = autoTranslateIn;
     }
 
     public LocalDateTime getCreateTime() {

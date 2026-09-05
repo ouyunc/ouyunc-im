@@ -7,11 +7,6 @@ public class HttpRequestConstant extends HttpConstant{
     public static final int DEFAULT_MAX_HTTP_CONTENT_LENGTH = 1048576;
 
     /**
-     * HTTP 推送接口路径
-     */
-    public static final String HTTP_PUSH_API_PATH = "/api/im/push";
-
-    /**
      * LB 存活探活（进程在即 200，无需鉴权）
      */
     public static final String HTTP_HEALTH_PATH = "/health";
