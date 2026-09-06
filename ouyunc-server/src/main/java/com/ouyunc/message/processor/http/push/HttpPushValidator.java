@@ -24,15 +24,21 @@ public final class HttpPushValidator {
      */
     public static Packet validateAndPrepare(MessagePushRequest request, HttpContext httpContext)
             throws HttpPipelineException {
-        validateFeatureEnabled();
-        validatePushChannel(request);
-        validateRequest(request, httpContext);
-        HttpPushJwtAuth.authenticate(httpContext, request);
+        validateCommon(request, httpContext);
         Packet packet = MessagePushPacketConverter.convert(request, httpContext);
         HttpPushJwtAuth.validateResolvedPacketScope(httpContext, request, packet);
         HttpPushSupportedTypes.validate(packet);
         verifyIngress(packet, httpContext);
         return packet;
+    }
+
+    /** JWT / 开关 / 渠道 / 基础字段；不含 Packet（toList 扇出时先鉴权一次）。 */
+    public static void validateCommon(MessagePushRequest request, HttpContext httpContext)
+            throws HttpPipelineException {
+        validateFeatureEnabled();
+        validatePushChannel(request);
+        validateRequest(request, httpContext);
+        HttpPushJwtAuth.authenticate(httpContext, request);
     }
 
     private static void validateFeatureEnabled() throws HttpPipelineException {

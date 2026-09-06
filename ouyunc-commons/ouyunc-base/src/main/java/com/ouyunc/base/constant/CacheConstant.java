@@ -64,6 +64,11 @@ public class CacheConstant {
      */
     private static final String LOGIN = "login:";
 
+    /**
+     * 身份级登录存在标记（SET，member=deviceType）。CS 探活用 EXISTS 一个 key，避免扫全部设备类型。
+     */
+    private static final String LOGIN_PRESENCE = "lp:";
+
     /***
      * 用户
      */
@@ -296,6 +301,14 @@ public class CacheConstant {
      */
     public static String buildLoginCacheKey(String appKey, String comboIdentity) {
         return buildBaseCacheKey(appKey) + LOGIN + USER + withHashTag(comboIdentity);
+    }
+
+    /**
+     * 身份级登录存在标记：{@code ...:login:lp:{identity}}，SET member 为设备类型。
+     * 与按端 login key 分离；CS 只 EXISTS 本 key。
+     */
+    public static String buildLoginPresenceCacheKey(String appKey, String identity) {
+        return buildBaseCacheKey(appKey) + LOGIN + LOGIN_PRESENCE + withHashTag(identity);
     }
 
     /**

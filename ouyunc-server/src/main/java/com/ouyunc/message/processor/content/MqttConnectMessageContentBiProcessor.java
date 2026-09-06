@@ -23,6 +23,7 @@ import com.ouyunc.base.utils.MqttCodecUtil;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.MessageEvent;
+import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.base.constant.enums.YesOrNo;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.handler.HeartBeatHandler;
@@ -41,6 +42,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.redis.core.RedisTemplate;
 
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -237,6 +239,12 @@ public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcesso
                                             closingRemoteMqttLoginClientInfo.setOnlineStatus(OnlineEnum.OFFLINE);
                                             MessageServerContext.remoteLoginClientInfoCache.put(loginClientInfoCacheKey, closingRemoteMqttLoginClientInfo, closingRemoteMqttLoginClientInfo.getSessionExpiryInterval(), TimeUnit.SECONDS);
                                         }
+                                        RedisTemplate<String, Object> redisTemplate = CacheFactory.REDIS.instance();
+                                        redisTemplate.opsForSet().remove(
+                                                CacheConstant.buildLoginPresenceCacheKey(
+                                                        closingLocalLoginClientInfo.getAppKey(),
+                                                        closingLocalLoginClientInfo.getIdentity()),
+                                                String.valueOf(closingLocalLoginClientInfo.getDeviceType()));
                                     } else {
                                         log.warn("mqtt客户端: {} 解绑登录信息跳过,原因：登录地址或时间戳不匹配（新连接已覆盖）", closingLocalLoginClientInfo);
                                     }

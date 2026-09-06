@@ -40,6 +40,20 @@ public class TranslationReadyContent implements Serializable {
         this.provider = provider;
     }
 
+    /** HTTP / 协议对外 packetId 已是十进制字符串。 */
+    public static TranslationReadyContent of(
+            String packetId,
+            String targetLanguage,
+            String sourceLanguage,
+            String translateContent,
+            Byte provider) {
+        String id = packetId == null ? null : packetId.trim();
+        if (id != null && id.isEmpty()) {
+            id = null;
+        }
+        return new TranslationReadyContent(id, targetLanguage, sourceLanguage, translateContent, provider);
+    }
+
     /** 热路径 Packet.packetId 为 long，对外协议转十进制字符串。 */
     public static TranslationReadyContent of(
             long packetId,
@@ -47,7 +61,7 @@ public class TranslationReadyContent implements Serializable {
             String sourceLanguage,
             String translateContent,
             Byte provider) {
-        return new TranslationReadyContent(
+        return of(
                 packetId > 0L ? String.valueOf(packetId) : null,
                 targetLanguage,
                 sourceLanguage,

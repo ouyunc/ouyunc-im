@@ -210,6 +210,12 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                                     operations.delete((K) loginClientInfoCacheKey);
                                     // 删除appKey 下的连接统计信息
                                     operations.opsForZSet().remove((K) (CacheConstant.buildConnectionsCacheKey(closingLocalloginClientInfo.getAppKey())), closingComboIdentity);
+                                    String presenceKey = CacheConstant.buildLoginPresenceCacheKey(
+                                            closingLocalloginClientInfo.getAppKey(),
+                                            closingLocalloginClientInfo.getIdentity());
+                                    operations.opsForSet().remove(
+                                            (K) presenceKey,
+                                            (V) String.valueOf(closingLocalloginClientInfo.getDeviceType()));
                                     return null;
                                 }
                             });

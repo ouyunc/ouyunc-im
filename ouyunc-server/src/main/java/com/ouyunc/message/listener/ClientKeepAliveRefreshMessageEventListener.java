@@ -43,9 +43,12 @@ class ClientKeepAliveRefreshMessageEventListener implements MessageEventListener
         String comboIdentity = IdentityUtil.generalComboIdentity(loginClientInfo.getAppKey(), loginClientInfo.getIdentity(), loginClientInfo.getDeviceType());
         String loginCacheKey = CacheConstant.buildLoginCacheKey(loginClientInfo.getAppKey(), comboIdentity);
         String appKeyConnectionsCacheKey = CacheConstant.buildConnectionsCacheKey(loginClientInfo.getAppKey());
+        String presenceKey = CacheConstant.buildLoginPresenceCacheKey(
+                loginClientInfo.getAppKey(), loginClientInfo.getIdentity());
         try {
             redisTemplate.expire(loginCacheKey, Duration.ofSeconds(loginExpireTime));
             redisTemplate.opsForZSet().add(appKeyConnectionsCacheKey, comboIdentity, TimeUtil.currentTimeMillis() + loginExpireTime * MessageConstant.NUMBER_1000);
+            redisTemplate.expire(presenceKey, Duration.ofSeconds(loginExpireTime));
         } catch (Exception e) {
             log.error("客户端登录保活刷新失败, identity={}, appKey={}, reason={}", loginClientInfo.getIdentity(), loginClientInfo.getAppKey(), e.getMessage());
         }

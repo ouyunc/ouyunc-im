@@ -131,12 +131,18 @@ public class ClientHelper {
                             String loginCacheKey = CacheConstant.buildLoginCacheKey(loginClientInfo.getAppKey(), comboIdentity);
                             long loginExpireTime = loginClientInfo.getLoginExpireTime();
                             String appKeyConnectionsCacheKey = CacheConstant.buildConnectionsCacheKey(loginClientInfo.getAppKey());
+                            String presenceKey = CacheConstant.buildLoginPresenceCacheKey(
+                                    loginClientInfo.getAppKey(), loginClientInfo.getIdentity());
+                            String deviceMember = String.valueOf(loginClientInfo.getDeviceType());
                             if (loginExpireTime <= 0) {
                                 operations.opsForValue().set((K) loginCacheKey, (V) loginClientInfo);
                                 operations.opsForZSet().add((K) (appKeyConnectionsCacheKey), (V) comboIdentity, NumberConstant.NUMBER_NEGATIVE_1);
+                                operations.opsForSet().add((K) presenceKey, (V) deviceMember);
                             } else {
                                 operations.opsForValue().set((K) loginCacheKey, (V) loginClientInfo, loginExpireTime, TimeUnit.SECONDS);
                                 operations.opsForZSet().add((K) (appKeyConnectionsCacheKey), (V) comboIdentity, TimeUtil.currentTimeMillis() + loginExpireTime * MessageConstant.NUMBER_1000);
+                                operations.opsForSet().add((K) presenceKey, (V) deviceMember);
+                                operations.expire((K) presenceKey, loginExpireTime, TimeUnit.SECONDS);
                             }
                             return null;
                         }

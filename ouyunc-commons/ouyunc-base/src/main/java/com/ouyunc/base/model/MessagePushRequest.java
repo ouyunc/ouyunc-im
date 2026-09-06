@@ -46,6 +46,12 @@ public class MessagePushRequest implements java.io.Serializable{
      */
     private String to;
 
+    /**
+     * 同内容多接收方（可选）。与 {@link #to} 合并去重后由 IM 内部扇出。
+     * 超过 {@link com.ouyunc.base.constant.MessageConstant#HTTP_PUSH_TO_LIST_MAX} 拒绝。
+     */
+    private java.util.List<String> toList;
+
 
     /**
      * 接收方标识类型，见 { com.ouyunc.base.constant.enums.MessageFromToTypeEnum}
@@ -136,6 +142,14 @@ public class MessagePushRequest implements java.io.Serializable{
 
     public void setTo(String to) {
         this.to = to;
+    }
+
+    public java.util.List<String> getToList() {
+        return toList;
+    }
+
+    public void setToList(java.util.List<String> toList) {
+        this.toList = toList;
     }
 
     public String getContent() {

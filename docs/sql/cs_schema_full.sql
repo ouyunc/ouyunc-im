@@ -98,7 +98,6 @@ CREATE TABLE IF NOT EXISTS `cs_consultation_ticket` (
     `pending_resume` tinyint NOT NULL DEFAULT 0 COMMENT '待恢复标记',
     `assignee_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '当前接待坐席id',
     `assignee_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '当前接待客服昵称/工号',
-    `auth_keys` json NULL COMMENT '参与坐席 agentId 列表 JSON 数组',
     `origin_assignee_id` varchar(64) NULL DEFAULT NULL COMMENT '首次分配坐席ID',
     `transfer_count` tinyint NOT NULL DEFAULT 0 COMMENT '转接次数',
     `is_robot` tinyint NULL DEFAULT 0 COMMENT '0-人工 1-机器人',
@@ -137,8 +136,7 @@ CREATE TABLE IF NOT EXISTS `cs_consultation_ticket` (
     INDEX `idx_app_start_time` (`app_key`, `start_time`) USING BTREE,
     INDEX `idx_app_channel` (`app_key`, `channel`) USING BTREE,
     INDEX `idx_app_biz_order` (`app_key`, `biz_order_no`) USING BTREE,
-    INDEX `idx_app_country` (`app_key`, `country_code`) USING BTREE,
-    INDEX `idx_ticket_auth_keys` ((CAST(`auth_keys` AS CHAR(64) ARRAY)))
+    INDEX `idx_app_country` (`app_key`, `country_code`) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '咨询单表' ROW_FORMAT = Dynamic;
 
 CREATE TABLE IF NOT EXISTS `cs_consultation_ticket_log` (

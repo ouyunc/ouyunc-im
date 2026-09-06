@@ -48,6 +48,11 @@ public class MessageConstant {
     public static final String ONE_STR = "1";
 
     /**
+     * HTTP 推送 toList 上限（排队变更一次扇出坐席）。
+     */
+    public static final int HTTP_PUSH_TO_LIST_MAX = 256;
+
+    /**
      * 数字1000
      */
     public static final int NUMBER_1000 = 1000;
