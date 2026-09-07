@@ -57,8 +57,8 @@ public class LoginKeepAliveHandler extends SimpleChannelInboundHandler<Packet> {
         }
         // 获取消息到达服务器的时间戳
         long currentTimeMillis = packet.getMessage().getMetadata().getServerTime();
-        // 判断当前时间是否大于等于上次心跳时间戳+心跳时间
-        if (currentTimeMillis >= lastHeartbeatTimestamp + heartbeatTimeout) {
+        // 判断当前时间是否大于等于上次心跳时间戳 + 心跳超时（秒转毫秒）
+        if (currentTimeMillis >= lastHeartbeatTimestamp + heartbeatTimeout * MessageConstant.SECOND_TIMESTAMP) {
             // 满足条件重新设置上次心跳
             ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LAST_HEARTBEAT_TIMESTAMP, packet.getMessage().getMetadata().getServerTime());
             // 有业务消息时也做保活刷新（前端有业务消息时可不发心跳）
