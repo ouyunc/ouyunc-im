@@ -12,6 +12,7 @@ import com.ouyunc.repository.DefaultRepository;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.core.publisher.Mono;
 
 /**
  * @Author fzx
@@ -52,6 +53,46 @@ public abstract class AbstractMessageBiProcessor<T extends Number> extends Abstr
             return;
         }
         PacketChannelWriter.fireChannelRead(ctx, packet);
+    }
+
+    /**
+     * 有序队列等待的前置阶段。默认把同步 {@link #preProcess} 包成 Mono；校验走 Redis 的子类应覆盖并等校验完成。
+     */
+    public Mono<Void> preProcessStage(ChannelHandlerContext ctx, Packet packet) {
+        return Mono.fromRunnable(() -> preProcess(ctx, packet));
+    }
+
+    /**
+     * 有序队列等待的业务阶段。默认把同步 {@link #process} 包成 Mono；落库走 subscribe 的子类应覆盖并等 Mono 完成。
+     */
+    public Mono<Void> processStage(ChannelHandlerContext ctx, Packet packet) {
+        return Mono.fromRunnable(() -> process(ctx, packet));
+    }
+
+    /**
+     * 校验通过后 fireChannelRead；拒绝或异常则不往下传。有序队列等该 Mono 完成再处理下一条。
+     *
+     * @param shouldReject true 表示拦截
+     * @param onReject     拦截时回调（如释放 QoS claim），可为 null
+     */
+    protected Mono<Void> fireWhenPassed(ChannelHandlerContext ctx, Packet packet, Mono<Boolean> shouldReject,
+                                        Runnable onReject, String rejectLog) {
+        return shouldReject
+                .onErrorResume(error -> {
+                    log.error("校验过程中出现异常: {}", error.getMessage());
+                    return Mono.just(true);
+                })
+                .flatMap(result -> {
+                    if (Boolean.TRUE.equals(result)) {
+                        log.warn(rejectLog, packet);
+                        if (onReject != null) {
+                            onReject.run();
+                        }
+                        return Mono.empty();
+                    }
+                    PacketChannelWriter.fireChannelRead(ctx, packet);
+                    return Mono.empty();
+                });
     }
 
     /**

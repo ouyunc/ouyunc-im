@@ -8,6 +8,7 @@ import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.core.context.MessageContext;
+import com.ouyunc.core.context.RelationLocalCache;
 import com.ouyunc.base.model.GroupRequestSession;
 import com.ouyunc.base.constant.enums.GroupUserPost;
 import com.ouyunc.domain.entity.GroupEntity;
@@ -193,14 +194,32 @@ public final class GroupMembershipSupport {
 
     @SuppressWarnings("unchecked")
     public boolean inGroup(String appKey, String from, String groupId) {
+        Boolean cached = RelationLocalCache.GROUP_MEMBER.get(RelationLocalCache.groupMemberKey(appKey, groupId, from));
+        if (cached != null) {
+            return cached;
+        }
         String cacheKey = CacheConstant.buildGroupUserConfigCacheKey(appKey, from, groupId);
-        // 1. 本地缓存
         GroupUserEntity groupUserEntity = MessageContext.groupUserEntityCache.get(cacheKey);
         if (groupUserEntity != null) {
+            RelationLocalCache.markGroupMember(appKey, groupId, from, true);
             return true;
         }
-        // 这里是否再去查询数据库？没有太大必要，后续如果需要再加
-        return infra.stringRedisTemplate.opsForZSet().score(CacheConstant.buildGroupUserCacheKey(appKey, groupId), from) != null;
+        Set<String> identities = MessageContext.groupUserIdentityCache.get(
+                CacheConstant.buildGroupUserCacheKey(appKey, groupId));
+        if (identities != null) {
+            boolean member = identities.contains(from);
+            RelationLocalCache.markGroupMember(appKey, groupId, from, member);
+            return member;
+        }
+        boolean member = infra.stringRedisTemplate.opsForZSet().score(
+                CacheConstant.buildGroupUserCacheKey(appKey, groupId), from) != null;
+        RelationLocalCache.markGroupMember(appKey, groupId, from, member);
+        return member;
+    }
+
+    public Mono<Boolean> isGroupMemberReactive(String appKey, String groupId, String memberId) {
+        return Mono.fromCallable(() -> inGroup(appKey, memberId, groupId))
+                .subscribeOn(Schedulers.fromExecutor(infra.dbExecutor()));
     }
 
     public GroupEntity getGroupEntity(String appKey, String groupId) {
@@ -401,6 +420,7 @@ public final class GroupMembershipSupport {
         });
         if (bound) {
             MessageContext.groupUserIdentityCache.delete(CacheConstant.buildGroupUserCacheKey(metadata.getAppKey(), groupId));
+            RelationLocalCache.markGroupMember(metadata.getAppKey(), groupId, joiner, true);
         }
         return bound;
     }

@@ -14,6 +14,8 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.CompletableFuture;
+
 /**
  * packet 业务逻辑处理器。PING 留在 EventLoop；其余按连接串行下沉，避免 groupUsersIdentity 等同步 Redis 堵 IO。
  **/
@@ -36,11 +38,11 @@ public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
             messageProcessor.process(ctx, packet);
             return;
         }
-        ChannelOrderedTasks.execute(ctx.channel(), () -> {
+        ChannelOrderedTasks.executeAsync(ctx.channel(), () -> {
             if (!ctx.channel().isActive()) {
-                return;
+                return CompletableFuture.completedFuture(null);
             }
-            messageProcessor.process(ctx, packet);
+            return ChannelOrderedTasks.toVoidStage(messageProcessor.processStage(ctx, packet));
         });
     }
 }

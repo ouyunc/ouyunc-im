@@ -15,6 +15,8 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.CompletableFuture;
+
 /**
  * 消息前置处理器：设备校验后，PING 留在 EventLoop；其余 preProcess 按连接串行下沉。
  **/
@@ -57,11 +59,11 @@ public class PacketPreHandler extends SimpleChannelInboundHandler<Packet> {
             return;
         }
         // clone 归档、鉴权、响应式校验离开 EventLoop；PING 仍在 IO 线程只做 fire
-        ChannelOrderedTasks.execute(ctx.channel(), () -> {
+        ChannelOrderedTasks.executeAsync(ctx.channel(), () -> {
             if (!ctx.channel().isActive()) {
-                return;
+                return CompletableFuture.completedFuture(null);
             }
-            messageProcessor.preProcess(ctx, packet);
+            return ChannelOrderedTasks.toVoidStage(messageProcessor.preProcessStage(ctx, packet));
         });
     }
 }

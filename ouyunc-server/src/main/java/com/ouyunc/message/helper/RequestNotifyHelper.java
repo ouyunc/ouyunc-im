@@ -1,12 +1,14 @@
 package com.ouyunc.message.helper;
 
 import com.google.common.collect.Sets;
+import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -51,24 +53,43 @@ public final class RequestNotifyHelper {
         return identities;
     }
 
+    /**
+     * 查在线离开 EventLoop；ACK / fireChannelRead 回到该连接 EventLoop，与聊天投递路径对齐。
+     */
     public static void dispatch(ChannelHandlerContext ctx, Packet packet, String appKey, Collection<String> identities) {
         if (CollectionUtils.isEmpty(identities)) {
             QosAckHelper.sendS2cAck(ctx, packet);
-            ctx.fireChannelRead(packet);
+            PacketChannelWriter.fireChannelRead(ctx, packet);
             return;
         }
-        ctx.channel().eventLoop().execute(() -> {
-            QosAckHelper.sendS2cAck(ctx, packet);
+        Runnable lookupAndDispatch = () -> {
+            List<LoginClientInfo> clients = new ArrayList<>();
             for (String identity : identities) {
                 if (StringUtils.isBlank(identity)) {
                     continue;
                 }
-                List<LoginClientInfo> clients = ClientHelper.onlineAll(appKey, identity);
+                List<LoginClientInfo> online = ClientHelper.onlineAll(appKey, identity);
+                if (CollectionUtils.isNotEmpty(online)) {
+                    clients.addAll(online);
+                }
+            }
+            Runnable onLoop = () -> {
+                QosAckHelper.sendS2cAck(ctx, packet);
                 if (CollectionUtils.isNotEmpty(clients)) {
                     MessageHelper.asyncSendMessage(packet, clients);
                 }
+                PacketChannelWriter.fireChannelRead(ctx, packet);
+            };
+            if (ctx.channel().eventLoop().inEventLoop()) {
+                onLoop.run();
+            } else {
+                ctx.channel().eventLoop().execute(onLoop);
             }
-            ctx.fireChannelRead(packet);
-        });
+        };
+        if (ctx.channel().eventLoop().inEventLoop()) {
+            ThreadPoolManager.messageProcessorExecutor().execute(lookupAndDispatch);
+        } else {
+            lookupAndDispatch.run();
+        }
     }
 }

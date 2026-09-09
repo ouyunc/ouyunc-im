@@ -3,7 +3,6 @@ package com.ouyunc.message.processor;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.constant.enums.*;
-import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.core.context.MessageContext;
@@ -54,79 +53,83 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
 
     @Override
     public void process(ChannelHandlerContext ctx, Packet packet) {
-        if (ctx.channel().eventLoop().inEventLoop()) {
-            ThreadPoolManager.messageProcessorExecutor().execute(() -> processSafely(ctx, packet));
-            return;
-        }
-        processSafely(ctx, packet);
+        processStage(ctx, packet).subscribe();
     }
 
-    private void processSafely(ChannelHandlerContext ctx, Packet packet) {
+    @Override
+    public Mono<Void> processStage(ChannelHandlerContext ctx, Packet packet) {
+        return processOffloadedStage(ctx, packet);
+    }
+
+    private Mono<Void> processOffloadedStage(ChannelHandlerContext ctx, Packet packet) {
         try {
-            processOffloaded(ctx, packet);
+            return processOffloaded(ctx, packet);
         } catch (Exception e) {
             log.error("客服消息处理异常, packetId={}", packet.getPacketId(), e);
             releaseQosOnFailure(packet);
+            return Mono.empty();
         }
     }
 
-    private void processOffloaded(ChannelHandlerContext ctx, Packet packet) {
+    private Mono<Void> processOffloaded(ChannelHandlerContext ctx, Packet packet) {
         log.debug("Processing customer service message...");
         if (processWithContentProcessor(ctx, packet)) {
-            return;
+            return Mono.empty();
         }
         PrepareOutcome prepared = validateAndPrepare(packet);
         if (!prepared.accepted()) {
-            return;
+            return Mono.empty();
         }
         PrepareOutcome live = CsHelper.refreshDelivery(packet, prepared.route());
         if (!live.accepted()) {
             log.warn("客服投递前路由刷新失败: {} | packetId={}", live.rejectReason(), packet.getPacketId());
             CsHelper.publishReject(packet, live.rejectReason());
             releaseQosOnFailure(packet);
-            return;
+            return Mono.empty();
         }
         CsImSessionRoute route = live.route();
         CsHelper.rewriteAgentFrom(packet, route);
         Message message = packet.getMessage();
         int contentType = message.getContentType();
         if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {
-            handleReadReceipt(ctx, packet, route);
-            return;
+            return handleReadReceipt(ctx, packet, route);
         }
-        saveMessage(packet, route).subscribe(
-                result -> {
-                    if (!result) {
-                        log.error("客服 ticket 消息索引写入失败: {}", packet);
-                        MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "客服消息写入 ticket 失败", packet), MessageEventTypeEnum.EXCEPTION), true);
-                        releaseQosOnFailure(packet);
-                        return;
-                    }
-                    if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
-                        handleWithdrawMessage(ctx, packet, route);
-                    } else {
-                        if (MessageContext.isQosEnable()) {
-                            qosPostHandle(ctx, packet);
-                        }
-                        CsHelper.saveChatLastMessage(repository(), route, packet);
-                        CsHelper.notifyAfterSave(packet, route);
-                        repository().reactiveAdvanceCsSenderReadOffsetOnSend(
-                                        packet, route, packet.getDeviceType(),
-                                        MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
-                                .subscribe(
-                                        ignored -> {
-                                        },
-                                        e -> log.warn("客服发消息静默更新 ticket 已读 offset 失败, packetId={}", packet.getPacketId(), e));
-                        CsHelper.deliverMessage(packet, route, false);
-                        fireReadOnEventLoop(ctx, packet);
-                    }
-                },
-                error -> {
+        return saveMessage(packet, route)
+                .flatMap(result -> afterCsSaved(ctx, packet, route, contentType, result))
+                .onErrorResume(error -> {
                     log.error("客服消息持久化异常, packetId={}", packet.getPacketId(), error);
                     MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "客服持久化异常: " + error.getMessage(), packet), MessageEventTypeEnum.EXCEPTION), true);
                     releaseQosOnFailure(packet);
+                    return Mono.empty();
                 });
+    }
 
+    private Mono<Void> afterCsSaved(ChannelHandlerContext ctx, Packet packet, CsImSessionRoute route,
+                                    int contentType, Boolean result) {
+        if (!Boolean.TRUE.equals(result)) {
+            log.error("客服 ticket 消息索引写入失败: {}", packet);
+            MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "客服消息写入 ticket 失败", packet), MessageEventTypeEnum.EXCEPTION), true);
+            releaseQosOnFailure(packet);
+            return Mono.empty();
+        }
+        if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
+            return handleWithdrawMessage(ctx, packet, route);
+        }
+        if (MessageContext.isQosEnable()) {
+            qosPostHandle(ctx, packet);
+        }
+        CsHelper.saveChatLastMessage(repository(), route, packet);
+        CsHelper.notifyAfterSave(packet, route);
+        repository().reactiveAdvanceCsSenderReadOffsetOnSend(
+                        packet, route, packet.getDeviceType(),
+                        MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
+                .subscribe(
+                        ignored -> {
+                        },
+                        e -> log.warn("客服发消息静默更新 ticket 已读 offset 失败, packetId={}", packet.getPacketId(), e));
+        CsHelper.deliverMessage(packet, route, false);
+        fireReadOnEventLoop(ctx, packet);
+        return Mono.empty();
     }
 
     /** 后续 pipeline 必须回到该连接的 EventLoop，避免跨线程 fireChannelRead。 */
@@ -161,7 +164,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
         }
     }
 
-    private void handleWithdrawMessage(ChannelHandlerContext ctx, Packet packet, CsImSessionRoute route) {
+    private Mono<Void> handleWithdrawMessage(ChannelHandlerContext ctx, Packet packet, CsImSessionRoute route) {
         String ticketScopeId = CsHelper.ticketMessageScopeId(route);
         String appKey = packet.getMessage().getMetadata().getAppKey();
         repository().reactiveHandleOperation(ctx, packet,
@@ -181,16 +184,17 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
                         },
                         (exceptionEvent) -> MessageServerContext.publishEvent(exceptionEvent, true),
                         ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR)
-                .subscribe(success -> {
+                .doOnNext(success -> {
                     if (!Boolean.TRUE.equals(success)) {
                         releaseQosOnFailure(packet);
                     }
-                });
+                })
+                .then();
 
     }
 
 
-    private void handleReadReceipt(ChannelHandlerContext ctx, Packet packet, CsImSessionRoute route) {
+    private Mono<Void> handleReadReceipt(ChannelHandlerContext ctx, Packet packet, CsImSessionRoute route) {
         String ticketScopeId = CsHelper.ticketMessageScopeId(route);
         repository().reactiveHandleOperation(ctx, packet,
                         repository().reactiveLoadValidatedCsReadReceiptPackets(
@@ -207,11 +211,12 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
                         },
                         (exceptionEvent) -> MessageServerContext.publishEvent(exceptionEvent, true),
                         ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR)
-                .subscribe(success -> {
+                .doOnNext(success -> {
                     if (!Boolean.TRUE.equals(success)) {
                         releaseQosOnFailure(packet);
                     }
-                });
+                })
+                .then();
     }
 
     private Mono<Boolean> saveMessage(Packet packet, CsImSessionRoute route) {

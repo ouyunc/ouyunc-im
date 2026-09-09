@@ -7,6 +7,7 @@ import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.core.publisher.Mono;
 
 import java.util.List;
 
@@ -43,23 +44,43 @@ public final class BiProcessorChainProxy<T extends BiProcessor<ChannelHandlerCon
     @SuppressWarnings("unchecked")
     @Override
     public void preProcess(ChannelHandlerContext ctx, Packet packet) {
-        List<AbstractMessageBiProcessor<Byte>> processors = (List<AbstractMessageBiProcessor<Byte>>) getProcessors(packet);
-        if (CollectionUtils.isNotEmpty(processors)) {
-            processors.forEach(messageProcessor -> {
-                messageProcessor.preProcess(ctx, packet);
-            });
-        }
+        preProcessStage(ctx, packet).subscribe();
     }
 
-    /**
-     * 消息处理器
-     */
+    @SuppressWarnings("unchecked")
+    @Override
+    public Mono<Void> preProcessStage(ChannelHandlerContext ctx, Packet packet) {
+        List<AbstractMessageBiProcessor<Byte>> processors = (List<AbstractMessageBiProcessor<Byte>>) getProcessors(packet);
+        if (CollectionUtils.isEmpty(processors)) {
+            return Mono.empty();
+        }
+        Mono<Void> chain = Mono.empty();
+        for (AbstractMessageBiProcessor<Byte> processor : processors) {
+            chain = chain.then(Mono.defer(() -> processor.preProcessStage(ctx, packet)));
+        }
+        return chain;
+    }
+
     @Override
     public void process(ChannelHandlerContext ctx, Packet packet) {
+        processStage(ctx, packet).subscribe();
+    }
+
+    @Override
+    public Mono<Void> processStage(ChannelHandlerContext ctx, Packet packet) {
         List<T> processors = getProcessors(packet);
-        if (CollectionUtils.isNotEmpty(processors)) {
-            processors.forEach(processor -> processor.process(ctx, packet));
+        if (CollectionUtils.isEmpty(processors)) {
+            return Mono.empty();
         }
+        Mono<Void> chain = Mono.empty();
+        for (T processor : processors) {
+            if (processor instanceof AbstractMessageBiProcessor<?> messageProcessor) {
+                chain = chain.then(Mono.defer(() -> messageProcessor.processStage(ctx, packet)));
+            } else {
+                chain = chain.then(Mono.fromRunnable(() -> processor.process(ctx, packet)));
+            }
+        }
+        return chain;
     }
 
 

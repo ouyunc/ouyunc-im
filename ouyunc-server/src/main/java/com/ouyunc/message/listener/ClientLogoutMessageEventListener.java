@@ -9,6 +9,7 @@ import com.ouyunc.base.model.MqttLoginClientInfo;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.serialize.Serializer;
+import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.MessageEventListener;
@@ -87,7 +88,14 @@ class ClientLogoutMessageEventListener implements MessageEventListener<MessageEv
                 new MqttPublishVariableHeader(mqttLoginClientInfo.getWillTopic(), NumberConstant.NUMBER_0), ByteBufAllocator.DEFAULT.buffer().writeBytes(mqttLoginClientInfo.getWillMessage().getBytes(CharsetUtil.UTF_8)));
         AbstractBaseBiProcessor<? extends Number> baseProcessor = MessageServerContext.messageContentProcessorCache.get(MqttMessageContentTypeEnum.MQTT_PUBLISH.getType());
         if (baseProcessor instanceof MqttPublishMessageContentBiProcessor mqttPublishMessageContentProcessor) {
-            mqttPublishMessageContentProcessor.doPublishMessage(willMqttMessage);
+            mqttPublishMessageContentProcessor.doPublishMessage(
+                    willMqttMessage,
+                    mqttLoginClientInfo.getAppKey(),
+                    IdentityUtil.generalComboIdentity(
+                            mqttLoginClientInfo.getAppKey(),
+                            mqttLoginClientInfo.getIdentity(),
+                            mqttLoginClientInfo.getDeviceType()),
+                    null);
             log.info("[客户端登出] MQTT 遗嘱已发布, eventId={}, appKey={}, identity={}, deviceType={}, willTopic={}, qos={}, loginServer={}, consumeLagMs={}",
                     event.getId(), mqttLoginClientInfo.getAppKey(), mqttLoginClientInfo.getIdentity(),
                     mqttLoginClientInfo.getDeviceType(), mqttLoginClientInfo.getWillTopic(), mqttLoginClientInfo.getQos(),

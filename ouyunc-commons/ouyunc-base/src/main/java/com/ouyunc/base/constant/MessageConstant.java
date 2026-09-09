@@ -78,6 +78,16 @@ public class MessageConstant {
     public static final long LOCAL_CACHE_MAX_SIZE = 1_200_000;
 
     /**
+     * 好友/群成员/拉黑 热路径布尔缓存容量。只存是否存在，短 TTL，靠写入侧标记与过期纠偏。
+     */
+    public static final long RELATION_PRESENCE_CACHE_MAX_SIZE = 500_000L;
+
+    /**
+     * 关系布尔缓存过期秒数。拉黑/删好友后最多延迟这么久才在本节点生效。
+     */
+    public static final int RELATION_PRESENCE_CACHE_EXPIRE_SECONDS = 60;
+
+    /**
      * QoS/调度定时任务本地缓存最大条目数。
      * <p>按 100 万在线、人均 5 条/分钟、QoS SERVER 重试估算：峰值 QoS QPS ≈ 83333/s；
      * 默认重试窗口约 12s（3s 起 + 3 次 × 3s），无 ACK 时并发任务 ≈ 100 万；ACK 约 2s 时 ≈ 17 万。

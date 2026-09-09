@@ -6,12 +6,12 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.http.HttpPipelineException;
 import com.ouyunc.message.validator.BlackListValidator;
-import com.ouyunc.message.validator.FriendShieldValidator;
-import com.ouyunc.message.validator.FriendValidator;
 import com.ouyunc.message.validator.FromToValidator;
 import com.ouyunc.message.validator.GroupSilenceValidator;
 import com.ouyunc.message.validator.PermissionValidator;
 import com.ouyunc.message.validator.ReactiveValidator;
+import com.ouyunc.repository.DefaultRepository;
+import com.ouyunc.repository.support.One2OneChatAccess;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +36,7 @@ public final class HttpPushValidatorChain {
 
     public static void verifyOne2One(Packet packet) throws HttpPipelineException {
         runChecks(buildOne2OneChecks(packet), packet);
+        verifyOne2OneRelation(packet);
     }
 
     public static void verifyGroup(Packet packet) throws HttpPipelineException {
@@ -81,14 +82,33 @@ public final class HttpPushValidatorChain {
         }
     }
 
+    /**
+     * 好友+拉黑+屏蔽一次 Pipeline（或本地缓存），保留各自拒绝文案。
+     */
+    private static void verifyOne2OneRelation(Packet packet) throws HttpPipelineException {
+        if (skipUserRelationForSystem(packet)) {
+            return;
+        }
+        String from = packet.getMessage().getFrom();
+        String to = packet.getMessage().getTo();
+        String appKey = packet.getMessage().getMetadata().getAppKey();
+        One2OneChatAccess access;
+        try {
+            access = DefaultRepository.INSTANCE.loadOne2OneChatAccess(appKey, from, to).block(VERIFY_TIMEOUT);
+        } catch (RuntimeException ex) {
+            Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+            log.error("HTTP 推送关系校验异常: {}", cause.getMessage(), cause);
+            throw HttpPushFailures.serverError(packet, HttpPushFailures.formatError(cause));
+        }
+        if (access == null || access.rejectSend()) {
+            String reason = access == null ? "双方不是好友，无法发送消息" : access.rejectReason();
+            throw HttpPushFailures.forbidden(packet, reason);
+        }
+    }
+
     private static List<RejectCheck> buildOne2OneChecks(Packet packet) {
         List<RejectCheck> checks = new ArrayList<>();
         checks.add(new RejectCheck("权限不足，无法发送该类型消息", PermissionValidator.INSTANCE.negate()));
-        if (!skipUserRelationForSystem(packet)) {
-            checks.add(new RejectCheck("双方不是好友，无法发送消息", FriendValidator.INSTANCE.negate()));
-            checks.add(new RejectCheck("对方已拉黑，无法发送消息", BlackListValidator.INSTANCE));
-            checks.add(new RejectCheck("对方已屏蔽，无法发送消息", FriendShieldValidator.INSTANCE));
-        }
         checks.add(new RejectCheck("发送方与接收方不能相同", FromToValidator.INSTANCE));
         return checks;
     }

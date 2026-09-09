@@ -3,6 +3,7 @@ package com.ouyunc.repository;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.model.MqttTopicSubscriptionOption;
 import com.ouyunc.base.packet.Packet;
+import com.ouyunc.base.utils.MqttTopicFilterUtil;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.repository.support.QosIdempotencyHelper;
 import com.ouyunc.repository.support.RepositorySupports;
@@ -12,7 +13,10 @@ import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.SessionCallback;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -40,6 +44,41 @@ public enum MqttRepository implements Repository{
      */
     public void savePublishMessage(MqttMessage mqttMessage) {
 
+    }
+
+    /**
+     * 按发布 topic 匹配所有订阅 filter，返回 comboIdentity（appKey:identity:deviceType）。
+     */
+    public List<MqttSubscriber> findPublishSubscribers(String appKey, String topicName) {
+        Set<Object> filters = redisTemplate.opsForSet().members(CacheConstant.buildMqttTopicListCacheKey(appKey));
+        if (filters == null || filters.isEmpty()) {
+            return List.of();
+        }
+        List<MqttSubscriber> subscribers = new ArrayList<>();
+        for (Object filterObj : filters) {
+            if (filterObj == null) {
+                continue;
+            }
+            String topicFilter = filterObj.toString();
+            if (!MqttTopicFilterUtil.matches(topicFilter, topicName)) {
+                continue;
+            }
+            Map<Object, Object> entries = redisTemplate.opsForHash().entries(
+                    CacheConstant.buildMqttTopicFilterCacheKey(appKey, topicFilter));
+            if (entries == null || entries.isEmpty()) {
+                continue;
+            }
+            for (Map.Entry<Object, Object> entry : entries.entrySet()) {
+                if (entry.getKey() == null) {
+                    continue;
+                }
+                subscribers.add(new MqttSubscriber(entry.getKey().toString(), entry.getValue()));
+            }
+        }
+        return subscribers;
+    }
+
+    public record MqttSubscriber(String comboIdentity, Object qos) {
     }
 
     public void subscribe(String appKey, String comboIdentity, List<MqttTopicSubscriptionOption> list) {

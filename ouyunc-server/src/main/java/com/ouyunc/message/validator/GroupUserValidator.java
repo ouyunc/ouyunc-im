@@ -1,19 +1,16 @@
 package com.ouyunc.message.validator;
 
-import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
-import com.ouyunc.cache.config.CacheFactory;
+import com.ouyunc.repository.DefaultRepository;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import reactor.core.publisher.Mono;
 
 /**
- * @author fzx
- * @description 群成员校验
+ * 群成员校验：Caffeine / 群成员 identity 缓存 miss 再 Redis ZSCORE。
  */
 public enum GroupUserValidator implements ReactiveValidator<Packet> {
 
@@ -21,12 +18,8 @@ public enum GroupUserValidator implements ReactiveValidator<Packet> {
 
     private static final Logger log = LoggerFactory.getLogger(GroupUserValidator.class);
 
-    private static final ReactiveStringRedisTemplate reactiveStringRedisTemplate = CacheFactory.REACTIVE_STRING_REDIS.instance();
-
-
-    /***
-     * @author fzx
-     * @description 校验是否是在群内，在群中返回true, 否则返回false
+    /**
+     * 校验是否在群内，在群中返回 true，否则 false。
      */
     @Override
     public Mono<Boolean> verify(Packet packet, ChannelHandlerContext ctx) {
@@ -35,20 +28,11 @@ public enum GroupUserValidator implements ReactiveValidator<Packet> {
         String to = message.getTo();
         Metadata metadata = message.getMetadata();
         String appKey = metadata.getAppKey();
-        String groupUserKey = CacheConstant.buildGroupUserCacheKey(appKey, to);
-        return reactiveStringRedisTemplate.opsForZSet().score(groupUserKey, from)
-                .flatMap(score -> {
-                    if (score != null) {
-                        return Mono.just(true);
+        return DefaultRepository.INSTANCE.isGroupMemberReactive(appKey, to, from)
+                .doOnNext(member -> {
+                    if (!Boolean.TRUE.equals(member)) {
+                        log.warn("校验群成员失败，{} 不在群 {} 内, appKey={}", from, to, appKey);
                     }
-                    log.warn("校验群成员失败，{} 不在群 {} 内, appKey={}, cacheKey={}, score=null",
-                            from, to, appKey, groupUserKey);
-                    return Mono.just(false);
-                })
-                .switchIfEmpty(Mono.defer(() -> {
-                    log.warn("校验群成员失败，{} 不在群 {} 内, appKey={}, cacheKey={}, redisScore=empty",
-                            from, to, appKey, groupUserKey);
-                    return Mono.just(false);
-                }));
+                });
     }
 }

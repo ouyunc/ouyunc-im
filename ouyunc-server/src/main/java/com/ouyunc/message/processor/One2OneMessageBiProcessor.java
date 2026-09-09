@@ -51,39 +51,28 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
 
     @Override
     public void preProcess(ChannelHandlerContext ctx, Packet packet) {
-        // 异步存储packet（目前只是保存相关信息，不做扩展，以后可以做数据分析使用），这里将该数据存储到时序数据库中
+        preProcessStage(ctx, packet).subscribe();
+    }
+
+    @Override
+    public Mono<Void> preProcessStage(ChannelHandlerContext ctx, Packet packet) {
         repository().save(packet);
-        // 两个都校验通过才放行
         if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
             log.error("校验消息失败: {} 认证未通过,开始关闭channel", packet);
             MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过!", packet), MessageEventTypeEnum.EXCEPTION), true);
             ctx.close();
-            return;
+            return Mono.empty();
         }
         if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
-            return;
+            return Mono.empty();
         }
-        // 校验是否拥有相关权限 permission （是有有单聊，甚至某种内容类型的权限，如不能发语音，视频消息，只能发文本，都可以在这里做校验拦截）
-        // 屏蔽和拉黑的效果目前是一样的功能，都不能将将消息发到对方
-        // 校验是否被拉黑,如果被拉黑 （无论是否是好友，都可以拉黑）
-        // 构建校验逻辑
-        PermissionValidator.INSTANCE.negate()
-                    .or(FriendValidator.INSTANCE.negate())
-                    .or(BlackListValidator.INSTANCE)
-                    .or(FriendShieldValidator.INSTANCE)
-                    .or(FromToValidator.INSTANCE)
-                    .verify(packet, ctx)
-                    .onErrorResume(error -> {
-                        log.error("校验过程中出现异常: {}", error.getMessage());
-                        return Mono.just(true); // 出现异常时默认校验不通过
-                    }).flatMap(result -> {
-                        if (result) {
-                            log.warn("权限不足/不是好友/在黑名单中/被屏蔽/发送方和接收方相同, 请知悉。该消息 {} 被忽略", packet);
-                            releaseQosOnFailure(packet);
-                            return Mono.empty(); // 校验不通过，不传递消息
-                        }
-                        return Mono.just(packet); // 校验通过，继续传递消息
-                    }).subscribe(p -> PacketChannelWriter.fireChannelRead(ctx, p));
+        return fireWhenPassed(ctx, packet,
+                PermissionValidator.INSTANCE.negate()
+                        .or(One2OneChatAccessValidator.INSTANCE)
+                        .or(FromToValidator.INSTANCE)
+                        .verify(packet, ctx),
+                () -> releaseQosOnFailure(packet),
+                "权限不足/不是好友/在黑名单中/被屏蔽/发送方和接收方相同, 请知悉。该消息 {} 被忽略");
     }
 
     /**
@@ -91,54 +80,59 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
      */
     @Override
     public void process(ChannelHandlerContext ctx, Packet packet) {
+        processStage(ctx, packet).subscribe();
+    }
+
+    @Override
+    public Mono<Void> processStage(ChannelHandlerContext ctx, Packet packet) {
         log.debug("Processing one-to-one message...");
-        // 1. 尝试使用内容处理器
         if (processWithContentProcessor(ctx, packet)) {
-            return;
+            return Mono.empty();
         }
         AtMentionHelper.clearAtIfPresent(packet.getMessage());
         if (!MessageRefHelper.normalizeMessageRefOrReject(packet)) {
             releaseQosOnFailure(packet);
-            return;
+            return Mono.empty();
         }
         int contentType = packet.getMessage().getContentType();
         if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {
-            handleReadReceipt(ctx, packet);
-            return;
+            return handleReadReceipt(ctx, packet);
         }
-        saveMessage(packet).subscribe(
-                result -> {
-                    if (!result) {
-                        log.error("单聊会话索引写入失败: {}", packet);
-                        MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "单聊消息写入会话失败", packet), MessageEventTypeEnum.EXCEPTION), true);
-                        releaseQosOnFailure(packet);
-                        return;
-                    }
-                    // 撤回走 handleWithdrawMessage，在撤回成功后再 ACK；普通聊天消息持久化成功即 ACK
-                    if (MessageContext.isQosEnable()
-                            && MessageContentTypeEnum.WITHDRAW_CONTENT.getType() != contentType) {
-                        qosPostHandle(ctx, packet);
-                    }
-                    if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() != contentType
-                            && MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() != contentType) {
-                        repository().saveLastMessageForSession(IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo()), packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
-                    }
-                    repository().reactiveAdvanceSenderReadOffsetOnSend(
-                                    packet, IdentityType.ONE_2_ONE, MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
-                            .subscribe(
-                                    ignored -> { },
-                                    e -> log.warn("发送消息静默更新本端已读 offset 失败, packetId={}", packet.getPacketId(), e));
-                    if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
-                        handleWithdrawMessage(ctx, packet);
-                    } else {
-                        deliverAndFireNext(ctx, packet, false);
-                    }
-                },
-                error -> {
+        return saveMessage(packet)
+                .flatMap(result -> afterOne2OneSaved(ctx, packet, contentType, result))
+                .onErrorResume(error -> {
                     log.error("单聊消息持久化异常, packetId={}", packet.getPacketId(), error);
                     MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "单聊持久化异常: " + error.getMessage(), packet), MessageEventTypeEnum.EXCEPTION), true);
                     releaseQosOnFailure(packet);
+                    return Mono.empty();
                 });
+    }
+
+    private Mono<Void> afterOne2OneSaved(ChannelHandlerContext ctx, Packet packet, int contentType, Boolean result) {
+        if (!Boolean.TRUE.equals(result)) {
+            log.error("单聊会话索引写入失败: {}", packet);
+            MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "单聊消息写入会话失败", packet), MessageEventTypeEnum.EXCEPTION), true);
+            releaseQosOnFailure(packet);
+            return Mono.empty();
+        }
+        if (MessageContext.isQosEnable()
+                && MessageContentTypeEnum.WITHDRAW_CONTENT.getType() != contentType) {
+            qosPostHandle(ctx, packet);
+        }
+        if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() != contentType
+                && MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() != contentType) {
+            repository().saveLastMessageForSession(IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo()), packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+        }
+        repository().reactiveAdvanceSenderReadOffsetOnSend(
+                        packet, IdentityType.ONE_2_ONE, MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
+                .subscribe(
+                        ignored -> { },
+                        e -> log.warn("发送消息静默更新本端已读 offset 失败, packetId={}", packet.getPacketId(), e));
+        if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
+            return handleWithdrawMessage(ctx, packet);
+        }
+        deliverAndFireNext(ctx, packet, false);
+        return Mono.empty();
     }
 
     private void qosAckOnSuccess(ChannelHandlerContext ctx, Packet packet) {
@@ -159,7 +153,7 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
      * @param ctx
      * @param packet
      */
-    private void handleWithdrawMessage(ChannelHandlerContext ctx, Packet packet) {
+    private Mono<Void> handleWithdrawMessage(ChannelHandlerContext ctx, Packet packet) {
         String from = packet.getMessage().getFrom();
         String to = packet.getMessage().getTo();
         String sessionId = IdentityUtil.sessionId(from, to);
@@ -183,11 +177,12 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
                 },
                 (exceptionEvent) -> MessageServerContext.publishEvent(exceptionEvent, true),
                 ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR)
-                .subscribe(success -> {
+                .doOnNext(success -> {
                     if (!Boolean.TRUE.equals(success)) {
                         releaseQosOnFailure(packet);
                     }
-                });
+                })
+                .then();
     }
 
     /**
@@ -195,7 +190,7 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
      * 以便发送方多端将己方气泡更新为「已读」。阅读方 {@link Message#getFrom()} 不再重复投递。
      * <p>对端亦可根据对方聊天消息 packetId 推断已读，见 {@code docs/read-receipt-session-offset.md}。</p>
      */
-    private void handleReadReceipt(ChannelHandlerContext ctx, Packet packet) {
+    private Mono<Void> handleReadReceipt(ChannelHandlerContext ctx, Packet packet) {
         String sessionId = IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo());
         repository().reactiveHandleOperation(ctx, packet,
                 repository().reactiveLoadValidatedReadReceiptPackets(
@@ -212,11 +207,12 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
                 },
                 (exceptionEvent)-> MessageServerContext.publishEvent(exceptionEvent, true),
                 ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR)
-                .subscribe(success -> {
+                .doOnNext(success -> {
                     if (!Boolean.TRUE.equals(success)) {
                         releaseQosOnFailure(packet);
                     }
-                });
+                })
+                .then();
     }
 
     /** 将已读回执推送给会话中的消息发送方（packet.message.to），与私聊普通消息投递 to 一致 */

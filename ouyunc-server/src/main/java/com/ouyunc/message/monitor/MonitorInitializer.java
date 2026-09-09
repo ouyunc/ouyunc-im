@@ -1,6 +1,7 @@
 package com.ouyunc.message.monitor;
 
 import com.ouyunc.core.context.MessageContext;
+import com.ouyunc.core.context.RelationLocalCache;
 import com.ouyunc.core.listener.MessageEventMulticaster;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.schedule.TimerTaskWrapper;
@@ -40,6 +41,10 @@ public class MonitorInitializer {
         registerCache(MessageContext.groupEntityCache);
         registerCache(MessageContext.groupUserEntityCache);
         registerCache(MessageContext.userEntityCache);
+        registerCache(RelationLocalCache.FRIEND);
+        registerCache(RelationLocalCache.GROUP_MEMBER);
+        registerCache(RelationLocalCache.BLACKLIST);
+        registerCache(RelationLocalCache.SHIELD);
 
         // QoS 定时重试任务（详见 ResourceMonitor.logQosRetryTimerMetrics）
         registerCache(TimerTaskWrapper.timerTaskCaffeine);

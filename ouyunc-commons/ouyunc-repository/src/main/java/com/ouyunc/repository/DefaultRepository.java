@@ -8,6 +8,7 @@ import com.ouyunc.base.constant.enums.IdentityType;
 import com.ouyunc.base.constant.enums.MessageDeliveryChannelEnum;
 import com.ouyunc.repository.cs.CsImSessionRoute;
 import com.ouyunc.repository.support.MessageIndexScope;
+import com.ouyunc.repository.support.One2OneChatAccess;
 import com.ouyunc.domain.entity.FriendEntity;
 import com.ouyunc.domain.entity.GroupEntity;
 import com.ouyunc.domain.entity.GroupUserEntity;
@@ -168,8 +169,16 @@ public enum DefaultRepository implements Repository {
         return RepositorySupports.FRIEND.isFriend(appKey, from, to);
     }
 
+    public Mono<One2OneChatAccess> loadOne2OneChatAccess(String appKey, String from, String to) {
+        return RepositorySupports.FRIEND.loadOne2OneChatAccess(appKey, from, to);
+    }
+
     public boolean inGroup(String appKey, String from, String groupId) {
         return RepositorySupports.GROUP.inGroup(appKey, from, groupId);
+    }
+
+    public Mono<Boolean> isGroupMemberReactive(String appKey, String groupId, String memberId) {
+        return RepositorySupports.GROUP.isGroupMemberReactive(appKey, groupId, memberId);
     }
 
     public Collection<String> getFriendIds(String appKey, String from) {

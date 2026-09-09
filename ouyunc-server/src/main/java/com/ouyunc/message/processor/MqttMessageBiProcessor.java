@@ -6,6 +6,7 @@ import com.ouyunc.base.constant.enums.MqttMessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.MqttMessageTypeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.message.helper.PacketChannelWriter;
 import com.ouyunc.message.validator.AuthValidator;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
@@ -37,17 +38,15 @@ public final class MqttMessageBiProcessor extends AbstractMessageBiProcessor<Byt
         repository().save(packet);
         // 只处理鉴权消息，如果是不是连接connect则进行鉴权，鉴权通过往下走，是connect直接往下走
         if (MqttMessageContentTypeEnum.MQTT_CONNECT.getType() == packet.getMessage().getContentType()) {
-            ctx.fireChannelRead(packet);
+            PacketChannelWriter.fireChannelRead(ctx, packet);
             return;
         }
         if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
-            // 关闭当前 channel，这里会触发 DefaultSocketChannelInitializer 中的关闭逻辑
             log.error("校验消息: {} 中的发送方登录认证失败,开始关闭channel", packet);
             ctx.close();
             return;
         }
-        // 交给下个处理
-        ctx.fireChannelRead(packet);
+        PacketChannelWriter.fireChannelRead(ctx, packet);
     }
 
     /***

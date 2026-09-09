@@ -5,6 +5,7 @@ import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.cache.config.CacheFactory;
+import com.ouyunc.core.context.RelationLocalCache;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,37 +13,43 @@ import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import reactor.core.publisher.Mono;
 
 /**
- * @author fzx
- * @description 黑名单校验器
+ * 黑名单校验器：本地布尔缓存 miss 再 Redis HGET。
  */
 public enum BlackListValidator implements ReactiveValidator<Packet> {
 
     INSTANCE;
     private static final Logger log = LoggerFactory.getLogger(BlackListValidator.class);
 
-    /**
-     * redisTemplate
-     */
     private static final ReactiveRedisTemplate<String, ?> reactiveRedisTemplate = CacheFactory.REACTIVE_REDIS.instance();
 
-   /***
-     * @author fzx
-     * @description 校验是否在黑名单, 在黑名单 返回true， 不在黑名单，返回false
+    /**
+     * 校验是否在黑名单：在黑名单返回 true，不在返回 false。
      */
     @Override
     public Mono<Boolean> verify(Packet packet, ChannelHandlerContext ctx) {
         Message message = packet.getMessage();
         String from = message.getFrom();
+        String to = message.getTo();
         Metadata metadata = message.getMetadata();
-        Mono<Long> joinTimestampMono = reactiveRedisTemplate.<String, Long>opsForHash().get(CacheConstant.buildBlacklistCacheKey(metadata.getAppKey(), message.getTo()), message.getFrom());
+        String appKey = metadata.getAppKey();
+        Boolean cached = RelationLocalCache.BLACKLIST.get(RelationLocalCache.blacklistKey(appKey, to, from));
+        if (cached != null) {
+            if (cached) {
+                log.warn("{} 在 {} 的黑名单缓存中", from, to);
+            }
+            return Mono.just(cached);
+        }
+        Mono<Long> joinTimestampMono = reactiveRedisTemplate.<String, Long>opsForHash()
+                .get(CacheConstant.buildBlacklistCacheKey(appKey, to), from);
         return joinTimestampMono
                 .map(joinTimestamp -> {
-                    if (joinTimestamp != null && joinTimestamp > 0) {
+                    boolean listed = joinTimestamp != null && joinTimestamp > 0;
+                    if (listed) {
                         log.warn("{} 在黑名单中，加入时间：{}", from, joinTimestamp);
-                        return true;
                     }
-                    return false;
+                    return listed;
                 })
-                .defaultIfEmpty(false);
+                .defaultIfEmpty(false)
+                .doOnNext(listed -> RelationLocalCache.markBlacklist(appKey, to, from, listed));
     }
 }

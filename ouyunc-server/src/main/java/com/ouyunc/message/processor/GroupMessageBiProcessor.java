@@ -50,111 +50,107 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
 
     @Override
     public void preProcess(ChannelHandlerContext ctx, Packet packet) {
-        // 异步存储packet（目前只是保存相关信息，不做扩展，以后可以做数据分析使用），这里将该数据存储到时序数据库中
+        preProcessStage(ctx, packet).subscribe();
+    }
+
+    @Override
+    public Mono<Void> preProcessStage(ChannelHandlerContext ctx, Packet packet) {
         repository().save(packet);
         if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
             log.error("校验消息: {} 中的发送方登录认证失败,开始关闭channel", packet);
             MessageContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过", packet), MessageEventTypeEnum.EXCEPTION), true);
             ctx.close();
-            return;
+            return Mono.empty();
         }
         if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
-            return;
+            return Mono.empty();
         }
-        // 校验是否拥有相关权限 permission （对方是否被拉黑，禁用等）群是否被封禁，是否全体禁言
-        PermissionValidator.INSTANCE.negate()
-                    .or(FromToValidator.INSTANCE)
-                    .or(BlackListValidator.INSTANCE)
-                    .or(GroupSilenceValidator.INSTANCE)
-                    .or(GroupUserValidator.INSTANCE.negate())
-                    .verify(packet, ctx)
-                    .onErrorResume(error -> {
-                        log.error("校验过程中出现异常: {}", error.getMessage());
-                        return Mono.just(true); // 出现异常时默认校验不通过
-                    }).flatMap(result -> {
-                        if (result) {
-                            log.warn("权限不足/在黑名单中/不是群成员/被禁言/发送方和接收方相同, 请知悉。该消息 {} 被忽略", packet);
-                            releaseQosOnFailure(packet);
-                            return Mono.empty(); // 校验不通过，不传递消息
-                        }
-                        return Mono.just(packet); // 校验通过，继续传递消息
-                    }).subscribe(p -> PacketChannelWriter.fireChannelRead(ctx, p));
-
+        return fireWhenPassed(ctx, packet,
+                PermissionValidator.INSTANCE.negate()
+                        .or(FromToValidator.INSTANCE)
+                        .or(BlackListValidator.INSTANCE)
+                        .or(GroupSilenceValidator.INSTANCE)
+                        .or(GroupUserValidator.INSTANCE.negate())
+                        .verify(packet, ctx),
+                () -> releaseQosOnFailure(packet),
+                "权限不足/在黑名单中/不是群成员/被禁言/发送方和接收方相同, 请知悉。该消息 {} 被忽略");
     }
 
     @Override
     public void process(ChannelHandlerContext ctx, Packet packet) {
+        processStage(ctx, packet).subscribe();
+    }
+
+    @Override
+    public Mono<Void> processStage(ChannelHandlerContext ctx, Packet packet) {
         log.debug("Processing group message...");
-        // 1. 尝试使用内容处理器
         if (processWithContentProcessor(ctx, packet)) {
-            return;
+            return Mono.empty();
         }
-        // 2. 校验群中是否存在群成员
-        // 获取群组成员登录标识id，如果群里面没有人是不允许往里面发消息的
         Set<String> groupUserIdentitySet = repository().groupUsersIdentity(packet);
         if (CollectionUtils.isEmpty(groupUserIdentitySet)) {
             log.error("群组：{}, 不存在群成员！群消息： {}", packet.getMessage().getTo(), packet);
             MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群成员", packet), MessageEventTypeEnum.EXCEPTION), true);
             releaseQosOnFailure(packet);
-            return;
+            return Mono.empty();
         }
-        // 将groupUserIdentitySet排除掉发送方（HTTP 系统代发时发送方可能不在群内）
         boolean skipSenderMembership = IngressPacketHelper.isHttpPush(packet)
                 && IngressPacketHelper.isSystemLikeSender(packet.getMessage());
         if (!skipSenderMembership && !groupUserIdentitySet.remove(packet.getMessage().getFrom())) {
             log.error("发送方：{}, 不在群组：{} 中！群消息： {}", packet.getMessage().getFrom(), packet.getMessage().getTo(), packet);
             MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "发送者不在群组中", packet), MessageEventTypeEnum.EXCEPTION), true);
             releaseQosOnFailure(packet);
-            return;
+            return Mono.empty();
         }
         Set<String> allGroupMembers = new HashSet<>(groupUserIdentitySet);
         allGroupMembers.add(packet.getMessage().getFrom());
         if (!normalizeGroupAtOrReject(packet, allGroupMembers)) {
             releaseQosOnFailure(packet);
-            return;
+            return Mono.empty();
         }
         if (!MessageRefHelper.normalizeMessageRefOrReject(packet)) {
             releaseQosOnFailure(packet);
-            return;
+            return Mono.empty();
         }
         int contentType = packet.getMessage().getContentType();
         if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {
-            handleReadReceipt(ctx, packet, groupUserIdentitySet);
-            return;
+            return handleReadReceipt(ctx, packet, groupUserIdentitySet);
         }
-        reactiveSaveGroupMessage(packet).subscribe(
-                result -> {
-                    if (!result) {
-                        log.error("群聊会话索引写入失败: {}", packet);
-                        MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "群聊消息写入会话失败", packet), MessageEventTypeEnum.EXCEPTION), true);
-                        releaseQosOnFailure(packet);
-                        return;
-                    }
-                    // 撤回走 handleWithdrawMessage，在撤回成功后再 ACK；普通群消息持久化成功即 ACK
-                    if (MessageContext.isQosEnable()
-                            && MessageContentTypeEnum.WITHDRAW_CONTENT.getType() != contentType) {
-                        qosPostHandle(ctx, packet);
-                    }
-                    if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() != contentType) {
-                        repository().saveLastMessageForSession(packet.getMessage().getTo(), packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
-                    }
-                    repository().reactiveAdvanceSenderReadOffsetOnSend(
-                                    packet, IdentityType.GROUP, MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
-                            .subscribe(
-                                    ignored -> { },
-                                    e -> log.warn("发送消息静默更新本端已读 offset 失败, packetId={}", packet.getPacketId(), e));
-                    if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
-                        handleWithdrawMessage(ctx, packet, groupUserIdentitySet);
-                    } else {
-                        deliverAndFireNext(ctx, packet, groupUserIdentitySet);
-                    }
-                },
-                error -> {
+        return reactiveSaveGroupMessage(packet)
+                .flatMap(result -> afterGroupSaved(ctx, packet, groupUserIdentitySet, contentType, result))
+                .onErrorResume(error -> {
                     log.error("群聊消息持久化异常, packetId={}", packet.getPacketId(), error);
                     MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "群聊持久化异常: " + error.getMessage(), packet), MessageEventTypeEnum.EXCEPTION), true);
                     releaseQosOnFailure(packet);
+                    return Mono.empty();
                 });
+    }
 
+    private Mono<Void> afterGroupSaved(ChannelHandlerContext ctx, Packet packet, Set<String> groupUserIdentitySet,
+                                       int contentType, Boolean result) {
+        if (!Boolean.TRUE.equals(result)) {
+            log.error("群聊会话索引写入失败: {}", packet);
+            MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "群聊消息写入会话失败", packet), MessageEventTypeEnum.EXCEPTION), true);
+            releaseQosOnFailure(packet);
+            return Mono.empty();
+        }
+        if (MessageContext.isQosEnable()
+                && MessageContentTypeEnum.WITHDRAW_CONTENT.getType() != contentType) {
+            qosPostHandle(ctx, packet);
+        }
+        if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() != contentType) {
+            repository().saveLastMessageForSession(packet.getMessage().getTo(), packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+        }
+        repository().reactiveAdvanceSenderReadOffsetOnSend(
+                        packet, IdentityType.GROUP, MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
+                .subscribe(
+                        ignored -> { },
+                        e -> log.warn("发送消息静默更新本端已读 offset 失败, packetId={}", packet.getPacketId(), e));
+        if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
+            return handleWithdrawMessage(ctx, packet, groupUserIdentitySet);
+        }
+        deliverAndFireNext(ctx, packet, groupUserIdentitySet);
+        return Mono.empty();
     }
 
     private void qosAckOnSuccess(ChannelHandlerContext ctx, Packet packet) {
@@ -181,7 +177,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
      * 发送方「已读」展示应走 HTTP 拉取各成员 offset 或产品层不做群聊逐条已读（见业务文档）。
      * 阅读方多端同步仍可通过 selfSync 投递给自己其它终端。
      */
-    private void handleReadReceipt(ChannelHandlerContext ctx, Packet packet, Set<String> groupUserIdentitySet) {
+    private Mono<Void> handleReadReceipt(ChannelHandlerContext ctx, Packet packet, Set<String> groupUserIdentitySet) {
         String sessionId = packet.getMessage().getTo();
         repository().reactiveHandleOperation(ctx, packet,
                 repository().reactiveLoadValidatedReadReceiptPackets(
@@ -198,11 +194,12 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
                 },
                 (exceptionEvent)-> MessageServerContext.publishEvent(exceptionEvent, true),
                 ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR)
-                .subscribe(success -> {
+                .doOnNext(success -> {
                     if (!Boolean.TRUE.equals(success)) {
                         releaseQosOnFailure(packet);
                     }
-                });
+                })
+                .then();
     }
 
     /** 群已读不回推全员，仅 selfSync 时同步阅读方其它设备 */
@@ -221,7 +218,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
      * @param packet
      */
 
-    private void handleWithdrawMessage(ChannelHandlerContext ctx, Packet packet, Set<String> groupUserIdentitySet) {
+    private Mono<Void> handleWithdrawMessage(ChannelHandlerContext ctx, Packet packet, Set<String> groupUserIdentitySet) {
         String sessionId = packet.getMessage().getTo();
         // 获取当前撤销人员是否是群主或者管理员，他们是最大权限可以撤销所有成员的消息，当然也包括自己
         Set<String> leaderOrManagerIdentitySet = repository().groupManagerAndLeaderUsersIdentity(packet);
@@ -246,11 +243,12 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
                 },
                 (exceptionEvent) -> MessageServerContext.publishEvent(exceptionEvent, true),
                 ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR)
-                .subscribe(success -> {
+                .doOnNext(success -> {
                     if (!Boolean.TRUE.equals(success)) {
                         releaseQosOnFailure(packet);
                     }
-                });
+                })
+                .then();
     }
 
 

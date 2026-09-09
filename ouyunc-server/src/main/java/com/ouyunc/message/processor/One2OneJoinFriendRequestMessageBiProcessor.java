@@ -50,36 +50,28 @@ public final class One2OneJoinFriendRequestMessageBiProcessor extends AbstractMe
 
     @Override
     public void preProcess(ChannelHandlerContext ctx, Packet packet) {
-        // 异步存储packet（目前只是保存相关信息，不做扩展，以后可以做数据分析使用），这里将该数据存储到时序数据库中
+        preProcessStage(ctx, packet).subscribe();
+    }
+
+    @Override
+    public Mono<Void> preProcessStage(ChannelHandlerContext ctx, Packet packet) {
         repository().save(packet);
-        // 两个都校验通过才放行
         if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
-            // 关闭当前 channel，这里会触发 DefaultSocketChannelInitializer 中的关闭逻辑
             log.error("校验消息失败: {} 认证未通过,开始关闭channel", packet);
             MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过!", packet), MessageEventTypeEnum.EXCEPTION), true);
             ctx.close();
-            return;
+            return Mono.empty();
         }
         if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
-            return;
+            return Mono.empty();
         }
-        // 校验是否拥有相关权限 permission （是有有单聊，甚至某种内容类型的权限，如不能发语音，视频消息，只能发文本，都可以在这里做校验拦截）
-        // 屏蔽和拉黑的效果目前是一样的功能，都不能将将消息发到对方
-        // 校验是否被拉黑,如果被拉黑 （无论是否是好友，都可以拉黑）判断当前会话是否被拒绝和同意中，防止mq 延迟消费
-        PermissionValidator.INSTANCE.negate()
-                    .or(FromToValidator.INSTANCE)
-                    .or(BlackListValidator.INSTANCE)
-                    .verify(packet, ctx)
-                    .onErrorResume(error -> {
-                        log.error("校验过程中出现异常: {}", error.getMessage());
-                        return Mono.just(true); // 出现异常时默认校验不通过
-                    }).flatMap(result -> {
-                        if (result) {
-                            log.warn("权限不足/在黑名单中/被屏蔽/发送方和接收方相等, 请知悉。该消息 {} 被忽略", packet);
-                            return Mono.empty(); // 校验不通过，不传递消息
-                        }
-                        return Mono.just(packet); // 校验通过，继续传递消息
-                    }).subscribe(p -> PacketChannelWriter.fireChannelRead(ctx, p));
+        return fireWhenPassed(ctx, packet,
+                PermissionValidator.INSTANCE.negate()
+                        .or(FromToValidator.INSTANCE)
+                        .or(BlackListValidator.INSTANCE)
+                        .verify(packet, ctx),
+                null,
+                "权限不足/在黑名单中/被屏蔽/发送方和接收方相等, 请知悉。该消息 {} 被忽略");
     }
 
     /**
