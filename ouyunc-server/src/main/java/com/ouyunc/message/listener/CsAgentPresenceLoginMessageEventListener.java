@@ -9,6 +9,7 @@ import com.ouyunc.core.listener.EventListener;
 import com.ouyunc.core.listener.MessageEventListener;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.event.payload.ClientLoginEventPayload;
+import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.message.helper.CsHelper;
 
 /**
@@ -25,6 +26,10 @@ class CsAgentPresenceLoginMessageEventListener implements MessageEventListener<M
 
     @Override
     public void onEvent(MessageEvent event) {
+        ThreadPoolManager.eventListenerExecutor().execute(() -> handleLogin(event));
+    }
+
+    private void handleLogin(MessageEvent event) {
         Object source = event.getSource();
         if (!(source instanceof ClientLoginEventPayload payload)) {
             return;

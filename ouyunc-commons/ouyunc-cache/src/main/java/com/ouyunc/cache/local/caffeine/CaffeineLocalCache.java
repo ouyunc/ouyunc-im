@@ -1,151 +1,165 @@
 package com.ouyunc.cache.local.caffeine;
 
+import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.ouyunc.cache.local.AbstractLocalCache;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * @Author fzx
- * @Description: 线程安全
- **/
-public class CaffeineLocalCache<K , V > extends AbstractLocalCache<K, V> {
-    private static final Logger log = LoggerFactory.getLogger(CaffeineLocalCache.class);
+ * 本地 Caffeine 封装。{@link #get} 未命中返回 null，与接口约定一致；
+ * Caffeine 3.1 CacheLoader 禁止返回 null 时捕获后按 miss 处理；3.2+ 允许 null 则直接返回。
+ */
+public class CaffeineLocalCache<K, V> extends AbstractLocalCache<K, V> {
 
-    /**
-     * 缓存名称
-     */
+    private static final String INVALID_CACHE_LOAD = "InvalidCacheLoadException";
+
     private final String cacheName;
 
-    /**
-     * 自动缓存
-     */
-    private final LoadingCache<K, V> loadingCache;
+    private final Cache<K, V> cache;
 
     public String getCacheName() {
         return cacheName;
     }
 
-    public CaffeineLocalCache(String cacheName, LoadingCache<K, V> loadingCache) {
+    public CaffeineLocalCache(String cacheName, Cache<K, V> cache) {
         this.cacheName = cacheName;
-        this.loadingCache = loadingCache;
+        this.cache = cache;
+    }
+
+    /**
+     * 非 LoadingCache 的手动表（如本地连接注册表）用这个，避免与 {@code build(CacheLoader)} 重载纠缠。
+     */
+    public static <K, V> CaffeineLocalCache<K, V> wrap(String cacheName, Cache<K, V> nativeCache) {
+        return new CaffeineLocalCache<>(cacheName, nativeCache);
     }
 
     @SuppressWarnings("unchecked")
     @Override
-    public LoadingCache<K, V> instance() {
-        return loadingCache;
+    public <T> T instance() {
+        return (T) cache;
     }
 
-    /**
-     * @Author fzx
-     * @Description 如果有值就覆盖
-     */
     @Override
     public void put(K key, V value) {
-        loadingCache.put(key, value);
+        cache.put(key, value);
     }
 
-
-    /**
-     * @Author fzx
-     * @Description 添加全部缓存
-     */
     @Override
     public void putAll(Map<? extends K, ? extends V> keyValueMap) {
-        loadingCache.putAll(keyValueMap);
+        cache.putAll(keyValueMap);
     }
 
-
-    /**
-     * @Author fzx
-     * @Description 如果有key对应的值就返回，不做操作，如果没有就添加
-     */
     @Override
     public V putIfAbsent(K key, V value) {
-        V v = loadingCache.get(key, k -> value);
+        V v = cache.get(key, k -> value);
         if (Objects.equals(value, v)) {
             return null;
         }
         return v;
     }
 
-
-
-
     /**
-     * @Author fzx
-     * @Description 如果key 对应的值，没有返回null
+     * 未命中返回 null。会先 {@code getIfPresent}，再对 LoadingCache 触发 load；load 返回 null 时不抛给调用方。
      */
     @Override
     public V get(K key) {
-        return loadingCache.get(key);
+        V present = cache.getIfPresent(key);
+        if (present != null) {
+            return present;
+        }
+        if (!(cache instanceof LoadingCache<K, V> loadingCache)) {
+            return null;
+        }
+        try {
+            return loadingCache.get(key);
+        } catch (RuntimeException e) {
+            if (isInvalidCacheLoad(e)) {
+                return null;
+            }
+            throw e;
+        }
     }
 
-    /**
-     * @Author fzx
-     * @Description 获取多个key对应的值
-     */
     @Override
     public Collection<V> getAll(Set<K> keys) {
-        Map<K, V> kvMap = loadingCache.getAll(keys);
+        Map<K, V> kvMap = getAllMap(keys);
         if (MapUtils.isEmpty(kvMap)) {
             return CollectionUtils.emptyCollection();
         }
         return kvMap.values();
     }
 
-    /**
-     * @Author fzx
-     * @Description 获取多个key对应的值
-     */
     @Override
     public Map<K, V> getAllMap(Set<K> keys) {
-        Map<K, V> kvMap = loadingCache.getAll(keys);
-        if (MapUtils.isEmpty(kvMap)) {
+        if (keys == null || keys.isEmpty()) {
             return new HashMap<>();
         }
-        return kvMap;
+        Map<K, V> present = new HashMap<>(cache.getAllPresent(keys));
+        if (present.size() == keys.size()) {
+            return present;
+        }
+        if (!(cache instanceof LoadingCache<K, V> loadingCache)) {
+            return present;
+        }
+        try {
+            Map<K, V> loaded = loadingCache.getAll(keys);
+            return MapUtils.isEmpty(loaded) ? present : new HashMap<>(loaded);
+        } catch (RuntimeException e) {
+            if (!isInvalidCacheLoad(e)) {
+                throw e;
+            }
+            for (K key : keys) {
+                if (present.containsKey(key)) {
+                    continue;
+                }
+                V value = get(key);
+                if (value != null) {
+                    present.put(key, value);
+                }
+            }
+            return present;
+        }
     }
 
-    /**
-     * @Author fzx
-     * @Description 删除key 对应的值
-     */
     @Override
     public void delete(K key) {
-        loadingCache.invalidate(key);
+        cache.invalidate(key);
     }
 
-    /**
-     * @Author fzx
-     * @Description 删除多个key对应的值
-     */
     @Override
     public void deleteAll(Set<K> keys) {
-        loadingCache.invalidateAll(keys);
+        cache.invalidateAll(keys);
     }
 
-    /**
-     * @Author fzx
-     * @Description 将内存转成Map
-     */
     @Override
     public ConcurrentMap<K, V> asMap() {
-        return loadingCache.asMap();
+        return cache.asMap();
+    }
+
+    @Override
+    public long sizeMap() {
+        return cache.estimatedSize();
     }
 
     /**
-     * @Author fzx
-     * @Description 获取内存大小
+     * Caffeine 3.1 抛 {@code InvalidCacheLoadException}；3.2 起该类已删除，按类名识别避免编不过。
      */
-    @Override
-    public long sizeMap() {
-        return loadingCache.estimatedSize();
+    private static boolean isInvalidCacheLoad(Throwable throwable) {
+        Throwable cursor = throwable;
+        while (cursor != null) {
+            if (INVALID_CACHE_LOAD.equals(cursor.getClass().getSimpleName())) {
+                return true;
+            }
+            cursor = cursor.getCause();
+        }
+        return false;
     }
 }

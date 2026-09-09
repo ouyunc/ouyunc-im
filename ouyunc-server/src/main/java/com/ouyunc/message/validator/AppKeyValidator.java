@@ -49,9 +49,9 @@ public enum AppKeyValidator implements Validator<String> {
         try {
             currentConnections = ClientHelper.connections(appKey);
         } catch (Exception e) {
-            // Redis 断连时无法读连接数：已确认 app 合法，放行以免登录被 Redis 异常打断
-            log.error("读取 appKey:{} 连接数失败，暂按未达上限处理", appKey, e);
-            return true;
+            // 配额读失败时拒登，避免 Redis 异常导致超限放行
+            log.error("读取 appKey:{} 连接数失败，拒绝登录", appKey, e);
+            return false;
         }
         if (currentConnections < maxConnections) {
             return true;

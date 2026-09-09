@@ -7,6 +7,7 @@ import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.message.validator.AuthValidator;
+import com.ouyunc.message.helper.PacketChannelWriter;
 import com.ouyunc.repository.DefaultRepository;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
@@ -50,7 +51,7 @@ public abstract class AbstractMessageBiProcessor<T extends Number> extends Abstr
         if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
             return;
         }
-        ctx.fireChannelRead(packet);
+        PacketChannelWriter.fireChannelRead(ctx, packet);
     }
 
     /**
@@ -61,6 +62,6 @@ public abstract class AbstractMessageBiProcessor<T extends Number> extends Abstr
      * 以避免「ACK 已回但消息未持久化」导致客户端不重发而消息丢失的问题。</p>
      */
     public void postProcess(ChannelHandlerContext ctx, Packet packet) {
-        ctx.fireChannelRead(packet);
+        PacketChannelWriter.fireChannelRead(ctx, packet);
     }
 }

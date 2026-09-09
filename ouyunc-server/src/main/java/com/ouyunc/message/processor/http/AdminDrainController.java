@@ -15,8 +15,8 @@ import org.slf4j.LoggerFactory;
 /**
  * 运维摘流 / 通知重连接口（需 {@code X-App-Key} 鉴权）。
  * <p>
- * 滚动升级推荐顺序：Nginx 摘 upstream → {@code POST /admin/drain} →
- * {@code POST /admin/kick-clients}（仅通知，由客户端主动断开重连）→ 停进程发版 → 挂回 LB。
+ * 滚动升级推荐顺序：Nginx 摘 upstream → {@code POST /api/im/admin/drain} →
+ * {@code POST /api/im/admin/kick-clients}（仅通知，由客户端主动断开重连）→ 停进程发版 → 挂回 LB。
  */
 @HttpRestController
 @HttpRequestMapping

@@ -48,7 +48,14 @@ public class RedisDistributedCache<K, V> extends AbstractDistributedCache<K,V> {
 
     @Override
     public void putAll(Map<? extends K, ? extends V> keyValueMap) {
-        redisTemplate.opsForValue().multiSet(keyValueMap);
+        if (keyValueMap == null || keyValueMap.isEmpty()) {
+            return;
+        }
+        @SuppressWarnings("unchecked")
+        RedisTemplate<String, V> typedTemplate = (RedisTemplate<String, V>) redisTemplate;
+        @SuppressWarnings("unchecked")
+        Map<String, V> typedMap = (Map<String, V>) keyValueMap;
+        RedisPipelineSupport.setValues(typedTemplate, typedMap);
     }
 
     @Override
@@ -63,7 +70,12 @@ public class RedisDistributedCache<K, V> extends AbstractDistributedCache<K,V> {
 
     @Override
     public List<V> getAll(Set<K> keys) {
-        List<V> vs = redisTemplate.opsForValue().multiGet(keys);
+        if (CollectionUtils.isEmpty(keys)) {
+            return Lists.newArrayList();
+        }
+        @SuppressWarnings("unchecked")
+        List<V> vs = (List<V>) RedisPipelineSupport.getValues(
+                (RedisTemplate<String, V>) redisTemplate, (Collection<String>) (Collection<?>) keys);
         if (CollectionUtils.isEmpty(vs)) {
             return Lists.newArrayList();
         }
@@ -72,23 +84,25 @@ public class RedisDistributedCache<K, V> extends AbstractDistributedCache<K,V> {
 
     /**
      * @Author fzx
-     * @Description 获取多个key对应的值
+     * @Description 获取多个key对应的值。Cluster 下逐 key GET，避免 MGET CROSSSLOT。
      */
     @Override
     public Map<K, V> getAllMap(Set<K> keys) {
-        List<V> values = redisTemplate.opsForValue().multiGet(keys);
-        if (CollectionUtils.isEmpty(values) || keys.isEmpty()) {
+        if (CollectionUtils.isEmpty(keys)) {
+            return new HashMap<>();
+        }
+        List<K> ordered = new ArrayList<>(keys);
+        @SuppressWarnings("unchecked")
+        List<V> values = (List<V>) RedisPipelineSupport.getValues(
+                (RedisTemplate<String, V>) redisTemplate, (Collection<String>) (Collection<?>) ordered);
+        if (CollectionUtils.isEmpty(values)) {
             return new HashMap<>();
         }
         Map<K, V> resultMap = Maps.newHashMap();
-        Iterator<K> keyIterator = keys.iterator();
-        Iterator<V> valueIterator = values.iterator();
-
-        while (keyIterator.hasNext() && valueIterator.hasNext()) {
-            K key = keyIterator.next();
-            V value = valueIterator.next();
+        for (int i = 0; i < ordered.size() && i < values.size(); i++) {
+            V value = values.get(i);
             if (value != null) {
-                resultMap.put(key, value);
+                resultMap.put(ordered.get(i), value);
             }
         }
         return resultMap;
@@ -101,7 +115,14 @@ public class RedisDistributedCache<K, V> extends AbstractDistributedCache<K,V> {
 
     @Override
     public void deleteAll(Set<K> keys) {
-        redisTemplate.delete(keys);
+        if (CollectionUtils.isEmpty(keys)) {
+            return;
+        }
+        @SuppressWarnings("unchecked")
+        RedisTemplate<String, V> typedTemplate = (RedisTemplate<String, V>) redisTemplate;
+        @SuppressWarnings("unchecked")
+        Collection<String> typedKeys = (Collection<String>) (Collection<?>) keys;
+        RedisPipelineSupport.deleteKeys(typedTemplate, typedKeys);
     }
 
     @Override

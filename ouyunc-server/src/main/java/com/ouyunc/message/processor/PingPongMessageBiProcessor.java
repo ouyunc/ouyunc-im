@@ -33,6 +33,12 @@ public final class PingPongMessageBiProcessor extends AbstractMessageBiProcessor
 
 
 
+    @Override
+    public void preProcess(ChannelHandlerContext ctx, Packet packet) {
+        // 心跳不归档、不走 QoS，避免 EventLoop 碰 MQ/Redis
+        ctx.fireChannelRead(packet);
+    }
+
     /***
      * @author fzx
      * @description 核心业务逻辑处理

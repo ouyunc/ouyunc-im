@@ -7,6 +7,7 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.message.helper.ChannelOrderedTasks;
 import com.ouyunc.message.processor.AbstractMessageBiProcessor;
 import com.ouyunc.message.validator.DeviceValidator;
 import io.netty.channel.ChannelHandlerContext;
@@ -15,8 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * @Author fzx
- * @Description: 消息前置处理器, 处理登录相关
+ * 消息前置处理器：设备校验后，PING 留在 EventLoop；其余 preProcess 按连接串行下沉。
  **/
 public class PacketPreHandler extends SimpleChannelInboundHandler<Packet> {
     private static final Logger log = LoggerFactory.getLogger(PacketPreHandler.class);
@@ -52,6 +52,16 @@ public class PacketPreHandler extends SimpleChannelInboundHandler<Packet> {
             ctx.close();
             return;
         }
-        messageProcessor.preProcess(ctx, packet);
+        if (packet.getMessageType() == MessageTypeEnum.PING_PONG.getType()) {
+            messageProcessor.preProcess(ctx, packet);
+            return;
+        }
+        // clone 归档、鉴权、响应式校验离开 EventLoop；PING 仍在 IO 线程只做 fire
+        ChannelOrderedTasks.execute(ctx.channel(), () -> {
+            if (!ctx.channel().isActive()) {
+                return;
+            }
+            messageProcessor.preProcess(ctx, packet);
+        });
     }
 }

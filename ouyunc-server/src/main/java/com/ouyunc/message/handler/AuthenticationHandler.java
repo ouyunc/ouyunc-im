@@ -5,8 +5,7 @@ import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.*;
-import com.ouyunc.base.encrypt.Encrypt;
-import com.ouyunc.base.exception.MessageException;
+import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.model.Protocol;
 import com.ouyunc.base.model.Target;
@@ -17,22 +16,20 @@ import com.ouyunc.base.packet.message.content.ServerNotifyContent;
 import com.ouyunc.base.serialize.Serializer;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.IdentityUtil;
-import com.ouyunc.base.utils.LoginSignatureUtil;
 import com.ouyunc.base.utils.TimeUtil;
-import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.event.payload.ClientLoginEventPayload;
 import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
-import com.ouyunc.domain.entity.AppEntity;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
+import com.ouyunc.message.helper.LoginSessionDirectory;
 import com.ouyunc.message.helper.MessageHelper;
+import com.ouyunc.message.schedule.ScheduleTimer;
 import com.ouyunc.message.protocol.NativePacketProtocol;
 import com.ouyunc.message.validator.AppKeyValidator;
 import com.ouyunc.message.validator.DeviceValidator;
-import com.ouyunc.message.validator.LoginUserValidator;
-import com.ouyunc.repository.DefaultRepository;
+import com.ouyunc.message.validator.LoginAuthValidator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -40,14 +37,8 @@ import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.ScheduledFuture;
 import org.apache.commons.lang3.StringUtils;
-import org.jetbrains.annotations.NotNull;
-import org.redisson.api.RLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.dao.DataAccessException;
-import org.springframework.data.redis.core.RedisOperations;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.SessionCallback;
 
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -156,93 +147,131 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         //将消息内容转成message
         LoginContent loginContent = JSON.parseObject(loginMessage.getContent(), LoginContent.class);
         loginContent.setScope(LoginScopeEnum.normalizeScope(loginContent.getScope()));
-        // 设置设备类型
         byte deviceType = MessageServerContext.deviceType(loginContent.getAppKey(), packet.getDeviceType());
-        // 做登录参数校验
-        //1,进行参数合法校验，校验失败，结束 ；2,进行签名的校验，校验失败，结束，3，进行权限校验，校验失败，结束
-        // 根据appKey 获取appSecret 然后拼接
-        if (AppKeyValidator.INSTANCE.negate().verify(loginContent.getAppKey(), ctx) || DeviceValidator.INSTANCE.negate().verify(packet, ctx) || !validate(loginContent)) {
-            log.warn("客户端id: {} 登录参数: {}，校验未通过！", ctx.channel().id().asShortText(), Serializer.JSON.serializeToString(loginContent));
-            MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_VERIFY_ERROR, "登录校验未通过", packet), MessageEventTypeEnum.EXCEPTION), true);
-            ctx.close();
+        if (Boolean.TRUE.equals(ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT))) {
+            log.warn("客户端id: {} 登录进行中，忽略重复登录包", ctx.channel().id().asShortText());
             return;
         }
-        String comboIdentity = IdentityUtil.generalComboIdentity(loginContent.getAppKey(), loginContent.getIdentity(), deviceType);
-        LoginClientInfo cacheLoginClientInfo = MessageServerContext.remoteLoginClientInfoCache.get(CacheConstant.buildLoginCacheKey(loginContent.getAppKey(), comboIdentity));
-        ChannelHandlerContext bindCtx = MessageServerContext.localLoginClientRegisterTable.get(comboIdentity);
-        kickPreviousSessionIfPresent(ctx, packet, loginContent, loginMessage, loginTimestamp, cacheLoginClientInfo, bindCtx);
-        // 获取使用的协议
-        Protocol protocol = ctx.channel().attr(NativePacketProtocol.protocolAttrKey).get();
-        if (protocol == null) {
-            log.warn("Protocol not set on channel, closing connection: {}", ctx.channel().id().asShortText());
-            ctx.close();
-            return;
-        }
-        byte protocolValue = protocol.getProtocol();
-        byte protocolVersion = protocol.getProtocolVersion();
-        LoginClientInfo newLoginClientInfo = new LoginClientInfo(protocolValue, protocolVersion, MessageContext.messageProperties.getLocalServerAddress(), OnlineEnum.ONLINE, null, ClientHelper.calculateClientLoginExpireTime(loginContent.getHeartBeatExpireTime()), ClientHelper.calculateClientHeartBeatTimeout(loginContent.getHeartBeatExpireTime()), loginTimestamp, loginContent.getAppKey(), loginContent.getIdentity(), deviceType, loginContent.getSupportDeviceTypes(), loginContent.getSn(), loginContent.getSignature(), loginContent.getSignatureAlgorithm(), loginContent.getHeartBeatExpireTime(), loginTimestamp, loginContent.getEnableWill(), loginContent.getWillMessage(), loginContent.getEnableAlive(), loginContent.getAliveMessage(), loginContent.getScope(), loginContent.getBusinessIdleSeconds(), loginContent.getHeartBeatWaitRetry(), loginContent.getBusinessIdleCloseStrike());
-        // 添加channel 关闭后释放资源的钩子, 该逻辑在DefaultSocketChannelInitializer 中进行调用
-        Consumer<Channel> channelCloseHook = channel -> {
-            //1,从channel中的attrMap取出相关属性
-            final LoginClientInfo closingLocalloginClientInfo = ChannelAttrUtil.getChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
-            if (closingLocalloginClientInfo != null) {
-                // 这里不进行判空了，到这里肯定不为空（登录信息里面一定要有登录设备的类型）
-                Byte clientLoginDeviceValue = closingLocalloginClientInfo.getDeviceType();
-                String closingComboIdentity = IdentityUtil.generalComboIdentity(closingLocalloginClientInfo.getAppKey(), closingLocalloginClientInfo.getIdentity(), clientLoginDeviceValue);
-                // 登录信息一致,才进行解绑，删除缓存信息
-                MessageServerContext.localLoginClientRegisterTable.delete(closingComboIdentity);
-                String loginClientInfoCacheKey = CacheConstant.buildLoginCacheKey(closingLocalloginClientInfo.getAppKey(), closingComboIdentity);
-                // 获取分布式锁, 这里使用锁的目的，可以参考登录处理器的分布式锁，防止重复解绑 LoginMessageProcessor
-                RLock lock = MessageServerContext.redissonClient.getLock(CacheConstant.buildIdentityBindOrUnbindLockCacheKey(closingLocalloginClientInfo.getAppKey(), closingComboIdentity));
-                try {
-                    if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
-                        LoginClientInfo closingRemoteLoginClientInfo = MessageServerContext.remoteLoginClientInfoCache.get(loginClientInfoCacheKey);
-                        // 这里比较两个登录服务器地址是否一致的目的是因为，无论集群还是单服务 在ctx异步关闭时,有可能存在关闭的执行顺序比绑定客户端的方法执行的慢，导致缓存被覆盖，结果又给删除了缓存信息，导致数据错乱。
-                        if (closingRemoteLoginClientInfo != null && closingLocalloginClientInfo.getLoginServerAddress().equals(closingRemoteLoginClientInfo.getLoginServerAddress()) && closingRemoteLoginClientInfo.getLastLoginTime() == closingLocalloginClientInfo.getLastLoginTime()) {
-                            // 缓存中有没有登录信息都进行删除下
-                            // 删除appKey 下的连接统计信息
-                            RedisTemplate<String, Object> redisTemplate = CacheFactory.REDIS.instance();
-                            redisTemplate.executePipelined(new SessionCallback<>() {
-                                @SuppressWarnings("unchecked")
-                                @Override
-                                public <K, V> Object execute(@NotNull RedisOperations<K, V> operations) throws DataAccessException {
-                                    // 删除登录信息
-                                    operations.delete((K) loginClientInfoCacheKey);
-                                    // 删除appKey 下的连接统计信息
-                                    operations.opsForZSet().remove((K) (CacheConstant.buildConnectionsCacheKey(closingLocalloginClientInfo.getAppKey())), closingComboIdentity);
-                                    String presenceKey = CacheConstant.buildLoginPresenceCacheKey(
-                                            closingLocalloginClientInfo.getAppKey(),
-                                            closingLocalloginClientInfo.getIdentity());
-                                    operations.opsForSet().remove(
-                                            (K) presenceKey,
-                                            (V) String.valueOf(closingLocalloginClientInfo.getDeviceType()));
-                                    return null;
-                                }
-                            });
-                        } else {
-                            MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.UN_BIND_ERROR, "客户端解绑登录信息失败！缓存中不存在登录信息或登录地址不匹配", packet), MessageEventTypeEnum.EXCEPTION));
-                        }
-                    } else {
-                        MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.UN_BIND_ERROR, "客户端解绑登录信息失败！获取分布式锁失败", packet), MessageEventTypeEnum.EXCEPTION));
-                    }
-                } catch (Exception e) {
-                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.UN_BIND_ERROR, "客户端解绑登录信息失败！" + e.getMessage(), packet), MessageEventTypeEnum.EXCEPTION));
-                    throw new MessageException(e);
-                } finally {
-                    if (lock.isHeldByCurrentThread()) {
-                        lock.unlock();
-                    }
-                }
-                // 发送客户端离线事件， 可以处理发送遗嘱等客户端关闭后的操作逻辑
-                MessageServerContext.publishEvent(new MessageEvent(closingLocalloginClientInfo, MessageEventTypeEnum.CLIENT_LOGOUT), true);
+        ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, Boolean.TRUE);
+        ThreadPoolManager.messageProcessorExecutor().execute(() ->
+                authenticateAndBind(ctx, packet, loginContent, deviceType, loginTimestamp));
+    }
+
+    /**
+     * AppKey 配额、签名、登录 GET、踢人全部离开 EventLoop。
+     */
+    private void authenticateAndBind(ChannelHandlerContext ctx, Packet packet, LoginContent loginContent,
+                                     byte deviceType, long loginTimestamp) {
+        Message loginMessage = packet.getMessage();
+        try {
+            if (!ctx.channel().isActive()) {
+                ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, null);
+                return;
             }
+            if (AppKeyValidator.INSTANCE.negate().verify(loginContent.getAppKey(), ctx)
+                    || DeviceValidator.INSTANCE.negate().verify(packet, ctx)
+                    || !validate(loginContent)) {
+                log.warn("客户端id: {} 登录参数: {}，校验未通过！",
+                        ctx.channel().id().asShortText(), Serializer.JSON.serializeToString(loginContent));
+                MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(
+                        ExceptionCodeEnum.LOGIN_VERIFY_ERROR, "登录校验未通过", packet),
+                        MessageEventTypeEnum.EXCEPTION), true);
+                failLoginOnEventLoop(ctx);
+                return;
+            }
+            String comboIdentity = IdentityUtil.generalComboIdentity(
+                    loginContent.getAppKey(), loginContent.getIdentity(), deviceType);
+            LoginClientInfo cacheLoginClientInfo = MessageServerContext.remoteLoginClientInfoCache.get(
+                    CacheConstant.buildLoginCacheKey(loginContent.getAppKey(), comboIdentity));
+            ChannelHandlerContext bindCtx = MessageServerContext.localLoginClientRegisterTable.get(comboIdentity);
+            kickPreviousSessionIfPresent(ctx, packet, loginContent, loginMessage, loginTimestamp,
+                    cacheLoginClientInfo, bindCtx);
+            Protocol protocol = ctx.channel().attr(NativePacketProtocol.protocolAttrKey).get();
+            if (protocol == null) {
+                log.warn("Protocol not set on channel, closing connection: {}", ctx.channel().id().asShortText());
+                failLoginOnEventLoop(ctx);
+                return;
+            }
+            LoginClientInfo newLoginClientInfo = new LoginClientInfo(
+                    protocol.getProtocol(), protocol.getProtocolVersion(),
+                    MessageContext.messageProperties.getLocalServerAddress(), OnlineEnum.ONLINE, null,
+                    ClientHelper.calculateClientHeartBeatTimeout(loginContent.getHeartBeatExpireTime()),
+                    loginTimestamp, loginContent.getAppKey(), loginContent.getIdentity(), deviceType,
+                    loginContent.getSupportDeviceTypes(), loginContent.getSn(), loginContent.getSignature(),
+                    loginContent.getSignatureAlgorithm(), loginContent.getHeartBeatExpireTime(), loginTimestamp,
+                    loginContent.getEnableWill(), loginContent.getWillMessage(), loginContent.getEnableAlive(),
+                    loginContent.getAliveMessage(), loginContent.getScope(), loginContent.getBusinessIdleSeconds(),
+                    loginContent.getHeartBeatWaitRetry(), loginContent.getBusinessIdleCloseStrike());
+            ctx.executor().execute(() -> startRemoteBind(ctx, packet, loginContent, loginMessage,
+                    deviceType, newLoginClientInfo, loginTimestamp));
+        } catch (Exception e) {
+            log.error("登录校验异常 channelId={}", ctx.channel().id().asShortText(), e);
+            failLoginOnEventLoop(ctx);
+        }
+    }
+
+    private void startRemoteBind(ChannelHandlerContext ctx, Packet packet, LoginContent loginContent,
+                                 Message loginMessage, byte deviceType, LoginClientInfo newLoginClientInfo,
+                                 long loginTimestamp) {
+        if (!ctx.channel().isActive()) {
+            ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, null);
+            return;
+        }
+        Consumer<Channel> channelCloseHook = channel -> {
+            LoginClientInfo attrLogin = ChannelAttrUtil.getChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
+            LoginClientInfo closingLogin = attrLogin != null ? attrLogin : newLoginClientInfo;
+            String closingComboIdentity = IdentityUtil.generalComboIdentity(
+                    closingLogin.getAppKey(), closingLogin.getIdentity(), closingLogin.getDeviceType());
+            ClientHelper.unregisterLocal(closingComboIdentity, ctx, closingLogin.getAppKey());
+            final boolean publishLogout = attrLogin != null;
+            ThreadPoolManager.messageProcessorExecutor().execute(() ->
+                    unbindRemoteOnClose(packet, closingLogin, closingComboIdentity, publishLogout));
         };
-        // 设置channel 关闭后的回调
         ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_CHANNEL_CLOSE_HOOK, channelCloseHook);
         ClientHelper.bindAsync(ctx, newLoginClientInfo).whenComplete((unused, ex) ->
                 ctx.executor().execute(() ->
                         completeLoginAfterRemoteBind(ctx, packet, loginContent, loginMessage,
                                 deviceType, newLoginClientInfo, loginTimestamp, ex)));
+    }
+
+    private void failLoginOnEventLoop(ChannelHandlerContext ctx) {
+        ctx.executor().execute(() -> {
+            ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, null);
+            ctx.close();
+        });
+    }
+
+    /**
+     * closeFuture 在 EventLoop 上触发，Redis 解绑必须离开 IO 线程。
+     */
+    private void unbindRemoteOnClose(Packet packet, LoginClientInfo closingLogin, String comboIdentity, boolean publishLogout) {
+        String loginClientInfoCacheKey = CacheConstant.buildLoginCacheKey(closingLogin.getAppKey(), comboIdentity);
+        boolean locked = tryUnbindMatchingSession(closingLogin, comboIdentity, loginClientInfoCacheKey);
+        if (!locked) {
+            MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(
+                    ExceptionCodeEnum.UN_BIND_ERROR, "客户端解绑登录信息失败！获取分布式锁失败", packet),
+                    MessageEventTypeEnum.EXCEPTION));
+            ScheduleTimer.scheduleOnce(() -> {
+                if (!tryUnbindMatchingSession(closingLogin, comboIdentity, loginClientInfoCacheKey)) {
+                    log.error("解绑补偿仍失败，等待下次登录或节点租约过期 combo={}", comboIdentity);
+                }
+            }, MessageConstant.UNBIND_COMPENSATE_DELAY_MILLIS, TimeUnit.MILLISECONDS);
+        }
+        if (publishLogout) {
+            MessageServerContext.publishEvent(new MessageEvent(closingLogin, MessageEventTypeEnum.CLIENT_LOGOUT), true);
+        }
+    }
+
+    private static boolean tryUnbindMatchingSession(LoginClientInfo closingLogin, String comboIdentity,
+                                                    String loginClientInfoCacheKey) {
+        return ClientHelper.tryRunWithBindLock(closingLogin.getAppKey(), comboIdentity, () -> {
+            LoginClientInfo remote = MessageServerContext.remoteLoginClientInfoCache.get(loginClientInfoCacheKey);
+            if (remote != null
+                    && closingLogin.getLoginServerAddress().equals(remote.getLoginServerAddress())
+                    && remote.getLastLoginTime() == closingLogin.getLastLoginTime()) {
+                LoginSessionDirectory.unbind(closingLogin, comboIdentity);
+            }
+        });
     }
 
     /**
@@ -259,18 +288,17 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
             oldClientInfo = ChannelAttrUtil.getChannelAttribute(bindCtx.channel(), MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
         }
         if (oldClientInfo == null) {
-            if (bindCtx != null && bindCtx.channel().isActive()) {
-                bindCtx.close();
-            }
+            closeOnOwnerLoop(bindCtx);
+            return;
+        }
+        if (!ClientHelper.isDirectoryOnline(oldClientInfo) && bindCtx == null) {
             return;
         }
         boolean sameDevice = StringUtils.isNotBlank(oldClientInfo.getSn())
                 && StringUtils.isNotBlank(loginContent.getSn())
                 && oldClientInfo.getSn().equals(loginContent.getSn());
         if (sameDevice) {
-            if (bindCtx != null && bindCtx.channel().isActive()) {
-                bindCtx.close();
-            }
+            closeOnOwnerLoop(bindCtx);
             return;
         }
         Message kickMessage = new Message(
@@ -301,9 +329,18 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                 .protocolVersion(oldClientInfo.getProtocolVersion())
                 .build();
         MessageHelper.syncSendMessageWithoutInterceptor(kickPacket, kickTarget);
-        if (bindCtx != null && bindCtx.channel().isActive()) {
-            bindCtx.close();
+        closeOnOwnerLoop(bindCtx);
+    }
+
+    private static void closeOnOwnerLoop(ChannelHandlerContext bindCtx) {
+        if (bindCtx == null || !bindCtx.channel().isActive()) {
+            return;
         }
+        if (bindCtx.channel().eventLoop().inEventLoop()) {
+            bindCtx.close();
+            return;
+        }
+        bindCtx.channel().eventLoop().execute(bindCtx::close);
     }
 
     /**
@@ -312,8 +349,9 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
     private void completeLoginAfterRemoteBind(ChannelHandlerContext ctx, Packet packet, LoginContent loginContent,
                                               Message loginMessage, byte deviceType, LoginClientInfo loginClientInfo,
                                               long loginTimestamp, Throwable bindError) {
+        ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, null);
         if (!ctx.channel().isActive()) {
-            ClientHelper.unbindLocalRegisterTable(loginClientInfo);
+            ClientHelper.unbindLocalRegisterTable(loginClientInfo, ctx);
             return;
         }
         if (bindError != null) {
@@ -374,8 +412,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                 ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_HEARTBEAT_WAIT_RETRY, loginContent.getHeartBeatWaitRetry());
             }
             ctx.pipeline()
-                    .addAfter(pipelineAnchor, MessageConstant.CLIENT_LOGIN_KEEP_ALIVE_HANDLER, new LoginKeepAliveHandler())
-                    .addAfter(MessageConstant.CLIENT_LOGIN_KEEP_ALIVE_HANDLER, MessageConstant.HEART_BEAT_IDLE_HANDLER, new IdleStateHandler(heartbeatExpireTime, NumberConstant.NUMBER_0, NumberConstant.NUMBER_0, TimeUnit.SECONDS))
+                    .addAfter(pipelineAnchor, MessageConstant.HEART_BEAT_IDLE_HANDLER, new IdleStateHandler(heartbeatExpireTime, NumberConstant.NUMBER_0, NumberConstant.NUMBER_0, TimeUnit.SECONDS))
                     .addAfter(MessageConstant.HEART_BEAT_IDLE_HANDLER, MessageConstant.HEART_BEAT_HANDLER, new HeartBeatHandler());
             pipelineAnchor = MessageConstant.HEART_BEAT_HANDLER;
         }
@@ -394,35 +431,6 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
      * {@link MessageConstant#LOGIN_SIGNATURE_CREATE_TIME_SKEW_MS} 偏差。
      */
     public boolean validate(LoginContent loginContent) {
-        if (loginContent == null || !LoginScopeEnum.isDefinedType(loginContent.getScope())) {
-            return false;
-        }
-        if (StringUtils.isAnyBlank(loginContent.getAppKey(), loginContent.getIdentity(), loginContent.getSignature())) {
-            return false;
-        }
-        // 客服坐席/访客：identity 必须已是本应用 ouyunc_im_user（签名不能代替建档）
-        if (LoginScopeEnum.isCustomerService(loginContent.getScope())
-                && !LoginUserValidator.userExists(loginContent.getAppKey(), loginContent.getIdentity())) {
-            return false;
-        }
-        AppEntity app = DefaultRepository.INSTANCE.getAppEntity(loginContent.getAppKey());
-        if (app == null || StringUtils.isBlank(app.getAppSecret())) {
-            log.warn("登录签名校验失败：appKey={} 不存在或无 appSecret", loginContent.getAppKey());
-            return false;
-        }
-        String secret = app.getAppSecret();
-        long createTime = loginContent.getCreateTime();
-        if (!LoginSignatureUtil.isCreateTimeValid(createTime, TimeUtil.currentTimeMillis())) {
-            log.warn("登录签名校验失败：createTime 无效或过期 appKey={} identity={}",
-                    loginContent.getAppKey(), loginContent.getIdentity());
-            return false;
-        }
-        String raw = LoginSignatureUtil.buildRaw(
-                loginContent.getAppKey(), loginContent.getIdentity(), createTime, secret);
-        Encrypt.AsymmetricEncrypt algo = Encrypt.AsymmetricEncrypt.prototype(loginContent.getSignatureAlgorithm());
-        if (algo == null) {
-            algo = Encrypt.AsymmetricEncrypt.MD5;
-        }
-        return algo.validate(raw, loginContent.getSignature());
+        return LoginAuthValidator.verify(loginContent);
     }
 }

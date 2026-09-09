@@ -39,14 +39,14 @@ public class LoginClientInfo extends LoginContent implements Protocol{
     private int heartBeatTimeout;
 
     /**
-     * 登录信息过期时间，单位秒
-     */
-    private long loginExpireTime;
-
-    /**
      * 最近一次登录时间戳
      */
     private long lastLoginTime;
+
+    /**
+     * 登录时所在 IM 节点 epoch，与节点租约比对判定该登录是否仍有效
+     */
+    private long nodeEpoch;
 
     /**
      * 协议类型
@@ -116,12 +116,12 @@ public class LoginClientInfo extends LoginContent implements Protocol{
         this.lastLoginTime = lastLoginTime;
     }
 
-    public long getLoginExpireTime() {
-        return loginExpireTime;
+    public long getNodeEpoch() {
+        return nodeEpoch;
     }
 
-    public void setLoginExpireTime(long loginExpireTime) {
-        this.loginExpireTime = loginExpireTime;
+    public void setNodeEpoch(long nodeEpoch) {
+        this.nodeEpoch = nodeEpoch;
     }
 
     public void setProtocol(byte protocol) {
@@ -130,6 +130,32 @@ public class LoginClientInfo extends LoginContent implements Protocol{
 
     public void setProtocolVersion(byte protocolVersion) {
         this.protocolVersion = protocolVersion;
+    }
+
+    /**
+     * 写入 Redis 登录 String 的副本，只带路由、踢人、在线判定字段。
+     * 签名、遗嘱/存活正文、设备列表仍在 Channel 属性上。
+     */
+    public LoginClientInfo copyForRedis() {
+        LoginClientInfo copy = new LoginClientInfo();
+        copyRedisLoginFields(copy);
+        return copy;
+    }
+
+    protected void copyRedisLoginFields(LoginClientInfo copy) {
+        copy.setAppKey(getAppKey());
+        copy.setIdentity(getIdentity());
+        copy.setSelfSync(getSelfSync());
+        copy.setDeviceType(getDeviceType());
+        copy.setSn(getSn());
+        copy.setProtocol(getProtocol());
+        copy.setProtocolVersion(getProtocolVersion());
+        copy.setLoginServerAddress(getLoginServerAddress());
+        copy.setOnlineStatus(getOnlineStatus());
+        copy.setHeartBeatTimeout(getHeartBeatTimeout());
+        copy.setLastLoginTime(getLastLoginTime());
+        copy.setNodeEpoch(getNodeEpoch());
+        copy.setScope(getScope());
     }
 
     @Override
@@ -148,7 +174,7 @@ public class LoginClientInfo extends LoginContent implements Protocol{
     public LoginClientInfo() {
     }
 
-    public LoginClientInfo(byte protocol, byte protocolVersion, String loginServerAddress, OnlineEnum onlineStatus, String authorizationScope, long loginExpireTime, int heartBeatTimeout, long lastLoginTime, String appKey, String identity, byte deviceType, Collection<Byte> supportDeviceTypes, String sn, String signature, byte signatureAlgorithm, int heartBeatExpireTime, long createTime, int enableWill, String willMessage, int enableAlive, String aliveMessage, int scope, int businessIdleSeconds, int heartBeatWaitRetry, int businessIdleCloseStrike) {
+    public LoginClientInfo(byte protocol, byte protocolVersion, String loginServerAddress, OnlineEnum onlineStatus, String authorizationScope, int heartBeatTimeout, long lastLoginTime, String appKey, String identity, byte deviceType, Collection<Byte> supportDeviceTypes, String sn, String signature, byte signatureAlgorithm, int heartBeatExpireTime, long createTime, int enableWill, String willMessage, int enableAlive, String aliveMessage, int scope, int businessIdleSeconds, int heartBeatWaitRetry, int businessIdleCloseStrike) {
         super(appKey, identity, supportDeviceTypes, sn, signature, signatureAlgorithm, heartBeatExpireTime, createTime, enableWill, willMessage, enableAlive, aliveMessage, scope, businessIdleSeconds, heartBeatWaitRetry, businessIdleCloseStrike);
         this.protocol = protocol;
         this.protocolVersion = protocolVersion;
@@ -156,7 +182,6 @@ public class LoginClientInfo extends LoginContent implements Protocol{
         this.loginServerAddress = loginServerAddress;
         this.onlineStatus = onlineStatus;
         this.authorizationScope = authorizationScope;
-        this.loginExpireTime = loginExpireTime;
         this.heartBeatTimeout = heartBeatTimeout;
         this.lastLoginTime = lastLoginTime;
     }

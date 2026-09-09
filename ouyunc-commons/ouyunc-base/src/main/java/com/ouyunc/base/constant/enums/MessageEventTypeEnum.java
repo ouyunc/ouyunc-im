@@ -19,10 +19,6 @@ public enum MessageEventTypeEnum implements EventType {
     PRELOAD_LUA_SCRIPT(6, "预加载Lua脚本事件"),
     /** source: {@code SendResult} */
     SEND_FAIL(7, "消息发送失败事件"),
-    /** source: {@code Packet} */
-    SEND_OFFLINE(9, "发送离线消息事件"),
-    /** source: {@code Packet} */
-    REMOVE_OFFLINE(10, "移除离线消息事件"),
     /** source: {@code Packet | BusinessPayload} */
     WITHDRAW_MESSAGE(11, "撤回消息事件"),
     /** source: {@code ExceptionEventPayload | Throwable} */
@@ -31,8 +27,6 @@ public enum MessageEventTypeEnum implements EventType {
     EXCEPTION_PERSIST(13, "异常持久化事件"),
     /** source: {@code Packet} */
     ON_MESSAGE(14, "客户端收消息事件"),
-    /** source: {@code LoginClientInfo} */
-    CLIENT_KEEP_ALIVE_REFRESH(15, "客户端登录保活刷新事件"),
     /** source: {@code ClientBusinessSessionIdlePayload}（ouyunc-core：loginInfo、连续次数 strike、ChannelHandlerContext） */
     CLIENT_BUSINESS_SESSION_IDLE(16, "客户端业务会话空闲事件"),
     ;

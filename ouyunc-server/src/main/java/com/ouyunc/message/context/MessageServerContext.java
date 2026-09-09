@@ -110,15 +110,8 @@ public class MessageServerContext extends MessageContext {
     /**
      * 外部（本地）用户的通道channel缓存，该缓存中不包含集群中的内置客户端的channel, 这里的key 可以是手机号/身份证/token 等唯一标识用户的字段
      */
-    public static Cache<String, ChannelHandlerContext> localLoginClientRegisterTable = new CaffeineLocalCache<>("clientLocalRegisterTable", Caffeine.newBuilder().build(new CacheLoader<>() {
-        /***
-         * 获取客户端对应的连接通道，先从缓存中取，如果没有则进行加载走load()方法
-         */
-        @Override
-        public @Nullable ChannelHandlerContext load(String messageTypeValue) throws Exception {
-            return null;
-        }
-    }));
+    public static Cache<String, ChannelHandlerContext> localLoginClientRegisterTable = CaffeineLocalCache.wrap(
+            "clientLocalRegisterTable", Caffeine.newBuilder().<String, ChannelHandlerContext>build());
 
 
 

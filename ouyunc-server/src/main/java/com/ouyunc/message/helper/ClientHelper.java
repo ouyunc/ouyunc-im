@@ -7,7 +7,6 @@ import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.constant.enums.NetworkEnum;
 import com.ouyunc.base.constant.enums.OnlineEnum;
-import com.ouyunc.base.constant.enums.SaveModeEnum;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.model.LoginClientInfo;
@@ -18,25 +17,28 @@ import com.ouyunc.base.packet.message.content.ServerNotifyContent;
 import com.ouyunc.base.serialize.Serializer;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.IdentityUtil;
+import com.ouyunc.base.utils.ImSessionPresence;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.cache.config.CacheFactory;
+import com.ouyunc.cache.distributed.redis.RedisPipelineSupport;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.domain.entity.AppEntity;
-import com.ouyunc.message.context.AppKeyConnectionCleanupRegistry;
+import com.ouyunc.message.cluster.lease.LocalNodeConnCounter;
+import com.ouyunc.message.cluster.lease.NodeLeaseKeeper;
 import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.message.protocol.NativePacketProtocol;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.EventLoop;
 import org.apache.commons.collections4.CollectionUtils;
-import org.jetbrains.annotations.NotNull;
+import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.dao.DataAccessException;
-import org.springframework.data.redis.core.RedisOperations;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.SessionCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.serializer.RedisSerializer;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -75,26 +77,81 @@ public class ClientHelper {
         Channel channel = ctx.channel();
         return CompletableFuture.runAsync(() -> {
                     doBindRemote(loginClientInfo, comboIdentity);
-                    MessageServerContext.localLoginClientRegisterTable.put(comboIdentity, ctx);
+                    rollbackRemoteIfChannelClosed(loginClientInfo, comboIdentity, channel);
                 }, ThreadPoolManager.messageProcessorExecutor())
                 .thenCompose(unused -> runOnEventLoop(channel, () -> {
+                    if (!channel.isActive()) {
+                        rollbackRemoteIfChannelClosed(loginClientInfo, comboIdentity, channel);
+                        throw new MessageException("channel 已关闭，放弃完成本地注册");
+                    }
                     ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN, loginClientInfo);
                     ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_HEARTBEAT_TIMEOUT,
                             loginClientInfo.getHeartBeatTimeout());
-                    ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LAST_HEARTBEAT_TIMESTAMP,
-                            loginClientInfo.getLastLoginTime());
+                    registerLocal(comboIdentity, ctx, loginClientInfo.getAppKey());
                 }))
                 .whenComplete((unused, ex) -> {
                     if (ex != null) {
-                        MessageServerContext.localLoginClientRegisterTable.delete(comboIdentity);
+                        unregisterLocal(comboIdentity, ctx, loginClientInfo.getAppKey());
+                        rollbackRemoteIfChannelClosed(loginClientInfo, comboIdentity, channel);
                     }
                 });
     }
 
+    /**
+     * TCP 已断则摘掉刚写入的目录，避免幽灵在线。lastLoginTime 不匹配说明已被新会话覆盖。
+     */
+    private static void rollbackRemoteIfChannelClosed(LoginClientInfo loginClientInfo, String comboIdentity, Channel channel) {
+        if (channel != null && channel.isActive()) {
+            return;
+        }
+        String loginKey = CacheConstant.buildLoginCacheKey(loginClientInfo.getAppKey(), comboIdentity);
+        if (!tryRunWithBindLock(loginClientInfo.getAppKey(), comboIdentity, () -> {
+            LoginClientInfo remote = MessageServerContext.remoteLoginClientInfoCache.get(loginKey);
+            if (remote != null
+                    && loginClientInfo.getLoginServerAddress().equals(remote.getLoginServerAddress())
+                    && remote.getLastLoginTime() == loginClientInfo.getLastLoginTime()) {
+                LoginSessionDirectory.unbind(loginClientInfo, comboIdentity);
+            }
+        })) {
+            log.error("客户端: {} 关闭回滚获取锁失败", loginClientInfo);
+        }
+    }
+
+    /**
+     * 写入本地注册表；仅首次占用 combo 时加本机连接计数。覆盖旧 ctx 不加，由旧连接 close 按 ctx 摘除。
+     */
+    public static void registerLocal(String comboIdentity, ChannelHandlerContext ctx, String appKey) {
+        ChannelHandlerContext previous = MessageServerContext.localLoginClientRegisterTable.asMap().put(comboIdentity, ctx);
+        if (previous == null) {
+            LocalNodeConnCounter.increment(appKey);
+            NodeLeaseKeeper.scheduleConnPublish();
+        }
+    }
+
+    /**
+     * 按 ctx 摘本地表并减计数，避免踢人/绑定失败把新会话减掉或减两次。
+     */
+    public static void unregisterLocal(String comboIdentity, ChannelHandlerContext ctx, String appKey) {
+        boolean removed;
+        if (ctx != null) {
+            removed = MessageServerContext.localLoginClientRegisterTable.asMap().remove(comboIdentity, ctx);
+        } else {
+            removed = MessageServerContext.localLoginClientRegisterTable.asMap().remove(comboIdentity) != null;
+        }
+        if (removed) {
+            LocalNodeConnCounter.decrement(appKey);
+            NodeLeaseKeeper.scheduleConnPublish();
+        }
+    }
+
     public static void unbindLocalRegisterTable(LoginClientInfo loginClientInfo) {
+        unbindLocalRegisterTable(loginClientInfo, null);
+    }
+
+    public static void unbindLocalRegisterTable(LoginClientInfo loginClientInfo, ChannelHandlerContext ctx) {
         String comboIdentity = IdentityUtil.generalComboIdentity(
                 loginClientInfo.getAppKey(), loginClientInfo.getIdentity(), loginClientInfo.getDeviceType());
-        MessageServerContext.localLoginClientRegisterTable.delete(comboIdentity);
+        unregisterLocal(comboIdentity, ctx, loginClientInfo.getAppKey());
     }
 
     private static CompletableFuture<Void> runOnEventLoop(Channel channel, Runnable action) {
@@ -118,36 +175,16 @@ public class ClientHelper {
         return future;
     }
 
+    /**
+     * 目录写仍加同端锁，避免同 identity+device 并发登录互相覆盖。
+     */
     private static void doBindRemote(LoginClientInfo loginClientInfo, String comboIdentity) {
         RLock lock = MessageServerContext.redissonClient.getLock(
                 CacheConstant.buildIdentityBindOrUnbindLockCacheKey(loginClientInfo.getAppKey(), comboIdentity));
         try {
             if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
                 try {
-                    redisTemplate.executePipelined(new SessionCallback<>() {
-                        @SuppressWarnings("unchecked")
-                        @Override
-                        public <K, V> Object execute(@NotNull RedisOperations<K, V> operations) throws DataAccessException {
-                            String loginCacheKey = CacheConstant.buildLoginCacheKey(loginClientInfo.getAppKey(), comboIdentity);
-                            long loginExpireTime = loginClientInfo.getLoginExpireTime();
-                            String appKeyConnectionsCacheKey = CacheConstant.buildConnectionsCacheKey(loginClientInfo.getAppKey());
-                            String presenceKey = CacheConstant.buildLoginPresenceCacheKey(
-                                    loginClientInfo.getAppKey(), loginClientInfo.getIdentity());
-                            String deviceMember = String.valueOf(loginClientInfo.getDeviceType());
-                            if (loginExpireTime <= 0) {
-                                operations.opsForValue().set((K) loginCacheKey, (V) loginClientInfo);
-                                operations.opsForZSet().add((K) (appKeyConnectionsCacheKey), (V) comboIdentity, NumberConstant.NUMBER_NEGATIVE_1);
-                                operations.opsForSet().add((K) presenceKey, (V) deviceMember);
-                            } else {
-                                operations.opsForValue().set((K) loginCacheKey, (V) loginClientInfo, loginExpireTime, TimeUnit.SECONDS);
-                                operations.opsForZSet().add((K) (appKeyConnectionsCacheKey), (V) comboIdentity, TimeUtil.currentTimeMillis() + loginExpireTime * MessageConstant.NUMBER_1000);
-                                operations.opsForSet().add((K) presenceKey, (V) deviceMember);
-                                operations.expire((K) presenceKey, loginExpireTime, TimeUnit.SECONDS);
-                            }
-                            return null;
-                        }
-                    });
-                    AppKeyConnectionCleanupRegistry.track(loginClientInfo.getAppKey());
+                    LoginSessionDirectory.bind(loginClientInfo, comboIdentity);
                 } finally {
                     if (lock.isHeldByCurrentThread()) {
                         lock.unlock();
@@ -167,6 +204,43 @@ public class ClientHelper {
         }
     }
 
+    /**
+     * 解绑/回滚抢锁失败会重试，避免幽灵 ONLINE。须在业务线程池调用，禁止 EventLoop。
+     */
+    public static boolean tryRunWithBindLock(String appKey, String comboIdentity, BindLockAction action) {
+        RLock lock = MessageServerContext.redissonClient.getLock(
+                CacheConstant.buildIdentityBindOrUnbindLockCacheKey(appKey, comboIdentity));
+        for (int attempt = 1; attempt <= MessageConstant.BIND_LOCK_RETRY_TIMES; attempt++) {
+            try {
+                if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
+                    try {
+                        action.run();
+                        return true;
+                    } finally {
+                        if (lock.isHeldByCurrentThread()) {
+                            lock.unlock();
+                        }
+                    }
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.warn("绑定锁等待被中断 appKey={} combo={}", appKey, comboIdentity);
+                return false;
+            } catch (Exception e) {
+                log.error("绑定锁内业务失败 appKey={} combo={}", appKey, comboIdentity, e);
+                return false;
+            }
+            log.warn("绑定锁超时，重试 {}/{} appKey={} combo={}",
+                    attempt, MessageConstant.BIND_LOCK_RETRY_TIMES, appKey, comboIdentity);
+        }
+        return false;
+    }
+
+    @FunctionalInterface
+    public interface BindLockAction {
+        void run();
+    }
+
     /***
      * @author fzx
      * @description 获取最终客户端心跳时间
@@ -180,31 +254,13 @@ public class ClientHelper {
         return heartBeatTimeSeconds;
     }
 
-
-    /**
-     * 计算客户端登录过期时间
-     * @param heartBeatExpireTime
-     * @return
-     */
-    public static long calculateClientLoginExpireTime(int heartBeatExpireTime) {
-        long expireTime = NumberConstant.NUMBER_NEGATIVE_1;
-        // 计算心跳超时时间
-        int heartBeatTimeout = calculateClientHeartBeatTimeout(heartBeatExpireTime);
-        // 如果客户端的登录信息存储模式是有限/短暂的则 保存时间是，心跳间隔时间*最大重试次数+5，这里加5是为了尽可能给其他程序去处理相关逻辑，如读写空闲事件
-        if (MessageServerContext.serverProperties().isClientHeartBeatEnable() && SaveModeEnum.FINITE.equals(MessageServerContext.serverProperties().getClientLoginInfoSaveMode())) {
-            expireTime = Integer.toUnsignedLong((heartBeatTimeout * MessageServerContext.serverProperties().getClientHeartBeatWaitRetry())) + NumberConstant.NUMBER_5;
-        }
-        return expireTime;
-    }
-
     public static Map<String, List<LoginClientInfo>> onlineAllBatch(String appKey, Set<String> identities) {
         Map<String, List<LoginClientInfo>> result = new HashMap<>(identities.size());
-        Set<String> remoteKeys = new HashSet<>();
-
-        // Phase 1: 本地注册表查询（零网络开销）
+        Map<String, Set<String>> remainingCombos = new LinkedHashMap<>();
         for (String identity : identities) {
             List<LoginClientInfo> localHits = new ArrayList<>();
             Collection<Byte> deviceTypes = MessageServerContext.deviceTypeList(appKey, identity);
+            Set<String> remoteCombos = new HashSet<>();
             for (Byte dt : deviceTypes) {
                 String comboId = IdentityUtil.generalComboIdentity(appKey, identity, dt);
                 ChannelHandlerContext ctx = MessageServerContext.localLoginClientRegisterTable.get(comboId);
@@ -215,26 +271,16 @@ public class ClientHelper {
                         continue;
                     }
                 }
-                remoteKeys.add(CacheConstant.buildLoginCacheKey(appKey, comboId));
+                remoteCombos.add(comboId);
             }
             if (!localHits.isEmpty()) {
                 result.put(identity, localHits);
             }
-        }
-
-        // Phase 2: 未命中本地的 → 一次 MGET 批量查 Redis
-        if (!remoteKeys.isEmpty()) {
-            List<String> keyList = new ArrayList<>(remoteKeys);
-            List<Object> cached = redisTemplate.opsForValue().multiGet(keyList);
-            if (cached != null) {
-                for (int i = 0; i < cached.size(); i++) {
-                    if (cached.get(i) instanceof LoginClientInfo info
-                            && OnlineEnum.ONLINE.equals(info.getOnlineStatus())) {
-                        result.computeIfAbsent(info.getIdentity(), k -> new ArrayList<>()).add(info);
-                    }
-                }
+            if (!remoteCombos.isEmpty()) {
+                remainingCombos.put(identity, remoteCombos);
             }
         }
+        appendRemoteOnlineByRoute(appKey, remainingCombos, result);
         return result;
     }
 
@@ -265,29 +311,80 @@ public class ClientHelper {
 
         // 先从本地注册表获取，如果在同一个服务器上或者不是集群
         Collection<ChannelHandlerContext> allLoginClientChannelHandlerContexts = MessageServerContext.localLoginClientRegisterTable.getAll(comboIdentitySet);
-        // 判断comboIdentitySet的size 与结果集的大小是否相等，如果不相等则在从redis获取，如果相等则返回
-        // 从ctx上下文获取客户端登录信息
         allLoginClientChannelHandlerContexts.forEach(ctx -> {
             LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
             if (loginClientInfo != null && OnlineEnum.ONLINE.equals(loginClientInfo.getOnlineStatus())) {
                 loginClientInfoList.add(loginClientInfo);
-                // 移除掉已经从本地获取的有效客户端登录信息
                 comboIdentitySet.remove(IdentityUtil.generalComboIdentity(appKey, identity, loginClientInfo.getDeviceType()));
             }
         });
-        if (comboIdentitySet.size() == loginClientInfoList.size()) {
+        if (comboIdentitySet.isEmpty()) {
             return loginClientInfoList;
         }
-        // 如果不相等，则将没有查询到的数据通过缓存来获取
-        // comboIdentitySet 中排除已经从本地获取结果的key
-        Set<String> remoteLoginClientIdentitySet = comboIdentitySet.parallelStream().map(comboIdentity -> CacheConstant.buildLoginCacheKey(appKey, comboIdentity)).collect(Collectors.toSet());
-        Collection<LoginClientInfo> remoteCacheLoginClientInfos = MessageServerContext.remoteLoginClientInfoCache.getAll(remoteLoginClientIdentitySet);
-        if (CollectionUtils.isNotEmpty(remoteCacheLoginClientInfos)) {
-             // 筛选合法的数据
-            loginClientInfoList.addAll(remoteCacheLoginClientInfos.stream().filter(loginClientInfo -> loginClientInfo != null && OnlineEnum.ONLINE.equals(loginClientInfo.getOnlineStatus())).toList());
+        Map<String, Long> liveEpochs = NodeLeaseKeeper.snapshot();
+        Map<Object, Object> route = stringRedisTemplate.opsForHash()
+                .entries(CacheConstant.buildLoginRouteCacheKey(appKey, identity));
+        LoginSessionDirectory.evictDeadRoute(appKey, identity, route, liveEpochs);
+        Set<String> liveLoginKeys = new HashSet<>();
+        for (String comboIdentity : comboIdentitySet) {
+            byte deviceType = IdentityUtil.revertDeviceType(comboIdentity);
+            if (ImSessionPresence.isDeviceRouteLive(route, deviceType, liveEpochs)) {
+                liveLoginKeys.add(CacheConstant.buildLoginCacheKey(appKey, comboIdentity));
+            }
         }
-        // 最后返回符合条件的数据
+        if (liveLoginKeys.isEmpty()) {
+            return loginClientInfoList;
+        }
+        Collection<LoginClientInfo> remoteCacheLoginClientInfos =
+                MessageServerContext.remoteLoginClientInfoCache.getAll(liveLoginKeys);
+        if (CollectionUtils.isNotEmpty(remoteCacheLoginClientInfos)) {
+            loginClientInfoList.addAll(remoteCacheLoginClientInfos);
+        }
         return loginClientInfoList;
+    }
+
+    /**
+     * 远程在线以路由 HASH + 租约为准，再管道 GET 登录 String 补发送元数据。
+     */
+    private static void appendRemoteOnlineByRoute(String appKey, Map<String, Set<String>> remainingCombos,
+                                                  Map<String, List<LoginClientInfo>> result) {
+        if (remainingCombos.isEmpty()) {
+            return;
+        }
+        List<String> identities = new ArrayList<>(remainingCombos.keySet());
+        RedisSerializer<String> keySer = stringRedisTemplate.getStringSerializer();
+        List<Object> routeRaw = stringRedisTemplate.executePipelined((RedisCallback<Object>) connection -> {
+            for (String identity : identities) {
+                connection.hashCommands().hGetAll(keySer.serialize(CacheConstant.buildLoginRouteCacheKey(appKey, identity)));
+            }
+            return null;
+        });
+        Map<String, Long> liveEpochs = NodeLeaseKeeper.snapshot();
+        Set<String> liveLoginKeys = new HashSet<>();
+        for (int i = 0; i < identities.size(); i++) {
+            Object row = routeRaw == null || i >= routeRaw.size() ? null : routeRaw.get(i);
+            Map<?, ?> route = row instanceof Map<?, ?> map ? map : Map.of();
+            String identity = identities.get(i);
+            LoginSessionDirectory.evictDeadRoute(appKey, identity, route, liveEpochs);
+            for (String combo : remainingCombos.get(identity)) {
+                byte deviceType = IdentityUtil.revertDeviceType(combo);
+                if (ImSessionPresence.isDeviceRouteLive(route, deviceType, liveEpochs)) {
+                    liveLoginKeys.add(CacheConstant.buildLoginCacheKey(appKey, combo));
+                }
+            }
+        }
+        if (liveLoginKeys.isEmpty()) {
+            return;
+        }
+        List<Object> cached = RedisPipelineSupport.getValues(redisTemplate, liveLoginKeys);
+        if (cached == null) {
+            return;
+        }
+        for (Object item : cached) {
+            if (item instanceof LoginClientInfo info) {
+                result.computeIfAbsent(info.getIdentity(), k -> new ArrayList<>()).add(info);
+            }
+        }
     }
 
 
@@ -309,25 +406,47 @@ public class ClientHelper {
         }
         // 从redis 获取登录信息
         LoginClientInfo loginClientInfo = MessageServerContext.remoteLoginClientInfoCache.get(CacheConstant.buildLoginCacheKey(appKey, comboIdentity));
-        if (loginClientInfo != null && OnlineEnum.ONLINE.equals(loginClientInfo.getOnlineStatus())) {
+        if (isDirectoryOnline(loginClientInfo)) {
             return loginClientInfo;
         }
         return null;
     }
 
+    /**
+     * 登录 String 为 ONLINE 且节点租约 epoch 仍匹配。投递路径请优先走 {@link #onlineAll}（路由 HASH）。
+     */
+    public static boolean isDirectoryOnline(LoginClientInfo loginClientInfo) {
+        if (loginClientInfo == null || !OnlineEnum.ONLINE.equals(loginClientInfo.getOnlineStatus())) {
+            return false;
+        }
+        return NodeLeaseKeeper.isLive(loginClientInfo.getLoginServerAddress(), loginClientInfo.getNodeEpoch());
+    }
+
 
     /**
-     * 获取某个在线appKey 连接数
-     * @param appKey
-     * @return
+     * 某 appKey 连接数：本机用内存计数（即时），其它存活节点用租约心跳写入的 HASH（最多一拍延迟）。
      */
     public static long connections(String appKey) {
-        long now = TimeUtil.currentTimeMillis();
-        Long connections = redisTemplate.opsForZSet().count(CacheConstant.buildConnectionsCacheKey(appKey), now, Double.POSITIVE_INFINITY);
-        if (connections == null) {
-            return NumberConstant.NUMBER_0;
+        String localNodeId = NodeLeaseKeeper.localNodeId();
+        List<String> remotes = remoteLiveNodeIds(localNodeId);
+        long total = LocalNodeConnCounter.get(appKey);
+        if (remotes.isEmpty()) {
+            return total;
         }
-        return connections;
+        RedisSerializer<String> keySer = stringRedisTemplate.getStringSerializer();
+        byte[] field = keySer.serialize(appKey);
+        List<Object> rows = stringRedisTemplate.executePipelined((RedisCallback<Object>) connection -> {
+            for (String nodeId : remotes) {
+                connection.hashCommands().hGet(keySer.serialize(CacheConstant.buildImNodeConnHashCacheKey(nodeId)), field);
+            }
+            return null;
+        });
+        if (rows != null) {
+            for (Object raw : rows) {
+                total += parseConnCount(raw);
+            }
+        }
+        return total;
     }
 
     /**
@@ -343,36 +462,173 @@ public class ClientHelper {
 
 
     /**
-     * 获取所有appKey的连接数总和
-     * @return
+     * 全量连接数：本机内存计数 + 其它存活节点 Redis HASH。
      */
-    @SuppressWarnings("unchecked")
     public static long connections() {
-        Set<String> appKeys = appKeys();
-        if (CollectionUtils.isEmpty(appKeys)) {
-            return NumberConstant.NUMBER_0;
+        String localNodeId = NodeLeaseKeeper.localNodeId();
+        List<String> remotes = remoteLiveNodeIds(localNodeId);
+        long totalConnections = LocalNodeConnCounter.total();
+        if (remotes.isEmpty()) {
+            return totalConnections;
         }
-        // 依次获取每个appKey的数据
-        long totalConnections = NumberConstant.NUMBER_0;
-        long now = TimeUtil.currentTimeMillis();
-        List<Object> executedResultList = redisTemplate.executePipelined(new SessionCallback<>() {
-            @Override
-            public <K, V> Object execute(@NotNull RedisOperations<K, V> operations) throws DataAccessException {
-                for (String appKey : appKeys) {
-                    operations.opsForZSet().count((K) CacheConstant.buildConnectionsCacheKey(appKey), now, Double.POSITIVE_INFINITY);
-                }
-                return null;
+        RedisSerializer<String> keySer = stringRedisTemplate.getStringSerializer();
+        List<Object> rows = stringRedisTemplate.executePipelined((RedisCallback<Object>) connection -> {
+            for (String nodeId : remotes) {
+                connection.hashCommands().hGetAll(keySer.serialize(CacheConstant.buildImNodeConnHashCacheKey(nodeId)));
             }
+            return null;
         });
-        // 统计所有appKey的连接数
-        if (CollectionUtils.isNotEmpty(executedResultList)) {
-            for (Object result : executedResultList) {
-                if (result instanceof Long connection) {
-                    totalConnections += connection;
-                }
+        if (rows == null) {
+            return totalConnections;
+        }
+        for (Object row : rows) {
+            if (!(row instanceof Map<?, ?> counts) || counts.isEmpty()) {
+                continue;
+            }
+            for (Object raw : counts.values()) {
+                totalConnections += parseConnCount(raw);
             }
         }
         return totalConnections;
+    }
+
+    private static List<String> remoteLiveNodeIds(String localNodeId) {
+        List<String> remotes = new ArrayList<>();
+        for (String nodeId : liveNodeIdsForConn()) {
+            if (!localNodeId.equals(nodeId)) {
+                remotes.add(nodeId);
+            }
+        }
+        return remotes;
+    }
+
+    private static Set<String> liveNodeIdsForConn() {
+        Set<String> nodeIds = new HashSet<>(NodeLeaseKeeper.snapshot().keySet());
+        nodeIds.add(NodeLeaseKeeper.localNodeId());
+        return nodeIds;
+    }
+
+    private static long parseConnCount(Object raw) {
+        if (raw == null) {
+            return NumberConstant.NUMBER_0;
+        }
+        if (raw instanceof Number number) {
+            return Math.max(0L, number.longValue());
+        }
+        try {
+            return Math.max(0L, Long.parseLong(raw.toString()));
+        } catch (NumberFormatException e) {
+            return NumberConstant.NUMBER_0;
+        }
+    }
+
+    /**
+     * SERVER_NOTIFY 广播：本机本地表投递；源节点按租约节点各发一份，dest 固定为对端节点地址。
+     * <p>A↛C 时走 {@link MessageHelper} 中转，中间节点不改 dest、不二次全员扇出。
+     */
+    public static void broadcastServerNotify(String appKey, Packet packet) {
+        deliverLocalBroadcast(appKey, packet);
+        if (packet.getMessage() == null || packet.getMessage().getMetadata() == null
+                || packet.getMessage().getMetadata().isLocalBroadcastOnly()) {
+            return;
+        }
+        if (!MessageServerContext.serverProperties().isClusterEnable()) {
+            return;
+        }
+        String localNodeId = NodeLeaseKeeper.localNodeId();
+        for (String nodeId : NodeLeaseKeeper.snapshot().keySet()) {
+            if (localNodeId.equals(nodeId)) {
+                continue;
+            }
+            Packet fanout = packet.clone();
+            fanout.getMessage().getMetadata().setLocalBroadcastOnly(true);
+            MessageHelper.asyncSendMessageWithoutInterceptor(fanout, buildBroadcastNodeTarget(appKey, nodeId));
+        }
+    }
+
+    /**
+     * 节点级广播信封：targetServerAddress 为最终要扫本地连接的 IM 节点，不是下一跳。
+     */
+    private static Target buildBroadcastNodeTarget(String appKey, String destNodeId) {
+        return Target.newBuilder()
+                .appKey(appKey)
+                .targetServerAddress(destNodeId)
+                .protocol(NativePacketProtocol.OUYUNC.getProtocol())
+                .protocolVersion(NativePacketProtocol.OUYUNC.getProtocolVersion())
+                .build();
+    }
+
+    /**
+     * 只投递本机已登录连接，不再向其他节点扇出。
+     * <p>禁止在 Netty IO 线程扫全表；按 EventLoop 分组后在该 loop 上直接写出，避免全表拷贝和每连接 clone。
+     */
+    public static void deliverLocalBroadcast(String appKey, Packet packet) {
+        if (packet == null) {
+            return;
+        }
+        ThreadPoolManager.messageSendExecutor().execute(() -> deliverLocalBroadcastGrouped(appKey, packet));
+    }
+
+    /**
+     * 弱一致遍历本机注册表，按 EventLoop 分桶后提交写出。每个 loop 一份 Packet clone，串行 setTarget。
+     */
+    private static void deliverLocalBroadcastGrouped(String appKey, Packet packet) {
+        Map<EventLoop, List<ChannelHandlerContext>> byLoop = new IdentityHashMap<>();
+        for (ChannelHandlerContext ctx : MessageServerContext.localLoginClientRegisterTable.asMap().values()) {
+            if (!acceptLocalBroadcastCtx(appKey, ctx)) {
+                continue;
+            }
+            byLoop.computeIfAbsent(ctx.channel().eventLoop(), loop -> new ArrayList<>()).add(ctx);
+        }
+        if (byLoop.isEmpty()) {
+            return;
+        }
+        for (Map.Entry<EventLoop, List<ChannelHandlerContext>> entry : byLoop.entrySet()) {
+            EventLoop loop = entry.getKey();
+            if (loop.isTerminated() || loop.isShutdown() || loop.isShuttingDown()) {
+                continue;
+            }
+            Packet loopPacket = packet.clone();
+            if (loopPacket.getMessage() != null && loopPacket.getMessage().getMetadata() != null) {
+                loopPacket.getMessage().getMetadata().setLocalBroadcastOnly(false);
+            }
+            List<ChannelHandlerContext> ctxs = entry.getValue();
+            loop.execute(() -> writeLocalBroadcastOnEventLoop(loop, loopPacket, ctxs, 0));
+        }
+    }
+
+    private static boolean acceptLocalBroadcastCtx(String appKey, ChannelHandlerContext ctx) {
+        if (ctx == null || ctx.channel() == null || !ctx.channel().isActive()) {
+            return false;
+        }
+        LoginClientInfo info = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
+        if (info == null || !OnlineEnum.ONLINE.equals(info.getOnlineStatus())) {
+            return false;
+        }
+        return !StringUtils.isNotBlank(appKey) || appKey.equals(info.getAppKey());
+    }
+
+    /**
+     * 同一 EventLoop 内分片写出：每批 {@link MessageConstant#IM_LOCAL_BROADCAST_EVENTLOOP_BATCH} 条后让出 loop。
+     * 尽力而为，水位高则跳过，不发 SEND_FAIL。
+     */
+    private static void writeLocalBroadcastOnEventLoop(EventLoop loop, Packet loopPacket,
+                                                       List<ChannelHandlerContext> ctxs, int from) {
+        if (loopPacket.getMessage() == null || loopPacket.getMessage().getMetadata() == null) {
+            return;
+        }
+        int end = Math.min(from + MessageConstant.IM_LOCAL_BROADCAST_EVENTLOOP_BATCH, ctxs.size());
+        for (int i = from; i < end; i++) {
+            ChannelHandlerContext ctx = ctxs.get(i);
+            if (!PacketChannelWriter.isSendable(ctx)) {
+                continue;
+            }
+            loopPacket.getMessage().getMetadata().setTarget(null);
+            PacketChannelWriter.sendOnChannelBestEffort(ctx, loopPacket);
+        }
+        if (end < ctxs.size() && !loop.isShuttingDown() && !loop.isShutdown() && !loop.isTerminated()) {
+            loop.execute(() -> writeLocalBroadcastOnEventLoop(loop, loopPacket, ctxs, end));
+        }
     }
 
     /**
@@ -382,16 +638,12 @@ public class ClientHelper {
      * @return 成功下发通知的连接数
      */
     public static int notifyAllLocalClientsToReconnect() {
-        Map<String, ChannelHandlerContext> snapshot =
-                new HashMap<>(MessageServerContext.localLoginClientRegisterTable.asMap());
-        if (snapshot.isEmpty()) {
-            return NumberConstant.NUMBER_0;
-        }
         long now = TimeUtil.currentTimeMillis();
         int notified = NumberConstant.NUMBER_0;
-        for (Map.Entry<String, ChannelHandlerContext> entry : snapshot.entrySet()) {
-            ChannelHandlerContext ctx = entry.getValue();
-            if (ctx == null || !ctx.channel().isActive()) {
+        int registrySize = NumberConstant.NUMBER_0;
+        for (ChannelHandlerContext ctx : MessageServerContext.localLoginClientRegisterTable.asMap().values()) {
+            registrySize++;
+            if (ctx == null || ctx.channel() == null || !ctx.channel().isActive()) {
                 continue;
             }
             LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(
@@ -403,7 +655,7 @@ public class ClientHelper {
             notified++;
         }
         log.warn("notifyAllLocalClientsToReconnect 完成, notified={}, registryKey={}",
-                notified, snapshot.size());
+                notified, registrySize);
         return notified;
     }
 
@@ -413,21 +665,18 @@ public class ClientHelper {
      * @return 尝试关闭的连接数
      */
     public static int forceCloseAllLocalClients() {
-        Map<String, ChannelHandlerContext> snapshot =
-                new HashMap<>(MessageServerContext.localLoginClientRegisterTable.asMap());
-        if (snapshot.isEmpty()) {
-            return NumberConstant.NUMBER_0;
-        }
-        List<Channel> closing = new ArrayList<>(snapshot.size());
-        for (ChannelHandlerContext ctx : snapshot.values()) {
-            if (ctx == null || !ctx.channel().isActive()) {
+        List<Channel> closing = new ArrayList<>();
+        int registrySize = NumberConstant.NUMBER_0;
+        for (ChannelHandlerContext ctx : MessageServerContext.localLoginClientRegisterTable.asMap().values()) {
+            registrySize++;
+            if (ctx == null || ctx.channel() == null || !ctx.channel().isActive()) {
                 continue;
             }
             closing.add(ctx.channel());
             ctx.close();
         }
         awaitChannelsClosed(closing, 5_000L);
-        log.warn("forceCloseAllLocalClients 完成, attempted={}, registryKey={}", closing.size(), snapshot.size());
+        log.warn("forceCloseAllLocalClients 完成, attempted={}, registryKey={}", closing.size(), registrySize);
         return closing.size();
     }
 

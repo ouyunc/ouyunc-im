@@ -29,14 +29,14 @@ ouyunc:
     netty-pipeline-logging-enabled: false
     # QOS 消息服务质量配置
     qos:
-      # 是否开启qos，默认关闭
-      enable: true
+      # 是否开启qos，默认关闭。生产走 CLIENT 模式，由对端补可靠投递，服务端保持无状态
+      enable: false
       # 模式，CLIENT-客户端模式，SERVER-服务端模式, 默认客户端（需要客户端配合实现，对服务端压力小，且服务端是无状态的），服务端模式则是服务端保存消息，然后定时发送给接收方，会影响性能，且服务端变成有状态服务
-      mode: SERVER
+      mode: CLIENT
       # 模式是服务端模式时生效
       retry:
-        # 是否开启重试，默认否
-        enable: true
+        # 是否开启重试，默认否。生产环境服务端重试会把 IM 做成有状态，默认关闭
+        enable: false
         # 定时循环初始延迟时间，模式是服务端模式时生效,单位秒
         initial-delay: 3
         # qos 循环周期时间间隔，单位秒
@@ -45,13 +45,6 @@ ouyunc:
         max-loops: 3
     # 客户端配置
     client:
-      # 外部客户端的登录信息（包含在线状态），FOREVER-永久， FINITE-有限
-      login-info:
-        save-mode: FINITE
-        # 调度扫描需要更新状态的队列的时间间隔：单位毫秒 ,默认1000； 注意：当开启FINITE 该字段有效，且登录过期时间为: client.heart-beat.timeout * client.heart-beat.wait-retry  单位秒
-        schedule-time-interval: 1000
-        # 批量过期数据量，默认1000 ，通过Redis pipeline 来操作批量命令， 减少网络传输的消耗，更具业务和配置自行配置
-        batch-expire-size: 1000
       # 心跳配置,服务端与外部客户端的心跳配置
       heart-beat:
         # 全局是否开启心跳，用来检测连接上的客户端需要发送心跳包（只针对外部客户端），默认开启
@@ -60,28 +53,6 @@ ouyunc:
         timeout: 15
         # 外部客户端，心跳重试等待次数，默认3次，超过3次没有心跳则关闭外部客户端channel  不能为负数
         wait-retry: 3
-        # 登录保活刷新节流窗口计算除数：窗口=clamp(timeout/divisor, min-interval, max-interval)
-        refresh-throttle-divisor: 3
-        # 登录保活刷新节流最小间隔，单位毫秒
-        refresh-throttle-min-interval: 1000
-        # 登录保活刷新节流最大间隔，单位毫秒（控制在线状态可见延迟上限）
-        refresh-throttle-max-interval: 10000
-      # appKey 的连接数统计，是否启用定时刷新清理，以及 定时刷新清理时间间隔
-      app-key:
-        # 刷新连接数统计
-        refresh-connection:
-          # 开启
-          enable: true
-          # 时间间隔，单位秒，默认值5
-          interval: 60
-          # 刷新步长，单位毫秒，默认值10000，单位毫秒，表示每次清理数据的时候，一批数据的时间步长，防止一次清理太多的数据造成redis 性能问题
-          step: 10000
-          # 每轮清理最大批次数，配合 step 限流，防止单轮清理过久
-          max-batches-per-run: 10
-          # 每执行多少轮定时任务与 Redis appKey 注册表对账一次（merge 全量）；≤0 则不做周期对账，仅启动加载 + 登录/广播增量
-          full-sync-every-runs: 10
-          # 偏移量，单位秒，默认值3600， 更具具体情况来调整，如果所有服务器都宕机且时间很长，那么该值可以设置大点，如果服务器宕机时间短，那么该值可以设置小点
-          offset: 3600
     # 服务端配置
     server:
       login:
@@ -89,7 +60,7 @@ ouyunc:
         enable: true
         # 服务端监听客户端的登录超时时间，单位秒，默认值5，  see AuthenticationHandler
         timeout: 5
-      # 启动后是否默认接受新登录；滚动升级可 POST /admin/drain 或优雅关闭时自动翻转
+      # 启动后是否默认接受新登录；滚动升级可 POST /api/im/admin/drain 或优雅关闭时自动翻转
       accept-new-connections: true
       drain:
         # 停机时：通知客户端主动断开后的等待秒数，超时仍在线则强制关闭；0 表示通知后立即强制关残留
@@ -102,8 +73,8 @@ ouyunc:
         enable: true
       # 服务端群消息处理模式
       group-message:
-        # 消息模式，PUSH-推送模式，PULL-拉取模式，PULL_PUSH 推拉模式，（在超大规模群，比如直播间，）  默认推送模式
-        mode: PUSH
+        # 默认 PULL_PUSH：小群推送，超过 threshold 只推 @，大群靠拉取
+        mode: PULL_PUSH
         # 群成员数量阈值，超过该值则切换为拉取模式，在推拉模式下，该配置生效，大于改值的群消息，则切换为拉取模式，小于等于该值则切换为推送模式
         threshold: 500
     # 客户端登录信息保存模式， FOREVER-永久， FINITE-有限； 默认值永久
@@ -216,7 +187,7 @@ ouyunc:
         # 高水位 默认64kb，写高水位标记，默认值64KB(64 * 1024)。如果Netty的写缓冲区中的字节超过该值，Channel的isWritable()返回False。每个连接一个，所以不能设太大
         write-buffer-high-water-mark: 65536
         # 低水位,默认32kb,写低水位标记，默认值32KB(32 * 1024)。当Netty的写缓冲区中的字节超过高水位之后若下降到低水位，则Channel的isWritable()返回True。写高低水位标记使用户可以控制写入数据速度，从而实现流量控制。推荐做法是：每次调用channl.write(msg)方法首先调用channel.isWritable()判断是否可写
-        write-buffer-low-water-mark: 3624
+        write-buffer-low-water-mark: 32768
 
     # 集群配置
     cluster:

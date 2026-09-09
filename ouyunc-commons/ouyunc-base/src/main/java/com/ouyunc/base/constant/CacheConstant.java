@@ -1,5 +1,7 @@
 package com.ouyunc.base.constant;
 
+import com.ouyunc.base.utils.IdentityUtil;
+
 /**
  * @Author fzx
  * @Description: 缓存相关常量类 - Redis集群优化版
@@ -50,24 +52,9 @@ public class CacheConstant {
     private static final String SESSION_READ_MESSAGE_OFFSET = "sro:";
 
     /***
-     * 平台appKey链接数
-     */
-    private static final String CONNECTIONS = "conn";
-
-    /***
      * 锁
      */
     private static final String LOCK = "lock:";
-
-    /***
-     * 登录
-     */
-    private static final String LOGIN = "login:";
-
-    /**
-     * 身份级登录存在标记（SET，member=deviceType）。CS 探活用 EXISTS 一个 key，避免扫全部设备类型。
-     */
-    private static final String LOGIN_PRESENCE = "lp:";
 
     /***
      * 用户
@@ -108,11 +95,6 @@ public class CacheConstant {
      * 黑名单
      */
     private static final String BLACKLIST = "bl:";
-
-    /***
-     * 离线
-     */
-    private static final String OFFLINE = "off:";
 
     /***
      * QoS 幂等
@@ -203,9 +185,11 @@ public class CacheConstant {
 
     /**
      * 构建基础 缓存key - 集群优化版
+     * <p>Cluster 只认 key 中<strong>第一个</strong>{@code {...}} 为槽。本前缀已带 {@code {appKey}}，
+     * 后续再包的 {@code {packetId}}/{@code {userId}} 等只是命名，不改槽。同一 app 的 MGET 因此同槽合法，
+     * 但会打热点槽；登录/租约/ticket 等 key 故意不用本前缀，避免与 identity/ticket 槽冲突。</p>
      */
     private static String buildBaseCacheKey(String appKey) {
-        // 使用appKey作为哈希标签，确保同一appKey的数据在同一个slot
         return OUYUNC + APP_KEY + withHashTag(appKey) + COLON;
     }
 
@@ -222,7 +206,8 @@ public class CacheConstant {
      * 构建appKey identity 关闭连接的分布式锁key - 集群优化
      */
     public static String buildIdentityBindOrUnbindLockCacheKey(String appKey, String comboIdentity) {
-        return buildAppKeyLockCacheKey(appKey) + COLON + withHashTag(comboIdentity);
+        String identity = IdentityUtil.revertIdentity(comboIdentity);
+        return OUYUNC + LOCK + withHashTag(stripHashTagChars(identity)) + COLON + APP_KEY + appKey + COLON + comboIdentity;
     }
 
     /**
@@ -274,7 +259,7 @@ public class CacheConstant {
      * 构建 消息message cache Key - 集群优化
      */
     public static String buildMessageCacheKey(String appKey, Long packetId) {
-        // 消息使用packetId作为哈希标签，确保同一消息操作在同一个slot
+        // 第一个 tag 仍是 {appKey}；{packetId} 仅作可读片段。跨 packet MGET 同 app 同槽。
         return buildBaseCacheKey(appKey) + MESSAGE + withHashTag(String.valueOf(packetId));
     }
 
@@ -283,32 +268,47 @@ public class CacheConstant {
      */
     public static String buildSessionReadMessageOffsetCacheKey(String appKey, Integer identityType,
                                                              String from, Byte deviceType, String to) {
-        // 使用from和to的组合作为哈希标签，确保同一会话的数据在同一个slot
+        // 第一个 tag 仍是 {appKey}，与 ur Hash 同槽，供未读 Lua 双 KEYS 合法。
         String sessionTag = withHashTag(from + MessageConstant.UNDERLINE + to);
         return buildBaseCacheKey(appKey) + SESSION_READ_MESSAGE_OFFSET + identityType + COLON +
                sessionTag + COLON + deviceType;
     }
 
     /**
-     * 构建 平台appKey链接数 cache key - 集群优化
-     */
-    public static String buildConnectionsCacheKey(String appKey) {
-        return buildBaseCacheKey(appKey) + CONNECTIONS;
-    }
-
-    /**
-     * 构建 appKey 登录 cache key - 集群优化
+     * 登录详情 String。哈希标签为 identity，与路由 HASH 同槽。
      */
     public static String buildLoginCacheKey(String appKey, String comboIdentity) {
-        return buildBaseCacheKey(appKey) + LOGIN + USER + withHashTag(comboIdentity);
+        String identity = IdentityUtil.revertIdentity(comboIdentity);
+        Byte deviceType = IdentityUtil.revertDeviceType(comboIdentity);
+        return OUYUNC + "im:lg:" + withHashTag(identity) + COLON + appKey + COLON + deviceType;
     }
 
     /**
-     * 身份级登录存在标记：{@code ...:login:lp:{identity}}，SET member 为设备类型。
-     * 与按端 login key 分离；CS 只 EXISTS 本 key。
+     * 身份路由 HASH：field=deviceType，value=nodeId|epoch。探测/多端在线看这把 key。
      */
-    public static String buildLoginPresenceCacheKey(String appKey, String identity) {
-        return buildBaseCacheKey(appKey) + LOGIN + LOGIN_PRESENCE + withHashTag(identity);
+    public static String buildLoginRouteCacheKey(String appKey, String identity) {
+        return OUYUNC + "im:rt:" + withHashTag(identity) + COLON + appKey;
+    }
+
+    /**
+     * IM 进程租约：value=epoch 字符串，PX 由心跳刷新。
+     */
+    public static String buildImNodeLeaseCacheKey(String nodeId) {
+        return OUYUNC + "im:node:" + withHashTag(nodeId);
+    }
+
+    /**
+     * 当前登记过的 IM 节点 id 集合（小 SET，心跳 SADD）。
+     */
+    public static String buildImNodeSetCacheKey() {
+        return OUYUNC + "im:nodes";
+    }
+
+    /**
+     * 节点连接数 HASH：field=appKey，value=count。与租约同 {@code {nodeId}} 槽，由心跳全量覆盖，不跟登录 Lua 同槽。
+     */
+    public static String buildImNodeConnHashCacheKey(String nodeId) {
+        return OUYUNC + "im:cc:" + withHashTag(nodeId);
     }
 
     /**
@@ -368,14 +368,6 @@ public class CacheConstant {
      */
     public static String buildBlacklistCacheKey(String appKey, String identity) {
         return buildBaseCacheKey(appKey) + BLACKLIST + withHashTag(identity);
-    }
-
-    /**
-     * @deprecated ToOffline 队列已废弃，仅用于历史 Redis 数据清理
-     */
-    @Deprecated
-    public static String buildToOfflineCacheKey(String appKey, String to, Byte deviceTypeValue) {
-        return buildBaseCacheKey(appKey) + OFFLINE + withHashTag(to) + COLON + deviceTypeValue;
     }
 
     /**

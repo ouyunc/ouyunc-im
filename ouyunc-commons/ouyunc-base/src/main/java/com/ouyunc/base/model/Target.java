@@ -21,7 +21,7 @@ public class Target implements Serializable, Cloneable, Protocol{
     private String targetIdentity;
 
     /**
-     * 接收者所登录的服务器地址：ip:port
+     * 接收者所登录的服务器地址：ip:port。集群中转时保持为最终落地机，不是 hop。
      */
     private String targetServerAddress;
 

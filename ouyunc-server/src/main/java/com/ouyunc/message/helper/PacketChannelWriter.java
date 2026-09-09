@@ -19,6 +19,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.EventLoop;
+import io.netty.util.ReferenceCountUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,19 +59,44 @@ public final class PacketChannelWriter {
      * 须先 {@link #isSendable}；转换器依赖 {@code metadata.target.protocol}，缺省时按登录信息补齐。
      */
     public static void sendOnChannel(ChannelHandlerContext ctx, Packet packet, SendCallback sendCallback) {
+        sendOnChannel(ctx, packet, sendCallback, true);
+    }
+
+    /**
+     * 本机广播尽力而为：不可写则跳过，不发布 SEND_FAIL，转换失败释放缓冲。
+     */
+    public static void sendOnChannelBestEffort(ChannelHandlerContext ctx, Packet packet) {
         if (!isSendable(ctx)) {
-            notifySendFail(packet, "发送消息时，入站 ctx 不可用或不可写", sendCallback);
+            return;
+        }
+        sendOnChannel(ctx, packet, sendResult -> {}, false);
+    }
+
+    private static void sendOnChannel(ChannelHandlerContext ctx, Packet packet, SendCallback sendCallback,
+                                      boolean publishSendFail) {
+        if (!isSendable(ctx)) {
+            if (publishSendFail) {
+                notifySendFail(packet, "发送消息时，入站 ctx 不可用或不可写", sendCallback);
+            }
             return;
         }
         ensureOutboundTarget(ctx, packet);
-        writeConverted(ctx.channel(), packet, sendCallback);
+        writeConverted(ctx.channel(), packet, sendCallback, publishSendFail);
     }
 
     /**
      * 给定 Channel 做协议转换后写出（调用方已拿到连接，不再查表）。
      */
     public static void writeConverted(Channel channel, Packet packet, SendCallback sendCallback) {
-        if (!validateWritable(channel, packet, sendCallback)) {
+        writeConverted(channel, packet, sendCallback, true);
+    }
+
+    private static void writeConverted(Channel channel, Packet packet, SendCallback sendCallback,
+                                       boolean publishSendFail) {
+        if (!isChannelSendable(channel)) {
+            if (publishSendFail) {
+                notifySendFail(packet, describeUnwritable(channel), sendCallback);
+            }
             return;
         }
         for (PacketConverter<?> packetConverter : MessageServerContext.packetConverterList) {
@@ -79,11 +105,36 @@ public final class PacketChannelWriter {
                 continue;
             }
             runOnEventLoop(channel, packet, sendCallback,
-                    () -> tryWriteObject(channel, msg, packet, sendCallback), null);
+                    () -> writeOrRelease(channel, msg, packet, sendCallback, publishSendFail),
+                    () -> ReferenceCountUtil.release(msg));
             return;
         }
         log.error("发送消息时，packet: {} 转换其他协议发生异常,找不到匹配的协议转换器！", packet);
-        notifySendFail(packet, "发送消息时，packet转换其他协议发生异常,找不到匹配的协议转换器！", sendCallback);
+        if (publishSendFail) {
+            notifySendFail(packet, "发送消息时，packet转换其他协议发生异常,找不到匹配的协议转换器！", sendCallback);
+        }
+    }
+
+    private static void writeOrRelease(Channel channel, Object msg, Packet packet, SendCallback sendCallback,
+                                       boolean publishSendFail) {
+        if (!isChannelSendable(channel)) {
+            ReferenceCountUtil.release(msg);
+            if (publishSendFail) {
+                notifySendFail(packet, describeUnwritable(channel), sendCallback);
+            }
+            return;
+        }
+        ChannelFuture future = channel.writeAndFlush(msg);
+        if (publishSendFail) {
+            addWriteListener(future, packet, sendCallback);
+            return;
+        }
+        future.addListener((ChannelFutureListener) f -> {
+            if (!f.isSuccess()) {
+                log.debug("尽力而为写出失败 channel={}: {}", channel.id().asShortText(),
+                        f.cause() == null ? "" : f.cause().getMessage());
+            }
+        });
     }
 
     /**
@@ -125,6 +176,7 @@ public final class PacketChannelWriter {
 
     public static boolean tryWriteObject(Channel channel, Object msg, Packet packet, SendCallback sendCallback) {
         if (!validateWritable(channel, packet, sendCallback)) {
+            ReferenceCountUtil.release(msg);
             return false;
         }
         addWriteListener(channel.writeAndFlush(msg), packet, sendCallback);
@@ -185,6 +237,32 @@ public final class PacketChannelWriter {
         notifySendFail(packet, "发送消息时，channel.eventLoop 被终止或关闭！", sendCallback);
     }
 
+    /**
+     * 入站后续 handler 必须在该连接 EventLoop 上 fire，禁止 Reactor/业务线程直接进管道。
+     */
+    public static void fireChannelRead(ChannelHandlerContext ctx, Object msg) {
+        if (ctx == null || msg == null) {
+            return;
+        }
+        Channel channel = ctx.channel();
+        if (channel == null || !channel.isActive()) {
+            return;
+        }
+        EventLoop eventLoop = channel.eventLoop();
+        if (eventLoop.inEventLoop()) {
+            ctx.fireChannelRead(msg);
+            return;
+        }
+        if (eventLoop.isTerminated() || eventLoop.isShutdown() || eventLoop.isShuttingDown()) {
+            return;
+        }
+        eventLoop.execute(() -> {
+            if (ctx.channel().isActive()) {
+                ctx.fireChannelRead(msg);
+            }
+        });
+    }
+
     static void ensureOutboundTarget(ChannelHandlerContext ctx, Packet packet) {
         if (packet == null || packet.getMessage() == null || packet.getMessage().getMetadata() == null) {
             return;
@@ -199,21 +277,29 @@ public final class PacketChannelWriter {
         }
     }
 
-    private static boolean validateWritable(Channel channel, Packet packet, SendCallback sendCallback) {
+    private static boolean isChannelSendable(Channel channel) {
+        return channel != null && channel.isActive() && channel.isWritable();
+    }
+
+    private static String describeUnwritable(Channel channel) {
         if (channel == null) {
-            notifySendFail(packet, "channel 为空，无法写入", sendCallback);
-            return false;
+            return "channel 为空，无法写入";
         }
         if (!channel.isActive()) {
-            notifySendFail(packet, "channel 未激活，无法写入", sendCallback);
-            return false;
+            return "channel 未激活，无法写入";
         }
-        if (!channel.isWritable()) {
+        return "channel 当前不可写";
+    }
+
+    private static boolean validateWritable(Channel channel, Packet packet, SendCallback sendCallback) {
+        if (isChannelSendable(channel)) {
+            return true;
+        }
+        if (channel != null && channel.isActive() && !channel.isWritable()) {
             log.warn("channel 不可写，丢弃或等待上层重试: {}", channel);
-            notifySendFail(packet, "channel 当前不可写", sendCallback);
-            return false;
         }
-        return true;
+        notifySendFail(packet, describeUnwritable(channel), sendCallback);
+        return false;
     }
 
     private static void addWriteListener(ChannelFuture future, Packet packet, SendCallback sendCallback) {

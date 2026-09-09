@@ -21,6 +21,7 @@ import com.ouyunc.base.constant.enums.GroupRequestSessionWay;
 import com.ouyunc.base.constant.enums.RequestSessionProgress;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.DistributedLockHelper;
+import com.ouyunc.message.helper.PacketChannelWriter;
 import com.ouyunc.message.helper.RequestNotifyHelper;
 import com.ouyunc.message.validator.*;
 import io.netty.channel.ChannelHandlerContext;
@@ -72,7 +73,7 @@ public final class GroupAgreeMessageBiProcessor extends AbstractMessageBiProcess
                             return Mono.empty(); // 校验不通过，不传递消息
                         }
                         return Mono.just(packet); // 校验通过，继续传递消息
-                    }).subscribe(ctx::fireChannelRead);
+                    }).subscribe(p -> PacketChannelWriter.fireChannelRead(ctx, p));
     }
 
     @Override

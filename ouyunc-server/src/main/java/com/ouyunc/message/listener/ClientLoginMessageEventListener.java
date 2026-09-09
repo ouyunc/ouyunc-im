@@ -15,6 +15,7 @@ import com.ouyunc.core.listener.EventListener;
 import com.ouyunc.core.listener.event.payload.ClientLoginEventPayload;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.base.constant.enums.YesOrNo;
+import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.protocol.NativePacketProtocol;
@@ -47,6 +48,13 @@ class ClientLoginMessageEventListener implements MessageEventListener<MessageEve
 
     @Override
     public void onEvent(MessageEvent event) {
+        ThreadPoolManager.eventListenerExecutor().execute(() -> handleLogin(event));
+    }
+
+    /**
+     * 好友上线通知含 Redis / 扇出，必须离开 Disruptor 线程。
+     */
+    private void handleLogin(MessageEvent event) {
         long consumeLagMs = Math.max(0L, TimeUtil.currentTimeMillis() - event.getPublishTime());
         Object source = event.getSource();
         if (!(source instanceof ClientLoginEventPayload payload)) {

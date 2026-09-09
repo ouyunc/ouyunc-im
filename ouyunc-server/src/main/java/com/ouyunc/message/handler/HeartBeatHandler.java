@@ -66,14 +66,18 @@ public class HeartBeatHandler extends SimpleChannelInboundHandler<Packet> {
                     if (readTimeoutTimes == null) {
                         readTimeoutTimes = (int) NumberConstant.NUMBER_1;
                     }
-                    log.warn("外部客户端channel: {} 的 read_idle: {} 第 {} 触发了", channel.id().asShortText(), ((IdleStateEvent) event).state(), readTimeoutTimes);
                     Integer maxRetry = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_HEARTBEAT_WAIT_RETRY);
                     if (maxRetry == null) {
                         maxRetry = MessageServerContext.serverProperties().getClientHeartBeatWaitRetry();
                     }
                     if (readTimeoutTimes > maxRetry - NumberConstant.NUMBER_1) {
+                        log.warn("外部客户端心跳读空闲超过重试，关闭 channel={}", channel.id().asShortText());
                         ctx.close();
                         return;
+                    }
+                    if (log.isDebugEnabled()) {
+                        log.debug("外部客户端心跳读空闲 channel={} times={}",
+                                channel.id().asShortText(), readTimeoutTimes);
                     }
                     // 设置连续超时次数
                     ChannelAttrUtil.setChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_TAG_READ_TIMEOUT_TIMES, ++readTimeoutTimes);

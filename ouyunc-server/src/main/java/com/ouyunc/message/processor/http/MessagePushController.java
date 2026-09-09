@@ -17,7 +17,7 @@ import java.util.concurrent.CompletionStage;
  * IM HTTP 推送：统一外部推送入口。校验与幂等通过后异步投递并返回 ACCEPTED（不等于已投递）。
  */
 @HttpRestController
-@HttpRequestMapping("/api/im")
+@HttpRequestMapping(HttpRequestConstant.HTTP_API_IM_PREFIX)
 public class MessagePushController {
 
     private static final Logger log = LoggerFactory.getLogger(MessagePushController.class);

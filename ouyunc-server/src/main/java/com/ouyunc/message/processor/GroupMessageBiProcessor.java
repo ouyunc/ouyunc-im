@@ -18,6 +18,7 @@ import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageDeliveryRouteHelper;
 import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.helper.MessageRefHelper;
+import com.ouyunc.message.helper.PacketChannelWriter;
 import com.ouyunc.message.processor.http.push.IngressPacketHelper;
 import com.ouyunc.message.validator.*;
 import com.ouyunc.repository.support.MessageIndexScope;
@@ -77,7 +78,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
                             return Mono.empty(); // 校验不通过，不传递消息
                         }
                         return Mono.just(packet); // 校验通过，继续传递消息
-                    }).subscribe(ctx::fireChannelRead);
+                    }).subscribe(p -> PacketChannelWriter.fireChannelRead(ctx, p));
 
     }
 
@@ -193,7 +194,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
                 (ctx0, packet0) -> {
                     qosAckOnSuccess(ctx0, packet0);
                     deliverGroupReadReceiptSelfSyncOnly(packet0);
-                    ctx0.fireChannelRead(packet0);
+                    PacketChannelWriter.fireChannelRead(ctx0, packet0);
                 },
                 (exceptionEvent)-> MessageServerContext.publishEvent(exceptionEvent, true),
                 ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR)
@@ -270,7 +271,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
         // 发送给他人
         deliver2AllGroupMembers(packet, groupUserIdentitySet);
         // 处理成功则转到下个处理器
-        ctx.fireChannelRead(packet);
+        PacketChannelWriter.fireChannelRead(ctx, packet);
     }
 
 
@@ -312,7 +313,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
             log.warn("暂不支持该消息推送模式:{}, 消息：{}", MessageServerContext.serverProperties().getGroupMessagePushMode(), packet);
         }
         // 处理成功则转到下个处理器
-        ctx.fireChannelRead(packet);
+        PacketChannelWriter.fireChannelRead(ctx, packet);
     }
 
     /**

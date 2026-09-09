@@ -21,6 +21,7 @@ import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageDeliveryRouteHelper;
 import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.helper.MessageRefHelper;
+import com.ouyunc.message.helper.PacketChannelWriter;
 import com.ouyunc.message.validator.*;
 import com.ouyunc.repository.support.MessageIndexScope;
 import io.netty.channel.ChannelHandlerContext;
@@ -82,7 +83,7 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
                             return Mono.empty(); // 校验不通过，不传递消息
                         }
                         return Mono.just(packet); // 校验通过，继续传递消息
-                    }).subscribe(ctx::fireChannelRead);
+                    }).subscribe(p -> PacketChannelWriter.fireChannelRead(ctx, p));
     }
 
     /**
@@ -207,7 +208,7 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
                 (ctx0, packet0) -> {
                     qosAckOnSuccess(ctx0, packet0);
                     deliverReadReceiptToSender(packet0);
-                    ctx0.fireChannelRead(packet0);
+                    PacketChannelWriter.fireChannelRead(ctx0, packet0);
                 },
                 (exceptionEvent)-> MessageServerContext.publishEvent(exceptionEvent, true),
                 ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR)
@@ -238,7 +239,7 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
      */
     private void deliverAndFireNext(ChannelHandlerContext ctx, Packet packet, Boolean forceSelfSync) {
         MessageDeliveryRouteHelper.deliverPeerMessage(packet, Boolean.TRUE.equals(forceSelfSync));
-        ctx.fireChannelRead(packet);
+        PacketChannelWriter.fireChannelRead(ctx, packet);
     }
 
     /**

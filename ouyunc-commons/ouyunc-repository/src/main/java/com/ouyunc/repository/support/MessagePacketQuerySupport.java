@@ -2,6 +2,7 @@ package com.ouyunc.repository.support;
 
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.CacheConstant;
+import com.ouyunc.cache.distributed.redis.RedisPipelineSupport;
 import com.ouyunc.base.constant.JdbcSqlDialectHolder;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.executor.ThreadPoolManager;
@@ -63,7 +64,7 @@ public final class MessagePacketQuerySupport {
         List<String> redisKeys = packetIds.stream()
                 .map(id -> CacheConstant.buildMessageCacheKey(appKey, id))
                 .collect(Collectors.toList());
-        List<Packet> cachedPackets = (List<Packet>) redisTemplate.opsForValue().multiGet(redisKeys);
+        List<Packet> cachedPackets = RedisPipelineSupport.getValues(redisTemplate, redisKeys);
         if (cachedPackets == null) {
             log.warn("cachedPackets 为空, appKey={}", appKey);
             return Collections.emptyList();

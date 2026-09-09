@@ -1,35 +1,43 @@
 package com.ouyunc.message.handler;
 
 import com.ouyunc.base.model.Metadata;
+import com.ouyunc.base.model.Target;
 import com.ouyunc.base.packet.Packet;
+import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Objects;
+
 /**
- * 集群中如果对方客户端不在同一台server中需要将消息路由投递到登录的服务中，为了不在业务处理器中写重复的判断是否是集群传递过来的消息，在这里统一进行处理
+ * 集群中如果对方客户端不在同一台 server 中需要将消息路由投递到登录的服务中。
+ * <p>{@code routed=true} 时按 {@link Target#getTargetServerAddress()} 继续投递；该地址是最终落地机，中间节点不得改写。
  */
 public class ClusterPacketRouteHandler extends SimpleChannelInboundHandler<Packet> {
     private static final Logger log = LoggerFactory.getLogger(ClusterPacketRouteHandler.class);
 
-
-    /**
-     * 在集群环境下收发消息的客户端不在同一个服务中，需要进行路由处理则使用该方式进行路由处理
-     * @param ctx
-     * @param packet
-     * @throws Exception
-     */
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Packet packet) throws Exception {
         Metadata metadata = packet.getMessage().getMetadata();
-        // 判断是否从其他服务路由过来的消息
-        if (metadata != null && metadata.isRouted()) {
-            MessageHelper.asyncSendMessageWithoutInterceptor(packet, metadata.getTarget());
+        if (metadata == null || !metadata.isRouted()) {
+            // 未路由包交给后续处理器（如集群 SYN-ACK）
+            ctx.fireChannelRead(packet);
             return;
         }
-        // 交给下个处理器, 如果上面条件没满足，则直接交给下个处理器去处理，一般是syn-ack集群内部心跳才会走这里
-        ctx.fireChannelRead(packet);
+        Target target = metadata.getTarget();
+        if (target == null) {
+            log.warn("集群路由包缺少 target, packetId={}", packet.getPacketId());
+            return;
+        }
+        String localServerAddress = MessageServerContext.serverProperties().getLocalServerAddress();
+        if (metadata.isLocalBroadcastOnly() && Objects.equals(localServerAddress, target.getTargetServerAddress())) {
+            ClientHelper.deliverLocalBroadcast(metadata.getAppKey(), packet);
+            return;
+        }
+        MessageHelper.asyncSendMessageWithoutInterceptor(packet, target);
     }
 }

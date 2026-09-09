@@ -91,11 +91,25 @@ public class MqttLoginClientInfo extends LoginClientInfo{
         this.isWillRetain = isWillRetain;
     }
 
+    /**
+     * Redis 登录 String 只带会话控制字段；遗嘱正文/主题仍在本机 Channel 属性上发。
+     */
+    @Override
+    public LoginClientInfo copyForRedis() {
+        MqttLoginClientInfo copy = new MqttLoginClientInfo();
+        copyRedisLoginFields(copy);
+        copy.setCleanSession(this.cleanSession);
+        copy.setSessionExpiryInterval(this.sessionExpiryInterval);
+        copy.setVersion(this.version);
+        copy.setQos(this.qos);
+        return copy;
+    }
+
     public MqttLoginClientInfo() {
     }
 
-    public MqttLoginClientInfo(byte protocol, byte protocolVersion, String loginServerAddress, OnlineEnum onlineStatus, String authorizationScope, long loginExpireTime, int heartBeatTimeout, long lastLoginTime, String appKey, String identity, byte deviceType, Collection<Byte> supportDeviceTypes, String sn, String signature, byte signatureAlgorithm, int heartBeatExpireTime, long createTime, int enableWill, int qos, byte version, int isWillRetain, String willMessage, String willTopic, int cleanSession, int sessionExpiryInterval, int enableAlive, String aliveMessage) {
-        super(protocol, protocolVersion, loginServerAddress, onlineStatus, authorizationScope, loginExpireTime, heartBeatTimeout, lastLoginTime, appKey, identity, deviceType, supportDeviceTypes, sn, signature, signatureAlgorithm, heartBeatExpireTime, createTime, enableWill, willMessage, enableAlive, aliveMessage, 0, 0, 0, 0);
+    public MqttLoginClientInfo(byte protocol, byte protocolVersion, String loginServerAddress, OnlineEnum onlineStatus, String authorizationScope, int heartBeatTimeout, long lastLoginTime, String appKey, String identity, byte deviceType, Collection<Byte> supportDeviceTypes, String sn, String signature, byte signatureAlgorithm, int heartBeatExpireTime, long createTime, int enableWill, int qos, byte version, int isWillRetain, String willMessage, String willTopic, int cleanSession, int sessionExpiryInterval, int enableAlive, String aliveMessage) {
+        super(protocol, protocolVersion, loginServerAddress, onlineStatus, authorizationScope, heartBeatTimeout, lastLoginTime, appKey, identity, deviceType, supportDeviceTypes, sn, signature, signatureAlgorithm, heartBeatExpireTime, createTime, enableWill, willMessage, enableAlive, aliveMessage, 0, 0, 0, 0);
         this.qos = qos;
         this.version = version;
         this.isWillRetain = isWillRetain;

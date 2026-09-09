@@ -15,6 +15,7 @@ import com.ouyunc.core.listener.MessageEventListener;
 import com.ouyunc.core.listener.EventListener;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.base.constant.enums.YesOrNo;
+import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
@@ -54,6 +55,13 @@ class ClientLogoutMessageEventListener implements MessageEventListener<MessageEv
 
     @Override
     public void onEvent(MessageEvent event) {
+        ThreadPoolManager.eventListenerExecutor().execute(() -> handleLogout(event));
+    }
+
+    /**
+     * 遗嘱发布 / 好友下线通知含 Redis 与写出，必须离开 Disruptor 线程。
+     */
+    private void handleLogout(MessageEvent event) {
         long consumeLagMs = Math.max(0L, TimeUtil.currentTimeMillis() - event.getPublishTime());
         Object source = event.getSource();
         switch (source) {

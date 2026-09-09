@@ -1,7 +1,6 @@
 package com.ouyunc.message.properties;
 
 import com.ouyunc.base.constant.enums.GroupMessagePushModeEnum;
-import com.ouyunc.base.constant.enums.SaveModeEnum;
 import com.ouyunc.core.properties.MessageProperties;
 import com.ouyunc.core.properties.annotation.Key;
 import com.ouyunc.core.properties.annotation.LoadProperties;
@@ -220,27 +219,9 @@ public class MessageServerProperties extends MessageProperties {
     /**
      * 低水位,默认32kb,写低水位标记，默认值32KB(32 * 1024)。当Netty的写缓冲区中的字节超过高水位之后若下降到低水位，则Channel的isWritable()返回True。写高低水位标记使用户可以控制写入数据速度，从而实现流量控制。推荐做法是：每次调用channl.write(msg)方法首先调用channel.isWritable()判断是否可写
      */
-    @Key(value = "ouyunc.message.work.child-option.write-buffer-low-water-mark", defaultValue = "3624")
+    @Key(value = "ouyunc.message.work.child-option.write-buffer-low-water-mark", defaultValue = "32768")
     int workerChildOptionWriteBufferLowWaterMark;
 
-
-    /***
-     * 外部客户端的登录信息（包含在线状态），FOREVER-永久， FINITE-有限
-     */
-    @Key(value = "ouyunc.message.client.login-info.save-mode", defaultValue = "FOREVER")
-    SaveModeEnum clientLoginInfoSaveMode;
-
-    /***
-     *  调度扫描需要更新状态的队列的时间间隔：单位毫秒 ,默认1000； 注意：当开启FINITE 该字段有效，且登录过期时间为: client.heart-beat.timeout * client.heart-beat.wait-retry  单位秒
-     */
-    @Key(value = "ouyunc.message.client.login-info.schedule-time-interval", defaultValue = "1000")
-    long clientLoginInfoScheduleTimeInterval;
-
-    /***
-     *
-     */
-    @Key(value = "ouyunc.message.client.login-info.batch-expire-size", defaultValue = "1000")
-    int clientLoginInfoBatchExpireSize;
 
     /***
      * 全局是否开启心跳，用来检测连接上的客户端需要发送心跳包（只针对外部客户端），默认开启
@@ -259,24 +240,6 @@ public class MessageServerProperties extends MessageProperties {
      */
     @Key(value = "ouyunc.message.client.heart-beat.wait-retry", defaultValue = "3")
     int clientHeartBeatWaitRetry;
-
-    /**
-     * 登录保活刷新节流：窗口计算除数，窗口 = clamp(heartBeatTimeout / divisor, minInterval, maxInterval)
-     */
-    @Key(value = "ouyunc.message.client.heart-beat.refresh-throttle-divisor", defaultValue = "3")
-    int clientHeartBeatRefreshThrottleDivisor;
-
-    /**
-     * 登录保活刷新节流：最小时间间隔，单位毫秒
-     */
-    @Key(value = "ouyunc.message.client.heart-beat.refresh-throttle-min-interval", defaultValue = "1000")
-    long clientHeartBeatRefreshThrottleMinInterval;
-
-    /**
-     * 登录保活刷新节流：最大时间间隔，单位毫秒
-     */
-    @Key(value = "ouyunc.message.client.heart-beat.refresh-throttle-max-interval", defaultValue = "10000")
-    long clientHeartBeatRefreshThrottleMaxInterval;
 
 
     /***
@@ -319,7 +282,7 @@ public class MessageServerProperties extends MessageProperties {
     /***
      * 服务端群消息推送模式，PUSH-推送模式，PULL-拉取模式 PULL_PUSH-拉取推送模式
      */
-    @Key(value = "ouyunc.message.server.group-message.mode", defaultValue = "PUSH")
+    @Key(value = "ouyunc.message.server.group-message.mode", defaultValue = "PULL_PUSH")
     GroupMessagePushModeEnum groupMessagePushMode;
 
 
@@ -353,43 +316,6 @@ public class MessageServerProperties extends MessageProperties {
      */
     @Key(value = "ouyunc.message.qos.retry.max-loops", defaultValue = "3")
     int qosRetryMaxLoops;
-
-    /***
-     * 是否开启appKey的连接数统计，默认开启
-     */
-    @Key(value = "ouyunc.message.client.app-key.refresh-connection.enable", defaultValue = "true")
-    boolean appKeyConnectionCountRefreshEnable;
-
-    /***
-     * appKey的连接数统计定时清理过期连接的间隔时间，刷新时间间隔，单位秒，默认5秒
-     */
-    @Key(value = "ouyunc.message.client.app-key.refresh-connection.interval", defaultValue = "5")
-    long appKeyConnectionCountRefreshInterval;
-
-
-    /***
-     * appKey的连接数统计,刷新步长，单位毫秒，默认10000
-     */
-    @Key(value = "ouyunc.message.client.app-key.refresh-connection.step", defaultValue = "10000")
-    long appKeyConnectionCountRefreshStep;
-
-    /***
-     * appKey 连接数过期清理：每轮最大批次数，默认10
-     */
-    @Key(value = "ouyunc.message.client.app-key.refresh-connection.max-batches-per-run", defaultValue = "10")
-    int appKeyConnectionCountRefreshMaxBatchesPerRun;
-
-    /**
-     * 连接数清理定时任务每执行多少轮与 Redis appKey 注册表对账一次（merge 全量 appKey）；≤0 表示不做周期对账，仅依赖启动加载与增量 track。
-     */
-    @Key(value = "ouyunc.message.client.app-key.refresh-connection.full-sync-every-runs", defaultValue = "10")
-    int appKeyConnectionCountRefreshFullSyncEveryRuns;
-
-    /***
-     # 偏移量，单位秒，默认值3600， 更具具体情况来调整，如果所有服务器都宕机且时间很长，那么该值可以设置大点，如果服务器宕机时间短，那么该值可以设置小点
-     */
-    @Key(value = "ouyunc.message.client.app-key.refresh-connection.offset", defaultValue = "3600")
-    long appKeyConnectionCountRefreshOffset;
 
 
     /**
@@ -752,14 +678,6 @@ public class MessageServerProperties extends MessageProperties {
         this.clusterClientIdleReadWriteTimeout = clusterClientIdleReadWriteTimeout;
     }
 
-    public long getAppKeyConnectionCountRefreshOffset() {
-        return appKeyConnectionCountRefreshOffset;
-    }
-
-    public void setAppKeyConnectionCountRefreshOffset(long appKeyConnectionCountRefreshOffset) {
-        this.appKeyConnectionCountRefreshOffset = appKeyConnectionCountRefreshOffset;
-    }
-
     public long getClusterClientChannelPoolAcquireTimeoutMillis() {
         return clusterClientChannelPoolAcquireTimeoutMillis;
     }
@@ -816,30 +734,6 @@ public class MessageServerProperties extends MessageProperties {
         this.groupMessageThreshold = groupMessageThreshold;
     }
 
-    public long getAppKeyConnectionCountRefreshStep() {
-        return appKeyConnectionCountRefreshStep;
-    }
-
-    public void setAppKeyConnectionCountRefreshStep(long appKeyConnectionCountRefreshStep) {
-        this.appKeyConnectionCountRefreshStep = appKeyConnectionCountRefreshStep;
-    }
-
-    public int getAppKeyConnectionCountRefreshMaxBatchesPerRun() {
-        return appKeyConnectionCountRefreshMaxBatchesPerRun;
-    }
-
-    public void setAppKeyConnectionCountRefreshMaxBatchesPerRun(int appKeyConnectionCountRefreshMaxBatchesPerRun) {
-        this.appKeyConnectionCountRefreshMaxBatchesPerRun = appKeyConnectionCountRefreshMaxBatchesPerRun;
-    }
-
-    public int getAppKeyConnectionCountRefreshFullSyncEveryRuns() {
-        return appKeyConnectionCountRefreshFullSyncEveryRuns;
-    }
-
-    public void setAppKeyConnectionCountRefreshFullSyncEveryRuns(int appKeyConnectionCountRefreshFullSyncEveryRuns) {
-        this.appKeyConnectionCountRefreshFullSyncEveryRuns = appKeyConnectionCountRefreshFullSyncEveryRuns;
-    }
-
     public List<String> getMessageProcessorScanPackagePaths() {
         return messageProcessorScanPackagePaths;
     }
@@ -854,22 +748,6 @@ public class MessageServerProperties extends MessageProperties {
 
     public void setMessageProtocolProcessorScanPackagePaths(List<String> messageProtocolProcessorScanPackagePaths) {
         this.messageProtocolProcessorScanPackagePaths = messageProtocolProcessorScanPackagePaths;
-    }
-
-    public boolean isAppKeyConnectionCountRefreshEnable() {
-        return appKeyConnectionCountRefreshEnable;
-    }
-
-    public void setAppKeyConnectionCountRefreshEnable(boolean appKeyConnectionCountRefreshEnable) {
-        this.appKeyConnectionCountRefreshEnable = appKeyConnectionCountRefreshEnable;
-    }
-
-    public long getAppKeyConnectionCountRefreshInterval() {
-        return appKeyConnectionCountRefreshInterval;
-    }
-
-    public void setAppKeyConnectionCountRefreshInterval(long appKeyConnectionCountRefreshInterval) {
-        this.appKeyConnectionCountRefreshInterval = appKeyConnectionCountRefreshInterval;
     }
 
     public int getBossThreads() {
@@ -958,22 +836,6 @@ public class MessageServerProperties extends MessageProperties {
 
     public void setClusterClientHeartbeatWaitRetry(int clusterClientHeartbeatWaitRetry) {
         this.clusterClientHeartbeatWaitRetry = clusterClientHeartbeatWaitRetry;
-    }
-
-    public SaveModeEnum getClientLoginInfoSaveMode() {
-        return clientLoginInfoSaveMode;
-    }
-
-    public void setClientLoginInfoSaveMode(SaveModeEnum clientLoginInfoSaveMode) {
-        this.clientLoginInfoSaveMode = clientLoginInfoSaveMode;
-    }
-
-    public long getClientLoginInfoScheduleTimeInterval() {
-        return clientLoginInfoScheduleTimeInterval;
-    }
-
-    public void setClientLoginInfoScheduleTimeInterval(long clientLoginInfoScheduleTimeInterval) {
-        this.clientLoginInfoScheduleTimeInterval = clientLoginInfoScheduleTimeInterval;
     }
 
     public boolean isServerLoginEnable() {
@@ -1135,38 +997,6 @@ public class MessageServerProperties extends MessageProperties {
         this.clientHeartBeatWaitRetry = clientHeartBeatWaitRetry;
     }
 
-    public int getClientHeartBeatRefreshThrottleDivisor() {
-        return clientHeartBeatRefreshThrottleDivisor;
-    }
-
-    public void setClientHeartBeatRefreshThrottleDivisor(int clientHeartBeatRefreshThrottleDivisor) {
-        this.clientHeartBeatRefreshThrottleDivisor = clientHeartBeatRefreshThrottleDivisor;
-    }
-
-    public long getClientHeartBeatRefreshThrottleMinInterval() {
-        return clientHeartBeatRefreshThrottleMinInterval;
-    }
-
-    public void setClientHeartBeatRefreshThrottleMinInterval(long clientHeartBeatRefreshThrottleMinInterval) {
-        this.clientHeartBeatRefreshThrottleMinInterval = clientHeartBeatRefreshThrottleMinInterval;
-    }
-
-    public long getClientHeartBeatRefreshThrottleMaxInterval() {
-        return clientHeartBeatRefreshThrottleMaxInterval;
-    }
-
-    public void setClientHeartBeatRefreshThrottleMaxInterval(long clientHeartBeatRefreshThrottleMaxInterval) {
-        this.clientHeartBeatRefreshThrottleMaxInterval = clientHeartBeatRefreshThrottleMaxInterval;
-    }
-
-    public int getClientLoginInfoBatchExpireSize() {
-        return clientLoginInfoBatchExpireSize;
-    }
-
-    public void setClientLoginInfoBatchExpireSize(int clientLoginInfoBatchExpireSize) {
-        this.clientLoginInfoBatchExpireSize = clientLoginInfoBatchExpireSize;
-    }
-
     @Override
     public String toString() {
         return "MessageServerProperties{" +
@@ -1202,15 +1032,9 @@ public class MessageServerProperties extends MessageProperties {
                 ", workerChildOptionSoReuseaddr=" + workerChildOptionSoReuseaddr +
                 ", workerChildOptionWriteBufferHighWaterMark=" + workerChildOptionWriteBufferHighWaterMark +
                 ", workerChildOptionWriteBufferLowWaterMark=" + workerChildOptionWriteBufferLowWaterMark +
-                ", clientLoginInfoSaveMode=" + clientLoginInfoSaveMode +
-                ", clientLoginInfoScheduleTimeInterval=" + clientLoginInfoScheduleTimeInterval +
-                ", clientLoginInfoBatchExpireSize=" + clientLoginInfoBatchExpireSize +
                 ", clientHeartBeatEnable=" + clientHeartBeatEnable +
                 ", clientHeartBeatTimeout=" + clientHeartBeatTimeout +
                 ", clientHeartBeatWaitRetry=" + clientHeartBeatWaitRetry +
-                ", clientHeartBeatRefreshThrottleDivisor=" + clientHeartBeatRefreshThrottleDivisor +
-                ", clientHeartBeatRefreshThrottleMinInterval=" + clientHeartBeatRefreshThrottleMinInterval +
-                ", clientHeartBeatRefreshThrottleMaxInterval=" + clientHeartBeatRefreshThrottleMaxInterval +
                 ", serverLoginEnable=" + serverLoginEnable +
                 ", serverLoginTimeout=" + serverLoginTimeout +
                 ", acceptNewConnections=" + acceptNewConnections +
@@ -1222,12 +1046,6 @@ public class MessageServerProperties extends MessageProperties {
                 ", qosRetryInitialDelay=" + qosRetryInitialDelay +
                 ", qosRetryPeriod=" + qosRetryPeriod +
                 ", qosRetryMaxLoops=" + qosRetryMaxLoops +
-                ", appKeyConnectionCountRefreshEnable=" + appKeyConnectionCountRefreshEnable +
-                ", appKeyConnectionCountRefreshInterval=" + appKeyConnectionCountRefreshInterval +
-                ", appKeyConnectionCountRefreshStep=" + appKeyConnectionCountRefreshStep +
-                ", appKeyConnectionCountRefreshMaxBatchesPerRun=" + appKeyConnectionCountRefreshMaxBatchesPerRun +
-                ", appKeyConnectionCountRefreshFullSyncEveryRuns=" + appKeyConnectionCountRefreshFullSyncEveryRuns +
-                ", appKeyConnectionCountRefreshOffset=" + appKeyConnectionCountRefreshOffset +
                 ", websocketPath='" + websocketPath + '\'' +
                 ", clusterEnable=" + clusterEnable +
                 ", nodes=" + nodes +

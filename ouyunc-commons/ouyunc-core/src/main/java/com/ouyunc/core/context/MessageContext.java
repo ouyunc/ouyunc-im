@@ -37,6 +37,7 @@ import java.io.Serializable;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -526,5 +527,16 @@ public class MessageContext {
                     return null;
                 }
             }));
+
+    /**
+     * 群成员 identity 列表。短过期，避免每条群消息都 ZRANGE；跨节点改成员靠 TTL，不靠 pub/sub。
+     */
+    public static final Cache<String, Set<String>> groupUserIdentityCache = CaffeineLocalCache.wrap(
+            "groupUserIdentity",
+            Caffeine.newBuilder()
+                    .maximumSize(MessageConstant.GROUP_MEMBER_IDENTITY_CACHE_MAX_SIZE)
+                    .expireAfterWrite(MessageConstant.GROUP_MEMBER_IDENTITY_CACHE_EXPIRE_SECONDS, TimeUnit.SECONDS)
+                    .recordStats()
+                    .build());
 
 }

@@ -165,86 +165,115 @@ public class MessageHelper {
 
 
     /**
-     * @Author fzx
-     * @Description 同步投递消息,不对外暴漏
+     * 同步投递。集群中 {@link Target#getTargetServerAddress()} 是最终落地机，不可改成下一跳。
      */
     private static void doSendMessage(Packet originPacket, Target target, SendCallback sendCallback) {
         Metadata originMetadata = originPacket.getMessage().getMetadata();
         originMetadata.setTarget(target);
-        String appKey = target.getAppKey();
-        // 需要发送到的服务器地址
-        String toServerAddress = target.getTargetServerAddress();
-        // 如果是单服务实例或者如果目标主机是本机，则直接发送处理
-        if (!MessageServerContext.serverProperties().isClusterEnable() || Objects.equals(MessageServerContext.serverProperties().getLocalServerAddress(), toServerAddress)) {
-            MessageServerContext.findProtocol(target.getProtocol(), target.getProtocolVersion()).doSendMessage(originPacket, IdentityUtil.generalComboIdentity(appKey, target.getTargetIdentity(), target.getDeviceType()), sendCallback);
+        String destServerAddress = target.getTargetServerAddress();
+        String localServerAddress = MessageServerContext.serverProperties().getLocalServerAddress();
+        if (!MessageServerContext.serverProperties().isClusterEnable()
+                || Objects.equals(localServerAddress, destServerAddress)) {
+            deliverLocal(originPacket, target, sendCallback);
             return;
         }
         Packet packet = originPacket.clone();
-        // 获取消息元数据消息
         Metadata metadata = packet.getMessage().getMetadata();
-        // 判断是否是首次在集群间传递消息
         if (!metadata.isRouted()) {
-            // 首次进行传递时，将目标以及目标主机和所登录的设备进行设置
             metadata.setRouted(true);
         }
-        // 将本机地址作为上一个路由服务地址传递过去
-        // 先从存活的注册表中查找（防止有新添加集群中的服务），然后再从全局中找到最近的服务;
-        // 重要！重要！重要！，这里是从channel pool 池中获取的channel(该channel的pipline 是内部协议的处理链，也就是说通过池中拿到的channel 所发送的消息，无论协议类型是什么都只会走内部的协议处理器，与协议类型无关),
-        ChannelPool channelPool = MessageServerContext.clusterActiveServerRegistryTableCache.get(toServerAddress);
-        // 如果从存活的服务注册表中获取不到channelPool 则进行路由其他服务去达到消息目的
-        if (channelPool == null) {
-            // 找不到有以下两种情况：
-            // 1,消息接收端是不在集群中的服务（非法的服务地址）,不予考虑;
-            // 2,消息接收端是后来加入的集群中的服务，在旧的集群中可能由于部分服务之间网络不通导致没有该服务记录保存; 此时的处理方式是路由到其他可用服务上处理
-            // 3,两个服务不直接连通，须通过中间服务做中转
-            log.warn("获取不到消息需要到达的服务: {}", toServerAddress);
-            exceptionHandle(packet, target, sendCallback);
+        ChannelPool destPool = resolveClusterChannelPool(destServerAddress);
+        if (destPool != null) {
+            writeViaClusterPool(packet, destPool, destServerAddress, sendCallback);
             return;
         }
-        // 异步获取 channel
+        log.warn("获取不到消息需要到达的服务: {}，尝试经其他节点中转，最终 dest 不变", destServerAddress);
+        relayViaNextHop(packet, destServerAddress, sendCallback);
+    }
+
+    /**
+     * 本机落地：普通单播按 identity+device 写连接；节点广播只扫本机登录表。
+     */
+    private static void deliverLocal(Packet packet, Target target, SendCallback sendCallback) {
+        Metadata metadata = packet.getMessage().getMetadata();
+        String identity = target.getTargetIdentity();
+        if (metadata != null && metadata.isLocalBroadcastOnly()
+                && (identity == null || identity.isEmpty())) {
+            ClientHelper.deliverLocalBroadcast(target.getAppKey(), packet);
+            return;
+        }
+        MessageServerContext.findProtocol(target.getProtocol(), target.getProtocolVersion())
+                .doSendMessage(packet, IdentityUtil.generalComboIdentity(
+                        target.getAppKey(), target.getTargetIdentity(), target.getDeviceType()), sendCallback);
+    }
+
+    /**
+     * 先 active 再 global。池中 channel 走内部协议 pipeline，与客户端协议类型无关。
+     */
+    private static ChannelPool resolveClusterChannelPool(String serverAddress) {
+        ChannelPool channelPool = MessageServerContext.clusterActiveServerRegistryTableCache.get(serverAddress);
+        if (channelPool != null) {
+            return channelPool;
+        }
+        return MessageServerContext.clusterGlobalServerRegistryTableCache.get(serverAddress);
+    }
+
+    /**
+     * 直连 dest 或 hop 失败：route(失败地址) 只选下一跳连接，包上 dest 保持登录机/目标节点。
+     */
+    private static void relayViaNextHop(Packet packet, String failedServerAddress, SendCallback sendCallback) {
+        String nextHop = MessageServerContext.messageRouter.route(packet, failedServerAddress);
+        if (nextHop == null) {
+            notifySendFail(packet, "消息id: " + packet.getPacketId() + " 尝试路由多次，都没有找到可用的服务！", sendCallback);
+            return;
+        }
+        ChannelPool hopPool = resolveClusterChannelPool(nextHop);
+        if (hopPool == null) {
+            log.warn("下一跳 {} 无连接池，继续回溯", nextHop);
+            relayViaNextHop(packet, nextHop, sendCallback);
+            return;
+        }
+        writeViaClusterPool(packet, hopPool, nextHop, sendCallback);
+    }
+
+    /**
+     * 经 hop 的集群连接写出；acquire 失败则对该 hop 再回溯，不改 Target.targetServerAddress。
+     */
+    private static void writeViaClusterPool(Packet packet, ChannelPool channelPool,
+                                            String hopServerAddress, SendCallback sendCallback) {
         Future<Channel> channelFuture = channelPool.acquire();
         if (channelFuture == null) {
-            // 找不到有以下两种情况：
-            // 1,消息接收端是不在集群中的服务（非法的服务地址）,不予考虑;
-            // 2,消息接收端是后来加入的集群中的服务，在旧的集群中可能由于部分服务之间网络不通导致没有该服务记录保存; 此时的处理方式是路由到其他可用服务上处理
-            // 3,两个服务不直接连通，须通过中间服务做中转
-            log.warn("获取不到消息需要到达的服务: {}", toServerAddress);
-            exceptionHandle(packet, target, sendCallback);
+            log.warn("获取不到消息需要到达的服务连接: {}", hopServerAddress);
+            relayViaNextHop(packet, hopServerAddress, sendCallback);
             return;
         }
-        // 监听是否发送成功
+        Metadata metadata = packet.getMessage().getMetadata();
         channelFuture.addListener((FutureListener<Channel>) acquireFuture -> {
-            if (acquireFuture.isDone()) {
-                // 判断是否连接成功
-                if (acquireFuture.isSuccess()) {
-                    Channel channel = acquireFuture.getNow();
-                    if (channel == null) {
-                        log.error("发送集群消息时，获取channel失败！");
-                        notifySendFail(packet, "发送集群消息时，获取channel失败！", sendCallback);
-                        return;
-                    }
-
-                    // 给该通道打上标签(如果该通道channel 上有标签则不需要再打标签),打上标签的目的，是为了以后动态回收该channel,保证核心channel数
-                    Integer channelPoolHashCode = ChannelAttrUtil.getChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_TAG_POOL);
-                    if (channelPoolHashCode == null) {
-                        ChannelAttrUtil.setChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_TAG_POOL, channelPool.hashCode());
-                    }
-                    // 当获取channel 成功的时候才将from进行设置进去
-                    metadata.setFromServerAddress(MessageServerContext.serverProperties().getLocalServerAddress());
-                    Runnable releaseChannel = () -> channelPool.release(channel);
-                    PacketChannelWriter.runOnEventLoop(channel, packet, sendCallback,
-                            () -> PacketChannelWriter.tryWritePacketAndThen(channel, packet, sendCallback, releaseChannel),
-                            releaseChannel);
-                } else {
-                    // 获取失败
-                    Throwable cause = acquireFuture.cause();
-                    log.warn("客户端获取channel异常！原因: {}", cause.getMessage());
-                    // 重新选择一个新的集群中的服务去路由，直到找到通的或没有任何一个连通的结束
-                    exceptionHandle(packet, target, sendCallback);
-                }
-            }else {
+            if (!acquireFuture.isDone()) {
                 log.error("发送消息时，获取channel异常！");
+                return;
             }
+            if (!acquireFuture.isSuccess()) {
+                Throwable cause = acquireFuture.cause();
+                log.warn("客户端获取channel异常！原因: {}", cause == null ? "" : cause.getMessage());
+                relayViaNextHop(packet, hopServerAddress, sendCallback);
+                return;
+            }
+            Channel channel = acquireFuture.getNow();
+            if (channel == null) {
+                log.error("发送集群消息时，获取channel失败！");
+                notifySendFail(packet, "发送集群消息时，获取channel失败！", sendCallback);
+                return;
+            }
+            Integer channelPoolHashCode = ChannelAttrUtil.getChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_TAG_POOL);
+            if (channelPoolHashCode == null) {
+                ChannelAttrUtil.setChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_TAG_POOL, channelPool.hashCode());
+            }
+            metadata.setFromServerAddress(MessageServerContext.serverProperties().getLocalServerAddress());
+            Runnable releaseChannel = () -> channelPool.release(channel);
+            PacketChannelWriter.runOnEventLoop(channel, packet, sendCallback,
+                    () -> PacketChannelWriter.tryWritePacketAndThen(channel, packet, sendCallback, releaseChannel),
+                    releaseChannel);
         });
     }
 
@@ -263,19 +292,4 @@ public class MessageHelper {
         return PacketChannelWriter.tryWriteObject(channel, msg, packet, sendCallback);
     }
 
-    /**
-     * @Author fzx
-     * @Description 异常数据的处理
-     */
-    private static void exceptionHandle(Packet packet, Target target, SendCallback sendCallback) {
-        // 通过路由助手，找到一个可用的服务连接，如果找不到最后会这里处理，重试，下线，等操作
-        String nextAvailableSocketAddress = MessageServerContext.messageRouter.route(packet, target.getTargetServerAddress());
-        if (nextAvailableSocketAddress == null) {
-            notifySendFail(packet, "消息id: " + packet.getPacketId() + " 尝试路由多次，都没有找到可用的服务！", sendCallback);
-            return;
-        }
-        // 设置可用的下个目标服务
-        target.setTargetServerAddress(nextAvailableSocketAddress);
-        doSendMessage(packet, target, sendCallback);
-    }
 }

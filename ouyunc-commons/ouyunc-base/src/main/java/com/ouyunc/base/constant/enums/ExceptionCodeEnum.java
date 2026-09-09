@@ -61,10 +61,6 @@ public enum ExceptionCodeEnum {
 
     BIND_GROUP_ERROR(700001, "绑定群组异常"),
 
-
-    SAVE_OFFLINE_MESSAGE_ERROR(800001, "保存离线消息异常"),
-
-
     MESSAGE_TYPE_ERROR(1000001, "消息类型异常"),
     MESSAGE_CONTENT_TYPE_ERROR(1000002, "消息内容类型异常"),
 

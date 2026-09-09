@@ -35,7 +35,7 @@ public class Metadata implements Serializable, Cloneable {
      private String fromServerAddress;
 
     /**
-     * 发送消息的目标信息,(消息最终接收方的信息)
+     * 发送消息的目标信息（最终接收方）。{@code targetServerAddress} 是落地机，集群中转不得改写为下一跳。
      */
     private Target target;
 
@@ -69,6 +69,11 @@ public class Metadata implements Serializable, Cloneable {
      * 客服会把 {@code message.from} 改写成入口 serviceIdentity，claim/release 不能用改写后的 from。
      */
     private String qosClaimIdentity;
+
+    /**
+     * 集群广播：仅投递本机连接，不再向其他节点扇出。
+     */
+    private boolean localBroadcastOnly;
 
 
     public String getAppKey() {
@@ -157,6 +162,14 @@ public class Metadata implements Serializable, Cloneable {
 
     public void setQosClaimIdentity(String qosClaimIdentity) {
         this.qosClaimIdentity = qosClaimIdentity;
+    }
+
+    public boolean isLocalBroadcastOnly() {
+        return localBroadcastOnly;
+    }
+
+    public void setLocalBroadcastOnly(boolean localBroadcastOnly) {
+        this.localBroadcastOnly = localBroadcastOnly;
     }
 
     public Metadata(String appKey, boolean routed, int currentRetry, String fromServerAddress, Target target, List<RoutingTable> routingTables, String clientIp, long serverTime) {

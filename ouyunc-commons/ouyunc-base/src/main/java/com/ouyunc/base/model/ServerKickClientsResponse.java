@@ -5,7 +5,7 @@ import java.io.Serializable;
 
 /**
  * 运维通知客户端主动重连接口响应 data。
- * <p>对应 {@code POST /admin/kick-clients}：服务端不下发 close，由客户端主动断开。</p>
+ * <p>对应 {@code POST /api/im/admin/kick-clients}：服务端不下发 close，由客户端主动断开。</p>
  */
 public class ServerKickClientsResponse implements Serializable {
 

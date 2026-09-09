@@ -5,7 +5,7 @@ import java.io.Serializable;
 
 /**
  * 运维摘流 / 取消摘流接口响应 data。
- * <p>对应 {@code POST /admin/drain}、{@code POST /admin/undrain}。</p>
+ * <p>对应 {@code POST /api/im/admin/drain}、{@code POST /api/im/admin/undrain}。</p>
  */
 public class ServerDrainStatusResponse implements Serializable {
 

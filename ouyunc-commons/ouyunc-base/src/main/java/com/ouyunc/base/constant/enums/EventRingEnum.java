@@ -23,14 +23,8 @@ public enum EventRingEnum {
     /** 客户端登出事件 */
     CLIENT_LOGOUT(1048576, WaitStrategyMode.BLOCKING, ProducerType.MULTI),
 
-    /** 移除离线消息事件 */
-    REMOVE_OFFLINE_MESSAGE(1048576, WaitStrategyMode.BLOCKING, ProducerType.MULTI),
-
     /** 发送失败消息事件 */
     SEND_FAIL_MESSAGE(1048576, WaitStrategyMode.BLOCKING, ProducerType.MULTI),
-
-    /** 客户端登录保活刷新事件专用 RingBuffer（与登录/登出链路隔离） */
-    CLIENT_KEEP_ALIVE_REFRESH(1048576, WaitStrategyMode.BLOCKING, ProducerType.MULTI),
 
     /** 客户端业务会话空闲（CLIENT_BUSINESS_SESSION_IDLE）专用 RingBuffer，与其它事件隔离 */
     CLIENT_BUSINESS_SESSION_IDLE(1048576, WaitStrategyMode.BLOCKING, ProducerType.MULTI),

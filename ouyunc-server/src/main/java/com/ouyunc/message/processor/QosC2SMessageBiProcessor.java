@@ -11,6 +11,7 @@ import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.message.helper.PacketChannelWriter;
 import com.ouyunc.message.schedule.ScheduleTimer;
 import com.ouyunc.message.validator.AuthValidator;
 import com.ouyunc.message.validator.PermissionValidator;
@@ -57,7 +58,7 @@ public final class QosC2SMessageBiProcessor extends AbstractMessageBiProcessor<B
                             return Mono.empty(); // 校验不通过，不传递消息
                         }
                         return Mono.just(packet); // 校验通过，继续传递消息
-                    }).subscribe(ctx::fireChannelRead);
+                    }).subscribe(p -> PacketChannelWriter.fireChannelRead(ctx, p));
     }
     /**
      * 外部客户端接收到消息后，发送消息已接收给服务端，做消息已接收确认

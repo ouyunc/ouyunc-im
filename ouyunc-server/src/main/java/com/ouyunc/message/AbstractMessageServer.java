@@ -16,6 +16,7 @@ import com.ouyunc.message.channel.ServerChannelInitializer;
 import com.ouyunc.message.channel.SocketChannelInitializer;
 import com.ouyunc.message.cluster.client.DefaultMessageClient;
 import com.ouyunc.message.cluster.client.MessageClient;
+import com.ouyunc.message.cluster.lease.NodeLeaseKeeper;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.http.HttpRequestDispatcher;
 import com.ouyunc.message.convert.BinaryWebSocketFramePacketConverter;
@@ -183,7 +184,7 @@ public abstract class AbstractMessageServer implements MessageServer {
         try {
             // 1. 摘流：拒绝新登录，/ready → 503
             MessageServerContext.enterDrainMode();
-            // 2. SERVER_STOP（同步）：通知客户端主动断开 → 宽限期 → 强制关残留 → Redis 订阅/连接数定时任务清理
+            // 2. SERVER_STOP（同步）：通知客户端主动断开 → 宽限期 → 强制关残留 → Redis 订阅/节点租约清理
             MessageServerContext.publishEvent(new MessageEvent(this, MessageEventTypeEnum.SERVER_STOP), false);
             // 3. 停止资源监控（调度任务随 ThreadPoolManager 一并结束）
             ResourceMonitor.stopMonitoring();
@@ -333,6 +334,7 @@ public abstract class AbstractMessageServer implements MessageServer {
                 }
             }
             ioTransport.enhanceServerBootstrap(bootstrap, bossThreads);
+            NodeLeaseKeeper.start();
             // 因为bind() 是异步的，这里不用 bind().sync(); 而是添加监听器的方式进行回调
             ChannelFuture channelFuture = bootstrap.bind();
             // 添加监听器来监听是否启动成功,做额外工作
@@ -344,6 +346,7 @@ public abstract class AbstractMessageServer implements MessageServer {
                             messageClient.configure(MessageServerContext.serverProperties());
                         }
                         log.debug("核心message服务初始化完成");
+                        NodeLeaseKeeper.start();
                         MessageServerContext.publishEvent(new MessageEvent(MessageServerContext.serverProperties().getLocalServerAddress(), MessageEventTypeEnum.SERVER_STARTUP), true);
                         log.debug("IM server启动成功，其绑定地址:{} 端口号:{} 共花费:{} ms.", MessageServerContext.serverProperties().getIp(), MessageServerContext.serverProperties().getPort(), (TimeUtil.currentTimeMillis() - startTimeStamp));
                     } else {

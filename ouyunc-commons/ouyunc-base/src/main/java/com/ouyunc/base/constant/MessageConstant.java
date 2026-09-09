@@ -253,9 +253,29 @@ public class MessageConstant {
     public static final String CLIENT_APP_KEY_PUBLISH_TOPIC = "client_app_key_publish_topic";
 
     /**
-     * appKey 连接数 ZSet 过期清理定时任务 id（与 ScheduleTimer 注册 id 一致）
+     * IM 节点租约心跳任务 id
      */
-    public static final String APP_KEY_CONNECTION_COUNT_REFRESH_TASK_ID = "appKey-connection-count-refresh-timer";
+    public static final String IM_NODE_LEASE_TASK_ID = "im-node-lease-heartbeat";
+
+    /**
+     * 节点租约刷新间隔（秒）
+     */
+    public static final int IM_NODE_LEASE_REFRESH_SECONDS = 2;
+
+    /**
+     * 节点租约 TTL（秒），须大于刷新间隔，kill -9 后整机在此窗口内判定宕机
+     */
+    public static final int IM_NODE_LEASE_TTL_SECONDS = 8;
+
+    /**
+     * 本机连接数变更后，合并写入 {nodeId} 连接 HASH 的等待（毫秒），避免每条登录打 Redis。
+     */
+    public static final int IM_NODE_CONN_PUBLISH_DEBOUNCE_MILLIS = 200;
+
+    /**
+     * 本机广播：每个 EventLoop 一次连续写出条数，写完再 execute 下一批，避免占满该 loop。
+     */
+    public static final int IM_LOCAL_BROADCAST_EVENTLOOP_BATCH = 64;
 
     /**
      * 自定义协议的魔数6个字节,字节数组 OUYUNC
@@ -293,6 +313,36 @@ public class MessageConstant {
      * 登录签名 createTime 允许的时钟偏差（毫秒），默认 ±5 分钟
      */
     public static final long LOGIN_SIGNATURE_CREATE_TIME_SKEW_MS = 5L * 60L * 1000L;
+
+    /**
+     * MQTT CONNECT password：{@code createTime#signature}，createTime 与原生登录签名同一套。
+     */
+    public static final char MQTT_LOGIN_PASSWORD_TIME_SEPARATOR = '#';
+
+    /**
+     * 解绑抢锁失败时的重试次数，避免幽灵 ONLINE。
+     */
+    public static final int BIND_LOCK_RETRY_TIMES = 3;
+
+    /**
+     * 解绑三次抢锁仍失败后，再延迟补偿一次。单位毫秒。
+     */
+    public static final long UNBIND_COMPENSATE_DELAY_MILLIS = 1000L;
+
+    /**
+     * 单连接有序业务队列上限。积压超过则关连，避免慢连接拖垮堆。
+     */
+    public static final int CHANNEL_ORDERED_TASK_MAX = 256;
+
+    /**
+     * 群成员 identity 列表本地缓存。短 TTL，HTTP 侧改成员后最多延迟这么久；调用方会 remove 发送者，必须返回副本。
+     */
+    public static final int GROUP_MEMBER_IDENTITY_CACHE_EXPIRE_SECONDS = 5;
+
+    /**
+     * 热点群数量上限（按群 key，不是按成员条数）。
+     */
+    public static final long GROUP_MEMBER_IDENTITY_CACHE_MAX_SIZE = 50_000L;
 
     /**
      * 广播接收方占位符（全员 SERVER_NOTIFY）
@@ -345,6 +395,11 @@ public class MessageConstant {
      */
     public static final String CHANNEL_ATTR_KEY_TAG_LOGIN = "CHANNEL_ATTR_KEY_TAG_LOGIN";
 
+    /**
+     * 登录 Redis 校验进行中，防止同一连接并发打出两个登录。
+     */
+    public static final String CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT = "CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT";
+
 
     /**
      * channel 的登录超时调度器
@@ -357,20 +412,9 @@ public class MessageConstant {
     public static final String CHANNEL_ATTR_KEY_CHANNEL_CLOSE_HOOK = "CHANNEL_ATTR_KEY_CHANNEL_CLOSE_HOOK";
 
     /**
-     * 该链接上次的心跳时间戳
-     */
-    public static final String CHANNEL_ATTR_KEY_TAG_LAST_HEARTBEAT_TIMESTAMP = "CHANNEL_ATTR_KEY_TAG_LAST_HEARTBEAT_TIMESTAMP";
-
-    /**
      * 链接上次的心跳间隔时间
      */
     public static final String CHANNEL_ATTR_KEY_TAG_HEARTBEAT_TIMEOUT = "CHANNEL_ATTR_KEY_TAG_HEARTBEAT_TIME";
-
-    /**
-     * channel 下一次允许执行保活刷新的时间戳（毫秒）
-     */
-    public static final String CHANNEL_ATTR_KEY_TAG_NEXT_KEEP_ALIVE_REFRESH_TIMESTAMP = "CHANNEL_ATTR_KEY_TAG_NEXT_KEEP_ALIVE_REFRESH_TIMESTAMP";
-
 
     /**
      * channel 客户端读超时的次数标签
@@ -483,12 +527,6 @@ public class MessageConstant {
      * 转换为packet处理器
      */
     public static final String CONVERT_2_PACKET_HANDLER = "CONVERT_2_PACKET_HANDLER";
-
-    /**
-     * 客户端登录保活处理器
-     */
-    public static final String CLIENT_LOGIN_KEEP_ALIVE_HANDLER = "LOGIN_KEEP_ALIVE_HANDLER";
-
 
     /**
      * mqtt 编码器处理器

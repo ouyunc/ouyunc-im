@@ -49,20 +49,25 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
         if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
             return;
         }
-        ctx.fireChannelRead(packet);
+        PacketChannelWriter.fireChannelRead(ctx, packet);
     }
 
     @Override
     public void process(ChannelHandlerContext ctx, Packet packet) {
-        // 同步 Redis 路由校验不能堵在 Netty EventLoop
-        ThreadPoolManager.messageProcessorExecutor().execute(() -> {
-            try {
-                processOffloaded(ctx, packet);
-            } catch (Exception e) {
-                log.error("客服消息处理异常, packetId={}", packet.getPacketId(), e);
-                releaseQosOnFailure(packet);
-            }
-        });
+        if (ctx.channel().eventLoop().inEventLoop()) {
+            ThreadPoolManager.messageProcessorExecutor().execute(() -> processSafely(ctx, packet));
+            return;
+        }
+        processSafely(ctx, packet);
+    }
+
+    private void processSafely(ChannelHandlerContext ctx, Packet packet) {
+        try {
+            processOffloaded(ctx, packet);
+        } catch (Exception e) {
+            log.error("客服消息处理异常, packetId={}", packet.getPacketId(), e);
+            releaseQosOnFailure(packet);
+        }
     }
 
     private void processOffloaded(ChannelHandlerContext ctx, Packet packet) {
@@ -126,11 +131,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
 
     /** 后续 pipeline 必须回到该连接的 EventLoop，避免跨线程 fireChannelRead。 */
     private static void fireReadOnEventLoop(ChannelHandlerContext ctx, Packet packet) {
-        if (ctx.executor().inEventLoop()) {
-            ctx.fireChannelRead(packet);
-            return;
-        }
-        ctx.executor().execute(() -> ctx.fireChannelRead(packet));
+        PacketChannelWriter.fireChannelRead(ctx, packet);
     }
 
 

@@ -29,6 +29,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -53,8 +54,16 @@ public final class GroupMembershipSupport {
     public Set<String> groupUsersIdentity(Packet packet) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        // score 存储的是用户加入群的时间戳，毫秒
-        return infra.stringRedisTemplate.opsForZSet().range(CacheConstant.buildGroupUserCacheKey(metadata.getAppKey(), message.getTo()), NumberConstant.NUMBER_0, NumberConstant.NUMBER_NEGATIVE_1);
+        String cacheKey = CacheConstant.buildGroupUserCacheKey(metadata.getAppKey(), message.getTo());
+        Set<String> cached = MessageContext.groupUserIdentityCache.get(cacheKey);
+        if (cached != null) {
+            return new HashSet<>(cached);
+        }
+        Set<String> fromRedis = infra.stringRedisTemplate.opsForZSet().range(
+                cacheKey, NumberConstant.NUMBER_0, NumberConstant.NUMBER_NEGATIVE_1);
+        Set<String> snapshot = fromRedis == null || fromRedis.isEmpty() ? Set.of() : Set.copyOf(fromRedis);
+        MessageContext.groupUserIdentityCache.put(cacheKey, snapshot);
+        return new HashSet<>(snapshot);
     }
 
     public GroupUserEntity groupUserEntity(String appKey, String groupId, String memberId) {
@@ -386,15 +395,14 @@ public final class GroupMembershipSupport {
     public<K, V> boolean bindGroup(Packet packet, String joiner, String groupId, String requestSessionId, long expireTime, Consumer<RedisConnection> consumer) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        return session.saveMessageWithSession(packet, expireTime, CacheConstant.buildMessageCacheKey(metadata.getAppKey(), packet.getPacketId()), CacheConstant.buildGroupRequestSessionCacheKey(metadata.getAppKey(), groupId, requestSessionId), consumer, (redisConnection, msg, ak, f, t) -> {
-            // 1. 获取 String 序列化器（与前文保持一致，确保序列化规则统一）
-            // 建立双向好友关系（仅bindFriend方法需要的逻辑）
-            // 2. 使用字符串序列化器处理ZSet操作（保持原生字符串特性）
-            // 2. 使用字符串序列化器处理ZSet操作（保持原生字符串特性）
-            // 转换键和值为字符串类型的键
+        boolean bound = session.saveMessageWithSession(packet, expireTime, CacheConstant.buildMessageCacheKey(metadata.getAppKey(), packet.getPacketId()), CacheConstant.buildGroupRequestSessionCacheKey(metadata.getAppKey(), groupId, requestSessionId), consumer, (redisConnection, msg, ak, f, t) -> {
             redisConnection.zSetCommands().zAdd(infra.stringSerializer.serialize(CacheConstant.buildGroupUserCacheKey(metadata.getAppKey(), groupId)), GroupUserPost.ORDINARY.value(), infra.stringSerializer.serialize(joiner));
             redisConnection.zSetCommands().zAdd(infra.stringSerializer.serialize(CacheConstant.buildUserGroupsCacheKey(metadata.getAppKey(), joiner)), msg.getMetadata().getServerTime(), infra.stringSerializer.serialize(groupId));
         });
+        if (bound) {
+            MessageContext.groupUserIdentityCache.delete(CacheConstant.buildGroupUserCacheKey(metadata.getAppKey(), groupId));
+        }
+        return bound;
     }
 
     public void updateGroupUserCache(String cacheKey, GroupUserEntity groupUserEntity) {
