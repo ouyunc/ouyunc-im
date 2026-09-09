@@ -529,7 +529,7 @@ public class MessageContext {
             }));
 
     /**
-     * 群成员 identity 列表。短过期，避免每条群消息都 ZRANGE；跨节点改成员靠 TTL，不靠 pub/sub。
+     * 群成员 identity 列表。短过期；HTTP 改成员后经 {@link com.ouyunc.base.constant.MessageConstant#IM_LOCAL_CACHE_EVICT_TOPIC} 立即失效。
      */
     public static final Cache<String, Set<String>> groupUserIdentityCache = CaffeineLocalCache.wrap(
             "groupUserIdentity",

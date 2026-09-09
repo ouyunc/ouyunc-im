@@ -55,6 +55,23 @@ public final class RelationLocalCache {
         SHIELD.put(shieldKey(appKey, ownerId, peerId), Boolean.valueOf(shielded));
     }
 
+    public static void invalidateGroupMember(String appKey, String groupId, String memberId) {
+        GROUP_MEMBER.delete(groupMemberKey(appKey, groupId, memberId));
+    }
+
+    public static void invalidateBlacklist(String appKey, String ownerId, String targetId) {
+        BLACKLIST.delete(blacklistKey(appKey, ownerId, targetId));
+    }
+
+    public static void invalidateFriend(String appKey, String userA, String userB) {
+        FRIEND.delete(friendKey(appKey, userA, userB));
+        FRIEND.delete(friendKey(appKey, userB, userA));
+    }
+
+    public static void invalidateShield(String appKey, String ownerId, String peerId) {
+        SHIELD.delete(shieldKey(appKey, ownerId, peerId));
+    }
+
     private static Cache<String, Boolean> newBooleanCache(String name) {
         return CaffeineLocalCache.wrap(name, Caffeine.newBuilder()
                 .maximumSize(MessageConstant.RELATION_PRESENCE_CACHE_MAX_SIZE)

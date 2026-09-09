@@ -142,10 +142,11 @@ public final class HttpPushSupportedTypes {
         }
         int contentType = packet.getMessage().getContentType();
         if (contentType == MessageContentTypeEnum.TEXT_CONTENT.getType()
-                || contentType == MessageContentTypeEnum.TRANSLATION_READY_CONTENT.getType()) {
+                || contentType == MessageContentTypeEnum.TRANSLATION_READY_CONTENT.getType()
+                || contentType == MessageContentTypeEnum.GROUP_OP_NOTIFY_CONTENT.getType()) {
             return;
         }
         throw new HttpPipelineException(HttpResponseStatus.BAD_REQUEST, HttpResponseCodeEnum.BAD_REQUEST,
-                "HTTP 推送服务端通知仅支持文本或译文就绪 contentType=" + contentType);
+                "HTTP 推送服务端通知仅支持文本、译文就绪或群操作通知 contentType=" + contentType);
     }
 }

@@ -124,6 +124,13 @@ public enum DefaultRepository implements Repository {
         return RepositorySupports.GROUP.groupUsersIdentity(packet);
     }
 
+    /**
+     * 去掉已屏蔽本群消息的成员后再扇出。
+     */
+    public Set<String> excludeGroupShieldedMembers(String appKey, String groupId, Set<String> memberIds) {
+        return RepositorySupports.GROUP.excludeGroupShieldedMembers(appKey, groupId, memberIds);
+    }
+
     public GroupUserEntity groupUserEntity(String appKey, String groupId, String memberId) {
         return RepositorySupports.GROUP.groupUserEntity(appKey, groupId, memberId);
     }

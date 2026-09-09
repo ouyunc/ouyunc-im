@@ -34,4 +34,11 @@ public enum GroupUserPost {
         }
         return null;
     }
+
+    /**
+     * 全员禁言时仍可发言的职位：群主、管理员。
+     */
+    public static boolean isManagerOrLeader(Integer post) {
+        return Objects.equals(post, MANAGER.value) || Objects.equals(post, LEADER.value);
+    }
 }

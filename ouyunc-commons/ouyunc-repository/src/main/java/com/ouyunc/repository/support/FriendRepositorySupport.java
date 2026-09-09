@@ -295,12 +295,12 @@ public final class FriendRepositorySupport {
             RelationLocalCache.markFriend(appKey, from, to, true);
         }
         Boolean blackHit = RelationLocalCache.BLACKLIST.get(RelationLocalCache.blacklistKey(appKey, to, from));
-        FriendEntity fromToEntity = MessageContext.friendEntityCache.get(
-                CacheConstant.buildFriendsConfigCacheKey(appKey, from, to));
-        Boolean shieldHit = RelationLocalCache.SHIELD.get(RelationLocalCache.shieldKey(appKey, from, to));
-        if (fromToEntity != null) {
-            shieldHit = YesOrNo.YES.getCode().equals(fromToEntity.getShield());
-            RelationLocalCache.markShield(appKey, from, to, shieldHit);
+        FriendEntity toFromEntity = MessageContext.friendEntityCache.get(
+                CacheConstant.buildFriendsConfigCacheKey(appKey, to, from));
+        Boolean shieldHit = RelationLocalCache.SHIELD.get(RelationLocalCache.shieldKey(appKey, to, from));
+        if (toFromEntity != null) {
+            shieldHit = YesOrNo.YES.getCode().equals(toFromEntity.getShield());
+            RelationLocalCache.markShield(appKey, to, from, shieldHit);
         }
         // 已知拒绝条件可短路，避免为否决路径再打 Redis
         if (Boolean.FALSE.equals(friendHit)) {
@@ -323,7 +323,7 @@ public final class FriendRepositorySupport {
         byte[] friendsKey = infra.stringSerializer.serialize(CacheConstant.buildFriendsCacheKey(appKey, to));
         byte[] fromBytes = infra.stringSerializer.serialize(from);
         byte[] blackKey = infra.stringSerializer.serialize(CacheConstant.buildBlacklistCacheKey(appKey, to));
-        byte[] shieldKey = infra.stringSerializer.serialize(CacheConstant.buildFriendsConfigCacheKey(appKey, from, to));
+        byte[] shieldKey = infra.stringSerializer.serialize(CacheConstant.buildFriendsConfigCacheKey(appKey, to, from));
         // closePipeline 拿原始结果，避免 executePipelined 用 valueSerializer 误解码 ZSCORE/HGET
         List<Object> raw = infra.redisTemplate.execute((RedisCallback<List<Object>>) connection -> {
             connection.openPipeline();
@@ -338,9 +338,9 @@ public final class FriendRepositorySupport {
         boolean shielded = shieldEntity != null && YesOrNo.YES.getCode().equals(shieldEntity.getShield());
         RelationLocalCache.FRIEND.put(RelationLocalCache.friendKey(appKey, to, from), friend);
         RelationLocalCache.markBlacklist(appKey, to, from, blacklisted);
-        RelationLocalCache.markShield(appKey, from, to, shielded);
+        RelationLocalCache.markShield(appKey, to, from, shielded);
         if (shieldEntity != null) {
-            MessageContext.friendEntityCache.put(CacheConstant.buildFriendsConfigCacheKey(appKey, from, to), shieldEntity);
+            MessageContext.friendEntityCache.put(CacheConstant.buildFriendsConfigCacheKey(appKey, to, from), shieldEntity);
         }
         return new One2OneChatAccess(friend, blacklisted, shielded);
     }

@@ -263,6 +263,11 @@ public class MessageConstant {
     public static final String CLIENT_APP_KEY_PUBLISH_TOPIC = "client_app_key_publish_topic";
 
     /**
+     * HTTP 写关系后通知 IM 节点删 Caffeine：payload 见 {@link com.ouyunc.base.model.ImLocalCacheEvictEvent#encode()}。
+     */
+    public static final String IM_LOCAL_CACHE_EVICT_TOPIC = "im_local_cache_evict_topic";
+
+    /**
      * IM 节点租约心跳任务 id
      */
     public static final String IM_NODE_LEASE_TASK_ID = "im-node-lease-heartbeat";

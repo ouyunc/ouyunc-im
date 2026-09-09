@@ -11,6 +11,7 @@ import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.context.RelationLocalCache;
 import com.ouyunc.base.model.GroupRequestSession;
 import com.ouyunc.base.constant.enums.GroupUserPost;
+import com.ouyunc.base.constant.enums.YesOrNo;
 import com.ouyunc.domain.entity.GroupEntity;
 import com.ouyunc.domain.entity.GroupUserEntity;
 import com.ouyunc.domain.entity.MongoGroupEntity;
@@ -24,14 +25,18 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisStringCommands;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.data.redis.core.types.Expiration;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -65,6 +70,101 @@ public final class GroupMembershipSupport {
         Set<String> snapshot = fromRedis == null || fromRedis.isEmpty() ? Set.of() : Set.copyOf(fromRedis);
         MessageContext.groupUserIdentityCache.put(cacheKey, snapshot);
         return new HashSet<>(snapshot);
+    }
+
+    /**
+     * 过滤已屏蔽本群消息的成员。配置 miss 时按未屏蔽投递（避免丢消息）。
+     */
+    public Set<String> excludeGroupShieldedMembers(String appKey, String groupId, Set<String> memberIds) {
+        if (memberIds == null || memberIds.isEmpty()) {
+            return Set.of();
+        }
+        Set<String> result = new HashSet<>();
+        List<String> missIds = new ArrayList<>();
+        for (String memberId : memberIds) {
+            if (memberId == null) {
+                continue;
+            }
+            String cacheKey = CacheConstant.buildGroupUserConfigCacheKey(appKey, memberId, groupId);
+            GroupUserEntity local = MessageContext.groupUserEntityCache.get(cacheKey);
+            if (local != null) {
+                if (!YesOrNo.YES.getCode().equals(local.getShield())) {
+                    result.add(memberId);
+                }
+            } else {
+                missIds.add(memberId);
+            }
+        }
+        if (missIds.isEmpty()) {
+            return result;
+        }
+        Map<String, GroupUserEntity> redisHits = loadGroupUserEntitiesFromRedis(appKey, groupId, missIds);
+        for (String memberId : missIds) {
+            GroupUserEntity entity = redisHits.get(memberId);
+            if (entity != null) {
+                updateGroupUserLocalCache(CacheConstant.buildGroupUserConfigCacheKey(appKey, memberId, groupId), entity);
+                if (!YesOrNo.YES.getCode().equals(entity.getShield())) {
+                    result.add(memberId);
+                }
+            } else {
+                result.add(memberId);
+            }
+        }
+        return result;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, GroupUserEntity> loadGroupUserEntitiesFromRedis(String appKey, String groupId,
+                                                                        List<String> memberIds) {
+        Map<String, GroupUserEntity> hits = new HashMap<>();
+        if (memberIds == null || memberIds.isEmpty()) {
+            return hits;
+        }
+        List<String> keys = new ArrayList<>(memberIds.size());
+        for (String memberId : memberIds) {
+            keys.add(CacheConstant.buildGroupUserConfigCacheKey(appKey, memberId, groupId));
+        }
+        List<Object> raw = infra.redisTemplate.execute((RedisCallback<List<Object>>) connection -> {
+            connection.openPipeline();
+            for (String key : keys) {
+                byte[] keyBytes = infra.stringSerializer.serialize(key);
+                if (keyBytes != null) {
+                    connection.stringCommands().get(keyBytes);
+                }
+            }
+            return connection.closePipeline();
+        });
+        if (raw == null) {
+            return hits;
+        }
+        int n = Math.min(memberIds.size(), raw.size());
+        for (int i = 0; i < n; i++) {
+            GroupUserEntity entity = deserializeGroupUserEntity(raw.get(i));
+            if (entity != null) {
+                hits.put(memberIds.get(i), entity);
+            }
+        }
+        return hits;
+    }
+
+    private GroupUserEntity deserializeGroupUserEntity(Object raw) {
+        if (raw == null) {
+            return null;
+        }
+        if (raw instanceof GroupUserEntity entity) {
+            return entity;
+        }
+        if (raw instanceof byte[] bytes) {
+            Object decoded = infra.valueSerializer.deserialize(bytes);
+            return decoded instanceof GroupUserEntity entity ? entity : null;
+        }
+        return null;
+    }
+
+    private void updateGroupUserLocalCache(String cacheKey, GroupUserEntity entity) {
+        if (entity != null) {
+            MessageContext.groupUserEntityCache.put(cacheKey, entity);
+        }
     }
 
     public GroupUserEntity groupUserEntity(String appKey, String groupId, String memberId) {
@@ -198,12 +298,7 @@ public final class GroupMembershipSupport {
         if (cached != null) {
             return cached;
         }
-        String cacheKey = CacheConstant.buildGroupUserConfigCacheKey(appKey, from, groupId);
-        GroupUserEntity groupUserEntity = MessageContext.groupUserEntityCache.get(cacheKey);
-        if (groupUserEntity != null) {
-            RelationLocalCache.markGroupMember(appKey, groupId, from, true);
-            return true;
-        }
+        // 不以 groupUserEntity Caffeine 作为在群证明：踢人后配置缓存可能仍在，ZSET 才是成员源
         Set<String> identities = MessageContext.groupUserIdentityCache.get(
                 CacheConstant.buildGroupUserCacheKey(appKey, groupId));
         if (identities != null) {
@@ -225,20 +320,24 @@ public final class GroupMembershipSupport {
     public GroupEntity getGroupEntity(String appKey, String groupId) {
         String cacheKey = CacheConstant.buildGroupCacheKey(appKey, groupId);
 
-        // 1. 本地缓存
         GroupEntity groupEntity = MessageContext.groupEntityCache.get(cacheKey);
         if (groupEntity != null) {
-            return groupEntity;
+            if (isLiveGroup(groupEntity)) {
+                return groupEntity;
+            }
+            MessageContext.groupEntityCache.delete(cacheKey);
+            return null;
         }
 
-        // 2. Redis缓存
-        groupEntity = (GroupEntity) infra.redisTemplate.opsForValue().get(cacheKey);
-        if (groupEntity != null) {
-            updateGroupCache(cacheKey, groupEntity);
-            return groupEntity;
+        Object redisValue = infra.redisTemplate.opsForValue().get(cacheKey);
+        if (redisValue instanceof GroupEntity redisGroup) {
+            if (!isLiveGroup(redisGroup)) {
+                return null;
+            }
+            updateGroupCache(cacheKey, redisGroup);
+            return redisGroup;
         }
 
-        // 3. MongoDB
         try {
             MongoGroupEntity mongoGroup = infra.mongoTemplate.findOne(
                     Query.query(Criteria.where(MongoGroupEntity.Fields.id).is(Long.parseLong(groupId))
@@ -246,62 +345,72 @@ public final class GroupMembershipSupport {
                     MongoGroupEntity.class);
             if (mongoGroup != null) {
                 groupEntity = convertMongoGroupToGroup(mongoGroup);
-                updateGroupCache(cacheKey, groupEntity);
-                return groupEntity;
+                if (isLiveGroup(groupEntity)) {
+                    updateGroupCache(cacheKey, groupEntity);
+                    return groupEntity;
+                }
             }
         } catch (Exception e) {
             log.warn("从MongoDB查询群组异常, appKey: {}, groupId: {}", appKey, groupId, e);
         }
 
-        // 4. MySQL
         groupEntity = getGroupEntityFromDatabases(appKey, groupId);
-        if (groupEntity != null) {
+        if (isLiveGroup(groupEntity)) {
             updateGroupCache(cacheKey, groupEntity);
+            return groupEntity;
         }
-
-        return groupEntity;
+        return null;
     }
 
     @SuppressWarnings("unchecked")
     public Mono<GroupEntity> getGroupEntityReactive(String appKey, String groupId) {
         String cacheKey = CacheConstant.buildGroupCacheKey(appKey, groupId);
 
-        // 1. 本地缓存
         GroupEntity localCached = MessageContext.groupEntityCache.get(cacheKey);
         if (localCached != null) {
-            return Mono.just(localCached);
+            if (isLiveGroup(localCached)) {
+                return Mono.just(localCached);
+            }
+            MessageContext.groupEntityCache.delete(cacheKey);
+            return Mono.empty();
         }
 
-        // 2. Redis缓存（响应式）
         return infra.reactiveRedisTemplate.opsForValue().get(cacheKey)
-                .cast(GroupEntity.class)
-                .doOnNext((Object groupEntity) -> {
-                    if (groupEntity != null) {
-                        updateGroupCache(cacheKey, (GroupEntity) groupEntity);
+                .map(Optional::of)
+                .defaultIfEmpty(Optional.empty())
+                .flatMap(opt -> {
+                    if (opt.isPresent()) {
+                        Object value = opt.get();
+                        if (!(value instanceof GroupEntity redisGroup) || !isLiveGroup(redisGroup)) {
+                            MessageContext.groupEntityCache.delete(cacheKey);
+                            return Mono.empty();
+                        }
+                        updateGroupCache(cacheKey, redisGroup);
+                        return Mono.just(redisGroup);
                     }
+                    return loadLiveGroupFromMongoThenDb(appKey, groupId, cacheKey);
                 })
-                .switchIfEmpty(
-                        // 3. MongoDB（响应式）
-                        infra.reactiveMongoTemplate.findOne(
-                                        Query.query(Criteria.where(MongoGroupEntity.Fields.id).is(Long.parseLong(groupId))
-                                                .and(MongoGroupEntity.Fields.delFlag).is(0L)),
-                                        MongoGroupEntity.class)
-                                .map(this::convertMongoGroupToGroup)
-                                .doOnNext(groupEntity -> updateGroupCache(cacheKey, groupEntity))
-                                .switchIfEmpty(
-                                        // 4. MySQL（响应式）
-                                        getGroupEntityFromDatabasesReactive(appKey, groupId)
-                                                .doOnNext(groupEntity -> {
-                                                    if (groupEntity != null) {
-                                                        updateGroupCache(cacheKey, groupEntity);
-                                                    }
-                                                })
-                                )
-                )
                 .onErrorResume(e -> {
                     log.error("响应式查询群组异常, appKey: {}, groupId: {}", appKey, groupId, e);
                     return Mono.empty();
                 });
+    }
+
+    private Mono<GroupEntity> loadLiveGroupFromMongoThenDb(String appKey, String groupId, String cacheKey) {
+        return infra.reactiveMongoTemplate.findOne(
+                        Query.query(Criteria.where(MongoGroupEntity.Fields.id).is(Long.parseLong(groupId))
+                                .and(MongoGroupEntity.Fields.delFlag).is(0L)),
+                        MongoGroupEntity.class)
+                .map(this::convertMongoGroupToGroup)
+                .filter(GroupMembershipSupport::isLiveGroup)
+                .doOnNext(groupEntity -> updateGroupCache(cacheKey, groupEntity))
+                .switchIfEmpty(getGroupEntityFromDatabasesReactive(appKey, groupId)
+                        .filter(GroupMembershipSupport::isLiveGroup)
+                        .doOnNext(groupEntity -> updateGroupCache(cacheKey, groupEntity)));
+    }
+
+    static boolean isLiveGroup(GroupEntity groupEntity) {
+        return groupEntity != null && (groupEntity.getDelFlag() == null || groupEntity.getDelFlag() == 0L);
     }
 
     public GroupEntity getGroupEntityFromDatabases(String appKey, String groupId) {
@@ -456,11 +565,16 @@ public final class GroupMembershipSupport {
     }
 
     public void updateGroupCache(String cacheKey, GroupEntity groupEntity) {
-        if (groupEntity != null) {
-            MessageContext.groupEntityCache.put(cacheKey, groupEntity);
-            infra.redisTemplate.opsForValue().set(cacheKey, groupEntity,
-                    MessageConstant.CACHE_ENTITY_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+        if (groupEntity == null) {
+            return;
         }
+        if (!isLiveGroup(groupEntity)) {
+            MessageContext.groupEntityCache.delete(cacheKey);
+            return;
+        }
+        MessageContext.groupEntityCache.put(cacheKey, groupEntity);
+        infra.redisTemplate.opsForValue().set(cacheKey, groupEntity,
+                MessageConstant.CACHE_ENTITY_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
     }
 
     public GroupEntity convertMongoGroupToGroup(MongoGroupEntity mongoGroup) {

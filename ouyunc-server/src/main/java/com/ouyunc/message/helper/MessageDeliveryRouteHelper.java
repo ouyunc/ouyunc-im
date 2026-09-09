@@ -47,15 +47,23 @@ public final class MessageDeliveryRouteHelper {
      * 群消息：向成员投递（调用方已排除发送方或自行过滤）。
      */
     public static void deliverGroupMember(Packet packet, String groupId, String memberId) {
+        if (memberId == null) {
+            return;
+        }
         Message message = packet.getMessage();
         String appKey = message.getMetadata().getAppKey();
+        Set<String> deliverable = DefaultRepository.INSTANCE.excludeGroupShieldedMembers(
+                appKey, groupId, Set.of(memberId));
+        if (deliverable.isEmpty()) {
+            return;
+        }
         MessageDeliveryChannelEnum channel =
                 DefaultRepository.INSTANCE.resolveGroupMemberDeliveryChannel(appKey, groupId, memberId);
         routeToRecipient(packet, memberId, channel, "群聊");
     }
 
     /**
-     * 群消息批量投递：IM 成员批量查在线，外渠成员逐条发 Kafka。
+     * 群消息批量投递：IM 成员批量查在线，外渠成员逐条发 Kafka。已屏蔽本群的成员不投递。
      */
     public static void deliverGroupMembers(Packet packet, Set<String> memberIds) {
         if (CollectionUtils.isEmpty(memberIds)) {
@@ -65,9 +73,11 @@ public final class MessageDeliveryRouteHelper {
         String appKey = message.getMetadata().getAppKey();
         String groupId = message.getTo();
         String senderId = message.getFrom();
+        Set<String> deliverable = DefaultRepository.INSTANCE.excludeGroupShieldedMembers(
+                appKey, groupId, memberIds);
 
         Set<String> imMembers = new HashSet<>();
-        for (String memberId : memberIds) {
+        for (String memberId : deliverable) {
             if (memberId == null || memberId.equals(senderId)) {
                 continue;
             }

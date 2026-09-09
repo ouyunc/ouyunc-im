@@ -3,6 +3,7 @@ package com.ouyunc.base.constant.enums;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.content.ChatFileContent;
+import com.ouyunc.base.packet.message.content.GroupOpNotifyContent;
 import com.ouyunc.base.packet.message.content.GroupRequestContent;
 import com.ouyunc.base.packet.message.content.ImageContent;
 import com.ouyunc.base.packet.message.content.ImageTextContent;
@@ -74,6 +75,8 @@ public enum MessageContentTypeEnum implements MessageContentType {
     RECOMMEND_ITEM_CONTENT(NumberConstant.NUMBER_NEGATIVE_113, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), RecommendItemContent.class, "通用推荐物消息内容"),
     /** 译文就绪 overlay，配合 SERVER_NOTIFY；禁止当聊天消息落会话 */
     TRANSLATION_READY_CONTENT(NumberConstant.NUMBER_NEGATIVE_112, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), TranslationReadyContent.class, "消息译文就绪"),
+    /** 群操作通知 overlay，配合 SERVER_NOTIFY；禁止当聊天消息落会话 */
+    GROUP_OP_NOTIFY_CONTENT(NumberConstant.NUMBER_NEGATIVE_111, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), GroupOpNotifyContent.class, "群操作通知"),
 
     TEXT_CONTENT(NumberConstant.NUMBER_NEGATIVE_128, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), String.class, "通用文本内容类型"),
 
