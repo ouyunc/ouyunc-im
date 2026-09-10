@@ -55,6 +55,7 @@ import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttMessageFactory;
 import io.netty.handler.codec.mqtt.MqttMessageType;
 import io.netty.handler.codec.mqtt.MqttProperties;
+import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.netty.handler.codec.mqtt.MqttUnacceptableProtocolVersionException;
 import io.netty.handler.codec.mqtt.MqttVersion;
@@ -64,6 +65,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -95,6 +97,11 @@ public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcesso
         }
         if (!MessageServerContext.isAcceptingNewConnections()) {
             log.warn("MQTT CONNECT 被拒绝：服务摘流中, channel={}", ctx.channel().id().asShortText());
+            refuse(ctx, packet, MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
+            return;
+        }
+        if (!MessageServerContext.serverProperties().isMqttEnabled()) {
+            log.warn("MQTT CONNECT 被拒绝：mqtt.enabled=false, channel={}", ctx.channel().id().asShortText());
             refuse(ctx, packet, MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
             return;
         }
@@ -385,7 +392,39 @@ public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcesso
         ctx.writeAndFlush(mqttConnAckMessage);
         log.debug("CONNECT - clientId: {}, cleanSession: {}", mqttConnectMessage.payload().clientIdentifier(),
                 mqttConnectMessage.variableHeader().isCleanSession());
-        // @todo 如果cleanSession为0, 需要重发同一clientId存储的未完成的QoS1和QoS2的DUP消息
+        String comboIdentity = IdentityUtil.generalComboIdentity(
+                loginClientInfo.getAppKey(), loginClientInfo.getIdentity(), DeviceTypeEnum.M.getType());
+        if (mqttConnectMessage.variableHeader().isCleanSession()) {
+            MqttRepository.INSTANCE.clearInflight(loginClientInfo.getAppKey(), comboIdentity);
+        } else {
+            replayMqttInflight(ctx, packet, loginClientInfo.getAppKey(), comboIdentity);
+        }
+    }
+
+    /**
+     * cleanSession=0 时重发未收到 PUBACK 的 QoS1 报文（DUP=1）。
+     */
+    private void replayMqttInflight(ChannelHandlerContext ctx, Packet packet, String appKey, String comboIdentity) {
+        Map<Integer, String> inflight = MqttRepository.INSTANCE.loadInflight(appKey, comboIdentity);
+        if (inflight.isEmpty()) {
+            return;
+        }
+        MqttVersion mqttVersion = MqttCodecUtil.getMqttVersion(packet.getRetain());
+        if (mqttVersion == null) {
+            mqttVersion = MqttVersion.MQTT_3_1_1;
+        }
+        for (Map.Entry<Integer, String> entry : inflight.entrySet()) {
+            MqttMessage stored = MqttCodecUtil.decode(mqttVersion, entry.getValue());
+            if (!(stored instanceof MqttPublishMessage publish)) {
+                continue;
+            }
+            MqttPublishMessage dup = (MqttPublishMessage) MqttMessageFactory.newMessage(
+                    new MqttFixedHeader(MqttMessageType.PUBLISH, true, publish.fixedHeader().qosLevel(),
+                            false, 0),
+                    publish.variableHeader(),
+                    publish.payload().retainedDuplicate());
+            MessageHelper.tryWriteObject(ctx.channel(), dup, packet, sendResult -> {});
+        }
     }
 
     /**

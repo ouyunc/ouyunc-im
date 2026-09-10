@@ -78,6 +78,14 @@ public final class JdbcSqlDialectHolder {
         return pick(JdbcSqlConstant.POSTGRESQL.SELECT_ALL_GROUP_USER, JdbcSqlConstant.ORACLE.SELECT_ALL_GROUP_USER, JdbcSqlConstant.MYSQL.SELECT_ALL_GROUP_USER);
     }
 
+    public static String countGroupUsersByGroup() {
+        return pick(JdbcSqlConstant.POSTGRESQL.COUNT_GROUP_USERS_BY_GROUP, JdbcSqlConstant.ORACLE.COUNT_GROUP_USERS_BY_GROUP, JdbcSqlConstant.MYSQL.COUNT_GROUP_USERS_BY_GROUP);
+    }
+
+    public static String countGroupsByUser() {
+        return pick(JdbcSqlConstant.POSTGRESQL.COUNT_GROUPS_BY_USER, JdbcSqlConstant.ORACLE.COUNT_GROUPS_BY_USER, JdbcSqlConstant.MYSQL.COUNT_GROUPS_BY_USER);
+    }
+
     public static String selectUser() {
         return pick(JdbcSqlConstant.POSTGRESQL.SELECT_USER, JdbcSqlConstant.ORACLE.SELECT_USER, JdbcSqlConstant.MYSQL.SELECT_USER);
     }

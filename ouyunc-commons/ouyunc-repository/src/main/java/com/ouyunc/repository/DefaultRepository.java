@@ -131,6 +131,14 @@ public enum DefaultRepository implements Repository {
         return RepositorySupports.GROUP.excludeGroupShieldedMembers(appKey, groupId, memberIds);
     }
 
+    public long groupMemberCount(String appKey, String groupId) {
+        return RepositorySupports.GROUP.groupMemberCount(appKey, groupId);
+    }
+
+    public long userGroupCount(String appKey, String userId) {
+        return RepositorySupports.GROUP.userGroupCount(appKey, userId);
+    }
+
     public GroupUserEntity groupUserEntity(String appKey, String groupId, String memberId) {
         return RepositorySupports.GROUP.groupUserEntity(appKey, groupId, memberId);
     }

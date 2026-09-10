@@ -84,7 +84,6 @@ public class MqttPublishMessageContentBiProcessor extends AbstractBaseBiProcesso
      * @param sourcePacket    入站包（优先复用）；遗嘱可为 null
      */
     public void doPublishMessage(MqttMessage mqttMessage, String appKey, String publisherCombo, Packet sourcePacket) {
-        repository().savePublishMessage(mqttMessage);
         if (!(mqttMessage instanceof MqttPublishMessage mqttPublishMessage)) {
             return;
         }
@@ -92,6 +91,7 @@ public class MqttPublishMessageContentBiProcessor extends AbstractBaseBiProcesso
         if (StringUtils.isBlank(appKey) && StringUtils.isNotBlank(publisherCombo)) {
             appKey = IdentityUtil.revertAppKey(publisherCombo);
         }
+        repository().savePublishMessage(appKey, mqttMessage);
         if (StringUtils.isBlank(appKey) || StringUtils.isBlank(topicName)) {
             log.warn("MQTT 发布缺少 appKey 或 topic，跳过扇出 topic={}", topicName);
             return;
@@ -118,6 +118,14 @@ public class MqttPublishMessageContentBiProcessor extends AbstractBaseBiProcesso
         if (fanoutPacket == null) {
             log.warn("MQTT 扇出无法构造 Packet，topic={}", topicName);
             return;
+        }
+        int packetId = mqttPublishMessage.variableHeader().packetId();
+        String encoded = fanoutPacket.getMessage() == null ? null : fanoutPacket.getMessage().getContent();
+        if (packetId > 0 && StringUtils.isNotBlank(encoded)) {
+            for (LoginClientInfo client : clients) {
+                String combo = IdentityUtil.generalComboIdentity(client.getAppKey(), client.getIdentity(), client.getDeviceType());
+                repository().saveInflight(client.getAppKey(), combo, packetId, encoded);
+            }
         }
         MessageHelper.asyncSendMessage(fanoutPacket, clients);
     }

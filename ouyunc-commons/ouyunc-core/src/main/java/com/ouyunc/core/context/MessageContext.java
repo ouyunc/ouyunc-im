@@ -395,9 +395,8 @@ public class MessageContext {
 
                 // 工具方法：生成带随机偏移的过期时间（单位：纳秒）
                 private long getRandomExpireNanos() {
-                    long baseNanos = TimeUnit.MINUTES.toNanos(NumberConstant.NUMBER_10);
-                    // 随机±30秒偏移
-                    long randomNanos = TimeUnit.SECONDS.toNanos(ThreadLocalRandom.current().nextLong(NumberConstant.NUMBER_NEGATIVE_30, NumberConstant.NUMBER_31));
+                    long baseNanos = TimeUnit.SECONDS.toNanos(MessageConstant.GROUP_POLICY_LOCAL_CACHE_EXPIRE_SECONDS);
+                    long randomNanos = TimeUnit.SECONDS.toNanos(ThreadLocalRandom.current().nextLong(NumberConstant.NUMBER_NEGATIVE_1, NumberConstant.NUMBER_2));
                     return baseNanos + randomNanos;
                 }
             })
@@ -455,9 +454,8 @@ public class MessageContext {
 
                 // 工具方法：生成带随机偏移的过期时间（单位：纳秒）
                 private long getRandomExpireNanos() {
-                    long baseNanos = TimeUnit.MINUTES.toNanos(NumberConstant.NUMBER_10);
-                    // 随机±30秒偏移
-                    long randomNanos = TimeUnit.SECONDS.toNanos(ThreadLocalRandom.current().nextLong(NumberConstant.NUMBER_NEGATIVE_30, NumberConstant.NUMBER_31));
+                    long baseNanos = TimeUnit.SECONDS.toNanos(MessageConstant.GROUP_POLICY_LOCAL_CACHE_EXPIRE_SECONDS);
+                    long randomNanos = TimeUnit.SECONDS.toNanos(ThreadLocalRandom.current().nextLong(NumberConstant.NUMBER_NEGATIVE_1, NumberConstant.NUMBER_2));
                     return baseNanos + randomNanos;
                 }
             })
@@ -529,7 +527,7 @@ public class MessageContext {
             }));
 
     /**
-     * 群成员 identity 列表。短过期；HTTP 改成员后经 {@link com.ouyunc.base.constant.MessageConstant#IM_LOCAL_CACHE_EVICT_TOPIC} 立即失效。
+     * 群成员 identity 列表。短过期，以 Redis 成员 ZSET 为准，禁止 Pub/Sub 失效。
      */
     public static final Cache<String, Set<String>> groupUserIdentityCache = CaffeineLocalCache.wrap(
             "groupUserIdentity",

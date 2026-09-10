@@ -292,6 +292,23 @@ public class MessageServerProperties extends MessageProperties {
     @Key(value = "ouyunc.message.server.group-message.threshold", defaultValue = "500")
     int groupMessageThreshold;
 
+    /**
+     * 单用户可加入/创建的群数量上限；{@code -1} 不限制。
+     */
+    @Key(value = "ouyunc.message.group.max-per-user", defaultValue = "500")
+    int groupMaxPerUser;
+
+    /**
+     * 单群成员数量上限；{@code -1} 不限制。
+     */
+    @Key(value = "ouyunc.message.group.max-members", defaultValue = "2000")
+    int groupMaxMembers;
+
+    /**
+     * 是否对外提供 MQTT。关闭后 CONNECT 直接拒绝。
+     */
+    @Key(value = "ouyunc.message.mqtt.enabled", defaultValue = "true")
+    boolean mqttEnabled;
 
     /***
      * 是否开启qos重试发送机制，默认关闭
@@ -734,6 +751,30 @@ public class MessageServerProperties extends MessageProperties {
         this.groupMessageThreshold = groupMessageThreshold;
     }
 
+    public int getGroupMaxPerUser() {
+        return groupMaxPerUser;
+    }
+
+    public void setGroupMaxPerUser(int groupMaxPerUser) {
+        this.groupMaxPerUser = groupMaxPerUser;
+    }
+
+    public int getGroupMaxMembers() {
+        return groupMaxMembers;
+    }
+
+    public void setGroupMaxMembers(int groupMaxMembers) {
+        this.groupMaxMembers = groupMaxMembers;
+    }
+
+    public boolean isMqttEnabled() {
+        return mqttEnabled;
+    }
+
+    public void setMqttEnabled(boolean mqttEnabled) {
+        this.mqttEnabled = mqttEnabled;
+    }
+
     public List<String> getMessageProcessorScanPackagePaths() {
         return messageProcessorScanPackagePaths;
     }
@@ -1042,6 +1083,9 @@ public class MessageServerProperties extends MessageProperties {
                 ", shutdownKickClients=" + shutdownKickClients +
                 ", groupMessagePushMode=" + groupMessagePushMode +
                 ", groupMessageThreshold=" + groupMessageThreshold +
+                ", groupMaxPerUser=" + groupMaxPerUser +
+                ", groupMaxMembers=" + groupMaxMembers +
+                ", mqttEnabled=" + mqttEnabled +
                 ", qosRetryEnable=" + qosRetryEnable +
                 ", qosRetryInitialDelay=" + qosRetryInitialDelay +
                 ", qosRetryPeriod=" + qosRetryPeriod +

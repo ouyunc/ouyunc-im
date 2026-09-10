@@ -83,9 +83,9 @@ public class MessageConstant {
     public static final long RELATION_PRESENCE_CACHE_MAX_SIZE = 500_000L;
 
     /**
-     * 关系布尔缓存过期秒数。拉黑/删好友后最多延迟这么久才在本节点生效。
+     * 关系布尔缓存过期秒数。不以 Pub/Sub 失效，HTTP 改 Redis 后最多延迟这么久才在本节点生效。
      */
-    public static final int RELATION_PRESENCE_CACHE_EXPIRE_SECONDS = 60;
+    public static final int RELATION_PRESENCE_CACHE_EXPIRE_SECONDS = 5;
 
     /**
      * QoS/调度定时任务本地缓存最大条目数。
@@ -263,11 +263,6 @@ public class MessageConstant {
     public static final String CLIENT_APP_KEY_PUBLISH_TOPIC = "client_app_key_publish_topic";
 
     /**
-     * HTTP 写关系后通知 IM 节点删 Caffeine：payload 见 {@link com.ouyunc.base.model.ImLocalCacheEvictEvent#encode()}。
-     */
-    public static final String IM_LOCAL_CACHE_EVICT_TOPIC = "im_local_cache_evict_topic";
-
-    /**
      * IM 节点租约心跳任务 id
      */
     public static final String IM_NODE_LEASE_TASK_ID = "im-node-lease-heartbeat";
@@ -353,6 +348,41 @@ public class MessageConstant {
      * 群成员 identity 列表本地缓存。短 TTL，HTTP 侧改成员后最多延迟这么久；调用方会 remove 发送者，必须返回副本。
      */
     public static final int GROUP_MEMBER_IDENTITY_CACHE_EXPIRE_SECONDS = 5;
+
+    /**
+     * 群实体/成员配置本地缓存秒数。禁言、屏蔽等以 Redis 为准，禁止用 Pub/Sub 刷本地缓存。
+     */
+    public static final int GROUP_POLICY_LOCAL_CACHE_EXPIRE_SECONDS = 5;
+
+    /**
+     * 单用户可加入/创建的群数量上限；{@code -1} 表示不限制。
+     */
+    public static final int DEFAULT_GROUP_MAX_PER_USER = 500;
+
+    /**
+     * 单群成员数量上限；{@code -1} 表示不限制。
+     */
+    public static final int DEFAULT_GROUP_MAX_MEMBERS = 2000;
+
+    /**
+     * 群屏蔽 Hash 的初始化标记 field，避免空 Hash 与「尚未建索引」混淆。
+     */
+    public static final String GROUP_SHIELD_HASH_INIT_FIELD = "_i";
+
+    /**
+     * MQTT 报文标识最大值（1~65535）。
+     */
+    public static final int MQTT_PACKET_ID_MAX = 65535;
+
+    /**
+     * Mongo 双写补偿队列单次回放条数。
+     */
+    public static final int MONGO_COMPENSATE_BATCH_SIZE = 50;
+
+    public static final String MONGO_COMPENSATE_KIND_MESSAGE = "message";
+    public static final String MONGO_COMPENSATE_KIND_WITHDRAW = "withdraw";
+    public static final String MONGO_COMPENSATE_KIND_OFFSET = "offset";
+    public static final String MONGO_COMPENSATE_KIND_READ_RECEIPT = "read_receipt";
 
     /**
      * 热点群数量上限（按群 key，不是按成员条数）。

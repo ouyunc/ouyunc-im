@@ -1,19 +1,26 @@
 package com.ouyunc.repository;
 
 import com.ouyunc.base.constant.CacheConstant;
+import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.model.MqttTopicSubscriptionOption;
 import com.ouyunc.base.packet.Packet;
+import com.ouyunc.base.utils.MqttCodecUtil;
 import com.ouyunc.base.utils.MqttTopicFilterUtil;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.repository.support.QosIdempotencyHelper;
 import com.ouyunc.repository.support.RepositorySupports;
 import io.netty.handler.codec.mqtt.MqttMessage;
+import io.netty.handler.codec.mqtt.MqttPublishMessage;
+import io.netty.handler.codec.mqtt.MqttVersion;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.SessionCallback;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -38,12 +45,141 @@ public enum MqttRepository implements Repository{
     }
 
 
-    /**
-     * 保存遗嘱消息
-     * @param mqttMessage
-     */
-    public void savePublishMessage(MqttMessage mqttMessage) {
+    private static final String RETAIN_FIELD_TOPIC = "topic";
+    private static final String RETAIN_FIELD_QOS = "qos";
+    private static final String RETAIN_FIELD_CONTENT = "content";
 
+    /**
+     * retain=1 时覆盖该 topic 的保留消息；payload 为空则删除（MQTT 规范）。
+     */
+    public void savePublishMessage(String appKey, MqttMessage mqttMessage) {
+        if (StringUtils.isBlank(appKey) || !(mqttMessage instanceof MqttPublishMessage publish)) {
+            return;
+        }
+        if (!publish.fixedHeader().isRetain()) {
+            return;
+        }
+        String topic = publish.variableHeader().topicName();
+        if (StringUtils.isBlank(topic)) {
+            return;
+        }
+        String retainKey = CacheConstant.buildMqttRetainCacheKey(appKey, topic);
+        String topicSetKey = CacheConstant.buildMqttRetainTopicSetCacheKey(appKey);
+        int readable = publish.payload() == null ? 0 : publish.payload().readableBytes();
+        if (readable == 0) {
+            redisTemplate.delete(retainKey);
+            redisTemplate.opsForSet().remove(topicSetKey, topic);
+            return;
+        }
+        Map<String, String> fields = new HashMap<>();
+        fields.put(RETAIN_FIELD_TOPIC, topic);
+        fields.put(RETAIN_FIELD_QOS, String.valueOf(publish.fixedHeader().qosLevel().value()));
+        fields.put(RETAIN_FIELD_CONTENT, MqttCodecUtil.encode(MqttVersion.MQTT_3_1_1, publish));
+        redisTemplate.opsForHash().putAll(retainKey, fields);
+        redisTemplate.opsForSet().add(topicSetKey, topic);
+    }
+
+    /**
+     * 订阅时回放匹配 filter 的 retain。
+     */
+    public List<MqttRetainStore> findRetainMatching(String appKey, String topicFilter) {
+        if (StringUtils.isAnyBlank(appKey, topicFilter)) {
+            return List.of();
+        }
+        Set<Object> topics = redisTemplate.opsForSet().members(CacheConstant.buildMqttRetainTopicSetCacheKey(appKey));
+        if (topics == null || topics.isEmpty()) {
+            return List.of();
+        }
+        List<MqttRetainStore> result = new ArrayList<>();
+        for (Object topicObj : topics) {
+            if (topicObj == null) {
+                continue;
+            }
+            String topic = topicObj.toString();
+            if (!MqttTopicFilterUtil.matches(topicFilter, topic)) {
+                continue;
+            }
+            MqttRetainStore store = loadRetain(appKey, topic);
+            if (store != null) {
+                result.add(store);
+            }
+        }
+        return result;
+    }
+
+    private MqttRetainStore loadRetain(String appKey, String topic) {
+        Map<Object, Object> entries = redisTemplate.opsForHash().entries(CacheConstant.buildMqttRetainCacheKey(appKey, topic));
+        if (entries == null || entries.isEmpty()) {
+            return null;
+        }
+        Object content = entries.get(RETAIN_FIELD_CONTENT);
+        if (content == null) {
+            return null;
+        }
+        int qos = 0;
+        Object qosObj = entries.get(RETAIN_FIELD_QOS);
+        if (qosObj != null) {
+            try {
+                qos = Integer.parseInt(qosObj.toString());
+            } catch (NumberFormatException ignored) {
+                qos = 0;
+            }
+        }
+        Object storedTopic = entries.get(RETAIN_FIELD_TOPIC);
+        return new MqttRetainStore(storedTopic == null ? topic : storedTopic.toString(), qos, content.toString());
+    }
+
+    public int nextPacketId(String appKey, String comboIdentity) {
+        Long seq = redisTemplate.opsForValue().increment(CacheConstant.buildMqttMessageIdCacheKey(appKey, comboIdentity));
+        long raw = seq == null ? 1L : seq;
+        int id = (int) ((raw % MessageConstant.MQTT_PACKET_ID_MAX) + 1);
+        return id <= 0 ? 1 : id;
+    }
+
+    public void saveInflight(String appKey, String comboIdentity, int packetId, String encodedPublish) {
+        if (StringUtils.isAnyBlank(appKey, comboIdentity, encodedPublish) || packetId <= 0) {
+            return;
+        }
+        redisTemplate.opsForHash().put(CacheConstant.buildMqttInflightCacheKey(appKey, comboIdentity),
+                String.valueOf(packetId), encodedPublish);
+    }
+
+    public void removeInflight(String appKey, String comboIdentity, int packetId) {
+        if (StringUtils.isAnyBlank(appKey, comboIdentity) || packetId <= 0) {
+            return;
+        }
+        redisTemplate.opsForHash().delete(CacheConstant.buildMqttInflightCacheKey(appKey, comboIdentity),
+                String.valueOf(packetId));
+    }
+
+    public Map<Integer, String> loadInflight(String appKey, String comboIdentity) {
+        if (StringUtils.isAnyBlank(appKey, comboIdentity)) {
+            return Map.of();
+        }
+        Map<Object, Object> entries = redisTemplate.opsForHash().entries(
+                CacheConstant.buildMqttInflightCacheKey(appKey, comboIdentity));
+        if (entries == null || entries.isEmpty()) {
+            return Map.of();
+        }
+        Map<Integer, String> result = new LinkedHashMap<>();
+        for (Map.Entry<Object, Object> entry : entries.entrySet()) {
+            if (entry.getKey() == null || entry.getValue() == null) {
+                continue;
+            }
+            try {
+                result.put(Integer.parseInt(entry.getKey().toString()), entry.getValue().toString());
+            } catch (NumberFormatException ignored) {
+                // skip
+            }
+        }
+        return result;
+    }
+
+    public void clearInflight(String appKey, String comboIdentity) {
+        if (StringUtils.isAnyBlank(appKey, comboIdentity)) {
+            return;
+        }
+        redisTemplate.delete(CacheConstant.buildMqttInflightCacheKey(appKey, comboIdentity));
     }
 
     /**
@@ -79,6 +215,9 @@ public enum MqttRepository implements Repository{
     }
 
     public record MqttSubscriber(String comboIdentity, Object qos) {
+    }
+
+    public record MqttRetainStore(String topic, int qos, String content) {
     }
 
     public void subscribe(String appKey, String comboIdentity, List<MqttTopicSubscriptionOption> list) {

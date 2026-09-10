@@ -25,7 +25,6 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisStringCommands;
-import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.data.redis.core.types.Expiration;
 import reactor.core.publisher.Mono;
@@ -60,111 +59,157 @@ public final class GroupMembershipSupport {
     public Set<String> groupUsersIdentity(Packet packet) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        String cacheKey = CacheConstant.buildGroupUserCacheKey(metadata.getAppKey(), message.getTo());
+        String appKey = metadata.getAppKey();
+        String groupId = message.getTo();
+        String cacheKey = CacheConstant.buildGroupUserCacheKey(appKey, groupId);
         Set<String> cached = MessageContext.groupUserIdentityCache.get(cacheKey);
         if (cached != null) {
             return new HashSet<>(cached);
         }
         Set<String> fromRedis = infra.stringRedisTemplate.opsForZSet().range(
                 cacheKey, NumberConstant.NUMBER_0, NumberConstant.NUMBER_NEGATIVE_1);
-        Set<String> snapshot = fromRedis == null || fromRedis.isEmpty() ? Set.of() : Set.copyOf(fromRedis);
-        MessageContext.groupUserIdentityCache.put(cacheKey, snapshot);
-        return new HashSet<>(snapshot);
+        if (fromRedis != null && !fromRedis.isEmpty()) {
+            Set<String> snapshot = Set.copyOf(fromRedis);
+            MessageContext.groupUserIdentityCache.put(cacheKey, snapshot);
+            return new HashSet<>(snapshot);
+        }
+        List<GroupUserEntity> dbMembers = loadAllGroupUsersFromDb(groupId);
+        if (dbMembers.isEmpty()) {
+            // Redis miss 且库中确认无成员：禁止把空集写入 Caffeine，避免误当成「群已空」
+            return new HashSet<>();
+        }
+        rebuildGroupMemberRedis(appKey, groupId, dbMembers);
+        Set<String> ids = new HashSet<>();
+        for (GroupUserEntity member : dbMembers) {
+            if (member.getUserId() != null) {
+                ids.add(member.getUserId());
+            }
+        }
+        MessageContext.groupUserIdentityCache.put(cacheKey, Set.copyOf(ids));
+        return ids;
     }
 
     /**
-     * 过滤已屏蔽本群消息的成员。配置 miss 时按未屏蔽投递（避免丢消息）。
+     * 过滤已屏蔽本群消息的成员。优先读群级屏蔽 Hash；索引未建时回源后重建，避免大群 N 次 GET。
      */
     public Set<String> excludeGroupShieldedMembers(String appKey, String groupId, Set<String> memberIds) {
         if (memberIds == null || memberIds.isEmpty()) {
             return Set.of();
         }
+        String shieldKey = CacheConstant.buildGroupShieldCacheKey(appKey, groupId);
+        Map<Object, Object> shieldHash = infra.stringRedisTemplate.opsForHash().entries(shieldKey);
+        if (shieldHash == null || !shieldHash.containsKey(MessageConstant.GROUP_SHIELD_HASH_INIT_FIELD)) {
+            List<GroupUserEntity> dbMembers = loadAllGroupUsersFromDb(groupId);
+            writeShieldHash(appKey, groupId, dbMembers);
+            shieldHash = infra.stringRedisTemplate.opsForHash().entries(shieldKey);
+        }
+        if (shieldHash == null || !shieldHash.containsKey(MessageConstant.GROUP_SHIELD_HASH_INIT_FIELD)) {
+            return new HashSet<>(memberIds);
+        }
         Set<String> result = new HashSet<>();
-        List<String> missIds = new ArrayList<>();
         for (String memberId : memberIds) {
-            if (memberId == null) {
-                continue;
-            }
-            String cacheKey = CacheConstant.buildGroupUserConfigCacheKey(appKey, memberId, groupId);
-            GroupUserEntity local = MessageContext.groupUserEntityCache.get(cacheKey);
-            if (local != null) {
-                if (!YesOrNo.YES.getCode().equals(local.getShield())) {
-                    result.add(memberId);
-                }
-            } else {
-                missIds.add(memberId);
-            }
-        }
-        if (missIds.isEmpty()) {
-            return result;
-        }
-        Map<String, GroupUserEntity> redisHits = loadGroupUserEntitiesFromRedis(appKey, groupId, missIds);
-        for (String memberId : missIds) {
-            GroupUserEntity entity = redisHits.get(memberId);
-            if (entity != null) {
-                updateGroupUserLocalCache(CacheConstant.buildGroupUserConfigCacheKey(appKey, memberId, groupId), entity);
-                if (!YesOrNo.YES.getCode().equals(entity.getShield())) {
-                    result.add(memberId);
-                }
-            } else {
+            if (memberId != null && !shieldHash.containsKey(memberId)) {
                 result.add(memberId);
             }
         }
         return result;
     }
 
-    @SuppressWarnings("unchecked")
-    private Map<String, GroupUserEntity> loadGroupUserEntitiesFromRedis(String appKey, String groupId,
-                                                                        List<String> memberIds) {
-        Map<String, GroupUserEntity> hits = new HashMap<>();
-        if (memberIds == null || memberIds.isEmpty()) {
-            return hits;
+    public long groupMemberCount(String appKey, String groupId) {
+        Long zcard = infra.stringRedisTemplate.opsForZSet().zCard(
+                CacheConstant.buildGroupUserCacheKey(appKey, groupId));
+        if (zcard != null && zcard > 0) {
+            return zcard;
         }
-        List<String> keys = new ArrayList<>(memberIds.size());
-        for (String memberId : memberIds) {
-            keys.add(CacheConstant.buildGroupUserConfigCacheKey(appKey, memberId, groupId));
+        return countFromDb(JdbcSqlDialectHolder.countGroupUsersByGroup(), GroupUserEntity.Fields.groupId, groupId);
+    }
+
+    public long userGroupCount(String appKey, String userId) {
+        Long zcard = infra.stringRedisTemplate.opsForZSet().zCard(
+                CacheConstant.buildUserGroupsCacheKey(appKey, userId));
+        if (zcard != null && zcard > 0) {
+            return zcard;
         }
-        List<Object> raw = infra.redisTemplate.execute((RedisCallback<List<Object>>) connection -> {
-            connection.openPipeline();
-            for (String key : keys) {
-                byte[] keyBytes = infra.stringSerializer.serialize(key);
-                if (keyBytes != null) {
-                    connection.stringCommands().get(keyBytes);
+        return countFromDb(JdbcSqlDialectHolder.countGroupsByUser(), GroupUserEntity.Fields.userId, userId);
+    }
+
+    private long countFromDb(String sql, String paramName, String paramValue) {
+        try {
+            Long count = infra.jdbcClient.sql(sql)
+                    .param(paramName, paramValue)
+                    .query(Long.class)
+                    .optional()
+                    .orElse(0L);
+            return count == null ? 0L : count;
+        } catch (Exception e) {
+            log.error("统计群/成员数量失败 param={} value={}", paramName, paramValue, e);
+            return 0L;
+        }
+    }
+
+    private List<GroupUserEntity> loadAllGroupUsersFromDb(String groupId) {
+        try {
+            List<MongoGroupUserEntity> mongoList = infra.mongoTemplate.find(
+                    Query.query(Criteria.where(MongoGroupUserEntity.Fields.groupId).is(Long.parseLong(groupId))),
+                    MongoGroupUserEntity.class);
+            if (mongoList != null && !mongoList.isEmpty()) {
+                List<GroupUserEntity> converted = new ArrayList<>(mongoList.size());
+                for (MongoGroupUserEntity mongo : mongoList) {
+                    GroupUserEntity entity = convertMongoGroupUserToGroupUser(mongo);
+                    if (entity != null) {
+                        converted.add(entity);
+                    }
+                }
+                return converted;
+            }
+        } catch (Exception e) {
+            log.warn("从MongoDB查询群全部成员异常, groupId: {}", groupId, e);
+        }
+        try {
+            List<GroupUserEntity> mysqlList = infra.jdbcClient.sql(JdbcSqlDialectHolder.selectAllGroupUser())
+                    .param(GroupUserEntity.Fields.groupId, groupId)
+                    .query(GroupUserEntity.class)
+                    .list();
+            return mysqlList == null ? List.of() : mysqlList;
+        } catch (Exception e) {
+            log.error("从MySQL查询群全部成员异常, groupId: {}", groupId, e);
+            return List.of();
+        }
+    }
+
+    private void rebuildGroupMemberRedis(String appKey, String groupId, List<GroupUserEntity> members) {
+        String zsetKey = CacheConstant.buildGroupUserCacheKey(appKey, groupId);
+        infra.stringRedisTemplate.delete(zsetKey);
+        if (members != null && !members.isEmpty()) {
+            Set<ZSetOperations.TypedTuple<String>> tuples = new HashSet<>();
+            for (GroupUserEntity member : members) {
+                if (member.getUserId() == null) {
+                    continue;
+                }
+                double score = member.getPost() == null ? GroupUserPost.ORDINARY.value() : member.getPost();
+                tuples.add(new org.springframework.data.redis.core.DefaultTypedTuple<>(member.getUserId(), score));
+            }
+            if (!tuples.isEmpty()) {
+                infra.stringRedisTemplate.opsForZSet().add(zsetKey, tuples);
+            }
+        }
+        writeShieldHash(appKey, groupId, members);
+    }
+
+    private void writeShieldHash(String appKey, String groupId, List<GroupUserEntity> members) {
+        String key = CacheConstant.buildGroupShieldCacheKey(appKey, groupId);
+        Map<String, String> fields = new HashMap<>();
+        fields.put(MessageConstant.GROUP_SHIELD_HASH_INIT_FIELD, "1");
+        if (members != null) {
+            for (GroupUserEntity member : members) {
+                if (member != null && member.getUserId() != null
+                        && YesOrNo.YES.getCode().equals(member.getShield())) {
+                    fields.put(member.getUserId(), "1");
                 }
             }
-            return connection.closePipeline();
-        });
-        if (raw == null) {
-            return hits;
         }
-        int n = Math.min(memberIds.size(), raw.size());
-        for (int i = 0; i < n; i++) {
-            GroupUserEntity entity = deserializeGroupUserEntity(raw.get(i));
-            if (entity != null) {
-                hits.put(memberIds.get(i), entity);
-            }
-        }
-        return hits;
-    }
-
-    private GroupUserEntity deserializeGroupUserEntity(Object raw) {
-        if (raw == null) {
-            return null;
-        }
-        if (raw instanceof GroupUserEntity entity) {
-            return entity;
-        }
-        if (raw instanceof byte[] bytes) {
-            Object decoded = infra.valueSerializer.deserialize(bytes);
-            return decoded instanceof GroupUserEntity entity ? entity : null;
-        }
-        return null;
-    }
-
-    private void updateGroupUserLocalCache(String cacheKey, GroupUserEntity entity) {
-        if (entity != null) {
-            MessageContext.groupUserEntityCache.put(cacheKey, entity);
-        }
+        infra.stringRedisTemplate.delete(key);
+        infra.stringRedisTemplate.opsForHash().putAll(key, fields);
     }
 
     public GroupUserEntity groupUserEntity(String appKey, String groupId, String memberId) {

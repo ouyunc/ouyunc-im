@@ -189,8 +189,6 @@ class ServerStartupEventMessageEventListener implements MessageEventListener<Mes
             }
             // 添加进入appKey对应的设备类型集合中
         }, new ChannelTopic(MessageConstant.CLIENT_APP_KEY_PUBLISH_TOPIC));
-        container.addMessageListener((message, pattern) -> ImLocalCacheEvictApplier.apply(message.getBody()),
-                new ChannelTopic(MessageConstant.IM_LOCAL_CACHE_EVICT_TOPIC));
         // 一定不要忘记了这句
         container.afterPropertiesSet();
         container.start();

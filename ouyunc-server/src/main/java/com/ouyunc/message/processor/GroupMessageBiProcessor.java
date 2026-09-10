@@ -359,7 +359,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
 
     private void deliver2AtMessage(Packet packet, List<String> atList, Set<String> groupMembers) {
         Set<String> targets = AtMentionHelper.resolveDeliveryTargets(atList, groupMembers);
-        targets.forEach(member -> deliverMessage(packet, member));
+        MessageDeliveryRouteHelper.deliverGroupMembers(packet, targets);
     }
 
     /**
@@ -381,11 +381,5 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
                     MessageEventTypeEnum.EXCEPTION), true);
             return false;
         }
-    }
-
-
-    private void deliverMessage(Packet packet, String memberIdentity) {
-        Message message = packet.getMessage();
-        MessageDeliveryRouteHelper.deliverGroupMember(packet, message.getTo(), memberIdentity);
     }
 }

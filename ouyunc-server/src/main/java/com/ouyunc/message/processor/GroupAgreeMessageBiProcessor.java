@@ -66,9 +66,10 @@ public final class GroupAgreeMessageBiProcessor extends AbstractMessageBiProcess
                         .or(BlackListValidator.INSTANCE)
                         .or(GroupValidator.INSTANCE)
                         .or(GroupUserValidator.INSTANCE.negate())
+                        .or(GroupUserMaxLimitValidator.INSTANCE)
                         .verify(packet, ctx),
                 null,
-                "权限不足/在黑名单中/群异常（被平台封禁)/不是群成员/接受者和发送者相同, 请知悉。该消息 {} 被忽略");
+                "权限不足/在黑名单中/群异常（被平台封禁)/不是群成员/群成员数超限/接受者和发送者相同, 请知悉。该消息 {} 被忽略");
     }
 
     @Override

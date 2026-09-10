@@ -80,10 +80,8 @@ public class MqttSubscribeMessageContentBiProcessor extends AbstractBaseBiProces
                 }
                 // 发布保留消息
                 topicSubscriptions.forEach(topicSubscription -> {
-                    String topicFilter = topicSubscription.topicFilter();
-                    MqttQoS mqttQoS = topicSubscription.qualityOfService();
-                    // @todo
-                    //this.sendRetainMessage(ctx, topicFilter, mqttQoS);
+                    sendRetainMessage(ctx, packet, loginClientInfo.getAppKey(), comboIdentity,
+                            topicSubscription.topicFilter(), topicSubscription.qualityOfService());
                 });
             } else {
                 log.error("MqttSubscribeMessageContentProcessor 订阅主题非法！");
@@ -123,31 +121,40 @@ public class MqttSubscribeMessageContentBiProcessor extends AbstractBaseBiProces
         return true;
     }
 
-
-//    private void sendRetainMessage(ChannelHandlerContext ctx, String topicFilter, MqttQoS mqttQoS) {
-//        List<RetainMessageStore> retainMessageStores = retainMessageStoreService.search(topicFilter);
-//        retainMessageStores.forEach(retainMessageStore -> {
-//            MqttQoS respQoS = retainMessageStore.getMqttQoS() > mqttQoS.value() ? mqttQoS : MqttQoS.valueOf(retainMessageStore.getMqttQoS());
-//            if (respQoS == MqttQoS.AT_MOST_ONCE) {
-//                MqttPublishMessage publishMessage = (MqttPublishMessage) MqttMessageFactory.newMessage(
-//                        new MqttFixedHeader(MqttMessageType.PUBLISH, false, respQoS, false, 0),
-//                        new MqttPublishVariableHeader(retainMessageStore.getTopic(), 0), Unpooled.buffer().writeBytes(retainMessageStore.getMessageBytes()));
-//                ctx.writeAndFlush(publishMessage);
-//            }
-//            if (respQoS == MqttQoS.AT_LEAST_ONCE) {
-//                int messageId = messageIdService.getNextMessageId();
-//                MqttPublishMessage publishMessage = (MqttPublishMessage) MqttMessageFactory.newMessage(
-//                        new MqttFixedHeader(MqttMessageType.PUBLISH, false, respQoS, false, 0),
-//                        new MqttPublishVariableHeader(retainMessageStore.getTopic(), messageId), Unpooled.buffer().writeBytes(retainMessageStore.getMessageBytes()));
-//                ctx.writeAndFlush(publishMessage);
-//            }
-//            if (respQoS == MqttQoS.EXACTLY_ONCE) {
-//                int messageId = messageIdService.getNextMessageId();
-//                MqttPublishMessage publishMessage = (MqttPublishMessage) MqttMessageFactory.newMessage(
-//                        new MqttFixedHeader(MqttMessageType.PUBLISH, false, respQoS, false, 0),
-//                        new MqttPublishVariableHeader(retainMessageStore.getTopic(), messageId), Unpooled.buffer().writeBytes(retainMessageStore.getMessageBytes()));
-//                ctx.writeAndFlush(publishMessage);
-//            }
-//        });
-//    }
+    /**
+     * 订阅成功后回放 matching retain；QoS1/2 写入 inflight 等待 PUBACK。
+     */
+    private void sendRetainMessage(ChannelHandlerContext ctx, Packet packet, String appKey, String comboIdentity,
+                                   String topicFilter, MqttQoS subscribeQos) {
+        java.util.List<MqttRepository.MqttRetainStore> retains = repository().findRetainMatching(appKey, topicFilter);
+        if (retains.isEmpty()) {
+            return;
+        }
+        MqttVersion mqttVersion = MqttCodecUtil.getMqttVersion(packet.getRetain());
+        if (mqttVersion == null) {
+            mqttVersion = MqttVersion.MQTT_3_1_1;
+        }
+        for (MqttRepository.MqttRetainStore retain : retains) {
+            int qosValue = Math.max(0, Math.min(retain.qos(), MqttQoS.EXACTLY_ONCE.value()));
+            MqttQoS storedQos = MqttQoS.valueOf(qosValue);
+            MqttQoS respQoS = storedQos.value() > subscribeQos.value() ? subscribeQos : storedQos;
+            MqttMessage decoded = MqttCodecUtil.decode(mqttVersion, retain.content());
+            if (!(decoded instanceof MqttPublishMessage publish)) {
+                continue;
+            }
+            io.netty.buffer.ByteBuf payload = publish.payload();
+            byte[] bytes = new byte[payload.readableBytes()];
+            payload.getBytes(payload.readerIndex(), bytes);
+            int messageId = respQoS == MqttQoS.AT_MOST_ONCE ? 0 : repository().nextPacketId(appKey, comboIdentity);
+            MqttPublishMessage out = (MqttPublishMessage) MqttMessageFactory.newMessage(
+                    new MqttFixedHeader(MqttMessageType.PUBLISH, false, respQoS, false, 0),
+                    new MqttPublishVariableHeader(retain.topic(), messageId),
+                    io.netty.buffer.Unpooled.wrappedBuffer(bytes));
+            MessageHelper.tryWriteObject(ctx.channel(), out, packet, sendResult -> {});
+            if (messageId > 0) {
+                repository().saveInflight(appKey, comboIdentity, messageId,
+                        MqttCodecUtil.encode(mqttVersion, out));
+            }
+        }
+    }
 }

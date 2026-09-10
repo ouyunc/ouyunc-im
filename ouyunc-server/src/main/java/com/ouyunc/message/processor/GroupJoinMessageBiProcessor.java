@@ -57,9 +57,11 @@ public final class GroupJoinMessageBiProcessor extends AbstractMessageBiProcesso
                         .or(FromToValidator.INSTANCE)
                         .or(BlackListValidator.INSTANCE)
                         .or(GroupValidator.INSTANCE)
+                        .or(GroupMaxLimitValidator.INSTANCE)
+                        .or(GroupUserMaxLimitValidator.INSTANCE)
                         .verify(packet, ctx),
                 null,
-                "权限不足/在黑名单中/群异常（被平台封禁）/接收者和发送者相同, 请知悉。该消息 {} 被忽略");
+                "权限不足/在黑名单中/群异常（被平台封禁）/群或成员数超限/接收者和发送者相同, 请知悉。该消息 {} 被忽略");
     }
 
     @Override

@@ -71,6 +71,20 @@ public class CacheConstant {
      */
     private static final String GROUP_USERS_CONFIG = "guc:";
 
+    /**
+     * 群成员屏蔽索引 Hash（field=memberId）
+     */
+    private static final String GROUP_USERS_SHIELD = "gsh:";
+
+    /**
+     * MQTT retain / inflight
+     */
+    private static final String MQTT_RETAIN = "rt:";
+    private static final String MQTT_RETAIN_TOPICS = "rts";
+    private static final String MQTT_INFLIGHT = "if:";
+    private static final String MQTT_MSG_ID = "mid:";
+    private static final String MONGO_COMPENSATE = "im:mongo:cp:";
+
     /***
      * 好友列表
      */
@@ -331,6 +345,36 @@ public class CacheConstant {
     public static String buildGroupUserConfigCacheKey(String appKey, String memberId, String groupId) {
         // 使用groupId作为哈希标签，确保同一群组的配置在同一个slot
         return buildBaseCacheKey(appKey) + GROUP_USERS_CONFIG + memberId + COLON + withHashTag(groupId);
+    }
+
+    /**
+     * 群屏蔽成员 Hash，与成员 ZSET 同 {@code {groupId}} 槽。
+     */
+    public static String buildGroupShieldCacheKey(String appKey, String groupId) {
+        return buildBaseCacheKey(appKey) + GROUP_USERS_SHIELD + withHashTag(groupId);
+    }
+
+    public static String buildMqttRetainCacheKey(String appKey, String topic) {
+        return buildBaseCacheKey(appKey) + MQTT + MQTT_RETAIN + withHashTag(topic);
+    }
+
+    public static String buildMqttRetainTopicSetCacheKey(String appKey) {
+        return buildBaseCacheKey(appKey) + MQTT + MQTT_RETAIN_TOPICS;
+    }
+
+    public static String buildMqttInflightCacheKey(String appKey, String comboIdentity) {
+        return buildBaseCacheKey(appKey) + MQTT + MQTT_INFLIGHT + withHashTag(comboIdentity);
+    }
+
+    public static String buildMqttMessageIdCacheKey(String appKey, String comboIdentity) {
+        return buildBaseCacheKey(appKey) + MQTT + MQTT_MSG_ID + withHashTag(comboIdentity);
+    }
+
+    /**
+     * MySQL 已提交、Mongo 失败时的补偿 List，按 kind 分队列。
+     */
+    public static String buildMongoCompensateListCacheKey(String kind) {
+        return OUYUNC + MONGO_COMPENSATE + kind;
     }
 
     /**
