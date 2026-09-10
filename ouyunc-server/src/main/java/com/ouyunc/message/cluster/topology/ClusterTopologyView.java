@@ -2,7 +2,6 @@ package com.ouyunc.message.cluster.topology;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.ouyunc.base.utils.YmlUtil;
 import com.ouyunc.message.cluster.routing.ClusterRoutingMode;
 import com.ouyunc.message.cluster.routing.CrossZoneVia;
 import com.ouyunc.message.properties.MessageServerProperties;
@@ -75,7 +74,7 @@ public final class ClusterTopologyView {
             return flat();
         }
 
-        Map<String, ClusterZoneInfo> zones = parseTopologySection();
+        Map<String, ClusterZoneInfo> zones = parseTopologySection(properties.getClusterTopology());
         if (zones.isEmpty()) {
             log.warn("cluster.routing.mode=zone-aware 但未配置 cluster.topology，回退为 flat 路由");
             return flat();
@@ -122,9 +121,7 @@ public final class ClusterTopologyView {
         return view;
     }
 
-    @SuppressWarnings("unchecked")
-    private static Map<String, ClusterZoneInfo> parseTopologySection() {
-        Map<String, Object> topologySection = YmlUtil.getValue("ouyunc-server.yml", "ouyunc.message.cluster.topology", Map.class);
+    private static Map<String, ClusterZoneInfo> parseTopologySection(Map<String, Object> topologySection) {
         if (MapUtils.isEmpty(topologySection)) {
             return Maps.newHashMap();
         }

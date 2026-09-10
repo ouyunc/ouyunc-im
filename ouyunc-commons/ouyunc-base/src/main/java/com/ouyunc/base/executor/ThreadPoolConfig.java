@@ -5,18 +5,14 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.time.Duration;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
 /**
- * 线程池的声明式配置。
- * 此配置可从 YAML（参见 {@code ouyunc-server.yml}）、系统属性或环境变量中加载
+ * 线程池声明式配置，只消费 {@code loadProperties} 已灌入的 {@code ouyunc.message.thread-pool} 段。
  */
 public final class ThreadPoolConfig {
-
-    private static final String CONFIG_PREFIX = "ouyunc.message.thread-pool.";
 
     private final EnumMap<ThreadPoolId, PoolConfig> configs;
 
@@ -90,13 +86,10 @@ public final class ThreadPoolConfig {
     }
 
     /**
-     * 根据 YAML 映射以及覆盖配置构建配置。
-     * 参数说明：
-     * @param yamlSection 从 YAML 中提取的配置片段（可为 null）
-     * @param overrides 覆盖配置映射（例如系统属性）
+     * 只消费 {@code loadProperties} 已灌入的 thread-pool 段。
      */
     @SuppressWarnings("unchecked")
-    public static ThreadPoolConfig from(Map<String, ?> yamlSection, Map<String, String> overrides) {
+    public static ThreadPoolConfig from(Map<String, ?> yamlSection) {
         ThreadPoolConfig base = defaultConfig();
         EnumMap<ThreadPoolId, PoolConfig> merged = base.getAll();
         if (MapUtils.isNotEmpty(yamlSection)) {
@@ -110,26 +103,6 @@ public final class ThreadPoolConfig {
                     merged.put(id, merge(merged.get(id), (Map<String, Object>) nodeMap));
                 }
             }
-        }
-        if (MapUtils.isNotEmpty(overrides)) {
-            overrides.forEach((key, value) -> {
-                if (!key.startsWith(CONFIG_PREFIX)) {
-                    return;
-                }
-                String remainder = key.substring(CONFIG_PREFIX.length());
-                int dotIndex = remainder.indexOf('.');
-                if (dotIndex <= 0) {
-                    return;
-                }
-                String poolKey = remainder.substring(0, dotIndex);
-                String property = remainder.substring(dotIndex + 1);
-                ThreadPoolId id = ThreadPoolId.fromConfigKey(poolKey);
-                if (id == null) {
-                    return;
-                }
-                PoolConfig current = merged.getOrDefault(id, PoolConfig.builder().build());
-                merged.put(id, applyOverride(current, property, value));
-            });
         }
         return new ThreadPoolConfig(merged);
     }
@@ -186,55 +159,6 @@ public final class ThreadPoolConfig {
                 }
             }
         });
-        return builder.build();
-    }
-
-    private static PoolConfig applyOverride(PoolConfig base, String property, String rawValue) {
-        PoolConfig.Builder builder = PoolConfig.builder(base);
-        String normalized = property.toLowerCase(Locale.ROOT);
-        ThreadPoolType poolType = base.type();
-        
-        // 如果覆盖的是 type，先更新类型
-        if ("type".equals(normalized)) {
-            poolType = parseType(rawValue, base.type());
-            builder.type(poolType);
-        }
-        
-        final ThreadPoolType finalPoolType = poolType;
-        switch (normalized) {
-            case "type" -> {
-                // 已在上面处理
-            }
-            case "core-size" -> {
-                if (finalPoolType == ThreadPoolType.SCHEDULED || finalPoolType == ThreadPoolType.FIXED) {
-                    builder.coreSize(Integer.parseInt(rawValue));
-                }
-            }
-            case "max-size" -> {
-                if (finalPoolType == ThreadPoolType.FIXED || finalPoolType == ThreadPoolType.CACHED) {
-                    builder.maxSize(Integer.parseInt(rawValue));
-                }
-            }
-            case "queue-capacity" -> {
-                if (finalPoolType == ThreadPoolType.FIXED) {
-                    builder.queueCapacity(Integer.parseInt(rawValue));
-                }
-            }
-            case "keep-alive-seconds" -> {
-                if (finalPoolType == ThreadPoolType.FIXED || finalPoolType == ThreadPoolType.CACHED) {
-                    builder.keepAliveSeconds(Long.parseLong(rawValue));
-                }
-            }
-            case "thread-name-prefix" -> builder.threadNamePrefix(rawValue);
-            case "daemon" -> builder.daemon(Boolean.parseBoolean(rawValue));
-            case "allow-core-timeout" -> {
-                if (finalPoolType == ThreadPoolType.FIXED || finalPoolType == ThreadPoolType.SCHEDULED) {
-                    builder.allowCoreThreadTimeout(Boolean.parseBoolean(rawValue));
-                }
-            }
-            default -> {
-            }
-        }
         return builder.build();
     }
 
@@ -478,10 +402,5 @@ public final class ThreadPoolConfig {
         }
     }
 
-    public static ThreadPoolConfig fromYaml(Map<String, ?> yamlSection) {
-        Map<String, String> overrides = new HashMap<>(System.getenv());
-        System.getProperties().forEach((key, value) -> overrides.put(String.valueOf(key), String.valueOf(value)));
-        return from(yamlSection, overrides);
-    }
 }
 

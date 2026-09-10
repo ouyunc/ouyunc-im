@@ -473,6 +473,18 @@ public class MessageServerProperties extends MessageProperties {
     @Key(value = "ouyunc.message.cluster.isolation.redis-fail-threshold", defaultValue = "3")
     int clusterIsolationRedisFailThreshold;
 
+    /**
+     * 线程池段，由 {@code loadProperties} 一次灌入，供 {@link com.ouyunc.base.executor.ThreadPoolConfig} 使用。
+     */
+    @Key("ouyunc.message.thread-pool")
+    Map<String, Object> threadPool;
+
+    /**
+     * 分区拓扑段，由 {@code loadProperties} 一次灌入，供 {@link com.ouyunc.message.cluster.topology.ClusterTopologyView} 使用。
+     */
+    @Key("ouyunc.message.cluster.topology")
+    Map<String, Object> clusterTopology;
+
     public boolean isMessageInterceptorEnable() {
         return messageInterceptorEnable;
     }
@@ -913,6 +925,22 @@ public class MessageServerProperties extends MessageProperties {
         this.clusterIsolationRedisFailThreshold = clusterIsolationRedisFailThreshold;
     }
 
+    public Map<String, Object> getThreadPool() {
+        return threadPool;
+    }
+
+    public void setThreadPool(Map<String, Object> threadPool) {
+        this.threadPool = threadPool;
+    }
+
+    public Map<String, Object> getClusterTopology() {
+        return clusterTopology;
+    }
+
+    public void setClusterTopology(Map<String, Object> clusterTopology) {
+        this.clusterTopology = clusterTopology;
+    }
+
     public int getClusterClientHeartbeatWaitRetry() {
         return clusterClientHeartbeatWaitRetry;
     }
@@ -1154,6 +1182,8 @@ public class MessageServerProperties extends MessageProperties {
                 ", clusterMembershipMode='" + clusterMembershipMode + '\'' +
                 ", clusterIsolationAction='" + clusterIsolationAction + '\'' +
                 ", clusterIsolationRedisFailThreshold=" + clusterIsolationRedisFailThreshold +
+                ", threadPool=" + (threadPool == null ? null : threadPool.keySet()) +
+                ", clusterTopology=" + (clusterTopology == null ? null : clusterTopology.keySet()) +
                 '}';
     }
 

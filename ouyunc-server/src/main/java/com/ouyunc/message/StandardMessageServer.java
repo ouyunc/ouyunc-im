@@ -61,10 +61,8 @@ public class StandardMessageServer extends AbstractMessageServer {
     void afterPropertiesSet() {
         super.afterPropertiesSet();
         log.debug("开始初始化线程池配置...");
-        @SuppressWarnings("unchecked")
-        Map<String, Object> threadPoolSection = YmlUtil.getValue("ouyunc-server.yml", "ouyunc.message.thread-pool", Map.class);
-        ThreadPoolConfig config = ThreadPoolConfig.fromYaml(threadPoolSection);
-        ThreadPoolManager.initialise(config);
+        ThreadPoolManager.initialise(ThreadPoolConfig.from(
+                MessageServerContext.serverProperties().getThreadPool()));
         log.debug("线程池配置初始化完成");
         
         // 初始化资源监控（注册缓存实例）
