@@ -9,6 +9,7 @@ import com.ouyunc.base.constant.NumberConstant;
 public enum OuyuncMessageContentTypeEnum implements MessageContentType {
     SYN_CONTENT(NumberConstant.NUMBER_1, ProtocolTypeEnum.OUYUNC.getProtocol(), ProtocolTypeEnum.OUYUNC.getProtocolVersion(), String.class, "内部消息心跳syn消息内容"),
     ACK_CONTENT(NumberConstant.NUMBER_2,ProtocolTypeEnum.OUYUNC.getProtocol(), ProtocolTypeEnum.OUYUNC.getProtocolVersion(), String.class, "内部消息心跳ack消息内容"),
+    RELATION_CACHE_INVALIDATE_CONTENT(NumberConstant.NUMBER_3, ProtocolTypeEnum.OUYUNC.getProtocol(), ProtocolTypeEnum.OUYUNC.getProtocolVersion(), String.class, "集群内部关系本机缓存失效内容"),
 
     ;
     /**

@@ -229,18 +229,38 @@ public final class ClusterTopologyView {
     }
 
     /**
+     * 拓扑里出现过的全部节点（allowlist 并入）。
+     */
+    public Set<String> getAllConfiguredNodes() {
+        return nodeZoneIndex.isEmpty() ? Sets.newHashSet() : Sets.newHashSet(nodeZoneIndex.keySet());
+    }
+
+    /**
      * 是否应与远端节点建立集群内置客户端连接。
      */
     public boolean shouldConnect(String remoteNodeAddress) {
-        if (!isZoneAware()) {
-            return true;
-        }
+        return shouldConnect(remoteNodeAddress, "");
+    }
+
+    /**
+     * @param advertisedZoneId 租约上的 zone，拓扑未收录新节点时使用
+     */
+    public boolean shouldConnect(String remoteNodeAddress, String advertisedZoneId) {
         if (StringUtils.equals(localServerAddress, remoteNodeAddress)) {
             return false;
         }
+        if (!isZoneAware()) {
+            return true;
+        }
         String remoteZoneId = resolveZone(remoteNodeAddress);
+        if (StringUtils.isBlank(remoteZoneId)) {
+            remoteZoneId = StringUtils.trimToEmpty(advertisedZoneId);
+        }
         if (isSameZone(localZoneId, remoteZoneId)) {
             return true;
+        }
+        if (StringUtils.isBlank(remoteZoneId)) {
+            return false;
         }
         if (crossZoneVia == CrossZoneVia.ANY) {
             return true;

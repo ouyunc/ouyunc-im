@@ -9,6 +9,7 @@ import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.message.cluster.client.pool.MessageClientPool;
+import com.ouyunc.message.cluster.lease.NodeLeaseKeeper;
 import com.ouyunc.message.context.MessageServerContext;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
@@ -50,23 +51,17 @@ public final class SynAckMessageBiProcessor extends AbstractMessageBiProcessor<B
             // 下面是解决集群中原有服务是如何发现新加入集群的服务的
             // 判断发到syn的服务是否在 全局服务注册表中，如果不在判断该服务的合法性，如果合法，尝试发送给对方syn进行探测，如果成功则将新加入集群中的服务添加到激活的路由表中
             if (MessageServerContext.clusterActiveServerRegistryTableCache.get(remoteServerAddress) == null && MessageServerContext.clusterGlobalServerRegistryTableCache.get(remoteServerAddress) == null) {
-                // 1,不在全局服务注册表中
-                // 2,判断服务的合法性， 这里不做太多的验证，认为只要加入集群中的服务都是合法的，如果后期需要，在加入校验规则
-                // 3,给对方发送syn心跳，去探测是否连通
-                synAckMessage.setContentType(OuyuncMessageContentTypeEnum.SYN_CONTENT.getType());
-                packet.setPacketId(MessageContext.idGenerator().generateId());
-                // 内部客户端连接池异步传递消息 syn ,尝试所有的路径去保持连通
-                ThreadPoolManager.messageProcessorExecutor().submit(() -> MessageServerContext.findProtocol(packet.getProtocol(), packet.getProtocolVersion()).doSendMessage(packet, remoteServerAddress, sendResult -> {}));
+                if (NodeLeaseKeeper.hasLiveLease(remoteServerAddress)) {
+                    ThreadPoolManager.messageProcessorExecutor().submit(() ->
+                            MessageClientPool.ensurePool(remoteServerAddress));
+                }
             }
-        }else if (OuyuncMessageContentTypeEnum.ACK_CONTENT.getType() == contentType) {
-            // 收到回应则添加新的服务到集群
-            // 清空本地 missAckTimes 次数
+        } else if (OuyuncMessageContentTypeEnum.ACK_CONTENT.getType() == contentType) {
             MessageServerContext.clusterClientMissAckTimesCache.delete(remoteServerAddress);
-            // 如果相等则添加到注册表，清空packet 中 message 的 路由信息，其实这里不需要清空了（不向外转发）
-            // 这一步完成了两个操作:
-            // 1，将remoteServerAddress 获取channel pool,
-            // 2，如果之前存在该remoteServerAddress 则不进行存储操作，否则存储该channelpool
-            MessageServerContext.clusterActiveServerRegistryTableCache.putIfAbsent(remoteServerAddress, MessageClientPool.clientSimpleChannelPoolMap.get(remoteServerAddress));
+            // 只把租约仍活的节点放回可投递池；get(poolMap) 会无脑建连，不能当发现手段
+            if (NodeLeaseKeeper.hasLiveLease(remoteServerAddress)) {
+                MessageClientPool.ensurePool(remoteServerAddress);
+            }
         }
     }
 

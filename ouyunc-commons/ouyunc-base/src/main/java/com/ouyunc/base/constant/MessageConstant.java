@@ -263,6 +263,25 @@ public class MessageConstant {
     public static final String CLIENT_APP_KEY_PUBLISH_TOPIC = "client_app_key_publish_topic";
 
     /**
+     * 集群成员发现：open 认租约；allowlist 仅连接 cluster.nodes ∪ topology
+     */
+    public static final String CLUSTER_MEMBERSHIP_MODE_OPEN = "open";
+
+    public static final String CLUSTER_MEMBERSHIP_MODE_ALLOWLIST = "allowlist";
+
+    /**
+     * Redis 租约写失败时的隔离动作：摘流拒新登录，不自杀
+     */
+    public static final String CLUSTER_ISOLATION_ACTION_NONE = "none";
+
+    public static final String CLUSTER_ISOLATION_ACTION_DRAIN_ON_REDIS_LOSS = "drain-on-redis-loss";
+
+    /**
+     * 从 Redis 发现的集群节点硬顶，防止错误 SET 灌爆连接
+     */
+    public static final int CLUSTER_MEMBERSHIP_MAX_NODES = 512;
+
+    /**
      * IM 节点租约心跳任务 id
      */
     public static final String IM_NODE_LEASE_TASK_ID = "im-node-lease-heartbeat";

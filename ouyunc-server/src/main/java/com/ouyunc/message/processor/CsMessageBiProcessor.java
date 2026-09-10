@@ -167,7 +167,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
     private Mono<Void> handleWithdrawMessage(ChannelHandlerContext ctx, Packet packet, CsImSessionRoute route) {
         String ticketScopeId = CsHelper.ticketMessageScopeId(route);
         String appKey = packet.getMessage().getMetadata().getAppKey();
-        repository().reactiveHandleOperation(ctx, packet,
+        return repository().reactiveHandleOperation(ctx, packet,
                         repository().reactiveLoadWithdrawTargetPackets(
                                 packet, ticketScopeId, MessageIndexScope.CS_TICKET, true),
                         ExceptionCodeEnum.WITHDRAW_MESSAGE_VERIFY_ERROR,
@@ -196,7 +196,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
 
     private Mono<Void> handleReadReceipt(ChannelHandlerContext ctx, Packet packet, CsImSessionRoute route) {
         String ticketScopeId = CsHelper.ticketMessageScopeId(route);
-        repository().reactiveHandleOperation(ctx, packet,
+        return repository().reactiveHandleOperation(ctx, packet,
                         repository().reactiveLoadValidatedCsReadReceiptPackets(
                                 packet, route, packet.getDeviceType()),
                         ExceptionCodeEnum.READ_RECEIPT_MESSAGE_VERIFY_ERROR,

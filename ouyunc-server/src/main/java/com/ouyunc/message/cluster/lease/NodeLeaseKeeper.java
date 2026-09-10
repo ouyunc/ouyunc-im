@@ -2,6 +2,7 @@ package com.ouyunc.message.cluster.lease;
 
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.model.NodeLeasePayload;
 import com.ouyunc.base.utils.ImSessionPresence;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.cache.config.CacheFactory;
@@ -25,6 +26,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 本机进程租约：启动生成 epoch，定时 SET PX；读路径用快照判断路由是否仍挂在活节点上。
@@ -37,7 +39,7 @@ public final class NodeLeaseKeeper {
 
     private static volatile long epoch;
 
-    private static volatile Map<String, Long> liveEpochs = Map.of();
+    private static volatile Map<String, NodeLeasePayload> liveLeases = Map.of();
 
     private static volatile String leaseSha;
 
@@ -61,6 +63,8 @@ public final class NodeLeaseKeeper {
     private static final AtomicBoolean CONN_PUBLISH_PENDING = new AtomicBoolean(false);
 
     private static final AtomicBoolean CONN_PUBLISH_DIRTY = new AtomicBoolean(false);
+
+    private static final AtomicInteger REDIS_FAIL_STREAK = new AtomicInteger(0);
 
     private NodeLeaseKeeper() {
     }
@@ -100,7 +104,7 @@ public final class NodeLeaseKeeper {
         } catch (Exception e) {
             log.warn("停止节点租约清理 Redis 失败 nodeId={}: {}", nodeId, e.getMessage());
         }
-        liveEpochs = Map.of();
+        liveLeases = Map.of();
         log.info("IM 节点租约已停止 nodeId={}", nodeId);
     }
 
@@ -125,29 +129,57 @@ public final class NodeLeaseKeeper {
         if (nodeId.equals(localNodeId()) && nodeEpoch == epoch) {
             return true;
         }
-        Long live = liveEpochs.get(nodeId);
+        Long live = epochOf(nodeId);
         return live != null && live == nodeEpoch;
     }
 
     public static Map<String, Long> snapshot() {
-        return liveEpochs;
+        Map<String, Long> epochs = new HashMap<>();
+        for (Map.Entry<String, NodeLeasePayload> entry : liveLeases.entrySet()) {
+            if (entry.getValue() != null) {
+                epochs.put(entry.getKey(), entry.getValue().getEpoch());
+            }
+        }
+        return Map.copyOf(epochs);
+    }
+
+    public static Map<String, NodeLeasePayload> liveLeases() {
+        return liveLeases;
+    }
+
+    /**
+     * 租约集合中是否仍有该节点（不校验 epoch，供建池/投递发现）。
+     */
+    public static boolean hasLiveLease(String nodeId) {
+        if (StringUtils.isBlank(nodeId)) {
+            return false;
+        }
+        if (nodeId.equals(localNodeId())) {
+            return true;
+        }
+        return liveLeases.containsKey(nodeId);
+    }
+
+    private static Long epochOf(String nodeId) {
+        NodeLeasePayload payload = liveLeases.get(nodeId);
+        return payload == null ? null : payload.getEpoch();
     }
 
     /**
      * 从 Redis 拉取当前租约仍在的节点。本机当前 epoch 始终并入结果。
      */
-    public static Map<String, Long> loadLiveNodeEpochs() {
+    public static Map<String, NodeLeasePayload> loadLiveLeases() {
         StringRedisTemplate stringRedis = CacheFactory.STRING_REDIS.instance();
         Set<String> nodeIds = stringRedis.opsForSet().members(CacheConstant.buildImNodeSetCacheKey());
-        Map<String, Long> latest;
+        Map<String, NodeLeasePayload> latest;
         if (nodeIds == null || nodeIds.isEmpty()) {
             latest = new HashMap<>();
         } else {
             List<String> ids = nodeIds.stream().filter(StringUtils::isNotBlank).toList();
             List<String> keys = ids.stream().map(CacheConstant::buildImNodeLeaseCacheKey).toList();
             List<String> values = RedisPipelineSupport.getStrings(stringRedis, keys);
-            latest = ImSessionPresence.parseLiveNodeEpochs(ids, values);
-            latest.put(localNodeId(), epoch);
+            latest = ImSessionPresence.parseLiveLeases(ids, values);
+            latest.put(localNodeId(), localPayload());
             for (String id : ids) {
                 if (!latest.containsKey(id)) {
                     stringRedis.opsForSet().remove(CacheConstant.buildImNodeSetCacheKey(), id);
@@ -155,8 +187,13 @@ public final class NodeLeaseKeeper {
             }
             return latest;
         }
-        latest.put(localNodeId(), epoch);
+        latest.put(localNodeId(), localPayload());
         return latest;
+    }
+
+    private static NodeLeasePayload localPayload() {
+        String zoneId = MessageServerContext.serverProperties().getClusterZoneId();
+        return new NodeLeasePayload(epoch, zoneId, localNodeId());
     }
 
     /**
@@ -190,9 +227,30 @@ public final class NodeLeaseKeeper {
         try {
             publishLeaseAndConnCounts(stringRedis, nodeId);
             stringRedis.opsForSet().add(CacheConstant.buildImNodeSetCacheKey(), nodeId);
-            liveEpochs = Map.copyOf(loadLiveNodeEpochs());
+            liveLeases = Map.copyOf(loadLiveLeases());
+            REDIS_FAIL_STREAK.set(0);
+            if (MessageServerContext.REDIS_ISOLATION_DRAINING.get()) {
+                MessageServerContext.exitRedisIsolationDrain();
+            }
+            ClusterMembershipReconciler.reconcile(liveLeases);
         } catch (Exception e) {
             log.error("刷新 IM 节点租约失败 nodeId={}，沿用上一拍快照（本机 epoch 仍视为存活）", nodeId, e);
+            onLeaseRedisFailure();
+        }
+    }
+
+    private static void onLeaseRedisFailure() {
+        int streak = REDIS_FAIL_STREAK.incrementAndGet();
+        String action = StringUtils.trimToEmpty(
+                MessageServerContext.serverProperties().getClusterIsolationAction());
+        int threshold = MessageServerContext.serverProperties().getClusterIsolationRedisFailThreshold();
+        if (threshold <= 0) {
+            threshold = 3;
+        }
+        if (MessageConstant.CLUSTER_ISOLATION_ACTION_DRAIN_ON_REDIS_LOSS.equalsIgnoreCase(action)
+                && streak >= threshold
+                && !MessageServerContext.REDIS_ISOLATION_DRAINING.get()) {
+            MessageServerContext.enterRedisIsolationDrain();
         }
     }
 
@@ -205,7 +263,7 @@ public final class NodeLeaseKeeper {
         List<byte[]> keysAndArgs = new ArrayList<>(4 + counts.size() * 2);
         keysAndArgs.add(utf8(serializer, CacheConstant.buildImNodeLeaseCacheKey(nodeId)));
         keysAndArgs.add(utf8(serializer, CacheConstant.buildImNodeConnHashCacheKey(nodeId)));
-        keysAndArgs.add(utf8(serializer, String.valueOf(epoch)));
+        keysAndArgs.add(utf8(serializer, localPayload().toJson()));
         keysAndArgs.add(utf8(serializer, String.valueOf(MessageConstant.IM_NODE_LEASE_TTL_SECONDS)));
         counts.forEach((appKey, count) -> {
             keysAndArgs.add(utf8(serializer, appKey));

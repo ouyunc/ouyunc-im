@@ -2,6 +2,7 @@ package com.ouyunc.base.utils;
 
 import com.ouyunc.base.constant.enums.OnlineEnum;
 import com.ouyunc.base.model.LoginClientInfo;
+import com.ouyunc.base.model.NodeLeasePayload;
 import org.apache.commons.lang3.StringUtils;
 
 import java.nio.charset.StandardCharsets;
@@ -20,24 +21,31 @@ public final class ImSessionPresence {
     }
 
     /**
-     * 将节点 SET 与租约 MGET 结果解析为仍存活的 nodeId → epoch。
+     * 将节点 SET 与租约 MGET 解析为仍存活的 nodeId → 租约体。
      */
-    public static Map<String, Long> parseLiveNodeEpochs(List<String> nodeIds, List<String> leaseValues) {
-        Map<String, Long> live = new HashMap<>();
+    public static Map<String, NodeLeasePayload> parseLiveLeases(List<String> nodeIds, List<String> leaseValues) {
+        Map<String, NodeLeasePayload> live = new HashMap<>();
         if (nodeIds == null || nodeIds.isEmpty() || leaseValues == null) {
             return live;
         }
         for (int i = 0; i < nodeIds.size() && i < leaseValues.size(); i++) {
             String nodeId = nodeIds.get(i);
-            String raw = leaseValues.get(i);
-            if (StringUtils.isBlank(nodeId) || StringUtils.isBlank(raw)) {
+            NodeLeasePayload payload = NodeLeasePayload.parse(leaseValues.get(i));
+            if (StringUtils.isBlank(nodeId) || payload == null) {
                 continue;
             }
-            try {
-                live.put(nodeId, Long.parseLong(raw.trim()));
-            } catch (NumberFormatException ignored) {
-                // 租约损坏视为该节点不在线
-            }
+            live.put(nodeId, payload);
+        }
+        return live;
+    }
+
+    /**
+     * 将节点 SET 与租约 MGET 结果解析为仍存活的 nodeId → epoch。
+     */
+    public static Map<String, Long> parseLiveNodeEpochs(List<String> nodeIds, List<String> leaseValues) {
+        Map<String, Long> live = new HashMap<>();
+        for (Map.Entry<String, NodeLeasePayload> entry : parseLiveLeases(nodeIds, leaseValues).entrySet()) {
+            live.put(entry.getKey(), entry.getValue().getEpoch());
         }
         return live;
     }

@@ -6,18 +6,23 @@ import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.utils.SocketAddressUtil;
 import com.ouyunc.message.channel.NativeIoTransport;
 import com.ouyunc.message.cluster.client.handler.MessageClientChannelPoolHandler;
-import com.ouyunc.message.cluster.topology.ClusterTopologyView;
+import com.ouyunc.message.cluster.lease.ClusterMembershipReconciler;
+import com.ouyunc.message.cluster.lease.NodeLeaseKeeper;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.properties.MessageServerProperties;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.pool.*;
+import io.netty.channel.pool.AbstractChannelPoolMap;
+import io.netty.channel.pool.ChannelHealthChecker;
+import io.netty.channel.pool.ChannelPool;
+import io.netty.channel.pool.FixedChannelPool;
+import io.netty.channel.pool.SimpleChannelPool;
 import io.netty.util.AttributeKey;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -31,7 +36,7 @@ public class MessageClientPool {
 
     private static Bootstrap bootstrap;
     private static EventLoopGroup workGroup;
-    public static final ChannelPoolMap<String, SimpleChannelPool> clientSimpleChannelPoolMap = new AbstractChannelPoolMap<>() {
+    public static final AbstractChannelPoolMap<String, SimpleChannelPool> clientSimpleChannelPoolMap = new AbstractChannelPoolMap<>() {
         @Override
         protected SimpleChannelPool newPool(String remoteHostPort) {
             //FixedChannelPool(Bootstrap bootstrap, 引导类
@@ -49,28 +54,58 @@ public class MessageClientPool {
     };
 
     /**
-     * @Author fzx
-     * @Description 使用连接池初始化内置客户端，动态扩容缩容连接
+     * 使用连接池初始化内置客户端。成员来自 Redis 租约，不再用 cluster.nodes 预填。
      */
     public static void init(MessageServerProperties serverProperties) {
         log.info("IM内置客户端开始启动......");
         ensureBootstrap();
-        Set<String> nodes = serverProperties.getNodes();
-        ClusterTopologyView topologyView = MessageServerContext.clusterTopologyView;
-        for (String node : nodes) {
-            String localServerAddress = loopBackAddress + MessageConstant.COLON + serverProperties.getPort();
-            if (localServerAddress.equals(node) || serverProperties.getLocalServerAddress().equals(node)) {
-                continue;
-            }
-            if (!topologyView.shouldConnect(node)) {
-                log.info("分区策略跳过集群连接: {}", node);
-                continue;
-            }
-            SimpleChannelPool simpleChannelPool = clientSimpleChannelPoolMap.get(node);
-            MessageServerContext.clusterGlobalServerRegistryTableCache.put(node, simpleChannelPool);
-            MessageServerContext.clusterActiveServerRegistryTableCache.put(node, simpleChannelPool);
-        }
+        ClusterMembershipReconciler.reconcile(NodeLeaseKeeper.liveLeases());
         log.info("IM内置客户端初始化完成");
+    }
+
+    /**
+     * 租约仍活且策略允许时确保有池。幂等。
+     */
+    public static ChannelPool ensurePool(String node) {
+        if (StringUtils.isBlank(node) || isLocalNode(node)) {
+            return null;
+        }
+        ChannelPool existing = MessageServerContext.clusterGlobalServerRegistryTableCache.get(node);
+        if (existing != null) {
+            MessageServerContext.clusterActiveServerRegistryTableCache.putIfAbsent(node, existing);
+            return existing;
+        }
+        int pooled = MessageServerContext.clusterGlobalServerRegistryTableCache.asMap().size();
+        if (pooled >= MessageConstant.CLUSTER_MEMBERSHIP_MAX_NODES) {
+            log.error("集群连接池已达硬顶 {}，拒绝为 {} 建池", MessageConstant.CLUSTER_MEMBERSHIP_MAX_NODES, node);
+            return null;
+        }
+        ensureBootstrap();
+        SimpleChannelPool pool = clientSimpleChannelPoolMap.get(node);
+        MessageServerContext.clusterGlobalServerRegistryTableCache.put(node, pool);
+        MessageServerContext.clusterActiveServerRegistryTableCache.putIfAbsent(node, pool);
+        log.info("集群发现节点并建池: {}", node);
+        return pool;
+    }
+
+    /**
+     * 租约消失后关池，避免继续往死节点打。
+     */
+    public static void evictPool(String node) {
+        if (StringUtils.isBlank(node)) {
+            return;
+        }
+        MessageServerContext.clusterActiveServerRegistryTableCache.delete(node);
+        MessageServerContext.clusterGlobalServerRegistryTableCache.delete(node);
+        MessageServerContext.clusterClientMissAckTimesCache.delete(node);
+        clientSimpleChannelPoolMap.remove(node);
+        log.info("集群租约消失，已关闭连接池: {}", node);
+    }
+
+    private static boolean isLocalNode(String node) {
+        MessageServerProperties properties = MessageServerContext.serverProperties();
+        return properties.getLocalServerAddress().equals(node)
+                || (loopBackAddress + MessageConstant.COLON + properties.getPort()).equals(node);
     }
 
     /**

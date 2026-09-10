@@ -26,13 +26,13 @@ public class AdminDrainController {
 
     @PostHttpRequest(HttpRequestConstant.HTTP_ADMIN_DRAIN_PATH)
     public HttpResponseResult<ServerDrainStatusResponse> drain() {
-        MessageServerContext.enterDrainMode();
+        MessageServerContext.enterAdminDrainMode();
         return HttpResponseResult.success(buildDrainStatus());
     }
 
     @PostHttpRequest(HttpRequestConstant.HTTP_ADMIN_UNDRAIN_PATH)
     public HttpResponseResult<ServerDrainStatusResponse> undrain() {
-        MessageServerContext.exitDrainMode();
+        MessageServerContext.exitAdminDrainMode();
         return HttpResponseResult.success(buildDrainStatus());
     }
 
@@ -43,7 +43,7 @@ public class AdminDrainController {
      */
     @PostHttpRequest(HttpRequestConstant.HTTP_ADMIN_KICK_CLIENTS_PATH)
     public HttpResponseResult<ServerKickClientsResponse> kickClients() {
-        MessageServerContext.enterDrainMode();
+        MessageServerContext.enterAdminDrainMode();
         int notified = ClientHelper.notifyAllLocalClientsToReconnect();
         int localOnlineRemaining = MessageServerContext.localLoginClientRegisterTable.asMap().size();
         log.warn("HTTP 运维通知客户端主动重连完成, notified={}, remaining={}, address={}",

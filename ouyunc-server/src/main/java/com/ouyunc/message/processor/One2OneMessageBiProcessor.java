@@ -157,7 +157,7 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
         String from = packet.getMessage().getFrom();
         String to = packet.getMessage().getTo();
         String sessionId = IdentityUtil.sessionId(from, to);
-        repository().reactiveHandleOperation(ctx, packet,
+        return repository().reactiveHandleOperation(ctx, packet,
                 repository().reactiveLoadWithdrawTargetPackets(
                         packet, sessionId, MessageIndexScope.CHANNEL_SESSION, true),
                 ExceptionCodeEnum.WITHDRAW_MESSAGE_VERIFY_ERROR,
@@ -192,7 +192,7 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
      */
     private Mono<Void> handleReadReceipt(ChannelHandlerContext ctx, Packet packet) {
         String sessionId = IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo());
-        repository().reactiveHandleOperation(ctx, packet,
+        return repository().reactiveHandleOperation(ctx, packet,
                 repository().reactiveLoadValidatedReadReceiptPackets(
                         packet, sessionId, IdentityType.ONE_2_ONE, false),
                 ExceptionCodeEnum.READ_RECEIPT_MESSAGE_VERIFY_ERROR,

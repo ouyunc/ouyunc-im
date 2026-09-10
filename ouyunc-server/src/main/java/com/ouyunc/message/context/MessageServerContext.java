@@ -252,6 +252,16 @@ public class MessageServerContext extends MessageContext {
     public static final AtomicBoolean DRAINING = new AtomicBoolean(false);
 
     /**
+     * 运维主动摘流；与 Redis 隔离摘流分开，避免租约恢复误退出运维 Drain
+     */
+    public static final AtomicBoolean ADMIN_DRAINING = new AtomicBoolean(false);
+
+    /**
+     * 租约写 Redis 失败导致的摘流
+     */
+    public static final AtomicBoolean REDIS_ISOLATION_DRAINING = new AtomicBoolean(false);
+
+    /**
      * 是否接受新登录连接；与 {@link #DRAINING} 配合，升级窗口由运维或优雅关闭流程翻转
      */
     public static final AtomicBoolean ACCEPT_NEW_CONNECTIONS = new AtomicBoolean(true);
@@ -263,6 +273,43 @@ public class MessageServerContext extends MessageContext {
         DRAINING.set(true);
         ACCEPT_NEW_CONNECTIONS.set(false);
         log.warn("IM 节点已进入摘流模式, localAddress={}", serverProperties().getLocalServerAddress());
+    }
+
+    /**
+     * 运维摘流
+     */
+    public static void enterAdminDrainMode() {
+        ADMIN_DRAINING.set(true);
+        enterDrainMode();
+    }
+
+    /**
+     * 运维恢复；若仍处于 Redis 隔离则保持摘流
+     */
+    public static void exitAdminDrainMode() {
+        ADMIN_DRAINING.set(false);
+        if (!REDIS_ISOLATION_DRAINING.get()) {
+            exitDrainMode();
+        }
+    }
+
+    /**
+     * 租约写失败：摘流拒新登录，不停止进程
+     */
+    public static void enterRedisIsolationDrain() {
+        REDIS_ISOLATION_DRAINING.set(true);
+        enterDrainMode();
+        log.error("IM 节点因 Redis 租约失败进入隔离摘流, localAddress={}", serverProperties().getLocalServerAddress());
+    }
+
+    /**
+     * 租约恢复；运维 Drain 期间不自动恢复接流
+     */
+    public static void exitRedisIsolationDrain() {
+        REDIS_ISOLATION_DRAINING.set(false);
+        if (!ADMIN_DRAINING.get()) {
+            exitDrainMode();
+        }
     }
 
     /**

@@ -325,13 +325,15 @@ public final class FriendRepositorySupport {
         byte[] blackKey = infra.stringSerializer.serialize(CacheConstant.buildBlacklistCacheKey(appKey, to));
         byte[] shieldKey = infra.stringSerializer.serialize(CacheConstant.buildFriendsConfigCacheKey(appKey, to, from));
         // closePipeline 拿原始结果，避免 executePipelined 用 valueSerializer 误解码 ZSCORE/HGET
-        List<Object> raw = infra.redisTemplate.execute((RedisCallback<List<Object>>) connection -> {
+        Object pipelineResult = infra.redisTemplate.execute((RedisCallback<Object>) connection -> {
             connection.openPipeline();
             connection.zSetCommands().zScore(friendsKey, fromBytes);
             connection.hashCommands().hGet(blackKey, fromBytes);
             connection.stringCommands().get(shieldKey);
             return connection.closePipeline();
         });
+        @SuppressWarnings("unchecked")
+        List<Object> raw = pipelineResult instanceof List<?> list ? (List<Object>) list : List.of();
         boolean friend = isScoreHit(raw != null && raw.size() > 0 ? raw.get(0) : null);
         boolean blacklisted = isBlacklistHit(raw != null && raw.size() > 1 ? raw.get(1) : null);
         FriendEntity shieldEntity = deserializeFriendEntity(raw != null && raw.size() > 2 ? raw.get(2) : null);

@@ -35,7 +35,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -407,51 +406,14 @@ public final class GroupMembershipSupport {
         return null;
     }
 
-    @SuppressWarnings("unchecked")
     public Mono<GroupEntity> getGroupEntityReactive(String appKey, String groupId) {
-        String cacheKey = CacheConstant.buildGroupCacheKey(appKey, groupId);
-
-        GroupEntity localCached = MessageContext.groupEntityCache.get(cacheKey);
-        if (localCached != null) {
-            if (isLiveGroup(localCached)) {
-                return Mono.just(localCached);
-            }
-            MessageContext.groupEntityCache.delete(cacheKey);
-            return Mono.empty();
-        }
-
-        return infra.reactiveRedisTemplate.opsForValue().get(cacheKey)
-                .map(Optional::of)
-                .defaultIfEmpty(Optional.empty())
-                .flatMap(opt -> {
-                    if (opt.isPresent()) {
-                        Object value = opt.get();
-                        if (!(value instanceof GroupEntity redisGroup) || !isLiveGroup(redisGroup)) {
-                            MessageContext.groupEntityCache.delete(cacheKey);
-                            return Mono.empty();
-                        }
-                        updateGroupCache(cacheKey, redisGroup);
-                        return Mono.just(redisGroup);
-                    }
-                    return loadLiveGroupFromMongoThenDb(appKey, groupId, cacheKey);
-                })
+        return Mono.fromCallable(() -> getGroupEntity(appKey, groupId))
+                .subscribeOn(Schedulers.fromExecutor(infra.dbExecutor()))
+                .flatMap(group -> group == null ? Mono.empty() : Mono.just(group))
                 .onErrorResume(e -> {
                     log.error("响应式查询群组异常, appKey: {}, groupId: {}", appKey, groupId, e);
                     return Mono.empty();
                 });
-    }
-
-    private Mono<GroupEntity> loadLiveGroupFromMongoThenDb(String appKey, String groupId, String cacheKey) {
-        return infra.reactiveMongoTemplate.findOne(
-                        Query.query(Criteria.where(MongoGroupEntity.Fields.id).is(Long.parseLong(groupId))
-                                .and(MongoGroupEntity.Fields.delFlag).is(0L)),
-                        MongoGroupEntity.class)
-                .map(this::convertMongoGroupToGroup)
-                .filter(GroupMembershipSupport::isLiveGroup)
-                .doOnNext(groupEntity -> updateGroupCache(cacheKey, groupEntity))
-                .switchIfEmpty(getGroupEntityFromDatabasesReactive(appKey, groupId)
-                        .filter(GroupMembershipSupport::isLiveGroup)
-                        .doOnNext(groupEntity -> updateGroupCache(cacheKey, groupEntity)));
     }
 
     static boolean isLiveGroup(GroupEntity groupEntity) {

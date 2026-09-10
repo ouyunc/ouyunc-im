@@ -7,6 +7,8 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.core.intercept.AbstractMessageInterceptor;
+import com.ouyunc.message.cluster.client.pool.MessageClientPool;
+import com.ouyunc.message.cluster.lease.NodeLeaseKeeper;
 import com.ouyunc.message.context.MessageServerContext;
 import io.netty.channel.Channel;
 import io.netty.channel.pool.ChannelPool;
@@ -215,7 +217,14 @@ public class MessageHelper {
         if (channelPool != null) {
             return channelPool;
         }
-        return MessageServerContext.clusterGlobalServerRegistryTableCache.get(serverAddress);
+        channelPool = MessageServerContext.clusterGlobalServerRegistryTableCache.get(serverAddress);
+        if (channelPool != null) {
+            return channelPool;
+        }
+        if (NodeLeaseKeeper.hasLiveLease(serverAddress)) {
+            return MessageClientPool.ensurePool(serverAddress);
+        }
+        return null;
     }
 
     /**

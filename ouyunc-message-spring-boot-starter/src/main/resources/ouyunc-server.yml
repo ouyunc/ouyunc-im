@@ -86,8 +86,13 @@ ouyunc:
     cluster:
       # 是否开启集群，默认关闭
       enable: false
-      # 集群中服务端地址，多个用逗号隔开
+      # 可选种子 / allowlist。open 模式下新节点由 Redis 租约发现
       nodes: 192.168.0.113:6001,192.168.0.113:6002,192.168.0.113:6003
+      membership:
+        mode: open
+      isolation:
+        action: drain-on-redis-loss
+        redis-fail-threshold: 3
       # 集群中消息重试次数，消息如果不通，会进行重试三次
       message-retry: 3
       zone:
@@ -121,7 +126,7 @@ ouyunc:
         # 服务端脑裂检测
         split-brain-detection:
           # 是否开启脑裂检测，在集群开启的情况下有效，默认开启
-          enable: true
+          enable: false
           # 检测延迟时间（服务启动后多久后开始检测），默认10分钟，单位分钟
           delay-time: 10
 ## 中间件配置已迁移至环境文件：

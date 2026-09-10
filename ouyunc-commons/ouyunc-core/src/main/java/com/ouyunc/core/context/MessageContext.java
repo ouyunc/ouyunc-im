@@ -527,7 +527,7 @@ public class MessageContext {
             }));
 
     /**
-     * 群成员 identity 列表。短过期，以 Redis 成员 ZSET 为准，禁止 Pub/Sub 失效。
+     * 群成员 identity 列表。短过期兜底；退群/解散须走 Pub/Sub 立刻失效，避免短暂扇出到已退成员。
      */
     public static final Cache<String, Set<String>> groupUserIdentityCache = CaffeineLocalCache.wrap(
             "groupUserIdentity",

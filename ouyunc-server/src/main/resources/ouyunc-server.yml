@@ -193,8 +193,15 @@ ouyunc:
     cluster:
       # 是否开启集群，默认关闭
       enable: false
-      # 集群中服务端地址，多个用逗号隔开
+      # 可选种子 / allowlist。open 模式下新节点由 Redis 租约发现，不必每台改全量列表
       nodes: 172.18.62.195:6001,172.18.62.195:6002,172.18.62.195:6003
+      membership:
+        # open: 认租约建池；allowlist: 仅连接 nodes ∪ topology
+        mode: open
+      isolation:
+        # none | drain-on-redis-loss（租约写失败摘流，不自杀）
+        action: drain-on-redis-loss
+        redis-fail-threshold: 3
       # 集群中消息重试次数，消息如果不通，会进行重试三次
       message-retry: 3
       # 分区路由（routing.mode=zone-aware 时生效）
@@ -240,8 +247,8 @@ ouyunc:
       server:
         # 服务端脑裂检测
         split-brain-detection:
-          # 是否开启脑裂检测，在集群开启的情况下有效，默认开启
-          enable: true
+          # 已废弃半数自杀；默认关闭。peer 不通只摘池
+          enable: false
           # 检测延迟时间（服务启动后多久后开始检测），默认10分钟，单位分钟
           delay-time: 10
 

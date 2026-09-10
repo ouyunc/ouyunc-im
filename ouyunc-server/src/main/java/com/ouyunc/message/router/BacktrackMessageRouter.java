@@ -6,6 +6,7 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.utils.MapUtil;
 import com.ouyunc.message.cluster.routing.ClusterNextHopSelector;
 import com.ouyunc.message.cluster.routing.FlatNextHopSelector;
+import com.ouyunc.message.cluster.lease.NodeLeaseKeeper;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.thread.MessageClusterRouteFailureThread;
 import io.netty.channel.pool.ChannelPool;
@@ -94,7 +95,8 @@ public class BacktrackMessageRouter extends AbstractMessageRouter {
             }
             if (!isExists
                     && !MessageServerContext.serverProperties().getLocalServerAddress().equals(nextServerAddress)
-                    && !localRoutingTable.getRoutedServerAddresses().contains(nextServerAddress)) {
+                    && !localRoutingTable.getRoutedServerAddresses().contains(nextServerAddress)
+                    && NodeLeaseKeeper.hasLiveLease(nextServerAddress)) {
                 candidates.add(nextServerAddress);
             }
         }

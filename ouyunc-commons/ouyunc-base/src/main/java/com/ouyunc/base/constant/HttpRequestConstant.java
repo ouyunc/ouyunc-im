@@ -37,6 +37,12 @@ public class HttpRequestConstant extends HttpConstant{
     public static final String HTTP_ADMIN_KICK_CLIENTS_PATH = HTTP_API_IM_PREFIX + "/admin/kick-clients";
 
     /**
+     * 关系本机缓存失效（需 X-App-Key）。接入节点清 Caffeine 后经集群 TCP 同步到其它租约节点。
+     */
+    public static final String HTTP_ADMIN_RELATION_CACHE_INVALIDATE_PATH =
+            HTTP_API_IM_PREFIX + "/admin/relation-cache/invalidate";
+
+    /**
      * 请求头：应用 appKey（HTTP 推送等接口必填，不再从 JSON body 读取）
      */
     public static final String HTTP_HEADER_APP_KEY = "X-App-Key";

@@ -179,7 +179,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
      */
     private Mono<Void> handleReadReceipt(ChannelHandlerContext ctx, Packet packet, Set<String> groupUserIdentitySet) {
         String sessionId = packet.getMessage().getTo();
-        repository().reactiveHandleOperation(ctx, packet,
+        return repository().reactiveHandleOperation(ctx, packet,
                 repository().reactiveLoadValidatedReadReceiptPackets(
                         packet, packet.getMessage().getTo(), IdentityType.GROUP, false),
                 ExceptionCodeEnum.READ_RECEIPT_MESSAGE_VERIFY_ERROR,
@@ -223,7 +223,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
         // 获取当前撤销人员是否是群主或者管理员，他们是最大权限可以撤销所有成员的消息，当然也包括自己
         Set<String> leaderOrManagerIdentitySet = repository().groupManagerAndLeaderUsersIdentity(packet);
         boolean leaderOrManager = CollectionUtils.isNotEmpty(leaderOrManagerIdentitySet) && leaderOrManagerIdentitySet.contains(packet.getMessage().getFrom());
-        repository().reactiveHandleOperation(ctx, packet,
+        return repository().reactiveHandleOperation(ctx, packet,
                 repository().reactiveLoadWithdrawTargetPackets(
                         packet, sessionId, MessageIndexScope.CHANNEL_SESSION, !leaderOrManager),
                 ExceptionCodeEnum.WITHDRAW_MESSAGE_VERIFY_ERROR,

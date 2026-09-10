@@ -422,7 +422,7 @@ public class MessageServerProperties extends MessageProperties {
     /**
      * 集群中的服务开启脑裂检测，默认开启
      */
-    @Key(value = "ouyunc.message.cluster.server.split-brain-detection.enable", defaultValue = "true")
+    @Key(value = "ouyunc.message.cluster.server.split-brain-detection.enable", defaultValue = "false")
     boolean clusterSplitBrainDetectionEnable;
 
     /**
@@ -454,6 +454,24 @@ public class MessageServerProperties extends MessageProperties {
      */
     @Key(value = "ouyunc.message.cluster.routing.cross-zone-via", defaultValue = "gateway")
     String clusterCrossZoneVia;
+
+    /**
+     * 成员发现：open 认 Redis 租约；allowlist 仅连接 cluster.nodes ∪ topology
+     */
+    @Key(value = "ouyunc.message.cluster.membership.mode", defaultValue = "open")
+    String clusterMembershipMode;
+
+    /**
+     * Redis 租约失败隔离：none | drain-on-redis-loss。不再因 peer 半数自杀。
+     */
+    @Key(value = "ouyunc.message.cluster.isolation.action", defaultValue = "drain-on-redis-loss")
+    String clusterIsolationAction;
+
+    /**
+     * 租约心跳连续失败几次后进入隔离摘流
+     */
+    @Key(value = "ouyunc.message.cluster.isolation.redis-fail-threshold", defaultValue = "3")
+    int clusterIsolationRedisFailThreshold;
 
     public boolean isMessageInterceptorEnable() {
         return messageInterceptorEnable;
@@ -871,6 +889,30 @@ public class MessageServerProperties extends MessageProperties {
         this.clusterCrossZoneVia = clusterCrossZoneVia;
     }
 
+    public String getClusterMembershipMode() {
+        return clusterMembershipMode;
+    }
+
+    public void setClusterMembershipMode(String clusterMembershipMode) {
+        this.clusterMembershipMode = clusterMembershipMode;
+    }
+
+    public String getClusterIsolationAction() {
+        return clusterIsolationAction;
+    }
+
+    public void setClusterIsolationAction(String clusterIsolationAction) {
+        this.clusterIsolationAction = clusterIsolationAction;
+    }
+
+    public int getClusterIsolationRedisFailThreshold() {
+        return clusterIsolationRedisFailThreshold;
+    }
+
+    public void setClusterIsolationRedisFailThreshold(int clusterIsolationRedisFailThreshold) {
+        this.clusterIsolationRedisFailThreshold = clusterIsolationRedisFailThreshold;
+    }
+
     public int getClusterClientHeartbeatWaitRetry() {
         return clusterClientHeartbeatWaitRetry;
     }
@@ -1109,6 +1151,9 @@ public class MessageServerProperties extends MessageProperties {
                 ", clusterZoneGateway=" + clusterZoneGateway +
                 ", clusterRoutingMode='" + clusterRoutingMode + '\'' +
                 ", clusterCrossZoneVia='" + clusterCrossZoneVia + '\'' +
+                ", clusterMembershipMode='" + clusterMembershipMode + '\'' +
+                ", clusterIsolationAction='" + clusterIsolationAction + '\'' +
+                ", clusterIsolationRedisFailThreshold=" + clusterIsolationRedisFailThreshold +
                 '}';
     }
 
