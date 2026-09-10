@@ -297,7 +297,7 @@ public final class NodeLeaseKeeper {
             }
             log.warn("租约 EVALSHA 仍 NOSCRIPT，回退 EVAL");
             stringRedis.execute((RedisCallback<Object>) connection ->
-                    connection.scriptingCommands().eval(LEASE_AND_CONN_LUA, ReturnType.VALUE, 2, keysAndArgs));
+                    connection.scriptingCommands().eval(LEASE_AND_CONN_LUA, ReturnType.INTEGER, 2, keysAndArgs));
         }
     }
 
@@ -321,7 +321,7 @@ public final class NodeLeaseKeeper {
 
     private static void evalSha(StringRedisTemplate stringRedis, String sha, byte[][] keysAndArgs) {
         stringRedis.execute((RedisCallback<Object>) connection ->
-                connection.scriptingCommands().evalSha(sha, ReturnType.VALUE, 2, keysAndArgs));
+                connection.scriptingCommands().evalSha(sha, ReturnType.INTEGER, 2, keysAndArgs));
     }
 
     private static boolean isNoScript(Throwable throwable) {
