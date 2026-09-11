@@ -56,12 +56,16 @@ public final class MessagePacketQuerySupport {
 
     @SuppressWarnings("unchecked")
     public List<Packet> getPackets(String appKey, List<Long> packetIds) {
+        if (appKey == null || appKey.isBlank()) {
+            throw new IllegalArgumentException("appKey is required for message queries");
+        }
         if (CollectionUtils.isEmpty(packetIds)) {
             log.warn("packetIds 为空, appKey={}", appKey);
             return Collections.emptyList();
         }
 
-        List<String> redisKeys = packetIds.stream()
+        Set<Long> requestedIds = new LinkedHashSet<>(packetIds);
+        List<String> redisKeys = requestedIds.stream()
                 .map(id -> CacheConstant.buildMessageCacheKey(appKey, id))
                 .collect(Collectors.toList());
         List<Packet> cachedPackets = RedisPipelineSupport.getValues(redisTemplate, redisKeys);
@@ -70,24 +74,28 @@ public final class MessagePacketQuerySupport {
             return Collections.emptyList();
         }
         Map<Long, Packet> cachedPacketMap = cachedPackets.stream()
-                .filter(Objects::nonNull)
+                .filter(packet -> belongsToApp(packet, appKey))
+                .filter(packet -> requestedIds.contains(packet.getPacketId()))
                 .collect(Collectors.toMap(Packet::getPacketId, Function.identity(), (a, b) -> a));
         Set<Long> cachedIds = cachedPacketMap.keySet();
 
-        if (cachedIds.size() == packetIds.size()) {
-            return new ArrayList<>(cachedPacketMap.values());
+        if (cachedIds.size() == requestedIds.size()) {
+            return requestedIds.stream().map(cachedPacketMap::get).collect(Collectors.toList());
         }
 
-        List<Long> missingIds = packetIds.stream()
+        List<Long> missingIds = requestedIds.stream()
                 .filter(id -> !cachedIds.contains(id))
                 .collect(Collectors.toList());
 
-        List<Packet> dbPackets = queryPacketsFromDatabases(missingIds);
+        List<Packet> dbPackets = queryPacketsFromDatabases(appKey, missingIds).stream()
+                .filter(packet -> belongsToApp(packet, appKey))
+                .filter(packet -> requestedIds.contains(packet.getPacketId()))
+                .collect(Collectors.toList());
 
-        List<Packet> result = new ArrayList<>(cachedPacketMap.values());
-        result.addAll(dbPackets);
+        dbPackets.forEach(packet -> cachedPacketMap.putIfAbsent(packet.getPacketId(), packet));
         asyncUpdatePacketCache(appKey, dbPackets);
-        return result;
+        return requestedIds.stream().map(cachedPacketMap::get).filter(Objects::nonNull)
+                .collect(Collectors.toList());
     }
 
     public Mono<List<Packet>> fetchPacketsReactive(String appKey, List<Long> packetIds) {
@@ -95,13 +103,14 @@ public final class MessagePacketQuerySupport {
                 .subscribeOn(Schedulers.boundedElastic());
     }
 
-    private List<Packet> queryPacketsFromDatabases(List<Long> missingIds) {
+    private List<Packet> queryPacketsFromDatabases(String appKey, List<Long> missingIds) {
         if (CollectionUtils.isEmpty(missingIds)) {
             return Collections.emptyList();
         }
 
         List<MongoMessageEntity> mongoEntities = mongoTemplate.find(
-                Query.query(Criteria.where(MongoMessageEntity.Fields.id).in(missingIds)),
+                Query.query(Criteria.where(MongoMessageEntity.Fields.id).in(missingIds)
+                        .and(MessageEntity.Fields.appKey).is(appKey)),
                 MongoMessageEntity.class
         );
         List<Packet> dbPackets = convertToPackets(mongoEntities);
@@ -117,6 +126,7 @@ public final class MessagePacketQuerySupport {
             try {
                 List<MessageEntity> mysqlEntities = jdbcClient.sql(JdbcSqlDialectHolder.selectMessage())
                         .param(MessageEntity.Fields.ids, remainingIds)
+                        .param(MessageEntity.Fields.appKey, appKey)
                         .query(MessageEntity.class)
                         .list();
                 dbPackets.addAll(convertToPackets(mysqlEntities));
@@ -156,6 +166,7 @@ public final class MessagePacketQuerySupport {
                         entity.getExtra(),
                         entity.getQos(),
                         entity.getClientSendTime(),
+                        entity.getCorrelationId(),
                         new Metadata(
                                 entity.getAppKey(),
                                 entity.getClientIp(),
@@ -163,6 +174,12 @@ public final class MessagePacketQuerySupport {
                         )
                 )
         );
+    }
+
+    static boolean belongsToApp(Packet packet, String appKey) {
+        return appKey != null && !appKey.isBlank() && packet != null
+                && packet.getMessage() != null && packet.getMessage().getMetadata() != null
+                && appKey.equals(packet.getMessage().getMetadata().getAppKey());
     }
 
     private List<Packet> convertToPackets(List<? extends MessageEntity> entities) {

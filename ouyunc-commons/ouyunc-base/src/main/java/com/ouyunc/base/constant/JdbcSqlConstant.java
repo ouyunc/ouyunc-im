@@ -10,7 +10,7 @@ public class JdbcSqlConstant {
      */
     public enum MYSQL{
 
-        SELECT_MESSAGE("SELECT `id`, `protocol`, `protocol_version`, `device_type`, `network_type`, `encrypt_type`, `serialize_algorithm`, `message_type`, `retain`, `client_ip`, `from`, `to`, `content_type`, `content`, `extra`, `at`, `qos`, `client_send_time`, `server_arrival_time` FROM `ouyunc_im_message` where id in (:ids)", "根据主键id查询消息"),
+        SELECT_MESSAGE("SELECT `id`, `protocol`, `protocol_version`, `device_type`, `network_type`, `encrypt_type`, `serialize_algorithm`, `message_type`, `retain`, `client_ip`, `message_id`, `from`, `from_type`, `to`, `to_type`, `content_type`, `content`, `extra`, `at`, `ref`, `correlation_id`, `app_key`, `qos`, `client_send_time`, `server_arrival_time` FROM `ouyunc_im_message` WHERE app_key = :app_key AND id IN (:ids)", "根据租户和主键id查询消息"),
 
         SELECT_SESSION_MESSAGE_OFFSET("select `from`, device_type, `to`,  `type`, `session_message_offset` from ouyunc_im_session_message_offset where `from` = :from and `to` = :to and `type` = :type and device_type = :device_type ", "根据from to 以及 type 获取会话偏移量"),
 
@@ -77,7 +77,7 @@ public class JdbcSqlConstant {
      */
     public enum POSTGRESQL {
 
-        SELECT_MESSAGE("SELECT id, protocol, protocol_version, device_type, network_type, encrypt_type, serialize_algorithm, message_type, retain, client_ip, \"from\", \"to\", content_type, content, extra, \"at\", qos, client_send_time, server_arrival_time FROM ouyunc_im_message where id in (:ids)", "根据主键id查询消息"),
+        SELECT_MESSAGE("SELECT id, protocol, protocol_version, device_type, network_type, encrypt_type, serialize_algorithm, message_type, retain, client_ip, message_id, \"from\", from_type, \"to\", to_type, content_type, content, extra, \"at\", ref, correlation_id, app_key, qos, client_send_time, server_arrival_time FROM ouyunc_im_message WHERE app_key = :app_key AND id IN (:ids)", "根据租户和主键id查询消息"),
 
         SELECT_SESSION_MESSAGE_OFFSET("select \"from\", device_type, \"to\",  \"type\", session_message_offset from ouyunc_im_session_message_offset where \"from\" = :from and \"to\" = :to and \"type\" = :type and device_type = :device_type ", "根据from to 以及 type 获取会话偏移量"),
 
@@ -135,7 +135,7 @@ public class JdbcSqlConstant {
      */
     public enum ORACLE {
 
-        SELECT_MESSAGE("SELECT ID, PROTOCOL, PROTOCOL_VERSION, DEVICE_TYPE, NETWORK_TYPE, ENCRYPT_TYPE, SERIALIZE_ALGORITHM, MESSAGE_TYPE, RETAIN, CLIENT_IP, \"FROM\", \"TO\", CONTENT_TYPE, CONTENT, EXTRA, \"AT\", QOS, CLIENT_SEND_TIME, SERVER_ARRIVAL_TIME FROM OUYUNC_IM_MESSAGE WHERE ID IN (:ids)", "根据主键id查询消息"),
+        SELECT_MESSAGE("SELECT ID, PROTOCOL, PROTOCOL_VERSION, DEVICE_TYPE, NETWORK_TYPE, ENCRYPT_TYPE, SERIALIZE_ALGORITHM, MESSAGE_TYPE, RETAIN, CLIENT_IP, MESSAGE_ID, \"FROM\", FROM_TYPE, \"TO\", TO_TYPE, CONTENT_TYPE, CONTENT, EXTRA, \"AT\", REF, CORRELATION_ID, APP_KEY, QOS, CLIENT_SEND_TIME, SERVER_ARRIVAL_TIME FROM OUYUNC_IM_MESSAGE WHERE APP_KEY = :app_key AND ID IN (:ids)", "根据租户和主键id查询消息"),
 
         SELECT_SESSION_MESSAGE_OFFSET("SELECT \"FROM\", DEVICE_TYPE, \"TO\", \"TYPE\", SESSION_MESSAGE_OFFSET FROM OUYUNC_IM_SESSION_MESSAGE_OFFSET WHERE \"FROM\" = :from AND \"TO\" = :to AND \"TYPE\" = :type AND DEVICE_TYPE = :device_type", "根据from to 以及 type 获取会话偏移量"),
 
