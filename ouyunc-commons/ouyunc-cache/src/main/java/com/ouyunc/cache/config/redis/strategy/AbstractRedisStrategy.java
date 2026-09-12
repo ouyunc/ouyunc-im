@@ -3,6 +3,8 @@ package com.ouyunc.cache.config.redis.strategy;
 import com.google.common.collect.Lists;
 import com.ouyunc.cache.config.redis.properties.RedisProperties;
 import io.lettuce.core.api.StatefulConnection;
+import io.lettuce.core.cluster.ClusterClientOptions;
+import io.lettuce.core.cluster.ClusterTopologyRefreshOptions;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.redisson.config.Config;
 import org.springframework.data.redis.connection.RedisConfiguration;
@@ -83,12 +85,20 @@ public abstract class AbstractRedisStrategy implements RedisStrategy {
      **/
     public LettuceClientConfiguration lettuceClientConfiguration(){
         //构造LettucePoolingClientConfiguration对象连接池，同时加入连接池配置信息
-        return LettucePoolingClientConfiguration
+        LettucePoolingClientConfiguration.LettucePoolingClientConfigurationBuilder builder = LettucePoolingClientConfiguration
                 .builder()
                 .poolConfig(genericObjectPoolConfig())
                 // 对于未配置超时的情况，给出一个合理默认值，避免 NPE
-                .commandTimeout(getTimeout())
-                .build();
+                .commandTimeout(getTimeout());
+        if (this instanceof ClusterRedisStrategy) {
+            builder.clientOptions(ClusterClientOptions.builder()
+                    .topologyRefreshOptions(ClusterTopologyRefreshOptions.builder()
+                            .enableAllAdaptiveRefreshTriggers()
+                            .enablePeriodicRefresh(Duration.ofSeconds(60))
+                            .build())
+                    .build());
+        }
+        return builder.build();
     }
 
 
