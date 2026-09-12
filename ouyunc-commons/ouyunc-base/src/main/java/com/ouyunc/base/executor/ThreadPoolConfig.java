@@ -120,6 +120,7 @@ public final class ThreadPoolConfig {
         
         overrides.forEach((key, value) -> {
             switch (key.toLowerCase(Locale.ROOT)) {
+                case "max-pending-tasks" -> builder.maxPendingTasks(asInt(value, base.maxPendingTasks()));
                 case "type" -> {
                     // 已在上面处理
                 }
@@ -228,6 +229,7 @@ public final class ThreadPoolConfig {
         private final int coreSize;
         private final int maxSize;
         private final int queueCapacity;
+        private final int maxPendingTasks;
         private final long keepAliveSeconds;
         private final String threadNamePrefix;
         private final boolean daemon;
@@ -238,6 +240,7 @@ public final class ThreadPoolConfig {
             this.coreSize = builder.coreSize;
             this.maxSize = builder.maxSize;
             this.queueCapacity = builder.queueCapacity;
+            this.maxPendingTasks = builder.maxPendingTasks;
             this.keepAliveSeconds = builder.keepAliveSeconds;
             this.threadNamePrefix = builder.threadNamePrefix;
             this.daemon = builder.daemon;
@@ -258,6 +261,10 @@ public final class ThreadPoolConfig {
 
         public int queueCapacity() {
             return queueCapacity;
+        }
+
+        public int maxPendingTasks() {
+            return maxPendingTasks;
         }
 
         public long keepAliveSeconds() {
@@ -283,6 +290,7 @@ public final class ThreadPoolConfig {
             return coreSize == that.coreSize
                     && maxSize == that.maxSize
                     && queueCapacity == that.queueCapacity
+                    && maxPendingTasks == that.maxPendingTasks
                     && keepAliveSeconds == that.keepAliveSeconds
                     && daemon == that.daemon
                     && allowCoreThreadTimeout == that.allowCoreThreadTimeout
@@ -292,7 +300,7 @@ public final class ThreadPoolConfig {
 
         @Override
         public int hashCode() {
-            return Objects.hash(type, coreSize, maxSize, queueCapacity, keepAliveSeconds, threadNamePrefix, daemon, allowCoreThreadTimeout);
+            return Objects.hash(type, coreSize, maxSize, queueCapacity, maxPendingTasks, keepAliveSeconds, threadNamePrefix, daemon, allowCoreThreadTimeout);
         }
 
         @Override
@@ -302,6 +310,7 @@ public final class ThreadPoolConfig {
                     ", coreSize=" + coreSize +
                     ", maxSize=" + maxSize +
                     ", queueCapacity=" + queueCapacity +
+                    ", maxPendingTasks=" + maxPendingTasks +
                     ", keepAliveSeconds=" + keepAliveSeconds +
                     ", threadNamePrefix='" + threadNamePrefix + '\'' +
                     ", daemon=" + daemon +
@@ -321,7 +330,8 @@ public final class ThreadPoolConfig {
             private ThreadPoolType type = ThreadPoolType.VIRTUAL;
             private int coreSize = Runtime.getRuntime().availableProcessors();
             private int maxSize = coreSize;
-            private int queueCapacity = -1;  // -1 表示无界队列
+            private int queueCapacity = -1;  // <= 0 uses maxPendingTasks as the bounded fallback
+            private int maxPendingTasks = 65_536;
             private long keepAliveSeconds = 60;
             private String threadNamePrefix = "thread-pool";
             private boolean daemon = true;
@@ -336,6 +346,7 @@ public final class ThreadPoolConfig {
                     this.coreSize = base.coreSize;
                     this.maxSize = base.maxSize;
                     this.queueCapacity = base.queueCapacity;
+                    this.maxPendingTasks = base.maxPendingTasks;
                     this.keepAliveSeconds = base.keepAliveSeconds;
                     this.threadNamePrefix = base.threadNamePrefix;
                     this.daemon = base.daemon;
@@ -366,6 +377,14 @@ public final class ThreadPoolConfig {
 
             public Builder queueCapacity(int queueCapacity) {
                 this.queueCapacity = queueCapacity;
+                return this;
+            }
+
+            public Builder maxPendingTasks(int maxPendingTasks) {
+                if (maxPendingTasks <= 0) {
+                    throw new IllegalArgumentException("max-pending-tasks must be positive");
+                }
+                this.maxPendingTasks = maxPendingTasks;
                 return this;
             }
 
@@ -403,4 +422,3 @@ public final class ThreadPoolConfig {
     }
 
 }
-

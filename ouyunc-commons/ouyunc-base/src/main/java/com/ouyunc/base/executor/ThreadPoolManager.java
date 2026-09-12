@@ -27,7 +27,7 @@ public final class ThreadPoolManager {
 
     private static volatile ThreadPoolConfig currentConfig = ThreadPoolConfig.defaultConfig();
 
-    private static final EnumMap<ThreadPoolId, ManagedExecutor> EXECUTORS = new EnumMap<>(ThreadPoolId.class);
+    private static final ConcurrentMap<ThreadPoolId, ManagedExecutor> EXECUTORS = new ConcurrentHashMap<>();
 
     private ThreadPoolManager() {
         throw new AssertionError("Instantiation not supported");
@@ -70,7 +70,9 @@ public final class ThreadPoolManager {
                 .daemon(config.daemon())
                 .build();
         return switch (config.type()) {
-            case VIRTUAL -> Executors.newVirtualThreadPerTaskExecutor();
+            case VIRTUAL -> new BoundedTaskExecutor(
+                    Executors.newThreadPerTaskExecutor(Thread.ofVirtual().name(config.threadNamePrefix() + "-", 0).factory()),
+                    config.maxPendingTasks());
             case FIXED -> createFixed(config, factory);
             case CACHED -> new ThreadPoolExecutor(
                     0,
@@ -79,9 +81,10 @@ public final class ThreadPoolManager {
                     TimeUnit.SECONDS,
                     new SynchronousQueue<>(),
                     factory,
-                    new ThreadPoolExecutor.CallerRunsPolicy());
+                    new ThreadPoolExecutor.AbortPolicy());
             case SCHEDULED -> createScheduled(config, factory);
-            case SINGLE -> Executors.newSingleThreadExecutor(factory);
+            case SINGLE -> new ThreadPoolExecutor(1, 1, 0, TimeUnit.SECONDS,
+                    new LinkedBlockingQueue<>(config.maxPendingTasks()), factory, new ThreadPoolExecutor.AbortPolicy());
         };
     }
 
@@ -90,13 +93,13 @@ public final class ThreadPoolManager {
         int maxSize = Math.max(coreSize, config.maxSize());
         BlockingQueue<Runnable> queue;
         if (config.queueCapacity() <= 0) {
-            queue = new LinkedBlockingQueue<>();
+            queue = new LinkedBlockingQueue<>(config.maxPendingTasks());
         } else {
             queue = new LinkedBlockingQueue<>(config.queueCapacity());
         }
         ThreadPoolExecutor executor = new ThreadPoolExecutor(coreSize, maxSize,
                 config.keepAliveSeconds(), TimeUnit.SECONDS,
-                queue, factory, new ThreadPoolExecutor.CallerRunsPolicy());
+                queue, factory, new ThreadPoolExecutor.AbortPolicy());
         executor.allowCoreThreadTimeOut(config.allowCoreThreadTimeout());
         return executor;
     }
@@ -228,6 +231,10 @@ public final class ThreadPoolManager {
             int queueSize
     ) {
         private static ThreadPoolMetrics from(ThreadPoolId id, ExecutorService executor) {
+            if (executor instanceof BoundedTaskExecutor bounded) {
+                return new ThreadPoolMetrics(id, executor.isShutdown(), executor.isTerminated(),
+                        bounded.inFlightTasks(), -1, -1, -1, 0);
+            }
             if (executor instanceof ThreadPoolExecutor tpe) {
                 BlockingQueue<Runnable> queue = tpe.getQueue();
                 return new ThreadPoolMetrics(
