@@ -160,6 +160,17 @@ public final class NodeLeaseKeeper {
         return liveLeases.containsKey(nodeId);
     }
 
+    /**
+     * HMAC 握手后确认对端是集群成员。只读本地租约快照，避免在 Netty EventLoop 上同步刷 Redis。
+     * <p>快照未命中则拒绝本次连接；后台心跳更新后由连接池重连即可。新节点加入可能有短暂失败窗口。</p>
+     */
+    public static boolean acceptPeer(String nodeId) {
+        if (StringUtils.isBlank(nodeId) || nodeId.equals(localNodeId())) {
+            return false;
+        }
+        return hasLiveLease(nodeId);
+    }
+
     private static Long epochOf(String nodeId) {
         NodeLeasePayload payload = liveLeases.get(nodeId);
         return payload == null ? null : payload.getEpoch();

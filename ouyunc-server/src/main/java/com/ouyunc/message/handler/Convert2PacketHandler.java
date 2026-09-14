@@ -2,6 +2,7 @@ package com.ouyunc.message.handler;
 
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.packet.Packet;
+import com.ouyunc.message.cluster.auth.ClusterChannelGuard;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.convert.PacketConverter;
 import io.netty.channel.ChannelHandlerContext;
@@ -28,7 +29,9 @@ public class Convert2PacketHandler extends SimpleChannelInboundHandler<Object> {
         for (PacketConverter<?> packetConverter : MessageServerContext.packetConverterList) {
             Packet packet = packetConverter.convertToPacket(ctx, msg);
             if (packet != null) {
-                // 交给下个handler处理
+                if (ClusterChannelGuard.rejectExternalInternalPacket(ctx, packet)) {
+                    return;
+                }
                 ctx.fireChannelRead(packet);
                 return;
             }

@@ -4,7 +4,7 @@ ouyunc:
     active: dev
   message:
     # 服务端口
-    port: 6003
+    port: 6004
     # 服务名称
     name: ouyunc-message
     # server提供的暴露ip(可以理解为主动设置本机ip),如果不指定则使用本地网卡ip，一般为内网ip; 注意如果开启集群，要注意集群服务的地址和该服务所在ip的网络是否连通
@@ -192,7 +192,10 @@ ouyunc:
     # 集群配置
     cluster:
       # 是否开启集群，默认关闭
-      enable: false
+      enable: true
+      # 所有节点配置同一份随机密钥（至少 32 字节），扩缩容无需维护 IP 白名单。
+      # 留空拒绝 OUYUNC；密钥通过部署配置注入，不要提交真实密钥到仓库。
+      secret: "dev-ouyunc-cluster-packet-secret-32"
       # 可选种子 / allowlist。open 模式下新节点由 Redis 租约发现，不必每台改全量列表
       nodes: 172.18.62.195:6001,172.18.62.195:6002,172.18.62.195:6003
       membership:

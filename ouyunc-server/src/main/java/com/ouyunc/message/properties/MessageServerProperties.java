@@ -355,6 +355,21 @@ public class MessageServerProperties extends MessageProperties {
     private Set<String> nodes = new HashSet<>();
 
     /**
+     * 所有集群节点共用的认证密钥，至少 32 个 UTF-8 字节；不配置则拒绝内部协议。
+     * 只用于新连接首包的 HMAC 签名，不通过网络发送原始密钥，不加入 toString 日志。
+     */
+    @Key(value = "ouyunc.message.cluster.secret")
+    private String clusterSecret;
+
+    public String getClusterSecret() {
+        return clusterSecret;
+    }
+
+    public void setClusterSecret(String clusterSecret) {
+        this.clusterSecret = clusterSecret;
+    }
+
+    /**
      * 集群中消息重试次数，消息如果不通，会进行重试三次
      */
     @Key(value = "ouyunc.message.cluster.message-retry", defaultValue = "3")

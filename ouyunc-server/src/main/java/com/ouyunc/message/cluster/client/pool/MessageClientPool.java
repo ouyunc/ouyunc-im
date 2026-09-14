@@ -5,6 +5,7 @@ import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.utils.SocketAddressUtil;
 import com.ouyunc.message.channel.NativeIoTransport;
+import com.ouyunc.message.cluster.auth.ClusterAuthConstant;
 import com.ouyunc.message.cluster.client.handler.MessageClientChannelPoolHandler;
 import com.ouyunc.message.cluster.lease.ClusterMembershipReconciler;
 import com.ouyunc.message.cluster.lease.NodeLeaseKeeper;
@@ -49,7 +50,11 @@ public class MessageClientPool {
             //                            boolean releaseHealthCheck, 释放检查
             //                            boolean lastRecentUsed) 获取连接的规则 FIFO/LIFO
             // 以下参数可以避免获取超时造成oom
-            return new FixedChannelPool(bootstrap.remoteAddress(SocketAddressUtil.convert2SocketAddress(remoteHostPort)), new MessageClientChannelPoolHandler(), ChannelHealthChecker.ACTIVE, FixedChannelPool.AcquireTimeoutAction.NEW, MessageServerContext.serverProperties().getClusterClientChannelPoolAcquireTimeoutMillis(), MessageServerContext.serverProperties().getClusterClientChannelPoolMaxConnection(), MessageServerContext.serverProperties().getClusterClientChannelPoolMaxPendingAcquires(), true, false);
+            // 每个连接池保留目标节点标识，用于签名接收方；clone 避免并发建池互相覆盖地址。
+            Bootstrap peerBootstrap = bootstrap.clone()
+                    .remoteAddress(SocketAddressUtil.convert2SocketAddress(remoteHostPort))
+                    .attr(ClusterAuthConstant.TARGET_NODE, remoteHostPort);
+            return new FixedChannelPool(peerBootstrap, new MessageClientChannelPoolHandler(), ChannelHealthChecker.ACTIVE, FixedChannelPool.AcquireTimeoutAction.NEW, MessageServerContext.serverProperties().getClusterClientChannelPoolAcquireTimeoutMillis(), MessageServerContext.serverProperties().getClusterClientChannelPoolMaxConnection(), MessageServerContext.serverProperties().getClusterClientChannelPoolMaxPendingAcquires(), true, false);
         }
     };
 

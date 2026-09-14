@@ -3,6 +3,7 @@ package com.ouyunc.message.handler;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.model.Target;
 import com.ouyunc.base.packet.Packet;
+import com.ouyunc.message.cluster.auth.ClusterChannelGuard;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
@@ -22,17 +23,28 @@ public class ClusterPacketRouteHandler extends SimpleChannelInboundHandler<Packe
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Packet packet) throws Exception {
+        String peer = ClusterChannelGuard.requireAuthenticatedPeer(ctx);
+        if (peer == null) {
+            return;
+        }
+        if (packet.getMessage() == null) {
+            log.warn("集群包缺少 message, packetId={}", packet.getPacketId());
+            return;
+        }
         Metadata metadata = packet.getMessage().getMetadata();
         if (metadata == null || !metadata.isRouted()) {
-            // 未路由包交给后续处理器（如集群 SYN-ACK）
+            if (!ClusterChannelGuard.isInternalClusterMessage(packet)) {
+                log.warn("拒绝未路由的非集群消息 packetId={} type={}", packet.getPacketId(), packet.getMessageType());
+                return;
+            }
             ctx.fireChannelRead(packet);
             return;
         }
-        Target target = metadata.getTarget();
-        if (target == null) {
-            log.warn("集群路由包缺少 target, packetId={}", packet.getPacketId());
+        if (!ClusterChannelGuard.allowRoutedDelivery(peer, metadata)) {
+            log.warn("拒绝非法集群路由包 packetId={} peer={}", packet.getPacketId(), peer);
             return;
         }
+        Target target = metadata.getTarget();
         String localServerAddress = MessageServerContext.serverProperties().getLocalServerAddress();
         if (metadata.isLocalBroadcastOnly() && Objects.equals(localServerAddress, target.getTargetServerAddress())) {
             ClientHelper.deliverLocalBroadcast(metadata.getAppKey(), packet);

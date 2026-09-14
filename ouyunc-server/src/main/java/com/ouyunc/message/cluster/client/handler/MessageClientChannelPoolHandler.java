@@ -5,6 +5,8 @@ import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.SSLUtil;
 import com.ouyunc.core.codec.PacketCodec;
+import com.ouyunc.message.cluster.auth.ClusterAuthentication;
+import com.ouyunc.message.cluster.auth.ClusterAuthConstant;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.properties.MessageServerProperties;
 import io.netty.channel.Channel;
@@ -54,6 +56,9 @@ public class MessageClientChannelPoolHandler extends AbstractChannelPoolHandler 
         }
         pipeline
                 .addLast(MessageConstant.CLIENT_PACKET_CODEC_HANDLER, new PacketCodec())
+                // 出站先补认证首包再编码，连接池复用时不重复认证，不改普通业务消息。
+                .addLast(ClusterAuthConstant.HANDLER_NAME, new ClusterAuthentication.ClientHandler(
+                        props.getClusterSecret(), props.getLocalServerAddress(), channel.attr(ClusterAuthConstant.TARGET_NODE).get()))
                 .addLast(MessageConstant.CLIENT_IDLE_HANDLER, new IdleStateHandler(props.getClusterClientIdleReadTimeout(), props.getClusterClientIdleWriteTimeout(), props.getClusterClientIdleReadWriteTimeout(), TimeUnit.SECONDS))
                 .addLast(MessageConstant.CLIENT_HEART_BEAT_HANDLER, new MessageClientHeartBeatHandler());
 
