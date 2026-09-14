@@ -119,6 +119,13 @@ ouyunc:
       jwt:
         secret: ouyunc-local-http-push-jwt-secret-32
 
+    # 节点运维 HTTP（drain/undrain/kick-clients）：默认关闭。开启后必须配置独立 JWT 密钥，
+    # 签发含 im:admin:drain 的凭证；密钥不得与 http-push.jwt.secret 共用。
+    http-admin:
+      enabled: false
+      jwt:
+         secret: ouyunc-local-http-admin-jwt-secret-32
+
     # 线程池配置（精简版，仅保留必要参数）
     thread-pool:
       # 虚拟线程池（I/O密集型任务，无需配置大小参数）

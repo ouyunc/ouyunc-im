@@ -1,10 +1,12 @@
 package com.ouyunc.message.cluster;
 
 import com.alibaba.fastjson2.JSON;
+import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.DeviceTypeEnum;
 import com.ouyunc.base.constant.enums.NetworkEnum;
 import com.ouyunc.base.constant.enums.OuyuncMessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.OuyuncMessageTypeEnum;
+import com.ouyunc.base.constant.enums.RelationCacheInvalidateKind;
 import com.ouyunc.base.encrypt.Encrypt;
 import com.ouyunc.base.model.RelationCacheInvalidateEvent;
 import com.ouyunc.base.packet.Packet;
@@ -21,6 +23,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
+
 /**
  * 本机清关系 Caffeine；集群开启时再经 TCP 同步到其它租约节点（不走 Redis Pub/Sub）。
  */
@@ -31,20 +35,76 @@ public final class RelationCacheInvalidateSupport {
     private RelationCacheInvalidateSupport() {
     }
 
+    /**
+     * HTTP 入口校验：kind 必须是枚举，并检查对应字段与 memberIds 上限。
+     * 校验通过后会把 kind 规范为枚举名；失败返回错误文案。
+     */
+    public static String validateForHttp(RelationCacheInvalidateEvent event) {
+        if (event == null || StringUtils.isBlank(event.getAppKey())) {
+            return "appKey 不能为空";
+        }
+        RelationCacheInvalidateKind kind = RelationCacheInvalidateKind.from(event.getKind());
+        if (kind == null) {
+            return "kind 无效，允许: FRIEND_REMOVE / GROUP_QUIT / GROUP_DISSOLVE";
+        }
+        event.setKind(kind.name());
+        switch (kind) {
+            case FRIEND_REMOVE -> {
+                if (StringUtils.isAnyBlank(event.getUserId(), event.getPeerId())) {
+                    return "FRIEND_REMOVE 需要 userId 与 peerId";
+                }
+            }
+            case GROUP_QUIT -> {
+                if (StringUtils.isAnyBlank(event.getGroupId(), event.getUserId())) {
+                    return "GROUP_QUIT 需要 groupId 与 userId";
+                }
+            }
+            case GROUP_DISSOLVE -> {
+                if (StringUtils.isBlank(event.getGroupId())) {
+                    return "GROUP_DISSOLVE 需要 groupId";
+                }
+                List<String> memberIds = event.getMemberIds();
+                if (memberIds != null && memberIds.size() > MessageConstant.RELATION_CACHE_MEMBER_IDS_MAX) {
+                    return "memberIds 超过上限 " + MessageConstant.RELATION_CACHE_MEMBER_IDS_MAX;
+                }
+            }
+        }
+        return null;
+    }
+
     public static void applyLocal(RelationCacheInvalidateEvent event) {
-        if (event == null || StringUtils.isBlank(event.getKind()) || StringUtils.isBlank(event.getAppKey())) {
+        if (event == null || StringUtils.isBlank(event.getAppKey())) {
             return;
         }
-        if (RelationCacheInvalidateEvent.KIND_FRIEND_REMOVE.equals(event.getKind())) {
-            RelationLocalCache.evictFriend(event.getAppKey(), event.getUserId(), event.getPeerId());
+        RelationCacheInvalidateKind kind = RelationCacheInvalidateKind.from(event.getKind());
+        if (kind == null) {
             return;
         }
-        if (RelationCacheInvalidateEvent.KIND_GROUP_QUIT.equals(event.getKind())) {
-            RelationLocalCache.evictGroupMember(event.getAppKey(), event.getGroupId(), event.getUserId());
-            return;
-        }
-        if (RelationCacheInvalidateEvent.KIND_GROUP_DISSOLVE.equals(event.getKind())) {
-            RelationLocalCache.evictGroup(event.getAppKey(), event.getGroupId(), event.getMemberIds());
+        switch (kind) {
+            case FRIEND_REMOVE -> {
+                if (StringUtils.isAnyBlank(event.getUserId(), event.getPeerId())) {
+                    return;
+                }
+                RelationLocalCache.evictFriend(event.getAppKey(), event.getUserId(), event.getPeerId());
+            }
+            case GROUP_QUIT -> {
+                if (StringUtils.isAnyBlank(event.getGroupId(), event.getUserId())) {
+                    return;
+                }
+                RelationLocalCache.evictGroupMember(event.getAppKey(), event.getGroupId(), event.getUserId());
+            }
+            case GROUP_DISSOLVE -> {
+                if (StringUtils.isBlank(event.getGroupId())) {
+                    return;
+                }
+                List<String> memberIds = event.getMemberIds();
+                if (memberIds != null && memberIds.size() > MessageConstant.RELATION_CACHE_MEMBER_IDS_MAX) {
+                    log.warn("关系缓存失效丢弃超限 memberIds appKey={} groupId={} size={}",
+                            event.getAppKey(), event.getGroupId(), memberIds.size());
+                    return;
+                }
+                RelationLocalCache.evictGroup(event.getAppKey(), event.getGroupId(), memberIds);
+            }
         }
     }
 

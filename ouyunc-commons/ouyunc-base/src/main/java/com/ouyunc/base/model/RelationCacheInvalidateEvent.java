@@ -1,18 +1,21 @@
 package com.ouyunc.base.model;
 
+import com.ouyunc.base.constant.enums.RelationCacheInvalidateKind;
+
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * 关系本机缓存失效事件。业务侧 Redis 写完后 HTTP 打到 IM，接入节点清 Caffeine 并集群同步。
+ * {@code kind} 取值见 {@link RelationCacheInvalidateKind}。
  */
 public class RelationCacheInvalidateEvent {
 
-    public static final String KIND_FRIEND_REMOVE = "FRIEND_REMOVE";
+    public static final String KIND_FRIEND_REMOVE = RelationCacheInvalidateKind.FRIEND_REMOVE.name();
 
-    public static final String KIND_GROUP_QUIT = "GROUP_QUIT";
+    public static final String KIND_GROUP_QUIT = RelationCacheInvalidateKind.GROUP_QUIT.name();
 
-    public static final String KIND_GROUP_DISSOLVE = "GROUP_DISSOLVE";
+    public static final String KIND_GROUP_DISSOLVE = RelationCacheInvalidateKind.GROUP_DISSOLVE.name();
 
     private String kind;
 

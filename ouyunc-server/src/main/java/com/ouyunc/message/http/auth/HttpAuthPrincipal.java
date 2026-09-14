@@ -42,6 +42,21 @@ public final class HttpAuthPrincipal {
     }
 
     public boolean hasScope(String scope) {
-        return scopes.contains(scope);
+        return scope != null && scopes.contains(scope);
+    }
+
+    /**
+     * 任一 scope 命中即视为具备权限。
+     */
+    public boolean hasAnyScope(String... required) {
+        if (required == null || required.length == 0) {
+            return false;
+        }
+        for (String scope : required) {
+            if (hasScope(scope)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

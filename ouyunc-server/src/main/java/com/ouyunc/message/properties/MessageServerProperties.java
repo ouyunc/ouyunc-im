@@ -153,6 +153,19 @@ public class MessageServerProperties extends MessageProperties {
     String httpPushJwtScopeClaim;
 
     /**
+     * 是否开启节点运维 HTTP（drain/undrain/kick-clients）。默认关闭。
+     * 开启后必须配置独立运维 JWT 密钥，并签发含 {@code im:admin:drain} 的凭证；不得与业务推送密钥共用。
+     */
+    @Key(value = "ouyunc.message.http-admin.enabled", defaultValue = "false")
+    boolean httpAdminEnabled;
+
+    /**
+     * 运维 JWT HS256 密钥，须与 {@link #httpPushJwtSecret} 隔离。长度 ≥ 32 字符。
+     */
+    @Key("ouyunc.message.http-admin.jwt.secret")
+    String httpAdminJwtSecret;
+
+    /**
      * 是否在接入 Channel 上安装 {@link com.ouyunc.message.handler.MessageLoggingHandler}。
      * 关闭后不再按「每次 socket 读」打日志；大流量下每次 {@code channelRead} 一条，极易刷屏。
      */
@@ -652,6 +665,22 @@ public class MessageServerProperties extends MessageProperties {
         this.httpPushJwtScopeClaim = httpPushJwtScopeClaim;
     }
 
+    public boolean isHttpAdminEnabled() {
+        return httpAdminEnabled;
+    }
+
+    public void setHttpAdminEnabled(boolean httpAdminEnabled) {
+        this.httpAdminEnabled = httpAdminEnabled;
+    }
+
+    public String getHttpAdminJwtSecret() {
+        return httpAdminJwtSecret;
+    }
+
+    public void setHttpAdminJwtSecret(String httpAdminJwtSecret) {
+        this.httpAdminJwtSecret = httpAdminJwtSecret;
+    }
+
     public boolean isNettyPipelineLoggingEnabled() {
         return nettyPipelineLoggingEnabled;
     }
@@ -1147,6 +1176,7 @@ public class MessageServerProperties extends MessageProperties {
                 ", httpPushJwtAppKeyClaim='" + httpPushJwtAppKeyClaim + '\'' +
                 ", httpPushJwtFromTypeClaim='" + httpPushJwtFromTypeClaim + '\'' +
                 ", httpPushJwtScopeClaim='" + httpPushJwtScopeClaim + '\'' +
+                ", httpAdminEnabled=" + httpAdminEnabled +
                 ", nettyPipelineLoggingEnabled=" + nettyPipelineLoggingEnabled +
                 ", bossThreads=" + bossThreads +
                 ", bossOptionConnectTimeoutMillis=" + bossOptionConnectTimeoutMillis +

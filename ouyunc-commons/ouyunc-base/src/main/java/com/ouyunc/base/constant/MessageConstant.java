@@ -53,6 +53,11 @@ public class MessageConstant {
     public static final int HTTP_PUSH_TO_LIST_MAX = 256;
 
     /**
+     * 关系缓存失效 GROUP_DISSOLVE 的 memberIds 上限，防止一次请求向集群放大超大清理集合。
+     */
+    public static final int RELATION_CACHE_MEMBER_IDS_MAX = 2000;
+
+    /**
      * 数字1000
      */
     public static final int NUMBER_1000 = 1000;

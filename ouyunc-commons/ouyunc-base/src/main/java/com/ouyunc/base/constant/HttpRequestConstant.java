@@ -22,25 +22,43 @@ public class HttpRequestConstant extends HttpConstant{
     public static final String HTTP_READY_PATH = "/ready";
 
     /**
-     * 运维摘流：拒绝新登录并使 /ready 返回 503（需 X-App-Key）
+     * 运维摘流：拒绝新登录并使 /ready 返回 503。
+     * 默认关闭；开启后需独立运维 JWT，scope={@link HttpAuthScopeConstant#IM_ADMIN_DRAIN}。
      */
     public static final String HTTP_ADMIN_DRAIN_PATH = HTTP_API_IM_PREFIX + "/admin/drain";
 
     /**
-     * 运维取消摘流（需 X-App-Key）
+     * 运维取消摘流。鉴权要求同 {@link #HTTP_ADMIN_DRAIN_PATH}。
      */
     public static final String HTTP_ADMIN_UNDRAIN_PATH = HTTP_API_IM_PREFIX + "/admin/undrain";
 
     /**
-     * 运维通知本机在线客户端主动断开并重连（需 X-App-Key）；会先进入摘流，服务端不主动 close
+     * 运维通知本机在线客户端主动断开并重连；会先进入摘流，服务端不主动 close。
+     * 鉴权要求同 {@link #HTTP_ADMIN_DRAIN_PATH}。
      */
     public static final String HTTP_ADMIN_KICK_CLIENTS_PATH = HTTP_API_IM_PREFIX + "/admin/kick-clients";
 
     /**
-     * 关系本机缓存失效（需 X-App-Key）。接入节点清 Caffeine 后经集群 TCP 同步到其它租约节点。
+     * 关系本机缓存失效。接入节点清 Caffeine 后经集群 TCP 同步到其它租约节点。
+     * 租户 JWT 强制使用 Principal.appKey；跨租户需要 {@link HttpAuthScopeConstant#IM_ADMIN_PLATFORM}。
      */
     public static final String HTTP_ADMIN_RELATION_CACHE_INVALIDATE_PATH =
             HTTP_API_IM_PREFIX + "/admin/relation-cache/invalidate";
+
+    /**
+     * HS256 JWT 密钥最短长度（字符），与 {@code Keys.hmacShaKeyFor} 256bit 要求对齐。
+     */
+    public static final int HTTP_JWT_SECRET_MIN_LENGTH = 32;
+
+    /**
+     * 运维操作原因（可选）。也可使用 query {@code reason}。
+     */
+    public static final String HTTP_HEADER_ADMIN_REASON = "X-Admin-Reason";
+
+    /**
+     * 运维原因写入日志的最大长度，防止超长/换行污染日志。
+     */
+    public static final int HTTP_ADMIN_REASON_MAX_LENGTH = 256;
 
     /**
      * 请求头：应用 appKey（HTTP 推送等接口必填，不再从 JSON body 读取）
