@@ -39,7 +39,9 @@ public abstract class AbstractBaseBiProcessor<T extends Number> implements BiPro
     }
 
     /**
-     * qos 前置处理，一般用于消息过滤，比如消息是否是重发等
+     * qos 前置处理，一般用于消息过滤，比如消息是否是重发等。
+     * 仅 {@code COMMITTED} 幂等记录可直接回 ACK；{@code PENDING} 表示占位但未确认落库，
+     * 必须继续展开处理，由持久化侧原子抢占并在写入成功后 commit。
      */
     @Override
     public boolean qosPreHandle(ChannelHandlerContext ctx, Packet packet) {

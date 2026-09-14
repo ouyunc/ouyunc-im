@@ -24,9 +24,11 @@ public final class QosRepositorySupport {
 
     @SuppressWarnings("unchecked")
     public boolean checkDup(Packet packet, String channelLoginIdentity) {
+        // 键存在性与正文哈希一致才由 COMMITTED 决定，未抢占过的消息自然不判重
         return QosIdempotencyHelper.isDuplicate(infra.redisTemplate, packet, channelLoginIdentity);
     }
 
+    @SuppressWarnings("unchecked")
     public void releaseQosClaim(Packet packet) {
         if (packet == null || packet.getMessage() == null) {
             return;
@@ -38,8 +40,9 @@ public final class QosRepositorySupport {
             return;
         }
         try {
+            // 无法取得原请求 owner 时不能释放，避免误删其他请求的占位。
             QosIdempotencyHelper.releaseClaim(infra.redisTemplate, metadata.getAppKey(),
-                    packet.getPacketId(), QosClaimIdentities.resolve(message), message.getId());
+                    packet.getPacketId(), QosClaimIdentities.resolve(message), message.getId(), null);
         } catch (Exception e) {
             log.warn("释放 QoS 占位异常: packetId={}", packet.getPacketId(), e);
         }

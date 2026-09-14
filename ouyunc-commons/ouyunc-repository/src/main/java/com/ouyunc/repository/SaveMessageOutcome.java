@@ -8,6 +8,8 @@ public enum SaveMessageOutcome {
     SUCCESS,
     /** Redis/序列化等失败 */
     FAILED,
-    /** 命中 QoS 幂等，无需重复落库 */
+    /** 相同幂等键对应了不同正文 */
+    CONFLICT,
+    /** 已提交的 QoS 幂等消息，无需重复落库 */
     DUPLICATE
 }

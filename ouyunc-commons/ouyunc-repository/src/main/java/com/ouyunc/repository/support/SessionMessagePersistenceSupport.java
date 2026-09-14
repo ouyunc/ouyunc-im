@@ -85,6 +85,11 @@ public final class SessionMessagePersistenceSupport {
         return isSaveAccepted(saveMessageWithSessionOutcome(packet, expireTime, messageKey, sessionKey, consumer, extraOperation));
     }
 
+    /**
+     * 热 key + 会话索引 Pipeline 落库。QoS 消息先原子抢占 PENDING（packet 键 + 稳定 client 键），
+     * Pipeline 成功后再 {@code COMMIT_SCRIPT} 提交为 COMMITTED；失败则 compare-and-delete 释放本次占位。
+     * 返回 {@link SaveMessageOutcome#DUPLICATE} 仅可能来自已提交记录，占位（PENDING）绝不视为成功。
+     */
     @SuppressWarnings("unchecked")
     public SaveMessageOutcome saveMessageWithSessionOutcome(Packet packet, long expireTime, String messageKey, String sessionKey,
                                                             Consumer<RedisConnection> consumer,
@@ -97,6 +102,8 @@ public final class SessionMessagePersistenceSupport {
         RedisConnectionFactory connectionFactory = infra.redisTemplate.getConnectionFactory();
         RedisSerializer<String> stringSerializer = infra.stringSerializer;
         RedisSerializer<Object> valueSerializer = infra.valueSerializer;
+        boolean qosSave = false;
+        String qosOwnerToken = null;
 
         try (RedisConnection conn = connectionFactory.getConnection()) {
             log.debug("获取 Redis 连接成功: {}", conn.hashCode());
@@ -115,9 +122,20 @@ public final class SessionMessagePersistenceSupport {
             String from = message.getFrom();
             String to = message.getTo();
             String qosClaimIdentity = QosClaimIdentities.resolve(message);
-            boolean qosSave = MessageContext.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel();
-            if (qosSave && !QosIdempotencyHelper.tryClaim(infra.redisTemplate, appKey, packet.getPacketId(), qosClaimIdentity, message.getId())) {
-                return SaveMessageOutcome.DUPLICATE;
+            qosSave = MessageContext.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel();
+            qosOwnerToken = qosSave ? QosIdempotencyHelper.newOwnerToken() : null;
+            if (qosSave) {
+                int claimState = QosIdempotencyHelper.tryClaim(infra.redisTemplate, appKey, packet.getPacketId(),
+                        qosClaimIdentity, message.getId(), qosOwnerToken, message);
+                if (claimState == QosIdempotencyHelper.CLAIM_COMMITTED) {
+                    return SaveMessageOutcome.DUPLICATE;
+                }
+                if (claimState == QosIdempotencyHelper.CLAIM_CONFLICT) {
+                    return SaveMessageOutcome.CONFLICT;
+                }
+                if (claimState != QosIdempotencyHelper.CLAIM_ACQUIRED) {
+                    return SaveMessageOutcome.FAILED;
+                }
             }
             String formatPacketId = MessageContext.idGenerator().formatLongId19Str(packet.getPacketId());
 
@@ -162,15 +180,24 @@ public final class SessionMessagePersistenceSupport {
                 log.error("Pipeline 执行失败: ", e);
                 forceClosePipeline(conn);
                 if (qosSave) {
-                    QosIdempotencyHelper.releaseClaim(infra.redisTemplate, appKey, packet.getPacketId(), qosClaimIdentity, message.getId());
+                    QosIdempotencyHelper.releaseClaim(infra.redisTemplate, appKey, packet.getPacketId(), qosClaimIdentity,
+                            message.getId(), qosOwnerToken);
                 }
                 return SaveMessageOutcome.FAILED;
             }
 
             if (CollectionUtils.isEmpty(results)) {
                 if (qosSave) {
-                    QosIdempotencyHelper.releaseClaim(infra.redisTemplate, appKey, packet.getPacketId(), qosClaimIdentity, message.getId());
+                    QosIdempotencyHelper.releaseClaim(infra.redisTemplate, appKey, packet.getPacketId(), qosClaimIdentity,
+                            message.getId(), qosOwnerToken);
                 }
+                return SaveMessageOutcome.FAILED;
+            }
+            if (qosSave && !QosIdempotencyHelper.commit(infra.redisTemplate, appKey, packet.getPacketId(),
+                    qosClaimIdentity, message.getId(), qosOwnerToken, message)) {
+                log.warn("QoS 占位提交失败，视为写入失败: appKey={} packetId={}", appKey, packet.getPacketId());
+                QosIdempotencyHelper.releaseClaim(infra.redisTemplate, appKey, packet.getPacketId(), qosClaimIdentity,
+                        message.getId(), qosOwnerToken);
                 return SaveMessageOutcome.FAILED;
             }
             return SaveMessageOutcome.SUCCESS;
@@ -178,12 +205,14 @@ public final class SessionMessagePersistenceSupport {
         } catch (Exception e) {
             log.error("Redis Pipeline 操作异常: ", e);
             try {
-                Message message = packet != null ? packet.getMessage() : null;
-                Metadata metadata = message != null ? message.getMetadata() : null;
-                if (metadata != null && MessageContext.isQosEnable()
-                        && message.getQos() > QosLevelEnum.QOS_0.getLevel()) {
-                    QosIdempotencyHelper.releaseClaim(infra.redisTemplate, metadata.getAppKey(),
-                            packet.getPacketId(), QosClaimIdentities.resolve(message), message.getId());
+                if (qosSave) {
+                    Message message = packet != null ? packet.getMessage() : null;
+                    Metadata metadata = message != null ? message.getMetadata() : null;
+                    if (metadata != null) {
+                        QosIdempotencyHelper.releaseClaim(infra.redisTemplate, metadata.getAppKey(),
+                                packet.getPacketId(), QosClaimIdentities.resolve(message), message.getId(),
+                                qosOwnerToken);
+                    }
                 }
             } catch (Exception ignored) {
                 log.warn("释放 QoS 占位异常", ignored);

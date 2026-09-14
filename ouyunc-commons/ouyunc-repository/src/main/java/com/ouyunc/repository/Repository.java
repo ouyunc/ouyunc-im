@@ -21,7 +21,8 @@ public interface Repository {
     Future<?> save(Packet packet);
 
     /**
-     * 检查 QoS 重发是否重复（packetId 优先，其次通道身份 + 客户端 messageId）
+     * 检查 QoS 重发是否重复（packetId 优先，其次通道身份 + 客户端 messageId）。
+     * 仅 COMMITTED 记录算重复；PENDING 占位不能当成功。
      *
      * @param packet 待检消息（含内嵌 packetId 或客户端 messageId）
      * @param channelLoginIdentity 当前连接登录身份，用于 cli 层幂等，可为 null
