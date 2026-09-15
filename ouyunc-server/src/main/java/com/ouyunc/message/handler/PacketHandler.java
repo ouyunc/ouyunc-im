@@ -141,7 +141,8 @@ public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
                             .then(Mono.defer(() -> processor.postProcess(ctx, packet)));
                 })
                 .onErrorResume(error -> {
-                    log.error("消息三阶段执行异常, packetId={}", packet == null ? null : packet.getPacketId(), error);
+                    // 吞掉 Mono 错误以免打乱有序队列；异常统一交给尾部 ExceptionHandler
+                    fireUnifiedException(ctx, packet, error, "消息三阶段执行异常");
                     return Mono.empty();
                 });
         return ChannelOrderedTasks.toVoidStage(chain);
@@ -153,7 +154,7 @@ public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
         Mono<Void> chain = processor.process(ctx, packet)
                 .then(Mono.defer(() -> processor.postProcess(ctx, packet)))
                 .onErrorResume(error -> {
-                    log.error("消息 process/post 执行异常, packetId={}", packet == null ? null : packet.getPacketId(), error);
+                    fireUnifiedException(ctx, packet, error, "消息 process/post 执行异常");
                     return Mono.empty();
                 });
         return ChannelOrderedTasks.toVoidStage(chain);
@@ -165,6 +166,42 @@ public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
                                  String scene) {
         processor.process(ctx, packet).subscribe(
                 unused -> { },
-                e -> log.error("{} process 异常, packetId={}", scene, packet.getPacketId(), e));
+                e -> fireUnifiedException(ctx, packet, e, scene + " process 异常"));
+    }
+
+    /**
+     * 异步业务异常回流 Netty 管道尾部 {@link ExceptionHandler}。
+     * <p>有序任务可能在虚拟线程执行，必须切回 EventLoop 再 {@code fireExceptionCaught}。</p>
+     */
+    private static void fireUnifiedException(ChannelHandlerContext ctx, Packet packet,
+                                             Throwable error, String scene) {
+        log.error("{}, packetId={}", scene, packet == null ? null : packet.getPacketId(), error);
+        if (ctx == null || error == null) {
+            return;
+        }
+        Runnable fire = () -> {
+            try {
+                ctx.fireExceptionCaught(error);
+            } catch (Exception ex) {
+                // 兜底：管道已拆时仍走与 ExceptionHandler 相同的事件发布
+                log.error("fireExceptionCaught 失败，直接发布异常事件 packetId={}",
+                        packet == null ? null : packet.getPacketId(), ex);
+                MessageServerContext.publishEvent(new MessageEvent(error, MessageEventTypeEnum.EXCEPTION), true);
+            }
+        };
+        if (ctx.channel() == null) {
+            MessageServerContext.publishEvent(new MessageEvent(error, MessageEventTypeEnum.EXCEPTION), true);
+            return;
+        }
+        var eventLoop = ctx.channel().eventLoop();
+        if (eventLoop.inEventLoop()) {
+            fire.run();
+            return;
+        }
+        if (eventLoop.isShuttingDown() || eventLoop.isShutdown() || eventLoop.isTerminated()) {
+            MessageServerContext.publishEvent(new MessageEvent(error, MessageEventTypeEnum.EXCEPTION), true);
+            return;
+        }
+        eventLoop.execute(fire);
     }
 }
