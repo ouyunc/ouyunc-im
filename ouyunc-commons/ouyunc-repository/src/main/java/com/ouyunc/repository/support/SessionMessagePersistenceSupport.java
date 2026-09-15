@@ -3,6 +3,7 @@ package com.ouyunc.repository.support;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.NumberConstant;
+import com.ouyunc.base.constant.enums.LuaScriptEnum;
 import com.ouyunc.base.constant.enums.QosLevelEnum;
 import com.ouyunc.base.model.FiveConsumer;
 import com.ouyunc.base.model.Metadata;
@@ -17,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -215,9 +217,21 @@ public final class SessionMessagePersistenceSupport {
 
     @SuppressWarnings("unchecked")
     public void saveLastMessageForSession(String sessionId, Packet lastPacket, long expireTime, TimeUnit timeUnit) {
-        infra.redisTemplate.opsForValue().set(
-                CacheConstant.buildSessionLastMessageCacheKey(lastPacket.getMessage().getMetadata().getAppKey(), sessionId),
-                lastPacket.getPacketId(), expireTime, timeUnit);
+        if (lastPacket == null || lastPacket.getMessage() == null || lastPacket.getMessage().getMetadata() == null
+                || StringUtils.isBlank(sessionId)) {
+            return;
+        }
+        String appKey = lastPacket.getMessage().getMetadata().getAppKey();
+        if (StringUtils.isBlank(appKey) || lastPacket.getPacketId() <= 0L) {
+            return;
+        }
+        // 字符串 max-merge，并发旧消息晚完成不会覆盖更新的指针
+        String lmKey = CacheConstant.buildSessionLastMessageCacheKey(appKey, sessionId);
+        long ttlMs = timeUnit.toMillis(expireTime);
+        DefaultRedisScript<String> script = new DefaultRedisScript<>(
+                LuaScriptEnum.SESSION_LM_MAX_SCRIPT.getScript(), String.class);
+        infra.stringRedisTemplate.execute(script, List.of(lmKey),
+                String.valueOf(lastPacket.getPacketId()), String.valueOf(ttlMs));
     }
 
     public static boolean isSaveAccepted(SaveMessageOutcome outcome) {

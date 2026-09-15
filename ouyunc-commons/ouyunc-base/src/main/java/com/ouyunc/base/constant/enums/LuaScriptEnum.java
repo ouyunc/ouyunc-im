@@ -198,6 +198,97 @@ public enum LuaScriptEnum {
             """, "客服 ticket lm max-merge"),
 
     /**
+     * 单聊/群聊 session 最后消息 lm max-merge（字符串比较，避免雪花 ID 浮点精度问题）。
+     * KEYS[1]=lmKey  ARGV[1]=incomingPacketId  ARGV[2]=ttlMs
+     */
+    SESSION_LM_MAX_SCRIPT("1", """
+            local function toIntOrZero(v)
+                if v == false or v == nil then return 0 end
+                if type(v) == 'string' and v == '' then return 0 end
+                local n = tonumber(v)
+                if n == nil then return 0 end
+                return n
+            end
+            local function mergeOffset(cur, inc)
+                if inc == nil or inc == '' then inc = '0' end
+                inc = tostring(inc)
+                if cur == false or cur == nil or cur == '' then return inc end
+                cur = tostring(cur)
+                if #cur > #inc then return cur end
+                if #cur == #inc and cur > inc then return cur end
+                return inc
+            end
+            local inc = ARGV[1]
+            local ttl = toIntOrZero(ARGV[2])
+            local merged = mergeOffset(redis.call('GET', KEYS[1]), inc)
+            if ttl > 0 then
+                redis.call('SET', KEYS[1], merged, 'PX', ttl)
+            else
+                redis.call('SET', KEYS[1], merged)
+            end
+            return merged
+            """, "会话 lm max-merge"),
+
+    /**
+     * 最后消息指针 CAS 替换（撤回回退用）：仅当当前值仍等于 expected 时写入 new 或删除。
+     * KEYS[1]=lmKey  ARGV[1]=expectedPacketId  ARGV[2]=newPacketId(空=删除)  ARGV[3]=ttlMs
+     * 返回 1=已替换，0=指针已变未改写。
+     */
+    LM_CAS_REPLACE_SCRIPT("1", """
+            local function toIntOrZero(v)
+                if v == false or v == nil then return 0 end
+                if type(v) == 'string' and v == '' then return 0 end
+                local n = tonumber(v)
+                if n == nil then return 0 end
+                return n
+            end
+            local cur = redis.call('GET', KEYS[1])
+            local expect = tostring(ARGV[1])
+            if cur == false or cur == nil then cur = '' else cur = tostring(cur) end
+            if cur ~= expect then
+                return 0
+            end
+            local neu = ARGV[2]
+            if neu == false or neu == nil or neu == '' then
+                redis.call('DEL', KEYS[1])
+                return 1
+            end
+            local ttl = toIntOrZero(ARGV[3])
+            if ttl > 0 then
+                redis.call('SET', KEYS[1], tostring(neu), 'PX', ttl)
+            else
+                redis.call('SET', KEYS[1], tostring(neu))
+            end
+            return 1
+            """, "lm CAS 替换"),
+
+    /**
+     * 群成员 ZSet 回源重建 CAS：仅当 relationVersion 仍等于 expected 时 DEL+ZADD。
+     * KEYS[1]=memberZSet KEYS[2]=versionKey
+     * ARGV[1]=expectedVersion ARGV[2]=memberCount ARGV[3..]=userId,score 交替
+     * 返回 1=已重建，0=版本已变跳过。
+     */
+    GROUP_MEMBER_REBUILD_CAS_SCRIPT("2", """
+            local expected = tostring(ARGV[1])
+            local cur = redis.call('GET', KEYS[2])
+            if cur == false or cur == nil then cur = '0' else cur = tostring(cur) end
+            if cur ~= expected then
+                return 0
+            end
+            redis.call('DEL', KEYS[1])
+            local n = tonumber(ARGV[2]) or 0
+            for i = 1, n do
+                local base = 2 + (i - 1) * 2
+                local score = tonumber(ARGV[base + 1]) or 0
+                local member = ARGV[base + 2]
+                if member ~= nil and member ~= '' then
+                    redis.call('ZADD', KEYS[1], score, member)
+                end
+            end
+            return 1
+            """, "群成员回源 CAS 重建"),
+
+    /**
      * 客服 ticket Hash 已读 offset max-merge。
      * KEYS[1]=sroHash  ARGV[1]=field  ARGV[2]=incomingOffset  ARGV[3]=ttlMs
      */

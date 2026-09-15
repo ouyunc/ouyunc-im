@@ -2,20 +2,22 @@ package com.ouyunc.repository.support;
 
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.enums.LuaScriptEnum;
 import com.ouyunc.base.packet.Packet;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 单聊 / 群聊 session 维度「最后一条有效聊天消息」Redis 读写与撤回回退。
+ * <p>普通发送走 max-merge；撤回回退走 CAS，避免旧指针覆盖并发写入的更新指针。</p>
  */
 public final class SessionLastMessageSupport {
 
@@ -25,18 +27,17 @@ public final class SessionLastMessageSupport {
 
     private final StringRedisTemplate stringRedisTemplate;
     private final MessagePacketQuerySupport messagePacketQuery;
-    private final SessionMessagePersistenceSupport sessionPersistence;
 
     public SessionLastMessageSupport(StringRedisTemplate stringRedisTemplate,
                                      MessagePacketQuerySupport messagePacketQuery,
                                      SessionMessagePersistenceSupport sessionPersistence) {
         this.stringRedisTemplate = stringRedisTemplate;
         this.messagePacketQuery = messagePacketQuery;
-        this.sessionPersistence = sessionPersistence;
+        // sessionPersistence 保留构造兼容；lm 写入已统一走 max-merge / CAS
     }
 
     /**
-     * 撤回后：若 session lm 指向被撤回消息或已无效，则回退到 session msgs ZSet 上一条可见聊天。
+     * 撤回后：若 session lm 指向被撤回消息或已无效，则 CAS 回退到 session msgs ZSet 上一条可见聊天。
      */
     public void refreshAfterWithdraw(String appKey, String sessionId) {
         if (StringUtils.isAnyBlank(appKey, sessionId)) {
@@ -48,7 +49,7 @@ public final class SessionLastMessageSupport {
             return;
         }
         if (!isCurrentSessionLmStillValid(appKey, sid, currentLm)) {
-            recomputeAndSaveSessionLm(appKey, sid);
+            recomputeAndCasReplace(appKey, sid, currentLm);
         }
     }
 
@@ -79,31 +80,34 @@ public final class SessionLastMessageSupport {
                 && SpecialMessageLoader.belongsToScope(packet, sessionId, MessageIndexScope.CHANNEL_SESSION);
     }
 
-    private void recomputeAndSaveSessionLm(String appKey, String sessionId) {
+    private void recomputeAndCasReplace(String appKey, String sessionId, long expectedCurrent) {
         List<Packet> recent = loadRecentSessionPackets(appKey, sessionId, REFRESH_SCAN_LIMIT);
-        if (CollectionUtils.isEmpty(recent)) {
-            delete(appKey, sessionId);
-            return;
+        Packet fallback = null;
+        if (CollectionUtils.isNotEmpty(recent)) {
+            fallback = recent.stream()
+                    .filter(Objects::nonNull)
+                    .filter(CsTicketLastMessageSupport::isCountableChatMessage)
+                    .filter(p -> SpecialMessageLoader.belongsToScope(p, sessionId, MessageIndexScope.CHANNEL_SESSION))
+                    .max(Comparator.comparingLong(Packet::getPacketId))
+                    .orElse(null);
         }
-        Packet fallback = recent.stream()
-                .filter(Objects::nonNull)
-                .filter(CsTicketLastMessageSupport::isCountableChatMessage)
-                .filter(p -> SpecialMessageLoader.belongsToScope(p, sessionId, MessageIndexScope.CHANNEL_SESSION))
-                .max(Comparator.comparingLong(Packet::getPacketId))
-                .orElse(null);
-        if (fallback == null) {
-            delete(appKey, sessionId);
-            return;
+        String newId = fallback == null ? "" : String.valueOf(fallback.getPacketId());
+        boolean replaced = casReplace(appKey, sessionId, expectedCurrent, newId);
+        if (!replaced) {
+            log.debug("session lm CAS 未命中（指针已被更新） appKey={} sessionId={} expected={}",
+                    appKey, sessionId, expectedCurrent);
         }
-        sessionPersistence.saveLastMessageForSession(
-                sessionId,
-                fallback,
-                MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP,
-                TimeUnit.MILLISECONDS);
     }
 
-    private void delete(String appKey, String sessionId) {
-        stringRedisTemplate.delete(CacheConstant.buildSessionLastMessageCacheKey(appKey, sessionId.trim()));
+    private boolean casReplace(String appKey, String sessionId, long expectedCurrent, String newPacketIdOrEmpty) {
+        String lmKey = CacheConstant.buildSessionLastMessageCacheKey(appKey, sessionId.trim());
+        DefaultRedisScript<Long> script = new DefaultRedisScript<>(
+                LuaScriptEnum.LM_CAS_REPLACE_SCRIPT.getScript(), Long.class);
+        Long result = stringRedisTemplate.execute(script, List.of(lmKey),
+                String.valueOf(expectedCurrent),
+                newPacketIdOrEmpty == null ? "" : newPacketIdOrEmpty,
+                String.valueOf(MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP));
+        return result != null && result == 1L;
     }
 
     private List<Packet> loadRecentSessionPackets(String appKey, String sessionId, int limit) {

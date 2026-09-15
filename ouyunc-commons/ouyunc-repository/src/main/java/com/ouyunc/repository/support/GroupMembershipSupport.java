@@ -11,6 +11,7 @@ import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.context.RelationLocalCache;
 import com.ouyunc.base.model.GroupRequestSession;
 import com.ouyunc.base.constant.enums.GroupUserPost;
+import com.ouyunc.base.constant.enums.LuaScriptEnum;
 import com.ouyunc.base.constant.enums.YesOrNo;
 import com.ouyunc.domain.entity.GroupEntity;
 import com.ouyunc.domain.entity.GroupUserEntity;
@@ -26,6 +27,7 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisStringCommands;
 import org.springframework.data.redis.core.ZSetOperations;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.types.Expiration;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -35,6 +37,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -72,12 +75,27 @@ public final class GroupMembershipSupport {
             MessageContext.groupUserIdentityCache.put(cacheKey, snapshot);
             return new HashSet<>(snapshot);
         }
-        List<GroupUserEntity> dbMembers = loadAllGroupUsersFromDb(groupId);
+        String versionBefore = currentRelationVersion(appKey, groupId);
+        List<GroupUserEntity> dbMembers;
+        try {
+            dbMembers = loadAllGroupUsersFromAuthority(groupId);
+        } catch (GroupMembershipLoadException e) {
+            log.error("群成员权威回源失败，拒绝写入空缓存 groupId={}", groupId, e);
+            return new HashSet<>();
+        }
         if (dbMembers.isEmpty()) {
             // Redis miss 且库中确认无成员：禁止把空集写入 Caffeine，避免误当成「群已空」
             return new HashSet<>();
         }
-        rebuildGroupMemberRedis(appKey, groupId, dbMembers);
+        if (!rebuildGroupMemberRedis(appKey, groupId, dbMembers, versionBefore)) {
+            // 版本已变：不覆盖；尽量读回并发写入后的 Redis
+            Set<String> after = infra.stringRedisTemplate.opsForZSet().range(
+                    cacheKey, NumberConstant.NUMBER_0, NumberConstant.NUMBER_NEGATIVE_1);
+            if (after != null && !after.isEmpty()) {
+                MessageContext.groupUserIdentityCache.put(cacheKey, Set.copyOf(after));
+                return new HashSet<>(after);
+            }
+        }
         Set<String> ids = new HashSet<>();
         for (GroupUserEntity member : dbMembers) {
             if (member.getUserId() != null) {
@@ -90,6 +108,7 @@ public final class GroupMembershipSupport {
 
     /**
      * 过滤已屏蔽本群消息的成员。优先读群级屏蔽 Hash；索引未建时回源后重建，避免大群 N 次 GET。
+     * 回源失败时 fail-closed：视为全部未屏蔽过滤失败，返回原集合（不投递风险由上层处理），绝不写入「已初始化无屏蔽」。
      */
     public Set<String> excludeGroupShieldedMembers(String appKey, String groupId, Set<String> memberIds) {
         if (memberIds == null || memberIds.isEmpty()) {
@@ -98,8 +117,18 @@ public final class GroupMembershipSupport {
         String shieldKey = CacheConstant.buildGroupShieldCacheKey(appKey, groupId);
         Map<Object, Object> shieldHash = infra.stringRedisTemplate.opsForHash().entries(shieldKey);
         if (shieldHash == null || !shieldHash.containsKey(MessageConstant.GROUP_SHIELD_HASH_INIT_FIELD)) {
-            List<GroupUserEntity> dbMembers = loadAllGroupUsersFromDb(groupId);
-            writeShieldHash(appKey, groupId, dbMembers);
+            String versionBefore = currentRelationVersion(appKey, groupId);
+            List<GroupUserEntity> dbMembers;
+            try {
+                dbMembers = loadAllGroupUsersFromAuthority(groupId);
+            } catch (GroupMembershipLoadException e) {
+                log.error("屏蔽索引回源失败，不写空初始化 groupId={}", groupId, e);
+                return new HashSet<>(memberIds);
+            }
+            if (!writeShieldHashIfVersionMatch(appKey, groupId, dbMembers, versionBefore)) {
+                log.warn("屏蔽索引回源版本冲突，跳过覆盖 groupId={}", groupId);
+                return new HashSet<>(memberIds);
+            }
             shieldHash = infra.stringRedisTemplate.opsForHash().entries(shieldKey);
         }
         if (shieldHash == null || !shieldHash.containsKey(MessageConstant.GROUP_SHIELD_HASH_INIT_FIELD)) {
@@ -146,24 +175,11 @@ public final class GroupMembershipSupport {
         }
     }
 
-    private List<GroupUserEntity> loadAllGroupUsersFromDb(String groupId) {
-        try {
-            List<MongoGroupUserEntity> mongoList = infra.mongoTemplate.find(
-                    Query.query(Criteria.where(MongoGroupUserEntity.Fields.groupId).is(Long.parseLong(groupId))),
-                    MongoGroupUserEntity.class);
-            if (mongoList != null && !mongoList.isEmpty()) {
-                List<GroupUserEntity> converted = new ArrayList<>(mongoList.size());
-                for (MongoGroupUserEntity mongo : mongoList) {
-                    GroupUserEntity entity = convertMongoGroupUserToGroupUser(mongo);
-                    if (entity != null) {
-                        converted.add(entity);
-                    }
-                }
-                return converted;
-            }
-        } catch (Exception e) {
-            log.warn("从MongoDB查询群全部成员异常, groupId: {}", groupId, e);
-        }
+    /**
+     * 关系权威源：MySQL。Mongo 异步滞后时非空集合不能当作完整真相。
+     * 查询失败抛 {@link GroupMembershipLoadException}，不得当成空群。
+     */
+    private List<GroupUserEntity> loadAllGroupUsersFromAuthority(String groupId) {
         try {
             List<GroupUserEntity> mysqlList = infra.jdbcClient.sql(JdbcSqlDialectHolder.selectAllGroupUser())
                     .param(GroupUserEntity.Fields.groupId, groupId)
@@ -171,28 +187,60 @@ public final class GroupMembershipSupport {
                     .list();
             return mysqlList == null ? List.of() : mysqlList;
         } catch (Exception e) {
-            log.error("从MySQL查询群全部成员异常, groupId: {}", groupId, e);
-            return List.of();
+            throw new GroupMembershipLoadException("MySQL 查询群成员失败 groupId=" + groupId, e);
         }
     }
 
-    private void rebuildGroupMemberRedis(String appKey, String groupId, List<GroupUserEntity> members) {
+    /**
+     * @return true 表示按 expectedVersion 重建成功；false 表示版本已变，未覆盖
+     */
+    private boolean rebuildGroupMemberRedis(String appKey, String groupId, List<GroupUserEntity> members,
+                                            String expectedVersion) {
         String zsetKey = CacheConstant.buildGroupUserCacheKey(appKey, groupId);
-        infra.stringRedisTemplate.delete(zsetKey);
-        if (members != null && !members.isEmpty()) {
-            Set<ZSetOperations.TypedTuple<String>> tuples = new HashSet<>();
-            for (GroupUserEntity member : members) {
-                if (member.getUserId() == null) {
-                    continue;
-                }
-                double score = member.getPost() == null ? GroupUserPost.ORDINARY.value() : member.getPost();
-                tuples.add(new org.springframework.data.redis.core.DefaultTypedTuple<>(member.getUserId(), score));
+        String versionKey = CacheConstant.buildGroupRelationVersionCacheKey(appKey, groupId);
+        List<String> args = new ArrayList<>();
+        args.add(expectedVersion == null ? "0" : expectedVersion);
+        List<GroupUserEntity> safeMembers = members == null ? List.of() : members;
+        int count = 0;
+        for (GroupUserEntity member : safeMembers) {
+            if (member == null || member.getUserId() == null) {
+                continue;
             }
-            if (!tuples.isEmpty()) {
-                infra.stringRedisTemplate.opsForZSet().add(zsetKey, tuples);
+            count++;
+        }
+        args.add(String.valueOf(count));
+        for (GroupUserEntity member : safeMembers) {
+            if (member == null || member.getUserId() == null) {
+                continue;
             }
+            double score = member.getPost() == null ? GroupUserPost.ORDINARY.value() : member.getPost();
+            args.add(String.valueOf(score));
+            args.add(member.getUserId());
+        }
+        DefaultRedisScript<Long> script = new DefaultRedisScript<>(
+                LuaScriptEnum.GROUP_MEMBER_REBUILD_CAS_SCRIPT.getScript(), Long.class);
+        Long ok = infra.stringRedisTemplate.execute(script, List.of(zsetKey, versionKey), args.toArray());
+        if (ok == null || ok != 1L) {
+            log.warn("群成员回源 CAS 未命中 appKey={} groupId={} expectedVersion={}", appKey, groupId, expectedVersion);
+            return false;
+        }
+        return writeShieldHashIfVersionMatch(appKey, groupId, members, expectedVersion);
+    }
+
+    private boolean writeShieldHashIfVersionMatch(String appKey, String groupId, List<GroupUserEntity> members,
+                                                  String expectedVersion) {
+        String versionNow = currentRelationVersion(appKey, groupId);
+        if (!Objects.equals(expectedVersion == null ? "0" : expectedVersion, versionNow)) {
+            return false;
         }
         writeShieldHash(appKey, groupId, members);
+        // 写完后再比对一次，变了则删掉半成品初始化标记，避免错误「无屏蔽」
+        String versionAfter = currentRelationVersion(appKey, groupId);
+        if (!Objects.equals(expectedVersion == null ? "0" : expectedVersion, versionAfter)) {
+            infra.stringRedisTemplate.delete(CacheConstant.buildGroupShieldCacheKey(appKey, groupId));
+            return false;
+        }
+        return true;
     }
 
     private void writeShieldHash(String appKey, String groupId, List<GroupUserEntity> members) {
@@ -209,6 +257,27 @@ public final class GroupMembershipSupport {
         }
         infra.stringRedisTemplate.delete(key);
         infra.stringRedisTemplate.opsForHash().putAll(key, fields);
+    }
+
+    private String currentRelationVersion(String appKey, String groupId) {
+        String raw = infra.stringRedisTemplate.opsForValue().get(
+                CacheConstant.buildGroupRelationVersionCacheKey(appKey, groupId));
+        return StringUtils.isBlank(raw) ? "0" : raw.trim();
+    }
+
+    /** 加群/退群等关系变更后递增，使进行中的旧快照回源失效。 */
+    public void bumpGroupRelationVersion(String appKey, String groupId) {
+        if (StringUtils.isAnyBlank(appKey, groupId)) {
+            return;
+        }
+        infra.stringRedisTemplate.opsForValue().increment(
+                CacheConstant.buildGroupRelationVersionCacheKey(appKey, groupId));
+    }
+
+    private static final class GroupMembershipLoadException extends RuntimeException {
+        private GroupMembershipLoadException(String message, Throwable cause) {
+            super(message, cause);
+        }
     }
 
     public GroupUserEntity groupUserEntity(String appKey, String groupId, String memberId) {
@@ -535,6 +604,7 @@ public final class GroupMembershipSupport {
             redisConnection.zSetCommands().zAdd(infra.stringSerializer.serialize(CacheConstant.buildUserGroupsCacheKey(metadata.getAppKey(), joiner)), msg.getMetadata().getServerTime(), infra.stringSerializer.serialize(groupId));
         });
         if (bound) {
+            bumpGroupRelationVersion(metadata.getAppKey(), groupId);
             MessageContext.groupUserIdentityCache.delete(CacheConstant.buildGroupUserCacheKey(metadata.getAppKey(), groupId));
             RelationLocalCache.markGroupMember(metadata.getAppKey(), groupId, joiner, true);
         }

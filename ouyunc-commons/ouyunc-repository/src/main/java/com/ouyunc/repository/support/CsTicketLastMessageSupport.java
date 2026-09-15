@@ -95,7 +95,7 @@ public final class CsTicketLastMessageSupport {
             return;
         }
         if (!isCurrentTicketLmStillValid(appKey, tid, currentLm)) {
-            recomputeAndSaveTicketLm(appKey, tid);
+            recomputeAndCasReplace(appKey, tid, currentLm);
         }
     }
 
@@ -108,22 +108,27 @@ public final class CsTicketLastMessageSupport {
         return isCountableChatMessage(packet) && belongsToTicketStrict(packet, ticketId);
     }
 
-    private void recomputeAndSaveTicketLm(String appKey, String ticketId) {
+    private void recomputeAndCasReplace(String appKey, String ticketId, long expectedCurrent) {
         List<Packet> recent = loadRecentTicketPackets(appKey, ticketId, REFRESH_SCAN_LIMIT);
-        if (CollectionUtils.isEmpty(recent)) {
-            delete(appKey, ticketId);
-            return;
+        Packet fallback = null;
+        if (CollectionUtils.isNotEmpty(recent)) {
+            fallback = recent.stream()
+                    .filter(Objects::nonNull)
+                    .filter(CsTicketLastMessageSupport::isCountableChatMessage)
+                    .max(Comparator.comparingLong(Packet::getPacketId))
+                    .orElse(null);
         }
-        Packet fallback = recent.stream()
-                .filter(Objects::nonNull)
-                .filter(CsTicketLastMessageSupport::isCountableChatMessage)
-                .max(Comparator.comparingLong(Packet::getPacketId))
-                .orElse(null);
-        if (fallback == null) {
-            delete(appKey, ticketId);
-            return;
+        String newId = fallback == null ? "" : String.valueOf(fallback.getPacketId());
+        String lmKey = CacheConstant.buildCsTicketLastMessageCacheKey(appKey, ticketId);
+        DefaultRedisScript<Long> script = new DefaultRedisScript<>(
+                LuaScriptEnum.LM_CAS_REPLACE_SCRIPT.getScript(), Long.class);
+        Long result = stringRedisTemplate.execute(script, List.of(lmKey),
+                String.valueOf(expectedCurrent),
+                newId,
+                String.valueOf(MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP));
+        if (result == null || result != 1L) {
+            log.debug("ticket lm CAS 未命中 appKey={} ticketId={} expected={}", appKey, ticketId, expectedCurrent);
         }
-        save(ticketId, fallback, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
     }
 
     @SuppressWarnings("unchecked")

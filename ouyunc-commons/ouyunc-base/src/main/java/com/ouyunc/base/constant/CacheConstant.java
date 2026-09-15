@@ -66,6 +66,9 @@ public class CacheConstant {
      */
     private static final String GROUP_USERS = "gu:";
 
+    /** 群成员关系版本（回源 CAS） */
+    private static final String GROUP_RELATION_VERSION = "grv:";
+
     /***
      * 群成员的信息配置
      */
@@ -499,6 +502,13 @@ public class CacheConstant {
     public static String buildUserDeviceUnreadIdsCacheKey(String appKey, String userId, Byte deviceType, String peerId) {
         return buildBaseCacheKey(appKey) + USER_DEVICE_UNREAD_IDS + withHashTag(userId) + COLON + deviceType
                 + COLON + peerId;
+    }
+
+    /**
+     * 群关系版本：加群/退群等变更递增；回源重建前比对，避免旧快照覆盖新成员。
+     */
+    public static String buildGroupRelationVersionCacheKey(String appKey, String groupId) {
+        return buildBaseCacheKey(appKey) + GROUP_RELATION_VERSION + withHashTag(groupId);
     }
 
     /**

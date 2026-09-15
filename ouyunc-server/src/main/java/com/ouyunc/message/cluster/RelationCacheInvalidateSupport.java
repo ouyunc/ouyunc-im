@@ -1,6 +1,7 @@
 package com.ouyunc.message.cluster;
 
 import com.alibaba.fastjson2.JSON;
+import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.DeviceTypeEnum;
 import com.ouyunc.base.constant.enums.NetworkEnum;
@@ -13,6 +14,7 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.serialize.Serializer;
 import com.ouyunc.base.utils.TimeUtil;
+import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.context.RelationLocalCache;
 import com.ouyunc.message.cluster.client.pool.MessageClientPool;
@@ -22,6 +24,7 @@ import com.ouyunc.message.protocol.NativePacketProtocol;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 import java.util.List;
 
@@ -92,6 +95,7 @@ public final class RelationCacheInvalidateSupport {
                     return;
                 }
                 RelationLocalCache.evictGroupMember(event.getAppKey(), event.getGroupId(), event.getUserId());
+                bumpGroupRelationVersion(event.getAppKey(), event.getGroupId());
             }
             case GROUP_DISSOLVE -> {
                 if (StringUtils.isBlank(event.getGroupId())) {
@@ -104,7 +108,21 @@ public final class RelationCacheInvalidateSupport {
                     return;
                 }
                 RelationLocalCache.evictGroup(event.getAppKey(), event.getGroupId(), memberIds);
+                bumpGroupRelationVersion(event.getAppKey(), event.getGroupId());
             }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void bumpGroupRelationVersion(String appKey, String groupId) {
+        if (StringUtils.isAnyBlank(appKey, groupId)) {
+            return;
+        }
+        try {
+            StringRedisTemplate redis = CacheFactory.STRING_REDIS.instance();
+            redis.opsForValue().increment(CacheConstant.buildGroupRelationVersionCacheKey(appKey, groupId));
+        } catch (Exception e) {
+            log.warn("递增群关系版本失败 appKey={} groupId={}", appKey, groupId, e);
         }
     }
 
