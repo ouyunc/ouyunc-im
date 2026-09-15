@@ -12,7 +12,7 @@ public class JdbcSqlConstant {
 
         SELECT_MESSAGE("SELECT `id`, `protocol`, `protocol_version`, `device_type`, `network_type`, `encrypt_type`, `serialize_algorithm`, `message_type`, `retain`, `client_ip`, `message_id`, `from`, `from_type`, `to`, `to_type`, `content_type`, `content`, `extra`, `at`, `ref`, `correlation_id`, `app_key`, `qos`, `client_send_time`, `server_arrival_time` FROM `ouyunc_im_message` WHERE app_key = :app_key AND id IN (:ids)", "根据租户和主键id查询消息"),
 
-        SELECT_SESSION_MESSAGE_OFFSET("select `from`, device_type, `to`,  `type`, `session_message_offset` from ouyunc_im_session_message_offset o where o.`from` = :from and o.`to` = :to and o.`type` = :type and o.device_type = :device_type and exists (select 1 from ouyunc_im_user u where u.id = o.`from` and u.app_key = :app_key and u.del_flag = 0)", "按租户校验后获取会话偏移量"),
+        SELECT_SESSION_MESSAGE_OFFSET("select app_key, `from`, device_type, `to`, `type`, `session_message_offset` from ouyunc_im_session_message_offset o where o.app_key = :app_key and o.`from` = :from and o.`to` = :to and o.`type` = :type and o.device_type = :device_type", "按租户主键获取会话偏移量"),
 
         SELECT_FRIEND("SELECT id, user_id, friend_user_code, friend_user_id, friend_nick_name, shield, way, channel, join_time, create_time, update_time FROM ouyunc_im_friend f where f.user_id = :user_id and f.friend_user_id = :friend_user_id and exists (select 1 from ouyunc_im_user u where u.id = f.user_id and u.app_key = :app_key and u.del_flag = 0)", "按租户查询好友关系"),
 
@@ -91,7 +91,7 @@ public class JdbcSqlConstant {
 
         SELECT_MESSAGE("SELECT id, protocol, protocol_version, device_type, network_type, encrypt_type, serialize_algorithm, message_type, retain, client_ip, message_id, \"from\", from_type, \"to\", to_type, content_type, content, extra, \"at\", ref, correlation_id, app_key, qos, client_send_time, server_arrival_time FROM ouyunc_im_message WHERE app_key = :app_key AND id IN (:ids)", "根据租户和主键id查询消息"),
 
-        SELECT_SESSION_MESSAGE_OFFSET("select \"from\", device_type, \"to\",  \"type\", session_message_offset from ouyunc_im_session_message_offset o where o.\"from\" = :from and o.\"to\" = :to and o.\"type\" = :type and o.device_type = :device_type and exists (select 1 from ouyunc_im_user u where u.id = o.\"from\" and u.app_key = :app_key and u.del_flag = 0)", "按租户校验后获取会话偏移量"),
+        SELECT_SESSION_MESSAGE_OFFSET("select app_key, \"from\", device_type, \"to\", \"type\", session_message_offset from ouyunc_im_session_message_offset o where o.app_key = :app_key and o.\"from\" = :from and o.\"to\" = :to and o.\"type\" = :type and o.device_type = :device_type", "按租户主键获取会话偏移量"),
 
         SELECT_FRIEND("SELECT id, user_id, friend_user_code, friend_user_id, friend_nick_name, shield, way, channel, join_time, create_time, update_time FROM ouyunc_im_friend f where f.user_id = :user_id and f.friend_user_id = :friend_user_id and exists (select 1 from ouyunc_im_user u where u.id = f.user_id and u.app_key = :app_key and u.del_flag = 0)", "按租户查询好友关系"),
 
@@ -161,7 +161,7 @@ public class JdbcSqlConstant {
 
         SELECT_MESSAGE("SELECT ID, PROTOCOL, PROTOCOL_VERSION, DEVICE_TYPE, NETWORK_TYPE, ENCRYPT_TYPE, SERIALIZE_ALGORITHM, MESSAGE_TYPE, RETAIN, CLIENT_IP, MESSAGE_ID, \"FROM\", FROM_TYPE, \"TO\", TO_TYPE, CONTENT_TYPE, CONTENT, EXTRA, \"AT\", REF, CORRELATION_ID, APP_KEY, QOS, CLIENT_SEND_TIME, SERVER_ARRIVAL_TIME FROM OUYUNC_IM_MESSAGE WHERE APP_KEY = :app_key AND ID IN (:ids)", "根据租户和主键id查询消息"),
 
-        SELECT_SESSION_MESSAGE_OFFSET("SELECT \"FROM\", DEVICE_TYPE, \"TO\", \"TYPE\", SESSION_MESSAGE_OFFSET FROM OUYUNC_IM_SESSION_MESSAGE_OFFSET o WHERE o.\"FROM\" = :from AND o.\"TO\" = :to AND o.\"TYPE\" = :type AND o.DEVICE_TYPE = :device_type AND EXISTS (SELECT 1 FROM OUYUNC_IM_USER u WHERE u.ID = o.\"FROM\" AND u.APP_KEY = :app_key AND u.DELETED = 0)", "按租户校验后获取会话偏移量"),
+        SELECT_SESSION_MESSAGE_OFFSET("SELECT APP_KEY, \"FROM\", DEVICE_TYPE, \"TO\", \"TYPE\", SESSION_MESSAGE_OFFSET FROM OUYUNC_IM_SESSION_MESSAGE_OFFSET o WHERE o.APP_KEY = :app_key AND o.\"FROM\" = :from AND o.\"TO\" = :to AND o.\"TYPE\" = :type AND o.DEVICE_TYPE = :device_type", "按租户主键获取会话偏移量"),
 
         SELECT_FRIEND("SELECT ID, USER_ID, FRIEND_USER_CODE, FRIEND_USER_ID, FRIEND_NICK_NAME, SHIELD, WAY, CHANNEL, JOIN_TIME, CREATE_TIME, UPDATE_TIME FROM OUYUNC_IM_FRIEND f WHERE f.USER_ID = :user_id AND f.FRIEND_USER_ID = :friend_user_id AND EXISTS (SELECT 1 FROM OUYUNC_IM_USER u WHERE u.ID = f.USER_ID AND u.APP_KEY = :app_key AND u.DELETED = 0)", "按租户查询好友关系"),
 

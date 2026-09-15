@@ -16,9 +16,10 @@ import java.io.Serializable;
  */
 @TableName("ouyunc_im_session_message_offset")
 @Document(collection = "ouyunc_im_session_message_offset")
-// 创建复合索引，对应MySQL中的复合主键，确保唯一性
+// 复合唯一索引与 MySQL 主键对齐：app_key + from + to + type + device_type
 @CompoundIndexes({
-        @CompoundIndex(name = "from_to_type_idx", def = "{'from': 1, 'to': 1, 'type': 1, 'device_type': 1}", unique = true)
+        @CompoundIndex(name = "app_from_to_type_device_idx",
+                def = "{'app_key': 1, 'from': 1, 'to': 1, 'type': 1, 'device_type': 1}", unique = true)
 })
 public class SessionMessageOffsetEntity implements Serializable {
     @Serial
@@ -55,8 +56,9 @@ public class SessionMessageOffsetEntity implements Serializable {
     private Long sessionMessageOffset = 0L;
 
     /**
-     * 租户 appKey（B9）：Mongo 必填过滤；MySQL 当前经 user.app_key EXISTS 校验，列落地见 docs/sql。
+     * 租户 appKey：与 MySQL/Mongo 主键（唯一键）组成部分，读写均必填。
      */
+    @TableField("app_key")
     @Field("app_key")
     private String appKey;
 
