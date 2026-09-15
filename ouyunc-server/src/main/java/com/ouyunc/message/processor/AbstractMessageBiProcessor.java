@@ -35,8 +35,6 @@ public abstract class AbstractMessageBiProcessor<T extends Number> extends Abstr
      * @Description 前置处理器，做认证授权相关处理，在真正处理消息前处理
      */
     public void preProcess(ChannelHandlerContext ctx, Packet packet) {
-        // 异步存储packet（目前只是保存相关信息，不做扩展，以后可以做数据分析使用），这里将该数据存储到时序数据库中
-        repository().save(packet);
         if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
             // 关闭当前 channel，这里会触发 DefaultSocketChannelInitializer 中的关闭逻辑
             log.error("校验消息: {} 中的发送方登录认证失败,开始关闭channel", packet);
@@ -46,8 +44,8 @@ public abstract class AbstractMessageBiProcessor<T extends Number> extends Abstr
             ctx.close();
             return;
         }
-        // 校验是否拥有相关权限 permission
-
+        // 认证通过后再旁路归档，避免未登录/非法包进入 MQ
+        repository().save(packet);
         // 做qos 处理（QOS_DUP 展开时在同一 packet 引用上原地更新）
         if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
             return;

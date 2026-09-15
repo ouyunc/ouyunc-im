@@ -166,6 +166,38 @@ public enum LuaScriptEnum {
             """, "单聊已读清未读"),
 
     /**
+     * 单聊撤回：从未读 SET 移除指定 packetId，并按剩余 SCARD 回写 Hash 计数。
+     * KEYS[1]=ur KEYS[2]=uridSet
+     * ARGV[1]=field ARGV[2]=packetId ARGV[3]=ttlMs
+     */
+    UNREAD_REMOVE_ONE2ONE_ON_WITHDRAW_SCRIPT("2", """
+            local function toIntOrZero(v)
+                if v == false or v == nil then return 0 end
+                if type(v) == 'string' and v == '' then return 0 end
+                local n = tonumber(v)
+                if n == nil then return 0 end
+                return n
+            end
+            local pid = ARGV[2]
+            if pid == nil or pid == '' then
+                return toIntOrZero(redis.call('HGET', KEYS[1], ARGV[1]))
+            end
+            redis.call('SREM', KEYS[2], tostring(pid))
+            local left = toIntOrZero(redis.call('SCARD', KEYS[2]))
+            if left == 0 then
+                redis.call('HDEL', KEYS[1], ARGV[1])
+            else
+                redis.call('HSET', KEYS[1], ARGV[1], left)
+            end
+            local ttl = toIntOrZero(ARGV[3])
+            if ttl > 0 then
+                redis.call('PEXPIRE', KEYS[1], ttl)
+                redis.call('PEXPIRE', KEYS[2], ttl)
+            end
+            return left
+            """, "单聊撤回清未读"),
+
+    /**
      * 客服 ticket 最后消息 lm max-merge（同 READ_OFFSET_MAX，防并发覆盖）。
      * KEYS[1]=lmKey  ARGV[1]=incomingPacketId  ARGV[2]=ttlMs
      */

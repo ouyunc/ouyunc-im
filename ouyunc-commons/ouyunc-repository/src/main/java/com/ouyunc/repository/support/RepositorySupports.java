@@ -18,9 +18,11 @@ public final class RepositorySupports {
             new SessionLastMessageSupport(INFRA.stringRedisTemplate, MESSAGE_PACKET_QUERY, SESSION);
     public static final SpecialMessageLoader SPECIAL_MESSAGE_LOADER =
             new SpecialMessageLoader(MESSAGE_PACKET_QUERY);
-    public static final WithdrawMessageSupport WITHDRAW =
-            new WithdrawMessageSupport(SPECIAL_MESSAGE_LOADER, INFRA.redisTemplate);
     public static final UnreadIndexSupport UNREAD = new UnreadIndexSupport(INFRA);
+    public static final CsTicketUnreadSupport CS_TICKET_UNREAD =
+            new CsTicketUnreadSupport(INFRA.stringRedisTemplate);
+    public static final WithdrawMessageSupport WITHDRAW =
+            new WithdrawMessageSupport(SPECIAL_MESSAGE_LOADER, INFRA.redisTemplate, UNREAD, CS_TICKET_UNREAD);
     public static final ReadReceiptSupport READ_RECEIPT =
             new ReadReceiptSupport(SPECIAL_MESSAGE_LOADER, INFRA.stringRedisTemplate, INFRA.mongoTemplate, INFRA.jdbcClient,
                     UNREAD);
@@ -35,8 +37,6 @@ public final class RepositorySupports {
             new CsImSessionRouteSupport(INFRA.stringRedisTemplate);
     public static final CsTicketLastMessageSupport CS_TICKET_LAST_MESSAGE =
             new CsTicketLastMessageSupport(INFRA.stringRedisTemplate, MESSAGE_PACKET_QUERY);
-    public static final CsTicketUnreadSupport CS_TICKET_UNREAD =
-            new CsTicketUnreadSupport(INFRA.stringRedisTemplate);
     public static final CsTicketMessagePersistenceSupport CS_TICKET_MESSAGE =
             new CsTicketMessagePersistenceSupport(SESSION, CS_TICKET_UNREAD);
     public static final CsTicketReadReceiptSupport CS_TICKET_READ_RECEIPT =

@@ -12,6 +12,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * 按好友/群成员 {@code channel} 解析投递渠道，并将外渠下行发布到 Kafka。
  */
@@ -49,6 +53,30 @@ public final class DeliveryChannelSupport {
             return MessageDeliveryChannelEnum.IM;
         }
         return MessageDeliveryChannelEnum.fromCode(member.getChannel());
+    }
+
+    /**
+     * 批量解析群成员投递渠道，避免热路径 N+1 回源。
+     */
+    public Map<String, MessageDeliveryChannelEnum> resolveGroupMemberDeliveryChannels(
+            String appKey, String groupId, Collection<String> memberIds) {
+        Map<String, MessageDeliveryChannelEnum> result = new HashMap<>();
+        if (memberIds == null || memberIds.isEmpty()) {
+            return result;
+        }
+        Map<String, GroupUserEntity> entities = groupSupport.groupUserEntitiesBatch(appKey, groupId, memberIds);
+        for (String memberId : memberIds) {
+            if (memberId == null) {
+                continue;
+            }
+            GroupUserEntity member = entities.get(memberId);
+            if (member == null || member.getChannel() == null) {
+                result.put(memberId, MessageDeliveryChannelEnum.IM);
+            } else {
+                result.put(memberId, MessageDeliveryChannelEnum.fromCode(member.getChannel()));
+            }
+        }
+        return result;
     }
 
     public void publishExternalOutbound(Packet packet, String recipientId, MessageDeliveryChannelEnum channel) {

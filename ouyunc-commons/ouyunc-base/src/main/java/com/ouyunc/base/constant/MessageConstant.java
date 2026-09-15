@@ -921,6 +921,11 @@ public class MessageConstant {
     public static final String REMOTE_LOGIN_NOTIFICATIONS = "你的ouyunc账号在另一台设备(ip: %s)上登录，你已被迫下线。如果本人不知晓，请立即冻结账号，并及时修改相关密码。";
 
     /**
+     * 同 sn 跨节点顶号：旧连接静默下线提示（不强调“异设备”）
+     */
+    public static final String REMOTE_LOGIN_SAME_DEVICE_KICK = "同设备重新登录，旧连接已下线。";
+
+    /**
      * 服务滚动升级：通知客户端主动断开并重连其他节点（服务端不主动 close）
      */
     public static final String SERVER_DRAIN_KICK_NOTIFICATION = "服务节点正在维护升级，请主动断开当前连接并重连；重连成功前请暂停发送消息。";

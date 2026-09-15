@@ -42,13 +42,14 @@ public final class GroupJoinMessageBiProcessor extends AbstractMessageBiProcesso
 
     @Override
     public Mono<Void> preProcessStage(ChannelHandlerContext ctx, Packet packet) {
-        repository().save(packet);
         if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
             log.error("校验消息: {} 中的发送方登录认证失败,开始关闭channel", packet);
             MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过", packet), MessageEventTypeEnum.EXCEPTION), true);
             ctx.close();
             return Mono.empty();
         }
+        // 认证通过后再旁路归档
+        repository().save(packet);
         if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
             return Mono.empty();
         }
@@ -75,13 +76,17 @@ public final class GroupJoinMessageBiProcessor extends AbstractMessageBiProcesso
 
         DistributedLockHelper.runWithLock(packet, lockKey, ExceptionCodeEnum.BIND_GROUP_ERROR, () -> {
             GroupRequestSession existingSession = repository().getGroupRequestSession(appKey, message.getFrom(), message.getTo());
-            if (null != existingSession && (existingSession.getProgress() > RequestSessionProgress.JOINING.value() || !GroupRequestSessionWay.ACTIVE.value().equals(existingSession.getWay()))) {
-                log.warn("{} 和 {} 会话请求存在正在处理中的群请求，拒绝或同意还未结束处理", message.getFrom(), message.getTo());
+            if (repository().inGroup(appKey, message.getFrom(), message.getTo())) {
+                log.warn("该用户 {} 已经加入群组 {}，幂等 ACK", message.getFrom(), message.getTo());
+                RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.userOnly(message.getFrom()));
                 return;
             }
-            if (repository().inGroup(appKey, message.getFrom(), message.getTo())) {
-                log.warn("该用户 {} 已经加入群组 {}", message.getFrom(), message.getTo());
-                return;
+            if (null != existingSession && (existingSession.getProgress() > RequestSessionProgress.JOINING.value()
+                    || !GroupRequestSessionWay.ACTIVE.value().equals(existingSession.getWay()))) {
+                log.warn("{} 和 {} 群请求会话残留 progress={} way={}，清除后允许重新申请",
+                        message.getFrom(), message.getTo(), existingSession.getProgress(), existingSession.getWay());
+                repository().deleteGroupRequestSession(appKey, message.getFrom(), message.getTo());
+                existingSession = null;
             }
             GroupEntity groupEntity = repository().getGroupEntity(appKey, message.getTo());
             if (groupEntity == null) {

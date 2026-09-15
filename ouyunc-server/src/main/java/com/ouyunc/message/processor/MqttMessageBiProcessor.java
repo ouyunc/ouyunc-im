@@ -34,9 +34,7 @@ public final class MqttMessageBiProcessor extends AbstractMessageBiProcessor<Byt
      */
     @Override
     public void preProcess(ChannelHandlerContext ctx, Packet packet) {
-        // 异步存储packet（目前只是保存相关信息，不做扩展，以后可以做数据分析使用），这里将该数据存储到时序数据库中
-        repository().save(packet);
-        // 只处理鉴权消息，如果是不是连接connect则进行鉴权，鉴权通过往下走，是connect直接往下走
+        // CONNECT 尚未登录，不归档；其它 MQTT 包认证通过后再归档
         if (MqttMessageContentTypeEnum.MQTT_CONNECT.getType() == packet.getMessage().getContentType()) {
             PacketChannelWriter.fireChannelRead(ctx, packet);
             return;
@@ -46,6 +44,7 @@ public final class MqttMessageBiProcessor extends AbstractMessageBiProcessor<Byt
             ctx.close();
             return;
         }
+        repository().save(packet);
         PacketChannelWriter.fireChannelRead(ctx, packet);
     }
 

@@ -2,6 +2,7 @@ package com.ouyunc.base.model;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.util.List;
 
 /**
  * POST /api/im/message/push 响应体 data 部分。
@@ -19,6 +20,8 @@ public class MessagePushResponse implements Serializable {
     private String status;
     /** PROCESSING / RETRYABLE_FAILED 使用；ACCEPTED/DUPLICATE 为 null。 */
     private String errorMessage;
+    /** toList 扇出时每接收人结果；单推为 null。 */
+    private List<MessagePushResponse> items;
 
     public String getMessageId() {
         return messageId;
@@ -50,5 +53,13 @@ public class MessagePushResponse implements Serializable {
 
     public void setErrorMessage(String errorMessage) {
         this.errorMessage = errorMessage;
+    }
+
+    public List<MessagePushResponse> getItems() {
+        return items;
+    }
+
+    public void setItems(List<MessagePushResponse> items) {
+        this.items = items;
     }
 }

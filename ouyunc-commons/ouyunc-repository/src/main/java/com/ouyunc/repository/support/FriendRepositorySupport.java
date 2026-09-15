@@ -50,8 +50,8 @@ public final class FriendRepositorySupport {
         return saveFriendRequestMessage(packet, requestSession.getSessionId(), expireTime, (redisConnection) -> {
             String friendRequestCacheKey = CacheConstant.buildFriendRequestCacheKey(message.getMetadata().getAppKey(), message.getFrom(), message.getTo());
             // 修复：key 必须用 stringSerializer，与 saveRefuseFriendRequestMessage 保持一致，否则后续读取时无法命中
-            byte[] keyBytes = session.serializeOrNull(infra.stringSerializer, friendRequestCacheKey);
-            byte[] valueBytes = session.serializeOrNull(infra.valueSerializer, requestSession);
+            byte[] keyBytes = session.serializeOrThrow(infra.stringSerializer, friendRequestCacheKey, "friendRequestCacheKey");
+            byte[] valueBytes = session.serializeOrThrow(infra.valueSerializer, requestSession, "requestSession");
             redisConnection.commands().set(keyBytes, valueBytes, Expiration.milliseconds(MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP), RedisStringCommands.SetOption.SET_IF_ABSENT);
         });
     }
@@ -60,12 +60,21 @@ public final class FriendRepositorySupport {
         return (RequestSession) infra.redisTemplate.opsForValue().get(CacheConstant.buildFriendRequestCacheKey(appKey, from, to));
     }
 
+    /** 清除好友请求会话占位，允许删友后再申请。 */
+    public void deleteFriendRequestSession(String appKey, String from, String to) {
+        if (appKey == null || from == null || to == null) {
+            return;
+        }
+        infra.redisTemplate.delete(CacheConstant.buildFriendRequestCacheKey(appKey, from, to));
+        infra.redisTemplate.delete(CacheConstant.buildFriendRequestCacheKey(appKey, to, from));
+    }
+
     public boolean saveRefuseFriendRequestMessage(Packet packet, RequestSession requestSession, long expireTime) {
         Message message = packet.getMessage();
         return saveFriendRequestMessage(packet, requestSession.getSessionId(), expireTime, (redisConnection) -> {
             String friendRequestCacheKey = CacheConstant.buildFriendRequestCacheKey(message.getMetadata().getAppKey(), message.getTo(), message.getFrom());
-            byte[] keyBytes = session.serializeOrNull(infra.stringSerializer, friendRequestCacheKey);
-            byte[] valueBytes = session.serializeOrNull(infra.valueSerializer, requestSession);
+            byte[] keyBytes = session.serializeOrThrow(infra.stringSerializer, friendRequestCacheKey, "friendRequestCacheKey");
+            byte[] valueBytes = session.serializeOrThrow(infra.valueSerializer, requestSession, "requestSession");
             redisConnection.commands().set(keyBytes, valueBytes, Expiration.milliseconds(MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP), RedisStringCommands.SetOption.UPSERT);
         });
     }
@@ -75,8 +84,8 @@ public final class FriendRepositorySupport {
         String appKey = message.getMetadata().getAppKey();
         return bindFriend(packet, requestSession.getSessionId(), expireTime, (redisConnection) -> {
             String friendRequestCacheKey = CacheConstant.buildFriendRequestCacheKey(appKey, message.getFrom(), message.getTo());
-            byte[] keyBytes = session.serializeOrNull(infra.stringSerializer, friendRequestCacheKey);
-            byte[] valueBytes = session.serializeOrNull(infra.valueSerializer, requestSession);
+            byte[] keyBytes = session.serializeOrThrow(infra.stringSerializer, friendRequestCacheKey, "friendRequestCacheKey");
+            byte[] valueBytes = session.serializeOrThrow(infra.valueSerializer, requestSession, "requestSession");
             redisConnection.commands().set(keyBytes, valueBytes, Expiration.milliseconds(MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP), RedisStringCommands.SetOption.UPSERT);
         });
     }
@@ -85,8 +94,8 @@ public final class FriendRepositorySupport {
         Message message = packet.getMessage();
         return bindFriend(packet, requestSession.getSessionId(), expireTime, (redisConnection) -> {
             String friendRequestCacheKey = CacheConstant.buildFriendRequestCacheKey(appKey, message.getTo(), message.getFrom());
-            byte[] keyBytes = session.serializeOrNull(infra.stringSerializer, friendRequestCacheKey);
-            byte[] valueBytes = session.serializeOrNull(infra.valueSerializer, requestSession);
+            byte[] keyBytes = session.serializeOrThrow(infra.stringSerializer, friendRequestCacheKey, "friendRequestCacheKey");
+            byte[] valueBytes = session.serializeOrThrow(infra.valueSerializer, requestSession, "requestSession");
             redisConnection.commands().set(keyBytes, valueBytes, Expiration.milliseconds(MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP), RedisStringCommands.SetOption.UPSERT);
         });
     }
@@ -123,43 +132,42 @@ public final class FriendRepositorySupport {
             return Mono.just(localCached);
         }
 
-        // 2. Redis缓存（响应式）
+        // 2. Redis缓存（响应式）：命中只填 L1
         return infra.reactiveRedisTemplate.opsForValue().get(cacheKey)
-                .cast(FriendEntity.class)
-                .doOnNext((Object friendEntity) -> {
-                    if (friendEntity != null) {
-                        updateFriendCache(cacheKey, (FriendEntity) friendEntity);
-                    }
-                })
+                .filter(FriendEntity.class::isInstance)
+                .map(FriendEntity.class::cast)
+                .doOnNext(friendEntity -> fillLocalFriendCache(cacheKey, friendEntity))
                 .switchIfEmpty(
-                        // 3. MongoDB（响应式）
-                        infra.reactiveMongoTemplate.findOne(
-                                        Query.query(Criteria.where(MongoFriendEntity.Fields.userId).is(Long.parseLong(from))
-                                                .and(MongoFriendEntity.Fields.friendUserId).is(Long.parseLong(to))),
-                                        MongoFriendEntity.class)
-                                .map(this::convertMongoFriendToFriend)
-                                .doOnNext(friendEntity -> updateFriendCache(cacheKey, friendEntity))
+                        // 3. MySQL 权威
+                        Mono.fromCallable(() -> {
+                                    try {
+                                        return infra.jdbcClient.sql(JdbcSqlDialectHolder.selectFriend())
+                                                .param(FriendEntity.Fields.userId, from)
+                                                .param(FriendEntity.Fields.friendUserId, to)
+                                                .query(FriendEntity.class)
+                                                .optional()
+                                                .orElse(null);
+                                    } catch (Exception e) {
+                                        log.error("从MySQL查询好友关系异常, appKey: {}, from: {}, to: {}", appKey, from, to, e);
+                                        return null;
+                                    }
+                                })
+                                .subscribeOn(Schedulers.fromExecutor(infra.dbExecutor()))
+                                .flatMap(friendEntity -> {
+                                    if (friendEntity == null) {
+                                        return Mono.empty();
+                                    }
+                                    updateFriendCache(cacheKey, friendEntity);
+                                    return Mono.just(friendEntity);
+                                })
                                 .switchIfEmpty(
-                                        // 4. MySQL（响应式）
-                                        Mono.fromCallable(() -> {
-                                                    try {
-                                                        return infra.jdbcClient.sql(JdbcSqlDialectHolder.selectFriend())
-                                                                .param(FriendEntity.Fields.userId, from)
-                                                                .param(FriendEntity.Fields.friendUserId, to)
-                                                                .query(FriendEntity.class)
-                                                                .optional()
-                                                                .orElse(null);
-                                                    } catch (Exception e) {
-                                                        log.error("从MySQL查询好友关系异常, appKey: {}, from: {}, to: {}", appKey, from, to, e);
-                                                        return null;
-                                                    }
-                                                })
-                                                .subscribeOn(Schedulers.fromExecutor(infra.dbExecutor()))
-                                                .doOnNext(friendEntity -> {
-                                                    if (friendEntity != null) {
-                                                        updateFriendCache(cacheKey, friendEntity);
-                                                    }
-                                                })
+                                        // 4. Mongo 兜底
+                                        infra.reactiveMongoTemplate.findOne(
+                                                        Query.query(Criteria.where(MongoFriendEntity.Fields.userId).is(Long.parseLong(from))
+                                                                .and(MongoFriendEntity.Fields.friendUserId).is(Long.parseLong(to))),
+                                                        MongoFriendEntity.class)
+                                                .map(this::convertMongoFriendToFriend)
+                                                .doOnNext(friendEntity -> updateFriendCache(cacheKey, friendEntity))
                                 )
                 )
                 .onErrorResume(e -> {
@@ -179,8 +187,23 @@ public final class FriendRepositorySupport {
         }
         FriendEntity redisCached = (FriendEntity) infra.redisTemplate.opsForValue().get(cacheKey);
         if (redisCached != null) {
-            updateFriendCache(cacheKey, redisCached);
+            fillLocalFriendCache(cacheKey, redisCached);
             return redisCached;
+        }
+        // MySQL 为 shield 等权限权威源
+        try {
+            FriendEntity friendEntity = infra.jdbcClient.sql(JdbcSqlDialectHolder.selectFriend())
+                    .param(FriendEntity.Fields.userId, ownerUserId)
+                    .param(FriendEntity.Fields.friendUserId, friendUserId)
+                    .query(FriendEntity.class)
+                    .optional()
+                    .orElse(null);
+            if (friendEntity != null) {
+                updateFriendCache(cacheKey, friendEntity);
+                return friendEntity;
+            }
+        } catch (Exception e) {
+            log.error("MySQL 查询好友失败, owner={}, friend={}", ownerUserId, friendUserId, e);
         }
         try {
             MongoFriendEntity mongoFriend = infra.mongoTemplate.findOne(
@@ -195,21 +218,7 @@ public final class FriendRepositorySupport {
         } catch (Exception e) {
             log.debug("Mongo 查询好友失败, owner={}, friend={}", ownerUserId, friendUserId, e);
         }
-        try {
-            FriendEntity friendEntity = infra.jdbcClient.sql(JdbcSqlDialectHolder.selectFriend())
-                    .param(FriendEntity.Fields.userId, ownerUserId)
-                    .param(FriendEntity.Fields.friendUserId, friendUserId)
-                    .query(FriendEntity.class)
-                    .optional()
-                    .orElse(null);
-            if (friendEntity != null) {
-                updateFriendCache(cacheKey, friendEntity);
-            }
-            return friendEntity;
-        } catch (Exception e) {
-            log.error("MySQL 查询好友失败, owner={}, friend={}", ownerUserId, friendUserId, e);
-            return null;
-        }
+        return null;
     }
 
     private static Object parseId(String userId) {
@@ -262,9 +271,16 @@ public final class FriendRepositorySupport {
 
     void updateFriendCache(String cacheKey, FriendEntity friendEntity) {
         if (friendEntity != null) {
-            MessageContext.friendEntityCache.put(cacheKey, friendEntity);
+            fillLocalFriendCache(cacheKey, friendEntity);
             infra.redisTemplate.opsForValue().set(cacheKey, friendEntity,
                     MessageConstant.CACHE_ENTITY_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+        }
+    }
+
+    /** L2 命中只填本地，禁止读路径续期 Redis。 */
+    private void fillLocalFriendCache(String cacheKey, FriendEntity friendEntity) {
+        if (friendEntity != null) {
+            MessageContext.friendEntityCache.put(cacheKey, friendEntity);
         }
     }
 

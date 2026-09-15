@@ -34,6 +34,8 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.List;
 
 /**
  * @Author fzx
@@ -119,15 +121,25 @@ class ClientLogoutMessageEventListener implements MessageEventListener<MessageEv
         Collection<String> friendIds = DefaultRepository.INSTANCE.getFriendIds(appKey, identity);
         int notifiedFriends = 0;
         int notifiedSessions = 0;
-        for (String friendId : friendIds) {
-            List<LoginClientInfo> loginClientInfos = ClientHelper.onlineAll(appKey, friendId);
-            if (CollectionUtils.isNotEmpty(loginClientInfos)) {
+        if (CollectionUtils.isNotEmpty(friendIds)) {
+            Map<String, List<LoginClientInfo>> onlineMap = ClientHelper.onlineAllBatch(appKey, new java.util.HashSet<>(friendIds));
+            for (Map.Entry<String, List<LoginClientInfo>> entry : onlineMap.entrySet()) {
+                List<LoginClientInfo> loginClientInfos = entry.getValue();
+                if (CollectionUtils.isEmpty(loginClientInfos)) {
+                    continue;
+                }
                 notifiedFriends++;
                 notifiedSessions += loginClientInfos.size();
+                String friendId = entry.getKey();
                 Metadata metadata = new Metadata();
                 metadata.setAppKey(appKey);
-                Message message = new Message(MessageContext.idGenerator().generateIdStr(), identity, friendId, MessageContentTypeEnum.TEXT_CONTENT.getType(), loginClientInfo.getWillMessage(), TimeUtil.currentTimeMillis(), metadata);
-                Packet packet = new Packet(NativePacketProtocol.OUYUNC.getProtocol(), NativePacketProtocol.OUYUNC.getProtocolVersion(), MessageContext.idGenerator().generateId(), DeviceTypeEnum.PC.getType(), NetworkEnum.OTHER.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(), MessageTypeEnum.CLIENT_LOGOUT.getType(), message);
+                Message message = new Message(MessageContext.idGenerator().generateIdStr(), identity, friendId,
+                        MessageContentTypeEnum.TEXT_CONTENT.getType(), loginClientInfo.getWillMessage(),
+                        TimeUtil.currentTimeMillis(), metadata);
+                Packet packet = new Packet(NativePacketProtocol.OUYUNC.getProtocol(),
+                        NativePacketProtocol.OUYUNC.getProtocolVersion(), MessageContext.idGenerator().generateId(),
+                        DeviceTypeEnum.PC.getType(), NetworkEnum.OTHER.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(),
+                        Serializer.PROTO_STUFF.getValue(), MessageTypeEnum.CLIENT_LOGOUT.getType(), message);
                 MessageHelper.asyncSendMessage(packet, loginClientInfos);
             }
         }

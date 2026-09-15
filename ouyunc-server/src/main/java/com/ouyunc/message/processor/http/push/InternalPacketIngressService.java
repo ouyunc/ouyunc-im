@@ -60,14 +60,27 @@ public final class InternalPacketIngressService {
         try {
             ThreadPoolManager.httpPushVerifyExecutor().execute(() -> {
                 try {
-                    HttpResponseResult<MessagePushResponse> last = null;
+                    List<MessagePushResponse> items = new ArrayList<>(recipients.size());
+                    String worstStatus = MessagePushStatusEnum.ACCEPTED.getCode();
+                    String lastPacketId = null;
                     for (String to : recipients) {
                         request.setTo(to);
                         request.setMessageId(baseMessageId + ':' + to);
-                        last = pushSingleSync(request, httpContext);
+                        HttpResponseResult<MessagePushResponse> one = pushSingleSync(request, httpContext);
+                        MessagePushResponse body = one != null ? one.getData() : null;
+                        if (body != null) {
+                            items.add(body);
+                            lastPacketId = body.getPacketId();
+                            worstStatus = worsePushStatus(worstStatus, body.getStatus());
+                        }
                     }
                     request.setMessageId(baseMessageId);
-                    future.complete(last);
+                    MessagePushResponse aggregate = new MessagePushResponse();
+                    aggregate.setMessageId(baseMessageId);
+                    aggregate.setPacketId(lastPacketId);
+                    aggregate.setStatus(worstStatus);
+                    aggregate.setItems(items);
+                    future.complete(HttpResponseResult.success(aggregate));
                 } catch (HttpPipelineException ex) {
                     future.completeExceptionally(ex);
                 } catch (Throwable t) {
@@ -218,5 +231,32 @@ public final class InternalPacketIngressService {
         response.setStatus(status.getCode());
         response.setErrorMessage(errorMessage);
         return response;
+    }
+
+    /** 扇出聚合：失败优先于处理中，处理中优先于已受理，已受理优先于重复。 */
+    private static String worsePushStatus(String current, String next) {
+        if (next == null) {
+            return current;
+        }
+        if (rankPushStatus(next) > rankPushStatus(current)) {
+            return next;
+        }
+        return current;
+    }
+
+    private static int rankPushStatus(String status) {
+        if (MessagePushStatusEnum.RETRYABLE_FAILED.getCode().equals(status)) {
+            return 4;
+        }
+        if (MessagePushStatusEnum.PROCESSING.getCode().equals(status)) {
+            return 3;
+        }
+        if (MessagePushStatusEnum.ACCEPTED.getCode().equals(status)) {
+            return 2;
+        }
+        if (MessagePushStatusEnum.DUPLICATE.getCode().equals(status)) {
+            return 1;
+        }
+        return 0;
     }
 }

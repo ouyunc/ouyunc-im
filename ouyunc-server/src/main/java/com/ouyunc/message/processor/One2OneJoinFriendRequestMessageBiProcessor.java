@@ -55,13 +55,14 @@ public final class One2OneJoinFriendRequestMessageBiProcessor extends AbstractMe
 
     @Override
     public Mono<Void> preProcessStage(ChannelHandlerContext ctx, Packet packet) {
-        repository().save(packet);
         if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
             log.error("校验消息失败: {} 认证未通过,开始关闭channel", packet);
             MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过!", packet), MessageEventTypeEnum.EXCEPTION), true);
             ctx.close();
             return Mono.empty();
         }
+        // 认证通过后再旁路归档
+        repository().save(packet);
         if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
             return Mono.empty();
         }
@@ -91,14 +92,18 @@ public final class One2OneJoinFriendRequestMessageBiProcessor extends AbstractMe
         DistributedLockHelper.runWithLock(packet, lockKey, ExceptionCodeEnum.BIND_FRIEND_ERROR, () -> {
             // 获取请求会话
             RequestSession requestSession = repository().getFriendRequestSession(appKey, message.getFrom(), message.getTo());
-            if (null != requestSession && requestSession.getProgress() > RequestSessionProgress.JOINING.value()) {
-                log.warn("{} 和 {} 会话存在正在处理中的好友请求，拒绝和同意还未结束处理", message.getFrom(), message.getTo());
+            // 已经是好友：幂等成功，回 ACK，避免 QoS 客户端空转
+            if (repository().isFriend(appKey, message.getFrom(), message.getTo())) {
+                log.warn("已经是好友, 幂等 ACK; {}", packet);
+                RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.userOnly(message.getFrom()));
                 return;
             }
-            // 如果已经是好友，直接返回
-            if (repository().isFriend(appKey, message.getFrom(), message.getTo())) {
-                log.warn("已经是好友, 请知悉; {}", packet);
-                return;
+            // AGREEING/REFUSING 残留但已非好友：清会话后允许再申请
+            if (null != requestSession && requestSession.getProgress() > RequestSessionProgress.JOINING.value()) {
+                log.warn("{} 和 {} 好友请求会话残留 progress={}，清除后允许重新申请",
+                        message.getFrom(), message.getTo(), requestSession.getProgress());
+                repository().deleteFriendRequestSession(appKey, message.getFrom(), message.getTo());
+                requestSession = null;
             }
             // 获取当前对方的配置信息
             UserEntity toUserEntity = repository().getUserEntity(appKey, message.getTo());

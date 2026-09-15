@@ -35,6 +35,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -324,7 +325,13 @@ public final class GroupMembershipSupport {
             return groupUserEntity;
         }
 
-        // 3. MongoDB
+        // 3. MySQL 为禁言/屏蔽等权限权威源；Mongo 滞后不得钉死错误状态
+        GroupUserEntity fromMysql = queryGroupUserEntityFromDataBase(cacheKey, appKey, groupId, memberId);
+        if (fromMysql != null) {
+            return fromMysql;
+        }
+
+        // 4. MySQL miss 时再尝试 Mongo（仅兜底，仍写缓存供投递 channel）
         try {
             MongoGroupUserEntity mongoGroupUser = infra.mongoTemplate.findOne(
                     Query.query(Criteria.where(MongoGroupUserEntity.Fields.userId).is(Long.parseLong(memberId))
@@ -338,9 +345,66 @@ public final class GroupMembershipSupport {
         } catch (Exception e) {
             log.warn("从MongoDB查询群成员异常, appKey: {}, groupId: {}, memberId: {}", appKey, groupId, memberId, e);
         }
+        return null;
+    }
 
-        // 4. MySQL
-        return queryGroupUserEntityFromDataBase(cacheKey, appKey, groupId, memberId);
+    /**
+     * 批量加载群成员配置（优先 L1/L2，miss 一次 JDBC IN 查询）。
+     */
+    public Map<String, GroupUserEntity> groupUserEntitiesBatch(String appKey, String groupId, Collection<String> memberIds) {
+        Map<String, GroupUserEntity> result = new HashMap<>();
+        if (memberIds == null || memberIds.isEmpty()) {
+            return result;
+        }
+        List<String> missing = new ArrayList<>();
+        for (String memberId : memberIds) {
+            if (memberId == null) {
+                continue;
+            }
+            String cacheKey = CacheConstant.buildGroupUserConfigCacheKey(appKey, memberId, groupId);
+            GroupUserEntity local = MessageContext.groupUserEntityCache.get(cacheKey);
+            if (local != null) {
+                result.put(memberId, local);
+                continue;
+            }
+            GroupUserEntity redis = (GroupUserEntity) infra.redisTemplate.opsForValue().get(cacheKey);
+            if (redis != null) {
+                fillLocalGroupUserCache(cacheKey, redis);
+                result.put(memberId, redis);
+                continue;
+            }
+            missing.add(memberId);
+        }
+        if (missing.isEmpty()) {
+            return result;
+        }
+        try {
+            List<GroupUserEntity> rows = infra.jdbcClient.sql(JdbcSqlDialectHolder.selectGroupUserBatch())
+                    .param(GroupUserEntity.Fields.groupId, groupId)
+                    .param("userIds", missing)
+                    .query(GroupUserEntity.class)
+                    .list();
+            if (rows != null) {
+                for (GroupUserEntity row : rows) {
+                    if (row == null || row.getUserId() == null) {
+                        continue;
+                    }
+                    String mid = String.valueOf(row.getUserId());
+                    String cacheKey = CacheConstant.buildGroupUserConfigCacheKey(appKey, mid, groupId);
+                    updateGroupUserCache(cacheKey, row);
+                    result.put(mid, row);
+                }
+            }
+        } catch (Exception e) {
+            log.error("批量查询群成员失败 groupId={} missingSize={}", groupId, missing.size(), e);
+            for (String mid : missing) {
+                GroupUserEntity one = groupUserEntity(appKey, groupId, mid);
+                if (one != null) {
+                    result.put(mid, one);
+                }
+            }
+        }
+        return result;
     }
 
     GroupUserEntity queryGroupUserEntityFromDataBase(String cacheKey, String appKey, String groupId, String memberId) {
@@ -381,37 +445,37 @@ public final class GroupMembershipSupport {
                     return Mono.just(entity);
                 })
                 .switchIfEmpty(
-                        // 3. MongoDB（响应式）
-                        infra.reactiveMongoTemplate.findOne(
-                                        Query.query(Criteria.where(MongoGroupUserEntity.Fields.userId).is(Long.parseLong(memberId))
-                                                .and(MongoGroupUserEntity.Fields.groupId).is(Long.parseLong(groupId))),
-                                        MongoGroupUserEntity.class)
-                                .map(this::convertMongoGroupUserToGroupUser)
-                                .flatMap(groupUserEntity -> writeThroughGroupUserCacheAsync(cacheKey, groupUserEntity)
-                                        .thenReturn(groupUserEntity))
+                        // 3. MySQL 权威源
+                        Mono.fromCallable(() -> {
+                                    try {
+                                        return infra.jdbcClient.sql(JdbcSqlDialectHolder.selectGroupUser())
+                                                .param(GroupUserEntity.Fields.userId, memberId)
+                                                .param(GroupUserEntity.Fields.groupId, groupId)
+                                                .query(GroupUserEntity.class)
+                                                .optional()
+                                                .orElse(null);
+                                    } catch (Exception e) {
+                                        log.error("从MySQL查询群成员异常, appKey: {}, groupId: {}, memberId: {}", appKey, groupId, memberId, e);
+                                        return null;
+                                    }
+                                })
+                                .subscribeOn(Schedulers.fromExecutor(infra.dbExecutor()))
+                                .flatMap(groupUserEntity -> {
+                                    if (groupUserEntity == null) {
+                                        return Mono.empty();
+                                    }
+                                    return writeThroughGroupUserCacheAsync(cacheKey, groupUserEntity)
+                                            .thenReturn(groupUserEntity);
+                                })
                                 .switchIfEmpty(
-                                        // 4. MySQL（响应式）
-                                        Mono.fromCallable(() -> {
-                                                    try {
-                                                        return infra.jdbcClient.sql(JdbcSqlDialectHolder.selectGroupUser())
-                                                                .param(GroupUserEntity.Fields.userId, memberId)
-                                                                .param(GroupUserEntity.Fields.groupId, groupId)
-                                                                .query(GroupUserEntity.class)
-                                                                .optional()
-                                                                .orElse(null);
-                                                    } catch (Exception e) {
-                                                        log.error("从MySQL查询群成员异常, appKey: {}, groupId: {}, memberId: {}", appKey, groupId, memberId, e);
-                                                        return null;
-                                                    }
-                                                })
-                                                .subscribeOn(Schedulers.fromExecutor(infra.dbExecutor()))
-                                                .flatMap(groupUserEntity -> {
-                                                    if (groupUserEntity == null) {
-                                                        return Mono.empty();
-                                                    }
-                                                    return writeThroughGroupUserCacheAsync(cacheKey, groupUserEntity)
-                                                            .thenReturn(groupUserEntity);
-                                                })
+                                        // 4. Mongo 兜底
+                                        infra.reactiveMongoTemplate.findOne(
+                                                        Query.query(Criteria.where(MongoGroupUserEntity.Fields.userId).is(Long.parseLong(memberId))
+                                                                .and(MongoGroupUserEntity.Fields.groupId).is(Long.parseLong(groupId))),
+                                                        MongoGroupUserEntity.class)
+                                                .map(this::convertMongoGroupUserToGroupUser)
+                                                .flatMap(groupUserEntity -> writeThroughGroupUserCacheAsync(cacheKey, groupUserEntity)
+                                                        .thenReturn(groupUserEntity))
                                 )
                 )
                 .onErrorResume(e -> {
@@ -580,6 +644,13 @@ public final class GroupMembershipSupport {
 
     public GroupRequestSession getGroupRequestSession(String appKey, String joiner, String groupId) {
         return (GroupRequestSession) infra.redisTemplate.opsForValue().get(CacheConstant.buildGroupRequestCacheKey(appKey, joiner, groupId));
+    }
+
+    public void deleteGroupRequestSession(String appKey, String joiner, String groupId) {
+        if (appKey == null || joiner == null || groupId == null) {
+            return;
+        }
+        infra.redisTemplate.delete(CacheConstant.buildGroupRequestCacheKey(appKey, joiner, groupId));
     }
 
     public boolean autoPassBindGroup(Packet packet, GroupRequestSession groupRequestSession, long expireTime) {

@@ -172,8 +172,18 @@ public enum DefaultRepository implements Repository {
         return RepositorySupports.FRIEND.getFriendRequestSession(appKey, from, to);
     }
 
+    /** 清除好友请求会话，允许删友后再申请。 */
+    public void deleteFriendRequestSession(String appKey, String from, String to) {
+        RepositorySupports.FRIEND.deleteFriendRequestSession(appKey, from, to);
+    }
+
     public GroupRequestSession getGroupRequestSession(String appKey, String joiner, String groupId) {
         return RepositorySupports.GROUP.getGroupRequestSession(appKey, joiner, groupId);
+    }
+
+    /** 清除群请求会话，允许退群后再申请。 */
+    public void deleteGroupRequestSession(String appKey, String joiner, String groupId) {
+        RepositorySupports.GROUP.deleteGroupRequestSession(appKey, joiner, groupId);
     }
 
     public boolean saveRefuseFriendRequestMessage(Packet packet, RequestSession requestSession, long expireTime) {
@@ -323,6 +333,11 @@ public enum DefaultRepository implements Repository {
 
     public MessageDeliveryChannelEnum resolveGroupMemberDeliveryChannel(String appKey, String groupId, String memberId) {
         return RepositorySupports.DELIVERY_CHANNEL.resolveGroupMemberDeliveryChannel(appKey, groupId, memberId);
+    }
+
+    public Map<String, MessageDeliveryChannelEnum> resolveGroupMemberDeliveryChannels(
+            String appKey, String groupId, Collection<String> memberIds) {
+        return RepositorySupports.DELIVERY_CHANNEL.resolveGroupMemberDeliveryChannels(appKey, groupId, memberIds);
     }
 
     public void publishExternalChannelOutbound(Packet packet, String recipientId, MessageDeliveryChannelEnum channel) {

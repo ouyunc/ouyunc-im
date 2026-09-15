@@ -181,11 +181,6 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
             }
             String comboIdentity = IdentityUtil.generalComboIdentity(
                     loginContent.getAppKey(), loginContent.getIdentity(), deviceType);
-            LoginClientInfo cacheLoginClientInfo = MessageServerContext.remoteLoginClientInfoCache.get(
-                    CacheConstant.buildLoginCacheKey(loginContent.getAppKey(), comboIdentity));
-            ChannelHandlerContext bindCtx = MessageServerContext.localLoginClientRegisterTable.get(comboIdentity);
-            kickPreviousSessionIfPresent(ctx, packet, loginContent, loginMessage, loginTimestamp,
-                    cacheLoginClientInfo, bindCtx);
             Protocol protocol = ctx.channel().attr(NativePacketProtocol.protocolAttrKey).get();
             if (protocol == null) {
                 log.warn("Protocol not set on channel, closing connection: {}", ctx.channel().id().asShortText());
@@ -228,10 +223,11 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                     unbindRemoteOnClose(packet, closingLogin, closingComboIdentity, publishLogout));
         };
         ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_CHANNEL_CLOSE_HOOK, channelCloseHook);
-        ClientHelper.bindAsync(ctx, newLoginClientInfo).whenComplete((unused, ex) ->
+        // 踢旧会话必须在 CAS 绑定胜出之后，避免锁外踢人导致跨节点双在线窗口
+        ClientHelper.bindAsync(ctx, newLoginClientInfo).whenComplete((previous, ex) ->
                 ctx.executor().execute(() ->
                         completeLoginAfterRemoteBind(ctx, packet, loginContent, loginMessage,
-                                deviceType, newLoginClientInfo, loginTimestamp, ex)));
+                                deviceType, newLoginClientInfo, loginTimestamp, previous, ex)));
     }
 
     private void failLoginOnEventLoop(ChannelHandlerContext ctx) {
@@ -275,30 +271,26 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
     }
 
     /**
-     * 重复登录：同 sn 仅静默断开旧连接；异 sn 发远程登录通知后断开。
+     * CAS 绑定胜出后踢旧会话：同 sn 仅静默断开；异 sn 发远程登录通知后断开（含跨节点）。
+     * 本机旧连接已在 {@link ClientHelper#bindAsync} 注册时关闭，此处主要处理跨节点旧会话。
      */
-    private void kickPreviousSessionIfPresent(ChannelHandlerContext ctx, Packet packet, LoginContent loginContent,
-                                              Message loginMessage, long loginTimestamp,
-                                              LoginClientInfo cacheLoginClientInfo, ChannelHandlerContext bindCtx) {
-        if (cacheLoginClientInfo == null && bindCtx == null) {
+    private void kickPreviousSessionAfterBindWin(ChannelHandlerContext ctx, Packet packet, LoginContent loginContent,
+                                                 Message loginMessage, long loginTimestamp,
+                                                 LoginClientInfo previous) {
+        if (previous == null) {
             return;
         }
-        LoginClientInfo oldClientInfo = cacheLoginClientInfo;
-        if (oldClientInfo == null && bindCtx != null) {
-            oldClientInfo = ChannelAttrUtil.getChannelAttribute(bindCtx.channel(), MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
-        }
-        if (oldClientInfo == null) {
-            closeOnOwnerLoop(bindCtx);
+        String local = MessageContext.messageProperties.getLocalServerAddress();
+        // 本机旧连接已在 bindAsync 注册时关闭；勿再按 identity 本机投递，否则会误踢新会话
+        if (StringUtils.isNotBlank(previous.getLoginServerAddress())
+                && previous.getLoginServerAddress().equals(local)) {
             return;
         }
-        if (!ClientHelper.isDirectoryOnline(oldClientInfo) && bindCtx == null) {
-            return;
-        }
-        boolean sameDevice = StringUtils.isNotBlank(oldClientInfo.getSn())
+        boolean sameDevice = StringUtils.isNotBlank(previous.getSn())
                 && StringUtils.isNotBlank(loginContent.getSn())
-                && oldClientInfo.getSn().equals(loginContent.getSn());
+                && previous.getSn().equals(loginContent.getSn());
         if (sameDevice) {
-            closeOnOwnerLoop(bindCtx);
+            closePreviousRemoteQuietly(previous);
             return;
         }
         Message kickMessage = new Message(
@@ -314,33 +306,66 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                 packet.getProtocol(),
                 packet.getProtocolVersion(),
                 MessageContext.idGenerator().generateId(),
-                oldClientInfo.getDeviceType(),
+                previous.getDeviceType(),
                 NetworkEnum.OTHER.getValue(),
                 packet.getEncryptType(),
                 packet.getSerializeAlgorithm(),
                 MessageTypeEnum.SERVER_NOTIFY.getType(),
                 kickMessage);
         Target kickTarget = Target.newBuilder()
-                .appKey(oldClientInfo.getAppKey())
-                .targetIdentity(oldClientInfo.getIdentity())
-                .targetServerAddress(oldClientInfo.getLoginServerAddress())
-                .deviceType(oldClientInfo.getDeviceType())
-                .protocol(oldClientInfo.getProtocol())
-                .protocolVersion(oldClientInfo.getProtocolVersion())
+                .appKey(previous.getAppKey())
+                .targetIdentity(previous.getIdentity())
+                .targetServerAddress(previous.getLoginServerAddress())
+                .deviceType(previous.getDeviceType())
+                .protocol(previous.getProtocol())
+                .protocolVersion(previous.getProtocolVersion())
                 .build();
         MessageHelper.syncSendMessageWithoutInterceptor(kickPacket, kickTarget);
-        closeOnOwnerLoop(bindCtx);
     }
 
-    private static void closeOnOwnerLoop(ChannelHandlerContext bindCtx) {
-        if (bindCtx == null || !bindCtx.channel().isActive()) {
+    /**
+     * 同 sn 顶号：向旧会话所在节点投递关闭通知。本机旧连接已在 bind 时关闭。
+     */
+    private void closePreviousRemoteQuietly(LoginClientInfo previous) {
+        if (previous == null || StringUtils.isBlank(previous.getLoginServerAddress())) {
             return;
         }
-        if (bindCtx.channel().eventLoop().inEventLoop()) {
-            bindCtx.close();
+        String local = MessageContext.messageProperties.getLocalServerAddress();
+        if (previous.getLoginServerAddress().equals(local)) {
             return;
         }
-        bindCtx.channel().eventLoop().execute(bindCtx::close);
+        try {
+            Message kickMessage = new Message(
+                    MessageContext.idGenerator().generateIdStr(),
+                    null,
+                    previous.getIdentity(),
+                    MessageContentTypeEnum.REMOTE_LOGIN_CONTENT.getType(),
+                    Serializer.JSON.serializeToString(new ServerNotifyContent(
+                            MessageConstant.REMOTE_LOGIN_SAME_DEVICE_KICK)),
+                    TimeUtil.currentTimeMillis(),
+                    null);
+            Packet kickPacket = new Packet(
+                    previous.getProtocol(),
+                    previous.getProtocolVersion(),
+                    MessageContext.idGenerator().generateId(),
+                    previous.getDeviceType(),
+                    NetworkEnum.OTHER.getValue(),
+                    NumberConstant.NUMBER_0,
+                    Serializer.JSON.getValue(),
+                    MessageTypeEnum.SERVER_NOTIFY.getType(),
+                    kickMessage);
+            Target kickTarget = Target.newBuilder()
+                    .appKey(previous.getAppKey())
+                    .targetIdentity(previous.getIdentity())
+                    .targetServerAddress(previous.getLoginServerAddress())
+                    .deviceType(previous.getDeviceType())
+                    .protocol(previous.getProtocol())
+                    .protocolVersion(previous.getProtocolVersion())
+                    .build();
+            MessageHelper.syncSendMessageWithoutInterceptor(kickPacket, kickTarget);
+        } catch (Exception e) {
+            log.warn("同设备跨节点静默踢旧失败 identity={}: {}", previous.getIdentity(), e.getMessage());
+        }
     }
 
     /**
@@ -348,7 +373,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
      */
     private void completeLoginAfterRemoteBind(ChannelHandlerContext ctx, Packet packet, LoginContent loginContent,
                                               Message loginMessage, byte deviceType, LoginClientInfo loginClientInfo,
-                                              long loginTimestamp, Throwable bindError) {
+                                              long loginTimestamp, LoginClientInfo previous, Throwable bindError) {
         ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, null);
         if (!ctx.channel().isActive()) {
             ClientHelper.unbindLocalRegisterTable(loginClientInfo, ctx);
@@ -360,6 +385,28 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                     ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_VERIFY_ERROR,
                             "登录绑定失败: " + bindError.getMessage(), packet),
                     MessageEventTypeEnum.EXCEPTION), true);
+            ctx.close();
+            return;
+        }
+        if (!ClientHelper.stillOwnsDirectory(loginClientInfo)) {
+            log.warn("登录 fencing 失败，目录已被更新会话覆盖 identity={}", loginClientInfo.getIdentity());
+            MessageServerContext.publishEvent(new MessageEvent(
+                    ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_VERIFY_ERROR,
+                            "登录绑定失败：会话已被更新连接顶替", packet),
+                    MessageEventTypeEnum.EXCEPTION), true);
+            ClientHelper.unbindLocalRegisterTable(loginClientInfo, ctx);
+            ctx.close();
+            return;
+        }
+        kickPreviousSessionAfterBindWin(ctx, packet, loginContent, loginMessage, loginTimestamp, previous);
+        // 踢人与装管道之间可能被更新会话覆盖，发 ACK 前再确认一次目录归属
+        if (!ClientHelper.stillOwnsDirectory(loginClientInfo)) {
+            log.warn("登录 ACK 前 fencing 失败 identity={}", loginClientInfo.getIdentity());
+            MessageServerContext.publishEvent(new MessageEvent(
+                    ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_VERIFY_ERROR,
+                            "登录绑定失败：会话在 ACK 前被顶替", packet),
+                    MessageEventTypeEnum.EXCEPTION), true);
+            ClientHelper.unbindLocalRegisterTable(loginClientInfo, ctx);
             ctx.close();
             return;
         }

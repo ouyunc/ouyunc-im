@@ -56,13 +56,14 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
 
     @Override
     public Mono<Void> preProcessStage(ChannelHandlerContext ctx, Packet packet) {
-        repository().save(packet);
         if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
             log.error("校验消息失败: {} 认证未通过,开始关闭channel", packet);
             MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过!", packet), MessageEventTypeEnum.EXCEPTION), true);
             ctx.close();
             return Mono.empty();
         }
+        // 认证通过后再旁路归档
+        repository().save(packet);
         if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
             return Mono.empty();
         }

@@ -77,12 +77,13 @@ public final class MessageDeliveryRouteHelper {
                 appKey, groupId, memberIds);
 
         Set<String> imMembers = new HashSet<>();
+        Map<String, MessageDeliveryChannelEnum> channels =
+                DefaultRepository.INSTANCE.resolveGroupMemberDeliveryChannels(appKey, groupId, deliverable);
         for (String memberId : deliverable) {
             if (memberId == null || memberId.equals(senderId)) {
                 continue;
             }
-            MessageDeliveryChannelEnum channel =
-                    DefaultRepository.INSTANCE.resolveGroupMemberDeliveryChannel(appKey, groupId, memberId);
+            MessageDeliveryChannelEnum channel = channels.getOrDefault(memberId, MessageDeliveryChannelEnum.IM);
             if (channel.isIm()) {
                 imMembers.add(memberId);
             } else {

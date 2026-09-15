@@ -3,8 +3,10 @@ package com.ouyunc.repository.support;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.NumberConstant;
+import com.ouyunc.base.constant.enums.MessageFromToTypeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
+import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.core.context.MessageContext;
 import org.apache.commons.collections4.CollectionUtils;
@@ -30,10 +32,16 @@ public final class WithdrawMessageSupport {
 
     private final SpecialMessageLoader specialMessageLoader;
     private final RedisTemplate redisTemplate;
+    private final UnreadIndexSupport unreadIndexSupport;
+    private final CsTicketUnreadSupport csTicketUnreadSupport;
 
-    public WithdrawMessageSupport(SpecialMessageLoader specialMessageLoader, RedisTemplate redisTemplate) {
+    public WithdrawMessageSupport(SpecialMessageLoader specialMessageLoader, RedisTemplate redisTemplate,
+                                  UnreadIndexSupport unreadIndexSupport,
+                                  CsTicketUnreadSupport csTicketUnreadSupport) {
         this.specialMessageLoader = specialMessageLoader;
         this.redisTemplate = redisTemplate;
+        this.unreadIndexSupport = unreadIndexSupport;
+        this.csTicketUnreadSupport = csTicketUnreadSupport;
     }
 
     public Mono<List<Packet>> reactiveLoadWithdrawTargetPackets(Packet packet, String scopeId,
@@ -125,6 +133,63 @@ public final class WithdrawMessageSupport {
                 return null;
             }
         });
+        // 撤回后从未读 SET/Hash 摘掉 packetId，避免单聊/客服未读虚高
+        clearUnreadForWithdrawnPackets(appKey, scopeId, scope, packets);
+    }
+
+    /**
+     * 单聊：仅当 scopeId 为双方 peer session 时清收件人未读；客服 ticket：清消息 to 侧未读。
+     */
+    private void clearUnreadForWithdrawnPackets(String appKey, String scopeId, MessageIndexScope scope,
+                                                List<Packet> packets) {
+        for (Packet withdrawPacket : packets) {
+            if (withdrawPacket == null || withdrawPacket.getMessage() == null) {
+                continue;
+            }
+            Message message = withdrawPacket.getMessage();
+            long packetId = withdrawPacket.getPacketId();
+            if (packetId <= 0L) {
+                continue;
+            }
+            if (scope == MessageIndexScope.CS_TICKET) {
+                String recipientId = resolveCsWithdrawRecipient(message);
+                if (StringUtils.isNotBlank(recipientId)) {
+                    csTicketUnreadSupport.removeOnWithdraw(appKey, scopeId, recipientId, packetId);
+                }
+                continue;
+            }
+            if (scope != MessageIndexScope.CHANNEL_SESSION) {
+                continue;
+            }
+            String from = message.getFrom();
+            String to = message.getTo();
+            if (StringUtils.isAnyBlank(from, to) || from.equals(to)) {
+                continue;
+            }
+            // 群聊 sessionId≠peerSession，跳过；单聊才清收件人 urid
+            if (!StringUtils.equals(scopeId, IdentityUtil.sessionId(from, to))) {
+                continue;
+            }
+            unreadIndexSupport.removeOne2OneOnWithdraw(appKey, to, from, packetId);
+        }
+    }
+
+    /**
+     * 客服撤回目标消息的收件人：优先 to；访客/座席 fromType 兜底。
+     */
+    private static String resolveCsWithdrawRecipient(Message message) {
+        if (message == null) {
+            return null;
+        }
+        if (StringUtils.isNotBlank(message.getTo())) {
+            return message.getTo();
+        }
+        int fromType = message.getFromType();
+        if (fromType == MessageFromToTypeEnum.CS_VISITOR.getType()
+                || fromType == MessageFromToTypeEnum.CS_AGENT.getType()) {
+            return message.getTo();
+        }
+        return null;
     }
 
     static String resolveMessageIndexKey(String appKey, String scopeId, MessageIndexScope scope) {

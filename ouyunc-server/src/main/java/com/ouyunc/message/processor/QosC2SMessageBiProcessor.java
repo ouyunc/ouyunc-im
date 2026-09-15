@@ -44,7 +44,6 @@ public final class QosC2SMessageBiProcessor extends AbstractMessageBiProcessor<B
 
     @Override
     public Mono<Void> preProcessStage(ChannelHandlerContext ctx, Packet packet) {
-        repository().save(packet);
         if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
             log.error("校验消息失败: {} 认证未通过,开始关闭channel", packet);
             MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过!", packet), MessageEventTypeEnum.EXCEPTION), true);

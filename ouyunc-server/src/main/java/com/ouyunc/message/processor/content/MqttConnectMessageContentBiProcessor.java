@@ -136,15 +136,15 @@ public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcesso
         }
         String comboIdentity = IdentityUtil.generalComboIdentity(
                 mqttLoginClientInfo.getAppKey(), mqttLoginClientInfo.getIdentity(), DeviceTypeEnum.M.getType());
+        // sessionPresent 以绑定前目录是否存在为准，但踢旧必须在 CAS 绑定胜出之后
         LoginClientInfo cacheLoginClientInfo = MessageServerContext.remoteLoginClientInfoCache.get(
                 CacheConstant.buildLoginCacheKey(mqttLoginClientInfo.getAppKey(), comboIdentity));
-        ChannelHandlerContext bindCtx = MessageServerContext.localLoginClientRegisterTable.get(comboIdentity);
-        kickPreviousMqttSession(packet, mqttLoginClientInfo, cacheLoginClientInfo, bindCtx, loginTimestamp);
         boolean sessionPresent = cacheLoginClientInfo != null && !mqttConnectMessage.variableHeader().isCleanSession();
         installCloseHook(ctx, comboIdentity, mqttLoginClientInfo);
-        ClientHelper.bindAsync(ctx, mqttLoginClientInfo).whenComplete((unused, ex) ->
+        ClientHelper.bindAsync(ctx, mqttLoginClientInfo).whenComplete((previous, ex) ->
                 ctx.executor().execute(() ->
-                        completeMqttConnectAfterRemoteBind(ctx, packet, mqttConnectMessage, sessionPresent, mqttLoginClientInfo, ex)));
+                        completeMqttConnectAfterRemoteBind(ctx, packet, mqttConnectMessage, sessionPresent,
+                                mqttLoginClientInfo, previous, loginTimestamp, ex)));
     }
 
     private MqttLoginClientInfo buildMqttLogin(ChannelHandlerContext ctx, MqttConnectPayload payload,
@@ -197,31 +197,19 @@ public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcesso
     }
 
     /**
-     * 同 clientId 顶号：本机关旧连接；跨节点发 DISCONNECT / 远程登录通知。不因 sn 相同跳过。
+     * CAS 绑定胜出后顶号：本机旧连接已在 bind 时关闭；跨节点发 DISCONNECT / 远程登录通知。
      */
-    private void kickPreviousMqttSession(Packet packet, MqttLoginClientInfo mqttLogin,
-                                         LoginClientInfo cacheLoginClientInfo, ChannelHandlerContext bindCtx,
-                                         long loginTimestamp) {
-        if (cacheLoginClientInfo == null && bindCtx == null) {
+    private void kickPreviousMqttSessionAfterBindWin(Packet packet, MqttLoginClientInfo mqttLogin,
+                                                     LoginClientInfo previous, long loginTimestamp) {
+        if (previous == null) {
             return;
         }
-        LoginClientInfo oldClientInfo = cacheLoginClientInfo;
-        if (oldClientInfo == null) {
-            oldClientInfo = ChannelAttrUtil.getChannelAttribute(bindCtx.channel(), MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
-        }
-        if (oldClientInfo == null) {
-            if (bindCtx != null && bindCtx.channel().isActive()) {
-                bindCtx.close();
-            }
+        String local = MessageContext.messageProperties.getLocalServerAddress();
+        if (StringUtils.isNotBlank(previous.getLoginServerAddress())
+                && previous.getLoginServerAddress().equals(local)) {
             return;
         }
-        if (!ClientHelper.isDirectoryOnline(oldClientInfo) && bindCtx == null) {
-            return;
-        }
-        notifyPreviousSession(packet, mqttLogin, oldClientInfo, loginTimestamp);
-        if (bindCtx != null && bindCtx.channel().isActive()) {
-            bindCtx.close();
-        }
+        notifyPreviousSession(packet, mqttLogin, previous, loginTimestamp);
     }
 
     private void notifyPreviousSession(Packet packet, MqttLoginClientInfo mqttLogin,
@@ -364,7 +352,8 @@ public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcesso
      */
     private void completeMqttConnectAfterRemoteBind(ChannelHandlerContext ctx, Packet packet,
                                                     MqttConnectMessage mqttConnectMessage, boolean sessionPresent,
-                                                    MqttLoginClientInfo loginClientInfo, Throwable bindError) {
+                                                    MqttLoginClientInfo loginClientInfo, LoginClientInfo previous,
+                                                    long loginTimestamp, Throwable bindError) {
         if (!ctx.channel().isActive()) {
             ClientHelper.unbindLocalRegisterTable(loginClientInfo, ctx);
             return;
@@ -376,6 +365,30 @@ public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcesso
                     new MqttConnAckVariableHeader(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE, false),
                     null);
             MessageHelper.tryWriteObject(ctx.channel(), connAckMessage, packet, sendResult -> {});
+            ctx.close();
+            return;
+        }
+        if (!ClientHelper.stillOwnsDirectory(loginClientInfo)) {
+            log.warn("mqtt 登录 fencing 失败，目录已被更新会话覆盖 clientId={}", loginClientInfo.getIdentity());
+            MqttMessage connAckMessage = MqttMessageFactory.newMessage(
+                    new MqttFixedHeader(MqttMessageType.CONNACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
+                    new MqttConnAckVariableHeader(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE, false),
+                    null);
+            MessageHelper.tryWriteObject(ctx.channel(), connAckMessage, packet, sendResult -> {});
+            ClientHelper.unbindLocalRegisterTable(loginClientInfo, ctx);
+            ctx.close();
+            return;
+        }
+        kickPreviousMqttSessionAfterBindWin(packet, loginClientInfo, previous, loginTimestamp);
+        // CONNACK 前再确认目录归属，缩小踢人后被顶替仍回成功码的窗口
+        if (!ClientHelper.stillOwnsDirectory(loginClientInfo)) {
+            log.warn("mqtt CONNACK 前 fencing 失败 clientId={}", loginClientInfo.getIdentity());
+            MqttMessage connAckMessage = MqttMessageFactory.newMessage(
+                    new MqttFixedHeader(MqttMessageType.CONNACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
+                    new MqttConnAckVariableHeader(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE, false),
+                    null);
+            MessageHelper.tryWriteObject(ctx.channel(), connAckMessage, packet, sendResult -> {});
+            ClientHelper.unbindLocalRegisterTable(loginClientInfo, ctx);
             ctx.close();
             return;
         }

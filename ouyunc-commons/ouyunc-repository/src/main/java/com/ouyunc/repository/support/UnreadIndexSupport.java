@@ -12,6 +12,7 @@ import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.base.constant.enums.IdentityType;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.SessionCallback;
@@ -130,6 +131,50 @@ public final class UnreadIndexSupport {
                             null),
                     MessageEventTypeEnum.EXCEPTION), true);
             return false;
+        }
+    }
+
+    /**
+     * 单聊撤回：收件人各 deviceType 未读集合移除 packetId，并回写 Hash 计数。
+     */
+    @SuppressWarnings("unchecked")
+    public void removeOne2OneOnWithdraw(String appKey, String recipientId, String peerId, long packetId) {
+        if (StringUtils.isAnyBlank(appKey, recipientId, peerId) || packetId <= 0L || recipientId.equals(peerId)) {
+            return;
+        }
+        Collection<Byte> deviceTypes = resolveDeviceTypes(appKey, recipientId);
+        if (CollectionUtils.isEmpty(deviceTypes)) {
+            return;
+        }
+        String field = IdentityType.ONE_2_ONE.unreadField(peerId);
+        String packetIdArg = String.valueOf(packetId);
+        long ttl = MessageConstant.CACHE_USER_DEVICE_UNREAD_EXPIRE_TIMESTAMP;
+        DefaultRedisScript<Long> script = new DefaultRedisScript<>(
+                LuaScriptEnum.UNREAD_REMOVE_ONE2ONE_ON_WITHDRAW_SCRIPT.getScript(), Long.class);
+        try {
+            stringRedisTemplate.executePipelined(new SessionCallback<>() {
+                @Override
+                @SuppressWarnings({"unchecked", "rawtypes"})
+                public Object execute(org.springframework.data.redis.core.RedisOperations operations) {
+                    for (Byte deviceType : deviceTypes) {
+                        String urKey = CacheConstant.buildUserDeviceUnreadCacheKey(appKey, recipientId, deviceType);
+                        String uridKey = CacheConstant.buildUserDeviceUnreadIdsCacheKey(
+                                appKey, recipientId, deviceType, peerId);
+                        operations.execute(script, List.of(urKey, uridKey),
+                                field, packetIdArg, String.valueOf(ttl));
+                    }
+                    return null;
+                }
+            });
+        } catch (Exception e) {
+            log.error("removeOne2OneOnWithdraw failed appKey={} recipient={} peer={} packetId={}",
+                    appKey, recipientId, peerId, packetId, e);
+            MessageContext.publishEvent(new MessageEvent(
+                    ExceptionEventPayload.of(
+                            ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
+                            "单聊撤回清未读失败: " + e.getMessage(),
+                            null),
+                    MessageEventTypeEnum.EXCEPTION), true);
         }
     }
 

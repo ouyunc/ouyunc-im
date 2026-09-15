@@ -3,11 +3,13 @@ package com.ouyunc.message.protocol;
 
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.NumberConstant;
+import com.ouyunc.base.constant.enums.LoginScopeEnum;
 import com.ouyunc.base.constant.enums.ProtocolTypeEnum;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.model.Protocol;
 import com.ouyunc.base.model.SendCallback;
 import com.ouyunc.base.packet.Packet;
+import com.ouyunc.base.packet.message.content.LoginContent;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.HttpUtil;
 import com.ouyunc.message.cluster.client.pool.MessageClientPool;
@@ -16,6 +18,8 @@ import com.ouyunc.message.handler.*;
 import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.helper.PacketChannelWriter;
 import com.ouyunc.message.http.HttpRequestDispatcher;
+import com.ouyunc.message.validator.AppKeyValidator;
+import com.ouyunc.message.validator.LoginAuthValidator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
@@ -33,6 +37,7 @@ import io.netty.handler.codec.mqtt.MqttEncoder;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,14 +80,15 @@ public enum NativePacketProtocol implements PacketProtocol {
                     // 这里可以根据业务提前做appKey 的验证和appKey下连接数的统计，直接从queryParamsMap 这里面取值即可
                     // 如果这里提前做校验签名了，登录那边可校验可不校验；为什么在这里提前做签名验证？因为读写空闲的开启默认在登录成功后才开启，如果外部客户端或非法客户端通过ws协议只连接不做登录，那么就是无用的连接且会占用连接资源，所以这里提前做签名验证，如果签名验证失败，直接断开连接，这样连接资源会减少，同时不会占用连接资源；fast-fail
                     // appKey的连接数统计，为什么在这里做链接数的统计？因为为了防止签名验证通过后，外部或非法客户端不发送登录信息，则无法真实统计该客户端的真实连接数，无法对外部客户端提前做连接限制，可能造成非法连接过多，从而造成资源浪费，增加服务器压力；
-                    if (!preVerifySignature(queryParamsMap) || !preVerifyAppKeyConnects(queryParamsMap)) {
+                    if (!preVerifySignature(queryParamsMap) || !preVerifyAppKeyConnects(ctx, queryParamsMap)) {
                         log.error("客户端连接失败,原因：签名验证失败或验证统计AppKey连接数超过允许的最大值！");
-                        // 关闭连接
                         ctx.close();
+                        return;
                     }
                 } catch (URISyntaxException e) {
                     log.error("客户端连接失败,原因：uri解析失败！正在关闭channel :{}", ctx.channel().id().asShortText());
                     ctx.channel().close();
+                    return;
                 }
                 ctx.channel().attr(protocolAttrKey).set(this);
                 ctx.pipeline()
@@ -131,25 +137,62 @@ public enum NativePacketProtocol implements PacketProtocol {
 
 
         /**
-         *
-         *  提前校验和统计appKey的连接数 预想连接数的存储使用缓存redis 的hash 结构， xxxx:connects:appKey     identity       登录信息（clientLoginInfo）,   由于还未登录登录信息暂时拿不到可以先空着或者使用1代替，当需要登录的时候再替代
-         *  注意：在使用连接统计的时候，切记在断开连接的时候需要把 对应的连接减少
-         * @param queryParamsMap
-         * @return
+         * 握手期连接配额：query 带 appKey 时强制校验（含停用/超限）；不带则兼容旧客户端（依赖后续登录）。
          */
-        private boolean preVerifyAppKeyConnects(Map<String, Object> queryParamsMap) {
-
-            return true;
+        private boolean preVerifyAppKeyConnects(ChannelHandlerContext ctx, Map<String, Object> queryParamsMap) {
+            String appKey = firstQuery(queryParamsMap, "appKey", "app_key");
+            if (StringUtils.isBlank(appKey)) {
+                return true;
+            }
+            return AppKeyValidator.INSTANCE.verify(appKey, ctx);
         }
 
         /**
-         *  提前验证签名
-         * @param queryParamsMap
-         * @return
+         * 握手期签名：query 同时带 appKey/identity/createTime/signature 时强制校验；缺任一字段则跳过（兼容仅连接后发登录包）。
          */
         private boolean preVerifySignature(Map<String, Object> queryParamsMap) {
-            // 根据业务自行处理，有些业务或appKey是不需要校验和签名的
-            return true;
+            String appKey = firstQuery(queryParamsMap, "appKey", "app_key");
+            String identity = firstQuery(queryParamsMap, "identity", "userId", "user_id");
+            String signature = firstQuery(queryParamsMap, "signature", "sign");
+            String createTimeRaw = firstQuery(queryParamsMap, "createTime", "create_time");
+            if (StringUtils.isAnyBlank(appKey, identity, signature, createTimeRaw)) {
+                return true;
+            }
+            long createTime;
+            try {
+                createTime = Long.parseLong(createTimeRaw.trim());
+            } catch (NumberFormatException e) {
+                log.warn("WS 握手 createTime 非法: {}", createTimeRaw);
+                return false;
+            }
+            LoginContent loginContent = new LoginContent();
+            loginContent.setAppKey(appKey);
+            loginContent.setIdentity(identity);
+            loginContent.setSignature(signature);
+            loginContent.setCreateTime(createTime);
+            loginContent.setScope(LoginScopeEnum.NORMAL.getType());
+            String algoRaw = firstQuery(queryParamsMap, "signatureAlgorithm", "signAlgo");
+            if (StringUtils.isNotBlank(algoRaw)) {
+                try {
+                    loginContent.setSignatureAlgorithm(Byte.parseByte(algoRaw.trim()));
+                } catch (NumberFormatException ignored) {
+                    // 默认 MD5
+                }
+            }
+            return LoginAuthValidator.verify(loginContent);
+        }
+
+        private static String firstQuery(Map<String, Object> queryParamsMap, String... keys) {
+            if (queryParamsMap == null || keys == null) {
+                return null;
+            }
+            for (String key : keys) {
+                Object v = queryParamsMap.get(key);
+                if (v != null && StringUtils.isNotBlank(String.valueOf(v))) {
+                    return String.valueOf(v).trim();
+                }
+            }
+            return null;
         }
 
     },

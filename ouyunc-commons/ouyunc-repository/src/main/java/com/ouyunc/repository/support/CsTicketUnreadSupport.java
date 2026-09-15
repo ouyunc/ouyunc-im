@@ -124,6 +124,49 @@ public final class CsTicketUnreadSupport {
         }
     }
 
+    /**
+     * 客服 ticket 撤回：收件人各 deviceType 未读集合移除 packetId。
+     */
+    public void removeOnWithdraw(String appKey, String ticketId, String recipientId, long packetId) {
+        if (StringUtils.isAnyBlank(appKey, ticketId, recipientId) || packetId <= 0L) {
+            return;
+        }
+        Collection<Byte> deviceTypes = resolveDeviceTypes(appKey, recipientId);
+        if (CollectionUtils.isEmpty(deviceTypes)) {
+            return;
+        }
+        String tid = ticketId.trim();
+        String urKey = CacheConstant.buildCsTicketUnreadHashCacheKey(appKey, tid);
+        String packetIdArg = String.valueOf(packetId);
+        long ttl = MessageConstant.CACHE_USER_DEVICE_UNREAD_EXPIRE_TIMESTAMP;
+        DefaultRedisScript<Long> script = new DefaultRedisScript<>(
+                LuaScriptEnum.UNREAD_REMOVE_ONE2ONE_ON_WITHDRAW_SCRIPT.getScript(), Long.class);
+        try {
+            stringRedisTemplate.executePipelined(new SessionCallback<>() {
+                @Override
+                @SuppressWarnings({"unchecked", "rawtypes"})
+                public Object execute(org.springframework.data.redis.core.RedisOperations operations) {
+                    for (Byte deviceType : deviceTypes) {
+                        String field = CacheConstant.buildCsTicketReaderDeviceField(recipientId, deviceType);
+                        String uridKey = CacheConstant.buildCsTicketUnreadIdsCacheKey(appKey, tid, field);
+                        operations.execute(script, List.of(urKey, uridKey),
+                                field, packetIdArg, String.valueOf(ttl));
+                    }
+                    return null;
+                }
+            });
+        } catch (Exception e) {
+            log.error("removeCsTicketUnreadOnWithdraw failed appKey={} ticketId={} recipient={} packetId={}",
+                    appKey, ticketId, recipientId, packetId, e);
+            MessageContext.publishEvent(new MessageEvent(
+                    ExceptionEventPayload.of(
+                            ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
+                            "客服 ticket 撤回清未读失败: " + e.getMessage(),
+                            null),
+                    MessageEventTypeEnum.EXCEPTION), true);
+        }
+    }
+
     static String resolveRecipientId(Message message, CsImSessionRoute route) {
         if (message == null || route == null) {
             return null;

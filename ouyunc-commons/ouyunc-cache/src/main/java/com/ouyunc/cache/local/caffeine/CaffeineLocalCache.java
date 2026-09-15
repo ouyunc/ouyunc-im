@@ -59,11 +59,8 @@ public class CaffeineLocalCache<K, V> extends AbstractLocalCache<K, V> {
 
     @Override
     public V putIfAbsent(K key, V value) {
-        V v = cache.get(key, k -> value);
-        if (Objects.equals(value, v)) {
-            return null;
-        }
-        return v;
+        // 与 ConcurrentMap.putIfAbsent 一致：仅在缺失时插入，已有值（含 equals）返回旧值
+        return cache.asMap().putIfAbsent(key, value);
     }
 
     /**

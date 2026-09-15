@@ -51,10 +51,13 @@ public class HttpProtocolDispatcherHandler extends SimpleChannelInboundHandler<O
                 if (MessageConstant.MQTT.equals(secWebsocketProtocol) || MessageConstant.MQTT_3_1.equals(secWebsocketProtocol)) {
                     ctx.pipeline()
                             //10 * 1024 * 1024
-                            .addLast(MessageConstant.WS_FRAME_AGGREGATOR_HANDLER, new WebSocketFrameAggregator(Integer.MAX_VALUE))
+                            .addLast(MessageConstant.WS_FRAME_AGGREGATOR_HANDLER,
+                                    new WebSocketFrameAggregator(MessageConstant.MAX_WEBSOCKET_FRAME_SIZE))
                             .addLast(MessageConstant.WS_COMPRESSION_HANDLER, new WebSocketServerCompressionHandler(NumberConstant.NUMBER_0))
-                            //10485760
-                            .addLast(MessageConstant.WS_SERVER_PROTOCOL_HANDLER, new WebSocketServerProtocolHandler(MessageServerContext.serverProperties().getWebsocketPath(), MessageConstant.MQTT_WEBSOCKET_SUB_PROTOCOLS, true, Integer.MAX_VALUE))
+                            .addLast(MessageConstant.WS_SERVER_PROTOCOL_HANDLER, new WebSocketServerProtocolHandler(
+                                    MessageServerContext.serverProperties().getWebsocketPath(),
+                                    MessageConstant.MQTT_WEBSOCKET_SUB_PROTOCOLS, true,
+                                    MessageConstant.MAX_WEBSOCKET_FRAME_SIZE))
                             // mqtt websocket 编解码器
                             .addLast(MessageConstant.MQTT_WEBSOCKET_CODEC_HANDLER, new MqttWebSocketCodec());
                     MessageServerContext.findProtocol(NativePacketProtocol.MQTT.getProtocol(), NativePacketProtocol.MQTT.getProtocolVersion()).doDispatcher(ctx, request);

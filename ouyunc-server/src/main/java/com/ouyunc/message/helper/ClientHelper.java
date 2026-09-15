@@ -68,33 +68,67 @@ public class ClientHelper {
 
     /***
      * @author fzx
-     * @description 客户端绑定登录信息：先写 Redis，成功后再注册本地表与 Channel 属性。
-     *              返回 CompletableFuture，在集群可见且本机可路由后完成（调用方再发登录成功 ACK）。
+     * @description 客户端绑定登录信息：分布式锁内 CAS 写 Redis（拒绝更旧 lastLoginTime），
+     *              成功后再注册本地表与 Channel 属性。Future 结果为被顶替的上一会话（可空），
+     *              调用方应在确认仍拥有目录后再踢旧连接并发登录 ACK。
      */
-    public static CompletableFuture<Void> bindAsync(ChannelHandlerContext ctx, LoginClientInfo loginClientInfo) {
+    public static CompletableFuture<LoginClientInfo> bindAsync(ChannelHandlerContext ctx, LoginClientInfo loginClientInfo) {
         String comboIdentity = IdentityUtil.generalComboIdentity(
                 loginClientInfo.getAppKey(), loginClientInfo.getIdentity(), loginClientInfo.getDeviceType());
         Channel channel = ctx.channel();
-        return CompletableFuture.runAsync(() -> {
-                    doBindRemote(loginClientInfo, comboIdentity);
+        return CompletableFuture.supplyAsync(() -> {
+                    LoginClientInfo previous = doBindRemote(loginClientInfo, comboIdentity);
                     rollbackRemoteIfChannelClosed(loginClientInfo, comboIdentity, channel);
+                    return previous;
                 }, ThreadPoolManager.messageProcessorExecutor())
-                .thenCompose(unused -> runOnEventLoop(channel, () -> {
+                .thenCompose(previous -> runOnEventLoop(channel, () -> {
                     if (!channel.isActive()) {
                         rollbackRemoteIfChannelClosed(loginClientInfo, comboIdentity, channel);
                         throw new MessageException("channel 已关闭，放弃完成本地注册");
                     }
+                    ChannelHandlerContext staleLocal =
+                            MessageServerContext.localLoginClientRegisterTable.get(comboIdentity);
                     ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN, loginClientInfo);
                     ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_HEARTBEAT_TIMEOUT,
                             loginClientInfo.getHeartBeatTimeout());
                     registerLocal(comboIdentity, ctx, loginClientInfo.getAppKey());
-                }))
+                    // 本机旧连接：在覆盖注册表前已取出引用，绑定胜出后立即关闭，避免双在线
+                    closeStaleLocalIfPresent(staleLocal, ctx);
+                }).thenApply(unused -> previous))
                 .whenComplete((unused, ex) -> {
                     if (ex != null) {
                         unregisterLocal(comboIdentity, ctx, loginClientInfo.getAppKey());
                         rollbackRemoteIfChannelClosed(loginClientInfo, comboIdentity, channel);
                     }
                 });
+    }
+
+    /**
+     * 绑定完成后校验本端是否仍是目录主人（防止解锁后被更新会话覆盖却继续发 ACK）。
+     */
+    public static boolean stillOwnsDirectory(LoginClientInfo loginClientInfo) {
+        if (loginClientInfo == null) {
+            return false;
+        }
+        String comboIdentity = IdentityUtil.generalComboIdentity(
+                loginClientInfo.getAppKey(), loginClientInfo.getIdentity(), loginClientInfo.getDeviceType());
+        LoginClientInfo remote = MessageServerContext.remoteLoginClientInfoCache.get(
+                CacheConstant.buildLoginCacheKey(loginClientInfo.getAppKey(), comboIdentity));
+        return remote != null
+                && remote.getLastLoginTime() == loginClientInfo.getLastLoginTime()
+                && Objects.equals(loginClientInfo.getLoginServerAddress(), remote.getLoginServerAddress());
+    }
+
+    private static void closeStaleLocalIfPresent(ChannelHandlerContext staleLocal, ChannelHandlerContext currentCtx) {
+        if (staleLocal == null || staleLocal == currentCtx || staleLocal.channel() == null
+                || !staleLocal.channel().isActive()) {
+            return;
+        }
+        if (staleLocal.channel().eventLoop().inEventLoop()) {
+            staleLocal.close();
+            return;
+        }
+        staleLocal.channel().eventLoop().execute(staleLocal::close);
     }
 
     /**
@@ -176,15 +210,25 @@ public class ClientHelper {
     }
 
     /**
-     * 目录写仍加同端锁，避免同 identity+device 并发登录互相覆盖。
+     * 目录写加同端锁：读出上一会话，若其 lastLoginTime 严格更大则拒绑（跨节点 fencing）；
+     * 否则覆盖绑定并返回上一会话供调用方踢线。
      */
-    private static void doBindRemote(LoginClientInfo loginClientInfo, String comboIdentity) {
+    private static LoginClientInfo doBindRemote(LoginClientInfo loginClientInfo, String comboIdentity) {
         RLock lock = MessageServerContext.redissonClient.getLock(
                 CacheConstant.buildIdentityBindOrUnbindLockCacheKey(loginClientInfo.getAppKey(), comboIdentity));
         try {
             if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
                 try {
+                    String loginKey = CacheConstant.buildLoginCacheKey(loginClientInfo.getAppKey(), comboIdentity);
+                    LoginClientInfo previous = MessageServerContext.remoteLoginClientInfoCache.get(loginKey);
+                    if (previous != null
+                            && previous.getLastLoginTime() > loginClientInfo.getLastLoginTime()) {
+                        log.warn("登录 fencing 拒绝更旧会话 combo={} previousTs={} currentTs={}",
+                                comboIdentity, previous.getLastLoginTime(), loginClientInfo.getLastLoginTime());
+                        throw new MessageException("登录绑定失败：已有更新会话");
+                    }
                     LoginSessionDirectory.bind(loginClientInfo, comboIdentity);
+                    return previous;
                 } finally {
                     if (lock.isHeldByCurrentThread()) {
                         lock.unlock();
@@ -198,6 +242,8 @@ public class ClientHelper {
             Thread.currentThread().interrupt();
             log.error("客户端绑定登录信息被中断: {}", loginClientInfo, e);
             throw new MessageException(e);
+        } catch (MessageException e) {
+            throw e;
         } catch (Exception e) {
             log.error("客户端绑定登录信息失败,原因：{}", e.getMessage(), e);
             throw new MessageException(e);

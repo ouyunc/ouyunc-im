@@ -19,7 +19,7 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * 消息 MQ 投递：协议包与 JSON 共用同一套发送与失败回调，对外只保留旁路异步方法。
- * <p>失败时异步写入 MySQL Outbox（{@link MqOutboxSupport}），不回滚 Redis、不挡在线 ACK。</p>
+ * <p>失败时同步写入 MySQL Outbox（{@link MqOutboxSupport}），不回滚 Redis、不挡在线 ACK。</p>
  */
 public final class MessageMqPublisherSupport {
 
@@ -126,7 +126,7 @@ public final class MessageMqPublisherSupport {
     }
 
     /**
-     * Packet / JSON 发送失败：打 warn、发布异常事件，并异步写入 MySQL Outbox 供补发。
+     * Packet / JSON 发送失败：打 warn、发布异常事件，并同步写入 MySQL Outbox 供补发。
      */
     private void handleFailure(String topic, String key, Long packetId, String payload, Packet packet,
                                String failureContext, Throwable ex) {

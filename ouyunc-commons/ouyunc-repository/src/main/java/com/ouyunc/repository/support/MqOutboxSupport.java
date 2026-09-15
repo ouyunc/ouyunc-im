@@ -2,9 +2,13 @@ package com.ouyunc.repository.support;
 
 import com.ouyunc.base.constant.JdbcSqlDialectHolder;
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
+import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.constant.enums.MqOutboxStatus;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.core.context.MessageContext;
+import com.ouyunc.core.listener.event.MessageEvent;
+import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.domain.entity.MqOutboxEntity;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -34,24 +38,25 @@ public final class MqOutboxSupport {
     }
 
     /**
-     * 异步入队 Outbox（仓库线程池），不阻塞 MQ 失败回调线程。
+     * 可靠入队（B2）：MQ 失败路径上同步写 Outbox，消除「线程池已接单、进程崩溃未落库」窗口。
+     * <p>失败场景稀少，同步 JDBC 可接受；写库失败发异常事件便于告警。方法名保留 enqueueAsync 兼容调用方。</p>
      */
     public void enqueueAsync(String topic, String mqKey, Long packetId, String payload, String failureContext, String lastError) {
         if (StringUtils.isBlank(topic) || StringUtils.isBlank(payload)) {
             log.warn("MQ Outbox 入队跳过：topic/payload 为空 topic={} packetId={}", topic, packetId);
             return;
         }
-        try {
-            infra.dbExecutor().execute(() -> enqueue(topic, mqKey, packetId, payload, failureContext, lastError));
-        } catch (Exception ex) {
-            log.error("MQ Outbox 提交异步入队失败 topic={} packetId={}", topic, packetId, ex);
+        if (!enqueue(topic, mqKey, packetId, payload, failureContext, lastError)) {
+            publishOutboxEnqueueFailure(topic, packetId, failureContext, lastError, null);
         }
     }
 
     /**
      * 同步写入；同 topic+biz_key 冲突时刷新错误信息与 payload。
+     *
+     * @return true 表示 JDBC 写入成功
      */
-    public void enqueue(String topic, String mqKey, Long packetId, String payload, String failureContext, String lastError) {
+    public boolean enqueue(String topic, String mqKey, Long packetId, String payload, String failureContext, String lastError) {
         long id = MessageContext.idGenerator().generateId();
         String bizKey = buildBizKey(packetId, mqKey, payload);
         long now = TimeUtil.currentTimeMillis();
@@ -69,9 +74,26 @@ public final class MqOutboxSupport {
                     .param(MqOutboxEntity.Fields.lastError, truncate(lastError, 1024))
                     .param(MqOutboxEntity.Fields.failureContext, truncate(failureContext, 512))
                     .update();
+            return true;
         } catch (Exception ex) {
             log.error("MQ Outbox 写入失败 topic={} bizKey={} packetId={}", topic, bizKey, packetId, ex);
+            return false;
         }
+    }
+
+    private static void publishOutboxEnqueueFailure(String topic, Long packetId, String failureContext,
+                                                    String lastError, Throwable cause) {
+        String detail = "MQ Outbox 入队失败 topic=" + topic
+                + " packetId=" + packetId
+                + " context=" + StringUtils.defaultString(failureContext)
+                + " error=" + StringUtils.defaultString(lastError);
+        if (cause != null) {
+            detail = detail + " cause=" + cause.getMessage();
+        }
+        log.error(detail);
+        MessageContext.publishEvent(new MessageEvent(
+                ExceptionEventPayload.of(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, detail, null),
+                MessageEventTypeEnum.EXCEPTION), true);
     }
 
     /** 回收僵死 SENDING，再拉取到期 PENDING。 */
