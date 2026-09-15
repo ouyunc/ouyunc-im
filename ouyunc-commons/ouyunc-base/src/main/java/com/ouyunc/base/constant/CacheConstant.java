@@ -631,28 +631,49 @@ public class CacheConstant {
 
     // ---------- 内容安全（敏感词 / 策略 / 热更新）----------
 
-    /** 平台默认词库租户标记（与租户词库合并加载）。 */
+    /** 平台默认词库租户标记，加载时与租户词库合并。 */
     public static final String CONTENT_SAFETY_GLOBAL_APP_KEY = "__global__";
 
-    /** 租户策略 JSON。 */
+    /**
+     * 租户策略 Redis String key，值为 ContentSafetyPolicy JSON。
+     *
+     * @param appKey 租户
+     * @return Redis key
+     */
     public static String buildContentSafetyPolicyCacheKey(String appKey) {
         return OUYUNC + "im:cs:policy:" + appKey;
     }
 
-    /** 词库 Hash：field=word，value=category|level。 */
+    /**
+     * 词库 Redis Hash：field=word，value=category|level。
+     *
+     * @param appKey 租户或 {@link #CONTENT_SAFETY_GLOBAL_APP_KEY}
+     * @return Redis key
+     */
     public static String buildContentSafetyWordsCacheKey(String appKey) {
         return OUYUNC + "im:cs:words:" + appKey;
     }
 
-    /** 词库版本号，变更时自增。 */
+    /**
+     * 词库版本号 Redis String，变更时 INCR。
+     *
+     * @param appKey 租户
+     * @return Redis key
+     */
     public static String buildContentSafetyVersionCacheKey(String appKey) {
         return OUYUNC + "im:cs:version:" + appKey;
     }
 
-    /** Pub/Sub 频道：payload 为 appKey 或 ALL。 */
+    /** Pub/Sub 频道名；payload 为 appKey 或 ALL。 */
     public static final String CONTENT_SAFETY_RELOAD_CHANNEL = OUYUNC + "im:cs:reload";
 
-    /** 媒体审核幂等键。 */
+    /**
+     * 媒体审核幂等键（P1）。
+     *
+     * @param appKey   租户
+     * @param packetId 协议包 id
+     * @return Redis key
+     */
     public static String buildContentModerateDedupeCacheKey(String appKey, long packetId) {
         return OUYUNC + "im:cs:moderate:dedupe:" + appKey + COLON + packetId;
     }

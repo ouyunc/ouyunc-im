@@ -320,7 +320,10 @@ public enum NativePacketProtocol implements PacketProtocol {
     ;
 
     /**
-     * 内容安全必须在登录鉴权之后：有登录则 Auth → ContentSafety → PRE；无登录则 ContentSafety → PRE。
+     * 挂载登录鉴权与内容安全。
+     * <p>有登录：Auth → ContentSafety → PRE；无登录：ContentSafety → PRE。禁止把内容安全挂到鉴权前。</p>
+     *
+     * @param pipeline 当前连接管道
      */
     private static void installAuthAndContentSafety(ChannelPipeline pipeline) {
         if (MessageServerContext.serverProperties().isServerLoginEnable()) {

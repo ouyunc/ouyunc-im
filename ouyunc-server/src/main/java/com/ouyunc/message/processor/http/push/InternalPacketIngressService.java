@@ -230,7 +230,10 @@ public final class InternalPacketIngressService {
     }
 
     /**
-     * 内容安全拒绝时返回 400；MASK 已原地改写 packet.content，继续受理。
+     * 内容安全拒绝时返回 HTTP 400；MASK 已原地改写 packet.content，继续受理。
+     * 检查异常时放行，避免误杀整条推送。
+     *
+     * @param packet 已组装的协议包
      */
     private static void applyContentSafetyOrThrow(Packet packet) throws HttpPipelineException {
         ContentSafetyResult result;

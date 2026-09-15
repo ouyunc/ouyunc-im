@@ -14,13 +14,21 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * 内容安全处理器：须挂在登录鉴权之后、业务 PRE 之前。
- * <p>敏感词 REJECT 时不向下传递；MASK/AUDIT/PASS 继续 fire。</p>
+ * 内容安全 Netty 处理器。
+ * <p>须挂在登录鉴权之后、业务 PRE 之前。REJECT 不向下传递并发 40010；MASK/AUDIT/PASS 继续 fire。
+ * 检查异常时放行，避免误杀。</p>
  */
 public class ContentSafetyHandler extends SimpleChannelInboundHandler<Packet> {
 
+    /** 日志。 */
     private static final Logger log = LoggerFactory.getLogger(ContentSafetyHandler.class);
 
+    /**
+     * 对入站 Packet 做敏感词检查。
+     *
+     * @param ctx    通道上下文
+     * @param packet 协议包
+     */
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Packet packet) {
         ContentSafetyResult result;

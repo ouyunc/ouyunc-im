@@ -1019,26 +1019,44 @@ public class MessageServerProperties extends MessageProperties {
         this.serverLoginEnable = serverLoginEnable;
     }
 
+    /**
+     * @return 内容安全总开关
+     */
     public boolean isContentSafetyEnable() {
         return contentSafetyEnable;
     }
 
+    /**
+     * @param contentSafetyEnable 内容安全总开关
+     */
     public void setContentSafetyEnable(boolean contentSafetyEnable) {
         this.contentSafetyEnable = contentSafetyEnable;
     }
 
+    /**
+     * @return 无租户策略时的默认文本动作
+     */
     public String getContentSafetyDefaultTextAction() {
         return contentSafetyDefaultTextAction;
     }
 
+    /**
+     * @param contentSafetyDefaultTextAction MASK / REJECT / AUDIT_ONLY
+     */
     public void setContentSafetyDefaultTextAction(String contentSafetyDefaultTextAction) {
         this.contentSafetyDefaultTextAction = contentSafetyDefaultTextAction;
     }
 
+    /**
+     * @return 无租户策略时的默认媒体动作
+     */
     public String getContentSafetyDefaultMediaAction() {
         return contentSafetyDefaultMediaAction;
     }
 
+    /**
+     * @param contentSafetyDefaultMediaAction SEND_THEN_REVIEW / HOLD
+     */
     public void setContentSafetyDefaultMediaAction(String contentSafetyDefaultMediaAction) {
         this.contentSafetyDefaultMediaAction = contentSafetyDefaultMediaAction;
     }

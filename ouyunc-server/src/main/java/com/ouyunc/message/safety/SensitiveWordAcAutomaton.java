@@ -10,12 +10,19 @@ import java.util.Map;
 import java.util.Queue;
 
 /**
- * Aho-Corasick 多模式匹配；词条按小写匹配（Latin），中文原样。
+ * Aho-Corasick 多模式敏感词匹配器。
+ * <p>构建后只读，可多线程共享。拉丁字母按小写匹配，中文原样。词库变更应新建实例，勿原地改树。</p>
  */
 public final class SensitiveWordAcAutomaton {
 
+    /** AC 自动机根节点。 */
     private final Node root = new Node();
 
+    /**
+     * 用词集合构建自动机（含 fail 指针）。
+     *
+     * @param words 敏感词，空/空白项会被跳过
+     */
     public SensitiveWordAcAutomaton(Iterable<String> words) {
         if (words != null) {
             for (String word : words) {
@@ -27,6 +34,12 @@ public final class SensitiveWordAcAutomaton {
         buildFail();
     }
 
+    /**
+     * 扫描文本，返回去重且保序的命中词（归一化后的词形）。
+     *
+     * @param text 原文
+     * @return 命中列表，未命中为空列表
+     */
     public List<String> findAll(String text) {
         if (text == null || text.isEmpty()) {
             return List.of();
@@ -61,6 +74,14 @@ public final class SensitiveWordAcAutomaton {
         return Collections.unmodifiableList(unique);
     }
 
+    /**
+     * 按命中词从长到短替换为等长掩码，避免短词破坏长词。
+     *
+     * @param text     原文
+     * @param hits     命中词
+     * @param maskChar 掩码字符，取首字符，空则 *
+     * @return 脱敏文本
+     */
     public String mask(String text, List<String> hits, String maskChar) {
         if (text == null || hits == null || hits.isEmpty()) {
             return text;
@@ -80,6 +101,11 @@ public final class SensitiveWordAcAutomaton {
         return out;
     }
 
+    /**
+     * 将词插入 Trie。
+     *
+     * @param word 已归一化的词
+     */
     private void insert(String word) {
         Node cur = root;
         for (int i = 0; i < word.length(); i++) {
@@ -89,6 +115,9 @@ public final class SensitiveWordAcAutomaton {
         cur.word = word;
     }
 
+    /**
+     * BFS 构建 fail 指针。
+     */
     private void buildFail() {
         Queue<Node> queue = new LinkedList<>();
         root.fail = root;
@@ -114,13 +143,25 @@ public final class SensitiveWordAcAutomaton {
         }
     }
 
+    /**
+     * 拉丁字母转小写，中文不变。
+     *
+     * @param s 原文
+     * @return 归一化结果
+     */
     private static String normalize(String s) {
         return s.toLowerCase(Locale.ROOT);
     }
 
+    /**
+     * AC 树节点。
+     */
     private static final class Node {
+        /** 子边。 */
         private final Map<Character, Node> next = new HashMap<>();
+        /** 失败指针。 */
         private Node fail;
+        /** 若本节点为词尾，存放归一化后的词。 */
         private String word;
     }
 }

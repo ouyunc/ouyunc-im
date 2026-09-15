@@ -195,18 +195,30 @@ public class Metadata implements Serializable, Cloneable {
         this.qosOwnerToken = qosOwnerToken;
     }
 
+    /**
+     * @return 内容审核状态 NONE/PENDING/PASS/REJECT
+     */
     public String getModerationStatus() {
         return moderationStatus;
     }
 
+    /**
+     * @param moderationStatus 内容审核状态
+     */
     public void setModerationStatus(String moderationStatus) {
         this.moderationStatus = moderationStatus;
     }
 
+    /**
+     * @return 审核模式 SEND_THEN_REVIEW / HOLD
+     */
     public String getModerationMode() {
         return moderationMode;
     }
 
+    /**
+     * @param moderationMode 审核模式
+     */
     public void setModerationMode(String moderationMode) {
         this.moderationMode = moderationMode;
     }

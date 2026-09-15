@@ -12,16 +12,27 @@ import java.util.function.Consumer;
 
 /**
  * 订阅 Redis 内容安全热更新频道（Redisson Topic）。
+ * <p>payload 为 appKey 或 ALL。订阅失败不阻断启动，仅依赖 Caffeine 过期刷新。</p>
  */
 public final class ContentSafetyReloadSubscriber {
 
+    /** 日志。 */
     private static final Logger log = LoggerFactory.getLogger(ContentSafetyReloadSubscriber.class);
 
+    /** 已注册的 listener id，非空表示已订阅。 */
     private static volatile Integer listenerId;
 
+    /**
+     * 工具类，禁止实例化。
+     */
     private ContentSafetyReloadSubscriber() {
     }
 
+    /**
+     * 幂等启动订阅；重复调用直接返回。
+     *
+     * @param onReload 收到通知后的回调，参数为 appKey 或 ALL
+     */
     public static synchronized void start(Consumer<String> onReload) {
         if (listenerId != null) {
             return;
