@@ -18,6 +18,7 @@ import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.http.HttpRequestDispatcher;
 import com.ouyunc.message.monitor.MonitorInitializer;
+import com.ouyunc.message.schedule.MqOutboxRelay;
 import com.ouyunc.repository.DefaultRepository;
 import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
@@ -88,6 +89,8 @@ class ServerStartupEventMessageEventListener implements MessageEventListener<Mes
         // 无论当前 Redis 是否已有 appKey，均启动订阅，避免启动时空集合导致后续无法收到设备类型
         startAppKeyDeviceTypeSubscription();
         NodeLeaseKeeper.start();
+        // MQ 旁路失败 MySQL Outbox 补发
+        MqOutboxRelay.start();
         // 启动资源监控
         MonitorInitializer.startMonitoring();
     }

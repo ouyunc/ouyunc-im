@@ -102,6 +102,30 @@ public final class JdbcSqlDialectHolder {
         return pick(JdbcSqlConstant.POSTGRESQL.SELECT_ALL_APPS, JdbcSqlConstant.ORACLE.SELECT_ALL_APPS, JdbcSqlConstant.MYSQL.SELECT_ALL_APPS);
     }
 
+    public static String insertMqOutbox() {
+        return pick(JdbcSqlConstant.POSTGRESQL.INSERT_MQ_OUTBOX, JdbcSqlConstant.ORACLE.INSERT_MQ_OUTBOX, JdbcSqlConstant.MYSQL.INSERT_MQ_OUTBOX);
+    }
+
+    public static String selectMqOutboxDue() {
+        return pick(JdbcSqlConstant.POSTGRESQL.SELECT_MQ_OUTBOX_DUE, JdbcSqlConstant.ORACLE.SELECT_MQ_OUTBOX_DUE, JdbcSqlConstant.MYSQL.SELECT_MQ_OUTBOX_DUE);
+    }
+
+    public static String claimMqOutbox() {
+        return pick(JdbcSqlConstant.POSTGRESQL.CLAIM_MQ_OUTBOX, JdbcSqlConstant.ORACLE.CLAIM_MQ_OUTBOX, JdbcSqlConstant.MYSQL.CLAIM_MQ_OUTBOX);
+    }
+
+    public static String deleteMqOutbox() {
+        return pick(JdbcSqlConstant.POSTGRESQL.DELETE_MQ_OUTBOX, JdbcSqlConstant.ORACLE.DELETE_MQ_OUTBOX, JdbcSqlConstant.MYSQL.DELETE_MQ_OUTBOX);
+    }
+
+    public static String updateMqOutboxRetry() {
+        return pick(JdbcSqlConstant.POSTGRESQL.UPDATE_MQ_OUTBOX_RETRY, JdbcSqlConstant.ORACLE.UPDATE_MQ_OUTBOX_RETRY, JdbcSqlConstant.MYSQL.UPDATE_MQ_OUTBOX_RETRY);
+    }
+
+    public static String resetStaleMqOutboxSending() {
+        return pick(JdbcSqlConstant.POSTGRESQL.RESET_STALE_MQ_OUTBOX_SENDING, JdbcSqlConstant.ORACLE.RESET_STALE_MQ_OUTBOX_SENDING, JdbcSqlConstant.MYSQL.RESET_STALE_MQ_OUTBOX_SENDING);
+    }
+
     private static String pick(JdbcSqlConstant.POSTGRESQL pg, JdbcSqlConstant.ORACLE ora, JdbcSqlConstant.MYSQL my) {
         return switch (current) {
             case POSTGRESQL -> pg.sql();

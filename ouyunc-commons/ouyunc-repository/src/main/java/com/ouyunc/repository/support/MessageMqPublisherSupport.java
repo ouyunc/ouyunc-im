@@ -19,6 +19,7 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * 消息 MQ 投递：协议包与 JSON 共用同一套发送与失败回调，对外只保留旁路异步方法。
+ * <p>失败时异步写入 MySQL Outbox（{@link MqOutboxSupport}），不回滚 Redis、不挡在线 ACK。</p>
  */
 public final class MessageMqPublisherSupport {
 
@@ -28,9 +29,16 @@ public final class MessageMqPublisherSupport {
     private static final String ARCHIVE_FAILURE_CONTEXT = "异步归档消息到 MQ";
 
     private final RepositoryInfrastructure infra;
+    private final MqOutboxSupport mqOutbox;
 
     public MessageMqPublisherSupport(RepositoryInfrastructure infra) {
         this.infra = infra;
+        this.mqOutbox = new MqOutboxSupport(infra);
+    }
+
+    MessageMqPublisherSupport(RepositoryInfrastructure infra, MqOutboxSupport mqOutbox) {
+        this.infra = infra;
+        this.mqOutbox = mqOutbox;
     }
 
     /**
@@ -46,7 +54,7 @@ public final class MessageMqPublisherSupport {
     }
 
     /**
-     * 旁路异步投递协议包：不阻塞调用方；失败记日志并发布异常事件。
+     * 旁路异步投递协议包：不阻塞调用方；失败记日志、发异常事件并入 MySQL Outbox。
      */
     public void publishPacketAsync(String topic, String key, Packet packet, String failureContext) {
         publishPacket(topic, key, packet, failureContext);
@@ -72,8 +80,8 @@ public final class MessageMqPublisherSupport {
                 }
             }));
         } catch (Exception ex) {
-            handleFailure(MqConstant.MQ_SAVE_MESSAGE_TOPIC, null, snapshot.getPacketId(), snapshot,
-                    ARCHIVE_FAILURE_CONTEXT, ex);
+            handleFailure(MqConstant.MQ_SAVE_MESSAGE_TOPIC, null, snapshot.getPacketId(),
+                    JSON.toJSONString(snapshot), snapshot, ARCHIVE_FAILURE_CONTEXT, ex);
             return CompletableFuture.failedFuture(ex);
         }
         return result;
@@ -83,12 +91,13 @@ public final class MessageMqPublisherSupport {
      * 发送协议包并挂失败回调；同步异常转为已完成的失败 Future。
      */
     private CompletableFuture<?> publishPacket(String topic, String key, Packet packet, String failureContext) {
+        String payload = JSON.toJSONString(packet);
         try {
             CompletableFuture<?> future = sendPacket(topic, key, packet);
-            attachFailure(future, topic, key, packet.getPacketId(), packet, failureContext);
+            attachFailure(future, topic, key, packet.getPacketId(), payload, packet, failureContext);
             return future;
         } catch (Exception ex) {
-            handleFailure(topic, key, packet.getPacketId(), packet, failureContext, ex);
+            handleFailure(topic, key, packet.getPacketId(), payload, packet, failureContext, ex);
             return CompletableFuture.failedFuture(ex);
         }
     }
@@ -98,9 +107,9 @@ public final class MessageMqPublisherSupport {
      */
     public void publishJsonAsync(String topic, String key, String jsonBody, String failureContext) {
         try {
-            attachFailure(infra.mqPublisher.send(topic, key, jsonBody, null), topic, key, null, null, failureContext);
+            attachFailure(infra.mqPublisher.send(topic, key, jsonBody, null), topic, key, null, jsonBody, null, failureContext);
         } catch (Exception ex) {
-            handleFailure(topic, key, null, null, failureContext, ex);
+            handleFailure(topic, key, null, jsonBody, null, failureContext, ex);
         }
     }
 
@@ -108,18 +117,18 @@ public final class MessageMqPublisherSupport {
      * Future 完成后的失败回调。
      */
     private void attachFailure(CompletableFuture<?> future, String topic, String key,
-                               Long packetId, Packet packet, String failureContext) {
+                               Long packetId, String payload, Packet packet, String failureContext) {
         future.whenComplete((ignored, ex) -> {
             if (ex != null) {
-                handleFailure(topic, key, packetId, packet, failureContext, ex);
+                handleFailure(topic, key, packetId, payload, packet, failureContext, ex);
             }
         });
     }
 
     /**
-     * Packet / JSON 发送失败：打 warn 并发布 {@link ExceptionCodeEnum#MQ_PERSISTENCE_ERROR}。
+     * Packet / JSON 发送失败：打 warn、发布异常事件，并异步写入 MySQL Outbox 供补发。
      */
-    private void handleFailure(String topic, String key, Long packetId, Packet packet,
+    private void handleFailure(String topic, String key, Long packetId, String payload, Packet packet,
                                String failureContext, Throwable ex) {
         log.warn("MQ 旁路投递失败, topic={}, key={}, packetId={}, context={}, 原因: {}",
                 topic, key, packetId, failureContext, ex.getMessage(), ex);
@@ -127,5 +136,6 @@ public final class MessageMqPublisherSupport {
                 ExceptionEventPayload.of(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR,
                         failureContext + ": " + ex.getMessage(), packet),
                 MessageEventTypeEnum.EXCEPTION), true);
+        mqOutbox.enqueueAsync(topic, key, packetId, payload, failureContext, ex.getMessage());
     }
 }
