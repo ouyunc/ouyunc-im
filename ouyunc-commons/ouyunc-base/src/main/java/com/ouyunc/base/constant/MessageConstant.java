@@ -369,6 +369,16 @@ public class MessageConstant {
     public static final int CHANNEL_ORDERED_TASK_MAX = 256;
 
     /**
+     * 连接有序队列单任务 deadline（毫秒）。超时视为失败并推进下一条，避免永久卡住。
+     */
+    public static final long CHANNEL_ORDERED_TASK_DEADLINE_MS = 30_000L;
+
+    /**
+     * 连接有序调度被拒绝后的延迟重试（毫秒）；仍失败则关连清队列。
+     */
+    public static final long CHANNEL_ORDERED_SCHEDULE_RETRY_DELAY_MS = 50L;
+
+    /**
      * 群成员 identity 列表本地缓存。短 TTL，HTTP 侧改成员后最多延迟这么久；调用方会 remove 发送者，必须返回副本。
      */
     public static final int GROUP_MEMBER_IDENTITY_CACHE_EXPIRE_SECONDS = 5;
