@@ -45,6 +45,13 @@ public final class ThreadPoolConfig {
                 .threadNamePrefix("qos-task")
                 .daemon(true)
                 .build());
+        // 租约刷新频率高、任务轻；独立有界池，拒绝时不影响时间轮，也不与 QoS 抢容量
+        defaults.put(ThreadPoolId.NODE_LEASE, PoolConfig.builder()
+                .type(ThreadPoolType.VIRTUAL)
+                .threadNamePrefix("node-lease")
+                .maxPendingTasks(1_024)
+                .daemon(true)
+                .build());
         defaults.put(ThreadPoolId.ROUTER, PoolConfig.builder()
                 .type(ThreadPoolType.VIRTUAL)
                 .threadNamePrefix("router")

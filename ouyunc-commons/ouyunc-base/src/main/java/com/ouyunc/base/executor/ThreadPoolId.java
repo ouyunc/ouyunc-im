@@ -7,6 +7,8 @@ public enum ThreadPoolId {
     MESSAGE_SEND("message-send"),
     MESSAGE_PROCESSOR("message-processor"),
     QOS_TASK("qos-task"),
+    /** 节点租约心跳 / 连接数发布，与 QoS 重试隔离，避免业务池打满拖死路由 */
+    NODE_LEASE("node-lease"),
     ROUTER("router"),
     REPOSITORY("repository"),
     EVENT_LISTENER("event-listener"),

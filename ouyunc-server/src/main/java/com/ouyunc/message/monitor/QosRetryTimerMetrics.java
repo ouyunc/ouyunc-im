@@ -15,7 +15,15 @@ public record QosRetryTimerMetrics(
         long hitCount,
         long missCount,
         long evictionCount,
-        long requestCount
+        long requestCount,
+        /** 时间轮触发滞后样本数 */
+        long triggerDelayCount,
+        /** 时间轮触发滞后平均毫秒 */
+        double triggerDelayAvgMs,
+        /** 时间轮触发滞后最大毫秒 */
+        double triggerDelayMaxMs,
+        /** 向有界执行器提交被拒绝累计 */
+        long executorRejectCount
 ) {
 
     public static final String CACHE_NAME = "timerTaskCaffeine";

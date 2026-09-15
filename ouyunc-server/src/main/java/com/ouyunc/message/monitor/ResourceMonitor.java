@@ -396,13 +396,14 @@ public final class ResourceMonitor {
         log.info("【线程池监控】");
         metrics.forEach((id, m) -> {
             if (m.activeThreads() >= 0) {
-                log.info("  {}: 活跃线程={}个, 池大小={}个, 已完成任务={}个, 总任务={}个, 队列大小={}, 状态={}",
+                log.info("  {}: 活跃线程={}个, 池大小={}个, 已完成任务={}个, 总任务={}个, 队列大小={}, 拒绝={}, 状态={}",
                         id.getConfigKey(),
                         m.activeThreads(),
                         m.poolSize(),
                         m.completedTaskCount(),
                         m.taskCount(),
                         m.queueSize() >= 0 ? m.queueSize() + "个" : "N/A",
+                        m.rejectedCount(),
                         m.shutdown() ? "已关闭" : (m.terminated() ? "已终止" : "运行中")
                 );
             } else {
@@ -449,7 +450,7 @@ public final class ResourceMonitor {
             return;
         }
         log.info(
-                "【QoS 定时重试】活跃任务={}/{} 条 (占用 {}%), 剩余容量={} 条, 容量淘汰累计={} 次, 缓存淘汰={} 次, 命中={} 次, 未命中={} 次",
+                "【QoS 定时重试】活跃任务={}/{} 条 (占用 {}%), 剩余容量={} 条, 容量淘汰累计={} 次, 缓存淘汰={} 次, 命中={} 次, 未命中={} 次, 时间轮滞后avg={}ms/max={}ms(样本={}), 执行器拒绝={}",
                 m.activeTasks(),
                 m.maxCapacity(),
                 String.format("%.1f", m.utilization() * 100),
@@ -457,7 +458,11 @@ public final class ResourceMonitor {
                 m.sizeEvictionCount(),
                 m.evictionCount(),
                 m.hitCount(),
-                m.missCount()
+                m.missCount(),
+                String.format("%.1f", m.triggerDelayAvgMs()),
+                String.format("%.1f", m.triggerDelayMaxMs()),
+                m.triggerDelayCount(),
+                m.executorRejectCount()
         );
         collectQosRetryTimerWarnings(m).forEach(msg -> log.warn("[QoS定时重试预警] {}", msg));
     }
@@ -482,6 +487,16 @@ public final class ResourceMonitor {
                     "[淘汰] 累计 %d 次因容量满被淘汰（RemovalCause.SIZE），未 ACK 消息可能停止重推",
                     m.sizeEvictionCount()));
         }
+        if (m.executorRejectCount() > 0) {
+            warnings.add(String.format(
+                    "[拒绝] 累计 %d 次向有界执行器提交失败，重试/租约可能延迟",
+                    m.executorRejectCount()));
+        }
+        if (m.triggerDelayMaxMs() >= 1_000) {
+            warnings.add(String.format(
+                    "[滞后] 时间轮最大触发滞后 %.0fms（avg=%.1fms），Timer-Worker 可能曾被阻塞或积压",
+                    m.triggerDelayMaxMs(), m.triggerDelayAvgMs()));
+        }
         return warnings;
     }
 
@@ -505,6 +520,9 @@ public final class ResourceMonitor {
                 if (m.queueSize() > 1000) {
                     result.addWarning("线程池 [" + id.getConfigKey() + "] 队列积压: " + m.queueSize());
                 }
+            }
+            if (m.rejectedCount() > 0) {
+                result.addWarning("线程池 [" + id.getConfigKey() + "] 累计拒绝: " + m.rejectedCount());
             }
         });
 

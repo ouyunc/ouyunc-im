@@ -197,20 +197,34 @@ public class CacheConstant {
     // ============================================ 集群优化方法 ============================================
 
     /**
-     * 为集群环境构建哈希标签 - 确保相关数据在同一个slot
+     * 为集群环境构建哈希标签 - Cluster 只认 key 中<strong>第一个</strong>{@code {...}} 为槽。
      */
     private static String withHashTag(String key) {
         return HASH_TAG_START + key + HASH_TAG_END;
     }
 
     /**
-     * 构建基础 缓存key - 集群优化版
-     * <p>Cluster 只认 key 中<strong>第一个</strong>{@code {...}} 为槽。本前缀已带 {@code {appKey}}，
-     * 后续再包的 {@code {packetId}}/{@code {userId}} 等只是命名，不改槽。同一 app 的 MGET 因此同槽合法，
-     * 但会打热点槽；登录/租约/ticket 等 key 故意不用本前缀，避免与 identity/ticket 槽冲突。</p>
+     * 原子聚合槽标签：{@code {appKey:aggregateId}}，会话/用户/群等按边界分片，避免大租户单槽热点。
+     */
+    private static String withAggregateHashTag(String appKey, String aggregateId) {
+        String ak = sanitizeAppKeyToken(appKey);
+        String agg = stripHashTagChars(aggregateId == null ? "" : aggregateId.trim());
+        return withHashTag(ak + MessageConstant.COLON + agg);
+    }
+
+    /**
+     * 租户级前缀（仅适合真正的 app 全局小集合：设备类型表、MQTT topic 列表、QoS 幂等等）。
+     * 普通会话/收件箱/群数据请用 {@link #buildAggregateCacheKey}。
      */
     private static String buildBaseCacheKey(String appKey) {
-        return OUYUNC + APP_KEY + withHashTag(appKey) + COLON;
+        return OUYUNC + APP_KEY + withHashTag(sanitizeAppKeyToken(appKey)) + COLON;
+    }
+
+    /**
+     * 按聚合实体分片的业务 key 前缀：首 tag 为 {@code {appKey:aggregateId}}。
+     */
+    private static String buildAggregateCacheKey(String appKey, String aggregateId) {
+        return OUYUNC + APP_KEY + withAggregateHashTag(appKey, aggregateId) + COLON;
     }
 
     // ============================================ 分布式锁 ============================================
@@ -265,7 +279,7 @@ public class CacheConstant {
      * 构建appKey 下的identity 的远端客户端设置信息 - 集群优化
      */
     public static String buildRemoteClientInfoCacheKey(String appKey, String identity) {
-        return buildBaseCacheKey(appKey) + CLIENT_INFO + withHashTag(identity);
+        return buildAggregateCacheKey(appKey, identity) + CLIENT_INFO;
     }
 
     /**
@@ -276,22 +290,20 @@ public class CacheConstant {
     }
 
     /**
-     * 构建 消息message cache Key - 集群优化
+     * 消息正文：按 packetId 分片；Cluster 下批量取用逐 key GET，不依赖同槽 MGET。
      */
     public static String buildMessageCacheKey(String appKey, Long packetId) {
-        // 第一个 tag 仍是 {appKey}；{packetId} 仅作可读片段。跨 packet MGET 同 app 同槽。
-        return buildBaseCacheKey(appKey) + MESSAGE + withHashTag(String.valueOf(packetId));
+        return buildAggregateCacheKey(appKey, String.valueOf(packetId)) + MESSAGE;
     }
 
     /**
-     * 构建 会话中已读消息偏移量 cache key - 集群优化
+     * 会话已读偏移：槽跟收件人（from）收件箱一致，与 ur/urid Lua 同槽。
      */
     public static String buildSessionReadMessageOffsetCacheKey(String appKey, Integer identityType,
                                                              String from, Byte deviceType, String to) {
-        // 第一个 tag 仍是 {appKey}，与 ur Hash 同槽，供未读 Lua 双 KEYS 合法。
-        String sessionTag = withHashTag(from + MessageConstant.UNDERLINE + to);
-        return buildBaseCacheKey(appKey) + SESSION_READ_MESSAGE_OFFSET + identityType + COLON +
-               sessionTag + COLON + deviceType;
+        String peer = stripHashTagChars(to == null ? "" : to.trim());
+        return buildAggregateCacheKey(appKey, from) + SESSION_READ_MESSAGE_OFFSET + identityType + COLON
+                + peer + COLON + deviceType;
     }
 
     /**
@@ -335,33 +347,32 @@ public class CacheConstant {
      * 构建 user 用户 cache key - 集群优化
      */
     public static String buildUserCacheKey(String appKey, String identity) {
-        return buildBaseCacheKey(appKey) + USER + withHashTag(identity);
+        return buildAggregateCacheKey(appKey, identity) + USER;
     }
 
     /**
-     * 构建 群组成员 cache key - 集群优化
+     * 群成员 ZSET：槽 {@code {appKey:groupId}}，与 grv/shield 同槽。
      */
     public static String buildGroupUserCacheKey(String appKey, String groupId) {
-        return buildBaseCacheKey(appKey) + GROUP_USERS + withHashTag(groupId);
+        return buildAggregateCacheKey(appKey, groupId) + GROUP_USERS;
     }
 
     /**
      * 构建 群组成员在群中的配置信息 cache key - 集群优化
      */
     public static String buildGroupUserConfigCacheKey(String appKey, String memberId, String groupId) {
-        // 使用groupId作为哈希标签，确保同一群组的配置在同一个slot
-        return buildBaseCacheKey(appKey) + GROUP_USERS_CONFIG + memberId + COLON + withHashTag(groupId);
+        return buildAggregateCacheKey(appKey, groupId) + GROUP_USERS_CONFIG + stripHashTagChars(memberId);
     }
 
     /**
-     * 群屏蔽成员 Hash，与成员 ZSET 同 {@code {groupId}} 槽。
+     * 群屏蔽成员 Hash，与成员 ZSET / grv 同 {@code {appKey:groupId}} 槽。
      */
     public static String buildGroupShieldCacheKey(String appKey, String groupId) {
-        return buildBaseCacheKey(appKey) + GROUP_USERS_SHIELD + withHashTag(groupId);
+        return buildAggregateCacheKey(appKey, groupId) + GROUP_USERS_SHIELD;
     }
 
     public static String buildMqttRetainCacheKey(String appKey, String topic) {
-        return buildBaseCacheKey(appKey) + MQTT + MQTT_RETAIN + withHashTag(topic);
+        return buildAggregateCacheKey(appKey, topic) + MQTT + MQTT_RETAIN;
     }
 
     public static String buildMqttRetainTopicSetCacheKey(String appKey) {
@@ -369,11 +380,11 @@ public class CacheConstant {
     }
 
     public static String buildMqttInflightCacheKey(String appKey, String comboIdentity) {
-        return buildBaseCacheKey(appKey) + MQTT + MQTT_INFLIGHT + withHashTag(comboIdentity);
+        return buildAggregateCacheKey(appKey, comboIdentity) + MQTT + MQTT_INFLIGHT;
     }
 
     public static String buildMqttMessageIdCacheKey(String appKey, String comboIdentity) {
-        return buildBaseCacheKey(appKey) + MQTT + MQTT_MSG_ID + withHashTag(comboIdentity);
+        return buildAggregateCacheKey(appKey, comboIdentity) + MQTT + MQTT_MSG_ID;
     }
 
     /**
@@ -384,153 +395,150 @@ public class CacheConstant {
     }
 
     /**
-     * 构建 好友关系 cache key - 集群优化
+     * 构建 好友关系 cache key：按用户分片
      */
     public static String buildFriendsCacheKey(String appKey, String identity) {
-        return buildBaseCacheKey(appKey) + FRIENDS + withHashTag(identity);
+        return buildAggregateCacheKey(appKey, identity) + FRIENDS;
     }
 
     /**
-     * 构建 好友关系配置信息 cache key - 集群优化
+     * 好友配置：槽按 from_to 对
      */
     public static String buildFriendsConfigCacheKey(String appKey, String from, String to) {
-        // 使用from和to的组合作为哈希标签，确保同一好友关系的数据在同一个slot
-        String friendTag = withHashTag(from + MessageConstant.UNDERLINE + to);
-        return buildBaseCacheKey(appKey) + FRIENDS_CONFIG + friendTag;
+        String pair = stripHashTagChars(from) + MessageConstant.UNDERLINE + stripHashTagChars(to);
+        return buildAggregateCacheKey(appKey, pair) + FRIENDS_CONFIG;
     }
 
     /**
-     * 构建 用户所加入的群组 cache key - 集群优化
+     * 用户所加入的群组：按用户分片
      */
     public static String buildUserGroupsCacheKey(String appKey, String userId) {
-        return buildBaseCacheKey(appKey) + GROUPS + withHashTag(userId);
+        return buildAggregateCacheKey(appKey, userId) + GROUPS;
     }
 
     /**
-     * 构建 群组信息 cache key - 集群优化
+     * 群组信息：槽 {@code {appKey:groupId}}
      */
     public static String buildGroupCacheKey(String appKey, String groupId) {
-        return buildBaseCacheKey(appKey) + GROUP + withHashTag(groupId);
+        return buildAggregateCacheKey(appKey, groupId) + GROUP;
     }
 
     /**
-     * 构建 identity 的黑名单 cache key - 集群优化
+     * identity 黑名单：按用户分片
      */
     public static String buildBlacklistCacheKey(String appKey, String identity) {
-        return buildBaseCacheKey(appKey) + BLACKLIST + withHashTag(identity);
+        return buildAggregateCacheKey(appKey, identity) + BLACKLIST;
     }
 
     /**
-     * QoS 幂等：服务端 packetId
+     * QoS 幂等 packet：与 client key 同 Lua，保持租户级 {@code {appKey}} 同槽
      */
     public static String buildQosIdempotencyPacketKey(String appKey, long packetId) {
-        return buildBaseCacheKey(appKey) + QOS_IDEM + QOS_IDEM_PKT + withHashTag(String.valueOf(packetId));
+        return buildBaseCacheKey(appKey) + QOS_IDEM + QOS_IDEM_PKT + stripHashTagChars(String.valueOf(packetId));
     }
 
     /**
-     * QoS 幂等：通道登录身份 + 客户端 messageId
+     * QoS 幂等 client：与 packet key 同 {@code {appKey}} 槽
      */
     public static String buildQosIdempotencyClientKey(String appKey, String loginIdentity, String clientMessageId) {
-        return buildBaseCacheKey(appKey) + QOS_IDEM + QOS_IDEM_CLI + withHashTag(loginIdentity) + COLON + clientMessageId;
+        return buildBaseCacheKey(appKey) + QOS_IDEM + QOS_IDEM_CLI
+                + stripHashTagChars(loginIdentity) + COLON + clientMessageId;
     }
 
     /**
-     * 构建 会话session cache key - 集群优化
+     * 会话：槽 {@code {appKey:sessionId}}
      */
     public static String buildSessionCacheKey(String appKey, String sessionId) {
-        return buildBaseCacheKey(appKey) + SESSION + withHashTag(sessionId);
+        return buildAggregateCacheKey(appKey, sessionId) + SESSION;
     }
 
     /**
-     * 构建 好友请求会话session cache key - 集群优化
+     * 好友请求会话：槽按业务 sessionId
      */
     public static String buildFriendRequestSessionCacheKey(String appKey, String sessionId, String friendRequestSessionId) {
-        return buildBaseCacheKey(appKey) + FRIEND_REQUEST + SESSION + 
-               withHashTag(sessionId) + COLON + friendRequestSessionId;
+        return buildAggregateCacheKey(appKey, sessionId) + FRIEND_REQUEST + SESSION
+                + COLON + stripHashTagChars(friendRequestSessionId);
     }
 
     /**
-     * 构建 好友请求 cache key - 集群优化
+     * 好友请求：槽按 from_to
      */
     public static String buildFriendRequestCacheKey(String appKey, String from, String to) {
-        // 使用from和to的组合作为哈希标签
-        String requestTag = withHashTag(from + MessageConstant.UNDERLINE + to);
-        return buildBaseCacheKey(appKey) + FRIEND_REQUEST_SESSION + requestTag;
+        String pair = stripHashTagChars(from) + MessageConstant.UNDERLINE + stripHashTagChars(to);
+        return buildAggregateCacheKey(appKey, pair) + FRIEND_REQUEST_SESSION;
     }
 
     /**
-     * 构建 群组请求会话session cache key - 集群优化
+     * 群请求会话：槽按 joiner
      */
     public static String buildGroupRequestSessionCacheKey(String appKey, String joiner, String groupRequestSessionId) {
-        return buildBaseCacheKey(appKey) + GROUP_REQUEST + SESSION + 
-               withHashTag(joiner) + COLON + groupRequestSessionId;
+        return buildAggregateCacheKey(appKey, joiner) + GROUP_REQUEST + SESSION
+                + COLON + stripHashTagChars(groupRequestSessionId);
     }
 
     /**
-     * 构建 群组请求 cache key - 集群优化
+     * 群请求：槽按 groupId
      */
     public static String buildGroupRequestCacheKey(String appKey, String joiner, String groupId) {
-        // 使用joiner和groupId的组合作为哈希标签
-        String requestTag = withHashTag(joiner + MessageConstant.UNDERLINE + groupId);
-        return buildBaseCacheKey(appKey) + GROUP_REQUEST_SESSION + requestTag;
+        return buildAggregateCacheKey(appKey, groupId) + GROUP_REQUEST_SESSION
+                + COLON + stripHashTagChars(joiner);
     }
 
     /**
-     * 构建 会话最后一条信息 cache key - 集群优化
+     * 会话最后一条消息：与 session 同槽
      */
     public static String buildSessionLastMessageCacheKey(String appKey, String sessionId) {
-        return buildBaseCacheKey(appKey) + SESSION + withHashTag(sessionId) + COLON + LAST_MESSAGE;
+        return buildAggregateCacheKey(appKey, sessionId) + SESSION + COLON + LAST_MESSAGE;
     }
 
     /**
-     * 构建 聊天消息会话 cache key - 集群优化
+     * 聊天会话列表：按用户分片
      */
     public static String buildChatSessionCacheKey(String appKey, String identity, Byte deviceType) {
-        return buildBaseCacheKey(appKey) + CHAT_SESSION + withHashTag(identity) + COLON + deviceType;
+        return buildAggregateCacheKey(appKey, identity) + CHAT_SESSION + COLON + deviceType;
     }
 
     /**
-     * 用户在某设备上的单聊未读 Hash（群聊未读不在此 key 维护）。
+     * 用户设备单聊未读 Hash：槽 {@code {appKey:userId}}，与 sro/urid 同槽
      */
     public static String buildUserDeviceUnreadCacheKey(String appKey, String userId, Byte deviceType) {
-        return buildBaseCacheKey(appKey) + USER_DEVICE_UNREAD + withHashTag(userId) + COLON + deviceType;
+        return buildAggregateCacheKey(appKey, userId) + USER_DEVICE_UNREAD + deviceType;
     }
 
     /**
-     * 单聊未读 packetId 集合：与 ur/sro 同属 {@code {appKey}} 槽，供 Lua 只移除 {@code <= incomingOffset} 的成员。
+     * 单聊未读 packetId 集合：与 ur/sro 同属收件人槽
      */
     public static String buildUserDeviceUnreadIdsCacheKey(String appKey, String userId, Byte deviceType, String peerId) {
-        return buildBaseCacheKey(appKey) + USER_DEVICE_UNREAD_IDS + withHashTag(userId) + COLON + deviceType
-                + COLON + peerId;
+        return buildAggregateCacheKey(appKey, userId) + USER_DEVICE_UNREAD_IDS + deviceType
+                + COLON + stripHashTagChars(peerId);
     }
 
     /**
-     * 群关系版本：加群/退群等变更递增；回源重建前比对，避免旧快照覆盖新成员。
+     * 群关系版本：与 gu/gsh 同 {@code {appKey:groupId}} 槽
      */
     public static String buildGroupRelationVersionCacheKey(String appKey, String groupId) {
-        return buildBaseCacheKey(appKey) + GROUP_RELATION_VERSION + withHashTag(groupId);
+        return buildAggregateCacheKey(appKey, groupId) + GROUP_RELATION_VERSION;
     }
 
     /**
-     * 构建 mqtt topic cache key - 集群优化
+     * mqtt topic filter：按 topic 分片
      */
     public static String buildMqttTopicFilterCacheKey(String appKey, String topicFilter) {
-        // 使用topicFilter作为哈希标签
-        return buildBaseCacheKey(appKey) + MQTT + TOPIC + withHashTag(topicFilter);
+        return buildAggregateCacheKey(appKey, topicFilter) + MQTT + TOPIC;
     }
 
     /**
-     * 构建 mqtt topic list cache key - 集群优化
+     * mqtt topic list：租户级小集合
      */
     public static String buildMqttTopicListCacheKey(String appKey) {
         return buildBaseCacheKey(appKey) + MQTT + TOPIC_LIST;
     }
 
     /**
-     * HTTP 外部推送幂等键：im:{appKey}:http-push:idempotent:{messageId}
+     * HTTP 外部推送幂等：按 messageId 分片
      */
     public static String buildHttpPushIdempotentCacheKey(String appKey, String messageId) {
-        return buildBaseCacheKey(appKey) + HTTP_PUSH_IDEM + withHashTag(messageId);
+        return buildAggregateCacheKey(appKey, messageId) + HTTP_PUSH_IDEM;
     }
 
     private static final String CS_SESSION_ROUTE = "cs:session:route:";

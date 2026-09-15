@@ -127,6 +127,11 @@ public final class ThreadPoolManager {
         return getExecutor(ThreadPoolId.QOS_TASK);
     }
 
+    /** 节点租约 / 连接数发布专用，与 QoS 重试池隔离 */
+    public static ExecutorService nodeLeaseExecutor() {
+        return getExecutor(ThreadPoolId.NODE_LEASE);
+    }
+
     public static ExecutorService routerExecutor() {
         return getExecutor(ThreadPoolId.ROUTER);
     }
@@ -228,12 +233,13 @@ public final class ThreadPoolManager {
             int poolSize,
             long completedTaskCount,
             long taskCount,
-            int queueSize
+            int queueSize,
+            long rejectedCount
     ) {
         private static ThreadPoolMetrics from(ThreadPoolId id, ExecutorService executor) {
             if (executor instanceof BoundedTaskExecutor bounded) {
                 return new ThreadPoolMetrics(id, executor.isShutdown(), executor.isTerminated(),
-                        bounded.inFlightTasks(), -1, -1, -1, 0);
+                        bounded.inFlightTasks(), bounded.capacity(), -1, -1, 0, bounded.rejectedCount());
             }
             if (executor instanceof ThreadPoolExecutor tpe) {
                 BlockingQueue<Runnable> queue = tpe.getQueue();
@@ -245,7 +251,8 @@ public final class ThreadPoolManager {
                         tpe.getPoolSize(),
                         tpe.getCompletedTaskCount(),
                         tpe.getTaskCount(),
-                        Optional.ofNullable(queue).map(BlockingQueue::size).orElse(-1)
+                        Optional.ofNullable(queue).map(BlockingQueue::size).orElse(-1),
+                        0L
                 );
             }
             if (executor instanceof ScheduledThreadPoolExecutor stpe) {
@@ -258,7 +265,8 @@ public final class ThreadPoolManager {
                         stpe.getPoolSize(),
                         stpe.getCompletedTaskCount(),
                         stpe.getTaskCount(),
-                        Optional.ofNullable(queue).map(BlockingQueue::size).orElse(-1)
+                        Optional.ofNullable(queue).map(BlockingQueue::size).orElse(-1),
+                        0L
                 );
             }
             return new ThreadPoolMetrics(
@@ -269,7 +277,8 @@ public final class ThreadPoolManager {
                     -1,
                     -1,
                     -1,
-                    -1
+                    -1,
+                    0L
             );
         }
     }

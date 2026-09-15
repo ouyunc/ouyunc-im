@@ -9,12 +9,14 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 /** Non-blocking admission control: overload never executes business work on the submitting I/O thread. */
 public final class BoundedTaskExecutor extends AbstractExecutorService {
     private final ExecutorService delegate;
     private final Semaphore permits;
     private final int capacity;
+    private final AtomicLong rejectedCount = new AtomicLong(0);
 
     public BoundedTaskExecutor(ExecutorService delegate, int capacity) {
         this.delegate = Objects.requireNonNull(delegate, "delegate");
@@ -29,6 +31,7 @@ public final class BoundedTaskExecutor extends AbstractExecutorService {
     public void execute(Runnable command) {
         Objects.requireNonNull(command, "command");
         if (isShutdown() || !permits.tryAcquire()) {
+            rejectedCount.incrementAndGet();
             throw new RejectedExecutionException("Executor admission capacity exhausted or executor shut down");
         }
         PermitTask task = new PermitTask(command);
@@ -42,6 +45,15 @@ public final class BoundedTaskExecutor extends AbstractExecutorService {
 
     public int inFlightTasks() {
         return capacity - permits.availablePermits();
+    }
+
+    public int capacity() {
+        return capacity;
+    }
+
+    /** 准入拒绝累计次数（容量满或已 shutdown） */
+    public long rejectedCount() {
+        return rejectedCount.get();
     }
 
     @Override

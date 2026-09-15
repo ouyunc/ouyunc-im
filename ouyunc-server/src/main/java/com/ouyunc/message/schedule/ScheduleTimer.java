@@ -17,7 +17,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 /**
- * 调度器， 如果是在ctx 中优先考虑 ctx.executor().schedule 的定时器
+ * 调度器：时间轮只做到期索引；业务/租约工作由 {@link TimerTaskWrapper} 下沉到有界执行器。
+ * <p>若在 ctx 中优先考虑 {@code ctx.executor().schedule}。</p>
  */
 public class ScheduleTimer {
 
@@ -25,7 +26,7 @@ public class ScheduleTimer {
 
     private static final AtomicBoolean STOPPED = new AtomicBoolean(false);
 
-    // 时间轮触发器
+    // 时间轮触发器（单线程）；禁止在此线程同步打 Redis/DB
     protected static final HashedWheelTimer timer = new HashedWheelTimer(r -> {
         Thread thread = new Thread(r, "Timer-Worker");
         thread.setDaemon(true);
@@ -34,44 +35,60 @@ public class ScheduleTimer {
 
 
     /**
-     * 调度定时任务,固定频率
+     * 调度定时任务,固定频率（业务域）
      */
     public static void scheduleAtFixedRate(String taskId, Consumer<TimerTaskWrapper> task, long initialDelay, long period, TimeUnit timeUnit, int maxLoops) {
-        schedule(taskId, task, initialDelay, period, timeUnit, false, maxLoops);
+        schedule(taskId, task, initialDelay, period, timeUnit, false, maxLoops, TimerTaskKind.BUSINESS);
     }
 
     /**
-     * 一直循环调度定时任务,固定频率
+     * 一直循环调度定时任务,固定频率（业务域）
      */
     public static void scheduleAtFixedRate(String taskId, Consumer<TimerTaskWrapper> task, long initialDelay, long period, TimeUnit timeUnit) {
-        schedule(taskId, task, initialDelay, period, timeUnit, false, NumberConstant.NUMBER_NEGATIVE_1);
+        schedule(taskId, task, initialDelay, period, timeUnit, false, NumberConstant.NUMBER_NEGATIVE_1, TimerTaskKind.BUSINESS);
     }
 
     /**
-     * 一直循环调度定时任务，固定间隔时间
+     * 系统任务固定频率（节点租约等）：独立缓存 + node-lease 执行器。
+     */
+    public static void scheduleSystemAtFixedRate(String taskId, Consumer<TimerTaskWrapper> task, long initialDelay, long period, TimeUnit timeUnit) {
+        schedule(taskId, task, initialDelay, period, timeUnit, false, NumberConstant.NUMBER_NEGATIVE_1, TimerTaskKind.SYSTEM);
+    }
+
+    /**
+     * 一直循环调度定时任务，固定间隔时间（完成后 delay，业务域）
      */
     public static void scheduleWithFixedDelay(String taskId, Consumer<TimerTaskWrapper> task, long initialDelay, long period, TimeUnit timeUnit) {
-        schedule(taskId, task, initialDelay, period, timeUnit, true, NumberConstant.NUMBER_NEGATIVE_1);
+        schedule(taskId, task, initialDelay, period, timeUnit, true, NumberConstant.NUMBER_NEGATIVE_1, TimerTaskKind.BUSINESS);
     }
 
     /**
-     * 一直循环调度定时任务，固定间隔时间
+     * 一直循环调度定时任务，固定间隔时间（完成后 delay，业务域）
      */
     public static void scheduleWithFixedDelay(String taskId, Consumer<TimerTaskWrapper> task, long initialDelay, long period, TimeUnit timeUnit, int maxLoops) {
-        schedule(taskId, task, initialDelay, period, timeUnit, true, maxLoops);
+        schedule(taskId, task, initialDelay, period, timeUnit, true, maxLoops, TimerTaskKind.BUSINESS);
     }
 
     /**
      * 一直循环调度定时任务
+     *
+     * @param waitForCompletion true=fixed-delay（完成后再调度）；false=fixed-rate（触发后立即调度下一轮）
      */
-    public static void schedule(String taskId, Consumer<TimerTaskWrapper> task, long initialDelay, long period, TimeUnit timeUnit, boolean sync, int maxLoops) {
+    public static void schedule(String taskId, Consumer<TimerTaskWrapper> task, long initialDelay, long period, TimeUnit timeUnit, boolean waitForCompletion, int maxLoops) {
+        schedule(taskId, task, initialDelay, period, timeUnit, waitForCompletion, maxLoops, TimerTaskKind.BUSINESS);
+    }
+
+    public static void schedule(String taskId, Consumer<TimerTaskWrapper> task, long initialDelay, long period,
+                                TimeUnit timeUnit, boolean waitForCompletion, int maxLoops, TimerTaskKind kind) {
         try {
             // 同 taskId 先取消旧任务，避免时间轮残留与缓存覆盖导致双调度
             cancelQuietly(taskId);
-            timer.newTimeout(new TimerTaskWrapper(taskId, task, period, timeUnit, sync, maxLoops), initialDelay, timeUnit);
-        }catch (Exception e) {
+            TimerTaskWrapper wrapper = new TimerTaskWrapper(taskId, task, period, timeUnit, waitForCompletion, maxLoops, kind);
+            wrapper.markExpectedFire(initialDelay, timeUnit);
+            Timeout timeout = timer.newTimeout(wrapper, initialDelay, timeUnit);
+            wrapper.setScheduledTimeout(timeout);
+        } catch (Exception e) {
             log.error("task 调度异常：{}", e.getMessage());
-            // 这里可以做错误日志记录
             MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.SCHEDULE_TASK_ERROR, "task 调度异常：" + e.getMessage(), null), MessageEventTypeEnum.EXCEPTION));
         }
     }
@@ -82,7 +99,7 @@ public class ScheduleTimer {
      */
     public static Timeout scheduleOnce(Runnable task, long delay, TimeUnit timeUnit) {
         try {
-            // 直接使用timer创建一次性定时任务
+            // 时间轮回调只跑传入 Runnable；重活请由调用方自行提交执行器
             return timer.newTimeout(timeout -> {
                 try {
                     task.run();
@@ -91,9 +108,8 @@ public class ScheduleTimer {
                     MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.SCHEDULE_TASK_ERROR, "一次性任务执行异常：" + e.getMessage(), null), MessageEventTypeEnum.EXCEPTION));
                 }
             }, delay, timeUnit);
-        }catch (Exception e) {
+        } catch (Exception e) {
             log.error("一次性任务调度异常：{}", e.getMessage());
-            // 这里可以做错误日志记录
             MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.SCHEDULE_TASK_ERROR, "一次性任务调度异常：" + e.getMessage(), null), MessageEventTypeEnum.EXCEPTION));
             return null;
         }
@@ -113,10 +129,10 @@ public class ScheduleTimer {
      * 取消任务
      */
     public static boolean cancel(String taskId) {
-        TimerTaskWrapper qosTimerTask = TimerTaskWrapper.timerTaskCaffeine.get(taskId);
+        TimerTaskWrapper qosTimerTask = TimerTaskWrapper.lookup(taskId);
         if (qosTimerTask != null) {
             return qosTimerTask.cancel();
-        }else {
+        } else {
             log.warn("qos取消任务失败，任务不存在,id：{}", taskId);
         }
         return false;
@@ -124,7 +140,7 @@ public class ScheduleTimer {
 
     /** 调度替换场景：任务不存在不打 warn。 */
     private static void cancelQuietly(String taskId) {
-        TimerTaskWrapper existing = TimerTaskWrapper.timerTaskCaffeine.get(taskId);
+        TimerTaskWrapper existing = TimerTaskWrapper.lookup(taskId);
         if (existing != null) {
             existing.cancel();
         }
@@ -141,6 +157,7 @@ public class ScheduleTimer {
             Set<Timeout> unfinished = timer.stop();
             int size = unfinished == null ? 0 : unfinished.size();
             log.warn("ScheduleTimer 已停止, unfinishedTimeouts={}", size);
+            TimerTaskWrapper.systemTimerTasks.clear();
         } catch (Exception e) {
             log.warn("ScheduleTimer 停止异常: {}", e.getMessage());
         }

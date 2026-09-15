@@ -7,6 +7,7 @@ import com.ouyunc.base.utils.ImSessionPresence;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.cache.distributed.redis.RedisPipelineSupport;
+import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.schedule.ScheduleTimer;
 import com.ouyunc.message.schedule.TimerTaskWrapper;
@@ -78,7 +79,7 @@ public final class NodeLeaseKeeper {
         StringRedisTemplate stringRedis = CacheFactory.STRING_REDIS.instance();
         stringRedis.delete(CacheConstant.buildImNodeConnHashCacheKey(nodeId));
         heartbeatOnce();
-        ScheduleTimer.scheduleAtFixedRate(
+        ScheduleTimer.scheduleSystemAtFixedRate(
                 MessageConstant.IM_NODE_LEASE_TASK_ID,
                 task -> heartbeatOnce(),
                 MessageConstant.IM_NODE_LEASE_REFRESH_SECONDS,
@@ -91,9 +92,14 @@ public final class NodeLeaseKeeper {
         if (!STARTED.compareAndSet(true, false)) {
             return;
         }
-        TimerTaskWrapper task = TimerTaskWrapper.timerTaskCaffeine.get(MessageConstant.IM_NODE_LEASE_TASK_ID);
+        TimerTaskWrapper task = TimerTaskWrapper.systemTimerTasks.get(MessageConstant.IM_NODE_LEASE_TASK_ID);
         if (task != null) {
             task.cancel();
+        } else {
+            TimerTaskWrapper business = TimerTaskWrapper.timerTaskCaffeine.get(MessageConstant.IM_NODE_LEASE_TASK_ID);
+            if (business != null) {
+                business.cancel();
+            }
         }
         String nodeId = localNodeId();
         StringRedisTemplate stringRedis = CacheFactory.STRING_REDIS.instance();
@@ -216,18 +222,26 @@ public final class NodeLeaseKeeper {
             return;
         }
         ScheduleTimer.scheduleOnce(() -> {
-            CONN_PUBLISH_PENDING.set(false);
-            CONN_PUBLISH_DIRTY.set(false);
-            if (!STARTED.get()) {
-                return;
-            }
+            // 时间轮只投递；Redis 发布在租约专用执行器，避免堵 Timer-Worker
             try {
-                publishLeaseAndConnCounts(CacheFactory.STRING_REDIS.instance(), localNodeId());
+                ThreadPoolManager.nodeLeaseExecutor().execute(() -> {
+                    CONN_PUBLISH_PENDING.set(false);
+                    CONN_PUBLISH_DIRTY.set(false);
+                    if (!STARTED.get()) {
+                        return;
+                    }
+                    try {
+                        publishLeaseAndConnCounts(CacheFactory.STRING_REDIS.instance(), localNodeId());
+                    } catch (Exception e) {
+                        log.warn("合并发布本机连接数失败 nodeId={}", localNodeId(), e);
+                    }
+                    if (CONN_PUBLISH_DIRTY.get()) {
+                        scheduleConnPublish();
+                    }
+                });
             } catch (Exception e) {
-                log.warn("合并发布本机连接数失败 nodeId={}", localNodeId(), e);
-            }
-            if (CONN_PUBLISH_DIRTY.get()) {
-                scheduleConnPublish();
+                CONN_PUBLISH_PENDING.set(false);
+                log.warn("连接数发布提交执行器失败 nodeId={}", localNodeId(), e);
             }
         }, MessageConstant.IM_NODE_CONN_PUBLISH_DEBOUNCE_MILLIS, TimeUnit.MILLISECONDS);
     }
