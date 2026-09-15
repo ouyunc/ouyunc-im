@@ -80,7 +80,8 @@ public final class ContentSafetyRegistry {
      * @param appKeyOrAll 租户 appKey；空或 ALL 则全部失效
      */
     public void invalidate(String appKeyOrAll) {
-        if (StringUtils.isBlank(appKeyOrAll) || "ALL".equalsIgnoreCase(appKeyOrAll.trim())) {
+        if (StringUtils.isBlank(appKeyOrAll)
+                || CacheConstant.CONTENT_SAFETY_RELOAD_ALL.equalsIgnoreCase(appKeyOrAll.trim())) {
             dictCache.invalidateAll();
             policyCache.invalidateAll();
             log.info("内容安全缓存已全部失效");

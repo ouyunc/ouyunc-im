@@ -12,7 +12,7 @@ import java.util.function.Consumer;
 
 /**
  * 订阅 Redis 内容安全热更新频道（Redisson Topic）。
- * <p>payload 为 appKey 或 ALL。订阅失败不阻断启动，仅依赖 Caffeine 过期刷新。</p>
+ * <p>payload 为 appKey 或 {@link CacheConstant#CONTENT_SAFETY_RELOAD_ALL}。订阅失败不阻断启动，仅依赖 Caffeine 过期刷新。</p>
  */
 public final class ContentSafetyReloadSubscriber {
 
@@ -42,7 +42,7 @@ public final class ContentSafetyReloadSubscriber {
             listenerId = topic.addListener(String.class, new MessageListener<String>() {
                 @Override
                 public void onMessage(CharSequence channel, String msg) {
-                    String payload = StringUtils.defaultIfBlank(msg, "ALL");
+                    String payload = StringUtils.defaultIfBlank(msg, CacheConstant.CONTENT_SAFETY_RELOAD_ALL);
                     log.info("收到内容安全热更新通知 channel={} payload={}", channel, payload);
                     onReload.accept(payload);
                 }

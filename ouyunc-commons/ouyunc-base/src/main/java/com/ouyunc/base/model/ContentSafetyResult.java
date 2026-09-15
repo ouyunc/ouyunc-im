@@ -2,6 +2,7 @@ package com.ouyunc.base.model;
 
 import com.ouyunc.base.constant.enums.ContentSafetyAction;
 import com.ouyunc.base.constant.enums.ContentSafetyHitType;
+import com.ouyunc.base.constant.enums.ContentSafetyReasonEnum;
 
 import java.util.Collections;
 import java.util.List;
@@ -56,7 +57,7 @@ public final class ContentSafetyResult {
      */
     public static ContentSafetyResult passMasked(String maskedContent, List<String> hitWords) {
         return new ContentSafetyResult(true, ContentSafetyAction.MASK, ContentSafetyHitType.KEYWORD,
-                hitWords, maskedContent, "sensitive-masked");
+                hitWords, maskedContent, ContentSafetyReasonEnum.SENSITIVE_MASKED.getCode());
     }
 
     /**
@@ -67,7 +68,7 @@ public final class ContentSafetyResult {
      */
     public static ContentSafetyResult passAuditOnly(List<String> hitWords) {
         return new ContentSafetyResult(true, ContentSafetyAction.AUDIT_ONLY, ContentSafetyHitType.KEYWORD,
-                hitWords, null, "sensitive-audit");
+                hitWords, null, ContentSafetyReasonEnum.SENSITIVE_AUDIT.getCode());
     }
 
     /**

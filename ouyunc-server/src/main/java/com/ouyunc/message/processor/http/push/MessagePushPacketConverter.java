@@ -43,7 +43,7 @@ public final class MessagePushPacketConverter {
                 ? request.getCreateTime() : TimeUtil.currentTimeMillis();
 
         Metadata metadata = new Metadata(appKey, resolveClientIp(httpContext), now);
-        metadata.setIngressSource(IngressSourceEnum.HTTP_PUSH.getCode());
+        metadata.setIngressSource(IngressSourceEnum.HTTP_PUSH);
         metadata.setHttpPushType(request.getPushType());
 
         Message message = buildMessage(request, resolved, metadata, now, fromType, toType, httpContext);

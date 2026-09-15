@@ -3,7 +3,10 @@ package com.ouyunc.message.safety;
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.enums.ContentSafetyAction;
 import com.ouyunc.base.constant.enums.ContentSafetyHitType;
+import com.ouyunc.base.constant.enums.ContentSafetyReasonEnum;
 import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
+import com.ouyunc.base.constant.enums.ModerationModeEnum;
+import com.ouyunc.base.constant.enums.ModerationStatusEnum;
 import com.ouyunc.base.model.ContentSafetyPolicy;
 import com.ouyunc.base.model.ContentSafetyResult;
 import com.ouyunc.base.model.Metadata;
@@ -67,9 +70,10 @@ public final class ContentSafetyFacade {
         if (policy.isMediaEnabled()
                 && (contentType == MessageContentTypeEnum.IMAGE_CONTENT.getType()
                 || contentType == MessageContentTypeEnum.VIDEO_CONTENT.getType())) {
-            if (metadata != null && StringUtils.isBlank(metadata.getModerationStatus())) {
-                metadata.setModerationStatus("NONE");
-                metadata.setModerationMode(policy.getMediaAction().name());
+            if (metadata != null && metadata.getModerationStatus() == null) {
+                metadata.setModerationStatus(ModerationStatusEnum.NONE);
+                metadata.setModerationMode(ModerationModeEnum.fromAction(
+                        policy.getMediaAction(), ModerationModeEnum.SEND_THEN_REVIEW));
             }
         }
         return ContentSafetyResult.pass();
@@ -155,7 +159,8 @@ public final class ContentSafetyFacade {
                 message.getMetadata() == null ? null : message.getMetadata().getAppKey(),
                 action, hits);
         if (action == ContentSafetyAction.REJECT) {
-            return ContentSafetyResult.reject(ContentSafetyHitType.KEYWORD, hits, "sensitive-reject");
+            return ContentSafetyResult.reject(ContentSafetyHitType.KEYWORD, hits,
+                    ContentSafetyReasonEnum.SENSITIVE_REJECT.getCode());
         }
         if (action == ContentSafetyAction.AUDIT_ONLY) {
             return ContentSafetyResult.passAuditOnly(hits);

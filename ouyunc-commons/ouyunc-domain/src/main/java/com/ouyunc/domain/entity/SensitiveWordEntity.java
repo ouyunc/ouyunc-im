@@ -25,7 +25,7 @@ public class SensitiveWordEntity implements Serializable {
     private String appKey;
     /** 敏感词原文。 */
     private String word;
-    /** 分类：POLITICS / PORN / ABUSE / CUSTOM。 */
+    /** 分类：见 {@link com.ouyunc.base.constant.enums.SensitiveWordCategoryEnum}。 */
     private String category;
     /** 级别：1 观察、2 警告、3 拒绝倾向。 */
     private Integer level;

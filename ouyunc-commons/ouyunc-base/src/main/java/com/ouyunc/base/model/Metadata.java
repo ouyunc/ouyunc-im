@@ -1,6 +1,10 @@
 package com.ouyunc.base.model;
 
 
+import com.ouyunc.base.constant.enums.IngressSourceEnum;
+import com.ouyunc.base.constant.enums.ModerationModeEnum;
+import com.ouyunc.base.constant.enums.ModerationStatusEnum;
+
 import java.io.Serial;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -55,9 +59,9 @@ public class Metadata implements Serializable, Cloneable {
     private long serverTime;
 
     /**
-     * 消息入口来源，见 {@link com.ouyunc.base.constant.enums.IngressSourceEnum#getCode()}。
+     * 消息入口来源。
      */
-    private String ingressSource;
+    private IngressSourceEnum ingressSource;
 
     /**
      * HTTP 推送时的 pushType 原值，便于 Processor 区分广播等场景。
@@ -77,14 +81,14 @@ public class Metadata implements Serializable, Cloneable {
     private String qosOwnerToken;
 
     /**
-     * 内容审核状态：NONE / PENDING / PASS / REJECT（媒体 HOLD / 先发后审）。
+     * 内容审核状态。
      */
-    private String moderationStatus;
+    private ModerationStatusEnum moderationStatus;
 
     /**
-     * 内容审核模式：SEND_THEN_REVIEW / HOLD。
+     * 内容审核模式。
      */
-    private String moderationMode;
+    private ModerationModeEnum moderationMode;
 
 
     /**
@@ -163,12 +167,27 @@ public class Metadata implements Serializable, Cloneable {
         this.clientIp = clientIp;
     }
 
-    public String getIngressSource() {
+    /**
+     * @return 入口来源枚举
+     */
+    public IngressSourceEnum getIngressSource() {
         return ingressSource;
     }
 
-    public void setIngressSource(String ingressSource) {
+    /**
+     * @param ingressSource 入口来源枚举
+     */
+    public void setIngressSource(IngressSourceEnum ingressSource) {
         this.ingressSource = ingressSource;
+    }
+
+    /**
+     * 兼容扩展字段里的短码字符串；无法识别则忽略。
+     *
+     * @param ingressSourceCode {@link IngressSourceEnum#getCode()} 或枚举名
+     */
+    public void setIngressSourceCode(String ingressSourceCode) {
+        this.ingressSource = IngressSourceEnum.fromCode(ingressSourceCode);
     }
 
     public Integer getHttpPushType() {
@@ -196,30 +215,30 @@ public class Metadata implements Serializable, Cloneable {
     }
 
     /**
-     * @return 内容审核状态 NONE/PENDING/PASS/REJECT
+     * @return 内容审核状态
      */
-    public String getModerationStatus() {
+    public ModerationStatusEnum getModerationStatus() {
         return moderationStatus;
     }
 
     /**
      * @param moderationStatus 内容审核状态
      */
-    public void setModerationStatus(String moderationStatus) {
+    public void setModerationStatus(ModerationStatusEnum moderationStatus) {
         this.moderationStatus = moderationStatus;
     }
 
     /**
-     * @return 审核模式 SEND_THEN_REVIEW / HOLD
+     * @return 审核模式
      */
-    public String getModerationMode() {
+    public ModerationModeEnum getModerationMode() {
         return moderationMode;
     }
 
     /**
      * @param moderationMode 审核模式
      */
-    public void setModerationMode(String moderationMode) {
+    public void setModerationMode(ModerationModeEnum moderationMode) {
         this.moderationMode = moderationMode;
     }
 
@@ -297,9 +316,11 @@ public class Metadata implements Serializable, Cloneable {
                 ", routingTables=" + routingTables +
                 ", clientIp='" + clientIp + '\'' +
                 ", serverTime=" + serverTime +
-                ", ingressSource='" + ingressSource + '\'' +
+                ", ingressSource=" + ingressSource +
                 ", httpPushType=" + httpPushType +
                 ", qosClaimIdentity='" + qosClaimIdentity + '\'' +
+                ", moderationStatus=" + moderationStatus +
+                ", moderationMode=" + moderationMode +
                 '}';
     }
 }

@@ -70,7 +70,7 @@ public enum BinaryWebSocketFramePacketConverter implements PacketConverter<Binar
                 metadata.setClientIp(IpUtil.getIp(ctx));
                 // 设置服务器时间
                 metadata.setServerTime(TimeUtil.currentTimeMillis());
-                metadata.setIngressSource(IngressSourceEnum.IM.getCode());
+                metadata.setIngressSource(IngressSourceEnum.IM);
             }
             message.setMetadata(metadata);
             // 设置服务端生成的消息id，以服务端的主键为准

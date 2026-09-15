@@ -664,8 +664,11 @@ public class CacheConstant {
         return OUYUNC + "im:cs:version:" + appKey;
     }
 
-    /** Pub/Sub 频道名；payload 为 appKey 或 ALL。 */
+    /** Pub/Sub 频道名；payload 为 appKey 或 {@link #CONTENT_SAFETY_RELOAD_ALL}。 */
     public static final String CONTENT_SAFETY_RELOAD_CHANNEL = OUYUNC + "im:cs:reload";
+
+    /** 内容安全热更新：全部租户失效。 */
+    public static final String CONTENT_SAFETY_RELOAD_ALL = "ALL";
 
     /**
      * 媒体审核幂等键（P1）。

@@ -1,6 +1,7 @@
 package com.ouyunc.base.model;
 
 import com.ouyunc.base.constant.enums.ContentSafetyAction;
+import com.ouyunc.base.constant.enums.ContentSafetyProviderEnum;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -25,9 +26,9 @@ public class ContentSafetyPolicy implements Serializable {
     private boolean mediaEnabled = true;
     /** 媒体动作：SEND_THEN_REVIEW / HOLD。 */
     private ContentSafetyAction mediaAction = ContentSafetyAction.SEND_THEN_REVIEW;
-    /** 监黄供应商，默认阿里云。 */
-    private String provider = "ALIYUN";
-    /** 审核场景标识，透传给供应商。 */
+    /** 监黄供应商。 */
+    private ContentSafetyProviderEnum provider = ContentSafetyProviderEnum.ALIYUN;
+    /** 审核场景标识，透传给供应商（供应商侧字符串，保持 String）。 */
     private String scene = "im_chat";
     /** 先发后审失败时是否放行（fail-open）。 */
     private boolean failOpen = true;
@@ -120,16 +121,16 @@ public class ContentSafetyPolicy implements Serializable {
     }
 
     /**
-     * @return 供应商编码
+     * @return 供应商，空则 ALIYUN
      */
-    public String getProvider() {
-        return provider;
+    public ContentSafetyProviderEnum getProvider() {
+        return provider == null ? ContentSafetyProviderEnum.ALIYUN : provider;
     }
 
     /**
-     * @param provider 供应商编码
+     * @param provider 供应商
      */
-    public void setProvider(String provider) {
+    public void setProvider(ContentSafetyProviderEnum provider) {
         this.provider = provider;
     }
 

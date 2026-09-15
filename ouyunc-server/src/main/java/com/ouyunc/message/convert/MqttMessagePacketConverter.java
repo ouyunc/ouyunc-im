@@ -84,7 +84,7 @@ public enum MqttMessagePacketConverter implements PacketConverter<MqttMessage>{
                 metadata.setClientIp(IpUtil.getIp(ctx));
                 // 设置服务器时间
                 metadata.setServerTime(TimeUtil.currentTimeMillis());
-                metadata.setIngressSource(IngressSourceEnum.IM.getCode());
+                metadata.setIngressSource(IngressSourceEnum.IM);
             }
             String from;
             if (MqttMessageType.CONNECT.equals(mqttMessageType) && mqttMessage instanceof MqttConnectMessage mqttConnectMessage) {
