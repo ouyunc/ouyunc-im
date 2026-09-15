@@ -40,7 +40,7 @@ public class MqttUnSubscribeMessageContentBiProcessor extends AbstractBaseBiProc
     public Mono<Void> process(ChannelHandlerContext ctx, Packet packet) {
         return Mono.fromRunnable(() -> {
             if (log.isDebugEnabled()) {
-                log.debug("MqttUnSubscribeMessageContentProcessor 正在处理外部客户端取消订�?{} ...", packet);
+                log.debug("MqttUnSubscribeMessageContentProcessor 正在处理外部客户端取消订阅 {} ...", packet);
             }
             Message message = packet.getMessage();
             MqttVersion mqttVersion = MqttCodecUtil.getMqttVersion(packet.getRetain());
@@ -64,7 +64,7 @@ public class MqttUnSubscribeMessageContentBiProcessor extends AbstractBaseBiProc
                     ctx.channel().eventLoop().execute(() -> MessageHelper.tryWriteObject(ctx.channel(), unsubAckMessage, packet, sendResult -> {}));
                 }
             }else {
-                log.error("MqttUnSubscribeMessageContentProcessor 取消订阅失败�?);
+                log.error("MqttUnSubscribeMessageContentProcessor 取消订阅失败！");
             }
 
             });

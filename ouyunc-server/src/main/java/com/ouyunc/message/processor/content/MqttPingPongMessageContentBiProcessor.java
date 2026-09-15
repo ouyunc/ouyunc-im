@@ -32,12 +32,12 @@ public class MqttPingPongMessageContentBiProcessor extends AbstractBaseBiProcess
     public Mono<Void> process(ChannelHandlerContext ctx, Packet packet) {
         return Mono.fromRunnable(() -> {
             if (log.isDebugEnabled()) {
-                log.debug("MqttPingPongMessageProcessor 正在处理外部客户端心�?{} ...", packet);
+                log.debug("MqttPingPongMessageProcessor 正在处理外部客户端心跳 {} ...", packet);
             }
-            // 安全校验：未认证连接不响�?PINGRESP，防止未登录客户端通过心跳无限保活
+            // 安全校验：未认证连接不响应 PINGRESP，防止未登录客户端通过心跳无限保活
             LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
             if (loginClientInfo == null) {
-                log.warn("未认证连接发�?PINGREQ，关闭连�? {}", ctx.channel().remoteAddress());
+                log.warn("未认证连接发送 PINGREQ，关闭连接 {}", ctx.channel().remoteAddress());
                 ctx.close();
                 return;
             }

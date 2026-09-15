@@ -43,7 +43,7 @@ public class MqttSubscribeMessageContentBiProcessor extends AbstractBaseBiProces
     public Mono<Void> process(ChannelHandlerContext ctx, Packet packet) {
         return Mono.fromRunnable(() -> {
             if (log.isDebugEnabled()) {
-                log.debug("MqttSubscribeMessageContentProcessor 正在处理外部客户端订�?{} ...", packet);
+                log.debug("MqttSubscribeMessageContentProcessor 正在处理外部客户端订阅 {} ...", packet);
             }
             Message message = packet.getMessage();
             MqttVersion mqttVersion = MqttCodecUtil.getMqttVersion(packet.getRetain());
@@ -86,8 +86,8 @@ public class MqttSubscribeMessageContentBiProcessor extends AbstractBaseBiProces
                                 topicSubscription.topicFilter(), topicSubscription.qualityOfService());
                     });
                 } else {
-                    log.error("MqttSubscribeMessageContentProcessor 订阅主题非法�?);
-                    // 非法topicFilter按订阅失败处�?
+                    log.error("MqttSubscribeMessageContentProcessor 订阅主题非法！");
+                    // 非法 topicFilter 按订阅失败处理
                     MqttSubAckMessage subAckMessage = (MqttSubAckMessage) MqttMessageFactory.newMessage(
                             new MqttFixedHeader(MqttMessageType.SUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
                             MqttMessageIdVariableHeader.from(mqttSubscribeMessage.variableHeader().messageId()),
@@ -100,7 +100,7 @@ public class MqttSubscribeMessageContentBiProcessor extends AbstractBaseBiProces
                     ctx.close();
                 }
             }else {
-                log.error("MqttSubscribeMessageContentProcessor 订阅消息解析失败�?);
+                log.error("MqttSubscribeMessageContentProcessor 订阅消息解析失败！");
             }
             });
     }
@@ -108,16 +108,16 @@ public class MqttSubscribeMessageContentBiProcessor extends AbstractBaseBiProces
     private boolean validTopicFilter(List<MqttTopicSubscription> topicSubscriptions) {
         for (MqttTopicSubscription topicSubscription : topicSubscriptions) {
             String topicFilter = topicSubscription.topicFilter();
-            // �?�?符号开头的、以/符号结尾的及不存�?符号的订阅按非法订阅处理, 这里没有参考标准协�?
+            // 以 #/+ 符号开头的、以 / 符号结尾的及不存在 / 符号的订阅按非法订阅处理, 这里没有参考标准协议
             if (StringUtils.startsWith(topicFilter, "#") || StringUtils.startsWith(topicFilter, "+") || StringUtils.endsWith(topicFilter, "/") || !StringUtils.contains(topicFilter, '/')) return false;
             if (StringUtils.contains(topicFilter, '#')) {
-                // 不是�?#字符串结尾的订阅按非法订阅处�?
+                // 不是以 /# 字符串结尾的订阅按非法订阅处理
                 if (!StringUtils.endsWith(topicFilter, "/#")) return false;
                 // 如果出现多个#符号的订阅按非法订阅处理
                 if (StringUtils.countMatches(topicFilter, '#') > 1) return false;
             }
             if (StringUtils.contains(topicFilter, '+')) {
-                //如果+符号�?+字符串出现的次数不等的情况按非法订阅处理
+                // 如果 + 符号与 /+ 字符串出现的次数不等的情况按非法订阅处理
                 if (StringUtils.countMatches(topicFilter, '+') != StringUtils.countMatches(topicFilter, "/+")) return false;
             }
         }
@@ -125,7 +125,7 @@ public class MqttSubscribeMessageContentBiProcessor extends AbstractBaseBiProces
     }
 
     /**
-     * 订阅成功后回�?matching retain；QoS1/2 写入 inflight 等待 PUBACK�?
+     * 订阅成功后回放 matching retain；QoS1/2 写入 inflight 等待 PUBACK。
      */
     private void sendRetainMessage(ChannelHandlerContext ctx, Packet packet, String appKey, String comboIdentity,
                                    String topicFilter, MqttQoS subscribeQos) {

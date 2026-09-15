@@ -37,7 +37,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * MQTT PUBLISH：按 Redis 订阅表匹�?topic filter，扇出到在线客户端（跳过发布者）�?
+ * MQTT PUBLISH：按 Redis 订阅表匹配 topic filter，扇出到在线客户端（跳过发布者）。
  */
 public class MqttPublishMessageContentBiProcessor extends AbstractBaseBiProcessor<Mono<Void>, Integer> {
     private static final Logger log = LoggerFactory.getLogger(MqttPublishMessageContentBiProcessor.class);
@@ -73,17 +73,17 @@ public class MqttPublishMessageContentBiProcessor extends AbstractBaseBiProcesso
     }
 
     /**
-     * 遗嘱等无入站 Packet 的发布入口�?
+     * 遗嘱等无入站 Packet 的发布入口。
      */
     public void doPublishMessage(MqttMessage mqttMessage) {
         doPublishMessage(mqttMessage, null, null, null);
     }
 
     /**
-     * 发布并扇出�?
+     * 发布并扇出。
      *
-     * @param appKey          订阅表命名空�?
-     * @param publisherCombo  发布�?comboIdentity，扇出时跳过
+     * @param appKey          订阅表命名空间
+     * @param publisherCombo  发布者 comboIdentity，扇出时跳过
      * @param sourcePacket    入站包（优先复用）；遗嘱可为 null
      */
     public void doPublishMessage(MqttMessage mqttMessage, String appKey, String publisherCombo, Packet sourcePacket) {
@@ -96,12 +96,12 @@ public class MqttPublishMessageContentBiProcessor extends AbstractBaseBiProcesso
         }
         repository().savePublishMessage(appKey, mqttMessage);
         if (StringUtils.isBlank(appKey) || StringUtils.isBlank(topicName)) {
-            log.warn("MQTT 发布缺少 appKey �?topic，跳过扇�?topic={}", topicName);
+            log.warn("MQTT 发布缺少 appKey 或 topic，跳过扇出 topic={}", topicName);
             return;
         }
         List<MqttRepository.MqttSubscriber> subscribers = repository().findPublishSubscribers(appKey, topicName);
         if (CollectionUtils.isEmpty(subscribers)) {
-            log.debug("MQTT 发布无订阅�?appKey={} topic={}", appKey, topicName);
+            log.debug("MQTT 发布无订阅者 appKey={} topic={}", appKey, topicName);
             return;
         }
         List<LoginClientInfo> clients = new ArrayList<>();
@@ -119,7 +119,7 @@ public class MqttPublishMessageContentBiProcessor extends AbstractBaseBiProcesso
         }
         Packet fanoutPacket = sourcePacket != null ? sourcePacket : wrapPublishPacket(mqttPublishMessage, appKey, publisherCombo);
         if (fanoutPacket == null) {
-            log.warn("MQTT 扇出无法构�?Packet，topic={}", topicName);
+            log.warn("MQTT 扇出无法构造 Packet，topic={}", topicName);
             return;
         }
         int packetId = mqttPublishMessage.variableHeader().packetId();
@@ -149,7 +149,7 @@ public class MqttPublishMessageContentBiProcessor extends AbstractBaseBiProcesso
             return MessageServerContext.remoteLoginClientInfoCache.get(
                     CacheConstant.buildLoginCacheKey(appKey, comboIdentity));
         } catch (Exception e) {
-            log.warn("MQTT 订阅�?combo 无法解析: {}", comboIdentity, e);
+            log.warn("MQTT 订阅者 combo 无法解析: {}", comboIdentity, e);
             return null;
         }
     }

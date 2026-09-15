@@ -43,7 +43,7 @@ public class MqttPublishAckContentBiProcessor extends AbstractBaseBiProcessor<Mo
             }
             LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
             if (loginClientInfo == null) {
-                log.warn("MQTT PUBACK 时登录信息不存在，关�?channel");
+                log.warn("MQTT PUBACK 时登录信息不存在，关闭 channel");
                 ctx.close();
                 return;
             }
