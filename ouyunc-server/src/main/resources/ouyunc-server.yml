@@ -77,6 +77,13 @@ ouyunc:
         mode: PULL_PUSH
         # 群成员数量阈值，超过该值则切换为拉取模式，在推拉模式下，该配置生效，大于改值的群消息，则切换为拉取模式，小于等于该值则切换为推送模式
         threshold: 500
+    # 内容安全（敏感词 P0；媒体监黄闭环见 P1）
+    content-safety:
+      enable: true
+      # MASK | REJECT | AUDIT_ONLY
+      default-text-action: MASK
+      # SEND_THEN_REVIEW | HOLD
+      default-media-action: SEND_THEN_REVIEW
     # 客户端登录信息保存模式， FOREVER-永久， FINITE-有限； 默认值永久
     # 消息监听器包扫描路径
     listeners:

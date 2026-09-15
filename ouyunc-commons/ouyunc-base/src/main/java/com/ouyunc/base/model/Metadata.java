@@ -77,6 +77,17 @@ public class Metadata implements Serializable, Cloneable {
     private String qosOwnerToken;
 
     /**
+     * 内容审核状态：NONE / PENDING / PASS / REJECT（媒体 HOLD / 先发后审）。
+     */
+    private String moderationStatus;
+
+    /**
+     * 内容审核模式：SEND_THEN_REVIEW / HOLD。
+     */
+    private String moderationMode;
+
+
+    /**
      * 集群广播：仅投递本机连接，不再向其他节点扇出。
      */
     private boolean localBroadcastOnly;
@@ -182,6 +193,22 @@ public class Metadata implements Serializable, Cloneable {
 
     public void setQosOwnerToken(String qosOwnerToken) {
         this.qosOwnerToken = qosOwnerToken;
+    }
+
+    public String getModerationStatus() {
+        return moderationStatus;
+    }
+
+    public void setModerationStatus(String moderationStatus) {
+        this.moderationStatus = moderationStatus;
+    }
+
+    public String getModerationMode() {
+        return moderationMode;
+    }
+
+    public void setModerationMode(String moderationMode) {
+        this.moderationMode = moderationMode;
     }
 
     public boolean isLocalBroadcastOnly() {

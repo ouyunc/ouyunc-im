@@ -1,9 +1,11 @@
 package com.ouyunc.message.processor.http.push;
 
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.HttpResponseCodeEnum;
 import com.ouyunc.base.constant.enums.MessagePushStatusEnum;
 import com.ouyunc.base.executor.ThreadPoolManager;
+import com.ouyunc.base.model.ContentSafetyResult;
 import com.ouyunc.base.model.HttpResponseResult;
 import com.ouyunc.base.model.MessagePushRequest;
 import com.ouyunc.base.model.MessagePushResponse;
@@ -11,6 +13,7 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.message.http.HttpContext;
 import com.ouyunc.message.http.HttpPipelineException;
 import com.ouyunc.message.processor.http.push.delivery.HttpPushDeliverySupport;
+import com.ouyunc.message.safety.ContentSafetyFacade;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -187,6 +190,9 @@ public final class InternalPacketIngressService {
 
     private static HttpResponseResult<MessagePushResponse> acceptAfterPreProcess(
             Packet packet, String appKey, String messageId, String packetIdStr) throws HttpPipelineException {
+        // 与长连接管道一致：敏感词 MASK/REJECT，避免 HTTP Push 绕过
+        applyContentSafetyOrThrow(packet);
+
         HttpPushProcessorDelegate.preProcessOrThrow(packet);
 
         int claim = PushIdempotencySupport.tryClaim(appKey, messageId, packetIdStr);
@@ -221,6 +227,24 @@ public final class InternalPacketIngressService {
         // ACCEPTED = PENDING 已写入，后台落库成功后才会 COMMITTED
         return HttpResponseResult.success(buildResponse(messageId, packetIdStr,
                 MessagePushStatusEnum.ACCEPTED, null));
+    }
+
+    /**
+     * 内容安全拒绝时返回 400；MASK 已原地改写 packet.content，继续受理。
+     */
+    private static void applyContentSafetyOrThrow(Packet packet) throws HttpPipelineException {
+        ContentSafetyResult result;
+        try {
+            result = ContentSafetyFacade.check(packet);
+        } catch (Exception e) {
+            log.error("HTTP 推送内容安全检查异常，放行以免误杀 message packetId={}",
+                    packet == null ? null : packet.getPacketId(), e);
+            return;
+        }
+        if (result != null && !result.isPassed()) {
+            throw new HttpPipelineException(HttpResponseStatus.BAD_REQUEST, HttpResponseCodeEnum.BAD_REQUEST,
+                    ExceptionCodeEnum.CONTENT_SENSITIVE_REJECT.getMessage());
+        }
     }
 
     private static MessagePushResponse buildResponse(String messageId, String packetId,

@@ -25,6 +25,14 @@ public enum ExceptionCodeEnum {
     MESSAGE_REF_INVALID_ERROR(40003, "引用消息无效或超过上限"),
     CS_SESSION_ROUTE_ERROR(40004, "客服会话路由校验失败"),
     HTTP_PUSH_BUSINESS_REJECT(40005, "HTTP推送业务校验未通过"),
+    /** 敏感词策略为 REJECT 时拒绝发送 */
+    CONTENT_SENSITIVE_REJECT(40010, "消息包含违规内容，请修改后重发"),
+    /** 媒体监黄违规（事后撤回或 HOLD 拒绝） */
+    CONTENT_MEDIA_REJECT(40011, "媒体内容违规"),
+    /** 审核服务不可用且策略拒绝 */
+    CONTENT_SAFETY_BUSY(40012, "内容审核繁忙，请稍后重试"),
+    /** HOLD 受理：消息审核中 */
+    CONTENT_MEDIA_HOLDING(40013, "消息审核中"),
 
 
     READ_RECEIPT_MESSAGE_ERROR(50001, "读已回执消息错误"),

@@ -7,26 +7,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * @Author fzx
- * @Description: 消息监控处理器（可以作为鉴黄，敏感政治言论，非法言论等逻辑处理，也可以接入第三方去处理）
- **/
+ * @deprecated 内容安全已迁移至鉴权后的 {@link ContentSafetyHandler}，请勿再挂在登录前。
+ */
+@Deprecated
 public class MonitorHandler extends SimpleChannelInboundHandler<Packet> {
     private static final Logger log = LoggerFactory.getLogger(MonitorHandler.class);
 
-
-    /**
-     * @param ctx
-     * @param packet
-     * @return void
-     * @Author fzx
-     * @Description 消息监控处理逻辑政治敏感词汇，监黄等 @todo 目前这里不做处理
-     */
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, Packet packet) throws Exception {
-        //log.info("监控处理器MonitorHandler正在监控消息：{}", packet);
-        // do nothing
-
-
+    protected void channelRead0(ChannelHandlerContext ctx, Packet packet) {
+        log.debug("MonitorHandler 已废弃，请使用 ContentSafetyHandler");
         ctx.fireChannelRead(packet);
     }
 }

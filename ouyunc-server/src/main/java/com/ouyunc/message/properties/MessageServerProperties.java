@@ -323,6 +323,24 @@ public class MessageServerProperties extends MessageProperties {
     @Key(value = "ouyunc.message.mqtt.enabled", defaultValue = "true")
     boolean mqttEnabled;
 
+    /**
+     * 内容安全总开关（敏感词；媒体监黄闭环见 P1）。关闭后 Handler/Facade 直接放行。
+     */
+    @Key(value = "ouyunc.message.content-safety.enable", defaultValue = "true")
+    boolean contentSafetyEnable;
+
+    /**
+     * 无租户策略时的默认文本动作：MASK / REJECT / AUDIT_ONLY。
+     */
+    @Key(value = "ouyunc.message.content-safety.default-text-action", defaultValue = "MASK")
+    String contentSafetyDefaultTextAction;
+
+    /**
+     * 无租户策略时的默认媒体动作：SEND_THEN_REVIEW / HOLD（P0 仅打标记，闭环见 P1）。
+     */
+    @Key(value = "ouyunc.message.content-safety.default-media-action", defaultValue = "SEND_THEN_REVIEW")
+    String contentSafetyDefaultMediaAction;
+
     /***
      * 是否开启qos重试发送机制，默认关闭
      */
@@ -1001,6 +1019,30 @@ public class MessageServerProperties extends MessageProperties {
         this.serverLoginEnable = serverLoginEnable;
     }
 
+    public boolean isContentSafetyEnable() {
+        return contentSafetyEnable;
+    }
+
+    public void setContentSafetyEnable(boolean contentSafetyEnable) {
+        this.contentSafetyEnable = contentSafetyEnable;
+    }
+
+    public String getContentSafetyDefaultTextAction() {
+        return contentSafetyDefaultTextAction;
+    }
+
+    public void setContentSafetyDefaultTextAction(String contentSafetyDefaultTextAction) {
+        this.contentSafetyDefaultTextAction = contentSafetyDefaultTextAction;
+    }
+
+    public String getContentSafetyDefaultMediaAction() {
+        return contentSafetyDefaultMediaAction;
+    }
+
+    public void setContentSafetyDefaultMediaAction(String contentSafetyDefaultMediaAction) {
+        this.contentSafetyDefaultMediaAction = contentSafetyDefaultMediaAction;
+    }
+
     public int getServerLoginTimeout() {
         return serverLoginTimeout;
     }
@@ -1201,6 +1243,9 @@ public class MessageServerProperties extends MessageProperties {
                 ", groupMaxPerUser=" + groupMaxPerUser +
                 ", groupMaxMembers=" + groupMaxMembers +
                 ", mqttEnabled=" + mqttEnabled +
+                ", contentSafetyEnable=" + contentSafetyEnable +
+                ", contentSafetyDefaultTextAction='" + contentSafetyDefaultTextAction + '\'' +
+                ", contentSafetyDefaultMediaAction='" + contentSafetyDefaultMediaAction + '\'' +
                 ", qosRetryEnable=" + qosRetryEnable +
                 ", qosRetryInitialDelay=" + qosRetryInitialDelay +
                 ", qosRetryPeriod=" + qosRetryPeriod +

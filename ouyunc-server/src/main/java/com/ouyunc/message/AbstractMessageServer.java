@@ -23,6 +23,7 @@ import com.ouyunc.message.convert.BinaryWebSocketFramePacketConverter;
 import com.ouyunc.message.convert.MqttMessagePacketConverter;
 import com.ouyunc.message.convert.PacketPacketConverter;
 import com.ouyunc.message.monitor.ResourceMonitor;
+import com.ouyunc.message.safety.ContentSafetyRegistry;
 import com.ouyunc.message.schedule.ScheduleTimer;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
@@ -160,6 +161,8 @@ public abstract class AbstractMessageServer implements MessageServer {
         MessageServerContext.addPacketConverterList(List.of(PacketPacketConverter.INSTANCE, BinaryWebSocketFramePacketConverter.INSTANCE,MqttMessagePacketConverter.INSTANCE));
         // 添加默认设备类型，这里可以改成从redis 获取，与appKey 进行绑定，由appKey来自定义所支持的设备类型，如果appKey 没有指定支持的设备类型，则走默认设备类型
         MessageServerContext.addDeviceType(DeviceTypeEnum.class);
+        // 内容安全：订阅 Redis 热更新（须在 Netty bind 前）
+        ContentSafetyRegistry.getInstance().start();
         // 发布预加载lua脚本事件
         MessageServerContext.publishEvent(new MessageEvent(LuaScriptEnum.values(), MessageEventTypeEnum.PRELOAD_LUA_SCRIPT), true);
 

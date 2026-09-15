@@ -754,9 +754,14 @@ public class MessageConstant {
 
 
     /**
-     * 监控 处理器
+     * 监控处理器（历史名）；内容安全请用 {@link #CONTENT_SAFETY_HANDLER}，挂在鉴权之后。
      */
     public static final String MONITOR_HANDLER = "MONITOR_HANDLER";
+
+    /**
+     * 内容安全（敏感词 / 监黄标记），须在 {@link #AUTHENTICATION_HANDLER} 之后、{@link #PRE_HANDLER} 之前。
+     */
+    public static final String CONTENT_SAFETY_HANDLER = "CONTENT_SAFETY_HANDLER";
 
 
 
