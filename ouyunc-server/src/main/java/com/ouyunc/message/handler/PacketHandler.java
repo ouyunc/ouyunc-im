@@ -17,7 +17,12 @@ import org.slf4j.LoggerFactory;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * packet 业务逻辑处理器。PING 留在 EventLoop；其余按连接串行下沉，避免 groupUsersIdentity 等同步 Redis 堵 IO。
+ * packet 业务逻辑处理器。
+ * <ul>
+ *   <li>PING：留在 EventLoop（由 PacketPreHandler fire 进入）</li>
+ *   <li>集群 OUYUNC 直连本 Handler：仅 processStage 入有序队列（无 PreHandler）</li>
+ *   <li>客户端 WS/MQTT 业务包：已在 PacketPreHandler 同任务完成 pre+process，不应再经本 Handler 入队</li>
+ * </ul>
  **/
 public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
     private static final Logger log = LoggerFactory.getLogger(PacketHandler.class);
@@ -38,6 +43,7 @@ public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
             messageProcessor.process(ctx, packet);
             return;
         }
+        // 集群内部等无 PreHandler 的路径：单次 process 入队
         ChannelOrderedTasks.executeAsync(ctx.channel(), () -> {
             if (!ctx.channel().isActive()) {
                 return CompletableFuture.completedFuture(null);

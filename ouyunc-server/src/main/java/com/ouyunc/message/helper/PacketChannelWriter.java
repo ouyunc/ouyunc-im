@@ -239,9 +239,16 @@ public final class PacketChannelWriter {
 
     /**
      * 入站后续 handler 必须在该连接 EventLoop 上 fire，禁止 Reactor/业务线程直接进管道。
+     * <p>
+     * 客户端有序全量入站的 PRE 阶段：仅标记校验通过，不 fire 到 PacketHandler
+     *（由 {@link ChannelOrderedInbound} + PacketPreHandler 同任务串联 processStage）。
+     * </p>
      */
     public static void fireChannelRead(ChannelHandlerContext ctx, Object msg) {
         if (ctx == null || msg == null) {
+            return;
+        }
+        if (ChannelOrderedInbound.tryMarkPassedOnPreFire(ctx)) {
             return;
         }
         Channel channel = ctx.channel();

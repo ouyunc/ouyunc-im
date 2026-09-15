@@ -542,6 +542,23 @@ public class MessageConstant {
      */
     public static final String CHANNEL_ATTR_KEY_QOS_DUP_ORIGINAL_PACKET = "CHANNEL_ATTR_KEY_QOS_DUP_ORIGINAL_PACKET";
 
+    /**
+     * 客户端入站有序全量处理阶段：{@code PRE} / {@code PROCESS}。
+     * PRE 阶段 {@code fireChannelRead} 仅标记通过，不进入 PacketHandler，避免同连接二次入队交错。
+     */
+    public static final String CHANNEL_ATTR_KEY_ORDERED_INBOUND_PHASE = "CHANNEL_ATTR_KEY_ORDERED_INBOUND_PHASE";
+
+    /**
+     * PRE 阶段校验通过标记；有序任务在 preProcessStage 完成后据此决定是否执行 processStage。
+     */
+    public static final String CHANNEL_ATTR_KEY_ORDERED_INBOUND_PRE_PASSED = "CHANNEL_ATTR_KEY_ORDERED_INBOUND_PRE_PASSED";
+
+    /** {@link #CHANNEL_ATTR_KEY_ORDERED_INBOUND_PHASE}：前置校验阶段 */
+    public static final String ORDERED_INBOUND_PHASE_PRE = "PRE";
+
+    /** {@link #CHANNEL_ATTR_KEY_ORDERED_INBOUND_PHASE}：业务处理阶段（允许 fire 到 PostHandler） */
+    public static final String ORDERED_INBOUND_PHASE_PROCESS = "PROCESS";
+
 
     // ==============================================handler tag=====================================
 

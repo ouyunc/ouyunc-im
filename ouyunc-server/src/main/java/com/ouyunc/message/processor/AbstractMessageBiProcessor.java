@@ -71,6 +71,10 @@ public abstract class AbstractMessageBiProcessor<T extends Number> extends Abstr
 
     /**
      * 校验通过后 fireChannelRead；拒绝或异常则不往下传。有序队列等该 Mono 完成再处理下一条。
+     * <p>
+     * 客户端有序全量入站 PRE 阶段：fire 被 {@link com.ouyunc.message.helper.ChannelOrderedInbound} 抑制为「通过标记」，
+     * 由 PacketPreHandler 同任务串联 {@link #processStage}，不会二次入队。
+     * </p>
      *
      * @param shouldReject true 表示拦截
      * @param onReject     拦截时回调（如释放 QoS claim），可为 null

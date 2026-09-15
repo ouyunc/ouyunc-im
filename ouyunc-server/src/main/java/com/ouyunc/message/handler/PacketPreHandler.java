@@ -7,6 +7,7 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.message.helper.ChannelOrderedInbound;
 import com.ouyunc.message.helper.ChannelOrderedTasks;
 import com.ouyunc.message.processor.AbstractMessageBiProcessor;
 import com.ouyunc.message.validator.DeviceValidator;
@@ -14,11 +15,17 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.core.publisher.Mono;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 /**
- * 消息前置处理器：设备校验后，PING 留在 EventLoop；其余 preProcess 按连接串行下沉。
+ * 消息前置处理器：设备校验后，PING 留在 EventLoop；其余 pre+process 合并为同一连接有序任务。
+ * <p>
+ * 同连接一条业务消息只入队一次，避免 A-pre → B-pre → A-process 交错；
+ * PRE 阶段通过 {@link ChannelOrderedInbound} 抑制向 PacketHandler 的二次入队。
+ * </p>
  **/
 public class PacketPreHandler extends SimpleChannelInboundHandler<Packet> {
     private static final Logger log = LoggerFactory.getLogger(PacketPreHandler.class);
@@ -58,12 +65,31 @@ public class PacketPreHandler extends SimpleChannelInboundHandler<Packet> {
             messageProcessor.preProcess(ctx, packet);
             return;
         }
-        // clone 归档、鉴权、响应式校验离开 EventLoop；PING 仍在 IO 线程只做 fire
-        ChannelOrderedTasks.executeAsync(ctx.channel(), () -> {
-            if (!ctx.channel().isActive()) {
-                return CompletableFuture.completedFuture(null);
-            }
-            return ChannelOrderedTasks.toVoidStage(messageProcessor.preProcessStage(ctx, packet));
-        });
+        // 一条业务消息：preProcessStage →（通过后）processStage，同一有序任务内完成
+        ChannelOrderedTasks.executeAsync(ctx.channel(), () -> runFullInbound(ctx, packet, messageProcessor));
+    }
+
+    /**
+     * 有序全量入站：PRE 抑制 fire；校验通过再切 PROCESS 跑业务。
+     */
+    private static CompletionStage<Void> runFullInbound(ChannelHandlerContext ctx, Packet packet,
+                                                        AbstractMessageBiProcessor<? extends Number> messageProcessor) {
+        if (!ctx.channel().isActive()) {
+            return CompletableFuture.completedFuture(null);
+        }
+        ChannelOrderedInbound.beginPre(ctx.channel());
+        Mono<Void> full = messageProcessor.preProcessStage(ctx, packet)
+                .then(Mono.defer(() -> {
+                    if (!ChannelOrderedInbound.consumePrePassed(ctx.channel())) {
+                        return Mono.empty();
+                    }
+                    if (!ctx.channel().isActive()) {
+                        return Mono.empty();
+                    }
+                    ChannelOrderedInbound.beginProcess(ctx.channel());
+                    return messageProcessor.processStage(ctx, packet);
+                }));
+        return ChannelOrderedTasks.toVoidStage(full)
+                .whenComplete((ignored, error) -> ChannelOrderedInbound.clear(ctx.channel()));
     }
 }
