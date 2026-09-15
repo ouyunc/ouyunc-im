@@ -577,6 +577,67 @@ public class ClientHelper {
     }
 
     /**
+     * 本机按目标列表扇出：共享正文，按 EventLoop 一份 clone；禁止跨用户复用含私人 Target 的 Packet 而不改 Target。
+     */
+    public static void deliverLocalFanoutTargets(Packet packet, List<Target> targets) {
+        if (packet == null || targets == null || targets.isEmpty()) {
+            return;
+        }
+        ThreadPoolManager.messageSendExecutor().execute(() -> deliverLocalFanoutGrouped(packet, targets));
+    }
+
+    private static void deliverLocalFanoutGrouped(Packet packet, List<Target> targets) {
+        Map<EventLoop, List<Target>> byLoop = new IdentityHashMap<>();
+        for (Target target : targets) {
+            if (target == null || StringUtils.isBlank(target.getTargetIdentity())) {
+                continue;
+            }
+            String combo = IdentityUtil.generalComboIdentity(
+                    target.getAppKey(), target.getTargetIdentity(), target.getDeviceType());
+            ChannelHandlerContext ctx = MessageServerContext.localLoginClientRegisterTable.get(combo);
+            if (ctx == null || ctx.channel() == null || !ctx.channel().isActive()) {
+                continue;
+            }
+            byLoop.computeIfAbsent(ctx.channel().eventLoop(), loop -> new ArrayList<>()).add(target);
+        }
+        if (byLoop.isEmpty()) {
+            return;
+        }
+        for (Map.Entry<EventLoop, List<Target>> entry : byLoop.entrySet()) {
+            EventLoop loop = entry.getKey();
+            if (loop.isTerminated() || loop.isShutdown() || loop.isShuttingDown()) {
+                continue;
+            }
+            Packet loopPacket = packet.clone();
+            List<Target> loopTargets = entry.getValue();
+            loop.execute(() -> writeLocalFanoutOnEventLoop(loop, loopPacket, loopTargets, 0));
+        }
+    }
+
+    private static void writeLocalFanoutOnEventLoop(EventLoop loop, Packet loopPacket,
+                                                    List<Target> targets, int from) {
+        if (loopPacket.getMessage() == null || loopPacket.getMessage().getMetadata() == null) {
+            return;
+        }
+        int end = Math.min(from + MessageConstant.GROUP_FANOUT_LOCAL_EVENTLOOP_BATCH, targets.size());
+        for (int i = from; i < end; i++) {
+            Target target = targets.get(i);
+            String combo = IdentityUtil.generalComboIdentity(
+                    target.getAppKey(), target.getTargetIdentity(), target.getDeviceType());
+            ChannelHandlerContext ctx = MessageServerContext.localLoginClientRegisterTable.get(combo);
+            if (ctx == null || !PacketChannelWriter.isSendable(ctx)) {
+                continue;
+            }
+            loopPacket.getMessage().getMetadata().setTarget(target);
+            loopPacket.getMessage().getMetadata().setFanoutTargets(null);
+            PacketChannelWriter.sendOnChannelBestEffort(ctx, loopPacket);
+        }
+        if (end < targets.size() && !loop.isShuttingDown() && !loop.isShutdown() && !loop.isTerminated()) {
+            loop.execute(() -> writeLocalFanoutOnEventLoop(loop, loopPacket, targets, end));
+        }
+    }
+
+    /**
      * 弱一致遍历本机注册表，按 EventLoop 分桶后提交写出。每个 loop 一份 Packet clone，串行 setTarget。
      */
     private static void deliverLocalBroadcastGrouped(String appKey, Packet packet) {

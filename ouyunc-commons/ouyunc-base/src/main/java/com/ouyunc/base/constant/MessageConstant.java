@@ -383,6 +383,32 @@ public class MessageConstant {
      */
     public static final int GROUP_MEMBER_IDENTITY_CACHE_EXPIRE_SECONDS = 5;
 
+    /** Redis 群成员 ZSET 游标分段 COUNT，避免大群一次 ZRANGE 0 -1 */
+    public static final int GROUP_MEMBER_ZSET_SCAN_COUNT = 500;
+
+    /** 跨节点群扇出：单包携带的目标上限，超出则再拆包 */
+    public static final int GROUP_FANOUT_REMOTE_TARGET_BATCH = 256;
+
+    /** 本机群扇出：同一 EventLoop 每批发完后让出，控制单任务占用 */
+    public static final int GROUP_FANOUT_LOCAL_EVENTLOOP_BATCH = 64;
+
+    /** 消息按 ID 批量查询公共上限（Mongo/MySQL 分片入口） */
+    public static final int MESSAGE_PACKET_QUERY_MAX_IDS = 500;
+
+    /** Mongo 消息查询超时（毫秒），超时后按 error 降级 MySQL */
+    public static final long MESSAGE_MONGO_QUERY_TIMEOUT_MS = 2_000L;
+
+    /**
+     * 用户实体本地缓存权重预算（近似字节）。与条数上限二选一用 weight。
+     */
+    public static final long USER_ENTITY_CACHE_MAX_WEIGHT = 256L * 1024 * 1024;
+
+    /** 群成员配置实体本地缓存权重预算（近似字节） */
+    public static final long GROUP_USER_ENTITY_CACHE_MAX_WEIGHT = 128L * 1024 * 1024;
+
+    /** 群成员 identity Set 本地缓存权重预算（近似字节） */
+    public static final long GROUP_MEMBER_IDENTITY_CACHE_MAX_WEIGHT = 64L * 1024 * 1024;
+
     /**
      * 群实体/成员配置本地缓存秒数。禁言、屏蔽等以 Redis 为准，禁止用 Pub/Sub 刷本地缓存。
      */

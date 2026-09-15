@@ -42,7 +42,8 @@ public final class UserRepositorySupport {
         // 2. Redis缓存
         userEntity = (UserEntity) infra.redisTemplate.opsForValue().get(userCacheKey);
         if (userEntity != null) {
-            updateUserCache(userCacheKey, userEntity);
+            // L2 命中只填本地，禁止回写 Redis 续期
+            fillLocalUserCache(userCacheKey, userEntity);
             return userEntity;
         }
 
@@ -84,8 +85,15 @@ public final class UserRepositorySupport {
 
     void updateUserCache(String cacheKey, UserEntity userEntity) {
         if (userEntity != null) {
-            MessageContext.userEntityCache.put(cacheKey, userEntity);
+            fillLocalUserCache(cacheKey, userEntity);
             infra.redisTemplate.opsForValue().set(cacheKey, userEntity, NumberConstant.NUMBER_30 * MessageConstant.DAY_TIMESTAMP, TimeUnit.MILLISECONDS);
+        }
+    }
+
+    /** 仅填本地缓存（Redis 命中路径） */
+    private void fillLocalUserCache(String cacheKey, UserEntity userEntity) {
+        if (userEntity != null) {
+            MessageContext.userEntityCache.put(cacheKey, userEntity);
         }
     }
 

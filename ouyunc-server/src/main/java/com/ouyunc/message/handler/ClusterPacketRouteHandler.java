@@ -9,6 +9,7 @@ import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,7 +47,14 @@ public class ClusterPacketRouteHandler extends SimpleChannelInboundHandler<Packe
         }
         Target target = metadata.getTarget();
         String localServerAddress = MessageServerContext.serverProperties().getLocalServerAddress();
-        if (metadata.isLocalBroadcastOnly() && Objects.equals(localServerAddress, target.getTargetServerAddress())) {
+        if (CollectionUtils.isNotEmpty(metadata.getFanoutTargets())
+                && target != null
+                && Objects.equals(localServerAddress, target.getTargetServerAddress())) {
+            ClientHelper.deliverLocalFanoutTargets(packet, metadata.getFanoutTargets());
+            return;
+        }
+        if (metadata.isLocalBroadcastOnly() && target != null
+                && Objects.equals(localServerAddress, target.getTargetServerAddress())) {
             ClientHelper.deliverLocalBroadcast(metadata.getAppKey(), packet);
             return;
         }

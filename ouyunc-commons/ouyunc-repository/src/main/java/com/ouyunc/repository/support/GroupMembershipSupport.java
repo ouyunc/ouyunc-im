@@ -26,6 +26,8 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisStringCommands;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.types.Expiration;
@@ -66,10 +68,10 @@ public final class GroupMembershipSupport {
         String cacheKey = CacheConstant.buildGroupUserCacheKey(appKey, groupId);
         Set<String> cached = MessageContext.groupUserIdentityCache.get(cacheKey);
         if (cached != null) {
+            // 调用方会 remove 发送者，必须返回可变副本；缓存内为不可变快照
             return new HashSet<>(cached);
         }
-        Set<String> fromRedis = infra.stringRedisTemplate.opsForZSet().range(
-                cacheKey, NumberConstant.NUMBER_0, NumberConstant.NUMBER_NEGATIVE_1);
+        Set<String> fromRedis = loadGroupUserIdsByScan(cacheKey);
         if (fromRedis != null && !fromRedis.isEmpty()) {
             Set<String> snapshot = Set.copyOf(fromRedis);
             MessageContext.groupUserIdentityCache.put(cacheKey, snapshot);
@@ -89,8 +91,7 @@ public final class GroupMembershipSupport {
         }
         if (!rebuildGroupMemberRedis(appKey, groupId, dbMembers, versionBefore)) {
             // 版本已变：不覆盖；尽量读回并发写入后的 Redis
-            Set<String> after = infra.stringRedisTemplate.opsForZSet().range(
-                    cacheKey, NumberConstant.NUMBER_0, NumberConstant.NUMBER_NEGATIVE_1);
+            Set<String> after = loadGroupUserIdsByScan(cacheKey);
             if (after != null && !after.isEmpty()) {
                 MessageContext.groupUserIdentityCache.put(cacheKey, Set.copyOf(after));
                 return new HashSet<>(after);
@@ -103,6 +104,32 @@ public final class GroupMembershipSupport {
             }
         }
         MessageContext.groupUserIdentityCache.put(cacheKey, Set.copyOf(ids));
+        return ids;
+    }
+
+    /**
+     * 大群成员用 ZSCAN 分段拉取，避免一次 ZRANGE 0 -1 堵 Redis/堆。
+     */
+    private Set<String> loadGroupUserIdsByScan(String cacheKey) {
+        Set<String> ids = new HashSet<>();
+        ScanOptions options = ScanOptions.scanOptions()
+                .count(MessageConstant.GROUP_MEMBER_ZSET_SCAN_COUNT)
+                .build();
+        try (Cursor<ZSetOperations.TypedTuple<String>> cursor =
+                     infra.stringRedisTemplate.opsForZSet().scan(cacheKey, options)) {
+            if (cursor == null) {
+                return ids;
+            }
+            while (cursor.hasNext()) {
+                ZSetOperations.TypedTuple<String> tuple = cursor.next();
+                if (tuple != null && tuple.getValue() != null) {
+                    ids.add(tuple.getValue());
+                }
+            }
+        } catch (Exception e) {
+            log.error("群成员 ZSCAN 失败 cacheKey={}", cacheKey, e);
+            return Set.of();
+        }
         return ids;
     }
 
@@ -292,7 +319,8 @@ public final class GroupMembershipSupport {
         // 2. Redis缓存
         groupUserEntity = (GroupUserEntity) infra.redisTemplate.opsForValue().get(cacheKey);
         if (groupUserEntity != null) {
-            updateGroupUserCache(cacheKey, groupUserEntity);
+            // L2 命中只填本地，禁止无条件回写 Redis 续期
+            fillLocalGroupUserCache(cacheKey, groupUserEntity);
             return groupUserEntity;
         }
 
@@ -343,13 +371,14 @@ public final class GroupMembershipSupport {
             return Mono.just(localCached);
         }
 
-        // 2. Redis缓存（响应式）
+        // 2. Redis缓存（响应式）：命中只填 L1，L2 写入放到受控执行器且仅回源路径
         return infra.reactiveRedisTemplate.opsForValue().get(cacheKey)
-                .cast(GroupUserEntity.class)
-                .doOnNext((Object groupUserEntity) -> {
-                    if (groupUserEntity != null) {
-                        updateGroupUserCache(cacheKey, (GroupUserEntity) groupUserEntity);
+                .flatMap(raw -> {
+                    if (!(raw instanceof GroupUserEntity entity)) {
+                        return Mono.empty();
                     }
+                    fillLocalGroupUserCache(cacheKey, entity);
+                    return Mono.just(entity);
                 })
                 .switchIfEmpty(
                         // 3. MongoDB（响应式）
@@ -358,7 +387,8 @@ public final class GroupMembershipSupport {
                                                 .and(MongoGroupUserEntity.Fields.groupId).is(Long.parseLong(groupId))),
                                         MongoGroupUserEntity.class)
                                 .map(this::convertMongoGroupUserToGroupUser)
-                                .doOnNext(groupUserEntity -> updateGroupUserCache(cacheKey, groupUserEntity))
+                                .flatMap(groupUserEntity -> writeThroughGroupUserCacheAsync(cacheKey, groupUserEntity)
+                                        .thenReturn(groupUserEntity))
                                 .switchIfEmpty(
                                         // 4. MySQL（响应式）
                                         Mono.fromCallable(() -> {
@@ -375,10 +405,12 @@ public final class GroupMembershipSupport {
                                                     }
                                                 })
                                                 .subscribeOn(Schedulers.fromExecutor(infra.dbExecutor()))
-                                                .doOnNext(groupUserEntity -> {
-                                                    if (groupUserEntity != null) {
-                                                        updateGroupUserCache(cacheKey, groupUserEntity);
+                                                .flatMap(groupUserEntity -> {
+                                                    if (groupUserEntity == null) {
+                                                        return Mono.empty();
                                                     }
+                                                    return writeThroughGroupUserCacheAsync(cacheKey, groupUserEntity)
+                                                            .thenReturn(groupUserEntity);
                                                 })
                                 )
                 )
@@ -386,6 +418,12 @@ public final class GroupMembershipSupport {
                     log.error("响应式查询群成员异常, appKey: {}, groupId: {}, memberId: {}", appKey, groupId, memberId, e);
                     return Mono.empty();
                 });
+    }
+
+    private Mono<Void> writeThroughGroupUserCacheAsync(String cacheKey, GroupUserEntity groupUserEntity) {
+        return Mono.fromRunnable(() -> updateGroupUserCache(cacheKey, groupUserEntity))
+                .subscribeOn(Schedulers.fromExecutor(infra.dbExecutor()))
+                .then();
     }
 
     @SuppressWarnings("unchecked")
@@ -613,9 +651,16 @@ public final class GroupMembershipSupport {
 
     public void updateGroupUserCache(String cacheKey, GroupUserEntity groupUserEntity) {
         if (groupUserEntity != null) {
-            MessageContext.groupUserEntityCache.put(cacheKey, groupUserEntity);
+            fillLocalGroupUserCache(cacheKey, groupUserEntity);
             infra.redisTemplate.opsForValue().set(cacheKey, groupUserEntity,
                     MessageConstant.CACHE_ENTITY_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+        }
+    }
+
+    /** 仅填本地缓存，不写 L2（Redis 命中路径） */
+    private void fillLocalGroupUserCache(String cacheKey, GroupUserEntity groupUserEntity) {
+        if (groupUserEntity != null) {
+            MessageContext.groupUserEntityCache.put(cacheKey, groupUserEntity);
         }
     }
 

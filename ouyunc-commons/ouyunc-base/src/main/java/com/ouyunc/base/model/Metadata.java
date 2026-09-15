@@ -75,6 +75,12 @@ public class Metadata implements Serializable, Cloneable {
      */
     private boolean localBroadcastOnly;
 
+    /**
+     * 跨节点聚合扇出：落地节点按此列表本机展开投递；正文只传一份。
+     * 单目标投递时保持 null；含私人 Target 字段，禁止跨用户复用同一 Packet 实例写不同连接前不 setTarget。
+     */
+    private List<Target> fanoutTargets;
+
 
     public String getAppKey() {
         return appKey;
@@ -172,6 +178,14 @@ public class Metadata implements Serializable, Cloneable {
         this.localBroadcastOnly = localBroadcastOnly;
     }
 
+    public List<Target> getFanoutTargets() {
+        return fanoutTargets;
+    }
+
+    public void setFanoutTargets(List<Target> fanoutTargets) {
+        this.fanoutTargets = fanoutTargets;
+    }
+
     public Metadata(String appKey, boolean routed, int currentRetry, String fromServerAddress, Target target, List<RoutingTable> routingTables, String clientIp, long serverTime) {
         this.appKey = appKey;
         this.routed = routed;
@@ -205,6 +219,13 @@ public class Metadata implements Serializable, Cloneable {
                     routingTableList.add(routingTable.clone());
                 }
                 metadata.setRoutingTables(routingTableList);
+            }
+            if (this.fanoutTargets != null) {
+                List<Target> copied = new ArrayList<>(this.fanoutTargets.size());
+                for (Target t : this.fanoutTargets) {
+                    copied.add(t == null ? null : t.clone());
+                }
+                metadata.setFanoutTargets(copied);
             }
             return metadata;
         } catch (CloneNotSupportedException e) {

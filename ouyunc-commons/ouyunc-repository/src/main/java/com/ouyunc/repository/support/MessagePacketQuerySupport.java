@@ -26,6 +26,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -64,7 +65,8 @@ public final class MessagePacketQuerySupport {
             return Collections.emptyList();
         }
 
-        Set<Long> requestedIds = new LinkedHashSet<>(packetIds);
+        List<Long> cappedIds = capPacketIds(packetIds);
+        Set<Long> requestedIds = new LinkedHashSet<>(cappedIds);
         List<String> redisKeys = requestedIds.stream()
                 .map(id -> CacheConstant.buildMessageCacheKey(appKey, id))
                 .collect(Collectors.toList());
@@ -103,40 +105,70 @@ public final class MessagePacketQuerySupport {
                 .subscribeOn(Schedulers.boundedElastic());
     }
 
+    /**
+     * 公共入口 ID 上限；超出截断并打日志，避免单次超大批量打爆 Mongo/MySQL。
+     */
+    private static List<Long> capPacketIds(List<Long> packetIds) {
+        int max = MessageConstant.MESSAGE_PACKET_QUERY_MAX_IDS;
+        if (packetIds.size() <= max) {
+            return packetIds;
+        }
+        log.warn("消息批量查询 ID 数 {} 超过上限 {}，已截断", packetIds.size(), max);
+        return packetIds.subList(0, max);
+    }
+
+    /**
+     * Mongo miss 继续 MySQL；Mongo <strong>error/timeout</strong> 也降级 MySQL（区分 miss 与 error）。
+     * 历史正文兜底可读；撤回/权限等权威状态不得仅依赖本路径旧数据。
+     */
     private List<Packet> queryPacketsFromDatabases(String appKey, List<Long> missingIds) {
         if (CollectionUtils.isEmpty(missingIds)) {
             return Collections.emptyList();
         }
 
-        List<MongoMessageEntity> mongoEntities = mongoTemplate.find(
-                Query.query(Criteria.where(MongoMessageEntity.Fields.id).in(missingIds)
-                        .and(MessageEntity.Fields.appKey).is(appKey)),
-                MongoMessageEntity.class
-        );
-        List<Packet> dbPackets = convertToPackets(mongoEntities);
+        List<Packet> dbPackets = new ArrayList<>();
+        List<Long> remainingIds = new ArrayList<>(missingIds);
+        boolean mongoFailed = false;
 
-        Set<Long> foundIds = mongoEntities.stream()
-                .map(MessageEntity::getId)
-                .collect(Collectors.toSet());
-        List<Long> remainingIds = missingIds.stream()
-                .filter(id -> !foundIds.contains(id))
-                .collect(Collectors.toList());
-
-        if (!CollectionUtils.isEmpty(remainingIds)) {
-            try {
-                List<MessageEntity> mysqlEntities = jdbcClient.sql(JdbcSqlDialectHolder.selectMessage())
-                        .param(MessageEntity.Fields.ids, remainingIds)
-                        .param(MessageEntity.Fields.appKey, appKey)
-                        .query(MessageEntity.class)
-                        .list();
-                dbPackets.addAll(convertToPackets(mysqlEntities));
-            } catch (EmptyResultDataAccessException e) {
-                log.error("message不存在, 原因: {}", e.getMessage());
-                return dbPackets;
-            } catch (Exception e) {
-                log.error("获取消息实体异常, remainingIds: {}, 原因：{}", remainingIds, e.getMessage());
-                return dbPackets;
+        try {
+            Query mongoQuery = Query.query(Criteria.where(MongoMessageEntity.Fields.id).in(missingIds)
+                    .and(MessageEntity.Fields.appKey).is(appKey));
+            mongoQuery.maxTime(Duration.ofMillis(MessageConstant.MESSAGE_MONGO_QUERY_TIMEOUT_MS));
+            List<MongoMessageEntity> mongoEntities = mongoTemplate.find(mongoQuery, MongoMessageEntity.class);
+            if (CollectionUtils.isNotEmpty(mongoEntities)) {
+                dbPackets.addAll(convertToPackets(mongoEntities));
+                Set<Long> foundIds = mongoEntities.stream()
+                        .map(MessageEntity::getId)
+                        .collect(Collectors.toSet());
+                remainingIds = missingIds.stream()
+                        .filter(id -> !foundIds.contains(id))
+                        .collect(Collectors.toList());
             }
+        } catch (Exception e) {
+            mongoFailed = true;
+            log.error("Mongo 查询消息失败，降级 MySQL appKey={} missingSize={}", appKey, missingIds.size(), e);
+            remainingIds = new ArrayList<>(missingIds);
+        }
+
+        if (CollectionUtils.isEmpty(remainingIds)) {
+            return dbPackets;
+        }
+
+        try {
+            List<MessageEntity> mysqlEntities = jdbcClient.sql(JdbcSqlDialectHolder.selectMessage())
+                    .param(MessageEntity.Fields.ids, remainingIds)
+                    .param(MessageEntity.Fields.appKey, appKey)
+                    .query(MessageEntity.class)
+                    .list();
+            dbPackets.addAll(convertToPackets(mysqlEntities));
+        } catch (EmptyResultDataAccessException e) {
+            if (mongoFailed) {
+                log.warn("Mongo 失败且 MySQL 无结果, remainingIds={}", remainingIds);
+            } else {
+                log.debug("MySQL 无更多消息, remainingIds={}", remainingIds);
+            }
+        } catch (Exception e) {
+            log.error("获取消息实体异常, remainingIds: {}, 原因：{}", remainingIds, e.getMessage());
         }
 
         return dbPackets;

@@ -417,8 +417,8 @@ public class MessageContext {
      * 群成员配置的映射缓存
      */
     public static final Cache<String, GroupUserEntity> groupUserEntityCache = new CaffeineLocalCache<>("groupUserEntity", Caffeine.newBuilder()
-            // 最大条目数：100万（预留20%冗余，避免频繁淘汰）
-            .maximumSize(MessageConstant.LOCAL_CACHE_MAX_SIZE)
+            .maximumWeight(MessageConstant.GROUP_USER_ENTITY_CACHE_MAX_WEIGHT)
+            .weigher((String key, GroupUserEntity value) -> approximateEntityWeight(key, 384))
             // 淘汰策略：LRU（最近最少使用）→ 适合热点数据集中的场景
             // 若热点分散，可改用 LFU（最少频率使用）：.expireAfterWrite(...) + .weigher(...)
             .evictionListener((key, value, cause) -> {
@@ -474,8 +474,9 @@ public class MessageContext {
      * 用户实体的映射缓存
      */
     public static final Cache<String, UserEntity> userEntityCache = new CaffeineLocalCache<>("userEntity", Caffeine.newBuilder()
-            // 最大条目数：100万（预留20%冗余，避免频繁淘汰）
-            .maximumSize(MessageConstant.LOCAL_CACHE_MAX_SIZE)
+            // 按近似字节预算，避免大对象 + 固定条数失控
+            .maximumWeight(MessageConstant.USER_ENTITY_CACHE_MAX_WEIGHT)
+            .weigher((String key, UserEntity value) -> approximateEntityWeight(key, 512))
             // 淘汰策略：LRU（最近最少使用）→ 适合热点数据集中的场景
             .evictionListener((key, value, cause) -> {
                 // 监控淘汰原因（如容量满、过期），用于调优
@@ -528,13 +529,31 @@ public class MessageContext {
 
     /**
      * 群成员 identity 列表。短过期兜底；退群/解散须走 Pub/Sub 立刻失效，避免短暂扇出到已退成员。
+     * 权重≈ key + 成员 id 总长，大群 Set 占更多预算。
      */
     public static final Cache<String, Set<String>> groupUserIdentityCache = CaffeineLocalCache.wrap(
             "groupUserIdentity",
             Caffeine.newBuilder()
-                    .maximumSize(MessageConstant.GROUP_MEMBER_IDENTITY_CACHE_MAX_SIZE)
+                    .maximumWeight(MessageConstant.GROUP_MEMBER_IDENTITY_CACHE_MAX_WEIGHT)
+                    .weigher((String key, Set<String> members) -> approximateMemberSetWeight(key, members))
                     .expireAfterWrite(MessageConstant.GROUP_MEMBER_IDENTITY_CACHE_EXPIRE_SECONDS, TimeUnit.SECONDS)
                     .recordStats()
                     .build());
+
+    /** 实体缓存权重近似：key 字符 + 固定载荷估算 */
+    private static int approximateEntityWeight(String key, int payloadBytes) {
+        int keyBytes = key == null ? 0 : key.length() * 2;
+        return Math.max(1, keyBytes + payloadBytes);
+    }
+
+    private static int approximateMemberSetWeight(String key, Set<String> members) {
+        int weight = key == null ? 0 : key.length() * 2;
+        if (members != null) {
+            for (String id : members) {
+                weight += id == null ? 8 : (id.length() * 2 + 16);
+            }
+        }
+        return Math.max(1, weight);
+    }
 
 }

@@ -18,7 +18,11 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -30,21 +34,84 @@ public class MessageHelper {
     private static final Logger log = LoggerFactory.getLogger(MessageHelper.class);
 
     /**
-     * 同步发送消息给多个客户端
+     * 同步发送消息给多个客户端：按落地节点聚合，跨节点一份正文+分批目标。
      */
     public static void syncSendMessage(Packet packet, Collection<LoginClientInfo> loginClientInfos) {
-        for (LoginClientInfo loginClientInfo : loginClientInfos) {
-            syncSendMessage(packet.clone(), buildTarget(loginClientInfo));
-        }
+        fanoutToClients(packet, loginClientInfos, true);
     }
 
     /**
-     * 异步发送消息给多个客户端
-     * 注意！注意！注意！，异步发送，只是逻辑处理事异步的，但是具体讲消息发送出去的时间不确定，因为最后发送消息的的writeAndFlush()方法，会被封装到channel.eventLoop()单线程的任务队列中；队列里面任务的执行时间可查看相关文档
+     * 异步发送消息给多个客户端：按落地节点聚合，跨节点一份正文+分批目标，避免 O(终端) 次 clone/调度。
      */
     public static void asyncSendMessage(Packet packet, Collection<LoginClientInfo> loginClientInfos) {
-        for (LoginClientInfo loginClientInfo : loginClientInfos) {
-            asyncSendMessage(packet.clone(), buildTarget(loginClientInfo));
+        fanoutToClients(packet, loginClientInfos, false);
+    }
+
+    /**
+     * 多端扇出：本机分批展开；远程按节点打包 {@link Metadata#getFanoutTargets()}。
+     */
+    private static void fanoutToClients(Packet packet, Collection<LoginClientInfo> loginClientInfos, boolean sync) {
+        if (packet == null || CollectionUtils.isEmpty(loginClientInfos)) {
+            return;
+        }
+        String local = MessageServerContext.serverProperties().getLocalServerAddress();
+        Map<String, List<LoginClientInfo>> byNode = new LinkedHashMap<>();
+        for (LoginClientInfo client : loginClientInfos) {
+            if (client == null) {
+                continue;
+            }
+            String node = client.getLoginServerAddress();
+            if (node == null || node.isBlank()) {
+                node = local;
+            }
+            byNode.computeIfAbsent(node, ignored -> new ArrayList<>()).add(client);
+        }
+        List<LoginClientInfo> localClients = byNode.remove(local);
+        if (CollectionUtils.isNotEmpty(localClients)) {
+            List<Target> targets = new ArrayList<>(localClients.size());
+            for (LoginClientInfo c : localClients) {
+                targets.add(buildTarget(c));
+            }
+            ClientHelper.deliverLocalFanoutTargets(packet, targets);
+        }
+        boolean cluster = MessageServerContext.serverProperties().isClusterEnable();
+        for (Map.Entry<String, List<LoginClientInfo>> entry : byNode.entrySet()) {
+            if (!cluster) {
+                List<Target> targets = new ArrayList<>(entry.getValue().size());
+                for (LoginClientInfo c : entry.getValue()) {
+                    targets.add(buildTarget(c));
+                }
+                ClientHelper.deliverLocalFanoutTargets(packet, targets);
+                continue;
+            }
+            sendRemoteFanoutBatches(packet, entry.getKey(), entry.getValue(), sync);
+        }
+    }
+
+    private static void sendRemoteFanoutBatches(Packet packet, String nodeId,
+                                                List<LoginClientInfo> clients, boolean sync) {
+        int batch = MessageConstant.GROUP_FANOUT_REMOTE_TARGET_BATCH;
+        for (int from = 0; from < clients.size(); from += batch) {
+            int to = Math.min(from + batch, clients.size());
+            List<Target> targets = new ArrayList<>(to - from);
+            for (int i = from; i < to; i++) {
+                targets.add(buildTarget(clients.get(i)));
+            }
+            Packet fanout = packet.clone();
+            Metadata metadata = fanout.getMessage().getMetadata();
+            metadata.setRouted(true);
+            metadata.setFanoutTargets(targets);
+            Target envelope = Target.newBuilder()
+                    .appKey(metadata.getAppKey())
+                    .targetServerAddress(nodeId)
+                    .protocol(com.ouyunc.message.protocol.NativePacketProtocol.OUYUNC.getProtocol())
+                    .protocolVersion(com.ouyunc.message.protocol.NativePacketProtocol.OUYUNC.getProtocolVersion())
+                    .build();
+            if (sync) {
+                syncSendMessageWithoutInterceptor(fanout, envelope);
+            } else {
+                asyncSendMessageWithoutInterceptor(fanout, envelope);
+            }
         }
     }
 
@@ -194,10 +261,14 @@ public class MessageHelper {
     }
 
     /**
-     * 本机落地：普通单播按 identity+device 写连接；节点广播只扫本机登录表。
+     * 本机落地：普通单播按 identity+device 写连接；节点广播只扫本机登录表；聚合扇出按 fanoutTargets 展开。
      */
     private static void deliverLocal(Packet packet, Target target, SendCallback sendCallback) {
         Metadata metadata = packet.getMessage().getMetadata();
+        if (metadata != null && CollectionUtils.isNotEmpty(metadata.getFanoutTargets())) {
+            ClientHelper.deliverLocalFanoutTargets(packet, metadata.getFanoutTargets());
+            return;
+        }
         String identity = target.getTargetIdentity();
         if (metadata != null && metadata.isLocalBroadcastOnly()
                 && (identity == null || identity.isEmpty())) {
