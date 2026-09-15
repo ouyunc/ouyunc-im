@@ -38,12 +38,12 @@ public enum LuaScriptEnum {
             """, "已读会话偏移量"),
 
     /**
-     * 单聊收消息：packetId 大于本端 sro 时未读 +1（带上限）。
-     * packetId / sro 为十进制字符串，按长度+字典序比较。
-     * KEYS[1]=ur KEYS[2]=sro
-     * ARGV[1]=field ARGV[2]=packetId ARGV[3]=delta ARGV[4]=storeMax ARGV[5]=ttlMs
+     * 单聊收消息：packetId 大于本端 sro 时把 packetId 记入未读集合，计数=SCARD（带上限）。
+     * 不用雪花 ID 相减；重复 packetId 靠 SADD 幂等。
+     * KEYS[1]=ur KEYS[2]=sro KEYS[3]=uridSet
+     * ARGV[1]=field ARGV[2]=packetId ARGV[3]=delta(忽略,兼容) ARGV[4]=storeMax ARGV[5]=ttlMs
      */
-    UNREAD_INCR_ONE2ONE_SCRIPT("1", """
+    UNREAD_INCR_ONE2ONE_SCRIPT("2", """
             local function toIntOrZero(v)
                 if v == false or v == nil then return 0 end
                 if type(v) == 'string' and v == '' then return 0 end
@@ -72,32 +72,32 @@ public enum LuaScriptEnum {
             end
             local storeMax = toIntOrZero(ARGV[4])
             if storeMax <= 0 then storeMax = 1000 end
-            local cur = toIntOrZero(redis.call('HGET', KEYS[1], ARGV[1]))
-            if cur >= storeMax then
-                return cur
-            end
-            local delta = toIntOrZero(ARGV[3])
-            if delta <= 0 then delta = 1 end
-            local nv = redis.call('HINCRBY', KEYS[1], ARGV[1], delta)
-            nv = toIntOrZero(nv)
-            if nv > storeMax then
+            local card = toIntOrZero(redis.call('SCARD', KEYS[3]))
+            if card >= storeMax then
                 redis.call('HSET', KEYS[1], ARGV[1], storeMax)
+                return storeMax
+            end
+            redis.call('SADD', KEYS[3], tostring(pid))
+            local nv = toIntOrZero(redis.call('SCARD', KEYS[3]))
+            if nv > storeMax then
                 nv = storeMax
             end
+            redis.call('HSET', KEYS[1], ARGV[1], nv)
             local ttl = toIntOrZero(ARGV[5])
             if ttl > 0 then
                 redis.call('PEXPIRE', KEYS[1], ttl)
+                redis.call('PEXPIRE', KEYS[3], ttl)
             end
             return nv
             """, "单聊未读增量"),
 
     /**
-     * 单聊本端已读：推进 sro；仅当 incoming 严格大于当前 sro 时 HDEL 未读 field。
-     * 校验与写入同脚本原子完成，避免 Java 校验与 Lua 执行之间的 TOCTOU 误清。
-     * KEYS[1]=ur KEYS[2]=sro
+     * 单聊本端已读：推进 sro；从未读集合中只移除 {@code packetId <= incomingOffset} 的成员，
+     * 再按剩余 SCARD 回写 Hash 计数。无序索引（升级前旧数据）时不整 field HDEL，避免误清更高未读。
+     * KEYS[1]=ur KEYS[2]=sro KEYS[3]=uridSet
      * ARGV[1]=field ARGV[2]=incomingOffset ARGV[3]=ttlMs
      */
-    UNREAD_CLEAR_ONE2ONE_ON_READ_SCRIPT("2", """
+    UNREAD_CLEAR_ONE2ONE_ON_READ_SCRIPT("3", """
             local function toIntOrZero(v)
                 if v == false or v == nil then return 0 end
                 if type(v) == 'string' and v == '' then return 0 end
@@ -113,6 +113,17 @@ public enum LuaScriptEnum {
                 if #a > #b then return true end
                 if #a < #b then return false end
                 return a > b
+            end
+            local function packetIdLe(a, b)
+                if a == false or a == nil then a = '0' end
+                if b == false or b == nil then b = '0' end
+                a = tostring(a)
+                b = tostring(b)
+                if a == '' then a = '0' end
+                if b == '' then b = '0' end
+                if #a < #b then return true end
+                if #a > #b then return false end
+                return a <= b
             end
             local function mergeOffset(cur, inc)
                 if inc == nil or inc == '' then inc = '0' end
@@ -133,11 +144,23 @@ public enum LuaScriptEnum {
             if ttl > 0 then
                 redis.call('SET', KEYS[2], merged, 'PX', ttl)
                 redis.call('PEXPIRE', KEYS[1], ttl)
+                redis.call('PEXPIRE', KEYS[3], ttl)
             else
                 redis.call('SET', KEYS[2], merged)
             end
-            if offsetGt(inc, cur) then
-                redis.call('HDEL', KEYS[1], ARGV[1])
+            local ids = redis.call('SMEMBERS', KEYS[3])
+            if #ids > 0 then
+                for _, id in ipairs(ids) do
+                    if packetIdLe(id, inc) then
+                        redis.call('SREM', KEYS[3], id)
+                    end
+                end
+                local left = toIntOrZero(redis.call('SCARD', KEYS[3]))
+                if left == 0 then
+                    redis.call('HDEL', KEYS[1], ARGV[1])
+                else
+                    redis.call('HSET', KEYS[1], ARGV[1], left)
+                end
             end
             return merged
             """, "单聊已读清未读"),
@@ -208,11 +231,11 @@ public enum LuaScriptEnum {
             """, "客服 ticket 已读 offset"),
 
     /**
-     * 客服 ticket 收消息：packetId 大于本端 ticket sro 时未读 +1。
-     * KEYS[1]=urHash KEYS[2]=sroHash
-     * ARGV[1]=field ARGV[2]=packetId ARGV[3]=delta ARGV[4]=storeMax ARGV[5]=ttlMs
+     * 客服 ticket 收消息：packetId 大于本端 ticket sro 时记入未读集合，计数=SCARD。
+     * KEYS[1]=urHash KEYS[2]=sroHash KEYS[3]=uridSet
+     * ARGV[1]=field ARGV[2]=packetId ARGV[3]=delta(忽略) ARGV[4]=storeMax ARGV[5]=ttlMs
      */
-    CS_TICKET_UNREAD_INCR_SCRIPT("1", """
+    CS_TICKET_UNREAD_INCR_SCRIPT("2", """
             local function toIntOrZero(v)
                 if v == false or v == nil then return 0 end
                 if type(v) == 'string' and v == '' then return 0 end
@@ -242,32 +265,33 @@ public enum LuaScriptEnum {
             end
             local storeMax = toIntOrZero(ARGV[4])
             if storeMax <= 0 then storeMax = 1000 end
-            local cur = toIntOrZero(redis.call('HGET', KEYS[1], field))
-            if cur >= storeMax then
-                return cur
-            end
-            local delta = toIntOrZero(ARGV[3])
-            if delta <= 0 then delta = 1 end
-            local nv = redis.call('HINCRBY', KEYS[1], field, delta)
-            nv = toIntOrZero(nv)
-            if nv > storeMax then
+            local card = toIntOrZero(redis.call('SCARD', KEYS[3]))
+            if card >= storeMax then
                 redis.call('HSET', KEYS[1], field, storeMax)
+                return storeMax
+            end
+            redis.call('SADD', KEYS[3], tostring(pid))
+            local nv = toIntOrZero(redis.call('SCARD', KEYS[3]))
+            if nv > storeMax then
                 nv = storeMax
             end
+            redis.call('HSET', KEYS[1], field, nv)
             local ttl = toIntOrZero(ARGV[5])
             if ttl > 0 then
                 redis.call('PEXPIRE', KEYS[1], ttl)
                 redis.call('PEXPIRE', KEYS[2], ttl)
+                redis.call('PEXPIRE', KEYS[3], ttl)
             end
             return nv
             """, "客服 ticket 未读增量"),
 
     /**
-     * 客服 ticket 已读：推进 sro Hash；incoming 严格大于当前 sro 时 HDEL 未读 field。
-     * KEYS[1]=urHash KEYS[2]=sroHash
+     * 客服 ticket 已读：推进 sro Hash；从未读集合只移除 {@code <= incomingOffset}，再回写计数。
+     * 无序索引时不整 field HDEL。
+     * KEYS[1]=urHash KEYS[2]=sroHash KEYS[3]=uridSet
      * ARGV[1]=field ARGV[2]=incomingOffset ARGV[3]=ttlMs
      */
-    CS_TICKET_CLEAR_UNREAD_ON_READ_SCRIPT("1", """
+    CS_TICKET_CLEAR_UNREAD_ON_READ_SCRIPT("2", """
             local function toIntOrZero(v)
                 if v == false or v == nil then return 0 end
                 if type(v) == 'string' and v == '' then return 0 end
@@ -283,6 +307,17 @@ public enum LuaScriptEnum {
                 if #a > #b then return true end
                 if #a < #b then return false end
                 return a > b
+            end
+            local function packetIdLe(a, b)
+                if a == false or a == nil then a = '0' end
+                if b == false or b == nil then b = '0' end
+                a = tostring(a)
+                b = tostring(b)
+                if a == '' then a = '0' end
+                if b == '' then b = '0' end
+                if #a < #b then return true end
+                if #a > #b then return false end
+                return a <= b
             end
             local function mergeOffset(cur, inc)
                 if inc == nil or inc == '' then inc = '0' end
@@ -305,9 +340,21 @@ public enum LuaScriptEnum {
             if ttl > 0 then
                 redis.call('PEXPIRE', KEYS[2], ttl)
                 redis.call('PEXPIRE', KEYS[1], ttl)
+                redis.call('PEXPIRE', KEYS[3], ttl)
             end
-            if offsetGt(inc, cur) then
-                redis.call('HDEL', KEYS[1], field)
+            local ids = redis.call('SMEMBERS', KEYS[3])
+            if #ids > 0 then
+                for _, id in ipairs(ids) do
+                    if packetIdLe(id, inc) then
+                        redis.call('SREM', KEYS[3], id)
+                    end
+                end
+                local left = toIntOrZero(redis.call('SCARD', KEYS[3]))
+                if left == 0 then
+                    redis.call('HDEL', KEYS[1], field)
+                else
+                    redis.call('HSET', KEYS[1], field, left)
+                end
             end
             return merged
             """, "客服 ticket 已读清未读");

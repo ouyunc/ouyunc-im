@@ -22,7 +22,7 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * 单聊未读 Hash（ur）写路径：按用户×设备增量维护；群聊不在此维护。
+ * 单聊未读：Hash 存展示计数，SET 存未读 packetId，已读时只移除 {@code <= offset} 的成员。
  */
 public final class UnreadIndexSupport {
 
@@ -35,7 +35,7 @@ public final class UnreadIndexSupport {
     }
 
     /**
-     * 单聊/客服：他人有效聊天消息持久化成功后，对收件人各 deviceType 未读 +1。
+     * 单聊/客服：他人有效聊天消息持久化成功后，对收件人各 deviceType 未读集合加入 packetId。
      */
     @SuppressWarnings("unchecked")
     public void incrOne2OneOnMessage(Packet packet) {
@@ -78,7 +78,9 @@ public final class UnreadIndexSupport {
                         String urKey = CacheConstant.buildUserDeviceUnreadCacheKey(appKey, recipientId, deviceType);
                         String sroKey = CacheConstant.buildSessionReadMessageOffsetCacheKey(
                                 appKey, IdentityType.ONE_2_ONE.value(), recipientId, deviceType, senderId);
-                        operations.execute(script, List.of(urKey, sroKey),
+                        String uridKey = CacheConstant.buildUserDeviceUnreadIdsCacheKey(
+                                appKey, recipientId, deviceType, senderId);
+                        operations.execute(script, List.of(urKey, sroKey, uridKey),
                                 field, packetIdArg, "1", String.valueOf(storeMax), String.valueOf(ttl));
                     }
                     return null;
@@ -97,23 +99,27 @@ public final class UnreadIndexSupport {
     }
 
     /**
-     * 单聊本端已读或发消息静默推进：更新 sro；仅当 incoming 严格大于当前 sro 时清未读 field。
+     * 单聊本端已读或发消息静默推进：更新 sro，并按 offset 部分清除未读集合。
+     *
+     * @return true 表示 Redis 脚本执行成功；失败返回 false（不吞异常语义，由调用方决定是否 ACK）
      */
     @SuppressWarnings("unchecked")
-    public void clearOne2OneOnRead(String appKey, String readerId, Byte deviceType, String peerId, long incomingOffset,
-                                   long expireTimeMs) {
+    public boolean clearOne2OneOnRead(String appKey, String readerId, Byte deviceType, String peerId, long incomingOffset,
+                                      long expireTimeMs) {
         if (appKey == null || readerId == null || deviceType == null || peerId == null) {
-            return;
+            return false;
         }
         String urKey = CacheConstant.buildUserDeviceUnreadCacheKey(appKey, readerId, deviceType);
         String sroKey = CacheConstant.buildSessionReadMessageOffsetCacheKey(
                 appKey, IdentityType.ONE_2_ONE.value(), readerId, deviceType, peerId);
+        String uridKey = CacheConstant.buildUserDeviceUnreadIdsCacheKey(appKey, readerId, deviceType, peerId);
         String field = IdentityType.ONE_2_ONE.unreadField(peerId);
         try {
             DefaultRedisScript<String> script = new DefaultRedisScript<>(
                     LuaScriptEnum.UNREAD_CLEAR_ONE2ONE_ON_READ_SCRIPT.getScript(), String.class);
-            stringRedisTemplate.execute(script, List.of(urKey, sroKey),
+            stringRedisTemplate.execute(script, List.of(urKey, sroKey, uridKey),
                     field, String.valueOf(incomingOffset), String.valueOf(expireTimeMs));
+            return true;
         } catch (Exception e) {
             log.error("clearOne2OneOnRead failed appKey={} reader={} peer={} deviceType={} offset={}",
                     appKey, readerId, peerId, deviceType, incomingOffset, e);
@@ -123,6 +129,7 @@ public final class UnreadIndexSupport {
                             "单聊已读 offset+未读清索引失败: " + e.getMessage(),
                             null),
                     MessageEventTypeEnum.EXCEPTION), true);
+            return false;
         }
     }
 

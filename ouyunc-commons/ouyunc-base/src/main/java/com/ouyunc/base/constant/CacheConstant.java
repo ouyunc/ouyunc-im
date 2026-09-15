@@ -188,6 +188,9 @@ public class CacheConstant {
     /** 用户设备单聊未读 Hash 前缀（群聊不在此存储） */
     private static final String USER_DEVICE_UNREAD = "ur:";
 
+    /** 用户设备单聊未读 packetId 集合前缀（有序清除用，member=packetId 十进制串） */
+    private static final String USER_DEVICE_UNREAD_IDS = "urids:";
+
     // ============================================ 集群优化方法 ============================================
 
     /**
@@ -491,6 +494,14 @@ public class CacheConstant {
     }
 
     /**
+     * 单聊未读 packetId 集合：与 ur/sro 同属 {@code {appKey}} 槽，供 Lua 只移除 {@code <= incomingOffset} 的成员。
+     */
+    public static String buildUserDeviceUnreadIdsCacheKey(String appKey, String userId, Byte deviceType, String peerId) {
+        return buildBaseCacheKey(appKey) + USER_DEVICE_UNREAD_IDS + withHashTag(userId) + COLON + deviceType
+                + COLON + peerId;
+    }
+
+    /**
      * 构建 mqtt topic cache key - 集群优化
      */
     public static String buildMqttTopicFilterCacheKey(String appKey, String topicFilter) {
@@ -574,8 +585,19 @@ public class CacheConstant {
     /** ticket 维度未读 Hash：field={@code readerId:deviceType}，value=未读计数。 */
     private static final String CS_TICKET_UR = "ur";
 
+    /** ticket 维度未读 packetId 集合后缀（按 readerDeviceField 分 key）。 */
+    private static final String CS_TICKET_UR_IDS = "urids";
+
     public static String buildCsTicketUnreadHashCacheKey(String appKey, String ticketId) {
         return buildCsTicketKeyPrefix(appKey) + CS_TICKET + withHashTag(stripHashTagChars(ticketId.trim())) + COLON + CS_TICKET_UR;
+    }
+
+    /**
+     * ticket 未读 packetId 集合：与 ur/sro Hash 同 ticket 槽，支持按 offset 部分清除。
+     */
+    public static String buildCsTicketUnreadIdsCacheKey(String appKey, String ticketId, String readerDeviceField) {
+        return buildCsTicketKeyPrefix(appKey) + CS_TICKET + withHashTag(stripHashTagChars(ticketId.trim()))
+                + COLON + CS_TICKET_UR_IDS + COLON + readerDeviceField;
     }
 
     /** ticket 已读/未读 Hash field：{@code readerId + ":" + deviceType}。 */

@@ -24,7 +24,7 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * 客服咨询单（ticket）维度未读 Hash。
+ * 客服咨询单（ticket）维度未读：Hash 计数 + packetId 集合，支持按 offset 部分清除。
  */
 public final class CsTicketUnreadSupport {
 
@@ -72,7 +72,9 @@ public final class CsTicketUnreadSupport {
                 public Object execute(org.springframework.data.redis.core.RedisOperations operations) {
                     for (Byte deviceType : deviceTypes) {
                         String field = CacheConstant.buildCsTicketReaderDeviceField(recipientId, deviceType);
-                        operations.execute(script, List.of(urKey, sroKey),
+                        String uridKey = CacheConstant.buildCsTicketUnreadIdsCacheKey(
+                                appKey, ticketId.trim(), field);
+                        operations.execute(script, List.of(urKey, sroKey, uridKey),
                                 field, packetIdArg, "1", String.valueOf(storeMax), String.valueOf(ttl));
                     }
                     return null;
@@ -90,20 +92,25 @@ public final class CsTicketUnreadSupport {
         }
     }
 
-    public void clearOnRead(String appKey, String ticketId, String readerId, byte deviceType, long incomingOffset,
-                            long expireTimeMs) {
+    /**
+     * @return true 表示 Redis 已提交；失败返回 false，调用方不得当作已读成功
+     */
+    public boolean clearOnRead(String appKey, String ticketId, String readerId, byte deviceType, long incomingOffset,
+                               long expireTimeMs) {
         if (StringUtils.isAnyBlank(appKey, ticketId, readerId)) {
-            return;
+            return false;
         }
         String tid = ticketId.trim();
         String urKey = CacheConstant.buildCsTicketUnreadHashCacheKey(appKey, tid);
         String sroKey = CacheConstant.buildCsTicketReadOffsetHashCacheKey(appKey, tid);
         String field = CacheConstant.buildCsTicketReaderDeviceField(readerId, deviceType);
+        String uridKey = CacheConstant.buildCsTicketUnreadIdsCacheKey(appKey, tid, field);
         try {
             DefaultRedisScript<String> script = new DefaultRedisScript<>(
                     LuaScriptEnum.CS_TICKET_CLEAR_UNREAD_ON_READ_SCRIPT.getScript(), String.class);
-            stringRedisTemplate.execute(script, List.of(urKey, sroKey),
+            stringRedisTemplate.execute(script, List.of(urKey, sroKey, uridKey),
                     field, String.valueOf(incomingOffset), String.valueOf(expireTimeMs));
+            return true;
         } catch (Exception e) {
             log.error("clearCsTicketUnread failed appKey={} ticketId={} reader={} offset={}",
                     appKey, ticketId, readerId, incomingOffset, e);
@@ -113,6 +120,7 @@ public final class CsTicketUnreadSupport {
                             "客服 ticket 已读清未读失败: " + e.getMessage(),
                             null),
                     MessageEventTypeEnum.EXCEPTION), true);
+            return false;
         }
     }
 

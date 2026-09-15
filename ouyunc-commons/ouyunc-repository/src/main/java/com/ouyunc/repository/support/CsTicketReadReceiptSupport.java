@@ -117,10 +117,8 @@ public final class CsTicketReadReceiptSupport {
         final long incomingOffset = maxReadPacketId;
         final String appKey = metadata.getAppKey();
         final String ticketId = route.ticketId().trim();
-        return Mono.fromCallable(() -> {
-                    ticketUnread.clearOnRead(appKey, ticketId, readerId, deviceType, incomingOffset, expireTime);
-                    return Boolean.TRUE;
-                })
+        return Mono.fromCallable(() -> ticketUnread.clearOnRead(
+                        appKey, ticketId, readerId, deviceType, incomingOffset, expireTime))
                 .subscribeOn(Schedulers.boundedElastic());
     }
 
@@ -135,16 +133,13 @@ public final class CsTicketReadReceiptSupport {
         if (StringUtils.isBlank(readerId)) {
             return Mono.just(false);
         }
-        return Mono.fromCallable(() -> {
-                    ticketUnread.clearOnRead(
-                            message.getMetadata().getAppKey(),
-                            route.ticketId().trim(),
-                            readerId,
-                            deviceType,
-                            packet.getPacketId(),
-                            expireTime);
-                    return Boolean.TRUE;
-                })
+        return Mono.fromCallable(() -> ticketUnread.clearOnRead(
+                        message.getMetadata().getAppKey(),
+                        route.ticketId().trim(),
+                        readerId,
+                        deviceType,
+                        packet.getPacketId(),
+                        expireTime))
                 .subscribeOn(Schedulers.boundedElastic());
     }
 

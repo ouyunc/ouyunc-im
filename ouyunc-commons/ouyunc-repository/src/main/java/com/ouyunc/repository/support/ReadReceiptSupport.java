@@ -138,10 +138,8 @@ public final class ReadReceiptSupport {
                                                           Byte deviceType, String to, long incomingOffset,
                                                           long expireTime) {
         if (identityType == IdentityType.ONE_2_ONE) {
-            return Mono.fromCallable(() -> {
-                        unreadIndexSupport.clearOne2OneOnRead(appKey, from, deviceType, to, incomingOffset, expireTime);
-                        return Boolean.TRUE;
-                    })
+            return Mono.fromCallable(() -> unreadIndexSupport.clearOne2OneOnRead(
+                            appKey, from, deviceType, to, incomingOffset, expireTime))
                     .doOnError(e -> log.error("单聊已读 offset+未读 更新失败 | reader={}, peer={}, incomingOffset={}",
                             from, to, incomingOffset, e))
                     .subscribeOn(Schedulers.boundedElastic());
