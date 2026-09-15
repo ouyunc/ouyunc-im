@@ -54,6 +54,12 @@ public class SessionMessageOffsetEntity implements Serializable {
     @Field("session_message_offset")
     private Long sessionMessageOffset = 0L;
 
+    /**
+     * 租户 appKey（B9）：Mongo 必填过滤；MySQL 当前经 user.app_key EXISTS 校验，列落地见 docs/sql。
+     */
+    @Field("app_key")
+    private String appKey;
+
     public SessionMessageOffsetEntity() {}
 
     public SessionMessageOffsetEntity(String from, Byte deviceType, String to, Integer type, Long sessionMessageOffset) {
@@ -64,12 +70,19 @@ public class SessionMessageOffsetEntity implements Serializable {
         this.sessionMessageOffset = sessionMessageOffset;
     }
 
+    public SessionMessageOffsetEntity(String from, Byte deviceType, String to, Integer type,
+                                      Long sessionMessageOffset, String appKey) {
+        this(from, deviceType, to, type, sessionMessageOffset);
+        this.appKey = appKey;
+    }
+
     public static final class Fields {
         public static final String from = "from";
         public static final String deviceType = "device_type";
         public static final String to = "to";
         public static final String type = "type";
         public static final String sessionMessageOffset = "session_message_offset";
+        public static final String appKey = "app_key";
     }
 
     public Byte getDeviceType() {
@@ -110,5 +123,13 @@ public class SessionMessageOffsetEntity implements Serializable {
 
     public void setSessionMessageOffset(Long sessionMessageOffset) {
         this.sessionMessageOffset = sessionMessageOffset;
+    }
+
+    public String getAppKey() {
+        return appKey;
+    }
+
+    public void setAppKey(String appKey) {
+        this.appKey = appKey;
     }
 }

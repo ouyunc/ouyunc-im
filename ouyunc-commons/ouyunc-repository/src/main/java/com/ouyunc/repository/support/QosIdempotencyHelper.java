@@ -80,8 +80,8 @@ public final class QosIdempotencyHelper {
             """;
 
     /**
-     * KEYS 为实际存在的幂等键（1~2 个，均带 {@code {appKey}} 哈希标签，同槽，集群合法）。
-     * 时间戳一律取 Redis 服务器时间（redis.call('TIME')），接管判定不受应用节点间时钟偏差影响。
+     * KEYS 为实际存在的幂等键（1~2 个）。有 loginIdentity 时 packet/client 同槽 {@code {appKey:identity}}（P1）；
+     * 仅 packet 键时按 packetId 分片。时间戳一律取 Redis 服务器时间。
      * ARGV: [hash, owner, serverId, clientId, takeoverMs, ttlMs...]（ttlMs 与 KEYS 一一对应）。
      */
     private static final DefaultRedisScript<Long> CLAIM_SCRIPT = script(PARSE_LUA + """
@@ -333,7 +333,7 @@ public final class QosIdempotencyHelper {
 
     private static ClaimTarget claimTarget(String appKey, long packetId, String loginIdentity, String clientMessageId) {
         ClaimTarget target = new ClaimTarget();
-        String pktKey = packetKey(appKey, packetId);
+        String pktKey = packetKey(appKey, packetId, loginIdentity);
         if (pktKey != null) {
             target.keys.add(pktKey);
             target.ttls.add(String.valueOf(ttlMs(MessageConstant.CACHE_QOS_IDEM_PACKET_EXPIRE_TIMESTAMP)));
@@ -348,7 +348,7 @@ public final class QosIdempotencyHelper {
 
     private static List<String> claimKeys(String appKey, long packetId, String loginIdentity, String clientMessageId) {
         List<String> keys = new ArrayList<>(2);
-        String pktKey = packetKey(appKey, packetId);
+        String pktKey = packetKey(appKey, packetId, loginIdentity);
         if (pktKey != null) {
             keys.add(pktKey);
         }
@@ -359,11 +359,11 @@ public final class QosIdempotencyHelper {
         return keys;
     }
 
-    private static String packetKey(String appKey, long packetId) {
+    private static String packetKey(String appKey, long packetId, String loginIdentity) {
         if (StringUtils.isBlank(appKey) || packetId <= 0) {
             return null;
         }
-        return CacheConstant.buildQosIdempotencyPacketKey(appKey, packetId);
+        return CacheConstant.buildQosIdempotencyPacketKey(appKey, loginIdentity, packetId);
     }
 
     private static String clientKey(String appKey, String loginIdentity, String clientMessageId) {

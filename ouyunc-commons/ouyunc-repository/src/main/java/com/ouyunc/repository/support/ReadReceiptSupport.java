@@ -164,16 +164,18 @@ public final class ReadReceiptSupport {
         Long sessionMessageOffset = null;
         String sessionMessageOffsetStr = stringRedisTemplate.opsForValue().get(sessionMessageOffsetKey);
         if (sessionMessageOffsetStr != null && !sessionMessageOffsetStr.isBlank()) {
-            sessionMessageOffset =  Long.parseLong(sessionMessageOffsetStr.trim());
+            sessionMessageOffset = Long.parseLong(sessionMessageOffsetStr.trim());
         }
         if (sessionMessageOffset != null) {
             return sessionMessageOffset;
         }
+        // Mongo：强制 app_key，避免跨租户水位污染（旧文档无 app_key 会 miss 并回落 MySQL）
         SessionMessageOffsetEntity mongoSessionMessageOffsetEntity = mongoTemplate.findOne(
                 new Query(Criteria.where(SessionMessageOffsetEntity.Fields.from).is(from)
                         .and(SessionMessageOffsetEntity.Fields.to).is(to)
                         .and(SessionMessageOffsetEntity.Fields.type).is(identityType.value())
-                        .and(SessionMessageOffsetEntity.Fields.deviceType).is(deviceType)).limit(NumberConstant.NUMBER_1),
+                        .and(SessionMessageOffsetEntity.Fields.deviceType).is(deviceType)
+                        .and(SessionMessageOffsetEntity.Fields.appKey).is(appKey)).limit(NumberConstant.NUMBER_1),
                 SessionMessageOffsetEntity.class);
         if (mongoSessionMessageOffsetEntity != null) {
             return mongoSessionMessageOffsetEntity.getSessionMessageOffset();
@@ -184,6 +186,7 @@ public final class ReadReceiptSupport {
                     .param(SessionMessageOffsetEntity.Fields.to, to)
                     .param(SessionMessageOffsetEntity.Fields.type, identityType.value())
                     .param(SessionMessageOffsetEntity.Fields.deviceType, deviceType)
+                    .param(SessionMessageOffsetEntity.Fields.appKey, appKey)
                     .query(SessionMessageOffsetEntity.class)
                     .single();
             Long maxSessionMessageOffset = sessionMessageOffsetEntity.getSessionMessageOffset();
@@ -194,11 +197,14 @@ public final class ReadReceiptSupport {
             }
             return maxSessionMessageOffset;
         } catch (EmptyResultDataAccessException e) {
-            log.debug("sessionMessageOffsetEntity 不存在, from: {}, to: {}, type: {}", from, to, identityType);
+            log.debug("sessionMessageOffsetEntity 不存在, appKey={}, from: {}, to: {}, type: {}",
+                    appKey, from, to, identityType);
             return null;
         } catch (Exception e) {
-            log.error("获取会话偏移量实体异常, from: {}, to:{}, type:{} 原因：{}", from, to, identityType, e.getMessage());
-            return null;
+            // B9：DB 异常 fail-closed，禁止当成 offset=0 放宽校验
+            log.error("获取会话偏移量实体异常(fail-closed), appKey={}, from: {}, to:{}, type:{} 原因：{}",
+                    appKey, from, to, identityType, e.getMessage());
+            return Long.MAX_VALUE;
         }
     }
 }

@@ -81,7 +81,7 @@ public final class GroupMembershipSupport {
         String versionBefore = currentRelationVersion(appKey, groupId);
         List<GroupUserEntity> dbMembers;
         try {
-            dbMembers = loadAllGroupUsersFromAuthority(groupId);
+            dbMembers = loadAllGroupUsersFromAuthority(appKey, groupId);
         } catch (GroupMembershipLoadException e) {
             log.error("群成员权威回源失败，拒绝写入空缓存 groupId={}", groupId, e);
             return new HashSet<>();
@@ -148,7 +148,7 @@ public final class GroupMembershipSupport {
             String versionBefore = currentRelationVersion(appKey, groupId);
             List<GroupUserEntity> dbMembers;
             try {
-                dbMembers = loadAllGroupUsersFromAuthority(groupId);
+                dbMembers = loadAllGroupUsersFromAuthority(appKey, groupId);
             } catch (GroupMembershipLoadException e) {
                 log.error("屏蔽索引回源失败，不写空初始化 groupId={}", groupId, e);
                 return new HashSet<>(memberIds);
@@ -177,7 +177,8 @@ public final class GroupMembershipSupport {
         if (zcard != null && zcard > 0) {
             return zcard;
         }
-        return countFromDb(JdbcSqlDialectHolder.countGroupUsersByGroup(), GroupUserEntity.Fields.groupId, groupId);
+        return countFromDb(JdbcSqlDialectHolder.countGroupUsersByGroup(),
+                GroupUserEntity.Fields.groupId, groupId, appKey);
     }
 
     public long userGroupCount(String appKey, String userId) {
@@ -186,19 +187,21 @@ public final class GroupMembershipSupport {
         if (zcard != null && zcard > 0) {
             return zcard;
         }
-        return countFromDb(JdbcSqlDialectHolder.countGroupsByUser(), GroupUserEntity.Fields.userId, userId);
+        return countFromDb(JdbcSqlDialectHolder.countGroupsByUser(),
+                GroupUserEntity.Fields.userId, userId, appKey);
     }
 
-    private long countFromDb(String sql, String paramName, String paramValue) {
+    private long countFromDb(String sql, String paramName, String paramValue, String appKey) {
         try {
             Long count = infra.jdbcClient.sql(sql)
                     .param(paramName, paramValue)
+                    .param(GroupEntity.Fields.appKey, appKey)
                     .query(Long.class)
                     .optional()
                     .orElse(0L);
             return count == null ? 0L : count;
         } catch (Exception e) {
-            log.error("统计群/成员数量失败 param={} value={}", paramName, paramValue, e);
+            log.error("统计群/成员数量失败 param={} value={} appKey={}", paramName, paramValue, appKey, e);
             return 0L;
         }
     }
@@ -207,10 +210,11 @@ public final class GroupMembershipSupport {
      * 关系权威源：MySQL。Mongo 异步滞后时非空集合不能当作完整真相。
      * 查询失败抛 {@link GroupMembershipLoadException}，不得当成空群。
      */
-    private List<GroupUserEntity> loadAllGroupUsersFromAuthority(String groupId) {
+    private List<GroupUserEntity> loadAllGroupUsersFromAuthority(String appKey, String groupId) {
         try {
             List<GroupUserEntity> mysqlList = infra.jdbcClient.sql(JdbcSqlDialectHolder.selectAllGroupUser())
                     .param(GroupUserEntity.Fields.groupId, groupId)
+                    .param(GroupEntity.Fields.appKey, appKey)
                     .query(GroupUserEntity.class)
                     .list();
             return mysqlList == null ? List.of() : mysqlList;
@@ -382,6 +386,7 @@ public final class GroupMembershipSupport {
             List<GroupUserEntity> rows = infra.jdbcClient.sql(JdbcSqlDialectHolder.selectGroupUserBatch())
                     .param(GroupUserEntity.Fields.groupId, groupId)
                     .param("userIds", missing)
+                    .param(GroupEntity.Fields.appKey, appKey)
                     .query(GroupUserEntity.class)
                     .list();
             if (rows != null) {
@@ -412,6 +417,7 @@ public final class GroupMembershipSupport {
             GroupUserEntity groupUserEntity = infra.jdbcClient.sql(JdbcSqlDialectHolder.selectGroupUser())
                     .param(GroupUserEntity.Fields.userId, memberId)
                     .param(GroupUserEntity.Fields.groupId, groupId)
+                    .param(GroupEntity.Fields.appKey, appKey)
                     .query(GroupUserEntity.class)
                     .optional()
                     .orElse(null);
@@ -451,6 +457,7 @@ public final class GroupMembershipSupport {
                                         return infra.jdbcClient.sql(JdbcSqlDialectHolder.selectGroupUser())
                                                 .param(GroupUserEntity.Fields.userId, memberId)
                                                 .param(GroupUserEntity.Fields.groupId, groupId)
+                                                .param(GroupEntity.Fields.appKey, appKey)
                                                 .query(GroupUserEntity.class)
                                                 .optional()
                                                 .orElse(null);
@@ -555,12 +562,13 @@ public final class GroupMembershipSupport {
 
         try {
             MongoGroupEntity mongoGroup = infra.mongoTemplate.findOne(
-                    Query.query(Criteria.where(MongoGroupEntity.Fields.id).is(Long.parseLong(groupId))
-                            .and(MongoGroupEntity.Fields.delFlag).is(0L)),
+                    Query.query(Criteria.where(GroupEntity.Fields.id).is(Long.parseLong(groupId))
+                            .and(GroupEntity.Fields.appKey).is(appKey)
+                            .and(GroupEntity.Fields.delFlag).is(0L)),
                     MongoGroupEntity.class);
             if (mongoGroup != null) {
                 groupEntity = convertMongoGroupToGroup(mongoGroup);
-                if (isLiveGroup(groupEntity)) {
+                if (isLiveGroup(groupEntity) && appKey.equals(groupEntity.getAppKey())) {
                     updateGroupCache(cacheKey, groupEntity);
                     return groupEntity;
                 }
@@ -595,8 +603,14 @@ public final class GroupMembershipSupport {
         try {
             GroupEntity groupEntity = infra.jdbcClient.sql(JdbcSqlDialectHolder.selectGroup())
                     .param(GroupEntity.Fields.id, groupId)
+                    .param(GroupEntity.Fields.appKey, appKey)
                     .query(GroupEntity.class)
                     .single();
+            if (groupEntity != null && !appKey.equals(groupEntity.getAppKey())) {
+                log.warn("群组租户不匹配, groupId={}, expectAppKey={}, actual={}",
+                        groupId, appKey, groupEntity.getAppKey());
+                return null;
+            }
             // 走不到这里就会进异常
             infra.redisTemplate.opsForValue().set(CacheConstant.buildGroupCacheKey(appKey, groupId), groupEntity,
                     MessageConstant.CACHE_ENTITY_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);

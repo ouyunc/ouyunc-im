@@ -31,6 +31,32 @@ public final class LocalNodeConnCounter {
         });
     }
 
+    /**
+     * B5：原子预占。当且仅当当前本机计数 &lt; exclusiveMax 时 +1。
+     *
+     * @param exclusiveMax 本机允许的上限（通常为 maxConnections - 其它节点计数）
+     * @return true 表示已 +1
+     */
+    public static boolean tryIncrementIfBelow(String appKey, long exclusiveMax) {
+        if (StringUtils.isBlank(appKey) || exclusiveMax <= 0L) {
+            return false;
+        }
+        final boolean[] ok = {false};
+        BY_APP_KEY.compute(appKey, (key, counter) -> {
+            long current = counter == null ? 0L : Math.max(0L, counter.get());
+            if (current >= exclusiveMax) {
+                return counter;
+            }
+            ok[0] = true;
+            if (counter == null) {
+                return new AtomicLong(1L);
+            }
+            counter.incrementAndGet();
+            return counter;
+        });
+        return ok[0];
+    }
+
     public static void decrement(String appKey) {
         if (StringUtils.isBlank(appKey)) {
             return;

@@ -213,7 +213,8 @@ public class CacheConstant {
     }
 
     /**
-     * 租户级前缀（仅适合真正的 app 全局小集合：设备类型表、MQTT topic 列表、QoS 幂等等）。
+     * 租户级前缀（仅适合真正的 app 全局小集合：设备类型表、MQTT topic 列表等）。
+     * QoS 幂等已按 identity/packetId 分片，见 {@link #buildQosIdempotencyPacketKey}。
      * 普通会话/收件箱/群数据请用 {@link #buildAggregateCacheKey}。
      */
     private static String buildBaseCacheKey(String appKey) {
@@ -245,18 +246,18 @@ public class CacheConstant {
     }
 
     /**
-     * 构建appKey 下的好友请求/同意/拒绝的分布式锁key - 集群优化
+     * 好友请求锁（P2）：首 tag {@code {appKey:sessionId}}，按会话分片，避免租户单槽热点。
      */
     public static String buildFriendRequestLockCacheKey(String appKey, String sessionId) {
-        return buildAppKeyLockCacheKey(appKey) + COLON + FRIEND_REQUEST + withHashTag(sessionId);
+        return OUYUNC + LOCK + withAggregateHashTag(appKey, sessionId) + COLON + FRIEND_REQUEST;
     }
 
     /**
-     * 构建appKey 下的群请求的分布式锁key - 集群优化
+     * 群请求锁（P2）：首 tag {@code {appKey:sessionId}}；joiner 仅作后缀、不再套多余 hash tag。
      */
     public static String buildGroupRequestLockCacheKey(String appKey, String joiner, String sessionId) {
-        return buildAppKeyLockCacheKey(appKey) + COLON + GROUP_REQUEST + 
-               withHashTag(joiner) + COLON + withHashTag(sessionId);
+        return OUYUNC + LOCK + withAggregateHashTag(appKey, sessionId) + COLON + GROUP_REQUEST
+                + COLON + stripHashTagChars(joiner == null ? "" : joiner);
     }
 
     // ============================================ 业务缓存键 ============================================
@@ -431,17 +432,22 @@ public class CacheConstant {
     }
 
     /**
-     * QoS 幂等 packet：与 client key 同 Lua，保持租户级 {@code {appKey}} 同槽
+     * QoS 幂等 packet（P1）：有 loginIdentity 时与 client key 同槽 {@code {appKey:identity}}；
+     * 仅 packet 维度时按 packetId 分片，避免大租户单槽打爆。
      */
-    public static String buildQosIdempotencyPacketKey(String appKey, long packetId) {
-        return buildBaseCacheKey(appKey) + QOS_IDEM + QOS_IDEM_PKT + stripHashTagChars(String.valueOf(packetId));
+    public static String buildQosIdempotencyPacketKey(String appKey, String loginIdentity, long packetId) {
+        String shard = (loginIdentity != null && !loginIdentity.isBlank())
+                ? loginIdentity
+                : ("pkt-" + packetId);
+        return buildAggregateCacheKey(appKey, shard) + QOS_IDEM + QOS_IDEM_PKT
+                + stripHashTagChars(String.valueOf(packetId));
     }
 
     /**
-     * QoS 幂等 client：与 packet key 同 {@code {appKey}} 槽
+     * QoS 幂等 client：槽 {@code {appKey:loginIdentity}}，与同身份 packet 键同 Lua。
      */
     public static String buildQosIdempotencyClientKey(String appKey, String loginIdentity, String clientMessageId) {
-        return buildBaseCacheKey(appKey) + QOS_IDEM + QOS_IDEM_CLI
+        return buildAggregateCacheKey(appKey, loginIdentity) + QOS_IDEM + QOS_IDEM_CLI
                 + stripHashTagChars(loginIdentity) + COLON + clientMessageId;
     }
 

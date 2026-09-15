@@ -171,7 +171,8 @@ public class MessageConstant {
     public static final int MAX_REF_COUNT = 5;
 
     /**
-     *  缓存最后一条会话消息 key / 会话 ZSet / 消息热 key 过期时间，默认 30 天，单位毫秒
+     * 缓存最后一条会话消息 key / 会话 ZSet 过期时间，默认 30 天，单位毫秒。
+     * 消息正文热 key 见 {@link #CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP}（更短）。
      */
     public static final long CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP = NumberConstant.NUMBER_30 * MessageConstant.DAY_TIMESTAMP;
 
@@ -179,9 +180,15 @@ public class MessageConstant {
     public static final long CACHE_CS_SESSION_ROUTE_EXPIRE_TIMESTAMP = CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP;
 
     /**
-     *  缓存消息热 key 过期时间（与会话 ZSet 一致）
+     * 消息正文热缓存 TTL（P12）：短 TTL 控 Redis 大 value 内存；会话 ZSet / lm 仍用 {@link #CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP}。
+     * 过期后读路径回源 Mongo/MySQL。
      */
-    public static final long CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP = CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP;
+    public static final long CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP = NumberConstant.NUMBER_2 * MessageConstant.HOUR_TIMESTAMP;
+
+    /**
+     * HTTP 推送 PENDING 僵死接管窗口（B3）：进程崩溃后同 messageId 可在该时限后重新抢占。
+     */
+    public static final long HTTP_PUSH_PENDING_TAKEOVER_MS = 30_000L;
 
     /**
      * QoS 幂等（packetId）缓存过期时间，默认 30 分钟
@@ -544,6 +551,11 @@ public class MessageConstant {
      * 登录 Redis 校验进行中，防止同一连接并发打出两个登录。
      */
     public static final String CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT = "CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT";
+
+    /**
+     * 登录配额已本机预占（B5）：registerLocal 时不再二次 INCR；失败/关闭时释放。
+     */
+    public static final String CHANNEL_ATTR_KEY_CONN_QUOTA_RESERVED = "CHANNEL_ATTR_KEY_CONN_QUOTA_RESERVED";
 
 
     /**

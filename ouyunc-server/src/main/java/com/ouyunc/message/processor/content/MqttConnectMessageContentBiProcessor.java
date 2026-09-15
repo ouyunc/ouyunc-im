@@ -185,15 +185,20 @@ public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcesso
      */
     private boolean authenticate(ChannelHandlerContext ctx, MqttLoginClientInfo loginClientInfo) {
         loginClientInfo.setScope(LoginScopeEnum.NORMAL.getType());
-        if (AppKeyValidator.INSTANCE.negate().verify(loginClientInfo.getAppKey(), ctx)) {
+        if (!AppKeyValidator.INSTANCE.tryReserveForLogin(loginClientInfo.getAppKey(), ctx)) {
             return false;
         }
         if (!MessageServerContext.deviceTypeList(loginClientInfo.getAppKey(), loginClientInfo.getIdentity())
                 .contains(DeviceTypeEnum.M.getType())) {
             log.warn("MQTT 登录拒绝：appKey={} 未开通设备类型 M", loginClientInfo.getAppKey());
+            AppKeyValidator.releaseReservedIfNeeded(loginClientInfo.getAppKey(), ctx);
             return false;
         }
-        return LoginAuthValidator.verify(loginClientInfo);
+        if (!LoginAuthValidator.verify(loginClientInfo)) {
+            AppKeyValidator.releaseReservedIfNeeded(loginClientInfo.getAppKey(), ctx);
+            return false;
+        }
+        return true;
     }
 
     /**
@@ -275,6 +280,7 @@ public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcesso
             String closingComboIdentity = IdentityUtil.generalComboIdentity(
                     closingLocalLoginClientInfo.getAppKey(), closingLocalLoginClientInfo.getIdentity(), clientLoginDeviceValue);
             ClientHelper.unregisterLocal(closingComboIdentity, ctx, closingLocalLoginClientInfo.getAppKey());
+            AppKeyValidator.releaseReservedIfNeeded(closingLocalLoginClientInfo.getAppKey(), ctx);
             if (attrLogin == null) {
                 return;
             }
@@ -356,6 +362,7 @@ public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcesso
                                                     long loginTimestamp, Throwable bindError) {
         if (!ctx.channel().isActive()) {
             ClientHelper.unbindLocalRegisterTable(loginClientInfo, ctx);
+            AppKeyValidator.releaseReservedIfNeeded(loginClientInfo.getAppKey(), ctx);
             return;
         }
         if (bindError != null) {
@@ -365,6 +372,8 @@ public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcesso
                     new MqttConnAckVariableHeader(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE, false),
                     null);
             MessageHelper.tryWriteObject(ctx.channel(), connAckMessage, packet, sendResult -> {});
+            ClientHelper.unbindLocalRegisterTable(loginClientInfo, ctx);
+            AppKeyValidator.releaseReservedIfNeeded(loginClientInfo.getAppKey(), ctx);
             ctx.close();
             return;
         }
@@ -376,6 +385,7 @@ public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcesso
                     null);
             MessageHelper.tryWriteObject(ctx.channel(), connAckMessage, packet, sendResult -> {});
             ClientHelper.unbindLocalRegisterTable(loginClientInfo, ctx);
+            AppKeyValidator.releaseReservedIfNeeded(loginClientInfo.getAppKey(), ctx);
             ctx.close();
             return;
         }
@@ -389,6 +399,7 @@ public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcesso
                     null);
             MessageHelper.tryWriteObject(ctx.channel(), connAckMessage, packet, sendResult -> {});
             ClientHelper.unbindLocalRegisterTable(loginClientInfo, ctx);
+            AppKeyValidator.releaseReservedIfNeeded(loginClientInfo.getAppKey(), ctx);
             ctx.close();
             return;
         }

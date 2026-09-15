@@ -14,6 +14,7 @@ import com.ouyunc.base.model.RequestSession;
 import com.ouyunc.base.constant.enums.YesOrNo;
 import com.ouyunc.domain.entity.FriendEntity;
 import com.ouyunc.domain.entity.MongoFriendEntity;
+import com.ouyunc.domain.entity.UserEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -135,8 +136,8 @@ public final class FriendRepositorySupport {
         // 2. Redis缓存（响应式）：命中只填 L1
         return infra.reactiveRedisTemplate.opsForValue().get(cacheKey)
                 .filter(FriendEntity.class::isInstance)
-                .map(FriendEntity.class::cast)
-                .doOnNext(friendEntity -> fillLocalFriendCache(cacheKey, friendEntity))
+                .<FriendEntity>map(FriendEntity.class::cast)
+                .doOnNext(friendEntity -> fillLocalFriendCache(cacheKey, (FriendEntity) friendEntity))
                 .switchIfEmpty(
                         // 3. MySQL 权威
                         Mono.fromCallable(() -> {
@@ -144,6 +145,7 @@ public final class FriendRepositorySupport {
                                         return infra.jdbcClient.sql(JdbcSqlDialectHolder.selectFriend())
                                                 .param(FriendEntity.Fields.userId, from)
                                                 .param(FriendEntity.Fields.friendUserId, to)
+                                                .param(UserEntity.Fields.appKey, appKey)
                                                 .query(FriendEntity.class)
                                                 .optional()
                                                 .orElse(null);
@@ -195,6 +197,7 @@ public final class FriendRepositorySupport {
             FriendEntity friendEntity = infra.jdbcClient.sql(JdbcSqlDialectHolder.selectFriend())
                     .param(FriendEntity.Fields.userId, ownerUserId)
                     .param(FriendEntity.Fields.friendUserId, friendUserId)
+                    .param(UserEntity.Fields.appKey, appKey)
                     .query(FriendEntity.class)
                     .optional()
                     .orElse(null);

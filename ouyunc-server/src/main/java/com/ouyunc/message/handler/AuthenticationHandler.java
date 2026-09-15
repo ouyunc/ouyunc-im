@@ -168,7 +168,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                 ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, null);
                 return;
             }
-            if (AppKeyValidator.INSTANCE.negate().verify(loginContent.getAppKey(), ctx)
+            if (!AppKeyValidator.INSTANCE.tryReserveForLogin(loginContent.getAppKey(), ctx)
                     || DeviceValidator.INSTANCE.negate().verify(packet, ctx)
                     || !validate(loginContent)) {
                 log.warn("客户端id: {} 登录参数: {}，校验未通过！",
@@ -176,6 +176,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                 MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(
                         ExceptionCodeEnum.LOGIN_VERIFY_ERROR, "登录校验未通过", packet),
                         MessageEventTypeEnum.EXCEPTION), true);
+                AppKeyValidator.releaseReservedIfNeeded(loginContent.getAppKey(), ctx);
                 failLoginOnEventLoop(ctx);
                 return;
             }
@@ -184,6 +185,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
             Protocol protocol = ctx.channel().attr(NativePacketProtocol.protocolAttrKey).get();
             if (protocol == null) {
                 log.warn("Protocol not set on channel, closing connection: {}", ctx.channel().id().asShortText());
+                AppKeyValidator.releaseReservedIfNeeded(loginContent.getAppKey(), ctx);
                 failLoginOnEventLoop(ctx);
                 return;
             }
@@ -201,6 +203,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                     deviceType, newLoginClientInfo, loginTimestamp));
         } catch (Exception e) {
             log.error("登录校验异常 channelId={}", ctx.channel().id().asShortText(), e);
+            AppKeyValidator.releaseReservedIfNeeded(loginContent.getAppKey(), ctx);
             failLoginOnEventLoop(ctx);
         }
     }
@@ -210,6 +213,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                                  long loginTimestamp) {
         if (!ctx.channel().isActive()) {
             ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, null);
+            AppKeyValidator.releaseReservedIfNeeded(newLoginClientInfo.getAppKey(), ctx);
             return;
         }
         Consumer<Channel> channelCloseHook = channel -> {
@@ -218,6 +222,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
             String closingComboIdentity = IdentityUtil.generalComboIdentity(
                     closingLogin.getAppKey(), closingLogin.getIdentity(), closingLogin.getDeviceType());
             ClientHelper.unregisterLocal(closingComboIdentity, ctx, closingLogin.getAppKey());
+            AppKeyValidator.releaseReservedIfNeeded(closingLogin.getAppKey(), ctx);
             final boolean publishLogout = attrLogin != null;
             ThreadPoolManager.messageProcessorExecutor().execute(() ->
                     unbindRemoteOnClose(packet, closingLogin, closingComboIdentity, publishLogout));
@@ -377,6 +382,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, null);
         if (!ctx.channel().isActive()) {
             ClientHelper.unbindLocalRegisterTable(loginClientInfo, ctx);
+            AppKeyValidator.releaseReservedIfNeeded(loginClientInfo.getAppKey(), ctx);
             return;
         }
         if (bindError != null) {
@@ -385,6 +391,8 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                     ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_VERIFY_ERROR,
                             "登录绑定失败: " + bindError.getMessage(), packet),
                     MessageEventTypeEnum.EXCEPTION), true);
+            ClientHelper.unbindLocalRegisterTable(loginClientInfo, ctx);
+            AppKeyValidator.releaseReservedIfNeeded(loginClientInfo.getAppKey(), ctx);
             ctx.close();
             return;
         }
@@ -395,6 +403,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                             "登录绑定失败：会话已被更新连接顶替", packet),
                     MessageEventTypeEnum.EXCEPTION), true);
             ClientHelper.unbindLocalRegisterTable(loginClientInfo, ctx);
+            AppKeyValidator.releaseReservedIfNeeded(loginClientInfo.getAppKey(), ctx);
             ctx.close();
             return;
         }
@@ -407,6 +416,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                             "登录绑定失败：会话在 ACK 前被顶替", packet),
                     MessageEventTypeEnum.EXCEPTION), true);
             ClientHelper.unbindLocalRegisterTable(loginClientInfo, ctx);
+            AppKeyValidator.releaseReservedIfNeeded(loginClientInfo.getAppKey(), ctx);
             ctx.close();
             return;
         }

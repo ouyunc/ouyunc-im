@@ -159,16 +159,17 @@ public final class CsTicketReadReceiptSupport {
                 log.warn("ticket sro 非数字 appKey={} ticketId={} raw={}", appKey, ticketId, raw);
             }
         }
-        return loadTicketReadOffsetFromStore(readerId, ticketId, deviceType);
+        return loadTicketReadOffsetFromStore(appKey, readerId, ticketId, deviceType);
     }
 
-    private long loadTicketReadOffsetFromStore(String readerId, String ticketId, byte deviceType) {
+    private long loadTicketReadOffsetFromStore(String appKey, String readerId, String ticketId, byte deviceType) {
         if (mongoTemplate != null) {
             SessionMessageOffsetEntity row = mongoTemplate.findOne(
                     Query.query(Criteria.where(SessionMessageOffsetEntity.Fields.from).is(readerId)
                             .and(SessionMessageOffsetEntity.Fields.to).is(ticketId)
                             .and(SessionMessageOffsetEntity.Fields.type).is(IdentityType.CUSTOMER_SERVICE.value())
-                            .and(SessionMessageOffsetEntity.Fields.deviceType).is(deviceType)),
+                            .and(SessionMessageOffsetEntity.Fields.deviceType).is(deviceType)
+                            .and(SessionMessageOffsetEntity.Fields.appKey).is(appKey)),
                     SessionMessageOffsetEntity.class);
             if (row != null && row.getSessionMessageOffset() != null) {
                 return row.getSessionMessageOffset();
@@ -183,6 +184,7 @@ public final class CsTicketReadReceiptSupport {
                     .param(SessionMessageOffsetEntity.Fields.to, ticketId)
                     .param(SessionMessageOffsetEntity.Fields.type, IdentityType.CUSTOMER_SERVICE.value())
                     .param(SessionMessageOffsetEntity.Fields.deviceType, deviceType)
+                    .param(SessionMessageOffsetEntity.Fields.appKey, appKey)
                     .query(SessionMessageOffsetEntity.class)
                     .single();
             Long offset = row.getSessionMessageOffset();
@@ -190,8 +192,10 @@ public final class CsTicketReadReceiptSupport {
         } catch (EmptyResultDataAccessException ex) {
             return 0L;
         } catch (Exception ex) {
-            log.warn("加载 ticket 已读 offset 失败 reader={} ticketId={}: {}", readerId, ticketId, ex.getMessage());
-            return 0L;
+            // B9：DB 异常 fail-closed，禁止当作 offset=0
+            log.warn("加载 ticket 已读 offset 失败(fail-closed) appKey={} reader={} ticketId={}: {}",
+                    appKey, readerId, ticketId, ex.getMessage());
+            return Long.MAX_VALUE;
         }
     }
 }

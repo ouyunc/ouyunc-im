@@ -50,13 +50,16 @@ public final class UserRepositorySupport {
         // 3. MongoDB
         try {
             MongoUserEntity mongoUser = infra.mongoTemplate.findOne(
-                    Query.query(Criteria.where(MongoUserEntity.Fields.id).is(Long.parseLong(identity))
-                            .and(MongoUserEntity.Fields.delFlag).is(0L)),
+                    Query.query(Criteria.where(UserEntity.Fields.id).is(Long.parseLong(identity))
+                            .and(UserEntity.Fields.appKey).is(appKey)
+                            .and(UserEntity.Fields.delFlag).is(0L)),
                     MongoUserEntity.class);
             if (mongoUser != null) {
                 userEntity = convertMongoUserToUser(mongoUser);
-                updateUserCache(userCacheKey, userEntity);
-                return userEntity;
+                if (userEntity != null && appKey.equals(userEntity.getAppKey())) {
+                    updateUserCache(userCacheKey, userEntity);
+                    return userEntity;
+                }
             }
         } catch (Exception e) {
             log.warn("从MongoDB查询用户异常, appKey: {}, identity: {}", appKey, identity, e);
@@ -66,8 +69,14 @@ public final class UserRepositorySupport {
         try {
             userEntity = infra.jdbcClient.sql(JdbcSqlDialectHolder.selectUser())
                     .param(UserEntity.Fields.id, identity)
+                    .param(UserEntity.Fields.appKey, appKey)
                     .query(UserEntity.class)
                     .single();
+            if (userEntity != null && !appKey.equals(userEntity.getAppKey())) {
+                log.warn("用户租户不匹配, identity={}, expectAppKey={}, actual={}",
+                        identity, appKey, userEntity.getAppKey());
+                return null;
+            }
             // 存到缓存中,30天
             updateUserCache(userCacheKey, userEntity);
             return userEntity;

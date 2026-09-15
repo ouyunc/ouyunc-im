@@ -152,12 +152,21 @@ public class ClientHelper {
     }
 
     /**
-     * 写入本地注册表；仅首次占用 combo 时加本机连接计数。覆盖旧 ctx 不加，由旧连接 close 按 ctx 摘除。
+     * 写入本地注册表；仅首次占用 combo 时加本机连接计数。
+     * 若登录路径已预占配额（B5），则消费预占标记、不再二次 INCR。覆盖旧 ctx 不加，由旧连接 close 按 ctx 摘除。
      */
     public static void registerLocal(String comboIdentity, ChannelHandlerContext ctx, String appKey) {
+        boolean reserved = ctx != null && Boolean.TRUE.equals(
+                ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_CONN_QUOTA_RESERVED));
+        if (reserved) {
+            ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_CONN_QUOTA_RESERVED, null);
+        }
         ChannelHandlerContext previous = MessageServerContext.localLoginClientRegisterTable.asMap().put(comboIdentity, ctx);
-        if (previous == null) {
+        if (previous == null && !reserved) {
             LocalNodeConnCounter.increment(appKey);
+            NodeLeaseKeeper.scheduleConnPublish();
+        } else if (previous == null) {
+            // 预占已计入 LocalNodeConnCounter，仅刷新租约心跳中的计数视图
             NodeLeaseKeeper.scheduleConnPublish();
         }
     }
