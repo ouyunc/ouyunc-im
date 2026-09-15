@@ -44,12 +44,11 @@ public abstract class AbstractMessageBiProcessor<T extends Number> extends Abstr
             ctx.close();
             return;
         }
-        // 认证通过后再旁路归档，避免未登录/非法包进入 MQ
-        repository().save(packet);
-        // 做qos 处理（QOS_DUP 展开时在同一 packet 引用上原地更新）
+        // 先做 qos 展开（QOS_DUP 原地更新），再归档，避免 MQ 落入外壳包
         if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
             return;
         }
+        archiveAfterAuth(packet);
         PacketChannelWriter.fireChannelRead(ctx, packet);
     }
 
@@ -68,7 +67,16 @@ public abstract class AbstractMessageBiProcessor<T extends Number> extends Abstr
     }
 
     /**
-     * 校验通过后 fireChannelRead；拒绝或异常则不往下传。有序队列等该 Mono 完成再处理下一条。
+     * 登录鉴权 +（可选）业务校验均通过后旁路归档。未登录包不得进入 MQ；
+     * 权限拒绝的包也不归档（由 {@link #fireWhenPassed} 在通过后再调用）。
+     */
+    protected void archiveAfterAuth(Packet packet) {
+        repository().save(packet);
+    }
+
+    /**
+     * 校验通过后旁路归档再 fireChannelRead；拒绝或异常则不往下传、不归档。
+     * 有序队列等该 Mono 完成再处理下一条。
      * <p>
      * 客户端有序全量入站 PRE 阶段：fire 被 {@link com.ouyunc.message.helper.ChannelOrderedInbound} 抑制为「通过标记」，
      * 由 PacketPreHandler 同任务串联 {@link #processStage}，不会二次入队。
@@ -92,6 +100,8 @@ public abstract class AbstractMessageBiProcessor<T extends Number> extends Abstr
                         }
                         return Mono.empty();
                     }
+                    // 权限等业务校验通过后再归档（此时 QOS_DUP 已展开）
+                    archiveAfterAuth(packet);
                     PacketChannelWriter.fireChannelRead(ctx, packet);
                     return Mono.empty();
                 });

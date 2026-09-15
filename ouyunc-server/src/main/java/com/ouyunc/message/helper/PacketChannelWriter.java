@@ -24,10 +24,13 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  * 已知 Channel 上的 Packet 出站：协议转换、EventLoop 写出、失败回调。
  * <p>不查登录注册表、不做集群路由。按身份投递仍走 {@link MessageHelper#asyncSendMessage}。</p>
  * <p>使用场景：QoS S2C ACK / Pong 写回入站连接；查表命中后的本机写出。</p>
+ * <p>写缓冲满（{@code !isWritable}）时延迟重试，避免直接丢包破坏投递语义。</p>
  */
 public final class PacketChannelWriter {
 
@@ -45,9 +48,10 @@ public final class PacketChannelWriter {
 
     /**
      * 写回当前入站连接。ctx 不可用时返回 false，由调用方再走 {@link MessageHelper#asyncSendMessage}。
+     * 仅 active 但暂时不可写时也会返回 true 并进入延迟重试。
      */
     public static boolean tryReplyOnChannel(ChannelHandlerContext ctx, Packet packet) {
-        if (!isSendable(ctx)) {
+        if (ctx == null || ctx.channel() == null || !ctx.channel().isActive()) {
             return false;
         }
         sendOnChannel(ctx, packet, sendResult -> {});
@@ -56,17 +60,17 @@ public final class PacketChannelWriter {
 
     /**
      * 将 Packet 转成对端协议帧后写入入站 Channel。
-     * 须先 {@link #isSendable}；转换器依赖 {@code metadata.target.protocol}，缺省时按登录信息补齐。
+     * 须先保证 channel active；转换器依赖 {@code metadata.target.protocol}，缺省时按登录信息补齐。
      */
     public static void sendOnChannel(ChannelHandlerContext ctx, Packet packet, SendCallback sendCallback) {
         sendOnChannel(ctx, packet, sendCallback, true);
     }
 
     /**
-     * 本机广播尽力而为：不可写则跳过，不发布 SEND_FAIL，转换失败释放缓冲。
+     * 本机广播尽力而为：不可写则短暂重试，耗尽后静默跳过（不发布 SEND_FAIL）。
      */
     public static void sendOnChannelBestEffort(ChannelHandlerContext ctx, Packet packet) {
-        if (!isSendable(ctx)) {
+        if (ctx == null || ctx.channel() == null || !ctx.channel().isActive()) {
             return;
         }
         sendOnChannel(ctx, packet, sendResult -> {}, false);
@@ -74,9 +78,9 @@ public final class PacketChannelWriter {
 
     private static void sendOnChannel(ChannelHandlerContext ctx, Packet packet, SendCallback sendCallback,
                                       boolean publishSendFail) {
-        if (!isSendable(ctx)) {
+        if (ctx == null || ctx.channel() == null || !ctx.channel().isActive()) {
             if (publishSendFail) {
-                notifySendFail(packet, "发送消息时，入站 ctx 不可用或不可写", sendCallback);
+                notifySendFail(packet, "发送消息时，入站 ctx 不可用或未激活", sendCallback);
             }
             return;
         }
@@ -93,7 +97,7 @@ public final class PacketChannelWriter {
 
     private static void writeConverted(Channel channel, Packet packet, SendCallback sendCallback,
                                        boolean publishSendFail) {
-        if (!isChannelSendable(channel)) {
+        if (channel == null || !channel.isActive()) {
             if (publishSendFail) {
                 notifySendFail(packet, describeUnwritable(channel), sendCallback);
             }
@@ -105,7 +109,7 @@ public final class PacketChannelWriter {
                 continue;
             }
             runOnEventLoop(channel, packet, sendCallback,
-                    () -> writeOrRelease(channel, msg, packet, sendCallback, publishSendFail),
+                    () -> writeOrRelease(channel, msg, packet, sendCallback, publishSendFail, 0),
                     () -> ReferenceCountUtil.release(msg));
             return;
         }
@@ -116,12 +120,18 @@ public final class PacketChannelWriter {
     }
 
     private static void writeOrRelease(Channel channel, Object msg, Packet packet, SendCallback sendCallback,
-                                       boolean publishSendFail) {
-        if (!isChannelSendable(channel)) {
+                                       boolean publishSendFail, int attempt) {
+        if (channel == null || !channel.isActive()) {
             ReferenceCountUtil.release(msg);
             if (publishSendFail) {
                 notifySendFail(packet, describeUnwritable(channel), sendCallback);
             }
+            return;
+        }
+        if (!channel.isWritable()) {
+            scheduleWritableRetry(channel, packet, sendCallback, publishSendFail, attempt,
+                    () -> writeOrRelease(channel, msg, packet, sendCallback, publishSendFail, attempt + 1),
+                    () -> ReferenceCountUtil.release(msg));
             return;
         }
         ChannelFuture future = channel.writeAndFlush(msg);
@@ -175,9 +185,22 @@ public final class PacketChannelWriter {
     }
 
     public static boolean tryWriteObject(Channel channel, Object msg, Packet packet, SendCallback sendCallback) {
-        if (!validateWritable(channel, packet, sendCallback)) {
+        return tryWriteObject(channel, msg, packet, sendCallback, 0);
+    }
+
+    private static boolean tryWriteObject(Channel channel, Object msg, Packet packet, SendCallback sendCallback,
+                                          int attempt) {
+        if (channel == null || !channel.isActive()) {
             ReferenceCountUtil.release(msg);
+            notifySendFail(packet, describeUnwritable(channel), sendCallback);
             return false;
+        }
+        if (!channel.isWritable()) {
+            scheduleWritableRetry(channel, packet, sendCallback, true, attempt,
+                    () -> tryWriteObject(channel, msg, packet, sendCallback, attempt + 1),
+                    () -> ReferenceCountUtil.release(msg));
+            // 已进入重试调度，对调用方视为已受理（最终成败由 callback）
+            return true;
         }
         addWriteListener(channel.writeAndFlush(msg), packet, sendCallback);
         return true;
@@ -185,10 +208,22 @@ public final class PacketChannelWriter {
 
     /** 集群连接池：写出 Packet 本体，完成后归还 Channel。 */
     public static void tryWritePacketAndThen(Channel channel, Packet packet, SendCallback sendCallback, Runnable afterComplete) {
-        if (!validateWritable(channel, packet, sendCallback)) {
+        tryWritePacketAndThen(channel, packet, sendCallback, afterComplete, 0);
+    }
+
+    private static void tryWritePacketAndThen(Channel channel, Packet packet, SendCallback sendCallback,
+                                              Runnable afterComplete, int attempt) {
+        if (channel == null || !channel.isActive()) {
+            notifySendFail(packet, describeUnwritable(channel), sendCallback);
             if (afterComplete != null) {
                 afterComplete.run();
             }
+            return;
+        }
+        if (!channel.isWritable()) {
+            scheduleWritableRetry(channel, packet, sendCallback, true, attempt,
+                    () -> tryWritePacketAndThen(channel, packet, sendCallback, afterComplete, attempt + 1),
+                    afterComplete);
             return;
         }
         ChannelFuture future = channel.writeAndFlush(packet);
@@ -284,10 +319,6 @@ public final class PacketChannelWriter {
         }
     }
 
-    private static boolean isChannelSendable(Channel channel) {
-        return channel != null && channel.isActive() && channel.isWritable();
-    }
-
     private static String describeUnwritable(Channel channel) {
         if (channel == null) {
             return "channel 为空，无法写入";
@@ -295,18 +326,55 @@ public final class PacketChannelWriter {
         if (!channel.isActive()) {
             return "channel 未激活，无法写入";
         }
-        return "channel 当前不可写";
+        return "channel 当前不可写（重试耗尽）";
     }
 
-    private static boolean validateWritable(Channel channel, Packet packet, SendCallback sendCallback) {
-        if (isChannelSendable(channel)) {
-            return true;
+    /**
+     * 写缓冲满时在 EventLoop 上延迟重试；超限后执行 onGiveUp（释放缓冲 / 归还连接）并按需 SEND_FAIL。
+     */
+    private static void scheduleWritableRetry(Channel channel, Packet packet, SendCallback sendCallback,
+                                              boolean publishSendFail, int attempt,
+                                              Runnable retryAction, Runnable onGiveUp) {
+        if (attempt >= MessageConstant.CHANNEL_WRITE_RETRY_MAX_ATTEMPTS) {
+            log.warn("channel 不可写重试耗尽 channelId={} attempts={} packetId={}",
+                    channel != null ? channel.id().asShortText() : "null",
+                    attempt,
+                    packet != null ? packet.getPacketId() : -1L);
+            if (onGiveUp != null) {
+                onGiveUp.run();
+            }
+            if (publishSendFail) {
+                notifySendFail(packet, describeUnwritable(channel), sendCallback);
+            }
+            return;
         }
-        if (channel != null && channel.isActive() && !channel.isWritable()) {
-            log.warn("channel 不可写，丢弃或等待上层重试: {}", channel);
+        EventLoop eventLoop = channel.eventLoop();
+        if (eventLoop.isTerminated() || eventLoop.isShutdown() || eventLoop.isShuttingDown()) {
+            if (onGiveUp != null) {
+                onGiveUp.run();
+            }
+            if (publishSendFail) {
+                notifySendFail(packet, "发送消息时，channel.eventLoop 被终止或关闭！", sendCallback);
+            }
+            return;
         }
-        notifySendFail(packet, describeUnwritable(channel), sendCallback);
-        return false;
+        long delayMs = MessageConstant.CHANNEL_WRITE_RETRY_BASE_DELAY_MS * (attempt + 1L);
+        if (log.isDebugEnabled()) {
+            log.debug("channel 不可写，延迟 {}ms 重试 attempt={} channelId={}",
+                    delayMs, attempt, channel.id().asShortText());
+        }
+        eventLoop.schedule(() -> {
+            if (!channel.isActive()) {
+                if (onGiveUp != null) {
+                    onGiveUp.run();
+                }
+                if (publishSendFail) {
+                    notifySendFail(packet, describeUnwritable(channel), sendCallback);
+                }
+                return;
+            }
+            retryAction.run();
+        }, delayMs, TimeUnit.MILLISECONDS);
     }
 
     private static void addWriteListener(ChannelFuture future, Packet packet, SendCallback sendCallback) {

@@ -44,7 +44,7 @@ public final class MqttMessageBiProcessor extends AbstractMessageBiProcessor<Byt
             ctx.close();
             return;
         }
-        repository().save(packet);
+        archiveAfterAuth(packet);
         PacketChannelWriter.fireChannelRead(ctx, packet);
     }
 

@@ -6,6 +6,7 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.QosClaimIdentities;
 import com.ouyunc.core.context.MessageContext;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,10 +40,15 @@ public final class QosRepositorySupport {
                 || message.getQos() <= QosLevelEnum.QOS_0.getLevel()) {
             return;
         }
+        String ownerToken = metadata.getQosOwnerToken();
+        if (StringUtils.isBlank(ownerToken)) {
+            // 尚未抢占或已 commit 清空：不能用 null 误调 release（会 no-op，但避免无意义调用噪音）
+            return;
+        }
         try {
-            // 无法取得原请求 owner 时不能释放，避免误删其他请求的占位。
             QosIdempotencyHelper.releaseClaim(infra.redisTemplate, metadata.getAppKey(),
-                    packet.getPacketId(), QosClaimIdentities.resolve(message), message.getId(), null);
+                    packet.getPacketId(), QosClaimIdentities.resolve(message), message.getId(), ownerToken);
+            metadata.setQosOwnerToken(null);
         } catch (Exception e) {
             log.warn("释放 QoS 占位异常: packetId={}", packet.getPacketId(), e);
         }

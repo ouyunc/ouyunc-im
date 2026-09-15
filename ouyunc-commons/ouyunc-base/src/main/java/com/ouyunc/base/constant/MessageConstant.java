@@ -386,6 +386,16 @@ public class MessageConstant {
     public static final long CHANNEL_ORDERED_SCHEDULE_RETRY_DELAY_MS = 50L;
 
     /**
+     * Channel 写缓冲满（!isWritable）时延迟重试次数上限；超限再走 SEND_FAIL。
+     */
+    public static final int CHANNEL_WRITE_RETRY_MAX_ATTEMPTS = 8;
+
+    /**
+     * Channel 写缓冲满时首次延迟（毫秒）；后续按 attempt 线性递增。
+     */
+    public static final long CHANNEL_WRITE_RETRY_BASE_DELAY_MS = 20L;
+
+    /**
      * 群成员 identity 列表本地缓存。短 TTL，HTTP 侧改成员后最多延迟这么久；调用方会 remove 发送者，必须返回副本。
      */
     public static final int GROUP_MEMBER_IDENTITY_CACHE_EXPIRE_SECONDS = 5;

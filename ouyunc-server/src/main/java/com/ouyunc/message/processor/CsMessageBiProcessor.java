@@ -43,11 +43,11 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
             ctx.close();
             return;
         }
-        // 认证通过后再归档，避免未登录/非法包进入数仓
-        repository().save(packet);
+        // 认证通过后先展开 QOS_DUP，再归档业务包
         if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
             return;
         }
+        archiveAfterAuth(packet);
         PacketChannelWriter.fireChannelRead(ctx, packet);
     }
 

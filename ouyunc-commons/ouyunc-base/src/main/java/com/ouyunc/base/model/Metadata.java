@@ -71,6 +71,12 @@ public class Metadata implements Serializable, Cloneable {
     private String qosClaimIdentity;
 
     /**
+     * QoS PENDING 占位持有者令牌。落库抢占成功后写入，失败释放/commit 必须带回；
+     * commit 成功后应清空。仅服务端内部使用，勿下发给客户端。
+     */
+    private String qosOwnerToken;
+
+    /**
      * 集群广播：仅投递本机连接，不再向其他节点扇出。
      */
     private boolean localBroadcastOnly;
@@ -168,6 +174,14 @@ public class Metadata implements Serializable, Cloneable {
 
     public void setQosClaimIdentity(String qosClaimIdentity) {
         this.qosClaimIdentity = qosClaimIdentity;
+    }
+
+    public String getQosOwnerToken() {
+        return qosOwnerToken;
+    }
+
+    public void setQosOwnerToken(String qosOwnerToken) {
+        this.qosOwnerToken = qosOwnerToken;
     }
 
     public boolean isLocalBroadcastOnly() {
