@@ -18,7 +18,6 @@ import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageDeliveryRouteHelper;
 import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.helper.MessageRefHelper;
-import com.ouyunc.message.helper.PacketChannelWriter;
 import com.ouyunc.message.processor.http.push.IngressPacketHelper;
 import com.ouyunc.message.validator.*;
 import com.ouyunc.repository.support.MessageIndexScope;
@@ -49,23 +48,18 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
     }
 
     @Override
-    public void preProcess(ChannelHandlerContext ctx, Packet packet) {
-        preProcessStage(ctx, packet).subscribe();
-    }
-
-    @Override
-    public Mono<Void> preProcessStage(ChannelHandlerContext ctx, Packet packet) {
+    public Mono<Boolean> preProcess(ChannelHandlerContext ctx, Packet packet) {
         if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
             log.error("校验消息: {} 中的发送方登录认证失败,开始关闭channel", packet);
             MessageContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过", packet), MessageEventTypeEnum.EXCEPTION), true);
             ctx.close();
-            return Mono.empty();
+            return Mono.just(false);
         }
-        // 权限等校验通过后由 fireWhenPassed 归档；此处仅做 QOS_DUP 展开
+        // 权限等校验通过后由 continueWhenPassed 归档；此处仅做 QOS_DUP 展开
         if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
-            return Mono.empty();
+            return Mono.just(false);
         }
-        return fireWhenPassed(ctx, packet,
+        return continueWhenPassed(packet,
                 PermissionValidator.INSTANCE.negate()
                         .or(FromToValidator.INSTANCE)
                         .or(BlackListValidator.INSTANCE)
@@ -77,15 +71,11 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
     }
 
     @Override
-    public void process(ChannelHandlerContext ctx, Packet packet) {
-        processStage(ctx, packet).subscribe();
-    }
-
-    @Override
-    public Mono<Void> processStage(ChannelHandlerContext ctx, Packet packet) {
+    public Mono<Void> process(ChannelHandlerContext ctx, Packet packet) {
         log.debug("Processing group message...");
-        if (processWithContentProcessor(ctx, packet)) {
-            return Mono.empty();
+        AbstractBaseBiProcessor<Mono<Void>, ? extends Number> content = MessageServerContext.messageContentProcessorCache.get(packet.getMessage().getContentType());
+        if (content != null) {
+            return content.process(ctx, packet);
         }
         Set<String> groupUserIdentitySet = repository().groupUsersIdentity(packet);
         if (CollectionUtils.isEmpty(groupUserIdentitySet)) {
@@ -149,7 +139,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
         if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
             return handleWithdrawMessage(ctx, packet, groupUserIdentitySet);
         }
-        deliverAndFireNext(ctx, packet, groupUserIdentitySet);
+        deliver(packet, groupUserIdentitySet);
         return Mono.empty();
     }
 
@@ -165,12 +155,6 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
         }
     }
 
-
-    /**
-     * 处理消息内容类型是已读消息
-     * @param ctx
-     * @param packet
-     */
 
     /**
      * 群已读回执：仅校验并写入 Redis/MQ（{@code SessionMessageOffset}），不向群成员广播，避免每人读一次产生 (N-1) 次推送风暴。
@@ -190,7 +174,6 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
                 (ctx0, packet0) -> {
                     qosAckOnSuccess(ctx0, packet0);
                     deliverGroupReadReceiptSelfSyncOnly(packet0);
-                    PacketChannelWriter.fireChannelRead(ctx0, packet0);
                 },
                 (exceptionEvent)-> MessageServerContext.publishEvent(exceptionEvent, true),
                 ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR)
@@ -207,16 +190,10 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
         Message message = packet.getMessage();
         ClientInfo clientInfo = MessageServerContext.localClientInfo(message.getMetadata().getAppKey(), message.getFrom());
         if (clientInfo != null && clientInfo.getSelfSync()) {
-            deliver2SelfAndFireNext(packet);
+            deliver2Self(packet);
         }
     }
 
-
-    /**
-     * 处理消息内容类型是撤回消息
-     * @param ctx
-     * @param packet
-     */
 
     private Mono<Void> handleWithdrawMessage(ChannelHandlerContext ctx, Packet packet, Set<String> groupUserIdentitySet) {
         String sessionId = packet.getMessage().getTo();
@@ -239,7 +216,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
                             repository().refreshSessionLastMessageAfterWithdraw(appKey, sessionId);
                         }
                     }
-                    deliverWithdrawMessageAndFireNext(ctx0, packet0, groupUserIdentitySet);
+                    deliverWithdrawMessage(packet0, groupUserIdentitySet);
                 },
                 (exceptionEvent) -> MessageServerContext.publishEvent(exceptionEvent, true),
                 ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR)
@@ -254,37 +231,32 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
 
 
     /**
-     * 发送消息给接收方
+     * 发送撤回消息给接收方
      *
-     * @param ctx
      * @param packet
+     * @param groupUserIdentitySet
      */
-    private void deliverWithdrawMessageAndFireNext(ChannelHandlerContext ctx, Packet packet, Set<String> groupUserIdentitySet) {
+    private void deliverWithdrawMessage(Packet packet, Set<String> groupUserIdentitySet) {
         Message message = packet.getMessage();
-        // 同步发送给自己
         ClientInfo clientInfo = MessageServerContext.localClientInfo(message.getMetadata().getAppKey(), message.getFrom());
         if (clientInfo != null && clientInfo.getSelfSync()) {
-            deliver2SelfAndFireNext(packet);
+            deliver2Self(packet);
         }
-        // 发送给他人
         deliver2AllGroupMembers(packet, groupUserIdentitySet);
-        // 处理成功则转到下个处理器
-        PacketChannelWriter.fireChannelRead(ctx, packet);
     }
 
 
     /**
      * 发送消息给接收方
      *
-     * @param ctx
      * @param packet
+     * @param groupUserIdentitySet
      */
-    private void deliverAndFireNext(ChannelHandlerContext ctx, Packet packet, Set<String> groupUserIdentitySet) {
+    private void deliver(Packet packet, Set<String> groupUserIdentitySet) {
         Message message = packet.getMessage();
-        // 同步发送给自己
         ClientInfo clientInfo = MessageServerContext.localClientInfo(message.getMetadata().getAppKey(), message.getFrom());
         if (clientInfo != null && clientInfo.getSelfSync()) {
-            deliver2SelfAndFireNext(packet);
+            deliver2Self(packet);
         }
         // 判断群消息的推送模式 推送还是拉取还是混合模式
         if (GroupMessagePushModeEnum.PUSH.equals(MessageServerContext.serverProperties().getGroupMessagePushMode())) {
@@ -310,8 +282,6 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
         }else {
             log.warn("暂不支持该消息推送模式:{}, 消息：{}", MessageServerContext.serverProperties().getGroupMessagePushMode(), packet);
         }
-        // 处理成功则转到下个处理器
-        PacketChannelWriter.fireChannelRead(ctx, packet);
     }
 
     /**
@@ -319,27 +289,13 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
      *
      * @param packet
      */
-    private void deliver2SelfAndFireNext(Packet packet) {
-        // 同步发送给自己
+    private void deliver2Self(Packet packet) {
         Message message = packet.getMessage();
         String appKey = message.getMetadata().getAppKey();
-        // 同步发送给自己
         List<LoginClientInfo> fromSelfLoginClientInfos = ClientHelper.onlineAll(appKey, message.getFrom(), MessageServerContext.deviceType(appKey, packet.getDeviceType()));
         if (CollectionUtils.isNotEmpty(fromSelfLoginClientInfos)) {
             MessageHelper.asyncSendMessage(packet, fromSelfLoginClientInfos);
         }
-    }
-
-    /**
-     * 使用内容处理器处理消息
-     */
-    private boolean processWithContentProcessor(ChannelHandlerContext ctx, Packet packet) {
-        AbstractBaseBiProcessor<? extends Number> processor = MessageServerContext.messageContentProcessorCache.get(packet.getMessage().getContentType());
-        if (processor != null) {
-            processor.process(ctx, packet);
-            return true;
-        }
-        return false;
     }
 
 

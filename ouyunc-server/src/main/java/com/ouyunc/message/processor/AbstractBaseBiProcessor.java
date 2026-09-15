@@ -19,10 +19,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * @Author fzx
- * @Description: 基础抽象处理类
- **/
-public abstract class AbstractBaseBiProcessor<T extends Number> implements BiProcessor<ChannelHandlerContext, Packet>, Qos {
+ * 基础抽象处理类。
+ *
+ * @param <R> {@link #process} 返回值类型（消息侧多为 {@code Mono<Void>}）
+ * @param <T> {@link #type()} 协议类型数值（Byte/Integer 等）
+ */
+public abstract class AbstractBaseBiProcessor<R, T extends Number>
+        implements BiProcessor<ChannelHandlerContext, Packet, R>, Qos {
     private static final Logger log = LoggerFactory.getLogger(AbstractBaseBiProcessor.class);
 
     /**
@@ -68,7 +71,7 @@ public abstract class AbstractBaseBiProcessor<T extends Number> implements BiPro
             Metadata metadata = message.getMetadata();
             dupPacket.getMessage().setMetadata(metadata);
             dupPacket.setPacketId(MessageContext.idGenerator().generateId());
-            // 原地写回同一 Packet 引用，保证上游 fireChannelRead(packet) 拿到展开后的业务包
+            // 原地写回同一 Packet 引用，保证后续 process 阶段拿到展开后的业务包
             packet.copyFrom(dupPacket);
             if (log.isDebugEnabled()) {
                 log.debug("qos 客户端模式正在处理客户端重发消息, 重发消息为: {}", packet);

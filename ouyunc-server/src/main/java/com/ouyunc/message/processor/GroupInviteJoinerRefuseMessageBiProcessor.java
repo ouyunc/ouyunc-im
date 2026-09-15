@@ -17,7 +17,6 @@ import com.ouyunc.base.constant.enums.GroupJoinerProcessStatus;
 import com.ouyunc.base.constant.enums.GroupRequestSessionWay;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.DistributedLockHelper;
-import com.ouyunc.message.helper.PacketChannelWriter;
 import com.ouyunc.message.helper.RequestNotifyHelper;
 import com.ouyunc.message.validator.*;
 import io.netty.channel.ChannelHandlerContext;
@@ -41,23 +40,18 @@ public final class GroupInviteJoinerRefuseMessageBiProcessor extends AbstractMes
     }
 
     @Override
-    public void preProcess(ChannelHandlerContext ctx, Packet packet) {
-        preProcessStage(ctx, packet).subscribe();
-    }
-
-    @Override
-    public Mono<Void> preProcessStage(ChannelHandlerContext ctx, Packet packet) {
+    public Mono<Boolean> preProcess(ChannelHandlerContext ctx, Packet packet) {
         if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
             log.error("校验消息: {} 中的发送方登录认证失败,开始关闭channel", packet);
             MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过", packet), MessageEventTypeEnum.EXCEPTION), true);
             ctx.close();
-            return Mono.empty();
+            return Mono.just(false);
         }
-        // 权限等校验通过后由 fireWhenPassed 归档；此处仅做 QOS_DUP 展开
+        // 权限等校验通过后由 continueWhenPassed 归档；此处仅做 QOS_DUP 展开
         if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
-            return Mono.empty();
+            return Mono.just(false);
         }
-        return fireWhenPassed(ctx, packet,
+        return continueWhenPassed(packet,
                 PermissionValidator.INSTANCE.negate()
                         .or(FromToValidator.INSTANCE)
                         .or(BlackListValidator.INSTANCE)
@@ -69,46 +63,48 @@ public final class GroupInviteJoinerRefuseMessageBiProcessor extends AbstractMes
     }
 
     @Override
-    public void process(ChannelHandlerContext ctx, Packet packet) {
-        if (log.isDebugEnabled()) {
-            log.debug("GroupInviteJoinerRefuseMessageProcessor 正在处理被邀请加群者同意加群的请求 {} ...", packet);
-        }
-        Message message = packet.getMessage();
-        String joiner = message.getFrom();
-        String appKey = message.getMetadata().getAppKey();
-        String lockKey = CacheConstant.buildGroupRequestLockCacheKey(appKey, joiner, message.getTo());
+    public Mono<Void> process(ChannelHandlerContext ctx, Packet packet) {
+        return Mono.fromRunnable(() -> {
+            if (log.isDebugEnabled()) {
+                log.debug("GroupInviteJoinerRefuseMessageProcessor 正在处理被邀请加群者同意加群的请求 {} ...", packet);
+            }
+            Message message = packet.getMessage();
+            String joiner = message.getFrom();
+            String appKey = message.getMetadata().getAppKey();
+            String lockKey = CacheConstant.buildGroupRequestLockCacheKey(appKey, joiner, message.getTo());
 
-        DistributedLockHelper.runWithLock(packet, lockKey, ExceptionCodeEnum.BIND_GROUP_ERROR, () -> {
-            GroupRequestSession groupRequestSession = repository().getGroupRequestSession(appKey, joiner, message.getTo());
-            if (null == groupRequestSession || !GroupRequestSessionWay.INVITED.value().equals(groupRequestSession.getWay()) || StringUtils.isBlank(groupRequestSession.getInviter()) || !Objects.equals(groupRequestSession.getJoinerProcessStatus(), GroupJoinerProcessStatus.PENDING.value())) {
-                log.warn("{} 和 {} 不存在正在处理中的群会话请求或当前群请求不是邀请或邀请人为空或存在拒绝或同意还未结束处理", joiner, message.getTo());
-                return;
-            }
-            if (repository().inGroup(appKey, joiner, message.getTo())) {
-                log.warn("该用户 {} 已经加入群组 {}", joiner, message.getTo());
-                return;
-            }
-            Map<String, Double> groupMannerOrLeaderUsersIdentityAndPostMap = repository().groupManagerAndLeaderUsersIdentityAndPost(packet);
-            if (MapUtils.isEmpty(groupMannerOrLeaderUsersIdentityAndPostMap)) {
-                log.error("群组：{}, 不存在群主和群管理员！群消息： {}", packet.getMessage().getTo(), packet);
-                MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群主或群管理员", packet), MessageEventTypeEnum.EXCEPTION), true);
-                return;
-            }
-            Set<String> groupMannerOrLeaderUsersIdentitySet = new HashSet<>(groupMannerOrLeaderUsersIdentityAndPostMap.keySet());
-            if (groupMannerOrLeaderUsersIdentitySet.remove(message.getFrom())) {
-                log.error("处理人不是管理员或群主：{} 不允许处理", message.getFrom());
-                return;
-            }
-            groupRequestSession.setJoinerProcessStatus(GroupJoinerProcessStatus.REFUSE.value());
-            if (!saveGroupRequestMessage(packet, groupMannerOrLeaderUsersIdentitySet, groupRequestSession)) {
-                log.error("Failed to save invited join group refuse request message: {}", packet);
-                MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存被邀请拒绝加群请求消息异常!", packet), MessageEventTypeEnum.EXCEPTION), true);
-                return;
-            }
-            RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.copyOf(groupMannerOrLeaderUsersIdentityAndPostMap.keySet()));
-            repository().publishPacketAsync(MqConstant.MQ_GROUP_REQUEST_TOPIC, packet.getMessage().getTo(), packet,
-                    "被邀请人拒绝邀请加群请求 MQ 旁路");
-        });
+            DistributedLockHelper.runWithLock(packet, lockKey, ExceptionCodeEnum.BIND_GROUP_ERROR, () -> {
+                GroupRequestSession groupRequestSession = repository().getGroupRequestSession(appKey, joiner, message.getTo());
+                if (null == groupRequestSession || !GroupRequestSessionWay.INVITED.value().equals(groupRequestSession.getWay()) || StringUtils.isBlank(groupRequestSession.getInviter()) || !Objects.equals(groupRequestSession.getJoinerProcessStatus(), GroupJoinerProcessStatus.PENDING.value())) {
+                    log.warn("{} 和 {} 不存在正在处理中的群会话请求或当前群请求不是邀请或邀请人为空或存在拒绝或同意还未结束处理", joiner, message.getTo());
+                    return;
+                }
+                if (repository().inGroup(appKey, joiner, message.getTo())) {
+                    log.warn("该用户 {} 已经加入群组 {}", joiner, message.getTo());
+                    return;
+                }
+                Map<String, Double> groupMannerOrLeaderUsersIdentityAndPostMap = repository().groupManagerAndLeaderUsersIdentityAndPost(packet);
+                if (MapUtils.isEmpty(groupMannerOrLeaderUsersIdentityAndPostMap)) {
+                    log.error("群组：{}, 不存在群主和群管理员！群消息： {}", packet.getMessage().getTo(), packet);
+                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群主或群管理员", packet), MessageEventTypeEnum.EXCEPTION), true);
+                    return;
+                }
+                Set<String> groupMannerOrLeaderUsersIdentitySet = new HashSet<>(groupMannerOrLeaderUsersIdentityAndPostMap.keySet());
+                if (groupMannerOrLeaderUsersIdentitySet.remove(message.getFrom())) {
+                    log.error("处理人不是管理员或群主：{} 不允许处理", message.getFrom());
+                    return;
+                }
+                groupRequestSession.setJoinerProcessStatus(GroupJoinerProcessStatus.REFUSE.value());
+                if (!saveGroupRequestMessage(packet, groupMannerOrLeaderUsersIdentitySet, groupRequestSession)) {
+                    log.error("Failed to save invited join group refuse request message: {}", packet);
+                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存被邀请拒绝加群请求消息异常!", packet), MessageEventTypeEnum.EXCEPTION), true);
+                    return;
+                }
+                RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.copyOf(groupMannerOrLeaderUsersIdentityAndPostMap.keySet()));
+                repository().publishPacketAsync(MqConstant.MQ_GROUP_REQUEST_TOPIC, packet.getMessage().getTo(), packet,
+                        "被邀请人拒绝邀请加群请求 MQ 旁路");
+            });
+            });
     }
 
 

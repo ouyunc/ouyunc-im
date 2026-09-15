@@ -186,13 +186,6 @@ public final class PushIdempotencySupport {
         return result != null && result > 0;
     }
 
-    /** @deprecated 请使用 {@link #getCommittedPacketId}；保留兼容旧调用。 */
-    @Deprecated
-    public static String getPacketId(String appKey, String messageId) {
-        IdempotencyRecord record = getRecord(appKey, messageId);
-        return record == null ? null : record.packetId();
-    }
-
     public record IdempotencyRecord(String state, String packetId) {
     }
 

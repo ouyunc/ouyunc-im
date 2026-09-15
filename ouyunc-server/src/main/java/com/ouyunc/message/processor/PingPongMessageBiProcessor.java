@@ -18,6 +18,7 @@ import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.core.publisher.Mono;
 
 /**
  * @Author fzx
@@ -34,9 +35,9 @@ public final class PingPongMessageBiProcessor extends AbstractMessageBiProcessor
 
 
     @Override
-    public void preProcess(ChannelHandlerContext ctx, Packet packet) {
-        // 心跳不归档、不走 QoS，避免 EventLoop 碰 MQ/Redis
-        ctx.fireChannelRead(packet);
+    public Mono<Boolean> preProcess(ChannelHandlerContext ctx, Packet packet) {
+        // HeartBeatHandler / BusinessIdleStateHandler 直接调 process；此处不 fire、不归档
+        return Mono.just(false);
     }
 
     /***
@@ -44,36 +45,37 @@ public final class PingPongMessageBiProcessor extends AbstractMessageBiProcessor
      * @description 核心业务逻辑处理
      */
     @Override
-    public void process(ChannelHandlerContext ctx, Packet packet) {
-        // 可能在三次之内再次发起心跳，此时需要清除 之前心跳超时次数的历史记录
-        ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_READ_TIMEOUT_TIMES, null);
-        // 发送pong
-        // 处理心跳消息
-        Message heartBeatMessage = packet.getMessage();
-        LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
-        String from = loginClientInfo != null && StringUtils.isNotBlank(loginClientInfo.getIdentity())
-                ? loginClientInfo.getIdentity()
-                : heartBeatMessage.getFrom();
-        if (StringUtils.isBlank(from)) {
-            log.error("心跳发送方不能为空！{}",  packet);
-            return;
-        }
-        heartBeatMessage.setId(MessageContext.idGenerator().generateIdStr());
-        heartBeatMessage.setFrom(null);
-        heartBeatMessage.setTo(from);
-        heartBeatMessage.setContent(null);
-        heartBeatMessage.setContentType(MessageContentTypeEnum.PING_PONG_CONTENT.getType());
-        heartBeatMessage.setCreateTime(TimeUtil.currentTimeMillis());
-        packet.setPacketId(MessageContext.idGenerator().generateId());
-        // Pong 写回当前连接，避免按 from 查表时连接已换绑或 identity 不一致
-        if (PacketChannelWriter.tryReplyOnChannel(ctx, packet)) {
-            return;
-        }
-        Target pongTarget = PacketChannelWriter.resolveReplyTarget(ctx, packet, from);
-        if (pongTarget == null) {
-            log.error("心跳无法确定投递目标: {}", packet);
-            return;
-        }
-        MessageHelper.asyncSendMessage(packet, pongTarget);
+    public Mono<Void> process(ChannelHandlerContext ctx, Packet packet) {
+        return Mono.fromRunnable(() -> {
+            // 可能在三次之内再次发起心跳，此时需要清除 之前心跳超时次数的历史记录
+            ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_READ_TIMEOUT_TIMES, null);
+            // 发送pong
+            Message heartBeatMessage = packet.getMessage();
+            LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
+            String from = loginClientInfo != null && StringUtils.isNotBlank(loginClientInfo.getIdentity())
+                    ? loginClientInfo.getIdentity()
+                    : heartBeatMessage.getFrom();
+            if (StringUtils.isBlank(from)) {
+                log.error("心跳发送方不能为空！{}",  packet);
+                return;
+            }
+            heartBeatMessage.setId(MessageContext.idGenerator().generateIdStr());
+            heartBeatMessage.setFrom(null);
+            heartBeatMessage.setTo(from);
+            heartBeatMessage.setContent(null);
+            heartBeatMessage.setContentType(MessageContentTypeEnum.PING_PONG_CONTENT.getType());
+            heartBeatMessage.setCreateTime(TimeUtil.currentTimeMillis());
+            packet.setPacketId(MessageContext.idGenerator().generateId());
+            // Pong 写回当前连接，避免按 from 查表时连接已换绑或 identity 不一致
+            if (PacketChannelWriter.tryReplyOnChannel(ctx, packet)) {
+                return;
+            }
+            Target pongTarget = PacketChannelWriter.resolveReplyTarget(ctx, packet, from);
+            if (pongTarget == null) {
+                log.error("心跳无法确定投递目标: {}", packet);
+                return;
+            }
+            MessageHelper.asyncSendMessage(packet, pongTarget);
+        });
     }
 }

@@ -138,12 +138,13 @@ public class MessageServerContext extends MessageContext {
     /**
      * 缓存消息内容处理接口的所有实现类 Number 类型是 Integer
      */
-    public static Cache<Number, AbstractBaseBiProcessor<? extends Number>> messageContentProcessorCache = new CaffeineLocalCache<>("messageContentProcessorCache",Caffeine.newBuilder().build(new CacheLoader<>() {
-        /***
-         * 获取消息内容处理器的时候，先从缓存中取，如果没有则进行加载走load()方法
-         */
+    /**
+     * 缓存消息内容处理接口的所有实现类 Number 类型是 Integer；process 返回 {@link reactor.core.publisher.Mono}{@code <Void>}。
+     */
+    public static Cache<Number, AbstractBaseBiProcessor<reactor.core.publisher.Mono<Void>, ? extends Number>> messageContentProcessorCache =
+            new CaffeineLocalCache<>("messageContentProcessorCache", Caffeine.newBuilder().build(new CacheLoader<>() {
         @Override
-        public @Nullable AbstractBaseBiProcessor<? extends Number> load(Number messageContentTypeValue) throws Exception {
+        public @Nullable AbstractBaseBiProcessor<reactor.core.publisher.Mono<Void>, ? extends Number> load(Number messageContentTypeValue) {
             return null;
         }
     }));

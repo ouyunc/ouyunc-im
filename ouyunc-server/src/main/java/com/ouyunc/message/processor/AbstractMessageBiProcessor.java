@@ -7,7 +7,6 @@ import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.message.validator.AuthValidator;
-import com.ouyunc.message.helper.PacketChannelWriter;
 import com.ouyunc.repository.DefaultRepository;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
@@ -15,10 +14,14 @@ import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
 /**
- * @Author fzx
- * @Description: 消息抽象处理类
- **/
-public abstract class AbstractMessageBiProcessor<T extends Number> extends AbstractBaseBiProcessor<T> {
+ * 消息抽象处理类：统一三阶段 API。
+ * <ul>
+ *   <li>{@link #preProcess} — 鉴权/校验/QoS 展开/归档；返回 true 才进入 process</li>
+ *   <li>{@link #process} — 落库、投递、回执等业务</li>
+ *   <li>{@link #postProcess} — 轻量收尾，默认空</li>
+ * </ul>
+ */
+public abstract class AbstractMessageBiProcessor<T extends Number> extends AbstractBaseBiProcessor<Mono<Void>, T> {
 
     private static final Logger log = LoggerFactory.getLogger(AbstractMessageBiProcessor.class);
 
@@ -31,90 +34,66 @@ public abstract class AbstractMessageBiProcessor<T extends Number> extends Abstr
     }
 
     /**
-     * @Author fzx
-     * @Description 前置处理器，做认证授权相关处理，在真正处理消息前处理
+     * 前置阶段：鉴权、业务校验、QoS 展开、旁路归档。
+     *
+     * @return {@code true} 进入 {@link #process}；{@code false} 结束本条消息链（已处理完毕或已拒绝）
      */
-    public void preProcess(ChannelHandlerContext ctx, Packet packet) {
+    public Mono<Boolean> preProcess(ChannelHandlerContext ctx, Packet packet) {
         if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
-            // 关闭当前 channel，这里会触发 DefaultSocketChannelInitializer 中的关闭逻辑
             log.error("校验消息: {} 中的发送方登录认证失败,开始关闭channel", packet);
             MessageContext.publishEvent(new MessageEvent(
                     ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过", packet),
                     MessageEventTypeEnum.EXCEPTION), true);
             ctx.close();
-            return;
+            return Mono.just(false);
         }
-        // 先做 qos 展开（QOS_DUP 原地更新），再归档，避免 MQ 落入外壳包
         if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
-            return;
+            // 幂等命中已 ACK，不再进 process
+            return Mono.just(false);
         }
         archiveAfterAuth(packet);
-        PacketChannelWriter.fireChannelRead(ctx, packet);
-    }
-
-    /**
-     * 有序队列等待的前置阶段。默认把同步 {@link #preProcess} 包成 Mono；校验走 Redis 的子类应覆盖并等校验完成。
-     */
-    public Mono<Void> preProcessStage(ChannelHandlerContext ctx, Packet packet) {
-        return Mono.fromRunnable(() -> preProcess(ctx, packet));
-    }
-
-    /**
-     * 有序队列等待的业务阶段。默认把同步 {@link #process} 包成 Mono；落库走 subscribe 的子类应覆盖并等 Mono 完成。
-     */
-    public Mono<Void> processStage(ChannelHandlerContext ctx, Packet packet) {
-        return Mono.fromRunnable(() -> process(ctx, packet));
+        return Mono.just(true);
     }
 
     /**
      * 登录鉴权 +（可选）业务校验均通过后旁路归档。未登录包不得进入 MQ；
-     * 权限拒绝的包也不归档（由 {@link #fireWhenPassed} 在通过后再调用）。
+     * 权限拒绝的包也不归档（由 {@link #continueWhenPassed} 在通过后再调用）。
      */
     protected void archiveAfterAuth(Packet packet) {
         repository().save(packet);
     }
 
     /**
-     * 校验通过后旁路归档再 fireChannelRead；拒绝或异常则不往下传、不归档。
-     * 有序队列等该 Mono 完成再处理下一条。
-     * <p>
-     * 客户端有序全量入站 PRE 阶段：fire 被 {@link com.ouyunc.message.helper.ChannelOrderedInbound} 抑制为「通过标记」，
-     * 由 PacketPreHandler 同任务串联 {@link #processStage}，不会二次入队。
-     * </p>
+     * 业务校验通过后归档并返回 true；拒绝则回调 onReject 并返回 false。
      *
      * @param shouldReject true 表示拦截
      * @param onReject     拦截时回调（如释放 QoS claim），可为 null
+     * @param rejectLog    拒绝日志模板，可含一个 {@code {}} 占位 packet
      */
-    protected Mono<Void> fireWhenPassed(ChannelHandlerContext ctx, Packet packet, Mono<Boolean> shouldReject,
-                                        Runnable onReject, String rejectLog) {
+    protected Mono<Boolean> continueWhenPassed(Packet packet, Mono<Boolean> shouldReject,
+                                               Runnable onReject, String rejectLog) {
         return shouldReject
                 .onErrorResume(error -> {
                     log.error("校验过程中出现异常: {}", error.getMessage());
                     return Mono.just(true);
                 })
-                .flatMap(result -> {
-                    if (Boolean.TRUE.equals(result)) {
+                .map(reject -> {
+                    if (Boolean.TRUE.equals(reject)) {
                         log.warn(rejectLog, packet);
                         if (onReject != null) {
                             onReject.run();
                         }
-                        return Mono.empty();
+                        return false;
                     }
-                    // 权限等业务校验通过后再归档（此时 QOS_DUP 已展开）
                     archiveAfterAuth(packet);
-                    PacketChannelWriter.fireChannelRead(ctx, packet);
-                    return Mono.empty();
+                    return true;
                 });
     }
 
     /**
-     * @Author fzx
-     * @Description 做后置处理：仅传递给下个 handler。
-     *
-     * <p><strong>注意</strong>：QoS ACK 不再在此发送。子类应在持久化成功后、在 {@link MessageContext#isQosEnable()} 为 true 时显式调用 {@link #qosPostHandle(io.netty.channel.ChannelHandlerContext, com.ouyunc.base.packet.Packet)}，
-     * 以避免「ACK 已回但消息未持久化」导致客户端不重发而消息丢失的问题。</p>
+     * 后置阶段：默认无操作。指标/清理可覆写；不要在此发业务成功 ACK。
      */
-    public void postProcess(ChannelHandlerContext ctx, Packet packet) {
-        PacketChannelWriter.fireChannelRead(ctx, packet);
+    public Mono<Void> postProcess(ChannelHandlerContext ctx, Packet packet) {
+        return Mono.empty();
     }
 }

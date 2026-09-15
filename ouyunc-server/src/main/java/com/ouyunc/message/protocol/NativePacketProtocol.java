@@ -109,13 +109,8 @@ public enum NativePacketProtocol implements PacketProtocol {
                         .addLast(MessageConstant.WS_SERVER_PROTOCOL_HANDLER, new WebSocketServerProtocolHandler(MessageServerContext.serverProperties().getWebsocketPath(), null, true, MessageConstant.MAX_WEBSOCKET_FRAME_SIZE))
                         // 转换成包packet,内部消息传递都是以packet 进行处理
                         .addLast(MessageConstant.CONVERT_2_PACKET_HANDLER, new Convert2PacketHandler())
-                        // 前置处理
-                        .addLast(MessageConstant.PRE_HANDLER, new PacketPreHandler())
-                        // 业务处理
-                        .addLast(MessageConstant.WS_HANDLER, new PacketHandler())
-                        // 后置处理
-                        .addLast(MessageConstant.POST_HANDLER, new PacketPostHandler())
-                        // 判断是否需要开启客户端心跳如果需要则开启客户端心跳，由于心跳消息不需要登录就可以，所以放在登录认证处理器前面
+                        // 统一业务入口：preProcess → process → postProcess
+                        .addLast(MessageConstant.PACKET_HANDLER, PacketHandler.client())
                         // 在最后添加异常处理器
                         .addLast(MessageConstant.EXCEPTION_HANDLER, new ExceptionHandler())
                         // 移除协议分发器
@@ -216,8 +211,8 @@ public enum NativePacketProtocol implements PacketProtocol {
                     .addLast(MessageConstant.CONVERT_2_PACKET_HANDLER, new Convert2PacketHandler())
                     // 添加一个集群中处理消息路由的处理器，这样就不需要在业务处理器中都写一下了
                     .addLast(MessageConstant.PACKET_CLUSTER_ROUTER_HANDLER, new ClusterPacketRouteHandler())
-                    // 集群内部/外部业务处理
-                    .addLast(MessageConstant.OUYUNC_HANDLER, new PacketHandler())
+                    // 集群内部业务处理：process → postProcess
+                    .addLast(MessageConstant.OUYUNC_HANDLER, PacketHandler.cluster())
                     // 在最后添加异常处理器
                     .addLast(MessageConstant.EXCEPTION_HANDLER, new ExceptionHandler())
                     // 移除协议分发器
@@ -290,12 +285,8 @@ public enum NativePacketProtocol implements PacketProtocol {
             pipeline.addLast(MessageConstant.MQTT_DECODER_HANDLER, new MqttDecoder())
                     .addLast(MessageConstant.MQTT_ENCODER_HANDLER, MqttEncoder.INSTANCE)
                     .addLast(MessageConstant.CONVERT_2_PACKET_HANDLER, new Convert2PacketHandler())
-                    // 前置处理
-                    .addLast(MessageConstant.PRE_HANDLER, new PacketPreHandler())
-                    // 业务处理
-                    .addLast(MessageConstant.MQTT_SERVER_HANDLER, new PacketHandler())
-                    // 后置处理
-                    .addLast(MessageConstant.POST_HANDLER, new PacketPostHandler())
+                    // 统一业务入口：preProcess → process → postProcess
+                    .addLast(MessageConstant.PACKET_HANDLER, PacketHandler.client())
                     // 异常处理器
                     .addLast(MessageConstant.EXCEPTION_HANDLER, new ExceptionHandler());
             // 登录认证（可选）+ 内容安全（鉴权之后）
@@ -321,16 +312,16 @@ public enum NativePacketProtocol implements PacketProtocol {
 
     /**
      * 挂载登录鉴权与内容安全。
-     * <p>有登录：Auth → ContentSafety → PRE；无登录：ContentSafety → PRE。禁止把内容安全挂到鉴权前。</p>
+     * <p>有登录：Auth → ContentSafety → PacketHandler；无登录：ContentSafety → PacketHandler。</p>
      *
      * @param pipeline 当前连接管道
      */
     private static void installAuthAndContentSafety(ChannelPipeline pipeline) {
         if (MessageServerContext.serverProperties().isServerLoginEnable()) {
-            pipeline.addBefore(MessageConstant.PRE_HANDLER, MessageConstant.AUTHENTICATION_HANDLER, new AuthenticationHandler());
+            pipeline.addBefore(MessageConstant.PACKET_HANDLER, MessageConstant.AUTHENTICATION_HANDLER, new AuthenticationHandler());
             pipeline.addAfter(MessageConstant.AUTHENTICATION_HANDLER, MessageConstant.CONTENT_SAFETY_HANDLER, new ContentSafetyHandler());
         } else {
-            pipeline.addBefore(MessageConstant.PRE_HANDLER, MessageConstant.CONTENT_SAFETY_HANDLER, new ContentSafetyHandler());
+            pipeline.addBefore(MessageConstant.PACKET_HANDLER, MessageConstant.CONTENT_SAFETY_HANDLER, new ContentSafetyHandler());
         }
     }
 

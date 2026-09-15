@@ -14,6 +14,7 @@ import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.core.publisher.Mono;
 
 import java.util.List;
 
@@ -31,23 +32,25 @@ public final class ServerNotifyMessageBiProcessor extends AbstractMessageBiProce
     }
 
     @Override
-    public void process(ChannelHandlerContext ctx, Packet packet) {
-        Message message = packet.getMessage();
-        if (message == null || message.getMetadata() == null) {
-            log.warn("SERVER_NOTIFY 缺少 message/metadata: {}", packet);
-            return;
-        }
-        String appKey = message.getMetadata().getAppKey();
-        if (isBroadcast(packet)) {
-            ClientHelper.broadcastServerNotify(appKey, packet);
-            return;
-        }
-        List<LoginClientInfo> targets = ClientHelper.onlineAll(appKey, message.getTo());
-        if (CollectionUtils.isEmpty(targets)) {
-            log.debug("SERVER_NOTIFY 接收方 {} 不在线", message.getTo());
-            return;
-        }
-        MessageHelper.asyncSendMessage(packet, targets);
+    public Mono<Void> process(ChannelHandlerContext ctx, Packet packet) {
+        return Mono.fromRunnable(() -> {
+            Message message = packet.getMessage();
+            if (message == null || message.getMetadata() == null) {
+                log.warn("SERVER_NOTIFY 缺少 message/metadata: {}", packet);
+                return;
+            }
+            String appKey = message.getMetadata().getAppKey();
+            if (isBroadcast(packet)) {
+                ClientHelper.broadcastServerNotify(appKey, packet);
+                return;
+            }
+            List<LoginClientInfo> targets = ClientHelper.onlineAll(appKey, message.getTo());
+            if (CollectionUtils.isEmpty(targets)) {
+                log.debug("SERVER_NOTIFY 接收方 {} 不在线", message.getTo());
+                return;
+            }
+            MessageHelper.asyncSendMessage(packet, targets);
+        });
     }
 
     private static boolean isBroadcast(Packet packet) {

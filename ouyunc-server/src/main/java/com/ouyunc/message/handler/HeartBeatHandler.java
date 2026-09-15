@@ -7,6 +7,7 @@ import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.message.processor.AbstractMessageBiProcessor;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -40,7 +41,16 @@ public class HeartBeatHandler extends SimpleChannelInboundHandler<Packet> {
             return;
         }
         // 如果是外部客户端的心跳消息则直接掉用心跳消息处理器来进行处理,然后就结束了，不会往下面透传消息
-        MessageServerContext.messageProcessorCache.get(MessageTypeEnum.PING_PONG.getType()).process(ctx, packet);
+        AbstractMessageBiProcessor<? extends Number> processor =
+                MessageServerContext.messageProcessorCache.get(MessageTypeEnum.PING_PONG.getType());
+        if (processor == null) {
+            log.error("未找到 PING_PONG 处理器，关闭连接");
+            ctx.close();
+            return;
+        }
+        processor.process(ctx, packet).subscribe(
+                unused -> { },
+                e -> log.error("心跳 process 异常, packetId={}", packet.getPacketId(), e));
     }
 
     /**

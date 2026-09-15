@@ -26,6 +26,7 @@ import com.ouyunc.message.properties.MessageServerProperties;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.core.publisher.Mono;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -163,18 +164,30 @@ public class StandardMessageServer extends AbstractMessageServer {
         } catch (IOException e) {
             log.error("扫描消息处理器失败: {}", e.getMessage());
         }
-        // 过滤并获取所有的AbstractBaseProcessor的实现类集合
-        Set<BiProcessor<ChannelHandlerContext,Packet>> biProcessorSet =  messageProcessorClazzSet.parallelStream().filter(processorClazz -> BiProcessor.class.isAssignableFrom(processorClazz) && !BiProcessor.class.equals(processorClazz) && !Modifier.isAbstract(processorClazz.getModifiers()) && !BiProcessorChainProxy.class.equals(processorClazz) && !DelegatingMessageProcessorChain.class.equals(processorClazz) && !DelegatingMessageContentProcessorChain.class.equals(processorClazz)).map(processorClazz-> (BiProcessor<ChannelHandlerContext, Packet>)objenesis.newInstance(processorClazz)).collect(Collectors.toSet());
-        // 消息处理器继承了 AbstractMessageProcessor ，消息内容处理器继承了 AbstractBaseProcessor ，分别筛选该两个类的实现类，且 type为MessageType 和MessageContentType 的处理类集合
+        // 过滤并获取所有 BiProcessor 实现（返回值泛型擦除为 ?）
+        @SuppressWarnings("unchecked")
+        Set<BiProcessor<ChannelHandlerContext, Packet, ?>> biProcessorSet = messageProcessorClazzSet.parallelStream()
+                .filter(processorClazz -> BiProcessor.class.isAssignableFrom(processorClazz)
+                        && !BiProcessor.class.equals(processorClazz)
+                        && !Modifier.isAbstract(processorClazz.getModifiers())
+                        && !BiProcessorChainProxy.class.equals(processorClazz)
+                        && !DelegatingMessageProcessorChain.class.equals(processorClazz)
+                        && !DelegatingMessageContentProcessorChain.class.equals(processorClazz))
+                .map(processorClazz -> (BiProcessor<ChannelHandlerContext, Packet, ?>) objenesis.newInstance(processorClazz))
+                .collect(Collectors.toSet());
+        // 消息处理器 / 消息内容处理器分流
         List<AbstractMessageBiProcessor<? extends Number>> messageProcessorList = new ArrayList<>();
-        List<AbstractBaseBiProcessor<? extends Number>> messageContentProcessorList = new ArrayList<>();
-        for (BiProcessor<ChannelHandlerContext, Packet> biProcessor : biProcessorSet) {
-            if (biProcessor instanceof AbstractMessageBiProcessor<?> messageProcessor  && messageProcessor.type() instanceof MessageType) {
-                // 消息处理器
+        List<AbstractBaseBiProcessor<Mono<Void>, ? extends Number>> messageContentProcessorList = new ArrayList<>();
+        for (BiProcessor<ChannelHandlerContext, Packet, ?> biProcessor : biProcessorSet) {
+            if (biProcessor instanceof AbstractMessageBiProcessor<?> messageProcessor
+                    && messageProcessor.type() instanceof MessageType) {
                 messageProcessorList.add(messageProcessor);
-            }else if (biProcessor instanceof AbstractBaseBiProcessor<?> baseProcessor && baseProcessor.type() instanceof MessageContentType) {
-                // 消息内容处理器
-                messageContentProcessorList.add(baseProcessor);
+            } else if (biProcessor instanceof AbstractBaseBiProcessor<?, ?> baseProcessor
+                    && baseProcessor.type() instanceof MessageContentType) {
+                @SuppressWarnings("unchecked")
+                AbstractBaseBiProcessor<Mono<Void>, ? extends Number> contentProcessor =
+                        (AbstractBaseBiProcessor<Mono<Void>, ? extends Number>) baseProcessor;
+                messageContentProcessorList.add(contentProcessor);
             }
         }
         // 消息 分别按照类型值分组，并排序
@@ -204,10 +217,10 @@ public class StandardMessageServer extends AbstractMessageServer {
         messageContentProcessorList.stream().collect(Collectors.groupingBy(messageContentProcessor -> messageContentProcessor.type().getType())).forEach((messageContentTypeValue, messageContentProcessors)->{
             int messageContentProcessorSize = messageContentProcessors.size();
             if (messageContentProcessorSize == NumberConstant.NUMBER_1) {
-                AbstractBaseBiProcessor<? extends Number> messageContentProcessor = messageContentProcessors.getFirst();
+                AbstractBaseBiProcessor<Mono<Void>, ? extends Number> messageContentProcessor = messageContentProcessors.getFirst();
                 MessageServerContext.messageContentProcessorCache.put(messageContentTypeValue, messageContentProcessor);
             }else if (messageContentProcessorSize > NumberConstant.NUMBER_1) {
-                List<ProcessorChain<AbstractBaseBiProcessor<? extends Number>>> processorChains = new ArrayList<>();
+                List<ProcessorChain<AbstractBaseBiProcessor<Mono<Void>, ? extends Number>>> processorChains = new ArrayList<>();
                 // 如果大于1，则转换为代理
                 messageContentProcessors.stream().collect(Collectors.groupingBy(processor -> new MessageProtocol(processor.type().getProtocol(), processor.type().getProtocolVersion()))).forEach((protocolType, protocolTypeProcessors)->{
                     // 排序
@@ -216,8 +229,9 @@ public class StandardMessageServer extends AbstractMessageServer {
                     DelegatingMessageContentProcessorChain delegatingMessageContentProcessorChain =  new DelegatingMessageContentProcessorChain(protocolType,  protocolTypeProcessors);
                     processorChains.add(delegatingMessageContentProcessorChain);
                 });
-                // 这里面的类型直接去取第一个
-                BiProcessorChainProxy<AbstractBaseBiProcessor<? extends Number>> processorChainProxy = new BiProcessorChainProxy<>(processorChains, processorChains.getFirst().getProcessors().getFirst().type());
+                // 内容多实现时用链代理（process 返回 Mono<Void>）
+                BiProcessorChainProxy<AbstractBaseBiProcessor<Mono<Void>, ? extends Number>> processorChainProxy =
+                        new BiProcessorChainProxy<>(processorChains, processorChains.getFirst().getProcessors().getFirst().type());
                 MessageServerContext.messageContentProcessorCache.put(messageContentTypeValue, processorChainProxy);
             }
             log.debug("消息内容类型处理器({})： {}",messageContentTypeValue ,MessageServerContext.messageContentProcessorCache.get(messageContentTypeValue));

@@ -12,14 +12,15 @@ import com.ouyunc.message.processor.AbstractBaseBiProcessor;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.core.publisher.Mono;
 
 /**
  * mqtt 断开连接
  *
- * 按 MQTT 3.1.1 规范：收到 DISCONNECT 报文表示客户端正常断连，
- * 此时 broker 不应发送遗嘱消息（will message），需清除遗嘱标记后再关闭 channel。
+ * �?MQTT 3.1.1 规范：收�?DISCONNECT 报文表示客户端正常断连，
+ * 此时 broker 不应发送遗嘱消息（will message），需清除遗嘱标记后再关闭 channel�?
  */
-public class MqttDisconnectMessageContentBiProcessor extends AbstractBaseBiProcessor<Integer> {
+public class MqttDisconnectMessageContentBiProcessor extends AbstractBaseBiProcessor<Mono<Void>, Integer> {
     private static final Logger log = LoggerFactory.getLogger(MqttDisconnectMessageContentBiProcessor.class);
 
     @Override
@@ -29,13 +30,15 @@ public class MqttDisconnectMessageContentBiProcessor extends AbstractBaseBiProce
 
 
     @Override
-    public void process(ChannelHandlerContext ctx, Packet packet) {
-        log.warn("MqttDisconnectMessageProcessor 正在处理mqtt 正常断开连接消息...");
-        // 正常 DISCONNECT：清除遗嘱标记，避免 channel close 事件触发遗嘱消息发送
-        LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
-        if (loginClientInfo instanceof MqttLoginClientInfo mqttLoginClientInfo) {
-            mqttLoginClientInfo.setEnableWill(NumberConstant.NUMBER_0);
-        }
-        ctx.close();
+    public Mono<Void> process(ChannelHandlerContext ctx, Packet packet) {
+        return Mono.fromRunnable(() -> {
+            log.warn("MqttDisconnectMessageProcessor 正在处理mqtt 正常断开连接消息...");
+            // 正常 DISCONNECT：清除遗嘱标记，避免 channel close 事件触发遗嘱消息发�?
+            LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
+            if (loginClientInfo instanceof MqttLoginClientInfo mqttLoginClientInfo) {
+                mqttLoginClientInfo.setEnableWill(NumberConstant.NUMBER_0);
+            }
+            ctx.close();
+            });
     }
 }

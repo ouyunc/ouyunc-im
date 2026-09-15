@@ -7,9 +7,11 @@ import io.netty.channel.ChannelHandlerContext;
 import java.util.List;
 
 /**
- * 处理器链
+ * 处理器链。
+ *
+ * @param <T> 链内处理器，须为 {@link BiProcessor}（含泛型返回值）
  */
-public interface ProcessorChain<T extends BiProcessor<ChannelHandlerContext, Packet>> {
+public interface ProcessorChain<T extends BiProcessor<ChannelHandlerContext, Packet, ?>> {
 
     /**
      * 匹配器

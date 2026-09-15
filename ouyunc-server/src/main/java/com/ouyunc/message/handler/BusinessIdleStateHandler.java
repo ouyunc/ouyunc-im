@@ -9,6 +9,7 @@ import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.event.payload.ClientBusinessSessionIdlePayload;
 import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.message.processor.AbstractMessageBiProcessor;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
@@ -46,7 +47,13 @@ public class BusinessIdleStateHandler extends IdleStateHandler {
         if (msg instanceof Packet packet
                 && packet.getMessage() != null
                 && MessageTypeEnum.PING_PONG.getType() == packet.getMessageType()) {
-            MessageServerContext.messageProcessorCache.get(MessageTypeEnum.PING_PONG.getType()).process(ctx, packet);
+            AbstractMessageBiProcessor<? extends Number> processor =
+                    MessageServerContext.messageProcessorCache.get(MessageTypeEnum.PING_PONG.getType());
+            if (processor != null) {
+                processor.process(ctx, packet).subscribe(
+                        unused -> { },
+                        e -> { /* 业务空闲路径心跳失败仅吞掉，避免打断读循环 */ });
+            }
             return;
         }
         ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_BUSINESS_IDLE_STRIKE, 0);

@@ -32,7 +32,7 @@
 
 依据：[PacketProtocolDispatcherBiProcessor.java](D:/workspace/ouyunc-im/ouyunc-server/src/main/java/com/ouyunc/message/dispatcher/PacketProtocolDispatcherBiProcessor.java:17)、[NativePacketProtocol.java](D:/workspace/ouyunc-im/ouyunc-server/src/main/java/com/ouyunc/message/protocol/NativePacketProtocol.java:170)、[ClusterPacketRouteHandler.java](D:/workspace/ouyunc-im/ouyunc-server/src/main/java/com/ouyunc/message/handler/ClusterPacketRouteHandler.java:27)、[DefaultSocketChannelInitializer.java](D:/workspace/ouyunc-im/ouyunc-server/src/main/java/com/ouyunc/message/channel/DefaultSocketChannelInitializer.java:35)。
 
-普通 Socket 统一进入 ProtocolDispatcher；原生协议通过魔数识别后安装 OUYUNC 管道，该管道只有 Convert2Packet、ClusterPacketRoute、PacketHandler 和异常处理，没有 AuthenticationHandler/PacketPreHandler。routed 包直接投递；非 routed 包进入业务 process。默认 TLS 配置也明确不校验客户端证书。
+普通 Socket 统一进入 ProtocolDispatcher；原生协议通过魔数识别后安装 OUYUNC 管道，该管道只有 Convert2Packet、ClusterPacketRoute、PacketHandler 和异常处理，没有 AuthenticationHandler。routed 包直接投递；非 routed 包进入业务 process。默认 TLS 配置也明确不校验客户端证书。
 
 触发条件：外部能够直连同一原始 TCP 接入端口，并且默认扫描加载原生协议。此时协议魔数不能证明发送方是可信节点，存在未认证路由和绕过业务前置验证的入口。如果生产入口只允许代理后的 WebSocket，风险暴露面会缩小，但服务端边界仍应修复。
 

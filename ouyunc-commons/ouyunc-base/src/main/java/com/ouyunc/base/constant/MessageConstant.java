@@ -604,24 +604,6 @@ public class MessageConstant {
      */
     public static final String CHANNEL_ATTR_KEY_QOS_DUP_ORIGINAL_PACKET = "CHANNEL_ATTR_KEY_QOS_DUP_ORIGINAL_PACKET";
 
-    /**
-     * 客户端入站有序全量处理阶段：{@code PRE} / {@code PROCESS}。
-     * PRE 阶段 {@code fireChannelRead} 仅标记通过，不进入 PacketHandler，避免同连接二次入队交错。
-     */
-    public static final String CHANNEL_ATTR_KEY_ORDERED_INBOUND_PHASE = "CHANNEL_ATTR_KEY_ORDERED_INBOUND_PHASE";
-
-    /**
-     * PRE 阶段校验通过标记；有序任务在 preProcessStage 完成后据此决定是否执行 processStage。
-     */
-    public static final String CHANNEL_ATTR_KEY_ORDERED_INBOUND_PRE_PASSED = "CHANNEL_ATTR_KEY_ORDERED_INBOUND_PRE_PASSED";
-
-    /** {@link #CHANNEL_ATTR_KEY_ORDERED_INBOUND_PHASE}：前置校验阶段 */
-    public static final String ORDERED_INBOUND_PHASE_PRE = "PRE";
-
-    /** {@link #CHANNEL_ATTR_KEY_ORDERED_INBOUND_PHASE}：业务处理阶段（允许 fire 到 PostHandler） */
-    public static final String ORDERED_INBOUND_PHASE_PROCESS = "PROCESS";
-
-
     // ==============================================handler tag=====================================
 
 
@@ -759,7 +741,7 @@ public class MessageConstant {
     public static final String MONITOR_HANDLER = "MONITOR_HANDLER";
 
     /**
-     * 内容安全（敏感词 / 监黄标记），须在 {@link #AUTHENTICATION_HANDLER} 之后、{@link #PRE_HANDLER} 之前。
+     * 内容安全（敏感词 / 监黄标记），须在 {@link #AUTHENTICATION_HANDLER} 之后、{@link #PACKET_HANDLER} 之前。
      */
     public static final String CONTENT_SAFETY_HANDLER = "CONTENT_SAFETY_HANDLER";
 
@@ -772,26 +754,18 @@ public class MessageConstant {
     public static final String AUTHENTICATION_HANDLER = "AUTHENTICATION_HANDLER";
 
     /**
-     * 统一前置处理器
+     * 统一 Packet 业务入口（客户端 / 集群均挂 {@code PacketHandler}）。
      */
-    public static final String PRE_HANDLER = "PRE_HANDLER";
-
-
+    public static final String PACKET_HANDLER = "PACKET_HANDLER";
 
     /**
-     * post 处理器
-     */
-    public static final String POST_HANDLER = "POST_HANDLER";
-
-
-    /**
-     * ws 业务处理器
+     * 客户端 SDK：WebSocket 业务 Handler 名（{@code WsProtocolHandler}），与服务端 {@link #PACKET_HANDLER} 不同。
      */
     public static final String WS_HANDLER = "WS_HANDLER";
 
 
     /**
-     * ouyunc 业务处理器
+     * ouyunc 业务处理器（集群管道上的 {@code PacketHandler.cluster()}）
      */
     public static final String OUYUNC_HANDLER = "OUYUNC_HANDLER";
 

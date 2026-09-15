@@ -35,33 +35,26 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
         return MessageTypeEnum.CUSTOMER_SERVICE;
     }
 
+    /**
+     * 鉴权 → QoS 展开；通过后进入 process。
+     * <p>旁路归档挪到路由校验通过之后，避免拒单污染归档流。</p>
+     */
     @Override
-    public void preProcess(ChannelHandlerContext ctx, Packet packet) {
+    public Mono<Boolean> preProcess(ChannelHandlerContext ctx, Packet packet) {
         if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
             log.error("客服消息校验失败: {} 认证未通过, 关闭 channel", packet);
             MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过!", packet), MessageEventTypeEnum.EXCEPTION), true);
             ctx.close();
-            return;
+            return Mono.just(false);
         }
-        // 认证通过后先展开 QOS_DUP，再归档业务包
         if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
-            return;
+            return Mono.just(false);
         }
-        archiveAfterAuth(packet);
-        PacketChannelWriter.fireChannelRead(ctx, packet);
+        return Mono.just(true);
     }
 
     @Override
-    public void process(ChannelHandlerContext ctx, Packet packet) {
-        processStage(ctx, packet).subscribe();
-    }
-
-    @Override
-    public Mono<Void> processStage(ChannelHandlerContext ctx, Packet packet) {
-        return processOffloadedStage(ctx, packet);
-    }
-
-    private Mono<Void> processOffloadedStage(ChannelHandlerContext ctx, Packet packet) {
+    public Mono<Void> process(ChannelHandlerContext ctx, Packet packet) {
         try {
             return processOffloaded(ctx, packet);
         } catch (Exception e) {
@@ -73,8 +66,10 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
 
     private Mono<Void> processOffloaded(ChannelHandlerContext ctx, Packet packet) {
         log.debug("Processing customer service message...");
-        if (processWithContentProcessor(ctx, packet)) {
-            return Mono.empty();
+        AbstractBaseBiProcessor<Mono<Void>, ? extends Number> content =
+                MessageServerContext.messageContentProcessorCache.get(packet.getMessage().getContentType());
+        if (content != null) {
+            return content.process(ctx, packet);
         }
         PrepareOutcome prepared = validateAndPrepare(packet);
         if (!prepared.accepted()) {
@@ -87,6 +82,8 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
             releaseQosOnFailure(packet);
             return Mono.empty();
         }
+        // 路由校验通过后再旁路归档（与单聊/群聊「校验通过后归档」对齐）
+        archiveAfterAuth(packet);
         CsImSessionRoute route = live.route();
         CsHelper.rewriteAgentFrom(packet, route);
         Message message = packet.getMessage();
@@ -128,13 +125,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
                         },
                         e -> log.warn("客服发消息静默更新 ticket 已读 offset 失败, packetId={}", packet.getPacketId(), e));
         CsHelper.deliverMessage(packet, route, false);
-        fireReadOnEventLoop(ctx, packet);
         return Mono.empty();
-    }
-
-    /** 后续 pipeline 必须回到该连接的 EventLoop，避免跨线程 fireChannelRead。 */
-    private static void fireReadOnEventLoop(ChannelHandlerContext ctx, Packet packet) {
-        PacketChannelWriter.fireChannelRead(ctx, packet);
     }
 
 
@@ -180,7 +171,6 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
                             if (StringUtils.isNoneBlank(ticketScopeId, appKey)) {
                                 repository().refreshCsTicketLastMessageAfterWithdraw(appKey, ticketScopeId);
                             }
-                            fireReadOnEventLoop(ctx0, packet0);
                         },
                         (exceptionEvent) -> MessageServerContext.publishEvent(exceptionEvent, true),
                         ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR)
@@ -207,7 +197,6 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
                         (ctx0, packet0) -> {
                             qosAckOnSuccess(ctx0, packet0);
                             CsHelper.deliverMessage(packet0, route);
-                            fireReadOnEventLoop(ctx0, packet0);
                         },
                         (exceptionEvent) -> MessageServerContext.publishEvent(exceptionEvent, true),
                         ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR)
@@ -222,15 +211,5 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
     private Mono<Boolean> saveMessage(Packet packet, CsImSessionRoute route) {
         return repository().reactiveSaveCsTicketMessage(
                 packet, route, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
-    }
-
-    private boolean processWithContentProcessor(ChannelHandlerContext ctx, Packet packet) {
-        AbstractBaseBiProcessor<? extends Number> processor =
-                MessageServerContext.messageContentProcessorCache.get(packet.getMessage().getContentType());
-        if (processor != null) {
-            processor.process(ctx, packet);
-            return true;
-        }
-        return false;
     }
 }

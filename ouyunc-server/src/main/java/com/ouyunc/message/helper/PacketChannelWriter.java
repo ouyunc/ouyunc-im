@@ -272,39 +272,6 @@ public final class PacketChannelWriter {
         notifySendFail(packet, "发送消息时，channel.eventLoop 被终止或关闭！", sendCallback);
     }
 
-    /**
-     * 入站后续 handler 必须在该连接 EventLoop 上 fire，禁止 Reactor/业务线程直接进管道。
-     * <p>
-     * 客户端有序全量入站的 PRE 阶段：仅标记校验通过，不 fire 到 PacketHandler
-     *（由 {@link ChannelOrderedInbound} + PacketPreHandler 同任务串联 processStage）。
-     * </p>
-     */
-    public static void fireChannelRead(ChannelHandlerContext ctx, Object msg) {
-        if (ctx == null || msg == null) {
-            return;
-        }
-        if (ChannelOrderedInbound.tryMarkPassedOnPreFire(ctx)) {
-            return;
-        }
-        Channel channel = ctx.channel();
-        if (channel == null || !channel.isActive()) {
-            return;
-        }
-        EventLoop eventLoop = channel.eventLoop();
-        if (eventLoop.inEventLoop()) {
-            ctx.fireChannelRead(msg);
-            return;
-        }
-        if (eventLoop.isTerminated() || eventLoop.isShutdown() || eventLoop.isShuttingDown()) {
-            return;
-        }
-        eventLoop.execute(() -> {
-            if (ctx.channel().isActive()) {
-                ctx.fireChannelRead(msg);
-            }
-        });
-    }
-
     static void ensureOutboundTarget(ChannelHandlerContext ctx, Packet packet) {
         if (packet == null || packet.getMessage() == null || packet.getMessage().getMetadata() == null) {
             return;

@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * 内容安全 Netty 处理器。
- * <p>须挂在登录鉴权之后、业务 PRE 之前。REJECT 不向下传递并发 40010；MASK/AUDIT/PASS 继续 fire。
+ * <p>须挂在登录鉴权之后、业务 {@code PacketHandler} 之前。REJECT 不向下传递并发 40010；MASK/AUDIT/PASS 继续 fire。
  * 检查异常时放行，避免误杀。</p>
  */
 public class ContentSafetyHandler extends SimpleChannelInboundHandler<Packet> {

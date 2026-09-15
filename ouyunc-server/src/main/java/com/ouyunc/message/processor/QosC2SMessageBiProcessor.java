@@ -38,48 +38,51 @@ public final class QosC2SMessageBiProcessor extends AbstractMessageBiProcessor<B
     }
 
     @Override
-    public void preProcess(ChannelHandlerContext ctx, Packet packet) {
-        preProcessStage(ctx, packet).subscribe();
-    }
-
-    @Override
-    public Mono<Void> preProcessStage(ChannelHandlerContext ctx, Packet packet) {
+    public Mono<Boolean> preProcess(ChannelHandlerContext ctx, Packet packet) {
         if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
             log.error("校验消息失败: {} 认证未通过,开始关闭channel", packet);
             MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过!", packet), MessageEventTypeEnum.EXCEPTION), true);
             ctx.close();
-            return Mono.empty();
+            return Mono.just(false);
         }
-        return fireWhenPassed(ctx, packet,
-                PermissionValidator.INSTANCE.negate().verify(packet, ctx),
-                null,
-                "权限不足, 请知悉。该消息 {} 被忽略");
+        // QoS ACK 不做旁路归档（不是业务聊天消息）
+        return PermissionValidator.INSTANCE.negate().verify(packet, ctx)
+                .onErrorReturn(true)
+                .map(reject -> {
+                    if (Boolean.TRUE.equals(reject)) {
+                        log.warn("权限不足, 请知悉。该消息 {} 被忽略", packet);
+                        return false;
+                    }
+                    return true;
+                });
     }
 
     /**
      * 外部客户端接收到消息后，发送消息已接收给服务端，做消息已接收确认
      */
     @Override
-    public void process(ChannelHandlerContext ctx, Packet packet) {
-        if (MessageContext.isQosEnable() && QosModeEnum.SERVER.equals(MessageServerContext.serverProperties().getQosMode())) {
-            LoginClientInfo login = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
-            if (login == null || StringUtils.isAnyBlank(login.getAppKey(), login.getIdentity())) {
-                log.warn("QoS ACK 缺少已认证登录身份，忽略取消重试");
-                return;
+    public Mono<Void> process(ChannelHandlerContext ctx, Packet packet) {
+        return Mono.fromRunnable(() -> {
+            if (MessageContext.isQosEnable() && QosModeEnum.SERVER.equals(MessageServerContext.serverProperties().getQosMode())) {
+                LoginClientInfo login = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
+                if (login == null || StringUtils.isAnyBlank(login.getAppKey(), login.getIdentity())) {
+                    log.warn("QoS ACK 缺少已认证登录身份，忽略取消重试");
+                    return;
+                }
+                Message message = packet.getMessage();
+                long packetId = QosAckContentParser.resolveAckPacketId(message != null ? message.getContent() : null);
+                if (packetId <= 0) {
+                    log.warn("QoS ACK 无法解析 packetId, content={}", message != null ? message.getContent() : null);
+                    return;
+                }
+                String taskId = QosRetryTaskIds.build(login.getAppKey(), packetId, login.getIdentity(), login.getDeviceType());
+                if (StringUtils.isBlank(taskId)) {
+                    return;
+                }
+                ScheduleTimer.cancel(taskId);
+            } else {
+                log.warn("QosC2SMessageProcessor qos未开启或者qos模式不是服务端模式,忽略处理");
             }
-            Message message = packet.getMessage();
-            long packetId = QosAckContentParser.resolveAckPacketId(message != null ? message.getContent() : null);
-            if (packetId <= 0) {
-                log.warn("QoS ACK 无法解析 packetId, content={}", message != null ? message.getContent() : null);
-                return;
-            }
-            String taskId = QosRetryTaskIds.build(login.getAppKey(), packetId, login.getIdentity(), login.getDeviceType());
-            if (StringUtils.isBlank(taskId)) {
-                return;
-            }
-            ScheduleTimer.cancel(taskId);
-        } else {
-            log.warn("QosC2SMessageProcessor qos未开启或者qos模式不是服务端模式,忽略处理");
-        }
+            });
     }
 }

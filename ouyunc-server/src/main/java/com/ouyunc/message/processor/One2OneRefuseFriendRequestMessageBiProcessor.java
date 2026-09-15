@@ -17,7 +17,6 @@ import com.ouyunc.base.model.RequestSession;
 import com.ouyunc.base.constant.enums.RequestSessionProgress;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.DistributedLockHelper;
-import com.ouyunc.message.helper.PacketChannelWriter;
 import com.ouyunc.message.helper.RequestNotifyHelper;
 import com.ouyunc.message.validator.AuthValidator;
 import com.ouyunc.message.validator.BlackListValidator;
@@ -49,23 +48,18 @@ public final class One2OneRefuseFriendRequestMessageBiProcessor extends Abstract
     }
 
     @Override
-    public void preProcess(ChannelHandlerContext ctx, Packet packet) {
-        preProcessStage(ctx, packet).subscribe();
-    }
-
-    @Override
-    public Mono<Void> preProcessStage(ChannelHandlerContext ctx, Packet packet) {
+    public Mono<Boolean> preProcess(ChannelHandlerContext ctx, Packet packet) {
         if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
             log.error("校验消息失败: {} 认证未通过,开始关闭channel", packet);
             MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过!", packet), MessageEventTypeEnum.EXCEPTION), true);
             ctx.close();
-            return Mono.empty();
+            return Mono.just(false);
         }
-        // 权限等校验通过后由 fireWhenPassed 归档；此处仅做 QOS_DUP 展开
+        // 权限等校验通过后由 continueWhenPassed 归档；此处仅做 QOS_DUP 展开
         if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
-            return Mono.empty();
+            return Mono.just(false);
         }
-        return fireWhenPassed(ctx, packet,
+        return continueWhenPassed(packet,
                 PermissionValidator.INSTANCE.negate()
                         .or(FromToValidator.INSTANCE)
                         .or(BlackListValidator.INSTANCE)
@@ -80,32 +74,34 @@ public final class One2OneRefuseFriendRequestMessageBiProcessor extends Abstract
      * @param packet
      */
     @Override
-    public void process(ChannelHandlerContext ctx, Packet packet) {
-        Message message = packet.getMessage();
-        String to = message.getTo();
-        String appKey = message.getMetadata().getAppKey();
-        String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
-        String lockKey = CacheConstant.buildFriendRequestLockCacheKey(appKey, sessionId);
+    public Mono<Void> process(ChannelHandlerContext ctx, Packet packet) {
+        return Mono.fromRunnable(() -> {
+            Message message = packet.getMessage();
+            String to = message.getTo();
+            String appKey = message.getMetadata().getAppKey();
+            String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
+            String lockKey = CacheConstant.buildFriendRequestLockCacheKey(appKey, sessionId);
 
-        DistributedLockHelper.runWithLock(packet, lockKey, ExceptionCodeEnum.BIND_FRIEND_ERROR, () -> {
-            RequestSession requestSession = repository().getFriendRequestSession(appKey, message.getTo(), message.getFrom());
-            if (null == requestSession || !Objects.equals(requestSession.getProgress(), RequestSessionProgress.JOINING.value())) {
-                log.warn("不存在加好友请求记录或存在正在处理的好友请求，该消息忽略");
-                return;
-            }
-            if (repository().isFriend(appKey, message.getFrom(), message.getTo())) {
-                log.warn("已经是好友, 请知悉; {}", packet);
-                return;
-            }
-            requestSession.setProgress(RequestSessionProgress.REFUSING.value());
-            if (!repository().saveRefuseFriendRequestMessage(packet, requestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
-                log.error("Failed to save one-to-one refuse friend request message: {}", packet);
-                MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一拒绝好友请求消息异常!", packet), MessageEventTypeEnum.EXCEPTION), true);
-                return;
-            }
-            RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.userOnly(to));
-            repository().publishPacketAsync(MqConstant.MQ_FRIEND_REQUEST_TOPIC, sessionId, packet,
-                    "处理一对一拒绝好友请求 MQ 旁路");
-        });
+            DistributedLockHelper.runWithLock(packet, lockKey, ExceptionCodeEnum.BIND_FRIEND_ERROR, () -> {
+                RequestSession requestSession = repository().getFriendRequestSession(appKey, message.getTo(), message.getFrom());
+                if (null == requestSession || !Objects.equals(requestSession.getProgress(), RequestSessionProgress.JOINING.value())) {
+                    log.warn("不存在加好友请求记录或存在正在处理的好友请求，该消息忽略");
+                    return;
+                }
+                if (repository().isFriend(appKey, message.getFrom(), message.getTo())) {
+                    log.warn("已经是好友, 请知悉; {}", packet);
+                    return;
+                }
+                requestSession.setProgress(RequestSessionProgress.REFUSING.value());
+                if (!repository().saveRefuseFriendRequestMessage(packet, requestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
+                    log.error("Failed to save one-to-one refuse friend request message: {}", packet);
+                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一拒绝好友请求消息异常!", packet), MessageEventTypeEnum.EXCEPTION), true);
+                    return;
+                }
+                RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.userOnly(to));
+                repository().publishPacketAsync(MqConstant.MQ_FRIEND_REQUEST_TOPIC, sessionId, packet,
+                        "处理一对一拒绝好友请求 MQ 旁路");
+            });
+            });
     }
 }

@@ -88,7 +88,8 @@ class ClientLogoutMessageEventListener implements MessageEventListener<MessageEv
         MqttMessage willMqttMessage = MqttMessageFactory.newMessage(
                 new MqttFixedHeader(MqttMessageType.PUBLISH, false, MqttQoS.valueOf(mqttLoginClientInfo.getQos()), mqttLoginClientInfo.getIsWillRetain() == YesOrNo.YES.getCode(), NumberConstant.NUMBER_0),
                 new MqttPublishVariableHeader(mqttLoginClientInfo.getWillTopic(), NumberConstant.NUMBER_0), ByteBufAllocator.DEFAULT.buffer().writeBytes(mqttLoginClientInfo.getWillMessage().getBytes(CharsetUtil.UTF_8)));
-        AbstractBaseBiProcessor<? extends Number> baseProcessor = MessageServerContext.messageContentProcessorCache.get(MqttMessageContentTypeEnum.MQTT_PUBLISH.getType());
+        AbstractBaseBiProcessor<?, ? extends Number> baseProcessor =
+                MessageServerContext.messageContentProcessorCache.get(MqttMessageContentTypeEnum.MQTT_PUBLISH.getType());
         if (baseProcessor instanceof MqttPublishMessageContentBiProcessor mqttPublishMessageContentProcessor) {
             mqttPublishMessageContentProcessor.doPublishMessage(
                     willMqttMessage,

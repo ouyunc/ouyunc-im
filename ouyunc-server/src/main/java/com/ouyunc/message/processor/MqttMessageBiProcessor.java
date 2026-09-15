@@ -6,11 +6,11 @@ import com.ouyunc.base.constant.enums.MqttMessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.MqttMessageTypeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.message.context.MessageServerContext;
-import com.ouyunc.message.helper.PacketChannelWriter;
 import com.ouyunc.message.validator.AuthValidator;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.core.publisher.Mono;
 
 /**
  * @Author fzx
@@ -30,22 +30,21 @@ public final class MqttMessageBiProcessor extends AbstractMessageBiProcessor<Byt
 
     /***
      * @author fzx
-     * @description 消息前置处理，做登录业务逻辑
+     * @description 消息前置处理，做登录业务逻辑；通过后返回 true，不 fire
      */
     @Override
-    public void preProcess(ChannelHandlerContext ctx, Packet packet) {
+    public Mono<Boolean> preProcess(ChannelHandlerContext ctx, Packet packet) {
         // CONNECT 尚未登录，不归档；其它 MQTT 包认证通过后再归档
         if (MqttMessageContentTypeEnum.MQTT_CONNECT.getType() == packet.getMessage().getContentType()) {
-            PacketChannelWriter.fireChannelRead(ctx, packet);
-            return;
+            return Mono.just(true);
         }
         if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
             log.error("校验消息: {} 中的发送方登录认证失败,开始关闭channel", packet);
             ctx.close();
-            return;
+            return Mono.just(false);
         }
         archiveAfterAuth(packet);
-        PacketChannelWriter.fireChannelRead(ctx, packet);
+        return Mono.just(true);
     }
 
     /***
@@ -53,14 +52,14 @@ public final class MqttMessageBiProcessor extends AbstractMessageBiProcessor<Byt
      * @description 业务处理，登录消息不需要做任何处理
      */
     @Override
-    public void process(ChannelHandlerContext ctx, Packet packet) {
-        AbstractBaseBiProcessor<? extends Number> mqttContentProcessor = MessageServerContext.messageContentProcessorCache.get(packet.getMessage().getContentType());
+    public Mono<Void> process(ChannelHandlerContext ctx, Packet packet) {
+        AbstractBaseBiProcessor<Mono<Void>, ? extends Number> mqttContentProcessor = MessageServerContext.messageContentProcessorCache.get(packet.getMessage().getContentType());
         if (mqttContentProcessor == null) {
             log.error("未找到对应的消息处理器，messageType= {}, 将关闭该连接!", packet.getMessageType());
             ctx.close();
-            return;
+            return Mono.empty();
         }
-        mqttContentProcessor.process(ctx, packet);
+        return mqttContentProcessor.process(ctx, packet);
     }
 
 }

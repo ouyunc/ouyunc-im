@@ -54,12 +54,11 @@ public final class RequestNotifyHelper {
     }
 
     /**
-     * 查在线离开 EventLoop；ACK / fireChannelRead 回到该连接 EventLoop，与聊天投递路径对齐。
+     * 查在线离开 EventLoop；ACK / 投递回到该连接 EventLoop，与聊天投递路径对齐。
      */
     public static void dispatch(ChannelHandlerContext ctx, Packet packet, String appKey, Collection<String> identities) {
         if (CollectionUtils.isEmpty(identities)) {
             QosAckHelper.sendS2cAck(ctx, packet);
-            PacketChannelWriter.fireChannelRead(ctx, packet);
             return;
         }
         Runnable lookupAndDispatch = () -> {
@@ -78,7 +77,6 @@ public final class RequestNotifyHelper {
                 if (CollectionUtils.isNotEmpty(clients)) {
                     MessageHelper.asyncSendMessage(packet, clients);
                 }
-                PacketChannelWriter.fireChannelRead(ctx, packet);
             };
             if (ctx.channel().eventLoop().inEventLoop()) {
                 onLoop.run();

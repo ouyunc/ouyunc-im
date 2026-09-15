@@ -10,12 +10,7 @@ import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
 import java.util.Queue;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
@@ -24,8 +19,6 @@ import java.util.function.Supplier;
  * 单连接业务串行下沉到虚拟线程池：同连接消息保序，PING 不走这里以免被群成员查询堵住。
  * 异步任务必须等 CompletionStage/Mono 完成再跑下一条，避免连发 subscribe 乱序并打满队列。
  *
- * <p>客户端入站由 {@code PacketPreHandler} 将 pre+process 合并为<strong>一次</strong>{@link #executeAsync}；
- * 见 {@link ChannelOrderedInbound}。集群直连 {@code PacketHandler} 仍只入队 process。</p>
  *
  * <p>调度入口统一捕获 {@link RejectedExecutionException}：清理 running、延迟重试一次，
  * 仍失败则关连并清空队列。禁止 CallerRunsPolicy 把重活退回 EventLoop。</p>

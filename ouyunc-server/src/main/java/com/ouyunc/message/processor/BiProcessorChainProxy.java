@@ -12,20 +12,15 @@ import reactor.core.publisher.Mono;
 import java.util.List;
 
 /**
- * 处理器链代理类
+ * 处理器链代理：对多协议/多实现统一走 {@code Mono<Void>} 三阶段。
+ *
+ * @param <T> 链内处理器，process 返回 {@link Mono}{@code <Void>}
  */
-public final class BiProcessorChainProxy<T extends BiProcessor<ChannelHandlerContext, Packet>> extends AbstractMessageBiProcessor<Number> {
+public final class BiProcessorChainProxy<T extends BiProcessor<ChannelHandlerContext, Packet, Mono<Void>>>
+        extends AbstractMessageBiProcessor<Number> {
     private static final Logger log = LoggerFactory.getLogger(BiProcessorChainProxy.class);
 
-    /**
-     * 类型标识
-     */
     private final ProtocolType<? extends Number> type;
-
-
-    /**
-     * 处理器链
-     */
     private final List<ProcessorChain<T>> processorChains;
 
     public BiProcessorChainProxy(List<ProcessorChain<T>> processorChains, ProtocolType<? extends Number> type) {
@@ -33,74 +28,60 @@ public final class BiProcessorChainProxy<T extends BiProcessor<ChannelHandlerCon
         this.processorChains = processorChains;
     }
 
-
     @Override
     public ProtocolType<? extends Number> type() {
         return type;
     }
+
     /**
-     * 消息处理器前置处理
+     * 链式 preProcess：任一返回 false 则短路。
      */
     @SuppressWarnings("unchecked")
     @Override
-    public void preProcess(ChannelHandlerContext ctx, Packet packet) {
-        preProcessStage(ctx, packet).subscribe();
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public Mono<Void> preProcessStage(ChannelHandlerContext ctx, Packet packet) {
+    public Mono<Boolean> preProcess(ChannelHandlerContext ctx, Packet packet) {
         List<AbstractMessageBiProcessor<Byte>> processors = (List<AbstractMessageBiProcessor<Byte>>) getProcessors(packet);
         if (CollectionUtils.isEmpty(processors)) {
-            return Mono.empty();
+            return Mono.just(false);
         }
-        Mono<Void> chain = Mono.empty();
+        Mono<Boolean> chain = Mono.just(true);
         for (AbstractMessageBiProcessor<Byte> processor : processors) {
-            chain = chain.then(Mono.defer(() -> processor.preProcessStage(ctx, packet)));
+            chain = chain.flatMap(passed -> {
+                if (!Boolean.TRUE.equals(passed)) {
+                    return Mono.just(false);
+                }
+                return processor.preProcess(ctx, packet);
+            });
         }
         return chain;
     }
 
     @Override
-    public void process(ChannelHandlerContext ctx, Packet packet) {
-        processStage(ctx, packet).subscribe();
-    }
-
-    @Override
-    public Mono<Void> processStage(ChannelHandlerContext ctx, Packet packet) {
+    public Mono<Void> process(ChannelHandlerContext ctx, Packet packet) {
         List<T> processors = getProcessors(packet);
         if (CollectionUtils.isEmpty(processors)) {
             return Mono.empty();
         }
         Mono<Void> chain = Mono.empty();
         for (T processor : processors) {
-            if (processor instanceof AbstractMessageBiProcessor<?> messageProcessor) {
-                chain = chain.then(Mono.defer(() -> messageProcessor.processStage(ctx, packet)));
-            } else {
-                chain = chain.then(Mono.fromRunnable(() -> processor.process(ctx, packet)));
-            }
+            chain = chain.then(Mono.defer(() -> processor.process(ctx, packet)));
         }
         return chain;
     }
 
-
-    /**
-     * 消息处理器后置处理
-     */
     @SuppressWarnings("unchecked")
     @Override
-    public void postProcess(ChannelHandlerContext ctx, Packet packet) {
+    public Mono<Void> postProcess(ChannelHandlerContext ctx, Packet packet) {
         List<AbstractMessageBiProcessor<Byte>> processors = (List<AbstractMessageBiProcessor<Byte>>) getProcessors(packet);
-        if (CollectionUtils.isNotEmpty(processors)) {
-            processors.forEach(messageProcessor -> {
-                messageProcessor.postProcess(ctx, packet);
-            });
+        if (CollectionUtils.isEmpty(processors)) {
+            return Mono.empty();
         }
+        Mono<Void> chain = Mono.empty();
+        for (AbstractMessageBiProcessor<Byte> messageProcessor : processors) {
+            chain = chain.then(Mono.defer(() -> messageProcessor.postProcess(ctx, packet)));
+        }
+        return chain;
     }
 
-    /**
-     * 获取processor
-     */
     private List<T> getProcessors(Packet packet) {
         for (ProcessorChain<T> chain : this.processorChains) {
             if (chain.matches(packet)) {
@@ -109,7 +90,4 @@ public final class BiProcessorChainProxy<T extends BiProcessor<ChannelHandlerCon
         }
         return null;
     }
-
-
-
 }

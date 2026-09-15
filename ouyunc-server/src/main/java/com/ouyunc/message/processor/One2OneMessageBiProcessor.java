@@ -21,7 +21,6 @@ import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageDeliveryRouteHelper;
 import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.helper.MessageRefHelper;
-import com.ouyunc.message.helper.PacketChannelWriter;
 import com.ouyunc.message.validator.*;
 import com.ouyunc.repository.support.MessageIndexScope;
 import io.netty.channel.ChannelHandlerContext;
@@ -50,23 +49,18 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
 
 
     @Override
-    public void preProcess(ChannelHandlerContext ctx, Packet packet) {
-        preProcessStage(ctx, packet).subscribe();
-    }
-
-    @Override
-    public Mono<Void> preProcessStage(ChannelHandlerContext ctx, Packet packet) {
+    public Mono<Boolean> preProcess(ChannelHandlerContext ctx, Packet packet) {
         if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
             log.error("校验消息失败: {} 认证未通过,开始关闭channel", packet);
             MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过!", packet), MessageEventTypeEnum.EXCEPTION), true);
             ctx.close();
-            return Mono.empty();
+            return Mono.just(false);
         }
-        // 权限等校验通过后由 fireWhenPassed 归档；此处仅做 QOS_DUP 展开
+        // 权限等校验通过后由 continueWhenPassed 归档；此处仅做 QOS_DUP 展开
         if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
-            return Mono.empty();
+            return Mono.just(false);
         }
-        return fireWhenPassed(ctx, packet,
+        return continueWhenPassed(packet,
                 PermissionValidator.INSTANCE.negate()
                         .or(One2OneChatAccessValidator.INSTANCE)
                         .or(FromToValidator.INSTANCE)
@@ -79,15 +73,11 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
      * 处理一对一消息
      */
     @Override
-    public void process(ChannelHandlerContext ctx, Packet packet) {
-        processStage(ctx, packet).subscribe();
-    }
-
-    @Override
-    public Mono<Void> processStage(ChannelHandlerContext ctx, Packet packet) {
+    public Mono<Void> process(ChannelHandlerContext ctx, Packet packet) {
         log.debug("Processing one-to-one message...");
-        if (processWithContentProcessor(ctx, packet)) {
-            return Mono.empty();
+        AbstractBaseBiProcessor<Mono<Void>, ? extends Number> content = MessageServerContext.messageContentProcessorCache.get(packet.getMessage().getContentType());
+        if (content != null) {
+            return content.process(ctx, packet);
         }
         AtMentionHelper.clearAtIfPresent(packet.getMessage());
         if (!MessageRefHelper.normalizeMessageRefOrReject(packet)) {
@@ -131,7 +121,7 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
         if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
             return handleWithdrawMessage(ctx, packet);
         }
-        deliverAndFireNext(ctx, packet, false);
+        deliver(packet, false);
         return Mono.empty();
     }
 
@@ -173,7 +163,7 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
                             repository().refreshSessionLastMessageAfterWithdraw(appKey, sessionId);
                         }
                     }
-                    deliverAndFireNext(ctx0, packet0, true);
+                    deliver(packet0, true);
                 },
                 (exceptionEvent) -> MessageServerContext.publishEvent(exceptionEvent, true),
                 ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR)
@@ -203,7 +193,6 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
                 (ctx0, packet0) -> {
                     qosAckOnSuccess(ctx0, packet0);
                     deliverReadReceiptToSender(packet0);
-                    PacketChannelWriter.fireChannelRead(ctx0, packet0);
                 },
                 (exceptionEvent)-> MessageServerContext.publishEvent(exceptionEvent, true),
                 ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR)
@@ -228,26 +217,13 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
 
 
     /**
-     * 发送消息给接收方
+     * 发送消息给接收方（投递仅此职责）
      *
-     * @param ctx
      * @param packet
+     * @param forceSelfSync
      */
-    private void deliverAndFireNext(ChannelHandlerContext ctx, Packet packet, Boolean forceSelfSync) {
+    private void deliver(Packet packet, Boolean forceSelfSync) {
         MessageDeliveryRouteHelper.deliverPeerMessage(packet, Boolean.TRUE.equals(forceSelfSync));
-        PacketChannelWriter.fireChannelRead(ctx, packet);
-    }
-
-    /**
-     * 使用内容处理器处理消息
-     */
-    private boolean processWithContentProcessor(ChannelHandlerContext ctx, Packet packet) {
-        AbstractBaseBiProcessor<? extends Number> processor = MessageServerContext.messageContentProcessorCache.get(packet.getMessage().getContentType());
-        if (processor != null) {
-            processor.process(ctx, packet);
-            return true;
-        }
-        return false;
     }
 
     /**

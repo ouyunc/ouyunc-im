@@ -16,13 +16,14 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.core.publisher.Mono;
 
 import java.util.List;
 
 /**
  * mqtt 取消订阅
  */
-public class MqttUnSubscribeMessageContentBiProcessor extends AbstractBaseBiProcessor<Integer> {
+public class MqttUnSubscribeMessageContentBiProcessor extends AbstractBaseBiProcessor<Mono<Void>, Integer> {
     private static final Logger log = LoggerFactory.getLogger(MqttUnSubscribeMessageContentBiProcessor.class);
 
     @Override
@@ -36,34 +37,36 @@ public class MqttUnSubscribeMessageContentBiProcessor extends AbstractBaseBiProc
     }
 
     @Override
-    public void process(ChannelHandlerContext ctx, Packet packet) {
-        if (log.isDebugEnabled()) {
-            log.debug("MqttUnSubscribeMessageContentProcessor 正在处理外部客户端取消订阅 {} ...", packet);
-        }
-        Message message = packet.getMessage();
-        MqttVersion mqttVersion = MqttCodecUtil.getMqttVersion(packet.getRetain());
-        MqttMessage mqttMessage = MqttCodecUtil.decode(mqttVersion, message.getContent());
-        if (mqttMessage instanceof MqttUnsubscribeMessage mqttUnsubscribeMessage) {
-            List<String> topicFilters = mqttUnsubscribeMessage.payload().topics();
-            LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
-            if (loginClientInfo == null) {
-                log.error("MqttUnSubscribeMessageContentProcessor 登录信息不存在！正在关闭该channel");
-                ctx.close();
-                return;
+    public Mono<Void> process(ChannelHandlerContext ctx, Packet packet) {
+        return Mono.fromRunnable(() -> {
+            if (log.isDebugEnabled()) {
+                log.debug("MqttUnSubscribeMessageContentProcessor 正在处理外部客户端取消订�?{} ...", packet);
             }
-            String comboIdentity = IdentityUtil.generalComboIdentity(loginClientInfo.getAppKey(), loginClientInfo.getIdentity(), loginClientInfo.getDeviceType());
-            repository().unSubscribe(loginClientInfo.getAppKey(), comboIdentity, topicFilters);
-            MqttUnsubAckMessage unsubAckMessage = (MqttUnsubAckMessage) MqttMessageFactory.newMessage(
-                    new MqttFixedHeader(MqttMessageType.UNSUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
-                    MqttMessageIdVariableHeader.from(mqttUnsubscribeMessage.variableHeader().messageId()), null);
-            if (ctx.channel().eventLoop().inEventLoop()) {
-                MessageHelper.tryWriteObject(ctx.channel(), unsubAckMessage, packet, sendResult -> {});
-            } else {
-                ctx.channel().eventLoop().execute(() -> MessageHelper.tryWriteObject(ctx.channel(), unsubAckMessage, packet, sendResult -> {}));
+            Message message = packet.getMessage();
+            MqttVersion mqttVersion = MqttCodecUtil.getMqttVersion(packet.getRetain());
+            MqttMessage mqttMessage = MqttCodecUtil.decode(mqttVersion, message.getContent());
+            if (mqttMessage instanceof MqttUnsubscribeMessage mqttUnsubscribeMessage) {
+                List<String> topicFilters = mqttUnsubscribeMessage.payload().topics();
+                LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
+                if (loginClientInfo == null) {
+                    log.error("MqttUnSubscribeMessageContentProcessor 登录信息不存在！正在关闭该channel");
+                    ctx.close();
+                    return;
+                }
+                String comboIdentity = IdentityUtil.generalComboIdentity(loginClientInfo.getAppKey(), loginClientInfo.getIdentity(), loginClientInfo.getDeviceType());
+                repository().unSubscribe(loginClientInfo.getAppKey(), comboIdentity, topicFilters);
+                MqttUnsubAckMessage unsubAckMessage = (MqttUnsubAckMessage) MqttMessageFactory.newMessage(
+                        new MqttFixedHeader(MqttMessageType.UNSUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
+                        MqttMessageIdVariableHeader.from(mqttUnsubscribeMessage.variableHeader().messageId()), null);
+                if (ctx.channel().eventLoop().inEventLoop()) {
+                    MessageHelper.tryWriteObject(ctx.channel(), unsubAckMessage, packet, sendResult -> {});
+                } else {
+                    ctx.channel().eventLoop().execute(() -> MessageHelper.tryWriteObject(ctx.channel(), unsubAckMessage, packet, sendResult -> {}));
+                }
+            }else {
+                log.error("MqttUnSubscribeMessageContentProcessor 取消订阅失败�?);
             }
-        }else {
-            log.error("MqttUnSubscribeMessageContentProcessor 取消订阅失败！");
-        }
 
+            });
     }
 }
