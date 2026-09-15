@@ -2,17 +2,21 @@ package com.ouyunc.base.constant.enums;
 
 /**
  * HTTP 推送受理状态。
- * <p>{@link #ACCEPTED} 与 {@link #DUPLICATE} 均视为调用成功；
- * {@link #PROCESSING} 表示占位冲突且尚无成功记录，可稍后重试（不当成功）。</p>
+ * <p>{@link #ACCEPTED}：已写入 PENDING，后台异步确认主记录落库；不等于已投递到端。
+ * {@link #DUPLICATE}：同 messageId 已 COMMITTED。
+ * {@link #PROCESSING}：同 messageId 仍为 PENDING（在途）。
+ * {@link #RETRYABLE_FAILED}：后台失败，可用同一 messageId 重试。</p>
  */
 public enum MessagePushStatusEnum {
 
-    /** 已受理：业务校验通过，落库/投递在后台进行。 */
+    /** 已受理：PENDING 已占位，落库确认在后台进行。 */
     ACCEPTED("ACCEPTED", "已受理"),
-    /** 重复推送：同 messageId 此前已成功受理。 */
-    DUPLICATE("DUPLICATE", "重复推送（已成功受理）"),
-    /** 受理冲突，尚未形成成功记录，请重试。 */
+    /** 重复推送：同 messageId 已 COMMITTED。 */
+    DUPLICATE("DUPLICATE", "重复推送（已成功落库）"),
+    /** 同 messageId 仍在 PENDING，请稍后查询或重试。 */
     PROCESSING("PROCESSING", "处理中"),
+    /** 后台落库/投递失败，允许同 messageId 重试。 */
+    RETRYABLE_FAILED("RETRYABLE_FAILED", "后台失败可重试"),
     ;
 
     private final String code;

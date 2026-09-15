@@ -209,8 +209,8 @@ public class TimerTaskWrapper implements TimerTask{
                 });
             }
         }finally {
-            // 重新调度以实现固定频率
-            if (timerTaskWrapper != null) {
+            // 任务内 cancel 后缓存已删除，禁止再重调度（否则会复活已取消任务）
+            if (timerTaskCaffeine.get(taskId) != null) {
                 scheduledTimeout = timeout.timer().newTimeout(this, period, timeUnit);
             }
         }

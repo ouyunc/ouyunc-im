@@ -389,10 +389,17 @@ public class ClientHelper {
 
 
     /**
-     * 获取某个端的登录信息,不暴露该接口
-     * @param identity 客户端唯一标识
-     * @param loginDeviceTypeValue 客户端登录的设备类型值
-     * @return
+     * 查询指定设备是否在线；不在线返回 null。
+     */
+    public static LoginClientInfo onlineDevice(String appKey, String identity, byte deviceType) {
+        if (StringUtils.isAnyBlank(appKey, identity)) {
+            return null;
+        }
+        return online(appKey, identity, deviceType);
+    }
+
+    /**
+     * 获取某个端的登录信息
      */
     private static LoginClientInfo online(String appKey, String identity, Byte loginDeviceTypeValue) {
         String comboIdentity = IdentityUtil.generalComboIdentity(appKey, identity, loginDeviceTypeValue);

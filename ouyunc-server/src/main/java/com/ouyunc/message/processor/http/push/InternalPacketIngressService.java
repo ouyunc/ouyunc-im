@@ -23,10 +23,11 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 /**
- * HTTP 推送入口（方案 1）：校验通过后再幂等占位，状态仅「无 / 已成功」。
- * <p>{@code ACCEPTED}/{@code DUPLICATE} 视为成功；占位冲突且尚无成功记录时 {@code PROCESSING}（可重试）。
- * preProcess 与触发投递均在 {@link ThreadPoolManager#httpPushVerifyExecutor()} 执行。
- * {@code toList} 由本服务内部扇出，避免调用方对每个接收方打一次 HTTP。</p>
+ * HTTP 推送入口：校验通过后写入 PENDING，后台落库成功再 COMMITTED。
+ * <p>{@code ACCEPTED}＝已受理（PENDING）；{@code DUPLICATE}＝已 COMMITTED；
+ * {@code PROCESSING}＝同 messageId 仍在途；{@code RETRYABLE_FAILED}＝后台失败可重试。
+ * 多接收人用 {@code messageId:to} 分键，避免局部成功被整键清掉。
+ * preProcess 与触发投递均在 {@link ThreadPoolManager#httpPushVerifyExecutor()} 执行。</p>
  */
 public final class InternalPacketIngressService {
 
@@ -103,10 +104,9 @@ public final class InternalPacketIngressService {
 
     private static CompletionStage<HttpResponseResult<MessagePushResponse>> enqueueVerify(
             Packet packet, String appKey, String messageId, String packetIdStr) throws HttpPipelineException {
-        String existing = PushIdempotencySupport.getPacketId(appKey, messageId);
-        if (existing != null) {
-            return CompletableFuture.completedFuture(HttpResponseResult.success(
-                    buildResponse(messageId, existing, MessagePushStatusEnum.DUPLICATE, null)));
+        HttpResponseResult<MessagePushResponse> early = respondIfTerminalOrInFlight(appKey, messageId);
+        if (early != null) {
+            return CompletableFuture.completedFuture(early);
         }
 
         CompletableFuture<HttpResponseResult<MessagePushResponse>> future = new CompletableFuture<>();
@@ -128,6 +128,29 @@ public final class InternalPacketIngressService {
                     HttpResponseCodeEnum.INTERNAL_SERVER_ERROR, "HTTP 推送受理失败：verify 任务提交异常");
         }
         return future;
+    }
+
+    /**
+     * COMMITTED → DUPLICATE；PENDING → PROCESSING；RETRYABLE_FAILED / 无记录 → null（允许继续受理）。
+     */
+    private static HttpResponseResult<MessagePushResponse> respondIfTerminalOrInFlight(String appKey, String messageId) {
+        PushIdempotencySupport.IdempotencyRecord record = PushIdempotencySupport.getRecord(appKey, messageId);
+        if (record == null) {
+            return null;
+        }
+        if (PushIdempotencySupport.STATE_COMMITTED.equals(record.state())) {
+            return HttpResponseResult.success(buildResponse(messageId, record.packetId(),
+                    MessagePushStatusEnum.DUPLICATE, null));
+        }
+        if (PushIdempotencySupport.STATE_PENDING.equals(record.state())) {
+            return HttpResponseResult.success(buildResponse(messageId, record.packetId(),
+                    MessagePushStatusEnum.PROCESSING, "同 messageId 正在处理，请稍后重试或查询"));
+        }
+        if (PushIdempotencySupport.STATE_RETRYABLE_FAILED.equals(record.state())) {
+            // 允许继续走 accept 重新抢占；此处返回 null
+            return null;
+        }
+        return null;
     }
 
     private static List<String> resolveRecipients(MessagePushRequest request) throws HttpPipelineException {
@@ -153,15 +176,23 @@ public final class InternalPacketIngressService {
             Packet packet, String appKey, String messageId, String packetIdStr) throws HttpPipelineException {
         HttpPushProcessorDelegate.preProcessOrThrow(packet);
 
-        if (!PushIdempotencySupport.tryClaim(appKey, messageId, packetIdStr)) {
+        int claim = PushIdempotencySupport.tryClaim(appKey, messageId, packetIdStr);
+        if (claim == PushIdempotencySupport.CLAIM_COMMITTED) {
             HttpPushDeliverySupport.discardStashed(packet);
-            String claimed = PushIdempotencySupport.getPacketId(appKey, messageId);
-            if (StringUtils.isNotBlank(claimed)) {
-                return HttpResponseResult.success(buildResponse(messageId, claimed,
-                        MessagePushStatusEnum.DUPLICATE, null));
-            }
+            PushIdempotencySupport.IdempotencyRecord record = PushIdempotencySupport.getRecord(appKey, messageId);
+            String committedId = record != null ? record.packetId() : packetIdStr;
+            return HttpResponseResult.success(buildResponse(messageId, committedId,
+                    MessagePushStatusEnum.DUPLICATE, null));
+        }
+        if (claim == PushIdempotencySupport.CLAIM_PENDING) {
+            HttpPushDeliverySupport.discardStashed(packet);
             return HttpResponseResult.success(buildResponse(messageId, packetIdStr,
-                    MessagePushStatusEnum.PROCESSING, "同 messageId 受理冲突，请稍后重试"));
+                    MessagePushStatusEnum.PROCESSING, "同 messageId 正在处理，请稍后重试"));
+        }
+        if (claim != PushIdempotencySupport.CLAIM_ACQUIRED) {
+            HttpPushDeliverySupport.discardStashed(packet);
+            throw new HttpPipelineException(HttpResponseStatus.INTERNAL_SERVER_ERROR,
+                    HttpResponseCodeEnum.INTERNAL_SERVER_ERROR, "HTTP 推送幂等占位失败");
         }
 
         try {
@@ -174,6 +205,7 @@ public final class InternalPacketIngressService {
                     HttpResponseCodeEnum.INTERNAL_SERVER_ERROR, "HTTP 推送受理失败：投递触发异常");
         }
 
+        // ACCEPTED = PENDING 已写入，后台落库成功后才会 COMMITTED
         return HttpResponseResult.success(buildResponse(messageId, packetIdStr,
                 MessagePushStatusEnum.ACCEPTED, null));
     }

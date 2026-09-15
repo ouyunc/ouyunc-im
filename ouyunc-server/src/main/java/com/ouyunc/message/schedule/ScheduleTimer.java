@@ -66,7 +66,8 @@ public class ScheduleTimer {
      */
     public static void schedule(String taskId, Consumer<TimerTaskWrapper> task, long initialDelay, long period, TimeUnit timeUnit, boolean sync, int maxLoops) {
         try {
-            // 开启第一层定时任务
+            // 同 taskId 先取消旧任务，避免时间轮残留与缓存覆盖导致双调度
+            cancelQuietly(taskId);
             timer.newTimeout(new TimerTaskWrapper(taskId, task, period, timeUnit, sync, maxLoops), initialDelay, timeUnit);
         }catch (Exception e) {
             log.error("task 调度异常：{}", e.getMessage());
@@ -119,6 +120,14 @@ public class ScheduleTimer {
             log.warn("qos取消任务失败，任务不存在,id：{}", taskId);
         }
         return false;
+    }
+
+    /** 调度替换场景：任务不存在不打 warn。 */
+    private static void cancelQuietly(String taskId) {
+        TimerTaskWrapper existing = TimerTaskWrapper.timerTaskCaffeine.get(taskId);
+        if (existing != null) {
+            existing.cancel();
+        }
     }
 
     /**

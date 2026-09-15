@@ -30,10 +30,8 @@ import org.slf4j.LoggerFactory;
 import com.ouyunc.repository.cs.CsImSessionRoute;
 import reactor.core.publisher.Mono;
 
-import java.io.Serializable;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -103,18 +101,27 @@ public final class HttpPushDeliverySupport {
     }
 
     /**
-     * 策略 {@code process} 统一订阅内部 Mono；失败只打日志。
-     * <p>已 ACCEPTED 后不释放幂等，靠 TTL，避免同 messageId 双发。</p>
+     * 策略 {@code process} 统一订阅内部 Mono。
+     * <p>落库成功 → COMMITTED；失败/异常 → RETRYABLE_FAILED，允许同 messageId 重试。
+     * ACCEPTED 仅表示 PENDING 已受理，不等于端侧已达。</p>
      */
     public static void subscribeDelivery(Packet packet, Mono<Boolean> delivery) {
         String messageId = packet != null && packet.getMessage() != null ? packet.getMessage().getId() : null;
         delivery.subscribe(
                 ok -> {
-                    if (!Boolean.TRUE.equals(ok)) {
-                        log.warn("HTTP 推送后台投递未成功（幂等已保留）, messageId={}", messageId);
+                    if (Boolean.TRUE.equals(ok)) {
+                        if (!commitIdempotency(packet)) {
+                            log.warn("HTTP 推送落库成功但幂等提交失败, messageId={}", messageId);
+                        }
+                    } else {
+                        markRetryableFailed(packet);
+                        log.warn("HTTP 推送后台投递未成功（已标 RETRYABLE_FAILED）, messageId={}", messageId);
                     }
                 },
-                ex -> log.error("HTTP 推送后台投递异常（幂等已保留）, messageId={}", messageId, ex));
+                ex -> {
+                    markRetryableFailed(packet);
+                    log.error("HTTP 推送后台投递异常（已标 RETRYABLE_FAILED）, messageId={}", messageId, ex);
+                });
     }
 
     /** 校验并规范化 message.ref；失败抛 403（应在 preProcess 调用）。 */
@@ -131,7 +138,6 @@ public final class HttpPushDeliverySupport {
     }
 
     public static void publishException(ExceptionCodeEnum code, String message, Packet packet) {
-        // ACCEPTED 后不释放幂等
         MessageServerContext.publishEvent(new MessageEvent(
                 ExceptionEventPayload.of(code, message, packet),
                 MessageEventTypeEnum.EXCEPTION), true);
@@ -145,7 +151,7 @@ public final class HttpPushDeliverySupport {
     }
 
     /**
-     * 释放幂等占位（仅占位成功后、提交后台失败时回滚，便于客户端重试）。
+     * 释放 PENDING 占位（投递触发失败、尚未进入后台 Mono 时回滚）。
      */
     public static void forceReleaseIdempotencyClaim(Packet packet) {
         if (packet == null || packet.getMessage() == null) {
@@ -168,6 +174,52 @@ public final class HttpPushDeliverySupport {
         } catch (Exception ex) {
             log.warn("释放 HTTP 推送幂等占位失败, appKey={}, messageId={}", appKey, messageId, ex);
         }
+    }
+
+    private static boolean commitIdempotency(Packet packet) {
+        IdempotencyCoords coords = resolveCoords(packet);
+        if (coords == null) {
+            return false;
+        }
+        try {
+            return PushIdempotencySupport.commit(coords.appKey(), coords.messageId(), coords.packetId());
+        } catch (Exception ex) {
+            log.warn("HTTP 推送幂等 COMMIT 失败, messageId={}", coords.messageId(), ex);
+            return false;
+        }
+    }
+
+    private static void markRetryableFailed(Packet packet) {
+        IdempotencyCoords coords = resolveCoords(packet);
+        if (coords == null) {
+            return;
+        }
+        try {
+            boolean marked = PushIdempotencySupport.markRetryableFailed(
+                    coords.appKey(), coords.messageId(), coords.packetId());
+            if (!marked) {
+                log.debug("HTTP 推送标记 RETRYABLE_FAILED 未命中, messageId={}", coords.messageId());
+            }
+        } catch (Exception ex) {
+            log.warn("HTTP 推送标记 RETRYABLE_FAILED 失败, messageId={}", coords.messageId(), ex);
+        }
+    }
+
+    private static IdempotencyCoords resolveCoords(Packet packet) {
+        if (packet == null || packet.getMessage() == null) {
+            return null;
+        }
+        Message message = packet.getMessage();
+        Metadata metadata = message.getMetadata();
+        String appKey = metadata != null ? metadata.getAppKey() : null;
+        String messageId = message.getId();
+        if (StringUtils.isAnyBlank(appKey, messageId)) {
+            return null;
+        }
+        return new IdempotencyCoords(appKey, messageId, String.valueOf(packet.getPacketId()));
+    }
+
+    private record IdempotencyCoords(String appKey, String messageId, String packetId) {
     }
 
     /** HTTP 模拟用户默认多端同步；若本地有登录配置则尊重 selfSync。 */

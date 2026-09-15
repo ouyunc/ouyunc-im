@@ -14,6 +14,7 @@ import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.schedule.QosRetryTaskContext;
+import com.ouyunc.message.schedule.QosRetryTaskIds;
 import com.ouyunc.message.schedule.ScheduleTimer;
 import com.ouyunc.repository.DefaultRepository;
 import org.apache.commons.collections4.CollectionUtils;
@@ -26,7 +27,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
- * qos 消息重试拦截器
+ * qos 消息重试拦截器：每个接收端（identity + deviceType）独立登记任务。
  */
 @Order(NumberConstant.NUMBER_100)
 public class QosRetryMessageInterceptor extends AbstractMessageInterceptor {
@@ -44,7 +45,7 @@ public class QosRetryMessageInterceptor extends AbstractMessageInterceptor {
             return;
         }
         Message message = packet.getMessage();
-        if (message == null || message.getMetadata() == null) {
+        if (message == null || message.getMetadata() == null || target == null) {
             return;
         }
         int qos = message.getQos();
@@ -60,29 +61,31 @@ public class QosRetryMessageInterceptor extends AbstractMessageInterceptor {
                 appKey,
                 packet.getPacketId(),
                 target.getAppKey(),
-                target.getTargetIdentity()
+                target.getTargetIdentity(),
+                target.getDeviceType()
         );
-        ScheduleTimer.scheduleWithFixedDelay(String.valueOf(packet.getPacketId()), taskWrapper -> {
-            List<LoginClientInfo> targetLoginClientInfos = ClientHelper.onlineAll(
-                    retryContext.targetAppKey(), retryContext.targetIdentity());
-            if (CollectionUtils.isEmpty(targetLoginClientInfos)) {
-                // 接收方全部离线时取消重试；上线后通过会话 ZSet + HTTP 分页拉取补数
+        String taskId = QosRetryTaskIds.build(retryContext);
+        if (StringUtils.isBlank(taskId)) {
+            return;
+        }
+        ScheduleTimer.scheduleWithFixedDelay(taskId, taskWrapper -> {
+            LoginClientInfo device = ClientHelper.onlineDevice(
+                    retryContext.targetAppKey(), retryContext.targetIdentity(), retryContext.deviceType());
+            if (device == null) {
+                // 该端离线：取消本端重试；上线后靠会话拉取补数
                 taskWrapper.cancel();
                 return;
             }
             Packet schedulePackage = loadRetryPacket(retryContext);
             if (schedulePackage == null) {
-                log.warn("QoS 重试加载消息失败，取消任务: appKey={}, packetId={}",
-                        retryContext.appKey(), retryContext.packetId());
+                log.warn("QoS 重试加载消息失败，取消任务: taskId={}", taskId);
                 taskWrapper.cancel();
                 return;
             }
-            // 重推不再走拦截器，避免重复注册定时任务
-            for (LoginClientInfo targetLoginClientInfo : targetLoginClientInfos) {
-                MessageHelper.asyncSendMessageWithoutInterceptor(
-                        schedulePackage.clone(),
-                        MessageHelper.buildTarget(targetLoginClientInfo));
-            }
+            // 重推不再走拦截器，避免重复注册；只投本端
+            MessageHelper.asyncSendMessageWithoutInterceptor(
+                    schedulePackage.clone(),
+                    MessageHelper.buildTarget(device));
         }, MessageServerContext.serverProperties().getQosRetryInitialDelay(),
                 MessageServerContext.serverProperties().getQosRetryPeriod(),
                 TimeUnit.SECONDS,

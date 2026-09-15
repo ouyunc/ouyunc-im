@@ -5,9 +5,10 @@ import java.io.Serializable;
 
 /**
  * POST /api/im/message/push 响应体 data 部分。
- * <p>{@code ACCEPTED}/{@code DUPLICATE} 均表示调用成功（已受理）；{@code PROCESSING} 表示同 messageId 尚未成功，可重试。
- * 均不等于已投递。</p>
- * <p>{@code errorMessage} 仅在 {@code PROCESSING} 时有文案；成功态为 {@code null}。</p>
+ * <p>{@code ACCEPTED}：已写入 PENDING（后台确认落库）；{@code DUPLICATE}：已 COMMITTED；
+ * {@code PROCESSING}：同 messageId 仍在途；{@code RETRYABLE_FAILED}：后台失败可重试。
+ * 均不等于“已投递到客户端”。</p>
+ * <p>{@code errorMessage} 仅 PROCESSING / RETRYABLE_FAILED 使用；成功态为 {@code null}。</p>
  */
 public class MessagePushResponse implements Serializable {
     @Serial
@@ -16,7 +17,7 @@ public class MessagePushResponse implements Serializable {
     private String messageId;
     private String packetId;
     private String status;
-    /** 仅 PROCESSING 使用；ACCEPTED/DUPLICATE 为 null。 */
+    /** PROCESSING / RETRYABLE_FAILED 使用；ACCEPTED/DUPLICATE 为 null。 */
     private String errorMessage;
 
     public String getMessageId() {
