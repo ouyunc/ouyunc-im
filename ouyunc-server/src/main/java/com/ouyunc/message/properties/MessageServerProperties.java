@@ -4,9 +4,9 @@ import com.ouyunc.base.constant.enums.GroupMessagePushModeEnum;
 import com.ouyunc.core.properties.MessageProperties;
 import com.ouyunc.core.properties.annotation.Key;
 import com.ouyunc.core.properties.annotation.LoadProperties;
-import com.ouyunc.message.channel.NativeIoTransport;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.WriteBufferWaterMark;
+import io.netty.channel.epoll.EpollChannelOption;
 
 import java.util.*;
 
@@ -417,13 +417,6 @@ public class MessageServerProperties extends MessageProperties {
     @Key(value = "ouyunc.message.cluster.secret")
     private String clusterSecret;
 
-    public String getClusterSecret() {
-        return clusterSecret;
-    }
-
-    public void setClusterSecret(String clusterSecret) {
-        this.clusterSecret = clusterSecret;
-    }
 
     /**
      * 集群中消息重试次数，消息如果不通，会进行重试三次
@@ -556,6 +549,13 @@ public class MessageServerProperties extends MessageProperties {
     @Key("ouyunc.message.cluster.topology")
     Map<String, Object> clusterTopology;
 
+    public String getClusterSecret() {
+        return clusterSecret;
+    }
+
+    public void setClusterSecret(String clusterSecret) {
+        this.clusterSecret = clusterSecret;
+    }
     public boolean isMessageInterceptorEnable() {
         return messageInterceptorEnable;
     }
@@ -1159,17 +1159,6 @@ public class MessageServerProperties extends MessageProperties {
     }
 
     /**
-     * 组装 epoll 专属 TCP 增强参数，供 {@link NativeIoTransport} 使用。
-     */
-    public NativeIoTransport.EpollTcpOptions toEpollTcpOptions() {
-        return new NativeIoTransport.EpollTcpOptions(
-                isServerNativeIoTcpQuickack(),
-                getServerNativeIoTcpKeepidle(),
-                getServerNativeIoTcpKeepintvl(),
-                getServerNativeIoTcpKeepcnt());
-    }
-
-    /**
      * 获取boss 线程组配置, 这里对其进行组装
      */
     @SuppressWarnings("rawtypes")
@@ -1188,6 +1177,20 @@ public class MessageServerProperties extends MessageProperties {
             put(ChannelOption.TCP_NODELAY, isWorkerChildOptionTcpNoDelay());
             put(ChannelOption.SO_REUSEADDR, isWorkerChildOptionSoReuseaddr());
             put(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(getWorkerChildOptionWriteBufferLowWaterMark(), getWorkerChildOptionWriteBufferHighWaterMark()));
+        }};
+    }
+
+    /**
+     * epoll 专属 ChannelOption（TCP_QUICKACK / keepalive 探测参数）。
+     * 仅在 Linux epoll 时由调用方合并进 childOption/option 一次设置；NIO/kqueue 不合并。
+     */
+    @SuppressWarnings("rawtypes")
+    public Map<ChannelOption, Object> getEpollChannelOptionMap() {
+        return new HashMap<>() {{
+            put(EpollChannelOption.TCP_QUICKACK, isServerNativeIoTcpQuickack());
+            put(EpollChannelOption.TCP_KEEPIDLE, getServerNativeIoTcpKeepidle());
+            put(EpollChannelOption.TCP_KEEPINTVL, getServerNativeIoTcpKeepintvl());
+            put(EpollChannelOption.TCP_KEEPCNT, getServerNativeIoTcpKeepcnt());
         }};
     }
 

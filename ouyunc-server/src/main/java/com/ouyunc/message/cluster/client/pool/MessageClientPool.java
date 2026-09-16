@@ -20,10 +20,12 @@ import io.netty.channel.pool.ChannelPool;
 import io.netty.channel.pool.FixedChannelPool;
 import io.netty.channel.pool.SimpleChannelPool;
 import io.netty.util.AttributeKey;
+import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -116,6 +118,7 @@ public class MessageClientPool {
     /**
      * 与接入服务端共用 {@link NativeIoTransport}，避免集群转发一端 epoll、一端 NIO。
      */
+    @SuppressWarnings({"rawtypes", "unchecked"})
     private static synchronized void ensureBootstrap() {
         if (bootstrap != null) {
             return;
@@ -131,8 +134,16 @@ public class MessageClientPool {
                 .option(ChannelOption.SO_KEEPALIVE, MessageConstant.TRUE)
                 .option(ChannelOption.TCP_NODELAY, MessageConstant.TRUE)
                 .attr(clusterClientTagKey, MessageConstant.BOOTSTRAP_ATTR_KEY_TAG_CLUSTER_CLIENT_VALUE);
-        ioTransport.enhanceClientBootstrap(bootstrap,
-                MessageServerContext.serverProperties().toEpollTcpOptions());
+        // epoll 专属 ChannelOption 与服务端共用同一份配置，仅在 EPOLL 时设置
+        if (ioTransport.kind() == NativeIoTransport.Kind.EPOLL) {
+            Map<ChannelOption, Object> epollChannelOptionMap =
+                    MessageServerContext.serverProperties().getEpollChannelOptionMap();
+            if (MapUtils.isNotEmpty(epollChannelOptionMap)) {
+                for (Map.Entry<ChannelOption, Object> entry : epollChannelOptionMap.entrySet()) {
+                    bootstrap.option(entry.getKey(), entry.getValue());
+                }
+            }
+        }
         log.info("集群内置客户端 IO 传输: {}", ioTransport.kind());
     }
 

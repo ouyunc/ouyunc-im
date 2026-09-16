@@ -39,6 +39,7 @@ import org.objenesis.ObjenesisStd;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -329,15 +330,23 @@ public abstract class AbstractMessageServer implements MessageServer {
                     bootstrap.option(channelOptionEntry.getKey(), channelOptionEntry.getValue());
                 }
             }
-            // 针对workerGroup设置连接活动保持连接状态
-            Map<ChannelOption, Object> childChannelOptionMap = MessageServerContext.serverProperties().getChildChannelOptionMap();
+            // worker 子连接 ChannelOption（通用 + epoll 专属合并后一次设置）
+            Map<ChannelOption, Object> childChannelOptionMap = new HashMap<>(
+                    MessageServerContext.serverProperties().getChildChannelOptionMap());
+            if (ioTransport.kind() == NativeIoTransport.Kind.EPOLL) {
+                Map<ChannelOption, Object> epollChannelOptionMap =
+                        MessageServerContext.serverProperties().getEpollChannelOptionMap();
+                if (MapUtils.isNotEmpty(epollChannelOptionMap)) {
+                    childChannelOptionMap.putAll(epollChannelOptionMap);
+                }
+            }
             if (MapUtils.isNotEmpty(childChannelOptionMap)) {
                 for (Map.Entry<ChannelOption, Object> childChannelOptionEntry : childChannelOptionMap.entrySet()) {
                     bootstrap.childOption(childChannelOptionEntry.getKey(), childChannelOptionEntry.getValue());
                 }
             }
-            ioTransport.enhanceServerBootstrap(bootstrap, bossThreads,
-                    MessageServerContext.serverProperties().toEpollTcpOptions());
+            // epoll 传输层增强（如 SO_REUSEPORT），与 ChannelOption 配置解耦
+            ioTransport.enhanceServerBootstrap(bootstrap, bossThreads);
             NodeLeaseKeeper.start();
             // 因为bind() 是异步的，这里不用 bind().sync(); 而是添加监听器的方式进行回调
             ChannelFuture channelFuture = bootstrap.bind();
