@@ -131,7 +131,8 @@ public class MessageClientPool {
                 .option(ChannelOption.SO_KEEPALIVE, MessageConstant.TRUE)
                 .option(ChannelOption.TCP_NODELAY, MessageConstant.TRUE)
                 .attr(clusterClientTagKey, MessageConstant.BOOTSTRAP_ATTR_KEY_TAG_CLUSTER_CLIENT_VALUE);
-        ioTransport.enhanceClientBootstrap(bootstrap);
+        ioTransport.enhanceClientBootstrap(bootstrap,
+                MessageServerContext.serverProperties().toEpollTcpOptions());
         log.info("集群内置客户端 IO 传输: {}", ioTransport.kind());
     }
 

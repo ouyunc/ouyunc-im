@@ -336,7 +336,8 @@ public abstract class AbstractMessageServer implements MessageServer {
                     bootstrap.childOption(childChannelOptionEntry.getKey(), childChannelOptionEntry.getValue());
                 }
             }
-            ioTransport.enhanceServerBootstrap(bootstrap, bossThreads);
+            ioTransport.enhanceServerBootstrap(bootstrap, bossThreads,
+                    MessageServerContext.serverProperties().toEpollTcpOptions());
             NodeLeaseKeeper.start();
             // 因为bind() 是异步的，这里不用 bind().sync(); 而是添加监听器的方式进行回调
             ChannelFuture channelFuture = bootstrap.bind();

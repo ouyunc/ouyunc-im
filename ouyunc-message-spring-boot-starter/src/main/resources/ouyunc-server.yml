@@ -54,6 +54,15 @@ ouyunc:
       scan-package-paths:
         - com.ouyunc.message.dispatcher
 
+    # 服务端原生 IO / epoll 专属参数（kqueue/NIO 忽略）
+    server:
+      native-io:
+        enable: true
+        tcp-quickack: true
+        tcp-keepidle: 60
+        tcp-keepintvl: 10
+        tcp-keepcnt: 6
+
     # Netty 线程组线程数配置
     boss:
       # boss 线程组的线程个数 1

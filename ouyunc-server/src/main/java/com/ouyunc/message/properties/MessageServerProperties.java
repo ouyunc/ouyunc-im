@@ -4,6 +4,7 @@ import com.ouyunc.base.constant.enums.GroupMessagePushModeEnum;
 import com.ouyunc.core.properties.MessageProperties;
 import com.ouyunc.core.properties.annotation.Key;
 import com.ouyunc.core.properties.annotation.LoadProperties;
+import com.ouyunc.message.channel.NativeIoTransport;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.WriteBufferWaterMark;
 
@@ -290,6 +291,30 @@ public class MessageServerProperties extends MessageProperties {
      */
     @Key(value = "ouyunc.message.server.native-io.enable", defaultValue = "true")
     boolean serverNativeIoEnable;
+
+    /**
+     * epoll 专属：边沿触发下尽快 ACK；仅 Linux epoll 生效。
+     */
+    @Key(value = "ouyunc.message.server.native-io.tcp-quickack", defaultValue = "true")
+    boolean serverNativeIoTcpQuickack;
+
+    /**
+     * epoll 专属：TCP keepalive 空闲多久（秒）后开始探测；配合 so-keepalive，仅 Linux epoll 生效。
+     */
+    @Key(value = "ouyunc.message.server.native-io.tcp-keepidle", defaultValue = "60")
+    int serverNativeIoTcpKeepidle;
+
+    /**
+     * epoll 专属：TCP keepalive 探测间隔（秒）；仅 Linux epoll 生效。
+     */
+    @Key(value = "ouyunc.message.server.native-io.tcp-keepintvl", defaultValue = "10")
+    int serverNativeIoTcpKeepintvl;
+
+    /**
+     * epoll 专属：TCP keepalive 最大探测次数；仅 Linux epoll 生效。
+     */
+    @Key(value = "ouyunc.message.server.native-io.tcp-keepcnt", defaultValue = "6")
+    int serverNativeIoTcpKeepcnt;
 
 
     /***
@@ -1101,6 +1126,49 @@ public class MessageServerProperties extends MessageProperties {
         this.serverNativeIoEnable = serverNativeIoEnable;
     }
 
+    public boolean isServerNativeIoTcpQuickack() {
+        return serverNativeIoTcpQuickack;
+    }
+
+    public void setServerNativeIoTcpQuickack(boolean serverNativeIoTcpQuickack) {
+        this.serverNativeIoTcpQuickack = serverNativeIoTcpQuickack;
+    }
+
+    public int getServerNativeIoTcpKeepidle() {
+        return serverNativeIoTcpKeepidle;
+    }
+
+    public void setServerNativeIoTcpKeepidle(int serverNativeIoTcpKeepidle) {
+        this.serverNativeIoTcpKeepidle = serverNativeIoTcpKeepidle;
+    }
+
+    public int getServerNativeIoTcpKeepintvl() {
+        return serverNativeIoTcpKeepintvl;
+    }
+
+    public void setServerNativeIoTcpKeepintvl(int serverNativeIoTcpKeepintvl) {
+        this.serverNativeIoTcpKeepintvl = serverNativeIoTcpKeepintvl;
+    }
+
+    public int getServerNativeIoTcpKeepcnt() {
+        return serverNativeIoTcpKeepcnt;
+    }
+
+    public void setServerNativeIoTcpKeepcnt(int serverNativeIoTcpKeepcnt) {
+        this.serverNativeIoTcpKeepcnt = serverNativeIoTcpKeepcnt;
+    }
+
+    /**
+     * 组装 epoll 专属 TCP 增强参数，供 {@link NativeIoTransport} 使用。
+     */
+    public NativeIoTransport.EpollTcpOptions toEpollTcpOptions() {
+        return new NativeIoTransport.EpollTcpOptions(
+                isServerNativeIoTcpQuickack(),
+                getServerNativeIoTcpKeepidle(),
+                getServerNativeIoTcpKeepintvl(),
+                getServerNativeIoTcpKeepcnt());
+    }
+
     /**
      * 获取boss 线程组配置, 这里对其进行组装
      */
@@ -1256,6 +1324,11 @@ public class MessageServerProperties extends MessageProperties {
                 ", acceptNewConnections=" + acceptNewConnections +
                 ", drainWaitSeconds=" + drainWaitSeconds +
                 ", shutdownKickClients=" + shutdownKickClients +
+                ", serverNativeIoEnable=" + serverNativeIoEnable +
+                ", serverNativeIoTcpQuickack=" + serverNativeIoTcpQuickack +
+                ", serverNativeIoTcpKeepidle=" + serverNativeIoTcpKeepidle +
+                ", serverNativeIoTcpKeepintvl=" + serverNativeIoTcpKeepintvl +
+                ", serverNativeIoTcpKeepcnt=" + serverNativeIoTcpKeepcnt +
                 ", groupMessagePushMode=" + groupMessagePushMode +
                 ", groupMessageThreshold=" + groupMessageThreshold +
                 ", groupMaxPerUser=" + groupMaxPerUser +

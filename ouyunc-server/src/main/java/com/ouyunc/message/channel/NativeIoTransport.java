@@ -2,6 +2,7 @@ package com.ouyunc.message.channel;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.IoHandlerFactory;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
@@ -100,30 +101,72 @@ public final class NativeIoTransport {
     }
 
     /**
+     * epoll 专属 TCP 增强参数；由 {@code ouyunc.message.server.native-io.*} 注入。
+     */
+    public static final class EpollTcpOptions {
+        private final boolean tcpQuickAck;
+        private final int tcpKeepIdle;
+        private final int tcpKeepIntvl;
+        private final int tcpKeepCnt;
+
+        public EpollTcpOptions(boolean tcpQuickAck, int tcpKeepIdle, int tcpKeepIntvl, int tcpKeepCnt) {
+            this.tcpQuickAck = tcpQuickAck;
+            this.tcpKeepIdle = tcpKeepIdle;
+            this.tcpKeepIntvl = tcpKeepIntvl;
+            this.tcpKeepCnt = tcpKeepCnt;
+        }
+
+        public boolean isTcpQuickAck() {
+            return tcpQuickAck;
+        }
+
+        public int getTcpKeepIdle() {
+            return tcpKeepIdle;
+        }
+
+        public int getTcpKeepIntvl() {
+            return tcpKeepIntvl;
+        }
+
+        public int getTcpKeepCnt() {
+            return tcpKeepCnt;
+        }
+    }
+
+    /**
      * epoll 专属：边沿触发下尽快 ACK；内核 TCP keepalive 作为应用心跳的补充。
      * {@code SO_REUSEPORT} 仅在 boss 线程 &gt; 1 时有意义（多 acceptor 内核负载均衡）。
      */
-    public void enhanceServerBootstrap(ServerBootstrap bootstrap, int bossThreads) {
+    public void enhanceServerBootstrap(ServerBootstrap bootstrap, int bossThreads, EpollTcpOptions options) {
         if (kind != Kind.EPOLL) {
             return;
         }
         if (bossThreads > 1) {
             bootstrap.option(EpollChannelOption.SO_REUSEPORT, Boolean.TRUE);
         }
-        bootstrap.childOption(EpollChannelOption.TCP_QUICKACK, Boolean.TRUE);
-        bootstrap.childOption(EpollChannelOption.TCP_KEEPIDLE, 60);
-        bootstrap.childOption(EpollChannelOption.TCP_KEEPINTVL, 10);
-        bootstrap.childOption(EpollChannelOption.TCP_KEEPCNT, 6);
+        applyEpollTcpOptions(bootstrap::childOption, options);
     }
 
-    public void enhanceClientBootstrap(Bootstrap bootstrap) {
+    public void enhanceClientBootstrap(Bootstrap bootstrap, EpollTcpOptions options) {
         if (kind != Kind.EPOLL) {
             return;
         }
-        bootstrap.option(EpollChannelOption.TCP_QUICKACK, Boolean.TRUE);
-        bootstrap.option(EpollChannelOption.TCP_KEEPIDLE, 60);
-        bootstrap.option(EpollChannelOption.TCP_KEEPINTVL, 10);
-        bootstrap.option(EpollChannelOption.TCP_KEEPCNT, 6);
+        applyEpollTcpOptions(bootstrap::option, options);
+    }
+
+    private void applyEpollTcpOptions(ChannelOptionSetter setter, EpollTcpOptions options) {
+        if (options == null) {
+            return;
+        }
+        setter.set(EpollChannelOption.TCP_QUICKACK, options.isTcpQuickAck());
+        setter.set(EpollChannelOption.TCP_KEEPIDLE, options.getTcpKeepIdle());
+        setter.set(EpollChannelOption.TCP_KEEPINTVL, options.getTcpKeepIntvl());
+        setter.set(EpollChannelOption.TCP_KEEPCNT, options.getTcpKeepCnt());
+    }
+
+    @FunctionalInterface
+    private interface ChannelOptionSetter {
+        <T> void set(ChannelOption<T> option, T value);
     }
 
     private static NativeIoTransport detect(boolean nativeEnabled) {
