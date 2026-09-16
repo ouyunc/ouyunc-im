@@ -412,7 +412,7 @@ public class MessageContext {
             }));
 
     /**
-     * 群成员 identity 列表。短过期兜底；退群/解散须走 Pub/Sub 立刻失效，避免短暂扇出到已退成员。
+     * 群成员 identity 列表。命中直接用，不 GET 版本；入群/退群靠 Pub/Sub 立刻失效，TTL 仅兜底丢通知。
      * 权重≈ key + 成员 id 总长，大群 Set 占更多预算。
      */
     public static final Cache<String, Set<String>> groupUserIdentityCache = CaffeineLocalCache.wrap(

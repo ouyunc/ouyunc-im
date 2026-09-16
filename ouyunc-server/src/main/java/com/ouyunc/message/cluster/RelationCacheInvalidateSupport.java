@@ -50,6 +50,12 @@ public final class RelationCacheInvalidateSupport {
                 RelationLocalCache.evictBlacklist(
                         event.getAppKey(), event.getUserId(), event.getPeerId(), event.getEnabled());
             }
+            case GROUP_JOIN -> {
+                if (StringUtils.isAnyBlank(event.getGroupId(), event.getUserId())) {
+                    return;
+                }
+                RelationLocalCache.onGroupJoin(event.getAppKey(), event.getGroupId(), event.getUserId());
+            }
             case GROUP_QUIT -> {
                 if (StringUtils.isAnyBlank(event.getGroupId(), event.getUserId())) {
                     return;

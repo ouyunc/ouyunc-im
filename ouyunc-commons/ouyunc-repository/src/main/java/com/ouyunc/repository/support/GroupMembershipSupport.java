@@ -8,7 +8,9 @@ import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.core.context.MessageContext;
+import com.ouyunc.core.relation.RelationCacheInvalidatePublisher;
 import com.ouyunc.core.relation.RelationLocalCache;
+import com.ouyunc.base.model.RelationCacheInvalidateEvent;
 import com.ouyunc.base.model.GroupRequestSession;
 import com.ouyunc.base.constant.enums.GroupUserPost;
 import com.ouyunc.base.constant.enums.LuaScriptEnum;
@@ -69,14 +71,12 @@ public final class GroupMembershipSupport {
         String cacheKey = CacheConstant.buildGroupUserCacheKey(appKey, groupId);
         Set<String> cached = MessageContext.groupUserIdentityCache.get(cacheKey);
         if (cached != null) {
-            // 调用方会 remove 发送者，必须返回可变副本；缓存内为不可变快照
             return new HashSet<>(cached);
         }
         Set<String> fromRedis = loadGroupUserIdsByScan(cacheKey);
         if (fromRedis != null && !fromRedis.isEmpty()) {
-            Set<String> snapshot = Set.copyOf(fromRedis);
-            MessageContext.groupUserIdentityCache.put(cacheKey, snapshot);
-            return new HashSet<>(snapshot);
+            putIdentitySnapshot(cacheKey, fromRedis);
+            return new HashSet<>(fromRedis);
         }
         String versionBefore = currentRelationVersion(appKey, groupId);
         List<GroupUserEntity> dbMembers;
@@ -94,7 +94,7 @@ public final class GroupMembershipSupport {
             // 版本已变：不覆盖；尽量读回并发写入后的 Redis
             Set<String> after = loadGroupUserIdsByScan(cacheKey);
             if (after != null && !after.isEmpty()) {
-                MessageContext.groupUserIdentityCache.put(cacheKey, Set.copyOf(after));
+                putIdentitySnapshot(cacheKey, after);
                 return new HashSet<>(after);
             }
         }
@@ -104,7 +104,7 @@ public final class GroupMembershipSupport {
                 ids.add(member.getUserId());
             }
         }
-        MessageContext.groupUserIdentityCache.put(cacheKey, Set.copyOf(ids));
+        putIdentitySnapshot(cacheKey, ids);
         return ids;
     }
 
@@ -297,13 +297,17 @@ public final class GroupMembershipSupport {
         return StringUtils.isBlank(raw) ? "0" : raw.trim();
     }
 
-    /** 加群/退群等关系变更后递增，使进行中的旧快照回源失效。 */
+    /** 加群/退群等关系变更后递增，仅用于 Redis 空名单回源重建时的 CAS，不出现在群聊扇出热路径。 */
     public void bumpGroupRelationVersion(String appKey, String groupId) {
         if (StringUtils.isAnyBlank(appKey, groupId)) {
             return;
         }
         infra.stringRedisTemplate.opsForValue().increment(
                 CacheConstant.buildGroupRelationVersionCacheKey(appKey, groupId));
+    }
+
+    private void putIdentitySnapshot(String cacheKey, Set<String> ids) {
+        MessageContext.groupUserIdentityCache.put(cacheKey, Set.copyOf(ids));
     }
 
     private static final class GroupMembershipLoadException extends RuntimeException {
@@ -761,8 +765,9 @@ public final class GroupMembershipSupport {
         });
         if (bound) {
             bumpGroupRelationVersion(metadata.getAppKey(), groupId);
-            MessageContext.groupUserIdentityCache.delete(CacheConstant.buildGroupUserCacheKey(metadata.getAppKey(), groupId));
-            RelationLocalCache.markGroupMember(metadata.getAppKey(), groupId, joiner, true);
+            RelationLocalCache.onGroupJoin(metadata.getAppKey(), groupId, joiner);
+            RelationCacheInvalidatePublisher.publish(
+                    RelationCacheInvalidateEvent.groupJoin(metadata.getAppKey(), groupId, joiner));
         }
         return bound;
     }

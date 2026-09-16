@@ -16,6 +16,9 @@ public enum RelationCacheInvalidateKind {
     /** 拉黑/取消拉黑：需要 userId(owner)、peerId(target)、enabled。 */
     BLACKLIST,
 
+    /** 入群：需要 groupId、userId；清成员列表快照并把在群布尔写成 true。 */
+    GROUP_JOIN,
+
     /** 退群/踢人：需要 groupId、userId。 */
     GROUP_QUIT,
 

@@ -85,7 +85,7 @@ public class MessageConstant {
     /**
      * 关系布尔缓存过期秒数。主动 Pub/Sub 失效为主；丢失时最多延迟这么久才靠过期纠偏。
      */
-    public static final int RELATION_PRESENCE_CACHE_EXPIRE_SECONDS = 5;
+    public static final int RELATION_PRESENCE_CACHE_EXPIRE_SECONDS = 3;
 
     /**
      * 好友/群成员实体本机缓存过期秒数（配置读取；存在性不依赖此缓存）。
@@ -398,9 +398,9 @@ public class MessageConstant {
     public static final long CHANNEL_WRITE_RETRY_BASE_DELAY_MS = 20L;
 
     /**
-     * 群成员 identity 列表本地缓存。短 TTL，HTTP 侧改成员后最多延迟这么久；调用方会 remove 发送者，必须返回副本。
+     * 群成员 identity 列表本地缓存。热路径命中不打 Redis；入群/退群靠 Pub/Sub 立刻失效，丢失时最多延迟这么久。
      */
-    public static final int GROUP_MEMBER_IDENTITY_CACHE_EXPIRE_SECONDS = 5;
+    public static final int GROUP_MEMBER_IDENTITY_CACHE_EXPIRE_SECONDS = 3;
 
     /** Redis 群成员 ZSET 游标分段 COUNT，避免大群一次 ZRANGE 0 -1 */
     public static final int GROUP_MEMBER_ZSET_SCAN_COUNT = 500;

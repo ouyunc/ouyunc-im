@@ -54,6 +54,17 @@ public final class RelationLocalCache {
         GROUP_MEMBER.put(groupMemberKey(appKey, groupId, memberId), Boolean.valueOf(member));
     }
 
+    /**
+     * 入群：在群布尔写成 true + 丢弃 identity 列表，其它节点靠 Pub/Sub 调用本方法。
+     */
+    public static void onGroupJoin(String appKey, String groupId, String memberId) {
+        if (StringUtils.isAnyBlank(appKey, groupId, memberId)) {
+            return;
+        }
+        markGroupMember(appKey, groupId, memberId, true);
+        MessageContext.groupUserIdentityCache.delete(CacheConstant.buildGroupUserCacheKey(appKey, groupId));
+    }
+
     public static void markBlacklist(String appKey, String ownerId, String targetId, boolean listed) {
         BLACKLIST.put(blacklistKey(appKey, ownerId, targetId), Boolean.valueOf(listed));
     }

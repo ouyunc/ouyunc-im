@@ -14,6 +14,8 @@ public class RelationCacheInvalidateEvent {
 
     public static final String KIND_BLACKLIST = RelationCacheInvalidateKind.BLACKLIST.name();
 
+    public static final String KIND_GROUP_JOIN = RelationCacheInvalidateKind.GROUP_JOIN.name();
+
     public static final String KIND_GROUP_QUIT = RelationCacheInvalidateKind.GROUP_QUIT.name();
 
     public static final String KIND_GROUP_DISSOLVE = RelationCacheInvalidateKind.GROUP_DISSOLVE.name();
@@ -63,6 +65,15 @@ public class RelationCacheInvalidateEvent {
         event.userId = ownerId;
         event.peerId = targetId;
         event.enabled = listed;
+        return event;
+    }
+
+    public static RelationCacheInvalidateEvent groupJoin(String appKey, String groupId, String memberId) {
+        RelationCacheInvalidateEvent event = new RelationCacheInvalidateEvent();
+        event.kind = KIND_GROUP_JOIN;
+        event.appKey = appKey;
+        event.groupId = groupId;
+        event.userId = memberId;
         return event;
     }
 
