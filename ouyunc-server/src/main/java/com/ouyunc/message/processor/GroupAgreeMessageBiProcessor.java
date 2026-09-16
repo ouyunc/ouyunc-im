@@ -54,7 +54,7 @@ public final class GroupAgreeMessageBiProcessor extends AbstractMessageBiProcess
         if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
             return Mono.just(false);
         }
-        return continueWhenPassed(packet,
+        return continueWhenPassedOrAck(ctx, packet,
                 PermissionValidator.INSTANCE.negate()
                         .or(FromToValidator.INSTANCE)
                         .or(BlackListValidator.INSTANCE)
@@ -62,7 +62,6 @@ public final class GroupAgreeMessageBiProcessor extends AbstractMessageBiProcess
                         .or(GroupUserValidator.INSTANCE.negate())
                         .or(GroupUserMaxLimitValidator.INSTANCE)
                         .verify(packet, ctx),
-                null,
                 "权限不足/在黑名单中/群异常（被平台封禁)/不是群成员/群成员数超限/接受者和发送者相同, 请知悉。该消息 {} 被忽略");
     }
 
@@ -75,6 +74,7 @@ public final class GroupAgreeMessageBiProcessor extends AbstractMessageBiProcess
             Message message = packet.getMessage();
             if (MessageContentTypeEnum.GROUP_REQUEST_CONTENT.getType() != message.getContentType()) {
                 log.error("消息内容类型:{} 不是群请求类型，请检查消息内容类型是否正确", message.getContentType());
+                ackRequestSettled(ctx, packet);
                 return;
             }
             Object contentObj = JSON.parseObject(message.getContent(), MessageContentTypeEnum.GROUP_REQUEST_CONTENT.getContentClass());
@@ -84,6 +84,7 @@ public final class GroupAgreeMessageBiProcessor extends AbstractMessageBiProcess
             } else {
                 log.error("消息内容类型:{} 不是群请求类型，请检查消息内容类型是否正确", message.getContentType());
                 MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.MESSAGE_CONTENT_TYPE_ERROR, "消息内容类型错误", packet), MessageEventTypeEnum.EXCEPTION), true);
+                ackRequestSettled(ctx, packet);
                 return;
             }
             String appKey = message.getMetadata().getAppKey();
@@ -93,33 +94,40 @@ public final class GroupAgreeMessageBiProcessor extends AbstractMessageBiProcess
                 GroupRequestSession groupRequestSession = repository().getGroupRequestSession(appKey, content.getIdentity(), message.getTo());
                 if (null == groupRequestSession || !RequestSessionProgress.JOINING.value().equals(groupRequestSession.getProgress())) {
                     log.warn("{} 和 {} 会话请求不存在正在处理中的群请求，或者存在有还未结束的同意或拒绝处理", content.getIdentity(), message.getTo());
+                    ackRequestSettled(ctx, packet);
                     return;
                 }
                 GroupRequestSessionWay way = GroupRequestSessionWay.valueOf(groupRequestSession.getWay());
                 if (way == null) {
                     log.error("非法群会话请求方式：{}", groupRequestSession.getWay());
+                    ackRequestSettled(ctx, packet);
                     return;
                 }
                 if (GroupRequestSessionWay.INVITED.equals(way) && message.getFrom().equals(content.getIdentity())) {
                     log.warn("发送方: {} 和加入方: {} 相同，忽略 该请求", message.getFrom(), content.getIdentity());
+                    ackRequestSettled(ctx, packet);
                     return;
                 }
                 if (GroupRequestSessionWay.INVITED.equals(way) && !GroupJoinerProcessStatus.AGREE.value().equals(groupRequestSession.getJoinerProcessStatus())) {
                     log.error("被邀请人 {} 尚未同意邀请，请等待", groupRequestSession.getJoiner());
+                    ackRequestSettled(ctx, packet);
                     return;
                 }
                 if (repository().inGroup(appKey, content.getIdentity(), message.getTo())) {
                     log.warn("该用户 {} 已经加入群组 {}", content.getIdentity(), message.getTo());
+                    ackRequestSettled(ctx, packet);
                     return;
                 }
                 Map<String, Double> groupMannerOrLeaderUsersIdentityAndPostMap = repository().groupManagerAndLeaderUsersIdentityAndPost(packet);
                 if (MapUtils.isEmpty(groupMannerOrLeaderUsersIdentityAndPostMap)) {
                     log.error("群组：{}, 不存在群主！群消息： {}", packet.getMessage().getTo(), packet);
                     MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群主和群管理员", packet), MessageEventTypeEnum.EXCEPTION), true);
+                    ackRequestSettled(ctx, packet);
                     return;
                 }
                 if (!groupMannerOrLeaderUsersIdentityAndPostMap.containsKey(message.getFrom())) {
                     log.error("处理人不是管理员或群主：{} 不允许处理", message.getFrom());
+                    ackRequestSettled(ctx, packet);
                     return;
                 }
                 Double processorPost = groupMannerOrLeaderUsersIdentityAndPostMap.remove(message.getFrom());

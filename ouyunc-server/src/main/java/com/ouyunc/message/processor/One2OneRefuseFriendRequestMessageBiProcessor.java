@@ -59,12 +59,11 @@ public final class One2OneRefuseFriendRequestMessageBiProcessor extends Abstract
         if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
             return Mono.just(false);
         }
-        return continueWhenPassed(packet,
+        return continueWhenPassedOrAck(ctx, packet,
                 PermissionValidator.INSTANCE.negate()
                         .or(FromToValidator.INSTANCE)
                         .or(BlackListValidator.INSTANCE)
                         .verify(packet, ctx),
-                null,
                 "验证不通过。没有权限/被拉黑/发送方和接收方相同，请知悉。该消息 {} 被忽略");
     }
 
@@ -86,10 +85,12 @@ public final class One2OneRefuseFriendRequestMessageBiProcessor extends Abstract
                 RequestSession requestSession = repository().getFriendRequestSession(appKey, message.getTo(), message.getFrom());
                 if (null == requestSession || !Objects.equals(requestSession.getProgress(), RequestSessionProgress.JOINING.value())) {
                     log.warn("不存在加好友请求记录或存在正在处理的好友请求，该消息忽略");
+                    ackRequestSettled(ctx, packet);
                     return;
                 }
                 if (repository().isFriend(appKey, message.getFrom(), message.getTo())) {
                     log.warn("已经是好友, 请知悉; {}", packet);
+                    ackRequestSettled(ctx, packet);
                     return;
                 }
                 requestSession.setProgress(RequestSessionProgress.REFUSING.value());

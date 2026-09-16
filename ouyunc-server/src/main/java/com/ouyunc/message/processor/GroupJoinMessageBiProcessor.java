@@ -46,7 +46,7 @@ public final class GroupJoinMessageBiProcessor extends AbstractMessageBiProcesso
         if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
             return Mono.just(false);
         }
-        return continueWhenPassed(packet,
+        return continueWhenPassedOrAck(ctx, packet,
                 PermissionValidator.INSTANCE.negate()
                         .or(FromToValidator.INSTANCE)
                         .or(BlackListValidator.INSTANCE)
@@ -54,7 +54,6 @@ public final class GroupJoinMessageBiProcessor extends AbstractMessageBiProcesso
                         .or(GroupMaxLimitValidator.INSTANCE)
                         .or(GroupUserMaxLimitValidator.INSTANCE)
                         .verify(packet, ctx),
-                null,
                 "权限不足/在黑名单中/群异常（被平台封禁）/群或成员数超限/接收者和发送者相同, 请知悉。该消息 {} 被忽略");
     }
 
@@ -86,12 +85,14 @@ public final class GroupJoinMessageBiProcessor extends AbstractMessageBiProcesso
                 if (groupEntity == null) {
                     log.error("群组:{} 不存在，请检查数据！", message.getTo());
                     MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.GROUP_NOT_EXIST, message.getTo() + "群组不存在！", packet), MessageEventTypeEnum.EXCEPTION));
+                    ackRequestSettled(ctx, packet);
                     return;
                 }
                 Map<String, Double> groupMannerOrLeaderUsersIdentityAndPostMap = repository().groupManagerAndLeaderUsersIdentityAndPost(packet);
                 if (MapUtils.isEmpty(groupMannerOrLeaderUsersIdentityAndPostMap)) {
                     log.error("群组：{}, 不存在群主和群管理员！群消息： {}", packet.getMessage().getTo(), packet);
                     MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群主或群管理员", packet), MessageEventTypeEnum.EXCEPTION), true);
+                    ackRequestSettled(ctx, packet);
                     return;
                 }
                 Set<String> notifyManagerAndLeaderUserIds = new HashSet<>(groupMannerOrLeaderUsersIdentityAndPostMap.keySet());
@@ -99,6 +100,7 @@ public final class GroupJoinMessageBiProcessor extends AbstractMessageBiProcesso
                 if (groupMannerOrLeaderUsersIdentitySet.remove(message.getFrom()) || CollectionUtils.isEmpty(groupMannerOrLeaderUsersIdentitySet)) {
                     log.error("群组：{}, 不存在群主和群管理员或群消息或已经加入群组： {}", packet.getMessage().getTo(), packet);
                     MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群主或群管理员", packet), MessageEventTypeEnum.EXCEPTION), true);
+                    ackRequestSettled(ctx, packet);
                     return;
                 }
                 GroupRequestSession groupRequestSession = existingSession != null ? existingSession

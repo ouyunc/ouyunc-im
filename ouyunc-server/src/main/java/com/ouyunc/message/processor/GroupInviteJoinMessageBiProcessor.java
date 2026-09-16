@@ -50,7 +50,7 @@ public final class GroupInviteJoinMessageBiProcessor extends AbstractMessageBiPr
         if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
             return Mono.just(false);
         }
-        return continueWhenPassed(packet,
+        return continueWhenPassedOrAck(ctx, packet,
                 PermissionValidator.INSTANCE.negate()
                         .or(FromToValidator.INSTANCE)
                         .or(GroupInviteSelfValidator.INSTANCE)
@@ -59,7 +59,6 @@ public final class GroupInviteJoinMessageBiProcessor extends AbstractMessageBiPr
                         .or(GroupUserValidator.INSTANCE.negate())
                         .or(GroupUserMaxLimitValidator.INSTANCE)
                         .verify(packet, ctx),
-                null,
                 "权限不足/在黑名单中/群异常（被平台封禁）/不是群成员/不能邀请自己/群成员数超限/接受者和发送者相同, 请知悉。该消息 {} 被忽略");
     }
 
@@ -77,6 +76,7 @@ public final class GroupInviteJoinMessageBiProcessor extends AbstractMessageBiPr
                 content = groupRequestContent;
             } else {
                 log.error("消息内容类型:{} 不是群请求类型，请检查消息内容类型是否正确", message.getContentType());
+                ackRequestSettled(ctx, packet);
                 return;
             }
             String lockKey = CacheConstant.buildGroupRequestLockCacheKey(appKey, content.getIdentity(), message.getTo());
@@ -85,32 +85,38 @@ public final class GroupInviteJoinMessageBiProcessor extends AbstractMessageBiPr
                 GroupRequestSession existingSession = repository().getGroupRequestSession(appKey, content.getIdentity(), message.getTo());
                 if (null != existingSession && (existingSession.getProgress() > RequestSessionProgress.JOINING.value() || !GroupRequestSessionWay.INVITED.value().equals(existingSession.getWay()))) {
                     log.warn("{} 和 {} 存在正在处理中的群会话请求(拒绝或同意还未结束处理)", content.getIdentity(), message.getTo());
+                    ackRequestSettled(ctx, packet);
                     return;
                 }
                 if (message.getFrom().equals(content.getIdentity())) {
                     log.warn("发送方: {} 和加入方: {} 相同，忽略 该请求", message.getFrom(), content.getIdentity());
+                    ackRequestSettled(ctx, packet);
                     return;
                 }
                 if (repository().inGroup(appKey, content.getIdentity(), message.getTo())) {
                     log.warn("该用户 {} 已经加入群组 {}", content.getIdentity(), message.getTo());
+                    ackRequestSettled(ctx, packet);
                     return;
                 }
                 GroupEntity groupEntity = repository().getGroupEntity(appKey, message.getTo());
                 if (groupEntity == null) {
                     log.error("群组:{} 不存在，请检查数据！", message.getTo());
                     MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.GROUP_NOT_EXIST, message.getTo() + "群组不存在！", packet), MessageEventTypeEnum.EXCEPTION));
+                    ackRequestSettled(ctx, packet);
                     return;
                 }
                 Map<String, Double> groupMannerOrLeaderUsersIdentityAndPostMap = repository().groupManagerAndLeaderUsersIdentityAndPost(packet);
                 if (MapUtils.isEmpty(groupMannerOrLeaderUsersIdentityAndPostMap)) {
                     log.error("群组：{}, 不存在群主和群管理员！群消息： {}", packet.getMessage().getTo(), packet);
                     MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群主或群管理员", packet), MessageEventTypeEnum.EXCEPTION), true);
+                    ackRequestSettled(ctx, packet);
                     return;
                 }
                 UserEntity userEntity = repository().getUserEntity(appKey, content.getIdentity());
                 if (userEntity == null) {
                     log.error("用户:{} 不存在，请检查数据！", content.getIdentity());
                     MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.USER_NOT_EXIST, content.getIdentity() + "用户不存在！", packet), MessageEventTypeEnum.EXCEPTION));
+                    ackRequestSettled(ctx, packet);
                     return;
                 }
                 GroupRequestSession groupRequestSession;
@@ -137,6 +143,7 @@ public final class GroupInviteJoinMessageBiProcessor extends AbstractMessageBiPr
                     if (fromGroupUserEntity == null) {
                         log.error("群组：{}, 用户：{} 不存在，请检查数据！", message.getTo(), message.getFrom());
                         MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, message.getFrom() + "不在群组中！", packet), MessageEventTypeEnum.EXCEPTION));
+                        ackRequestSettled(ctx, packet);
                         return;
                     }
                     groupRequestSession.setInviterPost(fromGroupUserEntity.getPost());

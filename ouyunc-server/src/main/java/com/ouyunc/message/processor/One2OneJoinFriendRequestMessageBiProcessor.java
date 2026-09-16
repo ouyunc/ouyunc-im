@@ -59,12 +59,11 @@ public final class One2OneJoinFriendRequestMessageBiProcessor extends AbstractMe
         if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
             return Mono.just(false);
         }
-        return continueWhenPassed(packet,
+        return continueWhenPassedOrAck(ctx, packet,
                 PermissionValidator.INSTANCE.negate()
                         .or(FromToValidator.INSTANCE)
                         .or(BlackListValidator.INSTANCE)
                         .verify(packet, ctx),
-                null,
                 "权限不足/在黑名单中/被屏蔽/发送方和接收方相等, 请知悉。该消息 {} 被忽略");
     }
 
@@ -104,6 +103,7 @@ public final class One2OneJoinFriendRequestMessageBiProcessor extends AbstractMe
                 if (toUserEntity == null) {
                     log.error("对方:{} 不存在，请检查数据！", message.getTo());
                     MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.USER_NOT_EXIST, message.getTo() + "用户不存在！", packet), MessageEventTypeEnum.EXCEPTION));
+                    ackRequestSettled(ctx, packet);
                     return;
                 }
                 // 尝试设置请求会话信息

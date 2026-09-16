@@ -67,7 +67,7 @@ public abstract class AbstractMessageBiProcessor<T extends Number> extends Abstr
      * 业务校验通过后归档并返回 true；拒绝则回调 onReject 并返回 false。
      *
      * @param shouldReject true 表示拦截
-     * @param onReject     拦截时回调（如释放 QoS claim），可为 null
+     * @param onReject     拦截时回调（如释放 QoS claim 或回 ACK），可为 null
      * @param rejectLog    拒绝日志模板，可含一个 {@code {}} 占位 packet
      */
     protected Mono<Boolean> continueWhenPassed(Packet packet, Mono<Boolean> shouldReject,
@@ -88,6 +88,21 @@ public abstract class AbstractMessageBiProcessor<T extends Number> extends Abstr
                     archiveAfterAuth(packet);
                     return true;
                 });
+    }
+
+    /**
+     * 好友/群请求：权限拒绝视为已定性，回 S2C ACK 停 QoS 重试（聊天消息仍应走 {@link #continueWhenPassed} 释放 claim）。
+     */
+    protected Mono<Boolean> continueWhenPassedOrAck(ChannelHandlerContext ctx, Packet packet,
+                                                    Mono<Boolean> shouldReject, String rejectLog) {
+        return continueWhenPassed(packet, shouldReject, () -> ackRequestSettled(ctx, packet), rejectLog);
+    }
+
+    /**
+     * 请求已定性（幂等忽略 / 客户端错误 / 无会话）：回 ACK。写库或绑定失败不要调用，以便客户端重试。
+     */
+    protected void ackRequestSettled(ChannelHandlerContext ctx, Packet packet) {
+        qosPostHandle(ctx, packet);
     }
 
     /**
