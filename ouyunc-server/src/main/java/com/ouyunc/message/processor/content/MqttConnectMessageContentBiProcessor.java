@@ -30,8 +30,8 @@ import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.utils.MqttCodecUtil;
 import com.ouyunc.base.utils.TimeUtil;
-import com.ouyunc.core.device.DeviceTypeRegistry;
 import com.ouyunc.core.context.MessageContext;
+import com.ouyunc.core.device.DeviceTypeRegistry;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.handler.HeartBeatHandler;
@@ -66,13 +66,14 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.MonoSink;
 
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 /**
- * mqtt connect。username=appKey，password={@code createTime#signature}，与原生登录同一�?MD5 签名�?
+ * mqtt connect。username=appKey，password={@code createTime#signature}，与原生登录同一套 MD5 签名。
  */
 public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcessor<Mono<Void>, Integer> {
     private static final Logger log = LoggerFactory.getLogger(MqttConnectMessageContentBiProcessor.class);
@@ -90,36 +91,55 @@ public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcesso
 
     @Override
     public Mono<Void> process(ChannelHandlerContext ctx, Packet packet) {
-        return Mono.fromRunnable(() -> {
+        // 有序队列需等到 bind/CONNACK 完成后再放行同 channel 下一包
+        return Mono.create(sink -> {
+            try {
+                doConnect(ctx, packet, sink);
+            } catch (Throwable t) {
+                sink.error(t);
+            }
+        });
+    }
+
+    /**
+     * CONNECT 鉴权与异步绑定；CAS 完成后由 {@link #completeMqttConnectAfterRemoteBind} 回写 CONNACK。
+     */
+    private void doConnect(ChannelHandlerContext ctx, Packet packet, MonoSink<Void> sink) {
             long loginTimestamp = TimeUtil.currentTimeMillis();
             Message connectMessage = packet.getMessage();
             MqttVersion mqttVersion = MqttCodecUtil.getMqttVersion(packet.getRetain());
             if (mqttVersion == null) {
                 log.error("MqttConnectMessageProcessor connect 消息解码失败，请检查协议版本是否正确！");
+                sink.success();
                 return;
             }
             if (!MessageServerContext.isAcceptingNewConnections()) {
-                log.warn("MQTT CONNECT 被拒绝：服务摘流�?channel={}", ctx.channel().id().asShortText());
+                log.warn("MQTT CONNECT 被拒绝：服务摘流中 channel={}", ctx.channel().id().asShortText());
                 refuse(ctx, packet, MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
+                sink.success();
                 return;
             }
             if (!MessageServerContext.serverProperties().isMqttEnabled()) {
                 log.warn("MQTT CONNECT 被拒绝：mqtt.enabled=false, channel={}", ctx.channel().id().asShortText());
                 refuse(ctx, packet, MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
+                sink.success();
                 return;
             }
             MqttMessage mqttMessage = MqttCodecUtil.decode(mqttVersion, connectMessage.getContent());
             if (!(mqttMessage instanceof MqttConnectMessage mqttConnectMessage)) {
-                log.error("mqtt 非法连接 connect 消息�?);
+                log.error("mqtt 非法连接 connect 消息！");
+                sink.success();
                 return;
             }
             if (mqttMessage.decoderResult().isFailure()) {
                 refuseDecoderFailure(ctx, packet, mqttMessage.decoderResult().cause());
+                sink.success();
                 return;
             }
             MqttConnectPayload mqttConnectPayload = mqttConnectMessage.payload();
             if (StringUtils.isBlank(mqttConnectPayload.clientIdentifier())) {
                 refuse(ctx, packet, MqttConnectReturnCode.CONNECTION_REFUSED_IDENTIFIER_REJECTED);
+                sink.success();
                 return;
             }
             MqttConnectVariableHeader mqttConnectVariableHeader = mqttConnectMessage.variableHeader();
@@ -129,25 +149,44 @@ public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcesso
             LoginAuthValidator.MqttPassword mqttPassword = LoginAuthValidator.parseMqttPassword(password);
             if (mqttPassword == null) {
                 refuse(ctx, packet, MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
+                sink.success();
                 return;
             }
             MqttLoginClientInfo mqttLoginClientInfo = buildMqttLogin(ctx, mqttConnectPayload, mqttConnectVariableHeader,
                     mqttVersion, appKey, mqttPassword, loginTimestamp);
             if (mqttLoginClientInfo == null || !authenticate(ctx, mqttLoginClientInfo)) {
                 refuse(ctx, packet, MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
+                sink.success();
                 return;
             }
             String comboIdentity = IdentityUtil.generalComboIdentity(
                     mqttLoginClientInfo.getAppKey(), mqttLoginClientInfo.getIdentity(), DeviceTypeEnum.M.getType());
-            // sessionPresent 以绑定前目录是否存在为准，但踢旧必须�?CAS 绑定胜出之后
+            // sessionPresent 以绑定前目录是否存在为准，但踢旧必须在 CAS 绑定胜出之后
             LoginClientInfo cacheLoginClientInfo = MessageServerContext.remoteLoginClientInfoCache.get(
                     CacheConstant.buildLoginCacheKey(mqttLoginClientInfo.getAppKey(), comboIdentity));
             boolean sessionPresent = cacheLoginClientInfo != null && !mqttConnectMessage.variableHeader().isCleanSession();
             installCloseHook(ctx, comboIdentity, mqttLoginClientInfo);
-            ClientHelper.bindAsync(ctx, mqttLoginClientInfo).whenComplete((previous, ex) ->
-                    ctx.executor().execute(() ->
+            ClientHelper.bindAsync(ctx, mqttLoginClientInfo).whenComplete((previous, ex) -> {
+                try {
+                    ctx.executor().execute(() -> {
+                        try {
                             completeMqttConnectAfterRemoteBind(ctx, packet, mqttConnectMessage, sessionPresent,
-                                    mqttLoginClientInfo, previous, loginTimestamp, ex)));
+                                    mqttLoginClientInfo, previous, loginTimestamp, ex);
+                            sink.success();
+                        } catch (Throwable t) {
+                            sink.error(t);
+                        }
+                    });
+                } catch (Throwable scheduleError) {
+                    // EventLoop 已关闭时 execute 可能拒绝，必须结束 Mono 以免有序队列挂死
+                    try {
+                        completeMqttConnectAfterRemoteBind(ctx, packet, mqttConnectMessage, sessionPresent,
+                                mqttLoginClientInfo, previous, loginTimestamp, ex);
+                    } catch (Throwable ignored) {
+                        // ignore secondary failure on teardown
+                    }
+                    sink.success();
+                }
             });
     }
 
@@ -185,7 +224,7 @@ public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcesso
     }
 
     /**
-     * appKey 配额、设备白名单、MQTT 所需 {@link DeviceTypeEnum#M}、签名与客服建档�?
+     * appKey 配额、设备白名单、MQTT 所需 {@link DeviceTypeEnum#M}、签名与客服建档。
      */
     private boolean authenticate(ChannelHandlerContext ctx, MqttLoginClientInfo loginClientInfo) {
         loginClientInfo.setScope(LoginScopeEnum.NORMAL.getType());
@@ -194,7 +233,7 @@ public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcesso
         }
         if (!DeviceTypeRegistry.supports(
                 loginClientInfo.getAppKey(), loginClientInfo.getIdentity(), DeviceTypeEnum.M.getType())) {
-            log.warn("MQTT 登录拒绝：appKey={} 未开通设备类�?M", loginClientInfo.getAppKey());
+            log.warn("MQTT 登录拒绝：appKey={} 未开通设备类型 M", loginClientInfo.getAppKey());
             AppKeyValidator.releaseReservedIfNeeded(loginClientInfo.getAppKey(), ctx);
             return false;
         }
@@ -206,7 +245,7 @@ public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcesso
     }
 
     /**
-     * CAS 绑定胜出后顶号：本机旧连接已�?bind 时关闭；跨节点发 DISCONNECT / 远程登录通知�?
+     * CAS 绑定胜出后顶号：本机旧连接已在 bind 时关闭；跨节点发 DISCONNECT / 远程登录通知。
      */
     private void kickPreviousMqttSessionAfterBindWin(Packet packet, MqttLoginClientInfo mqttLogin,
                                                      LoginClientInfo previous, long loginTimestamp) {
@@ -301,7 +340,7 @@ public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcesso
                 closingLocalLoginClientInfo.getAppKey(), closingComboIdentity, () ->
                         unbindMqttIfSameSession(closingLocalLoginClientInfo, loginClientInfoCacheKey, closingComboIdentity));
         if (!locked) {
-            log.error("mqtt客户�?{} 解绑登录信息失败,原因：获取分布式锁超�?, closingLocalLoginClientInfo);
+            log.error("mqtt客户端 {} 解绑登录信息失败,原因：获取分布式锁超时", closingLocalLoginClientInfo);
         }
         MessageServerContext.publishEvent(new MessageEvent(closingLocalLoginClientInfo, MessageEventTypeEnum.CLIENT_LOGOUT), true);
     }
@@ -314,7 +353,7 @@ public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcesso
         }
         if (!closingLocalLoginClientInfo.getLoginServerAddress().equals(closingRemoteMqttLoginClientInfo.getLoginServerAddress())
                 || closingRemoteMqttLoginClientInfo.getLastLoginTime() != closingLocalLoginClientInfo.getLastLoginTime()) {
-            log.warn("mqtt客户�?{} 解绑登录信息跳过,原因：登录地址或时间戳不匹配（新连接已覆盖�?, closingLocalLoginClientInfo);
+            log.warn("mqtt客户端 {} 解绑登录信息跳过,原因：登录地址或时间戳不匹配（新连接已覆盖）", closingLocalLoginClientInfo);
             return;
         }
         if (closingRemoteMqttLoginClientInfo.getCleanSession() == NumberConstant.NUMBER_1) {
@@ -358,7 +397,7 @@ public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcesso
     }
 
     /**
-     * Redis 与本地注册表绑定成功后发�?CONNACK 并安装心跳管道�?
+     * Redis 与本地注册表绑定成功后发送 CONNACK 并安装心跳管道。
      */
     private void completeMqttConnectAfterRemoteBind(ChannelHandlerContext ctx, Packet packet,
                                                     MqttConnectMessage mqttConnectMessage, boolean sessionPresent,
@@ -370,7 +409,7 @@ public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcesso
             return;
         }
         if (bindError != null) {
-            log.error("mqtt 客户�?{} 登录绑定失败", loginClientInfo.getIdentity(), bindError);
+            log.error("mqtt 客户端 {} 登录绑定失败", loginClientInfo.getIdentity(), bindError);
             MqttMessage connAckMessage = MqttMessageFactory.newMessage(
                     new MqttFixedHeader(MqttMessageType.CONNACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
                     new MqttConnAckVariableHeader(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE, false),
@@ -382,7 +421,7 @@ public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcesso
             return;
         }
         if (!ClientHelper.stillOwnsDirectory(loginClientInfo)) {
-            log.warn("mqtt 登录 fencing 失败，目录已被更新会话覆�?clientId={}", loginClientInfo.getIdentity());
+            log.warn("mqtt 登录 fencing 失败，目录已被更新会话覆盖 clientId={}", loginClientInfo.getIdentity());
             MqttMessage connAckMessage = MqttMessageFactory.newMessage(
                     new MqttFixedHeader(MqttMessageType.CONNACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
                     new MqttConnAckVariableHeader(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE, false),
@@ -394,9 +433,9 @@ public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcesso
             return;
         }
         kickPreviousMqttSessionAfterBindWin(packet, loginClientInfo, previous, loginTimestamp);
-        // CONNACK 前再确认目录归属，缩小踢人后被顶替仍回成功码的窗�?
+        // CONNACK 前再确认目录归属，缩小踢人后被顶替仍回成功码的窗口
         if (!ClientHelper.stillOwnsDirectory(loginClientInfo)) {
-            log.warn("mqtt CONNACK �?fencing 失败 clientId={}", loginClientInfo.getIdentity());
+            log.warn("mqtt CONNACK 前 fencing 失败 clientId={}", loginClientInfo.getIdentity());
             MqttMessage connAckMessage = MqttMessageFactory.newMessage(
                     new MqttFixedHeader(MqttMessageType.CONNACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
                     new MqttConnAckVariableHeader(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE, false),
@@ -430,7 +469,7 @@ public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcesso
     }
 
     /**
-     * cleanSession=0 时重发未收到 PUBACK �?QoS1 报文（DUP=1）�?
+     * cleanSession=0 时重发未收到 PUBACK 的 QoS1 报文（DUP=1）。
      */
     private void replayMqttInflight(ChannelHandlerContext ctx, Packet packet, String appKey, String comboIdentity) {
         Map<Integer, String> inflight = MqttRepository.INSTANCE.loadInflight(appKey, comboIdentity);
@@ -456,7 +495,7 @@ public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcesso
     }
 
     /**
-     * 校验登录信息；MQTT �?{@link #authenticate}�?
+     * 校验登录信息；MQTT 走 {@link #authenticate}。
      */
     public boolean validate(LoginContent loginContent) {
         return LoginAuthValidator.verify(loginContent);

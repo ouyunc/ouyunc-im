@@ -8,7 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * 本机清关�?Caffeine。由 Redis Pub/Sub 驱动，不�?HTTP 接入、不再集�?TCP 扇出、不 bump Redis 版本�?
+ * 本机清关系 Caffeine。由 Redis Pub/Sub 驱动，不再 HTTP 接入、不再集群 TCP 扇出、不 bump Redis 版本。
  */
 public final class RelationCacheInvalidateSupport {
 
@@ -18,7 +18,7 @@ public final class RelationCacheInvalidateSupport {
     }
 
     /**
-     * 应用本机失效；kind 未知或字段不全时静默跳过�?
+     * 应用本机失效；kind 未知或字段不全时静默跳过。
      */
     public static void applyLocal(RelationCacheInvalidateEvent event) {
         if (event == null || StringUtils.isBlank(event.getAppKey())) {

@@ -13,7 +13,7 @@ import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import reactor.core.publisher.Mono;
 
 /**
- * 黑名单校验器：本地布尔缓�?miss �?Redis HGET�?
+ * 黑名单校验器：本地布尔缓存 miss 再 Redis HGET。
  */
 public enum BlackListValidator implements ReactiveValidator<Packet> {
 
@@ -23,7 +23,7 @@ public enum BlackListValidator implements ReactiveValidator<Packet> {
     private static final ReactiveRedisTemplate<String, ?> reactiveRedisTemplate = CacheFactory.REACTIVE_REDIS.instance();
 
     /**
-     * 校验是否在黑名单：在黑名单返�?true，不在返�?false�?
+     * 校验是否在黑名单：在黑名单返回 true，不在返回 false。
      */
     @Override
     public Mono<Boolean> verify(Packet packet, ChannelHandlerContext ctx) {
@@ -35,7 +35,7 @@ public enum BlackListValidator implements ReactiveValidator<Packet> {
         Boolean cached = RelationLocalCache.BLACKLIST.get(RelationLocalCache.blacklistKey(appKey, to, from));
         if (cached != null) {
             if (cached) {
-                log.warn("{} �?{} 的黑名单缓存�?, from, to);
+                log.warn("{} 在 {} 的黑名单缓存中", from, to);
             }
             return Mono.just(cached);
         }

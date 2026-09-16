@@ -28,8 +28,8 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Netty bind 前准备：须在对外端口打开前完成的预热�?Redis 订阅�?
- * <p>�?{@code beforeInitServer} 同步发布 {@link MessageEventTypeEnum#SERVER_PREPARE} 触发�?/p>
+ * Netty bind 前准备：须在对外端口打开前完成的预热与 Redis 订阅。
+ * <p>由 {@code beforeInitServer} 同步发布 {@link MessageEventTypeEnum#SERVER_PREPARE} 触发。</p>
  */
 @EventListener
 class ServerPrepareEventMessageEventListener implements MessageEventListener<MessageEvent> {
@@ -45,25 +45,25 @@ class ServerPrepareEventMessageEventListener implements MessageEventListener<Mes
 
     @Override
     public void onEvent(MessageEvent event) {
-        // appKey / 设备类型：先预热本地表，再挂订阅（须�?bind 前，避免首登空窗�?
+        // appKey / 设备类型：先预热本地表，再挂订阅（须在 bind 前，避免首登空窗）
         warmupAppKeyDeviceTypes();
         AppKeyDeviceTypeSubscriber.start();
-        // 内容安全：订�?Redis 热更新（须在 Netty bind 前）
+        // 内容安全：订阅 Redis 热更新（须在 Netty bind 前）
         ContentSafetyRegistry.getInstance().start();
-        // 关系本机缓存：订�?Redis 失效频道（业务写 Redis �?PUBLISH�?
+        // 关系本机缓存：订阅 Redis 失效频道（业务写 Redis 后 PUBLISH）
         RelationCacheInvalidateSubscriber.start();
-        // 预加�?Lua 脚本 SHA 到本地（集群模式下注意各节点同步�?
+        // 预加载 Lua 脚本 SHA 到本地（集群模式下注意各节点同步）
         preloadLuaScripts();
         log.info("服务初始化前准备完成：appKey 设备类型/内容安全/关系缓存订阅已启动，Lua 已预加载");
     }
 
     /**
-     * 预热 appKey 与设备类型到本机缓存�?
+     * 预热 appKey 与设备类型到本机缓存。
      */
     private void warmupAppKeyDeviceTypes() {
         List<String> warmedAppKeys;
         try {
-            // 先从 ouyunc_im_app 预热 Redis Hash，避�?Redis 空缓存时登录全部�?appKey 不存�?
+            // 先从 ouyunc_im_app 预热 Redis Hash，避免 Redis 空缓存时登录全部报 appKey 不存在
             warmedAppKeys = DefaultRepository.INSTANCE.warmupAppKeys();
         } catch (Exception e) {
             log.error("预热 app-keys 失败", e);
@@ -73,7 +73,7 @@ class ServerPrepareEventMessageEventListener implements MessageEventListener<Mes
         try {
             appKeys = ClientHelper.appKeys();
         } catch (Exception e) {
-            log.error("启动读取 Redis app-keys 失败，使用预热列表兜�?, e);
+            log.error("启动读取 Redis app-keys 失败，使用预热列表兜底", e);
             appKeys = Set.of();
         }
         if (CollectionUtils.isEmpty(appKeys) && CollectionUtils.isNotEmpty(warmedAppKeys)) {
@@ -97,17 +97,15 @@ class ServerPrepareEventMessageEventListener implements MessageEventListener<Mes
         });
         for (int i = 0; i < appKeys.size(); i++) {
             String appKey = appKeys.get(i);
-            Object raw = results.get(i);
-            if (!(raw instanceof Set<?> rawSet) || CollectionUtils.isEmpty(rawSet)) {
-                continue;
+            Set<Byte> deviceTypeSet = (Set<Byte>) results.get(i);
+            if (CollectionUtils.isNotEmpty(deviceTypeSet)) {
+                DeviceTypeRegistry.replaceAppKeyWhitelist(appKey, deviceTypeSet);
             }
-            // Redis 元素可能�?Integer/Long，统一规范�?Byte 后再写入本地缓存
-            DeviceTypeRegistry.replaceAppKeyWhitelist(appKey, rawSet);
         }
     }
 
     /**
-     * �?Lua 脚本 SHA 缓存到本地�?
+     * 将 Lua 脚本 SHA 缓存到本地。
      */
     private void preloadLuaScripts() {
         for (LuaScriptEnum luaScript : LuaScriptEnum.values()) {
