@@ -25,8 +25,7 @@ import java.util.concurrent.CompletionStage;
  *   <li>{@link Mode#CLIENT}：设备校验后 {@code preProcess → process → postProcess}；
  *       外部心跳 {@link MessageTypeEnum#PING_PONG} 不入有序队列</li>
  *   <li>{@link Mode#CLUSTER}：仅 {@code process → postProcess}；
- *       {@link OuyuncMessageTypeEnum#SYN_ACK} / {@link OuyuncMessageTypeEnum#RELATION_CACHE_INVALIDATE}
- *       不入有序队列</li>
+ *       {@link OuyuncMessageTypeEnum#SYN_ACK} 不入有序队列</li>
  * </ul>
  */
 public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
@@ -101,12 +100,9 @@ public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
         if (processor == null) {
             return;
         }
-        // 集群心跳 / 本机关系失效：轻量处理，不占业务有序队列
-        if (packet.getMessageType() == OuyuncMessageTypeEnum.SYN_ACK.getType()
-                || packet.getMessageType() == OuyuncMessageTypeEnum.RELATION_CACHE_INVALIDATE.getType()) {
-            String scene = packet.getMessageType() == OuyuncMessageTypeEnum.SYN_ACK.getType()
-                    ? "集群 SYN/ACK" : "关系缓存失效";
-            runLightProcess(ctx, packet, processor, scene);
+        // 集群心跳：轻量处理，不占业务有序队列
+        if (packet.getMessageType() == OuyuncMessageTypeEnum.SYN_ACK.getType()) {
+            runLightProcess(ctx, packet, processor, "集群 SYN/ACK");
             return;
         }
         ChannelOrderedTasks.executeAsync(ctx.channel(),

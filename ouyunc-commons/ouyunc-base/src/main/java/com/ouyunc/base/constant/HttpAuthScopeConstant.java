@@ -31,13 +31,4 @@ public final class HttpAuthScopeConstant {
      * 须使用独立运维 JWT 密钥签发，不得与业务推送密钥共用。
      */
     public static final String IM_ADMIN_DRAIN = "im:admin:drain";
-
-    /**
-     * 平台身份：可在租户接口中指定其他 appKey。
-     * 仅有租户凭证时必须使用 Principal.appKey。
-     */
-    public static final String IM_ADMIN_PLATFORM = "im:admin:platform";
-
-    /** 本租户关系本机缓存失效（可集群扇出）。 */
-    public static final String IM_RELATION_CACHE = "im:relation-cache";
 }

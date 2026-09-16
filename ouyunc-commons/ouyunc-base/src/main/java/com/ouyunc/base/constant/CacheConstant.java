@@ -671,6 +671,12 @@ public class CacheConstant {
     public static final String CONTENT_SAFETY_RELOAD_ALL = "ALL";
 
     /**
+     * 关系本机缓存失效 Pub/Sub 频道；payload 为 {@code RelationCacheInvalidateEvent} JSON。
+     * <p>IM 与 micro-cloud 须共用同一 Redis 与本频道名。</p>
+     */
+    public static final String RELATION_CACHE_INVALIDATE_CHANNEL = OUYUNC + "im:relation-cache:invalidate";
+
+    /**
      * 媒体审核幂等键（P1）。
      *
      * @param appKey   租户

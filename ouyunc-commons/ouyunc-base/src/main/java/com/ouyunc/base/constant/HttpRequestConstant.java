@@ -39,13 +39,6 @@ public class HttpRequestConstant extends HttpConstant{
     public static final String HTTP_ADMIN_KICK_CLIENTS_PATH = HTTP_API_IM_PREFIX + "/admin/kick-clients";
 
     /**
-     * 关系本机缓存失效。接入节点清 Caffeine 后经集群 TCP 同步到其它租约节点。
-     * 租户 JWT 强制使用 Principal.appKey；跨租户需要 {@link HttpAuthScopeConstant#IM_ADMIN_PLATFORM}。
-     */
-    public static final String HTTP_ADMIN_RELATION_CACHE_INVALIDATE_PATH =
-            HTTP_API_IM_PREFIX + "/admin/relation-cache/invalidate";
-
-    /**
      * HS256 JWT 密钥最短长度（字符），与 {@code Keys.hmacShaKeyFor} 256bit 要求对齐。
      */
     public static final int HTTP_JWT_SECRET_MIN_LENGTH = 32;

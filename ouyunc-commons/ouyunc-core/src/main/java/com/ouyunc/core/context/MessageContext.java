@@ -334,9 +334,9 @@ public class MessageContext {
 
                 // 工具方法：生成带随机偏移的过期时间（单位：纳秒）
                 private long getRandomExpireNanos() {
-                    long baseNanos = TimeUnit.MINUTES.toNanos(NumberConstant.NUMBER_5);
-                    // 随机±30秒偏移
-                    long randomNanos = TimeUnit.SECONDS.toNanos(ThreadLocalRandom.current().nextLong(NumberConstant.NUMBER_NEGATIVE_30, NumberConstant.NUMBER_31));
+                    long baseNanos = TimeUnit.SECONDS.toNanos(MessageConstant.RELATION_ENTITY_LOCAL_CACHE_EXPIRE_SECONDS);
+                    // 随机±5秒偏移，避免雪崩
+                    long randomNanos = TimeUnit.SECONDS.toNanos(ThreadLocalRandom.current().nextLong(NumberConstant.NUMBER_NEGATIVE_5, NumberConstant.NUMBER_6));
                     return baseNanos + randomNanos;
                 }
             })
@@ -454,8 +454,8 @@ public class MessageContext {
 
                 // 工具方法：生成带随机偏移的过期时间（单位：纳秒）
                 private long getRandomExpireNanos() {
-                    long baseNanos = TimeUnit.SECONDS.toNanos(MessageConstant.GROUP_POLICY_LOCAL_CACHE_EXPIRE_SECONDS);
-                    long randomNanos = TimeUnit.SECONDS.toNanos(ThreadLocalRandom.current().nextLong(NumberConstant.NUMBER_NEGATIVE_1, NumberConstant.NUMBER_2));
+                    long baseNanos = TimeUnit.SECONDS.toNanos(MessageConstant.RELATION_ENTITY_LOCAL_CACHE_EXPIRE_SECONDS);
+                    long randomNanos = TimeUnit.SECONDS.toNanos(ThreadLocalRandom.current().nextLong(NumberConstant.NUMBER_NEGATIVE_5, NumberConstant.NUMBER_6));
                     return baseNanos + randomNanos;
                 }
             })

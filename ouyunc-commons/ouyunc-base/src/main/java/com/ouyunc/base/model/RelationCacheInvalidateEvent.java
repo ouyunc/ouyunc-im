@@ -2,20 +2,25 @@ package com.ouyunc.base.model;
 
 import com.ouyunc.base.constant.enums.RelationCacheInvalidateKind;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
- * 关系本机缓存失效事件。业务侧 Redis 写完后 HTTP 打到 IM，接入节点清 Caffeine 并集群同步。
+ * 关系本机缓存失效事件。业务侧 Redis 写完后 PUBLISH 到 IM 节点清 Caffeine。
  * {@code kind} 取值见 {@link RelationCacheInvalidateKind}。
  */
 public class RelationCacheInvalidateEvent {
 
     public static final String KIND_FRIEND_REMOVE = RelationCacheInvalidateKind.FRIEND_REMOVE.name();
 
+    public static final String KIND_FRIEND_SHIELD = RelationCacheInvalidateKind.FRIEND_SHIELD.name();
+
+    public static final String KIND_BLACKLIST = RelationCacheInvalidateKind.BLACKLIST.name();
+
     public static final String KIND_GROUP_QUIT = RelationCacheInvalidateKind.GROUP_QUIT.name();
 
     public static final String KIND_GROUP_DISSOLVE = RelationCacheInvalidateKind.GROUP_DISSOLVE.name();
+
+    public static final String KIND_GROUP_MEMBER_CONFIG = RelationCacheInvalidateKind.GROUP_MEMBER_CONFIG.name();
+
+    public static final String KIND_GROUP_CONFIG = RelationCacheInvalidateKind.GROUP_CONFIG.name();
 
     private String kind;
 
@@ -27,7 +32,10 @@ public class RelationCacheInvalidateEvent {
 
     private String groupId;
 
-    private List<String> memberIds;
+    /**
+     * 屏蔽/拉黑等开关态：true=开启，false=关闭。
+     */
+    private Boolean enabled;
 
     public static RelationCacheInvalidateEvent friendRemove(String appKey, String userId, String peerId) {
         RelationCacheInvalidateEvent event = new RelationCacheInvalidateEvent();
@@ -35,6 +43,26 @@ public class RelationCacheInvalidateEvent {
         event.appKey = appKey;
         event.userId = userId;
         event.peerId = peerId;
+        return event;
+    }
+
+    public static RelationCacheInvalidateEvent friendShield(String appKey, String userId, String peerId, boolean shielded) {
+        RelationCacheInvalidateEvent event = new RelationCacheInvalidateEvent();
+        event.kind = KIND_FRIEND_SHIELD;
+        event.appKey = appKey;
+        event.userId = userId;
+        event.peerId = peerId;
+        event.enabled = shielded;
+        return event;
+    }
+
+    public static RelationCacheInvalidateEvent blacklist(String appKey, String ownerId, String targetId, boolean listed) {
+        RelationCacheInvalidateEvent event = new RelationCacheInvalidateEvent();
+        event.kind = KIND_BLACKLIST;
+        event.appKey = appKey;
+        event.userId = ownerId;
+        event.peerId = targetId;
+        event.enabled = listed;
         return event;
     }
 
@@ -47,12 +75,28 @@ public class RelationCacheInvalidateEvent {
         return event;
     }
 
-    public static RelationCacheInvalidateEvent groupDissolve(String appKey, String groupId, List<String> memberIds) {
+    public static RelationCacheInvalidateEvent groupDissolve(String appKey, String groupId) {
         RelationCacheInvalidateEvent event = new RelationCacheInvalidateEvent();
         event.kind = KIND_GROUP_DISSOLVE;
         event.appKey = appKey;
         event.groupId = groupId;
-        event.memberIds = memberIds == null ? List.of() : new ArrayList<>(memberIds);
+        return event;
+    }
+
+    public static RelationCacheInvalidateEvent groupMemberConfig(String appKey, String groupId, String memberId) {
+        RelationCacheInvalidateEvent event = new RelationCacheInvalidateEvent();
+        event.kind = KIND_GROUP_MEMBER_CONFIG;
+        event.appKey = appKey;
+        event.groupId = groupId;
+        event.userId = memberId;
+        return event;
+    }
+
+    public static RelationCacheInvalidateEvent groupConfig(String appKey, String groupId) {
+        RelationCacheInvalidateEvent event = new RelationCacheInvalidateEvent();
+        event.kind = KIND_GROUP_CONFIG;
+        event.appKey = appKey;
+        event.groupId = groupId;
         return event;
     }
 
@@ -96,11 +140,11 @@ public class RelationCacheInvalidateEvent {
         this.groupId = groupId;
     }
 
-    public List<String> getMemberIds() {
-        return memberIds;
+    public Boolean getEnabled() {
+        return enabled;
     }
 
-    public void setMemberIds(List<String> memberIds) {
-        this.memberIds = memberIds;
+    public void setEnabled(Boolean enabled) {
+        this.enabled = enabled;
     }
 }

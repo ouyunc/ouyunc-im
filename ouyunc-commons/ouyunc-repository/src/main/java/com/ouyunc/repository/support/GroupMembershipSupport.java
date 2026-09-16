@@ -516,17 +516,10 @@ public final class GroupMembershipSupport {
 
     @SuppressWarnings("unchecked")
     public boolean inGroup(String appKey, String from, String groupId) {
+        // 存在性只信布尔 L1 + Redis ZSET；identity/实体缓存仅服务扇出与配置，不反推在群
         Boolean cached = RelationLocalCache.GROUP_MEMBER.get(RelationLocalCache.groupMemberKey(appKey, groupId, from));
         if (cached != null) {
             return cached;
-        }
-        // 不以 groupUserEntity Caffeine 作为在群证明：踢人后配置缓存可能仍在，ZSET 才是成员源
-        Set<String> identities = MessageContext.groupUserIdentityCache.get(
-                CacheConstant.buildGroupUserCacheKey(appKey, groupId));
-        if (identities != null) {
-            boolean member = identities.contains(from);
-            RelationLocalCache.markGroupMember(appKey, groupId, from, member);
-            return member;
         }
         boolean member = infra.stringRedisTemplate.opsForZSet().score(
                 CacheConstant.buildGroupUserCacheKey(appKey, groupId), from) != null;

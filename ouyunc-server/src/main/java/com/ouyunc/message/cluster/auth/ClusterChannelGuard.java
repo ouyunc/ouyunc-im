@@ -127,14 +127,13 @@ public final class ClusterChannelGuard {
         return false;
     }
 
-    /** 未路由的内部包只允许集群心跳/关系失效/认证，禁止走外部业务 Processor。 */
+    /** 未路由的内部包只允许集群心跳/认证，禁止走外部业务 Processor。 */
     public static boolean isInternalClusterMessage(Packet packet) {
         if (packet == null) {
             return false;
         }
         byte type = packet.getMessageType();
         return type == OuyuncMessageTypeEnum.SYN_ACK.getType()
-                || type == OuyuncMessageTypeEnum.RELATION_CACHE_INVALIDATE.getType()
                 || type == OuyuncMessageTypeEnum.CLUSTER_AUTH.getType();
     }
 

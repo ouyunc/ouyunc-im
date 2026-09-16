@@ -103,15 +103,10 @@ public final class FriendRepositorySupport {
 
     @SuppressWarnings("unchecked")
     public boolean isFriend(String appKey, String from, String to) {
+        // 存在性只信布尔 L1 + Redis ZSET，禁止用 friendEntityCache 推断（配置缓存与关系脱钩）
         Boolean cached = RelationLocalCache.FRIEND.get(RelationLocalCache.friendKey(appKey, from, to));
         if (cached != null) {
             return cached;
-        }
-        String cacheKey = CacheConstant.buildFriendsConfigCacheKey(appKey, from, to);
-        FriendEntity friendEntity = MessageContext.friendEntityCache.get(cacheKey);
-        if (friendEntity != null) {
-            RelationLocalCache.markFriend(appKey, from, to, true);
-            return true;
         }
         boolean friend = infra.stringRedisTemplate.opsForZSet().score(
                 CacheConstant.buildFriendsCacheKey(appKey, from), to) != null;
@@ -307,12 +302,8 @@ public final class FriendRepositorySupport {
     }
 
     private One2OneChatAccess loadOne2OneChatAccessFromLocal(String appKey, String from, String to) {
+        // 好友存在性只看布尔 L1；实体缓存仅补 shield 配置，不反推 isFriend
         Boolean friendHit = RelationLocalCache.FRIEND.get(RelationLocalCache.friendKey(appKey, to, from));
-        if (friendHit == null && MessageContext.friendEntityCache.get(
-                CacheConstant.buildFriendsConfigCacheKey(appKey, to, from)) != null) {
-            friendHit = Boolean.TRUE;
-            RelationLocalCache.markFriend(appKey, from, to, true);
-        }
         Boolean blackHit = RelationLocalCache.BLACKLIST.get(RelationLocalCache.blacklistKey(appKey, to, from));
         FriendEntity toFromEntity = MessageContext.friendEntityCache.get(
                 CacheConstant.buildFriendsConfigCacheKey(appKey, to, from));

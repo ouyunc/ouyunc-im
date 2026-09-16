@@ -3,18 +3,30 @@ package com.ouyunc.base.constant.enums;
 import org.apache.commons.lang3.StringUtils;
 
 /**
- * 关系本机缓存失效类型。HTTP 与集群同步必须使用枚举值，避免任意 kind 放大清理范围。
+ * 关系本机缓存失效类型。Pub/Sub 必须使用枚举值，避免任意 kind 放大清理范围。
  */
 public enum RelationCacheInvalidateKind {
 
     /** 解除好友：需要 userId、peerId。 */
     FRIEND_REMOVE,
 
+    /** 好友屏蔽变更：需要 userId、peerId、enabled。 */
+    FRIEND_SHIELD,
+
+    /** 拉黑/取消拉黑：需要 userId(owner)、peerId(target)、enabled。 */
+    BLACKLIST,
+
     /** 退群/踢人：需要 groupId、userId。 */
     GROUP_QUIT,
 
-    /** 解散群：需要 groupId；memberIds 可选，有则受上限约束。 */
-    GROUP_DISSOLVE;
+    /** 解散群：需要 groupId；本机 epoch bump，无需 memberIds。 */
+    GROUP_DISSOLVE,
+
+    /** 群成员配置变更（禁言/成员级屏蔽等）：需要 groupId、userId，只清实体配置缓存。 */
+    GROUP_MEMBER_CONFIG,
+
+    /** 群配置变更（全员禁言等）：需要 groupId，只清群实体缓存。 */
+    GROUP_CONFIG;
 
     /**
      * 解析 kind；空白或未知返回 {@code null}。

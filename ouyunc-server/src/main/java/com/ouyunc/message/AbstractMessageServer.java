@@ -14,6 +14,7 @@ import com.ouyunc.message.channel.DefaultSocketChannelInitializer;
 import com.ouyunc.message.channel.NativeIoTransport;
 import com.ouyunc.message.channel.ServerChannelInitializer;
 import com.ouyunc.message.channel.SocketChannelInitializer;
+import com.ouyunc.message.cluster.RelationCacheInvalidateSubscriber;
 import com.ouyunc.message.cluster.client.DefaultMessageClient;
 import com.ouyunc.message.cluster.client.MessageClient;
 import com.ouyunc.message.cluster.lease.NodeLeaseKeeper;
@@ -164,6 +165,8 @@ public abstract class AbstractMessageServer implements MessageServer {
         MessageServerContext.addDeviceType(DeviceTypeEnum.class);
         // 内容安全：订阅 Redis 热更新（须在 Netty bind 前，否则首包可能仍用空词库）
         ContentSafetyRegistry.getInstance().start();
+        // 关系本机缓存：订阅 Redis 失效频道（业务写 Redis 后 PUBLISH）
+        RelationCacheInvalidateSubscriber.start();
         // 发布预加载lua脚本事件
         MessageServerContext.publishEvent(new MessageEvent(LuaScriptEnum.values(), MessageEventTypeEnum.PRELOAD_LUA_SCRIPT), true);
 

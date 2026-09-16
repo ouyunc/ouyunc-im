@@ -7,10 +7,13 @@ import com.ouyunc.cache.Cache;
 import com.ouyunc.cache.local.caffeine.CaffeineLocalCache;
 import org.apache.commons.lang3.StringUtils;
 
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 好友/群成员/拉黑 热路径布尔缓存。未命中再打 Redis；写入关系时主动 mark，避免每条消息 ZSCORE。
+ * <p>群成员键带本地 epoch：解散时 bump epoch，无需枚举全员即可使旧布尔键失效。</p>
  */
 public final class RelationLocalCache {
 
@@ -22,12 +25,18 @@ public final class RelationLocalCache {
     public static final Cache<String, Boolean> BLACKLIST = newBooleanCache("relationBlacklist");
     public static final Cache<String, Boolean> SHIELD = newBooleanCache("relationShield");
 
+    /**
+     * 本机群成员布尔缓存世代。解散群时递增；键含 epoch，旧世代键自然 miss。
+     */
+    private static final ConcurrentHashMap<String, AtomicLong> GROUP_MEMBER_EPOCH = new ConcurrentHashMap<>();
+
     public static String friendKey(String appKey, String ownerId, String peerId) {
         return CacheConstant.buildFriendsCacheKey(appKey, ownerId) + ":" + peerId;
     }
 
     public static String groupMemberKey(String appKey, String groupId, String memberId) {
-        return CacheConstant.buildGroupUserCacheKey(appKey, groupId) + ":" + memberId;
+        long epoch = currentGroupMemberEpoch(appKey, groupId);
+        return CacheConstant.buildGroupUserCacheKey(appKey, groupId) + ":" + memberId + "@" + epoch;
     }
 
     public static String blacklistKey(String appKey, String ownerId, String targetId) {
@@ -56,25 +65,8 @@ public final class RelationLocalCache {
         SHIELD.put(shieldKey(appKey, ownerId, peerId), Boolean.valueOf(shielded));
     }
 
-    public static void invalidateGroupMember(String appKey, String groupId, String memberId) {
-        GROUP_MEMBER.delete(groupMemberKey(appKey, groupId, memberId));
-    }
-
-    public static void invalidateBlacklist(String appKey, String ownerId, String targetId) {
-        BLACKLIST.delete(blacklistKey(appKey, ownerId, targetId));
-    }
-
-    public static void invalidateFriend(String appKey, String userA, String userB) {
-        FRIEND.delete(friendKey(appKey, userA, userB));
-        FRIEND.delete(friendKey(appKey, userB, userA));
-    }
-
-    public static void invalidateShield(String appKey, String ownerId, String peerId) {
-        SHIELD.delete(shieldKey(appKey, ownerId, peerId));
-    }
-
     /**
-     * 删好友：布尔关系写成 false（避免下一条消息再被实体缓存误判为好友）+ 删好友配置/屏蔽。
+     * 删好友：布尔关系写成 false（避免下一条消息再被误判为好友）+ 删好友配置/屏蔽。
      */
     public static void evictFriend(String appKey, String userA, String userB) {
         if (StringUtils.isAnyBlank(appKey, userA, userB)) {
@@ -85,6 +77,27 @@ public final class RelationLocalCache {
         markShield(appKey, userB, userA, false);
         MessageContext.friendEntityCache.delete(CacheConstant.buildFriendsConfigCacheKey(appKey, userA, userB));
         MessageContext.friendEntityCache.delete(CacheConstant.buildFriendsConfigCacheKey(appKey, userB, userA));
+    }
+
+    /**
+     * 好友屏蔽变更：写布尔 + 清配置实体（存在性不变）。
+     */
+    public static void evictFriendShield(String appKey, String ownerId, String peerId, boolean shielded) {
+        if (StringUtils.isAnyBlank(appKey, ownerId, peerId)) {
+            return;
+        }
+        markShield(appKey, ownerId, peerId, shielded);
+        MessageContext.friendEntityCache.delete(CacheConstant.buildFriendsConfigCacheKey(appKey, ownerId, peerId));
+    }
+
+    /**
+     * 拉黑/取消拉黑：写布尔缓存，避免下一条消息沿用旧态。
+     */
+    public static void evictBlacklist(String appKey, String ownerId, String targetId, boolean listed) {
+        if (StringUtils.isAnyBlank(appKey, ownerId, targetId)) {
+            return;
+        }
+        markBlacklist(appKey, ownerId, targetId, listed);
     }
 
     /**
@@ -100,24 +113,56 @@ public final class RelationLocalCache {
     }
 
     /**
-     * 解散群：群实体 + 全员成员缓存 + identity 列表。
+     * 群成员配置变更（禁言/成员屏蔽）：只清配置实体，不改在群布尔。
      */
-    public static void evictGroup(String appKey, String groupId, Iterable<String> memberIds) {
+    public static void evictGroupMemberConfig(String appKey, String groupId, String memberId) {
+        if (StringUtils.isAnyBlank(appKey, groupId, memberId)) {
+            return;
+        }
+        MessageContext.groupUserEntityCache.delete(CacheConstant.buildGroupUserConfigCacheKey(appKey, memberId, groupId));
+    }
+
+    /**
+     * 群配置变更（全员禁言等）：只清群实体。
+     */
+    public static void evictGroupConfig(String appKey, String groupId) {
         if (StringUtils.isAnyBlank(appKey, groupId)) {
             return;
         }
         MessageContext.groupEntityCache.delete(CacheConstant.buildGroupCacheKey(appKey, groupId));
-        MessageContext.groupUserIdentityCache.delete(CacheConstant.buildGroupUserCacheKey(appKey, groupId));
-        if (memberIds == null) {
+    }
+
+    /**
+     * 解散群：bump 本机 epoch（使全员布尔键 miss）+ 清群实体与 identity，无需枚举 memberIds。
+     */
+    public static void evictGroup(String appKey, String groupId) {
+        if (StringUtils.isAnyBlank(appKey, groupId)) {
             return;
         }
-        for (String memberId : memberIds) {
-            if (StringUtils.isBlank(memberId)) {
-                continue;
-            }
-            markGroupMember(appKey, groupId, memberId, false);
-            MessageContext.groupUserEntityCache.delete(CacheConstant.buildGroupUserConfigCacheKey(appKey, memberId, groupId));
+        bumpGroupMemberEpoch(appKey, groupId);
+        MessageContext.groupEntityCache.delete(CacheConstant.buildGroupCacheKey(appKey, groupId));
+        MessageContext.groupUserIdentityCache.delete(CacheConstant.buildGroupUserCacheKey(appKey, groupId));
+    }
+
+    private static long currentGroupMemberEpoch(String appKey, String groupId) {
+        if (StringUtils.isAnyBlank(appKey, groupId)) {
+            return 0L;
         }
+        AtomicLong epoch = GROUP_MEMBER_EPOCH.get(epochMapKey(appKey, groupId));
+        return epoch == null ? 0L : epoch.get();
+    }
+
+    private static long bumpGroupMemberEpoch(String appKey, String groupId) {
+        if (StringUtils.isAnyBlank(appKey, groupId)) {
+            return 0L;
+        }
+        return GROUP_MEMBER_EPOCH
+                .computeIfAbsent(epochMapKey(appKey, groupId), k -> new AtomicLong(0L))
+                .incrementAndGet();
+    }
+
+    private static String epochMapKey(String appKey, String groupId) {
+        return appKey + ":" + groupId;
     }
 
     private static Cache<String, Boolean> newBooleanCache(String name) {

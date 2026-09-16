@@ -52,48 +52,6 @@ public final class HttpAdminAuth {
     }
 
     /**
-     * 关系缓存失效：始终要求业务推送 JWT（与运维入口开关无关）。
-     * 本租户需要 {@link HttpAuthScopeConstant#IM_RELATION_CACHE}；跨租户还需要平台权限。
-     */
-    public static HttpAuthPrincipal requireRelationCache(HttpContext httpContext) throws HttpPipelineException {
-        MessageServerProperties props = MessageServerContext.serverProperties();
-        String secret = props != null ? props.getHttpPushJwtSecret() : null;
-        if (!HttpJwtAuth.hasValidSecret(secret)) {
-            throw new HttpPipelineException(HttpResponseStatus.INTERNAL_SERVER_ERROR,
-                    HttpResponseCodeEnum.INTERNAL_SERVER_ERROR,
-                    "关系缓存失效需要配置 ouyunc.message.http-push.jwt.secret");
-        }
-        HttpAuthPrincipal principal = HttpJwtAuth.parseBearer(httpContext, secret, false);
-        if (!principal.hasAnyScope(HttpAuthScopeConstant.IM_RELATION_CACHE, HttpAuthScopeConstant.IM_ADMIN_PLATFORM)) {
-            throw HttpJwtAuth.forbidden("缺少关系缓存失效权限（需要 scope: "
-                    + HttpAuthScopeConstant.IM_RELATION_CACHE + " 或 "
-                    + HttpAuthScopeConstant.IM_ADMIN_PLATFORM + "）");
-        }
-        httpContext.setAuthPrincipal(principal);
-        return principal;
-    }
-
-    /**
-     * 租户凭证强制使用 Principal.appKey；仅平台权限可指定其他租户。
-     *
-     * @return 实际生效的 appKey
-     */
-    public static String bindTenantAppKey(HttpAuthPrincipal principal, String requestedAppKey)
-            throws HttpPipelineException {
-        if (principal == null || StringUtils.isBlank(principal.getAppKey())) {
-            throw HttpJwtAuth.unauthorized("缺少鉴权主体 appKey");
-        }
-        String principalAppKey = principal.getAppKey();
-        if (principal.hasScope(HttpAuthScopeConstant.IM_ADMIN_PLATFORM)) {
-            return StringUtils.isNotBlank(requestedAppKey) ? requestedAppKey.trim() : principalAppKey;
-        }
-        if (StringUtils.isNotBlank(requestedAppKey) && !StringUtils.equals(requestedAppKey.trim(), principalAppKey)) {
-            throw HttpJwtAuth.forbidden("无权指定其他租户 appKey");
-        }
-        return principalAppKey;
-    }
-
-    /**
      * 原因优先取 query {@code reason}，其次请求头 {@link HttpRequestConstant#HTTP_HEADER_ADMIN_REASON}。
      */
     public static String resolveReason(HttpContext httpContext, String queryReason) {
