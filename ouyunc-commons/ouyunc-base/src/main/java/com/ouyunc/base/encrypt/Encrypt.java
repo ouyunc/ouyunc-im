@@ -4,7 +4,6 @@ package com.ouyunc.base.encrypt;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.utils.MD5Util;
-import com.ouyunc.base.utils.ObjectUtil;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.slf4j.Logger;
@@ -60,19 +59,12 @@ public class Encrypt {
         NONE(NumberConstant.NUMBER_0, "none", "不加密", null) {
             @Override
             public <T> byte[] encrypt(T t) {
-                if (t instanceof byte[] bytes) {
-                    return bytes;
-                }
-                return ObjectUtil.serialize(t);
+                return toPlainBytes(t);
             }
 
             @Override
-            @SuppressWarnings("unchecked")
             public <T> T decrypt(byte[] bytes, Class<T> tClass) {
-                if (tClass != null && tClass.isAssignableFrom(byte[].class)) {
-                    return (T) bytes;
-                }
-                return ObjectUtil.deserialize(bytes);
+                return fromPlainBytes(bytes, tClass);
             }
         },
         DES(NumberConstant.NUMBER_1, "des", "DES加密算法", CipherAlgorithm.DES),
@@ -134,14 +126,14 @@ public class Encrypt {
         }
 
         /**
-         * 加密：入参为对象时先 JDK 序列化，为 {@code byte[]} 时直接加密字节。
+         * 加密：仅接受 {@code byte[]}，禁止对象级 JDK 序列化。
          */
         public <T> byte[] encrypt(T t) {
             return symmetricEncrypt(toPlainBytes(t), cipherAlgorithm);
         }
 
         /**
-         * 解密：目标类型为 {@code byte[].class} 时返回明文字节，否则 JDK 反序列化。
+         * 解密：仅支持目标类型 {@code byte[].class}，返回明文字节。
          */
         public <T> T decrypt(byte[] bytes, Class<T> tClass) {
             byte[] plain = symmetricDecrypt(bytes, cipherAlgorithm);
@@ -283,11 +275,7 @@ public class Encrypt {
         if (input instanceof byte[] bytes) {
             return bytes;
         }
-        byte[] serialized = ObjectUtil.serialize(input);
-        if (serialized == null) {
-            throw new MessageException("对称加密前序列化失败");
-        }
-        return serialized;
+        throw new MessageException("对称加密仅支持 byte[]，已移除 JDK 序列化");
     }
 
     @SuppressWarnings("unchecked")
@@ -296,13 +284,9 @@ public class Encrypt {
             throw new MessageException("解密目标类型不能为空");
         }
         if (byte[].class.equals(clazz)) {
-            return (T) plain;
+            return (T) (plain == null ? new byte[0] : plain);
         }
-        T result = ObjectUtil.deserialize(plain);
-        if (result == null) {
-            throw new MessageException("对称解密后反序列化失败");
-        }
-        return result;
+        throw new MessageException("对称解密仅支持 byte[]，已移除 JDK 反序列化");
     }
 
     private static byte[] symmetricEncrypt(byte[] plain, CipherAlgorithm algorithm) {

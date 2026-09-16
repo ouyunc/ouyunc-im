@@ -67,7 +67,7 @@ public class Packet implements Serializable, Cloneable{
     private byte encryptType;
 
     /**
-     * 序列化算法 1 个字节，json/jdk/hessian/kryo/protoStuff(protoBUf),默认是protobuf
+     * 序列化算法 1 个字节，仅 json / protoStuff；取值 1（原 JDK）已废弃
      */
     @Tag(8)
     private byte serializeAlgorithm;

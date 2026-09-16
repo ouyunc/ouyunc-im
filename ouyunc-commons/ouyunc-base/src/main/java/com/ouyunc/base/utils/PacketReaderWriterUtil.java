@@ -54,7 +54,7 @@ public class PacketReaderWriterUtil {
         final byte networkType = in.readByte();
         //消息加密，1个字节，加密方式，不加密/AES/...对称加密，防止消息泄密
         final byte encryptType = in.readByte();
-        //序列化算法 1 个字节，json/jdk/hessian/kryo/protoStuff(protoBUf)
+        //序列化算法 1 个字节，仅 json / protoStuff
         final byte serializeAlgorithm = in.readByte();
         //消息类型，1个字节
         final byte messageType = in.readByte();
@@ -75,11 +75,12 @@ public class PacketReaderWriterUtil {
         byte[] messageContentBytes = new byte[messageLength];
         //将消息内容n个字节读到字节数组中
         in.readBytes(messageContentBytes);
+        // 先解析序列化算法：未知取值（含已废弃的 JDK=1）直接拒绝，避免先解密再失败
+        final Serializer serializer = Serializer.prototype(serializeAlgorithm);
         //判断是否需要加密，何种算法加密
         final Encrypt.SymmetryEncrypt encryptEnum = Encrypt.SymmetryEncrypt.prototype(encryptType);
         final byte[] decryptMessageBytes = encryptEnum.decrypt(messageContentBytes, byte[].class);
-        // 得到一个完整的包,需要根据具体的消息类型获取消息class
-        final Message message = Serializer.prototype(serializeAlgorithm).deserialize(decryptMessageBytes, Message.class);
+        final Message message = serializer.deserialize(decryptMessageBytes, Message.class);
         // 将解码后的数据添加集合中
         return new Packet(protocol, protocolVersion, packetId, deviceType, networkType, encryptType,serializeAlgorithm, messageType, retain, messageLength, message);
     }
@@ -104,7 +105,7 @@ public class PacketReaderWriterUtil {
         out.writeByte(packet.getNetworkType());
         //message消息加密，1个字节，加密方式，不加密/AES/...对称加密，防止消息泄密
         out.writeByte(packet.getEncryptType());
-        //序列化算法 1 个字节，json/jdk/hessian/kryo/protoStuff(protoBUf)
+        //序列化算法 1 个字节，仅 json / protoStuff
         out.writeByte(packet.getSerializeAlgorithm());
         //消息类型 1 个字节，如 RPC 框架中有请求、响应、心跳类型。IM 通讯场景中有登陆、创建群聊、发送消息、接收消息、退出群聊等类型。
         out.writeByte(packet.getMessageType());

@@ -3,7 +3,6 @@ package com.ouyunc.base.serialize;
 
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.exception.MessageException;
-import com.ouyunc.base.utils.ObjectUtil;
 import io.protostuff.LinkedBuffer;
 import io.protostuff.ProtobufIOUtil;
 import io.protostuff.Schema;
@@ -22,17 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
  **/
 public enum Serializer {
 
-    JDK(NumberConstant.NUMBER_1, "jdk", "jdk 序列化") {
-        @Override
-        public  <T> byte[] serialize(T t)  {
-            return ObjectUtil.serialize(t);
-        }
-
-        @Override
-        public  <T> T deserialize(byte[] data, Class<T> cls) {
-            return ObjectUtil.deserialize(data);
-        }
-    },
+    /** 取值 2；取值 1（原 JDK 序列化）已废弃，入站会按未知算法拒绝。 */
     JSON(NumberConstant.NUMBER_2, "json", "json 序列化") {
         @Override
         public  <T> byte[] serialize(T t)  {
