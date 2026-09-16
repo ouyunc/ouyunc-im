@@ -152,10 +152,6 @@ public final class ThreadPoolManager {
         return (ScheduledExecutorService) getExecutor(ThreadPoolId.SYSTEM_CLOCK);
     }
 
-    public static ExecutorService redisPubSubExecutor() {
-        return getExecutor(ThreadPoolId.REDIS_PUBSUB);
-    }
-
     public static ExecutorService httpPushVerifyExecutor() {
         return getExecutor(ThreadPoolId.HTTP_PUSH_VERIFY);
     }

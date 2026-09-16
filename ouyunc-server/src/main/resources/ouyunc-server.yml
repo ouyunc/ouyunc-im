@@ -181,10 +181,6 @@ ouyunc:
         type: SCHEDULED
         core-size: 1
         thread-name-prefix: system-clock
-      # 单线程池（无需配置大小参数）
-      redis-pubsub:
-        type: SINGLE
-        thread-name-prefix: redis-pubsub-listener
 
     # Netty 线程组线程数配置
     boss:

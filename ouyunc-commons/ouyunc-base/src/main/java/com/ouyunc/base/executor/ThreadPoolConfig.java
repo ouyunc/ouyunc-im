@@ -79,11 +79,6 @@ public final class ThreadPoolConfig {
                 .threadNamePrefix("system-clock")
                 .daemon(true)
                 .build());
-        defaults.put(ThreadPoolId.REDIS_PUBSUB, PoolConfig.builder()
-                .type(ThreadPoolType.SINGLE)
-                .threadNamePrefix("redis-pubsub")
-                .daemon(true)
-                .build());
         defaults.put(ThreadPoolId.HTTP_PUSH_VERIFY, PoolConfig.builder()
                 .type(ThreadPoolType.VIRTUAL)
                 .threadNamePrefix("http-push-verify")

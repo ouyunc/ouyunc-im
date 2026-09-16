@@ -15,8 +15,6 @@ public enum MessageEventTypeEnum implements EventType {
     SERVER_STOP(4, "服务停止事件"),
     /** source: {@code String(serverAddress)} */
     SERVER_OFFLINE(5, "集群节点离线事件"),
-    /** source: {@code LuaScriptEnum[]} */
-    PRELOAD_LUA_SCRIPT(6, "预加载Lua脚本事件"),
     /** source: {@code SendResult} */
     SEND_FAIL(7, "消息发送失败事件"),
     /** source: {@code Packet | BusinessPayload} */
@@ -29,6 +27,11 @@ public enum MessageEventTypeEnum implements EventType {
     ON_MESSAGE(14, "客户端收消息事件"),
     /** source: {@code ClientBusinessSessionIdlePayload}（ouyunc-core：loginInfo、连续次数 strike、ChannelHandlerContext） */
     CLIENT_BUSINESS_SESSION_IDLE(16, "客户端业务会话空闲事件"),
+    /**
+     * Netty bind 前的准备事件（须同步发布）。
+     * <p>source: {@code String(localServerAddress)} 或占位 Object。</p>
+     */
+    SERVER_PREPARE(17, "服务初始化前准备事件"),
     ;
 
     private final int type;

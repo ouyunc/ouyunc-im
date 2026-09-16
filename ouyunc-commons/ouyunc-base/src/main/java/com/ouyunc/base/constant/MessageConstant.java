@@ -266,11 +266,13 @@ public class MessageConstant {
 
 
     /**
-     *  app key  变动 publish topic
+     * appKey 设备类型变更频道（Redisson Topic）。
+     * <p>payload：{@link com.ouyunc.base.model.AppKeyDeviceType} JSON 字符串。</p>
      */
     public static final String APP_KEY_PUBLISH_TOPIC = "app_key_publish_topic";
     /**
-     *  客户端 的 app key  变动 publish topic
+     * 客户端设备类型变更频道（Redisson Topic）。
+     * <p>payload：{@link com.ouyunc.base.model.ClientAppKeyDeviceType} JSON 字符串。</p>
      */
     public static final String CLIENT_APP_KEY_PUBLISH_TOPIC = "client_app_key_publish_topic";
 

@@ -149,8 +149,8 @@ public final class ResourceMonitor {
     /**
      * 启动定期监控（默认每5分钟输出一次）
      */
-    public static void startMonitoring() {
-        startMonitoring(1, TimeUnit.MINUTES);
+    public static void start() {
+        start(1, TimeUnit.MINUTES);
     }
 
     /**
@@ -159,7 +159,7 @@ public final class ResourceMonitor {
      * @param period 监控周期
      * @param unit   时间单位
      */
-    public static void startMonitoring(long period, TimeUnit unit) {
+    public static void start(long period, TimeUnit unit) {
         if (monitoring) {
             log.warn("监控已启动，无需重复启动");
             return;

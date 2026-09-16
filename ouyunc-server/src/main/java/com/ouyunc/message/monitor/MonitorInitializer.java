@@ -63,8 +63,8 @@ public class MonitorInitializer {
      * 启动定期监控
      * 默认每5分钟输出一次监控报告
      */
-    public static void startMonitoring() {
-        ResourceMonitor.startMonitoring();
+    public static void start() {
+        ResourceMonitor.start();
     }
 
     /**
@@ -72,8 +72,8 @@ public class MonitorInitializer {
      *
      * @param periodMinutes 监控周期（分钟）
      */
-    public static void startMonitoring(int periodMinutes) {
-        ResourceMonitor.startMonitoring(periodMinutes, java.util.concurrent.TimeUnit.MINUTES);
+    public static void start(int periodMinutes) {
+        ResourceMonitor.start(periodMinutes, java.util.concurrent.TimeUnit.MINUTES);
     }
 
     private static void registerCache(Object cache) {

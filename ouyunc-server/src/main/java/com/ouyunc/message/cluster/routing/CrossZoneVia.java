@@ -13,12 +13,15 @@ public enum CrossZoneVia {
     /** 跨分区允许任意可达节点（兼容 flat 行为） */
     ANY;
 
+    /** 配置项取值：跨分区允许任意可达节点 */
+    private static final String VALUE_ANY = "any";
+
     public static CrossZoneVia from(String value) {
         if (StringUtils.isBlank(value)) {
             return GATEWAY;
         }
         return switch (value.trim().toLowerCase()) {
-            case "any" -> ANY;
+            case VALUE_ANY -> ANY;
             default -> GATEWAY;
         };
     }
