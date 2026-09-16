@@ -62,6 +62,9 @@ public final class GroupMembershipSupport {
         this.session = session;
     }
 
+    /**
+     * 群成员 identity 集合。权威回源失败抛 {@link GroupMembershipLoadException}，不得当成空群。
+     */
     @SuppressWarnings("unchecked")
     public Set<String> groupUsersIdentity(Packet packet) {
         Message message = packet.getMessage();
@@ -80,12 +83,7 @@ public final class GroupMembershipSupport {
         }
         String versionBefore = currentRelationVersion(appKey, groupId);
         List<GroupUserEntity> dbMembers;
-        try {
-            dbMembers = loadAllGroupUsersFromAuthority(appKey, groupId);
-        } catch (GroupMembershipLoadException e) {
-            log.error("群成员权威回源失败，拒绝写入空缓存 groupId={}", groupId, e);
-            return new HashSet<>();
-        }
+        dbMembers = loadAllGroupUsersFromAuthority(appKey, groupId);
         if (dbMembers.isEmpty()) {
             // Redis miss 且库中确认无成员：禁止把空集写入 Caffeine，避免误当成「群已空」
             return new HashSet<>();
@@ -310,8 +308,8 @@ public final class GroupMembershipSupport {
         MessageContext.groupUserIdentityCache.put(cacheKey, Set.copyOf(ids));
     }
 
-    private static final class GroupMembershipLoadException extends RuntimeException {
-        private GroupMembershipLoadException(String message, Throwable cause) {
+    public static final class GroupMembershipLoadException extends RuntimeException {
+        public GroupMembershipLoadException(String message, Throwable cause) {
             super(message, cause);
         }
     }
@@ -338,11 +336,13 @@ public final class GroupMembershipSupport {
             return fromMysql;
         }
 
-        // 4. MySQL miss 时再尝试 Mongo（仅兜底，仍写缓存供投递 channel）
+        // 4. MySQL miss 时再尝试 Mongo（须先确认群属于本 appKey，成员文档本身无租户字段）
         try {
+            if (getGroupEntity(appKey, groupId) == null) {
+                return null;
+            }
             MongoGroupUserEntity mongoGroupUser = infra.mongoTemplate.findOne(
-                    Query.query(Criteria.where(MongoGroupUserEntity.Fields.userId).is(Long.parseLong(memberId))
-                            .and(MongoGroupUserEntity.Fields.groupId).is(Long.parseLong(groupId))),
+                    mongoGroupUserQuery(groupId, memberId),
                     MongoGroupUserEntity.class);
             if (mongoGroupUser != null) {
                 groupUserEntity = convertMongoGroupUserToGroupUser(mongoGroupUser);
@@ -478,11 +478,13 @@ public final class GroupMembershipSupport {
                                             .thenReturn(groupUserEntity);
                                 })
                                 .switchIfEmpty(
-                                        // 4. Mongo 兜底
-                                        infra.reactiveMongoTemplate.findOne(
-                                                        Query.query(Criteria.where(MongoGroupUserEntity.Fields.userId).is(Long.parseLong(memberId))
-                                                                .and(MongoGroupUserEntity.Fields.groupId).is(Long.parseLong(groupId))),
-                                                        MongoGroupUserEntity.class)
+                                        // 4. Mongo 兜底：群必须属于本 appKey
+                                        Mono.fromCallable(() -> getGroupEntity(appKey, groupId) != null)
+                                                .subscribeOn(Schedulers.fromExecutor(infra.dbExecutor()))
+                                                .filter(Boolean::booleanValue)
+                                                .flatMap(ignored -> infra.reactiveMongoTemplate.findOne(
+                                                        mongoGroupUserQuery(groupId, memberId),
+                                                        MongoGroupUserEntity.class))
                                                 .map(this::convertMongoGroupUserToGroupUser)
                                                 .flatMap(groupUserEntity -> writeThroughGroupUserCacheAsync(cacheKey, groupUserEntity)
                                                         .thenReturn(groupUserEntity))
@@ -519,7 +521,7 @@ public final class GroupMembershipSupport {
 
     @SuppressWarnings("unchecked")
     public boolean inGroup(String appKey, String from, String groupId) {
-        // 存在性：ZSCORE 命中为真；ZCARD>0 视为名单已完整；空/缺失才回源 MySQL，禁止单点 ZADD 污染扇出
+        // ZSCORE 命中为真；miss 一律回源 MySQL（部分 ZSET 不能当成「完整名单」缓存 false）
         Boolean cached = RelationLocalCache.GROUP_MEMBER.get(RelationLocalCache.groupMemberKey(appKey, groupId, from));
         if (cached != null) {
             return cached;
@@ -530,11 +532,6 @@ public final class GroupMembershipSupport {
             if (score != null) {
                 RelationLocalCache.markGroupMember(appKey, groupId, from, true);
                 return true;
-            }
-            Long card = infra.stringRedisTemplate.opsForZSet().zCard(zsetKey);
-            if (card != null && card > 0) {
-                RelationLocalCache.markGroupMember(appKey, groupId, from, false);
-                return false;
             }
         } catch (Exception e) {
             log.error("Redis 查询群成员异常, appKey: {}, groupId: {}, memberId: {}", appKey, groupId, from, e);
@@ -785,6 +782,11 @@ public final class GroupMembershipSupport {
         if (groupUserEntity != null) {
             MessageContext.groupUserEntityCache.put(cacheKey, groupUserEntity);
         }
+    }
+
+    private static Query mongoGroupUserQuery(String groupId, String memberId) {
+        return Query.query(Criteria.where(MongoGroupUserEntity.Fields.userId).is(Long.parseLong(memberId))
+                .and(MongoGroupUserEntity.Fields.groupId).is(Long.parseLong(groupId)));
     }
 
     public GroupUserEntity convertMongoGroupUserToGroupUser(MongoGroupUserEntity mongoGroupUser) {

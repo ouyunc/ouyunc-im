@@ -127,26 +127,32 @@ public enum NativePacketProtocol implements PacketProtocol {
 
 
         /**
-         * 握手期连接配额：query 带 appKey 时强制校验（含停用/超限）；不带则兼容旧客户端（依赖后续登录）。
+         * 握手期连接配额：必须带 appKey 并预占本机额度；未登录关连时由 closeFuture 释放。
          */
         private boolean preVerifyAppKeyConnects(ChannelHandlerContext ctx, Map<String, Object> queryParamsMap) {
             String appKey = firstQuery(queryParamsMap, "appKey", "app_key");
             if (StringUtils.isBlank(appKey)) {
-                return true;
+                log.error("WS 握手缺少 appKey，拒绝连接 channelId={}", ctx.channel().id().asShortText());
+                return false;
             }
-            return AppKeyValidator.INSTANCE.verify(appKey, ctx);
+            return AppKeyValidator.INSTANCE.tryReserveForLogin(appKey, ctx);
         }
 
         /**
-         * 握手期签名：query 同时带 appKey/identity/createTime/signature 时强制校验；缺任一字段则跳过（兼容仅连接后发登录包）。
+         * 握手期签名：四字段全缺则等 LOGIN 包；出现任一则必须齐全，否则拒绝（禁止半套签名绕过）。
          */
         private boolean preVerifySignature(Map<String, Object> queryParamsMap) {
             String appKey = firstQuery(queryParamsMap, "appKey", "app_key");
             String identity = firstQuery(queryParamsMap, "identity", "userId", "user_id");
             String signature = firstQuery(queryParamsMap, "signature", "sign");
             String createTimeRaw = firstQuery(queryParamsMap, "createTime", "create_time");
-            if (StringUtils.isAnyBlank(appKey, identity, signature, createTimeRaw)) {
+            int present = countPresent(identity, signature, createTimeRaw);
+            if (present == 0) {
                 return true;
+            }
+            if (present < 3 || StringUtils.isBlank(appKey)) {
+                log.warn("WS 握手签名字段不全，拒绝连接");
+                return false;
             }
             long createTime;
             try {
@@ -170,6 +176,19 @@ public enum NativePacketProtocol implements PacketProtocol {
                 }
             }
             return LoginAuthValidator.verify(loginContent);
+        }
+
+        private static int countPresent(String... values) {
+            int n = 0;
+            if (values == null) {
+                return 0;
+            }
+            for (String value : values) {
+                if (StringUtils.isNotBlank(value)) {
+                    n++;
+                }
+            }
+            return n;
         }
 
         private static String firstQuery(Map<String, Object> queryParamsMap, String... keys) {

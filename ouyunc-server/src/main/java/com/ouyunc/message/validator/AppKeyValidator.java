@@ -8,6 +8,7 @@ import com.ouyunc.domain.entity.AppEntity;
 import com.ouyunc.message.cluster.lease.LocalNodeConnCounter;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.repository.DefaultRepository;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,7 +25,7 @@ public enum AppKeyValidator implements Validator<String> {
      * @author fzx
      * @description 校验appKey是否合法, 返回true -合法， 返回false-不合法
      *
-     * <p>仅做存在性/状态/只读配额检查（握手、HTTP）。登录请用 {@link #tryReserveForLogin} 原子预占。</p>
+     * <p>仅做存在性/状态/只读配额检查（HTTP）。WS 握手与登录请用 {@link #tryReserveForLogin} 原子预占。</p>
      * <p>Redis Hash miss / 断连时由 {@link DefaultRepository#getAppEntity(String)} 回源 {@code ouyunc_im_app}。</p>
      */
     @Override
@@ -41,6 +42,16 @@ public enum AppKeyValidator implements Validator<String> {
      * {@link com.ouyunc.message.helper.ClientHelper#registerLocal} 不再二次 INCR。
      */
     public boolean tryReserveForLogin(String appKey, ChannelHandlerContext ctx) {
+        if (ctx != null && Boolean.TRUE.equals(ChannelAttrUtil.getChannelAttribute(
+                ctx, MessageConstant.CHANNEL_ATTR_KEY_CONN_QUOTA_RESERVED))) {
+            String reservedAppKey = ChannelAttrUtil.getChannelAttribute(
+                    ctx, MessageConstant.CHANNEL_ATTR_KEY_CONN_QUOTA_APP_KEY);
+            if (appKey != null && appKey.equals(reservedAppKey)) {
+                return true;
+            }
+            log.warn("连接配额已按 appKey={} 预占，拒绝改用 {}", reservedAppKey, appKey);
+            return false;
+        }
         AppEntity app = loadActiveApp(appKey);
         if (app == null) {
             return false;
@@ -70,6 +81,8 @@ public enum AppKeyValidator implements Validator<String> {
         }
         if (ctx != null) {
             ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_CONN_QUOTA_RESERVED, Boolean.TRUE);
+            ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_CONN_QUOTA_APP_KEY, appKey);
+            hookReleaseOnClose(ctx.channel());
         }
         return true;
     }
@@ -78,12 +91,34 @@ public enum AppKeyValidator implements Validator<String> {
      * 登录失败或未进入 registerLocal 时释放预占。
      */
     public static void releaseReservedIfNeeded(String appKey, ChannelHandlerContext ctx) {
-        if (ctx == null || Boolean.TRUE != ChannelAttrUtil.getChannelAttribute(
-                ctx, MessageConstant.CHANNEL_ATTR_KEY_CONN_QUOTA_RESERVED)) {
+        if (ctx == null) {
             return;
         }
-        ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_CONN_QUOTA_RESERVED, null);
-        LocalNodeConnCounter.decrement(appKey);
+        releaseReservedIfNeeded(appKey, ctx.channel());
+    }
+
+    public static void releaseReservedIfNeeded(String appKey, Channel channel) {
+        if (channel == null || Boolean.TRUE != ChannelAttrUtil.getChannelAttribute(
+                channel, MessageConstant.CHANNEL_ATTR_KEY_CONN_QUOTA_RESERVED)) {
+            return;
+        }
+        ChannelAttrUtil.setChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_CONN_QUOTA_RESERVED, null);
+        String reservedAppKey = appKey;
+        if (reservedAppKey == null || reservedAppKey.isBlank()) {
+            reservedAppKey = ChannelAttrUtil.getChannelAttribute(
+                    channel, MessageConstant.CHANNEL_ATTR_KEY_CONN_QUOTA_APP_KEY);
+        }
+        ChannelAttrUtil.setChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_CONN_QUOTA_APP_KEY, null);
+        if (reservedAppKey != null && !reservedAppKey.isBlank()) {
+            LocalNodeConnCounter.decrement(reservedAppKey);
+        }
+    }
+
+    private static void hookReleaseOnClose(Channel channel) {
+        if (channel == null) {
+            return;
+        }
+        channel.closeFuture().addListener(future -> releaseReservedIfNeeded(null, channel));
     }
 
     private AppEntity loadActiveApp(String appKey) {

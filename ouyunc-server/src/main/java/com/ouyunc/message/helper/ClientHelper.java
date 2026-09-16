@@ -227,7 +227,8 @@ public class ClientHelper {
         RLock lock = MessageServerContext.redissonClient.getLock(
                 CacheConstant.buildIdentityBindOrUnbindLockCacheKey(loginClientInfo.getAppKey(), comboIdentity));
         try {
-            if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
+            // 不传 leaseTime，启用 Redisson watchdog，避免 Redis 变慢时 5s 锁过期导致双绑
+            if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, TimeUnit.SECONDS)) {
                 try {
                     String loginKey = CacheConstant.buildLoginCacheKey(loginClientInfo.getAppKey(), comboIdentity);
                     LoginClientInfo previous = MessageServerContext.remoteLoginClientInfoCache.get(loginKey);
@@ -262,13 +263,14 @@ public class ClientHelper {
 
     /**
      * 解绑/回滚抢锁失败会重试，避免幽灵 ONLINE。须在业务线程池调用，禁止 EventLoop。
+     * 使用 watchdog 续期，禁止固定 5s lease。
      */
     public static boolean tryRunWithBindLock(String appKey, String comboIdentity, BindLockAction action) {
         RLock lock = MessageServerContext.redissonClient.getLock(
                 CacheConstant.buildIdentityBindOrUnbindLockCacheKey(appKey, comboIdentity));
         for (int attempt = 1; attempt <= MessageConstant.BIND_LOCK_RETRY_TIMES; attempt++) {
             try {
-                if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
+                if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, TimeUnit.SECONDS)) {
                     try {
                         action.run();
                         return true;

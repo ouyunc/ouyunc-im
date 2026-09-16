@@ -589,6 +589,11 @@ public class MessageConstant {
      */
     public static final String CHANNEL_ATTR_KEY_CONN_QUOTA_RESERVED = "CHANNEL_ATTR_KEY_CONN_QUOTA_RESERVED";
 
+    /**
+     * 预占配额对应的 appKey，关连时按此 DECR。
+     */
+    public static final String CHANNEL_ATTR_KEY_CONN_QUOTA_APP_KEY = "CHANNEL_ATTR_KEY_CONN_QUOTA_APP_KEY";
+
 
     /**
      * channel 的登录超时调度器

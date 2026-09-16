@@ -120,6 +120,9 @@ public enum DefaultRepository implements Repository {
         return RepositorySupports.READ_RECEIPT.reactiveAdvanceSenderReadOffsetOnSend(packet, identityType, expireTime);
     }
 
+    /**
+     * 群成员 identity。权威回源失败抛 {@link com.ouyunc.repository.support.GroupMembershipSupport.GroupMembershipLoadException}。
+     */
     public Set<String> groupUsersIdentity(Packet packet) {
         return RepositorySupports.GROUP.groupUsersIdentity(packet);
     }

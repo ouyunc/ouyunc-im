@@ -170,17 +170,20 @@ public final class ChannelOrderedTasks {
             if (stage == null) {
                 stage = CompletableFuture.completedFuture(null);
             }
-            CompletableFuture<?> timed = stage.toCompletableFuture()
-                    .orTimeout(MessageConstant.CHANNEL_ORDERED_TASK_DEADLINE_MS, TimeUnit.MILLISECONDS);
+            CompletableFuture<?> raw = stage.toCompletableFuture();
+            CompletableFuture<?> timed = raw.orTimeout(
+                    MessageConstant.CHANNEL_ORDERED_TASK_DEADLINE_MS, TimeUnit.MILLISECONDS);
             timed.whenComplete((ignored, error) -> {
                 if (error != null) {
                     if (error instanceof TimeoutException
                             || (error.getCause() instanceof TimeoutException)) {
                         log.error("连接有序任务超时 channelId={} deadlineMs={}",
                                 channel.id().asShortText(), MessageConstant.CHANNEL_ORDERED_TASK_DEADLINE_MS);
-                    } else {
-                        log.error("连接有序异步任务失败 channelId={}", channel.id().asShortText(), error);
+                        raw.cancel(true);
+                        failClose("task-timeout");
+                        return;
                     }
+                    log.error("连接有序异步任务失败 channelId={}", channel.id().asShortText(), error);
                 }
                 scheduleDrain(false);
             });

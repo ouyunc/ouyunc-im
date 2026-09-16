@@ -325,14 +325,17 @@ public class CacheConstant {
     public static String buildLoginCacheKey(String appKey, String comboIdentity) {
         String identity = IdentityUtil.revertIdentity(comboIdentity);
         Byte deviceType = IdentityUtil.revertDeviceType(comboIdentity);
-        return OUYUNC + "im:lg:" + withHashTag(identity) + COLON + appKey + COLON + deviceType;
+        return OUYUNC + "im:lg:" + withHashTag(stripHashTagChars(identity)) + COLON
+                + sanitizeAppKeyToken(appKey) + COLON + deviceType;
     }
 
     /**
      * 身份路由 HASH：field=deviceType，value=nodeId|epoch。探测/多端在线看这把 key。
+     * 首 tag 必须与 {@link #buildLoginCacheKey} 同一 identity，否则 Cluster CROSSSLOT。
      */
     public static String buildLoginRouteCacheKey(String appKey, String identity) {
-        return OUYUNC + "im:rt:" + withHashTag(identity) + COLON + appKey;
+        return OUYUNC + "im:rt:" + withHashTag(stripHashTagChars(identity == null ? "" : identity))
+                + COLON + sanitizeAppKeyToken(appKey);
     }
 
     /**

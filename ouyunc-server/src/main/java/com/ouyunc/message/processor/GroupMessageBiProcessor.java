@@ -20,6 +20,7 @@ import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.helper.MessageRefHelper;
 import com.ouyunc.message.processor.http.push.IngressPacketHelper;
 import com.ouyunc.message.validator.*;
+import com.ouyunc.repository.support.GroupMembershipSupport;
 import com.ouyunc.repository.support.MessageIndexScope;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.collections4.CollectionUtils;
@@ -77,7 +78,18 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
         if (content != null) {
             return content.process(ctx, packet);
         }
-        Set<String> groupUserIdentitySet = repository().groupUsersIdentity(packet);
+        Set<String> groupUserIdentitySet;
+        try {
+            groupUserIdentitySet = repository().groupUsersIdentity(packet);
+        } catch (GroupMembershipSupport.GroupMembershipLoadException e) {
+            log.error("群组：{} 成员权威回源失败，拒绝当成空群丢扇出, packetId={}",
+                    packet.getMessage().getTo(), packet.getPacketId(), e);
+            MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(
+                    ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "群成员回源失败: " + e.getMessage(), packet),
+                    MessageEventTypeEnum.EXCEPTION), true);
+            releaseQosOnFailure(packet);
+            return Mono.empty();
+        }
         if (CollectionUtils.isEmpty(groupUserIdentitySet)) {
             log.error("群组：{}, 不存在群成员！群消息： {}", packet.getMessage().getTo(), packet);
             MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群成员", packet), MessageEventTypeEnum.EXCEPTION), true);

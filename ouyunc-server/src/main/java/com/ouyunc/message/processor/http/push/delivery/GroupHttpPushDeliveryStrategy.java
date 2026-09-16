@@ -18,6 +18,7 @@ import com.ouyunc.message.processor.http.push.HttpPushFailures;
 import com.ouyunc.message.processor.http.push.HttpPushValidatorChain;
 import com.ouyunc.message.processor.http.push.IngressPacketHelper;
 import com.ouyunc.repository.DefaultRepository;
+import com.ouyunc.repository.support.GroupMembershipSupport;
 import com.ouyunc.repository.support.MessageIndexScope;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -51,7 +52,12 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
     public void preProcess(Packet packet) throws HttpPipelineException {
         HttpPushValidatorChain.verifyGroup(packet);
         HttpPushDeliverySupport.requireValidMessageRef(packet);
-        Set<String> groupUserIdentitySet = DefaultRepository.INSTANCE.groupUsersIdentity(packet);
+        Set<String> groupUserIdentitySet;
+        try {
+            groupUserIdentitySet = DefaultRepository.INSTANCE.groupUsersIdentity(packet);
+        } catch (GroupMembershipSupport.GroupMembershipLoadException e) {
+            throw HttpPushFailures.serverError(packet, "群成员回源失败: " + e.getMessage());
+        }
         if (CollectionUtils.isEmpty(groupUserIdentitySet)) {
             throw HttpPushFailures.forbidden(packet, ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群成员");
         }

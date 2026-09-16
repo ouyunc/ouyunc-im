@@ -54,13 +54,20 @@ public enum AuthValidator implements Validator<Packet> {
                     clientFrom, verifiedSender, deviceTypeValue);
             return false;
         }
+        byte loginDeviceType = loginClientInfo.getDeviceType();
+        if (deviceTypeValue != loginDeviceType) {
+            log.warn("消息 deviceType 与登录设备不一致，拒绝。packetDeviceType={}, loginDeviceType={}, sender={}",
+                    deviceTypeValue, loginDeviceType, verifiedSender);
+            return false;
+        }
+        packet.setDeviceType(loginDeviceType);
         message.setFrom(verifiedSender);
         QosClaimIdentities.rememberIfAbsent(message, verifiedSender);
         // 长连接：发送方类型一律以登录 scope 为准（普通用户、客服座席、访客均同）
         message.setFromType(LoginScopeEnum.normalizeScope(loginClientInfo.getScope()));
         if (log.isDebugEnabled()) {
             log.debug("发送方已绑定为登录用户 {}，fromType={}，deviceType={}",
-                    verifiedSender, message.getFromType(), deviceTypeValue);
+                    verifiedSender, message.getFromType(), loginDeviceType);
         }
         return true;
     }
