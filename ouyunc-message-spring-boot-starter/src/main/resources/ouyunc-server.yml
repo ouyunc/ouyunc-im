@@ -91,6 +91,10 @@ ouyunc:
         # 低水位,默认32kb,写低水位标记，默认值32KB(32 * 1024)。当Netty的写缓冲区中的字节超过高水位之后若下降到低水位，则Channel的isWritable()返回True。写高低水位标记使用户可以控制写入数据速度，从而实现流量控制。推荐做法是：每次调用channl.write(msg)方法首先调用channel.isWritable()判断是否可写
         write-buffer-low-water-mark: 32768
 
+    # IM 进程内 MQ Outbox 补发：默认关闭。有 im-consumer 时不要开。
+    mq-outbox-relay:
+      enable: false
+
     # 集群配置
     cluster:
       # 是否开启集群，默认关闭

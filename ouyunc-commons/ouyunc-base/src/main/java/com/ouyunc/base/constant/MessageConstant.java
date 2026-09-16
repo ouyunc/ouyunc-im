@@ -458,6 +458,11 @@ public class MessageConstant {
     public static final String MQ_OUTBOX_RELAY_TASK_ID = "mq-outbox-relay";
 
     /**
+     * MQ Outbox：集群扫描锁等待秒数。0 表示未抢到立即跳过，避免卡住 SYSTEM 定时线程。
+     */
+    public static final long MQ_OUTBOX_RELAY_LOCK_WAIT_SECONDS = 0L;
+
+    /**
      * 登录超时：{@code IN_FLIGHT} 时最多再续期次数（每次仍为 {@code serverLoginTimeout} 秒）。
      */
     public static final int LOGIN_TIMEOUT_IN_FLIGHT_MAX_RETRY = 2;

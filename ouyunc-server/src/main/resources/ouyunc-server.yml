@@ -93,6 +93,10 @@ ouyunc:
       default-text-action: MASK
       # SEND_THEN_REVIEW | HOLD
       default-media-action: SEND_THEN_REVIEW
+    # IM 进程内 MQ Outbox 补发：默认关闭。有 im-consumer 时不要开；仅无 consumer 的单机或指定一台时可开。
+    # 集群下即使多台误开，也靠 Redis 锁保证同一时刻只有一个节点扫描。
+    mq-outbox-relay:
+      enable: false
     # 客户端登录信息保存模式， FOREVER-永久， FINITE-有限； 默认值永久
     # 消息监听器包扫描路径
     listeners:
