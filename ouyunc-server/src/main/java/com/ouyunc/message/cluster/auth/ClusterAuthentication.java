@@ -11,6 +11,8 @@ import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.serialize.Serializer;
+import com.ouyunc.base.utils.SystemClock;
+import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.core.codec.PacketCodec;
 import com.ouyunc.message.cluster.lease.NodeLeaseKeeper;
 import io.netty.buffer.ByteBuf;
@@ -33,9 +35,10 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 共用密钥认证：每条 TCP 连接先发送一个签名首包，通过后沿用原有集群协议。
- * 签名绑定发送节点、接收节点、时间和随机 nonce，原始密钥不进入 Packet。
+ * 共用密钥认证：每条 TCP 连接先发送一个 {@link OuyuncMessageTypeEnum#CLUSTER_AUTH} 签名首包，
+ * 通过后沿用原有集群协议。签名绑定发送节点、接收节点、时间和随机 nonce，原始密钥不进入 Packet。
  * 认证不负责加密后续流量；跨不可信网络仍须使用现有 TLS。
+ * <p>认证首包与心跳 {@link OuyuncMessageTypeEnum#SYN_ACK} 分离；Packet 序列化固定 PROTO_STUFF。</p>
  */
 public final class ClusterAuthentication {
     private static final Logger log = LoggerFactory.getLogger(ClusterAuthentication.class);
@@ -52,7 +55,7 @@ public final class ClusterAuthentication {
     }
 
     /**
-     * 未认证时只解码受限大小的 JSON 首包，禁止在认证之前执行 JDK 等反序列化。
+     * 未认证时只解码受限大小的 PROTO_STUFF 认证首包，禁止在认证之前执行 JDK 等反序列化。
      * 该 Codec 前必须保留 LengthFieldBasedFrameDecoder，确保收到完整且受限的帧。
      */
     public static final class GuardedCodec extends PacketCodec {
@@ -61,7 +64,8 @@ public final class ClusterAuthentication {
             if (ctx.channel().attr(ClusterAuthConstant.AUTHENTICATED_NODE).get() == null
                     && (in.readableBytes() <= ClusterAuthConstant.SERIALIZER_OFFSET
                     || in.readableBytes() > ClusterAuthConstant.MAX_AUTH_FRAME_BYTES
-                    || in.getByte(in.readerIndex() + ClusterAuthConstant.SERIALIZER_OFFSET) != Serializer.JSON.getValue())) {
+                    || in.getByte(in.readerIndex() + ClusterAuthConstant.SERIALIZER_OFFSET)
+                    != Serializer.PROTO_STUFF.getValue())) {
                 in.skipBytes(in.readableBytes());
                 ctx.close();
                 return;
@@ -92,7 +96,7 @@ public final class ClusterAuthentication {
         if (!hasValidSecret(secret) || from == null || from.isBlank() || to == null || to.isBlank()) {
             throw new IllegalStateException("集群认证密钥或节点标识未配置");
         }
-        Proof unsigned = new Proof(from, to, System.currentTimeMillis(), UUID.randomUUID().toString(), null);
+        Proof unsigned = new Proof(from, to, TimeUtil.currentTimeMillis(), UUID.randomUUID().toString(), null);
         Proof proof = new Proof(from, to, unsigned.issuedAt(), unsigned.nonce(),
                 HexFormat.of().formatHex(signature(secret, unsigned)));
         // 复用合法头字段，不修改原业务 Packet；认证首包由服务端消费，不参与业务幂等。
@@ -100,10 +104,11 @@ public final class ClusterAuthentication {
         auth.setProtocol(ProtocolTypeEnum.OUYUNC.getProtocol());
         auth.setProtocolVersion(ProtocolTypeEnum.OUYUNC.getProtocolVersion());
         auth.setEncryptType(Encrypt.SymmetryEncrypt.NONE.getValue());
-        auth.setSerializeAlgorithm(Serializer.JSON.getValue());
-        auth.setMessageType(OuyuncMessageTypeEnum.SYN_ACK.getType());
+        // Packet 体与集群心跳一致走 PROTO_STUFF；Proof 规范串仍放 Message.content（HMAC 稳定字段边界）。
+        auth.setSerializeAlgorithm(Serializer.PROTO_STUFF.getValue());
+        auth.setMessageType(OuyuncMessageTypeEnum.CLUSTER_AUTH.getType());
         auth.setMessage(new Message(ClusterAuthConstant.AUTH_MESSAGE_ID, from, to,
-                OuyuncMessageContentTypeEnum.SYN_CONTENT.getType(), JSON.writeValueAsString(proof),
+                OuyuncMessageContentTypeEnum.AUTH_CONTENT.getType(), JSON.writeValueAsString(proof),
                 proof.issuedAt(), new Metadata()));
         return auth;
     }
@@ -111,14 +116,15 @@ public final class ClusterAuthentication {
     private static String verify(Packet packet, String secret, String localNode) throws Exception {
         Message message = packet.getMessage();
         if (!hasValidSecret(secret) || message == null
-                || packet.getMessageType() != OuyuncMessageTypeEnum.SYN_ACK.getType()
-                || message.getContentType() != OuyuncMessageContentTypeEnum.SYN_CONTENT.getType()
+                || packet.getMessageType() != OuyuncMessageTypeEnum.CLUSTER_AUTH.getType()
+                || packet.getSerializeAlgorithm() != Serializer.PROTO_STUFF.getValue()
+                || message.getContentType() != OuyuncMessageContentTypeEnum.AUTH_CONTENT.getType()
                 || !ClusterAuthConstant.AUTH_MESSAGE_ID.equals(message.getId())
                 || message.getContent() == null || message.getContent().length() > ClusterAuthConstant.MAX_PROOF_LENGTH) {
             return null;
         }
         Proof proof = JSON.readValue(message.getContent(), Proof.class);
-        long now = System.currentTimeMillis();
+        long now = TimeUtil.currentTimeMillis();
         if (proof == null || proof.from() == null || proof.from().isBlank()
                 || localNode == null || !localNode.equals(proof.to())
                 || proof.nonce() == null || proof.signature() == null

@@ -845,9 +845,9 @@ public class ClientHelper {
         if (channels.isEmpty()) {
             return;
         }
-        long deadline = System.currentTimeMillis() + timeoutMillis;
+        long deadline = TimeUtil.currentTimeMillis() + timeoutMillis;
         for (Channel channel : channels) {
-            long remain = deadline - System.currentTimeMillis();
+            long remain = deadline - TimeUtil.currentTimeMillis();
             if (remain <= 0) {
                 break;
             }

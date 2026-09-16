@@ -9,6 +9,8 @@ import com.ouyunc.base.constant.NumberConstant;
 public enum OuyuncMessageTypeEnum implements MessageType {
     SYN_ACK(NumberConstant.NUMBER_0, ProtocolTypeEnum.OUYUNC.getProtocol(), ProtocolTypeEnum.OUYUNC.getProtocolVersion(), "syn_ack",  "集群内部使用的心跳消息类型"),
     RELATION_CACHE_INVALIDATE(NumberConstant.NUMBER_1, ProtocolTypeEnum.OUYUNC.getProtocol(), ProtocolTypeEnum.OUYUNC.getProtocolVersion(), "relation_cache_invalidate", "集群内部关系本机缓存失效"),
+    /** 集群 TCP 连接 HMAC 认证首包；由 ServerHandler 消费，不进入业务 Processor。 */
+    CLUSTER_AUTH(NumberConstant.NUMBER_2, ProtocolTypeEnum.OUYUNC.getProtocol(), ProtocolTypeEnum.OUYUNC.getProtocolVersion(), "cluster_auth", "集群连接认证首包"),
 
     ;
 
