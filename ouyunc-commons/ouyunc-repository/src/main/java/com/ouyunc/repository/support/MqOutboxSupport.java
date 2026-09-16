@@ -52,7 +52,7 @@ public final class MqOutboxSupport {
     }
 
     /**
-     * 同步写入；同 topic+biz_key 冲突时刷新错误信息与 payload。
+     * 同步写入。同 topic+biz_key：SENDING/SENT 只刷新错误信息；PENDING 保留 retry；DEAD 才复活为 PENDING。
      *
      * @return true 表示 JDBC 写入成功
      */
@@ -73,6 +73,9 @@ public final class MqOutboxSupport {
                     .param(MqOutboxEntity.Fields.nextRetryAt, now)
                     .param(MqOutboxEntity.Fields.lastError, truncate(lastError, 1024))
                     .param(MqOutboxEntity.Fields.failureContext, truncate(failureContext, 512))
+                    .param(MqOutboxEntity.Fields.sendingStatus, MqOutboxStatus.SENDING.getCode())
+                    .param(MqOutboxEntity.Fields.pendingStatus, MqOutboxStatus.PENDING.getCode())
+                    .param(MqOutboxEntity.Fields.sentStatus, MqOutboxStatus.SENT.getCode())
                     .update();
             return true;
         } catch (Exception ex) {
@@ -119,9 +122,9 @@ public final class MqOutboxSupport {
     public boolean tryClaim(long id) {
         try {
             int rows = infra.jdbcClient.sql(JdbcSqlDialectHolder.claimMqOutbox())
-                    .param("sending_status", MqOutboxStatus.SENDING.getCode())
+                    .param(MqOutboxEntity.Fields.sendingStatus, MqOutboxStatus.SENDING.getCode())
                     .param(MqOutboxEntity.Fields.id, id)
-                    .param("pending_status", MqOutboxStatus.PENDING.getCode())
+                    .param(MqOutboxEntity.Fields.pendingStatus, MqOutboxStatus.PENDING.getCode())
                     .update();
             return rows > 0;
         } catch (Exception ex) {
@@ -132,8 +135,18 @@ public final class MqOutboxSupport {
 
     public void deleteOnSuccess(long id) {
         try {
+            int marked = infra.jdbcClient.sql(JdbcSqlDialectHolder.markSentMqOutbox())
+                    .param(MqOutboxEntity.Fields.sentStatus, MqOutboxStatus.SENT.getCode())
+                    .param(MqOutboxEntity.Fields.id, id)
+                    .param(MqOutboxEntity.Fields.sendingStatus, MqOutboxStatus.SENDING.getCode())
+                    .update();
+            if (marked <= 0) {
+                log.warn("MQ Outbox 标 SENT 未命中 id={}，跳过删除", id);
+                return;
+            }
             infra.jdbcClient.sql(JdbcSqlDialectHolder.deleteMqOutbox())
                     .param(MqOutboxEntity.Fields.id, id)
+                    .param(MqOutboxEntity.Fields.sentStatus, MqOutboxStatus.SENT.getCode())
                     .update();
         } catch (Exception ex) {
             log.error("MQ Outbox 删除失败 id={}", id, ex);
@@ -166,6 +179,7 @@ public final class MqOutboxSupport {
                     .param(MqOutboxEntity.Fields.nextRetryAt, nextAt)
                     .param(MqOutboxEntity.Fields.lastError, truncate(error, 1024))
                     .param(MqOutboxEntity.Fields.id, row.getId())
+                    .param(MqOutboxEntity.Fields.sendingStatus, MqOutboxStatus.SENDING.getCode())
                     .update();
         } catch (Exception ex) {
             log.error("MQ Outbox 更新重试状态失败 id={}", row.getId(), ex);
@@ -193,8 +207,14 @@ public final class MqOutboxSupport {
             LocalDateTime staleBefore = LocalDateTime.now(ZoneId.systemDefault())
                     .minusSeconds(Math.max(1L, MessageConstant.MQ_OUTBOX_SENDING_STALE_MS / 1000L));
             infra.jdbcClient.sql(JdbcSqlDialectHolder.resetStaleMqOutboxSending())
-                    .param("pending_status", MqOutboxStatus.PENDING.getCode())
-                    .param("sending_status", MqOutboxStatus.SENDING.getCode())
+                    .param(MqOutboxEntity.Fields.pendingStatus, MqOutboxStatus.PENDING.getCode())
+                    .param(MqOutboxEntity.Fields.sendingStatus, MqOutboxStatus.SENDING.getCode())
+                    .param(MqOutboxEntity.Fields.deadStatus, MqOutboxStatus.DEAD.getCode())
+                    .param(MqOutboxEntity.Fields.maxRetry, MessageConstant.MQ_OUTBOX_MAX_RETRY)
+                    .param(MqOutboxEntity.Fields.now, TimeUtil.currentTimeMillis())
+                    .param(MqOutboxEntity.Fields.backoffBase, MessageConstant.MQ_OUTBOX_BACKOFF_BASE_MS)
+                    .param(MqOutboxEntity.Fields.backoffMax, MessageConstant.MQ_OUTBOX_BACKOFF_MAX_MS)
+                    .param(MqOutboxEntity.Fields.lastError, MessageConstant.MQ_OUTBOX_STALE_SENDING_ERROR)
                     .param(MqOutboxEntity.Fields.staleBefore, staleBefore)
                     .update();
         } catch (Exception ex) {

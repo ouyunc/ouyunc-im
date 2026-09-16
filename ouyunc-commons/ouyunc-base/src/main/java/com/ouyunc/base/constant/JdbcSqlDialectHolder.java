@@ -114,6 +114,10 @@ public final class JdbcSqlDialectHolder {
         return pick(JdbcSqlConstant.POSTGRESQL.CLAIM_MQ_OUTBOX, JdbcSqlConstant.ORACLE.CLAIM_MQ_OUTBOX, JdbcSqlConstant.MYSQL.CLAIM_MQ_OUTBOX);
     }
 
+    public static String markSentMqOutbox() {
+        return pick(JdbcSqlConstant.POSTGRESQL.MARK_SENT_MQ_OUTBOX, JdbcSqlConstant.ORACLE.MARK_SENT_MQ_OUTBOX, JdbcSqlConstant.MYSQL.MARK_SENT_MQ_OUTBOX);
+    }
+
     public static String deleteMqOutbox() {
         return pick(JdbcSqlConstant.POSTGRESQL.DELETE_MQ_OUTBOX, JdbcSqlConstant.ORACLE.DELETE_MQ_OUTBOX, JdbcSqlConstant.MYSQL.DELETE_MQ_OUTBOX);
     }

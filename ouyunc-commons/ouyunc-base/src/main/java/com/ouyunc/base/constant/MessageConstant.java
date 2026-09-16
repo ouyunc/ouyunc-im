@@ -448,9 +448,14 @@ public class MessageConstant {
     public static final long MQ_OUTBOX_BACKOFF_MAX_MS = 300_000L;
 
     /**
-     * MQ Outbox：SENDING 超过该时长视为僵死，回收为 PENDING（毫秒）。
+     * MQ Outbox：SENDING 超过该时长视为僵死，按 retry 回收或置 DEAD（毫秒）。
      */
     public static final long MQ_OUTBOX_SENDING_STALE_MS = 120_000L;
+
+    /**
+     * MQ Outbox：僵死 SENDING 回收时写入 last_error。
+     */
+    public static final String MQ_OUTBOX_STALE_SENDING_ERROR = "stale SENDING recycled";
 
     /**
      * MQ Outbox：ScheduleTimer 任务 id。

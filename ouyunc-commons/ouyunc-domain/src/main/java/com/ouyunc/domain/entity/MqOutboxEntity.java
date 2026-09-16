@@ -50,6 +50,13 @@ public class MqOutboxEntity implements Serializable {
         public static final String now = "now";
         public static final String limit = "limit";
         public static final String staleBefore = "stale_before";
+        public static final String sendingStatus = "sending_status";
+        public static final String pendingStatus = "pending_status";
+        public static final String sentStatus = "sent_status";
+        public static final String deadStatus = "dead_status";
+        public static final String maxRetry = "max_retry";
+        public static final String backoffBase = "backoff_base";
+        public static final String backoffMax = "backoff_max";
     }
 
     public Long getId() {
