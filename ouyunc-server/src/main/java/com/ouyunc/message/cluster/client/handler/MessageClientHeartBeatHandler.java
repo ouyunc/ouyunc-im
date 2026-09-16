@@ -12,8 +12,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Set;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * @Author fzx
@@ -27,10 +25,6 @@ import java.util.concurrent.locks.ReentrantLock;
  **/
 public class MessageClientHeartBeatHandler extends ChannelInboundHandlerAdapter {
     private static final Logger log = LoggerFactory.getLogger(MessageClientHeartBeatHandler.class);
-
-    // 锁
-    private static final Lock lock = new ReentrantLock(true);
-
 
     /**
      * @param ctx
@@ -46,18 +40,33 @@ public class MessageClientHeartBeatHandler extends ChannelInboundHandlerAdapter 
         if (event instanceof IdleStateEvent) {
             // 判断该通道是否是存活
             if (channel.isActive()) {
-                try {
-                    // 从该channel中取出标签
-                    Integer channelPoolHashCode = ChannelAttrUtil.getChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_TAG_POOL);
-                    // 获取锁
-                    lock.lock();
-                    // 获取当前管道所属的channel pool 的hashcode
-                    Set<Channel> coreChannelSet = MessageServerContext.clusterClientCoreChannelPoolCache.get(channelPoolHashCode);
+                // 从该channel中取出标签；acquire 成功后才打标，空闲早于打标时不得 get(null)
+                Integer channelPoolHashCode = ChannelAttrUtil.getChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_TAG_POOL);
+                if (channelPoolHashCode == null) {
+                    log.warn("内部客户端空闲但未打池标签，关闭 channel {}", channel.id().asShortText());
+                    channel.close();
+                    return;
+                }
+                Set<Channel> coreChannelSet = MessageServerContext.clusterClientCoreChannelPoolCache.get(channelPoolHashCode);
+                if (coreChannelSet == null) {
+                    log.warn("内部客户端空闲时未找到核心池，关闭 channel {}", channel.id().asShortText());
+                    channel.close();
+                    return;
+                }
+                int coreLimit = MessageServerContext.serverProperties().getClusterClientChannelPoolCoreConnection();
+                // 按池加锁，禁止进程级公平锁把所有集群连接的空闲事件串到一把锁上
+                synchronized (coreChannelSet) {
                     // 判断当前核心coreChannelSet中是否已经满了，有可能这里的核心线程一个都没有，但是总的channel已经达到最大值,该channel 不正在写
                     // 注意；核心channel添加的场景及规则如下：一开始消息很多会频繁的创建内部客户端channel直到达到最大channel(有最大channel数规则限制)，
                     // 当消息少量时，会触发该空闲事件，如果核心channel pool 没有达到设置的数量则，添加到池中，后面消息多的时候会优先从channel池中取出channel,
                     // 不在需要创建新的channel,除非消息很多，核心channel 池中的channel 已经用完，则会重新新建channel来处理大量消息
-                    if (coreChannelSet.stream().filter(Channel::isActive).count() >= MessageServerContext.serverProperties().getClusterClientChannelPoolCoreConnection()) {
+                    int active = 0;
+                    for (Channel core : coreChannelSet) {
+                        if (core != null && core.isActive()) {
+                            active++;
+                        }
+                    }
+                    if (active >= coreLimit) {
                         // 直接关闭该通道，应该移除通道
                         log.warn("===============内部客户端核心channel已经满了，且现在channel {} 处于空闲状态，所以需要关闭该 channel===================", channel.id().asShortText());
                         // 这里的关闭会触发内部客户端的关闭，进行核心线程数的相关逻辑处理
@@ -66,9 +75,6 @@ public class MessageClientHeartBeatHandler extends ChannelInboundHandlerAdapter 
                     }
                     // 先将当前存活的channel 存入集合中，本地内存会自动变化
                     coreChannelSet.add(channel);
-                } finally {
-                    // 释放锁
-                    lock.unlock();
                 }
             }
         } else {

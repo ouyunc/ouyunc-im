@@ -9,19 +9,22 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * 全局消息异常处理器
+ * 管道尾部异常：编解码、SSL、半包粘包、IO 损坏。
+ * <p>业务 process 失败不得 {@code fireExceptionCaught} 到这里，否则会把在线连接误关。</p>
  */
 public class ExceptionHandler extends ChannelDuplexHandler {
     private static final Logger log = LoggerFactory.getLogger(ExceptionHandler.class);
 
 
     /**
-     * 异常处理逻辑
+     * 记录并发布异常事件后关闭通道，避免解码/协议异常留下半开僵尸连接。
      */
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         log.error("通道 channelId: {} 发生了异常", ctx.channel().id(), cause);
-        // 发送事件，统一交给事件再推送mq, 记录日志，发送邮件或短信进行通知
         MessageServerContext.publishEvent(new MessageEvent(cause, MessageEventTypeEnum.EXCEPTION), true);
+        if (ctx.channel() != null && ctx.channel().isActive()) {
+            ctx.close();
+        }
     }
 }

@@ -226,11 +226,12 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         // 踢旧会话必须在 CAS 绑定胜出之后，避免锁外踢人导致跨节点双在线窗口
         ClientHelper.bindAsync(ctx, newLoginClientInfo).whenComplete((previous, ex) -> {
             try {
-                ctx.executor().execute(() ->
-                        completeLoginAfterRemoteBind(ctx, packet, loginContent, loginMessage,
+                // fencing GET / 踢人禁止回到 EventLoop；whenComplete 可能已在 IO 线程
+                ThreadPoolManager.messageProcessorExecutor().execute(() ->
+                        finishLoginAfterDirectoryCheck(ctx, packet, loginContent, loginMessage,
                                 deviceType, newLoginClientInfo, loginTimestamp, previous, ex));
             } catch (RejectedExecutionException scheduleError) {
-                log.error("登录完成回调投递 EventLoop 被拒绝 channelId={}", ctx.channel().id().asShortText(), scheduleError);
+                log.error("登录 fencing 投递业务线程被拒绝 channelId={}", ctx.channel().id().asShortText(), scheduleError);
                 ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, null);
                 AppKeyValidator.releaseReservedIfNeeded(newLoginClientInfo.getAppKey(), ctx);
                 if (ctx.channel().isActive()) {
@@ -238,6 +239,34 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                 }
             }
         });
+    }
+
+    /**
+     * Redis 目录 fencing 与跨节点踢人在业务线程完成，再回 EventLoop 装管道/发 ACK。
+     */
+    private void finishLoginAfterDirectoryCheck(ChannelHandlerContext ctx, Packet packet, LoginContent loginContent,
+                                                Message loginMessage, byte deviceType, LoginClientInfo newLoginClientInfo,
+                                                long loginTimestamp, LoginClientInfo previous, Throwable bindError) {
+        boolean directoryOwned = false;
+        if (bindError == null && ctx.channel().isActive()) {
+            directoryOwned = ClientHelper.stillOwnsDirectory(newLoginClientInfo);
+            if (directoryOwned) {
+                kickPreviousSessionAfterBindWin(ctx, packet, loginContent, loginMessage, loginTimestamp, previous);
+                directoryOwned = ClientHelper.stillOwnsDirectory(newLoginClientInfo);
+            }
+        }
+        final boolean owned = directoryOwned;
+        try {
+            ctx.executor().execute(() -> completeLoginAfterRemoteBind(ctx, packet, loginContent, loginMessage,
+                    deviceType, newLoginClientInfo, loginTimestamp, bindError, owned));
+        } catch (RejectedExecutionException scheduleError) {
+            log.error("登录完成回调投递 EventLoop 被拒绝 channelId={}", ctx.channel().id().asShortText(), scheduleError);
+            ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, null);
+            AppKeyValidator.releaseReservedIfNeeded(newLoginClientInfo.getAppKey(), ctx);
+            if (ctx.channel().isActive()) {
+                ctx.channel().close();
+            }
+        }
     }
 
     private void failLoginOnEventLoop(ChannelHandlerContext ctx) {
@@ -385,11 +414,12 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
     }
 
     /**
-     * Redis 与本地注册表绑定成功后，在 EventLoop 上完成登录 ACK 与管道安装。
+     * 在 EventLoop 上完成登录 ACK 与管道安装。目录 fencing / 踢人已在业务线程做完。
      */
     private void completeLoginAfterRemoteBind(ChannelHandlerContext ctx, Packet packet, LoginContent loginContent,
                                               Message loginMessage, byte deviceType, LoginClientInfo loginClientInfo,
-                                              long loginTimestamp, LoginClientInfo previous, Throwable bindError) {
+                                              long loginTimestamp, Throwable bindError,
+                                              boolean directoryOwned) {
         ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, null);
         if (!ctx.channel().isActive()) {
             ClientHelper.unbindLocalRegisterTable(loginClientInfo, ctx);
@@ -407,24 +437,11 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
             ctx.close();
             return;
         }
-        if (!ClientHelper.stillOwnsDirectory(loginClientInfo)) {
+        if (!directoryOwned) {
             log.warn("登录 fencing 失败，目录已被更新会话覆盖 identity={}", loginClientInfo.getIdentity());
             MessageServerContext.publishEvent(new MessageEvent(
                     ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_VERIFY_ERROR,
                             "登录绑定失败：会话已被更新连接顶替", packet),
-                    MessageEventTypeEnum.EXCEPTION), true);
-            ClientHelper.unbindLocalRegisterTable(loginClientInfo, ctx);
-            AppKeyValidator.releaseReservedIfNeeded(loginClientInfo.getAppKey(), ctx);
-            ctx.close();
-            return;
-        }
-        kickPreviousSessionAfterBindWin(ctx, packet, loginContent, loginMessage, loginTimestamp, previous);
-        // 踢人与装管道之间可能被更新会话覆盖，发 ACK 前再确认一次目录归属
-        if (!ClientHelper.stillOwnsDirectory(loginClientInfo)) {
-            log.warn("登录 ACK 前 fencing 失败 identity={}", loginClientInfo.getIdentity());
-            MessageServerContext.publishEvent(new MessageEvent(
-                    ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_VERIFY_ERROR,
-                            "登录绑定失败：会话在 ACK 前被顶替", packet),
                     MessageEventTypeEnum.EXCEPTION), true);
             ClientHelper.unbindLocalRegisterTable(loginClientInfo, ctx);
             AppKeyValidator.releaseReservedIfNeeded(loginClientInfo.getAppKey(), ctx);

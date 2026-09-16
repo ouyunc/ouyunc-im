@@ -1,5 +1,6 @@
-package com.ouyunc.message.handler;
+package com.ouyunc.message.safety;
 
+import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
@@ -23,11 +24,8 @@ import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.helper.PacketChannelWriter;
 import com.ouyunc.message.protocol.NativePacketProtocol;
-import com.ouyunc.message.safety.ContentSafetyFacade;
-import com.ouyunc.base.constant.MessageConstant;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.mqtt.MqttFixedHeader;
 import io.netty.handler.codec.mqtt.MqttMessageFactory;
 import io.netty.handler.codec.mqtt.MqttMessageType;
@@ -39,30 +37,30 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * 内容安全 Netty 处理器。
- * <p>须挂在登录鉴权之后、业务 {@code PacketHandler} 之前。REJECT 不向下传递并发 40010；MASK/AUDIT/PASS 继续 fire。
- * 检查异常时放行，避免误杀。</p>
+ * 入站内容安全：在连接有序任务线程上检查，与业务 process 同序。
+ * <p>不是 Netty Handler，禁止挂到 EventLoop 管道。</p>
  */
-public class ContentSafetyHandler extends SimpleChannelInboundHandler<Packet> {
+public final class ContentSafetyIngress {
 
-    /** 日志。 */
-    private static final Logger log = LoggerFactory.getLogger(ContentSafetyHandler.class);
+    private static final Logger log = LoggerFactory.getLogger(ContentSafetyIngress.class);
+
+    private ContentSafetyIngress() {
+    }
 
     /**
-     * 对入站 Packet 做敏感词检查。
+     * 敏感词检查；REJECT 时回写并不再进入业务。检查异常放行，避免误杀。PING 不要调用。
      *
      * @param ctx    通道上下文
      * @param packet 协议包
+     * @return {@code true} 继续业务；{@code false} 已拒绝
      */
-    @Override
-    protected void channelRead0(ChannelHandlerContext ctx, Packet packet) {
+    public static boolean applyOnWorker(ChannelHandlerContext ctx, Packet packet) {
         ContentSafetyResult result;
         try {
             result = ContentSafetyFacade.check(packet);
         } catch (Exception e) {
             log.error("内容安全检查异常，放行以免误杀 packetId={}", packet == null ? null : packet.getPacketId(), e);
-            ctx.fireChannelRead(packet);
-            return;
+            return true;
         }
         if (result != null && !result.isPassed()) {
             log.warn("内容安全拒绝 packetId={} reason={} hits={}",
@@ -72,9 +70,9 @@ public class ContentSafetyHandler extends SimpleChannelInboundHandler<Packet> {
                             ExceptionCodeEnum.CONTENT_SENSITIVE_REJECT.getMessage(), packet),
                     MessageEventTypeEnum.EXCEPTION), true);
             replyReject(ctx, packet);
-            return;
+            return false;
         }
-        ctx.fireChannelRead(packet);
+        return true;
     }
 
     /**
@@ -97,17 +95,25 @@ public class ContentSafetyHandler extends SimpleChannelInboundHandler<Packet> {
     }
 
     private static void replyMqttReject(ChannelHandlerContext ctx, Packet source) {
-        try {
-            String text = ExceptionCodeEnum.CONTENT_SENSITIVE_REJECT.getMessage();
-            MqttPublishMessage publish = (MqttPublishMessage) MqttMessageFactory.newMessage(
-                    new MqttFixedHeader(MqttMessageType.PUBLISH, false, MqttQoS.AT_MOST_ONCE, false, 0),
-                    new MqttPublishVariableHeader(MessageConstant.MQTT_SYS_NOTIFY_TOPIC, 0),
-                    Unpooled.copiedBuffer(text, CharsetUtil.UTF_8));
-            MessageHelper.tryWriteObject(ctx.channel(), publish, source, sendResult -> {});
-        } catch (Exception e) {
-            log.warn("MQTT 内容安全拒绝回写失败 channelId={}", ctx.channel().id().asShortText(), e);
+        Runnable write = () -> {
+            try {
+                String text = ExceptionCodeEnum.CONTENT_SENSITIVE_REJECT.getMessage();
+                MqttPublishMessage publish = (MqttPublishMessage) MqttMessageFactory.newMessage(
+                        new MqttFixedHeader(MqttMessageType.PUBLISH, false, MqttQoS.AT_MOST_ONCE, false, 0),
+                        new MqttPublishVariableHeader(MessageConstant.MQTT_SYS_NOTIFY_TOPIC, 0),
+                        Unpooled.copiedBuffer(text, CharsetUtil.UTF_8));
+                MessageHelper.tryWriteObject(ctx.channel(), publish, source, sendResult -> {});
+            } catch (Exception e) {
+                log.warn("MQTT 内容安全拒绝回写失败 channelId={}", ctx.channel().id().asShortText(), e);
+            }
+        };
+        if (ctx.channel().eventLoop().inEventLoop()) {
+            write.run();
+            return;
         }
+        ctx.channel().eventLoop().execute(write);
     }
+
     private static Packet buildRejectNotify(ChannelHandlerContext ctx, Packet source) {
         long now = TimeUtil.currentTimeMillis();
         LoginClientInfo loginInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);

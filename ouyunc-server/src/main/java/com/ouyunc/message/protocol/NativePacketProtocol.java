@@ -115,8 +115,8 @@ public enum NativePacketProtocol implements PacketProtocol {
                         .addLast(MessageConstant.EXCEPTION_HANDLER, new ExceptionHandler())
                         // 移除协议分发器
                         .remove(MessageConstant.HTTP_DISPATCHER_HANDLER);
-                // 登录认证（可选）+ 内容安全（鉴权之后）
-                installAuthAndContentSafety(ctx.pipeline());
+                // 登录认证（可选）；敏感词在 PacketHandler 有序任务内，不挂管道
+                installAuth(ctx.pipeline());
                 // 调用当前handler的下一个handle的active，注意与ctx.pipeline().fireChannelActive()
                 ctx.fireChannelActive();
             }else {
@@ -288,7 +288,7 @@ public enum NativePacketProtocol implements PacketProtocol {
                     .addLast(MessageConstant.PACKET_HANDLER, PacketHandler.client())
                     .addLast(MessageConstant.EXCEPTION_HANDLER, new ExceptionHandler())
                     .remove(MessageConstant.PACKET_DISPATCHER_HANDLER);
-            installAuthAndContentSafety(ctx.pipeline());
+            installAuth(ctx.pipeline());
             ctx.fireChannelActive();
         }
     },
@@ -311,8 +311,6 @@ public enum NativePacketProtocol implements PacketProtocol {
             // MQTT 以 CONNECT 为登录，不挂 AuthenticationHandler（否则非 LOGIN 类型会被「请先登录」关掉）
             pipeline.addBefore(MessageConstant.PACKET_HANDLER, MessageConstant.LOGIN_TIMEOUT_HANDLER,
                     LoginTimeoutHandler.INSTANCE);
-            pipeline.addBefore(MessageConstant.PACKET_HANDLER, MessageConstant.CONTENT_SAFETY_HANDLER,
-                    new ContentSafetyHandler());
             // 移除掉掉协议分发器
             MqttProtocolDispatcherHandler mqttProtocolDispatcherHandler = pipeline.get(MqttProtocolDispatcherHandler.class);
             if (mqttProtocolDispatcherHandler != null) {
@@ -333,17 +331,13 @@ public enum NativePacketProtocol implements PacketProtocol {
     ;
 
     /**
-     * 挂载登录鉴权与内容安全。
-     * <p>有登录：Auth → ContentSafety → PacketHandler；无登录：ContentSafety → PacketHandler。</p>
+     * 需要登录时挂 AuthenticationHandler；内容安全在 {@link PacketHandler} 有序任务内执行。
      *
      * @param pipeline 当前连接管道
      */
-    private static void installAuthAndContentSafety(ChannelPipeline pipeline) {
+    private static void installAuth(ChannelPipeline pipeline) {
         if (MessageServerContext.serverProperties().isServerLoginEnable()) {
             pipeline.addBefore(MessageConstant.PACKET_HANDLER, MessageConstant.AUTHENTICATION_HANDLER, new AuthenticationHandler());
-            pipeline.addAfter(MessageConstant.AUTHENTICATION_HANDLER, MessageConstant.CONTENT_SAFETY_HANDLER, new ContentSafetyHandler());
-        } else {
-            pipeline.addBefore(MessageConstant.PACKET_HANDLER, MessageConstant.CONTENT_SAFETY_HANDLER, new ContentSafetyHandler());
         }
     }
 

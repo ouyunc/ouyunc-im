@@ -10,6 +10,7 @@ import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ChannelOrderedTasks;
 import com.ouyunc.message.processor.AbstractMessageBiProcessor;
+import com.ouyunc.message.safety.ContentSafetyIngress;
 import com.ouyunc.message.validator.DeviceValidator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -17,13 +18,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 /**
  * 统一 Packet 业务入口。
  * <ul>
- *   <li>{@link Mode#CLIENT}：设备校验后 {@code preProcess → process → postProcess}；
- *       外部心跳 {@link MessageTypeEnum#PING_PONG} 不入有序队列</li>
+ *   <li>{@link Mode#CLIENT}：设备校验后 {@code 内容安全 → preProcess → process → postProcess}（同一条有序任务）；
+ *       外部心跳 {@link MessageTypeEnum#PING_PONG} 不入有序队列、不做敏感词</li>
  *   <li>{@link Mode#CLUSTER}：仅 {@code process → postProcess}；
  *       {@link OuyuncMessageTypeEnum#SYN_ACK} 不入有序队列</li>
  * </ul>
@@ -123,11 +125,15 @@ public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
     }
 
     /**
-     * 客户端完整三阶段：preProcess → process → postProcess。
+     * 客户端完整三阶段：内容安全 → preProcess → process → postProcess。
+     * 安全检查与业务必须同一条有序任务，禁止拆成两次入队（否则 MASK 与 process 可能被后到的包插队）。
      * pre 返回 false/empty 时跳过后续阶段。
      */
     private static CompletionStage<Void> invokeFull(ChannelHandlerContext ctx, Packet packet,
                                                     AbstractMessageBiProcessor<? extends Number> processor) {
+        if (!ContentSafetyIngress.applyOnWorker(ctx, packet)) {
+            return CompletableFuture.completedFuture(null);
+        }
         Mono<Void> chain = processor.preProcess(ctx, packet)
                 .flatMap(passed -> {
                     if (!Boolean.TRUE.equals(passed)) {
@@ -137,8 +143,8 @@ public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
                             .then(Mono.defer(() -> processor.postProcess(ctx, packet)));
                 })
                 .onErrorResume(error -> {
-                    // 吞掉 Mono 错误以免打乱有序队列；异常统一交给尾部 ExceptionHandler
-                    fireUnifiedException(ctx, packet, error, "消息三阶段执行异常");
+                    // 吞掉 Mono 错误以免打乱有序队列；业务异常不断连
+                    publishBusinessException(packet, error, "消息三阶段执行异常");
                     return Mono.empty();
                 });
         return ChannelOrderedTasks.toVoidStage(chain);
@@ -150,7 +156,7 @@ public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
         Mono<Void> chain = processor.process(ctx, packet)
                 .then(Mono.defer(() -> processor.postProcess(ctx, packet)))
                 .onErrorResume(error -> {
-                    fireUnifiedException(ctx, packet, error, "消息 process/post 执行异常");
+                    publishBusinessException(packet, error, "消息 process/post 执行异常");
                     return Mono.empty();
                 });
         return ChannelOrderedTasks.toVoidStage(chain);
@@ -162,42 +168,18 @@ public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
                                  String scene) {
         processor.process(ctx, packet).subscribe(
                 unused -> { },
-                e -> fireUnifiedException(ctx, packet, e, scene + " process 异常"));
+                e -> publishBusinessException(packet, e, scene + " process 异常"));
     }
 
     /**
-     * 异步业务异常回流 Netty 管道尾部 {@link ExceptionHandler}。
-     * <p>有序任务可能在虚拟线程执行，必须切回 EventLoop 再 {@code fireExceptionCaught}。</p>
+     * 业务 process 失败只记日志和事件，不断开连接。
+     * <p>管道损坏（解码/SSL/IO）才走尾部 {@link ExceptionHandler} 关通道。</p>
      */
-    private static void fireUnifiedException(ChannelHandlerContext ctx, Packet packet,
-                                             Throwable error, String scene) {
+    private static void publishBusinessException(Packet packet, Throwable error, String scene) {
         log.error("{}, packetId={}", scene, packet == null ? null : packet.getPacketId(), error);
-        if (ctx == null || error == null) {
+        if (error == null) {
             return;
         }
-        Runnable fire = () -> {
-            try {
-                ctx.fireExceptionCaught(error);
-            } catch (Exception ex) {
-                // 兜底：管道已拆时仍走与 ExceptionHandler 相同的事件发布
-                log.error("fireExceptionCaught 失败，直接发布异常事件 packetId={}",
-                        packet == null ? null : packet.getPacketId(), ex);
-                MessageServerContext.publishEvent(new MessageEvent(error, MessageEventTypeEnum.EXCEPTION), true);
-            }
-        };
-        if (ctx.channel() == null) {
-            MessageServerContext.publishEvent(new MessageEvent(error, MessageEventTypeEnum.EXCEPTION), true);
-            return;
-        }
-        var eventLoop = ctx.channel().eventLoop();
-        if (eventLoop.inEventLoop()) {
-            fire.run();
-            return;
-        }
-        if (eventLoop.isShuttingDown() || eventLoop.isShutdown() || eventLoop.isTerminated()) {
-            MessageServerContext.publishEvent(new MessageEvent(error, MessageEventTypeEnum.EXCEPTION), true);
-            return;
-        }
-        eventLoop.execute(fire);
+        MessageServerContext.publishEvent(new MessageEvent(error, MessageEventTypeEnum.EXCEPTION), true);
     }
 }

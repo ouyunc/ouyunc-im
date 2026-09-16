@@ -70,7 +70,9 @@ import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 
+import java.util.Collections;
 import java.util.Map;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -178,23 +180,15 @@ public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcesso
             installCloseHook(ctx, comboIdentity, mqttLoginClientInfo);
             ClientHelper.bindAsync(ctx, mqttLoginClientInfo).whenComplete((previous, ex) -> {
                 try {
-                    ctx.executor().execute(() -> {
-                        try {
-                            completeMqttConnectAfterRemoteBind(ctx, packet, mqttConnectMessage, sessionPresent,
-                                    mqttLoginClientInfo, previous, loginTimestamp, ex);
-                            sink.success();
-                        } catch (Throwable t) {
-                            ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, null);
-                            sink.error(t);
-                        }
-                    });
-                } catch (Throwable scheduleError) {
-                    // EventLoop 已关闭时 execute 可能拒绝，必须结束 Mono 以免有序队列挂死
-                    try {
-                        completeMqttConnectAfterRemoteBind(ctx, packet, mqttConnectMessage, sessionPresent,
-                                mqttLoginClientInfo, previous, loginTimestamp, ex);
-                    } catch (Throwable ignored) {
-                        ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, null);
+                    ThreadPoolManager.messageProcessorExecutor().execute(() ->
+                            finishMqttConnectAfterDirectoryCheck(ctx, packet, mqttConnectMessage, sessionPresent,
+                                    mqttLoginClientInfo, previous, loginTimestamp, ex, sink));
+                } catch (RejectedExecutionException scheduleError) {
+                    log.error("MQTT fencing 投递业务线程被拒绝 channelId={}", ctx.channel().id().asShortText(), scheduleError);
+                    ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, null);
+                    AppKeyValidator.releaseReservedIfNeeded(mqttLoginClientInfo.getAppKey(), ctx);
+                    if (ctx.channel().isActive()) {
+                        ctx.channel().close();
                     }
                     sink.success();
                 }
@@ -408,12 +402,62 @@ public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcesso
     }
 
     /**
-     * Redis 与本地注册表绑定成功后发送 CONNACK 并安装心跳管道。
+     * Redis fencing、踢人、inflight 清理/加载在业务线程完成，再回 EventLoop 写 CONNACK。
+     */
+    private void finishMqttConnectAfterDirectoryCheck(ChannelHandlerContext ctx, Packet packet,
+                                                      MqttConnectMessage mqttConnectMessage, boolean sessionPresent,
+                                                      MqttLoginClientInfo loginClientInfo, LoginClientInfo previous,
+                                                      long loginTimestamp, Throwable bindError, MonoSink<Void> sink) {
+        boolean directoryOwned = false;
+        Map<Integer, String> inflight = Collections.emptyMap();
+        if (bindError == null && ctx.channel().isActive()) {
+            directoryOwned = ClientHelper.stillOwnsDirectory(loginClientInfo);
+            if (directoryOwned) {
+                kickPreviousMqttSessionAfterBindWin(packet, loginClientInfo, previous, loginTimestamp);
+                directoryOwned = ClientHelper.stillOwnsDirectory(loginClientInfo);
+            }
+            if (directoryOwned && ctx.channel().isActive()) {
+                String comboIdentity = IdentityUtil.generalComboIdentity(
+                        loginClientInfo.getAppKey(), loginClientInfo.getIdentity(), DeviceTypeEnum.M.getType());
+                if (mqttConnectMessage.variableHeader().isCleanSession()) {
+                    MqttRepository.INSTANCE.clearInflight(loginClientInfo.getAppKey(), comboIdentity);
+                } else {
+                    inflight = MqttRepository.INSTANCE.loadInflight(loginClientInfo.getAppKey(), comboIdentity);
+                }
+            }
+        }
+        final boolean owned = directoryOwned;
+        final Map<Integer, String> inflightSnapshot = inflight == null ? Collections.emptyMap() : inflight;
+        try {
+            ctx.executor().execute(() -> {
+                try {
+                    completeMqttConnectAfterRemoteBind(ctx, packet, mqttConnectMessage, sessionPresent,
+                            loginClientInfo, loginTimestamp, bindError, owned, inflightSnapshot);
+                    sink.success();
+                } catch (Throwable t) {
+                    ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, null);
+                    sink.error(t);
+                }
+            });
+        } catch (Throwable scheduleError) {
+            log.error("MQTT CONNACK 投递 EventLoop 被拒绝 channelId={}", ctx.channel().id().asShortText(), scheduleError);
+            ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, null);
+            AppKeyValidator.releaseReservedIfNeeded(loginClientInfo.getAppKey(), ctx);
+            if (ctx.channel().isActive()) {
+                ctx.channel().close();
+            }
+            sink.success();
+        }
+    }
+
+    /**
+     * 在 EventLoop 上发送 CONNACK 并安装心跳管道。fencing / inflight Redis 已在业务线程做完。
      */
     private void completeMqttConnectAfterRemoteBind(ChannelHandlerContext ctx, Packet packet,
                                                     MqttConnectMessage mqttConnectMessage, boolean sessionPresent,
-                                                    MqttLoginClientInfo loginClientInfo, LoginClientInfo previous,
-                                                    long loginTimestamp, Throwable bindError) {
+                                                    MqttLoginClientInfo loginClientInfo, long loginTimestamp,
+                                                    Throwable bindError, boolean directoryOwned,
+                                                    Map<Integer, String> inflight) {
         ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, null);
         if (!ctx.channel().isActive()) {
             ClientHelper.unbindLocalRegisterTable(loginClientInfo, ctx);
@@ -432,22 +476,8 @@ public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcesso
             ctx.close();
             return;
         }
-        if (!ClientHelper.stillOwnsDirectory(loginClientInfo)) {
+        if (!directoryOwned) {
             log.warn("mqtt 登录 fencing 失败，目录已被更新会话覆盖 clientId={}", loginClientInfo.getIdentity());
-            MqttMessage connAckMessage = MqttMessageFactory.newMessage(
-                    new MqttFixedHeader(MqttMessageType.CONNACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
-                    new MqttConnAckVariableHeader(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE, false),
-                    null);
-            MessageHelper.tryWriteObject(ctx.channel(), connAckMessage, packet, sendResult -> {});
-            ClientHelper.unbindLocalRegisterTable(loginClientInfo, ctx);
-            AppKeyValidator.releaseReservedIfNeeded(loginClientInfo.getAppKey(), ctx);
-            ctx.close();
-            return;
-        }
-        kickPreviousMqttSessionAfterBindWin(packet, loginClientInfo, previous, loginTimestamp);
-        // CONNACK 前再确认目录归属，缩小踢人后被顶替仍回成功码的窗口
-        if (!ClientHelper.stillOwnsDirectory(loginClientInfo)) {
-            log.warn("mqtt CONNACK 前 fencing 失败 clientId={}", loginClientInfo.getIdentity());
             MqttMessage connAckMessage = MqttMessageFactory.newMessage(
                     new MqttFixedHeader(MqttMessageType.CONNACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
                     new MqttConnAckVariableHeader(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE, false),
@@ -476,21 +506,16 @@ public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcesso
                 true);
         log.debug("CONNECT - clientId: {}, cleanSession: {}", mqttConnectMessage.payload().clientIdentifier(),
                 mqttConnectMessage.variableHeader().isCleanSession());
-        String comboIdentity = IdentityUtil.generalComboIdentity(
-                loginClientInfo.getAppKey(), loginClientInfo.getIdentity(), DeviceTypeEnum.M.getType());
-        if (mqttConnectMessage.variableHeader().isCleanSession()) {
-            MqttRepository.INSTANCE.clearInflight(loginClientInfo.getAppKey(), comboIdentity);
-        } else {
-            replayMqttInflight(ctx, packet, loginClientInfo.getAppKey(), comboIdentity);
+        if (!mqttConnectMessage.variableHeader().isCleanSession()) {
+            replayMqttInflight(ctx, packet, inflight);
         }
     }
 
     /**
-     * cleanSession=0 时重发未收到 PUBACK 的 QoS1 报文（DUP=1）。
+     * cleanSession=0 时重发未收到 PUBACK 的 QoS1 报文（DUP=1）。inflight 已在业务线程从 Redis 取出。
      */
-    private void replayMqttInflight(ChannelHandlerContext ctx, Packet packet, String appKey, String comboIdentity) {
-        Map<Integer, String> inflight = MqttRepository.INSTANCE.loadInflight(appKey, comboIdentity);
-        if (inflight.isEmpty()) {
+    private void replayMqttInflight(ChannelHandlerContext ctx, Packet packet, Map<Integer, String> inflight) {
+        if (inflight == null || inflight.isEmpty()) {
             return;
         }
         MqttVersion mqttVersion = MqttCodecUtil.getMqttVersion(packet.getRetain());
