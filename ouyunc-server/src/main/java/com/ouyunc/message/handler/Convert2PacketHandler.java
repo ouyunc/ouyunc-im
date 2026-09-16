@@ -29,7 +29,8 @@ public class Convert2PacketHandler extends SimpleChannelInboundHandler<Object> {
         for (PacketConverter<?> packetConverter : MessageServerContext.packetConverterList) {
             Packet packet = packetConverter.convertToPacket(ctx, msg);
             if (packet != null) {
-                if (ClusterChannelGuard.rejectExternalInternalPacket(ctx, packet)) {
+                if (ClusterChannelGuard.rejectExternalInternalPacket(ctx, packet)
+                        || ClusterChannelGuard.rejectClientClusterCapability(ctx, packet)) {
                     return;
                 }
                 ctx.fireChannelRead(packet);

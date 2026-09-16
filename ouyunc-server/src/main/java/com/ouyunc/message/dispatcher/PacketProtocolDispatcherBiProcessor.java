@@ -1,6 +1,7 @@
 package com.ouyunc.message.dispatcher;
 
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.enums.ProtocolTypeEnum;
 import com.ouyunc.base.utils.PacketMagicUtil;
 import com.ouyunc.message.cluster.auth.ClusterAuthentication;
 import com.ouyunc.message.cluster.auth.ClusterAuthConstant;
@@ -16,18 +17,16 @@ import org.slf4j.LoggerFactory;
 import java.nio.ByteOrder;
 
 /**
- * @author fzx
- * @description packet 协议,用于服务内部使用，主要用于集群节点之间通信
+ * 集群原生 Packet（protocol=OUYUNC）：HMAC 认证后走集群路由。
+ * 客户端原生包见 {@link ClientPacketProtocolDispatcherBiProcessor}。
  */
 public class PacketProtocolDispatcherBiProcessor implements ProtocolDispatcherBiProcessor {
     private static final Logger log = LoggerFactory.getLogger(PacketProtocolDispatcherBiProcessor.class);
 
     @Override
     public boolean match(ByteBuf in) {
-        // 判断是何种协议,注意这里不可以使用  in.readByte();
-        byte[] magicBytes = new byte[MessageConstant.MAGIC_BYTE_LENGTH];
-        in.getBytes(in.readerIndex(), magicBytes);
-        return isPacket(magicBytes);
+        // 仅匹配集群协议号，避免与 OUYUNC_CLIENT 抢同一魔数
+        return PacketMagicUtil.matchesPacketProtocol(in, ProtocolTypeEnum.OUYUNC.getProtocol());
     }
 
     @Override
@@ -56,13 +55,5 @@ public class PacketProtocolDispatcherBiProcessor implements ProtocolDispatcherBi
         ctx.pipeline().remove(MessageConstant.PROTOCOL_DISPATCHER_HANDLER);
         // 调用下一个handle
         ctx.fireChannelRead(in.retain());
-    }
-
-    /**
-     * @Author fzx
-     * @Description 判断是否是packet类型协议
-     */
-    private boolean isPacket(byte[] magicBytes) {
-        return PacketMagicUtil.isPacketMagic(magicBytes);
     }
 }

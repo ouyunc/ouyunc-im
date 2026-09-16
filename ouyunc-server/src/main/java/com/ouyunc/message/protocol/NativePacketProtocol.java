@@ -200,8 +200,8 @@ public enum NativePacketProtocol implements PacketProtocol {
     },
 
 
-    // 目前该协议不对外开放只作为集群内部协议使用，可以对接jt 818,或者其他物联网的通信，字节扩充，
-    OUYUNC(ProtocolTypeEnum.OUYUNC.getProtocol(), ProtocolTypeEnum.OUYUNC.getProtocolVersion(), "自定义ouyunc协议，版本号为1") {
+    // 集群内部原生 Packet：HMAC + 租约 + 集群路由；不对外部客户端开放。
+    OUYUNC(ProtocolTypeEnum.OUYUNC.getProtocol(), ProtocolTypeEnum.OUYUNC.getProtocolVersion(), "集群内部 ouyunc 协议，版本号为1") {
         @Override
         public void doDispatcher(ChannelHandlerContext ctx,  Object msg) {
             ctx.channel().attr(protocolAttrKey).set(this);
@@ -272,6 +272,25 @@ public enum NativePacketProtocol implements PacketProtocol {
             });
         }
 
+    },
+
+    /**
+     * 外部客户端原生 Packet：编解码复用 Packet，业务路径与 WS/MQTT 一致（client 三阶段 + 登录鉴权），
+     * 禁止集群路由 / 集群消息类型。
+     */
+    OUYUNC_CLIENT(ProtocolTypeEnum.OUYUNC_CLIENT.getProtocol(), ProtocolTypeEnum.OUYUNC_CLIENT.getProtocolVersion(),
+            "客户端原生 ouyunc 协议，版本号为1") {
+        @Override
+        public void doDispatcher(ChannelHandlerContext ctx, Object msg) {
+            ctx.channel().attr(protocolAttrKey).set(this);
+            ctx.pipeline()
+                    .addLast(MessageConstant.CONVERT_2_PACKET_HANDLER, new Convert2PacketHandler())
+                    .addLast(MessageConstant.PACKET_HANDLER, PacketHandler.client())
+                    .addLast(MessageConstant.EXCEPTION_HANDLER, new ExceptionHandler())
+                    .remove(MessageConstant.PACKET_DISPATCHER_HANDLER);
+            installAuthAndContentSafety(ctx.pipeline());
+            ctx.fireChannelActive();
+        }
     },
 
 

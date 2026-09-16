@@ -15,7 +15,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * 内部协议入口的轻量校验：HMAC 之后只认已认证 Channel，外部协议不允许内部包。
+ * 内部协议入口的轻量校验：HMAC 之后只认已认证 Channel；外部入口禁止集群能力。
+ * <p>拦的是「能力」（routed / 集群消息类型 / 集群协议号），不是「Packet 帧格式」本身。
+ * 客户端原生 {@link ProtocolTypeEnum#OUYUNC_CLIENT} 与集群 {@link ProtocolTypeEnum#OUYUNC} 完全分离。</p>
  */
 public final class ClusterChannelGuard {
 
@@ -25,7 +27,7 @@ public final class ClusterChannelGuard {
     }
 
     /**
-     * WS/HTTP/MQTT 连接上禁止 OUYUNC 协议和 routed 包，避免外部入口冒充集群路由。
+     * WS/HTTP/MQTT 连接上禁止集群 OUYUNC、客户端原生协议号冒充、routed 包与集群消息类型。
      *
      * @return true 表示已拒绝并关闭连接
      */
@@ -35,15 +37,44 @@ public final class ClusterChannelGuard {
             return false;
         }
         Metadata metadata = packet.getMessage() == null ? null : packet.getMessage().getMetadata();
-        boolean internalProtocol = packet.getProtocol() == ProtocolTypeEnum.OUYUNC.getProtocol();
+        boolean clusterOrNativeClientProtocol = isClusterOrClientNativeProtocol(packet.getProtocol());
         boolean routed = metadata != null && metadata.isRouted();
         boolean clusterType = isInternalClusterMessage(packet);
-        if (!internalProtocol && !routed && !clusterType) {
+        if (!clusterOrNativeClientProtocol && !routed && !clusterType) {
             return false;
         }
-        log.warn("外部协议连接投递内部包，关闭连接 remote={} channelProtocol={} packetProtocol={} routed={} clusterType={}",
+        log.warn("外部协议连接投递内部/原生能力包，关闭连接 remote={} channelProtocol={} packetProtocol={} routed={} clusterType={}",
                 ctx.channel().remoteAddress(),
                 channelProtocol.getProtocol(),
+                packet.getProtocol(),
+                routed,
+                clusterType);
+        ctx.close();
+        return true;
+    }
+
+    /**
+     * OUYUNC_CLIENT 通道：协议号必须与 Channel 一致，禁止 routed / 集群消息类型。
+     *
+     * @return true 表示已拒绝并关闭连接
+     */
+    public static boolean rejectClientClusterCapability(ChannelHandlerContext ctx, Packet packet) {
+        Protocol channelProtocol = ctx.channel().attr(NativePacketProtocol.protocolAttrKey).get();
+        if (channelProtocol == null
+                || channelProtocol.getProtocol() != ProtocolTypeEnum.OUYUNC_CLIENT.getProtocol()
+                || packet == null) {
+            return false;
+        }
+        Metadata metadata = packet.getMessage() == null ? null : packet.getMessage().getMetadata();
+        boolean protocolMismatch = packet.getProtocol() != ProtocolTypeEnum.OUYUNC_CLIENT.getProtocol()
+                || packet.getProtocolVersion() != ProtocolTypeEnum.OUYUNC_CLIENT.getProtocolVersion();
+        boolean routed = metadata != null && metadata.isRouted();
+        boolean clusterType = isInternalClusterMessage(packet);
+        if (!protocolMismatch && !routed && !clusterType) {
+            return false;
+        }
+        log.warn("OUYUNC_CLIENT 连接使用非法能力，关闭连接 remote={} packetProtocol={} routed={} clusterType={}",
+                ctx.channel().remoteAddress(),
                 packet.getProtocol(),
                 routed,
                 clusterType);
@@ -105,6 +136,11 @@ public final class ClusterChannelGuard {
         return type == OuyuncMessageTypeEnum.SYN_ACK.getType()
                 || type == OuyuncMessageTypeEnum.RELATION_CACHE_INVALIDATE.getType()
                 || type == OuyuncMessageTypeEnum.CLUSTER_AUTH.getType();
+    }
+
+    private static boolean isClusterOrClientNativeProtocol(byte protocol) {
+        return protocol == ProtocolTypeEnum.OUYUNC.getProtocol()
+                || protocol == ProtocolTypeEnum.OUYUNC_CLIENT.getProtocol();
     }
 
     private static boolean isExternalClientProtocol(Protocol protocol) {
