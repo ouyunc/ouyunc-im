@@ -308,8 +308,11 @@ public enum NativePacketProtocol implements PacketProtocol {
                     .addLast(MessageConstant.PACKET_HANDLER, PacketHandler.client())
                     // 异常处理器
                     .addLast(MessageConstant.EXCEPTION_HANDLER, new ExceptionHandler());
-            // 登录认证（可选）+ 内容安全（鉴权之后）
-            installAuthAndContentSafety(pipeline);
+            // MQTT 以 CONNECT 为登录，不挂 AuthenticationHandler（否则非 LOGIN 类型会被「请先登录」关掉）
+            pipeline.addBefore(MessageConstant.PACKET_HANDLER, MessageConstant.LOGIN_TIMEOUT_HANDLER,
+                    LoginTimeoutHandler.INSTANCE);
+            pipeline.addBefore(MessageConstant.PACKET_HANDLER, MessageConstant.CONTENT_SAFETY_HANDLER,
+                    new ContentSafetyHandler());
             // 移除掉掉协议分发器
             MqttProtocolDispatcherHandler mqttProtocolDispatcherHandler = pipeline.get(MqttProtocolDispatcherHandler.class);
             if (mqttProtocolDispatcherHandler != null) {

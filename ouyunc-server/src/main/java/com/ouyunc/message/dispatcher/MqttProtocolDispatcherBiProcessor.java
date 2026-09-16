@@ -47,6 +47,11 @@ public class MqttProtocolDispatcherBiProcessor implements ProtocolDispatcherBiPr
      * @Description 选取具体哪个mqtt 以及协议版本
      */
     private boolean determineMqtt(ByteBuf in, int retainLength) {
+        int needMqtt311 = retainLength + 9;
+        int needMqtt31 = retainLength + 11;
+        if (in.readableBytes() < needMqtt311) {
+            return false;
+        }
         final byte MSB = in.getByte(retainLength + 2);
         final byte LSB = in.getByte(retainLength + 3);
         final byte M = in.getByte(retainLength + 4);
@@ -55,12 +60,18 @@ public class MqttProtocolDispatcherBiProcessor implements ProtocolDispatcherBiPr
         final byte T_s = in.getByte(retainLength + 7);
         // 判断是哪个协议版本,协议可能是3.1.1 / 5.0
         if (MSB == 0 && LSB == 4) {
+            if (in.readableBytes() < retainLength + 9) {
+                return false;
+            }
             if (M == 'M' && Q == 'Q' && T_I == 'T' && T_s == 'T') {
                 // 此时是mqtt 协议,且协议版本号为protocolVersion : 4 => 3.1.1, 5 => 5.0
                 final byte protocolVersion = in.getByte(retainLength + 8);
                 return protocolVersion == 4 || protocolVersion == 5;
             }
         } else if (MSB == 0 && LSB == 6) {
+            if (in.readableBytes() < needMqtt31) {
+                return false;
+            }
             final byte d = in.getByte(retainLength + 8);
             final byte p = in.getByte(retainLength + 9);
             //协议可能是3.1

@@ -34,12 +34,11 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.timeout.IdleStateHandler;
-import io.netty.util.AttributeKey;
-import io.netty.util.concurrent.ScheduledFuture;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -64,9 +63,9 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         LoginContent loginInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
         // 登录消息
         if (MessageTypeEnum.LOGIN.getType().equals(packet.getMessageType())) {
-            if (loginInfo != null) {
-                log.warn("重复登录, 正在关闭连接!");
-                ctx.close();
+            if (loginInfo != null
+                    || Boolean.TRUE.equals(ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT))) {
+                log.warn("重复登录包忽略，不关闭已绑定/登录中的连接 channelId={}", ctx.channel().id().asShortText());
                 return;
             }
             doLogin(ctx, packet);
@@ -83,41 +82,17 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        ScheduledFuture<?> timeoutFuture = ctx.executor().schedule(() -> {
-            LoginContent loginInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
-            if (loginInfo == null) {
-                log.error("登录超时, 在规定时间：{} s 内未进行登录，现进行关闭连接: {}!", MessageServerContext.serverProperties().getServerLoginTimeout(), ctx.channel().id().asShortText());
-                ctx.close();
-            }
-        }, MessageServerContext.serverProperties().getServerLoginTimeout(), TimeUnit.SECONDS);
-        ctx.channel().attr(AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_LOGIN_TIMEOUT_SCHEDULED_FUTURE)).set(timeoutFuture);
+        LoginTimeoutSupport.install(ctx);
         super.channelActive(ctx);
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        // 取消登录超时定时任务，避免资源泄漏
-        boolean cancelled = cancelTimeoutFuture(ctx);
+        boolean cancelled = LoginTimeoutSupport.cancel(ctx);
         if (cancelled) {
             log.debug("客户端: {} 连接关闭，已取消登录超时定时任务", ctx.channel().id().asShortText());
         }
         super.channelInactive(ctx);
-    }
-
-    /**
-     * 取消登录超时定时任务
-     * @param ctx
-     * @return boolean
-     */
-    private boolean cancelTimeoutFuture(ChannelHandlerContext ctx) {
-        boolean cancel = false;
-        AttributeKey<ScheduledFuture<?>> attributeKey = AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_LOGIN_TIMEOUT_SCHEDULED_FUTURE);
-        ScheduledFuture<?> timeoutFuture = ctx.channel().attr(attributeKey).get();
-        if (timeoutFuture != null) {
-            cancel = timeoutFuture.cancel(true);
-            ctx.channel().attr(AttributeKey.valueOf(MessageConstant.CHANNEL_ATTR_KEY_LOGIN_TIMEOUT_SCHEDULED_FUTURE)).set(null);
-        }
-        return cancel;
     }
 
     /**
@@ -146,6 +121,11 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         }
         //将消息内容转成message
         LoginContent loginContent = JSON.parseObject(loginMessage.getContent(), LoginContent.class);
+        if (loginContent == null) {
+            log.warn("客户端id: {} 登录内容无法解析", ctx.channel().id().asShortText());
+            ctx.close();
+            return;
+        }
         loginContent.setScope(LoginScopeEnum.normalizeScope(loginContent.getScope()));
         byte deviceType = packet.getDeviceType();
         if (Boolean.TRUE.equals(ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT))) {
@@ -153,8 +133,14 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
             return;
         }
         ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, Boolean.TRUE);
-        ThreadPoolManager.messageProcessorExecutor().execute(() ->
-                authenticateAndBind(ctx, packet, loginContent, deviceType, loginTimestamp));
+        try {
+            ThreadPoolManager.messageProcessorExecutor().execute(() ->
+                    authenticateAndBind(ctx, packet, loginContent, deviceType, loginTimestamp));
+        } catch (RejectedExecutionException ex) {
+            log.error("登录任务提交被拒绝 channelId={}", ctx.channel().id().asShortText(), ex);
+            ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, null);
+            ctx.close();
+        }
     }
 
     /**
@@ -202,8 +188,14 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                     loginContent.getEnableWill(), loginContent.getWillMessage(), loginContent.getEnableAlive(),
                     loginContent.getAliveMessage(), loginContent.getScope(), loginContent.getBusinessIdleSeconds(),
                     loginContent.getHeartBeatWaitRetry(), loginContent.getBusinessIdleCloseStrike());
-            ctx.executor().execute(() -> startRemoteBind(ctx, packet, loginContent, loginMessage,
-                    deviceType, newLoginClientInfo, loginTimestamp));
+            try {
+                ctx.executor().execute(() -> startRemoteBind(ctx, packet, loginContent, loginMessage,
+                        deviceType, newLoginClientInfo, loginTimestamp));
+            } catch (RejectedExecutionException scheduleError) {
+                log.error("登录绑定回调投递 EventLoop 被拒绝 channelId={}", ctx.channel().id().asShortText(), scheduleError);
+                AppKeyValidator.releaseReservedIfNeeded(loginContent.getAppKey(), ctx);
+                failLoginOnEventLoop(ctx);
+            }
         } catch (Exception e) {
             log.error("登录校验异常 channelId={}", ctx.channel().id().asShortText(), e);
             AppKeyValidator.releaseReservedIfNeeded(loginContent.getAppKey(), ctx);
@@ -232,17 +224,33 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         };
         ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_CHANNEL_CLOSE_HOOK, channelCloseHook);
         // 踢旧会话必须在 CAS 绑定胜出之后，避免锁外踢人导致跨节点双在线窗口
-        ClientHelper.bindAsync(ctx, newLoginClientInfo).whenComplete((previous, ex) ->
+        ClientHelper.bindAsync(ctx, newLoginClientInfo).whenComplete((previous, ex) -> {
+            try {
                 ctx.executor().execute(() ->
                         completeLoginAfterRemoteBind(ctx, packet, loginContent, loginMessage,
-                                deviceType, newLoginClientInfo, loginTimestamp, previous, ex)));
+                                deviceType, newLoginClientInfo, loginTimestamp, previous, ex));
+            } catch (RejectedExecutionException scheduleError) {
+                log.error("登录完成回调投递 EventLoop 被拒绝 channelId={}", ctx.channel().id().asShortText(), scheduleError);
+                ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, null);
+                AppKeyValidator.releaseReservedIfNeeded(newLoginClientInfo.getAppKey(), ctx);
+                if (ctx.channel().isActive()) {
+                    ctx.channel().close();
+                }
+            }
+        });
     }
 
     private void failLoginOnEventLoop(ChannelHandlerContext ctx) {
-        ctx.executor().execute(() -> {
+        Runnable fail = () -> {
             ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, null);
             ctx.close();
-        });
+        };
+        try {
+            ctx.executor().execute(fail);
+        } catch (RejectedExecutionException scheduleError) {
+            log.error("登录失败回调投递 EventLoop 被拒绝 channelId={}", ctx.channel().id().asShortText(), scheduleError);
+            fail.run();
+        }
     }
 
     /**
@@ -450,7 +458,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                 .protocol(packet.getProtocol())
                 .protocolVersion(packet.getProtocolVersion())
                 .build());
-        if (!cancelTimeoutFuture(ctx)) {
+        if (!LoginTimeoutSupport.cancel(ctx)) {
             log.warn("客户端: {} 登录成功，取消登录超时定时任务失败", loginClientInfo);
         }
         MessageServerContext.publishEvent(

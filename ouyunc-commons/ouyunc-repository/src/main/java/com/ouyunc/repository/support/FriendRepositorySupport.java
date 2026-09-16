@@ -58,7 +58,8 @@ public final class FriendRepositorySupport {
     }
 
     public RequestSession getFriendRequestSession(String appKey, String from, String to) {
-        return (RequestSession) infra.redisTemplate.opsForValue().get(CacheConstant.buildFriendRequestCacheKey(appKey, from, to));
+        Object raw = infra.redisTemplate.opsForValue().get(CacheConstant.buildFriendRequestCacheKey(appKey, from, to));
+        return raw instanceof RequestSession requestSession ? requestSession : null;
     }
 
     /** 清除好友请求会话占位，允许删友后再申请。 */
@@ -103,15 +104,51 @@ public final class FriendRepositorySupport {
 
     @SuppressWarnings("unchecked")
     public boolean isFriend(String appKey, String from, String to) {
-        // 存在性只信布尔 L1 + Redis ZSET，禁止用 friendEntityCache 推断（配置缓存与关系脱钩）
+        // 存在性：ZSCORE 命中为真；ZCARD>0 视为名单已完整（未命中即非好友）；空/缺失才回源 MySQL，且不写残缺 ZSET
         Boolean cached = RelationLocalCache.FRIEND.get(RelationLocalCache.friendKey(appKey, from, to));
         if (cached != null) {
             return cached;
         }
-        boolean friend = infra.stringRedisTemplate.opsForZSet().score(
-                CacheConstant.buildFriendsCacheKey(appKey, from), to) != null;
-        RelationLocalCache.FRIEND.put(RelationLocalCache.friendKey(appKey, from, to), friend);
-        return friend;
+        String zsetKey = CacheConstant.buildFriendsCacheKey(appKey, from);
+        try {
+            Double score = infra.stringRedisTemplate.opsForZSet().score(zsetKey, to);
+            if (score != null) {
+                RelationLocalCache.FRIEND.put(RelationLocalCache.friendKey(appKey, from, to), true);
+                return true;
+            }
+            Long card = infra.stringRedisTemplate.opsForZSet().zCard(zsetKey);
+            if (card != null && card > 0) {
+                RelationLocalCache.FRIEND.put(RelationLocalCache.friendKey(appKey, from, to), false);
+                return false;
+            }
+        } catch (Exception e) {
+            log.error("Redis 查询好友关系异常, appKey: {}, from: {}, to: {}", appKey, from, to, e);
+        }
+        Boolean dbFriend = loadFriendExistsFromDb(appKey, from, to);
+        if (dbFriend == null) {
+            return false;
+        }
+        RelationLocalCache.FRIEND.put(RelationLocalCache.friendKey(appKey, from, to), dbFriend);
+        return dbFriend;
+    }
+
+    /**
+     * @return true 存在，false 不存在，null 查询异常（不得缓存 false）
+     */
+    private Boolean loadFriendExistsFromDb(String appKey, String from, String to) {
+        try {
+            FriendEntity friendEntity = infra.jdbcClient.sql(JdbcSqlDialectHolder.selectFriend())
+                    .param(FriendEntity.Fields.userId, from)
+                    .param(FriendEntity.Fields.friendUserId, to)
+                    .param(UserEntity.Fields.appKey, appKey)
+                    .query(FriendEntity.class)
+                    .optional()
+                    .orElse(null);
+            return friendEntity != null;
+        } catch (Exception e) {
+            log.error("从MySQL查询好友关系异常, appKey: {}, from: {}, to: {}", appKey, from, to, e);
+            return null;
+        }
     }
 
     public Collection<String> getFriendIds(String appKey, String from) {
@@ -186,8 +223,8 @@ public final class FriendRepositorySupport {
         if (localCached != null) {
             return localCached;
         }
-        FriendEntity redisCached = (FriendEntity) infra.redisTemplate.opsForValue().get(cacheKey);
-        if (redisCached != null) {
+        Object redisValue = infra.redisTemplate.opsForValue().get(cacheKey);
+        if (redisValue instanceof FriendEntity redisCached) {
             fillLocalFriendCache(cacheKey, redisCached);
             return redisCached;
         }

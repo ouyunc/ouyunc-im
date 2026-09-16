@@ -32,8 +32,8 @@ public class ProtocolDispatcher extends ByteToMessageDecoder {
             log.error("缓冲区不可读！");
             throw new MessageException("缓冲区不可读！");
         }
-        // Will use the first six bytes to detect a protocol.
-        if (in.readableBytes() < 6) {
+        // MQTT CONNECT 最短约 11 字节（3.1 协议名 MQIsdp + 版本）；不足则等待，避免 6 字节误关或越界
+        if (in.readableBytes() < 14) {
             return;
         }
         // 读索引必须从头开始读的，这样才能保证是第一次读取

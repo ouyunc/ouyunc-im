@@ -189,7 +189,7 @@ public final class HttpPushDeliverySupport {
         }
     }
 
-    private static void markRetryableFailed(Packet packet) {
+    public static void markRetryableFailed(Packet packet) {
         IdempotencyCoords coords = resolveCoords(packet);
         if (coords == null) {
             return;

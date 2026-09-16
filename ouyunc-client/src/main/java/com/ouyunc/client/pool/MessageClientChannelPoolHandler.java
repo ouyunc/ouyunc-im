@@ -5,6 +5,8 @@ import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.ProtocolTypeEnum;
 import com.ouyunc.base.model.Protocol;
 import com.ouyunc.base.utils.ChannelAttrUtil;
+import com.ouyunc.client.selector.MqttProtocolDispatcherProcessor;
+import com.ouyunc.client.selector.PacketProtocolDispatcherProcessor;
 import com.ouyunc.client.selector.ProtocolSelector;
 import com.ouyunc.client.selector.WebsocketProtocolDispatcherProcessor;
 import io.netty.channel.Channel;
@@ -81,12 +83,14 @@ public class MessageClientChannelPoolHandler extends AbstractChannelPoolHandler 
      * @description 获取协议选择器
      */
     public ProtocolSelector<Protocol, Channel> getProtocolSelector(Protocol protocol) {
-        // 匹配并获取协议分发器
-//        for (ProtocolSelector<Protocol, Channel> protocolSelector : MessageContext.protocolDispatcherProcessors) {
-//            if (protocolSelector.match(protocol)) {
-//                return protocolSelector;
-//            }
-//        }
+        PacketProtocolDispatcherProcessor packetSelector = new PacketProtocolDispatcherProcessor();
+        if (packetSelector.match(protocol)) {
+            return packetSelector;
+        }
+        MqttProtocolDispatcherProcessor mqttSelector = new MqttProtocolDispatcherProcessor();
+        if (mqttSelector.match(protocol)) {
+            return mqttSelector;
+        }
         return new WebsocketProtocolDispatcherProcessor();
     }
 

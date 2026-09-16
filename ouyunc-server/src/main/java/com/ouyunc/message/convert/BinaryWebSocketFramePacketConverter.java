@@ -21,6 +21,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,6 +56,11 @@ public enum BinaryWebSocketFramePacketConverter implements PacketConverter<Binar
                 // 设置默认的appKey
                 if (MessageTypeEnum.LOGIN.getType() == packet.getMessageType()) {
                     LoginContent loginContent = JSON.parseObject(message.getContent(), LoginContent.class);
+                    if (loginContent == null || StringUtils.isBlank(loginContent.getAppKey())) {
+                        log.error("客户端:{} 登录内容无法解析或缺少 appKey", message.getFrom());
+                        ctx.close();
+                        throw new MessageException("客户端:" + message.getFrom() + " 登录内容无法解析");
+                    }
                     metadata.setAppKey(loginContent.getAppKey());
                 }else {
                     // 不是登录类型的消息，说明该客户端已经登录，可以从当前通道获取用户appKey

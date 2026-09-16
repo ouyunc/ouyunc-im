@@ -55,6 +55,7 @@ public final class HttpPushProcessorDelegate {
         } catch (Exception ex) {
             log.error("HTTP 推送 process 异常, messageId={}", packet.getMessage().getId(), ex);
             HttpPushDeliverySupport.publishException(ExceptionCodeEnum.UNKNOWN_ERROR, ex.getMessage(), packet);
+            HttpPushDeliverySupport.markRetryableFailed(packet);
         }
     }
 

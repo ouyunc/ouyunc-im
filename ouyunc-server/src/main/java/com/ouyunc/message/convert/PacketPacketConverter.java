@@ -86,6 +86,11 @@ public enum PacketPacketConverter implements PacketConverter<Packet> {
         if (!metadata.isRouted()) {
             if (MessageTypeEnum.LOGIN.getType() == packet.getMessageType()) {
                 LoginContent loginContent = JSON.parseObject(message.getContent(), LoginContent.class);
+                if (loginContent == null || org.apache.commons.lang3.StringUtils.isBlank(loginContent.getAppKey())) {
+                    log.error("OUYUNC_CLIENT 客户端:{} 登录内容无法解析或缺少 appKey", message.getFrom());
+                    ctx.close();
+                    throw new MessageException("客户端:" + message.getFrom() + " 登录内容无法解析");
+                }
                 metadata.setAppKey(loginContent.getAppKey());
             } else {
                 LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);

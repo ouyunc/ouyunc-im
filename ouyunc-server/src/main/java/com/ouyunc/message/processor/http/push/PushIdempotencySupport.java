@@ -8,6 +8,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.serializer.RedisSerializer;
 
@@ -114,9 +115,9 @@ public final class PushIdempotencySupport {
         if (StringUtils.isAnyBlank(appKey, messageId)) {
             return null;
         }
-        RedisTemplate<String, Object> redisTemplate = CacheFactory.REDIS.instance();
+        StringRedisTemplate redisTemplate = CacheFactory.STRING_REDIS.instance();
         String key = CacheConstant.buildHttpPushIdempotentCacheKey(appKey, messageId);
-        Object value = redisTemplate.opsForValue().get(key);
+        String value = redisTemplate.opsForValue().get(key);
         if (value == null) {
             return null;
         }

@@ -129,7 +129,7 @@ public final class QosIdempotencyHelper {
 
     /**
      * KEYS 同抢占。ARGV: [owner, serverId, hash, ttlMs...]。时间戳取 Redis 服务器时间。
-     * 仅同 owner 同 serverId 同 hash 的 PENDING 可转 COMMITTED；已是同值 COMMITTED 视为幂等成功。
+     * 先校验全部键再统一写入，避免 key1 已 COMMITTED、key2 失败留下幽灵成功记录。
      */
     private static final DefaultRedisScript<Long> COMMIT_SCRIPT = script(PARSE_LUA + """
             local owner = ARGV[1]
@@ -143,10 +143,17 @@ public final class QosIdempotencyHelper {
               local f = parse(raw)
               if f[1] == 'COMMITTED' then
                 if f[2] ~= serverId or f[3] ~= hash then return 0 end
-              elseif f[1] == 'PENDING' and f[2] == serverId and f[3] == hash and f[4] == owner then
+              elseif not (f[1] == 'PENDING' and f[2] == serverId and f[3] == hash and f[4] == owner) then
+                return 0
+              end
+            end
+            for i = 1, #KEYS do
+              local raw = redis.call('GET', KEYS[i])
+              local f = parse(raw)
+              if f[1] == 'PENDING' then
                 redis.call('PSETEX', KEYS[i], tonumber(ARGV[3 + i]),
                   table.concat({'COMMITTED', serverId, hash, owner, f[5], tostring(now)}, '|'))
-              else return 0 end
+              end
             end
             return 1
             """);

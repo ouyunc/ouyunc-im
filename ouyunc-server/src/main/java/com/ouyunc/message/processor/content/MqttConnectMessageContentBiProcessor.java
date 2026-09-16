@@ -33,8 +33,10 @@ import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.device.DeviceTypeRegistry;
 import com.ouyunc.core.listener.event.MessageEvent;
+import com.ouyunc.core.listener.event.payload.ClientLoginEventPayload;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.handler.HeartBeatHandler;
+import com.ouyunc.message.handler.LoginTimeoutSupport;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.LoginSessionDirectory;
 import com.ouyunc.message.helper.MessageHelper;
@@ -159,6 +161,14 @@ public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcesso
                 sink.success();
                 return;
             }
+            if (ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN) != null
+                    || Boolean.TRUE.equals(ChannelAttrUtil.getChannelAttribute(ctx,
+                    MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT))) {
+                log.warn("MQTT 重复 CONNECT 忽略 channelId={}", ctx.channel().id().asShortText());
+                sink.success();
+                return;
+            }
+            ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, Boolean.TRUE);
             String comboIdentity = IdentityUtil.generalComboIdentity(
                     mqttLoginClientInfo.getAppKey(), mqttLoginClientInfo.getIdentity(), DeviceTypeEnum.M.getType());
             // sessionPresent 以绑定前目录是否存在为准，但踢旧必须在 CAS 绑定胜出之后
@@ -174,6 +184,7 @@ public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcesso
                                     mqttLoginClientInfo, previous, loginTimestamp, ex);
                             sink.success();
                         } catch (Throwable t) {
+                            ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, null);
                             sink.error(t);
                         }
                     });
@@ -183,7 +194,7 @@ public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcesso
                         completeMqttConnectAfterRemoteBind(ctx, packet, mqttConnectMessage, sessionPresent,
                                 mqttLoginClientInfo, previous, loginTimestamp, ex);
                     } catch (Throwable ignored) {
-                        // ignore secondary failure on teardown
+                        ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, null);
                     }
                     sink.success();
                 }
@@ -403,6 +414,7 @@ public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcesso
                                                     MqttConnectMessage mqttConnectMessage, boolean sessionPresent,
                                                     MqttLoginClientInfo loginClientInfo, LoginClientInfo previous,
                                                     long loginTimestamp, Throwable bindError) {
+        ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, null);
         if (!ctx.channel().isActive()) {
             ClientHelper.unbindLocalRegisterTable(loginClientInfo, ctx);
             AppKeyValidator.releaseReservedIfNeeded(loginClientInfo.getAppKey(), ctx);
@@ -457,6 +469,11 @@ public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcesso
                 new MqttFixedHeader(MqttMessageType.CONNACK, false, MqttQoS.AT_MOST_ONCE, false, 0),
                 new MqttConnAckVariableHeader(MqttConnectReturnCode.CONNECTION_ACCEPTED, sessionPresent), null);
         ctx.writeAndFlush(mqttConnAckMessage);
+        LoginTimeoutSupport.cancel(ctx);
+        MessageServerContext.publishEvent(
+                new MessageEvent(new ClientLoginEventPayload(loginClientInfo, ctx),
+                        MessageEventTypeEnum.CLIENT_LOGIN, loginTimestamp),
+                true);
         log.debug("CONNECT - clientId: {}, cleanSession: {}", mqttConnectMessage.payload().clientIdentifier(),
                 mqttConnectMessage.variableHeader().isCleanSession());
         String comboIdentity = IdentityUtil.generalComboIdentity(

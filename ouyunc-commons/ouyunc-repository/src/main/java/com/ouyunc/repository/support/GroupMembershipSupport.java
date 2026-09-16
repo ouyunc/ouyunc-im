@@ -322,11 +322,10 @@ public final class GroupMembershipSupport {
         }
 
         // 2. Redis缓存
-        groupUserEntity = (GroupUserEntity) infra.redisTemplate.opsForValue().get(cacheKey);
-        if (groupUserEntity != null) {
-            // L2 命中只填本地，禁止无条件回写 Redis 续期
-            fillLocalGroupUserCache(cacheKey, groupUserEntity);
-            return groupUserEntity;
+        Object redisRaw = infra.redisTemplate.opsForValue().get(cacheKey);
+        if (redisRaw instanceof GroupUserEntity redisEntity) {
+            fillLocalGroupUserCache(cacheKey, redisEntity);
+            return redisEntity;
         }
 
         // 3. MySQL 为禁言/屏蔽等权限权威源；Mongo 滞后不得钉死错误状态
@@ -371,8 +370,8 @@ public final class GroupMembershipSupport {
                 result.put(memberId, local);
                 continue;
             }
-            GroupUserEntity redis = (GroupUserEntity) infra.redisTemplate.opsForValue().get(cacheKey);
-            if (redis != null) {
+            Object redisRaw = infra.redisTemplate.opsForValue().get(cacheKey);
+            if (redisRaw instanceof GroupUserEntity redis) {
                 fillLocalGroupUserCache(cacheKey, redis);
                 result.put(memberId, redis);
                 continue;
@@ -516,15 +515,56 @@ public final class GroupMembershipSupport {
 
     @SuppressWarnings("unchecked")
     public boolean inGroup(String appKey, String from, String groupId) {
-        // 存在性只信布尔 L1 + Redis ZSET；identity/实体缓存仅服务扇出与配置，不反推在群
+        // 存在性：ZSCORE 命中为真；ZCARD>0 视为名单已完整；空/缺失才回源 MySQL，禁止单点 ZADD 污染扇出
         Boolean cached = RelationLocalCache.GROUP_MEMBER.get(RelationLocalCache.groupMemberKey(appKey, groupId, from));
         if (cached != null) {
             return cached;
         }
-        boolean member = infra.stringRedisTemplate.opsForZSet().score(
-                CacheConstant.buildGroupUserCacheKey(appKey, groupId), from) != null;
-        RelationLocalCache.markGroupMember(appKey, groupId, from, member);
-        return member;
+        String zsetKey = CacheConstant.buildGroupUserCacheKey(appKey, groupId);
+        try {
+            Double score = infra.stringRedisTemplate.opsForZSet().score(zsetKey, from);
+            if (score != null) {
+                RelationLocalCache.markGroupMember(appKey, groupId, from, true);
+                return true;
+            }
+            Long card = infra.stringRedisTemplate.opsForZSet().zCard(zsetKey);
+            if (card != null && card > 0) {
+                RelationLocalCache.markGroupMember(appKey, groupId, from, false);
+                return false;
+            }
+        } catch (Exception e) {
+            log.error("Redis 查询群成员异常, appKey: {}, groupId: {}, memberId: {}", appKey, groupId, from, e);
+        }
+        Boolean dbMember = loadGroupMemberExistsFromDb(appKey, groupId, from);
+        if (dbMember == null) {
+            return false;
+        }
+        RelationLocalCache.markGroupMember(appKey, groupId, from, dbMember);
+        return dbMember;
+    }
+
+    /**
+     * @return true 在群，false 不在群，null 查询异常（不得缓存 false）
+     */
+    private Boolean loadGroupMemberExistsFromDb(String appKey, String groupId, String memberId) {
+        String cacheKey = CacheConstant.buildGroupUserConfigCacheKey(appKey, memberId, groupId);
+        try {
+            GroupUserEntity groupUserEntity = infra.jdbcClient.sql(JdbcSqlDialectHolder.selectGroupUser())
+                    .param(GroupUserEntity.Fields.userId, memberId)
+                    .param(GroupUserEntity.Fields.groupId, groupId)
+                    .param(GroupEntity.Fields.appKey, appKey)
+                    .query(GroupUserEntity.class)
+                    .optional()
+                    .orElse(null);
+            if (groupUserEntity != null) {
+                updateGroupUserCache(cacheKey, groupUserEntity);
+                return true;
+            }
+            return false;
+        } catch (Exception e) {
+            log.error("从MySQL查询群成员异常, appKey: {}, groupId: {}, memberId: {}", appKey, groupId, memberId, e);
+            return null;
+        }
     }
 
     public Mono<Boolean> isGroupMemberReactive(String appKey, String groupId, String memberId) {

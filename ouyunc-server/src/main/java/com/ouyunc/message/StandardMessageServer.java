@@ -23,6 +23,7 @@ import com.ouyunc.message.dispatcher.ProtocolDispatcherBiProcessor;
 import com.ouyunc.message.monitor.MonitorInitializer;
 import com.ouyunc.message.processor.*;
 import com.ouyunc.message.properties.MessageServerProperties;
+import com.ouyunc.message.schedule.MqOutboxRelayScheduler;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,6 +69,7 @@ public class StandardMessageServer extends AbstractMessageServer {
         
         // 初始化资源监控（注册缓存实例）
         MonitorInitializer.initialize();
+        MqOutboxRelayScheduler.start();
         // 运行期接受新连接开关与 YAML 初始值对齐
         MessageServerContext.ACCEPT_NEW_CONNECTIONS.set(
                 MessageServerContext.serverProperties().isAcceptNewConnections());

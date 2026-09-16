@@ -1,9 +1,11 @@
 package com.ouyunc.client;
 
+import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.DeviceTypeEnum;
 import com.ouyunc.base.constant.enums.NetworkEnum;
 import com.ouyunc.base.constant.enums.OuyuncMessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.OuyuncMessageTypeEnum;
+import com.ouyunc.base.constant.enums.ProtocolTypeEnum;
 import com.ouyunc.base.encrypt.Encrypt;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
@@ -15,9 +17,11 @@ import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.logging.LoggingHandler;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 
+import java.nio.ByteOrder;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -61,6 +65,14 @@ public class StartClient {    private static final ScheduledExecutorService SCHE
                     @Override
                     protected void initChannel(SocketChannel socketChannel) throws Exception {
                         socketChannel.pipeline().addLast(new LoggingHandler());
+                        socketChannel.pipeline().addLast(new LengthFieldBasedFrameDecoder(
+                                ByteOrder.BIG_ENDIAN,
+                                MessageConstant.MAX_FRAME_LENGTH,
+                                MessageConstant.LENGTH_FIELD_OFFSET,
+                                MessageConstant.LENGTH_FIELD_LENGTH,
+                                MessageConstant.LENGTH_ADJUSTMENT,
+                                MessageConstant.INITIAL_BYTES_TO_STRIP,
+                                MessageConstant.FAIL_FAST));
                         socketChannel.pipeline().addLast(new PacketCodec());
                         socketChannel.pipeline().addLast(new SimpleChannelInboundHandler() {
                             @Override
@@ -76,7 +88,7 @@ public class StartClient {    private static final ScheduledExecutorService SCHE
                                 // hessian    430b         235b
                                 // fst        650b         315b
                                 // jdk        500b         346b
-                                Packet packet = new Packet((byte) 3, (byte) 1, 123L, DeviceTypeEnum.PC.getType(), NetworkEnum.OTHER.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(), OuyuncMessageTypeEnum.SYN_ACK.getType(), message);
+                                Packet packet = new Packet(ProtocolTypeEnum.OUYUNC_CLIENT.getProtocol(), ProtocolTypeEnum.OUYUNC_CLIENT.getProtocolVersion(), 123L, DeviceTypeEnum.PC.getType(), NetworkEnum.OTHER.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(), Serializer.PROTO_STUFF.getValue(), OuyuncMessageTypeEnum.SYN_ACK.getType(), message);
 
                                 ctx.writeAndFlush(packet);
                             }

@@ -10,6 +10,7 @@ import com.ouyunc.message.http.HttpContext;
 import com.ouyunc.message.http.HttpPipelineException;
 import com.ouyunc.message.http.annotation.HttpRequestMapping;
 import com.ouyunc.message.http.annotation.HttpRestController;
+import com.ouyunc.message.http.annotation.IgnoreAuth;
 import com.ouyunc.message.http.annotation.PostHttpRequest;
 import com.ouyunc.message.http.annotation.RequestParam;
 import com.ouyunc.message.http.auth.HttpAdminAuth;
@@ -20,9 +21,11 @@ import com.ouyunc.message.http.auth.HttpAuthPrincipal;
  * <p>
  * 滚动升级推荐顺序：Nginx 摘 upstream → {@code POST /api/im/admin/drain} →
  * {@code POST /api/im/admin/kick-clients}（仅通知，由客户端主动断开重连）→ 停进程发版 → 挂回 LB。
+ * <p>{@link IgnoreAuth} 跳过 AppKey 鉴权，由 {@link HttpAdminAuth#requireDrain} 校验运维 JWT。
  */
 @HttpRestController
 @HttpRequestMapping
+@IgnoreAuth
 public class AdminDrainController {
 
     @PostHttpRequest(HttpRequestConstant.HTTP_ADMIN_DRAIN_PATH)

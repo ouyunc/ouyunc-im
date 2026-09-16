@@ -1,6 +1,7 @@
 package com.ouyunc.message.safety;
 
 import com.alibaba.fastjson2.JSON;
+import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.enums.ContentSafetyAction;
 import com.ouyunc.base.constant.enums.ContentSafetyHitType;
 import com.ouyunc.base.constant.enums.ContentSafetyReasonEnum;
@@ -52,11 +53,16 @@ public final class ContentSafetyFacade {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         String appKey = metadata == null ? null : metadata.getAppKey();
+        int contentType = message.getContentType();
         if (StringUtils.isBlank(appKey)) {
-            return ContentSafetyResult.pass();
+            if (contentType == MessageContentTypeEnum.TEXT_CONTENT.getType()
+                    || contentType == MessageContentTypeEnum.IMAGE_TEXT_CONTENT.getType()) {
+                appKey = CacheConstant.CONTENT_SAFETY_GLOBAL_APP_KEY;
+            } else {
+                return ContentSafetyResult.pass();
+            }
         }
         ContentSafetyPolicy policy = registry.policy(appKey);
-        int contentType = message.getContentType();
 
         // 文本 / 图文说明
         if (contentType == MessageContentTypeEnum.TEXT_CONTENT.getType()) {
@@ -125,10 +131,13 @@ public final class ContentSafetyFacade {
         try {
             body = JSON.parseObject(message.getContent(), ImageTextContent.class);
         } catch (Exception e) {
-            log.warn("图文内容解析失败，跳过敏感词 packetContentType={}", message.getContentType());
-            return ContentSafetyResult.pass();
+            log.warn("图文内容解析失败，按原文做敏感词 packetContentType={}", message.getContentType());
+            return checkPlainText(message, appKey, policy, registry);
         }
-        if (body == null || StringUtils.isBlank(body.getText())) {
+        if (body == null) {
+            return checkPlainText(message, appKey, policy, registry);
+        }
+        if (StringUtils.isBlank(body.getText())) {
             return ContentSafetyResult.pass();
         }
         SensitiveWordAcAutomaton matcher = registry.matcher(appKey);

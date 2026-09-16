@@ -458,6 +458,16 @@ public class MessageConstant {
     public static final String MQ_OUTBOX_RELAY_TASK_ID = "mq-outbox-relay";
 
     /**
+     * 登录超时：{@code IN_FLIGHT} 时最多再续期次数（每次仍为 {@code serverLoginTimeout} 秒）。
+     */
+    public static final int LOGIN_TIMEOUT_IN_FLIGHT_MAX_RETRY = 2;
+
+    /**
+     * MQTT 内容安全 REJECT 下行 topic（QoS0 PUBLISH）。
+     */
+    public static final String MQTT_SYS_NOTIFY_TOPIC = "$SYS/ouyunc/notify";
+
+    /**
      * 用户实体本地缓存权重预算（近似字节）。与条数上限二选一用 weight。
      */
     public static final long USER_ENTITY_CACHE_MAX_WEIGHT = 256L * 1024 * 1024;
@@ -574,6 +584,11 @@ public class MessageConstant {
      * channel 的登录超时调度器
      */
     public static final String CHANNEL_ATTR_KEY_LOGIN_TIMEOUT_SCHEDULED_FUTURE = "CHANNEL_ATTR_KEY_LOGIN_TIMEOUT_SCHEDULED_FUTURE";
+
+    /**
+     * 登录超时在 IN_FLIGHT 下已续期次数。
+     */
+    public static final String CHANNEL_ATTR_KEY_LOGIN_TIMEOUT_STRIKE = "CHANNEL_ATTR_KEY_LOGIN_TIMEOUT_STRIKE";
 
     /**
      * channel 关闭时的钩子标签
@@ -754,6 +769,11 @@ public class MessageConstant {
      * 统一登录认证处理器
      */
     public static final String AUTHENTICATION_HANDLER = "AUTHENTICATION_HANDLER";
+
+    /**
+     * MQTT 等非 LOGIN 协议的连接登录超时（CONNECT 完成前关连）。
+     */
+    public static final String LOGIN_TIMEOUT_HANDLER = "LOGIN_TIMEOUT_HANDLER";
 
     /**
      * 统一 Packet 业务入口（客户端 / 集群均挂 {@code PacketHandler}）。

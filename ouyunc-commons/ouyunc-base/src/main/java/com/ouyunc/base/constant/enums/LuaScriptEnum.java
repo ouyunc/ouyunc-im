@@ -295,16 +295,20 @@ public enum LuaScriptEnum {
             """, "lm CAS 替换"),
 
     /**
-     * 群成员 ZSet 回源重建 CAS：仅当 relationVersion 仍等于 expected 时 DEL+ZADD。
+     * 群成员 ZSet 回源重建 CAS：仅当 relationVersion 仍等于 expected 且当前 ZSET 为空时 DEL+ZADD。
+     * 非空 ZSET 直接返回 0，避免并发入群被整表覆盖。
      * KEYS[1]=memberZSet KEYS[2]=versionKey
      * ARGV[1]=expectedVersion ARGV[2]=memberCount ARGV[3..]=userId,score 交替
-     * 返回 1=已重建，0=版本已变跳过。
+     * 返回 1=已重建，0=版本已变或 ZSET 非空跳过。
      */
     GROUP_MEMBER_REBUILD_CAS_SCRIPT("2", """
             local expected = tostring(ARGV[1])
             local cur = redis.call('GET', KEYS[2])
             if cur == false or cur == nil then cur = '0' else cur = tostring(cur) end
             if cur ~= expected then
+                return 0
+            end
+            if redis.call('EXISTS', KEYS[1]) == 1 and redis.call('ZCARD', KEYS[1]) > 0 then
                 return 0
             end
             redis.call('DEL', KEYS[1])
