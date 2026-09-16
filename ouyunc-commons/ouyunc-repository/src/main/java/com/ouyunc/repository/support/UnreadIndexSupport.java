@@ -7,6 +7,7 @@ import com.ouyunc.base.constant.enums.LuaScriptEnum;
 import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
+import com.ouyunc.core.device.DeviceTypeRegistry;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
@@ -23,7 +24,7 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * 单聊未读：Hash 存展示计数，SET 存未读 packetId，已读时只移除 {@code <= offset} 的成员。
+ * 单聊未读：Hash 存展示计数，SET 存未�?packetId，已读时只移�?{@code <= offset} 的成员�?
  */
 public final class UnreadIndexSupport {
 
@@ -36,7 +37,7 @@ public final class UnreadIndexSupport {
     }
 
     /**
-     * 单聊/客服：他人有效聊天消息持久化成功后，对收件人各 deviceType 未读集合加入 packetId。
+     * 单聊/客服：他人有效聊天消息持久化成功后，对收件人�?deviceType 未读集合加入 packetId�?
      */
     @SuppressWarnings("unchecked")
     public void incrOne2OneOnMessage(Packet packet) {
@@ -100,9 +101,9 @@ public final class UnreadIndexSupport {
     }
 
     /**
-     * 单聊本端已读或发消息静默推进：更新 sro，并按 offset 部分清除未读集合。
+     * 单聊本端已读或发消息静默推进：更�?sro，并�?offset 部分清除未读集合�?
      *
-     * @return true 表示 Redis 脚本执行成功；失败返回 false（不吞异常语义，由调用方决定是否 ACK）
+     * @return true 表示 Redis 脚本执行成功；失败返�?false（不吞异常语义，由调用方决定是否 ACK�?
      */
     @SuppressWarnings("unchecked")
     public boolean clearOne2OneOnRead(String appKey, String readerId, Byte deviceType, String peerId, long incomingOffset,
@@ -127,7 +128,7 @@ public final class UnreadIndexSupport {
             MessageContext.publishEvent(new MessageEvent(
                     ExceptionEventPayload.of(
                             ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
-                            "单聊已读 offset+未读清索引失败: " + e.getMessage(),
+                            "单聊已读 offset+未读清索引失�? " + e.getMessage(),
                             null),
                     MessageEventTypeEnum.EXCEPTION), true);
             return false;
@@ -135,7 +136,7 @@ public final class UnreadIndexSupport {
     }
 
     /**
-     * 单聊撤回：收件人各 deviceType 未读集合移除 packetId，并回写 Hash 计数。
+     * 单聊撤回：收件人�?deviceType 未读集合移除 packetId，并回写 Hash 计数�?
      */
     @SuppressWarnings("unchecked")
     public void removeOne2OneOnWithdraw(String appKey, String recipientId, String peerId, long packetId) {
@@ -172,16 +173,16 @@ public final class UnreadIndexSupport {
             MessageContext.publishEvent(new MessageEvent(
                     ExceptionEventPayload.of(
                             ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
-                            "单聊撤回清未读失败: " + e.getMessage(),
+                            "单聊撤回清未读失�? " + e.getMessage(),
                             null),
                     MessageEventTypeEnum.EXCEPTION), true);
         }
     }
 
     private static Collection<Byte> resolveDeviceTypes(String appKey, String userId) {
-        Collection<Byte> deviceTypes = MessageContext.deviceTypeList(appKey, userId);
+        Collection<Byte> deviceTypes = DeviceTypeRegistry.list(appKey, userId);
         if (CollectionUtils.isEmpty(deviceTypes)) {
-            deviceTypes = MessageContext.deviceTypeList(appKey);
+            deviceTypes = DeviceTypeRegistry.list(appKey);
         }
         return deviceTypes;
     }

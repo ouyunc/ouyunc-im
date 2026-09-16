@@ -1,7 +1,7 @@
 package com.ouyunc.message.monitor;
 
 import com.ouyunc.core.context.MessageContext;
-import com.ouyunc.core.context.RelationLocalCache;
+import com.ouyunc.core.relation.RelationLocalCache;
 import com.ouyunc.core.listener.MessageEventMulticaster;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.schedule.TimerTaskWrapper;
@@ -19,8 +19,8 @@ public class MonitorInitializer {
     private static final Logger log = LoggerFactory.getLogger(MonitorInitializer.class);
 
     /**
-     * 初始化监控
-     * 注册所有 Caffeine 缓存实例
+     * 初始化监�?
+     * 注册所�?Caffeine 缓存实例
      */
     public static void initialize() {
         log.debug("开始初始化资源监控...");
@@ -36,7 +36,7 @@ public class MonitorInitializer {
         registerCache(MessageServerContext.clusterClientMissAckTimesCache);
         registerCache(MessageServerContext.luaScriptShaCache);
 
-        // 注册 MessageContext 中的缓存（如果已启用 recordStats）
+        // 注册 MessageContext 中的缓存（如果已启用 recordStats�?
         registerCache(MessageContext.friendEntityCache);
         registerCache(MessageContext.groupEntityCache);
         registerCache(MessageContext.groupUserEntityCache);
@@ -46,14 +46,14 @@ public class MonitorInitializer {
         registerCache(RelationLocalCache.BLACKLIST);
         registerCache(RelationLocalCache.SHIELD);
 
-        // QoS 定时重试任务（详见 ResourceMonitor.logQosRetryTimerMetrics）
+        // QoS 定时重试任务（详�?ResourceMonitor.logQosRetryTimerMetrics�?
         registerCache(TimerTaskWrapper.timerTaskCaffeine);
 
-        log.info("资源监控初始化完成，已注册 {} 个缓存", ResourceMonitor.getRegisteredCacheNames().size());
+        log.info("资源监控初始化完成，已注�?{} 个缓�?, ResourceMonitor.getRegisteredCacheNames().size());
     }
 
     /**
-     * 在事件多播器创建完成后注册 Disruptor 指标拉取（与缓存注册分离，因 multicaster 在 loadEventListener 中创建）。
+     * 在事件多播器创建完成后注�?Disruptor 指标拉取（与缓存注册分离，因 multicaster �?loadEventListener 中创建）�?
      */
     public static void registerDisruptorMetrics(MessageEventMulticaster multicaster) {
         ResourceMonitor.registerDisruptorMetrics(multicaster);
@@ -61,14 +61,14 @@ public class MonitorInitializer {
 
     /**
      * 启动定期监控
-     * 默认每5分钟输出一次监控报告
+     * 默认�?分钟输出一次监控报�?
      */
     public static void start() {
         ResourceMonitor.start();
     }
 
     /**
-     * 启动定期监控（自定义周期）
+     * 启动定期监控（自定义周期�?
      *
      * @param periodMinutes 监控周期（分钟）
      */

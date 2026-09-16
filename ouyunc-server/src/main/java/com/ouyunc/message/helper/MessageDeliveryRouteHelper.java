@@ -141,7 +141,7 @@ public final class MessageDeliveryRouteHelper {
         List<LoginClientInfo> senderDevices = httpPush
                 ? ClientHelper.onlineAll(appKey, message.getFrom())
                 : ClientHelper.onlineAll(appKey, message.getFrom(),
-                MessageServerContext.deviceType(appKey, packet.getDeviceType()));
+                packet.getDeviceType());
         if (CollectionUtils.isNotEmpty(senderDevices)) {
             MessageHelper.asyncSendMessage(packet, senderDevices);
         }

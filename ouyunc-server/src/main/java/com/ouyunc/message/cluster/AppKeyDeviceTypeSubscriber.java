@@ -6,22 +6,27 @@ import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.model.AppKeyDeviceType;
 import com.ouyunc.base.model.ClientAppKeyDeviceType;
 import com.ouyunc.base.model.ClientInfo;
+import com.ouyunc.core.device.DeviceTypeRegistry;
 import com.ouyunc.message.context.MessageServerContext;
-import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RTopic;
 import org.redisson.api.listener.MessageListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Objects;
+import java.util.ArrayList;
+import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
- * 订阅 appKey / 客户端设备类型变更频道（Redisson Topic）。
- * <p>payload 为 {@link AppKeyDeviceType} / {@link ClientAppKeyDeviceType} 的 JSON 字符串。
- * 发布端请使用 {@code redissonClient.getTopic(channel).publish(JSON.toJSONString(...))}。</p>
+ * 订阅 appKey / 客户端设备类型变更频道（Redisson Topic）�?
+ * <p>payload �?{@link AppKeyDeviceType} / {@link ClientAppKeyDeviceType} �?JSON 字符串�?
+ * 发布端请使用 {@code redissonClient.getTopic(channel).publish(JSON.toJSONString(...))}�?/p>
+ * <ul>
+ *   <li>{@code deviceTypes == null}：忽略本次消�?/li>
+ *   <li>{@code deviceTypes} 为空集合：清除定制白名单（appKey 回落全局；客户端回落 appKey/全局�?/li>
+ *   <li>非空：覆盖本地缓存（客户端须�?appKey 白名单子集）</li>
+ * </ul>
  */
 public final class AppKeyDeviceTypeSubscriber {
 
@@ -34,7 +39,7 @@ public final class AppKeyDeviceTypeSubscriber {
     }
 
     /**
-     * 幂等启动订阅；重复调用直接返回。
+     * 幂等启动订阅；重复调用直接返回�?
      */
     public static synchronized void start() {
         if (appKeyListenerId != null && clientListenerId != null) {
@@ -59,7 +64,7 @@ public final class AppKeyDeviceTypeSubscriber {
                     }
                 });
             }
-            log.info("appKey 设备类型订阅已启动 channels=[{}, {}]",
+            log.info("appKey 设备类型订阅已启�?channels=[{}, {}]",
                     MessageConstant.APP_KEY_PUBLISH_TOPIC, MessageConstant.CLIENT_APP_KEY_PUBLISH_TOPIC);
         } catch (Exception e) {
             log.error("appKey 设备类型订阅失败，将仅依赖启动时 Redis 预热", e);
@@ -67,7 +72,7 @@ public final class AppKeyDeviceTypeSubscriber {
     }
 
     /**
-     * 停止订阅；在服务停机时调用。
+     * 停止订阅；在服务停机时调用�?
      */
     public static synchronized void stop() {
         Integer appId = appKeyListenerId;
@@ -88,7 +93,7 @@ public final class AppKeyDeviceTypeSubscriber {
                         .removeListener(clientId);
             }
         } catch (Exception e) {
-            log.warn("停止客户端 appKey 设备类型订阅异常: {}", e.getMessage());
+            log.warn("停止客户�?appKey 设备类型订阅异常: {}", e.getMessage());
         }
     }
 
@@ -98,9 +103,15 @@ public final class AppKeyDeviceTypeSubscriber {
         }
         try {
             AppKeyDeviceType appKeyDeviceType = JSON.parseObject(msg, AppKeyDeviceType.class);
-            if (appKeyDeviceType != null && StringUtils.isNotBlank(appKeyDeviceType.getAppKey())) {
-                MessageServerContext.addAppKeyDeviceType(appKeyDeviceType.getAppKey(), appKeyDeviceType.getDeviceTypes());
+            if (appKeyDeviceType == null || StringUtils.isBlank(appKeyDeviceType.getAppKey())) {
+                return;
             }
+            // null=忽略；空集合=清除定制白名单回落全局；非�?覆盖
+            Set<Byte> deviceTypes = appKeyDeviceType.getDeviceTypes();
+            if (deviceTypes == null) {
+                return;
+            }
+            DeviceTypeRegistry.replaceAppKeyWhitelist(appKeyDeviceType.getAppKey(), deviceTypes);
         } catch (Exception e) {
             log.warn("appKey 设备类型消息处理失败 payload={}", msg, e);
         }
@@ -116,26 +127,40 @@ public final class AppKeyDeviceTypeSubscriber {
                     clientAppKeyDeviceType.getAppKey(), clientAppKeyDeviceType.getIdentity())) {
                 return;
             }
-            // 客户端设备类型必须是 appKey 已支持类型的子集
             Set<Byte> deviceTypes = clientAppKeyDeviceType.getDeviceTypes();
-            if (CollectionUtils.isEmpty(deviceTypes)) {
+            if (deviceTypes == null) {
                 return;
             }
-            for (Byte deviceType : deviceTypes) {
-                if (!MessageServerContext.deviceTypeList(clientAppKeyDeviceType.getAppKey()).contains(deviceType)) {
-                    log.error("非法设备类型：{}", deviceType);
+            String cacheKey = CacheConstant.buildLocalClientInfoCacheKey(
+                    clientAppKeyDeviceType.getAppKey(), clientAppKeyDeviceType.getIdentity());
+            // 空集合：清除客户端定制，回落 appKey/全局白名�?
+            if (deviceTypes.isEmpty()) {
+                MessageServerContext.localClientInfoCache.delete(cacheKey);
+                log.info("已清除客户端定制设备类型 appKey={} identity={}",
+                        clientAppKeyDeviceType.getAppKey(), clientAppKeyDeviceType.getIdentity());
+                return;
+            }
+            // JSON/Redis 元素可能�?Integer，统一规范后再校验子集
+            Map<Byte, Byte> normalized = DeviceTypeRegistry.toIdentityMap(deviceTypes);
+            if (normalized.isEmpty()) {
+                log.error("客户端设备类型无有效元素 appKey={} identity={}",
+                        clientAppKeyDeviceType.getAppKey(), clientAppKeyDeviceType.getIdentity());
+                return;
+            }
+            for (Byte deviceType : normalized.keySet()) {
+                if (!DeviceTypeRegistry.supports(clientAppKeyDeviceType.getAppKey(), deviceType)) {
+                    log.error("非法设备类型：{} appKey={}", deviceType, clientAppKeyDeviceType.getAppKey());
                     return;
                 }
             }
             MessageServerContext.localClientInfoCache.put(
-                    CacheConstant.buildLocalClientInfoCacheKey(
-                            clientAppKeyDeviceType.getAppKey(), clientAppKeyDeviceType.getIdentity()),
+                    cacheKey,
                     new ClientInfo(
                             clientAppKeyDeviceType.getAppKey(),
                             clientAppKeyDeviceType.getIdentity(),
-                            deviceTypes.stream().filter(Objects::nonNull).collect(Collectors.toList())));
+                            new ArrayList<>(normalized.keySet())));
         } catch (Exception e) {
-            log.warn("客户端 appKey 设备类型消息处理失败 payload={}", msg, e);
+            log.warn("客户�?appKey 设备类型消息处理失败 payload={}", msg, e);
         }
     }
 }

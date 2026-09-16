@@ -292,7 +292,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
     private void deliver2Self(Packet packet) {
         Message message = packet.getMessage();
         String appKey = message.getMetadata().getAppKey();
-        List<LoginClientInfo> fromSelfLoginClientInfos = ClientHelper.onlineAll(appKey, message.getFrom(), MessageServerContext.deviceType(appKey, packet.getDeviceType()));
+        List<LoginClientInfo> fromSelfLoginClientInfos = ClientHelper.onlineAll(appKey, message.getFrom(), packet.getDeviceType());
         if (CollectionUtils.isNotEmpty(fromSelfLoginClientInfos)) {
             MessageHelper.asyncSendMessage(packet, fromSelfLoginClientInfos);
         }

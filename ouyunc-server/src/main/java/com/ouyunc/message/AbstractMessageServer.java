@@ -5,6 +5,7 @@ import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.constant.enums.DeviceTypeEnum;
 import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.utils.TimeUtil;
+import com.ouyunc.core.device.DeviceTypeRegistry;
 import com.ouyunc.core.listener.MessageEventMulticaster;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.message.banner.MessageBanner;
@@ -58,23 +59,23 @@ public abstract class AbstractMessageServer implements MessageServer {
     private static final ServerBootstrap bootstrap = new ServerBootstrap();
 
     /**
-     * boss 线程组
+     * boss 线程�?
      */
     private static EventLoopGroup bossGroup;
 
     /**
-     * work线程组
+     * work线程�?
      */
     private static EventLoopGroup workerGroup;
 
 
     /**
-     * server channel 初始化默认值
+     * server channel 初始化默认�?
      */
     private ServerChannelInitializer serverChannelInitializer = new DefaultServerChannelInitializer();
 
     /**
-     * socket channel 初始化默认值
+     * socket channel 初始化默认�?
      */
     private SocketChannelInitializer socketChannelInitializer = new DefaultSocketChannelInitializer();
 
@@ -84,13 +85,13 @@ public abstract class AbstractMessageServer implements MessageServer {
     private  MessageClient messageClient = new DefaultMessageClient();
 
     /**
-     * {@link #stop()} 与 JVM shutdown hook 可能先后触发，整段优雅关闭只执行一次。
+     * {@link #stop()} �?JVM shutdown hook 可能先后触发，整段优雅关闭只执行一次�?
      */
     private final AtomicBoolean gracefulShutdownDone = new AtomicBoolean(false);
 
     /***
      * @author fzx
-     * @description 设置集群内置客户端
+     * @description 设置集群内置客户�?
      */
     public void setMessageClient(MessageClient messageClient) {
         this.messageClient = messageClient;
@@ -114,32 +115,32 @@ public abstract class AbstractMessageServer implements MessageServer {
 
     /**
      * @Author fzx
-     * @Description IM服务配置类，现在直接读取本地配置文件；
-     * 后续整合到spring 项目中，直接集成AbstractMessageServer 然后重写该方法的实现，从spring容器或者配置中心获取属性值即可
+     * @Description IM服务配置类，现在直接读取本地配置文件�?
+     * 后续整合到spring 项目中，直接集成AbstractMessageServer 然后重写该方法的实现，从spring容器或者配置中心获取属性值即�?
      */
     abstract void loadProperties(String... args);
 
     /***
      * @author fzx
-     * @description 预留方法，用于在属性初始化后执行一些操作
+     * @description 预留方法，用于在属性初始化后执行一些操�?
      */
     void afterPropertiesSet() {}
 
     /***
      * @author fzx
-     * @description 加载事件监听器
+     * @description 加载事件监听�?
      */
     abstract void loadEventListener();
 
     /***
      * @author fzx
-     * @description 加载协议分发处理器
+     * @description 加载协议分发处理�?
      */
     abstract void loadProtocolProcessor();
 
     /***
      * @author fzx
-     * @description 加载消息处理器
+     * @description 加载消息处理�?
      */
     abstract void loadMessageProcessor();
 
@@ -153,13 +154,13 @@ public abstract class AbstractMessageServer implements MessageServer {
 
     /***
      * @author fzx
-     * @description 初始化服务之前做些处理，可以对上下文属性值进行改变
+     * @description 初始化服务之前做些处理，可以对上下文属性值进行改�?
      */
     void beforeInitServer() {
         // 添加协议包转换器
         MessageServerContext.addPacketConverterList(List.of(PacketPacketConverter.INSTANCE, BinaryWebSocketFramePacketConverter.INSTANCE,MqttMessagePacketConverter.INSTANCE));
-        // 添加默认设备类型，这里可以改成从redis 获取，与appKey 进行绑定，由appKey来自定义所支持的设备类型，如果appKey 没有指定支持的设备类型，则走默认设备类型
-        MessageServerContext.addDeviceType(DeviceTypeEnum.class);
+        // 注册全局默认设备类型；appKey 定制白名单由 SERVER_PREPARE 预热 / Topic 热更新写�?DeviceTypeRegistry
+        DeviceTypeRegistry.registerDefaults(DeviceTypeEnum.class);
         // bind 前准备（同步）：内容安全/关系缓存订阅、Lua 预加载等
         MessageServerContext.publishEvent(new MessageEvent(
                 MessageServerContext.serverProperties().getLocalServerAddress(),
@@ -167,40 +168,40 @@ public abstract class AbstractMessageServer implements MessageServer {
     }
 
     /**
-     * EventLoopGroup 优雅关闭等待上限（秒）
+     * EventLoopGroup 优雅关闭等待上限（秒�?
      */
     private static final long NETTY_SHUTDOWN_AWAIT_SECONDS = 15L;
 
     /**
-     * 统一优雅关闭：摘流、SERVER_STOP、监控/时间轮、HTTP、Netty、集群客户端、Disruptor 环、全局线程池。
+     * 统一优雅关闭：摘流、SERVER_STOP、监�?时间轮、HTTP、Netty、集群客户端、Disruptor 环、全局线程池�?
      *
-     * @return 本次调用是否实际执行了关闭序列（已被其它路径执行过则返回 false）
+     * @return 本次调用是否实际执行了关闭序列（已被其它路径执行过则返回 false�?
      */
     private boolean runGracefulShutdownOnce() {
         if (!gracefulShutdownDone.compareAndSet(false, true)) {
             return false;
         }
         try {
-            // 1. 摘流：拒绝新登录，/ready → 503
+            // 1. 摘流：拒绝新登录�?ready �?503
             MessageServerContext.enterDrainMode();
-            // 2. SERVER_STOP（同步）：通知客户端主动断开 → 宽限期 → 强制关残留 → Redis 订阅/节点租约清理
+            // 2. SERVER_STOP（同步）：通知客户端主动断开 �?宽限�?�?强制关残�?�?Redis 订阅/节点租约清理
             MessageServerContext.publishEvent(new MessageEvent(this, MessageEventTypeEnum.SERVER_STOP), false);
             // 3. 停止资源监控（调度任务随 ThreadPoolManager 一并结束）
             ResourceMonitor.stopMonitoring();
-            // 4. 停止 QoS 等 HashedWheelTimer，取消未完成超时
+            // 4. 停止 QoS �?HashedWheelTimer，取消未完成超时
             ScheduleTimer.stop();
-            // 5. HTTP 业务线程池
+            // 5. HTTP 业务线程�?
             HttpRequestDispatcher.shutdownHttpBusinessExecutor();
-            // 6. 对外 Netty，等待关闭完成
+            // 6. 对外 Netty，等待关闭完�?
             awaitEventLoopGroupShutdown(bossGroup, "bossGroup");
             awaitEventLoopGroupShutdown(workerGroup, "workerGroup");
             // 7. 集群内置客户端连接池
             if (MessageServerContext.serverProperties().isClusterEnable() && messageClient != null) {
                 messageClient.stop();
             }
-            // 8. Disruptor 环形队列（须在 ThreadPoolManager 之前，环有独立消费线程）
+            // 8. Disruptor 环形队列（须�?ThreadPoolManager 之前，环有独立消费线程）
             shutdownEventMulticaster();
-            // 9. 全局业务线程池
+            // 9. 全局业务线程�?
             ThreadPoolManager.shutdownAll();
         } catch (Throwable t) {
             log.error("优雅关闭过程异常: {}", t.getMessage(), t);
@@ -209,7 +210,7 @@ public abstract class AbstractMessageServer implements MessageServer {
     }
 
     /**
-     * 关闭事件多播器并释放各等级 Disruptor RingBuffer。
+     * 关闭事件多播器并释放各等�?Disruptor RingBuffer�?
      */
     private static void shutdownEventMulticaster() {
         MessageEventMulticaster multicaster = MessageServerContext.messageEventMulticaster;
@@ -218,14 +219,14 @@ public abstract class AbstractMessageServer implements MessageServer {
         }
         try {
             multicaster.removeAllMessageListeners();
-            log.warn("事件多播器 / Disruptor 环形队列已关闭");
+            log.warn("事件多播�?/ Disruptor 环形队列已关�?);
         } catch (Exception e) {
-            log.warn("关闭事件多播器异常: {}", e.getMessage());
+            log.warn("关闭事件多播器异�? {}", e.getMessage());
         }
     }
 
     /**
-     * 等待 Netty EventLoopGroup 优雅关闭。
+     * 等待 Netty EventLoopGroup 优雅关闭�?
      */
     private void awaitEventLoopGroupShutdown(EventLoopGroup group, String name) {
         if (group == null) {
@@ -234,42 +235,42 @@ public abstract class AbstractMessageServer implements MessageServer {
         try {
             Future<?> future = group.shutdownGracefully();
             if (!future.await(NETTY_SHUTDOWN_AWAIT_SECONDS, TimeUnit.SECONDS)) {
-                log.warn("Netty {} 在 {}s 内未完全关闭", name, NETTY_SHUTDOWN_AWAIT_SECONDS);
+                log.warn("Netty {} �?{}s 内未完全关闭", name, NETTY_SHUTDOWN_AWAIT_SECONDS);
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            log.warn("等待 Netty {} 关闭被中断", name);
+            log.warn("等待 Netty {} 关闭被中�?, name);
             group.shutdownGracefully();
         }
     }
 
     /***
      * @author fzx
-     * @description 开始服务
+     * @description 开始服�?
      * @param args  启动参数
      */
     @Override
     public void start(String[] args) {
         // 打印banner
         MessageBanner.printBanner(System.out);
-        log.debug("message开始启动,正在初始化......");
+        log.debug("message开始启�?正在初始�?.....");
         // 注册关闭钩子
         registerShutdownHook();
         // 设置服务实例
         cacheMessageServer();
         // 加载配置
         loadProperties(args);
-        // 属性加载之后执行一些操作，可以对属性进行改变
+        // 属性加载之后执行一些操作，可以对属性进行改�?
         afterPropertiesSet();
-        // 加载事件监听器
+        // 加载事件监听�?
         loadEventListener();
-        // 加载协议分发处理器
+        // 加载协议分发处理�?
         loadProtocolProcessor();
-        // 加载消息处理器
+        // 加载消息处理�?
         loadMessageProcessor();
         // 加载发送消息拦截器
         loadMessageInterceptor();
-        // 初始化服务之前做些操作，可以对上下文属性值进行改变
+        // 初始化服务之前做些操作，可以对上下文属性值进行改�?
         beforeInitServer();
         // 初始化IM服务
         initServer();
@@ -285,16 +286,16 @@ public abstract class AbstractMessageServer implements MessageServer {
     public void stop() {
         log.error("IM server 开始注销程序...");
         if (runGracefulShutdownOnce()) {
-            log.error("IM server 注销流程已完成, 即将退出");
+            log.error("IM server 注销流程已完�? 即将退�?);
         }
-        // 会触发 shutdown hook；其中 runGracefulShutdownOnce 已为幂等，不会重复收尾
+        // 会触�?shutdown hook；其�?runGracefulShutdownOnce 已为幂等，不会重复收�?
         System.exit(0);
     }
 
 
     /***
      * @author fzx
-     * @description 初始化服务
+     * @description 初始化服�?
      */
     @SuppressWarnings({"rawtypes","unchecked"})
     protected void initServer() {
@@ -309,23 +310,23 @@ public abstract class AbstractMessageServer implements MessageServer {
         bossGroup = ioTransport.newGroup(bossThreads, "im-boss");
         workerGroup = ioTransport.newGroup(workerThreads, "im-worker");
         try {
-            // 设置相关属性
+            // 设置相关属�?
             bootstrap.group(bossGroup, workerGroup)
                     .channel(ioTransport.serverChannelClass())
-                    // boss 线程组处理器,handler在初始化时就会执行
+                    // boss 线程组处理器,handler在初始化时就会执�?
                     .handler(serverChannelInitializer)
                     // 本地地址
                     .localAddress(MessageServerContext.serverProperties().getIp(), MessageServerContext.serverProperties().getPort())
-                    // worker线程组处理器,childHandler会在客户端成功connect后执行
+                    // worker线程组处理器,childHandler会在客户端成功connect后执�?
                     .childHandler(socketChannelInitializer);
-            // 设置boss 线程组相关的属性
+            // 设置boss 线程组相关的属�?
             Map<ChannelOption, Object> channelOptionMap = MessageServerContext.serverProperties().getChannelOptionMap();
             if (MapUtils.isNotEmpty(channelOptionMap)) {
                 for (Map.Entry<ChannelOption, Object> channelOptionEntry : channelOptionMap.entrySet()) {
                     bootstrap.option(channelOptionEntry.getKey(), channelOptionEntry.getValue());
                 }
             }
-            // worker 子连接 ChannelOption（通用 + epoll 专属合并后一次设置）
+            // worker 子连�?ChannelOption（通用 + epoll 专属合并后一次设置）
             Map<ChannelOption, Object> childChannelOptionMap = new HashMap<>(
                     MessageServerContext.serverProperties().getChildChannelOptionMap());
             if (ioTransport.kind() == NativeIoTransport.Kind.EPOLL) {
@@ -340,30 +341,30 @@ public abstract class AbstractMessageServer implements MessageServer {
                     bootstrap.childOption(childChannelOptionEntry.getKey(), childChannelOptionEntry.getValue());
                 }
             }
-            // epoll 传输层增强（如 SO_REUSEPORT），与 ChannelOption 配置解耦
+            // epoll 传输层增强（�?SO_REUSEPORT），�?ChannelOption 配置解�?
             ioTransport.enhanceServerBootstrap(bootstrap, bossThreads);
             NodeLeaseKeeper.start();
-            // 因为bind() 是异步的，这里不用 bind().sync(); 而是添加监听器的方式进行回调
+            // 因为bind() 是异步的，这里不�?bind().sync(); 而是添加监听器的方式进行回调
             ChannelFuture channelFuture = bootstrap.bind();
-            // 添加监听器来监听是否启动成功,做额外工作
+            // 添加监听器来监听是否启动成功,做额外工�?
             channelFuture.addListener((ChannelFutureListener) bindFuture -> {
                 if (bindFuture.isDone()) {
                     if (bindFuture.isSuccess()) {
-                        // =====================开始处理内置客户端用于做集群=================
+                        // =====================开始处理内置客户端用于做集�?================
                         if (MessageServerContext.serverProperties().isClusterEnable()) {
                             messageClient.configure(MessageServerContext.serverProperties());
                         }
-                        log.debug("核心message服务初始化完成");
+                        log.debug("核心message服务初始化完�?);
                         NodeLeaseKeeper.start();
                         MessageServerContext.publishEvent(new MessageEvent(MessageServerContext.serverProperties().getLocalServerAddress(), MessageEventTypeEnum.SERVER_STARTUP), true);
-                        log.debug("IM server启动成功，其绑定地址:{} 端口号:{} 共花费:{} ms.", MessageServerContext.serverProperties().getIp(), MessageServerContext.serverProperties().getPort(), (TimeUtil.currentTimeMillis() - startTimeStamp));
+                        log.debug("IM server启动成功，其绑定地址:{} 端口�?{} 共花�?{} ms.", MessageServerContext.serverProperties().getIp(), MessageServerContext.serverProperties().getPort(), (TimeUtil.currentTimeMillis() - startTimeStamp));
                     } else {
-                        log.error("IM server 启动失败！原因: {}", bindFuture.cause().getMessage());
+                        log.error("IM server 启动失败！原�? {}", bindFuture.cause().getMessage());
                         throw new MessageException(bindFuture.cause().getMessage());
                     }
                 }
             });
-            // 对关闭通道进行监听,不是立刻关闭,这里主要是为了优雅的关闭，将主线程阻塞处理
+            // 对关闭通道进行监听,不是立刻关闭,这里主要是为了优雅的关闭，将主线程阻塞处�?
             channelFuture.channel().closeFuture().sync();
         } catch (Exception e) {
             log.error("Message server 出现异常,原因：{}; 正在关闭服务...", e.getMessage());
@@ -381,7 +382,7 @@ public abstract class AbstractMessageServer implements MessageServer {
     private void registerShutdownHook() {
         // 注册关闭钩子
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            // 注意事项：1.不宜耗时过久 2.勿再注册/移除钩子 3.勿调用 System.exit
+            // 注意事项�?.不宜耗时过久 2.勿再注册/移除钩子 3.勿调�?System.exit
             log.error("Message server shutdown hook 触发");
             if (runGracefulShutdownOnce()) {
                 log.error("Message server 注销完成");

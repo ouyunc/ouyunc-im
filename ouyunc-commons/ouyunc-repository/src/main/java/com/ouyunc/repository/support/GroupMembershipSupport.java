@@ -8,7 +8,7 @@ import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.core.context.MessageContext;
-import com.ouyunc.core.context.RelationLocalCache;
+import com.ouyunc.core.relation.RelationLocalCache;
 import com.ouyunc.base.model.GroupRequestSession;
 import com.ouyunc.base.constant.enums.GroupUserPost;
 import com.ouyunc.base.constant.enums.LuaScriptEnum;
@@ -46,7 +46,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 /**
- * 群组成员与群组实体查询、绑定。
+ * 群组成员与群组实体查询、绑定�?
  */
 public final class GroupMembershipSupport {
 
@@ -83,15 +83,15 @@ public final class GroupMembershipSupport {
         try {
             dbMembers = loadAllGroupUsersFromAuthority(appKey, groupId);
         } catch (GroupMembershipLoadException e) {
-            log.error("群成员权威回源失败，拒绝写入空缓存 groupId={}", groupId, e);
+            log.error("群成员权威回源失败，拒绝写入空缓�?groupId={}", groupId, e);
             return new HashSet<>();
         }
         if (dbMembers.isEmpty()) {
-            // Redis miss 且库中确认无成员：禁止把空集写入 Caffeine，避免误当成「群已空」
+            // Redis miss 且库中确认无成员：禁止把空集写入 Caffeine，避免误当成「群已空�?
             return new HashSet<>();
         }
         if (!rebuildGroupMemberRedis(appKey, groupId, dbMembers, versionBefore)) {
-            // 版本已变：不覆盖；尽量读回并发写入后的 Redis
+            // 版本已变：不覆盖；尽量读回并发写入后�?Redis
             Set<String> after = loadGroupUserIdsByScan(cacheKey);
             if (after != null && !after.isEmpty()) {
                 MessageContext.groupUserIdentityCache.put(cacheKey, Set.copyOf(after));
@@ -109,7 +109,7 @@ public final class GroupMembershipSupport {
     }
 
     /**
-     * 大群成员用 ZSCAN 分段拉取，避免一次 ZRANGE 0 -1 堵 Redis/堆。
+     * 大群成员�?ZSCAN 分段拉取，避免一�?ZRANGE 0 -1 �?Redis/堆�?
      */
     private Set<String> loadGroupUserIdsByScan(String cacheKey) {
         Set<String> ids = new HashSet<>();
@@ -128,15 +128,15 @@ public final class GroupMembershipSupport {
                 }
             }
         } catch (Exception e) {
-            log.error("群成员 ZSCAN 失败 cacheKey={}", cacheKey, e);
+            log.error("群成�?ZSCAN 失败 cacheKey={}", cacheKey, e);
             return Set.of();
         }
         return ids;
     }
 
     /**
-     * 过滤已屏蔽本群消息的成员。优先读群级屏蔽 Hash；索引未建时回源后重建，避免大群 N 次 GET。
-     * 回源失败时 fail-closed：视为全部未屏蔽过滤失败，返回原集合（不投递风险由上层处理），绝不写入「已初始化无屏蔽」。
+     * 过滤已屏蔽本群消息的成员。优先读群级屏蔽 Hash；索引未建时回源后重建，避免大群 N �?GET�?
+     * 回源失败�?fail-closed：视为全部未屏蔽过滤失败，返回原集合（不投递风险由上层处理），绝不写入「已初始化无屏蔽」�?
      */
     public Set<String> excludeGroupShieldedMembers(String appKey, String groupId, Set<String> memberIds) {
         if (memberIds == null || memberIds.isEmpty()) {
@@ -150,11 +150,11 @@ public final class GroupMembershipSupport {
             try {
                 dbMembers = loadAllGroupUsersFromAuthority(appKey, groupId);
             } catch (GroupMembershipLoadException e) {
-                log.error("屏蔽索引回源失败，不写空初始化 groupId={}", groupId, e);
+                log.error("屏蔽索引回源失败，不写空初始�?groupId={}", groupId, e);
                 return new HashSet<>(memberIds);
             }
             if (!writeShieldHashIfVersionMatch(appKey, groupId, dbMembers, versionBefore)) {
-                log.warn("屏蔽索引回源版本冲突，跳过覆盖 groupId={}", groupId);
+                log.warn("屏蔽索引回源版本冲突，跳过覆�?groupId={}", groupId);
                 return new HashSet<>(memberIds);
             }
             shieldHash = infra.stringRedisTemplate.opsForHash().entries(shieldKey);
@@ -201,14 +201,14 @@ public final class GroupMembershipSupport {
                     .orElse(0L);
             return count == null ? 0L : count;
         } catch (Exception e) {
-            log.error("统计群/成员数量失败 param={} value={} appKey={}", paramName, paramValue, appKey, e);
+            log.error("统计�?成员数量失败 param={} value={} appKey={}", paramName, paramValue, appKey, e);
             return 0L;
         }
     }
 
     /**
-     * 关系权威源：MySQL。Mongo 异步滞后时非空集合不能当作完整真相。
-     * 查询失败抛 {@link GroupMembershipLoadException}，不得当成空群。
+     * 关系权威源：MySQL。Mongo 异步滞后时非空集合不能当作完整真相�?
+     * 查询失败�?{@link GroupMembershipLoadException}，不得当成空群�?
      */
     private List<GroupUserEntity> loadAllGroupUsersFromAuthority(String appKey, String groupId) {
         try {
@@ -219,12 +219,12 @@ public final class GroupMembershipSupport {
                     .list();
             return mysqlList == null ? List.of() : mysqlList;
         } catch (Exception e) {
-            throw new GroupMembershipLoadException("MySQL 查询群成员失败 groupId=" + groupId, e);
+            throw new GroupMembershipLoadException("MySQL 查询群成员失�?groupId=" + groupId, e);
         }
     }
 
     /**
-     * @return true 表示按 expectedVersion 重建成功；false 表示版本已变，未覆盖
+     * @return true 表示�?expectedVersion 重建成功；false 表示版本已变，未覆盖
      */
     private boolean rebuildGroupMemberRedis(String appKey, String groupId, List<GroupUserEntity> members,
                                             String expectedVersion) {
@@ -253,7 +253,7 @@ public final class GroupMembershipSupport {
                 LuaScriptEnum.GROUP_MEMBER_REBUILD_CAS_SCRIPT.getScript(), Long.class);
         Long ok = infra.stringRedisTemplate.execute(script, List.of(zsetKey, versionKey), args.toArray());
         if (ok == null || ok != 1L) {
-            log.warn("群成员回源 CAS 未命中 appKey={} groupId={} expectedVersion={}", appKey, groupId, expectedVersion);
+            log.warn("群成员回�?CAS 未命�?appKey={} groupId={} expectedVersion={}", appKey, groupId, expectedVersion);
             return false;
         }
         return writeShieldHashIfVersionMatch(appKey, groupId, members, expectedVersion);
@@ -266,7 +266,7 @@ public final class GroupMembershipSupport {
             return false;
         }
         writeShieldHash(appKey, groupId, members);
-        // 写完后再比对一次，变了则删掉半成品初始化标记，避免错误「无屏蔽」
+        // 写完后再比对一次，变了则删掉半成品初始化标记，避免错误「无屏蔽�?
         String versionAfter = currentRelationVersion(appKey, groupId);
         if (!Objects.equals(expectedVersion == null ? "0" : expectedVersion, versionAfter)) {
             infra.stringRedisTemplate.delete(CacheConstant.buildGroupShieldCacheKey(appKey, groupId));
@@ -297,7 +297,7 @@ public final class GroupMembershipSupport {
         return StringUtils.isBlank(raw) ? "0" : raw.trim();
     }
 
-    /** 加群/退群等关系变更后递增，使进行中的旧快照回源失效。 */
+    /** 加群/退群等关系变更后递增，使进行中的旧快照回源失效�?*/
     public void bumpGroupRelationVersion(String appKey, String groupId) {
         if (StringUtils.isAnyBlank(appKey, groupId)) {
             return;
@@ -329,13 +329,13 @@ public final class GroupMembershipSupport {
             return groupUserEntity;
         }
 
-        // 3. MySQL 为禁言/屏蔽等权限权威源；Mongo 滞后不得钉死错误状态
+        // 3. MySQL 为禁言/屏蔽等权限权威源；Mongo 滞后不得钉死错误状�?
         GroupUserEntity fromMysql = queryGroupUserEntityFromDataBase(cacheKey, appKey, groupId, memberId);
         if (fromMysql != null) {
             return fromMysql;
         }
 
-        // 4. MySQL miss 时再尝试 Mongo（仅兜底，仍写缓存供投递 channel）
+        // 4. MySQL miss 时再尝试 Mongo（仅兜底，仍写缓存供投�?channel�?
         try {
             MongoGroupUserEntity mongoGroupUser = infra.mongoTemplate.findOne(
                     Query.query(Criteria.where(MongoGroupUserEntity.Fields.userId).is(Long.parseLong(memberId))
@@ -347,13 +347,13 @@ public final class GroupMembershipSupport {
                 return groupUserEntity;
             }
         } catch (Exception e) {
-            log.warn("从MongoDB查询群成员异常, appKey: {}, groupId: {}, memberId: {}", appKey, groupId, memberId, e);
+            log.warn("从MongoDB查询群成员异�? appKey: {}, groupId: {}, memberId: {}", appKey, groupId, memberId, e);
         }
         return null;
     }
 
     /**
-     * 批量加载群成员配置（优先 L1/L2，miss 一次 JDBC IN 查询）。
+     * 批量加载群成员配置（优先 L1/L2，miss 一�?JDBC IN 查询）�?
      */
     public Map<String, GroupUserEntity> groupUserEntitiesBatch(String appKey, String groupId, Collection<String> memberIds) {
         Map<String, GroupUserEntity> result = new HashMap<>();
@@ -401,7 +401,7 @@ public final class GroupMembershipSupport {
                 }
             }
         } catch (Exception e) {
-            log.error("批量查询群成员失败 groupId={} missingSize={}", groupId, missing.size(), e);
+            log.error("批量查询群成员失�?groupId={} missingSize={}", groupId, missing.size(), e);
             for (String mid : missing) {
                 GroupUserEntity one = groupUserEntity(appKey, groupId, mid);
                 if (one != null) {
@@ -426,7 +426,7 @@ public final class GroupMembershipSupport {
             }
             return groupUserEntity;
         } catch (Exception e) {
-            log.error("从MySQL查询群成员异常, appKey: {}, groupId: {}, memberId: {}", appKey, groupId, memberId, e);
+            log.error("从MySQL查询群成员异�? appKey: {}, groupId: {}, memberId: {}", appKey, groupId, memberId, e);
             return null;
         }
     }
@@ -441,7 +441,7 @@ public final class GroupMembershipSupport {
             return Mono.just(localCached);
         }
 
-        // 2. Redis缓存（响应式）：命中只填 L1，L2 写入放到受控执行器且仅回源路径
+        // 2. Redis缓存（响应式）：命中只填 L1，L2 写入放到受控执行器且仅回源路�?
         return infra.reactiveRedisTemplate.opsForValue().get(cacheKey)
                 .flatMap(raw -> {
                     if (!(raw instanceof GroupUserEntity entity)) {
@@ -451,7 +451,7 @@ public final class GroupMembershipSupport {
                     return Mono.just(entity);
                 })
                 .switchIfEmpty(
-                        // 3. MySQL 权威源
+                        // 3. MySQL 权威�?
                         Mono.fromCallable(() -> {
                                     try {
                                         return infra.jdbcClient.sql(JdbcSqlDialectHolder.selectGroupUser())
@@ -462,7 +462,7 @@ public final class GroupMembershipSupport {
                                                 .optional()
                                                 .orElse(null);
                                     } catch (Exception e) {
-                                        log.error("从MySQL查询群成员异常, appKey: {}, groupId: {}, memberId: {}", appKey, groupId, memberId, e);
+                                        log.error("从MySQL查询群成员异�? appKey: {}, groupId: {}, memberId: {}", appKey, groupId, memberId, e);
                                         return null;
                                     }
                                 })
@@ -516,7 +516,7 @@ public final class GroupMembershipSupport {
 
     @SuppressWarnings("unchecked")
     public boolean inGroup(String appKey, String from, String groupId) {
-        // 存在性只信布尔 L1 + Redis ZSET；identity/实体缓存仅服务扇出与配置，不反推在群
+        // 存在性只信布�?L1 + Redis ZSET；identity/实体缓存仅服务扇出与配置，不反推在群
         Boolean cached = RelationLocalCache.GROUP_MEMBER.get(RelationLocalCache.groupMemberKey(appKey, groupId, from));
         if (cached != null) {
             return cached;
@@ -583,7 +583,7 @@ public final class GroupMembershipSupport {
                 .subscribeOn(Schedulers.fromExecutor(infra.dbExecutor()))
                 .flatMap(group -> group == null ? Mono.empty() : Mono.just(group))
                 .onErrorResume(e -> {
-                    log.error("响应式查询群组异常, appKey: {}, groupId: {}", appKey, groupId, e);
+                    log.error("响应式查询群组异�? appKey: {}, groupId: {}", appKey, groupId, e);
                     return Mono.empty();
                 });
     }
@@ -600,7 +600,7 @@ public final class GroupMembershipSupport {
                     .query(GroupEntity.class)
                     .single();
             if (groupEntity != null && !appKey.equals(groupEntity.getAppKey())) {
-                log.warn("群组租户不匹配, groupId={}, expectAppKey={}, actual={}",
+                log.warn("群组租户不匹�? groupId={}, expectAppKey={}, actual={}",
                         groupId, appKey, groupEntity.getAppKey());
                 return null;
             }
@@ -609,7 +609,7 @@ public final class GroupMembershipSupport {
                     MessageConstant.CACHE_ENTITY_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
             return groupEntity;
         } catch (EmptyResultDataAccessException e) {
-            log.warn("群组不存在, groupId: {}", groupId);
+            log.warn("群组不存�? groupId: {}", groupId);
             return null;
         } catch (IncorrectResultSizeDataAccessException e) {
             log.error("同一个groupId存在多个群组, groupId: {}", groupId);
@@ -623,27 +623,27 @@ public final class GroupMembershipSupport {
     public Mono<GroupEntity> getGroupEntityFromDatabasesReactive(String appKey, String groupId) {
         // 1. 入参校验（提前拦截无效请求，避免线程池资源浪费）
         if (StringUtils.isBlank(appKey) || StringUtils.isBlank(groupId)) {
-            log.warn("响应式查询群组：appKey 或 groupId 为空，appKey:{}, groupId:{}", appKey, groupId);
-            return Mono.empty(); // 空参数返回空流
+            log.warn("响应式查询群组：appKey �?groupId 为空，appKey:{}, groupId:{}", appKey, groupId);
+            return Mono.empty(); // 空参数返回空�?
         }
 
         // 2. 将同步方法封装为 Supplier（供给型函数，无参有返回值）
-        // 注意：Supplier 中的逻辑会在 publishOn 指定的线程池中执行
+        // 注意：Supplier 中的逻辑会在 publishOn 指定的线程池中执�?
         return Mono.fromSupplier(() -> getGroupEntityFromDatabases(appKey, groupId))
-                // 3. 切换到专用线程池执行同步任务（关键：避免阻塞 Reactor 核心线程）
+                // 3. 切换到专用线程池执行同步任务（关键：避免阻塞 Reactor 核心线程�?
                 .publishOn(Schedulers.fromExecutor(infra.dbExecutor()))
                 // 4. 响应式异常处理：将同步方法抛出的 RuntimeException 转换为响应式错误信号
                 .onErrorResume(e -> {
-                    log.error("响应式查询群组异常, appKey:{}, groupId:{}", appKey, groupId, e);
+                    log.error("响应式查询群组异�? appKey:{}, groupId:{}", appKey, groupId, e);
                     // 返回错误信号，上游可通过 onError 捕获
-                    return Mono.error(new RuntimeException("响应式查询群组失败, groupId: " + groupId, e));
+                    return Mono.error(new RuntimeException("响应式查询群组失�? groupId: " + groupId, e));
                 })
-                // 5. 日志记录：打印响应式流的结果（可选，用于调试）
+                // 5. 日志记录：打印响应式流的结果（可选，用于调试�?
                 .doOnSuccess(groupEntity -> {
                     if (groupEntity == null) {
-                        log.debug("响应式查询群组：未找到群组, appKey:{}, groupId:{}", appKey, groupId);
+                        log.debug("响应式查询群组：未找到群�? appKey:{}, groupId:{}", appKey, groupId);
                     } else {
-                        log.debug("响应式查询群组：成功获取群组, appKey:{}, groupId:{}, 状态:{}",
+                        log.debug("响应式查询群组：成功获取群组, appKey:{}, groupId:{}, 状�?{}",
                                 appKey, groupId, groupEntity.getStatus());
                     }
                 });
@@ -735,7 +735,7 @@ public final class GroupMembershipSupport {
         }
     }
 
-    /** 仅填本地缓存，不写 L2（Redis 命中路径） */
+    /** 仅填本地缓存，不�?L2（Redis 命中路径�?*/
     private void fillLocalGroupUserCache(String cacheKey, GroupUserEntity groupUserEntity) {
         if (groupUserEntity != null) {
             MessageContext.groupUserEntityCache.put(cacheKey, groupUserEntity);

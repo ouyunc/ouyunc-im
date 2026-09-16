@@ -9,7 +9,7 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.core.context.MessageContext;
-import com.ouyunc.core.context.RelationLocalCache;
+import com.ouyunc.core.relation.RelationLocalCache;
 import com.ouyunc.base.model.RequestSession;
 import com.ouyunc.base.constant.enums.YesOrNo;
 import com.ouyunc.domain.entity.FriendEntity;
@@ -32,7 +32,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 /**
- * 好友关系查询与绑定。
+ * 好友关系查询与绑定�?
  */
 public final class FriendRepositorySupport {
 
@@ -50,7 +50,7 @@ public final class FriendRepositorySupport {
         Message message = packet.getMessage();
         return saveFriendRequestMessage(packet, requestSession.getSessionId(), expireTime, (redisConnection) -> {
             String friendRequestCacheKey = CacheConstant.buildFriendRequestCacheKey(message.getMetadata().getAppKey(), message.getFrom(), message.getTo());
-            // 修复：key 必须用 stringSerializer，与 saveRefuseFriendRequestMessage 保持一致，否则后续读取时无法命中
+            // 修复：key 必须�?stringSerializer，与 saveRefuseFriendRequestMessage 保持一致，否则后续读取时无法命�?
             byte[] keyBytes = session.serializeOrThrow(infra.stringSerializer, friendRequestCacheKey, "friendRequestCacheKey");
             byte[] valueBytes = session.serializeOrThrow(infra.valueSerializer, requestSession, "requestSession");
             redisConnection.commands().set(keyBytes, valueBytes, Expiration.milliseconds(MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP), RedisStringCommands.SetOption.SET_IF_ABSENT);
@@ -61,7 +61,7 @@ public final class FriendRepositorySupport {
         return (RequestSession) infra.redisTemplate.opsForValue().get(CacheConstant.buildFriendRequestCacheKey(appKey, from, to));
     }
 
-    /** 清除好友请求会话占位，允许删友后再申请。 */
+    /** 清除好友请求会话占位，允许删友后再申请�?*/
     public void deleteFriendRequestSession(String appKey, String from, String to) {
         if (appKey == null || from == null || to == null) {
             return;
@@ -103,7 +103,7 @@ public final class FriendRepositorySupport {
 
     @SuppressWarnings("unchecked")
     public boolean isFriend(String appKey, String from, String to) {
-        // 存在性只信布尔 L1 + Redis ZSET，禁止用 friendEntityCache 推断（配置缓存与关系脱钩）
+        // 存在性只信布�?L1 + Redis ZSET，禁止用 friendEntityCache 推断（配置缓存与关系脱钩�?
         Boolean cached = RelationLocalCache.FRIEND.get(RelationLocalCache.friendKey(appKey, from, to));
         if (cached != null) {
             return cached;
@@ -168,13 +168,13 @@ public final class FriendRepositorySupport {
                                 )
                 )
                 .onErrorResume(e -> {
-                    log.error("响应式查询好友关系异常, appKey: {}, from: {}, to: {}", appKey, from, to, e);
+                    log.error("响应式查询好友关系异�? appKey: {}, from: {}, to: {}", appKey, from, to, e);
                     return Mono.empty();
                 });
     }
 
     /**
-     * 同步查询好友配置（含 channel），热路径优先本地/Redis 缓存。
+     * 同步查询好友配置（含 channel），热路径优先本�?Redis 缓存�?
      */
     public FriendEntity getFriendEntity(String appKey, String ownerUserId, String friendUserId) {
         String cacheKey = CacheConstant.buildFriendsConfigCacheKey(appKey, ownerUserId, friendUserId);
@@ -187,7 +187,7 @@ public final class FriendRepositorySupport {
             fillLocalFriendCache(cacheKey, redisCached);
             return redisCached;
         }
-        // MySQL 为 shield 等权限权威源
+        // MySQL �?shield 等权限权威源
         try {
             FriendEntity friendEntity = infra.jdbcClient.sql(JdbcSqlDialectHolder.selectFriend())
                     .param(FriendEntity.Fields.userId, ownerUserId)
@@ -228,7 +228,7 @@ public final class FriendRepositorySupport {
     }
 
     <K, V> boolean saveFriendRequestMessage(Packet packet, String friendRequestSessionId, long expireTime, Consumer<RedisConnection> consumer) {
-        // 调用公共方法，传入空的额外操作
+        // 调用公共方法，传入空的额外操�?
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         String appKey = metadata.getAppKey();
@@ -256,7 +256,7 @@ public final class FriendRepositorySupport {
     }
 
     /**
-     * 私聊热路径：Caffeine 命中则零 Redis；否则一次 Pipeline 读好友 ZSCORE + 拉黑 HGET + 屏蔽配置 GET。
+     * 私聊热路径：Caffeine 命中则零 Redis；否则一�?Pipeline 读好�?ZSCORE + 拉黑 HGET + 屏蔽配置 GET�?
      */
     public Mono<One2OneChatAccess> loadOne2OneChatAccess(String appKey, String from, String to) {
         One2OneChatAccess local = loadOne2OneChatAccessFromLocal(appKey, from, to);
@@ -275,7 +275,7 @@ public final class FriendRepositorySupport {
         }
     }
 
-    /** L2 命中只填本地，禁止读路径续期 Redis。 */
+    /** L2 命中只填本地，禁止读路径续期 Redis�?*/
     private void fillLocalFriendCache(String cacheKey, FriendEntity friendEntity) {
         if (friendEntity != null) {
             MessageContext.friendEntityCache.put(cacheKey, friendEntity);
@@ -302,7 +302,7 @@ public final class FriendRepositorySupport {
     }
 
     private One2OneChatAccess loadOne2OneChatAccessFromLocal(String appKey, String from, String to) {
-        // 好友存在性只看布尔 L1；实体缓存仅补 shield 配置，不反推 isFriend
+        // 好友存在性只看布�?L1；实体缓存仅�?shield 配置，不反推 isFriend
         Boolean friendHit = RelationLocalCache.FRIEND.get(RelationLocalCache.friendKey(appKey, to, from));
         Boolean blackHit = RelationLocalCache.BLACKLIST.get(RelationLocalCache.blacklistKey(appKey, to, from));
         FriendEntity toFromEntity = MessageContext.friendEntityCache.get(
@@ -312,7 +312,7 @@ public final class FriendRepositorySupport {
             shieldHit = YesOrNo.YES.getCode().equals(toFromEntity.getShield());
             RelationLocalCache.markShield(appKey, to, from, shieldHit);
         }
-        // 已知拒绝条件可短路，避免为否决路径再打 Redis
+        // 已知拒绝条件可短路，避免为否决路径再�?Redis
         if (Boolean.FALSE.equals(friendHit)) {
             return new One2OneChatAccess(false, false, false);
         }
@@ -334,7 +334,7 @@ public final class FriendRepositorySupport {
         byte[] fromBytes = infra.stringSerializer.serialize(from);
         byte[] blackKey = infra.stringSerializer.serialize(CacheConstant.buildBlacklistCacheKey(appKey, to));
         byte[] shieldKey = infra.stringSerializer.serialize(CacheConstant.buildFriendsConfigCacheKey(appKey, to, from));
-        // closePipeline 拿原始结果，避免 executePipelined 用 valueSerializer 误解码 ZSCORE/HGET
+        // closePipeline 拿原始结果，避免 executePipelined �?valueSerializer 误解�?ZSCORE/HGET
         Object pipelineResult = infra.redisTemplate.execute((RedisCallback<Object>) connection -> {
             connection.openPipeline();
             connection.zSetCommands().zScore(friendsKey, fromBytes);

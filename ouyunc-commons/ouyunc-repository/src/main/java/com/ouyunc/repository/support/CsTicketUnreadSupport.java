@@ -8,6 +8,7 @@ import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.constant.enums.MessageFromToTypeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
+import com.ouyunc.core.device.DeviceTypeRegistry;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
@@ -24,7 +25,7 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * 客服咨询单（ticket）维度未读：Hash 计数 + packetId 集合，支持按 offset 部分清除。
+ * 客服咨询单（ticket）维度未读：Hash 计数 + packetId 集合，支持按 offset 部分清除�?
  */
 public final class CsTicketUnreadSupport {
 
@@ -117,7 +118,7 @@ public final class CsTicketUnreadSupport {
             MessageContext.publishEvent(new MessageEvent(
                     ExceptionEventPayload.of(
                             ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
-                            "客服 ticket 已读清未读失败: " + e.getMessage(),
+                            "客服 ticket 已读清未读失�? " + e.getMessage(),
                             null),
                     MessageEventTypeEnum.EXCEPTION), true);
             return false;
@@ -125,7 +126,7 @@ public final class CsTicketUnreadSupport {
     }
 
     /**
-     * 客服 ticket 撤回：收件人各 deviceType 未读集合移除 packetId。
+     * 客服 ticket 撤回：收件人�?deviceType 未读集合移除 packetId�?
      */
     public void removeOnWithdraw(String appKey, String ticketId, String recipientId, long packetId) {
         if (StringUtils.isAnyBlank(appKey, ticketId, recipientId) || packetId <= 0L) {
@@ -161,7 +162,7 @@ public final class CsTicketUnreadSupport {
             MessageContext.publishEvent(new MessageEvent(
                     ExceptionEventPayload.of(
                             ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
-                            "客服 ticket 撤回清未读失败: " + e.getMessage(),
+                            "客服 ticket 撤回清未读失�? " + e.getMessage(),
                             null),
                     MessageEventTypeEnum.EXCEPTION), true);
         }
@@ -184,9 +185,9 @@ public final class CsTicketUnreadSupport {
     }
 
     private static Collection<Byte> resolveDeviceTypes(String appKey, String userId) {
-        Collection<Byte> deviceTypes = MessageContext.deviceTypeList(appKey, userId);
+        Collection<Byte> deviceTypes = DeviceTypeRegistry.list(appKey, userId);
         if (CollectionUtils.isEmpty(deviceTypes)) {
-            deviceTypes = MessageContext.deviceTypeList(appKey);
+            deviceTypes = DeviceTypeRegistry.list(appKey);
         }
         return deviceTypes;
     }

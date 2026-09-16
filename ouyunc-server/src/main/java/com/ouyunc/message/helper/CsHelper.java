@@ -312,7 +312,7 @@ public final class CsHelper {
         List<LoginClientInfo> senderDevices = httpPush
                 ? ClientHelper.onlineAll(appKey, syncIdentity)
                 : ClientHelper.onlineAll(appKey, syncIdentity,
-                MessageServerContext.deviceType(appKey, packet.getDeviceType()));
+                packet.getDeviceType());
         if (CollectionUtils.isNotEmpty(senderDevices)) {
             MessageHelper.asyncSendMessage(packet, senderDevices);
         }

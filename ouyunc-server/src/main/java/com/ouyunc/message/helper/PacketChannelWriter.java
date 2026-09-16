@@ -177,7 +177,7 @@ public final class PacketChannelWriter {
         return Target.newBuilder()
                 .appKey(metadata.getAppKey())
                 .targetIdentity(messageFrom)
-                .deviceType(MessageServerContext.deviceType(metadata.getAppKey(), packet.getDeviceType()))
+                .deviceType(packet.getDeviceType())
                 .targetServerAddress(MessageServerContext.serverProperties().getLocalServerAddress())
                 .protocol(packet.getProtocol())
                 .protocolVersion(packet.getProtocolVersion())

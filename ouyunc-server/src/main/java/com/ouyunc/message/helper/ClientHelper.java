@@ -21,6 +21,7 @@ import com.ouyunc.base.utils.ImSessionPresence;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.cache.distributed.redis.RedisPipelineSupport;
+import com.ouyunc.core.device.DeviceTypeRegistry;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.domain.entity.AppEntity;
 import com.ouyunc.message.cluster.lease.LocalNodeConnCounter;
@@ -48,8 +49,7 @@ import java.util.stream.Stream;
 
 /**
  * @author fzx
- * @description 客户端助手
- */
+ * @description 客户端助�? */
 public class ClientHelper {
 
     private static final Logger log = LoggerFactory.getLogger(ClientHelper.class);
@@ -60,18 +60,15 @@ public class ClientHelper {
 
     /***
      * @author fzx
-     * @description 客户端绑定登录信息（兼容入口，内部调用 {@link #bindAsync}）。
-     */
+     * @description 客户端绑定登录信息（兼容入口，内部调�?{@link #bindAsync}）�?     */
     public static void bind(ChannelHandlerContext ctx, LoginClientInfo loginClientInfo) {
         bindAsync(ctx, loginClientInfo);
     }
 
     /***
      * @author fzx
-     * @description 客户端绑定登录信息：分布式锁内 CAS 写 Redis（拒绝更旧 lastLoginTime），
-     *              成功后再注册本地表与 Channel 属性。Future 结果为被顶替的上一会话（可空），
-     *              调用方应在确认仍拥有目录后再踢旧连接并发登录 ACK。
-     */
+     * @description 客户端绑定登录信息：分布式锁�?CAS �?Redis（拒绝更�?lastLoginTime），
+     *              成功后再注册本地表与 Channel 属性。Future 结果为被顶替的上一会话（可空）�?     *              调用方应在确认仍拥有目录后再踢旧连接并发登录 ACK�?     */
     public static CompletableFuture<LoginClientInfo> bindAsync(ChannelHandlerContext ctx, LoginClientInfo loginClientInfo) {
         String comboIdentity = IdentityUtil.generalComboIdentity(
                 loginClientInfo.getAppKey(), loginClientInfo.getIdentity(), loginClientInfo.getDeviceType());
@@ -104,8 +101,7 @@ public class ClientHelper {
     }
 
     /**
-     * 绑定完成后校验本端是否仍是目录主人（防止解锁后被更新会话覆盖却继续发 ACK）。
-     */
+     * 绑定完成后校验本端是否仍是目录主人（防止解锁后被更新会话覆盖却继续发 ACK）�?     */
     public static boolean stillOwnsDirectory(LoginClientInfo loginClientInfo) {
         if (loginClientInfo == null) {
             return false;
@@ -132,8 +128,7 @@ public class ClientHelper {
     }
 
     /**
-     * TCP 已断则摘掉刚写入的目录，避免幽灵在线。lastLoginTime 不匹配说明已被新会话覆盖。
-     */
+     * TCP 已断则摘掉刚写入的目录，避免幽灵在线。lastLoginTime 不匹配说明已被新会话覆盖�?     */
     private static void rollbackRemoteIfChannelClosed(LoginClientInfo loginClientInfo, String comboIdentity, Channel channel) {
         if (channel != null && channel.isActive()) {
             return;
@@ -147,14 +142,12 @@ public class ClientHelper {
                 LoginSessionDirectory.unbind(loginClientInfo, comboIdentity);
             }
         })) {
-            log.error("客户端: {} 关闭回滚获取锁失败", loginClientInfo);
+            log.error("客户�? {} 关闭回滚获取锁失�?, loginClientInfo);
         }
     }
 
     /**
-     * 写入本地注册表；仅首次占用 combo 时加本机连接计数。
-     * 若登录路径已预占配额（B5），则消费预占标记、不再二次 INCR。覆盖旧 ctx 不加，由旧连接 close 按 ctx 摘除。
-     */
+     * 写入本地注册表；仅首次占�?combo 时加本机连接计数�?     * 若登录路径已预占配额（B5），则消费预占标记、不再二�?INCR。覆盖旧 ctx 不加，由旧连�?close �?ctx 摘除�?     */
     public static void registerLocal(String comboIdentity, ChannelHandlerContext ctx, String appKey) {
         boolean reserved = ctx != null && Boolean.TRUE.equals(
                 ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_CONN_QUOTA_RESERVED));
@@ -166,14 +159,13 @@ public class ClientHelper {
             LocalNodeConnCounter.increment(appKey);
             NodeLeaseKeeper.scheduleConnPublish();
         } else if (previous == null) {
-            // 预占已计入 LocalNodeConnCounter，仅刷新租约心跳中的计数视图
+            // 预占已计�?LocalNodeConnCounter，仅刷新租约心跳中的计数视图
             NodeLeaseKeeper.scheduleConnPublish();
         }
     }
 
     /**
-     * 按 ctx 摘本地表并减计数，避免踢人/绑定失败把新会话减掉或减两次。
-     */
+     * �?ctx 摘本地表并减计数，避免踢�?绑定失败把新会话减掉或减两次�?     */
     public static void unregisterLocal(String comboIdentity, ChannelHandlerContext ctx, String appKey) {
         boolean removed;
         if (ctx != null) {
@@ -213,15 +205,14 @@ public class ClientHelper {
         } else if (!eventLoop.isTerminated() && !eventLoop.isShutdown() && !eventLoop.isShuttingDown()) {
             eventLoop.execute(task);
         } else {
-            future.completeExceptionally(new MessageException("channel.eventLoop 已终止或关闭，无法完成登录绑定"));
+            future.completeExceptionally(new MessageException("channel.eventLoop 已终止或关闭，无法完成登录绑�?));
         }
         return future;
     }
 
     /**
-     * 目录写加同端锁：读出上一会话，若其 lastLoginTime 严格更大则拒绑（跨节点 fencing）；
-     * 否则覆盖绑定并返回上一会话供调用方踢线。
-     */
+     * 目录写加同端锁：读出上一会话，若�?lastLoginTime 严格更大则拒绑（跨节�?fencing）；
+     * 否则覆盖绑定并返回上一会话供调用方踢线�?     */
     private static LoginClientInfo doBindRemote(LoginClientInfo loginClientInfo, String comboIdentity) {
         RLock lock = MessageServerContext.redissonClient.getLock(
                 CacheConstant.buildIdentityBindOrUnbindLockCacheKey(loginClientInfo.getAppKey(), comboIdentity));
@@ -234,7 +225,7 @@ public class ClientHelper {
                             && previous.getLastLoginTime() > loginClientInfo.getLastLoginTime()) {
                         log.warn("登录 fencing 拒绝更旧会话 combo={} previousTs={} currentTs={}",
                                 comboIdentity, previous.getLastLoginTime(), loginClientInfo.getLastLoginTime());
-                        throw new MessageException("登录绑定失败：已有更新会话");
+                        throw new MessageException("登录绑定失败：已有更新会�?);
                     }
                     LoginSessionDirectory.bind(loginClientInfo, comboIdentity);
                     return previous;
@@ -244,7 +235,7 @@ public class ClientHelper {
                     }
                 }
             } else {
-                log.error("客户端: {} 绑定登录信息失败,原因：获取分布式锁超时", loginClientInfo);
+                log.error("客户�? {} 绑定登录信息失败,原因：获取分布式锁超�?, loginClientInfo);
                 throw new MessageException("客户端绑定登录信息失败：获取分布式锁超时");
             }
         } catch (InterruptedException e) {
@@ -254,14 +245,13 @@ public class ClientHelper {
         } catch (MessageException e) {
             throw e;
         } catch (Exception e) {
-            log.error("客户端绑定登录信息失败,原因：{}", e.getMessage(), e);
+            log.error("客户端绑定登录信息失�?原因：{}", e.getMessage(), e);
             throw new MessageException(e);
         }
     }
 
     /**
-     * 解绑/回滚抢锁失败会重试，避免幽灵 ONLINE。须在业务线程池调用，禁止 EventLoop。
-     */
+     * 解绑/回滚抢锁失败会重试，避免幽灵 ONLINE。须在业务线程池调用，禁�?EventLoop�?     */
     public static boolean tryRunWithBindLock(String appKey, String comboIdentity, BindLockAction action) {
         RLock lock = MessageServerContext.redissonClient.getLock(
                 CacheConstant.buildIdentityBindOrUnbindLockCacheKey(appKey, comboIdentity));
@@ -314,7 +304,7 @@ public class ClientHelper {
         Map<String, Set<String>> remainingCombos = new LinkedHashMap<>();
         for (String identity : identities) {
             List<LoginClientInfo> localHits = new ArrayList<>();
-            Collection<Byte> deviceTypes = MessageServerContext.deviceTypeList(appKey, identity);
+            Collection<Byte> deviceTypes = DeviceTypeRegistry.list(appKey, identity);
             Set<String> remoteCombos = new HashSet<>();
             for (Byte dt : deviceTypes) {
                 String comboId = IdentityUtil.generalComboIdentity(appKey, identity, dt);
@@ -346,26 +336,24 @@ public class ClientHelper {
      * @param excludeDeviceTypeArr 需要排除的设备类型数组
      * @return String
      * @Author fzx
-     * @Description 判断客户端是否在线, 如果在线返回该客户端所有在线连接的登录信息，支持多端登录
-     */
+     * @Description 判断客户端是否在�? 如果在线返回该客户端所有在线连接的登录信息，支持多端登�?     */
     public static List<LoginClientInfo> onlineAll(String appKey, String identity, Byte... excludeDeviceTypeArr) {
-        // 判断identity在该appKey下是否支持loginDeviceType该设备类型
-
+        // 判断identity在该appKey下是否支持loginDeviceType该设备类�?
         List<LoginClientInfo> loginClientInfoList = new ArrayList<>(NumberConstant.NUMBER_3);
-        // 获取所有的实现DeviceType接口的枚举实例,先找定制化的客户所支持的设备类型
-        Stream<Byte> deviceTypeStream = MessageServerContext.deviceTypeList(appKey, identity).stream();
+        // 获取所有的实现DeviceType接口的枚举实�?先找定制化的客户所支持的设备类�?        Stream<Byte> deviceTypeStream = DeviceTypeRegistry.list(appKey, identity).stream();
         if (excludeDeviceTypeArr != null && excludeDeviceTypeArr.length > NumberConstant.NUMBER_0) {
             Set<Byte> excludeNames = Arrays.stream(excludeDeviceTypeArr)
-                    .map(Byte::byteValue)
+                    .filter(Objects::nonNull)
                     .collect(Collectors.toSet());
-            deviceTypeStream = deviceTypeStream.filter(deviceType -> !excludeNames.contains(deviceType));
+            if (!excludeNames.isEmpty()) {
+                deviceTypeStream = deviceTypeStream.filter(deviceType -> !excludeNames.contains(deviceType));
+            }
         }
         Set<String> comboIdentitySet = deviceTypeStream
                 .map(deviceType -> IdentityUtil.generalComboIdentity(appKey, identity, deviceType))
                 .collect(Collectors.toSet());
 
-        // 先从本地注册表获取，如果在同一个服务器上或者不是集群
-        Collection<ChannelHandlerContext> allLoginClientChannelHandlerContexts = MessageServerContext.localLoginClientRegisterTable.getAll(comboIdentitySet);
+        // 先从本地注册表获取，如果在同一个服务器上或者不是集�?        Collection<ChannelHandlerContext> allLoginClientChannelHandlerContexts = MessageServerContext.localLoginClientRegisterTable.getAll(comboIdentitySet);
         allLoginClientChannelHandlerContexts.forEach(ctx -> {
             LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
             if (loginClientInfo != null && OnlineEnum.ONLINE.equals(loginClientInfo.getOnlineStatus())) {
@@ -399,8 +387,7 @@ public class ClientHelper {
     }
 
     /**
-     * 远程在线以路由 HASH + 租约为准，再管道 GET 登录 String 补发送元数据。
-     */
+     * 远程在线以路�?HASH + 租约为准，再管道 GET 登录 String 补发送元数据�?     */
     private static void appendRemoteOnlineByRoute(String appKey, Map<String, Set<String>> remainingCombos,
                                                   Map<String, List<LoginClientInfo>> result) {
         if (remainingCombos.isEmpty()) {
@@ -444,8 +431,7 @@ public class ClientHelper {
 
 
     /**
-     * 查询指定设备是否在线；不在线返回 null。
-     */
+     * 查询指定设备是否在线；不在线返回 null�?     */
     public static LoginClientInfo onlineDevice(String appKey, String identity, byte deviceType) {
         if (StringUtils.isAnyBlank(appKey, identity)) {
             return null;
@@ -458,8 +444,7 @@ public class ClientHelper {
      */
     private static LoginClientInfo online(String appKey, String identity, Byte loginDeviceTypeValue) {
         String comboIdentity = IdentityUtil.generalComboIdentity(appKey, identity, loginDeviceTypeValue);
-        // 先从本地注册表获取，如果在同一个服务器上或者不是集群
-        ChannelHandlerContext ctx = MessageServerContext.localLoginClientRegisterTable.get(comboIdentity);
+        // 先从本地注册表获取，如果在同一个服务器上或者不是集�?        ChannelHandlerContext ctx = MessageServerContext.localLoginClientRegisterTable.get(comboIdentity);
         if (ctx != null) {
             LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
             if (loginClientInfo != null && OnlineEnum.ONLINE.equals(loginClientInfo.getOnlineStatus()) && MessageContext.messageProperties.getLocalServerAddress().equals(loginClientInfo.getLoginServerAddress())) {
@@ -475,8 +460,7 @@ public class ClientHelper {
     }
 
     /**
-     * 登录 String 为 ONLINE 且节点租约 epoch 仍匹配。投递路径请优先走 {@link #onlineAll}（路由 HASH）。
-     */
+     * 登录 String �?ONLINE 且节点租�?epoch 仍匹配。投递路径请优先�?{@link #onlineAll}（路�?HASH）�?     */
     public static boolean isDirectoryOnline(LoginClientInfo loginClientInfo) {
         if (loginClientInfo == null || !OnlineEnum.ONLINE.equals(loginClientInfo.getOnlineStatus())) {
             return false;
@@ -486,8 +470,7 @@ public class ClientHelper {
 
 
     /**
-     * 某 appKey 连接数：本机用内存计数（即时），其它存活节点用租约心跳写入的 HASH（最多一拍延迟）。
-     */
+     * �?appKey 连接数：本机用内存计数（即时），其它存活节点用租约心跳写入的 HASH（最多一拍延迟）�?     */
     public static long connections(String appKey) {
         String localNodeId = NodeLeaseKeeper.localNodeId();
         List<String> remotes = remoteLiveNodeIds(localNodeId);
@@ -524,8 +507,7 @@ public class ClientHelper {
 
 
     /**
-     * 全量连接数：本机内存计数 + 其它存活节点 Redis HASH。
-     */
+     * 全量连接数：本机内存计数 + 其它存活节点 Redis HASH�?     */
     public static long connections() {
         String localNodeId = NodeLeaseKeeper.localNodeId();
         List<String> remotes = remoteLiveNodeIds(localNodeId);
@@ -585,9 +567,7 @@ public class ClientHelper {
     }
 
     /**
-     * SERVER_NOTIFY 广播：本机本地表投递；源节点按租约节点各发一份，dest 固定为对端节点地址。
-     * <p>A↛C 时走 {@link MessageHelper} 中转，中间节点不改 dest、不二次全员扇出。
-     */
+     * SERVER_NOTIFY 广播：本机本地表投递；源节点按租约节点各发一份，dest 固定为对端节点地址�?     * <p>A↛C 时走 {@link MessageHelper} 中转，中间节点不�?dest、不二次全员扇出�?     */
     public static void broadcastServerNotify(String appKey, Packet packet) {
         deliverLocalBroadcast(appKey, packet);
         if (packet.getMessage() == null || packet.getMessage().getMetadata() == null
@@ -609,8 +589,7 @@ public class ClientHelper {
     }
 
     /**
-     * 节点级广播信封：targetServerAddress 为最终要扫本地连接的 IM 节点，不是下一跳。
-     */
+     * 节点级广播信封：targetServerAddress 为最终要扫本地连接的 IM 节点，不是下一跳�?     */
     private static Target buildBroadcastNodeTarget(String appKey, String destNodeId) {
         return Target.newBuilder()
                 .appKey(appKey)
@@ -621,9 +600,7 @@ public class ClientHelper {
     }
 
     /**
-     * 只投递本机已登录连接，不再向其他节点扇出。
-     * <p>禁止在 Netty IO 线程扫全表；按 EventLoop 分组后在该 loop 上直接写出，避免全表拷贝和每连接 clone。
-     */
+     * 只投递本机已登录连接，不再向其他节点扇出�?     * <p>禁止�?Netty IO 线程扫全表；�?EventLoop 分组后在�?loop 上直接写出，避免全表拷贝和每连接 clone�?     */
     public static void deliverLocalBroadcast(String appKey, Packet packet) {
         if (packet == null) {
             return;
@@ -632,8 +609,7 @@ public class ClientHelper {
     }
 
     /**
-     * 本机按目标列表扇出：共享正文，按 EventLoop 一份 clone；禁止跨用户复用含私人 Target 的 Packet 而不改 Target。
-     */
+     * 本机按目标列表扇出：共享正文，按 EventLoop 一�?clone；禁止跨用户复用含私�?Target �?Packet 而不�?Target�?     */
     public static void deliverLocalFanoutTargets(Packet packet, List<Target> targets) {
         if (packet == null || targets == null || targets.isEmpty()) {
             return;
@@ -693,8 +669,7 @@ public class ClientHelper {
     }
 
     /**
-     * 弱一致遍历本机注册表，按 EventLoop 分桶后提交写出。每个 loop 一份 Packet clone，串行 setTarget。
-     */
+     * 弱一致遍历本机注册表，按 EventLoop 分桶后提交写出。每�?loop 一�?Packet clone，串�?setTarget�?     */
     private static void deliverLocalBroadcastGrouped(String appKey, Packet packet) {
         Map<EventLoop, List<ChannelHandlerContext>> byLoop = new IdentityHashMap<>();
         for (ChannelHandlerContext ctx : MessageServerContext.localLoginClientRegisterTable.asMap().values()) {
@@ -732,9 +707,7 @@ public class ClientHelper {
     }
 
     /**
-     * 同一 EventLoop 内分片写出：每批 {@link MessageConstant#IM_LOCAL_BROADCAST_EVENTLOOP_BATCH} 条后让出 loop。
-     * 尽力而为，水位高则跳过，不发 SEND_FAIL。
-     */
+     * 同一 EventLoop 内分片写出：每批 {@link MessageConstant#IM_LOCAL_BROADCAST_EVENTLOOP_BATCH} 条后让出 loop�?     * 尽力而为，水位高则跳过，不发 SEND_FAIL�?     */
     private static void writeLocalBroadcastOnEventLoop(EventLoop loop, Packet loopPacket,
                                                        List<ChannelHandlerContext> ctxs, int from) {
         if (loopPacket.getMessage() == null || loopPacket.getMessage().getMetadata() == null) {
@@ -755,9 +728,7 @@ public class ClientHelper {
     }
 
     /**
-     * 通知本机全部已登录客户端：请主动断开并重连其他节点。
-     * <p>服务端不 close 连接；由客户端收到 {@link MessageTypeEnum#SERVER_NOTIFY} 后自行断开重连。
-     *
+     * 通知本机全部已登录客户端：请主动断开并重连其他节点�?     * <p>服务端不 close 连接；由客户端收�?{@link MessageTypeEnum#SERVER_NOTIFY} 后自行断开重连�?     *
      * @return 成功下发通知的连接数
      */
     public static int notifyAllLocalClientsToReconnect() {
@@ -783,8 +754,7 @@ public class ClientHelper {
     }
 
     /**
-     * 强制关闭本机仍存活的长连接（仅用于进程退出兜底；日常运维踢线请用 {@link #notifyAllLocalClientsToReconnect()}）。
-     *
+     * 强制关闭本机仍存活的长连接（仅用于进程退出兜底；日常运维踢线请用 {@link #notifyAllLocalClientsToReconnect()}）�?     *
      * @return 尝试关闭的连接数
      */
     public static int forceCloseAllLocalClients() {
@@ -804,8 +774,7 @@ public class ClientHelper {
     }
 
     /**
-     * 向本机在线会话发送「请主动重连」维护通知（不关闭连接）。
-     */
+     * 向本机在线会话发送「请主动重连」维护通知（不关闭连接）�?     */
     private static void notifyLocalClientServerDrain(LoginClientInfo loginClientInfo, long timestamp) {
         try {
             Message notifyMessage = new Message(
@@ -855,7 +824,7 @@ public class ClientHelper {
                 channel.closeFuture().await(remain, TimeUnit.MILLISECONDS);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                log.warn("等待 channel 关闭被中断");
+                log.warn("等待 channel 关闭被中�?);
                 break;
             }
         }
