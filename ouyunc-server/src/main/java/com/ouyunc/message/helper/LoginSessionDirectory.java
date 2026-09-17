@@ -1,6 +1,7 @@
 package com.ouyunc.message.helper;
 
 import com.ouyunc.base.constant.CacheConstant;
+import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.utils.ImRouteCodec;
@@ -33,10 +34,23 @@ public final class LoginSessionDirectory {
     private static final StringRedisTemplate stringRedisTemplate = CacheFactory.STRING_REDIS.instance();
 
     /**
-     * KEYS: route, login；ARGV: deviceField, encoded, loginPayload。
+     * KEYS: route, login；ARGV: deviceField, encoded, loginPayload, lastLoginTime。
+     * 路由末段 lastLoginTime 更大则拒绝覆盖（fencing）。
      */
     private static final byte[] BIND_LUA = (
-            "redis.call('HSET', KEYS[1], ARGV[1], ARGV[2]) "
+            "local cur = redis.call('HGET', KEYS[1], ARGV[1]) "
+                    + "local ts = tonumber(ARGV[4]) "
+                    + "if cur and ts ~= nil then "
+                    + "local bars = 0 "
+                    + "for i = 1, #cur do "
+                    + "if string.sub(cur, i, i) == '|' then bars = bars + 1 end "
+                    + "end "
+                    + "if bars >= 2 then "
+                    + "local existingTs = tonumber(string.match(cur, '(%d+)$')) "
+                    + "if existingTs and existingTs > ts then return 0 end "
+                    + "end "
+                    + "end "
+                    + "redis.call('HSET', KEYS[1], ARGV[1], ARGV[2]) "
                     + "redis.call('SET', KEYS[2], ARGV[3]) "
                     + "return 1"
     ).getBytes(StandardCharsets.UTF_8);
@@ -84,11 +98,15 @@ public final class LoginSessionDirectory {
         loginClientInfo.setNodeEpoch(epoch);
         String routeKey = CacheConstant.buildLoginRouteCacheKey(loginClientInfo.getAppKey(), loginClientInfo.getIdentity());
         String loginKey = CacheConstant.buildLoginCacheKey(loginClientInfo.getAppKey(), comboIdentity);
-        String encoded = ImRouteCodec.encode(nodeId, epoch);
-        evalCached(BIND_LUA, ScriptKind.BIND, 2,
+        String encoded = ImRouteCodec.encode(nodeId, epoch, loginClientInfo.getLastLoginTime());
+        Object result = evalCached(BIND_LUA, ScriptKind.BIND, 2,
                 bytes(routeKey), bytes(loginKey),
                 bytes(String.valueOf(loginClientInfo.getDeviceType())),
-                bytes(encoded), serializeLogin(loginClientInfo.copyForRedis()));
+                bytes(encoded), serializeLogin(loginClientInfo.copyForRedis()),
+                bytes(String.valueOf(loginClientInfo.getLastLoginTime())));
+        if (result instanceof Number number && number.longValue() == 0L) {
+            throw new MessageException("登录绑定失败：已有更新会话");
+        }
     }
 
     public static void unbind(LoginClientInfo loginClientInfo, String comboIdentity) {

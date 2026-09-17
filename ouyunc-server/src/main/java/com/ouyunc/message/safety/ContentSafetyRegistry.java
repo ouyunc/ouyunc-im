@@ -1,10 +1,11 @@
 package com.ouyunc.message.safety;
 
 import com.alibaba.fastjson2.JSON;
+import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.enums.ContentSafetyAction;
+import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.model.ContentSafetyPolicy;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.message.context.MessageServerContext;
@@ -18,11 +19,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * 租户策略 + 敏感词 AC 本地注册表。
- * <p>数据源为 Redis（管理端推送）。Caffeine 写后 30 分钟过期；Pub/Sub 可立即失效。
+ * <p>数据源为 Redis（管理端推送）。热路径只读本机快照；miss / Pub/Sub 失效不阻塞调用方，异步回源覆盖。
  * 加载词库时合并 {@code __global__} 与当前 appKey。</p>
  */
 public final class ContentSafetyRegistry {
@@ -33,22 +35,27 @@ public final class ContentSafetyRegistry {
     /** 进程内单例。 */
     private static final ContentSafetyRegistry INSTANCE = new ContentSafetyRegistry();
 
+    /** 冷 miss 共用空自动机，避免每次 new。 */
+    private static final SensitiveWordAcAutomaton EMPTY_AUTOMATON = new SensitiveWordAcAutomaton(List.of());
+
     /** 读 Redis Hash / String。 */
     private final StringRedisTemplate stringRedis = CacheFactory.STRING_REDIS.instance();
     /** 保证 start 只执行一次。 */
     private final AtomicBoolean started = new AtomicBoolean(false);
+    /** 正在异步加载的 appKey，避免同一租户打爆线程池。 */
+    private final Set<String> reloadInFlight = ConcurrentHashMap.newKeySet();
 
-    /** appKey → 词库自动机；miss 时从 Redis 构建。 */
-    private final LoadingCache<String, CachedDict> dictCache = Caffeine.newBuilder()
+    /** appKey → 词库快照；不 Loading，miss 不阻塞。 */
+    private final Cache<String, CachedDict> dictCache = Caffeine.newBuilder()
             .maximumSize(2_000)
-            .expireAfterWrite(Duration.ofMinutes(30))
-            .build(this::loadDict);
+            .expireAfterAccess(Duration.ofMinutes(30))
+            .build();
 
-    /** appKey → 策略；miss 时从 Redis JSON 解析。 */
-    private final LoadingCache<String, ContentSafetyPolicy> policyCache = Caffeine.newBuilder()
+    /** appKey → 策略快照；不 Loading，miss 不阻塞。 */
+    private final Cache<String, ContentSafetyPolicy> policyCache = Caffeine.newBuilder()
             .maximumSize(2_000)
-            .expireAfterWrite(Duration.ofMinutes(30))
-            .build(this::loadPolicy);
+            .expireAfterAccess(Duration.ofMinutes(30))
+            .build();
 
     /**
      * 单例构造。
@@ -75,26 +82,30 @@ public final class ContentSafetyRegistry {
     }
 
     /**
-     * 使本地缓存失效。
+     * 安排异步重载。不立刻删本地快照，避免热路径打到空词库。
      *
-     * @param appKeyOrAll 租户 appKey；空或 ALL 则全部失效
+     * @param appKeyOrAll 租户 appKey；空或 ALL 则重载当前已缓存租户
      */
     public void invalidate(String appKeyOrAll) {
         if (StringUtils.isBlank(appKeyOrAll)
                 || CacheConstant.CONTENT_SAFETY_RELOAD_ALL.equalsIgnoreCase(appKeyOrAll.trim())) {
-            dictCache.invalidateAll();
-            policyCache.invalidateAll();
-            log.info("内容安全缓存已全部失效");
+            Set<String> keys = new HashSet<>();
+            keys.addAll(dictCache.asMap().keySet());
+            keys.addAll(policyCache.asMap().keySet());
+            if (keys.isEmpty()) {
+                log.info("内容安全缓存全部重载：当前无快照");
+                return;
+            }
+            keys.forEach(this::scheduleReload);
+            log.info("内容安全缓存已安排全部异步重载 size={}", keys.size());
             return;
         }
-        String appKey = appKeyOrAll.trim();
-        dictCache.invalidate(appKey);
-        policyCache.invalidate(appKey);
-        log.info("内容安全缓存已失效 appKey={}", appKey);
+        scheduleReload(appKeyOrAll.trim());
+        log.info("内容安全缓存已安排异步重载 appKey={}", appKeyOrAll.trim());
     }
 
     /**
-     * 取租户策略；无 Redis 配置时回退 YAML 默认。
+     * 取租户策略；无快照时回退 YAML 默认并异步加载。
      *
      * @param appKey 租户
      * @return 非空策略
@@ -103,22 +114,30 @@ public final class ContentSafetyRegistry {
         if (!isEnabled() || StringUtils.isBlank(appKey)) {
             return defaultPolicy();
         }
-        ContentSafetyPolicy policy = policyCache.get(appKey);
-        return policy == null ? defaultPolicy() : policy;
+        ContentSafetyPolicy policy = policyCache.getIfPresent(appKey);
+        if (policy == null) {
+            scheduleReload(appKey);
+            return defaultPolicy();
+        }
+        return policy;
     }
 
     /**
      * 取合并后的敏感词自动机。
      *
      * @param appKey 租户
-     * @return 非空自动机（可能无词）
+     * @return 非空自动机（冷 miss 为空机，异步补齐）
      */
     public SensitiveWordAcAutomaton matcher(String appKey) {
         if (!isEnabled() || StringUtils.isBlank(appKey)) {
-            return new SensitiveWordAcAutomaton(List.of());
+            return EMPTY_AUTOMATON;
         }
-        CachedDict dict = dictCache.get(appKey);
-        return dict == null ? new SensitiveWordAcAutomaton(List.of()) : dict.automaton();
+        CachedDict dict = dictCache.getIfPresent(appKey);
+        if (dict == null) {
+            scheduleReload(appKey);
+            return EMPTY_AUTOMATON;
+        }
+        return dict.automaton();
     }
 
     /**
@@ -152,8 +171,24 @@ public final class ContentSafetyRegistry {
         return policy;
     }
 
+    private void scheduleReload(String appKey) {
+        if (StringUtils.isBlank(appKey) || !reloadInFlight.add(appKey)) {
+            return;
+        }
+        ThreadPoolManager.messageProcessorExecutor().execute(() -> {
+            try {
+                dictCache.put(appKey, loadDict(appKey));
+                policyCache.put(appKey, loadPolicy(appKey));
+            } catch (Exception e) {
+                log.warn("异步加载内容安全失败 appKey={}", appKey, e);
+            } finally {
+                reloadInFlight.remove(appKey);
+            }
+        });
+    }
+
     /**
-     * Caffeine load：从 Redis 读策略 JSON。
+     * 从 Redis 读策略 JSON。
      *
      * @param appKey 租户
      * @return 策略
@@ -173,7 +208,7 @@ public final class ContentSafetyRegistry {
     }
 
     /**
-     * Caffeine load：合并全局词库 + 租户词库并编译 AC。
+     * 合并全局词库 + 租户词库并编译 AC。
      *
      * @param appKey 租户
      * @return 本地词库快照

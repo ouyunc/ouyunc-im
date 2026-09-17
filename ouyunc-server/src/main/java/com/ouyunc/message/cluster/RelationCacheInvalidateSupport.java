@@ -36,6 +36,12 @@ public final class RelationCacheInvalidateSupport {
                 }
                 RelationLocalCache.evictFriend(event.getAppKey(), event.getUserId(), event.getPeerId());
             }
+            case FRIEND_ADD -> {
+                if (StringUtils.isAnyBlank(event.getUserId(), event.getPeerId())) {
+                    return;
+                }
+                RelationLocalCache.markFriend(event.getAppKey(), event.getUserId(), event.getPeerId(), true);
+            }
             case FRIEND_SHIELD -> {
                 if (StringUtils.isAnyBlank(event.getUserId(), event.getPeerId()) || event.getEnabled() == null) {
                     return;

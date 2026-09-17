@@ -2,7 +2,6 @@ package com.ouyunc.message.processor;
 
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
-import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.*;
 import com.ouyunc.base.model.ClientInfo;
 import com.ouyunc.base.model.LoginClientInfo;
@@ -98,14 +97,18 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
         }
         boolean skipSenderMembership = IngressPacketHelper.isHttpPush(packet)
                 && IngressPacketHelper.isSystemLikeSender(packet.getMessage());
-        if (!skipSenderMembership && !groupUserIdentitySet.remove(packet.getMessage().getFrom())) {
-            log.error("发送方：{}, 不在群组：{} 中！群消息： {}", packet.getMessage().getFrom(), packet.getMessage().getTo(), packet);
+        String from = packet.getMessage().getFrom();
+        if (!skipSenderMembership && !groupUserIdentitySet.contains(from)) {
+            log.error("发送方：{}, 不在群组：{} 中！群消息： {}", from, packet.getMessage().getTo(), packet);
             MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "发送者不在群组中", packet), MessageEventTypeEnum.EXCEPTION), true);
             releaseQosOnFailure(packet);
             return Mono.empty();
         }
-        Set<String> allGroupMembers = new HashSet<>(groupUserIdentitySet);
-        allGroupMembers.add(packet.getMessage().getFrom());
+        Set<String> allGroupMembers = groupUserIdentitySet;
+        if (skipSenderMembership && from != null && !groupUserIdentitySet.contains(from)) {
+            allGroupMembers = new HashSet<>(groupUserIdentitySet);
+            allGroupMembers.add(from);
+        }
         if (!normalizeGroupAtOrReject(packet, allGroupMembers)) {
             releaseQosOnFailure(packet);
             return Mono.empty();
@@ -281,7 +284,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
             }
         }else if (GroupMessagePushModeEnum.PULL_PUSH.equals(MessageServerContext.serverProperties().getGroupMessagePushMode())) {
             // 混合模式(推拉模式)
-            if (groupUserIdentitySet.size() + NumberConstant.NUMBER_1 > MessageServerContext.serverProperties().getGroupMessageThreshold()) {
+            if (groupUserIdentitySet.size() > MessageServerContext.serverProperties().getGroupMessageThreshold()) {
                 // 发送给@ 的人
                 List<String> atList = message.getAt();
                 if (CollectionUtils.isNotEmpty(atList)) {

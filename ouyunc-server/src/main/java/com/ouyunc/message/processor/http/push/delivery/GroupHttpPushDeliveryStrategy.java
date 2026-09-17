@@ -2,7 +2,6 @@ package com.ouyunc.message.processor.http.push.delivery;
 
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
-import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.GroupMessagePushModeEnum;
 import com.ouyunc.base.constant.enums.IdentityType;
@@ -66,11 +65,15 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
         if (!skipSenderMembership && !groupUserIdentitySet.contains(packet.getMessage().getFrom())) {
             throw HttpPushFailures.forbidden(packet, ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "发送者不在群组中");
         }
-        Set<String> allGroupMembers = new HashSet<>(groupUserIdentitySet);
-        allGroupMembers.add(packet.getMessage().getFrom());
+        String from = packet.getMessage().getFrom();
+        Set<String> allGroupMembers = groupUserIdentitySet;
+        if (skipSenderMembership && from != null && !groupUserIdentitySet.contains(from)) {
+            allGroupMembers = new HashSet<>(groupUserIdentitySet);
+            allGroupMembers.add(from);
+        }
         requireValidGroupAt(packet, allGroupMembers);
-        // process 复用受理时刻成员集，不再二次全量查询
-        HttpPushDeliverySupport.stashGroupMembers(packet, new HashSet<>(groupUserIdentitySet));
+        // process 复用受理时刻不可变快照，不再二次全量查询、不再 copy/remove
+        HttpPushDeliverySupport.stashGroupMembers(packet, groupUserIdentitySet);
     }
 
     @Override
@@ -87,8 +90,6 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
                     "群成员缓存丢失", packet);
             return Mono.just(false);
         }
-        // 投递目标不含发送方；系统代发时 from 可能本就不在集内
-        groupUserIdentitySet.remove(packet.getMessage().getFrom());
         int contentType = packet.getMessage().getContentType();
         if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {
             return handleReadReceipt(packet);
@@ -214,8 +215,7 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
                 deliverToAtMembers(packet, atList, groupMembers);
             }
         } else if (GroupMessagePushModeEnum.PULL_PUSH.equals(mode)) {
-            if (groupMembers.size() + NumberConstant.NUMBER_1
-                    > MessageServerContext.serverProperties().getGroupMessageThreshold()) {
+            if (groupMembers.size() > MessageServerContext.serverProperties().getGroupMessageThreshold()) {
                 List<String> atList = message.getAt();
                 if (CollectionUtils.isNotEmpty(atList)) {
                     deliverToAtMembers(packet, atList, groupMembers);
@@ -236,7 +236,12 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
         Set<String> targets = AtMentionHelper.resolveDeliveryTargets(atList, groupMembers);
         Message message = packet.getMessage();
         String groupId = message.getTo();
-        targets.forEach(member -> MessageDeliveryRouteHelper.deliverGroupMember(packet, groupId, member));
+        String senderId = message.getFrom();
+        targets.forEach(member -> {
+            if (member != null && !member.equals(senderId)) {
+                MessageDeliveryRouteHelper.deliverGroupMember(packet, groupId, member);
+            }
+        });
     }
 
     private static void requireValidGroupAt(Packet packet, Set<String> allGroupMembers)

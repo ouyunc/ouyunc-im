@@ -17,6 +17,7 @@ import com.ouyunc.base.packet.message.content.ServerNotifyContent;
 import com.ouyunc.base.serialize.Serializer;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.IdentityUtil;
+import com.ouyunc.base.utils.ImRouteCodec;
 import com.ouyunc.base.utils.ImSessionPresence;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.cache.config.CacheFactory;
@@ -106,10 +107,23 @@ public class ClientHelper {
 
     /**
      * 绑定完成后校验本端是否仍是目录主人（防止解锁后被更新会话覆盖却继续发 ACK）。
+     * 优先读路由 HASH 小字段，避免再反序列化整份 LoginClientInfo JSON。
      */
     public static boolean stillOwnsDirectory(LoginClientInfo loginClientInfo) {
         if (loginClientInfo == null) {
             return false;
+        }
+        String routeKey = CacheConstant.buildLoginRouteCacheKey(
+                loginClientInfo.getAppKey(), loginClientInfo.getIdentity());
+        Object raw = stringRedisTemplate.opsForHash()
+                .get(routeKey, String.valueOf(loginClientInfo.getDeviceType()));
+        String encoded = raw == null ? null : raw.toString();
+        if (StringUtils.isNotBlank(encoded)) {
+            long routeTs = ImRouteCodec.lastLoginTime(encoded);
+            if (routeTs > 0L) {
+                return routeTs == loginClientInfo.getLastLoginTime()
+                        && Objects.equals(ImRouteCodec.nodeId(encoded), loginClientInfo.getLoginServerAddress());
+            }
         }
         String comboIdentity = IdentityUtil.generalComboIdentity(
                 loginClientInfo.getAppKey(), loginClientInfo.getIdentity(), loginClientInfo.getDeviceType());
@@ -313,6 +327,32 @@ public class ClientHelper {
     }
 
     public static Map<String, List<LoginClientInfo>> onlineAllBatch(String appKey, Set<String> identities) {
+        if (identities == null || identities.isEmpty()) {
+            return Map.of();
+        }
+        int batch = MessageConstant.GROUP_FANOUT_ONLINE_LOOKUP_BATCH;
+        if (identities.size() <= batch) {
+            return onlineAllBatchChunk(appKey, identities);
+        }
+        Map<String, List<LoginClientInfo>> result = new HashMap<>(identities.size());
+        Set<String> chunk = new HashSet<>(batch);
+        for (String identity : identities) {
+            if (identity == null) {
+                continue;
+            }
+            chunk.add(identity);
+            if (chunk.size() >= batch) {
+                result.putAll(onlineAllBatchChunk(appKey, Set.copyOf(chunk)));
+                chunk.clear();
+            }
+        }
+        if (!chunk.isEmpty()) {
+            result.putAll(onlineAllBatchChunk(appKey, Set.copyOf(chunk)));
+        }
+        return result;
+    }
+
+    private static Map<String, List<LoginClientInfo>> onlineAllBatchChunk(String appKey, Set<String> identities) {
         Map<String, List<LoginClientInfo>> result = new HashMap<>(identities.size());
         Map<String, Set<String>> remainingCombos = new LinkedHashMap<>();
         for (String identity : identities) {

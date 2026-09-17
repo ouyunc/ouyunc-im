@@ -10,6 +10,8 @@ public class RelationCacheInvalidateEvent {
 
     public static final String KIND_FRIEND_REMOVE = RelationCacheInvalidateKind.FRIEND_REMOVE.name();
 
+    public static final String KIND_FRIEND_ADD = RelationCacheInvalidateKind.FRIEND_ADD.name();
+
     public static final String KIND_FRIEND_SHIELD = RelationCacheInvalidateKind.FRIEND_SHIELD.name();
 
     public static final String KIND_BLACKLIST = RelationCacheInvalidateKind.BLACKLIST.name();
@@ -42,6 +44,15 @@ public class RelationCacheInvalidateEvent {
     public static RelationCacheInvalidateEvent friendRemove(String appKey, String userId, String peerId) {
         RelationCacheInvalidateEvent event = new RelationCacheInvalidateEvent();
         event.kind = KIND_FRIEND_REMOVE;
+        event.appKey = appKey;
+        event.userId = userId;
+        event.peerId = peerId;
+        return event;
+    }
+
+    public static RelationCacheInvalidateEvent friendAdd(String appKey, String userId, String peerId) {
+        RelationCacheInvalidateEvent event = new RelationCacheInvalidateEvent();
+        event.kind = KIND_FRIEND_ADD;
         event.appKey = appKey;
         event.userId = userId;
         event.peerId = peerId;

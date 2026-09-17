@@ -212,6 +212,7 @@ public class DisruptorMessageEventMulticaster extends AbstractMessageEventMultic
         List<ListenerExecutionStats> handlerStats = new ArrayList<>();
         EventHandlerGroupBuilder groupBuilder = new EventHandlerGroupBuilder(disruptor, handlerStats);
         byOrder.forEach(groupBuilder::addStage);
+        groupBuilder.addSlotClear();
         disruptor.start();
         RingBuffer<DisruptorEvent> ringBuffer = disruptor.getRingBuffer();
         log.info("Disruptor global ring initialized, ring={}, stages={}, listeners={}", ring, byOrder.size(), ringListeners.size());
@@ -275,6 +276,16 @@ public class DisruptorMessageEventMulticaster extends AbstractMessageEventMultic
                 current = disruptor.handleEventsWith(handlers);
             } else {
                 current = current.then(handlers);
+            }
+        }
+
+        /** 全阶段完成后清空槽位引用，避免 RingBuffer 槽长期持有 MessageEvent。 */
+        private void addSlotClear() {
+            EventHandler<DisruptorEvent> clearer = (holder, sequence, endOfBatch) -> holder.event = null;
+            if (current == null) {
+                current = disruptor.handleEventsWith(clearer);
+            } else {
+                current = current.then(clearer);
             }
         }
     }

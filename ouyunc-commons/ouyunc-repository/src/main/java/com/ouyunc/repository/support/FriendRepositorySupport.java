@@ -8,9 +8,11 @@ import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.IdentityUtil;
-import com.ouyunc.core.context.MessageContext;
-import com.ouyunc.core.relation.RelationLocalCache;
+import com.ouyunc.base.model.RelationCacheInvalidateEvent;
 import com.ouyunc.base.model.RequestSession;
+import com.ouyunc.core.context.MessageContext;
+import com.ouyunc.core.relation.RelationCacheInvalidatePublisher;
+import com.ouyunc.core.relation.RelationLocalCache;
 import com.ouyunc.base.constant.enums.YesOrNo;
 import com.ouyunc.domain.entity.FriendEntity;
 import com.ouyunc.domain.entity.MongoFriendEntity;
@@ -292,6 +294,8 @@ public final class FriendRepositorySupport {
                 });
         if (bound) {
             RelationLocalCache.markFriend(appKey, from, to, true);
+            RelationCacheInvalidatePublisher.publish(
+                    RelationCacheInvalidateEvent.friendAdd(appKey, from, to));
         }
         return bound;
     }

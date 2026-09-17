@@ -1,5 +1,6 @@
 package com.ouyunc.message.helper;
 
+import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.IngressSourceEnum;
 import com.ouyunc.base.constant.enums.MessageDeliveryChannelEnum;
 import com.ouyunc.base.model.ClientInfo;
@@ -93,6 +94,25 @@ public final class MessageDeliveryRouteHelper {
         if (imMembers.isEmpty()) {
             return;
         }
+        int batch = MessageConstant.GROUP_FANOUT_ONLINE_LOOKUP_BATCH;
+        if (imMembers.size() <= batch) {
+            sendImGroupMembers(packet, appKey, imMembers);
+            return;
+        }
+        Set<String> chunk = new HashSet<>(batch);
+        for (String memberId : imMembers) {
+            chunk.add(memberId);
+            if (chunk.size() >= batch) {
+                sendImGroupMembers(packet, appKey, Set.copyOf(chunk));
+                chunk.clear();
+            }
+        }
+        if (!chunk.isEmpty()) {
+            sendImGroupMembers(packet, appKey, Set.copyOf(chunk));
+        }
+    }
+
+    private static void sendImGroupMembers(Packet packet, String appKey, Set<String> imMembers) {
         Map<String, List<LoginClientInfo>> onlineMap = ClientHelper.onlineAllBatch(appKey, imMembers);
         onlineMap.forEach((member, clients) -> {
             if (CollectionUtils.isNotEmpty(clients)) {

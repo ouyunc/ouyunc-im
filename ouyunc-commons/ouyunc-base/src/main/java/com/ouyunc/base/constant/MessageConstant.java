@@ -400,10 +400,13 @@ public class MessageConstant {
     /**
      * 群成员 identity 列表本地缓存。热路径命中不打 Redis；入群/退群靠 Pub/Sub 立刻失效，丢失时最多延迟这么久。
      */
-    public static final int GROUP_MEMBER_IDENTITY_CACHE_EXPIRE_SECONDS = 3;
+    public static final int GROUP_MEMBER_IDENTITY_CACHE_EXPIRE_SECONDS = 30;
 
     /** Redis 群成员 ZSET 游标分段 COUNT，避免大群一次 ZRANGE 0 -1 */
     public static final int GROUP_MEMBER_ZSET_SCAN_COUNT = 500;
+
+    /** 群扇出：每批查在线/解析渠道的人数，避免一次物化万人 HashSet 与超大 Pipeline */
+    public static final int GROUP_FANOUT_ONLINE_LOOKUP_BATCH = 500;
 
     /** 跨节点群扇出：单包携带的目标上限，超出则再拆包 */
     public static final int GROUP_FANOUT_REMOTE_TARGET_BATCH = 256;
@@ -929,10 +932,9 @@ public class MessageConstant {
     public static final int PACKET_BASE_LENGTH = LENGTH_FIELD_OFFSET + LENGTH_FIELD_LENGTH;
 
     /**
-     * 单条消息内容最大长度（字节）：10MB
-     * Why: 防止恶意客户端发送超大 messageLength 触发 OOM
+     * 单条消息内容最大长度（字节）：256KB。图片/文件走对象存储，聊天包禁止把 EventLoop 缓冲打到 MB 级。
      */
-    public static final int MAX_MESSAGE_CONTENT_LENGTH = 10 * 1024 * 1024;
+    public static final int MAX_MESSAGE_CONTENT_LENGTH = 256 * 1024;
 
     /**
      * LengthFieldBasedFrameDecoder 最大帧长（字节）：协议头 + 消息体上限

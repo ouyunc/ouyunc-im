@@ -44,6 +44,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -56,6 +57,7 @@ public final class GroupMembershipSupport {
 
     private final RepositoryInfrastructure infra;
     private final SessionMessagePersistenceSupport session;
+    private final Set<String> shieldRebuildInFlight = ConcurrentHashMap.newKeySet();
 
     public GroupMembershipSupport(RepositoryInfrastructure infra, SessionMessagePersistenceSupport session) {
         this.infra = infra;
@@ -74,26 +76,24 @@ public final class GroupMembershipSupport {
         String cacheKey = CacheConstant.buildGroupUserCacheKey(appKey, groupId);
         Set<String> cached = MessageContext.groupUserIdentityCache.get(cacheKey);
         if (cached != null) {
-            return new HashSet<>(cached);
+            return cached;
         }
         Set<String> fromRedis = loadGroupUserIdsByScan(cacheKey);
         if (fromRedis != null && !fromRedis.isEmpty()) {
-            putIdentitySnapshot(cacheKey, fromRedis);
-            return new HashSet<>(fromRedis);
+            return snapshotIdentities(cacheKey, fromRedis);
         }
         String versionBefore = currentRelationVersion(appKey, groupId);
         List<GroupUserEntity> dbMembers;
         dbMembers = loadAllGroupUsersFromAuthority(appKey, groupId);
         if (dbMembers.isEmpty()) {
             // Redis miss 且库中确认无成员：禁止把空集写入 Caffeine，避免误当成「群已空」
-            return new HashSet<>();
+            return Set.of();
         }
         if (!rebuildGroupMemberRedis(appKey, groupId, dbMembers, versionBefore)) {
             // 版本已变：不覆盖；尽量读回并发写入后的 Redis
             Set<String> after = loadGroupUserIdsByScan(cacheKey);
             if (after != null && !after.isEmpty()) {
-                putIdentitySnapshot(cacheKey, after);
-                return new HashSet<>(after);
+                return snapshotIdentities(cacheKey, after);
             }
         }
         Set<String> ids = new HashSet<>();
@@ -102,8 +102,7 @@ public final class GroupMembershipSupport {
                 ids.add(member.getUserId());
             }
         }
-        putIdentitySnapshot(cacheKey, ids);
-        return ids;
+        return snapshotIdentities(cacheKey, ids);
     }
 
     /**
@@ -133,40 +132,54 @@ public final class GroupMembershipSupport {
     }
 
     /**
-     * 过滤已屏蔽本群消息的成员。优先读群级屏蔽 Hash；索引未建时回源后重建，避免大群 N 次 GET。
-     * 回源失败时 fail-closed：视为全部未屏蔽过滤失败，返回原集合（不投递风险由上层处理），绝不写入「已初始化无屏蔽」。
+     * 过滤已屏蔽本群消息的成员。热路径只读屏蔽 Hash / 本机快照；INIT 缺失不回源 MySQL，异步重建。
      */
     public Set<String> excludeGroupShieldedMembers(String appKey, String groupId, Set<String> memberIds) {
         if (memberIds == null || memberIds.isEmpty()) {
             return Set.of();
         }
-        String shieldKey = CacheConstant.buildGroupShieldCacheKey(appKey, groupId);
-        Map<Object, Object> shieldHash = infra.stringRedisTemplate.opsForHash().entries(shieldKey);
-        if (shieldHash == null || !shieldHash.containsKey(MessageConstant.GROUP_SHIELD_HASH_INIT_FIELD)) {
-            String versionBefore = currentRelationVersion(appKey, groupId);
-            List<GroupUserEntity> dbMembers;
-            try {
-                dbMembers = loadAllGroupUsersFromAuthority(appKey, groupId);
-            } catch (GroupMembershipLoadException e) {
-                log.error("屏蔽索引回源失败，不写空初始化 groupId={}", groupId, e);
-                return new HashSet<>(memberIds);
-            }
-            if (!writeShieldHashIfVersionMatch(appKey, groupId, dbMembers, versionBefore)) {
-                log.warn("屏蔽索引回源版本冲突，跳过覆盖 groupId={}", groupId);
-                return new HashSet<>(memberIds);
-            }
-            shieldHash = infra.stringRedisTemplate.opsForHash().entries(shieldKey);
+        Set<String> shielded = loadShieldedMembersHot(appKey, groupId);
+        if (shielded == null || shielded.isEmpty()) {
+            return memberIds;
         }
-        if (shieldHash == null || !shieldHash.containsKey(MessageConstant.GROUP_SHIELD_HASH_INIT_FIELD)) {
-            return new HashSet<>(memberIds);
-        }
-        Set<String> result = new HashSet<>();
+        Set<String> result = new HashSet<>(Math.max(16, memberIds.size() - shielded.size()));
         for (String memberId : memberIds) {
-            if (memberId != null && !shieldHash.containsKey(memberId)) {
+            if (memberId != null && !shielded.contains(memberId)) {
                 result.add(memberId);
             }
         }
         return result;
+    }
+
+    /**
+     * @return 已屏蔽成员；null 表示索引未就绪（调用方按未屏蔽处理）
+     */
+    private Set<String> loadShieldedMembersHot(String appKey, String groupId) {
+        String localKey = RelationLocalCache.groupShieldKey(appKey, groupId);
+        Set<String> cached = RelationLocalCache.GROUP_SHIELD.get(localKey);
+        if (cached != null) {
+            return cached;
+        }
+        String shieldKey = CacheConstant.buildGroupShieldCacheKey(appKey, groupId);
+        Map<Object, Object> shieldHash = infra.stringRedisTemplate.opsForHash().entries(shieldKey);
+        if (shieldHash == null || !shieldHash.containsKey(MessageConstant.GROUP_SHIELD_HASH_INIT_FIELD)) {
+            scheduleShieldRebuild(appKey, groupId);
+            return null;
+        }
+        Set<String> shielded = new HashSet<>();
+        for (Map.Entry<Object, Object> entry : shieldHash.entrySet()) {
+            if (entry.getKey() == null) {
+                continue;
+            }
+            String field = String.valueOf(entry.getKey());
+            if (MessageConstant.GROUP_SHIELD_HASH_INIT_FIELD.equals(field)) {
+                continue;
+            }
+            shielded.add(field);
+        }
+        Set<String> snapshot = Set.copyOf(shielded);
+        RelationLocalCache.GROUP_SHIELD.put(localKey, snapshot);
+        return snapshot;
     }
 
     public long groupMemberCount(String appKey, String groupId) {
@@ -304,8 +317,30 @@ public final class GroupMembershipSupport {
                 CacheConstant.buildGroupRelationVersionCacheKey(appKey, groupId));
     }
 
-    private void putIdentitySnapshot(String cacheKey, Set<String> ids) {
-        MessageContext.groupUserIdentityCache.put(cacheKey, Set.copyOf(ids));
+    private Set<String> snapshotIdentities(String cacheKey, Set<String> ids) {
+        Set<String> snap = Set.copyOf(ids);
+        MessageContext.groupUserIdentityCache.put(cacheKey, snap);
+        return snap;
+    }
+
+    private void scheduleShieldRebuild(String appKey, String groupId) {
+        String flightKey = appKey + ":" + groupId;
+        if (!shieldRebuildInFlight.add(flightKey)) {
+            return;
+        }
+        infra.dbExecutor().execute(() -> {
+            try {
+                String versionBefore = currentRelationVersion(appKey, groupId);
+                List<GroupUserEntity> dbMembers = loadAllGroupUsersFromAuthority(appKey, groupId);
+                if (writeShieldHashIfVersionMatch(appKey, groupId, dbMembers, versionBefore)) {
+                    RelationLocalCache.evictGroupShieldIndex(appKey, groupId);
+                }
+            } catch (Exception e) {
+                log.warn("异步重建群屏蔽索引失败 groupId={}", groupId, e);
+            } finally {
+                shieldRebuildInFlight.remove(flightKey);
+            }
+        });
     }
 
     public static final class GroupMembershipLoadException extends RuntimeException {

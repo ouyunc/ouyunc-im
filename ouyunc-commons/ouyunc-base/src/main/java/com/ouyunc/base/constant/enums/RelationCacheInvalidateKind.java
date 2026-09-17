@@ -10,6 +10,9 @@ public enum RelationCacheInvalidateKind {
     /** 解除好友：需要 userId、peerId。 */
     FRIEND_REMOVE,
 
+    /** 成为好友：需要 userId、peerId；其它节点把在友布尔写成 true。 */
+    FRIEND_ADD,
+
     /** 好友屏蔽变更：需要 userId、peerId、enabled。 */
     FRIEND_SHIELD,
 
