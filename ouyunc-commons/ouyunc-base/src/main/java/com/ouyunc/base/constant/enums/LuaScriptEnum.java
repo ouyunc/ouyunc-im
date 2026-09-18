@@ -484,7 +484,72 @@ public enum LuaScriptEnum {
                 end
             end
             return merged
-            """, "客服 ticket 已读清未读");
+            """, "客服 ticket 已读清未读"),
+
+    /**
+     * appKey 连接配额预占。HASH field=nodeId，整 key 打 {@code {appKey}} 槽，跨节点可原子求和。
+     * KEYS[1]=quotaHash ARGV[1]=nodeId ARGV[2]=maxConnections ARGV[3]=ttlSeconds
+     */
+    APP_KEY_CONN_RESERVE_SCRIPT("1", """
+            local max = tonumber(ARGV[2])
+            local ttl = tonumber(ARGV[3]) or 0
+            local sum = 0
+            local vals = redis.call('HVALS', KEYS[1])
+            for i = 1, #vals do
+              sum = sum + (tonumber(vals[i]) or 0)
+            end
+            if max ~= nil and max >= 0 and sum >= max then
+              return 0
+            end
+            redis.call('HINCRBY', KEYS[1], ARGV[1], 1)
+            if ttl > 0 then
+              redis.call('EXPIRE', KEYS[1], ttl)
+            end
+            return 1
+            """, "appKey 连接配额预占"),
+
+    /**
+     * 释放本节点一格配额。
+     * KEYS[1]=quotaHash ARGV[1]=nodeId
+     */
+    APP_KEY_CONN_RELEASE_SCRIPT("1", """
+            local n = tonumber(redis.call('HINCRBY', KEYS[1], ARGV[1], -1)) or 0
+            if n <= 0 then
+              redis.call('HDEL', KEYS[1], ARGV[1])
+            end
+            return 1
+            """, "appKey 连接配额释放"),
+
+    /**
+     * 心跳：把本节点 field 写成本地真实计数，并删掉已不在租约里的节点 field。
+     * KEYS[1]=quotaHash ARGV[1]=nodeId ARGV[2]=localCount ARGV[3]=ttlSeconds ARGV[4...]=liveNodeId
+     */
+    APP_KEY_CONN_SYNC_SCRIPT("1", """
+            local nodeId = ARGV[1]
+            local count = tonumber(ARGV[2]) or 0
+            local ttl = tonumber(ARGV[3]) or 0
+            if #ARGV >= 4 then
+              local live = {}
+              for i = 4, #ARGV do
+                live[ARGV[i]] = true
+              end
+              local fields = redis.call('HKEYS', KEYS[1])
+              for i = 1, #fields do
+                if live[fields[i]] ~= true then
+                  redis.call('HDEL', KEYS[1], fields[i])
+                end
+              end
+            end
+            if count <= 0 then
+              redis.call('HDEL', KEYS[1], nodeId)
+            else
+              redis.call('HSET', KEYS[1], nodeId, count)
+            end
+            if ttl > 0 and redis.call('EXISTS', KEYS[1]) == 1 then
+              redis.call('EXPIRE', KEYS[1], ttl)
+            end
+            return 1
+            """, "appKey 连接配额心跳对齐");
 
     private final String version;
 

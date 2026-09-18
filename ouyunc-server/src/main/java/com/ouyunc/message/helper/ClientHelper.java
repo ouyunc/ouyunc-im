@@ -25,6 +25,7 @@ import com.ouyunc.cache.distributed.redis.RedisPipelineSupport;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.device.DeviceTypeRegistry;
 import com.ouyunc.domain.entity.AppEntity;
+import com.ouyunc.message.cluster.lease.AppKeyConnQuotaSupport;
 import com.ouyunc.message.cluster.lease.LocalNodeConnCounter;
 import com.ouyunc.message.cluster.lease.NodeLeaseKeeper;
 import com.ouyunc.message.context.MessageServerContext;
@@ -198,6 +199,16 @@ public class ClientHelper {
         }
         if (removed) {
             LocalNodeConnCounter.decrement(appKey);
+            // 登录成功后会清掉 RESERVED 标记，关连时必须在这里还 Redis 配额；心跳 SYNC 是兜底。
+            if (ctx != null) {
+                String quotaAppKey = ChannelAttrUtil.getChannelAttribute(
+                        ctx, MessageConstant.CHANNEL_ATTR_KEY_CONN_QUOTA_APP_KEY);
+                if (quotaAppKey != null && !quotaAppKey.isBlank()) {
+                    AppKeyConnQuotaSupport.release(quotaAppKey);
+                    ChannelAttrUtil.setChannelAttribute(
+                            ctx, MessageConstant.CHANNEL_ATTR_KEY_CONN_QUOTA_APP_KEY, null);
+                }
+            }
             NodeLeaseKeeper.scheduleConnPublish();
         }
     }

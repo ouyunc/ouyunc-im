@@ -56,6 +56,24 @@ public class CacheConstant {
      */
     private static final String LOCK = "lock:";
 
+    /** 登录详情 String */
+    private static final String IM_LOGIN = "im:lg:";
+
+    /** 身份路由 HASH */
+    private static final String IM_ROUTE = "im:rt:";
+
+    /** 进程租约 */
+    private static final String IM_NODE = "im:node:";
+
+    /** 登记节点 id 集合 */
+    private static final String IM_NODES = "im:nodes";
+
+    /** 节点连接数 HASH */
+    private static final String IM_CONN = "im:cc:";
+
+    /** appKey 连接配额 HASH */
+    private static final String IM_QUOTA = "im:qa:";
+
     /***
      * 用户
      */
@@ -325,7 +343,7 @@ public class CacheConstant {
     public static String buildLoginCacheKey(String appKey, String comboIdentity) {
         String identity = IdentityUtil.revertIdentity(comboIdentity);
         Byte deviceType = IdentityUtil.revertDeviceType(comboIdentity);
-        return OUYUNC + "im:lg:" + withHashTag(stripHashTagChars(identity)) + COLON
+        return OUYUNC + IM_LOGIN + withHashTag(stripHashTagChars(identity)) + COLON
                 + sanitizeAppKeyToken(appKey) + COLON + deviceType;
     }
 
@@ -334,7 +352,7 @@ public class CacheConstant {
      * 首 tag 必须与 {@link #buildLoginCacheKey} 同一 identity，否则 Cluster CROSSSLOT。
      */
     public static String buildLoginRouteCacheKey(String appKey, String identity) {
-        return OUYUNC + "im:rt:" + withHashTag(stripHashTagChars(identity == null ? "" : identity))
+        return OUYUNC + IM_ROUTE + withHashTag(stripHashTagChars(identity == null ? "" : identity))
                 + COLON + sanitizeAppKeyToken(appKey);
     }
 
@@ -342,21 +360,28 @@ public class CacheConstant {
      * IM 进程租约：value=epoch 字符串，PX 由心跳刷新。
      */
     public static String buildImNodeLeaseCacheKey(String nodeId) {
-        return OUYUNC + "im:node:" + withHashTag(nodeId);
+        return OUYUNC + IM_NODE + withHashTag(nodeId);
     }
 
     /**
      * 当前登记过的 IM 节点 id 集合（小 SET，心跳 SADD）。
      */
     public static String buildImNodeSetCacheKey() {
-        return OUYUNC + "im:nodes";
+        return OUYUNC + IM_NODES;
     }
 
     /**
      * 节点连接数 HASH：field=appKey，value=count。与租约同 {@code {nodeId}} 槽，由心跳全量覆盖，不跟登录 Lua 同槽。
      */
     public static String buildImNodeConnHashCacheKey(String nodeId) {
-        return OUYUNC + "im:cc:" + withHashTag(nodeId);
+        return OUYUNC + IM_CONN + withHashTag(nodeId);
+    }
+
+    /**
+     * appKey 连接配额 HASH：field=nodeId，value=count。标签 {@code {appKey}}，各节点 Lua 求和预占同一槽。
+     */
+    public static String buildAppKeyConnQuotaHashCacheKey(String appKey) {
+        return OUYUNC + IM_QUOTA + withHashTag(sanitizeAppKeyToken(appKey));
     }
 
     /**

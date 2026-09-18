@@ -11,6 +11,25 @@ import java.util.Collection;
  **/
 public class LoginContent extends ClientInfo {
 
+    /**
+     * JSON / WS 握手 query 字段名（与 JavaBean 属性名一致；蛇形与简写为握手兼容别名）。
+     */
+    public static final class Fields {
+        public static final String APP_KEY = "appKey";
+        public static final String APP_KEY_SNAKE = "app_key";
+        public static final String IDENTITY = "identity";
+        public static final String USER_ID = "userId";
+        public static final String USER_ID_SNAKE = "user_id";
+        public static final String SIGNATURE = "signature";
+        public static final String SIGN = "sign";
+        public static final String CREATE_TIME = "createTime";
+        public static final String CREATE_TIME_SNAKE = "create_time";
+        public static final String SIGNATURE_ALGORITHM = "signatureAlgorithm";
+        public static final String SIGN_ALGO = "signAlgo";
+
+        private Fields() {
+        }
+    }
 
     /**
      * 设备序列号

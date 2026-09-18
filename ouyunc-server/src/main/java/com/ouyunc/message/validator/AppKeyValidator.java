@@ -5,8 +5,8 @@ import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.AppStatus;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.domain.entity.AppEntity;
+import com.ouyunc.message.cluster.lease.AppKeyConnQuotaSupport;
 import com.ouyunc.message.cluster.lease.LocalNodeConnCounter;
-import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.repository.DefaultRepository;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -38,7 +38,8 @@ public enum AppKeyValidator implements Validator<String> {
     }
 
     /**
-     * B5：登录路径原子预占本机连接额度；成功则打 {@link MessageConstant#CHANNEL_ATTR_KEY_CONN_QUOTA_RESERVED}，
+     * 登录路径原子预占：先 Lua 集群求和再 HINCRBY，再记本机计数。
+     * 成功则打 {@link MessageConstant#CHANNEL_ATTR_KEY_CONN_QUOTA_RESERVED}，
      * {@link com.ouyunc.message.helper.ClientHelper#registerLocal} 不再二次 INCR。
      */
     public boolean tryReserveForLogin(String appKey, ChannelHandlerContext ctx) {
@@ -60,25 +61,16 @@ public enum AppKeyValidator implements Validator<String> {
         if (maxConnections == null || maxConnections == NumberConstant.NUMBER_NEGATIVE_1) {
             return true;
         }
-        long remoteOthers;
         try {
-            long total = ClientHelper.connections(appKey);
-            long local = LocalNodeConnCounter.get(appKey);
-            remoteOthers = Math.max(0L, total - local);
+            if (!AppKeyConnQuotaSupport.tryReserve(appKey, maxConnections)) {
+                log.warn("appKey:{}连接数已达上限, max={}", appKey, maxConnections);
+                return false;
+            }
         } catch (Exception e) {
-            log.error("读取 appKey:{} 连接数失败，拒绝登录预占", appKey, e);
+            log.error("预占 appKey:{} 连接配额失败，拒绝登录", appKey, e);
             return false;
         }
-        long roomForLocal = maxConnections - remoteOthers;
-        if (roomForLocal <= 0L) {
-            log.warn("appKey:{}连接数已达上限(含远端), max={}, remoteOthers={}", appKey, maxConnections, remoteOthers);
-            return false;
-        }
-        if (!LocalNodeConnCounter.tryIncrementIfBelow(appKey, roomForLocal)) {
-            log.warn("appKey:{}本机连接预占失败, maxLocalRoom={}, local={}",
-                    appKey, roomForLocal, LocalNodeConnCounter.get(appKey));
-            return false;
-        }
+        LocalNodeConnCounter.increment(appKey);
         if (ctx != null) {
             ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_CONN_QUOTA_RESERVED, Boolean.TRUE);
             ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_CONN_QUOTA_APP_KEY, appKey);
@@ -111,6 +103,7 @@ public enum AppKeyValidator implements Validator<String> {
         ChannelAttrUtil.setChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_CONN_QUOTA_APP_KEY, null);
         if (reservedAppKey != null && !reservedAppKey.isBlank()) {
             LocalNodeConnCounter.decrement(reservedAppKey);
+            AppKeyConnQuotaSupport.release(reservedAppKey);
         }
     }
 
@@ -146,7 +139,7 @@ public enum AppKeyValidator implements Validator<String> {
         }
         long currentConnections;
         try {
-            currentConnections = ClientHelper.connections(appKey);
+            currentConnections = AppKeyConnQuotaSupport.current(appKey);
         } catch (Exception e) {
             log.error("读取 appKey:{} 连接数失败，拒绝", appKey, e);
             return false;

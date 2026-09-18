@@ -311,6 +311,26 @@ public class MessageConstant {
     public static final int IM_NODE_LEASE_TTL_SECONDS = 8;
 
     /**
+     * appKey 配额 HASH 过期：大于租约 TTL，心跳会刷新；节点全挂后残留 field 随 key 过期。
+     */
+    public static final int IM_APP_KEY_CONN_QUOTA_TTL_SECONDS = IM_NODE_LEASE_TTL_SECONDS * 4;
+
+    /**
+     * appKey 配额 Lua 成功返回值（预占/释放/心跳对齐）。
+     */
+    public static final long IM_APP_KEY_CONN_QUOTA_LUA_OK = 1L;
+
+    /**
+     * 配额 SYNC 固定 ARGV 个数：nodeId、localCount、ttlSeconds，其后为存活 nodeId。
+     */
+    public static final int IM_APP_KEY_CONN_QUOTA_SYNC_FIXED_ARGV = 3;
+
+    /**
+     * WS 握手签名：identity、signature、createTime 必须同时出现。
+     */
+    public static final int WS_HANDSHAKE_SIGNATURE_FIELD_COUNT = 3;
+
+    /**
      * 本机连接数变更后，合并写入 {nodeId} 连接 HASH 的等待（毫秒），避免每条登录打 Redis。
      */
     public static final int IM_NODE_CONN_PUBLISH_DEBOUNCE_MILLIS = 200;

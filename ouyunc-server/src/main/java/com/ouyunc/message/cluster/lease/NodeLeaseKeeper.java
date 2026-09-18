@@ -258,6 +258,7 @@ public final class NodeLeaseKeeper {
                 MessageServerContext.exitRedisIsolationDrain();
             }
             ClusterMembershipReconciler.reconcile(liveLeases);
+            AppKeyConnQuotaSupport.syncAfterHeartbeat(liveLeases.keySet());
         } catch (Exception e) {
             log.error("刷新 IM 节点租约失败 nodeId={}，沿用上一拍快照（本机 epoch 仍视为存活）", nodeId, e);
             onLeaseRedisFailure();
