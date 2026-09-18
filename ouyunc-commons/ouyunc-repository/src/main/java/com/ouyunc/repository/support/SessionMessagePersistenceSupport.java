@@ -40,10 +40,10 @@ public final class SessionMessagePersistenceSupport {
         this.infra = infra;
     }
 
-    public Mono<Boolean> reactiveSaveMessage(Packet packet, String sessionId, long expireTime) {
+    public Mono<SaveMessageOutcome> reactiveSaveMessage(Packet packet, String sessionId, long expireTime) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        return Mono.fromCallable(() -> saveMessageWithSession(packet, expireTime,
+        return Mono.fromCallable(() -> saveMessageWithSessionOutcome(packet, expireTime,
                 CacheConstant.buildMessageCacheKey(metadata.getAppKey(), packet.getPacketId()),
                 CacheConstant.buildSessionCacheKey(metadata.getAppKey(), sessionId),
                 (ops) -> {
@@ -52,14 +52,15 @@ public final class SessionMessagePersistenceSupport {
                 .subscribeOn(Schedulers.boundedElastic())
                 .onErrorResume(e -> {
                     log.error("Reactive save message failed: {}", e.getMessage(), e);
-                    return Mono.just(false);
+                    return Mono.just(SaveMessageOutcome.FAILED);
                 });
     }
 
     /**
      * 单聊/客服消息持久化，并在成功后对收件人维护 ur 未读 Hash。
+     * <p>DUPLICATE 不累加未读、不视为新写入；调用方只应 ACK，禁止二次扇出。</p>
      */
-    public Mono<Boolean> reactiveSaveOne2OneMessage(Packet packet, String sessionId, long expireTime,
+    public Mono<SaveMessageOutcome> reactiveSaveOne2OneMessage(Packet packet, String sessionId, long expireTime,
                                                     UnreadIndexSupport unreadIndexSupport) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
@@ -70,15 +71,15 @@ public final class SessionMessagePersistenceSupport {
                             (ops) -> {
                             }, (ops, msg, app, f, t) -> {
                             });
-                    if (outcome == SaveMessageOutcome.SUCCESS && unreadIndexSupport != null) {
+                    if (outcome.isFreshWrite() && unreadIndexSupport != null) {
                         unreadIndexSupport.incrOne2OneOnMessage(packet);
                     }
-                    return isSaveAccepted(outcome);
+                    return outcome;
                 })
                 .subscribeOn(Schedulers.boundedElastic())
                 .onErrorResume(e -> {
                     log.error("Reactive save one2one message failed: {}", e.getMessage(), e);
-                    return Mono.just(false);
+                    return Mono.just(SaveMessageOutcome.FAILED);
                 });
     }
 
@@ -244,6 +245,10 @@ public final class SessionMessagePersistenceSupport {
                 String.valueOf(lastPacket.getPacketId()), String.valueOf(ttlMs));
     }
 
+    /**
+     * 好友/群申请等「写入即定性」路径：DUPLICATE 可当成功。
+     * 聊天投递必须使用 {@link SaveMessageOutcome#isFreshWrite()}，禁止把 DUPLICATE 当新消息扇出。
+     */
     public static boolean isSaveAccepted(SaveMessageOutcome outcome) {
         return outcome == SaveMessageOutcome.SUCCESS || outcome == SaveMessageOutcome.DUPLICATE;
     }

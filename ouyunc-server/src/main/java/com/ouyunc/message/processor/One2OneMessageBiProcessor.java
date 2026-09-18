@@ -23,6 +23,7 @@ import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.helper.MessageRefHelper;
 import com.ouyunc.message.validator.*;
 import com.ouyunc.repository.support.MessageIndexScope;
+import com.ouyunc.repository.SaveMessageOutcome;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -98,8 +99,15 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
                 });
     }
 
-    private Mono<Void> afterOne2OneSaved(ChannelHandlerContext ctx, Packet packet, int contentType, Boolean result) {
-        if (!Boolean.TRUE.equals(result)) {
+    private Mono<Void> afterOne2OneSaved(ChannelHandlerContext ctx, Packet packet, int contentType, SaveMessageOutcome result) {
+        if (result != null && result.isDuplicate()) {
+            if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
+                return handleWithdrawMessage(ctx, packet);
+            }
+            qosAckOnSuccess(ctx, packet);
+            return Mono.empty();
+        }
+        if (result == null || !result.isFreshWrite()) {
             log.error("单聊会话索引写入失败: {}", packet);
             MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "单聊消息写入会话失败", packet), MessageEventTypeEnum.EXCEPTION), true);
             releaseQosOnFailure(packet);
@@ -229,7 +237,7 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
     /**
      * 保存消息
      */
-    private Mono<Boolean> saveMessage(Packet packet) {
+    private Mono<SaveMessageOutcome> saveMessage(Packet packet) {
         Message message = packet.getMessage();
         String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
         return repository().reactiveSaveOne2OneMessage(packet, sessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);

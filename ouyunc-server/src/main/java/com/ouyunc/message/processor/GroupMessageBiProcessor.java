@@ -21,6 +21,7 @@ import com.ouyunc.message.processor.http.push.IngressPacketHelper;
 import com.ouyunc.message.validator.*;
 import com.ouyunc.repository.support.GroupMembershipSupport;
 import com.ouyunc.repository.support.MessageIndexScope;
+import com.ouyunc.repository.SaveMessageOutcome;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -132,8 +133,15 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
     }
 
     private Mono<Void> afterGroupSaved(ChannelHandlerContext ctx, Packet packet, Set<String> groupUserIdentitySet,
-                                       int contentType, Boolean result) {
-        if (!Boolean.TRUE.equals(result)) {
+                                       int contentType, SaveMessageOutcome result) {
+        if (result != null && result.isDuplicate()) {
+            if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
+                return handleWithdrawMessage(ctx, packet, groupUserIdentitySet);
+            }
+            qosAckOnSuccess(ctx, packet);
+            return Mono.empty();
+        }
+        if (result == null || !result.isFreshWrite()) {
             log.error("群聊会话索引写入失败: {}", packet);
             MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "群聊消息写入会话失败", packet), MessageEventTypeEnum.EXCEPTION), true);
             releaseQosOnFailure(packet);
@@ -317,7 +325,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
     /**
      * 保存群组消息
      */
-    private Mono<Boolean> reactiveSaveGroupMessage(Packet packet) {
+    private Mono<SaveMessageOutcome> reactiveSaveGroupMessage(Packet packet) {
         Message message = packet.getMessage();
         return repository().reactiveSaveMessage(packet, message.getTo(), MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
     }

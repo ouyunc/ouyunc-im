@@ -21,6 +21,26 @@ public class Packet implements Serializable, Cloneable{
     @Serial
     private static final long serialVersionUID = 1L;
 
+    /**
+     * JSON 字段名（与 JavaBean 属性名一致）。二进制协议不用这些名字。
+     */
+    public static final class Fields {
+        public static final String MAGIC = "magic";
+        public static final String PROTOCOL = "protocol";
+        public static final String PROTOCOL_VERSION = "protocolVersion";
+        public static final String PACKET_ID = "packetId";
+        public static final String DEVICE_TYPE = "deviceType";
+        public static final String NETWORK_TYPE = "networkType";
+        public static final String ENCRYPT_TYPE = "encryptType";
+        public static final String SERIALIZE_ALGORITHM = "serializeAlgorithm";
+        public static final String MESSAGE_TYPE = "messageType";
+        public static final String RETAIN = "retain";
+        public static final String MESSAGE_LENGTH = "messageLength";
+        public static final String MESSAGE = "message";
+
+        private Fields() {
+        }
+    }
 
     /**
      * 5个字节, 魔数 since v6.0.0 后 改成字节数组 OUYUNC

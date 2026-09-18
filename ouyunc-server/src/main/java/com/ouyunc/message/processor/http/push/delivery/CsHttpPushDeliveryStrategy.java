@@ -85,8 +85,11 @@ public final class CsHttpPushDeliveryStrategy implements HttpProcessor {
     private Mono<Boolean> saveAndDeliverChat(Packet packet, CsImSessionRoute route) {
         return DefaultRepository.INSTANCE.reactiveSaveCsTicketMessage(packet, route,
                         MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)
-                .flatMap(saved -> {
-                    if (!Boolean.TRUE.equals(saved)) {
+                .flatMap(outcome -> {
+                    if (outcome != null && outcome.isDuplicate()) {
+                        return Mono.just(true);
+                    }
+                    if (outcome == null || !outcome.isFreshWrite()) {
                         log.error("HTTP 推送客服消息落库失败: {}", packet);
                         HttpPushDeliverySupport.publishException(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
                                 "客服消息写入 ticket 失败", packet);
@@ -113,8 +116,8 @@ public final class CsHttpPushDeliveryStrategy implements HttpProcessor {
     private Mono<Boolean> saveThenWithdraw(Packet packet, CsImSessionRoute route) {
         return DefaultRepository.INSTANCE.reactiveSaveCsTicketMessage(packet, route,
                         MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)
-                .flatMap(saved -> {
-                    if (!Boolean.TRUE.equals(saved)) {
+                .flatMap(outcome -> {
+                    if (outcome == null || outcome.isFailed()) {
                         log.error("HTTP 推送客服撤回消息落库失败: {}", packet);
                         HttpPushDeliverySupport.publishException(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
                                 "客服撤回消息写入 ticket 失败", packet);

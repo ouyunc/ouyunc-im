@@ -2,6 +2,7 @@ package com.ouyunc.message.handler;
 
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.packet.Packet;
+import com.ouyunc.base.utils.PacketVerifier;
 import com.ouyunc.message.cluster.auth.ClusterChannelGuard;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.convert.PacketConverter;
@@ -29,6 +30,11 @@ public class Convert2PacketHandler extends SimpleChannelInboundHandler<Object> {
         for (PacketConverter<?> packetConverter : MessageServerContext.packetConverterList) {
             Packet packet = packetConverter.convertToPacket(ctx, msg);
             if (packet != null) {
+                if (!PacketVerifier.verify(packet)) {
+                    log.error("协议包转换后校验失败, 关闭 channelId={}", ctx.channel().id().asShortText());
+                    ctx.close();
+                    return;
+                }
                 if (ClusterChannelGuard.rejectExternalInternalPacket(ctx, packet)
                         || ClusterChannelGuard.rejectClientClusterCapability(ctx, packet)) {
                     return;

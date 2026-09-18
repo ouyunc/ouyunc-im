@@ -1,11 +1,11 @@
 package com.ouyunc.message.processor;
 
-import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.*;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.utils.ChannelAttrUtil;
+import com.ouyunc.base.utils.QosDupPacketParser;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.core.context.MessageContext;
@@ -52,7 +52,7 @@ public abstract class AbstractBaseBiProcessor<R, T extends Number>
         Message message = packet.getMessage();
         // 判断是否开启qos
         if (MessageContext.isQosEnable() && packet.getMessageType() == MessageTypeEnum.QOS_DUP.getType() && message.getContentType() == MessageContentTypeEnum.QOS_DUP_CONTENT.getType()) {
-            Packet dupPacket = JSON.parseObject(message.getContent(), Packet.class);
+            Packet dupPacket = QosDupPacketParser.parse(message.getContent());
             if (dupPacket == null || dupPacket.getMessage() == null) {
                 log.warn("QOS_DUP 内容解析失败，按新消息处理: {}", message.getContent());
                 return false;

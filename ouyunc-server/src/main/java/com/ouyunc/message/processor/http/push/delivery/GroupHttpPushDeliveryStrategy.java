@@ -103,8 +103,11 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
     private Mono<Boolean> saveAndDeliverChat(Packet packet, Set<String> groupUserIdentitySet) {
         return DefaultRepository.INSTANCE.reactiveSaveMessage(packet, packet.getMessage().getTo(),
                         MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)
-                .flatMap(saved -> {
-                    if (!Boolean.TRUE.equals(saved)) {
+                .flatMap(outcome -> {
+                    if (outcome != null && outcome.isDuplicate()) {
+                        return Mono.just(true);
+                    }
+                    if (outcome == null || !outcome.isFreshWrite()) {
                         log.error("HTTP 推送群聊落库失败: {}", packet);
                         HttpPushDeliverySupport.publishException(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
                                 "群聊消息写入会话失败", packet);
@@ -130,17 +133,19 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
     private Mono<Boolean> saveThenWithdraw(Packet packet, Set<String> groupUserIdentitySet) {
         return DefaultRepository.INSTANCE.reactiveSaveMessage(packet, packet.getMessage().getTo(),
                         MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)
-                .flatMap(saved -> {
-                    if (!Boolean.TRUE.equals(saved)) {
+                .flatMap(outcome -> {
+                    if (outcome == null || outcome.isFailed()) {
                         log.error("HTTP 推送群聊撤回消息落库失败: {}", packet);
                         HttpPushDeliverySupport.publishException(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
                                 "群聊撤回消息写入会话失败", packet);
                         return Mono.just(false);
                     }
-                    DefaultRepository.INSTANCE.reactiveAdvanceSenderReadOffsetOnSend(packet, IdentityType.GROUP,
-                                    MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
-                            .subscribe(ignored -> { }, e -> log.warn(
-                                    "HTTP 推送撤回更新群聊已读 offset 失败, packetId={}", packet.getPacketId(), e));
+                    if (outcome.isFreshWrite()) {
+                        DefaultRepository.INSTANCE.reactiveAdvanceSenderReadOffsetOnSend(packet, IdentityType.GROUP,
+                                        MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
+                                .subscribe(ignored -> { }, e -> log.warn(
+                                        "HTTP 推送撤回更新群聊已读 offset 失败, packetId={}", packet.getPacketId(), e));
+                    }
                     return handleWithdraw(packet, groupUserIdentitySet);
                 })
                 .onErrorResume(error -> {

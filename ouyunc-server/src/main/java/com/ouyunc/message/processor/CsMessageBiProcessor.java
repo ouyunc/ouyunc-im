@@ -14,6 +14,7 @@ import com.ouyunc.message.helper.CsHelper.PrepareOutcome;
 import com.ouyunc.message.validator.AuthValidator;
 import com.ouyunc.repository.cs.CsImSessionRoute;
 import com.ouyunc.repository.support.MessageIndexScope;
+import com.ouyunc.repository.SaveMessageOutcome;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -102,8 +103,15 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
     }
 
     private Mono<Void> afterCsSaved(ChannelHandlerContext ctx, Packet packet, CsImSessionRoute route,
-                                    int contentType, Boolean result) {
-        if (!Boolean.TRUE.equals(result)) {
+                                    int contentType, SaveMessageOutcome result) {
+        if (result != null && result.isDuplicate()) {
+            if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
+                return handleWithdrawMessage(ctx, packet, route);
+            }
+            qosAckOnSuccess(ctx, packet);
+            return Mono.empty();
+        }
+        if (result == null || !result.isFreshWrite()) {
             log.error("客服 ticket 消息索引写入失败: {}", packet);
             MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "客服消息写入 ticket 失败", packet), MessageEventTypeEnum.EXCEPTION), true);
             releaseQosOnFailure(packet);
@@ -208,7 +216,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
                 .then();
     }
 
-    private Mono<Boolean> saveMessage(Packet packet, CsImSessionRoute route) {
+    private Mono<SaveMessageOutcome> saveMessage(Packet packet, CsImSessionRoute route) {
         return repository().reactiveSaveCsTicketMessage(
                 packet, route, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
     }

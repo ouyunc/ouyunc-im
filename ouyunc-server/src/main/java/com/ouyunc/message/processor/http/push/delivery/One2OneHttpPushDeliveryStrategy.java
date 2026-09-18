@@ -74,8 +74,11 @@ public final class One2OneHttpPushDeliveryStrategy implements HttpProcessor {
         String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
         return DefaultRepository.INSTANCE.reactiveSaveOne2OneMessage(packet, sessionId,
                         MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)
-                .flatMap(saved -> {
-                    if (!Boolean.TRUE.equals(saved)) {
+                .flatMap(outcome -> {
+                    if (outcome != null && outcome.isDuplicate()) {
+                        return Mono.just(true);
+                    }
+                    if (outcome == null || !outcome.isFreshWrite()) {
                         log.error("HTTP 推送单聊落库失败: {}", packet);
                         HttpPushDeliverySupport.publishException(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
                                 "单聊消息写入会话失败", packet);
@@ -103,18 +106,19 @@ public final class One2OneHttpPushDeliveryStrategy implements HttpProcessor {
         String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
         return DefaultRepository.INSTANCE.reactiveSaveOne2OneMessage(packet, sessionId,
                         MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)
-                .flatMap(saved -> {
-                    if (!Boolean.TRUE.equals(saved)) {
+                .flatMap(outcome -> {
+                    if (outcome == null || outcome.isFailed()) {
                         log.error("HTTP 推送单聊撤回消息落库失败: {}", packet);
                         HttpPushDeliverySupport.publishException(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
                                 "单聊撤回消息写入会话失败", packet);
                         return Mono.just(false);
                     }
-                    // 与 WS 对齐：撤回包落库后也推进发送方已读 offset
-                    DefaultRepository.INSTANCE.reactiveAdvanceSenderReadOffsetOnSend(packet, IdentityType.ONE_2_ONE,
-                                    MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
-                            .subscribe(ignored -> { }, e -> log.warn(
-                                    "HTTP 推送撤回更新单聊已读 offset 失败, packetId={}", packet.getPacketId(), e));
+                    if (outcome.isFreshWrite()) {
+                        DefaultRepository.INSTANCE.reactiveAdvanceSenderReadOffsetOnSend(packet, IdentityType.ONE_2_ONE,
+                                        MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
+                                .subscribe(ignored -> { }, e -> log.warn(
+                                        "HTTP 推送撤回更新单聊已读 offset 失败, packetId={}", packet.getPacketId(), e));
+                    }
                     return handleWithdraw(packet, sessionId);
                 })
                 .onErrorResume(error -> {

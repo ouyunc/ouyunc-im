@@ -11,6 +11,7 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.packet.message.content.QosAckContent;
 import com.ouyunc.base.utils.ChannelAttrUtil;
+import com.ouyunc.base.utils.QosDupPacketParser;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.core.context.MessageContext;
 import io.netty.channel.ChannelHandlerContext;
@@ -54,7 +55,7 @@ public final class QosAckHelper {
                     ? ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_QOS_DUP_ORIGINAL_PACKET)
                     : null;
             if (dupPacket == null) {
-                dupPacket = JSON.parseObject(packet.getMessage().getContent(), Packet.class);
+                dupPacket = QosDupPacketParser.parse(packet.getMessage().getContent());
             }
             if (ctx != null) {
                 ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_QOS_DUP_ORIGINAL_PACKET, null);

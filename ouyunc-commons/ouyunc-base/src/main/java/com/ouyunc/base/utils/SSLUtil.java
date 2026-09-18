@@ -6,6 +6,8 @@ import io.netty.handler.ssl.SslContextBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.InputStream;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 /**
@@ -15,7 +17,8 @@ import java.util.function.Consumer;
 public class SSLUtil {
     private static final Logger log = LoggerFactory.getLogger(SSLUtil.class);
 
-
+    private static final ConcurrentHashMap<String, SslContext> SERVER_CONTEXT_CACHE = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, SslContext> CLIENT_CONTEXT_CACHE = new ConcurrentHashMap<>();
 
     /**
      * @Author fangzhenxun
@@ -24,12 +27,16 @@ public class SSLUtil {
      * @return io.netty.handler.ssl.SslContext
      */
     public static SslContext buildServerSslContext(String sslCertificate, String sslPrivateKey) {
-        try {
-            return SslContextBuilder.forServer(SSLUtil.class.getClassLoader().getResourceAsStream(sslCertificate), SSLUtil.class.getClassLoader().getResourceAsStream(sslPrivateKey)).build();
-        } catch (Exception e) {
-            log.error("构建服务端证书异常：{}", e.getMessage());
-            throw new RuntimeException("构建服务端证书异常!");
-        }
+        String cacheKey = cacheKey("server", sslCertificate, sslPrivateKey);
+        return SERVER_CONTEXT_CACHE.computeIfAbsent(cacheKey, ignored -> {
+            try (InputStream cert = openClasspath(sslCertificate);
+                 InputStream key = openClasspath(sslPrivateKey)) {
+                return SslContextBuilder.forServer(cert, key).build();
+            } catch (Exception e) {
+                log.error("构建服务端证书异常：{}", e.getMessage());
+                throw new RuntimeException("构建服务端证书异常!");
+            }
+        });
     }
 
     /**
@@ -39,12 +46,28 @@ public class SSLUtil {
      * @return io.netty.handler.ssl.SslContext
      */
     public static SslContext buildClientSslContext(String sslCertificate, String sslPrivateKey) {
-        try {
-            return SslContextBuilder.forClient().keyManager(SSLUtil.class.getClassLoader().getResourceAsStream(sslCertificate), SSLUtil.class.getClassLoader().getResourceAsStream(sslPrivateKey)).build();
-        } catch (Exception e) {
-            log.error("构建内置客户端证书异常：{}", e.getMessage());
-            throw new RuntimeException("构建内置客户端证书异常!");
+        String cacheKey = cacheKey("client", sslCertificate, sslPrivateKey);
+        return CLIENT_CONTEXT_CACHE.computeIfAbsent(cacheKey, ignored -> {
+            try (InputStream cert = openClasspath(sslCertificate);
+                 InputStream key = openClasspath(sslPrivateKey)) {
+                return SslContextBuilder.forClient().keyManager(cert, key).build();
+            } catch (Exception e) {
+                log.error("构建内置客户端证书异常：{}", e.getMessage());
+                throw new RuntimeException("构建内置客户端证书异常!");
+            }
+        });
+    }
+
+    private static String cacheKey(String role, String certificate, String privateKey) {
+        return role + "|" + String.valueOf(certificate) + "|" + String.valueOf(privateKey);
+    }
+
+    private static InputStream openClasspath(String path) {
+        InputStream stream = SSLUtil.class.getClassLoader().getResourceAsStream(path);
+        if (stream == null) {
+            throw new RuntimeException("SSL 证书资源不存在: " + path);
         }
+        return stream;
     }
 
 

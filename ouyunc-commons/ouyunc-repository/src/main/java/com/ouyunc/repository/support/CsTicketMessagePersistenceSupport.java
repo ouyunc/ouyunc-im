@@ -23,14 +23,14 @@ public final class CsTicketMessagePersistenceSupport {
         this.ticketUnread = ticketUnread;
     }
 
-    public Mono<Boolean> reactiveSaveCsTicketMessage(Packet packet, CsImSessionRoute route, long expireTime) {
+    public Mono<SaveMessageOutcome> reactiveSaveCsTicketMessage(Packet packet, CsImSessionRoute route, long expireTime) {
         if (route == null || packet == null || packet.getMessage() == null) {
-            return Mono.just(false);
+            return Mono.just(SaveMessageOutcome.FAILED);
         }
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         if (metadata == null || metadata.getAppKey() == null || route.ticketId() == null) {
-            return Mono.just(false);
+            return Mono.just(SaveMessageOutcome.FAILED);
         }
         String ticketScopeId = route.ticketId().trim();
         String messageKey = CacheConstant.buildMessageCacheKey(metadata.getAppKey(), packet.getPacketId());
@@ -40,12 +40,12 @@ public final class CsTicketMessagePersistenceSupport {
                             packet, expireTime, messageKey, ticketSessionKey, (ops) -> {
                             }, (ops, msg, app, f, t) -> {
                             });
-                    if (outcome == SaveMessageOutcome.SUCCESS) {
+                    if (outcome.isFreshWrite()) {
                         ticketUnread.incrOnMessage(packet, route);
                     }
-                    return SessionMessagePersistenceSupport.isSaveAccepted(outcome);
+                    return outcome;
                 })
                 .subscribeOn(Schedulers.boundedElastic())
-                .onErrorResume(e -> Mono.just(false));
+                .onErrorResume(e -> Mono.just(SaveMessageOutcome.FAILED));
     }
 }

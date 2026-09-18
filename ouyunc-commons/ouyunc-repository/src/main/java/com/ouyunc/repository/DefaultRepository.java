@@ -158,11 +158,11 @@ public enum DefaultRepository implements Repository {
         return RepositorySupports.GROUP.groupManagerAndLeaderUsersIdentityAndPost(packet);
     }
 
-    public Mono<Boolean> reactiveSaveMessage(Packet packet, String sessionId, long expireTime) {
+    public Mono<SaveMessageOutcome> reactiveSaveMessage(Packet packet, String sessionId, long expireTime) {
         return RepositorySupports.SESSION.reactiveSaveMessage(packet, sessionId, expireTime);
     }
 
-    public Mono<Boolean> reactiveSaveOne2OneMessage(Packet packet, String sessionId, long expireTime) {
+    public Mono<SaveMessageOutcome> reactiveSaveOne2OneMessage(Packet packet, String sessionId, long expireTime) {
         return RepositorySupports.SESSION.reactiveSaveOne2OneMessage(packet, sessionId, expireTime,
                 RepositorySupports.UNREAD);
     }
@@ -304,7 +304,7 @@ public enum DefaultRepository implements Repository {
         RepositorySupports.CS_TICKET_LAST_MESSAGE.delete(appKey, ticketId);
     }
 
-    public Mono<Boolean> reactiveSaveCsTicketMessage(Packet packet, CsImSessionRoute route, long expireTime) {
+    public Mono<SaveMessageOutcome> reactiveSaveCsTicketMessage(Packet packet, CsImSessionRoute route, long expireTime) {
         return RepositorySupports.CS_TICKET_MESSAGE.reactiveSaveCsTicketMessage(packet, route, expireTime);
     }
 
