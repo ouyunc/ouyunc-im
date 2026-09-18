@@ -62,6 +62,10 @@ public final class JdbcSqlDialectHolder {
         return pick(JdbcSqlConstant.POSTGRESQL.SELECT_FRIEND, JdbcSqlConstant.ORACLE.SELECT_FRIEND, JdbcSqlConstant.MYSQL.SELECT_FRIEND);
     }
 
+    public static String selectAllFriend() {
+        return pick(JdbcSqlConstant.POSTGRESQL.SELECT_ALL_FRIEND, JdbcSqlConstant.ORACLE.SELECT_ALL_FRIEND, JdbcSqlConstant.MYSQL.SELECT_ALL_FRIEND);
+    }
+
     public static String selectGroup() {
         return pick(JdbcSqlConstant.POSTGRESQL.SELECT_GROUP, JdbcSqlConstant.ORACLE.SELECT_GROUP, JdbcSqlConstant.MYSQL.SELECT_GROUP);
     }

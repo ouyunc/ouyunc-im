@@ -4,6 +4,7 @@ import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.JdbcSqlDialectHolder;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.NumberConstant;
+import com.ouyunc.base.constant.enums.LuaScriptEnum;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
@@ -24,10 +25,12 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisStringCommands;
 import org.springframework.data.redis.core.RedisCallback;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.types.Expiration;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -123,6 +126,12 @@ public final class FriendRepositorySupport {
                 RelationLocalCache.FRIEND.put(RelationLocalCache.friendKey(appKey, from, to), false);
                 return false;
             }
+            if (ensureFriendRosterLoaded(appKey, from)) {
+                Double afterLoad = infra.stringRedisTemplate.opsForZSet().score(zsetKey, to);
+                boolean friend = afterLoad != null;
+                RelationLocalCache.FRIEND.put(RelationLocalCache.friendKey(appKey, from, to), friend);
+                return friend;
+            }
         } catch (Exception e) {
             log.error("Redis 查询好友关系异常, appKey: {}, from: {}, to: {}", appKey, from, to, e);
         }
@@ -153,7 +162,99 @@ public final class FriendRepositorySupport {
         }
     }
 
+    /**
+     * INIT 缺失时从 MySQL 全量灌入好友 ZSET 并写哨兵。失败不写 INIT。
+     *
+     * @return true 表示 INIT 已存在或本次写入成功
+     */
+    private boolean ensureFriendRosterLoaded(String appKey, String ownerId) {
+        if (appKey == null || ownerId == null) {
+            return false;
+        }
+        String zsetKey = CacheConstant.buildFriendsCacheKey(appKey, ownerId);
+        try {
+            if (infra.stringRedisTemplate.opsForZSet().score(zsetKey, CacheConstant.FRIEND_ZSET_INIT_MEMBER) != null) {
+                return true;
+            }
+        } catch (Exception e) {
+            log.error("检查好友 INIT 失败 appKey={} ownerId={}", appKey, ownerId, e);
+            return false;
+        }
+        String lockKey = CacheConstant.buildFriendRosterRebuildLockKey(appKey, ownerId);
+        Boolean locked = Boolean.FALSE;
+        try {
+            locked = infra.stringRedisTemplate.opsForValue().setIfAbsent(
+                    lockKey, "1", MessageConstant.FRIEND_ROSTER_REBUILD_LOCK_SECONDS, TimeUnit.SECONDS);
+            if (!Boolean.TRUE.equals(locked)) {
+                return infra.stringRedisTemplate.opsForZSet().score(zsetKey, CacheConstant.FRIEND_ZSET_INIT_MEMBER) != null;
+            }
+            if (infra.stringRedisTemplate.opsForZSet().score(zsetKey, CacheConstant.FRIEND_ZSET_INIT_MEMBER) != null) {
+                return true;
+            }
+            List<String> ids = loadAllFriendUserIdsFromDb(appKey, ownerId);
+            if (ids == null) {
+                return false;
+            }
+            if (ids.size() > MessageConstant.FRIEND_ZSET_FULL_LOAD_LIMIT) {
+                log.warn("好友名单超过回源上限，跳过 INIT appKey={} ownerId={} size={}",
+                        appKey, ownerId, ids.size());
+                return false;
+            }
+            return writeFriendRosterInit(zsetKey, ids);
+        } catch (Exception e) {
+            log.error("好友全量 INIT 失败 appKey={} ownerId={}", appKey, ownerId, e);
+            return false;
+        } finally {
+            if (Boolean.TRUE.equals(locked)) {
+                try {
+                    infra.stringRedisTemplate.delete(lockKey);
+                } catch (Exception e) {
+                    log.warn("释放好友 INIT 锁失败 appKey={} ownerId={}", appKey, ownerId, e);
+                }
+            }
+        }
+    }
+
+    /**
+     * @return 好友 id 列表；查询异常返回 null（不得写 INIT）
+     */
+    private List<String> loadAllFriendUserIdsFromDb(String appKey, String ownerId) {
+        try {
+            List<String> ids = infra.jdbcClient.sql(JdbcSqlDialectHolder.selectAllFriend())
+                    .param(FriendEntity.Fields.userId, ownerId)
+                    .param(UserEntity.Fields.appKey, appKey)
+                    .param("limit", MessageConstant.FRIEND_ZSET_FULL_LOAD_LIMIT + 1)
+                    .query((rs, rowNum) -> rs.getString(1))
+                    .list();
+            return ids == null ? List.of() : ids;
+        } catch (Exception e) {
+            log.error("MySQL 全量查询好友失败 appKey={} ownerId={}", appKey, ownerId, e);
+            return null;
+        }
+    }
+
+    private boolean writeFriendRosterInit(String zsetKey, List<String> friendIds) {
+        List<String> args = new ArrayList<>(2 + friendIds.size() * 2);
+        args.add(CacheConstant.FRIEND_ZSET_INIT_MEMBER);
+        args.add("0");
+        for (String friendId : friendIds) {
+            if (friendId == null || friendId.isBlank() || CacheConstant.FRIEND_ZSET_INIT_MEMBER.equals(friendId)) {
+                continue;
+            }
+            args.add("0");
+            args.add(friendId);
+        }
+        DefaultRedisScript<Long> script = new DefaultRedisScript<>(
+                LuaScriptEnum.FRIEND_ROSTER_INIT_SCRIPT.getScript(), Long.class);
+        Long ok = infra.stringRedisTemplate.execute(script, List.of(zsetKey), args.toArray());
+        if (ok != null && ok == 1L) {
+            return true;
+        }
+        return infra.stringRedisTemplate.opsForZSet().score(zsetKey, CacheConstant.FRIEND_ZSET_INIT_MEMBER) != null;
+    }
+
     public Collection<String> getFriendIds(String appKey, String from) {
+        ensureFriendRosterLoaded(appKey, from);
         Collection<String> ids = infra.stringRedisTemplate.opsForZSet().range(
                 CacheConstant.buildFriendsCacheKey(appKey, from), NumberConstant.NUMBER_0, NumberConstant.NUMBER_NEGATIVE_1);
         if (ids == null || ids.isEmpty()) {
@@ -405,10 +506,17 @@ public final class FriendRepositorySupport {
         boolean shielded = shieldEntity != null && YesOrNo.YES.getCode().equals(shieldEntity.getShield());
         boolean friend = friendHit;
         if (!friendHit && !rosterComplete) {
-            Boolean dbFriend = loadFriendExistsFromDb(appKey, to, from);
-            if (dbFriend != null) {
-                friend = dbFriend;
+            if (ensureFriendRosterLoaded(appKey, to)) {
+                Double afterLoad = infra.stringRedisTemplate.opsForZSet().score(
+                        CacheConstant.buildFriendsCacheKey(appKey, to), from);
+                friend = afterLoad != null;
                 RelationLocalCache.FRIEND.put(RelationLocalCache.friendKey(appKey, to, from), friend);
+            } else {
+                Boolean dbFriend = loadFriendExistsFromDb(appKey, to, from);
+                if (dbFriend != null) {
+                    friend = dbFriend;
+                    RelationLocalCache.FRIEND.put(RelationLocalCache.friendKey(appKey, to, from), friend);
+                }
             }
         } else {
             RelationLocalCache.FRIEND.put(RelationLocalCache.friendKey(appKey, to, from), friend);

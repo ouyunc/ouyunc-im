@@ -316,6 +316,21 @@ public class MessageConstant {
     public static final int IM_APP_KEY_CONN_QUOTA_TTL_SECONDS = IM_NODE_LEASE_TTL_SECONDS * 4;
 
     /**
+     * 登录 String TTL：活连接随租约心跳 EXPIRE；kill-9 后最多该窗口内幽灵在线。
+     */
+    public static final int IM_LOGIN_SESSION_TTL_SECONDS = IM_APP_KEY_CONN_QUOTA_TTL_SECONDS;
+
+    /**
+     * 好友 ZSET 全量回源上限；超过则不写 INIT，避免把截断名单当成完整。
+     */
+    public static final int FRIEND_ZSET_FULL_LOAD_LIMIT = 5000;
+
+    /**
+     * 好友全量 INIT 回源锁 TTL（秒）。
+     */
+    public static final int FRIEND_ROSTER_REBUILD_LOCK_SECONDS = 10;
+
+    /**
      * appKey 配额 Lua 成功返回值（预占/释放/心跳对齐）。
      */
     public static final long IM_APP_KEY_CONN_QUOTA_LUA_OK = 1L;

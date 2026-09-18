@@ -12,7 +12,7 @@ ouyunc:
       lettuce:
         pool:
           enabled: true
-          maxActive: 8
+          maxActive: 64
           maxWait: PT-0.001S
-          maxIdle: 8
-          minIdle: 0
+          maxIdle: 32
+          minIdle: 8

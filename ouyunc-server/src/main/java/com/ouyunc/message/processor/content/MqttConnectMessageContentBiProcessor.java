@@ -327,8 +327,8 @@ public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcesso
             Byte clientLoginDeviceValue = closingLocalLoginClientInfo.getDeviceType();
             String closingComboIdentity = IdentityUtil.generalComboIdentity(
                     closingLocalLoginClientInfo.getAppKey(), closingLocalLoginClientInfo.getIdentity(), clientLoginDeviceValue);
-            ClientHelper.unregisterLocal(closingComboIdentity, ctx, closingLocalLoginClientInfo.getAppKey());
-            AppKeyValidator.releaseReservedIfNeeded(closingLocalLoginClientInfo.getAppKey(), ctx);
+            ClientHelper.unregisterLocal(closingComboIdentity, channel, closingLocalLoginClientInfo.getAppKey());
+            AppKeyValidator.releaseReservedIfNeeded(closingLocalLoginClientInfo.getAppKey(), channel);
             if (attrLogin == null) {
                 return;
             }
@@ -367,6 +367,10 @@ public class MqttConnectMessageContentBiProcessor extends AbstractBaseBiProcesso
         }
         if (closingRemoteMqttLoginClientInfo.getCleanSession() == NumberConstant.NUMBER_0) {
             LoginSessionDirectory.unbindRouteKeepLogin(closingLocalLoginClientInfo);
+            LoginSessionDirectory.persistOrExpireLogin(
+                    closingLocalLoginClientInfo.getAppKey(),
+                    closingComboIdentity,
+                    closingRemoteMqttLoginClientInfo.getSessionExpiryInterval());
             closingRemoteMqttLoginClientInfo.setOnlineStatus(OnlineEnum.OFFLINE);
             MessageServerContext.remoteLoginClientInfoCache.put(
                     loginClientInfoCacheKey,

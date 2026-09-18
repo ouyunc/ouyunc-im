@@ -218,8 +218,8 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
             LoginClientInfo closingLogin = attrLogin != null ? attrLogin : newLoginClientInfo;
             String closingComboIdentity = IdentityUtil.generalComboIdentity(
                     closingLogin.getAppKey(), closingLogin.getIdentity(), closingLogin.getDeviceType());
-            ClientHelper.unregisterLocal(closingComboIdentity, ctx, closingLogin.getAppKey());
-            AppKeyValidator.releaseReservedIfNeeded(closingLogin.getAppKey(), ctx);
+            ClientHelper.unregisterLocal(closingComboIdentity, channel, closingLogin.getAppKey());
+            AppKeyValidator.releaseReservedIfNeeded(closingLogin.getAppKey(), channel);
             final boolean publishLogout = attrLogin != null;
             ThreadPoolManager.messageProcessorExecutor().execute(() ->
                     unbindRemoteOnClose(packet, closingLogin, closingComboIdentity, publishLogout));

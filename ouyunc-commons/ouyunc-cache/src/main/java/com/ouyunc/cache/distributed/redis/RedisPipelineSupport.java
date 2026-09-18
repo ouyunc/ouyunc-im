@@ -99,6 +99,26 @@ public final class RedisPipelineSupport {
     }
 
     /**
+     * Cluster 安全的逐 key EXPIRE，禁止多 key 一条命令。
+     */
+    public static void expireKeys(StringRedisTemplate template, Collection<String> keys, long ttlSeconds) {
+        if (template == null || keys == null || keys.isEmpty() || ttlSeconds <= 0) {
+            return;
+        }
+        RedisSerializer<String> keySerializer = template.getStringSerializer();
+        template.executePipelined((RedisCallback<Object>) connection -> {
+            for (String key : keys) {
+                byte[] rawKey = keySerializer.serialize(key);
+                if (rawKey == null) {
+                    throw new IllegalStateException("Redis key 序列化失败");
+                }
+                connection.keyCommands().expire(rawKey, ttlSeconds);
+            }
+            return null;
+        });
+    }
+
+    /**
      * SessionCallback 管道内逐 key SET，禁止 {@code MSET}。
      */
     @SuppressWarnings("unchecked")

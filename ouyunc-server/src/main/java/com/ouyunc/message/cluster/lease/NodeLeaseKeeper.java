@@ -9,6 +9,7 @@ import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.cache.distributed.redis.RedisPipelineSupport;
 import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.message.helper.LoginSessionDirectory;
 import com.ouyunc.message.schedule.ScheduleTimer;
 import com.ouyunc.message.schedule.TimerTaskWrapper;
 import org.apache.commons.lang3.StringUtils;
@@ -259,6 +260,11 @@ public final class NodeLeaseKeeper {
             }
             ClusterMembershipReconciler.reconcile(liveLeases);
             AppKeyConnQuotaSupport.syncAfterHeartbeat(liveLeases.keySet());
+            try {
+                ThreadPoolManager.messageProcessorExecutor().execute(LoginSessionDirectory::renewLocalLoginTtls);
+            } catch (Exception e) {
+                log.warn("提交登录 TTL 续期失败 nodeId={}", nodeId, e);
+            }
         } catch (Exception e) {
             log.error("刷新 IM 节点租约失败 nodeId={}，沿用上一拍快照（本机 epoch 仍视为存活）", nodeId, e);
             onLeaseRedisFailure();

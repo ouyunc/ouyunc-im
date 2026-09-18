@@ -188,41 +188,52 @@ public class ClientHelper {
     }
 
     /**
-     * 按 ctx 摘本地表并减计数，避免踢人/绑定失败把新会话减掉或减两次。
+     * 按关闭中的 Channel 摘本地表并减计数，避免踢人/绑定失败把新会话减掉或减两次。
      */
     public static void unregisterLocal(String comboIdentity, ChannelHandlerContext ctx, String appKey) {
+        unregisterLocal(comboIdentity, ctx == null ? null : ctx.channel(), appKey);
+    }
+
+    /**
+     * 关连钩子必须传正在关闭的 Channel，不能用登录时捕获的 ctx。
+     */
+    public static void unregisterLocal(String comboIdentity, Channel channel, String appKey) {
+        ChannelHandlerContext stored = MessageServerContext.localLoginClientRegisterTable.get(comboIdentity);
         boolean removed;
-        if (ctx != null) {
-            removed = MessageServerContext.localLoginClientRegisterTable.asMap().remove(comboIdentity, ctx);
-        } else {
+        if (channel == null) {
             removed = MessageServerContext.localLoginClientRegisterTable.asMap().remove(comboIdentity) != null;
+        } else if (stored != null && stored.channel() == channel) {
+            removed = MessageServerContext.localLoginClientRegisterTable.asMap().remove(comboIdentity, stored);
+        } else {
+            removed = false;
         }
+        Channel quotaChannel = channel != null ? channel : (stored == null ? null : stored.channel());
         if (removed) {
             LocalNodeConnCounter.decrement(appKey);
             // 登录成功后会清掉 RESERVED 标记，关连时必须在这里还 Redis 配额；心跳 SYNC 是兜底。
-            releaseQuotaAttr(ctx);
+            releaseQuotaAttr(quotaChannel);
             NodeLeaseKeeper.scheduleConnPublish();
         } else {
-            // 同机顶号：新连接已 put 进表，旧 ctx remove 对不上；本机计数未给新连接 +1，只还 Redis 预占。
-            releaseQuotaAttr(ctx);
+            // 同机顶号：新连接已 put 进表，旧 Channel remove 对不上；本机计数未给新连接 +1，只还 Redis 预占。
+            releaseQuotaAttr(quotaChannel);
         }
     }
 
     /**
      * 释放 Channel 上挂的 Redis 配额预占，成功/失败路径都要清 attr，避免关连钩子重复 DECR。
      */
-    private static void releaseQuotaAttr(ChannelHandlerContext ctx) {
-        if (ctx == null) {
+    private static void releaseQuotaAttr(Channel channel) {
+        if (channel == null) {
             return;
         }
         String quotaAppKey = ChannelAttrUtil.getChannelAttribute(
-                ctx, MessageConstant.CHANNEL_ATTR_KEY_CONN_QUOTA_APP_KEY);
+                channel, MessageConstant.CHANNEL_ATTR_KEY_CONN_QUOTA_APP_KEY);
         if (quotaAppKey == null || quotaAppKey.isBlank()) {
             return;
         }
         AppKeyConnQuotaSupport.release(quotaAppKey);
         ChannelAttrUtil.setChannelAttribute(
-                ctx, MessageConstant.CHANNEL_ATTR_KEY_CONN_QUOTA_APP_KEY, null);
+                channel, MessageConstant.CHANNEL_ATTR_KEY_CONN_QUOTA_APP_KEY, null);
     }
 
     public static void unbindLocalRegisterTable(LoginClientInfo loginClientInfo) {

@@ -1,13 +1,18 @@
 package com.ouyunc.message.helper;
 
 import com.ouyunc.base.constant.CacheConstant;
+import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.model.LoginClientInfo;
+import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.utils.ImRouteCodec;
 import com.ouyunc.base.utils.ImSessionPresence;
 import com.ouyunc.cache.config.CacheFactory;
+import com.ouyunc.cache.distributed.redis.RedisPipelineSupport;
 import com.ouyunc.message.cluster.lease.NodeLeaseKeeper;
+import com.ouyunc.message.context.MessageServerContext;
+import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.connection.ReturnType;
@@ -21,6 +26,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * 同 identity 槽原子写路由 HASH + 登录 String。连接计数不在本类，见 {@link com.ouyunc.message.cluster.lease.LocalNodeConnCounter}。
@@ -34,8 +41,8 @@ public final class LoginSessionDirectory {
     private static final StringRedisTemplate stringRedisTemplate = CacheFactory.STRING_REDIS.instance();
 
     /**
-     * KEYS: route, login；ARGV: deviceField, encoded, loginPayload, lastLoginTime。
-     * 路由末段 lastLoginTime 更大则拒绝覆盖（fencing）。
+     * KEYS: route, login；ARGV: deviceField, encoded, loginPayload, lastLoginTime, loginTtlSeconds。
+     * 路由末段 lastLoginTime 更大则拒绝覆盖（fencing）。登录 String 带 TTL，由租约心跳续期。
      */
     private static final byte[] BIND_LUA = (
             "local cur = redis.call('HGET', KEYS[1], ARGV[1]) "
@@ -51,7 +58,12 @@ public final class LoginSessionDirectory {
                     + "end "
                     + "end "
                     + "redis.call('HSET', KEYS[1], ARGV[1], ARGV[2]) "
+                    + "local ttl = tonumber(ARGV[5]) "
+                    + "if ttl ~= nil and ttl > 0 then "
+                    + "redis.call('SET', KEYS[2], ARGV[3], 'EX', ttl) "
+                    + "else "
                     + "redis.call('SET', KEYS[2], ARGV[3]) "
+                    + "end "
                     + "return 1"
     ).getBytes(StandardCharsets.UTF_8);
 
@@ -89,6 +101,10 @@ public final class LoginSessionDirectory {
 
     private static volatile String evictSha;
 
+    private static final AtomicBoolean LOGIN_TTL_RENEW_IN_FLIGHT = new AtomicBoolean(false);
+
+    private static final int LOGIN_TTL_RENEW_BATCH = 200;
+
     private LoginSessionDirectory() {
     }
 
@@ -103,7 +119,8 @@ public final class LoginSessionDirectory {
                 bytes(routeKey), bytes(loginKey),
                 bytes(String.valueOf(loginClientInfo.getDeviceType())),
                 bytes(encoded), serializeLogin(loginClientInfo.copyForRedis()),
-                bytes(String.valueOf(loginClientInfo.getLastLoginTime())));
+                bytes(String.valueOf(loginClientInfo.getLastLoginTime())),
+                bytes(String.valueOf(MessageConstant.IM_LOGIN_SESSION_TTL_SECONDS)));
         if (result instanceof Number number && number.longValue() == 0L) {
             throw new MessageException("登录绑定失败：已有更新会话");
         }
@@ -118,6 +135,56 @@ public final class LoginSessionDirectory {
      */
     public static void unbindRouteKeepLogin(LoginClientInfo loginClientInfo) {
         unbindInternal(loginClientInfo, null, false);
+    }
+
+    /**
+     * MQTT cleanSession=0 断连后：有 sessionExpiry 则续 TTL，否则 PERSIST 去掉登录 String 过期。
+     */
+    public static void persistOrExpireLogin(String appKey, String comboIdentity, long ttlSeconds) {
+        String loginKey = CacheConstant.buildLoginCacheKey(appKey, comboIdentity);
+        if (ttlSeconds > 0) {
+            stringRedisTemplate.expire(loginKey, ttlSeconds, TimeUnit.SECONDS);
+            return;
+        }
+        stringRedisTemplate.persist(loginKey);
+    }
+
+    /**
+     * 租约心跳联动：为本机仍在线的登录 String 续期。节点死后无人续期，TTL 内幽灵在线消失。
+     */
+    public static void renewLocalLoginTtls() {
+        if (!LOGIN_TTL_RENEW_IN_FLIGHT.compareAndSet(false, true)) {
+            return;
+        }
+        try {
+            List<String> batch = new ArrayList<>(LOGIN_TTL_RENEW_BATCH);
+            for (ChannelHandlerContext ctx : MessageServerContext.localLoginClientRegisterTable.asMap().values()) {
+                if (ctx == null || ctx.channel() == null || !ctx.channel().isActive()) {
+                    continue;
+                }
+                LoginClientInfo login = ChannelAttrUtil.getChannelAttribute(
+                        ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
+                if (login == null || login.getAppKey() == null || login.getIdentity() == null) {
+                    continue;
+                }
+                String combo = IdentityUtil.generalComboIdentity(
+                        login.getAppKey(), login.getIdentity(), login.getDeviceType());
+                batch.add(CacheConstant.buildLoginCacheKey(login.getAppKey(), combo));
+                if (batch.size() >= LOGIN_TTL_RENEW_BATCH) {
+                    RedisPipelineSupport.expireKeys(
+                            stringRedisTemplate, batch, MessageConstant.IM_LOGIN_SESSION_TTL_SECONDS);
+                    batch.clear();
+                }
+            }
+            if (!batch.isEmpty()) {
+                RedisPipelineSupport.expireKeys(
+                        stringRedisTemplate, batch, MessageConstant.IM_LOGIN_SESSION_TTL_SECONDS);
+            }
+        } catch (Exception e) {
+            log.warn("续期本机登录 String TTL 失败", e);
+        } finally {
+            LOGIN_TTL_RENEW_IN_FLIGHT.set(false);
+        }
     }
 
     /**

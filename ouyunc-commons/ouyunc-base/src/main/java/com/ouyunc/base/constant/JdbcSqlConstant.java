@@ -15,6 +15,7 @@ public class JdbcSqlConstant {
         SELECT_SESSION_MESSAGE_OFFSET("select app_key, `from`, device_type, `to`, `type`, `session_message_offset` from ouyunc_im_session_message_offset o where o.app_key = :app_key and o.`from` = :from and o.`to` = :to and o.`type` = :type and o.device_type = :device_type", "按租户主键获取会话偏移量"),
 
         SELECT_FRIEND("SELECT id, user_id, friend_user_code, friend_user_id, friend_nick_name, shield, way, channel, join_time, create_time, update_time FROM ouyunc_im_friend f where f.user_id = :user_id and f.friend_user_id = :friend_user_id and exists (select 1 from ouyunc_im_user u where u.id = f.user_id and u.app_key = :app_key and u.del_flag = 0)", "按租户查询好友关系"),
+        SELECT_ALL_FRIEND("SELECT friend_user_id FROM ouyunc_im_friend f where f.user_id = :user_id and exists (select 1 from ouyunc_im_user u where u.id = f.user_id and u.app_key = :app_key and u.del_flag = 0) ORDER BY f.id LIMIT :limit", "按租户查询用户全部好友 id"),
 
         SELECT_GROUP("SELECT id,group_code,group_name,group_avatar,group_description,group_announcement,group_join_policy,`status`,silence,app_key,create_time,update_time,del_flag FROM ouyunc_im_group WHERE id = :id and app_key = :app_key and del_flag = 0 ", "按租户查询群组"),
 
@@ -96,6 +97,7 @@ public class JdbcSqlConstant {
         SELECT_SESSION_MESSAGE_OFFSET("select app_key, \"from\", device_type, \"to\", \"type\", session_message_offset from ouyunc_im_session_message_offset o where o.app_key = :app_key and o.\"from\" = :from and o.\"to\" = :to and o.\"type\" = :type and o.device_type = :device_type", "按租户主键获取会话偏移量"),
 
         SELECT_FRIEND("SELECT id, user_id, friend_user_code, friend_user_id, friend_nick_name, shield, way, channel, join_time, create_time, update_time FROM ouyunc_im_friend f where f.user_id = :user_id and f.friend_user_id = :friend_user_id and exists (select 1 from ouyunc_im_user u where u.id = f.user_id and u.app_key = :app_key and u.del_flag = 0)", "按租户查询好友关系"),
+        SELECT_ALL_FRIEND("SELECT friend_user_id FROM ouyunc_im_friend f where f.user_id = :user_id and exists (select 1 from ouyunc_im_user u where u.id = f.user_id and u.app_key = :app_key and u.del_flag = 0) ORDER BY f.id LIMIT :limit", "按租户查询用户全部好友 id"),
 
         SELECT_GROUP("SELECT id,group_code,group_name,group_avatar,group_description,group_announcement,group_join_policy,\"status\",silence,app_key,create_time,update_time,del_flag FROM ouyunc_im_group WHERE id = :id and app_key = :app_key and del_flag = 0 ", "按租户查询群组"),
 
@@ -168,6 +170,7 @@ public class JdbcSqlConstant {
         SELECT_SESSION_MESSAGE_OFFSET("SELECT APP_KEY, \"FROM\", DEVICE_TYPE, \"TO\", \"TYPE\", SESSION_MESSAGE_OFFSET FROM OUYUNC_IM_SESSION_MESSAGE_OFFSET o WHERE o.APP_KEY = :app_key AND o.\"FROM\" = :from AND o.\"TO\" = :to AND o.\"TYPE\" = :type AND o.DEVICE_TYPE = :device_type", "按租户主键获取会话偏移量"),
 
         SELECT_FRIEND("SELECT ID, USER_ID, FRIEND_USER_CODE, FRIEND_USER_ID, FRIEND_NICK_NAME, SHIELD, WAY, CHANNEL, JOIN_TIME, CREATE_TIME, UPDATE_TIME FROM OUYUNC_IM_FRIEND f WHERE f.USER_ID = :user_id AND f.FRIEND_USER_ID = :friend_user_id AND EXISTS (SELECT 1 FROM OUYUNC_IM_USER u WHERE u.ID = f.USER_ID AND u.APP_KEY = :app_key AND u.DELETED = 0)", "按租户查询好友关系"),
+        SELECT_ALL_FRIEND("SELECT FRIEND_USER_ID FROM (SELECT FRIEND_USER_ID FROM OUYUNC_IM_FRIEND f WHERE f.USER_ID = :user_id AND EXISTS (SELECT 1 FROM OUYUNC_IM_USER u WHERE u.ID = f.USER_ID AND u.APP_KEY = :app_key AND u.DELETED = 0) ORDER BY f.ID) WHERE ROWNUM <= :limit", "按租户查询用户全部好友 id"),
 
         SELECT_GROUP("SELECT ID, GROUP_CODE, GROUP_NAME, GROUP_AVATAR, GROUP_DESCRIPTION, GROUP_ANNOUNCEMENT, GROUP_JOIN_POLICY, STATUS, SILENCE, APP_KEY, CREATE_TIME, UPDATE_TIME, DELETED FROM OUYUNC_IM_GROUP WHERE ID = :id AND APP_KEY = :app_key AND DELETED = 0", "按租户查询群组"),
 

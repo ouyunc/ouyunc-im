@@ -455,6 +455,13 @@ public class CacheConstant {
     }
 
     /**
+     * 好友全量 INIT 回源锁，与好友 ZSET 同 {@code {appKey:userId}} 槽。
+     */
+    public static String buildFriendRosterRebuildLockKey(String appKey, String identity) {
+        return buildAggregateCacheKey(appKey, identity) + LOCK + FRIENDS;
+    }
+
+    /**
      * 好友配置：槽按 from_to 对
      */
     public static String buildFriendsConfigCacheKey(String appKey, String from, String to) {
