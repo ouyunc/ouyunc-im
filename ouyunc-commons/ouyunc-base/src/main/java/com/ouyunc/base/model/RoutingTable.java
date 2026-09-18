@@ -39,7 +39,10 @@ public class RoutingTable implements Serializable, Cloneable  {
     }
 
     public Set<String> getRoutedServerAddresses() {
-        return routedServerAddresses == null ? new HashSet<>():routedServerAddresses;
+        if (routedServerAddresses == null) {
+            routedServerAddresses = new HashSet<>();
+        }
+        return routedServerAddresses;
     }
 
     public void setRoutedServerAddresses(Set<String> routedServerAddresses) {

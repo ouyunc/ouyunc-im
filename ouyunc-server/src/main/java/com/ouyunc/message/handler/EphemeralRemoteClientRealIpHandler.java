@@ -3,7 +3,9 @@ package com.ouyunc.message.handler;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.IpUtil;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.haproxy.HAProxyMessage;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -25,22 +27,30 @@ public class EphemeralRemoteClientRealIpHandler extends SimpleChannelInboundHand
      */
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (msg instanceof HAProxyMessage proxyMessage) {
-            // only save client real ip
-            String clientRealIp = proxyMessage.sourceAddress();
-            // 存入ctx 中，注意不能跨服务从ctx 获取该值，后面会解析处理存到packet中传递
-            if (StringUtils.isNoneBlank(clientRealIp)) {
-                ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_CLIENT_REAL_IP, clientRealIp);
+        try {
+            if (msg instanceof HAProxyMessage proxyMessage) {
+                String clientRealIp = proxyMessage.sourceAddress();
+                if (StringUtils.isNoneBlank(clientRealIp)) {
+                    ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_CLIENT_REAL_IP, clientRealIp);
+                }
+                ChannelPipeline pipeline = ctx.pipeline();
+                if (pipeline.get(MessageConstant.HA_PROXY_PROTOCOL_DECODER_HANDLER) != null) {
+                    // 摘掉 decoder，把 cumulation 里 PROXY 头之后的应用层字节交给后面的 ProtocolDispatcher
+                    pipeline.remove(MessageConstant.HA_PROXY_PROTOCOL_DECODER_HANDLER);
+                }
+            } else if (msg instanceof FullHttpRequest request) {
+                String clientRealIp = IpUtil.getIpFromHttpHeaders(request.headers());
+                if (StringUtils.isNoneBlank(clientRealIp)) {
+                    ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_CLIENT_REAL_IP, clientRealIp);
+                }
+                ctx.fireChannelRead(request.retain());
+            } else if (msg instanceof ByteBuf buf) {
+                ctx.fireChannelRead(buf.retain());
             }
-        }else if (msg instanceof FullHttpRequest request) {
-            // 工具类获取真实的客户端ip
-            String clientRealIp = IpUtil.getIpFromHttpHeaders(request.headers());
-            if (StringUtils.isNoneBlank(clientRealIp)) {
-                ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_CLIENT_REAL_IP, clientRealIp);
+        } finally {
+            if (ctx.pipeline().context(this) != null) {
+                ctx.pipeline().remove(this);
             }
-            ctx.fireChannelRead(request.retain());
         }
-        // 移除该处理器
-        ctx.pipeline().remove(this);
     }
 }

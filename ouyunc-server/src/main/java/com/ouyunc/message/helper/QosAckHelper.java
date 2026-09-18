@@ -50,21 +50,18 @@ public final class QosAckHelper {
 
         long serverPacketId;
         String originalClientMessageId;
-        if (packet.getMessageType() == MessageTypeEnum.QOS_DUP.getType()) {
-            Packet dupPacket = ctx != null
-                    ? ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_QOS_DUP_ORIGINAL_PACKET)
-                    : null;
-            if (dupPacket == null) {
-                dupPacket = QosDupPacketParser.parse(packet.getMessage().getContent());
-            }
-            if (ctx != null) {
-                ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_QOS_DUP_ORIGINAL_PACKET, null);
-            }
-            if (dupPacket == null) {
-                return;
-            }
+        Packet dupPacket = ctx != null
+                ? ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_QOS_DUP_ORIGINAL_PACKET)
+                : null;
+        if (ctx != null) {
+            ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_QOS_DUP_ORIGINAL_PACKET, null);
+        }
+        if (dupPacket == null && packet.getMessageType() == MessageTypeEnum.QOS_DUP.getType()) {
+            dupPacket = QosDupPacketParser.parse(packet.getMessage().getContent());
+        }
+        if (dupPacket != null && dupPacket.getMessage() != null) {
             serverPacketId = dupPacket.getPacketId();
-            originalClientMessageId = dupPacket.getMessage() != null ? dupPacket.getMessage().getId() : null;
+            originalClientMessageId = dupPacket.getMessage().getId();
         } else {
             serverPacketId = packet.getPacketId();
             originalClientMessageId = packet.getMessage().getId();

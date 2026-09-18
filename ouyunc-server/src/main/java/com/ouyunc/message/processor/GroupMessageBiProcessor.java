@@ -260,12 +260,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
      * @param groupUserIdentitySet
      */
     private void deliverWithdrawMessage(Packet packet, Set<String> groupUserIdentitySet) {
-        Message message = packet.getMessage();
-        ClientInfo clientInfo = MessageServerContext.localClientInfo(message.getMetadata().getAppKey(), message.getFrom());
-        if (clientInfo != null && clientInfo.getSelfSync()) {
-            deliver2Self(packet);
-        }
-        deliver2AllGroupMembers(packet, groupUserIdentitySet);
+        deliver(packet, groupUserIdentitySet);
     }
 
 

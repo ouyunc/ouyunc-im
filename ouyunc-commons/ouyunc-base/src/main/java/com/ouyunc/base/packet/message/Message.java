@@ -308,7 +308,21 @@ public class Message implements Serializable, Cloneable {
     }
 
     public Metadata getMetadata() {
-        return metadata == null ? new Metadata() : metadata;
+        if (metadata == null) {
+            metadata = new Metadata();
+        }
+        return metadata;
+    }
+
+    /**
+     * 是否携带元数据。校验层禁止用 {@link #getMetadata()} 判断，避免把空壳当已赋值。
+     */
+    public boolean hasMetadata() {
+        return metadata != null;
+    }
+
+    public Metadata getMetadataOrNull() {
+        return metadata;
     }
 
     public void setMetadata(Metadata metadata) {

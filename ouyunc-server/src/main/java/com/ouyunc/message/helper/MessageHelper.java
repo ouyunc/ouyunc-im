@@ -11,10 +11,12 @@ import com.ouyunc.message.cluster.client.pool.MessageClientPool;
 import com.ouyunc.message.cluster.lease.NodeLeaseKeeper;
 import com.ouyunc.message.context.MessageServerContext;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -277,7 +279,38 @@ public class MessageHelper {
         }
         MessageServerContext.findProtocol(target.getProtocol(), target.getProtocolVersion())
                 .doSendMessage(packet, IdentityUtil.generalComboIdentity(
-                        target.getAppKey(), target.getTargetIdentity(), target.getDeviceType()), sendCallback);
+                        target.getAppKey(), target.getTargetIdentity(), target.getDeviceType()),
+                        wrapRemoteLoginClose(packet, target, sendCallback));
+    }
+
+    /**
+     * REMOTE_LOGIN 落地写出后再关旧连接；集群 routed 包不进 ServerNotify 处理器，必须挂在写出回调上。
+     */
+    private static SendCallback wrapRemoteLoginClose(Packet packet, Target target, SendCallback sendCallback) {
+        if (!ClientHelper.isRemoteLoginNotify(packet)) {
+            return sendCallback;
+        }
+        return sendResult -> {
+            try {
+                if (sendCallback != null) {
+                    sendCallback.onCallback(sendResult);
+                }
+            } finally {
+                closeLocalTarget(target);
+            }
+        };
+    }
+
+    private static void closeLocalTarget(Target target) {
+        if (target == null || StringUtils.isBlank(target.getTargetIdentity())) {
+            return;
+        }
+        String combo = IdentityUtil.generalComboIdentity(
+                target.getAppKey(), target.getTargetIdentity(), target.getDeviceType());
+        ChannelHandlerContext ctx = MessageServerContext.localLoginClientRegisterTable.get(combo);
+        if (ctx != null && ctx.channel() != null && ctx.channel().isActive()) {
+            ctx.close();
+        }
     }
 
     /**

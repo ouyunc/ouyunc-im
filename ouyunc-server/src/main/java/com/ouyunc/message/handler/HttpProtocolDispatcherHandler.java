@@ -1,7 +1,6 @@
 package com.ouyunc.message.handler;
 
 import com.ouyunc.base.constant.MessageConstant;
-import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.core.codec.MqttWebSocketCodec;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.protocol.NativePacketProtocol;
@@ -53,7 +52,7 @@ public class HttpProtocolDispatcherHandler extends SimpleChannelInboundHandler<O
                             //10 * 1024 * 1024
                             .addLast(MessageConstant.WS_FRAME_AGGREGATOR_HANDLER,
                                     new WebSocketFrameAggregator(MessageConstant.MAX_WEBSOCKET_FRAME_SIZE))
-                            .addLast(MessageConstant.WS_COMPRESSION_HANDLER, new WebSocketServerCompressionHandler(NumberConstant.NUMBER_0))
+                            .addLast(MessageConstant.WS_COMPRESSION_HANDLER, new WebSocketServerCompressionHandler(MessageConstant.MAX_WEBSOCKET_FRAME_SIZE))
                             .addLast(MessageConstant.WS_SERVER_PROTOCOL_HANDLER, new WebSocketServerProtocolHandler(
                                     MessageServerContext.serverProperties().getWebsocketPath(),
                                     MessageConstant.MQTT_WEBSOCKET_SUB_PROTOCOLS, true,

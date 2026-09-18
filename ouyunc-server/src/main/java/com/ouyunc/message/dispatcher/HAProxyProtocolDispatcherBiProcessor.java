@@ -4,6 +4,7 @@ import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.message.handler.EphemeralRemoteClientRealIpHandler;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.haproxy.HAProxyMessageDecoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,14 +86,16 @@ public class HAProxyProtocolDispatcherBiProcessor implements ProtocolDispatcherB
     }
 
     /**
-     * 解析 ByteBuf
-     * @param ctx
+     * 解完 PROXY 头后摘掉当前分发器，把应用层剩余字节再交给新的协议探测。
+     * 不能让 HAProxyMessageDecoder 在 finished 后 skipBytes 吃掉 WS/MQTT 首包。
      */
     @Override
     public void process(ChannelHandlerContext ctx, ByteBuf in) {
-        // 存入ctx 中，注意不能跨服务从ctx 获取该值，后面会解析处理存到packet中传递
-        ctx.pipeline().addLast(MessageConstant.HA_PROXY_PROTOCOL_DECODER_HANDLER, new HAProxyMessageDecoder());
-        ctx.pipeline().addLast(MessageConstant.REMOTE_CLIENT_REAL_IP_HANDLER, new EphemeralRemoteClientRealIpHandler());
+        ChannelPipeline pipeline = ctx.pipeline();
+        pipeline.addLast(MessageConstant.HA_PROXY_PROTOCOL_DECODER_HANDLER, new HAProxyMessageDecoder());
+        pipeline.addLast(MessageConstant.REMOTE_CLIENT_REAL_IP_HANDLER, new EphemeralRemoteClientRealIpHandler());
+        pipeline.remove(MessageConstant.PROTOCOL_DISPATCHER_HANDLER);
+        pipeline.addLast(MessageConstant.PROTOCOL_DISPATCHER_HANDLER, new ProtocolDispatcher());
         ctx.fireChannelRead(in.retain());
     }
 

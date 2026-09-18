@@ -75,7 +75,7 @@ public final class PacketVerifier {
             log.warn("Packet 校验失败: message 为空, packetId={}", packet.getPacketId());
             return false;
         }
-        if (message.getMetadata() == null) {
+        if (!message.hasMetadata()) {
             log.warn("Packet 校验失败: metadata 为空, packetId={}", packet.getPacketId());
             return false;
         }

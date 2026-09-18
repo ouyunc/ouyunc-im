@@ -15,12 +15,14 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.pool.AbstractChannelPoolHandler;
 import com.ouyunc.message.handler.MessageLoggingHandler;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.timeout.IdleStateHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLEngine;
+import java.nio.ByteOrder;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -32,9 +34,7 @@ public class MessageClientChannelPoolHandler extends AbstractChannelPoolHandler 
 
 
     /**
-     * @Author fzx
-     * @Description channel 的创建,初次与服务端建立连接的时候会创建channel，内置客户端只做发送处理，不牵涉到粘包，半包，拿到的就是一个完整的包
-     * 这个链接池，所有协议以及包类型的信息都会走这里
+     * 出站编码一次写完整包；对端回包仍走 TCP，解码侧必须先拼帧再交给 PacketCodec。
      */
     @Override
     public void channelCreated(Channel channel) throws Exception {
@@ -55,6 +55,14 @@ public class MessageClientChannelPoolHandler extends AbstractChannelPoolHandler 
             pipeline.addLast(MessageConstant.LOG_HANDLER, new MessageLoggingHandler(props.getLogLevel()));
         }
         pipeline
+                .addLast(MessageConstant.PACKET_DECODE_HANDLER, new LengthFieldBasedFrameDecoder(
+                        ByteOrder.BIG_ENDIAN,
+                        MessageConstant.MAX_FRAME_LENGTH,
+                        MessageConstant.LENGTH_FIELD_OFFSET,
+                        MessageConstant.LENGTH_FIELD_LENGTH,
+                        MessageConstant.LENGTH_ADJUSTMENT,
+                        MessageConstant.INITIAL_BYTES_TO_STRIP,
+                        MessageConstant.FAIL_FAST))
                 .addLast(MessageConstant.CLIENT_PACKET_CODEC_HANDLER, new PacketCodec())
                 // 出站先补认证首包再编码，连接池复用时不重复认证，不改普通业务消息。
                 .addLast(ClusterAuthConstant.HANDLER_NAME, new ClusterAuthentication.ClientHandler(

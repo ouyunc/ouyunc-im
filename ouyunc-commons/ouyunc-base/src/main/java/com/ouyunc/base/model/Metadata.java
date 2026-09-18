@@ -128,7 +128,10 @@ public class Metadata implements Serializable, Cloneable {
     }
 
     public List<RoutingTable> getRoutingTables() {
-        return routingTables == null ? new ArrayList<>(): routingTables;
+        if (routingTables == null) {
+            routingTables = new ArrayList<>();
+        }
+        return routingTables;
     }
 
     public void setRoutingTables(List<RoutingTable> routingTables) {

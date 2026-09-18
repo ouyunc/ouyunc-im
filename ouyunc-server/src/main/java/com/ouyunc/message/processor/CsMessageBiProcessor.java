@@ -83,10 +83,10 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
             releaseQosOnFailure(packet);
             return Mono.empty();
         }
-        // 路由校验通过后再旁路归档（与单聊/群聊「校验通过后归档」对齐）
-        archiveAfterAuth(packet);
+        // 路由校验通过后先改写入口号再旁路归档，避免 MQ 身份与 ticket 索引不一致
         CsImSessionRoute route = live.route();
         CsHelper.rewriteAgentFrom(packet, route);
+        archiveAfterAuth(packet);
         Message message = packet.getMessage();
         int contentType = message.getContentType();
         if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {

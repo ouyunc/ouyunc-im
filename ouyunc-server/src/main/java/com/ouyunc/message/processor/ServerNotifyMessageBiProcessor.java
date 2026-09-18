@@ -1,6 +1,7 @@
 package com.ouyunc.message.processor;
 
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.MessageType;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.constant.enums.PushTypeEnum;
@@ -16,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -49,6 +51,9 @@ public final class ServerNotifyMessageBiProcessor extends AbstractMessageBiProce
                 log.debug("SERVER_NOTIFY 接收方 {} 不在线", message.getTo());
                 return;
             }
+            if (isRemoteLogin(message)) {
+                targets = filterKickDevice(targets, packet.getDeviceType());
+            }
             MessageHelper.asyncSendMessage(packet, targets);
         });
     }
@@ -61,5 +66,22 @@ public final class ServerNotifyMessageBiProcessor extends AbstractMessageBiProce
         PushTypeEnum pushType = PushTypeEnum.getPushTypeEnum(metadata.getHttpPushType());
         return pushType == PushTypeEnum.BROADCAST_SERVER_NOTIFY
                 || MessageConstant.SPLAT.equals(packet.getMessage().getTo());
+    }
+
+    private static boolean isRemoteLogin(Message message) {
+        return message.getContentType() == MessageContentTypeEnum.REMOTE_LOGIN_CONTENT.getType();
+    }
+
+    /**
+     * 顶号只踢对应设备；deviceType 对不上时回退全端，避免漏踢。
+     */
+    private static List<LoginClientInfo> filterKickDevice(List<LoginClientInfo> targets, byte deviceType) {
+        List<LoginClientInfo> matched = new ArrayList<>();
+        for (LoginClientInfo target : targets) {
+            if (target != null && target.getDeviceType() == deviceType) {
+                matched.add(target);
+            }
+        }
+        return matched.isEmpty() ? targets : matched;
     }
 }

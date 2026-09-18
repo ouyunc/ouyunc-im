@@ -70,8 +70,7 @@ public abstract class AbstractBaseBiProcessor<R, T extends Number>
             // 将元数据放入重发消息的packet中，否则会丢失相关信息
             Metadata metadata = message.getMetadata();
             dupPacket.getMessage().setMetadata(metadata);
-            dupPacket.setPacketId(MessageContext.idGenerator().generateId());
-            // 原地写回同一 Packet 引用，保证后续 process 阶段拿到展开后的业务包
+            // 保留客户端原 packetId，S2C ACK 才能对上重发侧认的 id
             packet.copyFrom(dupPacket);
             if (log.isDebugEnabled()) {
                 log.debug("qos 客户端模式正在处理客户端重发消息, 重发消息为: {}", packet);

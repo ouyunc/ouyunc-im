@@ -66,7 +66,11 @@ public final class LocalNodeConnCounter {
                 return null;
             }
             long left = counter.decrementAndGet();
-            return left <= 0L ? null : counter;
+            if (left <= 0L) {
+                counter.set(0L);
+            }
+            // 保留 0 计数，心跳 SYNC 才能 HDEL 本节点 field；SYNC 后再 prune
+            return counter;
         });
     }
 
@@ -95,11 +99,24 @@ public final class LocalNodeConnCounter {
     public static Map<String, String> snapshot() {
         Map<String, String> snapshot = new HashMap<>();
         BY_APP_KEY.forEach((appKey, counter) -> {
-            long value = counter.get();
-            if (value > 0L) {
-                snapshot.put(appKey, String.valueOf(value));
-            }
+            long value = Math.max(0L, counter.get());
+            snapshot.put(appKey, String.valueOf(value));
         });
         return snapshot;
+    }
+
+    /**
+     * SYNC 把 0 写回 Redis 后摘掉本机空计数，避免历史 appKey 常驻。
+     */
+    public static void removeIfZero(String appKey) {
+        if (StringUtils.isBlank(appKey)) {
+            return;
+        }
+        BY_APP_KEY.compute(appKey, (key, counter) -> {
+            if (counter == null || counter.get() <= 0L) {
+                return null;
+            }
+            return counter;
+        });
     }
 }

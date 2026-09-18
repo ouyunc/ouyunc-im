@@ -119,14 +119,6 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
             ctx.close();
             return;
         }
-        //将消息内容转成message
-        LoginContent loginContent = JSON.parseObject(loginMessage.getContent(), LoginContent.class);
-        if (loginContent == null) {
-            log.warn("客户端id: {} 登录内容无法解析", ctx.channel().id().asShortText());
-            ctx.close();
-            return;
-        }
-        loginContent.setScope(LoginScopeEnum.normalizeScope(loginContent.getScope()));
         byte deviceType = packet.getDeviceType();
         if (Boolean.TRUE.equals(ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT))) {
             log.warn("客户端id: {} 登录进行中，忽略重复登录包", ctx.channel().id().asShortText());
@@ -135,7 +127,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, Boolean.TRUE);
         try {
             ThreadPoolManager.messageProcessorExecutor().execute(() ->
-                    authenticateAndBind(ctx, packet, loginContent, deviceType, loginTimestamp));
+                    authenticateAndBind(ctx, packet, deviceType, loginTimestamp));
         } catch (RejectedExecutionException ex) {
             log.error("登录任务提交被拒绝 channelId={}", ctx.channel().id().asShortText(), ex);
             ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, null);
@@ -145,60 +137,70 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
 
     /**
      * AppKey 配额、设备白名单、签名、登录 GET、踢人全部离开 EventLoop。
+     * JSON 解析也在业务线程，避免占 EventLoop。
      * <p>设备类型走软校验（与 MQTT / PacketHandler 设备白名单一致），不抛异常。</p>
      */
-    private void authenticateAndBind(ChannelHandlerContext ctx, Packet packet, LoginContent loginContent,
+    private void authenticateAndBind(ChannelHandlerContext ctx, Packet packet,
                                      byte deviceType, long loginTimestamp) {
         Message loginMessage = packet.getMessage();
+        LoginContent loginContent = null;
         try {
             if (!ctx.channel().isActive()) {
                 ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, null);
                 return;
             }
-            // identity 级白名单优先；无定制时等价于 appKey/全局白名单
-            if (!AppKeyValidator.INSTANCE.tryReserveForLogin(loginContent.getAppKey(), ctx)
-                    || !DeviceTypeRegistry.supports(
-                            loginContent.getAppKey(), loginContent.getIdentity(), deviceType)
-                    || !validate(loginContent)) {
-                log.warn("客户端id: {} 登录参数: {}，校验未通过！",
-                        ctx.channel().id().asShortText(), Serializer.JSON.serializeToString(loginContent));
-                MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(
-                        ExceptionCodeEnum.LOGIN_VERIFY_ERROR, "登录校验未通过", packet),
-                        MessageEventTypeEnum.EXCEPTION), true);
-                AppKeyValidator.releaseReservedIfNeeded(loginContent.getAppKey(), ctx);
+            loginContent = JSON.parseObject(loginMessage.getContent(), LoginContent.class);
+            if (loginContent == null) {
+                log.warn("客户端id: {} 登录内容无法解析", ctx.channel().id().asShortText());
                 failLoginOnEventLoop(ctx);
                 return;
             }
-            String comboIdentity = IdentityUtil.generalComboIdentity(
-                    loginContent.getAppKey(), loginContent.getIdentity(), deviceType);
+            loginContent.setScope(LoginScopeEnum.normalizeScope(loginContent.getScope()));
+            final LoginContent parsedLogin = loginContent;
+            // identity 级白名单优先；无定制时等价于 appKey/全局白名单
+            if (!AppKeyValidator.INSTANCE.tryReserveForLogin(parsedLogin.getAppKey(), ctx)
+                    || !DeviceTypeRegistry.supports(
+                            parsedLogin.getAppKey(), parsedLogin.getIdentity(), deviceType)
+                    || !validate(parsedLogin)) {
+                log.warn("客户端id: {} 登录参数: {}，校验未通过！",
+                        ctx.channel().id().asShortText(), Serializer.JSON.serializeToString(parsedLogin));
+                MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(
+                        ExceptionCodeEnum.LOGIN_VERIFY_ERROR, "登录校验未通过", packet),
+                        MessageEventTypeEnum.EXCEPTION), true);
+                AppKeyValidator.releaseReservedIfNeeded(parsedLogin.getAppKey(), ctx);
+                failLoginOnEventLoop(ctx);
+                return;
+            }
             Protocol protocol = ctx.channel().attr(NativePacketProtocol.protocolAttrKey).get();
             if (protocol == null) {
                 log.warn("Protocol not set on channel, closing connection: {}", ctx.channel().id().asShortText());
-                AppKeyValidator.releaseReservedIfNeeded(loginContent.getAppKey(), ctx);
+                AppKeyValidator.releaseReservedIfNeeded(parsedLogin.getAppKey(), ctx);
                 failLoginOnEventLoop(ctx);
                 return;
             }
             LoginClientInfo newLoginClientInfo = new LoginClientInfo(
                     protocol.getProtocol(), protocol.getProtocolVersion(),
                     MessageContext.messageProperties.getLocalServerAddress(), OnlineEnum.ONLINE, null,
-                    ClientHelper.calculateClientHeartBeatTimeout(loginContent.getHeartBeatExpireTime()),
-                    loginTimestamp, loginContent.getAppKey(), loginContent.getIdentity(), deviceType,
-                    loginContent.getSupportDeviceTypes(), loginContent.getSn(), loginContent.getSignature(),
-                    loginContent.getSignatureAlgorithm(), loginContent.getHeartBeatExpireTime(), loginTimestamp,
-                    loginContent.getEnableWill(), loginContent.getWillMessage(), loginContent.getEnableAlive(),
-                    loginContent.getAliveMessage(), loginContent.getScope(), loginContent.getBusinessIdleSeconds(),
-                    loginContent.getHeartBeatWaitRetry(), loginContent.getBusinessIdleCloseStrike());
+                    ClientHelper.calculateClientHeartBeatTimeout(parsedLogin.getHeartBeatExpireTime()),
+                    loginTimestamp, parsedLogin.getAppKey(), parsedLogin.getIdentity(), deviceType,
+                    parsedLogin.getSupportDeviceTypes(), parsedLogin.getSn(), parsedLogin.getSignature(),
+                    parsedLogin.getSignatureAlgorithm(), parsedLogin.getHeartBeatExpireTime(), loginTimestamp,
+                    parsedLogin.getEnableWill(), parsedLogin.getWillMessage(), parsedLogin.getEnableAlive(),
+                    parsedLogin.getAliveMessage(), parsedLogin.getScope(), parsedLogin.getBusinessIdleSeconds(),
+                    parsedLogin.getHeartBeatWaitRetry(), parsedLogin.getBusinessIdleCloseStrike());
             try {
-                ctx.executor().execute(() -> startRemoteBind(ctx, packet, loginContent, loginMessage,
+                ctx.executor().execute(() -> startRemoteBind(ctx, packet, parsedLogin, loginMessage,
                         deviceType, newLoginClientInfo, loginTimestamp));
             } catch (RejectedExecutionException scheduleError) {
                 log.error("登录绑定回调投递 EventLoop 被拒绝 channelId={}", ctx.channel().id().asShortText(), scheduleError);
-                AppKeyValidator.releaseReservedIfNeeded(loginContent.getAppKey(), ctx);
+                AppKeyValidator.releaseReservedIfNeeded(parsedLogin.getAppKey(), ctx);
                 failLoginOnEventLoop(ctx);
             }
         } catch (Exception e) {
             log.error("登录校验异常 channelId={}", ctx.channel().id().asShortText(), e);
-            AppKeyValidator.releaseReservedIfNeeded(loginContent.getAppKey(), ctx);
+            if (loginContent != null) {
+                AppKeyValidator.releaseReservedIfNeeded(loginContent.getAppKey(), ctx);
+            }
             failLoginOnEventLoop(ctx);
         }
     }
@@ -481,7 +483,6 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         MessageServerContext.publishEvent(
                 new MessageEvent(new ClientLoginEventPayload(loginClientInfo, ctx), MessageEventTypeEnum.CLIENT_LOGIN, loginTimestamp),
                 true);
-        ctx.pipeline().remove(this);
     }
 
     /**

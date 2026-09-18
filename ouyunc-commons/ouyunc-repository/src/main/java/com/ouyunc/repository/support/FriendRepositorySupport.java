@@ -106,7 +106,7 @@ public final class FriendRepositorySupport {
 
     @SuppressWarnings("unchecked")
     public boolean isFriend(String appKey, String from, String to) {
-        // 存在性：ZSCORE 命中为真；ZCARD>0 视为名单已完整（未命中即非好友）；空/缺失才回源 MySQL，且不写残缺 ZSET
+        // ZSCORE 命中为真；INIT 哨兵存在且未命中才可判非好友；否则回源 MySQL。禁止 ZCARD>0 当完整名单。
         Boolean cached = RelationLocalCache.FRIEND.get(RelationLocalCache.friendKey(appKey, from, to));
         if (cached != null) {
             return cached;
@@ -118,8 +118,8 @@ public final class FriendRepositorySupport {
                 RelationLocalCache.FRIEND.put(RelationLocalCache.friendKey(appKey, from, to), true);
                 return true;
             }
-            Long card = infra.stringRedisTemplate.opsForZSet().zCard(zsetKey);
-            if (card != null && card > 0) {
+            Double init = infra.stringRedisTemplate.opsForZSet().score(zsetKey, CacheConstant.FRIEND_ZSET_INIT_MEMBER);
+            if (init != null) {
                 RelationLocalCache.FRIEND.put(RelationLocalCache.friendKey(appKey, from, to), false);
                 return false;
             }
@@ -154,7 +154,14 @@ public final class FriendRepositorySupport {
     }
 
     public Collection<String> getFriendIds(String appKey, String from) {
-        return infra.stringRedisTemplate.opsForZSet().range(CacheConstant.buildFriendsCacheKey(appKey, from), NumberConstant.NUMBER_0, NumberConstant.NUMBER_NEGATIVE_1);
+        Collection<String> ids = infra.stringRedisTemplate.opsForZSet().range(
+                CacheConstant.buildFriendsCacheKey(appKey, from), NumberConstant.NUMBER_0, NumberConstant.NUMBER_NEGATIVE_1);
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return ids.stream()
+                .filter(id -> id != null && !CacheConstant.FRIEND_ZSET_INIT_MEMBER.equals(id))
+                .toList();
     }
 
     @SuppressWarnings("unchecked")
@@ -377,6 +384,7 @@ public final class FriendRepositorySupport {
     private One2OneChatAccess loadOne2OneChatAccessFromRedis(String appKey, String from, String to) {
         byte[] friendsKey = infra.stringSerializer.serialize(CacheConstant.buildFriendsCacheKey(appKey, to));
         byte[] fromBytes = infra.stringSerializer.serialize(from);
+        byte[] initBytes = infra.stringSerializer.serialize(CacheConstant.FRIEND_ZSET_INIT_MEMBER);
         byte[] blackKey = infra.stringSerializer.serialize(CacheConstant.buildBlacklistCacheKey(appKey, to));
         byte[] shieldKey = infra.stringSerializer.serialize(CacheConstant.buildFriendsConfigCacheKey(appKey, to, from));
         // closePipeline 拿原始结果，避免 executePipelined 用 valueSerializer 误解码 ZSCORE/HGET
@@ -385,15 +393,26 @@ public final class FriendRepositorySupport {
             connection.zSetCommands().zScore(friendsKey, fromBytes);
             connection.hashCommands().hGet(blackKey, fromBytes);
             connection.stringCommands().get(shieldKey);
+            connection.zSetCommands().zScore(friendsKey, initBytes);
             return connection.closePipeline();
         });
         @SuppressWarnings("unchecked")
         List<Object> raw = pipelineResult instanceof List<?> list ? (List<Object>) list : List.of();
-        boolean friend = isScoreHit(raw != null && raw.size() > 0 ? raw.get(0) : null);
-        boolean blacklisted = isBlacklistHit(raw != null && raw.size() > 1 ? raw.get(1) : null);
-        FriendEntity shieldEntity = deserializeFriendEntity(raw != null && raw.size() > 2 ? raw.get(2) : null);
+        boolean friendHit = isScoreHit(raw.size() > 0 ? raw.get(0) : null);
+        boolean blacklisted = isBlacklistHit(raw.size() > 1 ? raw.get(1) : null);
+        FriendEntity shieldEntity = deserializeFriendEntity(raw.size() > 2 ? raw.get(2) : null);
+        boolean rosterComplete = isScoreHit(raw.size() > 3 ? raw.get(3) : null);
         boolean shielded = shieldEntity != null && YesOrNo.YES.getCode().equals(shieldEntity.getShield());
-        RelationLocalCache.FRIEND.put(RelationLocalCache.friendKey(appKey, to, from), friend);
+        boolean friend = friendHit;
+        if (!friendHit && !rosterComplete) {
+            Boolean dbFriend = loadFriendExistsFromDb(appKey, to, from);
+            if (dbFriend != null) {
+                friend = dbFriend;
+                RelationLocalCache.FRIEND.put(RelationLocalCache.friendKey(appKey, to, from), friend);
+            }
+        } else {
+            RelationLocalCache.FRIEND.put(RelationLocalCache.friendKey(appKey, to, from), friend);
+        }
         RelationLocalCache.markBlacklist(appKey, to, from, blacklisted);
         RelationLocalCache.markShield(appKey, to, from, shielded);
         if (shieldEntity != null) {

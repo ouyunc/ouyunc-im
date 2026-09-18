@@ -200,17 +200,29 @@ public class ClientHelper {
         if (removed) {
             LocalNodeConnCounter.decrement(appKey);
             // 登录成功后会清掉 RESERVED 标记，关连时必须在这里还 Redis 配额；心跳 SYNC 是兜底。
-            if (ctx != null) {
-                String quotaAppKey = ChannelAttrUtil.getChannelAttribute(
-                        ctx, MessageConstant.CHANNEL_ATTR_KEY_CONN_QUOTA_APP_KEY);
-                if (quotaAppKey != null && !quotaAppKey.isBlank()) {
-                    AppKeyConnQuotaSupport.release(quotaAppKey);
-                    ChannelAttrUtil.setChannelAttribute(
-                            ctx, MessageConstant.CHANNEL_ATTR_KEY_CONN_QUOTA_APP_KEY, null);
-                }
-            }
+            releaseQuotaAttr(ctx);
             NodeLeaseKeeper.scheduleConnPublish();
+        } else {
+            // 同机顶号：新连接已 put 进表，旧 ctx remove 对不上；本机计数未给新连接 +1，只还 Redis 预占。
+            releaseQuotaAttr(ctx);
         }
+    }
+
+    /**
+     * 释放 Channel 上挂的 Redis 配额预占，成功/失败路径都要清 attr，避免关连钩子重复 DECR。
+     */
+    private static void releaseQuotaAttr(ChannelHandlerContext ctx) {
+        if (ctx == null) {
+            return;
+        }
+        String quotaAppKey = ChannelAttrUtil.getChannelAttribute(
+                ctx, MessageConstant.CHANNEL_ATTR_KEY_CONN_QUOTA_APP_KEY);
+        if (quotaAppKey == null || quotaAppKey.isBlank()) {
+            return;
+        }
+        AppKeyConnQuotaSupport.release(quotaAppKey);
+        ChannelAttrUtil.setChannelAttribute(
+                ctx, MessageConstant.CHANNEL_ATTR_KEY_CONN_QUOTA_APP_KEY, null);
     }
 
     public static void unbindLocalRegisterTable(LoginClientInfo loginClientInfo) {
@@ -741,7 +753,15 @@ public class ClientHelper {
             }
             loopPacket.getMessage().getMetadata().setTarget(target);
             loopPacket.getMessage().getMetadata().setFanoutTargets(null);
-            PacketChannelWriter.sendOnChannelBestEffort(ctx, loopPacket);
+            if (isRemoteLoginNotify(loopPacket)) {
+                PacketChannelWriter.sendOnChannel(ctx, loopPacket, unused -> {
+                    if (ctx.channel() != null && ctx.channel().isActive()) {
+                        ctx.close();
+                    }
+                });
+            } else {
+                PacketChannelWriter.sendOnChannelBestEffort(ctx, loopPacket);
+            }
         }
         if (end < targets.size() && !loop.isShuttingDown() && !loop.isShutdown() && !loop.isTerminated()) {
             loop.execute(() -> writeLocalFanoutOnEventLoop(loop, loopPacket, targets, end));
@@ -915,5 +935,13 @@ public class ClientHelper {
                 break;
             }
         }
+    }
+
+    /**
+     * 跨节点顶号通知：写出后必须关掉本机旧 Channel，避免幽灵在线。
+     */
+    static boolean isRemoteLoginNotify(Packet packet) {
+        return packet != null && packet.getMessage() != null
+                && packet.getMessage().getContentType() == MessageContentTypeEnum.REMOTE_LOGIN_CONTENT.getType();
     }
 }

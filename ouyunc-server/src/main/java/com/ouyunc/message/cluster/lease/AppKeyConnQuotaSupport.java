@@ -7,13 +7,19 @@ import com.ouyunc.cache.config.CacheFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.RedisCallback;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * appKey 连接上限：同槽 HASH（field=nodeId）Lua 求和后再 HINCRBY，避免读远端租约 HASH 再本机 CAS 的窗口。
@@ -81,13 +87,10 @@ public final class AppKeyConnQuotaSupport {
     }
 
     /**
-     * 心跳：每个本机仍有连接的 appKey，把 field 写成本地计数并丢掉死节点。
+     * 心跳：把本机计数写回配额 HASH，并删掉已不在租约里的节点 field。
+     * 本机连接为 0 时仍 SCAN 配额 key，避免死节点残留要等 TTL。
      */
     public static void syncAfterHeartbeat(Collection<String> liveNodeIds) {
-        Map<String, String> local = LocalNodeConnCounter.snapshot();
-        if (local.isEmpty()) {
-            return;
-        }
         String nodeId = NodeLeaseKeeper.localNodeId();
         String ttl = String.valueOf(MessageConstant.IM_APP_KEY_CONN_QUOTA_TTL_SECONDS);
         List<String> liveArgs = new ArrayList<>();
@@ -101,19 +104,65 @@ public final class AppKeyConnQuotaSupport {
         if (!liveArgs.contains(nodeId)) {
             liveArgs.add(nodeId);
         }
+        Map<String, String> local = LocalNodeConnCounter.snapshot();
+        if (local.isEmpty()) {
+            syncOrphanQuotaHashes(nodeId, ttl, liveArgs);
+            return;
+        }
         for (Map.Entry<String, String> entry : local.entrySet()) {
-            List<String> args = new ArrayList<>(
-                    MessageConstant.IM_APP_KEY_CONN_QUOTA_SYNC_FIXED_ARGV + liveArgs.size());
-            args.add(nodeId);
-            args.add(entry.getValue());
-            args.add(ttl);
-            args.addAll(liveArgs);
             try {
-                eval(SYNC_SCRIPT, entry.getKey(), args.toArray(new String[0]));
+                eval(SYNC_SCRIPT, entry.getKey(), syncArgs(nodeId, entry.getValue(), ttl, liveArgs));
+                if ("0".equals(entry.getValue())) {
+                    LocalNodeConnCounter.removeIfZero(entry.getKey());
+                }
             } catch (Exception e) {
                 log.warn("同步 appKey 连接配额失败 appKey={}", entry.getKey(), e);
             }
         }
+    }
+
+    private static String[] syncArgs(String nodeId, String count, String ttl, List<String> liveArgs) {
+        List<String> args = new ArrayList<>(
+                MessageConstant.IM_APP_KEY_CONN_QUOTA_SYNC_FIXED_ARGV + liveArgs.size());
+        args.add(nodeId);
+        args.add(count);
+        args.add(ttl);
+        args.addAll(liveArgs);
+        return args.toArray(new String[0]);
+    }
+
+    /**
+     * 本机无连接时仍要清死节点 field：SCAN 配额 HASH，以 count=0 跑 SYNC。
+     */
+    private static void syncOrphanQuotaHashes(String nodeId, String ttl, List<String> liveArgs) {
+        String[] args = syncArgs(nodeId, "0", ttl, liveArgs);
+        StringRedisTemplate redis = CacheFactory.STRING_REDIS.instance();
+        for (String key : scanQuotaKeys(redis)) {
+            try {
+                redis.execute(SYNC_SCRIPT, List.of(key), (Object[]) args);
+            } catch (Exception e) {
+                log.warn("空节点同步配额失败 key={}", key, e);
+            }
+        }
+    }
+
+    private static Set<String> scanQuotaKeys(StringRedisTemplate redis) {
+        Set<String> keys = new HashSet<>();
+        String pattern = CacheConstant.appKeyConnQuotaKeyPattern();
+        try {
+            redis.execute((RedisCallback<Void>) connection -> {
+                ScanOptions options = ScanOptions.scanOptions().match(pattern).count(200).build();
+                try (Cursor<byte[]> cursor = connection.scan(options)) {
+                    while (cursor.hasNext()) {
+                        keys.add(new String(cursor.next(), StandardCharsets.UTF_8));
+                    }
+                }
+                return null;
+            });
+        } catch (Exception e) {
+            log.warn("扫描 appKey 配额 key 失败 pattern={}", pattern, e);
+        }
+        return keys;
     }
 
     private static DefaultRedisScript<Long> script(LuaScriptEnum lua) {

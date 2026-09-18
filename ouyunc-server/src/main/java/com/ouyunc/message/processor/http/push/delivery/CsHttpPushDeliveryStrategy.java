@@ -71,6 +71,7 @@ public final class CsHttpPushDeliveryStrategy implements HttpProcessor {
         }
         route = live.route();
         CsHelper.rewriteAgentFrom(packet, route);
+        DefaultRepository.INSTANCE.save(packet);
         Message message = packet.getMessage();
         int contentType = message.getContentType();
         if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {

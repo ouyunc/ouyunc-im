@@ -62,7 +62,8 @@ public final class SynAckMessageBiProcessor extends AbstractMessageBiProcessor<B
                 MessageServerContext.clusterClientMissAckTimesCache.delete(remoteServerAddress);
                 // 只把租约仍活的节点放回可投递池；get(poolMap) 会无脑建连，不能当发现手段
                 if (NodeLeaseKeeper.hasLiveLease(remoteServerAddress)) {
-                    MessageClientPool.ensurePool(remoteServerAddress);
+                    ThreadPoolManager.messageProcessorExecutor().submit(() ->
+                            MessageClientPool.ensurePool(remoteServerAddress));
                 }
             }
         });

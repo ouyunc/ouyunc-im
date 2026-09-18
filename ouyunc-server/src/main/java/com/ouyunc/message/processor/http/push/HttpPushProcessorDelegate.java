@@ -2,6 +2,7 @@ package com.ouyunc.message.processor.http.push;
 
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.HttpResponseCodeEnum;
+import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.message.http.HttpPipelineException;
 import com.ouyunc.message.processor.http.push.delivery.HttpProcessor;
@@ -42,7 +43,9 @@ public final class HttpPushProcessorDelegate {
         if (packet == null || packet.getMessage() == null) {
             return;
         }
-        DefaultRepository.INSTANCE.save(packet);
+        if (packet.getMessageType() != MessageTypeEnum.CUSTOMER_SERVICE.getType()) {
+            DefaultRepository.INSTANCE.save(packet);
+        }
         HttpProcessor strategy = HttpPushProcessorStrategies.get(packet.getMessageType());
         if (strategy == null) {
             log.error("HTTP 推送投递不支持 messageType={}", packet.getMessageType());

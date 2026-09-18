@@ -1,6 +1,7 @@
 package com.ouyunc.core.codec;
 
 
+import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.utils.PacketReaderWriterUtil;
@@ -51,15 +52,14 @@ public class PacketCodec extends ByteToMessageCodec<Packet> {
     }
 
     /**
-     * @Author fzx
-     * @Description 解码，需要处理半包粘包,如果长时间不out出去，则会消息堆积
-     * @param ctx
-     * @param in
-     * @param out
-     * @return void
+     * 解码：完整包才消费。半包直接 return，由 {@code ByteToMessageDecoder} 累计，禁止抛错关连。
+     * 有前置 LengthFieldBasedFrameDecoder 时这里是双保险。
      */
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+        if (!hasCompletePacket(in)) {
+            return;
+        }
         Packet packet = PacketReaderWriterUtil.readByteBuf2Packet(in);
         if (!verify(packet, ctx)) {
             log.error("协议包:{} 解码后校验失败,开始关闭通道channel.", packet);
@@ -67,6 +67,20 @@ public class PacketCodec extends ByteToMessageCodec<Packet> {
             return;
         }
         out.add(packet);
+    }
+
+    /**
+     * 可读字节不够一帧则等待；非法长度交给 {@code readByteBuf2Packet} 拒绝。
+     */
+    private static boolean hasCompletePacket(ByteBuf in) {
+        if (in.readableBytes() < MessageConstant.PACKET_BASE_LENGTH) {
+            return false;
+        }
+        int messageLength = in.getInt(in.readerIndex() + MessageConstant.LENGTH_FIELD_OFFSET);
+        if (messageLength < 0 || messageLength > MessageConstant.MAX_MESSAGE_CONTENT_LENGTH) {
+            return true;
+        }
+        return in.readableBytes() >= MessageConstant.PACKET_BASE_LENGTH + messageLength;
     }
 
 }

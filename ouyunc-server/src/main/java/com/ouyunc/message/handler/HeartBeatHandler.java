@@ -36,7 +36,7 @@ public class HeartBeatHandler extends SimpleChannelInboundHandler<Packet> {
         // 由于所有消息都会经过心跳处理器，所以这里对真正需要心跳处理的数据进行拦截处理，其他的数据直接放行不做处理
         // 需要判断是否是心跳的消息类型
         if (MessageTypeEnum.PING_PONG.getType() != packet.getMessageType()) {
-            // 交给下面业务处理器去处理
+            ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_READ_TIMEOUT_TIMES, null);
             ctx.fireChannelRead(packet);
             return;
         }

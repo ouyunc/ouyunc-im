@@ -202,10 +202,10 @@ final class WsHandshakeSupport {
                                 true,
                                 false,
                                 WS_FILTER_PROVIDER,
-                                NumberConstant.NUMBER_0
+                                MessageConstant.MAX_WEBSOCKET_FRAME_SIZE
                         ), new DeflateFrameServerExtensionHandshaker(
                                 DeflateFrameServerExtensionHandshaker.DEFAULT_COMPRESSION_LEVEL,
-                                NumberConstant.NUMBER_0)))
+                                MessageConstant.MAX_WEBSOCKET_FRAME_SIZE)))
                 .addLast(MessageConstant.WS_SERVER_PROTOCOL_HANDLER, new WebSocketServerProtocolHandler(
                         MessageServerContext.serverProperties().getWebsocketPath(),
                         null, true, MessageConstant.MAX_WEBSOCKET_FRAME_SIZE))

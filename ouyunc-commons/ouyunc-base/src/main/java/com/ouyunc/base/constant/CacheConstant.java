@@ -74,6 +74,11 @@ public class CacheConstant {
     /** appKey 连接配额 HASH */
     private static final String IM_QUOTA = "im:qa:";
 
+    /**
+     * 好友 ZSET 完整性哨兵。增量 ZADD 不得写入；没有该 member 时 ZSCORE 未命中必须回源 MySQL。
+     */
+    public static final String FRIEND_ZSET_INIT_MEMBER = "_i";
+
     /***
      * 用户
      */
@@ -382,6 +387,13 @@ public class CacheConstant {
      */
     public static String buildAppKeyConnQuotaHashCacheKey(String appKey) {
         return OUYUNC + IM_QUOTA + withHashTag(sanitizeAppKeyToken(appKey));
+    }
+
+    /**
+     * 配额 HASH 扫描模式。本机连接为 0 时仍要扫到死节点残留 field。
+     */
+    public static String appKeyConnQuotaKeyPattern() {
+        return OUYUNC + IM_QUOTA + "*";
     }
 
     /**

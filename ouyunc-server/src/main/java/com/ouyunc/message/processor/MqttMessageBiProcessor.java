@@ -35,7 +35,8 @@ public final class MqttMessageBiProcessor extends AbstractMessageBiProcessor<Byt
     @Override
     public Mono<Boolean> preProcess(ChannelHandlerContext ctx, Packet packet) {
         // CONNECT 尚未登录，不归档；其它 MQTT 包认证通过后再归档
-        if (MqttMessageContentTypeEnum.MQTT_CONNECT.getType() == packet.getMessage().getContentType()) {
+        if (MqttMessageContentTypeEnum.MQTT_CONNECT.getType() == packet.getMessage().getContentType()
+                || MqttMessageContentTypeEnum.MQTT_PINGREQ.getType() == packet.getMessage().getContentType()) {
             return Mono.just(true);
         }
         if (!AuthValidator.INSTANCE.verify(packet, ctx)) {

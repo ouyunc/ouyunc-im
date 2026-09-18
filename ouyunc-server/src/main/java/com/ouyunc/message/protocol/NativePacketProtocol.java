@@ -160,7 +160,7 @@ public enum NativePacketProtocol implements PacketProtocol {
         public void doDispatcher(ChannelHandlerContext ctx,  Object msg) {
             ctx.channel().attr(protocolAttrKey).set(this);
             ChannelPipeline pipeline = ctx.pipeline();
-            pipeline.addLast(MessageConstant.MQTT_DECODER_HANDLER, new MqttDecoder())
+            pipeline.addLast(MessageConstant.MQTT_DECODER_HANDLER, new MqttDecoder(MessageConstant.MAX_FRAME_LENGTH))
                     .addLast(MessageConstant.MQTT_ENCODER_HANDLER, MqttEncoder.INSTANCE)
                     .addLast(MessageConstant.CONVERT_2_PACKET_HANDLER, new Convert2PacketHandler())
                     // 统一业务入口：preProcess → process → postProcess
