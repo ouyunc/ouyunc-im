@@ -30,7 +30,7 @@ import reactor.core.publisher.Mono;
  * qos外部客户端已经收到消息,只有开启qos 且在服务端模式下才会处理相关逻辑。
  * ACK 取消重试必须绑定已认证 Channel 的 identity + deviceType。
  * C2S 正文固定 JSON：ackId=下行 packetId，messageId=原客户端消息 id。
- * 任务在始发节点：本机有则取消，否则按 originServerAddress 转回始发节点。
+ * 任务在始发节点：本机有则取消，否则按 originServerAddress 转集群包给 {@link ClusterQosRetryCancelMessageBiProcessor}。
  * 不给接收方回 S2C。C2S 控制包应为 qos=0。
  **/
 public final class QosC2SMessageBiProcessor extends AbstractMessageBiProcessor<Byte> {

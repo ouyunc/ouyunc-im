@@ -12,10 +12,11 @@ import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
 /**
- * 集群内取消始发节点的 SERVER QoS 下行重试。不走登录鉴权。
+ * 集群内部控制包：落地节点把已校验的 C2S ACK 转回始发节点，取消该端 SERVER QoS 下行重试。
+ * 只走集群 Channel，不走客户端登录鉴权。客户端 ACK 仍由 {@link QosC2SMessageBiProcessor} 处理。
  */
-public final class QosRetryCancelMessageBiProcessor extends AbstractMessageBiProcessor<Byte> {
-    private static final Logger log = LoggerFactory.getLogger(QosRetryCancelMessageBiProcessor.class);
+public final class ClusterQosRetryCancelMessageBiProcessor extends AbstractMessageBiProcessor<Byte> {
+    private static final Logger log = LoggerFactory.getLogger(ClusterQosRetryCancelMessageBiProcessor.class);
 
     @Override
     public MessageType type() {
@@ -31,7 +32,7 @@ public final class QosRetryCancelMessageBiProcessor extends AbstractMessageBiPro
             QosRetryCancelContent content = JSON.parseObject(
                     packet.getMessage().getContent(), QosRetryCancelContent.class);
             if (content == null) {
-                log.warn("QOS_RETRY_CANCEL 载荷解析失败 packetId={}", packet.getPacketId());
+                log.warn("集群 QOS_RETRY_CANCEL 载荷解析失败 packetId={}", packet.getPacketId());
                 return;
             }
             QosRetryScheduler.onClusterCancel(content);
