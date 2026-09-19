@@ -65,7 +65,8 @@ public final class GroupMembershipSupport {
     }
 
     /**
-     * 群成员 identity 集合。权威回源失败抛 {@link GroupMembershipLoadException}，不得当成空群。
+     * 群成员 identity 集合。热路径只读 Redis；INIT 缺失才 MySQL 灌 Redis，不把部分 ZSET 当完整名单。
+     * 权威回源失败抛 {@link GroupMembershipLoadException}，不得当成空群。
      */
     @SuppressWarnings("unchecked")
     public Set<String> groupUsersIdentity(Packet packet) {
@@ -78,31 +79,57 @@ public final class GroupMembershipSupport {
         if (cached != null) {
             return cached;
         }
+        ensureGroupMemberRoster(appKey, groupId);
         Set<String> fromRedis = loadGroupUserIdsByScan(cacheKey);
-        if (fromRedis != null && !fromRedis.isEmpty()) {
+        if (fromRedis == null) {
+            fromRedis = Set.of();
+        }
+        if (hasGroupMemberInit(appKey, groupId)) {
             return snapshotIdentities(cacheKey, fromRedis);
         }
-        String versionBefore = currentRelationVersion(appKey, groupId);
-        List<GroupUserEntity> dbMembers;
-        dbMembers = loadAllGroupUsersFromAuthority(appKey, groupId);
-        if (dbMembers.isEmpty()) {
-            // Redis miss 且库中确认无成员：禁止把空集写入 Caffeine，避免误当成「群已空」
-            return Set.of();
+        // CAS 未标 INIT：本条用当前 Redis 扇出，不写 Caffeine，避免钉死残缺名单
+        return Set.copyOf(fromRedis);
+    }
+
+    /**
+     * INIT 缺失时把 MySQL 全量灌进 Redis；有 INIT 后名单/扇出不再扫库。
+     */
+    private void ensureGroupMemberRoster(String appKey, String groupId) {
+        if (hasGroupMemberInit(appKey, groupId)) {
+            return;
         }
-        if (!rebuildGroupMemberRedis(appKey, groupId, dbMembers, versionBefore)) {
-            // 版本已变：不覆盖；尽量读回并发写入后的 Redis
-            Set<String> after = loadGroupUserIdsByScan(cacheKey);
-            if (after != null && !after.isEmpty()) {
-                return snapshotIdentities(cacheKey, after);
+        for (int attempt = 0; attempt < 2; attempt++) {
+            if (hasGroupMemberInit(appKey, groupId)) {
+                return;
+            }
+            String versionBefore = currentRelationVersion(appKey, groupId);
+            List<GroupUserEntity> dbMembers = loadAllGroupUsersFromAuthority(appKey, groupId);
+            if (rebuildGroupMemberRedis(appKey, groupId, dbMembers, versionBefore)) {
+                return;
             }
         }
-        Set<String> ids = new HashSet<>();
-        for (GroupUserEntity member : dbMembers) {
-            if (member.getUserId() != null) {
-                ids.add(member.getUserId());
-            }
+    }
+
+    private boolean hasGroupMemberInit(String appKey, String groupId) {
+        try {
+            Boolean exists = infra.stringRedisTemplate.hasKey(
+                    CacheConstant.buildGroupUserInitCacheKey(appKey, groupId));
+            return Boolean.TRUE.equals(exists);
+        } catch (Exception e) {
+            log.warn("读取群成员 INIT 失败 appKey={} groupId={}", appKey, groupId, e);
+            return false;
         }
-        return snapshotIdentities(cacheKey, ids);
+    }
+
+    private boolean hasUserGroupsInit(String appKey, String userId) {
+        try {
+            Boolean exists = infra.stringRedisTemplate.hasKey(
+                    CacheConstant.buildUserGroupsInitCacheKey(appKey, userId));
+            return Boolean.TRUE.equals(exists);
+        } catch (Exception e) {
+            log.warn("读取用户加群 INIT 失败 appKey={} userId={}", appKey, userId, e);
+            return false;
+        }
     }
 
     /**
@@ -183,20 +210,20 @@ public final class GroupMembershipSupport {
     }
 
     public long groupMemberCount(String appKey, String groupId) {
-        Long zcard = infra.stringRedisTemplate.opsForZSet().zCard(
-                CacheConstant.buildGroupUserCacheKey(appKey, groupId));
-        if (zcard != null && zcard > 0) {
-            return zcard;
+        if (hasGroupMemberInit(appKey, groupId)) {
+            Long zcard = infra.stringRedisTemplate.opsForZSet().zCard(
+                    CacheConstant.buildGroupUserCacheKey(appKey, groupId));
+            return zcard == null ? 0L : zcard;
         }
         return countFromDb(JdbcSqlDialectHolder.countGroupUsersByGroup(),
                 GroupUserEntity.Fields.groupId, groupId, appKey);
     }
 
     public long userGroupCount(String appKey, String userId) {
-        Long zcard = infra.stringRedisTemplate.opsForZSet().zCard(
-                CacheConstant.buildUserGroupsCacheKey(appKey, userId));
-        if (zcard != null && zcard > 0) {
-            return zcard;
+        if (hasUserGroupsInit(appKey, userId)) {
+            Long zcard = infra.stringRedisTemplate.opsForZSet().zCard(
+                    CacheConstant.buildUserGroupsCacheKey(appKey, userId));
+            return zcard == null ? 0L : zcard;
         }
         return countFromDb(JdbcSqlDialectHolder.countGroupsByUser(),
                 GroupUserEntity.Fields.userId, userId, appKey);
@@ -241,6 +268,7 @@ public final class GroupMembershipSupport {
                                             String expectedVersion) {
         String zsetKey = CacheConstant.buildGroupUserCacheKey(appKey, groupId);
         String versionKey = CacheConstant.buildGroupRelationVersionCacheKey(appKey, groupId);
+        String initKey = CacheConstant.buildGroupUserInitCacheKey(appKey, groupId);
         List<String> args = new ArrayList<>();
         args.add(expectedVersion == null ? "0" : expectedVersion);
         List<GroupUserEntity> safeMembers = members == null ? List.of() : members;
@@ -262,7 +290,7 @@ public final class GroupMembershipSupport {
         }
         DefaultRedisScript<Long> script = new DefaultRedisScript<>(
                 LuaScriptEnum.GROUP_MEMBER_REBUILD_CAS_SCRIPT.getScript(), Long.class);
-        Long ok = infra.stringRedisTemplate.execute(script, List.of(zsetKey, versionKey), args.toArray());
+        Long ok = infra.stringRedisTemplate.execute(script, List.of(zsetKey, versionKey, initKey), args.toArray());
         if (ok == null || ok != 1L) {
             log.warn("群成员回源 CAS 未命中 appKey={} groupId={} expectedVersion={}", appKey, groupId, expectedVersion);
             return false;
@@ -308,7 +336,7 @@ public final class GroupMembershipSupport {
         return StringUtils.isBlank(raw) ? "0" : raw.trim();
     }
 
-    /** 加群/退群等关系变更后递增，仅用于 Redis 空名单回源重建时的 CAS，不出现在群聊扇出热路径。 */
+    /** 退群/踢人等关系变更后递增，仅用于名单回源 CAS；入群须与 ZADD 同 pipeline INCR。 */
     public void bumpGroupRelationVersion(String appKey, String groupId) {
         if (StringUtils.isAnyBlank(appKey, groupId)) {
             return;
@@ -539,13 +567,25 @@ public final class GroupMembershipSupport {
 
     @SuppressWarnings("unchecked")
     public Set<String> groupManagerAndLeaderUsersIdentity(Packet packet) {
-        return infra.stringRedisTemplate.opsForZSet().rangeByScore(CacheConstant.buildGroupUserCacheKey(packet.getMessage().getMetadata().getAppKey(), packet.getMessage().getTo()), GroupUserPost.MANAGER.value(), GroupUserPost.LEADER.value());
+        Message message = packet.getMessage();
+        String appKey = message.getMetadata().getAppKey();
+        String groupId = message.getTo();
+        ensureGroupMemberRoster(appKey, groupId);
+        return infra.stringRedisTemplate.opsForZSet().rangeByScore(
+                CacheConstant.buildGroupUserCacheKey(appKey, groupId),
+                GroupUserPost.MANAGER.value(), GroupUserPost.LEADER.value());
     }
 
     @SuppressWarnings("unchecked")
     public Map<String, Double> groupManagerAndLeaderUsersIdentityAndPost(Packet packet) {
+        Message message = packet.getMessage();
+        String appKey = message.getMetadata().getAppKey();
+        String groupId = message.getTo();
+        ensureGroupMemberRoster(appKey, groupId);
         Map<String, Double> groupManagerAndLeaderUsersIdentityAndPost = new HashMap<>();
-        Set<ZSetOperations.TypedTuple<String>> tuples = infra.stringRedisTemplate.opsForZSet().rangeByScoreWithScores(CacheConstant.buildGroupUserCacheKey(packet.getMessage().getMetadata().getAppKey(), packet.getMessage().getTo()), GroupUserPost.MANAGER.value(), GroupUserPost.LEADER.value());
+        Set<ZSetOperations.TypedTuple<String>> tuples = infra.stringRedisTemplate.opsForZSet().rangeByScoreWithScores(
+                CacheConstant.buildGroupUserCacheKey(appKey, groupId),
+                GroupUserPost.MANAGER.value(), GroupUserPost.LEADER.value());
         if (tuples != null && !tuples.isEmpty()) {
             for (ZSetOperations.TypedTuple<String> tuple : tuples) {
                 groupManagerAndLeaderUsersIdentityAndPost.put(tuple.getValue(), tuple.getScore());
@@ -594,12 +634,29 @@ public final class GroupMembershipSupport {
                     .orElse(null);
             if (groupUserEntity != null) {
                 updateGroupUserCache(cacheKey, groupUserEntity);
+                cacheMemberPositive(appKey, groupId, memberId, groupUserEntity.getPost());
                 return true;
             }
             return false;
         } catch (Exception e) {
             log.error("从MySQL查询群成员异常, appKey: {}, groupId: {}, memberId: {}", appKey, groupId, memberId, e);
             return null;
+        }
+    }
+
+    /**
+     * 点查确认在群后只 ZADD 该成员，不写 INIT（残缺名单不能标成完整）。
+     */
+    private void cacheMemberPositive(String appKey, String groupId, String memberId, Integer post) {
+        if (StringUtils.isAnyBlank(appKey, groupId, memberId)) {
+            return;
+        }
+        double score = post == null ? GroupUserPost.ORDINARY.value() : post;
+        try {
+            infra.stringRedisTemplate.opsForZSet().add(
+                    CacheConstant.buildGroupUserCacheKey(appKey, groupId), memberId, score);
+        } catch (Exception e) {
+            log.warn("回写群成员正缓存失败 appKey={} groupId={} memberId={}", appKey, groupId, memberId, e);
         }
     }
 
@@ -792,11 +849,16 @@ public final class GroupMembershipSupport {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         boolean bound = session.saveMessageWithSession(packet, expireTime, CacheConstant.buildMessageCacheKey(metadata.getAppKey(), packet.getPacketId()), CacheConstant.buildGroupRequestSessionCacheKey(metadata.getAppKey(), groupId, requestSessionId), consumer, (redisConnection, msg, ak, f, t) -> {
+            // 先 INCR 再 ZADD，避免回源 Lua 在 DEL 后把并发入群标成完整名单
+            byte[] versionKeyBytes = infra.stringSerializer.serialize(
+                    CacheConstant.buildGroupRelationVersionCacheKey(metadata.getAppKey(), groupId));
+            if (versionKeyBytes != null) {
+                redisConnection.commands().incr(versionKeyBytes);
+            }
             redisConnection.zSetCommands().zAdd(infra.stringSerializer.serialize(CacheConstant.buildGroupUserCacheKey(metadata.getAppKey(), groupId)), GroupUserPost.ORDINARY.value(), infra.stringSerializer.serialize(joiner));
             redisConnection.zSetCommands().zAdd(infra.stringSerializer.serialize(CacheConstant.buildUserGroupsCacheKey(metadata.getAppKey(), joiner)), msg.getMetadata().getServerTime(), infra.stringSerializer.serialize(groupId));
         });
         if (bound) {
-            bumpGroupRelationVersion(metadata.getAppKey(), groupId);
             RelationLocalCache.onGroupJoin(metadata.getAppKey(), groupId, joiner);
             RelationCacheInvalidatePublisher.publish(
                     RelationCacheInvalidateEvent.groupJoin(metadata.getAppKey(), groupId, joiner));

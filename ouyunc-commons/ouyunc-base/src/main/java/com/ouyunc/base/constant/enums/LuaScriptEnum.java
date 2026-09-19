@@ -295,20 +295,20 @@ public enum LuaScriptEnum {
             """, "lm CAS 替换"),
 
     /**
-     * 群成员 ZSet 回源重建 CAS：仅当 relationVersion 仍等于 expected 且当前 ZSET 为空时 DEL+ZADD。
-     * 非空 ZSET 直接返回 0，避免并发入群被整表覆盖。
-     * KEYS[1]=memberZSet KEYS[2]=versionKey
-     * ARGV[1]=expectedVersion ARGV[2]=memberCount ARGV[3..]=userId,score 交替
-     * 返回 1=已重建，0=版本已变或 ZSET 非空跳过。
+     * 群成员 ZSet 回源重建 CAS：version 未变且 INIT 缺失时 DEL+ZADD 并写 INIT。
+     * 已有 INIT 视为完整名单，不覆盖并发入群；ZCARD>0 不再当成完整。
+     * KEYS[1]=memberZSet KEYS[2]=versionKey KEYS[3]=initKey
+     * ARGV[1]=expectedVersion ARGV[2]=memberCount ARGV[3..]=score,member 交替
+     * 返回 1=已重建并写 INIT，0=版本已变或已有 INIT。
      */
-    GROUP_MEMBER_REBUILD_CAS_SCRIPT("2", """
+    GROUP_MEMBER_REBUILD_CAS_SCRIPT("3", """
             local expected = tostring(ARGV[1])
             local cur = redis.call('GET', KEYS[2])
             if cur == false or cur == nil then cur = '0' else cur = tostring(cur) end
             if cur ~= expected then
                 return 0
             end
-            if redis.call('EXISTS', KEYS[1]) == 1 and redis.call('ZCARD', KEYS[1]) > 0 then
+            if redis.call('EXISTS', KEYS[3]) == 1 then
                 return 0
             end
             redis.call('DEL', KEYS[1])
@@ -321,8 +321,39 @@ public enum LuaScriptEnum {
                     redis.call('ZADD', KEYS[1], score, member)
                 end
             end
+            cur = redis.call('GET', KEYS[2])
+            if cur == false or cur == nil then cur = '0' else cur = tostring(cur) end
+            if cur ~= expected then
+                redis.call('DEL', KEYS[3])
+                return 0
+            end
+            redis.call('SET', KEYS[3], '1')
             return 1
             """, "群成员回源 CAS 重建"),
+
+    /**
+     * 名单一致性回源（好友 ZSET / 用户加群 ZSET）：INIT 缺失时 DEL+ZADD 并写 INIT。
+     * KEYS[1]=zset KEYS[2]=initKey
+     * ARGV[1]=count ARGV[2..]=score,member 交替
+     * 返回 1=已重建，0=已有 INIT。
+     */
+    USER_GROUPS_REBUILD_SCRIPT("2", """
+            if redis.call('EXISTS', KEYS[2]) == 1 then
+                return 0
+            end
+            redis.call('DEL', KEYS[1])
+            local n = tonumber(ARGV[1]) or 0
+            for i = 1, n do
+                local base = (i - 1) * 2
+                local score = tonumber(ARGV[base + 2]) or 0
+                local member = ARGV[base + 3]
+                if member ~= nil and member ~= '' then
+                    redis.call('ZADD', KEYS[1], score, member)
+                end
+            end
+            redis.call('SET', KEYS[2], '1')
+            return 1
+            """, "用户加群名单回源重建"),
 
     /**
      * 客服 ticket Hash 已读 offset max-merge。

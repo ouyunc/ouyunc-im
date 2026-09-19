@@ -14,6 +14,7 @@ import com.ouyunc.base.model.RequestSession;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.relation.RelationCacheInvalidatePublisher;
 import com.ouyunc.core.relation.RelationLocalCache;
+import com.ouyunc.base.constant.enums.LuaScriptEnum;
 import com.ouyunc.base.constant.enums.YesOrNo;
 import com.ouyunc.domain.entity.FriendEntity;
 import com.ouyunc.domain.entity.MongoFriendEntity;
@@ -25,10 +26,12 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisStringCommands;
 import org.springframework.data.redis.core.RedisCallback;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.types.Expiration;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -122,6 +125,10 @@ public final class FriendRepositorySupport {
         } catch (Exception e) {
             log.error("Redis 查询好友关系异常, appKey: {}, from: {}, to: {}", appKey, from, to, e);
         }
+        if (hasFriendRosterInit(appKey, from)) {
+            RelationLocalCache.FRIEND.put(RelationLocalCache.friendKey(appKey, from, to), false);
+            return false;
+        }
         Boolean dbFriend = loadFriendExistsFromDb(appKey, from, to);
         if (dbFriend == null) {
             return false;
@@ -153,7 +160,7 @@ public final class FriendRepositorySupport {
     }
 
     /**
-     * 只把确认存在的好友写入 ZSET，不写完整性哨兵。
+     * 只把确认存在的好友写入 ZSET，不写一致性标记（残缺名单不能标成与库一致）。
      */
     private void cacheFriendPositive(String appKey, String ownerId, String friendId) {
         if (appKey == null || ownerId == null || friendId == null || friendId.isBlank()
@@ -171,9 +178,10 @@ public final class FriendRepositorySupport {
     }
 
     /**
-     * 登录/登出通知用 Redis 正缓存，允许不全。历史 {@code _i} 哨兵丢弃。
+     * 登录/登出通知：一致性标记存在则只读 Redis；缺失则灌库后再读，避免漏通知/多通知。
      */
     public Collection<String> getFriendIds(String appKey, String from) {
+        ensureFriendRoster(appKey, from);
         Collection<String> ids = infra.stringRedisTemplate.opsForZSet().range(
                 CacheConstant.buildFriendsCacheKey(appKey, from), NumberConstant.NUMBER_0, NumberConstant.NUMBER_NEGATIVE_1);
         if (ids == null || ids.isEmpty()) {
@@ -182,6 +190,83 @@ public final class FriendRepositorySupport {
         return ids.stream()
                 .filter(id -> id != null && !CacheConstant.FRIEND_ZSET_INIT_MEMBER.equals(id))
                 .toList();
+    }
+
+    /**
+     * INIT 缺失时把 MySQL 全量灌进 Redis；有 INIT 后通知名单不再扫库。
+     */
+    private void ensureFriendRoster(String appKey, String ownerId) {
+        if (hasFriendRosterInit(appKey, ownerId)) {
+            return;
+        }
+        List<FriendEntity> dbFriends = loadAllFriendsFromDb(appKey, ownerId);
+        if (dbFriends == null) {
+            return;
+        }
+        rebuildFriendRosterRedis(appKey, ownerId, dbFriends);
+    }
+
+    private boolean hasFriendRosterInit(String appKey, String ownerId) {
+        try {
+            return Boolean.TRUE.equals(infra.stringRedisTemplate.hasKey(
+                    CacheConstant.buildFriendsInitCacheKey(appKey, ownerId)));
+        } catch (Exception e) {
+            log.warn("读取好友名单一致性标记失败 appKey={} ownerId={}", appKey, ownerId, e);
+            return false;
+        }
+    }
+
+    private List<FriendEntity> loadAllFriendsFromDb(String appKey, String ownerId) {
+        try {
+            List<FriendEntity> list = infra.jdbcClient.sql(JdbcSqlDialectHolder.selectAllFriend())
+                    .param(FriendEntity.Fields.userId, ownerId)
+                    .param(UserEntity.Fields.appKey, appKey)
+                    .query(FriendEntity.class)
+                    .list();
+            if (list == null || list.isEmpty()) {
+                return List.of();
+            }
+            if (list.size() > MessageConstant.FRIEND_ROSTER_FULL_LOAD_LIMIT) {
+                log.warn("好友名单回源截断 appKey={} ownerId={} size={}", appKey, ownerId, list.size());
+                return list.subList(0, MessageConstant.FRIEND_ROSTER_FULL_LOAD_LIMIT);
+            }
+            return list;
+        } catch (Exception e) {
+            log.error("MySQL 查询全部好友失败 appKey={} ownerId={}", appKey, ownerId, e);
+            return null;
+        }
+    }
+
+    private void rebuildFriendRosterRedis(String appKey, String ownerId, List<FriendEntity> friends) {
+        String zsetKey = CacheConstant.buildFriendsCacheKey(appKey, ownerId);
+        String initKey = CacheConstant.buildFriendsInitCacheKey(appKey, ownerId);
+        List<FriendEntity> safe = friends == null ? List.of() : friends;
+        List<String> args = new ArrayList<>();
+        int count = 0;
+        for (FriendEntity row : safe) {
+            if (row == null || row.getFriendUserId() == null
+                    || CacheConstant.FRIEND_ZSET_INIT_MEMBER.equals(row.getFriendUserId())) {
+                continue;
+            }
+            count++;
+        }
+        args.add(String.valueOf(count));
+        for (FriendEntity row : safe) {
+            if (row == null || row.getFriendUserId() == null
+                    || CacheConstant.FRIEND_ZSET_INIT_MEMBER.equals(row.getFriendUserId())) {
+                continue;
+            }
+            long score = row.getJoinTime() == null ? 0L : row.getJoinTime();
+            args.add(String.valueOf(score));
+            args.add(row.getFriendUserId());
+        }
+        try {
+            DefaultRedisScript<Long> script = new DefaultRedisScript<>(
+                    LuaScriptEnum.USER_GROUPS_REBUILD_SCRIPT.getScript(), Long.class);
+            infra.stringRedisTemplate.execute(script, List.of(zsetKey, initKey), args.toArray());
+        } catch (Exception e) {
+            log.warn("好友名单回源失败 appKey={} ownerId={}", appKey, ownerId, e);
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -422,13 +507,18 @@ public final class FriendRepositorySupport {
         boolean shielded = shieldEntity != null && YesOrNo.YES.getCode().equals(shieldEntity.getShield());
         boolean friend = friendHit;
         if (!friendHit) {
-            Boolean dbFriend = loadFriendExistsFromDb(appKey, to, from);
-            if (dbFriend != null) {
-                friend = dbFriend;
-                if (friend) {
-                    cacheFriendPositive(appKey, to, from);
+            if (hasFriendRosterInit(appKey, to)) {
+                friend = false;
+                RelationLocalCache.FRIEND.put(RelationLocalCache.friendKey(appKey, to, from), false);
+            } else {
+                Boolean dbFriend = loadFriendExistsFromDb(appKey, to, from);
+                if (dbFriend != null) {
+                    friend = dbFriend;
+                    if (friend) {
+                        cacheFriendPositive(appKey, to, from);
+                    }
+                    RelationLocalCache.FRIEND.put(RelationLocalCache.friendKey(appKey, to, from), friend);
                 }
-                RelationLocalCache.FRIEND.put(RelationLocalCache.friendKey(appKey, to, from), friend);
             }
         } else {
             RelationLocalCache.FRIEND.put(RelationLocalCache.friendKey(appKey, to, from), true);

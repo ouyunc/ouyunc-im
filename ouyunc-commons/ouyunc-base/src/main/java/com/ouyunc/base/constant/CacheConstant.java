@@ -89,6 +89,11 @@ public class CacheConstant {
      */
     private static final String GROUP_USERS = "gu:";
 
+    /**
+     * 群成员 ZSET 完整性标记，与 {@code gu:} 同槽；禁止把哨兵写进 ZSET member。
+     */
+    private static final String GROUP_USERS_INIT = "gui:";
+
     /** 群成员关系版本（回源 CAS） */
     private static final String GROUP_RELATION_VERSION = "grv:";
 
@@ -116,6 +121,11 @@ public class CacheConstant {
      */
     private static final String FRIENDS = "f:";
 
+    /**
+     * 好友 ZSET 与库一致的标记，与 {@code f:} 同槽；禁止把哨兵写进 ZSET member。
+     */
+    private static final String FRIENDS_INIT = "fi:";
+
     /***
      * 配置， 我的好友信息的配置
      */
@@ -125,6 +135,11 @@ public class CacheConstant {
      * 用户-群列表
      */
     private static final String GROUPS = "g:";
+
+    /**
+     * 用户已加入群 ZSET 完整性标记，与 {@code g:} 同槽。
+     */
+    private static final String USER_GROUPS_INIT = "ugi:";
 
     /***
      * 群
@@ -404,10 +419,17 @@ public class CacheConstant {
     }
 
     /**
-     * 群成员 ZSET：槽 {@code {appKey:groupId}}，与 grv/shield 同槽。
+     * 群成员 ZSET：槽 {@code {appKey:groupId}}，与 grv/shield/gui 同槽。
      */
     public static String buildGroupUserCacheKey(String appKey, String groupId) {
         return buildAggregateCacheKey(appKey, groupId) + GROUP_USERS;
+    }
+
+    /**
+     * 群成员名单已完整灌入 Redis 的标记 STRING，与成员 ZSET 同槽。
+     */
+    public static String buildGroupUserInitCacheKey(String appKey, String groupId) {
+        return buildAggregateCacheKey(appKey, groupId) + GROUP_USERS_INIT;
     }
 
     /**
@@ -455,6 +477,13 @@ public class CacheConstant {
     }
 
     /**
+     * 好友名单已与 MySQL 对齐的标记 STRING，与好友 ZSET 同槽。
+     */
+    public static String buildFriendsInitCacheKey(String appKey, String identity) {
+        return buildAggregateCacheKey(appKey, identity) + FRIENDS_INIT;
+    }
+
+    /**
      * 好友配置：槽按 from_to 对
      */
     public static String buildFriendsConfigCacheKey(String appKey, String from, String to) {
@@ -467,6 +496,13 @@ public class CacheConstant {
      */
     public static String buildUserGroupsCacheKey(String appKey, String userId) {
         return buildAggregateCacheKey(appKey, userId) + GROUPS;
+    }
+
+    /**
+     * 用户已加入群名单已完整灌入 Redis 的标记 STRING，与 user-groups ZSET 同槽。
+     */
+    public static String buildUserGroupsInitCacheKey(String appKey, String userId) {
+        return buildAggregateCacheKey(appKey, userId) + USER_GROUPS_INIT;
     }
 
     /**

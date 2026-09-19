@@ -537,6 +537,16 @@ public class MessageConstant {
     public static final String GROUP_SHIELD_HASH_INIT_FIELD = "_i";
 
     /**
+     * 关系名单（好友/群成员/用户加群）与库一致的 STRING 值。有此 key 才把 Redis 当完整名单通知/扇出。
+     */
+    public static final String GROUP_ROSTER_INIT_VALUE = "1";
+
+    /**
+     * 登录通知等全量灌好友 ZSET 的上限，防止异常膨胀。
+     */
+    public static final int FRIEND_ROSTER_FULL_LOAD_LIMIT = 5000;
+
+    /**
      * MQTT 报文标识最大值（1~65535）。
      */
     public static final int MQTT_PACKET_ID_MAX = 65535;
