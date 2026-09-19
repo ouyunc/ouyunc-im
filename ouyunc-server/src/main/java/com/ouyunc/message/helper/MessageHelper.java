@@ -2,6 +2,7 @@ package com.ouyunc.message.helper;
 
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.ClusterForwardModeEnum;
+import com.ouyunc.base.constant.enums.SendStatusEnum;
 import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.model.*;
 import com.ouyunc.base.packet.Packet;
@@ -213,7 +214,29 @@ public class MessageHelper {
      * 直连 dest；失败回溯下一跳，最终节点仍是 dest，落地进 Processor 不写客户端。
      */
     public static void sendClusterInternal(Packet packet, String destServerAddress) {
-        sendClusterInternal(packet, destServerAddress, sendResult -> { });
+        sendClusterInternal(packet, destServerAddress, sendResult -> {
+            if (sendResult != null && sendResult.getSendStatus() == SendStatusEnum.SEND_FAIL) {
+                Throwable cause = sendResult.getException();
+                log.warn("集群内部控制包发送失败 type={} packetId={} dest={} cause={}",
+                        packet == null ? null : packet.getMessageType(),
+                        packet == null ? null : packet.getPacketId(),
+                        destServerAddress,
+                        cause == null ? null : cause.getMessage());
+            }
+        });
+    }
+
+    /** Processor 与 RouteHandler 共用：只认 Target 落地机，不用 message.to。 */
+    public static String clusterDest(Packet packet) {
+        if (packet == null || packet.getMessage() == null || packet.getMessage().getMetadata() == null) {
+            return null;
+        }
+        Target target = packet.getMessage().getMetadata().getTarget();
+        if (target == null) {
+            return null;
+        }
+        String dest = target.getTargetServerAddress();
+        return StringUtils.isBlank(dest) ? null : dest;
     }
 
     public static void sendClusterInternal(Packet packet, String destServerAddress, SendCallback sendCallback) {
@@ -304,6 +327,12 @@ public class MessageHelper {
      */
     private static void doSendMessage(Packet originPacket, Target target, SendCallback sendCallback) {
         Metadata originMetadata = originPacket.getMessage().getMetadata();
+        if (originMetadata != null && originMetadata.isInternalForward()) {
+            log.error("doSendMessage 禁止覆盖 INTERNAL 为 CLIENT packetId={} dest={}",
+                    originPacket.getPacketId(), target == null ? null : target.getTargetServerAddress());
+            notifySendFail(originPacket, "内部控制包不得走客户端投递路径", sendCallback);
+            return;
+        }
         originMetadata.setTarget(target);
         String destServerAddress = target.getTargetServerAddress();
         String localServerAddress = MessageServerContext.serverProperties().getLocalServerAddress();

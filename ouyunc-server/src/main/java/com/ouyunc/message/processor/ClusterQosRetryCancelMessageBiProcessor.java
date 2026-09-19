@@ -32,9 +32,13 @@ public final class ClusterQosRetryCancelMessageBiProcessor extends AbstractMessa
             if (packet == null || packet.getMessage() == null) {
                 return;
             }
-            String dest = packet.getMessage().getTo();
+            String dest = MessageHelper.clusterDest(packet);
+            if (StringUtils.isBlank(dest)) {
+                log.warn("集群 QOS_RETRY_CANCEL 缺少 Target.targetServerAddress packetId={}", packet.getPacketId());
+                return;
+            }
             String local = MessageServerContext.serverProperties().getLocalServerAddress();
-            if (StringUtils.isNotBlank(dest) && !dest.equals(local)) {
+            if (!dest.equals(local)) {
                 MessageHelper.sendClusterInternal(packet, dest);
                 return;
             }

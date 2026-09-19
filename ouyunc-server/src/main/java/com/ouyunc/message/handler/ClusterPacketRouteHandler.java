@@ -52,17 +52,21 @@ public class ClusterPacketRouteHandler extends SimpleChannelInboundHandler<Packe
             return;
         }
         if (mode == ClusterForwardModeEnum.INTERNAL) {
-            handleInternalForward(ctx, packet, metadata);
+            handleInternalForward(ctx, packet);
             return;
         }
         handleClientForward(packet, metadata);
     }
 
     /** 内部控制包：本机是最终节点则进 Processor，否则继续发往 dest。 */
-    private static void handleInternalForward(ChannelHandlerContext ctx, Packet packet, Metadata metadata) {
-        String dest = resolveForwardDest(packet, metadata);
+    private static void handleInternalForward(ChannelHandlerContext ctx, Packet packet) {
+        String dest = MessageHelper.clusterDest(packet);
+        if (StringUtils.isBlank(dest)) {
+            log.warn("集群内部控制包缺少 Target.targetServerAddress packetId={}", packet.getPacketId());
+            return;
+        }
         String local = MessageServerContext.serverProperties().getLocalServerAddress();
-        if (StringUtils.isNotBlank(dest) && !dest.equals(local)) {
+        if (!dest.equals(local)) {
             MessageHelper.sendClusterInternal(packet, dest);
             return;
         }
@@ -84,13 +88,5 @@ public class ClusterPacketRouteHandler extends SimpleChannelInboundHandler<Packe
             return;
         }
         MessageHelper.asyncSendMessageWithoutInterceptor(packet, target);
-    }
-
-    private static String resolveForwardDest(Packet packet, Metadata metadata) {
-        Target target = metadata.getTarget();
-        if (target != null && StringUtils.isNotBlank(target.getTargetServerAddress())) {
-            return target.getTargetServerAddress();
-        }
-        return packet.getMessage().getTo();
     }
 }
