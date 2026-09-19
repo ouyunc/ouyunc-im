@@ -325,26 +325,6 @@ public enum LuaScriptEnum {
             """, "群成员回源 CAS 重建"),
 
     /**
-     * 好友 ZSET 全量 INIT。已有哨兵则跳过；否则 DEL 后写入成员 + {@code _i}。
-     * KEYS[1]=friendsZSet ARGV[1]=initMember ARGV[2]=initScore ARGV[3..]=score,member 交替
-     */
-    FRIEND_ROSTER_INIT_SCRIPT("1", """
-            if redis.call('ZSCORE', KEYS[1], ARGV[1]) then
-                return 0
-            end
-            redis.call('DEL', KEYS[1])
-            for i = 3, #ARGV, 2 do
-                local score = tonumber(ARGV[i]) or 0
-                local member = ARGV[i + 1]
-                if member ~= nil and member ~= '' then
-                    redis.call('ZADD', KEYS[1], score, member)
-                end
-            end
-            redis.call('ZADD', KEYS[1], tonumber(ARGV[2]) or 0, ARGV[1])
-            return 1
-            """, "好友名单全量 INIT"),
-
-    /**
      * 客服 ticket Hash 已读 offset max-merge。
      * KEYS[1]=sroHash  ARGV[1]=field  ARGV[2]=incomingOffset  ARGV[3]=ttlMs
      */

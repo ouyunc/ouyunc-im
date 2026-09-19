@@ -321,16 +321,6 @@ public class MessageConstant {
     public static final int IM_LOGIN_SESSION_TTL_SECONDS = IM_APP_KEY_CONN_QUOTA_TTL_SECONDS;
 
     /**
-     * 好友 ZSET 全量回源上限；超过则不写 INIT，避免把截断名单当成完整。
-     */
-    public static final int FRIEND_ZSET_FULL_LOAD_LIMIT = 5000;
-
-    /**
-     * 好友全量 INIT 回源锁 TTL（秒）。
-     */
-    public static final int FRIEND_ROSTER_REBUILD_LOCK_SECONDS = 10;
-
-    /**
      * appKey 配额 Lua 成功返回值（预占/释放/心跳对齐）。
      */
     public static final long IM_APP_KEY_CONN_QUOTA_LUA_OK = 1L;

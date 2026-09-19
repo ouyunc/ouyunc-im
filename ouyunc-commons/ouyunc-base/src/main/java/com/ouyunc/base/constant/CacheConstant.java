@@ -75,7 +75,7 @@ public class CacheConstant {
     private static final String IM_QUOTA = "im:qa:";
 
     /**
-     * 好友 ZSET 完整性哨兵。增量 ZADD 不得写入；没有该 member 时 ZSCORE 未命中必须回源 MySQL。
+     * 历史好友 ZSET 完整性哨兵。新代码不再写入；读名单时过滤，避免登录通知把 {@code _i} 当作用户。
      */
     public static final String FRIEND_ZSET_INIT_MEMBER = "_i";
 
@@ -452,13 +452,6 @@ public class CacheConstant {
      */
     public static String buildFriendsCacheKey(String appKey, String identity) {
         return buildAggregateCacheKey(appKey, identity) + FRIENDS;
-    }
-
-    /**
-     * 好友全量 INIT 回源锁，与好友 ZSET 同 {@code {appKey:userId}} 槽。
-     */
-    public static String buildFriendRosterRebuildLockKey(String appKey, String identity) {
-        return buildAggregateCacheKey(appKey, identity) + LOCK + FRIENDS;
     }
 
     /**
