@@ -1,5 +1,6 @@
 package com.ouyunc.message.handler;
 
+import com.ouyunc.base.constant.enums.ClusterForwardModeEnum;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.model.Target;
 import com.ouyunc.base.packet.Packet;
@@ -10,14 +11,16 @@ import com.ouyunc.message.helper.MessageHelper;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Objects;
 
 /**
- * 集群中如果对方客户端不在同一台 server 中需要将消息路由投递到登录的服务中。
- * <p>{@code routed=true} 时按 {@link Target#getTargetServerAddress()} 继续投递；该地址是最终落地机，中间节点不得改写。
+ * 集群入站分流：{@link ClusterForwardModeEnum#CLIENT} 写客户端；
+ * {@link ClusterForwardModeEnum#INTERNAL} 到目标节点后进 Processor，不写客户端。
+ * {@code Target.targetServerAddress} 是最终节点，中间跳不得改写。
  */
 public class ClusterPacketRouteHandler extends SimpleChannelInboundHandler<Packet> {
     private static final Logger log = LoggerFactory.getLogger(ClusterPacketRouteHandler.class);
@@ -33,18 +36,40 @@ public class ClusterPacketRouteHandler extends SimpleChannelInboundHandler<Packe
             return;
         }
         Metadata metadata = packet.getMessage().getMetadata();
-        if (metadata == null || !metadata.isRouted()) {
+        ClusterForwardModeEnum mode = metadata == null
+                ? ClusterForwardModeEnum.NONE
+                : metadata.clusterForwardModeOrNone();
+        if (mode == ClusterForwardModeEnum.NONE) {
             if (!ClusterChannelGuard.isInternalClusterMessage(packet)) {
-                log.warn("拒绝未路由的非集群消息 packetId={} type={}", packet.getPacketId(), packet.getMessageType());
+                log.warn("拒绝未转发的非集群消息 packetId={} type={}", packet.getPacketId(), packet.getMessageType());
                 return;
             }
             ctx.fireChannelRead(packet);
             return;
         }
-        if (!ClusterChannelGuard.allowRoutedDelivery(peer, metadata)) {
-            log.warn("拒绝非法集群路由包 packetId={} peer={}", packet.getPacketId(), peer);
+        if (!ClusterChannelGuard.allowClusterForward(peer, metadata)) {
+            log.warn("拒绝非法集群转发包 packetId={} peer={}", packet.getPacketId(), peer);
             return;
         }
+        if (mode == ClusterForwardModeEnum.INTERNAL) {
+            handleInternalForward(ctx, packet, metadata);
+            return;
+        }
+        handleClientForward(packet, metadata);
+    }
+
+    /** 内部控制包：本机是最终节点则进 Processor，否则继续发往 dest。 */
+    private static void handleInternalForward(ChannelHandlerContext ctx, Packet packet, Metadata metadata) {
+        String dest = resolveForwardDest(packet, metadata);
+        String local = MessageServerContext.serverProperties().getLocalServerAddress();
+        if (StringUtils.isNotBlank(dest) && !dest.equals(local)) {
+            MessageHelper.sendClusterInternal(packet, dest);
+            return;
+        }
+        ctx.fireChannelRead(packet);
+    }
+
+    private static void handleClientForward(Packet packet, Metadata metadata) {
         Target target = metadata.getTarget();
         String localServerAddress = MessageServerContext.serverProperties().getLocalServerAddress();
         if (CollectionUtils.isNotEmpty(metadata.getFanoutTargets())
@@ -59,5 +84,13 @@ public class ClusterPacketRouteHandler extends SimpleChannelInboundHandler<Packe
             return;
         }
         MessageHelper.asyncSendMessageWithoutInterceptor(packet, target);
+    }
+
+    private static String resolveForwardDest(Packet packet, Metadata metadata) {
+        Target target = metadata.getTarget();
+        if (target != null && StringUtils.isNotBlank(target.getTargetServerAddress())) {
+            return target.getTargetServerAddress();
+        }
+        return packet.getMessage().getTo();
     }
 }

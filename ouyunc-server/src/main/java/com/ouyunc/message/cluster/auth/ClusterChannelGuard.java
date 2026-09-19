@@ -16,7 +16,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * 内部协议入口的轻量校验：HMAC 之后只认已认证 Channel；外部入口禁止集群能力。
- * <p>拦的是「能力」（routed / 集群消息类型 / 集群协议号），不是「Packet 帧格式」本身。
+ * <p>拦的是「能力」（clusterForwardMode / 集群消息类型 / 集群协议号），不是「Packet 帧格式」本身。
  * 客户端原生 {@link ProtocolTypeEnum#OUYUNC_CLIENT} 与集群 {@link ProtocolTypeEnum#OUYUNC} 完全分离。</p>
  */
 public final class ClusterChannelGuard {
@@ -27,7 +27,7 @@ public final class ClusterChannelGuard {
     }
 
     /**
-     * WS/HTTP/MQTT 连接上禁止集群 OUYUNC、客户端原生协议号冒充、routed 包与集群消息类型。
+     * WS/HTTP/MQTT 连接上禁止集群 OUYUNC、客户端原生协议号冒充、集群转发包与集群消息类型。
      *
      * @return true 表示已拒绝并关闭连接
      */
@@ -38,23 +38,23 @@ public final class ClusterChannelGuard {
         }
         Metadata metadata = packet.getMessage() == null ? null : packet.getMessage().getMetadata();
         boolean clusterOrNativeClientProtocol = isClusterOrClientNativeProtocol(packet.getProtocol());
-        boolean routed = metadata != null && metadata.isRouted();
+        boolean clusterForward = metadata != null && !metadata.isLocalIngress();
         boolean clusterType = isInternalClusterMessage(packet);
-        if (!clusterOrNativeClientProtocol && !routed && !clusterType) {
+        if (!clusterOrNativeClientProtocol && !clusterForward && !clusterType) {
             return false;
         }
-        log.warn("外部协议连接投递内部/原生能力包，关闭连接 remote={} channelProtocol={} packetProtocol={} routed={} clusterType={}",
+        log.warn("外部协议连接投递内部/原生能力包，关闭连接 remote={} channelProtocol={} packetProtocol={} forwardMode={} clusterType={}",
                 ctx.channel().remoteAddress(),
                 channelProtocol.getProtocol(),
                 packet.getProtocol(),
-                routed,
+                metadata == null ? null : metadata.getClusterForwardMode(),
                 clusterType);
         ctx.close();
         return true;
     }
 
     /**
-     * OUYUNC_CLIENT 通道：协议号必须与 Channel 一致，禁止 routed / 集群消息类型。
+     * OUYUNC_CLIENT 通道：协议号必须与 Channel 一致，禁止集群转发 / 集群消息类型。
      *
      * @return true 表示已拒绝并关闭连接
      */
@@ -68,15 +68,15 @@ public final class ClusterChannelGuard {
         Metadata metadata = packet.getMessage() == null ? null : packet.getMessage().getMetadata();
         boolean protocolMismatch = packet.getProtocol() != ProtocolTypeEnum.OUYUNC_CLIENT.getProtocol()
                 || packet.getProtocolVersion() != ProtocolTypeEnum.OUYUNC_CLIENT.getProtocolVersion();
-        boolean routed = metadata != null && metadata.isRouted();
+        boolean clusterForward = metadata != null && !metadata.isLocalIngress();
         boolean clusterType = isInternalClusterMessage(packet);
-        if (!protocolMismatch && !routed && !clusterType) {
+        if (!protocolMismatch && !clusterForward && !clusterType) {
             return false;
         }
-        log.warn("OUYUNC_CLIENT 连接使用非法能力，关闭连接 remote={} packetProtocol={} routed={} clusterType={}",
+        log.warn("OUYUNC_CLIENT 连接使用非法能力，关闭连接 remote={} packetProtocol={} forwardMode={} clusterType={}",
                 ctx.channel().remoteAddress(),
                 packet.getProtocol(),
-                routed,
+                metadata == null ? null : metadata.getClusterForwardMode(),
                 clusterType);
         ctx.close();
         return true;
@@ -98,10 +98,10 @@ public final class ClusterChannelGuard {
     }
 
     /**
-     * routed 包：对端须与 fromServerAddress 一致；落地必须是本机，中转目标必须仍有租约。
+     * 集群转发包：对端须与 fromServerAddress 一致；落地必须是本机，中转目标必须仍有租约。
      * <p>peer 已由 Channel 认证确定；缺失或不一致的发送节点均拒绝。</p>
      */
-    public static boolean allowRoutedDelivery(String peer, Metadata metadata) {
+    public static boolean allowClusterForward(String peer, Metadata metadata) {
         if (metadata == null) {
             return false;
         }
@@ -127,7 +127,7 @@ public final class ClusterChannelGuard {
         return false;
     }
 
-    /** 未路由的内部包只允许集群心跳/认证，禁止走外部业务 Processor。 */
+    /** 未转发的内部包只允许集群心跳/认证/取消重试，禁止走外部业务 Processor。 */
     public static boolean isInternalClusterMessage(Packet packet) {
         if (packet == null) {
             return false;

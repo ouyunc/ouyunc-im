@@ -1,6 +1,7 @@
 package com.ouyunc.base.model;
 
 
+import com.ouyunc.base.constant.enums.ClusterForwardModeEnum;
 import com.ouyunc.base.constant.enums.IngressSourceEnum;
 import com.ouyunc.base.constant.enums.ModerationModeEnum;
 import com.ouyunc.base.constant.enums.ModerationStatusEnum;
@@ -24,9 +25,9 @@ public class Metadata implements Serializable, Cloneable {
     private String appKey;
 
     /**
-     * 该消息是否通过集群内路由传递
+     * 集群转发意图：落地写客户端还是进集群 Processor。null 视为 {@link ClusterForwardModeEnum#NONE}。
      */
-    private boolean routed;
+    private ClusterForwardModeEnum clusterForwardMode;
 
     /**
      * 当前消息投递重试次数,默认0
@@ -149,12 +150,31 @@ public class Metadata implements Serializable, Cloneable {
         this.routingTables = routingTables;
     }
 
-    public boolean isRouted() {
-        return routed;
+    public ClusterForwardModeEnum getClusterForwardMode() {
+        return clusterForwardMode;
     }
 
-    public void setRouted(boolean routed) {
-        this.routed = routed;
+    public void setClusterForwardMode(ClusterForwardModeEnum clusterForwardMode) {
+        this.clusterForwardMode = clusterForwardMode;
+    }
+
+    public ClusterForwardModeEnum clusterForwardModeOrNone() {
+        return ClusterForwardModeEnum.orNone(clusterForwardMode);
+    }
+
+    /** 尚未集群转发，按本机入站补元数据。 */
+    public boolean isLocalIngress() {
+        return clusterForwardModeOrNone() == ClusterForwardModeEnum.NONE;
+    }
+
+    /** 落地写客户端。 */
+    public boolean isClientForward() {
+        return clusterForwardModeOrNone() == ClusterForwardModeEnum.CLIENT;
+    }
+
+    /** 落地进集群 Processor，不写客户端。 */
+    public boolean isInternalForward() {
+        return clusterForwardModeOrNone() == ClusterForwardModeEnum.INTERNAL;
     }
 
     public String getFromServerAddress() {
@@ -288,9 +308,9 @@ public class Metadata implements Serializable, Cloneable {
         this.fanoutTargets = fanoutTargets;
     }
 
-    public Metadata(String appKey, boolean routed, int currentRetry, String fromServerAddress, Target target, List<RoutingTable> routingTables, String clientIp, long serverTime) {
+    public Metadata(String appKey, ClusterForwardModeEnum clusterForwardMode, int currentRetry, String fromServerAddress, Target target, List<RoutingTable> routingTables, String clientIp, long serverTime) {
         this.appKey = appKey;
-        this.routed = routed;
+        this.clusterForwardMode = clusterForwardMode;
         this.currentRetry = currentRetry;
         this.fromServerAddress = fromServerAddress;
         this.target = target;
@@ -339,7 +359,7 @@ public class Metadata implements Serializable, Cloneable {
     public String toString() {
         return "Metadata{" +
                 "appKey='" + appKey + '\'' +
-                ", routed=" + routed +
+                ", clusterForwardMode=" + clusterForwardMode +
                 ", currentRetry=" + currentRetry +
                 ", fromServerAddress='" + fromServerAddress + '\'' +
                 ", target=" + target +

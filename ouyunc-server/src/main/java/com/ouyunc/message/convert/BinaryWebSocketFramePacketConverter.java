@@ -51,7 +51,7 @@ public enum BinaryWebSocketFramePacketConverter implements PacketConverter<Binar
                 metadata = new Metadata();
             }
             // 判断如果不是集群中的传递消息，则进行以下处理
-            if (!metadata.isRouted()) {
+            if (metadata.isLocalIngress()) {
                 // 设置该消息发送者当前登录所属的平台 appKey
                 // 设置默认的appKey
                 if (MessageTypeEnum.LOGIN.getType() == packet.getMessageType()) {

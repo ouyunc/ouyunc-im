@@ -5,8 +5,11 @@ import com.ouyunc.base.constant.enums.MessageType;
 import com.ouyunc.base.constant.enums.OuyuncMessageTypeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.content.QosRetryCancelContent;
+import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.schedule.QosRetryScheduler;
 import io.netty.channel.ChannelHandlerContext;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
@@ -27,6 +30,12 @@ public final class ClusterQosRetryCancelMessageBiProcessor extends AbstractMessa
     public Mono<Void> process(ChannelHandlerContext ctx, Packet packet) {
         return Mono.fromRunnable(() -> {
             if (packet == null || packet.getMessage() == null) {
+                return;
+            }
+            String dest = packet.getMessage().getTo();
+            String local = MessageServerContext.serverProperties().getLocalServerAddress();
+            if (StringUtils.isNotBlank(dest) && !dest.equals(local)) {
+                MessageHelper.sendClusterInternal(packet, dest);
                 return;
             }
             QosRetryCancelContent content = JSON.parseObject(

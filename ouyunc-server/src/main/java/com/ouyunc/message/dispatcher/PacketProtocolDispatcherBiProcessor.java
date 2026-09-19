@@ -45,7 +45,7 @@ public class PacketProtocolDispatcherBiProcessor implements ProtocolDispatcherBi
                 .addLast(MessageConstant.PACKET_DECODE_HANDLER, new LengthFieldBasedFrameDecoder(ByteOrder.BIG_ENDIAN, MessageConstant.MAX_FRAME_LENGTH, MessageConstant.LENGTH_FIELD_OFFSET, MessageConstant.LENGTH_FIELD_LENGTH, MessageConstant.LENGTH_ADJUSTMENT, MessageConstant.INITIAL_BYTES_TO_STRIP, MessageConstant.FAIL_FAST))
                 // 自定义编解码器
                 .addLast(MessageConstant.PACKET_CODEC_HANDLER, new ClusterAuthentication.GuardedCodec())
-                // 首包认证在协议分发之前，routed 标记和 SYN/ACK 均不能跳过认证。
+                // 首包认证在协议分发之前，集群转发标记和 SYN/ACK 均不能跳过认证。
                 .addLast(ClusterAuthConstant.HANDLER_NAME,
                         new ClusterAuthentication.ServerHandler(properties.getClusterSecret(), properties.getLocalServerAddress()))
                 // packet 协议分发处理器

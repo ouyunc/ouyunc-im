@@ -1,6 +1,7 @@
 package com.ouyunc.message.helper;
 
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.enums.ClusterForwardModeEnum;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.model.SendCallback;
@@ -62,7 +63,7 @@ public final class LoginFollowHelper {
         Packet follow = packet.clone();
         Metadata followMeta = follow.getMessage().getMetadata();
         followMeta.setLoginFollowHops(metadata.getLoginFollowHops() + 1);
-        followMeta.setRouted(true);
+        followMeta.setClusterForwardMode(ClusterForwardModeEnum.CLIENT);
         followMeta.setFanoutTargets(null);
         Target next = MessageHelper.buildTarget(latest);
         followMeta.setTarget(next);

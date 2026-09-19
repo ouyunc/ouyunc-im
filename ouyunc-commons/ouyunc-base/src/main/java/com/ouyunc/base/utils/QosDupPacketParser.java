@@ -15,7 +15,7 @@ import java.util.List;
 
 /**
  * QOS_DUP 正文解析：只抽取协议头 + 业务 Message 标量/列表，禁止 {@code Packet.class} 全图反序列化。
- * <p>客户端 Metadata（routed/target/fanout/qosOwnerToken 等）一律丢弃，由入站通道元数据覆盖。</p>
+ * <p>客户端 Metadata（clusterForwardMode/target/fanout/qosOwnerToken 等）一律丢弃，由入站通道元数据覆盖。</p>
  */
 public final class QosDupPacketParser {
 

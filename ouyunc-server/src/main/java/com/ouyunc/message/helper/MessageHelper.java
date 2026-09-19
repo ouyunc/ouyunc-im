@@ -1,6 +1,7 @@
 package com.ouyunc.message.helper;
 
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.enums.ClusterForwardModeEnum;
 import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.model.*;
 import com.ouyunc.base.packet.Packet;
@@ -10,6 +11,7 @@ import com.ouyunc.core.intercept.AbstractMessageInterceptor;
 import com.ouyunc.message.cluster.client.pool.MessageClientPool;
 import com.ouyunc.message.cluster.lease.NodeLeaseKeeper;
 import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.message.protocol.NativePacketProtocol;
 import com.ouyunc.message.schedule.QosRetryScheduler;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -103,13 +105,13 @@ public class MessageHelper {
             }
             Packet fanout = packet.clone();
             Metadata metadata = fanout.getMessage().getMetadata();
-            metadata.setRouted(true);
+            metadata.setClusterForwardMode(ClusterForwardModeEnum.CLIENT);
             metadata.setFanoutTargets(targets);
             Target envelope = Target.newBuilder()
                     .appKey(metadata.getAppKey())
                     .targetServerAddress(nodeId)
-                    .protocol(com.ouyunc.message.protocol.NativePacketProtocol.OUYUNC.getProtocol())
-                    .protocolVersion(com.ouyunc.message.protocol.NativePacketProtocol.OUYUNC.getProtocolVersion())
+                    .protocol(NativePacketProtocol.OUYUNC.getProtocol())
+                    .protocolVersion(NativePacketProtocol.OUYUNC.getProtocolVersion())
                     .build();
             if (sync) {
                 syncSendMessageWithoutInterceptor(fanout, envelope);
@@ -206,6 +208,66 @@ public class MessageHelper {
         });
     }
 
+    /**
+     * 集群内部控制包（如 QOS_RETRY_CANCEL）：{@link ClusterForwardModeEnum#INTERNAL}，
+     * 直连 dest；失败回溯下一跳，最终节点仍是 dest，落地进 Processor 不写客户端。
+     */
+    public static void sendClusterInternal(Packet packet, String destServerAddress) {
+        sendClusterInternal(packet, destServerAddress, sendResult -> { });
+    }
+
+    public static void sendClusterInternal(Packet packet, String destServerAddress, SendCallback sendCallback) {
+        ThreadPoolManager.messageSendExecutor().execute(() ->
+                doSendClusterInternal(packet, destServerAddress, sendCallback));
+    }
+
+    private static void doSendClusterInternal(Packet originPacket, String destServerAddress,
+                                              SendCallback sendCallback) {
+        if (originPacket == null || StringUtils.isBlank(destServerAddress)) {
+            notifySendFail(originPacket, "集群内部控制包缺少目标节点", sendCallback);
+            return;
+        }
+        if (!MessageServerContext.serverProperties().isClusterEnable()) {
+            notifySendFail(originPacket, "未开启集群，无法转发内部控制包", sendCallback);
+            return;
+        }
+        String local = MessageServerContext.serverProperties().getLocalServerAddress();
+        if (Objects.equals(local, destServerAddress)) {
+            notifySendFail(originPacket, "集群内部控制包目标是本机", sendCallback);
+            return;
+        }
+        Packet packet = originPacket.clone();
+        Metadata metadata = packet.getMessage() == null ? null : packet.getMessage().getMetadata();
+        if (metadata != null) {
+            metadata.setClusterForwardMode(ClusterForwardModeEnum.INTERNAL);
+            metadata.setFanoutTargets(null);
+            ensureInternalForwardTarget(metadata, destServerAddress);
+        }
+        ChannelPool destPool = resolveClusterChannelPool(destServerAddress);
+        if (destPool != null) {
+            writeViaClusterPool(packet, destPool, destServerAddress, sendCallback);
+            return;
+        }
+        log.warn("集群内部控制包直连不到 {}，尝试下一跳 type={}", destServerAddress, packet.getMessageType());
+        relayViaNextHop(packet, destServerAddress, sendCallback);
+    }
+
+    private static void ensureInternalForwardTarget(Metadata metadata, String destServerAddress) {
+        Target target = metadata.getTarget();
+        if (target == null) {
+            metadata.setTarget(Target.newBuilder()
+                    .appKey(metadata.getAppKey())
+                    .targetServerAddress(destServerAddress)
+                    .protocol(NativePacketProtocol.OUYUNC.getProtocol())
+                    .protocolVersion(NativePacketProtocol.OUYUNC.getProtocolVersion())
+                    .build());
+            return;
+        }
+        if (StringUtils.isBlank(target.getTargetServerAddress())) {
+            target.setTargetServerAddress(destServerAddress);
+        }
+    }
+
 
     /**
      * @Author fzx
@@ -252,8 +314,8 @@ public class MessageHelper {
         }
         Packet packet = originPacket.clone();
         Metadata metadata = packet.getMessage().getMetadata();
-        if (!metadata.isRouted()) {
-            metadata.setRouted(true);
+        if (!metadata.isClientForward()) {
+            metadata.setClusterForwardMode(ClusterForwardModeEnum.CLIENT);
         }
         ChannelPool destPool = resolveClusterChannelPool(destServerAddress);
         if (destPool != null) {
@@ -300,7 +362,7 @@ public class MessageHelper {
     }
 
     /**
-     * REMOTE_LOGIN 落地写出后再关旧连接；集群 routed 包不进 ServerNotify 处理器，必须挂在写出回调上。
+     * REMOTE_LOGIN 落地写出后再关旧连接；集群 CLIENT 转发包不进 ServerNotify 处理器，必须挂在写出回调上。
      */
     private static SendCallback wrapRemoteLoginClose(Packet packet, Target target, SendCallback sendCallback) {
         if (!ClientHelper.isRemoteLoginNotify(packet)) {

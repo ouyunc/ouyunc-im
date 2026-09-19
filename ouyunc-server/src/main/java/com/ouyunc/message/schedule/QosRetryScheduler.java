@@ -1,6 +1,7 @@
 package com.ouyunc.message.schedule;
 
 import com.alibaba.fastjson2.JSON;
+import com.ouyunc.base.constant.enums.ClusterForwardModeEnum;
 import com.ouyunc.base.constant.enums.DeviceTypeEnum;
 import com.ouyunc.base.constant.enums.NetworkEnum;
 import com.ouyunc.base.constant.enums.OuyuncMessageContentTypeEnum;
@@ -165,7 +166,7 @@ public final class QosRetryScheduler {
         if (StringUtils.isNotBlank(metadata.getOriginServerAddress())) {
             return local.equals(metadata.getOriginServerAddress());
         }
-        return !metadata.isRouted();
+        return !metadata.isClientForward();
     }
 
     private static void retryOnce(QosRetryTaskContext retryContext, String taskId, TimerTaskWrapper taskWrapper) {
@@ -212,6 +213,13 @@ public final class QosRetryScheduler {
         metadata.setAppKey(content.getAppKey());
         metadata.setServerTime(now);
         metadata.setFromServerAddress(local);
+        metadata.setClusterForwardMode(ClusterForwardModeEnum.INTERNAL);
+        metadata.setTarget(Target.newBuilder()
+                .appKey(content.getAppKey())
+                .targetServerAddress(origin)
+                .protocol(NativePacketProtocol.OUYUNC.getProtocol())
+                .protocolVersion(NativePacketProtocol.OUYUNC.getProtocolVersion())
+                .build());
         Message message = new Message(
                 MessageContext.idGenerator().generateIdStr(),
                 local,
@@ -231,11 +239,7 @@ public final class QosRetryScheduler {
                 Serializer.PROTO_STUFF.getValue(),
                 OuyuncMessageTypeEnum.QOS_RETRY_CANCEL.getType(),
                 message);
-        var protocol = MessageServerContext.findProtocol(packet.getProtocol(), packet.getProtocolVersion());
-        if (protocol == null) {
-            log.warn("QOS_RETRY_CANCEL 找不到集群协议 origin={} packetId={}", origin, content.getPacketId());
-            return;
-        }
-        protocol.doSendMessage(packet, origin, sendResult -> { });
+        // INTERNAL：直连 origin 失败则下一跳，落地进 Processor 不写客户端
+        MessageHelper.sendClusterInternal(packet, origin);
     }
 }

@@ -83,7 +83,7 @@ public enum PacketPacketConverter implements PacketConverter<Packet> {
         if (metadata == null) {
             metadata = new Metadata();
         }
-        if (!metadata.isRouted()) {
+        if (metadata.isLocalIngress()) {
             if (MessageTypeEnum.LOGIN.getType() == packet.getMessageType()) {
                 LoginContent loginContent = JSON.parseObject(message.getContent(), LoginContent.class);
                 if (loginContent == null || org.apache.commons.lang3.StringUtils.isBlank(loginContent.getAppKey())) {

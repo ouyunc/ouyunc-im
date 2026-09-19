@@ -65,7 +65,7 @@ public enum MqttMessagePacketConverter implements PacketConverter<MqttMessage>{
             // 处理元数据
             Metadata metadata = new Metadata();
             // 判断如果不是集群中的传递消息，则进行以下处理
-            if (!metadata.isRouted()) {
+            if (metadata.isLocalIngress()) {
                 // 设置该消息发送者当前登录所属的平台 appKey
                 // 设置默认的appKey
                 if (MqttMessageType.CONNECT == mqttMessageType && mqttMessage instanceof MqttConnectMessage mqttConnectMessage) {
