@@ -33,7 +33,7 @@ import java.util.concurrent.CompletionStage;
  *   <li>{@link Mode#CLIENT}：{@code preProcess（含 DUP 展开）→ 内容安全 → process → postProcess}（同一条有序任务）；
  *       外部心跳 / MQTT PINGREQ 不入有序队列、不做敏感词</li>
  *   <li>{@link Mode#CLUSTER}：仅 {@code process → postProcess}；
- *       {@link OuyuncMessageTypeEnum#SYN_ACK} 不入有序队列</li>
+ *       {@link OuyuncMessageTypeEnum#SYN_ACK}、{@link OuyuncMessageTypeEnum#QOS_RETRY_CANCEL} 不入有序队列</li>
  * </ul>
  */
 public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
@@ -99,9 +99,12 @@ public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
         if (processor == null) {
             return;
         }
-        // 集群心跳：轻量处理，不占业务有序队列
-        if (packet.getMessageType() == OuyuncMessageTypeEnum.SYN_ACK.getType()) {
-            runLightProcess(ctx, packet, processor, "集群 SYN/ACK");
+        // 集群心跳 / 取消 QoS 重试：轻量处理，不占业务有序队列
+        if (packet.getMessageType() == OuyuncMessageTypeEnum.SYN_ACK.getType()
+                || packet.getMessageType() == OuyuncMessageTypeEnum.QOS_RETRY_CANCEL.getType()) {
+            String scene = packet.getMessageType() == OuyuncMessageTypeEnum.SYN_ACK.getType()
+                    ? "集群 SYN/ACK" : "集群 QOS_RETRY_CANCEL";
+            runLightProcess(ctx, packet, processor, scene);
             return;
         }
         ChannelOrderedTasks.executeAsync(ctx.channel(),

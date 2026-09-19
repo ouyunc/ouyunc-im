@@ -9,6 +9,7 @@ import com.ouyunc.base.constant.NumberConstant;
 public enum OuyuncMessageContentTypeEnum implements MessageContentType {
     SYN_CONTENT(NumberConstant.NUMBER_1, ProtocolTypeEnum.OUYUNC.getProtocol(), ProtocolTypeEnum.OUYUNC.getProtocolVersion(), String.class, "内部消息心跳syn消息内容"),
     ACK_CONTENT(NumberConstant.NUMBER_2,ProtocolTypeEnum.OUYUNC.getProtocol(), ProtocolTypeEnum.OUYUNC.getProtocolVersion(), String.class, "内部消息心跳ack消息内容"),
+    QOS_RETRY_CANCEL_CONTENT(NumberConstant.NUMBER_3, ProtocolTypeEnum.OUYUNC.getProtocol(), ProtocolTypeEnum.OUYUNC.getProtocolVersion(), String.class, "集群内取消 QoS 下行重试载荷"),
     /** 认证 Proof JSON 字符串；Packet 体用 PROTO_STUFF，content 内仍为签名用的规范 JSON。 */
     AUTH_CONTENT(NumberConstant.NUMBER_4, ProtocolTypeEnum.OUYUNC.getProtocol(), ProtocolTypeEnum.OUYUNC.getProtocolVersion(), String.class, "集群连接认证 Proof 内容"),
 

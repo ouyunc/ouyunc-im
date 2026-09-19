@@ -134,7 +134,8 @@ public final class ClusterChannelGuard {
         }
         byte type = packet.getMessageType();
         return type == OuyuncMessageTypeEnum.SYN_ACK.getType()
-                || type == OuyuncMessageTypeEnum.CLUSTER_AUTH.getType();
+                || type == OuyuncMessageTypeEnum.CLUSTER_AUTH.getType()
+                || type == OuyuncMessageTypeEnum.QOS_RETRY_CANCEL.getType();
     }
 
     private static boolean isClusterOrClientNativeProtocol(byte protocol) {

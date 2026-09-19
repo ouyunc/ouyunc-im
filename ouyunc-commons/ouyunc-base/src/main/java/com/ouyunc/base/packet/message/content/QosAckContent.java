@@ -3,22 +3,23 @@ package com.ouyunc.base.packet.message.content;
 import java.io.Serializable;
 
 /**
- * @Author fzx
- * @Description: qos ack 内容
- **/
+ * QoS ACK 正文，对外固定 JSON：{@code {"ackId":"<packetId>","messageId":"<客户端消息id>"}}。
+ */
 public class QosAckContent implements Serializable {
     private static final long serialVersionUID = -1L;
 
     /**
-     * 服务端原始消息的 packetId（十进制字符串，对外协议）
+     * 服务端原始消息的 packetId（十进制字符串）
      */
     private String ackId;
 
     /**
-     * 客户端消息的id
+     * 客户端消息的 id
      */
     private String messageId;
 
+    public QosAckContent() {
+    }
 
     public QosAckContent(String ackId, String messageId) {
         this.ackId = ackId;

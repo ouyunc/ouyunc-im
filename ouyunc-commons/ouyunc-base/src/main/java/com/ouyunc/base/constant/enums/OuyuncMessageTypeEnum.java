@@ -10,6 +10,8 @@ public enum OuyuncMessageTypeEnum implements MessageType {
     SYN_ACK(NumberConstant.NUMBER_0, ProtocolTypeEnum.OUYUNC.getProtocol(), ProtocolTypeEnum.OUYUNC.getProtocolVersion(), "syn_ack",  "集群内部使用的心跳消息类型"),
     /** 集群 TCP 连接 HMAC 认证首包；由 ServerHandler 消费，不进入业务 Processor。 */
     CLUSTER_AUTH(NumberConstant.NUMBER_2, ProtocolTypeEnum.OUYUNC.getProtocol(), ProtocolTypeEnum.OUYUNC.getProtocolVersion(), "cluster_auth", "集群连接认证首包"),
+    /** 落地节点把 C2S ACK 转回始发节点，取消该端下行重试定时器。 */
+    QOS_RETRY_CANCEL(NumberConstant.NUMBER_3, ProtocolTypeEnum.OUYUNC.getProtocol(), ProtocolTypeEnum.OUYUNC.getProtocolVersion(), "qos_retry_cancel", "集群内取消始发节点 QoS 下行重试"),
 
     ;
 

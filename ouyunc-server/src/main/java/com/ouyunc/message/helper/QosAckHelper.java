@@ -20,7 +20,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * QoS S2C ACK：确认服务端已收到客户端业务消息。
+ * QoS S2C ACK：仅确认服务端已收到客户端业务消息（该条 qos>0）。
+ * ACK 包自身 qos=0，避免控制包再走业务 QoS。
  * 优先写回入站 Channel；仅在连接已不可用时才按登录身份查表投递。
  */
 public final class QosAckHelper {
@@ -73,7 +74,7 @@ public final class QosAckHelper {
         ackMessage.setQos(QosLevelEnum.QOS_0.getLevel());
         ackMessage.setContent(JSON.toJSONString(new QosAckContent(
                 String.valueOf(serverPacketId), originalClientMessageId)));
-        ackMessage.setContentType(MessageContentTypeEnum.TEXT_CONTENT.getType());
+        ackMessage.setContentType(MessageContentTypeEnum.QOS_ACK_CONTENT.getType());
         ackMessage.setCreateTime(TimeUtil.currentTimeMillis());
         ackPacket.setPacketId(MessageContext.idGenerator().generateId());
         ackPacket.setMessageType(MessageTypeEnum.QOS_S2C_ACK.getType());

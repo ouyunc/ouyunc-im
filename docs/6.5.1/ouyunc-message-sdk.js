@@ -20,6 +20,7 @@ class Socket {
     };
     static MESSAGE_CONTENT_TYPES = {
         HEARTBEAT: -1,
+        QOS_ACK_CONTENT: -11,
         TEXT_CONTENT: -128,
     };
     static QOS_LEVEL = {
@@ -307,9 +308,12 @@ class Socket {
                         id: this.snowflake.nextIdStr(),
                         from: this.loginIdentity,
                         to: '',
-                        contentType: Socket.MESSAGE_CONTENT_TYPES.TEXT_CONTENT,
-                        content: String(packet.packetId),
-                        qos: Socket.QOS_LEVEL.QOS_1,
+                        contentType: Socket.MESSAGE_CONTENT_TYPES.QOS_ACK_CONTENT,
+                        content: JSON.stringify({
+                            ackId: packetIdStr,
+                            messageId: packet.message.id || ''
+                        }),
+                        qos: Socket.QOS_LEVEL.QOS_0,
                         createTime: Date.now()
                     },
                 });

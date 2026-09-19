@@ -11,6 +11,7 @@ import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.*;
 import com.ouyunc.message.helper.CsHelper.PrepareOutcome;
+import com.ouyunc.message.schedule.QosRetryScheduler;
 import com.ouyunc.message.validator.AuthValidator;
 import com.ouyunc.repository.cs.CsImSessionRoute;
 import com.ouyunc.repository.support.MessageIndexScope;
@@ -217,6 +218,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
     }
 
     private Mono<SaveMessageOutcome> saveMessage(Packet packet, CsImSessionRoute route) {
+        QosRetryScheduler.stampOrigin(packet);
         return repository().reactiveSaveCsTicketMessage(
                 packet, route, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
     }

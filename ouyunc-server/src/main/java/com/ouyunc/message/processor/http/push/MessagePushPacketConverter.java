@@ -45,6 +45,11 @@ public final class MessagePushPacketConverter {
         Metadata metadata = new Metadata(appKey, resolveClientIp(httpContext), now);
         metadata.setIngressSource(IngressSourceEnum.HTTP_PUSH);
         metadata.setHttpPushType(request.getPushType());
+        String local = MessageContext.messageProperties != null
+                ? MessageContext.messageProperties.getLocalServerAddress() : null;
+        if (StringUtils.isNotBlank(local)) {
+            metadata.setOriginServerAddress(local);
+        }
 
         Message message = buildMessage(request, resolved, metadata, now, fromType, toType, httpContext);
         applyRequestContentType(request, message);

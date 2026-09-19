@@ -10,6 +10,7 @@ import com.ouyunc.core.intercept.AbstractMessageInterceptor;
 import com.ouyunc.message.cluster.client.pool.MessageClientPool;
 import com.ouyunc.message.cluster.lease.NodeLeaseKeeper;
 import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.message.schedule.QosRetryScheduler;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.pool.ChannelPool;
@@ -69,6 +70,7 @@ public class MessageHelper {
             byNode.computeIfAbsent(node, ignored -> new ArrayList<>()).add(client);
         }
         List<LoginClientInfo> localClients = byNode.remove(local);
+        QosRetryScheduler.scheduleForClients(packet, loginClientInfos);
         if (CollectionUtils.isNotEmpty(localClients)) {
             List<Target> targets = new ArrayList<>(localClients.size());
             for (LoginClientInfo c : localClients) {
@@ -277,10 +279,24 @@ public class MessageHelper {
             ClientHelper.deliverLocalBroadcast(target.getAppKey(), packet);
             return;
         }
+        if (!hasLocalActiveConnection(target)
+                && LoginFollowHelper.tryFollow(packet, target, sendCallback)) {
+            return;
+        }
         MessageServerContext.findProtocol(target.getProtocol(), target.getProtocolVersion())
                 .doSendMessage(packet, IdentityUtil.generalComboIdentity(
                         target.getAppKey(), target.getTargetIdentity(), target.getDeviceType()),
                         wrapRemoteLoginClose(packet, target, sendCallback));
+    }
+
+    private static boolean hasLocalActiveConnection(Target target) {
+        if (target == null || StringUtils.isBlank(target.getTargetIdentity())) {
+            return false;
+        }
+        String combo = IdentityUtil.generalComboIdentity(
+                target.getAppKey(), target.getTargetIdentity(), target.getDeviceType());
+        ChannelHandlerContext ctx = MessageServerContext.localLoginClientRegisterTable.get(combo);
+        return PacketChannelWriter.isSendable(ctx);
     }
 
     /**

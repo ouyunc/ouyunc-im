@@ -439,6 +439,12 @@ public class MessageConstant {
     /** 本机群扇出：同一 EventLoop 每批发完后让出，控制单任务占用 */
     public static final int GROUP_FANOUT_LOCAL_EVENTLOOP_BATCH = 64;
 
+    /**
+     * 落地节点本机无连接时，按 Redis 登录 HASH 跟到新节点的最大次数（S2→S3 迁移）。
+     * 超出后交给始发节点 SERVER QoS 重试。
+     */
+    public static final int LOGIN_FOLLOW_MAX_HOPS = 3;
+
     /** 消息按 ID 批量查询公共上限（Mongo/MySQL 分片入口） */
     public static final int MESSAGE_PACKET_QUERY_MAX_IDS = 500;
 

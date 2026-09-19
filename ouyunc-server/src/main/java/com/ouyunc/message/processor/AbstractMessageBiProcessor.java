@@ -7,6 +7,7 @@ import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.message.validator.AuthValidator;
+import com.ouyunc.message.schedule.QosRetryScheduler;
 import com.ouyunc.repository.DefaultRepository;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
@@ -60,6 +61,7 @@ public abstract class AbstractMessageBiProcessor<T extends Number> extends Abstr
      * 权限拒绝的包也不归档（由 {@link #continueWhenPassed} 在通过后再调用）。
      */
     protected void archiveAfterAuth(Packet packet) {
+        QosRetryScheduler.stampOrigin(packet);
         repository().save(packet);
     }
 

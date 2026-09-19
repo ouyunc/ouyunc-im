@@ -81,6 +81,17 @@ public class Metadata implements Serializable, Cloneable {
     private String qosOwnerToken;
 
     /**
+     * 首次业务处理所在节点（ip:port）。集群中转只改 {@link #fromServerAddress}，本字段禁止改写。
+     * 仅服务端内部使用，写出给客户端前必须剥离 metadata。
+     */
+    private String originServerAddress;
+
+    /**
+     * 落地本机无连接时，按登录 HASH 再投到新节点的次数。不改 {@link #originServerAddress}。
+     */
+    private int loginFollowHops;
+
+    /**
      * 内容审核状态。
      */
     private ModerationStatusEnum moderationStatus;
@@ -217,6 +228,22 @@ public class Metadata implements Serializable, Cloneable {
         this.qosOwnerToken = qosOwnerToken;
     }
 
+    public String getOriginServerAddress() {
+        return originServerAddress;
+    }
+
+    public void setOriginServerAddress(String originServerAddress) {
+        this.originServerAddress = originServerAddress;
+    }
+
+    public int getLoginFollowHops() {
+        return loginFollowHops;
+    }
+
+    public void setLoginFollowHops(int loginFollowHops) {
+        this.loginFollowHops = loginFollowHops;
+    }
+
     /**
      * @return 内容审核状态
      */
@@ -322,6 +349,8 @@ public class Metadata implements Serializable, Cloneable {
                 ", ingressSource=" + ingressSource +
                 ", httpPushType=" + httpPushType +
                 ", qosClaimIdentity='" + qosClaimIdentity + '\'' +
+                ", originServerAddress='" + originServerAddress + '\'' +
+                ", loginFollowHops=" + loginFollowHops +
                 ", moderationStatus=" + moderationStatus +
                 ", moderationMode=" + moderationMode +
                 '}';

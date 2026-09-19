@@ -722,6 +722,7 @@ public class ClientHelper {
 
     private static void deliverLocalFanoutGrouped(Packet packet, List<Target> targets) {
         Map<EventLoop, List<Target>> byLoop = new IdentityHashMap<>();
+        List<Target> missed = new ArrayList<>();
         for (Target target : targets) {
             if (target == null || StringUtils.isBlank(target.getTargetIdentity())) {
                 continue;
@@ -730,10 +731,12 @@ public class ClientHelper {
                     target.getAppKey(), target.getTargetIdentity(), target.getDeviceType());
             ChannelHandlerContext ctx = MessageServerContext.localLoginClientRegisterTable.get(combo);
             if (ctx == null || ctx.channel() == null || !ctx.channel().isActive()) {
+                missed.add(target);
                 continue;
             }
             byLoop.computeIfAbsent(ctx.channel().eventLoop(), loop -> new ArrayList<>()).add(target);
         }
+        LoginFollowHelper.followMissed(packet, missed);
         if (byLoop.isEmpty()) {
             return;
         }

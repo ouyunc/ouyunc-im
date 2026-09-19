@@ -138,6 +138,17 @@ public class ScheduleTimer {
         return false;
     }
 
+    /**
+     * 本机有任务才取消；任务不在本 JVM（落地节点收到 C2S ACK）时不打 warn。
+     */
+    public static boolean cancelIfPresent(String taskId) {
+        TimerTaskWrapper existing = TimerTaskWrapper.lookup(taskId);
+        if (existing == null) {
+            return false;
+        }
+        return existing.cancel();
+    }
+
     /** 调度替换场景：任务不存在不打 warn。 */
     private static void cancelQuietly(String taskId) {
         TimerTaskWrapper existing = TimerTaskWrapper.lookup(taskId);

@@ -8,14 +8,15 @@ import com.ouyunc.base.constant.enums.QosModeEnum;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
+import com.ouyunc.base.packet.message.content.QosAckContent;
+import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.message.context.MessageServerContext;
-import com.ouyunc.message.schedule.QosRetryTaskIds;
-import com.ouyunc.message.schedule.ScheduleTimer;
+import com.ouyunc.message.schedule.QosRetryScheduler;
 import com.ouyunc.message.validator.AuthValidator;
 import com.ouyunc.message.validator.PermissionValidator;
 import com.ouyunc.repository.support.QosAckContentParser;
@@ -27,7 +28,10 @@ import reactor.core.publisher.Mono;
 
 /**
  * qos外部客户端已经收到消息,只有开启qos 且在服务端模式下才会处理相关逻辑。
- * ACK 取消重试必须绑定已认证 Channel 的 identity + deviceType，不能仅按 packetId 全局取消。
+ * ACK 取消重试必须绑定已认证 Channel 的 identity + deviceType。
+ * C2S 正文固定 JSON：ackId=下行 packetId，messageId=原客户端消息 id。
+ * 任务在始发节点：本机有则取消，否则按 originServerAddress 转回始发节点。
+ * 不给接收方回 S2C。C2S 控制包应为 qos=0。
  **/
 public final class QosC2SMessageBiProcessor extends AbstractMessageBiProcessor<Byte> {
     private static final Logger log = LoggerFactory.getLogger(QosC2SMessageBiProcessor.class);
@@ -70,18 +74,26 @@ public final class QosC2SMessageBiProcessor extends AbstractMessageBiProcessor<B
                     return;
                 }
                 Message message = packet.getMessage();
-                long packetId = QosAckContentParser.resolveAckPacketId(message != null ? message.getContent() : null);
+                if (message == null || message.getContentType() != MessageContentTypeEnum.QOS_ACK_CONTENT.getType()) {
+                    log.warn("QoS ACK contentType 非法, contentType={}", message != null ? message.getContentType() : null);
+                    return;
+                }
+                String content = message.getContent();
+                QosAckContent ack = QosAckContentParser.parse(content);
+                if (ack == null) {
+                    log.warn("QoS ACK 无法解析 JSON, content={}", content);
+                    return;
+                }
+                long packetId = QosAckContentParser.toPacketId(ack.getAckId());
                 if (packetId <= 0) {
-                    log.warn("QoS ACK 无法解析 packetId, content={}", message != null ? message.getContent() : null);
+                    log.warn("QoS ACK ackId 非法, content={}", content);
                     return;
                 }
-                String taskId = QosRetryTaskIds.build(login.getAppKey(), packetId, login.getIdentity(), login.getDeviceType());
-                if (StringUtils.isBlank(taskId)) {
-                    return;
-                }
-                ScheduleTimer.cancel(taskId);
+                QosRetryScheduler.onClientAck(login, packetId);
+            } else if (MessageContext.isQosEnable()) {
+                log.debug("客户端 QoS 模式不在服务端取消重试，忽略 C2S");
             } else {
-                log.warn("QosC2SMessageProcessor qos未开启或者qos模式不是服务端模式,忽略处理");
+                log.warn("QosC2SMessageProcessor qos未开启,忽略处理");
             }
             });
     }
