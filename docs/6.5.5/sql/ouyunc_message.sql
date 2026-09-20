@@ -177,17 +177,17 @@ CREATE TABLE `ouyunc_im_message_withdraw`  (
 -- Table structure for ouyunc_im_session_message_offset
 -- ----------------------------
 CREATE TABLE `ouyunc_im_session_message_offset`  (
+                                                     `app_key` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '租户 appKey',
                                                      `from` bigint(20) NOT NULL COMMENT '发送方ID',
                                                      `to` bigint(20) NOT NULL COMMENT '接收方ID（用户或群组）',
                                                      `type` tinyint NOT NULL COMMENT '会话类型：1-一对一，2-群，3-客服咨询单(ticketId 存 to)',
                                                      `session_message_offset` bigint(20) NOT NULL DEFAULT 0 COMMENT '会话消息偏移量，会话消息的接收时间；假如本次读取到会话A点，则下次从A点之后开始读取',
                                                      `device_type` tinyint NOT NULL COMMENT '发送方所登录设备类型',
-                                                     PRIMARY KEY (`from`, `to`, `type`, `device_type`) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'ouyunc_im_group_user 或 ouyunc_im_friend 会话消息偏移量
-建议使用该方式进行频繁的更新
-INSERT INTO ouyunc_im_session_message_offset (`from`, `to`, `type`, `session_message_offset`)
-VALUES (?, ?, ?, ?)
-ON DUPLICATE KEY UPDATE session_message_offset = VALUES(session_message_offset);' ROW_FORMAT = Dynamic;
+                                                     PRIMARY KEY (`app_key`, `from`, `to`, `type`, `device_type`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '会话消息偏移量（主键含 app_key）
+INSERT INTO ouyunc_im_session_message_offset (`app_key`, `from`, `device_type`, `to`, `type`, `session_message_offset`)
+VALUES (?, ?, ?, ?, ?, ?)
+ON DUPLICATE KEY UPDATE session_message_offset = GREATEST(session_message_offset, VALUES(session_message_offset));' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of ouyunc_im_session_message_offset

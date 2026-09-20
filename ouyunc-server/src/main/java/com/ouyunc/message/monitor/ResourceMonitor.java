@@ -1,7 +1,6 @@
 package com.ouyunc.message.monitor;
 
-import com.ouyunc.cache.Cache;
-import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.google.common.collect.Lists;
 import com.ouyunc.base.executor.ThreadPoolId;
@@ -31,9 +30,9 @@ public final class ResourceMonitor {
     private static final Logger log = LoggerFactory.getLogger(ResourceMonitor.class);
 
     /**
-     * 注册的 Caffeine 缓存实例
+     * 注册的 Caffeine 基础缓存实例，同时支持普通 Cache 和 LoadingCache
      */
-    private static final Map<String, LoadingCache<?, ?>> REGISTERED_CACHES = new ConcurrentHashMap<>();
+    private static final Map<String, Cache<?, ?>> REGISTERED_CACHES = new ConcurrentHashMap<>();
 
     /**
      * 监控任务调度器
@@ -64,7 +63,7 @@ public final class ResourceMonitor {
      * @param cacheName 缓存名称
      * @param cache     缓存实例
      */
-    public static void registerCache(String cacheName, LoadingCache<?, ?> cache) {
+    public static void registerCache(String cacheName, Cache<?, ?> cache) {
         if (cacheName == null || cache == null) {
             log.warn("注册缓存失败：cacheName 或 cache 不能为空");
             return;
@@ -74,24 +73,25 @@ public final class ResourceMonitor {
     }
 
     /**
-     * 注册缓存实例（通过反射获取 CaffeineLocalCache 的实例）
+     * 注册缓存实例：项目缓存优先通过接口解包，其他封装兼容 instance() 方法。
      * 
-     * @param cache 实现了 instance() 方法返回 LoadingCache 的缓存对象
+     * @param cache 原生 Caffeine Cache，或 instance() 返回该类型的缓存封装
      */
     public static void registerCache(Object cache) {
         if (cache == null) {
             return;
         }
+        String cacheName = resolveCacheName(cache);
         try {
-            LoadingCache<?, ?> loadingCache = resolveLoadingCache(cache);
-            if (loadingCache == null) {
-                log.warn("无法从缓存对象获取 LoadingCache 实例: {}", cache.getClass().getName());
+            Cache<?, ?> nativeCache = resolveCaffeineCache(cache);
+            if (nativeCache == null) {
+                log.warn("无法从缓存对象获取 Caffeine Cache 实例: name={} type={}",
+                        cacheName, cache.getClass().getName());
                 return;
             }
-            String cacheName = resolveCacheName(cache);
-            registerCache(cacheName, loadingCache);
+            registerCache(cacheName, nativeCache);
         } catch (Exception e) {
-            log.warn("注册缓存失败: {}", e.getMessage());
+            log.warn("注册缓存失败: name={} type={}", cacheName, cache.getClass().getName(), e);
         }
     }
 
@@ -104,22 +104,26 @@ public final class ResourceMonitor {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private static LoadingCache<?, ?> resolveLoadingCache(Object cache) {
-        if (cache instanceof Cache<?, ?> wrapped) {
+    /**
+     * 监控只读取 stats/estimatedSize，不依赖自动加载能力，也不触发 loader。
+     * 普通 Cache 与 LoadingCache 均实现 Caffeine Cache 接口。
+     */
+    private static Cache<?, ?> resolveCaffeineCache(Object cache) {
+        if (cache instanceof Cache<?, ?> nativeCache) {
+            return nativeCache;
+        }
+        if (cache instanceof com.ouyunc.cache.Cache<?, ?> wrapped) {
             Object instance = wrapped.instance();
-            if (instance instanceof LoadingCache<?, ?> loadingCache) {
-                return loadingCache;
-            }
+            return instance instanceof Cache<?, ?> nativeCache ? nativeCache : null;
         }
         try {
             java.lang.reflect.Method instanceMethod = cache.getClass().getMethod("instance");
             Object instance = instanceMethod.invoke(cache);
-            if (instance instanceof LoadingCache<?, ?> loadingCache) {
-                return loadingCache;
+            if (instance instanceof Cache<?, ?> nativeCache) {
+                return nativeCache;
             }
-        } catch (Exception ignored) {
-            // fall through
+        } catch (ReflectiveOperationException ignored) {
+            // 不支持的封装由调用方携带缓存名称统一记录，避免重复告警。
         }
         return null;
     }
@@ -574,7 +578,7 @@ public final class ResourceMonitor {
             long requestCount,
             double hitRate
     ) {
-        public static CacheMetrics from(String cacheName, LoadingCache<?, ?> cache) {
+        public static CacheMetrics from(String cacheName, Cache<?, ?> cache) {
             CacheStats stats = cache.stats();
             long requestCount = stats.requestCount();
             double hitRate = requestCount > 0 ? stats.hitRate() : 0.0;
