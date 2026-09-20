@@ -18,7 +18,6 @@ import com.ouyunc.message.helper.MessageDeliveryRouteHelper;
 import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.helper.MessageRefHelper;
 import com.ouyunc.message.processor.http.push.IngressPacketHelper;
-import com.ouyunc.message.schedule.QosRetryScheduler;
 import com.ouyunc.message.validator.*;
 import com.ouyunc.repository.support.GroupMembershipSupport;
 import com.ouyunc.repository.support.MessageIndexScope;
@@ -322,7 +321,6 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
      * 保存群组消息
      */
     private Mono<SaveMessageOutcome> reactiveSaveGroupMessage(Packet packet) {
-        QosRetryScheduler.stampOrigin(packet);
         Message message = packet.getMessage();
         return repository().reactiveSaveMessage(packet, message.getTo(), MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
     }

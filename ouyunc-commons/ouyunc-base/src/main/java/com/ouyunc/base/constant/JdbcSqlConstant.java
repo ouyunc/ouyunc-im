@@ -10,7 +10,7 @@ public class JdbcSqlConstant {
      */
     public enum MYSQL{
 
-        SELECT_MESSAGE("SELECT `id`, `protocol`, `protocol_version`, `device_type`, `network_type`, `encrypt_type`, `serialize_algorithm`, `message_type`, `retain`, `client_ip`, `message_id`, `from`, `from_type`, `to`, `to_type`, `content_type`, `content`, `extra`, `at`, `ref`, `correlation_id`, `app_key`, `qos`, `client_send_time`, `server_arrival_time` FROM `ouyunc_im_message` WHERE app_key = :app_key AND id IN (:ids)", "根据租户和主键id查询消息"),
+        SELECT_MESSAGE("SELECT `id`, `protocol`, `protocol_version`, `device_type`, `network_type`, `encrypt_type`, `serialize_algorithm`, `message_type`, `retain`, `client_ip`, `server_address`, `message_id`, `from`, `from_type`, `to`, `to_type`, `content_type`, `content`, `extra`, `at`, `ref`, `correlation_id`, `app_key`, `qos`, `client_send_time`, `server_arrival_time` FROM `ouyunc_im_message` WHERE app_key = :app_key AND id IN (:ids)", "根据租户和主键id查询消息"),
 
         SELECT_SESSION_MESSAGE_OFFSET("select app_key, `from`, device_type, `to`, `type`, `session_message_offset` from ouyunc_im_session_message_offset o where o.app_key = :app_key and o.`from` = :from and o.`to` = :to and o.`type` = :type and o.device_type = :device_type", "按租户主键获取会话偏移量"),
 
@@ -92,7 +92,7 @@ public class JdbcSqlConstant {
      */
     public enum POSTGRESQL {
 
-        SELECT_MESSAGE("SELECT id, protocol, protocol_version, device_type, network_type, encrypt_type, serialize_algorithm, message_type, retain, client_ip, message_id, \"from\", from_type, \"to\", to_type, content_type, content, extra, \"at\", ref, correlation_id, app_key, qos, client_send_time, server_arrival_time FROM ouyunc_im_message WHERE app_key = :app_key AND id IN (:ids)", "根据租户和主键id查询消息"),
+        SELECT_MESSAGE("SELECT id, protocol, protocol_version, device_type, network_type, encrypt_type, serialize_algorithm, message_type, retain, client_ip, server_address, message_id, \"from\", from_type, \"to\", to_type, content_type, content, extra, \"at\", ref, correlation_id, app_key, qos, client_send_time, server_arrival_time FROM ouyunc_im_message WHERE app_key = :app_key AND id IN (:ids)", "根据租户和主键id查询消息"),
 
         SELECT_SESSION_MESSAGE_OFFSET("select app_key, \"from\", device_type, \"to\", \"type\", session_message_offset from ouyunc_im_session_message_offset o where o.app_key = :app_key and o.\"from\" = :from and o.\"to\" = :to and o.\"type\" = :type and o.device_type = :device_type", "按租户主键获取会话偏移量"),
 

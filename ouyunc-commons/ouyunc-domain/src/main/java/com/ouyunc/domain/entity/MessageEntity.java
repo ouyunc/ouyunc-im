@@ -83,6 +83,16 @@ public class MessageEntity implements Serializable {
     private String clientIp;
 
     /**
+     * 消息首次接入的服务端节点地址（IP/主机名:端口）。
+     * 从内部 Metadata.originServerAddress 归档；集群中转及重复消费不得改写。
+     * 独立存储用于回源恢复 origin，不向客户端暴露，也不为该字段建立索引。
+     */
+    @Field("server_address")
+    @TableField("server_address")
+    private String serverAddress;
+
+
+    /**
      * 发送者,mysql 关键字段
      */
     @Field("message_id")
@@ -322,6 +332,14 @@ public class MessageEntity implements Serializable {
 
     public void setRetain(byte retain) {
         this.retain = retain;
+    }
+
+    public String getServerAddress() {
+        return serverAddress;
+    }
+
+    public void setServerAddress(String serverAddress) {
+        this.serverAddress = serverAddress;
     }
 
     public String getClientIp() {

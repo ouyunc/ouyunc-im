@@ -42,14 +42,16 @@ public final class MessagePushPacketConverter {
         long now = request.getCreateTime() != null && request.getCreateTime() > 0
                 ? request.getCreateTime() : TimeUtil.currentTimeMillis();
 
+        // 与客户端地址一起建立可信来源；后续业务保存和集群转发只保留该值。
         Metadata metadata = new Metadata(appKey, resolveClientIp(httpContext), now);
-        metadata.setIngressSource(IngressSourceEnum.HTTP_PUSH);
-        metadata.setHttpPushType(request.getPushType());
         String local = MessageContext.messageProperties != null
                 ? MessageContext.messageProperties.getLocalServerAddress() : null;
         if (StringUtils.isNotBlank(local)) {
             metadata.setOriginServerAddress(local);
         }
+
+        metadata.setIngressSource(IngressSourceEnum.HTTP_PUSH);
+        metadata.setHttpPushType(request.getPushType());
 
         Message message = buildMessage(request, resolved, metadata, now, fromType, toType, httpContext);
         applyRequestContentType(request, message);

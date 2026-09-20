@@ -21,7 +21,6 @@ import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageDeliveryRouteHelper;
 import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.helper.MessageRefHelper;
-import com.ouyunc.message.schedule.QosRetryScheduler;
 import com.ouyunc.message.validator.*;
 import com.ouyunc.repository.support.MessageIndexScope;
 import com.ouyunc.repository.SaveMessageOutcome;
@@ -239,7 +238,6 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
      * 保存消息
      */
     private Mono<SaveMessageOutcome> saveMessage(Packet packet) {
-        QosRetryScheduler.stampOrigin(packet);
         Message message = packet.getMessage();
         String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
         return repository().reactiveSaveOne2OneMessage(packet, sessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);

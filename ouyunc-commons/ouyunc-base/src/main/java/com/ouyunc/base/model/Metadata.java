@@ -82,7 +82,7 @@ public class Metadata implements Serializable, Cloneable {
     private String qosOwnerToken;
 
     /**
-     * 首次业务处理所在节点（ip:port）。集群中转只改 {@link #fromServerAddress}，本字段禁止改写。
+     * 首次外部入站节点（ip:port），与 clientIp 同阶段由服务端赋值，持久化为 server_address。集群中转只改 {@link #fromServerAddress}，本字段禁止改写。
      * 仅服务端内部使用，写出给客户端前必须剥离 metadata。
      */
     private String originServerAddress;
@@ -322,6 +322,13 @@ public class Metadata implements Serializable, Cloneable {
     public Metadata(String appKey, String clientIp, long serverTime) {
         this.appKey = appKey;
         this.clientIp = clientIp;
+        this.serverTime = serverTime;
+    }
+
+    public Metadata(String appKey, String clientIp, String originServerAddress, long serverTime) {
+        this.appKey = appKey;
+        this.clientIp = clientIp;
+        this.originServerAddress = originServerAddress;
         this.serverTime = serverTime;
     }
 

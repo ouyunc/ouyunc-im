@@ -102,6 +102,8 @@ public enum PacketPacketConverter implements PacketConverter<Packet> {
                 metadata.setAppKey(loginClientInfo.getAppKey());
             }
             metadata.setClientIp(IpUtil.getIp(ctx));
+            // 外部入站的来源由服务端覆盖赋值；集群透传不进入此分支。
+            metadata.setOriginServerAddress(MessageContext.messageProperties.getLocalServerAddress());
             metadata.setServerTime(TimeUtil.currentTimeMillis());
             metadata.setIngressSource(IngressSourceEnum.IM);
         }

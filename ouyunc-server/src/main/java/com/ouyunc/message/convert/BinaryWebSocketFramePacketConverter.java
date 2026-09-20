@@ -74,6 +74,8 @@ public enum BinaryWebSocketFramePacketConverter implements PacketConverter<Binar
                 }
                 // 获取客户端真实ip
                 metadata.setClientIp(IpUtil.getIp(ctx));
+                // 外部入站的来源由服务端覆盖赋值；集群透传不进入此分支。
+                metadata.setOriginServerAddress(MessageContext.messageProperties.getLocalServerAddress());
                 // 设置服务器时间
                 metadata.setServerTime(TimeUtil.currentTimeMillis());
                 metadata.setIngressSource(IngressSourceEnum.IM);

@@ -132,6 +132,7 @@ CREATE TABLE `ouyunc_im_message` (
                                      `message_type` tinyint NOT NULL COMMENT '消息类型：心跳，群聊，私聊...',
                                      `retain` tinyint NOT NULL DEFAULT '0' COMMENT '保留位，1个字节',
                                      `client_ip` varchar(40) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '客户端ip',
+                                     `server_address` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '消息首次接入的服务端节点地址（IP/主机名:端口）',
                                      `message_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '客户端消息id',
                                      `from` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '消息发送者',
                                      `from_type` tinyint NOT NULL COMMENT '发送方类型',

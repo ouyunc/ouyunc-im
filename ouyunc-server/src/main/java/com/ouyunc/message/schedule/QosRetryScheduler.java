@@ -50,18 +50,6 @@ public final class QosRetryScheduler {
     private QosRetryScheduler() {
     }
 
-    /** 首次业务处理机盖章；集群中转不得调用，避免改成落地节点。 */
-    public static void stampOrigin(Packet packet) {
-        if (packet == null || packet.getMessage() == null) {
-            return;
-        }
-        String local = MessageServerContext.serverProperties().getLocalServerAddress();
-        if (StringUtils.isBlank(local)) {
-            return;
-        }
-        packet.getMessage().getMetadata().setOriginServerAddress(local);
-    }
-
     public static boolean retryEnabled() {
         return MessageContext.isQosEnable()
                 && MessageServerContext.serverProperties().isQosRetryEnable()
@@ -97,7 +85,9 @@ public final class QosRetryScheduler {
             return;
         }
         if (StringUtils.isBlank(message.getMetadata().getOriginServerAddress())) {
-            stampOrigin(packet);
+            // 来源只能由外部入站层建立；落地节点补值会把自己误判为始发节点。
+            log.warn("QoS 重试拒绝登记：缺少入站 origin packetId={}", packet.getPacketId());
+            return;
         }
         if (!isOriginNode(packet)) {
             return;
@@ -196,10 +186,11 @@ public final class QosRetryScheduler {
             return false;
         }
         Metadata metadata = packet.getMessage().getMetadata();
-        if (StringUtils.isNotBlank(metadata.getOriginServerAddress())) {
-            return local.equals(metadata.getOriginServerAddress());
+        if (StringUtils.isBlank(metadata.getOriginServerAddress())) {
+            log.warn("QoS 重试无法确定归属：缺少入站 origin packetId={}", packet.getPacketId());
+            return false;
         }
-        return !metadata.isClientForward();
+        return local.equals(metadata.getOriginServerAddress());
     }
 
     private static void retryOnce(QosRetryTaskContext retryContext, String taskId, TimerTaskWrapper taskWrapper) {

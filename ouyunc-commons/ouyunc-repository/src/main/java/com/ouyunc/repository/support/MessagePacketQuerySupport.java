@@ -202,6 +202,7 @@ public final class MessagePacketQuerySupport {
                         new Metadata(
                                 entity.getAppKey(),
                                 entity.getClientIp(),
+                                entity.getServerAddress(),
                                 entity.getServerArrivalTime()
                         )
                 )
