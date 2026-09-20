@@ -1,11 +1,13 @@
 package com.ouyunc.message.cluster.auth;
 
+import com.ouyunc.base.constant.enums.OuyuncMessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.OuyuncMessageTypeEnum;
 import com.ouyunc.base.constant.enums.ProtocolTypeEnum;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.model.Protocol;
 import com.ouyunc.base.model.Target;
 import com.ouyunc.base.packet.Packet;
+import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.message.cluster.lease.NodeLeaseKeeper;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.protocol.NativePacketProtocol;
@@ -15,9 +17,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * 内部协议入口的轻量校验：HMAC 之后只认已认证 Channel；外部入口禁止集群能力。
- * <p>拦的是「能力」（clusterForwardMode / 集群消息类型 / 集群协议号），不是「Packet 帧格式」本身。
- * 客户端原生 {@link ProtocolTypeEnum#OUYUNC_CLIENT} 与集群 {@link ProtocolTypeEnum#OUYUNC} 完全分离。</p>
+ * 按 Channel 判断这条连接能干什么，不按包头自报字段放行。
+ * <p>外部连接禁止集群能力；集群连接须 HMAC。帧格式归 {@code PacketVerifier}，心跳字段归心跳入口。</p>
  */
 public final class ClusterChannelGuard {
 
@@ -36,7 +37,7 @@ public final class ClusterChannelGuard {
         if (!isExternalClientProtocol(channelProtocol) || packet == null) {
             return false;
         }
-        Metadata metadata = packet.getMessage() == null ? null : packet.getMessage().getMetadata();
+        Metadata metadata = packet.getMessage() == null ? null : packet.getMessage().getMetadataOrNull();
         boolean clusterOrNativeClientProtocol = isClusterOrClientNativeProtocol(packet.getProtocol());
         boolean clusterForward = metadata != null && !metadata.isLocalIngress();
         boolean clusterType = isInternalClusterMessage(packet);
@@ -65,7 +66,7 @@ public final class ClusterChannelGuard {
                 || packet == null) {
             return false;
         }
-        Metadata metadata = packet.getMessage() == null ? null : packet.getMessage().getMetadata();
+        Metadata metadata = packet.getMessage() == null ? null : packet.getMessage().getMetadataOrNull();
         boolean protocolMismatch = packet.getProtocol() != ProtocolTypeEnum.OUYUNC_CLIENT.getProtocol()
                 || packet.getProtocolVersion() != ProtocolTypeEnum.OUYUNC_CLIENT.getProtocolVersion();
         boolean clusterForward = metadata != null && !metadata.isLocalIngress();
@@ -125,6 +126,45 @@ public final class ClusterChannelGuard {
         }
         log.warn("集群路由目标不在本机且无活租约 dest={}", dest);
         return false;
+    }
+
+    /**
+     * 直连心跳：连接已认证，再核对本包 from/to/类型。不看 clusterForwardMode。
+     * <p>from 必须是握手节点，to 必须是本机；只认 SYN/ACK 内容类型。</p>
+     */
+    public static boolean allowDirectHeartbeat(String peer, Packet packet) {
+        if (StringUtils.isBlank(peer) || packet == null) {
+            return false;
+        }
+        if (packet.getMessageType() != OuyuncMessageTypeEnum.SYN_ACK.getType()) {
+            return false;
+        }
+        if (packet.getProtocol() != ProtocolTypeEnum.OUYUNC.getProtocol()
+                || packet.getProtocolVersion() != ProtocolTypeEnum.OUYUNC.getProtocolVersion()) {
+            log.warn("心跳协议与集群连接不一致 protocol={} version={}",
+                    packet.getProtocol(), packet.getProtocolVersion());
+            return false;
+        }
+        Message message = packet.getMessage();
+        if (message == null) {
+            return false;
+        }
+        int contentType = message.getContentType();
+        if (contentType != OuyuncMessageContentTypeEnum.SYN_CONTENT.getType()
+                && contentType != OuyuncMessageContentTypeEnum.ACK_CONTENT.getType()) {
+            log.warn("心跳 contentType 非法 peer={} contentType={}", peer, contentType);
+            return false;
+        }
+        if (!peer.equals(message.getFrom())) {
+            log.warn("心跳 from 与握手身份不一致 peer={} from={}", peer, message.getFrom());
+            return false;
+        }
+        String local = MessageServerContext.serverProperties().getLocalServerAddress();
+        if (!local.equals(message.getTo())) {
+            log.warn("心跳 to 不是本机 local={} to={}", local, message.getTo());
+            return false;
+        }
+        return true;
     }
 
     /** 未转发的内部包只允许集群心跳/认证/取消重试，禁止走外部业务 Processor。 */

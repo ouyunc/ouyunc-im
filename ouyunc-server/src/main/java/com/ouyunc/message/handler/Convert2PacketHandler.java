@@ -12,9 +12,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * @Author fzx
- * @Description: 将非packet 协议类型转成Packet,服务内部只处理packet
- **/
+ * 入站转成 Packet 后先做帧结构检查，再按 Channel 拦集群能力。
+ */
 public class Convert2PacketHandler extends SimpleChannelInboundHandler<Object> {
     private static final Logger log = LoggerFactory.getLogger(Convert2PacketHandler.class);
 
@@ -31,7 +30,7 @@ public class Convert2PacketHandler extends SimpleChannelInboundHandler<Object> {
             Packet packet = packetConverter.convertToPacket(ctx, msg);
             if (packet != null) {
                 if (!PacketVerifier.verify(packet)) {
-                    log.error("协议包转换后校验失败, 关闭 channelId={}", ctx.channel().id().asShortText());
+                    log.error("入站转换后帧结构非法, 关闭 channelId={}", ctx.channel().id().asShortText());
                     ctx.close();
                     return;
                 }

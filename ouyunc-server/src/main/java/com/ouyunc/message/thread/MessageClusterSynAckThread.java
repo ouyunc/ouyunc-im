@@ -4,7 +4,10 @@ import com.ouyunc.base.constant.enums.DeviceTypeEnum;
 import com.ouyunc.base.constant.enums.NetworkEnum;
 import com.ouyunc.base.constant.enums.OuyuncMessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.OuyuncMessageTypeEnum;
+import com.ouyunc.base.constant.enums.SendStatusEnum;
 import com.ouyunc.base.encrypt.Encrypt;
+import com.ouyunc.base.exception.OutboundPacketVerifyException;
+import com.ouyunc.base.model.SendResult;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.serialize.Serializer;
@@ -24,6 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 集群间节点心跳：只探已有连接池健康，不再用半数节点自杀。
+ * <p>missAck 只统计「已发出或网络失败」；本地构包失败单独记日志，不当成对端无应答。</p>
  */
 public class MessageClusterSynAckThread implements Runnable {
 
@@ -54,15 +58,39 @@ public class MessageClusterSynAckThread implements Runnable {
                     Serializer.PROTO_STUFF.getValue(),
                     OuyuncMessageTypeEnum.SYN_ACK.getType(),
                     message);
-            AtomicInteger missAckTimes = MessageServerContext.clusterClientMissAckTimesCache.get(targetServerAddress);
-            if (MessageServerContext.clusterActiveServerRegistryTableCache.asMap().containsKey(targetServerAddress)
-                    && missAckTimes.incrementAndGet() > MessageServerContext.serverProperties().getClusterClientHeartbeatWaitRetry()) {
-                MessageServerContext.clusterActiveServerRegistryTableCache.delete(targetServerAddress);
-                log.warn("集群节点 SYN 连续无 ACK，从可投递池摘除（租约仍在则继续重试）: {}", targetServerAddress);
-            }
             MessageServerContext.findProtocol(packet.getProtocol(), packet.getProtocolVersion())
-                    .doSendMessage(packet, targetServerAddress, sendResult -> {
-                    });
+                    .doSendMessage(packet, targetServerAddress,
+                            sendResult -> onSynSendResult(targetServerAddress, sendResult));
+        }
+    }
+
+    /**
+     * 已发出或网络失败才计入等待 ACK；本地校验失败不摘池。
+     */
+    static void onSynSendResult(String targetServerAddress, SendResult sendResult) {
+        if (sendResult != null
+                && OutboundPacketVerifyException.isLocalVerifyFailure(sendResult.getException())) {
+            log.error("集群心跳本地构包失败 dest={} packetId={}",
+                    targetServerAddress,
+                    sendResult.getPacket() == null ? null : sendResult.getPacket().getPacketId());
+            return;
+        }
+        if (sendResult != null && sendResult.getSendStatus() != SendStatusEnum.SEND_OK) {
+            log.warn("集群心跳发送失败 dest={} cause={}",
+                    targetServerAddress,
+                    sendResult.getException() == null ? null : sendResult.getException().getMessage());
+        }
+        noteWaitingAck(targetServerAddress);
+    }
+
+    private static void noteWaitingAck(String targetServerAddress) {
+        if (!MessageServerContext.clusterActiveServerRegistryTableCache.asMap().containsKey(targetServerAddress)) {
+            return;
+        }
+        AtomicInteger missAckTimes = MessageServerContext.clusterClientMissAckTimesCache.get(targetServerAddress);
+        if (missAckTimes.incrementAndGet() > MessageServerContext.serverProperties().getClusterClientHeartbeatWaitRetry()) {
+            MessageServerContext.clusterActiveServerRegistryTableCache.delete(targetServerAddress);
+            log.warn("集群节点 SYN 连续无 ACK，从可投递池摘除（租约仍在则继续重试）: {}", targetServerAddress);
         }
     }
 }

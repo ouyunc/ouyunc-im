@@ -17,7 +17,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * {@link Packet} 协议头与消息体字段校验（编解码层安全边界）。
+ * 帧结构检查：魔数、线上协议版本、长度、算法、消息体、类型码是否登记。
+ * <p>不管连接是谁、metadata、登录或路由。那些分别由 Channel 守卫和对应 Processor 处理。</p>
  */
 public final class PacketVerifier {
 
@@ -27,7 +28,7 @@ public final class PacketVerifier {
     }
 
     /**
-     * @return true 表示协议包字段合法
+     * @return true 表示这一帧字段能编解码
      */
     public static boolean verify(Packet packet) {
         if (packet == null) {
@@ -42,7 +43,7 @@ public final class PacketVerifier {
             log.warn("Packet 校验失败: 非法 packetId={}", packet.getPacketId());
             return false;
         }
-        if (!isKnownProtocol(packet.getProtocol(), packet.getProtocolVersion())) {
+        if (!isKnownWireProtocol(packet.getProtocol(), packet.getProtocolVersion())) {
             log.warn("Packet 校验失败: 未知协议 protocol={}, version={}, packetId={}",
                     packet.getProtocol(), packet.getProtocolVersion(), packet.getPacketId());
             return false;
@@ -60,8 +61,9 @@ public final class PacketVerifier {
                     packet.getSerializeAlgorithm(), packet.getPacketId());
             return false;
         }
-        if (!isKnownMessageType(packet.getMessageType())) {
-            log.warn("Packet 校验失败: 未知 messageType={}, packetId={}", packet.getMessageType(), packet.getPacketId());
+        if (!isRegisteredMessageType(packet.getMessageType())) {
+            log.warn("Packet 校验失败: 未登记的 messageType={}, packetId={}",
+                    packet.getMessageType(), packet.getPacketId());
             return false;
         }
         if (packet.getMessageLength() < 0
@@ -75,20 +77,20 @@ public final class PacketVerifier {
             log.warn("Packet 校验失败: message 为空, packetId={}", packet.getPacketId());
             return false;
         }
-        if (!message.hasMetadata()) {
-            log.warn("Packet 校验失败: metadata 为空, packetId={}", packet.getPacketId());
-            return false;
-        }
-        if (!isKnownContentType(message.getContentType())) {
-            log.warn("Packet 校验失败: 未知 contentType={}, packetId={}",
+        if (!isRegisteredContentType(message.getContentType())) {
+            log.warn("Packet 校验失败: 未登记的 contentType={}, packetId={}",
                     message.getContentType(), packet.getPacketId());
             return false;
         }
         return true;
     }
 
-    private static boolean isKnownProtocol(byte protocol, byte protocolVersion) {
+    /** ZERO 只是类型通配标志，不是线上协议。 */
+    private static boolean isKnownWireProtocol(byte protocol, byte protocolVersion) {
         for (ProtocolTypeEnum protocolType : ProtocolTypeEnum.values()) {
+            if (protocolType == ProtocolTypeEnum.ZERO) {
+                continue;
+            }
             if (protocolType.getProtocol() == protocol && protocolType.getProtocolVersion() == protocolVersion) {
                 return true;
             }
@@ -114,7 +116,7 @@ public final class PacketVerifier {
         return false;
     }
 
-    private static boolean isKnownMessageType(byte messageType) {
+    private static boolean isRegisteredMessageType(byte messageType) {
         for (MessageTypeEnum type : MessageTypeEnum.values()) {
             if (type.getType() == messageType) {
                 return true;
@@ -133,7 +135,7 @@ public final class PacketVerifier {
         return false;
     }
 
-    private static boolean isKnownContentType(int contentType) {
+    private static boolean isRegisteredContentType(int contentType) {
         for (MessageContentTypeEnum type : MessageContentTypeEnum.values()) {
             if (type.getType() == contentType) {
                 return true;

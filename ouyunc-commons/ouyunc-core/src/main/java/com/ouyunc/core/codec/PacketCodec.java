@@ -2,7 +2,7 @@ package com.ouyunc.core.codec;
 
 
 import com.ouyunc.base.constant.MessageConstant;
-import com.ouyunc.base.exception.MessageException;
+import com.ouyunc.base.exception.OutboundPacketVerifyException;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.utils.PacketReaderWriterUtil;
 import com.ouyunc.base.utils.PacketVerifier;
@@ -15,8 +15,8 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 
 /**
- * @Author fzx
- * @Description: 自定义编解码器，消息在服务器内部都会转成该packet格式的消息进行传递和处理
+ * Packet 编解码。这里只做帧结构校验。
+ * <p>入站非法：对端坏数据，关连接。出站非法：本机构包错误，失败本次发送，不关连接。</p>
  **/
 public class PacketCodec extends ByteToMessageCodec<Packet> {
     private static final Logger log = LoggerFactory.getLogger(PacketCodec.class);
@@ -33,11 +33,10 @@ public class PacketCodec extends ByteToMessageCodec<Packet> {
      */
     @Override
     protected void encode(ChannelHandlerContext ctx, Packet packet, ByteBuf out) throws Exception {
-        // 自定义
         if (!verify(packet, ctx)) {
-            log.error("协议包:{} 校验失败,开始关闭通道channel.", packet);
-            ctx.close();
-            throw new MessageException("协议包校验失败!");
+            log.error("本节点出站协议包校验失败, 本次发送失败且不关闭连接, packetId={}",
+                    packet == null ? null : packet.getPacketId());
+            throw new OutboundPacketVerifyException("本节点构造的协议包校验失败");
         }
         PacketReaderWriterUtil.writePacketInByteBuf(packet, out);
     }
@@ -45,7 +44,7 @@ public class PacketCodec extends ByteToMessageCodec<Packet> {
 
 
     /**
-     * 校验协议包字段参数（魔数、协议、消息类型、加密/序列化算法、消息体等）。
+     * 帧结构校验，不含连接能力或业务语义。
      */
     protected boolean verify(Packet packet, ChannelHandlerContext ctx) {
         return PacketVerifier.verify(packet);

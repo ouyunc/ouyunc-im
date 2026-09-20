@@ -1,6 +1,7 @@
 package com.ouyunc.message.handler;
 
 import com.ouyunc.base.constant.enums.ClusterForwardModeEnum;
+import com.ouyunc.base.constant.enums.OuyuncMessageTypeEnum;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.model.Target;
 import com.ouyunc.base.packet.Packet;
@@ -18,9 +19,8 @@ import org.slf4j.LoggerFactory;
 import java.util.Objects;
 
 /**
- * 集群入站分流：{@link ClusterForwardModeEnum#CLIENT} 写客户端；
- * {@link ClusterForwardModeEnum#INTERNAL} 到目标节点后进 Processor，不写客户端。
- * {@code Target.targetServerAddress} 是最终节点，中间跳不得改写。
+ * 已认证集群连接上的用途分流：心跳 / INTERNAL 控制包 / CLIENT 落地。
+ * <p>连接身份由 Guard 提供；不在这里做帧结构校验。</p>
  */
 public class ClusterPacketRouteHandler extends SimpleChannelInboundHandler<Packet> {
     private static final Logger log = LoggerFactory.getLogger(ClusterPacketRouteHandler.class);
@@ -35,16 +35,12 @@ public class ClusterPacketRouteHandler extends SimpleChannelInboundHandler<Packe
             log.warn("集群包缺少 message, packetId={}", packet.getPacketId());
             return;
         }
-        Metadata metadata = packet.getMessage().getMetadata();
+        Metadata metadata = packet.getMessage().getMetadataOrNull();
         ClusterForwardModeEnum mode = metadata == null
                 ? ClusterForwardModeEnum.NONE
                 : metadata.clusterForwardModeOrNone();
         if (mode == ClusterForwardModeEnum.NONE) {
-            if (!ClusterChannelGuard.isInternalClusterMessage(packet)) {
-                log.warn("拒绝未转发的非集群消息 packetId={} type={}", packet.getPacketId(), packet.getMessageType());
-                return;
-            }
-            ctx.fireChannelRead(packet);
+            dispatchLocalClusterPacket(ctx, packet, peer);
             return;
         }
         if (!ClusterChannelGuard.allowClusterForward(peer, metadata)) {
@@ -88,5 +84,25 @@ public class ClusterPacketRouteHandler extends SimpleChannelInboundHandler<Packe
             return;
         }
         MessageHelper.asyncSendMessageWithoutInterceptor(packet, target);
+    }
+
+    /**
+     * 未转发包：心跳绑定已认证对端；QOS_RETRY_CANCEL 必须走 INTERNAL；认证首包不应到这里。
+     */
+    private static void dispatchLocalClusterPacket(ChannelHandlerContext ctx, Packet packet, String peer) {
+        byte type = packet.getMessageType();
+        if (type == OuyuncMessageTypeEnum.CLUSTER_AUTH.getType()) {
+            log.warn("忽略已过认证阶段的 CLUSTER_AUTH packetId={}", packet.getPacketId());
+            return;
+        }
+        if (type == OuyuncMessageTypeEnum.SYN_ACK.getType()) {
+            if (!ClusterChannelGuard.allowDirectHeartbeat(peer, packet)) {
+                log.warn("拒绝非法集群心跳 packetId={} peer={}", packet.getPacketId(), peer);
+                return;
+            }
+            ctx.fireChannelRead(packet);
+            return;
+        }
+        log.warn("拒绝未转发的非集群消息 packetId={} type={}", packet.getPacketId(), type);
     }
 }
