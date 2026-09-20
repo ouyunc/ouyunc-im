@@ -7,6 +7,8 @@ import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.constant.enums.MqttMessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.OuyuncMessageTypeEnum;
 import com.ouyunc.base.constant.enums.ProtocolTypeEnum;
+import com.ouyunc.message.helper.QosAckDispatcher;
+import com.ouyunc.base.constant.QosControlConstant;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.utils.ChannelAttrUtil;
@@ -18,6 +20,7 @@ import com.ouyunc.message.helper.ChannelOrderedTasks;
 import com.ouyunc.message.processor.AbstractMessageBiProcessor;
 import com.ouyunc.message.safety.ContentSafetyIngress;
 import com.ouyunc.message.validator.DeviceValidator;
+import com.ouyunc.message.monitor.QosRetryCancelMetrics;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import org.slf4j.Logger;
@@ -26,12 +29,14 @@ import reactor.core.publisher.Mono;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.RejectedExecutionException;
 
 /**
  * 统一 Packet 业务入口。
  * <ul>
  *   <li>{@link Mode#CLIENT}：{@code preProcess（含 DUP 展开）→ 内容安全 → process → postProcess}（同一条有序任务）；
- *       外部心跳 / MQTT PINGREQ 不入有序队列、不做敏感词</li>
+ *       外部心跳 / MQTT PINGREQ 不入有序队列、不做敏感词；
+ *       {@link MessageTypeEnum#QOS_C2S_ACK} 走独立 {@code qosControlExecutor}，不进聊天有序队列、不进 EventLoop</li>
  *   <li>{@link Mode#CLUSTER}：仅 {@code process → postProcess}；
  *       {@link OuyuncMessageTypeEnum#SYN_ACK}、{@link OuyuncMessageTypeEnum#QOS_RETRY_CANCEL} 不入有序队列</li>
  * </ul>
@@ -88,6 +93,10 @@ public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
         // 外部心跳 / MQTT PINGREQ：EventLoop 直接 process，不占业务有序队列、不过敏感词
         if (packet.getMessageType() == MessageTypeEnum.PING_PONG.getType() || isMqttPingReq(packet)) {
             runLightProcess(ctx, packet, processor, "客户端心跳");
+            return;
+        }
+        if (packet.getMessageType() == MessageTypeEnum.QOS_C2S_ACK.getType()) {
+            dispatchClientAck(ctx, packet, processor);
             return;
         }
         ChannelOrderedTasks.executeAsync(ctx.channel(),
@@ -155,6 +164,46 @@ public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
                 .onErrorResume(error -> {
                     // 吞掉 Mono 错误以免打乱有序队列；业务异常不断连
                     publishBusinessException(packet, error, "消息三阶段执行异常");
+                    return Mono.empty();
+                });
+        return ChannelOrderedTasks.toVoidStage(chain);
+    }
+
+    /**
+     * 客户端 C2S ACK：鉴权/权限/原消息查询离开 EventLoop，且不排在该连接聊天队列后面。
+     */
+    private void dispatchClientAck(ChannelHandlerContext ctx, Packet packet,
+                                   AbstractMessageBiProcessor<? extends Number> processor) {
+        try {
+            QosAckDispatcher.execute(ctx.channel(), () -> invokeClientAck(ctx, packet, processor));
+        } catch (RejectedExecutionException e) {
+            QosRetryCancelMetrics.ackDispatchReject();
+            log.error("客户端 QOS_C2S_ACK 控制通道准入被拒绝 packetId={}", packet.getPacketId(), e);
+        }
+    }
+
+    private static CompletionStage<Void> invokeClientAck(ChannelHandlerContext ctx, Packet packet,
+                                        AbstractMessageBiProcessor<? extends Number> processor) {
+        if (!deviceAllowedOnWorker(ctx, packet)) {
+            log.error("设备类型不支持，deviceType= {}, appKey:{}", packet.getDeviceType(),
+                    packet.getMessage() == null ? null : packet.getMessage().getMetadata().getAppKey());
+            MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(
+                    ExceptionCodeEnum.ILLEGAL_DEVICE_TYPE_ERROR, null, packet),
+                    MessageEventTypeEnum.EXCEPTION), true);
+            ctx.close();
+            return CompletableFuture.completedFuture(null);
+        }
+        Mono<Void> chain = Mono.defer(() -> processor.preProcess(ctx, packet))
+                .flatMap(passed -> {
+                    if (!Boolean.TRUE.equals(passed)) {
+                        return Mono.empty();
+                    }
+                    return processor.process(ctx, packet)
+                            .then(Mono.defer(() -> processor.postProcess(ctx, packet)));
+                })
+                .timeout(java.time.Duration.ofSeconds(QosControlConstant.TIMEOUT_SECONDS))
+                .onErrorResume(error -> {
+                    publishBusinessException(packet, error, "QOS_C2S_ACK 执行异常");
                     return Mono.empty();
                 });
         return ChannelOrderedTasks.toVoidStage(chain);

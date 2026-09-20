@@ -255,6 +255,7 @@ public final class ResourceMonitor {
         logThreadPoolMetrics();
         logCacheMetrics();
         logQosRetryTimerMetrics();
+        logQosRetryCancelMetrics();
         logDisruptorMetrics();
         log.info("==================================");
     }
@@ -465,6 +466,20 @@ public final class ResourceMonitor {
                 m.executorRejectCount()
         );
         collectQosRetryTimerWarnings(m).forEach(msg -> log.warn("[QoS定时重试预警] {}", msg));
+    }
+
+    public static void logQosRetryCancelMetrics() {
+        QosRetryCancelMetrics.Snapshot s = QosRetryCancelMetrics.snapshot();
+        log.info(
+                "【QoS 取消】本机取消={} 跨节点命中={} 跨节点任务不存在={} 归属定位失败={} 转发失败={} 转发重试={} 非法控制包={} ACK调度拒绝={}",
+                s.localCancel(),
+                s.clusterCancelHit(),
+                s.clusterCancelMiss(),
+                s.originLocateFail(),
+                s.forwardFail(),
+                s.forwardRetry(),
+                s.invalidPacket(),
+                s.ackDispatchReject());
     }
 
     private static List<String> collectQosRetryTimerWarnings(QosRetryTimerMetrics m) {

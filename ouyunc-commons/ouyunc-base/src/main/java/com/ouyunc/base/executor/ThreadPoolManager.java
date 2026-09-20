@@ -127,6 +127,11 @@ public final class ThreadPoolManager {
         return getExecutor(ThreadPoolId.QOS_TASK);
     }
 
+    /** ACK 控制通道不与下行重试争抢执行容量。 */
+    public static ExecutorService qosControlExecutor() {
+        return getExecutor(ThreadPoolId.QOS_CONTROL);
+    }
+
     /** 节点租约 / 连接数发布专用，与 QoS 重试池隔离 */
     public static ExecutorService nodeLeaseExecutor() {
         return getExecutor(ThreadPoolId.NODE_LEASE);

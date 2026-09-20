@@ -20,7 +20,13 @@ public final class QosAckContentParser {
         if (!trimmed.startsWith("{")) {
             return null;
         }
-        QosAckContent parsed = JSON.parseObject(trimmed, QosAckContent.class);
+        QosAckContent parsed;
+        try {
+            parsed = JSON.parseObject(trimmed, QosAckContent.class);
+        } catch (com.alibaba.fastjson2.JSONException e) {
+            // 不可信 ACK 按无效输入处理，不让畸形 JSON 进入业务异常链。
+            return null;
+        }
         if (parsed == null || StringUtils.isBlank(parsed.getAckId())) {
             return null;
         }

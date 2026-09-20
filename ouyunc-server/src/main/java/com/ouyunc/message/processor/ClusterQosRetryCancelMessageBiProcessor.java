@@ -2,11 +2,17 @@ package com.ouyunc.message.processor;
 
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.enums.MessageType;
+import com.ouyunc.base.constant.enums.OuyuncMessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.OuyuncMessageTypeEnum;
+import com.ouyunc.base.model.Metadata;
+import com.ouyunc.base.model.Target;
 import com.ouyunc.base.packet.Packet;
+import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.packet.message.content.QosRetryCancelContent;
+import com.ouyunc.core.device.DeviceTypeRegistry;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.MessageHelper;
+import com.ouyunc.message.monitor.QosRetryCancelMetrics;
 import com.ouyunc.message.schedule.QosRetryScheduler;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.lang3.StringUtils;
@@ -30,11 +36,13 @@ public final class ClusterQosRetryCancelMessageBiProcessor extends AbstractMessa
     public Mono<Void> process(ChannelHandlerContext ctx, Packet packet) {
         return Mono.fromRunnable(() -> {
             if (packet == null || packet.getMessage() == null) {
+                QosRetryCancelMetrics.invalidPacket();
                 return;
             }
             String dest = MessageHelper.clusterDest(packet);
             if (StringUtils.isBlank(dest)) {
                 log.warn("集群 QOS_RETRY_CANCEL 缺少 Target.targetServerAddress packetId={}", packet.getPacketId());
+                QosRetryCancelMetrics.invalidPacket();
                 return;
             }
             String local = MessageServerContext.serverProperties().getLocalServerAddress();
@@ -42,13 +50,53 @@ public final class ClusterQosRetryCancelMessageBiProcessor extends AbstractMessa
                 MessageHelper.sendClusterInternal(packet, dest);
                 return;
             }
-            QosRetryCancelContent content = JSON.parseObject(
-                    packet.getMessage().getContent(), QosRetryCancelContent.class);
+            QosRetryCancelContent content = parseAndValidate(packet);
             if (content == null) {
-                log.warn("集群 QOS_RETRY_CANCEL 载荷解析失败 packetId={}", packet.getPacketId());
                 return;
             }
             QosRetryScheduler.onClusterCancel(content);
         });
+    }
+
+    private static QosRetryCancelContent parseAndValidate(Packet packet) {
+        Message message = packet.getMessage();
+        if (message.getContentType() != OuyuncMessageContentTypeEnum.QOS_RETRY_CANCEL_CONTENT.getType()) {
+            log.warn("集群 QOS_RETRY_CANCEL contentType 非法 packetId={} contentType={}",
+                    packet.getPacketId(), message.getContentType());
+            QosRetryCancelMetrics.invalidPacket();
+            return null;
+        }
+        QosRetryCancelContent content;
+        try {
+            content = JSON.parseObject(message.getContent(), QosRetryCancelContent.class);
+        } catch (Exception e) {
+            log.warn("集群 QOS_RETRY_CANCEL 载荷 JSON 解析失败 packetId={}", packet.getPacketId(), e);
+            QosRetryCancelMetrics.invalidPacket();
+            return null;
+        }
+        if (content == null || content.getPacketId() <= 0
+                || StringUtils.isAnyBlank(content.getAppKey(), content.getIdentity())) {
+            log.warn("集群 QOS_RETRY_CANCEL 载荷字段非法 packetId={}", packet.getPacketId());
+            QosRetryCancelMetrics.invalidPacket();
+            return null;
+        }
+        Metadata metadata = message.getMetadata();
+        Target target = metadata == null ? null : metadata.getTarget();
+        String metaAppKey = metadata == null ? null : metadata.getAppKey();
+        String targetAppKey = target == null ? null : target.getAppKey();
+        if (!content.getAppKey().equals(metaAppKey)
+                || (StringUtils.isNotBlank(targetAppKey) && !content.getAppKey().equals(targetAppKey))) {
+            log.warn("集群 QOS_RETRY_CANCEL appKey 不一致 packetId={} content={} meta={} target={}",
+                    packet.getPacketId(), content.getAppKey(), metaAppKey, targetAppKey);
+            QosRetryCancelMetrics.invalidPacket();
+            return null;
+        }
+        if (!DeviceTypeRegistry.supports(content.getAppKey(), content.getDeviceType())) {
+            log.warn("集群 QOS_RETRY_CANCEL 设备类型非法 packetId={} deviceType={}",
+                    packet.getPacketId(), content.getDeviceType());
+            QosRetryCancelMetrics.invalidPacket();
+            return null;
+        }
+        return content;
     }
 }

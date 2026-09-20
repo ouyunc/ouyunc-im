@@ -98,7 +98,7 @@ public class TimerTaskWrapper implements TimerTask {
     protected Consumer<TimerTaskWrapper> runnableTask;
     protected long period;
     protected TimeUnit timeUnit;
-    protected Timeout scheduledTimeout;
+    protected volatile Timeout scheduledTimeout;
     /**
      * true=fixed-delay：等任务（含异步）完成后再调度下一轮；false=fixed-rate：触发后立刻排下一轮。
      * 历史字段名 sync：曾表示在时间轮线程同步跑业务，已废弃该语义。
@@ -215,12 +215,16 @@ public class TimerTaskWrapper implements TimerTask {
     }
 
     public boolean cancel() {
+        boolean removed;
         if (kind == TimerTaskKind.SYSTEM) {
-            systemTimerTasks.remove(taskId, this);
+            removed = systemTimerTasks.remove(taskId, this);
         } else {
-            timerTaskCaffeine.delete(taskId);
+            // 旧任务不得删除同 key 下已经替换的新实例。
+            removed = timerTaskCaffeine.asMap().remove(taskId, this);
         }
-        return cancelScheduledTimeout();
+        boolean timeoutCancelled = cancelScheduledTimeout();
+        // 已触发的 Timeout 不能再 cancel，但移除索引已经完成逻辑取消。
+        return removed || timeoutCancelled;
     }
 
     /**
