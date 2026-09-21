@@ -483,10 +483,12 @@ public final class GroupMembershipSupport {
                     result.put(mid, row);
                 }
             }
-            RedisPipelineSupport.setValues(infra.redisTemplate, cacheWrites);
+            RedisPipelineSupport.setValues(infra.redisTemplate, cacheWrites,
+                    MessageConstant.CACHE_ENTITY_KEY_EXPIRE_TIMESTAMP);
         } catch (Exception e) {
             log.error("批量查询群成员失败 groupId={} missingSize={}", groupId, missing.size(), e);
-            // 故障时禁止逐成员回源放大数据库压力；返回已命中的缓存数据。
+            // 禁止把“权威源不可用”伪装成“确认无配置”，否则下游会误判为 IM 渠道。
+            throw new GroupMembershipLoadException("批量查询群成员失败 groupId=" + groupId, e);
         }
         return result;
     }

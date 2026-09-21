@@ -86,7 +86,7 @@ public class ClientHelper {
                 }, ThreadPoolManager.messageProcessorExecutor())
                 .thenCompose(previous -> runOnEventLoop(channel, () -> {
                     if (!channel.isActive()) {
-                        rollbackRemoteIfChannelClosed(loginClientInfo, comboIdentity, channel);
+                        rollbackRemoteAsync(loginClientInfo, comboIdentity, channel);
                         throw new MessageException("channel 已关闭，放弃完成本地注册");
                     }
                     ChannelHandlerContext staleLocal =
@@ -101,7 +101,7 @@ public class ClientHelper {
                 .whenComplete((unused, ex) -> {
                     if (ex != null) {
                         unregisterLocal(comboIdentity, ctx, loginClientInfo.getAppKey());
-                        rollbackRemoteIfChannelClosed(loginClientInfo, comboIdentity, channel);
+                        rollbackRemoteAsync(loginClientInfo, comboIdentity, channel);
                     }
                 });
     }
@@ -164,6 +164,18 @@ public class ClientHelper {
             }
         })) {
             log.error("客户端: {} 关闭回滚获取锁失败", loginClientInfo);
+        }
+    }
+
+    /**
+     * 远程锁与 Redis 回滚始终离开 EventLoop；拒绝时由登录 TTL/死路由清理兜底。
+     */
+    private static void rollbackRemoteAsync(LoginClientInfo loginClientInfo, String comboIdentity, Channel channel) {
+        try {
+            ThreadPoolManager.messageProcessorExecutor().execute(
+                    () -> rollbackRemoteIfChannelClosed(loginClientInfo, comboIdentity, channel));
+        } catch (RuntimeException e) {
+            log.error("提交登录远程回滚任务失败 combo={}，等待 TTL 清理", comboIdentity, e);
         }
     }
 

@@ -138,7 +138,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
     /**
      * AppKey 配额、设备白名单、签名、登录 GET、踢人全部离开 EventLoop。
      * JSON 解析也在业务线程，避免占 EventLoop。
-     * <p>设备类型走软校验（与 MQTT / PacketHandler 设备白名单一致），不抛异常。</p>
+     * <p>设备类型走软校验（与 PacketHandler 设备白名单一致），不抛异常。</p>
      */
     private void authenticateAndBind(ChannelHandlerContext ctx, Packet packet,
                                      byte deviceType, long loginTimestamp) {

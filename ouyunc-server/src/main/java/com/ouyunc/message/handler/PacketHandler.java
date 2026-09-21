@@ -3,20 +3,22 @@ package com.ouyunc.message.handler;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
+import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
-import com.ouyunc.base.constant.enums.MqttMessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.OuyuncMessageTypeEnum;
-import com.ouyunc.base.constant.enums.ProtocolTypeEnum;
 import com.ouyunc.message.helper.QosAckDispatcher;
 import com.ouyunc.base.constant.QosControlConstant;
 import com.ouyunc.base.model.LoginClientInfo;
+import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.utils.ChannelAttrUtil;
+import com.ouyunc.base.utils.QosDupPacketParser;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ChannelOrderedTasks;
+import com.ouyunc.message.helper.QosAckHelper;
 import com.ouyunc.message.processor.AbstractMessageBiProcessor;
 import com.ouyunc.message.safety.ContentSafetyIngress;
 import com.ouyunc.message.validator.DeviceValidator;
@@ -36,7 +38,7 @@ import java.util.concurrent.RejectedExecutionException;
  * 统一 Packet 业务入口。
  * <ul>
  *   <li>{@link Mode#CLIENT}：{@code preProcess（含 DUP 展开）→ 内容安全 → process → postProcess}（同一条有序任务）；
- *       外部心跳 / MQTT PINGREQ 不入有序队列、不做敏感词；
+ *       外部心跳不入有序队列、不做敏感词；
  *       {@link MessageTypeEnum#QOS_C2S_ACK} 走独立 {@code qosControlExecutor}，不进聊天有序队列、不进 EventLoop</li>
  *   <li>{@link Mode#CLUSTER}：仅 {@code process → postProcess}；
  *       {@link OuyuncMessageTypeEnum#SYN_ACK}、{@link OuyuncMessageTypeEnum#QOS_RETRY_CANCEL} 不入有序队列</li>
@@ -58,7 +60,7 @@ public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
         this.mode = mode == null ? Mode.CLIENT : mode;
     }
 
-    /** 客户端 WS/MQTT 入口。 */
+    /** 客户端 WS / 原生 Packet 入口。 */
     public static PacketHandler client() {
         return new PacketHandler(Mode.CLIENT);
     }
@@ -78,7 +80,7 @@ public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
     }
 
     private void handleClient(ChannelHandlerContext ctx, Packet packet) {
-        AbstractMessageBiProcessor<? extends Number> processor = resolveProcessor(ctx, packet);
+        AbstractMessageBiProcessor<? extends Number> processor = resolveClientProcessor(ctx, packet);
         if (processor == null) {
             return;
         }
@@ -91,8 +93,8 @@ public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
             ctx.close();
             return;
         }
-        // 外部心跳 / MQTT PINGREQ：EventLoop 直接 process，不占业务有序队列、不过敏感词
-        if (packet.getMessageType() == MessageTypeEnum.PING_PONG.getType() || isMqttPingReq(packet)) {
+        // 外部心跳：EventLoop 直接 process，不占业务有序队列、不过敏感词
+        if (packet.getMessageType() == MessageTypeEnum.PING_PONG.getType()) {
             runLightProcess(ctx, packet, processor, "客户端心跳");
             return;
         }
@@ -103,6 +105,53 @@ public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
         ChannelOrderedTasks.executeAsync(ctx.channel(),
                 () -> invokeFull(ctx, packet, processor),
                 MessageConstant.CHANNEL_ORDERED_TASK_DEADLINE_MS, estimatePacketBytes(packet));
+    }
+
+    /**
+     * QOS_DUP 是传输信封，不是业务处理器类型：鉴权后先展开，再按内部真实类型分发。
+     * 内部 Metadata 一律替换为通道已绑定的可信 Metadata，并禁止递归信封。
+     */
+    private AbstractMessageBiProcessor<? extends Number> resolveClientProcessor(
+            ChannelHandlerContext ctx, Packet packet) {
+        if (packet.getMessageType() != MessageTypeEnum.QOS_DUP.getType()) {
+            return resolveProcessor(ctx, packet);
+        }
+        if (!MessageContext.isQosEnable() || packet.getMessage() == null
+                || packet.getMessage().getContentType() != MessageContentTypeEnum.QOS_DUP_CONTENT.getType()) {
+            rejectIllegalType(ctx, packet, "非法 QOS_DUP 信封");
+            return null;
+        }
+        Packet original = QosDupPacketParser.parse(packet.getMessage().getContent());
+        if (original == null || original.getMessage() == null
+                || original.getMessageType() == MessageTypeEnum.QOS_DUP.getType()) {
+            rejectIllegalType(ctx, packet, "QOS_DUP 内部消息非法");
+            return null;
+        }
+        Metadata trustedMetadata = packet.getMessage().getMetadata();
+        original.getMessage().setMetadata(trustedMetadata);
+        ChannelAttrUtil.setChannelAttribute(
+                ctx, MessageConstant.CHANNEL_ATTR_KEY_QOS_DUP_ORIGINAL_PACKET, original);
+        packet.copyFrom(original);
+        AbstractMessageBiProcessor<? extends Number> processor = resolveProcessor(ctx, packet);
+        if (processor == null) {
+            return null;
+        }
+        LoginClientInfo login = ChannelAttrUtil.getChannelAttribute(
+                ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
+        String identity = login == null ? null : login.getIdentity();
+        if (processor.repository().checkDup(packet, identity)) {
+            QosAckHelper.sendS2cAck(ctx, packet);
+            return null;
+        }
+        return processor;
+    }
+
+    private static void rejectIllegalType(ChannelHandlerContext ctx, Packet packet, String reason) {
+        log.warn("{} packetId={}", reason, packet == null ? null : packet.getPacketId());
+        MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(
+                ExceptionCodeEnum.ILLEGAL_MESSAGE_TYPE_ERROR, reason, packet),
+                MessageEventTypeEnum.EXCEPTION), true);
+        ctx.close();
     }
 
     private void handleCluster(ChannelHandlerContext ctx, Packet packet) {
@@ -248,12 +297,6 @@ public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
             return login.getDeviceType() == packet.getDeviceType();
         }
         return DeviceValidator.INSTANCE.verify(packet, ctx);
-    }
-
-    private static boolean isMqttPingReq(Packet packet) {
-        return packet.getProtocol() == ProtocolTypeEnum.MQTT.getProtocol()
-                && packet.getMessage() != null
-                && packet.getMessage().getContentType() == MqttMessageContentTypeEnum.MQTT_PINGREQ.getType();
     }
 
     private static void releaseQosOnCancel(Packet packet, AbstractMessageBiProcessor<? extends Number> processor) {

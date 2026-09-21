@@ -10,7 +10,6 @@ import com.ouyunc.base.encrypt.Encrypt;
 import com.ouyunc.base.model.ContentSafetyResult;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.model.Metadata;
-import com.ouyunc.base.model.Protocol;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.packet.message.content.ServerNotifyContent;
@@ -21,18 +20,8 @@ import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.message.context.MessageServerContext;
-import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.helper.PacketChannelWriter;
-import com.ouyunc.message.protocol.NativePacketProtocol;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.mqtt.MqttFixedHeader;
-import io.netty.handler.codec.mqtt.MqttMessageFactory;
-import io.netty.handler.codec.mqtt.MqttMessageType;
-import io.netty.handler.codec.mqtt.MqttPublishMessage;
-import io.netty.handler.codec.mqtt.MqttPublishVariableHeader;
-import io.netty.handler.codec.mqtt.MqttQoS;
-import io.netty.util.CharsetUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,43 +64,9 @@ public final class ContentSafetyIngress {
         return true;
     }
 
-    /**
-     * REJECT 回写：MQTT 发 QoS0 PUBLISH；其它协议发 SERVER_NOTIFY。
-     */
+    /** REJECT 回写 SERVER_NOTIFY。 */
     private static void replyReject(ChannelHandlerContext ctx, Packet source) {
-        if (isMqtt(ctx, source)) {
-            replyMqttReject(ctx, source);
-            return;
-        }
         PacketChannelWriter.tryReplyOnChannel(ctx, buildRejectNotify(ctx, source));
-    }
-
-    private static boolean isMqtt(ChannelHandlerContext ctx, Packet source) {
-        if (source != null && source.getProtocol() == NativePacketProtocol.MQTT.getProtocol()) {
-            return true;
-        }
-        Protocol protocol = ctx.channel().attr(NativePacketProtocol.protocolAttrKey).get();
-        return protocol != null && protocol.getProtocol() == NativePacketProtocol.MQTT.getProtocol();
-    }
-
-    private static void replyMqttReject(ChannelHandlerContext ctx, Packet source) {
-        Runnable write = () -> {
-            try {
-                String text = ExceptionCodeEnum.CONTENT_SENSITIVE_REJECT.getMessage();
-                MqttPublishMessage publish = (MqttPublishMessage) MqttMessageFactory.newMessage(
-                        new MqttFixedHeader(MqttMessageType.PUBLISH, false, MqttQoS.AT_MOST_ONCE, false, 0),
-                        new MqttPublishVariableHeader(MessageConstant.MQTT_SYS_NOTIFY_TOPIC, 0),
-                        Unpooled.copiedBuffer(text, CharsetUtil.UTF_8));
-                MessageHelper.tryWriteObject(ctx.channel(), publish, source, sendResult -> {});
-            } catch (Exception e) {
-                log.warn("MQTT 内容安全拒绝回写失败 channelId={}", ctx.channel().id().asShortText(), e);
-            }
-        };
-        if (ctx.channel().eventLoop().inEventLoop()) {
-            write.run();
-            return;
-        }
-        ctx.channel().eventLoop().execute(write);
     }
 
     private static Packet buildRejectNotify(ChannelHandlerContext ctx, Packet source) {

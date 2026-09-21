@@ -1,45 +1,33 @@
 package com.ouyunc.message.listener;
 
-import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.*;
 import com.ouyunc.base.encrypt.Encrypt;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.model.Metadata;
-import com.ouyunc.base.model.MqttLoginClientInfo;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.serialize.Serializer;
-import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.MessageEventListener;
 import com.ouyunc.core.listener.EventListener;
 import com.ouyunc.core.listener.event.MessageEvent;
-import com.ouyunc.base.constant.enums.YesOrNo;
 import com.ouyunc.base.executor.ThreadPoolManager;
-import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
-import com.ouyunc.message.processor.AbstractBaseBiProcessor;
-import com.ouyunc.message.processor.content.MqttPublishMessageContentBiProcessor;
 import com.ouyunc.message.protocol.NativePacketProtocol;
 import com.ouyunc.repository.DefaultRepository;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.handler.codec.mqtt.*;
-import io.netty.util.CharsetUtil;
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 import java.util.List;
 
 /**
  * @Author fzx
- * @Description: 离线监听器（遗嘱 / 好友下线通知）。坐席 CHANNEL_CLOSE 由
+ * @Description: 离线监听器（好友下线通知）。坐席 CHANNEL_CLOSE 由
  * {@link CsAgentPresenceLogoutMessageEventListener} 投递。
  */
 @EventListener(ring = EventRingEnum.CLIENT_LOGOUT)
@@ -62,51 +50,17 @@ class ClientLogoutMessageEventListener implements MessageEventListener<MessageEv
     }
 
     /**
-     * 遗嘱发布 / 好友下线通知含 Redis 与写出，必须离开 Disruptor 线程。
+     * 好友下线通知含 Redis 与写出，必须离开 Disruptor 线程。
      */
     private void handleLogout(MessageEvent event) {
         long consumeLagMs = Math.max(0L, TimeUtil.currentTimeMillis() - event.getPublishTime());
         Object source = event.getSource();
         switch (source) {
-            case MqttLoginClientInfo mqttLoginClientInfo -> handleMqttLogout(event, mqttLoginClientInfo, consumeLagMs);
             case LoginClientInfo loginClientInfo -> handleNativeLogout(event, loginClientInfo, consumeLagMs);
             case null -> log.warn("[客户端登出] source 为空, eventId={}, publishTime={}, consumeLagMs={}",
                     event.getId(), event.getPublishTime(), consumeLagMs);
             default -> log.warn("[客户端登出] source 类型不支持, eventId={}, publishTime={}, consumeLagMs={}, sourceType={}",
                     event.getId(), event.getPublishTime(), consumeLagMs, source.getClass().getName());
-        }
-    }
-
-    private void handleMqttLogout(MessageEvent event, MqttLoginClientInfo mqttLoginClientInfo, long consumeLagMs) {
-        if (mqttLoginClientInfo.getEnableWill() != YesOrNo.YES.getCode()
-                || StringUtils.isBlank(mqttLoginClientInfo.getWillMessage())) {
-            log.info("[客户端登出] MQTT 已接收(未开启遗嘱), eventId={}, appKey={}, identity={}, deviceType={}, loginServer={}, consumeLagMs={}",
-                    event.getId(), mqttLoginClientInfo.getAppKey(), mqttLoginClientInfo.getIdentity(),
-                    mqttLoginClientInfo.getDeviceType(), mqttLoginClientInfo.getLoginServerAddress(), consumeLagMs);
-            return;
-        }
-        MqttMessage willMqttMessage = MqttMessageFactory.newMessage(
-                new MqttFixedHeader(MqttMessageType.PUBLISH, false, MqttQoS.valueOf(mqttLoginClientInfo.getQos()), mqttLoginClientInfo.getIsWillRetain() == YesOrNo.YES.getCode(), NumberConstant.NUMBER_0),
-                new MqttPublishVariableHeader(mqttLoginClientInfo.getWillTopic(), NumberConstant.NUMBER_0), ByteBufAllocator.DEFAULT.buffer().writeBytes(mqttLoginClientInfo.getWillMessage().getBytes(CharsetUtil.UTF_8)));
-        AbstractBaseBiProcessor<?, ? extends Number> baseProcessor =
-                MessageServerContext.messageContentProcessorCache.get(MqttMessageContentTypeEnum.MQTT_PUBLISH.getType());
-        if (baseProcessor instanceof MqttPublishMessageContentBiProcessor mqttPublishMessageContentProcessor) {
-            mqttPublishMessageContentProcessor.doPublishMessage(
-                    willMqttMessage,
-                    mqttLoginClientInfo.getAppKey(),
-                    IdentityUtil.generalComboIdentity(
-                            mqttLoginClientInfo.getAppKey(),
-                            mqttLoginClientInfo.getIdentity(),
-                            mqttLoginClientInfo.getDeviceType()),
-                    null);
-            log.info("[客户端登出] MQTT 遗嘱已发布, eventId={}, appKey={}, identity={}, deviceType={}, willTopic={}, qos={}, loginServer={}, consumeLagMs={}",
-                    event.getId(), mqttLoginClientInfo.getAppKey(), mqttLoginClientInfo.getIdentity(),
-                    mqttLoginClientInfo.getDeviceType(), mqttLoginClientInfo.getWillTopic(), mqttLoginClientInfo.getQos(),
-                    mqttLoginClientInfo.getLoginServerAddress(), consumeLagMs);
-        } else {
-            log.warn("[客户端登出] MQTT 遗嘱发布失败(处理器缺失), eventId={}, appKey={}, identity={}, willTopic={}, consumeLagMs={}",
-                    event.getId(), mqttLoginClientInfo.getAppKey(), mqttLoginClientInfo.getIdentity(),
-                    mqttLoginClientInfo.getWillTopic(), consumeLagMs);
         }
     }
 

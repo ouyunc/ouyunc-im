@@ -503,7 +503,7 @@ public class MessageHelper {
         PacketChannelWriter.notifySendFail(packet, message, sendCallback);
     }
 
-    /** MQTT 控制报文等已转换对象写出，实现见 {@link PacketChannelWriter#tryWriteObject}。 */
+    /** 已转换对象写出，实现见 {@link PacketChannelWriter#tryWriteObject}。 */
     public static boolean tryWriteObject(Channel channel, Object msg, Packet packet, SendCallback sendCallback) {
         return PacketChannelWriter.tryWriteObject(channel, msg, packet, sendCallback);
     }

@@ -33,7 +33,7 @@ public class HttpProtocolDispatcherBiProcessor implements ProtocolDispatcherBiPr
         ctx.pipeline()
                 .addLast(MessageConstant.REMOTE_CLIENT_REAL_IP_HANDLER, new EphemeralRemoteClientRealIpHandler())
                 // 这一步没有加自定义编解码器，是因为上面的处理器已经处理了消息编解码
-                // http 协议分发处理器（内部再分 WS / MQTT / 普通 HTTP）
+                // http 协议分发处理器（内部再分 WS / 普通 HTTP）
                 .addLast(MessageConstant.HTTP_DISPATCHER_HANDLER, new HttpProtocolDispatcherHandler());
         // 移除协议分发器，如果不移除在处理业务消息时还是会进行消息分发处理
         ctx.pipeline().remove(MessageConstant.PROTOCOL_DISPATCHER_HANDLER);

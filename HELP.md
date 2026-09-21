@@ -15,7 +15,3 @@
 (14) hash 已读(读已回执)消息:    ouyunc:app-key:${appKey}:im:message:read-receipt:${消息id}              ${用户唯一标识}    ImUser
 (15) hash存储 saas 中 im 连接数： ouyunc:app-key:${appKey}:connections             ${用户登录的唯一标识}  用户登录信息
 (16) zset session 聊天会话存储    ouyunc:app-key:${appKey}:im:message:session:${sessionId}  packet   ${小时时间戳}
-
-(16)opsvalue存储 mqtt Topic:     ouyunc:app-key:${appKey}:mqtt:topic:${topic}      MqttTopic
-(17)hash存储 mqtt Topic subscribe:     ouyunc:app-key:${appKey}:mqtt:topic:${topicId}   ${clientId}    MqttTopicSubscribe
-

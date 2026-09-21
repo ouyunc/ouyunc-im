@@ -1,6 +1,8 @@
 package com.ouyunc.cache.distributed.redis;
 
 import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.connection.RedisStringCommands;
+import org.springframework.data.redis.core.types.Expiration;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -61,6 +63,15 @@ public final class RedisPipelineSupport {
 
     @SuppressWarnings("unchecked")
     public static <V> void setValues(RedisTemplate<?, ?> template, Map<String, ? extends V> keyValues) {
+        setValues(template, keyValues, 0L);
+    }
+
+    /**
+     * 逐 key 原子 SET + PX，避免 SET 后再 EXPIRE 的无 TTL 窗口。
+     */
+    @SuppressWarnings("unchecked")
+    public static <V> void setValues(RedisTemplate<?, ?> template, Map<String, ? extends V> keyValues,
+                                     long ttlMillis) {
         if (template == null || keyValues == null || keyValues.isEmpty()) {
             return;
         }
@@ -74,7 +85,12 @@ public final class RedisPipelineSupport {
                 if (rawKey == null || rawVal == null) {
                     throw new IllegalStateException("Redis 序列化失败");
                 }
-                connection.stringCommands().set(rawKey, rawVal);
+                if (ttlMillis > 0L) {
+                    connection.stringCommands().set(rawKey, rawVal, Expiration.milliseconds(ttlMillis),
+                            RedisStringCommands.SetOption.UPSERT);
+                } else {
+                    connection.stringCommands().set(rawKey, rawVal);
+                }
             }
             return null;
         });

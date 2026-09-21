@@ -107,13 +107,6 @@ public class CacheConstant {
      */
     private static final String GROUP_USERS_SHIELD = "gsh:";
 
-    /**
-     * MQTT retain / inflight
-     */
-    private static final String MQTT_RETAIN = "rt:";
-    private static final String MQTT_RETAIN_TOPICS = "rts";
-    private static final String MQTT_INFLIGHT = "if:";
-    private static final String MQTT_MSG_ID = "mid:";
     private static final String MONGO_COMPENSATE = "im:mongo:cp:";
 
     /***
@@ -207,21 +200,6 @@ public class CacheConstant {
     private static final String MQ_OUTBOX_RELAY_TASK = "mq-outbox-relay";
 
     /***
-     * mqtt
-     */
-    private static final String MQTT = "mqtt:";
-
-    /***
-     * topic
-     */
-    private static final String TOPIC = "t:";
-
-    /***
-     * topic-list
-     */
-    private static final String TOPIC_LIST = "tl";
-
-    /***
      * 设备 类型device-type
      */
     private static final String DEVICE_TYPE = "dt";
@@ -256,7 +234,7 @@ public class CacheConstant {
     }
 
     /**
-     * 租户级前缀（仅适合真正的 app 全局小集合：设备类型表、MQTT topic 列表等）。
+     * 租户级前缀（仅适合真正的 app 全局小集合，如设备类型表）。
      * QoS 幂等已按 identity/packetId 分片，见 {@link #buildQosIdempotencyPacketKey}。
      * 普通会话/收件箱/群数据请用 {@link #buildAggregateCacheKey}。
      */
@@ -446,22 +424,6 @@ public class CacheConstant {
         return buildAggregateCacheKey(appKey, groupId) + GROUP_USERS_SHIELD;
     }
 
-    public static String buildMqttRetainCacheKey(String appKey, String topic) {
-        return buildAggregateCacheKey(appKey, topic) + MQTT + MQTT_RETAIN;
-    }
-
-    public static String buildMqttRetainTopicSetCacheKey(String appKey) {
-        return buildBaseCacheKey(appKey) + MQTT + MQTT_RETAIN_TOPICS;
-    }
-
-    public static String buildMqttInflightCacheKey(String appKey, String comboIdentity) {
-        return buildAggregateCacheKey(appKey, comboIdentity) + MQTT + MQTT_INFLIGHT;
-    }
-
-    public static String buildMqttMessageIdCacheKey(String appKey, String comboIdentity) {
-        return buildAggregateCacheKey(appKey, comboIdentity) + MQTT + MQTT_MSG_ID;
-    }
-
     /**
      * MySQL 已提交、Mongo 失败时的补偿 List，按 kind 分队列。
      */
@@ -612,20 +574,6 @@ public class CacheConstant {
      */
     public static String buildGroupRelationVersionCacheKey(String appKey, String groupId) {
         return buildAggregateCacheKey(appKey, groupId) + GROUP_RELATION_VERSION;
-    }
-
-    /**
-     * mqtt topic filter：按 topic 分片
-     */
-    public static String buildMqttTopicFilterCacheKey(String appKey, String topicFilter) {
-        return buildAggregateCacheKey(appKey, topicFilter) + MQTT + TOPIC;
-    }
-
-    /**
-     * mqtt topic list：租户级小集合
-     */
-    public static String buildMqttTopicListCacheKey(String appKey) {
-        return buildBaseCacheKey(appKey) + MQTT + TOPIC_LIST;
     }
 
     /**

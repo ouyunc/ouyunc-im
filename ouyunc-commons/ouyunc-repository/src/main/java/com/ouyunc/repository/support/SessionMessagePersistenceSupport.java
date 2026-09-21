@@ -141,6 +141,11 @@ public final class SessionMessagePersistenceSupport {
                 int claimState = QosIdempotencyHelper.tryClaim(infra.redisTemplate, appKey, packet.getPacketId(),
                         qosClaimIdentity, clientMessageId, qosOwnerToken, message);
                 if (claimState == QosIdempotencyHelper.CLAIM_COMMITTED) {
+                    Long canonicalPacketId = QosIdempotencyHelper.committedPacketId(
+                            infra.redisTemplate, appKey, qosClaimIdentity, clientMessageId);
+                    if (canonicalPacketId != null && canonicalPacketId > 0L) {
+                        packet.setPacketId(canonicalPacketId);
+                    }
                     metadata.setQosOwnerToken(null);
                     return SaveMessageOutcome.DUPLICATE;
                 }

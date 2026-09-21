@@ -20,7 +20,6 @@ import com.ouyunc.message.cluster.lease.NodeLeaseKeeper;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.http.HttpRequestDispatcher;
 import com.ouyunc.message.convert.BinaryWebSocketFramePacketConverter;
-import com.ouyunc.message.convert.MqttMessagePacketConverter;
 import com.ouyunc.message.convert.PacketPacketConverter;
 import com.ouyunc.message.monitor.ResourceMonitor;
 import com.ouyunc.message.schedule.ScheduleTimer;
@@ -158,7 +157,7 @@ public abstract class AbstractMessageServer implements MessageServer {
      */
     void beforeInitServer() {
         // 添加协议包转换器
-        MessageServerContext.addPacketConverterList(List.of(PacketPacketConverter.INSTANCE, BinaryWebSocketFramePacketConverter.INSTANCE,MqttMessagePacketConverter.INSTANCE));
+        MessageServerContext.addPacketConverterList(List.of(PacketPacketConverter.INSTANCE, BinaryWebSocketFramePacketConverter.INSTANCE));
         // 注册全局默认设备类型；appKey 定制白名单由 SERVER_PREPARE 预热 / Topic 热更新写入 DeviceTypeRegistry
         DeviceTypeRegistry.registerDefaults(DeviceTypeEnum.class);
         // bind 前准备（同步）：内容安全/关系缓存订阅、Lua 预加载等

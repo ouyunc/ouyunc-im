@@ -5,7 +5,6 @@ import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.ProtocolTypeEnum;
 import com.ouyunc.base.model.Protocol;
 import com.ouyunc.base.utils.ChannelAttrUtil;
-import com.ouyunc.client.selector.MqttProtocolDispatcherProcessor;
 import com.ouyunc.client.selector.PacketProtocolDispatcherProcessor;
 import com.ouyunc.client.selector.ProtocolSelector;
 import com.ouyunc.client.selector.WebsocketProtocolDispatcherProcessor;
@@ -86,10 +85,6 @@ public class MessageClientChannelPoolHandler extends AbstractChannelPoolHandler 
         PacketProtocolDispatcherProcessor packetSelector = new PacketProtocolDispatcherProcessor();
         if (packetSelector.match(protocol)) {
             return packetSelector;
-        }
-        MqttProtocolDispatcherProcessor mqttSelector = new MqttProtocolDispatcherProcessor();
-        if (mqttSelector.match(protocol)) {
-            return mqttSelector;
         }
         return new WebsocketProtocolDispatcherProcessor();
     }

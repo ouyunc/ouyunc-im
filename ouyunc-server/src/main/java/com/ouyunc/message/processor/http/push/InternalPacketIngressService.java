@@ -120,7 +120,7 @@ public final class InternalPacketIngressService {
 
     private static CompletionStage<HttpResponseResult<MessagePushResponse>> enqueueVerify(
             Packet packet, String appKey, String messageId, String packetIdStr) throws HttpPipelineException {
-        HttpResponseResult<MessagePushResponse> early = respondIfTerminalOrInFlight(appKey, messageId);
+        HttpResponseResult<MessagePushResponse> early = respondIfCommitted(appKey, messageId);
         if (early != null) {
             return CompletableFuture.completedFuture(early);
         }
@@ -147,9 +147,9 @@ public final class InternalPacketIngressService {
     }
 
     /**
-     * COMMITTED → DUPLICATE；PENDING → PROCESSING；RETRYABLE_FAILED / 无记录 → null（允许继续受理）。
+     * 仅 COMMITTED 快速返回。PENDING 必须进入原子抢占脚本，由 Redis 时间判断是否允许接管。
      */
-    private static HttpResponseResult<MessagePushResponse> respondIfTerminalOrInFlight(String appKey, String messageId) {
+    private static HttpResponseResult<MessagePushResponse> respondIfCommitted(String appKey, String messageId) {
         PushIdempotencySupport.IdempotencyRecord record = PushIdempotencySupport.getRecord(appKey, messageId);
         if (record == null) {
             return null;
@@ -157,14 +157,6 @@ public final class InternalPacketIngressService {
         if (PushIdempotencySupport.STATE_COMMITTED.equals(record.state())) {
             return HttpResponseResult.success(buildResponse(messageId, record.packetId(),
                     MessagePushStatusEnum.DUPLICATE, null));
-        }
-        if (PushIdempotencySupport.STATE_PENDING.equals(record.state())) {
-            return HttpResponseResult.success(buildResponse(messageId, record.packetId(),
-                    MessagePushStatusEnum.PROCESSING, "同 messageId 正在处理，请稍后重试或查询"));
-        }
-        if (PushIdempotencySupport.STATE_RETRYABLE_FAILED.equals(record.state())) {
-            // 允许继续走 accept 重新抢占；此处返回 null
-            return null;
         }
         return null;
     }

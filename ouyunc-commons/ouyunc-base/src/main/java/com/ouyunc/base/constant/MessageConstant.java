@@ -391,11 +391,6 @@ public class MessageConstant {
     public static final long LOGIN_SIGNATURE_CREATE_TIME_SKEW_MS = 5L * 60L * 1000L;
 
     /**
-     * MQTT CONNECT password：{@code createTime#signature}，createTime 与原生登录签名同一套。
-     */
-    public static final char MQTT_LOGIN_PASSWORD_TIME_SEPARATOR = '#';
-
-    /**
      * 解绑抢锁失败时的重试次数，避免幽灵 ONLINE。
      */
     public static final int BIND_LOCK_RETRY_TIMES = 3;
@@ -521,11 +516,6 @@ public class MessageConstant {
     public static final int LOGIN_TIMEOUT_IN_FLIGHT_MAX_RETRY = 2;
 
     /**
-     * MQTT 内容安全 REJECT 下行 topic（QoS0 PUBLISH）。
-     */
-    public static final String MQTT_SYS_NOTIFY_TOPIC = "$SYS/ouyunc/notify";
-
-    /**
      * 用户实体本地缓存权重预算（近似字节）。与条数上限二选一用 weight。
      */
     public static final long USER_ENTITY_CACHE_MAX_WEIGHT = 256L * 1024 * 1024;
@@ -565,11 +555,6 @@ public class MessageConstant {
      * 登录通知等全量灌好友 ZSET 的上限，防止异常膨胀。
      */
     public static final int FRIEND_ROSTER_FULL_LOAD_LIMIT = 5000;
-
-    /**
-     * MQTT 报文标识最大值（1~65535）。
-     */
-    public static final int MQTT_PACKET_ID_MAX = 65535;
 
     /**
      * Mongo 双写补偿队列单次回放条数。
@@ -785,31 +770,6 @@ public class MessageConstant {
     public static final String CONVERT_2_PACKET_HANDLER = "CONVERT_2_PACKET_HANDLER";
 
     /**
-     * mqtt 编码器处理器
-     */
-    public static final String MQTT_ENCODER_HANDLER = "MQTT_ENCODER_HANDLER";
-
-    /**
-     * mqtt 解码器处理器
-     */
-    public static final String MQTT_DECODER_HANDLER = "MQTT_DECODER_HANDLER";
-
-    /**
-     * mqtt 业务处理器
-     */
-    public static final String MQTT_SERVER_HANDLER = "MQTT_SERVER_HANDLER";
-
-    /**
-     * mqtt 调度处理器
-     */
-    public static final String MQTT_DISPATCHER_HANDLER = "MQTT_DISPATCHER_HANDLER";
-
-    /**
-     * mqtt websocket 处理器
-     */
-    public static final String MQTT_WEBSOCKET_CODEC_HANDLER = "MQTT_WEBSOCKET_CODEC_HANDLER";
-
-    /**
      * 心跳读空闲：第一个 {@link io.netty.handler.timeout.IdleStateHandler}（连接/心跳周期）
      */
     public static final String HEART_BEAT_IDLE_HANDLER = "HEART_BEAT_IDLE_HANDLER";
@@ -834,11 +794,6 @@ public class MessageConstant {
      * 统一登录认证处理器
      */
     public static final String AUTHENTICATION_HANDLER = "AUTHENTICATION_HANDLER";
-
-    /**
-     * MQTT 等非 LOGIN 协议的连接登录超时（CONNECT 完成前关连）。
-     */
-    public static final String LOGIN_TIMEOUT_HANDLER = "LOGIN_TIMEOUT_HANDLER";
 
     /**
      * 统一 Packet 业务入口（客户端 / 集群均挂 {@code PacketHandler}）。
@@ -924,23 +879,6 @@ public class MessageConstant {
      * SEC_WEBSOCKET_PROTOCOL
      */
     public static final String SEC_WEBSOCKET_PROTOCOL = "sec-websocket-protocol";
-
-
-    /**
-     * 定义mqtt 的 websocket支持的子协议，如果多个使用英文逗号隔开
-     */
-    public static final String MQTT_WEBSOCKET_SUB_PROTOCOLS = "mqtt,mqttv3.1";
-
-
-    /**
-     * mqtt
-     */
-    public static final String MQTT = "mqtt";
-
-    /**
-     * mqtt31
-     */
-    public static final String MQTT_3_1 = "mqttv3.1";
 
 
     /**

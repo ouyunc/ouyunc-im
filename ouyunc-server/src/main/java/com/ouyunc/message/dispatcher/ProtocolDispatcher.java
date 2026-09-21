@@ -32,7 +32,7 @@ public class ProtocolDispatcher extends ByteToMessageDecoder {
             log.error("缓冲区不可读！");
             throw new MessageException("缓冲区不可读！");
         }
-        // MQTT CONNECT 最短约 11 字节（3.1 协议名 MQIsdp + 版本）；不足则等待，避免 6 字节误关或越界
+        // 等待足够的协议识别字节，避免分片首包被误判为非法协议
         if (in.readableBytes() < 14) {
             return;
         }

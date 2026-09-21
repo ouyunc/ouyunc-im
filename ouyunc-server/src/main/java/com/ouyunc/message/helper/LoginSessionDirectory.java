@@ -78,16 +78,20 @@ public final class LoginSessionDirectory {
     ).getBytes(StandardCharsets.UTF_8);
 
     /**
-     * KEYS: route, login1..n；ARGV: field1..n。Cluster 要求脚本访问的 key 全部出现在 KEYS 且同槽。
+     * KEYS: route, login1..n；ARGV: field1, expectedRoute1..n。
+     * 仅当前路由仍等于读快照时删除，避免旧清理误删刚完成的新登录。
      */
     private static final byte[] EVICT_DEAD_LUA = (
             "local i = 2 "
                     + "local a = 1 "
                     + "while i <= #KEYS do "
+                    + "local cur = redis.call('HGET', KEYS[1], ARGV[a]) "
+                    + "if cur and cur == ARGV[a + 1] then "
                     + "redis.call('HDEL', KEYS[1], ARGV[a]) "
                     + "redis.call('DEL', KEYS[i]) "
+                    + "end "
                     + "i = i + 1 "
-                    + "a = a + 1 "
+                    + "a = a + 2 "
                     + "end "
                     + "if redis.call('HLEN', KEYS[1]) == 0 then redis.call('DEL', KEYS[1]) end "
                     + "return 1"
@@ -131,25 +135,6 @@ public final class LoginSessionDirectory {
     }
 
     /**
-     * MQTT 持久会话：只摘路由，保留 login String。
-     */
-    public static void unbindRouteKeepLogin(LoginClientInfo loginClientInfo) {
-        unbindInternal(loginClientInfo, null, false);
-    }
-
-    /**
-     * MQTT cleanSession=0 断连后：有 sessionExpiry 则续 TTL，否则 PERSIST 去掉登录 String 过期。
-     */
-    public static void persistOrExpireLogin(String appKey, String comboIdentity, long ttlSeconds) {
-        String loginKey = CacheConstant.buildLoginCacheKey(appKey, comboIdentity);
-        if (ttlSeconds > 0) {
-            stringRedisTemplate.expire(loginKey, ttlSeconds, TimeUnit.SECONDS);
-            return;
-        }
-        stringRedisTemplate.persist(loginKey);
-    }
-
-    /**
      * 租约心跳联动：为本机仍在线的登录 String 续期。节点死后无人续期，TTL 内幽灵在线消失。
      */
     public static void renewLocalLoginTtls() {
@@ -188,7 +173,7 @@ public final class LoginSessionDirectory {
     }
 
     /**
-     * 读路径发现死 epoch 时惰性清理。MQTT 持久会话若仍靠登录 String，节点死后也会被摘掉（与 kill-9 一致）。
+     * 读路径发现死 epoch 时惰性清理。
      */
     public static void evictDeadRoute(String appKey, String identity, Map<?, ?> routeHash, Map<String, Long> liveEpochs) {
         Set<Byte> dead = ImSessionPresence.deadDeviceTypes(routeHash, liveEpochs);
@@ -198,15 +183,26 @@ public final class LoginSessionDirectory {
         try {
             String routeKey = CacheConstant.buildLoginRouteCacheKey(appKey, identity);
             List<byte[]> keysAndArgs = new ArrayList<>(1 + dead.size() * 2);
-            List<byte[]> fields = new ArrayList<>(dead.size());
+            List<byte[]> fieldsAndExpected = new ArrayList<>(dead.size() * 2);
             keysAndArgs.add(bytes(routeKey));
             for (Byte deviceType : dead) {
                 String combo = IdentityUtil.generalComboIdentity(appKey, identity, deviceType);
                 keysAndArgs.add(bytes(CacheConstant.buildLoginCacheKey(appKey, combo)));
-                fields.add(bytes(String.valueOf(deviceType)));
+                String field = String.valueOf(deviceType);
+                String expectedRoute = routeValue(routeHash, field);
+                if (expectedRoute == null) {
+                    keysAndArgs.remove(keysAndArgs.size() - 1);
+                    continue;
+                }
+                fieldsAndExpected.add(bytes(field));
+                fieldsAndExpected.add(bytes(expectedRoute));
             }
-            keysAndArgs.addAll(fields);
-            evalCached(EVICT_DEAD_LUA, ScriptKind.EVICT, 1 + dead.size(), keysAndArgs.toArray(byte[][]::new));
+            int loginKeyCount = keysAndArgs.size() - 1;
+            if (loginKeyCount == 0) {
+                return;
+            }
+            keysAndArgs.addAll(fieldsAndExpected);
+            evalCached(EVICT_DEAD_LUA, ScriptKind.EVICT, 1 + loginKeyCount, keysAndArgs.toArray(byte[][]::new));
         } catch (Exception e) {
             log.warn("惰性清理死路由失败 identity={}", identity, e);
         }
@@ -326,6 +322,22 @@ public final class LoginSessionDirectory {
             throw new IllegalStateException("Redis 字符串序列化失败");
         }
         return raw;
+    }
+
+    private static String routeValue(Map<?, ?> routeHash, String field) {
+        if (routeHash == null || routeHash.isEmpty()) {
+            return null;
+        }
+        for (Map.Entry<?, ?> entry : routeHash.entrySet()) {
+            String key = entry.getKey() instanceof byte[] rawKey
+                    ? new String(rawKey, StandardCharsets.UTF_8) : String.valueOf(entry.getKey());
+            if (!field.equals(key) || entry.getValue() == null) {
+                continue;
+            }
+            return entry.getValue() instanceof byte[] rawValue
+                    ? new String(rawValue, StandardCharsets.UTF_8) : String.valueOf(entry.getValue());
+        }
+        return null;
     }
 
     private static byte[] serializeLogin(LoginClientInfo loginClientInfo) {

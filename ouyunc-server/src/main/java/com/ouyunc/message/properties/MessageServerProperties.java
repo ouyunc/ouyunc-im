@@ -343,12 +343,6 @@ public class MessageServerProperties extends MessageProperties {
     int groupMaxMembers;
 
     /**
-     * 是否对外提供 MQTT。关闭后 CONNECT 直接拒绝。
-     */
-    @Key(value = "ouyunc.message.mqtt.enabled", defaultValue = "true")
-    boolean mqttEnabled;
-
-    /**
      * 内容安全总开关（敏感词；媒体监黄闭环见 P1）。关闭后 Handler/Facade 直接放行。
      */
     @Key(value = "ouyunc.message.content-safety.enable", defaultValue = "true")
@@ -891,14 +885,6 @@ public class MessageServerProperties extends MessageProperties {
         this.groupMaxMembers = groupMaxMembers;
     }
 
-    public boolean isMqttEnabled() {
-        return mqttEnabled;
-    }
-
-    public void setMqttEnabled(boolean mqttEnabled) {
-        this.mqttEnabled = mqttEnabled;
-    }
-
     public List<String> getMessageProcessorScanPackagePaths() {
         return messageProcessorScanPackagePaths;
     }
@@ -1357,7 +1343,6 @@ public class MessageServerProperties extends MessageProperties {
                 ", groupMessageThreshold=" + groupMessageThreshold +
                 ", groupMaxPerUser=" + groupMaxPerUser +
                 ", groupMaxMembers=" + groupMaxMembers +
-                ", mqttEnabled=" + mqttEnabled +
                 ", contentSafetyEnable=" + contentSafetyEnable +
                 ", contentSafetyDefaultTextAction='" + contentSafetyDefaultTextAction + '\'' +
                 ", contentSafetyDefaultMediaAction='" + contentSafetyDefaultMediaAction + '\'' +

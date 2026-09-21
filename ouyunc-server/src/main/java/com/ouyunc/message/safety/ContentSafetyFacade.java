@@ -21,7 +21,7 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 
 /**
- * 内容安全统一入口（WS / MQTT / HTTP Push 共用）。
+ * 内容安全统一入口（WS / 原生 Packet / HTTP Push 共用）。
  * <p>P0：文本/图文说明做敏感词 MASK、REJECT、AUDIT_ONLY；图片视频仅打 metadata 标记，监黄闭环见 P1。
  * 生产日志只打 hits，不打原文全文。</p>
  */

@@ -1,12 +1,10 @@
 package com.ouyunc.message.validator;
 
 import com.ouyunc.base.constant.enums.AppStatus;
-import com.ouyunc.base.constant.enums.ProtocolTypeEnum;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.domain.entity.AppEntity;
-import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.repository.DefaultRepository;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.lang3.StringUtils;
@@ -16,7 +14,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 /**
- * 权限校验：应用存在且未停用；MQTT 可按配置关闭。通过返回 true。
+ * 权限校验：应用存在且未停用。通过返回 true。
  */
 public enum PermissionValidator implements ReactiveValidator<Packet> {
 
@@ -27,11 +25,6 @@ public enum PermissionValidator implements ReactiveValidator<Packet> {
     @Override
     public Mono<Boolean> verify(Packet packet, ChannelHandlerContext ctx) {
         if (packet == null || packet.getMessage() == null) {
-            return Mono.just(false);
-        }
-        if (packet.getProtocol() == ProtocolTypeEnum.MQTT.getProtocol()
-                && !MessageServerContext.serverProperties().isMqttEnabled()) {
-            log.warn("MQTT 已关闭，拒绝 packetId={}", packet.getPacketId());
             return Mono.just(false);
         }
         Message message = packet.getMessage();

@@ -8,7 +8,7 @@ import org.apache.commons.lang3.StringUtils;
  */
 public enum IngressSourceEnum {
 
-    /** IM 长连接客户端入站（WebSocket / MQTT） */
+    /** IM 长连接客户端入站（WebSocket / 原生 Packet） */
     IM("im", "IM 长连接客户端"),
     /** HTTP 外部推送 */
     HTTP_PUSH("http_push", "HTTP 外部推送"),

@@ -3,8 +3,6 @@ package com.ouyunc.base.utils;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
-import com.ouyunc.base.constant.enums.MqttMessageContentTypeEnum;
-import com.ouyunc.base.constant.enums.MqttMessageTypeEnum;
 import com.ouyunc.base.constant.enums.NetworkEnum;
 import com.ouyunc.base.constant.enums.OuyuncMessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.OuyuncMessageTypeEnum;
@@ -127,11 +125,6 @@ public final class PacketVerifier {
                 return true;
             }
         }
-        for (MqttMessageTypeEnum type : MqttMessageTypeEnum.values()) {
-            if (type.getType() == messageType) {
-                return true;
-            }
-        }
         return false;
     }
 
@@ -142,11 +135,6 @@ public final class PacketVerifier {
             }
         }
         for (OuyuncMessageContentTypeEnum type : OuyuncMessageContentTypeEnum.values()) {
-            if (type.getType() == contentType) {
-                return true;
-            }
-        }
-        for (MqttMessageContentTypeEnum type : MqttMessageContentTypeEnum.values()) {
             if (type.getType() == contentType) {
                 return true;
             }

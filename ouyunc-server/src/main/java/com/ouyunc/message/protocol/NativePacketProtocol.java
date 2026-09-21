@@ -19,8 +19,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.mqtt.MqttDecoder;
-import io.netty.handler.codec.mqtt.MqttEncoder;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
@@ -134,7 +132,7 @@ public enum NativePacketProtocol implements PacketProtocol {
     },
 
     /**
-     * 外部客户端原生 Packet：编解码复用 Packet，业务路径与 WS/MQTT 一致（client 三阶段 + 登录鉴权），
+     * 外部客户端原生 Packet：编解码复用 Packet，业务路径与 WS 一致（client 三阶段 + 登录鉴权），
      * 禁止集群路由 / 集群消息类型。
      */
     OUYUNC_CLIENT(ProtocolTypeEnum.OUYUNC_CLIENT.getProtocol(), ProtocolTypeEnum.OUYUNC_CLIENT.getProtocolVersion(),
@@ -150,40 +148,6 @@ public enum NativePacketProtocol implements PacketProtocol {
             installAuth(ctx.pipeline());
             ctx.fireChannelActive();
         }
-    },
-
-
-    //mqtt
-    MQTT(ProtocolTypeEnum.MQTT.getProtocol(), ProtocolTypeEnum.MQTT.getProtocolVersion(), "mqtt协议，版本号为v3.1/v3.1.1/v5.0") {
-
-        @Override
-        public void doDispatcher(ChannelHandlerContext ctx,  Object msg) {
-            ctx.channel().attr(protocolAttrKey).set(this);
-            ChannelPipeline pipeline = ctx.pipeline();
-            pipeline.addLast(MessageConstant.MQTT_DECODER_HANDLER, new MqttDecoder(MessageConstant.MAX_FRAME_LENGTH))
-                    .addLast(MessageConstant.MQTT_ENCODER_HANDLER, MqttEncoder.INSTANCE)
-                    .addLast(MessageConstant.CONVERT_2_PACKET_HANDLER, new Convert2PacketHandler())
-                    // 统一业务入口：preProcess → process → postProcess
-                    .addLast(MessageConstant.PACKET_HANDLER, PacketHandler.client())
-                    // 异常处理器
-                    .addLast(MessageConstant.EXCEPTION_HANDLER, new ExceptionHandler());
-            // MQTT 以 CONNECT 为登录，不挂 AuthenticationHandler（否则非 LOGIN 类型会被「请先登录」关掉）
-            pipeline.addBefore(MessageConstant.PACKET_HANDLER, MessageConstant.LOGIN_TIMEOUT_HANDLER,
-                    LoginTimeoutHandler.INSTANCE);
-            // 移除掉掉协议分发器
-            MqttProtocolDispatcherHandler mqttProtocolDispatcherHandler = pipeline.get(MqttProtocolDispatcherHandler.class);
-            if (mqttProtocolDispatcherHandler != null) {
-                pipeline.remove(MqttProtocolDispatcherHandler.class);
-            }
-            HttpProtocolDispatcherHandler httpProtocolDispatcherHandler = pipeline.get(HttpProtocolDispatcherHandler.class);
-            if (httpProtocolDispatcherHandler != null) {
-                pipeline.remove(HttpProtocolDispatcherHandler.class);
-            }
-            // 调用下一个handle的active
-            ctx.fireChannelActive();
-        }
-
-
     }
 
 

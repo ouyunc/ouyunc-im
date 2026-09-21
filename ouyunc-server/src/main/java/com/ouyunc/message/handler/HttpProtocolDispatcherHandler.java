@@ -1,7 +1,6 @@
 package com.ouyunc.message.handler;
 
 import com.ouyunc.base.constant.MessageConstant;
-import com.ouyunc.core.codec.MqttWebSocketCodec;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.protocol.NativePacketProtocol;
 import io.netty.channel.ChannelHandlerContext;
@@ -11,14 +10,8 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
-import io.netty.handler.codec.http.websocketx.WebSocketFrameAggregator;
-import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
-import io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketServerCompressionHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.net.URI;
-
 
 /**
  * @Author fzx
@@ -37,32 +30,9 @@ public class HttpProtocolDispatcherHandler extends SimpleChannelInboundHandler<O
         // 判断该消息是http何种变种协议
         if (msg instanceof FullHttpRequest request) {
             // 获取真实ip 并设置
-            String uriStr = request.uri();
-            URI uri = new URI(uriStr);
             //封装参数传
             // 判断是否是websocket 的101 升级请求，如果是则升级为websocket协议
             if (isUpgradeToWebSocket(request)) {
-                // 获取websocket 子协议
-                String secWebsocketProtocol = request.headers().get(MessageConstant.SEC_WEBSOCKET_PROTOCOL);
-                // 判断各种子协议并处理，目前这里只判断是否建立在websocket之上的mqtt协议
-                if (MessageConstant.MQTT.equals(secWebsocketProtocol) || MessageConstant.MQTT_3_1.equals(secWebsocketProtocol)) {
-                    //重设uri,去除请求param参数,否则ws会报错
-                    request.setUri(uri.getPath());
-                    ctx.pipeline()
-                            //10 * 1024 * 1024
-                            .addLast(MessageConstant.WS_FRAME_AGGREGATOR_HANDLER,
-                                    new WebSocketFrameAggregator(MessageConstant.MAX_WEBSOCKET_FRAME_SIZE))
-                            .addLast(MessageConstant.WS_COMPRESSION_HANDLER, new WebSocketServerCompressionHandler(MessageConstant.MAX_WEBSOCKET_FRAME_SIZE))
-                            .addLast(MessageConstant.WS_SERVER_PROTOCOL_HANDLER, new WebSocketServerProtocolHandler(
-                                    MessageServerContext.serverProperties().getWebsocketPath(),
-                                    MessageConstant.MQTT_WEBSOCKET_SUB_PROTOCOLS, true,
-                                    MessageConstant.MAX_WEBSOCKET_FRAME_SIZE))
-                            // mqtt websocket 编解码器
-                            .addLast(MessageConstant.MQTT_WEBSOCKET_CODEC_HANDLER, new MqttWebSocketCodec());
-                    MessageServerContext.findProtocol(NativePacketProtocol.MQTT.getProtocol(), NativePacketProtocol.MQTT.getProtocolVersion()).doDispatcher(ctx, request);
-                    ctx.fireChannelRead(request.retain());
-                    return;
-                }
                 // IM WS：保留 query 给握手校验；异步路径自己 retain 并 fireChannelRead
                 MessageServerContext.findProtocol(NativePacketProtocol.WS.getProtocol(), NativePacketProtocol.WS.getProtocolVersion()).doDispatcher(ctx, request);
                 return;

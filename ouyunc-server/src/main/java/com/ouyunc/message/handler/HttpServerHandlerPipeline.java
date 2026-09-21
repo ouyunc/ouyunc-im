@@ -11,8 +11,8 @@ import io.netty.handler.stream.ChunkedWriteHandler;
  * {@code newContinueResponse} 中处理，勿再叠加 {@link io.netty.handler.codec.http.HttpServerExpectContinueHandler}，
  * 否则 Netty 文档所述会与聚合器冲突（先无条件 100、去掉 Expect，超长无法在期望阶段拒绝）。
  * <p>
- * 本机端口上首包像 HTTP 的链路（含 WebSocket 握手、MQTT-over-WebSocket、普通 HTTP API）都走同一套
- * 解码与聚合；具体是 WS / MQTT / HTTP 在 {@link com.ouyunc.message.handler.HttpProtocolDispatcherHandler}
+ * 本机端口上首包像 HTTP 的链路（含 WebSocket 握手、普通 HTTP API）都走同一套
+ * 解码与聚合；具体是 WS / HTTP 在 {@link com.ouyunc.message.handler.HttpProtocolDispatcherHandler}
  * 里再分支。聚合与 413 JSON 由本类集中拼装，与 {@code HttpProtocolDispatcherProcessor} 解耦；聚合器之后仍保留
  * {@link HttpAggregatorExceptionHandler}，处理 {@link io.netty.handler.codec.http.HttpObjectAggregator} 链路上
  * 其它解码异常（如响应侧超长抛出的 {@link io.netty.handler.codec.http.TooLongHttpContentException}）。

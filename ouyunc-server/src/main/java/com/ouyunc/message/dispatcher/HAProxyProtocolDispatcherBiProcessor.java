@@ -87,7 +87,7 @@ public class HAProxyProtocolDispatcherBiProcessor implements ProtocolDispatcherB
 
     /**
      * 解完 PROXY 头后摘掉当前分发器，把应用层剩余字节再交给新的协议探测。
-     * 不能让 HAProxyMessageDecoder 在 finished 后 skipBytes 吃掉 WS/MQTT 首包。
+     * 不能让 HAProxyMessageDecoder 在 finished 后 skipBytes 吃掉 WS 首包。
      */
     @Override
     public void process(ChannelHandlerContext ctx, ByteBuf in) {

@@ -7,7 +7,7 @@ public enum MessageEventTypeEnum implements EventType {
 
     /** source: {@code ClientLoginEventPayload} */
     CLIENT_LOGIN(1, "客户端登录事件"),
-    /** source: {@code LoginClientInfo | MqttLoginClientInfo} */
+    /** source: {@code LoginClientInfo} */
     CLIENT_LOGOUT(2, "客户端登出事件"),
     /** source: {@code String(serverAddress)} */
     SERVER_STARTUP(3, "服务启动事件"),

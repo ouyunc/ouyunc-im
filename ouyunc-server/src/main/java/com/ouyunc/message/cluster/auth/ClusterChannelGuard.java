@@ -28,7 +28,7 @@ public final class ClusterChannelGuard {
     }
 
     /**
-     * WS/HTTP/MQTT 连接上禁止集群 OUYUNC、客户端原生协议号冒充、集群转发包与集群消息类型。
+     * WS/HTTP 连接上禁止集群 OUYUNC、客户端原生协议号冒充、集群转发包与集群消息类型。
      *
      * @return true 表示已拒绝并关闭连接
      */
@@ -189,7 +189,6 @@ public final class ClusterChannelGuard {
         }
         byte value = protocol.getProtocol();
         return value == ProtocolTypeEnum.WS.getProtocol()
-                || value == ProtocolTypeEnum.HTTP.getProtocol()
-                || value == ProtocolTypeEnum.MQTT.getProtocol();
+                || value == ProtocolTypeEnum.HTTP.getProtocol();
     }
 }

@@ -8,6 +8,7 @@ import com.ouyunc.base.packet.message.Message;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.serializer.RedisSerializer;
@@ -218,6 +219,33 @@ public final class QosIdempotencyHelper {
     public static boolean isDuplicate(RedisTemplate<String, ?> redisTemplate, Packet packet,
                                       String channelLoginIdentity) {
         return checkState(redisTemplate, packet, channelLoginIdentity) == CLAIM_COMMITTED;
+    }
+
+    /**
+     * 稳定 client-messageId 已提交时返回首次服务端 packetId，供未读索引和重复响应统一使用。
+     */
+    public static Long committedPacketId(RedisTemplate<String, ?> redisTemplate, String appKey,
+                                         String loginIdentity, String clientMessageId) {
+        String key = clientKey(appKey, loginIdentity, clientMessageId);
+        if (redisTemplate == null || key == null) {
+            return null;
+        }
+        try {
+            byte[] raw = redisTemplate.execute((RedisCallback<byte[]>) connection ->
+                    connection.stringCommands().get(STRING_SERIALIZER.serialize(key)));
+            if (raw == null) {
+                return null;
+            }
+            String[] fields = new String(raw, StandardCharsets.UTF_8).split("\\|", -1);
+            if (fields.length < 2 || !"COMMITTED".equals(fields[0])) {
+                return null;
+            }
+            return Long.parseLong(fields[1]);
+        } catch (Exception e) {
+            log.warn("读取 QoS canonical packetId 失败 appKey={} clientMessageId={}",
+                    appKey, clientMessageId, e);
+            return null;
+        }
     }
 
     /**

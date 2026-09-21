@@ -1,6 +1,5 @@
 package com.ouyunc.message.validator;
 
-import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.LoginScopeEnum;
 import com.ouyunc.base.encrypt.Encrypt;
 import com.ouyunc.base.packet.message.content.LoginContent;
@@ -13,7 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * 原生登录与 MQTT CONNECT 共用：scope、建档、签名 {@code MD5(appKey&identity&createTime_appSecret)}。
+ * 原生登录校验：scope、建档、签名 {@code MD5(appKey&identity&createTime_appSecret)}。
  */
 public final class LoginAuthValidator {
 
@@ -51,31 +50,5 @@ public final class LoginAuthValidator {
             algo = Encrypt.AsymmetricEncrypt.MD5;
         }
         return algo.validate(raw, loginContent.getSignature());
-    }
-
-    /**
-     * MQTT CONNECT password：{@code createTime#signature}，与原生登录同一套签名。
-     */
-    public static MqttPassword parseMqttPassword(String password) {
-        if (StringUtils.isBlank(password)) {
-            return null;
-        }
-        int idx = password.indexOf(MessageConstant.MQTT_LOGIN_PASSWORD_TIME_SEPARATOR);
-        if (idx <= 0 || idx >= password.length() - 1) {
-            return null;
-        }
-        try {
-            long createTime = Long.parseLong(password.substring(0, idx).trim());
-            String signature = password.substring(idx + 1).trim();
-            if (StringUtils.isBlank(signature)) {
-                return null;
-            }
-            return new MqttPassword(createTime, signature);
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
-    public record MqttPassword(long createTime, String signature) {
     }
 }
