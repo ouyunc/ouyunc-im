@@ -1,7 +1,5 @@
 package com.ouyunc.id.config;
 
-import com.ouyunc.base.utils.TimeUtil;
-import me.ahoo.cosid.CosId;
 import me.ahoo.cosid.machine.*;
 import me.ahoo.cosid.provider.DefaultIdGeneratorProvider;
 import me.ahoo.cosid.provider.IdGeneratorProvider;
@@ -9,11 +7,11 @@ import me.ahoo.cosid.snowflake.MillisecondSnowflakeId;
 import me.ahoo.cosid.spring.redis.SpringRedisMachineIdDistributor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.redis.connection.RedisConnection;
-import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 import java.time.Duration;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * CosId Redis 分布式配置
@@ -27,13 +25,15 @@ import java.time.Duration;
 public class CosIdRedisConfiguration {
     private static final Logger log = LoggerFactory.getLogger(CosIdRedisConfiguration.class);
 
-    private final StringRedisTemplate redisTemplate;
     private final String namespace;
     private final SpringRedisMachineIdDistributor machineIdDistributor;
     private final MachineIdGuardian machineIdGuardian;
     private final IdGeneratorProvider idGeneratorProvider;
     private final MachineState machineState;
     private final InstanceId instanceId;
+    private StrongClockSyncSnowflakeId guardedGenerator;
+    private final AtomicBoolean closed = new AtomicBoolean();
+    private final Thread shutdownHook = new Thread(this::shutdown, "CosId-Shutdown");
 
     /**
      * 构造函数
@@ -51,17 +51,23 @@ public class CosIdRedisConfiguration {
      *
      * @param redisTemplate Redis 模板
      * @param namespace 命名空间
-     * @param stable 是否为稳定实例（如 Kubernetes StatefulSet），稳定实例的机器号不会被真正释放
+     * @param stable 当前仅支持 false；稳定身份必须另行提供排他所有权协议
      */
     public CosIdRedisConfiguration(StringRedisTemplate redisTemplate,
                                    String namespace,
                                    boolean stable) {
-        this.redisTemplate = redisTemplate;
         this.namespace = namespace;
+        if (stable) {
+            throw new IllegalArgumentException("Stable instance requires exclusive ownership; use process-unique mode");
+        }
+        if (namespace == null || namespace.isBlank()) {
+            throw new IllegalArgumentException("CosId namespace must not be blank");
+        }
 
         // 1. 初始化机器号分发器
         MachineStateStorage stateStorage = new InMemoryMachineStateStorage();
-        DefaultClockBackwardsSynchronizer clockSync = new DefaultClockBackwardsSynchronizer(10, 2000);
+        DefaultClockBackwardsSynchronizer clockSync = new DefaultClockBackwardsSynchronizer(
+                IdGeneratorConstants.CLOCK_SPIN_THRESHOLD_MS, IdGeneratorConstants.CLOCK_BROKEN_THRESHOLD_MS);
         this.machineIdDistributor = new SpringRedisMachineIdDistributor(
                 redisTemplate,
                 stateStorage,
@@ -71,8 +77,8 @@ public class CosIdRedisConfiguration {
         // 2. 分配机器号
         String instanceIdStr = getInstanceIdString();
         this.instanceId = InstanceId.of(instanceIdStr, stable);
-        int machineBit = 10; // 10 位机器号，支持 1024 台机器
-        Duration safeGuardDuration = Duration.ofMinutes(5); // 5 分钟安全守护时间
+        int machineBit = IdGeneratorConstants.MACHINE_BITS;
+        Duration safeGuardDuration = IdGeneratorConstants.SAFE_GUARD_DURATION;
 
         this.machineState = machineIdDistributor.distribute(
                 namespace,
@@ -83,7 +89,7 @@ public class CosIdRedisConfiguration {
         log.info("MachineId distributed: {} for instance: {}", machineState, instanceId);
 
         // 3. 启动机器号守护线程
-        long guardIntervalSeconds = safeGuardDuration.getSeconds() / 3; // 守护间隔为安全时间的 1/3
+        long guardIntervalSeconds = IdGeneratorConstants.GUARD_INTERVAL_SECONDS;
         this.machineIdGuardian = new MachineIdGuardian(
                 machineIdDistributor,
                 namespace,
@@ -92,12 +98,16 @@ public class CosIdRedisConfiguration {
                 safeGuardDuration,
                 guardIntervalSeconds
         );
-        machineIdGuardian.start();
-        machineIdGuardian.registerShutdownHook(); // 注册关闭钩子
-
-        // 4. 创建 ID 生成器
         this.idGeneratorProvider = new DefaultIdGeneratorProvider();
-        initializeIdGenerators();
+        try {
+            machineIdGuardian.start();
+            initializeIdGenerators();
+            // 同一个关闭入口先封闭发号，再停止守护和释放机器号。
+            Runtime.getRuntime().addShutdownHook(shutdownHook);
+        } catch (RuntimeException error) {
+            shutdown();
+            throw error;
+        }
 
         log.info("CosId Redis configuration initialized successfully. Namespace: {}, MachineId: {}",
                 namespace, machineState.getMachineId());
@@ -109,57 +119,60 @@ public class CosIdRedisConfiguration {
      */
     private void initializeIdGenerators() {
         // 创建 SnowflakeId
-        MillisecondSnowflakeId snowflakeId = new MillisecondSnowflakeId(
-                CosId.COSID_EPOCH,
-                41,  // 时间戳位数
-                10,  // 机器号位数
-                12,  // 序列号位数
-                machineState.getMachineId()
-        );
-        StrongClockSyncSnowflakeId clockSyncSnowflakeId = new StrongClockSyncSnowflakeId(
-                snowflakeId,
-                new DefaultClockBackwardsSynchronizer(10, 2000)
-        );
+        MillisecondSnowflakeId snowflakeId = new NonBlockingSnowflakeId(machineState.getMachineId());
+        guardedGenerator = new StrongClockSyncSnowflakeId(snowflakeId, machineIdGuardian);
 
         // 设置为共享的默认 ID 生成器
-        idGeneratorProvider.setShare(clockSyncSnowflakeId);
+        idGeneratorProvider.setShare(guardedGenerator);
 
         // 也可以单独注册一个命名生成器（可选）
-        idGeneratorProvider.set("snowflake", clockSyncSnowflakeId);
+        idGeneratorProvider.set(IdGeneratorConstants.GENERATOR_NAME, guardedGenerator);
     }
 
     /**
      * 获取实例 ID 字符串
-     * 优先级：HOSTNAME 环境变量 > 系统属性 > 时间戳
+     * HOSTNAME 仅作诊断标签；随机启动标识保证同主机多个进程不会复用实例身份。
      */
     private String getInstanceIdString() {
         // 1. 尝试从环境变量获取
         String hostname = System.getenv("HOSTNAME");
         if (hostname != null && !hostname.isEmpty()) {
-            return hostname;
+            return hostname + "-" + UUID.randomUUID();
         }
 
         // 2. 尝试从系统属性获取
         hostname = System.getProperty("hostname");
         if (hostname != null && !hostname.isEmpty()) {
-            return hostname;
+            return hostname + "-" + UUID.randomUUID();
         }
 
-        // 3. 使用时间戳作为后备方案
-        return "instance-" + TimeUtil.currentTimeMillis();
+        return "instance-" + UUID.randomUUID();
     }
 
 
     /**
      * 关闭资源
-     * 停止守护线程，释放机器号，关闭 Redis 连接
+     * 先封闭发号，再停止守护线程并释放机器号；共享 Redis 资源不归本组件所有。
      */
     public void shutdown() {
+        if (!closed.compareAndSet(false, true)) {
+            return;
+        }
+        if (guardedGenerator != null) {
+            guardedGenerator.close();
+        }
         log.info("Shutting down CosId Redis configuration for namespace: {}", namespace);
 
         // 1. 停止守护线程
         if (machineIdGuardian != null) {
             machineIdGuardian.stop();
+        }
+
+        // 回拨期间不能用较小的当前时间归还槽位，否则新持有者可能重走已发号时间段。
+        // 不主动归还时保留 Redis 记录，由既有守护窗口回收；运维仍须保证节点时钟受控。
+        if (guardedGenerator != null && System.currentTimeMillis() <= guardedGenerator.getLastTimestamp()) {
+            log.warn("Skip CosId revert: clock has not advanced beyond last generated timestamp namespace={}", namespace);
+            return;
         }
 
         // 2. 释放机器号
@@ -172,19 +185,7 @@ public class CosIdRedisConfiguration {
             log.error("Failed to revert machineId for instance: " + this.instanceId, e);
         }
 
-        // 3. 关闭 Redis 连接（getConnection 可能返回 null，close 前做判空）
-        if (redisTemplate != null && redisTemplate.getConnectionFactory() != null) {
-            try {
-                RedisConnectionFactory connectionFactory = redisTemplate.getConnectionFactory();
-                if (connectionFactory != null) {
-                    RedisConnection connection = connectionFactory.getConnection();
-                    connection.close();
-                    log.info("Redis connection closed");
-                }
-            } catch (Exception e) {
-                log.error("Failed to close Redis connection", e);
-            }
-        }
+        // RedisTemplate/连接工厂由缓存模块管理，本组件不获取临时连接来伪装资源释放。
 
         log.info("CosId Redis configuration shut down successfully");
     }
@@ -196,6 +197,16 @@ public class CosIdRedisConfiguration {
      */
     public IdGeneratorProvider getIdGeneratorProvider() {
         return idGeneratorProvider;
+    }
+
+    /** 无 Redis IO，供服务就绪检查使用。 */
+    public boolean isHealthy() {
+        return !closed.get() && machineIdGuardian.isHealthy();
+    }
+
+    /** 服务已有统一关闭钩子时移除独立钩子，保证退出通知完成后才关闭发号器。 */
+    public void useManagedLifecycle() {
+        Runtime.getRuntime().removeShutdownHook(shutdownHook);
     }
 
     /**
@@ -226,4 +237,3 @@ public class CosIdRedisConfiguration {
         return machineIdDistributor;
     }
 }
-

@@ -326,7 +326,9 @@ public class MessageServerContext extends MessageContext {
      * 当前是否允许新登录（摘流或配置关闭时返回 false）
      */
     public static boolean isAcceptingNewConnections() {
-        return ACCEPT_NEW_CONNECTIONS.get() && !DRAINING.get();
+        boolean idReady = !(idGenerator() instanceof com.ouyunc.id.CosIdSnowflakeIdGenerator generator)
+                || generator.isHealthy();
+        return ACCEPT_NEW_CONNECTIONS.get() && !DRAINING.get() && idReady;
     }
 
     /**

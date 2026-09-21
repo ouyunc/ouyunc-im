@@ -204,6 +204,11 @@ public abstract class AbstractMessageServer implements MessageServer {
             ThreadPoolManager.shutdownAll();
         } catch (Throwable t) {
             log.error("优雅关闭过程异常: {}", t.getMessage(), t);
+        } finally {
+            // 即使排空异常也先封闭发号，再归还机器号；后续残留任务只能失败，不能继续发号。
+            if (MessageServerContext.idGenerator() instanceof com.ouyunc.id.CosIdSnowflakeIdGenerator generator) {
+                generator.shutdown();
+            }
         }
         return true;
     }
@@ -271,6 +276,10 @@ public abstract class AbstractMessageServer implements MessageServer {
         loadMessageInterceptor();
         // 初始化服务之前做些操作，可以对上下文属性值进行改变
         beforeInitServer();
+        // 必须在绑定监听端口前完成 Redis 机器号分配，禁止首条消息在 IO 线程初始化。
+        if (MessageServerContext.idGenerator() instanceof com.ouyunc.id.CosIdSnowflakeIdGenerator generator) {
+            generator.initializeManaged();
+        }
         // 初始化IM服务
         initServer();
     }

@@ -39,7 +39,7 @@ public class HealthController {
             throw new HttpPipelineException(
                     HttpResponseStatus.SERVICE_UNAVAILABLE,
                     HttpResponseCodeEnum.SERVICE_UNAVAILABLE,
-                    "not ready (drain or accept-new-connections=false)");
+                    "not ready (drain, ID generator unsafe, or accept-new-connections=false)");
         }
         ResourceMonitor.HealthCheckResult health = ResourceMonitor.checkHealth();
         if (!health.getIssues().isEmpty()) {
