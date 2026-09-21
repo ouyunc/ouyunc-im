@@ -36,7 +36,6 @@ public class MessageClusterSynAckThread implements Runnable {
 
     @Override
     public void run() {
-        log.debug("集群服务中当前存活的服务：{}", MessageServerContext.clusterActiveServerRegistryTableCache.asMap().keySet());
         Set<Map.Entry<String, ChannelPool>> availableGlobalServer = MapUtil.mergerMaps(
                 MessageServerContext.clusterActiveServerRegistryTableCache.asMap(),
                 MessageServerContext.clusterGlobalServerRegistryTableCache.asMap()).entrySet();

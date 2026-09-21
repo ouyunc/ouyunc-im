@@ -9,6 +9,8 @@ import com.ouyunc.base.executor.ThreadPoolManager.ThreadPoolMetrics;
 import com.ouyunc.core.listener.MessageEventMulticaster;
 import com.ouyunc.core.listener.metrics.DisruptorListenerExecSnapshot;
 import com.ouyunc.core.listener.metrics.DisruptorRingMetrics;
+import com.ouyunc.message.cluster.lease.NodeLeaseKeeper;
+import com.ouyunc.message.context.MessageServerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -258,6 +260,7 @@ public final class ResourceMonitor {
         log.info("========== 资源监控报告 ==========");
         logThreadPoolMetrics();
         logCacheMetrics();
+        logClusterTopologyMetrics();
         logQosRetryTimerMetrics();
         logQosRetryCancelMetrics();
         logDisruptorMetrics();
@@ -443,6 +446,25 @@ public final class ResourceMonitor {
                     m.totalLoadTime() / 1_000_000.0  // 纳秒转毫秒
             );
         });
+    }
+
+    /**
+     * 集群拓扑统一随资源监控周期输出，避免 SYN/ACK 高频任务每拍打印节点列表。
+     */
+    public static void logClusterTopologyMetrics() {
+        if (MessageServerContext.serverProperties() == null
+                || !MessageServerContext.serverProperties().isClusterEnable()) {
+            return;
+        }
+        Set<String> leaseNodes = new TreeSet<>(NodeLeaseKeeper.snapshot().keySet());
+        Set<String> activePools = new TreeSet<>(
+                MessageServerContext.clusterActiveServerRegistryTableCache.asMap().keySet());
+        Set<String> globalPools = new TreeSet<>(
+                MessageServerContext.clusterGlobalServerRegistryTableCache.asMap().keySet());
+        log.info("【集群拓扑】租约存活={}个 {}，活动连接池={}个 {}，全局连接池={}个 {}",
+                leaseNodes.size(), leaseNodes,
+                activePools.size(), activePools,
+                globalPools.size(), globalPools);
     }
 
     /**
