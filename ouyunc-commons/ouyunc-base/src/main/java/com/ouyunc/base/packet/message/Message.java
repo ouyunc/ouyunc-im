@@ -15,9 +15,7 @@ public class Message implements Serializable, Cloneable {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    /**
-     * JSON 字段名（与 JavaBean 属性名一致）。QOS_DUP 白名单解析不要读 {@link #METADATA}。
-     */
+    /** JSON 字段名（与 JavaBean 属性名一致）。 */
     public static final class Fields {
         public static final String ID = "id";
         public static final String FROM = "from";

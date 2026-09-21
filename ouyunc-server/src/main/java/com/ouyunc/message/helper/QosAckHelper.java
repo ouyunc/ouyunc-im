@@ -1,7 +1,6 @@
 package com.ouyunc.message.helper;
 
 import com.alibaba.fastjson2.JSON;
-import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.constant.enums.QosLevelEnum;
@@ -10,8 +9,6 @@ import com.ouyunc.base.model.Target;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.packet.message.content.QosAckContent;
-import com.ouyunc.base.utils.ChannelAttrUtil;
-import com.ouyunc.base.utils.QosDupPacketParser;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.core.context.MessageContext;
 import io.netty.channel.ChannelHandlerContext;
@@ -49,31 +46,12 @@ public final class QosAckHelper {
             return;
         }
 
-        long serverPacketId;
-        String originalClientMessageId;
-        Packet dupPacket = ctx != null
-                ? ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_QOS_DUP_ORIGINAL_PACKET)
-                : null;
-        if (ctx != null) {
-            ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_QOS_DUP_ORIGINAL_PACKET, null);
-        }
-        if (dupPacket == null && packet.getMessageType() == MessageTypeEnum.QOS_DUP.getType()) {
-            dupPacket = QosDupPacketParser.parse(packet.getMessage().getContent());
-        }
-        if (dupPacket != null && dupPacket.getMessage() != null) {
-            serverPacketId = dupPacket.getPacketId();
-            originalClientMessageId = dupPacket.getMessage().getId();
-        } else {
-            serverPacketId = packet.getPacketId();
-            originalClientMessageId = packet.getMessage().getId();
-        }
-
         ackMessage.setId(MessageContext.idGenerator().generateIdStr());
         ackMessage.setFrom(null);
         ackMessage.setTo(ackTo);
         ackMessage.setQos(QosLevelEnum.QOS_0.getLevel());
         ackMessage.setContent(JSON.toJSONString(new QosAckContent(
-                String.valueOf(serverPacketId), originalClientMessageId)));
+                String.valueOf(packet.getPacketId()), packet.getMessage().getId())));
         ackMessage.setContentType(MessageContentTypeEnum.QOS_ACK_CONTENT.getType());
         ackMessage.setCreateTime(TimeUtil.currentTimeMillis());
         ackPacket.setPacketId(MessageContext.idGenerator().generateId());

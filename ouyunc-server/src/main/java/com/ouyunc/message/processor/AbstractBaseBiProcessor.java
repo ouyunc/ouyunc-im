@@ -3,9 +3,7 @@ package com.ouyunc.message.processor;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.*;
 import com.ouyunc.base.model.LoginClientInfo;
-import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.utils.ChannelAttrUtil;
-import com.ouyunc.base.utils.QosDupPacketParser;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.core.context.MessageContext;
@@ -15,8 +13,6 @@ import com.ouyunc.message.helper.QosAckHelper;
 import com.ouyunc.repository.DefaultRepository;
 import com.ouyunc.repository.Repository;
 import io.netty.channel.ChannelHandlerContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * 基础抽象处理类。
@@ -26,8 +22,6 @@ import org.slf4j.LoggerFactory;
  */
 public abstract class AbstractBaseBiProcessor<R, T extends Number>
         implements BiProcessor<ChannelHandlerContext, Packet, R>, Qos {
-    private static final Logger log = LoggerFactory.getLogger(AbstractBaseBiProcessor.class);
-
     /**
      * 类型
      */
@@ -42,39 +36,25 @@ public abstract class AbstractBaseBiProcessor<R, T extends Number>
     }
 
     /**
-     * qos 前置处理，一般用于消息过滤，比如消息是否是重发等。
+     * QoS 前置判重。客户端首次发送和重发都使用原业务 Packet。
      * 仅 {@code COMMITTED} 幂等记录可直接回 ACK；{@code PENDING} 表示占位但未确认落库，
-     * 必须继续展开处理，由持久化侧原子抢占并在写入成功后 commit。
+     * 必须继续处理，由持久化侧原子抢占或等待接管。
      */
     @Override
     public boolean qosPreHandle(ChannelHandlerContext ctx, Packet packet) {
-        // 判断是否是需要qos以及是否是客户端模式
+        if (!MessageContext.isQosEnable() || packet == null) {
+            return false;
+        }
         Message message = packet.getMessage();
-        // 判断是否开启qos
-        if (MessageContext.isQosEnable() && packet.getMessageType() == MessageTypeEnum.QOS_DUP.getType() && message.getContentType() == MessageContentTypeEnum.QOS_DUP_CONTENT.getType()) {
-            Packet dupPacket = QosDupPacketParser.parse(message.getContent());
-            if (dupPacket == null || dupPacket.getMessage() == null) {
-                log.warn("QOS_DUP 内容解析失败，按新消息处理: {}", message.getContent());
-                return false;
-            }
-            // 缓存原始 dupPacket 供 qosPostHandle 使用
-            ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_QOS_DUP_ORIGINAL_PACKET, dupPacket);
-
-            LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
-            String channelLoginIdentity = loginClientInfo != null ? loginClientInfo.getIdentity() : null;
-            if (repository().checkDup(dupPacket, channelLoginIdentity)) {
-                qosPostHandle(ctx, packet);
-                return true;
-            }
-            // 未命中幂等键，按新消息展开处理
-            // 将元数据放入重发消息的packet中，否则会丢失相关信息
-            Metadata metadata = message.getMetadata();
-            dupPacket.getMessage().setMetadata(metadata);
-            // 保留客户端原 packetId，S2C ACK 才能对上重发侧认的 id
-            packet.copyFrom(dupPacket);
-            if (log.isDebugEnabled()) {
-                log.debug("qos 客户端模式正在处理客户端重发消息, 重发消息为: {}", packet);
-            }
+        if (message == null || message.getQos() <= QosLevelEnum.QOS_0.getLevel()) {
+            return false;
+        }
+        LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(
+                ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
+        String channelLoginIdentity = loginClientInfo != null ? loginClientInfo.getIdentity() : null;
+        if (repository().checkDup(packet, channelLoginIdentity)) {
+            qosPostHandle(ctx, packet);
+            return true;
         }
         return false;
     }

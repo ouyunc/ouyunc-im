@@ -30,7 +30,6 @@ final class SpecialMessageTargetValidator {
                 && contentType != MessageContentTypeEnum.LOGIN_REQUEST_CONTENT.getType()
                 && contentType != MessageContentTypeEnum.LOGIN_RESPONSE_FAIL_CONTENT.getType()
                 && contentType != MessageContentTypeEnum.LOGIN_RESPONSE_SUCCESS_CONTENT.getType()
-                && contentType != MessageContentTypeEnum.QOS_DUP_CONTENT.getType()
                 && contentType != MessageContentTypeEnum.GROUP_REQUEST_CONTENT.getType();
     }
 }

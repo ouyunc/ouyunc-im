@@ -50,7 +50,7 @@ public final class GroupAgreeMessageBiProcessor extends AbstractMessageBiProcess
             ctx.close();
             return Mono.just(false);
         }
-        // 权限等校验通过后由 continueWhenPassed 归档；此处仅做 QOS_DUP 展开
+        // 权限等校验通过后由 continueWhenPassed 归档；此处统一执行 QoS 判重
         if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
             return Mono.just(false);
         }

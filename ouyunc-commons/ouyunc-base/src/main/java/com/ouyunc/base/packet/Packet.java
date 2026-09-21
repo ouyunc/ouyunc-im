@@ -300,8 +300,8 @@ public class Packet implements Serializable, Cloneable{
     }
 
     /**
-     * 将 {@code source} 的协议头与消息体复制到本实例，保持 {@code Packet} 对象引用不变（例如 QOS_DUP 展开后原地写回）。
-     * {@link Message} 使用 {@link Message#clone()} 拷贝，避免与 {@code source} 共享同一条消息引用。
+     * 将 {@code source} 的协议头与消息体复制到本实例，同时保持当前对象引用不变。
+     * {@link Message} 使用 {@link Message#clone()} 拷贝，避免共享消息引用。
      *
      * @param source 源包，为 {@code null} 时不修改本实例
      */
@@ -324,4 +324,5 @@ public class Packet implements Serializable, Cloneable{
         Message srcMsg = source.getMessage();
         this.message = srcMsg != null ? srcMsg.clone() : null;
     }
+
 }
