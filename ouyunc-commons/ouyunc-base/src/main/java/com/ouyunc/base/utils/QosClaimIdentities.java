@@ -24,7 +24,21 @@ public final class QosClaimIdentities {
         return message.getFrom();
     }
 
-    /** 仅在尚未记录时写入，避免覆盖 AuthValidator 已绑定的登录身份。 */
+    /**
+     * 认证层强制写入登录身份，覆盖客户端预置值。
+     * 外部入站不得自行决定幂等键归属。
+     */
+    public static void remember(Message message, String loginIdentity) {
+        if (message == null || StringUtils.isBlank(loginIdentity)) {
+            return;
+        }
+        Metadata metadata = message.getMetadata();
+        metadata.setQosClaimIdentity(loginIdentity);
+    }
+
+    /**
+     * 仅在尚未记录时写入。客服改写 from 前调用，避免覆盖 AuthValidator 已绑定的登录身份。
+     */
     public static void rememberIfAbsent(Message message, String loginIdentity) {
         if (message == null || StringUtils.isBlank(loginIdentity)) {
             return;

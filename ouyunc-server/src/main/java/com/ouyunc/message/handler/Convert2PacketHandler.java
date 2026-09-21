@@ -5,6 +5,7 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.utils.PacketVerifier;
 import com.ouyunc.message.cluster.auth.ClusterChannelGuard;
 import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.message.convert.ExternalIngressMetadata;
 import com.ouyunc.message.convert.PacketConverter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -12,7 +13,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * 入站转成 Packet 后先做帧结构检查，再按 Channel 拦集群能力。
+ * 入站转成 Packet 后先做帧结构检查，再按 Channel 拦集群能力；
+ * Guard 通过后外部连接才换成白名单 Metadata。
  */
 public class Convert2PacketHandler extends SimpleChannelInboundHandler<Object> {
     private static final Logger log = LoggerFactory.getLogger(Convert2PacketHandler.class);
@@ -38,6 +40,7 @@ public class Convert2PacketHandler extends SimpleChannelInboundHandler<Object> {
                         || ClusterChannelGuard.rejectClientClusterCapability(ctx, packet)) {
                     return;
                 }
+                ExternalIngressMetadata.retainTrustedAfterGuard(ctx, packet);
                 ctx.fireChannelRead(packet);
                 return;
             }

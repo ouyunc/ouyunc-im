@@ -5,16 +5,14 @@ import com.ouyunc.base.constant.enums.ProtocolTypeEnum;
 import com.ouyunc.base.utils.PacketMagicUtil;
 import com.ouyunc.message.cluster.auth.ClusterAuthentication;
 import com.ouyunc.message.cluster.auth.ClusterAuthConstant;
+import com.ouyunc.message.cluster.auth.ClusterAuthFrameDecoder;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.handler.PacketProtocolDispatcherHandler;
 import com.ouyunc.message.properties.MessageServerProperties;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.nio.ByteOrder;
 
 /**
  * 集群原生 Packet（protocol=OUYUNC）：HMAC 认证后走集群路由。
@@ -41,9 +39,7 @@ public class PacketProtocolDispatcherBiProcessor implements ProtocolDispatcherBi
             return;
         }
         ctx.pipeline()
-                // 粘包半包处理
-                .addLast(MessageConstant.PACKET_DECODE_HANDLER, new LengthFieldBasedFrameDecoder(ByteOrder.BIG_ENDIAN, MessageConstant.MAX_FRAME_LENGTH, MessageConstant.LENGTH_FIELD_OFFSET, MessageConstant.LENGTH_FIELD_LENGTH, MessageConstant.LENGTH_ADJUSTMENT, MessageConstant.INITIAL_BYTES_TO_STRIP, MessageConstant.FAIL_FAST))
-                // 自定义编解码器
+                .addLast(MessageConstant.PACKET_DECODE_HANDLER, new ClusterAuthFrameDecoder())
                 .addLast(MessageConstant.PACKET_CODEC_HANDLER, new ClusterAuthentication.GuardedCodec())
                 // 首包认证在协议分发之前，集群转发标记和 SYN/ACK 均不能跳过认证。
                 .addLast(ClusterAuthConstant.HANDLER_NAME,

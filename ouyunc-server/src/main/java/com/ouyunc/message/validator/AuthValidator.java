@@ -62,7 +62,7 @@ public enum AuthValidator implements Validator<Packet> {
         }
         packet.setDeviceType(loginDeviceType);
         message.setFrom(verifiedSender);
-        QosClaimIdentities.rememberIfAbsent(message, verifiedSender);
+        QosClaimIdentities.remember(message, verifiedSender);
         // 长连接：发送方类型一律以登录 scope 为准（普通用户、客服座席、访客均同）
         message.setFromType(LoginScopeEnum.normalizeScope(loginClientInfo.getScope()));
         if (log.isDebugEnabled()) {

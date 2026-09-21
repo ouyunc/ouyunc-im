@@ -56,7 +56,7 @@ public final class ClusterAuthentication {
 
     /**
      * 未认证时只解码受限大小的 PROTO_STUFF 认证首包，禁止在认证之前使用其它序列化算法。
-     * 该 Codec 前必须保留 LengthFieldBasedFrameDecoder，确保收到完整且受限的帧。
+     * 前置 {@link ClusterAuthFrameDecoder} 在长度域可读时即按认证状态限制帧长。
      */
     public static final class GuardedCodec extends PacketCodec {
         @Override

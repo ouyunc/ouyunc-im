@@ -5,6 +5,7 @@ import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.message.schedule.ScheduleTimer;
 import io.netty.channel.Channel;
 import io.netty.util.AttributeKey;
+import io.netty.util.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
@@ -13,12 +14,12 @@ import java.util.Queue;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 /**
  * 单连接业务串行下沉到虚拟线程池：同连接消息保序，PING 不走这里以免被群成员查询堵住。
  * 异步任务必须等 CompletionStage/Mono 完成再跑下一条，避免连发 subscribe 乱序并打满队列。
- *
  *
  * <p>调度入口统一捕获 {@link RejectedExecutionException}：清理 running、延迟重试一次，
  * 仍失败则关连并清空队列。禁止 CallerRunsPolicy 把重活退回 EventLoop。</p>
@@ -41,13 +42,27 @@ public final class ChannelOrderedTasks {
     }
 
     public static void executeAsync(Channel channel, Supplier<? extends CompletionStage<?>> task) {
+        executeAsync(channel, task, MessageConstant.CHANNEL_ORDERED_TASK_DEADLINE_MS);
+    }
+
+    /**
+     * @param deadlineMs 超时从进入 drain 起算（含同步 task.get()）；到期取消源 Future，不是先完成再 cancel。
+     */
+    public static void executeAsync(Channel channel, Supplier<? extends CompletionStage<?>> task, long deadlineMs) {
         if (channel == null || task == null || !channel.isActive()) {
             return;
         }
-        SerialQueue created = new SerialQueue(channel);
-        SerialQueue queue = channel.attr(QUEUE_KEY).setIfAbsent(created);
+        long deadline = deadlineMs > 0 ? deadlineMs : MessageConstant.CHANNEL_ORDERED_TASK_DEADLINE_MS;
+        SerialQueue queue = channel.attr(QUEUE_KEY).get();
         if (queue == null) {
-            queue = created;
+            SerialQueue created = new SerialQueue(channel, deadline);
+            SerialQueue existing = channel.attr(QUEUE_KEY).setIfAbsent(created);
+            if (existing == null) {
+                created.hookCloseCleanup();
+                queue = created;
+            } else {
+                queue = existing;
+            }
         }
         queue.offer(task);
     }
@@ -66,10 +81,11 @@ public final class ChannelOrderedTasks {
         private final AtomicInteger size = new AtomicInteger(0);
         private final AtomicBoolean closeHooked = new AtomicBoolean(false);
         private final AtomicBoolean retryScheduled = new AtomicBoolean(false);
+        private final long deadlineMs;
 
-        private SerialQueue(Channel channel) {
+        private SerialQueue(Channel channel, long deadlineMs) {
             this.channel = channel;
-            hookCloseCleanup();
+            this.deadlineMs = deadlineMs;
         }
 
         private void hookCloseCleanup() {
@@ -127,17 +143,14 @@ public final class ChannelOrderedTasks {
 
         private void scheduleRetryOnce() {
             if (!retryScheduled.compareAndSet(false, true)) {
-                // 已有重试在途，保持 running=true 等回调
                 return;
             }
-            // ScheduleTimer 调度失败时返回 null，必须立刻 failClose，否则 running 永久卡住
             var timeout = ScheduleTimer.scheduleOnce(() -> {
                 retryScheduled.set(false);
                 if (!channel.isActive()) {
                     clearAndStop("channel-inactive-on-retry");
                     return;
                 }
-                // running 仍为 true，直接再投递 drain
                 scheduleDrain(true);
             }, MessageConstant.CHANNEL_ORDERED_SCHEDULE_RETRY_DELAY_MS, TimeUnit.MILLISECONDS);
             if (timeout == null) {
@@ -153,13 +166,32 @@ public final class ChannelOrderedTasks {
             Supplier<? extends CompletionStage<?>> task = tasks.poll();
             if (task == null) {
                 running.set(false);
-                // 防 TOCTOU：停跑后若又有入队则重启
                 if (!tasks.isEmpty()) {
                     tryStart();
                 }
                 return;
             }
             size.decrementAndGet();
+
+            AtomicBoolean settled = new AtomicBoolean(false);
+            AtomicReference<CompletableFuture<?>> inFlight = new AtomicReference<>();
+            Timeout deadline = ScheduleTimer.scheduleOnce(() -> {
+                if (!settled.compareAndSet(false, true)) {
+                    return;
+                }
+                CompletableFuture<?> raw = inFlight.get();
+                if (raw != null) {
+                    raw.cancel(true);
+                }
+                log.error("连接有序任务超时 channelId={} deadlineMs={}",
+                        channel.id().asShortText(), deadlineMs);
+                failClose("task-timeout");
+            }, deadlineMs, TimeUnit.MILLISECONDS);
+            if (deadline == null) {
+                failClose("task-timeout-schedule-failed");
+                return;
+            }
+
             CompletionStage<?> stage;
             try {
                 stage = task.get();
@@ -171,18 +203,17 @@ public final class ChannelOrderedTasks {
                 stage = CompletableFuture.completedFuture(null);
             }
             CompletableFuture<?> raw = stage.toCompletableFuture();
-            CompletableFuture<?> timed = raw.orTimeout(
-                    MessageConstant.CHANNEL_ORDERED_TASK_DEADLINE_MS, TimeUnit.MILLISECONDS);
-            timed.whenComplete((ignored, error) -> {
+            inFlight.set(raw);
+            if (settled.get()) {
+                raw.cancel(true);
+                return;
+            }
+            raw.whenComplete((ignored, error) -> {
+                if (!settled.compareAndSet(false, true)) {
+                    return;
+                }
+                deadline.cancel();
                 if (error != null) {
-                    if (error instanceof TimeoutException
-                            || (error.getCause() instanceof TimeoutException)) {
-                        log.error("连接有序任务超时 channelId={} deadlineMs={}",
-                                channel.id().asShortText(), MessageConstant.CHANNEL_ORDERED_TASK_DEADLINE_MS);
-                        raw.cancel(true);
-                        failClose("task-timeout");
-                        return;
-                    }
                     log.error("连接有序异步任务失败 channelId={}", channel.id().asShortText(), error);
                 }
                 scheduleDrain(false);
