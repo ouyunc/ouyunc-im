@@ -9,6 +9,8 @@ import com.ouyunc.message.processor.http.push.delivery.HttpProcessor;
 import com.ouyunc.message.processor.http.push.delivery.HttpPushDeliverySupport;
 import com.ouyunc.message.processor.http.push.delivery.HttpPushProcessorStrategies;
 import com.ouyunc.repository.DefaultRepository;
+import com.ouyunc.message.helper.MessageArchiveHelper;
+import reactor.core.publisher.Mono;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,9 +45,6 @@ public final class HttpPushProcessorDelegate {
         if (packet == null || packet.getMessage() == null) {
             return;
         }
-        if (packet.getMessageType() != MessageTypeEnum.CUSTOMER_SERVICE.getType()) {
-            DefaultRepository.INSTANCE.save(packet);
-        }
         HttpProcessor strategy = HttpPushProcessorStrategies.get(packet.getMessageType());
         if (strategy == null) {
             log.error("HTTP 推送投递不支持 messageType={}", packet.getMessageType());
@@ -53,13 +52,16 @@ public final class HttpPushProcessorDelegate {
                     "HTTP 推送不支持的消息类型", packet);
             return;
         }
-        try {
-            strategy.process(packet);
-        } catch (Exception ex) {
-            log.error("HTTP 推送 process 异常, messageId={}", packet.getMessage().getId(), ex);
+        // HTTP ACCEPTED 仍表示后台受理；COMMITTED 必须晚于归档确认。
+        Mono<Void> archived = packet.getMessageType() == MessageTypeEnum.CUSTOMER_SERVICE.getType()
+                ? Mono.empty()
+                : MessageArchiveHelper.confirm(() -> DefaultRepository.INSTANCE.save(packet));
+        archived.then(Mono.fromRunnable(() -> strategy.process(packet))).subscribe(ignored -> { }, ex -> {
+            log.error("HTTP 推送归档/投递异常, messageId={}", packet.getMessage().getId(), ex);
+            HttpPushDeliverySupport.discardStashed(packet);
             HttpPushDeliverySupport.publishException(ExceptionCodeEnum.UNKNOWN_ERROR, ex.getMessage(), packet);
             HttpPushDeliverySupport.markRetryableFailed(packet);
-        }
+        });
     }
 
     private static HttpProcessor requireStrategy(Packet packet) throws HttpPipelineException {

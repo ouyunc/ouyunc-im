@@ -1,6 +1,8 @@
 package com.ouyunc.mq.kafka;
 
 import com.ouyunc.mq.core.MqHeaderKeys;
+import com.ouyunc.base.constant.MqConstant;
+import org.apache.kafka.clients.producer.ProducerConfig;
 import com.ouyunc.mq.core.api.MqPublisher;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -20,19 +22,23 @@ public class KafkaMqPublisher implements MqPublisher {
 
     @Override
     public CompletableFuture<?> send(String topic, String payload) {
-        return kafkaTemplate.send(topic, payload);
+        return send(topic, null, payload, null);
     }
 
     @Override
     public CompletableFuture<?> send(String topic, String key, String payload) {
-        if (StringUtils.isBlank(key)) {
-            return send(topic, payload);
-        }
-        return kafkaTemplate.send(topic, key, payload);
+        return send(topic, key, payload, null);
     }
 
     @Override
     public CompletableFuture<?> send(String topic, String key, String payload, Map<String, Object> headers) {
+        // extra 配置可能覆盖 typed ack；必须校验最终 ProducerFactory 配置。
+        Object acks = kafkaTemplate.getProducerFactory().getConfigurationProperties().get(ProducerConfig.ACKS_CONFIG);
+        if (MqConstant.MQ_SAVE_MESSAGE_TOPIC.equals(topic)
+                && !MqConstant.KAFKA_ACKS_ALL.equals(String.valueOf(acks))
+                && !MqConstant.KAFKA_ACKS_ALL_NUMERIC.equals(String.valueOf(acks))) {
+            return CompletableFuture.failedFuture(new IllegalStateException("消息归档要求 Kafka acks=all 或 -1"));
+        }
         Map<String, Object> kafkaHeaders = new HashMap<>();
         if (headers != null) {
             headers.forEach((name, value) -> mapHeader(kafkaHeaders, name, value));

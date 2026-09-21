@@ -86,7 +86,11 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
         // 路由校验通过后先改写入口号再旁路归档，避免 MQ 身份与 ticket 索引不一致
         CsImSessionRoute route = live.route();
         CsHelper.rewriteAgentFrom(packet, route);
-        archiveAfterAuth(packet);
+        return archiveAfterAuth(packet).then(Mono.defer(() -> persistPrepared(ctx, packet, route)));
+    }
+
+    /** 归档确认后才提交 ticket 索引和 ACK，避免热存储成功掩盖归档失败。 */
+    private Mono<Void> persistPrepared(ChannelHandlerContext ctx, Packet packet, CsImSessionRoute route) {
         Message message = packet.getMessage();
         int contentType = message.getContentType();
         if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {

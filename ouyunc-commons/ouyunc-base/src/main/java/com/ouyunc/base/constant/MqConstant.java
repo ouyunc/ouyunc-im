@@ -4,6 +4,10 @@ package com.ouyunc.base.constant;
  * mq topic queue 等相关常量
  */
 public class MqConstant {
+    /** Kafka 归档必须等待 ISR 确认；两个值在客户端协议中等价。 */
+    public static final String KAFKA_ACKS_ALL = "all";
+    public static final String KAFKA_ACKS_ALL_NUMERIC = "-1";
+
 
 
     /**

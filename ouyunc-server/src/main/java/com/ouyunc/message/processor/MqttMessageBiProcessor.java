@@ -44,8 +44,7 @@ public final class MqttMessageBiProcessor extends AbstractMessageBiProcessor<Byt
             ctx.close();
             return Mono.just(false);
         }
-        archiveAfterAuth(packet);
-        return Mono.just(true);
+        return archiveAfterAuth(packet).thenReturn(true);
     }
 
     /***

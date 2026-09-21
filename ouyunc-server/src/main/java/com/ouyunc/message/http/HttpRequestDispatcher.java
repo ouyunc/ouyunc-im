@@ -1,6 +1,12 @@
 package com.ouyunc.message.http;
 
 import com.ouyunc.base.constant.enums.HttpResponseCodeEnum;
+import com.ouyunc.base.constant.MessageConstant;
+import io.netty.util.concurrent.RejectedExecutionHandlers;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import com.ouyunc.base.model.HttpFileResponse;
 import com.ouyunc.base.model.HttpRawResponse;
 import com.ouyunc.base.model.HttpResponseResult;
@@ -141,58 +147,91 @@ public class HttpRequestDispatcher {
     private void dispatchAsync(ChannelHandlerContext ctx, FullHttpRequest request, HttpRouteMatch match, EventExecutorGroup biz,
                                boolean logTiming, long startNanos, String method, String path) {
         request.retain();
-        biz.execute(() -> {
-            HttpContext httpContext = null;
-            try {
-                httpContext = HttpRequestPipeline.prepare(ctx, request, match.getRoute().getDescriptor(), match.getPathVariables());
-                Object result = match.getRoute().getProcessor().process(httpContext);
-                final HttpContext hc = httpContext;
-                httpContext = null;
-                if (result instanceof CompletionStage<?> stage) {
-                    completeWhenReady(ctx, request, hc, stage, logTiming, startNanos, method, path);
-                    return;
-                }
-                runOnChannelEventLoop(ctx, request, hc, logTiming, startNanos, method, path, () -> {
-                    try {
-                        writeDispatchResult(ctx, request, result);
-                    } catch (Exception e) {
-                        log.error("HTTP write response error, uri={}", request.uri(), e);
+        try {
+            biz.execute(() -> {
+                HttpContext httpContext = null;
+                try {
+                    httpContext = HttpRequestPipeline.prepare(ctx, request, match.getRoute().getDescriptor(), match.getPathVariables());
+                    Object result = match.getRoute().getProcessor().process(httpContext);
+                    final HttpContext hc = httpContext;
+                    httpContext = null;
+                    if (result instanceof CompletionStage<?> stage) {
+                        completeWhenReady(ctx, request, hc, stage, logTiming, startNanos, method, path);
+                        return;
+                    }
+                    runOnChannelEventLoop(ctx, request, hc, logTiming, startNanos, method, path, () -> {
+                        try {
+                            writeDispatchResult(ctx, request, result);
+                        } catch (Exception e) {
+                            log.error("HTTP write response error, uri={}", request.uri(), e);
+                            HttpUtil.writeJsonResponse(ctx, request, HttpResponseStatus.INTERNAL_SERVER_ERROR,
+                                    HttpResponseResult.error(HttpResponseCodeEnum.INTERNAL_SERVER_ERROR, "Internal Server Error"));
+                        }
+                    });
+                } catch (HttpPipelineException e) {
+                    final HttpContext hc = httpContext;
+                    runOnChannelEventLoop(ctx, request, hc, logTiming, startNanos, method, path, () ->
+                            HttpUtil.writeJsonResponse(ctx, request, e.getStatus(), HttpResponseResult.fail(e.getCodeEnum(), e.getMessage())));
+                } catch (Exception e) {
+                    final HttpContext hc = httpContext;
+                    runOnChannelEventLoop(ctx, request, hc, logTiming, startNanos, method, path, () -> {
+                        log.error("HTTP dispatch error, uri={}", request.uri(), e);
                         HttpUtil.writeJsonResponse(ctx, request, HttpResponseStatus.INTERNAL_SERVER_ERROR,
                                 HttpResponseResult.error(HttpResponseCodeEnum.INTERNAL_SERVER_ERROR, "Internal Server Error"));
-                    }
-                });
-            } catch (HttpPipelineException e) {
-                final HttpContext hc = httpContext;
-                runOnChannelEventLoop(ctx, request, hc, logTiming, startNanos, method, path, () ->
-                        HttpUtil.writeJsonResponse(ctx, request, e.getStatus(), HttpResponseResult.fail(e.getCodeEnum(), e.getMessage())));
-            } catch (Exception e) {
-                final HttpContext hc = httpContext;
-                runOnChannelEventLoop(ctx, request, hc, logTiming, startNanos, method, path, () -> {
-                    log.error("HTTP dispatch error, uri={}", request.uri(), e);
-                    HttpUtil.writeJsonResponse(ctx, request, HttpResponseStatus.INTERNAL_SERVER_ERROR,
-                            HttpResponseResult.error(HttpResponseCodeEnum.INTERNAL_SERVER_ERROR, "Internal Server Error"));
-                });
-            }
-        });
+                    });
+                }
+            });
+        } catch (RejectedExecutionException rejected) {
+            // retain 的所有权尚未交给工作线程，提交失败必须立即回收。
+            request.release();
+            HttpUtil.writeJsonResponse(ctx, request, HttpResponseStatus.SERVICE_UNAVAILABLE,
+                    HttpResponseResult.error(HttpResponseCodeEnum.INTERNAL_SERVER_ERROR, "HTTP service busy"));
+        }
     }
+
 
     private static void completeWhenReady(ChannelHandlerContext ctx, FullHttpRequest request, HttpContext httpContext,
                                           CompletionStage<?> stage, boolean logTiming, long startNanos,
                                           String method, String path) {
-        stage.whenComplete((result, error) ->
-                runOnChannelEventLoop(ctx, request, httpContext, logTiming, startNanos, method, path, () -> {
-                    if (error != null) {
-                        writeDispatchError(ctx, request, error);
-                        return;
-                    }
+        // 不使用 source.orTimeout：超时只结束响应所有权，不擅自取消业务存储操作。
+        // 到期后即使源 stage 迟到，也只能由 gate 的唯一完成回调释放一次资源。
+        CompletableFuture<Object> gate = new CompletableFuture<>();
+        var closeListener = new io.netty.channel.ChannelFutureListener() {
+            @Override
+            public void operationComplete(io.netty.channel.ChannelFuture future) {
+                gate.completeExceptionally(new java.util.concurrent.CancellationException("HTTP channel closed"));
+            }
+        };
+        ctx.channel().closeFuture().addListener(closeListener);
+        gate.orTimeout(MessageConstant.HTTP_ASYNC_RESULT_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        gate.whenComplete((result, error) -> {
+            ctx.channel().closeFuture().removeListener(closeListener);
+            runOnChannelEventLoop(ctx, request, httpContext, logTiming, startNanos, method, path, () -> {
+                if (!ctx.channel().isActive()) {
+                    return;
+                }
+                if (error != null) {
+                    writeDispatchError(ctx, request, error);
+                } else {
                     try {
                         writeDispatchResult(ctx, request, result);
-                    } catch (Exception e) {
-                        log.error("HTTP write response error, uri={}", request.uri(), e);
-                        HttpUtil.writeJsonResponse(ctx, request, HttpResponseStatus.INTERNAL_SERVER_ERROR,
-                                HttpResponseResult.error(HttpResponseCodeEnum.INTERNAL_SERVER_ERROR, "Internal Server Error"));
+                    } catch (Exception ex) {
+                        writeDispatchError(ctx, request, ex);
                     }
-                }));
+                }
+            });
+        });
+        try {
+            stage.whenComplete((result, error) -> {
+                if (error == null) {
+                    gate.complete(result);
+                } else {
+                    gate.completeExceptionally(error);
+                }
+            });
+        } catch (RuntimeException error) {
+            gate.completeExceptionally(error);
+        }
     }
 
     private static void writeDispatchError(ChannelHandlerContext ctx, FullHttpRequest request, Throwable error) {
@@ -201,6 +240,11 @@ public class HttpRequestDispatcher {
                 && (cause instanceof java.util.concurrent.CompletionException
                 || cause instanceof java.util.concurrent.ExecutionException)) {
             cause = cause.getCause();
+        }
+        if (cause instanceof TimeoutException) {
+            HttpUtil.writeJsonResponse(ctx, request, HttpResponseStatus.GATEWAY_TIMEOUT,
+                    HttpResponseResult.error(HttpResponseCodeEnum.INTERNAL_SERVER_ERROR, "HTTP operation timed out"));
+            return;
         }
         if (cause instanceof HttpPipelineException e) {
             HttpUtil.writeJsonResponse(ctx, request, e.getStatus(), HttpResponseResult.fail(e.getCodeEnum(), e.getMessage()));
@@ -214,24 +258,33 @@ public class HttpRequestDispatcher {
     private static void runOnChannelEventLoop(ChannelHandlerContext ctx, FullHttpRequest request, HttpContext httpContext,
                                               boolean logTiming, long startNanos, String method, String path, Runnable writeOnEventLoop) {
         EventLoop eventLoop = ctx.channel().eventLoop();
-        if (eventLoop.isShutdown()) {
-            if (httpContext != null) {
-                httpContext.releaseResources();
-            }
-            request.release();
-            return;
-        }
-        eventLoop.execute(() -> {
-            try {
-                writeOnEventLoop.run();
-            } finally {
-                if (httpContext != null) {
-                    httpContext.releaseResources();
+        AtomicBoolean released = new AtomicBoolean();
+        Runnable release = () -> {
+            if (released.compareAndSet(false, true)) {
+                try {
+                    if (httpContext != null) {
+                        httpContext.releaseResources();
+                    }
+                } finally {
+                    request.release();
+                    logTimingLine(logTiming, startNanos, method, path);
                 }
-                request.release();
-                logTimingLine(logTiming, startNanos, method, path);
             }
-        });
+        };
+        try {
+            eventLoop.execute(() -> {
+                try {
+                    if (ctx.channel().isActive()) {
+                        writeOnEventLoop.run();
+                    }
+                } finally {
+                    release.run();
+                }
+            });
+        } catch (RejectedExecutionException rejected) {
+            // isShutdown 检查无法覆盖检查后关闭的竞争，必须处理实际提交失败。
+            release.run();
+        }
     }
 
     private static void writeDispatchResult(ChannelHandlerContext ctx, FullHttpRequest request, Object result) throws Exception {
@@ -261,7 +314,8 @@ public class HttpRequestDispatcher {
             synchronized (httpExecutorLock) {
                 if (httpBusinessExecutor == null) {
                     httpBusinessExecutor = new DefaultEventExecutorGroup(threads,
-                            new BasicThreadFactory.Builder().namingPattern("http-business-%d").daemon(true).build());
+                            new BasicThreadFactory.Builder().namingPattern("http-business-%d").daemon(true).build(),
+                            MessageConstant.HTTP_BUSINESS_MAX_PENDING_TASKS, RejectedExecutionHandlers.reject());
                 }
             }
         }

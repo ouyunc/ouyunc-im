@@ -8,6 +8,7 @@ import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.message.helper.CsHelper;
+import com.ouyunc.message.helper.MessageArchiveHelper;
 import com.ouyunc.message.helper.CsHelper.PrepareOutcome;
 import com.ouyunc.message.http.HttpPipelineException;
 import com.ouyunc.message.processor.http.push.HttpPushFailures;
@@ -71,7 +72,13 @@ public final class CsHttpPushDeliveryStrategy implements HttpProcessor {
         }
         route = live.route();
         CsHelper.rewriteAgentFrom(packet, route);
-        DefaultRepository.INSTANCE.save(packet);
+        CsImSessionRoute confirmedRoute = route;
+        return MessageArchiveHelper.confirm(() -> DefaultRepository.INSTANCE.save(packet))
+                .then(Mono.defer(() -> persistPrepared(packet, confirmedRoute)));
+    }
+
+    /** 归档确认后执行存储，避免 HTTP COMMITTED 早于可靠归档。 */
+    private Mono<Boolean> persistPrepared(Packet packet, CsImSessionRoute route) {
         Message message = packet.getMessage();
         int contentType = message.getContentType();
         if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {

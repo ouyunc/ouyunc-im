@@ -114,13 +114,18 @@ public final class MessageDeliveryRouteHelper {
 
     private static void sendImGroupMembers(Packet packet, String appKey, Set<String> imMembers) {
         Map<String, List<LoginClientInfo>> onlineMap = ClientHelper.onlineAllBatch(appKey, imMembers);
+        // 本批所有设备一次交给 fanout，按节点合并正文；下游继续限制每帧的目标数。
+        List<LoginClientInfo> recipients = new java.util.ArrayList<>();
         onlineMap.forEach((member, clients) -> {
             if (CollectionUtils.isNotEmpty(clients)) {
-                MessageHelper.asyncSendMessage(packet, clients);
+                recipients.addAll(clients);
             } else {
                 log.debug("群 IM 成员 {} 不在线，已写入群会话索引", member);
             }
         });
+        if (!recipients.isEmpty()) {
+            MessageHelper.asyncSendMessage(packet, recipients);
+        }
     }
 
     private static void pushImUserIfOnline(Packet packet, String userId) {

@@ -421,21 +421,17 @@ public class MessageHelper {
     }
 
     /**
-     * 先 active 再 global。池中 channel 走内部协议 pipeline，与客户端协议类型无关。
+     * 只使用已获心跳 ACK 的 active 池；未知节点建池后由后台心跳确认。
      */
     private static ChannelPool resolveClusterChannelPool(String serverAddress) {
-        ChannelPool channelPool = MessageServerContext.clusterActiveServerRegistryTableCache.get(serverAddress);
-        if (channelPool != null) {
-            return channelPool;
+        // global 只供心跳探测；业务不得绕过 active 的健康门槛。
+        ChannelPool pool = MessageServerContext.clusterActiveServerRegistryTableCache.get(serverAddress);
+        if (pool == null
+                && MessageServerContext.clusterGlobalServerRegistryTableCache.get(serverAddress) == null
+                && NodeLeaseKeeper.hasLiveLease(serverAddress)) {
+            MessageClientPool.ensurePool(serverAddress);
         }
-        channelPool = MessageServerContext.clusterGlobalServerRegistryTableCache.get(serverAddress);
-        if (channelPool != null) {
-            return channelPool;
-        }
-        if (NodeLeaseKeeper.hasLiveLease(serverAddress)) {
-            return MessageClientPool.ensurePool(serverAddress);
-        }
-        return null;
+        return pool;
     }
 
     /**

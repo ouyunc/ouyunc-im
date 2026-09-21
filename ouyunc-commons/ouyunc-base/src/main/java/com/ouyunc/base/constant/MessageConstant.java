@@ -185,6 +185,14 @@ public class MessageConstant {
      */
     public static final long CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP = NumberConstant.NUMBER_2 * MessageConstant.HOUR_TIMESTAMP;
 
+    /** 归档确认必须早于连接任务/HTTP PENDING 接管期限，超时不发送业务成功 ACK。 */
+    public static final long MESSAGE_ARCHIVE_CONFIRM_TIMEOUT_MS = 20_000L;
+
+    /** HTTP 异步结果的最长等待时间，不在超时后继续保留请求引用。 */
+    public static final long HTTP_ASYNC_RESULT_TIMEOUT_MS = 30_000L;
+    /** 每个 HTTP 业务执行器的排队上限；过载明确拒绝，不能无限积压请求正文。 */
+    public static final int HTTP_BUSINESS_MAX_PENDING_TASKS = 1024;
+
     /**
      * HTTP 推送 PENDING 僵死接管窗口（B3）：进程崩溃后同 messageId 可在该时限后重新抢占。
      */

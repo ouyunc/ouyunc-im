@@ -3,6 +3,7 @@ package com.ouyunc.mq.kafka.builder;
 import com.ouyunc.mq.kafka.properties.KafkaProperties;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.kafka.clients.producer.ProducerConfig;
+import com.ouyunc.base.constant.MqConstant;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
@@ -59,7 +60,9 @@ public class KafkaTemplateBuilder extends AbstractKafkaBuilder<KafkaTemplate<?,?
             producerPropertiesMap.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaProperties.getProducer().getBootstrapServers());
         }
         //消息确认应答模式
-        producerPropertiesMap.put(ProducerConfig.ACKS_CONFIG, kafkaProperties.getProducer().getAck());
+        producerPropertiesMap.put(ProducerConfig.ACKS_CONFIG,
+                kafkaProperties.getProducer().getAck() == null
+                        ? MqConstant.KAFKA_ACKS_ALL : kafkaProperties.getProducer().getAck());
         //批量发送的消息数量
         producerPropertiesMap.put(ProducerConfig.BATCH_SIZE_CONFIG, kafkaProperties.getProducer().getBatchSize());
         //32M批处理缓冲区

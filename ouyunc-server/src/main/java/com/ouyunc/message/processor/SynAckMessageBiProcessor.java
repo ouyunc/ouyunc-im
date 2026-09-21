@@ -46,7 +46,7 @@ public final class SynAckMessageBiProcessor extends AbstractMessageBiProcessor<B
                 return;
             }
             if (OuyuncMessageContentTypeEnum.ACK_CONTENT.getType() == contentType) {
-                MessageServerContext.clusterClientMissAckTimesCache.delete(remoteServerAddress);
+                MessageClientPool.markHealthy(remoteServerAddress);
                 discoverPeerIfNeeded(remoteServerAddress);
             }
         });

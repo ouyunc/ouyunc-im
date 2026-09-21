@@ -43,7 +43,13 @@ public class RocketMqPublisher implements MqPublisher {
         rocketMQTemplate.asyncSend(topic, message, new SendCallback() {
             @Override
             public void onSuccess(SendResult sendResult) {
-                future.complete(sendResult);
+                // onSuccess 只代表收到 broker 响应，刷盘/副本超时不能作为可靠归档确认。
+                if (sendResult != null && sendResult.getSendStatus() == org.apache.rocketmq.client.producer.SendStatus.SEND_OK) {
+                    future.complete(sendResult);
+                } else {
+                    future.completeExceptionally(new IllegalStateException("RocketMQ 未确认可靠发送: "
+                            + (sendResult == null ? "null" : sendResult.getSendStatus())));
+                }
             }
 
             @Override

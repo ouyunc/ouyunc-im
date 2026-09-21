@@ -15,6 +15,7 @@ import com.ouyunc.base.utils.MapUtil;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.message.cluster.lease.NodeLeaseKeeper;
+import com.ouyunc.message.cluster.client.pool.MessageClientPool;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.protocol.NativePacketProtocol;
 import io.netty.channel.pool.ChannelPool;
@@ -58,18 +59,22 @@ public class MessageClusterSynAckThread implements Runnable {
                     Serializer.PROTO_STUFF.getValue(),
                     OuyuncMessageTypeEnum.SYN_ACK.getType(),
                     message);
+            // 发送前占一拍，ACK 会移除整个计数对象；迟到回调不应为已恢复节点重新计数。
+            AtomicInteger generation = MessageServerContext.clusterClientMissAckTimesCache.get(targetServerAddress);
+            generation.incrementAndGet();
             MessageServerContext.findProtocol(packet.getProtocol(), packet.getProtocolVersion())
                     .doSendMessage(packet, targetServerAddress,
-                            sendResult -> onSynSendResult(targetServerAddress, sendResult));
+                            sendResult -> onSynSendResult(targetServerAddress, generation, sendResult));
         }
     }
 
     /**
      * 已发出或网络失败才计入等待 ACK；本地校验失败不摘池。
      */
-    static void onSynSendResult(String targetServerAddress, SendResult sendResult) {
+    static void onSynSendResult(String targetServerAddress, AtomicInteger generation, SendResult sendResult) {
         if (sendResult != null
                 && OutboundPacketVerifyException.isLocalVerifyFailure(sendResult.getException())) {
+            generation.decrementAndGet();
             log.error("集群心跳本地构包失败 dest={} packetId={}",
                     targetServerAddress,
                     sendResult.getPacket() == null ? null : sendResult.getPacket().getPacketId());
@@ -80,17 +85,6 @@ public class MessageClusterSynAckThread implements Runnable {
                     targetServerAddress,
                     sendResult.getException() == null ? null : sendResult.getException().getMessage());
         }
-        noteWaitingAck(targetServerAddress);
-    }
-
-    private static void noteWaitingAck(String targetServerAddress) {
-        if (!MessageServerContext.clusterActiveServerRegistryTableCache.asMap().containsKey(targetServerAddress)) {
-            return;
-        }
-        AtomicInteger missAckTimes = MessageServerContext.clusterClientMissAckTimesCache.get(targetServerAddress);
-        if (missAckTimes.incrementAndGet() > MessageServerContext.serverProperties().getClusterClientHeartbeatWaitRetry()) {
-            MessageServerContext.clusterActiveServerRegistryTableCache.delete(targetServerAddress);
-            log.warn("集群节点 SYN 连续无 ACK，从可投递池摘除（租约仍在则继续重试）: {}", targetServerAddress);
-        }
+        MessageClientPool.markUnhealthy(targetServerAddress, generation);
     }
 }

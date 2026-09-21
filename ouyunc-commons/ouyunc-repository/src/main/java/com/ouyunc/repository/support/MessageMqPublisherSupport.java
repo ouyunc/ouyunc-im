@@ -71,14 +71,22 @@ public final class MessageMqPublisherSupport {
         Packet snapshot = packet.clone();
         CompletableFuture<Object> result = new CompletableFuture<>();
         try {
-            infra.dbExecutor().execute(() -> publishPacket(MqConstant.MQ_SAVE_MESSAGE_TOPIC, null, snapshot,
-                    ARCHIVE_FAILURE_CONTEXT).whenComplete((value, ex) -> {
-                if (ex != null) {
+            infra.dbExecutor().execute(() -> {
+                try {
+                    publishPacket(MqConstant.MQ_SAVE_MESSAGE_TOPIC, null, snapshot, ARCHIVE_FAILURE_CONTEXT)
+                            .whenComplete((value, ex) -> {
+                                if (ex != null) {
+                                    result.completeExceptionally(ex);
+                                } else {
+                                    result.complete(value);
+                                }
+                            });
+                } catch (Exception ex) {
+                    // 序列化等同步异常不能让外层确认 Future 永久挂起。
                     result.completeExceptionally(ex);
-                } else {
-                    result.complete(value);
+                    log.error("消息归档执行异常 packetId={}", snapshot.getPacketId(), ex);
                 }
-            }));
+            });
         } catch (Exception ex) {
             handleFailure(MqConstant.MQ_SAVE_MESSAGE_TOPIC, null, snapshot.getPacketId(),
                     JSON.toJSONString(snapshot), snapshot, ARCHIVE_FAILURE_CONTEXT, ex);
@@ -126,7 +134,7 @@ public final class MessageMqPublisherSupport {
     }
 
     /**
-     * Packet / JSON 发送失败：打 warn、发布异常事件，并同步写入 MySQL Outbox 供补发。
+     * Packet / JSON 发送失败：打 warn、发布异常事件，并把 MySQL Outbox 补偿提交到有界仓库池。
      */
     private void handleFailure(String topic, String key, Long packetId, String payload, Packet packet,
                                String failureContext, Throwable ex) {
@@ -136,6 +144,12 @@ public final class MessageMqPublisherSupport {
                 ExceptionEventPayload.of(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR,
                         failureContext + ": " + ex.getMessage(), packet),
                 MessageEventTypeEnum.EXCEPTION), true);
-        mqOutbox.enqueueAsync(topic, key, packetId, payload, failureContext, ex.getMessage());
+        try {
+            infra.dbExecutor().execute(() ->
+                    mqOutbox.enqueueAsync(topic, key, packetId, payload, failureContext, ex.getMessage()));
+        } catch (java.util.concurrent.RejectedExecutionException rejected) {
+            // 不把 JDBC 退回 MQ 网络回调；归档 Future 仍为失败，上游不得 ACK。
+            log.error("Outbox 补偿提交被拒绝 topic={} packetId={}，归档未确认", topic, packetId, rejected);
+        }
     }
 }

@@ -73,13 +73,12 @@ public class MessageClientPool {
     /**
      * 租约仍活且策略允许时确保有池。幂等。
      */
-    public static ChannelPool ensurePool(String node) {
+    public static synchronized ChannelPool ensurePool(String node) {
         if (StringUtils.isBlank(node) || isLocalNode(node)) {
             return null;
         }
         ChannelPool existing = MessageServerContext.clusterGlobalServerRegistryTableCache.get(node);
         if (existing != null) {
-            MessageServerContext.clusterActiveServerRegistryTableCache.putIfAbsent(node, existing);
             return existing;
         }
         int pooled = MessageServerContext.clusterGlobalServerRegistryTableCache.asMap().size();
@@ -90,15 +89,31 @@ public class MessageClientPool {
         ensureBootstrap();
         SimpleChannelPool pool = clientSimpleChannelPoolMap.get(node);
         MessageServerContext.clusterGlobalServerRegistryTableCache.put(node, pool);
-        MessageServerContext.clusterActiveServerRegistryTableCache.putIfAbsent(node, pool);
         log.info("集群发现节点并建池: {}", node);
         return pool;
+    }
+
+    /** 只有有效 ACK 才恢复投递资格；成员刷新只维护 global 连接池。 */
+    public static synchronized void markHealthy(String node) {
+        ChannelPool pool = MessageServerContext.clusterGlobalServerRegistryTableCache.get(node);
+        if (pool != null && NodeLeaseKeeper.hasLiveLease(node)) {
+            MessageServerContext.clusterClientMissAckTimesCache.delete(node);
+            MessageServerContext.clusterActiveServerRegistryTableCache.put(node, pool);
+        }
+    }
+
+    /** 按当前计数对象摘除，避免旧发送回调覆盖刚收到 ACK 的健康状态。 */
+    public static synchronized void markUnhealthy(String node, java.util.concurrent.atomic.AtomicInteger generation) {
+        if (MessageServerContext.clusterClientMissAckTimesCache.asMap().get(node) == generation
+                && generation.get() > MessageServerContext.serverProperties().getClusterClientHeartbeatWaitRetry()) {
+            MessageServerContext.clusterActiveServerRegistryTableCache.delete(node);
+        }
     }
 
     /**
      * 租约消失后关池，避免继续往死节点打。
      */
-    public static void evictPool(String node) {
+    public static synchronized void evictPool(String node) {
         if (StringUtils.isBlank(node)) {
             return;
         }

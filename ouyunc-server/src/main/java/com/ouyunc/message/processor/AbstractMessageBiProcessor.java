@@ -1,6 +1,7 @@
 package com.ouyunc.message.processor;
 
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
+import com.ouyunc.message.helper.MessageArchiveHelper;
 import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.core.context.MessageContext;
@@ -34,7 +35,7 @@ public abstract class AbstractMessageBiProcessor<T extends Number> extends Abstr
     }
 
     /**
-     * 前置阶段：鉴权、业务校验、QoS 展开、旁路归档。
+     * 前置阶段：鉴权、业务校验、QoS 展开、原文归档确认。
      *
      * @return {@code true} 进入 {@link #process}；{@code false} 结束本条消息链（已处理完毕或已拒绝）
      */
@@ -51,16 +52,17 @@ public abstract class AbstractMessageBiProcessor<T extends Number> extends Abstr
             // 幂等命中已 ACK，不再进 process
             return Mono.just(false);
         }
-        archiveAfterAuth(packet);
-        return Mono.just(true);
+        return archiveAfterAuth(packet).thenReturn(true);
     }
 
     /**
-     * 登录鉴权 +（可选）业务校验均通过后旁路归档。未登录包不得进入 MQ；
+     * 登录鉴权 +（可选）业务校验均通过后归档并等待 MQ 确认。未登录包不得进入 MQ；
      * 权限拒绝的包也不归档（由 {@link #continueWhenPassed} 在通过后再调用）。
      */
-    protected void archiveAfterAuth(Packet packet) {
-        repository().save(packet);
+    protected Mono<Void> archiveAfterAuth(Packet packet) {
+        // 原文先归档用于审计；只有 MQ 确认后才允许业务提交/成功 ACK。
+        // 不因连接取消撤销已开始的归档，避免取消 future 影响失败补偿。
+        return MessageArchiveHelper.confirm(() -> repository().save(packet));
     }
 
     /**
@@ -77,16 +79,15 @@ public abstract class AbstractMessageBiProcessor<T extends Number> extends Abstr
                     log.error("校验过程中出现异常: {}", error.getMessage());
                     return Mono.just(true);
                 })
-                .map(reject -> {
+                .flatMap(reject -> {
                     if (Boolean.TRUE.equals(reject)) {
                         log.warn(rejectLog, packet);
                         if (onReject != null) {
                             onReject.run();
                         }
-                        return false;
+                        return Mono.just(false);
                     }
-                    archiveAfterAuth(packet);
-                    return true;
+                    return archiveAfterAuth(packet).thenReturn(true);
                 });
     }
 
