@@ -59,19 +59,19 @@ public final class GroupJoinMessageBiProcessor extends AbstractMessageBiProcesso
 
     @Override
     public Mono<Void> process(ChannelHandlerContext ctx, Packet packet) {
-        return Mono.fromRunnable(() -> {
-            if (log.isDebugEnabled()) {
-                log.debug("GroupJoinMessageProcessor 正在处理外部客户端加群 {} ...", packet);
-            }
-            Message message = packet.getMessage();
-            String appKey = message.getMetadata().getAppKey();
+        if (log.isDebugEnabled()) {
+            log.debug("GroupJoinMessageProcessor 正在处理外部客户端加群 {} ...", packet);
+        }
+        Message message = packet.getMessage();
+        String appKey = message.getMetadata().getAppKey();
+        return confirmThenRun(MqConstant.MQ_GROUP_REQUEST_TOPIC, message.getTo(), packet, () -> {
             String lockKey = CacheConstant.buildGroupRequestLockCacheKey(appKey, message.getFrom(), message.getTo());
-
             DistributedLockHelper.runWithLock(packet, lockKey, ExceptionCodeEnum.BIND_GROUP_ERROR, () -> {
                 GroupRequestSession existingSession = repository().getGroupRequestSession(appKey, message.getFrom(), message.getTo());
                 if (repository().inGroup(appKey, message.getFrom(), message.getTo())) {
                     log.warn("该用户 {} 已经加入群组 {}，幂等 ACK", message.getFrom(), message.getTo());
                     RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.userOnly(message.getFrom()));
+                    ackRequestSettled(ctx, packet);
                     return;
                 }
                 if (null != existingSession && (existingSession.getProgress() > RequestSessionProgress.JOINING.value()
@@ -133,10 +133,9 @@ public final class GroupJoinMessageBiProcessor extends AbstractMessageBiProcesso
                     notifyIdentities = RequestNotifyHelper.copyOf(groupMannerOrLeaderUsersIdentityAndPostMap.keySet());
                 }
                 RequestNotifyHelper.dispatch(ctx, packet, appKey, notifyIdentities);
-                repository().publishPacketAsync(MqConstant.MQ_GROUP_REQUEST_TOPIC, packet.getMessage().getTo(), packet,
-                        "处理加群请求 MQ 旁路");
+                ackRequestSettled(ctx, packet);
             });
-            });
+        });
     }
 
 

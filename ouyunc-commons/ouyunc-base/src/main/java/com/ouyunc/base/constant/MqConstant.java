@@ -160,4 +160,15 @@ public class MqConstant {
      */
     public static final String MQ_TRANSLATE_MESSAGE_GROUP = "message_translate";
 
+    /**
+     * 确认路径 topic（归档/撤回/已读/好友请求/群请求）要求 Kafka acks=all。
+     */
+    public static boolean requiresBrokerAcksAll(String topic) {
+        return MQ_SAVE_MESSAGE_TOPIC.equals(topic)
+                || MQ_WITHDRAW_MESSAGE_TOPIC.equals(topic)
+                || MQ_READ_RECEIPT_MESSAGE_TOPIC.equals(topic)
+                || MQ_FRIEND_REQUEST_TOPIC.equals(topic)
+                || MQ_GROUP_REQUEST_TOPIC.equals(topic);
+    }
+
 }

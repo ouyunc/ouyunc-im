@@ -63,15 +63,14 @@ public final class GroupInviteJoinerRefuseMessageBiProcessor extends AbstractMes
 
     @Override
     public Mono<Void> process(ChannelHandlerContext ctx, Packet packet) {
-        return Mono.fromRunnable(() -> {
-            if (log.isDebugEnabled()) {
-                log.debug("GroupInviteJoinerRefuseMessageProcessor 正在处理被邀请加群者同意加群的请求 {} ...", packet);
-            }
-            Message message = packet.getMessage();
-            String joiner = message.getFrom();
-            String appKey = message.getMetadata().getAppKey();
+        if (log.isDebugEnabled()) {
+            log.debug("GroupInviteJoinerRefuseMessageProcessor 正在处理被邀请加群者同意加群的请求 {} ...", packet);
+        }
+        Message message = packet.getMessage();
+        String joiner = message.getFrom();
+        String appKey = message.getMetadata().getAppKey();
+        return confirmThenRun(MqConstant.MQ_GROUP_REQUEST_TOPIC, message.getTo(), packet, () -> {
             String lockKey = CacheConstant.buildGroupRequestLockCacheKey(appKey, joiner, message.getTo());
-
             DistributedLockHelper.runWithLock(packet, lockKey, ExceptionCodeEnum.BIND_GROUP_ERROR, () -> {
                 GroupRequestSession groupRequestSession = repository().getGroupRequestSession(appKey, joiner, message.getTo());
                 if (null == groupRequestSession || !GroupRequestSessionWay.INVITED.value().equals(groupRequestSession.getWay()) || StringUtils.isBlank(groupRequestSession.getInviter()) || !Objects.equals(groupRequestSession.getJoinerProcessStatus(), GroupJoinerProcessStatus.PENDING.value())) {
@@ -104,10 +103,9 @@ public final class GroupInviteJoinerRefuseMessageBiProcessor extends AbstractMes
                     return;
                 }
                 RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.copyOf(groupMannerOrLeaderUsersIdentityAndPostMap.keySet()));
-                repository().publishPacketAsync(MqConstant.MQ_GROUP_REQUEST_TOPIC, packet.getMessage().getTo(), packet,
-                        "被邀请人拒绝邀请加群请求 MQ 旁路");
+                ackRequestSettled(ctx, packet);
             });
-            });
+        });
     }
 
 

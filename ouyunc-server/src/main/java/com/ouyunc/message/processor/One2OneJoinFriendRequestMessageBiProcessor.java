@@ -74,31 +74,25 @@ public final class One2OneJoinFriendRequestMessageBiProcessor extends AbstractMe
      */
     @Override
     public Mono<Void> process(ChannelHandlerContext ctx, Packet packet) {
-        return Mono.fromRunnable(() -> {
-            // 1. 保存消息
-            Message message = packet.getMessage();
+        Message message = packet.getMessage();
+        String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
+        return confirmThenRun(MqConstant.MQ_FRIEND_REQUEST_TOPIC, sessionId, packet, () -> {
             String appKey = message.getMetadata().getAppKey();
-            String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
-
-            // 分布式锁保护的业务逻辑统一调度到业务线程池，避免阻塞 Netty EventLoop
             String lockKey = CacheConstant.buildFriendRequestLockCacheKey(appKey, sessionId);
             DistributedLockHelper.runWithLock(packet, lockKey, ExceptionCodeEnum.BIND_FRIEND_ERROR, () -> {
-                // 获取请求会话
                 RequestSession requestSession = repository().getFriendRequestSession(appKey, message.getFrom(), message.getTo());
-                // 已经是好友：幂等成功，回 ACK，避免 QoS 客户端空转
                 if (repository().isFriend(appKey, message.getFrom(), message.getTo())) {
                     log.warn("已经是好友, 幂等 ACK; {}", packet);
                     RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.userOnly(message.getFrom()));
+                    ackRequestSettled(ctx, packet);
                     return;
                 }
-                // AGREEING/REFUSING 残留但已非好友：清会话后允许再申请
                 if (null != requestSession && requestSession.getProgress() > RequestSessionProgress.JOINING.value()) {
                     log.warn("{} 和 {} 好友请求会话残留 progress={}，清除后允许重新申请",
                             message.getFrom(), message.getTo(), requestSession.getProgress());
                     repository().deleteFriendRequestSession(appKey, message.getFrom(), message.getTo());
                     requestSession = null;
                 }
-                // 获取当前对方的配置信息
                 UserEntity toUserEntity = repository().getUserEntity(appKey, message.getTo());
                 if (toUserEntity == null) {
                     log.error("对方:{} 不存在，请检查数据！", message.getTo());
@@ -106,11 +100,9 @@ public final class One2OneJoinFriendRequestMessageBiProcessor extends AbstractMe
                     ackRequestSettled(ctx, packet);
                     return;
                 }
-                // 尝试设置请求会话信息
                 RequestSession session = requestSession != null ? requestSession
                         : RequestSession.newBuilder().sessionId(MessageContext.idGenerator().generateIdStr()).build();
 
-                // 判断对方是否是自动同意加好友
                 if (FriendJoinPolicy.AUTO_PASS.value().equals(toUserEntity.getFriendJoinPolicy())) {
                     session.setProgress(RequestSessionProgress.AGREEING.value());
                     if (!repository().autoPassBindFriend(packet, session, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
@@ -128,9 +120,8 @@ public final class One2OneJoinFriendRequestMessageBiProcessor extends AbstractMe
                     }
                     RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.userOnly(message.getTo()));
                 }
-                repository().publishPacketAsync(MqConstant.MQ_FRIEND_REQUEST_TOPIC, sessionId, packet,
-                        "处理一对一添加好友请求 MQ 旁路");
+                ackRequestSettled(ctx, packet);
             });
-            });
+        });
     }
 }

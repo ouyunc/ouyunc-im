@@ -64,23 +64,22 @@ public final class GroupInviteJoinMessageBiProcessor extends AbstractMessageBiPr
 
     @Override
     public Mono<Void> process(ChannelHandlerContext ctx, Packet packet) {
-        return Mono.fromRunnable(() -> {
-            if (log.isDebugEnabled()) {
-                log.debug("GroupInviteJoinMessageProcessor 正在处理外部客户端加群 {} ...", packet);
-            }
-            Message message = packet.getMessage();
-            String appKey = message.getMetadata().getAppKey();
-            Object contentObj = JSON.parseObject(message.getContent(), MessageContentTypeEnum.GROUP_REQUEST_CONTENT.getContentClass());
-            GroupRequestContent content;
-            if (contentObj instanceof GroupRequestContent groupRequestContent) {
-                content = groupRequestContent;
-            } else {
-                log.error("消息内容类型:{} 不是群请求类型，请检查消息内容类型是否正确", message.getContentType());
-                ackRequestSettled(ctx, packet);
-                return;
-            }
+        if (log.isDebugEnabled()) {
+            log.debug("GroupInviteJoinMessageProcessor 正在处理外部客户端加群 {} ...", packet);
+        }
+        Message message = packet.getMessage();
+        String appKey = message.getMetadata().getAppKey();
+        Object contentObj = JSON.parseObject(message.getContent(), MessageContentTypeEnum.GROUP_REQUEST_CONTENT.getContentClass());
+        GroupRequestContent content;
+        if (contentObj instanceof GroupRequestContent groupRequestContent) {
+            content = groupRequestContent;
+        } else {
+            log.error("消息内容类型:{} 不是群请求类型，请检查消息内容类型是否正确", message.getContentType());
+            ackRequestSettled(ctx, packet);
+            return Mono.empty();
+        }
+        return confirmThenRun(MqConstant.MQ_GROUP_REQUEST_TOPIC, message.getTo(), packet, () -> {
             String lockKey = CacheConstant.buildGroupRequestLockCacheKey(appKey, content.getIdentity(), message.getTo());
-
             DistributedLockHelper.runWithLock(packet, lockKey, ExceptionCodeEnum.BIND_GROUP_ERROR, () -> {
                 GroupRequestSession existingSession = repository().getGroupRequestSession(appKey, content.getIdentity(), message.getTo());
                 if (null != existingSession && (existingSession.getProgress() > RequestSessionProgress.JOINING.value() || !GroupRequestSessionWay.INVITED.value().equals(existingSession.getWay()))) {
@@ -188,10 +187,9 @@ public final class GroupInviteJoinMessageBiProcessor extends AbstractMessageBiPr
                     notifyIdentities = RequestNotifyHelper.userOnly(content.getIdentity());
                 }
                 RequestNotifyHelper.dispatch(ctx, packet, appKey, notifyIdentities);
-                repository().publishPacketAsync(MqConstant.MQ_GROUP_REQUEST_TOPIC, packet.getMessage().getTo(), packet,
-                        "处理邀请加群请求 MQ 旁路");
+                ackRequestSettled(ctx, packet);
             });
-            });
+        });
     }
 
 

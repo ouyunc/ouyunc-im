@@ -74,13 +74,12 @@ public final class One2OneRefuseFriendRequestMessageBiProcessor extends Abstract
      */
     @Override
     public Mono<Void> process(ChannelHandlerContext ctx, Packet packet) {
-        return Mono.fromRunnable(() -> {
-            Message message = packet.getMessage();
-            String to = message.getTo();
-            String appKey = message.getMetadata().getAppKey();
-            String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
+        Message message = packet.getMessage();
+        String to = message.getTo();
+        String appKey = message.getMetadata().getAppKey();
+        String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
+        return confirmThenRun(MqConstant.MQ_FRIEND_REQUEST_TOPIC, sessionId, packet, () -> {
             String lockKey = CacheConstant.buildFriendRequestLockCacheKey(appKey, sessionId);
-
             DistributedLockHelper.runWithLock(packet, lockKey, ExceptionCodeEnum.BIND_FRIEND_ERROR, () -> {
                 RequestSession requestSession = repository().getFriendRequestSession(appKey, message.getTo(), message.getFrom());
                 if (null == requestSession || !Objects.equals(requestSession.getProgress(), RequestSessionProgress.JOINING.value())) {
@@ -100,9 +99,8 @@ public final class One2OneRefuseFriendRequestMessageBiProcessor extends Abstract
                     return;
                 }
                 RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.userOnly(to));
-                repository().publishPacketAsync(MqConstant.MQ_FRIEND_REQUEST_TOPIC, sessionId, packet,
-                        "处理一对一拒绝好友请求 MQ 旁路");
+                ackRequestSettled(ctx, packet);
             });
-            });
+        });
     }
 }

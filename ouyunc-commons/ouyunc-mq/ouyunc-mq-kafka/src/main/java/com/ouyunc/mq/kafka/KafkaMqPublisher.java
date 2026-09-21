@@ -34,10 +34,10 @@ public class KafkaMqPublisher implements MqPublisher {
     public CompletableFuture<?> send(String topic, String key, String payload, Map<String, Object> headers) {
         // extra 配置可能覆盖 typed ack；必须校验最终 ProducerFactory 配置。
         Object acks = kafkaTemplate.getProducerFactory().getConfigurationProperties().get(ProducerConfig.ACKS_CONFIG);
-        if (MqConstant.MQ_SAVE_MESSAGE_TOPIC.equals(topic)
+        if (MqConstant.requiresBrokerAcksAll(topic)
                 && !MqConstant.KAFKA_ACKS_ALL.equals(String.valueOf(acks))
                 && !MqConstant.KAFKA_ACKS_ALL_NUMERIC.equals(String.valueOf(acks))) {
-            return CompletableFuture.failedFuture(new IllegalStateException("消息归档要求 Kafka acks=all 或 -1"));
+            return CompletableFuture.failedFuture(new IllegalStateException("确认路径 topic 要求 Kafka acks=all 或 -1: " + topic));
         }
         Map<String, Object> kafkaHeaders = new HashMap<>();
         if (headers != null) {

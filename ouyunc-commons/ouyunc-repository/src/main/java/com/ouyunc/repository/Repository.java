@@ -11,9 +11,9 @@ import java.util.concurrent.Future;
 public interface Repository {
 
     /**
-     * 异步全局保存协议包（旁路投递到归档 MQ）。
-     * <p>调用线程会先快照 {@code packet}，JSON 与投递在仓库线程池执行，不阻塞调用方；返回值可忽略。
-     * 失败仍记日志并发布异常事件。需要等待发送结果时再对返回的 {@link Future} 挂回调，勿在 IO 线程 {@code get()}。</p>
+     * 确认归档协议包到 MQ：等 broker ACK 后才算成功。
+     * <p>调用线程会先快照 {@code packet}，JSON 与投递在仓库线程池执行，不阻塞调用方。
+     * 失败不写 Outbox，由客户端 QoS 重试。勿在 IO 线程 {@code get()}。</p>
      *
      * @param packet 待归档协议包
      * @return MQ 发送 Future；启动发送即失败时为已完成的异常 Future

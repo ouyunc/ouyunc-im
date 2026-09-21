@@ -67,29 +67,28 @@ public final class GroupAgreeMessageBiProcessor extends AbstractMessageBiProcess
 
     @Override
     public Mono<Void> process(ChannelHandlerContext ctx, Packet packet) {
-        return Mono.fromRunnable(() -> {
-            if (log.isDebugEnabled()) {
-                log.debug("GroupAgreeMessageProcessor 正在处理外部客户端加群 {} ...", packet);
-            }
-            Message message = packet.getMessage();
-            if (MessageContentTypeEnum.GROUP_REQUEST_CONTENT.getType() != message.getContentType()) {
-                log.error("消息内容类型:{} 不是群请求类型，请检查消息内容类型是否正确", message.getContentType());
-                ackRequestSettled(ctx, packet);
-                return;
-            }
-            Object contentObj = JSON.parseObject(message.getContent(), MessageContentTypeEnum.GROUP_REQUEST_CONTENT.getContentClass());
-            GroupRequestContent content;
-            if (contentObj instanceof GroupRequestContent groupRequestContent) {
-                content = groupRequestContent;
-            } else {
-                log.error("消息内容类型:{} 不是群请求类型，请检查消息内容类型是否正确", message.getContentType());
-                MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.MESSAGE_CONTENT_TYPE_ERROR, "消息内容类型错误", packet), MessageEventTypeEnum.EXCEPTION), true);
-                ackRequestSettled(ctx, packet);
-                return;
-            }
-            String appKey = message.getMetadata().getAppKey();
+        if (log.isDebugEnabled()) {
+            log.debug("GroupAgreeMessageProcessor 正在处理外部客户端加群 {} ...", packet);
+        }
+        Message message = packet.getMessage();
+        if (MessageContentTypeEnum.GROUP_REQUEST_CONTENT.getType() != message.getContentType()) {
+            log.error("消息内容类型:{} 不是群请求类型，请检查消息内容类型是否正确", message.getContentType());
+            ackRequestSettled(ctx, packet);
+            return Mono.empty();
+        }
+        Object contentObj = JSON.parseObject(message.getContent(), MessageContentTypeEnum.GROUP_REQUEST_CONTENT.getContentClass());
+        GroupRequestContent content;
+        if (contentObj instanceof GroupRequestContent groupRequestContent) {
+            content = groupRequestContent;
+        } else {
+            log.error("消息内容类型:{} 不是群请求类型，请检查消息内容类型是否正确", message.getContentType());
+            MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.MESSAGE_CONTENT_TYPE_ERROR, "消息内容类型错误", packet), MessageEventTypeEnum.EXCEPTION), true);
+            ackRequestSettled(ctx, packet);
+            return Mono.empty();
+        }
+        String appKey = message.getMetadata().getAppKey();
+        return confirmThenRun(MqConstant.MQ_GROUP_REQUEST_TOPIC, message.getTo(), packet, () -> {
             String lockKey = CacheConstant.buildGroupRequestLockCacheKey(appKey, content.getIdentity(), message.getTo());
-
             DistributedLockHelper.runWithLock(packet, lockKey, ExceptionCodeEnum.BIND_GROUP_ERROR, () -> {
                 GroupRequestSession groupRequestSession = repository().getGroupRequestSession(appKey, content.getIdentity(), message.getTo());
                 if (null == groupRequestSession || !RequestSessionProgress.JOINING.value().equals(groupRequestSession.getProgress())) {
@@ -141,10 +140,9 @@ public final class GroupAgreeMessageBiProcessor extends AbstractMessageBiProcess
                 }
                 RequestNotifyHelper.dispatch(ctx, packet, appKey,
                         RequestNotifyHelper.withUser(RequestNotifyHelper.copyExcept(groupMannerOrLeaderUsersIdentityAndPostMap.keySet(), message.getFrom()), content.getIdentity()));
-                repository().publishPacketAsync(MqConstant.MQ_GROUP_REQUEST_TOPIC, packet.getMessage().getTo(), packet,
-                        "处理同意加群请求 MQ 旁路");
+                ackRequestSettled(ctx, packet);
             });
-            });
+        });
     }
 
 

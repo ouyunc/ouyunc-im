@@ -1,9 +1,11 @@
 package com.ouyunc.repository.support;
 
 import com.alibaba.fastjson2.JSON;
+import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
+import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.MessageEvent;
@@ -12,21 +14,22 @@ import com.ouyunc.mq.core.MqHeaderKeys;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * 消息 MQ 投递：协议包与 JSON 共用同一套发送与失败回调，对外只保留旁路异步方法。
- * <p>失败时同步写入 MySQL Outbox（{@link MqOutboxSupport}），不回滚 Redis、不挡在线 ACK。</p>
+ * 消息 MQ 投递：协议包与 JSON 共用发送实现。
+ * <p>确认路径 {@link #publishPacketConfirmed}/{@link #save} 只等 broker ACK，失败交给客户端重试，不写 Outbox。
+ * 旁路路径 {@link #publishPacketAsync}/{@link #publishJsonAsync} 失败仍入 MySQL Outbox。</p>
  */
 public final class MessageMqPublisherSupport {
 
     private static final Logger log = LoggerFactory.getLogger(MessageMqPublisherSupport.class);
-
-    /** 全量归档失败上下文，与历史日志保持一致。 */
-    private static final String ARCHIVE_FAILURE_CONTEXT = "异步归档消息到 MQ";
 
     private final RepositoryInfrastructure infra;
     private final MqOutboxSupport mqOutbox;
@@ -61,10 +64,10 @@ public final class MessageMqPublisherSupport {
     }
 
     /**
-     * 全量归档到 {@link MqConstant#MQ_SAVE_MESSAGE_TOPIC}，对应 {@link com.ouyunc.repository.Repository#save}。
-     * <p>调用线程先 {@link Packet#clone()}，再把 JSON 序列化丢到仓库线程池，避免与后续 QoS {@code copyFrom} / 业务改包并发。</p>
+     * 确认投递：等 broker ACK，失败不写 Outbox（由客户端 QoS 重试）。
+     * <p>调用线程先 {@link Packet#clone()}，JSON 与发送丢到仓库线程池，避免与后续 QoS {@code copyFrom} / 业务改包并发。</p>
      */
-    public CompletableFuture<?> save(Packet packet) {
+    public CompletableFuture<?> publishPacketConfirmed(String topic, String key, Packet packet) {
         if (packet == null) {
             return CompletableFuture.completedFuture(null);
         }
@@ -73,26 +76,44 @@ public final class MessageMqPublisherSupport {
         try {
             infra.dbExecutor().execute(() -> {
                 try {
-                    publishPacket(MqConstant.MQ_SAVE_MESSAGE_TOPIC, null, snapshot, ARCHIVE_FAILURE_CONTEXT)
-                            .whenComplete((value, ex) -> {
-                                if (ex != null) {
-                                    result.completeExceptionally(ex);
-                                } else {
-                                    result.complete(value);
-                                }
-                            });
+                    sendPacket(topic, key, snapshot).whenComplete((value, ex) -> {
+                        if (ex != null) {
+                            log.warn("MQ 确认发送失败 topic={} packetId={}", topic, snapshot.getPacketId(), ex);
+                            MessageContext.publishEvent(new MessageEvent(
+                                    ExceptionEventPayload.of(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR,
+                                            "MQ 确认发送失败: " + ex.getMessage(), snapshot),
+                                    MessageEventTypeEnum.EXCEPTION), true);
+                            result.completeExceptionally(ex);
+                        } else {
+                            result.complete(value);
+                        }
+                    });
                 } catch (Exception ex) {
-                    // 序列化等同步异常不能让外层确认 Future 永久挂起。
                     result.completeExceptionally(ex);
-                    log.error("消息归档执行异常 packetId={}", snapshot.getPacketId(), ex);
+                    log.error("MQ 确认执行异常 topic={} packetId={}", topic, snapshot.getPacketId(), ex);
                 }
             });
         } catch (Exception ex) {
-            handleFailure(MqConstant.MQ_SAVE_MESSAGE_TOPIC, null, snapshot.getPacketId(),
-                    JSON.toJSONString(snapshot), snapshot, ARCHIVE_FAILURE_CONTEXT, ex);
             return CompletableFuture.failedFuture(ex);
         }
         return result;
+    }
+
+    /**
+     * 确认投递并切回业务线程：超时不撤销已发出的消息；消费者按 packetId 幂等。
+     */
+    public Mono<Void> confirmPacket(String topic, String key, Packet packet) {
+        return Mono.defer(() -> Mono.fromFuture(publishPacketConfirmed(topic, key, packet), true))
+                .timeout(Duration.ofMillis(MessageConstant.MESSAGE_ARCHIVE_CONFIRM_TIMEOUT_MS))
+                .publishOn(Schedulers.fromExecutor(ThreadPoolManager.messageProcessorExecutor()))
+                .then();
+    }
+
+    /**
+     * 全量归档到 {@link MqConstant#MQ_SAVE_MESSAGE_TOPIC}，对应 {@link com.ouyunc.repository.Repository#save}。
+     */
+    public CompletableFuture<?> save(Packet packet) {
+        return publishPacketConfirmed(MqConstant.MQ_SAVE_MESSAGE_TOPIC, null, packet);
     }
 
     /**
@@ -148,7 +169,6 @@ public final class MessageMqPublisherSupport {
             infra.dbExecutor().execute(() ->
                     mqOutbox.enqueueAsync(topic, key, packetId, payload, failureContext, ex.getMessage()));
         } catch (java.util.concurrent.RejectedExecutionException rejected) {
-            // 不把 JDBC 退回 MQ 网络回调；归档 Future 仍为失败，上游不得 ACK。
             log.error("Outbox 补偿提交被拒绝 topic={} packetId={}，归档未确认", topic, packetId, rejected);
         }
     }

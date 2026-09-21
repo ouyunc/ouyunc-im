@@ -15,7 +15,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
- * 特殊消息响应式编排：校验 / preparer → Redis 处理成功 → ACK/投递；MQ 仅在 Redis 成功后旁路投递。
+ * 特殊消息响应式编排：校验 / preparer → MQ 确认 → Redis 处理成功 → ACK/投递。
+ * MQ 失败不写 Redis、不 ACK，交给客户端重试。
  */
 public final class ReactiveMessageOperationSupport {
 
@@ -33,11 +34,10 @@ public final class ReactiveMessageOperationSupport {
                 exceptionConsumer.accept(new MessageEvent(ExceptionEventPayload.of(exceptionCode, null, packet), MessageEventTypeEnum.EXCEPTION));
                 return Mono.just(false);
             }
-            return processor
+            return RepositorySupports.MQ.confirmPacket(mqTopic, mqKey, packet)
+                    .then(processor)
                     .doOnNext(processed -> {
                         if (processed) {
-                            // Redis 已成功：再旁路 MQ。失败只打日志/事件，不回滚 Redis、不阻断 ACK。
-                            RepositorySupports.MQ.publishPacketAsync(mqTopic, mqKey, packet, "MQ 旁路投递 topic=" + mqTopic);
                             processorAfter.accept(ctx, packet);
                         } else {
                             exceptionConsumer.accept(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.UNKNOWN_ERROR, "撤销或已读异常", packet), MessageEventTypeEnum.EXCEPTION));

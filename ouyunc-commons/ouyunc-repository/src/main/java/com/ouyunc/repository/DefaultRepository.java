@@ -57,6 +57,13 @@ public enum DefaultRepository implements Repository {
         RepositorySupports.MQ.publishPacketAsync(topic, key, packet, failureContext);
     }
 
+    /**
+     * 确认投递协议包：等 broker ACK，失败不写 Outbox。
+     */
+    public CompletableFuture<?> publishPacketConfirmed(String topic, String key, Packet packet) {
+        return RepositorySupports.MQ.publishPacketConfirmed(topic, key, packet);
+    }
+
 
     /**
      * 旁路异步投递 JSON 负载。

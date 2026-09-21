@@ -100,10 +100,19 @@ public abstract class AbstractMessageBiProcessor<T extends Number> extends Abstr
     }
 
     /**
-     * 请求已定性（幂等忽略 / 客户端错误 / 无会话）：回 ACK。写库或绑定失败不要调用，以便客户端重试。
+     * 请求已定性（幂等忽略 / 客户端错误 / 无会话）或 Redis 成功：回 ACK。写库或绑定失败不要调用，以便客户端重试。
      */
     protected void ackRequestSettled(ChannelHandlerContext ctx, Packet packet) {
         qosPostHandle(ctx, packet);
+    }
+
+    /**
+     * 业务事件先等 MQ broker 确认，再跑 Redis/通知。确认超时 20s，禁止放进 5s 锁内。
+     * 失败不 ACK，交给客户端重试；不写 Outbox。
+     */
+    protected Mono<Void> confirmThenRun(String topic, String key, Packet packet, Runnable next) {
+        return MessageArchiveHelper.confirm(() -> repository().publishPacketConfirmed(topic, key, packet))
+                .then(Mono.fromRunnable(next));
     }
 
     /**
