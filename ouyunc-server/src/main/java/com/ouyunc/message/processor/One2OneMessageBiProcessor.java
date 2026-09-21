@@ -89,8 +89,11 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
         if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {
             return handleReadReceipt(ctx, packet);
         }
+        if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
+            return handleWithdrawMessage(ctx, packet);
+        }
         return saveMessage(packet)
-                .flatMap(result -> afterOne2OneSaved(ctx, packet, contentType, result))
+                .flatMap(result -> afterOne2OneSaved(ctx, packet, result))
                 .onErrorResume(error -> {
                     log.error("单聊消息持久化异常, packetId={}", packet.getPacketId(), error);
                     MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "单聊持久化异常: " + error.getMessage(), packet), MessageEventTypeEnum.EXCEPTION), true);
@@ -99,11 +102,8 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
                 });
     }
 
-    private Mono<Void> afterOne2OneSaved(ChannelHandlerContext ctx, Packet packet, int contentType, SaveMessageOutcome result) {
+    private Mono<Void> afterOne2OneSaved(ChannelHandlerContext ctx, Packet packet, SaveMessageOutcome result) {
         if (result != null && result.isDuplicate()) {
-            if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
-                return handleWithdrawMessage(ctx, packet);
-            }
             qosAckOnSuccess(ctx, packet);
             return Mono.empty();
         }
@@ -113,22 +113,20 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
             releaseQosOnFailure(packet);
             return Mono.empty();
         }
-        if (MessageContext.isQosEnable()
-                && MessageContentTypeEnum.WITHDRAW_CONTENT.getType() != contentType) {
-            qosPostHandle(ctx, packet);
-        }
-        if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() != contentType
-                && MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() != contentType) {
-            repository().saveLastMessageForSession(IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo()), packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+        qosAckOnSuccess(ctx, packet);
+        try {
+            repository().saveLastMessageForSession(
+                    IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo()),
+                    packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+        } catch (Exception e) {
+            // 最后消息是可重建派生索引，失败不能阻断已提交消息的实时投递。
+            log.warn("更新单聊最后消息失败，继续投递 packetId={}", packet.getPacketId(), e);
         }
         repository().reactiveAdvanceSenderReadOffsetOnSend(
                         packet, IdentityType.ONE_2_ONE, MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
                 .subscribe(
                         ignored -> { },
                         e -> log.warn("发送消息静默更新本端已读 offset 失败, packetId={}", packet.getPacketId(), e));
-        if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
-            return handleWithdrawMessage(ctx, packet);
-        }
         deliver(packet, false);
         return Mono.empty();
     }

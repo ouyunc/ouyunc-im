@@ -95,7 +95,7 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
             return handleReadReceipt(packet);
         }
         if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
-            return saveThenWithdraw(packet, groupUserIdentitySet);
+            return handleWithdraw(packet, groupUserIdentitySet);
         }
         return saveAndDeliverChat(packet, groupUserIdentitySet);
     }
@@ -113,8 +113,12 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
                                 "群聊消息写入会话失败", packet);
                         return Mono.just(false);
                     }
-                    DefaultRepository.INSTANCE.saveLastMessageForSession(packet.getMessage().getTo(), packet,
-                            MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+                    try {
+                        DefaultRepository.INSTANCE.saveLastMessageForSession(packet.getMessage().getTo(), packet,
+                                MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+                    } catch (Exception e) {
+                        log.warn("HTTP 推送更新群聊最后消息失败，继续投递 packetId={}", packet.getPacketId(), e);
+                    }
                     DefaultRepository.INSTANCE.reactiveAdvanceSenderReadOffsetOnSend(packet, IdentityType.GROUP,
                                     MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
                             .subscribe(ignored -> { }, e -> log.warn(
@@ -126,32 +130,6 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
                     log.error("HTTP 推送群聊落库异常, packetId={}", packet.getPacketId(), error);
                     HttpPushDeliverySupport.publishException(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
                             "群聊持久化异常: " + error.getMessage(), packet);
-                    return Mono.just(false);
-                });
-    }
-
-    private Mono<Boolean> saveThenWithdraw(Packet packet, Set<String> groupUserIdentitySet) {
-        return DefaultRepository.INSTANCE.reactiveSaveMessage(packet, packet.getMessage().getTo(),
-                        MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)
-                .flatMap(outcome -> {
-                    if (outcome == null || outcome.isFailed()) {
-                        log.error("HTTP 推送群聊撤回消息落库失败: {}", packet);
-                        HttpPushDeliverySupport.publishException(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
-                                "群聊撤回消息写入会话失败", packet);
-                        return Mono.just(false);
-                    }
-                    if (outcome.isFreshWrite()) {
-                        DefaultRepository.INSTANCE.reactiveAdvanceSenderReadOffsetOnSend(packet, IdentityType.GROUP,
-                                        MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
-                                .subscribe(ignored -> { }, e -> log.warn(
-                                        "HTTP 推送撤回更新群聊已读 offset 失败, packetId={}", packet.getPacketId(), e));
-                    }
-                    return handleWithdraw(packet, groupUserIdentitySet);
-                })
-                .onErrorResume(error -> {
-                    log.error("HTTP 推送群聊撤回落库异常, packetId={}", packet.getPacketId(), error);
-                    HttpPushDeliverySupport.publishException(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
-                            "群聊撤回持久化异常: " + error.getMessage(), packet);
                     return Mono.just(false);
                 });
     }

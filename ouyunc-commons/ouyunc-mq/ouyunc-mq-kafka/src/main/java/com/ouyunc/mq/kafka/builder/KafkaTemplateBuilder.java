@@ -75,12 +75,37 @@ public class KafkaTemplateBuilder extends AbstractKafkaBuilder<KafkaTemplate<?,?
         //#指定消息key和消息体的编解码方式
         producerPropertiesMap.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, kafkaProperties.getProducer().getKeySerializer());
         producerPropertiesMap.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, kafkaProperties.getProducer().getValueSerializer());
+        putIfPresent(producerPropertiesMap, ProducerConfig.CLIENT_ID_CONFIG, kafkaProperties.getProducer().getClientId());
+        putIfPresent(producerPropertiesMap, ProducerConfig.COMPRESSION_TYPE_CONFIG, kafkaProperties.getProducer().getCompressionType());
+        if (Boolean.TRUE.equals(kafkaProperties.getProducer().getEnableIdempotence())
+                || kafkaProperties.getProducer().getEnableIdempotence() == null) {
+            producerPropertiesMap.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
+            producerPropertiesMap.put(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION,
+                    kafkaProperties.getProducer().getMaxInFlightRequestsPerConnection() != null
+                            ? kafkaProperties.getProducer().getMaxInFlightRequestsPerConnection() : 5);
+        } else {
+            producerPropertiesMap.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, false);
+            putIfPresent(producerPropertiesMap, ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION,
+                    kafkaProperties.getProducer().getMaxInFlightRequestsPerConnection());
+        }
+        putIfPresent(producerPropertiesMap, ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG, kafkaProperties.getProducer().getRequestTimeoutMs());
+        putIfPresent(producerPropertiesMap, ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, kafkaProperties.getProducer().getDeliveryTimeoutMs());
         // extra 放在 typed 字段之后：可追加 SASL 等，也可按需覆盖同名项
         KafkaProperties.mergeClientProperties(producerPropertiesMap, kafkaProperties.getProperties());
         if (kafkaProperties.getProducer() != null) {
             KafkaProperties.mergeClientProperties(producerPropertiesMap, kafkaProperties.getProducer().getProperties());
         }
         return producerPropertiesMap;
+    }
+
+    private static void putIfPresent(Map<String, Object> map, String key, Object value) {
+        if (value == null) {
+            return;
+        }
+        if (value instanceof String str && str.isBlank()) {
+            return;
+        }
+        map.put(key, value);
     }
 
 }

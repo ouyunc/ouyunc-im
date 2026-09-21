@@ -33,11 +33,16 @@ public final class ChannelOrderedTasks {
     }
 
     public static void executeAsync(Channel channel, Supplier<? extends CompletionStage<?>> task) {
-        executeAsync(channel, task, MessageConstant.CHANNEL_ORDERED_TASK_DEADLINE_MS);
+        executeAsync(channel, task, MessageConstant.CHANNEL_ORDERED_TASK_DEADLINE_MS, 0L);
     }
 
     /** deadline 为本条任务进入执行阶段后的上限，包含同步 supplier；不改变其它任务的期限。 */
     public static void executeAsync(Channel channel, Supplier<? extends CompletionStage<?>> task, long deadlineMs) {
+        executeAsync(channel, task, deadlineMs, 0L);
+    }
+
+    public static void executeAsync(Channel channel, Supplier<? extends CompletionStage<?>> task,
+                                    long deadlineMs, long estimatedBytes) {
         if (channel == null || task == null || !channel.isActive()) {
             return;
         }
@@ -50,14 +55,16 @@ public final class ChannelOrderedTasks {
                 channel.closeFuture().addListener(ignored -> created.stop());
             }
         }
-        queue.offer(new Task(task, deadlineMs > 0 ? deadlineMs : MessageConstant.CHANNEL_ORDERED_TASK_DEADLINE_MS));
+        queue.offer(new Task(task, deadlineMs > 0 ? deadlineMs : MessageConstant.CHANNEL_ORDERED_TASK_DEADLINE_MS,
+                Math.max(0L, estimatedBytes), System.currentTimeMillis()));
     }
 
     public static CompletionStage<Void> toVoidStage(Mono<Void> mono) {
         return mono == null ? CompletableFuture.completedFuture(null) : mono.toFuture();
     }
 
-    private record Task(Supplier<? extends CompletionStage<?>> supplier, long deadlineMs) { }
+    private record Task(Supplier<? extends CompletionStage<?>> supplier, long deadlineMs,
+                        long estimatedBytes, long enqueuedAtMs) { }
 
     /**
      * cancel 可同步触发 Reactor 的 Redis 清理，不能在 EventLoop/时间轮直接调用。
@@ -84,6 +91,7 @@ public final class ChannelOrderedTasks {
         private final Queue<Task> pending = new ArrayDeque<>();
         private boolean running;
         private boolean stopped;
+        private long pendingBytes;
         private Execution current;
 
         private SerialQueue(Channel channel) { this.channel = channel; }
@@ -95,9 +103,11 @@ public final class ChannelOrderedTasks {
                 if (stopped || !channel.isActive()) {
                     return;
                 }
-                overflow = pending.size() >= MessageConstant.CHANNEL_ORDERED_TASK_MAX;
+                overflow = pending.size() >= MessageConstant.CHANNEL_ORDERED_TASK_MAX
+                        || pendingBytes + task.estimatedBytes() > MessageConstant.CHANNEL_ORDERED_PENDING_BYTES_MAX;
                 if (!overflow) {
                     pending.add(task);
+                    pendingBytes += task.estimatedBytes();
                     if (!running) {
                         running = true;
                         start = true;
@@ -132,6 +142,7 @@ public final class ChannelOrderedTasks {
 
         private void drainNext() {
             Execution execution;
+            boolean queueWaitTimeout = false;
             synchronized (this) {
                 if (stopped) {
                     return;
@@ -141,10 +152,21 @@ public final class ChannelOrderedTasks {
                     running = false;
                     return;
                 }
-                execution = new Execution(task);
-                current = execution;
+                pendingBytes = Math.max(0L, pendingBytes - task.estimatedBytes());
+                if (System.currentTimeMillis() - task.enqueuedAtMs()
+                        > MessageConstant.CHANNEL_ORDERED_MAX_QUEUE_WAIT_MS) {
+                    execution = null;
+                    queueWaitTimeout = true;
+                } else {
+                    execution = new Execution(task);
+                    current = execution;
+                }
             }
-            execution.run();
+            if (queueWaitTimeout) {
+                failClose("queue-wait-timeout");
+            } else {
+                execution.run();
+            }
         }
 
         private void failClose(String reason) {
@@ -161,6 +183,7 @@ public final class ChannelOrderedTasks {
                 }
                 stopped = true;
                 pending.clear();
+                pendingBytes = 0L;
                 execution = current;
                 current = null;
             }

@@ -410,6 +410,12 @@ public class MessageConstant {
      */
     public static final int CHANNEL_ORDERED_TASK_MAX = 256;
 
+    /** 单连接有序队列估算积压字节上限。 */
+    public static final long CHANNEL_ORDERED_PENDING_BYTES_MAX = 16L * 1024 * 1024;
+
+    /** 任务从入队到开始执行的最长等待时间。 */
+    public static final long CHANNEL_ORDERED_MAX_QUEUE_WAIT_MS = 30_000L;
+
     /**
      * 连接有序队列单任务 deadline（毫秒）。超时视为失败并推进下一条，避免永久卡住。
      */

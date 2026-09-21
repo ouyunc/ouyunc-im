@@ -1,5 +1,6 @@
 package com.ouyunc.message.processor.http.push;
 
+import com.ouyunc.base.constant.MqArchiveRouting;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.HttpResponseCodeEnum;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
@@ -53,7 +54,10 @@ public final class HttpPushProcessorDelegate {
             return;
         }
         // HTTP ACCEPTED 仍表示后台受理；COMMITTED 必须晚于归档确认。
-        Mono<Void> archived = packet.getMessageType() == MessageTypeEnum.CUSTOMER_SERVICE.getType()
+        // 客服在策略内路由通过后再归档；已读/撤回只确认领域 topic。
+        boolean skipSave = packet.getMessageType() == MessageTypeEnum.CUSTOMER_SERVICE.getType()
+                || MqArchiveRouting.usesDomainConfirmOnly(packet);
+        Mono<Void> archived = skipSave
                 ? Mono.empty()
                 : MessageArchiveHelper.confirm(() -> DefaultRepository.INSTANCE.save(packet));
         archived.then(Mono.fromRunnable(() -> strategy.process(packet))).subscribe(ignored -> { }, ex -> {

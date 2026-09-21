@@ -7,6 +7,7 @@ import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
+import com.ouyunc.cache.distributed.redis.RedisPipelineSupport;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.relation.RelationCacheInvalidatePublisher;
 import com.ouyunc.core.relation.RelationLocalCache;
@@ -54,6 +55,7 @@ import java.util.function.Consumer;
 public final class GroupMembershipSupport {
 
     private static final Logger log = LoggerFactory.getLogger(GroupMembershipSupport.class);
+    private static final int GROUP_USER_DB_BATCH_SIZE = 500;
 
     private final RepositoryInfrastructure infra;
     private final SessionMessagePersistenceSupport session;
@@ -426,7 +428,8 @@ public final class GroupMembershipSupport {
         if (memberIds == null || memberIds.isEmpty()) {
             return result;
         }
-        List<String> missing = new ArrayList<>();
+        List<String> redisMissingMembers = new ArrayList<>();
+        List<String> redisMissingKeys = new ArrayList<>();
         for (String memberId : memberIds) {
             if (memberId == null) {
                 continue;
@@ -437,43 +440,53 @@ public final class GroupMembershipSupport {
                 result.put(memberId, local);
                 continue;
             }
-            Object redisRaw = infra.redisTemplate.opsForValue().get(cacheKey);
-            if (redisRaw instanceof GroupUserEntity redis) {
-                fillLocalGroupUserCache(cacheKey, redis);
+            redisMissingMembers.add(memberId);
+            redisMissingKeys.add(cacheKey);
+        }
+        List<GroupUserEntity> redisValues = RedisPipelineSupport.getValues(infra.redisTemplate, redisMissingKeys);
+        List<String> missing = new ArrayList<>();
+        for (int i = 0; i < redisMissingMembers.size(); i++) {
+            String memberId = redisMissingMembers.get(i);
+            GroupUserEntity redis = i < redisValues.size() ? redisValues.get(i) : null;
+            if (redis != null) {
+                fillLocalGroupUserCache(redisMissingKeys.get(i), redis);
                 result.put(memberId, redis);
-                continue;
+            } else {
+                missing.add(memberId);
             }
-            missing.add(memberId);
         }
         if (missing.isEmpty()) {
             return result;
         }
         try {
-            List<GroupUserEntity> rows = infra.jdbcClient.sql(JdbcSqlDialectHolder.selectGroupUserBatch())
-                    .param(GroupUserEntity.Fields.groupId, groupId)
-                    .param("userIds", missing)
-                    .param(GroupEntity.Fields.appKey, appKey)
-                    .query(GroupUserEntity.class)
-                    .list();
-            if (rows != null) {
+            Map<String, GroupUserEntity> cacheWrites = new HashMap<>();
+            for (int fromIndex = 0; fromIndex < missing.size(); fromIndex += GROUP_USER_DB_BATCH_SIZE) {
+                List<String> batch = missing.subList(fromIndex,
+                        Math.min(fromIndex + GROUP_USER_DB_BATCH_SIZE, missing.size()));
+                List<GroupUserEntity> rows = infra.jdbcClient.sql(JdbcSqlDialectHolder.selectGroupUserBatch())
+                        .param(GroupUserEntity.Fields.groupId, groupId)
+                        .param("userIds", batch)
+                        .param(GroupEntity.Fields.appKey, appKey)
+                        .query(GroupUserEntity.class)
+                        .list();
+                if (rows == null) {
+                    continue;
+                }
                 for (GroupUserEntity row : rows) {
                     if (row == null || row.getUserId() == null) {
                         continue;
                     }
                     String mid = String.valueOf(row.getUserId());
                     String cacheKey = CacheConstant.buildGroupUserConfigCacheKey(appKey, mid, groupId);
-                    updateGroupUserCache(cacheKey, row);
+                    fillLocalGroupUserCache(cacheKey, row);
+                    cacheWrites.put(cacheKey, row);
                     result.put(mid, row);
                 }
             }
+            RedisPipelineSupport.setValues(infra.redisTemplate, cacheWrites);
         } catch (Exception e) {
             log.error("批量查询群成员失败 groupId={} missingSize={}", groupId, missing.size(), e);
-            for (String mid : missing) {
-                GroupUserEntity one = groupUserEntity(appKey, groupId, mid);
-                if (one != null) {
-                    result.put(mid, one);
-                }
-            }
+            // 故障时禁止逐成员回源放大数据库压力；返回已命中的缓存数据。
         }
         return result;
     }

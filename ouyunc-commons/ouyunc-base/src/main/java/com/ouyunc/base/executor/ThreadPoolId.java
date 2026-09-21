@@ -12,6 +12,8 @@ public enum ThreadPoolId {
     NODE_LEASE("node-lease"),
     ROUTER("router"),
     REPOSITORY("repository"),
+    /** 消息 Redis 持久化，与 JDBC/MQ 仓库任务隔离。 */
+    REDIS_PERSISTENCE("redis-persistence"),
     EVENT_LISTENER("event-listener"),
     CLUSTER_CLIENT_HEARTBEAT("cluster-client-heartbeat"),
     SYSTEM_CLOCK("system-clock"),

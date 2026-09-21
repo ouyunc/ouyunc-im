@@ -1,6 +1,7 @@
 package com.ouyunc.message.processor.http.push.delivery;
 
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.MqArchiveRouting;
 import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
@@ -73,8 +74,10 @@ public final class CsHttpPushDeliveryStrategy implements HttpProcessor {
         route = live.route();
         CsHelper.rewriteAgentFrom(packet, route);
         CsImSessionRoute confirmedRoute = route;
-        return MessageArchiveHelper.confirm(() -> DefaultRepository.INSTANCE.save(packet))
-                .then(Mono.defer(() -> persistPrepared(packet, confirmedRoute)));
+        Mono<Void> archived = MqArchiveRouting.usesDomainConfirmOnly(packet)
+                ? Mono.empty()
+                : MessageArchiveHelper.confirm(() -> DefaultRepository.INSTANCE.save(packet));
+        return archived.then(Mono.defer(() -> persistPrepared(packet, confirmedRoute)));
     }
 
     /** 归档确认后执行存储，避免 HTTP COMMITTED 早于可靠归档。 */
@@ -85,7 +88,7 @@ public final class CsHttpPushDeliveryStrategy implements HttpProcessor {
             return handleReadReceipt(packet, route);
         }
         if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
-            return saveThenWithdraw(packet, route);
+            return handleWithdraw(packet, route);
         }
         return saveAndDeliverChat(packet, route);
     }
@@ -103,7 +106,11 @@ public final class CsHttpPushDeliveryStrategy implements HttpProcessor {
                                 "客服消息写入 ticket 失败", packet);
                         return Mono.just(false);
                     }
-                    CsHelper.saveChatLastMessage(DefaultRepository.INSTANCE, route, packet);
+                    try {
+                        CsHelper.saveChatLastMessage(DefaultRepository.INSTANCE, route, packet);
+                    } catch (Exception e) {
+                        log.warn("HTTP 推送更新客服最后消息失败，继续投递 packetId={}", packet.getPacketId(), e);
+                    }
                     CsHelper.notifyAfterSave(packet, route);
                     DefaultRepository.INSTANCE.reactiveAdvanceCsSenderReadOffsetOnSend(
                                     packet, route, packet.getDeviceType(),
@@ -117,26 +124,6 @@ public final class CsHttpPushDeliveryStrategy implements HttpProcessor {
                     log.error("HTTP 推送客服落库异常, packetId={}", packet.getPacketId(), error);
                     HttpPushDeliverySupport.publishException(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
                             "客服持久化异常: " + error.getMessage(), packet);
-                    return Mono.just(false);
-                });
-    }
-
-    private Mono<Boolean> saveThenWithdraw(Packet packet, CsImSessionRoute route) {
-        return DefaultRepository.INSTANCE.reactiveSaveCsTicketMessage(packet, route,
-                        MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)
-                .flatMap(outcome -> {
-                    if (outcome == null || outcome.isFailed()) {
-                        log.error("HTTP 推送客服撤回消息落库失败: {}", packet);
-                        HttpPushDeliverySupport.publishException(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
-                                "客服撤回消息写入 ticket 失败", packet);
-                        return Mono.just(false);
-                    }
-                    return handleWithdraw(packet, route);
-                })
-                .onErrorResume(error -> {
-                    log.error("HTTP 推送客服撤回落库异常, packetId={}", packet.getPacketId(), error);
-                    HttpPushDeliverySupport.publishException(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
-                            "客服撤回持久化异常: " + error.getMessage(), packet);
                     return Mono.just(false);
                 });
     }

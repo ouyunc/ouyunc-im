@@ -235,6 +235,17 @@ public class KafkaProperties {
         private Integer retries;
 
         /**
+         * 是否开启幂等生产者。acks=all 时默认开启。
+         */
+        private Boolean enableIdempotence;
+
+        private Integer requestTimeoutMs;
+
+        private Integer deliveryTimeoutMs;
+
+        private Integer maxInFlightRequestsPerConnection;
+
+        /**
          * key 和value 的Serializer类
          **/
         private Class<?> keySerializer = StringSerializer.class;
@@ -308,6 +319,38 @@ public class KafkaProperties {
 
         public void setRetries(Integer retries) {
             this.retries = retries;
+        }
+
+        public Boolean getEnableIdempotence() {
+            return enableIdempotence;
+        }
+
+        public void setEnableIdempotence(Boolean enableIdempotence) {
+            this.enableIdempotence = enableIdempotence;
+        }
+
+        public Integer getRequestTimeoutMs() {
+            return requestTimeoutMs;
+        }
+
+        public void setRequestTimeoutMs(Integer requestTimeoutMs) {
+            this.requestTimeoutMs = requestTimeoutMs;
+        }
+
+        public Integer getDeliveryTimeoutMs() {
+            return deliveryTimeoutMs;
+        }
+
+        public void setDeliveryTimeoutMs(Integer deliveryTimeoutMs) {
+            this.deliveryTimeoutMs = deliveryTimeoutMs;
+        }
+
+        public Integer getMaxInFlightRequestsPerConnection() {
+            return maxInFlightRequestsPerConnection;
+        }
+
+        public void setMaxInFlightRequestsPerConnection(Integer maxInFlightRequestsPerConnection) {
+            this.maxInFlightRequestsPerConnection = maxInFlightRequestsPerConnection;
         }
 
         public Class<?> getKeySerializer() {

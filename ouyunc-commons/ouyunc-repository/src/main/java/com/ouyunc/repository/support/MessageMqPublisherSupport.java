@@ -2,6 +2,7 @@ package com.ouyunc.repository.support;
 
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.MqArchiveRouting;
 import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
@@ -24,24 +25,16 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * 消息 MQ 投递：协议包与 JSON 共用发送实现。
- * <p>确认路径 {@link #publishPacketConfirmed}/{@link #save} 只等 broker ACK，失败交给客户端重试，不写 Outbox。
- * 旁路路径 {@link #publishPacketAsync}/{@link #publishJsonAsync} 失败仍入 MySQL Outbox。</p>
+ * <p>确认路径等 broker ACK，失败交给客户端重试。旁路 JSON 失败只记日志和异常事件，不写 Outbox。</p>
  */
 public final class MessageMqPublisherSupport {
 
     private static final Logger log = LoggerFactory.getLogger(MessageMqPublisherSupport.class);
 
     private final RepositoryInfrastructure infra;
-    private final MqOutboxSupport mqOutbox;
 
     public MessageMqPublisherSupport(RepositoryInfrastructure infra) {
         this.infra = infra;
-        this.mqOutbox = new MqOutboxSupport(infra);
-    }
-
-    MessageMqPublisherSupport(RepositoryInfrastructure infra, MqOutboxSupport mqOutbox) {
-        this.infra = infra;
-        this.mqOutbox = mqOutbox;
     }
 
     /**
@@ -54,13 +47,6 @@ public final class MessageMqPublisherSupport {
             headers.put(MqHeaderKeys.MESSAGE_KEY, key);
         }
         return infra.mqPublisher.send(topic, key, JSON.toJSONString(packet), headers);
-    }
-
-    /**
-     * 旁路异步投递协议包：不阻塞调用方；失败记日志、发异常事件并入 MySQL Outbox。
-     */
-    public void publishPacketAsync(String topic, String key, Packet packet, String failureContext) {
-        publishPacket(topic, key, packet, failureContext);
     }
 
     /**
@@ -113,27 +99,9 @@ public final class MessageMqPublisherSupport {
      * 全量归档到 {@link MqConstant#MQ_SAVE_MESSAGE_TOPIC}，对应 {@link com.ouyunc.repository.Repository#save}。
      */
     public CompletableFuture<?> save(Packet packet) {
-        return publishPacketConfirmed(MqConstant.MQ_SAVE_MESSAGE_TOPIC, null, packet);
+        return publishPacketConfirmed(MqConstant.MQ_SAVE_MESSAGE_TOPIC, MqArchiveRouting.partitionKey(packet), packet);
     }
 
-    /**
-     * 发送协议包并挂失败回调；同步异常转为已完成的失败 Future。
-     */
-    private CompletableFuture<?> publishPacket(String topic, String key, Packet packet, String failureContext) {
-        String payload = JSON.toJSONString(packet);
-        try {
-            CompletableFuture<?> future = sendPacket(topic, key, packet);
-            attachFailure(future, topic, key, packet.getPacketId(), payload, packet, failureContext);
-            return future;
-        } catch (Exception ex) {
-            handleFailure(topic, key, packet.getPacketId(), payload, packet, failureContext, ex);
-            return CompletableFuture.failedFuture(ex);
-        }
-    }
-
-    /**
-     * 旁路异步投递 JSON 负载（客服活动、坐席 presence、外渠下行等）。
-     */
     public void publishJsonAsync(String topic, String key, String jsonBody, String failureContext) {
         try {
             attachFailure(infra.mqPublisher.send(topic, key, jsonBody, null), topic, key, null, jsonBody, null, failureContext);
@@ -155,7 +123,7 @@ public final class MessageMqPublisherSupport {
     }
 
     /**
-     * Packet / JSON 发送失败：打 warn、发布异常事件，并把 MySQL Outbox 补偿提交到有界仓库池。
+     * Packet / JSON 发送失败：打 warn、发布异常事件。
      */
     private void handleFailure(String topic, String key, Long packetId, String payload, Packet packet,
                                String failureContext, Throwable ex) {
@@ -165,11 +133,5 @@ public final class MessageMqPublisherSupport {
                 ExceptionEventPayload.of(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR,
                         failureContext + ": " + ex.getMessage(), packet),
                 MessageEventTypeEnum.EXCEPTION), true);
-        try {
-            infra.dbExecutor().execute(() ->
-                    mqOutbox.enqueueAsync(topic, key, packetId, payload, failureContext, ex.getMessage()));
-        } catch (java.util.concurrent.RejectedExecutionException rejected) {
-            log.error("Outbox 补偿提交被拒绝 topic={} packetId={}，归档未确认", topic, packetId, rejected);
-        }
     }
 }

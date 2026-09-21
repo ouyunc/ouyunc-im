@@ -122,8 +122,11 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
         if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {
             return handleReadReceipt(ctx, packet, groupUserIdentitySet);
         }
+        if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
+            return handleWithdrawMessage(ctx, packet, groupUserIdentitySet);
+        }
         return reactiveSaveGroupMessage(packet)
-                .flatMap(result -> afterGroupSaved(ctx, packet, groupUserIdentitySet, contentType, result))
+                .flatMap(result -> afterGroupSaved(ctx, packet, groupUserIdentitySet, result))
                 .onErrorResume(error -> {
                     log.error("群聊消息持久化异常, packetId={}", packet.getPacketId(), error);
                     MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "群聊持久化异常: " + error.getMessage(), packet), MessageEventTypeEnum.EXCEPTION), true);
@@ -133,11 +136,8 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
     }
 
     private Mono<Void> afterGroupSaved(ChannelHandlerContext ctx, Packet packet, Set<String> groupUserIdentitySet,
-                                       int contentType, SaveMessageOutcome result) {
+                                       SaveMessageOutcome result) {
         if (result != null && result.isDuplicate()) {
-            if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
-                return handleWithdrawMessage(ctx, packet, groupUserIdentitySet);
-            }
             qosAckOnSuccess(ctx, packet);
             return Mono.empty();
         }
@@ -147,21 +147,19 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
             releaseQosOnFailure(packet);
             return Mono.empty();
         }
-        if (MessageContext.isQosEnable()
-                && MessageContentTypeEnum.WITHDRAW_CONTENT.getType() != contentType) {
-            qosPostHandle(ctx, packet);
-        }
-        if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() != contentType) {
-            repository().saveLastMessageForSession(packet.getMessage().getTo(), packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+        qosAckOnSuccess(ctx, packet);
+        try {
+            repository().saveLastMessageForSession(packet.getMessage().getTo(), packet,
+                    MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+        } catch (Exception e) {
+            // 最后消息是可重建派生索引，失败不能阻断已提交消息的实时投递。
+            log.warn("更新群聊最后消息失败，继续投递 packetId={}", packet.getPacketId(), e);
         }
         repository().reactiveAdvanceSenderReadOffsetOnSend(
                         packet, IdentityType.GROUP, MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
                 .subscribe(
                         ignored -> { },
                         e -> log.warn("发送消息静默更新本端已读 offset 失败, packetId={}", packet.getPacketId(), e));
-        if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
-            return handleWithdrawMessage(ctx, packet, groupUserIdentitySet);
-        }
         deliver(packet, groupUserIdentitySet);
         return Mono.empty();
     }

@@ -1,6 +1,7 @@
 package com.ouyunc.repository.support;
 
 import com.ouyunc.base.constant.CacheConstant;
+import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
@@ -40,12 +41,13 @@ public final class CsTicketMessagePersistenceSupport {
                             packet, expireTime, messageKey, ticketSessionKey, (ops) -> {
                             }, (ops, msg, app, f, t) -> {
                             });
-                    if (outcome.isFreshWrite()) {
+                    // ticket 未读同样以 packetId 集合幂等，重复请求可补偿首次索引更新失败。
+                    if (outcome.isFreshWrite() || outcome.isDuplicate()) {
                         ticketUnread.incrOnMessage(packet, route);
                     }
                     return outcome;
                 })
-                .subscribeOn(Schedulers.boundedElastic())
+                .subscribeOn(Schedulers.fromExecutor(ThreadPoolManager.redisPersistenceExecutor()))
                 .onErrorResume(e -> Mono.just(SaveMessageOutcome.FAILED));
     }
 }

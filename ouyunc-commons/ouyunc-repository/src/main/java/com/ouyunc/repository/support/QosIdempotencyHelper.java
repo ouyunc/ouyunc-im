@@ -51,8 +51,13 @@ public final class QosIdempotencyHelper {
     /** 无可用幂等维度或 Redis 失败。 */
     public static final int CLAIM_FAILED = 0;
 
-    private static final String PENDING = "PENDING";
-    private static final String COMMITTED = "COMMITTED";
+    /** QoS 提交结果；UNKNOWN 表示 Redis 可能已执行脚本但响应未返回。 */
+    public enum CommitOutcome {
+        COMMITTED,
+        REJECTED,
+        UNKNOWN
+    }
+
     /** 空 clientMessageId 的占位符，避免记录出现空字段导致 Lua 解析错位。 */
     private static final String NO_CLIENT_ID = "-";
     /** PENDING 超过该时长可被同正文重发接管（原持有者视为崩溃），毫秒。 */
@@ -245,17 +250,16 @@ public final class QosIdempotencyHelper {
     }
 
     /**
-     * 将当前 owner 的 {@code PENDING} 原子转为 {@code COMMITTED}。返回 false 表示占位已丢失、
-     * 过期或被接管，本次写入不能作为成功回 ACK。
+     * 将当前 owner 的 {@code PENDING} 原子转为 {@code COMMITTED}，并区分明确拒绝与结果未知。
      */
-    public static boolean commit(RedisTemplate<String, ?> redisTemplate, String appKey, long packetId,
-                                 String loginIdentity, String clientMessageId, String ownerToken, Message message) {
+    public static CommitOutcome commit(RedisTemplate<String, ?> redisTemplate, String appKey, long packetId,
+                                       String loginIdentity, String clientMessageId, String ownerToken, Message message) {
         if (redisTemplate == null || StringUtils.isBlank(ownerToken)) {
-            return false;
+            return CommitOutcome.REJECTED;
         }
         ClaimTarget target = claimTarget(appKey, packetId, loginIdentity, clientMessageId);
         if (target.keys.isEmpty()) {
-            return false;
+            return CommitOutcome.REJECTED;
         }
         List<String> args = new ArrayList<>(3 + target.ttls.size());
         args.add(ownerToken);
@@ -263,7 +267,10 @@ public final class QosIdempotencyHelper {
         args.add(payloadHash(message));
         args.addAll(target.ttls);
         Long result = eval(redisTemplate, COMMIT_SCRIPT, target.keys, args.toArray(new String[0]));
-        return result != null && result == 1L;
+        if (result == null) {
+            return CommitOutcome.UNKNOWN;
+        }
+        return result == 1L ? CommitOutcome.COMMITTED : CommitOutcome.REJECTED;
     }
 
     /**
@@ -290,16 +297,22 @@ public final class QosIdempotencyHelper {
         if (message == null) {
             return "";
         }
-        String source = String.join("\u0001",
-                nullSafe(message.getId()),
-                nullSafe(message.getTo()),
-                String.valueOf(message.getToType()),
-                String.valueOf(message.getContentType()),
-                sanitize(message.getContent()),
-                String.valueOf(message.getCreateTime()),
-                nullSafe(message.getCorrelationId()));
         try {
-            byte[] digest = MessageDigest.getInstance("SHA-256").digest(source.getBytes(StandardCharsets.UTF_8));
+            MessageDigest digestBuilder = MessageDigest.getInstance("SHA-256");
+            updateDigest(digestBuilder, message.getId());
+            updateDigest(digestBuilder, message.getFrom());
+            updateDigest(digestBuilder, String.valueOf(message.getFromType()));
+            updateDigest(digestBuilder, message.getTo());
+            updateDigest(digestBuilder, String.valueOf(message.getToType()));
+            updateDigest(digestBuilder, String.valueOf(message.getContentType()));
+            updateDigest(digestBuilder, message.getContent());
+            updateDigest(digestBuilder, message.getExtra());
+            updateDigest(digestBuilder, String.valueOf(message.getQos()));
+            updateDigest(digestBuilder, String.valueOf(message.getCreateTime()));
+            updateDigest(digestBuilder, message.getCorrelationId());
+            updateDigest(digestBuilder, message.getAt());
+            updateDigest(digestBuilder, message.getRef());
+            byte[] digest = digestBuilder.digest();
             StringBuilder hex = new StringBuilder(digest.length * 2);
             for (byte item : digest) {
                 hex.append(String.format("%02x", item));
@@ -308,6 +321,36 @@ public final class QosIdempotencyHelper {
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException("SHA-256 unavailable", e);
         }
+    }
+
+    /** 使用 4 字节长度前缀编码字段，避免可控分隔符和 null/空串造成边界碰撞。 */
+    private static void updateDigest(MessageDigest digest, String value) {
+        if (value == null) {
+            updateLength(digest, -1);
+            return;
+        }
+        byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
+        updateLength(digest, bytes.length);
+        digest.update(bytes);
+    }
+
+    /** 列表先编码元素数量，再逐元素使用长度前缀，保留顺序及 null 元素语义。 */
+    private static void updateDigest(MessageDigest digest, List<String> values) {
+        if (values == null) {
+            updateLength(digest, -1);
+            return;
+        }
+        updateLength(digest, values.size());
+        for (String value : values) {
+            updateDigest(digest, value);
+        }
+    }
+
+    private static void updateLength(MessageDigest digest, int value) {
+        digest.update((byte) (value >>> 24));
+        digest.update((byte) (value >>> 16));
+        digest.update((byte) (value >>> 8));
+        digest.update((byte) value);
     }
 
     /** 判重使用的客户端身份：元数据 &gt; 当前通道登录身份 &gt; message.from。 */
@@ -406,10 +449,6 @@ public final class QosIdempotencyHelper {
             log.warn("QoS 幂等脚本执行失败: {}", e.getMessage());
             return null;
         }
-    }
-
-    private static String nullSafe(String value) {
-        return value == null ? "" : value;
     }
 
     private static DefaultRedisScript<Long> script(String body) {

@@ -96,8 +96,11 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
         if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {
             return handleReadReceipt(ctx, packet, route);
         }
+        if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
+            return handleWithdrawMessage(ctx, packet, route);
+        }
         return saveMessage(packet, route)
-                .flatMap(result -> afterCsSaved(ctx, packet, route, contentType, result))
+                .flatMap(result -> afterCsSaved(ctx, packet, route, result))
                 .onErrorResume(error -> {
                     log.error("客服消息持久化异常, packetId={}", packet.getPacketId(), error);
                     MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "客服持久化异常: " + error.getMessage(), packet), MessageEventTypeEnum.EXCEPTION), true);
@@ -107,11 +110,8 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
     }
 
     private Mono<Void> afterCsSaved(ChannelHandlerContext ctx, Packet packet, CsImSessionRoute route,
-                                    int contentType, SaveMessageOutcome result) {
+                                    SaveMessageOutcome result) {
         if (result != null && result.isDuplicate()) {
-            if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
-                return handleWithdrawMessage(ctx, packet, route);
-            }
             qosAckOnSuccess(ctx, packet);
             return Mono.empty();
         }
@@ -121,13 +121,12 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
             releaseQosOnFailure(packet);
             return Mono.empty();
         }
-        if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
-            return handleWithdrawMessage(ctx, packet, route);
+        qosAckOnSuccess(ctx, packet);
+        try {
+            CsHelper.saveChatLastMessage(repository(), route, packet);
+        } catch (Exception e) {
+            log.warn("更新客服会话最后消息失败，继续投递 packetId={}", packet.getPacketId(), e);
         }
-        if (MessageContext.isQosEnable()) {
-            qosPostHandle(ctx, packet);
-        }
-        CsHelper.saveChatLastMessage(repository(), route, packet);
         CsHelper.notifyAfterSave(packet, route);
         repository().reactiveAdvanceCsSenderReadOffsetOnSend(
                         packet, route, packet.getDeviceType(),

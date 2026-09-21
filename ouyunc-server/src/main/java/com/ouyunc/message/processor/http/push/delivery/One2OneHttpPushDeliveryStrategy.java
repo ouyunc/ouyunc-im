@@ -63,8 +63,8 @@ public final class One2OneHttpPushDeliveryStrategy implements HttpProcessor {
             return handleReadReceipt(packet);
         }
         if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
-            // 与 WS 对齐：先写入会话索引，再执行撤回
-            return saveThenWithdraw(packet);
+            Message message = packet.getMessage();
+            return handleWithdraw(packet, IdentityUtil.sessionId(message.getFrom(), message.getTo()));
         }
         return saveAndDeliverChat(packet);
     }
@@ -84,8 +84,12 @@ public final class One2OneHttpPushDeliveryStrategy implements HttpProcessor {
                                 "单聊消息写入会话失败", packet);
                         return Mono.just(false);
                     }
-                    DefaultRepository.INSTANCE.saveLastMessageForSession(sessionId, packet,
-                            MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+                    try {
+                        DefaultRepository.INSTANCE.saveLastMessageForSession(sessionId, packet,
+                                MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+                    } catch (Exception e) {
+                        log.warn("HTTP 推送更新单聊最后消息失败，继续投递 packetId={}", packet.getPacketId(), e);
+                    }
                     DefaultRepository.INSTANCE.reactiveAdvanceSenderReadOffsetOnSend(packet, IdentityType.ONE_2_ONE,
                                     MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
                             .subscribe(ignored -> { }, e -> log.warn(
@@ -97,34 +101,6 @@ public final class One2OneHttpPushDeliveryStrategy implements HttpProcessor {
                     log.error("HTTP 推送单聊落库异常, packetId={}", packet.getPacketId(), error);
                     HttpPushDeliverySupport.publishException(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
                             "单聊持久化异常: " + error.getMessage(), packet);
-                    return Mono.just(false);
-                });
-    }
-
-    private Mono<Boolean> saveThenWithdraw(Packet packet) {
-        Message message = packet.getMessage();
-        String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
-        return DefaultRepository.INSTANCE.reactiveSaveOne2OneMessage(packet, sessionId,
-                        MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)
-                .flatMap(outcome -> {
-                    if (outcome == null || outcome.isFailed()) {
-                        log.error("HTTP 推送单聊撤回消息落库失败: {}", packet);
-                        HttpPushDeliverySupport.publishException(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
-                                "单聊撤回消息写入会话失败", packet);
-                        return Mono.just(false);
-                    }
-                    if (outcome.isFreshWrite()) {
-                        DefaultRepository.INSTANCE.reactiveAdvanceSenderReadOffsetOnSend(packet, IdentityType.ONE_2_ONE,
-                                        MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
-                                .subscribe(ignored -> { }, e -> log.warn(
-                                        "HTTP 推送撤回更新单聊已读 offset 失败, packetId={}", packet.getPacketId(), e));
-                    }
-                    return handleWithdraw(packet, sessionId);
-                })
-                .onErrorResume(error -> {
-                    log.error("HTTP 推送单聊撤回落库异常, packetId={}", packet.getPacketId(), error);
-                    HttpPushDeliverySupport.publishException(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
-                            "单聊撤回持久化异常: " + error.getMessage(), packet);
                     return Mono.just(false);
                 });
     }

@@ -68,6 +68,11 @@ public final class ThreadPoolConfig {
                 .threadNamePrefix("repository")
                 .daemon(true)
                 .build());
+        defaults.put(ThreadPoolId.REDIS_PERSISTENCE, PoolConfig.builder()
+                .type(ThreadPoolType.VIRTUAL)
+                .threadNamePrefix("redis-persistence")
+                .daemon(true)
+                .build());
         defaults.put(ThreadPoolId.EVENT_LISTENER, PoolConfig.builder()
                 .type(ThreadPoolType.VIRTUAL)
                 .threadNamePrefix("event-listener")

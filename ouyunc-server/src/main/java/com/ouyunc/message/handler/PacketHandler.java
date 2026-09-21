@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.RejectedExecutionException;
@@ -100,7 +101,8 @@ public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
             return;
         }
         ChannelOrderedTasks.executeAsync(ctx.channel(),
-                () -> invokeFull(ctx, packet, processor));
+                () -> invokeFull(ctx, packet, processor),
+                MessageConstant.CHANNEL_ORDERED_TASK_DEADLINE_MS, estimatePacketBytes(packet));
     }
 
     private void handleCluster(ChannelHandlerContext ctx, Packet packet) {
@@ -117,7 +119,22 @@ public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
             return;
         }
         ChannelOrderedTasks.executeAsync(ctx.channel(),
-                () -> invokeProcessPost(ctx, packet, processor));
+                () -> invokeProcessPost(ctx, packet, processor),
+                MessageConstant.CHANNEL_ORDERED_TASK_DEADLINE_MS, estimatePacketBytes(packet));
+    }
+
+    private static long estimatePacketBytes(Packet packet) {
+        if (packet == null || packet.getMessage() == null) {
+            return 0L;
+        }
+        long bytes = packet.getMessageLength();
+        if (bytes > 0L) {
+            return bytes;
+        }
+        String content = packet.getMessage().getContent();
+        String extra = packet.getMessage().getExtra();
+        return (content == null ? 0L : content.getBytes(StandardCharsets.UTF_8).length)
+                + (extra == null ? 0L : extra.getBytes(StandardCharsets.UTF_8).length);
     }
 
     private AbstractMessageBiProcessor<? extends Number> resolveProcessor(ChannelHandlerContext ctx, Packet packet) {

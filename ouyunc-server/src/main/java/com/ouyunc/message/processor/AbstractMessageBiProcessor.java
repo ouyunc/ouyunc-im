@@ -1,5 +1,6 @@
 package com.ouyunc.message.processor;
 
+import com.ouyunc.base.constant.MqArchiveRouting;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.message.helper.MessageArchiveHelper;
 import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
@@ -60,8 +61,10 @@ public abstract class AbstractMessageBiProcessor<T extends Number> extends Abstr
      * 权限拒绝的包也不归档（由 {@link #continueWhenPassed} 在通过后再调用）。
      */
     protected Mono<Void> archiveAfterAuth(Packet packet) {
-        // 原文先归档用于审计；只有 MQ 确认后才允许业务提交/成功 ACK。
-        // 不因连接取消撤销已开始的归档，避免取消 future 影响失败补偿。
+        if (MqArchiveRouting.usesDomainConfirmOnly(packet)) {
+            // 已读/撤回/好友/群只确认领域 topic，避免 SAVE + 领域各等一次 broker。
+            return Mono.empty();
+        }
         return MessageArchiveHelper.confirm(() -> repository().save(packet));
     }
 
@@ -107,7 +110,7 @@ public abstract class AbstractMessageBiProcessor<T extends Number> extends Abstr
     }
 
     /**
-     * 业务事件先等 MQ broker 确认，再跑 Redis/通知。确认超时 20s，禁止放进 5s 锁内。
+     * 业务事件先等 MQ broker 确认，再跑 Redis/通知。确认超时见 {@link com.ouyunc.base.constant.MessageConstant#MESSAGE_ARCHIVE_CONFIRM_TIMEOUT_MS}，禁止放进 5s 锁内。
      * 失败不 ACK，交给客户端重试；不写 Outbox。
      */
     protected Mono<Void> confirmThenRun(String topic, String key, Packet packet, Runnable next) {

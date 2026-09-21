@@ -145,6 +145,10 @@ public final class ThreadPoolManager {
         return getExecutor(ThreadPoolId.REPOSITORY);
     }
 
+    public static ExecutorService redisPersistenceExecutor() {
+        return getExecutor(ThreadPoolId.REDIS_PERSISTENCE);
+    }
+
     public static ExecutorService eventListenerExecutor() {
         return getExecutor(ThreadPoolId.EVENT_LISTENER);
     }

@@ -5,6 +5,7 @@ import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.LuaScriptEnum;
 import com.ouyunc.base.constant.enums.QosLevelEnum;
+import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.model.FiveConsumer;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
@@ -49,7 +50,7 @@ public final class SessionMessagePersistenceSupport {
                 (ops) -> {
                 }, (ops, msg, app, f, t) -> {
                 }))
-                .subscribeOn(Schedulers.boundedElastic())
+                .subscribeOn(Schedulers.fromExecutor(ThreadPoolManager.redisPersistenceExecutor()))
                 .onErrorResume(e -> {
                     log.error("Reactive save message failed: {}", e.getMessage(), e);
                     return Mono.just(SaveMessageOutcome.FAILED);
@@ -71,12 +72,13 @@ public final class SessionMessagePersistenceSupport {
                             (ops) -> {
                             }, (ops, msg, app, f, t) -> {
                             });
-                    if (outcome.isFreshWrite() && unreadIndexSupport != null) {
+                    // 未读脚本以 packetId SADD 幂等；重复请求也重放一次，可修复首次提交后的索引失败。
+                    if ((outcome.isFreshWrite() || outcome.isDuplicate()) && unreadIndexSupport != null) {
                         unreadIndexSupport.incrOne2OneOnMessage(packet);
                     }
                     return outcome;
                 })
-                .subscribeOn(Schedulers.boundedElastic())
+                .subscribeOn(Schedulers.fromExecutor(ThreadPoolManager.redisPersistenceExecutor()))
                 .onErrorResume(e -> {
                     log.error("Reactive save one2one message failed: {}", e.getMessage(), e);
                     return Mono.just(SaveMessageOutcome.FAILED);
@@ -204,9 +206,25 @@ public final class SessionMessagePersistenceSupport {
                         clientMessageId, qosOwnerToken, metadata);
                 return SaveMessageOutcome.FAILED;
             }
-            if (qosSave && !QosIdempotencyHelper.commit(infra.redisTemplate, appKey, packet.getPacketId(),
-                    qosClaimIdentity, clientMessageId, qosOwnerToken, message)) {
-                log.warn("QoS 占位提交失败，回滚热写并视为写入失败: appKey={} packetId={}", appKey, packet.getPacketId());
+            QosIdempotencyHelper.CommitOutcome commitOutcome = qosSave
+                    ? QosIdempotencyHelper.commit(infra.redisTemplate, appKey, packet.getPacketId(),
+                    qosClaimIdentity, clientMessageId, qosOwnerToken, message)
+                    : QosIdempotencyHelper.CommitOutcome.COMMITTED;
+            if (commitOutcome == QosIdempotencyHelper.CommitOutcome.UNKNOWN) {
+                int verifiedState = QosIdempotencyHelper.checkState(
+                        infra.redisTemplate, packet, qosClaimIdentity);
+                if (verifiedState == QosIdempotencyHelper.CLAIM_COMMITTED) {
+                    commitOutcome = QosIdempotencyHelper.CommitOutcome.COMMITTED;
+                } else {
+                    log.warn("QoS 提交结果未知，保留热写和占位等待重试核对: appKey={} packetId={} state={}",
+                            appKey, packet.getPacketId(), verifiedState);
+                    // 不能删除热数据或释放占位：Redis 可能已经提交成功但响应丢失。
+                    metadata.setQosOwnerToken(null);
+                    return SaveMessageOutcome.FAILED;
+                }
+            }
+            if (commitOutcome == QosIdempotencyHelper.CommitOutcome.REJECTED) {
+                log.warn("QoS 占位明确拒绝提交，回滚热写并视为写入失败: appKey={} packetId={}", appKey, packet.getPacketId());
                 // Pipeline 已写入主体/会话索引，commit 失败必须回滚，否则幽灵消息 + 客户端换新 packetId 重复
                 rollbackHotWrite(messageKey, sessionKey, packet.getPacketId());
                 releaseQosClaimQuietly(true, appKey, packet.getPacketId(), qosClaimIdentity,
