@@ -227,13 +227,17 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
 
 
     /**
-     * 发送撤回消息给接收方
+     * 发送撤回消息给接收方。
+     * <p>撤回是会话状态变更而非内容推送，必须触达全体成员，不受 {@code group-message.mode}
+     * 推拉策略约束：PULL / 超阈值 PULL_PUSH 下只推 @ 列表会让撤回对绝大多数成员静默失效。
+     * 发送方其它设备同样强制同步，与单聊 {@code forceSelfSync} 语义一致。</p>
      *
      * @param packet
      * @param groupUserIdentitySet
      */
     private void deliverWithdrawMessage(Packet packet, Set<String> groupUserIdentitySet) {
-        deliver(packet, groupUserIdentitySet);
+        deliver2Self(packet);
+        deliver2AllGroupMembers(packet, groupUserIdentitySet);
     }
 
 
