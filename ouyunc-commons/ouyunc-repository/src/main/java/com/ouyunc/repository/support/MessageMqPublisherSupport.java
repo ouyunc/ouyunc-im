@@ -23,7 +23,7 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * 消息 MQ 投递：协议包与 JSON 共用发送实现。
- * <p>确认路径等 broker ACK，失败交给客户端重试。旁路 JSON 失败只记日志和异常事件，不写 Outbox。</p>
+ * <p>确认路径等 broker ACK，失败交给客户端重试。旁路 JSON 失败只记日志和异常事件。</p>
  */
 public final class MessageMqPublisherSupport {
 
@@ -48,7 +48,7 @@ public final class MessageMqPublisherSupport {
     }
 
     /**
-     * 确认投递：等 broker ACK，失败不写 Outbox（由客户端 QoS 重试）。
+     * 确认投递：等 broker ACK，失败由客户端 QoS 重试。
      * <p>调用线程先 {@link Packet#clone()}，JSON 与发送丢到仓库线程池，避免与后续 QoS {@code copyFrom} / 业务改包并发。</p>
      */
     public CompletableFuture<?> publishPacketConfirmed(String topic, String key, Packet packet) {

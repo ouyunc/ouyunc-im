@@ -127,7 +127,7 @@ public final class MessageAcceptPipelineHelper {
 
     /**
      * 业务事件先等 MQ broker 确认，再跑 Redis/通知。
-     * 失败不 ACK，交给客户端重试；不写业务 Outbox。
+     * 失败不 ACK，交给客户端重试。
      */
     public static Mono<Void> confirmThenRun(String topic, String key, Packet packet, Runnable next) {
         return MessageArchiveHelper.confirm(() -> repository().publishPacketConfirmed(topic, key, packet))

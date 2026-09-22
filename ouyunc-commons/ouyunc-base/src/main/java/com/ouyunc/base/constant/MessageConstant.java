@@ -461,56 +461,6 @@ public class MessageConstant {
     public static final long MESSAGE_MONGO_QUERY_TIMEOUT_MS = 2_000L;
 
     /**
-     * MQ Outbox：单条最大自动重试次数，超限置 DEAD。
-     */
-    public static final int MQ_OUTBOX_MAX_RETRY = 8;
-
-    /**
-     * MQ Outbox：每次扫描批量上限。
-     */
-    public static final int MQ_OUTBOX_RELAY_BATCH_SIZE = 32;
-
-    /**
-     * MQ Outbox：relay 首次延迟（毫秒）。
-     */
-    public static final long MQ_OUTBOX_RELAY_INITIAL_DELAY_MS = 3_000L;
-
-    /**
-     * MQ Outbox：relay 固定间隔（毫秒，fixed-delay）。
-     */
-    public static final long MQ_OUTBOX_RELAY_PERIOD_MS = 5_000L;
-
-    /**
-     * MQ Outbox：指数退避基数（毫秒）。
-     */
-    public static final long MQ_OUTBOX_BACKOFF_BASE_MS = 1_000L;
-
-    /**
-     * MQ Outbox：指数退避上限（毫秒）。
-     */
-    public static final long MQ_OUTBOX_BACKOFF_MAX_MS = 300_000L;
-
-    /**
-     * MQ Outbox：SENDING 超过该时长视为僵死，按 retry 回收或置 DEAD（毫秒）。
-     */
-    public static final long MQ_OUTBOX_SENDING_STALE_MS = 120_000L;
-
-    /**
-     * MQ Outbox：僵死 SENDING 回收时写入 last_error。
-     */
-    public static final String MQ_OUTBOX_STALE_SENDING_ERROR = "stale SENDING recycled";
-
-    /**
-     * MQ Outbox：ScheduleTimer 任务 id。
-     */
-    public static final String MQ_OUTBOX_RELAY_TASK_ID = "mq-outbox-relay";
-
-    /**
-     * MQ Outbox：集群扫描锁等待秒数。0 表示未抢到立即跳过，避免卡住 SYSTEM 定时线程。
-     */
-    public static final long MQ_OUTBOX_RELAY_LOCK_WAIT_SECONDS = 0L;
-
-    /**
      * 登录超时：{@code IN_FLIGHT} 时最多再续期次数（每次仍为 {@code serverLoginTimeout} 秒）。
      */
     public static final int LOGIN_TIMEOUT_IN_FLIGHT_MAX_RETRY = 2;

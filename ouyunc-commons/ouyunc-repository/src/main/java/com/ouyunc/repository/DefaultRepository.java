@@ -50,7 +50,7 @@ public enum DefaultRepository implements Repository {
 
 
     /**
-     * 确认投递协议包：等 broker ACK，失败不写 Outbox。
+     * 确认投递协议包：等 broker ACK，失败由客户端 QoS 重试。
      */
     public CompletableFuture<?> publishPacketConfirmed(String topic, String key, Packet packet) {
         return RepositorySupports.MQ.publishPacketConfirmed(topic, key, packet);

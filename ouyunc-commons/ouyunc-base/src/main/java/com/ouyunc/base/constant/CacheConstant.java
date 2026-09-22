@@ -194,11 +194,6 @@ public class CacheConstant {
      */
     private static final String GROUP_REQUEST = "gr:";
 
-    /**
-     * MQ Outbox 补发扫描锁片段（全局）。
-     */
-    private static final String MQ_OUTBOX_RELAY_TASK = "mq-outbox-relay";
-
     /***
      * 设备 类型device-type
      */
@@ -279,13 +274,6 @@ public class CacheConstant {
     public static String buildGroupRequestLockCacheKey(String appKey, String joiner, String sessionId) {
         return OUYUNC + LOCK + withAggregateHashTag(appKey, sessionId) + COLON + GROUP_REQUEST
                 + COLON + stripHashTagChars(joiner == null ? "" : joiner);
-    }
-
-    /**
-     * MQ Outbox 补发扫描锁（全集群一把，非租户维度）；首 tag 固定 Redis Cluster 槽。
-     */
-    public static String buildMqOutboxRelayLockCacheKey() {
-        return OUYUNC + LOCK + withHashTag(MQ_OUTBOX_RELAY_TASK);
     }
 
     // ============================================ 业务缓存键 ============================================

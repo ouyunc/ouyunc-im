@@ -360,13 +360,6 @@ public class MessageServerProperties extends MessageProperties {
     @Key(value = "ouyunc.message.content-safety.default-media-action", defaultValue = "SEND_THEN_REVIEW")
     String contentSafetyDefaultMediaAction;
 
-    /**
-     * IM 进程内 MQ Outbox 补发。默认关闭：有 im-consumer 时由消费端 Job 扫描。
-     * 仅无 consumer 的单机、或明确指定一台时可打开。集群打开后靠 Redis 锁保证同一时刻只有一个扫描者。
-     */
-    @Key(value = "ouyunc.message.mq-outbox-relay.enable", defaultValue = "false")
-    boolean mqOutboxRelayEnable;
-
     /***
      * 是否开启qos重试发送机制，默认关闭
      */
@@ -1052,20 +1045,6 @@ public class MessageServerProperties extends MessageProperties {
     }
 
     /**
-     * @return IM 进程内 MQ Outbox 补发开关，默认关闭
-     */
-    public boolean isMqOutboxRelayEnable() {
-        return mqOutboxRelayEnable;
-    }
-
-    /**
-     * @param mqOutboxRelayEnable true 时本进程扫描补发；集群下仍靠 Redis 锁互斥
-     */
-    public void setMqOutboxRelayEnable(boolean mqOutboxRelayEnable) {
-        this.mqOutboxRelayEnable = mqOutboxRelayEnable;
-    }
-
-    /**
      * @return 无租户策略时的默认文本动作
      */
     public String getContentSafetyDefaultTextAction() {
@@ -1346,7 +1325,6 @@ public class MessageServerProperties extends MessageProperties {
                 ", contentSafetyEnable=" + contentSafetyEnable +
                 ", contentSafetyDefaultTextAction='" + contentSafetyDefaultTextAction + '\'' +
                 ", contentSafetyDefaultMediaAction='" + contentSafetyDefaultMediaAction + '\'' +
-                ", mqOutboxRelayEnable=" + mqOutboxRelayEnable +
                 ", qosRetryEnable=" + qosRetryEnable +
                 ", qosRetryInitialDelay=" + qosRetryInitialDelay +
                 ", qosRetryPeriod=" + qosRetryPeriod +

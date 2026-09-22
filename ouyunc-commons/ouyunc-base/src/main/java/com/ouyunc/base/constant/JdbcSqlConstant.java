@@ -31,21 +31,14 @@ public class JdbcSqlConstant {
 
         SELECT_APP("SELECT id, app_key, app_secret, app_name, user_id, max_connections, `status`, create_time, update_time, del_flag FROM ouyunc_im_app WHERE app_key = :app_key AND del_flag = 0", "根据 appKey 查询未删除的 IM 应用"),
 
-        SELECT_ALL_APPS("SELECT id, app_key, app_secret, app_name, user_id, max_connections, `status`, create_time, update_time, del_flag FROM ouyunc_im_app WHERE del_flag = 0", "查询全部未删除的 IM 应用"),
+        SELECT_ALL_APPS("SELECT id, app_key, app_secret, app_name, user_id, max_connections, `status`, create_time, update_time, del_flag FROM ouyunc_im_app WHERE del_flag = 0", "查询全部未删除的 IM 应用")
 
-        INSERT_MQ_OUTBOX("INSERT INTO ouyunc_im_mq_outbox (id, topic, mq_key, biz_key, packet_id, payload, status, retry_count, next_retry_at, last_error, failure_context) VALUES (:id, :topic, :mq_key, :biz_key, :packet_id, :payload, :status, :retry_count, :next_retry_at, :last_error, :failure_context) ON DUPLICATE KEY UPDATE last_error = VALUES(last_error), failure_context = VALUES(failure_context), payload = VALUES(payload), packet_id = VALUES(packet_id), mq_key = VALUES(mq_key), retry_count = IF(status IN (:sending_status, :pending_status, :sent_status), retry_count, VALUES(retry_count)), next_retry_at = IF(status IN (:sending_status, :pending_status, :sent_status), next_retry_at, VALUES(next_retry_at)), status = IF(status IN (:sending_status, :sent_status), status, VALUES(status)), update_time = CURRENT_TIMESTAMP", "写入 MQ Outbox；SENDING/SENT 不覆盖状态，DEAD 才复活为 PENDING"),
 
-        SELECT_MQ_OUTBOX_DUE("SELECT id, topic, mq_key, biz_key, packet_id, payload, status, retry_count, next_retry_at, last_error, failure_context, create_time, update_time FROM ouyunc_im_mq_outbox WHERE status = :status AND next_retry_at <= :now ORDER BY next_retry_at ASC LIMIT :limit", "扫描到期 PENDING Outbox"),
 
-        CLAIM_MQ_OUTBOX("UPDATE ouyunc_im_mq_outbox SET status = :sending_status, update_time = CURRENT_TIMESTAMP WHERE id = :id AND status = :pending_status", "认领 PENDING→SENDING"),
 
-        MARK_SENT_MQ_OUTBOX("UPDATE ouyunc_im_mq_outbox SET status = :sent_status, update_time = CURRENT_TIMESTAMP WHERE id = :id AND status = :sending_status", "补发成功先标 SENT，避免删行失败后被当成僵死 SENDING 复活"),
 
-        DELETE_MQ_OUTBOX("DELETE FROM ouyunc_im_mq_outbox WHERE id = :id AND status = :sent_status", "删除已标 SENT 的 Outbox"),
 
-        UPDATE_MQ_OUTBOX_RETRY("UPDATE ouyunc_im_mq_outbox SET status = :status, retry_count = :retry_count, next_retry_at = :next_retry_at, last_error = :last_error, update_time = CURRENT_TIMESTAMP WHERE id = :id AND status = :sending_status", "Outbox 重试退避或置死信（仅 SENDING）"),
 
-        RESET_STALE_MQ_OUTBOX_SENDING("UPDATE ouyunc_im_mq_outbox SET status = IF(retry_count + 1 >= :max_retry, :dead_status, :pending_status), next_retry_at = :now + LEAST(:backoff_max, :backoff_base << LEAST(retry_count + 1, 16)), last_error = :last_error, retry_count = retry_count + 1, update_time = CURRENT_TIMESTAMP WHERE status = :sending_status AND update_time < :stale_before", "回收超时 SENDING：累加 retry，超限置 DEAD")
         ;
 
 
@@ -113,21 +106,14 @@ public class JdbcSqlConstant {
 
         SELECT_APP("SELECT id, app_key, app_secret, app_name, user_id, max_connections, \"status\", create_time, update_time, del_flag FROM ouyunc_im_app WHERE app_key = :app_key AND del_flag = 0", "根据 appKey 查询未删除的 IM 应用"),
 
-        SELECT_ALL_APPS("SELECT id, app_key, app_secret, app_name, user_id, max_connections, \"status\", create_time, update_time, del_flag FROM ouyunc_im_app WHERE del_flag = 0", "查询全部未删除的 IM 应用"),
+        SELECT_ALL_APPS("SELECT id, app_key, app_secret, app_name, user_id, max_connections, \"status\", create_time, update_time, del_flag FROM ouyunc_im_app WHERE del_flag = 0", "查询全部未删除的 IM 应用")
 
-        INSERT_MQ_OUTBOX("INSERT INTO ouyunc_im_mq_outbox (id, topic, mq_key, biz_key, packet_id, payload, status, retry_count, next_retry_at, last_error, failure_context) VALUES (:id, :topic, :mq_key, :biz_key, :packet_id, :payload, :status, :retry_count, :next_retry_at, :last_error, :failure_context) ON CONFLICT (topic, biz_key) DO UPDATE SET last_error = EXCLUDED.last_error, failure_context = EXCLUDED.failure_context, payload = EXCLUDED.payload, packet_id = EXCLUDED.packet_id, mq_key = EXCLUDED.mq_key, retry_count = CASE WHEN ouyunc_im_mq_outbox.status IN (:sending_status, :pending_status, :sent_status) THEN ouyunc_im_mq_outbox.retry_count ELSE EXCLUDED.retry_count END, next_retry_at = CASE WHEN ouyunc_im_mq_outbox.status IN (:sending_status, :pending_status, :sent_status) THEN ouyunc_im_mq_outbox.next_retry_at ELSE EXCLUDED.next_retry_at END, status = CASE WHEN ouyunc_im_mq_outbox.status IN (:sending_status, :sent_status) THEN ouyunc_im_mq_outbox.status ELSE EXCLUDED.status END, update_time = CURRENT_TIMESTAMP", "写入 MQ Outbox；SENDING/SENT 不覆盖状态，DEAD 才复活为 PENDING"),
 
-        SELECT_MQ_OUTBOX_DUE("SELECT id, topic, mq_key, biz_key, packet_id, payload, status, retry_count, next_retry_at, last_error, failure_context, create_time, update_time FROM ouyunc_im_mq_outbox WHERE status = :status AND next_retry_at <= :now ORDER BY next_retry_at ASC LIMIT :limit", "扫描到期 PENDING Outbox"),
 
-        CLAIM_MQ_OUTBOX("UPDATE ouyunc_im_mq_outbox SET status = :sending_status, update_time = CURRENT_TIMESTAMP WHERE id = :id AND status = :pending_status", "认领 PENDING→SENDING"),
 
-        MARK_SENT_MQ_OUTBOX("UPDATE ouyunc_im_mq_outbox SET status = :sent_status, update_time = CURRENT_TIMESTAMP WHERE id = :id AND status = :sending_status", "补发成功先标 SENT，避免删行失败后被当成僵死 SENDING 复活"),
 
-        DELETE_MQ_OUTBOX("DELETE FROM ouyunc_im_mq_outbox WHERE id = :id AND status = :sent_status", "删除已标 SENT 的 Outbox"),
 
-        UPDATE_MQ_OUTBOX_RETRY("UPDATE ouyunc_im_mq_outbox SET status = :status, retry_count = :retry_count, next_retry_at = :next_retry_at, last_error = :last_error, update_time = CURRENT_TIMESTAMP WHERE id = :id AND status = :sending_status", "Outbox 重试退避或置死信（仅 SENDING）"),
 
-        RESET_STALE_MQ_OUTBOX_SENDING("UPDATE ouyunc_im_mq_outbox SET status = CASE WHEN retry_count + 1 >= :max_retry THEN :dead_status ELSE :pending_status END, next_retry_at = :now + LEAST(:backoff_max, CAST(:backoff_base AS bigint) << LEAST(retry_count + 1, 16)), last_error = :last_error, retry_count = retry_count + 1, update_time = CURRENT_TIMESTAMP WHERE status = :sending_status AND update_time < :stale_before", "回收超时 SENDING：累加 retry，超限置 DEAD")
         ;
 
         private String sql;
@@ -186,21 +172,14 @@ public class JdbcSqlConstant {
 
         SELECT_APP("SELECT ID, APP_KEY, APP_SECRET, APP_NAME, USER_ID, MAX_CONNECTIONS, STATUS, CREATE_TIME, UPDATE_TIME, DELETED AS DEL_FLAG FROM OUYUNC_IM_APP WHERE APP_KEY = :app_key AND DELETED = 0", "根据 appKey 查询未删除的 IM 应用"),
 
-        SELECT_ALL_APPS("SELECT ID, APP_KEY, APP_SECRET, APP_NAME, USER_ID, MAX_CONNECTIONS, STATUS, CREATE_TIME, UPDATE_TIME, DELETED AS DEL_FLAG FROM OUYUNC_IM_APP WHERE DELETED = 0", "查询全部未删除的 IM 应用"),
+        SELECT_ALL_APPS("SELECT ID, APP_KEY, APP_SECRET, APP_NAME, USER_ID, MAX_CONNECTIONS, STATUS, CREATE_TIME, UPDATE_TIME, DELETED AS DEL_FLAG FROM OUYUNC_IM_APP WHERE DELETED = 0", "查询全部未删除的 IM 应用")
 
-        INSERT_MQ_OUTBOX("MERGE INTO OUYUNC_IM_MQ_OUTBOX t USING (SELECT :id AS ID, :topic AS TOPIC, :mq_key AS MQ_KEY, :biz_key AS BIZ_KEY, :packet_id AS PACKET_ID, :payload AS PAYLOAD, :status AS STATUS, :retry_count AS RETRY_COUNT, :next_retry_at AS NEXT_RETRY_AT, :last_error AS LAST_ERROR, :failure_context AS FAILURE_CONTEXT FROM DUAL) s ON (t.TOPIC = s.TOPIC AND t.BIZ_KEY = s.BIZ_KEY) WHEN MATCHED THEN UPDATE SET t.LAST_ERROR = s.LAST_ERROR, t.FAILURE_CONTEXT = s.FAILURE_CONTEXT, t.PAYLOAD = s.PAYLOAD, t.PACKET_ID = s.PACKET_ID, t.MQ_KEY = s.MQ_KEY, t.RETRY_COUNT = CASE WHEN t.STATUS IN (:sending_status, :pending_status, :sent_status) THEN t.RETRY_COUNT ELSE s.RETRY_COUNT END, t.NEXT_RETRY_AT = CASE WHEN t.STATUS IN (:sending_status, :pending_status, :sent_status) THEN t.NEXT_RETRY_AT ELSE s.NEXT_RETRY_AT END, t.STATUS = CASE WHEN t.STATUS IN (:sending_status, :sent_status) THEN t.STATUS ELSE s.STATUS END, t.UPDATE_TIME = SYSTIMESTAMP WHEN NOT MATCHED THEN INSERT (ID, TOPIC, MQ_KEY, BIZ_KEY, PACKET_ID, PAYLOAD, STATUS, RETRY_COUNT, NEXT_RETRY_AT, LAST_ERROR, FAILURE_CONTEXT) VALUES (s.ID, s.TOPIC, s.MQ_KEY, s.BIZ_KEY, s.PACKET_ID, s.PAYLOAD, s.STATUS, s.RETRY_COUNT, s.NEXT_RETRY_AT, s.LAST_ERROR, s.FAILURE_CONTEXT)", "写入 MQ Outbox；SENDING/SENT 不覆盖状态，DEAD 才复活为 PENDING"),
 
-        SELECT_MQ_OUTBOX_DUE("SELECT ID, TOPIC, MQ_KEY, BIZ_KEY, PACKET_ID, PAYLOAD, STATUS, RETRY_COUNT, NEXT_RETRY_AT, LAST_ERROR, FAILURE_CONTEXT, CREATE_TIME, UPDATE_TIME FROM (SELECT ID, TOPIC, MQ_KEY, BIZ_KEY, PACKET_ID, PAYLOAD, STATUS, RETRY_COUNT, NEXT_RETRY_AT, LAST_ERROR, FAILURE_CONTEXT, CREATE_TIME, UPDATE_TIME FROM OUYUNC_IM_MQ_OUTBOX WHERE STATUS = :status AND NEXT_RETRY_AT <= :now ORDER BY NEXT_RETRY_AT ASC) WHERE ROWNUM <= :limit", "扫描到期 PENDING Outbox"),
 
-        CLAIM_MQ_OUTBOX("UPDATE OUYUNC_IM_MQ_OUTBOX SET STATUS = :sending_status, UPDATE_TIME = SYSTIMESTAMP WHERE ID = :id AND STATUS = :pending_status", "认领 PENDING→SENDING"),
 
-        MARK_SENT_MQ_OUTBOX("UPDATE OUYUNC_IM_MQ_OUTBOX SET STATUS = :sent_status, UPDATE_TIME = SYSTIMESTAMP WHERE ID = :id AND STATUS = :sending_status", "补发成功先标 SENT，避免删行失败后被当成僵死 SENDING 复活"),
 
-        DELETE_MQ_OUTBOX("DELETE FROM OUYUNC_IM_MQ_OUTBOX WHERE ID = :id AND STATUS = :sent_status", "删除已标 SENT 的 Outbox"),
 
-        UPDATE_MQ_OUTBOX_RETRY("UPDATE OUYUNC_IM_MQ_OUTBOX SET STATUS = :status, RETRY_COUNT = :retry_count, NEXT_RETRY_AT = :next_retry_at, LAST_ERROR = :last_error, UPDATE_TIME = SYSTIMESTAMP WHERE ID = :id AND STATUS = :sending_status", "Outbox 重试退避或置死信（仅 SENDING）"),
 
-        RESET_STALE_MQ_OUTBOX_SENDING("UPDATE OUYUNC_IM_MQ_OUTBOX SET STATUS = CASE WHEN RETRY_COUNT + 1 >= :max_retry THEN :dead_status ELSE :pending_status END, NEXT_RETRY_AT = :now + LEAST(:backoff_max, :backoff_base * POWER(2, LEAST(RETRY_COUNT + 1, 16))), LAST_ERROR = :last_error, RETRY_COUNT = RETRY_COUNT + 1, UPDATE_TIME = SYSTIMESTAMP WHERE STATUS = :sending_status AND UPDATE_TIME < :stale_before", "回收超时 SENDING：累加 retry，超限置 DEAD")
         ;
 
         private String sql;
