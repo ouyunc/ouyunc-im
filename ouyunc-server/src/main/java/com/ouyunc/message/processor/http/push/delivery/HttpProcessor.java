@@ -4,9 +4,10 @@ import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.core.processor.Processor;
 import com.ouyunc.message.http.HttpPipelineException;
+import reactor.core.publisher.Mono;
 
 /**
- * HTTP 推送按消息类型的投递策略：{@link #preProcess} 校验 + {@link #process} 异步投递。
+ * HTTP 推送按消息类型的投递策略：{@link #preProcess} 校验 + {@link #processMono} 主链路。
  * <p>跨线程唯一载体是 {@link Packet}；HttpContext 止于入口，不进入策略。</p>
  */
 public interface HttpProcessor extends Processor<Packet> {
@@ -20,8 +21,18 @@ public interface HttpProcessor extends Processor<Packet> {
     void preProcess(Packet packet) throws HttpPipelineException;
 
     /**
-     * 异步核心链路（落库/投递等）。调用时 {@link #preProcess} 已通过；fire-and-forget。
+     * 主链路（MQ 已由入口确认时：Redis 热写 + 尽力投递）。
+     * <p>{@code true}＝热写成功或幂等命中（可 COMMITTED）；{@code false}＝热写失败（可重试）。
+     * 实时扇出失败不得把结果打成 false。</p>
+     */
+    Mono<Boolean> processMono(Packet packet);
+
+    /**
+     * 兼容异步入口：订阅 {@link #processMono} 并按结果提交/标记幂等。
+     * 正式 HTTP 路径应走 {@link com.ouyunc.message.processor.http.push.HttpPushProcessorDelegate#runPipeline}。
      */
     @Override
-    void process(Packet packet);
+    default void process(Packet packet) {
+        HttpPushDeliverySupport.subscribeDelivery(packet, processMono(packet));
+    }
 }

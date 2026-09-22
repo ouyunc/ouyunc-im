@@ -17,6 +17,7 @@ import com.ouyunc.base.model.RequestSession;
 import com.ouyunc.base.constant.enums.RequestSessionProgress;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.DistributedLockHelper;
+import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
 import com.ouyunc.message.helper.RequestNotifyHelper;
 import com.ouyunc.message.validator.AuthValidator;
 import com.ouyunc.message.validator.BlackListValidator;
@@ -59,7 +60,7 @@ public final class One2OneRefuseFriendRequestMessageBiProcessor extends Abstract
         if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
             return Mono.just(false);
         }
-        return continueWhenPassedOrAck(ctx, packet,
+        return MessageAcceptPipelineHelper.continueWhenPassedOrAck(ctx, packet,
                 PermissionValidator.INSTANCE.negate()
                         .or(FromToValidator.INSTANCE)
                         .or(BlackListValidator.INSTANCE)
@@ -78,18 +79,18 @@ public final class One2OneRefuseFriendRequestMessageBiProcessor extends Abstract
         String to = message.getTo();
         String appKey = message.getMetadata().getAppKey();
         String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
-        return confirmThenRun(MqConstant.MQ_FRIEND_REQUEST_TOPIC, sessionId, packet, () -> {
+        return MessageAcceptPipelineHelper.confirmThenRun(MqConstant.MQ_FRIEND_REQUEST_TOPIC, sessionId, packet, () -> {
             String lockKey = CacheConstant.buildFriendRequestLockCacheKey(appKey, sessionId);
             DistributedLockHelper.runWithLock(packet, lockKey, ExceptionCodeEnum.BIND_FRIEND_ERROR, () -> {
                 RequestSession requestSession = repository().getFriendRequestSession(appKey, message.getTo(), message.getFrom());
                 if (null == requestSession || !Objects.equals(requestSession.getProgress(), RequestSessionProgress.JOINING.value())) {
                     log.warn("不存在加好友请求记录或存在正在处理的好友请求，该消息忽略");
-                    ackRequestSettled(ctx, packet);
+                    MessageAcceptPipelineHelper.ackRequestSettled(ctx, packet);
                     return;
                 }
                 if (repository().isFriend(appKey, message.getFrom(), message.getTo())) {
                     log.warn("已经是好友, 请知悉; {}", packet);
-                    ackRequestSettled(ctx, packet);
+                    MessageAcceptPipelineHelper.ackRequestSettled(ctx, packet);
                     return;
                 }
                 requestSession.setProgress(RequestSessionProgress.REFUSING.value());
@@ -99,7 +100,7 @@ public final class One2OneRefuseFriendRequestMessageBiProcessor extends Abstract
                     return;
                 }
                 RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.userOnly(to));
-                ackRequestSettled(ctx, packet);
+                MessageAcceptPipelineHelper.ackRequestSettled(ctx, packet);
             });
         });
     }

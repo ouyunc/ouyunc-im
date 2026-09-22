@@ -77,11 +77,7 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
     }
 
     @Override
-    public void process(Packet packet) {
-        HttpPushDeliverySupport.subscribeDelivery(packet, doProcess(packet));
-    }
-
-    private Mono<Boolean> doProcess(Packet packet) {
+    public Mono<Boolean> processMono(Packet packet) {
         Set<String> groupUserIdentitySet = HttpPushDeliverySupport.takeGroupMembers(packet);
         if (CollectionUtils.isEmpty(groupUserIdentitySet)) {
             log.error("HTTP 推送群组缺少 preProcess 缓存的成员, group={}, packetId={}",

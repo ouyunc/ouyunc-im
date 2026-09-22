@@ -52,11 +52,7 @@ public final class One2OneHttpPushDeliveryStrategy implements HttpProcessor {
     }
 
     @Override
-    public void process(Packet packet) {
-        HttpPushDeliverySupport.subscribeDelivery(packet, doProcess(packet));
-    }
-
-    private Mono<Boolean> doProcess(Packet packet) {
+    public Mono<Boolean> processMono(Packet packet) {
         // preProcess 已完成业务校验与 ref 规范化
         int contentType = packet.getMessage().getContentType();
         if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {
@@ -68,6 +64,7 @@ public final class One2OneHttpPushDeliveryStrategy implements HttpProcessor {
         }
         return saveAndDeliverChat(packet);
     }
+
 
     private Mono<Boolean> saveAndDeliverChat(Packet packet) {
         Message message = packet.getMessage();

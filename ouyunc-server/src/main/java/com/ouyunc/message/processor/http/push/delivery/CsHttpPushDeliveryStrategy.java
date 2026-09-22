@@ -53,11 +53,7 @@ public final class CsHttpPushDeliveryStrategy implements HttpProcessor {
     }
 
     @Override
-    public void process(Packet packet) {
-        HttpPushDeliverySupport.subscribeDelivery(packet, doProcess(packet));
-    }
-
-    private Mono<Boolean> doProcess(Packet packet) {
+    public Mono<Boolean> processMono(Packet packet) {
         CsImSessionRoute route = HttpPushDeliverySupport.takeCsRoute(packet);
         if (route == null) {
             log.error("HTTP 推送客服缺少 preProcess 缓存的路由, packetId={}", packet.getPacketId());

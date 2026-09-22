@@ -1,33 +1,41 @@
 package com.ouyunc.message.processor.http.push;
 
+import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqArchiveRouting;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.HttpResponseCodeEnum;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.packet.Packet;
+import com.ouyunc.message.helper.MessageArchiveHelper;
 import com.ouyunc.message.http.HttpPipelineException;
 import com.ouyunc.message.processor.http.push.delivery.HttpProcessor;
 import com.ouyunc.message.processor.http.push.delivery.HttpPushDeliverySupport;
 import com.ouyunc.message.processor.http.push.delivery.HttpPushProcessorStrategies;
 import com.ouyunc.repository.DefaultRepository;
-import com.ouyunc.message.helper.MessageArchiveHelper;
-import reactor.core.publisher.Mono;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.core.publisher.Mono;
+
+import java.time.Duration;
 
 /**
- * HTTP 推送专用投递入口：按消息类型选择策略 {@code preProcess} + {@code process}。
+ * HTTP 推送专用投递入口：按消息类型选择策略 {@code preProcess} + {@code processMono}。
+ * <p>选项 A：同步等待「MQ confirm → Redis」后再对调用方给出成功/可重试结果。</p>
  */
 public final class HttpPushProcessorDelegate {
 
     private static final Logger log = LoggerFactory.getLogger(HttpPushProcessorDelegate.class);
 
+    /** MQ 确认超时 + Redis 缓冲，避免 HTTP 无限挂起。 */
+    private static final Duration PIPELINE_BLOCK_TIMEOUT = Duration.ofMillis(
+            MessageConstant.MESSAGE_ARCHIVE_CONFIRM_TIMEOUT_MS + 15_000L);
+
     private HttpPushProcessorDelegate() {
     }
 
     /**
-     * 幂等占位后、ACCEPTED 前调用：由对应策略 {@link HttpProcessor#preProcess}，失败抛 HTTP 403/500。
+     * 幂等占位后、响应前调用：由对应策略 {@link HttpProcessor#preProcess}，失败抛 HTTP 403/500。
      */
     public static void preProcessOrThrow(Packet packet) throws HttpPipelineException {
         HttpProcessor strategy = requireStrategy(packet);
@@ -40,32 +48,40 @@ public final class HttpPushProcessorDelegate {
     }
 
     /**
-     * 异步投递（fire-and-forget）：归档后调用策略 {@link HttpProcessor#process}。
+     * 同步管线：MQ confirm → 策略 Redis/投递；成功才应 COMMITTED。
+     * <p>客服在策略内路由通过后再归档；已读/撤回只确认领域 topic。</p>
+     *
+     * @return {@code true} 热写成功或幂等命中；{@code false} 热写失败
      */
-    public static void delegate(Packet packet) {
+    public static boolean runPipeline(Packet packet) {
         if (packet == null || packet.getMessage() == null) {
-            return;
+            return false;
         }
         HttpProcessor strategy = HttpPushProcessorStrategies.get(packet.getMessageType());
         if (strategy == null) {
             log.error("HTTP 推送投递不支持 messageType={}", packet.getMessageType());
             HttpPushDeliverySupport.publishException(ExceptionCodeEnum.ILLEGAL_MESSAGE_TYPE_ERROR,
                     "HTTP 推送不支持的消息类型", packet);
-            return;
+            return false;
         }
-        // HTTP ACCEPTED 仍表示后台受理；COMMITTED 必须晚于归档确认。
-        // 客服在策略内路由通过后再归档；已读/撤回只确认领域 topic。
+        try {
+            Boolean ok = pipelineMono(packet, strategy).block(PIPELINE_BLOCK_TIMEOUT);
+            return Boolean.TRUE.equals(ok);
+        } catch (Exception ex) {
+            log.error("HTTP 推送管线异常, messageId={}", packet.getMessage().getId(), ex);
+            HttpPushDeliverySupport.publishException(ExceptionCodeEnum.UNKNOWN_ERROR, ex.getMessage(), packet);
+            return false;
+        }
+    }
+
+    private static Mono<Boolean> pipelineMono(Packet packet, HttpProcessor strategy) {
+        // 客服在策略内改写 from 后再归档；已读/撤回只确认领域 topic，避免 SAVE + 领域各等一次。
         boolean skipSave = packet.getMessageType() == MessageTypeEnum.CUSTOMER_SERVICE.getType()
                 || MqArchiveRouting.usesDomainConfirmOnly(packet);
         Mono<Void> archived = skipSave
                 ? Mono.empty()
                 : MessageArchiveHelper.confirm(() -> DefaultRepository.INSTANCE.save(packet));
-        archived.then(Mono.fromRunnable(() -> strategy.process(packet))).subscribe(ignored -> { }, ex -> {
-            log.error("HTTP 推送归档/投递异常, messageId={}", packet.getMessage().getId(), ex);
-            HttpPushDeliverySupport.discardStashed(packet);
-            HttpPushDeliverySupport.publishException(ExceptionCodeEnum.UNKNOWN_ERROR, ex.getMessage(), packet);
-            HttpPushDeliverySupport.markRetryableFailed(packet);
-        });
+        return archived.then(Mono.defer(() -> strategy.processMono(packet)));
     }
 
     private static HttpProcessor requireStrategy(Packet packet) throws HttpPipelineException {

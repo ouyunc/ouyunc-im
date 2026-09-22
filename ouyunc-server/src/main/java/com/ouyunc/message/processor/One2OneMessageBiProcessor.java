@@ -17,6 +17,7 @@ import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.base.constant.enums.IdentityType;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.AtMentionHelper;
+import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageDeliveryRouteHelper;
 import com.ouyunc.message.helper.MessageHelper;
@@ -37,8 +38,8 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * 一对一（单聊）消息处理器。
- * <p>普通聊天消息持久化成功后回 QoS ACK；已读回执、撤回在对应操作成功后再 ACK。</p>
- * <p>如果在使用过程中存在 Redis 瓶颈，可使用响应式 Redis 改造提高吞吐量。</p>
+ * <p>标准管线：校验通过后 MQ 归档 → Redis 热写 → 仅成功/重复时 ACK → 新写入才扇出。
+ * 已读/撤回在对应操作成功后再 ACK。子类级覆写见 {@link AbstractMessageBiProcessor}。</p>
  */
 public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<Byte> {
     private static final Logger log = LoggerFactory.getLogger(One2OneMessageBiProcessor.class);
@@ -61,12 +62,12 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
         if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
             return Mono.just(false);
         }
-        return continueWhenPassed(packet,
+        return MessageAcceptPipelineHelper.continueWhenPassed(packet,
                 PermissionValidator.INSTANCE.negate()
                         .or(One2OneChatAccessValidator.INSTANCE)
                         .or(FromToValidator.INSTANCE)
                         .verify(packet, ctx),
-                () -> releaseQosOnFailure(packet),
+                () -> MessageAcceptPipelineHelper.releaseQosOnFailure(packet),
                 "权限不足/不是好友/在黑名单中/被屏蔽/发送方和接收方相同, 请知悉。该消息 {} 被忽略");
     }
 
@@ -82,7 +83,7 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
         }
         AtMentionHelper.clearAtIfPresent(packet.getMessage());
         if (!MessageRefHelper.normalizeMessageRefOrReject(packet)) {
-            releaseQosOnFailure(packet);
+            MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
             return Mono.empty();
         }
         int contentType = packet.getMessage().getContentType();
@@ -93,27 +94,17 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
             return handleWithdrawMessage(ctx, packet);
         }
         return saveMessage(packet)
-                .flatMap(result -> afterOne2OneSaved(ctx, packet, result))
+                .flatMap(result -> MessageAcceptPipelineHelper.afterHotSave(ctx, packet, result, () -> afterOne2OneFreshWrite(packet),
+                        "单聊消息写入会话失败"))
                 .onErrorResume(error -> {
                     log.error("单聊消息持久化异常, packetId={}", packet.getPacketId(), error);
                     MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "单聊持久化异常: " + error.getMessage(), packet), MessageEventTypeEnum.EXCEPTION), true);
-                    releaseQosOnFailure(packet);
+                    MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
                     return Mono.empty();
                 });
     }
 
-    private Mono<Void> afterOne2OneSaved(ChannelHandlerContext ctx, Packet packet, SaveMessageOutcome result) {
-        if (result != null && result.isDuplicate()) {
-            qosAckOnSuccess(ctx, packet);
-            return Mono.empty();
-        }
-        if (result == null || !result.isFreshWrite()) {
-            log.error("单聊会话索引写入失败: {}", packet);
-            MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "单聊消息写入会话失败", packet), MessageEventTypeEnum.EXCEPTION), true);
-            releaseQosOnFailure(packet);
-            return Mono.empty();
-        }
-        qosAckOnSuccess(ctx, packet);
+    private void afterOne2OneFreshWrite(Packet packet) {
         try {
             repository().saveLastMessageForSession(
                     IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo()),
@@ -128,19 +119,6 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
                         ignored -> { },
                         e -> log.warn("发送消息静默更新本端已读 offset 失败, packetId={}", packet.getPacketId(), e));
         deliver(packet, false);
-        return Mono.empty();
-    }
-
-    private void qosAckOnSuccess(ChannelHandlerContext ctx, Packet packet) {
-        if (MessageContext.isQosEnable()) {
-            qosPostHandle(ctx, packet);
-        }
-    }
-
-    private void releaseQosOnFailure(Packet packet) {
-        if (MessageContext.isQosEnable()) {
-            repository().releaseQosClaim(packet);
-        }
     }
 
     /**
@@ -161,7 +139,7 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
                 packets -> repository().reactiveWithdrawMessage(
                         packet, sessionId, MessageIndexScope.CHANNEL_SESSION, packets),
                 (ctx0, packet0) -> {
-                    qosAckOnSuccess(ctx0, packet0);
+                    MessageAcceptPipelineHelper.qosAckOnSuccess(ctx0, packet0);
                     Message msg = packet0.getMessage();
                     if (msg != null && msg.getMetadata() != null) {
                         String appKey = msg.getMetadata().getAppKey();
@@ -175,7 +153,7 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
                 ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR)
                 .doOnNext(success -> {
                     if (!Boolean.TRUE.equals(success)) {
-                        releaseQosOnFailure(packet);
+                        MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
                     }
                 })
                 .then();
@@ -197,14 +175,14 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
                         packet, IdentityType.ONE_2_ONE,
                         MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP, packets),
                 (ctx0, packet0) -> {
-                    qosAckOnSuccess(ctx0, packet0);
+                    MessageAcceptPipelineHelper.qosAckOnSuccess(ctx0, packet0);
                     deliverReadReceiptToSender(packet0);
                 },
                 (exceptionEvent)-> MessageServerContext.publishEvent(exceptionEvent, true),
                 ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR)
                 .doOnNext(success -> {
                     if (!Boolean.TRUE.equals(success)) {
-                        releaseQosOnFailure(packet);
+                        MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
                     }
                 })
                 .then();

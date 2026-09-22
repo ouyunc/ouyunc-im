@@ -41,12 +41,8 @@ public final class ServerNotifyHttpPushDeliveryStrategy implements HttpProcessor
     }
 
     @Override
-    public void process(Packet packet) {
-        HttpPushDeliverySupport.subscribeDelivery(packet, doProcess(packet));
-    }
-
-    private Mono<Boolean> doProcess(Packet packet) {
-        // preProcess 已在幂等占位前完成
+    public Mono<Boolean> processMono(Packet packet) {
+        // MQ 已由入口确认；实时扇出尽力而为，离线不把整单打成失败。
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         if (metadata == null) {
@@ -63,17 +59,12 @@ public final class ServerNotifyHttpPushDeliveryStrategy implements HttpProcessor
         return Mono.fromCallable(() -> {
             List<LoginClientInfo> targets = ClientHelper.onlineAll(appKey, message.getTo());
             if (CollectionUtils.isEmpty(targets)) {
-                return failOffline(packet, "接收方不在线");
+                log.debug("HTTP 推送 SERVER_NOTIFY 接收方不在线, to={}", message.getTo());
+                return true;
             }
             MessageHelper.asyncSendMessage(packet, targets);
             return true;
         });
-    }
-
-    /** 在线投递无目标：已 ACCEPTED 时保留幂等，后台记失败即可。 */
-    private static boolean failOffline(Packet packet, String reason) {
-        log.debug("HTTP 推送 SERVER_NOTIFY {}: {}", reason, packet.getMessage().getTo());
-        return false;
     }
 
     private static boolean isBroadcast(Packet packet) {

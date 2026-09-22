@@ -10,8 +10,11 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
 /**
- * 原文归档确认屏障：MQ 明确成功后，才允许业务提交与成功 ACK。
- * 取消/超时不撤销已发出的归档；客户端可能重试，消费者仍须按 packetId 幂等。
+ * 原文归档确认屏障：MQ 明确成功后，才允许业务提交热写与成功 ACK/HTTP 成功响应。
+ *
+ * <p>硬约束顺序：{@code MQ confirm → Redis → ACK/HTTP 成功 → 尽力投递}。
+ * 取消/超时不撤销已发出的归档；客户端/HTTP 调用方可能重试，消费者仍须按
+ * {@code appKey + messageId} 幂等。</p>
  */
 public final class MessageArchiveHelper {
     private MessageArchiveHelper() { }

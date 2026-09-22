@@ -13,6 +13,7 @@ import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.base.constant.enums.IdentityType;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.AtMentionHelper;
+import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageDeliveryRouteHelper;
 import com.ouyunc.message.helper.MessageHelper;
@@ -37,7 +38,8 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * 群聊消息处理器。
- * <p>普通群消息持久化成功后回 QoS ACK；已读回执、撤回在对应操作成功后再 ACK。</p>
+ * <p>标准管线：校验通过后 MQ 归档 → Redis 热写 → 仅成功/重复时 ACK → 新写入才扇出。
+ * 已读/撤回在对应操作成功后再 ACK。</p>
  */
 public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<Byte> {
     private static final Logger log = LoggerFactory.getLogger(GroupMessageBiProcessor.class);
@@ -60,14 +62,14 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
         if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
             return Mono.just(false);
         }
-        return continueWhenPassed(packet,
+        return MessageAcceptPipelineHelper.continueWhenPassed(packet,
                 PermissionValidator.INSTANCE.negate()
                         .or(FromToValidator.INSTANCE)
                         .or(BlackListValidator.INSTANCE)
                         .or(GroupSilenceValidator.INSTANCE)
                         .or(GroupUserValidator.INSTANCE.negate())
                         .verify(packet, ctx),
-                () -> releaseQosOnFailure(packet),
+                () -> MessageAcceptPipelineHelper.releaseQosOnFailure(packet),
                 "权限不足/在黑名单中/不是群成员/被禁言/发送方和接收方相同, 请知悉。该消息 {} 被忽略");
     }
 
@@ -87,13 +89,13 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
             MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(
                     ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "群成员回源失败: " + e.getMessage(), packet),
                     MessageEventTypeEnum.EXCEPTION), true);
-            releaseQosOnFailure(packet);
+            MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
             return Mono.empty();
         }
         if (CollectionUtils.isEmpty(groupUserIdentitySet)) {
             log.error("群组：{}, 不存在群成员！群消息： {}", packet.getMessage().getTo(), packet);
             MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群成员", packet), MessageEventTypeEnum.EXCEPTION), true);
-            releaseQosOnFailure(packet);
+            MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
             return Mono.empty();
         }
         boolean skipSenderMembership = IngressPacketHelper.isHttpPush(packet)
@@ -102,7 +104,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
         if (!skipSenderMembership && !groupUserIdentitySet.contains(from)) {
             log.error("发送方：{}, 不在群组：{} 中！群消息： {}", from, packet.getMessage().getTo(), packet);
             MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "发送者不在群组中", packet), MessageEventTypeEnum.EXCEPTION), true);
-            releaseQosOnFailure(packet);
+            MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
             return Mono.empty();
         }
         Set<String> allGroupMembers = groupUserIdentitySet;
@@ -111,11 +113,11 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
             allGroupMembers.add(from);
         }
         if (!normalizeGroupAtOrReject(packet, allGroupMembers)) {
-            releaseQosOnFailure(packet);
+            MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
             return Mono.empty();
         }
         if (!MessageRefHelper.normalizeMessageRefOrReject(packet)) {
-            releaseQosOnFailure(packet);
+            MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
             return Mono.empty();
         }
         int contentType = packet.getMessage().getContentType();
@@ -126,28 +128,18 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
             return handleWithdrawMessage(ctx, packet, groupUserIdentitySet);
         }
         return reactiveSaveGroupMessage(packet)
-                .flatMap(result -> afterGroupSaved(ctx, packet, groupUserIdentitySet, result))
+                .flatMap(result -> MessageAcceptPipelineHelper.afterHotSave(ctx, packet, result,
+                        () -> afterGroupFreshWrite(packet, groupUserIdentitySet),
+                        "群聊消息写入会话失败"))
                 .onErrorResume(error -> {
                     log.error("群聊消息持久化异常, packetId={}", packet.getPacketId(), error);
                     MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "群聊持久化异常: " + error.getMessage(), packet), MessageEventTypeEnum.EXCEPTION), true);
-                    releaseQosOnFailure(packet);
+                    MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
                     return Mono.empty();
                 });
     }
 
-    private Mono<Void> afterGroupSaved(ChannelHandlerContext ctx, Packet packet, Set<String> groupUserIdentitySet,
-                                       SaveMessageOutcome result) {
-        if (result != null && result.isDuplicate()) {
-            qosAckOnSuccess(ctx, packet);
-            return Mono.empty();
-        }
-        if (result == null || !result.isFreshWrite()) {
-            log.error("群聊会话索引写入失败: {}", packet);
-            MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "群聊消息写入会话失败", packet), MessageEventTypeEnum.EXCEPTION), true);
-            releaseQosOnFailure(packet);
-            return Mono.empty();
-        }
-        qosAckOnSuccess(ctx, packet);
+    private void afterGroupFreshWrite(Packet packet, Set<String> groupUserIdentitySet) {
         try {
             repository().saveLastMessageForSession(packet.getMessage().getTo(), packet,
                     MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
@@ -161,19 +153,6 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
                         ignored -> { },
                         e -> log.warn("发送消息静默更新本端已读 offset 失败, packetId={}", packet.getPacketId(), e));
         deliver(packet, groupUserIdentitySet);
-        return Mono.empty();
-    }
-
-    private void qosAckOnSuccess(ChannelHandlerContext ctx, Packet packet) {
-        if (MessageContext.isQosEnable()) {
-            qosPostHandle(ctx, packet);
-        }
-    }
-
-    private void releaseQosOnFailure(Packet packet) {
-        if (MessageContext.isQosEnable()) {
-            repository().releaseQosClaim(packet);
-        }
     }
 
 
@@ -193,14 +172,14 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
                         packet, IdentityType.GROUP,
                         MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP, packets),
                 (ctx0, packet0) -> {
-                    qosAckOnSuccess(ctx0, packet0);
+                    MessageAcceptPipelineHelper.qosAckOnSuccess(ctx0, packet0);
                     deliverGroupReadReceiptSelfSyncOnly(packet0);
                 },
                 (exceptionEvent)-> MessageServerContext.publishEvent(exceptionEvent, true),
                 ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR)
                 .doOnNext(success -> {
                     if (!Boolean.TRUE.equals(success)) {
-                        releaseQosOnFailure(packet);
+                        MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
                     }
                 })
                 .then();
@@ -229,7 +208,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
                 packets -> repository().reactiveWithdrawMessage(
                         packet, sessionId, MessageIndexScope.CHANNEL_SESSION, packets),
                 (ctx0, packet0) -> {
-                    qosAckOnSuccess(ctx0, packet0);
+                    MessageAcceptPipelineHelper.qosAckOnSuccess(ctx0, packet0);
                     Message msg = packet0.getMessage();
                     if (msg != null && msg.getMetadata() != null) {
                         String appKey = msg.getMetadata().getAppKey();
@@ -243,7 +222,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
                 ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR)
                 .doOnNext(success -> {
                     if (!Boolean.TRUE.equals(success)) {
-                        releaseQosOnFailure(packet);
+                        MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
                     }
                 })
                 .then();

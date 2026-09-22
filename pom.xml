@@ -13,7 +13,6 @@
 
   <!--模块-->
   <modules>
-    <module>ouyunc-client</module>
     <module>ouyunc-commons</module>
     <module>ouyunc-server</module>
   </modules>

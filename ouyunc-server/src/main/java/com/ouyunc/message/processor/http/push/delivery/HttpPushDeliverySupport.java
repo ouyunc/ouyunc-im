@@ -101,9 +101,9 @@ public final class HttpPushDeliverySupport {
     }
 
     /**
-     * 策略 {@code process} 统一订阅内部 Mono。
-     * <p>落库成功 → COMMITTED；失败/异常 → RETRYABLE_FAILED，允许同 messageId 重试。
-     * ACCEPTED 仅表示 PENDING 已受理，不等于端侧已达。</p>
+     * 策略异步订阅内部 Mono（仅兼容旧 fire-and-forget 入口）。
+     * <p>正式路径由 {@link com.ouyunc.message.processor.http.push.HttpPushProcessorDelegate#runPipeline}
+     * 同步等待后调用 {@link #commitIdempotency}。</p>
      */
     public static void subscribeDelivery(Packet packet, Mono<Boolean> delivery) {
         String messageId = packet != null && packet.getMessage() != null ? packet.getMessage().getId() : null;
@@ -176,7 +176,8 @@ public final class HttpPushDeliverySupport {
         }
     }
 
-    private static boolean commitIdempotency(Packet packet) {
+    /** 同步管线成功后提交幂等（PENDING → COMMITTED）。 */
+    public static boolean commitIdempotency(Packet packet) {
         IdempotencyCoords coords = resolveCoords(packet);
         if (coords == null) {
             return false;

@@ -27,6 +27,7 @@ import reactor.core.publisher.Mono;
  * <p>路由主键 = {@code ticketId}（消息 {@code correlationId}）。</p>
  * <p>通道语义 sessionId = {@code sessionId(userId, serviceIdentity)}，存在路由 Hash 字段中。</p>
  * <p>消息 scope：{@code ticketMessageScopeId = ticketId}，用于 msgs ZSet / 撤回 / 已读 / lm。</p>
+ * <p>覆写门闸：路由校验与改写 from 后再 MQ，再 Redis；仍遵守「MQ → Redis → ACK → 投递」。</p>
  */
 public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte> {
     private static final Logger log = LoggerFactory.getLogger(CsMessageBiProcessor.class);
@@ -60,7 +61,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
             return processOffloaded(ctx, packet);
         } catch (Exception e) {
             log.error("客服消息处理异常, packetId={}", packet.getPacketId(), e);
-            releaseQosOnFailure(packet);
+            MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
             return Mono.empty();
         }
     }
@@ -80,13 +81,13 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
         if (!live.accepted()) {
             log.warn("客服投递前路由刷新失败: {} | packetId={}", live.rejectReason(), packet.getPacketId());
             CsHelper.publishReject(packet, live.rejectReason());
-            releaseQosOnFailure(packet);
+            MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
             return Mono.empty();
         }
         // 路由校验通过后先改写入口号再旁路归档，避免 MQ 身份与 ticket 索引不一致
         CsImSessionRoute route = live.route();
         CsHelper.rewriteAgentFrom(packet, route);
-        return archiveAfterAuth(packet).then(Mono.defer(() -> persistPrepared(ctx, packet, route)));
+        return MessageAcceptPipelineHelper.archiveAfterAuth(packet).then(Mono.defer(() -> persistPrepared(ctx, packet, route)));
     }
 
     /** 归档确认后才提交 ticket 索引和 ACK，避免热存储成功掩盖归档失败。 */
@@ -100,28 +101,18 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
             return handleWithdrawMessage(ctx, packet, route);
         }
         return saveMessage(packet, route)
-                .flatMap(result -> afterCsSaved(ctx, packet, route, result))
+                .flatMap(result -> MessageAcceptPipelineHelper.afterHotSave(ctx, packet, result,
+                        () -> afterCsFreshWrite(packet, route),
+                        "客服消息写入 ticket 失败"))
                 .onErrorResume(error -> {
                     log.error("客服消息持久化异常, packetId={}", packet.getPacketId(), error);
                     MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "客服持久化异常: " + error.getMessage(), packet), MessageEventTypeEnum.EXCEPTION), true);
-                    releaseQosOnFailure(packet);
+                    MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
                     return Mono.empty();
                 });
     }
 
-    private Mono<Void> afterCsSaved(ChannelHandlerContext ctx, Packet packet, CsImSessionRoute route,
-                                    SaveMessageOutcome result) {
-        if (result != null && result.isDuplicate()) {
-            qosAckOnSuccess(ctx, packet);
-            return Mono.empty();
-        }
-        if (result == null || !result.isFreshWrite()) {
-            log.error("客服 ticket 消息索引写入失败: {}", packet);
-            MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "客服消息写入 ticket 失败", packet), MessageEventTypeEnum.EXCEPTION), true);
-            releaseQosOnFailure(packet);
-            return Mono.empty();
-        }
-        qosAckOnSuccess(ctx, packet);
+    private void afterCsFreshWrite(Packet packet, CsImSessionRoute route) {
         try {
             CsHelper.saveChatLastMessage(repository(), route, packet);
         } catch (Exception e) {
@@ -136,34 +127,20 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
                         },
                         e -> log.warn("客服发消息静默更新 ticket 已读 offset 失败, packetId={}", packet.getPacketId(), e));
         CsHelper.deliverMessage(packet, route, false);
-        return Mono.empty();
     }
-
 
     private PrepareOutcome validateAndPrepare(Packet packet) {
         if (!MessageRefHelper.normalizeMessageRefOrReject(packet)) {
-            releaseQosOnFailure(packet);
+            MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
             return PrepareOutcome.reject("引用校验失败");
         }
         PrepareOutcome outcome = CsHelper.prepare(packet);
         if (!outcome.accepted()) {
             log.warn("客服会话路由校验失败: {} | packetId={}", outcome.rejectReason(), packet.getPacketId());
             CsHelper.publishReject(packet, outcome.rejectReason());
-            releaseQosOnFailure(packet);
+            MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
         }
         return outcome;
-    }
-
-    private void qosAckOnSuccess(ChannelHandlerContext ctx, Packet packet) {
-        if (MessageContext.isQosEnable()) {
-            qosPostHandle(ctx, packet);
-        }
-    }
-
-    private void releaseQosOnFailure(Packet packet) {
-        if (MessageContext.isQosEnable()) {
-            repository().releaseQosClaim(packet);
-        }
     }
 
     private Mono<Void> handleWithdrawMessage(ChannelHandlerContext ctx, Packet packet, CsImSessionRoute route) {
@@ -177,7 +154,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
                         packets -> repository().reactiveWithdrawMessage(
                                 packet, ticketScopeId, MessageIndexScope.CS_TICKET, packets),
                         (ctx0, packet0) -> {
-                            qosAckOnSuccess(ctx0, packet0);
+                            MessageAcceptPipelineHelper.qosAckOnSuccess(ctx0, packet0);
                             CsHelper.deliverMessage(packet0, route, true);
                             if (StringUtils.isNoneBlank(ticketScopeId, appKey)) {
                                 repository().refreshCsTicketLastMessageAfterWithdraw(appKey, ticketScopeId);
@@ -187,7 +164,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
                         ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR)
                 .doOnNext(success -> {
                     if (!Boolean.TRUE.equals(success)) {
-                        releaseQosOnFailure(packet);
+                        MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
                     }
                 })
                 .then();
@@ -206,14 +183,14 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
                                 packet, route, packet.getDeviceType(),
                                 MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP, packets),
                         (ctx0, packet0) -> {
-                            qosAckOnSuccess(ctx0, packet0);
+                            MessageAcceptPipelineHelper.qosAckOnSuccess(ctx0, packet0);
                             CsHelper.deliverMessage(packet0, route);
                         },
                         (exceptionEvent) -> MessageServerContext.publishEvent(exceptionEvent, true),
                         ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR)
                 .doOnNext(success -> {
                     if (!Boolean.TRUE.equals(success)) {
-                        releaseQosOnFailure(packet);
+                        MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
                     }
                 })
                 .then();

@@ -26,11 +26,11 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 /**
- * HTTP 推送入口：校验通过后写入 PENDING，后台落库成功再 COMMITTED。
- * <p>{@code ACCEPTED}＝已受理（PENDING）；{@code DUPLICATE}＝已 COMMITTED；
- * {@code PROCESSING}＝同 messageId 仍在途；{@code RETRYABLE_FAILED}＝后台失败可重试。
+ * HTTP 推送入口：校验通过后同步完成 MQ confirm + Redis，再返回结果并 COMMITTED。
+ * <p>{@code ACCEPTED}＝本请求已完成 MQ+Redis（已 COMMITTED）；{@code DUPLICATE}＝此前已 COMMITTED；
+ * {@code PROCESSING}＝同 messageId 仍在途；{@code RETRYABLE_FAILED}＝本请求失败可重试。
  * 多接收人用 {@code messageId:to} 分键，避免局部成功被整键清掉。
- * preProcess 与触发投递均在 {@link ThreadPoolManager#httpPushVerifyExecutor()} 执行。</p>
+ * preProcess 与管线均在 {@link ThreadPoolManager#httpPushVerifyExecutor()} 执行。</p>
  */
 public final class InternalPacketIngressService {
 
@@ -207,18 +207,26 @@ public final class InternalPacketIngressService {
         }
 
         try {
-            HttpPushProcessorDelegate.delegate(packet);
+            boolean ok = HttpPushProcessorDelegate.runPipeline(packet);
+            if (!ok) {
+                HttpPushDeliverySupport.discardStashed(packet);
+                HttpPushDeliverySupport.markRetryableFailed(packet);
+                return HttpResponseResult.success(buildResponse(messageId, packetIdStr,
+                        MessagePushStatusEnum.RETRYABLE_FAILED, "MQ 或热写失败，请使用同一 messageId 重试"));
+            }
+            if (!HttpPushDeliverySupport.commitIdempotency(packet)) {
+                log.warn("HTTP 推送管线成功但幂等 COMMIT 失败, messageId={}", messageId);
+            }
+            // ACCEPTED = 本请求已完成 MQ confirm + Redis（幂等已 COMMITTED）；扇出尽力而为
+            return HttpResponseResult.success(buildResponse(messageId, packetIdStr,
+                    MessagePushStatusEnum.ACCEPTED, null));
         } catch (RuntimeException ex) {
             HttpPushDeliverySupport.discardStashed(packet);
             HttpPushDeliverySupport.forceReleaseIdempotencyClaim(packet);
-            log.error("HTTP 推送投递触发失败, messageId={}", messageId, ex);
+            log.error("HTTP 推送管线触发失败, messageId={}", messageId, ex);
             throw new HttpPipelineException(HttpResponseStatus.INTERNAL_SERVER_ERROR,
-                    HttpResponseCodeEnum.INTERNAL_SERVER_ERROR, "HTTP 推送受理失败：投递触发异常");
+                    HttpResponseCodeEnum.INTERNAL_SERVER_ERROR, "HTTP 推送受理失败：管线异常");
         }
-
-        // ACCEPTED = PENDING 已写入，后台落库成功后才会 COMMITTED
-        return HttpResponseResult.success(buildResponse(messageId, packetIdStr,
-                MessagePushStatusEnum.ACCEPTED, null));
     }
 
     /**

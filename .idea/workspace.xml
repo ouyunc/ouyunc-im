@@ -6,17 +6,67 @@
   <component name="ChangeListManager">
     <list default="true" id="f5e04433-bce4-4c4c-925d-8bad5c9272b8" name="Changes" comment="增加客户端packet 协议">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/packet/message/content/QosAckContent.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/packet/message/content/QosAckContent.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/Repository.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/Repository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/QosAckContentParser.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/QosAckContentParser.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/QosIdempotencyHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/QosIdempotencyHelper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/QosRepositorySupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/QosRepositorySupport.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/SessionMessagePersistenceSupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/SessionMessagePersistenceSupport.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/QosAckHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/QosAckHelper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/AbstractBaseBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/AbstractBaseBiProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-client/pom.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-client/src/main/java/com/ouyunc/client/AbstractMessageClient.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-client/src/main/java/com/ouyunc/client/DefaultMessageClient.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-client/src/main/java/com/ouyunc/client/MessageClient.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-client/src/main/java/com/ouyunc/client/MessageClientTemplate.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-client/src/main/java/com/ouyunc/client/StartClient.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-client/src/main/java/com/ouyunc/client/base/ChannelPoolKey.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-client/src/main/java/com/ouyunc/client/handler/HttpProtocolHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-client/src/main/java/com/ouyunc/client/handler/WsProtocolHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-client/src/main/java/com/ouyunc/client/listener/OnMessageListener.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-client/src/main/java/com/ouyunc/client/pool/MessageClientChannelPoolHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-client/src/main/java/com/ouyunc/client/pool/MessageClientHeartBeatHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-client/src/main/java/com/ouyunc/client/pool/MessageClientPool.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-client/src/main/java/com/ouyunc/client/selector/HttpProtocolSelector.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-client/src/main/java/com/ouyunc/client/selector/PacketProtocolDispatcherProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-client/src/main/java/com/ouyunc/client/selector/ProtocolSelector.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-client/src/main/java/com/ouyunc/client/selector/WebsocketProtocolDispatcherProcessor.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/MqArchiveRoutingProbe.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/enums/MessagePushStatusEnum.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/enums/MessagePushStatusEnum.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-message-spring-boot-starter/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-message-spring-boot-starter/.mvn/wrapper/maven-wrapper.properties" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-message-spring-boot-starter/mvnw" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-message-spring-boot-starter/mvnw.cmd" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-message-spring-boot-starter/pom.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-message-spring-boot-starter/src/main/java/com/ouyunc/ouyuncmessagespringbootstarter/OuyuncMessageSpringBootStarterApplication.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-message-spring-boot-starter/src/main/java/com/ouyunc/ouyuncmessagespringbootstarter/pro/PP.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-message-spring-boot-starter/src/main/java/com/ouyunc/ouyuncmessagespringbootstarter/pro/TypeEnum.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-message-spring-boot-starter/src/main/resources/application.properties" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-message-spring-boot-starter/src/main/resources/log4j2.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-message-spring-boot-starter/src/main/resources/ouyunc-server-dev.yml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-message-spring-boot-starter/src/main/resources/ouyunc-server-pre.yml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-message-spring-boot-starter/src/main/resources/ouyunc-server-prod.yml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-message-spring-boot-starter/src/main/resources/ouyunc-server-test.yml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-message-spring-boot-starter/src/main/resources/ouyunc-server.yml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/MessageArchiveHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/MessageArchiveHelper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/AbstractMessageBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/AbstractMessageBiProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/ClusterQosRetryCancelMessageBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/ClusterQosRetryCancelMessageBiProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/CsMessageBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/CsMessageBiProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupAgreeMessageBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupAgreeMessageBiProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupInviteJoinMessageBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupInviteJoinMessageBiProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupInviteJoinerAgreeMessageBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupInviteJoinerAgreeMessageBiProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupInviteJoinerRefuseMessageBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupInviteJoinerRefuseMessageBiProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupJoinMessageBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupJoinMessageBiProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupMessageBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupMessageBiProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupRefuseMessageBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupRefuseMessageBiProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneAgreeFriendRequestMessageBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneAgreeFriendRequestMessageBiProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneJoinFriendRequestMessageBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneJoinFriendRequestMessageBiProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneMessageBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneMessageBiProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneRefuseFriendRequestMessageBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneRefuseFriendRequestMessageBiProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/PingPongMessageBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/PingPongMessageBiProcessor.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/QosC2SMessageBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/QosC2SMessageBiProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/schedule/QosAckValidation.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/schedule/QosAckValidation.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/schedule/QosRetryScheduler.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/schedule/QosRetryScheduler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/SynAckMessageBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/SynAckMessageBiProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/push/HttpPushProcessorDelegate.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/push/HttpPushProcessorDelegate.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/push/InternalPacketIngressService.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/push/InternalPacketIngressService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/push/delivery/CsHttpPushDeliveryStrategy.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/push/delivery/CsHttpPushDeliveryStrategy.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/push/delivery/GroupHttpPushDeliveryStrategy.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/push/delivery/GroupHttpPushDeliveryStrategy.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/push/delivery/HttpProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/push/delivery/HttpProcessor.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/push/delivery/HttpPushDeliverySupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/push/delivery/HttpPushDeliverySupport.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/push/delivery/One2OneHttpPushDeliveryStrategy.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/push/delivery/One2OneHttpPushDeliveryStrategy.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/push/delivery/ServerNotifyHttpPushDeliveryStrategy.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/http/push/delivery/ServerNotifyHttpPushDeliveryStrategy.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -137,14 +187,6 @@
       <workItem from="1789651315637" duration="14982000" />
       <workItem from="1789874097856" duration="7334000" />
       <workItem from="1789910587669" duration="15496000" />
-    </task>
-    <task id="LOCAL-00016" summary="优化packet 协议不允许外部直接使用">
-      <option name="closed" value="true" />
-      <created>1789436365712</created>
-      <option name="number" value="00016" />
-      <option name="presentableId" value="LOCAL-00016" />
-      <option name="project" value="LOCAL" />
-      <updated>1789436365712</updated>
     </task>
     <task id="LOCAL-00017" summary="优化packet 协议不允许外部直接使用">
       <option name="closed" value="true" />
@@ -530,7 +572,15 @@
       <option name="project" value="LOCAL" />
       <updated>1789986452543</updated>
     </task>
-    <option name="localTasksCounter" value="65" />
+    <task id="LOCAL-00065" summary="增加客户端packet 协议">
+      <option name="closed" value="true" />
+      <created>1790044907272</created>
+      <option name="number" value="00065" />
+      <option name="presentableId" value="LOCAL-00065" />
+      <option name="project" value="LOCAL" />
+      <updated>1790044907272</updated>
+    </task>
+    <option name="localTasksCounter" value="66" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

@@ -19,6 +19,7 @@ import com.ouyunc.base.constant.enums.RequestSessionProgress;
 import com.ouyunc.domain.entity.UserEntity;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.DistributedLockHelper;
+import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
 import com.ouyunc.message.helper.RequestNotifyHelper;
 import com.ouyunc.message.validator.AuthValidator;
 import com.ouyunc.message.validator.BlackListValidator;
@@ -59,7 +60,7 @@ public final class One2OneJoinFriendRequestMessageBiProcessor extends AbstractMe
         if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
             return Mono.just(false);
         }
-        return continueWhenPassedOrAck(ctx, packet,
+        return MessageAcceptPipelineHelper.continueWhenPassedOrAck(ctx, packet,
                 PermissionValidator.INSTANCE.negate()
                         .or(FromToValidator.INSTANCE)
                         .or(BlackListValidator.INSTANCE)
@@ -76,7 +77,7 @@ public final class One2OneJoinFriendRequestMessageBiProcessor extends AbstractMe
     public Mono<Void> process(ChannelHandlerContext ctx, Packet packet) {
         Message message = packet.getMessage();
         String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
-        return confirmThenRun(MqConstant.MQ_FRIEND_REQUEST_TOPIC, sessionId, packet, () -> {
+        return MessageAcceptPipelineHelper.confirmThenRun(MqConstant.MQ_FRIEND_REQUEST_TOPIC, sessionId, packet, () -> {
             String appKey = message.getMetadata().getAppKey();
             String lockKey = CacheConstant.buildFriendRequestLockCacheKey(appKey, sessionId);
             DistributedLockHelper.runWithLock(packet, lockKey, ExceptionCodeEnum.BIND_FRIEND_ERROR, () -> {
@@ -84,7 +85,7 @@ public final class One2OneJoinFriendRequestMessageBiProcessor extends AbstractMe
                 if (repository().isFriend(appKey, message.getFrom(), message.getTo())) {
                     log.warn("已经是好友, 幂等 ACK; {}", packet);
                     RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.userOnly(message.getFrom()));
-                    ackRequestSettled(ctx, packet);
+                    MessageAcceptPipelineHelper.ackRequestSettled(ctx, packet);
                     return;
                 }
                 if (null != requestSession && requestSession.getProgress() > RequestSessionProgress.JOINING.value()) {
@@ -97,7 +98,7 @@ public final class One2OneJoinFriendRequestMessageBiProcessor extends AbstractMe
                 if (toUserEntity == null) {
                     log.error("对方:{} 不存在，请检查数据！", message.getTo());
                     MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.USER_NOT_EXIST, message.getTo() + "用户不存在！", packet), MessageEventTypeEnum.EXCEPTION));
-                    ackRequestSettled(ctx, packet);
+                    MessageAcceptPipelineHelper.ackRequestSettled(ctx, packet);
                     return;
                 }
                 RequestSession session = requestSession != null ? requestSession
@@ -120,7 +121,7 @@ public final class One2OneJoinFriendRequestMessageBiProcessor extends AbstractMe
                     }
                     RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.userOnly(message.getTo()));
                 }
-                ackRequestSettled(ctx, packet);
+                MessageAcceptPipelineHelper.ackRequestSettled(ctx, packet);
             });
         });
     }

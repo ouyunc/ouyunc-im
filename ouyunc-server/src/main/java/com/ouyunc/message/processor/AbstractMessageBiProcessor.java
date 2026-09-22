@@ -1,27 +1,38 @@
 package com.ouyunc.message.processor;
 
-import com.ouyunc.base.constant.MqArchiveRouting;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
-import com.ouyunc.message.helper.MessageArchiveHelper;
 import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
+import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
 import com.ouyunc.message.validator.AuthValidator;
 import com.ouyunc.repository.DefaultRepository;
 import io.netty.channel.ChannelHandlerContext;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
 /**
- * 消息抽象处理类：统一三阶段 API。
+ * 消息抽象处理类：仅保留三阶段 API。
+ *
+ * <h3>标准受理模型（聊天主路径）</h3>
+ * <pre>
+ * 鉴权/业务校验通过
+ *   → 等 MQ 成功/失败（失败：不写 Redis、不 ACK、不投递 → 客户端重试）
+ *   → Redis 热写
+ *   → 仅 SUCCESS/DUPLICATE 时 ACK
+ *   → 仅 SUCCESS 时扇出（尽力而为）
+ * </pre>
+ *
+ * <p>{@link #preProcess} / {@link #process} 允许子类整体覆写。
+ * 管线细节见 {@link MessageAcceptPipelineHelper}，勿在本类堆叠辅助方法。</p>
+ *
  * <ul>
- *   <li>{@link #preProcess} — 鉴权/校验/QoS 展开/归档；返回 true 才进入 process</li>
- *   <li>{@link #process} — 落库、投递、回执等业务</li>
- *   <li>{@link #postProcess} — 轻量收尾，默认空</li>
+ *   <li>{@link #preProcess} — 鉴权/校验/QoS 判重/MQ 归档；返回 true 才进入 process</li>
+ *   <li>{@link #process} — Redis 热写、ACK、投递等</li>
+ *   <li>{@link #postProcess} — 轻量收尾，默认空；不要在此发业务成功 ACK</li>
  * </ul>
  */
 public abstract class AbstractMessageBiProcessor<T extends Number> extends AbstractBaseBiProcessor<Mono<Void>, T> {
@@ -37,9 +48,11 @@ public abstract class AbstractMessageBiProcessor<T extends Number> extends Abstr
     }
 
     /**
-     * 前置阶段：鉴权、业务校验、QoS 展开、原文归档确认。
+     * 默认门闸：鉴权 → QoS 判重（COMMITTED 则 ACK 并结束）→ MQ 归档确认。
+     * <p>需要业务校验的子类请覆写，并在校验通过后调用
+     * {@link MessageAcceptPipelineHelper#continueWhenPassed}（内部仍走 MQ）。</p>
      *
-     * @return {@code true} 进入 {@link #process}；{@code false} 结束本条消息链（已处理完毕或已拒绝）
+     * @return {@code true} 进入 {@link #process}；{@code false} 结束本条消息链
      */
     public Mono<Boolean> preProcess(ChannelHandlerContext ctx, Packet packet) {
         if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
@@ -51,79 +64,10 @@ public abstract class AbstractMessageBiProcessor<T extends Number> extends Abstr
             return Mono.just(false);
         }
         if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
-            // 幂等命中已 ACK，不再进 process
+            // 幂等命中已 ACK，不再进 process、不再打 MQ
             return Mono.just(false);
         }
-        return archiveAfterAuth(packet).thenReturn(true);
-    }
-
-    /**
-     * 登录鉴权 +（可选）业务校验均通过后归档并等待 MQ 确认。未登录包不得进入 MQ；
-     * 权限拒绝的包也不归档（由 {@link #continueWhenPassed} 在通过后再调用）。
-     * SAVE 幂等键为 appKey + messageId；重复热写命中后不再进入本方法。
-     */
-    protected Mono<Void> archiveAfterAuth(Packet packet) {
-        if (MqArchiveRouting.usesDomainConfirmOnly(packet)) {
-            // 已读/撤回/好友/群只确认领域 topic，避免 SAVE + 领域各等一次 broker。
-            return Mono.empty();
-        }
-        if (packet == null || packet.getMessage() == null
-                || StringUtils.isBlank(packet.getMessage().getId())) {
-            log.error("SAVE 归档缺少客户端 messageId, packetId={}",
-                    packet == null ? null : packet.getPacketId());
-            return Mono.error(new IllegalStateException("SAVE 归档缺少客户端 messageId"));
-        }
-        return MessageArchiveHelper.confirm(() -> repository().save(packet));
-    }
-
-    /**
-     * 业务校验通过后归档并返回 true；拒绝则回调 onReject 并返回 false。
-     *
-     * @param shouldReject true 表示拦截
-     * @param onReject     拦截时回调（如释放 QoS claim 或回 ACK），可为 null
-     * @param rejectLog    拒绝日志模板，可含一个 {@code {}} 占位 packet
-     */
-    protected Mono<Boolean> continueWhenPassed(Packet packet, Mono<Boolean> shouldReject,
-                                               Runnable onReject, String rejectLog) {
-        return shouldReject
-                .onErrorResume(error -> {
-                    log.error("校验过程中出现异常: {}", error.getMessage());
-                    return Mono.just(true);
-                })
-                .flatMap(reject -> {
-                    if (Boolean.TRUE.equals(reject)) {
-                        log.warn(rejectLog, packet);
-                        if (onReject != null) {
-                            onReject.run();
-                        }
-                        return Mono.just(false);
-                    }
-                    return archiveAfterAuth(packet).thenReturn(true);
-                });
-    }
-
-    /**
-     * 好友/群请求：权限拒绝视为已定性，回 S2C ACK 停 QoS 重试（聊天消息仍应走 {@link #continueWhenPassed} 释放 claim）。
-     */
-    protected Mono<Boolean> continueWhenPassedOrAck(ChannelHandlerContext ctx, Packet packet,
-                                                    Mono<Boolean> shouldReject, String rejectLog) {
-        return continueWhenPassed(packet, shouldReject, () -> ackRequestSettled(ctx, packet), rejectLog);
-    }
-
-    /**
-     * 请求已定性（幂等忽略 / 客户端错误 / 无会话）或 Redis 成功：回 ACK。写库或绑定失败不要调用，以便客户端重试。
-     */
-    protected void ackRequestSettled(ChannelHandlerContext ctx, Packet packet) {
-        qosPostHandle(ctx, packet);
-    }
-
-    /**
-     * 业务事件先等 MQ broker 确认，再跑 Redis/通知。确认超时见 {@link com.ouyunc.base.constant.MessageConstant#MESSAGE_ARCHIVE_CONFIRM_TIMEOUT_MS}，禁止放进 5s 锁内。
-     * 失败不 ACK，交给客户端重试；不写 Outbox。
-     */
-    protected Mono<Void> confirmThenRun(String topic, String key, Packet packet, Runnable next) {
-        return MessageArchiveHelper.confirm(() -> repository().publishPacketConfirmed(topic, key, packet))
-                .then(Mono.fromRunnable(next));
+        return MessageAcceptPipelineHelper.archiveAfterAuth(packet).thenReturn(true);
     }
 
     /**

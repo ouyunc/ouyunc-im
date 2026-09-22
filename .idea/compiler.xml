@@ -15,26 +15,24 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="ouyunc-domain" />
-        <module name="ouyunc-client" />
-        <module name="ouyu-server" />
-        <module name="ouyunc-db-influx" />
         <module name="ouyunc-base" />
+        <module name="ouyu-cache" />
+        <module name="ouyunc-domain" />
         <module name="ouyunc-db-jdbc" />
+        <module name="ouyu-db" />
+        <module name="ouyu-client" />
+        <module name="ouyunc-cache" />
+        <module name="ouyunc-db-mongo" />
         <module name="ouyunc-ai" />
         <module name="ouyunc-mq-core" />
+        <module name="ouyunc-core" />
+        <module name="ouyu-server" />
         <module name="ouyunc-mq-rocket" />
+        <module name="ouyunc-db-influx" />
         <module name="ouyunc-server" />
         <module name="ouyunc-id" />
         <module name="ouyu-core" />
         <module name="ouyunc-mq-kafka" />
-        <module name="ouyunc-message-spring-boot-starter" />
-        <module name="ouyu-cache" />
-        <module name="ouyunc-cache" />
-        <module name="ouyunc-db-mongo" />
-        <module name="ouyu-db" />
-        <module name="ouyu-client" />
-        <module name="ouyunc-core" />
         <module name="ouyunc-repository" />
       </profile>
     </annotationProcessing>
@@ -44,6 +42,7 @@
       <module name="ouyunc-boot-starters" target="1.5" />
       <module name="ouyunc-business" target="1.5" />
       <module name="ouyunc-cache-spring-boot-starter" target="21" />
+      <module name="ouyunc-client" target="21" />
       <module name="ouyunc-common-spring-boot-starter" target="21" />
       <module name="ouyunc-config-spring-boot-starter" target="21" />
       <module name="ouyunc-consumer" target="1.5" />
@@ -61,6 +60,7 @@
       <module name="ouyunc-job" target="21" />
       <module name="ouyunc-loadbalancer-spring-boot-starter" target="21" />
       <module name="ouyunc-logging-spring-boot-starter" target="21" />
+      <module name="ouyunc-message-spring-boot-starter" target="21" />
       <module name="ouyunc-message-spring-boot-starter (1)" target="21" />
       <module name="ouyunc-micro-cloud-platform" target="1.5" />
       <module name="ouyunc-mongodb-spring-boot-starter" target="21" />

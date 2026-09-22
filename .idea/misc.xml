@@ -13,7 +13,9 @@
     </option>
     <option name="ignoredFiles">
       <set>
+        <option value="$PROJECT_DIR$/ouyunc-client/pom.xml" />
         <option value="$PROJECT_DIR$/ouyunc-im-commons/ouyunc-im-log/pom.xml" />
+        <option value="$PROJECT_DIR$/ouyunc-message-spring-boot-starter/pom.xml" />
       </set>
     </option>
   </component>
