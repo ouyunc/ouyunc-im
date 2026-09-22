@@ -125,7 +125,7 @@ public enum DefaultRepository implements Repository {
     }
 
     /**
-     * 去掉已屏蔽本群消息的成员后再扇出。
+     * 去掉已屏蔽本群消息的成员后再扇出。屏蔽索引未就绪时返回空集（fail-closed）。
      */
     public Set<String> excludeGroupShieldedMembers(String appKey, String groupId, Set<String> memberIds) {
         return RepositorySupports.GROUP.excludeGroupShieldedMembers(appKey, groupId, memberIds);

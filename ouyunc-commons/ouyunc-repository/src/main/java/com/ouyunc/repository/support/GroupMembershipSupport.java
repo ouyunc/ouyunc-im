@@ -159,14 +159,18 @@ public final class GroupMembershipSupport {
     }
 
     /**
-     * 过滤已屏蔽本群消息的成员。热路径只读屏蔽 Hash / 本机快照；INIT 缺失不回源 MySQL，异步重建。
+     * 过滤已屏蔽本群消息的成员。索引未就绪则 fail-closed 不扇出，避免漏屏蔽。
      */
     public Set<String> excludeGroupShieldedMembers(String appKey, String groupId, Set<String> memberIds) {
         if (memberIds == null || memberIds.isEmpty()) {
             return Set.of();
         }
         Set<String> shielded = loadShieldedMembersHot(appKey, groupId);
-        if (shielded == null || shielded.isEmpty()) {
+        if (shielded == null) {
+            log.warn("群屏蔽索引未就绪，fail-closed 跳过扇出 appKey={} groupId={}", appKey, groupId);
+            return Set.of();
+        }
+        if (shielded.isEmpty()) {
             return memberIds;
         }
         Set<String> result = new HashSet<>(Math.max(16, memberIds.size() - shielded.size()));
@@ -179,7 +183,7 @@ public final class GroupMembershipSupport {
     }
 
     /**
-     * @return 已屏蔽成员；null 表示索引未就绪（调用方按未屏蔽处理）
+     * @return 已屏蔽成员；null 表示索引未就绪（调用方不得按未屏蔽放行）
      */
     private Set<String> loadShieldedMembersHot(String appKey, String groupId) {
         String localKey = RelationLocalCache.groupShieldKey(appKey, groupId);
@@ -188,21 +192,24 @@ public final class GroupMembershipSupport {
             return cached;
         }
         String shieldKey = CacheConstant.buildGroupShieldCacheKey(appKey, groupId);
-        Map<Object, Object> shieldHash = infra.stringRedisTemplate.opsForHash().entries(shieldKey);
-        if (shieldHash == null || !shieldHash.containsKey(MessageConstant.GROUP_SHIELD_HASH_INIT_FIELD)) {
-            scheduleShieldRebuild(appKey, groupId);
-            return null;
+        if (!hasGroupShieldInit(appKey, groupId)) {
+            rebuildShieldIndexSync(appKey, groupId);
+            if (!hasGroupShieldInit(appKey, groupId)) {
+                return null;
+            }
         }
+        Map<Object, Object> shieldHash = infra.stringRedisTemplate.opsForHash().entries(shieldKey);
         Set<String> shielded = new HashSet<>();
-        for (Map.Entry<Object, Object> entry : shieldHash.entrySet()) {
-            if (entry.getKey() == null) {
-                continue;
+        if (shieldHash != null) {
+            for (Map.Entry<Object, Object> entry : shieldHash.entrySet()) {
+                if (entry.getKey() == null) {
+                    continue;
+                }
+                String field = String.valueOf(entry.getKey());
+                if (!field.isBlank()) {
+                    shielded.add(field);
+                }
             }
-            String field = String.valueOf(entry.getKey());
-            if (MessageConstant.GROUP_SHIELD_HASH_INIT_FIELD.equals(field)) {
-                continue;
-            }
-            shielded.add(field);
         }
         Set<String> snapshot = Set.copyOf(shielded);
         RelationLocalCache.GROUP_SHIELD.put(localKey, snapshot);
@@ -308,7 +315,7 @@ public final class GroupMembershipSupport {
         // 写完后再比对一次，变了则删掉半成品初始化标记，避免错误「无屏蔽」
         String versionAfter = currentRelationVersion(appKey, groupId);
         if (!Objects.equals(expectedVersion == null ? "0" : expectedVersion, versionAfter)) {
-            infra.stringRedisTemplate.delete(CacheConstant.buildGroupShieldCacheKey(appKey, groupId));
+            deleteGroupShieldIndex(appKey, groupId);
             return false;
         }
         return true;
@@ -317,7 +324,6 @@ public final class GroupMembershipSupport {
     private void writeShieldHash(String appKey, String groupId, List<GroupUserEntity> members) {
         String key = CacheConstant.buildGroupShieldCacheKey(appKey, groupId);
         Map<String, String> fields = new HashMap<>();
-        fields.put(MessageConstant.GROUP_SHIELD_HASH_INIT_FIELD, "1");
         if (members != null) {
             for (GroupUserEntity member : members) {
                 if (member != null && member.getUserId() != null
@@ -327,7 +333,22 @@ public final class GroupMembershipSupport {
             }
         }
         infra.stringRedisTemplate.delete(key);
-        infra.stringRedisTemplate.opsForHash().putAll(key, fields);
+        if (!fields.isEmpty()) {
+            infra.stringRedisTemplate.opsForHash().putAll(key, fields);
+        }
+        infra.stringRedisTemplate.opsForValue().set(
+                CacheConstant.buildGroupShieldInitCacheKey(appKey, groupId), "1");
+    }
+
+    private boolean hasGroupShieldInit(String appKey, String groupId) {
+        return Boolean.TRUE.equals(infra.stringRedisTemplate.hasKey(
+                CacheConstant.buildGroupShieldInitCacheKey(appKey, groupId)));
+    }
+
+    private void deleteGroupShieldIndex(String appKey, String groupId) {
+        infra.stringRedisTemplate.delete(List.of(
+                CacheConstant.buildGroupShieldCacheKey(appKey, groupId),
+                CacheConstant.buildGroupShieldInitCacheKey(appKey, groupId)));
     }
 
     private String currentRelationVersion(String appKey, String groupId) {
@@ -359,8 +380,12 @@ public final class GroupMembershipSupport {
                 CacheConstant.buildGroupUserInitCacheKey(appKey, groupId),
                 memberId);
         try {
-            infra.stringRedisTemplate.opsForZSet().remove(
-                    CacheConstant.buildUserGroupsCacheKey(appKey, memberId), groupId);
+            RelationRosterRedis.removeMember(
+                    infra.stringRedisTemplate,
+                    CacheConstant.buildUserGroupsCacheKey(appKey, memberId),
+                    CacheConstant.buildUserGroupsRelationVersionCacheKey(appKey, memberId),
+                    CacheConstant.buildUserGroupsInitCacheKey(appKey, memberId),
+                    groupId);
         } catch (Exception e) {
             log.warn("移除用户加群索引失败 appKey={} groupId={} memberId={}", appKey, groupId, memberId, e);
         }
@@ -375,24 +400,22 @@ public final class GroupMembershipSupport {
         return snap;
     }
 
-    private void scheduleShieldRebuild(String appKey, String groupId) {
+    private void rebuildShieldIndexSync(String appKey, String groupId) {
         String flightKey = appKey + ":" + groupId;
         if (!shieldRebuildInFlight.add(flightKey)) {
             return;
         }
-        infra.dbExecutor().execute(() -> {
-            try {
-                String versionBefore = currentRelationVersion(appKey, groupId);
-                List<GroupUserEntity> dbMembers = loadAllGroupUsersFromAuthority(appKey, groupId);
-                if (writeShieldHashIfVersionMatch(appKey, groupId, dbMembers, versionBefore)) {
-                    RelationLocalCache.evictGroupShieldIndex(appKey, groupId);
-                }
-            } catch (Exception e) {
-                log.warn("异步重建群屏蔽索引失败 groupId={}", groupId, e);
-            } finally {
-                shieldRebuildInFlight.remove(flightKey);
+        try {
+            String versionBefore = currentRelationVersion(appKey, groupId);
+            List<GroupUserEntity> dbMembers = loadAllGroupUsersFromAuthority(appKey, groupId);
+            if (writeShieldHashIfVersionMatch(appKey, groupId, dbMembers, versionBefore)) {
+                RelationLocalCache.evictGroupShieldIndex(appKey, groupId);
             }
-        });
+        } catch (Exception e) {
+            log.warn("同步重建群屏蔽索引失败 groupId={}", groupId, e);
+        } finally {
+            shieldRebuildInFlight.remove(flightKey);
+        }
     }
 
     public static final class GroupMembershipLoadException extends RuntimeException {
@@ -901,7 +924,12 @@ public final class GroupMembershipSupport {
                     CacheConstant.buildGroupUserInitCacheKey(metadata.getAppKey(), groupId),
                     GroupUserPost.ORDINARY.value(),
                     joiner);
-            redisConnection.zSetCommands().zAdd(infra.stringSerializer.serialize(CacheConstant.buildUserGroupsCacheKey(metadata.getAppKey(), joiner)), msg.getMetadata().getServerTime(), infra.stringSerializer.serialize(groupId));
+            RelationRosterRedis.evalAdd(redisConnection, infra.stringSerializer,
+                    CacheConstant.buildUserGroupsCacheKey(metadata.getAppKey(), joiner),
+                    CacheConstant.buildUserGroupsRelationVersionCacheKey(metadata.getAppKey(), joiner),
+                    CacheConstant.buildUserGroupsInitCacheKey(metadata.getAppKey(), joiner),
+                    msg.getMetadata().getServerTime(),
+                    groupId);
         });
         if (bound) {
             RelationLocalCache.onGroupJoin(metadata.getAppKey(), groupId, joiner);

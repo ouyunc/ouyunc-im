@@ -74,11 +74,6 @@ public class CacheConstant {
     /** appKey 连接配额 HASH */
     private static final String IM_QUOTA = "im:qa:";
 
-    /**
-     * 历史好友 ZSET 完整性哨兵。新代码不再写入；读名单时过滤，避免登录通知把 {@code _i} 当作用户。
-     */
-    public static final String FRIEND_ZSET_INIT_MEMBER = "_i";
-
     /***
      * 用户
      */
@@ -104,9 +99,12 @@ public class CacheConstant {
     private static final String GROUP_USERS_CONFIG = "guc:";
 
     /**
-     * 群成员屏蔽索引 Hash（field=memberId）
+     * 群成员屏蔽索引 Hash（field=memberId）。完整性用旁边的 {@code gsi:} STRING，不往 Hash 里塞哨兵。
      */
     private static final String GROUP_USERS_SHIELD = "gsh:";
+
+    /** 群屏蔽索引完整性标记，与 gsh: 同槽 */
+    private static final String GROUP_USERS_SHIELD_INIT = "gsi:";
 
     private static final String MONGO_COMPENSATE = "im:mongo:cp:";
 
@@ -138,6 +136,9 @@ public class CacheConstant {
      * 用户已加入群 ZSET 完整性标记，与 {@code g:} 同槽。
      */
     private static final String USER_GROUPS_INIT = "ugi:";
+
+    /** 用户加群关系版本（回源 CAS），与 g:/ugi: 同槽 {@code {appKey:userId}} */
+    private static final String USER_GROUPS_RELATION_VERSION = "ugv:";
 
     /***
      * 群
@@ -411,10 +412,17 @@ public class CacheConstant {
     }
 
     /**
-     * 群屏蔽成员 Hash，与成员 ZSET / grv 同 {@code {appKey:groupId}} 槽。
+     * 群屏蔽成员 Hash，与成员 ZSET / grv / gsi 同 {@code {appKey:groupId}} 槽。
      */
     public static String buildGroupShieldCacheKey(String appKey, String groupId) {
         return buildAggregateCacheKey(appKey, groupId) + GROUP_USERS_SHIELD;
+    }
+
+    /**
+     * 群屏蔽索引已完整：STRING 存在即表示 Hash 可当权威（空 Hash = 无人屏蔽）。
+     */
+    public static String buildGroupShieldInitCacheKey(String appKey, String groupId) {
+        return buildAggregateCacheKey(appKey, groupId) + GROUP_USERS_SHIELD_INIT;
     }
 
     /**
@@ -465,6 +473,13 @@ public class CacheConstant {
      */
     public static String buildUserGroupsInitCacheKey(String appKey, String userId) {
         return buildAggregateCacheKey(appKey, userId) + USER_GROUPS_INIT;
+    }
+
+    /**
+     * 用户加群关系版本：与 g:/ugi: 同 {@code {appKey:userId}} 槽。
+     */
+    public static String buildUserGroupsRelationVersionCacheKey(String appKey, String userId) {
+        return buildAggregateCacheKey(appKey, userId) + USER_GROUPS_RELATION_VERSION;
     }
 
     /**

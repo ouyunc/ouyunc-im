@@ -332,28 +332,40 @@ public enum LuaScriptEnum {
             """, "群成员回源 CAS 重建"),
 
     /**
-     * 名单一致性回源（用户加群 ZSET）：INIT 缺失时 DEL+ZADD 并写 INIT=成员数。
-     * KEYS[1]=zset KEYS[2]=initKey
-     * ARGV[1]=count ARGV[2..]=score,member 交替
-     * 返回 1=已重建，0=已有 INIT。
+     * 用户加群 ZSET 回源 CAS：version 未变且 INIT 缺失时 DEL+ZADD 并写 INIT=群数。
+     * KEYS[1]=zset KEYS[2]=versionKey KEYS[3]=initKey
+     * ARGV[1]=expectedVersion ARGV[2]=count ARGV[3..]=score,member 交替
+     * 返回 1=已重建并写 INIT，0=版本已变或已有 INIT。
      */
-    USER_GROUPS_REBUILD_SCRIPT("2", """
-            if redis.call('EXISTS', KEYS[2]) == 1 then
+    USER_GROUPS_REBUILD_SCRIPT("3", """
+            local expected = tostring(ARGV[1])
+            local cur = redis.call('GET', KEYS[2])
+            if cur == false or cur == nil then cur = '0' else cur = tostring(cur) end
+            if cur ~= expected then
+                return 0
+            end
+            if redis.call('EXISTS', KEYS[3]) == 1 then
                 return 0
             end
             redis.call('DEL', KEYS[1])
-            local n = tonumber(ARGV[1]) or 0
+            local n = tonumber(ARGV[2]) or 0
             for i = 1, n do
-                local base = (i - 1) * 2
-                local score = tonumber(ARGV[base + 2]) or 0
-                local member = ARGV[base + 3]
+                local base = 2 + (i - 1) * 2
+                local score = tonumber(ARGV[base + 1]) or 0
+                local member = ARGV[base + 2]
                 if member ~= nil and member ~= '' then
                     redis.call('ZADD', KEYS[1], score, member)
                 end
             end
-            redis.call('SET', KEYS[2], tostring(n))
+            cur = redis.call('GET', KEYS[2])
+            if cur == false or cur == nil then cur = '0' else cur = tostring(cur) end
+            if cur ~= expected then
+                redis.call('DEL', KEYS[3])
+                return 0
+            end
+            redis.call('SET', KEYS[3], tostring(n))
             return 1
-            """, "用户加群名单回源重建"),
+            """, "用户加群名单回源 CAS 重建"),
 
     /**
      * 好友名单回源 CAS：version 未变且 INIT 缺失时 DEL+ZADD。
@@ -429,6 +441,19 @@ public enum LuaScriptEnum {
             end
             return removed
             """, "关系名单移除"),
+
+    /**
+     * 已在名单内才改 score，不 INCR 版本、不改 INIT。设管理员/转让群主用，避免扇出扫描被误伤。
+     * KEYS[1]=zset  ARGV[1]=score ARGV[2]=member
+     * 返回 1=已更新，0=不在名单。
+     */
+    RELATION_ROSTER_UPDATE_SCORE_SCRIPT("1", """
+            if redis.call('ZSCORE', KEYS[1], ARGV[2]) == false then
+                return 0
+            end
+            redis.call('ZADD', KEYS[1], tonumber(ARGV[1]) or 0, ARGV[2])
+            return 1
+            """, "关系名单改分"),
 
     /**
      * INIT 与 ZCARD 一致性：值的绝对值必须等于 ZCARD，否则删 INIT 触发回源。

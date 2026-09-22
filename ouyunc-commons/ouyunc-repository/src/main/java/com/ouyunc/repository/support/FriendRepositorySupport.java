@@ -109,7 +109,7 @@ public final class FriendRepositorySupport {
 
     @SuppressWarnings("unchecked")
     public boolean isFriend(String appKey, String from, String to) {
-        // Redis 只缓存「是好友」；未命中回源一对 MySQL，禁止把 ZCARD/_i 当完整名单。
+        // Redis 只缓存「是好友」；未命中回源一对 MySQL，禁止把 ZCARD 当完整名单。
         Boolean cached = RelationLocalCache.FRIEND.get(RelationLocalCache.friendKey(appKey, from, to));
         if (cached != null) {
             return cached;
@@ -162,8 +162,7 @@ public final class FriendRepositorySupport {
      * 只把确认存在的好友写入 ZSET。INIT 缺失时不创建标记；已完整时同步递增计数。
      */
     private void cacheFriendPositive(String appKey, String ownerId, String friendId) {
-        if (appKey == null || ownerId == null || friendId == null || friendId.isBlank()
-                || CacheConstant.FRIEND_ZSET_INIT_MEMBER.equals(friendId)) {
+        if (appKey == null || ownerId == null || friendId == null || friendId.isBlank()) {
             return;
         }
         try {
@@ -190,7 +189,7 @@ public final class FriendRepositorySupport {
             return List.of();
         }
         return ids.stream()
-                .filter(id -> id != null && !CacheConstant.FRIEND_ZSET_INIT_MEMBER.equals(id))
+                .filter(id -> id != null && !id.isBlank())
                 .toList();
     }
 
@@ -258,8 +257,7 @@ public final class FriendRepositorySupport {
         List<String> args = new ArrayList<>();
         int count = 0;
         for (FriendEntity row : safe) {
-            if (row == null || row.getFriendUserId() == null
-                    || CacheConstant.FRIEND_ZSET_INIT_MEMBER.equals(row.getFriendUserId())) {
+            if (row == null || row.getFriendUserId() == null) {
                 continue;
             }
             count++;
@@ -268,8 +266,7 @@ public final class FriendRepositorySupport {
         args.add(String.valueOf(count));
         args.add(complete ? "1" : "0");
         for (FriendEntity row : safe) {
-            if (row == null || row.getFriendUserId() == null
-                    || CacheConstant.FRIEND_ZSET_INIT_MEMBER.equals(row.getFriendUserId())) {
+            if (row == null || row.getFriendUserId() == null) {
                 continue;
             }
             long score = row.getJoinTime() == null ? 0L : row.getJoinTime();
@@ -555,7 +552,6 @@ public final class FriendRepositorySupport {
         boolean friendHit = isScoreHit(raw.size() > 0 ? raw.get(0) : null);
         boolean blacklisted = isBlacklistHit(raw.size() > 1 ? raw.get(1) : null);
         FriendEntity shieldEntity = deserializeFriendEntity(raw.size() > 2 ? raw.get(2) : null);
-        boolean shielded = shieldEntity != null && YesOrNo.YES.getCode().equals(shieldEntity.getShield());
         boolean friend = friendHit;
         if (!friendHit) {
             if (isFriendRosterComplete(appKey, to)) {
@@ -575,11 +571,52 @@ public final class FriendRepositorySupport {
             RelationLocalCache.FRIEND.put(RelationLocalCache.friendKey(appKey, to, from), true);
         }
         RelationLocalCache.markBlacklist(appKey, to, from, blacklisted);
-        RelationLocalCache.markShield(appKey, to, from, shielded);
-        if (shieldEntity != null) {
-            MessageContext.friendEntityCache.put(CacheConstant.buildFriendsConfigCacheKey(appKey, to, from), shieldEntity);
+        boolean shielded = friend && resolveRecipientShield(appKey, to, from, shieldEntity);
+        if (!friend) {
+            RelationLocalCache.markShield(appKey, to, from, false);
         }
         return new One2OneChatAccess(friend, blacklisted, shielded);
+    }
+
+    /**
+     * 接收方对发送方的屏蔽。配置 miss 回源 MySQL；查不到当已屏蔽；查询异常抛出让准入 fail-closed。
+     */
+    private boolean resolveRecipientShield(String appKey, String recipientId, String senderId,
+                                           FriendEntity cached) {
+        if (cached != null) {
+            boolean shielded = YesOrNo.YES.getCode().equals(cached.getShield());
+            RelationLocalCache.markShield(appKey, recipientId, senderId, shielded);
+            MessageContext.friendEntityCache.put(
+                    CacheConstant.buildFriendsConfigCacheKey(appKey, recipientId, senderId), cached);
+            return shielded;
+        }
+        FriendEntity entity = loadFriendEntityFromDbOrThrow(appKey, recipientId, senderId);
+        if (entity == null) {
+            // 不写 L1：配置行稍后可见时不应被「已屏蔽」钉死
+            return true;
+        }
+        updateFriendCache(CacheConstant.buildFriendsConfigCacheKey(appKey, recipientId, senderId), entity);
+        boolean shielded = YesOrNo.YES.getCode().equals(entity.getShield());
+        RelationLocalCache.markShield(appKey, recipientId, senderId, shielded);
+        return shielded;
+    }
+
+    /**
+     * @return 好友配置；不存在返回 null。查询异常抛出，由准入链路 fail-closed。
+     */
+    private FriendEntity loadFriendEntityFromDbOrThrow(String appKey, String from, String to) {
+        try {
+            return infra.jdbcClient.sql(JdbcSqlDialectHolder.selectFriend())
+                    .param(FriendEntity.Fields.userId, from)
+                    .param(FriendEntity.Fields.friendUserId, to)
+                    .param(UserEntity.Fields.appKey, appKey)
+                    .query(FriendEntity.class)
+                    .optional()
+                    .orElse(null);
+        } catch (Exception e) {
+            log.error("从MySQL查询好友屏蔽配置异常, appKey: {}, from: {}, to: {}", appKey, from, to, e);
+            throw new IllegalStateException("查询好友屏蔽配置失败", e);
+        }
     }
 
     private static boolean isScoreHit(Object score) {

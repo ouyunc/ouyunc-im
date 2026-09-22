@@ -28,7 +28,7 @@ public final class RelationLocalCache {
     public static final Cache<String, Boolean> SHIELD = newBooleanCache("relationShield");
 
     /**
-     * 群屏蔽成员集合（不含 INIT 哨兵）。空 Set 表示已初始化且无人屏蔽。
+     * 群屏蔽成员集合。空 Set 表示索引已就绪且无人屏蔽。
      */
     public static final Cache<String, Set<String>> GROUP_SHIELD = CaffeineLocalCache.wrap(
             "relationGroupShield",

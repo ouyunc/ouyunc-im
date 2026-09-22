@@ -24,6 +24,8 @@ public final class RelationRosterRedis {
             LuaScriptEnum.RELATION_ROSTER_ADD_SCRIPT.getScript(), Long.class);
     private static final DefaultRedisScript<Long> REMOVE_SCRIPT = new DefaultRedisScript<>(
             LuaScriptEnum.RELATION_ROSTER_REMOVE_SCRIPT.getScript(), Long.class);
+    private static final DefaultRedisScript<Long> UPDATE_SCORE_SCRIPT = new DefaultRedisScript<>(
+            LuaScriptEnum.RELATION_ROSTER_UPDATE_SCORE_SCRIPT.getScript(), Long.class);
     private static final DefaultRedisScript<Long> CHECK_SCRIPT = new DefaultRedisScript<>(
             LuaScriptEnum.RELATION_ROSTER_INIT_CHECK_SCRIPT.getScript(), Long.class);
     private static final DefaultRedisScript<Long> FRIEND_REBUILD_SCRIPT = new DefaultRedisScript<>(
@@ -31,6 +33,8 @@ public final class RelationRosterRedis {
 
     private static final byte[] ADD_SCRIPT_BYTES =
             LuaScriptEnum.RELATION_ROSTER_ADD_SCRIPT.getScript().getBytes(StandardCharsets.UTF_8);
+    private static final byte[] REMOVE_SCRIPT_BYTES =
+            LuaScriptEnum.RELATION_ROSTER_REMOVE_SCRIPT.getScript().getBytes(StandardCharsets.UTF_8);
 
     private RelationRosterRedis() {
     }
@@ -79,6 +83,16 @@ public final class RelationRosterRedis {
         template.execute(REMOVE_SCRIPT, List.of(zsetKey, versionKey, initKey), member);
     }
 
+    /**
+     * 仅更新已存在 member 的 score，不抬版本。
+     */
+    public static void updateScore(StringRedisTemplate template, String zsetKey, double score, String member) {
+        if (template == null || StringUtils.isAnyBlank(zsetKey, member)) {
+            return;
+        }
+        template.execute(UPDATE_SCORE_SCRIPT, List.of(zsetKey), String.valueOf(score), member);
+    }
+
     public static boolean rebuildFriendCas(StringRedisTemplate template, String zsetKey, String versionKey,
                                            String initKey, Object[] args) {
         if (template == null || StringUtils.isAnyBlank(zsetKey, versionKey, initKey) || args == null) {
@@ -105,6 +119,25 @@ public final class RelationRosterRedis {
                 stringSerializer.serialize(versionKey),
                 stringSerializer.serialize(initKey),
                 stringSerializer.serialize(String.valueOf(score)),
+                stringSerializer.serialize(member));
+    }
+
+    /**
+     * Pipeline 内 EVAL 移除，与解散群批量 ZREM 同连接。
+     */
+    public static void evalRemove(RedisConnection connection, RedisSerializer<String> stringSerializer,
+                                  String zsetKey, String versionKey, String initKey, String member) {
+        if (connection == null || stringSerializer == null
+                || StringUtils.isAnyBlank(zsetKey, versionKey, initKey, member)) {
+            return;
+        }
+        connection.scriptingCommands().eval(
+                REMOVE_SCRIPT_BYTES,
+                ReturnType.INTEGER,
+                3,
+                stringSerializer.serialize(zsetKey),
+                stringSerializer.serialize(versionKey),
+                stringSerializer.serialize(initKey),
                 stringSerializer.serialize(member));
     }
 }

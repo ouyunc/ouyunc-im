@@ -493,11 +493,6 @@ public class MessageConstant {
     public static final int DEFAULT_GROUP_MAX_MEMBERS = 2000;
 
     /**
-     * 群屏蔽 Hash 的初始化标记 field，避免空 Hash 与「尚未建索引」混淆。
-     */
-    public static final String GROUP_SHIELD_HASH_INIT_FIELD = "_i";
-
-    /**
      * 建群时名单 INIT 初值：群主一人，与 ZCARD=1 对齐。完整回源后改为实际成员数。
      */
     public static final String GROUP_ROSTER_INIT_VALUE = "1";
