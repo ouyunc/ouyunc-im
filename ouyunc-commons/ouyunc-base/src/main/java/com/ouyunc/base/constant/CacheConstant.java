@@ -91,6 +91,7 @@ public class CacheConstant {
 
     /**
      * 群成员 ZSET 完整性标记，与 {@code gu:} 同槽；禁止把哨兵写进 ZSET member。
+     * 值为成员数，须与 ZCARD 一致；不一致则删标记并回源。
      */
     private static final String GROUP_USERS_INIT = "gui:";
 
@@ -116,8 +117,12 @@ public class CacheConstant {
 
     /**
      * 好友 ZSET 与库一致的标记，与 {@code f:} 同槽；禁止把哨兵写进 ZSET member。
+     * 值为名单基数（完整为正、截断为负），须与 ZCARD 一致。
      */
     private static final String FRIENDS_INIT = "fi:";
+
+    /** 好友关系版本（回源 CAS），与 f:/fi: 同槽 */
+    private static final String FRIENDS_RELATION_VERSION = "frv:";
 
     /***
      * 配置， 我的好友信息的配置
@@ -431,6 +436,13 @@ public class CacheConstant {
      */
     public static String buildFriendsInitCacheKey(String appKey, String identity) {
         return buildAggregateCacheKey(appKey, identity) + FRIENDS_INIT;
+    }
+
+    /**
+     * 好友关系版本：与 f:/fi: 同 {@code {appKey:identity}} 槽。
+     */
+    public static String buildFriendsRelationVersionCacheKey(String appKey, String identity) {
+        return buildAggregateCacheKey(appKey, identity) + FRIENDS_RELATION_VERSION;
     }
 
     /**

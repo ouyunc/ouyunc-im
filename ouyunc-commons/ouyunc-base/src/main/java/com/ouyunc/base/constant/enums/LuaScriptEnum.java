@@ -295,7 +295,7 @@ public enum LuaScriptEnum {
             """, "lm CAS 替换"),
 
     /**
-     * 群成员 ZSet 回源重建 CAS：version 未变且 INIT 缺失时 DEL+ZADD 并写 INIT。
+     * 群成员 ZSet 回源重建 CAS：version 未变且 INIT 缺失时 DEL+ZADD 并写 INIT=成员数。
      * 已有 INIT 视为完整名单，不覆盖并发入群；ZCARD>0 不再当成完整。
      * KEYS[1]=memberZSet KEYS[2]=versionKey KEYS[3]=initKey
      * ARGV[1]=expectedVersion ARGV[2]=memberCount ARGV[3..]=score,member 交替
@@ -327,12 +327,12 @@ public enum LuaScriptEnum {
                 redis.call('DEL', KEYS[3])
                 return 0
             end
-            redis.call('SET', KEYS[3], '1')
+            redis.call('SET', KEYS[3], tostring(n))
             return 1
             """, "群成员回源 CAS 重建"),
 
     /**
-     * 名单一致性回源（好友 ZSET / 用户加群 ZSET）：INIT 缺失时 DEL+ZADD 并写 INIT。
+     * 名单一致性回源（用户加群 ZSET）：INIT 缺失时 DEL+ZADD 并写 INIT=成员数。
      * KEYS[1]=zset KEYS[2]=initKey
      * ARGV[1]=count ARGV[2..]=score,member 交替
      * 返回 1=已重建，0=已有 INIT。
@@ -351,9 +351,112 @@ public enum LuaScriptEnum {
                     redis.call('ZADD', KEYS[1], score, member)
                 end
             end
-            redis.call('SET', KEYS[2], '1')
+            redis.call('SET', KEYS[2], tostring(n))
             return 1
             """, "用户加群名单回源重建"),
+
+    /**
+     * 好友名单回源 CAS：version 未变且 INIT 缺失时 DEL+ZADD。
+     * complete=1 写 INIT=count（可作负向判定）；complete=0 写 INIT=-count（截断，禁止当完整名单）。
+     * KEYS[1]=zset KEYS[2]=versionKey KEYS[3]=initKey
+     * ARGV[1]=expectedVersion ARGV[2]=count ARGV[3]=complete ARGV[4..]=score,member 交替
+     */
+    FRIEND_ROSTER_REBUILD_CAS_SCRIPT("3", """
+            local expected = tostring(ARGV[1])
+            local cur = redis.call('GET', KEYS[2])
+            if cur == false or cur == nil then cur = '0' else cur = tostring(cur) end
+            if cur ~= expected then
+                return 0
+            end
+            if redis.call('EXISTS', KEYS[3]) == 1 then
+                return 0
+            end
+            redis.call('DEL', KEYS[1])
+            local n = tonumber(ARGV[2]) or 0
+            for i = 1, n do
+                local base = 3 + (i - 1) * 2
+                local score = tonumber(ARGV[base + 1]) or 0
+                local member = ARGV[base + 2]
+                if member ~= nil and member ~= '' then
+                    redis.call('ZADD', KEYS[1], score, member)
+                end
+            end
+            cur = redis.call('GET', KEYS[2])
+            if cur == false or cur == nil then cur = '0' else cur = tostring(cur) end
+            if cur ~= expected then
+                redis.call('DEL', KEYS[3])
+                return 0
+            end
+            local complete = tonumber(ARGV[3]) or 0
+            if complete == 1 then
+                redis.call('SET', KEYS[3], tostring(n))
+            else
+                redis.call('SET', KEYS[3], tostring(-n))
+            end
+            return 1
+            """, "好友名单回源 CAS 重建"),
+
+    /**
+     * 关系 ZSET 增量加入：先 INCR 版本再 ZADD；仅新 member 且 INIT 为完整非负计数时 INCR INIT。
+     * KEYS[1]=zset KEYS[2]=versionKey KEYS[3]=initKey
+     * ARGV[1]=score ARGV[2]=member
+     */
+    RELATION_ROSTER_ADD_SCRIPT("3", """
+            redis.call('INCR', KEYS[2])
+            local added = redis.call('ZADD', KEYS[1], tonumber(ARGV[1]) or 0, ARGV[2])
+            if added == 1 and redis.call('EXISTS', KEYS[3]) == 1 then
+                local n = tonumber(redis.call('GET', KEYS[3]))
+                if n ~= nil and n >= 0 then
+                    redis.call('INCR', KEYS[3])
+                end
+            end
+            return added
+            """, "关系名单增量加入"),
+
+    /**
+     * 关系 ZSET 移除：先 INCR 版本再 ZREM；仅真正删掉且 INIT 为完整正计数时 DECR INIT。
+     * KEYS[1]=zset KEYS[2]=versionKey KEYS[3]=initKey
+     * ARGV[1]=member
+     */
+    RELATION_ROSTER_REMOVE_SCRIPT("3", """
+            redis.call('INCR', KEYS[2])
+            local removed = redis.call('ZREM', KEYS[1], ARGV[1])
+            if removed == 1 and redis.call('EXISTS', KEYS[3]) == 1 then
+                local n = tonumber(redis.call('GET', KEYS[3]))
+                if n ~= nil and n > 0 then
+                    redis.call('DECR', KEYS[3])
+                end
+            end
+            return removed
+            """, "关系名单移除"),
+
+    /**
+     * INIT 与 ZCARD 一致性：值的绝对值必须等于 ZCARD，否则删 INIT 触发回源。
+     * 正数=完整名单（可负向判定）；负数=截断名单（只读缓存，不可证伪）。
+     * KEYS[1]=zset KEYS[2]=initKey
+     * 返回 0=缺失或已删、1=完整一致、2=截断一致。
+     */
+    RELATION_ROSTER_INIT_CHECK_SCRIPT("2", """
+            local init = redis.call('GET', KEYS[2])
+            if init == false or init == nil then
+                return 0
+            end
+            local n = tonumber(init)
+            if n == nil then
+                redis.call('DEL', KEYS[2])
+                return 0
+            end
+            local expected = math.abs(n)
+            local zcard = redis.call('ZCARD', KEYS[1])
+            if zcard ~= expected then
+                redis.call('DEL', KEYS[2])
+                return 0
+            end
+            if n < 0 then
+                return 2
+            end
+            return 1
+            """, "关系名单 INIT 一致性校验"),
 
     /**
      * 客服 ticket Hash 已读 offset max-merge。

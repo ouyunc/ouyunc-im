@@ -120,25 +120,17 @@ public final class GroupMembershipSupport {
     }
 
     private boolean hasGroupMemberInit(String appKey, String groupId) {
-        try {
-            Boolean exists = infra.stringRedisTemplate.hasKey(
-                    CacheConstant.buildGroupUserInitCacheKey(appKey, groupId));
-            return Boolean.TRUE.equals(exists);
-        } catch (Exception e) {
-            log.warn("读取群成员 INIT 失败 appKey={} groupId={}", appKey, groupId, e);
-            return false;
-        }
+        return RelationRosterRedis.isComplete(RelationRosterRedis.checkInit(
+                infra.stringRedisTemplate,
+                CacheConstant.buildGroupUserCacheKey(appKey, groupId),
+                CacheConstant.buildGroupUserInitCacheKey(appKey, groupId)));
     }
 
     private boolean hasUserGroupsInit(String appKey, String userId) {
-        try {
-            Boolean exists = infra.stringRedisTemplate.hasKey(
-                    CacheConstant.buildUserGroupsInitCacheKey(appKey, userId));
-            return Boolean.TRUE.equals(exists);
-        } catch (Exception e) {
-            log.warn("读取用户加群 INIT 失败 appKey={} userId={}", appKey, userId, e);
-            return false;
-        }
+        return RelationRosterRedis.isComplete(RelationRosterRedis.checkInit(
+                infra.stringRedisTemplate,
+                CacheConstant.buildUserGroupsCacheKey(appKey, userId),
+                CacheConstant.buildUserGroupsInitCacheKey(appKey, userId)));
     }
 
     /**
@@ -351,6 +343,30 @@ public final class GroupMembershipSupport {
         }
         infra.stringRedisTemplate.opsForValue().increment(
                 CacheConstant.buildGroupRelationVersionCacheKey(appKey, groupId));
+    }
+
+    /**
+     * 热路径移出群成员：ZREM + 版本 + INIT 计数 + 用户加群 ZSET，并清本机/Pub/Sub。DB 由业务层负责。
+     */
+    public void removeGroupMemberHot(String appKey, String groupId, String memberId) {
+        if (StringUtils.isAnyBlank(appKey, groupId, memberId)) {
+            return;
+        }
+        RelationRosterRedis.removeMember(
+                infra.stringRedisTemplate,
+                CacheConstant.buildGroupUserCacheKey(appKey, groupId),
+                CacheConstant.buildGroupRelationVersionCacheKey(appKey, groupId),
+                CacheConstant.buildGroupUserInitCacheKey(appKey, groupId),
+                memberId);
+        try {
+            infra.stringRedisTemplate.opsForZSet().remove(
+                    CacheConstant.buildUserGroupsCacheKey(appKey, memberId), groupId);
+        } catch (Exception e) {
+            log.warn("移除用户加群索引失败 appKey={} groupId={} memberId={}", appKey, groupId, memberId, e);
+        }
+        RelationLocalCache.evictGroupMember(appKey, groupId, memberId);
+        RelationCacheInvalidatePublisher.publish(
+                RelationCacheInvalidateEvent.groupQuit(appKey, groupId, memberId));
     }
 
     private Set<String> snapshotIdentities(String cacheKey, Set<String> ids) {
@@ -670,7 +686,7 @@ public final class GroupMembershipSupport {
     }
 
     /**
-     * 点查确认在群后只 ZADD 该成员，不写 INIT（残缺名单不能标成完整）。
+     * 点查确认在群后 ZADD 该成员。INIT 缺失时不创建标记；已完整时同步递增计数。
      */
     private void cacheMemberPositive(String appKey, String groupId, String memberId, Integer post) {
         if (StringUtils.isAnyBlank(appKey, groupId, memberId)) {
@@ -678,8 +694,13 @@ public final class GroupMembershipSupport {
         }
         double score = post == null ? GroupUserPost.ORDINARY.value() : post;
         try {
-            infra.stringRedisTemplate.opsForZSet().add(
-                    CacheConstant.buildGroupUserCacheKey(appKey, groupId), memberId, score);
+            RelationRosterRedis.addMember(
+                    infra.stringRedisTemplate,
+                    CacheConstant.buildGroupUserCacheKey(appKey, groupId),
+                    CacheConstant.buildGroupRelationVersionCacheKey(appKey, groupId),
+                    CacheConstant.buildGroupUserInitCacheKey(appKey, groupId),
+                    score,
+                    memberId);
         } catch (Exception e) {
             log.warn("回写群成员正缓存失败 appKey={} groupId={} memberId={}", appKey, groupId, memberId, e);
         }
@@ -874,13 +895,12 @@ public final class GroupMembershipSupport {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         boolean bound = session.saveMessageWithSession(packet, expireTime, CacheConstant.buildGroupRequestSessionCacheKey(metadata.getAppKey(), groupId, requestSessionId), consumer, (redisConnection, msg, ak, f, t) -> {
-            // 先 INCR 再 ZADD，避免回源 Lua 在 DEL 后把并发入群标成完整名单
-            byte[] versionKeyBytes = infra.stringSerializer.serialize(
-                    CacheConstant.buildGroupRelationVersionCacheKey(metadata.getAppKey(), groupId));
-            if (versionKeyBytes != null) {
-                redisConnection.commands().incr(versionKeyBytes);
-            }
-            redisConnection.zSetCommands().zAdd(infra.stringSerializer.serialize(CacheConstant.buildGroupUserCacheKey(metadata.getAppKey(), groupId)), GroupUserPost.ORDINARY.value(), infra.stringSerializer.serialize(joiner));
+            RelationRosterRedis.evalAdd(redisConnection, infra.stringSerializer,
+                    CacheConstant.buildGroupUserCacheKey(metadata.getAppKey(), groupId),
+                    CacheConstant.buildGroupRelationVersionCacheKey(metadata.getAppKey(), groupId),
+                    CacheConstant.buildGroupUserInitCacheKey(metadata.getAppKey(), groupId),
+                    GroupUserPost.ORDINARY.value(),
+                    joiner);
             redisConnection.zSetCommands().zAdd(infra.stringSerializer.serialize(CacheConstant.buildUserGroupsCacheKey(metadata.getAppKey(), joiner)), msg.getMetadata().getServerTime(), infra.stringSerializer.serialize(groupId));
         });
         if (bound) {

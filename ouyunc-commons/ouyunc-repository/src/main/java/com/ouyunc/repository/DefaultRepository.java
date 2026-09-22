@@ -202,6 +202,20 @@ public enum DefaultRepository implements Repository {
         return RepositorySupports.GROUP.inGroup(appKey, from, groupId);
     }
 
+    /**
+     * 热路径移出群成员（Redis 名单 + 本机/Pub/Sub）。DB 由业务层删除。
+     */
+    public void removeGroupMemberHot(String appKey, String groupId, String memberId) {
+        RepositorySupports.GROUP.removeGroupMemberHot(appKey, groupId, memberId);
+    }
+
+    /**
+     * 热路径解除好友（Redis 名单 + 本机/Pub/Sub）。DB 由业务层删除。
+     */
+    public void unbindFriendHot(String appKey, String userA, String userB) {
+        RepositorySupports.FRIEND.unbindFriendHot(appKey, userA, userB);
+    }
+
     public Mono<Boolean> isGroupMemberReactive(String appKey, String groupId, String memberId) {
         return RepositorySupports.GROUP.isGroupMemberReactive(appKey, groupId, memberId);
     }

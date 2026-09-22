@@ -498,7 +498,7 @@ public class MessageConstant {
     public static final String GROUP_SHIELD_HASH_INIT_FIELD = "_i";
 
     /**
-     * 关系名单（好友/群成员/用户加群）与库一致的 STRING 值。有此 key 才把 Redis 当完整名单通知/扇出。
+     * 建群时名单 INIT 初值：群主一人，与 ZCARD=1 对齐。完整回源后改为实际成员数。
      */
     public static final String GROUP_ROSTER_INIT_VALUE = "1";
 
