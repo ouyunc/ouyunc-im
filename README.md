@@ -46,7 +46,7 @@ http://www.ouyunc.com
 
 
 #### 演示地址 
-- web端pc demo IM演示地址 （http://124.223.209.230:8082/） 客服系统演示地址 （http://124.223.209.230:8081/）：
+- web端pc demo IM演示地址 （http://124.223.209.230:8082/） 客服系统演示地址 （http://124.223.209.230:8081/）用户名：agent001,agent002,agent003 密码：123456
 
 ![web](docs/picture/img_1.png)
 ![输入图片说明](docs/picture/6f7e53c9af0f93bfceaf3e226f426720.png)
