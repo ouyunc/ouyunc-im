@@ -205,6 +205,7 @@ public final class InternalPacketIngressService {
             throw new HttpPipelineException(HttpResponseStatus.INTERNAL_SERVER_ERROR,
                     HttpResponseCodeEnum.INTERNAL_SERVER_ERROR, "HTTP 推送幂等占位失败");
         }
+        packetIdStr = alignPacketIdWithIdempotency(packet, appKey, messageId, packetIdStr);
 
         try {
             boolean ok = HttpPushProcessorDelegate.runPipeline(packet);
@@ -215,9 +216,11 @@ public final class InternalPacketIngressService {
                         MessagePushStatusEnum.RETRYABLE_FAILED, "MQ 或热写失败，请使用同一 messageId 重试"));
             }
             if (!HttpPushDeliverySupport.commitIdempotency(packet)) {
-                log.warn("HTTP 推送管线成功但幂等 COMMIT 失败, messageId={}", messageId);
+                log.warn("HTTP 推送管线成功但幂等 COMMIT 结果未知, messageId={}", messageId);
+                return HttpResponseResult.success(buildResponse(messageId, packetIdStr,
+                        MessagePushStatusEnum.PROCESSING, "已写入但幂等提交结果未知，请使用同一 messageId 查询或重试"));
             }
-            // ACCEPTED = 本请求已完成 MQ confirm + Redis（幂等已 COMMITTED）；扇出尽力而为
+            // ACCEPTED = 本请求已完成 MQ confirm + Redis，且幂等已 COMMITTED；扇出尽力而为
             return HttpResponseResult.success(buildResponse(messageId, packetIdStr,
                     MessagePushStatusEnum.ACCEPTED, null));
         } catch (RuntimeException ex) {
@@ -247,6 +250,23 @@ public final class InternalPacketIngressService {
         if (result != null && !result.isPassed()) {
             throw new HttpPipelineException(HttpResponseStatus.BAD_REQUEST, HttpResponseCodeEnum.BAD_REQUEST,
                     ExceptionCodeEnum.CONTENT_SENSITIVE_REJECT.getMessage());
+        }
+    }
+
+    /**
+     * 接管或失败重试时，幂等记录里的 packetId 才是第一次写入使用的服务端 ID。
+     */
+    private static String alignPacketIdWithIdempotency(Packet packet, String appKey, String messageId, String packetIdStr) {
+        PushIdempotencySupport.IdempotencyRecord record = PushIdempotencySupport.getRecord(appKey, messageId);
+        if (record == null || StringUtils.isBlank(record.packetId())) {
+            return packetIdStr;
+        }
+        try {
+            packet.setPacketId(Long.parseLong(record.packetId()));
+            return record.packetId();
+        } catch (NumberFormatException ex) {
+            log.warn("HTTP 幂等 packetId 无法解析, messageId={}, packetId={}", messageId, record.packetId());
+            return packetIdStr;
         }
     }
 

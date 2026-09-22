@@ -162,6 +162,10 @@ public final class SessionMessagePersistenceSupport {
                     metadata.setQosOwnerToken(null);
                     return SaveMessageOutcome.FAILED;
                 }
+                // 接管僵死 PENDING 时复用首次服务端 ID，避免换 packetId 再写一条热消息
+                if (claim.canonicalPacketId() > 0L) {
+                    packet.setPacketId(claim.canonicalPacketId());
+                }
             }
 
             // 必需字段先序列化；失败直接上抛，避免只写索引、无主体后仍判定成功

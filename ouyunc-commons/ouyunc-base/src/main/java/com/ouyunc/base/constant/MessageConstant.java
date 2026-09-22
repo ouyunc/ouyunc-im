@@ -32,7 +32,7 @@ public class MessageConstant {
     public static final long LOCK_WAIT_TIME = 5;
 
     /**
-     * 锁持有时间 30 s
+     * 已废弃的固定租约。关系锁改走 Redisson 看门狗，禁止再把该值传给 tryLock。
      */
     public static final long LOCK_LEASE_TIME = 5;
 
@@ -199,14 +199,15 @@ public class MessageConstant {
     public static final long HTTP_PUSH_PENDING_TAKEOVER_MS = 30_000L;
 
     /**
-     * QoS 幂等（packetId）缓存过期时间，默认 30 分钟
+     * QoS 幂等（packetId / 客户端 messageId）窗口：覆盖断线、发布和短时故障后的重试，默认 24 小时。
+     * 两个键必须同长，避免客户端键先过期后换 packetId 再写一条热消息。
      */
-    public static final long CACHE_QOS_IDEM_PACKET_EXPIRE_TIMESTAMP = NumberConstant.NUMBER_30 * MessageConstant.MINUTE_TIMESTAMP;
+    public static final long CACHE_QOS_IDEM_PACKET_EXPIRE_TIMESTAMP = NumberConstant.NUMBER_24 * MessageConstant.HOUR_TIMESTAMP;
 
     /**
-     * QoS 幂等（客户端 messageId）缓存过期时间，默认 5 分钟
+     * QoS 幂等（客户端 messageId）缓存过期时间，与 packet 键相同。
      */
-    public static final long CACHE_QOS_IDEM_CLIENT_EXPIRE_TIMESTAMP = NumberConstant.NUMBER_5 * MessageConstant.MINUTE_TIMESTAMP;
+    public static final long CACHE_QOS_IDEM_CLIENT_EXPIRE_TIMESTAMP = CACHE_QOS_IDEM_PACKET_EXPIRE_TIMESTAMP;
 
 
     /**

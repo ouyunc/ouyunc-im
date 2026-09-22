@@ -32,7 +32,8 @@ public final class DistributedLockHelper {
     public static void runWithLock(Packet packet, String lockKey, ExceptionCodeEnum errorCode, Runnable lockedAction) {
         RLock lock = MessageServerContext.redissonClient.getLock(lockKey);
         try {
-            if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, MessageConstant.LOCK_LEASE_TIME, TimeUnit.SECONDS)) {
+            // 不传 lease：Redisson 看门狗续期，避免关系更新未完成锁已过期
+            if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, TimeUnit.SECONDS)) {
                 try {
                     lockedAction.run();
                 } finally {

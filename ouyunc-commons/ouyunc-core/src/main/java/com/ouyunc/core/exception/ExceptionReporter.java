@@ -50,6 +50,9 @@ public final class ExceptionReporter {
         }
         ExceptionEventPayload normalized = truncate(payload);
         logLocal(normalized, cause);
+        if (normalized.severity() == ExceptionSeverity.BUSINESS) {
+            return;
+        }
         MessageContext.publishEvent(new MessageEvent(normalized, MessageEventTypeEnum.EXCEPTION), true);
     }
 

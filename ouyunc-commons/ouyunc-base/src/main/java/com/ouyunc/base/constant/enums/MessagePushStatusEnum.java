@@ -2,7 +2,8 @@ package com.ouyunc.base.constant.enums;
 
 /**
  * HTTP 推送受理状态。
- * <p>{@link #ACCEPTED}：本请求已完成 MQ confirm + Redis（幂等已 COMMITTED）；不等于端侧必达。
+ * <p>{@link #ACCEPTED}：本请求已完成 MQ confirm + Redis，且幂等已 COMMITTED；不等于端侧必达。
+ * 热写完成但幂等提交结果未知时返回 {@link #PROCESSING}，不得返回 ACCEPTED。
  * {@link #DUPLICATE}：同 messageId 此前已 COMMITTED。
  * {@link #PROCESSING}：同 messageId 仍为 PENDING（在途）。
  * {@link #RETRYABLE_FAILED}：本请求 MQ/热写失败，可用同一 messageId 重试。</p>

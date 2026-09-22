@@ -55,6 +55,7 @@ public final class PushIdempotencySupport {
             local takeoverMs = tonumber(ARGV[3])
             local nowArr = redis.call('TIME')
             local now = nowArr[1] * 1000 + math.floor(nowArr[2] / 1000)
+            local bound = packetId
             if raw then
               local sep = string.find(raw, '|', 1, true)
               if not sep then
@@ -62,19 +63,24 @@ public final class PushIdempotencySupport {
               end
               local state = string.sub(raw, 1, sep - 1)
               if state == 'COMMITTED' then return 2 end
+              local rest = string.sub(raw, sep + 1)
+              local sep2 = string.find(rest, '|', 1, true)
+              local existing = rest
+              local ts = nil
+              if sep2 then
+                existing = string.sub(rest, 1, sep2 - 1)
+                ts = tonumber(string.sub(rest, sep2 + 1))
+              end
+              if existing ~= nil and existing ~= '' then
+                bound = existing
+              end
               if state == 'PENDING' then
-                local rest = string.sub(raw, sep + 1)
-                local sep2 = string.find(rest, '|', 1, true)
-                local ts = nil
-                if sep2 then
-                  ts = tonumber(string.sub(rest, sep2 + 1))
-                end
                 if ts ~= nil and now - ts <= takeoverMs then
                   return 3
                 end
               end
             end
-            redis.call('PSETEX', KEYS[1], ttlMs, 'PENDING|' .. packetId .. '|' .. tostring(now))
+            redis.call('PSETEX', KEYS[1], ttlMs, 'PENDING|' .. bound .. '|' .. tostring(now))
             return 1
             """);
 

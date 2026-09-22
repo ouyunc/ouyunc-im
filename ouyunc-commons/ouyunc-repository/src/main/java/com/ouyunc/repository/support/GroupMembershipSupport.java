@@ -82,15 +82,15 @@ public final class GroupMembershipSupport {
             return cached;
         }
         ensureGroupMemberRoster(appKey, groupId);
+        if (!hasGroupMemberInit(appKey, groupId)) {
+            throw new GroupMembershipLoadException(
+                    "群成员名单未完成权威重建, appKey=" + appKey + ", groupId=" + groupId);
+        }
         Set<String> fromRedis = loadGroupUserIdsByScan(cacheKey);
         if (fromRedis == null) {
             fromRedis = Set.of();
         }
-        if (hasGroupMemberInit(appKey, groupId)) {
-            return snapshotIdentities(cacheKey, fromRedis);
-        }
-        // CAS 未标 INIT：本条用当前 Redis 扇出，不写 Caffeine，避免钉死残缺名单
-        return Set.copyOf(fromRedis);
+        return snapshotIdentities(cacheKey, fromRedis);
     }
 
     /**
@@ -154,8 +154,7 @@ public final class GroupMembershipSupport {
                 }
             }
         } catch (Exception e) {
-            log.error("群成员 ZSCAN 失败 cacheKey={}", cacheKey, e);
-            return Set.of();
+            throw new GroupMembershipLoadException("群成员 ZSCAN 失败, cacheKey=" + cacheKey, e);
         }
         return ids;
     }
@@ -374,6 +373,10 @@ public final class GroupMembershipSupport {
     }
 
     public static final class GroupMembershipLoadException extends RuntimeException {
+        public GroupMembershipLoadException(String message) {
+            super(message);
+        }
+
         public GroupMembershipLoadException(String message, Throwable cause) {
             super(message, cause);
         }

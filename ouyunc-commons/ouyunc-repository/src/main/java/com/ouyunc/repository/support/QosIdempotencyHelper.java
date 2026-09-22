@@ -113,6 +113,7 @@ public final class QosIdempotencyHelper {
             local takeoverMs = tonumber(ARGV[5])
             local now = redis.call('TIME')
             now = now[1] * 1000 + math.floor(now[2] / 1000)
+            local reuseId = nil
             for i = 1, #KEYS do
               local raw = redis.call('GET', KEYS[i])
               if raw then
@@ -124,14 +125,16 @@ public final class QosIdempotencyHelper {
                 if f[1] == 'PENDING' then
                   local ts = tonumber(f[6])
                   if ts == nil or now - ts <= takeoverMs then return {3, 0} end
+                  if f[2] ~= nil and f[2] ~= '' then reuseId = f[2] end
                 else return {4, 0} end
               end
             end
-            local record = table.concat({'PENDING', serverId, hash, owner, clientId, tostring(now)}, '|')
+            local sid = reuseId or serverId
+            local record = table.concat({'PENDING', sid, hash, owner, clientId, tostring(now)}, '|')
             for i = 1, #KEYS do
               redis.call('PSETEX', KEYS[i], tonumber(ARGV[5 + i]), record)
             end
-            return {1, 0}
+            return {1, tonumber(sid) or 0}
             """);
 
     /**

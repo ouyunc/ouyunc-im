@@ -107,6 +107,36 @@ public final class MessageMqPublisherSupport {
     }
 
     /**
+     * 外渠下行：Redis 记录 PENDING/PUBLISHED。已发布则跳过；失败保留 PENDING，同一键再次调用会重放。
+     */
+    public void publishExternalOutbound(String redisKey, String topic, String key, String jsonBody, String failureContext) {
+        if (StringUtils.isBlank(redisKey) || infra.stringRedisTemplate == null) {
+            publishJsonAsync(topic, key, jsonBody, failureContext);
+            return;
+        }
+        try {
+            String current = infra.stringRedisTemplate.opsForValue().get(redisKey);
+            if (current != null && current.startsWith("PUBLISHED|")) {
+                return;
+            }
+            infra.stringRedisTemplate.opsForValue().set(redisKey, "PENDING|" + jsonBody, java.time.Duration.ofDays(7));
+            infra.mqPublisher.send(topic, key, jsonBody, null).whenComplete((ignored, ex) -> {
+                if (ex != null) {
+                    handleFailure(topic, key, null, jsonBody, null, failureContext, ex);
+                    return;
+                }
+                try {
+                    infra.stringRedisTemplate.opsForValue().set(redisKey, "PUBLISHED|" + jsonBody, java.time.Duration.ofDays(7));
+                } catch (Exception markError) {
+                    log.warn("外渠下行已发出但标记 PUBLISHED 失败, key={}", redisKey, markError);
+                }
+            });
+        } catch (Exception ex) {
+            handleFailure(topic, key, null, jsonBody, null, failureContext, ex);
+        }
+    }
+
+    /**
      * Future 完成后的失败回调。
      */
     private void attachFailure(CompletableFuture<?> future, String topic, String key,
