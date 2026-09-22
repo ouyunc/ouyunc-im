@@ -146,9 +146,17 @@ public class CacheConstant {
     private static final String GROUP = "grp:";
 
     /***
-     * 黑名单
+     * 黑名单 Hash（field=被拉黑人）。完整性用旁边的 {@code bli:} STRING。
      */
     private static final String BLACKLIST = "bl:";
+
+    /** 黑名单 Hash 完整性标记，与 bl: 同槽 */
+    private static final String BLACKLIST_INIT = "bli:";
+
+    /**
+     * 关系名单回源临时 ZSET 后缀，必须接在已含 hash tag 的 zset key 后以同槽。
+     */
+    private static final String RELATION_ROSTER_TMP = "t:";
 
     /***
      * QoS 幂等
@@ -494,6 +502,23 @@ public class CacheConstant {
      */
     public static String buildBlacklistCacheKey(String appKey, String identity) {
         return buildAggregateCacheKey(appKey, identity) + BLACKLIST;
+    }
+
+    /**
+     * 黑名单 Hash 已完整：STRING 存在即可把 HGET miss 当未拉黑（空 Hash = 无人拉黑）。
+     */
+    public static String buildBlacklistInitCacheKey(String appKey, String identity) {
+        return buildAggregateCacheKey(appKey, identity) + BLACKLIST_INIT;
+    }
+
+    /**
+     * 关系名单回源临时 ZSET，与正式 zset 同槽。
+     */
+    public static String buildRelationRosterTmpCacheKey(String zsetKey) {
+        if (zsetKey == null || zsetKey.isBlank()) {
+            return zsetKey;
+        }
+        return zsetKey + RELATION_ROSTER_TMP;
     }
 
     /**

@@ -503,6 +503,21 @@ public class MessageConstant {
     public static final int FRIEND_ROSTER_FULL_LOAD_LIMIT = 5000;
 
     /**
+     * 群成员全量回源上限；超过则失败，禁止截断后当完整名单。
+     */
+    public static final int GROUP_ROSTER_FULL_LOAD_LIMIT = 20000;
+
+    /**
+     * 黑名单 Hash 全量回源上限。
+     */
+    public static final int BLACKLIST_FULL_LOAD_LIMIT = 5000;
+
+    /**
+     * 名单 CAS 回源重试次数。
+     */
+    public static final int RELATION_ROSTER_REBUILD_ATTEMPTS = 2;
+
+    /**
      * Mongo 双写补偿队列单次回放条数。
      */
     public static final int MONGO_COMPENSATE_BATCH_SIZE = 50;

@@ -59,7 +59,7 @@ public final class GroupMembershipSupport {
 
     private final RepositoryInfrastructure infra;
     private final SessionMessagePersistenceSupport session;
-    private final Set<String> shieldRebuildInFlight = ConcurrentHashMap.newKeySet();
+    private final ConcurrentHashMap<String, Object> shieldRebuildLocks = new ConcurrentHashMap<>();
 
     public GroupMembershipSupport(RepositoryInfrastructure infra, SessionMessagePersistenceSupport session) {
         this.infra = infra;
@@ -107,7 +107,7 @@ public final class GroupMembershipSupport {
         if (hasGroupMemberInit(appKey, groupId)) {
             return;
         }
-        for (int attempt = 0; attempt < 2; attempt++) {
+        for (int attempt = 0; attempt < MessageConstant.RELATION_ROSTER_REBUILD_ATTEMPTS; attempt++) {
             if (hasGroupMemberInit(appKey, groupId)) {
                 return;
             }
@@ -262,7 +262,14 @@ public final class GroupMembershipSupport {
                     .param(GroupEntity.Fields.appKey, appKey)
                     .query(GroupUserEntity.class)
                     .list();
-            return mysqlList == null ? List.of() : mysqlList;
+            if (mysqlList == null) {
+                return List.of();
+            }
+            if (mysqlList.size() > MessageConstant.GROUP_ROSTER_FULL_LOAD_LIMIT) {
+                throw new GroupMembershipLoadException(
+                        "群成员超过回源上限 groupId=" + groupId + " size=" + mysqlList.size());
+            }
+            return mysqlList;
         } catch (Exception e) {
             throw new GroupMembershipLoadException("MySQL 查询群成员失败 groupId=" + groupId, e);
         }
@@ -297,7 +304,9 @@ public final class GroupMembershipSupport {
         }
         DefaultRedisScript<Long> script = new DefaultRedisScript<>(
                 LuaScriptEnum.GROUP_MEMBER_REBUILD_CAS_SCRIPT.getScript(), Long.class);
-        Long ok = infra.stringRedisTemplate.execute(script, List.of(zsetKey, versionKey, initKey), args.toArray());
+        Long ok = infra.stringRedisTemplate.execute(script,
+                List.of(zsetKey, versionKey, initKey, CacheConstant.buildRelationRosterTmpCacheKey(zsetKey)),
+                args.toArray());
         if (ok == null || ok != 1L) {
             log.warn("群成员回源 CAS 未命中 appKey={} groupId={} expectedVersion={}", appKey, groupId, expectedVersion);
             return false;
@@ -402,19 +411,20 @@ public final class GroupMembershipSupport {
 
     private void rebuildShieldIndexSync(String appKey, String groupId) {
         String flightKey = appKey + ":" + groupId;
-        if (!shieldRebuildInFlight.add(flightKey)) {
-            return;
-        }
-        try {
-            String versionBefore = currentRelationVersion(appKey, groupId);
-            List<GroupUserEntity> dbMembers = loadAllGroupUsersFromAuthority(appKey, groupId);
-            if (writeShieldHashIfVersionMatch(appKey, groupId, dbMembers, versionBefore)) {
-                RelationLocalCache.evictGroupShieldIndex(appKey, groupId);
+        Object lock = shieldRebuildLocks.computeIfAbsent(flightKey, ignored -> new Object());
+        synchronized (lock) {
+            if (hasGroupShieldInit(appKey, groupId)) {
+                return;
             }
-        } catch (Exception e) {
-            log.warn("同步重建群屏蔽索引失败 groupId={}", groupId, e);
-        } finally {
-            shieldRebuildInFlight.remove(flightKey);
+            try {
+                String versionBefore = currentRelationVersion(appKey, groupId);
+                List<GroupUserEntity> dbMembers = loadAllGroupUsersFromAuthority(appKey, groupId);
+                if (writeShieldHashIfVersionMatch(appKey, groupId, dbMembers, versionBefore)) {
+                    RelationLocalCache.evictGroupShieldIndex(appKey, groupId);
+                }
+            } catch (Exception e) {
+                log.warn("同步重建群屏蔽索引失败 groupId={}", groupId, e);
+            }
         }
     }
 
@@ -660,7 +670,6 @@ public final class GroupMembershipSupport {
 
     @SuppressWarnings("unchecked")
     public boolean inGroup(String appKey, String from, String groupId) {
-        // ZSCORE 命中为真；miss 一律回源 MySQL（部分 ZSET 不能当成「完整名单」缓存 false）
         Boolean cached = RelationLocalCache.GROUP_MEMBER.get(RelationLocalCache.groupMemberKey(appKey, groupId, from));
         if (cached != null) {
             return cached;
@@ -671,6 +680,10 @@ public final class GroupMembershipSupport {
             if (score != null) {
                 RelationLocalCache.markGroupMember(appKey, groupId, from, true);
                 return true;
+            }
+            if (hasGroupMemberInit(appKey, groupId)) {
+                RelationLocalCache.markGroupMember(appKey, groupId, from, false);
+                return false;
             }
         } catch (Exception e) {
             log.error("Redis 查询群成员异常, appKey: {}, groupId: {}, memberId: {}", appKey, groupId, from, e);

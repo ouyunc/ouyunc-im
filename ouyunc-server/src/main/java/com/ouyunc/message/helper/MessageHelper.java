@@ -73,7 +73,12 @@ public class MessageHelper {
             byNode.computeIfAbsent(node, ignored -> new ArrayList<>()).add(client);
         }
         List<LoginClientInfo> localClients = byNode.remove(local);
-        QosRetryScheduler.scheduleForClients(packet, loginClientInfos);
+        boolean cluster = MessageServerContext.serverProperties().isClusterEnable();
+        if (cluster) {
+            QosRetryScheduler.scheduleForClients(packet, loginClientInfos);
+        } else {
+            QosRetryScheduler.scheduleForClients(packet, localClients);
+        }
         if (CollectionUtils.isNotEmpty(localClients)) {
             List<Target> targets = new ArrayList<>(localClients.size());
             for (LoginClientInfo c : localClients) {
@@ -81,14 +86,10 @@ public class MessageHelper {
             }
             ClientHelper.deliverLocalFanoutTargets(packet, targets);
         }
-        boolean cluster = MessageServerContext.serverProperties().isClusterEnable();
         for (Map.Entry<String, List<LoginClientInfo>> entry : byNode.entrySet()) {
             if (!cluster) {
-                List<Target> targets = new ArrayList<>(entry.getValue().size());
-                for (LoginClientInfo c : entry.getValue()) {
-                    targets.add(buildTarget(c));
-                }
-                ClientHelper.deliverLocalFanoutTargets(packet, targets);
+                log.warn("未开启集群，跳过远端节点投递 node={} size={} packetId={}",
+                        entry.getKey(), entry.getValue().size(), packet.getPacketId());
                 continue;
             }
             sendRemoteFanoutBatches(packet, entry.getKey(), entry.getValue(), sync);
@@ -336,8 +337,17 @@ public class MessageHelper {
         originMetadata.setTarget(target);
         String destServerAddress = target.getTargetServerAddress();
         String localServerAddress = MessageServerContext.serverProperties().getLocalServerAddress();
-        if (!MessageServerContext.serverProperties().isClusterEnable()
-                || Objects.equals(localServerAddress, destServerAddress)) {
+        boolean cluster = MessageServerContext.serverProperties().isClusterEnable();
+        if (!cluster) {
+            if (StringUtils.isNotBlank(destServerAddress)
+                    && !Objects.equals(localServerAddress, destServerAddress)) {
+                notifySendFail(originPacket, "未开启集群，无法投递到远端会话 " + destServerAddress, sendCallback);
+                return;
+            }
+            deliverLocal(originPacket, target, sendCallback);
+            return;
+        }
+        if (Objects.equals(localServerAddress, destServerAddress) || StringUtils.isBlank(destServerAddress)) {
             deliverLocal(originPacket, target, sendCallback);
             return;
         }

@@ -28,6 +28,7 @@ public class JdbcSqlConstant {
         SELECT_USER("SELECT id,open_id, code, username,`password`,nick_name,avatar,motto,age,sex,email,phone_num,id_card_no,group_invite_policy,friend_join_policy,`status`,app_key,type,external_id,union_id,language,auto_translate_in,create_time,update_time,del_flag FROM ouyunc_im_user WHERE id = :id and app_key = :app_key and del_flag = 0", "按租户查询用户"),
 
         SELECT_BLACKLIST("select id, identity, user_id, identity_type, join_time, create_time from  ouyunc_im_blacklist where identity = :identity and user_id = :user_id and identity_type = :identity_type ", "查询黑名单"),
+        SELECT_ALL_BLACKLIST("select id, identity, user_id, identity_type, join_time, create_time from ouyunc_im_blacklist where identity = :identity and identity_type = :identity_type ", "查询身份全部黑名单"),
 
         SELECT_APP("SELECT id, app_key, app_secret, app_name, user_id, max_connections, `status`, create_time, update_time, del_flag FROM ouyunc_im_app WHERE app_key = :app_key AND del_flag = 0", "根据 appKey 查询未删除的 IM 应用"),
 
@@ -103,6 +104,7 @@ public class JdbcSqlConstant {
         SELECT_USER("SELECT id,open_id, code, username,\"password\",nick_name,avatar,motto,age,sex,email,phone_num,id_card_no,group_invite_policy,friend_join_policy,\"status\",app_key,type,external_id,union_id,language,auto_translate_in,create_time,update_time,del_flag FROM ouyunc_im_user WHERE id = :id and app_key = :app_key and del_flag = 0", "按租户查询用户"),
 
         SELECT_BLACKLIST("select id, \"identity\", user_id, identity_type, join_time, create_time from  ouyunc_im_blacklist where \"identity\" = :identity and user_id = :user_id and identity_type = :identity_type ", "查询黑名单"),
+        SELECT_ALL_BLACKLIST("select id, \"identity\", user_id, identity_type, join_time, create_time from ouyunc_im_blacklist where \"identity\" = :identity and identity_type = :identity_type ", "查询身份全部黑名单"),
 
         SELECT_APP("SELECT id, app_key, app_secret, app_name, user_id, max_connections, \"status\", create_time, update_time, del_flag FROM ouyunc_im_app WHERE app_key = :app_key AND del_flag = 0", "根据 appKey 查询未删除的 IM 应用"),
 
@@ -169,6 +171,7 @@ public class JdbcSqlConstant {
         SELECT_USER("SELECT ID, OPEN_ID, CODE, USERNAME, \"PASSWORD\", NICK_NAME, AVATAR, MOTTO, AGE, SEX, EMAIL, PHONE_NUM, ID_CARD_NO, GROUP_INVITE_POLICY, FRIEND_JOIN_POLICY, STATUS, APP_KEY, \"TYPE\", LANGUAGE, AUTO_TRANSLATE_IN, CREATE_TIME, UPDATE_TIME, DELETED FROM OUYUNC_IM_USER WHERE ID = :id AND APP_KEY = :app_key AND DELETED = 0", "按租户查询用户"),
 
         SELECT_BLACKLIST("SELECT ID, \"IDENTITY\", USER_ID, IDENTITY_TYPE, JOIN_TIME, CREATE_TIME FROM OUYUNC_IM_BLACKLIST WHERE \"IDENTITY\" = :identity AND USER_ID = :user_id AND IDENTITY_TYPE = :identity_type", "查询黑名单"),
+        SELECT_ALL_BLACKLIST("SELECT ID, \"IDENTITY\", USER_ID, IDENTITY_TYPE, JOIN_TIME, CREATE_TIME FROM OUYUNC_IM_BLACKLIST WHERE \"IDENTITY\" = :identity AND IDENTITY_TYPE = :identity_type", "查询身份全部黑名单"),
 
         SELECT_APP("SELECT ID, APP_KEY, APP_SECRET, APP_NAME, USER_ID, MAX_CONNECTIONS, STATUS, CREATE_TIME, UPDATE_TIME, DELETED AS DEL_FLAG FROM OUYUNC_IM_APP WHERE APP_KEY = :app_key AND DELETED = 0", "根据 appKey 查询未删除的 IM 应用"),
 

@@ -98,6 +98,10 @@ public final class JdbcSqlDialectHolder {
         return pick(JdbcSqlConstant.POSTGRESQL.SELECT_BLACKLIST, JdbcSqlConstant.ORACLE.SELECT_BLACKLIST, JdbcSqlConstant.MYSQL.SELECT_BLACKLIST);
     }
 
+    public static String selectAllBlacklist() {
+        return pick(JdbcSqlConstant.POSTGRESQL.SELECT_ALL_BLACKLIST, JdbcSqlConstant.ORACLE.SELECT_ALL_BLACKLIST, JdbcSqlConstant.MYSQL.SELECT_ALL_BLACKLIST);
+    }
+
     public static String selectApp() {
         return pick(JdbcSqlConstant.POSTGRESQL.SELECT_APP, JdbcSqlConstant.ORACLE.SELECT_APP, JdbcSqlConstant.MYSQL.SELECT_APP);
     }

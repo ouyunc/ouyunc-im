@@ -14,7 +14,9 @@ import com.ouyunc.base.model.RequestSession;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.relation.RelationCacheInvalidatePublisher;
 import com.ouyunc.core.relation.RelationLocalCache;
+import com.ouyunc.base.constant.enums.IdentityType;
 import com.ouyunc.base.constant.enums.YesOrNo;
+import com.ouyunc.domain.entity.BlacklistEntity;
 import com.ouyunc.domain.entity.FriendEntity;
 import com.ouyunc.domain.entity.MongoFriendEntity;
 import com.ouyunc.domain.entity.UserEntity;
@@ -32,7 +34,10 @@ import reactor.core.scheduler.Schedulers;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -45,6 +50,8 @@ public final class FriendRepositorySupport {
 
     private final RepositoryInfrastructure infra;
     private final SessionMessagePersistenceSupport session;
+
+    private final ConcurrentHashMap<String, Object> blacklistRebuildLocks = new ConcurrentHashMap<>();
 
     public FriendRepositorySupport(RepositoryInfrastructure infra, SessionMessagePersistenceSupport session) {
         this.infra = infra;
@@ -183,28 +190,48 @@ public final class FriendRepositorySupport {
      */
     public Collection<String> getFriendIds(String appKey, String from) {
         ensureFriendRoster(appKey, from);
-        Collection<String> ids = infra.stringRedisTemplate.opsForZSet().range(
-                CacheConstant.buildFriendsCacheKey(appKey, from), NumberConstant.NUMBER_0, NumberConstant.NUMBER_NEGATIVE_1);
-        if (ids == null || ids.isEmpty()) {
+        if (isFriendRosterComplete(appKey, from)) {
+            Collection<String> ids = infra.stringRedisTemplate.opsForZSet().range(
+                    CacheConstant.buildFriendsCacheKey(appKey, from), NumberConstant.NUMBER_0, NumberConstant.NUMBER_NEGATIVE_1);
+            if (ids == null || ids.isEmpty()) {
+                return List.of();
+            }
+            return ids.stream()
+                    .filter(id -> id != null && !id.isBlank())
+                    .toList();
+        }
+        FriendRosterLoad load = loadAllFriendsFromDb(appKey, from);
+        if (load == null || load.rows().isEmpty()) {
             return List.of();
         }
-        return ids.stream()
-                .filter(id -> id != null && !id.isBlank())
+        if (load.truncated()) {
+            log.warn("好友通讯录截断，登录通知可能不全 appKey={} ownerId={}", appKey, from);
+        }
+        return load.rows().stream()
+                .filter(row -> row != null && row.getFriendUserId() != null && !row.getFriendUserId().isBlank())
+                .map(FriendEntity::getFriendUserId)
                 .toList();
     }
 
     /**
-     * INIT 缺失或与 ZCARD 不一致时把 MySQL 全量灌进 Redis；截断名单写负 INIT，不可作负向判定。
+     * INIT 缺失或不一致时把 MySQL 灌进 Redis；截断写负 INIT，不可作负向判定，也不得当完整通讯录。
      */
     private void ensureFriendRoster(String appKey, String ownerId) {
         if (RelationRosterRedis.skipRebuild(friendInitState(appKey, ownerId))) {
             return;
         }
-        FriendRosterLoad load = loadAllFriendsFromDb(appKey, ownerId);
-        if (load == null) {
-            return;
+        for (int attempt = 0; attempt < MessageConstant.RELATION_ROSTER_REBUILD_ATTEMPTS; attempt++) {
+            if (RelationRosterRedis.skipRebuild(friendInitState(appKey, ownerId))) {
+                return;
+            }
+            FriendRosterLoad load = loadAllFriendsFromDb(appKey, ownerId);
+            if (load == null) {
+                return;
+            }
+            if (rebuildFriendRosterRedis(appKey, ownerId, load.rows(), !load.truncated())) {
+                return;
+            }
         }
-        rebuildFriendRosterRedis(appKey, ownerId, load.rows(), !load.truncated());
     }
 
     /** 完整 INIT 才允许 ZSCORE miss 时证伪「不是好友」。 */
@@ -235,7 +262,7 @@ public final class FriendRepositorySupport {
             if (list == null || list.isEmpty()) {
                 return new FriendRosterLoad(List.of(), false);
             }
-            if (list.size() > MessageConstant.FRIEND_ROSTER_FULL_LOAD_LIMIT) {
+            if (list.size() >= MessageConstant.FRIEND_ROSTER_FULL_LOAD_LIMIT) {
                 log.warn("好友名单回源截断 appKey={} ownerId={} size={}", appKey, ownerId, list.size());
                 return new FriendRosterLoad(
                         list.subList(0, MessageConstant.FRIEND_ROSTER_FULL_LOAD_LIMIT), true);
@@ -247,7 +274,7 @@ public final class FriendRepositorySupport {
         }
     }
 
-    private void rebuildFriendRosterRedis(String appKey, String ownerId, List<FriendEntity> friends,
+    private boolean rebuildFriendRosterRedis(String appKey, String ownerId, List<FriendEntity> friends,
                                           boolean complete) {
         String zsetKey = CacheConstant.buildFriendsCacheKey(appKey, ownerId);
         String versionKey = CacheConstant.buildFriendsRelationVersionCacheKey(appKey, ownerId);
@@ -274,10 +301,11 @@ public final class FriendRepositorySupport {
             args.add(row.getFriendUserId());
         }
         try {
-            RelationRosterRedis.rebuildFriendCas(
+            return RelationRosterRedis.rebuildFriendCas(
                     infra.stringRedisTemplate, zsetKey, versionKey, initKey, args.toArray());
         } catch (Exception e) {
             log.warn("好友名单回源失败 appKey={} ownerId={}", appKey, ownerId, e);
+            return false;
         }
     }
 
@@ -472,6 +500,11 @@ public final class FriendRepositorySupport {
                 .subscribeOn(Schedulers.fromExecutor(infra.dbExecutor()));
     }
 
+    public Mono<Boolean> isBlacklistedReactive(String appKey, String ownerId, String targetId, int identityType) {
+        return Mono.fromCallable(() -> isBlacklisted(appKey, ownerId, targetId, identityType))
+                .subscribeOn(Schedulers.fromExecutor(infra.dbExecutor()));
+    }
+
     void updateFriendCache(String cacheKey, FriendEntity friendEntity) {
         if (friendEntity != null) {
             fillLocalFriendCache(cacheKey, friendEntity);
@@ -550,7 +583,7 @@ public final class FriendRepositorySupport {
         @SuppressWarnings("unchecked")
         List<Object> raw = pipelineResult instanceof List<?> list ? (List<Object>) list : List.of();
         boolean friendHit = isScoreHit(raw.size() > 0 ? raw.get(0) : null);
-        boolean blacklisted = isBlacklistHit(raw.size() > 1 ? raw.get(1) : null);
+        boolean hashBlacklisted = isBlacklistHit(raw.size() > 1 ? raw.get(1) : null);
         FriendEntity shieldEntity = deserializeFriendEntity(raw.size() > 2 ? raw.get(2) : null);
         boolean friend = friendHit;
         if (!friendHit) {
@@ -570,12 +603,132 @@ public final class FriendRepositorySupport {
         } else {
             RelationLocalCache.FRIEND.put(RelationLocalCache.friendKey(appKey, to, from), true);
         }
-        RelationLocalCache.markBlacklist(appKey, to, from, blacklisted);
+        boolean blacklisted = resolveBlacklisted(appKey, to, from, IdentityType.ONE_2_ONE.value(), hashBlacklisted);
         boolean shielded = friend && resolveRecipientShield(appKey, to, from, shieldEntity);
         if (!friend) {
             RelationLocalCache.markShield(appKey, to, from, false);
         }
         return new One2OneChatAccess(friend, blacklisted, shielded);
+    }
+
+    /**
+     * 拉黑判定：HGET 命中为真；完整 INIT 下 miss 为假；否则回源。查询异常抛出，准入 fail-closed。
+     */
+    public boolean isBlacklisted(String appKey, String ownerId, String targetId, int identityType) {
+        if (StringUtils.isAnyBlank(appKey, ownerId, targetId)) {
+            return true;
+        }
+        Boolean cached = RelationLocalCache.BLACKLIST.get(RelationLocalCache.blacklistKey(appKey, ownerId, targetId));
+        if (Boolean.TRUE.equals(cached)) {
+            return true;
+        }
+        if (Boolean.FALSE.equals(cached) && hasBlacklistInit(appKey, ownerId)) {
+            return false;
+        }
+        Object hashValue = infra.redisTemplate.opsForHash()
+                .get(CacheConstant.buildBlacklistCacheKey(appKey, ownerId), targetId);
+        return resolveBlacklisted(appKey, ownerId, targetId, identityType, isBlacklistHit(hashValue));
+    }
+
+    private boolean resolveBlacklisted(String appKey, String ownerId, String targetId, int identityType,
+                                       boolean hashHit) {
+        if (hashHit) {
+            RelationLocalCache.markBlacklist(appKey, ownerId, targetId, true);
+            return true;
+        }
+        if (hasBlacklistInit(appKey, ownerId)) {
+            RelationLocalCache.markBlacklist(appKey, ownerId, targetId, false);
+            return false;
+        }
+        rebuildBlacklistIndex(appKey, ownerId, identityType);
+        if (hasBlacklistInit(appKey, ownerId)) {
+            Object again = infra.redisTemplate.opsForHash()
+                    .get(CacheConstant.buildBlacklistCacheKey(appKey, ownerId), targetId);
+            boolean listed = isBlacklistHit(again);
+            RelationLocalCache.markBlacklist(appKey, ownerId, targetId, listed);
+            return listed;
+        }
+        Boolean dbListed = loadBlacklistExistsFromDbOrThrow(appKey, ownerId, targetId, identityType);
+        if (Boolean.TRUE.equals(dbListed)) {
+            cacheBlacklistPositive(appKey, ownerId, targetId);
+            RelationLocalCache.markBlacklist(appKey, ownerId, targetId, true);
+            return true;
+        }
+        return false;
+    }
+
+    private boolean hasBlacklistInit(String appKey, String ownerId) {
+        return Boolean.TRUE.equals(infra.stringRedisTemplate.hasKey(
+                CacheConstant.buildBlacklistInitCacheKey(appKey, ownerId)));
+    }
+
+    private void rebuildBlacklistIndex(String appKey, String ownerId, int identityType) {
+        String flightKey = appKey + ":" + ownerId + ":" + identityType;
+        Object lock = blacklistRebuildLocks.computeIfAbsent(flightKey, ignored -> new Object());
+        synchronized (lock) {
+            if (hasBlacklistInit(appKey, ownerId)) {
+                return;
+            }
+            try {
+                List<BlacklistEntity> rows = infra.jdbcClient.sql(JdbcSqlDialectHolder.selectAllBlacklist())
+                        .param(BlacklistEntity.Fields.identity, ownerId)
+                        .param(BlacklistEntity.Fields.identityType, identityType)
+                        .query(BlacklistEntity.class)
+                        .list();
+                if (rows != null && rows.size() > MessageConstant.BLACKLIST_FULL_LOAD_LIMIT) {
+                    log.warn("黑名单回源截断，不写 INIT appKey={} ownerId={} size={}", appKey, ownerId, rows.size());
+                    return;
+                }
+                writeBlacklistHash(appKey, ownerId, rows == null ? List.of() : rows);
+            } catch (Exception e) {
+                log.warn("重建黑名单索引失败 appKey={} ownerId={}", appKey, ownerId, e);
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void writeBlacklistHash(String appKey, String ownerId, List<BlacklistEntity> rows) {
+        String hashKey = CacheConstant.buildBlacklistCacheKey(appKey, ownerId);
+        Map<String, Long> fields = new HashMap<>();
+        for (BlacklistEntity row : rows) {
+            if (row == null || StringUtils.isBlank(row.getUserId())) {
+                continue;
+            }
+            long joinTime = row.getJoinTime() == null ? 1L : row.getJoinTime();
+            fields.put(row.getUserId(), joinTime);
+        }
+        infra.redisTemplate.delete(hashKey);
+        if (!fields.isEmpty()) {
+            infra.redisTemplate.opsForHash().putAll(hashKey, fields);
+        }
+        infra.stringRedisTemplate.opsForValue().set(
+                CacheConstant.buildBlacklistInitCacheKey(appKey, ownerId), "1");
+    }
+
+    private Boolean loadBlacklistExistsFromDbOrThrow(String appKey, String ownerId, String targetId, int identityType) {
+        try {
+            BlacklistEntity row = infra.jdbcClient.sql(JdbcSqlDialectHolder.selectBlacklist())
+                    .param(BlacklistEntity.Fields.identity, ownerId)
+                    .param(BlacklistEntity.Fields.userId, targetId)
+                    .param(BlacklistEntity.Fields.identityType, identityType)
+                    .query(BlacklistEntity.class)
+                    .optional()
+                    .orElse(null);
+            return row != null;
+        } catch (Exception e) {
+            log.error("查询黑名单失败 appKey={} owner={} target={}", appKey, ownerId, targetId, e);
+            throw new IllegalStateException("查询黑名单失败", e);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void cacheBlacklistPositive(String appKey, String ownerId, String targetId) {
+        try {
+            infra.redisTemplate.opsForHash().put(
+                    CacheConstant.buildBlacklistCacheKey(appKey, ownerId), targetId, 1L);
+        } catch (Exception e) {
+            log.warn("回写黑名单正缓存失败 appKey={} owner={} target={}", appKey, ownerId, targetId, e);
+        }
     }
 
     /**

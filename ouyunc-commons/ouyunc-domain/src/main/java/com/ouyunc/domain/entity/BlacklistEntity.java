@@ -98,4 +98,11 @@ public class BlacklistEntity implements Serializable {
     public void setCreateTime(LocalDateTime createTime) {
         this.createTime = createTime;
     }
+
+    public static final class Fields {
+        public static final String identity = "identity";
+        public static final String userId = "user_id";
+        public static final String identityType = "identity_type";
+        public static final String joinTime = "join_time";
+    }
 }

@@ -198,6 +198,17 @@ public enum DefaultRepository implements Repository {
         return RepositorySupports.FRIEND.loadOne2OneChatAccess(appKey, from, to);
     }
 
+    /**
+     * 拉黑判定：索引不完整时回源；查询异常由调用方 fail-closed。
+     */
+    public boolean isBlacklisted(String appKey, String ownerId, String targetId, int identityType) {
+        return RepositorySupports.FRIEND.isBlacklisted(appKey, ownerId, targetId, identityType);
+    }
+
+    public Mono<Boolean> isBlacklistedReactive(String appKey, String ownerId, String targetId, int identityType) {
+        return RepositorySupports.FRIEND.isBlacklistedReactive(appKey, ownerId, targetId, identityType);
+    }
+
     public boolean inGroup(String appKey, String from, String groupId) {
         return RepositorySupports.GROUP.inGroup(appKey, from, groupId);
     }

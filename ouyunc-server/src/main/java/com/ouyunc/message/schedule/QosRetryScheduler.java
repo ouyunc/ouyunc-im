@@ -41,7 +41,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * SERVER QoS 下行重试：任务只挂在始发节点。落地节点只写出；C2S ACK 若打到落地机，再转回始发节点取消。
  * <p>内部取消是 QoS0，发送失败仅有界重试；丢失后依赖客户端再次 ACK。取消成功仍可能有一条已在途的重复下行，
- * 客户端须按消息 ID 去重。始发进程宕机则内存 timer 丢失，跨宕机恢复不在本类范围。</p>
+ * 客户端须按消息 ID 去重。始发进程宕机则内存 timer 丢失。把重试外置 Redis 会引入双发/抢占，当前不改投递语义。</p>
  */
 public final class QosRetryScheduler {
 

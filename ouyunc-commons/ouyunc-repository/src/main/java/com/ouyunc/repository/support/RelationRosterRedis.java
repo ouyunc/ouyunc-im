@@ -1,5 +1,6 @@
 package com.ouyunc.repository.support;
 
+import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.enums.LuaScriptEnum;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.redis.connection.RedisConnection;
@@ -98,7 +99,8 @@ public final class RelationRosterRedis {
         if (template == null || StringUtils.isAnyBlank(zsetKey, versionKey, initKey) || args == null) {
             return false;
         }
-        Long ok = template.execute(FRIEND_REBUILD_SCRIPT, List.of(zsetKey, versionKey, initKey), args);
+        Long ok = template.execute(FRIEND_REBUILD_SCRIPT,
+                List.of(zsetKey, versionKey, initKey, CacheConstant.buildRelationRosterTmpCacheKey(zsetKey)), args);
         return ok != null && ok == 1L;
     }
 

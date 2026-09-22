@@ -295,109 +295,132 @@ public enum LuaScriptEnum {
             """, "lm CAS 替换"),
 
     /**
-     * 群成员 ZSet 回源重建 CAS：version 未变且 INIT 缺失时 DEL+ZADD 并写 INIT=成员数。
-     * 已有 INIT 视为完整名单，不覆盖并发入群；ZCARD>0 不再当成完整。
-     * KEYS[1]=memberZSet KEYS[2]=versionKey KEYS[3]=initKey
+     * 群成员回源 CAS：先写同槽临时 ZSET，版本仍匹配再 RENAME，失败只删临时键。
+     * KEYS[1]=memberZSet KEYS[2]=versionKey KEYS[3]=initKey KEYS[4]=tmpZset
      * ARGV[1]=expectedVersion ARGV[2]=memberCount ARGV[3..]=score,member 交替
-     * 返回 1=已重建并写 INIT，0=版本已变或已有 INIT。
+     * 返回 1=已重建并写 INIT，0=版本已变或已有一致 INIT。
      */
-    GROUP_MEMBER_REBUILD_CAS_SCRIPT("3", """
+    GROUP_MEMBER_REBUILD_CAS_SCRIPT("4", """
             local expected = tostring(ARGV[1])
             local cur = redis.call('GET', KEYS[2])
             if cur == false or cur == nil then cur = '0' else cur = tostring(cur) end
             if cur ~= expected then
                 return 0
             end
-            if redis.call('EXISTS', KEYS[3]) == 1 then
-                return 0
+            local init = redis.call('GET', KEYS[3])
+            if init ~= false and init ~= nil then
+                local n0 = tonumber(init)
+                if n0 ~= nil and math.abs(n0) == redis.call('ZCARD', KEYS[1]) then
+                    return 0
+                end
             end
-            redis.call('DEL', KEYS[1])
+            redis.call('DEL', KEYS[4])
             local n = tonumber(ARGV[2]) or 0
             for i = 1, n do
                 local base = 2 + (i - 1) * 2
                 local score = tonumber(ARGV[base + 1]) or 0
                 local member = ARGV[base + 2]
                 if member ~= nil and member ~= '' then
-                    redis.call('ZADD', KEYS[1], score, member)
+                    redis.call('ZADD', KEYS[4], score, member)
                 end
             end
             cur = redis.call('GET', KEYS[2])
             if cur == false or cur == nil then cur = '0' else cur = tostring(cur) end
             if cur ~= expected then
-                redis.call('DEL', KEYS[3])
+                redis.call('DEL', KEYS[4])
                 return 0
+            end
+            redis.call('DEL', KEYS[1])
+            if redis.call('EXISTS', KEYS[4]) == 1 then
+                redis.call('RENAME', KEYS[4], KEYS[1])
             end
             redis.call('SET', KEYS[3], tostring(n))
             return 1
             """, "群成员回源 CAS 重建"),
 
     /**
-     * 用户加群 ZSET 回源 CAS：version 未变且 INIT 缺失时 DEL+ZADD 并写 INIT=群数。
-     * KEYS[1]=zset KEYS[2]=versionKey KEYS[3]=initKey
+     * 用户加群 ZSET 回源 CAS：先写同槽临时 ZSET，版本仍匹配再 RENAME，失败只删临时键。
+     * KEYS[1]=zset KEYS[2]=versionKey KEYS[3]=initKey KEYS[4]=tmpZset
      * ARGV[1]=expectedVersion ARGV[2]=count ARGV[3..]=score,member 交替
-     * 返回 1=已重建并写 INIT，0=版本已变或已有 INIT。
+     * 返回 1=已重建并写 INIT，0=版本已变或已有一致 INIT。
      */
-    USER_GROUPS_REBUILD_SCRIPT("3", """
+    USER_GROUPS_REBUILD_SCRIPT("4", """
             local expected = tostring(ARGV[1])
             local cur = redis.call('GET', KEYS[2])
             if cur == false or cur == nil then cur = '0' else cur = tostring(cur) end
             if cur ~= expected then
                 return 0
             end
-            if redis.call('EXISTS', KEYS[3]) == 1 then
-                return 0
+            local init = redis.call('GET', KEYS[3])
+            if init ~= false and init ~= nil then
+                local n0 = tonumber(init)
+                if n0 ~= nil and math.abs(n0) == redis.call('ZCARD', KEYS[1]) then
+                    return 0
+                end
             end
-            redis.call('DEL', KEYS[1])
+            redis.call('DEL', KEYS[4])
             local n = tonumber(ARGV[2]) or 0
             for i = 1, n do
                 local base = 2 + (i - 1) * 2
                 local score = tonumber(ARGV[base + 1]) or 0
                 local member = ARGV[base + 2]
                 if member ~= nil and member ~= '' then
-                    redis.call('ZADD', KEYS[1], score, member)
+                    redis.call('ZADD', KEYS[4], score, member)
                 end
             end
             cur = redis.call('GET', KEYS[2])
             if cur == false or cur == nil then cur = '0' else cur = tostring(cur) end
             if cur ~= expected then
-                redis.call('DEL', KEYS[3])
+                redis.call('DEL', KEYS[4])
                 return 0
+            end
+            redis.call('DEL', KEYS[1])
+            if redis.call('EXISTS', KEYS[4]) == 1 then
+                redis.call('RENAME', KEYS[4], KEYS[1])
             end
             redis.call('SET', KEYS[3], tostring(n))
             return 1
             """, "用户加群名单回源 CAS 重建"),
 
     /**
-     * 好友名单回源 CAS：version 未变且 INIT 缺失时 DEL+ZADD。
-     * complete=1 写 INIT=count（可作负向判定）；complete=0 写 INIT=-count（截断，禁止当完整名单）。
-     * KEYS[1]=zset KEYS[2]=versionKey KEYS[3]=initKey
+     * 好友名单回源 CAS：先写同槽临时 ZSET，版本仍匹配再 RENAME。
+     * complete=1 写 INIT=count；complete=0 写 INIT=-count（截断，禁止负向判定）。
+     * KEYS[1]=zset KEYS[2]=versionKey KEYS[3]=initKey KEYS[4]=tmpZset
      * ARGV[1]=expectedVersion ARGV[2]=count ARGV[3]=complete ARGV[4..]=score,member 交替
      */
-    FRIEND_ROSTER_REBUILD_CAS_SCRIPT("3", """
+    FRIEND_ROSTER_REBUILD_CAS_SCRIPT("4", """
             local expected = tostring(ARGV[1])
             local cur = redis.call('GET', KEYS[2])
             if cur == false or cur == nil then cur = '0' else cur = tostring(cur) end
             if cur ~= expected then
                 return 0
             end
-            if redis.call('EXISTS', KEYS[3]) == 1 then
-                return 0
+            local init = redis.call('GET', KEYS[3])
+            if init ~= false and init ~= nil then
+                local n0 = tonumber(init)
+                if n0 ~= nil and math.abs(n0) == redis.call('ZCARD', KEYS[1]) then
+                    return 0
+                end
             end
-            redis.call('DEL', KEYS[1])
+            redis.call('DEL', KEYS[4])
             local n = tonumber(ARGV[2]) or 0
             for i = 1, n do
                 local base = 3 + (i - 1) * 2
                 local score = tonumber(ARGV[base + 1]) or 0
                 local member = ARGV[base + 2]
                 if member ~= nil and member ~= '' then
-                    redis.call('ZADD', KEYS[1], score, member)
+                    redis.call('ZADD', KEYS[4], score, member)
                 end
             end
             cur = redis.call('GET', KEYS[2])
             if cur == false or cur == nil then cur = '0' else cur = tostring(cur) end
             if cur ~= expected then
-                redis.call('DEL', KEYS[3])
+                redis.call('DEL', KEYS[4])
                 return 0
+            end
+            redis.call('DEL', KEYS[1])
+            if redis.call('EXISTS', KEYS[4]) == 1 then
+                redis.call('RENAME', KEYS[4], KEYS[1])
             end
             local complete = tonumber(ARGV[3]) or 0
             if complete == 1 then
@@ -409,17 +432,19 @@ public enum LuaScriptEnum {
             """, "好友名单回源 CAS 重建"),
 
     /**
-     * 关系 ZSET 增量加入：先 INCR 版本再 ZADD；仅新 member 且 INIT 为完整非负计数时 INCR INIT。
+     * 关系 ZSET 增量加入：仅新 member 才 INCR 版本；已存在只改 score 不抬版本。
      * KEYS[1]=zset KEYS[2]=versionKey KEYS[3]=initKey
      * ARGV[1]=score ARGV[2]=member
      */
     RELATION_ROSTER_ADD_SCRIPT("3", """
-            redis.call('INCR', KEYS[2])
             local added = redis.call('ZADD', KEYS[1], tonumber(ARGV[1]) or 0, ARGV[2])
-            if added == 1 and redis.call('EXISTS', KEYS[3]) == 1 then
-                local n = tonumber(redis.call('GET', KEYS[3]))
-                if n ~= nil and n >= 0 then
-                    redis.call('INCR', KEYS[3])
+            if added == 1 then
+                redis.call('INCR', KEYS[2])
+                if redis.call('EXISTS', KEYS[3]) == 1 then
+                    local n = tonumber(redis.call('GET', KEYS[3]))
+                    if n ~= nil and n >= 0 then
+                        redis.call('INCR', KEYS[3])
+                    end
                 end
             end
             return added
@@ -456,10 +481,10 @@ public enum LuaScriptEnum {
             """, "关系名单改分"),
 
     /**
-     * INIT 与 ZCARD 一致性：值的绝对值必须等于 ZCARD，否则删 INIT 触发回源。
+     * INIT 与 ZCARD 一致性（只读，不 DEL）。不一致由回源 CAS 覆盖。
      * 正数=完整名单（可负向判定）；负数=截断名单（只读缓存，不可证伪）。
      * KEYS[1]=zset KEYS[2]=initKey
-     * 返回 0=缺失或已删、1=完整一致、2=截断一致。
+     * 返回 0=缺失或不一致、1=完整一致、2=截断一致。
      */
     RELATION_ROSTER_INIT_CHECK_SCRIPT("2", """
             local init = redis.call('GET', KEYS[2])
@@ -468,13 +493,11 @@ public enum LuaScriptEnum {
             end
             local n = tonumber(init)
             if n == nil then
-                redis.call('DEL', KEYS[2])
                 return 0
             end
             local expected = math.abs(n)
             local zcard = redis.call('ZCARD', KEYS[1])
             if zcard ~= expected then
-                redis.call('DEL', KEYS[2])
                 return 0
             end
             if n < 0 then
