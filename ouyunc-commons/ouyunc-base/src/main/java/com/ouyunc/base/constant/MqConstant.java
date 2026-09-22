@@ -103,33 +103,6 @@ public class MqConstant {
 
 
     /**
-     * 保存好友配置 group
-     */
-    public static final String MQ_SAVE_FRIEND_CONFIG_GROUP = "friend_config_save";
-
-
-
-    /**
-     * 保存好友配置 topic
-     */
-    public static final String MQ_SAVE_FRIEND_CONFIG_TOPIC = MessageConstant.OUYUNC + MessageConstant.UNDERLINE + MQ_SAVE_FRIEND_CONFIG_GROUP;
-
-
-
-    /**
-     * 保存群成员配置 group
-     */
-    public static final String MQ_SAVE_GROUP_USER_CONFIG_GROUP = "group_user_config_save";
-
-
-
-    /**
-     * 保存群成员配置 topic
-     */
-    public static final String MQ_SAVE_GROUP_USER_CONFIG_TOPIC = MessageConstant.OUYUNC + MessageConstant.UNDERLINE + MQ_SAVE_GROUP_USER_CONFIG_GROUP;
-
-
-    /**
      * 外部渠道下行（WhatsApp / Telegram 等）group
      */
     public static final String MQ_EXTERNAL_CHANNEL_OUTBOUND_GROUP = "external_channel_outbound";
@@ -137,28 +110,23 @@ public class MqConstant {
     /**
      * 外部渠道下行 topic，由外渠适配服务消费
      */
-    public static final String MQ_EXTERNAL_CHANNEL_OUTBOUND_TOPIC =
-            MessageConstant.OUYUNC + MessageConstant.UNDERLINE + MQ_EXTERNAL_CHANNEL_OUTBOUND_GROUP;
+    public static final String MQ_EXTERNAL_CHANNEL_OUTBOUND_TOPIC = MessageConstant.OUYUNC + MessageConstant.UNDERLINE + MQ_EXTERNAL_CHANNEL_OUTBOUND_GROUP;
 
     /**
      * 客服 ticket 活动通知（IM → CS），与 {@code CsKafkaTopics#TICKET_ACTIVITY} 一致。
      */
     public static final String MQ_CS_TICKET_ACTIVITY_GROUP = "cs_ticket_activity";
 
-    public static final String MQ_CS_TICKET_ACTIVITY_TOPIC =
-            "ouyunc-cs-ticket-activity";
+    public static final String MQ_CS_TICKET_ACTIVITY_TOPIC = MessageConstant.OUYUNC + MessageConstant.UNDERLINE + MQ_CS_TICKET_ACTIVITY_GROUP;
+
 
     /**
      * 客服坐席 IM 通道关闭通知（IM → CS 踢技能池），与 {@code CsKafkaTopics#AGENT_PRESENCE} 一致。
      */
     public static final String MQ_CS_AGENT_PRESENCE_GROUP = "cs_agent_presence";
 
-    public static final String MQ_CS_AGENT_PRESENCE_TOPIC = "ouyunc-cs-agent-presence";
+    public static final String MQ_CS_AGENT_PRESENCE_TOPIC = MessageConstant.OUYUNC + MessageConstant.UNDERLINE + MQ_CS_AGENT_PRESENCE_GROUP;
 
-    /**
-     * 消息自动预译消费组，与 {@link #MQ_SAVE_MESSAGE_GROUP} 共用归档 topic，位移独立。
-     */
-    public static final String MQ_TRANSLATE_MESSAGE_GROUP = "message_translate";
 
     /**
      * 确认路径 topic（归档/撤回/已读/好友请求/群请求）要求 Kafka acks=all。
