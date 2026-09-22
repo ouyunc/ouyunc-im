@@ -1,19 +1,19 @@
 package com.ouyunc.message.processor;
 
 import com.alibaba.fastjson2.JSON;
-import com.ouyunc.base.constant.*;
+import com.ouyunc.base.constant.CacheConstant;
+import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.constant.enums.*;
+import com.ouyunc.base.model.GroupRequestSession;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.packet.message.content.GroupRequestContent;
 import com.ouyunc.core.context.MessageContext;
-import com.ouyunc.core.listener.event.MessageEvent;
-import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
-import com.ouyunc.base.model.GroupRequestSession;
+import com.ouyunc.core.exception.ExceptionReporter;
 import com.ouyunc.domain.entity.GroupEntity;
 import com.ouyunc.domain.entity.GroupUserEntity;
 import com.ouyunc.domain.entity.UserEntity;
-import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.DistributedLockHelper;
 import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
 import com.ouyunc.message.helper.RequestNotifyHelper;
@@ -43,7 +43,7 @@ public final class GroupInviteJoinMessageBiProcessor extends AbstractMessageBiPr
     public Mono<Boolean> preProcess(ChannelHandlerContext ctx, Packet packet) {
         if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
             log.error("校验消息: {} 中的发送方登录认证失败,开始关闭channel", packet);
-            MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过", packet), MessageEventTypeEnum.EXCEPTION), true);
+            ExceptionReporter.reportBusiness(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过", "GroupInviteJoinMessageBiProcessor.process", packet);
             ctx.close();
             return Mono.just(false);
         }
@@ -101,21 +101,21 @@ public final class GroupInviteJoinMessageBiProcessor extends AbstractMessageBiPr
                 GroupEntity groupEntity = repository().getGroupEntity(appKey, message.getTo());
                 if (groupEntity == null) {
                     log.error("群组:{} 不存在，请检查数据！", message.getTo());
-                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.GROUP_NOT_EXIST, message.getTo() + "群组不存在！", packet), MessageEventTypeEnum.EXCEPTION));
+                    ExceptionReporter.reportBusiness(ExceptionCodeEnum.GROUP_NOT_EXIST, message.getTo() + "群组不存在！", "GroupInviteJoinMessageBiProcessor.process", packet);
                     MessageAcceptPipelineHelper.ackRequestSettled(ctx, packet);
                     return;
                 }
                 Map<String, Double> groupMannerOrLeaderUsersIdentityAndPostMap = repository().groupManagerAndLeaderUsersIdentityAndPost(packet);
                 if (MapUtils.isEmpty(groupMannerOrLeaderUsersIdentityAndPostMap)) {
                     log.error("群组：{}, 不存在群主和群管理员！群消息： {}", packet.getMessage().getTo(), packet);
-                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群主或群管理员", packet), MessageEventTypeEnum.EXCEPTION), true);
+                    ExceptionReporter.reportBusiness(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群主或群管理员", "GroupInviteJoinMessageBiProcessor.process", packet);
                     MessageAcceptPipelineHelper.ackRequestSettled(ctx, packet);
                     return;
                 }
                 UserEntity userEntity = repository().getUserEntity(appKey, content.getIdentity());
                 if (userEntity == null) {
                     log.error("用户:{} 不存在，请检查数据！", content.getIdentity());
-                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.USER_NOT_EXIST, content.getIdentity() + "用户不存在！", packet), MessageEventTypeEnum.EXCEPTION));
+                    ExceptionReporter.reportBusiness(ExceptionCodeEnum.USER_NOT_EXIST, content.getIdentity() + "用户不存在！", "GroupInviteJoinMessageBiProcessor.process", packet);
                     MessageAcceptPipelineHelper.ackRequestSettled(ctx, packet);
                     return;
                 }
@@ -142,7 +142,7 @@ public final class GroupInviteJoinMessageBiProcessor extends AbstractMessageBiPr
                     GroupUserEntity fromGroupUserEntity = repository().groupUserEntity(appKey, message.getTo(), message.getFrom());
                     if (fromGroupUserEntity == null) {
                         log.error("群组：{}, 用户：{} 不存在，请检查数据！", message.getTo(), message.getFrom());
-                        MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, message.getFrom() + "不在群组中！", packet), MessageEventTypeEnum.EXCEPTION));
+                        ExceptionReporter.reportBusiness(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, message.getFrom() + "不在群组中！", "GroupInviteJoinMessageBiProcessor.process", packet);
                         MessageAcceptPipelineHelper.ackRequestSettled(ctx, packet);
                         return;
                     }
@@ -164,7 +164,7 @@ public final class GroupInviteJoinMessageBiProcessor extends AbstractMessageBiPr
                         }
                         if (!repository().autoPassBindGroup(packet, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
                             log.error("被邀请人自动同意且满足免审条件，绑定群组失败: {}", packet);
-                            MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "自动绑定群组请求消息异常!", packet), MessageEventTypeEnum.EXCEPTION), true);
+                            ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "自动绑定群组请求消息异常!", "GroupInviteJoinMessageBiProcessor.process", packet);
                             return;
                         }
                         notifyIdentities = RequestNotifyHelper.userOnly(content.getIdentity());
@@ -172,7 +172,7 @@ public final class GroupInviteJoinMessageBiProcessor extends AbstractMessageBiPr
                         groupRequestSession.setProgress(RequestSessionProgress.JOINING.value());
                         if (!saveGroupRequestMessage(packet, groupMannerOrLeaderUsersIdentityAndPostMap.keySet(), groupRequestSession)) {
                             log.error("Failed to save invite join group request message: {}", packet);
-                            MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存加群请求消息异常!", packet), MessageEventTypeEnum.EXCEPTION), true);
+                            ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存加群请求消息异常!", "GroupInviteJoinMessageBiProcessor.process", packet);
                             return;
                         }
                         notifyIdentities = RequestNotifyHelper.copyOf(groupMannerOrLeaderUsersIdentityAndPostMap.keySet());
@@ -182,7 +182,7 @@ public final class GroupInviteJoinMessageBiProcessor extends AbstractMessageBiPr
                     groupRequestSession.setProgress(RequestSessionProgress.JOINING.value());
                     if (!saveGroupRequestMessage(packet, groupMannerOrLeaderUsersIdentityAndPostMap.keySet(), groupRequestSession)) {
                         log.error("Failed to save invite join group request message: {}", packet);
-                        MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存加群请求消息异常!", packet), MessageEventTypeEnum.EXCEPTION), true);
+                        ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存加群请求消息异常!", "GroupInviteJoinMessageBiProcessor.process", packet);
                         return;
                     }
                     notifyIdentities = RequestNotifyHelper.userOnly(content.getIdentity());

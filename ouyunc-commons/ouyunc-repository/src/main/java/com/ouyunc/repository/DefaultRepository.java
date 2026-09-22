@@ -1,7 +1,6 @@
 package com.ouyunc.repository;
 
 import com.ouyunc.base.packet.Packet;
-import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.base.model.GroupRequestSession;
 import com.ouyunc.base.model.RequestSession;
 import com.ouyunc.base.constant.enums.IdentityType;
@@ -85,10 +84,9 @@ public enum DefaultRepository implements Repository {
                                                  String mqTopic, String mqKey,
                                                  Mono<Boolean> processor,
                                                  BiConsumer<ChannelHandlerContext, Packet> processorAfter,
-                                                 Consumer<MessageEvent> exceptionConsumer,
                                                  ExceptionCodeEnum exceptionCode) {
         return RepositorySupports.REACTIVE_OPERATION.reactiveHandleOperation(ctx, packet, validator, mqTopic, mqKey,
-                processor, processorAfter, exceptionConsumer, exceptionCode);
+                processor, processorAfter, exceptionCode);
     }
 
     public <T> Mono<Boolean> reactiveHandleOperation(ChannelHandlerContext ctx, Packet packet,
@@ -97,10 +95,9 @@ public enum DefaultRepository implements Repository {
                                                    String mqTopic, String mqKey,
                                                    Function<T, Mono<Boolean>> processor,
                                                    BiConsumer<ChannelHandlerContext, Packet> processorAfter,
-                                                   Consumer<MessageEvent> exceptionConsumer,
                                                    ExceptionCodeEnum processExceptionCode) {
         return RepositorySupports.REACTIVE_OPERATION.reactiveHandleOperation(ctx, packet, preparer, verifyExceptionCode,
-                mqTopic, mqKey, processor, processorAfter, exceptionConsumer, processExceptionCode);
+                mqTopic, mqKey, processor, processorAfter, processExceptionCode);
     }
 
     public Mono<List<Packet>> reactiveLoadValidatedReadReceiptPackets(Packet packet, String sessionId,

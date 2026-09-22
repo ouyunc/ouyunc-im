@@ -1,10 +1,11 @@
 package com.ouyunc.message.processor;
 
+import com.ouyunc.core.exception.ExceptionReporter;
+
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
-import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.constant.enums.MessageType;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.model.Metadata;
@@ -12,8 +13,6 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.core.context.MessageContext;
-import com.ouyunc.core.listener.event.MessageEvent;
-import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.base.model.RequestSession;
 import com.ouyunc.base.constant.enums.RequestSessionProgress;
 import com.ouyunc.message.context.MessageServerContext;
@@ -55,7 +54,7 @@ public final class One2OneAgreeFriendRequestMessageBiProcessor extends AbstractM
     public Mono<Boolean> preProcess(ChannelHandlerContext ctx, Packet packet) {
         if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
             log.error("校验消息失败: {} 认证未通过,开始关闭channel", packet);
-            MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过!", packet), MessageEventTypeEnum.EXCEPTION), true);
+            ExceptionReporter.reportBusiness(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过!", "One2OneAgreeFriendRequestMessageBiProcessor.process", packet);
             ctx.close();
             return Mono.just(false);
         }
@@ -102,7 +101,7 @@ public final class One2OneAgreeFriendRequestMessageBiProcessor extends AbstractM
                 requestSession.setProgress(RequestSessionProgress.AGREEING.value());
                 if (!repository().agreeBindFriend(appKey, packet, requestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
                     log.error("绑定好友关系异常: {}", packet);
-                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.BIND_FRIEND_ERROR, "处理一对一同意好友请求绑定异常！", packet), MessageEventTypeEnum.EXCEPTION), true);
+                    ExceptionReporter.reportBusiness(ExceptionCodeEnum.BIND_FRIEND_ERROR, "处理一对一同意好友请求绑定异常！", "One2OneAgreeFriendRequestMessageBiProcessor.process", packet);
                     return;
                 }
                 RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.userOnly(to));

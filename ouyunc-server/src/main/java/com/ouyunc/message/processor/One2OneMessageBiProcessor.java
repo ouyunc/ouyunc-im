@@ -1,9 +1,10 @@
 package com.ouyunc.message.processor;
 
+import com.ouyunc.core.exception.ExceptionReporter;
+
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
-import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.MessageType;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
@@ -12,8 +13,6 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.core.context.MessageContext;
-import com.ouyunc.core.listener.event.MessageEvent;
-import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.base.constant.enums.IdentityType;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.AtMentionHelper;
@@ -54,7 +53,7 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
     public Mono<Boolean> preProcess(ChannelHandlerContext ctx, Packet packet) {
         if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
             log.error("校验消息失败: {} 认证未通过,开始关闭channel", packet);
-            MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过!", packet), MessageEventTypeEnum.EXCEPTION), true);
+            ExceptionReporter.reportBusiness(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过!", "One2OneMessageBiProcessor.process", packet);
             ctx.close();
             return Mono.just(false);
         }
@@ -98,7 +97,7 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
                         "单聊消息写入会话失败"))
                 .onErrorResume(error -> {
                     log.error("单聊消息持久化异常, packetId={}", packet.getPacketId(), error);
-                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "单聊持久化异常: " + error.getMessage(), packet), MessageEventTypeEnum.EXCEPTION), true);
+                    ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "单聊持久化异常: " + error.getMessage(), "One2OneMessageBiProcessor.process", packet, error);
                     MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
                     return Mono.empty();
                 });
@@ -149,7 +148,6 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
                     }
                     deliver(packet0, true);
                 },
-                (exceptionEvent) -> MessageServerContext.publishEvent(exceptionEvent, true),
                 ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR)
                 .doOnNext(success -> {
                     if (!Boolean.TRUE.equals(success)) {
@@ -178,7 +176,6 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
                     MessageAcceptPipelineHelper.qosAckOnSuccess(ctx0, packet0);
                     deliverReadReceiptToSender(packet0);
                 },
-                (exceptionEvent)-> MessageServerContext.publishEvent(exceptionEvent, true),
                 ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR)
                 .doOnNext(success -> {
                     if (!Boolean.TRUE.equals(success)) {

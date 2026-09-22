@@ -1,5 +1,7 @@
 package com.ouyunc.message.handler;
 
+import com.ouyunc.core.exception.ExceptionReporter;
+
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
@@ -21,7 +23,6 @@ import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.device.DeviceTypeRegistry;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.event.payload.ClientLoginEventPayload;
-import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.LoginSessionDirectory;
@@ -113,9 +114,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         // 摘流 / 拒绝新连接：滚动升级窗口内不再接受新登录
         if (!MessageServerContext.isAcceptingNewConnections()) {
             log.warn("客户端id: {} 登录被拒绝：服务摘流中", ctx.channel().id().asShortText());
-            MessageServerContext.publishEvent(new MessageEvent(
-                    ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_REFUSED_DRAIN, "服务摘流中，拒绝登录", packet),
-                    MessageEventTypeEnum.EXCEPTION), true);
+            ExceptionReporter.reportBusiness(ExceptionCodeEnum.LOGIN_REFUSED_DRAIN, "服务摘流中，拒绝登录", "AuthenticationHandler", packet);
             ctx.close();
             return;
         }
@@ -164,9 +163,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                     || !validate(parsedLogin)) {
                 log.warn("客户端id: {} 登录参数: {}，校验未通过！",
                         ctx.channel().id().asShortText(), Serializer.JSON.serializeToString(parsedLogin));
-                MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(
-                        ExceptionCodeEnum.LOGIN_VERIFY_ERROR, "登录校验未通过", packet),
-                        MessageEventTypeEnum.EXCEPTION), true);
+                ExceptionReporter.reportBusiness(ExceptionCodeEnum.LOGIN_VERIFY_ERROR, "登录校验未通过", "AuthenticationHandler", packet);
                 AppKeyValidator.releaseReservedIfNeeded(parsedLogin.getAppKey(), ctx);
                 failLoginOnEventLoop(ctx);
                 return;
@@ -291,9 +288,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         String loginClientInfoCacheKey = CacheConstant.buildLoginCacheKey(closingLogin.getAppKey(), comboIdentity);
         boolean locked = tryUnbindMatchingSession(closingLogin, comboIdentity, loginClientInfoCacheKey);
         if (!locked) {
-            MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(
-                    ExceptionCodeEnum.UN_BIND_ERROR, "客户端解绑登录信息失败！获取分布式锁失败", packet),
-                    MessageEventTypeEnum.EXCEPTION));
+            ExceptionReporter.reportBusiness(ExceptionCodeEnum.UN_BIND_ERROR, "客户端解绑登录信息失败！获取分布式锁失败", "AuthenticationHandler", packet);
             ScheduleTimer.scheduleOnce(() -> {
                 if (!tryUnbindMatchingSession(closingLogin, comboIdentity, loginClientInfoCacheKey)) {
                     log.error("解绑补偿仍失败，等待下次登录或节点租约过期 combo={}", comboIdentity);
@@ -430,10 +425,9 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         }
         if (bindError != null) {
             log.error("客户端: {} 登录绑定失败", loginClientInfo, bindError);
-            MessageServerContext.publishEvent(new MessageEvent(
-                    ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_VERIFY_ERROR,
-                            "登录绑定失败: " + bindError.getMessage(), packet),
-                    MessageEventTypeEnum.EXCEPTION), true);
+            ExceptionReporter.reportSystem(ExceptionCodeEnum.LOGIN_VERIFY_ERROR,
+                    "登录绑定失败: " + bindError.getMessage(),
+                    "AuthenticationHandler.finishLoginBind", packet, bindError);
             ClientHelper.unbindLocalRegisterTable(loginClientInfo, ctx);
             AppKeyValidator.releaseReservedIfNeeded(loginClientInfo.getAppKey(), ctx);
             ctx.close();
@@ -441,10 +435,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         }
         if (!directoryOwned) {
             log.warn("登录 fencing 失败，目录已被更新会话覆盖 identity={}", loginClientInfo.getIdentity());
-            MessageServerContext.publishEvent(new MessageEvent(
-                    ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_VERIFY_ERROR,
-                            "登录绑定失败：会话已被更新连接顶替", packet),
-                    MessageEventTypeEnum.EXCEPTION), true);
+            ExceptionReporter.reportBusiness(ExceptionCodeEnum.LOGIN_VERIFY_ERROR, "登录绑定失败：会话已被更新连接顶替", "AuthenticationHandler", packet);
             ClientHelper.unbindLocalRegisterTable(loginClientInfo, ctx);
             AppKeyValidator.releaseReservedIfNeeded(loginClientInfo.getAppKey(), ctx);
             ctx.close();

@@ -1,9 +1,7 @@
 package com.ouyunc.message.handler;
 
-import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.exception.OutboundPacketVerifyException;
-import com.ouyunc.core.listener.event.MessageEvent;
-import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.core.exception.ExceptionReporter;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
@@ -17,9 +15,8 @@ import org.slf4j.LoggerFactory;
 public class ExceptionHandler extends ChannelDuplexHandler {
     private static final Logger log = LoggerFactory.getLogger(ExceptionHandler.class);
 
-
     /**
-     * 入站协议损坏才关连接；本地出站校验失败不关。
+     * 入站协议损坏才关连接；本地出站校验失败不关、不进故障 MQ。
      */
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
@@ -28,8 +25,7 @@ public class ExceptionHandler extends ChannelDuplexHandler {
                     ctx.channel() == null ? null : ctx.channel().id(), cause);
             return;
         }
-        log.error("通道 channelId: {} 发生了异常", ctx.channel().id(), cause);
-        MessageServerContext.publishEvent(new MessageEvent(cause, MessageEventTypeEnum.EXCEPTION), true);
+        ExceptionReporter.reportPipeline("ExceptionHandler", cause);
         if (ctx.channel() != null && ctx.channel().isActive()) {
             ctx.close();
         }

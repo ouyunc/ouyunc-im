@@ -1,13 +1,13 @@
 package com.ouyunc.message.processor;
 
+import com.ouyunc.core.exception.ExceptionReporter;
+
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.constant.enums.*;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.core.context.MessageContext;
-import com.ouyunc.core.listener.event.MessageEvent;
-import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.*;
 import com.ouyunc.message.helper.CsHelper.PrepareOutcome;
@@ -45,7 +45,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
     public Mono<Boolean> preProcess(ChannelHandlerContext ctx, Packet packet) {
         if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
             log.error("客服消息校验失败: {} 认证未通过, 关闭 channel", packet);
-            MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过!", packet), MessageEventTypeEnum.EXCEPTION), true);
+            ExceptionReporter.reportBusiness(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过!", "CsMessageBiProcessor.process", packet);
             ctx.close();
             return Mono.just(false);
         }
@@ -106,7 +106,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
                         "客服消息写入 ticket 失败"))
                 .onErrorResume(error -> {
                     log.error("客服消息持久化异常, packetId={}", packet.getPacketId(), error);
-                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "客服持久化异常: " + error.getMessage(), packet), MessageEventTypeEnum.EXCEPTION), true);
+                    ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "客服持久化异常: " + error.getMessage(), "CsMessageBiProcessor.process", packet, error);
                     MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
                     return Mono.empty();
                 });
@@ -160,7 +160,6 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
                                 repository().refreshCsTicketLastMessageAfterWithdraw(appKey, ticketScopeId);
                             }
                         },
-                        (exceptionEvent) -> MessageServerContext.publishEvent(exceptionEvent, true),
                         ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR)
                 .doOnNext(success -> {
                     if (!Boolean.TRUE.equals(success)) {
@@ -186,7 +185,6 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
                             MessageAcceptPipelineHelper.qosAckOnSuccess(ctx0, packet0);
                             CsHelper.deliverMessage(packet0, route);
                         },
-                        (exceptionEvent) -> MessageServerContext.publishEvent(exceptionEvent, true),
                         ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR)
                 .doOnNext(success -> {
                     if (!Boolean.TRUE.equals(success)) {

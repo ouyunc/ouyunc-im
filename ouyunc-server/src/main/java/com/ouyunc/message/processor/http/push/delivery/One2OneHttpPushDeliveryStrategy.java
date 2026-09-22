@@ -10,6 +10,7 @@ import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.IdentityUtil;
+import com.ouyunc.core.exception.ExceptionReporter;
 import com.ouyunc.message.helper.AtMentionHelper;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageDeliveryRouteHelper;
@@ -96,8 +97,9 @@ public final class One2OneHttpPushDeliveryStrategy implements HttpProcessor {
                 })
                 .onErrorResume(error -> {
                     log.error("HTTP 推送单聊落库异常, packetId={}", packet.getPacketId(), error);
-                    HttpPushDeliverySupport.publishException(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
-                            "单聊持久化异常: " + error.getMessage(), packet);
+                    ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
+                            "单聊持久化异常: " + error.getMessage(),
+                            "One2OneHttpPushDeliveryStrategy.process", packet, error);
                     return Mono.just(false);
                 });
     }
@@ -120,7 +122,6 @@ public final class One2OneHttpPushDeliveryStrategy implements HttpProcessor {
                             }
                             MessageDeliveryRouteHelper.deliverPeerMessage(packet0, true);
                         },
-                        HttpPushDeliverySupport::publishExceptionEvent,
                         ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR)
                 .map(Boolean.TRUE::equals);
     }
@@ -136,7 +137,6 @@ public final class One2OneHttpPushDeliveryStrategy implements HttpProcessor {
                                 packet, IdentityType.ONE_2_ONE,
                                 MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP, packets),
                         (ctx, packet0) -> deliverReadReceiptToSender(packet0),
-                        HttpPushDeliverySupport::publishExceptionEvent,
                         ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR)
                 .map(Boolean.TRUE::equals);
     }

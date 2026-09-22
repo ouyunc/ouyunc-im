@@ -2,10 +2,8 @@ package com.ouyunc.message.processor.http.push.delivery;
 
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
-import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.model.ClientInfo;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.model.Metadata;
@@ -13,8 +11,7 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.cache.Cache;
 import com.ouyunc.cache.local.caffeine.CaffeineLocalCache;
-import com.ouyunc.core.listener.event.MessageEvent;
-import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
+import com.ouyunc.core.exception.ExceptionReporter;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageHelper;
@@ -137,17 +134,33 @@ public final class HttpPushDeliverySupport {
         }
     }
 
-    public static void publishException(ExceptionCodeEnum code, String message, Packet packet) {
-        MessageServerContext.publishEvent(new MessageEvent(
-                ExceptionEventPayload.of(code, message, packet),
-                MessageEventTypeEnum.EXCEPTION), true);
-    }
-
     /**
-     * 供 reactiveHandleOperation 异常回调：仅发布事件。
+     * HTTP 推送侧异常上报；按错误码区分业务/系统。
      */
-    public static void publishExceptionEvent(MessageEvent event) {
-        MessageServerContext.publishEvent(event, true);
+    public static void publishException(ExceptionCodeEnum code, String message, Packet packet) {
+        String scene = "HttpPushDeliverySupport.publishException";
+        if (code == null) {
+            ExceptionReporter.reportSystem(ExceptionCodeEnum.UNKNOWN_ERROR, message, scene, packet);
+            return;
+        }
+        String name = code.name();
+        boolean business = name.startsWith("ILLEGAL_")
+                || name.startsWith("CONTENT_MEDIA_")
+                || name.startsWith("REQUEST_SESSION_")
+                || name.equals("GROUP_MEMBER_NOT_EXIST_ERROR")
+                || name.equals("GROUP_NOT_EXIST")
+                || name.equals("USER_NOT_EXIST")
+                || name.equals("MESSAGE_CONTENT_TYPE_ERROR")
+                || name.equals("MESSAGE_TYPE_ERROR")
+                || name.equals("MESSAGE_REF_INVALID_ERROR")
+                || name.equals("HTTP_PUSH_BUSINESS_REJECT")
+                || name.equals("CS_SESSION_ROUTE_ERROR")
+                || name.endsWith("_VERIFY_ERROR");
+        if (business) {
+            ExceptionReporter.reportBusiness(code, message, scene, packet);
+        } else {
+            ExceptionReporter.reportSystem(code, message, scene, packet);
+        }
     }
 
     /**

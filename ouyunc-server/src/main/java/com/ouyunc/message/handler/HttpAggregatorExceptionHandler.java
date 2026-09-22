@@ -40,13 +40,8 @@ public class HttpAggregatorExceptionHandler extends ChannelInboundHandlerAdapter
             return;
         }
         if (cause instanceof DecoderException) {
-            Throwable leaf = cause;
-            while (leaf.getCause() != null && leaf.getCause() != leaf) {
-                leaf = leaf.getCause();
-            }
             HttpUtil.writeJsonResponse(ctx, null, HttpResponseStatus.BAD_REQUEST,
-                    HttpResponseResult.fail(HttpResponseCodeEnum.BAD_REQUEST,
-                            leaf.getMessage() != null ? leaf.getMessage() : "HTTP 解码失败"));
+                    HttpResponseResult.fail(HttpResponseCodeEnum.BAD_REQUEST, "HTTP 解码失败"));
             return;
         }
         ctx.fireExceptionCaught(cause);

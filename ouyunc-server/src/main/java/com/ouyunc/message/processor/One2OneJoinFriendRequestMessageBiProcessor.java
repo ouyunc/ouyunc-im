@@ -1,18 +1,17 @@
 package com.ouyunc.message.processor;
 
+import com.ouyunc.core.exception.ExceptionReporter;
+
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
-import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.constant.enums.MessageType;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.core.context.MessageContext;
-import com.ouyunc.core.listener.event.MessageEvent;
-import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.base.model.RequestSession;
 import com.ouyunc.base.constant.enums.FriendJoinPolicy;
 import com.ouyunc.base.constant.enums.RequestSessionProgress;
@@ -52,7 +51,7 @@ public final class One2OneJoinFriendRequestMessageBiProcessor extends AbstractMe
     public Mono<Boolean> preProcess(ChannelHandlerContext ctx, Packet packet) {
         if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
             log.error("校验消息失败: {} 认证未通过,开始关闭channel", packet);
-            MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过!", packet), MessageEventTypeEnum.EXCEPTION), true);
+            ExceptionReporter.reportBusiness(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过!", "One2OneJoinFriendRequestMessageBiProcessor.process", packet);
             ctx.close();
             return Mono.just(false);
         }
@@ -97,7 +96,7 @@ public final class One2OneJoinFriendRequestMessageBiProcessor extends AbstractMe
                 UserEntity toUserEntity = repository().getUserEntity(appKey, message.getTo());
                 if (toUserEntity == null) {
                     log.error("对方:{} 不存在，请检查数据！", message.getTo());
-                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.USER_NOT_EXIST, message.getTo() + "用户不存在！", packet), MessageEventTypeEnum.EXCEPTION));
+                    ExceptionReporter.reportBusiness(ExceptionCodeEnum.USER_NOT_EXIST, message.getTo() + "用户不存在！", "One2OneJoinFriendRequestMessageBiProcessor.process", packet);
                     MessageAcceptPipelineHelper.ackRequestSettled(ctx, packet);
                     return;
                 }
@@ -108,7 +107,7 @@ public final class One2OneJoinFriendRequestMessageBiProcessor extends AbstractMe
                     session.setProgress(RequestSessionProgress.AGREEING.value());
                     if (!repository().autoPassBindFriend(packet, session, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
                         log.error("自动处理绑定好友失败: {}", packet);
-                        MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一自动绑定好友请求消息异常!", packet), MessageEventTypeEnum.EXCEPTION), true);
+                        ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一自动绑定好友请求消息异常!", "One2OneJoinFriendRequestMessageBiProcessor.process", packet);
                         return;
                     }
                     RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.userOnly(message.getFrom()));
@@ -116,7 +115,7 @@ public final class One2OneJoinFriendRequestMessageBiProcessor extends AbstractMe
                     session.setProgress(RequestSessionProgress.JOINING.value());
                     if (!repository().saveJoinFriendRequestMessage(packet, session, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
                         log.error("Failed to save one-to-one join friend request message: {}", packet);
-                        MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一加好友请求消息异常!", packet), MessageEventTypeEnum.EXCEPTION), true);
+                        ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一加好友请求消息异常!", "One2OneJoinFriendRequestMessageBiProcessor.process", packet);
                         return;
                     }
                     RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.userOnly(message.getTo()));

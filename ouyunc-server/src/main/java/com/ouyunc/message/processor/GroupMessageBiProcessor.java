@@ -1,5 +1,7 @@
 package com.ouyunc.message.processor;
 
+import com.ouyunc.core.exception.ExceptionReporter;
+
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.constant.enums.*;
@@ -8,8 +10,6 @@ import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.core.context.MessageContext;
-import com.ouyunc.core.listener.event.MessageEvent;
-import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.base.constant.enums.IdentityType;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.AtMentionHelper;
@@ -54,7 +54,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
     public Mono<Boolean> preProcess(ChannelHandlerContext ctx, Packet packet) {
         if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
             log.error("校验消息: {} 中的发送方登录认证失败,开始关闭channel", packet);
-            MessageContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过", packet), MessageEventTypeEnum.EXCEPTION), true);
+            ExceptionReporter.reportBusiness(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过", "GroupMessageBiProcessor.process", packet);
             ctx.close();
             return Mono.just(false);
         }
@@ -86,15 +86,13 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
         } catch (GroupMembershipSupport.GroupMembershipLoadException e) {
             log.error("群组：{} 成员权威回源失败，拒绝当成空群丢扇出, packetId={}",
                     packet.getMessage().getTo(), packet.getPacketId(), e);
-            MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(
-                    ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "群成员回源失败: " + e.getMessage(), packet),
-                    MessageEventTypeEnum.EXCEPTION), true);
+            ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "群成员回源失败: " + e.getMessage(), "GroupMessageBiProcessor.process", packet, e);
             MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
             return Mono.empty();
         }
         if (CollectionUtils.isEmpty(groupUserIdentitySet)) {
             log.error("群组：{}, 不存在群成员！群消息： {}", packet.getMessage().getTo(), packet);
-            MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群成员", packet), MessageEventTypeEnum.EXCEPTION), true);
+            ExceptionReporter.reportBusiness(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群成员", "GroupMessageBiProcessor.process", packet);
             MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
             return Mono.empty();
         }
@@ -103,7 +101,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
         String from = packet.getMessage().getFrom();
         if (!skipSenderMembership && !groupUserIdentitySet.contains(from)) {
             log.error("发送方：{}, 不在群组：{} 中！群消息： {}", from, packet.getMessage().getTo(), packet);
-            MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "发送者不在群组中", packet), MessageEventTypeEnum.EXCEPTION), true);
+            ExceptionReporter.reportBusiness(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "发送者不在群组中", "GroupMessageBiProcessor.process", packet);
             MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
             return Mono.empty();
         }
@@ -133,7 +131,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
                         "群聊消息写入会话失败"))
                 .onErrorResume(error -> {
                     log.error("群聊消息持久化异常, packetId={}", packet.getPacketId(), error);
-                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "群聊持久化异常: " + error.getMessage(), packet), MessageEventTypeEnum.EXCEPTION), true);
+                    ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "群聊持久化异常: " + error.getMessage(), "GroupMessageBiProcessor.process", packet, error);
                     MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
                     return Mono.empty();
                 });
@@ -175,7 +173,6 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
                     MessageAcceptPipelineHelper.qosAckOnSuccess(ctx0, packet0);
                     deliverGroupReadReceiptSelfSyncOnly(packet0);
                 },
-                (exceptionEvent)-> MessageServerContext.publishEvent(exceptionEvent, true),
                 ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR)
                 .doOnNext(success -> {
                     if (!Boolean.TRUE.equals(success)) {
@@ -218,7 +215,6 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
                     }
                     deliverWithdrawMessage(packet0, groupUserIdentitySet);
                 },
-                (exceptionEvent) -> MessageServerContext.publishEvent(exceptionEvent, true),
                 ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR)
                 .doOnNext(success -> {
                     if (!Boolean.TRUE.equals(success)) {
@@ -327,9 +323,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
             return true;
         } catch (IllegalArgumentException ex) {
             log.warn("群@校验失败: {} | packet={}", ex.getMessage(), packet);
-            MessageServerContext.publishEvent(new MessageEvent(
-                    ExceptionEventPayload.of(ExceptionCodeEnum.GROUP_AT_MENTION_INVALID_ERROR, ex.getMessage(), packet),
-                    MessageEventTypeEnum.EXCEPTION), true);
+            ExceptionReporter.reportBusiness(ExceptionCodeEnum.GROUP_AT_MENTION_INVALID_ERROR, ex.getMessage(), "GroupMessageBiProcessor.process", packet);
             return false;
         }
     }

@@ -1,16 +1,14 @@
 package com.ouyunc.repository.support;
 
+import com.ouyunc.core.exception.ExceptionReporter;
+
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqArchiveRouting;
 import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
-import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.packet.Packet;
-import com.ouyunc.core.context.MessageContext;
-import com.ouyunc.core.listener.event.MessageEvent;
-import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.mq.core.MqHeaderKeys;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -65,10 +63,7 @@ public final class MessageMqPublisherSupport {
                     sendPacket(topic, key, snapshot).whenComplete((value, ex) -> {
                         if (ex != null) {
                             log.warn("MQ 确认发送失败 topic={} packetId={}", topic, snapshot.getPacketId(), ex);
-                            MessageContext.publishEvent(new MessageEvent(
-                                    ExceptionEventPayload.of(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR,
-                                            "MQ 确认发送失败: " + ex.getMessage(), snapshot),
-                                    MessageEventTypeEnum.EXCEPTION), true);
+                            ExceptionReporter.reportSystem(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, "MQ 确认发送失败: " + ex.getMessage(), "MessageMqPublisherSupport", snapshot, ex);
                             result.completeExceptionally(ex);
                         } else {
                             result.complete(value);
@@ -130,9 +125,6 @@ public final class MessageMqPublisherSupport {
                                String failureContext, Throwable ex) {
         log.warn("MQ 旁路投递失败, topic={}, key={}, packetId={}, context={}, 原因: {}",
                 topic, key, packetId, failureContext, ex.getMessage(), ex);
-        MessageContext.publishEvent(new MessageEvent(
-                ExceptionEventPayload.of(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR,
-                        failureContext + ": " + ex.getMessage(), packet),
-                MessageEventTypeEnum.EXCEPTION), true);
+        ExceptionReporter.reportSystem(ExceptionCodeEnum.MQ_PERSISTENCE_ERROR, failureContext + ": " + ex.getMessage(), "MessageMqPublisherSupport", packet, ex);
     }
 }

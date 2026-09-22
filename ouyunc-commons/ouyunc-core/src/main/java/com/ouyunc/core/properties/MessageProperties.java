@@ -72,7 +72,23 @@ public class MessageProperties {
     @Key(value = "ouyunc.message.ssl.privateKey", defaultValue = "ssl/m.ouyunc.com_pkcs8.key")
     private String sslPrivateKey;
 
+    /**
+     * 异常 message 最大长度（截断后进事件/MQ）
+     */
+    @Key(value = "ouyunc.message.exception.message-max-length", defaultValue = "512")
+    private int exceptionMessageMaxLength;
 
+    /**
+     * SYSTEM/PIPELINE 是否发故障 MQ；关闭则仅日志（及 Persist 兜底）
+     */
+    @Key(value = "ouyunc.message.exception.mq-enabled", defaultValue = "true")
+    private boolean exceptionMqEnabled;
+
+    /**
+     * MQ 失败后是否落 Mongo
+     */
+    @Key(value = "ouyunc.message.exception.persist-enabled", defaultValue = "true")
+    private boolean exceptionPersistEnabled;
 
     public String getApplicationName() {
         return applicationName;
@@ -158,6 +174,30 @@ public class MessageProperties {
         this.qosMode = qosMode;
     }
 
+    public int getExceptionMessageMaxLength() {
+        return exceptionMessageMaxLength <= 0 ? 512 : exceptionMessageMaxLength;
+    }
+
+    public void setExceptionMessageMaxLength(int exceptionMessageMaxLength) {
+        this.exceptionMessageMaxLength = exceptionMessageMaxLength;
+    }
+
+    public boolean isExceptionMqEnabled() {
+        return exceptionMqEnabled;
+    }
+
+    public void setExceptionMqEnabled(boolean exceptionMqEnabled) {
+        this.exceptionMqEnabled = exceptionMqEnabled;
+    }
+
+    public boolean isExceptionPersistEnabled() {
+        return exceptionPersistEnabled;
+    }
+
+    public void setExceptionPersistEnabled(boolean exceptionPersistEnabled) {
+        this.exceptionPersistEnabled = exceptionPersistEnabled;
+    }
+
     @Override
     public String toString() {
         return "MessageProperties{" +
@@ -172,6 +212,9 @@ public class MessageProperties {
                 ", sslEnable=" + sslEnable +
                 ", sslCertificate='" + sslCertificate + '\'' +
                 ", sslPrivateKey='" + sslPrivateKey + '\'' +
+                ", exceptionMessageMaxLength=" + exceptionMessageMaxLength +
+                ", exceptionMqEnabled=" + exceptionMqEnabled +
+                ", exceptionPersistEnabled=" + exceptionPersistEnabled +
                 '}';
     }
 }

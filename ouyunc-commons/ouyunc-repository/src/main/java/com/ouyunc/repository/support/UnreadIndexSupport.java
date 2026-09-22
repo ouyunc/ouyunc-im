@@ -1,16 +1,14 @@
 package com.ouyunc.repository.support;
 
+import com.ouyunc.core.exception.ExceptionReporter;
+
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.LuaScriptEnum;
-import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
-import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.device.DeviceTypeRegistry;
-import com.ouyunc.core.listener.event.MessageEvent;
-import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.base.constant.enums.IdentityType;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -91,12 +89,7 @@ public final class UnreadIndexSupport {
         } catch (Exception e) {
             log.error("incrOne2OneOnMessage failed appKey={} recipient={} sender={} packetId={}",
                     appKey, recipientId, senderId, packetId, e);
-            MessageContext.publishEvent(new MessageEvent(
-                    ExceptionEventPayload.of(
-                            ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
-                            "单聊未读索引更新失败: " + e.getMessage(),
-                            packet),
-                    MessageEventTypeEnum.EXCEPTION), true);
+            ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "单聊未读索引更新失败: " + e.getMessage(), "UnreadIndexSupport", packet, e);
         }
     }
 
@@ -125,12 +118,7 @@ public final class UnreadIndexSupport {
         } catch (Exception e) {
             log.error("clearOne2OneOnRead failed appKey={} reader={} peer={} deviceType={} offset={}",
                     appKey, readerId, peerId, deviceType, incomingOffset, e);
-            MessageContext.publishEvent(new MessageEvent(
-                    ExceptionEventPayload.of(
-                            ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
-                            "单聊已读 offset+未读清索引失败: " + e.getMessage(),
-                            null),
-                    MessageEventTypeEnum.EXCEPTION), true);
+            ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "单聊已读 offset+未读清索引失败: " + e.getMessage(), "UnreadIndexSupport", null, e);
             return false;
         }
     }
@@ -170,12 +158,7 @@ public final class UnreadIndexSupport {
         } catch (Exception e) {
             log.error("removeOne2OneOnWithdraw failed appKey={} recipient={} peer={} packetId={}",
                     appKey, recipientId, peerId, packetId, e);
-            MessageContext.publishEvent(new MessageEvent(
-                    ExceptionEventPayload.of(
-                            ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
-                            "单聊撤回清未读失败: " + e.getMessage(),
-                            null),
-                    MessageEventTypeEnum.EXCEPTION), true);
+            ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "单聊撤回清未读失败: " + e.getMessage(), "UnreadIndexSupport", null, e);
         }
     }
 

@@ -1,13 +1,11 @@
 package com.ouyunc.message.helper;
 
+import com.ouyunc.core.exception.ExceptionReporter;
+
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
-import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
-import com.ouyunc.core.listener.event.MessageEvent;
-import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
-import com.ouyunc.message.context.MessageServerContext;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -38,9 +36,7 @@ public final class MessageRefHelper {
             return true;
         } catch (IllegalArgumentException ex) {
             log.warn("消息引用校验失败: {} | packet={}", ex.getMessage(), packet);
-            MessageServerContext.publishEvent(new MessageEvent(
-                    ExceptionEventPayload.of(ExceptionCodeEnum.MESSAGE_REF_INVALID_ERROR, ex.getMessage(), packet),
-                    MessageEventTypeEnum.EXCEPTION), true);
+            ExceptionReporter.reportBusiness(ExceptionCodeEnum.MESSAGE_REF_INVALID_ERROR, ex.getMessage(), "MessageRefHelper.applyOrReject", packet);
             return false;
         }
     }

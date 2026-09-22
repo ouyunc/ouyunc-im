@@ -1,5 +1,7 @@
 package com.ouyunc.message.helper;
 
+import com.ouyunc.core.exception.ExceptionReporter;
+
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
@@ -7,7 +9,6 @@ import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.IngressSourceEnum;
 import com.ouyunc.base.constant.enums.LoginScopeEnum;
 import com.ouyunc.base.constant.enums.MessageDeliveryChannelEnum;
-import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.constant.enums.MessageFromToTypeEnum;
 import com.ouyunc.base.constant.enums.YesOrNo;
 import com.ouyunc.base.model.ClientInfo;
@@ -20,8 +21,6 @@ import com.ouyunc.base.utils.AppKeyUtil;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.utils.QosClaimIdentities;
 import com.ouyunc.base.utils.TimeUtil;
-import com.ouyunc.core.listener.event.MessageEvent;
-import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.properties.MessageServerProperties;
 import com.ouyunc.repository.DefaultRepository;
@@ -215,9 +214,7 @@ public final class CsHelper {
     }
 
     public static void publishReject(Packet packet, String reason) {
-        MessageServerContext.publishEvent(new MessageEvent(
-                ExceptionEventPayload.of(ExceptionCodeEnum.CS_SESSION_ROUTE_ERROR, reason, packet),
-                MessageEventTypeEnum.EXCEPTION), true);
+        ExceptionReporter.reportBusiness(ExceptionCodeEnum.CS_SESSION_ROUTE_ERROR, reason, "CsHelper.publishReject", packet);
     }
 
     // -------------------------------------------------------------------------

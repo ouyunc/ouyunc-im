@@ -1,17 +1,15 @@
 package com.ouyunc.repository.support;
 
+import com.ouyunc.core.exception.ExceptionReporter;
+
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.LuaScriptEnum;
-import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.constant.enums.MessageFromToTypeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
-import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.device.DeviceTypeRegistry;
-import com.ouyunc.core.listener.event.MessageEvent;
-import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.repository.cs.CsImSessionRoute;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -84,12 +82,7 @@ public final class CsTicketUnreadSupport {
         } catch (Exception e) {
             log.error("incrCsTicketUnread failed appKey={} ticketId={} recipient={} packetId={}",
                     appKey, ticketId, recipientId, packetId, e);
-            MessageContext.publishEvent(new MessageEvent(
-                    ExceptionEventPayload.of(
-                            ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
-                            "客服 ticket 未读索引更新失败: " + e.getMessage(),
-                            packet),
-                    MessageEventTypeEnum.EXCEPTION), true);
+            ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "客服 ticket 未读索引更新失败: " + e.getMessage(), "CsTicketUnreadSupport", packet, e);
         }
     }
 
@@ -115,12 +108,7 @@ public final class CsTicketUnreadSupport {
         } catch (Exception e) {
             log.error("clearCsTicketUnread failed appKey={} ticketId={} reader={} offset={}",
                     appKey, ticketId, readerId, incomingOffset, e);
-            MessageContext.publishEvent(new MessageEvent(
-                    ExceptionEventPayload.of(
-                            ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
-                            "客服 ticket 已读清未读失败: " + e.getMessage(),
-                            null),
-                    MessageEventTypeEnum.EXCEPTION), true);
+            ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "客服 ticket 已读清未读失败: " + e.getMessage(), "CsTicketUnreadSupport", null, e);
             return false;
         }
     }
@@ -159,12 +147,7 @@ public final class CsTicketUnreadSupport {
         } catch (Exception e) {
             log.error("removeCsTicketUnreadOnWithdraw failed appKey={} ticketId={} recipient={} packetId={}",
                     appKey, ticketId, recipientId, packetId, e);
-            MessageContext.publishEvent(new MessageEvent(
-                    ExceptionEventPayload.of(
-                            ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
-                            "客服 ticket 撤回清未读失败: " + e.getMessage(),
-                            null),
-                    MessageEventTypeEnum.EXCEPTION), true);
+            ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "客服 ticket 撤回清未读失败: " + e.getMessage(), "CsTicketUnreadSupport", null, e);
         }
     }
 

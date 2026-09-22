@@ -1,12 +1,11 @@
 package com.ouyunc.message.helper;
 
+import com.ouyunc.core.exception.ExceptionReporter;
+
 import com.ouyunc.base.constant.MqArchiveRouting;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
-import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.core.context.MessageContext;
-import com.ouyunc.core.listener.event.MessageEvent;
-import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.repository.DefaultRepository;
 import com.ouyunc.repository.SaveMessageOutcome;
 import io.netty.channel.ChannelHandlerContext;
@@ -101,10 +100,7 @@ public final class MessageAcceptPipelineHelper {
         }
         if (result == null || !result.isFreshWrite()) {
             log.error("热写未成功，拒绝 ACK/投递: outcome={} packetId={}", result, packet.getPacketId());
-            MessageContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(
-                    ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
-                    failEventMessage != null ? failEventMessage : "消息热写失败",
-                    packet), MessageEventTypeEnum.EXCEPTION), true);
+            ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, failEventMessage != null ? failEventMessage : "消息热写失败", "MessageAcceptPipelineHelper.afterHotSave", packet);
             releaseQosOnFailure(packet);
             return Mono.empty();
         }

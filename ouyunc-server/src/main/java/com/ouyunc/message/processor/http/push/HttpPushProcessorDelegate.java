@@ -6,6 +6,7 @@ import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.HttpResponseCodeEnum;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.packet.Packet;
+import com.ouyunc.core.exception.ExceptionReporter;
 import com.ouyunc.message.helper.MessageArchiveHelper;
 import com.ouyunc.message.http.HttpPipelineException;
 import com.ouyunc.message.processor.http.push.delivery.HttpProcessor;
@@ -69,7 +70,8 @@ public final class HttpPushProcessorDelegate {
             return Boolean.TRUE.equals(ok);
         } catch (Exception ex) {
             log.error("HTTP 推送管线异常, messageId={}", packet.getMessage().getId(), ex);
-            HttpPushDeliverySupport.publishException(ExceptionCodeEnum.UNKNOWN_ERROR, ex.getMessage(), packet);
+            ExceptionReporter.reportSystem(ExceptionCodeEnum.UNKNOWN_ERROR, ex.getMessage(),
+                    "HttpPushProcessorDelegate.runPipeline", packet, ex);
             return false;
         }
     }

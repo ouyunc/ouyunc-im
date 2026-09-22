@@ -4,22 +4,13 @@ import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
-import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
-import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
-import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
-import com.ouyunc.base.constant.enums.MessageType;
-import com.ouyunc.base.constant.enums.MessageTypeEnum;
+import com.ouyunc.base.constant.enums.*;
+import com.ouyunc.base.model.GroupRequestSession;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.packet.message.content.GroupRequestContent;
 import com.ouyunc.core.context.MessageContext;
-import com.ouyunc.core.listener.event.MessageEvent;
-import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
-import com.ouyunc.base.model.GroupRequestSession;
-import com.ouyunc.base.constant.enums.GroupJoinerProcessStatus;
-import com.ouyunc.base.constant.enums.GroupRequestSessionWay;
-import com.ouyunc.base.constant.enums.RequestSessionProgress;
-import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.core.exception.ExceptionReporter;
 import com.ouyunc.message.helper.DistributedLockHelper;
 import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
 import com.ouyunc.message.helper.RequestNotifyHelper;
@@ -47,7 +38,7 @@ public final class GroupAgreeMessageBiProcessor extends AbstractMessageBiProcess
     public Mono<Boolean> preProcess(ChannelHandlerContext ctx, Packet packet) {
         if (!AuthValidator.INSTANCE.verify(packet, ctx)) {
             log.error("校验消息: {} 中的发送方登录认证失败,开始关闭channel", packet);
-            MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过", packet), MessageEventTypeEnum.EXCEPTION), true);
+            ExceptionReporter.reportBusiness(ExceptionCodeEnum.LOGIN_AUTH_ERROR, "登录认证未通过", "GroupAgreeMessageBiProcessor.process", packet);
             ctx.close();
             return Mono.just(false);
         }
@@ -83,7 +74,7 @@ public final class GroupAgreeMessageBiProcessor extends AbstractMessageBiProcess
             content = groupRequestContent;
         } else {
             log.error("消息内容类型:{} 不是群请求类型，请检查消息内容类型是否正确", message.getContentType());
-            MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.MESSAGE_CONTENT_TYPE_ERROR, "消息内容类型错误", packet), MessageEventTypeEnum.EXCEPTION), true);
+            ExceptionReporter.reportBusiness(ExceptionCodeEnum.MESSAGE_CONTENT_TYPE_ERROR, "消息内容类型错误", "GroupAgreeMessageBiProcessor.process", packet);
             MessageAcceptPipelineHelper.ackRequestSettled(ctx, packet);
             return Mono.empty();
         }
@@ -121,7 +112,7 @@ public final class GroupAgreeMessageBiProcessor extends AbstractMessageBiProcess
                 Map<String, Double> groupMannerOrLeaderUsersIdentityAndPostMap = repository().groupManagerAndLeaderUsersIdentityAndPost(packet);
                 if (MapUtils.isEmpty(groupMannerOrLeaderUsersIdentityAndPostMap)) {
                     log.error("群组：{}, 不存在群主！群消息： {}", packet.getMessage().getTo(), packet);
-                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群主和群管理员", packet), MessageEventTypeEnum.EXCEPTION), true);
+                    ExceptionReporter.reportBusiness(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群主和群管理员", "GroupAgreeMessageBiProcessor.process", packet);
                     MessageAcceptPipelineHelper.ackRequestSettled(ctx, packet);
                     return;
                 }
@@ -136,7 +127,7 @@ public final class GroupAgreeMessageBiProcessor extends AbstractMessageBiProcess
                 groupRequestSession.setProcessorPost(processorPost.intValue());
                 if (!repository().manualPassBindGroup(packet, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
                     log.error("手动处理绑定群组失败: {}", packet);
-                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "手动绑定群组请求消息异常!", packet), MessageEventTypeEnum.EXCEPTION), true);
+                    ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "手动绑定群组请求消息异常!", "GroupAgreeMessageBiProcessor.process", packet);
                     return;
                 }
                 RequestNotifyHelper.dispatch(ctx, packet, appKey,

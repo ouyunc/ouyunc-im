@@ -19,9 +19,9 @@ public enum MessageEventTypeEnum implements EventType {
     SEND_FAIL(7, "消息发送失败事件"),
     /** source: {@code Packet | BusinessPayload} */
     WITHDRAW_MESSAGE(11, "撤回消息事件"),
-    /** source: {@code ExceptionEventPayload | Throwable} */
+    /** source: {@code ExceptionEventPayload} */
     EXCEPTION(12, "异常事件"),
-    /** source: {@code MessageEvent(type=EXCEPTION)} */
+    /** source: {@code String(ExceptionRecord JSON)} */
     EXCEPTION_PERSIST(13, "异常持久化事件"),
     /** source: {@code Packet} */
     ON_MESSAGE(14, "客户端收消息事件"),

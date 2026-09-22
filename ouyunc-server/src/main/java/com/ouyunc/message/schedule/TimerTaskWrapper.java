@@ -1,17 +1,16 @@
 package com.ouyunc.message.schedule;
 
+import com.ouyunc.core.exception.ExceptionReporter;
+
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
-import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.cache.Cache;
 import com.ouyunc.cache.local.caffeine.CaffeineLocalCache;
-import com.ouyunc.core.listener.event.MessageEvent;
-import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.message.context.MessageServerContext;
 import io.netty.util.Timeout;
 import io.netty.util.Timer;
@@ -276,19 +275,13 @@ public class TimerTaskWrapper implements TimerTask {
                     work.run();
                 } catch (Exception ex) {
                     log.error("执行定时调度任务异常 taskId={}: {}", taskId, ex.getMessage());
-                    MessageServerContext.publishEvent(new MessageEvent(
-                            ExceptionEventPayload.of(ExceptionCodeEnum.SCHEDULE_TASK_ERROR,
-                                    "业务 task 调度异常：" + ex.getMessage(), null),
-                            MessageEventTypeEnum.EXCEPTION));
+                    ExceptionReporter.reportSystem(ExceptionCodeEnum.SCHEDULE_TASK_ERROR, "业务 task 调度异常：" + ex.getMessage(), "TimerTaskWrapper.runTask", null, ex);
                 }
             });
         } catch (RejectedExecutionException ex) {
             EXECUTOR_REJECT_COUNT.incrementAndGet();
             log.error("定时任务提交执行器被拒绝 taskId={} kind={}", taskId, kind, ex);
-            MessageServerContext.publishEvent(new MessageEvent(
-                    ExceptionEventPayload.of(ExceptionCodeEnum.SCHEDULE_TASK_ERROR,
-                            "task 执行器拒绝：" + ex.getMessage(), null),
-                    MessageEventTypeEnum.EXCEPTION));
+            ExceptionReporter.reportSystem(ExceptionCodeEnum.SCHEDULE_TASK_ERROR, "task 执行器拒绝：" + ex.getMessage(), "TimerTaskWrapper.runTask", null, ex);
             // fixed-delay 被拒时 work 的 finally 不会跑，需自行排下一轮以免永久停摆
             if (waitForCompletion) {
                 rescheduleIfAlive(timer);

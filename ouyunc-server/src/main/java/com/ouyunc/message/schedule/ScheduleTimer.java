@@ -1,10 +1,9 @@
 package com.ouyunc.message.schedule;
 
+import com.ouyunc.core.exception.ExceptionReporter;
+
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
-import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
-import com.ouyunc.core.listener.event.MessageEvent;
-import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.message.context.MessageServerContext;
 import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timeout;
@@ -89,7 +88,7 @@ public class ScheduleTimer {
             wrapper.setScheduledTimeout(timeout);
         } catch (Exception e) {
             log.error("task 调度异常：{}", e.getMessage());
-            MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.SCHEDULE_TASK_ERROR, "task 调度异常：" + e.getMessage(), null), MessageEventTypeEnum.EXCEPTION));
+            ExceptionReporter.reportSystem(ExceptionCodeEnum.SCHEDULE_TASK_ERROR, "task 调度异常：" + e.getMessage(), "ScheduleTimer.schedule", null, e);
         }
     }
 
@@ -105,12 +104,12 @@ public class ScheduleTimer {
                     task.run();
                 } catch (Exception e) {
                     log.error("一次性任务执行异常：{}", e.getMessage());
-                    MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.SCHEDULE_TASK_ERROR, "一次性任务执行异常：" + e.getMessage(), null), MessageEventTypeEnum.EXCEPTION));
+                    ExceptionReporter.reportSystem(ExceptionCodeEnum.SCHEDULE_TASK_ERROR, "一次性任务执行异常：" + e.getMessage(), "ScheduleTimer.schedule", null, e);
                 }
             }, delay, timeUnit);
         } catch (Exception e) {
             log.error("一次性任务调度异常：{}", e.getMessage());
-            MessageServerContext.publishEvent(new MessageEvent(ExceptionEventPayload.of(ExceptionCodeEnum.SCHEDULE_TASK_ERROR, "一次性任务调度异常：" + e.getMessage(), null), MessageEventTypeEnum.EXCEPTION));
+            ExceptionReporter.reportSystem(ExceptionCodeEnum.SCHEDULE_TASK_ERROR, "一次性任务调度异常：" + e.getMessage(), "ScheduleTimer.schedule", null, e);
             return null;
         }
     }

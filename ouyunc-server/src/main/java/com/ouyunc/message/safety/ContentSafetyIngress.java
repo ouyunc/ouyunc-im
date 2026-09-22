@@ -1,9 +1,10 @@
 package com.ouyunc.message.safety;
 
+import com.ouyunc.core.exception.ExceptionReporter;
+
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
-import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.constant.enums.NetworkEnum;
 import com.ouyunc.base.encrypt.Encrypt;
@@ -17,8 +18,6 @@ import com.ouyunc.base.serialize.Serializer;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.core.context.MessageContext;
-import com.ouyunc.core.listener.event.MessageEvent;
-import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.PacketChannelWriter;
 import io.netty.channel.ChannelHandlerContext;
@@ -54,10 +53,7 @@ public final class ContentSafetyIngress {
         if (result != null && !result.isPassed()) {
             log.warn("内容安全拒绝 packetId={} reason={} hits={}",
                     packet.getPacketId(), result.getReason(), result.getHitWords());
-            MessageServerContext.publishEvent(new MessageEvent(
-                    ExceptionEventPayload.of(ExceptionCodeEnum.CONTENT_SENSITIVE_REJECT,
-                            ExceptionCodeEnum.CONTENT_SENSITIVE_REJECT.getMessage(), packet),
-                    MessageEventTypeEnum.EXCEPTION), true);
+            ExceptionReporter.reportBusiness(ExceptionCodeEnum.CONTENT_SENSITIVE_REJECT, ExceptionCodeEnum.CONTENT_SENSITIVE_REJECT.getMessage(), "ContentSafetyIngress.applyOnWorker", packet);
             replyReject(ctx, packet);
             return false;
         }

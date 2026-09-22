@@ -8,6 +8,7 @@ import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
+import com.ouyunc.core.exception.ExceptionReporter;
 import com.ouyunc.message.helper.CsHelper;
 import com.ouyunc.message.helper.MessageArchiveHelper;
 import com.ouyunc.message.helper.CsHelper.PrepareOutcome;
@@ -118,8 +119,9 @@ public final class CsHttpPushDeliveryStrategy implements HttpProcessor {
                 })
                 .onErrorResume(error -> {
                     log.error("HTTP 推送客服落库异常, packetId={}", packet.getPacketId(), error);
-                    HttpPushDeliverySupport.publishException(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
-                            "客服持久化异常: " + error.getMessage(), packet);
+                    ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
+                            "客服持久化异常: " + error.getMessage(),
+                            "CsHttpPushDeliveryStrategy.process", packet, error);
                     return Mono.just(false);
                 });
     }
@@ -140,7 +142,6 @@ public final class CsHttpPushDeliveryStrategy implements HttpProcessor {
                                 DefaultRepository.INSTANCE.refreshCsTicketLastMessageAfterWithdraw(appKey, ticketScopeId);
                             }
                         },
-                        HttpPushDeliverySupport::publishExceptionEvent,
                         ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR)
                 .map(Boolean.TRUE::equals);
     }
@@ -156,7 +157,6 @@ public final class CsHttpPushDeliveryStrategy implements HttpProcessor {
                                 packet, route, packet.getDeviceType(),
                                 MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP, packets),
                         (ctx, packet0) -> CsHelper.deliverMessage(packet0, route),
-                        HttpPushDeliverySupport::publishExceptionEvent,
                         ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR)
                 .map(Boolean.TRUE::equals);
     }
