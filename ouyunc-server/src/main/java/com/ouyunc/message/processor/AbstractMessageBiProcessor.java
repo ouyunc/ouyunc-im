@@ -11,6 +11,7 @@ import com.ouyunc.core.listener.event.payload.ExceptionEventPayload;
 import com.ouyunc.message.validator.AuthValidator;
 import com.ouyunc.repository.DefaultRepository;
 import io.netty.channel.ChannelHandlerContext;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
@@ -59,11 +60,18 @@ public abstract class AbstractMessageBiProcessor<T extends Number> extends Abstr
     /**
      * 登录鉴权 +（可选）业务校验均通过后归档并等待 MQ 确认。未登录包不得进入 MQ；
      * 权限拒绝的包也不归档（由 {@link #continueWhenPassed} 在通过后再调用）。
+     * SAVE 幂等键为 appKey + messageId；重复热写命中后不再进入本方法。
      */
     protected Mono<Void> archiveAfterAuth(Packet packet) {
         if (MqArchiveRouting.usesDomainConfirmOnly(packet)) {
             // 已读/撤回/好友/群只确认领域 topic，避免 SAVE + 领域各等一次 broker。
             return Mono.empty();
+        }
+        if (packet == null || packet.getMessage() == null
+                || StringUtils.isBlank(packet.getMessage().getId())) {
+            log.error("SAVE 归档缺少客户端 messageId, packetId={}",
+                    packet == null ? null : packet.getPacketId());
+            return Mono.error(new IllegalStateException("SAVE 归档缺少客户端 messageId"));
         }
         return MessageArchiveHelper.confirm(() -> repository().save(packet));
     }

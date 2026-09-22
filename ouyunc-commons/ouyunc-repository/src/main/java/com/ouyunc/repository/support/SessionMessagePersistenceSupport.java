@@ -59,7 +59,7 @@ public final class SessionMessagePersistenceSupport {
 
     /**
      * 单聊/客服消息持久化，并在成功后对收件人维护 ur 未读 Hash。
-     * <p>DUPLICATE 不累加未读、不视为新写入；调用方只应 ACK，禁止二次扇出。</p>
+     * <p>DUPLICATE 不累加未读、不视为新写入（未读重放使用已收敛的正式 packetId）；调用方只应 ACK，禁止二次扇出。</p>
      */
     public Mono<SaveMessageOutcome> reactiveSaveOne2OneMessage(Packet packet, String sessionId, long expireTime,
                                                     UnreadIndexSupport unreadIndexSupport) {
@@ -138,22 +138,26 @@ public final class SessionMessagePersistenceSupport {
             if (qosSave) {
                 // 写入 Metadata，供失败路径 releaseQosClaim 带回同一 owner（禁止传 null）
                 metadata.setQosOwnerToken(qosOwnerToken);
-                int claimState = QosIdempotencyHelper.tryClaim(infra.redisTemplate, appKey, packet.getPacketId(),
+                QosIdempotencyHelper.ClaimResult claim = QosIdempotencyHelper.tryClaimResult(
+                        infra.redisTemplate, appKey, packet.getPacketId(),
                         qosClaimIdentity, clientMessageId, qosOwnerToken, message);
-                if (claimState == QosIdempotencyHelper.CLAIM_COMMITTED) {
-                    Long canonicalPacketId = QosIdempotencyHelper.committedPacketId(
-                            infra.redisTemplate, appKey, qosClaimIdentity, clientMessageId);
-                    if (canonicalPacketId != null && canonicalPacketId > 0L) {
-                        packet.setPacketId(canonicalPacketId);
+                if (claim.state() == QosIdempotencyHelper.CLAIM_COMMITTED) {
+                    // 客户端只认 messageId；服务端索引必须收敛到首次正式 packetId
+                    if (!claim.isCommittedWithCanonical()) {
+                        log.warn("QoS 已提交但缺少正式 packetId，拒绝按重复成功处理: appKey={} clientMessageId={}",
+                                appKey, clientMessageId);
+                        metadata.setQosOwnerToken(null);
+                        return SaveMessageOutcome.FAILED;
                     }
+                    packet.setPacketId(claim.canonicalPacketId());
                     metadata.setQosOwnerToken(null);
                     return SaveMessageOutcome.DUPLICATE;
                 }
-                if (claimState == QosIdempotencyHelper.CLAIM_CONFLICT) {
+                if (claim.state() == QosIdempotencyHelper.CLAIM_CONFLICT) {
                     metadata.setQosOwnerToken(null);
                     return SaveMessageOutcome.CONFLICT;
                 }
-                if (claimState != QosIdempotencyHelper.CLAIM_ACQUIRED) {
+                if (claim.state() != QosIdempotencyHelper.CLAIM_ACQUIRED) {
                     // PENDING / FAILED：占位未拿到，绝不能当作成功
                     metadata.setQosOwnerToken(null);
                     return SaveMessageOutcome.FAILED;

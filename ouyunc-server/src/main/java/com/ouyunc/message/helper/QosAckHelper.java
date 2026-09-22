@@ -19,7 +19,8 @@ import org.slf4j.LoggerFactory;
 /**
  * QoS S2C ACK：仅确认服务端已收到客户端业务消息（该条 qos>0）。
  * ACK 包自身 qos=0，避免控制包再走业务 QoS。
- * 优先写回入站 Channel；仅在连接已不可用时才按登录身份查表投递。
+ * <p>正文同时回 {@code ackId}(正式 packetId) 与 {@code messageId}；客户端停重试以 messageId 为准。
+ * 优先写回入站 Channel；仅在连接已不可用时才按登录身份查表投递。</p>
  */
 public final class QosAckHelper {
 

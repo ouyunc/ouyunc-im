@@ -123,11 +123,18 @@ public final class QosRetryScheduler {
             stored = loadStoredPacket(login.getAppKey(), packetId);
         } catch (Exception e) {
             QosRetryCancelMetrics.originLocateFail();
-            log.warn("QoS ACK 查询原消息失败 appKey={} packetId={}", login.getAppKey(), packetId, e);
+            log.warn("QoS ACK 查询原消息失败 appKey={} packetId={} messageId={}",
+                    login.getAppKey(), packetId, messageId, e);
             return;
         }
-        if (!QosAckValidation.matches(stored, login.getAppKey(), packetId, messageId)) {
+        QosAckValidation.MatchResult match =
+                QosAckValidation.match(stored, login.getAppKey(), packetId, messageId);
+        if (match != QosAckValidation.MatchResult.OK) {
             QosRetryCancelMetrics.invalidPacket();
+            String storedMessageId = stored != null && stored.getMessage() != null
+                    ? stored.getMessage().getId() : null;
+            log.warn("QoS C2S ACK 校验失败 reason={} appKey={} packetId={} ackMessageId={} storedMessageId={}",
+                    match, login.getAppKey(), packetId, messageId, storedMessageId);
             return;
         }
         // 最终收件权限由始发节点实际登记的身份/设备任务约束。

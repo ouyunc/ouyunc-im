@@ -13,6 +13,7 @@ import com.ouyunc.message.helper.QosAckHelper;
 import com.ouyunc.repository.DefaultRepository;
 import com.ouyunc.repository.Repository;
 import io.netty.channel.ChannelHandlerContext;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * 基础抽象处理类。
@@ -36,9 +37,9 @@ public abstract class AbstractBaseBiProcessor<R, T extends Number>
     }
 
     /**
-     * QoS 前置判重。客户端首次发送和重发都使用原业务 Packet。
-     * 仅 {@code COMMITTED} 幂等记录可直接回 ACK；{@code PENDING} 表示占位但未确认落库，
-     * 必须继续处理，由持久化侧原子抢占或等待接管。
+     * QoS 前置判重。客户端重试以稳定 {@code messageId} 为准，packetId 可变。
+     * 仅 {@code COMMITTED} 且拿到正式 packetId 时可直接回 ACK；会将 packet 收敛到该正式 ID。
+     * {@code PENDING} 表示占位但未确认落库，必须继续处理。
      */
     @Override
     public boolean qosPreHandle(ChannelHandlerContext ctx, Packet packet) {
@@ -47,6 +48,9 @@ public abstract class AbstractBaseBiProcessor<R, T extends Number>
         }
         Message message = packet.getMessage();
         if (message == null || message.getQos() <= QosLevelEnum.QOS_0.getLevel()) {
+            return false;
+        }
+        if (StringUtils.isBlank(message.getId())) {
             return false;
         }
         LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(

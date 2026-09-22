@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * QoS 幂等。
+ * <p>客户端稳定键为 messageId；判重成功时把 packet 收敛为首次正式 packetId，再允许 ACK。</p>
  */
 public final class QosRepositorySupport {
 
@@ -25,7 +26,7 @@ public final class QosRepositorySupport {
 
     @SuppressWarnings("unchecked")
     public boolean checkDup(Packet packet, String channelLoginIdentity) {
-        // 键存在性与正文哈希一致才由 COMMITTED 决定，未抢占过的消息自然不判重
+        // COMMITTED + 正式 packetId 才算重复；会改写 packet.packetId
         return QosIdempotencyHelper.isDuplicate(infra.redisTemplate, packet, channelLoginIdentity);
     }
 

@@ -9,7 +9,7 @@ import org.apache.commons.lang3.StringUtils;
 
 /**
  * 确认路径路由：聊天走 SAVE；已读/撤回/好友/群只走领域 topic。
- * 归档 Kafka record key 带 appKey，避免跨租户撞分区。
+ * SAVE 归档幂等键与 Kafka key 为 {@code appKey:messageId}；领域事件仍按会话/群/工单分区。
  */
 public final class MqArchiveRouting {
 
@@ -52,7 +52,27 @@ public final class MqArchiveRouting {
     }
 
     /**
-     * SAVE / 会话类确认的分区键。
+     * SAVE 全量归档的 Kafka key / 业务幂等键：{@code appKey:messageId}。
+     * messageId 缺失时回退 {@link #partitionKey(Packet)}（不应作为正常聊天路径）。
+     */
+    public static String archiveKey(Packet packet) {
+        if (packet == null || packet.getMessage() == null) {
+            return null;
+        }
+        Message message = packet.getMessage();
+        String appKey = message.getMetadata() != null ? message.getMetadata().getAppKey() : null;
+        String messageId = StringUtils.trimToNull(message.getId());
+        if (StringUtils.isBlank(messageId)) {
+            return partitionKey(packet);
+        }
+        if (StringUtils.isBlank(appKey)) {
+            return messageId;
+        }
+        return appKey + MessageConstant.COLON + messageId;
+    }
+
+    /**
+     * 领域确认（已读/撤回/好友/群等）的分区键：按会话/群/工单，保证同会话有序。
      */
     public static String partitionKey(Packet packet) {
         if (packet == null || packet.getMessage() == null) {

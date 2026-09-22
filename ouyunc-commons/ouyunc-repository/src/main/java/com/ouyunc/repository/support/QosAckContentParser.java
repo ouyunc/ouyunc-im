@@ -6,6 +6,7 @@ import org.apache.commons.lang3.StringUtils;
 
 /**
  * 解析 QoS ACK 载荷，仅接受 JSON：{@code {"ackId":"<packetId>","messageId":"<客户端消息id>"}}。
+ * <p>ackId 必填；C2S 取消重试还须非空 messageId，并由调用方校验其与 packet 对应关系。</p>
  */
 public final class QosAckContentParser {
 

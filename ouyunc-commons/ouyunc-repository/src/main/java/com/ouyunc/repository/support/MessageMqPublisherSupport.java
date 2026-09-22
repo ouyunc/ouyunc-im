@@ -97,9 +97,10 @@ public final class MessageMqPublisherSupport {
 
     /**
      * 全量归档到 {@link MqConstant#MQ_SAVE_MESSAGE_TOPIC}，对应 {@link com.ouyunc.repository.Repository#save}。
+     * Kafka key = {@code appKey:messageId}，与冷库 {@code uk_app_message_id} 一致。
      */
     public CompletableFuture<?> save(Packet packet) {
-        return publishPacketConfirmed(MqConstant.MQ_SAVE_MESSAGE_TOPIC, MqArchiveRouting.partitionKey(packet), packet);
+        return publishPacketConfirmed(MqConstant.MQ_SAVE_MESSAGE_TOPIC, MqArchiveRouting.archiveKey(packet), packet);
     }
 
     public void publishJsonAsync(String topic, String key, String jsonBody, String failureContext) {

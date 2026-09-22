@@ -29,7 +29,9 @@ import reactor.core.publisher.Mono;
 /**
  * qos外部客户端已经收到消息,只有开启qos 且在服务端模式下才会处理相关逻辑。
  * ACK 取消重试必须绑定已认证 Channel 的 identity + deviceType。
- * C2S 正文固定 JSON：ackId=下行 packetId，messageId=原客户端消息 id。
+ * <p>C2S 正文固定 JSON：{@code ackId}=下行 packetId（服务端内部定位），
+ * {@code messageId}=原客户端消息 id（客户端稳定键）。
+ * 必须校验 messageId 确为该 packetId 对应消息的 id，防止错取消重试。</p>
  * 任务在始发节点：先查询并校验原消息，再取消本机任务或转集群包给 {@link ClusterQosRetryCancelMessageBiProcessor}。
  * 不给接收方回 S2C。C2S 控制包应为 qos=0。
  **/
@@ -89,7 +91,11 @@ public final class QosC2SMessageBiProcessor extends AbstractMessageBiProcessor<B
                     log.warn("QoS ACK ackId 非法, content={}", content);
                     return;
                 }
-                QosRetryScheduler.onClientAck(login, packetId, ack.getMessageId());
+                if (StringUtils.isBlank(ack.getMessageId())) {
+                    log.warn("QoS C2S ACK 缺少 messageId，拒绝取消重试 ackId={}", ack.getAckId());
+                    return;
+                }
+                QosRetryScheduler.onClientAck(login, packetId, ack.getMessageId().trim());
             } else if (MessageContext.isQosEnable()) {
                 log.debug("客户端 QoS 模式不在服务端取消重试，忽略 C2S");
             } else {
