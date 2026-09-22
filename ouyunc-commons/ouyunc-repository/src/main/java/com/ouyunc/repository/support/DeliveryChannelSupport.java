@@ -1,7 +1,6 @@
 package com.ouyunc.repository.support;
 
 import com.alibaba.fastjson2.JSON;
-import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.constant.enums.MessageDeliveryChannelEnum;
 import com.ouyunc.base.model.ExternalChannelOutboundPayload;
@@ -100,11 +99,8 @@ public final class DeliveryChannelSupport {
         payload.setCreateTime(message.getCreateTime());
 
         String partitionKey = StringUtils.defaultIfBlank(message.getFrom(), recipientId);
-        String json = JSON.toJSONString(payload);
-        String redisKey = CacheConstant.buildExternalOutboundCacheKey(
-                payload.getAppKey(), packet.getPacketId(), recipientId, channel.getCode());
-        mqSupport.publishExternalOutbound(redisKey, MqConstant.MQ_EXTERNAL_CHANNEL_OUTBOUND_TOPIC, partitionKey,
-                json, "外部渠道下行");
+        mqSupport.publishJsonAsync(MqConstant.MQ_EXTERNAL_CHANNEL_OUTBOUND_TOPIC, partitionKey,
+                JSON.toJSONString(payload), "外部渠道下行");
         log.debug("已发布外部渠道下行, to={}, channel={}, packetId={}", recipientId, channel.getKey(), packet.getPacketId());
     }
 

@@ -46,10 +46,16 @@ public final class QosRepositorySupport {
             // 尚未抢占或已 commit 清空：不能用 null 误调 release（会 no-op，但避免无意义调用噪音）
             return;
         }
+        // 抢占键可能基于对齐前的 packetId，必须按 Metadata 记录的占位键释放
+        Long claimKeyPacketId = metadata.getQosClaimPacketId();
+        long keyPacketId = claimKeyPacketId != null && claimKeyPacketId > 0L
+                ? claimKeyPacketId : packet.getPacketId();
         try {
             QosIdempotencyHelper.releaseClaim(infra.redisTemplate, metadata.getAppKey(),
-                    packet.getPacketId(), QosClaimIdentities.resolve(message), message.getId(), ownerToken);
+                    keyPacketId, packet.getPacketId(), QosClaimIdentities.resolve(message),
+                    message.getId(), ownerToken);
             metadata.setQosOwnerToken(null);
+            metadata.setQosClaimPacketId(null);
         } catch (Exception e) {
             log.warn("释放 QoS 占位异常: packetId={}", packet.getPacketId(), e);
         }

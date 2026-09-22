@@ -330,16 +330,26 @@ public final class QosIdempotencyHelper {
      */
     public static CommitOutcome commit(RedisTemplate<String, ?> redisTemplate, String appKey, long packetId,
                                        String loginIdentity, String clientMessageId, String ownerToken, Message message) {
+        return commit(redisTemplate, appKey, packetId, packetId, loginIdentity, clientMessageId, ownerToken, message);
+    }
+
+    /**
+     * 接管重发时占位键仍按 {@code claimKeyPacketId} 定位，记录内的正式 ID 是 {@code recordPacketId}，
+     * 两者不同，不能用对齐后的 canonical ID 去算键，否则 commit 找不到自己的 PENDING。
+     */
+    public static CommitOutcome commit(RedisTemplate<String, ?> redisTemplate, String appKey,
+                                       long claimKeyPacketId, long recordPacketId,
+                                       String loginIdentity, String clientMessageId, String ownerToken, Message message) {
         if (redisTemplate == null || StringUtils.isBlank(ownerToken)) {
             return CommitOutcome.REJECTED;
         }
-        ClaimTarget target = claimTarget(appKey, packetId, loginIdentity, clientMessageId);
+        ClaimTarget target = claimTarget(appKey, claimKeyPacketId, loginIdentity, clientMessageId);
         if (target.keys.isEmpty()) {
             return CommitOutcome.REJECTED;
         }
         List<String> args = new ArrayList<>(3 + target.ttls.size());
         args.add(ownerToken);
-        args.add(String.valueOf(packetId));
+        args.add(String.valueOf(recordPacketId));
         args.add(payloadHash(message));
         args.addAll(target.ttls);
         Long result = eval(redisTemplate, COMMIT_SCRIPT, target.keys, args.toArray(new String[0]));
@@ -355,14 +365,23 @@ public final class QosIdempotencyHelper {
      */
     public static void releaseClaim(RedisTemplate<String, ?> redisTemplate, String appKey, long packetId,
                                     String loginIdentity, String clientMessageId, String ownerToken) {
+        releaseClaim(redisTemplate, appKey, packetId, packetId, loginIdentity, clientMessageId, ownerToken);
+    }
+
+    /**
+     * 键按 {@code claimKeyPacketId} 定位，记录内正式 ID 按 {@code recordPacketId} 比对，语义同 commit。
+     */
+    public static void releaseClaim(RedisTemplate<String, ?> redisTemplate, String appKey,
+                                    long claimKeyPacketId, long recordPacketId,
+                                    String loginIdentity, String clientMessageId, String ownerToken) {
         if (redisTemplate == null || StringUtils.isBlank(ownerToken)) {
             return;
         }
-        List<String> keys = claimKeys(appKey, packetId, loginIdentity, clientMessageId);
+        List<String> keys = claimKeys(appKey, claimKeyPacketId, loginIdentity, clientMessageId);
         if (keys.isEmpty()) {
             return;
         }
-        eval(redisTemplate, RELEASE_SCRIPT, keys, ownerToken, String.valueOf(packetId));
+        eval(redisTemplate, RELEASE_SCRIPT, keys, ownerToken, String.valueOf(recordPacketId));
     }
 
     /**

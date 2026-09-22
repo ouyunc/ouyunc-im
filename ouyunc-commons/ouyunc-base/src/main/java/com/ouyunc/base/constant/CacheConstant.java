@@ -571,14 +571,6 @@ public class CacheConstant {
         return buildAggregateCacheKey(appKey, messageId) + HTTP_PUSH_IDEM;
     }
 
-    /**
-     * 外部渠道下行投递记录：按 packetId 分片，值为状态加正文，供失败后按同一业务键重放。
-     */
-    public static String buildExternalOutboundCacheKey(String appKey, long packetId, String recipientId, int channelCode) {
-        return buildAggregateCacheKey(appKey, String.valueOf(packetId)) + "ext:out:"
-                + stripHashTagChars(recipientId) + COLON + channelCode;
-    }
-
     private static final String CS_SESSION_ROUTE = "cs:session:route:";
 
     /** 客服咨询单（ticket）维度最后一条聊天消息 packetId */

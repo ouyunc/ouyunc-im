@@ -82,6 +82,13 @@ public class Metadata implements Serializable, Cloneable {
     private String qosOwnerToken;
 
     /**
+     * 抢占 PENDING 时用于构造幂等键的 packetId。接管重发会把 {@code packet.packetId} 对齐成首次的
+     * canonical ID，但占位记录仍写在本字段对应的键上，commit/release 必须按本字段定位，否则找不到占位。
+     * 仅服务端内部使用，勿下发给客户端。
+     */
+    private Long qosClaimPacketId;
+
+    /**
      * 首次外部入站节点（ip:port），与 clientIp 同阶段由服务端赋值，持久化为 server_address。集群中转只改 {@link #fromServerAddress}，本字段禁止改写。
      * 仅服务端内部使用，写出给客户端前必须剥离 metadata。
      */
@@ -246,6 +253,14 @@ public class Metadata implements Serializable, Cloneable {
 
     public void setQosOwnerToken(String qosOwnerToken) {
         this.qosOwnerToken = qosOwnerToken;
+    }
+
+    public Long getQosClaimPacketId() {
+        return qosClaimPacketId;
+    }
+
+    public void setQosClaimPacketId(Long qosClaimPacketId) {
+        this.qosClaimPacketId = qosClaimPacketId;
     }
 
     public String getOriginServerAddress() {

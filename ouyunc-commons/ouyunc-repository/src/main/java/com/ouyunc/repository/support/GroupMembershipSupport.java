@@ -86,9 +86,16 @@ public final class GroupMembershipSupport {
             throw new GroupMembershipLoadException(
                     "群成员名单未完成权威重建, appKey=" + appKey + ", groupId=" + groupId);
         }
+        // 扫描期间可能有入群/退群删掉 INIT 并重建，扫描后必须再核 INIT 与关系版本，否则会缓存残缺名单
+        String versionBefore = currentRelationVersion(appKey, groupId);
         Set<String> fromRedis = loadGroupUserIdsByScan(cacheKey);
         if (fromRedis == null) {
             fromRedis = Set.of();
+        }
+        if (!hasGroupMemberInit(appKey, groupId)
+                || !StringUtils.equals(versionBefore, currentRelationVersion(appKey, groupId))) {
+            throw new GroupMembershipLoadException(
+                    "群成员名单在扫描期间发生变更, appKey=" + appKey + ", groupId=" + groupId);
         }
         return snapshotIdentities(cacheKey, fromRedis);
     }
