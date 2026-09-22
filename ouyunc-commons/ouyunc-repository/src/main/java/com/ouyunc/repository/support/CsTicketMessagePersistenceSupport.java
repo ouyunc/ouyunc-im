@@ -34,11 +34,10 @@ public final class CsTicketMessagePersistenceSupport {
             return Mono.just(SaveMessageOutcome.FAILED);
         }
         String ticketScopeId = route.ticketId().trim();
-        String messageKey = CacheConstant.buildMessageCacheKey(metadata.getAppKey(), packet.getPacketId());
         String ticketSessionKey = CacheConstant.buildCsTicketMessageSessionCacheKey(metadata.getAppKey(), ticketScopeId);
         return Mono.fromCallable(() -> {
                     SaveMessageOutcome outcome = sessionPersistence.saveMessageWithSessionOutcome(
-                            packet, expireTime, messageKey, ticketSessionKey, (ops) -> {
+                            packet, expireTime, ticketSessionKey, (ops) -> {
                             }, (ops, msg, app, f, t) -> {
                             });
                     // ticket 未读同样以 packetId 集合幂等，重复请求可补偿首次索引更新失败。

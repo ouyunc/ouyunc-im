@@ -858,7 +858,7 @@ public final class GroupMembershipSupport {
     public <K, V> boolean saveGroupRequestMessage(Packet packet, String groupId, String requestSessionId, long expireTime, Consumer<RedisConnection> consumer) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        return session.saveMessageWithSession(packet, expireTime, CacheConstant.buildMessageCacheKey(metadata.getAppKey(), packet.getPacketId()), CacheConstant.buildGroupRequestSessionCacheKey(metadata.getAppKey(), groupId, requestSessionId), consumer, (ops, msg, ak, f, t) -> {
+        return session.saveMessageWithSession(packet, expireTime, CacheConstant.buildGroupRequestSessionCacheKey(metadata.getAppKey(), groupId, requestSessionId), consumer, (ops, msg, ak, f, t) -> {
         });
     }
 
@@ -866,7 +866,7 @@ public final class GroupMembershipSupport {
     public<K, V> boolean bindGroup(Packet packet, String joiner, String groupId, String requestSessionId, long expireTime, Consumer<RedisConnection> consumer) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        boolean bound = session.saveMessageWithSession(packet, expireTime, CacheConstant.buildMessageCacheKey(metadata.getAppKey(), packet.getPacketId()), CacheConstant.buildGroupRequestSessionCacheKey(metadata.getAppKey(), groupId, requestSessionId), consumer, (redisConnection, msg, ak, f, t) -> {
+        boolean bound = session.saveMessageWithSession(packet, expireTime, CacheConstant.buildGroupRequestSessionCacheKey(metadata.getAppKey(), groupId, requestSessionId), consumer, (redisConnection, msg, ak, f, t) -> {
             // 先 INCR 再 ZADD，避免回源 Lua 在 DEL 后把并发入群标成完整名单
             byte[] versionKeyBytes = infra.stringSerializer.serialize(
                     CacheConstant.buildGroupRelationVersionCacheKey(metadata.getAppKey(), groupId));

@@ -102,7 +102,8 @@ public final class QosIdempotencyHelper {
      * KEYS 为实际存在的幂等键（1~2 个）。有 loginIdentity 时 packet/client 同槽 {@code {appKey:identity}}（P1）；
      * 仅 packet 键时按 packetId 分片。时间戳一律取 Redis 服务器时间。
      * ARGV: [hash, owner, serverId, clientId, takeoverMs, ttlMs...]（ttlMs 与 KEYS 一一对应）。
-     * 返回 {@code {state, canonicalPacketId}}；COMMITTED 时第二项为记录内正式 packetId，其余为 0。
+     * 返回 {@code {state, canonicalPacketId}}。第二项必须是<b>字符串</b>：Lua 5.1 的 number 是双精度，
+     * 19 位 packetId 超过 2^53 后经 {@code tonumber} 会被舍入，绝不能对 packetId 调用 tonumber。
      */
     @SuppressWarnings("rawtypes")
     private static final DefaultRedisScript<List> CLAIM_SCRIPT = listScript(PARSE_LUA + """
@@ -118,15 +119,15 @@ public final class QosIdempotencyHelper {
               local raw = redis.call('GET', KEYS[i])
               if raw then
                 local f = parse(raw)
-                if hash ~= '' and f[3] ~= hash then return {4, 0} end
+                if hash ~= '' and f[3] ~= hash then return {4, ''} end
                 if f[1] == 'COMMITTED' then
-                  return {2, tonumber(f[2]) or 0}
+                  return {2, f[2]}
                 end
                 if f[1] == 'PENDING' then
                   local ts = tonumber(f[6])
-                  if ts == nil or now - ts <= takeoverMs then return {3, 0} end
+                  if ts == nil or now - ts <= takeoverMs then return {3, ''} end
                   if f[2] ~= nil and f[2] ~= '' then reuseId = f[2] end
-                else return {4, 0} end
+                else return {4, ''} end
               end
             end
             local sid = reuseId or serverId
@@ -134,11 +135,12 @@ public final class QosIdempotencyHelper {
             for i = 1, #KEYS do
               redis.call('PSETEX', KEYS[i], tonumber(ARGV[5 + i]), record)
             end
-            return {1, tonumber(sid) or 0}
+            return {1, sid}
             """);
 
     /**
      * 只读判定。COMMITTED + 同正文即重复；canonical 取记录；重发可不带同一 packetId。
+     * canonical 同样按字符串返回，不得经 Lua {@code tonumber}。
      */
     @SuppressWarnings("rawtypes")
     private static final DefaultRedisScript<List> STATE_SCRIPT = listScript(PARSE_LUA + """
@@ -148,15 +150,15 @@ public final class QosIdempotencyHelper {
               local raw = redis.call('GET', KEYS[i])
               if raw then
                 local f = parse(raw)
-                if hash ~= '' and f[3] ~= hash then return {4, 0} end
+                if hash ~= '' and f[3] ~= hash then return {4, ''} end
                 if f[1] == 'COMMITTED' then
-                  return {2, tonumber(f[2]) or 0}
+                  return {2, f[2]}
                 end
                 if f[1] == 'PENDING' then pendingSeen = true end
               end
             end
-            if pendingSeen then return {3, 0} end
-            return {0, 0}
+            if pendingSeen then return {3, ''} end
+            return {0, ''}
             """);
 
     /**
@@ -460,7 +462,7 @@ public final class QosIdempotencyHelper {
             return new ClaimResult(CLAIM_FAILED, 0L);
         }
         int state = toClaimState(toLong(raw.get(0)));
-        long canonical = raw.size() > 1 ? toLong(raw.get(1)) : 0L;
+        long canonical = raw.size() > 1 ? toPacketId(raw.get(1)) : 0L;
         if (canonical < 0L) {
             canonical = 0L;
         }
@@ -477,6 +479,35 @@ public final class QosIdempotencyHelper {
         try {
             return Long.parseLong(String.valueOf(value));
         } catch (NumberFormatException e) {
+            return 0L;
+        }
+    }
+
+    /**
+     * packetId 只接受字符串形态。Lua number 已经过双精度舍入，19 位 ID 不可信，
+     * 此时返回 0 让调用方按“无 canonical”处理，绝不能把舍入值写回 packet。
+     */
+    private static long toPacketId(Object value) {
+        if (value == null) {
+            return 0L;
+        }
+        String text;
+        if (value instanceof byte[] bytes) {
+            text = new String(bytes, StandardCharsets.UTF_8);
+        } else if (value instanceof Number) {
+            log.error("QoS canonical packetId 以数值返回，可能已丢失精度，按无 canonical 处理: {}", value);
+            return 0L;
+        } else {
+            text = String.valueOf(value);
+        }
+        text = text.trim();
+        if (text.isEmpty()) {
+            return 0L;
+        }
+        try {
+            return Long.parseLong(text);
+        } catch (NumberFormatException e) {
+            log.error("QoS canonical packetId 无法解析: {}", text);
             return 0L;
         }
     }

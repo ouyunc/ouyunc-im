@@ -45,7 +45,6 @@ public final class SessionMessagePersistenceSupport {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         return Mono.fromCallable(() -> saveMessageWithSessionOutcome(packet, expireTime,
-                CacheConstant.buildMessageCacheKey(metadata.getAppKey(), packet.getPacketId()),
                 CacheConstant.buildSessionCacheKey(metadata.getAppKey(), sessionId),
                 (ops) -> {
                 }, (ops, msg, app, f, t) -> {
@@ -67,7 +66,6 @@ public final class SessionMessagePersistenceSupport {
         Metadata metadata = message.getMetadata();
         return Mono.fromCallable(() -> {
                     SaveMessageOutcome outcome = saveMessageWithSessionOutcome(packet, expireTime,
-                            CacheConstant.buildMessageCacheKey(metadata.getAppKey(), packet.getPacketId()),
                             CacheConstant.buildSessionCacheKey(metadata.getAppKey(), sessionId),
                             (ops) -> {
                             }, (ops, msg, app, f, t) -> {
@@ -85,10 +83,10 @@ public final class SessionMessagePersistenceSupport {
                 });
     }
 
-    public boolean saveMessageWithSession(Packet packet, long expireTime, String messageKey, String sessionKey,
+    public boolean saveMessageWithSession(Packet packet, long expireTime, String sessionKey,
                                           Consumer<RedisConnection> consumer,
                                           FiveConsumer<RedisConnection, Message, String, String, String> extraOperation) {
-        return isSaveAccepted(saveMessageWithSessionOutcome(packet, expireTime, messageKey, sessionKey, consumer, extraOperation));
+        return isSaveAccepted(saveMessageWithSessionOutcome(packet, expireTime, sessionKey, consumer, extraOperation));
     }
 
     /**
@@ -99,9 +97,12 @@ public final class SessionMessagePersistenceSupport {
      * <p>主体/会话键等必需字段必须在入队前序列化成功；{@code consumer}/{@code extraOperation}
      * 视为关键副作用（好友/群关系等），异常直接导致 FAILED，不可吞掉后仍 ACK。
      * Pipeline 只降低往返，不提供多命令事务回滚；closePipeline 异常或空结果一律失败。
+     *
+     * <p>消息正文 key 由本方法在 QoS 认领并对齐 canonical packetId 之后生成，调用方不得提前传入，
+     * 否则接管场景会把正文写到旧 packetId 的 key 上，而会话 ZSET 记录的是 canonical ID。</p>
      */
     @SuppressWarnings("unchecked")
-    public SaveMessageOutcome saveMessageWithSessionOutcome(Packet packet, long expireTime, String messageKey, String sessionKey,
+    public SaveMessageOutcome saveMessageWithSessionOutcome(Packet packet, long expireTime, String sessionKey,
                                                             Consumer<RedisConnection> consumer,
                                                             FiveConsumer<RedisConnection, Message, String, String, String> extraOperation) {
         if (packet == null || infra.redisTemplate.getConnectionFactory() == null) {
@@ -167,6 +168,9 @@ public final class SessionMessagePersistenceSupport {
                     packet.setPacketId(claim.canonicalPacketId());
                 }
             }
+
+            // canonical 对齐之后再建正文 key，保证正文、会话 ZSET、ACK、归档用同一个 packetId
+            String messageKey = CacheConstant.buildMessageCacheKey(appKey, packet.getPacketId());
 
             // 必需字段先序列化；失败直接上抛，避免只写索引、无主体后仍判定成功
             String formatPacketId = MessageContext.idGenerator().formatLongId19Str(packet.getPacketId());

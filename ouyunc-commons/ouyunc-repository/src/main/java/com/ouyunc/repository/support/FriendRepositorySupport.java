@@ -389,7 +389,7 @@ public final class FriendRepositorySupport {
         String appKey = metadata.getAppKey();
         String from = message.getFrom();
         String to = message.getTo();
-        return session.saveMessageWithSession(packet, expireTime, CacheConstant.buildMessageCacheKey(appKey, packet.getPacketId()), CacheConstant.buildFriendRequestSessionCacheKey(appKey, IdentityUtil.sessionId(from, to), friendRequestSessionId), consumer, (ops, msg, ak, f, t) -> {
+        return session.saveMessageWithSession(packet, expireTime, CacheConstant.buildFriendRequestSessionCacheKey(appKey, IdentityUtil.sessionId(from, to), friendRequestSessionId), consumer, (ops, msg, ak, f, t) -> {
         });
     }
 
@@ -399,7 +399,7 @@ public final class FriendRepositorySupport {
         String from = message.getFrom();
         String to = message.getTo();
         String appKey = metadata.getAppKey();
-        boolean bound = session.saveMessageWithSession(packet, expireTime, CacheConstant.buildMessageCacheKey(appKey, packet.getPacketId()), CacheConstant.buildFriendRequestSessionCacheKey(appKey, IdentityUtil.sessionId(from, to), friendRequestSessionId), consumer,
+        boolean bound = session.saveMessageWithSession(packet, expireTime, CacheConstant.buildFriendRequestSessionCacheKey(appKey, IdentityUtil.sessionId(from, to), friendRequestSessionId), consumer,
                 (redisConnection, msg, ak, f, t) -> {
                     redisConnection.zSetCommands().zAdd(infra.stringSerializer.serialize(CacheConstant.buildFriendsCacheKey(appKey, from)), msg.getMetadata().getServerTime(), infra.stringSerializer.serialize(t));
                     redisConnection.zSetCommands().zAdd(infra.stringSerializer.serialize(CacheConstant.buildFriendsCacheKey(appKey, to)), msg.getMetadata().getServerTime(), infra.stringSerializer.serialize(f));
