@@ -2,6 +2,8 @@ package com.ouyunc.message.helper;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.MessageSendStatusEnum;
@@ -26,6 +28,8 @@ import org.slf4j.LoggerFactory;
 public final class MessageSendResultHelper {
     private static final Logger log = LoggerFactory.getLogger(MessageSendResultHelper.class);
     private static final ObjectMapper JSON = new ObjectMapper();
+    /** 入站 Packet 实例维度去重；弱键避免把已完成请求留在内存中。 */
+    private static final Cache<Packet, Boolean> SENT_RESULTS = Caffeine.newBuilder().weakKeys().build();
 
     private MessageSendResultHelper() { }
 
@@ -83,7 +87,7 @@ public final class MessageSendResultHelper {
         if (metadata != null && target != null) {
             metadata.setTarget(target);
         }
-        if (!source.markSendResultOnce()) {
+        if (SENT_RESULTS.asMap().putIfAbsent(source, Boolean.TRUE) != null) {
             log.debug("消息受理结果已经回送, messageId={}", original.getId());
             return;
         }

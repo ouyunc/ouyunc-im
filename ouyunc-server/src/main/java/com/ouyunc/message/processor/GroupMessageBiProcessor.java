@@ -9,7 +9,6 @@ import com.ouyunc.base.model.ClientInfo;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
-import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.base.constant.enums.IdentityType;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.AtMentionHelper;
@@ -60,7 +59,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
             return Mono.just(false);
         }
         // QoS 判重占位；正式归档挪到 process（规范化 + 内容安全之后），避免 REJECT/MASK 冷热不一致
-        if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
+        if (qosPreHandle(ctx, packet)) {
             return Mono.just(false);
         }
         return MessageAcceptPipelineHelper.gateWhenPassed(ctx, packet,

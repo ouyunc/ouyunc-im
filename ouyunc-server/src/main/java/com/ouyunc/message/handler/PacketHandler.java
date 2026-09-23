@@ -4,6 +4,7 @@ import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.constant.enums.OuyuncMessageTypeEnum;
+import com.ouyunc.base.constant.enums.QosLevelEnum;
 import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
 import com.ouyunc.message.helper.MessageSendResultHelper;
 import com.ouyunc.message.helper.QosAckDispatcher;
@@ -161,6 +162,10 @@ public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
             ExceptionReporter.reportBusiness(ExceptionCodeEnum.ILLEGAL_DEVICE_TYPE_ERROR,
                     "设备类型不支持", "PacketHandler.invokeFull", packet);
             ctx.close();
+            return CompletableFuture.completedFuture(null);
+        }
+        if (packet.getMessage() != null && !QosLevelEnum.isSupportedLevel(packet.getMessage().getQos())) {
+            MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_QOS_UNSUPPORTED);
             return CompletableFuture.completedFuture(null);
         }
         Mono<Void> chain = processor.preProcess(ctx, packet)

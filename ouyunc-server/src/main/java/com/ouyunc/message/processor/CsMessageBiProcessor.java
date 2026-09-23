@@ -7,7 +7,6 @@ import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.constant.enums.*;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
-import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.*;
 import com.ouyunc.message.helper.CsHelper.PrepareOutcome;
@@ -49,7 +48,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
             ctx.close();
             return Mono.just(false);
         }
-        if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
+        if (qosPreHandle(ctx, packet)) {
             return Mono.just(false);
         }
         return Mono.just(true);

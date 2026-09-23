@@ -2,6 +2,7 @@ package com.ouyunc.message.processor.http.push;
 
 import com.ouyunc.base.constant.enums.HttpResponseCodeEnum;
 import com.ouyunc.base.constant.enums.PushChannelEnum;
+import com.ouyunc.base.constant.enums.QosLevelEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.model.MessagePushRequest;
 import com.ouyunc.message.context.MessageServerContext;
@@ -82,6 +83,11 @@ public final class HttpPushValidator {
         if (StringUtils.isBlank(request.getContent())) {
             throw new HttpPipelineException(HttpResponseStatus.BAD_REQUEST, HttpResponseCodeEnum.BAD_REQUEST,
                     "content 不能为空");
+        }
+        if (request.getExtra() != null && request.getExtra().getQos() != null
+                && !QosLevelEnum.isSupportedLevel(request.getExtra().getQos())) {
+            throw new HttpPipelineException(HttpResponseStatus.BAD_REQUEST, HttpResponseCodeEnum.BAD_REQUEST,
+                    "不支持的消息 qos 级别，仅允许 0 或 1");
         }
     }
 

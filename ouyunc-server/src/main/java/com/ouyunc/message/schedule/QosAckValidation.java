@@ -1,6 +1,7 @@
 package com.ouyunc.message.schedule;
 
 import com.ouyunc.base.packet.Packet;
+import com.ouyunc.base.constant.enums.QosLevelEnum;
 import com.ouyunc.base.packet.message.Message;
 import org.apache.commons.lang3.StringUtils;
 
@@ -44,7 +45,7 @@ public final class QosAckValidation {
             return MatchResult.PACKET_ID_MISMATCH;
         }
         Message message = stored.getMessage();
-        if (message == null || message.getQos() <= 0) {
+        if (message == null || message.getQos() <= QosLevelEnum.QOS_0.getLevel()) {
             return MatchResult.QOS_DISABLED;
         }
         if (message.getMetadataOrNull() == null

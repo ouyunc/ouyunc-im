@@ -21,17 +21,6 @@ public class Packet implements Serializable, Cloneable{
     @Serial
     private static final long serialVersionUID = 1L;
 
-    /** 仅用于本次入站处理，防止异常兜底与业务分支重复回送受理结果。 */
-    private transient boolean sendResultEmitted;
-
-    public synchronized boolean markSendResultOnce() {
-        if (sendResultEmitted) {
-            return false;
-        }
-        sendResultEmitted = true;
-        return true;
-    }
-
     /**
      * JSON 字段名（与 JavaBean 属性名一致）。二进制协议不用这些名字。
      */

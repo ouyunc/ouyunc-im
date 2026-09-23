@@ -27,6 +27,7 @@ public enum ExceptionCodeEnum {
     HTTP_PUSH_BUSINESS_REJECT(40005, "HTTP推送业务校验未通过"),
     MESSAGE_SEND_BUSINESS_REJECT(40006, "发送请求未通过业务校验"),
     MESSAGE_ID_CONFLICT(40007, "同一 messageId 对应不同消息内容"),
+    MESSAGE_QOS_UNSUPPORTED(40008, "不支持的消息 qos 级别，仅允许 0 或 1"),
     /** 敏感词策略为 REJECT 时拒绝发送 */
     CONTENT_SENSITIVE_REJECT(40010, "消息包含违规内容，请修改后重发"),
     /** 媒体监黄违规（事后撤回或 HOLD 拒绝） */

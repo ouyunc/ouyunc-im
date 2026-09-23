@@ -5,7 +5,6 @@ import com.ouyunc.core.exception.ExceptionReporter;
 import com.ouyunc.base.constant.MqArchiveRouting;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.packet.Packet;
-import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.message.safety.ContentSafetyIngress;
 import com.ouyunc.repository.DefaultRepository;
 import com.ouyunc.repository.SaveMessageOutcome;
@@ -157,9 +156,7 @@ public final class MessageAcceptPipelineHelper {
 
     /** 热写/校验失败时释放尚未 commit 的 QoS 占位。 */
     public static void releaseQosOnFailure(Packet packet) {
-        if (MessageContext.isQosEnable()) {
-            repository().releaseQosClaim(packet);
-        }
+        repository().releaseQosClaim(packet);
     }
 
     /**

@@ -4,7 +4,6 @@ import com.ouyunc.core.exception.ExceptionReporter;
 
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.packet.Packet;
-import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
 import com.ouyunc.message.validator.AuthValidator;
 import com.ouyunc.repository.DefaultRepository;
@@ -63,7 +62,7 @@ public abstract class AbstractMessageBiProcessor<T extends Number> extends Abstr
             ctx.close();
             return Mono.just(false);
         }
-        if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
+        if (qosPreHandle(ctx, packet)) {
             // 幂等命中已 ACK，不再进 process、不再打 MQ
             return Mono.just(false);
         }

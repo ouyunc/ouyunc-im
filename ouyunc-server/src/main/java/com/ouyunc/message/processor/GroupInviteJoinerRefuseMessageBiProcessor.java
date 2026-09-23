@@ -7,7 +7,6 @@ import com.ouyunc.base.constant.enums.*;
 import com.ouyunc.base.model.GroupRequestSession;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
-import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.exception.ExceptionReporter;
 import com.ouyunc.message.helper.DistributedLockHelper;
 import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
@@ -46,7 +45,7 @@ public final class GroupInviteJoinerRefuseMessageBiProcessor extends AbstractMes
             return Mono.just(false);
         }
         // 权限等校验通过后由 continueWhenPassed 归档；此处统一执行 QoS 判重
-        if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
+        if (qosPreHandle(ctx, packet)) {
             return Mono.just(false);
         }
         return MessageAcceptPipelineHelper.continueWhenPassedOrAck(ctx, packet,

@@ -1,21 +1,18 @@
 package com.ouyunc.message.processor;
 
-import com.ouyunc.core.exception.ExceptionReporter;
-
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.MessageType;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
+import com.ouyunc.base.constant.enums.RequestSessionProgress;
 import com.ouyunc.base.model.Metadata;
+import com.ouyunc.base.model.RequestSession;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.IdentityUtil;
-import com.ouyunc.core.context.MessageContext;
-import com.ouyunc.base.model.RequestSession;
-import com.ouyunc.base.constant.enums.RequestSessionProgress;
-import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.core.exception.ExceptionReporter;
 import com.ouyunc.message.helper.DistributedLockHelper;
 import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
 import com.ouyunc.message.helper.MessageSendResultHelper;
@@ -60,7 +57,7 @@ public final class One2OneAgreeFriendRequestMessageBiProcessor extends AbstractM
             return Mono.just(false);
         }
         // 权限等校验通过后由 continueWhenPassed 归档；此处统一执行 QoS 判重
-        if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
+        if (qosPreHandle(ctx, packet)) {
             return Mono.just(false);
         }
         return MessageAcceptPipelineHelper.continueWhenPassedOrAck(ctx, packet,
