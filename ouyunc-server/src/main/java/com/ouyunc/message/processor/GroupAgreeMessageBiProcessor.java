@@ -11,6 +11,7 @@ import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.packet.message.content.GroupRequestContent;
 import com.ouyunc.core.exception.ExceptionReporter;
 import com.ouyunc.message.helper.DistributedLockHelper;
+import com.ouyunc.message.helper.GroupBindResultHelper;
 import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
 import com.ouyunc.message.helper.MessageSendResultHelper;
 import com.ouyunc.message.helper.RequestNotifyHelper;
@@ -125,10 +126,11 @@ public final class GroupAgreeMessageBiProcessor extends AbstractMessageBiProcess
                 groupRequestSession.setProgress(RequestSessionProgress.AGREEING.value());
                 groupRequestSession.setProcessor(message.getFrom());
                 groupRequestSession.setProcessorPost(processorPost.intValue());
-                if (!repository().manualPassBindGroup(packet, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
-                    log.error("手动处理绑定群组失败: {}", packet);
-                    ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "手动绑定群组请求消息异常!", "GroupAgreeMessageBiProcessor.process", packet);
-                    com.ouyunc.message.helper.MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
+                if (!GroupBindResultHelper.acceptedOrReply(ctx, packet,
+                        repository().manualPassBindGroup(packet, groupRequestSession,
+                                MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP,
+                                GroupBindResultHelper.maxMembers(), GroupBindResultHelper.maxPerUser()),
+                        "手动绑定群组请求消息异常!")) {
                     return;
                 }
                 RequestNotifyHelper.dispatch(ctx, packet, appKey,

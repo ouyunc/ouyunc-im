@@ -30,6 +30,58 @@ public final class QosRepositorySupport {
         return QosIdempotencyHelper.isDuplicate(infra.redisTemplate, packet, channelLoginIdentity);
     }
 
+    /**
+     * 归档前抢占 QoS，把 packetId 收敛为首次正式 ID。已占位则不再换令牌。
+     *
+     * @return false 时不得归档、不得当成功
+     */
+    @SuppressWarnings("unchecked")
+    public boolean claimForArchive(Packet packet) {
+        if (packet == null || packet.getMessage() == null) {
+            return false;
+        }
+        Message message = packet.getMessage();
+        Metadata metadata = message.getMetadata();
+        if (metadata == null || StringUtils.isBlank(message.getId())) {
+            return false;
+        }
+        if (!MessageContext.isQosEnable() || message.getQos() <= QosLevelEnum.QOS_0.getLevel()) {
+            return true;
+        }
+        if (StringUtils.isNotBlank(metadata.getQosOwnerToken())) {
+            return packet.getPacketId() > 0L;
+        }
+        String ownerToken = QosIdempotencyHelper.newOwnerToken();
+        long claimKeyPacketId = packet.getPacketId();
+        if (claimKeyPacketId <= 0L) {
+            return false;
+        }
+        metadata.setQosOwnerToken(ownerToken);
+        metadata.setQosClaimPacketId(claimKeyPacketId);
+        QosIdempotencyHelper.ClaimResult claim = QosIdempotencyHelper.tryClaimResult(
+                infra.redisTemplate, metadata.getAppKey(), claimKeyPacketId,
+                QosClaimIdentities.resolve(message), message.getId(), ownerToken, message);
+        if (claim.state() == QosIdempotencyHelper.CLAIM_COMMITTED) {
+            if (!claim.isCommittedWithCanonical()) {
+                clearQosClaimMarks(metadata);
+                return false;
+            }
+            packet.setPacketId(claim.canonicalPacketId());
+            clearQosClaimMarks(metadata);
+            return true;
+        }
+        if (claim.state() == QosIdempotencyHelper.CLAIM_ACQUIRED) {
+            if (claim.canonicalPacketId() > 0L) {
+                packet.setPacketId(claim.canonicalPacketId());
+            }
+            return true;
+        }
+        clearQosClaimMarks(metadata);
+        log.warn("归档前 QoS 占位未拿到 state={} packetId={} messageId={}",
+                claim.state(), packet.getPacketId(), message.getId());
+        return false;
+    }
+
     @SuppressWarnings("unchecked")
     public void releaseQosClaim(Packet packet) {
         if (packet == null || packet.getMessage() == null) {
@@ -39,6 +91,10 @@ public final class QosRepositorySupport {
         Metadata metadata = message.getMetadata();
         if (metadata == null || !MessageContext.isQosEnable()
                 || message.getQos() <= QosLevelEnum.QOS_0.getLevel()) {
+            return;
+        }
+        if (metadata.isQosArchiveBound()) {
+            // 冷库已按正式 packetId 发出，保留 PENDING 以便重试复用同一 ID
             return;
         }
         String ownerToken = metadata.getQosOwnerToken();
@@ -58,6 +114,13 @@ public final class QosRepositorySupport {
             metadata.setQosClaimPacketId(null);
         } catch (Exception e) {
             log.warn("释放 QoS 占位异常: packetId={}", packet.getPacketId(), e);
+        }
+    }
+
+    private static void clearQosClaimMarks(Metadata metadata) {
+        if (metadata != null) {
+            metadata.setQosOwnerToken(null);
+            metadata.setQosClaimPacketId(null);
         }
     }
 }

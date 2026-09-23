@@ -290,12 +290,21 @@ public enum DefaultRepository implements Repository {
         RepositorySupports.QOS.releaseQosClaim(packet);
     }
 
-    public boolean autoPassBindGroup(Packet packet, GroupRequestSession groupRequestSession, long expireTime) {
-        return RepositorySupports.GROUP.autoPassBindGroup(packet, groupRequestSession, expireTime);
+    /** 归档前抢占并对齐正式 packetId；失败不得发 SAVE。 */
+    public boolean claimForArchive(Packet packet) {
+        return RepositorySupports.QOS.claimForArchive(packet);
     }
 
-    public boolean manualPassBindGroup(Packet packet, GroupRequestSession groupRequestSession, long expireTime) {
-        return RepositorySupports.GROUP.manualPassBindGroup(packet, groupRequestSession, expireTime);
+    public BindGroupResult autoPassBindGroup(Packet packet, GroupRequestSession groupRequestSession, long expireTime,
+                                             int maxMembers, int maxPerUser) {
+        return RepositorySupports.GROUP.autoPassBindGroup(packet, groupRequestSession, expireTime,
+                maxMembers, maxPerUser);
+    }
+
+    public BindGroupResult manualPassBindGroup(Packet packet, GroupRequestSession groupRequestSession, long expireTime,
+                                               int maxMembers, int maxPerUser) {
+        return RepositorySupports.GROUP.manualPassBindGroup(packet, groupRequestSession, expireTime,
+                maxMembers, maxPerUser);
     }
 
     public boolean saveJoinGroupRequestMessage(Packet packet, GroupRequestSession groupRequestSession, long expireTime) {

@@ -486,6 +486,34 @@ public enum LuaScriptEnum {
             """, "关系名单增量加入"),
 
     /**
+     * 关系 ZSET 带容量加入（同槽 zset/version/init）。
+     * KEYS[1]=zset KEYS[2]=versionKey KEYS[3]=initKey
+     * ARGV[1]=score ARGV[2]=member ARGV[3]=maxCount（负数不限制）
+     * 返回 1=新加入，2=已在名单（只改 score），0=超限未写入。
+     */
+    RELATION_ROSTER_ADD_IF_CAPACITY_SCRIPT("3", """
+            if redis.call('ZSCORE', KEYS[1], ARGV[2]) ~= false then
+                redis.call('ZADD', KEYS[1], tonumber(ARGV[1]) or 0, ARGV[2])
+                return 2
+            end
+            local max = tonumber(ARGV[3])
+            if max ~= nil and max >= 0 then
+                if redis.call('ZCARD', KEYS[1]) >= max then
+                    return 0
+                end
+            end
+            redis.call('ZADD', KEYS[1], tonumber(ARGV[1]) or 0, ARGV[2])
+            redis.call('INCR', KEYS[2])
+            if redis.call('EXISTS', KEYS[3]) == 1 then
+                local n = tonumber(redis.call('GET', KEYS[3]))
+                if n ~= nil and n >= 0 then
+                    redis.call('INCR', KEYS[3])
+                end
+            end
+            return 1
+            """, "关系名单带容量加入"),
+
+    /**
      * 关系 ZSET 移除：先 INCR 版本再 ZREM；仅真正删掉且 INIT 为完整正计数时 DECR INIT。
      * KEYS[1]=zset KEYS[2]=versionKey KEYS[3]=initKey
      * ARGV[1]=member

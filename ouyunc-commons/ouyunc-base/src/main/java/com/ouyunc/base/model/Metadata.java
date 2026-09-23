@@ -89,6 +89,12 @@ public class Metadata implements Serializable, Cloneable {
     private Long qosClaimPacketId;
 
     /**
+     * SAVE 归档已按当前正式 packetId 发出。此后失败不得释放 PENDING，避免重试换新 ID 与冷库首条分叉。
+     * 仅服务端内部使用。
+     */
+    private boolean qosArchiveBound;
+
+    /**
      * 首次外部入站节点（ip:port），与 clientIp 同阶段由服务端赋值，持久化为 server_address。集群中转只改 {@link #fromServerAddress}，本字段禁止改写。
      * 仅服务端内部使用，写出给客户端前必须剥离 metadata。
      */
@@ -261,6 +267,14 @@ public class Metadata implements Serializable, Cloneable {
 
     public void setQosClaimPacketId(Long qosClaimPacketId) {
         this.qosClaimPacketId = qosClaimPacketId;
+    }
+
+    public boolean isQosArchiveBound() {
+        return qosArchiveBound;
+    }
+
+    public void setQosArchiveBound(boolean qosArchiveBound) {
+        this.qosArchiveBound = qosArchiveBound;
     }
 
     public String getOriginServerAddress() {

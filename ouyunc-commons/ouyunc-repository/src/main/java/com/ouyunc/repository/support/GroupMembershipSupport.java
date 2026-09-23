@@ -20,6 +20,7 @@ import com.ouyunc.domain.entity.GroupEntity;
 import com.ouyunc.domain.entity.GroupUserEntity;
 import com.ouyunc.domain.entity.MongoGroupEntity;
 import com.ouyunc.domain.entity.MongoGroupUserEntity;
+import com.ouyunc.repository.BindGroupResult;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -864,10 +865,12 @@ public final class GroupMembershipSupport {
         infra.redisTemplate.delete(CacheConstant.buildGroupRequestCacheKey(appKey, joiner, groupId));
     }
 
-    public boolean autoPassBindGroup(Packet packet, GroupRequestSession groupRequestSession, long expireTime) {
+    public BindGroupResult autoPassBindGroup(Packet packet, GroupRequestSession groupRequestSession, long expireTime,
+                                             int maxMembers, int maxPerUser) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        return bindGroup(packet, groupRequestSession.getJoiner(), groupRequestSession.getGroupId(), groupRequestSession.getSessionId(), expireTime, (redisConnection) -> {
+        return bindGroup(packet, groupRequestSession.getJoiner(), groupRequestSession.getGroupId(),
+                groupRequestSession.getSessionId(), expireTime, maxMembers, maxPerUser, (redisConnection) -> {
             String groupRequestCacheKey = CacheConstant.buildGroupRequestCacheKey(metadata.getAppKey(), groupRequestSession.getJoiner(), groupRequestSession.getGroupId());
             byte[] keyBytes = session.serializeOrNull(infra.stringSerializer, groupRequestCacheKey);
             byte[] valueBytes = session.serializeOrNull(infra.valueSerializer, groupRequestSession);
@@ -875,10 +878,12 @@ public final class GroupMembershipSupport {
         });
     }
 
-    public boolean manualPassBindGroup(Packet packet, GroupRequestSession groupRequestSession, long expireTime) {
+    public BindGroupResult manualPassBindGroup(Packet packet, GroupRequestSession groupRequestSession, long expireTime,
+                                               int maxMembers, int maxPerUser) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        return bindGroup(packet, groupRequestSession.getJoiner(), groupRequestSession.getGroupId(), groupRequestSession.getSessionId(), expireTime, (redisConnection) -> {
+        return bindGroup(packet, groupRequestSession.getJoiner(), groupRequestSession.getGroupId(),
+                groupRequestSession.getSessionId(), expireTime, maxMembers, maxPerUser, (redisConnection) -> {
             String groupRequestCacheKey = CacheConstant.buildGroupRequestCacheKey(metadata.getAppKey(), groupRequestSession.getJoiner(), groupRequestSession.getGroupId());
             byte[] keyBytes = session.serializeOrNull(infra.stringSerializer, groupRequestCacheKey);
             byte[] valueBytes = session.serializeOrNull(infra.valueSerializer, groupRequestSession);
@@ -915,30 +920,112 @@ public final class GroupMembershipSupport {
         });
     }
 
-    @SuppressWarnings("unchecked")
-    public<K, V> boolean bindGroup(Packet packet, String joiner, String groupId, String requestSessionId, long expireTime, Consumer<RedisConnection> consumer) {
+    /**
+     * 先在群聚合槽原子判定「已是成员 / 容量 / 写入」，再写用户加群索引（超限回滚群侧），最后写请求会话。
+     * 群成员与用户加群不在同一 Redis 槽，不能放进一条 Lua；用户侧失败必须补偿删掉刚写入的群成员。
+     */
+    public BindGroupResult bindGroup(Packet packet, String joiner, String groupId, String requestSessionId,
+                                     long expireTime, int maxMembers, int maxPerUser,
+                                     Consumer<RedisConnection> consumer) {
+        if (packet == null || packet.getMessage() == null || packet.getMessage().getMetadata() == null) {
+            return BindGroupResult.FAILED;
+        }
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        boolean bound = session.saveMessageWithSession(packet, expireTime, CacheConstant.buildGroupRequestSessionCacheKey(metadata.getAppKey(), groupId, requestSessionId), consumer, (redisConnection, msg, ak, f, t) -> {
-            RelationRosterRedis.evalAdd(redisConnection, infra.stringSerializer,
-                    CacheConstant.buildGroupUserCacheKey(metadata.getAppKey(), groupId),
-                    CacheConstant.buildGroupRelationVersionCacheKey(metadata.getAppKey(), groupId),
-                    CacheConstant.buildGroupUserInitCacheKey(metadata.getAppKey(), groupId),
-                    GroupUserPost.ORDINARY.value(),
-                    joiner);
-            RelationRosterRedis.evalAdd(redisConnection, infra.stringSerializer,
-                    CacheConstant.buildUserGroupsCacheKey(metadata.getAppKey(), joiner),
-                    CacheConstant.buildUserGroupsRelationVersionCacheKey(metadata.getAppKey(), joiner),
-                    CacheConstant.buildUserGroupsInitCacheKey(metadata.getAppKey(), joiner),
-                    msg.getMetadata().getServerTime(),
-                    groupId);
-        });
-        if (bound) {
-            RelationLocalCache.onGroupJoin(metadata.getAppKey(), groupId, joiner);
-            RelationCacheInvalidatePublisher.publish(
-                    RelationCacheInvalidateEvent.groupJoin(metadata.getAppKey(), groupId, joiner));
+        String appKey = metadata.getAppKey();
+        if (StringUtils.isAnyBlank(appKey, joiner, groupId)) {
+            return BindGroupResult.FAILED;
         }
-        return bound;
+        try {
+            ensureGroupMemberRoster(appKey, groupId);
+        } catch (Exception e) {
+            log.error("入群前重建成员名单失败 appKey={} groupId={}", appKey, groupId, e);
+            return BindGroupResult.FAILED;
+        }
+        if (maxMembers >= 0 && !hasGroupMemberInit(appKey, groupId)) {
+            log.error("群成员名单未就绪，拒绝带容量入群 appKey={} groupId={}", appKey, groupId);
+            return BindGroupResult.FAILED;
+        }
+        if (maxPerUser >= 0 && !hasUserGroupsInit(appKey, joiner)
+                && userGroupCount(appKey, joiner) >= maxPerUser) {
+            return BindGroupResult.USER_GROUP_LIMIT;
+        }
+
+        long groupAdd = RelationRosterRedis.addMemberIfCapacity(
+                infra.stringRedisTemplate,
+                CacheConstant.buildGroupUserCacheKey(appKey, groupId),
+                CacheConstant.buildGroupRelationVersionCacheKey(appKey, groupId),
+                CacheConstant.buildGroupUserInitCacheKey(appKey, groupId),
+                GroupUserPost.ORDINARY.value(),
+                joiner,
+                maxMembers);
+        if (groupAdd == RelationRosterRedis.ADD_CAPACITY_EXCEEDED) {
+            return BindGroupResult.GROUP_FULL;
+        }
+        if (groupAdd != RelationRosterRedis.ADD_NEW && groupAdd != RelationRosterRedis.ADD_EXISTS) {
+            return BindGroupResult.FAILED;
+        }
+        boolean newGroupMember = groupAdd == RelationRosterRedis.ADD_NEW;
+        if (newGroupMember) {
+            long userAdd = RelationRosterRedis.addMemberIfCapacity(
+                    infra.stringRedisTemplate,
+                    CacheConstant.buildUserGroupsCacheKey(appKey, joiner),
+                    CacheConstant.buildUserGroupsRelationVersionCacheKey(appKey, joiner),
+                    CacheConstant.buildUserGroupsInitCacheKey(appKey, joiner),
+                    metadata.getServerTime(),
+                    groupId,
+                    maxPerUser);
+            if (userAdd == RelationRosterRedis.ADD_CAPACITY_EXCEEDED) {
+                rollbackGroupMemberAdd(appKey, groupId, joiner);
+                return BindGroupResult.USER_GROUP_LIMIT;
+            }
+            if (userAdd != RelationRosterRedis.ADD_NEW && userAdd != RelationRosterRedis.ADD_EXISTS) {
+                rollbackGroupMemberAdd(appKey, groupId, joiner);
+                return BindGroupResult.FAILED;
+            }
+        } else {
+            RelationRosterRedis.addMember(
+                    infra.stringRedisTemplate,
+                    CacheConstant.buildUserGroupsCacheKey(appKey, joiner),
+                    CacheConstant.buildUserGroupsRelationVersionCacheKey(appKey, joiner),
+                    CacheConstant.buildUserGroupsInitCacheKey(appKey, joiner),
+                    metadata.getServerTime(),
+                    groupId);
+        }
+
+        boolean bound = session.saveMessageWithSession(packet, expireTime,
+                CacheConstant.buildGroupRequestSessionCacheKey(appKey, groupId, requestSessionId),
+                consumer, (ops, msg, ak, f, t) -> {
+                });
+        if (!bound) {
+            if (newGroupMember) {
+                rollbackGroupMemberAdd(appKey, groupId, joiner);
+                RelationRosterRedis.removeMember(
+                        infra.stringRedisTemplate,
+                        CacheConstant.buildUserGroupsCacheKey(appKey, joiner),
+                        CacheConstant.buildUserGroupsRelationVersionCacheKey(appKey, joiner),
+                        CacheConstant.buildUserGroupsInitCacheKey(appKey, joiner),
+                        groupId);
+            }
+            return BindGroupResult.FAILED;
+        }
+        RelationLocalCache.onGroupJoin(appKey, groupId, joiner);
+        RelationCacheInvalidatePublisher.publish(
+                RelationCacheInvalidateEvent.groupJoin(appKey, groupId, joiner));
+        return newGroupMember ? BindGroupResult.SUCCESS : BindGroupResult.ALREADY_MEMBER;
+    }
+
+    private void rollbackGroupMemberAdd(String appKey, String groupId, String joiner) {
+        try {
+            RelationRosterRedis.removeMember(
+                    infra.stringRedisTemplate,
+                    CacheConstant.buildGroupUserCacheKey(appKey, groupId),
+                    CacheConstant.buildGroupRelationVersionCacheKey(appKey, groupId),
+                    CacheConstant.buildGroupUserInitCacheKey(appKey, groupId),
+                    joiner);
+        } catch (Exception e) {
+            log.error("回滚群成员写入失败 appKey={} groupId={} joiner={}", appKey, groupId, joiner, e);
+        }
     }
 
     public void updateGroupUserCache(String cacheKey, GroupUserEntity groupUserEntity) {

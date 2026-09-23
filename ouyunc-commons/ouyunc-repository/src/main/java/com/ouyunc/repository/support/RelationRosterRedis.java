@@ -24,8 +24,14 @@ public final class RelationRosterRedis {
     public static final int INIT_COMPLETE = 1;
     public static final int INIT_PARTIAL = 2;
 
+    public static final long ADD_CAPACITY_EXCEEDED = 0L;
+    public static final long ADD_NEW = 1L;
+    public static final long ADD_EXISTS = 2L;
+
     private static final DefaultRedisScript<Long> ADD_SCRIPT = new DefaultRedisScript<>(
             LuaScriptEnum.RELATION_ROSTER_ADD_SCRIPT.getScript(), Long.class);
+    private static final DefaultRedisScript<Long> ADD_IF_CAPACITY_SCRIPT = new DefaultRedisScript<>(
+            LuaScriptEnum.RELATION_ROSTER_ADD_IF_CAPACITY_SCRIPT.getScript(), Long.class);
     private static final DefaultRedisScript<Long> REMOVE_SCRIPT = new DefaultRedisScript<>(
             LuaScriptEnum.RELATION_ROSTER_REMOVE_SCRIPT.getScript(), Long.class);
     private static final DefaultRedisScript<Long> UPDATE_SCORE_SCRIPT = new DefaultRedisScript<>(
@@ -70,6 +76,21 @@ public final class RelationRosterRedis {
         } catch (Exception e) {
             return INIT_MISSING;
         }
+    }
+
+    /**
+     * 原子：已存在或未超限才写入。maxCount 为负数表示不限制容量。
+     *
+     * @return {@link #ADD_NEW} / {@link #ADD_EXISTS} / {@link #ADD_CAPACITY_EXCEEDED}，异常为 -1
+     */
+    public static long addMemberIfCapacity(StringRedisTemplate template, String zsetKey, String versionKey,
+                                           String initKey, double score, String member, int maxCount) {
+        if (template == null || StringUtils.isAnyBlank(zsetKey, versionKey, initKey, member)) {
+            return -1L;
+        }
+        Long code = template.execute(ADD_IF_CAPACITY_SCRIPT, List.of(zsetKey, versionKey, initKey),
+                String.valueOf(score), member, String.valueOf(maxCount));
+        return code == null ? -1L : code;
     }
 
     public static void addMember(StringRedisTemplate template, String zsetKey, String versionKey,

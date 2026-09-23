@@ -47,7 +47,19 @@ public final class MessageAcceptPipelineHelper {
                     packet == null ? null : packet.getPacketId());
             return Mono.error(new IllegalStateException("SAVE 归档缺少客户端 messageId"));
         }
-        return MessageArchiveHelper.confirm(() -> repository().save(packet));
+        if (!repository().claimForArchive(packet)) {
+            log.error("SAVE 归档前未能稳定 packetId, messageId={} packetId={}",
+                    packet.getMessage().getId(), packet.getPacketId());
+            return Mono.error(new IllegalStateException("SAVE 归档前 QoS 未对齐正式 packetId"));
+        }
+        return MessageArchiveHelper.confirm(() -> repository().save(packet))
+                .doOnSuccess(ignored -> markArchiveBound(packet));
+    }
+
+    private static void markArchiveBound(Packet packet) {
+        if (packet != null && packet.getMessage() != null && packet.getMessage().getMetadata() != null) {
+            packet.getMessage().getMetadata().setQosArchiveBound(true);
+        }
     }
 
     /**

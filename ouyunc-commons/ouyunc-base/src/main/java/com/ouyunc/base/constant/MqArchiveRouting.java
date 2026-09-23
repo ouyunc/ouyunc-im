@@ -9,7 +9,9 @@ import org.apache.commons.lang3.StringUtils;
 
 /**
  * 确认路径路由：聊天走 SAVE；已读/撤回/好友/群只走领域 topic。
- * SAVE 归档幂等键与 Kafka key 为 {@code appKey:messageId}；领域事件仍按会话/群/工单分区。
+ * SAVE 归档幂等键与 Kafka key / 冷库 {@code uk_app_message_id} 为 {@code appKey:messageId}：
+ * 客户端 messageId 必须在租户内唯一（建议 UUID）。长连接 QoS 仍按发送身份分片防并发重入，
+ * 但正式 packetId 须在发 SAVE 前对齐，避免冷热 ID 分叉。
  */
 public final class MqArchiveRouting {
 

@@ -25,6 +25,8 @@ import java.util.UUID;
  *
  * <p>客户端只稳定传递 {@code messageId}；{@code packetId} 是服务端内部身份。
  * 幂等权威键为 {@code appKey + loginIdentity + messageId}（client 键），packet 键仅辅助同请求占位。
+ * 冷库/SAVE 键是租户级 {@code appKey:messageId}，因此客户端 messageId 必须租户内唯一；
+ * 服务端正式身份是 claim 得到的 packetId，归档不得早于该对齐。
  *
  * <p>记录格式 {@code STATE|serverPacketId|payloadHash|ownerToken|clientMessageId|timestamp}：
  * <ul>
@@ -125,8 +127,14 @@ public final class QosIdempotencyHelper {
                 end
                 if f[1] == 'PENDING' then
                   local ts = tonumber(f[6])
-                  if ts == nil or now - ts <= takeoverMs then return {3, ''} end
-                  if f[2] ~= nil and f[2] ~= '' then reuseId = f[2] end
+                  -- 同正文重试立刻复用首次 serverId（归档已按该 ID 发出）；不同正文走上方 CONFLICT。
+                  if f[3] == hash and hash ~= '' then
+                    if f[2] ~= nil and f[2] ~= '' then reuseId = f[2] end
+                  elseif ts == nil or now - ts <= takeoverMs then
+                    return {3, ''}
+                  else
+                    if f[2] ~= nil and f[2] ~= '' then reuseId = f[2] end
+                  end
                 else return {4, ''} end
               end
             end

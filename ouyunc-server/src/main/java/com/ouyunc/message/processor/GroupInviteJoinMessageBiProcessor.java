@@ -15,6 +15,7 @@ import com.ouyunc.domain.entity.GroupEntity;
 import com.ouyunc.domain.entity.GroupUserEntity;
 import com.ouyunc.domain.entity.UserEntity;
 import com.ouyunc.message.helper.DistributedLockHelper;
+import com.ouyunc.message.helper.GroupBindResultHelper;
 import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
 import com.ouyunc.message.helper.MessageSendResultHelper;
 import com.ouyunc.message.helper.RequestNotifyHelper;
@@ -163,10 +164,11 @@ public final class GroupInviteJoinMessageBiProcessor extends AbstractMessageBiPr
                             groupRequestSession.setProcessor(message.getFrom());
                             groupRequestSession.setProcessorPost(groupRequestSession.getInviterPost());
                         }
-                        if (!repository().autoPassBindGroup(packet, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
-                            log.error("被邀请人自动同意且满足免审条件，绑定群组失败: {}", packet);
-                            ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "自动绑定群组请求消息异常!", "GroupInviteJoinMessageBiProcessor.process", packet);
-                            com.ouyunc.message.helper.MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
+                        if (!GroupBindResultHelper.acceptedOrReply(ctx, packet,
+                                repository().autoPassBindGroup(packet, groupRequestSession,
+                                        MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP,
+                                        GroupBindResultHelper.maxMembers(), GroupBindResultHelper.maxPerUser()),
+                                "自动绑定群组请求消息异常!")) {
                             return;
                         }
                         notifyIdentities = RequestNotifyHelper.userOnly(content.getIdentity());

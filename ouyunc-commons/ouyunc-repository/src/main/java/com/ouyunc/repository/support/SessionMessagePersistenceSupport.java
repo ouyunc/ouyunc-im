@@ -138,8 +138,13 @@ public final class SessionMessagePersistenceSupport {
             qosClaimIdentity = QosClaimIdentities.resolve(message);
             clientMessageId = message.getId();
             qosSave = MessageContext.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel();
-            qosOwnerToken = qosSave ? QosIdempotencyHelper.newOwnerToken() : null;
-            if (qosSave) {
+            boolean alreadyClaimed = qosSave && StringUtils.isNotBlank(metadata.getQosOwnerToken());
+            qosOwnerToken = alreadyClaimed ? metadata.getQosOwnerToken()
+                    : (qosSave ? QosIdempotencyHelper.newOwnerToken() : null);
+            if (qosSave && alreadyClaimed) {
+                Long claimKey = metadata.getQosClaimPacketId();
+                qosClaimKeyPacketId = claimKey != null && claimKey > 0L ? claimKey : packet.getPacketId();
+            } else if (qosSave) {
                 // 写入 Metadata，供失败路径 releaseQosClaim 带回同一 owner（禁止传 null）
                 metadata.setQosOwnerToken(qosOwnerToken);
                 // 占位键按抢占时的 packetId 固定；对齐 canonical 后 commit/release 仍按此键定位
@@ -344,6 +349,9 @@ public final class SessionMessagePersistenceSupport {
                                         String qosClaimIdentity, String clientMessageId, String qosOwnerToken,
                                         Metadata metadata) {
         if (!qosSave || StringUtils.isBlank(appKey) || StringUtils.isBlank(qosOwnerToken)) {
+            return;
+        }
+        if (metadata != null && metadata.isQosArchiveBound()) {
             return;
         }
         long keyPacketId = claimKeyPacketId > 0L ? claimKeyPacketId : recordPacketId;
