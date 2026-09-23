@@ -400,6 +400,11 @@ public final class QosIdempotencyHelper {
         if (message == null) {
             return "";
         }
+        Metadata metadata = message.getMetadata();
+        if (metadata != null && StringUtils.isNotBlank(metadata.getHttpPushPayloadHash())) {
+            // HTTP 在内容安全可能改写正文之前固定原始业务指纹；热写必须沿用同一值。
+            return metadata.getHttpPushPayloadHash();
+        }
         try {
             MessageDigest digestBuilder = MessageDigest.getInstance("SHA-256");
             updateDigest(digestBuilder, message.getId());
@@ -411,7 +416,7 @@ public final class QosIdempotencyHelper {
             updateDigest(digestBuilder, message.getContent());
             updateDigest(digestBuilder, message.getExtra());
             updateDigest(digestBuilder, String.valueOf(message.getQos()));
-            updateDigest(digestBuilder, String.valueOf(message.getCreateTime()));
+            // createTime 可能由入口服务补入，不能成为稳定 messageId 重试的冲突依据。
             updateDigest(digestBuilder, message.getCorrelationId());
             updateDigest(digestBuilder, message.getAt());
             updateDigest(digestBuilder, message.getRef());
@@ -613,7 +618,8 @@ public final class QosIdempotencyHelper {
     private static List<?> evalList(RedisTemplate<String, ?> template, DefaultRedisScript<List> script,
                                     List<String> keys, String... args) {
         try {
-            Object raw = template.execute(script, STRING_SERIALIZER, null, keys, (Object[]) args);
+            Object raw = template.execute(script, STRING_SERIALIZER,
+                    castResultSerializer(STRING_SERIALIZER), keys, (Object[]) args);
             if (raw instanceof List<?> list) {
                 return list;
             }
@@ -622,6 +628,12 @@ public final class QosIdempotencyHelper {
             log.warn("QoS 幂等脚本执行失败: {}", e.getMessage());
             return null;
         }
+    }
+
+    /** Spring 会递归使用结果序列化器解码 Lua 多返回值中的 bulk string。 */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static RedisSerializer<List> castResultSerializer(RedisSerializer<String> serializer) {
+        return (RedisSerializer) serializer;
     }
 
     private static DefaultRedisScript<Long> script(String body) {

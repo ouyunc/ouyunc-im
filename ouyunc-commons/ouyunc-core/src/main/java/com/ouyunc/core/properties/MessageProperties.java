@@ -43,15 +43,15 @@ public class MessageProperties {
     private LogLevel logLevel;
 
     /**
-     * 是否开启qos 消息服务质量，默认关闭
+     * 是否开启 QoS。默认开启，配合服务端模式对在线写出失败做有限次重试。
      */
-    @Key(value = "ouyunc.message.qos.enable", defaultValue = "false")
+    @Key(value = "ouyunc.message.qos.enable", defaultValue = "true")
     private boolean qosEnable;
 
     /**
-     * 模式，CLIENT-客户端模式，SERVER-服务端模式, 默认客户端（需要客户端配合实现，对服务端压力小，且服务端是无状态的），服务端模式则是服务端保存消息，然后定时发送给接收方，会影响性能，且服务端变成有状态服务
+     * CLIENT 由对端补可靠投递；SERVER 在始发节点按接收端登记重试。默认 SERVER，保证未开客户端 QoS 时在线失败仍会补发。
      */
-    @Key(value = "ouyunc.message.qos.mode", defaultValue = "CLIENT")
+    @Key(value = "ouyunc.message.qos.mode", defaultValue = "SERVER")
     private QosModeEnum qosMode;
 
     /**

@@ -80,7 +80,7 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
                         MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)
                 .flatMap(outcome -> {
                     if (outcome != null && outcome.isDuplicate()) {
-                        return Mono.just(true);
+                        return replayOnline(packet);
                     }
                     if (outcome == null || !outcome.isFreshWrite()) {
                         log.error("HTTP 推送群聊落库失败: {}", packet);
@@ -153,6 +153,21 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
 
     private static void deliverGroupReadReceiptSelfSyncOnly(Packet packet) {
         HttpPushDeliverySupport.syncSenderOnlineDevices(packet, packet.getMessage().getFrom());
+    }
+
+    @Override
+    public Mono<Boolean> replayOnline(Packet packet) {
+        return Mono.fromCallable(() -> {
+            int contentType = packet.getMessage().getContentType();
+            if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {
+                deliverGroupReadReceiptSelfSyncOnly(packet);
+            } else if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
+                deliverWithdraw(packet);
+            } else {
+                pushGroupOnline(packet);
+            }
+            return Boolean.TRUE;
+        });
     }
 
     private static void deliverWithdraw(Packet packet) {

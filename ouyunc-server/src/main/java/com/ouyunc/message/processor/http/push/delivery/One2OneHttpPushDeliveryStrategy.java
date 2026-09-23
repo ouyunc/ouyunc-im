@@ -74,7 +74,7 @@ public final class One2OneHttpPushDeliveryStrategy implements HttpProcessor {
                         MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)
                 .flatMap(outcome -> {
                     if (outcome != null && outcome.isDuplicate()) {
-                        return Mono.just(true);
+                        return replayOnline(packet);
                     }
                     if (outcome == null || !outcome.isFreshWrite()) {
                         log.error("HTTP 推送单聊落库失败: {}", packet);
@@ -139,6 +139,20 @@ public final class One2OneHttpPushDeliveryStrategy implements HttpProcessor {
                         (ctx, packet0) -> deliverReadReceiptToSender(packet0),
                         ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR)
                 .map(Boolean.TRUE::equals);
+    }
+
+    @Override
+    public Mono<Boolean> replayOnline(Packet packet) {
+        return Mono.fromCallable(() -> {
+            int contentType = packet.getMessage().getContentType();
+            if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {
+                deliverReadReceiptToSender(packet);
+            } else {
+                MessageDeliveryRouteHelper.deliverPeerMessage(packet,
+                        MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType);
+            }
+            return Boolean.TRUE;
+        });
     }
 
     private static void deliverReadReceiptToSender(Packet packet) {

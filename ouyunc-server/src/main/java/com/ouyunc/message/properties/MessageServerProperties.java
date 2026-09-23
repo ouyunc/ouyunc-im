@@ -170,7 +170,7 @@ public class MessageServerProperties extends MessageProperties {
      * 是否在接入 Channel 上安装 {@link com.ouyunc.message.handler.MessageLoggingHandler}。
      * 关闭后不再按「每次 socket 读」打日志；大流量下每次 {@code channelRead} 一条，极易刷屏。
      */
-    @Key(value = "ouyunc.message.netty-pipeline-logging-enabled", defaultValue = "true")
+    @Key(value = "ouyunc.message.netty-pipeline-logging-enabled", defaultValue = "false")
     boolean nettyPipelineLoggingEnabled;
 
     /**
@@ -361,9 +361,9 @@ public class MessageServerProperties extends MessageProperties {
     String contentSafetyDefaultMediaAction;
 
     /***
-     * 是否开启qos重试发送机制，默认关闭
+     * 是否开启 QoS 重试。默认开启；须同时 qos.enable=true 且 qos.mode=SERVER 才登记下行重试。
      */
-    @Key(value = "ouyunc.message.qos.retry.enable", defaultValue = "false")
+    @Key(value = "ouyunc.message.qos.retry.enable", defaultValue = "true")
     boolean qosRetryEnable;
 
     /***

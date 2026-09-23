@@ -79,6 +79,27 @@ public final class GroupJoinMessageBiProcessor extends AbstractMessageBiProcesso
                         MessageSendResultHelper.retryLater(ctx, packet, ExceptionCodeEnum.BIND_GROUP_ERROR);
                         return;
                     }
+                    // 上次可能在群关系写入后、请求会话提交前退出；重试必须补齐请求状态。
+                    if (existingSession == null) {
+                        existingSession = GroupRequestSession.newGroupBuilder()
+                                .sessionId(MessageContext.idGenerator().generateIdStr())
+                                .joiner(message.getFrom())
+                                .groupId(message.getTo())
+                                .channel(GroupRequestSessionChannel.OTHER.value())
+                                .way(GroupRequestSessionWay.ACTIVE.value())
+                                .joinerProcessStatus(GroupJoinerProcessStatus.AGREE.value())
+                                .progress(RequestSessionProgress.AGREEING.value())
+                                .build();
+                    } else {
+                        existingSession.setProgress(RequestSessionProgress.AGREEING.value());
+                        existingSession.setJoinerProcessStatus(GroupJoinerProcessStatus.AGREE.value());
+                        existingSession.setWay(GroupRequestSessionWay.ACTIVE.value());
+                    }
+                    if (!repository().saveGroupRequestMessage(packet, existingSession,
+                            MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
+                        MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
+                        return;
+                    }
                     RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.userOnly(message.getFrom()));
                     MessageAcceptPipelineHelper.requestAccepted(ctx, packet);
                     return;

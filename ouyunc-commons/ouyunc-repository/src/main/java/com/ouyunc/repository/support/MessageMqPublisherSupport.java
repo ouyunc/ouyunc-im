@@ -99,10 +99,21 @@ public final class MessageMqPublisherSupport {
     }
 
     public void publishJsonAsync(String topic, String key, String jsonBody, String failureContext) {
+        publishJsonConfirmed(topic, key, jsonBody, failureContext);
+    }
+
+    /**
+     * JSON 投递并暴露 broker 确认结果。调用方可选择等待；失败同时进入统一异常上报。
+     */
+    public CompletableFuture<?> publishJsonConfirmed(String topic, String key, String jsonBody,
+                                                     String failureContext) {
         try {
-            attachFailure(infra.mqPublisher.send(topic, key, jsonBody, null), topic, key, null, jsonBody, null, failureContext);
+            CompletableFuture<?> future = infra.mqPublisher.send(topic, key, jsonBody, null);
+            attachFailure(future, topic, key, null, jsonBody, null, failureContext);
+            return future;
         } catch (Exception ex) {
             handleFailure(topic, key, null, jsonBody, null, failureContext, ex);
+            return CompletableFuture.failedFuture(ex);
         }
     }
 

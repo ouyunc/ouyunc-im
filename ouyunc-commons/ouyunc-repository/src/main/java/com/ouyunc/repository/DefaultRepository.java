@@ -393,8 +393,9 @@ public enum DefaultRepository implements Repository {
         return RepositorySupports.DELIVERY_CHANNEL.resolveGroupMemberDeliveryChannels(appKey, groupId, memberIds);
     }
 
-    public void publishExternalChannelOutbound(Packet packet, String recipientId, MessageDeliveryChannelEnum channel) {
-        RepositorySupports.DELIVERY_CHANNEL.publishExternalOutbound(packet, recipientId, channel);
+    public java.util.concurrent.CompletableFuture<?> publishExternalChannelOutbound(
+            Packet packet, String recipientId, MessageDeliveryChannelEnum channel) {
+        return RepositorySupports.DELIVERY_CHANNEL.publishExternalOutbound(packet, recipientId, channel);
     }
 
     /** 读取 CS 写入的客服会话路由（主键 ticketId = 消息 correlationId）。 */

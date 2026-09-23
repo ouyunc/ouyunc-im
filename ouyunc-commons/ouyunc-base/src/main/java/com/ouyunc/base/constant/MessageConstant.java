@@ -188,6 +188,9 @@ public class MessageConstant {
     /** 归档确认必须早于连接任务/HTTP PENDING 接管期限，超时不发送业务成功 ACK。 */
     public static final long MESSAGE_ARCHIVE_CONFIRM_TIMEOUT_MS = 10_000L;
 
+    /** HTTP 外部渠道任务等待 broker 确认上限；失败由同 messageId 重试补投。 */
+    public static final long EXTERNAL_CHANNEL_CONFIRM_TIMEOUT_MS = 10_000L;
+
     /** HTTP 异步结果的最长等待时间，不在超时后继续保留请求引用。 */
     public static final long HTTP_ASYNC_RESULT_TIMEOUT_MS = 30_000L;
     /** 每个 HTTP 业务执行器的排队上限；过载明确拒绝，不能无限积压请求正文。 */

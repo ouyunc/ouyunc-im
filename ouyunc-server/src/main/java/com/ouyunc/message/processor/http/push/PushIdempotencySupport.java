@@ -5,6 +5,7 @@ import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.repository.support.QosIdempotencyHelper;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,9 +15,6 @@ import org.springframework.data.redis.serializer.RedisSerializer;
 
 import java.util.List;
 import java.util.UUID;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 
 /**
  * HTTP 推送幂等状态机。
@@ -97,7 +95,7 @@ public final class PushIdempotencySupport {
         String hash = message.getMetadata() != null
                 ? message.getMetadata().getHttpPushPayloadHash() : null;
         if (StringUtils.isBlank(hash)) {
-            hash = payloadHash(message);
+            hash = QosIdempotencyHelper.payloadHash(message);
         }
         String ownerToken = UUID.randomUUID().toString();
         List<?> raw = evalList(CLAIM_SCRIPT, CacheConstant.buildHttpPushIdempotentCacheKey(appKey, messageId),
@@ -141,52 +139,6 @@ public final class PushIdempotencySupport {
         public boolean isComplete() { return StringUtils.isNoneBlank(packetId, payloadHash, ownerToken); }
     }
 
-    /** HTTP 请求指纹排除服务端补入的 createTime，其余业务字段全部参与冲突判断。 */
-    public static String payloadHash(Message message) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            updateDigest(digest, message.getId());
-            updateDigest(digest, message.getFrom());
-            updateDigest(digest, String.valueOf(message.getFromType()));
-            updateDigest(digest, message.getTo());
-            updateDigest(digest, String.valueOf(message.getToType()));
-            updateDigest(digest, String.valueOf(message.getContentType()));
-            updateDigest(digest, message.getContent());
-            updateDigest(digest, message.getExtra());
-            updateDigest(digest, String.valueOf(message.getQos()));
-            updateDigest(digest, message.getCorrelationId());
-            updateDigest(digest, message.getAt());
-            updateDigest(digest, message.getRef());
-            return java.util.HexFormat.of().formatHex(digest.digest());
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 unavailable", e);
-        }
-    }
-
-    private static void updateDigest(MessageDigest digest, String value) {
-        if (value == null) {
-            digest.update(new byte[]{-1, -1, -1, -1});
-            return;
-        }
-        byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
-        digest.update(new byte[]{(byte) (bytes.length >>> 24), (byte) (bytes.length >>> 16),
-                (byte) (bytes.length >>> 8), (byte) bytes.length});
-        digest.update(bytes);
-    }
-
-    private static void updateDigest(MessageDigest digest, List<String> values) {
-        if (values == null) {
-            digest.update(new byte[]{-1, -1, -1, -1});
-            return;
-        }
-        int size = values.size();
-        digest.update(new byte[]{(byte) (size >>> 24), (byte) (size >>> 16),
-                (byte) (size >>> 8), (byte) size});
-        for (String value : values) {
-            updateDigest(digest, value);
-        }
-    }
-
     private static long ttlMs() {
         long seconds = MessageServerContext.serverProperties().getHttpPushIdempotentTtlSeconds();
         return (seconds > 0 ? seconds : 86_400L) * 1_000L;
@@ -207,12 +159,19 @@ public final class PushIdempotencySupport {
     private static List<?> evalList(DefaultRedisScript<List> script, String key, String... args) {
         try {
             RedisTemplate<String, Object> redis = CacheFactory.REDIS.instance();
-            Object raw = redis.execute(script, STRING_SERIALIZER, null, List.of(key), (Object[]) args);
+            Object raw = redis.execute(script, STRING_SERIALIZER,
+                    castResultSerializer(STRING_SERIALIZER), List.of(key), (Object[]) args);
             return raw instanceof List<?> values ? values : null;
         } catch (Exception e) {
             log.warn("HTTP 推送幂等抢占脚本失败 key={} err={}", key, e.getMessage());
             return null;
         }
+    }
+
+    /** Spring 会递归使用结果序列化器解码 Lua 多返回值中的 bulk string。 */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static RedisSerializer<List> castResultSerializer(RedisSerializer<String> serializer) {
+        return (RedisSerializer) serializer;
     }
 
     private static DefaultRedisScript<Long> longScript(String body) {

@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * 按好友/群成员 {@code channel} 解析投递渠道，并将外渠下行发布到 Kafka。
@@ -79,9 +80,10 @@ public final class DeliveryChannelSupport {
         return result;
     }
 
-    public void publishExternalOutbound(Packet packet, String recipientId, MessageDeliveryChannelEnum channel) {
+    public CompletableFuture<?> publishExternalOutbound(Packet packet, String recipientId,
+                                                        MessageDeliveryChannelEnum channel) {
         if (packet == null || packet.getMessage() == null || channel == null || channel.isIm()) {
-            return;
+            return CompletableFuture.completedFuture(null);
         }
         Message message = packet.getMessage();
         ExternalChannelOutboundPayload payload = new ExternalChannelOutboundPayload();
@@ -99,9 +101,11 @@ public final class DeliveryChannelSupport {
         payload.setCreateTime(message.getCreateTime());
 
         String partitionKey = StringUtils.defaultIfBlank(message.getFrom(), recipientId);
-        mqSupport.publishJsonAsync(MqConstant.MQ_EXTERNAL_CHANNEL_OUTBOUND_TOPIC, partitionKey,
+        CompletableFuture<?> confirmed = mqSupport.publishJsonConfirmed(
+                MqConstant.MQ_EXTERNAL_CHANNEL_OUTBOUND_TOPIC, partitionKey,
                 JSON.toJSONString(payload), "外部渠道下行");
         log.debug("已发布外部渠道下行, to={}, channel={}, packetId={}", recipientId, channel.getKey(), packet.getPacketId());
+        return confirmed;
     }
 
 }

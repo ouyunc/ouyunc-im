@@ -5,7 +5,7 @@ import io.netty.util.AttributeKey;
 /** 集群连接认证常量；只在每条连接首次发送/接收时使用。 */
 public final class ClusterAuthConstant {
     public static final String HANDLER_NAME = "clusterAuthentication";
-    public static final String AUTH_MESSAGE_ID = "ouyunc-cluster-auth-v1";
+    public static final String AUTH_MESSAGE_ID = "ouyunc-cluster-auth-20261001";
     public static final String HMAC_ALGORITHM = "HmacSHA256";
     public static final int MIN_SECRET_BYTES = 32;
     public static final int MAX_PROOF_LENGTH = 2048;

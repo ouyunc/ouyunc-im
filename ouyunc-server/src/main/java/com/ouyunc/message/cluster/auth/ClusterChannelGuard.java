@@ -168,7 +168,7 @@ public final class ClusterChannelGuard {
     }
 
     /** 未转发的内部包只允许集群心跳/认证/取消重试，禁止走外部业务 Processor。 */
-    public static boolean isInternalClusterMessage(Packet packet) {
+    private static boolean isInternalClusterMessage(Packet packet) {
         if (packet == null) {
             return false;
         }

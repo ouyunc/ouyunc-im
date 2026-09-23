@@ -31,9 +31,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 /**
- * HTTP 推送入口：校验通过后同步完成 MQ confirm + Redis，再返回结果并 COMMITTED。
- * <p>{@code ACCEPTED}＝本请求或此前同 ID 请求已完成提交；{@code REJECTED}＝业务明确拒绝；
- * {@code RETRY_LATER}＝当前占位仍在处理；{@code UNKNOWN}＝本次提交结果不确定。
+ * HTTP 推送入口：校验通过后同步完成 MQ confirm + Redis，在线扇出提交后再 COMMITTED。
+ * <p>{@code ACCEPTED}＝已提交且本次在线扇出已交给写出；同一 messageId 再次进入会补投在线端。
+ * {@code REJECTED}＝业务明确拒绝；{@code RETRY_LATER}＝当前占位仍在处理；
+ * {@code UNKNOWN}＝提交或在线扇出结果不确定，须用同一 messageId 重试。
  * 多接收人用 {@code messageId:to} 分键，避免局部成功被整键清掉。
  * 顺序：preProcess（权限/规范化）→ 内容安全 → 幂等占位 → MQ+Redis；
  * preProcess 与管线均在 {@link ThreadPoolManager#httpPushVerifyExecutor()} 执行。</p>
@@ -191,7 +192,7 @@ public final class InternalPacketIngressService {
             HttpPushProcessorDelegate.preProcessOrThrow(packet);
             // 指纹在业务规范化后、内容安全可能 MASK 正文前固定，保证原请求重试稳定。
             packet.getMessage().getMetadata().setHttpPushPayloadHash(
-                    PushIdempotencySupport.payloadHash(packet.getMessage()));
+                    com.ouyunc.repository.support.QosIdempotencyHelper.payloadHash(packet.getMessage()));
             applyContentSafetyOrThrow(packet);
         } catch (HttpPipelineException ex) {
             // 入站鉴权错误保持 HTTP 错误；已有 messageId 的业务拒绝返回统一逐消息结果。
@@ -251,7 +252,7 @@ public final class InternalPacketIngressService {
                 return HttpResponseResult.success(buildResponse(messageId, packetIdStr,
                         MessageSendStatusEnum.UNKNOWN, "已写入但幂等提交结果未知，请使用同一 messageId 查询或重试"));
             }
-            // ACCEPTED = 本请求已完成 MQ confirm + Redis，且幂等已 COMMITTED；扇出尽力而为
+            // ACCEPTED = MQ confirm + Redis 已提交，且本次在线扇出已交给写出/QoS。离线不算失败。
             return HttpResponseResult.success(buildResponse(messageId, packetIdStr,
                     MessageSendStatusEnum.ACCEPTED, null));
         } catch (RuntimeException ex) {

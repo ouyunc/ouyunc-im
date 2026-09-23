@@ -18,6 +18,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.ArrayList;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 按好友/群成员 {@code channel} 路由下行：IM 多设备推送或外部渠道 Kafka 出站。
@@ -78,6 +81,7 @@ public final class MessageDeliveryRouteHelper {
                 appKey, groupId, memberIds);
 
         Set<String> imMembers = new HashSet<>();
+        List<CompletableFuture<?>> externalConfirms = new ArrayList<>();
         Map<String, MessageDeliveryChannelEnum> channels =
                 DefaultRepository.INSTANCE.resolveGroupMemberDeliveryChannels(appKey, groupId, deliverable);
         for (String memberId : deliverable) {
@@ -88,9 +92,11 @@ public final class MessageDeliveryRouteHelper {
             if (channel.isIm()) {
                 imMembers.add(memberId);
             } else {
-                DefaultRepository.INSTANCE.publishExternalChannelOutbound(packet, memberId, channel);
+                externalConfirms.add(DefaultRepository.INSTANCE.publishExternalChannelOutbound(
+                        packet, memberId, channel));
             }
         }
+        awaitExternalIfHttp(packet, externalConfirms);
         if (imMembers.isEmpty()) {
             return;
         }
@@ -144,7 +150,9 @@ public final class MessageDeliveryRouteHelper {
             pushImUserIfOnline(packet, recipientId);
             return;
         }
-        DefaultRepository.INSTANCE.publishExternalChannelOutbound(packet, recipientId, channel);
+        CompletableFuture<?> confirmed = DefaultRepository.INSTANCE.publishExternalChannelOutbound(
+                packet, recipientId, channel);
+        awaitExternalIfHttp(packet, List.of(confirmed));
     }
 
     private static void syncSenderDevices(Packet packet, boolean forceSelfSync) {
@@ -174,5 +182,19 @@ public final class MessageDeliveryRouteHelper {
 
     private static boolean isHttpPush(Metadata metadata) {
         return metadata != null && IngressSourceEnum.isHttpPush(metadata.getIngressSource());
+    }
+
+    /** HTTP 受理必须知道外部任务是否进 broker；长连接保持原异步行为。 */
+    private static void awaitExternalIfHttp(Packet packet, List<CompletableFuture<?>> confirms) {
+        if (packet == null || packet.getMessage() == null || confirms == null || confirms.isEmpty()
+                || !isHttpPush(packet.getMessage().getMetadata())) {
+            return;
+        }
+        try {
+            CompletableFuture.allOf(confirms.toArray(CompletableFuture[]::new))
+                    .get(MessageConstant.EXTERNAL_CHANNEL_CONFIRM_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        } catch (Exception error) {
+            throw new IllegalStateException("HTTP 外部渠道任务 broker 确认失败", error);
+        }
     }
 }

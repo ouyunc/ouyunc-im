@@ -77,6 +77,26 @@ public final class CsHttpPushDeliveryStrategy implements HttpProcessor {
         return archived.then(Mono.defer(() -> persistPrepared(packet, confirmedRoute)));
     }
 
+    @Override
+    public Mono<Boolean> replayOnline(Packet packet) {
+        return Mono.fromCallable(() -> {
+            CsImSessionRoute route = HttpPushDeliverySupport.takeCsRoute(packet);
+            if (route == null) {
+                PrepareOutcome prepared = CsHelper.prepare(packet);
+                if (!prepared.accepted()) {
+                    return Boolean.FALSE;
+                }
+                route = prepared.route();
+            }
+            PrepareOutcome live = CsHelper.refreshDelivery(packet, route);
+            if (!live.accepted()) {
+                return Boolean.FALSE;
+            }
+            CsHelper.deliverMessage(packet, live.route(), false);
+            return Boolean.TRUE;
+        });
+    }
+
     /** 归档确认后执行存储，避免 HTTP COMMITTED 早于可靠归档。 */
     private Mono<Boolean> persistPrepared(Packet packet, CsImSessionRoute route) {
         Message message = packet.getMessage();
@@ -95,7 +115,7 @@ public final class CsHttpPushDeliveryStrategy implements HttpProcessor {
                         MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)
                 .flatMap(outcome -> {
                     if (outcome != null && outcome.isDuplicate()) {
-                        return Mono.just(true);
+                        return replayOnline(packet);
                     }
                     if (outcome == null || !outcome.isFreshWrite()) {
                         log.error("HTTP 推送客服消息落库失败: {}", packet);

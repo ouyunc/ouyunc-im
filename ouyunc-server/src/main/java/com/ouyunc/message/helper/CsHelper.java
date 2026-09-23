@@ -265,7 +265,17 @@ public final class CsHelper {
         }
         log.debug("客服外渠下行, ticketId={}, to={}, channel={}, packetId={}",
                 route.ticketId(), recipientId, channel.getKey(), packet.getPacketId());
-        DefaultRepository.INSTANCE.publishExternalChannelOutbound(packet, recipientId, channel);
+        java.util.concurrent.CompletableFuture<?> confirmed =
+                DefaultRepository.INSTANCE.publishExternalChannelOutbound(packet, recipientId, channel);
+        boolean httpPush = message != null && message.getMetadata() != null
+                && IngressSourceEnum.isHttpPush(message.getMetadata().getIngressSource());
+        if (httpPush) {
+            try {
+                confirmed.get(MessageConstant.EXTERNAL_CHANNEL_CONFIRM_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+            } catch (Exception error) {
+                throw new IllegalStateException("HTTP 客服外部渠道任务 broker 确认失败", error);
+            }
+        }
     }
 
     public static String resolveImRecipientId(String recipientId, CsImSessionRoute route) {

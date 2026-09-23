@@ -1031,8 +1031,9 @@ public final class GroupMembershipSupport {
         }
 
         boolean newGroupMember = false;
+        boolean relationCommitted = false;
         try {
-        long groupAdd = RelationRosterRedis.addMemberIfCapacity(
+            long groupAdd = RelationRosterRedis.addMemberIfCapacity(
                 infra.stringRedisTemplate,
                 CacheConstant.buildGroupUserCacheKey(appKey, groupId),
                 CacheConstant.buildGroupRelationVersionCacheKey(appKey, groupId),
@@ -1090,6 +1091,8 @@ public final class GroupMembershipSupport {
             }
             return BindGroupResult.FAILED;
         }
+        // 请求会话与消息已提交；后续本地缓存或通知失败不得再删除正式群关系。
+        relationCommitted = true;
         RelationLocalCache.onGroupJoin(appKey, groupId, joiner);
         RelationCacheInvalidatePublisher.publish(
                 RelationCacheInvalidateEvent.groupJoin(appKey, groupId, joiner));
@@ -1097,7 +1100,7 @@ public final class GroupMembershipSupport {
         } catch (Exception e) {
             // 两个关系集合位于不同 Redis 槽，任一步异常都必须补偿首次新增的群侧记录。
             // 已存在成员不删除，只由重试补齐用户侧反向索引。
-            if (newGroupMember) {
+            if (newGroupMember && !relationCommitted) {
                 rollbackGroupMemberAdd(appKey, groupId, joiner);
                 try {
                     RelationRosterRedis.removeMember(

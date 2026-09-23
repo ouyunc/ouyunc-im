@@ -41,8 +41,13 @@ public final class ServerNotifyHttpPushDeliveryStrategy implements HttpProcessor
     }
 
     @Override
+    public Mono<Boolean> replayOnline(Packet packet) {
+        return processMono(packet);
+    }
+
+    @Override
     public Mono<Boolean> processMono(Packet packet) {
-        // MQ 已由入口确认；实时扇出尽力而为，离线不把整单打成失败。
+        // 离线返回成功。在线查询或广播抛错时整段失败，入口不提交幂等。
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         if (metadata == null) {
