@@ -7,6 +7,7 @@ import com.lmax.disruptor.dsl.Disruptor;
 import com.lmax.disruptor.dsl.EventHandlerGroup;
 import com.ouyunc.base.constant.enums.EventRingEnum;
 import com.ouyunc.base.constant.enums.EventType;
+import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.metrics.DisruptorListenerExecSnapshot;
 import com.ouyunc.core.listener.metrics.DisruptorRingMetrics;
@@ -24,7 +25,7 @@ import java.util.concurrent.atomic.LongAdder;
  * 使用 Disruptor 原生 DSL 按监听器注解进行事件分发。
  * <p><b>异步发布心智模型</b>：根据 {@link MessageEvent#getType() 事件类型} 得到该类型涉及的 <b>一个或多个</b> 物理环，
  * 再向每个环投递同一条 {@link MessageEvent}。热路径为 {@code EventType → Set<RingDispatcher>} 一次查表，
- * 对每个派发器直接调用其 {@code publish}（内部即 {@link RingBuffer#publishEvent}），无额外门面类型。
+ * 异常类事件使用 {@link RingBuffer#tryPublishEvent} 非阻塞投递；业务事件仍保持可靠的阻塞发布语义。
  * <ul>
  *   <li>每个 {@link EventRingEnum} 全进程唯一一个物理 Disruptor；环内只按 {@code order} 建链（跨事件类型混排）</li>
  *   <li>相同 order：{@code handleEventsWith(...)} 并行；不同 order：{@code then(...)} 串行屏障</li>
@@ -153,8 +154,10 @@ public class DisruptorMessageEventMulticaster extends AbstractMessageEventMultic
         if (targets.isEmpty()) {
             return;
         }
+        boolean bestEffort = MessageEventTypeEnum.EXCEPTION.equals(eventType)
+                || MessageEventTypeEnum.EXCEPTION_PERSIST.equals(eventType);
         for (RingDispatcher dispatcher : targets) {
-            dispatcher.publish(event);
+            dispatcher.publish(event, bestEffort);
         }
     }
 
@@ -301,10 +304,15 @@ public class DisruptorMessageEventMulticaster extends AbstractMessageEventMultic
      * 单个物理环的派发器：持有 {@link Disruptor} / {@link RingBuffer}，{@link #publish(MessageEvent)} 即向环内发布。
      */
     private static final class RingDispatcher {
+        private static final org.slf4j.Logger RING_LOG =
+                org.slf4j.LoggerFactory.getLogger(RingDispatcher.class);
         private final Disruptor<DisruptorEvent> disruptor;
         private final RingBuffer<DisruptorEvent> ringBuffer;
         private final List<ListenerExecutionStats> listenerStats;
         private final LongAdder publishedEvents = new LongAdder();
+        private final LongAdder droppedEvents = new LongAdder();
+        private final java.util.concurrent.atomic.AtomicLong nextDropLogNanos =
+                new java.util.concurrent.atomic.AtomicLong();
 
         private RingDispatcher(
                 Disruptor<DisruptorEvent> disruptor,
@@ -315,9 +323,22 @@ public class DisruptorMessageEventMulticaster extends AbstractMessageEventMultic
             this.listenerStats = listenerStats;
         }
 
-        private void publish(MessageEvent event) {
-            publishedEvents.increment();
-            ringBuffer.publishEvent(DisruptorEvent.TRANSLATOR, event);
+        private void publish(MessageEvent event, boolean bestEffort) {
+            if (!bestEffort) {
+                ringBuffer.publishEvent(DisruptorEvent.TRANSLATOR, event);
+                publishedEvents.increment();
+                return;
+            }
+            if (ringBuffer.tryPublishEvent(DisruptorEvent.TRANSLATOR, event)) {
+                publishedEvents.increment();
+                return;
+            }
+            droppedEvents.increment();
+            long now = System.nanoTime();
+            long next = nextDropLogNanos.get();
+            if (now >= next && nextDropLogNanos.compareAndSet(next, now + java.util.concurrent.TimeUnit.SECONDS.toNanos(10))) {
+                RING_LOG.warn("Disruptor ring full, event dropped; totalDropped={}", droppedEvents.sum());
+            }
         }
 
         private void shutdown() {
@@ -341,6 +362,7 @@ public class DisruptorMessageEventMulticaster extends AbstractMessageEventMultic
                     pending,
                     ringBuffer.remainingCapacity(),
                     publishedEvents.sum(),
+                    droppedEvents.sum(),
                     disruptor.hasStarted(),
                     List.copyOf(execSnapshots)
             );

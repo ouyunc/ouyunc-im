@@ -288,7 +288,7 @@ public final class ResourceMonitor {
         int warnCount = 0;
         for (DisruptorRingMetrics m : metrics) {
             log.info(
-                    "  [环] eventType={}, ring={}, bufferSize={}槽, cursor={}序号, minGating={}序号, pending≈{}序号, remaining={}槽, published={}次, started={}",
+                    "  [环] eventType={}, ring={}, bufferSize={}槽, cursor={}序号, minGating={}序号, pending≈{}序号, remaining={}槽, published={}次, dropped={}次, started={}",
                     m.eventTypeName(),
                     m.ringName(),
                     m.bufferSize(),
@@ -297,6 +297,7 @@ public final class ResourceMonitor {
                     m.pendingSequences(),
                     m.remainingCapacity(),
                     m.publishedEvents(),
+                    m.droppedEvents(),
                     m.disruptorStarted()
             );
             List<DisruptorListenerExecSnapshot> listeners = m.listenerStats();
@@ -343,6 +344,11 @@ public final class ResourceMonitor {
         int buf = m.bufferSize();
         long pending = m.pendingSequences();
         long rem = m.remainingCapacity();
+        if (m.droppedEvents() > 0) {
+            out.accept(String.format(
+                    "[丢弃] eventType=%s ring=%s 异常类事件因环满被非阻塞丢弃=%d",
+                    m.eventTypeName(), m.ringName(), m.droppedEvents()));
+        }
         if (!m.disruptorStarted() && (m.publishedEvents() > 0 || m.cursor() > 0)) {
             out.accept(String.format(
                     "[严重] eventType=%s ring=%s Disruptor 未处于 started 状态但已有 cursor/published",

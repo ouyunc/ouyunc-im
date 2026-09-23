@@ -81,7 +81,9 @@ public final class MessageDeliveryRouteHelper {
                 appKey, groupId, memberIds);
 
         Set<String> imMembers = new HashSet<>();
-        List<CompletableFuture<?>> externalConfirms = new ArrayList<>();
+        boolean confirmExternal = isHttpPush(message.getMetadata());
+        List<CompletableFuture<?>> externalConfirms = confirmExternal
+                ? new ArrayList<>(MessageConstant.GROUP_EXTERNAL_CHANNEL_CONFIRM_BATCH) : null;
         Map<String, MessageDeliveryChannelEnum> channels =
                 DefaultRepository.INSTANCE.resolveGroupMemberDeliveryChannels(appKey, groupId, deliverable);
         for (String memberId : deliverable) {
@@ -92,11 +94,20 @@ public final class MessageDeliveryRouteHelper {
             if (channel.isIm()) {
                 imMembers.add(memberId);
             } else {
-                externalConfirms.add(DefaultRepository.INSTANCE.publishExternalChannelOutbound(
-                        packet, memberId, channel));
+                CompletableFuture<?> confirmed = DefaultRepository.INSTANCE.publishExternalChannelOutbound(
+                        packet, memberId, channel);
+                if (confirmExternal) {
+                    externalConfirms.add(confirmed);
+                    if (externalConfirms.size() >= MessageConstant.GROUP_EXTERNAL_CHANNEL_CONFIRM_BATCH) {
+                        awaitExternalIfHttp(packet, externalConfirms);
+                        externalConfirms.clear();
+                    }
+                }
             }
         }
-        awaitExternalIfHttp(packet, externalConfirms);
+        if (confirmExternal && !externalConfirms.isEmpty()) {
+            awaitExternalIfHttp(packet, externalConfirms);
+        }
         if (imMembers.isEmpty()) {
             return;
         }

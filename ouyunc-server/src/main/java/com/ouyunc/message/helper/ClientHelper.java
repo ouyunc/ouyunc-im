@@ -23,7 +23,6 @@ import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.cache.distributed.redis.RedisPipelineSupport;
 import com.ouyunc.core.context.MessageContext;
-import com.ouyunc.core.device.DeviceTypeRegistry;
 import com.ouyunc.domain.entity.AppEntity;
 import com.ouyunc.message.cluster.lease.AppKeyConnQuotaSupport;
 import com.ouyunc.message.cluster.lease.LocalNodeConnCounter;
@@ -47,7 +46,6 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * @author fzx
@@ -427,30 +425,38 @@ public class ClientHelper {
     private static Map<String, List<LoginClientInfo>> onlineAllBatchChunk(String appKey, Set<String> identities) {
         Map<String, List<LoginClientInfo>> result = new HashMap<>(identities.size());
         Map<String, Set<String>> remainingCombos = new LinkedHashMap<>();
-        for (String identity : identities) {
-            List<LoginClientInfo> localHits = new ArrayList<>();
-            Collection<Byte> deviceTypes = DeviceTypeRegistry.list(appKey, identity);
-            Set<String> remoteCombos = new HashSet<>();
-            for (Byte dt : deviceTypes) {
-                String comboId = IdentityUtil.generalComboIdentity(appKey, identity, dt);
-                ChannelHandlerContext ctx = MessageServerContext.localLoginClientRegisterTable.get(comboId);
-                if (ctx != null) {
-                    LoginClientInfo info = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
-                    if (info != null && OnlineEnum.ONLINE.equals(info.getOnlineStatus())) {
-                        localHits.add(info);
-                        continue;
-                    }
-                }
-                remoteCombos.add(comboId);
+        List<String> orderedIdentities = identities.stream().filter(Objects::nonNull).toList();
+        RedisSerializer<String> keySerializer = stringRedisTemplate.getStringSerializer();
+        List<Object> routeRows = stringRedisTemplate.executePipelined((RedisCallback<Object>) connection -> {
+            for (String identity : orderedIdentities) {
+                connection.hashCommands().hGetAll(
+                        keySerializer.serialize(CacheConstant.buildLoginRouteCacheKey(appKey, identity)));
             }
-            if (!localHits.isEmpty()) {
-                result.put(identity, localHits);
+            return null;
+        });
+        Map<String, Long> liveEpochs = NodeLeaseKeeper.snapshot();
+        for (int index = 0; index < orderedIdentities.size(); index++) {
+            String identity = orderedIdentities.get(index);
+            Object row = routeRows == null || index >= routeRows.size() ? null : routeRows.get(index);
+            Map<?, ?> route = row instanceof Map<?, ?> map ? map : Map.of();
+            LoginSessionDirectory.evictDeadRoute(appKey, identity, route, liveEpochs);
+            Set<String> remoteCombos = new HashSet<>();
+            for (Byte deviceType : ImSessionPresence.liveDeviceTypes(route, liveEpochs)) {
+                String comboId = IdentityUtil.generalComboIdentity(appKey, identity, deviceType);
+                ChannelHandlerContext ctx = MessageServerContext.localLoginClientRegisterTable.get(comboId);
+                LoginClientInfo local = ctx == null ? null : ChannelAttrUtil.getChannelAttribute(
+                        ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
+                if (local != null && OnlineEnum.ONLINE.equals(local.getOnlineStatus())) {
+                    result.computeIfAbsent(identity, ignored -> new ArrayList<>()).add(local);
+                } else {
+                    remoteCombos.add(comboId);
+                }
             }
             if (!remoteCombos.isEmpty()) {
                 remainingCombos.put(identity, remoteCombos);
             }
         }
-        appendRemoteOnlineByRoute(appKey, remainingCombos, result);
+        appendRemoteLoginDetails(remainingCombos, liveEpochs, result);
         return result;
     }
 
@@ -464,53 +470,18 @@ public class ClientHelper {
      * @Description 判断客户端是否在线, 如果在线返回该客户端所有在线连接的登录信息，支持多端登录
      */
     public static List<LoginClientInfo> onlineAll(String appKey, String identity, Byte... excludeDeviceTypeArr) {
-        // 判断identity在该appKey下是否支持loginDeviceType该设备类型
-
-        List<LoginClientInfo> loginClientInfoList = new ArrayList<>(NumberConstant.NUMBER_3);
-        // 获取所有的实现DeviceType接口的枚举实例,先找定制化的客户所支持的设备类型
-        Stream<Byte> deviceTypeStream = DeviceTypeRegistry.list(appKey, identity).stream();
+        if (StringUtils.isAnyBlank(appKey, identity)) {
+            return List.of();
+        }
+        List<LoginClientInfo> loginClientInfoList = new ArrayList<>(
+                onlineAllBatchChunk(appKey, Set.of(identity)).getOrDefault(identity, List.of()));
         if (excludeDeviceTypeArr != null && excludeDeviceTypeArr.length > NumberConstant.NUMBER_0) {
             Set<Byte> excludeNames = Arrays.stream(excludeDeviceTypeArr)
                     .filter(Objects::nonNull)
                     .collect(Collectors.toSet());
             if (!excludeNames.isEmpty()) {
-                deviceTypeStream = deviceTypeStream.filter(deviceType -> !excludeNames.contains(deviceType));
+                loginClientInfoList.removeIf(info -> excludeNames.contains(info.getDeviceType()));
             }
-        }
-        Set<String> comboIdentitySet = deviceTypeStream
-                .map(deviceType -> IdentityUtil.generalComboIdentity(appKey, identity, deviceType))
-                .collect(Collectors.toSet());
-
-        // 先从本地注册表获取，如果在同一个服务器上或者不是集群
-        Collection<ChannelHandlerContext> allLoginClientChannelHandlerContexts = MessageServerContext.localLoginClientRegisterTable.getAll(comboIdentitySet);
-        allLoginClientChannelHandlerContexts.forEach(ctx -> {
-            LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
-            if (loginClientInfo != null && OnlineEnum.ONLINE.equals(loginClientInfo.getOnlineStatus())) {
-                loginClientInfoList.add(loginClientInfo);
-                comboIdentitySet.remove(IdentityUtil.generalComboIdentity(appKey, identity, loginClientInfo.getDeviceType()));
-            }
-        });
-        if (comboIdentitySet.isEmpty()) {
-            return loginClientInfoList;
-        }
-        Map<String, Long> liveEpochs = NodeLeaseKeeper.snapshot();
-        Map<Object, Object> route = stringRedisTemplate.opsForHash()
-                .entries(CacheConstant.buildLoginRouteCacheKey(appKey, identity));
-        LoginSessionDirectory.evictDeadRoute(appKey, identity, route, liveEpochs);
-        Set<String> liveLoginKeys = new HashSet<>();
-        for (String comboIdentity : comboIdentitySet) {
-            byte deviceType = IdentityUtil.revertDeviceType(comboIdentity);
-            if (ImSessionPresence.isDeviceRouteLive(route, deviceType, liveEpochs)) {
-                liveLoginKeys.add(CacheConstant.buildLoginCacheKey(appKey, comboIdentity));
-            }
-        }
-        if (liveLoginKeys.isEmpty()) {
-            return loginClientInfoList;
-        }
-        Collection<LoginClientInfo> remoteCacheLoginClientInfos =
-                MessageServerContext.remoteLoginClientInfoCache.getAll(liveLoginKeys);
-        if (CollectionUtils.isNotEmpty(remoteCacheLoginClientInfos)) {
-            loginClientInfoList.addAll(remoteCacheLoginClientInfos);
         }
         return loginClientInfoList;
     }
@@ -518,31 +489,17 @@ public class ClientHelper {
     /**
      * 远程在线以路由 HASH + 租约为准，再管道 GET 登录 String 补发送元数据。
      */
-    private static void appendRemoteOnlineByRoute(String appKey, Map<String, Set<String>> remainingCombos,
-                                                  Map<String, List<LoginClientInfo>> result) {
+    private static void appendRemoteLoginDetails(Map<String, Set<String>> remainingCombos,
+                                                 Map<String, Long> liveEpochs,
+                                                 Map<String, List<LoginClientInfo>> result) {
         if (remainingCombos.isEmpty()) {
             return;
         }
-        List<String> identities = new ArrayList<>(remainingCombos.keySet());
-        RedisSerializer<String> keySer = stringRedisTemplate.getStringSerializer();
-        List<Object> routeRaw = stringRedisTemplate.executePipelined((RedisCallback<Object>) connection -> {
-            for (String identity : identities) {
-                connection.hashCommands().hGetAll(keySer.serialize(CacheConstant.buildLoginRouteCacheKey(appKey, identity)));
-            }
-            return null;
-        });
-        Map<String, Long> liveEpochs = NodeLeaseKeeper.snapshot();
         Set<String> liveLoginKeys = new HashSet<>();
-        for (int i = 0; i < identities.size(); i++) {
-            Object row = routeRaw == null || i >= routeRaw.size() ? null : routeRaw.get(i);
-            Map<?, ?> route = row instanceof Map<?, ?> map ? map : Map.of();
-            String identity = identities.get(i);
-            LoginSessionDirectory.evictDeadRoute(appKey, identity, route, liveEpochs);
-            for (String combo : remainingCombos.get(identity)) {
-                byte deviceType = IdentityUtil.revertDeviceType(combo);
-                if (ImSessionPresence.isDeviceRouteLive(route, deviceType, liveEpochs)) {
-                    liveLoginKeys.add(CacheConstant.buildLoginCacheKey(appKey, combo));
-                }
+        for (Set<String> combos : remainingCombos.values()) {
+            for (String combo : combos) {
+                String appKey = IdentityUtil.revertAppKey(combo);
+                liveLoginKeys.add(CacheConstant.buildLoginCacheKey(appKey, combo));
             }
         }
         if (liveLoginKeys.isEmpty()) {
@@ -553,7 +510,7 @@ public class ClientHelper {
             return;
         }
         for (Object item : cached) {
-            if (item instanceof LoginClientInfo info) {
+            if (item instanceof LoginClientInfo info && ImSessionPresence.isLoginLive(info, liveEpochs)) {
                 result.computeIfAbsent(info.getIdentity(), k -> new ArrayList<>()).add(info);
             }
         }

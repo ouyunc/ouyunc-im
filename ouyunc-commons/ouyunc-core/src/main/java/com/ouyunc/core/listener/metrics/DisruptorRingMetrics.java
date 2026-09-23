@@ -17,6 +17,8 @@ public record DisruptorRingMetrics(
         long remainingCapacity,
         /** 本环上 publishEvent 累计次数（异步发布路径） */
         long publishedEvents,
+        /** 环满时非阻塞丢弃的事件数；用于告警和容量评估。 */
+        long droppedEvents,
         boolean disruptorStarted,
         List<DisruptorListenerExecSnapshot> listenerStats
 ) {

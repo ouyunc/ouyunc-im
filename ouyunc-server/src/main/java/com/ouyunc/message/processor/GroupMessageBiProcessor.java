@@ -7,6 +7,7 @@ import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.constant.enums.*;
 import com.ouyunc.base.model.ClientInfo;
 import com.ouyunc.base.model.LoginClientInfo;
+import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.constant.enums.IdentityType;
@@ -19,6 +20,7 @@ import com.ouyunc.message.helper.MessageDeliveryRouteHelper;
 import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.helper.MessageRefHelper;
 import com.ouyunc.message.processor.http.push.IngressPacketHelper;
+import com.ouyunc.message.schedule.ScheduleTimer;
 import com.ouyunc.message.validator.*;
 import com.ouyunc.repository.support.GroupMembershipSupport;
 import com.ouyunc.repository.support.MessageIndexScope;
@@ -34,6 +36,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.RejectedExecutionException;
 
 
 /**
@@ -43,6 +47,8 @@ import java.util.concurrent.TimeUnit;
  */
 public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<Byte> {
     private static final Logger log = LoggerFactory.getLogger(GroupMessageBiProcessor.class);
+    /** 同一持久化消息只保留一个内存补投链，避免 Redis 故障时重复占用堆。 */
+    private static final ConcurrentHashMap<String, Boolean> PENDING_FANOUT_RECOVERY = new ConcurrentHashMap<>();
 
 
     @Override
@@ -305,7 +311,71 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
         } catch (GroupMembershipSupport.GroupMembershipLoadException e) {
             log.error("枚举群成员失败, groupId={} packetId={}",
                     packet.getMessage().getTo(), packet.getPacketId(), e);
+            scheduleFanoutRecovery(packet);
             return Set.of();
+        }
+    }
+
+    /**
+     * 群消息已经归档和热写，成员枚举暂时失败时做有界内存补投；节点重启后客户端仍可按会话索引补拉。
+     * 补投只重新读取成员并执行实时扇出，不重复归档、热写、未读累加或发送方 ACK。
+     */
+    private void scheduleFanoutRecovery(Packet packet) {
+        if (packet == null || packet.getMessage() == null || packet.getMessage().getMetadata() == null) {
+            return;
+        }
+        String appKey = packet.getMessage().getMetadata().getAppKey();
+        String recoveryKey = appKey + MessageConstant.COLON + packet.getPacketId();
+        if (PENDING_FANOUT_RECOVERY.size() >= MessageConstant.GROUP_FANOUT_RECOVERY_MAX_PENDING) {
+            log.error("群扇出补投队列已满, packetId={} pending={}",
+                    packet.getPacketId(), PENDING_FANOUT_RECOVERY.size());
+            return;
+        }
+        if (PENDING_FANOUT_RECOVERY.putIfAbsent(recoveryKey, Boolean.TRUE) != null) {
+            return;
+        }
+        scheduleFanoutRecoveryAttempt(appKey, packet.getPacketId(), recoveryKey, 1);
+    }
+
+    private void scheduleFanoutRecoveryAttempt(String appKey, long packetId, String recoveryKey, int attempt) {
+        long delayMs = MessageConstant.GROUP_FANOUT_RECOVERY_DELAY_MS * attempt;
+        io.netty.util.Timeout timeout = ScheduleTimer.scheduleOnce(() -> {
+            try {
+                ThreadPoolManager.messageSendExecutor().execute(
+                        () -> runFanoutRecoveryAttempt(appKey, packetId, recoveryKey, attempt));
+            } catch (RejectedExecutionException error) {
+                PENDING_FANOUT_RECOVERY.remove(recoveryKey);
+                log.error("群扇出补投执行器已满, packetId={} attempt={}", packetId, attempt, error);
+            }
+        }, delayMs, TimeUnit.MILLISECONDS);
+        if (timeout == null) {
+            PENDING_FANOUT_RECOVERY.remove(recoveryKey);
+        }
+    }
+
+    private void runFanoutRecoveryAttempt(String appKey, long packetId, String recoveryKey, int attempt) {
+        try {
+            List<Packet> stored = repository().getPackets(appKey, List.of(packetId));
+            if (CollectionUtils.isEmpty(stored) || stored.getFirst() == null) {
+                throw new GroupMembershipSupport.GroupMembershipLoadException("补投消息正文暂不可用");
+            }
+            Packet packet = stored.getFirst();
+            Set<String> members = repository().groupUsersIdentity(packet);
+            deliver2AllGroupMembers(packet, members == null ? Set.of() : members);
+            PENDING_FANOUT_RECOVERY.remove(recoveryKey);
+            log.info("群扇出补投成功, packetId={} attempt={} members={}",
+                    packet.getPacketId(), attempt, members == null ? 0 : members.size());
+        } catch (GroupMembershipSupport.GroupMembershipLoadException error) {
+            if (attempt < MessageConstant.GROUP_FANOUT_RECOVERY_MAX_ATTEMPTS) {
+                scheduleFanoutRecoveryAttempt(appKey, packetId, recoveryKey, attempt + 1);
+                return;
+            }
+            PENDING_FANOUT_RECOVERY.remove(recoveryKey);
+            log.error("群扇出补投达到上限，接收方需按会话索引补拉, packetId={} attempts={}",
+                    packetId, attempt, error);
+        } catch (RuntimeException error) {
+            PENDING_FANOUT_RECOVERY.remove(recoveryKey);
+            log.error("群扇出补投异常, packetId={} attempt={}", packetId, attempt, error);
         }
     }
 

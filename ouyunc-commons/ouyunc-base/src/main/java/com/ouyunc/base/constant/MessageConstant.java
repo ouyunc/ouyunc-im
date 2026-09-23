@@ -446,6 +446,18 @@ public class MessageConstant {
     /** 群扇出：每批查在线/解析渠道的人数，避免一次物化万人 HashSet 与超大 Pipeline */
     public static final int GROUP_FANOUT_ONLINE_LOOKUP_BATCH = 500;
 
+    /** 群外部渠道每批最多保留的 broker 确认 Future，限制大群瞬时堆占用。 */
+    public static final int GROUP_EXTERNAL_CHANNEL_CONFIRM_BATCH = 64;
+
+    /** 群成员临时加载失败后的内存补投次数；消息已持久化，最终仍可由客户端补拉。 */
+    public static final int GROUP_FANOUT_RECOVERY_MAX_ATTEMPTS = 3;
+
+    /** 群成员临时加载失败后的首次补投延迟。 */
+    public static final long GROUP_FANOUT_RECOVERY_DELAY_MS = 1_000L;
+
+    /** 单节点同时保留的群补投任务上限，防止 Redis 故障期间堆积 Packet。 */
+    public static final int GROUP_FANOUT_RECOVERY_MAX_PENDING = 2_048;
+
     /** 跨节点群扇出：单包携带的目标上限，超出则再拆包 */
     public static final int GROUP_FANOUT_REMOTE_TARGET_BATCH = 256;
 
