@@ -97,6 +97,7 @@ public final class SessionMessagePersistenceSupport {
      * <p>主体/会话键等必需字段必须在入队前序列化成功；{@code consumer}/{@code extraOperation}
      * 视为关键副作用（好友/群关系等），异常直接导致 FAILED，不可吞掉后仍 ACK。
      * Pipeline 只降低往返，不提供多命令事务回滚；closePipeline 异常或空结果一律失败。
+     * {@code COMMIT} 被拒绝表示已失去占位，不得删除共享 canonical 热数据（接管方可能已写完）。
      *
      * <p>消息正文 key 由本方法在 QoS 认领并对齐 canonical packetId 之后生成，调用方不得提前传入，
      * 否则接管场景会把正文写到旧 packetId 的 key 上，而会话 ZSET 记录的是 canonical ID。</p>
@@ -245,9 +246,11 @@ public final class SessionMessagePersistenceSupport {
                 }
             }
             if (commitOutcome == QosIdempotencyHelper.CommitOutcome.REJECTED) {
-                log.warn("QoS 占位明确拒绝提交，回滚热写并视为写入失败: appKey={} packetId={}", appKey, packet.getPacketId());
-                // Pipeline 已写入主体/会话索引，commit 失败必须回滚，否则幽灵消息 + 客户端换新 packetId 重复
-                rollbackHotWrite(messageKey, sessionKey, packet.getPacketId());
+                // REJECTED = 已失去幂等所有权（被接管 / 他人 PENDING / 已 COMMITTED）。
+                // 禁止删 canonical 正文和会话成员：接管方可能已用同一 packetId 写完热数据。
+                // 只 compare-and-delete 自己的 PENDING；热写留给当前 owner 覆盖或 TTL。
+                log.warn("QoS 提交被拒绝，保留热写以免误删接管方数据: appKey={} packetId={}",
+                        appKey, packet.getPacketId());
                 releaseQosClaimQuietly(true, appKey, qosClaimKeyPacketId, packet.getPacketId(), qosClaimIdentity,
                         clientMessageId, qosOwnerToken, metadata);
                 return SaveMessageOutcome.FAILED;
@@ -319,26 +322,6 @@ public final class SessionMessagePersistenceSupport {
             throw e;
         } catch (Exception e) {
             throw new IllegalArgumentException(fieldName + " 序列化失败: " + value, e);
-        }
-    }
-
-    /**
-     * QoS commit 失败后回滚 Pipeline 已写入的热 key 与会话 ZSet 成员，避免幽灵索引。
-     * <p>会话 ZSet 成员以 stringSerializer 写入，必须用 {@code stringRedisTemplate} 删除才能命中。</p>
-     */
-    @SuppressWarnings("unchecked")
-    private void rollbackHotWrite(String messageKey, String sessionKey, long packetId) {
-        try {
-            if (StringUtils.isNotBlank(messageKey)) {
-                infra.redisTemplate.delete(messageKey);
-            }
-            if (StringUtils.isNotBlank(sessionKey) && packetId > 0L) {
-                String formatPacketId = MessageContext.idGenerator().formatLongId19Str(packetId);
-                infra.stringRedisTemplate.opsForZSet().remove(sessionKey, formatPacketId);
-            }
-        } catch (Exception e) {
-            log.warn("QoS commit 失败后回滚热写异常: messageKey={} sessionKey={} packetId={}",
-                    messageKey, sessionKey, packetId, e);
         }
     }
 
