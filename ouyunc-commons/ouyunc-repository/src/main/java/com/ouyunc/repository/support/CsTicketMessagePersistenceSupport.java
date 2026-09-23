@@ -40,9 +40,9 @@ public final class CsTicketMessagePersistenceSupport {
                             packet, expireTime, ticketSessionKey, (ops) -> {
                             }, (ops, msg, app, f, t) -> {
                             });
-                    // ticket 未读同样以 packetId 集合幂等，重复请求可补偿首次索引更新失败。
-                    if (outcome.isFreshWrite() || outcome.isDuplicate()) {
-                        ticketUnread.incrOnMessage(packet, route);
+                    if ((outcome.isFreshWrite() || outcome.isDuplicate())
+                            && !ticketUnread.incrOnMessage(packet, route)) {
+                        return SaveMessageOutcome.FAILED;
                     }
                     return outcome;
                 })

@@ -54,6 +54,16 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
         return Mono.just(true);
     }
 
+    /** COMMITTED 重入：按当前路由幂等补 ticket 未读。 */
+    @Override
+    protected boolean repairDerivedIndexOnQosDuplicate(Packet packet) {
+        PrepareOutcome prepared = CsHelper.prepare(packet);
+        if (!prepared.accepted()) {
+            return true;
+        }
+        return repository().repairCsTicketUnread(packet, prepared.route());
+    }
+
     @Override
     public Mono<Void> process(ChannelHandlerContext ctx, Packet packet) {
         try {

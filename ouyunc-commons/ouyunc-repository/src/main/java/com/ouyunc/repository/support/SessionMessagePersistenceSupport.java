@@ -70,9 +70,10 @@ public final class SessionMessagePersistenceSupport {
                             (ops) -> {
                             }, (ops, msg, app, f, t) -> {
                             });
-                    // 未读脚本以 packetId SADD 幂等；重复请求也重放一次，可修复首次提交后的索引失败。
-                    if ((outcome.isFreshWrite() || outcome.isDuplicate()) && unreadIndexSupport != null) {
-                        unreadIndexSupport.incrOne2OneOnMessage(packet);
+                    // 未读 ZADD 幂等；SUCCESS/DUPLICATE 都重放。失败不得当受理成功，否则 ACK 后重试会被前置判重截住。
+                    if ((outcome.isFreshWrite() || outcome.isDuplicate()) && unreadIndexSupport != null
+                            && !unreadIndexSupport.incrOne2OneOnMessage(packet)) {
+                        return SaveMessageOutcome.FAILED;
                     }
                     return outcome;
                 })

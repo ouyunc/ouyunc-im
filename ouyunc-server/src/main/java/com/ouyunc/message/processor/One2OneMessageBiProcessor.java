@@ -70,6 +70,12 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
                 "权限不足/不是好友/在黑名单中/被屏蔽/发送方和接收方相同, 请知悉。该消息 {} 被忽略");
     }
 
+    /** COMMITTED 重入：用正式 packetId 幂等补未读，失败则 qosPreHandle 不 ACK。 */
+    @Override
+    protected boolean repairDerivedIndexOnQosDuplicate(Packet packet) {
+        return repository().repairOne2OneUnread(packet);
+    }
+
     /**
      * 处理一对一消息
      */

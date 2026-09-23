@@ -4,6 +4,7 @@ import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.HttpResponseCodeEnum;
 import com.ouyunc.base.constant.enums.MessageSendStatusEnum;
+import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.model.ContentSafetyResult;
 import com.ouyunc.base.model.HttpResponseResult;
@@ -12,8 +13,12 @@ import com.ouyunc.base.model.MessagePushResponse;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.message.http.HttpContext;
 import com.ouyunc.message.http.HttpPipelineException;
+import com.ouyunc.message.helper.CsHelper;
+import com.ouyunc.message.helper.CsHelper.PrepareOutcome;
 import com.ouyunc.message.processor.http.push.delivery.HttpPushDeliverySupport;
 import com.ouyunc.message.safety.ContentSafetyFacade;
+import com.ouyunc.repository.DefaultRepository;
+import com.ouyunc.repository.cs.CsImSessionRoute;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -210,9 +215,15 @@ public final class InternalPacketIngressService {
 
         int claim = PushIdempotencySupport.tryClaim(appKey, messageId, packetIdStr);
         if (claim == PushIdempotencySupport.CLAIM_COMMITTED) {
-            HttpPushDeliverySupport.discardStashed(packet);
             PushIdempotencySupport.IdempotencyRecord record = PushIdempotencySupport.getRecord(appKey, messageId);
             String committedId = record != null ? record.packetId() : packetIdStr;
+            alignCommittedPacketId(packet, committedId);
+            if (!repairUnreadOnHttpCommitted(packet)) {
+                HttpPushDeliverySupport.discardStashed(packet);
+                return HttpResponseResult.success(buildResponse(messageId, committedId,
+                        MessageSendStatusEnum.UNKNOWN, "消息已提交但未读索引待修复，请使用同一 messageId 重试"));
+            }
+            HttpPushDeliverySupport.discardStashed(packet);
             return HttpResponseResult.success(buildResponse(messageId, committedId,
                     MessageSendStatusEnum.ACCEPTED, null));
         }
@@ -272,6 +283,42 @@ public final class InternalPacketIngressService {
             throw new HttpPipelineException(HttpResponseStatus.BAD_REQUEST, HttpResponseCodeEnum.BAD_REQUEST,
                     ExceptionCodeEnum.CONTENT_SENSITIVE_REJECT.getMessage());
         }
+    }
+
+    private static void alignCommittedPacketId(Packet packet, String committedId) {
+        if (packet == null || StringUtils.isBlank(committedId)) {
+            return;
+        }
+        try {
+            packet.setPacketId(Long.parseLong(committedId));
+        } catch (NumberFormatException ex) {
+            log.warn("HTTP COMMITTED packetId 无法解析, packetId={}", committedId);
+        }
+    }
+
+    /**
+     * HTTP 幂等已 COMMITTED 时不再走热写，必须在此补未读；失败返回 UNKNOWN 让调用方重试。
+     */
+    private static boolean repairUnreadOnHttpCommitted(Packet packet) {
+        if (packet == null) {
+            return true;
+        }
+        byte messageType = packet.getMessageType();
+        if (messageType == MessageTypeEnum.ONE_2_ONE.getType()) {
+            return DefaultRepository.INSTANCE.repairOne2OneUnread(packet);
+        }
+        if (messageType == MessageTypeEnum.CUSTOMER_SERVICE.getType()) {
+            CsImSessionRoute route = HttpPushDeliverySupport.takeCsRoute(packet);
+            if (route == null) {
+                PrepareOutcome prepared = CsHelper.prepare(packet);
+                if (!prepared.accepted()) {
+                    return true;
+                }
+                route = prepared.route();
+            }
+            return DefaultRepository.INSTANCE.repairCsTicketUnread(packet, route);
+        }
+        return true;
     }
 
     /**

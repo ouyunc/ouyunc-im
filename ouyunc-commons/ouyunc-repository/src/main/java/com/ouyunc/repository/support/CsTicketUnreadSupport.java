@@ -36,27 +36,30 @@ public final class CsTicketUnreadSupport {
         this.stringRedisTemplate = stringRedisTemplate;
     }
 
-    public void incrOnMessage(Packet packet, CsImSessionRoute route) {
+    /**
+     * @return true 无需写或脚本已执行；false 表示 Redis 失败，调用方不得 ACK
+     */
+    public boolean incrOnMessage(Packet packet, CsImSessionRoute route) {
         if (packet == null || route == null || !SpecialMessageTargetValidator.isChatTargetMessage(packet)) {
-            return;
+            return true;
         }
         Message message = packet.getMessage();
         if (message == null || message.getMetadata() == null) {
-            return;
+            return true;
         }
         String appKey = message.getMetadata().getAppKey();
         String ticketId = route.ticketId();
         String recipientId = resolveRecipientId(message, route);
         if (StringUtils.isAnyBlank(appKey, ticketId, recipientId)) {
-            return;
+            return true;
         }
         long packetId = packet.getPacketId();
         if (packetId <= 0L) {
-            return;
+            return false;
         }
         Collection<Byte> deviceTypes = resolveDeviceTypes(appKey, recipientId);
         if (CollectionUtils.isEmpty(deviceTypes)) {
-            return;
+            return true;
         }
         String urKey = CacheConstant.buildCsTicketUnreadHashCacheKey(appKey, ticketId.trim());
         String sroKey = CacheConstant.buildCsTicketReadOffsetHashCacheKey(appKey, ticketId.trim());
@@ -80,10 +83,12 @@ public final class CsTicketUnreadSupport {
                     return null;
                 }
             });
+            return true;
         } catch (Exception e) {
             log.error("incrCsTicketUnread failed appKey={} ticketId={} recipient={} packetId={}",
                     appKey, ticketId, recipientId, packetId, e);
             ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "客服 ticket 未读索引更新失败: " + e.getMessage(), "CsTicketUnreadSupport", packet, e);
+            return false;
         }
     }
 

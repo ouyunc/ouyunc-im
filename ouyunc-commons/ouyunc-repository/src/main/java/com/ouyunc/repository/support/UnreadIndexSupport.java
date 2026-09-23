@@ -36,31 +36,33 @@ public final class UnreadIndexSupport {
     }
 
     /**
-     * 单聊/客服：他人有效聊天消息持久化成功后，对收件人各 deviceType 未读集合加入 packetId。
+     * 单聊：他人有效聊天消息对收件人各 deviceType 未读集合加入 packetId（ZADD 幂等）。
+     *
+     * @return true 无需写或脚本已执行；false 表示 Redis 失败，调用方不得 ACK
      */
     @SuppressWarnings("unchecked")
-    public void incrOne2OneOnMessage(Packet packet) {
+    public boolean incrOne2OneOnMessage(Packet packet) {
         if (packet == null || packet.getMessage() == null || packet.getMessage().getMetadata() == null) {
-            return;
+            return true;
         }
         if (!SpecialMessageTargetValidator.isChatTargetMessage(packet)) {
-            return;
+            return true;
         }
         Message message = packet.getMessage();
         String appKey = message.getMetadata().getAppKey();
         String senderId = message.getFrom();
         String recipientId = message.getTo();
         if (senderId == null || recipientId == null || senderId.equals(recipientId)) {
-            return;
+            return true;
         }
         long packetId = packet.getPacketId();
         if (packetId <= 0L) {
             log.warn("incrOne2OneOnMessage skip invalid packetId={} recipient={}", packetId, recipientId);
-            return;
+            return false;
         }
         Collection<Byte> deviceTypes = resolveDeviceTypes(appKey, recipientId);
         if (CollectionUtils.isEmpty(deviceTypes)) {
-            return;
+            return true;
         }
         String field = IdentityType.ONE_2_ONE.unreadField(senderId);
         String packetIdArg = MessageContext.idGenerator().formatLongId19Str(packetId);
@@ -87,10 +89,12 @@ public final class UnreadIndexSupport {
                     return null;
                 }
             });
+            return true;
         } catch (Exception e) {
             log.error("incrOne2OneOnMessage failed appKey={} recipient={} sender={} packetId={}",
                     appKey, recipientId, senderId, packetId, e);
             ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "单聊未读索引更新失败: " + e.getMessage(), "UnreadIndexSupport", packet, e);
+            return false;
         }
     }
 

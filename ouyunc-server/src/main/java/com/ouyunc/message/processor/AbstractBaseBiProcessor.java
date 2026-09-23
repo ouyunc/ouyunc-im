@@ -38,7 +38,8 @@ public abstract class AbstractBaseBiProcessor<R, T extends Number>
 
     /**
      * QoS 前置判重。客户端重试以稳定 {@code messageId} 为准，packetId 可变。
-     * 仅 {@code COMMITTED} 且拿到正式 packetId 时可直接回 ACK；会将 packet 收敛到该正式 ID。
+     * 仅 {@code COMMITTED} 且拿到正式 packetId 时可截住主链；会将 packet 收敛到该正式 ID，
+     * 先幂等补派生索引再 ACK，补失败回 UNKNOWN。
      * {@code PENDING} 表示占位但未确认落库，必须继续处理。
      */
     @Override
@@ -57,10 +58,24 @@ public abstract class AbstractBaseBiProcessor<R, T extends Number>
                 ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
         String channelLoginIdentity = loginClientInfo != null ? loginClientInfo.getIdentity() : null;
         if (repository().checkDup(packet, channelLoginIdentity)) {
+            // COMMITTED 后主链不再走 save；必须在此幂等补派生索引，失败不得 ACK。
+            if (!repairDerivedIndexOnQosDuplicate(packet)) {
+                MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
+                return true;
+            }
             qosPostHandle(ctx, packet);
             return true;
         }
         return false;
+    }
+
+    /**
+     * QoS 已 COMMITTED 的重入：补未读等派生索引。默认无派生索引。
+     *
+     * @return false 时不得 ACK，客户端用同一 messageId 重试
+     */
+    protected boolean repairDerivedIndexOnQosDuplicate(Packet packet) {
+        return true;
     }
 
     /**

@@ -164,6 +164,11 @@ public enum DefaultRepository implements Repository {
                 RepositorySupports.UNREAD);
     }
 
+    /** QoS/HTTP 已 COMMITTED 时幂等补单聊未读。 */
+    public boolean repairOne2OneUnread(Packet packet) {
+        return RepositorySupports.UNREAD.incrOne2OneOnMessage(packet);
+    }
+
     public boolean saveJoinFriendRequestMessage(Packet packet, RequestSession requestSession, long expireTime) {
         return RepositorySupports.FRIEND.saveJoinFriendRequestMessage(packet, requestSession, expireTime);
     }
@@ -328,6 +333,11 @@ public enum DefaultRepository implements Repository {
 
     public Mono<SaveMessageOutcome> reactiveSaveCsTicketMessage(Packet packet, CsImSessionRoute route, long expireTime) {
         return RepositorySupports.CS_TICKET_MESSAGE.reactiveSaveCsTicketMessage(packet, route, expireTime);
+    }
+
+    /** QoS/HTTP 已 COMMITTED 时幂等补客服 ticket 未读。 */
+    public boolean repairCsTicketUnread(Packet packet, CsImSessionRoute route) {
+        return RepositorySupports.CS_TICKET_UNREAD.incrOnMessage(packet, route);
     }
 
     public Mono<List<Packet>> reactiveLoadValidatedCsReadReceiptPackets(Packet packet, CsImSessionRoute route,
