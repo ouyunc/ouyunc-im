@@ -1,11 +1,10 @@
 package com.ouyunc.repository.support;
 
-import com.ouyunc.base.constant.enums.QosLevelEnum;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.QosClaimIdentities;
-import com.ouyunc.core.context.MessageContext;
+import com.ouyunc.repository.ArchiveClaimResult;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,25 +35,22 @@ public final class QosRepositorySupport {
      * @return false 时不得归档、不得当成功
      */
     @SuppressWarnings("unchecked")
-    public boolean claimForArchive(Packet packet) {
+    public ArchiveClaimResult claimForArchive(Packet packet) {
         if (packet == null || packet.getMessage() == null) {
-            return false;
+            return ArchiveClaimResult.FAILED;
         }
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         if (metadata == null || StringUtils.isBlank(message.getId())) {
-            return false;
-        }
-        if (!MessageContext.isQosEnable() || message.getQos() <= QosLevelEnum.QOS_0.getLevel()) {
-            return true;
+            return ArchiveClaimResult.FAILED;
         }
         if (StringUtils.isNotBlank(metadata.getQosOwnerToken())) {
-            return packet.getPacketId() > 0L;
+            return packet.getPacketId() > 0L ? ArchiveClaimResult.READY : ArchiveClaimResult.FAILED;
         }
         String ownerToken = QosIdempotencyHelper.newOwnerToken();
         long claimKeyPacketId = packet.getPacketId();
         if (claimKeyPacketId <= 0L) {
-            return false;
+            return ArchiveClaimResult.FAILED;
         }
         metadata.setQosOwnerToken(ownerToken);
         metadata.setQosClaimPacketId(claimKeyPacketId);
@@ -64,22 +60,28 @@ public final class QosRepositorySupport {
         if (claim.state() == QosIdempotencyHelper.CLAIM_COMMITTED) {
             if (!claim.isCommittedWithCanonical()) {
                 clearQosClaimMarks(metadata);
-                return false;
+                return ArchiveClaimResult.FAILED;
             }
             packet.setPacketId(claim.canonicalPacketId());
             clearQosClaimMarks(metadata);
-            return true;
+            return ArchiveClaimResult.READY;
         }
         if (claim.state() == QosIdempotencyHelper.CLAIM_ACQUIRED) {
             if (claim.canonicalPacketId() > 0L) {
                 packet.setPacketId(claim.canonicalPacketId());
             }
-            return true;
+            return ArchiveClaimResult.READY;
         }
         clearQosClaimMarks(metadata);
         log.warn("归档前 QoS 占位未拿到 state={} packetId={} messageId={}",
                 claim.state(), packet.getPacketId(), message.getId());
-        return false;
+        if (claim.state() == QosIdempotencyHelper.CLAIM_PENDING) {
+            return ArchiveClaimResult.PENDING;
+        }
+        if (claim.state() == QosIdempotencyHelper.CLAIM_CONFLICT) {
+            return ArchiveClaimResult.CONFLICT;
+        }
+        return ArchiveClaimResult.FAILED;
     }
 
     @SuppressWarnings("unchecked")
@@ -89,8 +91,7 @@ public final class QosRepositorySupport {
         }
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        if (metadata == null || !MessageContext.isQosEnable()
-                || message.getQos() <= QosLevelEnum.QOS_0.getLevel()) {
+        if (metadata == null) {
             return;
         }
         if (metadata.isQosArchiveBound()) {

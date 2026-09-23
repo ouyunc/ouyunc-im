@@ -94,6 +94,12 @@ public class Metadata implements Serializable, Cloneable {
      */
     private boolean qosArchiveBound;
 
+    /** HTTP 推送幂等占位的执行令牌，仅允许当前持有者提交、失败标记或释放。 */
+    private String httpPushOwnerToken;
+
+    /** HTTP 推送规范化后的请求指纹，用于阻止同 messageId 替换业务正文。 */
+    private String httpPushPayloadHash;
+
     /**
      * 首次外部入站节点（ip:port），与 clientIp 同阶段由服务端赋值，持久化为 server_address。集群中转只改 {@link #fromServerAddress}，本字段禁止改写。
      * 仅服务端内部使用，写出给客户端前必须剥离 metadata。
@@ -275,6 +281,22 @@ public class Metadata implements Serializable, Cloneable {
 
     public void setQosArchiveBound(boolean qosArchiveBound) {
         this.qosArchiveBound = qosArchiveBound;
+    }
+
+    public String getHttpPushOwnerToken() {
+        return httpPushOwnerToken;
+    }
+
+    public void setHttpPushOwnerToken(String httpPushOwnerToken) {
+        this.httpPushOwnerToken = httpPushOwnerToken;
+    }
+
+    public String getHttpPushPayloadHash() {
+        return httpPushPayloadHash;
+    }
+
+    public void setHttpPushPayloadHash(String httpPushPayloadHash) {
+        this.httpPushPayloadHash = httpPushPayloadHash;
     }
 
     public String getOriginServerAddress() {

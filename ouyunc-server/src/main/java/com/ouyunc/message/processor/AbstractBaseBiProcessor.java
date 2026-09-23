@@ -6,7 +6,6 @@ import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
-import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.processor.BiProcessor;
 import com.ouyunc.core.qos.Qos;
 import com.ouyunc.message.helper.MessageSendResultHelper;
@@ -44,11 +43,11 @@ public abstract class AbstractBaseBiProcessor<R, T extends Number>
      */
     @Override
     public boolean qosPreHandle(ChannelHandlerContext ctx, Packet packet) {
-        if (!MessageContext.isQosEnable() || packet == null) {
+        if (packet == null) {
             return false;
         }
         Message message = packet.getMessage();
-        if (message == null || message.getQos() <= QosLevelEnum.QOS_0.getLevel()) {
+        if (message == null) {
             return false;
         }
         if (StringUtils.isBlank(message.getId())) {

@@ -74,6 +74,11 @@ public final class GroupJoinMessageBiProcessor extends AbstractMessageBiProcesso
                 GroupRequestSession existingSession = repository().getGroupRequestSession(appKey, message.getFrom(), message.getTo());
                 if (repository().inGroup(appKey, message.getFrom(), message.getTo())) {
                     log.warn("该用户 {} 已经加入群组 {}，幂等 ACK", message.getFrom(), message.getTo());
+                    if (!repository().repairUserGroupIndex(appKey, message.getFrom(), message.getTo(),
+                            message.getMetadata().getServerTime())) {
+                        MessageSendResultHelper.retryLater(ctx, packet, ExceptionCodeEnum.BIND_GROUP_ERROR);
+                        return;
+                    }
                     RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.userOnly(message.getFrom()));
                     MessageAcceptPipelineHelper.requestAccepted(ctx, packet);
                     return;

@@ -7,6 +7,7 @@ import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.message.safety.ContentSafetyIngress;
 import com.ouyunc.repository.DefaultRepository;
+import com.ouyunc.repository.ArchiveClaimResult;
 import com.ouyunc.repository.SaveMessageOutcome;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.lang3.StringUtils;
@@ -47,10 +48,11 @@ public final class MessageAcceptPipelineHelper {
                     packet == null ? null : packet.getPacketId());
             return Mono.error(new IllegalStateException("SAVE 归档缺少客户端 messageId"));
         }
-        if (!repository().claimForArchive(packet)) {
+        ArchiveClaimResult claimResult = repository().claimForArchive(packet);
+        if (claimResult != ArchiveClaimResult.READY) {
             log.error("SAVE 归档前未能稳定 packetId, messageId={} packetId={}",
                     packet.getMessage().getId(), packet.getPacketId());
-            return Mono.error(new IllegalStateException("SAVE 归档前 QoS 未对齐正式 packetId"));
+            return Mono.error(new ArchiveClaimException(claimResult));
         }
         return MessageArchiveHelper.confirm(() -> repository().save(packet))
                 .doOnSuccess(ignored -> markArchiveBound(packet));
@@ -76,6 +78,17 @@ public final class MessageAcceptPipelineHelper {
         }
         return archiveAfterAuth(packet).thenReturn(true)
                 .onErrorResume(error -> {
+                    if (error instanceof ArchiveClaimException claimError) {
+                        releaseQosOnFailure(packet);
+                        if (claimError.result == ArchiveClaimResult.CONFLICT) {
+                            MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_ID_CONFLICT);
+                        } else if (claimError.result == ArchiveClaimResult.PENDING) {
+                            MessageSendResultHelper.retryLater(ctx, packet, ExceptionCodeEnum.UNKNOWN_ERROR);
+                        } else {
+                            MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
+                        }
+                        return Mono.just(false);
+                    }
                     log.error("消息归档确认结果未知, messageId={}", packet.getMessage().getId(), error);
                     MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.MQ_PERSISTENCE_ERROR);
                     return Mono.just(false);
@@ -119,7 +132,18 @@ public final class MessageAcceptPipelineHelper {
                                                         Mono<Boolean> shouldReject, String rejectLog) {
         return gateWhenPassed(ctx, packet, shouldReject, null, rejectLog)
                 .flatMap(passed -> Boolean.TRUE.equals(passed)
-                        ? archiveAfterAuth(packet).thenReturn(true) : Mono.just(false));
+                        ? archiveAfterAuth(packet).thenReturn(true) : Mono.just(false))
+                .onErrorResume(ArchiveClaimException.class, error -> {
+                    releaseQosOnFailure(packet);
+                    if (error.result == ArchiveClaimResult.CONFLICT) {
+                        MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_ID_CONFLICT);
+                    } else if (error.result == ArchiveClaimResult.PENDING) {
+                        MessageSendResultHelper.retryLater(ctx, packet, ExceptionCodeEnum.UNKNOWN_ERROR);
+                    } else {
+                        MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
+                    }
+                    return Mono.just(false);
+                });
     }
 
     /** 请求成功落库或确认已处理后回已受理结果；业务拒绝不可调用。 */
@@ -184,5 +208,15 @@ public final class MessageAcceptPipelineHelper {
                     MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.MQ_PERSISTENCE_ERROR);
                     return Mono.<Void>empty();
                 });
+    }
+
+    /** 只在受理管线内部传播，用于保留 Redis claim 的精确结果。 */
+    private static final class ArchiveClaimException extends RuntimeException {
+        private final ArchiveClaimResult result;
+
+        private ArchiveClaimException(ArchiveClaimResult result) {
+            super("archive claim failed: " + result);
+            this.result = result;
+        }
     }
 }

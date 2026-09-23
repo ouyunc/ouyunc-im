@@ -4,7 +4,6 @@ import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.LuaScriptEnum;
-import com.ouyunc.base.constant.enums.QosLevelEnum;
 import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.model.FiveConsumer;
 import com.ouyunc.base.model.Metadata;
@@ -137,7 +136,8 @@ public final class SessionMessagePersistenceSupport {
             String to = message.getTo();
             qosClaimIdentity = QosClaimIdentities.resolve(message);
             clientMessageId = message.getId();
-            qosSave = MessageContext.isQosEnable() && message.getQos() > QosLevelEnum.QOS_0.getLevel();
+            // 入站幂等是业务正确性，不再由下行 QoS 重传等级控制。
+            qosSave = StringUtils.isNotBlank(clientMessageId);
             boolean alreadyClaimed = qosSave && StringUtils.isNotBlank(metadata.getQosOwnerToken());
             qosOwnerToken = alreadyClaimed ? metadata.getQosOwnerToken()
                     : (qosSave ? QosIdempotencyHelper.newOwnerToken() : null);

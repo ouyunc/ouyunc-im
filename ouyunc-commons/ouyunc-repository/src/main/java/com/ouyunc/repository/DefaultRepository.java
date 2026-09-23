@@ -296,7 +296,7 @@ public enum DefaultRepository implements Repository {
     }
 
     /** 归档前抢占并对齐正式 packetId；失败不得发 SAVE。 */
-    public boolean claimForArchive(Packet packet) {
+    public ArchiveClaimResult claimForArchive(Packet packet) {
         return RepositorySupports.QOS.claimForArchive(packet);
     }
 
@@ -310,6 +310,10 @@ public enum DefaultRepository implements Repository {
                                                int maxMembers, int maxPerUser) {
         return RepositorySupports.GROUP.manualPassBindGroup(packet, groupRequestSession, expireTime,
                 maxMembers, maxPerUser);
+    }
+
+    public boolean repairUserGroupIndex(String appKey, String userId, String groupId, long score) {
+        return RepositorySupports.GROUP.repairUserGroupIndex(appKey, userId, groupId, score);
     }
 
     public boolean saveJoinGroupRequestMessage(Packet packet, GroupRequestSession groupRequestSession, long expireTime) {

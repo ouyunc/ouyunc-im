@@ -174,15 +174,15 @@ public final class HttpPushDeliverySupport {
         Metadata metadata = message.getMetadata();
         String appKey = metadata != null ? metadata.getAppKey() : null;
         String messageId = message.getId();
-        String packetId = String.valueOf(packet.getPacketId());
         if (StringUtils.isAnyBlank(appKey, messageId)) {
             return;
         }
         try {
-            boolean released = PushIdempotencySupport.releaseIfOwned(appKey, messageId, packetId);
+            PushIdempotencySupport.ClaimIdentity claim = claimIdentity(packet);
+            boolean released = PushIdempotencySupport.releaseIfOwned(appKey, messageId, claim);
             if (!released) {
                 log.debug("HTTP 推送幂等释放未命中, appKey={}, messageId={}, packetId={}",
-                        appKey, messageId, packetId);
+                        appKey, messageId, packet.getPacketId());
             }
         } catch (Exception ex) {
             log.warn("释放 HTTP 推送幂等占位失败, appKey={}, messageId={}", appKey, messageId, ex);
@@ -196,7 +196,7 @@ public final class HttpPushDeliverySupport {
             return false;
         }
         try {
-            return PushIdempotencySupport.commit(coords.appKey(), coords.messageId(), coords.packetId());
+            return PushIdempotencySupport.commit(coords.appKey(), coords.messageId(), coords.claim());
         } catch (Exception ex) {
             log.warn("HTTP 推送幂等 COMMIT 失败, messageId={}", coords.messageId(), ex);
             return false;
@@ -210,7 +210,7 @@ public final class HttpPushDeliverySupport {
         }
         try {
             boolean marked = PushIdempotencySupport.markRetryableFailed(
-                    coords.appKey(), coords.messageId(), coords.packetId());
+                    coords.appKey(), coords.messageId(), coords.claim());
             if (!marked) {
                 log.debug("HTTP 推送标记 RETRYABLE_FAILED 未命中, messageId={}", coords.messageId());
             }
@@ -230,10 +230,22 @@ public final class HttpPushDeliverySupport {
         if (StringUtils.isAnyBlank(appKey, messageId)) {
             return null;
         }
-        return new IdempotencyCoords(appKey, messageId, String.valueOf(packet.getPacketId()));
+        PushIdempotencySupport.ClaimIdentity claim = claimIdentity(packet);
+        if (!claim.isComplete()) {
+            return null;
+        }
+        return new IdempotencyCoords(appKey, messageId, claim);
     }
 
-    private record IdempotencyCoords(String appKey, String messageId, String packetId) {
+    private static PushIdempotencySupport.ClaimIdentity claimIdentity(Packet packet) {
+        Metadata metadata = packet.getMessage().getMetadata();
+        return new PushIdempotencySupport.ClaimIdentity(String.valueOf(packet.getPacketId()),
+                metadata == null ? null : metadata.getHttpPushPayloadHash(),
+                metadata == null ? null : metadata.getHttpPushOwnerToken());
+    }
+
+    private record IdempotencyCoords(String appKey, String messageId,
+                                     PushIdempotencySupport.ClaimIdentity claim) {
     }
 
     /** HTTP 模拟用户默认多端同步；若本地有登录配置则尊重 selfSync。 */

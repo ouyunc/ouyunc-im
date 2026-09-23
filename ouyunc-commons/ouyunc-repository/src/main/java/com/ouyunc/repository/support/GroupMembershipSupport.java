@@ -719,9 +719,12 @@ public final class GroupMembershipSupport {
         boolean initComplete = hasGroupMemberInit(appKey, groupId);
         String zsetKey = CacheConstant.buildGroupUserCacheKey(appKey, groupId);
         List<String> dbUnknown = new ArrayList<>();
-        for (String memberId : unknown) {
-            try {
-                Double score = infra.stringRedisTemplate.opsForZSet().score(zsetKey, memberId);
+        try {
+            List<Double> scores = infra.stringRedisTemplate.opsForZSet()
+                    .score(zsetKey, unknown.toArray(String[]::new));
+            for (int index = 0; index < unknown.size(); index++) {
+                String memberId = unknown.get(index);
+                Double score = scores != null && index < scores.size() ? scores.get(index) : null;
                 if (score != null) {
                     RelationLocalCache.markGroupMember(appKey, groupId, memberId, true);
                     present.add(memberId);
@@ -730,10 +733,11 @@ public final class GroupMembershipSupport {
                 } else {
                     dbUnknown.add(memberId);
                 }
-            } catch (Exception e) {
-                log.error("Redis 点查群成员异常 appKey={} groupId={} memberId={}", appKey, groupId, memberId, e);
-                dbUnknown.add(memberId);
             }
+        } catch (Exception e) {
+            log.error("Redis 批量查询群成员异常 appKey={} groupId={} count={}",
+                    appKey, groupId, unknown.size(), e);
+            dbUnknown.addAll(unknown);
         }
         if (dbUnknown.isEmpty()) {
             return present;
@@ -1026,6 +1030,8 @@ public final class GroupMembershipSupport {
             return BindGroupResult.USER_GROUP_LIMIT;
         }
 
+        boolean newGroupMember = false;
+        try {
         long groupAdd = RelationRosterRedis.addMemberIfCapacity(
                 infra.stringRedisTemplate,
                 CacheConstant.buildGroupUserCacheKey(appKey, groupId),
@@ -1040,7 +1046,7 @@ public final class GroupMembershipSupport {
         if (groupAdd != RelationRosterRedis.ADD_NEW && groupAdd != RelationRosterRedis.ADD_EXISTS) {
             return BindGroupResult.FAILED;
         }
-        boolean newGroupMember = groupAdd == RelationRosterRedis.ADD_NEW;
+        newGroupMember = groupAdd == RelationRosterRedis.ADD_NEW;
         if (newGroupMember) {
             long userAdd = RelationRosterRedis.addMemberIfCapacity(
                     infra.stringRedisTemplate,
@@ -1088,6 +1094,45 @@ public final class GroupMembershipSupport {
         RelationCacheInvalidatePublisher.publish(
                 RelationCacheInvalidateEvent.groupJoin(appKey, groupId, joiner));
         return newGroupMember ? BindGroupResult.SUCCESS : BindGroupResult.ALREADY_MEMBER;
+        } catch (Exception e) {
+            // 两个关系集合位于不同 Redis 槽，任一步异常都必须补偿首次新增的群侧记录。
+            // 已存在成员不删除，只由重试补齐用户侧反向索引。
+            if (newGroupMember) {
+                rollbackGroupMemberAdd(appKey, groupId, joiner);
+                try {
+                    RelationRosterRedis.removeMember(
+                            infra.stringRedisTemplate,
+                            CacheConstant.buildUserGroupsCacheKey(appKey, joiner),
+                            CacheConstant.buildUserGroupsRelationVersionCacheKey(appKey, joiner),
+                            CacheConstant.buildUserGroupsInitCacheKey(appKey, joiner), groupId);
+                } catch (Exception rollbackError) {
+                    log.error("回滚用户群反向索引失败 appKey={} groupId={} joiner={}",
+                            appKey, groupId, joiner, rollbackError);
+                }
+            }
+            log.error("绑定群关系异常 appKey={} groupId={} joiner={}", appKey, groupId, joiner, e);
+            return BindGroupResult.FAILED;
+        }
+    }
+
+    /**
+     * 已是群成员时补齐用户侧反向索引，供幂等重试继续完成跨槽关系写入。
+     */
+    public boolean repairUserGroupIndex(String appKey, String userId, String groupId, long score) {
+        if (StringUtils.isAnyBlank(appKey, userId, groupId)) {
+            return false;
+        }
+        try {
+            RelationRosterRedis.addMember(
+                    infra.stringRedisTemplate,
+                    CacheConstant.buildUserGroupsCacheKey(appKey, userId),
+                    CacheConstant.buildUserGroupsRelationVersionCacheKey(appKey, userId),
+                    CacheConstant.buildUserGroupsInitCacheKey(appKey, userId), score, groupId);
+            return true;
+        } catch (Exception e) {
+            log.error("修复用户群反向索引失败 appKey={} groupId={} userId={}", appKey, groupId, userId, e);
+            return false;
+        }
     }
 
     private void rollbackGroupMemberAdd(String appKey, String groupId, String joiner) {

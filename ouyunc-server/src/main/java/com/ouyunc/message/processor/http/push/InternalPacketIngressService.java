@@ -74,10 +74,20 @@ public final class InternalPacketIngressService {
                     MessagePushResponse worstItem = null;
                     String lastPacketId = null;
                     for (String to : recipients) {
-                        request.setTo(to);
-                        request.setMessageId(baseMessageId + ':' + to);
-                        HttpResponseResult<MessagePushResponse> one = pushSingleSync(request, httpContext);
-                        MessagePushResponse body = one != null ? one.getData() : null;
+                        String itemMessageId = baseMessageId + ':' + to;
+                        MessagePushResponse body;
+                        try {
+                            request.setTo(to);
+                            request.setMessageId(itemMessageId);
+                            HttpResponseResult<MessagePushResponse> one = pushSingleSync(request, httpContext);
+                            body = one != null ? one.getData() : null;
+                        } catch (Throwable itemError) {
+                            // 批量请求允许局部成功；单项异常必须转成逐项结果，不能丢弃此前已完成项。
+                            log.error("HTTP 批量推送单项异常, baseMessageId={} itemMessageId={} to={}",
+                                    baseMessageId, itemMessageId, to, itemError);
+                            body = buildResponse(itemMessageId, null, MessageSendStatusEnum.UNKNOWN,
+                                    "单项受理结果未知，请使用该 item messageId 重试");
+                        }
                         if (body != null) {
                             items.add(body);
                             lastPacketId = body.getPacketId();
@@ -98,8 +108,6 @@ public final class InternalPacketIngressService {
                     }
                     aggregate.setItems(items);
                     future.complete(HttpResponseResult.success(aggregate));
-                } catch (HttpPipelineException ex) {
-                    future.completeExceptionally(ex);
                 } catch (Throwable t) {
                     log.error("HTTP 推送 toList 扇出异常, messageId={}", baseMessageId, t);
                     future.completeExceptionally(new HttpPipelineException(HttpResponseStatus.INTERNAL_SERVER_ERROR,
@@ -136,11 +144,6 @@ public final class InternalPacketIngressService {
 
     private static CompletionStage<HttpResponseResult<MessagePushResponse>> enqueueVerify(
             Packet packet, String appKey, String messageId, String packetIdStr) throws HttpPipelineException {
-        HttpResponseResult<MessagePushResponse> early = respondIfCommitted(appKey, messageId);
-        if (early != null) {
-            return CompletableFuture.completedFuture(early);
-        }
-
         CompletableFuture<HttpResponseResult<MessagePushResponse>> future = new CompletableFuture<>();
         try {
             ThreadPoolManager.httpPushVerifyExecutor().execute(() -> {
@@ -160,21 +163,6 @@ public final class InternalPacketIngressService {
                     HttpResponseCodeEnum.INTERNAL_SERVER_ERROR, "HTTP 推送受理失败：verify 任务提交异常");
         }
         return future;
-    }
-
-    /**
-     * 仅 COMMITTED 快速返回。PENDING 必须进入原子抢占脚本，由 Redis 时间判断是否允许接管。
-     */
-    private static HttpResponseResult<MessagePushResponse> respondIfCommitted(String appKey, String messageId) {
-        PushIdempotencySupport.IdempotencyRecord record = PushIdempotencySupport.getRecord(appKey, messageId);
-        if (record == null) {
-            return null;
-        }
-        if (PushIdempotencySupport.STATE_COMMITTED.equals(record.state())) {
-            return HttpResponseResult.success(buildResponse(messageId, record.packetId(),
-                    MessageSendStatusEnum.ACCEPTED, null));
-        }
-        return null;
     }
 
     private static List<String> resolveRecipients(MessagePushRequest request) throws HttpPipelineException {
@@ -201,6 +189,9 @@ public final class InternalPacketIngressService {
         // 先业务校验与 ref/@ 规范化，再内容安全，再幂等占位与归档（与长连接单聊/群聊顺序对齐）
         try {
             HttpPushProcessorDelegate.preProcessOrThrow(packet);
+            // 指纹在业务规范化后、内容安全可能 MASK 正文前固定，保证原请求重试稳定。
+            packet.getMessage().getMetadata().setHttpPushPayloadHash(
+                    PushIdempotencySupport.payloadHash(packet.getMessage()));
             applyContentSafetyOrThrow(packet);
         } catch (HttpPipelineException ex) {
             // 入站鉴权错误保持 HTTP 错误；已有 messageId 的业务拒绝返回统一逐消息结果。
@@ -213,10 +204,15 @@ public final class InternalPacketIngressService {
             return HttpResponseResult.success(buildResponse(messageId, null, rejectedStatus, ex.getMessage()));
         }
 
-        int claim = PushIdempotencySupport.tryClaim(appKey, messageId, packetIdStr);
-        if (claim == PushIdempotencySupport.CLAIM_COMMITTED) {
-            PushIdempotencySupport.IdempotencyRecord record = PushIdempotencySupport.getRecord(appKey, messageId);
-            String committedId = record != null ? record.packetId() : packetIdStr;
+        PushIdempotencySupport.ClaimResult claim = PushIdempotencySupport.tryClaim(
+                appKey, messageId, packetIdStr, packet.getMessage());
+        if (claim.state() == PushIdempotencySupport.CLAIM_CONFLICT) {
+            HttpPushDeliverySupport.discardStashed(packet);
+            return HttpResponseResult.success(buildResponse(messageId, null,
+                    MessageSendStatusEnum.REJECTED, ExceptionCodeEnum.MESSAGE_ID_CONFLICT.getMessage()));
+        }
+        if (claim.state() == PushIdempotencySupport.CLAIM_COMMITTED) {
+            String committedId = claim.canonicalPacketId();
             alignCommittedPacketId(packet, committedId);
             if (!repairUnreadOnHttpCommitted(packet)) {
                 HttpPushDeliverySupport.discardStashed(packet);
@@ -227,17 +223,20 @@ public final class InternalPacketIngressService {
             return HttpResponseResult.success(buildResponse(messageId, committedId,
                     MessageSendStatusEnum.ACCEPTED, null));
         }
-        if (claim == PushIdempotencySupport.CLAIM_PENDING) {
+        if (claim.state() == PushIdempotencySupport.CLAIM_PENDING) {
             HttpPushDeliverySupport.discardStashed(packet);
             return HttpResponseResult.success(buildResponse(messageId, packetIdStr,
                     MessageSendStatusEnum.RETRY_LATER, "同 messageId 正在处理，请稍后重试"));
         }
-        if (claim != PushIdempotencySupport.CLAIM_ACQUIRED) {
+        if (claim.state() != PushIdempotencySupport.CLAIM_ACQUIRED) {
             HttpPushDeliverySupport.discardStashed(packet);
             return HttpResponseResult.success(buildResponse(messageId, null,
                     MessageSendStatusEnum.UNKNOWN, "幂等占位结果未知，请使用同一 messageId 核对或重试"));
         }
-        packetIdStr = alignPacketIdWithIdempotency(packet, appKey, messageId, packetIdStr);
+        packetIdStr = claim.canonicalPacketId();
+        alignCommittedPacketId(packet, packetIdStr);
+        packet.getMessage().getMetadata().setHttpPushPayloadHash(claim.payloadHash());
+        packet.getMessage().getMetadata().setHttpPushOwnerToken(claim.ownerToken());
 
         try {
             boolean ok = HttpPushProcessorDelegate.runPipeline(packet);
@@ -319,23 +318,6 @@ public final class InternalPacketIngressService {
             return DefaultRepository.INSTANCE.repairCsTicketUnread(packet, route);
         }
         return true;
-    }
-
-    /**
-     * 接管或失败重试时，幂等记录里的 packetId 才是第一次写入使用的服务端 ID。
-     */
-    private static String alignPacketIdWithIdempotency(Packet packet, String appKey, String messageId, String packetIdStr) {
-        PushIdempotencySupport.IdempotencyRecord record = PushIdempotencySupport.getRecord(appKey, messageId);
-        if (record == null || StringUtils.isBlank(record.packetId())) {
-            return packetIdStr;
-        }
-        try {
-            packet.setPacketId(Long.parseLong(record.packetId()));
-            return record.packetId();
-        } catch (NumberFormatException ex) {
-            log.warn("HTTP 幂等 packetId 无法解析, messageId={}, packetId={}", messageId, record.packetId());
-            return packetIdStr;
-        }
     }
 
     private static MessagePushResponse buildResponse(String messageId, String packetId,
