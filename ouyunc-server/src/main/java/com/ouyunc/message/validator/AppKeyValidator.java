@@ -103,7 +103,12 @@ public enum AppKeyValidator implements Validator<String> {
         ChannelAttrUtil.setChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_CONN_QUOTA_APP_KEY, null);
         if (reservedAppKey != null && !reservedAppKey.isBlank()) {
             LocalNodeConnCounter.decrement(reservedAppKey);
-            AppKeyConnQuotaSupport.release(reservedAppKey);
+            // closeFuture 在 EventLoop 上；登录失败路径已在业务线程，直接释放即可。
+            if (channel.eventLoop().inEventLoop()) {
+                AppKeyConnQuotaSupport.releaseAsync(reservedAppKey);
+            } else {
+                AppKeyConnQuotaSupport.release(reservedAppKey);
+            }
         }
     }
 

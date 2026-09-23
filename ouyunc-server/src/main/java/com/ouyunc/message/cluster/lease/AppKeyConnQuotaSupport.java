@@ -3,6 +3,7 @@ package com.ouyunc.message.cluster.lease;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.LuaScriptEnum;
+import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.cache.config.CacheFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -57,6 +58,21 @@ public final class AppKeyConnQuotaSupport {
             eval(RELEASE_SCRIPT, appKey, NodeLeaseKeeper.localNodeId());
         } catch (Exception e) {
             log.warn("释放 appKey 连接配额失败 appKey={}", appKey, e);
+        }
+    }
+
+    /**
+     * 关连钩子跑在 EventLoop 上，Lua 释放必须离开 IO 线程。
+     * 提交失败时本机计数已减，下一次心跳 SYNC 会按快照把 Redis field 写回去。
+     */
+    public static void releaseAsync(String appKey) {
+        if (StringUtils.isBlank(appKey)) {
+            return;
+        }
+        try {
+            ThreadPoolManager.messageProcessorExecutor().execute(() -> release(appKey));
+        } catch (RuntimeException e) {
+            log.warn("提交 appKey 连接配额释放失败，等待心跳 SYNC 对齐 appKey={}", appKey, e);
         }
     }
 

@@ -180,8 +180,8 @@ public class ClientHelper {
     }
 
     /**
-     * 写入本地注册表；仅首次占用 combo 时加本机连接计数。
-     * 若登录路径已预占配额（B5），则消费预占标记、不再二次 INCR。覆盖旧 ctx 不加，由旧连接 close 按 ctx 摘除。
+     * 写入本地注册表。本机计数已在 tryReserve 加过，这里只消费预占标记，不再二次 INCR。
+     * 覆盖旧 ctx 不加也不减：旧连接关连时按配额属性把那一格还掉。
      */
     public static void registerLocal(String comboIdentity, ChannelHandlerContext ctx, String appKey) {
         boolean reserved = ctx != null && Boolean.TRUE.equals(
@@ -220,32 +220,58 @@ public class ClientHelper {
             removed = false;
         }
         Channel quotaChannel = channel != null ? channel : (stored == null ? null : stored.channel());
-        if (removed) {
-            LocalNodeConnCounter.decrement(appKey);
-            // 登录成功后会清掉 RESERVED 标记，关连时必须在这里还 Redis 配额；心跳 SYNC 是兜底。
-            releaseQuotaAttr(quotaChannel);
-            NodeLeaseKeeper.scheduleConnPublish();
-        } else {
-            // 同机顶号：新连接已 put 进表，旧 Channel remove 对不上；本机计数未给新连接 +1，只还 Redis 预占。
-            releaseQuotaAttr(quotaChannel);
+        // 仍挂着 RESERVED 说明还没 registerLocal，本机与 Redis 交给 releaseReservedIfNeeded，这里不能动。
+        boolean stillReserved = quotaChannel != null && Boolean.TRUE.equals(ChannelAttrUtil.getChannelAttribute(
+                quotaChannel, MessageConstant.CHANNEL_ATTR_KEY_CONN_QUOTA_RESERVED));
+        if (stillReserved) {
+            return;
         }
+        String quotaAppKey = takeQuotaAppKey(quotaChannel);
+        if (removed) {
+            LocalNodeConnCounter.decrement(StringUtils.isNotBlank(appKey) ? appKey : quotaAppKey);
+            releaseQuotaOffEventLoop(quotaChannel, quotaAppKey);
+            NodeLeaseKeeper.scheduleConnPublish();
+            return;
+        }
+        // 同机顶号：新连接 tryReserve 已 +1 并覆盖注册表，旧 Channel 对不上。
+        // 旧连接的预占标记已在 registerLocal 清掉，但 APP_KEY 还在，必须把这一格本机计数还掉。
+        if (quotaAppKey == null) {
+            return;
+        }
+        LocalNodeConnCounter.decrement(quotaAppKey);
+        releaseQuotaOffEventLoop(quotaChannel, quotaAppKey);
+        NodeLeaseKeeper.scheduleConnPublish();
     }
 
     /**
-     * 释放 Channel 上挂的 Redis 配额预占，成功/失败路径都要清 attr，避免关连钩子重复 DECR。
+     * 取走配额 appKey 并立刻清属性，避免关连钩子和预占回滚各释放一次。
      */
-    private static void releaseQuotaAttr(Channel channel) {
+    private static String takeQuotaAppKey(Channel channel) {
         if (channel == null) {
-            return;
+            return null;
         }
         String quotaAppKey = ChannelAttrUtil.getChannelAttribute(
                 channel, MessageConstant.CHANNEL_ATTR_KEY_CONN_QUOTA_APP_KEY);
         if (quotaAppKey == null || quotaAppKey.isBlank()) {
+            return null;
+        }
+        ChannelAttrUtil.setChannelAttribute(
+                channel, MessageConstant.CHANNEL_ATTR_KEY_CONN_QUOTA_APP_KEY, null);
+        return quotaAppKey;
+    }
+
+    /**
+     * EventLoop 上只提交释放；业务线程上同步 Lua，避免再扩一次心跳对账窗口。
+     */
+    private static void releaseQuotaOffEventLoop(Channel channel, String quotaAppKey) {
+        if (quotaAppKey == null || quotaAppKey.isBlank()) {
+            return;
+        }
+        if (channel != null && channel.eventLoop().inEventLoop()) {
+            AppKeyConnQuotaSupport.releaseAsync(quotaAppKey);
             return;
         }
         AppKeyConnQuotaSupport.release(quotaAppKey);
-        ChannelAttrUtil.setChannelAttribute(
-                channel, MessageConstant.CHANNEL_ATTR_KEY_CONN_QUOTA_APP_KEY, null);
     }
 
     public static void unbindLocalRegisterTable(LoginClientInfo loginClientInfo) {
