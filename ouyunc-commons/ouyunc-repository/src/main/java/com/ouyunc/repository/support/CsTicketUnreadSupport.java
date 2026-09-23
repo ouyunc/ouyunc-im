@@ -10,6 +10,7 @@ import com.ouyunc.base.constant.enums.MessageFromToTypeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.core.device.DeviceTypeRegistry;
+import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.repository.cs.CsImSessionRoute;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -23,7 +24,7 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * 客服咨询单（ticket）维度未读：Hash 计数 + packetId 集合，支持按 offset 部分清除。
+ * 客服咨询单（ticket）维度未读：Hash 计数 + packetId ZSET（超限只留最新），支持按 offset 部分清除。
  */
 public final class CsTicketUnreadSupport {
 
@@ -59,7 +60,7 @@ public final class CsTicketUnreadSupport {
         }
         String urKey = CacheConstant.buildCsTicketUnreadHashCacheKey(appKey, ticketId.trim());
         String sroKey = CacheConstant.buildCsTicketReadOffsetHashCacheKey(appKey, ticketId.trim());
-        String packetIdArg = String.valueOf(packetId);
+        String packetIdArg = MessageContext.idGenerator().formatLongId19Str(packetId);
         long ttl = MessageConstant.CACHE_USER_DEVICE_UNREAD_EXPIRE_TIMESTAMP;
         int storeMax = MessageConstant.SESSION_UNREAD_STORE_MAX;
         DefaultRedisScript<Long> script = new DefaultRedisScript<>(
@@ -126,7 +127,7 @@ public final class CsTicketUnreadSupport {
         }
         String tid = ticketId.trim();
         String urKey = CacheConstant.buildCsTicketUnreadHashCacheKey(appKey, tid);
-        String packetIdArg = String.valueOf(packetId);
+        String packetIdArg = MessageContext.idGenerator().formatLongId19Str(packetId);
         long ttl = MessageConstant.CACHE_USER_DEVICE_UNREAD_EXPIRE_TIMESTAMP;
         DefaultRedisScript<Long> script = new DefaultRedisScript<>(
                 LuaScriptEnum.UNREAD_REMOVE_ONE2ONE_ON_WITHDRAW_SCRIPT.getScript(), Long.class);

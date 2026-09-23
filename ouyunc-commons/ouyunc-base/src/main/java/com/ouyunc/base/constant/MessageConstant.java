@@ -221,7 +221,7 @@ public class MessageConstant {
      */
     public static final long CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP = NumberConstant.NUMBER_30 * MessageConstant.DAY_TIMESTAMP;
 
-    /** 单聊未读 Hash 存储上限（超过视为 capped） */
+    /** 未读 ZSET 最多保留最新条数；展示封顶见 {@link #SESSION_UNREAD_DISPLAY_CAP} */
     public static final int SESSION_UNREAD_STORE_MAX = 1000;
 
     /** 单聊未读展示上限 */

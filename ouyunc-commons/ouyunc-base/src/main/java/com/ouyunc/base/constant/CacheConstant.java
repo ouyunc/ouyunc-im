@@ -614,7 +614,7 @@ public class CacheConstant {
     }
 
     /**
-     * 单聊未读 packetId 集合：与 ur/sro 同属收件人槽
+     * 单聊未读 packetId ZSET（19 位 member）：与 ur/sro 同属收件人槽
      */
     public static String buildUserDeviceUnreadIdsCacheKey(String appKey, String userId, Byte deviceType, String peerId) {
         return buildAggregateCacheKey(appKey, userId) + USER_DEVICE_UNREAD_IDS + deviceType

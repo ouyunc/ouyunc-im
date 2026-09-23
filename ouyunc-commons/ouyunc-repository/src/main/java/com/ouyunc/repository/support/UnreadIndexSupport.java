@@ -10,6 +10,7 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.core.device.DeviceTypeRegistry;
 import com.ouyunc.base.constant.enums.IdentityType;
+import com.ouyunc.core.context.MessageContext;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -22,7 +23,7 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * 单聊未读：Hash 存展示计数，SET 存未读 packetId，已读时只移除 {@code <= offset} 的成员。
+ * 单聊未读：Hash 存计数，ZSET 存未读 packetId（超限只留最新），已读时只移除 {@code <= offset}。
  */
 public final class UnreadIndexSupport {
 
@@ -62,7 +63,7 @@ public final class UnreadIndexSupport {
             return;
         }
         String field = IdentityType.ONE_2_ONE.unreadField(senderId);
-        String packetIdArg = String.valueOf(packetId);
+        String packetIdArg = MessageContext.idGenerator().formatLongId19Str(packetId);
         long ttl = MessageConstant.CACHE_USER_DEVICE_UNREAD_EXPIRE_TIMESTAMP;
         int storeMax = MessageConstant.SESSION_UNREAD_STORE_MAX;
 
@@ -136,7 +137,7 @@ public final class UnreadIndexSupport {
             return;
         }
         String field = IdentityType.ONE_2_ONE.unreadField(peerId);
-        String packetIdArg = String.valueOf(packetId);
+        String packetIdArg = MessageContext.idGenerator().formatLongId19Str(packetId);
         long ttl = MessageConstant.CACHE_USER_DEVICE_UNREAD_EXPIRE_TIMESTAMP;
         DefaultRedisScript<Long> script = new DefaultRedisScript<>(
                 LuaScriptEnum.UNREAD_REMOVE_ONE2ONE_ON_WITHDRAW_SCRIPT.getScript(), Long.class);

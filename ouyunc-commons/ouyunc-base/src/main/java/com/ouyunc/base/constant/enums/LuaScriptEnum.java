@@ -38,10 +38,10 @@ public enum LuaScriptEnum {
             """, "已读会话偏移量"),
 
     /**
-     * 单聊收消息：packetId 大于本端 sro 时把 packetId 记入未读集合，计数=SCARD（带上限）。
-     * 不用雪花 ID 相减；重复 packetId 靠 SADD 幂等。
-     * KEYS[1]=ur KEYS[2]=sro KEYS[3]=uridSet
-     * ARGV[1]=field ARGV[2]=packetId ARGV[3]=delta(忽略,兼容) ARGV[4]=storeMax ARGV[5]=ttlMs
+     * 单聊收消息：packetId 大于本端 sro 时记入未读 ZSET（member=19 位 packetId，score=0）。
+     * 超过 storeMax 裁掉最旧，保留最新；展示封顶由调用方处理，这里不丢新消息。
+     * KEYS[1]=ur KEYS[2]=sro KEYS[3]=uridZset
+     * ARGV[1]=field ARGV[2]=packetId ARGV[3]=delta(忽略) ARGV[4]=storeMax ARGV[5]=ttlMs
      */
     UNREAD_INCR_ONE2ONE_SCRIPT("2", """
             local function toIntOrZero(v)
@@ -51,13 +51,16 @@ public enum LuaScriptEnum {
                 if n == nil then return 0 end
                 return n
             end
+            local function normId(v)
+                if v == false or v == nil then return '0' end
+                v = tostring(v)
+                v = string.gsub(v, '^0+', '')
+                if v == '' then return '0' end
+                return v
+            end
             local function packetIdLe(a, b)
-                if a == false or a == nil then a = '0' end
-                if b == false or b == nil then b = '0' end
-                a = tostring(a)
-                b = tostring(b)
-                if a == '' then a = '0' end
-                if b == '' then b = '0' end
+                a = normId(a)
+                b = normId(b)
                 if #a < #b then return true end
                 if #a > #b then return false end
                 return a <= b
@@ -72,15 +75,11 @@ public enum LuaScriptEnum {
             end
             local storeMax = toIntOrZero(ARGV[4])
             if storeMax <= 0 then storeMax = 1000 end
-            local card = toIntOrZero(redis.call('SCARD', KEYS[3]))
-            if card >= storeMax then
-                redis.call('HSET', KEYS[1], ARGV[1], storeMax)
-                return storeMax
-            end
-            redis.call('SADD', KEYS[3], tostring(pid))
-            local nv = toIntOrZero(redis.call('SCARD', KEYS[3]))
+            redis.call('ZADD', KEYS[3], 0, tostring(pid))
+            local nv = toIntOrZero(redis.call('ZCARD', KEYS[3]))
             if nv > storeMax then
-                nv = storeMax
+                redis.call('ZREMRANGEBYRANK', KEYS[3], 0, nv - storeMax - 1)
+                nv = toIntOrZero(redis.call('ZCARD', KEYS[3]))
             end
             redis.call('HSET', KEYS[1], ARGV[1], nv)
             local ttl = toIntOrZero(ARGV[5])
@@ -93,8 +92,8 @@ public enum LuaScriptEnum {
 
     /**
      * 单聊本端已读：推进 sro；从未读集合中只移除 {@code packetId <= incomingOffset} 的成员，
-     * 再按剩余 SCARD 回写 Hash 计数。无序索引（升级前旧数据）时不整 field HDEL，避免误清更高未读。
-     * KEYS[1]=ur KEYS[2]=sro KEYS[3]=uridSet
+     * 再按剩余 ZCARD 回写 Hash 计数。
+     * KEYS[1]=ur KEYS[2]=sro KEYS[3]=uridZset
      * ARGV[1]=field ARGV[2]=incomingOffset ARGV[3]=ttlMs
      */
     UNREAD_CLEAR_ONE2ONE_ON_READ_SCRIPT("3", """
@@ -114,13 +113,16 @@ public enum LuaScriptEnum {
                 if #a < #b then return false end
                 return a > b
             end
+            local function normId(v)
+                if v == false or v == nil then return '0' end
+                v = tostring(v)
+                v = string.gsub(v, '^0+', '')
+                if v == '' then return '0' end
+                return v
+            end
             local function packetIdLe(a, b)
-                if a == false or a == nil then a = '0' end
-                if b == false or b == nil then b = '0' end
-                a = tostring(a)
-                b = tostring(b)
-                if a == '' then a = '0' end
-                if b == '' then b = '0' end
+                a = normId(a)
+                b = normId(b)
                 if #a < #b then return true end
                 if #a > #b then return false end
                 return a <= b
@@ -148,14 +150,14 @@ public enum LuaScriptEnum {
             else
                 redis.call('SET', KEYS[2], merged)
             end
-            local ids = redis.call('SMEMBERS', KEYS[3])
+            local ids = redis.call('ZRANGE', KEYS[3], 0, -1)
             if #ids > 0 then
                 for _, id in ipairs(ids) do
                     if packetIdLe(id, inc) then
-                        redis.call('SREM', KEYS[3], id)
+                        redis.call('ZREM', KEYS[3], id)
                     end
                 end
-                local left = toIntOrZero(redis.call('SCARD', KEYS[3]))
+                local left = toIntOrZero(redis.call('ZCARD', KEYS[3]))
                 if left == 0 then
                     redis.call('HDEL', KEYS[1], ARGV[1])
                 else
@@ -166,8 +168,8 @@ public enum LuaScriptEnum {
             """, "单聊已读清未读"),
 
     /**
-     * 单聊撤回：从未读 SET 移除指定 packetId，并按剩余 SCARD 回写 Hash 计数。
-     * KEYS[1]=ur KEYS[2]=uridSet
+     * 单聊撤回：从未读 ZSET 移除指定 packetId，并按剩余 ZCARD 回写 Hash 计数。
+     * KEYS[1]=ur KEYS[2]=uridZset
      * ARGV[1]=field ARGV[2]=packetId ARGV[3]=ttlMs
      */
     UNREAD_REMOVE_ONE2ONE_ON_WITHDRAW_SCRIPT("2", """
@@ -182,8 +184,8 @@ public enum LuaScriptEnum {
             if pid == nil or pid == '' then
                 return toIntOrZero(redis.call('HGET', KEYS[1], ARGV[1]))
             end
-            redis.call('SREM', KEYS[2], tostring(pid))
-            local left = toIntOrZero(redis.call('SCARD', KEYS[2]))
+            redis.call('ZREM', KEYS[2], tostring(pid))
+            local left = toIntOrZero(redis.call('ZCARD', KEYS[2]))
             if left == 0 then
                 redis.call('HDEL', KEYS[1], ARGV[1])
             else
@@ -573,8 +575,8 @@ public enum LuaScriptEnum {
             """, "客服 ticket 已读 offset"),
 
     /**
-     * 客服 ticket 收消息：packetId 大于本端 ticket sro 时记入未读集合，计数=SCARD。
-     * KEYS[1]=urHash KEYS[2]=sroHash KEYS[3]=uridSet
+     * 客服 ticket 收消息：packetId 大于本端 ticket sro 时记入未读 ZSET，超限裁最旧。
+     * KEYS[1]=urHash KEYS[2]=sroHash KEYS[3]=uridZset
      * ARGV[1]=field ARGV[2]=packetId ARGV[3]=delta(忽略) ARGV[4]=storeMax ARGV[5]=ttlMs
      */
     CS_TICKET_UNREAD_INCR_SCRIPT("2", """
@@ -585,13 +587,16 @@ public enum LuaScriptEnum {
                 if n == nil then return 0 end
                 return n
             end
+            local function normId(v)
+                if v == false or v == nil then return '0' end
+                v = tostring(v)
+                v = string.gsub(v, '^0+', '')
+                if v == '' then return '0' end
+                return v
+            end
             local function packetIdLe(a, b)
-                if a == false or a == nil then a = '0' end
-                if b == false or b == nil then b = '0' end
-                a = tostring(a)
-                b = tostring(b)
-                if a == '' then a = '0' end
-                if b == '' then b = '0' end
+                a = normId(a)
+                b = normId(b)
                 if #a < #b then return true end
                 if #a > #b then return false end
                 return a <= b
@@ -607,15 +612,11 @@ public enum LuaScriptEnum {
             end
             local storeMax = toIntOrZero(ARGV[4])
             if storeMax <= 0 then storeMax = 1000 end
-            local card = toIntOrZero(redis.call('SCARD', KEYS[3]))
-            if card >= storeMax then
-                redis.call('HSET', KEYS[1], field, storeMax)
-                return storeMax
-            end
-            redis.call('SADD', KEYS[3], tostring(pid))
-            local nv = toIntOrZero(redis.call('SCARD', KEYS[3]))
+            redis.call('ZADD', KEYS[3], 0, tostring(pid))
+            local nv = toIntOrZero(redis.call('ZCARD', KEYS[3]))
             if nv > storeMax then
-                nv = storeMax
+                redis.call('ZREMRANGEBYRANK', KEYS[3], 0, nv - storeMax - 1)
+                nv = toIntOrZero(redis.call('ZCARD', KEYS[3]))
             end
             redis.call('HSET', KEYS[1], field, nv)
             local ttl = toIntOrZero(ARGV[5])
@@ -628,9 +629,8 @@ public enum LuaScriptEnum {
             """, "客服 ticket 未读增量"),
 
     /**
-     * 客服 ticket 已读：推进 sro Hash；从未读集合只移除 {@code <= incomingOffset}，再回写计数。
-     * 无序索引时不整 field HDEL。
-     * KEYS[1]=urHash KEYS[2]=sroHash KEYS[3]=uridSet
+     * 客服 ticket 已读：推进 sro Hash；从未读 ZSET 只移除 {@code <= incomingOffset}，再回写计数。
+     * KEYS[1]=urHash KEYS[2]=sroHash KEYS[3]=uridZset
      * ARGV[1]=field ARGV[2]=incomingOffset ARGV[3]=ttlMs
      */
     CS_TICKET_CLEAR_UNREAD_ON_READ_SCRIPT("2", """
@@ -650,13 +650,16 @@ public enum LuaScriptEnum {
                 if #a < #b then return false end
                 return a > b
             end
+            local function normId(v)
+                if v == false or v == nil then return '0' end
+                v = tostring(v)
+                v = string.gsub(v, '^0+', '')
+                if v == '' then return '0' end
+                return v
+            end
             local function packetIdLe(a, b)
-                if a == false or a == nil then a = '0' end
-                if b == false or b == nil then b = '0' end
-                a = tostring(a)
-                b = tostring(b)
-                if a == '' then a = '0' end
-                if b == '' then b = '0' end
+                a = normId(a)
+                b = normId(b)
                 if #a < #b then return true end
                 if #a > #b then return false end
                 return a <= b
@@ -684,14 +687,14 @@ public enum LuaScriptEnum {
                 redis.call('PEXPIRE', KEYS[1], ttl)
                 redis.call('PEXPIRE', KEYS[3], ttl)
             end
-            local ids = redis.call('SMEMBERS', KEYS[3])
+            local ids = redis.call('ZRANGE', KEYS[3], 0, -1)
             if #ids > 0 then
                 for _, id in ipairs(ids) do
                     if packetIdLe(id, inc) then
-                        redis.call('SREM', KEYS[3], id)
+                        redis.call('ZREM', KEYS[3], id)
                     end
                 end
-                local left = toIntOrZero(redis.call('SCARD', KEYS[3]))
+                local left = toIntOrZero(redis.call('ZCARD', KEYS[3]))
                 if left == 0 then
                     redis.call('HDEL', KEYS[1], field)
                 else
