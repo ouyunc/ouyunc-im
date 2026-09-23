@@ -2,6 +2,7 @@ package com.ouyunc.repository.support;
 
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.CacheConstant;
+import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.cache.distributed.redis.RedisPipelineSupport;
 import com.ouyunc.base.constant.JdbcSqlDialectHolder;
 import com.ouyunc.base.constant.MessageConstant;
@@ -12,16 +13,15 @@ import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.domain.entity.MessageEntity;
 import com.ouyunc.domain.entity.MongoMessageEntity;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.dao.DataAccessException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.SessionCallback;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -30,7 +30,6 @@ import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -46,11 +45,14 @@ public final class MessagePacketQuerySupport {
     }
 
     private final RedisTemplate redisTemplate;
+    private final StringRedisTemplate stringRedisTemplate;
     private final MongoTemplate mongoTemplate;
     private final JdbcClient jdbcClient;
 
-    public MessagePacketQuerySupport(RedisTemplate redisTemplate, MongoTemplate mongoTemplate, JdbcClient jdbcClient) {
+    public MessagePacketQuerySupport(RedisTemplate redisTemplate, StringRedisTemplate stringRedisTemplate,
+                                     MongoTemplate mongoTemplate, JdbcClient jdbcClient) {
         this.redisTemplate = redisTemplate;
+        this.stringRedisTemplate = stringRedisTemplate;
         this.mongoTemplate = mongoTemplate;
         this.jdbcClient = jdbcClient;
     }
@@ -82,6 +84,7 @@ public final class MessagePacketQuerySupport {
         Set<Long> cachedIds = cachedPacketMap.keySet();
 
         if (cachedIds.size() == requestedIds.size()) {
+            applyWithdrawnOverlay(appKey, cachedPacketMap.values());
             return requestedIds.stream().map(cachedPacketMap::get).collect(Collectors.toList());
         }
 
@@ -95,6 +98,7 @@ public final class MessagePacketQuerySupport {
                 .collect(Collectors.toList());
 
         dbPackets.forEach(packet -> cachedPacketMap.putIfAbsent(packet.getPacketId(), packet));
+        applyWithdrawnOverlay(appKey, cachedPacketMap.values());
         asyncUpdatePacketCache(appKey, dbPackets);
         return requestedIds.stream().map(cachedPacketMap::get).filter(Objects::nonNull)
                 .collect(Collectors.toList());
@@ -222,21 +226,64 @@ public final class MessagePacketQuerySupport {
                 .collect(Collectors.toList());
     }
 
-    @SuppressWarnings("unchecked")
+    /**
+     * 撤回标记单调：命中则把正文 retain 升为 1，避免热缓存/冷库滞后读成未撤回。
+     */
+    private void applyWithdrawnOverlay(String appKey, Collection<Packet> packets) {
+        if (CollectionUtils.isEmpty(packets)) {
+            return;
+        }
+        List<Packet> candidates = new ArrayList<>();
+        List<String> markerKeys = new ArrayList<>();
+        for (Packet packet : packets) {
+            if (packet == null || packet.getPacketId() <= 0L
+                    || packet.getRetain() == NumberConstant.NUMBER_1) {
+                continue;
+            }
+            candidates.add(packet);
+            markerKeys.add(CacheConstant.buildMessageWithdrawnCacheKey(appKey, packet.getPacketId()));
+        }
+        if (markerKeys.isEmpty()) {
+            return;
+        }
+        List<String> flags = RedisPipelineSupport.getStrings(stringRedisTemplate, markerKeys);
+        for (int i = 0; i < candidates.size(); i++) {
+            String flag = flags == null || i >= flags.size() ? null : flags.get(i);
+            if (StringUtils.isNotBlank(flag)) {
+                candidates.get(i).setRetain(NumberConstant.NUMBER_1);
+            }
+        }
+    }
+
+    /**
+     * 库回填：已撤回写回 retain=1；未撤回只用 SET NX，禁止覆盖撤回后的热 key。
+     */
     private void asyncUpdatePacketCache(String appKey, List<Packet> dbPackets) {
         if (CollectionUtils.isEmpty(dbPackets)) {
             return;
         }
         CompletableFuture.runAsync(() -> {
-            redisTemplate.executePipelined(new SessionCallback<>() {
-                @Override
-                public <K, V> Object execute(RedisOperations<K, V> operations) throws DataAccessException {
-                    dbPackets.forEach(packet -> {
-                        operations.opsForValue().set((K) CacheConstant.buildMessageCacheKey(appKey, packet.getPacketId()), (V) packet, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
-                    });
-                    return null;
+            Map<String, Packet> upsert = new LinkedHashMap<>();
+            Map<String, Packet> fillIfAbsent = new LinkedHashMap<>();
+            for (Packet packet : dbPackets) {
+                if (packet == null || packet.getPacketId() <= 0L) {
+                    continue;
                 }
-            });
+                String key = CacheConstant.buildMessageCacheKey(appKey, packet.getPacketId());
+                if (packet.getRetain() == NumberConstant.NUMBER_1) {
+                    upsert.put(key, packet);
+                } else {
+                    fillIfAbsent.put(key, packet);
+                }
+            }
+            if (!upsert.isEmpty()) {
+                RedisPipelineSupport.setValues(redisTemplate, upsert,
+                        MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
+            }
+            if (!fillIfAbsent.isEmpty()) {
+                RedisPipelineSupport.setValuesIfAbsent(redisTemplate, fillIfAbsent,
+                        MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
+            }
         }, dbExecutor()).exceptionally(ex -> {
             log.error("异步更新缓存失败, appKey={}, packetSize={}", appKey, dbPackets.size(), ex);
             return null;

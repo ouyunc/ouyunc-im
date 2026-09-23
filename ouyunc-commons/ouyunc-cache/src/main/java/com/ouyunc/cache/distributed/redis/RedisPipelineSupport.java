@@ -96,6 +96,36 @@ public final class RedisPipelineSupport {
         });
     }
 
+    /**
+     * 逐 key SET NX + PX。库回填禁止覆盖已有热 key（含撤回后的 retain=1）。
+     */
+    @SuppressWarnings("unchecked")
+    public static <V> void setValuesIfAbsent(RedisTemplate<?, ?> template, Map<String, ? extends V> keyValues,
+                                             long ttlMillis) {
+        if (template == null || keyValues == null || keyValues.isEmpty()) {
+            return;
+        }
+        RedisTemplate<String, V> typed = (RedisTemplate<String, V>) template;
+        RedisSerializer<String> keySerializer = (RedisSerializer<String>) typed.getKeySerializer();
+        RedisSerializer<V> valueSerializer = (RedisSerializer<V>) typed.getValueSerializer();
+        typed.executePipelined((RedisCallback<Object>) connection -> {
+            for (Map.Entry<String, ? extends V> entry : keyValues.entrySet()) {
+                byte[] rawKey = keySerializer.serialize(entry.getKey());
+                byte[] rawVal = valueSerializer.serialize(entry.getValue());
+                if (rawKey == null || rawVal == null) {
+                    throw new IllegalStateException("Redis 序列化失败");
+                }
+                if (ttlMillis > 0L) {
+                    connection.stringCommands().set(rawKey, rawVal, Expiration.milliseconds(ttlMillis),
+                            RedisStringCommands.SetOption.SET_IF_ABSENT);
+                } else {
+                    throw new IllegalArgumentException("回填 SET NX 必须带正 TTL");
+                }
+            }
+            return null;
+        });
+    }
+
     @SuppressWarnings("unchecked")
     public static void deleteKeys(RedisTemplate<?, ?> template, Collection<String> keys) {
         if (template == null || keys == null || keys.isEmpty()) {

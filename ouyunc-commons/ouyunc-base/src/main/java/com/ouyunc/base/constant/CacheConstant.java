@@ -46,6 +46,11 @@ public class CacheConstant {
      */
     private static final String MESSAGE = "msg:";
 
+    /**
+     * 消息撤回单调标记，与 {@code msg:} 同槽；只增不减。
+     */
+    private static final String MESSAGE_WITHDRAWN = "mw:";
+
     /***
      * 会话已读消息偏移量缓存公共前缀
      */
@@ -325,6 +330,13 @@ public class CacheConstant {
      */
     public static String buildMessageCacheKey(String appKey, Long packetId) {
         return buildAggregateCacheKey(appKey, String.valueOf(packetId)) + MESSAGE;
+    }
+
+    /**
+     * 撤回权威标记（STRING=1）。与正文同槽，读路径叠加 retain，回填不得覆盖。
+     */
+    public static String buildMessageWithdrawnCacheKey(String appKey, Long packetId) {
+        return buildAggregateCacheKey(appKey, String.valueOf(packetId)) + MESSAGE_WITHDRAWN;
     }
 
     /**

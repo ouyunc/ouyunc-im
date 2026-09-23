@@ -14,14 +14,18 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
+import com.ouyunc.cache.distributed.redis.RedisPipelineSupport;
 import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.SessionCallback;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -33,16 +37,19 @@ public final class WithdrawMessageSupport {
 
     private final SpecialMessageLoader specialMessageLoader;
     private final RedisTemplate redisTemplate;
+    private final StringRedisTemplate stringRedisTemplate;
     private final SessionIndexSupport sessionIndexSupport;
     private final UnreadIndexSupport unreadIndexSupport;
     private final CsTicketUnreadSupport csTicketUnreadSupport;
 
     public WithdrawMessageSupport(SpecialMessageLoader specialMessageLoader, RedisTemplate redisTemplate,
+                                  StringRedisTemplate stringRedisTemplate,
                                   SessionIndexSupport sessionIndexSupport,
                                   UnreadIndexSupport unreadIndexSupport,
                                   CsTicketUnreadSupport csTicketUnreadSupport) {
         this.specialMessageLoader = specialMessageLoader;
         this.redisTemplate = redisTemplate;
+        this.stringRedisTemplate = stringRedisTemplate;
         this.sessionIndexSupport = sessionIndexSupport;
         this.unreadIndexSupport = unreadIndexSupport;
         this.csTicketUnreadSupport = csTicketUnreadSupport;
@@ -125,6 +132,19 @@ public final class WithdrawMessageSupport {
                                               List<Packet> packets) {
         String sessionCacheKey = resolveMessageIndexKey(appKey, scopeId, scope);
         List<String> indexMembers = new ArrayList<>(packets.size());
+        Map<String, String> withdrawnMarkers = new LinkedHashMap<>();
+        for (Packet withdrawPacket : packets) {
+            if (withdrawPacket == null || withdrawPacket.getPacketId() <= 0L) {
+                continue;
+            }
+            withdrawnMarkers.put(CacheConstant.buildMessageWithdrawnCacheKey(appKey, withdrawPacket.getPacketId()),
+                    MessageConstant.ONE_STR);
+        }
+        // 先写单调撤回标记，再覆盖正文，避免库回填把 retain 打回 0
+        if (!withdrawnMarkers.isEmpty()) {
+            RedisPipelineSupport.setValues(stringRedisTemplate, withdrawnMarkers,
+                    MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP);
+        }
         // 正文 Packet 走 Jackson 模板；会话 ZSet 成员是原始字符串，必须用 StringRedisTemplate 删除
         redisTemplate.executePipelined(new SessionCallback<>() {
             @Override

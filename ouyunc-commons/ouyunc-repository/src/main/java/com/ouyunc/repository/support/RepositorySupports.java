@@ -12,7 +12,7 @@ public final class RepositorySupports {
     public static final SessionMessagePersistenceSupport SESSION = new SessionMessagePersistenceSupport(INFRA);
     public static final SessionIndexSupport SESSION_INDEX = new SessionIndexSupport(INFRA.stringRedisTemplate);
     public static final MessagePacketQuerySupport MESSAGE_PACKET_QUERY =
-            new MessagePacketQuerySupport(INFRA.redisTemplate, INFRA.mongoTemplate, INFRA.jdbcClient);
+            new MessagePacketQuerySupport(INFRA.redisTemplate, INFRA.stringRedisTemplate, INFRA.mongoTemplate, INFRA.jdbcClient);
     public static final SessionLastMessageSupport SESSION_LAST_MESSAGE =
             new SessionLastMessageSupport(INFRA.stringRedisTemplate, MESSAGE_PACKET_QUERY, SESSION);
     public static final SpecialMessageLoader SPECIAL_MESSAGE_LOADER =
@@ -21,7 +21,8 @@ public final class RepositorySupports {
     public static final CsTicketUnreadSupport CS_TICKET_UNREAD =
             new CsTicketUnreadSupport(INFRA.stringRedisTemplate);
     public static final WithdrawMessageSupport WITHDRAW =
-            new WithdrawMessageSupport(SPECIAL_MESSAGE_LOADER, INFRA.redisTemplate, SESSION_INDEX, UNREAD, CS_TICKET_UNREAD);
+            new WithdrawMessageSupport(SPECIAL_MESSAGE_LOADER, INFRA.redisTemplate, INFRA.stringRedisTemplate,
+                    SESSION_INDEX, UNREAD, CS_TICKET_UNREAD);
     public static final ReadReceiptSupport READ_RECEIPT =
             new ReadReceiptSupport(SPECIAL_MESSAGE_LOADER, INFRA.stringRedisTemplate, INFRA.mongoTemplate, INFRA.jdbcClient,
                     UNREAD);
