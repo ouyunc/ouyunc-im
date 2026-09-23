@@ -1,12 +1,14 @@
 package com.ouyunc.repository.support;
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.SessionCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
@@ -19,6 +21,19 @@ public final class SessionIndexSupport {
 
     public SessionIndexSupport(StringRedisTemplate stringRedisTemplate) {
         this.stringRedisTemplate = stringRedisTemplate;
+    }
+
+    /**
+     * 会话/ticket 消息索引 ZSet 成员以 String 序列化写入，删除必须走 {@link StringRedisTemplate}。
+     * <p>普通 RedisTemplate 的 value 是 GenericJackson2JsonRedisSerializer，ZREM 字节对不上。</p>
+     */
+    public Long removeMembers(String zsetKey, Collection<String> members) {
+        if (StringUtils.isBlank(zsetKey) || CollectionUtils.isEmpty(members)) {
+            return 0L;
+        }
+        Object[] values = members.toArray();
+        Long removed = stringRedisTemplate.opsForZSet().remove(zsetKey, values);
+        return removed == null ? 0L : removed;
     }
 
     /**

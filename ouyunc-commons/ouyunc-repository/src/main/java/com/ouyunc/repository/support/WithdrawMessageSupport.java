@@ -20,6 +20,7 @@ import org.springframework.data.redis.core.SessionCallback;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -32,14 +33,17 @@ public final class WithdrawMessageSupport {
 
     private final SpecialMessageLoader specialMessageLoader;
     private final RedisTemplate redisTemplate;
+    private final SessionIndexSupport sessionIndexSupport;
     private final UnreadIndexSupport unreadIndexSupport;
     private final CsTicketUnreadSupport csTicketUnreadSupport;
 
     public WithdrawMessageSupport(SpecialMessageLoader specialMessageLoader, RedisTemplate redisTemplate,
+                                  SessionIndexSupport sessionIndexSupport,
                                   UnreadIndexSupport unreadIndexSupport,
                                   CsTicketUnreadSupport csTicketUnreadSupport) {
         this.specialMessageLoader = specialMessageLoader;
         this.redisTemplate = redisTemplate;
+        this.sessionIndexSupport = sessionIndexSupport;
         this.unreadIndexSupport = unreadIndexSupport;
         this.csTicketUnreadSupport = csTicketUnreadSupport;
     }
@@ -120,6 +124,8 @@ public final class WithdrawMessageSupport {
     private void applyWithdrawnPacketsToRedis(String appKey, String scopeId, MessageIndexScope scope,
                                               List<Packet> packets) {
         String sessionCacheKey = resolveMessageIndexKey(appKey, scopeId, scope);
+        List<String> indexMembers = new ArrayList<>(packets.size());
+        // 正文 Packet 走 Jackson 模板；会话 ZSet 成员是原始字符串，必须用 StringRedisTemplate 删除
         redisTemplate.executePipelined(new SessionCallback<>() {
             @Override
             public <K, V> Object execute(RedisOperations<K, V> operations) throws DataAccessException {
@@ -127,12 +133,12 @@ public final class WithdrawMessageSupport {
                     withdrawPacket.setRetain(NumberConstant.NUMBER_1);
                     operations.opsForValue().set((K) CacheConstant.buildMessageCacheKey(appKey, withdrawPacket.getPacketId()),
                             (V) withdrawPacket, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
-                    String member = MessageContext.idGenerator().formatLongId19Str(withdrawPacket.getPacketId());
-                    operations.opsForZSet().remove((K) sessionCacheKey, (V) member);
+                    indexMembers.add(MessageContext.idGenerator().formatLongId19Str(withdrawPacket.getPacketId()));
                 }
                 return null;
             }
         });
+        sessionIndexSupport.removeMembers(sessionCacheKey, indexMembers);
         // 撤回后从未读 SET/Hash 摘掉 packetId，避免单聊/客服未读虚高
         clearUnreadForWithdrawnPackets(appKey, scopeId, scope, packets);
     }
