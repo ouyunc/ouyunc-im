@@ -62,6 +62,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
         } catch (Exception e) {
             log.error("客服消息处理异常, packetId={}", packet.getPacketId(), e);
             MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
+            MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.UNKNOWN_ERROR);
             return Mono.empty();
         }
     }
@@ -75,6 +76,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
         }
         PrepareOutcome prepared = validateAndPrepare(packet);
         if (!prepared.accepted()) {
+            MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.CS_SESSION_ROUTE_ERROR);
             return Mono.empty();
         }
         PrepareOutcome live = CsHelper.refreshDelivery(packet, prepared.route());
@@ -82,12 +84,20 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
             log.warn("客服投递前路由刷新失败: {} | packetId={}", live.rejectReason(), packet.getPacketId());
             CsHelper.publishReject(packet, live.rejectReason());
             MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
+            MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.CS_SESSION_ROUTE_ERROR);
             return Mono.empty();
         }
         // 路由校验通过后先改写入口号再旁路归档，避免 MQ 身份与 ticket 索引不一致
         CsImSessionRoute route = live.route();
         CsHelper.rewriteAgentFrom(packet, route);
-        return MessageAcceptPipelineHelper.archiveAfterAuth(packet).then(Mono.defer(() -> persistPrepared(ctx, packet, route)));
+        return MessageAcceptPipelineHelper.archiveAfterAuth(packet)
+                .then(Mono.defer(() -> persistPrepared(ctx, packet, route)))
+                .onErrorResume(error -> {
+                    log.error("客服消息归档或处理结果未知, messageId={}", packet.getMessage().getId(), error);
+                    MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.MQ_PERSISTENCE_ERROR);
+                    MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
+                    return Mono.empty();
+                });
     }
 
     /** 归档确认后才提交 ticket 索引和 ACK，避免热存储成功掩盖归档失败。 */
@@ -108,6 +118,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
                     log.error("客服消息持久化异常, packetId={}", packet.getPacketId(), error);
                     ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "客服持久化异常: " + error.getMessage(), "CsMessageBiProcessor.process", packet, error);
                     MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
+                    MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
                     return Mono.empty();
                 });
     }
@@ -163,6 +174,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
                         ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR)
                 .doOnNext(success -> {
                     if (!Boolean.TRUE.equals(success)) {
+                        MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.UNKNOWN_ERROR);
                         MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
                     }
                 })
@@ -188,6 +200,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
                         ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR)
                 .doOnNext(success -> {
                     if (!Boolean.TRUE.equals(success)) {
+                        MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.UNKNOWN_ERROR);
                         MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
                     }
                 })

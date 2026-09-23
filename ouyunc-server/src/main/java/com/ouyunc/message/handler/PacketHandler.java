@@ -5,6 +5,7 @@ import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.constant.enums.OuyuncMessageTypeEnum;
 import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
+import com.ouyunc.message.helper.MessageSendResultHelper;
 import com.ouyunc.message.helper.QosAckDispatcher;
 import com.ouyunc.base.constant.QosControlConstant;
 import com.ouyunc.base.model.LoginClientInfo;
@@ -180,6 +181,7 @@ public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
                 .onErrorResume(error -> {
                     // 吞掉 Mono 错误以免打乱有序队列；业务异常不断连
                     publishBusinessException(packet, error, "消息三阶段执行异常");
+                    MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.UNKNOWN_ERROR);
                     return Mono.empty();
                 });
         return ChannelOrderedTasks.toVoidStage(chain);

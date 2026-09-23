@@ -21,9 +21,9 @@ import reactor.core.publisher.Mono;
  * 鉴权/业务校验通过（preProcess，不归档）
  *   → 内容/引用规范化
  *   → 内容安全（REJECT 不归档；MASK 改写正文）
- *   → 等 MQ SAVE 成功/失败（失败：不写 Redis、不 ACK、不投递 → 客户端重试）
+ *   → 等 MQ SAVE 成功/失败（失败：不写 Redis、不投递，返回 UNKNOWN）
  *   → Redis 热写
- *   → 仅 SUCCESS/DUPLICATE 时 ACK
+ *   → SUCCESS/DUPLICATE 返回 ACCEPTED，失败返回对应受理结果
  *   → 仅 SUCCESS 时扇出（尽力而为）
  * </pre>
  *
@@ -32,8 +32,8 @@ import reactor.core.publisher.Mono;
  *
  * <ul>
  *   <li>{@link #preProcess} — 鉴权/校验/QoS 判重；单聊/群聊不在此归档；返回 true 才进入 process</li>
- *   <li>{@link #process} — 规范化、内容安全、MQ 归档、Redis 热写、ACK、投递等</li>
- *   <li>{@link #postProcess} — 轻量收尾，默认空；不要在此发业务成功 ACK</li>
+ *   <li>{@link #process} — 规范化、内容安全、MQ 归档、Redis 热写、受理结果、投递等</li>
+ *   <li>{@link #postProcess} — 轻量收尾，默认空；不要在此重复发送受理结果</li>
  * </ul>
  */
 public abstract class AbstractMessageBiProcessor<T extends Number> extends AbstractBaseBiProcessor<Mono<Void>, T> {
@@ -49,8 +49,8 @@ public abstract class AbstractMessageBiProcessor<T extends Number> extends Abstr
     }
 
     /**
-     * 默认门闸：鉴权 → QoS 判重（COMMITTED 则 ACK 并结束）→ MQ 归档确认。
-     * <p>好友/群请求等可覆写后调用 {@link MessageAcceptPipelineHelper#continueWhenPassed}。
+     * 默认门闸：鉴权 → QoS 判重（COMMITTED 则回 ACCEPTED 并结束）→ MQ 归档确认。
+     * <p>好友/群请求等可覆写后调用 {@link MessageAcceptPipelineHelper#continueWhenPassedOrAck}。
      * 单聊/群聊请用 {@link MessageAcceptPipelineHelper#gateWhenPassed}，并在 process 内
      * {@link MessageAcceptPipelineHelper#archiveAfterContentReady}。</p>
      *

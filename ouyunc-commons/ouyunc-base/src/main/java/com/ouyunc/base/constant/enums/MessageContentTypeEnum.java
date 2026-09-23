@@ -14,6 +14,7 @@ import com.ouyunc.base.packet.message.content.PostcardContent;
 import com.ouyunc.base.packet.message.content.ProductCardContent;
 import com.ouyunc.base.packet.message.content.ProfileCardContent;
 import com.ouyunc.base.packet.message.content.QosAckContent;
+import com.ouyunc.base.packet.message.content.MessageSendResultContent;
 import com.ouyunc.base.packet.message.content.RecommendItemContent;
 import com.ouyunc.base.packet.message.content.TranslationReadyContent;
 import com.ouyunc.base.packet.message.content.VideoCallContent;
@@ -32,7 +33,8 @@ public enum MessageContentTypeEnum implements MessageContentType {
     LOGIN_REQUEST_CONTENT(NumberConstant.NUMBER_NEGATIVE_2,ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), LoginContent.class, "外部客户端登录消息内容"),
     LOGIN_RESPONSE_FAIL_CONTENT(NumberConstant.NUMBER_NEGATIVE_3,ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), String.class, "外部客户端登录失败消息内容"),
     LOGIN_RESPONSE_SUCCESS_CONTENT(NumberConstant.NUMBER_NEGATIVE_4,ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), String.class, "客户端登录成功"),
-    QOS_ACK_CONTENT(NumberConstant.NUMBER_NEGATIVE_11, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), QosAckContent.class, "qos S2C/C2S ACK 内容"),
+    QOS_ACK_CONTENT(NumberConstant.NUMBER_NEGATIVE_11, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), QosAckContent.class, "客户端确认服务端投递的 ACK 内容"),
+    MESSAGE_SEND_RESULT_CONTENT(NumberConstant.NUMBER_NEGATIVE_12, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), MessageSendResultContent.class, "逐消息受理结果内容"),
 
     WITHDRAW_CONTENT(NumberConstant.NUMBER_NEGATIVE_6, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), List.class,  "撤销消息的消息内容"),
     READ_RECEIPT_CONTENT(NumberConstant.NUMBER_NEGATIVE_7, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), List.class,  "读已回执消息内容"),

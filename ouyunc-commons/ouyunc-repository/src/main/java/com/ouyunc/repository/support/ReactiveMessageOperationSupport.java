@@ -36,7 +36,13 @@ public final class ReactiveMessageOperationSupport {
                     .then(processor)
                     .doOnNext(processed -> {
                         if (processed) {
-                            processorAfter.accept(ctx, packet);
+                            try {
+                                processorAfter.accept(ctx, packet);
+                            } catch (Exception callbackError) {
+                                // 主操作已经成功，后续通知失败不可把受理状态回滚为失败。
+                                log.error("操作已提交，但后续通知失败, messageId={}",
+                                        packet.getMessage().getId(), callbackError);
+                            }
                         } else {
                             ExceptionReporter.reportSystem(ExceptionCodeEnum.UNKNOWN_ERROR, "撤销或已读异常", SCENE, packet);
                         }

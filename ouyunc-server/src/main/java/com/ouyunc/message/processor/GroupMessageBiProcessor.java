@@ -14,6 +14,7 @@ import com.ouyunc.base.constant.enums.IdentityType;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.AtMentionHelper;
 import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
+import com.ouyunc.message.helper.MessageSendResultHelper;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageDeliveryRouteHelper;
 import com.ouyunc.message.helper.MessageHelper;
@@ -62,7 +63,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
         if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
             return Mono.just(false);
         }
-        return MessageAcceptPipelineHelper.gateWhenPassed(packet,
+        return MessageAcceptPipelineHelper.gateWhenPassed(ctx, packet,
                 PermissionValidator.INSTANCE.negate()
                         .or(FromToValidator.INSTANCE)
                         .or(BlackListValidator.INSTANCE)
@@ -89,12 +90,14 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
             log.error("群组：{} 成员权威回源失败，拒绝当成空群丢扇出, packetId={}",
                     packet.getMessage().getTo(), packet.getPacketId(), e);
             ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "群成员回源失败: " + e.getMessage(), "GroupMessageBiProcessor.process", packet, e);
+            MessageSendResultHelper.retryLater(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
             MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
             return Mono.empty();
         }
         if (CollectionUtils.isEmpty(groupUserIdentitySet)) {
             log.error("群组：{}, 不存在群成员！群消息： {}", packet.getMessage().getTo(), packet);
             ExceptionReporter.reportBusiness(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群成员", "GroupMessageBiProcessor.process", packet);
+            MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR);
             MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
             return Mono.empty();
         }
@@ -104,6 +107,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
         if (!skipSenderMembership && !groupUserIdentitySet.contains(from)) {
             log.error("发送方：{}, 不在群组：{} 中！群消息： {}", from, packet.getMessage().getTo(), packet);
             ExceptionReporter.reportBusiness(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "发送者不在群组中", "GroupMessageBiProcessor.process", packet);
+            MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR);
             MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
             return Mono.empty();
         }
@@ -113,10 +117,12 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
             allGroupMembers.add(from);
         }
         if (!normalizeGroupAtOrReject(packet, allGroupMembers)) {
+            MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.GROUP_AT_MENTION_INVALID_ERROR);
             MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
             return Mono.empty();
         }
         if (!MessageRefHelper.normalizeMessageRefOrReject(packet)) {
+            MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_REF_INVALID_ERROR);
             MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
             return Mono.empty();
         }
@@ -138,6 +144,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
                                     "群聊持久化异常: " + error.getMessage(),
                                     "GroupMessageBiProcessor.process", packet, error);
                             MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
+                            MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
                             return Mono.empty();
                         }));
     }
@@ -181,6 +188,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
                 ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR)
                 .doOnNext(success -> {
                     if (!Boolean.TRUE.equals(success)) {
+                        MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.UNKNOWN_ERROR);
                         MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
                     }
                 })
@@ -223,6 +231,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
                 ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR)
                 .doOnNext(success -> {
                     if (!Boolean.TRUE.equals(success)) {
+                        MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.UNKNOWN_ERROR);
                         MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
                     }
                 })

@@ -5,6 +5,7 @@ import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.core.exception.ExceptionReporter;
 import com.ouyunc.message.context.MessageServerContext;
+import io.netty.channel.ChannelHandlerContext;
 import org.redisson.api.RLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,7 +30,8 @@ public final class DistributedLockHelper {
      * @param errorCode    锁内业务异常时上报的错误码
      * @param lockedAction 锁内执行的业务逻辑
      */
-    public static void runWithLock(Packet packet, String lockKey, ExceptionCodeEnum errorCode, Runnable lockedAction) {
+    public static void runWithLock(ChannelHandlerContext ctx, Packet packet, String lockKey,
+                                   ExceptionCodeEnum errorCode, Runnable lockedAction) {
         RLock lock = MessageServerContext.redissonClient.getLock(lockKey);
         try {
             // 不传 lease：Redisson 看门狗续期，避免关系更新未完成锁已过期
@@ -44,13 +46,16 @@ public final class DistributedLockHelper {
             } else {
                 log.error("获取分布式锁超时, lockKey={}, packet={}", lockKey, packet);
                 ExceptionReporter.reportSystem(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, "获取分布式锁超时", SCENE, packet);
+                MessageSendResultHelper.retryLater(ctx, packet, ExceptionCodeEnum.ACQUIRE_LOCK_ERROR);
             }
         } catch (InterruptedException ie) {
             Thread.currentThread().interrupt();
             log.warn("分布式锁等待被中断, lockKey={}", lockKey);
+            MessageSendResultHelper.retryLater(ctx, packet, ExceptionCodeEnum.ACQUIRE_LOCK_ERROR);
         } catch (Exception e) {
             log.error("分布式锁内业务异常, lockKey={}, 原因: {}", lockKey, e.getMessage(), e);
             ExceptionReporter.reportSystem(errorCode, "锁内业务异常: " + e.getMessage(), SCENE, packet, e);
+            MessageSendResultHelper.unknown(ctx, packet, errorCode);
         }
     }
 }

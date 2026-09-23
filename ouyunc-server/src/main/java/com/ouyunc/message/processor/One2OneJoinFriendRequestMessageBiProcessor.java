@@ -19,6 +19,7 @@ import com.ouyunc.domain.entity.UserEntity;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.DistributedLockHelper;
 import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
+import com.ouyunc.message.helper.MessageSendResultHelper;
 import com.ouyunc.message.helper.RequestNotifyHelper;
 import com.ouyunc.message.validator.AuthValidator;
 import com.ouyunc.message.validator.BlackListValidator;
@@ -76,15 +77,15 @@ public final class One2OneJoinFriendRequestMessageBiProcessor extends AbstractMe
     public Mono<Void> process(ChannelHandlerContext ctx, Packet packet) {
         Message message = packet.getMessage();
         String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
-        return MessageAcceptPipelineHelper.confirmThenRun(MqConstant.MQ_FRIEND_REQUEST_TOPIC, sessionId, packet, () -> {
+        return MessageAcceptPipelineHelper.confirmThenRun(ctx, MqConstant.MQ_FRIEND_REQUEST_TOPIC, sessionId, packet, () -> {
             String appKey = message.getMetadata().getAppKey();
             String lockKey = CacheConstant.buildFriendRequestLockCacheKey(appKey, sessionId);
-            DistributedLockHelper.runWithLock(packet, lockKey, ExceptionCodeEnum.BIND_FRIEND_ERROR, () -> {
+            DistributedLockHelper.runWithLock(ctx, packet, lockKey, ExceptionCodeEnum.BIND_FRIEND_ERROR, () -> {
                 RequestSession requestSession = repository().getFriendRequestSession(appKey, message.getFrom(), message.getTo());
                 if (repository().isFriend(appKey, message.getFrom(), message.getTo())) {
                     log.warn("已经是好友, 幂等 ACK; {}", packet);
                     RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.userOnly(message.getFrom()));
-                    MessageAcceptPipelineHelper.ackRequestSettled(ctx, packet);
+                    MessageAcceptPipelineHelper.requestAccepted(ctx, packet);
                     return;
                 }
                 if (null != requestSession && requestSession.getProgress() > RequestSessionProgress.JOINING.value()) {
@@ -97,7 +98,7 @@ public final class One2OneJoinFriendRequestMessageBiProcessor extends AbstractMe
                 if (toUserEntity == null) {
                     log.error("对方:{} 不存在，请检查数据！", message.getTo());
                     ExceptionReporter.reportBusiness(ExceptionCodeEnum.USER_NOT_EXIST, message.getTo() + "用户不存在！", "One2OneJoinFriendRequestMessageBiProcessor.process", packet);
-                    MessageAcceptPipelineHelper.ackRequestSettled(ctx, packet);
+                    MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
                     return;
                 }
                 RequestSession session = requestSession != null ? requestSession
@@ -108,6 +109,7 @@ public final class One2OneJoinFriendRequestMessageBiProcessor extends AbstractMe
                     if (!repository().autoPassBindFriend(packet, session, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
                         log.error("自动处理绑定好友失败: {}", packet);
                         ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一自动绑定好友请求消息异常!", "One2OneJoinFriendRequestMessageBiProcessor.process", packet);
+                        com.ouyunc.message.helper.MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
                         return;
                     }
                     RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.userOnly(message.getFrom()));
@@ -116,11 +118,12 @@ public final class One2OneJoinFriendRequestMessageBiProcessor extends AbstractMe
                     if (!repository().saveJoinFriendRequestMessage(packet, session, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
                         log.error("Failed to save one-to-one join friend request message: {}", packet);
                         ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一加好友请求消息异常!", "One2OneJoinFriendRequestMessageBiProcessor.process", packet);
+                        com.ouyunc.message.helper.MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
                         return;
                     }
                     RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.userOnly(message.getTo()));
                 }
-                MessageAcceptPipelineHelper.ackRequestSettled(ctx, packet);
+                MessageAcceptPipelineHelper.requestAccepted(ctx, packet);
             });
         });
     }

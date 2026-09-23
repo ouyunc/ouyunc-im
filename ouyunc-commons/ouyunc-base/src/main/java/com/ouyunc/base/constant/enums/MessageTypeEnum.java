@@ -9,8 +9,8 @@ import com.ouyunc.base.constant.NumberConstant;
 public enum MessageTypeEnum implements MessageType {
     PING_PONG(NumberConstant.NUMBER_NEGATIVE_1, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(),"ping_pong",  "外部客户端心跳消息"),
     LOGIN(NumberConstant.NUMBER_NEGATIVE_2, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), "login",  "外部客户端登录消息") ,
-    QOS_S2C_ACK(NumberConstant.NUMBER_NEGATIVE_3, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), "s2c_ack",  "qos  服务端发送给客户端的，标识服务端已收到客户端传来的消息"),
     QOS_C2S_ACK(NumberConstant.NUMBER_NEGATIVE_4, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), "c2s_ack",  "qos  客户端发送给服务端的，标识客户端已经收到服务端发来的消息"),
+    MESSAGE_SEND_RESULT(NumberConstant.NUMBER_NEGATIVE_5, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), "message_send_result", "服务端返回的逐消息受理结果"),
 
 
     ONE_2_ONE(NumberConstant.NUMBER_NEGATIVE_6, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), "one_2_one",  "私聊"),

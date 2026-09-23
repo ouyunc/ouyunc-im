@@ -17,6 +17,7 @@ import com.ouyunc.base.constant.enums.IdentityType;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.AtMentionHelper;
 import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
+import com.ouyunc.message.helper.MessageSendResultHelper;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageDeliveryRouteHelper;
 import com.ouyunc.message.helper.MessageHelper;
@@ -61,7 +62,7 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
         if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
             return Mono.just(false);
         }
-        return MessageAcceptPipelineHelper.gateWhenPassed(packet,
+        return MessageAcceptPipelineHelper.gateWhenPassed(ctx, packet,
                 PermissionValidator.INSTANCE.negate()
                         .or(One2OneChatAccessValidator.INSTANCE)
                         .or(FromToValidator.INSTANCE)
@@ -84,6 +85,7 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
         }
         AtMentionHelper.clearAtIfPresent(packet.getMessage());
         if (!MessageRefHelper.normalizeMessageRefOrReject(packet)) {
+            MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_REF_INVALID_ERROR);
             MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
             return Mono.empty();
         }
@@ -105,6 +107,7 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
                                     "单聊持久化异常: " + error.getMessage(),
                                     "One2OneMessageBiProcessor.process", packet, error);
                             MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
+                            MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
                             return Mono.empty();
                         }));
     }
@@ -157,6 +160,7 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
                 ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR)
                 .doOnNext(success -> {
                     if (!Boolean.TRUE.equals(success)) {
+                        MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.UNKNOWN_ERROR);
                         MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
                     }
                 })
@@ -185,6 +189,7 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
                 ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR)
                 .doOnNext(success -> {
                     if (!Boolean.TRUE.equals(success)) {
+                        MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.UNKNOWN_ERROR);
                         MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
                     }
                 })

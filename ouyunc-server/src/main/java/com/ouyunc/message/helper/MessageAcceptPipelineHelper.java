@@ -53,7 +53,7 @@ public final class MessageAcceptPipelineHelper {
 
     /**
      * 内容安全检查通过后旁路归档，再执行后续热写。
-     * <p>REJECT：回写通知、释放 QoS 占位、不 ACK、不归档。MASK 已原地改写 content，归档与热写同文。</p>
+     * <p>REJECT：回写拒绝结果、释放 QoS 占位、不归档。MASK 已原地改写 content，归档与热写同文。</p>
      *
      * @param next 归档确认后的热写/投递链
      */
@@ -63,26 +63,37 @@ public final class MessageAcceptPipelineHelper {
             releaseQosOnFailure(packet);
             return Mono.empty();
         }
-        return archiveAfterAuth(packet).then(Mono.defer(() -> next));
+        return archiveAfterAuth(packet).thenReturn(true)
+                .onErrorResume(error -> {
+                    log.error("消息归档确认结果未知, messageId={}", packet.getMessage().getId(), error);
+                    MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.MQ_PERSISTENCE_ERROR);
+                    return Mono.just(false);
+                })
+                .flatMap(archived -> Boolean.TRUE.equals(archived) ? next : Mono.empty());
     }
 
     /**
      * 业务校验通过后仅放行，不归档。单聊/群聊应在 process 内规范化与内容安全后再归档。
      *
      * @param shouldReject true 表示拦截
-     * @param onReject     拦截时回调（如释放 QoS claim），可为 null；聊天消息拒绝时不要 ACK
+     * @param onReject     拦截时回调（如释放 QoS claim），可为 null
      * @param rejectLog    拒绝日志模板，可含一个 {@code {}} 占位 packet
      */
-    public static Mono<Boolean> gateWhenPassed(Packet packet, Mono<Boolean> shouldReject,
+    public static Mono<Boolean> gateWhenPassed(ChannelHandlerContext ctx, Packet packet, Mono<Boolean> shouldReject,
                                                Runnable onReject, String rejectLog) {
         return shouldReject
                 .onErrorResume(error -> {
-                    log.error("校验过程中出现异常: {}", error.getMessage());
-                    return Mono.just(true);
+                    log.error("校验过程中出现异常: {}", error.getMessage(), error);
+                    MessageSendResultHelper.retryLater(ctx, packet, ExceptionCodeEnum.UNKNOWN_ERROR);
+                    if (onReject != null) {
+                        onReject.run();
+                    }
+                    return Mono.empty();
                 })
                 .map(reject -> {
                     if (Boolean.TRUE.equals(reject)) {
                         log.warn(rejectLog, packet);
+                        MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
                         if (onReject != null) {
                             onReject.run();
                         }
@@ -92,42 +103,21 @@ public final class MessageAcceptPipelineHelper {
                 });
     }
 
-    /**
-     * 业务校验通过后归档并返回 true；拒绝则回调 onReject 并返回 false。
-     * <p>好友/群请求等仍可用；单聊/群聊请用 {@link #gateWhenPassed} + {@link #archiveAfterContentReady}。</p>
-     *
-     * @param shouldReject true 表示拦截
-     * @param onReject     拦截时回调（如释放 QoS claim），可为 null；聊天消息拒绝时不要 ACK
-     * @param rejectLog    拒绝日志模板，可含一个 {@code {}} 占位 packet
-     */
-    public static Mono<Boolean> continueWhenPassed(Packet packet, Mono<Boolean> shouldReject,
-                                                   Runnable onReject, String rejectLog) {
-        return gateWhenPassed(packet, shouldReject, onReject, rejectLog)
-                .flatMap(passed -> {
-                    if (!Boolean.TRUE.equals(passed)) {
-                        return Mono.just(false);
-                    }
-                    return archiveAfterAuth(packet).thenReturn(true);
-                });
-    }
-
-    /**
-     * 好友/群请求：权限拒绝视为已定性，回 S2C ACK 停 QoS 重试。
-     */
+    /** 好友/群请求权限拒绝时返回明确拒绝结果。 */
     public static Mono<Boolean> continueWhenPassedOrAck(ChannelHandlerContext ctx, Packet packet,
                                                         Mono<Boolean> shouldReject, String rejectLog) {
-        return continueWhenPassed(packet, shouldReject, () -> ackRequestSettled(ctx, packet), rejectLog);
+        return gateWhenPassed(ctx, packet, shouldReject, null, rejectLog)
+                .flatMap(passed -> Boolean.TRUE.equals(passed)
+                        ? archiveAfterAuth(packet).thenReturn(true) : Mono.just(false));
+    }
+
+    /** 请求成功落库或确认已处理后回已受理结果；业务拒绝不可调用。 */
+    public static void requestAccepted(ChannelHandlerContext ctx, Packet packet) {
+        MessageSendResultHelper.accepted(ctx, packet);
     }
 
     /**
-     * 请求已定性或 Redis 成功：回 ACK。写库/绑定失败不要调用。
-     */
-    public static void ackRequestSettled(ChannelHandlerContext ctx, Packet packet) {
-        QosAckHelper.sendS2cAck(ctx, packet);
-    }
-
-    /**
-     * Redis 热写结果收口：仅 SUCCESS/DUPLICATE 可 ACK；FAILED/CONFLICT 绝不 ACK。
+     * Redis 热写结果收口：仅 SUCCESS/DUPLICATE 可回已受理；FAILED/CONFLICT 返回失败结果。
      * 仅 {@link SaveMessageOutcome#isFreshWrite()} 时执行 {@code onFreshWrite}。
      */
     public static Mono<Void> afterHotSave(ChannelHandlerContext ctx, Packet packet, SaveMessageOutcome result,
@@ -140,20 +130,29 @@ public final class MessageAcceptPipelineHelper {
             log.error("热写未成功，拒绝 ACK/投递: outcome={} packetId={}", result, packet.getPacketId());
             ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, failEventMessage != null ? failEventMessage : "消息热写失败", "MessageAcceptPipelineHelper.afterHotSave", packet);
             releaseQosOnFailure(packet);
+            if (result == SaveMessageOutcome.CONFLICT) {
+                MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_ID_CONFLICT);
+            } else {
+                // Redis 写入超时可能已提交，不能向客户端承诺“未写入”。
+                MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
+            }
             return Mono.empty();
         }
         qosAckOnSuccess(ctx, packet);
         if (onFreshWrite != null) {
-            onFreshWrite.run();
+            try {
+                onFreshWrite.run();
+            } catch (Exception error) {
+                // 主消息已经提交，派生索引或实时投递失败不能撤销成功结果。
+                log.error("消息已受理，但后续副作用失败, messageId={}", packet.getMessage().getId(), error);
+            }
         }
         return Mono.empty();
     }
 
-    /** 热写成功或幂等命中后回 ACK；QoS 关闭时 no-op。 */
+    /** 热写成功或幂等命中后回受理结果，独立于业务 QoS 开关。 */
     public static void qosAckOnSuccess(ChannelHandlerContext ctx, Packet packet) {
-        if (MessageContext.isQosEnable()) {
-            QosAckHelper.sendS2cAck(ctx, packet);
-        }
+        MessageSendResultHelper.accepted(ctx, packet);
     }
 
     /** 热写/校验失败时释放尚未 commit 的 QoS 占位。 */
@@ -165,10 +164,16 @@ public final class MessageAcceptPipelineHelper {
 
     /**
      * 业务事件先等 MQ broker 确认，再跑 Redis/通知。
-     * 失败不 ACK，交给客户端重试。
+     * 确认结果不明时返回 UNKNOWN，客户端使用同一 messageId 核对或重试。
      */
-    public static Mono<Void> confirmThenRun(String topic, String key, Packet packet, Runnable next) {
+    public static Mono<Void> confirmThenRun(ChannelHandlerContext ctx, String topic, String key,
+                                            Packet packet, Runnable next) {
         return MessageArchiveHelper.confirm(() -> repository().publishPacketConfirmed(topic, key, packet))
-                .then(Mono.fromRunnable(next));
+                .then(Mono.<Void>fromRunnable(next))
+                .onErrorResume(error -> {
+                    log.error("请求归档结果未知, messageId={}", packet.getMessage().getId(), error);
+                    MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.MQ_PERSISTENCE_ERROR);
+                    return Mono.<Void>empty();
+                });
     }
 }

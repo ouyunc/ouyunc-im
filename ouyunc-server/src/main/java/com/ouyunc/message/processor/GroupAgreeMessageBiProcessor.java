@@ -13,6 +13,7 @@ import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.exception.ExceptionReporter;
 import com.ouyunc.message.helper.DistributedLockHelper;
 import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
+import com.ouyunc.message.helper.MessageSendResultHelper;
 import com.ouyunc.message.helper.RequestNotifyHelper;
 import com.ouyunc.message.validator.*;
 import io.netty.channel.ChannelHandlerContext;
@@ -65,7 +66,7 @@ public final class GroupAgreeMessageBiProcessor extends AbstractMessageBiProcess
         Message message = packet.getMessage();
         if (MessageContentTypeEnum.GROUP_REQUEST_CONTENT.getType() != message.getContentType()) {
             log.error("消息内容类型:{} 不是群请求类型，请检查消息内容类型是否正确", message.getContentType());
-            MessageAcceptPipelineHelper.ackRequestSettled(ctx, packet);
+            MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
             return Mono.empty();
         }
         Object contentObj = JSON.parseObject(message.getContent(), MessageContentTypeEnum.GROUP_REQUEST_CONTENT.getContentClass());
@@ -75,50 +76,50 @@ public final class GroupAgreeMessageBiProcessor extends AbstractMessageBiProcess
         } else {
             log.error("消息内容类型:{} 不是群请求类型，请检查消息内容类型是否正确", message.getContentType());
             ExceptionReporter.reportBusiness(ExceptionCodeEnum.MESSAGE_CONTENT_TYPE_ERROR, "消息内容类型错误", "GroupAgreeMessageBiProcessor.process", packet);
-            MessageAcceptPipelineHelper.ackRequestSettled(ctx, packet);
+            MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
             return Mono.empty();
         }
         String appKey = message.getMetadata().getAppKey();
-        return MessageAcceptPipelineHelper.confirmThenRun(MqConstant.MQ_GROUP_REQUEST_TOPIC, message.getTo(), packet, () -> {
+        return MessageAcceptPipelineHelper.confirmThenRun(ctx, MqConstant.MQ_GROUP_REQUEST_TOPIC, message.getTo(), packet, () -> {
             String lockKey = CacheConstant.buildGroupRequestLockCacheKey(appKey, content.getIdentity(), message.getTo());
-            DistributedLockHelper.runWithLock(packet, lockKey, ExceptionCodeEnum.BIND_GROUP_ERROR, () -> {
+            DistributedLockHelper.runWithLock(ctx, packet, lockKey, ExceptionCodeEnum.BIND_GROUP_ERROR, () -> {
                 GroupRequestSession groupRequestSession = repository().getGroupRequestSession(appKey, content.getIdentity(), message.getTo());
                 if (null == groupRequestSession || !RequestSessionProgress.JOINING.value().equals(groupRequestSession.getProgress())) {
                     log.warn("{} 和 {} 会话请求不存在正在处理中的群请求，或者存在有还未结束的同意或拒绝处理", content.getIdentity(), message.getTo());
-                    MessageAcceptPipelineHelper.ackRequestSettled(ctx, packet);
+                    MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
                     return;
                 }
                 GroupRequestSessionWay way = GroupRequestSessionWay.valueOf(groupRequestSession.getWay());
                 if (way == null) {
                     log.error("非法群会话请求方式：{}", groupRequestSession.getWay());
-                    MessageAcceptPipelineHelper.ackRequestSettled(ctx, packet);
+                    MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
                     return;
                 }
                 if (GroupRequestSessionWay.INVITED.equals(way) && message.getFrom().equals(content.getIdentity())) {
                     log.warn("发送方: {} 和加入方: {} 相同，忽略 该请求", message.getFrom(), content.getIdentity());
-                    MessageAcceptPipelineHelper.ackRequestSettled(ctx, packet);
+                    MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
                     return;
                 }
                 if (GroupRequestSessionWay.INVITED.equals(way) && !GroupJoinerProcessStatus.AGREE.value().equals(groupRequestSession.getJoinerProcessStatus())) {
                     log.error("被邀请人 {} 尚未同意邀请，请等待", groupRequestSession.getJoiner());
-                    MessageAcceptPipelineHelper.ackRequestSettled(ctx, packet);
+                    MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
                     return;
                 }
                 if (repository().inGroup(appKey, content.getIdentity(), message.getTo())) {
                     log.warn("该用户 {} 已经加入群组 {}", content.getIdentity(), message.getTo());
-                    MessageAcceptPipelineHelper.ackRequestSettled(ctx, packet);
+                    MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
                     return;
                 }
                 Map<String, Double> groupMannerOrLeaderUsersIdentityAndPostMap = repository().groupManagerAndLeaderUsersIdentityAndPost(packet);
                 if (MapUtils.isEmpty(groupMannerOrLeaderUsersIdentityAndPostMap)) {
                     log.error("群组：{}, 不存在群主！群消息： {}", packet.getMessage().getTo(), packet);
                     ExceptionReporter.reportBusiness(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群主和群管理员", "GroupAgreeMessageBiProcessor.process", packet);
-                    MessageAcceptPipelineHelper.ackRequestSettled(ctx, packet);
+                    MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
                     return;
                 }
                 if (!groupMannerOrLeaderUsersIdentityAndPostMap.containsKey(message.getFrom())) {
                     log.error("处理人不是管理员或群主：{} 不允许处理", message.getFrom());
-                    MessageAcceptPipelineHelper.ackRequestSettled(ctx, packet);
+                    MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
                     return;
                 }
                 Double processorPost = groupMannerOrLeaderUsersIdentityAndPostMap.remove(message.getFrom());
@@ -128,11 +129,12 @@ public final class GroupAgreeMessageBiProcessor extends AbstractMessageBiProcess
                 if (!repository().manualPassBindGroup(packet, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
                     log.error("手动处理绑定群组失败: {}", packet);
                     ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "手动绑定群组请求消息异常!", "GroupAgreeMessageBiProcessor.process", packet);
+                    com.ouyunc.message.helper.MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
                     return;
                 }
                 RequestNotifyHelper.dispatch(ctx, packet, appKey,
                         RequestNotifyHelper.withUser(RequestNotifyHelper.copyExcept(groupMannerOrLeaderUsersIdentityAndPostMap.keySet(), message.getFrom()), content.getIdentity()));
-                MessageAcceptPipelineHelper.ackRequestSettled(ctx, packet);
+                MessageAcceptPipelineHelper.requestAccepted(ctx, packet);
             });
         });
     }

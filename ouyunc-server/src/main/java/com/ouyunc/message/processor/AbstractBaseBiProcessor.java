@@ -9,7 +9,7 @@ import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.processor.BiProcessor;
 import com.ouyunc.core.qos.Qos;
-import com.ouyunc.message.helper.QosAckHelper;
+import com.ouyunc.message.helper.MessageSendResultHelper;
 import com.ouyunc.repository.DefaultRepository;
 import com.ouyunc.repository.Repository;
 import io.netty.channel.ChannelHandlerContext;
@@ -68,6 +68,6 @@ public abstract class AbstractBaseBiProcessor<R, T extends Number>
      */
     @Override
     public void qosPostHandle(ChannelHandlerContext ctx, Packet packet) {
-        QosAckHelper.sendS2cAck(ctx, packet);
+        MessageSendResultHelper.accepted(ctx, packet);
     }
 }
