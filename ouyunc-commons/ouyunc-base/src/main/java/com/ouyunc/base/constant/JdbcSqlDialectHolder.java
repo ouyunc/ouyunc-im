@@ -78,8 +78,18 @@ public final class JdbcSqlDialectHolder {
         return pick(JdbcSqlConstant.POSTGRESQL.SELECT_GROUP_USER_BATCH, JdbcSqlConstant.ORACLE.SELECT_GROUP_USER_BATCH, JdbcSqlConstant.MYSQL.SELECT_GROUP_USER_BATCH);
     }
 
+    /**
+     * 群成员回源必须带 {@code :limit}（调用方传上限+1），禁止无界全表灌入 JVM。
+     */
     public static String selectAllGroupUser() {
-        return pick(JdbcSqlConstant.POSTGRESQL.SELECT_ALL_GROUP_USER, JdbcSqlConstant.ORACLE.SELECT_ALL_GROUP_USER, JdbcSqlConstant.MYSQL.SELECT_ALL_GROUP_USER);
+        String sql = pick(JdbcSqlConstant.POSTGRESQL.SELECT_ALL_GROUP_USER, JdbcSqlConstant.ORACLE.SELECT_ALL_GROUP_USER, JdbcSqlConstant.MYSQL.SELECT_ALL_GROUP_USER);
+        if (sql != null && sql.contains(":limit")) {
+            return sql;
+        }
+        if (isOracle()) {
+            return "SELECT * FROM (" + sql + ") WHERE ROWNUM <= :limit";
+        }
+        return sql + " LIMIT :limit";
     }
 
     public static String countGroupUsersByGroup() {

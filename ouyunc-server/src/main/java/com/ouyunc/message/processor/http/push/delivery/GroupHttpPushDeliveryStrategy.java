@@ -52,52 +52,30 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
     public void preProcess(Packet packet) throws HttpPipelineException {
         HttpPushValidatorChain.verifyGroup(packet);
         HttpPushDeliverySupport.requireValidMessageRef(packet);
-        Set<String> groupUserIdentitySet;
-        try {
-            groupUserIdentitySet = DefaultRepository.INSTANCE.groupUsersIdentity(packet);
-        } catch (GroupMembershipSupport.GroupMembershipLoadException e) {
-            throw HttpPushFailures.serverError(packet, "群成员回源失败: " + e.getMessage());
-        }
-        if (CollectionUtils.isEmpty(groupUserIdentitySet)) {
-            throw HttpPushFailures.forbidden(packet, ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群成员");
-        }
+        Message message = packet.getMessage();
+        String appKey = message.getMetadata().getAppKey();
+        String groupId = message.getTo();
         boolean skipSenderMembership = IngressPacketHelper.isHttpPush(packet)
-                && IngressPacketHelper.isSystemLikeSender(packet.getMessage());
-        if (!skipSenderMembership && !groupUserIdentitySet.contains(packet.getMessage().getFrom())) {
+                && IngressPacketHelper.isSystemLikeSender(message);
+        if (!skipSenderMembership && !DefaultRepository.INSTANCE.inGroup(appKey, message.getFrom(), groupId)) {
             throw HttpPushFailures.forbidden(packet, ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "发送者不在群组中");
         }
-        String from = packet.getMessage().getFrom();
-        Set<String> allGroupMembers = groupUserIdentitySet;
-        if (skipSenderMembership && from != null && !groupUserIdentitySet.contains(from)) {
-            allGroupMembers = new HashSet<>(groupUserIdentitySet);
-            allGroupMembers.add(from);
-        }
-        requireValidGroupAt(packet, allGroupMembers);
-        // process 复用受理时刻不可变快照，不再二次全量查询、不再 copy/remove
-        HttpPushDeliverySupport.stashGroupMembers(packet, groupUserIdentitySet);
+        requireValidGroupAt(packet, appKey, groupId);
     }
 
     @Override
     public Mono<Boolean> processMono(Packet packet) {
-        Set<String> groupUserIdentitySet = HttpPushDeliverySupport.takeGroupMembers(packet);
-        if (CollectionUtils.isEmpty(groupUserIdentitySet)) {
-            log.error("HTTP 推送群组缺少 preProcess 缓存的成员, group={}, packetId={}",
-                    packet.getMessage().getTo(), packet.getPacketId());
-            HttpPushDeliverySupport.publishException(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR,
-                    "群成员缓存丢失", packet);
-            return Mono.just(false);
-        }
         int contentType = packet.getMessage().getContentType();
         if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {
             return handleReadReceipt(packet);
         }
         if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
-            return handleWithdraw(packet, groupUserIdentitySet);
+            return handleWithdraw(packet);
         }
-        return saveAndDeliverChat(packet, groupUserIdentitySet);
+        return saveAndDeliverChat(packet);
     }
 
-    private Mono<Boolean> saveAndDeliverChat(Packet packet, Set<String> groupUserIdentitySet) {
+    private Mono<Boolean> saveAndDeliverChat(Packet packet) {
         return DefaultRepository.INSTANCE.reactiveSaveMessage(packet, packet.getMessage().getTo(),
                         MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)
                 .flatMap(outcome -> {
@@ -120,7 +98,7 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
                                     MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
                             .subscribe(ignored -> { }, e -> log.warn(
                                     "HTTP 推送更新群聊已读 offset 失败, packetId={}", packet.getPacketId(), e));
-                    pushGroupOnline(packet, groupUserIdentitySet);
+                    pushGroupOnline(packet);
                     return Mono.just(true);
                 })
                 .onErrorResume(error -> {
@@ -132,7 +110,7 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
                 });
     }
 
-    private Mono<Boolean> handleWithdraw(Packet packet, Set<String> groupUserIdentitySet) {
+    private Mono<Boolean> handleWithdraw(Packet packet) {
         String sessionId = packet.getMessage().getTo();
         Set<String> leaderOrManagerIdentitySet = DefaultRepository.INSTANCE.groupManagerAndLeaderUsersIdentity(packet);
         boolean leaderOrManager = CollectionUtils.isNotEmpty(leaderOrManagerIdentitySet)
@@ -152,7 +130,7 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
                                     DefaultRepository.INSTANCE.refreshSessionLastMessageAfterWithdraw(appKey, sessionId);
                                 }
                             }
-                            deliverWithdraw(packet0, groupUserIdentitySet);
+                            deliverWithdraw(packet0);
                         },
                         ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR)
                 .map(Boolean.TRUE::equals);
@@ -177,53 +155,64 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
         HttpPushDeliverySupport.syncSenderOnlineDevices(packet, packet.getMessage().getFrom());
     }
 
-    private static void deliverWithdraw(Packet packet, Set<String> groupMembers) {
+    private static void deliverWithdraw(Packet packet) {
         HttpPushDeliverySupport.syncSenderOnlineDevices(packet, packet.getMessage().getFrom());
-        MessageDeliveryRouteHelper.deliverGroupMembers(packet, groupMembers);
+        MessageDeliveryRouteHelper.deliverGroupMembers(packet, loadFullMembersOrEmpty(packet));
     }
 
-    private static void pushGroupOnline(Packet packet, Set<String> groupMembers) {
+    private static void pushGroupOnline(Packet packet) {
         Message message = packet.getMessage();
         HttpPushDeliverySupport.syncSenderOnlineDevices(packet, message.getFrom());
         GroupMessagePushModeEnum mode = MessageServerContext.serverProperties().getGroupMessagePushMode();
         if (GroupMessagePushModeEnum.PUSH.equals(mode)) {
-            deliverToAllGroupMembers(packet, groupMembers);
-        } else if (GroupMessagePushModeEnum.PULL.equals(mode)) {
-            List<String> atList = message.getAt();
-            if (CollectionUtils.isNotEmpty(atList)) {
-                deliverToAtMembers(packet, atList, groupMembers);
-            }
-        } else if (GroupMessagePushModeEnum.PULL_PUSH.equals(mode)) {
-            if (groupMembers.size() > MessageServerContext.serverProperties().getGroupMessageThreshold()) {
-                List<String> atList = message.getAt();
-                if (CollectionUtils.isNotEmpty(atList)) {
-                    deliverToAtMembers(packet, atList, groupMembers);
-                }
-            } else {
-                deliverToAllGroupMembers(packet, groupMembers);
-            }
-        } else {
-            log.warn("HTTP 推送暂不支持群消息推送模式: {}", mode);
+            deliverToAllGroupMembers(packet, loadFullMembersOrEmpty(packet));
+            return;
         }
+        if (GroupMessagePushModeEnum.PULL.equals(mode)) {
+            deliverAtMentionsIfAny(packet);
+            return;
+        }
+        if (GroupMessagePushModeEnum.PULL_PUSH.equals(mode)) {
+            long memberCount = DefaultRepository.INSTANCE.groupMemberCount(
+                    message.getMetadata().getAppKey(), message.getTo());
+            if (memberCount > MessageServerContext.serverProperties().getGroupMessageThreshold()) {
+                deliverAtMentionsIfAny(packet);
+            } else {
+                deliverToAllGroupMembers(packet, loadFullMembersOrEmpty(packet));
+            }
+            return;
+        }
+        log.warn("HTTP 推送暂不支持群消息推送模式: {}", mode);
     }
 
     private static void deliverToAllGroupMembers(Packet packet, Set<String> groupMembers) {
         MessageDeliveryRouteHelper.deliverGroupMembers(packet, groupMembers);
     }
 
-    private static void deliverToAtMembers(Packet packet, List<String> atList, Set<String> groupMembers) {
-        Set<String> targets = AtMentionHelper.resolveDeliveryTargets(atList, groupMembers);
-        Message message = packet.getMessage();
-        String groupId = message.getTo();
-        String senderId = message.getFrom();
-        targets.forEach(member -> {
-            if (member != null && !member.equals(senderId)) {
-                MessageDeliveryRouteHelper.deliverGroupMember(packet, groupId, member);
-            }
-        });
+    private static void deliverAtMentionsIfAny(Packet packet) {
+        List<String> atList = packet.getMessage().getAt();
+        if (CollectionUtils.isEmpty(atList)) {
+            return;
+        }
+        if (AtMentionHelper.containsAtAll(atList)) {
+            deliverToAllGroupMembers(packet, loadFullMembersOrEmpty(packet));
+            return;
+        }
+        MessageDeliveryRouteHelper.deliverGroupMembers(packet, new HashSet<>(atList));
     }
 
-    private static void requireValidGroupAt(Packet packet, Set<String> allGroupMembers)
+    private static Set<String> loadFullMembersOrEmpty(Packet packet) {
+        try {
+            Set<String> members = DefaultRepository.INSTANCE.groupUsersIdentity(packet);
+            return members == null ? Set.of() : members;
+        } catch (GroupMembershipSupport.GroupMembershipLoadException e) {
+            log.error("HTTP 枚举群成员失败 group={} packetId={}",
+                    packet.getMessage().getTo(), packet.getPacketId(), e);
+            return Set.of();
+        }
+    }
+
+    private static void requireValidGroupAt(Packet packet, String appKey, String groupId)
             throws HttpPipelineException {
         Message message = packet.getMessage();
         List<String> at = message.getAt();
@@ -231,8 +220,10 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
             return;
         }
         try {
-            message.setAt(AtMentionHelper.normalizeAndValidate(at, allGroupMembers));
-        } catch (IllegalArgumentException ex) {
+            List<String> explicit = AtMentionHelper.explicitMemberIds(at);
+            Set<String> confirmed = DefaultRepository.INSTANCE.presentInGroup(appKey, groupId, explicit);
+            message.setAt(AtMentionHelper.normalizeAndValidate(at, confirmed));
+        } catch (GroupMembershipSupport.GroupMembershipLoadException | IllegalArgumentException ex) {
             throw HttpPushFailures.forbidden(packet, ExceptionCodeEnum.GROUP_AT_MENTION_INVALID_ERROR, ex.getMessage());
         }
     }

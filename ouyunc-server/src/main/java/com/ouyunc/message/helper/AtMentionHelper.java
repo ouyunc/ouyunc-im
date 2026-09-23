@@ -20,8 +20,41 @@ public final class AtMentionHelper {
     private AtMentionHelper() {
     }
 
+    public static boolean containsAtAll(List<String> rawAt) {
+        if (CollectionUtils.isEmpty(rawAt)) {
+            return false;
+        }
+        for (String item : rawAt) {
+            if (AtTargetEnum.isAtAll(StringUtils.trim(item))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 去重后的显式 @ 成员（不含 @all / 空串），用于点查是否在群。
+     */
+    public static List<String> explicitMemberIds(List<String> rawAt) {
+        if (CollectionUtils.isEmpty(rawAt)) {
+            return List.of();
+        }
+        LinkedHashSet<String> ids = new LinkedHashSet<>();
+        for (String item : rawAt) {
+            if (StringUtils.isBlank(item)) {
+                continue;
+            }
+            String trimmed = StringUtils.trim(item);
+            if (!AtTargetEnum.isAtAll(trimmed)) {
+                ids.add(trimmed);
+            }
+        }
+        return new ArrayList<>(ids);
+    }
+
     /**
      * 去重、校验成员/@all，超过 {@link MessageConstant#MAX_AT_TARGET_COUNT} 时抛异常。
+     * {@code confirmedMemberIds} 只需覆盖显式 @ 对象，不必是全群名单。
      */
     public static List<String> normalizeAndValidate(List<String> rawAt, Set<String> groupMemberIds) {
         if (CollectionUtils.isEmpty(rawAt)) {

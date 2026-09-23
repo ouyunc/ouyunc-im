@@ -82,40 +82,19 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
             return MessageAcceptPipelineHelper.archiveAfterContentReady(ctx, packet,
                     Mono.defer(() -> content.process(ctx, packet)));
         }
-        Set<String> groupUserIdentitySet;
-        try {
-            groupUserIdentitySet = repository().groupUsersIdentity(packet);
-        } catch (GroupMembershipSupport.GroupMembershipLoadException e) {
-            log.error("群组：{} 成员权威回源失败，拒绝当成空群丢扇出, packetId={}",
-                    packet.getMessage().getTo(), packet.getPacketId(), e);
-            ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "群成员回源失败: " + e.getMessage(), "GroupMessageBiProcessor.process", packet, e);
-            MessageSendResultHelper.retryLater(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
-            MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
-            return Mono.empty();
-        }
-        if (CollectionUtils.isEmpty(groupUserIdentitySet)) {
-            log.error("群组：{}, 不存在群成员！群消息： {}", packet.getMessage().getTo(), packet);
-            ExceptionReporter.reportBusiness(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群成员", "GroupMessageBiProcessor.process", packet);
-            MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR);
-            MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
-            return Mono.empty();
-        }
+        Message message = packet.getMessage();
+        String appKey = message.getMetadata().getAppKey();
+        String groupId = message.getTo();
         boolean skipSenderMembership = IngressPacketHelper.isHttpPush(packet)
-                && IngressPacketHelper.isSystemLikeSender(packet.getMessage());
-        String from = packet.getMessage().getFrom();
-        if (!skipSenderMembership && !groupUserIdentitySet.contains(from)) {
-            log.error("发送方：{}, 不在群组：{} 中！群消息： {}", from, packet.getMessage().getTo(), packet);
+                && IngressPacketHelper.isSystemLikeSender(message);
+        if (!skipSenderMembership && !repository().inGroup(appKey, message.getFrom(), groupId)) {
+            log.error("发送方：{}, 不在群组：{} 中！群消息： {}", message.getFrom(), groupId, packet);
             ExceptionReporter.reportBusiness(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "发送者不在群组中", "GroupMessageBiProcessor.process", packet);
             MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR);
             MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
             return Mono.empty();
         }
-        Set<String> allGroupMembers = groupUserIdentitySet;
-        if (skipSenderMembership && from != null && !groupUserIdentitySet.contains(from)) {
-            allGroupMembers = new HashSet<>(groupUserIdentitySet);
-            allGroupMembers.add(from);
-        }
-        if (!normalizeGroupAtOrReject(packet, allGroupMembers)) {
+        if (!normalizeGroupAtOrReject(packet, appKey, groupId)) {
             MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.GROUP_AT_MENTION_INVALID_ERROR);
             MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
             return Mono.empty();
@@ -125,17 +104,17 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
             MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
             return Mono.empty();
         }
-        int contentType = packet.getMessage().getContentType();
+        int contentType = message.getContentType();
         if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {
-            return handleReadReceipt(ctx, packet, groupUserIdentitySet);
+            return handleReadReceipt(ctx, packet);
         }
         if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
-            return handleWithdrawMessage(ctx, packet, groupUserIdentitySet);
+            return handleWithdrawMessage(ctx, packet);
         }
         return MessageAcceptPipelineHelper.archiveAfterContentReady(ctx, packet,
                 reactiveSaveGroupMessage(packet)
                         .flatMap(result -> MessageAcceptPipelineHelper.afterHotSave(ctx, packet, result,
-                                () -> afterGroupFreshWrite(packet, groupUserIdentitySet),
+                                () -> afterGroupFreshWrite(packet),
                                 "群聊消息写入会话失败"))
                         .onErrorResume(error -> {
                             log.error("群聊消息持久化异常, packetId={}", packet.getPacketId(), error);
@@ -148,7 +127,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
                         }));
     }
 
-    private void afterGroupFreshWrite(Packet packet, Set<String> groupUserIdentitySet) {
+    private void afterGroupFreshWrite(Packet packet) {
         try {
             repository().saveLastMessageForSession(packet.getMessage().getTo(), packet,
                     MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
@@ -161,7 +140,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
                 .subscribe(
                         ignored -> { },
                         e -> log.warn("发送消息静默更新本端已读 offset 失败, packetId={}", packet.getPacketId(), e));
-        deliver(packet, groupUserIdentitySet);
+        deliver(packet);
     }
 
 
@@ -170,7 +149,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
      * 发送方「已读」展示应走 HTTP 拉取各成员 offset 或产品层不做群聊逐条已读（见业务文档）。
      * 阅读方多端同步仍可通过 selfSync 投递给自己其它终端。
      */
-    private Mono<Void> handleReadReceipt(ChannelHandlerContext ctx, Packet packet, Set<String> groupUserIdentitySet) {
+    private Mono<Void> handleReadReceipt(ChannelHandlerContext ctx, Packet packet) {
         String sessionId = packet.getMessage().getTo();
         return repository().reactiveHandleOperation(ctx, packet,
                 repository().reactiveLoadValidatedReadReceiptPackets(
@@ -204,7 +183,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
     }
 
 
-    private Mono<Void> handleWithdrawMessage(ChannelHandlerContext ctx, Packet packet, Set<String> groupUserIdentitySet) {
+    private Mono<Void> handleWithdrawMessage(ChannelHandlerContext ctx, Packet packet) {
         String sessionId = packet.getMessage().getTo();
         // 获取当前撤销人员是否是群主或者管理员，他们是最大权限可以撤销所有成员的消息，当然也包括自己
         Set<String> leaderOrManagerIdentitySet = repository().groupManagerAndLeaderUsersIdentity(packet);
@@ -225,7 +204,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
                             repository().refreshSessionLastMessageAfterWithdraw(appKey, sessionId);
                         }
                     }
-                    deliverWithdrawMessage(packet0, groupUserIdentitySet);
+                    deliverWithdrawMessage(packet0);
                 },
                 ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR)
                 .doOnNext(success -> {
@@ -244,52 +223,38 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
      * <p>撤回是会话状态变更而非内容推送，必须触达全体成员，不受 {@code group-message.mode}
      * 推拉策略约束：PULL / 超阈值 PULL_PUSH 下只推 @ 列表会让撤回对绝大多数成员静默失效。
      * 发送方其它设备同样强制同步，与单聊 {@code forceSelfSync} 语义一致。</p>
-     *
-     * @param packet
-     * @param groupUserIdentitySet
      */
-    private void deliverWithdrawMessage(Packet packet, Set<String> groupUserIdentitySet) {
+    private void deliverWithdrawMessage(Packet packet) {
         deliver2Self(packet);
-        deliver2AllGroupMembers(packet, groupUserIdentitySet);
+        deliver2AllGroupMembers(packet, loadFullMembersOrEmpty(packet));
     }
 
-
-    /**
-     * 发送消息给接收方
-     *
-     * @param packet
-     * @param groupUserIdentitySet
-     */
-    private void deliver(Packet packet, Set<String> groupUserIdentitySet) {
+    private void deliver(Packet packet) {
         Message message = packet.getMessage();
-        ClientInfo clientInfo = MessageServerContext.localClientInfo(message.getMetadata().getAppKey(), message.getFrom());
+        String appKey = message.getMetadata().getAppKey();
+        ClientInfo clientInfo = MessageServerContext.localClientInfo(appKey, message.getFrom());
         if (clientInfo != null && clientInfo.getSelfSync()) {
             deliver2Self(packet);
         }
-        // 判断群消息的推送模式 推送还是拉取还是混合模式
-        if (GroupMessagePushModeEnum.PUSH.equals(MessageServerContext.serverProperties().getGroupMessagePushMode())) {
-            deliver2AllGroupMembers(packet, groupUserIdentitySet);
-        }else if (GroupMessagePushModeEnum.PULL.equals(MessageServerContext.serverProperties().getGroupMessagePushMode())) {
-            // 发送给@ 的人
-            List<String> atList = message.getAt();
-            if (CollectionUtils.isNotEmpty(atList)) {
-                deliver2AtMessage(packet, atList, groupUserIdentitySet);
-            }
-        }else if (GroupMessagePushModeEnum.PULL_PUSH.equals(MessageServerContext.serverProperties().getGroupMessagePushMode())) {
-            // 混合模式(推拉模式)
-            if (groupUserIdentitySet.size() > MessageServerContext.serverProperties().getGroupMessageThreshold()) {
-                // 发送给@ 的人
-                List<String> atList = message.getAt();
-                if (CollectionUtils.isNotEmpty(atList)) {
-                    deliver2AtMessage(packet, atList, groupUserIdentitySet);
-                }
-            }else {
-                // 发送全体成员
-                deliver2AllGroupMembers(packet, groupUserIdentitySet);
-            }
-        }else {
-            log.warn("暂不支持该消息推送模式:{}, 消息：{}", MessageServerContext.serverProperties().getGroupMessagePushMode(), packet);
+        GroupMessagePushModeEnum mode = MessageServerContext.serverProperties().getGroupMessagePushMode();
+        if (GroupMessagePushModeEnum.PUSH.equals(mode)) {
+            deliver2AllGroupMembers(packet, loadFullMembersOrEmpty(packet));
+            return;
         }
+        if (GroupMessagePushModeEnum.PULL.equals(mode)) {
+            deliverAtMentionsIfAny(packet);
+            return;
+        }
+        if (GroupMessagePushModeEnum.PULL_PUSH.equals(mode)) {
+            long memberCount = repository().groupMemberCount(appKey, message.getTo());
+            if (memberCount > MessageServerContext.serverProperties().getGroupMessageThreshold()) {
+                deliverAtMentionsIfAny(packet);
+            } else {
+                deliver2AllGroupMembers(packet, loadFullMembersOrEmpty(packet));
+            }
+            return;
+        }
+        log.warn("暂不支持该消息推送模式:{}, 消息：{}", mode, packet);
     }
 
     /**
@@ -321,24 +286,44 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
         MessageDeliveryRouteHelper.deliverGroupMembers(packet, groupMembers);
     }
 
-    private void deliver2AtMessage(Packet packet, List<String> atList, Set<String> groupMembers) {
-        Set<String> targets = AtMentionHelper.resolveDeliveryTargets(atList, groupMembers);
-        MessageDeliveryRouteHelper.deliverGroupMembers(packet, targets);
+    private void deliverAtMentionsIfAny(Packet packet) {
+        List<String> atList = packet.getMessage().getAt();
+        if (CollectionUtils.isEmpty(atList)) {
+            return;
+        }
+        if (AtMentionHelper.containsAtAll(atList)) {
+            deliver2AllGroupMembers(packet, loadFullMembersOrEmpty(packet));
+            return;
+        }
+        MessageDeliveryRouteHelper.deliverGroupMembers(packet, new HashSet<>(atList));
+    }
+
+    private Set<String> loadFullMembersOrEmpty(Packet packet) {
+        try {
+            Set<String> members = repository().groupUsersIdentity(packet);
+            return members == null ? Set.of() : members;
+        } catch (GroupMembershipSupport.GroupMembershipLoadException e) {
+            log.error("枚举群成员失败, groupId={} packetId={}",
+                    packet.getMessage().getTo(), packet.getPacketId(), e);
+            return Set.of();
+        }
     }
 
     /**
-     * 校验并规范化群 @ 列表；失败时发布异常事件并返回 false。
+     * 校验并规范化群 @ 列表；只点查 @ 对象，不拉全群。
      */
-    private boolean normalizeGroupAtOrReject(Packet packet, Set<String> allGroupMembers) {
+    private boolean normalizeGroupAtOrReject(Packet packet, String appKey, String groupId) {
         Message message = packet.getMessage();
         List<String> at = message.getAt();
         if (CollectionUtils.isEmpty(at)) {
             return true;
         }
         try {
-            message.setAt(AtMentionHelper.normalizeAndValidate(at, allGroupMembers));
+            List<String> explicit = AtMentionHelper.explicitMemberIds(at);
+            Set<String> confirmed = repository().presentInGroup(appKey, groupId, explicit);
+            message.setAt(AtMentionHelper.normalizeAndValidate(at, confirmed));
             return true;
-        } catch (IllegalArgumentException ex) {
+        } catch (GroupMembershipSupport.GroupMembershipLoadException | IllegalArgumentException ex) {
             log.warn("群@校验失败: {} | packet={}", ex.getMessage(), packet);
             ExceptionReporter.reportBusiness(ExceptionCodeEnum.GROUP_AT_MENTION_INVALID_ERROR, ex.getMessage(), "GroupMessageBiProcessor.process", packet);
             return false;

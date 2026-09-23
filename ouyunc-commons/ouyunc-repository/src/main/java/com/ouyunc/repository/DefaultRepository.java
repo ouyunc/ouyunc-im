@@ -124,6 +124,11 @@ public enum DefaultRepository implements Repository {
         return RepositorySupports.GROUP.groupUsersIdentity(packet);
     }
 
+    /** 少量成员是否在群；不触发完整名单回源。 */
+    public Set<String> presentInGroup(String appKey, String groupId, Collection<String> memberIds) {
+        return RepositorySupports.GROUP.presentInGroup(appKey, groupId, memberIds);
+    }
+
     /**
      * 去掉已屏蔽本群消息的成员后再扇出。屏蔽索引未就绪时返回空集（fail-closed）。
      */

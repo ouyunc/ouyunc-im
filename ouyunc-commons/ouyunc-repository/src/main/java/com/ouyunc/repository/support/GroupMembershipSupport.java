@@ -60,10 +60,12 @@ public final class GroupMembershipSupport {
     private final RepositoryInfrastructure infra;
     private final SessionMessagePersistenceSupport session;
     private static final Object[] SHIELD_REBUILD_LOCKS = new Object[MessageConstant.RELATION_REBUILD_LOCK_STRIPES];
+    private static final Object[] ROSTER_REBUILD_LOCKS = new Object[MessageConstant.RELATION_REBUILD_LOCK_STRIPES];
 
     static {
         for (int i = 0; i < SHIELD_REBUILD_LOCKS.length; i++) {
             SHIELD_REBUILD_LOCKS[i] = new Object();
+            ROSTER_REBUILD_LOCKS[i] = new Object();
         }
     }
 
@@ -113,16 +115,27 @@ public final class GroupMembershipSupport {
         if (hasGroupMemberInit(appKey, groupId)) {
             return;
         }
-        for (int attempt = 0; attempt < MessageConstant.RELATION_ROSTER_REBUILD_ATTEMPTS; attempt++) {
+        Object lock = rosterRebuildLock(appKey, groupId);
+        synchronized (lock) {
             if (hasGroupMemberInit(appKey, groupId)) {
                 return;
             }
-            String versionBefore = currentRelationVersion(appKey, groupId);
-            List<GroupUserEntity> dbMembers = loadAllGroupUsersFromAuthority(appKey, groupId);
-            if (rebuildGroupMemberRedis(appKey, groupId, dbMembers, versionBefore)) {
-                return;
+            for (int attempt = 0; attempt < MessageConstant.RELATION_ROSTER_REBUILD_ATTEMPTS; attempt++) {
+                if (hasGroupMemberInit(appKey, groupId)) {
+                    return;
+                }
+                String versionBefore = currentRelationVersion(appKey, groupId);
+                List<GroupUserEntity> dbMembers = loadAllGroupUsersFromAuthority(appKey, groupId);
+                if (rebuildGroupMemberRedis(appKey, groupId, dbMembers, versionBefore)) {
+                    return;
+                }
             }
         }
+    }
+
+    private static Object rosterRebuildLock(String appKey, String groupId) {
+        String flightKey = appKey + ":" + groupId;
+        return ROSTER_REBUILD_LOCKS[Math.floorMod(flightKey.hashCode(), ROSTER_REBUILD_LOCKS.length)];
     }
 
     private boolean hasGroupMemberInit(String appKey, String groupId) {
@@ -262,20 +275,25 @@ public final class GroupMembershipSupport {
      * 查询失败抛 {@link GroupMembershipLoadException}，不得当成空群。
      */
     private List<GroupUserEntity> loadAllGroupUsersFromAuthority(String appKey, String groupId) {
+        int cap = MessageConstant.GROUP_ROSTER_FULL_LOAD_LIMIT;
+        int fetchLimit = cap + 1;
         try {
             List<GroupUserEntity> mysqlList = infra.jdbcClient.sql(JdbcSqlDialectHolder.selectAllGroupUser())
                     .param(GroupUserEntity.Fields.groupId, groupId)
                     .param(GroupEntity.Fields.appKey, appKey)
+                    .param("limit", fetchLimit)
                     .query(GroupUserEntity.class)
                     .list();
             if (mysqlList == null) {
                 return List.of();
             }
-            if (mysqlList.size() > MessageConstant.GROUP_ROSTER_FULL_LOAD_LIMIT) {
+            if (mysqlList.size() > cap) {
                 throw new GroupMembershipLoadException(
-                        "群成员超过回源上限 groupId=" + groupId + " size=" + mysqlList.size());
+                        "群成员超过回源上限 groupId=" + groupId + " size>" + cap);
             }
             return mysqlList;
+        } catch (GroupMembershipLoadException e) {
+            throw e;
         } catch (Exception e) {
             throw new GroupMembershipLoadException("MySQL 查询群成员失败 groupId=" + groupId, e);
         }
@@ -672,6 +690,63 @@ public final class GroupMembershipSupport {
             }
         }
         return groupManagerAndLeaderUsersIdentityAndPost;
+    }
+
+    /**
+     * 少量身份点查是否在群（@ 校验）。不灌完整名单、不 ensure 全量回源。
+     */
+    public Set<String> presentInGroup(String appKey, String groupId, Collection<String> memberIds) {
+        Set<String> present = new HashSet<>();
+        if (StringUtils.isAnyBlank(appKey, groupId) || memberIds == null || memberIds.isEmpty()) {
+            return present;
+        }
+        List<String> unknown = new ArrayList<>();
+        for (String memberId : memberIds) {
+            if (StringUtils.isBlank(memberId)) {
+                continue;
+            }
+            Boolean cached = RelationLocalCache.GROUP_MEMBER.get(
+                    RelationLocalCache.groupMemberKey(appKey, groupId, memberId));
+            if (Boolean.TRUE.equals(cached)) {
+                present.add(memberId);
+            } else if (!Boolean.FALSE.equals(cached)) {
+                unknown.add(memberId);
+            }
+        }
+        if (unknown.isEmpty()) {
+            return present;
+        }
+        boolean initComplete = hasGroupMemberInit(appKey, groupId);
+        String zsetKey = CacheConstant.buildGroupUserCacheKey(appKey, groupId);
+        List<String> dbUnknown = new ArrayList<>();
+        for (String memberId : unknown) {
+            try {
+                Double score = infra.stringRedisTemplate.opsForZSet().score(zsetKey, memberId);
+                if (score != null) {
+                    RelationLocalCache.markGroupMember(appKey, groupId, memberId, true);
+                    present.add(memberId);
+                } else if (initComplete) {
+                    RelationLocalCache.markGroupMember(appKey, groupId, memberId, false);
+                } else {
+                    dbUnknown.add(memberId);
+                }
+            } catch (Exception e) {
+                log.error("Redis 点查群成员异常 appKey={} groupId={} memberId={}", appKey, groupId, memberId, e);
+                dbUnknown.add(memberId);
+            }
+        }
+        if (dbUnknown.isEmpty()) {
+            return present;
+        }
+        Map<String, GroupUserEntity> rows = groupUserEntitiesBatch(appKey, groupId, dbUnknown);
+        for (String memberId : dbUnknown) {
+            boolean in = rows.containsKey(memberId);
+            RelationLocalCache.markGroupMember(appKey, groupId, memberId, in);
+            if (in) {
+                present.add(memberId);
+            }
+        }
+        return present;
     }
 
     @SuppressWarnings("unchecked")
