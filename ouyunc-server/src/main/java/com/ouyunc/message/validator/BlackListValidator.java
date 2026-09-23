@@ -28,7 +28,11 @@ public enum BlackListValidator implements ReactiveValidator<Packet> {
         String to = message.getTo();
         Metadata metadata = message.getMetadata();
         String appKey = metadata.getAppKey();
-        int identityType = resolveIdentityType(message);
+        // 业务黑名单只按用户对用户 identity_type=1 写入；群/客服 to 不是 owner，禁止回源错误索引
+        if (!isUserOwnerBlacklist(message)) {
+            return Mono.just(Boolean.FALSE);
+        }
+        int identityType = IdentityType.ONE_2_ONE.value();
         return DefaultRepository.INSTANCE.isBlacklistedReactive(appKey, to, from, identityType)
                 .doOnNext(listed -> {
                     if (Boolean.TRUE.equals(listed)) {
@@ -41,8 +45,11 @@ public enum BlackListValidator implements ReactiveValidator<Packet> {
                 });
     }
 
-    private static int resolveIdentityType(Message message) {
-        IdentityType parsed = IdentityType.valueOf(message.getToType());
-        return parsed == null ? IdentityType.ONE_2_ONE.value() : parsed.value();
+    /**
+     * 仅当接收方是用户会话时查拉黑。toType 缺省按一对一；群/客服直接放行本校验。
+     */
+    private static boolean isUserOwnerBlacklist(Message message) {
+        IdentityType toType = IdentityType.valueOf(message.getToType());
+        return toType == null || toType == IdentityType.ONE_2_ONE;
     }
 }

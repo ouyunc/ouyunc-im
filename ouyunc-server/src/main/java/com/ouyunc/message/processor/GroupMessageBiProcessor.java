@@ -38,8 +38,8 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * 群聊消息处理器。
- * <p>标准管线：校验通过后 MQ 归档 → Redis 热写 → 仅成功/重复时 ACK → 新写入才扇出。
- * 已读/撤回在对应操作成功后再 ACK。</p>
+ * <p>标准管线：身份权限 → 成员/@ /ref 规范化 → 内容安全 → MQ 归档 → Redis 热写 → 仅成功/重复时 ACK → 新写入才扇出。
+ * 已读/撤回在对应操作成功后再 ACK（不走 SAVE）。</p>
  */
 public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<Byte> {
     private static final Logger log = LoggerFactory.getLogger(GroupMessageBiProcessor.class);
@@ -58,11 +58,11 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
             ctx.close();
             return Mono.just(false);
         }
-        // 权限等校验通过后由 continueWhenPassed 归档；此处统一执行 QoS 判重
+        // QoS 判重占位；正式归档挪到 process（规范化 + 内容安全之后），避免 REJECT/MASK 冷热不一致
         if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
             return Mono.just(false);
         }
-        return MessageAcceptPipelineHelper.continueWhenPassed(packet,
+        return MessageAcceptPipelineHelper.gateWhenPassed(packet,
                 PermissionValidator.INSTANCE.negate()
                         .or(FromToValidator.INSTANCE)
                         .or(BlackListValidator.INSTANCE)
@@ -78,7 +78,9 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
         log.debug("Processing group message...");
         AbstractBaseBiProcessor<Mono<Void>, ? extends Number> content = MessageServerContext.messageContentProcessorCache.get(packet.getMessage().getContentType());
         if (content != null) {
-            return content.process(ctx, packet);
+            // 插件内容处理器：内容安全 + 归档后再交给插件，与默认聊天路径语义一致
+            return MessageAcceptPipelineHelper.archiveAfterContentReady(ctx, packet,
+                    Mono.defer(() -> content.process(ctx, packet)));
         }
         Set<String> groupUserIdentitySet;
         try {
@@ -125,16 +127,19 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
         if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
             return handleWithdrawMessage(ctx, packet, groupUserIdentitySet);
         }
-        return reactiveSaveGroupMessage(packet)
-                .flatMap(result -> MessageAcceptPipelineHelper.afterHotSave(ctx, packet, result,
-                        () -> afterGroupFreshWrite(packet, groupUserIdentitySet),
-                        "群聊消息写入会话失败"))
-                .onErrorResume(error -> {
-                    log.error("群聊消息持久化异常, packetId={}", packet.getPacketId(), error);
-                    ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "群聊持久化异常: " + error.getMessage(), "GroupMessageBiProcessor.process", packet, error);
-                    MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
-                    return Mono.empty();
-                });
+        return MessageAcceptPipelineHelper.archiveAfterContentReady(ctx, packet,
+                reactiveSaveGroupMessage(packet)
+                        .flatMap(result -> MessageAcceptPipelineHelper.afterHotSave(ctx, packet, result,
+                                () -> afterGroupFreshWrite(packet, groupUserIdentitySet),
+                                "群聊消息写入会话失败"))
+                        .onErrorResume(error -> {
+                            log.error("群聊消息持久化异常, packetId={}", packet.getPacketId(), error);
+                            ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
+                                    "群聊持久化异常: " + error.getMessage(),
+                                    "GroupMessageBiProcessor.process", packet, error);
+                            MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
+                            return Mono.empty();
+                        }));
     }
 
     private void afterGroupFreshWrite(Packet packet, Set<String> groupUserIdentitySet) {

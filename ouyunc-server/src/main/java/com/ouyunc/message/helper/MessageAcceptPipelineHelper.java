@@ -6,6 +6,7 @@ import com.ouyunc.base.constant.MqArchiveRouting;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.core.context.MessageContext;
+import com.ouyunc.message.safety.ContentSafetyIngress;
 import com.ouyunc.repository.DefaultRepository;
 import com.ouyunc.repository.SaveMessageOutcome;
 import io.netty.channel.ChannelHandlerContext;
@@ -18,6 +19,8 @@ import reactor.core.publisher.Mono;
  * 消息受理管线公共能力：MQ → Redis → ACK → 投递。
  * <p>从 {@code AbstractMessageBiProcessor} 抽离，保持抽象处理器只保留三阶段 API。</p>
  * <p>子类可整体覆写 preProcess/process，但成功路径应复用本类方法，避免颠倒顺序。</p>
+ * <p>单聊/群聊正式聊天：身份权限 → 内容/引用规范化 → 内容安全 → 归档 → 热写 → ACK → 投递；
+ * 勿在内容安全前打 SAVE 归档（REJECT/MASK 会导致冷热不一致）。被拒原文若需留存应走独立审计事件。</p>
  */
 public final class MessageAcceptPipelineHelper {
 
@@ -31,8 +34,9 @@ public final class MessageAcceptPipelineHelper {
     }
 
     /**
-     * 鉴权/业务校验通过后归档并等待 MQ 确认。SAVE 幂等键为 appKey + messageId。
-     * <p>已读/撤回/好友/群只确认领域 topic，避免 SAVE + 领域各等一次 broker。</p>
+     * 旁路 SAVE 归档并等待 MQ 确认。SAVE 幂等键为 appKey + messageId。
+     * <p>调用方须保证：权限已过、内容已规范化、内容安全已通过（或本方法前紧挨着
+     * {@link #archiveAfterContentReady}）。已读/撤回/好友/群只确认领域 topic。</p>
      */
     public static Mono<Void> archiveAfterAuth(Packet packet) {
         if (MqArchiveRouting.usesDomainConfirmOnly(packet)) {
@@ -48,7 +52,49 @@ public final class MessageAcceptPipelineHelper {
     }
 
     /**
+     * 内容安全检查通过后旁路归档，再执行后续热写。
+     * <p>REJECT：回写通知、释放 QoS 占位、不 ACK、不归档。MASK 已原地改写 content，归档与热写同文。</p>
+     *
+     * @param next 归档确认后的热写/投递链
+     */
+    public static Mono<Void> archiveAfterContentReady(ChannelHandlerContext ctx, Packet packet,
+                                                      Mono<Void> next) {
+        if (!ContentSafetyIngress.applyOnWorker(ctx, packet)) {
+            releaseQosOnFailure(packet);
+            return Mono.empty();
+        }
+        return archiveAfterAuth(packet).then(Mono.defer(() -> next));
+    }
+
+    /**
+     * 业务校验通过后仅放行，不归档。单聊/群聊应在 process 内规范化与内容安全后再归档。
+     *
+     * @param shouldReject true 表示拦截
+     * @param onReject     拦截时回调（如释放 QoS claim），可为 null；聊天消息拒绝时不要 ACK
+     * @param rejectLog    拒绝日志模板，可含一个 {@code {}} 占位 packet
+     */
+    public static Mono<Boolean> gateWhenPassed(Packet packet, Mono<Boolean> shouldReject,
+                                               Runnable onReject, String rejectLog) {
+        return shouldReject
+                .onErrorResume(error -> {
+                    log.error("校验过程中出现异常: {}", error.getMessage());
+                    return Mono.just(true);
+                })
+                .map(reject -> {
+                    if (Boolean.TRUE.equals(reject)) {
+                        log.warn(rejectLog, packet);
+                        if (onReject != null) {
+                            onReject.run();
+                        }
+                        return false;
+                    }
+                    return true;
+                });
+    }
+
+    /**
      * 业务校验通过后归档并返回 true；拒绝则回调 onReject 并返回 false。
+     * <p>好友/群请求等仍可用；单聊/群聊请用 {@link #gateWhenPassed} + {@link #archiveAfterContentReady}。</p>
      *
      * @param shouldReject true 表示拦截
      * @param onReject     拦截时回调（如释放 QoS claim），可为 null；聊天消息拒绝时不要 ACK
@@ -56,17 +102,9 @@ public final class MessageAcceptPipelineHelper {
      */
     public static Mono<Boolean> continueWhenPassed(Packet packet, Mono<Boolean> shouldReject,
                                                    Runnable onReject, String rejectLog) {
-        return shouldReject
-                .onErrorResume(error -> {
-                    log.error("校验过程中出现异常: {}", error.getMessage());
-                    return Mono.just(true);
-                })
-                .flatMap(reject -> {
-                    if (Boolean.TRUE.equals(reject)) {
-                        log.warn(rejectLog, packet);
-                        if (onReject != null) {
-                            onReject.run();
-                        }
+        return gateWhenPassed(packet, shouldReject, onReject, rejectLog)
+                .flatMap(passed -> {
+                    if (!Boolean.TRUE.equals(passed)) {
                         return Mono.just(false);
                     }
                     return archiveAfterAuth(packet).thenReturn(true);

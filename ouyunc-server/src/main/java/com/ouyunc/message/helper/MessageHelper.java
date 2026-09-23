@@ -327,11 +327,23 @@ public class MessageHelper {
      * 同步投递。集群中 {@link Target#getTargetServerAddress()} 是最终落地机，不可改成下一跳。
      */
     private static void doSendMessage(Packet originPacket, Target target, SendCallback sendCallback) {
+        if (originPacket == null || originPacket.getMessage() == null) {
+            notifySendFail(originPacket, "投递包缺少 message", sendCallback);
+            return;
+        }
         Metadata originMetadata = originPacket.getMessage().getMetadata();
-        if (originMetadata != null && originMetadata.isInternalForward()) {
+        if (originMetadata == null) {
+            notifySendFail(originPacket, "投递包缺少 metadata", sendCallback);
+            return;
+        }
+        if (originMetadata.isInternalForward()) {
             log.error("doSendMessage 禁止覆盖 INTERNAL 为 CLIENT packetId={} dest={}",
                     originPacket.getPacketId(), target == null ? null : target.getTargetServerAddress());
             notifySendFail(originPacket, "内部控制包不得走客户端投递路径", sendCallback);
+            return;
+        }
+        if (target == null) {
+            notifySendFail(originPacket, "缺少投递目标", sendCallback);
             return;
         }
         originMetadata.setTarget(target);

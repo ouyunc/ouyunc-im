@@ -5,12 +5,15 @@ import com.ouyunc.base.constant.enums.LuaScriptEnum;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.ReturnType;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.serializer.RedisSerializer;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 关系名单 Redis：INIT 存基数并与 ZCARD 对齐；增量加/删与版本 CAS 同槽。
@@ -31,6 +34,8 @@ public final class RelationRosterRedis {
             LuaScriptEnum.RELATION_ROSTER_INIT_CHECK_SCRIPT.getScript(), Long.class);
     private static final DefaultRedisScript<Long> FRIEND_REBUILD_SCRIPT = new DefaultRedisScript<>(
             LuaScriptEnum.FRIEND_ROSTER_REBUILD_CAS_SCRIPT.getScript(), Long.class);
+    private static final byte[] BLACKLIST_REBUILD_SCRIPT_BYTES =
+            LuaScriptEnum.BLACKLIST_REBUILD_CAS_SCRIPT.getScript().getBytes(StandardCharsets.UTF_8);
 
     private static final byte[] ADD_SCRIPT_BYTES =
             LuaScriptEnum.RELATION_ROSTER_ADD_SCRIPT.getScript().getBytes(StandardCharsets.UTF_8);
@@ -102,6 +107,47 @@ public final class RelationRosterRedis {
         Long ok = template.execute(FRIEND_REBUILD_SCRIPT,
                 List.of(zsetKey, versionKey, initKey, CacheConstant.buildRelationRosterTmpCacheKey(zsetKey)), args);
         return ok != null && ok == 1L;
+    }
+
+    /**
+     * 黑名单 Hash CAS 重建。field 用 string 序列化，value 用 Redis valueSerializer，
+     * 与业务层 HPUT Long 同形态，避免 Lua 写明文后 HGET 反序列化失败。
+     */
+    @SuppressWarnings("unchecked")
+    public static boolean rebuildBlacklistCas(RedisTemplate<String, ?> template,
+                                             RedisSerializer<String> stringSerializer,
+                                             RedisSerializer<?> valueSerializer,
+                                             String hashKey, String initKey, Map<String, Long> fields) {
+        if (template == null || stringSerializer == null || valueSerializer == null
+                || StringUtils.isAnyBlank(hashKey, initKey)) {
+            return false;
+        }
+        RedisSerializer<Object> valueSer = (RedisSerializer<Object>) valueSerializer;
+        Map<String, Long> safe = fields == null ? Map.of() : fields;
+        Object result = template.execute((RedisConnection connection) -> {
+            List<byte[]> pairs = new ArrayList<>(safe.size() * 2);
+            for (Map.Entry<String, Long> entry : safe.entrySet()) {
+                if (entry == null || StringUtils.isBlank(entry.getKey())) {
+                    continue;
+                }
+                pairs.add(stringSerializer.serialize(entry.getKey()));
+                Long joinTime = entry.getValue() == null ? 1L : entry.getValue();
+                pairs.add(valueSer.serialize(joinTime));
+            }
+            int pairCount = pairs.size() / 2;
+            List<byte[]> keysAndArgs = new ArrayList<>(4 + pairs.size());
+            keysAndArgs.add(stringSerializer.serialize(hashKey));
+            keysAndArgs.add(stringSerializer.serialize(initKey));
+            keysAndArgs.add(stringSerializer.serialize(CacheConstant.buildRelationRosterTmpCacheKey(hashKey)));
+            keysAndArgs.add(stringSerializer.serialize(String.valueOf(pairCount)));
+            keysAndArgs.addAll(pairs);
+            return connection.scriptingCommands().eval(
+                    BLACKLIST_REBUILD_SCRIPT_BYTES,
+                    ReturnType.INTEGER,
+                    3,
+                    keysAndArgs.toArray(new byte[0][]));
+        });
+        return result instanceof Number number && number.longValue() == 1L;
     }
 
     /**

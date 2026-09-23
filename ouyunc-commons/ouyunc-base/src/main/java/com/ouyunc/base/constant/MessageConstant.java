@@ -518,6 +518,11 @@ public class MessageConstant {
     public static final int RELATION_ROSTER_REBUILD_ATTEMPTS = 2;
 
     /**
+     * 名单/黑名单回源 JVM 内条带锁数量，避免 per-owner ConcurrentHashMap 无限增长。
+     */
+    public static final int RELATION_REBUILD_LOCK_STRIPES = 64;
+
+    /**
      * Mongo 双写补偿队列单次回放条数。
      */
     public static final int MONGO_COMPENSATE_BATCH_SIZE = 50;

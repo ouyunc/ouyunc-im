@@ -432,6 +432,39 @@ public enum LuaScriptEnum {
             """, "好友名单回源 CAS 重建"),
 
     /**
+     * 黑名单 Hash 回源：先写同槽临时 Hash，INIT 仍未出现再 RENAME，避免 DEL+PUTALL 空窗。
+     * 已有 INIT 则只删临时键，不覆盖线上增量 HPUT。
+     * KEYS[1]=hash KEYS[2]=initKey KEYS[3]=tmpHash
+     * ARGV[1]=count ARGV[2..]=field,value 交替（value 由调用方按 Redis valueSerializer 传入）
+     */
+    BLACKLIST_REBUILD_CAS_SCRIPT("1", """
+            if redis.call('EXISTS', KEYS[2]) == 1 then
+                redis.call('DEL', KEYS[3])
+                return 0
+            end
+            redis.call('DEL', KEYS[3])
+            local n = tonumber(ARGV[1]) or 0
+            for i = 1, n do
+                local base = 1 + (i - 1) * 2
+                local field = ARGV[base + 1]
+                local val = ARGV[base + 2]
+                if field ~= nil and field ~= '' then
+                    redis.call('HSET', KEYS[3], field, val)
+                end
+            end
+            if redis.call('EXISTS', KEYS[2]) == 1 then
+                redis.call('DEL', KEYS[3])
+                return 0
+            end
+            redis.call('DEL', KEYS[1])
+            if redis.call('EXISTS', KEYS[3]) == 1 then
+                redis.call('RENAME', KEYS[3], KEYS[1])
+            end
+            redis.call('SET', KEYS[2], '1')
+            return 1
+            """, "黑名单回源 CAS 重建"),
+
+    /**
      * 关系 ZSET 增量加入：仅新 member 才 INCR 版本；已存在只改 score 不抬版本。
      * KEYS[1]=zset KEYS[2]=versionKey KEYS[3]=initKey
      * ARGV[1]=score ARGV[2]=member

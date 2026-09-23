@@ -50,7 +50,8 @@ public final class HttpPushProcessorDelegate {
 
     /**
      * 同步管线：MQ confirm → 策略 Redis/投递；成功才应 COMMITTED。
-     * <p>客服在策略内路由通过后再归档；已读/撤回只确认领域 topic。</p>
+     * <p>调用前须已完成 preProcess（规范化）与内容安全；客服在策略内路由通过后再归档；
+     * 已读/撤回只确认领域 topic。</p>
      *
      * @return {@code true} 热写成功或幂等命中；{@code false} 热写失败
      */

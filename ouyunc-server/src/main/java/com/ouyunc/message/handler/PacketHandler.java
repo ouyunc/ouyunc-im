@@ -4,6 +4,7 @@ import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.constant.enums.OuyuncMessageTypeEnum;
+import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
 import com.ouyunc.message.helper.QosAckDispatcher;
 import com.ouyunc.base.constant.QosControlConstant;
 import com.ouyunc.base.model.LoginClientInfo;
@@ -31,7 +32,8 @@ import java.util.concurrent.RejectedExecutionException;
 /**
  * 统一 Packet 业务入口。
  * <ul>
- *   <li>{@link Mode#CLIENT}：{@code preProcess（含 QoS 判重）→ 内容安全 → process → postProcess}（同一条有序任务）；
+ *   <li>{@link Mode#CLIENT}：{@code preProcess（含 QoS 判重）→ [非单聊/群聊]内容安全 → process → postProcess}
+ *       （同一条有序任务）。单聊/群聊在 process 内先规范化再内容安全再归档，避免 SAVE 早于 MASK/REJECT；
  *       外部心跳不入有序队列、不做敏感词；
  *       {@link MessageTypeEnum#QOS_C2S_ACK} 走独立 {@code qosControlExecutor}，不进聊天有序队列、不进 EventLoop</li>
  *   <li>{@link Mode#CLUSTER}：仅 {@code process → postProcess}；
@@ -145,8 +147,9 @@ public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
     }
 
     /**
-     * 客户端完整三阶段：设备校验 → preProcess（含 QoS 判重）→ 内容安全 → process → postProcess。
+     * 客户端完整三阶段：设备校验 → preProcess（含 QoS 判重）→ [按类型]内容安全 → process → postProcess。
      * 安全检查与业务必须同一条有序任务，禁止拆成两次入队（否则 MASK 与 process 可能被后到的包插队）。
+     * 单聊/群聊延后到 process（规范化之后）再做内容安全与归档。
      * pre 返回 false/empty 时跳过后续阶段。超时取消时释放尚未 commit 的 QoS 占位。
      */
     private static CompletionStage<Void> invokeFull(ChannelHandlerContext ctx, Packet packet,
@@ -164,7 +167,10 @@ public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
                     if (!Boolean.TRUE.equals(passed)) {
                         return Mono.empty();
                     }
-                    if (!ContentSafetyIngress.applyOnWorker(ctx, packet)) {
+                    // 单聊/群聊：规范化 → 内容安全 → 归档 在 process 内完成，此处跳过以免二次 MASK/提前 REJECT
+                    if (!defersContentSafetyToProcess(packet)
+                            && !ContentSafetyIngress.applyOnWorker(ctx, packet)) {
+                        MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
                         return Mono.empty();
                     }
                     return processor.process(ctx, packet)
@@ -177,6 +183,18 @@ public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
                     return Mono.empty();
                 });
         return ChannelOrderedTasks.toVoidStage(chain);
+    }
+
+    /**
+     * 单聊/群聊在各自 process 内做内容安全（位于 ref/@ 规范化之后、SAVE 归档之前）。
+     */
+    private static boolean defersContentSafetyToProcess(Packet packet) {
+        if (packet == null) {
+            return false;
+        }
+        byte messageType = packet.getMessageType();
+        return messageType == MessageTypeEnum.ONE_2_ONE.getType()
+                || messageType == MessageTypeEnum.GROUP.getType();
     }
 
     /**

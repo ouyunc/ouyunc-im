@@ -37,7 +37,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -51,7 +50,13 @@ public final class FriendRepositorySupport {
     private final RepositoryInfrastructure infra;
     private final SessionMessagePersistenceSupport session;
 
-    private final ConcurrentHashMap<String, Object> blacklistRebuildLocks = new ConcurrentHashMap<>();
+    private static final Object[] BLACKLIST_REBUILD_LOCKS = new Object[MessageConstant.RELATION_REBUILD_LOCK_STRIPES];
+
+    static {
+        for (int i = 0; i < BLACKLIST_REBUILD_LOCKS.length; i++) {
+            BLACKLIST_REBUILD_LOCKS[i] = new Object();
+        }
+    }
 
     public FriendRepositorySupport(RepositoryInfrastructure infra, SessionMessagePersistenceSupport session) {
         this.infra = infra;
@@ -560,6 +565,10 @@ public final class FriendRepositorySupport {
         if (Boolean.TRUE.equals(shieldHit)) {
             return new One2OneChatAccess(true, false, true);
         }
+        // 负向拉黑必须有 bli: INIT，否则与 isBlacklisted 不一致会放行
+        if (Boolean.FALSE.equals(blackHit) && !hasBlacklistInit(appKey, to)) {
+            blackHit = null;
+        }
         if (friendHit == null || blackHit == null || shieldHit == null) {
             return null;
         }
@@ -664,7 +673,7 @@ public final class FriendRepositorySupport {
 
     private void rebuildBlacklistIndex(String appKey, String ownerId, int identityType) {
         String flightKey = appKey + ":" + ownerId + ":" + identityType;
-        Object lock = blacklistRebuildLocks.computeIfAbsent(flightKey, ignored -> new Object());
+        Object lock = BLACKLIST_REBUILD_LOCKS[Math.floorMod(flightKey.hashCode(), BLACKLIST_REBUILD_LOCKS.length)];
         synchronized (lock) {
             if (hasBlacklistInit(appKey, ownerId)) {
                 return;
@@ -686,7 +695,6 @@ public final class FriendRepositorySupport {
         }
     }
 
-    @SuppressWarnings("unchecked")
     private void writeBlacklistHash(String appKey, String ownerId, List<BlacklistEntity> rows) {
         String hashKey = CacheConstant.buildBlacklistCacheKey(appKey, ownerId);
         Map<String, Long> fields = new HashMap<>();
@@ -697,12 +705,12 @@ public final class FriendRepositorySupport {
             long joinTime = row.getJoinTime() == null ? 1L : row.getJoinTime();
             fields.put(row.getUserId(), joinTime);
         }
-        infra.redisTemplate.delete(hashKey);
-        if (!fields.isEmpty()) {
-            infra.redisTemplate.opsForHash().putAll(hashKey, fields);
+        boolean written = RelationRosterRedis.rebuildBlacklistCas(
+                infra.redisTemplate, infra.stringSerializer, infra.valueSerializer,
+                hashKey, CacheConstant.buildBlacklistInitCacheKey(appKey, ownerId), fields);
+        if (!written && !hasBlacklistInit(appKey, ownerId)) {
+            log.warn("黑名单 CAS 重建未写入且 INIT 仍缺失 appKey={} ownerId={}", appKey, ownerId);
         }
-        infra.stringRedisTemplate.opsForValue().set(
-                CacheConstant.buildBlacklistInitCacheKey(appKey, ownerId), "1");
     }
 
     private Boolean loadBlacklistExistsFromDbOrThrow(String appKey, String ownerId, String targetId, int identityType) {

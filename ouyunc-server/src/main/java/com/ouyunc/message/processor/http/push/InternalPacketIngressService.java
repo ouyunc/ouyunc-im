@@ -30,6 +30,7 @@ import java.util.concurrent.CompletionStage;
  * <p>{@code ACCEPTED}＝本请求已完成 MQ+Redis（已 COMMITTED）；{@code DUPLICATE}＝此前已 COMMITTED；
  * {@code PROCESSING}＝同 messageId 仍在途；{@code RETRYABLE_FAILED}＝本请求失败可重试。
  * 多接收人用 {@code messageId:to} 分键，避免局部成功被整键清掉。
+ * 顺序：preProcess（权限/规范化）→ 内容安全 → 幂等占位 → MQ+Redis；
  * preProcess 与管线均在 {@link ThreadPoolManager#httpPushVerifyExecutor()} 执行。</p>
  */
 public final class InternalPacketIngressService {
@@ -182,10 +183,15 @@ public final class InternalPacketIngressService {
 
     private static HttpResponseResult<MessagePushResponse> acceptAfterPreProcess(
             Packet packet, String appKey, String messageId, String packetIdStr) throws HttpPipelineException {
-        // 与长连接管道一致：敏感词 MASK/REJECT，避免 HTTP Push 绕过
-        applyContentSafetyOrThrow(packet);
-
+        // 先业务校验与 ref/@ 规范化，再内容安全，再幂等占位与归档（与长连接单聊/群聊顺序对齐）
         HttpPushProcessorDelegate.preProcessOrThrow(packet);
+        try {
+            applyContentSafetyOrThrow(packet);
+        } catch (HttpPipelineException ex) {
+            // preProcess 可能已 stash 群成员/客服路由，REJECT 必须丢弃以免泄漏
+            HttpPushDeliverySupport.discardStashed(packet);
+            throw ex;
+        }
 
         int claim = PushIdempotencySupport.tryClaim(appKey, messageId, packetIdStr);
         if (claim == PushIdempotencySupport.CLAIM_COMMITTED) {

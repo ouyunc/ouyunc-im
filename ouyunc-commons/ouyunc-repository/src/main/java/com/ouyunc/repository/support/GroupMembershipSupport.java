@@ -45,7 +45,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -59,7 +58,13 @@ public final class GroupMembershipSupport {
 
     private final RepositoryInfrastructure infra;
     private final SessionMessagePersistenceSupport session;
-    private final ConcurrentHashMap<String, Object> shieldRebuildLocks = new ConcurrentHashMap<>();
+    private static final Object[] SHIELD_REBUILD_LOCKS = new Object[MessageConstant.RELATION_REBUILD_LOCK_STRIPES];
+
+    static {
+        for (int i = 0; i < SHIELD_REBUILD_LOCKS.length; i++) {
+            SHIELD_REBUILD_LOCKS[i] = new Object();
+        }
+    }
 
     public GroupMembershipSupport(RepositoryInfrastructure infra, SessionMessagePersistenceSupport session) {
         this.infra = infra;
@@ -411,7 +416,7 @@ public final class GroupMembershipSupport {
 
     private void rebuildShieldIndexSync(String appKey, String groupId) {
         String flightKey = appKey + ":" + groupId;
-        Object lock = shieldRebuildLocks.computeIfAbsent(flightKey, ignored -> new Object());
+        Object lock = SHIELD_REBUILD_LOCKS[Math.floorMod(flightKey.hashCode(), SHIELD_REBUILD_LOCKS.length)];
         synchronized (lock) {
             if (hasGroupShieldInit(appKey, groupId)) {
                 return;
@@ -768,23 +773,7 @@ public final class GroupMembershipSupport {
             return redisGroup;
         }
 
-        try {
-            MongoGroupEntity mongoGroup = infra.mongoTemplate.findOne(
-                    Query.query(Criteria.where(GroupEntity.Fields.id).is(Long.parseLong(groupId))
-                            .and(GroupEntity.Fields.appKey).is(appKey)
-                            .and(GroupEntity.Fields.delFlag).is(0L)),
-                    MongoGroupEntity.class);
-            if (mongoGroup != null) {
-                groupEntity = convertMongoGroupToGroup(mongoGroup);
-                if (isLiveGroup(groupEntity) && appKey.equals(groupEntity.getAppKey())) {
-                    updateGroupCache(cacheKey, groupEntity);
-                    return groupEntity;
-                }
-            }
-        } catch (Exception e) {
-            log.warn("从MongoDB查询群组异常, appKey: {}, groupId: {}", appKey, groupId, e);
-        }
-
+        // MySQL 权威：miss/已删除不再回落 Mongo，避免 del_flag 滞后把解散群当活群
         groupEntity = getGroupEntityFromDatabases(appKey, groupId);
         if (isLiveGroup(groupEntity)) {
             updateGroupCache(cacheKey, groupEntity);

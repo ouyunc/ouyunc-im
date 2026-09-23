@@ -37,8 +37,8 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * 一对一（单聊）消息处理器。
- * <p>标准管线：校验通过后 MQ 归档 → Redis 热写 → 仅成功/重复时 ACK → 新写入才扇出。
- * 已读/撤回在对应操作成功后再 ACK。子类级覆写见 {@link AbstractMessageBiProcessor}。</p>
+ * <p>标准管线：身份权限 → ref 规范化 → 内容安全 → MQ 归档 → Redis 热写 → 仅成功/重复时 ACK → 新写入才扇出。
+ * 已读/撤回在对应操作成功后再 ACK（不走 SAVE）。子类级覆写见 {@link AbstractMessageBiProcessor}。</p>
  */
 public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<Byte> {
     private static final Logger log = LoggerFactory.getLogger(One2OneMessageBiProcessor.class);
@@ -57,11 +57,11 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
             ctx.close();
             return Mono.just(false);
         }
-        // 权限等校验通过后由 continueWhenPassed 归档；此处统一执行 QoS 判重
+        // QoS 判重占位；正式归档挪到 process（规范化 + 内容安全之后），避免 REJECT/MASK 冷热不一致
         if (MessageContext.isQosEnable() && qosPreHandle(ctx, packet)) {
             return Mono.just(false);
         }
-        return MessageAcceptPipelineHelper.continueWhenPassed(packet,
+        return MessageAcceptPipelineHelper.gateWhenPassed(packet,
                 PermissionValidator.INSTANCE.negate()
                         .or(One2OneChatAccessValidator.INSTANCE)
                         .or(FromToValidator.INSTANCE)
@@ -78,7 +78,9 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
         log.debug("Processing one-to-one message...");
         AbstractBaseBiProcessor<Mono<Void>, ? extends Number> content = MessageServerContext.messageContentProcessorCache.get(packet.getMessage().getContentType());
         if (content != null) {
-            return content.process(ctx, packet);
+            // 插件内容处理器：内容安全 + 归档后再交给插件，与默认聊天路径语义一致
+            return MessageAcceptPipelineHelper.archiveAfterContentReady(ctx, packet,
+                    Mono.defer(() -> content.process(ctx, packet)));
         }
         AtMentionHelper.clearAtIfPresent(packet.getMessage());
         if (!MessageRefHelper.normalizeMessageRefOrReject(packet)) {
@@ -92,15 +94,19 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
         if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
             return handleWithdrawMessage(ctx, packet);
         }
-        return saveMessage(packet)
-                .flatMap(result -> MessageAcceptPipelineHelper.afterHotSave(ctx, packet, result, () -> afterOne2OneFreshWrite(packet),
-                        "单聊消息写入会话失败"))
-                .onErrorResume(error -> {
-                    log.error("单聊消息持久化异常, packetId={}", packet.getPacketId(), error);
-                    ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "单聊持久化异常: " + error.getMessage(), "One2OneMessageBiProcessor.process", packet, error);
-                    MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
-                    return Mono.empty();
-                });
+        return MessageAcceptPipelineHelper.archiveAfterContentReady(ctx, packet,
+                saveMessage(packet)
+                        .flatMap(result -> MessageAcceptPipelineHelper.afterHotSave(ctx, packet, result,
+                                () -> afterOne2OneFreshWrite(packet),
+                                "单聊消息写入会话失败"))
+                        .onErrorResume(error -> {
+                            log.error("单聊消息持久化异常, packetId={}", packet.getPacketId(), error);
+                            ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
+                                    "单聊持久化异常: " + error.getMessage(),
+                                    "One2OneMessageBiProcessor.process", packet, error);
+                            MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
+                            return Mono.empty();
+                        }));
     }
 
     private void afterOne2OneFreshWrite(Packet packet) {
