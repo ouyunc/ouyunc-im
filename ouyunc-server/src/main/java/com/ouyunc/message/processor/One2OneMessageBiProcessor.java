@@ -223,6 +223,11 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
         MessageDeliveryRouteHelper.deliverPeerMessage(packet, Boolean.TRUE.equals(forceSelfSync));
     }
 
+    @Override
+    protected void replayExternalDelivery(Packet packet) {
+        deliver(packet, false);
+    }
+
     /**
      * 保存消息
      */

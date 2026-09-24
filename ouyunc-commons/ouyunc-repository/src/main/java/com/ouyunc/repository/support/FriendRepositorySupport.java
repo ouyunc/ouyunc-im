@@ -88,6 +88,22 @@ public final class FriendRepositorySupport {
         infra.redisTemplate.delete(CacheConstant.buildFriendRequestCacheKey(appKey, to, from));
     }
 
+    /**
+     * 同意好友：覆盖申请人方向的请求会话（键为接收方、发送方），不走拒绝保存。
+     */
+    public boolean saveAgreeFriendRequestSession(Packet packet, RequestSession requestSession, long expireTime) {
+        Message message = packet.getMessage();
+        return saveFriendRequestMessage(packet, requestSession.getSessionId(), expireTime, (redisConnection) -> {
+            String friendRequestCacheKey = CacheConstant.buildFriendRequestCacheKey(
+                    message.getMetadata().getAppKey(), message.getTo(), message.getFrom());
+            byte[] keyBytes = session.serializeOrThrow(infra.stringSerializer, friendRequestCacheKey, "friendRequestCacheKey");
+            byte[] valueBytes = session.serializeOrThrow(infra.valueSerializer, requestSession, "requestSession");
+            redisConnection.commands().set(keyBytes, valueBytes,
+                    Expiration.milliseconds(MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP),
+                    RedisStringCommands.SetOption.UPSERT);
+        });
+    }
+
     public boolean saveRefuseFriendRequestMessage(Packet packet, RequestSession requestSession, long expireTime) {
         Message message = packet.getMessage();
         return saveFriendRequestMessage(packet, requestSession.getSessionId(), expireTime, (redisConnection) -> {

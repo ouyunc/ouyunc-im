@@ -267,11 +267,13 @@ public final class CsHelper {
                 route.ticketId(), recipientId, channel.getKey(), packet.getPacketId());
         java.util.concurrent.CompletableFuture<?> confirmed =
                 DefaultRepository.INSTANCE.publishExternalChannelOutbound(packet, recipientId, channel);
+        DefaultRepository.INSTANCE.markExternalDeliveryPending(packet);
         try {
             confirmed.get(MessageConstant.EXTERNAL_CHANNEL_CONFIRM_TIMEOUT_MS, TimeUnit.MILLISECONDS);
         } catch (Exception error) {
             throw new ExternalDeliveryConfirmException("客服外部渠道任务 broker 确认失败", error);
         }
+        DefaultRepository.INSTANCE.clearExternalDeliveryPending(packet);
     }
 
     public static String resolveImRecipientId(String recipientId, CsImSessionRoute route) {

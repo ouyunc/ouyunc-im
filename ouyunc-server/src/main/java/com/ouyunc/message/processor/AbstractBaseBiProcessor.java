@@ -8,6 +8,7 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.core.processor.BiProcessor;
 import com.ouyunc.core.qos.Qos;
+import com.ouyunc.message.helper.ExternalDeliveryConfirmException;
 import com.ouyunc.message.helper.MessageSendResultHelper;
 import com.ouyunc.repository.DefaultRepository;
 import com.ouyunc.repository.Repository;
@@ -62,6 +63,14 @@ public abstract class AbstractBaseBiProcessor<R, T extends Number>
                 MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
                 return true;
             }
+            if (DefaultRepository.INSTANCE.isExternalDeliveryPending(packet)) {
+                try {
+                    replayExternalDelivery(packet);
+                } catch (ExternalDeliveryConfirmException error) {
+                    MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.MQ_PERSISTENCE_ERROR);
+                    return true;
+                }
+            }
             qosPostHandle(ctx, packet);
             return true;
         }
@@ -75,6 +84,12 @@ public abstract class AbstractBaseBiProcessor<R, T extends Number>
      */
     protected boolean repairDerivedIndexOnQosDuplicate(Packet packet) {
         return true;
+    }
+
+    /**
+     * QoS 已提交但外渠标记仍在时补投。没有外渠标记时不调用，避免成功消息的重试再推一遍。
+     */
+    protected void replayExternalDelivery(Packet packet) {
     }
 
     /**

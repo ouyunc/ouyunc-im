@@ -132,6 +132,15 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
                 });
     }
 
+    @Override
+    protected void replayExternalDelivery(Packet packet) {
+        PrepareOutcome outcome = CsHelper.prepare(packet);
+        if (!outcome.accepted() || outcome.route() == null) {
+            throw new ExternalDeliveryConfirmException("客服外渠重试缺少会话路由", null);
+        }
+        CsHelper.deliverMessage(packet, outcome.route(), false);
+    }
+
     private void afterCsFreshWrite(Packet packet, CsImSessionRoute route) {
         try {
             CsHelper.saveChatLastMessage(repository(), route, packet);

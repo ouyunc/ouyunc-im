@@ -288,6 +288,11 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
 
 
 
+    @Override
+    protected void replayExternalDelivery(Packet packet) {
+        deliver(packet);
+    }
+
     private void deliver2AllGroupMembers(Packet packet, Set<String> groupMembers) {
         MessageDeliveryRouteHelper.deliverGroupMembers(packet, groupMembers);
     }

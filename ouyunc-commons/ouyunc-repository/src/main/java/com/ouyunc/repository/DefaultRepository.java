@@ -1,6 +1,12 @@
 package com.ouyunc.repository;
 
+import com.ouyunc.base.constant.CacheConstant;
+import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.packet.Packet;
+import com.ouyunc.base.packet.message.Message;
+import org.apache.commons.lang3.StringUtils;
+
+import java.time.Duration;
 import com.ouyunc.base.model.GroupRequestSession;
 import com.ouyunc.base.model.RequestSession;
 import com.ouyunc.base.constant.enums.IdentityType;
@@ -194,6 +200,43 @@ public enum DefaultRepository implements Repository {
     /** 清除群请求会话，允许退群后再申请。 */
     public void deleteGroupRequestSession(String appKey, String joiner, String groupId) {
         RepositorySupports.GROUP.deleteGroupRequestSession(appKey, joiner, groupId);
+    }
+
+    public void markExternalDeliveryPending(Packet packet) {
+        String key = externalDeliveryPendingKey(packet);
+        if (key == null) {
+            return;
+        }
+        RepositorySupports.INFRA.stringRedisTemplate.opsForValue().set(key, "1",
+                Duration.ofMillis(MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP));
+    }
+
+    public void clearExternalDeliveryPending(Packet packet) {
+        String key = externalDeliveryPendingKey(packet);
+        if (key == null) {
+            return;
+        }
+        RepositorySupports.INFRA.stringRedisTemplate.delete(key);
+    }
+
+    public boolean isExternalDeliveryPending(Packet packet) {
+        String key = externalDeliveryPendingKey(packet);
+        return key != null && Boolean.TRUE.equals(RepositorySupports.INFRA.stringRedisTemplate.hasKey(key));
+    }
+
+    private static String externalDeliveryPendingKey(Packet packet) {
+        if (packet == null || packet.getMessage() == null || packet.getMessage().getMetadata() == null) {
+            return null;
+        }
+        Message message = packet.getMessage();
+        if (StringUtils.isAnyBlank(message.getMetadata().getAppKey(), message.getId())) {
+            return null;
+        }
+        return CacheConstant.buildExternalDeliveryPendingKey(message.getMetadata().getAppKey(), message.getId());
+    }
+
+    public boolean saveAgreeFriendRequestSession(Packet packet, RequestSession requestSession, long expireTime) {
+        return RepositorySupports.FRIEND.saveAgreeFriendRequestSession(packet, requestSession, expireTime);
     }
 
     public boolean saveRefuseFriendRequestMessage(Packet packet, RequestSession requestSession, long expireTime) {

@@ -39,12 +39,12 @@ public final class MessageDeliveryRouteHelper {
         Message message = packet.getMessage();
         String appKey = message.getMetadata().getAppKey();
         syncSenderDevices(packet, forceSelfSync);
-
         String senderId = message.getFrom();
         String recipientId = message.getTo();
         MessageDeliveryChannelEnum channel =
                 DefaultRepository.INSTANCE.resolveFriendDeliveryChannel(appKey, senderId, recipientId);
         routeToRecipient(packet, recipientId, channel, "单聊");
+        DefaultRepository.INSTANCE.clearExternalDeliveryPending(packet);
     }
 
     /**
@@ -64,6 +64,7 @@ public final class MessageDeliveryRouteHelper {
         MessageDeliveryChannelEnum channel =
                 DefaultRepository.INSTANCE.resolveGroupMemberDeliveryChannel(appKey, groupId, memberId);
         routeToRecipient(packet, memberId, channel, "群聊");
+        DefaultRepository.INSTANCE.clearExternalDeliveryPending(packet);
     }
 
     /**
@@ -87,6 +88,7 @@ public final class MessageDeliveryRouteHelper {
         if (!batch.isEmpty()) {
             deliverGroupBatch(packet, batch);
         }
+        DefaultRepository.INSTANCE.clearExternalDeliveryPending(packet);
     }
 
     /** 每批完成过滤、渠道和在线查询后释放临时集合，避免整群渠道 Map 和 IM Set 叠加。 */
@@ -187,6 +189,7 @@ public final class MessageDeliveryRouteHelper {
         if (packet == null || confirms == null || confirms.isEmpty()) {
             return;
         }
+        DefaultRepository.INSTANCE.markExternalDeliveryPending(packet);
         try {
             CompletableFuture.allOf(confirms.toArray(CompletableFuture[]::new))
                     .get(MessageConstant.EXTERNAL_CHANNEL_CONFIRM_TIMEOUT_MS, TimeUnit.MILLISECONDS);

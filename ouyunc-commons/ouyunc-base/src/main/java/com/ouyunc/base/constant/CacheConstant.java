@@ -203,6 +203,9 @@ public class CacheConstant {
      */
     private static final String FRIEND_REQUEST_SESSION = "frs:";
 
+    /** 外渠下行已发出但 broker 尚未确认。确认成功后删除，QoS 重试据此补投。 */
+    private static final String EXTERNAL_DELIVERY_PENDING = "edp:";
+
     /***
      * 正在处理中的群请求会话标识
      */
@@ -578,6 +581,10 @@ public class CacheConstant {
     /**
      * 好友请求：槽按 from_to
      */
+    public static String buildExternalDeliveryPendingKey(String appKey, String messageId) {
+        return buildAggregateCacheKey(appKey, messageId) + EXTERNAL_DELIVERY_PENDING;
+    }
+
     public static String buildFriendRequestCacheKey(String appKey, String from, String to) {
         String pair = stripHashTagChars(from) + MessageConstant.UNDERLINE + stripHashTagChars(to);
         return buildAggregateCacheKey(appKey, pair) + FRIEND_REQUEST_SESSION;
