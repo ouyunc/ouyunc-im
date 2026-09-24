@@ -34,12 +34,12 @@ public class CacheConstant {
     /***
      * 平台的 唯一标识key 公共前缀
      */
-    private static final String APP_KEY = "ak:";
+    private static final String APP_KEY = "app:";
 
     /***
      * appKey 下的identity 的 客户端信息
      */
-    private static final String CLIENT_INFO = "ci:";
+    private static final String CLIENT_INFO = "client:";
 
     /***
      * 消息缓存公共前缀
@@ -49,12 +49,12 @@ public class CacheConstant {
     /**
      * 消息撤回单调标记，与 {@code msg:} 同槽；只增不减。
      */
-    private static final String MESSAGE_WITHDRAWN = "mw:";
+    private static final String MESSAGE_WITHDRAWN = "msg-withdrawn:";
 
     /***
      * 会话已读消息偏移量缓存公共前缀
      */
-    private static final String SESSION_READ_MESSAGE_OFFSET = "sro:";
+    private static final String SESSION_READ_MESSAGE_OFFSET = "session-read:";
 
     /***
      * 锁
@@ -62,10 +62,10 @@ public class CacheConstant {
     private static final String LOCK = "lock:";
 
     /** 登录详情 String */
-    private static final String IM_LOGIN = "im:lg:";
+    private static final String IM_LOGIN = "im:login:";
 
     /** 身份路由 HASH */
-    private static final String IM_ROUTE = "im:rt:";
+    private static final String IM_ROUTE = "im:route:";
 
     /** 进程租约 */
     private static final String IM_NODE = "im:node:";
@@ -74,94 +74,94 @@ public class CacheConstant {
     private static final String IM_NODES = "im:nodes";
 
     /** 节点连接数 HASH */
-    private static final String IM_CONN = "im:cc:";
+    private static final String IM_CONN = "im:conn:";
 
     /** appKey 连接配额 HASH */
-    private static final String IM_QUOTA = "im:qa:";
+    private static final String IM_QUOTA = "im:quota:";
 
     /***
      * 用户
      */
-    private static final String USER = "u:";
+    private static final String USER = "user:";
 
     /***
      * 群组绑定的用户
      */
-    private static final String GROUP_USERS = "gu:";
+    private static final String GROUP_USERS = "group-members:";
 
     /**
-     * 群成员 ZSET 完整性标记，与 {@code gu:} 同槽；禁止把哨兵写进 ZSET member。
+     * 群成员 ZSET 完整性标记，与 {@code group-members:} 同槽；禁止把哨兵写进 ZSET member。
      * 值为成员数，须与 ZCARD 一致；不一致则删标记并回源。
      */
-    private static final String GROUP_USERS_INIT = "gui:";
+    private static final String GROUP_USERS_INIT = "group-members-init:";
 
     /** 群成员关系版本（回源 CAS） */
-    private static final String GROUP_RELATION_VERSION = "grv:";
+    private static final String GROUP_RELATION_VERSION = "group-relation-ver:";
 
     /***
      * 群成员的信息配置
      */
-    private static final String GROUP_USERS_CONFIG = "guc:";
+    private static final String GROUP_USERS_CONFIG = "group-member-cfg:";
 
     /**
-     * 群成员屏蔽索引 Hash（field=memberId）。完整性用旁边的 {@code gsi:} STRING，不往 Hash 里塞哨兵。
+     * 群成员屏蔽索引 Hash（field=memberId）。完整性用旁边的 {@code group-shield-init:} STRING，不往 Hash 里塞哨兵。
      */
-    private static final String GROUP_USERS_SHIELD = "gsh:";
+    private static final String GROUP_USERS_SHIELD = "group-shield:";
 
-    /** 群屏蔽索引完整性标记，与 gsh: 同槽 */
-    private static final String GROUP_USERS_SHIELD_INIT = "gsi:";
+    /** 群屏蔽索引完整性标记，与 group-shield: 同槽 */
+    private static final String GROUP_USERS_SHIELD_INIT = "group-shield-init:";
 
-    private static final String MONGO_COMPENSATE = "im:mongo:cp:";
+    private static final String MONGO_COMPENSATE = "im:mongo:compensate:";
 
     /***
      * 好友列表
      */
-    private static final String FRIENDS = "f:";
+    private static final String FRIENDS = "friends:";
 
     /**
-     * 好友 ZSET 与库一致的标记，与 {@code f:} 同槽；禁止把哨兵写进 ZSET member。
+     * 好友 ZSET 与库一致的标记，与 {@code friends:} 同槽；禁止把哨兵写进 ZSET member。
      * 值为名单基数（完整为正、截断为负），须与 ZCARD 一致。
      */
-    private static final String FRIENDS_INIT = "fi:";
+    private static final String FRIENDS_INIT = "friends-init:";
 
-    /** 好友关系版本（回源 CAS），与 f:/fi: 同槽 */
-    private static final String FRIENDS_RELATION_VERSION = "frv:";
+    /** 好友关系版本（回源 CAS），与 friends:/friends-init: 同槽 */
+    private static final String FRIENDS_RELATION_VERSION = "friends-relation-ver:";
 
     /***
      * 配置， 我的好友信息的配置
      */
-    private static final String FRIENDS_CONFIG = "fc:";
+    private static final String FRIENDS_CONFIG = "friend-cfg:";
 
     /***
      * 用户-群列表
      */
-    private static final String GROUPS = "g:";
+    private static final String GROUPS = "groups:";
 
     /**
-     * 用户已加入群 ZSET 完整性标记，与 {@code g:} 同槽。
+     * 用户已加入群 ZSET 完整性标记，与 {@code groups:} 同槽。
      */
-    private static final String USER_GROUPS_INIT = "ugi:";
+    private static final String USER_GROUPS_INIT = "groups-init:";
 
-    /** 用户加群关系版本（回源 CAS），与 g:/ugi: 同槽 {@code {appKey:userId}} */
-    private static final String USER_GROUPS_RELATION_VERSION = "ugv:";
+    /** 用户加群关系版本（回源 CAS），与 groups:/groups-init: 同槽 {@code {appKey:userId}} */
+    private static final String USER_GROUPS_RELATION_VERSION = "groups-relation-ver:";
 
     /***
      * 群
      */
-    private static final String GROUP = "grp:";
+    private static final String GROUP = "group:";
 
     /***
-     * 黑名单 Hash（field=被拉黑人）。完整性用旁边的 {@code bli:} STRING。
+     * 黑名单 Hash（field=被拉黑人）。完整性用旁边的 {@code blacklist-init:} STRING。
      */
-    private static final String BLACKLIST = "bl:";
+    private static final String BLACKLIST = "blacklist:";
 
-    /** 黑名单 Hash 完整性标记，与 bl: 同槽 */
-    private static final String BLACKLIST_INIT = "bli:";
+    /** 黑名单 Hash 完整性标记，与 blacklist: 同槽 */
+    private static final String BLACKLIST_INIT = "blacklist-init:";
 
     /**
      * 关系名单回源临时 ZSET 后缀，必须接在已含 hash tag 的 zset key 后以同槽。
      */
-    private static final String RELATION_ROSTER_TMP = "t:";
+    private static final String RELATION_ROSTER_TMP = "tmp";
 
     /***
      * QoS 幂等
@@ -181,56 +181,56 @@ public class CacheConstant {
     /***
      * QoS 幂等 cli
      */
-    private static final String QOS_IDEM_CLI = "cli:";
+    private static final String QOS_IDEM_CLI = "client-msg:";
 
     /***
      * 会话
      */
-    private static final String SESSION = "s:";
+    private static final String SESSION = "session:";
 
     /***
      * 聊天会话
      */
-    private static final String CHAT_SESSION = "cs:";
+    private static final String CHAT_SESSION = "chat-session:";
 
     /***
      * 好友请求
      */
-    private static final String FRIEND_REQUEST = "fr:";
+    private static final String FRIEND_REQUEST = "friend-req:";
 
     /***
      * 正在处理中的好友请求会话标识
      */
-    private static final String FRIEND_REQUEST_SESSION = "frs:";
+    private static final String FRIEND_REQUEST_SESSION = "friend-req-session:";
 
     /** 外渠下行已发出但 broker 尚未确认。确认成功后删除，QoS 重试据此补投。 */
-    private static final String EXTERNAL_DELIVERY_PENDING = "edp:";
+    private static final String EXTERNAL_DELIVERY_PENDING = "external-pending:";
 
     /***
      * 正在处理中的群请求会话标识
      */
-    private static final String GROUP_REQUEST_SESSION = "grs:";
+    private static final String GROUP_REQUEST_SESSION = "group-req-session:";
 
     /***
      * 群请求
      */
-    private static final String GROUP_REQUEST = "gr:";
+    private static final String GROUP_REQUEST = "group-req:";
 
     /***
      * 设备 类型device-type
      */
-    private static final String DEVICE_TYPE = "dt";
+    private static final String DEVICE_TYPE = "device-type";
 
     /***
      * 最后一条消息
      */
-    private static final String LAST_MESSAGE = "lm";
+    private static final String LAST_MESSAGE = "last-msg";
 
     /** 用户设备单聊未读 Hash 前缀（群聊不在此存储） */
-    private static final String USER_DEVICE_UNREAD = "ur:";
+    private static final String USER_DEVICE_UNREAD = "unread:";
 
     /** 用户设备单聊未读 packetId 集合前缀（有序清除用，member=packetId 十进制串） */
-    private static final String USER_DEVICE_UNREAD_IDS = "urids:";
+    private static final String USER_DEVICE_UNREAD_IDS = "unread-ids:";
 
     // ============================================ 集群优化方法 ============================================
 
@@ -350,7 +350,7 @@ public class CacheConstant {
     }
 
     /**
-     * 会话已读偏移：槽跟收件人（from）收件箱一致，与 ur/urid Lua 同槽。
+     * 会话已读偏移：槽跟收件人（from）收件箱一致，与 unread/unread-ids Lua 同槽。
      */
     public static String buildSessionReadMessageOffsetCacheKey(String appKey, Integer identityType,
                                                              String from, Byte deviceType, String to) {
@@ -421,7 +421,7 @@ public class CacheConstant {
     }
 
     /**
-     * 群成员 ZSET：槽 {@code {appKey:groupId}}，与 grv/shield/gui 同槽。
+     * 群成员 ZSET：槽 {@code {appKey:groupId}}，与 group-relation-ver/group-shield/group-members-init 同槽。
      */
     public static String buildGroupUserCacheKey(String appKey, String groupId) {
         return buildAggregateCacheKey(appKey, groupId) + GROUP_USERS;
@@ -442,7 +442,7 @@ public class CacheConstant {
     }
 
     /**
-     * 群屏蔽成员 Hash，与成员 ZSET / grv / gsi 同 {@code {appKey:groupId}} 槽。
+     * 群屏蔽成员 Hash，与成员 ZSET / group-relation-ver / group-shield-init 同 {@code {appKey:groupId}} 槽。
      */
     public static String buildGroupShieldCacheKey(String appKey, String groupId) {
         return buildAggregateCacheKey(appKey, groupId) + GROUP_USERS_SHIELD;
@@ -477,7 +477,7 @@ public class CacheConstant {
     }
 
     /**
-     * 好友关系版本：与 f:/fi: 同 {@code {appKey:identity}} 槽。
+     * 好友关系版本：与 friends:/friends-init: 同 {@code {appKey:identity}} 槽。
      */
     public static String buildFriendsRelationVersionCacheKey(String appKey, String identity) {
         return buildAggregateCacheKey(appKey, identity) + FRIENDS_RELATION_VERSION;
@@ -506,7 +506,7 @@ public class CacheConstant {
     }
 
     /**
-     * 用户加群关系版本：与 g:/ugi: 同 {@code {appKey:userId}} 槽。
+     * 用户加群关系版本：与 groups:/groups-init: 同 {@code {appKey:userId}} 槽。
      */
     public static String buildUserGroupsRelationVersionCacheKey(String appKey, String userId) {
         return buildAggregateCacheKey(appKey, userId) + USER_GROUPS_RELATION_VERSION;
@@ -621,14 +621,80 @@ public class CacheConstant {
     }
 
     /**
-     * 用户设备单聊未读 Hash：槽 {@code {appKey:userId}}，与 sro/urid 同槽
+     * 会话读模型 Hash：{@code ouyunc:app:appKey:session-view:userId:deviceType}。
+     * appKey 不加 hash tag，与客服 ticket 维 key 一致；field=对端 id。
+     */
+    public static String buildSessionViewCacheKey(String appKey, String userId, Byte deviceType) {
+        return buildCsTicketKeyPrefix(appKey) + "session-view:" + stripHashTagChars(userId == null ? "" : userId)
+                + COLON + deviceType;
+    }
+
+    /** IM 用户翻译偏好 Hash。槽 {@code {appKey}}。 */
+    public static String buildTranslateUserPrefCacheKey(String appKey, String identity) {
+        return buildBaseCacheKey(appKey) + "translate:user:" + withHashTag(stripHashTagChars(identity));
+    }
+
+    /** 坐席翻译偏好 Hash。槽 {@code {appKey}}。 */
+    public static String buildTranslateAgentPrefCacheKey(String appKey, String agentId) {
+        return buildBaseCacheKey(appKey) + "cs:agent:translate:" + withHashTag(stripHashTagChars(agentId));
+    }
+
+    /** 译文内容哈希。首 tag 为内容摘要，与锁同槽。 */
+    public static String buildTranslateContentCacheKey(String appKey, String sourceLang, String targetLang, String sha256) {
+        return buildCsTicketKeyPrefix(appKey) + "translate:content:" + withHashTag(stripHashTagChars(sha256))
+                + COLON + sourceLang + COLON + targetLang;
+    }
+
+    /** 同一句译文 singleflight 锁，与内容缓存同槽。 */
+    public static String buildTranslateLockCacheKey(String appKey, String sourceLang, String targetLang, String sha256) {
+        return buildCsTicketKeyPrefix(appKey) + "translate:lock:" + withHashTag(stripHashTagChars(sha256))
+                + COLON + sourceLang + COLON + targetLang;
+    }
+
+    /** 译文通知去重。槽 {@code {appKey}}。 */
+    public static String buildTranslateNotifyOnceCacheKey(String appKey, String packetId, String language, String to) {
+        return buildBaseCacheKey(appKey) + "translate:notify:" + withHashTag(stripHashTagChars(packetId))
+                + COLON + stripHashTagChars(language) + COLON + stripHashTagChars(to);
+    }
+
+    /** 客服访客入站自动预译开关，值为 1/0。槽 {@code {appKey}}。 */
+    public static String buildTranslateVisitorAutoInCacheKey(String appKey) {
+        return buildBaseCacheKey(appKey) + "translate:cs:visitor-auto-in";
+    }
+
+    /** 访客翻译限流（咨询单）。槽 {@code {appKey}}。 */
+    public static String buildTranslateGuestTicketLimitCacheKey(String appKey, long ticketId, long epochMinute) {
+        return buildBaseCacheKey(appKey) + "translate:limit:ticket:" + ticketId + COLON + epochMinute;
+    }
+
+    /** 访客翻译限流（IP）。槽 {@code {appKey}}。 */
+    public static String buildTranslateGuestIpLimitCacheKey(String appKey, String clientIp, long epochMinute) {
+        return buildBaseCacheKey(appKey) + "translate:limit:ip:" + sanitizeTranslateIp(clientIp) + COLON + epochMinute;
+    }
+
+    /** 翻译语种目录快照，全平台一份。 */
+    public static final String TRANSLATE_LANGUAGE_CATALOG_KEY = OUYUNC + "translate:languages";
+
+    /** 语种目录变更通知频道。 */
+    public static final String TRANSLATE_LANGUAGE_CATALOG_CHANNEL = OUYUNC + "translate:languages:channel";
+
+    private static String sanitizeTranslateIp(String clientIp) {
+        if (clientIp == null || clientIp.isBlank()) {
+            return "unknown";
+        }
+        String ip = stripHashTagChars(clientIp.trim()).replace(':', '_');
+        return ip.length() > 64 ? ip.substring(0, 64) : ip;
+    }
+
+    /**
+     * 用户设备单聊未读 Hash：槽 {@code {appKey:userId}}，与 session-read/unread-ids 同槽
      */
     public static String buildUserDeviceUnreadCacheKey(String appKey, String userId, Byte deviceType) {
         return buildAggregateCacheKey(appKey, userId) + USER_DEVICE_UNREAD + deviceType;
     }
 
     /**
-     * 单聊未读 packetId ZSET（19 位 member）：与 ur/sro 同属收件人槽
+     * 单聊未读 packetId ZSET（19 位 member）：与 unread/session-read 同属收件人槽
      */
     public static String buildUserDeviceUnreadIdsCacheKey(String appKey, String userId, Byte deviceType, String peerId) {
         return buildAggregateCacheKey(appKey, userId) + USER_DEVICE_UNREAD_IDS + deviceType
@@ -636,7 +702,7 @@ public class CacheConstant {
     }
 
     /**
-     * 群关系版本：与 gu/gsh 同 {@code {appKey:groupId}} 槽
+     * 群关系版本：与 group-members/group-shield 同 {@code {appKey:groupId}} 槽
      */
     public static String buildGroupRelationVersionCacheKey(String appKey, String groupId) {
         return buildAggregateCacheKey(appKey, groupId) + GROUP_RELATION_VERSION;
@@ -656,7 +722,7 @@ public class CacheConstant {
 
     /**
      * 客服 ticket 维 key 前缀：appKey 只做命名空间，<strong>不加 hash tag</strong>。
-     * <p>Cluster 唯一 tag 是后续的 {@code {ticketId}}，避免大租户 route/msgs/sro/ur/lm 全部打到 {@code {appKey}} 单槽。
+     * <p>Cluster 唯一 tag 是后续的 {@code {ticketId}}，避免大租户 route/msgs/session-read/unread/last-msg 全部打到 {@code {appKey}} 单槽。
      * 同一 ticket 的 Lua（未读+已读等）KEYS 仍同槽。</p>
      */
     private static String buildCsTicketKeyPrefix(String appKey) {
@@ -677,7 +743,7 @@ public class CacheConstant {
 
     /**
      * 客服会话路由（主键 = ticketId）：Hash 含 sessionId / serviceIdentity / assigneeId / agentType / channel。
-     * {@code ouyunc:ak:appKey:cs:session:route:{ticketId}}
+     * {@code ouyunc:app:appKey:cs:session:route:{ticketId}}
      */
     public static String buildCsSessionRouteCacheKey(String appKey, String ticketId) {
         return buildCsTicketKeyPrefix(appKey) + CS_SESSION_ROUTE + withHashTag(stripHashTagChars(ticketId.trim()));
@@ -702,24 +768,24 @@ public class CacheConstant {
     }
 
     /** ticket 维度已读 offset Hash：field={@code readerId:deviceType}，value=max packetId。 */
-    private static final String CS_TICKET_SRO = "sro";
+    private static final String CS_TICKET_SRO = "session-read";
 
     public static String buildCsTicketReadOffsetHashCacheKey(String appKey, String ticketId) {
         return buildCsTicketKeyPrefix(appKey) + CS_TICKET + withHashTag(stripHashTagChars(ticketId.trim())) + COLON + CS_TICKET_SRO;
     }
 
     /** ticket 维度未读 Hash：field={@code readerId:deviceType}，value=未读计数。 */
-    private static final String CS_TICKET_UR = "ur";
+    private static final String CS_TICKET_UR = "unread";
 
     /** ticket 维度未读 packetId 集合后缀（按 readerDeviceField 分 key）。 */
-    private static final String CS_TICKET_UR_IDS = "urids";
+    private static final String CS_TICKET_UR_IDS = "unread-ids";
 
     public static String buildCsTicketUnreadHashCacheKey(String appKey, String ticketId) {
         return buildCsTicketKeyPrefix(appKey) + CS_TICKET + withHashTag(stripHashTagChars(ticketId.trim())) + COLON + CS_TICKET_UR;
     }
 
     /**
-     * ticket 未读 packetId 集合：与 ur/sro Hash 同 ticket 槽，支持按 offset 部分清除。
+     * ticket 未读 packetId 集合：与 unread/session-read Hash 同 ticket 槽，支持按 offset 部分清除。
      */
     public static String buildCsTicketUnreadIdsCacheKey(String appKey, String ticketId, String readerDeviceField) {
         return buildCsTicketKeyPrefix(appKey) + CS_TICKET + withHashTag(stripHashTagChars(ticketId.trim()))
