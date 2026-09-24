@@ -207,7 +207,7 @@ public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
     private void dispatchClientAck(ChannelHandlerContext ctx, Packet packet,
                                    AbstractMessageBiProcessor<? extends Number> processor) {
         try {
-            QosAckBackpressure.execute(ctx.channel(), () -> invokeClientAck(ctx, packet, processor));
+            QosAckBackpressure.execute(ctx.channel(), packet.getPacketId(), () -> invokeClientAck(ctx, packet, processor));
         } catch (RejectedExecutionException e) {
             QosRetryCancelMetrics.ackDispatchReject();
             log.error("客户端 QOS_C2S_ACK 控制通道准入被拒绝 packetId={}", packet.getPacketId(), e);

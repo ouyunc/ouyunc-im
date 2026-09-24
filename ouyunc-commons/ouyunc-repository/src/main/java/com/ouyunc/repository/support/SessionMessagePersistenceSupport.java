@@ -152,7 +152,7 @@ public final class SessionMessagePersistenceSupport {
                 metadata.setQosClaimPacketId(qosClaimKeyPacketId);
                 QosIdempotencyHelper.ClaimResult claim = QosIdempotencyHelper.tryClaimResult(
                         infra.redisTemplate, appKey, qosClaimKeyPacketId,
-                        qosClaimIdentity, clientMessageId, qosOwnerToken, message);
+                        qosClaimIdentity, clientMessageId, qosOwnerToken, message, packet.getMessageType());
                 if (claim.state() == QosIdempotencyHelper.CLAIM_COMMITTED) {
                     // 客户端只认 messageId；服务端索引必须收敛到首次正式 packetId
                     if (!claim.isCommittedWithCanonical()) {
@@ -236,7 +236,8 @@ public final class SessionMessagePersistenceSupport {
             }
             QosIdempotencyHelper.CommitOutcome commitOutcome = qosSave
                     ? QosIdempotencyHelper.commit(infra.redisTemplate, appKey, qosClaimKeyPacketId,
-                    packet.getPacketId(), qosClaimIdentity, clientMessageId, qosOwnerToken, message)
+                    packet.getPacketId(), qosClaimIdentity, clientMessageId, qosOwnerToken, message,
+                    packet.getMessageType())
                     : QosIdempotencyHelper.CommitOutcome.COMMITTED;
             if (commitOutcome == QosIdempotencyHelper.CommitOutcome.UNKNOWN) {
                 int verifiedState = QosIdempotencyHelper.checkState(

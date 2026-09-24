@@ -56,7 +56,7 @@ public final class QosRepositorySupport {
         metadata.setQosClaimPacketId(claimKeyPacketId);
         QosIdempotencyHelper.ClaimResult claim = QosIdempotencyHelper.tryClaimResult(
                 infra.redisTemplate, metadata.getAppKey(), claimKeyPacketId,
-                QosClaimIdentities.resolve(message), message.getId(), ownerToken, message);
+                QosClaimIdentities.resolve(message), message.getId(), ownerToken, message, packet.getMessageType());
         if (claim.state() == QosIdempotencyHelper.CLAIM_COMMITTED) {
             if (!claim.isCommittedWithCanonical()) {
                 clearQosClaimMarks(metadata);

@@ -767,6 +767,44 @@ public enum LuaScriptEnum {
             """, "appKey 连接配额释放"),
 
     /**
+     * 好友/群审批处理权：键只有 appKey + requestSessionId，不含设备。
+     * 返回 1 首次取得，2 同一 commandId 重试，3 相同动作已在处理或完成，4 相反动作已占用，0 非法。
+     * KEYS[1]=hash ARGV[1]=targetProgress ARGV[2]=commandId ARGV[3]=action ARGV[4]=operatorId ARGV[5]=now ARGV[6]=ttlMs
+     */
+    APPROVAL_PROGRESS_CAS_SCRIPT("1", """
+            local progress = redis.call('HGET', KEYS[1], 'progress')
+            local commandId = redis.call('HGET', KEYS[1], 'commandId')
+            local action = redis.call('HGET', KEYS[1], 'action')
+            local function touch()
+              local ttl = tonumber(ARGV[6])
+              if ttl ~= nil and ttl > 0 then redis.call('PEXPIRE', KEYS[1], ttl) end
+            end
+            if progress == false or progress == nil or progress == '' or progress == 'JOINING' then
+              redis.call('HSET', KEYS[1],
+                'progress', ARGV[1],
+                'commandId', ARGV[2],
+                'action', ARGV[3],
+                'operatorId', ARGV[4],
+                'processingAt', ARGV[5])
+              touch()
+              return 1
+            end
+            if commandId == ARGV[2] then
+              touch()
+              return 2
+            end
+            if progress == 'AGREEING' or progress == 'REFUSING' then
+              if action == ARGV[3] then return 5 end
+              return 4
+            end
+            if progress == 'APPROVED' or progress == 'REJECTED' then
+              if action == ARGV[3] then return 3 end
+              return 4
+            end
+            return 0
+            """, "审批进度 CAS"),
+
+    /**
      * 心跳：把本节点 field 写成本地真实计数，并删掉已不在租约里的节点 field。
      * KEYS[1]=quotaHash ARGV[1]=nodeId ARGV[2]=localCount ARGV[3]=ttlSeconds ARGV[4...]=liveNodeId
      */

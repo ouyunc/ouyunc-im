@@ -288,6 +288,13 @@ public class CacheConstant {
     }
 
     /**
+     * 审批处理权：{@code appKey + requestSessionId}，不含用户设备。手机和 PC 必须抢同一把状态。
+     */
+    public static String buildApprovalProgressCacheKey(String appKey, String requestSessionId) {
+        return OUYUNC + LOCK + withAggregateHashTag(appKey, requestSessionId) + COLON + "approval:";
+    }
+
+    /**
      * 群请求锁（P2）：首 tag {@code {appKey:sessionId}}；joiner 仅作后缀、不再套多余 hash tag。
      */
     public static String buildGroupRequestLockCacheKey(String appKey, String joiner, String sessionId) {

@@ -76,30 +76,27 @@ public final class One2OneRefuseFriendRequestMessageBiProcessor extends Abstract
         String to = message.getTo();
         String appKey = message.getMetadata().getAppKey();
         String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
+        java.util.concurrent.atomic.AtomicBoolean allowed = new java.util.concurrent.atomic.AtomicBoolean();
+        DistributedLockHelper.runWithLock(ctx, packet, CacheConstant.buildFriendRequestLockCacheKey(appKey, sessionId),
+                ExceptionCodeEnum.BIND_FRIEND_ERROR, () -> {
+                    RequestSession requestSession = repository().getFriendRequestSession(appKey, message.getTo(), message.getFrom());
+                    if (requestSession == null) {
+                        log.warn("不存在加好友请求记录，该消息忽略");
+                        MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.REQUEST_SESSION_NOT_EXIST);
+                        return;
+                    }
+                    if (RequestSessionProgress.AGREEING.value().equals(requestSession.getProgress())) {
+                        MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.REQUEST_SESSION_PROGRESS_MISMATCH);
+                        return;
+                    }
+                    allowed.set(true);
+                });
+        if (!allowed.get()) {
+            return Mono.empty();
+        }
         return MessageAcceptPipelineHelper.confirmThenRun(ctx, MqConstant.MQ_FRIEND_REQUEST_TOPIC, sessionId, packet, () -> {
-            String lockKey = CacheConstant.buildFriendRequestLockCacheKey(appKey, sessionId);
-            DistributedLockHelper.runWithLock(ctx, packet, lockKey, ExceptionCodeEnum.BIND_FRIEND_ERROR, () -> {
-                RequestSession requestSession = repository().getFriendRequestSession(appKey, message.getTo(), message.getFrom());
-                if (null == requestSession || !Objects.equals(requestSession.getProgress(), RequestSessionProgress.JOINING.value())) {
-                    log.warn("不存在加好友请求记录或存在正在处理的好友请求，该消息忽略");
-                    MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
-                    return;
-                }
-                if (repository().isFriend(appKey, message.getFrom(), message.getTo())) {
-                    log.warn("已经是好友, 请知悉; {}", packet);
-                    MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
-                    return;
-                }
-                requestSession.setProgress(RequestSessionProgress.REFUSING.value());
-                if (!repository().saveRefuseFriendRequestMessage(packet, requestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
-                    log.error("Failed to save one-to-one refuse friend request message: {}", packet);
-                    ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一拒绝好友请求消息异常!", "One2OneRefuseFriendRequestMessageBiProcessor.process", packet);
-                    com.ouyunc.message.helper.MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
-                    return;
-                }
-                RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.userOnly(to));
-                MessageAcceptPipelineHelper.requestAccepted(ctx, packet);
-            });
+            RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.userOnly(to));
+            MessageAcceptPipelineHelper.requestAccepted(ctx, packet);
         });
     }
 }

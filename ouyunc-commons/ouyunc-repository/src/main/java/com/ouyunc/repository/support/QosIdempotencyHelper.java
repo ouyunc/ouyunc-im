@@ -25,7 +25,8 @@ import java.util.UUID;
  *
  * <p>客户端只稳定传递 {@code messageId}；{@code packetId} 是服务端内部身份。
  * 幂等权威键为 {@code appKey + loginIdentity + messageId}（client 键），packet 键仅辅助同请求占位。
- * 冷库/SAVE 键是租户级 {@code appKey:messageId}，因此客户端 messageId 必须租户内唯一；
+ * 冷库/SAVE 键是租户级 {@code appKey:messageId}，因此客户端 messageId 必须在同一 appKey 内全局唯一
+ * （UUID/ULID/雪花），不能按设备从 1 递增；记录额外保存协议 messageType，避免同 messageId 不同业务被当成重复成功。
  * 服务端正式身份是 claim 得到的 packetId，归档不得早于该对齐。
  *
  * <p>记录格式 {@code STATE|serverPacketId|payloadHash|ownerToken|clientMessageId|timestamp}：
@@ -37,7 +38,8 @@ import java.util.UUID;
  *
  * <p>服务端 packet 键与稳定客户端键在同一个 Lua 内原子抢占：
  * 任一维度已 COMMITTED 即 DUPLICATE，并原子带回 canonical packetId；
- * 同键不同正文（payloadHash 不一致）即 CONFLICT。
+     * 同键不同正文（payloadHash 不一致）或消息类型不同即 CONFLICT。
+     * 旧记录没有消息类型字段时只比对正文，避免升级后把已提交重试判成冲突。
  * 释放一律 compare-and-delete（owner + serverPacketId 比对）。
  *
  * <p>崩溃残留的 PENDING 在 {@link #PENDING_TAKEOVER_MS} 之后可被同正文的重发接管。
@@ -103,7 +105,7 @@ public final class QosIdempotencyHelper {
     /**
      * KEYS 为实际存在的幂等键（1~2 个）。有 loginIdentity 时 packet/client 同槽 {@code {appKey:identity}}（P1）；
      * 仅 packet 键时按 packetId 分片。时间戳一律取 Redis 服务器时间。
-     * ARGV: [hash, owner, serverId, clientId, takeoverMs, ttlMs...]（ttlMs 与 KEYS 一一对应）。
+     * ARGV: [hash, owner, serverId, clientId, messageType, takeoverMs, ttlMs...]（ttlMs 与 KEYS 一一对应）。
      * 返回 {@code {state, canonicalPacketId}}。第二项必须是<b>字符串</b>：Lua 5.1 的 number 是双精度，
      * 19 位 packetId 超过 2^53 后经 {@code tonumber} 会被舍入，绝不能对 packetId 调用 tonumber。
      */
@@ -113,7 +115,8 @@ public final class QosIdempotencyHelper {
             local owner = ARGV[2]
             local serverId = ARGV[3]
             local clientId = ARGV[4]
-            local takeoverMs = tonumber(ARGV[5])
+            local messageType = ARGV[5]
+            local takeoverMs = tonumber(ARGV[6])
             local now = redis.call('TIME')
             now = now[1] * 1000 + math.floor(now[2] / 1000)
             local reuseId = nil
@@ -122,6 +125,7 @@ public final class QosIdempotencyHelper {
               if raw then
                 local f = parse(raw)
                 if hash ~= '' and f[3] ~= hash then return {4, ''} end
+                if f[7] ~= nil and f[7] ~= '' and messageType ~= '' and f[7] ~= messageType then return {4, ''} end
                 if f[1] == 'COMMITTED' then
                   return {2, f[2]}
                 end
@@ -139,9 +143,9 @@ public final class QosIdempotencyHelper {
               end
             end
             local sid = reuseId or serverId
-            local record = table.concat({'PENDING', sid, hash, owner, clientId, tostring(now)}, '|')
+            local record = table.concat({'PENDING', sid, hash, owner, clientId, tostring(now), messageType}, '|')
             for i = 1, #KEYS do
-              redis.call('PSETEX', KEYS[i], tonumber(ARGV[5 + i]), record)
+              redis.call('PSETEX', KEYS[i], tonumber(ARGV[6 + i]), record)
             end
             return {1, sid}
             """);
@@ -153,12 +157,14 @@ public final class QosIdempotencyHelper {
     @SuppressWarnings("rawtypes")
     private static final DefaultRedisScript<List> STATE_SCRIPT = listScript(PARSE_LUA + """
             local hash = ARGV[1]
+            local messageType = ARGV[2]
             local pendingSeen = false
             for i = 1, #KEYS do
               local raw = redis.call('GET', KEYS[i])
               if raw then
                 local f = parse(raw)
                 if hash ~= '' and f[3] ~= hash then return {4, ''} end
+                if f[7] ~= nil and f[7] ~= '' and messageType ~= '' and f[7] ~= messageType then return {4, ''} end
                 if f[1] == 'COMMITTED' then
                   return {2, f[2]}
                 end
@@ -170,13 +176,14 @@ public final class QosIdempotencyHelper {
             """);
 
     /**
-     * KEYS 同抢占。ARGV: [owner, serverId, hash, ttlMs...]。时间戳取 Redis 服务器时间。
+     * KEYS 同抢占。ARGV: [owner, serverId, hash, messageType, ttlMs...]。时间戳取 Redis 服务器时间。
      * 先校验全部键再统一写入，避免 key1 已 COMMITTED、key2 失败留下幽灵成功记录。
      */
     private static final DefaultRedisScript<Long> COMMIT_SCRIPT = script(PARSE_LUA + """
             local owner = ARGV[1]
             local serverId = ARGV[2]
             local hash = ARGV[3]
+            local messageType = ARGV[4]
             local nowParts = redis.call('TIME')
             local now = nowParts[1] * 1000 + math.floor(nowParts[2] / 1000)
             for i = 1, #KEYS do
@@ -185,7 +192,10 @@ public final class QosIdempotencyHelper {
               local f = parse(raw)
               if f[1] == 'COMMITTED' then
                 if f[2] ~= serverId or f[3] ~= hash then return 0 end
+                if f[7] ~= nil and f[7] ~= '' and messageType ~= '' and f[7] ~= messageType then return 0 end
               elseif not (f[1] == 'PENDING' and f[2] == serverId and f[3] == hash and f[4] == owner) then
+                return 0
+              elseif f[7] ~= nil and f[7] ~= '' and messageType ~= '' and f[7] ~= messageType then
                 return 0
               end
             end
@@ -193,8 +203,8 @@ public final class QosIdempotencyHelper {
               local raw = redis.call('GET', KEYS[i])
               local f = parse(raw)
               if f[1] == 'PENDING' then
-                redis.call('PSETEX', KEYS[i], tonumber(ARGV[3 + i]),
-                  table.concat({'COMMITTED', serverId, hash, owner, f[5], tostring(now)}, '|'))
+                redis.call('PSETEX', KEYS[i], tonumber(ARGV[4 + i]),
+                  table.concat({'COMMITTED', serverId, hash, owner, f[5], tostring(now), f[7] or messageType}, '|'))
               end
             end
             return 1
@@ -253,7 +263,8 @@ public final class QosIdempotencyHelper {
         if (keys.isEmpty()) {
             return new ClaimResult(CLAIM_FAILED, 0L);
         }
-        return toClaimResult(evalList(redisTemplate, STATE_SCRIPT, keys, payloadHash(message)));
+        return toClaimResult(evalList(redisTemplate, STATE_SCRIPT, keys,
+                payloadHash(message), String.valueOf(packet.getMessageType())));
     }
 
     /**
@@ -301,9 +312,10 @@ public final class QosIdempotencyHelper {
      * 原子抢占 packet 键与稳定 client 键。只有返回 {@link #CLAIM_ACQUIRED} 才允许写消息。
      */
     public static int tryClaim(RedisTemplate<String, ?> redisTemplate, String appKey, long packetId,
-                               String loginIdentity, String clientMessageId, String ownerToken, Message message) {
-        return tryClaimResult(redisTemplate, appKey, packetId, loginIdentity, clientMessageId, ownerToken, message)
-                .state();
+                               String loginIdentity, String clientMessageId, String ownerToken, Message message,
+                               byte messageType) {
+        return tryClaimResult(redisTemplate, appKey, packetId, loginIdentity, clientMessageId, ownerToken, message,
+                messageType).state();
     }
 
     /**
@@ -311,7 +323,7 @@ public final class QosIdempotencyHelper {
      */
     public static ClaimResult tryClaimResult(RedisTemplate<String, ?> redisTemplate, String appKey, long packetId,
                                              String loginIdentity, String clientMessageId, String ownerToken,
-                                             Message message) {
+                                             Message message, byte messageType) {
         if (redisTemplate == null || StringUtils.isBlank(ownerToken)) {
             return new ClaimResult(CLAIM_FAILED, 0L);
         }
@@ -324,6 +336,7 @@ public final class QosIdempotencyHelper {
         args.add(ownerToken);
         args.add(String.valueOf(packetId));
         args.add(normalizeClientId(clientMessageId));
+        args.add(String.valueOf(messageType));
         args.add(String.valueOf(PENDING_TAKEOVER_MS));
         args.addAll(target.ttls);
         return toClaimResult(evalList(redisTemplate, CLAIM_SCRIPT, target.keys, args.toArray(new String[0])));
@@ -337,8 +350,10 @@ public final class QosIdempotencyHelper {
      * 将当前 owner 的 {@code PENDING} 原子转为 {@code COMMITTED}，并区分明确拒绝与结果未知。
      */
     public static CommitOutcome commit(RedisTemplate<String, ?> redisTemplate, String appKey, long packetId,
-                                       String loginIdentity, String clientMessageId, String ownerToken, Message message) {
-        return commit(redisTemplate, appKey, packetId, packetId, loginIdentity, clientMessageId, ownerToken, message);
+                                       String loginIdentity, String clientMessageId, String ownerToken, Message message,
+                                       byte messageType) {
+        return commit(redisTemplate, appKey, packetId, packetId, loginIdentity, clientMessageId, ownerToken, message,
+                messageType);
     }
 
     /**
@@ -347,7 +362,8 @@ public final class QosIdempotencyHelper {
      */
     public static CommitOutcome commit(RedisTemplate<String, ?> redisTemplate, String appKey,
                                        long claimKeyPacketId, long recordPacketId,
-                                       String loginIdentity, String clientMessageId, String ownerToken, Message message) {
+                                       String loginIdentity, String clientMessageId, String ownerToken, Message message,
+                                       byte messageType) {
         if (redisTemplate == null || StringUtils.isBlank(ownerToken)) {
             return CommitOutcome.REJECTED;
         }
@@ -359,6 +375,7 @@ public final class QosIdempotencyHelper {
         args.add(ownerToken);
         args.add(String.valueOf(recordPacketId));
         args.add(payloadHash(message));
+        args.add(String.valueOf(messageType));
         args.addAll(target.ttls);
         Long result = eval(redisTemplate, COMMIT_SCRIPT, target.keys, args.toArray(new String[0]));
         if (result == null) {
