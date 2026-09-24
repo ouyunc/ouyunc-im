@@ -111,8 +111,6 @@ public class CacheConstant {
     /** 群屏蔽索引完整性标记，与 group-shield: 同槽 */
     private static final String GROUP_USERS_SHIELD_INIT = "group-shield-init:";
 
-    private static final String MONGO_COMPENSATE = "im:mongo:compensate:";
-
     /***
      * 好友列表
      */
@@ -267,13 +265,6 @@ public class CacheConstant {
     }
 
     // ============================================ 分布式锁 ============================================
-
-    /**
-     * 构建基础 appKey锁 缓存key - 集群优化
-     */
-    public static String buildAppKeyLockCacheKey(String appKey) {
-        return OUYUNC + LOCK + APP_KEY + withHashTag(appKey);
-    }
 
     /**
      * 构建appKey identity 关闭连接的分布式锁key - 集群优化
@@ -453,13 +444,6 @@ public class CacheConstant {
      */
     public static String buildGroupShieldInitCacheKey(String appKey, String groupId) {
         return buildAggregateCacheKey(appKey, groupId) + GROUP_USERS_SHIELD_INIT;
-    }
-
-    /**
-     * MySQL 已提交、Mongo 失败时的补偿 List，按 kind 分队列。
-     */
-    public static String buildMongoCompensateListCacheKey(String kind) {
-        return OUYUNC + MONGO_COMPENSATE + kind;
     }
 
     /**
@@ -843,15 +827,4 @@ public class CacheConstant {
      * <p>IM 与 micro-cloud 须共用同一 Redis 与本频道名。</p>
      */
     public static final String RELATION_CACHE_INVALIDATE_CHANNEL = OUYUNC + "im:relation-cache:invalidate";
-
-    /**
-     * 媒体审核幂等键（P1）。
-     *
-     * @param appKey   租户
-     * @param packetId 协议包 id
-     * @return Redis key
-     */
-    public static String buildContentModerateDedupeCacheKey(String appKey, long packetId) {
-        return OUYUNC + "im:cs:moderate:dedupe:" + appKey + COLON + packetId;
-    }
 }
