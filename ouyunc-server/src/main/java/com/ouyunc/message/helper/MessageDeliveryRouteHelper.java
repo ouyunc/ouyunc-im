@@ -37,7 +37,7 @@ public final class MessageDeliveryRouteHelper {
      */
     public static void deliverPeerMessage(Packet packet, boolean forceSelfSync) {
         Message message = packet.getMessage();
-        String appKey = message.getMetadata().getAppKey();
+        String appKey = message.getMetadata().getIngress().getAppKey();
         syncSenderDevices(packet, forceSelfSync);
         String senderId = message.getFrom();
         String recipientId = message.getTo();
@@ -55,7 +55,7 @@ public final class MessageDeliveryRouteHelper {
             return;
         }
         Message message = packet.getMessage();
-        String appKey = message.getMetadata().getAppKey();
+        String appKey = message.getMetadata().getIngress().getAppKey();
         Set<String> deliverable = DefaultRepository.INSTANCE.excludeGroupShieldedMembers(
                 appKey, groupId, Set.of(memberId));
         if (deliverable.isEmpty()) {
@@ -94,7 +94,7 @@ public final class MessageDeliveryRouteHelper {
     /** 每批完成过滤、渠道和在线查询后释放临时集合，避免整群渠道 Map 和 IM Set 叠加。 */
     private static void deliverGroupBatch(Packet packet, Set<String> members) {
         Message message = packet.getMessage();
-        String appKey = message.getMetadata().getAppKey();
+        String appKey = message.getMetadata().getIngress().getAppKey();
         Set<String> deliverable = DefaultRepository.INSTANCE.excludeGroupShieldedMembers(
                 appKey, message.getTo(), members);
         Map<String, MessageDeliveryChannelEnum> channels = DefaultRepository.INSTANCE
@@ -136,7 +136,7 @@ public final class MessageDeliveryRouteHelper {
 
     private static void pushImUserIfOnline(Packet packet, String userId) {
         Message message = packet.getMessage();
-        List<LoginClientInfo> clients = ClientHelper.onlineAll(message.getMetadata().getAppKey(), userId);
+        List<LoginClientInfo> clients = ClientHelper.onlineAll(message.getMetadata().getIngress().getAppKey(), userId);
         if (CollectionUtils.isEmpty(clients)) {
             log.debug("IM 用户 {} 不在线，已写入会话索引", userId);
             return;
@@ -157,7 +157,7 @@ public final class MessageDeliveryRouteHelper {
 
     private static void syncSenderDevices(Packet packet, boolean forceSelfSync) {
         Message message = packet.getMessage();
-        String appKey = message.getMetadata().getAppKey();
+        String appKey = message.getMetadata().getIngress().getAppKey();
         boolean httpPush = isHttpPush(message.getMetadata());
         if (!forceSelfSync) {
             ClientInfo clientInfo = MessageServerContext.localClientInfo(appKey, message.getFrom());
@@ -181,7 +181,7 @@ public final class MessageDeliveryRouteHelper {
     }
 
     private static boolean isHttpPush(Metadata metadata) {
-        return metadata != null && IngressSourceEnum.isHttpPush(metadata.getIngressSource());
+        return metadata != null && IngressSourceEnum.isHttpPush(metadata.getIngress().getIngressSource());
     }
 
     /** 长连接和 HTTP 都要等外渠进入 broker，失败时不得回受理成功。 */

@@ -63,7 +63,7 @@ public final class MessageAcceptPipelineHelper {
 
     private static void markArchiveBound(Packet packet) {
         if (packet != null && packet.getMessage() != null && packet.getMessage().getMetadata() != null) {
-            packet.getMessage().getMetadata().setQosArchiveBound(true);
+            packet.getMessage().getMetadata().getQosClaim().setQosArchiveBound(true);
         }
     }
 

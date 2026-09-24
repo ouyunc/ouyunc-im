@@ -38,11 +38,11 @@ public final class ExternalIngressMetadata {
         }
         Metadata trusted = new Metadata();
         if (incoming != null) {
-            trusted.setAppKey(incoming.getAppKey());
-            trusted.setClientIp(incoming.getClientIp());
-            trusted.setOriginServerAddress(incoming.getOriginServerAddress());
-            trusted.setServerTime(incoming.getServerTime());
-            trusted.setIngressSource(incoming.getIngressSource());
+            trusted.getIngress().setAppKey(incoming.getIngress().getAppKey());
+            trusted.getIngress().setClientIp(incoming.getIngress().getClientIp());
+            trusted.getIngress().setOriginServerAddress(incoming.getIngress().getOriginServerAddress());
+            trusted.getIngress().setServerTime(incoming.getIngress().getServerTime());
+            trusted.getIngress().setIngressSource(incoming.getIngress().getIngressSource());
         }
         message.setMetadata(trusted);
     }

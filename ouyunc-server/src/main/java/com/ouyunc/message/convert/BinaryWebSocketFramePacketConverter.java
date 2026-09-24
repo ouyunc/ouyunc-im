@@ -61,7 +61,7 @@ public enum BinaryWebSocketFramePacketConverter implements PacketConverter<Binar
                         ctx.close();
                         throw new MessageException("客户端:" + message.getFrom() + " 登录内容无法解析");
                     }
-                    metadata.setAppKey(loginContent.getAppKey());
+                    metadata.getIngress().setAppKey(loginContent.getAppKey());
                 }else {
                     // 不是登录类型的消息，说明该客户端已经登录，可以从当前通道获取用户appKey
                     LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
@@ -70,15 +70,15 @@ public enum BinaryWebSocketFramePacketConverter implements PacketConverter<Binar
                         ctx.close();
                         throw new MessageException("客户端:"+message.getFrom()+" 未登录，请先登录");
                     }
-                    metadata.setAppKey(loginClientInfo.getAppKey());
+                    metadata.getIngress().setAppKey(loginClientInfo.getAppKey());
                 }
                 // 获取客户端真实ip
-                metadata.setClientIp(IpUtil.getIp(ctx));
+                metadata.getIngress().setClientIp(IpUtil.getIp(ctx));
                 // 外部入站的来源由服务端覆盖赋值；集群透传不进入此分支。
-                metadata.setOriginServerAddress(MessageContext.messageProperties.getLocalServerAddress());
+                metadata.getIngress().setOriginServerAddress(MessageContext.messageProperties.getLocalServerAddress());
                 // 设置服务器时间
-                metadata.setServerTime(TimeUtil.currentTimeMillis());
-                metadata.setIngressSource(IngressSourceEnum.IM);
+                metadata.getIngress().setServerTime(TimeUtil.currentTimeMillis());
+                metadata.getIngress().setIngressSource(IngressSourceEnum.IM);
             }
             message.setMetadata(metadata);
             // 设置服务端生成的消息id，以服务端的主键为准
@@ -95,7 +95,7 @@ public enum BinaryWebSocketFramePacketConverter implements PacketConverter<Binar
     @Override
     public BinaryWebSocketFrame convertFromPacket(Packet packet) {
         // 将packet 的元数据信息清空（内部辅助数据，不对客户端暴漏）
-        Target target = packet.getMessage().getMetadata().getTarget();
+        Target target = packet.getMessage().getMetadata().getClusterRoute().getTarget();
         if (target != null && target.getProtocol() == NativePacketProtocol.WS.getProtocol() && target.getProtocolVersion() == NativePacketProtocol.WS.getProtocolVersion()) {
             // 暂存元数据信息
             Message message = packet.getMessage();

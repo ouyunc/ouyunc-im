@@ -31,7 +31,7 @@ public enum FriendShieldValidator implements ReactiveValidator<Packet> {
         String from = message.getFrom();
         String to = message.getTo();
         Metadata metadata = message.getMetadata();
-        String appKey = metadata.getAppKey();
+        String appKey = metadata.getIngress().getAppKey();
         
         // 使用响应式多级缓存查询好友关系
         return DefaultRepository.INSTANCE.getFriendReactive(appKey, from, to)

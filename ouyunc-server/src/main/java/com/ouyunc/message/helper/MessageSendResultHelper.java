@@ -85,7 +85,7 @@ public final class MessageSendResultHelper {
         result.setPacketId(MessageContext.idGenerator().generateId());
         result.setMessageType(MessageTypeEnum.MESSAGE_SEND_RESULT.getType());
         if (metadata != null && target != null) {
-            metadata.setTarget(target);
+            metadata.getClusterRoute().setTarget(target);
         }
         if (SENT_RESULTS.asMap().putIfAbsent(source, Boolean.TRUE) != null) {
             log.debug("消息受理结果已经回送, messageId={}", original.getId());

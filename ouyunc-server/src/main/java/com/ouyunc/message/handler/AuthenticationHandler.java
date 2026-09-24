@@ -341,7 +341,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                 loginContent.getIdentity(),
                 MessageContentTypeEnum.REMOTE_LOGIN_CONTENT.getType(),
                 Serializer.JSON.serializeToString(new ServerNotifyContent(
-                        String.format(MessageConstant.REMOTE_LOGIN_NOTIFICATIONS, loginMessage.getMetadata().getClientIp()))),
+                        String.format(MessageConstant.REMOTE_LOGIN_NOTIFICATIONS, loginMessage.getMetadata().getIngress().getClientIp()))),
                 loginTimestamp,
                 loginMessage.getMetadata());
         Packet kickPacket = new Packet(

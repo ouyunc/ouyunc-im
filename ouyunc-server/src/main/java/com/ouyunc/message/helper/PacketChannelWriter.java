@@ -158,7 +158,7 @@ public final class PacketChannelWriter {
         if (loginClientInfo != null && StringUtils.isNotBlank(loginClientInfo.getIdentity())) {
             String appKey = StringUtils.isNotBlank(loginClientInfo.getAppKey())
                     ? loginClientInfo.getAppKey()
-                    : (metadata != null ? metadata.getAppKey() : null);
+                    : (metadata != null ? metadata.getIngress().getAppKey() : null);
             String serverAddress = StringUtils.isNotBlank(loginClientInfo.getLoginServerAddress())
                     ? loginClientInfo.getLoginServerAddress()
                     : MessageServerContext.serverProperties().getLocalServerAddress();
@@ -175,7 +175,7 @@ public final class PacketChannelWriter {
             return null;
         }
         return Target.newBuilder()
-                .appKey(metadata.getAppKey())
+                .appKey(metadata.getIngress().getAppKey())
                 .targetIdentity(messageFrom)
                 .deviceType(packet.getDeviceType())
                 .targetServerAddress(MessageServerContext.serverProperties().getLocalServerAddress())
@@ -277,12 +277,12 @@ public final class PacketChannelWriter {
             return;
         }
         Metadata metadata = packet.getMessage().getMetadata();
-        if (metadata.getTarget() != null) {
+        if (metadata.getClusterRoute().getTarget() != null) {
             return;
         }
         Target target = resolveReplyTarget(ctx, packet, packet.getMessage().getTo());
         if (target != null) {
-            metadata.setTarget(target);
+            metadata.getClusterRoute().setTarget(target);
         }
     }
 

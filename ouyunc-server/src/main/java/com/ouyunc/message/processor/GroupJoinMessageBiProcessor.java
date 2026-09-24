@@ -68,7 +68,7 @@ public final class GroupJoinMessageBiProcessor extends AbstractMessageBiProcesso
             log.debug("GroupJoinMessageProcessor 正在处理外部客户端加群 {} ...", packet);
         }
         Message message = packet.getMessage();
-        String appKey = message.getMetadata().getAppKey();
+        String appKey = message.getMetadata().getIngress().getAppKey();
         return MessageAcceptPipelineHelper.confirmThenRun(ctx, MqConstant.MQ_GROUP_REQUEST_TOPIC, message.getTo(), packet, () -> {
             String lockKey = CacheConstant.buildGroupRequestLockCacheKey(appKey, message.getFrom(), message.getTo());
             DistributedLockHelper.runWithLock(ctx, packet, lockKey, ExceptionCodeEnum.BIND_GROUP_ERROR, () -> {
@@ -76,7 +76,7 @@ public final class GroupJoinMessageBiProcessor extends AbstractMessageBiProcesso
                 if (repository().inGroup(appKey, message.getFrom(), message.getTo())) {
                     log.warn("该用户 {} 已经加入群组 {}，幂等 ACK", message.getFrom(), message.getTo());
                     if (!repository().repairUserGroupIndex(appKey, message.getFrom(), message.getTo(),
-                            message.getMetadata().getServerTime())) {
+                            message.getMetadata().getIngress().getServerTime())) {
                         MessageSendResultHelper.retryLater(ctx, packet, ExceptionCodeEnum.BIND_GROUP_ERROR);
                         return;
                     }

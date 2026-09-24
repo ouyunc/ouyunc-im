@@ -66,7 +66,7 @@ public class ExceptionRecord implements Serializable {
                 record.setTo(msg.getTo());
                 Metadata metadata = msg.getMetadataOrNull();
                 if (metadata != null) {
-                    record.setAppKey(metadata.getAppKey());
+                    record.setAppKey(metadata.getIngress().getAppKey());
                 }
             }
         }

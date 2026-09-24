@@ -32,12 +32,12 @@ public class MessageClusterRouteFailureThread implements Runnable {
     public void run() {
         log.warn("获取不到可用的服务连接！packetId: {},开始进行重试...", packet.getPacketId());
         Metadata metadata = packet.getMessage().getMetadata();
-        int currentRetry = metadata.getCurrentRetry();
+        int currentRetry = metadata.getClusterRoute().getCurrentRetry();
         currentRetry++;
         // 清空消息中的列表，添加重试次数+1
-        metadata.setCurrentRetry(currentRetry);
-        metadata.setFromServerAddress(null);
-        metadata.setRoutingTables(null);
+        metadata.getClusterRoute().setCurrentRetry(currentRetry);
+        metadata.getClusterRoute().setFromServerAddress(null);
+        metadata.getClusterRoute().setRoutingTables(null);
         // targetSocketAddress 不改变
         if (log.isDebugEnabled()) {
             log.debug("正在进行第 {} 次重试消息 packetId:{} ", currentRetry, packet.getPacketId());
@@ -45,7 +45,7 @@ public class MessageClusterRouteFailureThread implements Runnable {
         if (currentRetry < MessageServerContext.serverProperties().getClusterMessageRetry()) {
             // 重试次数+1，清空消息中的曾经路由过的服务，封装消息，找到目标主机
             // retry 去处理
-            MessageHelper.asyncSendMessage(packet, metadata.getTarget());
+            MessageHelper.asyncSendMessage(packet, metadata.getClusterRoute().getTarget());
             return;
         }
         // 如果重试之后还是出现服务不通，则进行服务的下线处理(这一步在内置客户端心跳保活时处理，这里不做服务下线的处理)，也就是将目标主机从本服务的注册表中删除（如果存在），其他服务上的注册表不做同步更新

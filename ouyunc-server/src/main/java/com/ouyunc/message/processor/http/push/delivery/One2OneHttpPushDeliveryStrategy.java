@@ -115,7 +115,7 @@ public final class One2OneHttpPushDeliveryStrategy implements HttpProcessor {
                         (ctx, packet0) -> {
                             Message msg = packet0.getMessage();
                             if (msg != null && msg.getMetadata() != null) {
-                                String appKey = msg.getMetadata().getAppKey();
+                                String appKey = msg.getMetadata().getIngress().getAppKey();
                                 if (StringUtils.isNoneBlank(appKey, sessionId)) {
                                     DefaultRepository.INSTANCE.refreshSessionLastMessageAfterWithdraw(appKey, sessionId);
                                 }
@@ -157,7 +157,7 @@ public final class One2OneHttpPushDeliveryStrategy implements HttpProcessor {
 
     private static void deliverReadReceiptToSender(Packet packet) {
         Message message = packet.getMessage();
-        String appKey = message.getMetadata().getAppKey();
+        String appKey = message.getMetadata().getIngress().getAppKey();
         List<LoginClientInfo> senderClients = ClientHelper.onlineAll(appKey, message.getTo());
         if (CollectionUtils.isNotEmpty(senderClients)) {
             MessageHelper.asyncSendMessage(packet, senderClients);

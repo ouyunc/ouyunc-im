@@ -31,7 +31,7 @@ public enum GroupValidator implements ReactiveValidator<Packet> {
         Message message = packet.getMessage();
         String to = message.getTo();
         Metadata metadata = message.getMetadata();
-        String appKey = metadata.getAppKey();
+        String appKey = metadata.getIngress().getAppKey();
 
         // 使用响应式多级缓存查询群组信息
         return DefaultRepository.INSTANCE.getGroupEntityReactive(appKey, to)

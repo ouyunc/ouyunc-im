@@ -22,7 +22,7 @@ public enum One2OneChatAccessValidator implements ReactiveValidator<Packet> {
     public Mono<Boolean> verify(Packet packet, ChannelHandlerContext ctx) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        String appKey = metadata.getAppKey();
+        String appKey = metadata.getIngress().getAppKey();
         return DefaultRepository.INSTANCE.loadOne2OneChatAccess(appKey, message.getFrom(), message.getTo())
                 .map(access -> {
                     if (access.rejectSend()) {

@@ -16,7 +16,8 @@ public final class HttpPushClaim implements Serializable, Cloneable {
     /** 规范化后的请求指纹。同一 messageId 不能换成另一份正文。 */
     private String httpPushPayloadHash;
 
-    public HttpPushClaim copy() {
+    @Override
+    public HttpPushClaim clone() {
         try {
             return (HttpPushClaim) super.clone();
         } catch (CloneNotSupportedException e) {

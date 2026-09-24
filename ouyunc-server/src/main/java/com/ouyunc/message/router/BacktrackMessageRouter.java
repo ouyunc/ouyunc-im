@@ -34,7 +34,7 @@ public class BacktrackMessageRouter extends AbstractMessageRouter {
     @Override
     public String route(Packet packet, String toServerAddress) {
         Metadata metadata = packet.getMessage().getMetadata();
-        List<RoutingTable> routingTables = metadata.getRoutingTables();
+        List<RoutingTable> routingTables = metadata.getClusterRoute().routingTables();
         Iterator<RoutingTable> routedTableIterator = routingTables.iterator();
         boolean isContain = false;
         RoutingTable localRoutingTable = null;
@@ -51,9 +51,9 @@ public class BacktrackMessageRouter extends AbstractMessageRouter {
             if (!isContain) {
                 Set<String> routedServerAddresses = new HashSet<>();
                 routedServerAddresses.add(toServerAddress);
-                localRoutingTable = new RoutingTable(MessageServerContext.serverProperties().getLocalServerAddress(), metadata.getFromServerAddress(), routedServerAddresses);
+                localRoutingTable = new RoutingTable(MessageServerContext.serverProperties().getLocalServerAddress(), metadata.getClusterRoute().getFromServerAddress(), routedServerAddresses);
                 routingTables.add(localRoutingTable);
-                metadata.setRoutingTables(routingTables);
+                metadata.getClusterRoute().setRoutingTables(routingTables);
             }
             Set<String> candidates = collectEligibleCandidates(localRoutingTable, routingTables);
             String nextHop = nextHopSelector.select(toServerAddress, routingTables, candidates);

@@ -71,7 +71,7 @@ public final class RequestEventContextFactory {
 
     private static RequestEventContext friendJoin(Message message) {
         DefaultRepository repository = DefaultRepository.INSTANCE;
-        String appKey = message.getMetadata().getAppKey();
+        String appKey = message.getMetadata().getIngress().getAppKey();
         RequestSession existing = repository.getFriendRequestSession(appKey, message.getFrom(), message.getTo());
         RequestSession session = existing;
         if (session == null || session.getProgress() > RequestSessionProgress.JOINING.value()) {
@@ -88,13 +88,13 @@ public final class RequestEventContextFactory {
 
     private static RequestEventContext friendApproval(Message message) {
         RequestSession session = DefaultRepository.INSTANCE.getFriendRequestSession(
-                message.getMetadata().getAppKey(), message.getTo(), message.getFrom());
+                message.getMetadata().getIngress().getAppKey(), message.getTo(), message.getFrom());
         return session == null ? null : friendContext(session);
     }
 
     private static RequestEventContext activeGroupJoin(Message message) {
         DefaultRepository repository = DefaultRepository.INSTANCE;
-        String appKey = message.getMetadata().getAppKey();
+        String appKey = message.getMetadata().getIngress().getAppKey();
         GroupRequestSession existing = repository.getGroupRequestSession(appKey, message.getFrom(), message.getTo());
         if (existing != null && existing.getProgress() <= RequestSessionProgress.JOINING.value()
                 && GroupRequestSessionWay.ACTIVE.value().equals(existing.getWay())) {
@@ -120,7 +120,7 @@ public final class RequestEventContextFactory {
             return null;
         }
         DefaultRepository repository = DefaultRepository.INSTANCE;
-        String appKey = message.getMetadata().getAppKey();
+        String appKey = message.getMetadata().getIngress().getAppKey();
         GroupRequestSession existing = repository.getGroupRequestSession(appKey, content.getIdentity(), message.getTo());
         if (existing != null && existing.getProgress() <= RequestSessionProgress.JOINING.value()
                 && GroupRequestSessionWay.INVITED.value().equals(existing.getWay())) {
@@ -156,13 +156,13 @@ public final class RequestEventContextFactory {
             return null;
         }
         GroupRequestSession session = DefaultRepository.INSTANCE.getGroupRequestSession(
-                message.getMetadata().getAppKey(), content.getIdentity(), message.getTo());
+                message.getMetadata().getIngress().getAppKey(), content.getIdentity(), message.getTo());
         return session == null ? null : groupContext(session);
     }
 
     private static RequestEventContext invitedJoinerApproval(Message message, boolean agree) {
         DefaultRepository repository = DefaultRepository.INSTANCE;
-        String appKey = message.getMetadata().getAppKey();
+        String appKey = message.getMetadata().getIngress().getAppKey();
         GroupRequestSession session = repository.getGroupRequestSession(appKey, message.getFrom(), message.getTo());
         if (session == null) {
             return null;

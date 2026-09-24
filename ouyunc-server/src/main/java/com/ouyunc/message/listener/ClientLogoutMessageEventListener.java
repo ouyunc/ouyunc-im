@@ -87,7 +87,7 @@ class ClientLogoutMessageEventListener implements MessageEventListener<MessageEv
                 notifiedSessions += loginClientInfos.size();
                 String friendId = entry.getKey();
                 Metadata metadata = new Metadata();
-                metadata.setAppKey(appKey);
+                metadata.getIngress().setAppKey(appKey);
                 Message message = new Message(MessageContext.idGenerator().generateIdStr(), identity, friendId,
                         MessageContentTypeEnum.TEXT_CONTENT.getType(), loginClientInfo.getWillMessage(),
                         TimeUtil.currentTimeMillis(), metadata);

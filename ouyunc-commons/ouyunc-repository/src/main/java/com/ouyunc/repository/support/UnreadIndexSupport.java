@@ -49,7 +49,7 @@ public final class UnreadIndexSupport {
             return true;
         }
         Message message = packet.getMessage();
-        String appKey = message.getMetadata().getAppKey();
+        String appKey = message.getMetadata().getIngress().getAppKey();
         String senderId = message.getFrom();
         String recipientId = message.getTo();
         if (senderId == null || recipientId == null || senderId.equals(recipientId)) {

@@ -48,7 +48,7 @@ public final class ClusterChannelGuard {
                 ctx.channel().remoteAddress(),
                 channelProtocol.getProtocol(),
                 packet.getProtocol(),
-                metadata == null ? null : metadata.getClusterForwardMode(),
+                metadata == null ? null : metadata.getClusterRoute().getClusterForwardMode(),
                 clusterType);
         ctx.close();
         return true;
@@ -77,7 +77,7 @@ public final class ClusterChannelGuard {
         log.warn("OUYUNC_CLIENT 连接使用非法能力，关闭连接 remote={} packetProtocol={} forwardMode={} clusterType={}",
                 ctx.channel().remoteAddress(),
                 packet.getProtocol(),
-                metadata == null ? null : metadata.getClusterForwardMode(),
+                metadata == null ? null : metadata.getClusterRoute().getClusterForwardMode(),
                 clusterType);
         ctx.close();
         return true;
@@ -107,12 +107,12 @@ public final class ClusterChannelGuard {
             return false;
         }
         // MessageHelper 经集群连接写出前会写本机地址；空值不得放行。
-        if (!peer.equals(metadata.getFromServerAddress())) {
+        if (!peer.equals(metadata.getClusterRoute().getFromServerAddress())) {
             log.warn("集群路由包发送节点与握手身份不一致 peer={} fromServer={}",
-                    peer, metadata.getFromServerAddress());
+                    peer, metadata.getClusterRoute().getFromServerAddress());
             return false;
         }
-        Target target = metadata.getTarget();
+        Target target = metadata.getClusterRoute().getTarget();
         if (target == null || StringUtils.isBlank(target.getTargetServerAddress())) {
             return false;
         }

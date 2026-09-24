@@ -25,7 +25,7 @@ public enum DeviceValidator implements Validator<Packet> {
     public boolean verify(Packet packet, ChannelHandlerContext ctx) {
         Message message = packet.getMessage();
         String from = message.getFrom();
-        String appKey = message.getMetadata().getAppKey();
+        String appKey = message.getMetadata().getIngress().getAppKey();
         // 软校验：白名单未命中返回 false，不抛异常
         return DeviceTypeRegistry.supports(appKey, from, packet.getDeviceType());
     }

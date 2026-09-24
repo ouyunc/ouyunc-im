@@ -107,10 +107,10 @@ public class MessageHelper {
             }
             Packet fanout = packet.clone();
             Metadata metadata = fanout.getMessage().getMetadata();
-            metadata.setClusterForwardMode(ClusterForwardModeEnum.CLIENT);
-            metadata.setFanoutTargets(targets);
+            metadata.getClusterRoute().setClusterForwardMode(ClusterForwardModeEnum.CLIENT);
+            metadata.getClusterRoute().setFanoutTargets(targets);
             Target envelope = Target.newBuilder()
-                    .appKey(metadata.getAppKey())
+                    .appKey(metadata.getIngress().getAppKey())
                     .targetServerAddress(nodeId)
                     .protocol(NativePacketProtocol.OUYUNC.getProtocol())
                     .protocolVersion(NativePacketProtocol.OUYUNC.getProtocolVersion())
@@ -232,7 +232,7 @@ public class MessageHelper {
         if (packet == null || packet.getMessage() == null || packet.getMessage().getMetadata() == null) {
             return null;
         }
-        Target target = packet.getMessage().getMetadata().getTarget();
+        Target target = packet.getMessage().getMetadata().getClusterRoute().getTarget();
         if (target == null) {
             return null;
         }
@@ -263,8 +263,8 @@ public class MessageHelper {
         Packet packet = originPacket.clone();
         Metadata metadata = packet.getMessage() == null ? null : packet.getMessage().getMetadata();
         if (metadata != null) {
-            metadata.setClusterForwardMode(ClusterForwardModeEnum.INTERNAL);
-            metadata.setFanoutTargets(null);
+            metadata.getClusterRoute().setClusterForwardMode(ClusterForwardModeEnum.INTERNAL);
+            metadata.getClusterRoute().setFanoutTargets(null);
             ensureInternalForwardTarget(metadata, destServerAddress);
         }
         ChannelPool destPool = resolveClusterChannelPool(destServerAddress);
@@ -277,10 +277,10 @@ public class MessageHelper {
     }
 
     private static void ensureInternalForwardTarget(Metadata metadata, String destServerAddress) {
-        Target target = metadata.getTarget();
+        Target target = metadata.getClusterRoute().getTarget();
         if (target == null) {
-            metadata.setTarget(Target.newBuilder()
-                    .appKey(metadata.getAppKey())
+            metadata.getClusterRoute().setTarget(Target.newBuilder()
+                    .appKey(metadata.getIngress().getAppKey())
                     .targetServerAddress(destServerAddress)
                     .protocol(NativePacketProtocol.OUYUNC.getProtocol())
                     .protocolVersion(NativePacketProtocol.OUYUNC.getProtocolVersion())
@@ -346,7 +346,7 @@ public class MessageHelper {
             notifySendFail(originPacket, "缺少投递目标", sendCallback);
             return;
         }
-        originMetadata.setTarget(target);
+        originMetadata.getClusterRoute().setTarget(target);
         String destServerAddress = target.getTargetServerAddress();
         String localServerAddress = MessageServerContext.serverProperties().getLocalServerAddress();
         boolean cluster = MessageServerContext.serverProperties().isClusterEnable();
@@ -366,7 +366,7 @@ public class MessageHelper {
         Packet packet = originPacket.clone();
         Metadata metadata = packet.getMessage().getMetadata();
         if (!metadata.isClientForward()) {
-            metadata.setClusterForwardMode(ClusterForwardModeEnum.CLIENT);
+            metadata.getClusterRoute().setClusterForwardMode(ClusterForwardModeEnum.CLIENT);
         }
         ChannelPool destPool = resolveClusterChannelPool(destServerAddress);
         if (destPool != null) {
@@ -382,12 +382,12 @@ public class MessageHelper {
      */
     private static void deliverLocal(Packet packet, Target target, SendCallback sendCallback) {
         Metadata metadata = packet.getMessage().getMetadata();
-        if (metadata != null && CollectionUtils.isNotEmpty(metadata.getFanoutTargets())) {
-            ClientHelper.deliverLocalFanoutTargets(packet, metadata.getFanoutTargets());
+        if (metadata != null && CollectionUtils.isNotEmpty(metadata.getClusterRoute().getFanoutTargets())) {
+            ClientHelper.deliverLocalFanoutTargets(packet, metadata.getClusterRoute().getFanoutTargets());
             return;
         }
         String identity = target.getTargetIdentity();
-        if (metadata != null && metadata.isLocalBroadcastOnly()
+        if (metadata != null && metadata.getClusterRoute().isLocalBroadcastOnly()
                 && (identity == null || identity.isEmpty())) {
             ClientHelper.deliverLocalBroadcast(target.getAppKey(), packet);
             return;
@@ -507,7 +507,7 @@ public class MessageHelper {
             if (channelPoolHashCode == null) {
                 ChannelAttrUtil.setChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_TAG_POOL, channelPool.hashCode());
             }
-            metadata.setFromServerAddress(MessageServerContext.serverProperties().getLocalServerAddress());
+            metadata.getClusterRoute().setFromServerAddress(MessageServerContext.serverProperties().getLocalServerAddress());
             Runnable releaseChannel = () -> channelPool.release(channel);
             PacketChannelWriter.runOnEventLoop(channel, packet, sendCallback,
                     () -> PacketChannelWriter.tryWritePacketAndThen(channel, packet, sendCallback, releaseChannel),

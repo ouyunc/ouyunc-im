@@ -81,8 +81,8 @@ public final class ClusterQosRetryCancelMessageBiProcessor extends AbstractMessa
             return null;
         }
         Metadata metadata = message.getMetadata();
-        Target target = metadata == null ? null : metadata.getTarget();
-        String metaAppKey = metadata == null ? null : metadata.getAppKey();
+        Target target = metadata == null ? null : metadata.getClusterRoute().getTarget();
+        String metaAppKey = metadata == null ? null : metadata.getIngress().getAppKey();
         String targetAppKey = target == null ? null : target.getAppKey();
         if (!content.getAppKey().equals(metaAppKey)
                 || (StringUtils.isNotBlank(targetAppKey) && !content.getAppKey().equals(targetAppKey))) {

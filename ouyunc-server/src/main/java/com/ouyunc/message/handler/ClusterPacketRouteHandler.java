@@ -70,17 +70,17 @@ public class ClusterPacketRouteHandler extends SimpleChannelInboundHandler<Packe
     }
 
     private static void handleClientForward(Packet packet, Metadata metadata) {
-        Target target = metadata.getTarget();
+        Target target = metadata.getClusterRoute().getTarget();
         String localServerAddress = MessageServerContext.serverProperties().getLocalServerAddress();
-        if (CollectionUtils.isNotEmpty(metadata.getFanoutTargets())
+        if (CollectionUtils.isNotEmpty(metadata.getClusterRoute().getFanoutTargets())
                 && target != null
                 && Objects.equals(localServerAddress, target.getTargetServerAddress())) {
-            ClientHelper.deliverLocalFanoutTargets(packet, metadata.getFanoutTargets());
+            ClientHelper.deliverLocalFanoutTargets(packet, metadata.getClusterRoute().getFanoutTargets());
             return;
         }
-        if (metadata.isLocalBroadcastOnly() && target != null
+        if (metadata.getClusterRoute().isLocalBroadcastOnly() && target != null
                 && Objects.equals(localServerAddress, target.getTargetServerAddress())) {
-            ClientHelper.deliverLocalBroadcast(metadata.getAppKey(), packet);
+            ClientHelper.deliverLocalBroadcast(metadata.getIngress().getAppKey(), packet);
             return;
         }
         MessageHelper.asyncSendMessageWithoutInterceptor(packet, target);

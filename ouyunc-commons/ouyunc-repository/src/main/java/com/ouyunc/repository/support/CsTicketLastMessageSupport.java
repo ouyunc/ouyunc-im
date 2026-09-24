@@ -42,13 +42,13 @@ public final class CsTicketLastMessageSupport {
             return;
         }
         Message message = lastPacket.getMessage();
-        if (message.getMetadata() == null || StringUtils.isBlank(message.getMetadata().getAppKey())) {
+        if (message.getMetadata() == null || StringUtils.isBlank(message.getMetadata().getIngress().getAppKey())) {
             return;
         }
         if (!isCountableChatMessage(lastPacket)) {
             return;
         }
-        String appKey = message.getMetadata().getAppKey();
+        String appKey = message.getMetadata().getIngress().getAppKey();
         String lmKey = CacheConstant.buildCsTicketLastMessageCacheKey(appKey, ticketId.trim());
         long ttlMs = timeUnit.toMillis(expireTime);
         DefaultRedisScript<String> script = new DefaultRedisScript<>(

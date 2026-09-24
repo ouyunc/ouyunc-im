@@ -79,7 +79,7 @@ public final class One2OneJoinFriendRequestMessageBiProcessor extends AbstractMe
         Message message = packet.getMessage();
         String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
         return Mono.fromRunnable(() -> {
-            String appKey = message.getMetadata().getAppKey();
+            String appKey = message.getMetadata().getIngress().getAppKey();
             String lockKey = CacheConstant.buildFriendRequestLockCacheKey(appKey, sessionId);
             DistributedLockHelper.runWithLock(ctx, packet, lockKey, ExceptionCodeEnum.BIND_FRIEND_ERROR, () -> {
                 RequestSession requestSession = repository().getFriendRequestSession(appKey, message.getFrom(), message.getTo());

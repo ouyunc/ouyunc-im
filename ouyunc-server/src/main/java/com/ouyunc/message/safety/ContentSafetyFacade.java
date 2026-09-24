@@ -52,7 +52,7 @@ public final class ContentSafetyFacade {
         }
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        String appKey = metadata == null ? null : metadata.getAppKey();
+        String appKey = metadata == null ? null : metadata.getIngress().getAppKey();
         int contentType = message.getContentType();
         if (StringUtils.isBlank(appKey)) {
             if (contentType == MessageContentTypeEnum.TEXT_CONTENT.getType()
@@ -76,9 +76,9 @@ public final class ContentSafetyFacade {
         if (policy.isMediaEnabled()
                 && (contentType == MessageContentTypeEnum.IMAGE_CONTENT.getType()
                 || contentType == MessageContentTypeEnum.VIDEO_CONTENT.getType())) {
-            if (metadata != null && metadata.getModerationStatus() == null) {
-                metadata.setModerationStatus(ModerationStatusEnum.NONE);
-                metadata.setModerationMode(ModerationModeEnum.fromAction(
+            if (metadata != null && metadata.getIngress().getModerationStatus() == null) {
+                metadata.getIngress().setModerationStatus(ModerationStatusEnum.NONE);
+                metadata.getIngress().setModerationMode(ModerationModeEnum.fromAction(
                         policy.getMediaAction(), ModerationModeEnum.SEND_THEN_REVIEW));
             }
         }
@@ -165,7 +165,7 @@ public final class ContentSafetyFacade {
                                                        SensitiveWordAcAutomaton matcher) {
         ContentSafetyAction action = policy.getTextAction();
         log.info("敏感词命中 appKey={} action={} hits={}",
-                message.getMetadata() == null ? null : message.getMetadata().getAppKey(),
+                message.getMetadata() == null ? null : message.getMetadata().getIngress().getAppKey(),
                 action, hits);
         if (action == ContentSafetyAction.REJECT) {
             return ContentSafetyResult.reject(ContentSafetyHitType.KEYWORD, hits,

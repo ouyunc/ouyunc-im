@@ -98,7 +98,7 @@ class ClientLoginMessageEventListener implements MessageEventListener<MessageEve
                 notifiedSessions += loginClientInfos.size();
                 String friendId = entry.getKey();
                 Metadata metadata = new Metadata();
-                metadata.setAppKey(appKey);
+                metadata.getIngress().setAppKey(appKey);
                 Message message = new Message(MessageContext.idGenerator().generateIdStr(), identity, friendId,
                         MessageContentTypeEnum.TEXT_CONTENT.getType(), loginClientInfo.getAliveMessage(),
                         TimeUtil.currentTimeMillis(), metadata);

@@ -47,7 +47,7 @@ public final class CsTicketUnreadSupport {
         if (message == null || message.getMetadata() == null) {
             return true;
         }
-        String appKey = message.getMetadata().getAppKey();
+        String appKey = message.getMetadata().getIngress().getAppKey();
         String ticketId = route.ticketId();
         String recipientId = resolveRecipientId(message, route);
         if (StringUtils.isAnyBlank(appKey, ticketId, recipientId)) {

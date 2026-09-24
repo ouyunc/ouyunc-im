@@ -27,7 +27,7 @@ public enum FriendValidator implements ReactiveValidator<Packet> {
         String from = message.getFrom();
         String to = message.getTo();
         Metadata metadata = message.getMetadata();
-        String appKey = metadata.getAppKey();
+        String appKey = metadata.getIngress().getAppKey();
         return Mono.fromCallable(() -> DefaultRepository.INSTANCE.isFriend(appKey, to, from))
                 .doOnNext(friend -> {
                     if (!Boolean.TRUE.equals(friend)) {

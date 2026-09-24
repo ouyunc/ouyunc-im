@@ -148,7 +148,7 @@ public final class CsHttpPushDeliveryStrategy implements HttpProcessor {
 
     private Mono<Boolean> handleWithdraw(Packet packet, CsImSessionRoute route) {
         String ticketScopeId = CsHelper.ticketMessageScopeId(route);
-        String appKey = packet.getMessage().getMetadata().getAppKey();
+        String appKey = packet.getMessage().getMetadata().getIngress().getAppKey();
         return DefaultRepository.INSTANCE.reactiveHandleOperation(null, packet,
                         DefaultRepository.INSTANCE.reactiveLoadWithdrawTargetPackets(
                                 packet, ticketScopeId, MessageIndexScope.CS_TICKET, true),

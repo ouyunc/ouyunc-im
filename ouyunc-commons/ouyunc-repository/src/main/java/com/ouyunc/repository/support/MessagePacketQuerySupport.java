@@ -214,7 +214,7 @@ public final class MessagePacketQuerySupport {
     static boolean belongsToApp(Packet packet, String appKey) {
         return appKey != null && !appKey.isBlank() && packet != null
                 && packet.getMessage() != null && packet.getMessage().getMetadata() != null
-                && appKey.equals(packet.getMessage().getMetadata().getAppKey());
+                && appKey.equals(packet.getMessage().getMetadata().getIngress().getAppKey());
     }
 
     private List<Packet> convertToPackets(List<? extends MessageEntity> entities) {

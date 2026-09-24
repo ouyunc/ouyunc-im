@@ -30,11 +30,11 @@ public final class CsTicketMessagePersistenceSupport {
         }
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        if (metadata == null || metadata.getAppKey() == null || route.ticketId() == null) {
+        if (metadata == null || metadata.getIngress().getAppKey() == null || route.ticketId() == null) {
             return Mono.just(SaveMessageOutcome.FAILED);
         }
         String ticketScopeId = route.ticketId().trim();
-        String ticketSessionKey = CacheConstant.buildCsTicketMessageSessionCacheKey(metadata.getAppKey(), ticketScopeId);
+        String ticketSessionKey = CacheConstant.buildCsTicketMessageSessionCacheKey(metadata.getIngress().getAppKey(), ticketScopeId);
         return Mono.fromCallable(() -> {
                     SaveMessageOutcome outcome = sessionPersistence.saveMessageWithSessionOutcome(
                             packet, expireTime, ticketSessionKey, (ops) -> {

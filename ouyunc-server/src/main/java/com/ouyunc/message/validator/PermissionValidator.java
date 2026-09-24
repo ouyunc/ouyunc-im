@@ -29,7 +29,7 @@ public enum PermissionValidator implements ReactiveValidator<Packet> {
         }
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        String appKey = metadata == null ? null : metadata.getAppKey();
+        String appKey = metadata == null ? null : metadata.getIngress().getAppKey();
         if (StringUtils.isBlank(appKey)) {
             return Mono.just(false);
         }

@@ -65,7 +65,7 @@ public final class CsTicketReadReceiptSupport {
             return Mono.empty();
         }
         String ticketId = route.ticketId().trim();
-        String appKey = message.getMetadata().getAppKey();
+        String appKey = message.getMetadata().getIngress().getAppKey();
         return specialMessageLoader.reactiveLoadValidatedSpecialPackets(
                 packet, ticketId, MessageIndexScope.CS_TICKET,
                 MessageConstant.MAX_READ_RECEIPT_MESSAGE_COUNT,
@@ -115,7 +115,7 @@ public final class CsTicketReadReceiptSupport {
             return Mono.just(false);
         }
         final long incomingOffset = maxReadPacketId;
-        final String appKey = metadata.getAppKey();
+        final String appKey = metadata.getIngress().getAppKey();
         final String ticketId = route.ticketId().trim();
         return Mono.fromCallable(() -> ticketUnread.clearOnRead(
                         appKey, ticketId, readerId, deviceType, incomingOffset, expireTime))
@@ -134,7 +134,7 @@ public final class CsTicketReadReceiptSupport {
             return Mono.just(false);
         }
         return Mono.fromCallable(() -> ticketUnread.clearOnRead(
-                        message.getMetadata().getAppKey(),
+                        message.getMetadata().getIngress().getAppKey(),
                         route.ticketId().trim(),
                         readerId,
                         deviceType,

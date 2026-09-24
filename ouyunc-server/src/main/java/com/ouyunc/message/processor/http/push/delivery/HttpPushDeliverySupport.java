@@ -172,7 +172,7 @@ public final class HttpPushDeliverySupport {
         }
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        String appKey = metadata != null ? metadata.getAppKey() : null;
+        String appKey = metadata != null ? metadata.getIngress().getAppKey() : null;
         String messageId = message.getId();
         if (StringUtils.isAnyBlank(appKey, messageId)) {
             return;
@@ -225,7 +225,7 @@ public final class HttpPushDeliverySupport {
         }
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        String appKey = metadata != null ? metadata.getAppKey() : null;
+        String appKey = metadata != null ? metadata.getIngress().getAppKey() : null;
         String messageId = message.getId();
         if (StringUtils.isAnyBlank(appKey, messageId)) {
             return null;
@@ -240,8 +240,8 @@ public final class HttpPushDeliverySupport {
     private static PushIdempotencySupport.ClaimIdentity claimIdentity(Packet packet) {
         Metadata metadata = packet.getMessage().getMetadata();
         return new PushIdempotencySupport.ClaimIdentity(String.valueOf(packet.getPacketId()),
-                metadata == null ? null : metadata.getHttpPushPayloadHash(),
-                metadata == null ? null : metadata.getHttpPushOwnerToken());
+                metadata == null ? null : metadata.getHttpPushClaim().getHttpPushPayloadHash(),
+                metadata == null ? null : metadata.getHttpPushClaim().getHttpPushOwnerToken());
     }
 
     private record IdempotencyCoords(String appKey, String messageId,
@@ -262,7 +262,7 @@ public final class HttpPushDeliverySupport {
                 || StringUtils.isBlank(identity)) {
             return;
         }
-        String appKey = packet.getMessage().getMetadata().getAppKey();
+        String appKey = packet.getMessage().getMetadata().getIngress().getAppKey();
         if (!shouldSelfSync(appKey, identity)) {
             return;
         }

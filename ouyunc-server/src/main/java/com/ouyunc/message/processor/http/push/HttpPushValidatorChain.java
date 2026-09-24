@@ -91,7 +91,7 @@ public final class HttpPushValidatorChain {
         }
         String from = packet.getMessage().getFrom();
         String to = packet.getMessage().getTo();
-        String appKey = packet.getMessage().getMetadata().getAppKey();
+        String appKey = packet.getMessage().getMetadata().getIngress().getAppKey();
         One2OneChatAccess access;
         try {
             access = DefaultRepository.INSTANCE.loadOne2OneChatAccess(appKey, from, to).block(VERIFY_TIMEOUT);
@@ -148,10 +148,10 @@ public final class HttpPushValidatorChain {
 
     private static boolean isBroadcast(Packet packet) {
         Metadata metadata = packet.getMessage().getMetadata();
-        if (metadata == null || metadata.getHttpPushType() == null) {
+        if (metadata == null || metadata.getIngress().getHttpPushType() == null) {
             return false;
         }
-        PushTypeEnum pushType = PushTypeEnum.getPushTypeEnum(metadata.getHttpPushType());
+        PushTypeEnum pushType = PushTypeEnum.getPushTypeEnum(metadata.getIngress().getHttpPushType());
         return pushType == PushTypeEnum.BROADCAST_SERVER_NOTIFY;
     }
 

@@ -191,7 +191,7 @@ public final class InternalPacketIngressService {
         try {
             HttpPushProcessorDelegate.preProcessOrThrow(packet);
             // 指纹在业务规范化后、内容安全可能 MASK 正文前固定，保证原请求重试稳定。
-            packet.getMessage().getMetadata().setHttpPushPayloadHash(
+            packet.getMessage().getMetadata().getHttpPushClaim().setHttpPushPayloadHash(
                     com.ouyunc.repository.support.QosIdempotencyHelper.payloadHash(packet.getMessage()));
             applyContentSafetyOrThrow(packet);
         } catch (HttpPipelineException ex) {
@@ -236,8 +236,8 @@ public final class InternalPacketIngressService {
         }
         packetIdStr = claim.canonicalPacketId();
         alignCommittedPacketId(packet, packetIdStr);
-        packet.getMessage().getMetadata().setHttpPushPayloadHash(claim.payloadHash());
-        packet.getMessage().getMetadata().setHttpPushOwnerToken(claim.ownerToken());
+        packet.getMessage().getMetadata().getHttpPushClaim().setHttpPushPayloadHash(claim.payloadHash());
+        packet.getMessage().getMetadata().getHttpPushClaim().setHttpPushOwnerToken(claim.ownerToken());
 
         try {
             boolean ok = HttpPushProcessorDelegate.runPipeline(packet);

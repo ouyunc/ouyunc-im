@@ -66,7 +66,7 @@ public final class FriendRepositorySupport {
     public boolean saveJoinFriendRequestMessage(Packet packet, RequestSession requestSession, long expireTime) {
         Message message = packet.getMessage();
         return saveFriendRequestMessage(packet, requestSession.getSessionId(), expireTime, (redisConnection) -> {
-            String friendRequestCacheKey = CacheConstant.buildFriendRequestCacheKey(message.getMetadata().getAppKey(), message.getFrom(), message.getTo());
+            String friendRequestCacheKey = CacheConstant.buildFriendRequestCacheKey(message.getMetadata().getIngress().getAppKey(), message.getFrom(), message.getTo());
             // 修复：key 必须用 stringSerializer，与 saveRefuseFriendRequestMessage 保持一致，否则后续读取时无法命中
             byte[] keyBytes = session.serializeOrThrow(infra.stringSerializer, friendRequestCacheKey, "friendRequestCacheKey");
             byte[] valueBytes = session.serializeOrThrow(infra.valueSerializer, requestSession, "requestSession");
@@ -95,7 +95,7 @@ public final class FriendRepositorySupport {
         Message message = packet.getMessage();
         return saveFriendRequestMessage(packet, requestSession.getSessionId(), expireTime, (redisConnection) -> {
             String friendRequestCacheKey = CacheConstant.buildFriendRequestCacheKey(
-                    message.getMetadata().getAppKey(), message.getTo(), message.getFrom());
+                    message.getMetadata().getIngress().getAppKey(), message.getTo(), message.getFrom());
             byte[] keyBytes = session.serializeOrThrow(infra.stringSerializer, friendRequestCacheKey, "friendRequestCacheKey");
             byte[] valueBytes = session.serializeOrThrow(infra.valueSerializer, requestSession, "requestSession");
             redisConnection.commands().set(keyBytes, valueBytes,
@@ -107,7 +107,7 @@ public final class FriendRepositorySupport {
     public boolean saveRefuseFriendRequestMessage(Packet packet, RequestSession requestSession, long expireTime) {
         Message message = packet.getMessage();
         return saveFriendRequestMessage(packet, requestSession.getSessionId(), expireTime, (redisConnection) -> {
-            String friendRequestCacheKey = CacheConstant.buildFriendRequestCacheKey(message.getMetadata().getAppKey(), message.getTo(), message.getFrom());
+            String friendRequestCacheKey = CacheConstant.buildFriendRequestCacheKey(message.getMetadata().getIngress().getAppKey(), message.getTo(), message.getFrom());
             byte[] keyBytes = session.serializeOrThrow(infra.stringSerializer, friendRequestCacheKey, "friendRequestCacheKey");
             byte[] valueBytes = session.serializeOrThrow(infra.valueSerializer, requestSession, "requestSession");
             redisConnection.commands().set(keyBytes, valueBytes, Expiration.milliseconds(MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP), RedisStringCommands.SetOption.UPSERT);
@@ -116,7 +116,7 @@ public final class FriendRepositorySupport {
 
     public boolean autoPassBindFriend(Packet packet, RequestSession requestSession, long expireTime) {
         Message message = packet.getMessage();
-        String appKey = message.getMetadata().getAppKey();
+        String appKey = message.getMetadata().getIngress().getAppKey();
         return bindFriend(packet, requestSession.getSessionId(), expireTime, (redisConnection) -> {
             String friendRequestCacheKey = CacheConstant.buildFriendRequestCacheKey(appKey, message.getFrom(), message.getTo());
             byte[] keyBytes = session.serializeOrThrow(infra.stringSerializer, friendRequestCacheKey, "friendRequestCacheKey");
@@ -450,7 +450,7 @@ public final class FriendRepositorySupport {
         // 调用公共方法，传入空的额外操作
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        String appKey = metadata.getAppKey();
+        String appKey = metadata.getIngress().getAppKey();
         String from = message.getFrom();
         String to = message.getTo();
         return session.saveMessageWithSession(packet, expireTime, CacheConstant.buildFriendRequestSessionCacheKey(appKey, IdentityUtil.sessionId(from, to), friendRequestSessionId), consumer, (ops, msg, ak, f, t) -> {
@@ -462,10 +462,10 @@ public final class FriendRepositorySupport {
         Metadata metadata = message.getMetadata();
         String from = message.getFrom();
         String to = message.getTo();
-        String appKey = metadata.getAppKey();
+        String appKey = metadata.getIngress().getAppKey();
         boolean bound = session.saveMessageWithSession(packet, expireTime, CacheConstant.buildFriendRequestSessionCacheKey(appKey, IdentityUtil.sessionId(from, to), friendRequestSessionId), consumer,
                 (redisConnection, msg, ak, f, t) -> {
-                    double score = msg.getMetadata().getServerTime();
+                    double score = msg.getMetadata().getIngress().getServerTime();
                     RelationRosterRedis.evalAdd(redisConnection, infra.stringSerializer,
                             CacheConstant.buildFriendsCacheKey(appKey, from),
                             CacheConstant.buildFriendsRelationVersionCacheKey(appKey, from),

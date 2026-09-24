@@ -84,7 +84,7 @@ public final class QosRetryScheduler {
         if (message.getQos() <= QosLevelEnum.QOS_0.getLevel()) {
             return;
         }
-        if (StringUtils.isBlank(message.getMetadata().getOriginServerAddress())) {
+        if (StringUtils.isBlank(message.getMetadata().getIngress().getOriginServerAddress())) {
             // 来源只能由外部入站层建立；落地节点补值会把自己误判为始发节点。
             log.warn("QoS 重试拒绝登记：缺少入站 origin packetId={}", packet.getPacketId());
             return;
@@ -92,7 +92,7 @@ public final class QosRetryScheduler {
         if (!isOriginNode(packet)) {
             return;
         }
-        String appKey = message.getMetadata().getAppKey();
+        String appKey = message.getMetadata().getIngress().getAppKey();
         QosRetryTaskContext retryContext = new QosRetryTaskContext(
                 appKey, packet.getPacketId(), target.getAppKey(), target.getTargetIdentity(), target.getDeviceType());
         String taskId = QosRetryTaskIds.build(retryContext);
@@ -193,11 +193,11 @@ public final class QosRetryScheduler {
             return false;
         }
         Metadata metadata = packet.getMessage().getMetadata();
-        if (StringUtils.isBlank(metadata.getOriginServerAddress())) {
+        if (StringUtils.isBlank(metadata.getIngress().getOriginServerAddress())) {
             log.warn("QoS 重试无法确定归属：缺少入站 origin packetId={}", packet.getPacketId());
             return false;
         }
-        return local.equals(metadata.getOriginServerAddress());
+        return local.equals(metadata.getIngress().getOriginServerAddress());
     }
 
     private static void retryOnce(QosRetryTaskContext retryContext, String taskId, TimerTaskWrapper taskWrapper) {
@@ -246,11 +246,11 @@ public final class QosRetryScheduler {
         String local = MessageServerContext.serverProperties().getLocalServerAddress();
         long now = TimeUtil.currentTimeMillis();
         Metadata metadata = new Metadata();
-        metadata.setAppKey(content.getAppKey());
-        metadata.setServerTime(now);
-        metadata.setFromServerAddress(local);
-        metadata.setClusterForwardMode(ClusterForwardModeEnum.INTERNAL);
-        metadata.setTarget(Target.newBuilder()
+        metadata.getIngress().setAppKey(content.getAppKey());
+        metadata.getIngress().setServerTime(now);
+        metadata.getClusterRoute().setFromServerAddress(local);
+        metadata.getClusterRoute().setClusterForwardMode(ClusterForwardModeEnum.INTERNAL);
+        metadata.getClusterRoute().setTarget(Target.newBuilder()
                 .appKey(content.getAppKey())
                 .targetServerAddress(origin)
                 .protocol(NativePacketProtocol.OUYUNC.getProtocol())

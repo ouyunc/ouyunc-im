@@ -87,7 +87,7 @@ public final class DeliveryChannelSupport {
         }
         Message message = packet.getMessage();
         ExternalChannelOutboundPayload payload = new ExternalChannelOutboundPayload();
-        payload.setAppKey(message.getMetadata().getAppKey());
+        payload.setAppKey(message.getMetadata().getIngress().getAppKey());
         payload.setMessageId(message.getId());
         payload.setPacketId(packet.getPacketId());
         payload.setMessageType(packet.getMessageType());

@@ -81,7 +81,7 @@ public final class One2OneAgreeFriendRequestMessageBiProcessor extends AbstractM
         String from = message.getFrom();
         String to = message.getTo();
         Metadata metadata = message.getMetadata();
-        String appKey = metadata.getAppKey();
+        String appKey = metadata.getIngress().getAppKey();
         String sessionId = IdentityUtil.sessionId(from, to);
         return Mono.fromRunnable(() -> DistributedLockHelper.runWithLock(ctx, packet,
                 CacheConstant.buildFriendRequestLockCacheKey(appKey, sessionId),

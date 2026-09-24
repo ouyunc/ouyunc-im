@@ -25,7 +25,7 @@ public final class ChannelMessagePushSupport {
         if (metadata == null || extensions == null || extensions.isEmpty()) {
             return;
         }
-        if (preserveHttpPushIngress && IngressSourceEnum.isHttpPush(metadata.getIngressSource())) {
+        if (preserveHttpPushIngress && IngressSourceEnum.isHttpPush(metadata.getIngress().getIngressSource())) {
             return;
         }
         Object ingressChannel = extensions.get(ChannelMessageExtraKeys.INGRESS_CHANNEL);
@@ -33,14 +33,14 @@ public final class ChannelMessagePushSupport {
             String key = String.valueOf(ingressChannel);
             IngressSourceEnum ingress = mapIngressSource(key);
             if (ingress != null) {
-                metadata.setIngressSource(ingress);
+                metadata.getIngress().setIngressSource(ingress);
             }
         }
         Object ingressSource = extensions.get(ChannelMessageExtraKeys.INGRESS_SOURCE);
         if (ingressSource != null && StringUtils.isNotBlank(String.valueOf(ingressSource))) {
             IngressSourceEnum parsed = IngressSourceEnum.fromCode(String.valueOf(ingressSource));
             if (parsed != null) {
-                metadata.setIngressSource(parsed);
+                metadata.getIngress().setIngressSource(parsed);
             }
         }
     }

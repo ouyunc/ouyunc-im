@@ -41,7 +41,7 @@ public final class ServerNotifyMessageBiProcessor extends AbstractMessageBiProce
                 log.warn("SERVER_NOTIFY 缺少 message/metadata: {}", packet);
                 return;
             }
-            String appKey = message.getMetadata().getAppKey();
+            String appKey = message.getMetadata().getIngress().getAppKey();
             if (isBroadcast(packet)) {
                 ClientHelper.broadcastServerNotify(appKey, packet);
                 return;
@@ -60,10 +60,10 @@ public final class ServerNotifyMessageBiProcessor extends AbstractMessageBiProce
 
     private static boolean isBroadcast(Packet packet) {
         Metadata metadata = packet.getMessage().getMetadata();
-        if (metadata == null || metadata.getHttpPushType() == null) {
+        if (metadata == null || metadata.getIngress().getHttpPushType() == null) {
             return false;
         }
-        PushTypeEnum pushType = PushTypeEnum.getPushTypeEnum(metadata.getHttpPushType());
+        PushTypeEnum pushType = PushTypeEnum.getPushTypeEnum(metadata.getIngress().getHttpPushType());
         return pushType == PushTypeEnum.BROADCAST_SERVER_NOTIFY
                 || MessageConstant.SPLAT.equals(packet.getMessage().getTo());
     }

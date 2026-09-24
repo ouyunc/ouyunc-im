@@ -28,7 +28,7 @@ public enum GroupMaxLimitValidator implements ReactiveValidator<Packet> {
             return Mono.just(false);
         }
         Message message = packet.getMessage();
-        String appKey = message.getMetadata().getAppKey();
+        String appKey = message.getMetadata().getIngress().getAppKey();
         String userId = message.getFrom();
         if (StringUtils.isAnyBlank(appKey, userId)) {
             return Mono.just(true);

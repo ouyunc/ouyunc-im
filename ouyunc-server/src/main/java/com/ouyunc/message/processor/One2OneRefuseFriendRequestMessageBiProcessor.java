@@ -75,7 +75,7 @@ public final class One2OneRefuseFriendRequestMessageBiProcessor extends Abstract
     public Mono<Void> process(ChannelHandlerContext ctx, Packet packet) {
         Message message = packet.getMessage();
         String to = message.getTo();
-        String appKey = message.getMetadata().getAppKey();
+        String appKey = message.getMetadata().getIngress().getAppKey();
         String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
         return Mono.fromRunnable(() -> DistributedLockHelper.runWithLock(ctx, packet,
                 CacheConstant.buildFriendRequestLockCacheKey(appKey, sessionId),

@@ -20,7 +20,8 @@ public final class QosClaim implements Serializable, Cloneable {
     /** SAVE 归档已按正式 packetId 发出。此后失败不得释放占位。 */
     private boolean qosArchiveBound;
 
-    public QosClaim copy() {
+    @Override
+    public QosClaim clone() {
         try {
             return (QosClaim) super.clone();
         } catch (CloneNotSupportedException e) {

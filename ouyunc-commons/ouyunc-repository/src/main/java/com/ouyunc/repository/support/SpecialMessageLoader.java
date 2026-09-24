@@ -67,7 +67,7 @@ public final class SpecialMessageLoader {
             log.error("消息数量为0或超出限制 {}!", maxCount);
             return Mono.empty();
         }
-        String expectedAppKey = metadata.getAppKey();
+        String expectedAppKey = metadata.getIngress().getAppKey();
         return messagePacketQuery.fetchPacketsReactive(expectedAppKey, packetIds)
                 .flatMap(packets -> validateLoadedPackets(
                         scopeId, scope, packetIds, packets, function, extraPredicate))

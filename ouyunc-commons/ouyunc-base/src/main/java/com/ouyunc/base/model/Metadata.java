@@ -4,16 +4,12 @@ import com.alibaba.fastjson2.JSONReader;
 import com.alibaba.fastjson2.JSONWriter;
 import com.alibaba.fastjson2.annotation.JSONType;
 import com.ouyunc.base.constant.enums.ClusterForwardModeEnum;
-import com.ouyunc.base.constant.enums.IngressSourceEnum;
-import com.ouyunc.base.constant.enums.ModerationModeEnum;
-import com.ouyunc.base.constant.enums.ModerationStatusEnum;
 
 import java.io.Serial;
 import java.io.Serializable;
-import java.util.List;
 
 /**
- * 消息内部上下文。对外仍是一组取值方法，状态按生命周期分开放：
+ * 消息内部上下文。状态按生命周期分成五块：
  * 入站事实、集群路由、QoS 占位、HTTP 幂等、申请快照。
  */
 @JSONType(serializeFeatures = JSONWriter.Feature.FieldBased, deserializeFeatures = JSONReader.Feature.FieldBased)
@@ -46,69 +42,63 @@ public class Metadata implements Serializable, Cloneable {
         this.httpPushClaim = httpPushClaim == null ? new HttpPushClaim() : httpPushClaim;
         this.requestEventContext = requestEventContext;
     }
-    /**
-     * 只接收已组装好的五块。某一块传 null 时用空对象，不在这里拆字段赋值。
-     */
+    /** 只替换入站事实，其余四块保持空对象。 */
     public Metadata(IngressFacts ingress) {
         this.ingress = ingress == null ? new IngressFacts() : ingress;
     }
 
     /** 归档快照去掉只在本机受理使用的占位令牌，申请快照保留。 */
     public void clearDeliveryClaims() {
-        qosClaim().clear();
-        httpPushClaim().clear();
+        getQosClaim().clear();
+        getHttpPushClaim().clear();
     }
 
-    private IngressFacts ingress() {
+    public IngressFacts getIngress() {
         if (ingress == null) {
             ingress = new IngressFacts();
         }
         return ingress;
     }
 
-    private ClusterRoute clusterRoute() {
+    public void setIngress(IngressFacts ingress) {
+        this.ingress = ingress == null ? new IngressFacts() : ingress;
+    }
+
+    public ClusterRoute getClusterRoute() {
         if (clusterRoute == null) {
             clusterRoute = new ClusterRoute();
         }
         return clusterRoute;
     }
 
-    private QosClaim qosClaim() {
+    public void setClusterRoute(ClusterRoute clusterRoute) {
+        this.clusterRoute = clusterRoute == null ? new ClusterRoute() : clusterRoute;
+    }
+
+    public QosClaim getQosClaim() {
         if (qosClaim == null) {
             qosClaim = new QosClaim();
         }
         return qosClaim;
     }
 
-    private HttpPushClaim httpPushClaim() {
+    public void setQosClaim(QosClaim qosClaim) {
+        this.qosClaim = qosClaim == null ? new QosClaim() : qosClaim;
+    }
+
+    public HttpPushClaim getHttpPushClaim() {
         if (httpPushClaim == null) {
             httpPushClaim = new HttpPushClaim();
         }
         return httpPushClaim;
     }
 
-    public String getAppKey() { return ingress().getAppKey(); }
-    public void setAppKey(String appKey) { ingress().setAppKey(appKey); }
-    public Target getTarget() { return clusterRoute().getTarget(); }
-    public void setTarget(Target target) { clusterRoute().setTarget(target); }
-    public int getCurrentRetry() { return clusterRoute().getCurrentRetry(); }
-    public void setCurrentRetry(int currentRetry) { clusterRoute().setCurrentRetry(currentRetry); }
-
-    public List<RoutingTable> getRoutingTables() {
-        return clusterRoute().routingTables();
-    }
-
-    public void setRoutingTables(List<RoutingTable> routingTables) {
-        clusterRoute().setRoutingTables(routingTables);
-    }
-
-    public ClusterForwardModeEnum getClusterForwardMode() { return clusterRoute().getClusterForwardMode(); }
-    public void setClusterForwardMode(ClusterForwardModeEnum clusterForwardMode) {
-        clusterRoute().setClusterForwardMode(clusterForwardMode);
+    public void setHttpPushClaim(HttpPushClaim httpPushClaim) {
+        this.httpPushClaim = httpPushClaim == null ? new HttpPushClaim() : httpPushClaim;
     }
 
     public ClusterForwardModeEnum clusterForwardModeOrNone() {
-        return ClusterForwardModeEnum.orNone(getClusterForwardMode());
+        return ClusterForwardModeEnum.orNone(getClusterRoute().getClusterForwardMode());
     }
 
     public boolean isLocalIngress() {
@@ -123,41 +113,6 @@ public class Metadata implements Serializable, Cloneable {
         return clusterForwardModeOrNone() == ClusterForwardModeEnum.INTERNAL;
     }
 
-    public String getFromServerAddress() { return clusterRoute().getFromServerAddress(); }
-    public void setFromServerAddress(String fromServerAddress) { clusterRoute().setFromServerAddress(fromServerAddress); }
-    public long getServerTime() { return ingress().getServerTime(); }
-    public void setServerTime(long serverTime) { ingress().setServerTime(serverTime); }
-    public String getClientIp() { return ingress().getClientIp(); }
-    public void setClientIp(String clientIp) { ingress().setClientIp(clientIp); }
-    public IngressSourceEnum getIngressSource() { return ingress().getIngressSource(); }
-    public void setIngressSource(IngressSourceEnum ingressSource) { ingress().setIngressSource(ingressSource); }
-
-    public Integer getHttpPushType() { return ingress().getHttpPushType(); }
-    public void setHttpPushType(Integer httpPushType) { ingress().setHttpPushType(httpPushType); }
-    public String getQosClaimIdentity() { return qosClaim().getQosClaimIdentity(); }
-    public void setQosClaimIdentity(String qosClaimIdentity) { qosClaim().setQosClaimIdentity(qosClaimIdentity); }
-    public String getQosOwnerToken() { return qosClaim().getQosOwnerToken(); }
-    public void setQosOwnerToken(String qosOwnerToken) { qosClaim().setQosOwnerToken(qosOwnerToken); }
-    public Long getQosClaimPacketId() { return qosClaim().getQosClaimPacketId(); }
-    public void setQosClaimPacketId(Long qosClaimPacketId) { qosClaim().setQosClaimPacketId(qosClaimPacketId); }
-    public boolean isQosArchiveBound() { return qosClaim().isQosArchiveBound(); }
-    public void setQosArchiveBound(boolean qosArchiveBound) { qosClaim().setQosArchiveBound(qosArchiveBound); }
-    public String getHttpPushOwnerToken() { return httpPushClaim().getHttpPushOwnerToken(); }
-    public void setHttpPushOwnerToken(String httpPushOwnerToken) { httpPushClaim().setHttpPushOwnerToken(httpPushOwnerToken); }
-    public String getHttpPushPayloadHash() { return httpPushClaim().getHttpPushPayloadHash(); }
-    public void setHttpPushPayloadHash(String httpPushPayloadHash) { httpPushClaim().setHttpPushPayloadHash(httpPushPayloadHash); }
-    public String getOriginServerAddress() { return ingress().getOriginServerAddress(); }
-    public void setOriginServerAddress(String originServerAddress) { ingress().setOriginServerAddress(originServerAddress); }
-    public int getLoginFollowHops() { return clusterRoute().getLoginFollowHops(); }
-    public void setLoginFollowHops(int loginFollowHops) { clusterRoute().setLoginFollowHops(loginFollowHops); }
-    public ModerationStatusEnum getModerationStatus() { return ingress().getModerationStatus(); }
-    public void setModerationStatus(ModerationStatusEnum moderationStatus) { ingress().setModerationStatus(moderationStatus); }
-    public ModerationModeEnum getModerationMode() { return ingress().getModerationMode(); }
-    public void setModerationMode(ModerationModeEnum moderationMode) { ingress().setModerationMode(moderationMode); }
-    public boolean isLocalBroadcastOnly() { return clusterRoute().isLocalBroadcastOnly(); }
-    public void setLocalBroadcastOnly(boolean localBroadcastOnly) { clusterRoute().setLocalBroadcastOnly(localBroadcastOnly); }
-    public List<Target> getFanoutTargets() { return clusterRoute().getFanoutTargets(); }
-    public void setFanoutTargets(List<Target> fanoutTargets) { clusterRoute().setFanoutTargets(fanoutTargets); }
     public RequestEventContext getRequestEventContext() { return requestEventContext; }
     public void setRequestEventContext(RequestEventContext requestEventContext) { this.requestEventContext = requestEventContext; }
 
@@ -165,10 +120,10 @@ public class Metadata implements Serializable, Cloneable {
     public Metadata clone() {
         try {
             Metadata metadata = (Metadata) super.clone();
-            metadata.ingress = ingress().copy();
-            metadata.clusterRoute = clusterRoute().copy();
-            metadata.qosClaim = qosClaim().copy();
-            metadata.httpPushClaim = httpPushClaim().copy();
+            metadata.ingress = getIngress().clone();
+            metadata.clusterRoute = getClusterRoute().clone();
+            metadata.qosClaim = getQosClaim().clone();
+            metadata.httpPushClaim = getHttpPushClaim().clone();
             metadata.requestEventContext = requestEventContext == null ? null : requestEventContext.clone();
             return metadata;
         } catch (CloneNotSupportedException e) {
@@ -179,20 +134,10 @@ public class Metadata implements Serializable, Cloneable {
     @Override
     public String toString() {
         return "Metadata{" +
-                "appKey='" + getAppKey() + '\'' +
-                ", clusterForwardMode=" + getClusterForwardMode() +
-                ", currentRetry=" + getCurrentRetry() +
-                ", fromServerAddress='" + getFromServerAddress() + '\'' +
-                ", target=" + getTarget() +
-                ", clientIp='" + getClientIp() + '\'' +
-                ", serverTime=" + getServerTime() +
-                ", ingressSource=" + getIngressSource() +
-                ", httpPushType=" + getHttpPushType() +
-                ", qosClaimIdentity='" + getQosClaimIdentity() + '\'' +
-                ", originServerAddress='" + getOriginServerAddress() + '\'' +
-                ", loginFollowHops=" + getLoginFollowHops() +
-                ", moderationStatus=" + getModerationStatus() +
-                ", moderationMode=" + getModerationMode() +
+                "ingress=" + getIngress() +
+                ", clusterRoute=" + getClusterRoute() +
+                ", qosClaim=" + getQosClaim() +
+                ", httpPushClaim=" + getHttpPushClaim() +
                 '}';
     }
 }

@@ -82,7 +82,7 @@ public final class GroupMembershipSupport {
     public Set<String> groupUsersIdentity(Packet packet) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        String appKey = metadata.getAppKey();
+        String appKey = metadata.getIngress().getAppKey();
         String groupId = message.getTo();
         String cacheKey = CacheConstant.buildGroupUserCacheKey(appKey, groupId);
         Set<String> cached = MessageContext.groupUserIdentityCache.get(cacheKey);
@@ -666,7 +666,7 @@ public final class GroupMembershipSupport {
     @SuppressWarnings("unchecked")
     public Set<String> groupManagerAndLeaderUsersIdentity(Packet packet) {
         Message message = packet.getMessage();
-        String appKey = message.getMetadata().getAppKey();
+        String appKey = message.getMetadata().getIngress().getAppKey();
         String groupId = message.getTo();
         ensureGroupMemberRoster(appKey, groupId);
         return infra.stringRedisTemplate.opsForZSet().rangeByScore(
@@ -677,7 +677,7 @@ public final class GroupMembershipSupport {
     @SuppressWarnings("unchecked")
     public Map<String, Double> groupManagerAndLeaderUsersIdentityAndPost(Packet packet) {
         Message message = packet.getMessage();
-        String appKey = message.getMetadata().getAppKey();
+        String appKey = message.getMetadata().getIngress().getAppKey();
         String groupId = message.getTo();
         ensureGroupMemberRoster(appKey, groupId);
         Map<String, Double> groupManagerAndLeaderUsersIdentityAndPost = new HashMap<>();
@@ -950,7 +950,7 @@ public final class GroupMembershipSupport {
         Metadata metadata = message.getMetadata();
         return bindGroup(packet, groupRequestSession.getJoiner(), groupRequestSession.getGroupId(),
                 groupRequestSession.getSessionId(), expireTime, maxMembers, maxPerUser, (redisConnection) -> {
-            String groupRequestCacheKey = CacheConstant.buildGroupRequestCacheKey(metadata.getAppKey(), groupRequestSession.getJoiner(), groupRequestSession.getGroupId());
+            String groupRequestCacheKey = CacheConstant.buildGroupRequestCacheKey(metadata.getIngress().getAppKey(), groupRequestSession.getJoiner(), groupRequestSession.getGroupId());
             byte[] keyBytes = session.serializeOrNull(infra.stringSerializer, groupRequestCacheKey);
             byte[] valueBytes = session.serializeOrNull(infra.valueSerializer, groupRequestSession);
             redisConnection.commands().set(keyBytes, valueBytes, Expiration.milliseconds(MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP), RedisStringCommands.SetOption.UPSERT);
@@ -963,7 +963,7 @@ public final class GroupMembershipSupport {
         Metadata metadata = message.getMetadata();
         return bindGroup(packet, groupRequestSession.getJoiner(), groupRequestSession.getGroupId(),
                 groupRequestSession.getSessionId(), expireTime, maxMembers, maxPerUser, (redisConnection) -> {
-            String groupRequestCacheKey = CacheConstant.buildGroupRequestCacheKey(metadata.getAppKey(), groupRequestSession.getJoiner(), groupRequestSession.getGroupId());
+            String groupRequestCacheKey = CacheConstant.buildGroupRequestCacheKey(metadata.getIngress().getAppKey(), groupRequestSession.getJoiner(), groupRequestSession.getGroupId());
             byte[] keyBytes = session.serializeOrNull(infra.stringSerializer, groupRequestCacheKey);
             byte[] valueBytes = session.serializeOrNull(infra.valueSerializer, groupRequestSession);
             redisConnection.commands().set(keyBytes, valueBytes, Expiration.milliseconds(MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP), RedisStringCommands.SetOption.UPSERT);
@@ -974,7 +974,7 @@ public final class GroupMembershipSupport {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         return saveGroupRequestMessage(packet, groupRequestSession.getGroupId(), groupRequestSession.getSessionId(), expireTime, (redisConnection) -> {
-            String groupRequestCacheKey = CacheConstant.buildGroupRequestCacheKey(metadata.getAppKey(), groupRequestSession.getJoiner(), groupRequestSession.getGroupId());
+            String groupRequestCacheKey = CacheConstant.buildGroupRequestCacheKey(metadata.getIngress().getAppKey(), groupRequestSession.getJoiner(), groupRequestSession.getGroupId());
             byte[] keyBytes = session.serializeOrNull(infra.stringSerializer, groupRequestCacheKey);
             byte[] valueBytes = session.serializeOrNull(infra.valueSerializer, groupRequestSession);
             redisConnection.commands().set(keyBytes, valueBytes, Expiration.milliseconds(MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP), RedisStringCommands.SetOption.SET_IF_ABSENT);
@@ -985,7 +985,7 @@ public final class GroupMembershipSupport {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         return saveGroupRequestMessage(packet, groupRequestSession.getGroupId(), groupRequestSession.getSessionId(), expireTime, (redisConnection) -> {
-            String groupRequestCacheKey = CacheConstant.buildGroupRequestCacheKey(metadata.getAppKey(), groupRequestSession.getJoiner(), groupRequestSession.getGroupId());
+            String groupRequestCacheKey = CacheConstant.buildGroupRequestCacheKey(metadata.getIngress().getAppKey(), groupRequestSession.getJoiner(), groupRequestSession.getGroupId());
             byte[] keyBytes = session.serializeOrNull(infra.stringSerializer, groupRequestCacheKey);
             byte[] valueBytes = session.serializeOrNull(infra.valueSerializer, groupRequestSession);
             redisConnection.commands().set(keyBytes, valueBytes, Expiration.milliseconds(MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP), RedisStringCommands.SetOption.UPSERT);
@@ -995,7 +995,7 @@ public final class GroupMembershipSupport {
     public <K, V> boolean saveGroupRequestMessage(Packet packet, String groupId, String requestSessionId, long expireTime, Consumer<RedisConnection> consumer) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        return session.saveMessageWithSession(packet, expireTime, CacheConstant.buildGroupRequestSessionCacheKey(metadata.getAppKey(), groupId, requestSessionId), consumer, (ops, msg, ak, f, t) -> {
+        return session.saveMessageWithSession(packet, expireTime, CacheConstant.buildGroupRequestSessionCacheKey(metadata.getIngress().getAppKey(), groupId, requestSessionId), consumer, (ops, msg, ak, f, t) -> {
         });
     }
 
@@ -1011,7 +1011,7 @@ public final class GroupMembershipSupport {
         }
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        String appKey = metadata.getAppKey();
+        String appKey = metadata.getIngress().getAppKey();
         if (StringUtils.isAnyBlank(appKey, joiner, groupId)) {
             return BindGroupResult.FAILED;
         }
@@ -1054,7 +1054,7 @@ public final class GroupMembershipSupport {
                     CacheConstant.buildUserGroupsCacheKey(appKey, joiner),
                     CacheConstant.buildUserGroupsRelationVersionCacheKey(appKey, joiner),
                     CacheConstant.buildUserGroupsInitCacheKey(appKey, joiner),
-                    metadata.getServerTime(),
+                    metadata.getIngress().getServerTime(),
                     groupId,
                     maxPerUser);
             if (userAdd == RelationRosterRedis.ADD_CAPACITY_EXCEEDED) {
@@ -1071,7 +1071,7 @@ public final class GroupMembershipSupport {
                     CacheConstant.buildUserGroupsCacheKey(appKey, joiner),
                     CacheConstant.buildUserGroupsRelationVersionCacheKey(appKey, joiner),
                     CacheConstant.buildUserGroupsInitCacheKey(appKey, joiner),
-                    metadata.getServerTime(),
+                    metadata.getIngress().getServerTime(),
                     groupId);
         }
 

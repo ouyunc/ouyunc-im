@@ -74,7 +74,7 @@ public final class ReadReceiptSupport {
     private boolean isReadReceiptTargetPacketsValid(Packet packet, List<Packet> packets, IdentityType identityType) {
         Message message = packet.getMessage();
         Long deviceStoredOffset = getSessionMaxReadPackageId(
-                message.getMetadata().getAppKey(), identityType, message.getFrom(),
+                message.getMetadata().getIngress().getAppKey(), identityType, message.getFrom(),
                 packet.getDeviceType(), message.getTo());
         long storedOffset = deviceStoredOffset != null ? deviceStoredOffset : 0L;
         for (Packet readPacket : packets) {
@@ -103,7 +103,7 @@ public final class ReadReceiptSupport {
             return Mono.just(false);
         }
         return reactiveUpdateSessionReadOffset(
-                message.getMetadata().getAppKey(),
+                message.getMetadata().getIngress().getAppKey(),
                 identityType,
                 message.getFrom(),
                 packet.getDeviceType(),
@@ -130,7 +130,7 @@ public final class ReadReceiptSupport {
             return Mono.just(false);
         }
         return reactiveUpdateSessionReadOffset(
-                metadata.getAppKey(), identityType, from, packet.getDeviceType(), to, maxReadPacketId, expireTime);
+                metadata.getIngress().getAppKey(), identityType, from, packet.getDeviceType(), to, maxReadPacketId, expireTime);
     }
 
     @SuppressWarnings("unchecked")

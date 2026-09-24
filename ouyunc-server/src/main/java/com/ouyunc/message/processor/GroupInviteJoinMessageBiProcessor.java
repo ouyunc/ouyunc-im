@@ -72,7 +72,7 @@ public final class GroupInviteJoinMessageBiProcessor extends AbstractMessageBiPr
             log.debug("GroupInviteJoinMessageProcessor 正在处理外部客户端加群 {} ...", packet);
         }
         Message message = packet.getMessage();
-        String appKey = message.getMetadata().getAppKey();
+        String appKey = message.getMetadata().getIngress().getAppKey();
         Object contentObj = JSON.parseObject(message.getContent(), MessageContentTypeEnum.GROUP_REQUEST_CONTENT.getContentClass());
         GroupRequestContent content;
         if (contentObj instanceof GroupRequestContent groupRequestContent) {

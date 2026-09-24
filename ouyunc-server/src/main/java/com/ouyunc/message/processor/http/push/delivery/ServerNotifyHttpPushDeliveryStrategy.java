@@ -54,7 +54,7 @@ public final class ServerNotifyHttpPushDeliveryStrategy implements HttpProcessor
             log.warn("HTTP 推送 SERVER_NOTIFY 缺少 metadata: {}", packet);
             return Mono.just(false);
         }
-        String appKey = metadata.getAppKey();
+        String appKey = metadata.getIngress().getAppKey();
         if (isBroadcast(packet)) {
             return Mono.fromCallable(() -> {
                 ClientHelper.broadcastServerNotify(appKey, packet);
@@ -74,10 +74,10 @@ public final class ServerNotifyHttpPushDeliveryStrategy implements HttpProcessor
 
     private static boolean isBroadcast(Packet packet) {
         Metadata metadata = packet.getMessage().getMetadata();
-        if (metadata == null || metadata.getHttpPushType() == null) {
+        if (metadata == null || metadata.getIngress().getHttpPushType() == null) {
             return false;
         }
-        PushTypeEnum pushType = PushTypeEnum.getPushTypeEnum(metadata.getHttpPushType());
+        PushTypeEnum pushType = PushTypeEnum.getPushTypeEnum(metadata.getIngress().getHttpPushType());
         return pushType == PushTypeEnum.BROADCAST_SERVER_NOTIFY
                 || MessageConstant.SPLAT.equals(packet.getMessage().getTo());
     }

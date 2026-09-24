@@ -18,8 +18,8 @@ public final class QosClaimIdentities {
             return null;
         }
         Metadata metadata = message.getMetadata();
-        if (metadata != null && StringUtils.isNotBlank(metadata.getQosClaimIdentity())) {
-            return metadata.getQosClaimIdentity();
+        if (metadata != null && StringUtils.isNotBlank(metadata.getQosClaim().getQosClaimIdentity())) {
+            return metadata.getQosClaim().getQosClaimIdentity();
         }
         return message.getFrom();
     }
@@ -33,7 +33,7 @@ public final class QosClaimIdentities {
             return;
         }
         Metadata metadata = message.getMetadata();
-        metadata.setQosClaimIdentity(loginIdentity);
+        metadata.getQosClaim().setQosClaimIdentity(loginIdentity);
     }
 
     /**
@@ -44,9 +44,9 @@ public final class QosClaimIdentities {
             return;
         }
         Metadata metadata = message.getMetadata();
-        if (metadata == null || StringUtils.isNotBlank(metadata.getQosClaimIdentity())) {
+        if (metadata == null || StringUtils.isNotBlank(metadata.getQosClaim().getQosClaimIdentity())) {
             return;
         }
-        metadata.setQosClaimIdentity(loginIdentity);
+        metadata.getQosClaim().setQosClaimIdentity(loginIdentity);
     }
 }

@@ -155,7 +155,7 @@ public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
                                                     AbstractMessageBiProcessor<? extends Number> processor) {
         if (!deviceAllowedOnWorker(ctx, packet)) {
             log.error("设备类型不支持，deviceType= {}, appKey:{}", packet.getDeviceType(),
-                    packet.getMessage() == null ? null : packet.getMessage().getMetadata().getAppKey());
+                    packet.getMessage() == null ? null : packet.getMessage().getMetadata().getIngress().getAppKey());
             ExceptionReporter.reportBusiness(ExceptionCodeEnum.ILLEGAL_DEVICE_TYPE_ERROR,
                     "设备类型不支持", "PacketHandler.invokeFull", packet);
             ctx.close();
@@ -218,7 +218,7 @@ public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
                                         AbstractMessageBiProcessor<? extends Number> processor) {
         if (!deviceAllowedOnWorker(ctx, packet)) {
             log.error("设备类型不支持，deviceType= {}, appKey:{}", packet.getDeviceType(),
-                    packet.getMessage() == null ? null : packet.getMessage().getMetadata().getAppKey());
+                    packet.getMessage() == null ? null : packet.getMessage().getMetadata().getIngress().getAppKey());
             ExceptionReporter.reportBusiness(ExceptionCodeEnum.ILLEGAL_DEVICE_TYPE_ERROR,
                     "设备类型不支持", "PacketHandler.invokeClientAck", packet);
             ctx.close();

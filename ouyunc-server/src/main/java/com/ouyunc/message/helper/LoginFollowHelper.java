@@ -46,11 +46,11 @@ public final class LoginFollowHelper {
             return false;
         }
         Metadata metadata = packet.getMessage().getMetadata();
-        if (metadata.getLoginFollowHops() >= MessageConstant.LOGIN_FOLLOW_MAX_HOPS) {
+        if (metadata.getClusterRoute().getLoginFollowHops() >= MessageConstant.LOGIN_FOLLOW_MAX_HOPS) {
             log.warn("登录跟随次数耗尽 packetId={} identity={}", packet.getPacketId(), target.getTargetIdentity());
             return false;
         }
-        String appKey = StringUtils.isNotBlank(target.getAppKey()) ? target.getAppKey() : metadata.getAppKey();
+        String appKey = StringUtils.isNotBlank(target.getAppKey()) ? target.getAppKey() : metadata.getIngress().getAppKey();
         LoginClientInfo latest = ClientHelper.onlineDevice(appKey, target.getTargetIdentity(), target.getDeviceType());
         if (latest == null || StringUtils.isBlank(latest.getLoginServerAddress())) {
             return false;
@@ -62,11 +62,11 @@ public final class LoginFollowHelper {
         }
         Packet follow = packet.clone();
         Metadata followMeta = follow.getMessage().getMetadata();
-        followMeta.setLoginFollowHops(metadata.getLoginFollowHops() + 1);
-        followMeta.setClusterForwardMode(ClusterForwardModeEnum.CLIENT);
-        followMeta.setFanoutTargets(null);
+        followMeta.getClusterRoute().setLoginFollowHops(metadata.getClusterRoute().getLoginFollowHops() + 1);
+        followMeta.getClusterRoute().setClusterForwardMode(ClusterForwardModeEnum.CLIENT);
+        followMeta.getClusterRoute().setFanoutTargets(null);
         Target next = MessageHelper.buildTarget(latest);
-        followMeta.setTarget(next);
+        followMeta.getClusterRoute().setTarget(next);
         log.debug("登录跟随 packetId={} identity={} {} -> {}",
                 packet.getPacketId(), target.getTargetIdentity(), local, dest);
         MessageHelper.asyncSendMessageWithoutInterceptor(follow, next, sendCallback);

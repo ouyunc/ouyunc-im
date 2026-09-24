@@ -49,11 +49,11 @@ public final class MessagePushPacketConverter {
         String local = MessageContext.messageProperties != null
                 ? MessageContext.messageProperties.getLocalServerAddress() : null;
         if (StringUtils.isNotBlank(local)) {
-            metadata.setOriginServerAddress(local);
+            metadata.getIngress().setOriginServerAddress(local);
         }
 
-        metadata.setIngressSource(IngressSourceEnum.HTTP_PUSH);
-        metadata.setHttpPushType(request.getPushType());
+        metadata.getIngress().setIngressSource(IngressSourceEnum.HTTP_PUSH);
+        metadata.getIngress().setHttpPushType(request.getPushType());
 
         Message message = buildMessage(request, resolved, metadata, now, fromType, toType, httpContext);
         applyRequestContentType(request, message);

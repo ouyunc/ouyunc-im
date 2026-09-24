@@ -174,7 +174,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
 
     private Mono<Void> handleWithdrawMessage(ChannelHandlerContext ctx, Packet packet, CsImSessionRoute route) {
         String ticketScopeId = CsHelper.ticketMessageScopeId(route);
-        String appKey = packet.getMessage().getMetadata().getAppKey();
+        String appKey = packet.getMessage().getMetadata().getIngress().getAppKey();
         return repository().reactiveHandleOperation(ctx, packet,
                         repository().reactiveLoadWithdrawTargetPackets(
                                 packet, ticketScopeId, MessageIndexScope.CS_TICKET, true),

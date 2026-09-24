@@ -62,7 +62,7 @@ public final class MqArchiveRouting {
             return null;
         }
         Message message = packet.getMessage();
-        String appKey = message.getMetadata() != null ? message.getMetadata().getAppKey() : null;
+        String appKey = message.getMetadata() != null ? message.getMetadata().getIngress().getAppKey() : null;
         String messageId = StringUtils.trimToNull(message.getId());
         if (StringUtils.isBlank(messageId)) {
             return partitionKey(packet);
@@ -81,7 +81,7 @@ public final class MqArchiveRouting {
             return null;
         }
         Message message = packet.getMessage();
-        String appKey = message.getMetadata() != null ? message.getMetadata().getAppKey() : null;
+        String appKey = message.getMetadata() != null ? message.getMetadata().getIngress().getAppKey() : null;
         String scope;
         if (packet.getMessageType() == MessageTypeEnum.CUSTOMER_SERVICE.getType()) {
             scope = StringUtils.trimToNull(message.getCorrelationId());

@@ -80,7 +80,7 @@ public final class GroupAgreeMessageBiProcessor extends AbstractMessageBiProcess
             MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
             return Mono.empty();
         }
-        String appKey = message.getMetadata().getAppKey();
+        String appKey = message.getMetadata().getIngress().getAppKey();
         String lockKey = CacheConstant.buildGroupRequestLockCacheKey(appKey, content.getIdentity(), message.getTo());
         return Mono.fromRunnable(() -> DistributedLockHelper.runWithLock(ctx, packet, lockKey, ExceptionCodeEnum.BIND_GROUP_ERROR, () -> {
             java.util.Set<String> notifyIds = approveTargets(ctx, packet, content, appKey);

@@ -89,7 +89,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
                     Mono.defer(() -> content.process(ctx, packet)));
         }
         Message message = packet.getMessage();
-        String appKey = message.getMetadata().getAppKey();
+        String appKey = message.getMetadata().getIngress().getAppKey();
         String groupId = message.getTo();
         boolean skipSenderMembership = IngressPacketHelper.isHttpPush(packet)
                 && IngressPacketHelper.isSystemLikeSender(message);
@@ -182,7 +182,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
     /** 群已读不回推全员，仅 selfSync 时同步阅读方其它设备 */
     private void deliverGroupReadReceiptSelfSyncOnly(Packet packet) {
         Message message = packet.getMessage();
-        ClientInfo clientInfo = MessageServerContext.localClientInfo(message.getMetadata().getAppKey(), message.getFrom());
+        ClientInfo clientInfo = MessageServerContext.localClientInfo(message.getMetadata().getIngress().getAppKey(), message.getFrom());
         if (clientInfo != null && clientInfo.getSelfSync()) {
             deliver2Self(packet);
         }
@@ -205,7 +205,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
                     MessageAcceptPipelineHelper.qosAckOnSuccess(ctx0, packet0);
                     Message msg = packet0.getMessage();
                     if (msg != null && msg.getMetadata() != null) {
-                        String appKey = msg.getMetadata().getAppKey();
+                        String appKey = msg.getMetadata().getIngress().getAppKey();
                         if (StringUtils.isNoneBlank(appKey, sessionId)) {
                             repository().refreshSessionLastMessageAfterWithdraw(appKey, sessionId);
                         }
@@ -237,7 +237,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
 
     private void deliver(Packet packet) {
         Message message = packet.getMessage();
-        String appKey = message.getMetadata().getAppKey();
+        String appKey = message.getMetadata().getIngress().getAppKey();
         ClientInfo clientInfo = MessageServerContext.localClientInfo(appKey, message.getFrom());
         if (clientInfo != null && clientInfo.getSelfSync()) {
             deliver2Self(packet);
@@ -270,7 +270,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
      */
     private void deliver2Self(Packet packet) {
         Message message = packet.getMessage();
-        String appKey = message.getMetadata().getAppKey();
+        String appKey = message.getMetadata().getIngress().getAppKey();
         List<LoginClientInfo> fromSelfLoginClientInfos = ClientHelper.onlineAll(appKey, message.getFrom(), packet.getDeviceType());
         if (CollectionUtils.isNotEmpty(fromSelfLoginClientInfos)) {
             MessageHelper.asyncSendMessage(packet, fromSelfLoginClientInfos);
@@ -329,7 +329,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
         if (packet == null || packet.getMessage() == null || packet.getMessage().getMetadata() == null) {
             return;
         }
-        String appKey = packet.getMessage().getMetadata().getAppKey();
+        String appKey = packet.getMessage().getMetadata().getIngress().getAppKey();
         String recoveryKey = appKey + MessageConstant.COLON + packet.getPacketId();
         if (PENDING_FANOUT_RECOVERY.size() >= MessageConstant.GROUP_FANOUT_RECOVERY_MAX_PENDING) {
             log.error("群扇出补投队列已满, packetId={} pending={}",

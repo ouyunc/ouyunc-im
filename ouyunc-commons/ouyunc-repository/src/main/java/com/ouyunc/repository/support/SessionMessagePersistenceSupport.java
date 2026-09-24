@@ -44,7 +44,7 @@ public final class SessionMessagePersistenceSupport {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         return Mono.fromCallable(() -> saveMessageWithSessionOutcome(packet, expireTime,
-                CacheConstant.buildSessionCacheKey(metadata.getAppKey(), sessionId),
+                CacheConstant.buildSessionCacheKey(metadata.getIngress().getAppKey(), sessionId),
                 (ops) -> {
                 }, (ops, msg, app, f, t) -> {
                 }))
@@ -65,7 +65,7 @@ public final class SessionMessagePersistenceSupport {
         Metadata metadata = message.getMetadata();
         return Mono.fromCallable(() -> {
                     SaveMessageOutcome outcome = saveMessageWithSessionOutcome(packet, expireTime,
-                            CacheConstant.buildSessionCacheKey(metadata.getAppKey(), sessionId),
+                            CacheConstant.buildSessionCacheKey(metadata.getIngress().getAppKey(), sessionId),
                             (ops) -> {
                             }, (ops, msg, app, f, t) -> {
                             });
@@ -131,25 +131,25 @@ public final class SessionMessagePersistenceSupport {
                 return SaveMessageOutcome.FAILED;
             }
 
-            appKey = metadata.getAppKey();
+            appKey = metadata.getIngress().getAppKey();
             String from = message.getFrom();
             String to = message.getTo();
             qosClaimIdentity = QosClaimIdentities.resolve(message);
             clientMessageId = message.getId();
             // 入站幂等是业务正确性，不再由下行 QoS 重传等级控制。
             qosSave = StringUtils.isNotBlank(clientMessageId);
-            boolean alreadyClaimed = qosSave && StringUtils.isNotBlank(metadata.getQosOwnerToken());
-            qosOwnerToken = alreadyClaimed ? metadata.getQosOwnerToken()
+            boolean alreadyClaimed = qosSave && StringUtils.isNotBlank(metadata.getQosClaim().getQosOwnerToken());
+            qosOwnerToken = alreadyClaimed ? metadata.getQosClaim().getQosOwnerToken()
                     : (qosSave ? QosIdempotencyHelper.newOwnerToken() : null);
             if (qosSave && alreadyClaimed) {
-                Long claimKey = metadata.getQosClaimPacketId();
+                Long claimKey = metadata.getQosClaim().getQosClaimPacketId();
                 qosClaimKeyPacketId = claimKey != null && claimKey > 0L ? claimKey : packet.getPacketId();
             } else if (qosSave) {
                 // 写入 Metadata，供失败路径 releaseQosClaim 带回同一 owner（禁止传 null）
-                metadata.setQosOwnerToken(qosOwnerToken);
+                metadata.getQosClaim().setQosOwnerToken(qosOwnerToken);
                 // 占位键按抢占时的 packetId 固定；对齐 canonical 后 commit/release 仍按此键定位
                 qosClaimKeyPacketId = packet.getPacketId();
-                metadata.setQosClaimPacketId(qosClaimKeyPacketId);
+                metadata.getQosClaim().setQosClaimPacketId(qosClaimKeyPacketId);
                 QosIdempotencyHelper.ClaimResult claim = QosIdempotencyHelper.tryClaimResult(
                         infra.redisTemplate, appKey, qosClaimKeyPacketId,
                         qosClaimIdentity, clientMessageId, qosOwnerToken, message, packet.getMessageType());
@@ -263,8 +263,8 @@ public final class SessionMessagePersistenceSupport {
                 return SaveMessageOutcome.FAILED;
             }
             if (qosSave && metadata != null) {
-                metadata.setQosOwnerToken(null);
-                metadata.setQosClaimPacketId(null);
+                metadata.getQosClaim().setQosOwnerToken(null);
+                metadata.getQosClaim().setQosClaimPacketId(null);
             }
             return SaveMessageOutcome.SUCCESS;
 
@@ -282,7 +282,7 @@ public final class SessionMessagePersistenceSupport {
                 || StringUtils.isBlank(sessionId)) {
             return;
         }
-        String appKey = lastPacket.getMessage().getMetadata().getAppKey();
+        String appKey = lastPacket.getMessage().getMetadata().getIngress().getAppKey();
         if (StringUtils.isBlank(appKey) || lastPacket.getPacketId() <= 0L) {
             return;
         }
@@ -334,8 +334,8 @@ public final class SessionMessagePersistenceSupport {
 
     private static void clearQosClaimMarks(Metadata metadata) {
         if (metadata != null) {
-            metadata.setQosOwnerToken(null);
-            metadata.setQosClaimPacketId(null);
+            metadata.getQosClaim().setQosOwnerToken(null);
+            metadata.getQosClaim().setQosClaimPacketId(null);
         }
     }
 
@@ -352,7 +352,7 @@ public final class SessionMessagePersistenceSupport {
         if (!qosSave || StringUtils.isBlank(appKey) || StringUtils.isBlank(qosOwnerToken)) {
             return;
         }
-        if (metadata != null && metadata.isQosArchiveBound()) {
+        if (metadata != null && metadata.getQosClaim().isQosArchiveBound()) {
             return;
         }
         long keyPacketId = claimKeyPacketId > 0L ? claimKeyPacketId : recordPacketId;
@@ -360,8 +360,8 @@ public final class SessionMessagePersistenceSupport {
             QosIdempotencyHelper.releaseClaim(infra.redisTemplate, appKey, keyPacketId, recordPacketId,
                     qosClaimIdentity, clientMessageId, qosOwnerToken);
             if (metadata != null) {
-                metadata.setQosOwnerToken(null);
-                metadata.setQosClaimPacketId(null);
+                metadata.getQosClaim().setQosOwnerToken(null);
+                metadata.getQosClaim().setQosClaimPacketId(null);
             }
         } catch (Exception e) {
             log.warn("释放 QoS 占位异常 claimKeyPacketId={} packetId={}", keyPacketId, recordPacketId, e);

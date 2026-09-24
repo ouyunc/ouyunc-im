@@ -100,7 +100,7 @@ public final class PushIdempotencySupport {
     public static ClaimResult tryClaim(String appKey, String messageId, String packetId, Message message) {
         if (StringUtils.isAnyBlank(appKey, messageId, packetId) || message == null) return ClaimResult.failed();
         String hash = message.getMetadata() != null
-                ? message.getMetadata().getHttpPushPayloadHash() : null;
+                ? message.getMetadata().getHttpPushClaim().getHttpPushPayloadHash() : null;
         if (StringUtils.isBlank(hash)) {
             hash = QosIdempotencyHelper.payloadHash(message);
         }

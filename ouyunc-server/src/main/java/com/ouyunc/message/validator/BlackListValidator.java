@@ -27,7 +27,7 @@ public enum BlackListValidator implements ReactiveValidator<Packet> {
         String from = message.getFrom();
         String to = message.getTo();
         Metadata metadata = message.getMetadata();
-        String appKey = metadata.getAppKey();
+        String appKey = metadata.getIngress().getAppKey();
         // 业务黑名单只按用户对用户 identity_type=1 写入；群/客服 to 不是 owner，禁止回源错误索引
         if (!isUserOwnerBlacklist(message)) {
             return Mono.just(Boolean.FALSE);

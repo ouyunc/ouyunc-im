@@ -100,7 +100,7 @@ public final class CsHelper {
         if (message == null || message.getMetadata() == null) {
             return PrepareOutcome.reject("消息或元数据为空");
         }
-        String appKey = message.getMetadata().getAppKey();
+        String appKey = message.getMetadata().getIngress().getAppKey();
         String from = message.getFrom();
         String to = message.getTo();
         if (StringUtils.isAnyBlank(appKey, from, to)) {
@@ -168,7 +168,7 @@ public final class CsHelper {
             return PrepareOutcome.reject("投递刷新缺少路由快照");
         }
         String appKey = packet.getMessage().getMetadata() != null
-                ? packet.getMessage().getMetadata().getAppKey()
+                ? packet.getMessage().getMetadata().getIngress().getAppKey()
                 : null;
         CsImSessionRoute live = DefaultRepository.INSTANCE.mergeCsImSessionRouteDelivery(appKey, snapshot);
         if (live == null || !live.hasRequiredDeliveryFields()) {
@@ -241,7 +241,7 @@ public final class CsHelper {
             syncCsSenderDevices(packet, route, forceSelfSync);
         }
         Message message = packet.getMessage();
-        String appKey = message.getMetadata().getAppKey();
+        String appKey = message.getMetadata().getIngress().getAppKey();
         String recipientId = resolveImRecipientId(message.getTo(), route);
         if (StringUtils.isBlank(recipientId)) {
             log.debug("客服投递暂无目标 to={}, 已落库, packetId={}", message.getTo(), packet.getPacketId());
@@ -297,13 +297,13 @@ public final class CsHelper {
 
     private static void syncCsSenderDevices(Packet packet, CsImSessionRoute route, boolean forceSelfSync) {
         Message message = packet.getMessage();
-        String appKey = message.getMetadata().getAppKey();
+        String appKey = message.getMetadata().getIngress().getAppKey();
         String syncIdentity = resolveSenderSyncIdentity(message.getFrom(), route);
         if (StringUtils.isBlank(syncIdentity)) {
             return;
         }
         boolean httpPush = message.getMetadata() != null
-                && IngressSourceEnum.isHttpPush(message.getMetadata().getIngressSource());
+                && IngressSourceEnum.isHttpPush(message.getMetadata().getIngress().getIngressSource());
         if (!forceSelfSync) {
             ClientInfo clientInfo = MessageServerContext.localClientInfo(appKey, syncIdentity);
             if (httpPush) {
@@ -366,8 +366,8 @@ public final class CsHelper {
             return;
         }
         String appKey = AppKeyUtil.defaultIfBlank(
-                message.getMetadata() != null ? message.getMetadata().getAppKey() : null);
-        Long serverTime = message.getMetadata() != null ? message.getMetadata().getServerTime() : null;
+                message.getMetadata() != null ? message.getMetadata().getIngress().getAppKey() : null);
+        Long serverTime = message.getMetadata() != null ? message.getMetadata().getIngress().getServerTime() : null;
         CsTicketActivityNotifyPayload body = new CsTicketActivityNotifyPayload(
                 appKey,
                 ticketId,

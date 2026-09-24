@@ -44,7 +44,7 @@ public final class QosRepositorySupport {
         if (metadata == null || StringUtils.isBlank(message.getId())) {
             return ArchiveClaimResult.FAILED;
         }
-        if (StringUtils.isNotBlank(metadata.getQosOwnerToken())) {
+        if (StringUtils.isNotBlank(metadata.getQosClaim().getQosOwnerToken())) {
             return packet.getPacketId() > 0L ? ArchiveClaimResult.READY : ArchiveClaimResult.FAILED;
         }
         String ownerToken = QosIdempotencyHelper.newOwnerToken();
@@ -52,10 +52,10 @@ public final class QosRepositorySupport {
         if (claimKeyPacketId <= 0L) {
             return ArchiveClaimResult.FAILED;
         }
-        metadata.setQosOwnerToken(ownerToken);
-        metadata.setQosClaimPacketId(claimKeyPacketId);
+        metadata.getQosClaim().setQosOwnerToken(ownerToken);
+        metadata.getQosClaim().setQosClaimPacketId(claimKeyPacketId);
         QosIdempotencyHelper.ClaimResult claim = QosIdempotencyHelper.tryClaimResult(
-                infra.redisTemplate, metadata.getAppKey(), claimKeyPacketId,
+                infra.redisTemplate, metadata.getIngress().getAppKey(), claimKeyPacketId,
                 QosClaimIdentities.resolve(message), message.getId(), ownerToken, message, packet.getMessageType());
         if (claim.state() == QosIdempotencyHelper.CLAIM_COMMITTED) {
             if (!claim.isCommittedWithCanonical()) {
@@ -94,25 +94,25 @@ public final class QosRepositorySupport {
         if (metadata == null) {
             return;
         }
-        if (metadata.isQosArchiveBound()) {
+        if (metadata.getQosClaim().isQosArchiveBound()) {
             // 冷库已按正式 packetId 发出，保留 PENDING 以便重试复用同一 ID
             return;
         }
-        String ownerToken = metadata.getQosOwnerToken();
+        String ownerToken = metadata.getQosClaim().getQosOwnerToken();
         if (StringUtils.isBlank(ownerToken)) {
             // 尚未抢占或已 commit 清空：不能用 null 误调 release（会 no-op，但避免无意义调用噪音）
             return;
         }
         // 抢占键可能基于对齐前的 packetId，必须按 Metadata 记录的占位键释放
-        Long claimKeyPacketId = metadata.getQosClaimPacketId();
+        Long claimKeyPacketId = metadata.getQosClaim().getQosClaimPacketId();
         long keyPacketId = claimKeyPacketId != null && claimKeyPacketId > 0L
                 ? claimKeyPacketId : packet.getPacketId();
         try {
-            QosIdempotencyHelper.releaseClaim(infra.redisTemplate, metadata.getAppKey(),
+            QosIdempotencyHelper.releaseClaim(infra.redisTemplate, metadata.getIngress().getAppKey(),
                     keyPacketId, packet.getPacketId(), QosClaimIdentities.resolve(message),
                     message.getId(), ownerToken);
-            metadata.setQosOwnerToken(null);
-            metadata.setQosClaimPacketId(null);
+            metadata.getQosClaim().setQosOwnerToken(null);
+            metadata.getQosClaim().setQosClaimPacketId(null);
         } catch (Exception e) {
             log.warn("释放 QoS 占位异常: packetId={}", packet.getPacketId(), e);
         }
@@ -120,8 +120,8 @@ public final class QosRepositorySupport {
 
     private static void clearQosClaimMarks(Metadata metadata) {
         if (metadata != null) {
-            metadata.setQosOwnerToken(null);
-            metadata.setQosClaimPacketId(null);
+            metadata.getQosClaim().setQosOwnerToken(null);
+            metadata.getQosClaim().setQosClaimPacketId(null);
         }
     }
 }

@@ -23,12 +23,12 @@ public enum IngressAuthSupport {
         }
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        if (metadata == null || !IngressSourceEnum.isHttpPush(metadata.getIngressSource())) {
+        if (metadata == null || !IngressSourceEnum.isHttpPush(metadata.getIngress().getIngressSource())) {
             log.warn("HTTP 推送 Packet 缺少 ingressSource 标记");
             return false;
         }
-        if (!StringUtils.equals(metadata.getAppKey(), httpContext.getAppKey())) {
-            log.warn("HTTP 推送 appKey 不一致: header={}, metadata={}", httpContext.getAppKey(), metadata.getAppKey());
+        if (!StringUtils.equals(metadata.getIngress().getAppKey(), httpContext.getAppKey())) {
+            log.warn("HTTP 推送 appKey 不一致: header={}, metadata={}", httpContext.getAppKey(), metadata.getIngress().getAppKey());
             return false;
         }
         if (StringUtils.isBlank(message.getFrom()) || StringUtils.isBlank(message.getTo())) {

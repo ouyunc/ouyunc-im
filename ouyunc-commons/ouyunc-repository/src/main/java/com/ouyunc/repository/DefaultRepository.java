@@ -229,10 +229,10 @@ public enum DefaultRepository implements Repository {
             return null;
         }
         Message message = packet.getMessage();
-        if (StringUtils.isAnyBlank(message.getMetadata().getAppKey(), message.getId())) {
+        if (StringUtils.isAnyBlank(message.getMetadata().getIngress().getAppKey(), message.getId())) {
             return null;
         }
-        return CacheConstant.buildExternalDeliveryPendingKey(message.getMetadata().getAppKey(), message.getId());
+        return CacheConstant.buildExternalDeliveryPendingKey(message.getMetadata().getIngress().getAppKey(), message.getId());
     }
 
     public boolean saveAgreeFriendRequestSession(Packet packet, RequestSession requestSession, long expireTime) {

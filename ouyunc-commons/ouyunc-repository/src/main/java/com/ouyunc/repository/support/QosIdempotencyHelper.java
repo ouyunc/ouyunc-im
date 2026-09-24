@@ -254,10 +254,10 @@ public final class QosIdempotencyHelper {
         }
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        if (metadata == null || StringUtils.isBlank(metadata.getAppKey())) {
+        if (metadata == null || StringUtils.isBlank(metadata.getIngress().getAppKey())) {
             return new ClaimResult(CLAIM_FAILED, 0L);
         }
-        List<String> keys = claimKeys(metadata.getAppKey(), packet.getPacketId(),
+        List<String> keys = claimKeys(metadata.getIngress().getAppKey(), packet.getPacketId(),
                 resolveClaimIdentity(message, channelLoginIdentity), message.getId());
         if (keys.isEmpty()) {
             return new ClaimResult(CLAIM_FAILED, 0L);
@@ -417,9 +417,9 @@ public final class QosIdempotencyHelper {
             return "";
         }
         Metadata metadata = message.getMetadata();
-        if (metadata != null && StringUtils.isNotBlank(metadata.getHttpPushPayloadHash())) {
+        if (metadata != null && StringUtils.isNotBlank(metadata.getHttpPushClaim().getHttpPushPayloadHash())) {
             // HTTP 在内容安全可能改写正文之前固定原始业务指纹；热写必须沿用同一值。
-            return metadata.getHttpPushPayloadHash();
+            return metadata.getHttpPushClaim().getHttpPushPayloadHash();
         }
         try {
             MessageDigest digestBuilder = MessageDigest.getInstance("SHA-256");
@@ -483,8 +483,8 @@ public final class QosIdempotencyHelper {
             return channelLoginIdentity;
         }
         Metadata metadata = message.getMetadata();
-        if (metadata != null && StringUtils.isNotBlank(metadata.getQosClaimIdentity())) {
-            return metadata.getQosClaimIdentity();
+        if (metadata != null && StringUtils.isNotBlank(metadata.getQosClaim().getQosClaimIdentity())) {
+            return metadata.getQosClaim().getQosClaimIdentity();
         }
         if (StringUtils.isNotBlank(channelLoginIdentity)) {
             return channelLoginIdentity;

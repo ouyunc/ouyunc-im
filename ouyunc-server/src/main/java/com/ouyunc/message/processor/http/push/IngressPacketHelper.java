@@ -20,7 +20,7 @@ public final class IngressPacketHelper {
         }
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
-        return metadata != null && IngressSourceEnum.isHttpPush(metadata.getIngressSource());
+        return metadata != null && IngressSourceEnum.isHttpPush(metadata.getIngress().getIngressSource());
     }
 
     public static boolean isSystemLikeSender(Message message) {

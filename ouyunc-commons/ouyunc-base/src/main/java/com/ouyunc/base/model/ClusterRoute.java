@@ -32,7 +32,8 @@ public final class ClusterRoute implements Serializable, Cloneable {
     /** 跨节点扇出目标。正文只传一份，落地节点按此列表本机展开。单目标时为 null。 */
     private List<Target> fanoutTargets;
 
-    public ClusterRoute copy() {
+    @Override
+    public ClusterRoute clone() {
         try {
             ClusterRoute copy = (ClusterRoute) super.clone();
             if (target != null) {

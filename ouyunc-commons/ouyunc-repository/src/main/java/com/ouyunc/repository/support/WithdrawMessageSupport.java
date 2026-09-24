@@ -82,7 +82,7 @@ public final class WithdrawMessageSupport {
                     packet, scopeId, targetPackets == null ? null : targetPackets.size());
             return Mono.just(false);
         }
-        String appKey = packet.getMessage().getMetadata().getAppKey();
+        String appKey = packet.getMessage().getMetadata().getIngress().getAppKey();
         return Mono.fromCallable(() -> {
                     applyWithdrawnPacketsToRedis(appKey, scopeId, scope, targetPackets);
                     return Boolean.TRUE;
@@ -116,7 +116,7 @@ public final class WithdrawMessageSupport {
         Message message = targetPacket.getMessage();
         long sendTime = 0L;
         if (message.getMetadata() != null) {
-            sendTime = message.getMetadata().getServerTime();
+            sendTime = message.getMetadata().getIngress().getServerTime();
         }
         if (sendTime <= 0L) {
             sendTime = message.getCreateTime();

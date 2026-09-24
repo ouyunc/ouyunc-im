@@ -50,7 +50,7 @@ public enum PacketPacketConverter implements PacketConverter<Packet> {
         if (packet == null || packet.getMessage() == null || packet.getMessage().getMetadata() == null) {
             return null;
         }
-        Target target = packet.getMessage().getMetadata().getTarget();
+        Target target = packet.getMessage().getMetadata().getClusterRoute().getTarget();
         if (target == null) {
             return null;
         }
@@ -91,7 +91,7 @@ public enum PacketPacketConverter implements PacketConverter<Packet> {
                     ctx.close();
                     throw new MessageException("客户端:" + message.getFrom() + " 登录内容无法解析");
                 }
-                metadata.setAppKey(loginContent.getAppKey());
+                metadata.getIngress().setAppKey(loginContent.getAppKey());
             } else {
                 LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
                 if (loginClientInfo == null) {
@@ -99,13 +99,13 @@ public enum PacketPacketConverter implements PacketConverter<Packet> {
                     ctx.close();
                     throw new MessageException("客户端:" + message.getFrom() + " 未登录，请先登录");
                 }
-                metadata.setAppKey(loginClientInfo.getAppKey());
+                metadata.getIngress().setAppKey(loginClientInfo.getAppKey());
             }
-            metadata.setClientIp(IpUtil.getIp(ctx));
+            metadata.getIngress().setClientIp(IpUtil.getIp(ctx));
             // 外部入站的来源由服务端覆盖赋值；集群透传不进入此分支。
-            metadata.setOriginServerAddress(MessageContext.messageProperties.getLocalServerAddress());
-            metadata.setServerTime(TimeUtil.currentTimeMillis());
-            metadata.setIngressSource(IngressSourceEnum.IM);
+            metadata.getIngress().setOriginServerAddress(MessageContext.messageProperties.getLocalServerAddress());
+            metadata.getIngress().setServerTime(TimeUtil.currentTimeMillis());
+            metadata.getIngress().setIngressSource(IngressSourceEnum.IM);
         }
         message.setMetadata(metadata);
         packet.setPacketId(MessageContext.idGenerator().generateId());

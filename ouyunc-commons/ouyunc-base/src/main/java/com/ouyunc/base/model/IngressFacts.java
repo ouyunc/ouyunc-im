@@ -42,7 +42,8 @@ public final class IngressFacts implements Serializable, Cloneable {
         this.serverTime = serverTime;
     }
 
-    public IngressFacts copy() {
+    @Override
+    public IngressFacts clone() {
         try {
             return (IngressFacts) super.clone();
         } catch (CloneNotSupportedException e) {

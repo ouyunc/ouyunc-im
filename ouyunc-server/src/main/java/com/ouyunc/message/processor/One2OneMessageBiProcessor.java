@@ -155,7 +155,7 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
                     MessageAcceptPipelineHelper.qosAckOnSuccess(ctx0, packet0);
                     Message msg = packet0.getMessage();
                     if (msg != null && msg.getMetadata() != null) {
-                        String appKey = msg.getMetadata().getAppKey();
+                        String appKey = msg.getMetadata().getIngress().getAppKey();
                         if (StringUtils.isNoneBlank(appKey, sessionId)) {
                             repository().refreshSessionLastMessageAfterWithdraw(appKey, sessionId);
                         }
@@ -204,7 +204,7 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
     /** 将已读回执推送给会话中的消息发送方（packet.message.to），与私聊普通消息投递 to 一致 */
     private void deliverReadReceiptToSender(Packet packet) {
         Message message = packet.getMessage();
-        String appKey = message.getMetadata().getAppKey();
+        String appKey = message.getMetadata().getIngress().getAppKey();
         List<LoginClientInfo> senderClients = ClientHelper.onlineAll(appKey, message.getTo());
         if (CollectionUtils.isNotEmpty(senderClients)) {
             MessageHelper.asyncSendMessage(packet, senderClients);

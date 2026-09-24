@@ -76,8 +76,8 @@ public final class BusinessIdleNotifyHelper {
     private static Packet buildNotifyPacket(LoginClientInfo loginInfo, String text) {
         long now = TimeUtil.currentTimeMillis();
         Metadata metadata = new Metadata();
-        metadata.setAppKey(loginInfo.getAppKey());
-        metadata.setServerTime(now);
+        metadata.getIngress().setAppKey(loginInfo.getAppKey());
+        metadata.getIngress().setServerTime(now);
         Message message = new Message(
                 MessageContext.idGenerator().generateIdStr(),
                 null,
