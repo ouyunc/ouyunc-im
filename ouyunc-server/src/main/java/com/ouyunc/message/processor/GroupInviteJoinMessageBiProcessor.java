@@ -128,14 +128,7 @@ public final class GroupInviteJoinMessageBiProcessor extends AbstractMessageBiPr
                         groupRequestSession.setInviter(message.getFrom());
                     }
                 } else {
-                    groupRequestSession = GroupRequestSession.newGroupBuilder()
-                            .sessionId(MessageContext.idGenerator().generateIdStr())
-                            .joiner(content.getIdentity())
-                            .inviter(message.getFrom())
-                            .groupId(message.getTo())
-                            .channel(GroupRequestSessionChannel.OTHER.value())
-                            .way(GroupRequestSessionWay.INVITED.value())
-                            .build();
+                    groupRequestSession = message.getMetadata().getRequestEventContext().toGroupSession();
                 }
 
                 boolean inviterIsMannerOrLeader = false;

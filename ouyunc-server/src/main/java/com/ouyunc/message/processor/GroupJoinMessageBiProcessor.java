@@ -81,15 +81,7 @@ public final class GroupJoinMessageBiProcessor extends AbstractMessageBiProcesso
                     }
                     // 上次可能在群关系写入后、请求会话提交前退出；重试必须补齐请求状态。
                     if (existingSession == null) {
-                        existingSession = GroupRequestSession.newGroupBuilder()
-                                .sessionId(MessageContext.idGenerator().generateIdStr())
-                                .joiner(message.getFrom())
-                                .groupId(message.getTo())
-                                .channel(GroupRequestSessionChannel.OTHER.value())
-                                .way(GroupRequestSessionWay.ACTIVE.value())
-                                .joinerProcessStatus(GroupJoinerProcessStatus.AGREE.value())
-                                .progress(RequestSessionProgress.AGREEING.value())
-                                .build();
+                        existingSession = message.getMetadata().getRequestEventContext().toGroupSession();
                     } else {
                         existingSession.setProgress(RequestSessionProgress.AGREEING.value());
                         existingSession.setJoinerProcessStatus(GroupJoinerProcessStatus.AGREE.value());
@@ -134,13 +126,7 @@ public final class GroupJoinMessageBiProcessor extends AbstractMessageBiProcesso
                     return;
                 }
                 GroupRequestSession groupRequestSession = existingSession != null ? existingSession
-                        : GroupRequestSession.newGroupBuilder()
-                                .sessionId(MessageContext.idGenerator().generateIdStr())
-                                .joiner(message.getFrom())
-                                .groupId(message.getTo())
-                                .channel(GroupRequestSessionChannel.OTHER.value())
-                                .way(GroupRequestSessionWay.ACTIVE.value())
-                                .build();
+                        : message.getMetadata().getRequestEventContext().toGroupSession();
                 groupRequestSession.setJoinerProcessStatus(GroupJoinerProcessStatus.AGREE.value());
                 groupRequestSession.setWay(GroupRequestSessionWay.ACTIVE.value());
 

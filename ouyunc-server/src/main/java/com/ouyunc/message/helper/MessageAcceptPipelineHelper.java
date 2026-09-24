@@ -201,7 +201,8 @@ public final class MessageAcceptPipelineHelper {
      */
     public static Mono<Void> confirmThenRun(ChannelHandlerContext ctx, String topic, String key,
                                             Packet packet, Runnable next) {
-        return MessageArchiveHelper.confirm(() -> repository().publishPacketConfirmed(topic, key, packet))
+        return Mono.fromRunnable(() -> RequestEventContextFactory.ensure(packet))
+                .then(MessageArchiveHelper.confirm(() -> repository().publishPacketConfirmed(topic, key, packet)))
                 .then(Mono.<Void>fromRunnable(next))
                 .onErrorResume(error -> {
                     log.error("请求归档结果未知, messageId={}", packet.getMessage().getId(), error);

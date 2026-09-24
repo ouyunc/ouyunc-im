@@ -102,7 +102,7 @@ public final class One2OneJoinFriendRequestMessageBiProcessor extends AbstractMe
                     return;
                 }
                 RequestSession session = requestSession != null ? requestSession
-                        : RequestSession.newBuilder().sessionId(MessageContext.idGenerator().generateIdStr()).build();
+                        : message.getMetadata().getRequestEventContext().toFriendSession();
 
                 if (FriendJoinPolicy.AUTO_PASS.value().equals(toUserEntity.getFriendJoinPolicy())) {
                     session.setProgress(RequestSessionProgress.AGREEING.value());

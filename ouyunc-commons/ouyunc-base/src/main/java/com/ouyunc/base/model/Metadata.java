@@ -133,6 +133,9 @@ public class Metadata implements Serializable, Cloneable {
      */
     private List<Target> fanoutTargets;
 
+    /** 好友/群申请的完整状态快照；Kafka 消费者以此重建请求会话，不依赖生产端 Redis。 */
+    private RequestEventContext requestEventContext;
+
 
     public String getAppKey() {
         return appKey;
@@ -359,6 +362,14 @@ public class Metadata implements Serializable, Cloneable {
         this.fanoutTargets = fanoutTargets;
     }
 
+    public RequestEventContext getRequestEventContext() {
+        return requestEventContext;
+    }
+
+    public void setRequestEventContext(RequestEventContext requestEventContext) {
+        this.requestEventContext = requestEventContext;
+    }
+
     public Metadata(String appKey, ClusterForwardModeEnum clusterForwardMode, int currentRetry, String fromServerAddress, Target target, List<RoutingTable> routingTables, String clientIp, long serverTime) {
         this.appKey = appKey;
         this.clusterForwardMode = clusterForwardMode;
@@ -406,6 +417,9 @@ public class Metadata implements Serializable, Cloneable {
                     copied.add(t == null ? null : t.clone());
                 }
                 metadata.setFanoutTargets(copied);
+            }
+            if (this.requestEventContext != null) {
+                metadata.setRequestEventContext(this.requestEventContext.clone());
             }
             return metadata;
         } catch (CloneNotSupportedException e) {
