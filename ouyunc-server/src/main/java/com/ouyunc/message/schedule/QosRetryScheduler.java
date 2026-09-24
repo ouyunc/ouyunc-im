@@ -147,7 +147,7 @@ public final class QosRetryScheduler {
             QosRetryCancelMetrics.localCancel();
             return;
         }
-        String origin = stored.getMessage().getMetadataOrNull().getOriginServerAddress();
+        String origin = stored.getMessage().getMetadataOrNull().getIngress().getOriginServerAddress();
         String local = MessageServerContext.serverProperties().getLocalServerAddress();
         if (StringUtils.isBlank(origin)) {
             QosRetryCancelMetrics.originLocateFail();

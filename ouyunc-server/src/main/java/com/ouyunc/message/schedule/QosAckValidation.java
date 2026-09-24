@@ -49,7 +49,7 @@ public final class QosAckValidation {
             return MatchResult.QOS_DISABLED;
         }
         if (message.getMetadataOrNull() == null
-                || !appKey.equals(message.getMetadataOrNull().getAppKey())) {
+                || !appKey.equals(message.getMetadataOrNull().getIngress().getAppKey())) {
             return MatchResult.APP_KEY_MISMATCH;
         }
         if (!messageId.equals(message.getId())) {
