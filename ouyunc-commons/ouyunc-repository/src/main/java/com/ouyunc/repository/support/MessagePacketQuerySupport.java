@@ -7,6 +7,7 @@ import com.ouyunc.cache.distributed.redis.RedisPipelineSupport;
 import com.ouyunc.base.constant.JdbcSqlDialectHolder;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.executor.ThreadPoolManager;
+import com.ouyunc.base.model.IngressFacts;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
@@ -204,11 +205,8 @@ public final class MessagePacketQuerySupport {
                         entity.getClientSendTime(),
                         entity.getCorrelationId(),
                         new Metadata(
-                                entity.getAppKey(),
-                                entity.getClientIp(),
-                                entity.getServerAddress(),
-                                entity.getServerArrivalTime()
-                        )
+                                new IngressFacts(entity.getAppKey(), entity.getClientIp(),
+                                        entity.getServerAddress(), entity.getServerArrivalTime()))
                 )
         );
     }

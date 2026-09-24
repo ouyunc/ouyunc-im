@@ -12,19 +12,32 @@ public class RequestEventContext implements Serializable, Cloneable {
     @Serial
     private static final long serialVersionUID = 1L;
 
+    /** 快照结构版本。与 {@link #version} 不一致的事件拒绝处理。 */
     public static final int CURRENT_VERSION = 1;
 
+    /** 快照版本，写入时等于 {@link #CURRENT_VERSION}。 */
     private int version = CURRENT_VERSION;
+    /** 请求会话 ID。 */
     private String requestSessionId;
+    /** 申请进度，取值见请求会话进度枚举。 */
     private Integer progress;
+    /** 邀请人。主动加群时为空。 */
     private String inviter;
+    /** 邀请人在群内的岗位。 */
     private Integer inviterPost;
+    /** 被邀请人或申请人。 */
     private String joiner;
+    /** 被邀请人是否已同意。 */
     private Integer joinerProcessStatus;
+    /** 群 ID。好友申请为空。 */
     private String groupId;
+    /** 审批处理人。 */
     private String processor;
+    /** 审批处理人岗位。 */
     private Integer processorPost;
+    /** 申请方式：主动加入或被邀请。 */
     private Integer way;
+    /** 申请渠道。 */
     private Integer channel;
 
     public RequestSession toFriendSession() {

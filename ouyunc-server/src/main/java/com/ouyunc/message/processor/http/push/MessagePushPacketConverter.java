@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.*;
+import com.ouyunc.base.model.IngressFacts;
 import com.ouyunc.base.model.MessagePushExtra;
 import com.ouyunc.base.model.MessagePushRequest;
 import com.ouyunc.base.model.Metadata;
@@ -43,7 +44,8 @@ public final class MessagePushPacketConverter {
                 ? request.getCreateTime() : TimeUtil.currentTimeMillis();
 
         // 与客户端地址一起建立可信来源；后续业务保存和集群转发只保留该值。
-        Metadata metadata = new Metadata(appKey, resolveClientIp(httpContext), now);
+        IngressFacts ingress = new IngressFacts(appKey, resolveClientIp(httpContext), null, now);
+        Metadata metadata = new Metadata(ingress);
         String local = MessageContext.messageProperties != null
                 ? MessageContext.messageProperties.getLocalServerAddress() : null;
         if (StringUtils.isNotBlank(local)) {

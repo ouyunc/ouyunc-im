@@ -56,6 +56,9 @@ public final class MessageMqPublisherSupport {
             return CompletableFuture.completedFuture(null);
         }
         Packet snapshot = packet.clone();
+        if (snapshot.getMessage() != null && snapshot.getMessage().getMetadata() != null) {
+            snapshot.getMessage().getMetadata().clearDeliveryClaims();
+        }
         CompletableFuture<Object> result = new CompletableFuture<>();
         try {
             infra.dbExecutor().execute(() -> {
