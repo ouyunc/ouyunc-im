@@ -10,7 +10,7 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.core.exception.ExceptionReporter;
 import com.ouyunc.message.helper.CsHelper;
-import com.ouyunc.message.helper.MessageArchiveHelper;
+import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
 import com.ouyunc.message.helper.CsHelper.PrepareOutcome;
 import com.ouyunc.message.http.HttpPipelineException;
 import com.ouyunc.message.processor.http.push.HttpPushFailures;
@@ -73,7 +73,7 @@ public final class CsHttpPushDeliveryStrategy implements HttpProcessor {
         CsImSessionRoute confirmedRoute = route;
         Mono<Void> archived = MqArchiveRouting.usesDomainConfirmOnly(packet)
                 ? Mono.empty()
-                : MessageArchiveHelper.confirm(() -> DefaultRepository.INSTANCE.save(packet));
+                : MessageAcceptPipelineHelper.archiveAfterAuth(packet);
         return archived.then(Mono.defer(() -> persistPrepared(packet, confirmedRoute)));
     }
 

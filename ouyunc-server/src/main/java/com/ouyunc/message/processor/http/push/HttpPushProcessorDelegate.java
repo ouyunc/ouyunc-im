@@ -7,12 +7,11 @@ import com.ouyunc.base.constant.enums.HttpResponseCodeEnum;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.core.exception.ExceptionReporter;
-import com.ouyunc.message.helper.MessageArchiveHelper;
+import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
 import com.ouyunc.message.http.HttpPipelineException;
 import com.ouyunc.message.processor.http.push.delivery.HttpProcessor;
 import com.ouyunc.message.processor.http.push.delivery.HttpPushDeliverySupport;
 import com.ouyunc.message.processor.http.push.delivery.HttpPushProcessorStrategies;
-import com.ouyunc.repository.DefaultRepository;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,7 +82,7 @@ public final class HttpPushProcessorDelegate {
                 || MqArchiveRouting.usesDomainConfirmOnly(packet);
         Mono<Void> archived = skipSave
                 ? Mono.empty()
-                : MessageArchiveHelper.confirm(() -> DefaultRepository.INSTANCE.save(packet));
+                : MessageAcceptPipelineHelper.archiveAfterAuth(packet);
         return archived.then(Mono.defer(() -> strategy.processMono(packet)));
     }
 
