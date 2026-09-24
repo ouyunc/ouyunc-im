@@ -471,9 +471,34 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         if (!LoginTimeoutSupport.cancel(ctx)) {
             log.warn("客户端: {} 登录成功，取消登录超时定时任务失败", loginClientInfo);
         }
-        MessageServerContext.publishEvent(
-                new MessageEvent(new ClientLoginEventPayload(loginClientInfo, ctx), MessageEventTypeEnum.CLIENT_LOGIN, loginTimestamp),
-                true);
+        publishClientLoginOutsideEventLoop(ctx, loginClientInfo, loginTimestamp);
+    }
+
+    /**
+     * 登录事件必须可靠进入 Disruptor，但环满时 {@code publishEvent} 会等待可用槽位。
+     * 当前方法只在 EventLoop 上执行一次有界线程池提交，避免登录洪峰或慢监听器反压整个网络线程。
+     * 如果事件线程池已经过载，则关闭刚建立的连接，让客户端重新登录恢复完整的上线事件语义。
+     */
+    private void publishClientLoginOutsideEventLoop(ChannelHandlerContext ctx,
+                                                    LoginClientInfo loginClientInfo,
+                                                    long loginTimestamp) {
+        MessageEvent loginEvent = new MessageEvent(
+                new ClientLoginEventPayload(loginClientInfo, ctx),
+                MessageEventTypeEnum.CLIENT_LOGIN,
+                loginTimestamp);
+        try {
+            ThreadPoolManager.eventListenerExecutor().execute(
+                    () -> {
+                        // 任务排队期间连接可能已经关闭；此时 closeFuture 会发布登出事件，禁止再补发上线事件。
+                        if (ctx.channel().isActive()) {
+                            MessageServerContext.publishEvent(loginEvent, true);
+                        }
+                    });
+        } catch (RejectedExecutionException rejected) {
+            log.error("登录事件提交被拒绝，关闭连接等待客户端重试 identity={}, channelId={}",
+                    loginClientInfo.getIdentity(), ctx.channel().id().asShortText(), rejected);
+            ctx.close();
+        }
     }
 
     /**
