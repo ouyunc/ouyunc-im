@@ -109,7 +109,7 @@ class ServerPrepareEventMessageEventListener implements MessageEventListener<Mes
      */
     private void preloadLuaScripts() {
         for (LuaScriptEnum luaScript : LuaScriptEnum.values()) {
-            log.debug("预加载lua脚本: {}", luaScript.getScript());
+            log.debug("预加载lua脚本: {}, {}", luaScript.name(), luaScript.getScript());
             ReactiveRedisLuaScriptEngine.preloadLuaScript(luaScript);
         }
     }
