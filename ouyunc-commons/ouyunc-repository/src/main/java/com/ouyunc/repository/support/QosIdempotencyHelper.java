@@ -131,14 +131,13 @@ public final class QosIdempotencyHelper {
                 end
                 if f[1] == 'PENDING' then
                   local ts = tonumber(f[6])
-                  -- 同正文重试立刻复用首次 serverId（归档已按该 ID 发出）；不同正文走上方 CONFLICT。
-                  if f[3] == hash and hash ~= '' then
-                    if f[2] ~= nil and f[2] ~= '' then reuseId = f[2] end
-                  elseif ts == nil or now - ts <= takeoverMs then
-                    return {3, ''}
-                  else
-                    if f[2] ~= nil and f[2] ~= '' then reuseId = f[2] end
+                  if f[4] == owner then
+                    return {1, f[2]}
                   end
+                  if ts ~= nil and now - ts <= takeoverMs then
+                    return {3, ''}
+                  end
+                  if f[2] ~= nil and f[2] ~= '' then reuseId = f[2] end
                 else return {4, ''} end
               end
             end

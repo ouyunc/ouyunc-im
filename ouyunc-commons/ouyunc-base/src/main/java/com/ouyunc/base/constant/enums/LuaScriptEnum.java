@@ -779,6 +779,10 @@ public enum LuaScriptEnum {
               local ttl = tonumber(ARGV[6])
               if ttl ~= nil and ttl > 0 then redis.call('PEXPIRE', KEYS[1], ttl) end
             end
+            local function nowMillis()
+              local now = redis.call('TIME')
+              return now[1] * 1000 + math.floor(now[2] / 1000)
+            end
             if progress == false or progress == nil or progress == '' or progress == 'JOINING' then
               redis.call('HSET', KEYS[1],
                 'progress', ARGV[1],
@@ -794,6 +798,19 @@ public enum LuaScriptEnum {
               return 2
             end
             if progress == 'AGREEING' or progress == 'REFUSING' then
+              local processingAt = tonumber(redis.call('HGET', KEYS[1], 'processingAt'))
+              local lease = tonumber(ARGV[7])
+              local expired = processingAt ~= nil and lease ~= nil and lease > 0 and (nowMillis() - processingAt) > lease
+              if action == ARGV[3] and expired then
+                redis.call('HSET', KEYS[1],
+                  'progress', ARGV[1],
+                  'commandId', ARGV[2],
+                  'action', ARGV[3],
+                  'operatorId', ARGV[4],
+                  'processingAt', ARGV[5])
+                touch()
+                return 1
+              end
               if action == ARGV[3] then return 5 end
               return 4
             end
@@ -803,6 +820,36 @@ public enum LuaScriptEnum {
             end
             return 0
             """, "审批进度 CAS"),
+
+    /**
+     * 只有持有 commandId 且动作一致时才能写成终态。
+     * KEYS[1]=hash ARGV[1]=commandId ARGV[2]=action ARGV[3]=terminal ARGV[4]=ttlMs
+     * 返回 1 成功，0 不匹配。
+     */
+    APPROVAL_PROGRESS_FINISH_SCRIPT("1", """
+            local commandId = redis.call('HGET', KEYS[1], 'commandId')
+            local action = redis.call('HGET', KEYS[1], 'action')
+            local progress = redis.call('HGET', KEYS[1], 'progress')
+            if commandId ~= ARGV[1] or action ~= ARGV[2] then return 0 end
+            if progress == ARGV[3] then return 1 end
+            if progress ~= 'AGREEING' and progress ~= 'REFUSING' then return 0 end
+            redis.call('HSET', KEYS[1], 'progress', ARGV[3])
+            local ttl = tonumber(ARGV[4])
+            if ttl ~= nil and ttl > 0 then redis.call('PEXPIRE', KEYS[1], ttl) end
+            return 1
+            """, "审批终态 CAS"),
+
+    /**
+     * 毒消息隔离前释放本命令占用。相反命令或已终态不动。
+     * KEYS[1]=hash ARGV[1]=commandId
+     */
+    APPROVAL_PROGRESS_RELEASE_SCRIPT("1", """
+            local commandId = redis.call('HGET', KEYS[1], 'commandId')
+            local progress = redis.call('HGET', KEYS[1], 'progress')
+            if commandId ~= ARGV[1] then return 0 end
+            if progress ~= 'AGREEING' and progress ~= 'REFUSING' then return 0 end
+            return redis.call('DEL', KEYS[1])
+            """, "审批处理权释放"),
 
     /**
      * 心跳：把本节点 field 写成本地真实计数，并删掉已不在租约里的节点 field。

@@ -223,7 +223,7 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
         } catch (GroupMembershipSupport.GroupMembershipLoadException e) {
             log.error("HTTP 枚举群成员失败 group={} packetId={}",
                     packet.getMessage().getTo(), packet.getPacketId(), e);
-            return Set.of();
+            throw e;
         }
     }
 

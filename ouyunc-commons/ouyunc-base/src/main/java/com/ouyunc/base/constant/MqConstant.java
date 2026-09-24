@@ -100,6 +100,12 @@ public class MqConstant {
      */
     public static final String MQ_GROUP_REQUEST_TOPIC =  MessageConstant.OUYUNC + MessageConstant.UNDERLINE + MQ_GROUP_REQUEST_GROUP;
 
+    /**
+     * 归档翻译消费组。与 message_save 共用归档 topic，组名独立，避免改动 message_save 的位点。
+     * 源码里原先没有这个常量，按现有 group 命名补上，不是改名。
+     */
+    public static final String MQ_TRANSLATE_MESSAGE_GROUP = "message_translate";
+
 
 
     /**
