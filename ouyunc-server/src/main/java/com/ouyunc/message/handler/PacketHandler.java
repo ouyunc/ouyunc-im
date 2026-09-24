@@ -5,9 +5,7 @@ import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.constant.enums.OuyuncMessageTypeEnum;
 import com.ouyunc.base.constant.enums.QosLevelEnum;
-import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
-import com.ouyunc.message.helper.MessageSendResultHelper;
-import com.ouyunc.message.helper.QosAckDispatcher;
+import com.ouyunc.message.helper.*;
 import com.ouyunc.base.constant.QosControlConstant;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
@@ -15,7 +13,6 @@ import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.exception.ExceptionReporter;
 import com.ouyunc.message.context.MessageServerContext;
-import com.ouyunc.message.helper.ChannelOrderedTasks;
 import com.ouyunc.message.processor.AbstractMessageBiProcessor;
 import com.ouyunc.message.safety.ContentSafetyIngress;
 import com.ouyunc.message.validator.DeviceValidator;
@@ -210,7 +207,7 @@ public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
     private void dispatchClientAck(ChannelHandlerContext ctx, Packet packet,
                                    AbstractMessageBiProcessor<? extends Number> processor) {
         try {
-            QosAckDispatcher.execute(ctx.channel(), () -> invokeClientAck(ctx, packet, processor));
+            QosAckBackpressure.execute(ctx.channel(), () -> invokeClientAck(ctx, packet, processor));
         } catch (RejectedExecutionException e) {
             QosRetryCancelMetrics.ackDispatchReject();
             log.error("客户端 QOS_C2S_ACK 控制通道准入被拒绝 packetId={}", packet.getPacketId(), e);

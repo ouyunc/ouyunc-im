@@ -73,62 +73,49 @@ public final class MessageDeliveryRouteHelper {
         if (CollectionUtils.isEmpty(memberIds)) {
             return;
         }
-        Message message = packet.getMessage();
-        String appKey = message.getMetadata().getAppKey();
-        String groupId = message.getTo();
-        String senderId = message.getFrom();
-        Set<String> deliverable = DefaultRepository.INSTANCE.excludeGroupShieldedMembers(
-                appKey, groupId, memberIds);
-
-        Set<String> imMembers = new HashSet<>();
-        boolean confirmExternal = isHttpPush(message.getMetadata());
-        List<CompletableFuture<?>> externalConfirms = confirmExternal
-                ? new ArrayList<>(MessageConstant.GROUP_EXTERNAL_CHANNEL_CONFIRM_BATCH) : null;
-        Map<String, MessageDeliveryChannelEnum> channels =
-                DefaultRepository.INSTANCE.resolveGroupMemberDeliveryChannels(appKey, groupId, deliverable);
-        for (String memberId : deliverable) {
-            if (memberId == null || memberId.equals(senderId)) {
-                continue;
+        int batchSize = MessageConstant.GROUP_FANOUT_ONLINE_LOOKUP_BATCH;
+        Set<String> batch = new HashSet<>(batchSize);
+        for (String member : memberIds) {
+            if (member != null && !member.equals(packet.getMessage().getFrom())) {
+                batch.add(member);
             }
-            MessageDeliveryChannelEnum channel = channels.getOrDefault(memberId, MessageDeliveryChannelEnum.IM);
-            if (channel.isIm()) {
-                imMembers.add(memberId);
-            } else {
-                CompletableFuture<?> confirmed = DefaultRepository.INSTANCE.publishExternalChannelOutbound(
-                        packet, memberId, channel);
-                if (confirmExternal) {
-                    externalConfirms.add(confirmed);
-                    if (externalConfirms.size() >= MessageConstant.GROUP_EXTERNAL_CHANNEL_CONFIRM_BATCH) {
-                        awaitExternalIfHttp(packet, externalConfirms);
-                        externalConfirms.clear();
-                    }
-                }
+            if (batch.size() >= batchSize) {
+                deliverGroupBatch(packet, batch);
+                batch.clear();
             }
         }
-        if (confirmExternal && !externalConfirms.isEmpty()) {
-            awaitExternalIfHttp(packet, externalConfirms);
-        }
-        if (imMembers.isEmpty()) {
-            return;
-        }
-        int batch = MessageConstant.GROUP_FANOUT_ONLINE_LOOKUP_BATCH;
-        if (imMembers.size() <= batch) {
-            sendImGroupMembers(packet, appKey, imMembers);
-            return;
-        }
-        Set<String> chunk = new HashSet<>(batch);
-        for (String memberId : imMembers) {
-            chunk.add(memberId);
-            if (chunk.size() >= batch) {
-                sendImGroupMembers(packet, appKey, Set.copyOf(chunk));
-                chunk.clear();
-            }
-        }
-        if (!chunk.isEmpty()) {
-            sendImGroupMembers(packet, appKey, Set.copyOf(chunk));
+        if (!batch.isEmpty()) {
+            deliverGroupBatch(packet, batch);
         }
     }
 
+    /** 每批完成过滤、渠道和在线查询后释放临时集合，避免整群渠道 Map 和 IM Set 叠加。 */
+    private static void deliverGroupBatch(Packet packet, Set<String> members) {
+        Message message = packet.getMessage();
+        String appKey = message.getMetadata().getAppKey();
+        Set<String> deliverable = DefaultRepository.INSTANCE.excludeGroupShieldedMembers(
+                appKey, message.getTo(), members);
+        Map<String, MessageDeliveryChannelEnum> channels = DefaultRepository.INSTANCE
+                .resolveGroupMemberDeliveryChannels(appKey, message.getTo(), deliverable);
+        Set<String> imMembers = new HashSet<>();
+        List<CompletableFuture<?>> confirms = new ArrayList<>(MessageConstant.GROUP_EXTERNAL_CHANNEL_CONFIRM_BATCH);
+        for (String member : deliverable) {
+            MessageDeliveryChannelEnum channel = channels.getOrDefault(member, MessageDeliveryChannelEnum.IM);
+            if (channel.isIm()) {
+                imMembers.add(member);
+            } else {
+                confirms.add(DefaultRepository.INSTANCE.publishExternalChannelOutbound(packet, member, channel));
+                if (confirms.size() >= MessageConstant.GROUP_EXTERNAL_CHANNEL_CONFIRM_BATCH) {
+                    awaitExternalIfHttp(packet, confirms);
+                    confirms.clear();
+                }
+            }
+        }
+        awaitExternalIfHttp(packet, confirms);
+        if (!imMembers.isEmpty()) {
+            sendImGroupMembers(packet, appKey, imMembers);
+        }
+    }
     private static void sendImGroupMembers(Packet packet, String appKey, Set<String> imMembers) {
         Map<String, List<LoginClientInfo>> onlineMap = ClientHelper.onlineAllBatch(appKey, imMembers);
         // 本批所有设备一次交给 fanout，按节点合并正文；下游继续限制每帧的目标数。

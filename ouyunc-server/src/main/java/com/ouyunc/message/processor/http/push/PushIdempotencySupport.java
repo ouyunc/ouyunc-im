@@ -28,6 +28,8 @@ public final class PushIdempotencySupport {
     public static final int CLAIM_COMMITTED = 2;
     public static final int CLAIM_PENDING = 3;
     public static final int CLAIM_CONFLICT = 4;
+    /** 旧版完成记录没有摘要，必须读取正式消息校验后才能认定为重复。 */
+    private static final int CLAIM_LEGACY_COMMITTED = 5;
     private static final RedisSerializer<String> STRING_SERIALIZER = RedisSerializer.string();
 
     /** ARGV: proposedPacketId, payloadHash, ownerToken, ttlMs, takeoverMs。 */
@@ -45,7 +47,12 @@ public final class PushIdempotencySupport {
             if raw then
               local fields = {}
               for value in string.gmatch(raw, '([^|]+)') do table.insert(fields, value) end
-              if #fields < 5 then return {0, ''} end
+              if #fields < 5 then
+                if #fields == 2 and fields[1] == 'COMMITTED' then return {5, fields[2]} end
+                -- 旧节点没有 owner CAS，滚动升级时不能强占；等待旧执行完成或旧键原 TTL 到期。
+                if fields[1] == 'PENDING' then return {3, fields[2]} end
+                return {0, ''}
+              end
               if fields[3] ~= hash then return {4, fields[2]} end
               canonical = fields[2]
               if fields[1] == 'COMMITTED' then return {2, canonical} end
@@ -104,9 +111,30 @@ public final class PushIdempotencySupport {
         if (raw == null || raw.size() < 2) return ClaimResult.failed();
         int state = Integer.parseInt(String.valueOf(raw.get(0)));
         String canonical = String.valueOf(raw.get(1));
+        if (state == CLAIM_LEGACY_COMMITTED) {
+            return verifyLegacyCommitted(appKey, canonical, hash);
+        }
         return new ClaimResult(state, canonical, hash, state == CLAIM_ACQUIRED ? ownerToken : null);
     }
 
+    /** 旧完成记录只读兼容，不以本次请求摘要覆盖历史事实，避免相同 messageId 替换正文。 */
+    private static ClaimResult verifyLegacyCommitted(String appKey, String canonical, String requestHash) {
+        try {
+            long id = Long.parseLong(canonical);
+            List<com.ouyunc.base.packet.Packet> packets = com.ouyunc.repository.DefaultRepository.INSTANCE
+                    .getPackets(appKey, List.of(id));
+            if (packets == null || packets.size() != 1 || packets.getFirst() == null
+                    || packets.getFirst().getMessage() == null) {
+                return ClaimResult.failed();
+            }
+            String storedHash = QosIdempotencyHelper.payloadHash(packets.getFirst().getMessage());
+            int state = requestHash.equals(storedHash) ? CLAIM_COMMITTED : CLAIM_CONFLICT;
+            return new ClaimResult(state, canonical, storedHash, null);
+        } catch (Exception error) {
+            log.warn("旧 HTTP 幂等记录无法核对 appKey={} packetId={}", appKey, canonical, error);
+            return ClaimResult.failed();
+        }
+    }
     public static boolean commit(String appKey, String messageId, ClaimIdentity claim) {
         return mutate(COMMIT_SCRIPT, appKey, messageId, claim, true);
     }
