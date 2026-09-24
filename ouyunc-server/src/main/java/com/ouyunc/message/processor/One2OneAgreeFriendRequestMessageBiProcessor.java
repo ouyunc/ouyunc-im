@@ -16,6 +16,7 @@ import com.ouyunc.core.exception.ExceptionReporter;
 import com.ouyunc.message.helper.DistributedLockHelper;
 import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
 import com.ouyunc.message.helper.MessageSendResultHelper;
+import com.ouyunc.message.helper.RequestEventContextFactory;
 import com.ouyunc.message.helper.RequestNotifyHelper;
 import com.ouyunc.message.validator.AuthValidator;
 import com.ouyunc.message.validator.BlackListValidator;
@@ -82,35 +83,45 @@ public final class One2OneAgreeFriendRequestMessageBiProcessor extends AbstractM
         Metadata metadata = message.getMetadata();
         String appKey = metadata.getAppKey();
         String sessionId = IdentityUtil.sessionId(from, to);
-        java.util.concurrent.atomic.AtomicBoolean allowed = new java.util.concurrent.atomic.AtomicBoolean();
-        DistributedLockHelper.runWithLock(ctx, packet, CacheConstant.buildFriendRequestLockCacheKey(appKey, sessionId),
-                ExceptionCodeEnum.BIND_FRIEND_ERROR, () -> allowed.set(friendAgreeAllowed(ctx, packet, appKey)));
-        if (!allowed.get()) {
-            return Mono.empty();
-        }
-        return MessageAcceptPipelineHelper.confirmThenRun(ctx, MqConstant.MQ_FRIEND_REQUEST_TOPIC, sessionId, packet, () -> {
-            RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.userOnly(to));
-            MessageAcceptPipelineHelper.requestAccepted(ctx, packet);
-        });
+        return Mono.fromRunnable(() -> DistributedLockHelper.runWithLock(ctx, packet,
+                CacheConstant.buildFriendRequestLockCacheKey(appKey, sessionId),
+                ExceptionCodeEnum.BIND_FRIEND_ERROR, () -> {
+                    RequestSession requestSession = friendAgreeSession(ctx, packet, appKey);
+                    if (requestSession == null) {
+                        return;
+                    }
+                    requestSession.setProgress(RequestSessionProgress.AGREEING.value());
+                    if (!repository().saveRefuseFriendRequestMessage(packet, requestSession,
+                            MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
+                        MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
+                        return;
+                    }
+                    RequestEventContextFactory.capture(packet, requestSession);
+                    if (!MessageAcceptPipelineHelper.publishRequestCommand(ctx, MqConstant.MQ_FRIEND_REQUEST_TOPIC, sessionId, packet)) {
+                        return;
+                    }
+                    RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.userOnly(to));
+                    MessageAcceptPipelineHelper.requestAccepted(ctx, packet);
+                }));
     }
 
-    /** 通过才允许发布审批命令。已经是好友时直接回受理成功。 */
-    private boolean friendAgreeAllowed(ChannelHandlerContext ctx, Packet packet, String appKey) {
+    /** 通过才允许发布审批命令。已经是好友时直接回受理成功，返回 null 表示不得发布。 */
+    private RequestSession friendAgreeSession(ChannelHandlerContext ctx, Packet packet, String appKey) {
         Message message = packet.getMessage();
         RequestSession requestSession = repository().getFriendRequestSession(appKey, message.getTo(), message.getFrom());
         if (requestSession == null) {
             log.warn("不存在加好友请求记录，该消息忽略");
             MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.REQUEST_SESSION_NOT_EXIST);
-            return false;
+            return null;
         }
         if (RequestSessionProgress.REFUSING.value().equals(requestSession.getProgress())) {
             MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.REQUEST_SESSION_PROGRESS_MISMATCH);
-            return false;
+            return null;
         }
         if (repository().isFriend(appKey, message.getFrom(), message.getTo())) {
             MessageAcceptPipelineHelper.requestAccepted(ctx, packet);
-            return false;
+            return null;
         }
-        return true;
+        return requestSession;
     }
 }

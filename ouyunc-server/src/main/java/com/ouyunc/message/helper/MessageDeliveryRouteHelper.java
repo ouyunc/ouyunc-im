@@ -106,12 +106,12 @@ public final class MessageDeliveryRouteHelper {
             } else {
                 confirms.add(DefaultRepository.INSTANCE.publishExternalChannelOutbound(packet, member, channel));
                 if (confirms.size() >= MessageConstant.GROUP_EXTERNAL_CHANNEL_CONFIRM_BATCH) {
-                    awaitExternalIfHttp(packet, confirms);
+                    awaitExternalConfirm(packet, confirms);
                     confirms.clear();
                 }
             }
         }
-        awaitExternalIfHttp(packet, confirms);
+        awaitExternalConfirm(packet, confirms);
         if (!imMembers.isEmpty()) {
             sendImGroupMembers(packet, appKey, imMembers);
         }
@@ -150,7 +150,7 @@ public final class MessageDeliveryRouteHelper {
         }
         CompletableFuture<?> confirmed = DefaultRepository.INSTANCE.publishExternalChannelOutbound(
                 packet, recipientId, channel);
-        awaitExternalIfHttp(packet, List.of(confirmed));
+        awaitExternalConfirm(packet, List.of(confirmed));
     }
 
     private static void syncSenderDevices(Packet packet, boolean forceSelfSync) {
@@ -182,17 +182,16 @@ public final class MessageDeliveryRouteHelper {
         return metadata != null && IngressSourceEnum.isHttpPush(metadata.getIngressSource());
     }
 
-    /** HTTP 受理必须知道外部任务是否进 broker；长连接保持原异步行为。 */
-    private static void awaitExternalIfHttp(Packet packet, List<CompletableFuture<?>> confirms) {
-        if (packet == null || packet.getMessage() == null || confirms == null || confirms.isEmpty()
-                || !isHttpPush(packet.getMessage().getMetadata())) {
+    /** 长连接和 HTTP 都要等外渠进入 broker，失败时不得回受理成功。 */
+    private static void awaitExternalConfirm(Packet packet, List<CompletableFuture<?>> confirms) {
+        if (packet == null || confirms == null || confirms.isEmpty()) {
             return;
         }
         try {
             CompletableFuture.allOf(confirms.toArray(CompletableFuture[]::new))
                     .get(MessageConstant.EXTERNAL_CHANNEL_CONFIRM_TIMEOUT_MS, TimeUnit.MILLISECONDS);
         } catch (Exception error) {
-            throw new IllegalStateException("HTTP 外部渠道任务 broker 确认失败", error);
+            throw new ExternalDeliveryConfirmException("外部渠道任务 broker 确认失败", error);
         }
     }
 }

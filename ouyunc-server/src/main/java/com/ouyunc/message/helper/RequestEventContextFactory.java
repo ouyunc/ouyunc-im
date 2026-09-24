@@ -13,7 +13,7 @@ import com.ouyunc.repository.DefaultRepository;
 import org.apache.commons.lang3.StringUtils;
 
 /** 在领域消息写入 Kafka 前生成完整、可重放的申请状态快照。 */
-final class RequestEventContextFactory {
+public final class RequestEventContextFactory {
 
     private RequestEventContextFactory() {
     }
@@ -29,6 +29,16 @@ final class RequestEventContextFactory {
             throw new IllegalStateException("申请事件缺少可重放的请求会话快照, messageId=" + message.getId());
         }
         metadata.setRequestEventContext(context);
+    }
+
+    /** 用刚刚写入 Redis 的会话覆盖快照，避免 ensure 按旧进度重新推导。 */
+    public static void capture(Packet packet, RequestSession session) {
+        packet.getMessage().getMetadata().setRequestEventContext(friendContext(session));
+    }
+
+    /** 用刚刚写入 Redis 的群会话覆盖快照。 */
+    public static void capture(Packet packet, GroupRequestSession session) {
+        packet.getMessage().getMetadata().setRequestEventContext(groupContext(session));
     }
 
     /** 使用协议枚举识别申请消息，避免协议值调整后事件快照逻辑静默失效。 */

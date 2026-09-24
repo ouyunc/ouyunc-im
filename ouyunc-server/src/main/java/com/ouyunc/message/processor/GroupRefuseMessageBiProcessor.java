@@ -13,6 +13,7 @@ import com.ouyunc.core.exception.ExceptionReporter;
 import com.ouyunc.message.helper.DistributedLockHelper;
 import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
 import com.ouyunc.message.helper.MessageSendResultHelper;
+import com.ouyunc.message.helper.RequestEventContextFactory;
 import com.ouyunc.message.helper.RequestNotifyHelper;
 import com.ouyunc.message.validator.*;
 import io.netty.channel.ChannelHandlerContext;
@@ -78,16 +79,29 @@ public final class GroupRefuseMessageBiProcessor extends AbstractMessageBiProces
             return Mono.empty();
         }
         String appKey = message.getMetadata().getAppKey();
-        java.util.concurrent.atomic.AtomicReference<java.util.Set<String>> notifyIds = new java.util.concurrent.atomic.AtomicReference<>();
         String lockKey = CacheConstant.buildGroupRequestLockCacheKey(appKey, content.getIdentity(), message.getTo());
-        DistributedLockHelper.runWithLock(ctx, packet, lockKey, ExceptionCodeEnum.BIND_GROUP_ERROR, () -> notifyIds.set(refuseTargets(ctx, packet, content, appKey)));
-        if (notifyIds.get() == null) {
-            return Mono.empty();
-        }
-        return MessageAcceptPipelineHelper.confirmThenRun(ctx, MqConstant.MQ_GROUP_REQUEST_TOPIC, message.getTo(), packet, () -> {
-            RequestNotifyHelper.dispatch(ctx, packet, appKey, notifyIds.get());
+        return Mono.fromRunnable(() -> DistributedLockHelper.runWithLock(ctx, packet, lockKey, ExceptionCodeEnum.BIND_GROUP_ERROR, () -> {
+            java.util.Set<String> notifyIds = refuseTargets(ctx, packet, content, appKey);
+            if (notifyIds == null) {
+                return;
+            }
+            GroupRequestSession session = repository().getGroupRequestSession(appKey, content.getIdentity(), message.getTo());
+            if (session == null) {
+                MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
+                return;
+            }
+            session.setProgress(RequestSessionProgress.REFUSING.value());
+            if (!repository().saveGroupRequestMessage(packet, session, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
+                MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
+                return;
+            }
+            RequestEventContextFactory.capture(packet, session);
+            if (!MessageAcceptPipelineHelper.publishRequestCommand(ctx, MqConstant.MQ_GROUP_REQUEST_TOPIC, message.getTo(), packet)) {
+                return;
+            }
+            RequestNotifyHelper.dispatch(ctx, packet, appKey, notifyIds);
             MessageAcceptPipelineHelper.requestAccepted(ctx, packet);
-        });
+        }));
     }
 
     /** 校验通过返回通知目标；失败时已回拒绝结果，返回 null，调用方不得发布命令。 */

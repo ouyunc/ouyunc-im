@@ -14,6 +14,7 @@ import com.ouyunc.message.helper.DistributedLockHelper;
 import com.ouyunc.message.helper.GroupBindResultHelper;
 import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
 import com.ouyunc.message.helper.MessageSendResultHelper;
+import com.ouyunc.message.helper.RequestEventContextFactory;
 import com.ouyunc.message.helper.RequestNotifyHelper;
 import com.ouyunc.message.validator.*;
 import io.netty.channel.ChannelHandlerContext;
@@ -81,7 +82,7 @@ public final class GroupJoinMessageBiProcessor extends AbstractMessageBiProcesso
                     }
                     // 上次可能在群关系写入后、请求会话提交前退出；重试必须补齐请求状态。
                     if (existingSession == null) {
-                        existingSession = message.getMetadata().getRequestEventContext().toGroupSession();
+                        existingSession = newActiveGroupSession(message, RequestSessionProgress.AGREEING.value());
                     } else {
                         existingSession.setProgress(RequestSessionProgress.AGREEING.value());
                         existingSession.setJoinerProcessStatus(GroupJoinerProcessStatus.AGREE.value());
@@ -90,6 +91,9 @@ public final class GroupJoinMessageBiProcessor extends AbstractMessageBiProcesso
                     if (!repository().saveGroupRequestMessage(packet, existingSession,
                             MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
                         MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
+                        return;
+                    }
+                    if (!publishGroupCommand(ctx, packet, existingSession)) {
                         return;
                     }
                     RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.userOnly(message.getFrom()));
@@ -126,7 +130,7 @@ public final class GroupJoinMessageBiProcessor extends AbstractMessageBiProcesso
                     return;
                 }
                 GroupRequestSession groupRequestSession = existingSession != null ? existingSession
-                        : message.getMetadata().getRequestEventContext().toGroupSession();
+                        : newActiveGroupSession(message, RequestSessionProgress.JOINING.value());
                 groupRequestSession.setJoinerProcessStatus(GroupJoinerProcessStatus.AGREE.value());
                 groupRequestSession.setWay(GroupRequestSessionWay.ACTIVE.value());
 
@@ -151,6 +155,9 @@ public final class GroupJoinMessageBiProcessor extends AbstractMessageBiProcesso
                     }
                     notifyIdentities = RequestNotifyHelper.copyOf(groupMannerOrLeaderUsersIdentityAndPostMap.keySet());
                 }
+                if (!publishGroupCommand(ctx, packet, groupRequestSession)) {
+                    return;
+                }
                 RequestNotifyHelper.dispatch(ctx, packet, appKey, notifyIdentities);
                 MessageAcceptPipelineHelper.requestAccepted(ctx, packet);
             });
@@ -167,6 +174,24 @@ public final class GroupJoinMessageBiProcessor extends AbstractMessageBiProcesso
             return repository().saveGroupRequestMessage(packet, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
         }
         return repository().saveJoinGroupRequestMessage(packet, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
+    }
+
+    private static GroupRequestSession newActiveGroupSession(Message message, int progress) {
+        return GroupRequestSession.newGroupBuilder()
+                .sessionId(message.getId())
+                .progress(progress)
+                .joiner(message.getFrom())
+                .groupId(message.getTo())
+                .channel(GroupRequestSessionChannel.OTHER.value())
+                .way(GroupRequestSessionWay.ACTIVE.value())
+                .joinerProcessStatus(GroupJoinerProcessStatus.AGREE.value())
+                .build();
+    }
+
+    private static boolean publishGroupCommand(ChannelHandlerContext ctx, Packet packet, GroupRequestSession session) {
+        RequestEventContextFactory.capture(packet, session);
+        return MessageAcceptPipelineHelper.publishRequestCommand(
+                ctx, MqConstant.MQ_GROUP_REQUEST_TOPIC, packet.getMessage().getTo(), packet);
     }
 
 }

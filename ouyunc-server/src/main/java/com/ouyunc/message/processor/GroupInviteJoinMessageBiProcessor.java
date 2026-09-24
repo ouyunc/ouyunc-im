@@ -18,6 +18,7 @@ import com.ouyunc.message.helper.DistributedLockHelper;
 import com.ouyunc.message.helper.GroupBindResultHelper;
 import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
 import com.ouyunc.message.helper.MessageSendResultHelper;
+import com.ouyunc.message.helper.RequestEventContextFactory;
 import com.ouyunc.message.helper.RequestNotifyHelper;
 import com.ouyunc.message.validator.*;
 import io.netty.channel.ChannelHandlerContext;
@@ -128,7 +129,16 @@ public final class GroupInviteJoinMessageBiProcessor extends AbstractMessageBiPr
                         groupRequestSession.setInviter(message.getFrom());
                     }
                 } else {
-                    groupRequestSession = message.getMetadata().getRequestEventContext().toGroupSession();
+                    groupRequestSession = GroupRequestSession.newGroupBuilder()
+                            .sessionId(message.getId())
+                            .joiner(content.getIdentity())
+                            .groupId(message.getTo())
+                            .inviter(message.getFrom())
+                            .way(GroupRequestSessionWay.INVITED.value())
+                            .channel(GroupRequestSessionChannel.OTHER.value())
+                            .progress(RequestSessionProgress.JOINING.value())
+                            .joinerProcessStatus(GroupJoinerProcessStatus.PENDING.value())
+                            .build();
                 }
 
                 boolean inviterIsMannerOrLeader = false;
@@ -185,6 +195,10 @@ public final class GroupInviteJoinMessageBiProcessor extends AbstractMessageBiPr
                         return;
                     }
                     notifyIdentities = RequestNotifyHelper.userOnly(content.getIdentity());
+                }
+                RequestEventContextFactory.capture(packet, groupRequestSession);
+                if (!MessageAcceptPipelineHelper.publishRequestCommand(ctx, MqConstant.MQ_GROUP_REQUEST_TOPIC, message.getTo(), packet)) {
+                    return;
                 }
                 RequestNotifyHelper.dispatch(ctx, packet, appKey, notifyIdentities);
                 MessageAcceptPipelineHelper.requestAccepted(ctx, packet);

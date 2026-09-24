@@ -267,14 +267,10 @@ public final class CsHelper {
                 route.ticketId(), recipientId, channel.getKey(), packet.getPacketId());
         java.util.concurrent.CompletableFuture<?> confirmed =
                 DefaultRepository.INSTANCE.publishExternalChannelOutbound(packet, recipientId, channel);
-        boolean httpPush = message != null && message.getMetadata() != null
-                && IngressSourceEnum.isHttpPush(message.getMetadata().getIngressSource());
-        if (httpPush) {
-            try {
-                confirmed.get(MessageConstant.EXTERNAL_CHANNEL_CONFIRM_TIMEOUT_MS, TimeUnit.MILLISECONDS);
-            } catch (Exception error) {
-                throw new IllegalStateException("HTTP 客服外部渠道任务 broker 确认失败", error);
-            }
+        try {
+            confirmed.get(MessageConstant.EXTERNAL_CHANNEL_CONFIRM_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        } catch (Exception error) {
+            throw new ExternalDeliveryConfirmException("客服外部渠道任务 broker 确认失败", error);
         }
     }
 

@@ -12,6 +12,7 @@ import com.ouyunc.message.helper.DistributedLockHelper;
 import com.ouyunc.message.helper.GroupBindResultHelper;
 import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
 import com.ouyunc.message.helper.MessageSendResultHelper;
+import com.ouyunc.message.helper.RequestEventContextFactory;
 import com.ouyunc.message.helper.RequestNotifyHelper;
 import com.ouyunc.message.validator.*;
 import io.netty.channel.ChannelHandlerContext;
@@ -114,12 +115,18 @@ public final class GroupInviteJoinerAgreeMessageBiProcessor extends AbstractMess
                             "自动绑定群组请求消息异常!")) {
                         return;
                     }
+                    if (!publishGroupCommand(ctx, packet, groupRequestSession)) {
+                        return;
+                    }
                     RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.userOnly(joiner));
                 } else {
                     if (!saveGroupRequestMessage(packet, groupMannerOrLeaderUsersIdentitySet, groupRequestSession)) {
                         log.error("Failed to save invited join group agree request message: {}", packet);
                         ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存被邀请同意加群请求消息异常!", "GroupInviteJoinerAgreeMessageBiProcessor.process", packet);
                         MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
+                        return;
+                    }
+                    if (!publishGroupCommand(ctx, packet, groupRequestSession)) {
                         return;
                     }
                     RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.copyOf(groupMannerOrLeaderUsersIdentityAndPostMap.keySet()));
@@ -136,6 +143,12 @@ public final class GroupInviteJoinerAgreeMessageBiProcessor extends AbstractMess
      */
     private boolean saveGroupRequestMessage(Packet packet, Set<String> groupMembers, GroupRequestSession groupRequestSession) {
         return repository().saveGroupRequestMessage(packet, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
+    }
+
+    private static boolean publishGroupCommand(ChannelHandlerContext ctx, Packet packet, GroupRequestSession session) {
+        RequestEventContextFactory.capture(packet, session);
+        return MessageAcceptPipelineHelper.publishRequestCommand(
+                ctx, MqConstant.MQ_GROUP_REQUEST_TOPIC, packet.getMessage().getTo(), packet);
     }
 
     private static boolean isManagerOrLeader(Integer post) {

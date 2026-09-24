@@ -2,6 +2,7 @@ package com.ouyunc.message.helper;
 
 import com.ouyunc.core.exception.ExceptionReporter;
 
+import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqArchiveRouting;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.packet.Packet;
@@ -14,6 +15,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
+
+import java.util.concurrent.TimeUnit;
 
 /**
  * 消息受理管线公共能力：MQ → Redis → ACK → 投递。
@@ -173,15 +176,18 @@ public final class MessageAcceptPipelineHelper {
             }
             return Mono.empty();
         }
-        qosAckOnSuccess(ctx, packet);
         if (onFreshWrite != null) {
             try {
                 onFreshWrite.run();
+            } catch (ExternalDeliveryConfirmException error) {
+                log.error("外部渠道未确认，不回受理成功, messageId={}", packet.getMessage().getId(), error);
+                MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.MQ_PERSISTENCE_ERROR);
+                return Mono.empty();
             } catch (Exception error) {
-                // 主消息已经提交，派生索引或实时投递失败不能撤销成功结果。
-                log.error("消息已受理，但后续副作用失败, messageId={}", packet.getMessage().getId(), error);
+                log.error("消息已写入，但后续副作用失败, messageId={}", packet.getMessage().getId(), error);
             }
         }
+        qosAckOnSuccess(ctx, packet);
         return Mono.empty();
     }
 
@@ -196,19 +202,32 @@ public final class MessageAcceptPipelineHelper {
     }
 
     /**
-     * 业务事件先等 MQ broker 确认，再跑 Redis/通知。
-     * 确认结果不明时返回 UNKNOWN，客户端使用同一 messageId 核对或重试。
+     * 调用方须已在同一把关系锁内写完 Redis。此处只确认 MQ，失败回 UNKNOWN，不在确认前改状态。
+     *
+     * @return false 时调用方不得再通知或回受理成功
+     */
+    public static boolean publishRequestCommand(ChannelHandlerContext ctx, String topic, String key, Packet packet) {
+        try {
+            if (packet.getMessage().getMetadata().getRequestEventContext() == null) {
+                RequestEventContextFactory.ensure(packet);
+            }
+            repository().publishPacketConfirmed(topic, key, packet)
+                    .get(MessageConstant.MESSAGE_ARCHIVE_CONFIRM_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+            return true;
+        } catch (Exception error) {
+            log.error("请求归档结果未知, messageId={}", packet.getMessage().getId(), error);
+            MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.MQ_PERSISTENCE_ERROR);
+            return false;
+        }
+    }
+
+    /**
+     * 在当前订阅线程执行业务。Redis 提交和 {@link #publishRequestCommand} 必须放在同一把锁里，
+     * 不能先确认 MQ 再改会话。
      */
     public static Mono<Void> confirmThenRun(ChannelHandlerContext ctx, String topic, String key,
                                             Packet packet, Runnable next) {
-        return Mono.fromRunnable(() -> RequestEventContextFactory.ensure(packet))
-                .then(MessageArchiveHelper.confirm(() -> repository().publishPacketConfirmed(topic, key, packet)))
-                .then(Mono.<Void>fromRunnable(next))
-                .onErrorResume(error -> {
-                    log.error("请求归档结果未知, messageId={}", packet.getMessage().getId(), error);
-                    MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.MQ_PERSISTENCE_ERROR);
-                    return Mono.<Void>empty();
-                });
+        return Mono.fromRunnable(next);
     }
 
     /** 只在受理管线内部传播，用于保留 Redis claim 的精确结果。 */

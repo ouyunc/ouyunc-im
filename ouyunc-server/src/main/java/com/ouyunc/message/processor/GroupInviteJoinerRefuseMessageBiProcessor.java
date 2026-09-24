@@ -11,6 +11,7 @@ import com.ouyunc.core.exception.ExceptionReporter;
 import com.ouyunc.message.helper.DistributedLockHelper;
 import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
 import com.ouyunc.message.helper.MessageSendResultHelper;
+import com.ouyunc.message.helper.RequestEventContextFactory;
 import com.ouyunc.message.helper.RequestNotifyHelper;
 import com.ouyunc.message.validator.*;
 import io.netty.channel.ChannelHandlerContext;
@@ -100,6 +101,9 @@ public final class GroupInviteJoinerRefuseMessageBiProcessor extends AbstractMes
                     MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
                     return;
                 }
+                if (!publishGroupCommand(ctx, packet, groupRequestSession)) {
+                    return;
+                }
                 RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.copyOf(groupMannerOrLeaderUsersIdentityAndPostMap.keySet()));
                 MessageAcceptPipelineHelper.requestAccepted(ctx, packet);
             });
@@ -113,6 +117,12 @@ public final class GroupInviteJoinerRefuseMessageBiProcessor extends AbstractMes
      */
     private boolean saveGroupRequestMessage(Packet packet, Set<String> groupMembers, GroupRequestSession groupRequestSession) {
         return repository().saveGroupRequestMessage(packet, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
+    }
+
+    private static boolean publishGroupCommand(ChannelHandlerContext ctx, Packet packet, GroupRequestSession session) {
+        RequestEventContextFactory.capture(packet, session);
+        return MessageAcceptPipelineHelper.publishRequestCommand(
+                ctx, MqConstant.MQ_GROUP_REQUEST_TOPIC, packet.getMessage().getTo(), packet);
     }
 
 }

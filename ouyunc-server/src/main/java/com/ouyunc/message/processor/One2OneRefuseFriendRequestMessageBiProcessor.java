@@ -15,6 +15,7 @@ import com.ouyunc.core.exception.ExceptionReporter;
 import com.ouyunc.message.helper.DistributedLockHelper;
 import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
 import com.ouyunc.message.helper.MessageSendResultHelper;
+import com.ouyunc.message.helper.RequestEventContextFactory;
 import com.ouyunc.message.helper.RequestNotifyHelper;
 import com.ouyunc.message.validator.AuthValidator;
 import com.ouyunc.message.validator.BlackListValidator;
@@ -76,8 +77,8 @@ public final class One2OneRefuseFriendRequestMessageBiProcessor extends Abstract
         String to = message.getTo();
         String appKey = message.getMetadata().getAppKey();
         String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
-        java.util.concurrent.atomic.AtomicBoolean allowed = new java.util.concurrent.atomic.AtomicBoolean();
-        DistributedLockHelper.runWithLock(ctx, packet, CacheConstant.buildFriendRequestLockCacheKey(appKey, sessionId),
+        return Mono.fromRunnable(() -> DistributedLockHelper.runWithLock(ctx, packet,
+                CacheConstant.buildFriendRequestLockCacheKey(appKey, sessionId),
                 ExceptionCodeEnum.BIND_FRIEND_ERROR, () -> {
                     RequestSession requestSession = repository().getFriendRequestSession(appKey, message.getTo(), message.getFrom());
                     if (requestSession == null) {
@@ -89,14 +90,18 @@ public final class One2OneRefuseFriendRequestMessageBiProcessor extends Abstract
                         MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.REQUEST_SESSION_PROGRESS_MISMATCH);
                         return;
                     }
-                    allowed.set(true);
-                });
-        if (!allowed.get()) {
-            return Mono.empty();
-        }
-        return MessageAcceptPipelineHelper.confirmThenRun(ctx, MqConstant.MQ_FRIEND_REQUEST_TOPIC, sessionId, packet, () -> {
-            RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.userOnly(to));
-            MessageAcceptPipelineHelper.requestAccepted(ctx, packet);
-        });
+                    requestSession.setProgress(RequestSessionProgress.REFUSING.value());
+                    if (!repository().saveRefuseFriendRequestMessage(packet, requestSession,
+                            MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
+                        MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
+                        return;
+                    }
+                    RequestEventContextFactory.capture(packet, requestSession);
+                    if (!MessageAcceptPipelineHelper.publishRequestCommand(ctx, MqConstant.MQ_FRIEND_REQUEST_TOPIC, sessionId, packet)) {
+                        return;
+                    }
+                    RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.userOnly(to));
+                    MessageAcceptPipelineHelper.requestAccepted(ctx, packet);
+                }));
     }
 }
