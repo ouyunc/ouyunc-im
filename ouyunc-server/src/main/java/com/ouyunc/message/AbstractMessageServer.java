@@ -1,26 +1,23 @@
 package com.ouyunc.message;
 
+import com.ouyunc.base.constant.enums.DeviceTypeEnum;
+import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.executor.ThreadPoolManager;
-import com.ouyunc.base.constant.enums.DeviceTypeEnum;
-import com.ouyunc.core.device.DeviceTypeRegistry;
-import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.utils.TimeUtil;
+import com.ouyunc.core.device.DeviceTypeRegistry;
 import com.ouyunc.core.listener.MessageEventMulticaster;
 import com.ouyunc.core.listener.event.MessageEvent;
+import com.ouyunc.id.CosIdSnowflakeIdGenerator;
 import com.ouyunc.message.banner.MessageBanner;
-import com.ouyunc.message.channel.DefaultServerChannelInitializer;
-import com.ouyunc.message.channel.DefaultSocketChannelInitializer;
-import com.ouyunc.message.channel.NativeIoTransport;
-import com.ouyunc.message.channel.ServerChannelInitializer;
-import com.ouyunc.message.channel.SocketChannelInitializer;
+import com.ouyunc.message.channel.*;
 import com.ouyunc.message.cluster.client.DefaultMessageClient;
 import com.ouyunc.message.cluster.client.MessageClient;
 import com.ouyunc.message.cluster.lease.NodeLeaseKeeper;
 import com.ouyunc.message.context.MessageServerContext;
-import com.ouyunc.message.http.HttpRequestDispatcher;
 import com.ouyunc.message.convert.BinaryWebSocketFramePacketConverter;
 import com.ouyunc.message.convert.PacketPacketConverter;
+import com.ouyunc.message.http.HttpRequestDispatcher;
 import com.ouyunc.message.monitor.ResourceMonitor;
 import com.ouyunc.message.schedule.ScheduleTimer;
 import io.netty.bootstrap.ServerBootstrap;
@@ -164,6 +161,11 @@ public abstract class AbstractMessageServer implements MessageServer {
         MessageServerContext.publishEvent(new MessageEvent(
                 MessageServerContext.serverProperties().getLocalServerAddress(),
                 MessageEventTypeEnum.SERVER_PREPARE), false);
+
+        // 必须在绑定监听端口前完成 Redis 机器号分配，禁止首条消息在 IO 线程初始化。
+        if (MessageServerContext.idGenerator() instanceof CosIdSnowflakeIdGenerator generator) {
+            generator.initializeManaged();
+        }
     }
 
     /**
@@ -276,10 +278,6 @@ public abstract class AbstractMessageServer implements MessageServer {
         loadMessageInterceptor();
         // 初始化服务之前做些操作，可以对上下文属性值进行改变
         beforeInitServer();
-        // 必须在绑定监听端口前完成 Redis 机器号分配，禁止首条消息在 IO 线程初始化。
-        if (MessageServerContext.idGenerator() instanceof com.ouyunc.id.CosIdSnowflakeIdGenerator generator) {
-            generator.initializeManaged();
-        }
         // 初始化IM服务
         initServer();
     }
