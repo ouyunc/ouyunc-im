@@ -52,4 +52,21 @@ public final class RelationCacheSubscriber {
             log.error("关系本机缓存失效订阅失败，将仅依赖本地缓存过期纠偏", e);
         }
     }
+
+    /**
+     * 停止订阅；在服务停机时调用。
+     */
+    public static synchronized void stop() {
+        Integer id = listenerId;
+        listenerId = null;
+        if (id == null) {
+            return;
+        }
+        try {
+            MessageServerContext.redissonClient.getTopic(CacheConstant.RELATION_CACHE_INVALIDATE_CHANNEL)
+                    .removeListener(id);
+        } catch (Exception e) {
+            log.warn("停止关系本机缓存订阅异常: {}", e.getMessage());
+        }
+    }
 }

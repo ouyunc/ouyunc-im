@@ -40,7 +40,7 @@ public final class RelationCacheInvalidateSupport {
                 if (StringUtils.isAnyBlank(event.getUserId(), event.getPeerId())) {
                     return;
                 }
-                RelationLocalCache.markFriend(event.getAppKey(), event.getUserId(), event.getPeerId(), true);
+                RelationLocalCache.onFriendAdd(event.getAppKey(), event.getUserId(), event.getPeerId());
             }
             case FRIEND_SHIELD -> {
                 if (StringUtils.isAnyBlank(event.getUserId(), event.getPeerId()) || event.getEnabled() == null) {

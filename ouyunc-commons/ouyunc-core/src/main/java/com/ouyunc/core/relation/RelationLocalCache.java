@@ -95,6 +95,18 @@ public final class RelationLocalCache {
     }
 
     /**
+     * 成为好友：双向布尔写成 true，并丢掉双方好友配置，下次从 Redis 加载。
+     */
+    public static void onFriendAdd(String appKey, String userA, String userB) {
+        if (StringUtils.isAnyBlank(appKey, userA, userB)) {
+            return;
+        }
+        markFriend(appKey, userA, userB, true);
+        MessageContext.friendEntityCache.delete(CacheConstant.buildFriendsConfigCacheKey(appKey, userA, userB));
+        MessageContext.friendEntityCache.delete(CacheConstant.buildFriendsConfigCacheKey(appKey, userB, userA));
+    }
+
+    /**
      * 删好友：布尔关系写成 false（避免下一条消息再被误判为好友）+ 删好友配置/屏蔽。
      */
     public static void evictFriend(String appKey, String userA, String userB) {
