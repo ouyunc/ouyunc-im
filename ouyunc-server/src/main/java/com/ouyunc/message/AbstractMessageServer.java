@@ -212,6 +212,7 @@ public abstract class AbstractMessageServer implements MessageServer {
             if (MessageServerContext.idGenerator() instanceof com.ouyunc.id.CosIdSnowflakeIdGenerator generator) {
                 generator.shutdown();
             }
+            MessageServerContext.server = null;
         }
         return true;
     }

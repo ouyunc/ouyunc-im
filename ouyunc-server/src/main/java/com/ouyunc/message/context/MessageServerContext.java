@@ -47,9 +47,9 @@ public class MessageServerContext extends MessageContext {
     private static final Logger log = LoggerFactory.getLogger(MessageServerContext.class);
 
     /**
-     * message 服务实例
+     * 当前进程的 message 服务实例。启动时写入，优雅关闭结束后置空。
      */
-    public static MessageServer server;
+    public static volatile MessageServer server;
 
     /**
      * Message 协议分发处理器
