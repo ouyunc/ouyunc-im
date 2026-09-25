@@ -351,7 +351,6 @@ public abstract class AbstractMessageServer implements MessageServer {
             }
             // epoll 传输层增强（如 SO_REUSEPORT），与 ChannelOption 配置解耦
             ioTransport.enhanceServerBootstrap(bootstrap, bossThreads);
-            NodeLeaseKeeper.start();
             // 因为bind() 是异步的，这里不用 bind().sync(); 而是添加监听器的方式进行回调
             ChannelFuture channelFuture = bootstrap.bind();
             // 添加监听器来监听是否启动成功,做额外工作
