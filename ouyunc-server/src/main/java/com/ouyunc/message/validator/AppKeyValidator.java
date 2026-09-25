@@ -6,7 +6,6 @@ import com.ouyunc.base.constant.enums.AppStatus;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.domain.entity.AppEntity;
 import com.ouyunc.message.cluster.lease.AppKeyConnQuotaSupport;
-import com.ouyunc.message.cluster.lease.LocalNodeConnCounter;
 import com.ouyunc.repository.DefaultRepository;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -70,7 +69,6 @@ public enum AppKeyValidator implements Validator<String> {
             log.error("预占 appKey:{} 连接配额失败，拒绝登录", appKey, e);
             return false;
         }
-        LocalNodeConnCounter.increment(appKey);
         if (ctx != null) {
             ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_CONN_QUOTA_RESERVED, Boolean.TRUE);
             ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_CONN_QUOTA_APP_KEY, appKey);
@@ -102,7 +100,6 @@ public enum AppKeyValidator implements Validator<String> {
         }
         ChannelAttrUtil.setChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_CONN_QUOTA_APP_KEY, null);
         if (reservedAppKey != null && !reservedAppKey.isBlank()) {
-            LocalNodeConnCounter.decrement(reservedAppKey);
             // closeFuture 在 EventLoop 上；登录失败路径已在业务线程，直接释放即可。
             if (channel.eventLoop().inEventLoop()) {
                 AppKeyConnQuotaSupport.releaseAsync(reservedAppKey);

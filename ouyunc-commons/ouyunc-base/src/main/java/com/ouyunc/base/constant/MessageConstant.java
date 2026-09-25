@@ -318,10 +318,16 @@ public class MessageConstant {
      */
     public static final String IM_NODE_LEASE_TASK_ID = "im-node-lease-heartbeat";
 
+    /** 单机登录记录及配额 TTL 维护任务，不发布集群租约。 */
+    public static final String IM_STANDALONE_SESSION_TASK_ID = "im-standalone-session-maintenance";
+
     /**
      * 节点租约刷新间隔（秒）
      */
     public static final int IM_NODE_LEASE_REFRESH_SECONDS = 2;
+
+    /** 单机登录与配额 TTL 续期间隔，沿用原心跳频率。 */
+    public static final int IM_STANDALONE_SESSION_REFRESH_SECONDS = IM_NODE_LEASE_REFRESH_SECONDS;
 
     /**
      * 节点租约 TTL（秒），须大于刷新间隔，kill -9 后整机在此窗口内判定宕机
@@ -340,8 +346,8 @@ public class MessageConstant {
     /** 配额管道每批最多处理的 HASH 数。 */
     public static final int IM_NODE_QUOTA_SYNC_BATCH = 128;
 
-    /** 每条配额 Lua 仅操作一个 appKey HASH。 */
-    public static final int IM_NODE_QUOTA_SCRIPT_KEY_COUNT = 1;
+    /** 配额同步 Lua 操作同槽的计数 HASH 与最后刷新时间 HASH。 */
+    public static final int IM_NODE_QUOTA_SCRIPT_KEY_COUNT = 2;
 
     /** 租约 Lua 发布/清理成功返回值。 */
     public static final long IM_NODE_LEASE_LUA_OK = 1L;
@@ -351,10 +357,19 @@ public class MessageConstant {
      */
     public static final int IM_APP_KEY_CONN_QUOTA_TTL_SECONDS = IM_NODE_LEASE_TTL_SECONDS * 4;
 
+    /** 配额字段失联宽限期；新节点字段在成员快照尚未传播时不得被其它节点误删。 */
+    public static final int IM_APP_KEY_CONN_QUOTA_STALE_SECONDS = IM_APP_KEY_CONN_QUOTA_TTL_SECONDS * 2;
+
+    /** appKey 本机配额操作的分段锁数量，限制锁对象数量并串行化同一 appKey 的预占、释放和对账。 */
+    public static final int IM_APP_KEY_CONN_QUOTA_LOCK_STRIPES = 256;
+
     /**
      * 登录 String TTL：活连接随租约心跳 EXPIRE；kill-9 后最多该窗口内幽灵在线。
      */
     public static final int IM_LOGIN_SESSION_TTL_SECONDS = IM_APP_KEY_CONN_QUOTA_TTL_SECONDS;
+
+    /** 登录目录维护超过该窗口未成功时停止接收新登录，必须小于登录记录 TTL。 */
+    public static final int IM_LOGIN_DIRECTORY_READY_SECONDS = IM_LOGIN_SESSION_TTL_SECONDS / 2;
 
     /**
      * appKey 配额 Lua 成功返回值（预占/释放/心跳对齐）。

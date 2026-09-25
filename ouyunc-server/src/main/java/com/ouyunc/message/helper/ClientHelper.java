@@ -26,7 +26,6 @@ import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.domain.entity.AppEntity;
 import com.ouyunc.message.cluster.lease.AppKeyConnQuotaSupport;
 import com.ouyunc.message.cluster.lease.LocalNodeConnCounter;
-import com.ouyunc.message.cluster.lease.NodeLeaseKeeper;
 import com.ouyunc.message.cluster.lease.NodeLeaseSnapshot;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.protocol.NativePacketProtocol;
@@ -191,10 +190,10 @@ public class ClientHelper {
         ChannelHandlerContext previous = MessageServerContext.localLoginClientRegisterTable.asMap().put(comboIdentity, ctx);
         if (previous == null && !reserved) {
             LocalNodeConnCounter.increment(appKey);
-            NodeLeaseKeeper.scheduleConnPublish();
+            SessionNodeState.scheduleConnPublish();
         } else if (previous == null) {
             // 预占已计入 LocalNodeConnCounter，仅刷新租约心跳中的计数视图
-            NodeLeaseKeeper.scheduleConnPublish();
+            SessionNodeState.scheduleConnPublish();
         }
     }
 
@@ -227,9 +226,8 @@ public class ClientHelper {
         }
         String quotaAppKey = takeQuotaAppKey(quotaChannel);
         if (removed) {
-            LocalNodeConnCounter.decrement(StringUtils.isNotBlank(appKey) ? appKey : quotaAppKey);
             releaseQuotaOffEventLoop(quotaChannel, quotaAppKey);
-            NodeLeaseKeeper.scheduleConnPublish();
+            SessionNodeState.scheduleConnPublish();
             return;
         }
         // 同机顶号：新连接 tryReserve 已 +1 并覆盖注册表，旧 Channel 对不上。
@@ -237,9 +235,8 @@ public class ClientHelper {
         if (quotaAppKey == null) {
             return;
         }
-        LocalNodeConnCounter.decrement(quotaAppKey);
         releaseQuotaOffEventLoop(quotaChannel, quotaAppKey);
-        NodeLeaseKeeper.scheduleConnPublish();
+        SessionNodeState.scheduleConnPublish();
     }
 
     /**
@@ -435,7 +432,7 @@ public class ClientHelper {
             }
             return null;
         });
-        NodeLeaseSnapshot leaseSnapshot = NodeLeaseKeeper.currentSnapshot();
+        NodeLeaseSnapshot leaseSnapshot = SessionNodeState.currentSnapshot();
         Map<String, Long> liveEpochs = leaseSnapshot.epochs();
         for (int index = 0; index < orderedIdentities.size(); index++) {
             String identity = orderedIdentities.get(index);
@@ -557,7 +554,7 @@ public class ClientHelper {
         if (loginClientInfo == null || !OnlineEnum.ONLINE.equals(loginClientInfo.getOnlineStatus())) {
             return false;
         }
-        return NodeLeaseKeeper.isLive(loginClientInfo.getLoginServerAddress(), loginClientInfo.getNodeEpoch());
+        return SessionNodeState.isLive(loginClientInfo.getLoginServerAddress(), loginClientInfo.getNodeEpoch());
     }
 
 
@@ -565,7 +562,7 @@ public class ClientHelper {
      * 某 appKey 连接数：本机用内存计数（即时），其它存活节点用租约心跳写入的 HASH（最多一拍延迟）。
      */
     public static long connections(String appKey) {
-        String localNodeId = NodeLeaseKeeper.localNodeId();
+        String localNodeId = SessionNodeState.localNodeId();
         List<String> remotes = remoteLiveNodeIds(localNodeId);
         long total = LocalNodeConnCounter.get(appKey);
         if (remotes.isEmpty()) {
@@ -603,7 +600,7 @@ public class ClientHelper {
      * 全量连接数：本机内存计数 + 其它存活节点 Redis HASH。
      */
     public static long connections() {
-        String localNodeId = NodeLeaseKeeper.localNodeId();
+        String localNodeId = SessionNodeState.localNodeId();
         List<String> remotes = remoteLiveNodeIds(localNodeId);
         long totalConnections = LocalNodeConnCounter.total();
         if (remotes.isEmpty()) {
@@ -641,8 +638,8 @@ public class ClientHelper {
     }
 
     private static Set<String> liveNodeIdsForConn() {
-        Set<String> nodeIds = new HashSet<>(NodeLeaseKeeper.snapshot().keySet());
-        nodeIds.add(NodeLeaseKeeper.localNodeId());
+        Set<String> nodeIds = new HashSet<>(SessionNodeState.snapshot().keySet());
+        nodeIds.add(SessionNodeState.localNodeId());
         return nodeIds;
     }
 
@@ -673,8 +670,8 @@ public class ClientHelper {
         if (!MessageServerContext.serverProperties().isClusterEnable()) {
             return;
         }
-        String localNodeId = NodeLeaseKeeper.localNodeId();
-        for (String nodeId : NodeLeaseKeeper.snapshot().keySet()) {
+        String localNodeId = SessionNodeState.localNodeId();
+        for (String nodeId : SessionNodeState.snapshot().keySet()) {
             if (localNodeId.equals(nodeId)) {
                 continue;
             }

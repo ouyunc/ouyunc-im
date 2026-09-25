@@ -853,31 +853,43 @@ public enum LuaScriptEnum {
 
     /**
      * 心跳：把本节点 field 写成本地真实计数，并删掉已不在租约里的节点 field。
-     * KEYS[1]=quotaHash ARGV[1]=nodeId ARGV[2]=localCount ARGV[3]=ttlSeconds ARGV[4...]=liveNodeId
+     * KEYS=quotaHash,seenHash；ARGV=nodeId, localCount, ttlSeconds, staleSeconds, liveNodeId...
      */
     APP_KEY_CONN_SYNC_SCRIPT("1", """
             local nodeId = ARGV[1]
             local count = tonumber(ARGV[2]) or 0
             local ttl = tonumber(ARGV[3]) or 0
-            if #ARGV >= 4 then
+            local stale = tonumber(ARGV[4]) or 0
+            local clock = redis.call('TIME')
+            local now = tonumber(clock[1])
+            if #ARGV >= 5 then
               local live = {}
-              for i = 4, #ARGV do
+              for i = 5, #ARGV do
                 live[ARGV[i]] = true
               end
               local fields = redis.call('HKEYS', KEYS[1])
               for i = 1, #fields do
-                if live[fields[i]] ~= true then
-                  redis.call('HDEL', KEYS[1], fields[i])
+                if fields[i] ~= nodeId and live[fields[i]] ~= true then
+                  local seen = tonumber(redis.call('HGET', KEYS[2], fields[i]))
+                  if seen and stale > 0 and now - seen >= stale then
+                    redis.call('HDEL', KEYS[1], fields[i])
+                    redis.call('HDEL', KEYS[2], fields[i])
+                  elseif not seen then
+                    redis.call('HSET', KEYS[2], fields[i], now)
+                  end
                 end
               end
             end
             if count <= 0 then
               redis.call('HDEL', KEYS[1], nodeId)
+              redis.call('HDEL', KEYS[2], nodeId)
             else
               redis.call('HSET', KEYS[1], nodeId, count)
+              redis.call('HSET', KEYS[2], nodeId, now)
             end
             if ttl > 0 and redis.call('EXISTS', KEYS[1]) == 1 then
               redis.call('EXPIRE', KEYS[1], ttl)
+              redis.call('EXPIRE', KEYS[2], ttl)
             end
             return 1
             """, "appKey 连接配额心跳对齐");

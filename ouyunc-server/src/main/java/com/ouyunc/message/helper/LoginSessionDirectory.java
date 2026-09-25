@@ -9,8 +9,6 @@ import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.utils.ImRouteCodec;
 import com.ouyunc.base.utils.ImSessionPresence;
 import com.ouyunc.cache.config.CacheFactory;
-import com.ouyunc.cache.distributed.redis.RedisPipelineSupport;
-import com.ouyunc.message.cluster.lease.NodeLeaseKeeper;
 import com.ouyunc.message.cluster.lease.NodeLeaseSnapshot;
 import com.ouyunc.message.context.MessageServerContext;
 import io.netty.channel.ChannelHandlerContext;
@@ -27,7 +25,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -98,6 +95,17 @@ public final class LoginSessionDirectory {
                     + "return 1"
     ).getBytes(StandardCharsets.UTF_8);
 
+    /**
+     * 活跃连接续期与修复：只有路由字段仍等于本连接的完整 fencing 值时才写登录详情。
+     * 登录 String 已经过期时会原子重建；跨节点顶号后旧连接无法把新目录覆盖回来。
+     */
+    private static final byte[] RENEW_LUA = (
+            "local cur = redis.call('HGET', KEYS[1], ARGV[1]) "
+                    + "if not cur or cur ~= ARGV[2] then return 0 end "
+                    + "redis.call('SET', KEYS[2], ARGV[3], 'EX', ARGV[4]) "
+                    + "return 1"
+    ).getBytes(StandardCharsets.UTF_8);
+
     private static final Object SHA_LOCK = new Object();
 
     private static volatile String bindSha;
@@ -114,8 +122,8 @@ public final class LoginSessionDirectory {
     }
 
     public static void bind(LoginClientInfo loginClientInfo, String comboIdentity) {
-        String nodeId = NodeLeaseKeeper.localNodeId();
-        long epoch = NodeLeaseKeeper.currentEpoch();
+        String nodeId = SessionNodeState.localNodeId();
+        long epoch = SessionNodeState.currentEpoch();
         loginClientInfo.setNodeEpoch(epoch);
         String routeKey = CacheConstant.buildLoginRouteCacheKey(loginClientInfo.getAppKey(), loginClientInfo.getIdentity());
         String loginKey = CacheConstant.buildLoginCacheKey(loginClientInfo.getAppKey(), comboIdentity);
@@ -138,12 +146,12 @@ public final class LoginSessionDirectory {
     /**
      * 租约心跳联动：为本机仍在线的登录 String 续期。节点死后无人续期，TTL 内幽灵在线消失。
      */
-    public static void renewLocalLoginTtls() {
+    public static boolean renewLocalLoginTtls() {
         if (!LOGIN_TTL_RENEW_IN_FLIGHT.compareAndSet(false, true)) {
-            return;
+            return false;
         }
         try {
-            List<String> batch = new ArrayList<>(LOGIN_TTL_RENEW_BATCH);
+            List<RenewItem> batch = new ArrayList<>(LOGIN_TTL_RENEW_BATCH);
             for (ChannelHandlerContext ctx : MessageServerContext.localLoginClientRegisterTable.asMap().values()) {
                 if (ctx == null || ctx.channel() == null || !ctx.channel().isActive()) {
                     continue;
@@ -155,22 +163,59 @@ public final class LoginSessionDirectory {
                 }
                 String combo = IdentityUtil.generalComboIdentity(
                         login.getAppKey(), login.getIdentity(), login.getDeviceType());
-                batch.add(CacheConstant.buildLoginCacheKey(login.getAppKey(), combo));
+                String expectedRoute = ImRouteCodec.encode(SessionNodeState.localNodeId(),
+                        login.getNodeEpoch(), login.getLastLoginTime());
+                batch.add(new RenewItem(ctx,
+                        CacheConstant.buildLoginRouteCacheKey(login.getAppKey(), login.getIdentity()),
+                        CacheConstant.buildLoginCacheKey(login.getAppKey(), combo),
+                        String.valueOf(login.getDeviceType()), expectedRoute,
+                        serializeLogin(login.copyForRedis())));
                 if (batch.size() >= LOGIN_TTL_RENEW_BATCH) {
-                    RedisPipelineSupport.expireKeys(
-                            stringRedisTemplate, batch, MessageConstant.IM_LOGIN_SESSION_TTL_SECONDS);
+                    renewBatch(batch);
                     batch.clear();
                 }
             }
             if (!batch.isEmpty()) {
-                RedisPipelineSupport.expireKeys(
-                        stringRedisTemplate, batch, MessageConstant.IM_LOGIN_SESSION_TTL_SECONDS);
+                renewBatch(batch);
             }
+            return true;
         } catch (Exception e) {
-            log.warn("续期本机登录 String TTL 失败", e);
+            log.warn("续期或修复本机登录目录失败", e);
+            return false;
         } finally {
             LOGIN_TTL_RENEW_IN_FLIGHT.set(false);
         }
+    }
+
+    /** 同一条命令中的 route/login key 使用相同 identity hash-tag，可安全运行于 Redis Cluster。 */
+    private static void renewBatch(List<RenewItem> batch) {
+        List<Object> results = stringRedisTemplate.executePipelined((RedisCallback<Object>) connection -> {
+            for (RenewItem item : batch) {
+                connection.scriptingCommands().eval(RENEW_LUA, ReturnType.INTEGER, 2,
+                        bytes(item.routeKey()), bytes(item.loginKey()), bytes(item.deviceField()),
+                        bytes(item.expectedRoute()), item.loginPayload(),
+                        bytes(String.valueOf(MessageConstant.IM_LOGIN_SESSION_TTL_SECONDS)));
+            }
+            return null;
+        });
+        if (results == null || results.size() != batch.size()) {
+            throw new IllegalStateException("登录目录续期结果数量不完整 expected="
+                    + batch.size() + " actual=" + (results == null ? 0 : results.size()));
+        }
+        for (int index = 0; index < batch.size(); index++) {
+            if (Long.valueOf(1L).equals(results.get(index))) {
+                continue;
+            }
+            ChannelHandlerContext ctx = batch.get(index).ctx();
+            if (ctx != null && ctx.channel() != null && ctx.channel().isActive()) {
+                log.info("本机连接已失去登录目录所有权，关闭旧连接 channel={}", ctx.channel().id());
+                ctx.channel().eventLoop().execute(ctx::close);
+            }
+        }
+    }
+
+    private record RenewItem(ChannelHandlerContext ctx, String routeKey, String loginKey,
+                             String deviceField, String expectedRoute, byte[] loginPayload) {
     }
 
     /**
@@ -179,7 +224,7 @@ public final class LoginSessionDirectory {
     public static void evictDeadRoute(String appKey, String identity, Map<?, ?> routeHash,
                                      NodeLeaseSnapshot snapshot) {
         // Redis 失联或启动中只有本地信息，不能把这种不完整视图作为删除远端路由的证据。
-        if (!NodeLeaseKeeper.isCurrentSnapshot(snapshot)) {
+        if (!SessionNodeState.isCurrentSnapshot(snapshot)) {
             return;
         }
         Set<Byte> dead = ImSessionPresence.deadDeviceTypes(routeHash, snapshot.epochs());
@@ -209,7 +254,7 @@ public final class LoginSessionDirectory {
             }
             keysAndArgs.addAll(fieldsAndExpected);
             // 构造参数期间可能跨过有效期或已刷新为新的成员视图，旧判断一律放弃。
-            if (NodeLeaseKeeper.isCurrentSnapshot(snapshot)) {
+            if (SessionNodeState.isCurrentSnapshot(snapshot)) {
                 evalCached(EVICT_DEAD_LUA, ScriptKind.EVICT, 1 + loginKeyCount, keysAndArgs.toArray(byte[][]::new));
             }
         } catch (Exception e) {

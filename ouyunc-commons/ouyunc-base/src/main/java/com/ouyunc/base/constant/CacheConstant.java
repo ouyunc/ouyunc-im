@@ -78,6 +78,7 @@ public class CacheConstant {
 
     /** appKey 连接配额 HASH */
     private static final String IM_QUOTA = "im:quota:";
+    private static final String IM_QUOTA_SEEN_SUFFIX = ":seen";
 
     /***
      * 用户
@@ -403,6 +404,11 @@ public class CacheConstant {
      */
     public static String buildAppKeyConnQuotaHashCacheKey(String appKey) {
         return OUYUNC + IM_QUOTA + withHashTag(sanitizeAppKeyToken(appKey));
+    }
+
+    /** 配额节点最后刷新时间 HASH，与配额 HASH 使用相同 appKey 标签，供 Lua 原子清理失联字段。 */
+    public static String buildAppKeyConnQuotaSeenHashCacheKey(String appKey) {
+        return buildAppKeyConnQuotaHashCacheKey(appKey) + IM_QUOTA_SEEN_SUFFIX;
     }
 
     /**

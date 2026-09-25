@@ -26,7 +26,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * 进程租约生命周期。首次心跳异步执行，周期采用 fixed-delay；心跳与连接数发布共用互斥边界。
+ * 节点运行生命周期。单机维护本地进程代次、登录目录和配额；集群模式额外维护 Redis 节点租约。
+ * 首次任务异步执行，周期采用 fixed-delay；集群心跳与连接数发布共用互斥边界。
  * 每次 start 创建独立运行实例，所有排队任务捕获该实例，禁止旧任务跨越 stop/start 发布数据。
  */
 public final class NodeLeaseKeeper {
@@ -51,14 +52,18 @@ public final class NodeLeaseKeeper {
                 return;
             }
             long epoch = Math.max(TimeUtil.currentTimeMillis(), lastEpoch + 1L);
-            LeaseRun run = new LeaseRun(localNodeId(), epoch);
+            LeaseRun run = new LeaseRun(localNodeId(), epoch,
+                    MessageServerContext.serverProperties().isClusterEnable());
             lastEpoch = epoch;
             current = run;
             try {
+                String taskId = run.clusterMode ? MessageConstant.IM_NODE_LEASE_TASK_ID
+                        : MessageConstant.IM_STANDALONE_SESSION_TASK_ID;
                 run.heartbeatTask = ScheduleTimer.scheduleSystemWithFixedDelay(
-                        MessageConstant.IM_NODE_LEASE_TASK_ID, task -> heartbeatOnce(run),
-                        0L, MessageConstant.IM_NODE_LEASE_REFRESH_SECONDS, TimeUnit.SECONDS);
-                log.info("IM 节点租约调度已启动，等待首次续租 nodeId={} epoch={}", run.nodeId, epoch);
+                        taskId, task -> heartbeatOnce(run), 0L,
+                        MessageConstant.IM_NODE_LEASE_REFRESH_SECONDS, TimeUnit.SECONDS);
+                log.info("IM 节点运行维护已启动 nodeId={} epoch={} clusterMode={}",
+                        run.nodeId, epoch, run.clusterMode);
             } catch (RuntimeException e) {
                 // 调度失败必须回滚，下一次显式 start 可以重试，不能留下虚假的 STARTED 状态。
                 current = null;
@@ -81,13 +86,17 @@ public final class NodeLeaseKeeper {
             current = null;
             run.heartbeatTask.cancel();
             run.publishLock.lock();
-            run.maintenanceLock.lock();
+            run.quotaMaintenanceLock.lock();
+            run.directoryMaintenanceLock.lock();
             try {
-                NodeLeaseRedisSupport.release(CacheFactory.STRING_REDIS.instance(), run.nodeId, run.payloadJson);
+                if (run.clusterMode) {
+                    NodeLeaseRedisSupport.release(CacheFactory.STRING_REDIS.instance(), run.nodeId, run.payloadJson);
+                }
             } catch (Exception e) {
                 log.warn("停止节点租约清理失败，等待 TTL 回收 nodeId={}", run.nodeId, e);
             } finally {
-                run.maintenanceLock.unlock();
+                run.directoryMaintenanceLock.unlock();
+                run.quotaMaintenanceLock.unlock();
                 run.publishLock.unlock();
             }
             log.info("IM 节点租约已停止 nodeId={} epoch={}", run.nodeId, run.epoch);
@@ -110,7 +119,8 @@ public final class NodeLeaseKeeper {
     /** 首次成功及故障恢复均以完整的新鲜快照为准，不能仅凭内存初始化允许新登录。 */
     public static boolean isReady() {
         LeaseRun run = current;
-        return run != null && run.snapshot.isFresh();
+        return run != null && run.directoryMaintenanceFresh()
+                && (!run.clusterMode || run.snapshot.isFresh());
     }
 
     /** 本机已有连接在运行期间仍可本地投递；远端成员必须来自未过期的快照。 */
@@ -121,6 +131,9 @@ public final class NodeLeaseKeeper {
         }
         if (nodeId.equals(run.nodeId)) {
             return nodeEpoch == run.epoch;
+        }
+        if (!run.clusterMode) {
+            return false;
         }
         NodeLeasePayload payload = currentSnapshot().leases().get(nodeId);
         return payload != null && payload.getEpoch() == nodeEpoch;
@@ -142,6 +155,9 @@ public final class NodeLeaseKeeper {
         if (run == null) {
             return new NodeLeaseSnapshot(Map.of(), 0L, false);
         }
+        if (!run.clusterMode) {
+            return new NodeLeaseSnapshot(Map.of(run.nodeId, run.payload), System.nanoTime(), true);
+        }
         NodeLeaseSnapshot snapshot = run.snapshot;
         return snapshot.isFresh() ? snapshot
                 : new NodeLeaseSnapshot(Map.of(run.nodeId, run.payload), 0L, false);
@@ -150,7 +166,15 @@ public final class NodeLeaseKeeper {
     /** 清理方必须校验自己捕获的同一快照，而不是用后来恢复的状态为旧空快照背书。 */
     public static boolean isCurrentSnapshot(NodeLeaseSnapshot snapshot) {
         LeaseRun run = current;
-        return run != null && run.snapshot == snapshot && snapshot.isFresh();
+        if (run == null || snapshot == null || !snapshot.isFresh()) {
+            return false;
+        }
+        if (run.clusterMode) {
+            return run.snapshot == snapshot;
+        }
+        NodeLeasePayload local = snapshot.leases().get(run.nodeId);
+        return local != null && local.getEpoch() == run.epoch
+                && run.payload.getOwnerToken().equals(local.getOwnerToken());
     }
 
     public static boolean hasLiveLease(String nodeId) {
@@ -181,7 +205,7 @@ public final class NodeLeaseKeeper {
     /** 一个运行实例最多一个待发布任务；调度失败保留 dirty，周期心跳始终会重新发布最新计数。 */
     public static void scheduleConnPublish() {
         LeaseRun run = current;
-        if (run != null) {
+        if (run != null && run.clusterMode) {
             scheduleConnPublish(run);
         }
     }
@@ -241,6 +265,10 @@ public final class NodeLeaseKeeper {
         if (current != run) {
             return;
         }
+        if (!run.clusterMode) {
+            scheduleMaintenance(run);
+            return;
+        }
         // fixed-delay 保证仅一个心跳在途，允许它等待当前计数发布；计数任务让出排队优先级。
         // 若这里也 tryLock 后跳过，高频连接变更可能一直抢占锁，导致心跳与快照饥饿。
         run.publishLock.lock();
@@ -291,32 +319,62 @@ public final class NodeLeaseKeeper {
     }
 
     private static void scheduleMaintenance(LeaseRun run) {
-        if (current != run || !run.maintenancePending.compareAndSet(false, true)) {
+        if (current != run) {
+            return;
+        }
+        submitQuotaMaintenance(run);
+        submitDirectoryMaintenance(run);
+    }
+
+    private static void submitQuotaMaintenance(LeaseRun run) {
+        if (!run.quotaMaintenancePending.compareAndSet(false, true)) {
             return;
         }
         try {
-            ThreadPoolManager.messageProcessorExecutor().execute(() -> maintain(run));
+            ThreadPoolManager.messageProcessorExecutor().execute(() -> maintainQuota(run));
         } catch (Exception e) {
-            run.maintenancePending.set(false);
-            log.warn("提交租约派生数据维护失败 nodeId={}", run.nodeId, e);
+            run.quotaMaintenancePending.set(false);
+            log.warn("提交连接配额维护失败 nodeId={}", run.nodeId, e);
         }
     }
 
-    private static void maintain(LeaseRun run) {
-        run.maintenanceLock.lock();
+    private static void submitDirectoryMaintenance(LeaseRun run) {
+        if (!run.directoryMaintenancePending.compareAndSet(false, true)) {
+            return;
+        }
         try {
-            if (current != run || !run.snapshot.isFresh()) {
-                return;
-            }
-            AppKeyConnQuotaSupport.syncAfterHeartbeat(run.snapshot);
-            if (current == run && run.snapshot.isFresh()) {
-                LoginSessionDirectory.renewLocalLoginTtls();
+            ThreadPoolManager.messageProcessorExecutor().execute(() -> maintainDirectory(run));
+        } catch (Exception e) {
+            run.directoryMaintenancePending.set(false);
+            log.warn("提交登录目录维护失败 nodeId={}", run.nodeId, e);
+        }
+    }
+
+    private static void maintainQuota(LeaseRun run) {
+        run.quotaMaintenanceLock.lock();
+        try {
+            if (current == run) {
+                AppKeyConnQuotaSupport.syncAfterHeartbeat(currentSnapshot());
             }
         } catch (Exception e) {
-            log.warn("租约派生数据维护失败 nodeId={}", run.nodeId, e);
+            log.warn("连接配额维护失败 nodeId={}", run.nodeId, e);
         } finally {
-            run.maintenanceLock.unlock();
-            run.maintenancePending.set(false);
+            run.quotaMaintenanceLock.unlock();
+            run.quotaMaintenancePending.set(false);
+        }
+    }
+
+    private static void maintainDirectory(LeaseRun run) {
+        run.directoryMaintenanceLock.lock();
+        try {
+            if (current == run && LoginSessionDirectory.renewLocalLoginTtls()) {
+                run.lastDirectorySuccessNanos = System.nanoTime();
+            }
+        } catch (Exception e) {
+            log.warn("登录目录维护失败 nodeId={}", run.nodeId, e);
+        } finally {
+            run.directoryMaintenanceLock.unlock();
+            run.directoryMaintenancePending.set(false);
         }
     }
 
@@ -345,22 +403,33 @@ public final class NodeLeaseKeeper {
         private final long epoch;
         private final NodeLeasePayload payload;
         private final String payloadJson;
+        private final boolean clusterMode;
         private final ReentrantLock publishLock = new ReentrantLock(true);
-        private final ReentrantLock maintenanceLock = new ReentrantLock();
+        private final ReentrantLock quotaMaintenanceLock = new ReentrantLock();
+        private final ReentrantLock directoryMaintenanceLock = new ReentrantLock();
         private final AtomicBoolean connPending = new AtomicBoolean();
         private final AtomicBoolean connDirty = new AtomicBoolean();
-        private final AtomicBoolean maintenancePending = new AtomicBoolean();
+        private final AtomicBoolean quotaMaintenancePending = new AtomicBoolean();
+        private final AtomicBoolean directoryMaintenancePending = new AtomicBoolean();
         private volatile NodeLeaseSnapshot snapshot = new NodeLeaseSnapshot(Map.of(), 0L, false);
+        private volatile long lastDirectorySuccessNanos;
         private TimerTaskWrapper heartbeatTask;
         private int redisFailStreak;
 
-        private LeaseRun(String nodeId, long epoch) {
+        private LeaseRun(String nodeId, long epoch, boolean clusterMode) {
             this.nodeId = nodeId;
             this.epoch = epoch;
+            this.clusterMode = clusterMode;
             this.payload = new NodeLeasePayload(epoch,
                     MessageServerContext.serverProperties().getClusterZoneId(), nodeId);
             this.payload.setOwnerToken(UUID.randomUUID().toString());
             this.payloadJson = payload.toJson();
+        }
+
+        private boolean directoryMaintenanceFresh() {
+            long successAt = lastDirectorySuccessNanos;
+            return successAt > 0L && System.nanoTime() - successAt < TimeUnit.SECONDS.toNanos(
+                    MessageConstant.IM_LOGIN_DIRECTORY_READY_SECONDS);
         }
     }
 }
