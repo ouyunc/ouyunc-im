@@ -159,9 +159,9 @@ public final class AppKeyDeviceTypeSubscriber {
      */
     private static void applyClientSupportDeviceTypes(String appKey, String identity, Collection<Byte> supportDeviceTypes) {
         String cacheKey = CacheConstant.buildLocalClientInfoCacheKey(appKey, identity);
-        ClientInfo cached = MessageServerContext.localClientInfoCache.get(cacheKey);
-        if (cached != null) {
-            cached.setSupportDeviceTypes(supportDeviceTypes);
+        Object cached = MessageServerContext.localClientInfoCache.get(cacheKey);
+        if (cached instanceof ClientInfo clientInfo) {
+            clientInfo.setSupportDeviceTypes(supportDeviceTypes);
             return;
         }
         MessageServerContext.evictLocalClientInfo(appKey, identity);
