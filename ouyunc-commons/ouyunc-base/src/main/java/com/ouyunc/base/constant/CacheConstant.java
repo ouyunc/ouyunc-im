@@ -384,6 +384,14 @@ public class CacheConstant {
     }
 
     /**
+     * 注册索引到期时间。标签使用整个旧 SET key，使新 ZSET 与无标签的旧 SET 位于同一槽。
+     * 仅用于原子回收发现索引，节点是否存活仍以各自租约 key 为准。
+     */
+    public static String buildImNodeRegistryExpiryCacheKey() {
+        return withHashTag(buildImNodeSetCacheKey()) + COLON + "expiry";
+    }
+
+    /**
      * 节点连接数 HASH：field=appKey，value=count。与租约同 {@code {nodeId}} 槽，由心跳全量覆盖，不跟登录 Lua 同槽。
      */
     public static String buildImNodeConnHashCacheKey(String nodeId) {

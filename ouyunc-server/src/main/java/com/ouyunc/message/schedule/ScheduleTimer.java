@@ -55,6 +55,25 @@ public class ScheduleTimer {
     }
 
     /**
+     * 核心系统任务完成后再计时。注册失败必须抛出并撤销索引，让生命周期调用方回滚启动状态。
+     * initialDelay=0 可用于异步首次执行，实际 Redis 工作仍由 node-lease 执行器承载。
+     */
+    public static TimerTaskWrapper scheduleSystemWithFixedDelay(String taskId, Consumer<TimerTaskWrapper> task,
+                                                                long initialDelay, long period, TimeUnit unit) {
+        cancelQuietly(taskId);
+        TimerTaskWrapper wrapper = new TimerTaskWrapper(taskId, task, period, unit, true,
+                NumberConstant.NUMBER_NEGATIVE_1, TimerTaskKind.SYSTEM);
+        try {
+            wrapper.markExpectedFire(initialDelay, unit);
+            wrapper.setScheduledTimeout(timer.newTimeout(wrapper, initialDelay, unit));
+            return wrapper;
+        } catch (RuntimeException e) {
+            wrapper.cancel();
+            throw e;
+        }
+    }
+
+    /**
      * 一直循环调度定时任务，固定间隔时间（完成后 delay，业务域）
      */
     public static void scheduleWithFixedDelay(String taskId, Consumer<TimerTaskWrapper> task, long initialDelay, long period, TimeUnit timeUnit) {

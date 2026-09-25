@@ -9,6 +9,7 @@ import com.ouyunc.message.cluster.auth.ClusterAuthConstant;
 import com.ouyunc.message.cluster.client.handler.MessageClientChannelPoolHandler;
 import com.ouyunc.message.cluster.lease.ClusterMembershipReconciler;
 import com.ouyunc.message.cluster.lease.NodeLeaseKeeper;
+import com.ouyunc.message.cluster.lease.NodeLeaseSnapshot;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.properties.MessageServerProperties;
 import io.netty.bootstrap.Bootstrap;
@@ -66,7 +67,10 @@ public class MessageClientPool {
     public static void init(MessageServerProperties serverProperties) {
         log.info("IM内置客户端开始启动......");
         ensureBootstrap();
-        ClusterMembershipReconciler.reconcile(NodeLeaseKeeper.liveLeases());
+        NodeLeaseSnapshot snapshot = NodeLeaseKeeper.currentSnapshot();
+        if (NodeLeaseKeeper.isCurrentSnapshot(snapshot)) {
+            ClusterMembershipReconciler.reconcile(snapshot.leases());
+        }
         log.info("IM内置客户端初始化完成");
     }
 

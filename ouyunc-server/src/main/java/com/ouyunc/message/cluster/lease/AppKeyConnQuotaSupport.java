@@ -8,19 +8,15 @@ import com.ouyunc.cache.config.CacheFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.connection.ReturnType;
 import org.springframework.data.redis.core.RedisCallback;
-import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * appKey 连接上限：同槽 HASH（field=nodeId）Lua 求和后再 HINCRBY，避免读远端租约 HASH 再本机 CAS 的窗口。
@@ -34,8 +30,8 @@ public final class AppKeyConnQuotaSupport {
             LuaScriptEnum.APP_KEY_CONN_RESERVE_SCRIPT);
     private static final DefaultRedisScript<Long> RELEASE_SCRIPT = script(
             LuaScriptEnum.APP_KEY_CONN_RELEASE_SCRIPT);
-    private static final DefaultRedisScript<Long> SYNC_SCRIPT = script(
-            LuaScriptEnum.APP_KEY_CONN_SYNC_SCRIPT);
+    private static final byte[] SYNC_SCRIPT_BYTES = LuaScriptEnum.APP_KEY_CONN_SYNC_SCRIPT.getScript()
+            .getBytes(StandardCharsets.UTF_8);
 
     private AppKeyConnQuotaSupport() {
     }
@@ -103,84 +99,75 @@ public final class AppKeyConnQuotaSupport {
     }
 
     /**
-     * 心跳：把本机计数写回配额 HASH，并删掉已不在租约里的节点 field。
-     * 本机连接为 0 时仍 SCAN 配额 key，避免死节点残留要等 TTL。
+     * 租约维护任务：同一时刻仅一个任务执行，Lua 按有限批次走管道，不再占用核心续租路径。
+     * 快照过期或被新一拍替换即停止清理，禁止用历史成员集合删除有效配额。
+     * 无本机连接时不扫描整个 Redis；无活节点维护的孤儿 HASH 由原有 TTL 自然回收。
      */
-    public static void syncAfterHeartbeat(Collection<String> liveNodeIds) {
-        String nodeId = NodeLeaseKeeper.localNodeId();
-        String ttl = String.valueOf(MessageConstant.IM_APP_KEY_CONN_QUOTA_TTL_SECONDS);
-        List<String> liveArgs = new ArrayList<>();
-        if (liveNodeIds != null) {
-            for (String id : liveNodeIds) {
-                if (StringUtils.isNotBlank(id)) {
-                    liveArgs.add(id);
-                }
-            }
-        }
-        if (!liveArgs.contains(nodeId)) {
-            liveArgs.add(nodeId);
+    public static void syncAfterHeartbeat(NodeLeaseSnapshot snapshot) {
+        if (!NodeLeaseKeeper.isCurrentSnapshot(snapshot)) {
+            return;
         }
         Map<String, String> local = LocalNodeConnCounter.snapshot();
         if (local.isEmpty()) {
-            syncOrphanQuotaHashes(nodeId, ttl, liveArgs);
             return;
         }
+        List<String> liveNodes = new ArrayList<>(snapshot.leases().keySet());
+        List<QuotaSyncItem> batch = new ArrayList<>(MessageConstant.IM_NODE_QUOTA_SYNC_BATCH);
         for (Map.Entry<String, String> entry : local.entrySet()) {
-            try {
-                eval(SYNC_SCRIPT, entry.getKey(), syncArgs(nodeId, entry.getValue(), ttl, liveArgs));
-                if ("0".equals(entry.getValue())) {
-                    LocalNodeConnCounter.removeIfZero(entry.getKey());
+            batch.add(new QuotaSyncItem(entry.getKey(), entry.getValue()));
+            if (batch.size() >= MessageConstant.IM_NODE_QUOTA_SYNC_BATCH) {
+                if (!syncBatch(snapshot, liveNodes, batch)) {
+                    return;
                 }
-            } catch (Exception e) {
-                log.warn("同步 appKey 连接配额失败 appKey={}", entry.getKey(), e);
+                batch.clear();
             }
+        }
+        if (!batch.isEmpty()) {
+            syncBatch(snapshot, liveNodes, batch);
         }
     }
 
-    private static String[] syncArgs(String nodeId, String count, String ttl, List<String> liveArgs) {
-        List<String> args = new ArrayList<>(
-                MessageConstant.IM_APP_KEY_CONN_QUOTA_SYNC_FIXED_ARGV + liveArgs.size());
-        args.add(nodeId);
-        args.add(count);
-        args.add(ttl);
-        args.addAll(liveArgs);
-        return args.toArray(new String[0]);
-    }
-
-    /**
-     * 本机无连接时仍要清死节点 field：SCAN 配额 HASH，以 count=0 跑 SYNC。
-     */
-    private static void syncOrphanQuotaHashes(String nodeId, String ttl, List<String> liveArgs) {
-        String[] args = syncArgs(nodeId, "0", ttl, liveArgs);
-        StringRedisTemplate redis = CacheFactory.STRING_REDIS.instance();
-        for (String key : scanQuotaKeys(redis)) {
-            try {
-                redis.execute(SYNC_SCRIPT, List.of(key), (Object[]) args);
-            } catch (Exception e) {
-                log.warn("空节点同步配额失败 key={}", key, e);
-            }
+    /** 每个 appKey 的 Lua 仍保持同槽原子性；管道仅合并网络往返，不作为跨 key 事务。 */
+    private static boolean syncBatch(NodeLeaseSnapshot snapshot, List<String> liveNodes, List<QuotaSyncItem> batch) {
+        if (!NodeLeaseKeeper.isCurrentSnapshot(snapshot)) {
+            return false;
         }
-    }
-
-    private static Set<String> scanQuotaKeys(StringRedisTemplate redis) {
-        Set<String> keys = new HashSet<>();
-        String pattern = CacheConstant.appKeyConnQuotaKeyPattern();
         try {
-            redis.execute((RedisCallback<Void>) connection -> {
-                ScanOptions options = ScanOptions.scanOptions().match(pattern).count(200).build();
-                try (Cursor<byte[]> cursor = connection.scan(options)) {
-                    while (cursor.hasNext()) {
-                        keys.add(new String(cursor.next(), StandardCharsets.UTF_8));
-                    }
+            StringRedisTemplate redis = CacheFactory.STRING_REDIS.instance();
+            String nodeId = NodeLeaseKeeper.localNodeId();
+            String ttl = String.valueOf(MessageConstant.IM_APP_KEY_CONN_QUOTA_TTL_SECONDS);
+            List<Object> results = redis.executePipelined((RedisCallback<Object>) connection -> {
+                for (QuotaSyncItem item : batch) {
+                    List<byte[]> keysAndArgs = new ArrayList<>();
+                    keysAndArgs.add(CacheConstant.buildAppKeyConnQuotaHashCacheKey(item.appKey())
+                            .getBytes(StandardCharsets.UTF_8));
+                    keysAndArgs.add(nodeId.getBytes(StandardCharsets.UTF_8));
+                    keysAndArgs.add(item.count().getBytes(StandardCharsets.UTF_8));
+                    keysAndArgs.add(ttl.getBytes(StandardCharsets.UTF_8));
+                    liveNodes.forEach(node -> keysAndArgs.add(node.getBytes(StandardCharsets.UTF_8)));
+                    connection.scriptingCommands().eval(SYNC_SCRIPT_BYTES, ReturnType.INTEGER,
+                            MessageConstant.IM_NODE_QUOTA_SCRIPT_KEY_COUNT, keysAndArgs.toArray(byte[][]::new));
                 }
                 return null;
             });
+            for (int index = 0; index < batch.size(); index++) {
+                QuotaSyncItem item = batch.get(index);
+                if (results != null && index < results.size()
+                        && Long.valueOf(MessageConstant.IM_APP_KEY_CONN_QUOTA_LUA_OK).equals(results.get(index))
+                        && Long.parseLong(item.count()) == 0L) {
+                    LocalNodeConnCounter.removeIfZero(item.appKey());
+                }
+            }
+            return true;
         } catch (Exception e) {
-            log.warn("扫描 appKey 配额 key 失败 pattern={}", pattern, e);
+            log.warn("批量同步 appKey 配额失败，等待后续维护 batchSize={}", batch.size(), e);
+            return false;
         }
-        return keys;
     }
 
+    /** 单条配额维护参数，避免业务方法使用无类型的 Map 传递参数。 */
+    private record QuotaSyncItem(String appKey, String count) {
+    }
     private static DefaultRedisScript<Long> script(LuaScriptEnum lua) {
         DefaultRedisScript<Long> redisScript = new DefaultRedisScript<>();
         redisScript.setScriptText(lua.getScript());

@@ -27,6 +27,7 @@ import com.ouyunc.domain.entity.AppEntity;
 import com.ouyunc.message.cluster.lease.AppKeyConnQuotaSupport;
 import com.ouyunc.message.cluster.lease.LocalNodeConnCounter;
 import com.ouyunc.message.cluster.lease.NodeLeaseKeeper;
+import com.ouyunc.message.cluster.lease.NodeLeaseSnapshot;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.protocol.NativePacketProtocol;
 import io.netty.channel.Channel;
@@ -434,12 +435,13 @@ public class ClientHelper {
             }
             return null;
         });
-        Map<String, Long> liveEpochs = NodeLeaseKeeper.snapshot();
+        NodeLeaseSnapshot leaseSnapshot = NodeLeaseKeeper.currentSnapshot();
+        Map<String, Long> liveEpochs = leaseSnapshot.epochs();
         for (int index = 0; index < orderedIdentities.size(); index++) {
             String identity = orderedIdentities.get(index);
             Object row = routeRows == null || index >= routeRows.size() ? null : routeRows.get(index);
             Map<?, ?> route = row instanceof Map<?, ?> map ? map : Map.of();
-            LoginSessionDirectory.evictDeadRoute(appKey, identity, route, liveEpochs);
+            LoginSessionDirectory.evictDeadRoute(appKey, identity, route, leaseSnapshot);
             Set<String> remoteCombos = new HashSet<>();
             for (Byte deviceType : ImSessionPresence.liveDeviceTypes(route, liveEpochs)) {
                 String comboId = IdentityUtil.generalComboIdentity(appKey, identity, deviceType);

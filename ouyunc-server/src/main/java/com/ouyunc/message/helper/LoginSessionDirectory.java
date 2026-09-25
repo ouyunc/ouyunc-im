@@ -11,6 +11,7 @@ import com.ouyunc.base.utils.ImSessionPresence;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.cache.distributed.redis.RedisPipelineSupport;
 import com.ouyunc.message.cluster.lease.NodeLeaseKeeper;
+import com.ouyunc.message.cluster.lease.NodeLeaseSnapshot;
 import com.ouyunc.message.context.MessageServerContext;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
@@ -175,8 +176,13 @@ public final class LoginSessionDirectory {
     /**
      * 读路径发现死 epoch 时惰性清理。
      */
-    public static void evictDeadRoute(String appKey, String identity, Map<?, ?> routeHash, Map<String, Long> liveEpochs) {
-        Set<Byte> dead = ImSessionPresence.deadDeviceTypes(routeHash, liveEpochs);
+    public static void evictDeadRoute(String appKey, String identity, Map<?, ?> routeHash,
+                                     NodeLeaseSnapshot snapshot) {
+        // Redis 失联或启动中只有本地信息，不能把这种不完整视图作为删除远端路由的证据。
+        if (!NodeLeaseKeeper.isCurrentSnapshot(snapshot)) {
+            return;
+        }
+        Set<Byte> dead = ImSessionPresence.deadDeviceTypes(routeHash, snapshot.epochs());
         if (dead.isEmpty()) {
             return;
         }
@@ -202,7 +208,10 @@ public final class LoginSessionDirectory {
                 return;
             }
             keysAndArgs.addAll(fieldsAndExpected);
-            evalCached(EVICT_DEAD_LUA, ScriptKind.EVICT, 1 + loginKeyCount, keysAndArgs.toArray(byte[][]::new));
+            // 构造参数期间可能跨过有效期或已刷新为新的成员视图，旧判断一律放弃。
+            if (NodeLeaseKeeper.isCurrentSnapshot(snapshot)) {
+                evalCached(EVICT_DEAD_LUA, ScriptKind.EVICT, 1 + loginKeyCount, keysAndArgs.toArray(byte[][]::new));
+            }
         } catch (Exception e) {
             log.warn("惰性清理死路由失败 identity={}", identity, e);
         }

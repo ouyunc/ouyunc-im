@@ -14,6 +14,9 @@ public class NodeLeasePayload {
 
     private String addr;
 
+    /** 每次运行独立的所有权标识，防止相同地址/毫秒 epoch 的实例互相覆盖或删除。 */
+    private String ownerToken;
+
     public NodeLeasePayload() {
     }
 
@@ -64,5 +67,13 @@ public class NodeLeasePayload {
 
     public void setAddr(String addr) {
         this.addr = addr;
+    }
+
+    public String getOwnerToken() {
+        return ownerToken;
+    }
+
+    public void setOwnerToken(String ownerToken) {
+        this.ownerToken = ownerToken;
     }
 }

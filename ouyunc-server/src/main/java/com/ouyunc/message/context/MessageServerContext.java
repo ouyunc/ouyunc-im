@@ -14,6 +14,7 @@ import com.ouyunc.cache.local.caffeine.CaffeineLocalCache;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.intercept.AbstractMessageInterceptor;
 import com.ouyunc.message.MessageServer;
+import com.ouyunc.message.cluster.lease.NodeLeaseKeeper;
 import com.ouyunc.message.convert.PacketConverter;
 import com.ouyunc.message.dispatcher.ProtocolDispatcherBiProcessor;
 import com.ouyunc.message.processor.AbstractBaseBiProcessor;
@@ -328,7 +329,9 @@ public class MessageServerContext extends MessageContext {
     public static boolean isAcceptingNewConnections() {
         boolean idReady = !(idGenerator() instanceof com.ouyunc.id.CosIdSnowflakeIdGenerator generator)
                 || generator.isHealthy();
-        return ACCEPT_NEW_CONNECTIONS.get() && !DRAINING.get() && idReady;
+        // 租约首次发布和故障恢复都异步完成，只有新鲜成员快照建立后才能接受新登录。
+        return ACCEPT_NEW_CONNECTIONS.get() && !DRAINING.get() && idReady
+                && NodeLeaseKeeper.isReady();
     }
 
     /**

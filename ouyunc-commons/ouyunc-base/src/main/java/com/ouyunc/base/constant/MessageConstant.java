@@ -328,6 +328,24 @@ public class MessageConstant {
      */
     public static final int IM_NODE_LEASE_TTL_SECONDS = 8;
 
+    /** 快照从开始读取起计时，慢查询不能延长历史成员资格。 */
+    public static final int IM_NODE_LEASE_SNAPSHOT_TTL_SECONDS = IM_NODE_LEASE_TTL_SECONDS;
+
+    /** Redis 连续失败的默认摘流阈值。 */
+    public static final int IM_NODE_LEASE_FAILURE_THRESHOLD = 3;
+
+    /** 注册索引每轮最多回收的过期节点数，限制单次 Lua 执行时间。 */
+    public static final int IM_NODE_REGISTRY_CLEANUP_BATCH = 128;
+
+    /** 配额管道每批最多处理的 HASH 数。 */
+    public static final int IM_NODE_QUOTA_SYNC_BATCH = 128;
+
+    /** 每条配额 Lua 仅操作一个 appKey HASH。 */
+    public static final int IM_NODE_QUOTA_SCRIPT_KEY_COUNT = 1;
+
+    /** 租约 Lua 发布/清理成功返回值。 */
+    public static final long IM_NODE_LEASE_LUA_OK = 1L;
+
     /**
      * appKey 配额 HASH 过期：大于租约 TTL，心跳会刷新；节点全挂后残留 field 随 key 过期。
      */
