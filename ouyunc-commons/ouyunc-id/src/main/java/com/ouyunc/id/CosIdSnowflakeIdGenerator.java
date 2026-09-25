@@ -46,10 +46,9 @@ public enum CosIdSnowflakeIdGenerator implements IdGenerator{
         }
     }
 
-    /** 由 IM 服务在完成排空后显式 shutdown，避免 JVM 多个钩子并发提前释放机器号。 */
+    /** 服务启动前分配机器号。关闭只走 {@link #shutdown()}，不注册 JVM 钩子。 */
     public void initializeManaged() {
         initialize();
-        configuration.useManagedLifecycle();
     }
 
     /** 只读本地状态；未初始化和永久失效均不可就绪。 */

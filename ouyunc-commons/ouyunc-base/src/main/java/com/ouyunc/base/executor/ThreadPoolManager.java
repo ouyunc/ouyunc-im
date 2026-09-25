@@ -23,7 +23,6 @@ public final class ThreadPoolManager {
     private static final Logger log = LoggerFactory.getLogger(ThreadPoolManager.class);
 
     private static final AtomicBoolean INITIALISED = new AtomicBoolean(false);
-    private static final AtomicBoolean SHUTDOWN_HOOK_REGISTERED = new AtomicBoolean(false);
 
     private static volatile ThreadPoolConfig currentConfig = ThreadPoolConfig.defaultConfig();
 
@@ -42,9 +41,6 @@ public final class ThreadPoolManager {
         }
         currentConfig = config;
         rebuildExecutors();
-        if (SHUTDOWN_HOOK_REGISTERED.compareAndSet(false, true)) {
-            Runtime.getRuntime().addShutdownHook(new Thread(() -> shutdownAll(true), "thread-pool-manager-shutdown"));
-        }
         INITIALISED.set(true);
     }
 
@@ -196,15 +192,9 @@ public final class ThreadPoolManager {
     // ===== shutdown =====
 
     public static void shutdownAll() {
-        shutdownAll(false);
-    }
-
-    private static void shutdownAll(boolean fromHook) {
-        EXECUTORS.forEach((id, managed) -> shutdownExecutor(id, managed.executor(), !fromHook));
+        EXECUTORS.forEach((id, managed) -> shutdownExecutor(id, managed.executor(), true));
         EXECUTORS.clear();
-        if (!fromHook) {
-            INITIALISED.set(false);
-        }
+        INITIALISED.set(false);
     }
 
     private static void shutdownExecutor(ThreadPoolId id, ExecutorService executor, boolean wait) {

@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * 1. 自动分配机器号（用于 SnowflakeId）
  * 2. 机器号守护和续约
  * 3. 创建 SnowflakeId 生成器
- * 4. 应用关闭时自动清理资源
+ * 4. 由调用方在统一关闭流程里显式 {@link #shutdown()}，不注册独立 JVM 钩子
  */
 public class CosIdRedisConfiguration {
     private static final Logger log = LoggerFactory.getLogger(CosIdRedisConfiguration.class);
@@ -33,7 +33,6 @@ public class CosIdRedisConfiguration {
     private final InstanceId instanceId;
     private StrongClockSyncSnowflakeId guardedGenerator;
     private final AtomicBoolean closed = new AtomicBoolean();
-    private final Thread shutdownHook = new Thread(this::shutdown, "CosId-Shutdown");
 
     /**
      * 构造函数
@@ -102,8 +101,6 @@ public class CosIdRedisConfiguration {
         try {
             machineIdGuardian.start();
             initializeIdGenerators();
-            // 同一个关闭入口先封闭发号，再停止守护和释放机器号。
-            Runtime.getRuntime().addShutdownHook(shutdownHook);
         } catch (RuntimeException error) {
             shutdown();
             throw error;
@@ -202,11 +199,6 @@ public class CosIdRedisConfiguration {
     /** 无 Redis IO，供服务就绪检查使用。 */
     public boolean isHealthy() {
         return !closed.get() && machineIdGuardian.isHealthy();
-    }
-
-    /** 服务已有统一关闭钩子时移除独立钩子，保证退出通知完成后才关闭发号器。 */
-    public void useManagedLifecycle() {
-        Runtime.getRuntime().removeShutdownHook(shutdownHook);
     }
 
     /**

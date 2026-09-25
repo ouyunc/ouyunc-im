@@ -5,12 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="f5e04433-bce4-4c4c-925d-8bad5c9272b8" name="Changes" comment="增加客户端packet 协议">
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/MessageConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/MessageConstant.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-core/src/main/java/com/ouyunc/core/context/MessageContext.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-core/src/main/java/com/ouyunc/core/context/MessageContext.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/cluster/AppKeyDeviceTypeSubscriber.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/cluster/AppKeyDeviceTypeSubscriber.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/ServerPrepareEventMessageEventListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/ServerPrepareEventMessageEventListener.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/ServerStartupEventMessageEventListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/listener/ServerStartupEventMessageEventListener.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/monitor/MonitorInitializer.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/monitor/MonitorInitializer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/executor/ThreadPoolManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/executor/ThreadPoolManager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-id/src/main/java/com/ouyunc/id/CosIdSnowflakeIdGenerator.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-id/src/main/java/com/ouyunc/id/CosIdSnowflakeIdGenerator.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-id/src/main/java/com/ouyunc/id/config/CosIdRedisConfiguration.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-id/src/main/java/com/ouyunc/id/config/CosIdRedisConfiguration.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -49,31 +47,32 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Application.StartServer.executor&quot;: &quot;Debug&quot;,
-    &quot;Maven.ouyunc-im [clean].executor&quot;: &quot;Run&quot;,
-    &quot;Maven.ouyunc-im [install].executor&quot;: &quot;Run&quot;,
-    &quot;Maven.ouyunc-im [package].executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;6.5.6&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;D:/workspace/ouyunc-im/docs&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;MavenSettings&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Application.ServerLauncher.executor": "Debug",
+    "Application.StartServer.executor": "Debug",
+    "Maven.ouyunc-im [clean].executor": "Run",
+    "Maven.ouyunc-im [install].executor": "Run",
+    "Maven.ouyunc-im [package].executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "6.5.6",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "D:/workspace/ouyunc-im/docs",
+    "node.js.detected.package.eslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "MavenSettings",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="ReactorSettings">
     <option name="notificationShown" value="true" />
   </component>
-  <component name="RunManager" selected="Application.StartServer">
-    <configuration name="StartServer" type="Application" factoryName="Application" singleton="false" temporary="true" nameIsGenerated="true">
-      <option name="MAIN_CLASS_NAME" value="com.ouyunc.message.StartServer" />
+  <component name="RunManager" selected="Application.ServerLauncher">
+    <configuration name="ServerLauncher" type="Application" factoryName="Application" singleton="false" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="com.ouyunc.message.ServerLauncher" />
       <module name="ouyunc-server" />
       <option name="VM_PARAMETERS" value="-Dlog4j.skipJansi=false" />
       <extension name="coverage">
@@ -94,12 +93,12 @@
       </method>
     </configuration>
     <list>
-      <item itemvalue="Application.StartServer" />
+      <item itemvalue="Application.ServerLauncher" />
       <item itemvalue="Spring Boot.OuyuncMessageSpringBootStarterApplication" />
     </list>
     <recent_temporary>
       <list>
-        <item itemvalue="Application.StartServer" />
+        <item itemvalue="Application.ServerLauncher" />
       </list>
     </recent_temporary>
   </component>
@@ -133,30 +132,6 @@
       <workItem from="1789874097856" duration="7334000" />
       <workItem from="1789910587669" duration="15496000" />
       <workItem from="1790077280132" duration="19038000" />
-    </task>
-    <task id="LOCAL-00054" summary="增加客户端packet 协议">
-      <option name="closed" value="true" />
-      <created>1789799449261</created>
-      <option name="number" value="00054" />
-      <option name="presentableId" value="LOCAL-00054" />
-      <option name="project" value="LOCAL" />
-      <updated>1789799449261</updated>
-    </task>
-    <task id="LOCAL-00055" summary="增加客户端packet 协议">
-      <option name="closed" value="true" />
-      <created>1789868214183</created>
-      <option name="number" value="00055" />
-      <option name="presentableId" value="LOCAL-00055" />
-      <option name="project" value="LOCAL" />
-      <updated>1789868214183</updated>
-    </task>
-    <task id="LOCAL-00056" summary="增加客户端packet 协议">
-      <option name="closed" value="true" />
-      <created>1789887579681</created>
-      <option name="number" value="00056" />
-      <option name="presentableId" value="LOCAL-00056" />
-      <option name="project" value="LOCAL" />
-      <updated>1789887579681</updated>
     </task>
     <task id="LOCAL-00057" summary="增加客户端packet 协议">
       <option name="closed" value="true" />
@@ -526,7 +501,31 @@
       <option name="project" value="LOCAL" />
       <updated>1790299337862</updated>
     </task>
-    <option name="localTasksCounter" value="103" />
+    <task id="LOCAL-00103" summary="增加客户端packet 协议">
+      <option name="closed" value="true" />
+      <created>1790309477281</created>
+      <option name="number" value="00103" />
+      <option name="presentableId" value="LOCAL-00103" />
+      <option name="project" value="LOCAL" />
+      <updated>1790309477281</updated>
+    </task>
+    <task id="LOCAL-00104" summary="增加客户端packet 协议">
+      <option name="closed" value="true" />
+      <created>1790309631171</created>
+      <option name="number" value="00104" />
+      <option name="presentableId" value="LOCAL-00104" />
+      <option name="project" value="LOCAL" />
+      <updated>1790309631171</updated>
+    </task>
+    <task id="LOCAL-00105" summary="增加客户端packet 协议">
+      <option name="closed" value="true" />
+      <created>1790309782371</created>
+      <option name="number" value="00105" />
+      <option name="presentableId" value="LOCAL-00105" />
+      <option name="project" value="LOCAL" />
+      <updated>1790309782371</updated>
+    </task>
+    <option name="localTasksCounter" value="106" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -646,7 +645,7 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/ouyunc-commons/ouyunc-id/src/main/java/com/ouyunc/id/config/CosIdRedisConfiguration.java</url>
-          <line>208</line>
+          <line>201</line>
           <option name="timeStamp" value="19" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
