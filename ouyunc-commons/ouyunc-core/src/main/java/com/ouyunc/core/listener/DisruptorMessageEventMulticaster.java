@@ -1,7 +1,6 @@
 package com.ouyunc.core.listener;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.lmax.disruptor.*;
 import com.lmax.disruptor.dsl.Disruptor;
 import com.lmax.disruptor.dsl.EventHandlerGroup;
@@ -44,7 +43,7 @@ public class DisruptorMessageEventMulticaster extends AbstractMessageEventMultic
     private final ConcurrentMap<EventRingEnum, RingDispatcher> globalRingDispatchers = new ConcurrentHashMap<>();
     /**
      * 事件类型 → 该类型要投递的环派发器（可能多个）。缓存的是 {@link RingDispatcher} 引用；
-     * 任意环 {@link #invalidateGlobalRing} 时整表清空，避免持有已 shutdown 的实例。
+     * 环被摘掉时整表清空，避免持有已关闭的实例。
      */
     private final ConcurrentMap<EventType, Set<RingDispatcher>> dispatchersByEventType = new ConcurrentHashMap<>();
 
@@ -75,51 +74,57 @@ public class DisruptorMessageEventMulticaster extends AbstractMessageEventMultic
 
     @Override
     public void addMessageListener(MessageEventListener<MessageEvent> listener) {
-        super.addMessageListener(listener);
-        if (listener != null && listener.type() != null) {
-            dispatchersByEventType.remove(listener.type());
-            invalidateGlobalRing(resolveListenerRing(listener));
+        List<RingDispatcher> retired;
+        synchronized (this) {
+            super.addMessageListener(listener);
+            if (listener == null || listener.type() == null) {
+                return;
+            }
+            retired = detachRing(resolveListenerRing(listener));
         }
+        shutdownRetired(retired);
     }
 
     @Override
     public void removeMessageListener(MessageEventListener<MessageEvent> listener) {
-        EventRingEnum ring = listener != null ? resolveListenerRing(listener) : null;
-        EventType type = listener != null ? listener.type() : null;
-        super.removeMessageListener(listener);
-        if (type != null) {
-            dispatchersByEventType.remove(type);
+        List<RingDispatcher> retired = List.of();
+        synchronized (this) {
+            EventRingEnum ring = listener != null ? resolveListenerRing(listener) : null;
+            super.removeMessageListener(listener);
+            if (ring != null) {
+                retired = detachRing(ring);
+            }
         }
-        if (ring != null) {
-            invalidateGlobalRing(ring);
-        }
+        shutdownRetired(retired);
     }
 
     @Override
     public void removeMessageListener(MessageEvent event) {
-        EventType eventType = event == null ? null : event.getType();
-        Set<EventRingEnum> touched = eventType == null ? Sets.newHashSet() : ringsForEventType(eventType);
-        super.removeMessageListener(event);
-        if (eventType != null) {
-            dispatchersByEventType.remove(eventType);
-            for (EventRingEnum r : touched) {
-                invalidateGlobalRing(r);
+        List<RingDispatcher> retired = List.of();
+        synchronized (this) {
+            EventType eventType = event == null ? null : event.getType();
+            Set<EventRingEnum> touched = eventType == null ? Set.of() : ringsForEventType(eventType);
+            super.removeMessageListener(event);
+            if (eventType != null) {
+                retired = detachRings(touched);
             }
         }
+        shutdownRetired(retired);
     }
 
     @Override
     public void removeAllMessageListeners() {
+        List<RingDispatcher> retired;
         synchronized (this) {
-            dispatchersByEventType.clear();
-            for (RingDispatcher d : globalRingDispatchers.values()) {
-                if (d != null) {
-                    d.shutdown();
-                }
+            retired = new ArrayList<>(globalRingDispatchers.values());
+            for (RingDispatcher dispatcher : retired) {
+                dispatcher.retire();
             }
+            dispatchersByEventType.clear();
             globalRingDispatchers.clear();
+            super.removeAllMessageListeners();
         }
-        super.removeAllMessageListeners();
+        shutdownRetired(retired);
     }
 
     @Override
@@ -150,36 +155,95 @@ public class DisruptorMessageEventMulticaster extends AbstractMessageEventMultic
         if (eventType == null) {
             return;
         }
-        Set<RingDispatcher> targets = dispatchersByEventType.computeIfAbsent(eventType, this::buildDispatchersForEventType);
-        if (targets.isEmpty()) {
-            return;
-        }
         boolean bestEffort = MessageEventTypeEnum.EXCEPTION.equals(eventType)
                 || MessageEventTypeEnum.EXCEPTION_PERSIST.equals(eventType)
                 || MessageEventTypeEnum.SEND_FAIL.equals(eventType)
                 || MessageEventTypeEnum.CLIENT_BUSINESS_SESSION_IDLE.equals(eventType);
-        for (RingDispatcher dispatcher : targets) {
-            dispatcher.publish(event, bestEffort);
+        publishToLiveRings(event, bestEffort);
+    }
+
+    /**
+     * 调用方必须持有 {@code this}。只摘掉环，不在锁内 shutdown。
+     */
+    private List<RingDispatcher> detachRing(EventRingEnum ring) {
+        if (ring == null) {
+            return List.of();
+        }
+        return detachRings(Set.of(ring));
+    }
+
+    private List<RingDispatcher> detachRings(Set<EventRingEnum> rings) {
+        dispatchersByEventType.clear();
+        List<RingDispatcher> retired = new ArrayList<>();
+        for (EventRingEnum ring : rings) {
+            RingDispatcher removed = globalRingDispatchers.remove(ring);
+            if (removed != null) {
+                removed.retire();
+                retired.add(removed);
+            }
+        }
+        return retired;
+    }
+
+    private static void shutdownRetired(List<RingDispatcher> retired) {
+        for (RingDispatcher dispatcher : retired) {
+            dispatcher.shutdown();
         }
     }
 
     /**
-     * 在同步块内解析类型涉及的各环，并解析/创建对应的 {@link RingDispatcher}（与 {@link #invalidateGlobalRing} 同锁，避免缓存到已失效实例）。
+     * 锁内取仍在册的派发器。某个环已摘掉时只重试该环一次，已成功发出的环不重复发。
      */
-    private Set<RingDispatcher> buildDispatchersForEventType(EventType eventType) {
+    private void publishToLiveRings(MessageEvent event, boolean bestEffort) {
+        List<RingDispatcher> targets;
         synchronized (this) {
-            LinkedHashSet<RingDispatcher> set = new LinkedHashSet<>();
-            for (EventRingEnum ring : ringsForEventType(eventType)) {
-                RingDispatcher d = getOrCreateRingDispatcher(ring);
-                if (d != null) {
-                    set.add(d);
+            targets = new ArrayList<>(loadOrCreateDispatchers(event.getType()));
+        }
+        if (targets.isEmpty()) {
+            return;
+        }
+        boolean isolate = targets.size() > 1;
+        for (RingDispatcher dispatcher : targets) {
+            MessageEvent toSend = isolate ? copyEvent(event) : event;
+            if (dispatcher.publish(toSend, bestEffort) || !dispatcher.retired) {
+                continue;
+            }
+            RingDispatcher fresh;
+            synchronized (this) {
+                fresh = globalRingDispatchers.get(dispatcher.ring);
+                if (fresh == null) {
+                    fresh = getOrCreateRingDispatcher(dispatcher.ring);
                 }
             }
-            return Set.copyOf(set);
+            if (fresh != null && fresh != dispatcher) {
+                fresh.publish(isolate ? copyEvent(event) : event, bestEffort);
+            }
         }
     }
 
-    /** 获取或创建指定环的派发器；若该环当前无任何监听则返回 null（不同步，须由调用方持有 this 锁） */
+    /** 调用方必须持有 {@code this}。 */
+    private Set<RingDispatcher> loadOrCreateDispatchers(EventType eventType) {
+        Set<RingDispatcher> cached = dispatchersByEventType.get(eventType);
+        if (cached != null) {
+            return cached;
+        }
+        LinkedHashSet<RingDispatcher> set = new LinkedHashSet<>();
+        for (EventRingEnum ring : ringsForEventType(eventType)) {
+            RingDispatcher dispatcher = getOrCreateRingDispatcher(ring);
+            if (dispatcher != null) {
+                set.add(dispatcher);
+            }
+        }
+        Set<RingDispatcher> frozen = Set.copyOf(set);
+        dispatchersByEventType.put(eventType, frozen);
+        return frozen;
+    }
+
+    private static MessageEvent copyEvent(MessageEvent event) {
+        return new MessageEvent(event.getId(), event.getSource(), event.getType(), event.getPublishTime());
+    }
+
+    /** 获取或创建指定环的派发器；若该环当前无任何监听则返回 null。调用方必须持有 this 锁。 */
     private RingDispatcher getOrCreateRingDispatcher(EventRingEnum ring) {
         RingDispatcher d = globalRingDispatchers.get(ring);
         if (d != null) {
@@ -192,16 +256,6 @@ public class DisruptorMessageEventMulticaster extends AbstractMessageEventMultic
         d = buildDispatcher(ring, ringListeners);
         globalRingDispatchers.put(ring, d);
         return d;
-    }
-
-    private void invalidateGlobalRing(EventRingEnum ring) {
-        synchronized (this) {
-            dispatchersByEventType.clear();
-            RingDispatcher removed = globalRingDispatchers.remove(ring);
-            if (removed != null) {
-                removed.shutdown();
-            }
-        }
     }
 
     private RingDispatcher buildDispatcher(EventRingEnum ring, List<MessageEventListener<MessageEvent>> ringListeners) {
@@ -221,7 +275,7 @@ public class DisruptorMessageEventMulticaster extends AbstractMessageEventMultic
         disruptor.start();
         RingBuffer<DisruptorEvent> ringBuffer = disruptor.getRingBuffer();
         log.info("Disruptor global ring initialized, ring={}, stages={}, listeners={}", ring, byOrder.size(), ringListeners.size());
-        return new RingDispatcher(disruptor, ringBuffer, handlerStats);
+        return new RingDispatcher(ring, disruptor, ringBuffer, handlerStats);
     }
 
     private Map<Integer, List<MessageEventListener<MessageEvent>>> groupListenersByOrder(List<MessageEventListener<MessageEvent>> listeners) {
@@ -238,10 +292,12 @@ public class DisruptorMessageEventMulticaster extends AbstractMessageEventMultic
 
         private final MessageEventListener<MessageEvent> listener;
         private final ListenerExecutionStats stats;
+        private final boolean isolateEvent;
 
-        private FilteringListenerHandler(MessageEventListener<MessageEvent> listener, ListenerExecutionStats stats) {
+        private FilteringListenerHandler(MessageEventListener<MessageEvent> listener, ListenerExecutionStats stats, boolean isolateEvent) {
             this.listener = listener;
             this.stats = stats;
+            this.isolateEvent = isolateEvent;
         }
 
         @Override
@@ -249,6 +305,9 @@ public class DisruptorMessageEventMulticaster extends AbstractMessageEventMultic
             MessageEvent event = holder.event;
             if (event == null || !Objects.equals(listener.type(), event.getType())) {
                 return;
+            }
+            if (isolateEvent) {
+                event = copyEvent(event);
             }
             invokeListener(listener, event, stats::record);
         }
@@ -268,11 +327,12 @@ public class DisruptorMessageEventMulticaster extends AbstractMessageEventMultic
         private void addStage(int order, List<MessageEventListener<MessageEvent>> listeners) {
             @SuppressWarnings("unchecked")
             EventHandler<DisruptorEvent>[] handlers = new EventHandler[listeners.size()];
+            boolean isolateEvent = listeners.size() > 1;
             for (int i = 0; i < listeners.size(); i++) {
                 MessageEventListener<MessageEvent> l = listeners.get(i);
                 ListenerExecutionStats stats = new ListenerExecutionStats(l.getClass().getName(), order);
                 handlerStats.add(stats);
-                handlers[i] = new FilteringListenerHandler(l, stats);
+                handlers[i] = new FilteringListenerHandler(l, stats, isolateEvent);
             }
             if (handlers.length == 0) {
                 return;
@@ -308,6 +368,7 @@ public class DisruptorMessageEventMulticaster extends AbstractMessageEventMultic
     private static final class RingDispatcher {
         private static final org.slf4j.Logger RING_LOG =
                 org.slf4j.LoggerFactory.getLogger(RingDispatcher.class);
+        private final EventRingEnum ring;
         private final Disruptor<DisruptorEvent> disruptor;
         private final RingBuffer<DisruptorEvent> ringBuffer;
         private final List<ListenerExecutionStats> listenerStats;
@@ -315,25 +376,45 @@ public class DisruptorMessageEventMulticaster extends AbstractMessageEventMultic
         private final LongAdder droppedEvents = new LongAdder();
         private final java.util.concurrent.atomic.AtomicLong nextDropLogNanos =
                 new java.util.concurrent.atomic.AtomicLong();
+        private final java.util.concurrent.atomic.AtomicBoolean shutdownOnce =
+                new java.util.concurrent.atomic.AtomicBoolean();
+        private volatile boolean retired;
 
         private RingDispatcher(
+                EventRingEnum ring,
                 Disruptor<DisruptorEvent> disruptor,
                 RingBuffer<DisruptorEvent> ringBuffer,
                 List<ListenerExecutionStats> listenerStats) {
+            this.ring = ring;
             this.disruptor = disruptor;
             this.ringBuffer = ringBuffer;
             this.listenerStats = listenerStats;
         }
 
-        private void publish(MessageEvent event, boolean bestEffort) {
-            if (!bestEffort) {
-                ringBuffer.publishEvent(DisruptorEvent.TRANSLATOR, event);
-                publishedEvents.increment();
-                return;
+        private void retire() {
+            retired = true;
+        }
+
+        /**
+         * @return false 表示环已摘掉或已关闭，调用方可换新环重发；环满丢弃返回 true
+         */
+        private boolean publish(MessageEvent event, boolean bestEffort) {
+            if (retired) {
+                return false;
             }
-            if (ringBuffer.tryPublishEvent(DisruptorEvent.TRANSLATOR, event)) {
-                publishedEvents.increment();
-                return;
+            try {
+                if (!bestEffort) {
+                    ringBuffer.publishEvent(DisruptorEvent.TRANSLATOR, event);
+                    publishedEvents.increment();
+                    return true;
+                }
+                if (ringBuffer.tryPublishEvent(DisruptorEvent.TRANSLATOR, event)) {
+                    publishedEvents.increment();
+                    return true;
+                }
+            } catch (RuntimeException ex) {
+                RING_LOG.warn("Disruptor ring publish failed, ring={}: {}", ring, ex.toString());
+                return false;
             }
             droppedEvents.increment();
             long now = System.nanoTime();
@@ -341,10 +422,18 @@ public class DisruptorMessageEventMulticaster extends AbstractMessageEventMultic
             if (now >= next && nextDropLogNanos.compareAndSet(next, now + java.util.concurrent.TimeUnit.SECONDS.toNanos(10))) {
                 RING_LOG.warn("Disruptor ring full, event dropped; totalDropped={}", droppedEvents.sum());
             }
+            return true;
         }
 
         private void shutdown() {
-            disruptor.shutdown();
+            if (!shutdownOnce.compareAndSet(false, true)) {
+                return;
+            }
+            try {
+                disruptor.shutdown();
+            } catch (RuntimeException ex) {
+                RING_LOG.warn("Disruptor ring shutdown failed, ring={}: {}", ring, ex.toString());
+            }
         }
 
         private DisruptorRingMetrics snapshot(EventRingEnum ring) {

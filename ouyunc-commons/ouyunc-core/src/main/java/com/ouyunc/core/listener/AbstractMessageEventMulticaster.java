@@ -27,7 +27,6 @@ public abstract class AbstractMessageEventMulticaster implements MessageEventMul
      * 监听器（按事件类型分组，组内顺序为注册顺序）；每实例独立，便于组合多播器委托。
      */
     private final SetMultimap<EventType, MessageEventListener<MessageEvent>> messageListeners = LinkedHashMultimap.create();
-    private final Object listenersMonitor = new Object();
 
     /**
      * 按事件类型缓存排序后的监听器，避免每次发布事件都复制+排序。
@@ -51,7 +50,7 @@ public abstract class AbstractMessageEventMulticaster implements MessageEventMul
                 log.warn("message 监听器 {} 未声明 type()，忽略注册", listener);
                 return;
             }
-            synchronized (listenersMonitor) {
+            synchronized (this) {
                 messageListeners.put(eventType, listener);
                 orderedListenersCache.remove(eventType);
             }
@@ -67,7 +66,7 @@ public abstract class AbstractMessageEventMulticaster implements MessageEventMul
         if (event == null || event.getType() == null) {
             return null;
         }
-        synchronized (listenersMonitor) {
+        synchronized (this) {
             return List.copyOf(messageListeners.get(event.getType()));
         }
     }
@@ -81,7 +80,7 @@ public abstract class AbstractMessageEventMulticaster implements MessageEventMul
         if (listener != null) {
             EventType eventType = listener.type();
             if (eventType != null) {
-                synchronized (listenersMonitor) {
+                synchronized (this) {
                     messageListeners.remove(eventType, listener);
                     orderedListenersCache.remove(eventType);
                 }
@@ -97,7 +96,7 @@ public abstract class AbstractMessageEventMulticaster implements MessageEventMul
     @Override
     public void removeMessageListener(MessageEvent event) {
         if (event != null && event.getType() != null) {
-            synchronized (listenersMonitor) {
+            synchronized (this) {
                 messageListeners.removeAll(event.getType());
                 orderedListenersCache.remove(event.getType());
             }
@@ -111,7 +110,7 @@ public abstract class AbstractMessageEventMulticaster implements MessageEventMul
      */
     @Override
     public void removeAllMessageListeners() {
-        synchronized (listenersMonitor) {
+        synchronized (this) {
             messageListeners.clear();
             orderedListenersCache.clear();
         }
@@ -141,7 +140,7 @@ public abstract class AbstractMessageEventMulticaster implements MessageEventMul
             if (timingCallback != null) {
                 timingCallback.onComplete(System.nanoTime() - t0, err);
             }
-            log.error("message 监听器 {} 执行事件 {} 失败：{}", listener, event, err.getMessage());
+            log.error("message 监听器 {} 执行事件 {} 失败：{}", listener, event, err.toString(), err);
         }
     }
 
@@ -168,7 +167,7 @@ public abstract class AbstractMessageEventMulticaster implements MessageEventMul
         if (eventType == null) {
             return Sets.newHashSet();
         }
-        synchronized (listenersMonitor) {
+        synchronized (this) {
             Collection<MessageEventListener<MessageEvent>> listeners = messageListeners.get(eventType);
             if (listeners.isEmpty()) {
                 return Sets.newHashSet();
@@ -186,7 +185,7 @@ public abstract class AbstractMessageEventMulticaster implements MessageEventMul
         if (ring == null) {
             return Lists.newArrayList();
         }
-        synchronized (listenersMonitor) {
+        synchronized (this) {
             List<MessageEventListener<MessageEvent>> out = new ArrayList<>();
             for (EventType type : messageListeners.keySet()) {
                 for (MessageEventListener<MessageEvent> listener : messageListeners.get(type)) {
@@ -219,7 +218,7 @@ public abstract class AbstractMessageEventMulticaster implements MessageEventMul
         if (cached != null) {
             return cached;
         }
-        synchronized (listenersMonitor) {
+        synchronized (this) {
             List<MessageEventListener<MessageEvent>> current = orderedListenersCache.get(eventType);
             if (current != null) {
                 return current;
