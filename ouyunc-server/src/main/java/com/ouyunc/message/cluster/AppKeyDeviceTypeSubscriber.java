@@ -4,7 +4,6 @@ import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.model.AppKeyDeviceType;
-import com.ouyunc.base.model.ClientAppKeyDeviceType;
 import com.ouyunc.base.model.ClientInfo;
 import com.ouyunc.core.device.DeviceTypeRegistry;
 import com.ouyunc.message.context.MessageServerContext;
@@ -20,8 +19,8 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * 订阅 appKey / 客户端设备类型变更频道（Redisson Topic）。
- * <p>payload 为 {@link AppKeyDeviceType} / {@link ClientAppKeyDeviceType} 的 JSON 字符串。
+ * 订阅 appKey 设备白名单与客户端信息变更频道（Redisson Topic）。
+ * <p>payload 为 {@link AppKeyDeviceType} / {@link ClientInfo} 的 JSON 字符串。
  * 发布端请使用 {@code redissonClient.getTopic(channel).publish(JSON.toJSONString(...))}。</p>
  */
 public final class AppKeyDeviceTypeSubscriber {
@@ -52,16 +51,16 @@ public final class AppKeyDeviceTypeSubscriber {
                 });
             }
             if (clientListenerId == null) {
-                RTopic clientTopic = MessageServerContext.redissonClient.getTopic(MessageConstant.CLIENT_APP_KEY_PUBLISH_TOPIC);
+                RTopic clientTopic = MessageServerContext.redissonClient.getTopic(MessageConstant.CLIENT_INFO_PUBLISH_TOPIC);
                 clientListenerId = clientTopic.addListener(String.class, new MessageListener<String>() {
                     @Override
                     public void onMessage(CharSequence channel, String msg) {
-                        onClientAppKeyDeviceTypeMessage(msg);
+                        onClientInfoMessage(msg);
                     }
                 });
             }
             log.info("appKey 设备类型订阅已启动 channels=[{}, {}]",
-                    MessageConstant.APP_KEY_PUBLISH_TOPIC, MessageConstant.CLIENT_APP_KEY_PUBLISH_TOPIC);
+                    MessageConstant.APP_KEY_PUBLISH_TOPIC, MessageConstant.CLIENT_INFO_PUBLISH_TOPIC);
         } catch (Exception e) {
             log.error("appKey 设备类型订阅失败，将仅依赖启动时 Redis 预热", e);
         }
@@ -85,7 +84,7 @@ public final class AppKeyDeviceTypeSubscriber {
         }
         try {
             if (clientId != null) {
-                MessageServerContext.redissonClient.getTopic(MessageConstant.CLIENT_APP_KEY_PUBLISH_TOPIC)
+                MessageServerContext.redissonClient.getTopic(MessageConstant.CLIENT_INFO_PUBLISH_TOPIC)
                         .removeListener(clientId);
             }
         } catch (Exception e) {
@@ -113,29 +112,32 @@ public final class AppKeyDeviceTypeSubscriber {
         }
     }
 
-    private static void onClientAppKeyDeviceTypeMessage(String msg) {
+    private static void onClientInfoMessage(String msg) {
         if (StringUtils.isBlank(msg)) {
             return;
         }
         try {
-            ClientAppKeyDeviceType clientAppKeyDeviceType = JSON.parseObject(msg, ClientAppKeyDeviceType.class);
-            if (clientAppKeyDeviceType == null || StringUtils.isAnyBlank(
-                    clientAppKeyDeviceType.getAppKey(), clientAppKeyDeviceType.getIdentity())) {
+            ClientInfo published = JSON.parseObject(msg, ClientInfo.class);
+            if (published == null || StringUtils.isAnyBlank(published.getAppKey(), published.getIdentity())) {
                 return;
             }
-            Set<Byte> deviceTypes = clientAppKeyDeviceType.getDeviceTypes();
+            String appKey = published.getAppKey();
+            String identity = published.getIdentity();
+            Boolean selfSync = published.getSelfSync();
+            Collection<Byte> deviceTypes = published.getSupportDeviceTypes();
             if (deviceTypes == null) {
+                if (selfSync != null) {
+                    applyClientSettings(appKey, identity, null, selfSync);
+                }
                 return;
             }
-            String appKey = clientAppKeyDeviceType.getAppKey();
-            String identity = clientAppKeyDeviceType.getIdentity();
             // 空集合：只清客户端定制设备类型，回落 appKey/全局白名单
             if (deviceTypes.isEmpty()) {
-                applyClientSupportDeviceTypes(appKey, identity, List.of());
+                applyClientSettings(appKey, identity, List.of(), selfSync);
                 log.info("已清除客户端定制设备类型 appKey={} identity={}", appKey, identity);
                 return;
             }
-            // JSON/Redis 元素可能是 Integer，统一规范后再校验子集
+            // JSON 元素可能是 Integer，统一规范后再校验子集
             Map<Byte, Byte> normalized = DeviceTypeRegistry.toIdentityMap(deviceTypes);
             if (normalized.isEmpty()) {
                 log.error("客户端设备类型无有效元素 appKey={} identity={}", appKey, identity);
@@ -147,29 +149,41 @@ public final class AppKeyDeviceTypeSubscriber {
                     return;
                 }
             }
-            applyClientSupportDeviceTypes(appKey, identity, List.copyOf(normalized.keySet()));
+            applyClientSettings(appKey, identity, List.copyOf(normalized.keySet()), selfSync);
         } catch (Exception e) {
             log.warn("客户端 appKey 设备类型消息处理失败 payload={}", msg, e);
         }
     }
 
     /**
-     * 只改已有 {@link ClientInfo} 的设备白名单，保留 selfSync 等字段。
-     * 本地未命中时按原路径加载 Redis；没有完整客户端信息时不写入半截对象，避免挡住后续加载。
+     * 只改已有 {@link ClientInfo}。设备类型为 null 时不动白名单；selfSync 为 null 时不动多端同步。
+     * 没有完整客户端信息时不写入半截对象。
      */
-    private static void applyClientSupportDeviceTypes(String appKey, String identity, Collection<Byte> supportDeviceTypes) {
+    private static void applyClientSettings(String appKey, String identity, Collection<Byte> supportDeviceTypes, Boolean selfSync) {
+        if (supportDeviceTypes == null && selfSync == null) {
+            return;
+        }
         String cacheKey = CacheConstant.buildLocalClientInfoCacheKey(appKey, identity);
         Object cached = MessageServerContext.localClientInfoCache.get(cacheKey);
         if (cached instanceof ClientInfo clientInfo) {
-            clientInfo.setSupportDeviceTypes(supportDeviceTypes);
+            patchClientInfo(clientInfo, supportDeviceTypes, selfSync);
             return;
         }
         MessageServerContext.evictLocalClientInfo(appKey, identity);
         ClientInfo loaded = MessageServerContext.localClientInfo(appKey, identity);
         if (loaded != null) {
-            loaded.setSupportDeviceTypes(supportDeviceTypes);
+            patchClientInfo(loaded, supportDeviceTypes, selfSync);
             return;
         }
-        log.info("本地与 Redis 均无完整客户端信息，忽略设备类型热更新 appKey={} identity={}", appKey, identity);
+        log.info("本地与 Redis 均无完整客户端信息，忽略客户端热更新 appKey={} identity={}", appKey, identity);
+    }
+
+    private static void patchClientInfo(ClientInfo clientInfo, Collection<Byte> supportDeviceTypes, Boolean selfSync) {
+        if (supportDeviceTypes != null) {
+            clientInfo.setSupportDeviceTypes(supportDeviceTypes);
+        }
+        if (selfSync != null) {
+            clientInfo.setSelfSync(selfSync);
+        }
     }
 }

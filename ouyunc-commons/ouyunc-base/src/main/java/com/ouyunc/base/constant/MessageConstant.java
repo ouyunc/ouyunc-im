@@ -283,15 +283,9 @@ public class MessageConstant {
      */
     public static final String APP_KEY_PUBLISH_TOPIC = "app_key_publish_topic";
     /**
-     * 客户端设备类型变更频道（Redisson Topic）。
-     * <p>payload：{@link com.ouyunc.base.model.ClientAppKeyDeviceType} JSON 字符串。</p>
-     */
-    public static final String CLIENT_APP_KEY_PUBLISH_TOPIC = "client_app_key_publish_topic";
-
-    /**
-     * 客户端信息写入或更新后的本机缓存失效频道（Redisson Topic）。
-     * <p>payload：{@link com.ouyunc.base.model.ClientInfoRefresh} JSON 字符串。
-     * 发布端在 Redis 写入客户端信息后 {@code publish}，各节点删除本地正式缓存与负缓存。</p>
+     * 客户端信息变更频道（Redisson Topic）。
+     * <p>payload：{@link com.ouyunc.base.model.ClientInfo} JSON。
+     * {@code supportDeviceTypes}、{@code selfSync} 为 null 时不改对应字段。</p>
      */
     public static final String CLIENT_INFO_PUBLISH_TOPIC = "client_info_publish_topic";
 

@@ -109,7 +109,6 @@ public class MessageContext {
 
     /**
      * 获取连接在本机视角下的客户端信息。本地命中直接返回；负缓存命中返回 null；都没有则读 Redis。
-     * Redis 写入后由客户端信息 Topic 调用 {@link #evictLocalClientInfo} 失效。
      */
     public static ClientInfo localClientInfo(String appKey, String identity) {
         if (StringUtils.isBlank(identity)) {
