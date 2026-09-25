@@ -28,7 +28,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.Serializable;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -87,46 +86,63 @@ public class MessageContext {
 
 
     /**
-     * 存储客户端的信息，所有客户端设备的信息都共享，生命周期与最后长的设备连接一致，设置为过期时间, 这个过期时间根据实际业务来调整，避免避免长时间不过期，占用过大内存
+     * 已从 Redis 加载的客户端信息。未命中标记放在 {@link #localClientInfoMissCache}，避免和正式对象混用 30 天过期。
      */
-    public static Cache<String, Serializable> localClientInfoCache = new CaffeineLocalCache<>("localClientInfoCache", Caffeine.newBuilder()
+    public static Cache<String, ClientInfo> localClientInfoCache = new CaffeineLocalCache<>("localClientInfoCache", Caffeine.newBuilder()
             .maximumSize(MessageConstant.LOCAL_CACHE_MAX_SIZE)
             .expireAfterWrite(NumberConstant.NUMBER_30, TimeUnit.DAYS).build(new CacheLoader<>() {
-        /***
-         * 获取客户端对应的客户端信息
-         */
         @Override
-        public @Nullable Serializable load(String appKeyIdentity) throws Exception {
+        public @Nullable ClientInfo load(String appKeyIdentity) {
             return null;
         }
     }));
 
     /**
-     * 获取本地客户（连接在该服务器上的）端信息， 这里需要有一个类似布隆过滤器的概念，如果首次本地缓存没中，则去redis中获取，无论是否获取到，都存入本地缓存，如果获取到，则真实值存入，如果获取不到则存入一个空值或者进行标记，并设置过期时间，这样在过期时间内再次获取时，就不用请求redis了，直接走本地缓存。除非手动触发更新本地缓存（通过发布订阅）
-     在过期后再次请求本地缓存，如果没有值或者标记则请求redis 然后重复以上步骤
-     * @param appKey
-     * @param identity
-     * @return
+     * Redis 未命中标记。过期后再次访问会重新读 Redis；{@link #evictLocalClientInfo} 也会立刻删掉。
+     */
+    public static Cache<String, Boolean> localClientInfoMissCache = CaffeineLocalCache.wrap(
+            "localClientInfoMissCache",
+            Caffeine.newBuilder()
+                    .maximumSize(MessageConstant.LOCAL_CACHE_MAX_SIZE)
+                    .expireAfterWrite(MessageConstant.CLIENT_INFO_LOCAL_MISS_EXPIRE_SECONDS, TimeUnit.SECONDS)
+                    .build());
+
+    /**
+     * 获取连接在本机视角下的客户端信息。本地命中直接返回；负缓存命中返回 null；都没有则读 Redis。
+     * Redis 写入后由客户端信息 Topic 调用 {@link #evictLocalClientInfo} 失效。
      */
     public static ClientInfo localClientInfo(String appKey, String identity) {
-        if (StringUtils.isNotBlank(identity)) {
-            Serializable cacheData = localClientInfoCache.get(CacheConstant.buildLocalClientInfoCacheKey(appKey, identity));
-            if (cacheData instanceof ClientInfo clientInfo) {
-                return clientInfo;
-            }else if (cacheData instanceof Boolean) {
-                return null;
-            }else {
-                // 未缓存过，则去redis中获取
-                Object obj = cache.get(CacheConstant.buildRemoteClientInfoCacheKey(appKey,  identity));
-                if (obj instanceof ClientInfo clientInfo) {
-                    localClientInfoCache.put(CacheConstant.buildLocalClientInfoCacheKey(appKey, identity), clientInfo);
-                    return clientInfo;
-                }else {
-                    localClientInfoCache.put(CacheConstant.buildLocalClientInfoCacheKey(appKey, identity), Boolean.TRUE);
-                }
-            }
+        if (StringUtils.isBlank(identity)) {
+            return null;
         }
+        String localKey = CacheConstant.buildLocalClientInfoCacheKey(appKey, identity);
+        if (localClientInfoMissCache.get(localKey) != null) {
+            return null;
+        }
+        ClientInfo cached = localClientInfoCache.get(localKey);
+        if (cached != null) {
+            return cached;
+        }
+        Object obj = cache.get(CacheConstant.buildRemoteClientInfoCacheKey(appKey, identity));
+        if (obj instanceof ClientInfo clientInfo) {
+            localClientInfoMissCache.delete(localKey);
+            localClientInfoCache.put(localKey, clientInfo);
+            return clientInfo;
+        }
+        localClientInfoMissCache.put(localKey, Boolean.TRUE);
         return null;
+    }
+
+    /**
+     * 删除本机客户端信息与未命中标记，下次 {@link #localClientInfo} 重新读 Redis。
+     */
+    public static void evictLocalClientInfo(String appKey, String identity) {
+        if (StringUtils.isAnyBlank(appKey, identity)) {
+            return;
+        }
+        String localKey = CacheConstant.buildLocalClientInfoCacheKey(appKey, identity);
+        localClientInfoCache.delete(localKey);
+        localClientInfoMissCache.delete(localKey);
     }
 
     /**

@@ -6,6 +6,7 @@ import com.ouyunc.core.listener.EventListener;
 import com.ouyunc.core.listener.MessageEventListener;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.message.cluster.AppKeyDeviceTypeSubscriber;
+import com.ouyunc.message.cluster.ClientInfoSubscriber;
 import com.ouyunc.message.cluster.lease.NodeLeaseKeeper;
 import com.ouyunc.message.http.HttpRequestDispatcher;
 import com.ouyunc.message.monitor.MonitorInitializer;
@@ -44,6 +45,7 @@ class ServerStartupEventMessageEventListener implements MessageEventListener<Mes
             return;
         }
         AppKeyDeviceTypeSubscriber.stop();
+        ClientInfoSubscriber.stop();
         NodeLeaseKeeper.stop();
     }
 }

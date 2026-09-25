@@ -12,6 +12,7 @@ import com.ouyunc.core.listener.EventListener;
 import com.ouyunc.core.listener.MessageEventListener;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.message.cluster.AppKeyDeviceTypeSubscriber;
+import com.ouyunc.message.cluster.ClientInfoSubscriber;
 import com.ouyunc.message.cluster.RelationCacheInvalidateSubscriber;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.safety.ContentSafetyRegistry;
@@ -48,6 +49,7 @@ class ServerPrepareEventMessageEventListener implements MessageEventListener<Mes
         // appKey / 设备类型：先预热本地表，再挂订阅（须在 bind 前，避免首登空窗）
         warmupAppKeyDeviceTypes();
         AppKeyDeviceTypeSubscriber.start();
+        ClientInfoSubscriber.start();
         // 内容安全：订阅 Redis 热更新（须在 Netty bind 前）
         ContentSafetyRegistry.getInstance().start();
         // 关系本机缓存：订阅 Redis 失效频道（业务写 Redis 后 PUBLISH）

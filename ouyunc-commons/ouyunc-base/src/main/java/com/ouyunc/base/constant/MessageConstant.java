@@ -289,6 +289,18 @@ public class MessageConstant {
     public static final String CLIENT_APP_KEY_PUBLISH_TOPIC = "client_app_key_publish_topic";
 
     /**
+     * 客户端信息写入或更新后的本机缓存失效频道（Redisson Topic）。
+     * <p>payload：{@link com.ouyunc.base.model.ClientInfoRefresh} JSON 字符串。
+     * 发布端在 Redis 写入客户端信息后 {@code publish}，各节点删除本地正式缓存与负缓存。</p>
+     */
+    public static final String CLIENT_INFO_PUBLISH_TOPIC = "client_info_publish_topic";
+
+    /**
+     * 本地客户端信息未命中标记的过期时间（秒）。短于正式缓存，避免 Redis 后来写入后长时间不可见。
+     */
+    public static final int CLIENT_INFO_LOCAL_MISS_EXPIRE_SECONDS = 60;
+
+    /**
      * 集群成员发现：open 认租约；allowlist 仅连接 cluster.nodes ∪ topology
      */
     public static final String CLUSTER_MEMBERSHIP_MODE_OPEN = "open";
