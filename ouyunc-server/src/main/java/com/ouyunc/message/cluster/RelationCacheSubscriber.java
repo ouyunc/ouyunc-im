@@ -14,13 +14,13 @@ import org.slf4j.LoggerFactory;
  * 订阅 Redis 关系本机缓存失效频道（Redisson Topic）。
  * <p>payload 为 {@link RelationCacheInvalidateEvent} JSON。订阅失败不阻断启动，依赖布尔/实体短 TTL 纠偏。</p>
  */
-public final class RelationCacheInvalidateSubscriber {
+public final class RelationCacheSubscriber {
 
-    private static final Logger log = LoggerFactory.getLogger(RelationCacheInvalidateSubscriber.class);
+    private static final Logger log = LoggerFactory.getLogger(RelationCacheSubscriber.class);
 
     private static volatile Integer listenerId;
 
-    private RelationCacheInvalidateSubscriber() {
+    private RelationCacheSubscriber() {
     }
 
     /**
