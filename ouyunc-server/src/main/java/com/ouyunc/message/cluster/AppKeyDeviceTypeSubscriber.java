@@ -14,7 +14,8 @@ import org.redisson.api.listener.MessageListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -126,36 +127,48 @@ public final class AppKeyDeviceTypeSubscriber {
             if (deviceTypes == null) {
                 return;
             }
-            String cacheKey = CacheConstant.buildLocalClientInfoCacheKey(
-                    clientAppKeyDeviceType.getAppKey(), clientAppKeyDeviceType.getIdentity());
-            // 空集合：清除客户端定制，回落 appKey/全局白名单
+            String appKey = clientAppKeyDeviceType.getAppKey();
+            String identity = clientAppKeyDeviceType.getIdentity();
+            // 空集合：只清客户端定制设备类型，回落 appKey/全局白名单
             if (deviceTypes.isEmpty()) {
-                MessageServerContext.localClientInfoCache.delete(cacheKey);
-                log.info("已清除客户端定制设备类型 appKey={} identity={}",
-                        clientAppKeyDeviceType.getAppKey(), clientAppKeyDeviceType.getIdentity());
+                applyClientSupportDeviceTypes(appKey, identity, List.of());
+                log.info("已清除客户端定制设备类型 appKey={} identity={}", appKey, identity);
                 return;
             }
             // JSON/Redis 元素可能是 Integer，统一规范后再校验子集
             Map<Byte, Byte> normalized = DeviceTypeRegistry.toIdentityMap(deviceTypes);
             if (normalized.isEmpty()) {
-                log.error("客户端设备类型无有效元素 appKey={} identity={}",
-                        clientAppKeyDeviceType.getAppKey(), clientAppKeyDeviceType.getIdentity());
+                log.error("客户端设备类型无有效元素 appKey={} identity={}", appKey, identity);
                 return;
             }
             for (Byte deviceType : normalized.keySet()) {
-                if (!DeviceTypeRegistry.supports(clientAppKeyDeviceType.getAppKey(), deviceType)) {
-                    log.error("非法设备类型：{} appKey={}", deviceType, clientAppKeyDeviceType.getAppKey());
+                if (!DeviceTypeRegistry.supports(appKey, deviceType)) {
+                    log.error("非法设备类型：{} appKey={}", deviceType, appKey);
                     return;
                 }
             }
-            MessageServerContext.localClientInfoCache.put(
-                    cacheKey,
-                    new ClientInfo(
-                            clientAppKeyDeviceType.getAppKey(),
-                            clientAppKeyDeviceType.getIdentity(),
-                            new ArrayList<>(normalized.keySet())));
+            applyClientSupportDeviceTypes(appKey, identity, List.copyOf(normalized.keySet()));
         } catch (Exception e) {
             log.warn("客户端 appKey 设备类型消息处理失败 payload={}", msg, e);
         }
+    }
+
+    /**
+     * 只改已有 {@link ClientInfo} 的设备白名单，保留 selfSync 等字段。
+     * 本地未命中时按原路径加载 Redis；没有完整客户端信息时不写入半截对象，避免挡住后续加载。
+     */
+    private static void applyClientSupportDeviceTypes(String appKey, String identity, Collection<Byte> supportDeviceTypes) {
+        String cacheKey = CacheConstant.buildLocalClientInfoCacheKey(appKey, identity);
+        Object cached = MessageServerContext.localClientInfoCache.get(cacheKey);
+        if (cached instanceof ClientInfo clientInfo) {
+            clientInfo.setSupportDeviceTypes(supportDeviceTypes);
+            return;
+        }
+        ClientInfo loaded = MessageServerContext.localClientInfo(appKey, identity);
+        if (loaded != null) {
+            loaded.setSupportDeviceTypes(supportDeviceTypes);
+            return;
+        }
+        log.info("本地与 Redis 均无完整客户端信息，忽略设备类型热更新 appKey={} identity={}", appKey, identity);
     }
 }
