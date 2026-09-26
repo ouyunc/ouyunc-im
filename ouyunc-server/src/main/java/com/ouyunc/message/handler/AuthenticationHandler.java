@@ -155,42 +155,42 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                 return;
             }
             loginContent.setScope(LoginScopeEnum.normalizeScope(loginContent.getScope()));
-            final LoginContent parsedLogin = loginContent;
             // identity 级白名单优先；无定制时等价于 appKey/全局白名单
-            if (!AppKeyValidator.INSTANCE.tryReserveForLogin(parsedLogin.getAppKey(), ctx)
+            if (!AppKeyValidator.INSTANCE.tryReserveForLogin(loginContent.getAppKey(), ctx)
                     || !DeviceTypeRegistry.supports(
-                            parsedLogin.getAppKey(), parsedLogin.getIdentity(), deviceType)
-                    || !validate(parsedLogin)) {
+                    loginContent.getAppKey(), loginContent.getIdentity(), deviceType)
+                    || !validate(loginContent)) {
                 log.warn("客户端id: {} 登录参数: {}，校验未通过！",
-                        ctx.channel().id().asShortText(), Serializer.JSON.serializeToString(parsedLogin));
+                        ctx.channel().id().asShortText(), Serializer.JSON.serializeToString(loginContent));
                 ExceptionReporter.reportBusiness(ExceptionCodeEnum.LOGIN_VERIFY_ERROR, "登录校验未通过", "AuthenticationHandler", packet);
-                AppKeyValidator.releaseReservedIfNeeded(parsedLogin.getAppKey(), ctx);
+                AppKeyValidator.releaseReservedIfNeeded(loginContent.getAppKey(), ctx);
                 failLoginOnEventLoop(ctx);
                 return;
             }
             Protocol protocol = ctx.channel().attr(NativePacketProtocol.protocolAttrKey).get();
             if (protocol == null) {
                 log.warn("Protocol not set on channel, closing connection: {}", ctx.channel().id().asShortText());
-                AppKeyValidator.releaseReservedIfNeeded(parsedLogin.getAppKey(), ctx);
+                AppKeyValidator.releaseReservedIfNeeded(loginContent.getAppKey(), ctx);
                 failLoginOnEventLoop(ctx);
                 return;
             }
             LoginClientInfo newLoginClientInfo = new LoginClientInfo(
                     protocol.getProtocol(), protocol.getProtocolVersion(),
                     MessageContext.messageProperties.getLocalServerAddress(), OnlineEnum.ONLINE, null,
-                    ClientHelper.calculateClientHeartBeatTimeout(parsedLogin.getHeartBeatExpireTime()),
-                    loginTimestamp, parsedLogin.getAppKey(), parsedLogin.getIdentity(), deviceType,
-                    parsedLogin.getSupportDeviceTypes(), parsedLogin.getSn(), parsedLogin.getSignature(),
-                    parsedLogin.getSignatureAlgorithm(), parsedLogin.getHeartBeatExpireTime(), loginTimestamp,
-                    parsedLogin.getEnableWill(), parsedLogin.getWillMessage(), parsedLogin.getEnableAlive(),
-                    parsedLogin.getAliveMessage(), parsedLogin.getScope(), parsedLogin.getBusinessIdleSeconds(),
-                    parsedLogin.getHeartBeatWaitRetry(), parsedLogin.getBusinessIdleCloseStrike());
+                    ClientHelper.calculateClientHeartBeatTimeout(loginContent.getHeartBeatExpireTime()),
+                    loginTimestamp, loginContent.getAppKey(), loginContent.getIdentity(), deviceType,
+                    loginContent.getSupportDeviceTypes(), loginContent.getSn(), loginContent.getSignature(),
+                    loginContent.getSignatureAlgorithm(), loginContent.getHeartBeatExpireTime(), loginTimestamp,
+                    loginContent.getEnableWill(), loginContent.getWillMessage(), loginContent.getEnableAlive(),
+                    loginContent.getAliveMessage(), loginContent.getScope(), loginContent.getBusinessIdleSeconds(),
+                    loginContent.getHeartBeatWaitRetry(), loginContent.getBusinessIdleCloseStrike());
             try {
+                final LoginContent parsedLogin = loginContent;
                 ctx.executor().execute(() -> startRemoteBind(ctx, packet, parsedLogin, loginMessage,
                         deviceType, newLoginClientInfo, loginTimestamp));
             } catch (RejectedExecutionException scheduleError) {
                 log.error("登录绑定回调投递 EventLoop 被拒绝 channelId={}", ctx.channel().id().asShortText(), scheduleError);
-                AppKeyValidator.releaseReservedIfNeeded(parsedLogin.getAppKey(), ctx);
+                AppKeyValidator.releaseReservedIfNeeded(loginContent.getAppKey(), ctx);
                 failLoginOnEventLoop(ctx);
             }
         } catch (Exception e) {
