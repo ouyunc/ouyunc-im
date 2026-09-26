@@ -37,7 +37,7 @@ import java.util.concurrent.RejectedExecutionException;
 /**
  * WS 握手：URI/字段形态在 EventLoop 上做完；签名与配额下沉到业务线程，避免连接风暴堵 IO。
  */
-final class WsHandshakeSupport {
+public final class WsHandshakeSupport {
 
     private static final Logger log = LoggerFactory.getLogger(WsHandshakeSupport.class);
 
@@ -60,7 +60,7 @@ final class WsHandshakeSupport {
     private WsHandshakeSupport() {
     }
 
-    static void dispatch(ChannelHandlerContext ctx, FullHttpRequest request) {
+    public static void dispatch(ChannelHandlerContext ctx, FullHttpRequest request) {
         HandshakeGate gate = parseGate(ctx, request);
         if (gate == null) {
             ctx.close();
