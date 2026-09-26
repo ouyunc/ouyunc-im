@@ -25,6 +25,12 @@ public final class ClusterMembershipReconciler {
     private ClusterMembershipReconciler() {
     }
 
+    /**
+     * 按当前存活租约把集群连接池收成应连集合。
+     * 应连节点补池，租约里已不在、或拓扑不再要求连接的节点拆池。单机模式直接返回。
+     *
+     * @param liveLeases 当前仍持有租约的节点，key 为节点地址
+     */
     public static void reconcile(Map<String, NodeLeasePayload> liveLeases) {
         if (!MessageServerContext.serverProperties().isClusterEnable()) {
             return;
@@ -41,6 +47,14 @@ public final class ClusterMembershipReconciler {
         }
     }
 
+    /**
+     * 从存活租约里选出本机应该建池的远端节点。
+     * 跳过本机和空白地址；allowlist 模式下不在配置或拓扑名单里的租约只记日志；
+     * 拓扑判定不应连接的节点也不纳入。数量达到硬顶后停止继续加入。
+     *
+     * @param liveLeases 当前仍持有租约的节点
+     * @return 应保留连接池的远端节点地址
+     */
     static Set<String> selectDesired(Map<String, NodeLeasePayload> liveLeases) {
         Set<String> desired = new HashSet<>();
         if (liveLeases == null || liveLeases.isEmpty()) {
@@ -75,6 +89,13 @@ public final class ClusterMembershipReconciler {
         return desired;
     }
 
+    /**
+     * allowlist 的合法节点：静态配置、拓扑里已配置的节点，再加上本机地址。
+     *
+     * @param properties 当前消息服务配置
+     * @param topology   集群拓扑；为空时只采用静态配置和本机地址
+     * @return 允许建池的节点地址
+     */
     private static Set<String> allowedNodes(MessageServerProperties properties, ClusterTopologyView topology) {
         Set<String> allowed = new HashSet<>();
         if (properties.getNodes() != null) {
@@ -87,6 +108,11 @@ public final class ClusterMembershipReconciler {
         return allowed;
     }
 
+    /**
+     * 本机已经建出的集群连接池节点，活跃表和全局表合并。
+     *
+     * @return 当前持有 ChannelPool 的节点地址
+     */
     private static Set<String> existingPoolNodes() {
         Set<String> existing = new HashSet<>();
         Map<String, ChannelPool> active = MessageServerContext.clusterActiveServerRegistryTableCache.asMap();
