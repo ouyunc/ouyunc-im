@@ -18,8 +18,9 @@ public class HttpProtocolDispatcherBiProcessor implements ProtocolDispatcherBiPr
     @Override
     public boolean match(ByteBuf in) {
         // 判断是何种协议,注意这里不可以使用  in.readByte();
-        final byte magic1 = in.getByte(NumberConstant.NUMBER_0);
-        final byte magic2 = in.getByte(NumberConstant.NUMBER_0 + NumberConstant.NUMBER_1);
+        int readerIndex = in.readerIndex();
+        final byte magic1 = in.getByte(readerIndex + NumberConstant.NUMBER_0);
+        final byte magic2 = in.getByte(readerIndex + NumberConstant.NUMBER_1);
         return isHttp(magic1, magic2);
     }
 

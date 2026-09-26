@@ -36,6 +36,20 @@ public class MessageServerProperties extends MessageProperties {
     List<String> messageProtocolProcessorScanPackagePaths;
 
     /**
+     * 是否要求连接携带 HAProxy PROXY Protocol 头。
+     * 开启后应确保所有连接均由已配置的可信反向代理转发，直连请求会被拒绝。
+     */
+    @Key(value = "ouyunc.message.proxy-protocol.enabled", defaultValue = "false")
+    boolean proxyProtocolEnabled;
+
+    /**
+     * 允许发送 PROXY Protocol 头的 TCP 对端地址，支持单个 IPv4/IPv6 地址及 CIDR。
+     * 该配置校验的是与消息服务直接建立 TCP 连接的 Nginx 地址，不是 PROXY 头中的客户端地址。
+     */
+    @Key("ouyunc.message.proxy-protocol.trusted-proxies")
+    List<String> proxyProtocolTrustedProxies;
+
+    /**
      * 是否开启消息拦截器扫描包路径，true 开启，false-关闭
      */
     @Key(value = "ouyunc.message.interceptor.enable", defaultValue = "true")
@@ -892,6 +906,22 @@ public class MessageServerProperties extends MessageProperties {
 
     public void setMessageProtocolProcessorScanPackagePaths(List<String> messageProtocolProcessorScanPackagePaths) {
         this.messageProtocolProcessorScanPackagePaths = messageProtocolProcessorScanPackagePaths;
+    }
+
+    public boolean isProxyProtocolEnabled() {
+        return proxyProtocolEnabled;
+    }
+
+    public void setProxyProtocolEnabled(boolean proxyProtocolEnabled) {
+        this.proxyProtocolEnabled = proxyProtocolEnabled;
+    }
+
+    public List<String> getProxyProtocolTrustedProxies() {
+        return proxyProtocolTrustedProxies;
+    }
+
+    public void setProxyProtocolTrustedProxies(List<String> proxyProtocolTrustedProxies) {
+        this.proxyProtocolTrustedProxies = proxyProtocolTrustedProxies;
     }
 
     public int getBossThreads() {

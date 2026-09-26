@@ -3,6 +3,8 @@ package com.ouyunc.message.handler;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.IpUtil;
+import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.message.support.ProxyProtocolTrustSupport;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
@@ -29,6 +31,13 @@ public class EphemeralRemoteClientRealIpHandler extends SimpleChannelInboundHand
     protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
         try {
             if (msg instanceof HAProxyMessage proxyMessage) {
+                if (!ProxyProtocolTrustSupport.isTrustedProxy(
+                        ctx.channel().remoteAddress(),
+                        MessageServerContext.serverProperties().getProxyProtocolTrustedProxies())) {
+                    log.warn("拒绝非可信代理发送的 PROXY Protocol 连接，remote={}", ctx.channel().remoteAddress());
+                    ctx.close();
+                    return;
+                }
                 String clientRealIp = proxyMessage.sourceAddress();
                 if (StringUtils.isNoneBlank(clientRealIp)) {
                     ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_CLIENT_REAL_IP, clientRealIp);
@@ -39,9 +48,14 @@ public class EphemeralRemoteClientRealIpHandler extends SimpleChannelInboundHand
                     pipeline.remove(MessageConstant.HA_PROXY_PROTOCOL_DECODER_HANDLER);
                 }
             } else if (msg instanceof FullHttpRequest request) {
-                String clientRealIp = IpUtil.getIpFromHttpHeaders(request.headers());
-                if (StringUtils.isNoneBlank(clientRealIp)) {
-                    ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_CLIENT_REAL_IP, clientRealIp);
+                // PROXY Protocol 的来源已经通过 TCP 对端校验，不能再被客户端可伪造的 HTTP 头覆盖。
+                String proxyProtocolIp = ChannelAttrUtil.getChannelAttribute(
+                        ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_CLIENT_REAL_IP);
+                if (StringUtils.isBlank(proxyProtocolIp)) {
+                    String clientRealIp = IpUtil.getIpFromHttpHeaders(request.headers());
+                    if (StringUtils.isNoneBlank(clientRealIp)) {
+                        ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_CLIENT_REAL_IP, clientRealIp);
+                    }
                 }
                 ctx.fireChannelRead(request.retain());
             } else if (msg instanceof ByteBuf buf) {

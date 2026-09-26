@@ -36,11 +36,6 @@ public class ProtocolDispatcher extends ByteToMessageDecoder {
         if (in.readableBytes() < 14) {
             return;
         }
-        // 读索引必须从头开始读的，这样才能保证是第一次读取
-        int readerIndex = in.readerIndex();
-        if (readerIndex != 0) {
-            return;
-        }
         ProtocolDispatcherBiProcessor protocolDispatcherProcessor = getProtocolDispatcherProcessor(in);
         // 包含http/https/ws/wss
         if (protocolDispatcherProcessor != null) {

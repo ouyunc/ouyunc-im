@@ -21,6 +21,14 @@ ouyunc:
       certificate: ssl/m.ouyunc.com.pem
       # SSL/TLS 私钥文件路径（使用时需要替换成自己的），注意文件格式为pkcs8，  默认classpath 下的 resource 目录找
       privateKey: ssl/m.ouyunc.com_pkcs8.key
+    # Nginx stream 配置 proxy_protocol on 时开启。开启后所有连接都必须携带 PROXY Protocol 头。
+    proxy-protocol:
+      enabled: true
+      # 默认允许所有代理来源，部署时必须通过安全组、防火墙或容器网络确保服务端口只对 Nginx 开放。
+      # 生产环境获取到固定代理地址后，建议收紧为 Nginx 的具体 IP（/32、/128）或专用代理网段。
+      trusted-proxies:
+        - 0.0.0.0/0
+        - ::/0
     # 日志信息
     log:
       # Netty 管道 LoggingHandler 级别：DEBUG/TRACE 会打完整 ByteBuf hex（极占日志）；生产建议 INFO 或 WARN

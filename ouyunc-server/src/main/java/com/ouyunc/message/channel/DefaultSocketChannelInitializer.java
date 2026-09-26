@@ -6,6 +6,7 @@ import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.SSLUtil;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.dispatcher.ProtocolDispatcher;
+import com.ouyunc.message.handler.EphemeralRemoteClientRealIpHandler;
 import com.ouyunc.message.handler.MessageLoggingHandler;
 import com.ouyunc.message.properties.MessageServerProperties;
 import io.netty.channel.Channel;
@@ -14,6 +15,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.handler.codec.haproxy.HAProxyMessageDecoder;
 import io.netty.handler.ssl.SslHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,19 +39,24 @@ public class DefaultSocketChannelInitializer extends SocketChannelInitializer {
     void initSocketChannel(SocketChannel socketChannel) {
         // 这里只设置协议分发器，具体可参照netty 的源码例子
         ChannelPipeline pipeline = socketChannel.pipeline();
+        MessageServerProperties props = MessageServerContext.serverProperties();
+        // PROXY Protocol 头位于 TLS ClientHello 之前，必须先解析代理头，再进行 TLS 和业务协议识别。
+        if (props != null && props.isProxyProtocolEnabled()) {
+            pipeline.addLast(MessageConstant.HA_PROXY_PROTOCOL_DECODER_HANDLER, new HAProxyMessageDecoder());
+            pipeline.addLast(MessageConstant.REMOTE_CLIENT_REAL_IP_HANDLER, new EphemeralRemoteClientRealIpHandler());
+        }
         // 是否开启SSL/TLS
         if (MessageServerContext.serverProperties().isSslEnable()) {
-            // 这个处理器需要放到第一位
+            // 开启 PROXY Protocol 时 TLS 位于代理头解析之后；未开启时 TLS 仍是首个协议处理器。
             SSLUtil.configSSL(channel -> {
                 SSLEngine sslEngine = SSLUtil.buildServerSslContext(MessageServerContext.serverProperties().getSslCertificate(), MessageServerContext.serverProperties().getSslPrivateKey()).newEngine(channel.alloc());
                 // 服务器端模式，客户端模式设置为true
                 sslEngine.setUseClientMode(MessageConstant.FALSE);
                 // 不需要验证客户端，客户端不设置该项；  SSL/TLS 开启后有多种认证方式：1-不需要认证，2-单向认证（一般是客户端认证），3-双向认证
                 sslEngine.setNeedClientAuth(MessageConstant.FALSE);
-                channel.pipeline().addFirst(MessageConstant.SSL_HANDLER, new SslHandler(sslEngine));
+                channel.pipeline().addLast(MessageConstant.SSL_HANDLER, new SslHandler(sslEngine));
             }, socketChannel);
         }
-        MessageServerProperties props = MessageServerContext.serverProperties();
         if (props == null || props.isNettyPipelineLoggingEnabled()) {
             pipeline.addLast(MessageConstant.LOG_HANDLER, new MessageLoggingHandler(props != null ? props.getLogLevel() : LogLevel.INFO));
         }
