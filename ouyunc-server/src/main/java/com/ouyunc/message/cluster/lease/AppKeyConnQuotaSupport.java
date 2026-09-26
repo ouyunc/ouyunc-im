@@ -41,6 +41,13 @@ public final class AppKeyConnQuotaSupport {
     private AppKeyConnQuotaSupport() {
     }
 
+    /**
+     * 登录路径原子预占：同槽 HASH 上 Lua 求和后再 HINCRBY，成功后增加本机计数。
+     *
+     * @param appKey          租户标识；空白时直接拒绝
+     * @param maxConnections  该 appKey 允许的连接上限
+     * @return true 表示已预占；达到上限、脚本失败或 appKey 空白时返回 false
+     */
     public static boolean tryReserve(String appKey, long maxConnections) {
         if (StringUtils.isBlank(appKey)) {
             return false;
@@ -61,6 +68,13 @@ public final class AppKeyConnQuotaSupport {
         }
     }
 
+    /**
+     * 同步释放一次预占：先减本机计数，再执行释放脚本。
+     * 脚本失败只记日志，本机计数已经减去；下一次心跳 SYNC 会按本机快照把 Redis field 写回。
+     * EventLoop 上的关连钩子应走 {@link #releaseAsync(String)}，不要在 IO 线程直接调用。
+     *
+     * @param appKey 租户标识；空白时忽略
+     */
     public static void release(String appKey) {
         if (StringUtils.isBlank(appKey)) {
             return;
@@ -82,6 +96,8 @@ public final class AppKeyConnQuotaSupport {
     /**
      * 关连钩子跑在 EventLoop 上，Lua 释放必须离开 IO 线程。
      * 提交失败时本机计数已减，下一次心跳 SYNC 会按快照把 Redis field 写回去。
+     *
+     * @param appKey 租户标识；空白时忽略
      */
     public static void releaseAsync(String appKey) {
         if (StringUtils.isBlank(appKey)) {
@@ -96,6 +112,9 @@ public final class AppKeyConnQuotaSupport {
 
     /**
      * 只读求和，供 HTTP 校验。失败时抛给调用方按拒绝处理。
+     *
+     * @param appKey 租户标识；空白时返回 0
+     * @return 各节点 field 的连接数之和；无法解析的脏 field 不计入
      */
     public static long current(String appKey) {
         if (StringUtils.isBlank(appKey)) {
@@ -124,6 +143,8 @@ public final class AppKeyConnQuotaSupport {
      * 租约维护任务：同一时刻仅一个任务执行，Lua 按有限批次走管道，不再占用核心续租路径。
      * 本机字段刷新不依赖快照对象身份；远端字段只有在成员缺失且自身时间戳超过宽限期后才删除。
      * 无本机连接时不扫描整个 Redis；无活节点维护的孤儿 HASH 由原有 TTL 自然回收。
+     *
+     * @param snapshot 当前存活节点租约，用于判断远端 field 是否仍有维护者
      */
     public static void syncAfterHeartbeat(NodeLeaseSnapshot snapshot) {
         Map<String, String> local = LocalNodeConnCounter.snapshot();
