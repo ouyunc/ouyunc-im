@@ -32,7 +32,7 @@ public final class ClusterChannelGuard {
      *
      * @return true 表示已拒绝并关闭连接
      */
-    public static boolean rejectExternalInternalPacket(ChannelHandlerContext ctx, Packet packet) {
+    public static boolean rejectExternalNativeCapability(ChannelHandlerContext ctx, Packet packet) {
         Protocol channelProtocol = ctx.channel().attr(NativePacketProtocol.protocolAttrKey).get();
         if (!isExternalClientProtocol(channelProtocol) || packet == null) {
             return false;

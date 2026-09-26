@@ -36,7 +36,7 @@ public class Convert2PacketHandler extends SimpleChannelInboundHandler<Object> {
                     ctx.close();
                     return;
                 }
-                if (ClusterChannelGuard.rejectExternalInternalPacket(ctx, packet)
+                if (ClusterChannelGuard.rejectExternalNativeCapability(ctx, packet)
                         || ClusterChannelGuard.rejectClientClusterCapability(ctx, packet)) {
                     return;
                 }
