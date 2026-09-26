@@ -1,12 +1,11 @@
-package com.ouyunc.message.cluster;
+package com.ouyunc.core.device;
 
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.model.AppKeyDeviceType;
 import com.ouyunc.base.model.ClientInfo;
-import com.ouyunc.core.device.DeviceTypeRegistry;
-import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.core.context.MessageContext;
 import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RTopic;
 import org.redisson.api.listener.MessageListener;
@@ -42,7 +41,7 @@ public final class AppKeyDeviceTypeSubscriber {
         }
         try {
             if (appKeyListenerId == null) {
-                RTopic appKeyTopic = MessageServerContext.redissonClient.getTopic(MessageConstant.APP_KEY_PUBLISH_TOPIC);
+                RTopic appKeyTopic = MessageContext.redissonClient.getTopic(MessageConstant.APP_KEY_PUBLISH_TOPIC);
                 appKeyListenerId = appKeyTopic.addListener(String.class, new MessageListener<String>() {
                     @Override
                     public void onMessage(CharSequence channel, String msg) {
@@ -51,7 +50,7 @@ public final class AppKeyDeviceTypeSubscriber {
                 });
             }
             if (clientListenerId == null) {
-                RTopic clientTopic = MessageServerContext.redissonClient.getTopic(MessageConstant.CLIENT_INFO_PUBLISH_TOPIC);
+                RTopic clientTopic = MessageContext.redissonClient.getTopic(MessageConstant.CLIENT_INFO_PUBLISH_TOPIC);
                 clientListenerId = clientTopic.addListener(String.class, new MessageListener<String>() {
                     @Override
                     public void onMessage(CharSequence channel, String msg) {
@@ -76,7 +75,7 @@ public final class AppKeyDeviceTypeSubscriber {
         clientListenerId = null;
         try {
             if (appId != null) {
-                MessageServerContext.redissonClient.getTopic(MessageConstant.APP_KEY_PUBLISH_TOPIC)
+                MessageContext.redissonClient.getTopic(MessageConstant.APP_KEY_PUBLISH_TOPIC)
                         .removeListener(appId);
             }
         } catch (Exception e) {
@@ -84,7 +83,7 @@ public final class AppKeyDeviceTypeSubscriber {
         }
         try {
             if (clientId != null) {
-                MessageServerContext.redissonClient.getTopic(MessageConstant.CLIENT_INFO_PUBLISH_TOPIC)
+                MessageContext.redissonClient.getTopic(MessageConstant.CLIENT_INFO_PUBLISH_TOPIC)
                         .removeListener(clientId);
             }
         } catch (Exception e) {
@@ -164,13 +163,13 @@ public final class AppKeyDeviceTypeSubscriber {
             return;
         }
         String cacheKey = CacheConstant.buildLocalClientInfoCacheKey(appKey, identity);
-        Object cached = MessageServerContext.localClientInfoCache.get(cacheKey);
+        Object cached = MessageContext.localClientInfoCache.get(cacheKey);
         if (cached instanceof ClientInfo clientInfo) {
             patchClientInfo(clientInfo, supportDeviceTypes, selfSync);
             return;
         }
-        MessageServerContext.evictLocalClientInfo(appKey, identity);
-        ClientInfo loaded = MessageServerContext.localClientInfo(appKey, identity);
+        MessageContext.evictLocalClientInfo(appKey, identity);
+        ClientInfo loaded = MessageContext.localClientInfo(appKey, identity);
         if (loaded != null) {
             patchClientInfo(loaded, supportDeviceTypes, selfSync);
             return;

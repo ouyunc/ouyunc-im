@@ -11,7 +11,7 @@ import com.ouyunc.core.engine.ReactiveRedisLuaScriptEngine;
 import com.ouyunc.core.listener.EventListener;
 import com.ouyunc.core.listener.MessageEventListener;
 import com.ouyunc.core.listener.event.MessageEvent;
-import com.ouyunc.message.cluster.AppKeyDeviceTypeSubscriber;
+import com.ouyunc.core.device.AppKeyDeviceTypeSubscriber;
 import com.ouyunc.core.relation.RelationCacheSubscriber;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.safety.ContentSafetyRegistry;
