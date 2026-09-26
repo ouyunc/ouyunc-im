@@ -1,4 +1,4 @@
-package com.ouyunc.message.helper;
+package com.ouyunc.core.exception;
 
 /**
  * 外部渠道 Kafka 在确认超时或失败时抛出。调用方不得把这次投递回成受理成功。

@@ -8,6 +8,7 @@ import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
+import com.ouyunc.core.exception.ExternalDeliveryConfirmException;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.repository.DefaultRepository;
 import org.apache.commons.collections4.CollectionUtils;

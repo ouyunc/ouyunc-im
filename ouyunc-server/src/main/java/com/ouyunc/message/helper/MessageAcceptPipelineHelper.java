@@ -6,6 +6,7 @@ import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqArchiveRouting;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.packet.Packet;
+import com.ouyunc.core.exception.ExternalDeliveryConfirmException;
 import com.ouyunc.message.safety.ContentSafetyIngress;
 import com.ouyunc.repository.DefaultRepository;
 import com.ouyunc.repository.ArchiveClaimResult;

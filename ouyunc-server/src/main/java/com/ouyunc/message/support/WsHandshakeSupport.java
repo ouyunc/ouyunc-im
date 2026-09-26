@@ -1,4 +1,4 @@
-package com.ouyunc.message.protocol;
+package com.ouyunc.message.support;
 
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.NumberConstant;
@@ -11,6 +11,7 @@ import com.ouyunc.message.handler.AuthenticationHandler;
 import com.ouyunc.message.handler.Convert2PacketHandler;
 import com.ouyunc.message.handler.ExceptionHandler;
 import com.ouyunc.message.handler.PacketHandler;
+import com.ouyunc.message.protocol.NativePacketProtocol;
 import com.ouyunc.message.validator.AppKeyValidator;
 import com.ouyunc.message.validator.LoginAuthValidator;
 import io.netty.channel.Channel;

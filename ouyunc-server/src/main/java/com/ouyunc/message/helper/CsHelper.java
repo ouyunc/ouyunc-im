@@ -21,6 +21,7 @@ import com.ouyunc.base.utils.AppKeyUtil;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.utils.QosClaimIdentities;
 import com.ouyunc.base.utils.TimeUtil;
+import com.ouyunc.core.exception.ExternalDeliveryConfirmException;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.properties.MessageServerProperties;
 import com.ouyunc.repository.DefaultRepository;

@@ -8,7 +8,7 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.core.processor.BiProcessor;
 import com.ouyunc.core.qos.Qos;
-import com.ouyunc.message.helper.ExternalDeliveryConfirmException;
+import com.ouyunc.core.exception.ExternalDeliveryConfirmException;
 import com.ouyunc.message.helper.MessageSendResultHelper;
 import com.ouyunc.repository.DefaultRepository;
 import com.ouyunc.repository.Repository;

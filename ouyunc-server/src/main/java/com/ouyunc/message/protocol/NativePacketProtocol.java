@@ -14,6 +14,7 @@ import com.ouyunc.message.handler.*;
 import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.helper.PacketChannelWriter;
 import com.ouyunc.message.http.HttpRequestDispatcher;
+import com.ouyunc.message.support.WsHandshakeSupport;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
