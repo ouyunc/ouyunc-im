@@ -6,7 +6,7 @@ import com.ouyunc.core.listener.EventListener;
 import com.ouyunc.core.listener.MessageEventListener;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.message.cluster.AppKeyDeviceTypeSubscriber;
-import com.ouyunc.message.cluster.RelationCacheSubscriber;
+import com.ouyunc.core.relation.RelationCacheSubscriber;
 import com.ouyunc.message.cluster.lease.NodeLeaseKeeper;
 import com.ouyunc.message.http.HttpRequestDispatcher;
 import com.ouyunc.message.monitor.MonitorInitializer;

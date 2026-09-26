@@ -2,7 +2,6 @@ package com.ouyunc.message.cluster.client;
 
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.executor.ThreadPoolManager;
-import com.ouyunc.message.cluster.ClusterBootstrap;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.thread.MessageClusterSynAckThread;
 import org.slf4j.Logger;

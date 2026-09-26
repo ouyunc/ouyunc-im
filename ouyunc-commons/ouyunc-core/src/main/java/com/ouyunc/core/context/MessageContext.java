@@ -25,6 +25,8 @@ import com.ouyunc.id.IdGenerator;
 import io.netty.util.internal.ThreadLocalRandom;
 import org.apache.commons.lang3.StringUtils;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.redisson.api.RedissonClient;
+import org.redisson.api.RedissonReactiveClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,6 +39,19 @@ import java.util.concurrent.TimeUnit;
  **/
 public class MessageContext {
     private static final Logger log = LoggerFactory.getLogger(MessageContext.class);
+
+
+    /**
+     * 分布式锁redisson
+     */
+    public static final RedissonClient redissonClient = CacheFactory.REDISSON.instance();
+
+
+    /**
+     * 响应式分布式锁redisson
+     */
+    public static RedissonReactiveClient reactiveRedissonClient = CacheFactory.REACTIVE_REDISSON.instance();
+
 
 
     /**

@@ -1,9 +1,9 @@
-package com.ouyunc.message.cluster;
+package com.ouyunc.core.relation;
 
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.model.RelationCacheInvalidateEvent;
-import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.core.context.MessageContext;
 import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RTopic;
 import org.redisson.api.listener.MessageListener;
@@ -31,7 +31,7 @@ public final class RelationCacheSubscriber {
             return;
         }
         try {
-            RTopic topic = MessageServerContext.redissonClient.getTopic(
+            RTopic topic = MessageContext.redissonClient.getTopic(
                     CacheConstant.RELATION_CACHE_INVALIDATE_CHANNEL);
             listenerId = topic.addListener(String.class, new MessageListener<String>() {
                 @Override
@@ -63,7 +63,7 @@ public final class RelationCacheSubscriber {
             return;
         }
         try {
-            MessageServerContext.redissonClient.getTopic(CacheConstant.RELATION_CACHE_INVALIDATE_CHANNEL)
+            MessageContext.redissonClient.getTopic(CacheConstant.RELATION_CACHE_INVALIDATE_CHANNEL)
                     .removeListener(id);
         } catch (Exception e) {
             log.warn("停止关系本机缓存订阅异常: {}", e.getMessage());

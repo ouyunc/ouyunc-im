@@ -1,8 +1,7 @@
-package com.ouyunc.message.cluster;
+package com.ouyunc.core.relation;
 
 import com.ouyunc.base.constant.enums.RelationCacheInvalidateKind;
 import com.ouyunc.base.model.RelationCacheInvalidateEvent;
-import com.ouyunc.core.relation.RelationLocalCache;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

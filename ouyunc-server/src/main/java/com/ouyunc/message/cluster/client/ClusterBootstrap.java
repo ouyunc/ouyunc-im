@@ -1,4 +1,4 @@
-package com.ouyunc.message.cluster;
+package com.ouyunc.message.cluster.client;
 
 import com.ouyunc.message.cluster.routing.ClusterNextHopSelector;
 import com.ouyunc.message.cluster.routing.ClusterRoutingMode;

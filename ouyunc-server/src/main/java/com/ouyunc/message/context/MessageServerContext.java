@@ -92,19 +92,6 @@ public class MessageServerContext extends MessageContext {
     public static final Cache<String, LoginClientInfo> remoteLoginClientInfoCache = new RedisDistributedCache<>(CacheFactory.REDIS.instance(), CacheFactory.STRING_REDIS.instance());
 
 
-    /**
-     * 分布式锁redisson
-     */
-    public static final RedissonClient redissonClient = CacheFactory.REDISSON.instance();
-
-
-    /**
-     * 响应式分布式锁redisson
-     */
-    public static RedissonReactiveClient reactiveRedissonClient = CacheFactory.REACTIVE_REDISSON.instance();
-
-
-
 
     // ================================================================local=====================================
 

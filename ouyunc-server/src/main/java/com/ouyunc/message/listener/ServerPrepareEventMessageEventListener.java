@@ -12,7 +12,7 @@ import com.ouyunc.core.listener.EventListener;
 import com.ouyunc.core.listener.MessageEventListener;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.message.cluster.AppKeyDeviceTypeSubscriber;
-import com.ouyunc.message.cluster.RelationCacheSubscriber;
+import com.ouyunc.core.relation.RelationCacheSubscriber;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.safety.ContentSafetyRegistry;
 import com.ouyunc.repository.DefaultRepository;
