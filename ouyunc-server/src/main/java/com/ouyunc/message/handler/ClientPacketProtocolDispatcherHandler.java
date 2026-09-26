@@ -7,7 +7,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
 /**
- * OUYUNC_CLIENT 首包后安装客户端业务管道（与集群 {@link PacketProtocolDispatcherHandler} 分离）。
+ * OUYUNC_CLIENT 首包后安装客户端业务管道（与集群 {@link ClusterPacketProtocolDispatcherHandler} 分离）。
  */
 public class ClientPacketProtocolDispatcherHandler extends SimpleChannelInboundHandler<Packet> {
 

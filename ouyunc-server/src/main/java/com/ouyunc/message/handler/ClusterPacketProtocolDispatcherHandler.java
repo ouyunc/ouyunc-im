@@ -8,10 +8,10 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
 /**
- * @Author fzx
- * @Description: packet 协议调度处理器
- **/
-public class PacketProtocolDispatcherHandler extends SimpleChannelInboundHandler<Packet> {
+ * 集群 OUYUNC 认证通过后，按协议号交给集群业务管道。
+ * 客户端原生包见 {@link ClientPacketProtocolDispatcherHandler}。
+ */
+public class ClusterPacketProtocolDispatcherHandler extends SimpleChannelInboundHandler<Packet> {
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Packet packet) throws Exception {

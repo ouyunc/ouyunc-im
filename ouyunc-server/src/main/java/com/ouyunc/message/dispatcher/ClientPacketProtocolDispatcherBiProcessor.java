@@ -15,7 +15,7 @@ import java.nio.ByteOrder;
 
 /**
  * 客户端原生 Packet（protocol=OUYUNC_CLIENT）：复用 Packet 编解码，不走集群 HMAC/路由。
- * <p>与 {@link PacketProtocolDispatcherBiProcessor} 共用魔数，靠首包协议号分流。</p>
+ * <p>与 {@link ClusterPacketProtocolDispatcherBiProcessor} 共用魔数，靠首包协议号分流。</p>
  */
 public class ClientPacketProtocolDispatcherBiProcessor implements ProtocolDispatcherBiProcessor {
     private static final Logger log = LoggerFactory.getLogger(ClientPacketProtocolDispatcherBiProcessor.class);

@@ -7,7 +7,7 @@ import com.ouyunc.message.cluster.auth.ClusterAuthentication;
 import com.ouyunc.message.cluster.auth.ClusterAuthConstant;
 import com.ouyunc.message.cluster.auth.ClusterAuthFrameDecoder;
 import com.ouyunc.message.context.MessageServerContext;
-import com.ouyunc.message.handler.PacketProtocolDispatcherHandler;
+import com.ouyunc.message.handler.ClusterPacketProtocolDispatcherHandler;
 import com.ouyunc.message.properties.MessageServerProperties;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -18,8 +18,8 @@ import org.slf4j.LoggerFactory;
  * 集群原生 Packet（protocol=OUYUNC）：HMAC 认证后走集群路由。
  * 客户端原生包见 {@link ClientPacketProtocolDispatcherBiProcessor}。
  */
-public class PacketProtocolDispatcherBiProcessor implements ProtocolDispatcherBiProcessor {
-    private static final Logger log = LoggerFactory.getLogger(PacketProtocolDispatcherBiProcessor.class);
+public class ClusterPacketProtocolDispatcherBiProcessor implements ProtocolDispatcherBiProcessor {
+    private static final Logger log = LoggerFactory.getLogger(ClusterPacketProtocolDispatcherBiProcessor.class);
 
     @Override
     public boolean match(ByteBuf in) {
@@ -45,7 +45,7 @@ public class PacketProtocolDispatcherBiProcessor implements ProtocolDispatcherBi
                 .addLast(ClusterAuthConstant.HANDLER_NAME,
                         new ClusterAuthentication.ServerHandler(properties.getClusterSecret(), properties.getLocalServerAddress()))
                 // packet 协议分发处理器
-                .addLast(MessageConstant.PACKET_DISPATCHER_HANDLER, new PacketProtocolDispatcherHandler());
+                .addLast(MessageConstant.PACKET_DISPATCHER_HANDLER, new ClusterPacketProtocolDispatcherHandler());
 
         // 移除协议分发器
         ctx.pipeline().remove(MessageConstant.PROTOCOL_DISPATCHER_HANDLER);
