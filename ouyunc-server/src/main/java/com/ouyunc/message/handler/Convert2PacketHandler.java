@@ -43,7 +43,7 @@ public class Convert2PacketHandler extends SimpleChannelInboundHandler<Object> {
                         || ClusterChannelGuard.rejectClientClusterCapability(ctx, packet)) {
                     return;
                 }
-                retainTrustedAfterGuard(ctx, packet);
+                packetFormat(ctx, packet);
                 ctx.fireChannelRead(packet);
                 return;
             }
@@ -54,9 +54,9 @@ public class Convert2PacketHandler extends SimpleChannelInboundHandler<Object> {
 
 
     /**
-     * Guard 通过后：外部连接只保留服务端在转换阶段写入的字段。
+     * 格式化packet, Guard 通过后：外部连接只保留服务端在转换阶段写入的字段。
      */
-    private void retainTrustedAfterGuard(ChannelHandlerContext ctx, Packet packet) {
+    private void packetFormat(ChannelHandlerContext ctx, Packet packet) {
         if (ctx == null || packet == null || packet.getMessage() == null) {
             return;
         }
