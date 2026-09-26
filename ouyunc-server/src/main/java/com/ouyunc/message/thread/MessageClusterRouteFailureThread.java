@@ -33,9 +33,8 @@ public class MessageClusterRouteFailureThread implements Runnable {
         log.warn("获取不到可用的服务连接！packetId: {},开始进行重试...", packet.getPacketId());
         Metadata metadata = packet.getMessage().getMetadata();
         int currentRetry = metadata.getClusterRoute().getCurrentRetry();
-        currentRetry++;
         // 清空消息中的列表，添加重试次数+1
-        metadata.getClusterRoute().setCurrentRetry(currentRetry);
+        metadata.getClusterRoute().setCurrentRetry(currentRetry++);
         metadata.getClusterRoute().setFromServerAddress(null);
         metadata.getClusterRoute().setRoutingTables(null);
         // targetSocketAddress 不改变
