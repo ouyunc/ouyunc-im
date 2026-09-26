@@ -41,17 +41,17 @@ public final class ClusterChannelGuard {
         boolean clusterOrNativeClientProtocol = isClusterOrClientNativeProtocol(packet.getProtocol());
         boolean clusterForward = metadata != null && !metadata.isLocalIngress();
         boolean clusterType = isInternalClusterMessage(packet);
-        if (!clusterOrNativeClientProtocol && !clusterForward && !clusterType) {
-            return false;
+        if (clusterOrNativeClientProtocol || clusterForward || clusterType) {
+            log.warn("外部协议连接投递内部/原生能力包，关闭连接 remote={} channelProtocol={} packetProtocol={} forwardMode={} clusterType={}",
+                    ctx.channel().remoteAddress(),
+                    channelProtocol.getProtocol(),
+                    packet.getProtocol(),
+                    metadata == null ? null : metadata.getClusterRoute().getClusterForwardMode(),
+                    clusterType);
+            ctx.close();
+            return true;
         }
-        log.warn("外部协议连接投递内部/原生能力包，关闭连接 remote={} channelProtocol={} packetProtocol={} forwardMode={} clusterType={}",
-                ctx.channel().remoteAddress(),
-                channelProtocol.getProtocol(),
-                packet.getProtocol(),
-                metadata == null ? null : metadata.getClusterRoute().getClusterForwardMode(),
-                clusterType);
-        ctx.close();
-        return true;
+        return false;
     }
 
     /**
@@ -71,16 +71,16 @@ public final class ClusterChannelGuard {
                 || packet.getProtocolVersion() != ProtocolTypeEnum.OUYUNC_CLIENT.getProtocolVersion();
         boolean clusterForward = metadata != null && !metadata.isLocalIngress();
         boolean clusterType = isInternalClusterMessage(packet);
-        if (!protocolMismatch && !clusterForward && !clusterType) {
-            return false;
+        if (protocolMismatch || clusterForward || clusterType) {
+            log.warn("OUYUNC_CLIENT 连接使用非法能力，关闭连接 remote={} packetProtocol={} forwardMode={} clusterType={}",
+                    ctx.channel().remoteAddress(),
+                    packet.getProtocol(),
+                    metadata == null ? null : metadata.getClusterRoute().getClusterForwardMode(),
+                    clusterType);
+            ctx.close();
+            return true;
         }
-        log.warn("OUYUNC_CLIENT 连接使用非法能力，关闭连接 remote={} packetProtocol={} forwardMode={} clusterType={}",
-                ctx.channel().remoteAddress(),
-                packet.getProtocol(),
-                metadata == null ? null : metadata.getClusterRoute().getClusterForwardMode(),
-                clusterType);
-        ctx.close();
-        return true;
+        return false;
     }
 
     /**
