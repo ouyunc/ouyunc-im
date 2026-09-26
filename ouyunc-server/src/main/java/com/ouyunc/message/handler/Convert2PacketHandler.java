@@ -1,12 +1,15 @@
 package com.ouyunc.message.handler;
 
 import com.ouyunc.base.exception.MessageException;
+import com.ouyunc.base.model.Metadata;
+import com.ouyunc.base.model.Protocol;
 import com.ouyunc.base.packet.Packet;
+import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.PacketVerifier;
 import com.ouyunc.message.cluster.auth.ClusterChannelGuard;
 import com.ouyunc.message.context.MessageServerContext;
-import com.ouyunc.message.convert.ExternalIngressMetadata;
 import com.ouyunc.message.convert.PacketConverter;
+import com.ouyunc.message.protocol.NativePacketProtocol;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import org.slf4j.Logger;
@@ -40,7 +43,7 @@ public class Convert2PacketHandler extends SimpleChannelInboundHandler<Object> {
                         || ClusterChannelGuard.rejectClientClusterCapability(ctx, packet)) {
                     return;
                 }
-                ExternalIngressMetadata.retainTrustedAfterGuard(ctx, packet);
+                retainTrustedAfterGuard(ctx, packet);
                 ctx.fireChannelRead(packet);
                 return;
             }
@@ -50,5 +53,33 @@ public class Convert2PacketHandler extends SimpleChannelInboundHandler<Object> {
     }
 
 
+    /**
+     * Guard 通过后：外部连接只保留服务端在转换阶段写入的字段。
+     */
+    private void retainTrustedAfterGuard(ChannelHandlerContext ctx, Packet packet) {
+        if (ctx == null || packet == null || packet.getMessage() == null) {
+            return;
+        }
+        Protocol channelProtocol = ctx.channel().attr(NativePacketProtocol.protocolAttrKey).get();
+        if (channelProtocol == null
+                || channelProtocol.getProtocol() == NativePacketProtocol.OUYUNC.getProtocol()) {
+            return;
+        }
+        Message message = packet.getMessage();
+        Metadata incoming = message.getMetadataOrNull();
+        if (incoming != null && !incoming.isLocalIngress()) {
+            // Guard 应已拒绝；不在此处清掉标记，避免掩盖漏检。
+            return;
+        }
+        Metadata trusted = new Metadata();
+        if (incoming != null) {
+            trusted.getIngress().setAppKey(incoming.getIngress().getAppKey());
+            trusted.getIngress().setClientIp(incoming.getIngress().getClientIp());
+            trusted.getIngress().setOriginServerAddress(incoming.getIngress().getOriginServerAddress());
+            trusted.getIngress().setServerTime(incoming.getIngress().getServerTime());
+            trusted.getIngress().setIngressSource(incoming.getIngress().getIngressSource());
+        }
+        message.setMetadata(trusted);
+    }
 
 }
