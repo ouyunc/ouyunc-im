@@ -15,11 +15,7 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.packet.message.content.ServerNotifyContent;
 import com.ouyunc.base.serialize.Serializer;
-import com.ouyunc.base.utils.ChannelAttrUtil;
-import com.ouyunc.base.utils.IdentityUtil;
-import com.ouyunc.base.utils.ImRouteCodec;
-import com.ouyunc.base.utils.ImSessionPresence;
-import com.ouyunc.base.utils.TimeUtil;
+import com.ouyunc.base.utils.*;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.cache.distributed.redis.RedisPipelineSupport;
 import com.ouyunc.core.context.MessageContext;
@@ -32,7 +28,6 @@ import com.ouyunc.message.protocol.NativePacketProtocol;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.EventLoop;
-import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RLock;
 import org.slf4j.Logger;
@@ -347,7 +342,7 @@ public class ClientHelper {
      * 解绑/回滚抢锁失败会重试，避免幽灵 ONLINE。须在业务线程池调用，禁止 EventLoop。
      * 使用 watchdog 续期，禁止固定 5s lease。
      */
-    public static boolean tryRunWithBindLock(String appKey, String comboIdentity, BindLockAction action) {
+    public static boolean tryRunWithBindLock(String appKey, String comboIdentity, Runnable action) {
         RLock lock = MessageServerContext.redissonClient.getLock(
                 CacheConstant.buildIdentityBindOrUnbindLockCacheKey(appKey, comboIdentity));
         for (int attempt = 1; attempt <= MessageConstant.BIND_LOCK_RETRY_TIMES; attempt++) {
@@ -376,10 +371,6 @@ public class ClientHelper {
         return false;
     }
 
-    @FunctionalInterface
-    public interface BindLockAction {
-        void run();
-    }
 
     /***
      * @author fzx
