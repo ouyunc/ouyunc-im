@@ -20,6 +20,8 @@ class Socket {
     };
     static MESSAGE_CONTENT_TYPES = {
         HEARTBEAT: -1,
+        LOGIN_FAIL: -3,
+        LOGIN_SUCCESS: -4,
         QOS_ACK_CONTENT: -11,
         TEXT_CONTENT: -128,
     };
@@ -39,7 +41,7 @@ class Socket {
     static DEFAULT_CONFIG = {
         clientType: 1, // 1-web, 2-uniapp
         Message: null, // protobuf Message 对象
-        deviceType: 0,
+        deviceType: 11, // DeviceTypeEnum.PC；0 已废弃，未读/已读位点会对不上
         networkType: 0,
         encryptType: 0,
         serializeAlgorithm: 6, // 6-protobuf, 2-json
@@ -112,9 +114,9 @@ class Socket {
                 this.webSocket.send({data: wrappedMessage.buffer});
             }
 
-            // 处理登录消息
+            // 只记住本次登录身份。心跳必须等服务端登录成功回包，否则未进注册表时 ping 没有 pong。
             if (messageType === Socket.MESSAGE_TYPES.LOGIN) {
-                this._handleLoginSuccess(message);
+                this._pendingLoginIdentity = this._identityOf(message);
             }
             return wrappedMessage.packet;
         } catch (error) {
@@ -124,21 +126,49 @@ class Socket {
     }
 
     /**
-     * 关闭连接
+     * 关闭连接。默认是用户主动断开，后续不再重连。
+     * 心跳判死传 {allowReconnect:true}：保留 loginIdentity，并通知业务层补连。
+     * @param {{ allowReconnect?: boolean }} [options]
      */
-    close() {
-        console.log('Closing WebSocket connection...');
-        this.config.reconnect.enable = false; // 禁用重连
-        this.heartbeatManager.stop();
-        this.reconnectManager.stop();
-
-        if (this.webSocket) {
-            this.webSocket.close();
-            this.webSocket = null;
+    close(options = {}) {
+        const allowReconnect = !!options.allowReconnect;
+        console.log('Closing WebSocket connection...', allowReconnect ? '(allow reconnect)' : '');
+        if (!allowReconnect) {
+            this.config.reconnect.enable = false;
+            this.reconnectManager.stop();
+            this.loginIdentity = '';
+            this._pendingLoginIdentity = '';
         }
+        this.heartbeatManager.stop();
 
+        const ws = this.webSocket;
+        this.webSocket = null;
         this.connected = false;
-        this.loginIdentity = '';
+        if (ws) {
+            try {
+                // 摘掉原生回调，避免和下面的主动通知各走一遍；半开连接上 close 也不一定触发 onclose
+                ws.onopen = null;
+                ws.onmessage = null;
+                ws.onerror = null;
+                ws.onclose = null;
+                ws.close();
+            } catch (_) {
+                /* ignore */
+            }
+        }
+        if (allowReconnect) {
+            try {
+                this.onclose?.({
+                    type: 'close',
+                    code: 4000,
+                    reason: 'client-declare-dead',
+                    wasClean: false,
+                });
+            } catch (_) {
+                /* ignore */
+            }
+        }
+        this._handleConnectionClosed();
     }
 
     // =============== 私有方法 ===============
@@ -188,6 +218,20 @@ class Socket {
      * 初始化WebSocket连接
      */
     _initWebSocket() {
+        // 先丢掉旧 socket，避免重连时两条连接并存，同 identity 互踢
+        if (this.webSocket) {
+            const old = this.webSocket;
+            this.webSocket = null;
+            try {
+                old.onopen = null;
+                old.onmessage = null;
+                old.onerror = null;
+                old.onclose = null;
+                old.close();
+            } catch (_) {
+                /* ignore */
+            }
+        }
         if (this.config.clientType === 1) {
             this.webSocket = new WebSocket(this.url);
             this._bindWebSocketEvents(this.webSocket);
@@ -214,9 +258,7 @@ class Socket {
         ws.onmessage = async (e) => {
             try {
                 const message = await this._parseMessage(e.data);
-                this._handleQosReceived(message);
-                this.heartbeatManager.reset();
-                this.onmessage?.(message);
+                this._acceptInbound(message);
             } catch (error) {
                 console.error('Failed to parse message:', error);
             }
@@ -250,9 +292,7 @@ class Socket {
         ws.onMessage(async (res) => {
             try {
                 const message = await this._parseMessage(res.data);
-                this._handleQosReceived(message);
-                this.heartbeatManager.reset();
-                this.onmessage?.(message);
+                this._acceptInbound(message);
             } catch (error) {
                 console.error('Failed to parse message:', error);
             }
@@ -350,18 +390,67 @@ class Socket {
     }
 
     /**
-     * 处理登录成功
+     * 入站顺序：登录成功才开心跳，先交给业务，再发 C2S ACK。
+     * 先 ACK 再回调时，监听还没绑上就无法补推。
      */
-    _handleLoginSuccess(message) {
-        const content = typeof message.content === 'string' ?
-            JSON.parse(message.content) : message.content;
+    _acceptInbound(packet) {
+        this._noteLoginAck(packet);
+        this.heartbeatManager.reset();
+        this.onmessage?.(packet);
+        this._handleQosReceived(packet);
+    }
 
-        this.loginIdentity = content.identity;
+    /**
+     * 服务端登录成功回包（messageType=LOGIN 且 contentType=-4）后启动心跳。
+     */
+    _noteLoginAck(packet) {
+        if (!packet || packet.messageType !== Socket.MESSAGE_TYPES.LOGIN) {
+            return;
+        }
+        const message = packet.message;
+        if (!message || Number(message.contentType) !== Socket.MESSAGE_CONTENT_TYPES.LOGIN_SUCCESS) {
+            return;
+        }
+        this.markLoggedIn(this._identityOf(message) || this._pendingLoginIdentity);
+    }
+
+    /**
+     * 登录成功后调用：记下 identity 并启动心跳。
+     * @param {string} [identity]
+     */
+    markLoggedIn(identity) {
+        if (identity) {
+            this.loginIdentity = String(identity);
+        }
         console.log(`Client ${this.loginIdentity} logged in successfully`);
-
         if (this.config.heartbeat.enable) {
             this.heartbeatManager.start();
         }
+    }
+
+    /**
+     * 兼容旧调用。请等服务端登录成功后再调，或直接使用 markLoggedIn。
+     */
+    _handleLoginSuccess(message) {
+        this.markLoggedIn(this._identityOf(message));
+    }
+
+    _identityOf(message) {
+        if (!message) {
+            return '';
+        }
+        let content = message.content;
+        if (typeof content === 'string' && content) {
+            try {
+                content = JSON.parse(content);
+            } catch (_) {
+                content = null;
+            }
+        }
+        if (content && content.identity) {
+            return String(content.identity);
+        }
+        return message.from ? String(message.from) : '';
     }
 
 
@@ -397,7 +486,7 @@ class Socket {
         //     // 生成64位二进制消息ID
         //     binaryMessageId = this._generateBinaryMessageId();
         // }
-        // message 是否存在messageId,如果不存在则使用雪花id给定
+        // 客户端 messageId（Message.id）。包头 packetId 由服务端覆盖生成，这里保持 0。
         message.id = message.id || this.snowflake.nextIdStr();
         // 序列化消息内容
         const messageData = this._serializeMessage(message, serializeAlgorithm);
@@ -416,10 +505,7 @@ class Socket {
         headerView.setInt8(offset++, 1); // 协议版本
         headerView.setInt8(offset++, 1); // 协议类型
 
-        // 服务端 PacketVerifier 拒绝 packetId <= 0，这里写入雪花 ID（大端 8 字节）。
-        const packetId = BigInt(this.snowflake.nextIdStr());
-        headerView.setUint32(offset, Number((packetId >> 32n) & 0xffffffffn));
-        headerView.setUint32(offset + 4, Number(packetId & 0xffffffffn));
+        // 跳过 packetId。WebSocket 入站后服务端会写成自己的主键，客户端这 8 字节保持 0。
         offset += 8;
 
         // 写入其他字段
@@ -444,7 +530,6 @@ class Socket {
                 magic: Socket.MAGIC,
                 protocol: Socket.PROTOCOL,
                 protocolVersion: Socket.PROTOCOL_VERSION,
-                packetId: packetId.toString(),
                 deviceType: deviceType,
                 networkType: networkType,
                 encryptType: encryptType,
@@ -572,7 +657,10 @@ class Socket {
                 ref: message.getRefList(),
                 qos: message.getQos(),
                 extra: message.getExtra(),
-                createTime: message.getCreateTime()
+                createTime: message.getCreateTime(),
+                correlationId: typeof message.getCorrelationId === 'function'
+                    ? message.getCorrelationId()
+                    : undefined,
             };
         } else if (algorithm === 2) { // JSON
             return JSON.parse(Socket.DECODER.decode(buffer), function (key, value) {
@@ -685,21 +773,28 @@ class HeartbeatManager {
             this._waitForResponse();
         } catch (error) {
             console.error('Failed to send heartbeat:', error);
+            this._declareDead('heartbeat send failed');
         }
     }
 
     /**
-     * 等待心跳响应
+     * 偶发丢 pong 靠 maxWait 容错；连续失败则关掉半开连接。
+     * allowReconnect 会保留 loginIdentity。reconnect.enable 为 false 时由业务层自己补连。
      */
     _waitForResponse() {
         clearTimeout(this.timeoutId);
         this.timeoutId = setTimeout(() => {
             this.retryCount++;
             if (this.retryCount >= this.socket.config.heartbeat.maxWait) {
-                console.log('Heartbeat timeout, closing connection...');
-                this.socket.close();
+                this._declareDead('pong missing x' + this.retryCount);
             }
         }, this.socket.config.heartbeat.timeout);
+    }
+
+    _declareDead(reason) {
+        console.warn('Heartbeat dead, closing connection:', reason);
+        this.stop();
+        this.socket.close({allowReconnect: true});
     }
 }
 

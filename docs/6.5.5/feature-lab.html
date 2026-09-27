@@ -242,7 +242,7 @@ document.getElementById('btnConnect').onclick = () => {
         setStatus('已连接，正在登录');
         log('·', 'WebSocket 已打开，发送登录');
         const packet = socket.send(loginPacket());
-        log('发', `登录 id=${packet.message.id} packetId=${packet.packetId}`);
+        log('发', `登录 messageId=${packet.message.id}`);
     };
     socket.onmessage = (packet) => {
         const message = packet.message || {};
