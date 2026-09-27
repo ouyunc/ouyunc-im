@@ -154,7 +154,7 @@ public class ClientHelper {
             if (remote != null
                     && loginClientInfo.getLoginServerAddress().equals(remote.getLoginServerAddress())
                     && remote.getLastLoginTime() == loginClientInfo.getLastLoginTime()) {
-                LoginSessionDirectory.unbind(loginClientInfo, comboIdentity);
+                LoginSessionDirectoryHelper.unbind(loginClientInfo, comboIdentity);
             }
         })) {
             log.error("客户端: {} 关闭回滚获取锁失败", loginClientInfo);
@@ -316,7 +316,7 @@ public class ClientHelper {
                                 comboIdentity, previous.getLastLoginTime(), loginClientInfo.getLastLoginTime());
                         throw new MessageException("登录绑定失败：已有更新会话");
                     }
-                    LoginSessionDirectory.bind(loginClientInfo, comboIdentity);
+                    LoginSessionDirectoryHelper.bind(loginClientInfo, comboIdentity);
                     return previous;
                 } finally {
                     if (lock.isHeldByCurrentThread()) {
@@ -430,7 +430,7 @@ public class ClientHelper {
             String identity = orderedIdentities.get(index);
             Object row = routeRows == null || index >= routeRows.size() ? null : routeRows.get(index);
             Map<?, ?> route = row instanceof Map<?, ?> map ? map : Map.of();
-            LoginSessionDirectory.evictDeadRoute(appKey, identity, route, leaseSnapshot);
+            LoginSessionDirectoryHelper.evictDeadRoute(appKey, identity, route, leaseSnapshot);
             Set<String> remoteCombos = new HashSet<>();
             for (Byte deviceType : ImSessionPresence.liveDeviceTypes(route, liveEpochs)) {
                 String comboId = IdentityUtil.generalComboIdentity(appKey, identity, deviceType);

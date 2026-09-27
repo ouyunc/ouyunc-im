@@ -16,15 +16,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
 /** ACK 过载缓冲：EventLoop 只尝试非阻塞准入，不执行鉴权、Redis 或业务处理。 */
-public final class QosAckBackpressure {
-    private static final Logger log = LoggerFactory.getLogger(QosAckBackpressure.class);
+public final class QosAckBackpressureHelper {
+    private static final Logger log = LoggerFactory.getLogger(QosAckBackpressureHelper.class);
     private static final Semaphore PENDING = new Semaphore(QosControlConstant.MAX_PENDING_ACKS);
     private static final AttributeKey<Semaphore> LOCAL = AttributeKey.valueOf("qos.ack.pending");
     /** 同一连接上相同 packetId 的等待 ACK 合并；不能按用户合并，否则会吞掉其他设备的重发取消。 */
     private static final AttributeKey<ConcurrentHashMap<Long, Boolean>> WAITING =
             AttributeKey.valueOf("qos.ack.waiting.packets");
 
-    private QosAckBackpressure() { }
+    private QosAckBackpressureHelper() { }
 
     /** 与 QosAckDispatcher 配合使用；保留原始 ACK 校验，不因缓冲而跳过权限检查。 */
     public static void execute(Channel channel, long packetId, Supplier<CompletionStage<Void>> task) {

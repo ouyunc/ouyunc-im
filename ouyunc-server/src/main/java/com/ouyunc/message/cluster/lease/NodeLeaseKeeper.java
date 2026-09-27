@@ -9,7 +9,7 @@ import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.cache.distributed.redis.RedisPipelineSupport;
 import com.ouyunc.message.context.MessageServerContext;
-import com.ouyunc.message.helper.LoginSessionDirectory;
+import com.ouyunc.message.helper.LoginSessionDirectoryHelper;
 import com.ouyunc.message.schedule.ScheduleTimer;
 import com.ouyunc.message.schedule.TimerTaskWrapper;
 import org.apache.commons.lang3.StringUtils;
@@ -367,7 +367,7 @@ public final class NodeLeaseKeeper {
     private static void maintainDirectory(LeaseRun run) {
         run.directoryMaintenanceLock.lock();
         try {
-            if (current == run && LoginSessionDirectory.renewLocalLoginTtls()) {
+            if (current == run && LoginSessionDirectoryHelper.renewLocalLoginTtls()) {
                 run.lastDirectorySuccessNanos = System.nanoTime();
             }
         } catch (Exception e) {

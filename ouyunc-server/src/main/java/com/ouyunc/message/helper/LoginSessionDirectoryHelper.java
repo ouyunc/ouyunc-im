@@ -31,9 +31,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * 同 identity 槽原子写路由 HASH + 登录 String。连接计数不在本类，见 {@link com.ouyunc.message.cluster.lease.LocalNodeConnCounter}。
  */
-public final class LoginSessionDirectory {
+public final class LoginSessionDirectoryHelper {
 
-    private static final Logger log = LoggerFactory.getLogger(LoginSessionDirectory.class);
+    private static final Logger log = LoggerFactory.getLogger(LoginSessionDirectoryHelper.class);
 
     private static final RedisTemplate<String, Object> redisTemplate = CacheFactory.REDIS.instance();
 
@@ -119,7 +119,7 @@ public final class LoginSessionDirectory {
 
     private static final int LOGIN_TTL_RENEW_BATCH = 200;
 
-    private LoginSessionDirectory() {
+    private LoginSessionDirectoryHelper() {
     }
 
     public static void bind(LoginClientInfo loginClientInfo, String comboIdentity) {

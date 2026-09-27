@@ -25,7 +25,7 @@ import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.listener.event.payload.ClientLoginEventPayload;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
-import com.ouyunc.message.helper.LoginSessionDirectory;
+import com.ouyunc.message.helper.LoginSessionDirectoryHelper;
 import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.protocol.NativePacketProtocol;
 import com.ouyunc.message.schedule.ScheduleTimer;
@@ -307,7 +307,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
             if (remote != null
                     && closingLogin.getLoginServerAddress().equals(remote.getLoginServerAddress())
                     && remote.getLastLoginTime() == closingLogin.getLastLoginTime()) {
-                LoginSessionDirectory.unbind(closingLogin, comboIdentity);
+                LoginSessionDirectoryHelper.unbind(closingLogin, comboIdentity);
             }
         });
     }
