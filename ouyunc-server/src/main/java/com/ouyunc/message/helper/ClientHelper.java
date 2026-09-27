@@ -55,13 +55,7 @@ public class ClientHelper {
 
     private  static final StringRedisTemplate stringRedisTemplate = CacheFactory.STRING_REDIS.instance();
 
-    /***
-     * @author fzx
-     * @description 客户端绑定登录信息（兼容入口，内部调用 {@link #bindAsync}）。
-     */
-    public static void bind(ChannelHandlerContext ctx, LoginClientInfo loginClientInfo) {
-        bindAsync(ctx, loginClientInfo);
-    }
+
 
     /***
      * @author fzx

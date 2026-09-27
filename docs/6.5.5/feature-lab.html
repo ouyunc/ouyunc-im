@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>ouyunc-im 功能测试</title>
+    <style>
+        body { margin: 0; font: 14px/1.5 "Segoe UI", sans-serif; color: #1c1c1c; background: #f4f4f4; }
+        header { padding: 16px 20px 8px; }
+        h1 { margin: 0 0 4px; font-size: 20px; font-weight: 600; }
+        p { margin: 0; color: #555; }
+        main { display: grid; grid-template-columns: 360px 1fr; gap: 16px; padding: 12px 20px 24px; }
+        section { background: #fff; border: 1px solid #ddd; padding: 12px; }
+        h2 { margin: 0 0 10px; font-size: 14px; }
+        label { display: block; margin: 8px 0 2px; color: #444; }
+        input { width: 100%; box-sizing: border-box; padding: 6px 8px; border: 1px solid #ccc; }
+        .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+        button { border: 1px solid #bbb; background: #fff; padding: 6px 10px; cursor: pointer; }
+        button.primary { background: #1f4b99; color: #fff; border-color: #1f4b99; }
+        button:disabled { opacity: 0.45; cursor: default; }
+        .actions { display: flex; flex-wrap: wrap; gap: 6px; }
+        #log { height: 640px; overflow: auto; background: #111; color: #d7d7d7; font: 12px/1.45 Consolas, monospace; padding: 10px; white-space: pre-wrap; }
+        .hint { margin-top: 8px; color: #666; font-size: 12px; }
+    </style>
+</head>
+<body>
+<header>
+    <h1>ouyunc-im 功能测试</h1>
+    <p>使用 docs/6.5.5 的 WebSocket SDK。登录签名与服务端一致：MD5(appKey&amp;identity&amp;createTime_appSecret)。用浏览器直接打开本文件即可。</p>
+</header>
+<main>
+    <div>
+        <section>
+            <h2>连接</h2>
+            <label>WebSocket</label>
+            <input id="url" value="ws://127.0.0.1:6003/ws">
+            <label>appKey</label>
+            <input id="appKey" value="ouyunc">
+            <label>appSecret</label>
+            <input id="appSecret" value="">
+            <label>我的 identity</label>
+            <input id="identity" value="user-a">
+            <label>对方 identity</label>
+            <input id="peer" value="user-b">
+            <label>群 ID</label>
+            <input id="groupId" value="group-1">
+            <div class="row">
+                <button class="primary" id="btnConnect" type="button">连接并登录</button>
+                <button id="btnClose" type="button">断开</button>
+            </div>
+            <p class="hint" id="status">未连接</p>
+        </section>
+        <section style="margin-top:12px">
+            <h2>长连接</h2>
+            <div class="actions" id="actions"></div>
+            <p class="hint">受理结果看右侧日志里的 messageType=-5。ACCEPTED 只表示服务端受理，不表示对方已收到。好友、群、客服是否成功取决于库里的关系。</p>
+        </section>
+        <section style="margin-top:12px">
+            <h2>HTTP</h2>
+            <label>Bearer Token（推送接口）</label>
+            <input id="token" placeholder="可不填，仅探活时留空">
+            <div class="row">
+                <button type="button" id="btnHealth">GET /health</button>
+                <button type="button" id="btnReady">GET /ready</button>
+                <button type="button" id="btnPush">POST /api/im/message/push</button>
+            </div>
+            <p class="hint">页面用 file:// 打开时，浏览器可能拦截对 127.0.0.1 的 HTTP。WebSocket 一般不受这条限制。</p>
+        </section>
+    </div>
+    <section>
+        <h2>收发日志</h2>
+        <div class="row">
+            <button type="button" id="btnClear">清空</button>
+        </div>
+        <div id="log"></div>
+    </section>
+</main>
+<script src="../6.0.0/md5.js"></script>
+<script type="module">
+import Socket from './ouyunc-message-sdk.js';
+
+const TYPES = {
+    [-1]: '心跳',
+    [-2]: '登录',
+    [-4]: 'QoS C2S ACK',
+    [-5]: '受理结果',
+    [-6]: '单聊',
+    [-7]: '群聊',
+    [-8]: '好友申请',
+    [-9]: '好友同意',
+    [-10]: '好友拒绝',
+    [-11]: '加群',
+    [-12]: '邀请加群',
+    [-13]: '处理人同意加群',
+    [-14]: '处理人拒绝加群',
+    [-15]: '被邀请者同意',
+    [-16]: '被邀请者拒绝',
+    [-17]: '客服',
+    [-100]: '上线通知',
+    [-101]: '下线通知',
+    [-128]: '服务端通知'
+};
+
+const FEATURES = [
+    ['心跳', () => send(-1, -1, '', 1, 'ping', 0)],
+    ['单聊文本', () => send(-6, -128, peer(), 1, 'hello', 1)],
+    ['单聊图片', () => send(-6, -120, peer(), 1, JSON.stringify({url: 'https://example.test/a.png'}), 1)],
+    ['撤回', () => send(-6, -6, peer(), 1, JSON.stringify([lastChatId || 'missing']), 1)],
+    ['已读', () => send(-6, -7, peer(), 1, JSON.stringify([lastChatId || 'missing']), 1)],
+    ['群文本', () => send(-7, -128, groupId(), 2, 'group hello', 1)],
+    ['客服', () => send(-17, -128, peer(), 5, 'cs hello', 1, null, 6)],
+    ['好友申请', () => send(-8, -128, peer(), 1, 'join', 1)],
+    ['好友同意', () => send(-9, -128, peer(), 1, 'agree', 1)],
+    ['好友拒绝', () => send(-10, -128, peer(), 1, 'refuse', 1)],
+    ['加群', () => send(-11, -8, groupId(), 2, '{}', 1)],
+    ['邀请加群', () => send(-12, -8, groupId(), 2, '{}', 1)],
+    ['处理人同意', () => send(-13, -8, groupId(), 2, '{}', 1)],
+    ['处理人拒绝', () => send(-14, -8, groupId(), 2, '{}', 1)],
+    ['被邀请者同意', () => send(-15, -8, groupId(), 2, '{}', 1)],
+    ['被邀请者拒绝', () => send(-16, -8, groupId(), 2, '{}', 1)],
+    ['重复 messageId', () => resendSameId()],
+    ['顺序发一遍', () => runAll()]
+];
+
+let socket = null;
+let lastMessageId = '';
+let lastChatId = '';
+
+const logEl = document.getElementById('log');
+const statusEl = document.getElementById('status');
+
+function val(id) { return document.getElementById(id).value.trim(); }
+function peer() { return val('peer'); }
+function groupId() { return val('groupId'); }
+function identity() { return val('identity'); }
+
+function log(direction, text) {
+    const time = new Date().toLocaleTimeString();
+    logEl.textContent += `[${time}] ${direction} ${text}\n`;
+    logEl.scrollTop = logEl.scrollHeight;
+}
+
+function setStatus(text) { statusEl.textContent = text; }
+
+function requireSocket() {
+    if (!socket || !socket.connected) {
+        log('!', '还没有连接。先点「连接并登录」。');
+        return false;
+    }
+    return true;
+}
+
+function send(messageType, contentType, to, toType, content, qos, messageId, fromType) {
+    if (!requireSocket()) return null;
+    const id = messageId || undefined;
+    const packet = socket.send({
+        messageType,
+        message: {
+            id,
+            from: identity(),
+            fromType: fromType || 1,
+            to,
+            toType,
+            contentType,
+            content,
+            qos,
+            createTime: Date.now()
+        }
+    });
+    const sentId = packet.message.id;
+    lastMessageId = sentId;
+    if (messageType === -6 && contentType === -128) lastChatId = sentId;
+    log('发', `${TYPES[messageType] || messageType} contentType=${contentType} id=${sentId} to=${to} packetId=${packet.packetId}`);
+    return sentId;
+}
+
+function resendSameId() {
+    if (!lastMessageId) {
+        log('!', '还没有发过消息，无法复用 messageId。');
+        return;
+    }
+    send(-6, -128, peer(), 1, 'hello-changed', 1, lastMessageId);
+}
+
+async function runAll() {
+    const steps = FEATURES.filter(([name]) => name !== '顺序发一遍' && name !== '重复 messageId' && name !== '撤回' && name !== '已读');
+    for (const [, fn] of steps) {
+        fn();
+        await new Promise((resolve) => setTimeout(resolve, 300));
+    }
+    if (lastChatId) {
+        send(-6, -6, peer(), 1, JSON.stringify([lastChatId]), 1);
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        send(-6, -7, peer(), 1, JSON.stringify([lastChatId]), 1);
+    }
+    resendSameId();
+}
+
+function loginPacket() {
+    const appKey = val('appKey');
+    const appSecret = val('appSecret');
+    const who = identity();
+    const createTime = Date.now();
+    const raw = `${appKey}&${who}&${createTime}_${appSecret}`;
+    return {
+        messageType: -2,
+        message: {
+            from: who,
+            fromType: 1,
+            to: '',
+            toType: 1,
+            contentType: -2,
+            content: JSON.stringify({
+                identity: who,
+                appKey,
+                scope: 1,
+                sn: 'web-' + who,
+                signatureAlgorithm: 1,
+                signature: hex_md5(raw),
+                createTime
+            }),
+            qos: 0,
+            createTime
+        }
+    };
+}
+
+document.getElementById('btnConnect').onclick = () => {
+    if (socket) socket.close();
+    const url = val('url');
+    socket = new Socket(url, {
+        clientType: 1,
+        serializeAlgorithm: 2,
+        deviceType: 1,
+        networkType: 1,
+        encryptType: 0,
+        heartbeat: {enable: true, interval: 15000, timeout: 5000, maxWait: 3},
+        reconnect: {enable: true, maxTimes: 5, delay: 2000}
+    });
+    setStatus('正在连接 ' + url);
+    log('·', '连接 ' + url);
+    socket.onopen = () => {
+        setStatus('已连接，正在登录');
+        log('·', 'WebSocket 已打开，发送登录');
+        const packet = socket.send(loginPacket());
+        log('发', `登录 id=${packet.message.id} packetId=${packet.packetId}`);
+    };
+    socket.onmessage = (packet) => {
+        const message = packet.message || {};
+        const name = TYPES[packet.messageType] || String(packet.messageType);
+        let extra = '';
+        if (packet.messageType === -5 && message.content) {
+            try {
+                const result = JSON.parse(message.content);
+                extra = ` status=${result.status} messageId=${result.messageId} code=${result.code || ''}`;
+            } catch (e) {
+                extra = ' ' + message.content;
+            }
+        } else if (packet.messageType === -2) {
+            extra = ` contentType=${message.contentType} ${message.content || ''}`;
+            if (message.contentType === -4) setStatus('已登录 ' + identity());
+            if (message.contentType === -3) setStatus('登录失败');
+        } else if (message.content) {
+            extra = ' ' + String(message.content).slice(0, 180);
+        }
+        log('收', `${name} packetId=${packet.packetId}${extra}`);
+    };
+    socket.onclose = () => {
+        setStatus('连接已关闭');
+        log('·', '连接关闭');
+    };
+    socket.onerror = () => log('!', 'WebSocket 错误');
+};
+
+document.getElementById('btnClose').onclick = () => {
+    if (socket) socket.close();
+    socket = null;
+    setStatus('未连接');
+};
+
+document.getElementById('btnClear').onclick = () => { logEl.textContent = ''; };
+
+const actions = document.getElementById('actions');
+for (const [name, fn] of FEATURES) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = name;
+    button.onclick = fn;
+    actions.appendChild(button);
+}
+
+function httpBase() {
+    const url = new URL(val('url').replace(/^ws/, 'http'));
+    return url.origin;
+}
+
+async function httpGet(path) {
+    const target = httpBase() + path;
+    log('发', 'GET ' + target);
+    try {
+        const response = await fetch(target);
+        log('收', `${response.status} ${path} ${await response.text()}`);
+    } catch (error) {
+        log('!', path + ' ' + error);
+    }
+}
+
+document.getElementById('btnHealth').onclick = () => httpGet('/health');
+document.getElementById('btnReady').onclick = () => httpGet('/ready');
+document.getElementById('btnPush').onclick = async () => {
+    const target = httpBase() + '/api/im/message/push';
+    const token = val('token');
+    const body = {
+        pushType: 1,
+        messageId: String(Date.now()),
+        from: identity(),
+        to: peer(),
+        toType: 1,
+        content: 'http push hello',
+        contentType: -128
+    };
+    log('发', 'POST ' + target);
+    try {
+        const headers = {
+            'Content-Type': 'application/json',
+            'X-App-Key': val('appKey'),
+            'X-Request-Id': String(Date.now())
+        };
+        if (token) headers.Authorization = token.startsWith('Bearer ') ? token : 'Bearer ' + token;
+        const response = await fetch(target, {method: 'POST', headers, body: JSON.stringify(body)});
+        log('收', `${response.status} push ${await response.text()}`);
+    } catch (error) {
+        log('!', 'push ' + error);
+    }
+};
+</script>
+</body>
+</html>

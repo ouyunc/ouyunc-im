@@ -416,14 +416,10 @@ class Socket {
         headerView.setInt8(offset++, 1); // 协议版本
         headerView.setInt8(offset++, 1); // 协议类型
 
-        // 写入消息ID (8字节)
-        //const idBytes = this._splitBinaryMessageId(binaryMessageId);
-        //headerView.setUint32(offset, idBytes.high);
-        //headerView.setUint32(offset + 4, idBytes.low);
-        // 全写0 无效数据
-        //headerView.setUint32(offset, 0);
-        //headerView.setUint32(offset + 4, 0);
-        // 跳过消息id，服务端维护
+        // 服务端 PacketVerifier 拒绝 packetId <= 0，这里写入雪花 ID（大端 8 字节）。
+        const packetId = BigInt(this.snowflake.nextIdStr());
+        headerView.setUint32(offset, Number((packetId >> 32n) & 0xffffffffn));
+        headerView.setUint32(offset + 4, Number(packetId & 0xffffffffn));
         offset += 8;
 
         // 写入其他字段
@@ -448,7 +444,7 @@ class Socket {
                 magic: Socket.MAGIC,
                 protocol: Socket.PROTOCOL,
                 protocolVersion: Socket.PROTOCOL_VERSION,
-                //packetId: Snowflake.binaryToDecimalStr(binaryMessageId),
+                packetId: packetId.toString(),
                 deviceType: deviceType,
                 networkType: networkType,
                 encryptType: encryptType,
