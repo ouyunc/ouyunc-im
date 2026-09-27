@@ -49,9 +49,7 @@ class ClientBusinessSessionIdleMessageEventListener implements MessageEventListe
         switch (strike) {
             case 1 -> onPrompt(payload);
             case 2 -> onEscrow(payload);
-            default -> {
-                // 第 3 次及以后无单独钩子，业务可在 onEvent 后统一处理或扩展
-            }
+            default -> onLaterStrike(payload);
         }
     }
 
@@ -62,6 +60,13 @@ class ClientBusinessSessionIdleMessageEventListener implements MessageEventListe
 
     /** 第 2 次连续业务空闲：即将断开预警（若配置了关连档位数）。 */
     protected void onEscrow(ClientBusinessSessionIdlePayload payload) {
+        BusinessIdleNotifyHelper.notifyIdle(payload.ctx(), payload.loginInfo(), payload.strike());
+    }
+
+    /**
+     * 第 3 次及以后：仅当 Redis 配了对应 field（如 {@code cs_agent:3:repeat}）才下行，无内置兜底。
+     */
+    protected void onLaterStrike(ClientBusinessSessionIdlePayload payload) {
         BusinessIdleNotifyHelper.notifyIdle(payload.ctx(), payload.loginInfo(), payload.strike());
     }
 }

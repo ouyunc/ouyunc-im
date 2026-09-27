@@ -119,6 +119,13 @@ ouyunc:
       scan-package-paths:
         - com.ouyunc.message.intercept
 
+    # 业务空闲下行文案：不配 YAML。IM 读 Redis Hash（本机 Caffeine 缓存 10 分钟）
+    # 租户：ouyunc:app:{appKey}:idle-notify
+    # 全平台：ouyunc:im:idle-notify:__global__
+    # Hash field：{LoginScope.name}:{strike} 或 {name}:{strike}:pre-close|repeat，通配 *:variant
+    # 例：HSET ouyunc:app:{demo}:idle-notify cs_agent:1 "座席空闲提示"
+    #     HSET ouyunc:im:idle-notify:__global__ *:2:pre-close "若 %d 秒内仍无消息，连接将断开。"
+
     # HTTP 控制器/Handler 扫描包路径，未配置时默认扫描 com.ouyunc.message.http
     http:
       # 普通请求体最大字节（JSON、form-urlencoded 等，不含 multipart 单独策略时与其共用聚合上限计算）

@@ -22,7 +22,8 @@ import java.util.concurrent.TimeUnit;
  * 在 {@link #channelIdle} 中发布 {@link MessageEventTypeEnum#CLIENT_BUSINESS_SESSION_IDLE}，source 为
  * {@link ClientBusinessSessionIdlePayload}（含连续次数 {@code strike} 与 {@code ctx}）。
  * 只要持续无有效业务读，会按 {@code businessIdleSeconds} 间隔反复触发，事件可一直发、{@code strike} 递增。
- * 是否关连由登录 {@link com.ouyunc.base.packet.message.content.LoginContent#getBusinessIdleCloseStrike()} 决定（{@code <=0} 不关，{@code >=1} 为第 N 次关），达到次数时在本 handler 内 {@link ChannelHandlerContext#close()}。
+ * 是否关连由登录 {@link com.ouyunc.base.packet.message.content.LoginContent#getBusinessIdleCloseStrike()} 决定（{@code <=0} 不关，{@code >=1} 为第 N 次关）。
+ * 达到次数时先下行提示，写出后再关；本 handler 仅做超时兜底关连。
  * 非 PING 业务上行会清零 {@code strike} 并重新计时。
  */
 public class BusinessIdleStateHandler extends IdleStateHandler {
@@ -56,6 +57,7 @@ public class BusinessIdleStateHandler extends IdleStateHandler {
             }
             return;
         }
+        // 业务上行：清零次数。已预约的 8s 兜底 / 通知后关连见 {@link #isCloseStillDue}，不再关。
         ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_BUSINESS_IDLE_STRIKE, 0);
         super.channelRead(ctx, msg);
     }
@@ -81,8 +83,44 @@ public class BusinessIdleStateHandler extends IdleStateHandler {
                 new MessageEvent(new ClientBusinessSessionIdlePayload(info, strike, ctx), MessageEventTypeEnum.CLIENT_BUSINESS_SESSION_IDLE),
                 true);
         int closeAt = resolveCloseAtStrike(info);
+        // 关连改由通知写出回调执行；此处仅兜底，避免 Disruptor 丢事件后连接永不关
         if (closeAt > 0 && strike >= closeAt && ctx.channel().isActive()) {
-            ctx.close();
+            ctx.executor().schedule(() -> {
+                if (isCloseStillDue(ctx)) {
+                    ctx.close();
+                }
+            }, MessageConstant.BUSINESS_IDLE_CLOSE_AFTER_NOTIFY_SECONDS, TimeUnit.SECONDS);
         }
+    }
+
+    /**
+     * 业务上行后 strike 被置 0（或尚未计数）。此时空闲提示和关连都应取消。
+     */
+    public static boolean isIdleStrikeCleared(ChannelHandlerContext ctx) {
+        if (ctx == null) {
+            return true;
+        }
+        Integer current = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_BUSINESS_IDLE_STRIKE);
+        return current == null || current == 0;
+    }
+
+    /**
+     * 关连是否仍然成立：连接还在，且当前 strike 仍达到关连档。
+     * 8s 内对方发了业务包会把 strike 置 0，此时必须取消关连（含通知写出回调）。
+     */
+    public static boolean isCloseStillDue(ChannelHandlerContext ctx) {
+        if (ctx == null || ctx.channel() == null || !ctx.channel().isActive()) {
+            return false;
+        }
+        LoginClientInfo info = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
+        if (info == null) {
+            return false;
+        }
+        int closeAt = resolveCloseAtStrike(info);
+        if (closeAt <= 0) {
+            return false;
+        }
+        Integer current = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_BUSINESS_IDLE_STRIKE);
+        return current != null && current >= closeAt;
     }
 }

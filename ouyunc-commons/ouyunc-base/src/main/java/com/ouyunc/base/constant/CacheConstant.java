@@ -220,6 +220,11 @@ public class CacheConstant {
      */
     private static final String DEVICE_TYPE = "device-type";
 
+    /**
+     * 业务空闲下行文案 Hash：field={@code {loginScopeName}:{variant}}，如 {@code cs_agent:1}、{@code normal:2:pre-close}。
+     */
+    private static final String IDLE_NOTIFY = "idle-notify";
+
     /***
      * 最后一条消息
      */
@@ -304,6 +309,22 @@ public class CacheConstant {
      */
     public static String buildAppKeyDeviceTypeCacheKey(String appKey) {
         return buildBaseCacheKey(appKey) + DEVICE_TYPE;
+    }
+
+    /**
+     * 租户业务空闲提示文案 Hash。{@code ouyunc:app:{appKey}:idle-notify}
+     * <p>field 约定：{@code {LoginScopeEnum.name}:{strike}} 或 {@code {name}:{strike}:pre-close|repeat}；
+     * 通配 {@code *:{variant}}。未配 field 时再读 {@link #buildIdleNotifyTextGlobalCacheKey()}。</p>
+     */
+    public static String buildIdleNotifyTextCacheKey(String appKey) {
+        return buildBaseCacheKey(appKey) + IDLE_NOTIFY;
+    }
+
+    /**
+     * 全平台默认业务空闲文案 Hash，field 与租户 Hash 相同。
+     */
+    public static String buildIdleNotifyTextGlobalCacheKey() {
+        return OUYUNC + "im:" + IDLE_NOTIFY + COLON + CONTENT_SAFETY_GLOBAL_APP_KEY;
     }
 
     /**
@@ -835,6 +856,12 @@ public class CacheConstant {
 
     /** 内容安全热更新：全部租户失效。 */
     public static final String CONTENT_SAFETY_RELOAD_ALL = "ALL";
+
+    /**
+     * 业务空闲文案本机缓存失效频道；payload 为 appKey 或 {@link #CONTENT_SAFETY_RELOAD_ALL}。
+     * IM 与 CS 须共用同一 Redis，发布端用 Redisson Topic。
+     */
+    public static final String IDLE_NOTIFY_RELOAD_CHANNEL = OUYUNC + "im:idle-notify:reload";
 
     /**
      * 关系本机缓存失效 Pub/Sub 频道；payload 为 {@code RelationCacheInvalidateEvent} JSON。

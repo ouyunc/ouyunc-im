@@ -86,7 +86,7 @@ public class LoginContent extends ClientInfo {
     private int scope;
 
     /**
-     * 业务空闲：无业务消息（非 PING）持续秒数；仅当 {@link #scope} 为客服且 {@code >0} 时安装业务空闲处理器。0 表示不启用。
+     * 业务空闲：无业务消息（非 PING）持续秒数；{@code >0} 时安装业务空闲处理器（任意登录 scope）。0 表示不启用。
      */
     private int businessIdleSeconds;
 

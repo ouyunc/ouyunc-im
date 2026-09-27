@@ -518,7 +518,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                     .addAfter(MessageConstant.HEART_BEAT_IDLE_HANDLER, MessageConstant.HEART_BEAT_HANDLER, new HeartBeatHandler());
             pipelineAnchor = MessageConstant.HEART_BEAT_HANDLER;
         }
-        if (!LoginScopeEnum.isCustomerService(loginContent.getScope()) || loginContent.getBusinessIdleSeconds() <= 0) {
+        if (loginContent.getBusinessIdleSeconds() <= 0) {
             return;
         }
         int bizSec = loginContent.getBusinessIdleSeconds();

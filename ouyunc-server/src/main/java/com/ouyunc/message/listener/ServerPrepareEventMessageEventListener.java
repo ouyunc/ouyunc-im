@@ -14,6 +14,7 @@ import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.device.AppKeyDeviceTypeSubscriber;
 import com.ouyunc.core.relation.RelationCacheSubscriber;
 import com.ouyunc.message.helper.ClientHelper;
+import com.ouyunc.message.cache.IdleNotifyTextCache;
 import com.ouyunc.message.safety.ContentSafetyRegistry;
 import com.ouyunc.repository.DefaultRepository;
 import org.apache.commons.collections4.CollectionUtils;
@@ -50,11 +51,12 @@ class ServerPrepareEventMessageEventListener implements MessageEventListener<Mes
         AppKeyDeviceTypeSubscriber.start();
         // 内容安全：订阅 Redis 热更新（须在 Netty bind 前）
         ContentSafetyRegistry.getInstance().start();
+        IdleNotifyTextCache.getInstance().start();
         // 关系本机缓存：订阅 Redis 失效频道（业务写 Redis 后 PUBLISH）
         RelationCacheSubscriber.start();
         // 预加载 Lua 脚本 SHA 到本地（集群模式下注意各节点同步）
         preloadLuaScripts();
-        log.info("服务初始化前准备完成：appKey 设备类型/内容安全/关系缓存订阅已启动，Lua 已预加载");
+        log.info("服务初始化前准备完成：appKey 设备类型/内容安全/空闲文案/关系缓存订阅已启动，Lua 已预加载");
     }
 
     /**

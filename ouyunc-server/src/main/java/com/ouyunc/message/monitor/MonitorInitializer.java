@@ -4,6 +4,7 @@ import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.relation.RelationLocalCache;
 import com.ouyunc.core.listener.MessageEventMulticaster;
 import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.message.cache.IdleNotifyTextCache;
 import com.ouyunc.message.schedule.TimerTaskWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,6 +50,7 @@ public class MonitorInitializer {
 
         // QoS 定时重试任务（详见 ResourceMonitor.logQosRetryTimerMetrics）
         registerCache(TimerTaskWrapper.timerTaskCaffeine);
+        registerCache(IdleNotifyTextCache.getInstance().localCache);
 
         log.info("资源监控初始化完成，已注册 {} 个缓存", ResourceMonitor.getRegisteredCacheNames().size());
     }

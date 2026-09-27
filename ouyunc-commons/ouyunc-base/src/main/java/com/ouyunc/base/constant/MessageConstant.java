@@ -970,13 +970,27 @@ public class MessageConstant {
      */
     public static final String SERVER_DRAIN_KICK_NOTIFICATION = "服务节点正在维护升级，请主动断开当前连接并重连；重连成功前请暂停发送消息。";
 
-    /** 客服座席：首次业务读空闲提示（scope=cs_agent） */
+    /** 普通客户端：首次业务读空闲提示（Redis 未配时的兜底） */
+    public static final String BUSINESS_IDLE_PROMPT_NORMAL =
+            "您已有一段时间未操作，请发送消息以保持连接。";
+
+    /** 客服座席：首次业务读空闲提示（scope=cs_agent，Redis 未配时的兜底） */
     public static final String BUSINESS_IDLE_PROMPT_CS_AGENT =
             "您已有一段时间未操作，会话仍保持连接；请继续处理咨询或发送消息以保持在线。";
 
-    /** 客服访客：首次业务读空闲提示（scope=cs_visitor） */
+    /** 客服访客：首次业务读空闲提示（scope=cs_visitor，Redis 未配时的兜底） */
     public static final String BUSINESS_IDLE_PROMPT_CS_VISITOR =
             "您已有一段时间未发送消息，如需继续咨询请直接输入。";
+
+    /**
+     * 业务空闲文案本机 Caffeine 过期（分钟）。写 Redis 后应 PUBLISH 失效；未收到通知时靠本窗口刷新。
+     */
+    public static final int IDLE_NOTIFY_TEXT_LOCAL_EXPIRE_MINUTES = 10;
+
+    /**
+     * 达到关连档后：先异步下发通知，再由写出回调关连；本秒数为 handler 兜底关连，防止事件丢失一直占连接。
+     */
+    public static final int BUSINESS_IDLE_CLOSE_AFTER_NOTIFY_SECONDS = 8;
 
     /** 第 2 次业务空闲且仍将关连：%d 为 {@code businessIdleSeconds} */
     public static final String BUSINESS_IDLE_PRE_CLOSE =
