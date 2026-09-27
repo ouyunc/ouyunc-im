@@ -1,7 +1,7 @@
 package com.ouyunc.core.idle;
 
 import com.ouyunc.base.constant.CacheConstant;
-import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.core.context.MessageContext;
 import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RTopic;
 import org.redisson.api.listener.MessageListener;
@@ -27,7 +27,7 @@ public final class IdleNotifyTextReloadSubscriber {
             return;
         }
         try {
-            RTopic topic = MessageServerContext.redissonClient.getTopic(CacheConstant.IDLE_NOTIFY_RELOAD_CHANNEL);
+            RTopic topic = MessageContext.redissonClient.getTopic(CacheConstant.IDLE_NOTIFY_RELOAD_CHANNEL);
             listenerId = topic.addListener(String.class, new MessageListener<String>() {
                 @Override
                 public void onMessage(CharSequence channel, String msg) {
