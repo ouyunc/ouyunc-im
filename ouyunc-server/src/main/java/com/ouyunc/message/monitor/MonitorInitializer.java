@@ -4,7 +4,7 @@ import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.relation.RelationLocalCache;
 import com.ouyunc.core.listener.MessageEventMulticaster;
 import com.ouyunc.message.context.MessageServerContext;
-import com.ouyunc.message.cache.IdleNotifyTextCache;
+import com.ouyunc.core.idle.IdleNotifyTextCache;
 import com.ouyunc.message.schedule.TimerTaskWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

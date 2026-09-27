@@ -1,4 +1,4 @@
-package com.ouyunc.message.cache;
+package com.ouyunc.core.idle;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.ouyunc.base.constant.CacheConstant;

@@ -18,7 +18,7 @@ import com.ouyunc.base.serialize.Serializer;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.core.context.MessageContext;
-import com.ouyunc.message.cache.IdleNotifyTextCache;
+import com.ouyunc.core.idle.IdleNotifyTextCache;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;

@@ -1,4 +1,4 @@
-package com.ouyunc.message.cache;
+package com.ouyunc.core.idle;
 
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.message.context.MessageServerContext;

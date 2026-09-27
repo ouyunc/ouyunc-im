@@ -14,7 +14,7 @@ import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.device.AppKeyDeviceTypeSubscriber;
 import com.ouyunc.core.relation.RelationCacheSubscriber;
 import com.ouyunc.message.helper.ClientHelper;
-import com.ouyunc.message.cache.IdleNotifyTextCache;
+import com.ouyunc.core.idle.IdleNotifyTextCache;
 import com.ouyunc.message.safety.ContentSafetyRegistry;
 import com.ouyunc.repository.DefaultRepository;
 import org.apache.commons.collections4.CollectionUtils;
