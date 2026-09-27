@@ -5,7 +5,6 @@ import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.LuaScriptEnum;
 import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.cache.config.CacheFactory;
-import com.ouyunc.message.helper.SessionNodeState;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

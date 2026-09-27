@@ -10,6 +10,7 @@ import com.ouyunc.base.utils.ImRouteCodec;
 import com.ouyunc.base.utils.ImSessionPresence;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.message.cluster.lease.NodeLeaseSnapshot;
+import com.ouyunc.message.cluster.lease.SessionNodeState;
 import com.ouyunc.message.context.MessageServerContext;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;

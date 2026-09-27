@@ -14,7 +14,7 @@ import com.ouyunc.cache.local.caffeine.CaffeineLocalCache;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.intercept.AbstractMessageInterceptor;
 import com.ouyunc.message.MessageServer;
-import com.ouyunc.message.helper.SessionNodeState;
+import com.ouyunc.message.cluster.lease.SessionNodeState;
 import com.ouyunc.message.convert.PacketConverter;
 import com.ouyunc.message.dispatcher.ProtocolDispatcherBiProcessor;
 import com.ouyunc.message.processor.AbstractBaseBiProcessor;
@@ -29,8 +29,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.pool.ChannelPool;
 import org.checkerframework.checker.nullness.qual.Nullable;
-import org.redisson.api.RedissonClient;
-import org.redisson.api.RedissonReactiveClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

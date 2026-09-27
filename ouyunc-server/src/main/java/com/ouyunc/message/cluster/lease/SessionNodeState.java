@@ -1,7 +1,4 @@
-package com.ouyunc.message.helper;
-
-import com.ouyunc.message.cluster.lease.NodeLeaseKeeper;
-import com.ouyunc.message.cluster.lease.NodeLeaseSnapshot;
+package com.ouyunc.message.cluster.lease;
 
 import java.util.Map;
 
