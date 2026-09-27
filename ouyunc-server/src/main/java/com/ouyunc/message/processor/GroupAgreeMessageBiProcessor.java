@@ -11,10 +11,9 @@ import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.packet.message.content.GroupRequestContent;
 import com.ouyunc.core.exception.ExceptionReporter;
 import com.ouyunc.message.helper.DistributedLockHelper;
-import com.ouyunc.message.helper.GroupBindResultHelper;
 import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
 import com.ouyunc.message.helper.MessageSendResultHelper;
-import com.ouyunc.message.helper.RequestEventContextFactory;
+import com.ouyunc.message.helper.RequestEventContextFactoryHelper;
 import com.ouyunc.message.helper.RequestNotifyHelper;
 import com.ouyunc.message.validator.*;
 import io.netty.channel.ChannelHandlerContext;
@@ -97,7 +96,7 @@ public final class GroupAgreeMessageBiProcessor extends AbstractMessageBiProcess
                 MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
                 return;
             }
-            RequestEventContextFactory.capture(packet, session);
+            RequestEventContextFactoryHelper.capture(packet, session);
             if (!MessageAcceptPipelineHelper.publishRequestCommand(ctx, MqConstant.MQ_GROUP_REQUEST_TOPIC, message.getTo(), packet)) {
                 return;
             }

@@ -16,7 +16,7 @@ import com.ouyunc.core.exception.ExceptionReporter;
 import com.ouyunc.message.helper.DistributedLockHelper;
 import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
 import com.ouyunc.message.helper.MessageSendResultHelper;
-import com.ouyunc.message.helper.RequestEventContextFactory;
+import com.ouyunc.message.helper.RequestEventContextFactoryHelper;
 import com.ouyunc.message.helper.RequestNotifyHelper;
 import com.ouyunc.message.validator.AuthValidator;
 import com.ouyunc.message.validator.BlackListValidator;
@@ -27,8 +27,6 @@ import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
-
-import java.util.Objects;
 
 /**
  * 同意加好友：仅通知申请人（审批操作者不推送）。
@@ -96,7 +94,7 @@ public final class One2OneAgreeFriendRequestMessageBiProcessor extends AbstractM
                         MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
                         return;
                     }
-                    RequestEventContextFactory.capture(packet, requestSession);
+                    RequestEventContextFactoryHelper.capture(packet, requestSession);
                     if (!MessageAcceptPipelineHelper.publishRequestCommand(ctx, MqConstant.MQ_FRIEND_REQUEST_TOPIC, sessionId, packet)) {
                         return;
                     }

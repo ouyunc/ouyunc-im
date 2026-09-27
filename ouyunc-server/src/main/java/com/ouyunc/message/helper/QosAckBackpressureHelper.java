@@ -29,7 +29,7 @@ public final class QosAckBackpressureHelper {
     /** 与 QosAckDispatcher 配合使用；保留原始 ACK 校验，不因缓冲而跳过权限检查。 */
     public static void execute(Channel channel, long packetId, Supplier<CompletionStage<Void>> task) {
         try {
-            QosAckDispatcher.execute(channel, task);
+            QosAckDispatcherHelper.execute(channel, task);
         } catch (RejectedExecutionException error) {
             QosRetryCancelMetrics.ackDispatchReject();
             ConcurrentHashMap<Long, Boolean> waiting = waiting(channel);
@@ -95,7 +95,7 @@ public final class QosAckBackpressureHelper {
                 return;
             }
             try {
-                QosAckDispatcher.execute(channel, task);
+                QosAckDispatcherHelper.execute(channel, task);
                 finish();
             } catch (RejectedExecutionException error) {
                 if (++attempts < QosControlConstant.ACK_RETRY_ATTEMPTS) {

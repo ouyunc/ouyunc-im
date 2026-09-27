@@ -13,9 +13,9 @@ import com.ouyunc.repository.DefaultRepository;
 import org.apache.commons.lang3.StringUtils;
 
 /** 在领域消息写入 Kafka 前生成完整、可重放的申请状态快照。 */
-public final class RequestEventContextFactory {
+public final class RequestEventContextFactoryHelper {
 
-    private RequestEventContextFactory() {
+    private RequestEventContextFactoryHelper() {
     }
 
     static void ensure(Packet packet) {

@@ -210,7 +210,7 @@ public final class MessageAcceptPipelineHelper {
     public static boolean publishRequestCommand(ChannelHandlerContext ctx, String topic, String key, Packet packet) {
         try {
             if (packet.getMessage().getMetadata().getRequestEventContext() == null) {
-                RequestEventContextFactory.ensure(packet);
+                RequestEventContextFactoryHelper.ensure(packet);
             }
             repository().publishPacketConfirmed(topic, key, packet)
                     .get(MessageConstant.MESSAGE_ARCHIVE_CONFIRM_TIMEOUT_MS, TimeUnit.MILLISECONDS);

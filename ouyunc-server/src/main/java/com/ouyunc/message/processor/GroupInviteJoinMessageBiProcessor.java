@@ -9,7 +9,6 @@ import com.ouyunc.base.model.GroupRequestSession;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.packet.message.content.GroupRequestContent;
-import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.exception.ExceptionReporter;
 import com.ouyunc.domain.entity.GroupEntity;
 import com.ouyunc.domain.entity.GroupUserEntity;
@@ -18,7 +17,7 @@ import com.ouyunc.message.helper.DistributedLockHelper;
 import com.ouyunc.message.helper.GroupBindResultHelper;
 import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
 import com.ouyunc.message.helper.MessageSendResultHelper;
-import com.ouyunc.message.helper.RequestEventContextFactory;
+import com.ouyunc.message.helper.RequestEventContextFactoryHelper;
 import com.ouyunc.message.helper.RequestNotifyHelper;
 import com.ouyunc.message.validator.*;
 import io.netty.channel.ChannelHandlerContext;
@@ -196,7 +195,7 @@ public final class GroupInviteJoinMessageBiProcessor extends AbstractMessageBiPr
                     }
                     notifyIdentities = RequestNotifyHelper.userOnly(content.getIdentity());
                 }
-                RequestEventContextFactory.capture(packet, groupRequestSession);
+                RequestEventContextFactoryHelper.capture(packet, groupRequestSession);
                 if (!MessageAcceptPipelineHelper.publishRequestCommand(ctx, MqConstant.MQ_GROUP_REQUEST_TOPIC, message.getTo(), packet)) {
                     return;
                 }

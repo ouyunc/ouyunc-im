@@ -15,11 +15,11 @@ import java.util.function.Supplier;
  * 许可绑定完整异步链，而非绑定启动订阅的 Runnable；成功、异常和取消均释放。
  * 调用方必须给异步链设置超时，防止未完成订阅永久占用容量。
  */
-public final class QosAckDispatcher {
+public final class QosAckDispatcherHelper {
     private static final Semaphore GLOBAL = new Semaphore(QosControlConstant.MAX_IN_FLIGHT);
     private static final AttributeKey<Semaphore> PER_CHANNEL = AttributeKey.valueOf("qos.ack.admission");
 
-    private QosAckDispatcher() {
+    private QosAckDispatcherHelper() {
     }
 
     public static void execute(Channel channel, Supplier<CompletionStage<Void>> task) {

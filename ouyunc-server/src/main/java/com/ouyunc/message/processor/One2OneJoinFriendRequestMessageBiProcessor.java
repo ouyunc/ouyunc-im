@@ -11,16 +11,14 @@ import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.IdentityUtil;
-import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.base.model.RequestSession;
 import com.ouyunc.base.constant.enums.FriendJoinPolicy;
 import com.ouyunc.base.constant.enums.RequestSessionProgress;
 import com.ouyunc.domain.entity.UserEntity;
-import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.DistributedLockHelper;
 import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
 import com.ouyunc.message.helper.MessageSendResultHelper;
-import com.ouyunc.message.helper.RequestEventContextFactory;
+import com.ouyunc.message.helper.RequestEventContextFactoryHelper;
 import com.ouyunc.message.helper.RequestNotifyHelper;
 import com.ouyunc.message.validator.AuthValidator;
 import com.ouyunc.message.validator.BlackListValidator;
@@ -136,7 +134,7 @@ public final class One2OneJoinFriendRequestMessageBiProcessor extends AbstractMe
     }
 
     private static boolean publishFriendCommand(ChannelHandlerContext ctx, String sessionId, Packet packet, RequestSession session) {
-        RequestEventContextFactory.capture(packet, session);
+        RequestEventContextFactoryHelper.capture(packet, session);
         return MessageAcceptPipelineHelper.publishRequestCommand(ctx, MqConstant.MQ_FRIEND_REQUEST_TOPIC, sessionId, packet);
     }
 }
