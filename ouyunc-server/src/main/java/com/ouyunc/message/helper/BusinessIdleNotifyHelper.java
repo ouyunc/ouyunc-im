@@ -4,21 +4,21 @@ import com.ouyunc.base.constant.IdleNotifyConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.LoginScopeEnum;
-import com.ouyunc.base.encrypt.Encrypt;
 import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.constant.enums.NetworkEnum;
+import com.ouyunc.base.encrypt.Encrypt;
 import com.ouyunc.base.model.LoginClientInfo;
-import com.ouyunc.base.model.SendCallback;
 import com.ouyunc.base.model.Metadata;
+import com.ouyunc.base.model.SendCallback;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.packet.message.content.ServerNotifyContent;
 import com.ouyunc.base.serialize.Serializer;
+import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.message.cache.IdleNotifyTextCache;
-import com.ouyunc.message.handler.BusinessIdleStateHandler;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -59,7 +59,7 @@ public final class BusinessIdleNotifyHelper {
                 return;
             }
             // 组包前已有业务上行：strike 已清零，提示作废，关连一并取消
-            if (BusinessIdleStateHandler.isIdleStrikeCleared(ctx)) {
+            if (isIdleStrikeCleared(ctx)) {
                 return;
             }
             try {
@@ -90,7 +90,7 @@ public final class BusinessIdleNotifyHelper {
             return;
         }
         Runnable close = () -> {
-            if (BusinessIdleStateHandler.isCloseStillDue(ctx)) {
+            if (isCloseStillDue(ctx)) {
                 ctx.close();
             }
         };
@@ -212,5 +212,48 @@ public final class BusinessIdleNotifyHelper {
                 Serializer.JSON.getValue(),
                 MessageTypeEnum.SERVER_NOTIFY.getType(),
                 message);
+    }
+
+
+    /**
+     * 业务上行后 strike 被置 0（或尚未计数）。此时空闲提示和关连都应取消。
+     */
+    public static boolean isIdleStrikeCleared(ChannelHandlerContext ctx) {
+        if (ctx == null) {
+            return true;
+        }
+        Integer current = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_BUSINESS_IDLE_STRIKE);
+        return current == null || current == IdleNotifyConstant.STRIKE_CLEARED;
+    }
+
+    /**
+     * 关连是否仍然成立：连接还在，且当前 strike 仍达到关连档。
+     * 通知写出回调前对方发了业务包会把 strike 清零，此时必须取消关连。
+     */
+    public static boolean isCloseStillDue(ChannelHandlerContext ctx) {
+        if (ctx == null || ctx.channel() == null || !ctx.channel().isActive()) {
+            return false;
+        }
+        LoginClientInfo info = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
+        if (info == null) {
+            return false;
+        }
+        int closeAt = resolveCloseAtStrike(info);
+        if (closeAt <= NumberConstant.NUMBER_0) {
+            return false;
+        }
+        Integer current = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_BUSINESS_IDLE_STRIKE);
+        return current != null && current >= closeAt;
+    }
+
+    /**
+     * @return -1 表示不因次数关连（{@code businessIdleCloseStrike <= 0}）；否则为第几次关连
+     */
+    private static int resolveCloseAtStrike(LoginClientInfo loginInfo) {
+        int t = loginInfo.getBusinessIdleCloseStrike();
+        if (t <= NumberConstant.NUMBER_0) {
+            return IdleNotifyConstant.CLOSE_STRIKE_DISABLED;
+        }
+        return t;
     }
 }

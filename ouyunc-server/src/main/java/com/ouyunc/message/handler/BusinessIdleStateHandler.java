@@ -34,16 +34,7 @@ public class BusinessIdleStateHandler extends IdleStateHandler {
         super(businessIdleSeconds, NumberConstant.NUMBER_0, NumberConstant.NUMBER_0, TimeUnit.SECONDS);
     }
 
-    /**
-     * @return -1 表示不因次数关连（{@code businessIdleCloseStrike <= 0}）；否则为第几次关连
-     */
-    private static int resolveCloseAtStrike(LoginClientInfo loginInfo) {
-        int t = loginInfo.getBusinessIdleCloseStrike();
-        if (t <= NumberConstant.NUMBER_0) {
-            return IdleNotifyConstant.CLOSE_STRIKE_DISABLED;
-        }
-        return t;
-    }
+
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -87,34 +78,4 @@ public class BusinessIdleStateHandler extends IdleStateHandler {
                 true);
     }
 
-    /**
-     * 业务上行后 strike 被置 0（或尚未计数）。此时空闲提示和关连都应取消。
-     */
-    public static boolean isIdleStrikeCleared(ChannelHandlerContext ctx) {
-        if (ctx == null) {
-            return true;
-        }
-        Integer current = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_BUSINESS_IDLE_STRIKE);
-        return current == null || current == IdleNotifyConstant.STRIKE_CLEARED;
-    }
-
-    /**
-     * 关连是否仍然成立：连接还在，且当前 strike 仍达到关连档。
-     * 通知写出回调前对方发了业务包会把 strike 清零，此时必须取消关连。
-     */
-    public static boolean isCloseStillDue(ChannelHandlerContext ctx) {
-        if (ctx == null || ctx.channel() == null || !ctx.channel().isActive()) {
-            return false;
-        }
-        LoginClientInfo info = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
-        if (info == null) {
-            return false;
-        }
-        int closeAt = resolveCloseAtStrike(info);
-        if (closeAt <= NumberConstant.NUMBER_0) {
-            return false;
-        }
-        Integer current = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_BUSINESS_IDLE_STRIKE);
-        return current != null && current >= closeAt;
-    }
 }
