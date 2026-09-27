@@ -861,7 +861,7 @@ public class CacheConstant {
      * 业务空闲文案本机缓存失效频道；payload 为 appKey 或 {@link #CONTENT_SAFETY_RELOAD_ALL}。
      * IM 与 CS 须共用同一 Redis，发布端用 Redisson Topic。
      */
-    public static final String IDLE_NOTIFY_RELOAD_CHANNEL = OUYUNC + "im:idle-notify:reload";
+    public static final String IDLE_NOTIFY_RELOAD_CHANNEL = IdleNotifyConstant.RELOAD_CHANNEL;
 
     /**
      * 关系本机缓存失效 Pub/Sub 频道；payload 为 {@code RelationCacheInvalidateEvent} JSON。

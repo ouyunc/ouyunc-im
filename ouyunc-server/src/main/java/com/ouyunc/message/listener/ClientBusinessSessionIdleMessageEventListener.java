@@ -1,5 +1,6 @@
 package com.ouyunc.message.listener;
 
+import com.ouyunc.base.constant.IdleNotifyConstant;
 import com.ouyunc.base.constant.enums.EventRingEnum;
 import com.ouyunc.base.constant.enums.EventType;
 import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
@@ -16,10 +17,11 @@ import org.slf4j.LoggerFactory;
 
 /**
  * 客户端业务会话空闲：按 {@link ClientBusinessSessionIdlePayload#strike()} 向本连接下行 IM 提示；关连由
- * {@link BusinessIdleStateHandler} 在 {@link com.ouyunc.base.packet.message.content.LoginContent#getBusinessIdleCloseStrike()} {@code >=1} 且达到次数时关连；{@code <=0} 不关。
+ * {@link BusinessIdleStateHandler} 在 {@link com.ouyunc.base.packet.message.content.LoginContent#getBusinessIdleCloseStrike()}
+ * {@code >=} {@link IdleNotifyConstant#STRIKE_FIRST} 且达到次数时关连；{@code <=} {@link IdleNotifyConstant#STRIKE_CLEARED} 不关。
  * <p>不通知 CS；通道关闭后由 {@link CsAgentPresenceLogoutMessageEventListener} 投递 MQ。ticket SLA 仍由 CS Scanner 负责。</p>
  */
-@EventListener(order = 100, ring = EventRingEnum.CLIENT_BUSINESS_SESSION_IDLE)
+@EventListener(ring = EventRingEnum.CLIENT_BUSINESS_SESSION_IDLE)
 class ClientBusinessSessionIdleMessageEventListener implements MessageEventListener<MessageEvent> {
 
     private static final Logger log = LoggerFactory.getLogger(ClientBusinessSessionIdleMessageEventListener.class);
@@ -43,30 +45,10 @@ class ClientBusinessSessionIdleMessageEventListener implements MessageEventListe
             return;
         }
         String chId = ctx.channel().id().asShortText();
-        if (log.isInfoEnabled()) {
-            log.debug("业务会话空闲: appKey={}, identity={}, strike={}, channel={}", loginInfo.getAppKey(), loginInfo.getIdentity(), strike, chId);
+        if (log.isDebugEnabled()) {
+            log.debug("业务会话空闲: appKey={}, identity={}, strike={}, channel={}",
+                    loginInfo.getAppKey(), loginInfo.getIdentity(), strike, chId);
         }
-        switch (strike) {
-            case 1 -> onPrompt(payload);
-            case 2 -> onEscrow(payload);
-            default -> onLaterStrike(payload);
-        }
-    }
-
-    /** 第 1 次连续业务空闲：IM 下行提示。 */
-    protected void onPrompt(ClientBusinessSessionIdlePayload payload) {
-        BusinessIdleNotifyHelper.notifyIdle(payload.ctx(), payload.loginInfo(), payload.strike());
-    }
-
-    /** 第 2 次连续业务空闲：即将断开预警（若配置了关连档位数）。 */
-    protected void onEscrow(ClientBusinessSessionIdlePayload payload) {
-        BusinessIdleNotifyHelper.notifyIdle(payload.ctx(), payload.loginInfo(), payload.strike());
-    }
-
-    /**
-     * 第 3 次及以后：仅当 Redis 配了对应 field（如 {@code cs_agent:3:repeat}）才下行，无内置兜底。
-     */
-    protected void onLaterStrike(ClientBusinessSessionIdlePayload payload) {
-        BusinessIdleNotifyHelper.notifyIdle(payload.ctx(), payload.loginInfo(), payload.strike());
+        BusinessIdleNotifyHelper.notifyIdle(ctx, loginInfo, strike);
     }
 }

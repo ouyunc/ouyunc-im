@@ -1,6 +1,8 @@
 package com.ouyunc.message.helper;
 
+import com.ouyunc.base.constant.IdleNotifyConstant;
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.LoginScopeEnum;
 import com.ouyunc.base.encrypt.Encrypt;
 import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
@@ -32,13 +34,6 @@ public final class BusinessIdleNotifyHelper {
 
     private static final Logger log = LoggerFactory.getLogger(BusinessIdleNotifyHelper.class);
 
-    /** Redis field 通配 scope。 */
-    static final String WILDCARD_SCOPE = "*";
-    /** 第 2 档且仍将关连。 */
-    static final String VARIANT_PRE_CLOSE = "pre-close";
-    /** 第 2 档及以后不关连。 */
-    static final String VARIANT_REPEAT = "repeat";
-
     private BusinessIdleNotifyHelper() {
     }
 
@@ -48,7 +43,7 @@ public final class BusinessIdleNotifyHelper {
      * @param strike 连续业务空闲次数（1=首次提示，2+=预断开/重复提示，文案按 Redis field 可扩展）
      */
     public static void notifyIdle(ChannelHandlerContext ctx, LoginClientInfo loginInfo, int strike) {
-        if (ctx == null || loginInfo == null || strike <= 0) {
+        if (ctx == null || loginInfo == null || strike <= NumberConstant.NUMBER_0) {
             return;
         }
         boolean closeAfter = shouldCloseAfterStrike(loginInfo, strike);
@@ -87,7 +82,7 @@ public final class BusinessIdleNotifyHelper {
     /** 登录配置了关连档且当前次数已达到。 */
     static boolean shouldCloseAfterStrike(LoginClientInfo loginInfo, int strike) {
         int closeAt = loginInfo.getBusinessIdleCloseStrike();
-        return closeAt > 0 && strike >= closeAt;
+        return closeAt > NumberConstant.NUMBER_0 && strike >= closeAt;
     }
 
     private static void closeIfStillDue(ChannelHandlerContext ctx) {
@@ -124,63 +119,67 @@ public final class BusinessIdleNotifyHelper {
         if (text == null) {
             return null;
         }
-        if (variant.endsWith(VARIANT_PRE_CLOSE)) {
-            return formatIdleSeconds(text, Math.max(1, loginInfo.getBusinessIdleSeconds()));
+        if (variant.endsWith(IdleNotifyConstant.VARIANT_PRE_CLOSE)) {
+            return formatIdleSeconds(text, Math.max(NumberConstant.NUMBER_1, loginInfo.getBusinessIdleSeconds()));
         }
         return text;
     }
 
     /**
-     * {@code 1} / {@code 2:pre-close} / {@code 2:repeat}；strike&gt;2 同样按是否关连拼 variant。
+     * 首次为 {@link IdleNotifyConstant#VARIANT_FIRST}；其后为 {@code {strike}:pre-close|repeat}。
      */
     static String resolveVariant(int strike, int closeAt) {
-        if (strike <= 0) {
+        if (strike <= NumberConstant.NUMBER_0) {
             return null;
         }
-        if (strike == 1) {
-            return "1";
+        if (strike == IdleNotifyConstant.STRIKE_FIRST) {
+            return IdleNotifyConstant.VARIANT_FIRST;
         }
-        // 即将关或本档就关：用 pre-close；永不关连：repeat
-        boolean closeNowOrLater = closeAt > 0 && closeAt >= strike;
-        String suffix = closeNowOrLater ? VARIANT_PRE_CLOSE : VARIANT_REPEAT;
-        return strike + ":" + suffix;
+        boolean closeNowOrLater = closeAt > NumberConstant.NUMBER_0 && closeAt >= strike;
+        String suffix = closeNowOrLater
+                ? IdleNotifyConstant.VARIANT_PRE_CLOSE
+                : IdleNotifyConstant.VARIANT_REPEAT;
+        return IdleNotifyConstant.variantWithSuffix(strike, suffix);
     }
 
     static String pickConfigured(Map<String, String> fields, LoginScopeEnum scopeEnum, String variant) {
         if (fields == null || fields.isEmpty() || variant == null) {
             return null;
         }
-        String byName = fields.get(scopeEnum.getName() + ":" + variant);
+        String byName = fields.get(IdleNotifyConstant.fieldKey(scopeEnum.getName(), variant));
         if (StringUtils.isNotBlank(byName)) {
             return byName;
         }
-        String byType = fields.get(scopeEnum.getType() + ":" + variant);
+        String byType = fields.get(IdleNotifyConstant.fieldKey(String.valueOf(scopeEnum.getType()), variant));
         if (StringUtils.isNotBlank(byType)) {
             return byType;
         }
-        String wildcard = fields.get(WILDCARD_SCOPE + ":" + variant);
+        String wildcard = fields.get(IdleNotifyConstant.fieldKey(IdleNotifyConstant.WILDCARD_SCOPE, variant));
         return StringUtils.isNotBlank(wildcard) ? wildcard : null;
     }
 
     static String builtinText(LoginScopeEnum scopeEnum, String variant) {
-        if ("1".equals(variant)) {
+        if (IdleNotifyConstant.VARIANT_FIRST.equals(variant)) {
             return switch (scopeEnum) {
                 case CS_AGENT -> MessageConstant.BUSINESS_IDLE_PROMPT_CS_AGENT;
                 case CS_VISITOR -> MessageConstant.BUSINESS_IDLE_PROMPT_CS_VISITOR;
                 case NORMAL -> MessageConstant.BUSINESS_IDLE_PROMPT_NORMAL;
             };
         }
-        if (variant.endsWith(VARIANT_PRE_CLOSE) && variant.startsWith("2:")) {
+        if (variant.endsWith(IdleNotifyConstant.VARIANT_PRE_CLOSE)
+                && variant.startsWith(IdleNotifyConstant.BUILTIN_STRIKE_PREFIX)) {
             return MessageConstant.BUSINESS_IDLE_PRE_CLOSE;
         }
-        if (variant.endsWith(VARIANT_REPEAT) && variant.startsWith("2:")) {
+        if (variant.endsWith(IdleNotifyConstant.VARIANT_REPEAT)
+                && variant.startsWith(IdleNotifyConstant.BUILTIN_STRIKE_PREFIX)) {
             return MessageConstant.BUSINESS_IDLE_REPEAT_PROMPT;
         }
         return null;
     }
 
     private static String formatIdleSeconds(String template, int idleSec) {
-        if (template.contains("%d") || template.contains("%s")) {
+        if (template.contains(IdleNotifyConstant.PLACEHOLDER_INT)
+                || template.contains(IdleNotifyConstant.PLACEHOLDER_STRING)) {
             try {
                 return String.format(template, idleSec);
             } catch (Exception e) {

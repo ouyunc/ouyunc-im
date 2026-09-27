@@ -2,6 +2,7 @@ package com.ouyunc.message.cache;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.ouyunc.base.constant.CacheConstant;
+import com.ouyunc.base.constant.IdleNotifyConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.cache.Cache;
 import com.ouyunc.cache.config.CacheFactory;
@@ -36,9 +37,9 @@ public final class IdleNotifyTextCache {
      * Redis Hash 快照。key=租户 appKey 或 {@link #GLOBAL_CACHE_KEY}。
      */
     public final Cache<String, Map<String, String>> localCache = CaffeineLocalCache.wrap(
-            "idleNotifyTextCache",
+            IdleNotifyConstant.LOCAL_CACHE_NAME,
             Caffeine.newBuilder()
-                    .maximumSize(2_000)
+                    .maximumSize(IdleNotifyConstant.LOCAL_CACHE_MAX_SIZE)
                     .expireAfterWrite(MessageConstant.IDLE_NOTIFY_TEXT_LOCAL_EXPIRE_MINUTES, TimeUnit.MINUTES)
                     .recordStats()
                     .build());
@@ -78,7 +79,8 @@ public final class IdleNotifyTextCache {
      * 管理端改文案后可主动失效本机快照；不删 Redis。
      */
     public void invalidate(String appKeyOrAll) {
-        if (StringUtils.isBlank(appKeyOrAll) || "ALL".equalsIgnoreCase(appKeyOrAll.trim())) {
+        if (StringUtils.isBlank(appKeyOrAll)
+                || CacheConstant.CONTENT_SAFETY_RELOAD_ALL.equalsIgnoreCase(appKeyOrAll.trim())) {
             localCache.deleteAll(Set.copyOf(localCache.asMap().keySet()));
             return;
         }
@@ -93,7 +95,7 @@ public final class IdleNotifyTextCache {
         try {
             Map<Object, Object> raw = stringRedis.opsForHash().entries(redisKey);
             Map<String, String> copied = toStringMap(raw);
-            // 空 Hash 不进 L1，避免首次空读把管理端刚写入的文案挡住 10 分钟
+            // 空 Hash 不进 L1，避免首次空读挡住管理端刚写入的文案（L1 过期见 IDLE_NOTIFY_TEXT_LOCAL_EXPIRE_MINUTES）
             if (!copied.isEmpty()) {
                 localCache.put(cacheKey, copied);
             }

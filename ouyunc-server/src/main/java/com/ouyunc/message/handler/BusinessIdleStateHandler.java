@@ -1,6 +1,8 @@
 package com.ouyunc.message.handler;
 
+import com.ouyunc.base.constant.IdleNotifyConstant;
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.model.LoginClientInfo;
@@ -29,7 +31,7 @@ import java.util.concurrent.TimeUnit;
 public class BusinessIdleStateHandler extends IdleStateHandler {
 
     public BusinessIdleStateHandler(long businessIdleSeconds) {
-        super(businessIdleSeconds, 0L, 0L, TimeUnit.SECONDS);
+        super(businessIdleSeconds, NumberConstant.NUMBER_0, NumberConstant.NUMBER_0, TimeUnit.SECONDS);
     }
 
     /**
@@ -37,8 +39,8 @@ public class BusinessIdleStateHandler extends IdleStateHandler {
      */
     private static int resolveCloseAtStrike(LoginClientInfo loginInfo) {
         int t = loginInfo.getBusinessIdleCloseStrike();
-        if (t <= 0) {
-            return -1;
+        if (t <= NumberConstant.NUMBER_0) {
+            return IdleNotifyConstant.CLOSE_STRIKE_DISABLED;
         }
         return t;
     }
@@ -57,8 +59,9 @@ public class BusinessIdleStateHandler extends IdleStateHandler {
             }
             return;
         }
-        // 业务上行：清零次数。已预约的 8s 兜底 / 通知后关连见 {@link #isCloseStillDue}，不再关。
-        ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_BUSINESS_IDLE_STRIKE, 0);
+        // 业务上行：清零次数。已预约的兜底关连 / 通知后关连见 {@link #isCloseStillDue}，不再关。
+        ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_BUSINESS_IDLE_STRIKE,
+                IdleNotifyConstant.STRIKE_CLEARED);
         super.channelRead(ctx, msg);
     }
 
@@ -72,7 +75,7 @@ public class BusinessIdleStateHandler extends IdleStateHandler {
             return;
         }
         Integer prev = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_BUSINESS_IDLE_STRIKE);
-        int strike = (prev == null ? 0 : prev) + 1;
+        int strike = (prev == null ? IdleNotifyConstant.STRIKE_CLEARED : prev) + NumberConstant.NUMBER_1;
         ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_BUSINESS_IDLE_STRIKE, strike);
 
         LoginClientInfo info = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
@@ -84,7 +87,7 @@ public class BusinessIdleStateHandler extends IdleStateHandler {
                 true);
         int closeAt = resolveCloseAtStrike(info);
         // 关连改由通知写出回调执行；此处仅兜底，避免 Disruptor 丢事件后连接永不关
-        if (closeAt > 0 && strike >= closeAt && ctx.channel().isActive()) {
+        if (closeAt > NumberConstant.NUMBER_0 && strike >= closeAt && ctx.channel().isActive()) {
             ctx.executor().schedule(() -> {
                 if (isCloseStillDue(ctx)) {
                     ctx.close();
@@ -101,12 +104,12 @@ public class BusinessIdleStateHandler extends IdleStateHandler {
             return true;
         }
         Integer current = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_BUSINESS_IDLE_STRIKE);
-        return current == null || current == 0;
+        return current == null || current == IdleNotifyConstant.STRIKE_CLEARED;
     }
 
     /**
      * 关连是否仍然成立：连接还在，且当前 strike 仍达到关连档。
-     * 8s 内对方发了业务包会把 strike 置 0，此时必须取消关连（含通知写出回调）。
+     * {@link MessageConstant#BUSINESS_IDLE_CLOSE_AFTER_NOTIFY_SECONDS} 内对方发了业务包会把 strike 清零，此时必须取消关连。
      */
     public static boolean isCloseStillDue(ChannelHandlerContext ctx) {
         if (ctx == null || ctx.channel() == null || !ctx.channel().isActive()) {
@@ -117,7 +120,7 @@ public class BusinessIdleStateHandler extends IdleStateHandler {
             return false;
         }
         int closeAt = resolveCloseAtStrike(info);
-        if (closeAt <= 0) {
+        if (closeAt <= NumberConstant.NUMBER_0) {
             return false;
         }
         Integer current = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_BUSINESS_IDLE_STRIKE);
