@@ -134,10 +134,10 @@ public class Metadata implements Serializable, Cloneable {
     @Override
     public String toString() {
         return "Metadata{" +
-                "ingress=" + getIngress() +
-                ", clusterRoute=" + getClusterRoute() +
-                ", qosClaim=" + getQosClaim() +
-                ", httpPushClaim=" + getHttpPushClaim() +
+                "ingress=" + getIngress().toString() +
+                ", clusterRoute=" + getClusterRoute().toString() +
+                ", qosClaim=" + getQosClaim().toString() +
+                ", httpPushClaim=" + getHttpPushClaim().toString() +
                 '}';
     }
 }

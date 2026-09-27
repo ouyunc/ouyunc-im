@@ -34,4 +34,12 @@ public final class HttpPushClaim implements Serializable, Cloneable {
     public void setHttpPushOwnerToken(String httpPushOwnerToken) { this.httpPushOwnerToken = httpPushOwnerToken; }
     public String getHttpPushPayloadHash() { return httpPushPayloadHash; }
     public void setHttpPushPayloadHash(String httpPushPayloadHash) { this.httpPushPayloadHash = httpPushPayloadHash; }
+
+    @Override
+    public String toString() {
+        return "HttpPushClaim{" +
+                "httpPushOwnerToken='" + httpPushOwnerToken + '\'' +
+                ", httpPushPayloadHash='" + httpPushPayloadHash + '\'' +
+                '}';
+    }
 }

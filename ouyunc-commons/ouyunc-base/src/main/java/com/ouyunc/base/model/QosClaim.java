@@ -44,4 +44,14 @@ public final class QosClaim implements Serializable, Cloneable {
     public void setQosClaimPacketId(Long qosClaimPacketId) { this.qosClaimPacketId = qosClaimPacketId; }
     public boolean isQosArchiveBound() { return qosArchiveBound; }
     public void setQosArchiveBound(boolean qosArchiveBound) { this.qosArchiveBound = qosArchiveBound; }
+
+    @Override
+    public String toString() {
+        return "QosClaim{" +
+                "qosClaimIdentity='" + qosClaimIdentity + '\'' +
+                ", qosOwnerToken='" + qosOwnerToken + '\'' +
+                ", qosClaimPacketId=" + qosClaimPacketId +
+                ", qosArchiveBound=" + qosArchiveBound +
+                '}';
+    }
 }

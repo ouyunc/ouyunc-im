@@ -82,4 +82,22 @@ public class RequestEventContext implements Serializable, Cloneable {
     public void setWay(Integer way) { this.way = way; }
     public Integer getChannel() { return channel; }
     public void setChannel(Integer channel) { this.channel = channel; }
+
+    @Override
+    public String toString() {
+        return "RequestEventContext{" +
+                "version=" + version +
+                ", requestSessionId='" + requestSessionId + '\'' +
+                ", progress=" + progress +
+                ", inviter='" + inviter + '\'' +
+                ", inviterPost=" + inviterPost +
+                ", joiner='" + joiner + '\'' +
+                ", joinerProcessStatus=" + joinerProcessStatus +
+                ", groupId='" + groupId + '\'' +
+                ", processor='" + processor + '\'' +
+                ", processorPost=" + processorPost +
+                ", way=" + way +
+                ", channel=" + channel +
+                '}';
+    }
 }

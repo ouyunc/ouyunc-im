@@ -82,4 +82,18 @@ public final class ClusterRoute implements Serializable, Cloneable {
     public void setLocalBroadcastOnly(boolean localBroadcastOnly) { this.localBroadcastOnly = localBroadcastOnly; }
     public List<Target> getFanoutTargets() { return fanoutTargets; }
     public void setFanoutTargets(List<Target> fanoutTargets) { this.fanoutTargets = fanoutTargets; }
+
+    @Override
+    public String toString() {
+        return "ClusterRoute{" +
+                "clusterForwardMode=" + clusterForwardMode +
+                ", currentRetry=" + currentRetry +
+                ", fromServerAddress='" + fromServerAddress + '\'' +
+                ", target=" + target +
+                ", routingTables=" + routingTables +
+                ", loginFollowHops=" + loginFollowHops +
+                ", localBroadcastOnly=" + localBroadcastOnly +
+                ", fanoutTargets=" + fanoutTargets +
+                '}';
+    }
 }

@@ -67,4 +67,18 @@ public final class IngressFacts implements Serializable, Cloneable {
     public void setModerationStatus(ModerationStatusEnum moderationStatus) { this.moderationStatus = moderationStatus; }
     public ModerationModeEnum getModerationMode() { return moderationMode; }
     public void setModerationMode(ModerationModeEnum moderationMode) { this.moderationMode = moderationMode; }
+
+    @Override
+    public String toString() {
+        return "IngressFacts{" +
+                "appKey='" + appKey + '\'' +
+                ", clientIp='" + clientIp + '\'' +
+                ", serverTime=" + serverTime +
+                ", originServerAddress='" + originServerAddress + '\'' +
+                ", ingressSource=" + ingressSource +
+                ", httpPushType=" + httpPushType +
+                ", moderationStatus=" + moderationStatus +
+                ", moderationMode=" + moderationMode +
+                '}';
+    }
 }
