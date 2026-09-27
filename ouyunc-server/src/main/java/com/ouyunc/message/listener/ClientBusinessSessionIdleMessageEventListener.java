@@ -1,6 +1,5 @@
 package com.ouyunc.message.listener;
 
-import com.ouyunc.base.constant.IdleNotifyConstant;
 import com.ouyunc.base.constant.enums.EventRingEnum;
 import com.ouyunc.base.constant.enums.EventType;
 import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
@@ -16,9 +15,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * 客户端业务会话空闲：按 {@link ClientBusinessSessionIdlePayload#strike()} 向本连接下行 IM 提示；关连由
- * {@link BusinessIdleStateHandler} 在 {@link com.ouyunc.base.packet.message.content.LoginContent#getBusinessIdleCloseStrike()}
- * {@code >=} {@link IdleNotifyConstant#STRIKE_FIRST} 且达到次数时关连；{@code <=} {@link IdleNotifyConstant#STRIKE_CLEARED} 不关。
+ * 客户端业务会话空闲：按 {@link ClientBusinessSessionIdlePayload#strike()} 向本连接下行 IM 提示；
+ * 关连在 {@link BusinessIdleNotifyHelper}：达到 {@link com.ouyunc.base.packet.message.content.LoginContent#getBusinessIdleCloseStrike()}
+ * 且写出后（或无文案时）再关；对方中途发业务包则 {@link BusinessIdleStateHandler#isCloseStillDue} 为假，不关。
  * <p>不通知 CS；通道关闭后由 {@link CsAgentPresenceLogoutMessageEventListener} 投递 MQ。ticket SLA 仍由 CS Scanner 负责。</p>
  */
 @EventListener(ring = EventRingEnum.CLIENT_BUSINESS_SESSION_IDLE)

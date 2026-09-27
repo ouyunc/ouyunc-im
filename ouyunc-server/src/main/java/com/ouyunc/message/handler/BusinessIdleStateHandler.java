@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit;
  * {@link ClientBusinessSessionIdlePayload}（含连续次数 {@code strike} 与 {@code ctx}）。
  * 只要持续无有效业务读，会按 {@code businessIdleSeconds} 间隔反复触发，事件可一直发、{@code strike} 递增。
  * 是否关连由登录 {@link com.ouyunc.base.packet.message.content.LoginContent#getBusinessIdleCloseStrike()} 决定（{@code <=0} 不关，{@code >=1} 为第 N 次关）。
- * 达到次数时先下行提示，写出后再关；本 handler 仅做超时兜底关连。
+ * 达到次数时由空闲事件监听器下行提示，写出成功/失败后再关连；本 handler 不关连接。
  * 非 PING 业务上行会清零 {@code strike} 并重新计时。
  */
 public class BusinessIdleStateHandler extends IdleStateHandler {
@@ -59,7 +59,7 @@ public class BusinessIdleStateHandler extends IdleStateHandler {
             }
             return;
         }
-        // 业务上行：清零次数。已预约的兜底关连 / 通知后关连见 {@link #isCloseStillDue}，不再关。
+        // 业务上行：清零次数。通知写出回调见 {@link #isCloseStillDue}，不再关。
         ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_BUSINESS_IDLE_STRIKE,
                 IdleNotifyConstant.STRIKE_CLEARED);
         super.channelRead(ctx, msg);
@@ -85,15 +85,6 @@ public class BusinessIdleStateHandler extends IdleStateHandler {
         MessageServerContext.publishEvent(
                 new MessageEvent(new ClientBusinessSessionIdlePayload(info, strike, ctx), MessageEventTypeEnum.CLIENT_BUSINESS_SESSION_IDLE),
                 true);
-        int closeAt = resolveCloseAtStrike(info);
-        // 关连改由通知写出回调执行；此处仅兜底，避免 Disruptor 丢事件后连接永不关
-        if (closeAt > NumberConstant.NUMBER_0 && strike >= closeAt && ctx.channel().isActive()) {
-            ctx.executor().schedule(() -> {
-                if (isCloseStillDue(ctx)) {
-                    ctx.close();
-                }
-            }, MessageConstant.BUSINESS_IDLE_CLOSE_AFTER_NOTIFY_SECONDS, TimeUnit.SECONDS);
-        }
     }
 
     /**
@@ -109,7 +100,7 @@ public class BusinessIdleStateHandler extends IdleStateHandler {
 
     /**
      * 关连是否仍然成立：连接还在，且当前 strike 仍达到关连档。
-     * {@link MessageConstant#BUSINESS_IDLE_CLOSE_AFTER_NOTIFY_SECONDS} 内对方发了业务包会把 strike 清零，此时必须取消关连。
+     * 通知写出回调前对方发了业务包会把 strike 清零，此时必须取消关连。
      */
     public static boolean isCloseStillDue(ChannelHandlerContext ctx) {
         if (ctx == null || ctx.channel() == null || !ctx.channel().isActive()) {

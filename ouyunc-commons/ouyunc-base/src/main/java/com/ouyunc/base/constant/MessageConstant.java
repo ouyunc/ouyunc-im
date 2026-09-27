@@ -987,11 +987,6 @@ public class MessageConstant {
      */
     public static final int IDLE_NOTIFY_TEXT_LOCAL_EXPIRE_MINUTES = 10;
 
-    /**
-     * 达到关连档后：先异步下发通知，再由写出回调关连；本秒数为 handler 兜底关连，防止事件丢失一直占连接。
-     */
-    public static final int BUSINESS_IDLE_CLOSE_AFTER_NOTIFY_SECONDS = 8;
-
     /** 第 2 次业务空闲且仍将关连：%d 为 {@code businessIdleSeconds} */
     public static final String BUSINESS_IDLE_PRE_CLOSE =
             "长时间无操作，若 %d 秒内仍无消息，连接将自动断开。";
