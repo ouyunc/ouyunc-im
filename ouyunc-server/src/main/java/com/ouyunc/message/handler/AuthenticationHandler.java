@@ -174,20 +174,18 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                 failLoginOnEventLoop(ctx);
                 return;
             }
-            LoginClientInfo newLoginClientInfo = new LoginClientInfo(
+            LoginClientInfo loginClientInfo = new LoginClientInfo(
                     protocol.getProtocol(), protocol.getProtocolVersion(),
                     MessageContext.messageProperties.getLocalServerAddress(), OnlineEnum.ONLINE, null,
                     ClientHelper.calculateClientHeartBeatTimeout(loginContent.getHeartBeatExpireTime()),
                     loginTimestamp, loginContent.getAppKey(), loginContent.getIdentity(), deviceType,
                     loginContent.getSupportDeviceTypes(), loginContent.getSn(), loginContent.getSignature(),
-                    loginContent.getSignatureAlgorithm(), loginContent.getHeartBeatExpireTime(), loginTimestamp,
+                    loginContent.getSignatureAlgorithm(), loginContent.getHeartBeatExpireTime(), loginContent.getCreateTime(),
                     loginContent.getEnableWill(), loginContent.getWillMessage(), loginContent.getEnableAlive(),
                     loginContent.getAliveMessage(), loginContent.getScope(), loginContent.getBusinessIdleSeconds(),
                     loginContent.getHeartBeatWaitRetry(), loginContent.getBusinessIdleCloseStrike());
             try {
-                final LoginContent parsedLogin = loginContent;
-                ctx.executor().execute(() -> startRemoteBind(ctx, packet, parsedLogin, loginMessage,
-                        deviceType, newLoginClientInfo, loginTimestamp));
+                ctx.executor().execute(() -> startRemoteBind(ctx, packet, loginClientInfo));
             } catch (RejectedExecutionException scheduleError) {
                 log.error("登录绑定回调投递 EventLoop 被拒绝 channelId={}", ctx.channel().id().asShortText(), scheduleError);
                 AppKeyValidator.releaseReservedIfNeeded(loginContent.getAppKey(), ctx);
@@ -202,17 +200,16 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         }
     }
 
-    private void startRemoteBind(ChannelHandlerContext ctx, Packet packet, LoginContent loginContent,
-                                 Message loginMessage, byte deviceType, LoginClientInfo newLoginClientInfo,
-                                 long loginTimestamp) {
+    private void startRemoteBind(ChannelHandlerContext ctx, Packet packet,
+                                 LoginClientInfo loginClientInfo) {
         if (!ctx.channel().isActive()) {
             ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, null);
-            AppKeyValidator.releaseReservedIfNeeded(newLoginClientInfo.getAppKey(), ctx);
+            AppKeyValidator.releaseReservedIfNeeded(loginClientInfo.getAppKey(), ctx);
             return;
         }
         Consumer<Channel> channelCloseHook = channel -> {
             LoginClientInfo attrLogin = ChannelAttrUtil.getChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
-            LoginClientInfo closingLogin = attrLogin != null ? attrLogin : newLoginClientInfo;
+            LoginClientInfo closingLogin = attrLogin != null ? attrLogin : loginClientInfo;
             String closingComboIdentity = IdentityUtil.generalComboIdentity(
                     closingLogin.getAppKey(), closingLogin.getIdentity(), closingLogin.getDeviceType());
             ClientHelper.unregisterLocal(closingComboIdentity, channel, closingLogin.getAppKey());
@@ -223,16 +220,15 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         };
         ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_CHANNEL_CLOSE_HOOK, channelCloseHook);
         // 踢旧会话必须在 CAS 绑定胜出之后，避免锁外踢人导致跨节点双在线窗口
-        ClientHelper.bindAsync(ctx, newLoginClientInfo).whenComplete((previous, ex) -> {
+        ClientHelper.bindAsync(ctx, loginClientInfo).whenComplete((previous, ex) -> {
             try {
                 // fencing GET / 踢人禁止回到 EventLoop；whenComplete 可能已在 IO 线程
                 ThreadPoolManager.messageProcessorExecutor().execute(() ->
-                        finishLoginAfterDirectoryCheck(ctx, packet, loginContent, loginMessage,
-                                deviceType, newLoginClientInfo, loginTimestamp, previous, ex));
+                        finishLoginAfterDirectoryCheck(ctx, packet, loginClientInfo, previous, ex));
             } catch (RejectedExecutionException scheduleError) {
                 log.error("登录 fencing 投递业务线程被拒绝 channelId={}", ctx.channel().id().asShortText(), scheduleError);
                 ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, null);
-                AppKeyValidator.releaseReservedIfNeeded(newLoginClientInfo.getAppKey(), ctx);
+                AppKeyValidator.releaseReservedIfNeeded(loginClientInfo.getAppKey(), ctx);
                 if (ctx.channel().isActive()) {
                     ctx.channel().close();
                 }
@@ -243,25 +239,25 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
     /**
      * Redis 目录 fencing 与跨节点踢人在业务线程完成，再回 EventLoop 装管道/发 ACK。
      */
-    private void finishLoginAfterDirectoryCheck(ChannelHandlerContext ctx, Packet packet, LoginContent loginContent,
-                                                Message loginMessage, byte deviceType, LoginClientInfo newLoginClientInfo,
-                                                long loginTimestamp, LoginClientInfo previous, Throwable bindError) {
+    private void finishLoginAfterDirectoryCheck(ChannelHandlerContext ctx, Packet packet,
+                                                LoginClientInfo loginClientInfo,
+                                                LoginClientInfo previous, Throwable bindError) {
         boolean directoryOwned = false;
         if (bindError == null && ctx.channel().isActive()) {
-            directoryOwned = ClientHelper.stillOwnsDirectory(newLoginClientInfo);
+            directoryOwned = ClientHelper.stillOwnsDirectory(loginClientInfo);
             if (directoryOwned) {
-                kickPreviousSessionAfterBindWin(ctx, packet, loginContent, loginMessage, loginTimestamp, previous);
-                directoryOwned = ClientHelper.stillOwnsDirectory(newLoginClientInfo);
+                kickPreviousSessionAfterBindWin(packet, loginClientInfo, previous);
+                directoryOwned = ClientHelper.stillOwnsDirectory(loginClientInfo);
             }
         }
         final boolean owned = directoryOwned;
         try {
-            ctx.executor().execute(() -> completeLoginAfterRemoteBind(ctx, packet, loginContent, loginMessage,
-                    deviceType, newLoginClientInfo, loginTimestamp, bindError, owned));
+            ctx.executor().execute(() -> completeLoginAfterRemoteBind(
+                    ctx, packet, loginClientInfo, bindError, owned));
         } catch (RejectedExecutionException scheduleError) {
             log.error("登录完成回调投递 EventLoop 被拒绝 channelId={}", ctx.channel().id().asShortText(), scheduleError);
             ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, null);
-            AppKeyValidator.releaseReservedIfNeeded(newLoginClientInfo.getAppKey(), ctx);
+            AppKeyValidator.releaseReservedIfNeeded(loginClientInfo.getAppKey(), ctx);
             if (ctx.channel().isActive()) {
                 ctx.channel().close();
             }
@@ -316,8 +312,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
      * CAS 绑定胜出后踢旧会话：同 sn 仅静默断开；异 sn 发远程登录通知后断开（含跨节点）。
      * 本机旧连接已在 {@link ClientHelper#bindAsync} 注册时关闭，此处主要处理跨节点旧会话。
      */
-    private void kickPreviousSessionAfterBindWin(ChannelHandlerContext ctx, Packet packet, LoginContent loginContent,
-                                                 Message loginMessage, long loginTimestamp,
+    private void kickPreviousSessionAfterBindWin(Packet packet, LoginClientInfo loginClientInfo,
                                                  LoginClientInfo previous) {
         if (previous == null) {
             return;
@@ -329,8 +324,8 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
             return;
         }
         boolean sameDevice = StringUtils.isNotBlank(previous.getSn())
-                && StringUtils.isNotBlank(loginContent.getSn())
-                && previous.getSn().equals(loginContent.getSn());
+                && StringUtils.isNotBlank(loginClientInfo.getSn())
+                && previous.getSn().equals(loginClientInfo.getSn());
         if (sameDevice) {
             closePreviousRemoteQuietly(previous);
             return;
@@ -338,12 +333,13 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         Message kickMessage = new Message(
                 MessageContext.idGenerator().generateIdStr(),
                 null,
-                loginContent.getIdentity(),
+                loginClientInfo.getIdentity(),
                 MessageContentTypeEnum.REMOTE_LOGIN_CONTENT.getType(),
                 Serializer.JSON.serializeToString(new ServerNotifyContent(
-                        String.format(MessageConstant.REMOTE_LOGIN_NOTIFICATIONS, loginMessage.getMetadata().getIngress().getClientIp()))),
-                loginTimestamp,
-                loginMessage.getMetadata());
+                        String.format(MessageConstant.REMOTE_LOGIN_NOTIFICATIONS,
+                                packet.getMessage().getMetadata().getIngress().getClientIp()))),
+                loginClientInfo.getLastLoginTime(),
+                packet.getMessage().getMetadata());
         Packet kickPacket = new Packet(
                 packet.getProtocol(),
                 packet.getProtocolVersion(),
@@ -413,9 +409,8 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
     /**
      * 在 EventLoop 上完成登录 ACK 与管道安装。目录 fencing / 踢人已在业务线程做完。
      */
-    private void completeLoginAfterRemoteBind(ChannelHandlerContext ctx, Packet packet, LoginContent loginContent,
-                                              Message loginMessage, byte deviceType, LoginClientInfo loginClientInfo,
-                                              long loginTimestamp, Throwable bindError,
+    private void completeLoginAfterRemoteBind(ChannelHandlerContext ctx, Packet packet,
+                                              LoginClientInfo loginClientInfo, Throwable bindError,
                                               boolean directoryOwned) {
         ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, null);
         if (!ctx.channel().isActive()) {
@@ -441,20 +436,20 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
             ctx.close();
             return;
         }
-        installLoginIdlePipeline(ctx, loginContent);
+        installLoginIdlePipeline(ctx, loginClientInfo);
         Message loginAckMessage = new Message(
                 MessageContext.idGenerator().generateIdStr(),
                 null,
                 loginClientInfo.getIdentity(),
                 MessageContentTypeEnum.LOGIN_RESPONSE_SUCCESS_CONTENT.getType(),
                 MessageContentTypeEnum.LOGIN_RESPONSE_SUCCESS_CONTENT.getDescription(),
-                loginTimestamp,
-                loginMessage.getMetadata());
+                loginClientInfo.getLastLoginTime(),
+                packet.getMessage().getMetadata());
         Packet loginAckPacket = new Packet(
                 packet.getProtocol(),
                 packet.getProtocolVersion(),
                 MessageContext.idGenerator().generateId(),
-                deviceType,
+                loginClientInfo.getDeviceType(),
                 packet.getNetworkType(),
                 packet.getEncryptType(),
                 packet.getSerializeAlgorithm(),
@@ -464,14 +459,14 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                 .appKey(loginClientInfo.getAppKey())
                 .targetIdentity(loginClientInfo.getIdentity())
                 .targetServerAddress(loginClientInfo.getLoginServerAddress())
-                .deviceType(deviceType)
+                .deviceType(loginClientInfo.getDeviceType())
                 .protocol(packet.getProtocol())
                 .protocolVersion(packet.getProtocolVersion())
                 .build());
         if (!LoginTimeoutSupport.cancel(ctx)) {
             log.warn("客户端: {} 登录成功，取消登录超时定时任务失败", loginClientInfo);
         }
-        publishClientLoginOutsideEventLoop(ctx, loginClientInfo, loginTimestamp);
+        publishClientLoginOutsideEventLoop(ctx, loginClientInfo, loginClientInfo.getLastLoginTime());
     }
 
     /**
@@ -505,23 +500,24 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
      * 登录成功后安装管道：心跳读空闲（第一个 {@link IdleStateHandler} + {@link HeartBeatHandler}，可选）；
      * 业务读空闲为 {@link BusinessIdleStateHandler}（继承 {@link IdleStateHandler}，合并 PING 与读空闲事件处理，少一层 handler）。
      */
-    private void installLoginIdlePipeline(ChannelHandlerContext ctx, LoginContent loginContent) {
+    private void installLoginIdlePipeline(ChannelHandlerContext ctx, LoginClientInfo loginClientInfo) {
         String pipelineAnchor = MessageConstant.CONVERT_2_PACKET_HANDLER;
         Integer heartbeatExpireTime = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_HEARTBEAT_TIMEOUT);
         boolean heartbeatInstalled = MessageServerContext.serverProperties().isClientHeartBeatEnable() && heartbeatExpireTime != null;
         if (heartbeatInstalled) {
-            if (loginContent.getHeartBeatWaitRetry() > 0) {
-                ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_HEARTBEAT_WAIT_RETRY, loginContent.getHeartBeatWaitRetry());
+            if (loginClientInfo.getHeartBeatWaitRetry() > 0) {
+                ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_HEARTBEAT_WAIT_RETRY,
+                        loginClientInfo.getHeartBeatWaitRetry());
             }
             ctx.pipeline()
                     .addAfter(pipelineAnchor, MessageConstant.HEART_BEAT_IDLE_HANDLER, new IdleStateHandler(heartbeatExpireTime, NumberConstant.NUMBER_0, NumberConstant.NUMBER_0, TimeUnit.SECONDS))
                     .addAfter(MessageConstant.HEART_BEAT_IDLE_HANDLER, MessageConstant.HEART_BEAT_HANDLER, new HeartBeatHandler());
             pipelineAnchor = MessageConstant.HEART_BEAT_HANDLER;
         }
-        if (loginContent.getBusinessIdleSeconds() <= 0) {
+        if (loginClientInfo.getBusinessIdleSeconds() <= 0) {
             return;
         }
-        int bizSec = loginContent.getBusinessIdleSeconds();
+        int bizSec = loginClientInfo.getBusinessIdleSeconds();
         ctx.pipeline().addAfter(pipelineAnchor, MessageConstant.BUSINESS_READ_IDLE_HANDLER, new BusinessIdleStateHandler(bizSec));
     }
 
