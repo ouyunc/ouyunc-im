@@ -110,7 +110,7 @@
       <module name="ouyunc-job" options="-parameters" />
       <module name="ouyunc-loadbalancer-spring-boot-starter" options="-parameters" />
       <module name="ouyunc-logging-spring-boot-starter" options="-parameters" />
-      <module name="ouyunc-message-spring-boot-starter" options="-parameters" />
+      <module name="ouyunc-message-spring-boot-starter" options="" />
       <module name="ouyunc-message-spring-boot-starter (1)" options="-parameters" />
       <module name="ouyunc-mongodb-spring-boot-starter" options="-parameters" />
       <module name="ouyunc-mq-core-spring-boot-starter" options="-parameters" />

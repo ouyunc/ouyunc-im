@@ -32,7 +32,7 @@
         <section>
             <h2>连接</h2>
             <label>WebSocket</label>
-            <input id="url" value="ws://127.0.0.1:6003/ws">
+            <input id="url" value="ws://172.18.112.63:6003/ws?appKey=ouyunc">
             <label>appKey</label>
             <input id="appKey" value="ouyunc">
             <label>appSecret</label>
@@ -216,7 +216,8 @@ function loginPacket() {
                 sn: 'web-' + who,
                 signatureAlgorithm: 1,
                 signature: hex_md5(raw),
-                createTime
+                createTime,
+                heartBeatExpireTime: 10
             }),
             qos: 0,
             createTime
@@ -233,7 +234,7 @@ document.getElementById('btnConnect').onclick = () => {
         deviceType: 1,
         networkType: 1,
         encryptType: 0,
-        heartbeat: {enable: true, interval: 15000, timeout: 5000, maxWait: 3},
+        heartbeat: {enable: true, interval: 10000, timeout: 5000, maxWait: 3},
         reconnect: {enable: true, maxTimes: 5, delay: 2000}
     });
     setStatus('正在连接 ' + url);
