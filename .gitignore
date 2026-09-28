@@ -1,5 +1,9 @@
-/logs/
+logs/
+*.log
+*.log.gz
 target/
+*.class
+.flattened-pom.xml
 .idea/
 out/
 ouyu-server/src/META-INF/MANIFEST.MF
