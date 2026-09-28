@@ -129,13 +129,13 @@ public final class LoginSessionDirectoryHelper {
         String routeKey = CacheConstant.buildLoginRouteCacheKey(loginClientInfo.getAppKey(), loginClientInfo.getIdentity());
         String loginKey = CacheConstant.buildLoginCacheKey(loginClientInfo.getAppKey(), comboIdentity);
         String encoded = ImRouteCodec.encode(nodeId, epoch, loginClientInfo.getLastLoginTime());
-        Object result = evalCached(BIND_LUA, ScriptKind.BIND, 2,
+        Long result = evalCached(BIND_LUA, ScriptKind.BIND, 2,
                 bytes(routeKey), bytes(loginKey),
                 bytes(String.valueOf(loginClientInfo.getDeviceType())),
                 bytes(encoded), serializeLogin(loginClientInfo.copyForRedis()),
                 bytes(String.valueOf(loginClientInfo.getLastLoginTime())),
                 bytes(String.valueOf(MessageConstant.IM_LOGIN_SESSION_TTL_SECONDS)));
-        if (result instanceof Number number && number.longValue() == 0L) {
+        if (result != null && result == 0L) {
             throw new MessageException("登录绑定失败：已有更新会话");
         }
     }
@@ -277,7 +277,7 @@ public final class LoginSessionDirectoryHelper {
     /**
      * 登录风暴走 EVALSHA；脚本被 FLUSH 后回退 SCRIPT LOAD / EVAL。
      */
-    private static Object evalCached(byte[] script, ScriptKind kind, int keyCount, byte[]... keysAndArgs) {
+    private static Long evalCached(byte[] script, ScriptKind kind, int keyCount, byte[]... keysAndArgs) {
         String sha = shaOf(script, kind);
         try {
             return evalSha(sha, keyCount, keysAndArgs);
@@ -347,14 +347,21 @@ public final class LoginSessionDirectoryHelper {
         EVICT
     }
 
-    private static Object evalSha(String sha, int keyCount, byte[]... keysAndArgs) {
-        return stringRedisTemplate.execute((RedisCallback<Object>) connection ->
-                connection.scriptingCommands().evalSha(sha, ReturnType.VALUE, keyCount, keysAndArgs));
+    /**
+     * 通过 SHA 执行登录目录脚本。当前脚本统一返回 Redis Integer Reply，必须使用 INTEGER 解码；
+     * 若误用 VALUE，Lettuce 会以 ValueOutput 解码整数并抛出 UnsupportedOperationException。
+     */
+    private static Long evalSha(String sha, int keyCount, byte[]... keysAndArgs) {
+        return stringRedisTemplate.execute((RedisCallback<Long>) connection ->
+                (Long) connection.scriptingCommands().evalSha(
+                        sha, ReturnType.INTEGER, keyCount, keysAndArgs));
     }
 
-    private static Object evalRaw(byte[] script, int keyCount, byte[]... keysAndArgs) {
-        return stringRedisTemplate.execute((RedisCallback<Object>) connection ->
-                connection.scriptingCommands().eval(script, ReturnType.VALUE, keyCount, keysAndArgs));
+    /** SCRIPT FLUSH 后的原始脚本回退路径，返回类型必须与 EVALSHA 路径保持一致。 */
+    private static Long evalRaw(byte[] script, int keyCount, byte[]... keysAndArgs) {
+        return stringRedisTemplate.execute((RedisCallback<Long>) connection ->
+                (Long) connection.scriptingCommands().eval(
+                        script, ReturnType.INTEGER, keyCount, keysAndArgs));
     }
 
     private static boolean isNoScript(Throwable throwable) {
