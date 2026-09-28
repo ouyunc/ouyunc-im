@@ -156,7 +156,7 @@ public final class ResourceMonitor {
      * 启动定期监控（默认每5分钟输出一次）
      */
     public static void start() {
-        start(1, TimeUnit.MINUTES);
+        start(5, TimeUnit.MINUTES);
     }
 
     /**

@@ -152,6 +152,7 @@ public class LoginClientInfo extends LoginContent implements Protocol{
         copy.setProtocolVersion(getProtocolVersion());
         copy.setLoginServerAddress(getLoginServerAddress());
         copy.setOnlineStatus(getOnlineStatus());
+        copy.setHeartBeatExpireTime(getHeartBeatExpireTime());
         copy.setHeartBeatTimeout(getHeartBeatTimeout());
         copy.setLastLoginTime(getLastLoginTime());
         copy.setNodeEpoch(getNodeEpoch());
