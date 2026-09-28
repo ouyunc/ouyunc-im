@@ -38,7 +38,7 @@ public enum PacketPacketConverter implements PacketConverter<Packet> {
             log.warn("Packet 入站缺少 Channel 协议标识，关闭连接 channel={}",
                     ctx.channel().id().asShortText());
             ctx.close();
-            return null;
+            throw new MessageException("Packet 入站缺少 Channel 协议标识");
         }
         // 只有明确识别为集群协议的连接才允许保留内部 Metadata。
         if (channelProtocol.getProtocol() == NativePacketProtocol.OUYUNC.getProtocol()) {
@@ -48,7 +48,7 @@ public enum PacketPacketConverter implements PacketConverter<Packet> {
             log.warn("Packet 入站协议不受支持，关闭连接 channel={} protocol={}",
                     ctx.channel().id().asShortText(), channelProtocol.getProtocol());
             ctx.close();
-            return null;
+            throw new MessageException("Packet 入站协议不受支持: " + channelProtocol.getProtocol());
         }
         return enrichClientIngress(ctx, packet);
     }

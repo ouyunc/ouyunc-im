@@ -42,6 +42,12 @@ public enum BinaryWebSocketFramePacketConverter implements PacketConverter<Binar
     public Packet convertToPacket(ChannelHandlerContext ctx, Object msg) {
         if (msg instanceof BinaryWebSocketFrame binaryWebSocketFrame) {
             Packet packet = PacketReaderWriterUtil.readByteBuf2Packet(binaryWebSocketFrame.content());
+            if (packet == null || packet.getMessage() == null) {
+                log.warn("WebSocket Packet 缺少 message，关闭连接 channel={}",
+                        ctx.channel().id().asShortText());
+                ctx.close();
+                throw new MessageException("WebSocket Packet 缺少 message");
+            }
             // 获取消息
             Message message = packet.getMessage();
             // 获取元数据
@@ -100,8 +106,14 @@ public enum BinaryWebSocketFramePacketConverter implements PacketConverter<Binar
             // 只复制客户端协议字段，不深拷贝随后必然丢弃的内部 Metadata。
             Packet outbound = packet.copyForExternalDelivery();
             ByteBuf byteBuf = ByteBufAllocator.DEFAULT.buffer();
-            PacketReaderWriterUtil.writePacketInByteBuf(outbound, byteBuf);
-            return new BinaryWebSocketFrame(byteBuf);
+            try {
+                PacketReaderWriterUtil.writePacketInByteBuf(outbound, byteBuf);
+                return new BinaryWebSocketFrame(byteBuf);
+            } catch (RuntimeException | Error e) {
+                // frame 尚未接管引用，转换失败时必须释放，避免 Netty 直接内存泄漏。
+                byteBuf.release();
+                throw e;
+            }
         }
         return null;
     }
