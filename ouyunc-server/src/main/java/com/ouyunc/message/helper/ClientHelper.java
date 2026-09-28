@@ -662,7 +662,7 @@ public class ClientHelper {
                 continue;
             }
             Packet fanout = packet.clone();
-            fanout.getMessage().getMetadata().getClusterRoute().setLocalBroadcastOnly(true);
+            fanout.getMessage().ensureMetadata().ensureClusterRoute().setLocalBroadcastOnly(true);
             MessageHelper.asyncSendMessageWithoutInterceptor(fanout, buildBroadcastNodeTarget(appKey, nodeId));
         }
     }
@@ -745,8 +745,8 @@ public class ClientHelper {
             if (ctx == null || !PacketChannelWriter.isSendable(ctx)) {
                 continue;
             }
-            loopPacket.getMessage().getMetadata().getClusterRoute().setTarget(target);
-            loopPacket.getMessage().getMetadata().getClusterRoute().setFanoutTargets(null);
+            loopPacket.getMessage().ensureMetadata().ensureClusterRoute().setTarget(target);
+            loopPacket.getMessage().ensureMetadata().ensureClusterRoute().setFanoutTargets(null);
             if (isRemoteLoginNotify(loopPacket)) {
                 PacketChannelWriter.sendOnChannel(ctx, loopPacket, unused -> {
                     if (ctx.channel() != null && ctx.channel().isActive()) {
@@ -783,7 +783,7 @@ public class ClientHelper {
             }
             Packet loopPacket = packet.clone();
             if (loopPacket.getMessage() != null && loopPacket.getMessage().getMetadata() != null) {
-                loopPacket.getMessage().getMetadata().getClusterRoute().setLocalBroadcastOnly(false);
+                loopPacket.getMessage().ensureMetadata().ensureClusterRoute().setLocalBroadcastOnly(false);
             }
             List<ChannelHandlerContext> ctxs = entry.getValue();
             loop.execute(() -> writeLocalBroadcastOnEventLoop(loop, loopPacket, ctxs, 0));
@@ -816,7 +816,7 @@ public class ClientHelper {
             if (!PacketChannelWriter.isSendable(ctx)) {
                 continue;
             }
-            loopPacket.getMessage().getMetadata().getClusterRoute().setTarget(null);
+            loopPacket.getMessage().ensureMetadata().ensureClusterRoute().setTarget(null);
             PacketChannelWriter.sendOnChannelBestEffort(ctx, loopPacket);
         }
         if (end < ctxs.size() && !loop.isShuttingDown() && !loop.isShutdown() && !loop.isTerminated()) {

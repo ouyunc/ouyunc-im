@@ -3,6 +3,7 @@ package com.ouyunc.message.cluster.auth;
 import com.ouyunc.base.constant.enums.OuyuncMessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.OuyuncMessageTypeEnum;
 import com.ouyunc.base.constant.enums.ProtocolTypeEnum;
+import com.ouyunc.base.model.ClusterRoute;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.model.Protocol;
 import com.ouyunc.base.model.Target;
@@ -37,7 +38,8 @@ public final class ClusterChannelGuard {
         if (!isExternalClientProtocol(channelProtocol) || packet == null) {
             return false;
         }
-        Metadata metadata = packet.getMessage() == null ? null : packet.getMessage().getMetadataOrNull();
+        Metadata metadata = packet.getMessage() == null ? null : packet.getMessage().getMetadata();
+        ClusterRoute clusterRoute = metadata == null ? null : metadata.getClusterRoute();
         boolean clusterOrNativeClientProtocol = isClusterOrClientNativeProtocol(packet.getProtocol());
         boolean clusterForward = metadata != null && !metadata.isLocalIngress();
         boolean clusterType = isInternalClusterMessage(packet);
@@ -46,7 +48,7 @@ public final class ClusterChannelGuard {
                     ctx.channel().remoteAddress(),
                     channelProtocol.getProtocol(),
                     packet.getProtocol(),
-                    metadata == null ? null : metadata.getClusterRoute().getClusterForwardMode(),
+                    clusterRoute == null ? null : clusterRoute.getClusterForwardMode(),
                     clusterType);
             ctx.close();
             return true;
@@ -66,7 +68,8 @@ public final class ClusterChannelGuard {
                 || packet == null) {
             return false;
         }
-        Metadata metadata = packet.getMessage() == null ? null : packet.getMessage().getMetadataOrNull();
+        Metadata metadata = packet.getMessage() == null ? null : packet.getMessage().getMetadata();
+        ClusterRoute clusterRoute = metadata == null ? null : metadata.getClusterRoute();
         boolean protocolMismatch = packet.getProtocol() != ProtocolTypeEnum.OUYUNC_CLIENT.getProtocol()
                 || packet.getProtocolVersion() != ProtocolTypeEnum.OUYUNC_CLIENT.getProtocolVersion();
         boolean clusterForward = metadata != null && !metadata.isLocalIngress();
@@ -75,7 +78,7 @@ public final class ClusterChannelGuard {
             log.warn("OUYUNC_CLIENT 连接使用非法能力，关闭连接 remote={} packetProtocol={} forwardMode={} clusterType={}",
                     ctx.channel().remoteAddress(),
                     packet.getProtocol(),
-                    metadata == null ? null : metadata.getClusterRoute().getClusterForwardMode(),
+                    clusterRoute == null ? null : clusterRoute.getClusterForwardMode(),
                     clusterType);
             ctx.close();
             return true;
@@ -103,7 +106,7 @@ public final class ClusterChannelGuard {
      * <p>peer 已由 Channel 认证确定；缺失或不一致的发送节点均拒绝。</p>
      */
     public static boolean allowClusterForward(String peer, Metadata metadata) {
-        if (metadata == null) {
+        if (metadata == null || metadata.getClusterRoute() == null) {
             return false;
         }
         // MessageHelper 经集群连接写出前会写本机地址；空值不得放行。

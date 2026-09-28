@@ -282,7 +282,7 @@ public final class PacketChannelWriter {
         }
         Target target = resolveReplyTarget(ctx, packet, packet.getMessage().getTo());
         if (target != null) {
-            metadata.getClusterRoute().setTarget(target);
+            metadata.ensureClusterRoute().setTarget(target);
         }
     }
 

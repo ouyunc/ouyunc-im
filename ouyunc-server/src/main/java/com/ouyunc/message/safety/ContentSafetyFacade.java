@@ -77,8 +77,8 @@ public final class ContentSafetyFacade {
                 && (contentType == MessageContentTypeEnum.IMAGE_CONTENT.getType()
                 || contentType == MessageContentTypeEnum.VIDEO_CONTENT.getType())) {
             if (metadata != null && metadata.getIngress().getModerationStatus() == null) {
-                metadata.getIngress().setModerationStatus(ModerationStatusEnum.NONE);
-                metadata.getIngress().setModerationMode(ModerationModeEnum.fromAction(
+                metadata.ensureIngress().setModerationStatus(ModerationStatusEnum.NONE);
+                metadata.ensureIngress().setModerationMode(ModerationModeEnum.fromAction(
                         policy.getMediaAction(), ModerationModeEnum.SEND_THEN_REVIEW));
             }
         }

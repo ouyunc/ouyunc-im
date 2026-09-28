@@ -34,20 +34,29 @@ public enum PacketPacketConverter implements PacketConverter<Packet> {
             return null;
         }
         Protocol channelProtocol = ctx.channel().attr(NativePacketProtocol.protocolAttrKey).get();
-        // 集群或未打标：原样透传（心跳 / 已包装的路由包）
-        if (channelProtocol == null
-                || channelProtocol.getProtocol() == NativePacketProtocol.OUYUNC.getProtocol()) {
+        if (channelProtocol == null) {
+            log.warn("Packet 入站缺少 Channel 协议标识，关闭连接 channel={}",
+                    ctx.channel().id().asShortText());
+            ctx.close();
+            return null;
+        }
+        // 只有明确识别为集群协议的连接才允许保留内部 Metadata。
+        if (channelProtocol.getProtocol() == NativePacketProtocol.OUYUNC.getProtocol()) {
             return packet;
         }
         if (channelProtocol.getProtocol() != NativePacketProtocol.OUYUNC_CLIENT.getProtocol()) {
-            return packet;
+            log.warn("Packet 入站协议不受支持，关闭连接 channel={} protocol={}",
+                    ctx.channel().id().asShortText(), channelProtocol.getProtocol());
+            ctx.close();
+            return null;
         }
         return enrichClientIngress(ctx, packet);
     }
 
     @Override
     public Packet convertFromPacket(Packet packet) {
-        if (packet == null || packet.getMessage() == null || packet.getMessage().getMetadata() == null) {
+        if (packet == null || packet.getMessage() == null || packet.getMessage().getMetadata() == null
+                || packet.getMessage().getMetadata().getClusterRoute() == null) {
             return null;
         }
         Target target = packet.getMessage().getMetadata().getClusterRoute().getTarget();
@@ -59,14 +68,10 @@ public enum PacketPacketConverter implements PacketConverter<Packet> {
                 && target.getProtocolVersion() == NativePacketProtocol.OUYUNC.getProtocolVersion()) {
             return packet;
         }
-        // 客户端原生：克隆后清空内部元数据，避免泄漏
+        // 客户端原生：构造不携带内部元数据的轻量副本，避免泄漏和无效深复制。
         if (target.getProtocol() == NativePacketProtocol.OUYUNC_CLIENT.getProtocol()
                 && target.getProtocolVersion() == NativePacketProtocol.OUYUNC_CLIENT.getProtocolVersion()) {
-            Packet outbound = packet.clone();
-            if (outbound.getMessage() != null) {
-                outbound.getMessage().setMetadata(null);
-            }
-            return outbound;
+            return packet.copyForExternalDelivery();
         }
         return null;
     }
@@ -79,10 +84,8 @@ public enum PacketPacketConverter implements PacketConverter<Packet> {
         if (message == null) {
             return packet;
         }
-        Metadata metadata = message.getMetadata();
-        if (metadata == null) {
-            metadata = new Metadata();
-        }
+        // 本方法只处理 OUYUNC_CLIENT；客户端上传的 Metadata 一律不可信。
+        Metadata metadata = new Metadata();
         if (metadata.isLocalIngress()) {
             if (MessageTypeEnum.LOGIN.getType() == packet.getMessageType()) {
                 LoginContent loginContent = JSON.parseObject(message.getContent(), LoginContent.class);
@@ -91,7 +94,7 @@ public enum PacketPacketConverter implements PacketConverter<Packet> {
                     ctx.close();
                     throw new MessageException("客户端:" + message.getFrom() + " 登录内容无法解析");
                 }
-                metadata.getIngress().setAppKey(loginContent.getAppKey());
+                metadata.ensureIngress().setAppKey(loginContent.getAppKey());
             } else {
                 LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
                 if (loginClientInfo == null) {
@@ -99,13 +102,13 @@ public enum PacketPacketConverter implements PacketConverter<Packet> {
                     ctx.close();
                     throw new MessageException("客户端:" + message.getFrom() + " 未登录，请先登录");
                 }
-                metadata.getIngress().setAppKey(loginClientInfo.getAppKey());
+                metadata.ensureIngress().setAppKey(loginClientInfo.getAppKey());
             }
-            metadata.getIngress().setClientIp(IpUtil.getIp(ctx));
+            metadata.ensureIngress().setClientIp(IpUtil.getIp(ctx));
             // 外部入站的来源由服务端覆盖赋值；集群透传不进入此分支。
-            metadata.getIngress().setOriginServerAddress(MessageContext.messageProperties.getLocalServerAddress());
-            metadata.getIngress().setServerTime(TimeUtil.currentTimeMillis());
-            metadata.getIngress().setIngressSource(IngressSourceEnum.IM);
+            metadata.ensureIngress().setOriginServerAddress(MessageContext.messageProperties.getLocalServerAddress());
+            metadata.ensureIngress().setServerTime(TimeUtil.currentTimeMillis());
+            metadata.ensureIngress().setIngressSource(IngressSourceEnum.IM);
         }
         message.setMetadata(metadata);
         packet.setPacketId(MessageContext.idGenerator().generateId());

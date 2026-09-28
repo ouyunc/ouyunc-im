@@ -665,7 +665,7 @@ class Socket {
         } else if (algorithm === 2) { // JSON
             return JSON.parse(Socket.DECODER.decode(buffer), function (key, value) {
                 if (key === "metadata") {
-                    // 对于 "metadata" 字段，返回 undefined 以跳过反序列化
+                    // 内部元数据不属于客户端协议，客户端不接收该字段。
                     return undefined;
                 }
                 return value;

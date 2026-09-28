@@ -52,8 +52,8 @@ public final class QosRepositorySupport {
         if (claimKeyPacketId <= 0L) {
             return ArchiveClaimResult.FAILED;
         }
-        metadata.getQosClaim().setQosOwnerToken(ownerToken);
-        metadata.getQosClaim().setQosClaimPacketId(claimKeyPacketId);
+        metadata.ensureQosClaim().setQosOwnerToken(ownerToken);
+        metadata.ensureQosClaim().setQosClaimPacketId(claimKeyPacketId);
         QosIdempotencyHelper.ClaimResult claim = QosIdempotencyHelper.tryClaimResult(
                 infra.redisTemplate, metadata.getIngress().getAppKey(), claimKeyPacketId,
                 QosClaimIdentities.resolve(message), message.getId(), ownerToken, message, packet.getMessageType());
@@ -111,8 +111,8 @@ public final class QosRepositorySupport {
             QosIdempotencyHelper.releaseClaim(infra.redisTemplate, metadata.getIngress().getAppKey(),
                     keyPacketId, packet.getPacketId(), QosClaimIdentities.resolve(message),
                     message.getId(), ownerToken);
-            metadata.getQosClaim().setQosOwnerToken(null);
-            metadata.getQosClaim().setQosClaimPacketId(null);
+            metadata.ensureQosClaim().setQosOwnerToken(null);
+            metadata.ensureQosClaim().setQosClaimPacketId(null);
         } catch (Exception e) {
             log.warn("释放 QoS 占位异常: packetId={}", packet.getPacketId(), e);
         }
@@ -120,8 +120,8 @@ public final class QosRepositorySupport {
 
     private static void clearQosClaimMarks(Metadata metadata) {
         if (metadata != null) {
-            metadata.getQosClaim().setQosOwnerToken(null);
-            metadata.getQosClaim().setQosClaimPacketId(null);
+            metadata.ensureQosClaim().setQosOwnerToken(null);
+            metadata.ensureQosClaim().setQosClaimPacketId(null);
         }
     }
 }

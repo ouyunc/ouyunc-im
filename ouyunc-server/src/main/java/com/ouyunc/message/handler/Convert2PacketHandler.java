@@ -66,18 +66,18 @@ public class Convert2PacketHandler extends SimpleChannelInboundHandler<Object> {
             return;
         }
         Message message = packet.getMessage();
-        Metadata incoming = message.getMetadataOrNull();
+        Metadata incoming = message.getMetadata();
         if (incoming != null && !incoming.isLocalIngress()) {
             // Guard 应已拒绝；不在此处清掉标记，避免掩盖漏检。
             return;
         }
         Metadata trusted = new Metadata();
-        if (incoming != null) {
-            trusted.getIngress().setAppKey(incoming.getIngress().getAppKey());
-            trusted.getIngress().setClientIp(incoming.getIngress().getClientIp());
-            trusted.getIngress().setOriginServerAddress(incoming.getIngress().getOriginServerAddress());
-            trusted.getIngress().setServerTime(incoming.getIngress().getServerTime());
-            trusted.getIngress().setIngressSource(incoming.getIngress().getIngressSource());
+        if (incoming != null && incoming.getIngress() != null) {
+            trusted.ensureIngress().setAppKey(incoming.getIngress().getAppKey());
+            trusted.ensureIngress().setClientIp(incoming.getIngress().getClientIp());
+            trusted.ensureIngress().setOriginServerAddress(incoming.getIngress().getOriginServerAddress());
+            trusted.ensureIngress().setServerTime(incoming.getIngress().getServerTime());
+            trusted.ensureIngress().setIngressSource(incoming.getIngress().getIngressSource());
         }
         message.setMetadata(trusted);
     }

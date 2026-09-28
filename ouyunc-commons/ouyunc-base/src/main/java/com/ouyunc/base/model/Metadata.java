@@ -49,11 +49,20 @@ public class Metadata implements Serializable, Cloneable {
 
     /** 归档快照去掉只在本机受理使用的占位令牌，申请快照保留。 */
     public void clearDeliveryClaims() {
-        getQosClaim().clear();
-        getHttpPushClaim().clear();
+        if (qosClaim != null) {
+            qosClaim.clear();
+        }
+        if (httpPushClaim != null) {
+            httpPushClaim.clear();
+        }
     }
 
     public IngressFacts getIngress() {
+        return ingress;
+    }
+
+    /** 仅供可信写入阶段使用；读取和校验代码必须通过 {@link #getIngress()} 显式判空。 */
+    public IngressFacts ensureIngress() {
         if (ingress == null) {
             ingress = new IngressFacts();
         }
@@ -65,6 +74,11 @@ public class Metadata implements Serializable, Cloneable {
     }
 
     public ClusterRoute getClusterRoute() {
+        return clusterRoute;
+    }
+
+    /** 仅供内部路由构建阶段使用，不得在路由校验时补建空对象。 */
+    public ClusterRoute ensureClusterRoute() {
         if (clusterRoute == null) {
             clusterRoute = new ClusterRoute();
         }
@@ -76,6 +90,11 @@ public class Metadata implements Serializable, Cloneable {
     }
 
     public QosClaim getQosClaim() {
+        return qosClaim;
+    }
+
+    /** 仅供 QoS 占位写入阶段使用。 */
+    public QosClaim ensureQosClaim() {
         if (qosClaim == null) {
             qosClaim = new QosClaim();
         }
@@ -87,6 +106,11 @@ public class Metadata implements Serializable, Cloneable {
     }
 
     public HttpPushClaim getHttpPushClaim() {
+        return httpPushClaim;
+    }
+
+    /** 仅供 HTTP Push 幂等占位写入阶段使用。 */
+    public HttpPushClaim ensureHttpPushClaim() {
         if (httpPushClaim == null) {
             httpPushClaim = new HttpPushClaim();
         }
@@ -98,7 +122,9 @@ public class Metadata implements Serializable, Cloneable {
     }
 
     public ClusterForwardModeEnum clusterForwardModeOrNone() {
-        return ClusterForwardModeEnum.orNone(getClusterRoute().getClusterForwardMode());
+        return clusterRoute == null
+                ? ClusterForwardModeEnum.NONE
+                : ClusterForwardModeEnum.orNone(clusterRoute.getClusterForwardMode());
     }
 
     public boolean isLocalIngress() {
@@ -120,10 +146,11 @@ public class Metadata implements Serializable, Cloneable {
     public Metadata clone() {
         try {
             Metadata metadata = (Metadata) super.clone();
-            metadata.ingress = getIngress().clone();
-            metadata.clusterRoute = getClusterRoute().clone();
-            metadata.qosClaim = getQosClaim().clone();
-            metadata.httpPushClaim = getHttpPushClaim().clone();
+            // Metadata 一旦存在，四个内部状态块必须保持非空；clone 不传播非法空状态。
+            metadata.ingress = ingress == null ? new IngressFacts() : ingress.clone();
+            metadata.clusterRoute = clusterRoute == null ? new ClusterRoute() : clusterRoute.clone();
+            metadata.qosClaim = qosClaim == null ? new QosClaim() : qosClaim.clone();
+            metadata.httpPushClaim = httpPushClaim == null ? new HttpPushClaim() : httpPushClaim.clone();
             metadata.requestEventContext = requestEventContext == null ? null : requestEventContext.clone();
             return metadata;
         } catch (CloneNotSupportedException e) {
@@ -134,10 +161,10 @@ public class Metadata implements Serializable, Cloneable {
     @Override
     public String toString() {
         return "Metadata{" +
-                "ingress=" + getIngress().toString() +
-                ", clusterRoute=" + getClusterRoute().toString() +
-                ", qosClaim=" + getQosClaim().toString() +
-                ", httpPushClaim=" + getHttpPushClaim().toString() +
+                "ingress=" + ingress +
+                ", clusterRoute=" + clusterRoute +
+                ", qosClaim=" + qosClaim +
+                ", httpPushClaim=" + httpPushClaim +
                 '}';
     }
 }

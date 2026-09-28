@@ -107,8 +107,8 @@ public class MessageHelper {
             }
             Packet fanout = packet.clone();
             Metadata metadata = fanout.getMessage().getMetadata();
-            metadata.getClusterRoute().setClusterForwardMode(ClusterForwardModeEnum.CLIENT);
-            metadata.getClusterRoute().setFanoutTargets(targets);
+            metadata.ensureClusterRoute().setClusterForwardMode(ClusterForwardModeEnum.CLIENT);
+            metadata.ensureClusterRoute().setFanoutTargets(targets);
             Target envelope = Target.newBuilder()
                     .appKey(metadata.getIngress().getAppKey())
                     .targetServerAddress(nodeId)
@@ -263,8 +263,8 @@ public class MessageHelper {
         Packet packet = originPacket.clone();
         Metadata metadata = packet.getMessage() == null ? null : packet.getMessage().getMetadata();
         if (metadata != null) {
-            metadata.getClusterRoute().setClusterForwardMode(ClusterForwardModeEnum.INTERNAL);
-            metadata.getClusterRoute().setFanoutTargets(null);
+            metadata.ensureClusterRoute().setClusterForwardMode(ClusterForwardModeEnum.INTERNAL);
+            metadata.ensureClusterRoute().setFanoutTargets(null);
             ensureInternalForwardTarget(metadata, destServerAddress);
         }
         ChannelPool destPool = resolveClusterChannelPool(destServerAddress);
@@ -279,7 +279,7 @@ public class MessageHelper {
     private static void ensureInternalForwardTarget(Metadata metadata, String destServerAddress) {
         Target target = metadata.getClusterRoute().getTarget();
         if (target == null) {
-            metadata.getClusterRoute().setTarget(Target.newBuilder()
+            metadata.ensureClusterRoute().setTarget(Target.newBuilder()
                     .appKey(metadata.getIngress().getAppKey())
                     .targetServerAddress(destServerAddress)
                     .protocol(NativePacketProtocol.OUYUNC.getProtocol())
@@ -346,7 +346,7 @@ public class MessageHelper {
             notifySendFail(originPacket, "缺少投递目标", sendCallback);
             return;
         }
-        originMetadata.getClusterRoute().setTarget(target);
+        originMetadata.ensureClusterRoute().setTarget(target);
         String destServerAddress = target.getTargetServerAddress();
         String localServerAddress = MessageServerContext.serverProperties().getLocalServerAddress();
         boolean cluster = MessageServerContext.serverProperties().isClusterEnable();
@@ -366,7 +366,7 @@ public class MessageHelper {
         Packet packet = originPacket.clone();
         Metadata metadata = packet.getMessage().getMetadata();
         if (!metadata.isClientForward()) {
-            metadata.getClusterRoute().setClusterForwardMode(ClusterForwardModeEnum.CLIENT);
+            metadata.ensureClusterRoute().setClusterForwardMode(ClusterForwardModeEnum.CLIENT);
         }
         ChannelPool destPool = resolveClusterChannelPool(destServerAddress);
         if (destPool != null) {
@@ -507,7 +507,7 @@ public class MessageHelper {
             if (channelPoolHashCode == null) {
                 ChannelAttrUtil.setChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_TAG_POOL, channelPool.hashCode());
             }
-            metadata.getClusterRoute().setFromServerAddress(MessageServerContext.serverProperties().getLocalServerAddress());
+            metadata.ensureClusterRoute().setFromServerAddress(MessageServerContext.serverProperties().getLocalServerAddress());
             Runnable releaseChannel = () -> channelPool.release(channel);
             PacketChannelWriter.runOnEventLoop(channel, packet, sendCallback,
                     () -> PacketChannelWriter.tryWritePacketAndThen(channel, packet, sendCallback, releaseChannel),

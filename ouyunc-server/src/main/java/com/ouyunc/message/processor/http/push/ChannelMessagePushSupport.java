@@ -33,14 +33,14 @@ public final class ChannelMessagePushSupport {
             String key = String.valueOf(ingressChannel);
             IngressSourceEnum ingress = mapIngressSource(key);
             if (ingress != null) {
-                metadata.getIngress().setIngressSource(ingress);
+                metadata.ensureIngress().setIngressSource(ingress);
             }
         }
         Object ingressSource = extensions.get(ChannelMessageExtraKeys.INGRESS_SOURCE);
         if (ingressSource != null && StringUtils.isNotBlank(String.valueOf(ingressSource))) {
             IngressSourceEnum parsed = IngressSourceEnum.fromCode(String.valueOf(ingressSource));
             if (parsed != null) {
-                metadata.getIngress().setIngressSource(parsed);
+                metadata.ensureIngress().setIngressSource(parsed);
             }
         }
     }

@@ -53,7 +53,7 @@ public class BacktrackMessageRouter extends AbstractMessageRouter {
                 routedServerAddresses.add(toServerAddress);
                 localRoutingTable = new RoutingTable(MessageServerContext.serverProperties().getLocalServerAddress(), metadata.getClusterRoute().getFromServerAddress(), routedServerAddresses);
                 routingTables.add(localRoutingTable);
-                metadata.getClusterRoute().setRoutingTables(routingTables);
+                metadata.ensureClusterRoute().setRoutingTables(routingTables);
             }
             Set<String> candidates = collectEligibleCandidates(localRoutingTable, routingTables);
             String nextHop = nextHopSelector.select(toServerAddress, routingTables, candidates);

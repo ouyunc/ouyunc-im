@@ -33,12 +33,12 @@ public final class RequestEventContextFactoryHelper {
 
     /** 用刚刚写入 Redis 的会话覆盖快照，避免 ensure 按旧进度重新推导。 */
     public static void capture(Packet packet, RequestSession session) {
-        packet.getMessage().getMetadata().setRequestEventContext(friendContext(session));
+        packet.getMessage().ensureMetadata().setRequestEventContext(friendContext(session));
     }
 
     /** 用刚刚写入 Redis 的群会话覆盖快照。 */
     public static void capture(Packet packet, GroupRequestSession session) {
-        packet.getMessage().getMetadata().setRequestEventContext(groupContext(session));
+        packet.getMessage().ensureMetadata().setRequestEventContext(groupContext(session));
     }
 
     /** 使用协议枚举识别申请消息，避免协议值调整后事件快照逻辑静默失效。 */

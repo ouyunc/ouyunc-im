@@ -146,10 +146,10 @@ public final class SessionMessagePersistenceSupport {
                 qosClaimKeyPacketId = claimKey != null && claimKey > 0L ? claimKey : packet.getPacketId();
             } else if (qosSave) {
                 // 写入 Metadata，供失败路径 releaseQosClaim 带回同一 owner（禁止传 null）
-                metadata.getQosClaim().setQosOwnerToken(qosOwnerToken);
+                metadata.ensureQosClaim().setQosOwnerToken(qosOwnerToken);
                 // 占位键按抢占时的 packetId 固定；对齐 canonical 后 commit/release 仍按此键定位
                 qosClaimKeyPacketId = packet.getPacketId();
-                metadata.getQosClaim().setQosClaimPacketId(qosClaimKeyPacketId);
+                metadata.ensureQosClaim().setQosClaimPacketId(qosClaimKeyPacketId);
                 QosIdempotencyHelper.ClaimResult claim = QosIdempotencyHelper.tryClaimResult(
                         infra.redisTemplate, appKey, qosClaimKeyPacketId,
                         qosClaimIdentity, clientMessageId, qosOwnerToken, message, packet.getMessageType());
@@ -263,8 +263,8 @@ public final class SessionMessagePersistenceSupport {
                 return SaveMessageOutcome.FAILED;
             }
             if (qosSave && metadata != null) {
-                metadata.getQosClaim().setQosOwnerToken(null);
-                metadata.getQosClaim().setQosClaimPacketId(null);
+                metadata.ensureQosClaim().setQosOwnerToken(null);
+                metadata.ensureQosClaim().setQosClaimPacketId(null);
             }
             return SaveMessageOutcome.SUCCESS;
 
@@ -334,8 +334,8 @@ public final class SessionMessagePersistenceSupport {
 
     private static void clearQosClaimMarks(Metadata metadata) {
         if (metadata != null) {
-            metadata.getQosClaim().setQosOwnerToken(null);
-            metadata.getQosClaim().setQosClaimPacketId(null);
+            metadata.ensureQosClaim().setQosOwnerToken(null);
+            metadata.ensureQosClaim().setQosClaimPacketId(null);
         }
     }
 
@@ -360,8 +360,8 @@ public final class SessionMessagePersistenceSupport {
             QosIdempotencyHelper.releaseClaim(infra.redisTemplate, appKey, keyPacketId, recordPacketId,
                     qosClaimIdentity, clientMessageId, qosOwnerToken);
             if (metadata != null) {
-                metadata.getQosClaim().setQosOwnerToken(null);
-                metadata.getQosClaim().setQosClaimPacketId(null);
+                metadata.ensureQosClaim().setQosOwnerToken(null);
+                metadata.ensureQosClaim().setQosClaimPacketId(null);
             }
         } catch (Exception e) {
             log.warn("释放 QoS 占位异常 claimKeyPacketId={} packetId={}", keyPacketId, recordPacketId, e);

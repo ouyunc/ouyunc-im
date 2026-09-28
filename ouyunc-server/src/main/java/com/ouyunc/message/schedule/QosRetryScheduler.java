@@ -147,7 +147,7 @@ public final class QosRetryScheduler {
             QosRetryCancelMetrics.localCancel();
             return;
         }
-        String origin = stored.getMessage().getMetadataOrNull().getIngress().getOriginServerAddress();
+        String origin = stored.getMessage().getMetadata().getIngress().getOriginServerAddress();
         String local = MessageServerContext.serverProperties().getLocalServerAddress();
         if (StringUtils.isBlank(origin)) {
             QosRetryCancelMetrics.originLocateFail();
@@ -246,11 +246,11 @@ public final class QosRetryScheduler {
         String local = MessageServerContext.serverProperties().getLocalServerAddress();
         long now = TimeUtil.currentTimeMillis();
         Metadata metadata = new Metadata();
-        metadata.getIngress().setAppKey(content.getAppKey());
-        metadata.getIngress().setServerTime(now);
-        metadata.getClusterRoute().setFromServerAddress(local);
-        metadata.getClusterRoute().setClusterForwardMode(ClusterForwardModeEnum.INTERNAL);
-        metadata.getClusterRoute().setTarget(Target.newBuilder()
+        metadata.ensureIngress().setAppKey(content.getAppKey());
+        metadata.ensureIngress().setServerTime(now);
+        metadata.ensureClusterRoute().setFromServerAddress(local);
+        metadata.ensureClusterRoute().setClusterForwardMode(ClusterForwardModeEnum.INTERNAL);
+        metadata.ensureClusterRoute().setTarget(Target.newBuilder()
                 .appKey(content.getAppKey())
                 .targetServerAddress(origin)
                 .protocol(NativePacketProtocol.OUYUNC.getProtocol())

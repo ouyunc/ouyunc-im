@@ -62,11 +62,11 @@ public final class LoginFollowHelper {
         }
         Packet follow = packet.clone();
         Metadata followMeta = follow.getMessage().getMetadata();
-        followMeta.getClusterRoute().setLoginFollowHops(metadata.getClusterRoute().getLoginFollowHops() + 1);
-        followMeta.getClusterRoute().setClusterForwardMode(ClusterForwardModeEnum.CLIENT);
-        followMeta.getClusterRoute().setFanoutTargets(null);
+        followMeta.ensureClusterRoute().setLoginFollowHops(metadata.getClusterRoute().getLoginFollowHops() + 1);
+        followMeta.ensureClusterRoute().setClusterForwardMode(ClusterForwardModeEnum.CLIENT);
+        followMeta.ensureClusterRoute().setFanoutTargets(null);
         Target next = MessageHelper.buildTarget(latest);
-        followMeta.getClusterRoute().setTarget(next);
+        followMeta.ensureClusterRoute().setTarget(next);
         log.debug("登录跟随 packetId={} identity={} {} -> {}",
                 packet.getPacketId(), target.getTargetIdentity(), local, dest);
         MessageHelper.asyncSendMessageWithoutInterceptor(follow, next, sendCallback);

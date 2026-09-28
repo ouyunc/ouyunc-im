@@ -300,6 +300,32 @@ public class Packet implements Serializable, Cloneable{
     }
 
     /**
+     * 创建外部客户端写出专用副本，不复制服务端内部元数据。
+     *
+     * <p>普通 {@link #clone()} 会深复制完整 Metadata 对象树，而客户端写出随后必须丢弃
+     * Metadata。该方法只复制协议头和客户端可见消息字段，减少高扇出场景的对象分配，
+     * 同时保持原 Packet 完全不变。</p>
+     *
+     * @return 可安全交给客户端序列化器的独立 Packet
+     */
+    public Packet copyForExternalDelivery() {
+        Packet outbound = new Packet();
+        outbound.magic = magic == null ? null : Arrays.copyOf(magic, magic.length);
+        outbound.protocol = protocol;
+        outbound.protocolVersion = protocolVersion;
+        outbound.packetId = packetId;
+        outbound.deviceType = deviceType;
+        outbound.networkType = networkType;
+        outbound.encryptType = encryptType;
+        outbound.serializeAlgorithm = serializeAlgorithm;
+        outbound.messageType = messageType;
+        outbound.retain = retain;
+        outbound.messageLength = messageLength;
+        outbound.message = message == null ? null : message.copyForExternalDelivery();
+        return outbound;
+    }
+
+    /**
      * 将 {@code source} 的协议头与消息体复制到本实例，同时保持当前对象引用不变。
      * {@link Message} 使用 {@link Message#clone()} 拷贝，避免共享消息引用。
      *

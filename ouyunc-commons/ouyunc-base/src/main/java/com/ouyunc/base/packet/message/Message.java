@@ -5,6 +5,7 @@ import io.protostuff.Tag;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -304,21 +305,28 @@ public class Message implements Serializable, Cloneable {
         this.content = content;
     }
 
+    /**
+     * 读取服务端内部元数据，不执行任何初始化。
+     *
+     * @return 内部元数据；尚未由可信入口建立时返回 {@code null}
+     */
     public Metadata getMetadata() {
-        if (metadata == null) {
-            metadata = new Metadata();
-        }
         return metadata;
     }
 
     /**
-     * 是否携带元数据。校验层禁止用 {@link #getMetadata()} 判断，避免把空壳当已赋值。
+     * 获取或创建服务端内部元数据。
+     *
+     * <p>仅允许在可信入站、内部消息构建和明确的元数据写入阶段调用。权限校验、
+     * 路由判断和持久化读取必须使用 {@link #getMetadata()} 并显式处理 {@code null}，
+     * 避免把缺少可信上下文的消息静默补成空壳。</p>
+     *
+     * @return 已存在或新创建的内部元数据
      */
-    public boolean hasMetadata() {
-        return metadata != null;
-    }
-
-    public Metadata getMetadataOrNull() {
+    public Metadata ensureMetadata() {
+        if (metadata == null) {
+            metadata = new Metadata();
+        }
         return metadata;
     }
 
@@ -380,6 +388,32 @@ public class Message implements Serializable, Cloneable {
 
     public void setCorrelationId(String correlationId) {
         this.correlationId = correlationId;
+    }
+
+    /**
+     * 创建仅包含客户端协议字段的独立消息副本。
+     *
+     * <p>服务端内部 {@link Metadata} 不属于客户端协议，故意不复制。{@code at/ref}
+     * 使用新列表，避免原消息仍在归档、重试或其它 EventLoop 中处理时发生共享可变状态。</p>
+     *
+     * @return 不携带内部元数据的客户端消息副本
+     */
+    public Message copyForExternalDelivery() {
+        Message outbound = new Message();
+        outbound.id = id;
+        outbound.from = from;
+        outbound.fromType = fromType;
+        outbound.to = to;
+        outbound.toType = toType;
+        outbound.contentType = contentType;
+        outbound.content = content;
+        outbound.at = at == null ? null : new ArrayList<>(at);
+        outbound.ref = ref == null ? null : new ArrayList<>(ref);
+        outbound.extra = extra;
+        outbound.qos = qos;
+        outbound.createTime = createTime;
+        outbound.correlationId = correlationId;
+        return outbound;
     }
 
     @Override

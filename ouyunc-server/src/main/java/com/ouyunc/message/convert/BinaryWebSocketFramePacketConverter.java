@@ -45,11 +45,8 @@ public enum BinaryWebSocketFramePacketConverter implements PacketConverter<Binar
             // 获取消息
             Message message = packet.getMessage();
             // 获取元数据
-            Metadata metadata = message.getMetadata();
-            // 处理元数据
-            if (metadata == null) {
-                metadata = new Metadata();
-            }
+            // 外部客户端携带的 metadata 不可信，由服务端重新建立内部上下文。
+            Metadata metadata = new Metadata();
             // 判断如果不是集群中的传递消息，则进行以下处理
             if (metadata.isLocalIngress()) {
                 // 设置该消息发送者当前登录所属的平台 appKey
@@ -61,7 +58,7 @@ public enum BinaryWebSocketFramePacketConverter implements PacketConverter<Binar
                         ctx.close();
                         throw new MessageException("客户端:" + message.getFrom() + " 登录内容无法解析");
                     }
-                    metadata.getIngress().setAppKey(loginContent.getAppKey());
+                    metadata.ensureIngress().setAppKey(loginContent.getAppKey());
                 }else {
                     // 不是登录类型的消息，说明该客户端已经登录，可以从当前通道获取用户appKey
                     LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
@@ -70,15 +67,15 @@ public enum BinaryWebSocketFramePacketConverter implements PacketConverter<Binar
                         ctx.close();
                         throw new MessageException("客户端:"+message.getFrom()+" 未登录，请先登录");
                     }
-                    metadata.getIngress().setAppKey(loginClientInfo.getAppKey());
+                    metadata.ensureIngress().setAppKey(loginClientInfo.getAppKey());
                 }
                 // 获取客户端真实ip
-                metadata.getIngress().setClientIp(IpUtil.getIp(ctx));
+                metadata.ensureIngress().setClientIp(IpUtil.getIp(ctx));
                 // 外部入站的来源由服务端覆盖赋值；集群透传不进入此分支。
-                metadata.getIngress().setOriginServerAddress(MessageContext.messageProperties.getLocalServerAddress());
+                metadata.ensureIngress().setOriginServerAddress(MessageContext.messageProperties.getLocalServerAddress());
                 // 设置服务器时间
-                metadata.getIngress().setServerTime(TimeUtil.currentTimeMillis());
-                metadata.getIngress().setIngressSource(IngressSourceEnum.IM);
+                metadata.ensureIngress().setServerTime(TimeUtil.currentTimeMillis());
+                metadata.ensureIngress().setIngressSource(IngressSourceEnum.IM);
             }
             message.setMetadata(metadata);
             // 设置服务端生成的消息id，以服务端的主键为准
@@ -94,17 +91,16 @@ public enum BinaryWebSocketFramePacketConverter implements PacketConverter<Binar
      */
     @Override
     public BinaryWebSocketFrame convertFromPacket(Packet packet) {
-        // 将packet 的元数据信息清空（内部辅助数据，不对客户端暴漏）
+        if (packet == null || packet.getMessage() == null || packet.getMessage().getMetadata() == null
+                || packet.getMessage().getMetadata().getClusterRoute() == null) {
+            return null;
+        }
         Target target = packet.getMessage().getMetadata().getClusterRoute().getTarget();
         if (target != null && target.getProtocol() == NativePacketProtocol.WS.getProtocol() && target.getProtocolVersion() == NativePacketProtocol.WS.getProtocolVersion()) {
-            // 暂存元数据信息
-            Message message = packet.getMessage();
-            Metadata metadata = message.getMetadata();
-            message.setMetadata(null);
+            // 只复制客户端协议字段，不深拷贝随后必然丢弃的内部 Metadata。
+            Packet outbound = packet.copyForExternalDelivery();
             ByteBuf byteBuf = ByteBufAllocator.DEFAULT.buffer();
-            PacketReaderWriterUtil.writePacketInByteBuf(packet, byteBuf);
-            // 在将该元数据设置进去
-            message.setMetadata(metadata);
+            PacketReaderWriterUtil.writePacketInByteBuf(outbound, byteBuf);
             return new BinaryWebSocketFrame(byteBuf);
         }
         return null;

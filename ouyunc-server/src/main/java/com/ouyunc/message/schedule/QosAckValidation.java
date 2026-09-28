@@ -48,8 +48,8 @@ public final class QosAckValidation {
         if (message == null || message.getQos() <= QosLevelEnum.QOS_0.getLevel()) {
             return MatchResult.QOS_DISABLED;
         }
-        if (message.getMetadataOrNull() == null
-                || !appKey.equals(message.getMetadataOrNull().getIngress().getAppKey())) {
+        if (message.getMetadata() == null || message.getMetadata().getIngress() == null
+                || !appKey.equals(message.getMetadata().getIngress().getAppKey())) {
             return MatchResult.APP_KEY_MISMATCH;
         }
         if (!messageId.equals(message.getId())) {

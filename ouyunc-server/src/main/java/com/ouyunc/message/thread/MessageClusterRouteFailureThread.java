@@ -1,6 +1,6 @@
 package com.ouyunc.message.thread;
 
-
+import com.ouyunc.base.model.ClusterRoute;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.message.context.MessageServerContext;
@@ -32,23 +32,23 @@ public class MessageClusterRouteFailureThread implements Runnable {
     public void run() {
         log.warn("获取不到可用的服务连接！packetId: {},开始进行重试...", packet.getPacketId());
         Metadata metadata = packet.getMessage().getMetadata();
-        int currentRetry = metadata.getClusterRoute().getCurrentRetry();
-        // 清空消息中的列表，添加重试次数+1
-        metadata.getClusterRoute().setCurrentRetry(currentRetry++);
-        metadata.getClusterRoute().setFromServerAddress(null);
-        metadata.getClusterRoute().setRoutingTables(null);
-        // targetSocketAddress 不改变
-        if (log.isDebugEnabled()) {
-            log.debug("正在进行第 {} 次重试消息 packetId:{} ", currentRetry, packet.getPacketId());
-        }
-        if (currentRetry < MessageServerContext.serverProperties().getClusterMessageRetry()) {
-            // 重试次数+1，清空消息中的曾经路由过的服务，封装消息，找到目标主机
-            // retry 去处理
-            MessageHelper.asyncSendMessage(packet, metadata.getClusterRoute().getTarget());
+        ClusterRoute clusterRoute = metadata.getClusterRoute();
+        int currentRetry = clusterRoute.getCurrentRetry();
+        int maxRetry = MessageServerContext.serverProperties().getClusterMessageRetry();
+        if (currentRetry >= maxRetry) {
+            log.error("已经重试 {} 次,也没解决问题,该消息packetId : {}将被丢弃！", maxRetry, packet.getPacketId());
             return;
         }
-        // 如果重试之后还是出现服务不通，则进行服务的下线处理(这一步在内置客户端心跳保活时处理，这里不做服务下线的处理)，也就是将目标主机从本服务的注册表中删除（如果存在），其他服务上的注册表不做同步更新
-        // 其实这里注册表中的数据移除不移除没什么太大意义
-        log.error("已经重试 {} 次,也没解决问题,该消息packetId : {}将被丢弃！", MessageServerContext.serverProperties().getClusterMessageRetry(), packet.getPacketId());
+        int nextRetry = currentRetry + 1;
+        // 清空消息中的列表，添加重试次数+1
+        clusterRoute.setCurrentRetry(nextRetry);
+        clusterRoute.setFromServerAddress(null);
+        clusterRoute.setRoutingTables(null);
+        // targetSocketAddress 不改变
+        if (log.isDebugEnabled()) {
+            log.debug("正在进行第 {} 次重试消息 packetId:{} ", nextRetry, packet.getPacketId());
+        }
+        // 本次是第 nextRetry 次重试；只有该次发送再次失败，失败线程才会在入口处判断是否丢弃。
+        MessageHelper.asyncSendMessage(packet, clusterRoute.getTarget());
     }
 }

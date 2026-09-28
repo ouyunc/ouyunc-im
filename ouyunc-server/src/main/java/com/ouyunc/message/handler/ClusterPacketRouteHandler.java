@@ -35,7 +35,7 @@ public class ClusterPacketRouteHandler extends SimpleChannelInboundHandler<Packe
             log.warn("集群包缺少 message, packetId={}", packet.getPacketId());
             return;
         }
-        Metadata metadata = packet.getMessage().getMetadataOrNull();
+        Metadata metadata = packet.getMessage().getMetadata();
         ClusterForwardModeEnum mode = metadata == null
                 ? ClusterForwardModeEnum.NONE
                 : metadata.clusterForwardModeOrNone();
@@ -49,6 +49,10 @@ public class ClusterPacketRouteHandler extends SimpleChannelInboundHandler<Packe
         }
         if (mode == ClusterForwardModeEnum.INTERNAL) {
             handleInternalForward(ctx, packet);
+            return;
+        }
+        if (metadata.getIngress() == null) {
+            log.warn("拒绝缺少 ingress 的客户端转发包 packetId={} peer={}", packet.getPacketId(), peer);
             return;
         }
         handleClientForward(packet, metadata);

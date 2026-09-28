@@ -74,7 +74,7 @@ public record ExceptionEventPayload(
             if (message == null) {
                 return new PacketBrief(packetId, messageType, null, null, null);
             }
-            Metadata metadata = message.getMetadataOrNull();
+            Metadata metadata = message.getMetadata();
             String appKey = metadata != null ? metadata.getIngress().getAppKey() : null;
             return new PacketBrief(packetId, messageType, appKey, message.getFrom(), message.getTo());
         }
