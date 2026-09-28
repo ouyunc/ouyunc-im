@@ -132,33 +132,6 @@ public class LoginClientInfo extends LoginContent implements Protocol{
         this.protocolVersion = protocolVersion;
     }
 
-    /**
-     * 写入 Redis 登录 String 的副本，只带路由、踢人、在线判定字段。
-     * 签名、遗嘱/存活正文、设备列表仍在 Channel 属性上。
-     */
-    public LoginClientInfo copyForRedis() {
-        LoginClientInfo copy = new LoginClientInfo();
-        copyRedisLoginFields(copy);
-        return copy;
-    }
-
-    protected void copyRedisLoginFields(LoginClientInfo copy) {
-        copy.setAppKey(getAppKey());
-        copy.setIdentity(getIdentity());
-        copy.setSelfSync(getSelfSync());
-        copy.setDeviceType(getDeviceType());
-        copy.setSn(getSn());
-        copy.setProtocol(getProtocol());
-        copy.setProtocolVersion(getProtocolVersion());
-        copy.setLoginServerAddress(getLoginServerAddress());
-        copy.setOnlineStatus(getOnlineStatus());
-        copy.setHeartBeatExpireTime(getHeartBeatExpireTime());
-        copy.setHeartBeatTimeout(getHeartBeatTimeout());
-        copy.setLastLoginTime(getLastLoginTime());
-        copy.setNodeEpoch(getNodeEpoch());
-        copy.setScope(getScope());
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

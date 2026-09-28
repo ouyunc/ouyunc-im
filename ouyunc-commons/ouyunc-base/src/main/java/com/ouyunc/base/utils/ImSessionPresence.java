@@ -1,7 +1,5 @@
 package com.ouyunc.base.utils;
 
-import com.ouyunc.base.constant.enums.OnlineEnum;
-import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.model.NodeLeasePayload;
 import org.apache.commons.lang3.StringUtils;
 
@@ -13,7 +11,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * 节点租约 + 身份路由 HASH 的只读判定。心跳不再刷新登录 TTL 后，在线一律走这里。
+ * 节点租约 + 身份路由 HASH 的只读判定。在线状态一律以路由所指 epoch 是否存活为准。
  */
 public final class ImSessionPresence {
 
@@ -58,13 +56,6 @@ public final class ImSessionPresence {
         return live != null && live == epoch;
     }
 
-    public static boolean isLoginLive(LoginClientInfo loginClientInfo, Map<String, Long> liveEpochs) {
-        if (loginClientInfo == null || !OnlineEnum.ONLINE.equals(loginClientInfo.getOnlineStatus())) {
-            return false;
-        }
-        return isNodeEpochLive(liveEpochs, loginClientInfo.getLoginServerAddress(), loginClientInfo.getNodeEpoch());
-    }
-
     /**
      * 路由 HASH 中是否存在仍挂在活节点上的设备。
      */
@@ -101,9 +92,6 @@ public final class ImSessionPresence {
     }
 
     /**
-     * 路由 HASH 中仍挂在活节点上的设备类型。
-     */
-    /**
      * 路由 HASH 中 epoch 已死、应惰性摘掉的设备类型。
      */
     public static Set<Byte> deadDeviceTypes(Map<?, ?> routeHash, Map<String, Long> liveEpochs) {
@@ -113,23 +101,6 @@ public final class ImSessionPresence {
         }
         for (Map.Entry<?, ?> entry : routeHash.entrySet()) {
             if (isEncodedRouteLive(entry.getValue(), liveEpochs)) {
-                continue;
-            }
-            Byte deviceType = parseDeviceField(entry.getKey());
-            if (deviceType != null) {
-                devices.add(deviceType);
-            }
-        }
-        return devices;
-    }
-
-    public static Set<Byte> liveDeviceTypes(Map<?, ?> routeHash, Map<String, Long> liveEpochs) {
-        Set<Byte> devices = new HashSet<>();
-        if (routeHash == null || routeHash.isEmpty()) {
-            return devices;
-        }
-        for (Map.Entry<?, ?> entry : routeHash.entrySet()) {
-            if (!isEncodedRouteLive(entry.getValue(), liveEpochs)) {
                 continue;
             }
             Byte deviceType = parseDeviceField(entry.getKey());

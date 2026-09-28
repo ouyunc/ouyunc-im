@@ -61,11 +61,11 @@ public class CacheConstant {
      */
     private static final String LOCK = "lock:";
 
-    /** 登录详情 String */
-    private static final String IM_LOGIN = "im:login:";
-
     /** 身份路由 HASH */
     private static final String IM_ROUTE = "im:route:";
+
+    /** 节点 epoch 下的路由反向索引，仅用于死亡节点后台清理 */
+    private static final String IM_NODE_ROUTES = "im:node-routes:";
 
     /** 进程租约 */
     private static final String IM_NODE = "im:node:";
@@ -373,22 +373,19 @@ public class CacheConstant {
     }
 
     /**
-     * 登录详情 String。哈希标签为 identity，与路由 HASH 同槽。
-     */
-    public static String buildLoginCacheKey(String appKey, String comboIdentity) {
-        String identity = IdentityUtil.revertIdentity(comboIdentity);
-        Byte deviceType = IdentityUtil.revertDeviceType(comboIdentity);
-        return OUYUNC + IM_LOGIN + withHashTag(stripHashTagChars(identity)) + COLON
-                + sanitizeAppKeyToken(appKey) + COLON + deviceType;
-    }
-
-    /**
-     * 身份路由 HASH：field=deviceType，value=nodeId|epoch。探测/多端在线看这把 key。
-     * 首 tag 必须与 {@link #buildLoginCacheKey} 同一 identity，否则 Cluster CROSSSLOT。
+     * 身份路由 HASH：field=deviceType，value=nodeId|epoch|lastLoginTime。
+     * 完整登录上下文只保存在最终落地节点的 Channel 属性中。
      */
     public static String buildLoginRouteCacheKey(String appKey, String identity) {
         return OUYUNC + IM_ROUTE + withHashTag(stripHashTagChars(identity == null ? "" : identity))
                 + COLON + sanitizeAppKeyToken(appKey);
+    }
+
+    /**
+     * 节点路由反向索引。索引是可修复派生数据，不参与在线判定；节点死亡后用于定向清理 route field。
+     */
+    public static String buildImNodeRouteIndexCacheKey(String nodeId, long epoch) {
+        return OUYUNC + IM_NODE_ROUTES + withHashTag(nodeId) + COLON + epoch;
     }
 
     /**

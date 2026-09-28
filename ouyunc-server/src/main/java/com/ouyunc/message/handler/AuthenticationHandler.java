@@ -281,12 +281,11 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
      * closeFuture 在 EventLoop 上触发，Redis 解绑必须离开 IO 线程。
      */
     private void unbindRemoteOnClose(Packet packet, LoginClientInfo closingLogin, String comboIdentity, boolean publishLogout) {
-        String loginClientInfoCacheKey = CacheConstant.buildLoginCacheKey(closingLogin.getAppKey(), comboIdentity);
-        boolean locked = tryUnbindMatchingSession(closingLogin, comboIdentity, loginClientInfoCacheKey);
+        boolean locked = tryUnbindMatchingSession(closingLogin, comboIdentity);
         if (!locked) {
             ExceptionReporter.reportBusiness(ExceptionCodeEnum.UN_BIND_ERROR, "客户端解绑登录信息失败！获取分布式锁失败", "AuthenticationHandler", packet);
             ScheduleTimer.scheduleOnce(() -> {
-                if (!tryUnbindMatchingSession(closingLogin, comboIdentity, loginClientInfoCacheKey)) {
+                if (!tryUnbindMatchingSession(closingLogin, comboIdentity)) {
                     log.error("解绑补偿仍失败，等待下次登录或节点租约过期 combo={}", comboIdentity);
                 }
             }, MessageConstant.UNBIND_COMPENSATE_DELAY_MILLIS, TimeUnit.MILLISECONDS);
@@ -296,14 +295,10 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         }
     }
 
-    private static boolean tryUnbindMatchingSession(LoginClientInfo closingLogin, String comboIdentity,
-                                                    String loginClientInfoCacheKey) {
+    private static boolean tryUnbindMatchingSession(LoginClientInfo closingLogin, String comboIdentity) {
         return ClientHelper.tryRunWithBindLock(closingLogin.getAppKey(), comboIdentity, () -> {
-            LoginClientInfo remote = MessageServerContext.remoteLoginClientInfoCache.get(loginClientInfoCacheKey);
-            if (remote != null
-                    && closingLogin.getLoginServerAddress().equals(remote.getLoginServerAddress())
-                    && remote.getLastLoginTime() == closingLogin.getLastLoginTime()) {
-                LoginSessionDirectoryHelper.unbind(closingLogin, comboIdentity);
+            if (ClientHelper.stillOwnsDirectory(closingLogin)) {
+                LoginSessionDirectoryHelper.unbind(closingLogin);
             }
         });
     }

@@ -4,48 +4,45 @@ import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.model.LoginClientInfo;
-import com.ouyunc.base.utils.ChannelAttrUtil;
-import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.utils.ImRouteCodec;
 import com.ouyunc.base.utils.ImSessionPresence;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.message.cluster.lease.NodeLeaseSnapshot;
 import com.ouyunc.message.cluster.lease.SessionNodeState;
-import com.ouyunc.message.context.MessageServerContext;
-import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.connection.ReturnType;
+import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisCallback;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.serializer.RedisSerializer;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * 同 identity 槽原子写路由 HASH + 登录 String。连接计数不在本类，见 {@link com.ouyunc.message.cluster.lease.LocalNodeConnCounter}。
+ * 登录会话的 Redis 轻量路由目录。
+ * <p>完整登录上下文只保存在落地节点的 Channel 属性中；Redis 仅保存
+ * {@code deviceType -> nodeId|nodeEpoch|lastLoginTime}，不再创建或续期登录详情 String。</p>
  */
 public final class LoginSessionDirectoryHelper {
 
     private static final Logger log = LoggerFactory.getLogger(LoginSessionDirectoryHelper.class);
 
-    private static final RedisTemplate<String, Object> redisTemplate = CacheFactory.REDIS.instance();
-
     private static final StringRedisTemplate stringRedisTemplate = CacheFactory.STRING_REDIS.instance();
 
     /**
-     * KEYS: route, login；ARGV: deviceField, encoded, loginPayload, lastLoginTime, loginTtlSeconds。
-     * 路由末段 lastLoginTime 更大则拒绝覆盖（fencing）。登录 String 带 TTL，由租约心跳续期。
+     * KEYS[1]=route；ARGV: deviceField, encoded, lastLoginTime。
+     * 路由末段 lastLoginTime 更大则拒绝覆盖，避免迟到的旧登录覆盖新会话。
      */
     private static final byte[] BIND_LUA = (
             "local cur = redis.call('HGET', KEYS[1], ARGV[1]) "
-                    + "local ts = tonumber(ARGV[4]) "
+                    + "local ts = tonumber(ARGV[3]) "
                     + "if cur and ts ~= nil then "
                     + "local bars = 0 "
                     + "for i = 1, #cur do "
@@ -57,53 +54,34 @@ public final class LoginSessionDirectoryHelper {
                     + "end "
                     + "end "
                     + "redis.call('HSET', KEYS[1], ARGV[1], ARGV[2]) "
-                    + "local ttl = tonumber(ARGV[5]) "
-                    + "if ttl ~= nil and ttl > 0 then "
-                    + "redis.call('SET', KEYS[2], ARGV[3], 'EX', ttl) "
-                    + "else "
-                    + "redis.call('SET', KEYS[2], ARGV[3]) "
-                    + "end "
                     + "return 1"
     ).getBytes(StandardCharsets.UTF_8);
 
     /**
-     * KEYS: route, login；ARGV: deviceField, deleteLogin(0/1)。
+     * 仅当字段仍等于本连接的完整 fencing value 时删除，防止旧 Channel 关闭误删新登录。
      */
     private static final byte[] UNBIND_LUA = (
-            "local removed = redis.call('HDEL', KEYS[1], ARGV[1]) "
+            "local cur = redis.call('HGET', KEYS[1], ARGV[1]) "
+                    + "if not cur or cur ~= ARGV[2] then return 0 end "
+                    + "local removed = redis.call('HDEL', KEYS[1], ARGV[1]) "
                     + "if redis.call('HLEN', KEYS[1]) == 0 then redis.call('DEL', KEYS[1]) end "
-                    + "if ARGV[2] == '1' then redis.call('DEL', KEYS[2]) end "
                     + "return removed"
     ).getBytes(StandardCharsets.UTF_8);
 
     /**
-     * KEYS: route, login1..n；ARGV: field1, expectedRoute1..n。
+     * KEYS[1]=route；ARGV: field1, expectedRoute1...。
      * 仅当前路由仍等于读快照时删除，避免旧清理误删刚完成的新登录。
      */
     private static final byte[] EVICT_DEAD_LUA = (
-            "local i = 2 "
-                    + "local a = 1 "
-                    + "while i <= #KEYS do "
+            "local a = 1 "
+                    + "while a <= #ARGV do "
                     + "local cur = redis.call('HGET', KEYS[1], ARGV[a]) "
                     + "if cur and cur == ARGV[a + 1] then "
                     + "redis.call('HDEL', KEYS[1], ARGV[a]) "
-                    + "redis.call('DEL', KEYS[i]) "
                     + "end "
-                    + "i = i + 1 "
                     + "a = a + 2 "
                     + "end "
                     + "if redis.call('HLEN', KEYS[1]) == 0 then redis.call('DEL', KEYS[1]) end "
-                    + "return 1"
-    ).getBytes(StandardCharsets.UTF_8);
-
-    /**
-     * 活跃连接续期与修复：只有路由字段仍等于本连接的完整 fencing 值时才写登录详情。
-     * 登录 String 已经过期时会原子重建；跨节点顶号后旧连接无法把新目录覆盖回来。
-     */
-    private static final byte[] RENEW_LUA = (
-            "local cur = redis.call('HGET', KEYS[1], ARGV[1]) "
-                    + "if not cur or cur ~= ARGV[2] then return 0 end "
-                    + "redis.call('SET', KEYS[2], ARGV[3], 'EX', ARGV[4]) "
                     + "return 1"
     ).getBytes(StandardCharsets.UTF_8);
 
@@ -115,108 +93,27 @@ public final class LoginSessionDirectoryHelper {
 
     private static volatile String evictSha;
 
-    private static final AtomicBoolean LOGIN_TTL_RENEW_IN_FLIGHT = new AtomicBoolean(false);
-
-    private static final int LOGIN_TTL_RENEW_BATCH = 200;
-
     private LoginSessionDirectoryHelper() {
     }
 
-    public static void bind(LoginClientInfo loginClientInfo, String comboIdentity) {
+    public static void bind(LoginClientInfo loginClientInfo) {
         String nodeId = SessionNodeState.localNodeId();
         long epoch = SessionNodeState.currentEpoch();
         loginClientInfo.setNodeEpoch(epoch);
         String routeKey = CacheConstant.buildLoginRouteCacheKey(loginClientInfo.getAppKey(), loginClientInfo.getIdentity());
-        String loginKey = CacheConstant.buildLoginCacheKey(loginClientInfo.getAppKey(), comboIdentity);
         String encoded = ImRouteCodec.encode(nodeId, epoch, loginClientInfo.getLastLoginTime());
-        Long result = evalCached(BIND_LUA, ScriptKind.BIND, 2,
-                bytes(routeKey), bytes(loginKey),
+        Long result = evalCached(BIND_LUA, ScriptKind.BIND, 1,
+                bytes(routeKey),
                 bytes(String.valueOf(loginClientInfo.getDeviceType())),
-                bytes(encoded), serializeLogin(loginClientInfo.copyForRedis()),
-                bytes(String.valueOf(loginClientInfo.getLastLoginTime())),
-                bytes(String.valueOf(MessageConstant.IM_LOGIN_SESSION_TTL_SECONDS)));
-        if (result != null && result == 0L) {
+                bytes(encoded), bytes(String.valueOf(loginClientInfo.getLastLoginTime())));
+        if (!Long.valueOf(1L).equals(result)) {
             throw new MessageException("登录绑定失败：已有更新会话");
         }
+        addRouteIndexQuietly(routeKey, String.valueOf(loginClientInfo.getDeviceType()), encoded, nodeId, epoch);
     }
 
-    public static void unbind(LoginClientInfo loginClientInfo, String comboIdentity) {
-        unbindInternal(loginClientInfo, comboIdentity, true);
-    }
-
-    /**
-     * 租约心跳联动：为本机仍在线的登录 String 续期。节点死后无人续期，TTL 内幽灵在线消失。
-     */
-    public static boolean renewLocalLoginTtls() {
-        if (!LOGIN_TTL_RENEW_IN_FLIGHT.compareAndSet(false, true)) {
-            return false;
-        }
-        try {
-            List<RenewItem> batch = new ArrayList<>(LOGIN_TTL_RENEW_BATCH);
-            for (ChannelHandlerContext ctx : MessageServerContext.localLoginClientRegisterTable.asMap().values()) {
-                if (ctx == null || ctx.channel() == null || !ctx.channel().isActive()) {
-                    continue;
-                }
-                LoginClientInfo login = ChannelAttrUtil.getChannelAttribute(
-                        ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
-                if (login == null || login.getAppKey() == null || login.getIdentity() == null) {
-                    continue;
-                }
-                String combo = IdentityUtil.generalComboIdentity(
-                        login.getAppKey(), login.getIdentity(), login.getDeviceType());
-                String expectedRoute = ImRouteCodec.encode(SessionNodeState.localNodeId(),
-                        login.getNodeEpoch(), login.getLastLoginTime());
-                batch.add(new RenewItem(ctx,
-                        CacheConstant.buildLoginRouteCacheKey(login.getAppKey(), login.getIdentity()),
-                        CacheConstant.buildLoginCacheKey(login.getAppKey(), combo),
-                        String.valueOf(login.getDeviceType()), expectedRoute,
-                        serializeLogin(login.copyForRedis())));
-                if (batch.size() >= LOGIN_TTL_RENEW_BATCH) {
-                    renewBatch(batch);
-                    batch.clear();
-                }
-            }
-            if (!batch.isEmpty()) {
-                renewBatch(batch);
-            }
-            return true;
-        } catch (Exception e) {
-            log.warn("续期或修复本机登录目录失败", e);
-            return false;
-        } finally {
-            LOGIN_TTL_RENEW_IN_FLIGHT.set(false);
-        }
-    }
-
-    /** 同一条命令中的 route/login key 使用相同 identity hash-tag，可安全运行于 Redis Cluster。 */
-    private static void renewBatch(List<RenewItem> batch) {
-        List<Object> results = stringRedisTemplate.executePipelined((RedisCallback<Object>) connection -> {
-            for (RenewItem item : batch) {
-                connection.scriptingCommands().eval(RENEW_LUA, ReturnType.INTEGER, 2,
-                        bytes(item.routeKey()), bytes(item.loginKey()), bytes(item.deviceField()),
-                        bytes(item.expectedRoute()), item.loginPayload(),
-                        bytes(String.valueOf(MessageConstant.IM_LOGIN_SESSION_TTL_SECONDS)));
-            }
-            return null;
-        });
-        if (results == null || results.size() != batch.size()) {
-            throw new IllegalStateException("登录目录续期结果数量不完整 expected="
-                    + batch.size() + " actual=" + (results == null ? 0 : results.size()));
-        }
-        for (int index = 0; index < batch.size(); index++) {
-            if (Long.valueOf(1L).equals(results.get(index))) {
-                continue;
-            }
-            ChannelHandlerContext ctx = batch.get(index).ctx();
-            if (ctx != null && ctx.channel() != null && ctx.channel().isActive()) {
-                log.info("本机连接已失去登录目录所有权，关闭旧连接 channel={}", ctx.channel().id());
-                ctx.channel().eventLoop().execute(ctx::close);
-            }
-        }
-    }
-
-    private record RenewItem(ChannelHandlerContext ctx, String routeKey, String loginKey,
-                             String deviceField, String expectedRoute, byte[] loginPayload) {
+    public static void unbind(LoginClientInfo loginClientInfo) {
+        unbindInternal(loginClientInfo);
     }
 
     /**
@@ -238,40 +135,137 @@ public final class LoginSessionDirectoryHelper {
             List<byte[]> fieldsAndExpected = new ArrayList<>(dead.size() * 2);
             keysAndArgs.add(bytes(routeKey));
             for (Byte deviceType : dead) {
-                String combo = IdentityUtil.generalComboIdentity(appKey, identity, deviceType);
-                keysAndArgs.add(bytes(CacheConstant.buildLoginCacheKey(appKey, combo)));
                 String field = String.valueOf(deviceType);
                 String expectedRoute = routeValue(routeHash, field);
                 if (expectedRoute == null) {
-                    keysAndArgs.remove(keysAndArgs.size() - 1);
                     continue;
                 }
                 fieldsAndExpected.add(bytes(field));
                 fieldsAndExpected.add(bytes(expectedRoute));
             }
-            int loginKeyCount = keysAndArgs.size() - 1;
-            if (loginKeyCount == 0) {
+            if (fieldsAndExpected.isEmpty()) {
                 return;
             }
             keysAndArgs.addAll(fieldsAndExpected);
             // 构造参数期间可能跨过有效期或已刷新为新的成员视图，旧判断一律放弃。
             if (SessionNodeState.isCurrentSnapshot(snapshot)) {
-                evalCached(EVICT_DEAD_LUA, ScriptKind.EVICT, 1 + loginKeyCount, keysAndArgs.toArray(byte[][]::new));
+                evalCached(EVICT_DEAD_LUA, ScriptKind.EVICT, 1, keysAndArgs.toArray(byte[][]::new));
             }
         } catch (Exception e) {
             log.warn("惰性清理死路由失败 identity={}", identity, e);
         }
     }
 
-    private static void unbindInternal(LoginClientInfo loginClientInfo, String comboIdentity, boolean deleteLogin) {
+    private static void unbindInternal(LoginClientInfo loginClientInfo) {
         String routeKey = CacheConstant.buildLoginRouteCacheKey(loginClientInfo.getAppKey(), loginClientInfo.getIdentity());
-        String loginKey = deleteLogin
-                ? CacheConstant.buildLoginCacheKey(loginClientInfo.getAppKey(), comboIdentity)
-                : routeKey;
-        evalCached(UNBIND_LUA, ScriptKind.UNBIND, 2,
-                bytes(routeKey), bytes(loginKey),
+        String expectedRoute = ImRouteCodec.encode(loginClientInfo.getLoginServerAddress(),
+                loginClientInfo.getNodeEpoch(), loginClientInfo.getLastLoginTime());
+        Long removed = evalCached(UNBIND_LUA, ScriptKind.UNBIND, 1,
+                bytes(routeKey),
                 bytes(String.valueOf(loginClientInfo.getDeviceType())),
-                bytes(deleteLogin ? "1" : "0"));
+                bytes(expectedRoute));
+        if (Long.valueOf(1L).equals(removed)) {
+            removeRouteIndexQuietly(routeKey, String.valueOf(loginClientInfo.getDeviceType()), expectedRoute,
+                    loginClientInfo.getLoginServerAddress(), loginClientInfo.getNodeEpoch());
+        }
+    }
+
+    /**
+     * 分批清理已经失效的节点 epoch 路由。
+     * <p>反向索引不是在线权威；每条 route 仍通过 compare-and-delete 校验完整 fencing value，
+     * 因此旧节点清理与用户新登录并发时不会误删新路由。</p>
+     *
+     * @return true 表示本轮后索引已经清空；false 表示仍需后续周期继续处理
+     */
+    public static boolean cleanupDeadNodeRoutes(String nodeId, long epoch) {
+        String indexKey = CacheConstant.buildImNodeRouteIndexCacheKey(nodeId, epoch);
+        List<String> members = new ArrayList<>(MessageConstant.IM_DEAD_NODE_ROUTE_CLEANUP_BATCH);
+        ScanOptions options = ScanOptions.scanOptions()
+                .count(MessageConstant.IM_DEAD_NODE_ROUTE_CLEANUP_BATCH)
+                .build();
+        try (Cursor<String> cursor = stringRedisTemplate.opsForSet().scan(indexKey, options)) {
+            while (cursor.hasNext() && members.size() < MessageConstant.IM_DEAD_NODE_ROUTE_CLEANUP_BATCH) {
+                String member = cursor.next();
+                if (member != null) {
+                    members.add(member);
+                }
+            }
+        }
+        if (members.isEmpty()) {
+            stringRedisTemplate.delete(indexKey);
+            return true;
+        }
+        List<String> processed = new ArrayList<>(members.size());
+        for (String member : members) {
+            RouteIndexEntry entry = decodeIndexMember(member);
+            if (entry == null) {
+                processed.add(member);
+                continue;
+            }
+            Long result = evalCached(UNBIND_LUA, ScriptKind.UNBIND, 1,
+                    bytes(entry.routeKey()), bytes(entry.deviceField()), bytes(entry.expectedRoute()));
+            if (result == null) {
+                throw new IllegalStateException("死亡节点路由 CAS 返回空结果");
+            }
+            processed.add(member);
+        }
+        stringRedisTemplate.opsForSet().remove(indexKey, processed.toArray());
+        Long remaining = stringRedisTemplate.opsForSet().size(indexKey);
+        if (remaining == null || remaining == 0L) {
+            stringRedisTemplate.delete(indexKey);
+            return true;
+        }
+        return false;
+    }
+
+    private static void addRouteIndexQuietly(String routeKey, String deviceField, String expectedRoute,
+                                             String nodeId, long epoch) {
+        try {
+            stringRedisTemplate.opsForSet().add(
+                    CacheConstant.buildImNodeRouteIndexCacheKey(nodeId, epoch),
+                    encodeIndexMember(routeKey, deviceField, expectedRoute));
+        } catch (Exception e) {
+            // 派生索引写失败不能回滚已完成的登录绑定；读时惰性清理仍可保证正确性。
+            log.warn("登记节点路由反向索引失败 nodeId={} epoch={} routeKey={}", nodeId, epoch, routeKey, e);
+        }
+    }
+
+    private static void removeRouteIndexQuietly(String routeKey, String deviceField, String expectedRoute,
+                                                String nodeId, long epoch) {
+        try {
+            stringRedisTemplate.opsForSet().remove(
+                    CacheConstant.buildImNodeRouteIndexCacheKey(nodeId, epoch),
+                    encodeIndexMember(routeKey, deviceField, expectedRoute));
+        } catch (Exception e) {
+            // 残留索引成员只会在后台再次执行安全 CAS，不影响在线状态。
+            log.debug("移除节点路由反向索引失败 nodeId={} epoch={} routeKey={}", nodeId, epoch, routeKey, e);
+        }
+    }
+
+    private static String encodeIndexMember(String routeKey, String deviceField, String expectedRoute) {
+        Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
+        return encoder.encodeToString(routeKey.getBytes(StandardCharsets.UTF_8)) + "."
+                + encoder.encodeToString(deviceField.getBytes(StandardCharsets.UTF_8)) + "."
+                + encoder.encodeToString(expectedRoute.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static RouteIndexEntry decodeIndexMember(String member) {
+        try {
+            String[] parts = member.split("\\.", 3);
+            if (parts.length != 3) {
+                return null;
+            }
+            Base64.Decoder decoder = Base64.getUrlDecoder();
+            return new RouteIndexEntry(
+                    new String(decoder.decode(parts[0]), StandardCharsets.UTF_8),
+                    new String(decoder.decode(parts[1]), StandardCharsets.UTF_8),
+                    new String(decoder.decode(parts[2]), StandardCharsets.UTF_8));
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    private record RouteIndexEntry(String routeKey, String deviceField, String expectedRoute) {
     }
 
     /**
@@ -402,13 +396,4 @@ public final class LoginSessionDirectoryHelper {
         return null;
     }
 
-    private static byte[] serializeLogin(LoginClientInfo loginClientInfo) {
-        @SuppressWarnings("unchecked")
-        RedisSerializer<Object> objSer = (RedisSerializer<Object>) redisTemplate.getValueSerializer();
-        byte[] raw = objSer.serialize(loginClientInfo);
-        if (raw == null) {
-            throw new IllegalStateException("登录对象序列化失败");
-        }
-        return raw;
-    }
 }

@@ -8,8 +8,6 @@ import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.cache.Cache;
-import com.ouyunc.cache.config.CacheFactory;
-import com.ouyunc.cache.distributed.redis.RedisDistributedCache;
 import com.ouyunc.cache.local.caffeine.CaffeineLocalCache;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.intercept.AbstractMessageInterceptor;
@@ -80,14 +78,6 @@ public class MessageServerContext extends MessageContext {
      * 集群分区拓扑视图（flat 模式下为 {@link ClusterTopologyView#flat()}）
      */
     public static ClusterTopologyView clusterTopologyView = ClusterTopologyView.flat();
-
-
-
-    // ================================================================redis=====================================
-    /**
-     * 客户端登录信息redis缓存,使用0号库
-     */
-    public static final Cache<String, LoginClientInfo> remoteLoginClientInfoCache = new RedisDistributedCache<>(CacheFactory.REDIS.instance(), CacheFactory.STRING_REDIS.instance());
 
 
 

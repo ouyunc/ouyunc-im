@@ -396,10 +396,11 @@ public class MessageHelper {
                 && LoginFollowHelper.tryFollow(packet, target, sendCallback)) {
             return;
         }
-        MessageServerContext.findProtocol(target.getProtocol(), target.getProtocolVersion())
-                .doSendMessage(packet, IdentityUtil.generalComboIdentity(
-                        target.getAppKey(), target.getTargetIdentity(), target.getDeviceType()),
-                        wrapRemoteLoginClose(packet, target, sendCallback));
+        String combo = IdentityUtil.generalComboIdentity(
+                target.getAppKey(), target.getTargetIdentity(), target.getDeviceType());
+        ChannelHandlerContext ctx = MessageServerContext.localLoginClientRegisterTable.get(combo);
+        // 协议属于真实连接上下文。远端源节点只携带轻量路由，最终落地必须以本机 Channel 为准。
+        PacketChannelWriter.sendOnChannel(ctx, packet, wrapRemoteLoginClose(packet, target, sendCallback));
     }
 
     private static boolean hasLocalActiveConnection(Target target) {

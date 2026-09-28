@@ -343,6 +343,12 @@ public class MessageConstant {
     /** 注册索引每轮最多回收的过期节点数，限制单次 Lua 执行时间。 */
     public static final int IM_NODE_REGISTRY_CLEANUP_BATCH = 128;
 
+    /** 死亡节点路由反向索引每轮最多清理的成员数，避免故障恢复时集中冲击 Redis。 */
+    public static final int IM_DEAD_NODE_ROUTE_CLEANUP_BATCH = 256;
+
+    /** 死亡节点路由清理宽限期，节点短暂停顿后同 epoch 恢复时不得删除其仍有效的在线路由。 */
+    public static final int IM_DEAD_NODE_ROUTE_CLEANUP_GRACE_SECONDS = IM_NODE_LEASE_TTL_SECONDS * 2;
+
     /** 配额管道每批最多处理的 HASH 数。 */
     public static final int IM_NODE_QUOTA_SYNC_BATCH = 128;
 
@@ -362,14 +368,6 @@ public class MessageConstant {
 
     /** appKey 本机配额操作的分段锁数量，限制锁对象数量并串行化同一 appKey 的预占、释放和对账。 */
     public static final int IM_APP_KEY_CONN_QUOTA_LOCK_STRIPES = 256;
-
-    /**
-     * 登录 String TTL：活连接随租约心跳 EXPIRE；kill-9 后最多该窗口内幽灵在线。
-     */
-    public static final int IM_LOGIN_SESSION_TTL_SECONDS = IM_APP_KEY_CONN_QUOTA_TTL_SECONDS;
-
-    /** 登录目录维护超过该窗口未成功时停止接收新登录，必须小于登录记录 TTL。 */
-    public static final int IM_LOGIN_DIRECTORY_READY_SECONDS = IM_LOGIN_SESSION_TTL_SECONDS / 2;
 
     /**
      * appKey 配额 Lua 成功返回值（预占/释放/心跳对齐）。

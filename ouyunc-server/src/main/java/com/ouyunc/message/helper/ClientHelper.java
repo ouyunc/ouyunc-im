@@ -17,7 +17,6 @@ import com.ouyunc.base.packet.message.content.ServerNotifyContent;
 import com.ouyunc.base.serialize.Serializer;
 import com.ouyunc.base.utils.*;
 import com.ouyunc.cache.config.CacheFactory;
-import com.ouyunc.cache.distributed.redis.RedisPipelineSupport;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.domain.entity.AppEntity;
 import com.ouyunc.message.cluster.lease.AppKeyConnQuotaSupport;
@@ -114,13 +113,7 @@ public class ClientHelper {
                         && Objects.equals(ImRouteCodec.nodeId(encoded), loginClientInfo.getLoginServerAddress());
             }
         }
-        String comboIdentity = IdentityUtil.generalComboIdentity(
-                loginClientInfo.getAppKey(), loginClientInfo.getIdentity(), loginClientInfo.getDeviceType());
-        LoginClientInfo remote = MessageServerContext.remoteLoginClientInfoCache.get(
-                CacheConstant.buildLoginCacheKey(loginClientInfo.getAppKey(), comboIdentity));
-        return remote != null
-                && remote.getLastLoginTime() == loginClientInfo.getLastLoginTime()
-                && Objects.equals(loginClientInfo.getLoginServerAddress(), remote.getLoginServerAddress());
+        return false;
     }
 
     private static void closeStaleLocalIfPresent(ChannelHandlerContext staleLocal, ChannelHandlerContext currentCtx) {
@@ -142,13 +135,9 @@ public class ClientHelper {
         if (channel != null && channel.isActive()) {
             return;
         }
-        String loginKey = CacheConstant.buildLoginCacheKey(loginClientInfo.getAppKey(), comboIdentity);
         if (!tryRunWithBindLock(loginClientInfo.getAppKey(), comboIdentity, () -> {
-            LoginClientInfo remote = MessageServerContext.remoteLoginClientInfoCache.get(loginKey);
-            if (remote != null
-                    && loginClientInfo.getLoginServerAddress().equals(remote.getLoginServerAddress())
-                    && remote.getLastLoginTime() == loginClientInfo.getLastLoginTime()) {
-                LoginSessionDirectoryHelper.unbind(loginClientInfo, comboIdentity);
+            if (stillOwnsDirectory(loginClientInfo)) {
+                LoginSessionDirectoryHelper.unbind(loginClientInfo);
             }
         })) {
             log.error("客户端: {} 关闭回滚获取锁失败", loginClientInfo);
@@ -156,14 +145,14 @@ public class ClientHelper {
     }
 
     /**
-     * 远程锁与 Redis 回滚始终离开 EventLoop；拒绝时由登录 TTL/死路由清理兜底。
+     * 远程锁与 Redis 回滚始终离开 EventLoop；拒绝时由路由 CAS 回滚/死路由清理兜底。
      */
     private static void rollbackRemoteAsync(LoginClientInfo loginClientInfo, String comboIdentity, Channel channel) {
         try {
             ThreadPoolManager.messageProcessorExecutor().execute(
                     () -> rollbackRemoteIfChannelClosed(loginClientInfo, comboIdentity, channel));
         } catch (RuntimeException e) {
-            log.error("提交登录远程回滚任务失败 combo={}，等待 TTL 清理", comboIdentity, e);
+            log.error("提交登录远程回滚任务失败 combo={}，等待死路由清理", comboIdentity, e);
         }
     }
 
@@ -302,15 +291,15 @@ public class ClientHelper {
             // 不传 leaseTime，启用 Redisson watchdog，避免 Redis 变慢时 5s 锁过期导致双绑
             if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, TimeUnit.SECONDS)) {
                 try {
-                    String loginKey = CacheConstant.buildLoginCacheKey(loginClientInfo.getAppKey(), comboIdentity);
-                    LoginClientInfo previous = MessageServerContext.remoteLoginClientInfoCache.get(loginKey);
+                    LoginClientInfo previous = routeLoginInfo(loginClientInfo.getAppKey(),
+                            loginClientInfo.getIdentity(), loginClientInfo.getDeviceType(), null);
                     if (previous != null
                             && previous.getLastLoginTime() > loginClientInfo.getLastLoginTime()) {
                         log.warn("登录 fencing 拒绝更旧会话 combo={} previousTs={} currentTs={}",
                                 comboIdentity, previous.getLastLoginTime(), loginClientInfo.getLastLoginTime());
                         throw new MessageException("登录绑定失败：已有更新会话");
                     }
-                    LoginSessionDirectoryHelper.bind(loginClientInfo, comboIdentity);
+                    LoginSessionDirectoryHelper.bind(loginClientInfo);
                     return previous;
                 } finally {
                     if (lock.isHeldByCurrentThread()) {
@@ -408,7 +397,6 @@ public class ClientHelper {
 
     private static Map<String, List<LoginClientInfo>> onlineAllBatchChunk(String appKey, Set<String> identities) {
         Map<String, List<LoginClientInfo>> result = new HashMap<>(identities.size());
-        Map<String, Set<String>> remainingCombos = new LinkedHashMap<>();
         List<String> orderedIdentities = identities.stream().filter(Objects::nonNull).toList();
         RedisSerializer<String> keySerializer = stringRedisTemplate.getStringSerializer();
         List<Object> routeRows = stringRedisTemplate.executePipelined((RedisCallback<Object>) connection -> {
@@ -425,23 +413,18 @@ public class ClientHelper {
             Object row = routeRows == null || index >= routeRows.size() ? null : routeRows.get(index);
             Map<?, ?> route = row instanceof Map<?, ?> map ? map : Map.of();
             LoginSessionDirectoryHelper.evictDeadRoute(appKey, identity, route, leaseSnapshot);
-            Set<String> remoteCombos = new HashSet<>();
-            for (Byte deviceType : ImSessionPresence.liveDeviceTypes(route, liveEpochs)) {
-                String comboId = IdentityUtil.generalComboIdentity(appKey, identity, deviceType);
-                ChannelHandlerContext ctx = MessageServerContext.localLoginClientRegisterTable.get(comboId);
-                LoginClientInfo local = ctx == null ? null : ChannelAttrUtil.getChannelAttribute(
-                        ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
-                if (local != null && OnlineEnum.ONLINE.equals(local.getOnlineStatus())) {
-                    result.computeIfAbsent(identity, ignored -> new ArrayList<>()).add(local);
-                } else {
-                    remoteCombos.add(comboId);
+            for (Map.Entry<?, ?> routeEntry : route.entrySet()) {
+                Byte deviceType = parseDeviceType(routeEntry.getKey());
+                String encoded = rawString(routeEntry.getValue());
+                if (deviceType == null || !routeMatchesLiveLease(encoded, liveEpochs)) {
+                    continue;
+                }
+                LoginClientInfo resolved = routeLoginInfo(appKey, identity, deviceType, encoded);
+                if (resolved != null) {
+                    result.computeIfAbsent(identity, ignored -> new ArrayList<>()).add(resolved);
                 }
             }
-            if (!remoteCombos.isEmpty()) {
-                remainingCombos.put(identity, remoteCombos);
-            }
         }
-        appendRemoteLoginDetails(remainingCombos, liveEpochs, result);
         return result;
     }
 
@@ -472,37 +455,6 @@ public class ClientHelper {
     }
 
     /**
-     * 远程在线以路由 HASH + 租约为准，再管道 GET 登录 String 补发送元数据。
-     */
-    private static void appendRemoteLoginDetails(Map<String, Set<String>> remainingCombos,
-                                                 Map<String, Long> liveEpochs,
-                                                 Map<String, List<LoginClientInfo>> result) {
-        if (remainingCombos.isEmpty()) {
-            return;
-        }
-        Set<String> liveLoginKeys = new HashSet<>();
-        for (Set<String> combos : remainingCombos.values()) {
-            for (String combo : combos) {
-                String appKey = IdentityUtil.revertAppKey(combo);
-                liveLoginKeys.add(CacheConstant.buildLoginCacheKey(appKey, combo));
-            }
-        }
-        if (liveLoginKeys.isEmpty()) {
-            return;
-        }
-        List<Object> cached = RedisPipelineSupport.getValues(redisTemplate, liveLoginKeys);
-        if (cached == null) {
-            return;
-        }
-        for (Object item : cached) {
-            if (item instanceof LoginClientInfo info && ImSessionPresence.isLoginLive(info, liveEpochs)) {
-                result.computeIfAbsent(info.getIdentity(), k -> new ArrayList<>()).add(info);
-            }
-        }
-    }
-
-
-    /**
      * 查询指定设备是否在线；不在线返回 null。
      */
     public static LoginClientInfo onlineDevice(String appKey, String identity, byte deviceType) {
@@ -516,33 +468,98 @@ public class ClientHelper {
      * 获取某个端的登录信息
      */
     private static LoginClientInfo online(String appKey, String identity, Byte loginDeviceTypeValue) {
-        String comboIdentity = IdentityUtil.generalComboIdentity(appKey, identity, loginDeviceTypeValue);
-        // 先从本地注册表获取，如果在同一个服务器上或者不是集群
-        ChannelHandlerContext ctx = MessageServerContext.localLoginClientRegisterTable.get(comboIdentity);
-        if (ctx != null) {
-            LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
-            if (loginClientInfo != null && OnlineEnum.ONLINE.equals(loginClientInfo.getOnlineStatus()) && MessageContext.messageProperties.getLocalServerAddress().equals(loginClientInfo.getLoginServerAddress())) {
-                return loginClientInfo;
+        String combo = IdentityUtil.generalComboIdentity(appKey, identity, loginDeviceTypeValue);
+        ChannelHandlerContext ctx = MessageServerContext.localLoginClientRegisterTable.get(combo);
+        LoginClientInfo local = ctx == null ? null : ChannelAttrUtil.getChannelAttribute(
+                ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
+        boolean localSendable = local != null && OnlineEnum.ONLINE.equals(local.getOnlineStatus())
+                && PacketChannelWriter.isSendable(ctx);
+        try {
+            LoginClientInfo resolved = routeLoginInfo(appKey, identity, loginDeviceTypeValue, null);
+            if (resolved != null) {
+                return resolved;
             }
+            // 租约快照不完整时不能用 Redis 的不完整视图否定本机真实 Channel。
+            return localSendable && !SessionNodeState.currentSnapshot().isFresh() ? local : null;
+        } catch (RuntimeException redisFailure) {
+            if (localSendable) {
+                log.debug("Redis 路由暂不可用，使用本机真实 Channel appKey={} identity={} deviceType={}",
+                        appKey, identity, loginDeviceTypeValue);
+                return local;
+            }
+            throw redisFailure;
         }
-        // 从redis 获取登录信息
-        LoginClientInfo loginClientInfo = MessageServerContext.remoteLoginClientInfoCache.get(CacheConstant.buildLoginCacheKey(appKey, comboIdentity));
-        if (isDirectoryOnline(loginClientInfo)) {
-            return loginClientInfo;
-        }
-        return null;
     }
 
     /**
-     * 登录 String 为 ONLINE 且节点租约 epoch 仍匹配。投递路径请优先走 {@link #onlineAll}（路由 HASH）。
+     * 由轻量路由构造远端投递目标。该对象不是完整登录上下文，只允许用于节点分组、设备定位和 fencing。
+     * 协议、selfSync 等连接属性必须由最终落地节点从本机 Channel 获取。
      */
-    public static boolean isDirectoryOnline(LoginClientInfo loginClientInfo) {
-        if (loginClientInfo == null || !OnlineEnum.ONLINE.equals(loginClientInfo.getOnlineStatus())) {
-            return false;
+    private static LoginClientInfo routeLoginInfo(String appKey, String identity, byte deviceType, String encodedRoute) {
+        String encoded = encodedRoute;
+        if (StringUtils.isBlank(encoded)) {
+            Object raw = stringRedisTemplate.opsForHash().get(
+                    CacheConstant.buildLoginRouteCacheKey(appKey, identity), String.valueOf(deviceType));
+            encoded = rawString(raw);
         }
-        return SessionNodeState.isLive(loginClientInfo.getLoginServerAddress(), loginClientInfo.getNodeEpoch());
+        NodeLeaseSnapshot snapshot = SessionNodeState.currentSnapshot();
+        if (!SessionNodeState.isCurrentSnapshot(snapshot) || !routeMatchesLiveLease(encoded, snapshot.epochs())) {
+            return null;
+        }
+        String routeNode = ImRouteCodec.nodeId(encoded);
+        long routeEpoch = ImRouteCodec.epoch(encoded);
+        long routeLoginTime = ImRouteCodec.lastLoginTime(encoded);
+        if (Objects.equals(SessionNodeState.localNodeId(), routeNode)) {
+            String combo = IdentityUtil.generalComboIdentity(appKey, identity, deviceType);
+            ChannelHandlerContext ctx = MessageServerContext.localLoginClientRegisterTable.get(combo);
+            LoginClientInfo local = ctx == null ? null : ChannelAttrUtil.getChannelAttribute(
+                    ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
+            if (local == null || !PacketChannelWriter.isSendable(ctx)
+                    || !OnlineEnum.ONLINE.equals(local.getOnlineStatus())
+                    || local.getNodeEpoch() != routeEpoch
+                    || local.getLastLoginTime() != routeLoginTime) {
+                return null;
+            }
+            return local;
+        }
+        LoginClientInfo routeTarget = new LoginClientInfo();
+        routeTarget.setAppKey(appKey);
+        routeTarget.setIdentity(identity);
+        routeTarget.setDeviceType(deviceType);
+        routeTarget.setLoginServerAddress(routeNode);
+        routeTarget.setNodeEpoch(routeEpoch);
+        routeTarget.setLastLoginTime(routeLoginTime);
+        routeTarget.setOnlineStatus(OnlineEnum.ONLINE);
+        return routeTarget;
     }
 
+    private static boolean routeMatchesLiveLease(String encoded, Map<String, Long> liveEpochs) {
+        if (StringUtils.isBlank(encoded) || liveEpochs == null || liveEpochs.isEmpty()) {
+            return false;
+        }
+        String nodeId = ImRouteCodec.nodeId(encoded);
+        Long liveEpoch = nodeId == null ? null : liveEpochs.get(nodeId);
+        return liveEpoch != null && liveEpoch == ImRouteCodec.epoch(encoded);
+    }
+
+    private static Byte parseDeviceType(Object raw) {
+        String value = rawString(raw);
+        if (StringUtils.isBlank(value)) {
+            return null;
+        }
+        try {
+            return Byte.valueOf(value);
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
+    }
+
+    private static String rawString(Object raw) {
+        if (raw instanceof byte[] bytes) {
+            return new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
+        }
+        return raw == null ? null : String.valueOf(raw);
+    }
 
     /**
      * 某 appKey 连接数：本机用内存计数（即时），其它存活节点用租约心跳写入的 HASH（最多一拍延迟）。

@@ -104,8 +104,8 @@ const FEATURES = [
     ['心跳', () => send(-1, -1, '', 1, 'ping', 0)],
     ['单聊文本', () => send(-6, -128, peer(), 1, 'hello', 1)],
     ['单聊图片', () => send(-6, -120, peer(), 1, JSON.stringify({url: 'https://example.test/a.png'}), 1)],
-    ['撤回', () => send(-6, -6, peer(), 1, JSON.stringify([lastChatId || 'missing']), 1)],
-    ['已读', () => send(-6, -7, peer(), 1, JSON.stringify([lastChatId || 'missing']), 1)],
+    ['撤回', () => sendByLastChat(-6)],
+    ['已读', () => sendByLastChat(-7)],
     ['群文本', () => send(-7, -128, groupId(), 2, 'group hello', 1)],
     ['客服', () => send(-17, -128, peer(), 5, 'cs hello', 1, null, 6)],
     ['好友申请', () => send(-8, -128, peer(), 1, 'join', 1)],
@@ -123,6 +123,8 @@ const FEATURES = [
 
 let socket = null;
 let lastMessageId = '';
+// 撤回/已读的目标必须是服务端 packetId（受理结果 -5 里的字符串），不是客户端 messageId；全程保持字符串，避免雪花 ID 精度丢失
+let pendingChatMessageId = '';
 let lastChatId = '';
 
 const logEl = document.getElementById('log');
@@ -186,9 +188,20 @@ function send(messageType, contentType, to, toType, content, qos, messageId, fro
     });
     const sentId = packet.message.id;
     lastMessageId = sentId;
-    if (messageType === -6 && contentType === -128) lastChatId = sentId;
-    log('发', `${TYPES[messageType] || messageType} contentType=${contentType} id=${sentId} to=${to} packetId=${packet.packetId}`);
+    if (messageType === -6 && contentType === -128) {
+        pendingChatMessageId = sentId;
+        lastChatId = '';
+    }
+    log('发', `${TYPES[messageType] || messageType} contentType=${contentType} id=${sentId} to=${to}`);
     return sentId;
+}
+
+function sendByLastChat(contentType) {
+    if (!lastChatId) {
+        log('!', '还没有拿到上一条单聊文本的服务端 packetId（等受理结果 ACCEPTED 后再试）。');
+        return null;
+    }
+    return send(-6, contentType, peer(), 1, JSON.stringify([lastChatId]), 1);
 }
 
 function resendSameId() {
@@ -206,9 +219,9 @@ async function runAll() {
         await new Promise((resolve) => setTimeout(resolve, 300));
     }
     if (lastChatId) {
-        send(-6, -6, peer(), 1, JSON.stringify([lastChatId]), 1);
+        sendByLastChat(-6);
         await new Promise((resolve) => setTimeout(resolve, 300));
-        send(-6, -7, peer(), 1, JSON.stringify([lastChatId]), 1);
+        sendByLastChat(-7);
     }
     resendSameId();
 }
@@ -272,7 +285,10 @@ document.getElementById('btnConnect').onclick = () => {
         if (packet.messageType === -5 && message.content) {
             try {
                 const result = JSON.parse(message.content);
-                extra = ` status=${result.status} messageId=${result.messageId} code=${result.code || ''}`;
+                if (result.status === 'ACCEPTED' && result.packetId && result.messageId === pendingChatMessageId) {
+                    lastChatId = String(result.packetId);
+                }
+                extra = ` status=${result.status} messageId=${result.messageId} packetId=${result.packetId || ''} code=${result.code || ''}`;
             } catch (e) {
                 extra = ' ' + message.content;
             }

@@ -277,7 +277,16 @@ public final class PacketChannelWriter {
             return;
         }
         Metadata metadata = packet.getMessage().getMetadata();
-        if (metadata.getClusterRoute().getTarget() != null) {
+        Target existing = metadata.getClusterRoute().getTarget();
+        if (existing != null) {
+            // 跨机源节点只掌握轻量 route，不能把缺省或过期协议带到最终写出。
+            // 最终落地节点始终以真实 Channel 上的登录上下文覆盖协议版本。
+            LoginClientInfo localLogin = ChannelAttrUtil.getChannelAttribute(
+                    ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
+            if (localLogin != null) {
+                existing.setProtocol(localLogin.getProtocol());
+                existing.setProtocolVersion(localLogin.getProtocolVersion());
+            }
             return;
         }
         Target target = resolveReplyTarget(ctx, packet, packet.getMessage().getTo());

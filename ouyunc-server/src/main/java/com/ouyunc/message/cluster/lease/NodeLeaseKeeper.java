@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
@@ -87,7 +88,6 @@ public final class NodeLeaseKeeper {
             run.heartbeatTask.cancel();
             run.publishLock.lock();
             run.quotaMaintenanceLock.lock();
-            run.directoryMaintenanceLock.lock();
             try {
                 if (run.clusterMode) {
                     NodeLeaseRedisSupport.release(CacheFactory.STRING_REDIS.instance(), run.nodeId, run.payloadJson);
@@ -95,7 +95,6 @@ public final class NodeLeaseKeeper {
             } catch (Exception e) {
                 log.warn("停止节点租约清理失败，等待 TTL 回收 nodeId={}", run.nodeId, e);
             } finally {
-                run.directoryMaintenanceLock.unlock();
                 run.quotaMaintenanceLock.unlock();
                 run.publishLock.unlock();
             }
@@ -116,11 +115,10 @@ public final class NodeLeaseKeeper {
         return MessageServerContext.serverProperties().getLocalServerAddress();
     }
 
-    /** 首次成功及故障恢复均以完整的新鲜快照为准，不能仅凭内存初始化允许新登录。 */
+    /** 集群首次成功及故障恢复均以完整的新鲜租约快照为准。完整登录上下文只驻留本机 Channel。 */
     public static boolean isReady() {
         LeaseRun run = current;
-        return run != null && run.directoryMaintenanceFresh()
-                && (!run.clusterMode || run.snapshot.isFresh());
+        return run != null && (!run.clusterMode || run.snapshot.isFresh());
     }
 
     /** 本机已有连接在运行期间仍可本地投递；远端成员必须来自未过期的快照。 */
@@ -284,7 +282,7 @@ public final class NodeLeaseKeeper {
         } finally {
             run.publishLock.unlock();
         }
-        // 配额及登录 TTL 维护不占用核心续租锁；异常不污染 Redis 租约失败计数。
+        // 配额及死路由维护不占用核心续租锁；异常不污染 Redis 租约失败计数。
         scheduleMaintenance(run);
     }
 
@@ -300,6 +298,7 @@ public final class NodeLeaseKeeper {
         if (current != run) {
             return;
         }
+        registerDeadRouteCleanup(run, run.snapshot, snapshot);
         run.snapshot = snapshot;
         run.redisFailStreak = 0;
         if (MessageServerContext.REDIS_ISOLATION_DRAINING.get()) {
@@ -323,7 +322,73 @@ public final class NodeLeaseKeeper {
             return;
         }
         submitQuotaMaintenance(run);
-        submitDirectoryMaintenance(run);
+        submitDeadRouteCleanup(run);
+    }
+
+    /** 仅由两个连续的权威快照比较登记死亡 epoch；同 epoch 在宽限期内恢复会撤销清理。 */
+    private static void registerDeadRouteCleanup(LeaseRun run, NodeLeaseSnapshot previous, NodeLeaseSnapshot currentSnapshot) {
+        if (previous != null && !previous.leases().isEmpty()) {
+            for (Map.Entry<String, NodeLeasePayload> entry : previous.leases().entrySet()) {
+                String nodeId = entry.getKey();
+                NodeLeasePayload oldLease = entry.getValue();
+                if (nodeId == null || oldLease == null || nodeId.equals(run.nodeId)) {
+                    continue;
+                }
+                NodeLeasePayload currentLease = currentSnapshot.leases().get(nodeId);
+                if (currentLease == null || currentLease.getEpoch() != oldLease.getEpoch()) {
+                    String cleanupKey = deadCleanupKey(nodeId, oldLease.getEpoch());
+                    run.deadRouteCleanups.putIfAbsent(cleanupKey,
+                            new DeadRouteCleanup(nodeId, oldLease.getEpoch(), System.nanoTime()));
+                }
+            }
+        }
+        for (Map.Entry<String, NodeLeasePayload> entry : currentSnapshot.leases().entrySet()) {
+            NodeLeasePayload lease = entry.getValue();
+            if (lease != null) {
+                run.deadRouteCleanups.remove(deadCleanupKey(entry.getKey(), lease.getEpoch()));
+            }
+        }
+    }
+
+    private static void submitDeadRouteCleanup(LeaseRun run) {
+        if (run.deadRouteCleanups.isEmpty() || !run.deadRouteCleanupPending.compareAndSet(false, true)) {
+            return;
+        }
+        try {
+            ThreadPoolManager.nodeLeaseExecutor().execute(() -> cleanupDeadRoutes(run));
+        } catch (Exception e) {
+            run.deadRouteCleanupPending.set(false);
+            log.warn("提交死亡节点路由清理失败 nodeId={}", run.nodeId, e);
+        }
+    }
+
+    private static void cleanupDeadRoutes(LeaseRun run) {
+        try {
+            long graceNanos = TimeUnit.SECONDS.toNanos(MessageConstant.IM_DEAD_NODE_ROUTE_CLEANUP_GRACE_SECONDS);
+            for (Map.Entry<String, DeadRouteCleanup> entry : run.deadRouteCleanups.entrySet()) {
+                DeadRouteCleanup cleanup = entry.getValue();
+                if (cleanup == null || System.nanoTime() - cleanup.detectedAtNanos() < graceNanos) {
+                    continue;
+                }
+                NodeLeasePayload live = currentSnapshot().leases().get(cleanup.nodeId());
+                if (live != null && live.getEpoch() == cleanup.epoch()) {
+                    run.deadRouteCleanups.remove(entry.getKey(), cleanup);
+                    continue;
+                }
+                if (LoginSessionDirectoryHelper.cleanupDeadNodeRoutes(cleanup.nodeId(), cleanup.epoch())) {
+                    run.deadRouteCleanups.remove(entry.getKey(), cleanup);
+                    log.info("死亡节点路由后台清理完成 deadNode={} epoch={}", cleanup.nodeId(), cleanup.epoch());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("死亡节点路由后台清理失败，保留任务等待下轮", e);
+        } finally {
+            run.deadRouteCleanupPending.set(false);
+        }
+    }
+
+    private static String deadCleanupKey(String nodeId, long epoch) {
+        return nodeId + '#' + epoch;
     }
 
     private static void submitQuotaMaintenance(LeaseRun run) {
@@ -338,18 +403,6 @@ public final class NodeLeaseKeeper {
         }
     }
 
-    private static void submitDirectoryMaintenance(LeaseRun run) {
-        if (!run.directoryMaintenancePending.compareAndSet(false, true)) {
-            return;
-        }
-        try {
-            ThreadPoolManager.messageProcessorExecutor().execute(() -> maintainDirectory(run));
-        } catch (Exception e) {
-            run.directoryMaintenancePending.set(false);
-            log.warn("提交登录目录维护失败 nodeId={}", run.nodeId, e);
-        }
-    }
-
     private static void maintainQuota(LeaseRun run) {
         run.quotaMaintenanceLock.lock();
         try {
@@ -361,20 +414,6 @@ public final class NodeLeaseKeeper {
         } finally {
             run.quotaMaintenanceLock.unlock();
             run.quotaMaintenancePending.set(false);
-        }
-    }
-
-    private static void maintainDirectory(LeaseRun run) {
-        run.directoryMaintenanceLock.lock();
-        try {
-            if (current == run && LoginSessionDirectoryHelper.renewLocalLoginTtls()) {
-                run.lastDirectorySuccessNanos = System.nanoTime();
-            }
-        } catch (Exception e) {
-            log.warn("登录目录维护失败 nodeId={}", run.nodeId, e);
-        } finally {
-            run.directoryMaintenanceLock.unlock();
-            run.directoryMaintenancePending.set(false);
         }
     }
 
@@ -406,13 +445,12 @@ public final class NodeLeaseKeeper {
         private final boolean clusterMode;
         private final ReentrantLock publishLock = new ReentrantLock(true);
         private final ReentrantLock quotaMaintenanceLock = new ReentrantLock();
-        private final ReentrantLock directoryMaintenanceLock = new ReentrantLock();
         private final AtomicBoolean connPending = new AtomicBoolean();
         private final AtomicBoolean connDirty = new AtomicBoolean();
         private final AtomicBoolean quotaMaintenancePending = new AtomicBoolean();
-        private final AtomicBoolean directoryMaintenancePending = new AtomicBoolean();
+        private final AtomicBoolean deadRouteCleanupPending = new AtomicBoolean();
+        private final Map<String, DeadRouteCleanup> deadRouteCleanups = new ConcurrentHashMap<>();
         private volatile NodeLeaseSnapshot snapshot = new NodeLeaseSnapshot(Map.of(), 0L, false);
-        private volatile long lastDirectorySuccessNanos;
         private TimerTaskWrapper heartbeatTask;
         private int redisFailStreak;
 
@@ -426,10 +464,8 @@ public final class NodeLeaseKeeper {
             this.payloadJson = payload.toJson();
         }
 
-        private boolean directoryMaintenanceFresh() {
-            long successAt = lastDirectorySuccessNanos;
-            return successAt > 0L && System.nanoTime() - successAt < TimeUnit.SECONDS.toNanos(
-                    MessageConstant.IM_LOGIN_DIRECTORY_READY_SECONDS);
-        }
+    }
+
+    private record DeadRouteCleanup(String nodeId, long epoch, long detectedAtNanos) {
     }
 }
