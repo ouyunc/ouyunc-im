@@ -276,11 +276,11 @@ public final class MessagePacketQuerySupport {
             }
             if (!upsert.isEmpty()) {
                 RedisPipelineSupport.setValues(redisTemplate, upsert,
-                        MessageContext.messageHotDataTtlMillis());
+                        MessageContext.messageProperties.getHotDataTtlMillis());
             }
             if (!fillIfAbsent.isEmpty()) {
                 RedisPipelineSupport.setValuesIfAbsent(redisTemplate, fillIfAbsent,
-                        MessageContext.messageHotDataTtlMillis());
+                        MessageContext.messageProperties.getHotDataTtlMillis());
             }
         }, dbExecutor()).exceptionally(ex -> {
             log.error("异步更新缓存失败, appKey={}, packetSize={}", appKey, dbPackets.size(), ex);

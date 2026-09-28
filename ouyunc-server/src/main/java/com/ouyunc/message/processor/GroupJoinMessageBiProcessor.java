@@ -90,7 +90,7 @@ public final class GroupJoinMessageBiProcessor extends AbstractMessageBiProcesso
                         existingSession.setWay(GroupRequestSessionWay.ACTIVE.value());
                     }
                     if (!repository().saveGroupRequestMessage(packet, existingSession,
-                            MessageContext.messageHotDataTtlMillis())) {
+                            MessageContext.messageProperties.getHotDataTtlMillis())) {
                         MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
                         return;
                     }
@@ -140,7 +140,7 @@ public final class GroupJoinMessageBiProcessor extends AbstractMessageBiProcesso
                     groupRequestSession.setProgress(RequestSessionProgress.AGREEING.value());
                     if (!GroupBindResultHelper.acceptedOrReply(ctx, packet,
                             repository().autoPassBindGroup(packet, groupRequestSession,
-                                    MessageContext.messageHotDataTtlMillis(),
+                                    MessageContext.messageProperties.getHotDataTtlMillis(),
                                     GroupBindResultHelper.maxMembers(), GroupBindResultHelper.maxPerUser()),
                             "自动绑定群组请求消息异常!")) {
                         return;
@@ -172,9 +172,9 @@ public final class GroupJoinMessageBiProcessor extends AbstractMessageBiProcesso
      */
     private boolean saveGroupRequestMessage(Packet packet, Set<String> groupMembers, GroupRequestSession groupRequestSession, boolean upsert) {
         if (upsert) {
-            return repository().saveGroupRequestMessage(packet, groupRequestSession, MessageContext.messageHotDataTtlMillis());
+            return repository().saveGroupRequestMessage(packet, groupRequestSession, MessageContext.messageProperties.getHotDataTtlMillis());
         }
-        return repository().saveJoinGroupRequestMessage(packet, groupRequestSession, MessageContext.messageHotDataTtlMillis());
+        return repository().saveJoinGroupRequestMessage(packet, groupRequestSession, MessageContext.messageProperties.getHotDataTtlMillis());
     }
 
     private static GroupRequestSession newActiveGroupSession(Message message, int progress) {

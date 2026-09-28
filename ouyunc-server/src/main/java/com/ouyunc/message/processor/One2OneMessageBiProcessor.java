@@ -236,7 +236,7 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
     private Mono<SaveMessageOutcome> saveMessage(Packet packet) {
         Message message = packet.getMessage();
         String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
-        return repository().reactiveSaveOne2OneMessage(packet, sessionId, MessageContext.messageHotDataTtlMillis());
+        return repository().reactiveSaveOne2OneMessage(packet, sessionId, MessageContext.messageProperties.getHotDataTtlMillis());
     }
 
 

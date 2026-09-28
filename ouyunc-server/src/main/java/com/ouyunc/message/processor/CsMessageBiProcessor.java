@@ -230,6 +230,6 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
 
     private Mono<SaveMessageOutcome> saveMessage(Packet packet, CsImSessionRoute route) {
         return repository().reactiveSaveCsTicketMessage(
-                packet, route, MessageContext.messageHotDataTtlMillis());
+                packet, route, MessageContext.messageProperties.getHotDataTtlMillis());
     }
 }

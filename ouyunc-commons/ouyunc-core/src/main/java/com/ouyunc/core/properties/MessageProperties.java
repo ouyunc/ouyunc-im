@@ -11,8 +11,6 @@ import io.netty.handler.logging.LogLevel;
  */
 public class MessageProperties {
 
-    private static final long DEFAULT_HOT_DATA_TTL_SECONDS = 7_200L;
-
     private static final long MILLIS_PER_SECOND = 1_000L;
 
     /** 消息正文在 Redis 中的热数据保留时间，单位秒；默认 2 小时。 */
@@ -103,17 +101,14 @@ public class MessageProperties {
     }
 
     /**
-     * 返回 Redis 消息热数据 TTL。非法配置回退到 2 小时，避免动态配置错误导致消息写入后立即过期。
+     * Redis 消息热数据 TTL，单位毫秒。
      */
     public long getHotDataTtlMillis() {
-        long seconds = getHotDataTtlSeconds();
-        return seconds <= Long.MAX_VALUE / MILLIS_PER_SECOND
-                ? seconds * MILLIS_PER_SECOND
-                : DEFAULT_HOT_DATA_TTL_SECONDS * MILLIS_PER_SECOND;
+        return getHotDataTtlSeconds() * MILLIS_PER_SECOND;
     }
 
     public long getHotDataTtlSeconds() {
-        return hotDataTtlSeconds > 0L ? hotDataTtlSeconds : DEFAULT_HOT_DATA_TTL_SECONDS;
+        return hotDataTtlSeconds;
     }
 
     public void setHotDataTtlSeconds(long hotDataTtlSeconds) {

@@ -4,6 +4,7 @@ import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
+import com.ouyunc.core.context.MessageContext;
 import org.apache.commons.lang3.StringUtils;
 
 import java.time.Duration;
@@ -208,7 +209,7 @@ public enum DefaultRepository implements Repository {
             return;
         }
         RepositorySupports.INFRA.stringRedisTemplate.opsForValue().set(key, "1",
-                Duration.ofMillis(MessageContext.messageHotDataTtlMillis()));
+                Duration.ofMillis(MessageContext.messageProperties.getHotDataTtlMillis()));
     }
 
     public void clearExternalDeliveryPending(Packet packet) {

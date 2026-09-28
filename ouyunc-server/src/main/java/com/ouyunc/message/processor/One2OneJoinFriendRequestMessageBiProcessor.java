@@ -107,7 +107,7 @@ public final class One2OneJoinFriendRequestMessageBiProcessor extends AbstractMe
 
                 if (FriendJoinPolicy.AUTO_PASS.value().equals(toUserEntity.getFriendJoinPolicy())) {
                     session.setProgress(RequestSessionProgress.AGREEING.value());
-                    if (!repository().autoPassBindFriend(packet, session, MessageContext.messageHotDataTtlMillis())) {
+                    if (!repository().autoPassBindFriend(packet, session, MessageContext.messageProperties.getHotDataTtlMillis())) {
                         log.error("自动处理绑定好友失败: {}", packet);
                         ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一自动绑定好友请求消息异常!", "One2OneJoinFriendRequestMessageBiProcessor.process", packet);
                         com.ouyunc.message.helper.MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
@@ -119,7 +119,7 @@ public final class One2OneJoinFriendRequestMessageBiProcessor extends AbstractMe
                     RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.userOnly(message.getFrom()));
                 } else {
                     session.setProgress(RequestSessionProgress.JOINING.value());
-                    if (!repository().saveJoinFriendRequestMessage(packet, session, MessageContext.messageHotDataTtlMillis())) {
+                    if (!repository().saveJoinFriendRequestMessage(packet, session, MessageContext.messageProperties.getHotDataTtlMillis())) {
                         log.error("Failed to save one-to-one join friend request message: {}", packet);
                         ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存一对一加好友请求消息异常!", "One2OneJoinFriendRequestMessageBiProcessor.process", packet);
                         com.ouyunc.message.helper.MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);

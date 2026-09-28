@@ -112,7 +112,7 @@ public final class GroupInviteJoinerAgreeMessageBiProcessor extends AbstractMess
                     }
                     if (!GroupBindResultHelper.acceptedOrReply(ctx, packet,
                             repository().autoPassBindGroup(packet, groupRequestSession,
-                                    MessageContext.messageHotDataTtlMillis(),
+                                    MessageContext.messageProperties.getHotDataTtlMillis(),
                                     GroupBindResultHelper.maxMembers(), GroupBindResultHelper.maxPerUser()),
                             "自动绑定群组请求消息异常!")) {
                         return;
@@ -144,7 +144,7 @@ public final class GroupInviteJoinerAgreeMessageBiProcessor extends AbstractMess
      * 保存群组消息
      */
     private boolean saveGroupRequestMessage(Packet packet, Set<String> groupMembers, GroupRequestSession groupRequestSession) {
-        return repository().saveGroupRequestMessage(packet, groupRequestSession, MessageContext.messageHotDataTtlMillis());
+        return repository().saveGroupRequestMessage(packet, groupRequestSession, MessageContext.messageProperties.getHotDataTtlMillis());
     }
 
     private static boolean publishGroupCommand(ChannelHandlerContext ctx, Packet packet, GroupRequestSession session) {

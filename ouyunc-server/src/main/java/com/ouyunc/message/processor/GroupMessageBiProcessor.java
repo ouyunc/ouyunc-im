@@ -285,7 +285,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
      */
     private Mono<SaveMessageOutcome> reactiveSaveGroupMessage(Packet packet) {
         Message message = packet.getMessage();
-        return repository().reactiveSaveMessage(packet, message.getTo(), MessageContext.messageHotDataTtlMillis());
+        return repository().reactiveSaveMessage(packet, message.getTo(), MessageContext.messageProperties.getHotDataTtlMillis());
     }
 
 

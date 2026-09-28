@@ -39,7 +39,6 @@ import java.util.concurrent.TimeUnit;
  **/
 public class MessageContext {
 
-    private static final long DEFAULT_MESSAGE_HOT_DATA_TTL_MILLIS = 7_200_000L;
     private static final Logger log = LoggerFactory.getLogger(MessageContext.class);
 
 
@@ -66,13 +65,6 @@ public class MessageContext {
      * message 基础消息属性配置类
      * */
     public static MessageProperties messageProperties;
-
-    /** 统一获取可配置的 Redis 消息热数据 TTL，所有写入和回源回填路径必须使用同一值。 */
-    public static long messageHotDataTtlMillis() {
-        return messageProperties == null
-                ? DEFAULT_MESSAGE_HOT_DATA_TTL_MILLIS
-                : messageProperties.getHotDataTtlMillis();
-    }
 
     /**
      * QoS 是否开启（仓库与处理器统一入口）
