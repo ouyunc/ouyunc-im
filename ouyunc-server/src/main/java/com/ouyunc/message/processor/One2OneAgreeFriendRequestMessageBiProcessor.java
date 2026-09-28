@@ -15,7 +15,7 @@ import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.core.exception.ExceptionReporter;
 import com.ouyunc.message.helper.DistributedLockHelper;
 import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
-import com.ouyunc.message.helper.MessageSendResultHelper;
+import com.ouyunc.message.helper.MessageSubmissionResponseHelper;
 import com.ouyunc.message.helper.RequestEventContextFactoryHelper;
 import com.ouyunc.message.helper.RequestNotifyHelper;
 import com.ouyunc.message.validator.AuthValidator;
@@ -91,7 +91,7 @@ public final class One2OneAgreeFriendRequestMessageBiProcessor extends AbstractM
                     requestSession.setProgress(RequestSessionProgress.AGREEING.value());
                     if (!repository().saveAgreeFriendRequestSession(packet, requestSession,
                             MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
-                        MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
+                        MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
                         return;
                     }
                     RequestEventContextFactoryHelper.capture(packet, requestSession);
@@ -109,11 +109,11 @@ public final class One2OneAgreeFriendRequestMessageBiProcessor extends AbstractM
         RequestSession requestSession = repository().getFriendRequestSession(appKey, message.getTo(), message.getFrom());
         if (requestSession == null) {
             log.warn("不存在加好友请求记录，该消息忽略");
-            MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.REQUEST_SESSION_NOT_EXIST);
+            MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.REQUEST_SESSION_NOT_EXIST);
             return null;
         }
         if (RequestSessionProgress.REFUSING.value().equals(requestSession.getProgress())) {
-            MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.REQUEST_SESSION_PROGRESS_MISMATCH);
+            MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.REQUEST_SESSION_PROGRESS_MISMATCH);
             return null;
         }
         if (repository().isFriend(appKey, message.getFrom(), message.getTo())) {

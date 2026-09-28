@@ -3,7 +3,7 @@ package com.ouyunc.message.processor.http.push;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.HttpResponseCodeEnum;
-import com.ouyunc.base.constant.enums.MessageSendStatusEnum;
+import com.ouyunc.base.constant.enums.MessageSubmissionStatusEnum;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.model.ContentSafetyResult;
@@ -71,7 +71,7 @@ public final class InternalPacketIngressService {
             ThreadPoolManager.httpPushVerifyExecutor().execute(() -> {
                 try {
                     List<MessagePushResponse> items = new ArrayList<>(recipients.size());
-                    String worstStatus = MessageSendStatusEnum.ACCEPTED.name();
+                    String worstStatus = MessageSubmissionStatusEnum.ACCEPTED.name();
                     MessagePushResponse worstItem = null;
                     String lastPacketId = null;
                     for (String to : recipients) {
@@ -86,7 +86,7 @@ public final class InternalPacketIngressService {
                             // 批量请求允许局部成功；单项异常必须转成逐项结果，不能丢弃此前已完成项。
                             log.error("HTTP 批量推送单项异常, baseMessageId={} itemMessageId={} to={}",
                                     baseMessageId, itemMessageId, to, itemError);
-                            body = buildResponse(itemMessageId, null, MessageSendStatusEnum.UNKNOWN,
+                            body = buildResponse(itemMessageId, null, MessageSubmissionStatusEnum.UNKNOWN,
                                     "单项受理结果未知，请使用该 item messageId 重试");
                         }
                         if (body != null) {
@@ -101,7 +101,7 @@ public final class InternalPacketIngressService {
                     request.setMessageId(baseMessageId);
                     MessagePushResponse aggregate = new MessagePushResponse();
                     aggregate.setMessageId(baseMessageId);
-                    aggregate.setPacketId(MessageSendStatusEnum.ACCEPTED.name().equals(worstStatus) ? lastPacketId : null);
+                    aggregate.setPacketId(MessageSubmissionStatusEnum.ACCEPTED.name().equals(worstStatus) ? lastPacketId : null);
                     aggregate.setStatus(worstStatus);
                     if (worstItem != null) {
                         aggregate.setCode(worstItem.getCode());
@@ -200,8 +200,8 @@ public final class InternalPacketIngressService {
             if (ex.getStatus().code() == HttpResponseStatus.UNAUTHORIZED.code()) {
                 throw ex;
             }
-            MessageSendStatusEnum rejectedStatus = ex.getStatus().code() >= HttpResponseStatus.INTERNAL_SERVER_ERROR.code()
-                    ? MessageSendStatusEnum.RETRY_LATER : MessageSendStatusEnum.REJECTED;
+            MessageSubmissionStatusEnum rejectedStatus = ex.getStatus().code() >= HttpResponseStatus.INTERNAL_SERVER_ERROR.code()
+                    ? MessageSubmissionStatusEnum.RETRY_LATER : MessageSubmissionStatusEnum.REJECTED;
             return HttpResponseResult.success(buildResponse(messageId, null, rejectedStatus, ex.getMessage()));
         }
 
@@ -210,7 +210,7 @@ public final class InternalPacketIngressService {
         if (claim.state() == PushIdempotencySupport.CLAIM_CONFLICT) {
             HttpPushDeliverySupport.discardStashed(packet);
             return HttpResponseResult.success(buildResponse(messageId, null,
-                    MessageSendStatusEnum.REJECTED, ExceptionCodeEnum.MESSAGE_ID_CONFLICT.getMessage()));
+                    MessageSubmissionStatusEnum.REJECTED, ExceptionCodeEnum.MESSAGE_ID_CONFLICT.getMessage()));
         }
         if (claim.state() == PushIdempotencySupport.CLAIM_COMMITTED) {
             String committedId = claim.canonicalPacketId();
@@ -218,21 +218,21 @@ public final class InternalPacketIngressService {
             if (!repairUnreadOnHttpCommitted(packet)) {
                 HttpPushDeliverySupport.discardStashed(packet);
                 return HttpResponseResult.success(buildResponse(messageId, committedId,
-                        MessageSendStatusEnum.UNKNOWN, "消息已提交但未读索引待修复，请使用同一 messageId 重试"));
+                        MessageSubmissionStatusEnum.UNKNOWN, "消息已提交但未读索引待修复，请使用同一 messageId 重试"));
             }
             HttpPushDeliverySupport.discardStashed(packet);
             return HttpResponseResult.success(buildResponse(messageId, committedId,
-                    MessageSendStatusEnum.ACCEPTED, null));
+                    MessageSubmissionStatusEnum.ACCEPTED, null));
         }
         if (claim.state() == PushIdempotencySupport.CLAIM_PENDING) {
             HttpPushDeliverySupport.discardStashed(packet);
             return HttpResponseResult.success(buildResponse(messageId, packetIdStr,
-                    MessageSendStatusEnum.RETRY_LATER, "同 messageId 正在处理，请稍后重试"));
+                    MessageSubmissionStatusEnum.RETRY_LATER, "同 messageId 正在处理，请稍后重试"));
         }
         if (claim.state() != PushIdempotencySupport.CLAIM_ACQUIRED) {
             HttpPushDeliverySupport.discardStashed(packet);
             return HttpResponseResult.success(buildResponse(messageId, null,
-                    MessageSendStatusEnum.UNKNOWN, "幂等占位结果未知，请使用同一 messageId 核对或重试"));
+                    MessageSubmissionStatusEnum.UNKNOWN, "幂等占位结果未知，请使用同一 messageId 核对或重试"));
         }
         packetIdStr = claim.canonicalPacketId();
         alignCommittedPacketId(packet, packetIdStr);
@@ -245,22 +245,22 @@ public final class InternalPacketIngressService {
                 HttpPushDeliverySupport.discardStashed(packet);
                 HttpPushDeliverySupport.markRetryableFailed(packet);
                 return HttpResponseResult.success(buildResponse(messageId, packetIdStr,
-                        MessageSendStatusEnum.UNKNOWN, "MQ 或热写失败，请使用同一 messageId 重试"));
+                        MessageSubmissionStatusEnum.UNKNOWN, "MQ 或热写失败，请使用同一 messageId 重试"));
             }
             if (!HttpPushDeliverySupport.commitIdempotency(packet)) {
                 log.warn("HTTP 推送管线成功但幂等 COMMIT 结果未知, messageId={}", messageId);
                 return HttpResponseResult.success(buildResponse(messageId, packetIdStr,
-                        MessageSendStatusEnum.UNKNOWN, "已写入但幂等提交结果未知，请使用同一 messageId 查询或重试"));
+                        MessageSubmissionStatusEnum.UNKNOWN, "已写入但幂等提交结果未知，请使用同一 messageId 查询或重试"));
             }
             // ACCEPTED = MQ confirm + Redis 已提交，且本次在线扇出已交给写出/QoS。离线不算失败。
             return HttpResponseResult.success(buildResponse(messageId, packetIdStr,
-                    MessageSendStatusEnum.ACCEPTED, null));
+                    MessageSubmissionStatusEnum.ACCEPTED, null));
         } catch (RuntimeException ex) {
             HttpPushDeliverySupport.discardStashed(packet);
             HttpPushDeliverySupport.forceReleaseIdempotencyClaim(packet);
             log.error("HTTP 推送管线触发失败, messageId={}", messageId, ex);
             return HttpResponseResult.success(buildResponse(messageId, null,
-                    MessageSendStatusEnum.UNKNOWN, "HTTP 推送受理结果未知，请使用同一 messageId 核对或重试"));
+                    MessageSubmissionStatusEnum.UNKNOWN, "HTTP 推送受理结果未知，请使用同一 messageId 核对或重试"));
         }
     }
 
@@ -322,14 +322,14 @@ public final class InternalPacketIngressService {
     }
 
     private static MessagePushResponse buildResponse(String messageId, String packetId,
-                                                     MessageSendStatusEnum status, String errorMessage) {
+                                                     MessageSubmissionStatusEnum status, String errorMessage) {
         MessagePushResponse response = new MessagePushResponse();
         response.setMessageId(messageId);
-        response.setPacketId(status == MessageSendStatusEnum.ACCEPTED ? packetId : null);
+        response.setPacketId(status == MessageSubmissionStatusEnum.ACCEPTED ? packetId : null);
         response.setStatus(status.name());
-        if (status == MessageSendStatusEnum.REJECTED) {
+        if (status == MessageSubmissionStatusEnum.REJECTED) {
             response.setCode(ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT.getCode());
-        } else if (status != MessageSendStatusEnum.ACCEPTED) {
+        } else if (status != MessageSubmissionStatusEnum.ACCEPTED) {
             response.setCode(ExceptionCodeEnum.UNKNOWN_ERROR.getCode());
         }
         response.setDescription(errorMessage);
@@ -348,16 +348,16 @@ public final class InternalPacketIngressService {
     }
 
     private static int rankPushStatus(String status) {
-        if (MessageSendStatusEnum.REJECTED.name().equals(status)) {
+        if (MessageSubmissionStatusEnum.REJECTED.name().equals(status)) {
             return 4;
         }
-        if (MessageSendStatusEnum.UNKNOWN.name().equals(status)) {
+        if (MessageSubmissionStatusEnum.UNKNOWN.name().equals(status)) {
             return 3;
         }
-        if (MessageSendStatusEnum.RETRY_LATER.name().equals(status)) {
+        if (MessageSubmissionStatusEnum.RETRY_LATER.name().equals(status)) {
             return 2;
         }
-        if (MessageSendStatusEnum.ACCEPTED.name().equals(status)) {
+        if (MessageSubmissionStatusEnum.ACCEPTED.name().equals(status)) {
             return 1;
         }
         return 0;

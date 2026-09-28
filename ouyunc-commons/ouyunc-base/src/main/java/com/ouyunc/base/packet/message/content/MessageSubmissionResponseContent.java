@@ -3,10 +3,11 @@ package com.ouyunc.base.packet.message.content;
 import java.io.Serializable;
 
 /**
- * 客户端原消息的受理结果。messageId 是客户端稳定幂等键，packetId 使用字符串避免雪花 ID 精度丢失。
+ * 服务端针对客户端原消息返回的提交受理响应。
+ * messageId 是客户端稳定幂等键，packetId 使用字符串避免雪花 ID 在 JavaScript 中发生精度丢失。
  * ACCEPTED 仅表示服务端已提交受理，不表示接收方已送达或已读。
  */
-public class MessageSendResultContent implements Serializable {
+public class MessageSubmissionResponseContent implements Serializable {
     private static final long serialVersionUID = 1L;
 
     private String messageId;
@@ -16,10 +17,10 @@ public class MessageSendResultContent implements Serializable {
     private String description;
     private Long retryAfterMs;
 
-    public MessageSendResultContent() { }
+    public MessageSubmissionResponseContent() { }
 
-    public MessageSendResultContent(String messageId, String packetId, String status,
-                                    Integer code, String description, Long retryAfterMs) {
+    public MessageSubmissionResponseContent(String messageId, String packetId, String status,
+                                             Integer code, String description, Long retryAfterMs) {
         this.messageId = messageId;
         this.packetId = packetId;
         this.status = status;

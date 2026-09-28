@@ -162,7 +162,7 @@ public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
             return CompletableFuture.completedFuture(null);
         }
         if (packet.getMessage() != null && !QosLevelEnum.isSupportedLevel(packet.getMessage().getQos())) {
-            MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_QOS_UNSUPPORTED);
+            MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_QOS_UNSUPPORTED);
             return CompletableFuture.completedFuture(null);
         }
         Mono<Void> chain = processor.preProcess(ctx, packet)
@@ -183,7 +183,7 @@ public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
                 .onErrorResume(error -> {
                     // 吞掉 Mono 错误以免打乱有序队列；业务异常不断连
                     publishBusinessException(packet, error, "消息三阶段执行异常");
-                    MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.UNKNOWN_ERROR);
+                    MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.UNKNOWN_ERROR);
                     return Mono.empty();
                 });
         return ChannelOrderedTasks.toVoidStage(chain);

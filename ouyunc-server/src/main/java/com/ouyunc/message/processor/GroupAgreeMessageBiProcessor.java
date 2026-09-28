@@ -12,7 +12,7 @@ import com.ouyunc.base.packet.message.content.GroupRequestContent;
 import com.ouyunc.core.exception.ExceptionReporter;
 import com.ouyunc.message.helper.DistributedLockHelper;
 import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
-import com.ouyunc.message.helper.MessageSendResultHelper;
+import com.ouyunc.message.helper.MessageSubmissionResponseHelper;
 import com.ouyunc.message.helper.RequestEventContextFactoryHelper;
 import com.ouyunc.message.helper.RequestNotifyHelper;
 import com.ouyunc.message.validator.*;
@@ -66,7 +66,7 @@ public final class GroupAgreeMessageBiProcessor extends AbstractMessageBiProcess
         Message message = packet.getMessage();
         if (MessageContentTypeEnum.GROUP_REQUEST_CONTENT.getType() != message.getContentType()) {
             log.error("消息内容类型:{} 不是群请求类型，请检查消息内容类型是否正确", message.getContentType());
-            MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
+            MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
             return Mono.empty();
         }
         Object contentObj = JSON.parseObject(message.getContent(), MessageContentTypeEnum.GROUP_REQUEST_CONTENT.getContentClass());
@@ -76,7 +76,7 @@ public final class GroupAgreeMessageBiProcessor extends AbstractMessageBiProcess
         } else {
             log.error("消息内容类型:{} 不是群请求类型，请检查消息内容类型是否正确", message.getContentType());
             ExceptionReporter.reportBusiness(ExceptionCodeEnum.MESSAGE_CONTENT_TYPE_ERROR, "消息内容类型错误", "GroupAgreeMessageBiProcessor.process", packet);
-            MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
+            MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
             return Mono.empty();
         }
         String appKey = message.getMetadata().getIngress().getAppKey();
@@ -88,12 +88,12 @@ public final class GroupAgreeMessageBiProcessor extends AbstractMessageBiProcess
             }
             GroupRequestSession session = repository().getGroupRequestSession(appKey, content.getIdentity(), message.getTo());
             if (session == null) {
-                MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
+                MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
                 return;
             }
             session.setProgress(RequestSessionProgress.AGREEING.value());
             if (!repository().saveGroupRequestMessage(packet, session, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
-                MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
+                MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
                 return;
             }
             RequestEventContextFactoryHelper.capture(packet, session);
@@ -111,27 +111,27 @@ public final class GroupAgreeMessageBiProcessor extends AbstractMessageBiProcess
         GroupRequestSession groupRequestSession = repository().getGroupRequestSession(appKey, content.getIdentity(), message.getTo());
         if (groupRequestSession == null) {
             log.warn("{} 和 {} 会话请求不存在", content.getIdentity(), message.getTo());
-            MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.REQUEST_SESSION_NOT_EXIST);
+            MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.REQUEST_SESSION_NOT_EXIST);
             return null;
         }
         if (RequestSessionProgress.REFUSING.value().equals(groupRequestSession.getProgress())) {
-            MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.REQUEST_SESSION_PROGRESS_MISMATCH);
+            MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.REQUEST_SESSION_PROGRESS_MISMATCH);
             return null;
         }
         GroupRequestSessionWay way = GroupRequestSessionWay.valueOf(groupRequestSession.getWay());
         if (way == null) {
             log.error("非法群会话请求方式：{}", groupRequestSession.getWay());
-            MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
+            MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
             return null;
         }
         if (GroupRequestSessionWay.INVITED.equals(way) && message.getFrom().equals(content.getIdentity())) {
             log.warn("发送方: {} 和加入方: {} 相同，忽略 该请求", message.getFrom(), content.getIdentity());
-            MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
+            MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
             return null;
         }
         if (GroupRequestSessionWay.INVITED.equals(way) && !GroupJoinerProcessStatus.AGREE.value().equals(groupRequestSession.getJoinerProcessStatus())) {
             log.error("被邀请人 {} 尚未同意邀请，请等待", groupRequestSession.getJoiner());
-            MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
+            MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
             return null;
         }
         if (repository().inGroup(appKey, content.getIdentity(), message.getTo())) {
@@ -142,12 +142,12 @@ public final class GroupAgreeMessageBiProcessor extends AbstractMessageBiProcess
         if (MapUtils.isEmpty(managers)) {
             log.error("群组：{}, 不存在群主！群消息： {}", packet.getMessage().getTo(), packet);
             ExceptionReporter.reportBusiness(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群主和群管理员", "GroupAgreeMessageBiProcessor.process", packet);
-            MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
+            MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
             return null;
         }
         if (!managers.containsKey(message.getFrom())) {
             log.error("处理人不是管理员或群主：{} 不允许处理", message.getFrom());
-            MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
+            MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
             return null;
         }
         managers.remove(message.getFrom());

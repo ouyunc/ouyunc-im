@@ -9,7 +9,7 @@ import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.core.processor.BiProcessor;
 import com.ouyunc.core.qos.Qos;
 import com.ouyunc.core.exception.ExternalDeliveryConfirmException;
-import com.ouyunc.message.helper.MessageSendResultHelper;
+import com.ouyunc.message.helper.MessageSubmissionResponseHelper;
 import com.ouyunc.repository.DefaultRepository;
 import com.ouyunc.repository.Repository;
 import io.netty.channel.ChannelHandlerContext;
@@ -60,14 +60,14 @@ public abstract class AbstractBaseBiProcessor<R, T extends Number>
         if (repository().checkDup(packet, channelLoginIdentity)) {
             // COMMITTED 后主链不再走 save；必须在此幂等补派生索引，失败不得 ACK。
             if (!repairDerivedIndexOnQosDuplicate(packet)) {
-                MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
+                MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
                 return true;
             }
             if (DefaultRepository.INSTANCE.isExternalDeliveryPending(packet)) {
                 try {
                     replayExternalDelivery(packet);
                 } catch (ExternalDeliveryConfirmException error) {
-                    MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.MQ_PERSISTENCE_ERROR);
+                    MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.MQ_PERSISTENCE_ERROR);
                     return true;
                 }
             }
@@ -97,6 +97,6 @@ public abstract class AbstractBaseBiProcessor<R, T extends Number>
      */
     @Override
     public void qosPostHandle(ChannelHandlerContext ctx, Packet packet) {
-        MessageSendResultHelper.accepted(ctx, packet);
+        MessageSubmissionResponseHelper.accepted(ctx, packet);
     }
 }

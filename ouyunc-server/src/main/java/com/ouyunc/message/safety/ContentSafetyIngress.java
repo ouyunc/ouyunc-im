@@ -5,7 +5,7 @@ import com.ouyunc.core.exception.ExceptionReporter;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.model.ContentSafetyResult;
 import com.ouyunc.base.packet.Packet;
-import com.ouyunc.message.helper.MessageSendResultHelper;
+import com.ouyunc.message.helper.MessageSubmissionResponseHelper;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,7 +40,7 @@ public final class ContentSafetyIngress {
             log.warn("内容安全拒绝 packetId={} reason={} hits={}",
                     packet.getPacketId(), result.getReason(), result.getHitWords());
             ExceptionReporter.reportBusiness(ExceptionCodeEnum.CONTENT_SENSITIVE_REJECT, ExceptionCodeEnum.CONTENT_SENSITIVE_REJECT.getMessage(), "ContentSafetyIngress.applyOnWorker", packet);
-            MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.CONTENT_SENSITIVE_REJECT);
+            MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.CONTENT_SENSITIVE_REJECT);
             return false;
         }
         return true;

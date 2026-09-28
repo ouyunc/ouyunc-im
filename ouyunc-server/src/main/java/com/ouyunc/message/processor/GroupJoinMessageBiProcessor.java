@@ -12,7 +12,7 @@ import com.ouyunc.domain.entity.GroupEntity;
 import com.ouyunc.message.helper.DistributedLockHelper;
 import com.ouyunc.message.helper.GroupBindResultHelper;
 import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
-import com.ouyunc.message.helper.MessageSendResultHelper;
+import com.ouyunc.message.helper.MessageSubmissionResponseHelper;
 import com.ouyunc.message.helper.RequestEventContextFactoryHelper;
 import com.ouyunc.message.helper.RequestNotifyHelper;
 import com.ouyunc.message.validator.*;
@@ -76,7 +76,7 @@ public final class GroupJoinMessageBiProcessor extends AbstractMessageBiProcesso
                     log.warn("该用户 {} 已经加入群组 {}，幂等 ACK", message.getFrom(), message.getTo());
                     if (!repository().repairUserGroupIndex(appKey, message.getFrom(), message.getTo(),
                             message.getMetadata().getIngress().getServerTime())) {
-                        MessageSendResultHelper.retryLater(ctx, packet, ExceptionCodeEnum.BIND_GROUP_ERROR);
+                        MessageSubmissionResponseHelper.retryLater(ctx, packet, ExceptionCodeEnum.BIND_GROUP_ERROR);
                         return;
                     }
                     // 上次可能在群关系写入后、请求会话提交前退出；重试必须补齐请求状态。
@@ -89,7 +89,7 @@ public final class GroupJoinMessageBiProcessor extends AbstractMessageBiProcesso
                     }
                     if (!repository().saveGroupRequestMessage(packet, existingSession,
                             MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
-                        MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
+                        MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
                         return;
                     }
                     if (!publishGroupCommand(ctx, packet, existingSession)) {
@@ -110,14 +110,14 @@ public final class GroupJoinMessageBiProcessor extends AbstractMessageBiProcesso
                 if (groupEntity == null) {
                     log.error("群组:{} 不存在，请检查数据！", message.getTo());
                     ExceptionReporter.reportBusiness(ExceptionCodeEnum.GROUP_NOT_EXIST, message.getTo() + "群组不存在！", "GroupJoinMessageBiProcessor.process", packet);
-                    MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
+                    MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
                     return;
                 }
                 Map<String, Double> groupMannerOrLeaderUsersIdentityAndPostMap = repository().groupManagerAndLeaderUsersIdentityAndPost(packet);
                 if (MapUtils.isEmpty(groupMannerOrLeaderUsersIdentityAndPostMap)) {
                     log.error("群组：{}, 不存在群主和群管理员！群消息： {}", packet.getMessage().getTo(), packet);
                     ExceptionReporter.reportBusiness(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群主或群管理员", "GroupJoinMessageBiProcessor.process", packet);
-                    MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
+                    MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
                     return;
                 }
                 Set<String> notifyManagerAndLeaderUserIds = new HashSet<>(groupMannerOrLeaderUsersIdentityAndPostMap.keySet());
@@ -125,7 +125,7 @@ public final class GroupJoinMessageBiProcessor extends AbstractMessageBiProcesso
                 if (groupMannerOrLeaderUsersIdentitySet.remove(message.getFrom()) || CollectionUtils.isEmpty(groupMannerOrLeaderUsersIdentitySet)) {
                     log.error("群组：{}, 不存在群主和群管理员或群消息或已经加入群组： {}", packet.getMessage().getTo(), packet);
                     ExceptionReporter.reportBusiness(ExceptionCodeEnum.GROUP_MEMBER_NOT_EXIST_ERROR, "群组不存在群主或群管理员", "GroupJoinMessageBiProcessor.process", packet);
-                    MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
+                    MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
                     return;
                 }
                 GroupRequestSession groupRequestSession = existingSession != null ? existingSession
@@ -149,7 +149,7 @@ public final class GroupJoinMessageBiProcessor extends AbstractMessageBiProcesso
                     if (!saveGroupRequestMessage(packet, groupMannerOrLeaderUsersIdentitySet, groupRequestSession, existingSession != null)) {
                         log.error("Failed to save join group request message: {}", packet);
                         ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "保存加群请求消息异常!", "GroupJoinMessageBiProcessor.process", packet);
-                        MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
+                        MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
                         return;
                     }
                     notifyIdentities = RequestNotifyHelper.copyOf(groupMannerOrLeaderUsersIdentityAndPostMap.keySet());

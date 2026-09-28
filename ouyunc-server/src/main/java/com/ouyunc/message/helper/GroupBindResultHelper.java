@@ -37,14 +37,14 @@ public final class GroupBindResultHelper {
         }
         if (result != null && result.capacityRejected()) {
             log.warn("入群容量拒绝 result={} packetId={}", result, packet == null ? null : packet.getPacketId());
-            MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
+            MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
             return false;
         }
         log.error("绑定群组失败: {}", packet);
         ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
                 failEventMessage != null ? failEventMessage : "绑定群组失败",
                 "GroupBindResultHelper", packet);
-        MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
+        MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
         return false;
     }
 }

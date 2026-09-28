@@ -46,16 +46,16 @@ public final class DistributedLockHelper {
             } else {
                 log.error("获取分布式锁超时, lockKey={}, packet={}", lockKey, packet);
                 ExceptionReporter.reportSystem(ExceptionCodeEnum.ACQUIRE_LOCK_ERROR, "获取分布式锁超时", SCENE, packet);
-                MessageSendResultHelper.retryLater(ctx, packet, ExceptionCodeEnum.ACQUIRE_LOCK_ERROR);
+                MessageSubmissionResponseHelper.retryLater(ctx, packet, ExceptionCodeEnum.ACQUIRE_LOCK_ERROR);
             }
         } catch (InterruptedException ie) {
             Thread.currentThread().interrupt();
             log.warn("分布式锁等待被中断, lockKey={}", lockKey);
-            MessageSendResultHelper.retryLater(ctx, packet, ExceptionCodeEnum.ACQUIRE_LOCK_ERROR);
+            MessageSubmissionResponseHelper.retryLater(ctx, packet, ExceptionCodeEnum.ACQUIRE_LOCK_ERROR);
         } catch (Exception e) {
             log.error("分布式锁内业务异常, lockKey={}, 原因: {}", lockKey, e.getMessage(), e);
             ExceptionReporter.reportSystem(errorCode, "锁内业务异常: " + e.getMessage(), SCENE, packet, e);
-            MessageSendResultHelper.unknown(ctx, packet, errorCode);
+            MessageSubmissionResponseHelper.unknown(ctx, packet, errorCode);
         }
     }
 }

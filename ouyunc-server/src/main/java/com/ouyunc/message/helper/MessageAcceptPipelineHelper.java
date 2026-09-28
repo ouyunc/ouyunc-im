@@ -85,16 +85,16 @@ public final class MessageAcceptPipelineHelper {
                     if (error instanceof ArchiveClaimException claimError) {
                         releaseQosOnFailure(packet);
                         if (claimError.result == ArchiveClaimResult.CONFLICT) {
-                            MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_ID_CONFLICT);
+                            MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_ID_CONFLICT);
                         } else if (claimError.result == ArchiveClaimResult.PENDING) {
-                            MessageSendResultHelper.retryLater(ctx, packet, ExceptionCodeEnum.UNKNOWN_ERROR);
+                            MessageSubmissionResponseHelper.retryLater(ctx, packet, ExceptionCodeEnum.UNKNOWN_ERROR);
                         } else {
-                            MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
+                            MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
                         }
                         return Mono.just(false);
                     }
                     log.error("消息归档确认结果未知, messageId={}", packet.getMessage().getId(), error);
-                    MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.MQ_PERSISTENCE_ERROR);
+                    MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.MQ_PERSISTENCE_ERROR);
                     return Mono.just(false);
                 })
                 .flatMap(archived -> Boolean.TRUE.equals(archived) ? next : Mono.empty());
@@ -112,7 +112,7 @@ public final class MessageAcceptPipelineHelper {
         return shouldReject
                 .onErrorResume(error -> {
                     log.error("校验过程中出现异常: {}", error.getMessage(), error);
-                    MessageSendResultHelper.retryLater(ctx, packet, ExceptionCodeEnum.UNKNOWN_ERROR);
+                    MessageSubmissionResponseHelper.retryLater(ctx, packet, ExceptionCodeEnum.UNKNOWN_ERROR);
                     if (onReject != null) {
                         onReject.run();
                     }
@@ -121,7 +121,7 @@ public final class MessageAcceptPipelineHelper {
                 .map(reject -> {
                     if (Boolean.TRUE.equals(reject)) {
                         log.warn(rejectLog, packet);
-                        MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
+                        MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
                         if (onReject != null) {
                             onReject.run();
                         }
@@ -140,11 +140,11 @@ public final class MessageAcceptPipelineHelper {
                 .onErrorResume(ArchiveClaimException.class, error -> {
                     releaseQosOnFailure(packet);
                     if (error.result == ArchiveClaimResult.CONFLICT) {
-                        MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_ID_CONFLICT);
+                        MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_ID_CONFLICT);
                     } else if (error.result == ArchiveClaimResult.PENDING) {
-                        MessageSendResultHelper.retryLater(ctx, packet, ExceptionCodeEnum.UNKNOWN_ERROR);
+                        MessageSubmissionResponseHelper.retryLater(ctx, packet, ExceptionCodeEnum.UNKNOWN_ERROR);
                     } else {
-                        MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
+                        MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
                     }
                     return Mono.just(false);
                 });
@@ -152,7 +152,7 @@ public final class MessageAcceptPipelineHelper {
 
     /** 请求成功落库或确认已处理后回已受理结果；业务拒绝不可调用。 */
     public static void requestAccepted(ChannelHandlerContext ctx, Packet packet) {
-        MessageSendResultHelper.accepted(ctx, packet);
+        MessageSubmissionResponseHelper.accepted(ctx, packet);
     }
 
     /**
@@ -170,10 +170,10 @@ public final class MessageAcceptPipelineHelper {
             ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, failEventMessage != null ? failEventMessage : "消息热写失败", "MessageAcceptPipelineHelper.afterHotSave", packet);
             releaseQosOnFailure(packet);
             if (result == SaveMessageOutcome.CONFLICT) {
-                MessageSendResultHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_ID_CONFLICT);
+                MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_ID_CONFLICT);
             } else {
                 // Redis 写入超时可能已提交，不能向客户端承诺“未写入”。
-                MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
+                MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
             }
             return Mono.empty();
         }
@@ -182,7 +182,7 @@ public final class MessageAcceptPipelineHelper {
                 onFreshWrite.run();
             } catch (ExternalDeliveryConfirmException error) {
                 log.error("外部渠道未确认，不回受理成功, messageId={}", packet.getMessage().getId(), error);
-                MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.MQ_PERSISTENCE_ERROR);
+                MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.MQ_PERSISTENCE_ERROR);
                 return Mono.empty();
             } catch (Exception error) {
                 log.error("消息已写入，但后续副作用失败, messageId={}", packet.getMessage().getId(), error);
@@ -194,7 +194,7 @@ public final class MessageAcceptPipelineHelper {
 
     /** 热写成功或幂等命中后回受理结果，独立于业务 QoS 开关。 */
     public static void qosAckOnSuccess(ChannelHandlerContext ctx, Packet packet) {
-        MessageSendResultHelper.accepted(ctx, packet);
+        MessageSubmissionResponseHelper.accepted(ctx, packet);
     }
 
     /** 热写/校验失败时释放尚未 commit 的 QoS 占位。 */
@@ -217,7 +217,7 @@ public final class MessageAcceptPipelineHelper {
             return true;
         } catch (Exception error) {
             log.error("请求归档结果未知, messageId={}", packet.getMessage().getId(), error);
-            MessageSendResultHelper.unknown(ctx, packet, ExceptionCodeEnum.MQ_PERSISTENCE_ERROR);
+            MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.MQ_PERSISTENCE_ERROR);
             return false;
         }
     }
