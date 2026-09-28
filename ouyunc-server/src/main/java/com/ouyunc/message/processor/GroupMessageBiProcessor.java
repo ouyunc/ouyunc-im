@@ -1,5 +1,7 @@
 package com.ouyunc.message.processor;
 
+import com.ouyunc.core.context.MessageContext;
+
 import com.ouyunc.core.exception.ExceptionReporter;
 
 import com.ouyunc.base.constant.MessageConstant;
@@ -283,7 +285,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
      */
     private Mono<SaveMessageOutcome> reactiveSaveGroupMessage(Packet packet) {
         Message message = packet.getMessage();
-        return repository().reactiveSaveMessage(packet, message.getTo(), MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
+        return repository().reactiveSaveMessage(packet, message.getTo(), MessageContext.messageHotDataTtlMillis());
     }
 
 

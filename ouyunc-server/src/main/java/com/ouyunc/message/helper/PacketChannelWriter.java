@@ -13,6 +13,7 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.message.schedule.QosRetryScheduler;
 import com.ouyunc.message.convert.PacketConverter;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -85,6 +86,8 @@ public final class PacketChannelWriter {
             return;
         }
         ensureOutboundTarget(ctx, packet);
+        // ACK 通常从同一长连接返回本落地节点，先留紧凑证明以消除每次 ACK 的 Redis Packet GET。
+        QosRetryScheduler.rememberOutbound(packet);
         writeConverted(ctx.channel(), packet, sendCallback, publishSendFail);
     }
 

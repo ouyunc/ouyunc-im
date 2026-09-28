@@ -1,5 +1,7 @@
 package com.ouyunc.message.processor;
 
+import com.ouyunc.core.context.MessageContext;
+
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
@@ -116,7 +118,7 @@ public final class GroupInviteJoinerRefuseMessageBiProcessor extends AbstractMes
      * 保存群组消息
      */
     private boolean saveGroupRequestMessage(Packet packet, Set<String> groupMembers, GroupRequestSession groupRequestSession) {
-        return repository().saveGroupRequestMessage(packet, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
+        return repository().saveGroupRequestMessage(packet, groupRequestSession, MessageContext.messageHotDataTtlMillis());
     }
 
     private static boolean publishGroupCommand(ChannelHandlerContext ctx, Packet packet, GroupRequestSession session) {

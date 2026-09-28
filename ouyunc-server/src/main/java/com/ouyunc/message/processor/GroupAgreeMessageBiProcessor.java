@@ -1,5 +1,7 @@
 package com.ouyunc.message.processor;
 
+import com.ouyunc.core.context.MessageContext;
+
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
@@ -92,7 +94,7 @@ public final class GroupAgreeMessageBiProcessor extends AbstractMessageBiProcess
                 return;
             }
             session.setProgress(RequestSessionProgress.AGREEING.value());
-            if (!repository().saveGroupRequestMessage(packet, session, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
+            if (!repository().saveGroupRequestMessage(packet, session, MessageContext.messageHotDataTtlMillis())) {
                 MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
                 return;
             }

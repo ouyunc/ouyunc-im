@@ -15,10 +15,16 @@ import java.util.Map;
  */
 final class NodeLeaseRedisSupport {
 
-    private static final DefaultRedisScript<Long> PUBLISH = new DefaultRedisScript<>("""
+    private static final DefaultRedisScript<Long> PUBLISH_LEASE = new DefaultRedisScript<>("""
             local current = redis.call('GET', KEYS[1])
             if current and current ~= ARGV[1] then return 0 end
             redis.call('SET', KEYS[1], ARGV[1], 'EX', ARGV[2])
+            return 1
+            """, Long.class);
+
+    /** 只在连接计数变化或低频续期时重建 HASH，并校验当前租约所有权。 */
+    private static final DefaultRedisScript<Long> PUBLISH_CONNECTIONS = new DefaultRedisScript<>("""
+            if redis.call('GET', KEYS[1]) ~= ARGV[1] then return 0 end
             redis.call('DEL', KEYS[2])
             for i = 3, #ARGV, 2 do
                 redis.call('HSET', KEYS[2], ARGV[i], ARGV[i + 1])
@@ -58,15 +64,26 @@ final class NodeLeaseRedisSupport {
     }
 
     /** 相同地址只能由当前所有者续租；冲突实例必须等待旧租约释放或到期。 */
-    static void publish(StringRedisTemplate redis, String nodeId, String payload, Map<String, String> counts) {
+    static void publishLease(StringRedisTemplate redis, String nodeId, String payload) {
+        Long result = redis.execute(PUBLISH_LEASE, List.of(CacheConstant.buildImNodeLeaseCacheKey(nodeId)),
+                payload, String.valueOf(MessageConstant.IM_NODE_LEASE_TTL_SECONDS));
+        requireOwned(result, nodeId);
+    }
+
+    static void publishConnections(StringRedisTemplate redis, String nodeId, String payload,
+                                   Map<String, String> counts) {
         List<String> args = new ArrayList<>();
         args.add(payload);
-        args.add(String.valueOf(MessageConstant.IM_NODE_LEASE_TTL_SECONDS));
+        args.add(String.valueOf(MessageConstant.IM_NODE_CONN_COUNT_TTL_SECONDS));
         counts.forEach((appKey, count) -> {
             args.add(appKey);
             args.add(count);
         });
-        Long result = redis.execute(PUBLISH, leaseKeys(nodeId), args.toArray());
+        Long result = redis.execute(PUBLISH_CONNECTIONS, leaseKeys(nodeId), args.toArray());
+        requireOwned(result, nodeId);
+    }
+
+    private static void requireOwned(Long result, String nodeId) {
         if (result == null || result != MessageConstant.IM_NODE_LEASE_LUA_OK) {
             throw new IllegalStateException("节点租约被其他实例持有 nodeId=" + nodeId);
         }

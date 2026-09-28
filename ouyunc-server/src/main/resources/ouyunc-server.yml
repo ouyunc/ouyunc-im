@@ -3,6 +3,9 @@ ouyunc:
   profiles:
     active: dev
   message:
+    storage:
+      # Redis 消息正文热数据 TTL，单位秒；过期后 packets 查询回源 Mongo/MySQL 并按该 TTL 回填。
+      hot-data-ttl-seconds: 7200
     # 服务端口
     port: 6003
     # 服务名称

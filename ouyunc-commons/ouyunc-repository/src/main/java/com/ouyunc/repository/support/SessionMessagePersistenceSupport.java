@@ -18,6 +18,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.connection.RedisStringCommands;
+import org.springframework.data.redis.core.types.Expiration;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import reactor.core.publisher.Mono;
@@ -193,9 +195,12 @@ public final class SessionMessagePersistenceSupport {
             conn.openPipeline();
             log.debug("Pipeline 已开启");
 
-            conn.commands().set(msgKeyBytes, packetBytes);
             if (expireTime > 0) {
-                conn.keyCommands().pExpire(msgKeyBytes, expireTime);
+                // SET PX 一条命令同时写入正文和 TTL，避免每条消息额外执行 PEXPIRE。
+                conn.stringCommands().set(msgKeyBytes, packetBytes, Expiration.milliseconds(expireTime),
+                        RedisStringCommands.SetOption.UPSERT);
+            } else {
+                conn.stringCommands().set(msgKeyBytes, packetBytes);
             }
             log.debug("消息主体命令入队: {}", messageKey);
 

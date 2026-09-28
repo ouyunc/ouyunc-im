@@ -1,5 +1,7 @@
 package com.ouyunc.message.processor;
 
+import com.ouyunc.core.context.MessageContext;
+
 import com.ouyunc.core.exception.ExceptionReporter;
 
 import com.ouyunc.base.constant.MessageConstant;
@@ -234,7 +236,7 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
     private Mono<SaveMessageOutcome> saveMessage(Packet packet) {
         Message message = packet.getMessage();
         String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
-        return repository().reactiveSaveOne2OneMessage(packet, sessionId, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
+        return repository().reactiveSaveOne2OneMessage(packet, sessionId, MessageContext.messageHotDataTtlMillis());
     }
 
 

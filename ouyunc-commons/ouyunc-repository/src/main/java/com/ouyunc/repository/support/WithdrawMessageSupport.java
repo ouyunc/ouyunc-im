@@ -152,7 +152,7 @@ public final class WithdrawMessageSupport {
                 for (Packet withdrawPacket : packets) {
                     withdrawPacket.setRetain(NumberConstant.NUMBER_1);
                     operations.opsForValue().set((K) CacheConstant.buildMessageCacheKey(appKey, withdrawPacket.getPacketId()),
-                            (V) withdrawPacket, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+                            (V) withdrawPacket, MessageContext.messageHotDataTtlMillis(), TimeUnit.MILLISECONDS);
                     indexMembers.add(MessageContext.idGenerator().formatLongId19Str(withdrawPacket.getPacketId()));
                 }
                 return null;

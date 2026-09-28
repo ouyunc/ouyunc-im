@@ -1,5 +1,7 @@
 package com.ouyunc.message.processor;
 
+import com.ouyunc.core.context.MessageContext;
+
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
@@ -168,7 +170,7 @@ public final class GroupInviteJoinMessageBiProcessor extends AbstractMessageBiPr
                         }
                         if (!GroupBindResultHelper.acceptedOrReply(ctx, packet,
                                 repository().autoPassBindGroup(packet, groupRequestSession,
-                                        MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP,
+                                        MessageContext.messageHotDataTtlMillis(),
                                         GroupBindResultHelper.maxMembers(), GroupBindResultHelper.maxPerUser()),
                                 "自动绑定群组请求消息异常!")) {
                             return;
@@ -210,7 +212,7 @@ public final class GroupInviteJoinMessageBiProcessor extends AbstractMessageBiPr
      * 保存群组消息
      */
     private boolean saveGroupRequestMessage(Packet packet, Set<String> groupMembers, GroupRequestSession groupRequestSession) {
-        return repository().saveJoinGroupRequestMessage(packet, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
+        return repository().saveJoinGroupRequestMessage(packet, groupRequestSession, MessageContext.messageHotDataTtlMillis());
     }
 
 }

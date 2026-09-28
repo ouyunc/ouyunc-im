@@ -1,5 +1,7 @@
 package com.ouyunc.message.processor;
 
+import com.ouyunc.core.context.MessageContext;
+
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
@@ -90,7 +92,7 @@ public final class One2OneRefuseFriendRequestMessageBiProcessor extends Abstract
                     }
                     requestSession.setProgress(RequestSessionProgress.REFUSING.value());
                     if (!repository().saveRefuseFriendRequestMessage(packet, requestSession,
-                            MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
+                            MessageContext.messageHotDataTtlMillis())) {
                         MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
                         return;
                     }

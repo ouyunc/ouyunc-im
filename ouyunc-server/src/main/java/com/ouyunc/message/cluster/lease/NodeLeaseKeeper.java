@@ -243,8 +243,10 @@ public final class NodeLeaseKeeper {
             if (current != run) {
                 return;
             }
+            NodeLeaseRedisSupport.publishConnections(CacheFactory.STRING_REDIS.instance(), run.nodeId,
+                    run.payloadJson, LocalNodeConnCounter.snapshot());
+            run.lastConnPublishNanos = System.nanoTime();
             run.connDirty.set(false);
-            publish(run);
             published = true;
         } catch (Exception e) {
             run.connDirty.set(true);
@@ -288,8 +290,8 @@ public final class NodeLeaseKeeper {
 
     private static void refreshSnapshot(LeaseRun run) {
         long observedAt = System.nanoTime();
-        run.connDirty.set(false);
-        publish(run);
+        publishLease(run);
+        publishConnectionsIfRequired(run);
         NodeLeaseSnapshot snapshot = new NodeLeaseSnapshot(loadLiveLeases(), observedAt, true);
         NodeLeasePayload local = snapshot.leases().get(run.nodeId);
         if (!snapshot.isFresh() || local == null || !run.payload.getOwnerToken().equals(local.getOwnerToken())) {
@@ -311,10 +313,29 @@ public final class NodeLeaseKeeper {
         }
     }
 
-    private static void publish(LeaseRun run) {
+    private static void publishLease(LeaseRun run) {
         StringRedisTemplate redis = CacheFactory.STRING_REDIS.instance();
-        NodeLeaseRedisSupport.publish(redis, run.nodeId, run.payloadJson, LocalNodeConnCounter.snapshot());
+        NodeLeaseRedisSupport.publishLease(redis, run.nodeId, run.payloadJson);
         NodeLeaseRedisSupport.register(redis, run.nodeId);
+    }
+
+    /** 连接数变化时立即发布；稳定期只在 TTL 刷新窗口到达时重建一次计数 HASH。 */
+    private static void publishConnectionsIfRequired(LeaseRun run) {
+        long refreshNanos = TimeUnit.SECONDS.toNanos(MessageConstant.IM_NODE_CONN_COUNT_REFRESH_SECONDS);
+        if (!run.connDirty.get() && run.lastConnPublishNanos > 0L
+                && System.nanoTime() - run.lastConnPublishNanos < refreshNanos) {
+            return;
+        }
+        try {
+            NodeLeaseRedisSupport.publishConnections(CacheFactory.STRING_REDIS.instance(), run.nodeId,
+                    run.payloadJson, LocalNodeConnCounter.snapshot());
+            run.lastConnPublishNanos = System.nanoTime();
+            run.connDirty.set(false);
+        } catch (Exception e) {
+            // 连接统计是派生数据，发布失败不得把已成功的核心租约误判为失败。
+            run.connDirty.set(true);
+            log.warn("周期刷新节点连接数失败，保留 dirty 等待重试 nodeId={}", run.nodeId, e);
+        }
     }
 
     private static void scheduleMaintenance(LeaseRun run) {
@@ -451,6 +472,7 @@ public final class NodeLeaseKeeper {
         private final AtomicBoolean deadRouteCleanupPending = new AtomicBoolean();
         private final Map<String, DeadRouteCleanup> deadRouteCleanups = new ConcurrentHashMap<>();
         private volatile NodeLeaseSnapshot snapshot = new NodeLeaseSnapshot(Map.of(), 0L, false);
+        private volatile long lastConnPublishNanos;
         private TimerTaskWrapper heartbeatTask;
         private int redisFailStreak;
 

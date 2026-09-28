@@ -1,5 +1,8 @@
 package com.ouyunc.message.schedule;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.ouyunc.base.constant.MessageConstant;
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.QosControlConstant;
 import com.ouyunc.base.constant.enums.ClusterForwardModeEnum;
@@ -44,6 +47,15 @@ import java.util.concurrent.TimeUnit;
  * 客户端须按消息 ID 去重。始发进程宕机则内存 timer 丢失。把重试外置 Redis 会引入双发/抢占，当前不改投递语义。</p>
  */
 public final class QosRetryScheduler {
+
+    /**
+     * 最终落地节点已实际处理过的 QoS 下行证明。ACK 通常沿同一长连接回到本节点，
+     * 命中时无需再从 Redis 反序列化完整 Packet；未命中仍保留 Redis 权威回退。
+     */
+    private static final Cache<String, AckProof> ACK_PROOFS = Caffeine.newBuilder()
+            .maximumSize(MessageConstant.QOS_ACK_PROOF_LOCAL_CACHE_MAX_SIZE)
+            .expireAfterWrite(MessageConstant.QOS_ACK_PROOF_LOCAL_CACHE_TTL_SECONDS, TimeUnit.SECONDS)
+            .build();
 
     private static final Logger log = LoggerFactory.getLogger(QosRetryScheduler.class);
 
@@ -118,21 +130,35 @@ public final class QosRetryScheduler {
             log.warn("QoS ACK 缺少已认证登录身份，忽略取消重试");
             return;
         }
-        Packet stored;
-        try {
-            stored = loadStoredPacket(login.getAppKey(), packetId);
-        } catch (Exception e) {
-            QosRetryCancelMetrics.originLocateFail();
-            log.warn("QoS ACK 查询原消息失败 appKey={} packetId={} messageId={}",
-                    login.getAppKey(), packetId, messageId, e);
-            return;
+        String proofKey = ackProofKey(login.getAppKey(), packetId);
+        AckProof proof = ACK_PROOFS.getIfPresent(proofKey);
+        Packet stored = null;
+        QosAckValidation.MatchResult match;
+        String origin;
+        String storedMessageId;
+        if (proof != null) {
+            match = proof.matches(login.getAppKey(), packetId, messageId)
+                    ? QosAckValidation.MatchResult.OK
+                    : QosAckValidation.MatchResult.MESSAGE_ID_MISMATCH;
+            origin = proof.originServerAddress();
+            storedMessageId = proof.messageId();
+        } else {
+            try {
+                stored = loadStoredPacket(login.getAppKey(), packetId);
+            } catch (Exception e) {
+                QosRetryCancelMetrics.originLocateFail();
+                log.warn("QoS ACK 查询原消息失败 appKey={} packetId={} messageId={}",
+                        login.getAppKey(), packetId, messageId, e);
+                return;
+            }
+            match = QosAckValidation.match(stored, login.getAppKey(), packetId, messageId);
+            origin = stored != null && stored.getMessage() != null && stored.getMessage().getMetadata() != null
+                    ? stored.getMessage().getMetadata().getIngress().getOriginServerAddress() : null;
+            storedMessageId = stored != null && stored.getMessage() != null
+                    ? stored.getMessage().getId() : null;
         }
-        QosAckValidation.MatchResult match =
-                QosAckValidation.match(stored, login.getAppKey(), packetId, messageId);
         if (match != QosAckValidation.MatchResult.OK) {
             QosRetryCancelMetrics.invalidPacket();
-            String storedMessageId = stored != null && stored.getMessage() != null
-                    ? stored.getMessage().getId() : null;
             log.warn("QoS C2S ACK 校验失败 reason={} appKey={} packetId={} ackMessageId={} storedMessageId={}",
                     match, login.getAppKey(), packetId, messageId, storedMessageId);
             return;
@@ -144,10 +170,10 @@ public final class QosRetryScheduler {
             return;
         }
         if (ScheduleTimer.cancelIfPresent(taskId)) {
+            ACK_PROOFS.invalidate(proofKey);
             QosRetryCancelMetrics.localCancel();
             return;
         }
-        String origin = stored.getMessage().getMetadata().getIngress().getOriginServerAddress();
         String local = MessageServerContext.serverProperties().getLocalServerAddress();
         if (StringUtils.isBlank(origin)) {
             QosRetryCancelMetrics.originLocateFail();
@@ -164,6 +190,55 @@ public final class QosRetryScheduler {
         }
         forwardCancel(origin, new QosRetryCancelContent(
                 login.getAppKey(), packetId, login.getIdentity(), login.getDeviceType()), 1);
+        ACK_PROOFS.invalidate(proofKey);
+    }
+
+    /** 在最终落地 Channel 写出前登记紧凑 ACK 证明；只缓存校验字段，不持有完整 Packet。 */
+    public static void rememberOutbound(Packet packet) {
+        if (!retryEnabled() || packet == null || packet.getPacketId() <= 0L || packet.getMessage() == null
+                || packet.getMessage().getQos() <= 0 || packet.getMessage().getMetadata() == null
+                || packet.getMessage().getMetadata().getIngress() == null) {
+            return;
+        }
+        String appKey = packet.getMessage().getMetadata().getIngress().getAppKey();
+        String messageId = packet.getMessage().getId();
+        String origin = packet.getMessage().getMetadata().getIngress().getOriginServerAddress();
+        if (StringUtils.isAnyBlank(appKey, messageId, origin)) {
+            return;
+        }
+        ACK_PROOFS.put(ackProofKey(appKey, packet.getPacketId()),
+                new AckProof(appKey, packet.getPacketId(), messageId, origin));
+    }
+
+    private static String ackProofKey(String appKey, long packetId) {
+        return appKey + ':' + packetId;
+    }
+
+    private static final class AckProof {
+
+        private final String appKey;
+        private final long packetId;
+        private final String messageId;
+        private final String originServerAddress;
+
+        private AckProof(String appKey, long packetId, String messageId, String originServerAddress) {
+            this.appKey = appKey;
+            this.packetId = packetId;
+            this.messageId = messageId;
+            this.originServerAddress = originServerAddress;
+        }
+
+        private String messageId() {
+            return messageId;
+        }
+
+        private String originServerAddress() {
+            return originServerAddress;
+        }
+
+        private boolean matches(String expectedAppKey, long expectedPacketId, String expectedMessageId) {
+            return packetId == expectedPacketId && appKey.equals(expectedAppKey) && messageId.equals(expectedMessageId);
+        }
     }
 
     public static boolean onClusterCancel(QosRetryCancelContent content) {

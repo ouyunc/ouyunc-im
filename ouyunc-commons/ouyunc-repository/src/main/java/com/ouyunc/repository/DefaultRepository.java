@@ -208,7 +208,7 @@ public enum DefaultRepository implements Repository {
             return;
         }
         RepositorySupports.INFRA.stringRedisTemplate.opsForValue().set(key, "1",
-                Duration.ofMillis(MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP));
+                Duration.ofMillis(MessageContext.messageHotDataTtlMillis()));
     }
 
     public void clearExternalDeliveryPending(Packet packet) {

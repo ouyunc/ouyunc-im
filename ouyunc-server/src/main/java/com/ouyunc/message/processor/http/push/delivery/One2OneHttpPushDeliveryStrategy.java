@@ -1,5 +1,7 @@
 package com.ouyunc.message.processor.http.push.delivery;
 
+import com.ouyunc.core.context.MessageContext;
+
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
@@ -71,7 +73,7 @@ public final class One2OneHttpPushDeliveryStrategy implements HttpProcessor {
         Message message = packet.getMessage();
         String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
         return DefaultRepository.INSTANCE.reactiveSaveOne2OneMessage(packet, sessionId,
-                        MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)
+                        MessageContext.messageHotDataTtlMillis())
                 .flatMap(outcome -> {
                     if (outcome != null && outcome.isDuplicate()) {
                         return replayOnline(packet);

@@ -1,5 +1,7 @@
 package com.ouyunc.message.processor;
 
+import com.ouyunc.core.context.MessageContext;
+
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
@@ -88,7 +90,7 @@ public final class GroupJoinMessageBiProcessor extends AbstractMessageBiProcesso
                         existingSession.setWay(GroupRequestSessionWay.ACTIVE.value());
                     }
                     if (!repository().saveGroupRequestMessage(packet, existingSession,
-                            MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP)) {
+                            MessageContext.messageHotDataTtlMillis())) {
                         MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
                         return;
                     }
@@ -138,7 +140,7 @@ public final class GroupJoinMessageBiProcessor extends AbstractMessageBiProcesso
                     groupRequestSession.setProgress(RequestSessionProgress.AGREEING.value());
                     if (!GroupBindResultHelper.acceptedOrReply(ctx, packet,
                             repository().autoPassBindGroup(packet, groupRequestSession,
-                                    MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP,
+                                    MessageContext.messageHotDataTtlMillis(),
                                     GroupBindResultHelper.maxMembers(), GroupBindResultHelper.maxPerUser()),
                             "自动绑定群组请求消息异常!")) {
                         return;
@@ -170,9 +172,9 @@ public final class GroupJoinMessageBiProcessor extends AbstractMessageBiProcesso
      */
     private boolean saveGroupRequestMessage(Packet packet, Set<String> groupMembers, GroupRequestSession groupRequestSession, boolean upsert) {
         if (upsert) {
-            return repository().saveGroupRequestMessage(packet, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
+            return repository().saveGroupRequestMessage(packet, groupRequestSession, MessageContext.messageHotDataTtlMillis());
         }
-        return repository().saveJoinGroupRequestMessage(packet, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
+        return repository().saveJoinGroupRequestMessage(packet, groupRequestSession, MessageContext.messageHotDataTtlMillis());
     }
 
     private static GroupRequestSession newActiveGroupSession(Message message, int progress) {

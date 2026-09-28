@@ -1,5 +1,7 @@
 package com.ouyunc.message.processor;
 
+import com.ouyunc.core.context.MessageContext;
+
 import com.ouyunc.core.exception.ExceptionReporter;
 
 import com.ouyunc.base.constant.MessageConstant;
@@ -228,6 +230,6 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
 
     private Mono<SaveMessageOutcome> saveMessage(Packet packet, CsImSessionRoute route) {
         return repository().reactiveSaveCsTicketMessage(
-                packet, route, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
+                packet, route, MessageContext.messageHotDataTtlMillis());
     }
 }

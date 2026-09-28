@@ -1,5 +1,7 @@
 package com.ouyunc.message.processor;
 
+import com.ouyunc.core.context.MessageContext;
+
 import com.ouyunc.core.exception.ExceptionReporter;
 
 import com.ouyunc.base.constant.*;
@@ -110,7 +112,7 @@ public final class GroupInviteJoinerAgreeMessageBiProcessor extends AbstractMess
                     }
                     if (!GroupBindResultHelper.acceptedOrReply(ctx, packet,
                             repository().autoPassBindGroup(packet, groupRequestSession,
-                                    MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP,
+                                    MessageContext.messageHotDataTtlMillis(),
                                     GroupBindResultHelper.maxMembers(), GroupBindResultHelper.maxPerUser()),
                             "自动绑定群组请求消息异常!")) {
                         return;
@@ -142,7 +144,7 @@ public final class GroupInviteJoinerAgreeMessageBiProcessor extends AbstractMess
      * 保存群组消息
      */
     private boolean saveGroupRequestMessage(Packet packet, Set<String> groupMembers, GroupRequestSession groupRequestSession) {
-        return repository().saveGroupRequestMessage(packet, groupRequestSession, MessageConstant.CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP);
+        return repository().saveGroupRequestMessage(packet, groupRequestSession, MessageContext.messageHotDataTtlMillis());
     }
 
     private static boolean publishGroupCommand(ChannelHandlerContext ctx, Packet packet, GroupRequestSession session) {

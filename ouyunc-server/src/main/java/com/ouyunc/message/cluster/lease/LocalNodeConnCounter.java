@@ -15,6 +15,11 @@ public final class LocalNodeConnCounter {
 
     private static final ConcurrentHashMap<String, AtomicLong> BY_APP_KEY = new ConcurrentHashMap<>();
 
+    /** appKey 计数变更版本；同步成功时按版本删除，避免并发变更被旧任务清掉。 */
+    private static final ConcurrentHashMap<String, Long> DIRTY_VERSIONS = new ConcurrentHashMap<>();
+
+    private static final AtomicLong CHANGE_SEQUENCE = new AtomicLong();
+
     private LocalNodeConnCounter() {
     }
 
@@ -29,6 +34,7 @@ public final class LocalNodeConnCounter {
             counter.incrementAndGet();
             return counter;
         });
+        markDirty(appKey);
     }
 
     /**
@@ -54,6 +60,9 @@ public final class LocalNodeConnCounter {
             counter.incrementAndGet();
             return counter;
         });
+        if (ok[0]) {
+            markDirty(appKey);
+        }
         return ok[0];
     }
 
@@ -72,6 +81,7 @@ public final class LocalNodeConnCounter {
             // 保留 0 计数，心跳 SYNC 才能 HDEL 本节点 field；SYNC 后再 prune
             return counter;
         });
+        markDirty(appKey);
     }
 
     public static long get(String appKey) {
@@ -103,6 +113,23 @@ public final class LocalNodeConnCounter {
             snapshot.put(appKey, String.valueOf(value));
         });
         return snapshot;
+    }
+
+    /** 返回当前待同步 appKey 及其版本快照。 */
+    public static Map<String, Long> dirtySnapshot() {
+        return Map.copyOf(DIRTY_VERSIONS);
+    }
+
+    /** 仅当同步期间未发生新变更时清除 dirty 标记。 */
+    public static void markSynced(String appKey, long expectedVersion) {
+        if (StringUtils.isBlank(appKey) || expectedVersion <= 0L) {
+            return;
+        }
+        DIRTY_VERSIONS.remove(appKey, expectedVersion);
+    }
+
+    private static void markDirty(String appKey) {
+        DIRTY_VERSIONS.put(appKey, CHANGE_SEQUENCE.incrementAndGet());
     }
 
     /**

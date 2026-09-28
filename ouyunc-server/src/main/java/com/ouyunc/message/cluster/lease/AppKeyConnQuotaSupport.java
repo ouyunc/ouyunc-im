@@ -20,6 +20,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.TimeUnit;
 
 /**
  * appKey 连接上限：同槽 HASH（field=nodeId）Lua 求和后再 HINCRBY，避免读远端租约 HASH 再本机 CAS 的窗口。
@@ -36,6 +37,10 @@ public final class AppKeyConnQuotaSupport {
     private static final byte[] SYNC_SCRIPT_BYTES = LuaScriptEnum.APP_KEY_CONN_SYNC_SCRIPT.getScript()
             .getBytes(StandardCharsets.UTF_8);
     private static final ReentrantLock[] QUOTA_LOCKS = createQuotaLocks();
+
+    private static volatile long lastFullSyncNanos;
+
+    private static volatile long lastFullSyncEpoch;
 
     private AppKeyConnQuotaSupport() {
     }
@@ -146,22 +151,46 @@ public final class AppKeyConnQuotaSupport {
      * @param snapshot 当前存活节点租约，用于判断远端 field 是否仍有维护者
      */
     public static void syncAfterHeartbeat(NodeLeaseSnapshot snapshot) {
-        Map<String, String> local = LocalNodeConnCounter.snapshot();
-        if (local.isEmpty()) {
+        long epoch = SessionNodeState.currentEpoch();
+        long fullRefreshNanos = TimeUnit.SECONDS.toNanos(
+                MessageConstant.IM_APP_KEY_CONN_QUOTA_REFRESH_SECONDS);
+        boolean forceFull = lastFullSyncEpoch != epoch || lastFullSyncNanos == 0L
+                || System.nanoTime() - lastFullSyncNanos >= fullRefreshNanos;
+        Map<String, Long> candidates = forceFull
+                ? fullSyncCandidates()
+                : LocalNodeConnCounter.dirtySnapshot();
+        if (candidates.isEmpty()) {
+            if (forceFull) {
+                lastFullSyncEpoch = epoch;
+                lastFullSyncNanos = System.nanoTime();
+            }
             return;
         }
         List<String> liveNodes = new ArrayList<>(snapshot.leases().keySet());
         List<QuotaSyncItem> batch = new ArrayList<>(MessageConstant.IM_NODE_QUOTA_SYNC_BATCH);
-        for (Map.Entry<String, String> entry : local.entrySet()) {
-            batch.add(new QuotaSyncItem(entry.getKey()));
+        boolean allSucceeded = true;
+        for (Map.Entry<String, Long> entry : candidates.entrySet()) {
+            batch.add(new QuotaSyncItem(entry.getKey(), entry.getValue()));
             if (batch.size() >= MessageConstant.IM_NODE_QUOTA_SYNC_BATCH) {
-                syncBatch(liveNodes, batch);
+                allSucceeded &= syncBatch(liveNodes, batch);
                 batch.clear();
             }
         }
         if (!batch.isEmpty()) {
-            syncBatch(liveNodes, batch);
+            allSucceeded &= syncBatch(liveNodes, batch);
         }
+        if (forceFull && allSucceeded) {
+            lastFullSyncEpoch = epoch;
+            lastFullSyncNanos = System.nanoTime();
+        }
+    }
+
+    private static Map<String, Long> fullSyncCandidates() {
+        Map<String, String> local = LocalNodeConnCounter.snapshot();
+        Map<String, Long> dirty = LocalNodeConnCounter.dirtySnapshot();
+        Map<String, Long> candidates = new java.util.HashMap<>(local.size());
+        local.keySet().forEach(appKey -> candidates.put(appKey, dirty.getOrDefault(appKey, 0L)));
+        return candidates;
     }
 
     /** 每个 appKey 的 Lua 仍保持同槽原子性；管道仅合并网络往返，不作为跨 key 事务。 */
@@ -198,15 +227,20 @@ public final class AppKeyConnQuotaSupport {
                     locks.get(index).unlock();
                 }
             }
+            boolean batchSucceeded = results != null && results.size() >= batch.size();
             for (int index = 0; index < batch.size(); index++) {
                 QuotaSyncItem item = batch.get(index);
                 if (results != null && index < results.size()
-                        && Long.valueOf(MessageConstant.IM_APP_KEY_CONN_QUOTA_LUA_OK).equals(results.get(index))
-                        && LocalNodeConnCounter.get(item.appKey()) == 0L) {
-                    LocalNodeConnCounter.removeIfZero(item.appKey());
+                        && Long.valueOf(MessageConstant.IM_APP_KEY_CONN_QUOTA_LUA_OK).equals(results.get(index))) {
+                    LocalNodeConnCounter.markSynced(item.appKey(), item.dirtyVersion());
+                    if (LocalNodeConnCounter.get(item.appKey()) == 0L) {
+                        LocalNodeConnCounter.removeIfZero(item.appKey());
+                    }
+                } else {
+                    batchSucceeded = false;
                 }
             }
-            return true;
+            return batchSucceeded;
         } catch (Exception e) {
             log.warn("批量同步 appKey 配额失败，等待后续维护 batchSize={}", batch.size(), e);
             return false;
@@ -214,7 +248,7 @@ public final class AppKeyConnQuotaSupport {
     }
 
     /** 单条配额维护参数，避免业务方法使用无类型的 Map 传递参数。 */
-    private record QuotaSyncItem(String appKey) {
+    private record QuotaSyncItem(String appKey, long dirtyVersion) {
     }
 
     private static ReentrantLock quotaLock(String appKey) {

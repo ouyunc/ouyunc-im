@@ -172,18 +172,12 @@ public class MessageConstant {
 
     /**
      * 缓存最后一条会话消息 key / 会话 ZSet 过期时间，默认 30 天，单位毫秒。
-     * 消息正文热 key 见 {@link #CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP}（更短）。
+     * 消息正文热 key 由 {@code ouyunc.message.storage.hot-data-ttl-seconds} 配置（更短）。
      */
     public static final long CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP = NumberConstant.NUMBER_30 * MessageConstant.DAY_TIMESTAMP;
 
     /** 客服会话路由 Redis TTL，与进行中咨询单生命周期一致 */
     public static final long CACHE_CS_SESSION_ROUTE_EXPIRE_TIMESTAMP = CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP;
-
-    /**
-     * 消息正文热缓存 TTL（P12）：短 TTL 控 Redis 大 value 内存；会话 ZSet / lm 仍用 {@link #CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP}。
-     * 过期后读路径回源 Mongo/MySQL。
-     */
-    public static final long CACHE_MESSAGE_HOT_KEY_EXPIRE_TIMESTAMP = NumberConstant.NUMBER_2 * MessageConstant.HOUR_TIMESTAMP;
 
     /** 归档确认必须早于连接任务/HTTP PENDING 接管期限，超时不发送业务成功 ACK。 */
     public static final long MESSAGE_ARCHIVE_CONFIRM_TIMEOUT_MS = 10_000L;
@@ -211,6 +205,12 @@ public class MessageConstant {
      * QoS 幂等（客户端 messageId）缓存过期时间，与 packet 键相同。
      */
     public static final long CACHE_QOS_IDEM_CLIENT_EXPIRE_TIMESTAMP = CACHE_QOS_IDEM_PACKET_EXPIRE_TIMESTAMP;
+
+    /** 落地节点 QoS ACK 校验证明本地缓存上限，防止高并发下行占用无界内存。 */
+    public static final long QOS_ACK_PROOF_LOCAL_CACHE_MAX_SIZE = 200_000L;
+
+    /** QoS ACK 本地证明保留时间，需要覆盖服务端有限重试窗口。 */
+    public static final int QOS_ACK_PROOF_LOCAL_CACHE_TTL_SECONDS = 300;
 
 
     /**
@@ -334,6 +334,15 @@ public class MessageConstant {
      */
     public static final int IM_NODE_LEASE_TTL_SECONDS = 8;
 
+    /**
+     * 节点连接计数 HASH 仅用于统计，在线性仍由节点租约判定。
+     * TTL 长于核心租约，允许无连接变化时低频刷新，减少全量 HASH 重建。
+     */
+    public static final int IM_NODE_CONN_COUNT_TTL_SECONDS = IM_NODE_LEASE_TTL_SECONDS * 4;
+
+    /** 连接计数无变化时的刷新间隔，必须小于连接计数 HASH TTL。 */
+    public static final int IM_NODE_CONN_COUNT_REFRESH_SECONDS = IM_NODE_CONN_COUNT_TTL_SECONDS / 2;
+
     /** 快照从开始读取起计时，慢查询不能延长历史成员资格。 */
     public static final int IM_NODE_LEASE_SNAPSHOT_TTL_SECONDS = IM_NODE_LEASE_TTL_SECONDS;
 
@@ -362,6 +371,9 @@ public class MessageConstant {
      * appKey 配额 HASH 过期：大于租约 TTL，心跳会刷新；节点全挂后残留 field 随 key 过期。
      */
     public static final int IM_APP_KEY_CONN_QUOTA_TTL_SECONDS = IM_NODE_LEASE_TTL_SECONDS * 4;
+
+    /** 配额无变更时的全量校准/续期间隔，高频周期只同步 dirty appKey。 */
+    public static final int IM_APP_KEY_CONN_QUOTA_REFRESH_SECONDS = IM_APP_KEY_CONN_QUOTA_TTL_SECONDS / 2;
 
     /** 配额字段失联宽限期；新节点字段在成员快照尚未传播时不得被其它节点误删。 */
     public static final int IM_APP_KEY_CONN_QUOTA_STALE_SECONDS = IM_APP_KEY_CONN_QUOTA_TTL_SECONDS * 2;
