@@ -139,6 +139,32 @@ function log(direction, text) {
     logEl.scrollTop = logEl.scrollHeight;
 }
 
+/**
+ * 将服务端返回的数据完整输出到浏览器控制台。
+ * 页面右侧日志只保留便于浏览的摘要；Console 中保留完整 Packet、正文和接收时间，
+ * 避免长消息截断后无法排查协议字段、服务端错误码或业务正文。
+ */
+function consoleServerMessage(source, payload) {
+    const receivedAt = new Date().toISOString();
+    console.groupCollapsed(`[OUYUNC-IM][服务端 -> 客户端][${source}] ${receivedAt}`);
+    console.log('接收时间:', receivedAt);
+    console.log('完整数据:', payload);
+
+    // WebSocket message.content 通常是 JSON 字符串；解析副本仅用于调试展示，失败不影响收包流程。
+    const content = payload?.message?.content;
+    if (content !== undefined && content !== null && content !== '') {
+        console.log('原始 content:', content);
+        if (typeof content === 'string') {
+            try {
+                console.log('JSON content:', JSON.parse(content));
+            } catch (_) {
+                // 文本、图片地址等非 JSON 正文保持原样输出即可。
+            }
+        }
+    }
+    console.groupEnd();
+}
+
 function setStatus(text) { statusEl.textContent = text; }
 
 function requireSocket() {
@@ -246,6 +272,8 @@ document.getElementById('btnConnect').onclick = () => {
         log('发', `登录 messageId=${packet.message.id}`);
     };
     socket.onmessage = (packet) => {
+        // 必须放在业务摘要和分支解析之前，确保所有已解码的服务端 Packet 都完整可见。
+        consoleServerMessage('WebSocket', packet);
         const message = packet.message || {};
         const name = TYPES[packet.messageType] || String(packet.messageType);
         let extra = '';
@@ -299,8 +327,16 @@ async function httpGet(path) {
     log('发', 'GET ' + target);
     try {
         const response = await fetch(target);
-        log('收', `${response.status} ${path} ${await response.text()}`);
+        const responseText = await response.text();
+        consoleServerMessage(`HTTP GET ${path}`, {
+            status: response.status,
+            statusText: response.statusText,
+            headers: Object.fromEntries(response.headers.entries()),
+            body: responseText
+        });
+        log('收', `${response.status} ${path} ${responseText}`);
     } catch (error) {
+        console.error(`[OUYUNC-IM][HTTP GET ${path}] 请求失败`, error);
         log('!', path + ' ' + error);
     }
 }
@@ -328,8 +364,16 @@ document.getElementById('btnPush').onclick = async () => {
         };
         if (token) headers.Authorization = token.startsWith('Bearer ') ? token : 'Bearer ' + token;
         const response = await fetch(target, {method: 'POST', headers, body: JSON.stringify(body)});
-        log('收', `${response.status} push ${await response.text()}`);
+        const responseText = await response.text();
+        consoleServerMessage('HTTP POST /api/im/message/push', {
+            status: response.status,
+            statusText: response.statusText,
+            headers: Object.fromEntries(response.headers.entries()),
+            body: responseText
+        });
+        log('收', `${response.status} push ${responseText}`);
     } catch (error) {
+        console.error('[OUYUNC-IM][HTTP POST /api/im/message/push] 请求失败', error);
         log('!', 'push ' + error);
     }
 };
