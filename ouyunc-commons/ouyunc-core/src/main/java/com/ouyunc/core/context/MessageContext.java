@@ -67,6 +67,16 @@ public class MessageContext {
     public static MessageProperties messageProperties;
 
     /**
+     * 统一获取 Redis 消息正文热数据 TTL。
+     * <p>服务启动前或独立仓储测试尚未注入配置时使用默认值，避免业务调用点直接解引用全局配置。</p>
+     */
+    public static long messageHotDataTtlMillis() {
+        return messageProperties == null
+                ? MessageConstant.CACHE_MESSAGE_HOT_DEFAULT_TTL_SECONDS * 1_000L
+                : messageProperties.getHotDataTtlMillis();
+    }
+
+    /**
      * QoS 是否开启（仓库与处理器统一入口）
      */
     public static boolean isQosEnable() {

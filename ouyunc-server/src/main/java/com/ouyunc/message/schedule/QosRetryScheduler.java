@@ -152,7 +152,8 @@ public final class QosRetryScheduler {
                 return;
             }
             match = QosAckValidation.match(stored, login.getAppKey(), packetId, messageId);
-            origin = stored != null && stored.getMessage() != null && stored.getMessage().getMetadata() != null
+            // 只有完整校验通过时 ingress 才被 QosAckValidation 证明非空，避免旧格式/脏 Packet 触发空指针。
+            origin = match == QosAckValidation.MatchResult.OK
                     ? stored.getMessage().getMetadata().getIngress().getOriginServerAddress() : null;
             storedMessageId = stored != null && stored.getMessage() != null
                     ? stored.getMessage().getId() : null;
@@ -180,6 +181,8 @@ public final class QosRetryScheduler {
             return;
         }
         if (origin.equals(local)) {
+            // 本机已不存在对应任务，证明不再有复用价值，避免占用本地缓存直到自然过期。
+            ACK_PROOFS.invalidate(proofKey);
             return;
         }
         if (!MessageServerContext.serverProperties().isClusterEnable()
@@ -193,7 +196,7 @@ public final class QosRetryScheduler {
         ACK_PROOFS.invalidate(proofKey);
     }
 
-    /** 在最终落地 Channel 写出前登记紧凑 ACK 证明；只缓存校验字段，不持有完整 Packet。 */
+    /** 在最终落地 Channel 写成功后登记紧凑 ACK 证明；只缓存校验字段，不持有完整 Packet。 */
     public static void rememberOutbound(Packet packet) {
         if (!retryEnabled() || packet == null || packet.getPacketId() <= 0L || packet.getMessage() == null
                 || packet.getMessage().getQos() <= 0 || packet.getMessage().getMetadata() == null

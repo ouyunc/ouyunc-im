@@ -92,7 +92,7 @@ public final class One2OneRefuseFriendRequestMessageBiProcessor extends Abstract
                     }
                     requestSession.setProgress(RequestSessionProgress.REFUSING.value());
                     if (!repository().saveRefuseFriendRequestMessage(packet, requestSession,
-                            MessageContext.messageProperties.getHotDataTtlMillis())) {
+                            MessageContext.messageHotDataTtlMillis())) {
                         MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
                         return;
                     }

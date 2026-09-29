@@ -102,13 +102,16 @@ public class MessageProperties {
 
     /**
      * Redis 消息热数据 TTL，单位毫秒。
+     * <p>配置必须为正数且换算毫秒后不能溢出；非法值回退默认值，避免正文 key 因 TTL 非正而永久驻留。</p>
      */
     public long getHotDataTtlMillis() {
         return getHotDataTtlSeconds() * MILLIS_PER_SECOND;
     }
 
     public long getHotDataTtlSeconds() {
-        return hotDataTtlSeconds;
+        return hotDataTtlSeconds > 0L && hotDataTtlSeconds <= Long.MAX_VALUE / MILLIS_PER_SECOND
+                ? hotDataTtlSeconds
+                : MessageConstant.CACHE_MESSAGE_HOT_DEFAULT_TTL_SECONDS;
     }
 
     public void setHotDataTtlSeconds(long hotDataTtlSeconds) {

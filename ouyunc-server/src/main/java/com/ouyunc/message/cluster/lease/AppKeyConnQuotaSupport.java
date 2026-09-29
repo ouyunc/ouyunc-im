@@ -66,6 +66,8 @@ public final class AppKeyConnQuotaSupport {
                 return false;
             }
             LocalNodeConnCounter.increment(appKey);
+            // 计数实际变化后再推进节点统计版本，禁止注册流程早于本机计数发布旧快照。
+            SessionNodeState.scheduleConnPublish();
             return true;
         } finally {
             lock.unlock();
@@ -88,6 +90,8 @@ public final class AppKeyConnQuotaSupport {
             lock.lock();
             try {
                 LocalNodeConnCounter.decrement(appKey);
+                // releaseAsync 可能晚于关连钩子执行，必须在真正减数后再触发统计发布。
+                SessionNodeState.scheduleConnPublish();
                 eval(RELEASE_SCRIPT, appKey, SessionNodeState.localNodeId());
             } finally {
                 lock.unlock();

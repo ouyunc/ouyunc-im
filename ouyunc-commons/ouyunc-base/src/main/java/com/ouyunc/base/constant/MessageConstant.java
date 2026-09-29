@@ -206,6 +206,9 @@ public class MessageConstant {
      */
     public static final long CACHE_QOS_IDEM_CLIENT_EXPIRE_TIMESTAMP = CACHE_QOS_IDEM_PACKET_EXPIRE_TIMESTAMP;
 
+    /** Redis 消息正文热数据默认保留时间，单位秒；配置非法或毫秒换算溢出时回退到该值。 */
+    public static final long CACHE_MESSAGE_HOT_DEFAULT_TTL_SECONDS = 7_200L;
+
     /** 落地节点 QoS ACK 校验证明本地缓存上限，防止高并发下行占用无界内存。 */
     public static final long QOS_ACK_PROOF_LOCAL_CACHE_MAX_SIZE = 200_000L;
 

@@ -24,6 +24,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
@@ -209,7 +210,12 @@ public final class NodeLeaseKeeper {
     }
 
     private static void scheduleConnPublish(LeaseRun run) {
-        run.connDirty.set(true);
+        run.connChangeVersion.incrementAndGet();
+        enqueueConnPublish(run);
+    }
+
+    /** 仅安排发布任务；补发旧版本差异时不得伪造新的连接变更版本。 */
+    private static void enqueueConnPublish(LeaseRun run) {
         if (current != run || !run.connPending.compareAndSet(false, true)) {
             return;
         }
@@ -243,20 +249,20 @@ public final class NodeLeaseKeeper {
             if (current != run) {
                 return;
             }
+            long publishedVersion = run.connChangeVersion.get();
             NodeLeaseRedisSupport.publishConnections(CacheFactory.STRING_REDIS.instance(), run.nodeId,
                     run.payloadJson, LocalNodeConnCounter.snapshot());
             run.lastConnPublishNanos = System.nanoTime();
-            run.connDirty.set(false);
+            run.lastPublishedConnVersion = publishedVersion;
             published = true;
         } catch (Exception e) {
-            run.connDirty.set(true);
             log.warn("连接数发布失败，等待周期心跳 nodeId={}", run.nodeId, e);
         } finally {
             run.publishLock.unlock();
             run.connPending.set(false);
         }
-        if (published && run.connDirty.get() && current == run) {
-            scheduleConnPublish(run);
+        if (published && hasUnpublishedConnectionChanges(run) && current == run) {
+            enqueueConnPublish(run);
         }
     }
 
@@ -322,20 +328,25 @@ public final class NodeLeaseKeeper {
     /** 连接数变化时立即发布；稳定期只在 TTL 刷新窗口到达时重建一次计数 HASH。 */
     private static void publishConnectionsIfRequired(LeaseRun run) {
         long refreshNanos = TimeUnit.SECONDS.toNanos(MessageConstant.IM_NODE_CONN_COUNT_REFRESH_SECONDS);
-        if (!run.connDirty.get() && run.lastConnPublishNanos > 0L
+        if (!hasUnpublishedConnectionChanges(run) && run.lastConnPublishNanos > 0L
                 && System.nanoTime() - run.lastConnPublishNanos < refreshNanos) {
             return;
         }
         try {
+            long publishedVersion = run.connChangeVersion.get();
             NodeLeaseRedisSupport.publishConnections(CacheFactory.STRING_REDIS.instance(), run.nodeId,
                     run.payloadJson, LocalNodeConnCounter.snapshot());
             run.lastConnPublishNanos = System.nanoTime();
-            run.connDirty.set(false);
+            run.lastPublishedConnVersion = publishedVersion;
         } catch (Exception e) {
-            // 连接统计是派生数据，发布失败不得把已成功的核心租约误判为失败。
-            run.connDirty.set(true);
+            // 连接统计是派生数据；版本未推进，后续心跳会继续重试且不污染核心租约状态。
             log.warn("周期刷新节点连接数失败，保留 dirty 等待重试 nodeId={}", run.nodeId, e);
         }
+    }
+
+    /** 发布版本落后于变更版本时仍有未同步计数，禁止旧发布任务清掉并发产生的新变化。 */
+    private static boolean hasUnpublishedConnectionChanges(LeaseRun run) {
+        return run.connChangeVersion.get() != run.lastPublishedConnVersion;
     }
 
     private static void scheduleMaintenance(LeaseRun run) {
@@ -467,12 +478,13 @@ public final class NodeLeaseKeeper {
         private final ReentrantLock publishLock = new ReentrantLock(true);
         private final ReentrantLock quotaMaintenanceLock = new ReentrantLock();
         private final AtomicBoolean connPending = new AtomicBoolean();
-        private final AtomicBoolean connDirty = new AtomicBoolean();
+        private final AtomicLong connChangeVersion = new AtomicLong();
         private final AtomicBoolean quotaMaintenancePending = new AtomicBoolean();
         private final AtomicBoolean deadRouteCleanupPending = new AtomicBoolean();
         private final Map<String, DeadRouteCleanup> deadRouteCleanups = new ConcurrentHashMap<>();
         private volatile NodeLeaseSnapshot snapshot = new NodeLeaseSnapshot(Map.of(), 0L, false);
         private volatile long lastConnPublishNanos;
+        private volatile long lastPublishedConnVersion;
         private TimerTaskWrapper heartbeatTask;
         private int redisFailStreak;
 

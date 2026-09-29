@@ -209,7 +209,7 @@ public enum DefaultRepository implements Repository {
             return;
         }
         RepositorySupports.INFRA.stringRedisTemplate.opsForValue().set(key, "1",
-                Duration.ofMillis(MessageContext.messageProperties.getHotDataTtlMillis()));
+                Duration.ofMillis(MessageContext.messageHotDataTtlMillis()));
     }
 
     public void clearExternalDeliveryPending(Packet packet) {

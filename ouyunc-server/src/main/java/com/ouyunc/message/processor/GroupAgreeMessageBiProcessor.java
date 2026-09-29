@@ -94,7 +94,7 @@ public final class GroupAgreeMessageBiProcessor extends AbstractMessageBiProcess
                 return;
             }
             session.setProgress(RequestSessionProgress.AGREEING.value());
-            if (!repository().saveGroupRequestMessage(packet, session, MessageContext.messageProperties.getHotDataTtlMillis())) {
+            if (!repository().saveGroupRequestMessage(packet, session, MessageContext.messageHotDataTtlMillis())) {
                 MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
                 return;
             }

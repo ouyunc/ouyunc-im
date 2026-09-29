@@ -73,7 +73,7 @@ public final class One2OneHttpPushDeliveryStrategy implements HttpProcessor {
         Message message = packet.getMessage();
         String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
         return DefaultRepository.INSTANCE.reactiveSaveOne2OneMessage(packet, sessionId,
-                        MessageContext.messageProperties.getHotDataTtlMillis())
+                        MessageContext.messageHotDataTtlMillis())
                 .flatMap(outcome -> {
                     if (outcome != null && outcome.isDuplicate()) {
                         return replayOnline(packet);

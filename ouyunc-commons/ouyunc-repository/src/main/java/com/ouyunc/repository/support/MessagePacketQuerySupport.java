@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.cache.distributed.redis.RedisPipelineSupport;
+import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.base.constant.JdbcSqlDialectHolder;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.executor.ThreadPoolManager;
@@ -276,11 +277,11 @@ public final class MessagePacketQuerySupport {
             }
             if (!upsert.isEmpty()) {
                 RedisPipelineSupport.setValues(redisTemplate, upsert,
-                        MessageContext.messageProperties.getHotDataTtlMillis());
+                        MessageContext.messageHotDataTtlMillis());
             }
             if (!fillIfAbsent.isEmpty()) {
                 RedisPipelineSupport.setValuesIfAbsent(redisTemplate, fillIfAbsent,
-                        MessageContext.messageProperties.getHotDataTtlMillis());
+                        MessageContext.messageHotDataTtlMillis());
             }
         }, dbExecutor()).exceptionally(ex -> {
             log.error("异步更新缓存失败, appKey={}, packetSize={}", appKey, dbPackets.size(), ex);

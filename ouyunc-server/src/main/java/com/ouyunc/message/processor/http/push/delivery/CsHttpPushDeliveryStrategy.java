@@ -114,7 +114,7 @@ public final class CsHttpPushDeliveryStrategy implements HttpProcessor {
 
     private Mono<Boolean> saveAndDeliverChat(Packet packet, CsImSessionRoute route) {
         return DefaultRepository.INSTANCE.reactiveSaveCsTicketMessage(packet, route,
-                        MessageContext.messageProperties.getHotDataTtlMillis())
+                        MessageContext.messageHotDataTtlMillis())
                 .flatMap(outcome -> {
                     if (outcome != null && outcome.isDuplicate()) {
                         return replayOnline(packet);

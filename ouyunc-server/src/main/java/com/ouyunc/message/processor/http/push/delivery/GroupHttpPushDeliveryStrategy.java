@@ -79,7 +79,7 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
 
     private Mono<Boolean> saveAndDeliverChat(Packet packet) {
         return DefaultRepository.INSTANCE.reactiveSaveMessage(packet, packet.getMessage().getTo(),
-                        MessageContext.messageProperties.getHotDataTtlMillis())
+                        MessageContext.messageHotDataTtlMillis())
                 .flatMap(outcome -> {
                     if (outcome != null && outcome.isDuplicate()) {
                         return replayOnline(packet);

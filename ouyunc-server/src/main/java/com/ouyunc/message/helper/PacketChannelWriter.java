@@ -86,8 +86,6 @@ public final class PacketChannelWriter {
             return;
         }
         ensureOutboundTarget(ctx, packet);
-        // ACK 通常从同一长连接返回本落地节点，先留紧凑证明以消除每次 ACK 的 Redis Packet GET。
-        QosRetryScheduler.rememberOutbound(packet);
         writeConverted(ctx.channel(), packet, sendCallback, publishSendFail);
     }
 
@@ -139,11 +137,13 @@ public final class PacketChannelWriter {
         }
         ChannelFuture future = channel.writeAndFlush(msg);
         if (publishSendFail) {
-            addWriteListener(future, packet, sendCallback);
+            addClientWriteListener(future, packet, sendCallback);
             return;
         }
         future.addListener((ChannelFutureListener) f -> {
-            if (!f.isSuccess()) {
+            if (f.isSuccess()) {
+                QosRetryScheduler.rememberOutbound(packet);
+            } else {
                 log.debug("尽力而为写出失败 channel={}: {}", channel.id().asShortText(),
                         f.cause() == null ? "" : f.cause().getMessage());
             }
@@ -359,6 +359,18 @@ public final class PacketChannelWriter {
     private static void addWriteListener(ChannelFuture future, Packet packet, SendCallback sendCallback) {
         future.addListener((ChannelFutureListener) f -> {
             if (f.isSuccess()) {
+                sendCallback.onCallback(SendResult.builder().sendStatus(SendStatusEnum.SEND_OK).packet(packet).build());
+            } else {
+                notifySendFail(packet, f.cause(), sendCallback);
+            }
+        });
+    }
+
+    /** 客户端协议帧真正写成功后再建立 ACK 证明，写失败不得取消后续 QoS 重试。 */
+    private static void addClientWriteListener(ChannelFuture future, Packet packet, SendCallback sendCallback) {
+        future.addListener((ChannelFutureListener) f -> {
+            if (f.isSuccess()) {
+                QosRetryScheduler.rememberOutbound(packet);
                 sendCallback.onCallback(SendResult.builder().sendStatus(SendStatusEnum.SEND_OK).packet(packet).build());
             } else {
                 notifySendFail(packet, f.cause(), sendCallback);

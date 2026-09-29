@@ -170,9 +170,6 @@ public class ClientHelper {
         if (previous == null && !reserved) {
             LocalNodeConnCounter.increment(appKey);
             SessionNodeState.scheduleConnPublish();
-        } else if (previous == null) {
-            // 预占已计入 LocalNodeConnCounter，仅刷新租约心跳中的计数视图
-            SessionNodeState.scheduleConnPublish();
         }
     }
 
@@ -206,7 +203,6 @@ public class ClientHelper {
         String quotaAppKey = takeQuotaAppKey(quotaChannel);
         if (removed) {
             releaseQuotaOffEventLoop(quotaChannel, quotaAppKey);
-            SessionNodeState.scheduleConnPublish();
             return;
         }
         // 同机顶号：新连接 tryReserve 已 +1 并覆盖注册表，旧 Channel 对不上。
@@ -215,7 +211,6 @@ public class ClientHelper {
             return;
         }
         releaseQuotaOffEventLoop(quotaChannel, quotaAppKey);
-        SessionNodeState.scheduleConnPublish();
     }
 
     /**
