@@ -146,7 +146,7 @@ public class MessageSender {
 
 
     /**
-     * 多端扇出：本机分批展开；远程按节点打包 {@link Metadata#getFanoutTargets()}。
+     * 多端扇出：本机分批展开；远程按节点打包 {@link Metadata#()}。
      */
     private static void fanoutToClients(Packet packet, Collection<LoginClientInfo> loginClientInfos) {
         if (packet == null || CollectionUtils.isEmpty(loginClientInfos)) {
