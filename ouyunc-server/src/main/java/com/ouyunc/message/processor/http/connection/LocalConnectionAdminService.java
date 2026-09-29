@@ -15,6 +15,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * 本节点连接管理服务。
@@ -30,6 +31,33 @@ public final class LocalConnectionAdminService {
             .thenComparing(entry -> entry.channel().id().asLongText());
 
     private LocalConnectionAdminService() {
+    }
+
+    /**
+     * 只统计有效连接。直接单次遍历本地注册表，不生成连接快照列表也不排序，
+     * 用于监控和容量查询场景。
+     */
+    public static AdminConnectionCountResponse count(String appKey) {
+        Map<String, Long> countByAppKey = new TreeMap<>();
+        long total = 0L;
+        for (ChannelHandlerContext context
+                : MessageServerContext.localLoginClientRegisterTable.asMap().values()) {
+            LoginClientInfo login = validLogin(context, appKey);
+            if (login == null) {
+                continue;
+            }
+            total++;
+            countByAppKey.merge(login.getAppKey(), 1L, Long::sum);
+        }
+        List<AppKeyConnectionCount> counts = countByAppKey.entrySet().stream()
+                .map(entry -> new AppKeyConnectionCount(entry.getKey(), entry.getValue()))
+                .toList();
+        return new AdminConnectionCountResponse(
+                AdminConnectionQueryResponse.SCOPE_LOCAL_NODE,
+                localNode(),
+                System.currentTimeMillis(),
+                total,
+                counts);
     }
 
     /** 按 appKey 查询当前节点有效连接；appKey 为空时查询全部租户。 */
@@ -122,20 +150,29 @@ public final class LocalConnectionAdminService {
         for (Map.Entry<String, ChannelHandlerContext> entry
                 : MessageServerContext.localLoginClientRegisterTable.asMap().entrySet()) {
             ChannelHandlerContext context = entry.getValue();
-            if (context == null || context.channel() == null || !context.channel().isActive()) {
-                continue;
-            }
-            LoginClientInfo login = ChannelAttrUtil.getChannelAttribute(
-                    context.channel(), MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
-            if (login == null || !OnlineEnum.ONLINE.equals(login.getOnlineStatus())) {
-                continue;
-            }
-            if (StringUtils.isNotBlank(appKey) && !appKey.equals(login.getAppKey())) {
+            LoginClientInfo login = validLogin(context, appKey);
+            if (login == null) {
                 continue;
             }
             result.add(new ConnectionEntry(entry.getKey(), context, context.channel(), login));
         }
         return result;
+    }
+
+    /** 连接数和详情查询共用同一有效性定义，避免两个接口统计口径不一致。 */
+    private static LoginClientInfo validLogin(ChannelHandlerContext context, String appKey) {
+        if (context == null || context.channel() == null || !context.channel().isActive()) {
+            return null;
+        }
+        LoginClientInfo login = ChannelAttrUtil.getChannelAttribute(
+                context.channel(), MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
+        if (login == null || !OnlineEnum.ONLINE.equals(login.getOnlineStatus())) {
+            return null;
+        }
+        if (StringUtils.isNotBlank(appKey) && !appKey.equals(login.getAppKey())) {
+            return null;
+        }
+        return login;
     }
 
     private static boolean matches(AdminConnectionOfflineRequest request, ConnectionEntry entry) {

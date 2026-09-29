@@ -25,6 +25,20 @@ import com.ouyunc.message.http.auth.HttpAuthPrincipal;
 public class AdminConnectionController {
 
     /**
+     * 只查询某个 appKey 或全部 appKey 的有效连接数，不排序、不构造连接详情。
+     */
+    @GetHttpRequest(HttpRequestConstant.HTTP_ADMIN_CONNECTIONS_COUNT_PATH)
+    public HttpResponseResult<AdminConnectionCountResponse> connectionCount(
+            HttpContext httpContext,
+            @RequestParam(value = "appKey", required = false) String appKey) throws HttpPipelineException {
+        HttpAuthPrincipal principal = HttpAdminAuth.requireConnectionRead(httpContext);
+        AdminConnectionCountResponse response = LocalConnectionAdminService.count(appKey);
+        HttpAdminAuth.audit("connections-count", principal, response.node(), "",
+                "ok total=" + response.totalConnections(), null);
+        return HttpResponseResult.success(response);
+    }
+
+    /**
      * 查询某个 appKey 或全部 appKey 的当前有效连接。详情分页返回，租户计数基于完整快照。
      */
     @GetHttpRequest(HttpRequestConstant.HTTP_ADMIN_CONNECTIONS_PATH)

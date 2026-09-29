@@ -41,6 +41,9 @@ public class HttpRequestConstant extends HttpConstant{
     /** 查询本节点当前有效客户端连接。 */
     public static final String HTTP_ADMIN_CONNECTIONS_PATH = HTTP_API_IM_PREFIX + "/admin/connections";
 
+    /** 只统计本节点当前有效连接数，不构造连接详情。 */
+    public static final String HTTP_ADMIN_CONNECTIONS_COUNT_PATH = HTTP_ADMIN_CONNECTIONS_PATH + "/count";
+
     /** 按条件强制关闭本节点客户端连接。 */
     public static final String HTTP_ADMIN_CONNECTIONS_OFFLINE_PATH = HTTP_ADMIN_CONNECTIONS_PATH + "/offline";
 
