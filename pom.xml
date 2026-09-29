@@ -89,6 +89,7 @@
     <bcprov.version>1.78.1</bcprov.version>
     <jjwt.version>0.12.6</jjwt.version>
     <okhttp.version>4.12.0</okhttp.version>
+    <junit.version>5.11.4</junit.version>
   </properties>
 
   <!--依赖-->
@@ -125,6 +126,12 @@
     <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-lang3</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>${junit.version}</version>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
@@ -502,6 +509,11 @@
     <!--设置打包名称-->
     <finalName> ${project.artifactId}-${project.version}_${maven.build.timestamp}</finalName>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.5.2</version>
+      </plugin>
       <!--处理${revision}等占位符，供其他项目可以依赖该模块-->
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
