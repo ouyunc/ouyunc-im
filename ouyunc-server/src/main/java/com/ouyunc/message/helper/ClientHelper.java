@@ -24,7 +24,6 @@ import com.ouyunc.message.cluster.lease.LocalNodeConnCounter;
 import com.ouyunc.message.cluster.lease.NodeLeaseSnapshot;
 import com.ouyunc.message.cluster.lease.SessionNodeState;
 import com.ouyunc.message.context.MessageServerContext;
-import com.ouyunc.message.protocol.NativePacketProtocol;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.EventLoop;
@@ -686,8 +685,6 @@ public class ClientHelper {
         return Target.newBuilder()
                 .appKey(appKey)
                 .targetServerAddress(destNodeId)
-                .protocol(NativePacketProtocol.OUYUNC.getProtocol())
-                .protocolVersion(NativePacketProtocol.OUYUNC.getProtocolVersion())
                 .build();
     }
 
@@ -914,8 +911,6 @@ public class ClientHelper {
                     .targetIdentity(loginClientInfo.getIdentity())
                     .targetServerAddress(loginClientInfo.getLoginServerAddress())
                     .deviceType(loginClientInfo.getDeviceType())
-                    .protocol(loginClientInfo.getProtocol())
-                    .protocolVersion(loginClientInfo.getProtocolVersion())
                     .build();
             MessageHelper.syncSendMessageWithoutInterceptor(notifyPacket, kickTarget);
         } catch (Exception e) {

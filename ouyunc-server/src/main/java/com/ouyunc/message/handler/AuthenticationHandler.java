@@ -350,8 +350,6 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                 .targetIdentity(previous.getIdentity())
                 .targetServerAddress(previous.getLoginServerAddress())
                 .deviceType(previous.getDeviceType())
-                .protocol(previous.getProtocol())
-                .protocolVersion(previous.getProtocolVersion())
                 .build();
         MessageHelper.syncSendMessageWithoutInterceptor(kickPacket, kickTarget);
     }
@@ -392,8 +390,6 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                     .targetIdentity(previous.getIdentity())
                     .targetServerAddress(previous.getLoginServerAddress())
                     .deviceType(previous.getDeviceType())
-                    .protocol(previous.getProtocol())
-                    .protocolVersion(previous.getProtocolVersion())
                     .build();
             MessageHelper.syncSendMessageWithoutInterceptor(kickPacket, kickTarget);
         } catch (Exception e) {
@@ -455,8 +451,6 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                 .targetIdentity(loginClientInfo.getIdentity())
                 .targetServerAddress(loginClientInfo.getLoginServerAddress())
                 .deviceType(loginClientInfo.getDeviceType())
-                .protocol(packet.getProtocol())
-                .protocolVersion(packet.getProtocolVersion())
                 .build());
         if (!LoginTimeoutSupport.cancel(ctx)) {
             log.warn("客户端: {} 登录成功，取消登录超时定时任务失败", loginClientInfo);

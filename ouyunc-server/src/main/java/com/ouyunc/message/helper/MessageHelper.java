@@ -12,7 +12,6 @@ import com.ouyunc.core.intercept.AbstractMessageInterceptor;
 import com.ouyunc.message.cluster.client.pool.MessageClientPool;
 import com.ouyunc.message.cluster.lease.NodeLeaseKeeper;
 import com.ouyunc.message.context.MessageServerContext;
-import com.ouyunc.message.protocol.NativePacketProtocol;
 import com.ouyunc.message.schedule.QosRetryScheduler;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -112,8 +111,6 @@ public class MessageHelper {
             Target envelope = Target.newBuilder()
                     .appKey(metadata.getIngress().getAppKey())
                     .targetServerAddress(nodeId)
-                    .protocol(NativePacketProtocol.OUYUNC.getProtocol())
-                    .protocolVersion(NativePacketProtocol.OUYUNC.getProtocolVersion())
                     .build();
             if (sync) {
                 syncSendMessageWithoutInterceptor(fanout, envelope);
@@ -129,8 +126,6 @@ public class MessageHelper {
                 .targetIdentity(loginClientInfo.getIdentity())
                 .targetServerAddress(loginClientInfo.getLoginServerAddress())
                 .deviceType(loginClientInfo.getDeviceType())
-                .protocol(loginClientInfo.getProtocol())
-                .protocolVersion(loginClientInfo.getProtocolVersion())
                 .build();
     }
 
@@ -282,8 +277,6 @@ public class MessageHelper {
             metadata.ensureClusterRoute().setTarget(Target.newBuilder()
                     .appKey(metadata.getIngress().getAppKey())
                     .targetServerAddress(destServerAddress)
-                    .protocol(NativePacketProtocol.OUYUNC.getProtocol())
-                    .protocolVersion(NativePacketProtocol.OUYUNC.getProtocolVersion())
                     .build());
             return;
         }

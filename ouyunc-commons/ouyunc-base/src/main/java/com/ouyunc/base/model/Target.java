@@ -4,9 +4,12 @@ import java.io.Serial;
 import java.io.Serializable;
 
 /**
- * 消息接收的目标
+ * 消息接收目标，仅描述业务身份与集群落点。
+ *
+ * <p>线协议属于最终建立连接的 Channel 上下文，不属于可跨节点传递的路由数据。
+ * 因此本对象不得保存协议类型或版本，避免源节点携带的过期协议覆盖落地节点的真实连接协议。</p>
  */
-public class Target implements Serializable, Cloneable, Protocol{
+public class Target implements Serializable, Cloneable {
     @Serial
     private static final long serialVersionUID = 1L;
 
@@ -29,10 +32,6 @@ public class Target implements Serializable, Cloneable, Protocol{
      * 接收者当前所使用的的登录设备类型,需要在一开始调用方法的时候设置进来
      */
     private byte deviceType;
-
-    private byte protocol;
-
-    private byte protocolVersion;
 
     public String getAppKey() {
         return appKey;
@@ -66,14 +65,6 @@ public class Target implements Serializable, Cloneable, Protocol{
         this.targetServerAddress = targetServerAddress;
     }
 
-    public void setProtocol(byte protocol) {
-        this.protocol = protocol;
-    }
-
-    public void setProtocolVersion(byte protocolVersion) {
-        this.protocolVersion = protocolVersion;
-    }
-
     private Target() {
     }
 
@@ -89,16 +80,6 @@ public class Target implements Serializable, Cloneable, Protocol{
         } catch (CloneNotSupportedException e) {
             throw new AssertionError();
         }
-    }
-
-    @Override
-    public byte getProtocol() {
-        return protocol;
-    }
-
-    @Override
-    public byte getProtocolVersion() {
-        return protocolVersion;
     }
 
     public static class Builder {
@@ -123,16 +104,6 @@ public class Target implements Serializable, Cloneable, Protocol{
          */
         private byte deviceType;
 
-        /**
-         * 协议类型
-         */
-        private byte protocol;
-
-        /**
-         * 协议版本号
-         */
-        private byte protocolVersion;
-
         public Builder appKey(String appKey) {
             this.appKey = appKey;
             return this;
@@ -156,24 +127,12 @@ public class Target implements Serializable, Cloneable, Protocol{
             return this;
         }
 
-        public Builder protocol(byte protocol) {
-            this.protocol = protocol;
-            return this;
-        }
-
-        public Builder protocolVersion(byte protocolVersion) {
-            this.protocolVersion = protocolVersion;
-            return this;
-        }
-
         public Target build() {
             Target target = new Target();
             target.appKey = this.appKey;
             target.targetIdentity = this.targetIdentity;
             target.targetServerAddress = this.targetServerAddress;
             target.deviceType = this.deviceType;
-            target.protocol = this.protocol;
-            target.protocolVersion = this.protocolVersion;
             return target;
         }
     }
@@ -185,8 +144,6 @@ public class Target implements Serializable, Cloneable, Protocol{
                 ", targetIdentity='" + targetIdentity + '\'' +
                 ", targetServerAddress='" + targetServerAddress + '\'' +
                 ", deviceType=" + deviceType +
-                ", protocol=" + protocol +
-                ", protocolVersion=" + protocolVersion +
                 '}';
     }
 }

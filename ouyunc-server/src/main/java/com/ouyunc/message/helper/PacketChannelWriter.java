@@ -6,6 +6,7 @@ import com.ouyunc.base.constant.enums.SendStatusEnum;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.model.Metadata;
+import com.ouyunc.base.model.Protocol;
 import com.ouyunc.base.model.SendCallback;
 import com.ouyunc.base.model.SendResult;
 import com.ouyunc.base.model.Target;
@@ -15,6 +16,7 @@ import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.schedule.QosRetryScheduler;
 import com.ouyunc.message.convert.PacketConverter;
+import com.ouyunc.message.protocol.NativePacketProtocol;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -104,8 +106,15 @@ public final class PacketChannelWriter {
             }
             return;
         }
+        Protocol protocol = channel.attr(NativePacketProtocol.protocolAttrKey).get();
+        if (protocol == null) {
+            if (publishSendFail) {
+                notifySendFail(packet, "发送消息时，目标 Channel 缺少协议标识", sendCallback);
+            }
+            return;
+        }
         for (PacketConverter<?> packetConverter : MessageServerContext.packetConverterList) {
-            Object msg = packetConverter.convertFromPacket(packet);
+            Object msg = packetConverter.convertFromPacket(protocol, packet);
             if (msg == null) {
                 continue;
             }
@@ -170,8 +179,6 @@ public final class PacketChannelWriter {
                     .targetIdentity(loginClientInfo.getIdentity())
                     .deviceType(loginClientInfo.getDeviceType())
                     .targetServerAddress(serverAddress)
-                    .protocol(loginClientInfo.getProtocol())
-                    .protocolVersion(loginClientInfo.getProtocolVersion())
                     .build();
         }
         if (packet == null || StringUtils.isBlank(messageFrom) || metadata == null) {
@@ -182,8 +189,6 @@ public final class PacketChannelWriter {
                 .targetIdentity(messageFrom)
                 .deviceType(packet.getDeviceType())
                 .targetServerAddress(MessageServerContext.serverProperties().getLocalServerAddress())
-                .protocol(packet.getProtocol())
-                .protocolVersion(packet.getProtocolVersion())
                 .build();
     }
 
@@ -282,14 +287,6 @@ public final class PacketChannelWriter {
         Metadata metadata = packet.getMessage().getMetadata();
         Target existing = metadata.getClusterRoute().getTarget();
         if (existing != null) {
-            // 跨机源节点只掌握轻量 route，不能把缺省或过期协议带到最终写出。
-            // 最终落地节点始终以真实 Channel 上的登录上下文覆盖协议版本。
-            LoginClientInfo localLogin = ChannelAttrUtil.getChannelAttribute(
-                    ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
-            if (localLogin != null) {
-                existing.setProtocol(localLogin.getProtocol());
-                existing.setProtocolVersion(localLogin.getProtocolVersion());
-            }
             return;
         }
         Target target = resolveReplyTarget(ctx, packet, packet.getMessage().getTo());

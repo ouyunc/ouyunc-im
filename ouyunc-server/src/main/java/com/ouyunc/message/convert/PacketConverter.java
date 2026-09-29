@@ -1,5 +1,6 @@
 package com.ouyunc.message.convert;
 
+import com.ouyunc.base.model.Protocol;
 import com.ouyunc.base.packet.Packet;
 import io.netty.channel.ChannelHandlerContext;
 
@@ -15,9 +16,12 @@ public interface PacketConverter<T> {
      */
     Packet convertToPacket(ChannelHandlerContext ctx, Object msg);
 
-    /***
-     * @author fzx
-     * @description 将packet转成业务消息T
+    /**
+     * 按最终目标 Channel 已绑定的权威协议，将内部 Packet 转成线协议对象。
+     *
+     * @param protocol 最终目标 Channel 的协议，禁止从路由 Target 推断
+     * @param packet 内部消息
+     * @return 当前转换器不支持该协议时返回 null
      */
-    T convertFromPacket(Packet packet);
+    T convertFromPacket(Protocol protocol, Packet packet);
 }

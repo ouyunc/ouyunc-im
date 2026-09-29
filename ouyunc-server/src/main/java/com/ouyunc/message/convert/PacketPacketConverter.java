@@ -8,7 +8,6 @@ import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.model.Protocol;
-import com.ouyunc.base.model.Target;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.packet.message.content.LoginContent;
@@ -54,23 +53,19 @@ public enum PacketPacketConverter implements PacketConverter<Packet> {
     }
 
     @Override
-    public Packet convertFromPacket(Packet packet) {
-        if (packet == null || packet.getMessage() == null || packet.getMessage().getMetadata() == null
-                || packet.getMessage().getMetadata().getClusterRoute() == null) {
-            return null;
-        }
-        Target target = packet.getMessage().getMetadata().getClusterRoute().getTarget();
-        if (target == null) {
+    public Packet convertFromPacket(Protocol protocol, Packet packet) {
+        if (protocol == null || packet == null || packet.getMessage() == null
+                || packet.getMessage().getMetadata() == null) {
             return null;
         }
         // 集群节点间：保留元数据
-        if (target.getProtocol() == NativePacketProtocol.OUYUNC.getProtocol()
-                && target.getProtocolVersion() == NativePacketProtocol.OUYUNC.getProtocolVersion()) {
+        if (protocol.getProtocol() == NativePacketProtocol.OUYUNC.getProtocol()
+                && protocol.getProtocolVersion() == NativePacketProtocol.OUYUNC.getProtocolVersion()) {
             return packet;
         }
         // 客户端原生：构造不携带内部元数据的轻量副本，避免泄漏和无效深复制。
-        if (target.getProtocol() == NativePacketProtocol.OUYUNC_CLIENT.getProtocol()
-                && target.getProtocolVersion() == NativePacketProtocol.OUYUNC_CLIENT.getProtocolVersion()) {
+        if (protocol.getProtocol() == NativePacketProtocol.OUYUNC_CLIENT.getProtocol()
+                && protocol.getProtocolVersion() == NativePacketProtocol.OUYUNC_CLIENT.getProtocolVersion()) {
             return packet.copyForExternalDelivery();
         }
         return null;

@@ -331,8 +331,6 @@ public final class QosRetryScheduler {
         metadata.ensureClusterRoute().setTarget(Target.newBuilder()
                 .appKey(content.getAppKey())
                 .targetServerAddress(origin)
-                .protocol(NativePacketProtocol.OUYUNC.getProtocol())
-                .protocolVersion(NativePacketProtocol.OUYUNC.getProtocolVersion())
                 .build());
         Message message = new Message(
                 MessageContext.idGenerator().generateIdStr(),

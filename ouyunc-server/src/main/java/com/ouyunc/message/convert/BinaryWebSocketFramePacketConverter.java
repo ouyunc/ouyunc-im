@@ -7,7 +7,7 @@ import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.model.Metadata;
-import com.ouyunc.base.model.Target;
+import com.ouyunc.base.model.Protocol;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.packet.message.content.LoginContent;
@@ -96,13 +96,13 @@ public enum BinaryWebSocketFramePacketConverter implements PacketConverter<Binar
      * @description 将packet转换成BinaryWebSocketFrame
      */
     @Override
-    public BinaryWebSocketFrame convertFromPacket(Packet packet) {
-        if (packet == null || packet.getMessage() == null || packet.getMessage().getMetadata() == null
-                || packet.getMessage().getMetadata().getClusterRoute() == null) {
+    public BinaryWebSocketFrame convertFromPacket(Protocol protocol, Packet packet) {
+        if (protocol == null || packet == null || packet.getMessage() == null
+                || packet.getMessage().getMetadata() == null) {
             return null;
         }
-        Target target = packet.getMessage().getMetadata().getClusterRoute().getTarget();
-        if (target != null && target.getProtocol() == NativePacketProtocol.WS.getProtocol() && target.getProtocolVersion() == NativePacketProtocol.WS.getProtocolVersion()) {
+        if (protocol.getProtocol() == NativePacketProtocol.WS.getProtocol()
+                && protocol.getProtocolVersion() == NativePacketProtocol.WS.getProtocolVersion()) {
             // 只复制客户端协议字段，不深拷贝随后必然丢弃的内部 Metadata。
             Packet outbound = packet.copyForExternalDelivery();
             ByteBuf byteBuf = ByteBufAllocator.DEFAULT.buffer();
