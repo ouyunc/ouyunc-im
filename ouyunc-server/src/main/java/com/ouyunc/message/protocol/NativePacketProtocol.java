@@ -2,28 +2,34 @@ package com.ouyunc.message.protocol;
 
 
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.constant.enums.ProtocolTypeEnum;
+import com.ouyunc.base.constant.enums.SendStatusEnum;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.model.Protocol;
 import com.ouyunc.base.model.SendCallback;
+import com.ouyunc.base.model.SendResult;
 import com.ouyunc.base.packet.Packet;
-import com.ouyunc.base.utils.ChannelAttrUtil;
-import com.ouyunc.message.cluster.client.pool.MessageClientPool;
+import com.ouyunc.core.listener.event.MessageEvent;
+import com.ouyunc.message.convert.BinaryWebSocketFramePacketConverter;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.handler.*;
-import com.ouyunc.message.helper.PacketChannelWriter;
 import com.ouyunc.message.http.HttpRequestDispatcher;
+import com.ouyunc.message.schedule.QosRetryScheduler;
 import com.ouyunc.message.support.WsHandshakeSupport;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.pool.ChannelPool;
+import io.netty.channel.EventLoop;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.util.AttributeKey;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureListener;
+import io.netty.util.ReferenceCountUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.concurrent.TimeUnit;
 
 /**
  * @Author fzx
@@ -42,6 +48,21 @@ public enum NativePacketProtocol implements PacketProtocol {
             }
             log.error("当前请求不是http 请求,正在关闭channel:{}", ctx.channel().id().asShortText());
         }
+
+        @Override
+        public void doSendMessage(Channel channel, Packet packet, SendCallback sendCallback) {
+            Object frame = null;
+            try {
+                if (packet != null && packet.getMessage() != null) {
+                    frame = BinaryWebSocketFramePacketConverter.INSTANCE.convertFromPacket(this, packet);
+                }
+            } catch (RuntimeException e) {
+                log.error("WebSocket 出站编码失败 packetId={}", packet == null ? null : packet.getPacketId(), e);
+                callback(sendCallback, packet, SendStatusEnum.SEND_FAIL, e);
+                return;
+            }
+            flushSafely(channel, frame, packet, sendCallback);
+        }
     },
 
 
@@ -53,6 +74,11 @@ public enum NativePacketProtocol implements PacketProtocol {
             if (msg instanceof FullHttpRequest request) {
                 HttpRequestDispatcher.getInstance().dispatch(ctx, request);
             }
+        }
+
+        @Override
+        public void doSendMessage(Channel channel, Packet packet, SendCallback sendCallback) {
+            flushSafely(channel, null, packet, sendCallback);
         }
     },
 
@@ -78,57 +104,10 @@ public enum NativePacketProtocol implements PacketProtocol {
             ctx.fireChannelActive();
         }
 
-        /***
-         * @author fzx
-         * @description 重写发送消息逻辑，主要是针对集群内部消息发送
-         */
         @Override
-        public void doSendMessage(Packet packet, String to, SendCallback sendCallback) {
-            // 合并获取连接池
-            // 先从活跃的channelPool缓存中获取，如果没有再从全局的channelPool缓存中获取
-            ChannelPool channelPool = MessageServerContext.clusterActiveServerRegistryTableCache.get(to);
-            if (channelPool == null) {
-                channelPool = MessageServerContext.clusterGlobalServerRegistryTableCache.get(to);
-            }
-            // 判断是否有连接池，如果没有则创建新的连接池
-            if (channelPool == null) {
-                log.warn("有新的服务 {} 加入集群，正在尝试与其确认ack", to);
-                try {
-                    channelPool = MessageClientPool.clientSimpleChannelPoolMap.get(to);
-                }catch (Exception e) {
-                    log.error("通过参数to: {} , 获取/创建channelPool异常， 原因：{}", to, e.getMessage());
-                    throw new MessageException(e);
-                }
-            }
-            final ChannelPool finalChannelPool = channelPool;
-            // 从连接池中获取一个连接
-            Future<Channel> channelFuture = channelPool.acquire();
-            channelFuture.addListener((FutureListener<Channel>) acquireFuture -> {
-                if (acquireFuture.isDone()) {
-                    // 判断是否连接成功
-                    if (acquireFuture.isSuccess()) {
-                        // 获取连接
-                        Channel channel = acquireFuture.getNow();
-                        // 给该通道打上标签(如果该通道channel 上有标签则不需要再打标签),打上标签的目的，是为了以后动态回收该channel,保证核心channel数
-                        Integer channelPoolHashCode = ChannelAttrUtil.getChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_TAG_POOL);
-                        if (channelPoolHashCode == null) {
-                            ChannelAttrUtil.setChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_TAG_POOL, finalChannelPool.hashCode());
-                        }
-                        // 客户端将数据写出到中介管道中；在写完成后再归还 channel
-                        Runnable releaseChannel = () -> finalChannelPool.release(channel);
-                        PacketChannelWriter.runOnEventLoop(channel, packet, sendCallback,
-                                () -> PacketChannelWriter.tryWritePacketAndThen(channel, packet, sendCallback, releaseChannel),
-                                releaseChannel);
-                    } else {
-                        // 获取失败
-                        Throwable e = acquireFuture.cause();
-                        log.error("获取集群中远端channel失败：{}", e.getMessage());
-                        PacketChannelWriter.notifySendFail(packet, e, sendCallback);
-                    }
-                }
-            });
+        public void doSendMessage(Channel channel, Packet packet, SendCallback sendCallback) {
+            flushSafely(channel, packet, packet, sendCallback);
         }
-
     },
 
     /**
@@ -147,6 +126,21 @@ public enum NativePacketProtocol implements PacketProtocol {
                     .remove(MessageConstant.PACKET_DISPATCHER_HANDLER);
             installAuth(ctx.pipeline());
             ctx.fireChannelActive();
+        }
+
+        @Override
+        public void doSendMessage(Channel channel, Packet packet, SendCallback sendCallback) {
+            Object frame = null;
+            try {
+                if (packet != null && packet.getMessage() != null) {
+                    frame = packet.copyForExternalDelivery();
+                }
+            } catch (RuntimeException e) {
+                log.error("客户端协议出站编码失败 packetId={}", packet == null ? null : packet.getPacketId(), e);
+                callback(sendCallback, packet, SendStatusEnum.SEND_FAIL, e);
+                return;
+            }
+            flushSafely(channel, frame, packet, sendCallback);
         }
     }
 
@@ -237,32 +231,149 @@ public enum NativePacketProtocol implements PacketProtocol {
     public void doDispatcher(ChannelHandlerContext ctx,  Object msg) {
         throw new MessageException("请完善对应协议分发器, channelId=" + ctx.channel().id().asShortText());
     }
-    /**
-     * @param packet       消息包
-     * @param to           接受者,组合唯一值
-     * @param sendCallback 这个发送的回调，针对成功来说，只是理论上的成功，因为writeAndFlush 本身就是异步的，加上网络的不稳定性，很难严格意义上的判断发送成功
-     * @return void
-     * @Author fzx
-     * @Description
-     */
+
     @Override
-    public void doSendMessage(Packet packet, String to, SendCallback sendCallback) {
+    public void doSendMessage(Channel channel, Packet packet, SendCallback sendCallback) {
+        flushSafely(channel, null, packet, sendCallback);
+    }
+
+    /** 编码异常也回调失败，调用方据此归还集群连接。 */
+    private static void flushSafely(Channel channel, Object msg, Packet packet, SendCallback sendCallback) {
         try {
-            //从用户注册表中，获取用户对应的channel然后将消息写出去
-            ChannelHandlerContext ctx = MessageServerContext.localLoginClientRegisterTable.get(to);
-            if (ctx == null) {
-                // 注意：如果走到了这里，可能是客户端注销了，qos 在重试，找不到ctx
-                log.error("发送消息时，ctx 不存在； 请检查客户端 {} 是否登录", to);
-                PacketChannelWriter.notifySendFail(packet, "发送消息时，ctx 不存在； 请检查客户端是否登录", sendCallback);
-                return;
-            }
-            Channel channel = ctx.channel();
-            PacketChannelWriter.writeConverted(channel, packet, sendCallback);
-        } catch (Exception e) {
-            log.error("消息packet: {} 发送给用户: {} 失败!", packet, to);
-            // 消息丢失
-            PacketChannelWriter.notifySendFail(packet, e, sendCallback);
+            flush(channel, msg, packet, sendCallback);
+        } catch (RuntimeException e) {
+            log.error("发送消息时，协议写出失败 packetId={}", packet == null ? null : packet.getPacketId(), e);
+            ReferenceCountUtil.release(msg);
+            callback(sendCallback, packet, SendStatusEnum.SEND_FAIL, e);
         }
     }
-    
+
+    /** 各协议编出帧之后共用的写出：EventLoop、水位重试。成败只走回调。 */
+    private static void flush(Channel channel, Object msg, Packet packet, SendCallback sendCallback) {
+        if (channel == null || !channel.isActive()) {
+            callback(sendCallback, packet, SendStatusEnum.SEND_FAIL, new MessageException(describeUnwritable(channel)));
+            return;
+        }
+        if (msg == null) {
+            callback(sendCallback, packet, SendStatusEnum.SEND_FAIL, new MessageException("发送消息时，当前协议无法编码该包"));
+            return;
+        }
+        runOnEventLoop(channel, packet, sendCallback,
+                () -> writeOrRelease(channel, msg, packet, sendCallback, 0),
+                () -> ReferenceCountUtil.release(msg));
+    }
+
+    private static void writeOrRelease(Channel channel, Object msg, Packet packet, SendCallback sendCallback, int attempt) {
+        if (channel == null || !channel.isActive()) {
+            ReferenceCountUtil.release(msg);
+            callback(sendCallback, packet, SendStatusEnum.SEND_FAIL, new MessageException(describeUnwritable(channel)));
+            return;
+        }
+        if (!channel.isWritable()) {
+            scheduleWritableRetry(channel, packet, sendCallback, attempt,
+                    () -> writeOrRelease(channel, msg, packet, sendCallback, attempt + 1),
+                    () -> ReferenceCountUtil.release(msg));
+            return;
+        }
+        channel.writeAndFlush(msg).addListener((ChannelFutureListener) f -> {
+            if (f.isSuccess()) {
+                QosRetryScheduler.rememberOutbound(packet);
+                callback(sendCallback, packet, SendStatusEnum.SEND_OK, null);
+            } else {
+                callback(sendCallback, packet, SendStatusEnum.SEND_FAIL, f.cause());
+            }
+        });
+    }
+
+    private static void callback(SendCallback sendCallback, Packet packet, SendStatusEnum status, Throwable cause) {
+        if (sendCallback == null) {
+            return;
+        }
+        sendCallback.onCallback(SendResult.builder()
+                .sendStatus(status)
+                .packet(packet)
+                .exception(cause)
+                .build());
+    }
+
+    public static void notifySendFail(Packet packet, Throwable cause, SendCallback sendCallback) {
+        SendResult sendResult = SendResult.builder()
+                .sendStatus(SendStatusEnum.SEND_FAIL)
+                .packet(packet)
+                .exception(cause)
+                .build();
+        if (sendCallback != null) {
+            sendCallback.onCallback(sendResult);
+        }
+        MessageServerContext.publishEvent(new MessageEvent(sendResult, MessageEventTypeEnum.SEND_FAIL), true);
+    }
+
+    public static void notifySendFail(Packet packet, String message, SendCallback sendCallback) {
+        notifySendFail(packet, new MessageException(message), sendCallback);
+    }
+
+    private static void runOnEventLoop(Channel channel, Packet packet, SendCallback sendCallback,
+                                       Runnable task, Runnable onLoopDead) {
+        EventLoop eventLoop = channel.eventLoop();
+        if (eventLoop.inEventLoop()) {
+            task.run();
+            return;
+        }
+        if (!eventLoop.isTerminated() && !eventLoop.isShutdown() && !eventLoop.isShuttingDown()) {
+            eventLoop.execute(task);
+            return;
+        }
+        if (onLoopDead != null) {
+            onLoopDead.run();
+        }
+        log.error("发送消息时，channel.eventLoop 被终止或关闭； channelId: {}", channel.id().asShortText());
+        callback(sendCallback, packet, SendStatusEnum.SEND_FAIL,
+                new MessageException("发送消息时，channel.eventLoop 被终止或关闭！"));
+    }
+
+    private static void scheduleWritableRetry(Channel channel, Packet packet, SendCallback sendCallback, int attempt,
+                                              Runnable retryAction, Runnable onGiveUp) {
+        if (attempt >= MessageConstant.CHANNEL_WRITE_RETRY_MAX_ATTEMPTS) {
+            log.warn("channel 不可写重试耗尽 channelId={} attempts={} packetId={}",
+                    channel != null ? channel.id().asShortText() : "null",
+                    attempt,
+                    packet != null ? packet.getPacketId() : -1L);
+            if (onGiveUp != null) {
+                onGiveUp.run();
+            }
+            callback(sendCallback, packet, SendStatusEnum.SEND_FAIL, new MessageException(describeUnwritable(channel)));
+            return;
+        }
+        EventLoop eventLoop = channel.eventLoop();
+        if (eventLoop.isTerminated() || eventLoop.isShutdown() || eventLoop.isShuttingDown()) {
+            if (onGiveUp != null) {
+                onGiveUp.run();
+            }
+            callback(sendCallback, packet, SendStatusEnum.SEND_FAIL,
+                    new MessageException("发送消息时，channel.eventLoop 被终止或关闭！"));
+            return;
+        }
+        long delayMs = MessageConstant.CHANNEL_WRITE_RETRY_BASE_DELAY_MS * (attempt + 1L);
+        eventLoop.schedule(() -> {
+            if (!channel.isActive()) {
+                if (onGiveUp != null) {
+                    onGiveUp.run();
+                }
+                callback(sendCallback, packet, SendStatusEnum.SEND_FAIL, new MessageException(describeUnwritable(channel)));
+                return;
+            }
+            retryAction.run();
+        }, delayMs, TimeUnit.MILLISECONDS);
+    }
+
+    private static String describeUnwritable(Channel channel) {
+        if (channel == null) {
+            return "channel 为空，无法写入";
+        }
+        if (!channel.isActive()) {
+            return "channel 未激活，无法写入";
+        }
+        return "channel 当前不可写（重试耗尽）";
+    }
+
 }

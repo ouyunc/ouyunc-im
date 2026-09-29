@@ -8,6 +8,7 @@ import com.ouyunc.core.codec.PacketCodec;
 import com.ouyunc.message.cluster.auth.ClusterAuthentication;
 import com.ouyunc.message.cluster.auth.ClusterAuthConstant;
 import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.message.protocol.NativePacketProtocol;
 import com.ouyunc.message.properties.MessageServerProperties;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -38,6 +39,7 @@ public class MessageClientChannelPoolHandler extends AbstractChannelPoolHandler 
      */
     @Override
     public void channelCreated(Channel channel) throws Exception {
+        channel.attr(NativePacketProtocol.protocolAttrKey).set(NativePacketProtocol.OUYUNC);
         ChannelPipeline pipeline = channel.pipeline();
         if (MessageServerContext.serverProperties().isSslEnable()) {
             // 这个处理器需要放到第一位

@@ -12,6 +12,7 @@ import com.ouyunc.message.cluster.auth.ClusterChannelGuard;
 import com.ouyunc.message.cluster.client.pool.MessageClientPool;
 import com.ouyunc.message.cluster.lease.NodeLeaseKeeper;
 import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.message.helper.MessageSender;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,8 +60,7 @@ public final class SynAckMessageBiProcessor extends AbstractMessageBiProcessor<B
         synAckMessage.setTo(remoteServerAddress);
         synAckMessage.setCreateTime(TimeUtil.currentTimeMillis());
         packet.setPacketId(MessageContext.idGenerator().generateId());
-        MessageServerContext.findProtocol(packet.getProtocol(), packet.getProtocolVersion())
-                .doSendMessage(packet, remoteServerAddress, sendResult -> {});
+        MessageSender.sendClusterProbe(packet, remoteServerAddress, sendResult -> { });
     }
 
     private static void discoverPeerIfNeeded(String remoteServerAddress) {

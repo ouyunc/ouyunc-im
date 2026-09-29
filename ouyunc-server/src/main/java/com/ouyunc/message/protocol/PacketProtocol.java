@@ -3,6 +3,7 @@ package com.ouyunc.message.protocol;
 import com.ouyunc.base.model.Protocol;
 import com.ouyunc.base.model.SendCallback;
 import com.ouyunc.base.packet.Packet;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 
 /**
@@ -22,11 +23,8 @@ public interface PacketProtocol extends Protocol {
     void doDispatcher(ChannelHandlerContext ctx, Object msg);
 
     /**
-     * @Author fzx
-     * @Description
-     * @param packet 消息包
-     * @param to 接受者
-     * @param sendCallback 这个发送的回调，针对成功来说，只是理论上的成功，因为writeAndFlush 本身就是异步的，加上网络的不稳定性，很难严格意义上的判断发送成功
+     * 在已经选定的 Channel 上按本协议写出。不查登录表，不做集群选路。
+     * 成败只通过 {@code sendCallback} 交回调用方。
      */
-    void doSendMessage(Packet packet, String to, SendCallback sendCallback);
+    void doSendMessage(Channel channel, Packet packet, SendCallback sendCallback);
 }

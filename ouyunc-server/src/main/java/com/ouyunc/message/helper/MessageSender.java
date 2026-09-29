@@ -2,6 +2,7 @@ package com.ouyunc.message.helper;
 
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.ClusterForwardModeEnum;
+import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.constant.enums.SendStatusEnum;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.model.Metadata;
@@ -12,9 +13,12 @@ import com.ouyunc.base.packet.PacketCopyHelper;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.core.intercept.AbstractMessageInterceptor;
+import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.message.cluster.client.pool.MessageClientPool;
+import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.message.cluster.lease.NodeLeaseKeeper;
 import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.message.protocol.NativePacketProtocol;
 import com.ouyunc.message.schedule.QosRetryScheduler;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -30,9 +34,8 @@ import java.util.*;
 
 /**
  * @Author fzx
- * 客户端目标投递、集群内部控制包、当前连接控制响应。
- * 已知 Channel 上的协议转换与写出见 {@link PacketChannelWriter}，业务 Processor 不直接调用它。
- * {@code send} 表示提交到发送链路；最终 {@code writeAndFlush} 由 Netty 异步完成，调用方不选择同步或异步。
+ * 发送只有这里一个出口：决定连接之后，调用该 Channel 绑定的 {@link NativePacketProtocol#doSendMessage}。
+ * {@code send} 表示提交到发送链路；最终 writeAndFlush 由 Netty 异步完成。
  **/
 public class MessageSender {
 
@@ -94,20 +97,98 @@ public class MessageSender {
     }
 
     public static void sendControl(ChannelHandlerContext ctx, Packet packet, SendCallback sendCallback) {
-        PacketChannelWriter.sendOnChannel(ctx, packet, sendCallback == null ? sendResult -> { } : sendCallback);
+        writeOnChannel(ctx, packet, sendCallback == null ? sendResult -> { } : sendCallback, true);
     }
 
     /** 控制响应尽力写出：失败不发布 SEND_FAIL，供受理回执和本机扇出使用。 */
     public static void sendControlQuiet(ChannelHandlerContext ctx, Packet packet) {
-        PacketChannelWriter.sendOnChannelBestEffort(ctx, packet);
+        writeOnChannel(ctx, packet, sendResult -> { }, false);
     }
 
     public static boolean isChannelSendable(ChannelHandlerContext ctx) {
-        return PacketChannelWriter.isSendable(ctx);
+        return ctx != null && ctx.channel() != null && ctx.channel().isActive() && ctx.channel().isWritable();
     }
 
     public static Target resolveReplyTarget(ChannelHandlerContext ctx, Packet packet, String messageFrom) {
-        return PacketChannelWriter.resolveReplyTarget(ctx, packet, messageFrom);
+        Metadata metadata = packet != null && packet.getMessage() != null ? packet.getMessage().getMetadata() : null;
+        LoginClientInfo loginClientInfo = ctx != null
+                ? ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN)
+                : null;
+        if (loginClientInfo != null && StringUtils.isNotBlank(loginClientInfo.getIdentity())) {
+            String appKey = StringUtils.isNotBlank(loginClientInfo.getAppKey())
+                    ? loginClientInfo.getAppKey()
+                    : (metadata != null ? metadata.getIngress().getAppKey() : null);
+            String serverAddress = StringUtils.isNotBlank(loginClientInfo.getLoginServerAddress())
+                    ? loginClientInfo.getLoginServerAddress()
+                    : MessageServerContext.serverProperties().getLocalServerAddress();
+            return Target.newBuilder()
+                    .appKey(appKey)
+                    .targetIdentity(loginClientInfo.getIdentity())
+                    .deviceType(loginClientInfo.getDeviceType())
+                    .targetServerAddress(serverAddress)
+                    .build();
+        }
+        if (packet == null || StringUtils.isBlank(messageFrom) || metadata == null) {
+            return null;
+        }
+        return Target.newBuilder()
+                .appKey(metadata.getIngress().getAppKey())
+                .targetIdentity(messageFrom)
+                .deviceType(packet.getDeviceType())
+                .targetServerAddress(MessageServerContext.serverProperties().getLocalServerAddress())
+                .build();
+    }
+
+    private static void writeOnChannel(ChannelHandlerContext ctx, Packet packet, SendCallback sendCallback,
+                                       boolean publishSendFail) {
+        if (ctx == null || ctx.channel() == null || !ctx.channel().isActive()) {
+            if (publishSendFail) {
+                notifySendFail(packet, "发送消息时，入站 ctx 不可用或未激活", sendCallback);
+            }
+            return;
+        }
+        ensureOutboundTarget(ctx, packet);
+        if (!(ctx.channel().attr(NativePacketProtocol.protocolAttrKey).get() instanceof NativePacketProtocol protocol)) {
+            if (publishSendFail) {
+                notifySendFail(packet, "发送消息时，目标 Channel 缺少协议标识", sendCallback);
+            }
+            return;
+        }
+        protocol.doSendMessage(ctx.channel(), packet, finish(sendCallback, publishSendFail, null));
+    }
+
+    /**
+     * 协议只回调成败。是否发布 SEND_FAIL、写完后是否归还集群连接，由这里决定。
+     */
+    private static SendCallback finish(SendCallback delegate, boolean publishSendFail, Runnable afterComplete) {
+        return result -> {
+            try {
+                if (publishSendFail && result != null && result.getSendStatus() == SendStatusEnum.SEND_FAIL) {
+                    MessageServerContext.publishEvent(new MessageEvent(result, MessageEventTypeEnum.SEND_FAIL), true);
+                }
+                if (delegate != null) {
+                    delegate.onCallback(result);
+                }
+            } finally {
+                if (afterComplete != null) {
+                    afterComplete.run();
+                }
+            }
+        };
+    }
+
+    private static void ensureOutboundTarget(ChannelHandlerContext ctx, Packet packet) {
+        if (packet == null || packet.getMessage() == null || packet.getMessage().getMetadata() == null) {
+            return;
+        }
+        Metadata metadata = packet.getMessage().getMetadata();
+        if (metadata.getClusterRoute().getTarget() != null) {
+            return;
+        }
+        Target target = resolveReplyTarget(ctx, packet, packet.getMessage().getTo());
+        if (target != null) {
+            metadata.ensureClusterRoute().setTarget(target);
+        }
     }
 
     /**
@@ -142,6 +223,30 @@ public class MessageSender {
 
     public static void sendClusterInternal(Packet packet, String destServerAddress, SendCallback sendCallback) {
         doSendClusterInternal(packet, destServerAddress, sendCallback);
+    }
+
+    /**
+     * 集群心跳探测与 ACK 回写。允许使用尚未进入 active 的连接池，失败不回溯下一跳，也不改包上的路由。
+     */
+    public static void sendClusterProbe(Packet packet, String serverAddress, SendCallback sendCallback) {
+        if (packet == null || StringUtils.isBlank(serverAddress)) {
+            notifySendFail(packet, "集群探测缺少目标节点", sendCallback);
+            return;
+        }
+        ChannelPool channelPool = MessageServerContext.clusterActiveServerRegistryTableCache.get(serverAddress);
+        if (channelPool == null) {
+            channelPool = MessageServerContext.clusterGlobalServerRegistryTableCache.get(serverAddress);
+        }
+        if (channelPool == null) {
+            log.warn("有新的服务 {} 加入集群，正在尝试与其确认ack", serverAddress);
+            try {
+                channelPool = MessageClientPool.clientSimpleChannelPoolMap.get(serverAddress);
+            } catch (Exception e) {
+                log.error("通过参数to: {} , 获取/创建channelPool异常， 原因：{}", serverAddress, e.getMessage());
+                throw new MessageException(e);
+            }
+        }
+        writeViaClusterPool(packet, channelPool, serverAddress, sendCallback, false);
     }
 
 
@@ -245,7 +350,7 @@ public class MessageSender {
         }
         ChannelPool destPool = resolveClusterChannelPool(destServerAddress);
         if (destPool != null) {
-            writeViaClusterPool(packet, destPool, destServerAddress, sendCallback);
+            writeViaClusterPool(packet, destPool, destServerAddress, sendCallback, true);
             return;
         }
         log.warn("集群内部控制包直连不到 {}，尝试下一跳 type={}", destServerAddress, packet.getMessageType());
@@ -314,7 +419,7 @@ public class MessageSender {
         }
         ChannelPool destPool = resolveClusterChannelPool(destServerAddress);
         if (destPool != null) {
-            writeViaClusterPool(packet, destPool, destServerAddress, sendCallback);
+            writeViaClusterPool(packet, destPool, destServerAddress, sendCallback, true);
             return;
         }
         log.warn("获取不到消息需要到达的服务: {}，尝试经其他节点中转，最终 dest 不变", destServerAddress);
@@ -346,7 +451,7 @@ public class MessageSender {
         // 写出用副本，避免 ensureOutboundTarget 或后续编码改到调用方持有的 Packet。
         // 协议仍从本机 Channel 读取，不使用副本上的旧协议字段。
         Packet outbound = PacketCopyHelper.copyForDelivery(packet, target);
-        PacketChannelWriter.sendOnChannel(ctx, outbound, wrapRemoteLoginClose(outbound, target, sendCallback));
+        writeOnChannel(ctx, outbound, wrapRemoteLoginClose(outbound, target, sendCallback), true);
     }
 
     private static boolean hasLocalActiveConnection(Target target) {
@@ -356,7 +461,7 @@ public class MessageSender {
         String combo = IdentityUtil.generalComboIdentity(
                 target.getAppKey(), target.getTargetIdentity(), target.getDeviceType());
         ChannelHandlerContext ctx = MessageServerContext.localLoginClientRegisterTable.get(combo);
-        return PacketChannelWriter.isSendable(ctx);
+        return isChannelSendable(ctx);
     }
 
     /**
@@ -418,21 +523,25 @@ public class MessageSender {
             relayViaNextHop(packet, nextHop, sendCallback);
             return;
         }
-        writeViaClusterPool(packet, hopPool, nextHop, sendCallback);
+        writeViaClusterPool(packet, hopPool, nextHop, sendCallback, true);
     }
 
     /**
      * 经 hop 的集群连接写出；acquire 失败则对该 hop 再回溯，不改 Target.targetServerAddress。
      */
     private static void writeViaClusterPool(Packet packet, ChannelPool channelPool,
-                                            String hopServerAddress, SendCallback sendCallback) {
+                                            String hopServerAddress, SendCallback sendCallback,
+                                            boolean relayOnFailure) {
         Future<Channel> channelFuture = channelPool.acquire();
         if (channelFuture == null) {
             log.warn("获取不到消息需要到达的服务连接: {}", hopServerAddress);
-            relayViaNextHop(packet, hopServerAddress, sendCallback);
+            if (relayOnFailure) {
+                relayViaNextHop(packet, hopServerAddress, sendCallback);
+            } else {
+                notifySendFail(packet, "获取不到集群连接: " + hopServerAddress, sendCallback);
+            }
             return;
         }
-        Metadata metadata = packet.getMessage().getMetadata();
         channelFuture.addListener((FutureListener<Channel>) acquireFuture -> {
             if (!acquireFuture.isDone()) {
                 log.error("发送消息时，获取channel异常！");
@@ -440,8 +549,12 @@ public class MessageSender {
             }
             if (!acquireFuture.isSuccess()) {
                 Throwable cause = acquireFuture.cause();
-                log.warn("客户端获取channel异常！原因: {}", cause == null ? "" : cause.getMessage());
-                relayViaNextHop(packet, hopServerAddress, sendCallback);
+                log.warn("获取集群 channel 失败: {}", cause == null ? "" : cause.getMessage());
+                if (relayOnFailure) {
+                    relayViaNextHop(packet, hopServerAddress, sendCallback);
+                } else {
+                    notifySendFail(packet, cause == null ? new MessageException("获取集群 channel 失败") : cause, sendCallback);
+                }
                 return;
             }
             Channel channel = acquireFuture.getNow();
@@ -454,20 +567,26 @@ public class MessageSender {
             if (channelPoolHashCode == null) {
                 ChannelAttrUtil.setChannelAttribute(channel, MessageConstant.CHANNEL_ATTR_KEY_TAG_POOL, channelPool.hashCode());
             }
-            metadata.ensureClusterRoute().setFromServerAddress(MessageServerContext.serverProperties().getLocalServerAddress());
+            if (relayOnFailure && packet.getMessage() != null && packet.getMessage().getMetadata() != null) {
+                packet.getMessage().getMetadata().ensureClusterRoute()
+                        .setFromServerAddress(MessageServerContext.serverProperties().getLocalServerAddress());
+            }
             Runnable releaseChannel = () -> channelPool.release(channel);
-            PacketChannelWriter.runOnEventLoop(channel, packet, sendCallback,
-                    () -> PacketChannelWriter.tryWritePacketAndThen(channel, packet, sendCallback, releaseChannel),
-                    releaseChannel);
+            if (!(channel.attr(NativePacketProtocol.protocolAttrKey).get() instanceof NativePacketProtocol protocol)) {
+                notifySendFail(packet, "发送消息时，目标 Channel 缺少协议标识", sendCallback);
+                releaseChannel.run();
+                return;
+            }
+            protocol.doSendMessage(channel, packet, finish(sendCallback, true, releaseChannel));
         });
     }
 
     private static void notifySendFail(Packet packet, Throwable cause, SendCallback sendCallback) {
-        PacketChannelWriter.notifySendFail(packet, cause, sendCallback);
+        NativePacketProtocol.notifySendFail(packet, cause, sendCallback);
     }
 
     private static void notifySendFail(Packet packet, String message, SendCallback sendCallback) {
-        PacketChannelWriter.notifySendFail(packet, message, sendCallback);
+        NativePacketProtocol.notifySendFail(packet, message, sendCallback);
     }
 
 }
