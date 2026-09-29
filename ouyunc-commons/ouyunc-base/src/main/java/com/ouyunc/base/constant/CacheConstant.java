@@ -39,17 +39,17 @@ public class CacheConstant {
     /***
      * appKey 下的identity 的 客户端信息
      */
-    private static final String CLIENT_INFO = "client:";
+    private static final String CLIENT_INFO = "client";
 
     /***
      * 消息缓存公共前缀
      */
-    private static final String MESSAGE = "msg:";
+    private static final String MESSAGE = "msg";
 
     /**
-     * 消息撤回单调标记，与 {@code msg:} 同槽；只增不减。
+     * 消息撤回单调标记，与 {@code msg} 同槽；只增不减。
      */
-    private static final String MESSAGE_WITHDRAWN = "msg-withdrawn:";
+    private static final String MESSAGE_WITHDRAWN = "msg-withdrawn";
 
     /***
      * 会话已读消息偏移量缓存公共前缀
@@ -83,21 +83,21 @@ public class CacheConstant {
     /***
      * 用户
      */
-    private static final String USER = "user:";
+    private static final String USER = "user";
 
     /***
      * 群组绑定的用户
      */
-    private static final String GROUP_USERS = "group-members:";
+    private static final String GROUP_USERS = "group-members";
 
     /**
-     * 群成员 ZSET 完整性标记，与 {@code group-members:} 同槽；禁止把哨兵写进 ZSET member。
+     * 群成员 ZSET 完整性标记，与 {@code group-members} 同槽；禁止把哨兵写进 ZSET member。
      * 值为成员数，须与 ZCARD 一致；不一致则删标记并回源。
      */
-    private static final String GROUP_USERS_INIT = "group-members-init:";
+    private static final String GROUP_USERS_INIT = "group-members-init";
 
     /** 群成员关系版本（回源 CAS） */
-    private static final String GROUP_RELATION_VERSION = "group-relation-ver:";
+    private static final String GROUP_RELATION_VERSION = "group-relation-ver";
 
     /***
      * 群成员的信息配置
@@ -105,57 +105,57 @@ public class CacheConstant {
     private static final String GROUP_USERS_CONFIG = "group-member-cfg:";
 
     /**
-     * 群成员屏蔽索引 Hash（field=memberId）。完整性用旁边的 {@code group-shield-init:} STRING，不往 Hash 里塞哨兵。
+     * 群成员屏蔽索引 Hash（field=memberId）。完整性用旁边的 {@code group-shield-init} STRING，不往 Hash 里塞哨兵。
      */
-    private static final String GROUP_USERS_SHIELD = "group-shield:";
+    private static final String GROUP_USERS_SHIELD = "group-shield";
 
-    /** 群屏蔽索引完整性标记，与 group-shield: 同槽 */
-    private static final String GROUP_USERS_SHIELD_INIT = "group-shield-init:";
+    /** 群屏蔽索引完整性标记，与 group-shield 同槽 */
+    private static final String GROUP_USERS_SHIELD_INIT = "group-shield-init";
 
     /***
      * 好友列表
      */
-    private static final String FRIENDS = "friends:";
+    private static final String FRIENDS = "friends";
 
     /**
-     * 好友 ZSET 与库一致的标记，与 {@code friends:} 同槽；禁止把哨兵写进 ZSET member。
+     * 好友 ZSET 与库一致的标记，与 {@code friends} 同槽；禁止把哨兵写进 ZSET member。
      * 值为名单基数（完整为正、截断为负），须与 ZCARD 一致。
      */
-    private static final String FRIENDS_INIT = "friends-init:";
+    private static final String FRIENDS_INIT = "friends-init";
 
-    /** 好友关系版本（回源 CAS），与 friends:/friends-init: 同槽 */
-    private static final String FRIENDS_RELATION_VERSION = "friends-relation-ver:";
+    /** 好友关系版本（回源 CAS），与 friends/friends-init 同槽 */
+    private static final String FRIENDS_RELATION_VERSION = "friends-relation-ver";
 
     /***
      * 配置， 我的好友信息的配置
      */
-    private static final String FRIENDS_CONFIG = "friend-cfg:";
+    private static final String FRIENDS_CONFIG = "friend-cfg";
 
     /***
      * 用户-群列表
      */
-    private static final String GROUPS = "groups:";
+    private static final String GROUPS = "groups";
 
     /**
      * 用户已加入群 ZSET 完整性标记，与 {@code groups:} 同槽。
      */
-    private static final String USER_GROUPS_INIT = "groups-init:";
+    private static final String USER_GROUPS_INIT = "groups-init";
 
-    /** 用户加群关系版本（回源 CAS），与 groups:/groups-init: 同槽 {@code {appKey:userId}} */
-    private static final String USER_GROUPS_RELATION_VERSION = "groups-relation-ver:";
+    /** 用户加群关系版本（回源 CAS），与 groups/groups-init 同槽 {@code {appKey:userId}} */
+    private static final String USER_GROUPS_RELATION_VERSION = "groups-relation-ver";
 
     /***
      * 群
      */
-    private static final String GROUP = "group:";
+    private static final String GROUP = "group";
 
     /***
-     * 黑名单 Hash（field=被拉黑人）。完整性用旁边的 {@code blacklist-init:} STRING。
+     * 黑名单 Hash（field=被拉黑人）。完整性用旁边的 {@code blacklist-init} STRING。
      */
-    private static final String BLACKLIST = "blacklist:";
+    private static final String BLACKLIST = "blacklist";
 
-    /** 黑名单 Hash 完整性标记，与 blacklist: 同槽 */
-    private static final String BLACKLIST_INIT = "blacklist-init:";
+    /** 黑名单 Hash 完整性标记，与 blacklist 同槽 */
+    private static final String BLACKLIST_INIT = "blacklist-init";
 
     /**
      * 关系名单回源临时 ZSET 后缀，必须接在已含 hash tag 的 zset key 后以同槽。
@@ -170,7 +170,7 @@ public class CacheConstant {
     /***
      * http push 幂等
      */
-    private static final String HTTP_PUSH_IDEM = ":http-push:idem:";
+    private static final String HTTP_PUSH_IDEM = "http-push:idem";
 
     /***
      * QoS 幂等 pkt
@@ -185,44 +185,44 @@ public class CacheConstant {
     /***
      * 会话
      */
-    private static final String SESSION = "session:";
+    private static final String SESSION = "session";
 
     /***
      * 聊天会话
      */
-    private static final String CHAT_SESSION = "chat-session:";
+    private static final String CHAT_SESSION = "chat-session";
 
     /***
      * 好友请求
      */
-    private static final String FRIEND_REQUEST = "friend-req:";
+    private static final String FRIEND_REQUEST = "friend-req";
 
     /***
      * 正在处理中的好友请求会话标识
      */
-    private static final String FRIEND_REQUEST_SESSION = "friend-req-session:";
+    private static final String FRIEND_REQUEST_SESSION = "friend-req-session";
 
     /**
      * 外渠任务 Hash：field={@code recipientId|channel}，值 P=待确认、C=已确认。
      * 身份是 appKey + canonical packetId + 收件人 + 渠道，避免同租户 messageId 互相清除。
      */
-    private static final String EXTERNAL_DELIVERY_TASK = "ext-task:";
+    private static final String EXTERNAL_DELIVERY_TASK = "ext-task";
 
     /** 首次扇出已完成。重复请求看到该键后不再广播。 */
-    private static final String DELIVERY_DONE = "delivery-done:";
+    private static final String DELIVERY_DONE = "delivery-done";
 
     /** 首次扇出进行中的 owner 锁，崩溃后靠 TTL 释放。 */
-    private static final String DELIVERY_RUN = "delivery-run:";
+    private static final String DELIVERY_RUN = "delivery-run";
 
     /***
      * 正在处理中的群请求会话标识
      */
-    private static final String GROUP_REQUEST_SESSION = "group-req-session:";
+    private static final String GROUP_REQUEST_SESSION = "group-req-session";
 
     /***
      * 群请求
      */
-    private static final String GROUP_REQUEST = "group-req:";
+    private static final String GROUP_REQUEST = "group-req";
 
     /***
      * 设备 类型device-type
@@ -300,7 +300,7 @@ public class CacheConstant {
      * 审批处理权：{@code appKey + requestSessionId}，不含用户设备。手机和 PC 必须抢同一把状态。
      */
     public static String buildApprovalProgressCacheKey(String appKey, String requestSessionId) {
-        return OUYUNC + LOCK + withAggregateHashTag(appKey, requestSessionId) + COLON + "approval:";
+        return OUYUNC + LOCK + withAggregateHashTag(appKey, requestSessionId) + COLON + "approval";
     }
 
     /**
@@ -502,7 +502,7 @@ public class CacheConstant {
     }
 
     /**
-     * 好友关系版本：与 friends:/friends-init: 同 {@code {appKey:identity}} 槽。
+     * 好友关系版本：与 friends/friends-init 同 {@code {appKey:identity}} 槽。
      */
     public static String buildFriendsRelationVersionCacheKey(String appKey, String identity) {
         return buildAggregateCacheKey(appKey, identity) + FRIENDS_RELATION_VERSION;
@@ -531,7 +531,7 @@ public class CacheConstant {
     }
 
     /**
-     * 用户加群关系版本：与 groups:/groups-init: 同 {@code {appKey:userId}} 槽。
+     * 用户加群关系版本：与 groups/groups-init 同 {@code {appKey:userId}} 槽。
      */
     public static String buildUserGroupsRelationVersionCacheKey(String appKey, String userId) {
         return buildAggregateCacheKey(appKey, userId) + USER_GROUPS_RELATION_VERSION;
@@ -599,7 +599,7 @@ public class CacheConstant {
      * 好友请求会话：槽按业务 sessionId
      */
     public static String buildFriendRequestSessionCacheKey(String appKey, String sessionId, String friendRequestSessionId) {
-        return buildAggregateCacheKey(appKey, sessionId) + FRIEND_REQUEST + SESSION
+        return buildAggregateCacheKey(appKey, sessionId) + FRIEND_REQUEST + COLON + SESSION
                 + COLON + stripHashTagChars(friendRequestSessionId);
     }
 
@@ -648,7 +648,7 @@ public class CacheConstant {
      * 群请求会话：槽按 joiner
      */
     public static String buildGroupRequestSessionCacheKey(String appKey, String joiner, String groupRequestSessionId) {
-        return buildAggregateCacheKey(appKey, joiner) + GROUP_REQUEST + SESSION
+        return buildAggregateCacheKey(appKey, joiner) + GROUP_REQUEST + COLON + SESSION
                 + COLON + stripHashTagChars(groupRequestSessionId);
     }
 
