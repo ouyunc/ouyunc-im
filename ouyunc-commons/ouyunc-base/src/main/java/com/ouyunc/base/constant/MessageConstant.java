@@ -185,6 +185,11 @@ public class MessageConstant {
     /** HTTP 外部渠道任务等待 broker 确认上限；失败由同 messageId 重试补投。 */
     public static final long EXTERNAL_CHANNEL_CONFIRM_TIMEOUT_MS = 10_000L;
 
+    /**
+     * 首次扇出互斥锁。覆盖单次外渠确认等待；进程崩溃后到期，重入可以再补投。
+     */
+    public static final long DELIVERY_RUN_LOCK_MILLIS = 120_000L;
+
     /** HTTP 异步结果的最长等待时间，不在超时后继续保留请求引用。 */
     public static final long HTTP_ASYNC_RESULT_TIMEOUT_MS = 30_000L;
     /** 每个 HTTP 业务执行器的排队上限；过载明确拒绝，不能无限积压请求正文。 */

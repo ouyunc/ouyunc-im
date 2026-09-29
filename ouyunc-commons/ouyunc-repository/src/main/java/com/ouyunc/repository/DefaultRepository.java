@@ -1,13 +1,7 @@
 package com.ouyunc.repository;
 
-import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.enums.*;
 import com.ouyunc.base.packet.Packet;
-import com.ouyunc.base.packet.message.Message;
-import com.ouyunc.core.context.MessageContext;
-import org.apache.commons.lang3.StringUtils;
-
-import java.time.Duration;
 import com.ouyunc.base.model.GroupRequestSession;
 import com.ouyunc.base.model.RequestSession;
 import com.ouyunc.repository.cs.CsImSessionRoute;
@@ -17,6 +11,7 @@ import com.ouyunc.domain.entity.GroupEntity;
 import com.ouyunc.domain.entity.GroupUserEntity;
 import com.ouyunc.domain.entity.UserEntity;
 import com.ouyunc.domain.entity.AppEntity;
+import com.ouyunc.repository.support.DeliveryCompletionSupport;
 import com.ouyunc.repository.support.RepositorySupports;
 import io.netty.channel.ChannelHandlerContext;
 import reactor.core.publisher.Mono;
@@ -199,37 +194,35 @@ public enum DefaultRepository implements Repository {
         RepositorySupports.GROUP.deleteGroupRequestSession(appKey, joiner, groupId);
     }
 
-    public void markExternalDeliveryPending(Packet packet) {
-        String key = externalDeliveryPendingKey(packet);
-        if (key == null) {
-            return;
-        }
-        RepositorySupports.INFRA.stringRedisTemplate.opsForValue().set(key, "1",
-                Duration.ofMillis(MessageContext.messageHotDataTtlMillis()));
+    public boolean isDeliveryFinished(Packet packet) {
+        return RepositorySupports.DELIVERY_COMPLETION.isDeliveryFinished(packet);
     }
 
-    public void clearExternalDeliveryPending(Packet packet) {
-        String key = externalDeliveryPendingKey(packet);
-        if (key == null) {
-            return;
-        }
-        RepositorySupports.INFRA.stringRedisTemplate.delete(key);
+    public DeliveryCompletionSupport.RunState tryStartDelivery(Packet packet, String ownerToken) {
+        return RepositorySupports.DELIVERY_COMPLETION.tryStartDelivery(packet, ownerToken);
     }
 
-    public boolean isExternalDeliveryPending(Packet packet) {
-        String key = externalDeliveryPendingKey(packet);
-        return key != null && Boolean.TRUE.equals(RepositorySupports.INFRA.stringRedisTemplate.hasKey(key));
+    public void finishDelivery(Packet packet, String ownerToken) {
+        RepositorySupports.DELIVERY_COMPLETION.finishDelivery(packet, ownerToken);
     }
 
-    private static String externalDeliveryPendingKey(Packet packet) {
-        if (packet == null || packet.getMessage() == null || packet.getMessage().getMetadata() == null) {
-            return null;
-        }
-        Message message = packet.getMessage();
-        if (StringUtils.isAnyBlank(message.getMetadata().getIngress().getAppKey(), message.getId())) {
-            return null;
-        }
-        return CacheConstant.buildExternalDeliveryPendingKey(message.getMetadata().getIngress().getAppKey(), message.getId());
+    public void abortDelivery(Packet packet, String ownerToken) {
+        RepositorySupports.DELIVERY_COMPLETION.abortDelivery(packet, ownerToken);
+    }
+
+    /**
+     * @return false 表示该收件人渠道已经确认，或身份不足，调用方不得再发布
+     */
+    public boolean markExternalRecipientPending(Packet packet, String recipientId, MessageDeliveryChannelEnum channel) {
+        return RepositorySupports.DELIVERY_COMPLETION.markExternalPending(packet, recipientId, channel);
+    }
+
+    public boolean isExternalRecipientConfirmed(Packet packet, String recipientId, MessageDeliveryChannelEnum channel) {
+        return RepositorySupports.DELIVERY_COMPLETION.isExternalConfirmed(packet, recipientId, channel);
+    }
+
+    public void confirmExternalRecipient(Packet packet, String recipientId, MessageDeliveryChannelEnum channel) {
+        RepositorySupports.DELIVERY_COMPLETION.confirmExternal(packet, recipientId, channel);
     }
 
     public boolean saveAgreeFriendRequestSession(Packet packet, RequestSession requestSession, long expireTime) {

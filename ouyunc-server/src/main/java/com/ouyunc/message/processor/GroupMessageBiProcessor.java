@@ -14,6 +14,7 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.constant.enums.IdentityType;
 import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.message.helper.CommittedDelivery;
 import com.ouyunc.message.helper.MessageContentNormalizer;
 import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
 import com.ouyunc.message.helper.MessageSubmissionResponseHelper;
@@ -134,19 +135,36 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
     }
 
     private void afterGroupFreshWrite(Packet packet) {
-        try {
-            repository().saveLastMessageForSession(packet.getMessage().getTo(), packet,
-                    MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
-        } catch (Exception e) {
-            // 最后消息是可重建派生索引，失败不能阻断已提交消息的实时投递。
-            log.warn("更新群聊最后消息失败，继续投递 packetId={}", packet.getPacketId(), e);
+        completeGroupDelivery(packet);
+    }
+
+    @Override
+    protected void ensureCommittedDelivery(Packet packet) {
+        int contentType = packet.getMessage().getContentType();
+        if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType
+                || MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
+            return;
         }
-        repository().reactiveAdvanceSenderReadOffsetOnSend(
-                        packet, IdentityType.GROUP, MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
-                .subscribe(
-                        ignored -> { },
-                        e -> log.warn("发送消息静默更新本端已读 offset 失败, packetId={}", packet.getPacketId(), e));
-        deliver(packet);
+        completeGroupDelivery(packet);
+    }
+
+    /** 首次写入和 COMMITTED 重入共用。已完成的扇出不会再次推送。 */
+    private void completeGroupDelivery(Packet packet) {
+        CommittedDelivery.run(packet, () -> {
+            try {
+                repository().saveLastMessageForSession(packet.getMessage().getTo(), packet,
+                        MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+            } catch (Exception e) {
+                // 最后消息是可重建派生索引，失败不能阻断已提交消息的实时投递。
+                log.warn("更新群聊最后消息失败，继续投递 packetId={}", packet.getPacketId(), e);
+            }
+            repository().reactiveAdvanceSenderReadOffsetOnSend(
+                            packet, IdentityType.GROUP, MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
+                    .subscribe(
+                            ignored -> { },
+                            e -> log.warn("发送消息静默更新本端已读 offset 失败, packetId={}", packet.getPacketId(), e));
+            deliver(packet);
+        });
     }
 
 
@@ -287,11 +305,6 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
     }
 
 
-
-    @Override
-    protected void replayExternalDelivery(Packet packet) {
-        deliver(packet);
-    }
 
     private void deliver2AllGroupMembers(Packet packet, Set<String> groupMembers) {
         MessageDeliveryPlanner.deliverGroupMembers(packet, groupMembers);

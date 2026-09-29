@@ -266,15 +266,23 @@ public final class CsHelper {
         }
         log.debug("客服外渠下行, ticketId={}, to={}, channel={}, packetId={}",
                 route.ticketId(), recipientId, channel.getKey(), packet.getPacketId());
+        if (DefaultRepository.INSTANCE.isExternalRecipientConfirmed(packet, recipientId, channel)) {
+            return;
+        }
+        if (!DefaultRepository.INSTANCE.markExternalRecipientPending(packet, recipientId, channel)) {
+            if (DefaultRepository.INSTANCE.isExternalRecipientConfirmed(packet, recipientId, channel)) {
+                return;
+            }
+            throw new ExternalDeliveryConfirmException("客服外渠任务身份不足，无法记录恢复标记", null);
+        }
         java.util.concurrent.CompletableFuture<?> confirmed =
                 DefaultRepository.INSTANCE.publishExternalChannelOutbound(packet, recipientId, channel);
-        DefaultRepository.INSTANCE.markExternalDeliveryPending(packet);
         try {
             confirmed.get(MessageConstant.EXTERNAL_CHANNEL_CONFIRM_TIMEOUT_MS, TimeUnit.MILLISECONDS);
         } catch (Exception error) {
             throw new ExternalDeliveryConfirmException("客服外部渠道任务 broker 确认失败", error);
         }
-        DefaultRepository.INSTANCE.clearExternalDeliveryPending(packet);
+        DefaultRepository.INSTANCE.confirmExternalRecipient(packet, recipientId, channel);
     }
 
     public static String resolveImRecipientId(String recipientId, CsImSessionRoute route) {

@@ -59,7 +59,9 @@ public class ClientHelper {
 
     /**
      * 按用户缓存完整设备路由快照，供 onlineAll 使用。
-     * 只缓存非空结果；新登录用户不会被负缓存短暂误判为离线。
+     * 确认离线（Redis 返回空 Hash）也放入缓存，TTL 与在线路由相同（当前 500ms）。
+     * Pipeline 缺行或类型异常不缓存，避免把查询失败当成离线。
+     * 登录写目录会主动失效，新登录不会一直被负缓存挡住。
      */
     private static final Cache<RouteIdentityKey, Map<Byte, String>> ROUTE_SNAPSHOT_CACHE = Caffeine.newBuilder()
             .maximumSize(MessageConstant.LOGIN_ROUTE_LOCAL_CACHE_MAX_SIZE)
@@ -451,7 +453,7 @@ public class ClientHelper {
 
     /**
      * Caffeine 批量加载器：仅对未命中的 identity 发起一次 Pipeline，避免 TTL 边界的重复 HGETALL。
-     * 空路由不放入返回 Map，因此不会形成会遮蔽新登录的负缓存。
+     * 空 Hash 写入空快照，作为确认离线的短负缓存。单行缺失不写入。
      */
     private static Map<RouteIdentityKey, Map<Byte, String>> loadRouteSnapshots(
             Set<? extends RouteIdentityKey> missingKeys) {
@@ -472,15 +474,16 @@ public class ClientHelper {
         for (int index = 0; index < orderedKeys.size(); index++) {
             RouteIdentityKey key = orderedKeys.get(index);
             Object row = routeRows == null || index >= routeRows.size() ? null : routeRows.get(index);
-            Map<?, ?> rawRoutes = row instanceof Map<?, ?> map ? map : Map.of();
+            // 缺行不是“确认离线”，不写入负缓存，下一跳仍查 Redis。
+            if (!(row instanceof Map<?, ?> rawRoutes)) {
+                continue;
+            }
             LoginSessionDirectoryHelper.evictDeadRoute(
                     key.appKey(), key.identity(), rawRoutes, loadSnapshot);
             Map<Byte, String> parsedRoutes = parseRoutes(rawRoutes);
-            if (!parsedRoutes.isEmpty()) {
-                loaded.put(key, parsedRoutes);
-                parsedRoutes.forEach((deviceType, encoded) -> ROUTE_DEVICE_CACHE.put(
-                        new RouteDeviceKey(key.appKey(), key.identity(), deviceType), encoded));
-            }
+            loaded.put(key, parsedRoutes);
+            parsedRoutes.forEach((deviceType, encoded) -> ROUTE_DEVICE_CACHE.put(
+                    new RouteDeviceKey(key.appKey(), key.identity(), deviceType), encoded));
         }
         return loaded;
     }

@@ -15,6 +15,7 @@ import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.core.exception.ExceptionReporter;
 import com.ouyunc.message.helper.MessageContentNormalizer;
 import com.ouyunc.message.helper.ClientHelper;
+import com.ouyunc.message.helper.CommittedDelivery;
 import com.ouyunc.message.helper.MessageDeliveryPlanner;
 import com.ouyunc.message.http.HttpPipelineException;
 import com.ouyunc.message.processor.http.push.HttpPushValidatorChain;
@@ -93,7 +94,7 @@ public final class One2OneHttpPushDeliveryStrategy implements HttpProcessor {
                                     MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
                             .subscribe(ignored -> { }, e -> log.warn(
                                     "HTTP 推送更新单聊已读 offset 失败, packetId={}", packet.getPacketId(), e));
-                    MessageDeliveryPlanner.deliverPeerMessage(packet, false);
+                    CommittedDelivery.run(packet, () -> MessageDeliveryPlanner.deliverPeerMessage(packet, false));
                     return Mono.just(true);
                 })
                 .onErrorResume(error -> {
@@ -148,9 +149,10 @@ public final class One2OneHttpPushDeliveryStrategy implements HttpProcessor {
             int contentType = packet.getMessage().getContentType();
             if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {
                 deliverReadReceiptToSender(packet);
+            } else if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
+                MessageDeliveryPlanner.deliverPeerMessage(packet, true);
             } else {
-                MessageDeliveryPlanner.deliverPeerMessage(packet,
-                        MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType);
+                CommittedDelivery.run(packet, () -> MessageDeliveryPlanner.deliverPeerMessage(packet, false));
             }
             return Boolean.TRUE;
         });

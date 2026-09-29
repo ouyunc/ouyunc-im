@@ -202,8 +202,17 @@ public class CacheConstant {
      */
     private static final String FRIEND_REQUEST_SESSION = "friend-req-session:";
 
-    /** 外渠下行已发出但 broker 尚未确认。确认成功后删除，QoS 重试据此补投。 */
-    private static final String EXTERNAL_DELIVERY_PENDING = "external-pending:";
+    /**
+     * 外渠任务 Hash：field={@code recipientId|channel}，值 P=待确认、C=已确认。
+     * 身份是 appKey + canonical packetId + 收件人 + 渠道，避免同租户 messageId 互相清除。
+     */
+    private static final String EXTERNAL_DELIVERY_TASK = "ext-task:";
+
+    /** 首次扇出已完成。重复请求看到该键后不再广播。 */
+    private static final String DELIVERY_DONE = "delivery-done:";
+
+    /** 首次扇出进行中的 owner 锁，崩溃后靠 TTL 释放。 */
+    private static final String DELIVERY_RUN = "delivery-run:";
 
     /***
      * 正在处理中的群请求会话标识
@@ -597,8 +606,37 @@ public class CacheConstant {
     /**
      * 好友请求：槽按 from_to
      */
-    public static String buildExternalDeliveryPendingKey(String appKey, String messageId) {
-        return buildAggregateCacheKey(appKey, messageId) + EXTERNAL_DELIVERY_PENDING;
+    /**
+     * 外渠任务槽 {@code {appKey:packetId}}。同一正式 packet 的收件人进度放在一个 Hash。
+     * 使用 canonical packetId，不使用客户端 messageId，避免同租户不同发送者串键。
+     */
+    public static String buildExternalDeliveryTaskKey(String appKey, long packetId) {
+        if (appKey == null || appKey.isBlank() || packetId <= 0L) {
+            return null;
+        }
+        return buildAggregateCacheKey(appKey, String.valueOf(packetId)) + EXTERNAL_DELIVERY_TASK;
+    }
+
+    public static String buildDeliveryDoneKey(String appKey, long packetId) {
+        if (appKey == null || appKey.isBlank() || packetId <= 0L) {
+            return null;
+        }
+        return buildAggregateCacheKey(appKey, String.valueOf(packetId)) + DELIVERY_DONE;
+    }
+
+    public static String buildDeliveryRunKey(String appKey, long packetId) {
+        if (appKey == null || appKey.isBlank() || packetId <= 0L) {
+            return null;
+        }
+        return buildAggregateCacheKey(appKey, String.valueOf(packetId)) + DELIVERY_RUN;
+    }
+
+    /** 任务字段：收件人与渠道，不含客户端 messageId。 */
+    public static String externalDeliveryTaskField(String recipientId, String channelKey) {
+        if (recipientId == null || recipientId.isBlank() || channelKey == null || channelKey.isBlank()) {
+            return null;
+        }
+        return recipientId + "|" + channelKey;
     }
 
     public static String buildFriendRequestCacheKey(String appKey, String from, String to) {

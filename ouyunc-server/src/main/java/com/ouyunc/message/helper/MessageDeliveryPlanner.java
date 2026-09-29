@@ -118,7 +118,6 @@ public final class MessageDeliveryPlanner {
         MessageDeliveryChannelEnum channel =
                 DefaultRepository.INSTANCE.resolveFriendDeliveryChannel(appKey, senderId, recipientId);
         routeToRecipient(packet, recipientId, channel, "单聊");
-        DefaultRepository.INSTANCE.clearExternalDeliveryPending(packet);
     }
 
     /**
@@ -138,7 +137,6 @@ public final class MessageDeliveryPlanner {
         MessageDeliveryChannelEnum channel =
                 DefaultRepository.INSTANCE.resolveGroupMemberDeliveryChannel(appKey, groupId, memberId);
         routeToRecipient(packet, memberId, channel, "群聊");
-        DefaultRepository.INSTANCE.clearExternalDeliveryPending(packet);
     }
 
     /**
@@ -162,7 +160,6 @@ public final class MessageDeliveryPlanner {
         if (!batch.isEmpty()) {
             deliverGroupBatch(packet, batch);
         }
-        DefaultRepository.INSTANCE.clearExternalDeliveryPending(packet);
     }
 
     /** 每批完成过滤、渠道和在线查询后释放临时集合，避免整群渠道 Map 和 IM Set 叠加。 */
@@ -175,19 +172,30 @@ public final class MessageDeliveryPlanner {
                 .resolveGroupMemberDeliveryChannels(appKey, message.getTo(), deliverable);
         Set<String> imMembers = new HashSet<>();
         List<CompletableFuture<?>> confirms = new ArrayList<>(MessageConstant.GROUP_EXTERNAL_CHANNEL_CONFIRM_BATCH);
+        List<String> externalMembers = new ArrayList<>(MessageConstant.GROUP_EXTERNAL_CHANNEL_CONFIRM_BATCH);
+        List<MessageDeliveryChannelEnum> externalChannels = new ArrayList<>(MessageConstant.GROUP_EXTERNAL_CHANNEL_CONFIRM_BATCH);
         for (String member : deliverable) {
             MessageDeliveryChannelEnum channel = channels.getOrDefault(member, MessageDeliveryChannelEnum.IM);
             if (channel.isIm()) {
                 imMembers.add(member);
-            } else {
-                confirms.add(DefaultRepository.INSTANCE.publishExternalChannelOutbound(packet, member, channel));
-                if (confirms.size() >= MessageConstant.GROUP_EXTERNAL_CHANNEL_CONFIRM_BATCH) {
-                    awaitExternalConfirm(packet, confirms);
-                    confirms.clear();
-                }
+                continue;
+            }
+            if (!beginExternalTask(packet, member, channel)) {
+                continue;
+            }
+            externalMembers.add(member);
+            externalChannels.add(channel);
+            confirms.add(DefaultRepository.INSTANCE.publishExternalChannelOutbound(packet, member, channel));
+            if (confirms.size() >= MessageConstant.GROUP_EXTERNAL_CHANNEL_CONFIRM_BATCH) {
+                awaitExternalConfirm(packet, confirms);
+                confirmExternalBatch(packet, externalMembers, externalChannels);
+                confirms.clear();
+                externalMembers.clear();
+                externalChannels.clear();
             }
         }
         awaitExternalConfirm(packet, confirms);
+        confirmExternalBatch(packet, externalMembers, externalChannels);
         if (!imMembers.isEmpty()) {
             sendImGroupMembers(packet, appKey, imMembers);
         }
@@ -224,9 +232,13 @@ public final class MessageDeliveryPlanner {
             pushImUserIfOnline(packet, recipientId);
             return;
         }
+        if (!beginExternalTask(packet, recipientId, channel)) {
+            return;
+        }
         CompletableFuture<?> confirmed = DefaultRepository.INSTANCE.publishExternalChannelOutbound(
                 packet, recipientId, channel);
         awaitExternalConfirm(packet, List.of(confirmed));
+        DefaultRepository.INSTANCE.confirmExternalRecipient(packet, recipientId, channel);
     }
 
     private static void syncSenderDevices(Packet packet, boolean forceSelfSync) {
@@ -258,12 +270,36 @@ public final class MessageDeliveryPlanner {
         return metadata != null && IngressSourceEnum.isHttpPush(metadata.getIngress().getIngressSource());
     }
 
-    /** 长连接和 HTTP 都要等外渠进入 broker，失败时不得回受理成功。 */
+    /**
+     * 发布前先落下收件人任务。已经确认过的收件人不再发布。
+     *
+     * @return false 表示该收件人已经确认
+     */
+    private static boolean beginExternalTask(Packet packet, String recipientId, MessageDeliveryChannelEnum channel) {
+        if (DefaultRepository.INSTANCE.isExternalRecipientConfirmed(packet, recipientId, channel)) {
+            return false;
+        }
+        if (!DefaultRepository.INSTANCE.markExternalRecipientPending(packet, recipientId, channel)) {
+            if (DefaultRepository.INSTANCE.isExternalRecipientConfirmed(packet, recipientId, channel)) {
+                return false;
+            }
+            throw new ExternalDeliveryConfirmException("外渠任务身份不足，无法记录恢复标记", null);
+        }
+        return true;
+    }
+
+    private static void confirmExternalBatch(Packet packet, List<String> recipients,
+                                             List<MessageDeliveryChannelEnum> channels) {
+        for (int index = 0; index < recipients.size(); index++) {
+            DefaultRepository.INSTANCE.confirmExternalRecipient(packet, recipients.get(index), channels.get(index));
+        }
+    }
+
+    /** 长连接和 HTTP 都要等外渠进入 broker，失败时不得回受理成功。任务标记在等待之前已经写入。 */
     private static void awaitExternalConfirm(Packet packet, List<CompletableFuture<?>> confirms) {
         if (packet == null || confirms == null || confirms.isEmpty()) {
             return;
         }
-        DefaultRepository.INSTANCE.markExternalDeliveryPending(packet);
         try {
             CompletableFuture.allOf(confirms.toArray(CompletableFuture[]::new))
                     .get(MessageConstant.EXTERNAL_CHANNEL_CONFIRM_TIMEOUT_MS, TimeUnit.MILLISECONDS);

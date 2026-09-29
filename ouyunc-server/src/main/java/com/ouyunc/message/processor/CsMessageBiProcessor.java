@@ -11,6 +11,7 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.core.exception.ExternalDeliveryConfirmException;
 import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.message.helper.CommittedDelivery;
 import com.ouyunc.message.helper.CsHelper;
 import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
 import com.ouyunc.message.helper.MessageContentNormalizer;
@@ -127,7 +128,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
         }
         return saveMessage(packet, route)
                 .flatMap(result -> MessageAcceptPipelineHelper.afterHotSave(ctx, packet, result,
-                        () -> afterCsFreshWrite(packet, route),
+                        () -> completeCsDelivery(packet, route),
                         "客服消息写入 ticket 失败"))
                 .onErrorResume(error -> {
                     log.error("客服消息持久化异常, packetId={}", packet.getPacketId(), error);
@@ -139,12 +140,21 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
     }
 
     @Override
-    protected void replayExternalDelivery(Packet packet) {
+    protected void ensureCommittedDelivery(Packet packet) {
+        int contentType = packet.getMessage().getContentType();
+        if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType
+                || MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
+            return;
+        }
         PrepareOutcome outcome = CsHelper.prepare(packet);
         if (!outcome.accepted() || outcome.route() == null) {
-            throw new ExternalDeliveryConfirmException("客服外渠重试缺少会话路由", null);
+            throw new ExternalDeliveryConfirmException("客服已提交消息重入时缺少会话路由", null);
         }
-        CsHelper.deliverMessage(packet, outcome.route(), false);
+        completeCsDelivery(packet, outcome.route());
+    }
+
+    private void completeCsDelivery(Packet packet, CsImSessionRoute route) {
+        CommittedDelivery.run(packet, () -> afterCsFreshWrite(packet, route));
     }
 
     private void afterCsFreshWrite(Packet packet, CsImSessionRoute route) {

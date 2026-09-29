@@ -8,6 +8,7 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.core.processor.BiProcessor;
 import com.ouyunc.core.qos.Qos;
+import com.ouyunc.core.exception.DeliveryRunBusyException;
 import com.ouyunc.core.exception.ExternalDeliveryConfirmException;
 import com.ouyunc.message.helper.MessageSubmissionResponseHelper;
 import com.ouyunc.repository.DefaultRepository;
@@ -39,7 +40,7 @@ public abstract class AbstractBaseBiProcessor<R, T extends Number>
     /**
      * QoS 前置判重。客户端重试以稳定 {@code messageId} 为准，packetId 可变。
      * 仅 {@code COMMITTED} 且拿到正式 packetId 时可截住主链；会将 packet 收敛到该正式 ID，
-     * 先幂等补派生索引再 ACK，补失败回 UNKNOWN。
+     * 先幂等补派生索引，再保证首次扇出已完成，然后 ACK。补失败或扇出未完成回 UNKNOWN。
      * {@code PENDING} 表示占位但未确认落库，必须继续处理。
      */
     @Override
@@ -63,13 +64,15 @@ public abstract class AbstractBaseBiProcessor<R, T extends Number>
                 MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
                 return true;
             }
-            if (DefaultRepository.INSTANCE.isExternalDeliveryPending(packet)) {
-                try {
-                    replayExternalDelivery(packet);
-                } catch (ExternalDeliveryConfirmException error) {
-                    MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.MQ_PERSISTENCE_ERROR);
-                    return true;
-                }
+            try {
+                // 第一次可能在 COMMITTED 之后、投递之前失败。这里补做尚未完成的扇出，已完成则不再广播。
+                ensureCommittedDelivery(packet);
+            } catch (ExternalDeliveryConfirmException error) {
+                MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.MQ_PERSISTENCE_ERROR);
+                return true;
+            } catch (DeliveryRunBusyException error) {
+                MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.MQ_PERSISTENCE_ERROR);
+                return true;
             }
             qosPostHandle(ctx, packet);
             return true;
@@ -87,9 +90,10 @@ public abstract class AbstractBaseBiProcessor<R, T extends Number>
     }
 
     /**
-     * QoS 已提交但外渠标记仍在时补投。没有外渠标记时不调用，避免成功消息的重试再推一遍。
+     * QoS 已提交后的可重入完成。默认没有扇出。
+     * 子类必须走 {@link com.ouyunc.message.helper.CommittedDelivery}，保证只补一次。
      */
-    protected void replayExternalDelivery(Packet packet) {
+    protected void ensureCommittedDelivery(Packet packet) {
     }
 
     /**

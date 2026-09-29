@@ -14,6 +14,7 @@ import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.core.exception.ExceptionReporter;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.MessageContentNormalizer;
+import com.ouyunc.message.helper.CommittedDelivery;
 import com.ouyunc.message.helper.MessageDeliveryPlanner;
 import com.ouyunc.message.http.HttpPipelineException;
 import com.ouyunc.message.processor.http.push.HttpPushFailures;
@@ -100,7 +101,7 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
                                     MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
                             .subscribe(ignored -> { }, e -> log.warn(
                                     "HTTP 推送更新群聊已读 offset 失败, packetId={}", packet.getPacketId(), e));
-                    pushGroupOnline(packet);
+                    CommittedDelivery.run(packet, () -> pushGroupOnline(packet));
                     return Mono.just(true);
                 })
                 .onErrorResume(error -> {
@@ -166,7 +167,7 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
             } else if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
                 deliverWithdraw(packet);
             } else {
-                pushGroupOnline(packet);
+                CommittedDelivery.run(packet, () -> pushGroupOnline(packet));
             }
             return Boolean.TRUE;
         });

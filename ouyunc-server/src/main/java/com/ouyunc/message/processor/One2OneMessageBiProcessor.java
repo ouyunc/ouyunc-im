@@ -20,6 +20,7 @@ import com.ouyunc.message.helper.MessageContentNormalizer;
 import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
 import com.ouyunc.message.helper.MessageSubmissionResponseHelper;
 import com.ouyunc.message.helper.ClientHelper;
+import com.ouyunc.message.helper.CommittedDelivery;
 import com.ouyunc.message.helper.MessageDeliveryPlanner;
 import com.ouyunc.message.validator.*;
 import com.ouyunc.base.constant.enums.MessageIndexScopeEnum;
@@ -118,20 +119,41 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
     }
 
     private void afterOne2OneFreshWrite(Packet packet) {
-        try {
-            repository().saveLastMessageForSession(
-                    IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo()),
-                    packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
-        } catch (Exception e) {
-            // 最后消息是可重建派生索引，失败不能阻断已提交消息的实时投递。
-            log.warn("更新单聊最后消息失败，继续投递 packetId={}", packet.getPacketId(), e);
+        completeOne2OneDelivery(packet);
+    }
+
+    @Override
+    protected void ensureCommittedDelivery(Packet packet) {
+        if (isSessionControlContent(packet)) {
+            return;
         }
-        repository().reactiveAdvanceSenderReadOffsetOnSend(
-                        packet, IdentityType.ONE_2_ONE, MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
-                .subscribe(
-                        ignored -> { },
-                        e -> log.warn("发送消息静默更新本端已读 offset 失败, packetId={}", packet.getPacketId(), e));
-        deliver(packet, false);
+        completeOne2OneDelivery(packet);
+    }
+
+    /** 首次写入和 COMMITTED 重入共用。已完成的扇出不会再次推送。 */
+    private void completeOne2OneDelivery(Packet packet) {
+        CommittedDelivery.run(packet, () -> {
+            try {
+                repository().saveLastMessageForSession(
+                        IdentityUtil.sessionId(packet.getMessage().getFrom(), packet.getMessage().getTo()),
+                        packet, MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+            } catch (Exception e) {
+                // 最后消息是可重建派生索引，失败不能阻断已提交消息的实时投递。
+                log.warn("更新单聊最后消息失败，继续投递 packetId={}", packet.getPacketId(), e);
+            }
+            repository().reactiveAdvanceSenderReadOffsetOnSend(
+                            packet, IdentityType.ONE_2_ONE, MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
+                    .subscribe(
+                            ignored -> { },
+                            e -> log.warn("发送消息静默更新本端已读 offset 失败, packetId={}", packet.getPacketId(), e));
+            deliver(packet, false);
+        });
+    }
+
+    private static boolean isSessionControlContent(Packet packet) {
+        int contentType = packet.getMessage().getContentType();
+        return MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType
+                || MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType;
     }
 
     /**
@@ -221,11 +243,6 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
      */
     private void deliver(Packet packet, Boolean forceSelfSync) {
         MessageDeliveryPlanner.deliverPeerMessage(packet, Boolean.TRUE.equals(forceSelfSync));
-    }
-
-    @Override
-    protected void replayExternalDelivery(Packet packet) {
-        deliver(packet, false);
     }
 
     /**

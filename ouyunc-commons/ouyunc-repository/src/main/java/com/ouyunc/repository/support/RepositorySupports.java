@@ -7,6 +7,9 @@ public final class RepositorySupports {
 
     public static final RepositoryInfrastructure INFRA = RepositoryInfrastructure.createDefault();
 
+    public static final DeliveryCompletionSupport DELIVERY_COMPLETION =
+            new DeliveryCompletionSupport(INFRA.stringRedisTemplate);
+
     public static final MessageMqPublisherSupport MQ = new MessageMqPublisherSupport(INFRA);
     public static final QosRepositorySupport QOS = new QosRepositorySupport(INFRA);
     public static final SessionMessagePersistenceSupport SESSION = new SessionMessagePersistenceSupport(INFRA);

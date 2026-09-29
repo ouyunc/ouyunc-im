@@ -11,6 +11,7 @@ import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.core.exception.ExceptionReporter;
+import com.ouyunc.message.helper.CommittedDelivery;
 import com.ouyunc.message.helper.CsHelper;
 import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
 import com.ouyunc.message.helper.CsHelper.PrepareOutcome;
@@ -94,7 +95,8 @@ public final class CsHttpPushDeliveryStrategy implements HttpProcessor {
             if (!live.accepted()) {
                 return Boolean.FALSE;
             }
-            CsHelper.deliverMessage(packet, live.route(), false);
+            CsImSessionRoute deliveryRoute = live.route();
+            CommittedDelivery.run(packet, () -> CsHelper.deliverMessage(packet, deliveryRoute, false));
             return Boolean.TRUE;
         });
     }
@@ -136,7 +138,7 @@ public final class CsHttpPushDeliveryStrategy implements HttpProcessor {
                                     MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
                             .subscribe(ignored -> { }, e -> log.warn(
                                     "HTTP 推送更新客服 ticket 已读 offset 失败, packetId={}", packet.getPacketId(), e));
-                    CsHelper.deliverMessage(packet, route, false);
+                    CommittedDelivery.run(packet, () -> CsHelper.deliverMessage(packet, route, false));
                     return Mono.just(true);
                 })
                 .onErrorResume(error -> {
