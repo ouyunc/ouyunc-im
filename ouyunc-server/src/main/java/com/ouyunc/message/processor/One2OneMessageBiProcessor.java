@@ -16,15 +16,14 @@ import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.constant.enums.IdentityType;
 import com.ouyunc.message.context.MessageServerContext;
-import com.ouyunc.message.helper.AtMentionHelper;
+import com.ouyunc.message.helper.MessageContentNormalizer;
 import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
 import com.ouyunc.message.helper.MessageSubmissionResponseHelper;
 import com.ouyunc.message.helper.ClientHelper;
-import com.ouyunc.message.helper.MessageDeliveryRouteHelper;
-import com.ouyunc.message.helper.MessageRefHelper;
+import com.ouyunc.message.helper.MessageDeliveryPlanner;
 import com.ouyunc.message.validator.*;
-import com.ouyunc.repository.support.MessageIndexScope;
-import com.ouyunc.repository.SaveMessageOutcome;
+import com.ouyunc.base.constant.enums.MessageIndexScopeEnum;
+import com.ouyunc.base.constant.enums.SaveMessageOutcomeEnum;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -89,8 +88,8 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
             return MessageAcceptPipelineHelper.archiveAfterContentReady(ctx, packet,
                     Mono.defer(() -> content.process(ctx, packet)));
         }
-        AtMentionHelper.clearAtIfPresent(packet.getMessage());
-        if (!MessageRefHelper.normalizeMessageRefOrReject(packet)) {
+        MessageContentNormalizer.clearAt(packet.getMessage());
+        if (!MessageContentNormalizer.normalizeReferencesOrReject(packet)) {
             MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_REF_INVALID_ERROR);
             MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
             return Mono.empty();
@@ -147,11 +146,11 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
         String sessionId = IdentityUtil.sessionId(from, to);
         return repository().reactiveHandleOperation(ctx, packet,
                 repository().reactiveLoadWithdrawTargetPackets(
-                        packet, sessionId, MessageIndexScope.CHANNEL_SESSION, true),
+                        packet, sessionId, MessageIndexScopeEnum.CHANNEL_SESSION, true),
                 ExceptionCodeEnum.WITHDRAW_MESSAGE_VERIFY_ERROR,
                 MqConstant.MQ_WITHDRAW_MESSAGE_TOPIC, sessionId,
                 packets -> repository().reactiveWithdrawMessage(
-                        packet, sessionId, MessageIndexScope.CHANNEL_SESSION, packets),
+                        packet, sessionId, MessageIndexScopeEnum.CHANNEL_SESSION, packets),
                 (ctx0, packet0) -> {
                     MessageAcceptPipelineHelper.qosAckOnSuccess(ctx0, packet0);
                     Message msg = packet0.getMessage();
@@ -208,7 +207,7 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
         String appKey = message.getMetadata().getIngress().getAppKey();
         List<LoginClientInfo> senderClients = ClientHelper.onlineAll(appKey, message.getTo());
         if (CollectionUtils.isNotEmpty(senderClients)) {
-            MessageDeliveryRouteHelper.deliverOnlineClients(packet, senderClients);
+            MessageDeliveryPlanner.deliverOnlineClients(packet, senderClients);
         }
     }
 
@@ -221,7 +220,7 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
      * @param forceSelfSync
      */
     private void deliver(Packet packet, Boolean forceSelfSync) {
-        MessageDeliveryRouteHelper.deliverPeerMessage(packet, Boolean.TRUE.equals(forceSelfSync));
+        MessageDeliveryPlanner.deliverPeerMessage(packet, Boolean.TRUE.equals(forceSelfSync));
     }
 
     @Override
@@ -232,7 +231,7 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
     /**
      * 保存消息
      */
-    private Mono<SaveMessageOutcome> saveMessage(Packet packet) {
+    private Mono<SaveMessageOutcomeEnum> saveMessage(Packet packet) {
         Message message = packet.getMessage();
         String sessionId = IdentityUtil.sessionId(message.getFrom(), message.getTo());
         return repository().reactiveSaveOne2OneMessage(packet, sessionId, MessageContext.messageHotDataTtlMillis());

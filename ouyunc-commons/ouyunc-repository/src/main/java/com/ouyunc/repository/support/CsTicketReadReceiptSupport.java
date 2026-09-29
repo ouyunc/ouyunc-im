@@ -4,6 +4,7 @@ import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.JdbcSqlDialectHolder;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.IdentityType;
+import com.ouyunc.base.constant.enums.MessageIndexScopeEnum;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
@@ -67,7 +68,7 @@ public final class CsTicketReadReceiptSupport {
         String ticketId = route.ticketId().trim();
         String appKey = message.getMetadata().getIngress().getAppKey();
         return specialMessageLoader.reactiveLoadValidatedSpecialPackets(
-                packet, ticketId, MessageIndexScope.CS_TICKET,
+                packet, ticketId, MessageIndexScopeEnum.CS_TICKET,
                 MessageConstant.MAX_READ_RECEIPT_MESSAGE_COUNT,
                 (specialPackets) -> Mono.just(true),
                 packets -> isReadReceiptTargetPacketsValid(appKey, ticketId, readerId, deviceType, packets));

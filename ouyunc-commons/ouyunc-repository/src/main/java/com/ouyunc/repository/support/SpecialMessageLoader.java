@@ -1,6 +1,7 @@
 package com.ouyunc.repository.support;
 
 import com.alibaba.fastjson2.JSON;
+import com.ouyunc.base.constant.enums.MessageIndexScopeEnum;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
@@ -30,7 +31,7 @@ public final class SpecialMessageLoader {
         this.messagePacketQuery = messagePacketQuery;
     }
 
-    public Mono<Boolean> reactiveValidSpecialMessage(Packet packet, String scopeId, MessageIndexScope scope, int maxCount,
+    public Mono<Boolean> reactiveValidSpecialMessage(Packet packet, String scopeId, MessageIndexScopeEnum scope, int maxCount,
                                                      Function<List<Packet>, Mono<Boolean>> function,
                                                      Predicate<List<Packet>> extraPredicate) {
         return reactiveLoadValidatedSpecialPackets(packet, scopeId, scope, maxCount, function, extraPredicate)
@@ -43,10 +44,10 @@ public final class SpecialMessageLoader {
                                                      Function<List<Packet>, Mono<Boolean>> function,
                                                      Predicate<List<Packet>> extraPredicate) {
         return reactiveValidSpecialMessage(
-                packet, sessionId, MessageIndexScope.CHANNEL_SESSION, maxCount, function, extraPredicate);
+                packet, sessionId, MessageIndexScopeEnum.CHANNEL_SESSION, maxCount, function, extraPredicate);
     }
 
-    public Mono<List<Packet>> reactiveLoadValidatedSpecialPackets(Packet packet, String scopeId, MessageIndexScope scope,
+    public Mono<List<Packet>> reactiveLoadValidatedSpecialPackets(Packet packet, String scopeId, MessageIndexScopeEnum scope,
                                                                   int maxCount,
                                                                   Function<List<Packet>, Mono<Boolean>> function,
                                                                   Predicate<List<Packet>> extraPredicate) {
@@ -77,16 +78,16 @@ public final class SpecialMessageLoader {
                 });
     }
 
-    /** @deprecated 使用 {@link #reactiveLoadValidatedSpecialPackets(Packet, String, MessageIndexScope, int, Function, Predicate)} */
+    /** @deprecated 使用 {@link #reactiveLoadValidatedSpecialPackets(Packet, String, MessageIndexScopeEnum, int, Function, Predicate)} */
     @Deprecated
     public Mono<List<Packet>> reactiveLoadValidatedSpecialPackets(Packet packet, String sessionId, int maxCount,
                                                                   Function<List<Packet>, Mono<Boolean>> function,
                                                                   Predicate<List<Packet>> extraPredicate) {
         return reactiveLoadValidatedSpecialPackets(
-                packet, sessionId, MessageIndexScope.CHANNEL_SESSION, maxCount, function, extraPredicate);
+                packet, sessionId, MessageIndexScopeEnum.CHANNEL_SESSION, maxCount, function, extraPredicate);
     }
 
-    private Mono<List<Packet>> validateLoadedPackets(String scopeId, MessageIndexScope scope,
+    private Mono<List<Packet>> validateLoadedPackets(String scopeId, MessageIndexScopeEnum scope,
                                                      List<Long> packetIds, List<Packet> packets,
                                                      Function<List<Packet>, Mono<Boolean>> function,
                                                      Predicate<List<Packet>> extraPredicate) {
@@ -120,8 +121,8 @@ public final class SpecialMessageLoader {
         });
     }
 
-    static boolean belongsToScope(Packet targetPacket, String scopeId, MessageIndexScope scope) {
-        if (scope == MessageIndexScope.CS_TICKET) {
+    static boolean belongsToScope(Packet targetPacket, String scopeId, MessageIndexScopeEnum scope) {
+        if (scope == MessageIndexScopeEnum.CS_TICKET) {
             return belongsToTicketScope(targetPacket, scopeId);
         }
         return belongsToSession(targetPacket, scopeId);

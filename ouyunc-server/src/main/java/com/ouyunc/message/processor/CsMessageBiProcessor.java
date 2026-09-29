@@ -11,12 +11,15 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.core.exception.ExternalDeliveryConfirmException;
 import com.ouyunc.message.context.MessageServerContext;
-import com.ouyunc.message.helper.*;
+import com.ouyunc.message.helper.CsHelper;
+import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
+import com.ouyunc.message.helper.MessageContentNormalizer;
+import com.ouyunc.message.helper.MessageSubmissionResponseHelper;
 import com.ouyunc.message.helper.CsHelper.PrepareOutcome;
 import com.ouyunc.message.validator.AuthValidator;
 import com.ouyunc.repository.cs.CsImSessionRoute;
-import com.ouyunc.repository.support.MessageIndexScope;
-import com.ouyunc.repository.SaveMessageOutcome;
+import com.ouyunc.base.constant.enums.MessageIndexScopeEnum;
+import com.ouyunc.base.constant.enums.SaveMessageOutcomeEnum;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -162,7 +165,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
     }
 
     private PrepareOutcome validateAndPrepare(Packet packet) {
-        if (!MessageRefHelper.normalizeMessageRefOrReject(packet)) {
+        if (!MessageContentNormalizer.normalizeReferencesOrReject(packet)) {
             MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
             return PrepareOutcome.reject("引用校验失败");
         }
@@ -180,11 +183,11 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
         String appKey = packet.getMessage().getMetadata().getIngress().getAppKey();
         return repository().reactiveHandleOperation(ctx, packet,
                         repository().reactiveLoadWithdrawTargetPackets(
-                                packet, ticketScopeId, MessageIndexScope.CS_TICKET, true),
+                                packet, ticketScopeId, MessageIndexScopeEnum.CS_TICKET, true),
                         ExceptionCodeEnum.WITHDRAW_MESSAGE_VERIFY_ERROR,
                         MqConstant.MQ_WITHDRAW_MESSAGE_TOPIC, ticketScopeId,
                         packets -> repository().reactiveWithdrawMessage(
-                                packet, ticketScopeId, MessageIndexScope.CS_TICKET, packets),
+                                packet, ticketScopeId, MessageIndexScopeEnum.CS_TICKET, packets),
                         (ctx0, packet0) -> {
                             MessageAcceptPipelineHelper.qosAckOnSuccess(ctx0, packet0);
                             CsHelper.deliverMessage(packet0, route, true);
@@ -228,7 +231,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
                 .then();
     }
 
-    private Mono<SaveMessageOutcome> saveMessage(Packet packet, CsImSessionRoute route) {
+    private Mono<SaveMessageOutcomeEnum> saveMessage(Packet packet, CsImSessionRoute route) {
         return repository().reactiveSaveCsTicketMessage(
                 packet, route, MessageContext.messageHotDataTtlMillis());
     }

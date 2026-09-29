@@ -3,21 +3,26 @@ package com.ouyunc.message.helper;
 import com.ouyunc.core.exception.ExceptionReporter;
 
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.constant.MqArchiveRouting;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.core.exception.ExternalDeliveryConfirmException;
 import com.ouyunc.message.safety.ContentSafetyIngress;
 import com.ouyunc.repository.DefaultRepository;
-import com.ouyunc.repository.ArchiveClaimResult;
-import com.ouyunc.repository.SaveMessageOutcome;
+import com.ouyunc.base.constant.enums.ArchiveClaimEnum;
+import com.ouyunc.base.constant.enums.SaveMessageOutcomeEnum;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
+import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 /**
  * 消息受理管线公共能力：MQ → Redis → ACK → 投递。
@@ -52,14 +57,22 @@ public final class MessageAcceptPipelineHelper {
                     packet == null ? null : packet.getPacketId());
             return Mono.error(new IllegalStateException("SAVE 归档缺少客户端 messageId"));
         }
-        ArchiveClaimResult claimResult = repository().claimForArchive(packet);
-        if (claimResult != ArchiveClaimResult.READY) {
+        ArchiveClaimEnum claimResult = repository().claimForArchive(packet);
+        if (claimResult != ArchiveClaimEnum.READY) {
             log.error("SAVE 归档前未能稳定 packetId, messageId={} packetId={}",
                     packet.getMessage().getId(), packet.getPacketId());
             return Mono.error(new ArchiveClaimException(claimResult));
         }
-        return MessageArchiveHelper.confirm(() -> repository().save(packet))
+        return confirmArchive(() -> repository().save(packet))
                 .doOnSuccess(ignored -> markArchiveBound(packet));
+    }
+
+    /** MQ 明确确认后才允许继续热写；后续处理切回消息处理执行器。 */
+    private static Mono<Void> confirmArchive(Supplier<? extends CompletableFuture<?>> publish) {
+        return Mono.defer(() -> Mono.fromFuture(publish.get(), true))
+                .timeout(Duration.ofMillis(MessageConstant.MESSAGE_ARCHIVE_CONFIRM_TIMEOUT_MS))
+                .publishOn(Schedulers.fromExecutor(ThreadPoolManager.messageProcessorExecutor()))
+                .then();
     }
 
     private static void markArchiveBound(Packet packet) {
@@ -84,9 +97,9 @@ public final class MessageAcceptPipelineHelper {
                 .onErrorResume(error -> {
                     if (error instanceof ArchiveClaimException claimError) {
                         releaseQosOnFailure(packet);
-                        if (claimError.result == ArchiveClaimResult.CONFLICT) {
+                        if (claimError.result == ArchiveClaimEnum.CONFLICT) {
                             MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_ID_CONFLICT);
-                        } else if (claimError.result == ArchiveClaimResult.PENDING) {
+                        } else if (claimError.result == ArchiveClaimEnum.PENDING) {
                             MessageSubmissionResponseHelper.retryLater(ctx, packet, ExceptionCodeEnum.UNKNOWN_ERROR);
                         } else {
                             MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
@@ -139,9 +152,9 @@ public final class MessageAcceptPipelineHelper {
                         ? archiveAfterAuth(packet).thenReturn(true) : Mono.just(false))
                 .onErrorResume(ArchiveClaimException.class, error -> {
                     releaseQosOnFailure(packet);
-                    if (error.result == ArchiveClaimResult.CONFLICT) {
+                    if (error.result == ArchiveClaimEnum.CONFLICT) {
                         MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_ID_CONFLICT);
-                    } else if (error.result == ArchiveClaimResult.PENDING) {
+                    } else if (error.result == ArchiveClaimEnum.PENDING) {
                         MessageSubmissionResponseHelper.retryLater(ctx, packet, ExceptionCodeEnum.UNKNOWN_ERROR);
                     } else {
                         MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
@@ -157,9 +170,9 @@ public final class MessageAcceptPipelineHelper {
 
     /**
      * Redis 热写结果收口：仅 SUCCESS/DUPLICATE 可回已受理；FAILED/CONFLICT 返回失败结果。
-     * 仅 {@link SaveMessageOutcome#isFreshWrite()} 时执行 {@code onFreshWrite}。
+     * 仅 {@link SaveMessageOutcomeEnum#isFreshWrite()} 时执行 {@code onFreshWrite}。
      */
-    public static Mono<Void> afterHotSave(ChannelHandlerContext ctx, Packet packet, SaveMessageOutcome result,
+    public static Mono<Void> afterHotSave(ChannelHandlerContext ctx, Packet packet, SaveMessageOutcomeEnum result,
                                           Runnable onFreshWrite, String failEventMessage) {
         if (result != null && result.isDuplicate()) {
             qosAckOnSuccess(ctx, packet);
@@ -169,7 +182,7 @@ public final class MessageAcceptPipelineHelper {
             log.error("热写未成功，拒绝 ACK/投递: outcome={} packetId={}", result, packet.getPacketId());
             ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, failEventMessage != null ? failEventMessage : "消息热写失败", "MessageAcceptPipelineHelper.afterHotSave", packet);
             releaseQosOnFailure(packet);
-            if (result == SaveMessageOutcome.CONFLICT) {
+            if (result == SaveMessageOutcomeEnum.CONFLICT) {
                 MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_ID_CONFLICT);
             } else {
                 // Redis 写入超时可能已提交，不能向客户端承诺“未写入”。
@@ -233,9 +246,9 @@ public final class MessageAcceptPipelineHelper {
 
     /** 只在受理管线内部传播，用于保留 Redis claim 的精确结果。 */
     private static final class ArchiveClaimException extends RuntimeException {
-        private final ArchiveClaimResult result;
+        private final ArchiveClaimEnum result;
 
-        private ArchiveClaimException(ArchiveClaimResult result) {
+        private ArchiveClaimException(ArchiveClaimEnum result) {
             super("archive claim failed: " + result);
             this.result = result;
         }

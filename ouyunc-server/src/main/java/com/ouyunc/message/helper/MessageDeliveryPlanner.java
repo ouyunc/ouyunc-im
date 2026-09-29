@@ -30,11 +30,11 @@ import java.util.concurrent.TimeUnit;
 /**
  * 按好友/群成员 {@code channel} 路由下行：IM 多设备推送或外部渠道 Kafka 出站。
  */
-public final class MessageDeliveryRouteHelper {
+public final class MessageDeliveryPlanner {
 
-    private static final Logger log = LoggerFactory.getLogger(MessageDeliveryRouteHelper.class);
+    private static final Logger log = LoggerFactory.getLogger(MessageDeliveryPlanner.class);
 
-    private MessageDeliveryRouteHelper() {
+    private MessageDeliveryPlanner() {
     }
 
     /**

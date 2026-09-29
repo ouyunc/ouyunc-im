@@ -14,19 +14,17 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.constant.enums.IdentityType;
 import com.ouyunc.message.context.MessageServerContext;
-import com.ouyunc.message.helper.AtMentionHelper;
+import com.ouyunc.message.helper.MessageContentNormalizer;
 import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
 import com.ouyunc.message.helper.MessageSubmissionResponseHelper;
 import com.ouyunc.message.helper.ClientHelper;
-import com.ouyunc.message.helper.MessageDeliveryRouteHelper;
-import com.ouyunc.message.helper.MessageDeliveryRouteHelper;
-import com.ouyunc.message.helper.MessageRefHelper;
+import com.ouyunc.message.helper.MessageDeliveryPlanner;
 import com.ouyunc.message.processor.http.push.IngressPacketHelper;
 import com.ouyunc.message.schedule.ScheduleTimer;
 import com.ouyunc.message.validator.*;
 import com.ouyunc.repository.support.GroupMembershipSupport;
-import com.ouyunc.repository.support.MessageIndexScope;
-import com.ouyunc.repository.SaveMessageOutcome;
+import com.ouyunc.base.constant.enums.MessageIndexScopeEnum;
+import com.ouyunc.base.constant.enums.SaveMessageOutcomeEnum;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -107,7 +105,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
             MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
             return Mono.empty();
         }
-        if (!MessageRefHelper.normalizeMessageRefOrReject(packet)) {
+        if (!MessageContentNormalizer.normalizeReferencesOrReject(packet)) {
             MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_REF_INVALID_ERROR);
             MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
             return Mono.empty();
@@ -198,11 +196,11 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
         boolean leaderOrManager = CollectionUtils.isNotEmpty(leaderOrManagerIdentitySet) && leaderOrManagerIdentitySet.contains(packet.getMessage().getFrom());
         return repository().reactiveHandleOperation(ctx, packet,
                 repository().reactiveLoadWithdrawTargetPackets(
-                        packet, sessionId, MessageIndexScope.CHANNEL_SESSION, !leaderOrManager),
+                        packet, sessionId, MessageIndexScopeEnum.CHANNEL_SESSION, !leaderOrManager),
                 ExceptionCodeEnum.WITHDRAW_MESSAGE_VERIFY_ERROR,
                 MqConstant.MQ_WITHDRAW_MESSAGE_TOPIC, sessionId,
                 packets -> repository().reactiveWithdrawMessage(
-                        packet, sessionId, MessageIndexScope.CHANNEL_SESSION, packets),
+                        packet, sessionId, MessageIndexScopeEnum.CHANNEL_SESSION, packets),
                 (ctx0, packet0) -> {
                     MessageAcceptPipelineHelper.qosAckOnSuccess(ctx0, packet0);
                     Message msg = packet0.getMessage();
@@ -275,7 +273,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
         String appKey = message.getMetadata().getIngress().getAppKey();
         List<LoginClientInfo> fromSelfLoginClientInfos = ClientHelper.onlineAll(appKey, message.getFrom(), packet.getDeviceType());
         if (CollectionUtils.isNotEmpty(fromSelfLoginClientInfos)) {
-            MessageDeliveryRouteHelper.deliverOnlineClients(packet, fromSelfLoginClientInfos);
+            MessageDeliveryPlanner.deliverOnlineClients(packet, fromSelfLoginClientInfos);
         }
     }
 
@@ -283,7 +281,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
     /**
      * 保存群组消息
      */
-    private Mono<SaveMessageOutcome> reactiveSaveGroupMessage(Packet packet) {
+    private Mono<SaveMessageOutcomeEnum> reactiveSaveGroupMessage(Packet packet) {
         Message message = packet.getMessage();
         return repository().reactiveSaveMessage(packet, message.getTo(), MessageContext.messageHotDataTtlMillis());
     }
@@ -296,7 +294,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
     }
 
     private void deliver2AllGroupMembers(Packet packet, Set<String> groupMembers) {
-        MessageDeliveryRouteHelper.deliverGroupMembers(packet, groupMembers);
+        MessageDeliveryPlanner.deliverGroupMembers(packet, groupMembers);
     }
 
     private void deliverAtMentionsIfAny(Packet packet) {
@@ -304,11 +302,11 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
         if (CollectionUtils.isEmpty(atList)) {
             return;
         }
-        if (AtMentionHelper.containsAtAll(atList)) {
+        if (MessageContentNormalizer.containsAtAll(atList)) {
             deliver2AllGroupMembers(packet, loadFullMembersOrEmpty(packet));
             return;
         }
-        MessageDeliveryRouteHelper.deliverGroupMembers(packet, new HashSet<>(atList));
+        MessageDeliveryPlanner.deliverGroupMembers(packet, new HashSet<>(atList));
     }
 
     private Set<String> loadFullMembersOrEmpty(Packet packet) {
@@ -396,9 +394,9 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
             return true;
         }
         try {
-            List<String> explicit = AtMentionHelper.explicitMemberIds(at);
+            List<String> explicit = MessageContentNormalizer.explicitAtMemberIds(at);
             Set<String> confirmed = repository().presentInGroup(appKey, groupId, explicit);
-            message.setAt(AtMentionHelper.normalizeAndValidate(at, confirmed));
+            message.setAt(MessageContentNormalizer.normalizeAt(at, confirmed));
             return true;
         } catch (GroupMembershipSupport.GroupMembershipLoadException | IllegalArgumentException ex) {
             log.warn("群@校验失败: {} | packet={}", ex.getMessage(), packet);

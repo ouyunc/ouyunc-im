@@ -5,7 +5,7 @@ import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
-import com.ouyunc.repository.SaveMessageOutcome;
+import com.ouyunc.base.constant.enums.SaveMessageOutcomeEnum;
 import com.ouyunc.repository.cs.CsImSessionRoute;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -24,29 +24,29 @@ public final class CsTicketMessagePersistenceSupport {
         this.ticketUnread = ticketUnread;
     }
 
-    public Mono<SaveMessageOutcome> reactiveSaveCsTicketMessage(Packet packet, CsImSessionRoute route, long expireTime) {
+    public Mono<SaveMessageOutcomeEnum> reactiveSaveCsTicketMessage(Packet packet, CsImSessionRoute route, long expireTime) {
         if (route == null || packet == null || packet.getMessage() == null) {
-            return Mono.just(SaveMessageOutcome.FAILED);
+            return Mono.just(SaveMessageOutcomeEnum.FAILED);
         }
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         if (metadata == null || metadata.getIngress().getAppKey() == null || route.ticketId() == null) {
-            return Mono.just(SaveMessageOutcome.FAILED);
+            return Mono.just(SaveMessageOutcomeEnum.FAILED);
         }
         String ticketScopeId = route.ticketId().trim();
         String ticketSessionKey = CacheConstant.buildCsTicketMessageSessionCacheKey(metadata.getIngress().getAppKey(), ticketScopeId);
         return Mono.fromCallable(() -> {
-                    SaveMessageOutcome outcome = sessionPersistence.saveMessageWithSessionOutcome(
+                    SaveMessageOutcomeEnum outcome = sessionPersistence.saveMessageWithSessionOutcome(
                             packet, expireTime, ticketSessionKey, (ops) -> {
                             }, (ops, msg, app, f, t) -> {
                             });
                     if ((outcome.isFreshWrite() || outcome.isDuplicate())
                             && !ticketUnread.incrOnMessage(packet, route)) {
-                        return SaveMessageOutcome.FAILED;
+                        return SaveMessageOutcomeEnum.FAILED;
                     }
                     return outcome;
                 })
                 .subscribeOn(Schedulers.fromExecutor(ThreadPoolManager.redisPersistenceExecutor()))
-                .onErrorResume(e -> Mono.just(SaveMessageOutcome.FAILED));
+                .onErrorResume(e -> Mono.just(SaveMessageOutcomeEnum.FAILED));
     }
 }

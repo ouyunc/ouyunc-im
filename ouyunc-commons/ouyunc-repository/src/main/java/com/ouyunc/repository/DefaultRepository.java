@@ -1,7 +1,7 @@
 package com.ouyunc.repository;
 
 import com.ouyunc.base.constant.CacheConstant;
-import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.enums.*;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.core.context.MessageContext;
@@ -10,17 +10,13 @@ import org.apache.commons.lang3.StringUtils;
 import java.time.Duration;
 import com.ouyunc.base.model.GroupRequestSession;
 import com.ouyunc.base.model.RequestSession;
-import com.ouyunc.base.constant.enums.IdentityType;
-import com.ouyunc.base.constant.enums.MessageDeliveryChannelEnum;
 import com.ouyunc.repository.cs.CsImSessionRoute;
-import com.ouyunc.repository.support.MessageIndexScope;
 import com.ouyunc.repository.support.One2OneChatAccess;
 import com.ouyunc.domain.entity.FriendEntity;
 import com.ouyunc.domain.entity.GroupEntity;
 import com.ouyunc.domain.entity.GroupUserEntity;
 import com.ouyunc.domain.entity.UserEntity;
 import com.ouyunc.domain.entity.AppEntity;
-import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.repository.support.RepositorySupports;
 import io.netty.channel.ChannelHandlerContext;
 import reactor.core.publisher.Mono;
@@ -77,11 +73,11 @@ public enum DefaultRepository implements Repository {
     }
 
     public Mono<List<Packet>> reactiveLoadWithdrawTargetPackets(Packet packet, String scopeId,
-                                                                 MessageIndexScope scope, boolean isValidSender) {
+                                                                MessageIndexScopeEnum scope, boolean isValidSender) {
         return RepositorySupports.WITHDRAW.reactiveLoadWithdrawTargetPackets(packet, scopeId, scope, isValidSender);
     }
 
-    public Mono<Boolean> reactiveWithdrawMessage(Packet packet, String scopeId, MessageIndexScope scope,
+    public Mono<Boolean> reactiveWithdrawMessage(Packet packet, String scopeId, MessageIndexScopeEnum scope,
                                                  List<Packet> targetPackets) {
         return RepositorySupports.WITHDRAW.reactiveWithdrawMessage(packet, scopeId, scope, targetPackets);
     }
@@ -167,11 +163,11 @@ public enum DefaultRepository implements Repository {
         return RepositorySupports.GROUP.groupManagerAndLeaderUsersIdentityAndPost(packet);
     }
 
-    public Mono<SaveMessageOutcome> reactiveSaveMessage(Packet packet, String sessionId, long expireTime) {
+    public Mono<SaveMessageOutcomeEnum> reactiveSaveMessage(Packet packet, String sessionId, long expireTime) {
         return RepositorySupports.SESSION.reactiveSaveMessage(packet, sessionId, expireTime);
     }
 
-    public Mono<SaveMessageOutcome> reactiveSaveOne2OneMessage(Packet packet, String sessionId, long expireTime) {
+    public Mono<SaveMessageOutcomeEnum> reactiveSaveOne2OneMessage(Packet packet, String sessionId, long expireTime) {
         return RepositorySupports.SESSION.reactiveSaveOne2OneMessage(packet, sessionId, expireTime,
                 RepositorySupports.UNREAD);
     }
@@ -340,18 +336,18 @@ public enum DefaultRepository implements Repository {
     }
 
     /** 归档前抢占并对齐正式 packetId；失败不得发 SAVE。 */
-    public ArchiveClaimResult claimForArchive(Packet packet) {
+    public ArchiveClaimEnum claimForArchive(Packet packet) {
         return RepositorySupports.QOS.claimForArchive(packet);
     }
 
-    public BindGroupResult autoPassBindGroup(Packet packet, GroupRequestSession groupRequestSession, long expireTime,
-                                             int maxMembers, int maxPerUser) {
+    public BindGroupEnum autoPassBindGroup(Packet packet, GroupRequestSession groupRequestSession, long expireTime,
+                                           int maxMembers, int maxPerUser) {
         return RepositorySupports.GROUP.autoPassBindGroup(packet, groupRequestSession, expireTime,
                 maxMembers, maxPerUser);
     }
 
-    public BindGroupResult manualPassBindGroup(Packet packet, GroupRequestSession groupRequestSession, long expireTime,
-                                               int maxMembers, int maxPerUser) {
+    public BindGroupEnum manualPassBindGroup(Packet packet, GroupRequestSession groupRequestSession, long expireTime,
+                                             int maxMembers, int maxPerUser) {
         return RepositorySupports.GROUP.manualPassBindGroup(packet, groupRequestSession, expireTime,
                 maxMembers, maxPerUser);
     }
@@ -393,7 +389,7 @@ public enum DefaultRepository implements Repository {
         RepositorySupports.CS_TICKET_LAST_MESSAGE.delete(appKey, ticketId);
     }
 
-    public Mono<SaveMessageOutcome> reactiveSaveCsTicketMessage(Packet packet, CsImSessionRoute route, long expireTime) {
+    public Mono<SaveMessageOutcomeEnum> reactiveSaveCsTicketMessage(Packet packet, CsImSessionRoute route, long expireTime) {
         return RepositorySupports.CS_TICKET_MESSAGE.reactiveSaveCsTicketMessage(packet, route, expireTime);
     }
 

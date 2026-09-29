@@ -1,9 +1,9 @@
-package com.ouyunc.repository.support;
+package com.ouyunc.base.constant.enums;
 
 /**
  * 消息索引 / 特殊消息校验作用域。
  */
-public enum MessageIndexScope {
+public enum MessageIndexScopeEnum {
 
     /** 单聊 channel：{@code IdentityUtil.sessionId(from, to)}。 */
     CHANNEL_SESSION,

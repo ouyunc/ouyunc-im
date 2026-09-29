@@ -13,15 +13,15 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.core.exception.ExceptionReporter;
 import com.ouyunc.message.context.MessageServerContext;
-import com.ouyunc.message.helper.AtMentionHelper;
-import com.ouyunc.message.helper.MessageDeliveryRouteHelper;
+import com.ouyunc.message.helper.MessageContentNormalizer;
+import com.ouyunc.message.helper.MessageDeliveryPlanner;
 import com.ouyunc.message.http.HttpPipelineException;
 import com.ouyunc.message.processor.http.push.HttpPushFailures;
 import com.ouyunc.message.processor.http.push.HttpPushValidatorChain;
 import com.ouyunc.message.processor.http.push.IngressPacketHelper;
 import com.ouyunc.repository.DefaultRepository;
 import com.ouyunc.repository.support.GroupMembershipSupport;
-import com.ouyunc.repository.support.MessageIndexScope;
+import com.ouyunc.base.constant.enums.MessageIndexScopeEnum;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -119,11 +119,11 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
                 && leaderOrManagerIdentitySet.contains(packet.getMessage().getFrom());
         return DefaultRepository.INSTANCE.reactiveHandleOperation(null, packet,
                         DefaultRepository.INSTANCE.reactiveLoadWithdrawTargetPackets(
-                                packet, sessionId, MessageIndexScope.CHANNEL_SESSION, !leaderOrManager),
+                                packet, sessionId, MessageIndexScopeEnum.CHANNEL_SESSION, !leaderOrManager),
                         ExceptionCodeEnum.WITHDRAW_MESSAGE_VERIFY_ERROR,
                         MqConstant.MQ_WITHDRAW_MESSAGE_TOPIC, sessionId,
                         packets -> DefaultRepository.INSTANCE.reactiveWithdrawMessage(
-                                packet, sessionId, MessageIndexScope.CHANNEL_SESSION, packets),
+                                packet, sessionId, MessageIndexScopeEnum.CHANNEL_SESSION, packets),
                         (ctx, packet0) -> {
                             Message msg = packet0.getMessage();
                             if (msg != null && msg.getMetadata() != null) {
@@ -174,7 +174,7 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
 
     private static void deliverWithdraw(Packet packet) {
         HttpPushDeliverySupport.syncSenderOnlineDevices(packet, packet.getMessage().getFrom());
-        MessageDeliveryRouteHelper.deliverGroupMembers(packet, loadFullMembersOrEmpty(packet));
+        MessageDeliveryPlanner.deliverGroupMembers(packet, loadFullMembersOrEmpty(packet));
     }
 
     private static void pushGroupOnline(Packet packet) {
@@ -203,7 +203,7 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
     }
 
     private static void deliverToAllGroupMembers(Packet packet, Set<String> groupMembers) {
-        MessageDeliveryRouteHelper.deliverGroupMembers(packet, groupMembers);
+        MessageDeliveryPlanner.deliverGroupMembers(packet, groupMembers);
     }
 
     private static void deliverAtMentionsIfAny(Packet packet) {
@@ -211,11 +211,11 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
         if (CollectionUtils.isEmpty(atList)) {
             return;
         }
-        if (AtMentionHelper.containsAtAll(atList)) {
+        if (MessageContentNormalizer.containsAtAll(atList)) {
             deliverToAllGroupMembers(packet, loadFullMembersOrEmpty(packet));
             return;
         }
-        MessageDeliveryRouteHelper.deliverGroupMembers(packet, new HashSet<>(atList));
+        MessageDeliveryPlanner.deliverGroupMembers(packet, new HashSet<>(atList));
     }
 
     private static Set<String> loadFullMembersOrEmpty(Packet packet) {
@@ -237,9 +237,9 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
             return;
         }
         try {
-            List<String> explicit = AtMentionHelper.explicitMemberIds(at);
+            List<String> explicit = MessageContentNormalizer.explicitAtMemberIds(at);
             Set<String> confirmed = DefaultRepository.INSTANCE.presentInGroup(appKey, groupId, explicit);
-            message.setAt(AtMentionHelper.normalizeAndValidate(at, confirmed));
+            message.setAt(MessageContentNormalizer.normalizeAt(at, confirmed));
         } catch (GroupMembershipSupport.GroupMembershipLoadException | IllegalArgumentException ex) {
             throw HttpPushFailures.forbidden(packet, ExceptionCodeEnum.GROUP_AT_MENTION_INVALID_ERROR, ex.getMessage());
         }

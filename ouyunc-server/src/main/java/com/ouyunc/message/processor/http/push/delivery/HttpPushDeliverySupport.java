@@ -14,8 +14,8 @@ import com.ouyunc.cache.local.caffeine.CaffeineLocalCache;
 import com.ouyunc.core.exception.ExceptionReporter;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
-import com.ouyunc.message.helper.MessageDeliveryRouteHelper;
-import com.ouyunc.message.helper.MessageRefHelper;
+import com.ouyunc.message.helper.MessageDeliveryPlanner;
+import com.ouyunc.message.helper.MessageContentNormalizer;
 import com.ouyunc.message.http.HttpPipelineException;
 import com.ouyunc.message.processor.http.push.HttpPushFailures;
 import com.ouyunc.message.processor.http.push.PushIdempotencySupport;
@@ -128,7 +128,7 @@ public final class HttpPushDeliverySupport {
             return;
         }
         try {
-            message.setRef(MessageRefHelper.normalizeAndValidate(message.getRef()));
+            message.setRef(MessageContentNormalizer.normalizeReferences(message.getRef()));
         } catch (IllegalArgumentException ex) {
             throw HttpPushFailures.forbidden(packet, ExceptionCodeEnum.MESSAGE_REF_INVALID_ERROR, ex.getMessage());
         }
@@ -268,7 +268,7 @@ public final class HttpPushDeliverySupport {
         }
         List<LoginClientInfo> clients = ClientHelper.onlineAll(appKey, identity);
         if (CollectionUtils.isNotEmpty(clients)) {
-            MessageDeliveryRouteHelper.deliverOnlineClients(packet, clients);
+            MessageDeliveryPlanner.deliverOnlineClients(packet, clients);
         }
     }
 }

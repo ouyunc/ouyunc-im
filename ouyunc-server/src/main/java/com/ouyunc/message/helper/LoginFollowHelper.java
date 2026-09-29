@@ -79,7 +79,7 @@ public final class LoginFollowHelper {
                 metadata.getClusterRoute().getLoginFollowHops() + 1);
         followMetadata.ensureClusterRoute().setClusterForwardMode(ClusterForwardModeEnum.CLIENT);
         followMetadata.ensureClusterRoute().setFanoutTargets(null);
-        MessageDeliveryRouteHelper.deliverOnlineClients(follow, followedClients);
+        MessageDeliveryPlanner.deliverOnlineClients(follow, followedClients);
     }
 
     /**

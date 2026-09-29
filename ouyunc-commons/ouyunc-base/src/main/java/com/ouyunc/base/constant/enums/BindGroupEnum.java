@@ -1,9 +1,9 @@
-package com.ouyunc.repository;
+package com.ouyunc.base.constant.enums;
 
 /**
  * 热路径入群结果。容量在群成员 / 用户加群 ZSET 上原子判定，不能只靠前置 Validator。
  */
-public enum BindGroupResult {
+public enum BindGroupEnum {
     SUCCESS,
     ALREADY_MEMBER,
     GROUP_FULL,

@@ -13,14 +13,13 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.core.exception.ExceptionReporter;
-import com.ouyunc.message.helper.AtMentionHelper;
+import com.ouyunc.message.helper.MessageContentNormalizer;
 import com.ouyunc.message.helper.ClientHelper;
-import com.ouyunc.message.helper.MessageDeliveryRouteHelper;
-import com.ouyunc.message.helper.MessageDeliveryRouteHelper;
+import com.ouyunc.message.helper.MessageDeliveryPlanner;
 import com.ouyunc.message.http.HttpPipelineException;
 import com.ouyunc.message.processor.http.push.HttpPushValidatorChain;
 import com.ouyunc.repository.DefaultRepository;
-import com.ouyunc.repository.support.MessageIndexScope;
+import com.ouyunc.base.constant.enums.MessageIndexScopeEnum;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -51,7 +50,7 @@ public final class One2OneHttpPushDeliveryStrategy implements HttpProcessor {
     public void preProcess(Packet packet) throws HttpPipelineException {
         HttpPushValidatorChain.verifyOne2One(packet);
         HttpPushDeliverySupport.requireValidMessageRef(packet);
-        AtMentionHelper.clearAtIfPresent(packet.getMessage());
+        MessageContentNormalizer.clearAt(packet.getMessage());
     }
 
     @Override
@@ -94,7 +93,7 @@ public final class One2OneHttpPushDeliveryStrategy implements HttpProcessor {
                                     MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
                             .subscribe(ignored -> { }, e -> log.warn(
                                     "HTTP 推送更新单聊已读 offset 失败, packetId={}", packet.getPacketId(), e));
-                    MessageDeliveryRouteHelper.deliverPeerMessage(packet, false);
+                    MessageDeliveryPlanner.deliverPeerMessage(packet, false);
                     return Mono.just(true);
                 })
                 .onErrorResume(error -> {
@@ -109,11 +108,11 @@ public final class One2OneHttpPushDeliveryStrategy implements HttpProcessor {
     private Mono<Boolean> handleWithdraw(Packet packet, String sessionId) {
         return DefaultRepository.INSTANCE.reactiveHandleOperation(null, packet,
                         DefaultRepository.INSTANCE.reactiveLoadWithdrawTargetPackets(
-                                packet, sessionId, MessageIndexScope.CHANNEL_SESSION, true),
+                                packet, sessionId, MessageIndexScopeEnum.CHANNEL_SESSION, true),
                         ExceptionCodeEnum.WITHDRAW_MESSAGE_VERIFY_ERROR,
                         MqConstant.MQ_WITHDRAW_MESSAGE_TOPIC, sessionId,
                         packets -> DefaultRepository.INSTANCE.reactiveWithdrawMessage(
-                                packet, sessionId, MessageIndexScope.CHANNEL_SESSION, packets),
+                                packet, sessionId, MessageIndexScopeEnum.CHANNEL_SESSION, packets),
                         (ctx, packet0) -> {
                             Message msg = packet0.getMessage();
                             if (msg != null && msg.getMetadata() != null) {
@@ -122,7 +121,7 @@ public final class One2OneHttpPushDeliveryStrategy implements HttpProcessor {
                                     DefaultRepository.INSTANCE.refreshSessionLastMessageAfterWithdraw(appKey, sessionId);
                                 }
                             }
-                            MessageDeliveryRouteHelper.deliverPeerMessage(packet0, true);
+                            MessageDeliveryPlanner.deliverPeerMessage(packet0, true);
                         },
                         ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR)
                 .map(Boolean.TRUE::equals);
@@ -150,7 +149,7 @@ public final class One2OneHttpPushDeliveryStrategy implements HttpProcessor {
             if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType) {
                 deliverReadReceiptToSender(packet);
             } else {
-                MessageDeliveryRouteHelper.deliverPeerMessage(packet,
+                MessageDeliveryPlanner.deliverPeerMessage(packet,
                         MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType);
             }
             return Boolean.TRUE;
@@ -162,7 +161,7 @@ public final class One2OneHttpPushDeliveryStrategy implements HttpProcessor {
         String appKey = message.getMetadata().getIngress().getAppKey();
         List<LoginClientInfo> senderClients = ClientHelper.onlineAll(appKey, message.getTo());
         if (CollectionUtils.isNotEmpty(senderClients)) {
-            MessageDeliveryRouteHelper.deliverOnlineClients(packet, senderClients);
+            MessageDeliveryPlanner.deliverOnlineClients(packet, senderClients);
         }
     }
 }

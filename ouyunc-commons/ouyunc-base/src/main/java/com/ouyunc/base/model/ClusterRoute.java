@@ -66,6 +66,11 @@ public final class ClusterRoute implements Serializable, Cloneable {
         return routingTables;
     }
 
+    /** 最终落地节点地址；中转节点不得把它替换成下一跳地址。 */
+    public String destinationAddress() {
+        return target == null ? null : target.getTargetServerAddress();
+    }
+
     public ClusterForwardModeEnum getClusterForwardMode() { return clusterForwardMode; }
     public void setClusterForwardMode(ClusterForwardModeEnum clusterForwardMode) { this.clusterForwardMode = clusterForwardMode; }
     public int getCurrentRetry() { return currentRetry; }

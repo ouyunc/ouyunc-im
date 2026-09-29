@@ -1,6 +1,7 @@
 package com.ouyunc.message.helper;
 
 import com.ouyunc.base.constant.QosControlConstant;
+import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.message.monitor.QosRetryCancelMetrics;
 import io.netty.channel.Channel;
 import io.netty.util.AttributeKey;
@@ -19,6 +20,9 @@ import java.util.function.Supplier;
 public final class QosAckBackpressureHelper {
     private static final Logger log = LoggerFactory.getLogger(QosAckBackpressureHelper.class);
     private static final Semaphore PENDING = new Semaphore(QosControlConstant.MAX_PENDING_ACKS);
+    private static final Semaphore IN_FLIGHT = new Semaphore(QosControlConstant.MAX_IN_FLIGHT);
+    private static final AttributeKey<Semaphore> IN_FLIGHT_PER_CHANNEL =
+            AttributeKey.valueOf("qos.ack.admission");
     private static final AttributeKey<Semaphore> LOCAL = AttributeKey.valueOf("qos.ack.pending");
     /** 同一连接上相同 packetId 的等待 ACK 合并；不能按用户合并，否则会吞掉其他设备的重发取消。 */
     private static final AttributeKey<ConcurrentHashMap<Long, Boolean>> WAITING =
@@ -26,10 +30,10 @@ public final class QosAckBackpressureHelper {
 
     private QosAckBackpressureHelper() { }
 
-    /** 与 QosAckDispatcher 配合使用；保留原始 ACK 校验，不因缓冲而跳过权限检查。 */
+    /** 统一完成 ACK 准入与调度；保留原始 ACK 校验，不因缓冲而跳过权限检查。 */
     public static void execute(Channel channel, long packetId, Supplier<CompletionStage<Void>> task) {
         try {
-            QosAckDispatcherHelper.execute(channel, task);
+            dispatch(channel, task);
         } catch (RejectedExecutionException error) {
             QosRetryCancelMetrics.ackDispatchReject();
             ConcurrentHashMap<Long, Boolean> waiting = waiting(channel);
@@ -95,7 +99,7 @@ public final class QosAckBackpressureHelper {
                 return;
             }
             try {
-                QosAckDispatcherHelper.execute(channel, task);
+                dispatch(channel, task);
                 finish();
             } catch (RejectedExecutionException error) {
                 if (++attempts < QosControlConstant.ACK_RETRY_ATTEMPTS) {
@@ -123,6 +127,44 @@ public final class QosAckBackpressureHelper {
         @Override
         public void operationComplete(io.netty.channel.ChannelFuture future) {
             finish();
+        }
+    }
+
+    /** 全局和单连接双重非阻塞准入；许可覆盖完整异步处理链。 */
+    private static void dispatch(Channel channel, Supplier<CompletionStage<Void>> task) {
+        Semaphore local = channel.attr(IN_FLIGHT_PER_CHANNEL).get();
+        if (local == null) {
+            Semaphore created = new Semaphore(QosControlConstant.MAX_PER_CHANNEL);
+            Semaphore existing = channel.attr(IN_FLIGHT_PER_CHANNEL).setIfAbsent(created);
+            local = existing == null ? created : existing;
+        }
+        if (!local.tryAcquire()) {
+            throw new RejectedExecutionException("ACK channel capacity exhausted");
+        }
+        if (!IN_FLIGHT.tryAcquire()) {
+            local.release();
+            throw new RejectedExecutionException("ACK global capacity exhausted");
+        }
+        Semaphore admitted = local;
+        AtomicBoolean released = new AtomicBoolean();
+        Runnable release = () -> {
+            if (released.compareAndSet(false, true)) {
+                admitted.release();
+                IN_FLIGHT.release();
+            }
+        };
+        try {
+            ThreadPoolManager.qosControlExecutor().execute(() -> {
+                try {
+                    task.get().whenComplete((ignored, error) -> release.run());
+                } catch (Throwable error) {
+                    release.run();
+                    throw error;
+                }
+            });
+        } catch (RuntimeException | Error error) {
+            release.run();
+            throw error;
         }
     }
 }

@@ -11,7 +11,7 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.QosClaimIdentities;
 import com.ouyunc.core.context.MessageContext;
-import com.ouyunc.repository.SaveMessageOutcome;
+import com.ouyunc.base.constant.enums.SaveMessageOutcomeEnum;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -42,7 +42,7 @@ public final class SessionMessagePersistenceSupport {
         this.infra = infra;
     }
 
-    public Mono<SaveMessageOutcome> reactiveSaveMessage(Packet packet, String sessionId, long expireTime) {
+    public Mono<SaveMessageOutcomeEnum> reactiveSaveMessage(Packet packet, String sessionId, long expireTime) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         return Mono.fromCallable(() -> saveMessageWithSessionOutcome(packet, expireTime,
@@ -53,7 +53,7 @@ public final class SessionMessagePersistenceSupport {
                 .subscribeOn(Schedulers.fromExecutor(ThreadPoolManager.redisPersistenceExecutor()))
                 .onErrorResume(e -> {
                     log.error("Reactive save message failed: {}", e.getMessage(), e);
-                    return Mono.just(SaveMessageOutcome.FAILED);
+                    return Mono.just(SaveMessageOutcomeEnum.FAILED);
                 });
     }
 
@@ -61,12 +61,12 @@ public final class SessionMessagePersistenceSupport {
      * 单聊/客服消息持久化，并在成功后对收件人维护 ur 未读 Hash。
      * <p>DUPLICATE 不累加未读、不视为新写入（未读重放使用已收敛的正式 packetId）；调用方只应 ACK，禁止二次扇出。</p>
      */
-    public Mono<SaveMessageOutcome> reactiveSaveOne2OneMessage(Packet packet, String sessionId, long expireTime,
-                                                    UnreadIndexSupport unreadIndexSupport) {
+    public Mono<SaveMessageOutcomeEnum> reactiveSaveOne2OneMessage(Packet packet, String sessionId, long expireTime,
+                                                                   UnreadIndexSupport unreadIndexSupport) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         return Mono.fromCallable(() -> {
-                    SaveMessageOutcome outcome = saveMessageWithSessionOutcome(packet, expireTime,
+                    SaveMessageOutcomeEnum outcome = saveMessageWithSessionOutcome(packet, expireTime,
                             CacheConstant.buildSessionCacheKey(metadata.getIngress().getAppKey(), sessionId),
                             (ops) -> {
                             }, (ops, msg, app, f, t) -> {
@@ -74,14 +74,14 @@ public final class SessionMessagePersistenceSupport {
                     // 未读 ZADD 幂等；SUCCESS/DUPLICATE 都重放。失败不得当受理成功，否则 ACK 后重试会被前置判重截住。
                     if ((outcome.isFreshWrite() || outcome.isDuplicate()) && unreadIndexSupport != null
                             && !unreadIndexSupport.incrOne2OneOnMessage(packet)) {
-                        return SaveMessageOutcome.FAILED;
+                        return SaveMessageOutcomeEnum.FAILED;
                     }
                     return outcome;
                 })
                 .subscribeOn(Schedulers.fromExecutor(ThreadPoolManager.redisPersistenceExecutor()))
                 .onErrorResume(e -> {
                     log.error("Reactive save one2one message failed: {}", e.getMessage(), e);
-                    return Mono.just(SaveMessageOutcome.FAILED);
+                    return Mono.just(SaveMessageOutcomeEnum.FAILED);
                 });
     }
 
@@ -94,7 +94,7 @@ public final class SessionMessagePersistenceSupport {
     /**
      * 热 key + 会话索引 Pipeline 落库。QoS 消息先原子抢占 PENDING（packet 键 + 稳定 client 键），
      * Pipeline 成功后再 {@code COMMIT_SCRIPT} 提交为 COMMITTED；失败则 compare-and-delete 释放本次占位。
-     * 返回 {@link SaveMessageOutcome#DUPLICATE} 仅可能来自已提交记录，占位（PENDING）绝不视为成功。
+     * 返回 {@link SaveMessageOutcomeEnum#DUPLICATE} 仅可能来自已提交记录，占位（PENDING）绝不视为成功。
      *
      * <p>主体/会话键等必需字段必须在入队前序列化成功；{@code consumer}/{@code extraOperation}
      * 视为关键副作用（好友/群关系等），异常直接导致 FAILED，不可吞掉后仍 ACK。
@@ -105,12 +105,12 @@ public final class SessionMessagePersistenceSupport {
      * 否则接管场景会把正文写到旧 packetId 的 key 上，而会话 ZSET 记录的是 canonical ID。</p>
      */
     @SuppressWarnings("unchecked")
-    public SaveMessageOutcome saveMessageWithSessionOutcome(Packet packet, long expireTime, String sessionKey,
-                                                            Consumer<RedisConnection> consumer,
-                                                            FiveConsumer<RedisConnection, Message, String, String, String> extraOperation) {
+    public SaveMessageOutcomeEnum saveMessageWithSessionOutcome(Packet packet, long expireTime, String sessionKey,
+                                                                Consumer<RedisConnection> consumer,
+                                                                FiveConsumer<RedisConnection, Message, String, String, String> extraOperation) {
         if (packet == null || infra.redisTemplate.getConnectionFactory() == null) {
             log.error("Packet 或 RedisConnectionFactory 为空");
-            return SaveMessageOutcome.FAILED;
+            return SaveMessageOutcomeEnum.FAILED;
         }
 
         RedisConnectionFactory connectionFactory = infra.redisTemplate.getConnectionFactory();
@@ -130,7 +130,7 @@ public final class SessionMessagePersistenceSupport {
             Metadata metadata = message != null ? message.getMetadata() : null;
             if (message == null || metadata == null) {
                 log.error("消息或元数据为空");
-                return SaveMessageOutcome.FAILED;
+                return SaveMessageOutcomeEnum.FAILED;
             }
 
             appKey = metadata.getIngress().getAppKey();
@@ -161,20 +161,20 @@ public final class SessionMessagePersistenceSupport {
                         log.warn("QoS 已提交但缺少正式 packetId，拒绝按重复成功处理: appKey={} clientMessageId={}",
                                 appKey, clientMessageId);
                         clearQosClaimMarks(metadata);
-                        return SaveMessageOutcome.FAILED;
+                        return SaveMessageOutcomeEnum.FAILED;
                     }
                     packet.setPacketId(claim.canonicalPacketId());
                     clearQosClaimMarks(metadata);
-                    return SaveMessageOutcome.DUPLICATE;
+                    return SaveMessageOutcomeEnum.DUPLICATE;
                 }
                 if (claim.state() == QosIdempotencyHelper.CLAIM_CONFLICT) {
                     clearQosClaimMarks(metadata);
-                    return SaveMessageOutcome.CONFLICT;
+                    return SaveMessageOutcomeEnum.CONFLICT;
                 }
                 if (claim.state() != QosIdempotencyHelper.CLAIM_ACQUIRED) {
                     // PENDING / FAILED：占位未拿到，绝不能当作成功
                     clearQosClaimMarks(metadata);
-                    return SaveMessageOutcome.FAILED;
+                    return SaveMessageOutcomeEnum.FAILED;
                 }
                 // 接管僵死 PENDING 时复用首次服务端 ID，避免换 packetId 再写一条热消息
                 if (claim.canonicalPacketId() > 0L) {
@@ -231,13 +231,13 @@ public final class SessionMessagePersistenceSupport {
                 forceClosePipeline(conn);
                 releaseQosClaimQuietly(qosSave, appKey, qosClaimKeyPacketId, packet.getPacketId(), qosClaimIdentity,
                         clientMessageId, qosOwnerToken, metadata);
-                return SaveMessageOutcome.FAILED;
+                return SaveMessageOutcomeEnum.FAILED;
             }
 
             if (CollectionUtils.isEmpty(results)) {
                 releaseQosClaimQuietly(qosSave, appKey, qosClaimKeyPacketId, packet.getPacketId(), qosClaimIdentity,
                         clientMessageId, qosOwnerToken, metadata);
-                return SaveMessageOutcome.FAILED;
+                return SaveMessageOutcomeEnum.FAILED;
             }
             QosIdempotencyHelper.CommitOutcome commitOutcome = qosSave
                     ? QosIdempotencyHelper.commit(infra.redisTemplate, appKey, qosClaimKeyPacketId,
@@ -254,7 +254,7 @@ public final class SessionMessagePersistenceSupport {
                             appKey, packet.getPacketId(), verifiedState);
                     // 不能删除热数据或释放占位：Redis 可能已经提交成功但响应丢失。
                     clearQosClaimMarks(metadata);
-                    return SaveMessageOutcome.FAILED;
+                    return SaveMessageOutcomeEnum.FAILED;
                 }
             }
             if (commitOutcome == QosIdempotencyHelper.CommitOutcome.REJECTED) {
@@ -265,19 +265,19 @@ public final class SessionMessagePersistenceSupport {
                         appKey, packet.getPacketId());
                 releaseQosClaimQuietly(true, appKey, qosClaimKeyPacketId, packet.getPacketId(), qosClaimIdentity,
                         clientMessageId, qosOwnerToken, metadata);
-                return SaveMessageOutcome.FAILED;
+                return SaveMessageOutcomeEnum.FAILED;
             }
             if (qosSave && metadata != null) {
                 metadata.ensureQosClaim().setQosOwnerToken(null);
                 metadata.ensureQosClaim().setQosClaimPacketId(null);
             }
-            return SaveMessageOutcome.SUCCESS;
+            return SaveMessageOutcomeEnum.SUCCESS;
 
         } catch (Exception e) {
             log.error("Redis Pipeline 操作异常: ", e);
             releaseQosClaimQuietly(qosSave, appKey, qosClaimKeyPacketId, packet.getPacketId(), qosClaimIdentity,
                     clientMessageId, qosOwnerToken, metadataFromPacket(packet));
-            return SaveMessageOutcome.FAILED;
+            return SaveMessageOutcomeEnum.FAILED;
         }
     }
 
@@ -302,10 +302,10 @@ public final class SessionMessagePersistenceSupport {
 
     /**
      * 好友/群申请等「写入即定性」路径：DUPLICATE 可当成功。
-     * 聊天投递必须使用 {@link SaveMessageOutcome#isFreshWrite()}，禁止把 DUPLICATE 当新消息扇出。
+     * 聊天投递必须使用 {@link SaveMessageOutcomeEnum#isFreshWrite()}，禁止把 DUPLICATE 当新消息扇出。
      */
-    public static boolean isSaveAccepted(SaveMessageOutcome outcome) {
-        return outcome == SaveMessageOutcome.SUCCESS || outcome == SaveMessageOutcome.DUPLICATE;
+    public static boolean isSaveAccepted(SaveMessageOutcomeEnum outcome) {
+        return outcome == SaveMessageOutcomeEnum.SUCCESS || outcome == SaveMessageOutcomeEnum.DUPLICATE;
     }
 
     /**
@@ -321,7 +321,7 @@ public final class SessionMessagePersistenceSupport {
     }
 
     /**
-     * 必需字段序列化：失败上抛，由落库入口转为 {@link SaveMessageOutcome#FAILED}，禁止跳过写入。
+     * 必需字段序列化：失败上抛，由落库入口转为 {@link SaveMessageOutcomeEnum#FAILED}，禁止跳过写入。
      */
     public <T> byte[] serializeOrThrow(RedisSerializer<T> serializer, T value, String fieldName) {
         try {

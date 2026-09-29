@@ -3,6 +3,7 @@ package com.ouyunc.repository.support;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.LuaScriptEnum;
+import com.ouyunc.base.constant.enums.MessageIndexScopeEnum;
 import com.ouyunc.base.packet.Packet;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -77,7 +78,7 @@ public final class SessionLastMessageSupport {
         }
         Packet packet = current.getFirst();
         return CsTicketLastMessageSupport.isCountableChatMessage(packet)
-                && SpecialMessageLoader.belongsToScope(packet, sessionId, MessageIndexScope.CHANNEL_SESSION);
+                && SpecialMessageLoader.belongsToScope(packet, sessionId, MessageIndexScopeEnum.CHANNEL_SESSION);
     }
 
     private void recomputeAndCasReplace(String appKey, String sessionId, long expectedCurrent) {
@@ -87,7 +88,7 @@ public final class SessionLastMessageSupport {
             fallback = recent.stream()
                     .filter(Objects::nonNull)
                     .filter(CsTicketLastMessageSupport::isCountableChatMessage)
-                    .filter(p -> SpecialMessageLoader.belongsToScope(p, sessionId, MessageIndexScope.CHANNEL_SESSION))
+                    .filter(p -> SpecialMessageLoader.belongsToScope(p, sessionId, MessageIndexScopeEnum.CHANNEL_SESSION))
                     .max(Comparator.comparingLong(Packet::getPacketId))
                     .orElse(null);
         }

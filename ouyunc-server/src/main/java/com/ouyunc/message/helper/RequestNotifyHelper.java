@@ -77,7 +77,7 @@ public final class RequestNotifyHelper {
                 }
                 Runnable onLoop = () -> {
                     if (CollectionUtils.isNotEmpty(clients)) {
-                        MessageDeliveryRouteHelper.deliverOnlineClients(packet, clients);
+                        MessageDeliveryPlanner.deliverOnlineClients(packet, clients);
                     }
                 };
                 if (ctx.channel().eventLoop().inEventLoop()) {

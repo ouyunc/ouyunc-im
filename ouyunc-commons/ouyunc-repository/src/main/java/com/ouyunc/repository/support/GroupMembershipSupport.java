@@ -3,7 +3,6 @@ package com.ouyunc.repository.support;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.JdbcSqlDialectHolder;
 import com.ouyunc.base.constant.MessageConstant;
-import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
@@ -20,7 +19,7 @@ import com.ouyunc.domain.entity.GroupEntity;
 import com.ouyunc.domain.entity.GroupUserEntity;
 import com.ouyunc.domain.entity.MongoGroupEntity;
 import com.ouyunc.domain.entity.MongoGroupUserEntity;
-import com.ouyunc.repository.BindGroupResult;
+import com.ouyunc.base.constant.enums.BindGroupEnum;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -971,8 +970,8 @@ public final class GroupMembershipSupport {
         infra.redisTemplate.delete(CacheConstant.buildGroupRequestCacheKey(appKey, joiner, groupId));
     }
 
-    public BindGroupResult autoPassBindGroup(Packet packet, GroupRequestSession groupRequestSession, long expireTime,
-                                             int maxMembers, int maxPerUser) {
+    public BindGroupEnum autoPassBindGroup(Packet packet, GroupRequestSession groupRequestSession, long expireTime,
+                                           int maxMembers, int maxPerUser) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         return bindGroup(packet, groupRequestSession.getJoiner(), groupRequestSession.getGroupId(),
@@ -984,8 +983,8 @@ public final class GroupMembershipSupport {
         });
     }
 
-    public BindGroupResult manualPassBindGroup(Packet packet, GroupRequestSession groupRequestSession, long expireTime,
-                                               int maxMembers, int maxPerUser) {
+    public BindGroupEnum manualPassBindGroup(Packet packet, GroupRequestSession groupRequestSession, long expireTime,
+                                             int maxMembers, int maxPerUser) {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         return bindGroup(packet, groupRequestSession.getJoiner(), groupRequestSession.getGroupId(),
@@ -1030,31 +1029,31 @@ public final class GroupMembershipSupport {
      * 先在群聚合槽原子判定「已是成员 / 容量 / 写入」，再写用户加群索引（超限回滚群侧），最后写请求会话。
      * 群成员与用户加群不在同一 Redis 槽，不能放进一条 Lua；用户侧失败必须补偿删掉刚写入的群成员。
      */
-    public BindGroupResult bindGroup(Packet packet, String joiner, String groupId, String requestSessionId,
-                                     long expireTime, int maxMembers, int maxPerUser,
-                                     Consumer<RedisConnection> consumer) {
+    public BindGroupEnum bindGroup(Packet packet, String joiner, String groupId, String requestSessionId,
+                                   long expireTime, int maxMembers, int maxPerUser,
+                                   Consumer<RedisConnection> consumer) {
         if (packet == null || packet.getMessage() == null || packet.getMessage().getMetadata() == null) {
-            return BindGroupResult.FAILED;
+            return BindGroupEnum.FAILED;
         }
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         String appKey = metadata.getIngress().getAppKey();
         if (StringUtils.isAnyBlank(appKey, joiner, groupId)) {
-            return BindGroupResult.FAILED;
+            return BindGroupEnum.FAILED;
         }
         try {
             ensureGroupMemberRoster(appKey, groupId);
         } catch (Exception e) {
             log.error("入群前重建成员名单失败 appKey={} groupId={}", appKey, groupId, e);
-            return BindGroupResult.FAILED;
+            return BindGroupEnum.FAILED;
         }
         if (maxMembers >= 0 && !hasGroupMemberInit(appKey, groupId)) {
             log.error("群成员名单未就绪，拒绝带容量入群 appKey={} groupId={}", appKey, groupId);
-            return BindGroupResult.FAILED;
+            return BindGroupEnum.FAILED;
         }
         if (maxPerUser >= 0 && !hasUserGroupsInit(appKey, joiner)
                 && userGroupCount(appKey, joiner) >= maxPerUser) {
-            return BindGroupResult.USER_GROUP_LIMIT;
+            return BindGroupEnum.USER_GROUP_LIMIT;
         }
 
         boolean newGroupMember = false;
@@ -1069,10 +1068,10 @@ public final class GroupMembershipSupport {
                 joiner,
                 maxMembers);
         if (groupAdd == RelationRosterRedis.ADD_CAPACITY_EXCEEDED) {
-            return BindGroupResult.GROUP_FULL;
+            return BindGroupEnum.GROUP_FULL;
         }
         if (groupAdd != RelationRosterRedis.ADD_NEW && groupAdd != RelationRosterRedis.ADD_EXISTS) {
-            return BindGroupResult.FAILED;
+            return BindGroupEnum.FAILED;
         }
         newGroupMember = groupAdd == RelationRosterRedis.ADD_NEW;
         if (newGroupMember) {
@@ -1086,11 +1085,11 @@ public final class GroupMembershipSupport {
                     maxPerUser);
             if (userAdd == RelationRosterRedis.ADD_CAPACITY_EXCEEDED) {
                 rollbackGroupMemberAdd(appKey, groupId, joiner);
-                return BindGroupResult.USER_GROUP_LIMIT;
+                return BindGroupEnum.USER_GROUP_LIMIT;
             }
             if (userAdd != RelationRosterRedis.ADD_NEW && userAdd != RelationRosterRedis.ADD_EXISTS) {
                 rollbackGroupMemberAdd(appKey, groupId, joiner);
-                return BindGroupResult.FAILED;
+                return BindGroupEnum.FAILED;
             }
         } else {
             RelationRosterRedis.addMember(
@@ -1116,14 +1115,14 @@ public final class GroupMembershipSupport {
                         CacheConstant.buildUserGroupsInitCacheKey(appKey, joiner),
                         groupId);
             }
-            return BindGroupResult.FAILED;
+            return BindGroupEnum.FAILED;
         }
         // 请求会话与消息已提交；后续本地缓存或通知失败不得再删除正式群关系。
         relationCommitted = true;
         RelationLocalCache.onGroupJoin(appKey, groupId, joiner);
         RelationCacheInvalidatePublisher.publish(
                 RelationCacheInvalidateEvent.groupJoin(appKey, groupId, joiner));
-        return newGroupMember ? BindGroupResult.SUCCESS : BindGroupResult.ALREADY_MEMBER;
+        return newGroupMember ? BindGroupEnum.SUCCESS : BindGroupEnum.ALREADY_MEMBER;
         } catch (Exception e) {
             // 两个关系集合位于不同 Redis 槽，任一步异常都必须补偿首次新增的群侧记录。
             // 已存在成员不删除，只由重试补齐用户侧反向索引。
@@ -1141,7 +1140,7 @@ public final class GroupMembershipSupport {
                 }
             }
             log.error("绑定群关系异常 appKey={} groupId={} joiner={}", appKey, groupId, joiner, e);
-            return BindGroupResult.FAILED;
+            return BindGroupEnum.FAILED;
         }
     }
 

@@ -19,7 +19,7 @@ import com.ouyunc.message.processor.http.push.HttpPushFailures;
 import com.ouyunc.message.processor.http.push.HttpPushValidatorChain;
 import com.ouyunc.repository.DefaultRepository;
 import com.ouyunc.repository.cs.CsImSessionRoute;
-import com.ouyunc.repository.support.MessageIndexScope;
+import com.ouyunc.base.constant.enums.MessageIndexScopeEnum;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -153,11 +153,11 @@ public final class CsHttpPushDeliveryStrategy implements HttpProcessor {
         String appKey = packet.getMessage().getMetadata().getIngress().getAppKey();
         return DefaultRepository.INSTANCE.reactiveHandleOperation(null, packet,
                         DefaultRepository.INSTANCE.reactiveLoadWithdrawTargetPackets(
-                                packet, ticketScopeId, MessageIndexScope.CS_TICKET, true),
+                                packet, ticketScopeId, MessageIndexScopeEnum.CS_TICKET, true),
                         ExceptionCodeEnum.WITHDRAW_MESSAGE_VERIFY_ERROR,
                         MqConstant.MQ_WITHDRAW_MESSAGE_TOPIC, ticketScopeId,
                         packets -> DefaultRepository.INSTANCE.reactiveWithdrawMessage(
-                                packet, ticketScopeId, MessageIndexScope.CS_TICKET, packets),
+                                packet, ticketScopeId, MessageIndexScopeEnum.CS_TICKET, packets),
                         (ctx, packet0) -> {
                             CsHelper.deliverMessage(packet0, route, true);
                             if (StringUtils.isNoneBlank(ticketScopeId, appKey)) {

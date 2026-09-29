@@ -4,6 +4,7 @@ import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.MessageFromToTypeEnum;
+import com.ouyunc.base.constant.enums.MessageIndexScopeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.IdentityUtil;
@@ -56,7 +57,7 @@ public final class WithdrawMessageSupport {
     }
 
     public Mono<List<Packet>> reactiveLoadWithdrawTargetPackets(Packet packet, String scopeId,
-                                                                MessageIndexScope scope, boolean isValidSender) {
+                                                                MessageIndexScopeEnum scope, boolean isValidSender) {
         return specialMessageLoader.reactiveLoadValidatedSpecialPackets(
                 packet, scopeId, scope, MessageConstant.MAX_WITHDRAW_MESSAGE_COUNT,
                 (specialPackets) -> {
@@ -74,7 +75,7 @@ public final class WithdrawMessageSupport {
     }
 
     @SuppressWarnings("unchecked")
-    public Mono<Boolean> reactiveWithdrawMessage(Packet packet, String scopeId, MessageIndexScope scope,
+    public Mono<Boolean> reactiveWithdrawMessage(Packet packet, String scopeId, MessageIndexScopeEnum scope,
                                                  List<Packet> targetPackets) {
         if (packet == null || packet.getMessage() == null || packet.getMessage().getMetadata() == null
                 || StringUtils.isBlank(scopeId) || CollectionUtils.isEmpty(targetPackets)) {
@@ -128,7 +129,7 @@ public final class WithdrawMessageSupport {
     }
 
     @SuppressWarnings("unchecked")
-    private void applyWithdrawnPacketsToRedis(String appKey, String scopeId, MessageIndexScope scope,
+    private void applyWithdrawnPacketsToRedis(String appKey, String scopeId, MessageIndexScopeEnum scope,
                                               List<Packet> packets) {
         String sessionCacheKey = resolveMessageIndexKey(appKey, scopeId, scope);
         List<String> indexMembers = new ArrayList<>(packets.size());
@@ -166,7 +167,7 @@ public final class WithdrawMessageSupport {
     /**
      * 单聊：仅当 scopeId 为双方 peer session 时清收件人未读；客服 ticket：清消息 to 侧未读。
      */
-    private void clearUnreadForWithdrawnPackets(String appKey, String scopeId, MessageIndexScope scope,
+    private void clearUnreadForWithdrawnPackets(String appKey, String scopeId, MessageIndexScopeEnum scope,
                                                 List<Packet> packets) {
         for (Packet withdrawPacket : packets) {
             if (withdrawPacket == null || withdrawPacket.getMessage() == null) {
@@ -177,14 +178,14 @@ public final class WithdrawMessageSupport {
             if (packetId <= 0L) {
                 continue;
             }
-            if (scope == MessageIndexScope.CS_TICKET) {
+            if (scope == MessageIndexScopeEnum.CS_TICKET) {
                 String recipientId = resolveCsWithdrawRecipient(message);
                 if (StringUtils.isNotBlank(recipientId)) {
                     csTicketUnreadSupport.removeOnWithdraw(appKey, scopeId, recipientId, packetId);
                 }
                 continue;
             }
-            if (scope != MessageIndexScope.CHANNEL_SESSION) {
+            if (scope != MessageIndexScopeEnum.CHANNEL_SESSION) {
                 continue;
             }
             String from = message.getFrom();
@@ -218,8 +219,8 @@ public final class WithdrawMessageSupport {
         return null;
     }
 
-    static String resolveMessageIndexKey(String appKey, String scopeId, MessageIndexScope scope) {
-        if (scope == MessageIndexScope.CS_TICKET) {
+    static String resolveMessageIndexKey(String appKey, String scopeId, MessageIndexScopeEnum scope) {
+        if (scope == MessageIndexScopeEnum.CS_TICKET) {
             return CacheConstant.buildCsTicketMessageSessionCacheKey(appKey, scopeId);
         }
         return CacheConstant.buildSessionCacheKey(appKey, scopeId);

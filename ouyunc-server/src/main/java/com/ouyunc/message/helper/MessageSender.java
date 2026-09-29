@@ -88,6 +88,29 @@ public final class MessageSender {
         return completion;
     }
 
+
+    /**
+     * 集群内部控制包（如 QOS_RETRY_CANCEL）：{@link ClusterForwardModeEnum#INTERNAL}，
+     * 直连 dest；失败回溯下一跳，最终节点仍是 dest，落地进 Processor 不写客户端。
+     */
+    public static CompletableFuture<SendResult> sendClusterInternal(Packet packet, String destServerAddress) {
+        CompletableFuture<SendResult> completion = new CompletableFuture<>();
+        doSendClusterInternal(packet, destServerAddress, sendResult -> {
+            if (sendResult != null && sendResult.getSendStatus() == SendStatusEnum.SEND_FAIL) {
+                Throwable cause = sendResult.getException();
+                log.warn("集群内部控制包发送失败 type={} packetId={} dest={} cause={}",
+                        packet == null ? null : packet.getMessageType(),
+                        packet == null ? null : packet.getPacketId(),
+                        destServerAddress,
+                        cause == null ? null : cause.getMessage());
+            }
+            completion.complete(sendResult);
+        });
+        return completion;
+    }
+
+
+
     static boolean isChannelSendable(ChannelHandlerContext ctx) {
         // active 但暂时不可写的连接交给协议层执行有界水位重试，不能在业务层提前丢消息。
         return ctx != null && ctx.channel() != null && ctx.channel().isActive();
@@ -175,25 +198,6 @@ public final class MessageSender {
         }
     }
 
-    /**
-     * 集群内部控制包（如 QOS_RETRY_CANCEL）：{@link ClusterForwardModeEnum#INTERNAL}，
-     * 直连 dest；失败回溯下一跳，最终节点仍是 dest，落地进 Processor 不写客户端。
-     */
-    public static CompletableFuture<SendResult> sendClusterInternal(Packet packet, String destServerAddress) {
-        CompletableFuture<SendResult> completion = new CompletableFuture<>();
-        doSendClusterInternal(packet, destServerAddress, sendResult -> {
-            if (sendResult != null && sendResult.getSendStatus() == SendStatusEnum.SEND_FAIL) {
-                Throwable cause = sendResult.getException();
-                log.warn("集群内部控制包发送失败 type={} packetId={} dest={} cause={}",
-                        packet == null ? null : packet.getMessageType(),
-                        packet == null ? null : packet.getPacketId(),
-                        destServerAddress,
-                        cause == null ? null : cause.getMessage());
-            }
-            completion.complete(sendResult);
-        });
-        return completion;
-    }
 
 
     private static void doSendClusterInternal(Packet originPacket, String destServerAddress,

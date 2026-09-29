@@ -8,7 +8,6 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.message.cluster.auth.ClusterChannelGuard;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
-import com.ouyunc.message.helper.ClusterRouteSupport;
 import com.ouyunc.message.helper.MessageSender;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -61,7 +60,7 @@ public class ClusterPacketRouteHandler extends SimpleChannelInboundHandler<Packe
 
     /** 内部控制包：本机是最终节点则进 Processor，否则继续发往 dest。 */
     private static void handleInternalForward(ChannelHandlerContext ctx, Packet packet) {
-        String dest = ClusterRouteSupport.destination(packet);
+        String dest = packet.getMessage().getMetadata().getClusterRoute().destinationAddress();
         if (StringUtils.isBlank(dest)) {
             log.warn("集群内部控制包缺少 Target.targetServerAddress packetId={}", packet.getPacketId());
             return;

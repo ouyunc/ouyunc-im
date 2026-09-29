@@ -4,7 +4,7 @@ import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.core.exception.ExceptionReporter;
 import com.ouyunc.message.context.MessageServerContext;
-import com.ouyunc.repository.BindGroupResult;
+import com.ouyunc.base.constant.enums.BindGroupEnum;
 import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,7 +30,7 @@ public final class GroupBindResultHelper {
     /**
      * @return true 已入群（含已是成员）；false 已向客户端回写拒绝或未知
      */
-    public static boolean acceptedOrReply(ChannelHandlerContext ctx, Packet packet, BindGroupResult result,
+    public static boolean acceptedOrReply(ChannelHandlerContext ctx, Packet packet, BindGroupEnum result,
                                           String failEventMessage) {
         if (result != null && result.accepted()) {
             return true;
