@@ -4,7 +4,7 @@ import com.ouyunc.base.model.ClusterRoute;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.message.context.MessageServerContext;
-import com.ouyunc.message.helper.MessageHelper;
+import com.ouyunc.message.helper.MessageSender;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,6 +49,6 @@ public class MessageClusterRouteFailureThread implements Runnable {
             log.debug("正在进行第 {} 次重试消息 packetId:{} ", nextRetry, packet.getPacketId());
         }
         // 本次是第 nextRetry 次重试；只有该次发送再次失败，失败线程才会在入口处判断是否丢弃。
-        MessageHelper.asyncSendMessage(packet, clusterRoute.getTarget());
+        MessageSender.send(packet, clusterRoute.getTarget());
     }
 }

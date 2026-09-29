@@ -11,7 +11,7 @@ import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.packet.message.content.QosRetryCancelContent;
 import com.ouyunc.core.device.DeviceTypeRegistry;
 import com.ouyunc.message.context.MessageServerContext;
-import com.ouyunc.message.helper.MessageHelper;
+import com.ouyunc.message.helper.MessageSender;
 import com.ouyunc.message.monitor.QosRetryCancelMetrics;
 import com.ouyunc.message.schedule.QosRetryScheduler;
 import io.netty.channel.ChannelHandlerContext;
@@ -39,7 +39,7 @@ public final class ClusterQosRetryCancelMessageBiProcessor extends AbstractMessa
                 QosRetryCancelMetrics.invalidPacket();
                 return;
             }
-            String dest = MessageHelper.clusterDest(packet);
+            String dest = MessageSender.clusterDest(packet);
             if (StringUtils.isBlank(dest)) {
                 log.warn("集群 QOS_RETRY_CANCEL 缺少 Target.targetServerAddress packetId={}", packet.getPacketId());
                 QosRetryCancelMetrics.invalidPacket();
@@ -47,7 +47,7 @@ public final class ClusterQosRetryCancelMessageBiProcessor extends AbstractMessa
             }
             String local = MessageServerContext.serverProperties().getLocalServerAddress();
             if (!dest.equals(local)) {
-                MessageHelper.sendClusterInternal(packet, dest);
+                MessageSender.sendClusterInternal(packet, dest);
                 return;
             }
             QosRetryCancelContent content = parseAndValidate(packet);

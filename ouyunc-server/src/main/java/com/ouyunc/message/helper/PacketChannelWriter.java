@@ -31,7 +31,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * 已知 Channel 上的 Packet 出站：协议转换、EventLoop 写出、失败回调。
- * <p>不查登录注册表、不做集群路由。按身份投递仍走 {@link MessageHelper#asyncSendMessage}。</p>
+ * <p>不查登录注册表、不做集群路由。按身份投递走 {@link MessageSender#send(Packet, Target)}。</p>
  * <p>使用场景：QoS S2C ACK / Pong 写回入站连接；查表命中后的本机写出。</p>
  * <p>写缓冲满（{@code !isWritable}）时延迟重试，避免直接丢包破坏投递语义。</p>
  */
@@ -50,7 +50,7 @@ public final class PacketChannelWriter {
     }
 
     /**
-     * 写回当前入站连接。ctx 不可用时返回 false，由调用方再走 {@link MessageHelper#asyncSendMessage}。
+     * 写回当前入站连接。控制响应由 {@link MessageSender#sendControl} 调用。
      * 仅 active 但暂时不可写时也会返回 true 并进入延迟重试。
      */
     public static boolean tryReplyOnChannel(ChannelHandlerContext ctx, Packet packet) {

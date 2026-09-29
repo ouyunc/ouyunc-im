@@ -293,7 +293,7 @@ public final class CsHelper {
             log.debug("IM 用户 {} 不在线，已写入会话索引", userId);
             return;
         }
-        MessageHelper.asyncSendMessage(packet, clients);
+        MessageSender.send(packet, clients);
     }
 
     private static void syncCsSenderDevices(Packet packet, CsImSessionRoute route, boolean forceSelfSync) {
@@ -320,7 +320,7 @@ public final class CsHelper {
                 : ClientHelper.onlineAll(appKey, syncIdentity,
                 packet.getDeviceType());
         if (CollectionUtils.isNotEmpty(senderDevices)) {
-            MessageHelper.asyncSendMessage(packet, senderDevices);
+            MessageSender.send(packet, senderDevices);
         }
     }
 

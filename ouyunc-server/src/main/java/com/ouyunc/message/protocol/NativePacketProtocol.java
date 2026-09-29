@@ -11,7 +11,6 @@ import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.message.cluster.client.pool.MessageClientPool;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.handler.*;
-import com.ouyunc.message.helper.MessageHelper;
 import com.ouyunc.message.helper.PacketChannelWriter;
 import com.ouyunc.message.http.HttpRequestDispatcher;
 import com.ouyunc.message.support.WsHandshakeSupport;
@@ -124,7 +123,7 @@ public enum NativePacketProtocol implements PacketProtocol {
                         // 获取失败
                         Throwable e = acquireFuture.cause();
                         log.error("获取集群中远端channel失败：{}", e.getMessage());
-                        MessageHelper.notifySendFail(packet, e, sendCallback);
+                        PacketChannelWriter.notifySendFail(packet, e, sendCallback);
                     }
                 }
             });
@@ -254,7 +253,7 @@ public enum NativePacketProtocol implements PacketProtocol {
             if (ctx == null) {
                 // 注意：如果走到了这里，可能是客户端注销了，qos 在重试，找不到ctx
                 log.error("发送消息时，ctx 不存在； 请检查客户端 {} 是否登录", to);
-                MessageHelper.notifySendFail(packet, "发送消息时，ctx 不存在； 请检查客户端是否登录", sendCallback);
+                PacketChannelWriter.notifySendFail(packet, "发送消息时，ctx 不存在； 请检查客户端是否登录", sendCallback);
                 return;
             }
             Channel channel = ctx.channel();
@@ -262,7 +261,7 @@ public enum NativePacketProtocol implements PacketProtocol {
         } catch (Exception e) {
             log.error("消息packet: {} 发送给用户: {} 失败!", packet, to);
             // 消息丢失
-            MessageHelper.notifySendFail(packet, e, sendCallback);
+            PacketChannelWriter.notifySendFail(packet, e, sendCallback);
         }
     }
     

@@ -109,7 +109,7 @@ public final class ClusterChannelGuard {
         if (metadata == null || metadata.getClusterRoute() == null) {
             return false;
         }
-        // MessageHelper 经集群连接写出前会写本机地址；空值不得放行。
+        // MessageSender 经集群连接写出前会写本机地址；空值不得放行。
         if (!peer.equals(metadata.getClusterRoute().getFromServerAddress())) {
             log.warn("集群路由包发送节点与握手身份不一致 peer={} fromServer={}",
                     peer, metadata.getClusterRoute().getFromServerAddress());

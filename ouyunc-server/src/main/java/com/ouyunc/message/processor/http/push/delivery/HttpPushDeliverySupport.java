@@ -14,7 +14,7 @@ import com.ouyunc.cache.local.caffeine.CaffeineLocalCache;
 import com.ouyunc.core.exception.ExceptionReporter;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
-import com.ouyunc.message.helper.MessageHelper;
+import com.ouyunc.message.helper.MessageSender;
 import com.ouyunc.message.helper.MessageRefHelper;
 import com.ouyunc.message.http.HttpPipelineException;
 import com.ouyunc.message.processor.http.push.HttpPushFailures;
@@ -268,7 +268,7 @@ public final class HttpPushDeliverySupport {
         }
         List<LoginClientInfo> clients = ClientHelper.onlineAll(appKey, identity);
         if (CollectionUtils.isNotEmpty(clients)) {
-            MessageHelper.asyncSendMessage(packet, clients);
+            MessageSender.send(packet, clients);
         }
     }
 }

@@ -16,7 +16,7 @@ import com.ouyunc.core.exception.ExceptionReporter;
 import com.ouyunc.message.helper.AtMentionHelper;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageDeliveryRouteHelper;
-import com.ouyunc.message.helper.MessageHelper;
+import com.ouyunc.message.helper.MessageSender;
 import com.ouyunc.message.http.HttpPipelineException;
 import com.ouyunc.message.processor.http.push.HttpPushValidatorChain;
 import com.ouyunc.repository.DefaultRepository;
@@ -162,7 +162,7 @@ public final class One2OneHttpPushDeliveryStrategy implements HttpProcessor {
         String appKey = message.getMetadata().getIngress().getAppKey();
         List<LoginClientInfo> senderClients = ClientHelper.onlineAll(appKey, message.getTo());
         if (CollectionUtils.isNotEmpty(senderClients)) {
-            MessageHelper.asyncSendMessage(packet, senderClients);
+            MessageSender.send(packet, senderClients);
         }
     }
 }

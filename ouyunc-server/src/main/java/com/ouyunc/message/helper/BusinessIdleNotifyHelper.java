@@ -67,8 +67,7 @@ public final class BusinessIdleNotifyHelper {
                 SendCallback afterSend = closeAfter
                         ? unused -> closeIfStillDue(ctx)
                         : unused -> { };
-                MessageHelper.syncSendMessageWithoutInterceptor(
-                        packet, MessageHelper.buildTarget(loginInfo), afterSend);
+                MessageSender.sendControl(ctx, packet, afterSend);
             } catch (Exception e) {
                 log.warn("业务空闲提示下发失败, appKey={}, identity={}, strike={}: {}",
                         loginInfo.getAppKey(), loginInfo.getIdentity(), strike, e.getMessage());

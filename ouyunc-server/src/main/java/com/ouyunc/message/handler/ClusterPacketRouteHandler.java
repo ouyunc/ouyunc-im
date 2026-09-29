@@ -8,7 +8,7 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.message.cluster.auth.ClusterChannelGuard;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
-import com.ouyunc.message.helper.MessageHelper;
+import com.ouyunc.message.helper.MessageSender;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import org.apache.commons.collections4.CollectionUtils;
@@ -60,14 +60,14 @@ public class ClusterPacketRouteHandler extends SimpleChannelInboundHandler<Packe
 
     /** 内部控制包：本机是最终节点则进 Processor，否则继续发往 dest。 */
     private static void handleInternalForward(ChannelHandlerContext ctx, Packet packet) {
-        String dest = MessageHelper.clusterDest(packet);
+        String dest = MessageSender.clusterDest(packet);
         if (StringUtils.isBlank(dest)) {
             log.warn("集群内部控制包缺少 Target.targetServerAddress packetId={}", packet.getPacketId());
             return;
         }
         String local = MessageServerContext.serverProperties().getLocalServerAddress();
         if (!dest.equals(local)) {
-            MessageHelper.sendClusterInternal(packet, dest);
+            MessageSender.sendClusterInternal(packet, dest);
             return;
         }
         ctx.fireChannelRead(packet);
@@ -87,7 +87,7 @@ public class ClusterPacketRouteHandler extends SimpleChannelInboundHandler<Packe
             ClientHelper.deliverLocalBroadcast(metadata.getIngress().getAppKey(), packet);
             return;
         }
-        MessageHelper.asyncSendMessageWithoutInterceptor(packet, target);
+        MessageSender.resumeDelivery(packet, target);
     }
 
     /**

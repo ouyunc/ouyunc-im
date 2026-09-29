@@ -131,7 +131,7 @@ public final class MessageDeliveryRouteHelper {
             }
         });
         if (!recipients.isEmpty()) {
-            MessageHelper.asyncSendMessage(packet, recipients);
+            MessageSender.send(packet, recipients);
         }
     }
 
@@ -142,7 +142,7 @@ public final class MessageDeliveryRouteHelper {
             log.debug("IM 用户 {} 不在线，已写入会话索引", userId);
             return;
         }
-        MessageHelper.asyncSendMessage(packet, clients);
+        MessageSender.send(packet, clients);
     }
 
     private static void routeToRecipient(Packet packet, String recipientId,
@@ -177,7 +177,7 @@ public final class MessageDeliveryRouteHelper {
                 : ClientHelper.onlineAll(appKey, message.getFrom(),
                 packet.getDeviceType());
         if (CollectionUtils.isNotEmpty(senderDevices)) {
-            MessageHelper.asyncSendMessage(packet, senderDevices);
+            MessageSender.send(packet, senderDevices);
         }
     }
 

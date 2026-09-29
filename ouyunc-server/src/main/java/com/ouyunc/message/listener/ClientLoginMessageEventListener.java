@@ -17,7 +17,7 @@ import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.base.constant.enums.YesOrNo;
 import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.message.helper.ClientHelper;
-import com.ouyunc.message.helper.MessageHelper;
+import com.ouyunc.message.helper.MessageSender;
 import com.ouyunc.message.protocol.NativePacketProtocol;
 import com.ouyunc.repository.DefaultRepository;
 import org.apache.commons.collections4.CollectionUtils;
@@ -106,7 +106,7 @@ class ClientLoginMessageEventListener implements MessageEventListener<MessageEve
                         NativePacketProtocol.OUYUNC.getProtocolVersion(), MessageContext.idGenerator().generateId(),
                         DeviceTypeEnum.PC.getType(), NetworkEnum.OTHER.getValue(), Encrypt.SymmetryEncrypt.NONE.getValue(),
                         Serializer.PROTO_STUFF.getValue(), MessageTypeEnum.CLIENT_LOGIN.getType(), message);
-                MessageHelper.asyncSendMessage(packet, loginClientInfos);
+                MessageSender.send(packet, loginClientInfos);
             }
         }
         log.info("[客户端登录] 已处理, eventId={}, appKey={}, identity={}, deviceType={}, remoteIp={}, loginServer={}, friendCount={}, notifiedFriends={}, notifiedSessions={}, consumeLagMs={}",

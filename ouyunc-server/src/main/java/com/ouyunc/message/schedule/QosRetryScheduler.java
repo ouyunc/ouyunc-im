@@ -27,7 +27,7 @@ import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.message.cluster.lease.NodeLeaseKeeper;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
-import com.ouyunc.message.helper.MessageHelper;
+import com.ouyunc.message.helper.MessageSender;
 import com.ouyunc.message.monitor.QosRetryCancelMetrics;
 import com.ouyunc.message.protocol.NativePacketProtocol;
 import com.ouyunc.repository.DefaultRepository;
@@ -77,7 +77,7 @@ public final class QosRetryScheduler {
         }
         for (LoginClientInfo client : clients) {
             if (client != null) {
-                schedule(packet, MessageHelper.buildTarget(client));
+                schedule(packet, MessageSender.buildTarget(client));
             }
         }
     }
@@ -300,8 +300,7 @@ public final class QosRetryScheduler {
         if (!taskStillActive(taskId, taskWrapper)) {
             return;
         }
-        MessageHelper.asyncSendMessageWithoutInterceptor(
-                schedulePackage.clone(), MessageHelper.buildTarget(device));
+        MessageSender.resumeDelivery(schedulePackage.clone(), MessageSender.buildTarget(device));
     }
 
     private static Packet loadRetryPacket(QosRetryTaskContext retryContext) {
@@ -366,6 +365,6 @@ public final class QosRetryScheduler {
             log.warn("集群 QOS_RETRY_CANCEL 转发失败 origin={} packetId={} cause={}",
                     origin, content.getPacketId(), cause == null ? null : cause.getMessage());
         };
-        MessageHelper.sendClusterInternal(packet, origin, onResult);
+        MessageSender.sendClusterInternal(packet, origin, onResult);
     }
 }

@@ -3,9 +3,9 @@ package com.ouyunc.message.helper;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.ClusterForwardModeEnum;
 import com.ouyunc.base.constant.enums.SendStatusEnum;
-import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.model.*;
 import com.ouyunc.base.packet.Packet;
+import com.ouyunc.base.packet.PacketCopyHelper;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.core.intercept.AbstractMessageInterceptor;
@@ -32,30 +32,26 @@ import java.util.Objects;
 
 /**
  * @Author fzx
- * @Description: 消息路由/拦截器/集群投递。已知 Channel 上的协议转换与写出见 {@link PacketChannelWriter}。
+ * 客户端目标投递、集群内部控制包、当前连接控制响应。
+ * 已知 Channel 上的协议转换与写出见 {@link PacketChannelWriter}，业务 Processor 不直接调用它。
+ * {@code send} 表示提交到发送链路；最终 {@code writeAndFlush} 由 Netty 异步完成，调用方不选择同步或异步。
  **/
-public class MessageHelper {
+public class MessageSender {
 
-    private static final Logger log = LoggerFactory.getLogger(MessageHelper.class);
-
-    /**
-     * 同步发送消息给多个客户端：按落地节点聚合，跨节点一份正文+分批目标。
-     */
-    public static void syncSendMessage(Packet packet, Collection<LoginClientInfo> loginClientInfos) {
-        fanoutToClients(packet, loginClientInfos, true);
-    }
+    private static final Logger log = LoggerFactory.getLogger(MessageSender.class);
 
     /**
-     * 异步发送消息给多个客户端：按落地节点聚合，跨节点一份正文+分批目标，避免 O(终端) 次 clone/调度。
+     * 多端扇出：按落地节点聚合。本机展开；跨节点一份正文加分批目标。
+     * 始发节点在这里登记 QoS，展开后的单目标不再走 {@link #send(Packet, Target)}，避免重复登记。
      */
-    public static void asyncSendMessage(Packet packet, Collection<LoginClientInfo> loginClientInfos) {
-        fanoutToClients(packet, loginClientInfos, false);
+    public static void send(Packet packet, Collection<LoginClientInfo> loginClientInfos) {
+        fanoutToClients(packet, loginClientInfos);
     }
 
     /**
      * 多端扇出：本机分批展开；远程按节点打包 {@link Metadata#getFanoutTargets()}。
      */
-    private static void fanoutToClients(Packet packet, Collection<LoginClientInfo> loginClientInfos, boolean sync) {
+    private static void fanoutToClients(Packet packet, Collection<LoginClientInfo> loginClientInfos) {
         if (packet == null || CollectionUtils.isEmpty(loginClientInfos)) {
             return;
         }
@@ -91,12 +87,12 @@ public class MessageHelper {
                         entry.getKey(), entry.getValue().size(), packet.getPacketId());
                 continue;
             }
-            sendRemoteFanoutBatches(packet, entry.getKey(), entry.getValue(), sync);
+            sendRemoteFanoutBatches(packet, entry.getKey(), entry.getValue());
         }
     }
 
     private static void sendRemoteFanoutBatches(Packet packet, String nodeId,
-                                                List<LoginClientInfo> clients, boolean sync) {
+                                                List<LoginClientInfo> clients) {
         int batch = MessageConstant.GROUP_FANOUT_REMOTE_TARGET_BATCH;
         for (int from = 0; from < clients.size(); from += batch) {
             int to = Math.min(from + batch, clients.size());
@@ -112,11 +108,7 @@ public class MessageHelper {
                     .appKey(metadata.getIngress().getAppKey())
                     .targetServerAddress(nodeId)
                     .build();
-            if (sync) {
-                syncSendMessageWithoutInterceptor(fanout, envelope);
-            } else {
-                asyncSendMessageWithoutInterceptor(fanout, envelope);
-            }
+            resumeDelivery(fanout, envelope);
         }
     }
 
@@ -130,12 +122,12 @@ public class MessageHelper {
     }
 
     /**
-     * @Author fzx
-     * @Description 同步发送消息
+     * 提交一条客户端业务目标投递。拦截器在这里统一执行，调用方不能绕过。
+     * 不把任务再丢进公共发送线程池，避免多目标顺序被二次调度打乱。
      */
-    public static void syncSendMessage(Packet packet, Target target) {
+    public static void send(Packet packet, Target target) {
         if (CollectionUtils.isEmpty(MessageServerContext.messageInterceptorChain)) {
-            doSendMessage(packet, target, (sendResult)->{});
+            doSendMessage(packet, target, sendResult -> { });
             return;
         }
         try {
@@ -145,64 +137,50 @@ public class MessageHelper {
                     return;
                 }
             }
-            doSendMessage(packet, target, (sendResult)->{});
+            doSendMessage(packet, target, sendResult -> { });
             for (AbstractMessageInterceptor messageInterceptor : MessageServerContext.messageInterceptorChain) {
                 messageInterceptor.postHandle(packet, target);
             }
         } catch (Exception e) {
-            log.error("同步发送消息过程中发生异常", e);
+            log.error("发送消息过程中发生异常", e);
         }
     }
 
     /**
-     * @Author fzx
-     * @Description 同步发送消息，不尝试使用拦截器
+     * 已经完成首次业务处理的续传：集群 CLIENT 中转、登录跟随、QoS 重投。
+     * 不再跑拦截器，避免重复 QoS 登记或把集群转发当成新的入站消息。
      */
-    public static void syncSendMessageWithoutInterceptor(Packet packet, Target target) {
-        doSendMessage(packet, target, (sendResult)->{});
+    public static void resumeDelivery(Packet packet, Target target) {
+        resumeDelivery(packet, target, sendResult -> { });
     }
 
-
-    /**
-     * @Author fzx
-     * @Description 同步发送消息，不尝试使用拦截器
-     */
-    public static void syncSendMessageWithoutInterceptor(Packet packet, Target target, SendCallback sendCallback) {
+    public static void resumeDelivery(Packet packet, Target target, SendCallback sendCallback) {
         doSendMessage(packet, target, sendCallback);
     }
 
-
     /**
-     * @Author fzx
-     * @Description 异步发送消息，不带回调，
-     * 注意！注意！注意！，异步发送，只是逻辑处理事异步的，但是具体讲消息发送出去的时间不确定，因为最后发送消息的的writeAndFlush()方法，会被封装到channel.eventLoop()单线程的任务队列中；队列里面任务的执行时间可查看相关文档
+     * 当前 Channel 上的控制响应：登录成功、心跳 Pong、提交 ACK。
+     * 协议从该 Channel 绑定的 Protocol 取得，不按身份再查登录表。
      */
-    public static void asyncSendMessage(Packet packet, Target target) {
-        asyncSendMessage(packet, target, (sendResult)->{});
+    public static void sendControl(ChannelHandlerContext ctx, Packet packet) {
+        sendControl(ctx, packet, sendResult -> { });
     }
 
-
-
-    /**
-     * @Author fzx
-     * @Description 异步投递消息，添加回调，不尝试使用拦截器
-     * 注意！注意！注意！，异步发送，只是逻辑处理事异步的，但是具体讲消息发送出去的时间不确定，因为最后发送消息的的writeAndFlush()方法，会被封装到channel.eventLoop()单线程的任务队列中；队列里面任务的执行时间可查看相关文档
-     */
-    public static void asyncSendMessageWithoutInterceptor(Packet packet, Target target) {
-        ThreadPoolManager.messageSendExecutor().execute(()-> {
-            doSendMessage(packet, target, (sendResult)->{});
-        });
+    public static void sendControl(ChannelHandlerContext ctx, Packet packet, SendCallback sendCallback) {
+        PacketChannelWriter.sendOnChannel(ctx, packet, sendCallback == null ? sendResult -> { } : sendCallback);
     }
 
-    /**
-     * @Author fzx
-     * @Description 异步投递消息，添加回调，不尝试使用拦截器
-     * 注意！注意！注意！，异步发送，只是逻辑处理事异步的，但是具体讲消息发送出去的时间不确定，因为最后发送消息的的writeAndFlush()方法，会被封装到channel.eventLoop()单线程的任务队列中；队列里面任务的执行时间可查看相关文档
-     */
-    public static void asyncSendMessageWithoutInterceptor(Packet packet, Target target, SendCallback sendCallback) {
-        ThreadPoolManager.messageSendExecutor().execute(()-> {
-            doSendMessage(packet, target, sendCallback);
-        });
+    /** 控制响应尽力写出：失败不发布 SEND_FAIL，供受理回执和本机扇出使用。 */
+    public static void sendControlQuiet(ChannelHandlerContext ctx, Packet packet) {
+        PacketChannelWriter.sendOnChannelBestEffort(ctx, packet);
+    }
+
+    public static boolean isChannelSendable(ChannelHandlerContext ctx) {
+        return PacketChannelWriter.isSendable(ctx);
+    }
+
+    public static Target resolveReplyTarget(ChannelHandlerContext ctx, Packet packet, String messageFrom) {
+        return PacketChannelWriter.resolveReplyTarget(ctx, packet, messageFrom);
     }
 
     /**
@@ -236,8 +214,7 @@ public class MessageHelper {
     }
 
     public static void sendClusterInternal(Packet packet, String destServerAddress, SendCallback sendCallback) {
-        ThreadPoolManager.messageSendExecutor().execute(() ->
-                doSendClusterInternal(packet, destServerAddress, sendCallback));
+        doSendClusterInternal(packet, destServerAddress, sendCallback);
     }
 
     private static void doSendClusterInternal(Packet originPacket, String destServerAddress,
@@ -255,7 +232,7 @@ public class MessageHelper {
             notifySendFail(originPacket, "集群内部控制包目标是本机", sendCallback);
             return;
         }
-        Packet packet = originPacket.clone();
+        Packet packet = PacketCopyHelper.copyForDelivery(originPacket, null);
         Metadata metadata = packet.getMessage() == null ? null : packet.getMessage().getMetadata();
         if (metadata != null) {
             metadata.ensureClusterRoute().setClusterForwardMode(ClusterForwardModeEnum.INTERNAL);
@@ -287,37 +264,8 @@ public class MessageHelper {
 
 
     /**
-     * @Author fzx
-     * @Description 异步投递消息，添加回调
-     * 注意！注意！注意！，异步发送，只是逻辑处理事异步的，但是具体讲消息发送出去的时间不确定，因为最后发送消息的的writeAndFlush()方法，会被封装到channel.eventLoop()单线程的任务队列中；队列里面任务的执行时间可查看相关文档
-     */
-    private static void asyncSendMessage(Packet packet, Target target, SendCallback sendCallback) {
-        ThreadPoolManager.messageSendExecutor().execute(()-> {
-            if (CollectionUtils.isEmpty(MessageServerContext.messageInterceptorChain)) {
-                doSendMessage(packet, target, sendCallback);
-                return;
-            }
-            try {
-                for (AbstractMessageInterceptor messageInterceptor : MessageServerContext.messageInterceptorChain) {
-                    if (!messageInterceptor.preHandle(packet, target)) {
-                        log.debug("消息拦截器 {} 拦截了消息: {}", messageInterceptor.getClass().getName(), packet);
-                        return;
-                    }
-                }
-                doSendMessage(packet, target, sendCallback);
-                for (AbstractMessageInterceptor messageInterceptor : MessageServerContext.messageInterceptorChain) {
-                    messageInterceptor.postHandle(packet, target);
-                }
-            } catch (Exception e) {
-                log.error("同步发送消息过程中发生异常", e);
-            }
-        });
-    }
-
-
-
-    /**
-     * 同步投递。集群中 {@link Target#getTargetServerAddress()} 是最终落地机，不可改成下一跳。
+     * 客户端目标投递。集群中 {@link Target#getTargetServerAddress()} 是最终落地机，不可改成下一跳。
+     * 本机路径不改原始 Packet；跨节点先 {@link PacketCopyHelper#copyForDelivery} 再写本次 target。
      */
     private static void doSendMessage(Packet originPacket, Target target, SendCallback sendCallback) {
         if (originPacket == null || originPacket.getMessage() == null) {
@@ -339,7 +287,6 @@ public class MessageHelper {
             notifySendFail(originPacket, "缺少投递目标", sendCallback);
             return;
         }
-        originMetadata.ensureClusterRoute().setTarget(target);
         String destServerAddress = target.getTargetServerAddress();
         String localServerAddress = MessageServerContext.serverProperties().getLocalServerAddress();
         boolean cluster = MessageServerContext.serverProperties().isClusterEnable();
@@ -356,7 +303,7 @@ public class MessageHelper {
             deliverLocal(originPacket, target, sendCallback);
             return;
         }
-        Packet packet = originPacket.clone();
+        Packet packet = PacketCopyHelper.copyForDelivery(originPacket, target);
         Metadata metadata = packet.getMessage().getMetadata();
         if (!metadata.isClientForward()) {
             metadata.ensureClusterRoute().setClusterForwardMode(ClusterForwardModeEnum.CLIENT);
@@ -392,8 +339,10 @@ public class MessageHelper {
         String combo = IdentityUtil.generalComboIdentity(
                 target.getAppKey(), target.getTargetIdentity(), target.getDeviceType());
         ChannelHandlerContext ctx = MessageServerContext.localLoginClientRegisterTable.get(combo);
-        // 协议属于真实连接上下文。远端源节点只携带轻量路由，最终落地必须以本机 Channel 为准。
-        PacketChannelWriter.sendOnChannel(ctx, packet, wrapRemoteLoginClose(packet, target, sendCallback));
+        // 写出用副本，避免 ensureOutboundTarget 或后续编码改到调用方持有的 Packet。
+        // 协议仍从本机 Channel 读取，不使用副本上的旧协议字段。
+        Packet outbound = PacketCopyHelper.copyForDelivery(packet, target);
+        PacketChannelWriter.sendOnChannel(ctx, outbound, wrapRemoteLoginClose(outbound, target, sendCallback));
     }
 
     private static boolean hasLocalActiveConnection(Target target) {
@@ -509,19 +458,12 @@ public class MessageHelper {
         });
     }
 
-
-    /** 发送失败回调与事件，实现见 {@link PacketChannelWriter#notifySendFail}。 */
-    public static void notifySendFail(Packet packet, Throwable cause, SendCallback sendCallback) {
+    private static void notifySendFail(Packet packet, Throwable cause, SendCallback sendCallback) {
         PacketChannelWriter.notifySendFail(packet, cause, sendCallback);
     }
 
-    public static void notifySendFail(Packet packet, String message, SendCallback sendCallback) {
+    private static void notifySendFail(Packet packet, String message, SendCallback sendCallback) {
         PacketChannelWriter.notifySendFail(packet, message, sendCallback);
-    }
-
-    /** 已转换对象写出，实现见 {@link PacketChannelWriter#tryWriteObject}。 */
-    public static boolean tryWriteObject(Channel channel, Object msg, Packet packet, SendCallback sendCallback) {
-        return PacketChannelWriter.tryWriteObject(channel, msg, packet, sendCallback);
     }
 
 }

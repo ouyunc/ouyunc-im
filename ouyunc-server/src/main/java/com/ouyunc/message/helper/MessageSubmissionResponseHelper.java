@@ -67,7 +67,7 @@ public final class MessageSubmissionResponseHelper {
         Packet response = source.clone();
         Message reply = response.getMessage();
         Metadata metadata = reply.getMetadata();
-        Target target = PacketChannelWriter.resolveReplyTarget(ctx, source, original.getFrom());
+        Target target = MessageSender.resolveReplyTarget(ctx, source, original.getFrom());
         reply.setId(MessageContext.idGenerator().generateIdStr());
         reply.setFrom(null);
         reply.setTo(target != null ? target.getTargetIdentity() : original.getFrom());
@@ -97,6 +97,6 @@ public final class MessageSubmissionResponseHelper {
             return;
         }
         // 响应包无需再触发 SEND_FAIL 业务事件，客户端负责使用同一 messageId 超时核对。
-        PacketChannelWriter.sendOnChannelBestEffort(ctx, response);
+        MessageSender.sendControlQuiet(ctx, response);
     }
 }

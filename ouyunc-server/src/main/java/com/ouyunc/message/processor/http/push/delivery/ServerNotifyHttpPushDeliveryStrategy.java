@@ -8,7 +8,7 @@ import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.message.helper.ClientHelper;
-import com.ouyunc.message.helper.MessageHelper;
+import com.ouyunc.message.helper.MessageSender;
 import com.ouyunc.message.http.HttpPipelineException;
 import com.ouyunc.message.processor.http.push.HttpPushValidatorChain;
 import org.apache.commons.collections4.CollectionUtils;
@@ -67,7 +67,7 @@ public final class ServerNotifyHttpPushDeliveryStrategy implements HttpProcessor
                 log.debug("HTTP 推送 SERVER_NOTIFY 接收方不在线, to={}", message.getTo());
                 return true;
             }
-            MessageHelper.asyncSendMessage(packet, targets);
+            MessageSender.send(packet, targets);
             return true;
         });
     }

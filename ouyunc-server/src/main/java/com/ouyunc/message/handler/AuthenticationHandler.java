@@ -26,7 +26,7 @@ import com.ouyunc.core.listener.event.payload.ClientLoginEventPayload;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.LoginSessionDirectoryHelper;
-import com.ouyunc.message.helper.MessageHelper;
+import com.ouyunc.message.helper.MessageSender;
 import com.ouyunc.message.protocol.NativePacketProtocol;
 import com.ouyunc.message.schedule.ScheduleTimer;
 import com.ouyunc.message.validator.AppKeyValidator;
@@ -45,7 +45,7 @@ import java.util.function.Consumer;
 
 /**
  * @Author fzx
- * @Description: 登录认证处理器
+ * @Description: ç»å½è®¤è¯å¤çå¨
  **/
 public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
     private static final Logger log = LoggerFactory.getLogger(AuthenticationHandler.class);
@@ -56,25 +56,25 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
      * @param packet
      * @return void
      * @Author fangzhenxun
-     * @Description 登录逻辑处理
+     * @Description ç»å½é»è¾å¤ç
      */
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Packet packet) throws Exception {
-        // 在这里做一次设备的登录支持校验，如果不想在这校验可以下放到processor中来根据不同的校验器做校验
+        // å¨è¿éåä¸æ¬¡è®¾å¤çç»å½æ¯ææ ¡éªï¼å¦æä¸æ³å¨è¿æ ¡éªå¯ä»¥ä¸æ¾å°processorä¸­æ¥æ ¹æ®ä¸åçæ ¡éªå¨åæ ¡éª
         LoginContent loginInfo = ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
-        // 登录消息
+        // ç»å½æ¶æ¯
         if (MessageTypeEnum.LOGIN.getType().equals(packet.getMessageType())) {
             if (loginInfo != null
                     || Boolean.TRUE.equals(ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT))) {
-                log.warn("重复登录包忽略，不关闭已绑定/登录中的连接 channelId={}", ctx.channel().id().asShortText());
+                log.warn("éå¤ç»å½åå¿½ç¥ï¼ä¸å³é­å·²ç»å®/ç»å½ä¸­çè¿æ¥ channelId={}", ctx.channel().id().asShortText());
                 return;
             }
             doLogin(ctx, packet);
             return;
         }
-        // 非登录消息，已经登录放行
+        // éç»å½æ¶æ¯ï¼å·²ç»ç»å½æ¾è¡
         if (loginInfo == null) {
-            log.warn("请先登录!");
+            log.warn("è¯·åç»å½!");
             ctx.close();
             return;
         }
@@ -91,36 +91,36 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         boolean cancelled = LoginTimeoutSupport.cancel(ctx);
         if (cancelled) {
-            log.debug("客户端: {} 连接关闭，已取消登录超时定时任务", ctx.channel().id().asShortText());
+            log.debug("å®¢æ·ç«¯: {} è¿æ¥å³é­ï¼å·²åæ¶ç»å½è¶æ¶å®æ¶ä»»å¡", ctx.channel().id().asShortText());
         }
         super.channelInactive(ctx);
     }
 
     /**
-     * 登录
+     * ç»å½
      * @param ctx
      * @param packet
      */
     private void doLogin(ChannelHandlerContext ctx, Packet packet) {
-        // 构造默认发送的是IM 的消息格式
+        // æé é»è®¤åéçæ¯IM çæ¶æ¯æ ¼å¼
         long loginTimestamp = TimeUtil.currentTimeMillis();
-        // 取出登录消息
+        // ååºç»å½æ¶æ¯
         Message loginMessage = packet.getMessage();
         if (loginMessage.getContentType() != MessageContentTypeEnum.LOGIN_REQUEST_CONTENT.getType()) {
-            log.warn("客户端id: {} 登录内容类型: {}，校验未通过！", ctx.channel().id().asShortText(), loginMessage.getContentType());
+            log.warn("å®¢æ·ç«¯id: {} ç»å½åå®¹ç±»å: {}ï¼æ ¡éªæªéè¿ï¼", ctx.channel().id().asShortText(), loginMessage.getContentType());
             ctx.close();
             return;
         }
-        // 摘流 / 拒绝新连接：滚动升级窗口内不再接受新登录
+        // ææµ / æç»æ°è¿æ¥ï¼æ»å¨åçº§çªå£åä¸åæ¥åæ°ç»å½
         if (!MessageServerContext.isAcceptingNewConnections()) {
-            log.warn("客户端id: {} 登录被拒绝：服务尚未就绪或正在摘流", ctx.channel().id().asShortText());
-            ExceptionReporter.reportBusiness(ExceptionCodeEnum.LOGIN_REFUSED_DRAIN, "服务尚未就绪或正在摘流，拒绝登录", "AuthenticationHandler", packet);
+            log.warn("å®¢æ·ç«¯id: {} ç»å½è¢«æç»ï¼æå¡å°æªå°±ç»ªææ­£å¨ææµ", ctx.channel().id().asShortText());
+            ExceptionReporter.reportBusiness(ExceptionCodeEnum.LOGIN_REFUSED_DRAIN, "æå¡å°æªå°±ç»ªææ­£å¨ææµï¼æç»ç»å½", "AuthenticationHandler", packet);
             ctx.close();
             return;
         }
         byte deviceType = packet.getDeviceType();
         if (Boolean.TRUE.equals(ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT))) {
-            log.warn("客户端id: {} 登录进行中，忽略重复登录包", ctx.channel().id().asShortText());
+            log.warn("å®¢æ·ç«¯id: {} ç»å½è¿è¡ä¸­ï¼å¿½ç¥éå¤ç»å½å", ctx.channel().id().asShortText());
             return;
         }
         ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, Boolean.TRUE);
@@ -128,16 +128,16 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
             ThreadPoolManager.messageProcessorExecutor().execute(() ->
                     authenticateAndBind(ctx, packet, deviceType, loginTimestamp));
         } catch (RejectedExecutionException ex) {
-            log.error("登录任务提交被拒绝 channelId={}", ctx.channel().id().asShortText(), ex);
+            log.error("ç»å½ä»»å¡æäº¤è¢«æç» channelId={}", ctx.channel().id().asShortText(), ex);
             ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, null);
             ctx.close();
         }
     }
 
     /**
-     * AppKey 配额、设备白名单、签名、登录 GET、踢人全部离开 EventLoop。
-     * JSON 解析也在业务线程，避免占 EventLoop。
-     * <p>设备类型走软校验（与 PacketHandler 设备白名单一致），不抛异常。</p>
+     * AppKey éé¢ãè®¾å¤ç½ååãç­¾åãç»å½ GETãè¸¢äººå¨é¨ç¦»å¼ EventLoopã
+     * JSON è§£æä¹å¨ä¸å¡çº¿ç¨ï¼é¿åå  EventLoopã
+     * <p>è®¾å¤ç±»åèµ°è½¯æ ¡éªï¼ä¸ PacketHandler è®¾å¤ç½ååä¸è´ï¼ï¼ä¸æå¼å¸¸ã</p>
      */
     private void authenticateAndBind(ChannelHandlerContext ctx, Packet packet,
                                      byte deviceType, long loginTimestamp) {
@@ -150,19 +150,19 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
             }
             loginContent = JSON.parseObject(loginMessage.getContent(), LoginContent.class);
             if (loginContent == null) {
-                log.warn("客户端id: {} 登录内容无法解析", ctx.channel().id().asShortText());
+                log.warn("å®¢æ·ç«¯id: {} ç»å½åå®¹æ æ³è§£æ", ctx.channel().id().asShortText());
                 failLoginOnEventLoop(ctx);
                 return;
             }
             loginContent.setScope(LoginScopeEnum.normalizeScope(loginContent.getScope()));
-            // identity 级白名单优先；无定制时等价于 appKey/全局白名单
+            // identity çº§ç½ååä¼åï¼æ å®å¶æ¶ç­ä»·äº appKey/å¨å±ç½åå
             if (!AppKeyValidator.INSTANCE.tryReserveForLogin(loginContent.getAppKey(), ctx)
                     || !DeviceTypeRegistry.supports(
                     loginContent.getAppKey(), loginContent.getIdentity(), deviceType)
                     || !validate(loginContent)) {
-                log.warn("客户端id: {} 登录参数: {}，校验未通过！",
+                log.warn("å®¢æ·ç«¯id: {} ç»å½åæ°: {}ï¼æ ¡éªæªéè¿ï¼",
                         ctx.channel().id().asShortText(), Serializer.JSON.serializeToString(loginContent));
-                ExceptionReporter.reportBusiness(ExceptionCodeEnum.LOGIN_VERIFY_ERROR, "登录校验未通过", "AuthenticationHandler", packet);
+                ExceptionReporter.reportBusiness(ExceptionCodeEnum.LOGIN_VERIFY_ERROR, "ç»å½æ ¡éªæªéè¿", "AuthenticationHandler", packet);
                 AppKeyValidator.releaseReservedIfNeeded(loginContent.getAppKey(), ctx);
                 failLoginOnEventLoop(ctx);
                 return;
@@ -187,12 +187,12 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
             try {
                 ctx.executor().execute(() -> startRemoteBind(ctx, packet, loginClientInfo));
             } catch (RejectedExecutionException scheduleError) {
-                log.error("登录绑定回调投递 EventLoop 被拒绝 channelId={}", ctx.channel().id().asShortText(), scheduleError);
+                log.error("ç»å½ç»å®åè°æé EventLoop è¢«æç» channelId={}", ctx.channel().id().asShortText(), scheduleError);
                 AppKeyValidator.releaseReservedIfNeeded(loginContent.getAppKey(), ctx);
                 failLoginOnEventLoop(ctx);
             }
         } catch (Exception e) {
-            log.error("登录校验异常 channelId={}", ctx.channel().id().asShortText(), e);
+            log.error("ç»å½æ ¡éªå¼å¸¸ channelId={}", ctx.channel().id().asShortText(), e);
             if (loginContent != null) {
                 AppKeyValidator.releaseReservedIfNeeded(loginContent.getAppKey(), ctx);
             }
@@ -219,14 +219,14 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                     unbindRemoteOnClose(packet, closingLogin, closingComboIdentity, publishLogout));
         };
         ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_CHANNEL_CLOSE_HOOK, channelCloseHook);
-        // 踢旧会话必须在 CAS 绑定胜出之后，避免锁外踢人导致跨节点双在线窗口
+        // è¸¢æ§ä¼è¯å¿é¡»å¨ CAS ç»å®èåºä¹åï¼é¿åéå¤è¸¢äººå¯¼è´è·¨èç¹åå¨çº¿çªå£
         ClientHelper.bindAsync(ctx, loginClientInfo).whenComplete((previous, ex) -> {
             try {
-                // fencing GET / 踢人禁止回到 EventLoop；whenComplete 可能已在 IO 线程
+                // fencing GET / è¸¢äººç¦æ­¢åå° EventLoopï¼whenComplete å¯è½å·²å¨ IO çº¿ç¨
                 ThreadPoolManager.messageProcessorExecutor().execute(() ->
                         finishLoginAfterDirectoryCheck(ctx, packet, loginClientInfo, previous, ex));
             } catch (RejectedExecutionException scheduleError) {
-                log.error("登录 fencing 投递业务线程被拒绝 channelId={}", ctx.channel().id().asShortText(), scheduleError);
+                log.error("ç»å½ fencing æéä¸å¡çº¿ç¨è¢«æç» channelId={}", ctx.channel().id().asShortText(), scheduleError);
                 ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, null);
                 AppKeyValidator.releaseReservedIfNeeded(loginClientInfo.getAppKey(), ctx);
                 if (ctx.channel().isActive()) {
@@ -237,7 +237,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
     }
 
     /**
-     * Redis 目录 fencing 与跨节点踢人在业务线程完成，再回 EventLoop 装管道/发 ACK。
+     * Redis ç®å½ fencing ä¸è·¨èç¹è¸¢äººå¨ä¸å¡çº¿ç¨å®æï¼åå EventLoop è£ç®¡é/å ACKã
      */
     private void finishLoginAfterDirectoryCheck(ChannelHandlerContext ctx, Packet packet,
                                                 LoginClientInfo loginClientInfo,
@@ -255,7 +255,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
             ctx.executor().execute(() -> completeLoginAfterRemoteBind(
                     ctx, packet, loginClientInfo, bindError, owned));
         } catch (RejectedExecutionException scheduleError) {
-            log.error("登录完成回调投递 EventLoop 被拒绝 channelId={}", ctx.channel().id().asShortText(), scheduleError);
+            log.error("ç»å½å®æåè°æé EventLoop è¢«æç» channelId={}", ctx.channel().id().asShortText(), scheduleError);
             ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, null);
             AppKeyValidator.releaseReservedIfNeeded(loginClientInfo.getAppKey(), ctx);
             if (ctx.channel().isActive()) {
@@ -272,21 +272,21 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         try {
             ctx.executor().execute(fail);
         } catch (RejectedExecutionException scheduleError) {
-            log.error("登录失败回调投递 EventLoop 被拒绝 channelId={}", ctx.channel().id().asShortText(), scheduleError);
+            log.error("ç»å½å¤±è´¥åè°æé EventLoop è¢«æç» channelId={}", ctx.channel().id().asShortText(), scheduleError);
             fail.run();
         }
     }
 
     /**
-     * closeFuture 在 EventLoop 上触发，Redis 解绑必须离开 IO 线程。
+     * closeFuture å¨ EventLoop ä¸è§¦åï¼Redis è§£ç»å¿é¡»ç¦»å¼ IO çº¿ç¨ã
      */
     private void unbindRemoteOnClose(Packet packet, LoginClientInfo closingLogin, String comboIdentity, boolean publishLogout) {
         boolean locked = tryUnbindMatchingSession(closingLogin, comboIdentity);
         if (!locked) {
-            ExceptionReporter.reportBusiness(ExceptionCodeEnum.UN_BIND_ERROR, "客户端解绑登录信息失败！获取分布式锁失败", "AuthenticationHandler", packet);
+            ExceptionReporter.reportBusiness(ExceptionCodeEnum.UN_BIND_ERROR, "å®¢æ·ç«¯è§£ç»ç»å½ä¿¡æ¯å¤±è´¥ï¼è·ååå¸å¼éå¤±è´¥", "AuthenticationHandler", packet);
             ScheduleTimer.scheduleOnce(() -> {
                 if (!tryUnbindMatchingSession(closingLogin, comboIdentity)) {
-                    log.error("解绑补偿仍失败，等待下次登录或节点租约过期 combo={}", comboIdentity);
+                    log.error("è§£ç»è¡¥å¿ä»å¤±è´¥ï¼ç­å¾ä¸æ¬¡ç»å½æèç¹ç§çº¦è¿æ combo={}", comboIdentity);
                 }
             }, MessageConstant.UNBIND_COMPENSATE_DELAY_MILLIS, TimeUnit.MILLISECONDS);
         }
@@ -305,8 +305,8 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
     }
 
     /**
-     * CAS 绑定胜出后踢旧会话：同 sn 仅静默断开；异 sn 发远程登录通知后断开（含跨节点）。
-     * 本机旧连接已在 {@link ClientHelper#bindAsync} 注册时关闭，此处主要处理跨节点旧会话。
+     * CAS ç»å®èåºåè¸¢æ§ä¼è¯ï¼å sn ä»éé»æ­å¼ï¼å¼ sn åè¿ç¨ç»å½éç¥åæ­å¼ï¼å«è·¨èç¹ï¼ã
+     * æ¬æºæ§è¿æ¥å·²å¨ {@link ClientHelper#bindAsync} æ³¨åæ¶å³é­ï¼æ­¤å¤ä¸»è¦å¤çè·¨èç¹æ§ä¼è¯ã
      */
     private void kickPreviousSessionAfterBindWin(Packet packet, LoginClientInfo loginClientInfo,
                                                  LoginClientInfo previous) {
@@ -314,7 +314,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
             return;
         }
         String local = MessageContext.messageProperties.getLocalServerAddress();
-        // 本机旧连接已在 bindAsync 注册时关闭；勿再按 identity 本机投递，否则会误踢新会话
+        // æ¬æºæ§è¿æ¥å·²å¨ bindAsync æ³¨åæ¶å³é­ï¼å¿åæ identity æ¬æºæéï¼å¦åä¼è¯¯è¸¢æ°ä¼è¯
         if (StringUtils.isNotBlank(previous.getLoginServerAddress())
                 && previous.getLoginServerAddress().equals(local)) {
             return;
@@ -352,11 +352,11 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                 .targetServerAddress(previous.getLoginServerAddress())
                 .deviceType(previous.getDeviceType())
                 .build();
-        MessageHelper.syncSendMessageWithoutInterceptor(kickPacket, kickTarget);
+        MessageSender.send(kickPacket, kickTarget);
     }
 
     /**
-     * 同 sn 顶号：向旧会话所在节点投递关闭通知。本机旧连接已在 bind 时关闭。
+     * å sn é¡¶å·ï¼åæ§ä¼è¯æå¨èç¹æéå³é­éç¥ãæ¬æºæ§è¿æ¥å·²å¨ bind æ¶å³é­ã
      */
     private void closePreviousRemoteQuietly(LoginClientInfo previous) {
         if (previous == null || StringUtils.isBlank(previous.getLoginServerAddress())) {
@@ -392,14 +392,14 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                     .targetServerAddress(previous.getLoginServerAddress())
                     .deviceType(previous.getDeviceType())
                     .build();
-            MessageHelper.syncSendMessageWithoutInterceptor(kickPacket, kickTarget);
+            MessageSender.send(kickPacket, kickTarget);
         } catch (Exception e) {
-            log.warn("同设备跨节点静默踢旧失败 identity={}: {}", previous.getIdentity(), e.getMessage());
+            log.warn("åè®¾å¤è·¨èç¹éé»è¸¢æ§å¤±è´¥ identity={}: {}", previous.getIdentity(), e.getMessage());
         }
     }
 
     /**
-     * 在 EventLoop 上完成登录 ACK 与管道安装。目录 fencing / 踢人已在业务线程做完。
+     * å¨ EventLoop ä¸å®æç»å½ ACK ä¸ç®¡éå®è£ãç®å½ fencing / è¸¢äººå·²å¨ä¸å¡çº¿ç¨åå®ã
      */
     private void completeLoginAfterRemoteBind(ChannelHandlerContext ctx, Packet packet,
                                               LoginClientInfo loginClientInfo, Throwable bindError,
@@ -411,9 +411,9 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
             return;
         }
         if (bindError != null) {
-            log.error("客户端: {} 登录绑定失败", loginClientInfo, bindError);
+            log.error("å®¢æ·ç«¯: {} ç»å½ç»å®å¤±è´¥", loginClientInfo, bindError);
             ExceptionReporter.reportSystem(ExceptionCodeEnum.LOGIN_VERIFY_ERROR,
-                    "登录绑定失败: " + bindError.getMessage(),
+                    "ç»å½ç»å®å¤±è´¥: " + bindError.getMessage(),
                     "AuthenticationHandler.finishLoginBind", packet, bindError);
             ClientHelper.unbindLocalRegisterTable(loginClientInfo, ctx);
             AppKeyValidator.releaseReservedIfNeeded(loginClientInfo.getAppKey(), ctx);
@@ -421,8 +421,8 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
             return;
         }
         if (!directoryOwned) {
-            log.warn("登录 fencing 失败，目录已被更新会话覆盖 identity={}", loginClientInfo.getIdentity());
-            ExceptionReporter.reportBusiness(ExceptionCodeEnum.LOGIN_VERIFY_ERROR, "登录绑定失败：会话已被更新连接顶替", "AuthenticationHandler", packet);
+            log.warn("ç»å½ fencing å¤±è´¥ï¼ç®å½å·²è¢«æ´æ°ä¼è¯è¦ç identity={}", loginClientInfo.getIdentity());
+            ExceptionReporter.reportBusiness(ExceptionCodeEnum.LOGIN_VERIFY_ERROR, "ç»å½ç»å®å¤±è´¥ï¼ä¼è¯å·²è¢«æ´æ°è¿æ¥é¡¶æ¿", "AuthenticationHandler", packet);
             ClientHelper.unbindLocalRegisterTable(loginClientInfo, ctx);
             AppKeyValidator.releaseReservedIfNeeded(loginClientInfo.getAppKey(), ctx);
             ctx.close();
@@ -447,22 +447,17 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                 packet.getSerializeAlgorithm(),
                 MessageTypeEnum.LOGIN.getType(),
                 loginAckMessage);
-        MessageHelper.syncSendMessage(loginAckPacket, Target.newBuilder()
-                .appKey(loginClientInfo.getAppKey())
-                .targetIdentity(loginClientInfo.getIdentity())
-                .targetServerAddress(loginClientInfo.getLoginServerAddress())
-                .deviceType(loginClientInfo.getDeviceType())
-                .build());
+        MessageSender.sendControl(ctx, loginAckPacket);
         if (!LoginTimeoutSupport.cancel(ctx)) {
-            log.warn("客户端: {} 登录成功，取消登录超时定时任务失败", loginClientInfo);
+            log.warn("å®¢æ·ç«¯: {} ç»å½æåï¼åæ¶ç»å½è¶æ¶å®æ¶ä»»å¡å¤±è´¥", loginClientInfo);
         }
         publishClientLoginOutsideEventLoop(ctx, loginClientInfo, loginClientInfo.getLastLoginTime());
     }
 
     /**
-     * 登录事件必须可靠进入 Disruptor，但环满时 {@code publishEvent} 会等待可用槽位。
-     * 当前方法只在 EventLoop 上执行一次有界线程池提交，避免登录洪峰或慢监听器反压整个网络线程。
-     * 如果事件线程池已经过载，则关闭刚建立的连接，让客户端重新登录恢复完整的上线事件语义。
+     * ç»å½äºä»¶å¿é¡»å¯é è¿å¥ Disruptorï¼ä½ç¯æ»¡æ¶ {@code publishEvent} ä¼ç­å¾å¯ç¨æ§½ä½ã
+     * å½åæ¹æ³åªå¨ EventLoop ä¸æ§è¡ä¸æ¬¡æççº¿ç¨æ± æäº¤ï¼é¿åç»å½æ´ªå³°ææ¢çå¬å¨ååæ´ä¸ªç½ç»çº¿ç¨ã
+     * å¦æäºä»¶çº¿ç¨æ± å·²ç»è¿è½½ï¼åå³é­åå»ºç«çè¿æ¥ï¼è®©å®¢æ·ç«¯éæ°ç»å½æ¢å¤å®æ´çä¸çº¿äºä»¶è¯­ä¹ã
      */
     private void publishClientLoginOutsideEventLoop(ChannelHandlerContext ctx,
                                                     LoginClientInfo loginClientInfo,
@@ -474,21 +469,21 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         try {
             ThreadPoolManager.eventListenerExecutor().execute(
                     () -> {
-                        // 任务排队期间连接可能已经关闭；此时 closeFuture 会发布登出事件，禁止再补发上线事件。
+                        // ä»»å¡æéæé´è¿æ¥å¯è½å·²ç»å³é­ï¼æ­¤æ¶ closeFuture ä¼åå¸ç»åºäºä»¶ï¼ç¦æ­¢åè¡¥åä¸çº¿äºä»¶ã
                         if (ctx.channel().isActive()) {
                             MessageServerContext.publishEvent(loginEvent, true);
                         }
                     });
         } catch (RejectedExecutionException rejected) {
-            log.error("登录事件提交被拒绝，关闭连接等待客户端重试 identity={}, channelId={}",
+            log.error("ç»å½äºä»¶æäº¤è¢«æç»ï¼å³é­è¿æ¥ç­å¾å®¢æ·ç«¯éè¯ identity={}, channelId={}",
                     loginClientInfo.getIdentity(), ctx.channel().id().asShortText(), rejected);
             ctx.close();
         }
     }
 
     /**
-     * 登录成功后安装管道：心跳读空闲（第一个 {@link IdleStateHandler} + {@link HeartBeatHandler}，可选）；
-     * 业务读空闲为 {@link BusinessIdleStateHandler}（继承 {@link IdleStateHandler}，合并 PING 与读空闲事件处理，少一层 handler）。
+     * ç»å½æååå®è£ç®¡éï¼å¿è·³è¯»ç©ºé²ï¼ç¬¬ä¸ä¸ª {@link IdleStateHandler} + {@link HeartBeatHandler}ï¼å¯éï¼ï¼
+     * ä¸å¡è¯»ç©ºé²ä¸º {@link BusinessIdleStateHandler}ï¼ç»§æ¿ {@link IdleStateHandler}ï¼åå¹¶ PING ä¸è¯»ç©ºé²äºä»¶å¤çï¼å°ä¸å± handlerï¼ã
      */
     private void installLoginIdlePipeline(ChannelHandlerContext ctx, LoginClientInfo loginClientInfo) {
         String pipelineAnchor = MessageConstant.CONVERT_2_PACKET_HANDLER;
@@ -513,10 +508,10 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
 
     /***
      * @author fzx
-     * @description 校验登录信息；{@code scope} 必须为 {@link LoginScopeEnum} 已定义取值；
-     * identity 在客服 scope 下须在 {@code ouyunc_im_user} 存在且属于该 appKey；
-     * 签名为 {@code MD5(appKey&identity&createTime_appSecret)}，createTime 允许
-     * {@link MessageConstant#LOGIN_SIGNATURE_CREATE_TIME_SKEW_MS} 偏差。
+     * @description æ ¡éªç»å½ä¿¡æ¯ï¼{@code scope} å¿é¡»ä¸º {@link LoginScopeEnum} å·²å®ä¹åå¼ï¼
+     * identity å¨å®¢æ scope ä¸é¡»å¨ {@code ouyunc_im_user} å­å¨ä¸å±äºè¯¥ appKeyï¼
+     * ç­¾åä¸º {@code MD5(appKey&identity&createTime_appSecret)}ï¼createTime åè®¸
+     * {@link MessageConstant#LOGIN_SIGNATURE_CREATE_TIME_SKEW_MS} åå·®ã
      */
     public boolean validate(LoginContent loginContent) {
         return LoginAuthValidator.verify(loginContent);

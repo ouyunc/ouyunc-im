@@ -9,7 +9,7 @@ import com.ouyunc.message.schedule.QosRetryScheduler;
 
 /**
  * 单 Target 投递后在始发节点登记 SERVER QoS 下行重试。
- * 群/私聊主路径走 {@code asyncSendMessage(packet, clients)} 扇出，由
+ * 群/私聊主路径走 {@code send(packet, clients)} 扇出，由
  * {@link QosRetryScheduler#scheduleForClients} 登记；本拦截器覆盖单目标写出。
  */
 @Order(NumberConstant.NUMBER_100)

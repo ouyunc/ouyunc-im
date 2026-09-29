@@ -6,14 +6,12 @@ import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.MessageType;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.model.LoginClientInfo;
-import com.ouyunc.base.model.Target;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.core.context.MessageContext;
-import com.ouyunc.message.helper.MessageHelper;
-import com.ouyunc.message.helper.PacketChannelWriter;
+import com.ouyunc.message.helper.MessageSender;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -67,15 +65,7 @@ public final class PingPongMessageBiProcessor extends AbstractMessageBiProcessor
             heartBeatMessage.setCreateTime(TimeUtil.currentTimeMillis());
             packet.setPacketId(MessageContext.idGenerator().generateId());
             // Pong 写回当前连接，避免按 from 查表时连接已换绑或 identity 不一致
-            if (PacketChannelWriter.tryReplyOnChannel(ctx, packet)) {
-                return;
-            }
-            Target pongTarget = PacketChannelWriter.resolveReplyTarget(ctx, packet, from);
-            if (pongTarget == null) {
-                log.error("心跳无法确定投递目标: {}", packet);
-                return;
-            }
-            MessageHelper.asyncSendMessage(packet, pongTarget);
+            MessageSender.sendControl(ctx, packet);
         });
     }
 }
