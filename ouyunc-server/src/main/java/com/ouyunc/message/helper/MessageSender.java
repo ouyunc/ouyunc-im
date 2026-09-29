@@ -3,7 +3,10 @@ package com.ouyunc.message.helper;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.ClusterForwardModeEnum;
 import com.ouyunc.base.constant.enums.SendStatusEnum;
-import com.ouyunc.base.model.*;
+import com.ouyunc.base.model.LoginClientInfo;
+import com.ouyunc.base.model.Metadata;
+import com.ouyunc.base.model.SendCallback;
+import com.ouyunc.base.model.Target;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.PacketCopyHelper;
 import com.ouyunc.base.utils.ChannelAttrUtil;
@@ -23,12 +26,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * @Author fzx
@@ -48,78 +46,7 @@ public class MessageSender {
         fanoutToClients(packet, loginClientInfos);
     }
 
-    /**
-     * 多端扇出：本机分批展开；远程按节点打包 {@link Metadata#getFanoutTargets()}。
-     */
-    private static void fanoutToClients(Packet packet, Collection<LoginClientInfo> loginClientInfos) {
-        if (packet == null || CollectionUtils.isEmpty(loginClientInfos)) {
-            return;
-        }
-        String local = MessageServerContext.serverProperties().getLocalServerAddress();
-        Map<String, List<LoginClientInfo>> byNode = new LinkedHashMap<>();
-        for (LoginClientInfo client : loginClientInfos) {
-            if (client == null) {
-                continue;
-            }
-            String node = client.getLoginServerAddress();
-            if (node == null || node.isBlank()) {
-                node = local;
-            }
-            byNode.computeIfAbsent(node, ignored -> new ArrayList<>()).add(client);
-        }
-        List<LoginClientInfo> localClients = byNode.remove(local);
-        boolean cluster = MessageServerContext.serverProperties().isClusterEnable();
-        if (cluster) {
-            QosRetryScheduler.scheduleForClients(packet, loginClientInfos);
-        } else {
-            QosRetryScheduler.scheduleForClients(packet, localClients);
-        }
-        if (CollectionUtils.isNotEmpty(localClients)) {
-            List<Target> targets = new ArrayList<>(localClients.size());
-            for (LoginClientInfo c : localClients) {
-                targets.add(buildTarget(c));
-            }
-            ClientHelper.deliverLocalFanoutTargets(packet, targets);
-        }
-        for (Map.Entry<String, List<LoginClientInfo>> entry : byNode.entrySet()) {
-            if (!cluster) {
-                log.warn("未开启集群，跳过远端节点投递 node={} size={} packetId={}",
-                        entry.getKey(), entry.getValue().size(), packet.getPacketId());
-                continue;
-            }
-            sendRemoteFanoutBatches(packet, entry.getKey(), entry.getValue());
-        }
-    }
 
-    private static void sendRemoteFanoutBatches(Packet packet, String nodeId,
-                                                List<LoginClientInfo> clients) {
-        int batch = MessageConstant.GROUP_FANOUT_REMOTE_TARGET_BATCH;
-        for (int from = 0; from < clients.size(); from += batch) {
-            int to = Math.min(from + batch, clients.size());
-            List<Target> targets = new ArrayList<>(to - from);
-            for (int i = from; i < to; i++) {
-                targets.add(buildTarget(clients.get(i)));
-            }
-            Packet fanout = packet.clone();
-            Metadata metadata = fanout.getMessage().getMetadata();
-            metadata.ensureClusterRoute().setClusterForwardMode(ClusterForwardModeEnum.CLIENT);
-            metadata.ensureClusterRoute().setFanoutTargets(targets);
-            Target envelope = Target.newBuilder()
-                    .appKey(metadata.getIngress().getAppKey())
-                    .targetServerAddress(nodeId)
-                    .build();
-            resumeDelivery(fanout, envelope);
-        }
-    }
-
-    public static Target buildTarget(LoginClientInfo loginClientInfo) {
-        return Target.newBuilder()
-                .appKey(loginClientInfo.getAppKey())
-                .targetIdentity(loginClientInfo.getIdentity())
-                .targetServerAddress(loginClientInfo.getLoginServerAddress())
-                .deviceType(loginClientInfo.getDeviceType())
-                .build();
-    }
 
     /**
      * 提交一条客户端业务目标投递。拦截器在这里统一执行，调用方不能绕过。
@@ -216,6 +143,83 @@ public class MessageSender {
     public static void sendClusterInternal(Packet packet, String destServerAddress, SendCallback sendCallback) {
         doSendClusterInternal(packet, destServerAddress, sendCallback);
     }
+
+
+    /**
+     * 多端扇出：本机分批展开；远程按节点打包 {@link Metadata#getFanoutTargets()}。
+     */
+    private static void fanoutToClients(Packet packet, Collection<LoginClientInfo> loginClientInfos) {
+        if (packet == null || CollectionUtils.isEmpty(loginClientInfos)) {
+            return;
+        }
+        String local = MessageServerContext.serverProperties().getLocalServerAddress();
+        Map<String, List<LoginClientInfo>> byNode = new LinkedHashMap<>();
+        for (LoginClientInfo client : loginClientInfos) {
+            if (client == null) {
+                continue;
+            }
+            String node = client.getLoginServerAddress();
+            if (node == null || node.isBlank()) {
+                node = local;
+            }
+            byNode.computeIfAbsent(node, ignored -> new ArrayList<>()).add(client);
+        }
+        List<LoginClientInfo> localClients = byNode.remove(local);
+        boolean cluster = MessageServerContext.serverProperties().isClusterEnable();
+        if (cluster) {
+            QosRetryScheduler.scheduleForClients(packet, loginClientInfos);
+        } else {
+            QosRetryScheduler.scheduleForClients(packet, localClients);
+        }
+        if (CollectionUtils.isNotEmpty(localClients)) {
+            List<Target> targets = new ArrayList<>(localClients.size());
+            for (LoginClientInfo c : localClients) {
+                targets.add(Target.newBuilder()
+                        .appKey(c.getAppKey())
+                        .targetIdentity(c.getIdentity())
+                        .targetServerAddress(c.getLoginServerAddress())
+                        .deviceType(c.getDeviceType())
+                        .build());
+            }
+            ClientHelper.deliverLocalFanoutTargets(packet, targets);
+        }
+        for (Map.Entry<String, List<LoginClientInfo>> entry : byNode.entrySet()) {
+            if (!cluster) {
+                log.warn("未开启集群，跳过远端节点投递 node={} size={} packetId={}",
+                        entry.getKey(), entry.getValue().size(), packet.getPacketId());
+                continue;
+            }
+            sendRemoteFanoutBatches(packet, entry.getKey(), entry.getValue());
+        }
+    }
+
+    private static void sendRemoteFanoutBatches(Packet packet, String nodeId,
+                                                List<LoginClientInfo> clients) {
+        int batch = MessageConstant.GROUP_FANOUT_REMOTE_TARGET_BATCH;
+        for (int from = 0; from < clients.size(); from += batch) {
+            int to = Math.min(from + batch, clients.size());
+            List<Target> targets = new ArrayList<>(to - from);
+            for (int i = from; i < to; i++) {
+                LoginClientInfo loginClientInfo = clients.get(i);
+                targets.add(Target.newBuilder()
+                        .appKey(loginClientInfo.getAppKey())
+                        .targetIdentity(loginClientInfo.getIdentity())
+                        .targetServerAddress(loginClientInfo.getLoginServerAddress())
+                        .deviceType(loginClientInfo.getDeviceType())
+                        .build());
+            }
+            Packet fanout = packet.clone();
+            Metadata metadata = fanout.getMessage().getMetadata();
+            metadata.ensureClusterRoute().setClusterForwardMode(ClusterForwardModeEnum.CLIENT);
+            metadata.ensureClusterRoute().setFanoutTargets(targets);
+            Target envelope = Target.newBuilder()
+                    .appKey(metadata.getIngress().getAppKey())
+                    .targetServerAddress(nodeId)
+                    .build();
+            resumeDelivery(fanout, envelope);
+        }
+    }
+
 
     private static void doSendClusterInternal(Packet originPacket, String destServerAddress,
                                               SendCallback sendCallback) {

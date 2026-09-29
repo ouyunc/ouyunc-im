@@ -65,7 +65,12 @@ public final class LoginFollowHelper {
         followMeta.ensureClusterRoute().setLoginFollowHops(metadata.getClusterRoute().getLoginFollowHops() + 1);
         followMeta.ensureClusterRoute().setClusterForwardMode(ClusterForwardModeEnum.CLIENT);
         followMeta.ensureClusterRoute().setFanoutTargets(null);
-        Target next = MessageSender.buildTarget(latest);
+        Target next = Target.newBuilder()
+                .appKey(latest.getAppKey())
+                .targetIdentity(latest.getIdentity())
+                .targetServerAddress(latest.getLoginServerAddress())
+                .deviceType(latest.getDeviceType())
+                .build();
         followMeta.ensureClusterRoute().setTarget(next);
         log.debug("登录跟随 packetId={} identity={} {} -> {}",
                 packet.getPacketId(), target.getTargetIdentity(), local, dest);

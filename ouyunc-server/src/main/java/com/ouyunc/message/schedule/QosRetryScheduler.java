@@ -77,7 +77,12 @@ public final class QosRetryScheduler {
         }
         for (LoginClientInfo client : clients) {
             if (client != null) {
-                schedule(packet, MessageSender.buildTarget(client));
+                schedule(packet, Target.newBuilder()
+                        .appKey(client.getAppKey())
+                        .targetIdentity(client.getIdentity())
+                        .targetServerAddress(client.getLoginServerAddress())
+                        .deviceType(client.getDeviceType())
+                        .build());
             }
         }
     }
@@ -300,7 +305,12 @@ public final class QosRetryScheduler {
         if (!taskStillActive(taskId, taskWrapper)) {
             return;
         }
-        MessageSender.resumeDelivery(schedulePackage.clone(), MessageSender.buildTarget(device));
+        MessageSender.resumeDelivery(schedulePackage.clone(), Target.newBuilder()
+                .appKey(device.getAppKey())
+                .targetIdentity(device.getIdentity())
+                .targetServerAddress(device.getLoginServerAddress())
+                .deviceType(device.getDeviceType())
+                .build());
     }
 
     private static Packet loadRetryPacket(QosRetryTaskContext retryContext) {
