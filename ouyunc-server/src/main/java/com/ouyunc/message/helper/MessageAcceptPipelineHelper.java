@@ -199,6 +199,10 @@ public final class MessageAcceptPipelineHelper {
                 return Mono.empty();
             } catch (Exception error) {
                 log.error("消息已写入，但后续副作用失败, messageId={}", packet.getMessage().getId(), error);
+                // 正文已提交但首次扇出/派生状态未完成。返回 UNKNOWN 促使客户端以同一 messageId 重试，
+                // 重入路径会读取 canonical packetId 并继续完成尚未结束的投递。
+                MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
+                return Mono.empty();
             }
         }
         qosAckOnSuccess(ctx, packet);

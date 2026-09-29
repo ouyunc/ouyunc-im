@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 
 import java.time.Duration;
 
@@ -30,6 +31,37 @@ public final class DeliveryCompletionSupport {
 
     /** 该收件人渠道已确认，重入不得再发布。 */
     public static final String TASK_CONFIRMED = "C";
+
+    /**
+     * 原子获取首次扇出执行权。返回 2 表示已完成，1 表示本次获取成功，0 表示其他 owner 正在执行。
+     * done/run 使用同一 canonical packetId 哈希标签，可在 Redis Cluster 中执行双 key Lua。
+     */
+    private static final DefaultRedisScript<Long> START_SCRIPT = new DefaultRedisScript<>("""
+            if redis.call('EXISTS', KEYS[1]) == 1 then return 2 end
+            if redis.call('SET', KEYS[2], ARGV[1], 'NX', 'PX', ARGV[2]) then return 1 end
+            if redis.call('EXISTS', KEYS[1]) == 1 then return 2 end
+            return 0
+            """, Long.class);
+
+    /** 仅当前 owner 可以写完成标记并释放执行锁。 */
+    private static final DefaultRedisScript<Long> FINISH_SCRIPT = new DefaultRedisScript<>("""
+            if redis.call('GET', KEYS[2]) ~= ARGV[1] then return 0 end
+            redis.call('PSETEX', KEYS[1], ARGV[2], '1')
+            redis.call('DEL', KEYS[2])
+            return 1
+            """, Long.class);
+
+    /** 仅当前 owner 可以释放执行锁，避免旧执行者误删接管者的新锁。 */
+    private static final DefaultRedisScript<Long> ABORT_SCRIPT = new DefaultRedisScript<>("""
+            if redis.call('GET', KEYS[1]) ~= ARGV[1] then return 0 end
+            return redis.call('DEL', KEYS[1])
+            """, Long.class);
+
+    /** 长时间群扇出在批次边界续租；只有当前 owner 可以延长执行权。 */
+    private static final DefaultRedisScript<Long> RENEW_SCRIPT = new DefaultRedisScript<>("""
+            if redis.call('GET', KEYS[1]) ~= ARGV[1] then return 0 end
+            return redis.call('PEXPIRE', KEYS[1], ARGV[2])
+            """, Long.class);
 
     public enum RunState {
         /** 已经完成首次扇出。 */
@@ -63,35 +95,42 @@ public final class DeliveryCompletionSupport {
         if (done == null || run == null) {
             return RunState.BUSY;
         }
-        if (Boolean.TRUE.equals(redis.hasKey(done))) {
+        Long result = redis.execute(START_SCRIPT, java.util.List.of(done, run), ownerToken,
+                String.valueOf(MessageConstant.DELIVERY_RUN_LOCK_MILLIS));
+        if (Long.valueOf(2L).equals(result)) {
             return RunState.DONE;
         }
-        Boolean acquired = redis.opsForValue().setIfAbsent(run, ownerToken,
-                Duration.ofMillis(MessageConstant.DELIVERY_RUN_LOCK_MILLIS));
-        if (Boolean.TRUE.equals(acquired)) {
-            return RunState.ACQUIRED;
-        }
-        if (Boolean.TRUE.equals(redis.hasKey(done))) {
-            return RunState.DONE;
-        }
-        return RunState.BUSY;
+        return Long.valueOf(1L).equals(result) ? RunState.ACQUIRED : RunState.BUSY;
     }
 
-    public void finishDelivery(Packet packet, String ownerToken) {
+    public boolean finishDelivery(Packet packet, String ownerToken) {
         String done = doneKey(packet);
         String run = runKey(packet);
-        if (done == null || run == null) {
-            return;
+        if (done == null || run == null || StringUtils.isBlank(ownerToken)) {
+            return false;
         }
-        redis.opsForValue().set(done, "1", Duration.ofMillis(MessageContext.messageHotDataTtlMillis()));
-        releaseRunLock(run, ownerToken);
+        Long result = redis.execute(FINISH_SCRIPT, java.util.List.of(done, run), ownerToken,
+                String.valueOf(MessageContext.messageHotDataTtlMillis()));
+        return Long.valueOf(1L).equals(result);
     }
 
-    public void abortDelivery(Packet packet, String ownerToken) {
+    public boolean abortDelivery(Packet packet, String ownerToken) {
         String run = runKey(packet);
-        if (run != null) {
-            releaseRunLock(run, ownerToken);
+        if (run == null || StringUtils.isBlank(ownerToken)) {
+            return false;
         }
+        Long result = redis.execute(ABORT_SCRIPT, java.util.List.of(run), ownerToken);
+        return Long.valueOf(1L).equals(result);
+    }
+
+    public boolean renewDelivery(Packet packet, String ownerToken) {
+        String run = runKey(packet);
+        if (run == null || StringUtils.isBlank(ownerToken)) {
+            return false;
+        }
+        Long result = redis.execute(RENEW_SCRIPT, java.util.List.of(run), ownerToken,
+                String.valueOf(MessageConstant.DELIVERY_RUN_LOCK_MILLIS));
+        return Long.valueOf(1L).equals(result);
     }
 
     /**
@@ -131,13 +170,6 @@ public final class DeliveryCompletionSupport {
         }
         redis.opsForHash().put(key, field, TASK_CONFIRMED);
         redis.expire(key, Duration.ofMillis(MessageContext.messageHotDataTtlMillis()));
-    }
-
-    private void releaseRunLock(String runKey, String ownerToken) {
-        String current = redis.opsForValue().get(runKey);
-        if (ownerToken.equals(current)) {
-            redis.delete(runKey);
-        }
     }
 
     private static String doneKey(Packet packet) {

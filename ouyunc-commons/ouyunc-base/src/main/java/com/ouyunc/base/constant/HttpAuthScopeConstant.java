@@ -31,4 +31,10 @@ public final class HttpAuthScopeConstant {
      * 须使用独立运维 JWT 密钥签发，不得与业务推送密钥共用。
      */
     public static final String IM_ADMIN_DRAIN = "im:admin:drain";
+
+    /** 查询本节点连接数和连接详情。 */
+    public static final String IM_ADMIN_CONNECTIONS_READ = "im:admin:connections:read";
+
+    /** 强制下线本节点客户端连接。 */
+    public static final String IM_ADMIN_CONNECTIONS_OFFLINE = "im:admin:connections:offline";
 }

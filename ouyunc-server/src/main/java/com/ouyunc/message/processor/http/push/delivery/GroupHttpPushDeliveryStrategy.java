@@ -101,7 +101,7 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
                                     MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
                             .subscribe(ignored -> { }, e -> log.warn(
                                     "HTTP 推送更新群聊已读 offset 失败, packetId={}", packet.getPacketId(), e));
-                    CommittedDelivery.run(packet, () -> pushGroupOnline(packet));
+                    CommittedDelivery.run(packet, lease -> pushGroupOnline(packet, lease));
                     return Mono.just(true);
                 })
                 .onErrorResume(error -> {
@@ -167,7 +167,7 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
             } else if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
                 deliverWithdraw(packet);
             } else {
-                CommittedDelivery.run(packet, () -> pushGroupOnline(packet));
+                CommittedDelivery.run(packet, lease -> pushGroupOnline(packet, lease));
             }
             return Boolean.TRUE;
         });
@@ -178,25 +178,25 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
         MessageDeliveryPlanner.deliverGroupMembers(packet, loadFullMembersOrEmpty(packet));
     }
 
-    private static void pushGroupOnline(Packet packet) {
+    private static void pushGroupOnline(Packet packet, CommittedDelivery.DeliveryLease lease) {
         Message message = packet.getMessage();
         HttpPushDeliverySupport.syncSenderOnlineDevices(packet, message.getFrom());
         GroupMessagePushModeEnum mode = MessageServerContext.serverProperties().getGroupMessagePushMode();
         if (GroupMessagePushModeEnum.PUSH.equals(mode)) {
-            deliverToAllGroupMembers(packet, loadFullMembersOrEmpty(packet));
+            deliverToAllGroupMembers(packet, loadFullMembersOrEmpty(packet), lease);
             return;
         }
         if (GroupMessagePushModeEnum.PULL.equals(mode)) {
-            deliverAtMentionsIfAny(packet);
+            deliverAtMentionsIfAny(packet, lease);
             return;
         }
         if (GroupMessagePushModeEnum.PULL_PUSH.equals(mode)) {
             long memberCount = DefaultRepository.INSTANCE.groupMemberCount(
                     message.getMetadata().getIngress().getAppKey(), message.getTo());
             if (memberCount > MessageServerContext.serverProperties().getGroupMessageThreshold()) {
-                deliverAtMentionsIfAny(packet);
+                deliverAtMentionsIfAny(packet, lease);
             } else {
-                deliverToAllGroupMembers(packet, loadFullMembersOrEmpty(packet));
+                deliverToAllGroupMembers(packet, loadFullMembersOrEmpty(packet), lease);
             }
             return;
         }
@@ -205,6 +205,11 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
 
     private static void deliverToAllGroupMembers(Packet packet, Set<String> groupMembers) {
         MessageDeliveryPlanner.deliverGroupMembers(packet, groupMembers);
+    }
+
+    private static void deliverToAllGroupMembers(Packet packet, Set<String> groupMembers,
+                                                 CommittedDelivery.DeliveryLease lease) {
+        MessageDeliveryPlanner.deliverGroupMembers(packet, groupMembers, lease::renew);
     }
 
     private static void deliverAtMentionsIfAny(Packet packet) {
@@ -217,6 +222,18 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
             return;
         }
         MessageDeliveryPlanner.deliverGroupMembers(packet, new HashSet<>(atList));
+    }
+
+    private static void deliverAtMentionsIfAny(Packet packet, CommittedDelivery.DeliveryLease lease) {
+        List<String> atList = packet.getMessage().getAt();
+        if (CollectionUtils.isEmpty(atList)) {
+            return;
+        }
+        if (MessageContentNormalizer.containsAtAll(atList)) {
+            deliverToAllGroupMembers(packet, loadFullMembersOrEmpty(packet), lease);
+            return;
+        }
+        MessageDeliveryPlanner.deliverGroupMembers(packet, new HashSet<>(atList), lease::renew);
     }
 
     private static Set<String> loadFullMembersOrEmpty(Packet packet) {

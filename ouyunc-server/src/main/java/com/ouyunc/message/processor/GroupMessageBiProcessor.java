@@ -3,6 +3,7 @@ package com.ouyunc.message.processor;
 import com.ouyunc.core.context.MessageContext;
 
 import com.ouyunc.core.exception.ExceptionReporter;
+import com.ouyunc.core.exception.DeliveryRunBusyException;
 
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
@@ -150,7 +151,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
 
     /** 首次写入和 COMMITTED 重入共用。已完成的扇出不会再次推送。 */
     private void completeGroupDelivery(Packet packet) {
-        CommittedDelivery.run(packet, () -> {
+        CommittedDelivery.run(packet, lease -> {
             try {
                 repository().saveLastMessageForSession(packet.getMessage().getTo(), packet,
                         MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
@@ -163,7 +164,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
                     .subscribe(
                             ignored -> { },
                             e -> log.warn("发送消息静默更新本端已读 offset 失败, packetId={}", packet.getPacketId(), e));
-            deliver(packet);
+            deliver(packet, lease);
         });
     }
 
@@ -253,7 +254,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
         deliver2AllGroupMembers(packet, loadFullMembersOrEmpty(packet));
     }
 
-    private void deliver(Packet packet) {
+    private void deliver(Packet packet, CommittedDelivery.DeliveryLease lease) {
         Message message = packet.getMessage();
         String appKey = message.getMetadata().getIngress().getAppKey();
         ClientInfo clientInfo = MessageServerContext.localClientInfo(appKey, message.getFrom());
@@ -262,19 +263,19 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
         }
         GroupMessagePushModeEnum mode = MessageServerContext.serverProperties().getGroupMessagePushMode();
         if (GroupMessagePushModeEnum.PUSH.equals(mode)) {
-            deliver2AllGroupMembers(packet, loadFullMembersOrEmpty(packet));
+            deliver2AllGroupMembers(packet, loadFullMembersOrEmpty(packet), lease);
             return;
         }
         if (GroupMessagePushModeEnum.PULL.equals(mode)) {
-            deliverAtMentionsIfAny(packet);
+            deliverAtMentionsIfAny(packet, lease);
             return;
         }
         if (GroupMessagePushModeEnum.PULL_PUSH.equals(mode)) {
             long memberCount = repository().groupMemberCount(appKey, message.getTo());
             if (memberCount > MessageServerContext.serverProperties().getGroupMessageThreshold()) {
-                deliverAtMentionsIfAny(packet);
+                deliverAtMentionsIfAny(packet, lease);
             } else {
-                deliver2AllGroupMembers(packet, loadFullMembersOrEmpty(packet));
+                deliver2AllGroupMembers(packet, loadFullMembersOrEmpty(packet), lease);
             }
             return;
         }
@@ -310,6 +311,11 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
         MessageDeliveryPlanner.deliverGroupMembers(packet, groupMembers);
     }
 
+    private void deliver2AllGroupMembers(Packet packet, Set<String> groupMembers,
+                                         CommittedDelivery.DeliveryLease lease) {
+        MessageDeliveryPlanner.deliverGroupMembers(packet, groupMembers, lease::renew);
+    }
+
     private void deliverAtMentionsIfAny(Packet packet) {
         List<String> atList = packet.getMessage().getAt();
         if (CollectionUtils.isEmpty(atList)) {
@@ -322,6 +328,18 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
         MessageDeliveryPlanner.deliverGroupMembers(packet, new HashSet<>(atList));
     }
 
+    private void deliverAtMentionsIfAny(Packet packet, CommittedDelivery.DeliveryLease lease) {
+        List<String> atList = packet.getMessage().getAt();
+        if (CollectionUtils.isEmpty(atList)) {
+            return;
+        }
+        if (MessageContentNormalizer.containsAtAll(atList)) {
+            deliver2AllGroupMembers(packet, loadFullMembersOrEmpty(packet), lease);
+            return;
+        }
+        MessageDeliveryPlanner.deliverGroupMembers(packet, new HashSet<>(atList), lease::renew);
+    }
+
     private Set<String> loadFullMembersOrEmpty(Packet packet) {
         try {
             Set<String> members = repository().groupUsersIdentity(packet);
@@ -330,7 +348,9 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
             log.error("枚举群成员失败, groupId={} packetId={}",
                     packet.getMessage().getTo(), packet.getPacketId(), e);
             scheduleFanoutRecovery(packet);
-            return Set.of();
+            // 不能把“成员尚未加载出来”当作空群并把 delivery-done 写成完成。
+            // 抛出后会释放本次 owner，客户端重试和本机有界恢复任务均可继续补投。
+            throw e;
         }
     }
 
@@ -378,11 +398,10 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
                 throw new GroupMembershipSupport.GroupMembershipLoadException("补投消息正文暂不可用");
             }
             Packet packet = stored.getFirst();
-            Set<String> members = repository().groupUsersIdentity(packet);
-            deliver2AllGroupMembers(packet, members == null ? Set.of() : members);
+            // 恢复任务也必须竞争同一 delivery owner；不能绕过状态机直接扇出，否则会与客户端重试重复投递。
+            completeGroupDelivery(packet);
             PENDING_FANOUT_RECOVERY.remove(recoveryKey);
-            log.info("群扇出补投成功, packetId={} attempt={} members={}",
-                    packet.getPacketId(), attempt, members == null ? 0 : members.size());
+            log.info("群扇出补投成功, packetId={} attempt={}", packet.getPacketId(), attempt);
         } catch (GroupMembershipSupport.GroupMembershipLoadException error) {
             if (attempt < MessageConstant.GROUP_FANOUT_RECOVERY_MAX_ATTEMPTS) {
                 scheduleFanoutRecoveryAttempt(appKey, packetId, recoveryKey, attempt + 1);
@@ -390,6 +409,16 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
             }
             PENDING_FANOUT_RECOVERY.remove(recoveryKey);
             log.error("群扇出补投达到上限，接收方需按会话索引补拉, packetId={} attempts={}",
+                    packetId, attempt, error);
+        } catch (DeliveryRunBusyException error) {
+            // 客户端重试或其他恢复线程正在持有 delivery owner。保留补投项等待下一轮，
+            // 下次执行会在 done 状态上幂等返回，不会与当前 owner 重复扇出。
+            if (attempt < MessageConstant.GROUP_FANOUT_RECOVERY_MAX_ATTEMPTS) {
+                scheduleFanoutRecoveryAttempt(appKey, packetId, recoveryKey, attempt + 1);
+                return;
+            }
+            PENDING_FANOUT_RECOVERY.remove(recoveryKey);
+            log.warn("群扇出补投持续等待其他 delivery owner, packetId={} attempts={}",
                     packetId, attempt, error);
         } catch (RuntimeException error) {
             PENDING_FANOUT_RECOVERY.remove(recoveryKey);

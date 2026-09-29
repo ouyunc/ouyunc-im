@@ -38,6 +38,15 @@ public class HttpRequestConstant extends HttpConstant{
      */
     public static final String HTTP_ADMIN_KICK_CLIENTS_PATH = HTTP_API_IM_PREFIX + "/admin/kick-clients";
 
+    /** 查询本节点当前有效客户端连接。 */
+    public static final String HTTP_ADMIN_CONNECTIONS_PATH = HTTP_API_IM_PREFIX + "/admin/connections";
+
+    /** 按条件强制关闭本节点客户端连接。 */
+    public static final String HTTP_ADMIN_CONNECTIONS_OFFLINE_PATH = HTTP_ADMIN_CONNECTIONS_PATH + "/offline";
+
+    /** 单次连接详情查询最大页大小，防止大节点生成超大 JSON。 */
+    public static final int HTTP_ADMIN_CONNECTION_PAGE_SIZE_MAX = 500;
+
     /**
      * HS256 JWT 密钥最短长度（字符），与 {@code Keys.hmacShaKeyFor} 256bit 要求对齐。
      */

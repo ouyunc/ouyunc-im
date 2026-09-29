@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * 节点运维 HTTP 鉴权：入口默认关闭；开启后必须使用独立运维 JWT（不得回退到推送密钥），
- * 并校验 {@link HttpAuthScopeConstant#IM_ADMIN_DRAIN}。
+ * 并按具体运维操作校验细粒度 scope。
  */
 public final class HttpAdminAuth {
 
@@ -27,6 +27,24 @@ public final class HttpAdminAuth {
      * drain / undrain / kick-clients：管理入口未开启视为不存在；开启后校验运维 JWT 与 drain 权限。
      */
     public static HttpAuthPrincipal requireDrain(HttpContext httpContext) throws HttpPipelineException {
+        return requireScope(httpContext, HttpAuthScopeConstant.IM_ADMIN_DRAIN, "节点排空");
+    }
+
+    /** 查询本节点连接详情。 */
+    public static HttpAuthPrincipal requireConnectionRead(HttpContext httpContext) throws HttpPipelineException {
+        return requireScope(httpContext, HttpAuthScopeConstant.IM_ADMIN_CONNECTIONS_READ, "连接查询");
+    }
+
+    /** 强制下线本节点连接。 */
+    public static HttpAuthPrincipal requireConnectionOffline(HttpContext httpContext) throws HttpPipelineException {
+        return requireScope(httpContext, HttpAuthScopeConstant.IM_ADMIN_CONNECTIONS_OFFLINE, "连接下线");
+    }
+
+    /**
+     * 运维接口统一校验：入口开关、独立密钥、JWT 以及细粒度 scope。
+     */
+    private static HttpAuthPrincipal requireScope(HttpContext httpContext, String requiredScope, String operation)
+            throws HttpPipelineException {
         MessageServerProperties props = MessageServerContext.serverProperties();
         if (props == null || !props.isHttpAdminEnabled()) {
             throw HttpJwtAuth.notFound("管理入口未开启（ouyunc.message.http-admin.enabled=true）");
@@ -41,11 +59,20 @@ public final class HttpAdminAuth {
                     HttpResponseCodeEnum.INTERNAL_SERVER_ERROR,
                     "运维 JWT 密钥不得与业务推送密钥相同");
         }
+        // 运维 Controller 通过 @IgnoreAuth 跳过业务 AppKey 校验，HttpContext 因此不会自动携带 appKey。
+        // 在运维 JWT 入口统一绑定请求头，后续 parseBearer 仍会强制校验 header 与 token claim 一致。
+        String headerAppKey = httpContext.getRequest() == null ? null
+                : httpContext.getRequest().headers().get(HttpRequestConstant.HTTP_HEADER_APP_KEY);
+        if (StringUtils.isBlank(headerAppKey)) {
+            throw HttpJwtAuth.badRequest("缺少 appKey（请在请求头设置 "
+                    + HttpRequestConstant.HTTP_HEADER_APP_KEY + "）");
+        }
+        httpContext.setAppKey(headerAppKey.trim());
         HttpAuthPrincipal principal = HttpJwtAuth.parseBearer(httpContext, props.getHttpAdminJwtSecret(), false);
-        if (!principal.hasScope(HttpAuthScopeConstant.IM_ADMIN_DRAIN)) {
+        if (!principal.hasScope(requiredScope)) {
             audit("admin-auth", principal, props.getLocalServerAddress(),
-                    "", "deny", "missing scope " + HttpAuthScopeConstant.IM_ADMIN_DRAIN);
-            throw HttpJwtAuth.forbidden("缺少节点运维权限（需要 scope: " + HttpAuthScopeConstant.IM_ADMIN_DRAIN + "）");
+                    "", "deny", "missing scope " + requiredScope);
+            throw HttpJwtAuth.forbidden("缺少" + operation + "权限（需要 scope: " + requiredScope + "）");
         }
         httpContext.setAuthPrincipal(principal);
         return principal;

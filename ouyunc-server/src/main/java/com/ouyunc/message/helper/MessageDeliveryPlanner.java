@@ -143,6 +143,14 @@ public final class MessageDeliveryPlanner {
      * 群消息批量投递：IM 成员批量查在线，外渠成员逐条发 Kafka。已屏蔽本群的成员不投递。
      */
     public static void deliverGroupMembers(Packet packet, Set<String> memberIds) {
+        deliverGroupMembers(packet, memberIds, () -> { });
+    }
+
+    /**
+     * 群成员分批投递。{@code beforeBatch} 在每一批产生 IM/MQ 副作用前执行，
+     * 用于长时间首次扇出续租和及时感知 owner 丢失。
+     */
+    public static void deliverGroupMembers(Packet packet, Set<String> memberIds, Runnable beforeBatch) {
         if (CollectionUtils.isEmpty(memberIds)) {
             return;
         }
@@ -153,17 +161,19 @@ public final class MessageDeliveryPlanner {
                 batch.add(member);
             }
             if (batch.size() >= batchSize) {
-                deliverGroupBatch(packet, batch);
+                beforeBatch.run();
+                deliverGroupBatch(packet, batch, beforeBatch);
                 batch.clear();
             }
         }
         if (!batch.isEmpty()) {
-            deliverGroupBatch(packet, batch);
+            beforeBatch.run();
+            deliverGroupBatch(packet, batch, beforeBatch);
         }
     }
 
     /** 每批完成过滤、渠道和在线查询后释放临时集合，避免整群渠道 Map 和 IM Set 叠加。 */
-    private static void deliverGroupBatch(Packet packet, Set<String> members) {
+    private static void deliverGroupBatch(Packet packet, Set<String> members, Runnable beforeExternalBatch) {
         Message message = packet.getMessage();
         String appKey = message.getMetadata().getIngress().getAppKey();
         Set<String> deliverable = DefaultRepository.INSTANCE.excludeGroupShieldedMembers(
@@ -182,6 +192,11 @@ public final class MessageDeliveryPlanner {
             }
             if (!beginExternalTask(packet, member, channel)) {
                 continue;
+            }
+            // 外渠每 64 人可能等待一次 broker 确认，在新一批发布前再续租，
+            // 避免多个慢批次累计超过 delivery 锁 TTL。续租失败时保留 PENDING 供下次重试。
+            if (confirms.isEmpty()) {
+                beforeExternalBatch.run();
             }
             externalMembers.add(member);
             externalChannels.add(channel);

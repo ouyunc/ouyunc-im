@@ -202,12 +202,16 @@ public enum DefaultRepository implements Repository {
         return RepositorySupports.DELIVERY_COMPLETION.tryStartDelivery(packet, ownerToken);
     }
 
-    public void finishDelivery(Packet packet, String ownerToken) {
-        RepositorySupports.DELIVERY_COMPLETION.finishDelivery(packet, ownerToken);
+    public boolean finishDelivery(Packet packet, String ownerToken) {
+        return RepositorySupports.DELIVERY_COMPLETION.finishDelivery(packet, ownerToken);
     }
 
-    public void abortDelivery(Packet packet, String ownerToken) {
-        RepositorySupports.DELIVERY_COMPLETION.abortDelivery(packet, ownerToken);
+    public boolean abortDelivery(Packet packet, String ownerToken) {
+        return RepositorySupports.DELIVERY_COMPLETION.abortDelivery(packet, ownerToken);
+    }
+
+    public boolean renewDelivery(Packet packet, String ownerToken) {
+        return RepositorySupports.DELIVERY_COMPLETION.renewDelivery(packet, ownerToken);
     }
 
     /**
