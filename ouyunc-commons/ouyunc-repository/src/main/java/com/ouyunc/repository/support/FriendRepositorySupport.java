@@ -143,6 +143,7 @@ public final class FriendRepositorySupport {
             return cached;
         }
         String zsetKey = CacheConstant.buildFriendsCacheKey(appKey, from);
+        boolean redisAvailable = true;
         try {
             Double score = infra.stringRedisTemplate.opsForZSet().score(zsetKey, to);
             if (score != null) {
@@ -150,9 +151,14 @@ public final class FriendRepositorySupport {
                 return true;
             }
         } catch (Exception e) {
+            redisAvailable = false;
             log.error("Redis 查询好友关系异常, appKey: {}, from: {}, to: {}", appKey, from, to, e);
         }
-        if (isFriendRosterComplete(appKey, from)) {
+        // ZSCORE 失败后不能再用 INIT 证伪：INIT 即使存在，也无法证明本次 ZSCORE 的 null 是真实未命中。
+        int initState = redisAvailable ? friendInitState(appKey, from) : RelationRosterRedis.INIT_ERROR;
+        if (RelationRosterRedis.isError(initState)) {
+            redisAvailable = false;
+        } else if (RelationRosterRedis.isComplete(initState)) {
             RelationLocalCache.FRIEND.put(RelationLocalCache.friendKey(appKey, from, to), false);
             return false;
         }
@@ -163,7 +169,10 @@ public final class FriendRepositorySupport {
         if (Boolean.TRUE.equals(dbFriend)) {
             cacheFriendPositive(appKey, from, to);
         }
-        RelationLocalCache.FRIEND.put(RelationLocalCache.friendKey(appKey, from, to), dbFriend);
+        // Redis 异常时数据库正结果仍可安全缓存；否定结果不落本地，避免故障期间形成错误负缓存。
+        if (redisAvailable || Boolean.TRUE.equals(dbFriend)) {
+            RelationLocalCache.FRIEND.put(RelationLocalCache.friendKey(appKey, from, to), dbFriend);
+        }
         return dbFriend;
     }
 

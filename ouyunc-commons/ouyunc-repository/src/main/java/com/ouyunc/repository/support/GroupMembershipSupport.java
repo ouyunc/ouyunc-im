@@ -40,6 +40,7 @@ import reactor.core.scheduler.Schedulers;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -112,16 +113,16 @@ public final class GroupMembershipSupport {
      * INIT 缺失时把 MySQL 全量灌进 Redis；有 INIT 后名单/扇出不再扫库。
      */
     private void ensureGroupMemberRoster(String appKey, String groupId) {
-        if (hasGroupMemberInit(appKey, groupId)) {
+        if (RelationRosterRedis.skipRebuild(groupMemberInitState(appKey, groupId))) {
             return;
         }
         Object lock = rosterRebuildLock(appKey, groupId);
         synchronized (lock) {
-            if (hasGroupMemberInit(appKey, groupId)) {
+            if (RelationRosterRedis.skipRebuild(groupMemberInitState(appKey, groupId))) {
                 return;
             }
             for (int attempt = 0; attempt < MessageConstant.RELATION_ROSTER_REBUILD_ATTEMPTS; attempt++) {
-                if (hasGroupMemberInit(appKey, groupId)) {
+                if (RelationRosterRedis.skipRebuild(groupMemberInitState(appKey, groupId))) {
                     return;
                 }
                 String versionBefore = currentRelationVersion(appKey, groupId);
@@ -139,10 +140,14 @@ public final class GroupMembershipSupport {
     }
 
     private boolean hasGroupMemberInit(String appKey, String groupId) {
-        return RelationRosterRedis.isComplete(RelationRosterRedis.checkInit(
+        return RelationRosterRedis.isComplete(groupMemberInitState(appKey, groupId));
+    }
+
+    private int groupMemberInitState(String appKey, String groupId) {
+        return RelationRosterRedis.checkInit(
                 infra.stringRedisTemplate,
                 CacheConstant.buildGroupUserCacheKey(appKey, groupId),
-                CacheConstant.buildGroupUserInitCacheKey(appKey, groupId)));
+                CacheConstant.buildGroupUserInitCacheKey(appKey, groupId));
     }
 
     private boolean hasUserGroupsInit(String appKey, String userId) {
@@ -428,7 +433,8 @@ public final class GroupMembershipSupport {
     }
 
     private Set<String> snapshotIdentities(String cacheKey, Set<String> ids) {
-        Set<String> snap = Set.copyOf(ids);
+        // ids 是本方法私有构建的 HashSet，包装为只读视图即可；避免超大群在 Set.copyOf 时再复制一整份峰值内存。
+        Set<String> snap = ids.isEmpty() ? Set.of() : Collections.unmodifiableSet(ids);
         MessageContext.groupUserIdentityCache.put(cacheKey, snap);
         return snap;
     }
@@ -716,10 +722,16 @@ public final class GroupMembershipSupport {
         if (unknown.isEmpty()) {
             return present;
         }
-        boolean initComplete = hasGroupMemberInit(appKey, groupId);
         String zsetKey = CacheConstant.buildGroupUserCacheKey(appKey, groupId);
         List<String> dbUnknown = new ArrayList<>();
+        boolean redisAvailable = true;
         try {
+            int initState = groupMemberInitState(appKey, groupId);
+            if (RelationRosterRedis.isError(initState)) {
+                throw new GroupMembershipLoadException(
+                        "Redis 无法确认群成员名单状态, appKey=" + appKey + ", groupId=" + groupId);
+            }
+            boolean initComplete = RelationRosterRedis.isComplete(initState);
             List<Double> scores = infra.stringRedisTemplate.opsForZSet()
                     .score(zsetKey, unknown.toArray(String[]::new));
             for (int index = 0; index < unknown.size(); index++) {
@@ -735,6 +747,7 @@ public final class GroupMembershipSupport {
                 }
             }
         } catch (Exception e) {
+            redisAvailable = false;
             log.error("Redis 批量查询群成员异常 appKey={} groupId={} count={}",
                     appKey, groupId, unknown.size(), e);
             dbUnknown.addAll(unknown);
@@ -745,7 +758,10 @@ public final class GroupMembershipSupport {
         Map<String, GroupUserEntity> rows = groupUserEntitiesBatch(appKey, groupId, dbUnknown);
         for (String memberId : dbUnknown) {
             boolean in = rows.containsKey(memberId);
-            RelationLocalCache.markGroupMember(appKey, groupId, memberId, in);
+            // Redis 故障后的数据库正结果可以缓存；否定结果留待 Redis 恢复后重新确认。
+            if (redisAvailable || in) {
+                RelationLocalCache.markGroupMember(appKey, groupId, memberId, in);
+            }
             if (in) {
                 present.add(memberId);
             }
@@ -760,24 +776,35 @@ public final class GroupMembershipSupport {
             return cached;
         }
         String zsetKey = CacheConstant.buildGroupUserCacheKey(appKey, groupId);
+        boolean redisAvailable = true;
         try {
             Double score = infra.stringRedisTemplate.opsForZSet().score(zsetKey, from);
             if (score != null) {
                 RelationLocalCache.markGroupMember(appKey, groupId, from, true);
                 return true;
             }
-            if (hasGroupMemberInit(appKey, groupId)) {
+            int initState = groupMemberInitState(appKey, groupId);
+            if (RelationRosterRedis.isError(initState)) {
+                throw new GroupMembershipLoadException(
+                        "Redis 无法确认群成员名单状态, appKey=" + appKey + ", groupId=" + groupId);
+            }
+            if (RelationRosterRedis.isComplete(initState)) {
                 RelationLocalCache.markGroupMember(appKey, groupId, from, false);
                 return false;
             }
         } catch (Exception e) {
+            redisAvailable = false;
             log.error("Redis 查询群成员异常, appKey: {}, groupId: {}, memberId: {}", appKey, groupId, from, e);
         }
         Boolean dbMember = loadGroupMemberExistsFromDb(appKey, groupId, from);
         if (dbMember == null) {
-            return false;
+            throw new GroupMembershipLoadException(
+                    "无法从权威源确认群成员关系, appKey=" + appKey
+                            + ", groupId=" + groupId + ", memberId=" + from);
         }
-        RelationLocalCache.markGroupMember(appKey, groupId, from, dbMember);
+        if (redisAvailable || Boolean.TRUE.equals(dbMember)) {
+            RelationLocalCache.markGroupMember(appKey, groupId, from, dbMember);
+        }
         return dbMember;
     }
 

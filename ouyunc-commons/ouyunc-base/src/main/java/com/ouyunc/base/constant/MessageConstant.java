@@ -309,6 +309,13 @@ public class MessageConstant {
     public static final int CLIENT_INFO_LOCAL_MISS_EXPIRE_SECONDS = 60;
 
     /**
+     * 本地客户端信息命中过期时间（秒）。
+     * <p>客户端信息变更仍优先通过 Pub/Sub 主动失效；该 TTL 用于订阅短暂断线或消息丢失后的最终自愈，
+     * 避免 selfSync 等配置长期停留在旧值。</p>
+     */
+    public static final int CLIENT_INFO_LOCAL_HIT_EXPIRE_SECONDS = 300;
+
+    /**
      * 集群成员发现：open 认租约；allowlist 仅连接 cluster.nodes ∪ topology
      */
     public static final String CLUSTER_MEMBERSHIP_MODE_OPEN = "open";

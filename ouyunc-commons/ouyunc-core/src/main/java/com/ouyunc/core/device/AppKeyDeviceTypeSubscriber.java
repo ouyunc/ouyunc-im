@@ -163,9 +163,9 @@ public final class AppKeyDeviceTypeSubscriber {
             return;
         }
         String cacheKey = CacheConstant.buildLocalClientInfoCacheKey(appKey, identity);
-        Object cached = MessageContext.localClientInfoCache.get(cacheKey);
-        if (cached instanceof ClientInfo clientInfo) {
-            patchClientInfo(clientInfo, supportDeviceTypes, selfSync);
+        MessageContext.ClientInfoLookup cached = MessageContext.localClientInfoCache.get(cacheKey);
+        if (cached != null && cached.found() && cached.clientInfo() != null) {
+            patchClientInfo(cached.clientInfo(), supportDeviceTypes, selfSync);
             return;
         }
         MessageContext.evictLocalClientInfo(appKey, identity);

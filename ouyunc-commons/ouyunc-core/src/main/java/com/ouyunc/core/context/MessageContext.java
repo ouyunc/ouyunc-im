@@ -112,54 +112,52 @@ public class MessageContext {
 
 
     /**
-     * 已从 Redis 加载的客户端信息。未命中标记放在 {@link #localClientInfoMissCache}，避免和正式对象混用 30 天过期。
+     * 客户端信息统一查询结果缓存。命中与未命中必须放在同一个 key 空间，避免两个独立缓存并发回填后
+     * “未命中标记”长期遮住已经加载成功的 ClientInfo。
+     * <p>正结果 5 分钟兜底刷新，负结果 1 分钟重试；Pub/Sub 仍负责配置变更后的即时失效。</p>
      */
-    public static Cache<String, ClientInfo> localClientInfoCache = new CaffeineLocalCache<>("localClientInfoCache", Caffeine.newBuilder()
-            .maximumSize(MessageConstant.LOCAL_CACHE_MAX_SIZE)
-            .expireAfterWrite(NumberConstant.NUMBER_30, TimeUnit.DAYS).build(new CacheLoader<>() {
-        @Override
-        public @Nullable ClientInfo load(String appKeyIdentity) {
-            return null;
-        }
-    }));
-
-    /**
-     * Redis 未命中标记。过期后再次访问会重新读 Redis；{@link #evictLocalClientInfo} 也会立刻删掉。
-     */
-    public static Cache<String, Boolean> localClientInfoMissCache = CaffeineLocalCache.wrap(
-            "localClientInfoMissCache",
+    public static final Cache<String, ClientInfoLookup> localClientInfoCache = CaffeineLocalCache.wrap(
+            "localClientInfoCache",
             Caffeine.newBuilder()
                     .maximumSize(MessageConstant.LOCAL_CACHE_MAX_SIZE)
-                    .expireAfterWrite(MessageConstant.CLIENT_INFO_LOCAL_MISS_EXPIRE_SECONDS, TimeUnit.SECONDS)
+                    .expireAfter(new Expiry<String, ClientInfoLookup>() {
+                        @Override
+                        public long expireAfterCreate(String key, ClientInfoLookup value, long currentTime) {
+                            return clientInfoExpireNanos(value);
+                        }
+
+                        @Override
+                        public long expireAfterUpdate(String key, ClientInfoLookup value,
+                                                      long currentTime, long currentDuration) {
+                            return clientInfoExpireNanos(value);
+                        }
+
+                        @Override
+                        public long expireAfterRead(String key, ClientInfoLookup value,
+                                                    long currentTime, long currentDuration) {
+                            return currentDuration;
+                        }
+                    })
+                    .recordStats()
                     .build());
 
     /**
-     * 获取连接在本机视角下的客户端信息。本地命中直接返回；负缓存命中返回 null；都没有则读 Redis。
+     * 获取连接在本机视角下的客户端信息。Caffeine 原生 get(key, mappingFunction) 对同一 key 合并并发加载，
+     * 冷启动时每个 identity 只会有一个线程访问 Redis。
      */
     public static ClientInfo localClientInfo(String appKey, String identity) {
-        if (StringUtils.isBlank(identity)) {
+        if (StringUtils.isAnyBlank(appKey, identity)) {
             return null;
         }
         String localKey = CacheConstant.buildLocalClientInfoCacheKey(appKey, identity);
-        if (localClientInfoMissCache.get(localKey) != null) {
-            return null;
-        }
-        ClientInfo cached = localClientInfoCache.get(localKey);
-        if (cached != null) {
-            return cached;
-        }
-        Object obj = cache.get(CacheConstant.buildRemoteClientInfoCacheKey(appKey, identity));
-        if (obj instanceof ClientInfo clientInfo) {
-            localClientInfoMissCache.delete(localKey);
-            localClientInfoCache.put(localKey, clientInfo);
-            return clientInfo;
-        }
-        localClientInfoMissCache.put(localKey, Boolean.TRUE);
-        return null;
+        com.github.benmanes.caffeine.cache.Cache<String, ClientInfoLookup> nativeCache =
+                localClientInfoCache.instance();
+        ClientInfoLookup lookup = nativeCache.get(localKey, ignored -> loadClientInfo(appKey, identity));
+        return lookup == null ? null : lookup.clientInfo();
     }
 
     /**
-     * 删除本机客户端信息与未命中标记，下次 {@link #localClientInfo} 重新读 Redis。
+     * 删除本机客户端信息查询结果，下次 {@link #localClientInfo} 重新读 Redis。
      */
     public static void evictLocalClientInfo(String appKey, String identity) {
         if (StringUtils.isAnyBlank(appKey, identity)) {
@@ -167,7 +165,35 @@ public class MessageContext {
         }
         String localKey = CacheConstant.buildLocalClientInfoCacheKey(appKey, identity);
         localClientInfoCache.delete(localKey);
-        localClientInfoMissCache.delete(localKey);
+    }
+
+    private static ClientInfoLookup loadClientInfo(String appKey, String identity) {
+        Object value = cache.get(CacheConstant.buildRemoteClientInfoCacheKey(appKey, identity));
+        return value instanceof ClientInfo clientInfo
+                ? ClientInfoLookup.found(clientInfo)
+                : ClientInfoLookup.missing();
+    }
+
+    private static long clientInfoExpireNanos(ClientInfoLookup lookup) {
+        int seconds = lookup != null && lookup.found()
+                ? MessageConstant.CLIENT_INFO_LOCAL_HIT_EXPIRE_SECONDS
+                : MessageConstant.CLIENT_INFO_LOCAL_MISS_EXPIRE_SECONDS;
+        return TimeUnit.SECONDS.toNanos(seconds);
+    }
+
+    /**
+     * 显式表达 Redis 中“存在/不存在”，避免 Caffeine 禁止 null value 时再引入第二份负缓存。
+     */
+    public record ClientInfoLookup(boolean found, ClientInfo clientInfo) {
+        private static final ClientInfoLookup MISSING = new ClientInfoLookup(false, null);
+
+        public static ClientInfoLookup found(ClientInfo clientInfo) {
+            return new ClientInfoLookup(true, clientInfo);
+        }
+
+        public static ClientInfoLookup missing() {
+            return MISSING;
+        }
     }
 
     /**

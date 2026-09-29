@@ -23,6 +23,8 @@ public final class RelationRosterRedis {
     public static final int INIT_MISSING = 0;
     public static final int INIT_COMPLETE = 1;
     public static final int INIT_PARTIAL = 2;
+    /** Redis 无法确认 INIT 状态；不得按“缺失”触发数据库重建。 */
+    public static final int INIT_ERROR = -1;
 
     public static final long ADD_CAPACITY_EXCEEDED = 0L;
     public static final long ADD_NEW = 1L;
@@ -59,6 +61,10 @@ public final class RelationRosterRedis {
         return code != INIT_MISSING;
     }
 
+    public static boolean isError(int code) {
+        return code == INIT_ERROR;
+    }
+
     public static int checkInit(StringRedisTemplate template, String zsetKey, String initKey) {
         if (template == null || StringUtils.isAnyBlank(zsetKey, initKey)) {
             return INIT_MISSING;
@@ -74,7 +80,7 @@ public final class RelationRosterRedis {
             }
             return INIT_MISSING;
         } catch (Exception e) {
-            return INIT_MISSING;
+            return INIT_ERROR;
         }
     }
 

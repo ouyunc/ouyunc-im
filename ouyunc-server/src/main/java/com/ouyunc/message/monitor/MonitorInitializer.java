@@ -29,7 +29,6 @@ public class MonitorInitializer {
         // 注册 MessageServerContext 中的缓存
         registerCache(MessageServerContext.localLoginClientRegisterTable);
         registerCache(MessageServerContext.localClientInfoCache);
-        registerCache(MessageServerContext.localClientInfoMissCache);
         registerCache(MessageServerContext.messageProcessorCache);
         registerCache(MessageServerContext.messageContentProcessorCache);
         registerCache(MessageServerContext.clusterActiveServerRegistryTableCache);
