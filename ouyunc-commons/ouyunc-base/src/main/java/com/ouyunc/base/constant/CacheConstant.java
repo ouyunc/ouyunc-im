@@ -34,7 +34,7 @@ public class CacheConstant {
     /***
      * 平台的 唯一标识key 公共前缀
      */
-    private static final String APP_KEY = "app:";
+    private static final String APP_KEY = "app";
 
     /***
      * appKey 下的identity 的 客户端信息
@@ -54,31 +54,31 @@ public class CacheConstant {
     /***
      * 会话已读消息偏移量缓存公共前缀
      */
-    private static final String SESSION_READ_MESSAGE_OFFSET = "session-read:";
+    private static final String SESSION_READ_MESSAGE_OFFSET = "session-read";
 
     /***
      * 锁
      */
-    private static final String LOCK = "lock:";
+    private static final String LOCK = "lock";
 
     /** 身份路由 HASH */
-    private static final String IM_ROUTE = "im:route:";
+    private static final String IM_ROUTE = "im:route";
 
     /** 节点 epoch 下的路由反向索引，仅用于死亡节点后台清理 */
-    private static final String IM_NODE_ROUTES = "im:node-routes:";
+    private static final String IM_NODE_ROUTES = "im:node-routes";
 
     /** 进程租约 */
-    private static final String IM_NODE = "im:node:";
+    private static final String IM_NODE = "im:node";
 
     /** 登记节点 id 集合 */
     private static final String IM_NODES = "im:nodes";
 
     /** 节点连接数 HASH */
-    private static final String IM_CONN = "im:conn:";
+    private static final String IM_CONN = "im:conn";
 
     /** appKey 连接配额 HASH */
-    private static final String IM_QUOTA = "im:quota:";
-    private static final String IM_QUOTA_SEEN_SUFFIX = ":seen";
+    private static final String IM_QUOTA = "im:quota";
+    private static final String IM_QUOTA_SEEN_SUFFIX = "seen";
 
     /***
      * 用户
@@ -102,7 +102,7 @@ public class CacheConstant {
     /***
      * 群成员的信息配置
      */
-    private static final String GROUP_USERS_CONFIG = "group-member-cfg:";
+    private static final String GROUP_USERS_CONFIG = "group-member-cfg";
 
     /**
      * 群成员屏蔽索引 Hash（field=memberId）。完整性用旁边的 {@code group-shield-init} STRING，不往 Hash 里塞哨兵。
@@ -165,7 +165,7 @@ public class CacheConstant {
     /***
      * QoS 幂等
      */
-    private static final String QOS_IDEM = "qos:idem:";
+    private static final String QOS_IDEM = "qos:idem";
 
     /***
      * http push 幂等
@@ -175,12 +175,12 @@ public class CacheConstant {
     /***
      * QoS 幂等 pkt
      */
-    private static final String QOS_IDEM_PKT = "pkt:";
+    private static final String QOS_IDEM_PKT = "pkt";
 
     /***
      * QoS 幂等 cli
      */
-    private static final String QOS_IDEM_CLI = "client-msg:";
+    private static final String QOS_IDEM_CLI = "client-msg";
 
     /***
      * 会话
@@ -240,10 +240,10 @@ public class CacheConstant {
     private static final String LAST_MESSAGE = "last-msg";
 
     /** 用户设备单聊未读 Hash 前缀（群聊不在此存储） */
-    private static final String USER_DEVICE_UNREAD = "unread:";
+    private static final String USER_DEVICE_UNREAD = "unread";
 
     /** 用户设备单聊未读 packetId 集合前缀（有序清除用，member=packetId 十进制串） */
-    private static final String USER_DEVICE_UNREAD_IDS = "unread-ids:";
+    private static final String USER_DEVICE_UNREAD_IDS = "unread-ids";
 
     // ============================================ 集群优化方法 ============================================
 
@@ -269,14 +269,14 @@ public class CacheConstant {
      * 普通会话/收件箱/群数据请用 {@link #buildAggregateCacheKey}。
      */
     private static String buildBaseCacheKey(String appKey) {
-        return OUYUNC + APP_KEY + withHashTag(sanitizeAppKeyToken(appKey)) + COLON;
+        return OUYUNC + APP_KEY + COLON + withHashTag(sanitizeAppKeyToken(appKey)) + COLON;
     }
 
     /**
      * 按聚合实体分片的业务 key 前缀：首 tag 为 {@code {appKey:aggregateId}}。
      */
     private static String buildAggregateCacheKey(String appKey, String aggregateId) {
-        return OUYUNC + APP_KEY + withAggregateHashTag(appKey, aggregateId) + COLON;
+        return OUYUNC + APP_KEY + COLON + withAggregateHashTag(appKey, aggregateId) + COLON;
     }
 
     // ============================================ 分布式锁 ============================================
@@ -286,28 +286,28 @@ public class CacheConstant {
      */
     public static String buildIdentityBindOrUnbindLockCacheKey(String appKey, String comboIdentity) {
         String identity = IdentityUtil.revertIdentity(comboIdentity);
-        return OUYUNC + LOCK + withHashTag(stripHashTagChars(identity)) + COLON + APP_KEY + appKey + COLON + comboIdentity;
+        return OUYUNC + LOCK + COLON + withHashTag(stripHashTagChars(identity)) + COLON + APP_KEY + COLON + appKey + COLON + comboIdentity;
     }
 
     /**
      * 好友请求锁（P2）：首 tag {@code {appKey:sessionId}}，按会话分片，避免租户单槽热点。
      */
     public static String buildFriendRequestLockCacheKey(String appKey, String sessionId) {
-        return OUYUNC + LOCK + withAggregateHashTag(appKey, sessionId) + COLON + FRIEND_REQUEST;
+        return OUYUNC + LOCK + COLON + withAggregateHashTag(appKey, sessionId) + COLON + FRIEND_REQUEST;
     }
 
     /**
      * 审批处理权：{@code appKey + requestSessionId}，不含用户设备。手机和 PC 必须抢同一把状态。
      */
     public static String buildApprovalProgressCacheKey(String appKey, String requestSessionId) {
-        return OUYUNC + LOCK + withAggregateHashTag(appKey, requestSessionId) + COLON + "approval";
+        return OUYUNC + LOCK + COLON + withAggregateHashTag(appKey, requestSessionId) + COLON + "approval";
     }
 
     /**
      * 群请求锁（P2）：首 tag {@code {appKey:sessionId}}；joiner 仅作后缀、不再套多余 hash tag。
      */
     public static String buildGroupRequestLockCacheKey(String appKey, String joiner, String sessionId) {
-        return OUYUNC + LOCK + withAggregateHashTag(appKey, sessionId) + COLON + GROUP_REQUEST
+        return OUYUNC + LOCK + COLON + withAggregateHashTag(appKey, sessionId) + COLON + GROUP_REQUEST
                 + COLON + stripHashTagChars(joiner == null ? "" : joiner);
     }
 
@@ -333,7 +333,7 @@ public class CacheConstant {
      * 全平台默认业务空闲文案 Hash，field 与租户 Hash 相同。
      */
     public static String buildIdleNotifyTextGlobalCacheKey() {
-        return OUYUNC + "im:" + IDLE_NOTIFY + COLON + CONTENT_SAFETY_GLOBAL_APP_KEY;
+        return OUYUNC + "im" + COLON + IDLE_NOTIFY + COLON + CONTENT_SAFETY_GLOBAL_APP_KEY;
     }
 
     /**
@@ -377,7 +377,7 @@ public class CacheConstant {
     public static String buildSessionReadMessageOffsetCacheKey(String appKey, Integer identityType,
                                                              String from, Byte deviceType, String to) {
         String peer = stripHashTagChars(to == null ? "" : to.trim());
-        return buildAggregateCacheKey(appKey, from) + SESSION_READ_MESSAGE_OFFSET + identityType + COLON
+        return buildAggregateCacheKey(appKey, from) + SESSION_READ_MESSAGE_OFFSET + COLON + identityType + COLON
                 + peer + COLON + deviceType;
     }
 
@@ -386,7 +386,7 @@ public class CacheConstant {
      * 完整登录上下文只保存在最终落地节点的 Channel 属性中。
      */
     public static String buildLoginRouteCacheKey(String appKey, String identity) {
-        return OUYUNC + IM_ROUTE + withHashTag(stripHashTagChars(identity == null ? "" : identity))
+        return OUYUNC + IM_ROUTE + COLON + withHashTag(stripHashTagChars(identity == null ? "" : identity))
                 + COLON + sanitizeAppKeyToken(appKey);
     }
 
@@ -394,14 +394,14 @@ public class CacheConstant {
      * 节点路由反向索引。索引是可修复派生数据，不参与在线判定；节点死亡后用于定向清理 route field。
      */
     public static String buildImNodeRouteIndexCacheKey(String nodeId, long epoch) {
-        return OUYUNC + IM_NODE_ROUTES + withHashTag(nodeId) + COLON + epoch;
+        return OUYUNC + IM_NODE_ROUTES + COLON + withHashTag(nodeId) + COLON + epoch;
     }
 
     /**
      * IM 进程租约：value=epoch 字符串，PX 由心跳刷新。
      */
     public static String buildImNodeLeaseCacheKey(String nodeId) {
-        return OUYUNC + IM_NODE + withHashTag(nodeId);
+        return OUYUNC + IM_NODE + COLON + withHashTag(nodeId);
     }
 
     /**
@@ -423,26 +423,26 @@ public class CacheConstant {
      * 节点连接数 HASH：field=appKey，value=count。与租约同 {@code {nodeId}} 槽，由心跳全量覆盖，不跟登录 Lua 同槽。
      */
     public static String buildImNodeConnHashCacheKey(String nodeId) {
-        return OUYUNC + IM_CONN + withHashTag(nodeId);
+        return OUYUNC + IM_CONN + COLON + withHashTag(nodeId);
     }
 
     /**
      * appKey 连接配额 HASH：field=nodeId，value=count。标签 {@code {appKey}}，各节点 Lua 求和预占同一槽。
      */
     public static String buildAppKeyConnQuotaHashCacheKey(String appKey) {
-        return OUYUNC + IM_QUOTA + withHashTag(sanitizeAppKeyToken(appKey));
+        return OUYUNC + IM_QUOTA + COLON + withHashTag(sanitizeAppKeyToken(appKey));
     }
 
     /** 配额节点最后刷新时间 HASH，与配额 HASH 使用相同 appKey 标签，供 Lua 原子清理失联字段。 */
     public static String buildAppKeyConnQuotaSeenHashCacheKey(String appKey) {
-        return buildAppKeyConnQuotaHashCacheKey(appKey) + IM_QUOTA_SEEN_SUFFIX;
+        return buildAppKeyConnQuotaHashCacheKey(appKey) + COLON + IM_QUOTA_SEEN_SUFFIX;
     }
 
     /**
      * 配额 HASH 扫描模式。本机连接为 0 时仍要扫到死节点残留 field。
      */
     public static String appKeyConnQuotaKeyPattern() {
-        return OUYUNC + IM_QUOTA + "*";
+        return OUYUNC + IM_QUOTA + COLON + "*";
     }
 
     /**
@@ -470,7 +470,7 @@ public class CacheConstant {
      * 构建 群组成员在群中的配置信息 cache key - 集群优化
      */
     public static String buildGroupUserConfigCacheKey(String appKey, String memberId, String groupId) {
-        return buildAggregateCacheKey(appKey, groupId) + GROUP_USERS_CONFIG + stripHashTagChars(memberId);
+        return buildAggregateCacheKey(appKey, groupId) + GROUP_USERS_CONFIG + COLON + stripHashTagChars(memberId);
     }
 
     /**
@@ -576,7 +576,7 @@ public class CacheConstant {
         String shard = (loginIdentity != null && !loginIdentity.isBlank())
                 ? loginIdentity
                 : ("pkt-" + packetId);
-        return buildAggregateCacheKey(appKey, shard) + QOS_IDEM + QOS_IDEM_PKT
+        return buildAggregateCacheKey(appKey, shard) + QOS_IDEM + COLON + QOS_IDEM_PKT + COLON
                 + stripHashTagChars(String.valueOf(packetId));
     }
 
@@ -584,7 +584,7 @@ public class CacheConstant {
      * QoS 幂等 client：槽 {@code {appKey:loginIdentity}}，与同身份 packet 键同 Lua。
      */
     public static String buildQosIdempotencyClientKey(String appKey, String loginIdentity, String clientMessageId) {
-        return buildAggregateCacheKey(appKey, loginIdentity) + QOS_IDEM + QOS_IDEM_CLI
+        return buildAggregateCacheKey(appKey, loginIdentity) + QOS_IDEM + COLON + QOS_IDEM_CLI + COLON
                 + stripHashTagChars(loginIdentity) + COLON + clientMessageId;
     }
 
@@ -679,35 +679,35 @@ public class CacheConstant {
      * appKey 不加 hash tag，与客服 ticket 维 key 一致；field=对端 id。
      */
     public static String buildSessionViewCacheKey(String appKey, String userId, Byte deviceType) {
-        return buildCsTicketKeyPrefix(appKey) + "session-view:" + stripHashTagChars(userId == null ? "" : userId)
+        return buildCsTicketKeyPrefix(appKey) + "session-view" + COLON + stripHashTagChars(userId == null ? "" : userId)
                 + COLON + deviceType;
     }
 
     /** IM 用户翻译偏好 Hash。槽 {@code {appKey}}。 */
     public static String buildTranslateUserPrefCacheKey(String appKey, String identity) {
-        return buildBaseCacheKey(appKey) + "translate:user:" + withHashTag(stripHashTagChars(identity));
+        return buildBaseCacheKey(appKey) + "translate:user" + COLON + withHashTag(stripHashTagChars(identity));
     }
 
     /** 坐席翻译偏好 Hash。槽 {@code {appKey}}。 */
     public static String buildTranslateAgentPrefCacheKey(String appKey, String agentId) {
-        return buildBaseCacheKey(appKey) + "cs:agent:translate:" + withHashTag(stripHashTagChars(agentId));
+        return buildBaseCacheKey(appKey) + "cs:agent:translate" + COLON + withHashTag(stripHashTagChars(agentId));
     }
 
     /** 译文内容哈希。首 tag 为内容摘要，与锁同槽。 */
     public static String buildTranslateContentCacheKey(String appKey, String sourceLang, String targetLang, String sha256) {
-        return buildCsTicketKeyPrefix(appKey) + "translate:content:" + withHashTag(stripHashTagChars(sha256))
+        return buildCsTicketKeyPrefix(appKey) + "translate:content" + COLON + withHashTag(stripHashTagChars(sha256))
                 + COLON + sourceLang + COLON + targetLang;
     }
 
     /** 同一句译文 singleflight 锁，与内容缓存同槽。 */
     public static String buildTranslateLockCacheKey(String appKey, String sourceLang, String targetLang, String sha256) {
-        return buildCsTicketKeyPrefix(appKey) + "translate:lock:" + withHashTag(stripHashTagChars(sha256))
+        return buildCsTicketKeyPrefix(appKey) + "translate:lock" + COLON + withHashTag(stripHashTagChars(sha256))
                 + COLON + sourceLang + COLON + targetLang;
     }
 
     /** 译文通知去重。槽 {@code {appKey}}。 */
     public static String buildTranslateNotifyOnceCacheKey(String appKey, String packetId, String language, String to) {
-        return buildBaseCacheKey(appKey) + "translate:notify:" + withHashTag(stripHashTagChars(packetId))
+        return buildBaseCacheKey(appKey) + "translate:notify" + COLON + withHashTag(stripHashTagChars(packetId))
                 + COLON + stripHashTagChars(language) + COLON + stripHashTagChars(to);
     }
 
@@ -718,12 +718,12 @@ public class CacheConstant {
 
     /** 访客翻译限流（咨询单）。槽 {@code {appKey}}。 */
     public static String buildTranslateGuestTicketLimitCacheKey(String appKey, long ticketId, long epochMinute) {
-        return buildBaseCacheKey(appKey) + "translate:limit:ticket:" + ticketId + COLON + epochMinute;
+        return buildBaseCacheKey(appKey) + "translate:limit:ticket" + COLON + ticketId + COLON + epochMinute;
     }
 
     /** 访客翻译限流（IP）。槽 {@code {appKey}}。 */
     public static String buildTranslateGuestIpLimitCacheKey(String appKey, String clientIp, long epochMinute) {
-        return buildBaseCacheKey(appKey) + "translate:limit:ip:" + sanitizeTranslateIp(clientIp) + COLON + epochMinute;
+        return buildBaseCacheKey(appKey) + "translate:limit:ip" + COLON + sanitizeTranslateIp(clientIp) + COLON + epochMinute;
     }
 
     /** 翻译语种目录快照，全平台一份。 */
@@ -744,14 +744,14 @@ public class CacheConstant {
      * 用户设备单聊未读 Hash：槽 {@code {appKey:userId}}，与 session-read/unread-ids 同槽
      */
     public static String buildUserDeviceUnreadCacheKey(String appKey, String userId, Byte deviceType) {
-        return buildAggregateCacheKey(appKey, userId) + USER_DEVICE_UNREAD + deviceType;
+        return buildAggregateCacheKey(appKey, userId) + USER_DEVICE_UNREAD + COLON + deviceType;
     }
 
     /**
      * 单聊未读 packetId ZSET（19 位 member）：与 unread/session-read 同属收件人槽
      */
     public static String buildUserDeviceUnreadIdsCacheKey(String appKey, String userId, Byte deviceType, String peerId) {
-        return buildAggregateCacheKey(appKey, userId) + USER_DEVICE_UNREAD_IDS + deviceType
+        return buildAggregateCacheKey(appKey, userId) + USER_DEVICE_UNREAD_IDS + COLON + deviceType
                 + COLON + stripHashTagChars(peerId);
     }
 
@@ -769,10 +769,10 @@ public class CacheConstant {
         return buildAggregateCacheKey(appKey, messageId) + HTTP_PUSH_IDEM;
     }
 
-    private static final String CS_SESSION_ROUTE = "cs:session:route:";
+    private static final String CS_SESSION_ROUTE = "cs:session:route";
 
     /** 客服咨询单（ticket）维度最后一条聊天消息 packetId */
-    private static final String CS_TICKET = "cs:ticket:";
+    private static final String CS_TICKET = "cs:ticket";
 
     /**
      * 客服 ticket 维 key 前缀：appKey 只做命名空间，<strong>不加 hash tag</strong>。
@@ -780,7 +780,7 @@ public class CacheConstant {
      * 同一 ticket 的 Lua（未读+已读等）KEYS 仍同槽。</p>
      */
     private static String buildCsTicketKeyPrefix(String appKey) {
-        return OUYUNC + APP_KEY + sanitizeAppKeyToken(appKey) + COLON;
+        return OUYUNC + APP_KEY + COLON + sanitizeAppKeyToken(appKey) + COLON;
     }
 
     private static String sanitizeAppKeyToken(String raw) {
@@ -800,7 +800,7 @@ public class CacheConstant {
      * {@code ouyunc:app:appKey:cs:session:route:{ticketId}}
      */
     public static String buildCsSessionRouteCacheKey(String appKey, String ticketId) {
-        return buildCsTicketKeyPrefix(appKey) + CS_SESSION_ROUTE + withHashTag(stripHashTagChars(ticketId.trim()));
+        return buildCsTicketKeyPrefix(appKey) + CS_SESSION_ROUTE + COLON + withHashTag(stripHashTagChars(ticketId.trim()));
     }
 
     /**
@@ -808,7 +808,7 @@ public class CacheConstant {
      * <p>SLA 扫描应读本 key；写入使用 Lua max-merge 保证并发安全。</p>
      */
     public static String buildCsTicketLastMessageCacheKey(String appKey, String ticketId) {
-        return buildCsTicketKeyPrefix(appKey) + CS_TICKET + withHashTag(stripHashTagChars(ticketId.trim())) + COLON + LAST_MESSAGE;
+        return buildCsTicketKeyPrefix(appKey) + CS_TICKET + COLON + withHashTag(stripHashTagChars(ticketId.trim())) + COLON + LAST_MESSAGE;
     }
 
     /** 客服咨询单消息 ZSet 索引（ticket 维度，与 channel sessionId 分离）。 */
@@ -818,14 +818,14 @@ public class CacheConstant {
      * 客服咨询单消息会话 ZSet：member=packetId，score=0。
      */
     public static String buildCsTicketMessageSessionCacheKey(String appKey, String ticketId) {
-        return buildCsTicketKeyPrefix(appKey) + CS_TICKET + withHashTag(stripHashTagChars(ticketId.trim())) + COLON + MSGS;
+        return buildCsTicketKeyPrefix(appKey) + CS_TICKET + COLON + withHashTag(stripHashTagChars(ticketId.trim())) + COLON + MSGS;
     }
 
     /** ticket 维度已读 offset Hash：field={@code readerId:deviceType}，value=max packetId。 */
     private static final String CS_TICKET_SRO = "session-read";
 
     public static String buildCsTicketReadOffsetHashCacheKey(String appKey, String ticketId) {
-        return buildCsTicketKeyPrefix(appKey) + CS_TICKET + withHashTag(stripHashTagChars(ticketId.trim())) + COLON + CS_TICKET_SRO;
+        return buildCsTicketKeyPrefix(appKey) + CS_TICKET + COLON + withHashTag(stripHashTagChars(ticketId.trim())) + COLON + CS_TICKET_SRO;
     }
 
     /** ticket 维度未读 Hash：field={@code readerId:deviceType}，value=未读计数。 */
@@ -835,14 +835,14 @@ public class CacheConstant {
     private static final String CS_TICKET_UR_IDS = "unread-ids";
 
     public static String buildCsTicketUnreadHashCacheKey(String appKey, String ticketId) {
-        return buildCsTicketKeyPrefix(appKey) + CS_TICKET + withHashTag(stripHashTagChars(ticketId.trim())) + COLON + CS_TICKET_UR;
+        return buildCsTicketKeyPrefix(appKey) + CS_TICKET + COLON + withHashTag(stripHashTagChars(ticketId.trim())) + COLON + CS_TICKET_UR;
     }
 
     /**
      * ticket 未读 packetId 集合：与 unread/session-read Hash 同 ticket 槽，支持按 offset 部分清除。
      */
     public static String buildCsTicketUnreadIdsCacheKey(String appKey, String ticketId, String readerDeviceField) {
-        return buildCsTicketKeyPrefix(appKey) + CS_TICKET + withHashTag(stripHashTagChars(ticketId.trim()))
+        return buildCsTicketKeyPrefix(appKey) + CS_TICKET + COLON + withHashTag(stripHashTagChars(ticketId.trim()))
                 + COLON + CS_TICKET_UR_IDS + COLON + readerDeviceField;
     }
 
@@ -863,7 +863,7 @@ public class CacheConstant {
      * @return Redis key
      */
     public static String buildContentSafetyPolicyCacheKey(String appKey) {
-        return OUYUNC + "im:cs:policy:" + appKey;
+        return OUYUNC + "im:cs:policy" + COLON + appKey;
     }
 
     /**
@@ -873,7 +873,7 @@ public class CacheConstant {
      * @return Redis key
      */
     public static String buildContentSafetyWordsCacheKey(String appKey) {
-        return OUYUNC + "im:cs:words:" + appKey;
+        return OUYUNC + "im:cs:words" + COLON + appKey;
     }
 
     /**
@@ -883,7 +883,7 @@ public class CacheConstant {
      * @return Redis key
      */
     public static String buildContentSafetyVersionCacheKey(String appKey) {
-        return OUYUNC + "im:cs:version:" + appKey;
+        return OUYUNC + "im:cs:version" + COLON + appKey;
     }
 
     /** Pub/Sub 频道名；payload 为 appKey 或 {@link #CONTENT_SAFETY_RELOAD_ALL}。 */
