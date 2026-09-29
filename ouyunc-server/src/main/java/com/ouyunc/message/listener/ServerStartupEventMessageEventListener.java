@@ -9,6 +9,7 @@ import com.ouyunc.core.device.AppKeyDeviceTypeSubscriber;
 import com.ouyunc.core.relation.RelationCacheSubscriber;
 import com.ouyunc.message.cluster.lease.NodeLeaseKeeper;
 import com.ouyunc.message.http.HttpRequestDispatcher;
+import com.ouyunc.message.helper.LoginRouteCacheInvalidationBus;
 import com.ouyunc.message.monitor.MonitorInitializer;
 
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -46,6 +47,7 @@ class ServerStartupEventMessageEventListener implements MessageEventListener<Mes
         }
         AppKeyDeviceTypeSubscriber.stop();
         RelationCacheSubscriber.stop();
+        LoginRouteCacheInvalidationBus.stop();
         NodeLeaseKeeper.stop();
     }
 }

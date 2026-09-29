@@ -865,4 +865,10 @@ public class CacheConstant {
      * <p>IM 与 micro-cloud 须共用同一 Redis 与本频道名。</p>
      */
     public static final String RELATION_CACHE_INVALIDATE_CHANNEL = OUYUNC + "im:relation-cache:invalidate";
+
+    /**
+     * 登录路由本机缓存失效频道。登录绑定或解绑完成后发布，所有 IM 节点清理对应 Caffeine 项。
+     * Redisson Topic 只负责降低旧路由窗口；消息丢失时仍由短 TTL 最终收敛。
+     */
+    public static final String LOGIN_ROUTE_CACHE_INVALIDATE_CHANNEL = OUYUNC + "im:login-route-cache:invalidate";
 }

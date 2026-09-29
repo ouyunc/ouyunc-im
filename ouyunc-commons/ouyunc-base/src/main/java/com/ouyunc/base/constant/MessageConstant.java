@@ -215,6 +215,17 @@ public class MessageConstant {
     /** QoS ACK 本地证明保留时间，需要覆盖服务端有限重试窗口。 */
     public static final int QOS_ACK_PROOF_LOCAL_CACHE_TTL_SECONDS = 300;
 
+    /**
+     * 登录路由本地缓存容量上限。缓存项仅保存轻量 encoded route，不保存完整登录详情或 Channel。
+     */
+    public static final long LOGIN_ROUTE_LOCAL_CACHE_MAX_SIZE = 200_000L;
+
+    /**
+     * 登录路由本地缓存 TTL，单位毫秒。
+     * 短 TTL 用于合并连续消息产生的 HGET/HGETALL，同时限制跨节点重登后的旧路由窗口。
+     */
+    public static final long LOGIN_ROUTE_LOCAL_CACHE_TTL_MILLIS = 500L;
+
 
     /**
      *  缓存请求会话key 过期时间默认30 天，与mongo 保持一致

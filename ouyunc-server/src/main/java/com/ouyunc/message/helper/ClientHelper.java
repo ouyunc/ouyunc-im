@@ -1,5 +1,7 @@
 package com.ouyunc.message.helper;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.NumberConstant;
@@ -52,6 +54,24 @@ public class ClientHelper {
     private  static final RedisTemplate<String, Object> redisTemplate = CacheFactory.REDIS.instance();
 
     private  static final StringRedisTemplate stringRedisTemplate = CacheFactory.STRING_REDIS.instance();
+
+    /**
+     * 按用户缓存完整设备路由快照，供 onlineAll 使用。
+     * 只缓存非空结果；新登录用户不会被负缓存短暂误判为离线。
+     */
+    private static final Cache<RouteIdentityKey, Map<Byte, String>> ROUTE_SNAPSHOT_CACHE = Caffeine.newBuilder()
+            .maximumSize(MessageConstant.LOGIN_ROUTE_LOCAL_CACHE_MAX_SIZE)
+            .expireAfterWrite(MessageConstant.LOGIN_ROUTE_LOCAL_CACHE_TTL_MILLIS, TimeUnit.MILLISECONDS)
+            .build();
+
+    /**
+     * 按设备缓存单字段路由，供 onlineDevice 使用，避免为了一个设备执行 HGETALL。
+     * onlineAll 从 Redis 取得完整快照后会同步预热本缓存。
+     */
+    private static final Cache<RouteDeviceKey, String> ROUTE_DEVICE_CACHE = Caffeine.newBuilder()
+            .maximumSize(MessageConstant.LOGIN_ROUTE_LOCAL_CACHE_MAX_SIZE)
+            .expireAfterWrite(MessageConstant.LOGIN_ROUTE_LOCAL_CACHE_TTL_MILLIS, TimeUnit.MILLISECONDS)
+            .build();
 
 
 
@@ -137,6 +157,7 @@ public class ClientHelper {
         if (!tryRunWithBindLock(loginClientInfo.getAppKey(), comboIdentity, () -> {
             if (stillOwnsDirectory(loginClientInfo)) {
                 LoginSessionDirectoryHelper.unbind(loginClientInfo);
+                invalidateRouteCacheEverywhere(loginClientInfo);
             }
         })) {
             log.error("客户端: {} 关闭回滚获取锁失败", loginClientInfo);
@@ -285,8 +306,15 @@ public class ClientHelper {
             // 不传 leaseTime，启用 Redisson watchdog，避免 Redis 变慢时 5s 锁过期导致双绑
             if (lock.tryLock(MessageConstant.LOCK_WAIT_TIME, TimeUnit.SECONDS)) {
                 try {
-                    LoginClientInfo previous = routeLoginInfo(loginClientInfo.getAppKey(),
-                            loginClientInfo.getIdentity(), loginClientInfo.getDeviceType(), null);
+                    // 登录 fencing 必须读取 Redis 权威值，禁止命中短 TTL 路由缓存。
+                    Object raw = stringRedisTemplate.opsForHash().get(
+                            CacheConstant.buildLoginRouteCacheKey(
+                                    loginClientInfo.getAppKey(), loginClientInfo.getIdentity()),
+                            String.valueOf(loginClientInfo.getDeviceType()));
+                    String authoritativeRoute = rawString(raw);
+                    LoginClientInfo previous = StringUtils.isBlank(authoritativeRoute) ? null
+                            : routeLoginInfo(loginClientInfo.getAppKey(), loginClientInfo.getIdentity(),
+                            loginClientInfo.getDeviceType(), authoritativeRoute);
                     if (previous != null
                             && previous.getLastLoginTime() > loginClientInfo.getLastLoginTime()) {
                         log.warn("登录 fencing 拒绝更旧会话 combo={} previousTs={} currentTs={}",
@@ -294,6 +322,7 @@ public class ClientHelper {
                         throw new MessageException("登录绑定失败：已有更新会话");
                     }
                     LoginSessionDirectoryHelper.bind(loginClientInfo);
+                    invalidateRouteCacheEverywhere(loginClientInfo);
                     return previous;
                 } finally {
                     if (lock.isHeldByCurrentThread()) {
@@ -392,25 +421,21 @@ public class ClientHelper {
     private static Map<String, List<LoginClientInfo>> onlineAllBatchChunk(String appKey, Set<String> identities) {
         Map<String, List<LoginClientInfo>> result = new HashMap<>(identities.size());
         List<String> orderedIdentities = identities.stream().filter(Objects::nonNull).toList();
-        RedisSerializer<String> keySerializer = stringRedisTemplate.getStringSerializer();
-        List<Object> routeRows = stringRedisTemplate.executePipelined((RedisCallback<Object>) connection -> {
-            for (String identity : orderedIdentities) {
-                connection.hashCommands().hGetAll(
-                        keySerializer.serialize(CacheConstant.buildLoginRouteCacheKey(appKey, identity)));
-            }
-            return null;
-        });
+        List<RouteIdentityKey> cacheKeys = orderedIdentities.stream()
+                .map(identity -> new RouteIdentityKey(appKey, identity))
+                .toList();
+        Map<RouteIdentityKey, Map<Byte, String>> cachedRoutes = ROUTE_SNAPSHOT_CACHE.getAll(
+                cacheKeys, ClientHelper::loadRouteSnapshots);
+
         NodeLeaseSnapshot leaseSnapshot = SessionNodeState.currentSnapshot();
         Map<String, Long> liveEpochs = leaseSnapshot.epochs();
-        for (int index = 0; index < orderedIdentities.size(); index++) {
-            String identity = orderedIdentities.get(index);
-            Object row = routeRows == null || index >= routeRows.size() ? null : routeRows.get(index);
-            Map<?, ?> route = row instanceof Map<?, ?> map ? map : Map.of();
-            LoginSessionDirectoryHelper.evictDeadRoute(appKey, identity, route, leaseSnapshot);
-            for (Map.Entry<?, ?> routeEntry : route.entrySet()) {
-                Byte deviceType = parseDeviceType(routeEntry.getKey());
-                String encoded = rawString(routeEntry.getValue());
-                if (deviceType == null || !routeMatchesLiveLease(encoded, liveEpochs)) {
+        for (String identity : orderedIdentities) {
+            Map<Byte, String> routes = cachedRoutes.getOrDefault(
+                    new RouteIdentityKey(appKey, identity), Map.of());
+            for (Map.Entry<Byte, String> routeEntry : routes.entrySet()) {
+                Byte deviceType = routeEntry.getKey();
+                String encoded = routeEntry.getValue();
+                if (!routeMatchesLiveLease(encoded, liveEpochs)) {
                     continue;
                 }
                 LoginClientInfo resolved = routeLoginInfo(appKey, identity, deviceType, encoded);
@@ -420,6 +445,42 @@ public class ClientHelper {
             }
         }
         return result;
+    }
+
+    /**
+     * Caffeine 批量加载器：仅对未命中的 identity 发起一次 Pipeline，避免 TTL 边界的重复 HGETALL。
+     * 空路由不放入返回 Map，因此不会形成会遮蔽新登录的负缓存。
+     */
+    private static Map<RouteIdentityKey, Map<Byte, String>> loadRouteSnapshots(
+            Set<? extends RouteIdentityKey> missingKeys) {
+        if (missingKeys == null || missingKeys.isEmpty()) {
+            return Map.of();
+        }
+        List<RouteIdentityKey> orderedKeys = List.copyOf(missingKeys);
+        RedisSerializer<String> keySerializer = stringRedisTemplate.getStringSerializer();
+        List<Object> routeRows = stringRedisTemplate.executePipelined((RedisCallback<Object>) connection -> {
+            for (RouteIdentityKey key : orderedKeys) {
+                connection.hashCommands().hGetAll(keySerializer.serialize(
+                        CacheConstant.buildLoginRouteCacheKey(key.appKey(), key.identity())));
+            }
+            return null;
+        });
+        NodeLeaseSnapshot loadSnapshot = SessionNodeState.currentSnapshot();
+        Map<RouteIdentityKey, Map<Byte, String>> loaded = new HashMap<>(orderedKeys.size());
+        for (int index = 0; index < orderedKeys.size(); index++) {
+            RouteIdentityKey key = orderedKeys.get(index);
+            Object row = routeRows == null || index >= routeRows.size() ? null : routeRows.get(index);
+            Map<?, ?> rawRoutes = row instanceof Map<?, ?> map ? map : Map.of();
+            LoginSessionDirectoryHelper.evictDeadRoute(
+                    key.appKey(), key.identity(), rawRoutes, loadSnapshot);
+            Map<Byte, String> parsedRoutes = parseRoutes(rawRoutes);
+            if (!parsedRoutes.isEmpty()) {
+                loaded.put(key, parsedRoutes);
+                parsedRoutes.forEach((deviceType, encoded) -> ROUTE_DEVICE_CACHE.put(
+                        new RouteDeviceKey(key.appKey(), key.identity(), deviceType), encoded));
+            }
+        }
+        return loaded;
     }
 
 
@@ -492,9 +553,14 @@ public class ClientHelper {
     private static LoginClientInfo routeLoginInfo(String appKey, String identity, byte deviceType, String encodedRoute) {
         String encoded = encodedRoute;
         if (StringUtils.isBlank(encoded)) {
-            Object raw = stringRedisTemplate.opsForHash().get(
-                    CacheConstant.buildLoginRouteCacheKey(appKey, identity), String.valueOf(deviceType));
-            encoded = rawString(raw);
+            RouteDeviceKey cacheKey = new RouteDeviceKey(appKey, identity, deviceType);
+            encoded = ROUTE_DEVICE_CACHE.get(cacheKey, key -> {
+                Object raw = stringRedisTemplate.opsForHash().get(
+                        CacheConstant.buildLoginRouteCacheKey(key.appKey(), key.identity()),
+                        String.valueOf(key.deviceType()));
+                String loaded = rawString(raw);
+                return StringUtils.isBlank(loaded) ? null : loaded;
+            });
         }
         NodeLeaseSnapshot snapshot = SessionNodeState.currentSnapshot();
         if (!SessionNodeState.isCurrentSnapshot(snapshot) || !routeMatchesLiveLease(encoded, snapshot.epochs())) {
@@ -525,6 +591,54 @@ public class ClientHelper {
         routeTarget.setLastLoginTime(routeLoginTime);
         routeTarget.setOnlineStatus(OnlineEnum.ONLINE);
         return routeTarget;
+    }
+
+    /**
+     * 登录目录发生本机写入或删除后主动失效。其它节点依靠极短 TTL 收敛，
+     * 最终落地仍会校验节点租约和本机 Channel，不把缓存作为目录所有权证明。
+     */
+    public static void invalidateRouteCacheEverywhere(LoginClientInfo loginClientInfo) {
+        if (loginClientInfo == null || StringUtils.isAnyBlank(
+                loginClientInfo.getAppKey(), loginClientInfo.getIdentity())) {
+            return;
+        }
+        invalidateRouteCacheLocal(loginClientInfo.getAppKey(), loginClientInfo.getIdentity(),
+                loginClientInfo.getDeviceType());
+        LoginRouteCacheInvalidationBus.publish(loginClientInfo.getAppKey(), loginClientInfo.getIdentity(),
+                loginClientInfo.getDeviceType());
+    }
+
+    /**
+     * 仅清理当前 JVM 的路由缓存，供失效 Topic 订阅回调使用，禁止再次发布以免形成消息环。
+     */
+    public static void invalidateRouteCacheLocal(String appKey, String identity, byte deviceType) {
+        if (StringUtils.isAnyBlank(appKey, identity)) {
+            return;
+        }
+        RouteIdentityKey identityKey = new RouteIdentityKey(appKey, identity);
+        ROUTE_SNAPSHOT_CACHE.invalidate(identityKey);
+        ROUTE_DEVICE_CACHE.invalidate(new RouteDeviceKey(appKey, identity, deviceType));
+    }
+
+    private static Map<Byte, String> parseRoutes(Map<?, ?> rawRoutes) {
+        if (rawRoutes == null || rawRoutes.isEmpty()) {
+            return Map.of();
+        }
+        Map<Byte, String> parsed = new HashMap<>(rawRoutes.size());
+        for (Map.Entry<?, ?> entry : rawRoutes.entrySet()) {
+            Byte deviceType = parseDeviceType(entry.getKey());
+            String encoded = rawString(entry.getValue());
+            if (deviceType != null && StringUtils.isNotBlank(encoded)) {
+                parsed.put(deviceType, encoded);
+            }
+        }
+        return parsed.isEmpty() ? Map.of() : Map.copyOf(parsed);
+    }
+
+    private record RouteIdentityKey(String appKey, String identity) {
+    }
+
+    private record RouteDeviceKey(String appKey, String identity, byte deviceType) {
     }
 
     private static boolean routeMatchesLiveLease(String encoded, Map<String, Long> liveEpochs) {

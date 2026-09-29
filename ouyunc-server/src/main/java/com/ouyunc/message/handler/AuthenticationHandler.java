@@ -299,6 +299,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         return ClientHelper.tryRunWithBindLock(closingLogin.getAppKey(), comboIdentity, () -> {
             if (ClientHelper.stillOwnsDirectory(closingLogin)) {
                 LoginSessionDirectoryHelper.unbind(closingLogin);
+                ClientHelper.invalidateRouteCacheEverywhere(closingLogin);
             }
         });
     }

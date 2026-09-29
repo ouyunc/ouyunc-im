@@ -14,6 +14,7 @@ import com.ouyunc.core.listener.event.MessageEvent;
 import com.ouyunc.core.device.AppKeyDeviceTypeSubscriber;
 import com.ouyunc.core.relation.RelationCacheSubscriber;
 import com.ouyunc.message.helper.ClientHelper;
+import com.ouyunc.message.helper.LoginRouteCacheInvalidationBus;
 import com.ouyunc.core.idle.IdleNotifyTextCache;
 import com.ouyunc.message.safety.ContentSafetyRegistry;
 import com.ouyunc.repository.DefaultRepository;
@@ -54,9 +55,11 @@ class ServerPrepareEventMessageEventListener implements MessageEventListener<Mes
         IdleNotifyTextCache.getInstance().start();
         // 关系本机缓存：订阅 Redis 失效频道（业务写 Redis 后 PUBLISH）
         RelationCacheSubscriber.start();
+        // 登录路由短缓存：订阅跨节点失效，Topic 丢失时由 500ms TTL 兜底。
+        LoginRouteCacheInvalidationBus.start();
         // 预加载 Lua 脚本 SHA 到本地（集群模式下注意各节点同步）
         preloadLuaScripts();
-        log.info("服务初始化前准备完成：appKey 设备类型/内容安全/空闲文案/关系缓存订阅已启动，Lua 已预加载");
+        log.info("服务初始化前准备完成：appKey 设备类型/内容安全/空闲文案/关系缓存/登录路由缓存订阅已启动，Lua 已预加载");
     }
 
     /**
