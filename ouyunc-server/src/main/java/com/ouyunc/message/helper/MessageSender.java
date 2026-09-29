@@ -4,9 +4,10 @@ import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.ClusterForwardModeEnum;
 import com.ouyunc.base.constant.enums.MessageEventTypeEnum;
 import com.ouyunc.base.constant.enums.SendStatusEnum;
-import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.model.Metadata;
+import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.model.SendCallback;
+import com.ouyunc.base.model.SendResult;
 import com.ouyunc.base.model.Target;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.PacketCopyHelper;
@@ -19,34 +20,29 @@ import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.message.cluster.lease.NodeLeaseKeeper;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.protocol.NativePacketProtocol;
-import com.ouyunc.message.schedule.QosRetryScheduler;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.pool.ChannelPool;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
-import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * @Author fzx
  * 发送只有这里一个出口：决定连接之后，调用该 Channel 绑定的 {@link NativePacketProtocol#doSendMessage}。
  * {@code send} 表示提交到发送链路；最终 writeAndFlush 由 Netty 异步完成。
  **/
-public class MessageSender {
+public final class MessageSender {
 
     private static final Logger log = LoggerFactory.getLogger(MessageSender.class);
 
-    /**
-     * 多端扇出：按落地节点聚合。本机展开；跨节点一份正文加分批目标。
-     * 始发节点在这里登记 QoS，展开后的单目标不再走 {@link #send(Packet, Target)}，避免重复登记。
-     */
-    public static void send(Packet packet, Collection<LoginClientInfo> loginClientInfos) {
-        fanoutToClients(packet, loginClientInfos);
+    private MessageSender() {
     }
 
 
@@ -56,6 +52,11 @@ public class MessageSender {
      * 不把任务再丢进公共发送线程池，避免多目标顺序被二次调度打乱。
      */
     public static void send(Packet packet, Target target) {
+        if (packet != null && packet.getMessage() != null && packet.getMessage().getMetadata() != null
+                && packet.getMessage().getMetadata().isClientForward()) {
+            doSendMessage(packet, target, sendResult -> { });
+            return;
+        }
         if (CollectionUtils.isEmpty(MessageServerContext.messageInterceptorChain)) {
             doSendMessage(packet, target, sendResult -> { });
             return;
@@ -77,39 +78,22 @@ public class MessageSender {
     }
 
     /**
-     * 已经完成首次业务处理的续传：集群 CLIENT 中转、登录跟随、QoS 重投。
-     * 不再跑拦截器，避免重复 QoS 登记或把集群转发当成新的入站消息。
-     */
-    public static void resumeDelivery(Packet packet, Target target) {
-        resumeDelivery(packet, target, sendResult -> { });
-    }
-
-    public static void resumeDelivery(Packet packet, Target target, SendCallback sendCallback) {
-        doSendMessage(packet, target, sendCallback);
-    }
-
-    /**
      * 当前 Channel 上的控制响应：登录成功、心跳 Pong、提交 ACK。
      * 协议从该 Channel 绑定的 Protocol 取得，不按身份再查登录表。
      */
-    public static void sendControl(ChannelHandlerContext ctx, Packet packet) {
-        sendControl(ctx, packet, sendResult -> { });
+    public static CompletableFuture<SendResult> sendControl(ChannelHandlerContext ctx, Packet packet) {
+        CompletableFuture<SendResult> completion = new CompletableFuture<>();
+        Packet outbound = PacketCopyHelper.copyForDelivery(packet, null);
+        writeOnChannel(ctx, outbound, completion::complete, true);
+        return completion;
     }
 
-    public static void sendControl(ChannelHandlerContext ctx, Packet packet, SendCallback sendCallback) {
-        writeOnChannel(ctx, packet, sendCallback == null ? sendResult -> { } : sendCallback, true);
+    static boolean isChannelSendable(ChannelHandlerContext ctx) {
+        // active 但暂时不可写的连接交给协议层执行有界水位重试，不能在业务层提前丢消息。
+        return ctx != null && ctx.channel() != null && ctx.channel().isActive();
     }
 
-    /** 控制响应尽力写出：失败不发布 SEND_FAIL，供受理回执和本机扇出使用。 */
-    public static void sendControlQuiet(ChannelHandlerContext ctx, Packet packet) {
-        writeOnChannel(ctx, packet, sendResult -> { }, false);
-    }
-
-    public static boolean isChannelSendable(ChannelHandlerContext ctx) {
-        return ctx != null && ctx.channel() != null && ctx.channel().isActive() && ctx.channel().isWritable();
-    }
-
-    public static Target resolveReplyTarget(ChannelHandlerContext ctx, Packet packet, String messageFrom) {
+    static Target resolveReplyTarget(ChannelHandlerContext ctx, Packet packet, String messageFrom) {
         Metadata metadata = packet != null && packet.getMessage() != null ? packet.getMessage().getMetadata() : null;
         LoginClientInfo loginClientInfo = ctx != null
                 ? ChannelAttrUtil.getChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN)
@@ -195,8 +179,9 @@ public class MessageSender {
      * 集群内部控制包（如 QOS_RETRY_CANCEL）：{@link ClusterForwardModeEnum#INTERNAL}，
      * 直连 dest；失败回溯下一跳，最终节点仍是 dest，落地进 Processor 不写客户端。
      */
-    public static void sendClusterInternal(Packet packet, String destServerAddress) {
-        sendClusterInternal(packet, destServerAddress, sendResult -> {
+    public static CompletableFuture<SendResult> sendClusterInternal(Packet packet, String destServerAddress) {
+        CompletableFuture<SendResult> completion = new CompletableFuture<>();
+        doSendClusterInternal(packet, destServerAddress, sendResult -> {
             if (sendResult != null && sendResult.getSendStatus() == SendStatusEnum.SEND_FAIL) {
                 Throwable cause = sendResult.getException();
                 log.warn("集群内部控制包发送失败 type={} packetId={} dest={} cause={}",
@@ -205,124 +190,9 @@ public class MessageSender {
                         destServerAddress,
                         cause == null ? null : cause.getMessage());
             }
+            completion.complete(sendResult);
         });
-    }
-
-    /** Processor 与 RouteHandler 共用：只认 Target 落地机，不用 message.to。 */
-    public static String clusterDest(Packet packet) {
-        if (packet == null || packet.getMessage() == null || packet.getMessage().getMetadata() == null) {
-            return null;
-        }
-        Target target = packet.getMessage().getMetadata().getClusterRoute().getTarget();
-        if (target == null) {
-            return null;
-        }
-        String dest = target.getTargetServerAddress();
-        return StringUtils.isBlank(dest) ? null : dest;
-    }
-
-    public static void sendClusterInternal(Packet packet, String destServerAddress, SendCallback sendCallback) {
-        doSendClusterInternal(packet, destServerAddress, sendCallback);
-    }
-
-    /**
-     * 集群心跳探测与 ACK 回写。允许使用尚未进入 active 的连接池，失败不回溯下一跳，也不改包上的路由。
-     */
-    public static void sendClusterProbe(Packet packet, String serverAddress, SendCallback sendCallback) {
-        if (packet == null || StringUtils.isBlank(serverAddress)) {
-            notifySendFail(packet, "集群探测缺少目标节点", sendCallback);
-            return;
-        }
-        ChannelPool channelPool = MessageServerContext.clusterActiveServerRegistryTableCache.get(serverAddress);
-        if (channelPool == null) {
-            channelPool = MessageServerContext.clusterGlobalServerRegistryTableCache.get(serverAddress);
-        }
-        if (channelPool == null) {
-            log.warn("有新的服务 {} 加入集群，正在尝试与其确认ack", serverAddress);
-            try {
-                channelPool = MessageClientPool.clientSimpleChannelPoolMap.get(serverAddress);
-            } catch (Exception e) {
-                log.error("通过参数to: {} , 获取/创建channelPool异常， 原因：{}", serverAddress, e.getMessage());
-                throw new MessageException(e);
-            }
-        }
-        writeViaClusterPool(packet, channelPool, serverAddress, sendCallback, false);
-    }
-
-
-    /**
-     * 多端扇出：本机分批展开；远程按节点打包 {@link Metadata#()}。
-     */
-    private static void fanoutToClients(Packet packet, Collection<LoginClientInfo> loginClientInfos) {
-        if (packet == null || CollectionUtils.isEmpty(loginClientInfos)) {
-            return;
-        }
-        String local = MessageServerContext.serverProperties().getLocalServerAddress();
-        Map<String, List<LoginClientInfo>> byNode = new LinkedHashMap<>();
-        for (LoginClientInfo client : loginClientInfos) {
-            if (client == null) {
-                continue;
-            }
-            String node = client.getLoginServerAddress();
-            if (node == null || node.isBlank()) {
-                node = local;
-            }
-            byNode.computeIfAbsent(node, ignored -> new ArrayList<>()).add(client);
-        }
-        List<LoginClientInfo> localClients = byNode.remove(local);
-        boolean cluster = MessageServerContext.serverProperties().isClusterEnable();
-        if (cluster) {
-            QosRetryScheduler.scheduleForClients(packet, loginClientInfos);
-        } else {
-            QosRetryScheduler.scheduleForClients(packet, localClients);
-        }
-        if (CollectionUtils.isNotEmpty(localClients)) {
-            List<Target> targets = new ArrayList<>(localClients.size());
-            for (LoginClientInfo c : localClients) {
-                targets.add(Target.newBuilder()
-                        .appKey(c.getAppKey())
-                        .targetIdentity(c.getIdentity())
-                        .targetServerAddress(c.getLoginServerAddress())
-                        .deviceType(c.getDeviceType())
-                        .build());
-            }
-            ClientHelper.deliverLocalFanoutTargets(packet, targets);
-        }
-        for (Map.Entry<String, List<LoginClientInfo>> entry : byNode.entrySet()) {
-            if (!cluster) {
-                log.warn("未开启集群，跳过远端节点投递 node={} size={} packetId={}",
-                        entry.getKey(), entry.getValue().size(), packet.getPacketId());
-                continue;
-            }
-            sendRemoteFanoutBatches(packet, entry.getKey(), entry.getValue());
-        }
-    }
-
-    private static void sendRemoteFanoutBatches(Packet packet, String nodeId,
-                                                List<LoginClientInfo> clients) {
-        int batch = MessageConstant.GROUP_FANOUT_REMOTE_TARGET_BATCH;
-        for (int from = 0; from < clients.size(); from += batch) {
-            int to = Math.min(from + batch, clients.size());
-            List<Target> targets = new ArrayList<>(to - from);
-            for (int i = from; i < to; i++) {
-                LoginClientInfo loginClientInfo = clients.get(i);
-                targets.add(Target.newBuilder()
-                        .appKey(loginClientInfo.getAppKey())
-                        .targetIdentity(loginClientInfo.getIdentity())
-                        .targetServerAddress(loginClientInfo.getLoginServerAddress())
-                        .deviceType(loginClientInfo.getDeviceType())
-                        .build());
-            }
-            Packet fanout = packet.clone();
-            Metadata metadata = fanout.getMessage().getMetadata();
-            metadata.ensureClusterRoute().setClusterForwardMode(ClusterForwardModeEnum.CLIENT);
-            metadata.ensureClusterRoute().setFanoutTargets(targets);
-            Target envelope = Target.newBuilder()
-                    .appKey(metadata.getIngress().getAppKey())
-                    .targetServerAddress(nodeId)
-                    .build();
-            resumeDelivery(fanout, envelope);
-        }
+        return completion;
     }
 
 
@@ -346,7 +216,7 @@ public class MessageSender {
         if (metadata != null) {
             metadata.ensureClusterRoute().setClusterForwardMode(ClusterForwardModeEnum.INTERNAL);
             metadata.ensureClusterRoute().setFanoutTargets(null);
-            ensureInternalForwardTarget(metadata, destServerAddress);
+            setInternalForwardTarget(metadata, destServerAddress);
         }
         ChannelPool destPool = resolveClusterChannelPool(destServerAddress);
         if (destPool != null) {
@@ -357,18 +227,11 @@ public class MessageSender {
         relayViaNextHop(packet, destServerAddress, sendCallback);
     }
 
-    private static void ensureInternalForwardTarget(Metadata metadata, String destServerAddress) {
-        Target target = metadata.getClusterRoute().getTarget();
-        if (target == null) {
-            metadata.ensureClusterRoute().setTarget(Target.newBuilder()
-                    .appKey(metadata.getIngress().getAppKey())
-                    .targetServerAddress(destServerAddress)
-                    .build());
-            return;
-        }
-        if (StringUtils.isBlank(target.getTargetServerAddress())) {
-            target.setTargetServerAddress(destServerAddress);
-        }
+    private static void setInternalForwardTarget(Metadata metadata, String destServerAddress) {
+        metadata.ensureClusterRoute().setTarget(Target.newBuilder()
+                .appKey(metadata.getIngress().getAppKey())
+                .targetServerAddress(destServerAddress)
+                .build());
     }
 
 
@@ -442,7 +305,7 @@ public class MessageSender {
             return;
         }
         if (!hasLocalActiveConnection(target)
-                && LoginFollowHelper.tryFollow(packet, target, sendCallback)) {
+                && LoginFollowHelper.tryFollow(packet, target)) {
             return;
         }
         String combo = IdentityUtil.generalComboIdentity(
@@ -529,9 +392,9 @@ public class MessageSender {
     /**
      * 经 hop 的集群连接写出；acquire 失败则对该 hop 再回溯，不改 Target.targetServerAddress。
      */
-    private static void writeViaClusterPool(Packet packet, ChannelPool channelPool,
-                                            String hopServerAddress, SendCallback sendCallback,
-                                            boolean relayOnFailure) {
+    static void writeViaClusterPool(Packet packet, ChannelPool channelPool,
+                                    String hopServerAddress, SendCallback sendCallback,
+                                    boolean relayOnFailure) {
         Future<Channel> channelFuture = channelPool.acquire();
         if (channelFuture == null) {
             log.warn("获取不到消息需要到达的服务连接: {}", hopServerAddress);

@@ -96,7 +96,6 @@ public final class MessageSubmissionResponseHelper {
             log.debug("消息提交响应未写回：入站连接已关闭，messageId={} status={}", original.getId(), status);
             return;
         }
-        // 响应包无需再触发 SEND_FAIL 业务事件，客户端负责使用同一 messageId 超时核对。
-        MessageSender.sendControlQuiet(ctx, response);
+        MessageSender.sendControl(ctx, response);
     }
 }

@@ -10,7 +10,6 @@ import com.ouyunc.base.constant.enums.NetworkEnum;
 import com.ouyunc.base.encrypt.Encrypt;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.model.Metadata;
-import com.ouyunc.base.model.SendCallback;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.packet.message.content.ServerNotifyContent;
@@ -64,10 +63,11 @@ public final class BusinessIdleNotifyHelper {
             }
             try {
                 Packet packet = buildNotifyPacket(loginInfo, text);
-                SendCallback afterSend = closeAfter
-                        ? unused -> closeIfStillDue(ctx)
-                        : unused -> { };
-                MessageSender.sendControl(ctx, packet, afterSend);
+                MessageSender.sendControl(ctx, packet).whenComplete((unused, error) -> {
+                    if (closeAfter) {
+                        closeIfStillDue(ctx);
+                    }
+                });
             } catch (Exception e) {
                 log.warn("业务空闲提示下发失败, appKey={}, identity={}, strike={}: {}",
                         loginInfo.getAppKey(), loginInfo.getIdentity(), strike, e.getMessage());

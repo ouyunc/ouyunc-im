@@ -4,7 +4,6 @@ import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.ClusterForwardModeEnum;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.model.Metadata;
-import com.ouyunc.base.model.SendCallback;
 import com.ouyunc.base.model.Target;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.message.context.MessageServerContext;
@@ -13,6 +12,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * 落地本机无连接时，按 Redis 登录 HASH 跟到新节点（S2→S3）。
@@ -26,18 +30,62 @@ public final class LoginFollowHelper {
     }
 
     public static void followMissed(Packet packet, List<Target> missed) {
-        if (packet == null || missed == null || missed.isEmpty()) {
+        if (packet == null || packet.getMessage() == null || packet.getMessage().getMetadata() == null
+                || missed == null || missed.isEmpty()
+                || !MessageServerContext.serverProperties().isClusterEnable()) {
             return;
         }
-        for (Target target : missed) {
-            tryFollow(packet, target, unused -> { });
+        Metadata metadata = packet.getMessage().getMetadata();
+        if (metadata.getClusterRoute().getLoginFollowHops() >= MessageConstant.LOGIN_FOLLOW_MAX_HOPS) {
+            log.warn("批量登录跟随次数耗尽 packetId={} missed={}", packet.getPacketId(), missed.size());
+            return;
         }
+        String defaultAppKey = metadata.getIngress().getAppKey();
+        Map<String, List<Target>> targetsByApp = new HashMap<>();
+        for (Target target : missed) {
+            if (target == null || StringUtils.isBlank(target.getTargetIdentity())) {
+                continue;
+            }
+            String appKey = StringUtils.isNotBlank(target.getAppKey()) ? target.getAppKey() : defaultAppKey;
+            targetsByApp.computeIfAbsent(appKey, ignored -> new ArrayList<>()).add(target);
+        }
+        List<LoginClientInfo> followedClients = new ArrayList<>();
+        String localAddress = MessageServerContext.serverProperties().getLocalServerAddress();
+        targetsByApp.forEach((appKey, targets) -> {
+            Set<String> identities = new HashSet<>(targets.size());
+            targets.forEach(target -> identities.add(target.getTargetIdentity()));
+            Map<String, List<LoginClientInfo>> online = ClientHelper.onlineAllBatch(appKey, identities);
+            for (Target target : targets) {
+                List<LoginClientInfo> devices = online.get(target.getTargetIdentity());
+                if (devices == null) {
+                    continue;
+                }
+                for (LoginClientInfo device : devices) {
+                    if (device.getDeviceType() == target.getDeviceType()
+                            && StringUtils.isNotBlank(device.getLoginServerAddress())
+                            && !device.getLoginServerAddress().equals(localAddress)) {
+                        followedClients.add(device);
+                        break;
+                    }
+                }
+            }
+        });
+        if (followedClients.isEmpty()) {
+            return;
+        }
+        Packet follow = packet.clone();
+        Metadata followMetadata = follow.getMessage().getMetadata();
+        followMetadata.ensureClusterRoute().setLoginFollowHops(
+                metadata.getClusterRoute().getLoginFollowHops() + 1);
+        followMetadata.ensureClusterRoute().setClusterForwardMode(ClusterForwardModeEnum.CLIENT);
+        followMetadata.ensureClusterRoute().setFanoutTargets(null);
+        MessageDeliveryRouteHelper.deliverOnlineClients(follow, followedClients);
     }
 
     /**
      * @return true 已转到新节点；false 仍在本机/离线/超限，调用方按原路径处理
      */
-    public static boolean tryFollow(Packet packet, Target target, SendCallback sendCallback) {
+    public static boolean tryFollow(Packet packet, Target target) {
         if (packet == null || packet.getMessage() == null || packet.getMessage().getMetadata() == null
                 || target == null || StringUtils.isBlank(target.getTargetIdentity())) {
             return false;
@@ -74,7 +122,7 @@ public final class LoginFollowHelper {
         followMeta.ensureClusterRoute().setTarget(next);
         log.debug("登录跟随 packetId={} identity={} {} -> {}",
                 packet.getPacketId(), target.getTargetIdentity(), local, dest);
-        MessageSender.resumeDelivery(follow, next, sendCallback);
+        MessageSender.send(follow, next);
         return true;
     }
 }

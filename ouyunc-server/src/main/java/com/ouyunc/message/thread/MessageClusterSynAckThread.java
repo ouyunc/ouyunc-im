@@ -17,7 +17,7 @@ import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.message.cluster.lease.NodeLeaseKeeper;
 import com.ouyunc.message.cluster.client.pool.MessageClientPool;
 import com.ouyunc.message.context.MessageServerContext;
-import com.ouyunc.message.helper.MessageSender;
+import com.ouyunc.message.helper.ClusterProbeSender;
 import com.ouyunc.message.protocol.NativePacketProtocol;
 import io.netty.channel.pool.ChannelPool;
 import org.slf4j.Logger;
@@ -62,7 +62,7 @@ public class MessageClusterSynAckThread implements Runnable {
             // 发送前占一拍，ACK 会移除整个计数对象；迟到回调不应为已恢复节点重新计数。
             AtomicInteger generation = MessageServerContext.clusterClientMissAckTimesCache.get(targetServerAddress);
             generation.incrementAndGet();
-            MessageSender.sendClusterProbe(packet, targetServerAddress,
+            ClusterProbeSender.send(packet, targetServerAddress,
                     sendResult -> onSynSendResult(targetServerAddress, generation, sendResult));
         }
     }

@@ -5,6 +5,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.NumberConstant;
+import com.ouyunc.base.constant.enums.ClusterForwardModeEnum;
 import com.ouyunc.base.constant.enums.MessageContentTypeEnum;
 import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.constant.enums.NetworkEnum;
@@ -788,8 +789,10 @@ public class ClientHelper {
                 continue;
             }
             Packet fanout = packet.clone();
+            fanout.getMessage().ensureMetadata().ensureClusterRoute()
+                    .setClusterForwardMode(ClusterForwardModeEnum.CLIENT);
             fanout.getMessage().ensureMetadata().ensureClusterRoute().setLocalBroadcastOnly(true);
-            MessageSender.resumeDelivery(fanout, buildBroadcastNodeTarget(appKey, nodeId));
+            MessageSender.send(fanout, buildBroadcastNodeTarget(appKey, nodeId));
         }
     }
 
@@ -811,7 +814,7 @@ public class ClientHelper {
         if (packet == null) {
             return;
         }
-        ThreadPoolManager.messageSendExecutor().execute(() -> deliverLocalBroadcastGrouped(appKey, packet));
+        deliverLocalBroadcastGrouped(appKey, packet);
     }
 
     /**
@@ -821,7 +824,7 @@ public class ClientHelper {
         if (packet == null || targets == null || targets.isEmpty()) {
             return;
         }
-        ThreadPoolManager.messageSendExecutor().execute(() -> deliverLocalFanoutGrouped(packet, targets));
+        deliverLocalFanoutGrouped(packet, targets);
     }
 
     private static void deliverLocalFanoutGrouped(Packet packet, List<Target> targets) {
@@ -872,13 +875,13 @@ public class ClientHelper {
             Packet outbound = PacketCopyHelper.copyForDelivery(loopPacket, target);
             outbound.getMessage().ensureMetadata().ensureClusterRoute().setFanoutTargets(null);
             if (isRemoteLoginNotify(outbound)) {
-                MessageSender.sendControl(ctx, outbound, unused -> {
+                MessageSender.sendControl(ctx, outbound).whenComplete((unused, error) -> {
                     if (ctx.channel() != null && ctx.channel().isActive()) {
                         ctx.close();
                     }
                 });
             } else {
-                MessageSender.sendControlQuiet(ctx, outbound);
+                MessageSender.sendControl(ctx, outbound);
             }
         }
         if (end < targets.size() && !loop.isShuttingDown() && !loop.isShutdown() && !loop.isTerminated()) {
@@ -942,7 +945,7 @@ public class ClientHelper {
             }
             Packet outbound = PacketCopyHelper.copyForDelivery(loopPacket, null);
             outbound.getMessage().ensureMetadata().ensureClusterRoute().setTarget(null);
-            MessageSender.sendControlQuiet(ctx, outbound);
+            MessageSender.sendControl(ctx, outbound);
         }
         if (end < ctxs.size() && !loop.isShuttingDown() && !loop.isShutdown() && !loop.isTerminated()) {
             loop.execute(() -> writeLocalBroadcastOnEventLoop(loop, loopPacket, ctxs, end));

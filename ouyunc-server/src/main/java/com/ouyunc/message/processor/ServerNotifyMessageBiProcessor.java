@@ -10,7 +10,7 @@ import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.message.helper.ClientHelper;
-import com.ouyunc.message.helper.MessageSender;
+import com.ouyunc.message.helper.MessageDeliveryRouteHelper;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
@@ -54,7 +54,7 @@ public final class ServerNotifyMessageBiProcessor extends AbstractMessageBiProce
             if (isRemoteLogin(message)) {
                 targets = filterKickDevice(targets, packet.getDeviceType());
             }
-            MessageSender.send(packet, targets);
+            MessageDeliveryRouteHelper.deliverOnlineClients(packet, targets);
         });
     }
 

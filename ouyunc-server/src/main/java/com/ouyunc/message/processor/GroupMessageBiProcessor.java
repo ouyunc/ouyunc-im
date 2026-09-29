@@ -19,7 +19,7 @@ import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
 import com.ouyunc.message.helper.MessageSubmissionResponseHelper;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageDeliveryRouteHelper;
-import com.ouyunc.message.helper.MessageSender;
+import com.ouyunc.message.helper.MessageDeliveryRouteHelper;
 import com.ouyunc.message.helper.MessageRefHelper;
 import com.ouyunc.message.processor.http.push.IngressPacketHelper;
 import com.ouyunc.message.schedule.ScheduleTimer;
@@ -275,7 +275,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
         String appKey = message.getMetadata().getIngress().getAppKey();
         List<LoginClientInfo> fromSelfLoginClientInfos = ClientHelper.onlineAll(appKey, message.getFrom(), packet.getDeviceType());
         if (CollectionUtils.isNotEmpty(fromSelfLoginClientInfos)) {
-            MessageSender.send(packet, fromSelfLoginClientInfos);
+            MessageDeliveryRouteHelper.deliverOnlineClients(packet, fromSelfLoginClientInfos);
         }
     }
 

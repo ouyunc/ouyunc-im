@@ -305,7 +305,11 @@ public final class QosRetryScheduler {
         if (!taskStillActive(taskId, taskWrapper)) {
             return;
         }
-        MessageSender.resumeDelivery(schedulePackage.clone(), Target.newBuilder()
+        Packet retryPacket = schedulePackage.clone();
+        retryPacket.getMessage().ensureMetadata().ensureClusterRoute()
+                .setClusterForwardMode(ClusterForwardModeEnum.CLIENT);
+        retryPacket.getMessage().ensureMetadata().ensureClusterRoute().setFanoutTargets(null);
+        MessageSender.send(retryPacket, Target.newBuilder()
                 .appKey(device.getAppKey())
                 .targetIdentity(device.getIdentity())
                 .targetServerAddress(device.getLoginServerAddress())
@@ -375,6 +379,16 @@ public final class QosRetryScheduler {
             log.warn("集群 QOS_RETRY_CANCEL 转发失败 origin={} packetId={} cause={}",
                     origin, content.getPacketId(), cause == null ? null : cause.getMessage());
         };
-        MessageSender.sendClusterInternal(packet, origin, onResult);
+        MessageSender.sendClusterInternal(packet, origin).whenComplete((sendResult, error) -> {
+            if (error != null) {
+                onResult.onCallback(com.ouyunc.base.model.SendResult.builder()
+                        .sendStatus(SendStatusEnum.SEND_FAIL)
+                        .packet(packet)
+                        .exception(error)
+                        .build());
+                return;
+            }
+            onResult.onCallback(sendResult);
+        });
     }
 }

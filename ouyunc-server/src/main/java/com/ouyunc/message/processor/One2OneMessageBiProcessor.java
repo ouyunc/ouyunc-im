@@ -21,7 +21,6 @@ import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
 import com.ouyunc.message.helper.MessageSubmissionResponseHelper;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageDeliveryRouteHelper;
-import com.ouyunc.message.helper.MessageSender;
 import com.ouyunc.message.helper.MessageRefHelper;
 import com.ouyunc.message.validator.*;
 import com.ouyunc.repository.support.MessageIndexScope;
@@ -209,7 +208,7 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
         String appKey = message.getMetadata().getIngress().getAppKey();
         List<LoginClientInfo> senderClients = ClientHelper.onlineAll(appKey, message.getTo());
         if (CollectionUtils.isNotEmpty(senderClients)) {
-            MessageSender.send(packet, senderClients);
+            MessageDeliveryRouteHelper.deliverOnlineClients(packet, senderClients);
         }
     }
 

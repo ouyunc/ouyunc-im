@@ -2,14 +2,17 @@ package com.ouyunc.message.helper;
 
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.IngressSourceEnum;
+import com.ouyunc.base.constant.enums.ClusterForwardModeEnum;
 import com.ouyunc.base.constant.enums.MessageDeliveryChannelEnum;
 import com.ouyunc.base.model.ClientInfo;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.model.Metadata;
+import com.ouyunc.base.model.Target;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.core.exception.ExternalDeliveryConfirmException;
 import com.ouyunc.message.context.MessageServerContext;
+import com.ouyunc.message.schedule.QosRetryScheduler;
 import com.ouyunc.repository.DefaultRepository;
 import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
@@ -20,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -31,6 +35,75 @@ public final class MessageDeliveryRouteHelper {
     private static final Logger log = LoggerFactory.getLogger(MessageDeliveryRouteHelper.class);
 
     private MessageDeliveryRouteHelper() {
+    }
+
+    /**
+     * 将已解析出的在线设备提交到统一发送入口。
+     *
+     * <p>本机设备逐目标调用 {@link MessageSender#send(Packet, Target)}，保持拦截器和 QoS 语义一致；
+     * 远端设备先按最终落地节点聚合正文，再构造 CLIENT 续传包调用同一个入口，避免跨节点逐设备复制正文。
+     * CLIENT 包在 {@code MessageSender} 内部只继续投递，不会重复执行首次业务拦截器。</p>
+     */
+    public static void deliverOnlineClients(Packet packet, List<LoginClientInfo> clients) {
+        if (packet == null || CollectionUtils.isEmpty(clients)) {
+            return;
+        }
+        String localAddress = MessageServerContext.serverProperties().getLocalServerAddress();
+        boolean clusterEnabled = MessageServerContext.serverProperties().isClusterEnable();
+        Map<String, List<LoginClientInfo>> remoteByNode = new LinkedHashMap<>();
+        for (LoginClientInfo client : clients) {
+            if (client == null) {
+                continue;
+            }
+            Target target = toTarget(client, localAddress);
+            String targetAddress = target.getTargetServerAddress();
+            if (!clusterEnabled || localAddress.equals(targetAddress)) {
+                MessageSender.send(packet, target);
+                continue;
+            }
+            remoteByNode.computeIfAbsent(targetAddress, ignored -> new ArrayList<>()).add(client);
+        }
+        remoteByNode.forEach((nodeAddress, nodeClients) -> deliverRemoteNodeBatches(packet, nodeAddress, nodeClients));
+    }
+
+    private static Target toTarget(LoginClientInfo client, String localAddress) {
+        String address = client.getLoginServerAddress();
+        if (address == null || address.isBlank()) {
+            address = localAddress;
+        }
+        return Target.newBuilder()
+                .appKey(client.getAppKey())
+                .targetIdentity(client.getIdentity())
+                .targetServerAddress(address)
+                .deviceType(client.getDeviceType())
+                .build();
+    }
+
+    private static void deliverRemoteNodeBatches(Packet packet, String nodeAddress,
+                                                 List<LoginClientInfo> nodeClients) {
+        // 首次远端聚合绕过单目标拦截器，因此在始发节点按真实设备登记 QoS；
+        // CLIENT 续传（登录跟随、跨节点落地）已经登记过，不能再次创建定时任务。
+        Metadata sourceMetadata = packet.getMessage() == null ? null : packet.getMessage().getMetadata();
+        if (sourceMetadata == null || !sourceMetadata.isClientForward()) {
+            QosRetryScheduler.scheduleForClients(packet, nodeClients);
+        }
+        int batchSize = MessageConstant.GROUP_FANOUT_REMOTE_TARGET_BATCH;
+        for (int from = 0; from < nodeClients.size(); from += batchSize) {
+            int to = Math.min(from + batchSize, nodeClients.size());
+            List<Target> targets = new ArrayList<>(to - from);
+            for (int index = from; index < to; index++) {
+                targets.add(toTarget(nodeClients.get(index), nodeAddress));
+            }
+            Packet fanoutPacket = packet.clone();
+            Metadata metadata = fanoutPacket.getMessage().ensureMetadata();
+            metadata.ensureClusterRoute().setClusterForwardMode(ClusterForwardModeEnum.CLIENT);
+            metadata.ensureClusterRoute().setFanoutTargets(targets);
+            Target envelopeTarget = Target.newBuilder()
+                    .appKey(metadata.getIngress().getAppKey())
+                    .targetServerAddress(nodeAddress)
+                    .build();
+            MessageSender.send(fanoutPacket, envelopeTarget);
+        }
     }
 
     /**
@@ -131,7 +204,7 @@ public final class MessageDeliveryRouteHelper {
             }
         });
         if (!recipients.isEmpty()) {
-            MessageSender.send(packet, recipients);
+            deliverOnlineClients(packet, recipients);
         }
     }
 
@@ -142,7 +215,7 @@ public final class MessageDeliveryRouteHelper {
             log.debug("IM 用户 {} 不在线，已写入会话索引", userId);
             return;
         }
-        MessageSender.send(packet, clients);
+        deliverOnlineClients(packet, clients);
     }
 
     private static void routeToRecipient(Packet packet, String recipientId,
@@ -177,7 +250,7 @@ public final class MessageDeliveryRouteHelper {
                 : ClientHelper.onlineAll(appKey, message.getFrom(),
                 packet.getDeviceType());
         if (CollectionUtils.isNotEmpty(senderDevices)) {
-            MessageSender.send(packet, senderDevices);
+            deliverOnlineClients(packet, senderDevices);
         }
     }
 
