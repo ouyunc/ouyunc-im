@@ -245,6 +245,59 @@ public class CacheConstant {
     /** 用户设备单聊未读 packetId 集合前缀（有序清除用，member=packetId 十进制串） */
     private static final String USER_DEVICE_UNREAD_IDS = "unread-ids";
 
+    /** 翻译语种目录快照，全平台一份。 */
+    public static final String TRANSLATE_LANGUAGE_CATALOG_KEY = OUYUNC + "translate:languages";
+
+    /** 语种目录变更通知频道。 */
+    public static final String TRANSLATE_LANGUAGE_CATALOG_CHANNEL = OUYUNC + "translate:languages:channel";
+
+    /** 客服会话路由。 */
+    private static final String CS_SESSION_ROUTE = "session-route";
+
+    /** 客服咨询单（ticket）维度最后一条聊天消息 packetId。 */
+    private static final String CS_TICKET = "cs:ticket";
+
+    /** 客服咨询单消息 ZSet 索引（ticket 维度，与 channel sessionId 分离）。 */
+    private static final String MSGS = "msgs";
+
+    /** ticket 维度已读 offset Hash：field={@code readerId:deviceType}，value=max packetId。 */
+    private static final String CS_TICKET_SRO = "session-read";
+
+    /** ticket 维度未读 Hash：field={@code readerId:deviceType}，value=未读计数。 */
+    private static final String CS_TICKET_UR = "unread";
+
+    /** ticket 维度未读 packetId 集合后缀（按 readerDeviceField 分 key）。 */
+    private static final String CS_TICKET_UR_IDS = "unread-ids";
+
+    // ---------- 内容安全（敏感词 / 策略 / 热更新）----------
+
+    /** 平台默认词库租户标记，加载时与租户词库合并。 */
+    public static final String CONTENT_SAFETY_GLOBAL_APP_KEY = "__global__";
+
+    /** Pub/Sub 频道名；payload 为 appKey 或 {@link #CONTENT_SAFETY_RELOAD_ALL}。 */
+    public static final String CONTENT_SAFETY_RELOAD_CHANNEL = OUYUNC + "im:cs:reload";
+
+    /** 内容安全热更新：全部租户失效。 */
+    public static final String CONTENT_SAFETY_RELOAD_ALL = "ALL";
+
+    /**
+     * 业务空闲文案本机缓存失效频道；payload 为 appKey 或 {@link #CONTENT_SAFETY_RELOAD_ALL}。
+     * IM 与 CS 须共用同一 Redis，发布端用 Redisson Topic。
+     */
+    public static final String IDLE_NOTIFY_RELOAD_CHANNEL = IdleNotifyConstant.RELOAD_CHANNEL;
+
+    /**
+     * 关系本机缓存失效 Pub/Sub 频道；payload 为 {@code RelationCacheInvalidateEvent} JSON。
+     * <p>IM 与 micro-cloud 须共用同一 Redis 与本频道名。</p>
+     */
+    public static final String RELATION_CACHE_INVALIDATE_CHANNEL = OUYUNC + "im:relation-cache:invalidate";
+
+    /**
+     * 登录路由本机缓存失效频道。登录绑定或解绑完成后发布，所有 IM 节点清理对应 Caffeine 项。
+     * Redisson Topic 只负责降低旧路由窗口；消息丢失时仍由短 TTL 最终收敛。
+     */
+    public static final String LOGIN_ROUTE_CACHE_INVALIDATE_CHANNEL = OUYUNC + "im:login-route-cache:invalidate";
+
     // ============================================ 集群优化方法 ============================================
 
     /**
@@ -726,12 +779,6 @@ public class CacheConstant {
         return buildBaseCacheKey(appKey) + "translate:limit:ip" + COLON + sanitizeTranslateIp(clientIp) + COLON + epochMinute;
     }
 
-    /** 翻译语种目录快照，全平台一份。 */
-    public static final String TRANSLATE_LANGUAGE_CATALOG_KEY = OUYUNC + "translate:languages";
-
-    /** 语种目录变更通知频道。 */
-    public static final String TRANSLATE_LANGUAGE_CATALOG_CHANNEL = OUYUNC + "translate:languages:channel";
-
     private static String sanitizeTranslateIp(String clientIp) {
         if (clientIp == null || clientIp.isBlank()) {
             return "unknown";
@@ -768,11 +815,6 @@ public class CacheConstant {
     public static String buildHttpPushIdempotentCacheKey(String appKey, String messageId) {
         return buildAggregateCacheKey(appKey, messageId) + HTTP_PUSH_IDEM;
     }
-
-    private static final String CS_SESSION_ROUTE = "session-route";
-
-    /** 客服咨询单（ticket）维度最后一条聊天消息 packetId */
-    private static final String CS_TICKET = "cs:ticket";
 
     /**
      * 客服非 ticket 聚合 key 前缀。
@@ -820,9 +862,6 @@ public class CacheConstant {
         return buildCsTicketAggregateKeyPrefix(appKey, ticketId) + LAST_MESSAGE;
     }
 
-    /** 客服咨询单消息 ZSet 索引（ticket 维度，与 channel sessionId 分离）。 */
-    private static final String MSGS = "msgs";
-
     /**
      * 客服咨询单消息会话 ZSet：member=packetId，score=0。
      */
@@ -830,18 +869,9 @@ public class CacheConstant {
         return buildCsTicketAggregateKeyPrefix(appKey, ticketId) + MSGS;
     }
 
-    /** ticket 维度已读 offset Hash：field={@code readerId:deviceType}，value=max packetId。 */
-    private static final String CS_TICKET_SRO = "session-read";
-
     public static String buildCsTicketReadOffsetHashCacheKey(String appKey, String ticketId) {
         return buildCsTicketAggregateKeyPrefix(appKey, ticketId) + CS_TICKET_SRO;
     }
-
-    /** ticket 维度未读 Hash：field={@code readerId:deviceType}，value=未读计数。 */
-    private static final String CS_TICKET_UR = "unread";
-
-    /** ticket 维度未读 packetId 集合后缀（按 readerDeviceField 分 key）。 */
-    private static final String CS_TICKET_UR_IDS = "unread-ids";
 
     public static String buildCsTicketUnreadHashCacheKey(String appKey, String ticketId) {
         return buildCsTicketAggregateKeyPrefix(appKey, ticketId) + CS_TICKET_UR;
@@ -858,11 +888,6 @@ public class CacheConstant {
     public static String buildCsTicketReaderDeviceField(String readerId, byte deviceType) {
         return readerId + COLON + deviceType;
     }
-
-    // ---------- 内容安全（敏感词 / 策略 / 热更新）----------
-
-    /** 平台默认词库租户标记，加载时与租户词库合并。 */
-    public static final String CONTENT_SAFETY_GLOBAL_APP_KEY = "__global__";
 
     /**
      * 租户策略 Redis String key，值为 ContentSafetyPolicy JSON。
@@ -894,27 +919,4 @@ public class CacheConstant {
         return OUYUNC + "im:cs:version" + COLON + appKey;
     }
 
-    /** Pub/Sub 频道名；payload 为 appKey 或 {@link #CONTENT_SAFETY_RELOAD_ALL}。 */
-    public static final String CONTENT_SAFETY_RELOAD_CHANNEL = OUYUNC + "im:cs:reload";
-
-    /** 内容安全热更新：全部租户失效。 */
-    public static final String CONTENT_SAFETY_RELOAD_ALL = "ALL";
-
-    /**
-     * 业务空闲文案本机缓存失效频道；payload 为 appKey 或 {@link #CONTENT_SAFETY_RELOAD_ALL}。
-     * IM 与 CS 须共用同一 Redis，发布端用 Redisson Topic。
-     */
-    public static final String IDLE_NOTIFY_RELOAD_CHANNEL = IdleNotifyConstant.RELOAD_CHANNEL;
-
-    /**
-     * 关系本机缓存失效 Pub/Sub 频道；payload 为 {@code RelationCacheInvalidateEvent} JSON。
-     * <p>IM 与 micro-cloud 须共用同一 Redis 与本频道名。</p>
-     */
-    public static final String RELATION_CACHE_INVALIDATE_CHANNEL = OUYUNC + "im:relation-cache:invalidate";
-
-    /**
-     * 登录路由本机缓存失效频道。登录绑定或解绑完成后发布，所有 IM 节点清理对应 Caffeine 项。
-     * Redisson Topic 只负责降低旧路由窗口；消息丢失时仍由短 TTL 最终收敛。
-     */
-    public static final String LOGIN_ROUTE_CACHE_INVALIDATE_CHANNEL = OUYUNC + "im:login-route-cache:invalidate";
 }
