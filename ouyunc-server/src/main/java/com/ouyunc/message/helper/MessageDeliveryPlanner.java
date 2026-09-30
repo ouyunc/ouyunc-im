@@ -202,15 +202,13 @@ public final class MessageDeliveryPlanner {
             externalChannels.add(channel);
             confirms.add(DefaultRepository.INSTANCE.publishExternalChannelOutbound(packet, member, channel));
             if (confirms.size() >= MessageConstant.GROUP_EXTERNAL_CHANNEL_CONFIRM_BATCH) {
-                awaitExternalConfirm(packet, confirms);
-                confirmExternalBatch(packet, externalMembers, externalChannels);
+                awaitExternalConfirm(packet, confirms, externalMembers, externalChannels);
                 confirms.clear();
                 externalMembers.clear();
                 externalChannels.clear();
             }
         }
-        awaitExternalConfirm(packet, confirms);
-        confirmExternalBatch(packet, externalMembers, externalChannels);
+        awaitExternalConfirm(packet, confirms, externalMembers, externalChannels);
         if (!imMembers.isEmpty()) {
             sendImGroupMembers(packet, appKey, imMembers);
         }
@@ -252,8 +250,7 @@ public final class MessageDeliveryPlanner {
         }
         CompletableFuture<?> confirmed = DefaultRepository.INSTANCE.publishExternalChannelOutbound(
                 packet, recipientId, channel);
-        awaitExternalConfirm(packet, List.of(confirmed));
-        DefaultRepository.INSTANCE.confirmExternalRecipient(packet, recipientId, channel);
+        awaitExternalConfirm(packet, List.of(confirmed), List.of(recipientId), List.of(channel));
     }
 
     private static void syncSenderDevices(Packet packet, boolean forceSelfSync) {
@@ -303,22 +300,36 @@ public final class MessageDeliveryPlanner {
         return true;
     }
 
-    private static void confirmExternalBatch(Packet packet, List<String> recipients,
-                                             List<MessageDeliveryChannelEnum> channels) {
-        for (int index = 0; index < recipients.size(); index++) {
-            DefaultRepository.INSTANCE.confirmExternalRecipient(packet, recipients.get(index), channels.get(index));
+    /**
+     * 只确认 broker 已成功的收件人。同批其他人失败时不得把已成功项留在 PENDING，
+     * 否则下一次重入会把已经发出的外渠再发一遍。
+     */
+    private static void confirmSucceeded(Packet packet, List<CompletableFuture<?>> confirms,
+                                         List<String> recipients, List<MessageDeliveryChannelEnum> channels) {
+        int size = Math.min(confirms.size(), Math.min(recipients.size(), channels.size()));
+        for (int index = 0; index < size; index++) {
+            CompletableFuture<?> confirm = confirms.get(index);
+            if (confirm.isDone() && !confirm.isCompletedExceptionally() && !confirm.isCancelled()) {
+                DefaultRepository.INSTANCE.confirmExternalRecipient(packet, recipients.get(index), channels.get(index));
+            }
         }
     }
 
-    /** 长连接和 HTTP 都要等外渠进入 broker，失败时不得回受理成功。任务标记在等待之前已经写入。 */
-    private static void awaitExternalConfirm(Packet packet, List<CompletableFuture<?>> confirms) {
+    /**
+     * 长连接和 HTTP 都要等外渠进入 broker，失败时不得回受理成功。任务标记在等待之前已经写入。
+     * 超时或个别失败时，先记下本批已经成功的收件人，再把异常抛给受理链。
+     */
+    private static void awaitExternalConfirm(Packet packet, List<CompletableFuture<?>> confirms,
+                                             List<String> recipients, List<MessageDeliveryChannelEnum> channels) {
         if (packet == null || confirms == null || confirms.isEmpty()) {
             return;
         }
         try {
             CompletableFuture.allOf(confirms.toArray(CompletableFuture[]::new))
                     .get(MessageConstant.EXTERNAL_CHANNEL_CONFIRM_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+            confirmSucceeded(packet, confirms, recipients, channels);
         } catch (Exception error) {
+            confirmSucceeded(packet, confirms, recipients, channels);
             throw new ExternalDeliveryConfirmException("外部渠道任务 broker 确认失败", error);
         }
     }

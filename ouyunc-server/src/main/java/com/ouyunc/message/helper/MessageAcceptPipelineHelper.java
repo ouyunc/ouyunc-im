@@ -170,29 +170,34 @@ public final class MessageAcceptPipelineHelper {
 
     /**
      * Redis 热写结果收口：仅 SUCCESS/DUPLICATE 可回已受理；FAILED/CONFLICT 返回失败结果。
-     * 仅 {@link SaveMessageOutcomeEnum#isFreshWrite()} 时执行 {@code onFreshWrite}。
+     * <p>DUPLICATE 与 SUCCESS 共用 {@code onCommitted}。回调须走可重入完成器：
+     * 已完成则不再扇出，未完成则补投。补投失败或执行权忙时回 UNKNOWN，禁止在首次投递未结束时回成功。</p>
      */
     public static Mono<Void> afterHotSave(ChannelHandlerContext ctx, Packet packet, SaveMessageOutcomeEnum result,
-                                          Runnable onFreshWrite, String failEventMessage) {
-        if (result != null && result.isDuplicate()) {
-            qosAckOnSuccess(ctx, packet);
-            return Mono.empty();
+                                          Runnable onCommitted, String failEventMessage) {
+        if (result != null && (result.isDuplicate() || result.isFreshWrite())) {
+            return completeThenAccept(ctx, packet, onCommitted);
         }
-        if (result == null || !result.isFreshWrite()) {
-            log.error("热写未成功，拒绝 ACK/投递: outcome={} packetId={}", result, packet.getPacketId());
-            ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, failEventMessage != null ? failEventMessage : "消息热写失败", "MessageAcceptPipelineHelper.afterHotSave", packet);
-            releaseQosOnFailure(packet);
-            if (result == SaveMessageOutcomeEnum.CONFLICT) {
-                MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_ID_CONFLICT);
-            } else {
-                // Redis 写入超时可能已提交，不能向客户端承诺“未写入”。
-                MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
-            }
-            return Mono.empty();
+        log.error("热写未成功，拒绝 ACK/投递: outcome={} packetId={}", result, packet.getPacketId());
+        ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, failEventMessage != null ? failEventMessage : "消息热写失败", "MessageAcceptPipelineHelper.afterHotSave", packet);
+        releaseQosOnFailure(packet);
+        if (result == SaveMessageOutcomeEnum.CONFLICT) {
+            MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_ID_CONFLICT);
+        } else {
+            // Redis 写入超时可能已提交，不能向客户端承诺“未写入”。
+            MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
         }
-        if (onFreshWrite != null) {
+        return Mono.empty();
+    }
+
+    /**
+     * 已提交消息先跑完成器，成功后再回已受理。
+     * 使用场景：热写 SUCCESS，以及并发请求在首次投递前撞上 DUPLICATE。
+     */
+    private static Mono<Void> completeThenAccept(ChannelHandlerContext ctx, Packet packet, Runnable onCommitted) {
+        if (onCommitted != null) {
             try {
-                onFreshWrite.run();
+                onCommitted.run();
             } catch (ExternalDeliveryConfirmException error) {
                 log.error("外部渠道未确认，不回受理成功, messageId={}", packet.getMessage().getId(), error);
                 MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.MQ_PERSISTENCE_ERROR);

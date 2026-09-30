@@ -9,11 +9,8 @@ import com.ouyunc.core.context.MessageContext;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
-
-import java.time.Duration;
 
 /**
  * 把“消息已提交”和“首次扇出已完成”分开。
@@ -61,6 +58,26 @@ public final class DeliveryCompletionSupport {
     private static final DefaultRedisScript<Long> RENEW_SCRIPT = new DefaultRedisScript<>("""
             if redis.call('GET', KEYS[1]) ~= ARGV[1] then return 0 end
             return redis.call('PEXPIRE', KEYS[1], ARGV[2])
+            """, Long.class);
+
+    /**
+     * 外渠任务只允许空/P → P，已确认的 C 不得回退。
+     * HGET 与 HSET 必须在同一脚本内，避免租约过期后旧执行者覆盖新确认。
+     * 返回 1 表示已写入 PENDING，0 表示已经是 CONFIRMED。
+     */
+    private static final DefaultRedisScript<Long> MARK_PENDING_SCRIPT = new DefaultRedisScript<>("""
+            local current = redis.call('HGET', KEYS[1], ARGV[1])
+            if current == ARGV[3] then return 0 end
+            redis.call('HSET', KEYS[1], ARGV[1], ARGV[2])
+            redis.call('PEXPIRE', KEYS[1], ARGV[4])
+            return 1
+            """, Long.class);
+
+    /** 确认只升级为 C，并与 TTL 同一脚本提交，避免只写状态、过期失败。 */
+    private static final DefaultRedisScript<Long> CONFIRM_SCRIPT = new DefaultRedisScript<>("""
+            redis.call('HSET', KEYS[1], ARGV[1], ARGV[2])
+            redis.call('PEXPIRE', KEYS[1], ARGV[3])
+            return 1
             """, Long.class);
 
     public enum RunState {
@@ -142,14 +159,10 @@ public final class DeliveryCompletionSupport {
         if (key == null || field == null) {
             return false;
         }
-        HashOperations<String, String, String> hash = redis.opsForHash();
-        Object current = hash.get(key, field);
-        if (TASK_CONFIRMED.equals(current)) {
-            return false;
-        }
-        hash.put(key, field, TASK_PENDING);
-        redis.expire(key, Duration.ofMillis(MessageContext.messageHotDataTtlMillis()));
-        return true;
+        Long written = redis.execute(MARK_PENDING_SCRIPT, java.util.List.of(key),
+                field, TASK_PENDING, TASK_CONFIRMED,
+                String.valueOf(MessageContext.messageHotDataTtlMillis()));
+        return Long.valueOf(1L).equals(written);
     }
 
     public boolean isExternalConfirmed(Packet packet, String recipientId, MessageDeliveryChannelEnum channel) {
@@ -168,8 +181,8 @@ public final class DeliveryCompletionSupport {
             log.warn("外渠完成记录缺少身份, recipientId={}", recipientId);
             return;
         }
-        redis.opsForHash().put(key, field, TASK_CONFIRMED);
-        redis.expire(key, Duration.ofMillis(MessageContext.messageHotDataTtlMillis()));
+        redis.execute(CONFIRM_SCRIPT, java.util.List.of(key),
+                field, TASK_CONFIRMED, String.valueOf(MessageContext.messageHotDataTtlMillis()));
     }
 
     private static String doneKey(Packet packet) {

@@ -77,10 +77,10 @@ public final class ThreadPoolManager {
                     TimeUnit.SECONDS,
                     new SynchronousQueue<>(),
                     factory,
-                    new ThreadPoolExecutor.AbortPolicy());
+                    countingAbort());
             case SCHEDULED -> createScheduled(config, factory);
             case SINGLE -> new ThreadPoolExecutor(1, 1, 0, TimeUnit.SECONDS,
-                    new LinkedBlockingQueue<>(config.maxPendingTasks()), factory, new ThreadPoolExecutor.AbortPolicy());
+                    new LinkedBlockingQueue<>(config.maxPendingTasks()), factory, countingAbort());
         };
     }
 
@@ -95,14 +95,14 @@ public final class ThreadPoolManager {
         }
         ThreadPoolExecutor executor = new ThreadPoolExecutor(coreSize, maxSize,
                 config.keepAliveSeconds(), TimeUnit.SECONDS,
-                queue, factory, new ThreadPoolExecutor.AbortPolicy());
+                queue, factory, countingAbort());
         executor.allowCoreThreadTimeOut(config.allowCoreThreadTimeout());
         return executor;
     }
 
     private static ScheduledExecutorService createScheduled(ThreadPoolConfig.PoolConfig config, ThreadFactory factory) {
         int size = Math.max(1, config.coreSize());
-        ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(size, factory);
+        ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(size, factory, countingAbort());
         executor.setRemoveOnCancelPolicy(true);
         executor.setExecuteExistingDelayedTasksAfterShutdownPolicy(false);
         // SCHEDULED 类型通常不需要核心线程超时，保持线程常驻以提高性能
@@ -247,7 +247,7 @@ public final class ThreadPoolManager {
                         tpe.getCompletedTaskCount(),
                         tpe.getTaskCount(),
                         Optional.ofNullable(queue).map(BlockingQueue::size).orElse(-1),
-                        0L
+                        readRejectedCount(tpe)
                 );
             }
             if (executor instanceof ScheduledThreadPoolExecutor stpe) {
@@ -261,7 +261,7 @@ public final class ThreadPoolManager {
                         stpe.getCompletedTaskCount(),
                         stpe.getTaskCount(),
                         Optional.ofNullable(queue).map(BlockingQueue::size).orElse(-1),
-                        0L
+                        readRejectedCount(stpe)
                 );
             }
             return new ThreadPoolMetrics(
@@ -275,6 +275,36 @@ public final class ThreadPoolManager {
                     -1,
                     0L
             );
+        }
+    }
+
+    private static CountingAbortPolicy countingAbort() {
+        return new CountingAbortPolicy();
+    }
+
+    /** 标准池的 AbortPolicy 不计数；只有本类安装的策略才能读出真实拒绝数。 */
+    private static long readRejectedCount(ThreadPoolExecutor executor) {
+        if (executor.getRejectedExecutionHandler() instanceof CountingAbortPolicy counting) {
+            return counting.rejectedCount();
+        }
+        return -1L;
+    }
+
+    /**
+     * 拒绝时先计数再按 AbortPolicy 抛出，供监控读取。
+     * 虚拟线程池走 {@link BoundedTaskExecutor}，不使用本策略。
+     */
+    static final class CountingAbortPolicy extends ThreadPoolExecutor.AbortPolicy {
+        private final java.util.concurrent.atomic.AtomicLong rejected = new java.util.concurrent.atomic.AtomicLong();
+
+        @Override
+        public void rejectedExecution(Runnable runnable, ThreadPoolExecutor executor) {
+            rejected.incrementAndGet();
+            super.rejectedExecution(runnable, executor);
+        }
+
+        long rejectedCount() {
+            return rejected.get();
         }
     }
 
