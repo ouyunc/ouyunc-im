@@ -407,7 +407,9 @@ public final class NodeLeaseKeeper {
                     run.deadRouteCleanups.remove(entry.getKey(), cleanup);
                     continue;
                 }
-                if (LoginSessionDirectoryHelper.cleanupDeadNodeRoutes(cleanup.nodeId(), cleanup.epoch())) {
+                LoginSessionDirectoryHelper.DeadRouteDrain drain = LoginSessionDirectoryHelper.drainDeadNodeRoutes(
+                        cleanup.nodeId(), cleanup.epoch(), run.payload.getOwnerToken());
+                if (drain == LoginSessionDirectoryHelper.DeadRouteDrain.DONE) {
                     run.deadRouteCleanups.remove(entry.getKey(), cleanup);
                     log.info("死亡节点路由后台清理完成 deadNode={} epoch={}", cleanup.nodeId(), cleanup.epoch());
                 }

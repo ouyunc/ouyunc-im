@@ -67,6 +67,9 @@ public class CacheConstant {
     /** 节点 epoch 下的路由反向索引，仅用于死亡节点后台清理 */
     private static final String IM_NODE_ROUTES = "im:node-routes";
 
+    /** 死亡 epoch 清扫锁，与反向索引同槽，保证同一代只有一个存活节点在扫 */
+    private static final String IM_NODE_ROUTE_CLEAN = "im:node-route-clean";
+
     /** 进程租约 */
     private static final String IM_NODE = "im:node";
 
@@ -448,6 +451,13 @@ public class CacheConstant {
      */
     public static String buildImNodeRouteIndexCacheKey(String nodeId, long epoch) {
         return OUYUNC + IM_NODE_ROUTES + COLON + withHashTag(nodeId) + COLON + epoch;
+    }
+
+    /**
+     * 死亡节点路由清扫锁。与反向索引使用同一个 nodeId 槽；value 为持有者 token。
+     */
+    public static String buildImNodeRouteCleanupLockCacheKey(String nodeId, long epoch) {
+        return OUYUNC + IM_NODE_ROUTE_CLEAN + COLON + withHashTag(nodeId) + COLON + epoch;
     }
 
     /**
