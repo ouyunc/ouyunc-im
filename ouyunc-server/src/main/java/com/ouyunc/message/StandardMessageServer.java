@@ -21,7 +21,6 @@ import com.ouyunc.core.properties.CommandLineArgs;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.dispatcher.ProtocolDispatcherBiProcessor;
 import com.ouyunc.message.monitor.MonitorInitializer;
-import com.ouyunc.message.safety.ProductionSecretGuard;
 import com.ouyunc.message.processor.*;
 import com.ouyunc.message.properties.MessageServerProperties;
 import io.netty.channel.ChannelHandlerContext;
@@ -56,7 +55,6 @@ public class StandardMessageServer extends AbstractMessageServer {
         MessageServerContext.messageProperties =  loadArgsProperties(loader.loadProperties(MessageServerProperties.class, System.getProperties()), resolverArgs(args));
         // 设置本地localhost
         MessageServerContext.serverProperties().setLocalHost(IpUtil.getLocalHost());
-        ProductionSecretGuard.assertSafe(MessageServerContext.serverProperties());
         log.debug("配置信息加载完成：{}", MessageServerContext.serverProperties().toString());
     }
 
