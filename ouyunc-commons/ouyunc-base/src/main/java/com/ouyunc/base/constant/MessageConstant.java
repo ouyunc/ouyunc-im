@@ -422,9 +422,9 @@ public class MessageConstant {
     public static final long IM_APP_KEY_CONN_QUOTA_LUA_OK = 1L;
 
     /**
-     * 配额 SYNC 固定 ARGV 个数：nodeId、localCount、ttlSeconds，其后为存活 nodeId。
+     * 配额 SYNC 固定 ARGV 个数：nodeId、localCount、ttlSeconds、staleSeconds，其后为存活 nodeId。
      */
-    public static final int IM_APP_KEY_CONN_QUOTA_SYNC_FIXED_ARGV = 3;
+    public static final int IM_APP_KEY_CONN_QUOTA_SYNC_FIXED_ARGV = 4;
 
     /**
      * WS 握手签名：identity、signature、createTime 必须同时出现。
