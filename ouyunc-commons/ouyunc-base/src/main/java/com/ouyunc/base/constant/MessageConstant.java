@@ -396,8 +396,8 @@ public class MessageConstant {
     /** 配额管道每批最多处理的 HASH 数。 */
     public static final int IM_NODE_QUOTA_SYNC_BATCH = 128;
 
-    /** 配额同步 Lua 操作同槽的计数 HASH 与最后刷新时间 HASH。 */
-    public static final int IM_NODE_QUOTA_SCRIPT_KEY_COUNT = 2;
+    /** 配额同步 Lua 只操作一把配额 HASH。 */
+    public static final int IM_NODE_QUOTA_SCRIPT_KEY_COUNT = 1;
 
     /** 租约 Lua 发布/清理成功返回值。 */
     public static final long IM_NODE_LEASE_LUA_OK = 1L;

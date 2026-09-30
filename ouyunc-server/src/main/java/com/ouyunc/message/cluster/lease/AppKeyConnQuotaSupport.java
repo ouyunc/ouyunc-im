@@ -23,8 +23,8 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.TimeUnit;
 
 /**
- * appKey 连接上限：同槽 HASH（field=nodeId）Lua 求和后再 HINCRBY，避免读远端租约 HASH 再本机 CAS 的窗口。
- * 节点宕机残留 field 由心跳 SYNC 按存活租约剔除。
+ * appKey 连接上限：一把 HASH，field=nodeId，value=count|lastSeenUnixSeconds。
+ * Lua 只累加竖线前的连接数。失联节点用 value 里的时间判断宽限，到期后由心跳删除。
  */
 public final class AppKeyConnQuotaSupport {
 
@@ -46,7 +46,7 @@ public final class AppKeyConnQuotaSupport {
     }
 
     /**
-     * 登录路径原子预占：同槽 HASH 上 Lua 求和后再 HINCRBY，成功后增加本机计数。
+     * 登录路径原子预占：Lua 求和后写回 count|now，成功后增加本机计数。
      *
      * @param appKey          租户标识；空白时直接拒绝
      * @param maxConnections  该 appKey 允许的连接上限
@@ -92,7 +92,8 @@ public final class AppKeyConnQuotaSupport {
                 LocalNodeConnCounter.decrement(appKey);
                 // releaseAsync 可能晚于关连钩子执行，必须在真正减数后再触发统计发布。
                 SessionNodeState.scheduleConnPublish();
-                eval(RELEASE_SCRIPT, appKey, SessionNodeState.localNodeId());
+                eval(RELEASE_SCRIPT, appKey, SessionNodeState.localNodeId(),
+                        String.valueOf(MessageConstant.IM_APP_KEY_CONN_QUOTA_TTL_SECONDS));
             } finally {
                 lock.unlock();
             }
@@ -139,7 +140,7 @@ public final class AppKeyConnQuotaSupport {
                 continue;
             }
             try {
-                sum += Long.parseLong(String.valueOf(raw));
+                sum += countOf(String.valueOf(raw));
             } catch (NumberFormatException ignored) {
                 // 脏 field 不计
             }
@@ -149,7 +150,7 @@ public final class AppKeyConnQuotaSupport {
 
     /**
      * 租约维护任务：同一时刻仅一个任务执行，Lua 按有限批次走管道，不再占用核心续租路径。
-     * 本机字段刷新不依赖快照对象身份；远端字段只有在成员缺失且自身时间戳超过宽限期后才删除。
+     * 本机字段刷新不依赖快照对象身份。远端 field 不在存活租约里时，对齐时间超过宽限或缺少时间就删除。
      * 无本机连接时不扫描整个 Redis；无活节点维护的孤儿 HASH 由原有 TTL 自然回收。
      *
      * @param snapshot 当前存活节点租约，用于判断远端 field 是否仍有维护者
@@ -212,8 +213,6 @@ public final class AppKeyConnQuotaSupport {
                         String currentCount = String.valueOf(LocalNodeConnCounter.get(item.appKey()));
                         List<byte[]> keysAndArgs = new ArrayList<>();
                         keysAndArgs.add(CacheConstant.buildAppKeyConnQuotaHashCacheKey(item.appKey())
-                                .getBytes(StandardCharsets.UTF_8));
-                        keysAndArgs.add(CacheConstant.buildAppKeyConnQuotaSeenHashCacheKey(item.appKey())
                                 .getBytes(StandardCharsets.UTF_8));
                         keysAndArgs.add(nodeId.getBytes(StandardCharsets.UTF_8));
                         keysAndArgs.add(currentCount.getBytes(StandardCharsets.UTF_8));
@@ -288,6 +287,16 @@ public final class AppKeyConnQuotaSupport {
         redisScript.setScriptText(lua.getScript());
         redisScript.setResultType(Long.class);
         return redisScript;
+    }
+
+    /** value 形如 {@code 12|1710000000}，只取连接数。 */
+    private static long countOf(String raw) {
+        if (raw == null || raw.isEmpty()) {
+            return 0L;
+        }
+        int split = raw.indexOf('|');
+        String count = split >= 0 ? raw.substring(0, split) : raw;
+        return Long.parseLong(count);
     }
 
     private static Long eval(DefaultRedisScript<Long> script, String appKey, String... args) {

@@ -733,21 +733,27 @@ public enum LuaScriptEnum {
             """, "客服 ticket 已读清未读"),
 
     /**
-     * appKey 连接配额预占。HASH field=nodeId，整 key 打 {@code {appKey}} 槽，跨节点可原子求和。
+     * appKey 连接配额预占。HASH field=nodeId，value=count|lastSeenUnixSeconds。
      * KEYS[1]=quotaHash ARGV[1]=nodeId ARGV[2]=maxConnections ARGV[3]=ttlSeconds
      */
     APP_KEY_CONN_RESERVE_SCRIPT("1", """
+            local function countOf(raw)
+              if not raw then return 0 end
+              return tonumber(string.match(raw, '^(%d+)')) or 0
+            end
             local max = tonumber(ARGV[2])
             local ttl = tonumber(ARGV[3]) or 0
             local sum = 0
             local vals = redis.call('HVALS', KEYS[1])
             for i = 1, #vals do
-              sum = sum + (tonumber(vals[i]) or 0)
+              sum = sum + countOf(vals[i])
             end
             if max ~= nil and max >= 0 and sum >= max then
               return 0
             end
-            redis.call('HINCRBY', KEYS[1], ARGV[1], 1)
+            local n = countOf(redis.call('HGET', KEYS[1], ARGV[1])) + 1
+            local now = redis.call('TIME')[1]
+            redis.call('HSET', KEYS[1], ARGV[1], n .. '|' .. now)
             if ttl > 0 then
               redis.call('EXPIRE', KEYS[1], ttl)
             end
@@ -755,13 +761,24 @@ public enum LuaScriptEnum {
             """, "appKey 连接配额预占"),
 
     /**
-     * 释放本节点一格配额。
-     * KEYS[1]=quotaHash ARGV[1]=nodeId
+     * 释放本节点一格配额，并刷新本节点的对齐时间。减到 0 时 field 整个删除。
+     * KEYS[1]=quotaHash ARGV[1]=nodeId ARGV[2]=ttlSeconds
      */
     APP_KEY_CONN_RELEASE_SCRIPT("1", """
-            local n = tonumber(redis.call('HINCRBY', KEYS[1], ARGV[1], -1)) or 0
+            local function countOf(raw)
+              if not raw then return 0 end
+              return tonumber(string.match(raw, '^(%d+)')) or 0
+            end
+            local n = countOf(redis.call('HGET', KEYS[1], ARGV[1])) - 1
             if n <= 0 then
               redis.call('HDEL', KEYS[1], ARGV[1])
+            else
+              local now = redis.call('TIME')[1]
+              redis.call('HSET', KEYS[1], ARGV[1], n .. '|' .. now)
+            end
+            local ttl = tonumber(ARGV[2]) or 0
+            if ttl > 0 and redis.call('EXISTS', KEYS[1]) == 1 then
+              redis.call('EXPIRE', KEYS[1], ttl)
             end
             return 1
             """, "appKey 连接配额释放"),
@@ -852,16 +869,20 @@ public enum LuaScriptEnum {
             """, "审批处理权释放"),
 
     /**
-     * 心跳：把本节点 field 写成本地真实计数，并删掉已不在租约里的节点 field。
-     * KEYS=quotaHash,seenHash；ARGV=nodeId, localCount, ttlSeconds, staleSeconds, liveNodeId...
+     * 心跳：把本节点 field 写成本地真实计数和时间，并删掉失联超过宽限的节点 field。
+     * value=count|lastSeenUnixSeconds。KEYS[1]=quotaHash。
+     * ARGV=nodeId, localCount, ttlSeconds, staleSeconds, liveNodeId...
      */
     APP_KEY_CONN_SYNC_SCRIPT("1", """
+            local function seenOf(raw)
+              if not raw then return nil end
+              return tonumber(string.match(raw, '|(%d+)$'))
+            end
             local nodeId = ARGV[1]
             local count = tonumber(ARGV[2]) or 0
             local ttl = tonumber(ARGV[3]) or 0
             local stale = tonumber(ARGV[4]) or 0
-            local clock = redis.call('TIME')
-            local now = tonumber(clock[1])
+            local now = tonumber(redis.call('TIME')[1])
             if #ARGV >= 5 then
               local live = {}
               for i = 5, #ARGV do
@@ -870,26 +891,20 @@ public enum LuaScriptEnum {
               local fields = redis.call('HKEYS', KEYS[1])
               for i = 1, #fields do
                 if fields[i] ~= nodeId and live[fields[i]] ~= true then
-                  local seen = tonumber(redis.call('HGET', KEYS[2], fields[i]))
-                  if seen and stale > 0 and now - seen >= stale then
+                  local seen = seenOf(redis.call('HGET', KEYS[1], fields[i]))
+                  if not seen or (stale > 0 and now - seen >= stale) then
                     redis.call('HDEL', KEYS[1], fields[i])
-                    redis.call('HDEL', KEYS[2], fields[i])
-                  elseif not seen then
-                    redis.call('HSET', KEYS[2], fields[i], now)
                   end
                 end
               end
             end
             if count <= 0 then
               redis.call('HDEL', KEYS[1], nodeId)
-              redis.call('HDEL', KEYS[2], nodeId)
             else
-              redis.call('HSET', KEYS[1], nodeId, count)
-              redis.call('HSET', KEYS[2], nodeId, now)
+              redis.call('HSET', KEYS[1], nodeId, count .. '|' .. now)
             end
             if ttl > 0 and redis.call('EXISTS', KEYS[1]) == 1 then
               redis.call('EXPIRE', KEYS[1], ttl)
-              redis.call('EXPIRE', KEYS[2], ttl)
             end
             return 1
             """, "appKey 连接配额心跳对齐");

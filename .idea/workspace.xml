@@ -8,8 +8,9 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/CacheConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/CacheConstant.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/MessageConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/MessageConstant.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/cluster/lease/NodeLeaseKeeper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/cluster/lease/NodeLeaseKeeper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/LoginSessionDirectoryHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/LoginSessionDirectoryHelper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/enums/LuaScriptEnum.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/enums/LuaScriptEnum.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/cluster/lease/AppKeyConnQuotaSupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/cluster/lease/AppKeyConnQuotaSupport.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/validator/AppKeyValidator.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/validator/AppKeyValidator.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -202,14 +203,6 @@
       <workItem from="1789910587669" duration="15496000" />
       <workItem from="1790077280132" duration="19038000" />
       <workItem from="1790514949006" duration="2013000" />
-    </task>
-    <task id="LOCAL-00105" summary="增加客户端packet 协议">
-      <option name="closed" value="true" />
-      <created>1790309782371</created>
-      <option name="number" value="00105" />
-      <option name="presentableId" value="LOCAL-00105" />
-      <option name="project" value="LOCAL" />
-      <updated>1790309782371</updated>
     </task>
     <task id="LOCAL-00106" summary="增加客户端packet 协议">
       <option name="closed" value="true" />
@@ -595,7 +588,15 @@
       <option name="project" value="LOCAL" />
       <updated>1790745063423</updated>
     </task>
-    <option name="localTasksCounter" value="154" />
+    <task id="LOCAL-00154" summary="增加客户端packet 协议">
+      <option name="closed" value="true" />
+      <created>1790759413205</created>
+      <option name="number" value="00154" />
+      <option name="presentableId" value="LOCAL-00154" />
+      <option name="project" value="LOCAL" />
+      <updated>1790759413206</updated>
+    </task>
+    <option name="localTasksCounter" value="155" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

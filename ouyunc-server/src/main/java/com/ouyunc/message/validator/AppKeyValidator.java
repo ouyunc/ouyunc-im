@@ -37,7 +37,7 @@ public enum AppKeyValidator implements Validator<String> {
     }
 
     /**
-     * 登录路径原子预占：先 Lua 集群求和再 HINCRBY，再记本机计数。
+     * 登录路径原子预占：先 Lua 求和再写回 count|now，再记本机计数。
      * 成功则打 {@link MessageConstant#CHANNEL_ATTR_KEY_CONN_QUOTA_RESERVED}，
      * {@link com.ouyunc.message.helper.ClientHelper#registerLocal} 不再二次 INCR。
      */

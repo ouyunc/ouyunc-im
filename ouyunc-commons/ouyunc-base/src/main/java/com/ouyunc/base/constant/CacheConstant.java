@@ -79,9 +79,8 @@ public class CacheConstant {
     /** 节点连接数 HASH */
     private static final String IM_CONN = "im:conn";
 
-    /** appKey 连接配额 HASH */
+    /** appKey 连接配额 HASH，field=nodeId，value=count|lastSeenUnixSeconds */
     private static final String IM_QUOTA = "im:quota";
-    private static final String IM_QUOTA_SEEN_SUFFIX = "seen";
 
     /***
      * 用户
@@ -490,15 +489,11 @@ public class CacheConstant {
     }
 
     /**
-     * appKey 连接配额 HASH：field=nodeId，value=count。标签 {@code {appKey}}，各节点 Lua 求和预占同一槽。
+     * appKey 连接配额 HASH：field=nodeId，value=count|lastSeenUnixSeconds。
+     * 标签 {@code {appKey}}，各节点在同一槽上原子求和预占。
      */
     public static String buildAppKeyConnQuotaHashCacheKey(String appKey) {
         return OUYUNC + IM_QUOTA + COLON + withHashTag(sanitizeAppKeyToken(appKey));
-    }
-
-    /** 配额节点最后刷新时间 HASH，与配额 HASH 使用相同 appKey 标签，供 Lua 原子清理失联字段。 */
-    public static String buildAppKeyConnQuotaSeenHashCacheKey(String appKey) {
-        return buildAppKeyConnQuotaHashCacheKey(appKey) + COLON + IM_QUOTA_SEEN_SUFFIX;
     }
 
     /**
