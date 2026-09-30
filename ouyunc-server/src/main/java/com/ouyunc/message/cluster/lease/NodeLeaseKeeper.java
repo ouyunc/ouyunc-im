@@ -77,7 +77,7 @@ public final class NodeLeaseKeeper {
 
     /**
      * 先撤销运行资格，再等待已进入临界区的工作结束，最后按所有权清理 Redis。
-     * 不删除发现 SET 成员：跨槽直接 SREM 可能误删新实例，由注册索引原子到期回收。
+     * 不删除发现索引成员：直接 ZREM 可能误删同一 nodeId 的新实例，由后续注册按 score 到期回收。
      */
     public static void stop() {
         synchronized (LIFECYCLE_LOCK) {
@@ -191,7 +191,7 @@ public final class NodeLeaseKeeper {
      */
     public static Map<String, NodeLeasePayload> loadLiveLeases() {
         StringRedisTemplate redis = CacheFactory.STRING_REDIS.instance();
-        Set<String> nodeIds = redis.opsForSet().members(CacheConstant.buildImNodeSetCacheKey());
+        Set<String> nodeIds = redis.opsForZSet().range(CacheConstant.buildImNodeRegistryCacheKey(), 0, -1);
         if (nodeIds == null || nodeIds.isEmpty()) {
             return Map.of();
         }

@@ -73,7 +73,7 @@ public class CacheConstant {
     /** 进程租约 */
     private static final String IM_NODE = "im:node";
 
-    /** 登记节点 id 集合 */
+    /** 登记节点发现索引（ZSET，score 为到期时间） */
     private static final String IM_NODES = "im:nodes";
 
     /** 节点连接数 HASH */
@@ -467,18 +467,11 @@ public class CacheConstant {
     }
 
     /**
-     * 当前登记过的 IM 节点 id 集合（小 SET，心跳 SADD）。
+     * 登记过的 IM 节点发现索引（ZSET）。member=nodeId，score=Redis 时间 + 租约 TTL。
+     * 心跳 ZADD 刷新到期时间，并按 score 回收过期成员。节点是否存活仍以各自租约 key 为准。
      */
-    public static String buildImNodeSetCacheKey() {
+    public static String buildImNodeRegistryCacheKey() {
         return OUYUNC + IM_NODES;
-    }
-
-    /**
-     * 注册索引到期时间。标签使用整个旧 SET key，使新 ZSET 与无标签的旧 SET 位于同一槽。
-     * 仅用于原子回收发现索引，节点是否存活仍以各自租约 key 为准。
-     */
-    public static String buildImNodeRegistryExpiryCacheKey() {
-        return withHashTag(buildImNodeSetCacheKey()) + COLON + "expiry";
     }
 
     /**

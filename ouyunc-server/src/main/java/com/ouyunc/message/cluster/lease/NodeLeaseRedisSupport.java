@@ -11,7 +11,7 @@ import java.util.Map;
 
 /**
  * 租约 Redis 原子操作。每个脚本只操作同槽 key；DefaultRedisScript 负责 SHA 缓存和 NOSCRIPT 回退。
- * 注册集合是发现索引，不能根据一次跨槽 GET 的结果直接 SREM。
+ * 发现索引是单个 ZSET。停机不按跨槽 GET 的结果删成员，过期由注册脚本按 score 回收。
  */
 final class NodeLeaseRedisSupport {
 
@@ -42,20 +42,18 @@ final class NodeLeaseRedisSupport {
             """, Long.class);
 
     /**
-     * Redis TIME 为注册索引提供统一时钟。注册/过期判断/移除同槽串行执行：
-     * 新一轮注册已经刷新 score 时，旧清理无法再删除这个成员。
-     * 停机不主动 SREM，剩余索引由到期回收，实际租约删除后读路径立即忽略它。
+     * Redis TIME 为发现索引提供统一时钟。先刷新本成员 score，再按 score 删除已到期成员：
+     * 本轮刚续期的节点 score 已在 now 之后，不会被同一脚本删掉。
+     * 停机不主动 ZREM，剩余索引由后续注册到期回收；租约删除后读路径立即忽略它。
      */
     private static final DefaultRedisScript<Long> REGISTER = new DefaultRedisScript<>("""
             local clock = redis.call('TIME')
             local now = tonumber(clock[1]) + tonumber(clock[2]) / 1000000
-            redis.call('SADD', KEYS[1], ARGV[1])
-            redis.call('ZADD', KEYS[2], now + tonumber(ARGV[2]), ARGV[1])
-            local expired = redis.call('ZRANGEBYSCORE', KEYS[2], '-inf', now,
+            redis.call('ZADD', KEYS[1], now + tonumber(ARGV[2]), ARGV[1])
+            local expired = redis.call('ZRANGEBYSCORE', KEYS[1], '-inf', now,
                 'LIMIT', 0, tonumber(ARGV[3]))
-            for _, node in ipairs(expired) do
-                redis.call('SREM', KEYS[1], node)
-                redis.call('ZREM', KEYS[2], node)
+            if #expired > 0 then
+                redis.call('ZREM', KEYS[1], unpack(expired))
             end
             return 1
             """, Long.class);
@@ -90,8 +88,7 @@ final class NodeLeaseRedisSupport {
     }
 
     static void register(StringRedisTemplate redis, String nodeId) {
-        Long result = redis.execute(REGISTER, List.of(CacheConstant.buildImNodeSetCacheKey(),
-                        CacheConstant.buildImNodeRegistryExpiryCacheKey()), nodeId,
+        Long result = redis.execute(REGISTER, List.of(CacheConstant.buildImNodeRegistryCacheKey()), nodeId,
                 String.valueOf(MessageConstant.IM_NODE_LEASE_TTL_SECONDS),
                 String.valueOf(MessageConstant.IM_NODE_REGISTRY_CLEANUP_BATCH));
         if (result == null || result != MessageConstant.IM_NODE_LEASE_LUA_OK) {
