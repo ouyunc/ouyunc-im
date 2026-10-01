@@ -249,7 +249,7 @@ ouyunc:
         gateway: false
       routing:
         # flat: 全集群任意中转（默认）；zone-aware: 区内自由、跨区经 gateway
-        mode: zone-aware
+        mode: flat
         # gateway: 跨区仅经各分区 gateway；any: 跨区允许任意可达节点
         cross-zone-via: gateway
       # 分区拓扑示例（zone-aware 模式下必填）：

@@ -141,22 +141,33 @@ function log(direction, text) {
     logEl.scrollTop = logEl.scrollHeight;
 }
 
+function formatPayload(payload) {
+    try {
+        return JSON.stringify(payload, null, 2);
+    } catch (e) {
+        return String(payload);
+    }
+}
+
 /**
- * 直接打印服务端完整数据。WebSocket 的关键协议字段提升到第一层，
- * 无须展开 message 就能看到消息类型、内容类型和完整正文。
+ * 服务端报文写入右侧黑窗，并保留控制台副本。
+ * 心跳只记一行，避免把对话刷掉。
  */
 function consoleServerMessage(payload) {
     const message = payload?.message;
-    if (message) {
-        console.log({
-            messageType: payload.messageType,
-            contentType: message.contentType,
-            content: message.content,
-            ...payload
-        });
+    const visible = message
+        ? {messageType: payload.messageType, contentType: message.contentType, content: message.content, ...payload}
+        : payload;
+    console.log(visible);
+    if (payload?.messageType === -1) {
+        log('收', '心跳');
         return;
     }
-    console.log(payload);
+    const messageType = payload?.messageType;
+    const name = TYPES[messageType] || (messageType == null ? 'HTTP' : String(messageType));
+    const from = message?.from ? ` from=${message.from}` : '';
+    const to = message?.to ? ` to=${message.to}` : '';
+    log('收', `${name}${from}${to}\n${formatPayload(visible)}`);
 }
 
 function setStatus(text) { statusEl.textContent = text; }
@@ -192,7 +203,7 @@ function send(messageType, contentType, to, toType, content, qos, messageId, fro
         pendingChatMessageId = sentId;
         lastChatId = '';
     }
-    log('发', `${TYPES[messageType] || messageType} contentType=${contentType} id=${sentId} to=${to}`);
+    log('发', `${TYPES[messageType] || messageType} → ${to || '服务器'} id=${sentId}\n${content == null ? '' : String(content)}`);
     return sentId;
 }
 
@@ -274,32 +285,25 @@ document.getElementById('btnConnect').onclick = () => {
         setStatus('已连接，正在登录');
         log('·', 'WebSocket 已打开，发送登录');
         const packet = socket.send(loginPacket());
-        log('发', `登录 messageId=${packet.message.id}`);
+        log('发', `登录 → 服务器 messageId=${packet.message.id}\n${packet.message.content}`);
     };
     socket.onmessage = (packet) => {
-        // 必须放在业务摘要和分支解析之前，确保所有已解码的服务端 Packet 都完整可见。
+        // 黑窗展示完整报文；这里只更新登录状态和撤回/已读要用的 packetId。
         consoleServerMessage(packet);
         const message = packet.message || {};
-        const name = TYPES[packet.messageType] || String(packet.messageType);
-        let extra = '';
         if (packet.messageType === -5 && message.content) {
             try {
                 const result = JSON.parse(message.content);
                 if (result.status === 'ACCEPTED' && result.packetId && result.messageId === pendingChatMessageId) {
                     lastChatId = String(result.packetId);
                 }
-                extra = ` status=${result.status} messageId=${result.messageId} packetId=${result.packetId || ''} code=${result.code || ''}`;
             } catch (e) {
-                extra = ' ' + message.content;
+                // 受理结果不是 JSON 时，完整正文已由 consoleServerMessage 写入黑窗。
             }
         } else if (packet.messageType === -2) {
-            extra = ` contentType=${message.contentType} ${message.content || ''}`;
             if (message.contentType === -4) setStatus('已登录 ' + identity());
             if (message.contentType === -3) setStatus('登录失败');
-        } else if (message.content) {
-            extra = ' ' + String(message.content).slice(0, 180);
         }
-        log('收', `${name} packetId=${packet.packetId}${extra}`);
     };
     socket.onclose = () => {
         setStatus('连接已关闭');
@@ -342,7 +346,7 @@ async function httpGet(path) {
             headers: Object.fromEntries(response.headers.entries()),
             body: responseText
         });
-        log('收', `${response.status} ${path} ${responseText}`);
+        log('收', `${response.status} ${path}`);
     } catch (error) {
         console.error(`[OUYUNC-IM][HTTP GET ${path}] 请求失败`, error);
         log('!', path + ' ' + error);
@@ -379,7 +383,7 @@ document.getElementById('btnPush').onclick = async () => {
             headers: Object.fromEntries(response.headers.entries()),
             body: responseText
         });
-        log('收', `${response.status} push ${responseText}`);
+        log('收', `${response.status} push`);
     } catch (error) {
         console.error('[OUYUNC-IM][HTTP POST /api/im/message/push] 请求失败', error);
         log('!', 'push ' + error);

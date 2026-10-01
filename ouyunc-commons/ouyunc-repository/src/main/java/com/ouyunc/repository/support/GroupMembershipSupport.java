@@ -6,7 +6,6 @@ import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
-import com.ouyunc.cache.distributed.redis.RedisPipelineSupport;
 import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.relation.RelationCacheInvalidatePublisher;
 import com.ouyunc.core.relation.RelationLocalCache;
@@ -426,6 +425,9 @@ public final class GroupMembershipSupport {
         } catch (Exception e) {
             log.warn("移除用户加群索引失败 appKey={} groupId={} memberId={}", appKey, groupId, memberId, e);
         }
+        infra.redisTemplate.opsForHash().delete(
+                CacheConstant.buildGroupUserConfigCacheKey(appKey, groupId),
+                CacheConstant.groupUserConfigField(memberId));
         RelationLocalCache.evictGroupMember(appKey, groupId, memberId);
         RelationCacheInvalidatePublisher.publish(
                 RelationCacheInvalidateEvent.groupQuit(appKey, groupId, memberId));
@@ -468,23 +470,25 @@ public final class GroupMembershipSupport {
     }
 
     public GroupUserEntity groupUserEntity(String appKey, String groupId, String memberId) {
-        String cacheKey = CacheConstant.buildGroupUserConfigCacheKey(appKey, memberId, groupId);
+        String localKey = CacheConstant.buildGroupUserConfigLocalCacheKey(appKey, groupId, memberId);
 
         // 1. 本地缓存
-        GroupUserEntity groupUserEntity = MessageContext.groupUserEntityCache.get(cacheKey);
+        GroupUserEntity groupUserEntity = MessageContext.groupUserEntityCache.get(localKey);
         if (groupUserEntity != null) {
             return groupUserEntity;
         }
 
-        // 2. Redis缓存
-        Object redisRaw = infra.redisTemplate.opsForValue().get(cacheKey);
+        // 2. Redis Hash：field=memberId
+        Object redisRaw = infra.redisTemplate.opsForHash().get(
+                CacheConstant.buildGroupUserConfigCacheKey(appKey, groupId),
+                CacheConstant.groupUserConfigField(memberId));
         if (redisRaw instanceof GroupUserEntity redisEntity) {
-            fillLocalGroupUserCache(cacheKey, redisEntity);
+            fillLocalGroupUserCache(localKey, redisEntity);
             return redisEntity;
         }
 
         // 3. MySQL 为禁言/屏蔽等权限权威源；Mongo 滞后不得钉死错误状态
-        GroupUserEntity fromMysql = queryGroupUserEntityFromDataBase(cacheKey, appKey, groupId, memberId);
+        GroupUserEntity fromMysql = queryGroupUserEntityFromDataBase(appKey, groupId, memberId);
         if (fromMysql != null) {
             return fromMysql;
         }
@@ -499,7 +503,7 @@ public final class GroupMembershipSupport {
                     MongoGroupUserEntity.class);
             if (mongoGroupUser != null) {
                 groupUserEntity = convertMongoGroupUserToGroupUser(mongoGroupUser);
-                updateGroupUserCache(cacheKey, groupUserEntity);
+                updateGroupUserCache(appKey, groupId, groupUserEntity);
                 return groupUserEntity;
             }
         } catch (Exception e) {
@@ -517,27 +521,33 @@ public final class GroupMembershipSupport {
             return result;
         }
         List<String> redisMissingMembers = new ArrayList<>();
-        List<String> redisMissingKeys = new ArrayList<>();
         for (String memberId : memberIds) {
             if (memberId == null) {
                 continue;
             }
-            String cacheKey = CacheConstant.buildGroupUserConfigCacheKey(appKey, memberId, groupId);
-            GroupUserEntity local = MessageContext.groupUserEntityCache.get(cacheKey);
+            String localKey = CacheConstant.buildGroupUserConfigLocalCacheKey(appKey, groupId, memberId);
+            GroupUserEntity local = MessageContext.groupUserEntityCache.get(localKey);
             if (local != null) {
                 result.put(memberId, local);
                 continue;
             }
             redisMissingMembers.add(memberId);
-            redisMissingKeys.add(cacheKey);
         }
-        List<GroupUserEntity> redisValues = RedisPipelineSupport.getValues(infra.redisTemplate, redisMissingKeys);
+        List<Object> fields = new ArrayList<>(redisMissingMembers.size());
+        for (String memberId : redisMissingMembers) {
+            fields.add(CacheConstant.groupUserConfigField(memberId));
+        }
+        List<Object> redisValues = fields.isEmpty()
+                ? List.of()
+                : infra.redisTemplate.opsForHash().multiGet(
+                        CacheConstant.buildGroupUserConfigCacheKey(appKey, groupId), fields);
         List<String> missing = new ArrayList<>();
         for (int i = 0; i < redisMissingMembers.size(); i++) {
             String memberId = redisMissingMembers.get(i);
-            GroupUserEntity redis = i < redisValues.size() ? redisValues.get(i) : null;
-            if (redis != null) {
-                fillLocalGroupUserCache(redisMissingKeys.get(i), redis);
+            Object raw = i < redisValues.size() ? redisValues.get(i) : null;
+            if (raw instanceof GroupUserEntity redis) {
+                fillLocalGroupUserCache(
+                        CacheConstant.buildGroupUserConfigLocalCacheKey(appKey, groupId, memberId), redis);
                 result.put(memberId, redis);
             } else {
                 missing.add(memberId);
@@ -565,14 +575,17 @@ public final class GroupMembershipSupport {
                         continue;
                     }
                     String mid = String.valueOf(row.getUserId());
-                    String cacheKey = CacheConstant.buildGroupUserConfigCacheKey(appKey, mid, groupId);
-                    fillLocalGroupUserCache(cacheKey, row);
-                    cacheWrites.put(cacheKey, row);
+                    fillLocalGroupUserCache(
+                            CacheConstant.buildGroupUserConfigLocalCacheKey(appKey, groupId, mid), row);
+                    cacheWrites.put(CacheConstant.groupUserConfigField(mid), row);
                     result.put(mid, row);
                 }
             }
-            RedisPipelineSupport.setValues(infra.redisTemplate, cacheWrites,
-                    MessageConstant.CACHE_ENTITY_KEY_EXPIRE_TIMESTAMP);
+            if (!cacheWrites.isEmpty()) {
+                String hashKey = CacheConstant.buildGroupUserConfigCacheKey(appKey, groupId);
+                infra.redisTemplate.opsForHash().putAll(hashKey, cacheWrites);
+                infra.redisTemplate.expire(hashKey, MessageConstant.CACHE_ENTITY_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+            }
         } catch (Exception e) {
             log.error("批量查询群成员失败 groupId={} missingSize={}", groupId, missing.size(), e);
             // 禁止把“权威源不可用”伪装成“确认无配置”，否则下游会误判为 IM 渠道。
@@ -581,7 +594,7 @@ public final class GroupMembershipSupport {
         return result;
     }
 
-    GroupUserEntity queryGroupUserEntityFromDataBase(String cacheKey, String appKey, String groupId, String memberId) {
+    GroupUserEntity queryGroupUserEntityFromDataBase(String appKey, String groupId, String memberId) {
         try {
             GroupUserEntity groupUserEntity = infra.jdbcClient.sql(JdbcSqlDialectHolder.selectGroupUser())
                     .param(GroupUserEntity.Fields.userId, memberId)
@@ -591,7 +604,7 @@ public final class GroupMembershipSupport {
                     .optional()
                     .orElse(null);
             if (groupUserEntity != null) {
-                updateGroupUserCache(cacheKey, groupUserEntity);
+                updateGroupUserCache(appKey, groupId, groupUserEntity);
             }
             return groupUserEntity;
         } catch (Exception e) {
@@ -602,21 +615,23 @@ public final class GroupMembershipSupport {
 
     @SuppressWarnings("unchecked")
     public Mono<GroupUserEntity> groupUserEntityReactive(String appKey, String groupId, String memberId) {
-        String cacheKey = CacheConstant.buildGroupUserConfigCacheKey(appKey, memberId, groupId);
+        String localKey = CacheConstant.buildGroupUserConfigLocalCacheKey(appKey, groupId, memberId);
 
         // 1. 本地缓存
-        GroupUserEntity localCached = MessageContext.groupUserEntityCache.get(cacheKey);
+        GroupUserEntity localCached = MessageContext.groupUserEntityCache.get(localKey);
         if (localCached != null) {
             return Mono.just(localCached);
         }
 
-        // 2. Redis缓存（响应式）：命中只填 L1，L2 写入放到受控执行器且仅回源路径
-        return infra.reactiveRedisTemplate.opsForValue().get(cacheKey)
+        // 2. Redis Hash（响应式）：命中只填 L1，L2 写入放到受控执行器且仅回源路径
+        return infra.reactiveRedisTemplate.opsForHash().get(
+                        CacheConstant.buildGroupUserConfigCacheKey(appKey, groupId),
+                        CacheConstant.groupUserConfigField(memberId))
                 .flatMap(raw -> {
                     if (!(raw instanceof GroupUserEntity entity)) {
                         return Mono.empty();
                     }
-                    fillLocalGroupUserCache(cacheKey, entity);
+                    fillLocalGroupUserCache(localKey, entity);
                     return Mono.just(entity);
                 })
                 .switchIfEmpty(
@@ -640,7 +655,7 @@ public final class GroupMembershipSupport {
                                     if (groupUserEntity == null) {
                                         return Mono.empty();
                                     }
-                                    return writeThroughGroupUserCacheAsync(cacheKey, groupUserEntity)
+                                    return writeThroughGroupUserCacheAsync(appKey, groupId, groupUserEntity)
                                             .thenReturn(groupUserEntity);
                                 })
                                 .switchIfEmpty(
@@ -652,7 +667,7 @@ public final class GroupMembershipSupport {
                                                         mongoGroupUserQuery(groupId, memberId),
                                                         MongoGroupUserEntity.class))
                                                 .map(this::convertMongoGroupUserToGroupUser)
-                                                .flatMap(groupUserEntity -> writeThroughGroupUserCacheAsync(cacheKey, groupUserEntity)
+                                                .flatMap(groupUserEntity -> writeThroughGroupUserCacheAsync(appKey, groupId, groupUserEntity)
                                                         .thenReturn(groupUserEntity))
                                 )
                 )
@@ -662,8 +677,8 @@ public final class GroupMembershipSupport {
                 });
     }
 
-    private Mono<Void> writeThroughGroupUserCacheAsync(String cacheKey, GroupUserEntity groupUserEntity) {
-        return Mono.fromRunnable(() -> updateGroupUserCache(cacheKey, groupUserEntity))
+    private Mono<Void> writeThroughGroupUserCacheAsync(String appKey, String groupId, GroupUserEntity groupUserEntity) {
+        return Mono.fromRunnable(() -> updateGroupUserCache(appKey, groupId, groupUserEntity))
                 .subscribeOn(Schedulers.fromExecutor(infra.dbExecutor()))
                 .then();
     }
@@ -811,7 +826,6 @@ public final class GroupMembershipSupport {
      * @return true 在群，false 不在群，null 查询异常（不得缓存 false）
      */
     private Boolean loadGroupMemberExistsFromDb(String appKey, String groupId, String memberId) {
-        String cacheKey = CacheConstant.buildGroupUserConfigCacheKey(appKey, memberId, groupId);
         try {
             GroupUserEntity groupUserEntity = infra.jdbcClient.sql(JdbcSqlDialectHolder.selectGroupUser())
                     .param(GroupUserEntity.Fields.userId, memberId)
@@ -821,7 +835,7 @@ public final class GroupMembershipSupport {
                     .optional()
                     .orElse(null);
             if (groupUserEntity != null) {
-                updateGroupUserCache(cacheKey, groupUserEntity);
+                updateGroupUserCache(appKey, groupId, groupUserEntity);
                 cacheMemberPositive(appKey, groupId, memberId, groupUserEntity.getPost());
                 return true;
             }
@@ -1177,12 +1191,19 @@ public final class GroupMembershipSupport {
         }
     }
 
-    public void updateGroupUserCache(String cacheKey, GroupUserEntity groupUserEntity) {
-        if (groupUserEntity != null) {
-            fillLocalGroupUserCache(cacheKey, groupUserEntity);
-            infra.redisTemplate.opsForValue().set(cacheKey, groupUserEntity,
-                    MessageConstant.CACHE_ENTITY_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
+    /**
+     * 群成员配置写入同群 Hash。整份 Hash 共用 TTL，刷新任一成员会顺延过期时间。
+     */
+    public void updateGroupUserCache(String appKey, String groupId, GroupUserEntity groupUserEntity) {
+        if (groupUserEntity == null || groupUserEntity.getUserId() == null) {
+            return;
         }
+        String memberId = String.valueOf(groupUserEntity.getUserId());
+        fillLocalGroupUserCache(
+                CacheConstant.buildGroupUserConfigLocalCacheKey(appKey, groupId, memberId), groupUserEntity);
+        String hashKey = CacheConstant.buildGroupUserConfigCacheKey(appKey, groupId);
+        infra.redisTemplate.opsForHash().put(hashKey, CacheConstant.groupUserConfigField(memberId), groupUserEntity);
+        infra.redisTemplate.expire(hashKey, MessageConstant.CACHE_ENTITY_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
     }
 
     /** 仅填本地缓存，不写 L2（Redis 命中路径） */

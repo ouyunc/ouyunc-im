@@ -149,7 +149,7 @@ public final class RelationLocalCache {
             return;
         }
         markGroupMember(appKey, groupId, memberId, false);
-        MessageContext.groupUserEntityCache.delete(CacheConstant.buildGroupUserConfigCacheKey(appKey, memberId, groupId));
+        MessageContext.groupUserEntityCache.delete(CacheConstant.buildGroupUserConfigLocalCacheKey(appKey, groupId, memberId));
         MessageContext.groupUserIdentityCache.delete(CacheConstant.buildGroupUserCacheKey(appKey, groupId));
         evictGroupShieldIndex(appKey, groupId);
     }
@@ -161,7 +161,7 @@ public final class RelationLocalCache {
         if (StringUtils.isAnyBlank(appKey, groupId, memberId)) {
             return;
         }
-        MessageContext.groupUserEntityCache.delete(CacheConstant.buildGroupUserConfigCacheKey(appKey, memberId, groupId));
+        MessageContext.groupUserEntityCache.delete(CacheConstant.buildGroupUserConfigLocalCacheKey(appKey, groupId, memberId));
         evictGroupShieldIndex(appKey, groupId);
     }
 

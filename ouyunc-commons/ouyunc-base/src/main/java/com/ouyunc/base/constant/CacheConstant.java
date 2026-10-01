@@ -156,7 +156,7 @@ public class CacheConstant {
     /**
      * 关系名单回源临时 ZSET 后缀，必须接在已含 hash tag 的 zset key 后以同槽。
      */
-    private static final String RELATION_ROSTER_TMP = "tmp";
+    private static final String RELATION_ROSTER_TMP = ":tmp";
 
     /***
      * QoS 幂等
@@ -271,7 +271,7 @@ public class CacheConstant {
     public static final String CONTENT_SAFETY_GLOBAL_APP_KEY = "__global__";
 
     /** Pub/Sub 频道名；payload 为 appKey 或 {@link #CONTENT_SAFETY_RELOAD_ALL}。 */
-    public static final String CONTENT_SAFETY_RELOAD_CHANNEL = OUYUNC + "im:cs:reload";
+    public static final String CONTENT_SAFETY_RELOAD_CHANNEL = OUYUNC + "im:safety:reload";
 
     /** 内容安全热更新：全部租户失效。 */
     public static final String CONTENT_SAFETY_RELOAD_ALL = "ALL";
@@ -335,7 +335,8 @@ public class CacheConstant {
      */
     public static String buildIdentityBindOrUnbindLockCacheKey(String appKey, String comboIdentity) {
         String identity = IdentityUtil.revertIdentity(comboIdentity);
-        return OUYUNC + LOCK + COLON + withHashTag(stripHashTagChars(identity)) + COLON + APP_KEY + COLON + appKey + COLON + comboIdentity;
+        return OUYUNC + LOCK + COLON + withAggregateHashTag(appKey, identity) + COLON
+                + stripHashTagChars(comboIdentity == null ? "" : comboIdentity);
     }
 
     /**
@@ -431,12 +432,11 @@ public class CacheConstant {
     }
 
     /**
-     * 身份路由 HASH：field=deviceType，value=nodeId|epoch|lastLoginTime。
+     * 身份路由 HASH：槽 {@code {appKey:identity}}，field=deviceType，value=nodeId|epoch|lastLoginTime。
      * 完整登录上下文只保存在最终落地节点的 Channel 属性中。
      */
     public static String buildLoginRouteCacheKey(String appKey, String identity) {
-        return OUYUNC + IM_ROUTE + COLON + withHashTag(stripHashTagChars(identity == null ? "" : identity))
-                + COLON + sanitizeAppKeyToken(appKey);
+        return OUYUNC + IM_ROUTE + COLON + withAggregateHashTag(appKey, identity);
     }
 
     /**
@@ -498,10 +498,21 @@ public class CacheConstant {
     }
 
     /**
-     * 构建 群组成员在群中的配置信息 cache key - 集群优化
+     * 群成员配置 Hash：槽 {@code {appKey:groupId}}，field 为 memberId。
+     * 与成员 ZSET 同槽，避免大群一人一条 STRING。
      */
-    public static String buildGroupUserConfigCacheKey(String appKey, String memberId, String groupId) {
-        return buildAggregateCacheKey(appKey, groupId) + GROUP_USERS_CONFIG + COLON + stripHashTagChars(memberId);
+    public static String buildGroupUserConfigCacheKey(String appKey, String groupId) {
+        return buildAggregateCacheKey(appKey, groupId) + GROUP_USERS_CONFIG;
+    }
+
+    /** Hash field，去掉花括号以免被误当成槽。 */
+    public static String groupUserConfigField(String memberId) {
+        return stripHashTagChars(memberId == null ? "" : memberId);
+    }
+
+    /** 本机 Caffeine 键，不是 Redis key。 */
+    public static String buildGroupUserConfigLocalCacheKey(String appKey, String groupId, String memberId) {
+        return buildGroupUserConfigCacheKey(appKey, groupId) + COLON + groupUserConfigField(memberId);
     }
 
     /**
@@ -540,11 +551,10 @@ public class CacheConstant {
     }
 
     /**
-     * 好友配置：槽按 from_to 对
+     * 好友配置 STRING：槽跟主人 {@code {appKey:from}}，与好友名单同槽；后缀是对端。
      */
     public static String buildFriendsConfigCacheKey(String appKey, String from, String to) {
-        String pair = stripHashTagChars(from) + MessageConstant.UNDERLINE + stripHashTagChars(to);
-        return buildAggregateCacheKey(appKey, pair) + FRIENDS_CONFIG;
+        return buildAggregateCacheKey(appKey, from) + FRIENDS_CONFIG + COLON + stripHashTagChars(to);
     }
 
     /**
@@ -616,7 +626,7 @@ public class CacheConstant {
      */
     public static String buildQosIdempotencyClientKey(String appKey, String loginIdentity, String clientMessageId) {
         return buildAggregateCacheKey(appKey, loginIdentity) + QOS_IDEM + COLON + QOS_IDEM_CLI + COLON
-                + stripHashTagChars(loginIdentity) + COLON + clientMessageId;
+                + stripHashTagChars(clientMessageId);
     }
 
     /**
@@ -627,16 +637,13 @@ public class CacheConstant {
     }
 
     /**
-     * 好友请求会话：槽按业务 sessionId
+     * 好友请求会话：槽按业务 sessionId。
      */
     public static String buildFriendRequestSessionCacheKey(String appKey, String sessionId, String friendRequestSessionId) {
-        return buildAggregateCacheKey(appKey, sessionId) + FRIEND_REQUEST + COLON + SESSION
+        return buildAggregateCacheKey(appKey, sessionId) + FRIEND_REQUEST_SESSION
                 + COLON + stripHashTagChars(friendRequestSessionId);
     }
 
-    /**
-     * 好友请求：槽按 from_to
-     */
     /**
      * 外渠任务槽 {@code {appKey:packetId}}。同一正式 packet 的收件人进度放在一个 Hash。
      * 使用 canonical packetId，不使用客户端 messageId，避免同租户不同发送者串键。
@@ -670,16 +677,19 @@ public class CacheConstant {
         return recipientId + "|" + channelKey;
     }
 
+    /**
+     * 好友请求实体：槽按 from_to，避免和主人好友名单抢同一条大 key。
+     */
     public static String buildFriendRequestCacheKey(String appKey, String from, String to) {
         String pair = stripHashTagChars(from) + MessageConstant.UNDERLINE + stripHashTagChars(to);
-        return buildAggregateCacheKey(appKey, pair) + FRIEND_REQUEST_SESSION;
+        return buildAggregateCacheKey(appKey, pair) + FRIEND_REQUEST;
     }
 
     /**
      * 群请求会话：槽按 joiner
      */
     public static String buildGroupRequestSessionCacheKey(String appKey, String joiner, String groupRequestSessionId) {
-        return buildAggregateCacheKey(appKey, joiner) + GROUP_REQUEST + COLON + SESSION
+        return buildAggregateCacheKey(appKey, joiner) + GROUP_REQUEST_SESSION
                 + COLON + stripHashTagChars(groupRequestSessionId);
     }
 
@@ -687,7 +697,7 @@ public class CacheConstant {
      * 群请求：槽按 groupId
      */
     public static String buildGroupRequestCacheKey(String appKey, String joiner, String groupId) {
-        return buildAggregateCacheKey(appKey, groupId) + GROUP_REQUEST_SESSION
+        return buildAggregateCacheKey(appKey, groupId) + GROUP_REQUEST
                 + COLON + stripHashTagChars(joiner);
     }
 
@@ -706,22 +716,21 @@ public class CacheConstant {
     }
 
     /**
-     * 会话读模型 Hash：{@code ouyunc:app:appKey:session-view:userId:deviceType}。
-     * 该读模型不参与 ticket Lua，保持独立 key；field=对端 id。
+     * 会话读模型 Hash：{@code ouyunc:app:{appKey:userId}:session-view:deviceType}。
+     * 与单聊未读同槽；field=对端 id。ticket 数据仍走 cs:ticket 前缀。
      */
     public static String buildSessionViewCacheKey(String appKey, String userId, Byte deviceType) {
-        return buildAppNamespaceKeyPrefix(appKey) + "session-view" + COLON + stripHashTagChars(userId == null ? "" : userId)
-                + COLON + deviceType;
+        return buildAggregateCacheKey(appKey, userId) + "session-view" + COLON + deviceType;
     }
 
-    /** IM 用户翻译偏好 Hash。槽 {@code {appKey}}。 */
+    /** IM 用户翻译偏好 Hash。槽 {@code {appKey:identity}}。 */
     public static String buildTranslateUserPrefCacheKey(String appKey, String identity) {
-        return buildBaseCacheKey(appKey) + "translate:user" + COLON + withHashTag(stripHashTagChars(identity));
+        return buildAggregateCacheKey(appKey, identity) + "translate:user";
     }
 
-    /** 坐席翻译偏好 Hash。槽 {@code {appKey}}。 */
+    /** 坐席翻译偏好 Hash。槽 {@code {appKey:agentId}}。 */
     public static String buildTranslateAgentPrefCacheKey(String appKey, String agentId) {
-        return buildBaseCacheKey(appKey) + "cs:agent:translate" + COLON + withHashTag(stripHashTagChars(agentId));
+        return buildAggregateCacheKey(appKey, agentId) + "cs:agent:translate";
     }
 
     /** 译文内容哈希。首 tag 为内容摘要，与锁同槽。 */
@@ -736,10 +745,10 @@ public class CacheConstant {
                 + COLON + sourceLang + COLON + targetLang;
     }
 
-    /** 译文通知去重。槽 {@code {appKey}}。 */
+    /** 译文通知去重。槽 {@code {appKey:packetId}}。 */
     public static String buildTranslateNotifyOnceCacheKey(String appKey, String packetId, String language, String to) {
-        return buildBaseCacheKey(appKey) + "translate:notify" + COLON + withHashTag(stripHashTagChars(packetId))
-                + COLON + stripHashTagChars(language) + COLON + stripHashTagChars(to);
+        return buildAggregateCacheKey(appKey, packetId) + "translate:notify" + COLON
+                + stripHashTagChars(language) + COLON + stripHashTagChars(to);
     }
 
     /** 客服访客入站自动预译开关，值为 1/0。槽 {@code {appKey}}。 */
@@ -747,14 +756,14 @@ public class CacheConstant {
         return buildBaseCacheKey(appKey) + "translate:cs:visitor-auto-in";
     }
 
-    /** 访客翻译限流（咨询单）。槽 {@code {appKey}}。 */
+    /** 访客翻译限流（咨询单）。槽 {@code {appKey:ticketId}}，与 ticket 聚合同槽。 */
     public static String buildTranslateGuestTicketLimitCacheKey(String appKey, long ticketId, long epochMinute) {
-        return buildBaseCacheKey(appKey) + "translate:limit:ticket" + COLON + ticketId + COLON + epochMinute;
+        return buildAggregateCacheKey(appKey, String.valueOf(ticketId)) + "translate:limit:ticket" + COLON + epochMinute;
     }
 
-    /** 访客翻译限流（IP）。槽 {@code {appKey}}。 */
+    /** 访客翻译限流（IP）。槽 {@code {appKey:ip}}。 */
     public static String buildTranslateGuestIpLimitCacheKey(String appKey, String clientIp, long epochMinute) {
-        return buildBaseCacheKey(appKey) + "translate:limit:ip" + COLON + sanitizeTranslateIp(clientIp) + COLON + epochMinute;
+        return buildAggregateCacheKey(appKey, sanitizeTranslateIp(clientIp)) + "translate:limit:ip" + COLON + epochMinute;
     }
 
     private static String sanitizeTranslateIp(String clientIp) {
@@ -796,7 +805,7 @@ public class CacheConstant {
 
     /**
      * 客服非 ticket 聚合 key 前缀。
-     * <p>仅供 session-view、翻译内容等具有各自分片维度的 key 使用，ticket 数据必须通过
+     * <p>仅供翻译内容等自带 hash tag 的 key 使用，ticket 数据必须通过
      * {@link #buildCsTicketAggregateKeyPrefix(String, String)} 构造，禁止再次使用裸 {@code ticketId} hash tag。</p>
      */
     private static String buildAppNamespaceKeyPrefix(String appKey) {
@@ -874,7 +883,7 @@ public class CacheConstant {
      * @return Redis key
      */
     public static String buildContentSafetyPolicyCacheKey(String appKey) {
-        return OUYUNC + "im:cs:policy" + COLON + appKey;
+        return OUYUNC + "im:safety:policy" + COLON + appKey;
     }
 
     /**
@@ -884,7 +893,7 @@ public class CacheConstant {
      * @return Redis key
      */
     public static String buildContentSafetyWordsCacheKey(String appKey) {
-        return OUYUNC + "im:cs:words" + COLON + appKey;
+        return OUYUNC + "im:safety:words" + COLON + appKey;
     }
 
     /**
@@ -894,7 +903,7 @@ public class CacheConstant {
      * @return Redis key
      */
     public static String buildContentSafetyVersionCacheKey(String appKey) {
-        return OUYUNC + "im:cs:version" + COLON + appKey;
+        return OUYUNC + "im:safety:version" + COLON + appKey;
     }
 
 }
