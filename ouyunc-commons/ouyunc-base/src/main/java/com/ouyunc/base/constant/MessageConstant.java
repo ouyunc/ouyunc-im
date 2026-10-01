@@ -378,21 +378,6 @@ public class MessageConstant {
     /** 注册索引每轮最多回收的过期节点数，限制单次 Lua 执行时间。 */
     public static final int IM_NODE_REGISTRY_CLEANUP_BATCH = 128;
 
-    /** 死亡节点路由反向索引每批最多清理的成员数，避免故障恢复时集中冲击 Redis。 */
-    public static final int IM_DEAD_NODE_ROUTE_CLEANUP_BATCH = 256;
-
-    /**
-     * 抢到清扫锁的节点在一次维护任务里连续处理的批次数。
-     * 下一次要等租约心跳再次提交，用心跳间隔把突发流量隔开。
-     */
-    public static final int IM_DEAD_NODE_ROUTE_CLEANUP_BATCHES_PER_ROUND = 4;
-
-    /** 清扫锁 TTL。持有者每批续期；进程中断后其他节点可在此窗口后接手。 */
-    public static final int IM_DEAD_NODE_ROUTE_CLEANUP_LOCK_TTL_MILLIS = 10_000;
-
-    /** 死亡节点路由清理宽限期，节点短暂停顿后同 epoch 恢复时不得删除其仍有效的在线路由。 */
-    public static final int IM_DEAD_NODE_ROUTE_CLEANUP_GRACE_SECONDS = IM_NODE_LEASE_TTL_SECONDS * 2;
-
     /** 配额管道每批最多处理的 HASH 数。 */
     public static final int IM_NODE_QUOTA_SYNC_BATCH = 128;
 

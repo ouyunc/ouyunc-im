@@ -9,7 +9,6 @@ import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.cache.config.CacheFactory;
 import com.ouyunc.cache.distributed.redis.RedisPipelineSupport;
 import com.ouyunc.message.context.MessageServerContext;
-import com.ouyunc.message.helper.LoginSessionDirectoryHelper;
 import com.ouyunc.message.schedule.ScheduleTimer;
 import com.ouyunc.message.schedule.TimerTaskWrapper;
 import org.apache.commons.lang3.StringUtils;
@@ -21,7 +20,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -290,7 +288,7 @@ public final class NodeLeaseKeeper {
         } finally {
             run.publishLock.unlock();
         }
-        // 配额及死路由维护不占用核心续租锁；异常不污染 Redis 租约失败计数。
+        // 配额维护不占用核心续租锁；异常不污染 Redis 租约失败计数。
         scheduleMaintenance(run);
     }
 
@@ -306,7 +304,6 @@ public final class NodeLeaseKeeper {
         if (current != run) {
             return;
         }
-        registerDeadRouteCleanup(run, run.snapshot, snapshot);
         run.snapshot = snapshot;
         run.redisFailStreak = 0;
         if (MessageServerContext.REDIS_ISOLATION_DRAINING.get()) {
@@ -354,75 +351,6 @@ public final class NodeLeaseKeeper {
             return;
         }
         submitQuotaMaintenance(run);
-        submitDeadRouteCleanup(run);
-    }
-
-    /** 仅由两个连续的权威快照比较登记死亡 epoch；同 epoch 在宽限期内恢复会撤销清理。 */
-    private static void registerDeadRouteCleanup(LeaseRun run, NodeLeaseSnapshot previous, NodeLeaseSnapshot currentSnapshot) {
-        if (previous != null && !previous.leases().isEmpty()) {
-            for (Map.Entry<String, NodeLeasePayload> entry : previous.leases().entrySet()) {
-                String nodeId = entry.getKey();
-                NodeLeasePayload oldLease = entry.getValue();
-                if (nodeId == null || oldLease == null || nodeId.equals(run.nodeId)) {
-                    continue;
-                }
-                NodeLeasePayload currentLease = currentSnapshot.leases().get(nodeId);
-                if (currentLease == null || currentLease.getEpoch() != oldLease.getEpoch()) {
-                    String cleanupKey = deadCleanupKey(nodeId, oldLease.getEpoch());
-                    run.deadRouteCleanups.putIfAbsent(cleanupKey,
-                            new DeadRouteCleanup(nodeId, oldLease.getEpoch(), System.nanoTime()));
-                }
-            }
-        }
-        for (Map.Entry<String, NodeLeasePayload> entry : currentSnapshot.leases().entrySet()) {
-            NodeLeasePayload lease = entry.getValue();
-            if (lease != null) {
-                run.deadRouteCleanups.remove(deadCleanupKey(entry.getKey(), lease.getEpoch()));
-            }
-        }
-    }
-
-    private static void submitDeadRouteCleanup(LeaseRun run) {
-        if (run.deadRouteCleanups.isEmpty() || !run.deadRouteCleanupPending.compareAndSet(false, true)) {
-            return;
-        }
-        try {
-            ThreadPoolManager.nodeLeaseExecutor().execute(() -> cleanupDeadRoutes(run));
-        } catch (Exception e) {
-            run.deadRouteCleanupPending.set(false);
-            log.warn("提交死亡节点路由清理失败 nodeId={}", run.nodeId, e);
-        }
-    }
-
-    private static void cleanupDeadRoutes(LeaseRun run) {
-        try {
-            long graceNanos = TimeUnit.SECONDS.toNanos(MessageConstant.IM_DEAD_NODE_ROUTE_CLEANUP_GRACE_SECONDS);
-            for (Map.Entry<String, DeadRouteCleanup> entry : run.deadRouteCleanups.entrySet()) {
-                DeadRouteCleanup cleanup = entry.getValue();
-                if (cleanup == null || System.nanoTime() - cleanup.detectedAtNanos() < graceNanos) {
-                    continue;
-                }
-                NodeLeasePayload live = currentSnapshot().leases().get(cleanup.nodeId());
-                if (live != null && live.getEpoch() == cleanup.epoch()) {
-                    run.deadRouteCleanups.remove(entry.getKey(), cleanup);
-                    continue;
-                }
-                LoginSessionDirectoryHelper.DeadRouteDrain drain = LoginSessionDirectoryHelper.drainDeadNodeRoutes(
-                        cleanup.nodeId(), cleanup.epoch(), run.payload.getOwnerToken());
-                if (drain == LoginSessionDirectoryHelper.DeadRouteDrain.DONE) {
-                    run.deadRouteCleanups.remove(entry.getKey(), cleanup);
-                    log.info("死亡节点路由后台清理完成 deadNode={} epoch={}", cleanup.nodeId(), cleanup.epoch());
-                }
-            }
-        } catch (Exception e) {
-            log.warn("死亡节点路由后台清理失败，保留任务等待下轮", e);
-        } finally {
-            run.deadRouteCleanupPending.set(false);
-        }
-    }
-
-    private static String deadCleanupKey(String nodeId, long epoch) {
-        return nodeId + '#' + epoch;
     }
 
     private static void submitQuotaMaintenance(LeaseRun run) {
@@ -482,8 +410,6 @@ public final class NodeLeaseKeeper {
         private final AtomicBoolean connPending = new AtomicBoolean();
         private final AtomicLong connChangeVersion = new AtomicLong();
         private final AtomicBoolean quotaMaintenancePending = new AtomicBoolean();
-        private final AtomicBoolean deadRouteCleanupPending = new AtomicBoolean();
-        private final Map<String, DeadRouteCleanup> deadRouteCleanups = new ConcurrentHashMap<>();
         private volatile NodeLeaseSnapshot snapshot = new NodeLeaseSnapshot(Map.of(), 0L, false);
         private volatile long lastConnPublishNanos;
         private volatile long lastPublishedConnVersion;
@@ -500,8 +426,5 @@ public final class NodeLeaseKeeper {
             this.payloadJson = payload.toJson();
         }
 
-    }
-
-    private record DeadRouteCleanup(String nodeId, long epoch, long detectedAtNanos) {
     }
 }

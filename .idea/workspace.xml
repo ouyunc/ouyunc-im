@@ -6,7 +6,10 @@
   <component name="ChangeListManager">
     <list default="true" id="f5e04433-bce4-4c4c-925d-8bad5c9272b8" name="Changes" comment="增加客户端packet 协议">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/CacheConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/CacheConstant.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/MessageConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/MessageConstant.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/cluster/lease/NodeLeaseKeeper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/cluster/lease/NodeLeaseKeeper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/LoginSessionDirectoryHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/LoginSessionDirectoryHelper.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -36,61 +39,61 @@
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="9.925298230773567E-68" />
-      <entry key="MS500" value="3.975105990828246E-14" />
-      <entry key="S2" value="4.4651615698237376E-4" />
-      <entry key="S5" value="0.04570196478126531" />
-      <entry key="S10" value="0.2137801786444789" />
-      <entry key="S30" value="0.5979375283304643" />
-      <entry key="S60" value="0.7732642190971778" />
-      <entry key="M2" value="0.8794999195901629" />
-      <entry key="M5" value="1.0139622128452237" />
-      <entry key="M10" value="1.6796226454805334" />
-      <entry key="M15" value="2.644224039974226" />
-      <entry key="M30" value="5.015673191320709" />
-      <entry key="H1" value="7.320251813694011" />
-      <entry key="H2" value="8.944721782982025" />
-      <entry key="H4" value="9.911838445031538" />
-      <entry key="D1" value="10.809598507115618" />
-      <entry key="W1" value="10.972569572251171" />
+      <entry key="MS100" value="1.0" />
+      <entry key="MS500" value="1.0000000000000173" />
+      <entry key="S2" value="1.000362809536938" />
+      <entry key="S5" value="1.0420602139806197" />
+      <entry key="S10" value="1.2050858697731752" />
+      <entry key="S30" value="1.5897191709320446" />
+      <entry key="S60" value="1.7679317644197665" />
+      <entry key="M2" value="1.8764621436547126" />
+      <entry key="M5" value="2.0125598761268684" />
+      <entry key="M10" value="2.6784607622088736" />
+      <entry key="M15" value="3.6430044668336614" />
+      <entry key="M30" value="6.014516389609318" />
+      <entry key="H1" value="8.319407603173996" />
+      <entry key="H2" value="9.9442059915759" />
+      <entry key="H4" value="10.911552661140414" />
+      <entry key="D1" value="11.809546561719664" />
+      <entry key="W1" value="11.97256203958545" />
     </decayedCancelled>
     <decayedSelected>
-      <entry key="MS100" value="1.0" />
-      <entry key="MS500" value="1.0000000000770186" />
-      <entry key="S2" value="1.0029624366120595" />
-      <entry key="S5" value="1.0974225799880073" />
-      <entry key="S10" value="1.3121259040643813" />
-      <entry key="S30" value="1.6783335086635425" />
-      <entry key="S60" value="1.8236100467349683" />
-      <entry key="M2" value="1.9075615411738205" />
-      <entry key="M5" value="1.9984699390887153" />
-      <entry key="M10" value="2.363077379945125" />
-      <entry key="M15" value="2.823299547309781" />
-      <entry key="M30" value="3.8223795008457686" />
-      <entry key="H1" value="4.701453224226727" />
-      <entry key="H2" value="5.287567680545968" />
-      <entry key="H4" value="5.626412975704314" />
-      <entry key="D1" value="5.9351757023521134" />
-      <entry key="W1" value="5.990674683933766" />
+      <entry key="MS100" value="0.015733680469636226" />
+      <entry key="MS500" value="0.43587911980210187" />
+      <entry key="S2" value="0.8149410306953532" />
+      <entry key="S5" value="1.0099747081416712" />
+      <entry key="S10" value="1.258762547553457" />
+      <entry key="S30" value="1.655265639606296" />
+      <entry key="S60" value="1.8110343737847316" />
+      <entry key="M2" value="1.9009728600197977" />
+      <entry key="M5" value="1.9957060019906558" />
+      <entry key="M10" value="2.361442715108482" />
+      <entry key="M15" value="2.821997380684104" />
+      <entry key="M30" value="3.821497917261771" />
+      <entry key="H1" value="4.700911027541112" />
+      <entry key="H2" value="5.287262776488011" />
+      <entry key="H4" value="5.626250751692877" />
+      <entry key="D1" value="5.935147180936474" />
+      <entry key="W1" value="5.990670571337392" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="6.266728015443866E-4" />
-      <entry key="MS500" value="0.22877479203206827" />
-      <entry key="S2" value="0.6924504890181308" />
-      <entry key="S5" value="0.9521718299941891" />
-      <entry key="S10" value="1.3511244070184671" />
-      <entry key="S30" value="2.1663319171392588" />
-      <entry key="S60" value="2.530865189523941" />
-      <entry key="M2" value="2.750786118376749" />
-      <entry key="M5" value="2.9969793824641315" />
-      <entry key="M10" value="4.0344103308494965" />
-      <entry key="M15" value="5.461584872835952" />
-      <entry key="M30" value="8.834635135840005" />
-      <entry key="H1" value="12.019795163143824" />
-      <entry key="H2" value="14.231266468962303" />
-      <entry key="H4" value="15.537720077810329" />
-      <entry key="D1" value="16.744682620883736" />
-      <entry key="W1" value="16.963231094015157" />
+      <entry key="MS100" value="0.01574354033925474" />
+      <entry key="MS500" value="0.5355972747446976" />
+      <entry key="S2" value="1.3751734816513128" />
+      <entry key="S5" value="1.796613456105778" />
+      <entry key="S10" value="2.2555056180404955" />
+      <entry key="S30" value="3.1228122414137167" />
+      <entry key="S60" value="3.506516230746088" />
+      <entry key="M2" value="3.737830974714274" />
+      <entry key="M5" value="3.991451453632533" />
+      <entry key="M10" value="5.030927764594614" />
+      <entry key="M15" value="6.458604650571402" />
+      <entry key="M30" value="9.832366901383315" />
+      <entry key="H1" value="13.01829365085642" />
+      <entry key="H2" value="15.230388168156566" />
+      <entry key="H4" value="16.537243252646117" />
+      <entry key="D1" value="17.744597349024268" />
+      <entry key="W1" value="17.963218762262397" />
     </decayedShown>
   </component>
   <component name="ProjectColorInfo">{
@@ -200,15 +203,7 @@
       <workItem from="1790077280132" duration="19038000" />
       <workItem from="1790514949006" duration="2013000" />
       <workItem from="1790769925349" duration="8761000" />
-      <workItem from="1790842152197" duration="2008000" />
-    </task>
-    <task id="LOCAL-00108" summary="增加客户端packet 协议">
-      <option name="closed" value="true" />
-      <created>1790315178289</created>
-      <option name="number" value="00108" />
-      <option name="presentableId" value="LOCAL-00108" />
-      <option name="project" value="LOCAL" />
-      <updated>1790315178289</updated>
+      <workItem from="1790842152197" duration="5259000" />
     </task>
     <task id="LOCAL-00109" summary="增加客户端packet 协议">
       <option name="closed" value="true" />
@@ -594,7 +589,15 @@
       <option name="project" value="LOCAL" />
       <updated>1790773766595</updated>
     </task>
-    <option name="localTasksCounter" value="157" />
+    <task id="LOCAL-00157" summary="增加客户端packet 协议">
+      <option name="closed" value="true" />
+      <created>1790845103769</created>
+      <option name="number" value="00157" />
+      <option name="presentableId" value="LOCAL-00157" />
+      <option name="project" value="LOCAL" />
+      <updated>1790845103770</updated>
+    </task>
+    <option name="localTasksCounter" value="158" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -661,11 +664,6 @@
           <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/AbstractMessageBiProcessor.java</url>
           <line>58</line>
           <option name="timeStamp" value="134" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/handler/PacketHandler.java</url>
-          <line>273</line>
-          <option name="timeStamp" value="135" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/AbstractMessageBiProcessor.java</url>

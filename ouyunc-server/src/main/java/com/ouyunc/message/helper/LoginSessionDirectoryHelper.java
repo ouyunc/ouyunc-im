@@ -1,7 +1,6 @@
 package com.ouyunc.message.helper;
 
 import com.ouyunc.base.constant.CacheConstant;
-import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.exception.MessageException;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.utils.ImRouteCodec;
@@ -12,16 +11,12 @@ import com.ouyunc.message.cluster.lease.SessionNodeState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.connection.ReturnType;
-import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisCallback;
-import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.serializer.RedisSerializer;
 
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -69,20 +64,6 @@ public final class LoginSessionDirectoryHelper {
                     + "return removed"
     ).getBytes(StandardCharsets.UTF_8);
 
-    /** 仅持有者能续期，避免旧节点把新抢到的锁 TTL 盖掉。 */
-    private static final byte[] RENEW_CLEANUP_LOCK_LUA = (
-            "if redis.call('GET', KEYS[1]) == ARGV[1] then "
-                    + "return redis.call('PEXPIRE', KEYS[1], ARGV[2]) end "
-                    + "return 0"
-    ).getBytes(StandardCharsets.UTF_8);
-
-    /** 仅持有者能释放，避免清扫结束时删掉后来者的锁。 */
-    private static final byte[] RELEASE_CLEANUP_LOCK_LUA = (
-            "if redis.call('GET', KEYS[1]) == ARGV[1] then "
-                    + "return redis.call('DEL', KEYS[1]) end "
-                    + "return 0"
-    ).getBytes(StandardCharsets.UTF_8);
-
     /**
      * KEYS[1]=route；ARGV: field1, expectedRoute1...。
      * 仅当前路由仍等于读快照时删除，避免旧清理误删刚完成的新登录。
@@ -124,7 +105,6 @@ public final class LoginSessionDirectoryHelper {
         if (!Long.valueOf(1L).equals(result)) {
             throw new MessageException("登录绑定失败：已有更新会话");
         }
-        addRouteIndexQuietly(routeKey, String.valueOf(loginClientInfo.getDeviceType()), encoded, nodeId, epoch);
     }
 
     public static void unbind(LoginClientInfo loginClientInfo) {
@@ -175,203 +155,10 @@ public final class LoginSessionDirectoryHelper {
         String routeKey = CacheConstant.buildLoginRouteCacheKey(loginClientInfo.getAppKey(), loginClientInfo.getIdentity());
         String expectedRoute = ImRouteCodec.encode(loginClientInfo.getLoginServerAddress(),
                 loginClientInfo.getNodeEpoch(), loginClientInfo.getLastLoginTime());
-        Long removed = evalCached(UNBIND_LUA, ScriptKind.UNBIND, 1,
+        evalCached(UNBIND_LUA, ScriptKind.UNBIND, 1,
                 bytes(routeKey),
                 bytes(String.valueOf(loginClientInfo.getDeviceType())),
                 bytes(expectedRoute));
-        if (Long.valueOf(1L).equals(removed)) {
-            removeRouteIndexQuietly(routeKey, String.valueOf(loginClientInfo.getDeviceType()), expectedRoute,
-                    loginClientInfo.getLoginServerAddress(), loginClientInfo.getNodeEpoch());
-        }
-    }
-
-    /**
-     * 同一死亡 epoch 的清扫结果。锁被其他节点持有时不视为失败，登记保留到下一次心跳。
-     */
-    public enum DeadRouteDrain {
-        /** 反向索引已空，本地登记可以移除 */
-        DONE,
-        /** 本轮批次已用完或锁已丢失，索引可能仍有剩余 */
-        CONTINUED,
-        /** 其他存活节点正在清扫这个 epoch */
-        BUSY
-    }
-
-    /**
-     * 抢短锁后连续清扫若干批。路由 key 与索引 key 不在同一槽，解绑仍是单 key CAS，管道只合并往返。
-     */
-    public static DeadRouteDrain drainDeadNodeRoutes(String nodeId, long epoch, String ownerToken) {
-        if (!acquireCleanupLock(nodeId, epoch, ownerToken)) {
-            return DeadRouteDrain.BUSY;
-        }
-        try {
-            int rounds = MessageConstant.IM_DEAD_NODE_ROUTE_CLEANUP_BATCHES_PER_ROUND;
-            for (int batch = 0; batch < rounds; batch++) {
-                if (!renewCleanupLock(nodeId, epoch, ownerToken)) {
-                    return DeadRouteDrain.CONTINUED;
-                }
-                if (cleanupDeadNodeRoutes(nodeId, epoch)) {
-                    return DeadRouteDrain.DONE;
-                }
-            }
-            return DeadRouteDrain.CONTINUED;
-        } finally {
-            releaseCleanupLock(nodeId, epoch, ownerToken);
-        }
-    }
-
-    /**
-     * 分批清理已经失效的节点 epoch 路由。
-     * <p>反向索引不是在线权威；每条 route 仍通过 compare-and-delete 校验完整 fencing value，
-     * 因此旧节点清理与用户新登录并发时不会误删新路由。</p>
-     *
-     * @return true 表示本轮后索引已经清空；false 表示仍需后续周期继续处理
-     */
-    public static boolean cleanupDeadNodeRoutes(String nodeId, long epoch) {
-        String indexKey = CacheConstant.buildImNodeRouteIndexCacheKey(nodeId, epoch);
-        List<String> members = new ArrayList<>(MessageConstant.IM_DEAD_NODE_ROUTE_CLEANUP_BATCH);
-        ScanOptions options = ScanOptions.scanOptions()
-                .count(MessageConstant.IM_DEAD_NODE_ROUTE_CLEANUP_BATCH)
-                .build();
-        try (Cursor<String> cursor = stringRedisTemplate.opsForSet().scan(indexKey, options)) {
-            while (cursor.hasNext() && members.size() < MessageConstant.IM_DEAD_NODE_ROUTE_CLEANUP_BATCH) {
-                String member = cursor.next();
-                if (member != null) {
-                    members.add(member);
-                }
-            }
-        }
-        if (members.isEmpty()) {
-            stringRedisTemplate.delete(indexKey);
-            return true;
-        }
-        List<String> invalid = new ArrayList<>();
-        List<RouteIndexEntry> entries = new ArrayList<>(members.size());
-        List<String> validMembers = new ArrayList<>(members.size());
-        for (String member : members) {
-            RouteIndexEntry entry = decodeIndexMember(member);
-            if (entry == null) {
-                invalid.add(member);
-                continue;
-            }
-            entries.add(entry);
-            validMembers.add(member);
-        }
-        if (!invalid.isEmpty()) {
-            stringRedisTemplate.opsForSet().remove(indexKey, invalid.toArray());
-        }
-        if (!entries.isEmpty()) {
-            unbindDeadRoutes(entries);
-            stringRedisTemplate.opsForSet().remove(indexKey, validMembers.toArray());
-        }
-        Long remaining = stringRedisTemplate.opsForSet().size(indexKey);
-        if (remaining == null || remaining == 0L) {
-            stringRedisTemplate.delete(indexKey);
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * 一批死亡路由一次管道提交。每条脚本只碰一个身份槽，Cluster 下不会 CROSSSLOT。
-     * 管道失败时不移除有效成员，下一轮仍用同一 fencing value 重试。
-     */
-    private static void unbindDeadRoutes(List<RouteIndexEntry> entries) {
-        // 管道走 EVAL 而不是 EVALSHA。Cluster 按身份槽落到不同节点，SHA 只存在于加载过的那个节点。
-        List<Object> results = stringRedisTemplate.executePipelined((RedisCallback<Object>) connection -> {
-            for (RouteIndexEntry entry : entries) {
-                connection.scriptingCommands().eval(UNBIND_LUA, ReturnType.INTEGER, 1,
-                        bytes(entry.routeKey()), bytes(entry.deviceField()), bytes(entry.expectedRoute()));
-            }
-            return null;
-        });
-        if (results == null || results.size() < entries.size()) {
-            throw new IllegalStateException("死亡节点路由 CAS 返回空结果");
-        }
-        for (int index = 0; index < entries.size(); index++) {
-            if (results.get(index) == null) {
-                throw new IllegalStateException("死亡节点路由 CAS 返回空结果");
-            }
-        }
-    }
-
-    private static boolean acquireCleanupLock(String nodeId, long epoch, String ownerToken) {
-        Boolean acquired = stringRedisTemplate.opsForValue().setIfAbsent(
-                CacheConstant.buildImNodeRouteCleanupLockCacheKey(nodeId, epoch),
-                ownerToken,
-                Duration.ofMillis(MessageConstant.IM_DEAD_NODE_ROUTE_CLEANUP_LOCK_TTL_MILLIS));
-        return Boolean.TRUE.equals(acquired);
-    }
-
-    private static boolean renewCleanupLock(String nodeId, long epoch, String ownerToken) {
-        Long renewed = evalLock(RENEW_CLEANUP_LOCK_LUA, nodeId, epoch, ownerToken);
-        return renewed != null && renewed > 0L;
-    }
-
-    private static void releaseCleanupLock(String nodeId, long epoch, String ownerToken) {
-        try {
-            evalLock(RELEASE_CLEANUP_LOCK_LUA, nodeId, epoch, ownerToken);
-        } catch (Exception e) {
-            log.debug("释放死亡路由清扫锁失败 nodeId={} epoch={}", nodeId, epoch, e);
-        }
-    }
-
-    private static Long evalLock(byte[] script, String nodeId, long epoch, String ownerToken) {
-        byte[] key = bytes(CacheConstant.buildImNodeRouteCleanupLockCacheKey(nodeId, epoch));
-        byte[] token = bytes(ownerToken);
-        byte[] ttl = bytes(String.valueOf(MessageConstant.IM_DEAD_NODE_ROUTE_CLEANUP_LOCK_TTL_MILLIS));
-        return stringRedisTemplate.execute((RedisCallback<Long>) connection ->
-                (Long) connection.scriptingCommands().eval(script, ReturnType.INTEGER, 1, key, token, ttl));
-    }
-
-    private static void addRouteIndexQuietly(String routeKey, String deviceField, String expectedRoute,
-                                             String nodeId, long epoch) {
-        try {
-            stringRedisTemplate.opsForSet().add(
-                    CacheConstant.buildImNodeRouteIndexCacheKey(nodeId, epoch),
-                    encodeIndexMember(routeKey, deviceField, expectedRoute));
-        } catch (Exception e) {
-            // 派生索引写失败不能回滚已完成的登录绑定；读时惰性清理仍可保证正确性。
-            log.warn("登记节点路由反向索引失败 nodeId={} epoch={} routeKey={}", nodeId, epoch, routeKey, e);
-        }
-    }
-
-    private static void removeRouteIndexQuietly(String routeKey, String deviceField, String expectedRoute,
-                                                String nodeId, long epoch) {
-        try {
-            stringRedisTemplate.opsForSet().remove(
-                    CacheConstant.buildImNodeRouteIndexCacheKey(nodeId, epoch),
-                    encodeIndexMember(routeKey, deviceField, expectedRoute));
-        } catch (Exception e) {
-            // 残留索引成员只会在后台再次执行安全 CAS，不影响在线状态。
-            log.debug("移除节点路由反向索引失败 nodeId={} epoch={} routeKey={}", nodeId, epoch, routeKey, e);
-        }
-    }
-
-    private static String encodeIndexMember(String routeKey, String deviceField, String expectedRoute) {
-        Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
-        return encoder.encodeToString(routeKey.getBytes(StandardCharsets.UTF_8)) + "."
-                + encoder.encodeToString(deviceField.getBytes(StandardCharsets.UTF_8)) + "."
-                + encoder.encodeToString(expectedRoute.getBytes(StandardCharsets.UTF_8));
-    }
-
-    private static RouteIndexEntry decodeIndexMember(String member) {
-        try {
-            String[] parts = member.split("\\.", 3);
-            if (parts.length != 3) {
-                return null;
-            }
-            Base64.Decoder decoder = Base64.getUrlDecoder();
-            return new RouteIndexEntry(
-                    new String(decoder.decode(parts[0]), StandardCharsets.UTF_8),
-                    new String(decoder.decode(parts[1]), StandardCharsets.UTF_8),
-                    new String(decoder.decode(parts[2]), StandardCharsets.UTF_8));
-        } catch (IllegalArgumentException e) {
-            return null;
-        }
-    }
-
-    private record RouteIndexEntry(String routeKey, String deviceField, String expectedRoute) {
     }
 
     /**
