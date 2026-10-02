@@ -72,26 +72,6 @@ public final class ImSessionPresence {
     }
 
     /**
-     * 指定设备 field 是否仍挂在活节点上。HASH field 为 deviceType 字符串。
-     */
-    public static boolean isDeviceRouteLive(Map<?, ?> routeHash, byte deviceType, Map<String, Long> liveEpochs) {
-        if (routeHash == null || routeHash.isEmpty()) {
-            return false;
-        }
-        String field = String.valueOf(deviceType);
-        Object raw = routeHash.get(field);
-        if (raw == null) {
-            for (Map.Entry<?, ?> entry : routeHash.entrySet()) {
-                if (entry.getKey() != null && field.equals(stringifyRoutePart(entry.getKey()))) {
-                    raw = entry.getValue();
-                    break;
-                }
-            }
-        }
-        return isEncodedRouteLive(raw, liveEpochs);
-    }
-
-    /**
      * 路由 HASH 中 epoch 已死、应惰性摘掉的设备类型。
      */
     public static Set<Byte> deadDeviceTypes(Map<?, ?> routeHash, Map<String, Long> liveEpochs) {
