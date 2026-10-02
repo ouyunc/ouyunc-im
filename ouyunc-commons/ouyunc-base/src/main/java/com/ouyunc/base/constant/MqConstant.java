@@ -102,11 +102,13 @@ public class MqConstant {
 
     /**
      * 归档翻译消费组。与 message_save 共用归档 topic，组名独立，避免改动 message_save 的位点。
-     * 源码里原先没有这个常量，按现有 group 命名补上，不是改名。
      */
     public static final String MQ_TRANSLATE_MESSAGE_GROUP = "message_translate";
 
-
+    /**
+     * 外渠归档恢复消费组：独立消费 SAVE/WITHDRAW/READ 归档，不与 message_save 位点耦合。
+     */
+    public static final String MQ_EXTERNAL_ARCHIVE_RELAY_GROUP = "external_archive_relay";
 
     /**
      * 外部渠道下行（WhatsApp / Telegram 等）group

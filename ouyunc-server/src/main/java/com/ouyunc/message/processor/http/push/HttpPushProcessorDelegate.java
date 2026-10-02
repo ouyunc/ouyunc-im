@@ -21,7 +21,7 @@ import java.time.Duration;
 
 /**
  * HTTP 推送专用投递入口：按消息类型选择策略 {@code preProcess} + {@code processMono}。
- * <p>选项 A：同步等待「MQ confirm → Redis」后再对调用方给出成功/可重试结果。</p>
+ * 同步等待「MQ confirm → Redis」后再对调用方给出成功/可重试结果。
  */
 public final class HttpPushProcessorDelegate {
 
@@ -77,9 +77,9 @@ public final class HttpPushProcessorDelegate {
     }
 
     private static Mono<Boolean> pipelineMono(Packet packet, HttpProcessor strategy) {
-        // 客服在策略内改写 from 后再归档；已读/撤回只确认领域 topic，避免 SAVE + 领域各等一次。
+        // 客服在策略内改写 from 后再归档；已读/撤回/译文就绪/群操作 overlay 不打 SAVE。
         boolean skipSave = packet.getMessageType() == MessageTypeEnum.CUSTOMER_SERVICE.getType()
-                || MqArchiveRouting.usesDomainConfirmOnly(packet);
+                || MqArchiveRouting.skipsSaveArchive(packet);
         Mono<Void> archived = skipSave
                 ? Mono.empty()
                 : MessageAcceptPipelineHelper.archiveAfterAuth(packet);

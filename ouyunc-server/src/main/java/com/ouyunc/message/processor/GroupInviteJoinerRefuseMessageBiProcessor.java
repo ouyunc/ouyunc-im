@@ -29,7 +29,8 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * 被邀请人拒绝邀请：仅通知群主/管理员归档；不通知邀请人及被邀请人本人。
+ * 被邀请人拒绝邀请：仅通知群主/管理员；不通知邀请人及被邀请人本人。
+ * 领域确认走 {@link com.ouyunc.base.constant.MqConstant#MQ_GROUP_REQUEST_TOPIC}，不进 SAVE。
  */
 public final class GroupInviteJoinerRefuseMessageBiProcessor extends AbstractMessageBiProcessor<Byte> {
     private static final Logger log = LoggerFactory.getLogger(GroupInviteJoinerRefuseMessageBiProcessor.class);
@@ -47,7 +48,7 @@ public final class GroupInviteJoinerRefuseMessageBiProcessor extends AbstractMes
             ctx.close();
             return Mono.just(false);
         }
-        // 权限等校验通过后由 continueWhenPassed 归档；此处统一执行 QoS 判重
+        // 权限等校验通过后由 continueWhenPassed 进入 process；此处统一执行 QoS 判重
         if (qosPreHandle(ctx, packet)) {
             return Mono.just(false);
         }
@@ -64,7 +65,7 @@ public final class GroupInviteJoinerRefuseMessageBiProcessor extends AbstractMes
     @Override
     public Mono<Void> process(ChannelHandlerContext ctx, Packet packet) {
         if (log.isDebugEnabled()) {
-            log.debug("GroupInviteJoinerRefuseMessageProcessor 正在处理被邀请加群者同意加群的请求 {} ...", packet);
+            log.debug("GroupInviteJoinerRefuseMessageProcessor 正在处理被邀请人拒绝加群请求 {} ...", packet);
         }
         Message message = packet.getMessage();
         String joiner = message.getFrom();

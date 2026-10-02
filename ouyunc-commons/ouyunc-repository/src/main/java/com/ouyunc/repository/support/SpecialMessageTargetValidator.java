@@ -23,7 +23,9 @@ final class SpecialMessageTargetValidator {
 
     static boolean isChatTargetContentType(int contentType) {
         if (contentType == MessageContentTypeEnum.WITHDRAW_CONTENT.getType()
-                || contentType == MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType()) {
+                || contentType == MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType()
+                || contentType == MessageContentTypeEnum.TRANSLATION_READY_CONTENT.getType()
+                || contentType == MessageContentTypeEnum.GROUP_OP_NOTIFY_CONTENT.getType()) {
             return false;
         }
         return contentType != MessageContentTypeEnum.PING_PONG_CONTENT.getType()

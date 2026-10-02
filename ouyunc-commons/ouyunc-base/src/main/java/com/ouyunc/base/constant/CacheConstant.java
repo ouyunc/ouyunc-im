@@ -723,12 +723,18 @@ public class CacheConstant {
         return buildAggregateCacheKey(appKey, userId) + "session-view" + COLON + deviceType;
     }
 
-    /** IM 用户翻译偏好 Hash。槽 {@code {appKey:identity}}。 */
+    /**
+     * IM 用户翻译偏好 Hash。槽 {@code {appKey:identity}}。
+     * field 约定（业务侧写入，通信进程不写）：{@code language}、{@code autoTranslateIn}。
+     */
     public static String buildTranslateUserPrefCacheKey(String appKey, String identity) {
         return buildAggregateCacheKey(appKey, identity) + "translate:user";
     }
 
-    /** 坐席翻译偏好 Hash。槽 {@code {appKey:agentId}}。 */
+    /**
+     * 坐席翻译偏好 Hash。槽 {@code {appKey:agentId}}。
+     * field 约定同用户偏好：{@code language}、{@code autoTranslateIn}。
+     */
     public static String buildTranslateAgentPrefCacheKey(String appKey, String agentId) {
         return buildAggregateCacheKey(appKey, agentId) + "cs:agent:translate";
     }

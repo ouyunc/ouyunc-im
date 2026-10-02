@@ -8,7 +8,7 @@ import com.ouyunc.base.utils.IdentityUtil;
 import org.apache.commons.lang3.StringUtils;
 
 /**
- * 确认路径路由：聊天走 SAVE；已读/撤回/好友/群只走领域 topic。
+ * 确认路径路由：聊天走 SAVE；已读/撤回/好友/群/SERVER_NOTIFY overlay 不打 SAVE。
  * SAVE 归档幂等键与 Kafka key / 冷库 {@code uk_app_message_id} 为 {@code appKey:messageId}：
  * 客户端 messageId 必须在租户内唯一（建议 UUID）。长连接 QoS 仍按发送身份分片防并发重入，
  * 但正式 packetId 须在发 SAVE 前对齐，避免冷热 ID 分叉。
@@ -19,9 +19,10 @@ public final class MqArchiveRouting {
     }
 
     /**
-     * 已读、撤回、好友请求、群请求只确认领域 topic，不再打 {@link MqConstant#MQ_SAVE_MESSAGE_TOPIC}。
+     * 不走 {@link MqConstant#MQ_SAVE_MESSAGE_TOPIC}：
+     * 已读/撤回/好友/群请求走领域 topic；译文就绪(-112)/群操作(-111) 为投递 overlay，只在线通知不冷归档。
      */
-    public static boolean usesDomainConfirmOnly(Packet packet) {
+    public static boolean skipsSaveArchive(Packet packet) {
         if (packet == null) {
             return false;
         }
@@ -35,7 +36,16 @@ public final class MqArchiveRouting {
         }
         int contentType = message.getContentType();
         return contentType == MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType()
-                || contentType == MessageContentTypeEnum.WITHDRAW_CONTENT.getType();
+                || contentType == MessageContentTypeEnum.WITHDRAW_CONTENT.getType()
+                || isServerNotifyOverlayContent(contentType);
+    }
+
+    /**
+     * SERVER_NOTIFY overlay：不落会话投影、不进 SAVE 冷库，仅实时投递。
+     */
+    public static boolean isServerNotifyOverlayContent(int contentType) {
+        return contentType == MessageContentTypeEnum.TRANSLATION_READY_CONTENT.getType()
+                || contentType == MessageContentTypeEnum.GROUP_OP_NOTIFY_CONTENT.getType();
     }
 
     public static boolean isFriendRequestType(byte messageType) {

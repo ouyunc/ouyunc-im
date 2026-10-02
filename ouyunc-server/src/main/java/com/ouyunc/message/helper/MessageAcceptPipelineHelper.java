@@ -48,7 +48,7 @@ public final class MessageAcceptPipelineHelper {
      * {@link #archiveAfterContentReady}）。已读/撤回/好友/群只确认领域 topic。</p>
      */
     public static Mono<Void> archiveAfterAuth(Packet packet) {
-        if (MqArchiveRouting.usesDomainConfirmOnly(packet)) {
+        if (MqArchiveRouting.skipsSaveArchive(packet)) {
             return Mono.empty();
         }
         if (packet == null || packet.getMessage() == null

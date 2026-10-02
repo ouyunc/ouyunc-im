@@ -74,7 +74,7 @@ public final class CsHttpPushDeliveryStrategy implements HttpProcessor {
         route = live.route();
         CsHelper.rewriteAgentFrom(packet, route);
         CsImSessionRoute confirmedRoute = route;
-        Mono<Void> archived = MqArchiveRouting.usesDomainConfirmOnly(packet)
+        Mono<Void> archived = MqArchiveRouting.skipsSaveArchive(packet)
                 ? Mono.empty()
                 : MessageAcceptPipelineHelper.archiveAfterAuth(packet);
         return archived.then(Mono.defer(() -> persistPrepared(packet, confirmedRoute)));
