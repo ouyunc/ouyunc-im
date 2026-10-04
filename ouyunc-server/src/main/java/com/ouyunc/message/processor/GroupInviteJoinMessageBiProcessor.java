@@ -4,7 +4,6 @@ import com.ouyunc.core.context.MessageContext;
 
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.CacheConstant;
-import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.constant.enums.*;
 import com.ouyunc.base.model.GroupRequestSession;
@@ -87,18 +86,55 @@ public final class GroupInviteJoinMessageBiProcessor extends AbstractMessageBiPr
             String lockKey = CacheConstant.buildGroupRequestLockCacheKey(appKey, content.getIdentity(), message.getTo());
             DistributedLockHelper.runWithLock(ctx, packet, lockKey, ExceptionCodeEnum.BIND_GROUP_ERROR, () -> {
                 GroupRequestSession existingSession = repository().getGroupRequestSession(appKey, content.getIdentity(), message.getTo());
-                if (null != existingSession && (existingSession.getProgress() > RequestSessionProgress.JOINING.value() || !GroupRequestSessionWay.INVITED.value().equals(existingSession.getWay()))) {
-                    log.warn("{} 和 {} 存在正在处理中的群会话请求(拒绝或同意还未结束处理)", content.getIdentity(), message.getTo());
-                    MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
-                    return;
-                }
                 if (message.getFrom().equals(content.getIdentity())) {
                     log.warn("发送方: {} 和加入方: {} 相同，忽略 该请求", message.getFrom(), content.getIdentity());
                     MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
                     return;
                 }
+                // 被邀请人已在群：对齐主动加群——repair 索引、热会话 AGREEING、publish，再 ACK（勿 reject）
                 if (repository().inGroup(appKey, content.getIdentity(), message.getTo())) {
-                    log.warn("该用户 {} 已经加入群组 {}", content.getIdentity(), message.getTo());
+                    log.warn("该用户 {} 已经加入群组 {}，幂等 ACK", content.getIdentity(), message.getTo());
+                    if (!repository().repairUserGroupIndex(appKey, content.getIdentity(), message.getTo(),
+                            message.getMetadata().getIngress().getServerTime())) {
+                        MessageSubmissionResponseHelper.retryLater(ctx, packet, ExceptionCodeEnum.BIND_GROUP_ERROR);
+                        return;
+                    }
+                    if (existingSession == null) {
+                        existingSession = GroupRequestSession.newGroupBuilder()
+                                .sessionId(message.getId())
+                                .progress(RequestSessionProgress.AGREEING.value())
+                                .joiner(content.getIdentity())
+                                .groupId(message.getTo())
+                                .inviter(message.getFrom())
+                                .channel(GroupRequestSessionChannel.OTHER.value())
+                                .way(GroupRequestSessionWay.INVITED.value())
+                                .joinerProcessStatus(GroupJoinerProcessStatus.AGREE.value())
+                                .build();
+                    } else {
+                        existingSession.setProgress(RequestSessionProgress.AGREEING.value());
+                        existingSession.setJoinerProcessStatus(GroupJoinerProcessStatus.AGREE.value());
+                        existingSession.setWay(GroupRequestSessionWay.INVITED.value());
+                        if (StringUtils.isBlank(existingSession.getInviter())) {
+                            existingSession.setInviter(message.getFrom());
+                        }
+                    }
+                    if (!repository().saveGroupRequestMessage(packet, existingSession,
+                            MessageContext.messageHotDataTtlMillis())) {
+                        MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
+                        return;
+                    }
+                    RequestEventContextFactoryHelper.capture(packet, existingSession);
+                    if (!MessageAcceptPipelineHelper.publishRequestCommand(ctx, MqConstant.MQ_GROUP_REQUEST_TOPIC,
+                            message.getTo(), packet)) {
+                        return;
+                    }
+                    RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.userOnly(content.getIdentity()));
+                    MessageAcceptPipelineHelper.requestAccepted(ctx, packet);
+                    return;
+                }
+                if (null != existingSession && (existingSession.getProgress() > RequestSessionProgress.JOINING.value()
+                        || !GroupRequestSessionWay.INVITED.value().equals(existingSession.getWay()))) {
+                    log.warn("{} 和 {} 存在正在处理中的群会话请求(拒绝或同意还未结束处理)", content.getIdentity(), message.getTo());
                     MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
                     return;
                 }

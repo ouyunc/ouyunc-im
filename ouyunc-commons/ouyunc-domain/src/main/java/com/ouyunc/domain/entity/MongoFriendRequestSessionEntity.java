@@ -50,10 +50,10 @@ public class MongoFriendRequestSessionEntity implements Serializable {
 
 
     /**
-     * 会话开id
+     * 会话 id（业务唯一，Kafka 重放/补插均按此幂等）
      */
     @Field("session_id")
-    @Indexed
+    @Indexed(unique = true)
     private String sessionId;
 
     /**

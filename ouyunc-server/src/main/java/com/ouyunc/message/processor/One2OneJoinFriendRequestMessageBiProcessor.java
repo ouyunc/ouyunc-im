@@ -5,7 +5,6 @@ import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.exception.ExceptionReporter;
 
 import com.ouyunc.base.constant.CacheConstant;
-import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.MessageType;
@@ -83,8 +82,22 @@ public final class One2OneJoinFriendRequestMessageBiProcessor extends AbstractMe
             String lockKey = CacheConstant.buildFriendRequestLockCacheKey(appKey, sessionId);
             DistributedLockHelper.runWithLock(ctx, packet, lockKey, ExceptionCodeEnum.BIND_FRIEND_ERROR, () -> {
                 RequestSession requestSession = repository().getFriendRequestSession(appKey, message.getFrom(), message.getTo());
+                // 已是好友：对齐主动加群已在群——推进热会话 AGREEING 并投递 Kafka，供消费侧收尾 Mongo AUTO_AGREED
                 if (repository().isFriend(appKey, message.getFrom(), message.getTo())) {
-                    log.warn("已经是好友, 幂等 ACK; {}", packet);
+                    log.warn("已经是好友, 幂等推进热会话并投递; {}", packet);
+                    RequestSession session = requestSession != null ? requestSession
+                            : new RequestSession(message.getId(), RequestSessionProgress.AGREEING.value());
+                    session.setProgress(RequestSessionProgress.AGREEING.value());
+                    if (!repository().saveFriendRequestMessage(packet, session, MessageContext.messageHotDataTtlMillis())) {
+                        log.error("已是好友但保存请求会话失败: {}", packet);
+                        ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR,
+                                "保存一对一已是好友请求会话异常!", "One2OneJoinFriendRequestMessageBiProcessor.process", packet);
+                        MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
+                        return;
+                    }
+                    if (!publishFriendCommand(ctx, sessionId, packet, session)) {
+                        return;
+                    }
                     RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.userOnly(message.getFrom()));
                     MessageAcceptPipelineHelper.requestAccepted(ctx, packet);
                     return;

@@ -10,7 +10,7 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
-* 好友请求会话
+* 群请求会话
 * @TableName ouyunc_im_group_request_session
 */
 @Document(collection = "ouyunc_im_group_request_session")
@@ -79,10 +79,10 @@ public class MongoGroupRequestSessionEntity implements Serializable {
     private Integer processorPost;
 
     /**
-     * 会话开id
+     * 会话 id（业务唯一，Kafka 重放/补插均按此幂等）
      */
     @Field("session_id")
-    @Indexed
+    @Indexed(unique = true)
     private String sessionId;
 
     /**
@@ -160,45 +160,6 @@ public class MongoGroupRequestSessionEntity implements Serializable {
         public static final String sessionEndTime = "session_end_time";
     }
     public MongoGroupRequestSessionEntity() {
-    }
-
-    public MongoGroupRequestSessionEntity(Long id, String lastMessage,  String inviter, Integer inviterPost, String joiner, String groupId, String processor, Integer processorPost, String sessionId, Long sessionBeginTime, Long sessionEndTime, Integer status, Integer way, LocalDateTime createTime, LocalDateTime updateTime, LocalDateTime expireAt) {
-        this.id = id;
-        this.lastMessage = lastMessage;
-        this.inviter = inviter;
-        this.inviterPost = inviterPost;
-        this.joiner = joiner;
-        this.groupId = groupId;
-        this.processor = processor;
-        this.processorPost = processorPost;
-        this.sessionId = sessionId;
-        this.sessionBeginTime = sessionBeginTime;
-        this.sessionEndTime = sessionEndTime;
-        this.status = status;
-        this.way = way;
-        this.createTime = createTime;
-        this.updateTime = updateTime;
-        this.expireAt = expireAt;
-    }
-
-    public MongoGroupRequestSessionEntity(Long id, String lastMessage, String inviter, Integer inviterPost, String joiner, String groupId, String processor, Integer processorPost, String sessionId, Long sessionBeginTime, Long sessionEndTime, Integer status, Integer way, Integer channel, LocalDateTime createTime, LocalDateTime updateTime, LocalDateTime expireAt) {
-        this.id = id;
-        this.lastMessage = lastMessage;
-        this.inviter = inviter;
-        this.inviterPost = inviterPost;
-        this.joiner = joiner;
-        this.groupId = groupId;
-        this.processor = processor;
-        this.processorPost = processorPost;
-        this.sessionId = sessionId;
-        this.sessionBeginTime = sessionBeginTime;
-        this.sessionEndTime = sessionEndTime;
-        this.status = status;
-        this.way = way;
-        this.channel = channel;
-        this.createTime = createTime;
-        this.updateTime = updateTime;
-        this.expireAt = expireAt;
     }
 
     public MongoGroupRequestSessionEntity(Long id, String lastMessage,  String inviter, Integer inviterPost, String joiner, Integer joinerProcessStatus, String groupId, String processor, Integer processorPost, String sessionId, Long sessionBeginTime, Long sessionEndTime, Integer status, Integer way, Integer channel, LocalDateTime createTime, LocalDateTime updateTime, LocalDateTime expireAt) {

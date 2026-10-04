@@ -74,6 +74,22 @@ public final class FriendRepositorySupport {
         });
     }
 
+    /**
+     * 覆盖写好友请求热会话（申请人方向）。已是好友幂等重放需推进 progress=AGREEING，不能用 NX。
+     */
+    public boolean saveFriendRequestMessage(Packet packet, RequestSession requestSession, long expireTime) {
+        Message message = packet.getMessage();
+        return saveFriendRequestMessage(packet, requestSession.getSessionId(), expireTime, (redisConnection) -> {
+            String friendRequestCacheKey = CacheConstant.buildFriendRequestCacheKey(
+                    message.getMetadata().getIngress().getAppKey(), message.getFrom(), message.getTo());
+            byte[] keyBytes = session.serializeOrThrow(infra.stringSerializer, friendRequestCacheKey, "friendRequestCacheKey");
+            byte[] valueBytes = session.serializeOrThrow(infra.valueSerializer, requestSession, "requestSession");
+            redisConnection.commands().set(keyBytes, valueBytes,
+                    Expiration.milliseconds(MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP),
+                    RedisStringCommands.SetOption.UPSERT);
+        });
+    }
+
     public RequestSession getFriendRequestSession(String appKey, String from, String to) {
         Object raw = infra.redisTemplate.opsForValue().get(CacheConstant.buildFriendRequestCacheKey(appKey, from, to));
         return raw instanceof RequestSession requestSession ? requestSession : null;

@@ -176,6 +176,11 @@ public enum DefaultRepository implements Repository {
         return RepositorySupports.FRIEND.saveJoinFriendRequestMessage(packet, requestSession, expireTime);
     }
 
+    /** 覆盖写好友请求热会话（申请人方向），供已是好友幂等推进 progress。 */
+    public boolean saveFriendRequestMessage(Packet packet, RequestSession requestSession, long expireTime) {
+        return RepositorySupports.FRIEND.saveFriendRequestMessage(packet, requestSession, expireTime);
+    }
+
     public RequestSession getFriendRequestSession(String appKey, String from, String to) {
         return RepositorySupports.FRIEND.getFriendRequestSession(appKey, from, to);
     }
