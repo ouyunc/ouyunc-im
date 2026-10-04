@@ -32,6 +32,7 @@ ouyunc:
       org: ouyunc
   mq:
     type: kafka
+    topicPrefix: pre
     kafka:
       bootstrapServers: 47.92.113.112:9092
       producer:

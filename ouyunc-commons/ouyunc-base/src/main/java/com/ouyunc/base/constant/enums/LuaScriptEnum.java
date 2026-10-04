@@ -800,13 +800,14 @@ public enum LuaScriptEnum {
               local now = redis.call('TIME')
               return now[1] * 1000 + math.floor(now[2] / 1000)
             end
+            -- processingAt 必须用 Redis 时间，避免 JVM 时钟超前导致 5 分钟租约永不到期。
             if progress == false or progress == nil or progress == '' or progress == 'JOINING' then
               redis.call('HSET', KEYS[1],
                 'progress', ARGV[1],
                 'commandId', ARGV[2],
                 'action', ARGV[3],
                 'operatorId', ARGV[4],
-                'processingAt', ARGV[5])
+                'processingAt', nowMillis())
               touch()
               return 1
             end
@@ -824,7 +825,7 @@ public enum LuaScriptEnum {
                   'commandId', ARGV[2],
                   'action', ARGV[3],
                   'operatorId', ARGV[4],
-                  'processingAt', ARGV[5])
+                  'processingAt', nowMillis())
                 touch()
                 return 1
               end

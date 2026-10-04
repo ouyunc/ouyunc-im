@@ -1,5 +1,6 @@
 package com.ouyunc.message;
 
+import com.ouyunc.base.constant.MqDestination;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.MessageContentType;
 import com.ouyunc.base.constant.enums.MessageType;
@@ -55,6 +56,7 @@ public class StandardMessageServer extends AbstractMessageServer {
         MessageServerContext.messageProperties =  loadArgsProperties(loader.loadProperties(MessageServerProperties.class, System.getProperties()), resolverArgs(args));
         // 设置本地localhost
         MessageServerContext.serverProperties().setLocalHost(IpUtil.getLocalHost());
+        MqDestination.install(MessageServerContext.serverProperties().getMqTopicPrefix());
         log.debug("配置信息加载完成：{}", MessageServerContext.serverProperties().toString());
     }
 

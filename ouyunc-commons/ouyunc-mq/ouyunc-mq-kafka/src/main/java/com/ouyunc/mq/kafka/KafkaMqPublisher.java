@@ -2,6 +2,7 @@ package com.ouyunc.mq.kafka;
 
 import com.ouyunc.mq.core.MqHeaderKeys;
 import com.ouyunc.base.constant.MqConstant;
+import com.ouyunc.base.constant.MqDestination;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import com.ouyunc.mq.core.api.MqPublisher;
 import org.apache.commons.lang3.StringUtils;
@@ -34,6 +35,7 @@ public class KafkaMqPublisher implements MqPublisher {
     public CompletableFuture<?> send(String topic, String key, String payload, Map<String, Object> headers) {
         // extra 配置可能覆盖 typed ack；必须校验最终 ProducerFactory 配置。
         Object acks = kafkaTemplate.getProducerFactory().getConfigurationProperties().get(ProducerConfig.ACKS_CONFIG);
+        topic = MqDestination.topic(topic);
         if (MqConstant.requiresBrokerAcksAll(topic)
                 && !MqConstant.KAFKA_ACKS_ALL.equals(String.valueOf(acks))
                 && !MqConstant.KAFKA_ACKS_ALL_NUMERIC.equals(String.valueOf(acks))) {

@@ -119,6 +119,12 @@ public class MessageServerProperties extends MessageProperties {
     boolean csAgentPresenceEnabled;
 
     /**
+     * MQ topic 环境前缀，对应 {@code ouyunc.mq.topicPrefix}。空 / prod 表示生产原名。
+     */
+    @Key("ouyunc.mq.topicPrefix")
+    String mqTopicPrefix;
+
+    /**
      * 系统/BOT 代发私聊时是否跳过好友校验。
      */
     @Key(value = "ouyunc.message.http-push.skip-friend-check-for-system", defaultValue = "true")
@@ -650,6 +656,14 @@ public class MessageServerProperties extends MessageProperties {
 
     public void setCsAgentPresenceEnabled(boolean csAgentPresenceEnabled) {
         this.csAgentPresenceEnabled = csAgentPresenceEnabled;
+    }
+
+    public String getMqTopicPrefix() {
+        return mqTopicPrefix;
+    }
+
+    public void setMqTopicPrefix(String mqTopicPrefix) {
+        this.mqTopicPrefix = mqTopicPrefix;
     }
 
     public boolean isHttpPushSkipFriendCheckForSystem() {

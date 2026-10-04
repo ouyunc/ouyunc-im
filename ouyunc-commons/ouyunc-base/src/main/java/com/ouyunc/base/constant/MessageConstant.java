@@ -22,6 +22,16 @@ public class MessageConstant {
     public static final String UNDERLINE = "_";
 
     /**
+     * 连字符
+     */
+    public static final String HYPHEN = "-";
+
+    /**
+     * 空字符串
+     */
+    public static final String EMPTY_STR = "";
+
+    /**
      * 0.5
      */
     public static final Float ZERO_POINT_FIVE = 0.5f;

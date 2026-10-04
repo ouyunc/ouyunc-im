@@ -1,5 +1,6 @@
 package com.ouyunc.mq.rocket;
 
+import com.ouyunc.base.constant.MqDestination;
 import com.ouyunc.mq.core.MqHeaderKeys;
 import com.ouyunc.mq.core.api.MqPublisher;
 import org.apache.commons.lang3.StringUtils;
@@ -39,6 +40,7 @@ public class RocketMqPublisher implements MqPublisher {
             builder.setHeader(MessageConst.PROPERTY_KEYS, key);
         }
         org.springframework.messaging.Message<String> message = builder.build();
+        topic = MqDestination.topic(topic);
         CompletableFuture<SendResult> future = new CompletableFuture<>();
         rocketMQTemplate.asyncSend(topic, message, new SendCallback() {
             @Override

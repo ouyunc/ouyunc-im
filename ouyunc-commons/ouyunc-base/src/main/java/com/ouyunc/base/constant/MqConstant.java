@@ -1,5 +1,7 @@
 package com.ouyunc.base.constant;
 
+import java.util.Set;
+
 /**
  * mq topic queue 等相关常量
  */
@@ -7,6 +9,15 @@ public class MqConstant {
     /** Kafka 归档必须等待 ISR 确认；两个值在客户端协议中等价。 */
     public static final String KAFKA_ACKS_ALL = "all";
     public static final String KAFKA_ACKS_ALL_NUMERIC = "-1";
+
+    /**
+     * 配置这些值时不加 topic 环境前缀，沿用生产原名。
+     */
+    public static final String MQ_TOPIC_PREFIX_PROD = "prod";
+    public static final String MQ_TOPIC_PREFIX_PRODUCTION = "production";
+    public static final String MQ_TOPIC_PREFIX_NONE = "none";
+    public static final Set<String> MQ_TOPIC_PREFIX_DISABLED_VALUES = Set.of(
+            MQ_TOPIC_PREFIX_PROD, MQ_TOPIC_PREFIX_PRODUCTION, MQ_TOPIC_PREFIX_NONE);
 
 
 
@@ -140,11 +151,12 @@ public class MqConstant {
      * 确认路径 topic（归档/撤回/已读/好友请求/群请求）要求 Kafka acks=all。
      */
     public static boolean requiresBrokerAcksAll(String topic) {
-        return MQ_SAVE_MESSAGE_TOPIC.equals(topic)
-                || MQ_WITHDRAW_MESSAGE_TOPIC.equals(topic)
-                || MQ_READ_RECEIPT_MESSAGE_TOPIC.equals(topic)
-                || MQ_FRIEND_REQUEST_TOPIC.equals(topic)
-                || MQ_GROUP_REQUEST_TOPIC.equals(topic);
+        String logical = MqDestination.logical(topic);
+        return MQ_SAVE_MESSAGE_TOPIC.equals(logical)
+                || MQ_WITHDRAW_MESSAGE_TOPIC.equals(logical)
+                || MQ_READ_RECEIPT_MESSAGE_TOPIC.equals(logical)
+                || MQ_FRIEND_REQUEST_TOPIC.equals(logical)
+                || MQ_GROUP_REQUEST_TOPIC.equals(logical);
     }
 
 }
