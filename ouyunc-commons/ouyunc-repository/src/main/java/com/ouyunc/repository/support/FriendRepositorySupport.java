@@ -15,10 +15,13 @@ import com.ouyunc.core.context.MessageContext;
 import com.ouyunc.core.relation.RelationCacheInvalidatePublisher;
 import com.ouyunc.core.relation.RelationLocalCache;
 import com.ouyunc.base.constant.enums.IdentityType;
+import com.ouyunc.base.constant.enums.RequestSessionProgress;
+import com.ouyunc.base.constant.enums.RequestSessionStatus;
 import com.ouyunc.base.constant.enums.YesOrNo;
 import com.ouyunc.domain.entity.BlacklistEntity;
 import com.ouyunc.domain.entity.FriendEntity;
 import com.ouyunc.domain.entity.MongoFriendEntity;
+import com.ouyunc.domain.entity.MongoFriendRequestSessionEntity;
 import com.ouyunc.domain.entity.UserEntity;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -91,8 +94,48 @@ public final class FriendRepositorySupport {
     }
 
     public RequestSession getFriendRequestSession(String appKey, String from, String to) {
-        Object raw = infra.redisTemplate.opsForValue().get(CacheConstant.buildFriendRequestCacheKey(appKey, from, to));
-        return raw instanceof RequestSession requestSession ? requestSession : null;
+        String cacheKey = CacheConstant.buildFriendRequestCacheKey(appKey, from, to);
+        Object raw = infra.redisTemplate.opsForValue().get(cacheKey);
+        if (raw instanceof RequestSession requestSession) {
+            return requestSession;
+        }
+        if (raw != null) {
+            log.warn("好友请求热会话类型异常, key={}, type={}", cacheKey, raw.getClass().getName());
+        }
+        // UI/列表以 Mongo PENDING 为准；审批走 Redis 热投影。热键丢失时回源重建，避免 600001。
+        return restoreFriendRequestSessionFromMongo(from, to, cacheKey);
+    }
+
+    /**
+     * Mongo PENDING → Redis JOINING 热投影。仅用于审批读路径 miss。
+     */
+    private RequestSession restoreFriendRequestSessionFromMongo(String from, String to, String cacheKey) {
+        if (infra.mongoTemplate == null || StringUtils.isAnyBlank(from, to)) {
+            return null;
+        }
+        try {
+            MongoFriendRequestSessionEntity pending = infra.mongoTemplate.findOne(
+                    Query.query(Criteria.where(MongoFriendRequestSessionEntity.Fields.from).is(from)
+                            .and(MongoFriendRequestSessionEntity.Fields.to).is(to)
+                            .and(MongoFriendRequestSessionEntity.Fields.status)
+                            .is(RequestSessionStatus.PENDING.value())),
+                    MongoFriendRequestSessionEntity.class);
+            if (pending == null || StringUtils.isBlank(pending.getSessionId())) {
+                return null;
+            }
+            RequestSession restored = new RequestSession(pending.getSessionId(), RequestSessionProgress.JOINING.value());
+            infra.redisTemplate.opsForValue().set(
+                    cacheKey,
+                    restored,
+                    MessageConstant.CACHE_REQUEST_SESSION_KEY_EXPIRE_TIMESTAMP,
+                    TimeUnit.MILLISECONDS);
+            log.info("好友请求热会话 Redis 缺失，已从 Mongo PENDING 回源重建 key={} sessionId={}",
+                    cacheKey, pending.getSessionId());
+            return restored;
+        } catch (Exception e) {
+            log.warn("好友请求热会话 Mongo 回源失败 from={} to={}", from, to, e);
+            return null;
+        }
     }
 
     /** 清除好友请求会话占位，允许删友后再申请。 */
