@@ -289,6 +289,12 @@ public class CacheConstant {
      */
     public static final String LOGIN_ROUTE_CACHE_INVALIDATE_CHANNEL = OUYUNC + "im:login-route-cache:invalidate";
 
+
+
+    private static final String MESSAGE_OPERATION = ":operation";
+    private static final String REQUEST_COMMAND_CONFIRMED = ":request-command-confirmed";
+
+
     // ============================================ 集群优化方法 ============================================
 
     /**
@@ -649,9 +655,6 @@ public class CacheConstant {
     public static String buildMessageOperationKey(String appKey, long packetId) {
         return buildAggregateCacheKey(appKey, String.valueOf(packetId)) + MESSAGE_OPERATION;
     }
-
-    private static final String MESSAGE_OPERATION = ":operation";
-    private static final String REQUEST_COMMAND_CONFIRMED = ":request-command-confirmed";
 
     /** 请求领域命令已获 broker 确认；通知重试不再次发布已确认命令。 */
     public static String buildRequestCommandConfirmedKey(String appKey, long packetId) {
