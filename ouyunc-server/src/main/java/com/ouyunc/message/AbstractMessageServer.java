@@ -390,9 +390,9 @@ public abstract class AbstractMessageServer implements MessageServer {
         // 注册关闭钩子
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             // 注意事项：1.不宜耗时过久 2.勿再注册/移除钩子 3.勿调用 System.exit
-            log.error("Message server shutdown hook 触发");
+            log.warn("Message server shutdown hook 触发");
             if (runGracefulShutdownOnce()) {
-                log.error("Message server 注销完成");
+                log.warn("Message server 注销完成");
             }
         }));
     }
