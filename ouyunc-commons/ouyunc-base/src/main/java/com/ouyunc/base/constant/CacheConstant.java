@@ -291,8 +291,11 @@ public class CacheConstant {
 
 
 
-    private static final String MESSAGE_OPERATION = ":operation";
-    private static final String REQUEST_COMMAND_CONFIRMED = ":request-command-confirmed";
+    /** 控制操作恢复快照；聚合前缀已包含末尾冒号，此处不再添加前导分隔符。 */
+    private static final String MESSAGE_OPERATION = "operation";
+
+    /** 请求领域命令的 MQ 确认标记；与聚合前缀直接拼接，不包含前导分隔符。 */
+    private static final String REQUEST_COMMAND_CONFIRMED = "request-command-confirmed";
 
 
     // ============================================ 集群优化方法 ============================================
@@ -324,6 +327,7 @@ public class CacheConstant {
 
     /**
      * 按聚合实体分片的业务 key 前缀：首 tag 为 {@code {appKey:aggregateId}}。
+     * 返回值已包含末尾冒号，直接拼接的业务段不得再带前导冒号，避免生成双分隔符。
      */
     private static String buildAggregateCacheKey(String appKey, String aggregateId) {
         return OUYUNC + APP_KEY + COLON + withAggregateHashTag(appKey, aggregateId) + COLON;

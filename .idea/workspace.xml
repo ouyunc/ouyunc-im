@@ -6,7 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="f5e04433-bce4-4c4c-925d-8bad5c9272b8" name="Changes" comment="增加客户端packet 协议">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/CacheConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/CacheConstant.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -222,22 +221,6 @@
       <workItem from="1790514949006" duration="2013000" />
       <workItem from="1790769925349" duration="8761000" />
       <workItem from="1790842152197" duration="8040000" />
-    </task>
-    <task id="LOCAL-00120" summary="增加客户端packet 协议">
-      <option name="closed" value="true" />
-      <created>1790413560675</created>
-      <option name="number" value="00120" />
-      <option name="presentableId" value="LOCAL-00120" />
-      <option name="project" value="LOCAL" />
-      <updated>1790413560675</updated>
-    </task>
-    <task id="LOCAL-00121" summary="增加客户端packet 协议">
-      <option name="closed" value="true" />
-      <created>1790414004091</created>
-      <option name="number" value="00121" />
-      <option name="presentableId" value="LOCAL-00121" />
-      <option name="project" value="LOCAL" />
-      <updated>1790414004091</updated>
     </task>
     <task id="LOCAL-00122" summary="增加客户端packet 协议">
       <option name="closed" value="true" />
@@ -615,7 +598,23 @@
       <option name="project" value="LOCAL" />
       <updated>1791167442634</updated>
     </task>
-    <option name="localTasksCounter" value="169" />
+    <task id="LOCAL-00169" summary="增加客户端packet 协议">
+      <option name="closed" value="true" />
+      <created>1791168481349</created>
+      <option name="number" value="00169" />
+      <option name="presentableId" value="LOCAL-00169" />
+      <option name="project" value="LOCAL" />
+      <updated>1791168481349</updated>
+    </task>
+    <task id="LOCAL-00170" summary="增加客户端packet 协议">
+      <option name="closed" value="true" />
+      <created>1791169624873</created>
+      <option name="number" value="00170" />
+      <option name="presentableId" value="LOCAL-00170" />
+      <option name="project" value="LOCAL" />
+      <updated>1791169624873</updated>
+    </task>
+    <option name="localTasksCounter" value="171" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
