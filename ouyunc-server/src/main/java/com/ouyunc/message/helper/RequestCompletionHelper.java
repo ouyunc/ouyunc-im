@@ -6,7 +6,7 @@ import com.ouyunc.base.constant.MqConstant;
 import com.ouyunc.base.constant.enums.*;
 import com.ouyunc.base.model.RequestEventContext;
 import com.ouyunc.base.packet.Packet;
-import com.ouyunc.core.exception.ExternalDeliveryConfirmException;
+import com.ouyunc.base.exception.ExternalDeliveryConfirmException;
 import com.ouyunc.repository.DefaultRepository;
 
 import java.util.List;

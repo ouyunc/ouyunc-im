@@ -3,7 +3,6 @@ package com.ouyunc.message.handler;
 import com.ouyunc.core.exception.ExceptionReporter;
 
 import com.alibaba.fastjson2.JSON;
-import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.*;

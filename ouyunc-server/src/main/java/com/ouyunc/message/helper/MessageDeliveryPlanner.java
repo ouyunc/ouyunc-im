@@ -10,7 +10,7 @@ import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.model.Target;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
-import com.ouyunc.core.exception.ExternalDeliveryConfirmException;
+import com.ouyunc.base.exception.ExternalDeliveryConfirmException;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.schedule.QosRetryScheduler;
 import com.ouyunc.repository.DefaultRepository;

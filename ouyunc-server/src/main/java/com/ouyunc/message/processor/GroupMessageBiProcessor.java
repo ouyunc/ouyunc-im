@@ -3,7 +3,7 @@ package com.ouyunc.message.processor;
 import com.ouyunc.core.context.MessageContext;
 
 import com.ouyunc.core.exception.ExceptionReporter;
-import com.ouyunc.core.exception.DeliveryRunBusyException;
+import com.ouyunc.base.exception.DeliveryRunBusyException;
 
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;

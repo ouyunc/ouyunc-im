@@ -2,7 +2,7 @@ package com.ouyunc.message.helper;
 
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.packet.Packet;
-import com.ouyunc.core.exception.DeliveryRunBusyException;
+import com.ouyunc.base.exception.DeliveryRunBusyException;
 import com.ouyunc.repository.DefaultRepository;
 import com.ouyunc.repository.support.DeliveryCompletionSupport;
 
