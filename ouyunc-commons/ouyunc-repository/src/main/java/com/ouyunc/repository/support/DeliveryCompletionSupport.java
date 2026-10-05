@@ -2,6 +2,7 @@ package com.ouyunc.repository.support;
 
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.MqArchiveRouting;
 import com.ouyunc.base.constant.enums.MessageDeliveryChannelEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
@@ -113,7 +114,7 @@ public final class DeliveryCompletionSupport {
             throw new IllegalArgumentException("请求领域命令缺少持久化身份");
         }
         redis.opsForValue().set(CacheConstant.buildRequestCommandConfirmedKey(identity.appKey, identity.packetId),
-                TASK_CONFIRMED, java.time.Duration.ofMillis(MessageContext.messageHotDataTtlMillis()));
+                TASK_CONFIRMED, java.time.Duration.ofMillis(deliveryTtlMillis(packet)));
     }
 
     /**
@@ -143,7 +144,7 @@ public final class DeliveryCompletionSupport {
             return false;
         }
         Long result = redis.execute(FINISH_SCRIPT, java.util.List.of(done, run), ownerToken,
-                String.valueOf(MessageContext.messageHotDataTtlMillis()));
+                String.valueOf(deliveryTtlMillis(packet)));
         return Long.valueOf(1L).equals(result);
     }
 
@@ -199,6 +200,16 @@ public final class DeliveryCompletionSupport {
         }
         redis.execute(CONFIRM_SCRIPT, java.util.List.of(key),
                 field, TASK_CONFIRMED, String.valueOf(MessageContext.messageHotDataTtlMillis()));
+    }
+
+    /** 请求的已确认/已完成状态必须和首次命令快照覆盖同一个 QoS 重试期。 */
+    private static long deliveryTtlMillis(Packet packet) {
+        long hotTtl = MessageContext.messageHotDataTtlMillis();
+        if (packet != null && (MqArchiveRouting.isFriendRequestType(packet.getMessageType())
+                || MqArchiveRouting.isGroupRequestType(packet.getMessageType()))) {
+            return Math.max(hotTtl, MessageConstant.CACHE_REQUEST_DELIVERY_EXPIRE_TIMESTAMP);
+        }
+        return hotTtl;
     }
 
     private static String doneKey(Packet packet) {

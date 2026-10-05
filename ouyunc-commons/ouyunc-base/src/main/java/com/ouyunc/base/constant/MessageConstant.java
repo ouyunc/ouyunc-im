@@ -216,6 +216,10 @@ public class MessageConstant {
     public static final long CACHE_QOS_IDEM_CLIENT_EXPIRE_TIMESTAMP =
             NumberConstant.NUMBER_24 * MessageConstant.HOUR_TIMESTAMP;
 
+    /** 请求首次快照及完成记录的保留期。预留一小时覆盖热写与 QoS COMMIT 之间的时间差。 */
+    public static final long CACHE_REQUEST_DELIVERY_EXPIRE_TIMESTAMP =
+            CACHE_QOS_IDEM_CLIENT_EXPIRE_TIMESTAMP + HOUR_TIMESTAMP;
+
     /** Redis 消息正文热数据默认保留时间，单位秒；配置非法或毫秒换算溢出时回退到该值。 */
     public static final long CACHE_MESSAGE_HOT_DEFAULT_TTL_SECONDS = 7_200L;
 

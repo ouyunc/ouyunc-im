@@ -2,6 +2,7 @@ package com.ouyunc.repository.support;
 
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.MqArchiveRouting;
 import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.LuaScriptEnum;
 import com.ouyunc.base.executor.ThreadPoolManager;
@@ -130,6 +131,12 @@ public final class SessionMessagePersistenceSupport {
             if (message == null || metadata == null) {
                 log.error("消息或元数据为空");
                 return SaveMessageOutcomeEnum.FAILED;
+            }
+
+            // 请求命令依赖首次 Packet 中的 RequestEventContext 恢复；正文必须活过 QoS 判重窗口。
+            if (MqArchiveRouting.isFriendRequestType(packet.getMessageType())
+                    || MqArchiveRouting.isGroupRequestType(packet.getMessageType())) {
+                expireTime = Math.max(expireTime, MessageConstant.CACHE_REQUEST_DELIVERY_EXPIRE_TIMESTAMP);
             }
 
             appKey = metadata.getIngress().getAppKey();

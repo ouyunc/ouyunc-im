@@ -29,6 +29,8 @@ import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
 import java.util.Map;
+import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -159,10 +161,47 @@ public final class GroupInviteJoinMessageBiProcessor extends AbstractRequestMess
                     MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
                     return;
                 }
-                // 正在等待确认的邀请属于原邀请人；不能把其身份与本次发送人的岗位拼在一起。
+                // 热会话可能已写入，而 QoS COMMIT 的结果尚未确认。同一 messageId 应续做首次命令，
+                // 不能按当前邀请策略重新推导 PENDING/AGREE，否则自动接受后待审批的邀请无法重试。
+                boolean sameInvite = existingSession != null
+                        && message.getId().equals(existingSession.getSessionId())
+                        && message.getFrom().equals(existingSession.getInviter());
                 if (existingSession != null && (!message.getFrom().equals(existingSession.getInviter())
-                        || !GroupJoinerProcessStatus.PENDING.value().equals(existingSession.getJoinerProcessStatus()))) {
+                        || (!sameInvite && !GroupJoinerProcessStatus.PENDING.value()
+                        .equals(existingSession.getJoinerProcessStatus())))) {
                     MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.REQUEST_SESSION_PROGRESS_MISMATCH);
+                    return;
+                }
+                if (sameInvite) {
+                    List<Packet> stored = repository().getPackets(appKey, List.of(packet.getPacketId()));
+                    Packet first = stored == null || stored.size() != 1 ? null : stored.getFirst();
+                    if (first == null || first.getMessage() == null || first.getMessage().getMetadata() == null
+                            || first.getMessage().getMetadata().getRequestEventContext() == null) {
+                        MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
+                        return;
+                    }
+                    // 被邀请人或管理员已改变会话时，不得用原邀请重试覆盖其决定。
+                    var firstState = first.getMessage().getMetadata().getRequestEventContext();
+                    if (!Objects.equals(first.getMessage().getId(), message.getId())
+                            || !Objects.equals(first.getMessage().getFrom(), message.getFrom())
+                            || !Objects.equals(first.getMessage().getTo(), message.getTo())
+                            || !Objects.equals(firstState.getProgress(), existingSession.getProgress())
+                            || !Objects.equals(firstState.getJoinerProcessStatus(),
+                            existingSession.getJoinerProcessStatus())) {
+                        MessageSubmissionResponseHelper.rejected(ctx, packet,
+                                ExceptionCodeEnum.REQUEST_SESSION_PROGRESS_MISMATCH);
+                        return;
+                    }
+                    // 已保存的会话代表第一次决策；QoS claim 已在 preProcess 获取，重新热写后完成领域命令。
+                    if (!saveGroupRequestMessage(packet, groupMannerOrLeaderUsersIdentityAndPostMap.keySet(), existingSession)) {
+                        MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
+                        return;
+                    }
+                    RequestEventContextFactoryHelper.capture(packet, existingSession);
+                    if (MessageAcceptPipelineHelper.publishRequestCommand(ctx, MqConstant.MQ_GROUP_REQUEST_TOPIC,
+                            message.getTo(), packet)) {
+                        MessageAcceptPipelineHelper.requestAccepted(ctx, packet);
+                    }
                     return;
                 }
                 GroupRequestSession groupRequestSession = existingSession != null ? existingSession
