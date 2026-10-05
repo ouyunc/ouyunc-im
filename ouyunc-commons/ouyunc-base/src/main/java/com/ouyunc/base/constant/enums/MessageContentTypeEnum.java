@@ -33,8 +33,6 @@ public enum MessageContentTypeEnum implements MessageContentType {
     LOGIN_REQUEST_CONTENT(NumberConstant.NUMBER_NEGATIVE_2,ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), LoginContent.class, "外部客户端登录消息内容"),
     LOGIN_RESPONSE_FAIL_CONTENT(NumberConstant.NUMBER_NEGATIVE_3,ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), String.class, "外部客户端登录失败消息内容"),
     LOGIN_RESPONSE_SUCCESS_CONTENT(NumberConstant.NUMBER_NEGATIVE_4,ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), String.class, "客户端登录成功"),
-    QOS_ACK_CONTENT(NumberConstant.NUMBER_NEGATIVE_11, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), QosAckContent.class, "客户端确认服务端投递的 ACK 内容"),
-    MESSAGE_SUBMISSION_RESPONSE_CONTENT(NumberConstant.NUMBER_NEGATIVE_12, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), MessageSubmissionResponseContent.class, "客户端消息提交受理响应内容"),
 
     WITHDRAW_CONTENT(NumberConstant.NUMBER_NEGATIVE_6, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), List.class,  "撤销消息的消息内容"),
     READ_RECEIPT_CONTENT(NumberConstant.NUMBER_NEGATIVE_7, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), List.class,  "读已回执消息内容"),
@@ -45,6 +43,8 @@ public enum MessageContentTypeEnum implements MessageContentType {
     DUPLICATE_LOGIN_CONTENT(NumberConstant.NUMBER_NEGATIVE_9, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), String.class, "同设备重复登录通知"),
     /** 同账号异设备（sn 不同）登录，通知旧连接下线 */
     REMOTE_LOGIN_CONTENT(NumberConstant.NUMBER_NEGATIVE_10, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), String.class, "远程登录踢下线通知"),
+    QOS_ACK_CONTENT(NumberConstant.NUMBER_NEGATIVE_11, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), QosAckContent.class, "客户端确认服务端投递的 ACK 内容"),
+    MESSAGE_SUBMISSION_RESPONSE_CONTENT(NumberConstant.NUMBER_NEGATIVE_12, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), MessageSubmissionResponseContent.class, "客户端消息提交受理响应内容"),
 
     /** 纯图片消息 */
     IMAGE_CONTENT(NumberConstant.NUMBER_NEGATIVE_120, ProtocolTypeEnum.ZERO.getProtocol(), ProtocolTypeEnum.ZERO.getProtocolVersion(), ImageContent.class, "图片消息内容"),
