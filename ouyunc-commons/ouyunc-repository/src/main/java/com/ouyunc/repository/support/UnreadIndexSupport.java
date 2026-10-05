@@ -117,9 +117,9 @@ public final class UnreadIndexSupport {
         try {
             DefaultRedisScript<String> script = new DefaultRedisScript<>(
                     LuaScriptEnum.UNREAD_CLEAR_ONE2ONE_ON_READ_SCRIPT.getScript(), String.class);
-            stringRedisTemplate.execute(script, List.of(urKey, sroKey, uridKey),
+            String confirmed = stringRedisTemplate.execute(script, List.of(urKey, sroKey, uridKey),
                     field, String.valueOf(incomingOffset), String.valueOf(expireTimeMs));
-            return true;
+            return confirmed != null && !confirmed.isBlank();
         } catch (Exception e) {
             log.error("clearOne2OneOnRead failed appKey={} reader={} peer={} deviceType={} offset={}",
                     appKey, readerId, peerId, deviceType, incomingOffset, e);

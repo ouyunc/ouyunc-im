@@ -71,19 +71,13 @@ public final class CsTicketReadReceiptSupport {
                 packet, ticketId, MessageIndexScopeEnum.CS_TICKET,
                 MessageConstant.MAX_READ_RECEIPT_MESSAGE_COUNT,
                 (specialPackets) -> Mono.just(true),
-                packets -> isReadReceiptTargetPacketsValid(appKey, ticketId, readerId, deviceType, packets));
+                this::isReadReceiptTargetPacketsValid);
     }
 
-    private boolean isReadReceiptTargetPacketsValid(String appKey, String ticketId, String readerId, byte deviceType,
-                                                    List<Packet> packets) {
-        long storedOffset = getTicketReadOffset(appKey, ticketId, readerId, deviceType);
+    private boolean isReadReceiptTargetPacketsValid(List<Packet> packets) {
         for (Packet readPacket : packets) {
             if (!SpecialMessageTargetValidator.isChatTargetMessage(readPacket)) {
                 log.error("已读回执目标类型不允许 | packetId={}", readPacket == null ? null : readPacket.getPacketId());
-                return false;
-            }
-            if (readPacket.getPacketId() < storedOffset) {
-                log.error("已读 packetId 小于当前 ticket offset | stored={}", storedOffset);
                 return false;
             }
         }
@@ -118,9 +112,18 @@ public final class CsTicketReadReceiptSupport {
         final long incomingOffset = maxReadPacketId;
         final String appKey = metadata.getIngress().getAppKey();
         final String ticketId = route.ticketId().trim();
-        return Mono.fromCallable(() -> ticketUnread.clearOnRead(
-                        appKey, ticketId, readerId, deviceType, incomingOffset, expireTime))
-                .subscribeOn(Schedulers.boundedElastic());
+        return Mono.fromCallable(() -> getTicketReadOffset(appKey, ticketId, readerId, deviceType))
+                .subscribeOn(Schedulers.boundedElastic())
+                .flatMap(stored -> {
+                    // 同一咨询单的旧回执只补齐已有水位；冷库查询失败时保持失败关闭。
+                    if (stored == Long.MAX_VALUE) {
+                        return Mono.just(false);
+                    }
+                    long merged = Math.max(incomingOffset, stored);
+                    return Mono.fromCallable(() -> ticketUnread.clearOnRead(
+                                    appKey, ticketId, readerId, deviceType, merged, expireTime))
+                            .subscribeOn(Schedulers.boundedElastic());
+                });
     }
 
     public Mono<Boolean> reactiveAdvanceCsSenderReadOffsetOnSend(Packet packet, CsImSessionRoute route, byte deviceType,

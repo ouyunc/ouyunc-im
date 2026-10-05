@@ -108,9 +108,9 @@ public final class CsTicketUnreadSupport {
         try {
             DefaultRedisScript<String> script = new DefaultRedisScript<>(
                     LuaScriptEnum.CS_TICKET_CLEAR_UNREAD_ON_READ_SCRIPT.getScript(), String.class);
-            stringRedisTemplate.execute(script, List.of(urKey, sroKey, uridKey),
+            String confirmed = stringRedisTemplate.execute(script, List.of(urKey, sroKey, uridKey),
                     field, String.valueOf(incomingOffset), String.valueOf(expireTimeMs));
-            return true;
+            return confirmed != null && !confirmed.isBlank();
         } catch (Exception e) {
             log.error("clearCsTicketUnread failed appKey={} ticketId={} reader={} offset={}",
                     appKey, ticketId, readerId, incomingOffset, e);

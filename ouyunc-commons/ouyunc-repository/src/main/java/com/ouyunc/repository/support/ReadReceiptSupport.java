@@ -68,25 +68,16 @@ public final class ReadReceiptSupport {
                 }
             }
             return Mono.just(true);
-        }, packets -> isReadReceiptTargetPacketsValid(packet, packets, identityType));
+        }, this::isReadReceiptTargetPacketsValid);
     }
 
-    private boolean isReadReceiptTargetPacketsValid(Packet packet, List<Packet> packets, IdentityType identityType) {
-        Message message = packet.getMessage();
-        Long deviceStoredOffset = getSessionMaxReadPackageId(
-                message.getMetadata().getIngress().getAppKey(), identityType, message.getFrom(),
-                packet.getDeviceType(), message.getTo());
-        long storedOffset = deviceStoredOffset != null ? deviceStoredOffset : 0L;
+    private boolean isReadReceiptTargetPacketsValid(List<Packet> packets) {
         for (Packet readPacket : packets) {
             if (!SpecialMessageTargetValidator.isChatTargetMessage(readPacket)) {
                 log.error("已读回执目标消息内容类型不允许 | packetId={} | contentType={}",
                         readPacket == null ? null : readPacket.getPacketId(),
                         readPacket == null || readPacket.getMessage() == null
                                 ? null : readPacket.getMessage().getContentType());
-                return false;
-            }
-            if (readPacket.getPacketId() < storedOffset) {
-                log.error("消息id: {} 对应的消息已读id小于当前设备最大已读id: {}！", packet, storedOffset);
                 return false;
             }
         }
@@ -129,8 +120,22 @@ public final class ReadReceiptSupport {
             log.error("已读的消息id不能为空 | packet={}", packet);
             return Mono.just(false);
         }
-        return reactiveUpdateSessionReadOffset(
-                metadata.getIngress().getAppKey(), identityType, from, packet.getDeviceType(), to, maxReadPacketId, expireTime);
+        long incomingOffset = maxReadPacketId;
+        return Mono.fromCallable(() -> {
+                    Long stored = getSessionMaxReadPackageId(
+                            metadata.getIngress().getAppKey(), identityType, from, packet.getDeviceType(), to);
+                    return stored == null ? 0L : stored;
+                })
+                .subscribeOn(Schedulers.boundedElastic())
+                .flatMap(stored -> {
+                    // 旧回执是合法重试。Redis 水位若已过期，先以冷库水位为下限，避免重建成更小值。
+                    if (stored == Long.MAX_VALUE) {
+                        return Mono.just(false);
+                    }
+                    long merged = Math.max(incomingOffset, stored);
+                    return reactiveUpdateSessionReadOffset(metadata.getIngress().getAppKey(),
+                            identityType, from, packet.getDeviceType(), to, merged, expireTime);
+                });
     }
 
     @SuppressWarnings("unchecked")
@@ -149,9 +154,10 @@ public final class ReadReceiptSupport {
         return Mono.fromCallable(() -> {
                     DefaultRedisScript<String> readOffsetScript = new DefaultRedisScript<>(
                             LuaScriptEnum.READ_OFFSET_MAX_SCRIPT.getScript(), String.class);
-                    stringRedisTemplate.execute(readOffsetScript, List.of(offsetKey),
+                    String confirmed = stringRedisTemplate.execute(readOffsetScript, List.of(offsetKey),
                             String.valueOf(incomingOffset), String.valueOf(expireTime));
-                    return Boolean.TRUE;
+                    // 脚本无确认值时结果未知，不得把客户端 ACK 当成持久化成功。
+                    return confirmed != null && !confirmed.isBlank();
                 })
                 .doOnError(e -> log.error("会话已读 offset Redis 更新失败 | offsetKey={}, incomingOffset={}, expireTime={}",
                         offsetKey, incomingOffset, expireTime, e))
