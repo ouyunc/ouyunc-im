@@ -1,20 +1,14 @@
 package com.ouyunc.message.processor;
 
-import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.*;
-import com.ouyunc.base.model.LoginClientInfo;
-import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.packet.Packet;
-import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.core.processor.BiProcessor;
 import com.ouyunc.core.qos.Qos;
-import com.ouyunc.core.exception.DeliveryRunBusyException;
-import com.ouyunc.core.exception.ExternalDeliveryConfirmException;
 import com.ouyunc.message.helper.MessageSubmissionResponseHelper;
+import com.ouyunc.message.helper.QosCommittedDeliverySupport;
 import com.ouyunc.repository.DefaultRepository;
 import com.ouyunc.repository.Repository;
 import io.netty.channel.ChannelHandlerContext;
-import org.apache.commons.lang3.StringUtils;
 
 /**
  * 基础抽象处理类。
@@ -45,59 +39,7 @@ public abstract class AbstractBaseBiProcessor<R, T extends Number>
      */
     @Override
     public boolean qosPreHandle(ChannelHandlerContext ctx, Packet packet) {
-        if (packet == null) {
-            return false;
-        }
-        Message message = packet.getMessage();
-        if (message == null) {
-            return false;
-        }
-        if (StringUtils.isBlank(message.getId())) {
-            return false;
-        }
-        // 控制操作必须进入自己的恢复链；不能在此跳过尚未完成的撤回通知。
-        if (com.ouyunc.base.constant.MqArchiveRouting.isSessionControl(packet)) {
-            return false;
-        }
-        LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(
-                ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
-        String channelLoginIdentity = loginClientInfo != null ? loginClientInfo.getIdentity() : null;
-        if (repository().checkDup(packet, channelLoginIdentity)) {
-            // COMMITTED 后主链不再走 save；必须在此幂等补派生索引，失败不得 ACK。
-            if (!repairDerivedIndexOnQosDuplicate(packet)) {
-                MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
-                return true;
-            }
-            try {
-                // 第一次可能在 COMMITTED 之后、投递之前失败。这里补做尚未完成的扇出，已完成则不再广播。
-                ensureCommittedDelivery(packet);
-            } catch (ExternalDeliveryConfirmException error) {
-                MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.MQ_PERSISTENCE_ERROR);
-                return true;
-            } catch (DeliveryRunBusyException error) {
-                MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.MQ_PERSISTENCE_ERROR);
-                return true;
-            }
-            qosPostHandle(ctx, packet);
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * QoS 已 COMMITTED 的重入：补未读等派生索引。默认无派生索引。
-     *
-     * @return false 时不得 ACK，客户端用同一 messageId 重试
-     */
-    protected boolean repairDerivedIndexOnQosDuplicate(Packet packet) {
-        return true;
-    }
-
-    /**
-     * QoS 已提交后的可重入完成。默认没有扇出。
-     * 子类必须走 {@link com.ouyunc.message.helper.CommittedDelivery}，保证只补一次。
-     */
-    protected void ensureCommittedDelivery(Packet packet) {
+        return QosCommittedDeliverySupport.handle(ctx, packet, repository(), null);
     }
 
     /**

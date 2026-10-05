@@ -2,6 +2,7 @@ package com.ouyunc.message.processor;
 
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.message.helper.RequestCompletionHelper;
+import com.ouyunc.message.helper.QosCommittedDeliverySupport;
 import com.ouyunc.repository.support.QosIdempotencyHelper;
 
 /** 好友/群请求的 COMMITTED 仅表示热写完成；受理前还必须补齐领域命令与通知。 */
@@ -13,11 +14,6 @@ public abstract class AbstractRequestMessageBiProcessor extends AbstractMessageB
         if (claim.getQosPayloadHash() == null) {
             claim.setQosPayloadHash(QosIdempotencyHelper.payloadHash(packet.getMessage()));
         }
-        return super.qosPreHandle(ctx, packet);
-    }
-
-    @Override
-    protected void ensureCommittedDelivery(Packet packet) {
-        RequestCompletionHelper.complete(packet);
+        return QosCommittedDeliverySupport.handle(ctx, packet, repository(), RequestCompletionHelper::complete);
     }
 }

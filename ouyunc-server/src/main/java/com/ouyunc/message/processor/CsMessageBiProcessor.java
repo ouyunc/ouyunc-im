@@ -14,6 +14,7 @@ import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.CommittedDelivery;
 import com.ouyunc.message.helper.CsHelper;
 import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
+import com.ouyunc.message.helper.QosCommittedDeliverySupport;
 import com.ouyunc.message.helper.MessageContentNormalizer;
 import com.ouyunc.message.helper.MessageSubmissionResponseHelper;
 import com.ouyunc.message.helper.CsHelper.PrepareOutcome;
@@ -64,14 +65,10 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
                 "应用不存在或已停用，拒绝客服消息: {}");
     }
 
-    /** COMMITTED 重入：按当前路由幂等补 ticket 未读。 */
+    /** QoS 重入由公共门闸处理，客服仅提供本业务的恢复动作。 */
     @Override
-    protected boolean repairDerivedIndexOnQosDuplicate(Packet packet) {
-        PrepareOutcome prepared = CsHelper.prepare(packet);
-        if (!prepared.accepted()) {
-            return true;
-        }
-        return repository().repairCsTicketUnread(packet, prepared.route());
+    public boolean qosPreHandle(ChannelHandlerContext ctx, Packet packet) {
+        return QosCommittedDeliverySupport.handle(ctx, packet, repository(), this::completeCommittedDelivery);
     }
 
     @Override
@@ -141,8 +138,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
                 });
     }
 
-    @Override
-    protected void ensureCommittedDelivery(Packet packet) {
+    private void completeCommittedDelivery(Packet packet) {
         int contentType = packet.getMessage().getContentType();
         if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType
                 || MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
@@ -151,6 +147,10 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
         PrepareOutcome outcome = CsHelper.prepare(packet);
         if (!outcome.accepted() || outcome.route() == null) {
             throw new ExternalDeliveryConfirmException("客服已提交消息重入时缺少会话路由", null);
+        }
+        // COMMITTED 后不会再进入 ticket 保存；按当前有效路由幂等补未读，失败时禁止 ACK。
+        if (!repository().repairCsTicketUnread(packet, outcome.route())) {
+            throw new ExternalDeliveryConfirmException("客服 ticket 未读索引补偿未完成", null);
         }
         completeCsDelivery(packet, outcome.route());
     }

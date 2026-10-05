@@ -3,6 +3,7 @@ package com.ouyunc.message.processor;
 import com.ouyunc.core.context.MessageContext;
 
 import com.ouyunc.core.exception.ExceptionReporter;
+import com.ouyunc.core.exception.ExternalDeliveryConfirmException;
 
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
@@ -18,6 +19,7 @@ import com.ouyunc.base.constant.enums.IdentityType;
 import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.MessageContentNormalizer;
 import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
+import com.ouyunc.message.helper.QosCommittedDeliverySupport;
 import com.ouyunc.message.helper.MessageSubmissionResponseHelper;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.CommittedDelivery;
@@ -71,10 +73,10 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
                 "权限不足/不是好友/在黑名单中/被屏蔽/发送方和接收方相同, 请知悉。该消息 {} 被忽略");
     }
 
-    /** COMMITTED 重入：用正式 packetId 幂等补未读，失败则 qosPreHandle 不 ACK。 */
+    /** QoS 重入由公共门闸处理，单聊仅提供本业务的恢复动作。 */
     @Override
-    protected boolean repairDerivedIndexOnQosDuplicate(Packet packet) {
-        return repository().repairOne2OneUnread(packet);
+    public boolean qosPreHandle(ChannelHandlerContext ctx, Packet packet) {
+        return QosCommittedDeliverySupport.handle(ctx, packet, repository(), this::completeCommittedDelivery);
     }
 
     /**
@@ -122,10 +124,13 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
         completeOne2OneDelivery(packet);
     }
 
-    @Override
-    protected void ensureCommittedDelivery(Packet packet) {
+    private void completeCommittedDelivery(Packet packet) {
         if (isSessionControlContent(packet)) {
             return;
+        }
+        // COMMITTED 后不会再进入 save；先用正式 packetId 幂等补未读，失败时禁止 ACK。
+        if (!repository().repairOne2OneUnread(packet)) {
+            throw new ExternalDeliveryConfirmException("单聊未读索引补偿未完成", null);
         }
         completeOne2OneDelivery(packet);
     }

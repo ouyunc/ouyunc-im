@@ -18,6 +18,7 @@ import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.CommittedDelivery;
 import com.ouyunc.message.helper.MessageContentNormalizer;
 import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
+import com.ouyunc.message.helper.QosCommittedDeliverySupport;
 import com.ouyunc.message.helper.MessageSubmissionResponseHelper;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.MessageDeliveryPlanner;
@@ -81,6 +82,12 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
                 "权限不足/在黑名单中/不是群成员/被禁言/发送方和接收方相同, 请知悉。该消息 {} 被忽略");
     }
 
+    /** QoS 重入由公共门闸处理，群聊仅提供本业务的恢复动作。 */
+    @Override
+    public boolean qosPreHandle(ChannelHandlerContext ctx, Packet packet) {
+        return QosCommittedDeliverySupport.handle(ctx, packet, repository(), this::completeCommittedDelivery);
+    }
+
     @Override
     public Mono<Void> process(ChannelHandlerContext ctx, Packet packet) {
         log.debug("Processing group message...");
@@ -139,8 +146,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
         completeGroupDelivery(packet);
     }
 
-    @Override
-    protected void ensureCommittedDelivery(Packet packet) {
+    private void completeCommittedDelivery(Packet packet) {
         int contentType = packet.getMessage().getContentType();
         if (MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType() == contentType
                 || MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
