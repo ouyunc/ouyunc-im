@@ -55,6 +55,10 @@ public abstract class AbstractBaseBiProcessor<R, T extends Number>
         if (StringUtils.isBlank(message.getId())) {
             return false;
         }
+        // 控制操作必须进入自己的恢复链；不能在此跳过尚未完成的撤回通知。
+        if (com.ouyunc.base.constant.MqArchiveRouting.isSessionControl(packet)) {
+            return false;
+        }
         LoginClientInfo loginClientInfo = ChannelAttrUtil.getChannelAttribute(
                 ctx, MessageConstant.CHANNEL_ATTR_KEY_TAG_LOGIN);
         String channelLoginIdentity = loginClientInfo != null ? loginClientInfo.getIdentity() : null;

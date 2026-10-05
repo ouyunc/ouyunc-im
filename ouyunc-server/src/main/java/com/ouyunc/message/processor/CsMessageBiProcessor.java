@@ -58,7 +58,10 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
         if (qosPreHandle(ctx, packet)) {
             return Mono.just(false);
         }
-        return Mono.just(true);
+        return MessageAcceptPipelineHelper.gateWhenPassed(ctx, packet,
+                com.ouyunc.message.validator.PermissionValidator.INSTANCE.negate().verify(packet, ctx),
+                () -> MessageAcceptPipelineHelper.releaseQosOnFailure(packet),
+                "应用不存在或已停用，拒绝客服消息: {}");
     }
 
     /** COMMITTED 重入：按当前路由幂等补 ticket 未读。 */
@@ -87,9 +90,6 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
         log.debug("Processing customer service message...");
         AbstractBaseBiProcessor<Mono<Void>, ? extends Number> content =
                 MessageServerContext.messageContentProcessorCache.get(packet.getMessage().getContentType());
-        if (content != null) {
-            return content.process(ctx, packet);
-        }
         PrepareOutcome prepared = validateAndPrepare(packet);
         if (!prepared.accepted()) {
             MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.CS_SESSION_ROUTE_ERROR);
@@ -107,7 +107,9 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
         CsImSessionRoute route = live.route();
         CsHelper.rewriteAgentFrom(packet, route);
         return MessageAcceptPipelineHelper.archiveAfterAuth(packet)
-                .then(Mono.defer(() -> persistPrepared(ctx, packet, route)))
+                // 插件也必须通过工单、当前坐席和归档校验，不能在路由检查前短路。
+                .then(Mono.defer(() -> content != null ? content.process(ctx, packet)
+                        : persistPrepared(ctx, packet, route)))
                 .onErrorResume(error -> {
                     log.error("客服消息归档或处理结果未知, messageId={}", packet.getMessage().getId(), error);
                     MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.MQ_PERSISTENCE_ERROR);
@@ -199,7 +201,6 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
                         packets -> repository().reactiveWithdrawMessage(
                                 packet, ticketScopeId, MessageIndexScopeEnum.CS_TICKET, packets),
                         (ctx0, packet0) -> {
-                            MessageAcceptPipelineHelper.qosAckOnSuccess(ctx0, packet0);
                             CsHelper.deliverMessage(packet0, route, true);
                             if (StringUtils.isNoneBlank(ticketScopeId, appKey)) {
                                 repository().refreshCsTicketLastMessageAfterWithdraw(appKey, ticketScopeId);
@@ -207,7 +208,9 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
                         },
                         ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR)
                 .doOnNext(success -> {
-                    if (!Boolean.TRUE.equals(success)) {
+                    if (Boolean.TRUE.equals(success)) {
+                        MessageAcceptPipelineHelper.qosAckOnSuccess(ctx, packet);
+                    } else {
                         MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.UNKNOWN_ERROR);
                         MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
                     }
@@ -228,12 +231,13 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
                                 packet, route, packet.getDeviceType(),
                                 MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP, packets),
                         (ctx0, packet0) -> {
-                            MessageAcceptPipelineHelper.qosAckOnSuccess(ctx0, packet0);
                             CsHelper.deliverMessage(packet0, route);
                         },
                         ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR)
                 .doOnNext(success -> {
-                    if (!Boolean.TRUE.equals(success)) {
+                    if (Boolean.TRUE.equals(success)) {
+                        MessageAcceptPipelineHelper.qosAckOnSuccess(ctx, packet);
+                    } else {
                         MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.UNKNOWN_ERROR);
                         MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
                     }

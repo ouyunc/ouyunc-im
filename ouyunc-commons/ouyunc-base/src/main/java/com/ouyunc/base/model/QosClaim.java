@@ -19,6 +19,8 @@ public final class QosClaim implements Serializable, Cloneable {
     private Long qosClaimPacketId;
     /** SAVE 归档已按正式 packetId 发出。此后失败不得释放占位。 */
     private boolean qosArchiveBound;
+    /** 请求类消息在内容安全改写前固定的指纹，保证原请求重试能找到持久化命令快照。 */
+    private String qosPayloadHash;
 
     @Override
     public QosClaim clone() {
@@ -34,6 +36,7 @@ public final class QosClaim implements Serializable, Cloneable {
         qosOwnerToken = null;
         qosClaimPacketId = null;
         qosArchiveBound = false;
+        qosPayloadHash = null;
     }
 
     public String getQosClaimIdentity() { return qosClaimIdentity; }
@@ -44,6 +47,8 @@ public final class QosClaim implements Serializable, Cloneable {
     public void setQosClaimPacketId(Long qosClaimPacketId) { this.qosClaimPacketId = qosClaimPacketId; }
     public boolean isQosArchiveBound() { return qosArchiveBound; }
     public void setQosArchiveBound(boolean qosArchiveBound) { this.qosArchiveBound = qosArchiveBound; }
+    public String getQosPayloadHash() { return qosPayloadHash; }
+    public void setQosPayloadHash(String qosPayloadHash) { this.qosPayloadHash = qosPayloadHash; }
 
     @Override
     public String toString() {

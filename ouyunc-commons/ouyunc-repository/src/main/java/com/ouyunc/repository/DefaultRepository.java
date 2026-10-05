@@ -78,20 +78,10 @@ public enum DefaultRepository implements Repository {
     }
 
     public Mono<Boolean> reactiveHandleOperation(ChannelHandlerContext ctx, Packet packet,
-                                                 Mono<Boolean> validator,
-                                                 String mqTopic, String mqKey,
-                                                 Mono<Boolean> processor,
-                                                 BiConsumer<ChannelHandlerContext, Packet> processorAfter,
-                                                 ExceptionCodeEnum exceptionCode) {
-        return RepositorySupports.REACTIVE_OPERATION.reactiveHandleOperation(ctx, packet, validator, mqTopic, mqKey,
-                processor, processorAfter, exceptionCode);
-    }
-
-    public <T> Mono<Boolean> reactiveHandleOperation(ChannelHandlerContext ctx, Packet packet,
-                                                   Mono<T> preparer,
+                                                   Mono<List<Packet>> preparer,
                                                    ExceptionCodeEnum verifyExceptionCode,
                                                    String mqTopic, String mqKey,
-                                                   Function<T, Mono<Boolean>> processor,
+                                                   Function<List<Packet>, Mono<Boolean>> processor,
                                                    BiConsumer<ChannelHandlerContext, Packet> processorAfter,
                                                    ExceptionCodeEnum processExceptionCode) {
         return RepositorySupports.REACTIVE_OPERATION.reactiveHandleOperation(ctx, packet, preparer, verifyExceptionCode,
@@ -201,6 +191,14 @@ public enum DefaultRepository implements Repository {
 
     public boolean isDeliveryFinished(Packet packet) {
         return RepositorySupports.DELIVERY_COMPLETION.isDeliveryFinished(packet);
+    }
+
+    public boolean isRequestCommandConfirmed(Packet packet) {
+        return RepositorySupports.DELIVERY_COMPLETION.isRequestCommandConfirmed(packet);
+    }
+
+    public void confirmRequestCommand(Packet packet) {
+        RepositorySupports.DELIVERY_COMPLETION.confirmRequestCommand(packet);
     }
 
     public DeliveryCompletionSupport.RunState tryStartDelivery(Packet packet, String ownerToken) {

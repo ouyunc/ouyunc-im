@@ -20,6 +20,10 @@ public enum One2OneChatAccessValidator implements ReactiveValidator<Packet> {
 
     @Override
     public Mono<Boolean> verify(Packet packet, ChannelHandlerContext ctx) {
+        // 旧会话的已读/撤回依赖持久化目标归属，不因删友/拉黑而误判为发送新聊天。
+        if (com.ouyunc.base.constant.MqArchiveRouting.isSessionControl(packet)) {
+            return Mono.just(false);
+        }
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         String appKey = metadata.getIngress().getAppKey();

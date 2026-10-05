@@ -31,7 +31,7 @@ import java.util.Set;
 /**
  * 主动加群：群开启自动同意则直接绑定并通知申请人；需审核时仅通知群主/管理员（发起方不推送）。
  */
-public final class GroupJoinMessageBiProcessor extends AbstractMessageBiProcessor<Byte> {
+public final class GroupJoinMessageBiProcessor extends AbstractRequestMessageBiProcessor {
     private static final Logger log = LoggerFactory.getLogger(GroupJoinMessageBiProcessor.class);
 
     @Override
@@ -96,16 +96,15 @@ public final class GroupJoinMessageBiProcessor extends AbstractMessageBiProcesso
                     if (!publishGroupCommand(ctx, packet, existingSession)) {
                         return;
                     }
-                    RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.userOnly(message.getFrom()));
+
                     MessageAcceptPipelineHelper.requestAccepted(ctx, packet);
                     return;
                 }
                 if (null != existingSession && (existingSession.getProgress() > RequestSessionProgress.JOINING.value()
                         || !GroupRequestSessionWay.ACTIVE.value().equals(existingSession.getWay()))) {
-                    log.warn("{} 和 {} 群请求会话残留 progress={} way={}，清除后允许重新申请",
-                            message.getFrom(), message.getTo(), existingSession.getProgress(), existingSession.getWay());
-                    repository().deleteGroupRequestSession(appKey, message.getFrom(), message.getTo());
-                    existingSession = null;
+                    // 保留当前邀请/审批；消费端按 requestSessionId 校验，不允许新申请使旧命令失效。
+                    MessageSubmissionResponseHelper.retryLater(ctx, packet, ExceptionCodeEnum.REQUEST_SESSION_PROGRESS_MISMATCH);
+                    return;
                 }
                 GroupEntity groupEntity = repository().getGroupEntity(appKey, message.getTo());
                 if (groupEntity == null) {
@@ -134,7 +133,6 @@ public final class GroupJoinMessageBiProcessor extends AbstractMessageBiProcesso
                 groupRequestSession.setJoinerProcessStatus(GroupJoinerProcessStatus.AGREE.value());
                 groupRequestSession.setWay(GroupRequestSessionWay.ACTIVE.value());
 
-                Set<String> notifyIdentities;
                 if (GroupJoinPolicy.AUTO_PASS.value().equals(groupEntity.getGroupJoinPolicy())) {
                     groupRequestSession.setProgress(RequestSessionProgress.AGREEING.value());
                     if (!GroupBindResultHelper.acceptedOrReply(ctx, packet,
@@ -144,7 +142,7 @@ public final class GroupJoinMessageBiProcessor extends AbstractMessageBiProcesso
                             "自动绑定群组请求消息异常!")) {
                         return;
                     }
-                    notifyIdentities = RequestNotifyHelper.userOnly(message.getFrom());
+
                 } else {
                     groupRequestSession.setProgress(RequestSessionProgress.JOINING.value());
                     if (!saveGroupRequestMessage(packet, groupMannerOrLeaderUsersIdentitySet, groupRequestSession, existingSession != null)) {
@@ -153,17 +151,16 @@ public final class GroupJoinMessageBiProcessor extends AbstractMessageBiProcesso
                         MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
                         return;
                     }
-                    notifyIdentities = RequestNotifyHelper.copyOf(groupMannerOrLeaderUsersIdentityAndPostMap.keySet());
+
                 }
                 if (!publishGroupCommand(ctx, packet, groupRequestSession)) {
                     return;
                 }
-                RequestNotifyHelper.dispatch(ctx, packet, appKey, notifyIdentities);
+
                 MessageAcceptPipelineHelper.requestAccepted(ctx, packet);
             });
         });
     }
-
 
 
     /**

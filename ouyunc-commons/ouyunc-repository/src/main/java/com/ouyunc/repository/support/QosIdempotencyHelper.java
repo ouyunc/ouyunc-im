@@ -413,6 +413,10 @@ public final class QosIdempotencyHelper {
      * 同时重发（同一正文）能对上哈希。
      */
     public static String payloadHash(Message message) {
+        if (message != null && message.getMetadata() != null
+                && StringUtils.isNotBlank(message.getMetadata().getQosClaim().getQosPayloadHash())) {
+            return message.getMetadata().getQosClaim().getQosPayloadHash();
+        }
         if (message == null) {
             return "";
         }

@@ -34,7 +34,7 @@ import reactor.core.publisher.Mono;
 /**
  * 加好友：自动同意通知申请人；待审通知被申请人（发起方不推送）。
  */
-public final class One2OneJoinFriendRequestMessageBiProcessor extends AbstractMessageBiProcessor<Byte> {
+public final class One2OneJoinFriendRequestMessageBiProcessor extends AbstractRequestMessageBiProcessor {
     private static final Logger log = LoggerFactory.getLogger(One2OneJoinFriendRequestMessageBiProcessor.class);
 
     @Override
@@ -98,15 +98,14 @@ public final class One2OneJoinFriendRequestMessageBiProcessor extends AbstractMe
                     if (!publishFriendCommand(ctx, sessionId, packet, session)) {
                         return;
                     }
-                    RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.userOnly(message.getFrom()));
+
                     MessageAcceptPipelineHelper.requestAccepted(ctx, packet);
                     return;
                 }
                 if (null != requestSession && requestSession.getProgress() > RequestSessionProgress.JOINING.value()) {
-                    log.warn("{} 和 {} 好友请求会话残留 progress={}，清除后允许重新申请",
-                            message.getFrom(), message.getTo(), requestSession.getProgress());
-                    repository().deleteFriendRequestSession(appKey, message.getFrom(), message.getTo());
-                    requestSession = null;
+                    // AGREEING/REFUSING 是消费中的状态，不能用新申请覆盖尚未完成的审批。
+                    MessageSubmissionResponseHelper.retryLater(ctx, packet, ExceptionCodeEnum.REQUEST_SESSION_PROGRESS_MISMATCH);
+                    return;
                 }
                 UserEntity toUserEntity = repository().getUserEntity(appKey, message.getTo());
                 if (toUserEntity == null) {
@@ -129,7 +128,7 @@ public final class One2OneJoinFriendRequestMessageBiProcessor extends AbstractMe
                     if (!publishFriendCommand(ctx, sessionId, packet, session)) {
                         return;
                     }
-                    RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.userOnly(message.getFrom()));
+
                 } else {
                     session.setProgress(RequestSessionProgress.JOINING.value());
                     if (!repository().saveJoinFriendRequestMessage(packet, session, MessageContext.messageHotDataTtlMillis())) {
@@ -141,7 +140,7 @@ public final class One2OneJoinFriendRequestMessageBiProcessor extends AbstractMe
                     if (!publishFriendCommand(ctx, sessionId, packet, session)) {
                         return;
                     }
-                    RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.userOnly(message.getTo()));
+
                 }
                 MessageAcceptPipelineHelper.requestAccepted(ctx, packet);
             });

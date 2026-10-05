@@ -29,7 +29,7 @@ import java.util.Map;
 /**
  * 处理人拒绝 加/邀请 群
  */
-public final class GroupRefuseMessageBiProcessor extends AbstractMessageBiProcessor<Byte> {
+public final class GroupRefuseMessageBiProcessor extends AbstractRequestMessageBiProcessor {
     private static final Logger log = LoggerFactory.getLogger(GroupRefuseMessageBiProcessor.class);
 
     @Override
@@ -100,7 +100,7 @@ public final class GroupRefuseMessageBiProcessor extends AbstractMessageBiProces
             if (!MessageAcceptPipelineHelper.publishRequestCommand(ctx, MqConstant.MQ_GROUP_REQUEST_TOPIC, message.getTo(), packet)) {
                 return;
             }
-            RequestNotifyHelper.dispatch(ctx, packet, appKey, notifyIds);
+
             MessageAcceptPipelineHelper.requestAccepted(ctx, packet);
         }));
     }

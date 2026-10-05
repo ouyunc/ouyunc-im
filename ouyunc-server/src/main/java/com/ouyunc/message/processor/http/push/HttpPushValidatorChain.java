@@ -86,7 +86,8 @@ public final class HttpPushValidatorChain {
      * 好友+拉黑+屏蔽一次 Pipeline（或本地缓存），保留各自拒绝文案。
      */
     private static void verifyOne2OneRelation(Packet packet) throws HttpPipelineException {
-        if (skipUserRelationForSystem(packet)) {
+        if (skipUserRelationForSystem(packet)
+                || com.ouyunc.base.constant.MqArchiveRouting.isSessionControl(packet)) {
             return;
         }
         String from = packet.getMessage().getFrom();

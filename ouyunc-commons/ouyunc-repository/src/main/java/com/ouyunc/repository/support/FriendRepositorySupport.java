@@ -67,6 +67,8 @@ public final class FriendRepositorySupport {
     }
 
     public boolean saveJoinFriendRequestMessage(Packet packet, RequestSession requestSession, long expireTime) {
+        packet.getMessage().ensureMetadata().setRequestEventContext(
+                com.ouyunc.base.model.RequestEventContext.fromSession(requestSession));
         Message message = packet.getMessage();
         return saveFriendRequestMessage(packet, requestSession.getSessionId(), expireTime, (redisConnection) -> {
             String friendRequestCacheKey = CacheConstant.buildFriendRequestCacheKey(message.getMetadata().getIngress().getAppKey(), message.getFrom(), message.getTo());
@@ -81,6 +83,8 @@ public final class FriendRepositorySupport {
      * 覆盖写好友请求热会话（申请人方向）。已是好友幂等重放需推进 progress=AGREEING，不能用 NX。
      */
     public boolean saveFriendRequestMessage(Packet packet, RequestSession requestSession, long expireTime) {
+        packet.getMessage().ensureMetadata().setRequestEventContext(
+                com.ouyunc.base.model.RequestEventContext.fromSession(requestSession));
         Message message = packet.getMessage();
         return saveFriendRequestMessage(packet, requestSession.getSessionId(), expireTime, (redisConnection) -> {
             String friendRequestCacheKey = CacheConstant.buildFriendRequestCacheKey(
@@ -151,6 +155,8 @@ public final class FriendRepositorySupport {
      * 同意好友：覆盖申请人方向的请求会话（键为接收方、发送方），不走拒绝保存。
      */
     public boolean saveAgreeFriendRequestSession(Packet packet, RequestSession requestSession, long expireTime) {
+        packet.getMessage().ensureMetadata().setRequestEventContext(
+                com.ouyunc.base.model.RequestEventContext.fromSession(requestSession));
         Message message = packet.getMessage();
         return saveFriendRequestMessage(packet, requestSession.getSessionId(), expireTime, (redisConnection) -> {
             String friendRequestCacheKey = CacheConstant.buildFriendRequestCacheKey(
@@ -164,6 +170,8 @@ public final class FriendRepositorySupport {
     }
 
     public boolean saveRefuseFriendRequestMessage(Packet packet, RequestSession requestSession, long expireTime) {
+        packet.getMessage().ensureMetadata().setRequestEventContext(
+                com.ouyunc.base.model.RequestEventContext.fromSession(requestSession));
         Message message = packet.getMessage();
         return saveFriendRequestMessage(packet, requestSession.getSessionId(), expireTime, (redisConnection) -> {
             String friendRequestCacheKey = CacheConstant.buildFriendRequestCacheKey(message.getMetadata().getIngress().getAppKey(), message.getTo(), message.getFrom());
@@ -174,6 +182,8 @@ public final class FriendRepositorySupport {
     }
 
     public boolean autoPassBindFriend(Packet packet, RequestSession requestSession, long expireTime) {
+        packet.getMessage().ensureMetadata().setRequestEventContext(
+                com.ouyunc.base.model.RequestEventContext.fromSession(requestSession));
         Message message = packet.getMessage();
         String appKey = message.getMetadata().getIngress().getAppKey();
         return bindFriend(packet, requestSession.getSessionId(), expireTime, (redisConnection) -> {
@@ -185,6 +195,8 @@ public final class FriendRepositorySupport {
     }
 
     public boolean agreeBindFriend(String appKey, Packet packet, RequestSession requestSession, long expireTime) {
+        packet.getMessage().ensureMetadata().setRequestEventContext(
+                com.ouyunc.base.model.RequestEventContext.fromSession(requestSession));
         Message message = packet.getMessage();
         return bindFriend(packet, requestSession.getSessionId(), expireTime, (redisConnection) -> {
             String friendRequestCacheKey = CacheConstant.buildFriendRequestCacheKey(appKey, message.getTo(), message.getFrom());

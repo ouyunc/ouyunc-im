@@ -78,6 +78,11 @@ public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
     }
 
     private void handleClient(ChannelHandlerContext ctx, Packet packet) {
+        // 能编解码不代表客户端有发送权限；服务端通知、受理响应和集群控制包均不在白名单内。
+        if (!com.ouyunc.message.helper.ClientMessagePolicy.isAllowed(packet)) {
+            MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.ILLEGAL_MESSAGE_TYPE_ERROR);
+            return;
+        }
         AbstractMessageBiProcessor<? extends Number> processor = resolveProcessor(ctx, packet);
         if (processor == null) {
             return;
@@ -183,6 +188,14 @@ public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
                             .then(Mono.defer(() -> processor.postProcess(ctx, packet)));
                 })
                 .doOnCancel(() -> releaseQosOnCancel(packet, processor))
+                .doFinally(ignored -> {
+                    // 请求提前抢占 owner；业务拒绝/解析异常/锁等待失败都要释放未提交占位。
+                    // 已提交时 owner 已清空，归档绑定时 release 也会保留恢复身份。
+                    if (com.ouyunc.base.constant.MqArchiveRouting.isFriendRequestType(packet.getMessageType())
+                            || com.ouyunc.base.constant.MqArchiveRouting.isGroupRequestType(packet.getMessageType())) {
+                        MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
+                    }
+                })
                 .onErrorResume(error -> {
                     // 吞掉 Mono 错误以免打乱有序队列；业务异常不断连
                     publishBusinessException(packet, error, "消息三阶段执行异常");

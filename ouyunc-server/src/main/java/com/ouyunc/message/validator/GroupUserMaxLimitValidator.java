@@ -34,6 +34,21 @@ public enum GroupUserMaxLimitValidator implements ReactiveValidator<Packet> {
             return Mono.just(true);
         }
         return Mono.fromCallable(() -> {
+                    String joiner = message.getFrom();
+                    byte type = packet.getMessageType();
+                    if (type == com.ouyunc.base.constant.enums.MessageTypeEnum.GROUP_REQUEST_INVITE_JOIN.getType()
+                            || type == com.ouyunc.base.constant.enums.MessageTypeEnum.GROUP_REQUEST_AGREE.getType()) {
+                        var content = com.alibaba.fastjson2.JSON.parseObject(message.getContent(),
+                                com.ouyunc.base.packet.message.content.GroupRequestContent.class);
+                        joiner = content == null ? null : content.getIdentity();
+                    }
+                    // 邀请/审批的新增成员是 content.identity，不能把当前管理员当作申请人。
+                    if (StringUtils.isBlank(joiner)) {
+                        return true;
+                    }
+                    if (DefaultRepository.INSTANCE.inGroup(appKey, joiner, groupId)) {
+                        return false;
+                    }
                     long current = DefaultRepository.INSTANCE.groupMemberCount(appKey, groupId);
                     if (current >= maxMembers) {
                         log.warn("群成员数超限 appKey={} groupId={} current={} max={}", appKey, groupId, current, maxMembers);

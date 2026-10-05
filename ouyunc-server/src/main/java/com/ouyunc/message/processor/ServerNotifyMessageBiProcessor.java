@@ -34,6 +34,14 @@ public final class ServerNotifyMessageBiProcessor extends AbstractMessageBiProce
     }
 
     @Override
+    public Mono<Boolean> preProcess(ChannelHandlerContext ctx, Packet packet) {
+        // 客户端三阶段入口不得发送服务端通知；内部及已授权 HTTP 入口直接调用 process。
+        com.ouyunc.message.helper.MessageSubmissionResponseHelper.rejected(ctx, packet,
+                com.ouyunc.base.constant.enums.ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
+        return Mono.just(false);
+    }
+
+    @Override
     public Mono<Void> process(ChannelHandlerContext ctx, Packet packet) {
         return Mono.fromRunnable(() -> {
             Message message = packet.getMessage();

@@ -100,6 +100,22 @@ public final class DeliveryCompletionSupport {
         return key != null && Boolean.TRUE.equals(redis.hasKey(key));
     }
 
+    public boolean isRequestCommandConfirmed(Packet packet) {
+        Identity identity = identity(packet);
+        return identity != null && Boolean.TRUE.equals(redis.hasKey(
+                CacheConstant.buildRequestCommandConfirmedKey(identity.appKey, identity.packetId)));
+    }
+
+    /** 写入单调确认标记；写失败必须传播，不能把未知确认误判为已完成。 */
+    public void confirmRequestCommand(Packet packet) {
+        Identity identity = identity(packet);
+        if (identity == null) {
+            throw new IllegalArgumentException("请求领域命令缺少持久化身份");
+        }
+        redis.opsForValue().set(CacheConstant.buildRequestCommandConfirmedKey(identity.appKey, identity.packetId),
+                TASK_CONFIRMED, java.time.Duration.ofMillis(MessageContext.messageHotDataTtlMillis()));
+    }
+
     /**
      * 只有一个 owner 可以执行首次扇出。已完成直接返回 {@link RunState#DONE}。
      */

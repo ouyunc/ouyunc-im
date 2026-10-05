@@ -40,6 +40,25 @@ public class RequestEventContext implements Serializable, Cloneable {
     /** 申请渠道。 */
     private Integer channel;
 
+    /** 在热消息写入前固定会话快照；重试只能重放这份快照，不读取后来被修改的请求会话。 */
+    public static RequestEventContext fromSession(RequestSession session) {
+        RequestEventContext context = new RequestEventContext();
+        context.setRequestSessionId(session.getSessionId());
+        context.setProgress(session.getProgress());
+        if (session instanceof GroupRequestSession group) {
+            context.setInviter(group.getInviter());
+            context.setInviterPost(group.getInviterPost());
+            context.setJoiner(group.getJoiner());
+            context.setJoinerProcessStatus(group.getJoinerProcessStatus());
+            context.setGroupId(group.getGroupId());
+            context.setProcessor(group.getProcessor());
+            context.setProcessorPost(group.getProcessorPost());
+            context.setWay(group.getWay());
+            context.setChannel(group.getChannel());
+        }
+        return context;
+    }
+
     public RequestSession toFriendSession() {
         return new RequestSession(requestSessionId, progress);
     }

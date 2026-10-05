@@ -29,7 +29,7 @@ public enum BlackListValidator implements ReactiveValidator<Packet> {
         Metadata metadata = message.getMetadata();
         String appKey = metadata.getIngress().getAppKey();
         // 业务黑名单只按用户对用户 identity_type=1 写入；群/客服 to 不是 owner，禁止回源错误索引
-        if (!isUserOwnerBlacklist(message)) {
+        if (!isUserOwnerBlacklist(packet)) {
             return Mono.just(Boolean.FALSE);
         }
         int identityType = IdentityType.ONE_2_ONE.value();
@@ -46,10 +46,10 @@ public enum BlackListValidator implements ReactiveValidator<Packet> {
     }
 
     /**
-     * 仅当接收方是用户会话时查拉黑。toType 缺省按一对一；群/客服直接放行本校验。
+     * 黑名单作用域由服务端业务类型决定，禁止客户端通过伪造 toType 跳过好友请求校验。
      */
-    private static boolean isUserOwnerBlacklist(Message message) {
-        IdentityType toType = IdentityType.valueOf(message.getToType());
-        return toType == null || toType == IdentityType.ONE_2_ONE;
+    private static boolean isUserOwnerBlacklist(Packet packet) {
+        return packet.getMessageType() == com.ouyunc.base.constant.enums.MessageTypeEnum.ONE_2_ONE.getType()
+                || com.ouyunc.base.constant.MqArchiveRouting.isFriendRequestType(packet.getMessageType());
     }
 }

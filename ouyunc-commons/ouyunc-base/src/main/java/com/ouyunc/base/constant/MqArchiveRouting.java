@@ -18,6 +18,21 @@ public final class MqArchiveRouting {
     private MqArchiveRouting() {
     }
 
+    /** 已读/撤回是会话控制操作，使用目标消息归属与操作权限校验，不套用普通发言限制。 */
+    public static boolean isSessionControl(Packet packet) {
+        if (packet == null || packet.getMessage() == null) {
+            return false;
+        }
+        byte messageType = packet.getMessageType();
+        if (messageType != MessageTypeEnum.ONE_2_ONE.getType() && messageType != MessageTypeEnum.GROUP.getType()
+                && messageType != MessageTypeEnum.CUSTOMER_SERVICE.getType()) {
+            return false;
+        }
+        int type = packet.getMessage().getContentType();
+        return type == MessageContentTypeEnum.READ_RECEIPT_CONTENT.getType()
+                || type == MessageContentTypeEnum.WITHDRAW_CONTENT.getType();
+    }
+
     /**
      * 不走 {@link MqConstant#MQ_SAVE_MESSAGE_TOPIC}：
      * 已读/撤回/好友/群请求走领域 topic；译文就绪(-112)/群操作(-111) 为投递 overlay，只在线通知不冷归档。

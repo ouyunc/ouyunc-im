@@ -32,7 +32,7 @@ import reactor.core.publisher.Mono;
 /**
  * 拒绝加好友：仅通知申请人（审批操作者不推送）。
  */
-public final class One2OneRefuseFriendRequestMessageBiProcessor extends AbstractMessageBiProcessor<Byte> {
+public final class One2OneRefuseFriendRequestMessageBiProcessor extends AbstractRequestMessageBiProcessor {
     private static final Logger log = LoggerFactory.getLogger(One2OneRefuseFriendRequestMessageBiProcessor.class);
 
     @Override
@@ -100,7 +100,7 @@ public final class One2OneRefuseFriendRequestMessageBiProcessor extends Abstract
                     if (!MessageAcceptPipelineHelper.publishRequestCommand(ctx, MqConstant.MQ_FRIEND_REQUEST_TOPIC, sessionId, packet)) {
                         return;
                     }
-                    RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.userOnly(to));
+
                     MessageAcceptPipelineHelper.requestAccepted(ctx, packet);
                 }));
     }

@@ -174,7 +174,6 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
                 packets -> repository().reactiveWithdrawMessage(
                         packet, sessionId, MessageIndexScopeEnum.CHANNEL_SESSION, packets),
                 (ctx0, packet0) -> {
-                    MessageAcceptPipelineHelper.qosAckOnSuccess(ctx0, packet0);
                     Message msg = packet0.getMessage();
                     if (msg != null && msg.getMetadata() != null) {
                         String appKey = msg.getMetadata().getIngress().getAppKey();
@@ -186,7 +185,9 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
                 },
                 ExceptionCodeEnum.WITHDRAW_MESSAGE_ERROR)
                 .doOnNext(success -> {
-                    if (!Boolean.TRUE.equals(success)) {
+                    if (Boolean.TRUE.equals(success)) {
+                        MessageAcceptPipelineHelper.qosAckOnSuccess(ctx, packet);
+                    } else {
                         MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.UNKNOWN_ERROR);
                         MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
                     }
@@ -210,12 +211,13 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
                         packet, IdentityType.ONE_2_ONE,
                         MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP, packets),
                 (ctx0, packet0) -> {
-                    MessageAcceptPipelineHelper.qosAckOnSuccess(ctx0, packet0);
                     deliverReadReceiptToSender(packet0);
                 },
                 ExceptionCodeEnum.READ_RECEIPT_MESSAGE_ERROR)
                 .doOnNext(success -> {
-                    if (!Boolean.TRUE.equals(success)) {
+                    if (Boolean.TRUE.equals(success)) {
+                        MessageAcceptPipelineHelper.qosAckOnSuccess(ctx, packet);
+                    } else {
                         MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.UNKNOWN_ERROR);
                         MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
                     }

@@ -24,6 +24,10 @@ public enum GroupSilenceValidator implements ReactiveValidator<Packet> {
 
     @Override
     public Mono<Boolean> verify(Packet packet, ChannelHandlerContext ctx) {
+        // 禁言只限制新增发言；控制操作仍校验群有效性，成员资格由调用链单独校验。
+        if (com.ouyunc.base.constant.MqArchiveRouting.isSessionControl(packet)) {
+            return GroupValidator.INSTANCE.verify(packet, ctx);
+        }
         Message message = packet.getMessage();
         String from = message.getFrom();
         String to = message.getTo();

@@ -34,6 +34,10 @@ public enum GroupMaxLimitValidator implements ReactiveValidator<Packet> {
             return Mono.just(true);
         }
         return Mono.fromCallable(() -> {
+                    // 已存在的关系只需补请求状态，不新增用户群数量；允许其进入幂等修复。
+                    if (DefaultRepository.INSTANCE.inGroup(appKey, userId, message.getTo())) {
+                        return false;
+                    }
                     long owned = DefaultRepository.INSTANCE.userGroupCount(appKey, userId);
                     if (owned >= maxPerUser) {
                         log.warn("用户加群数超限 appKey={} userId={} owned={} max={}", appKey, userId, owned, maxPerUser);

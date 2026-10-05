@@ -1,14 +1,10 @@
 package com.ouyunc.message.helper;
 
 import com.google.common.collect.Sets;
-import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
-import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -20,9 +16,30 @@ import java.util.Set;
  * 关系请求（好友/群）WS 推送的通用基础设施。
  */
 public final class RequestNotifyHelper {
-    private static final Logger log = LoggerFactory.getLogger(RequestNotifyHelper.class);
 
     private RequestNotifyHelper() {
+    }
+
+    /**
+     * 在请求完成器的工作线程查询在线状态并提交投递。失败向上传播，不能提前写 delivery-done。
+     * MessageDeliveryPlanner 内部负责线程切换，不依赖发起请求的旧 Channel 是否仍在线。
+     */
+    public static void dispatchCommitted(Packet packet, String appKey, Collection<String> identities) {
+        if (CollectionUtils.isEmpty(identities)) {
+            return;
+        }
+        List<LoginClientInfo> clients = new ArrayList<>();
+        for (String identity : identities) {
+            if (StringUtils.isNotBlank(identity)) {
+                List<LoginClientInfo> online = ClientHelper.onlineAll(appKey, identity);
+                if (CollectionUtils.isNotEmpty(online)) {
+                    clients.addAll(online);
+                }
+            }
+        }
+        if (!clients.isEmpty()) {
+            MessageDeliveryPlanner.deliverOnlineClients(packet, clients);
+        }
     }
 
     public static Set<String> userOnly(String userId) {
@@ -56,48 +73,4 @@ public final class RequestNotifyHelper {
         return identities;
     }
 
-    /**
-     * 查在线离开 EventLoop；通知投递回到连接 EventLoop。发送方受理结果由请求处理器单独返回。
-     */
-    public static void dispatch(ChannelHandlerContext ctx, Packet packet, String appKey, Collection<String> identities) {
-        if (CollectionUtils.isEmpty(identities)) {
-            return;
-        }
-        Runnable lookupAndDispatch = () -> {
-            try {
-                List<LoginClientInfo> clients = new ArrayList<>();
-                for (String identity : identities) {
-                    if (StringUtils.isBlank(identity)) {
-                        continue;
-                    }
-                    List<LoginClientInfo> online = ClientHelper.onlineAll(appKey, identity);
-                    if (CollectionUtils.isNotEmpty(online)) {
-                        clients.addAll(online);
-                    }
-                }
-                Runnable onLoop = () -> {
-                    if (CollectionUtils.isNotEmpty(clients)) {
-                        MessageDeliveryPlanner.deliverOnlineClients(packet, clients);
-                    }
-                };
-                if (ctx.channel().eventLoop().inEventLoop()) {
-                    onLoop.run();
-                } else {
-                    ctx.channel().eventLoop().execute(onLoop);
-                }
-            } catch (RuntimeException error) {
-                // 请求已写入，在线通知失败不改变发送方的受理状态。
-                log.error("关系请求已受理但在线通知失败, messageId={}", packet.getMessage().getId(), error);
-            }
-        };
-        try {
-            if (ctx.channel().eventLoop().inEventLoop()) {
-                ThreadPoolManager.messageProcessorExecutor().execute(lookupAndDispatch);
-            } else {
-                lookupAndDispatch.run();
-            }
-        } catch (RuntimeException error) {
-            log.error("关系请求已受理但通知任务提交失败, messageId={}", packet.getMessage().getId(), error);
-        }
-    }
 }

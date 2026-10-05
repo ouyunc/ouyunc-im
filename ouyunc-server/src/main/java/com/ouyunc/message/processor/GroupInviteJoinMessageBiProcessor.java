@@ -34,7 +34,7 @@ import java.util.Set;
 /**
  * 邀请加群：发起方（邀请人）不推送；待被邀请人确认时仅通知被邀请人；待管理员审时仅通知群主/管理员；免审入群仅通知被邀请人。
  */
-public final class GroupInviteJoinMessageBiProcessor extends AbstractMessageBiProcessor<Byte> {
+public final class GroupInviteJoinMessageBiProcessor extends AbstractRequestMessageBiProcessor {
     private static final Logger log = LoggerFactory.getLogger(GroupInviteJoinMessageBiProcessor.class);
 
     @Override
@@ -128,7 +128,7 @@ public final class GroupInviteJoinMessageBiProcessor extends AbstractMessageBiPr
                             message.getTo(), packet)) {
                         return;
                     }
-                    RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.userOnly(content.getIdentity()));
+
                     MessageAcceptPipelineHelper.requestAccepted(ctx, packet);
                     return;
                 }
@@ -159,24 +159,23 @@ public final class GroupInviteJoinMessageBiProcessor extends AbstractMessageBiPr
                     MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
                     return;
                 }
-                GroupRequestSession groupRequestSession;
-                if (existingSession != null) {
-                    groupRequestSession = existingSession;
-                    if (StringUtils.isBlank(groupRequestSession.getInviter())) {
-                        groupRequestSession.setInviter(message.getFrom());
-                    }
-                } else {
-                    groupRequestSession = GroupRequestSession.newGroupBuilder()
-                            .sessionId(message.getId())
-                            .joiner(content.getIdentity())
-                            .groupId(message.getTo())
-                            .inviter(message.getFrom())
-                            .way(GroupRequestSessionWay.INVITED.value())
-                            .channel(GroupRequestSessionChannel.OTHER.value())
-                            .progress(RequestSessionProgress.JOINING.value())
-                            .joinerProcessStatus(GroupJoinerProcessStatus.PENDING.value())
-                            .build();
+                // 正在等待确认的邀请属于原邀请人；不能把其身份与本次发送人的岗位拼在一起。
+                if (existingSession != null && (!message.getFrom().equals(existingSession.getInviter())
+                        || !GroupJoinerProcessStatus.PENDING.value().equals(existingSession.getJoinerProcessStatus()))) {
+                    MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.REQUEST_SESSION_PROGRESS_MISMATCH);
+                    return;
                 }
+                GroupRequestSession groupRequestSession = existingSession != null ? existingSession
+                        : GroupRequestSession.newGroupBuilder()
+                                .sessionId(message.getId())
+                                .joiner(content.getIdentity())
+                                .groupId(message.getTo())
+                                .inviter(message.getFrom())
+                                .way(GroupRequestSessionWay.INVITED.value())
+                                .channel(GroupRequestSessionChannel.OTHER.value())
+                                .progress(RequestSessionProgress.JOINING.value())
+                                .joinerProcessStatus(GroupJoinerProcessStatus.PENDING.value())
+                                .build();
 
                 boolean inviterIsMannerOrLeader = false;
                 Double inviterPost = groupMannerOrLeaderUsersIdentityAndPostMap.remove(message.getFrom());
@@ -195,7 +194,7 @@ public final class GroupInviteJoinMessageBiProcessor extends AbstractMessageBiPr
                 }
                 boolean canSkipAdminReview = inviterIsMannerOrLeader
                         || GroupJoinPolicy.AUTO_PASS.value().equals(groupEntity.getGroupJoinPolicy());
-                Set<String> notifyIdentities;
+
                 if (GroupInvitePolicy.AUTO_PASS.value().equals(userEntity.getGroupInvitePolicy())) {
                     groupRequestSession.setJoinerProcessStatus(GroupJoinerProcessStatus.AGREE.value());
                     if (canSkipAdminReview) {
@@ -211,7 +210,7 @@ public final class GroupInviteJoinMessageBiProcessor extends AbstractMessageBiPr
                                 "自动绑定群组请求消息异常!")) {
                             return;
                         }
-                        notifyIdentities = RequestNotifyHelper.userOnly(content.getIdentity());
+
                     } else {
                         groupRequestSession.setProgress(RequestSessionProgress.JOINING.value());
                         if (!saveGroupRequestMessage(packet, groupMannerOrLeaderUsersIdentityAndPostMap.keySet(), groupRequestSession)) {
@@ -220,7 +219,7 @@ public final class GroupInviteJoinMessageBiProcessor extends AbstractMessageBiPr
                             MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
                             return;
                         }
-                        notifyIdentities = RequestNotifyHelper.copyOf(groupMannerOrLeaderUsersIdentityAndPostMap.keySet());
+
                     }
                 } else {
                     groupRequestSession.setJoinerProcessStatus(GroupJoinerProcessStatus.PENDING.value());
@@ -231,13 +230,13 @@ public final class GroupInviteJoinMessageBiProcessor extends AbstractMessageBiPr
                         MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
                         return;
                     }
-                    notifyIdentities = RequestNotifyHelper.userOnly(content.getIdentity());
+
                 }
                 RequestEventContextFactoryHelper.capture(packet, groupRequestSession);
                 if (!MessageAcceptPipelineHelper.publishRequestCommand(ctx, MqConstant.MQ_GROUP_REQUEST_TOPIC, message.getTo(), packet)) {
                     return;
                 }
-                RequestNotifyHelper.dispatch(ctx, packet, appKey, notifyIdentities);
+
                 MessageAcceptPipelineHelper.requestAccepted(ctx, packet);
             });
         });
@@ -248,7 +247,7 @@ public final class GroupInviteJoinMessageBiProcessor extends AbstractMessageBiPr
      * 保存群组消息
      */
     private boolean saveGroupRequestMessage(Packet packet, Set<String> groupMembers, GroupRequestSession groupRequestSession) {
-        return repository().saveJoinGroupRequestMessage(packet, groupRequestSession, MessageContext.messageHotDataTtlMillis());
+        return repository().saveGroupRequestMessage(packet, groupRequestSession, MessageContext.messageHotDataTtlMillis());
     }
 
 }

@@ -149,7 +149,7 @@ public final class MessageAcceptPipelineHelper {
                                                         Mono<Boolean> shouldReject, String rejectLog) {
         return gateWhenPassed(ctx, packet, shouldReject, null, rejectLog)
                 .flatMap(passed -> Boolean.TRUE.equals(passed)
-                        ? archiveAfterAuth(packet).thenReturn(true) : Mono.just(false))
+                        ? Mono.fromCallable(() -> claimRequestOrResume(ctx, packet)) : Mono.just(false))
                 .onErrorResume(ArchiveClaimException.class, error -> {
                     releaseQosOnFailure(packet);
                     if (error.result == ArchiveClaimEnum.CONFLICT) {
@@ -160,7 +160,26 @@ public final class MessageAcceptPipelineHelper {
                         MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR);
                     }
                     return Mono.just(false);
+                })
+                .onErrorResume(error -> {
+                    log.error("请求完成状态核对失败, messageId={}", packet.getMessage().getId(), error);
+                    MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.MQ_PERSISTENCE_ERROR);
+                    return Mono.just(false);
                 });
+    }
+
+    /** 关系写入之前取得幂等 owner；已提交的并发重入只补命令/通知，不再进入关系状态机。 */
+    private static boolean claimRequestOrResume(ChannelHandlerContext ctx, Packet packet) {
+        ArchiveClaimEnum result = repository().claimForArchive(packet);
+        if (result != ArchiveClaimEnum.READY) {
+            throw new ArchiveClaimException(result);
+        }
+        if (StringUtils.isBlank(packet.getMessage().getMetadata().getQosClaim().getQosOwnerToken())) {
+            RequestCompletionHelper.complete(packet);
+            requestAccepted(ctx, packet);
+            return false;
+        }
+        return true;
     }
 
     /** 请求成功落库或确认已处理后回已受理结果；业务拒绝不可调用。 */
@@ -225,17 +244,13 @@ public final class MessageAcceptPipelineHelper {
     }
 
     /**
-     * 调用方须已在同一把关系锁内写完 Redis。此处只确认 MQ，失败回 UNKNOWN，不在确认前改状态。
+     * 调用方须已在关系锁内写完带事件快照的 Redis 消息；此处完成 MQ 确认和通知，失败回 UNKNOWN。
      *
-     * @return false 时调用方不得再通知或回受理成功
+     * @return false 时调用方不得回受理成功；同一 messageId 重试由请求完成器续做
      */
     public static boolean publishRequestCommand(ChannelHandlerContext ctx, String topic, String key, Packet packet) {
         try {
-            if (packet.getMessage().getMetadata().getRequestEventContext() == null) {
-                RequestEventContextFactoryHelper.ensure(packet);
-            }
-            repository().publishPacketConfirmed(topic, key, packet)
-                    .get(MessageConstant.MESSAGE_ARCHIVE_CONFIRM_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+            RequestCompletionHelper.complete(packet);
             return true;
         } catch (Exception error) {
             log.error("请求归档结果未知, messageId={}", packet.getMessage().getId(), error);

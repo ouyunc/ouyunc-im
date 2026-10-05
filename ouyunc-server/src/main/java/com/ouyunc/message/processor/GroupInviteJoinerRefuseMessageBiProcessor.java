@@ -32,7 +32,7 @@ import java.util.Set;
  * 被邀请人拒绝邀请：仅通知群主/管理员；不通知邀请人及被邀请人本人。
  * 领域确认走 {@link com.ouyunc.base.constant.MqConstant#MQ_GROUP_REQUEST_TOPIC}，不进 SAVE。
  */
-public final class GroupInviteJoinerRefuseMessageBiProcessor extends AbstractMessageBiProcessor<Byte> {
+public final class GroupInviteJoinerRefuseMessageBiProcessor extends AbstractRequestMessageBiProcessor {
     private static final Logger log = LoggerFactory.getLogger(GroupInviteJoinerRefuseMessageBiProcessor.class);
 
     @Override
@@ -73,8 +73,11 @@ public final class GroupInviteJoinerRefuseMessageBiProcessor extends AbstractMes
         return MessageAcceptPipelineHelper.confirmThenRun(ctx, MqConstant.MQ_GROUP_REQUEST_TOPIC, message.getTo(), packet, () -> {
             String lockKey = CacheConstant.buildGroupRequestLockCacheKey(appKey, joiner, message.getTo());
             DistributedLockHelper.runWithLock(ctx, packet, lockKey, ExceptionCodeEnum.BIND_GROUP_ERROR, () -> {
+                // 同方向重复操作可继续补保存/发布；相反决定或管理员已开始相反审批时仍拒绝。
                 GroupRequestSession groupRequestSession = repository().getGroupRequestSession(appKey, joiner, message.getTo());
-                if (null == groupRequestSession || !GroupRequestSessionWay.INVITED.value().equals(groupRequestSession.getWay()) || StringUtils.isBlank(groupRequestSession.getInviter()) || !Objects.equals(groupRequestSession.getJoinerProcessStatus(), GroupJoinerProcessStatus.PENDING.value())) {
+                if (null == groupRequestSession || !GroupRequestSessionWay.INVITED.value().equals(groupRequestSession.getWay()) || StringUtils.isBlank(groupRequestSession.getInviter()) || RequestSessionProgress.AGREEING.value().equals(groupRequestSession.getProgress())
+                        || (!Objects.equals(groupRequestSession.getJoinerProcessStatus(), GroupJoinerProcessStatus.PENDING.value())
+                        && !Objects.equals(groupRequestSession.getJoinerProcessStatus(), GroupJoinerProcessStatus.REFUSE.value()))) {
                     log.warn("{} 和 {} 不存在正在处理中的群会话请求或当前群请求不是邀请或邀请人为空或存在拒绝或同意还未结束处理", joiner, message.getTo());
                     MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.MESSAGE_SEND_BUSINESS_REJECT);
                     return;
@@ -107,12 +110,11 @@ public final class GroupInviteJoinerRefuseMessageBiProcessor extends AbstractMes
                 if (!publishGroupCommand(ctx, packet, groupRequestSession)) {
                     return;
                 }
-                RequestNotifyHelper.dispatch(ctx, packet, appKey, RequestNotifyHelper.copyOf(groupMannerOrLeaderUsersIdentityAndPostMap.keySet()));
+
                 MessageAcceptPipelineHelper.requestAccepted(ctx, packet);
             });
         });
     }
-
 
 
     /**

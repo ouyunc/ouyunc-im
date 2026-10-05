@@ -662,6 +662,19 @@ public class CacheConstant {
         return buildAggregateCacheKey(appKey, String.valueOf(packetId)) + DELIVERY_RUN;
     }
 
+    /** 已校验的控制操作快照，与正式 packetId 同槽；不会混入聊天会话索引。 */
+    public static String buildMessageOperationKey(String appKey, long packetId) {
+        return buildAggregateCacheKey(appKey, String.valueOf(packetId)) + MESSAGE_OPERATION;
+    }
+
+    private static final String MESSAGE_OPERATION = ":operation";
+    private static final String REQUEST_COMMAND_CONFIRMED = ":request-command-confirmed";
+
+    /** 请求领域命令已获 broker 确认；通知重试不再次发布已确认命令。 */
+    public static String buildRequestCommandConfirmedKey(String appKey, long packetId) {
+        return buildAggregateCacheKey(appKey, String.valueOf(packetId)) + REQUEST_COMMAND_CONFIRMED;
+    }
+
     /** 任务字段：收件人与渠道，不含客户端 messageId。 */
     public static String externalDeliveryTaskField(String recipientId, String channelKey) {
         if (recipientId == null || recipientId.isBlank() || channelKey == null || channelKey.isBlank()) {

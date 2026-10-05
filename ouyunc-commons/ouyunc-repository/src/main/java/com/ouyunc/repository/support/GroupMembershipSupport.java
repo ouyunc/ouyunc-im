@@ -986,6 +986,8 @@ public final class GroupMembershipSupport {
 
     public BindGroupEnum autoPassBindGroup(Packet packet, GroupRequestSession groupRequestSession, long expireTime,
                                            int maxMembers, int maxPerUser) {
+        packet.getMessage().ensureMetadata().setRequestEventContext(
+                com.ouyunc.base.model.RequestEventContext.fromSession(groupRequestSession));
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         return bindGroup(packet, groupRequestSession.getJoiner(), groupRequestSession.getGroupId(),
@@ -999,6 +1001,8 @@ public final class GroupMembershipSupport {
 
     public BindGroupEnum manualPassBindGroup(Packet packet, GroupRequestSession groupRequestSession, long expireTime,
                                              int maxMembers, int maxPerUser) {
+        packet.getMessage().ensureMetadata().setRequestEventContext(
+                com.ouyunc.base.model.RequestEventContext.fromSession(groupRequestSession));
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         return bindGroup(packet, groupRequestSession.getJoiner(), groupRequestSession.getGroupId(),
@@ -1011,6 +1015,8 @@ public final class GroupMembershipSupport {
     }
 
     public boolean saveJoinGroupRequestMessage(Packet packet, GroupRequestSession groupRequestSession, long expireTime) {
+        packet.getMessage().ensureMetadata().setRequestEventContext(
+                com.ouyunc.base.model.RequestEventContext.fromSession(groupRequestSession));
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         return saveGroupRequestMessage(packet, groupRequestSession.getGroupId(), groupRequestSession.getSessionId(), expireTime, (redisConnection) -> {
@@ -1022,6 +1028,8 @@ public final class GroupMembershipSupport {
     }
 
     public boolean saveGroupRequestMessage(Packet packet, GroupRequestSession groupRequestSession, long expireTime) {
+        packet.getMessage().ensureMetadata().setRequestEventContext(
+                com.ouyunc.base.model.RequestEventContext.fromSession(groupRequestSession));
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         return saveGroupRequestMessage(packet, groupRequestSession.getGroupId(), groupRequestSession.getSessionId(), expireTime, (redisConnection) -> {
