@@ -169,11 +169,6 @@ public class CacheConstant {
     private static final String HTTP_PUSH_IDEM = "http-push:idem";
 
     /***
-     * QoS 幂等 pkt
-     */
-    private static final String QOS_IDEM_PKT = "pkt";
-
-    /***
      * QoS 幂等 cli
      */
     private static final String QOS_IDEM_CLI = "client-msg";
@@ -314,7 +309,7 @@ public class CacheConstant {
 
     /**
      * 租户级前缀（仅适合真正的 app 全局小集合，如设备类型表）。
-     * QoS 幂等已按 identity/packetId 分片，见 {@link #buildQosIdempotencyPacketKey}。
+     * QoS 幂等按登录 identity 分片；普通会话、收件箱和群数据使用各自聚合实体分片。
      * 普通会话/收件箱/群数据请用 {@link #buildAggregateCacheKey}。
      */
     private static String buildBaseCacheKey(String appKey) {
@@ -603,19 +598,7 @@ public class CacheConstant {
     }
 
     /**
-     * QoS 幂等 packet（P1）：有 loginIdentity 时与 client key 同槽 {@code {appKey:identity}}；
-     * 仅 packet 维度时按 packetId 分片，避免大租户单槽打爆。
-     */
-    public static String buildQosIdempotencyPacketKey(String appKey, String loginIdentity, long packetId) {
-        String shard = (loginIdentity != null && !loginIdentity.isBlank())
-                ? loginIdentity
-                : ("pkt-" + packetId);
-        return buildAggregateCacheKey(appKey, shard) + QOS_IDEM + COLON + QOS_IDEM_PKT + COLON
-                + stripHashTagChars(String.valueOf(packetId));
-    }
-
-    /**
-     * QoS 幂等 client：槽 {@code {appKey:loginIdentity}}，与同身份 packet 键同 Lua。
+     * QoS 幂等权威键：登录身份隔离客户端 messageId，首次正式 packetId 保存在记录值中。
      */
     public static String buildQosIdempotencyClientKey(String appKey, String loginIdentity, String clientMessageId) {
         return buildAggregateCacheKey(appKey, loginIdentity) + QOS_IDEM + COLON + QOS_IDEM_CLI + COLON

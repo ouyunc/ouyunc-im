@@ -138,19 +138,17 @@ public final class ReactiveMessageOperationSupport {
             return;
         }
         String token = metadata.getQosClaim().getQosOwnerToken();
-        Long claimId = metadata.getQosClaim().getQosClaimPacketId();
-        if (StringUtils.isBlank(token) || claimId == null) {
+        if (StringUtils.isBlank(token) || StringUtils.isBlank(identity)) {
             throw new IllegalStateException("控制操作缺少幂等 owner");
         }
         var result = QosIdempotencyHelper.commit(RepositorySupports.INFRA.redisTemplate,
-                metadata.getIngress().getAppKey(), claimId, packet.getPacketId(), identity,
+                metadata.getIngress().getAppKey(), packet.getPacketId(), identity,
                 message.getId(), token, message, packet.getMessageType());
         if (result != QosIdempotencyHelper.CommitOutcome.COMMITTED
                 && !RepositorySupports.QOS.checkDup(packet, identity)) {
             throw new IllegalStateException("控制操作幂等提交未确认");
         }
         metadata.ensureQosClaim().setQosOwnerToken(null);
-        metadata.ensureQosClaim().setQosClaimPacketId(null);
     }
 
     private static void renewOrThrow(Packet packet, String owner) {

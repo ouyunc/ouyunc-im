@@ -15,8 +15,6 @@ public final class QosClaim implements Serializable, Cloneable {
     private String qosClaimIdentity;
     /** PENDING 占位持有者。commit 和 release 必须带回，commit 成功后清空。 */
     private String qosOwnerToken;
-    /** 抢占占位时的 packetId。正式 packetId 对齐后，仍用它定位占位键。 */
-    private Long qosClaimPacketId;
     /** SAVE 归档已按正式 packetId 发出。此后失败不得释放占位。 */
     private boolean qosArchiveBound;
     /** 请求类消息在内容安全改写前固定的指纹，保证原请求重试能找到持久化命令快照。 */
@@ -34,7 +32,6 @@ public final class QosClaim implements Serializable, Cloneable {
     public void clear() {
         qosClaimIdentity = null;
         qosOwnerToken = null;
-        qosClaimPacketId = null;
         qosArchiveBound = false;
         qosPayloadHash = null;
     }
@@ -43,8 +40,6 @@ public final class QosClaim implements Serializable, Cloneable {
     public void setQosClaimIdentity(String qosClaimIdentity) { this.qosClaimIdentity = qosClaimIdentity; }
     public String getQosOwnerToken() { return qosOwnerToken; }
     public void setQosOwnerToken(String qosOwnerToken) { this.qosOwnerToken = qosOwnerToken; }
-    public Long getQosClaimPacketId() { return qosClaimPacketId; }
-    public void setQosClaimPacketId(Long qosClaimPacketId) { this.qosClaimPacketId = qosClaimPacketId; }
     public boolean isQosArchiveBound() { return qosArchiveBound; }
     public void setQosArchiveBound(boolean qosArchiveBound) { this.qosArchiveBound = qosArchiveBound; }
     public String getQosPayloadHash() { return qosPayloadHash; }
@@ -55,7 +50,6 @@ public final class QosClaim implements Serializable, Cloneable {
         return "QosClaim{" +
                 "qosClaimIdentity='" + qosClaimIdentity + '\'' +
                 ", qosOwnerToken='" + qosOwnerToken + '\'' +
-                ", qosClaimPacketId=" + qosClaimPacketId +
                 ", qosArchiveBound=" + qosArchiveBound +
                 '}';
     }
