@@ -24,7 +24,7 @@ import java.util.concurrent.CompletableFuture;
  */
 public final class HttpClientUtils {
 
-    private static volatile HttpClientEngineType engineType = HttpClientEngineType.JDK;
+    private static volatile HttpClientEngineType engineType = HttpClientEngineType.OKHTTP;
     private static volatile HttpClientConfig config = HttpClientConfig.defaults();
     private static volatile HttpClientEngine engine;
 

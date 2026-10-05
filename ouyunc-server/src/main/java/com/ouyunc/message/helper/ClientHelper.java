@@ -15,7 +15,6 @@ import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.model.Target;
 import com.ouyunc.base.packet.Packet;
-import com.ouyunc.base.packet.PacketCopyHelper;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.packet.message.content.ServerNotifyContent;
 import com.ouyunc.base.serialize.Serializer;

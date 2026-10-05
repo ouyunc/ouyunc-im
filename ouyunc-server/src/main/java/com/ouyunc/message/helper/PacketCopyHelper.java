@@ -1,6 +1,7 @@
-package com.ouyunc.base.packet;
+package com.ouyunc.message.helper;
 
 import com.ouyunc.base.model.Target;
+import com.ouyunc.base.packet.Packet;
 
 /**
  * 为单次投递复制 Packet。

@@ -10,7 +10,6 @@ import com.ouyunc.base.model.SendCallback;
 import com.ouyunc.base.model.SendResult;
 import com.ouyunc.base.model.Target;
 import com.ouyunc.base.packet.Packet;
-import com.ouyunc.base.packet.PacketCopyHelper;
 import com.ouyunc.base.utils.ChannelAttrUtil;
 import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.core.intercept.AbstractMessageInterceptor;
