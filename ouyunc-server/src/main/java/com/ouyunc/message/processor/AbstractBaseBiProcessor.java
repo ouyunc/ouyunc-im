@@ -39,7 +39,7 @@ public abstract class AbstractBaseBiProcessor<R, T extends Number>
      */
     @Override
     public boolean qosPreHandle(ChannelHandlerContext ctx, Packet packet) {
-        return QosCommittedDeliverySupport.handle(ctx, packet, repository(), null);
+        return QosCommittedDeliverySupport.handle(ctx, packet, DefaultRepository.INSTANCE, null);
     }
 
     /**

@@ -7,12 +7,13 @@ import com.ouyunc.base.model.LoginClientInfo;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.ChannelAttrUtil;
-import com.ouyunc.base.exception.DeliveryRunBusyException;
 import com.ouyunc.base.exception.ExternalDeliveryConfirmException;
-import com.ouyunc.repository.Repository;
+import com.ouyunc.repository.DefaultRepository;
 import io.netty.channel.ChannelHandlerContext;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 
+import java.util.List;
 import java.util.function.Consumer;
 
 /**
@@ -32,7 +33,7 @@ public final class QosCommittedDeliverySupport {
      * @param recovery 没有提交后恢复动作时传 {@code null}
      * @return {@code true} 表示本次消息已在判重路径处理，调用方不得再进入主流程
      */
-    public static boolean handle(ChannelHandlerContext ctx, Packet packet, Repository repository,
+    public static boolean handle(ChannelHandlerContext ctx, Packet packet, DefaultRepository repository,
                                  Consumer<Packet> recovery) {
         if (!eligible(packet)) {
             return false;
@@ -45,14 +46,48 @@ public final class QosCommittedDeliverySupport {
         }
         try {
             if (recovery != null) {
-                recovery.accept(packet);
+                recovery.accept(loadCommittedPacket(repository, packet));
             }
-        } catch (ExternalDeliveryConfirmException | DeliveryRunBusyException error) {
+        } catch (RuntimeException error) {
+            // 恢复链包含 Redis、数据库和在线投递，任何运行时异常都表示完成状态暂不可确认。
+            // 此处统一返回 UNKNOWN，禁止异常穿透后既无 ACK 也无明确重试语义。
             MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.MQ_PERSISTENCE_ERROR);
             return true;
         }
         MessageSubmissionResponseHelper.accepted(ctx, packet);
         return true;
+    }
+
+    /**
+     * COMMITTED 重入必须使用首次正式 Packet 完成派生索引和投递。
+     * 客户端重试包仍是原始内容，可能尚未经过 MASK、引用/@ 规范化或客服入口身份改写，
+     * 直接拿它恢复会让热数据与投递内容不一致。
+     */
+    private static Packet loadCommittedPacket(DefaultRepository repository, Packet retry) {
+        if (retry == null || retry.getMessage() == null || retry.getMessage().getMetadata() == null) {
+            throw new ExternalDeliveryConfirmException("已提交消息重入缺少正式身份", null);
+        }
+        try {
+            String appKey = retry.getMessage().getMetadata().getIngress().getAppKey();
+            List<Packet> packets = repository.getPackets(appKey, List.of(retry.getPacketId()));
+            if (CollectionUtils.isEmpty(packets) || packets.getFirst() == null) {
+                throw new ExternalDeliveryConfirmException("已提交消息正文暂不可用, packetId="
+                        + retry.getPacketId(), null);
+            }
+            Packet committed = packets.getFirst();
+            if (committed.getPacketId() != retry.getPacketId()
+                    || committed.getMessage() == null
+                    || !StringUtils.equals(committed.getMessage().getId(), retry.getMessage().getId())) {
+                throw new ExternalDeliveryConfirmException("已提交消息正文与幂等身份不一致, packetId="
+                        + retry.getPacketId(), null);
+            }
+            return committed;
+        } catch (ExternalDeliveryConfirmException error) {
+            throw error;
+        } catch (RuntimeException error) {
+            throw new ExternalDeliveryConfirmException("读取已提交消息正文失败, packetId="
+                    + retry.getPacketId(), error);
+        }
     }
 
     private static boolean eligible(Packet packet) {

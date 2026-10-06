@@ -4,6 +4,7 @@ import com.ouyunc.core.exception.ExceptionReporter;
 
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.LuaScriptEnum;
 import com.ouyunc.base.constant.enums.MessageFromToTypeEnum;
@@ -17,11 +18,16 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.SessionCallback;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * 客服咨询单（ticket）维度未读：Hash 计数 + packetId ZSET（超限只留最新），支持按 offset 部分清除。
@@ -41,6 +47,10 @@ public final class CsTicketUnreadSupport {
      */
     public boolean incrOnMessage(Packet packet, CsImSessionRoute route) {
         if (packet == null || route == null || !SpecialMessageTargetValidator.isChatTargetMessage(packet)) {
+            return true;
+        }
+        // 撤回覆盖后的正式快照仍可能进入 COMMITTED 修复，不能再次增加任何坐席/访客未读。
+        if (packet.getRetain() == NumberConstant.NUMBER_1) {
             return true;
         }
         Message message = packet.getMessage();
@@ -120,15 +130,16 @@ public final class CsTicketUnreadSupport {
     }
 
     /**
-     * 客服 ticket 撤回：收件人各 deviceType 未读集合移除 packetId。
+     * 客服 ticket 撤回：从该咨询单所有实际读者的未读集合中幂等移除 packetId。
+     * <p>不能根据消息 {@code to} 或当前 assignee 推断收件人：访客消息的 to 是客服入口，
+     * 且消息发送后可能已经转单。扫描 ticket 未读 Hash 的实际 reader/device field，既能命中
+     * 首次接待坐席，也不会错误增加或清除其他消息的未读。</p>
+     *
+     * @return true 表示无需清理或 Redis 已执行；false 表示清理结果未知，撤回链不得确认完成
      */
-    public void removeOnWithdraw(String appKey, String ticketId, String recipientId, long packetId) {
-        if (StringUtils.isAnyBlank(appKey, ticketId, recipientId) || packetId <= 0L) {
-            return;
-        }
-        Collection<Byte> deviceTypes = resolveDeviceTypes(appKey, recipientId);
-        if (CollectionUtils.isEmpty(deviceTypes)) {
-            return;
+    public boolean removeOnWithdraw(String appKey, String ticketId, long packetId) {
+        if (StringUtils.isAnyBlank(appKey, ticketId) || packetId <= 0L) {
+            return false;
         }
         String tid = ticketId.trim();
         String urKey = CacheConstant.buildCsTicketUnreadHashCacheKey(appKey, tid);
@@ -137,12 +148,19 @@ public final class CsTicketUnreadSupport {
         DefaultRedisScript<Long> script = new DefaultRedisScript<>(
                 LuaScriptEnum.UNREAD_REMOVE_ONE2ONE_ON_WITHDRAW_SCRIPT.getScript(), Long.class);
         try {
+            Set<Object> readerDeviceFields = scanReaderDeviceFields(urKey);
+            if (CollectionUtils.isEmpty(readerDeviceFields)) {
+                return true;
+            }
             stringRedisTemplate.executePipelined(new SessionCallback<>() {
                 @Override
                 @SuppressWarnings({"unchecked", "rawtypes"})
                 public Object execute(org.springframework.data.redis.core.RedisOperations operations) {
-                    for (Byte deviceType : deviceTypes) {
-                        String field = CacheConstant.buildCsTicketReaderDeviceField(recipientId, deviceType);
+                    for (Object rawField : readerDeviceFields) {
+                        if (rawField == null || StringUtils.isBlank(rawField.toString())) {
+                            continue;
+                        }
+                        String field = rawField.toString();
                         String uridKey = CacheConstant.buildCsTicketUnreadIdsCacheKey(appKey, tid, field);
                         operations.execute(script, List.of(urKey, uridKey),
                                 field, packetIdArg, String.valueOf(ttl));
@@ -150,11 +168,34 @@ public final class CsTicketUnreadSupport {
                     return null;
                 }
             });
+            return true;
         } catch (Exception e) {
-            log.error("removeCsTicketUnreadOnWithdraw failed appKey={} ticketId={} recipient={} packetId={}",
-                    appKey, ticketId, recipientId, packetId, e);
+            log.error("removeCsTicketUnreadOnWithdraw failed appKey={} ticketId={} packetId={}",
+                    appKey, ticketId, packetId, e);
             ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "客服 ticket 撤回清未读失败: " + e.getMessage(), "CsTicketUnreadSupport", null, e);
+            return false;
         }
+    }
+
+    /**
+     * 渐进扫描 ticket 的实际未读读者。不能使用 HKEYS：咨询单多次转接并存在多设备时，
+     * 单条 Redis 命令遍历整个 Hash 会阻塞 Redis 事件线程。这里仍在一次撤回内收集完整 field，
+     * 随后通过 pipeline 批量执行 Lua，避免逐 field 网络往返。
+     */
+    private Set<Object> scanReaderDeviceFields(String unreadHashKey) {
+        Set<Object> fields = new LinkedHashSet<>();
+        ScanOptions options = ScanOptions.scanOptions()
+                .count(MessageConstant.CS_UNREAD_WITHDRAW_SCAN_COUNT)
+                .build();
+        try (Cursor<Map.Entry<Object, Object>> cursor = stringRedisTemplate.opsForHash().scan(unreadHashKey, options)) {
+            while (cursor.hasNext()) {
+                Map.Entry<Object, Object> entry = cursor.next();
+                if (entry != null && entry.getKey() != null) {
+                    fields.add(entry.getKey());
+                }
+            }
+        }
+        return fields;
     }
 
     static String resolveRecipientId(Message message, CsImSessionRoute route) {

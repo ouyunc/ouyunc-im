@@ -161,6 +161,46 @@ public final class CsHelper {
     }
 
     /**
+     * 已 COMMITTED 客服消息的恢复路由。
+     *
+     * <p>该消息在首次受理时已经通过坐席权限和咨询单状态校验，因此这里只校验持久化消息与
+     * ticket 固定身份是否一致，不再要求咨询单仍处于进行中，也不再用旧坐席身份校验当前 assignee。
+     * 未完成的访客消息按当前 assignee 补投；坐席消息仍投递给固定访客。</p>
+     */
+    public static PrepareOutcome prepareCommittedRecovery(Packet packet) {
+        if (packet == null || packet.getMessage() == null || packet.getMessage().getMetadata() == null) {
+            return PrepareOutcome.reject("已提交客服消息或元数据为空");
+        }
+        Message message = packet.getMessage();
+        String appKey = message.getMetadata().getIngress().getAppKey();
+        String ticketId = message.getCorrelationId();
+        if (StringUtils.isAnyBlank(appKey, ticketId, message.getFrom(), message.getTo())) {
+            return PrepareOutcome.reject("已提交客服消息缺少 appKey/ticketId/from/to");
+        }
+        CsImSessionRoute route = DefaultRepository.INSTANCE.getCsImSessionRoute(appKey, ticketId);
+        if (route == null || StringUtils.isAnyBlank(route.ticketId(), route.userId(),
+                route.serviceIdentity(), route.sessionId()) || !route.hasRequiredDeliveryFields()) {
+            return PrepareOutcome.reject("已提交客服消息缺少可恢复路由");
+        }
+        int fromType = message.getFromType();
+        if (fromType == MessageFromToTypeEnum.CS_VISITOR.getType()) {
+            if (!StringUtils.equals(message.getFrom(), route.userId())
+                    || !StringUtils.equals(message.getTo(), route.serviceIdentity())) {
+                return PrepareOutcome.reject("已提交访客消息与 ticket 固定身份不一致");
+            }
+        } else if (fromType == MessageFromToTypeEnum.CS_AGENT.getType()) {
+            // 首次归档前已把真实坐席 from 改写为客服入口，转单后仍可识别历史消息。
+            if (!StringUtils.equals(message.getFrom(), route.serviceIdentity())
+                    || !StringUtils.equals(message.getTo(), route.userId())) {
+                return PrepareOutcome.reject("已提交坐席消息与 ticket 固定身份不一致");
+            }
+        } else {
+            return PrepareOutcome.reject("已提交客服消息身份类型非法");
+        }
+        return PrepareOutcome.ok(route);
+    }
+
+    /**
      * 投递前二次读 assignee/epoch。转接发生在 prepare 之后时改打新座席；关单则拒绝。
      * 坐席侧若已不是当前 assignee，拒绝发送，避免旧座席在转接窗口继续发言。
      */

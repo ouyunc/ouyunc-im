@@ -187,12 +187,12 @@ public final class InternalPacketIngressService {
 
     private static HttpResponseResult<MessagePushResponse> acceptAfterPreProcess(
             Packet packet, String appKey, String messageId, String packetIdStr) throws HttpPipelineException {
-        // 先业务校验与 ref/@ 规范化，再内容安全，再幂等占位与归档（与长连接单聊/群聊顺序对齐）
+        // HTTP 已完成身份鉴权；在 ref/@、客服身份和内容安全改写前固定原始请求指纹。
+        packet.getMessage().ensureMetadata().ensureHttpPushClaim().setHttpPushPayloadHash(
+                com.ouyunc.repository.support.QosIdempotencyHelper.payloadHash(packet.getMessage()));
+        // 业务校验与规范化后执行内容安全，再建立幂等占位与归档。
         try {
             HttpPushProcessorDelegate.preProcessOrThrow(packet);
-            // 指纹在业务规范化后、内容安全可能 MASK 正文前固定，保证原请求重试稳定。
-            packet.getMessage().ensureMetadata().ensureHttpPushClaim().setHttpPushPayloadHash(
-                    com.ouyunc.repository.support.QosIdempotencyHelper.payloadHash(packet.getMessage()));
             applyContentSafetyOrThrow(packet);
         } catch (HttpPipelineException ex) {
             // 入站鉴权错误保持 HTTP 错误；已有 messageId 的业务拒绝返回统一逐消息结果。
@@ -303,22 +303,47 @@ public final class InternalPacketIngressService {
         if (packet == null) {
             return true;
         }
-        byte messageType = packet.getMessageType();
+        Packet committed = loadCommittedPacket(packet);
+        if (committed == null) {
+            return false;
+        }
+        byte messageType = committed.getMessageType();
         if (messageType == MessageTypeEnum.ONE_2_ONE.getType()) {
-            return DefaultRepository.INSTANCE.repairOne2OneUnread(packet);
+            return DefaultRepository.INSTANCE.repairOne2OneUnread(committed);
         }
         if (messageType == MessageTypeEnum.CUSTOMER_SERVICE.getType()) {
-            CsImSessionRoute route = HttpPushDeliverySupport.takeCsRoute(packet);
-            if (route == null) {
-                PrepareOutcome prepared = CsHelper.prepare(packet);
-                if (!prepared.accepted()) {
-                    return true;
-                }
-                route = prepared.route();
+            if (DefaultRepository.INSTANCE.isDeliveryFinished(committed)) {
+                return true;
             }
-            return DefaultRepository.INSTANCE.repairCsTicketUnread(packet, route);
+            PrepareOutcome prepared = CsHelper.prepareCommittedRecovery(committed);
+            if (!prepared.accepted() || prepared.route() == null) {
+                return false;
+            }
+            return DefaultRepository.INSTANCE.repairCsTicketUnread(committed, prepared.route());
         }
         return true;
+    }
+
+    /** HTTP COMMITTED 重试同样只使用首次正式快照，不能拿重新规范化前的请求包修复派生索引。 */
+    private static Packet loadCommittedPacket(Packet retry) {
+        if (retry.getMessage() == null || retry.getMessage().getMetadata() == null) {
+            return null;
+        }
+        try {
+            String appKey = retry.getMessage().getMetadata().getIngress().getAppKey();
+            List<Packet> packets = DefaultRepository.INSTANCE.getPackets(appKey, List.of(retry.getPacketId()));
+            if (packets == null || packets.isEmpty() || packets.getFirst() == null) {
+                return null;
+            }
+            Packet committed = packets.getFirst();
+            return committed.getPacketId() == retry.getPacketId()
+                    && committed.getMessage() != null
+                    && StringUtils.equals(committed.getMessage().getId(), retry.getMessage().getId())
+                    ? committed : null;
+        } catch (RuntimeException error) {
+            log.error("HTTP COMMITTED 重试读取首次正式快照失败, packetId={}", retry.getPacketId(), error);
+            return null;
+        }
     }
 
     private static MessagePushResponse buildResponse(String messageId, String packetId,

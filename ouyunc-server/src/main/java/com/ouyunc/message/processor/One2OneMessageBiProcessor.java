@@ -20,6 +20,7 @@ import com.ouyunc.message.context.MessageServerContext;
 import com.ouyunc.message.helper.MessageContentNormalizer;
 import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
 import com.ouyunc.message.helper.QosCommittedDeliverySupport;
+import com.ouyunc.message.helper.QosRequestFingerprintSupport;
 import com.ouyunc.message.helper.MessageSubmissionResponseHelper;
 import com.ouyunc.message.helper.ClientHelper;
 import com.ouyunc.message.helper.CommittedDelivery;
@@ -60,6 +61,8 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
             ctx.close();
             return Mono.just(false);
         }
+        // 在 ref/at/敏感词等改写前固定原始请求身份，确保相同 messageId 重试稳定命中。
+        QosRequestFingerprintSupport.captureIfAbsent(packet);
         // QoS 判重占位；正式归档挪到 process（规范化 + 内容安全之后），避免 REJECT/MASK 冷热不一致
         if (qosPreHandle(ctx, packet)) {
             return Mono.just(false);
@@ -76,7 +79,8 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
     /** QoS 重入由公共门闸处理，单聊仅提供本业务的恢复动作。 */
     @Override
     public boolean qosPreHandle(ChannelHandlerContext ctx, Packet packet) {
-        return QosCommittedDeliverySupport.handle(ctx, packet, repository(), this::completeCommittedDelivery);
+        return QosCommittedDeliverySupport.handle(ctx, packet,
+                com.ouyunc.repository.DefaultRepository.INSTANCE, this::completeCommittedDelivery);
     }
 
     /**

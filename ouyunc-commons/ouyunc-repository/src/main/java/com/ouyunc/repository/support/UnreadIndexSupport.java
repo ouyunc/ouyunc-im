@@ -4,6 +4,7 @@ import com.ouyunc.core.exception.ExceptionReporter;
 
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.LuaScriptEnum;
 import com.ouyunc.base.packet.Packet;
@@ -43,6 +44,10 @@ public final class UnreadIndexSupport {
     @SuppressWarnings("unchecked")
     public boolean incrOne2OneOnMessage(Packet packet) {
         if (packet == null || packet.getMessage() == null || packet.getMessage().getMetadata() == null) {
+            return true;
+        }
+        // 已撤回快照可能由 COMMITTED 恢复链重新加载，禁止把目标消息重新加入未读。
+        if (packet.getRetain() == NumberConstant.NUMBER_1) {
             return true;
         }
         if (!SpecialMessageTargetValidator.isChatTargetMessage(packet)) {

@@ -251,6 +251,8 @@ public enum NativePacketProtocol implements PacketProtocol {
     /** 各协议编出帧之后共用的写出：EventLoop、水位重试。成败只走回调。 */
     private static void flush(Channel channel, Object msg, Packet packet, SendCallback sendCallback) {
         if (channel == null || !channel.isActive()) {
+            // 编码产物尚未交给 Netty，连接失效时仍由当前方法负责释放，避免 WebSocket ByteBuf 泄漏。
+            ReferenceCountUtil.release(msg);
             callback(sendCallback, packet, SendStatusEnum.SEND_FAIL, new MessageException(describeUnwritable(channel)));
             return;
         }

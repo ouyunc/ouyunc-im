@@ -214,8 +214,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
             ClientHelper.unregisterLocal(closingComboIdentity, channel, closingLogin.getAppKey());
             AppKeyValidator.releaseReservedIfNeeded(closingLogin.getAppKey(), channel);
             final boolean publishLogout = attrLogin != null;
-            ThreadPoolManager.messageProcessorExecutor().execute(() ->
-                    unbindRemoteOnClose(packet, closingLogin, closingComboIdentity, publishLogout));
+            submitUnbindRemote(packet, closingLogin, closingComboIdentity, publishLogout, 0);
         };
         ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_CHANNEL_CLOSE_HOOK, channelCloseHook);
         // 踢旧会话必须在 CAS 绑定胜出之后，避免锁外踢人导致跨节点双在线窗口
@@ -283,14 +282,73 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         boolean locked = tryUnbindMatchingSession(closingLogin, comboIdentity);
         if (!locked) {
             ExceptionReporter.reportBusiness(ExceptionCodeEnum.UN_BIND_ERROR, "客户端解绑登录信息失败！获取分布式锁失败", "AuthenticationHandler", packet);
-            ScheduleTimer.scheduleOnce(() -> {
-                if (!tryUnbindMatchingSession(closingLogin, comboIdentity)) {
-                    log.error("解绑补偿仍失败，等待下次登录或节点租约过期 combo={}", comboIdentity);
-                }
-            }, MessageConstant.UNBIND_COMPENSATE_DELAY_MILLIS, TimeUnit.MILLISECONDS);
+            scheduleUnbindCompensation(packet, closingLogin, comboIdentity);
         }
         if (publishLogout) {
             MessageServerContext.publishEvent(new MessageEvent(closingLogin, MessageEventTypeEnum.CLIENT_LOGOUT), true);
+        }
+    }
+
+    /**
+     * closeFuture 运行在 EventLoop；这里只做非阻塞提交。执行器过载时由时间轮延迟重新提交，
+     * 时间轮本身不获取分布式锁、不访问 Redis，避免一个慢解绑拖延全节点定时任务。
+     */
+    private void submitUnbindRemote(Packet packet, LoginClientInfo closingLogin, String comboIdentity,
+                                    boolean publishLogout, int retry) {
+        try {
+            ThreadPoolManager.messageProcessorExecutor().execute(() ->
+                    unbindRemoteOnClose(packet, closingLogin, comboIdentity, publishLogout));
+        } catch (RejectedExecutionException rejected) {
+            if (retry >= MessageConstant.UNBIND_SUBMIT_MAX_RETRIES) {
+                log.error("解绑任务提交持续被拒绝，等待下次登录或节点租约过期 combo={} retries={}",
+                        comboIdentity, retry, rejected);
+                ExceptionReporter.reportSystem(ExceptionCodeEnum.UN_BIND_ERROR,
+                        "登录目录解绑任务提交持续被拒绝", "AuthenticationHandler.submitUnbindRemote",
+                        packet, rejected);
+                return;
+            }
+            io.netty.util.Timeout timeout = ScheduleTimer.scheduleOnce(
+                    () -> submitUnbindRemote(packet, closingLogin, comboIdentity, publishLogout, retry + 1),
+                    MessageConstant.UNBIND_COMPENSATE_DELAY_MILLIS, TimeUnit.MILLISECONDS);
+            if (timeout == null) {
+                log.error("解绑任务重新提交调度失败，等待下次登录或节点租约过期 combo={}", comboIdentity);
+            }
+        }
+    }
+
+    /** 分布式锁未取得时延迟补偿；到期后先切换到业务执行器，再执行锁和 Redis 操作。 */
+    private void scheduleUnbindCompensation(Packet packet, LoginClientInfo closingLogin, String comboIdentity) {
+        io.netty.util.Timeout timeout = ScheduleTimer.scheduleOnce(
+                () -> submitUnbindCompensation(packet, closingLogin, comboIdentity, 0),
+                MessageConstant.UNBIND_COMPENSATE_DELAY_MILLIS, TimeUnit.MILLISECONDS);
+        if (timeout == null) {
+            log.error("解绑补偿调度失败，等待下次登录或节点租约过期 combo={}", comboIdentity);
+        }
+    }
+
+    private void submitUnbindCompensation(Packet packet, LoginClientInfo closingLogin,
+                                          String comboIdentity, int retry) {
+        try {
+            ThreadPoolManager.messageProcessorExecutor().execute(() -> {
+                if (!tryUnbindMatchingSession(closingLogin, comboIdentity)) {
+                    log.error("解绑补偿仍失败，等待下次登录或节点租约过期 combo={}", comboIdentity);
+                }
+            });
+        } catch (RejectedExecutionException rejected) {
+            if (retry >= MessageConstant.UNBIND_SUBMIT_MAX_RETRIES) {
+                log.error("解绑补偿任务提交持续被拒绝，等待下次登录或节点租约过期 combo={} retries={}",
+                        comboIdentity, retry, rejected);
+                ExceptionReporter.reportSystem(ExceptionCodeEnum.UN_BIND_ERROR,
+                        "登录目录解绑补偿任务提交持续被拒绝", "AuthenticationHandler.submitUnbindCompensation",
+                        packet, rejected);
+                return;
+            }
+            io.netty.util.Timeout timeout = ScheduleTimer.scheduleOnce(
+                    () -> submitUnbindCompensation(packet, closingLogin, comboIdentity, retry + 1),
+                    MessageConstant.UNBIND_COMPENSATE_DELAY_MILLIS, TimeUnit.MILLISECONDS);
+            if (timeout == null) {
+                log.error("解绑补偿重新提交调度失败，等待下次登录或节点租约过期 combo={}", comboIdentity);
+            }
         }
     }
 

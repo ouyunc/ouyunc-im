@@ -3,7 +3,6 @@ package com.ouyunc.repository.support;
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.NumberConstant;
-import com.ouyunc.base.constant.enums.MessageFromToTypeEnum;
 import com.ouyunc.base.constant.enums.MessageIndexScopeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
@@ -165,7 +164,8 @@ public final class WithdrawMessageSupport {
     }
 
     /**
-     * 单聊：仅当 scopeId 为双方 peer session 时清收件人未读；客服 ticket：清消息 to 侧未读。
+     * 单聊：仅当 scopeId 为双方 peer session 时清收件人未读；客服 ticket 按实际未读 field 清理，
+     * 避免访客消息的入口号或转单后的当前坐席与首次未读归属不一致。
      */
     private void clearUnreadForWithdrawnPackets(String appKey, String scopeId, MessageIndexScopeEnum scope,
                                                 List<Packet> packets) {
@@ -179,9 +179,8 @@ public final class WithdrawMessageSupport {
                 continue;
             }
             if (scope == MessageIndexScopeEnum.CS_TICKET) {
-                String recipientId = resolveCsWithdrawRecipient(message);
-                if (StringUtils.isNotBlank(recipientId)) {
-                    csTicketUnreadSupport.removeOnWithdraw(appKey, scopeId, recipientId, packetId);
+                if (!csTicketUnreadSupport.removeOnWithdraw(appKey, scopeId, packetId)) {
+                    throw new IllegalStateException("客服 ticket 撤回清理未读失败, packetId=" + packetId);
                 }
                 continue;
             }
@@ -199,24 +198,6 @@ public final class WithdrawMessageSupport {
             }
             unreadIndexSupport.removeOne2OneOnWithdraw(appKey, to, from, packetId);
         }
-    }
-
-    /**
-     * 客服撤回目标消息的收件人：优先 to；访客/座席 fromType 兜底。
-     */
-    private static String resolveCsWithdrawRecipient(Message message) {
-        if (message == null) {
-            return null;
-        }
-        if (StringUtils.isNotBlank(message.getTo())) {
-            return message.getTo();
-        }
-        int fromType = message.getFromType();
-        if (fromType == MessageFromToTypeEnum.CS_VISITOR.getType()
-                || fromType == MessageFromToTypeEnum.CS_AGENT.getType()) {
-            return message.getTo();
-        }
-        return null;
     }
 
     static String resolveMessageIndexKey(String appKey, String scopeId, MessageIndexScopeEnum scope) {
