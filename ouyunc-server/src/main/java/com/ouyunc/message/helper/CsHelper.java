@@ -19,7 +19,6 @@ import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
 import com.ouyunc.base.utils.AppKeyUtil;
 import com.ouyunc.base.utils.IdentityUtil;
-import com.ouyunc.base.utils.QosClaimIdentities;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.base.exception.ExternalDeliveryConfirmException;
 import com.ouyunc.message.context.MessageServerContext;
@@ -182,6 +181,9 @@ public final class CsHelper {
                 route.serviceIdentity(), route.sessionId()) || !route.hasRequiredDeliveryFields()) {
             return PrepareOutcome.reject("已提交客服消息缺少可恢复路由");
         }
+        if (!StringUtils.equals(message.getSessionId(), route.sessionId())) {
+            return PrepareOutcome.reject("已提交客服消息会话归属与咨询单不一致");
+        }
         int fromType = message.getFromType();
         if (fromType == MessageFromToTypeEnum.CS_VISITOR.getType()) {
             if (!StringUtils.equals(message.getFrom(), route.userId())
@@ -189,9 +191,8 @@ public final class CsHelper {
                 return PrepareOutcome.reject("已提交访客消息与 ticket 固定身份不一致");
             }
         } else if (fromType == MessageFromToTypeEnum.CS_AGENT.getType()) {
-            // 首次归档前已把真实坐席 from 改写为客服入口，转单后仍可识别历史消息。
-            if (!StringUtils.equals(message.getFrom(), route.serviceIdentity())
-                    || !StringUtils.equals(message.getTo(), route.userId())) {
+            // 已提交的历史坐席可能不再是当前 assignee；只校验首次固定会话与接收访客。
+            if (StringUtils.isBlank(message.getFrom()) || !StringUtils.equals(message.getTo(), route.userId())) {
                 return PrepareOutcome.reject("已提交坐席消息与 ticket 固定身份不一致");
             }
         } else {
@@ -234,24 +235,6 @@ public final class CsHelper {
                     live.assigneeId());
         }
         return PrepareOutcome.ok(live);
-    }
-
-    /**
-     * 坐席发消息对外 from 改为入口 identity；须在 {@link #refreshDelivery} 通过之后调用。
-     * 改写前会把真实发送方记入 metadata.qosClaimIdentity，供 QoS 幂等键使用。
-     */
-    public static void rewriteAgentFrom(Packet packet, CsImSessionRoute route) {
-        if (packet == null || packet.getMessage() == null || route == null) {
-            return;
-        }
-        if (packet.getMessage().getFromType() != MessageFromToTypeEnum.CS_AGENT.getType()) {
-            return;
-        }
-        if (StringUtils.isNotBlank(route.serviceIdentity())) {
-            // HTTP 推送无 AuthValidator：改写前记下真实发送方，供 QoS claim 对齐登录身份
-            QosClaimIdentities.rememberIfAbsent(packet.getMessage(), packet.getMessage().getFrom());
-            packet.getMessage().setFrom(route.serviceIdentity());
-        }
     }
 
     public static void publishReject(Packet packet, String reason) {
@@ -300,8 +283,10 @@ public final class CsHelper {
             return;
         }
         MessageDeliveryChannelEnum channel = resolveRecipientChannel(route, recipientId);
+        // 访客只看到企业入口；正式 Packet 保留真实作者，且坐席多端同步已经使用原包。
+        Packet outbound = visitorFacingPacket(packet, route, recipientId);
         if (channel.isIm()) {
-            pushImUserIfOnline(packet, appKey, recipientId);
+            pushImUserIfOnline(outbound, appKey, recipientId);
             return;
         }
         log.debug("客服外渠下行, ticketId={}, to={}, channel={}, packetId={}",
@@ -316,13 +301,24 @@ public final class CsHelper {
             throw new ExternalDeliveryConfirmException("客服外渠任务身份不足，无法记录恢复标记", null);
         }
         java.util.concurrent.CompletableFuture<?> confirmed =
-                DefaultRepository.INSTANCE.publishExternalChannelOutbound(packet, recipientId, channel);
+                DefaultRepository.INSTANCE.publishExternalChannelOutbound(outbound, recipientId, channel);
         try {
             confirmed.get(MessageConstant.EXTERNAL_CHANNEL_CONFIRM_TIMEOUT_MS, TimeUnit.MILLISECONDS);
         } catch (Exception error) {
             throw new ExternalDeliveryConfirmException("客服外部渠道任务 broker 确认失败", error);
         }
         DefaultRepository.INSTANCE.confirmExternalRecipient(packet, recipientId, channel);
+    }
+
+    /** 只修改面向访客的独立投递副本，避免污染 MQ 归档、工单索引和本人撤回依据。 */
+    private static Packet visitorFacingPacket(Packet source, CsImSessionRoute route, String recipientId) {
+        if (!StringUtils.equals(recipientId, route.userId())
+                || source.getMessage().getFromType() != MessageFromToTypeEnum.CS_AGENT.getType()) {
+            return source;
+        }
+        Packet copy = source.clone();
+        copy.getMessage().setFrom(route.serviceIdentity());
+        return copy;
     }
 
     public static String resolveImRecipientId(String recipientId, CsImSessionRoute route) {
@@ -347,7 +343,8 @@ public final class CsHelper {
     private static void syncCsSenderDevices(Packet packet, CsImSessionRoute route, boolean forceSelfSync) {
         Message message = packet.getMessage();
         String appKey = message.getMetadata().getIngress().getAppKey();
-        String syncIdentity = resolveSenderSyncIdentity(message.getFrom(), route);
+        // 正式消息 from 始终是真实作者；历史坐席转接后也只同步到原发送者设备。
+        String syncIdentity = message.getFrom();
         if (StringUtils.isBlank(syncIdentity)) {
             return;
         }
@@ -370,16 +367,6 @@ public final class CsHelper {
         if (CollectionUtils.isNotEmpty(senderDevices)) {
             MessageDeliveryPlanner.deliverOnlineClients(packet, senderDevices);
         }
-    }
-
-    private static String resolveSenderSyncIdentity(String from, CsImSessionRoute route) {
-        if (route == null) {
-            return from;
-        }
-        if (StringUtils.equals(from, route.serviceIdentity())) {
-            return route.assigneeId();
-        }
-        return from;
     }
 
     // -------------------------------------------------------------------------

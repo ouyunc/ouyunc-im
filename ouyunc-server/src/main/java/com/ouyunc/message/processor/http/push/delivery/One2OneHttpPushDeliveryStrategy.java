@@ -50,6 +50,7 @@ public final class One2OneHttpPushDeliveryStrategy implements HttpProcessor {
     @Override
     public void preProcess(Packet packet) throws HttpPipelineException {
         HttpPushValidatorChain.verifyOne2One(packet);
+        com.ouyunc.message.helper.MessageSessionIdentitySupport.bindOne2One(packet);
         HttpPushDeliverySupport.requireValidMessageRef(packet);
         MessageContentNormalizer.clearAt(packet.getMessage());
     }

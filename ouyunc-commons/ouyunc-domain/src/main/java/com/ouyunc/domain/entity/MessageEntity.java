@@ -175,6 +175,9 @@ public class MessageEntity implements Serializable {
      */
     @Field("correlation_id")
     private String correlationId;
+    /** 服务端固定的会话 ID；客服坐席转接时保持访客与入口的会话不变。 */
+    @Field("session_id")
+    private String sessionId;
     /**
      * 客户端发送时间
      */
@@ -207,6 +210,7 @@ public class MessageEntity implements Serializable {
         public static final String messageType = "message_type";
         public static final String contentType = "content_type";
         public static final String correlationId = "correlation_id";
+        public static final String sessionId = "session_id";
         public static final String appKey = "app_key";
         public static final String retain = "retain";
     }
@@ -215,6 +219,9 @@ public class MessageEntity implements Serializable {
 
     // 构造函数、Getter 和 Setter 方法
     public MessageEntity() {}
+
+    public String getSessionId() { return sessionId; }
+    public void setSessionId(String sessionId) { this.sessionId = sessionId; }
 
 
 

@@ -94,6 +94,7 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
 
     @Override
     public Mono<Void> process(ChannelHandlerContext ctx, Packet packet) {
+        com.ouyunc.message.helper.MessageSessionIdentitySupport.bindGroup(packet);
         log.debug("Processing group message...");
         AbstractBaseBiProcessor<Mono<Void>, ? extends Number> content = MessageServerContext.messageContentProcessorCache.get(packet.getMessage().getContentType());
         if (content != null) {

@@ -104,9 +104,9 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
             MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.CS_SESSION_ROUTE_ERROR);
             return Mono.empty();
         }
-        // 路由校验通过后先改写入口号再旁路归档，避免 MQ 身份与 ticket 索引不一致
+        // 可信路由固定会话归属；from 保留已认证的真实访客、坐席或机器人身份。
         CsImSessionRoute route = live.route();
-        CsHelper.rewriteAgentFrom(packet, route);
+        com.ouyunc.message.helper.MessageSessionIdentitySupport.bindCustomerService(packet, route);
         return MessageAcceptPipelineHelper.archiveAfterAuth(packet)
                 // 插件也必须通过工单、当前坐席和归档校验，不能在路由检查前短路。
                 .then(Mono.defer(() -> content != null ? content.process(ctx, packet)

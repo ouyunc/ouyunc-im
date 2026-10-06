@@ -54,6 +54,7 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
     @Override
     public void preProcess(Packet packet) throws HttpPipelineException {
         HttpPushValidatorChain.verifyGroup(packet);
+        com.ouyunc.message.helper.MessageSessionIdentitySupport.bindGroup(packet);
         HttpPushDeliverySupport.requireValidMessageRef(packet);
         Message message = packet.getMessage();
         String appKey = message.getMetadata().getIngress().getAppKey();

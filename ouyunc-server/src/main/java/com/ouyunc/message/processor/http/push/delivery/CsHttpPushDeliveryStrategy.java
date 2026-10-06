@@ -52,6 +52,7 @@ public final class CsHttpPushDeliveryStrategy implements HttpProcessor {
             throw HttpPushFailures.forbidden(packet, ExceptionCodeEnum.CS_SESSION_ROUTE_ERROR,
                     prepared.rejectReason() != null ? prepared.rejectReason() : "客服会话路由校验失败");
         }
+        com.ouyunc.message.helper.MessageSessionIdentitySupport.bindCustomerService(packet, prepared.route());
         // process 复用，不再二次 prepare / getRoute 使用缓存即可
         HttpPushDeliverySupport.stashCsRoute(packet, prepared.route());
     }
@@ -72,7 +73,7 @@ public final class CsHttpPushDeliveryStrategy implements HttpProcessor {
             return Mono.just(false);
         }
         route = live.route();
-        CsHelper.rewriteAgentFrom(packet, route);
+        com.ouyunc.message.helper.MessageSessionIdentitySupport.bindCustomerService(packet, route);
         CsImSessionRoute confirmedRoute = route;
         Mono<Void> archived = MqArchiveRouting.skipsSaveArchive(packet)
                 ? Mono.empty()

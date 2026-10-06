@@ -24,9 +24,8 @@ public final class CsMessageScopeHelper {
             return null;
         }
         int fromType = message.getFromType();
-        if (fromType == MessageFromToTypeEnum.CS_AGENT.getType()
-                || StringUtils.equals(message.getFrom(), route.serviceIdentity())) {
-            return route.assigneeId();
+        if (fromType == MessageFromToTypeEnum.CS_AGENT.getType()) {
+            return message.getFrom();
         }
         if (fromType == MessageFromToTypeEnum.CS_VISITOR.getType()
                 || StringUtils.equals(message.getFrom(), route.userId())) {

@@ -133,8 +133,7 @@ public final class CsTicketUnreadSupport {
                 || StringUtils.equals(message.getFrom(), route.userId())) {
             return route.assigneeId();
         }
-        if (fromType == MessageFromToTypeEnum.CS_AGENT.getType()
-                || StringUtils.equals(message.getFrom(), route.serviceIdentity())) {
+        if (fromType == MessageFromToTypeEnum.CS_AGENT.getType()) {
             return route.userId();
         }
         return null;

@@ -72,7 +72,8 @@ public final class SpecialMessageLoader {
         String expectedAppKey = metadata.getIngress().getAppKey();
         return messagePacketQuery.fetchPacketsReactive(expectedAppKey, packetIds)
                 .flatMap(packets -> validateLoadedPackets(
-                        packet.getMessageType(), scopeId, scope, packetIds, packets, function, extraPredicate))
+                        packet.getMessageType(), message.getSessionId(), scopeId, scope,
+                        packetIds, packets, function, extraPredicate))
                 .onErrorResume(e -> {
                     log.error("消息处理异常 | scope={} scopeId={}", scope, scopeId, e);
                     return Mono.empty();
@@ -88,7 +89,8 @@ public final class SpecialMessageLoader {
                 packet, sessionId, MessageIndexScopeEnum.CHANNEL_SESSION, maxCount, function, extraPredicate);
     }
 
-    private Mono<List<Packet>> validateLoadedPackets(byte expectedType, String scopeId, MessageIndexScopeEnum scope,
+    private Mono<List<Packet>> validateLoadedPackets(byte expectedType, String expectedSessionId,
+                                                     String scopeId, MessageIndexScopeEnum scope,
                                                      List<Long> packetIds, List<Packet> packets,
                                                      Function<List<Packet>, Mono<Boolean>> function,
                                                      Predicate<List<Packet>> extraPredicate) {
@@ -107,7 +109,10 @@ public final class SpecialMessageLoader {
         }
         for (Packet targetPacket : packets) {
             // 操作和目标必须属于同一种业务，不能仅凭接收方或 correlationId 相等跨类型操作。
-            if (targetPacket.getMessageType() != expectedType || !belongsToScope(targetPacket, scopeId, scope)) {
+            if (targetPacket.getMessageType() != expectedType
+                    || !belongsToScope(targetPacket, scopeId, scope)
+                    || (scope == MessageIndexScopeEnum.CS_TICKET
+                    && !StringUtils.equals(expectedSessionId, targetPacket.getMessage().getSessionId()))) {
                 log.error("消息归属校验失败 | scope={} scopeId={} packetId={}", scope, scopeId, targetPacket.getPacketId());
                 return Mono.empty();
             }
@@ -146,10 +151,11 @@ public final class SpecialMessageLoader {
         if (targetMessage == null || StringUtils.isAnyBlank(targetMessage.getFrom(), targetMessage.getTo(), sessionId)) {
             return false;
         }
-        if (targetPacket.getMessageType() == MessageTypeEnum.ONE_2_ONE.getType()) {
-            return sessionId.equals(IdentityUtil.sessionId(targetMessage.getFrom(), targetMessage.getTo()));
+        if (targetPacket.getMessageType() != MessageTypeEnum.ONE_2_ONE.getType()
+                && targetPacket.getMessageType() != MessageTypeEnum.GROUP.getType()) {
+            return false;
         }
-        return targetPacket.getMessageType() == MessageTypeEnum.GROUP.getType()
-                && sessionId.equals(targetMessage.getTo());
+        // 撤回和已读以首次正式消息记录的会话归属为准，不能从可变化的展示身份推导。
+        return sessionId.equals(targetMessage.getSessionId());
     }
 }

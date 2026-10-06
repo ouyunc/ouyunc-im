@@ -111,6 +111,10 @@ public class Message implements Serializable, Cloneable {
     @Tag(14)
     private Metadata metadata;
 
+    /** 服务端确认的会话归属：私聊为双方会话、群聊为群 ID、客服为访客与入口会话。 */
+    @Tag(15)
+    private String sessionId;
+
 
     /** JSON 字段名（与 JavaBean 属性名一致）。 */
     public static final class Fields {
@@ -128,6 +132,7 @@ public class Message implements Serializable, Cloneable {
         public static final String CREATE_TIME = "createTime";
         public static final String CORRELATION_ID = "correlationId";
         public static final String METADATA = "metadata";
+        public static final String SESSION_ID = "sessionId";
 
         private Fields() {
         }
@@ -390,6 +395,15 @@ public class Message implements Serializable, Cloneable {
         this.correlationId = correlationId;
     }
 
+    public String getSessionId() {
+        return sessionId;
+    }
+
+    /** 只允许可信入口在业务归属校验通过后写入；客户端提交值不得直接采信。 */
+    public void setSessionId(String sessionId) {
+        this.sessionId = sessionId;
+    }
+
     /**
      * 创建仅包含客户端协议字段的独立消息副本。
      *
@@ -413,6 +427,7 @@ public class Message implements Serializable, Cloneable {
         outbound.qos = qos;
         outbound.createTime = createTime;
         outbound.correlationId = correlationId;
+        outbound.sessionId = sessionId;
         return outbound;
     }
 
@@ -445,6 +460,7 @@ public class Message implements Serializable, Cloneable {
                 ", qos=" + qos +
                 ", createTime=" + createTime +
                 ", correlationId=" + correlationId +
+                ", sessionId=" + sessionId +
                 ", metadata=" + metadata +
                 '}';
     }

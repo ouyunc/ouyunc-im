@@ -181,7 +181,7 @@ public final class MessagePacketQuerySupport {
     }
 
     private Packet convertToPacket(MessageEntity entity) {
-        return new Packet(
+        Packet packet = new Packet(
                 entity.getProtocol(),
                 entity.getProtocolVersion(),
                 entity.getId(),
@@ -210,6 +210,8 @@ public final class MessagePacketQuerySupport {
                                         entity.getServerAddress(), entity.getServerArrivalTime()))
                 )
         );
+        packet.getMessage().setSessionId(entity.getSessionId());
+        return packet;
     }
 
     static boolean belongsToApp(Packet packet, String appKey) {
