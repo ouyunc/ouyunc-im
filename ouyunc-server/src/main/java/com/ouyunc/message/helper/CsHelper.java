@@ -145,7 +145,7 @@ public final class CsHelper {
             if (!StringUtils.equals(to, route.userId())) {
                 return PrepareOutcome.reject("坐席 to 必须为访客 userId");
             }
-            // from 改写推迟到 refreshDelivery 之后，以便转接窗口用真实 assignee 校验发送方
+            // 保留真实坐席身份；转接窗口会在 refreshDelivery 再次校验当前 assignee。
         } else {
             if (!StringUtils.equals(from, route.userId()) || !StringUtils.equals(to, route.serviceIdentity())) {
                 return PrepareOutcome.reject("访客 from/to 与咨询单不一致（须访客→入口）");
