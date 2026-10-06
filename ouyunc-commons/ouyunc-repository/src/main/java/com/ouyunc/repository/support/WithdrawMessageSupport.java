@@ -6,7 +6,6 @@ import com.ouyunc.base.constant.NumberConstant;
 import com.ouyunc.base.constant.enums.MessageIndexScopeEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
-import com.ouyunc.base.utils.IdentityUtil;
 import com.ouyunc.base.utils.TimeUtil;
 import com.ouyunc.core.context.MessageContext;
 import org.apache.commons.collections4.CollectionUtils;
@@ -39,20 +38,14 @@ public final class WithdrawMessageSupport {
     private final RedisTemplate redisTemplate;
     private final StringRedisTemplate stringRedisTemplate;
     private final SessionIndexSupport sessionIndexSupport;
-    private final UnreadIndexSupport unreadIndexSupport;
-    private final CsTicketUnreadSupport csTicketUnreadSupport;
 
     public WithdrawMessageSupport(SpecialMessageLoader specialMessageLoader, RedisTemplate redisTemplate,
                                   StringRedisTemplate stringRedisTemplate,
-                                  SessionIndexSupport sessionIndexSupport,
-                                  UnreadIndexSupport unreadIndexSupport,
-                                  CsTicketUnreadSupport csTicketUnreadSupport) {
+                                  SessionIndexSupport sessionIndexSupport) {
         this.specialMessageLoader = specialMessageLoader;
         this.redisTemplate = redisTemplate;
         this.stringRedisTemplate = stringRedisTemplate;
         this.sessionIndexSupport = sessionIndexSupport;
-        this.unreadIndexSupport = unreadIndexSupport;
-        this.csTicketUnreadSupport = csTicketUnreadSupport;
     }
 
     public Mono<List<Packet>> reactiveLoadWithdrawTargetPackets(Packet packet, String scopeId,
@@ -159,45 +152,8 @@ public final class WithdrawMessageSupport {
             }
         });
         sessionIndexSupport.removeMembers(sessionCacheKey, indexMembers);
-        // 撤回后从未读 SET/Hash 摘掉 packetId，避免单聊/客服未读虚高
-        clearUnreadForWithdrawnPackets(appKey, scopeId, scope, packets);
-    }
-
-    /**
-     * 单聊：仅当 scopeId 为双方 peer session 时清收件人未读；客服 ticket 按实际未读 field 清理，
-     * 避免访客消息的入口号或转单后的当前坐席与首次未读归属不一致。
-     */
-    private void clearUnreadForWithdrawnPackets(String appKey, String scopeId, MessageIndexScopeEnum scope,
-                                                List<Packet> packets) {
-        for (Packet withdrawPacket : packets) {
-            if (withdrawPacket == null || withdrawPacket.getMessage() == null) {
-                continue;
-            }
-            Message message = withdrawPacket.getMessage();
-            long packetId = withdrawPacket.getPacketId();
-            if (packetId <= 0L) {
-                continue;
-            }
-            if (scope == MessageIndexScopeEnum.CS_TICKET) {
-                if (!csTicketUnreadSupport.removeOnWithdraw(appKey, scopeId, packetId)) {
-                    throw new IllegalStateException("客服 ticket 撤回清理未读失败, packetId=" + packetId);
-                }
-                continue;
-            }
-            if (scope != MessageIndexScopeEnum.CHANNEL_SESSION) {
-                continue;
-            }
-            String from = message.getFrom();
-            String to = message.getTo();
-            if (StringUtils.isAnyBlank(from, to) || from.equals(to)) {
-                continue;
-            }
-            // 群聊 sessionId≠peerSession，跳过；单聊才清收件人 urid
-            if (!StringUtils.equals(scopeId, IdentityUtil.sessionId(from, to))) {
-                continue;
-            }
-            unreadIndexSupport.removeOne2OneOnWithdraw(appKey, to, from, packetId);
-        }
+        // 产品语义：撤回只改变消息可见状态，不修改任何已形成的已读/未读数据。
+        // 原有未读由正常已读 offset 单调清理；retain=1 的正式快照也不会在 QoS 恢复时新增未读。
     }
 
     static String resolveMessageIndexKey(String appKey, String scopeId, MessageIndexScopeEnum scope) {

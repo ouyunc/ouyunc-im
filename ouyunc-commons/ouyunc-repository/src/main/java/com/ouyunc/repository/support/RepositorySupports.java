@@ -25,7 +25,7 @@ public final class RepositorySupports {
             new CsTicketUnreadSupport(INFRA.stringRedisTemplate);
     public static final WithdrawMessageSupport WITHDRAW =
             new WithdrawMessageSupport(SPECIAL_MESSAGE_LOADER, INFRA.redisTemplate, INFRA.stringRedisTemplate,
-                    SESSION_INDEX, UNREAD, CS_TICKET_UNREAD);
+                    SESSION_INDEX);
     public static final ReadReceiptSupport READ_RECEIPT =
             new ReadReceiptSupport(SPECIAL_MESSAGE_LOADER, INFRA.stringRedisTemplate, INFRA.mongoTemplate, INFRA.jdbcClient,
                     UNREAD);

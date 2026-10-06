@@ -133,45 +133,6 @@ public final class UnreadIndexSupport {
         }
     }
 
-    /**
-     * 单聊撤回：收件人各 deviceType 未读集合移除 packetId，并回写 Hash 计数。
-     */
-    @SuppressWarnings("unchecked")
-    public void removeOne2OneOnWithdraw(String appKey, String recipientId, String peerId, long packetId) {
-        if (StringUtils.isAnyBlank(appKey, recipientId, peerId) || packetId <= 0L || recipientId.equals(peerId)) {
-            return;
-        }
-        Collection<Byte> deviceTypes = resolveDeviceTypes(appKey, recipientId);
-        if (CollectionUtils.isEmpty(deviceTypes)) {
-            return;
-        }
-        String field = IdentityType.ONE_2_ONE.unreadField(peerId);
-        String packetIdArg = MessageContext.idGenerator().formatLongId19Str(packetId);
-        long ttl = MessageConstant.CACHE_USER_DEVICE_UNREAD_EXPIRE_TIMESTAMP;
-        DefaultRedisScript<Long> script = new DefaultRedisScript<>(
-                LuaScriptEnum.UNREAD_REMOVE_ONE2ONE_ON_WITHDRAW_SCRIPT.getScript(), Long.class);
-        try {
-            stringRedisTemplate.executePipelined(new SessionCallback<>() {
-                @Override
-                @SuppressWarnings({"unchecked", "rawtypes"})
-                public Object execute(org.springframework.data.redis.core.RedisOperations operations) {
-                    for (Byte deviceType : deviceTypes) {
-                        String urKey = CacheConstant.buildUserDeviceUnreadCacheKey(appKey, recipientId, deviceType);
-                        String uridKey = CacheConstant.buildUserDeviceUnreadIdsCacheKey(
-                                appKey, recipientId, deviceType, peerId);
-                        operations.execute(script, List.of(urKey, uridKey),
-                                field, packetIdArg, String.valueOf(ttl));
-                    }
-                    return null;
-                }
-            });
-        } catch (Exception e) {
-            log.error("removeOne2OneOnWithdraw failed appKey={} recipient={} peer={} packetId={}",
-                    appKey, recipientId, peerId, packetId, e);
-            ExceptionReporter.reportSystem(ExceptionCodeEnum.CACHE_PERSISTENCE_ERROR, "单聊撤回清未读失败: " + e.getMessage(), "UnreadIndexSupport", null, e);
-        }
-    }
-
     private static Collection<Byte> resolveDeviceTypes(String appKey, String userId) {
         Collection<Byte> deviceTypes = DeviceTypeRegistry.list(appKey, userId);
         if (CollectionUtils.isEmpty(deviceTypes)) {

@@ -486,11 +486,6 @@ public class MessageConstant {
     public static final int UNBIND_SUBMIT_MAX_RETRIES = 3;
 
     /**
-     * 客服撤回扫描 ticket 未读 Hash 时单批建议数量。使用 HSCAN 避免长期咨询单直接 HKEYS 阻塞 Redis。
-     */
-    public static final long CS_UNREAD_WITHDRAW_SCAN_COUNT = 256L;
-
-    /**
      * 单连接有序业务队列上限。积压超过则关连，避免慢连接拖垮堆。
      */
     public static final int CHANNEL_ORDERED_TASK_MAX = 256;
