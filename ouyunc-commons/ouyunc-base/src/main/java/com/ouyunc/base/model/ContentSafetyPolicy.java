@@ -17,6 +17,16 @@ public class ContentSafetyPolicy implements Serializable {
 
     /** 是否启用文本敏感词；false 时跳过文本检查。 */
     private boolean textEnabled = true;
+    /** 入站检查异常时是否降级放行；默认暂缓受理，客户端可用同一消息 ID 重试。独立于媒体事后审核策略。 */
+    private boolean ingressFailOpen = false;
+
+    public boolean isIngressFailOpen() {
+        return ingressFailOpen;
+    }
+
+    public void setIngressFailOpen(boolean ingressFailOpen) {
+        this.ingressFailOpen = ingressFailOpen;
+    }
     /** 文本命中动作：MASK / REJECT / AUDIT_ONLY / PASS。 */
     private ContentSafetyAction textAction = ContentSafetyAction.MASK;
     /** 脱敏替换字符，取首字符；空则用 *。 */

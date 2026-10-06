@@ -22,7 +22,7 @@ public final class ContentSafetyIngress {
     }
 
     /**
-     * 敏感词检查；REJECT 时回写并不再进入业务。检查异常放行，避免误杀。PING 不要调用。
+     * 敏感词检查；REJECT 时回写并不再进入业务。检查异常按租户 ingressFailOpen 策略处理。
      *
      * @param ctx    通道上下文
      * @param packet 协议包
@@ -33,8 +33,11 @@ public final class ContentSafetyIngress {
         try {
             result = ContentSafetyFacade.check(packet);
         } catch (Exception e) {
-            log.error("内容安全检查异常，放行以免误杀 packetId={}", packet == null ? null : packet.getPacketId(), e);
-            return true;
+            if (ContentSafetyFacade.allowOnFailure(packet, e)) {
+                return true;
+            }
+            MessageSubmissionResponseHelper.retryLater(ctx, packet, ExceptionCodeEnum.UNKNOWN_ERROR);
+            return false;
         }
         if (result != null && !result.isPassed()) {
             log.warn("内容安全拒绝 packetId={} reason={} hits={}",

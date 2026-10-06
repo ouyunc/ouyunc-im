@@ -23,6 +23,7 @@ import java.util.function.Consumer;
  * 避免通用处理器基类感知单聊、群聊、客服或请求业务。</p>
  */
 public final class QosCommittedDeliverySupport {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(QosCommittedDeliverySupport.class);
 
     private QosCommittedDeliverySupport() {
     }
@@ -48,10 +49,17 @@ public final class QosCommittedDeliverySupport {
             if (recovery != null) {
                 recovery.accept(loadCommittedPacket(repository, packet));
             }
+        } catch (com.ouyunc.base.exception.DeliveryRunBusyException busy) {
+            log.debug("已提交消息正在恢复, packetId={} messageId={} type={}",
+                    packet.getPacketId(), packet.getMessage().getId(), packet.getMessageType());
+            MessageSubmissionResponseHelper.retryLater(ctx, packet, ExceptionCodeEnum.UNKNOWN_ERROR);
+            return true;
         } catch (RuntimeException error) {
             // 恢复链包含 Redis、数据库和在线投递，任何运行时异常都表示完成状态暂不可确认。
             // 此处统一返回 UNKNOWN，禁止异常穿透后既无 ACK 也无明确重试语义。
-            MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.MQ_PERSISTENCE_ERROR);
+            log.error("已提交消息恢复失败, packetId={} messageId={} type={}",
+                    packet.getPacketId(), packet.getMessage().getId(), packet.getMessageType(), error);
+            MessageSubmissionResponseHelper.unknown(ctx, packet, ExceptionCodeEnum.UNKNOWN_ERROR);
             return true;
         }
         MessageSubmissionResponseHelper.accepted(ctx, packet);

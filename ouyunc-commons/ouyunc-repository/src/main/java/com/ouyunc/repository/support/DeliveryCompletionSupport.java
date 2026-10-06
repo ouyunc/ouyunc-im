@@ -2,7 +2,6 @@ package com.ouyunc.repository.support;
 
 import com.ouyunc.base.constant.CacheConstant;
 import com.ouyunc.base.constant.MessageConstant;
-import com.ouyunc.base.constant.MqArchiveRouting;
 import com.ouyunc.base.constant.enums.MessageDeliveryChannelEnum;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
@@ -178,7 +177,7 @@ public final class DeliveryCompletionSupport {
         }
         Long written = redis.execute(MARK_PENDING_SCRIPT, java.util.List.of(key),
                 field, TASK_PENDING, TASK_CONFIRMED,
-                String.valueOf(MessageContext.messageHotDataTtlMillis()));
+                String.valueOf(MessageContext.messageRecoveryTtlMillis()));
         return Long.valueOf(1L).equals(written);
     }
 
@@ -199,19 +198,13 @@ public final class DeliveryCompletionSupport {
             return;
         }
         redis.execute(CONFIRM_SCRIPT, java.util.List.of(key),
-                field, TASK_CONFIRMED, String.valueOf(MessageContext.messageHotDataTtlMillis()));
+                field, TASK_CONFIRMED, String.valueOf(MessageContext.messageRecoveryTtlMillis()));
     }
 
-    /** 请求的已确认/已完成状态必须和首次命令快照覆盖同一个 QoS 重试期。 */
+    /** 所有业务的完成证明覆盖最大重试期，不再按消息正文热缓存淘汰。 */
     private static long deliveryTtlMillis(Packet packet) {
-        long hotTtl = MessageContext.messageHotDataTtlMillis();
-        if (packet != null && (MqArchiveRouting.isFriendRequestType(packet.getMessageType())
-                || MqArchiveRouting.isGroupRequestType(packet.getMessageType()))) {
-            return Math.max(hotTtl, MessageConstant.CACHE_REQUEST_DELIVERY_EXPIRE_TIMESTAMP);
-        }
-        return hotTtl;
+        return MessageContext.messageRecoveryTtlMillis();
     }
-
     private static String doneKey(Packet packet) {
         Identity identity = identity(packet);
         return identity == null ? null

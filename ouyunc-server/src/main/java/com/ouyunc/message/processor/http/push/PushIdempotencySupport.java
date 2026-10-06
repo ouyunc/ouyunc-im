@@ -18,7 +18,7 @@ import java.util.UUID;
 
 /**
  * HTTP 推送幂等状态机。
- * <p>记录格式：{@code STATE|canonicalPacketId|payloadHash|ownerToken|epochMs}。
+ * <p>记录格式：{@code STATE|canonicalPacketId|payloadHash|ownerToken|epochMs|messageType}。
  * packetId 标识消息，ownerToken 标识本次执行；接管后旧执行者不能修改新占位。</p>
  */
 public final class PushIdempotencySupport {
@@ -28,11 +28,34 @@ public final class PushIdempotencySupport {
     public static final int CLAIM_COMMITTED = 2;
     public static final int CLAIM_PENDING = 3;
     public static final int CLAIM_CONFLICT = 4;
-    /** 旧版完成记录没有摘要，必须读取正式消息校验后才能认定为重复。 */
-    private static final int CLAIM_LEGACY_COMMITTED = 5;
+    /** 只读查询未发现可确认的完成记录，仍需校验业务并原子抢占。 */
+    public static final int CLAIM_UNRESOLVED = 5;
     private static final RedisSerializer<String> STRING_SERIALIZER = RedisSerializer.string();
 
-    /** ARGV: proposedPacketId, payloadHash, ownerToken, ttlMs, takeoverMs。 */
+    /** 只查询历史结果，不建立或接管占位；并发变化最终仍由 CLAIM_SCRIPT 校验。 */
+    @SuppressWarnings("rawtypes")
+    private static final DefaultRedisScript<List> LOOKUP_SCRIPT = listScript("""
+            local raw = redis.call('GET', KEYS[1])
+            if not raw then return {5, ''} end
+            local fields = {}
+            for value in string.gmatch(raw, '([^|]+)') do table.insert(fields, value) end
+            if #fields ~= 6 then return {0, ''} end
+            if fields[3] ~= ARGV[1] or fields[6] ~= ARGV[2] then return {4, fields[2]} end
+            if fields[1] == 'COMMITTED' then return {2, fields[2]} end
+            return {5, fields[2]}
+            """);
+
+    /** 鉴权和原始指纹建立后调用；已完成请求不再受当前路由、权限或内容策略变化影响。 */
+    public static ClaimResult lookup(String appKey, String messageId, Message message, byte messageType) {
+        String hash = QosIdempotencyHelper.payloadHash(message);
+        List<?> raw = evalList(LOOKUP_SCRIPT,
+                CacheConstant.buildHttpPushIdempotentCacheKey(appKey, messageId), hash, String.valueOf(messageType));
+        if (raw == null || raw.size() < 2) return ClaimResult.failed();
+        return new ClaimResult(Integer.parseInt(String.valueOf(raw.get(0))),
+                String.valueOf(raw.get(1)), hash, null);
+    }
+
+    /** ARGV: proposedPacketId, payloadHash, ownerToken, ttlMs, takeoverMs, messageType。 */
     @SuppressWarnings("rawtypes")
     private static final DefaultRedisScript<List> CLAIM_SCRIPT = listScript("""
             local raw = redis.call('GET', KEYS[1])
@@ -47,13 +70,8 @@ public final class PushIdempotencySupport {
             if raw then
               local fields = {}
               for value in string.gmatch(raw, '([^|]+)') do table.insert(fields, value) end
-              if #fields < 5 then
-                if #fields == 2 and fields[1] == 'COMMITTED' then return {5, fields[2]} end
-                -- 旧节点没有 owner CAS，滚动升级时不能强占；等待旧执行完成或旧键原 TTL 到期。
-                if fields[1] == 'PENDING' then return {3, fields[2]} end
-                return {0, ''}
-              end
-              if fields[3] ~= hash then return {4, fields[2]} end
+              if #fields ~= 6 then return {0, ''} end
+              if fields[3] ~= hash or fields[6] ~= ARGV[6] then return {4, fields[2]} end
               canonical = fields[2]
               if fields[1] == 'COMMITTED' then return {2, canonical} end
               if fields[1] == 'PENDING' and now - tonumber(fields[5]) <= takeoverMs then
@@ -61,7 +79,7 @@ public final class PushIdempotencySupport {
               end
             end
             redis.call('PSETEX', KEYS[1], ttlMs,
-              'PENDING|' .. canonical .. '|' .. hash .. '|' .. owner .. '|' .. tostring(now))
+              'PENDING|' .. canonical .. '|' .. hash .. '|' .. owner .. '|' .. tostring(now) .. '|' .. ARGV[6])
             return {1, canonical}
             """);
 
@@ -71,7 +89,7 @@ public final class PushIdempotencySupport {
             local expected = 'PENDING|' .. ARGV[1] .. '|' .. ARGV[2] .. '|' .. ARGV[3] .. '|'
             if string.sub(raw, 1, #expected) ~= expected then return 0 end
             redis.call('PSETEX', KEYS[1], tonumber(ARGV[4]),
-              'COMMITTED|' .. ARGV[1] .. '|' .. ARGV[2] .. '|NONE|0')
+              'COMMITTED|' .. ARGV[1] .. '|' .. ARGV[2] .. '|NONE|0|' .. string.match(raw, '([^|]+)$'))
             return 1
             """);
 
@@ -81,7 +99,7 @@ public final class PushIdempotencySupport {
             local expected = 'PENDING|' .. ARGV[1] .. '|' .. ARGV[2] .. '|' .. ARGV[3] .. '|'
             if string.sub(raw, 1, #expected) ~= expected then return 0 end
             redis.call('PSETEX', KEYS[1], tonumber(ARGV[4]),
-              'RETRYABLE_FAILED|' .. ARGV[1] .. '|' .. ARGV[2] .. '|NONE|0')
+              'RETRYABLE_FAILED|' .. ARGV[1] .. '|' .. ARGV[2] .. '|NONE|0|' .. string.match(raw, '([^|]+)$'))
             return 1
             """);
 
@@ -97,7 +115,7 @@ public final class PushIdempotencySupport {
     }
 
     /** 原子抢占；指纹不同返回 CONFLICT，仍在处理返回 PENDING。 */
-    public static ClaimResult tryClaim(String appKey, String messageId, String packetId, Message message) {
+    public static ClaimResult tryClaim(String appKey, String messageId, String packetId, Message message, byte messageType) {
         if (StringUtils.isAnyBlank(appKey, messageId, packetId) || message == null) return ClaimResult.failed();
         String hash = message.getMetadata() != null
                 ? message.getMetadata().getHttpPushClaim().getHttpPushPayloadHash() : null;
@@ -107,33 +125,11 @@ public final class PushIdempotencySupport {
         String ownerToken = UUID.randomUUID().toString();
         List<?> raw = evalList(CLAIM_SCRIPT, CacheConstant.buildHttpPushIdempotentCacheKey(appKey, messageId),
                 packetId, hash, ownerToken, String.valueOf(ttlMs()),
-                String.valueOf(MessageConstant.HTTP_PUSH_PENDING_TAKEOVER_MS));
+                String.valueOf(MessageConstant.HTTP_PUSH_PENDING_TAKEOVER_MS), String.valueOf(messageType));
         if (raw == null || raw.size() < 2) return ClaimResult.failed();
         int state = Integer.parseInt(String.valueOf(raw.get(0)));
         String canonical = String.valueOf(raw.get(1));
-        if (state == CLAIM_LEGACY_COMMITTED) {
-            return verifyLegacyCommitted(appKey, canonical, hash);
-        }
         return new ClaimResult(state, canonical, hash, state == CLAIM_ACQUIRED ? ownerToken : null);
-    }
-
-    /** 旧完成记录只读兼容，不以本次请求摘要覆盖历史事实，避免相同 messageId 替换正文。 */
-    private static ClaimResult verifyLegacyCommitted(String appKey, String canonical, String requestHash) {
-        try {
-            long id = Long.parseLong(canonical);
-            List<com.ouyunc.base.packet.Packet> packets = com.ouyunc.repository.DefaultRepository.INSTANCE
-                    .getPackets(appKey, List.of(id));
-            if (packets == null || packets.size() != 1 || packets.getFirst() == null
-                    || packets.getFirst().getMessage() == null) {
-                return ClaimResult.failed();
-            }
-            String storedHash = QosIdempotencyHelper.payloadHash(packets.getFirst().getMessage());
-            int state = requestHash.equals(storedHash) ? CLAIM_COMMITTED : CLAIM_CONFLICT;
-            return new ClaimResult(state, canonical, storedHash, null);
-        } catch (Exception error) {
-            log.warn("旧 HTTP 幂等记录无法核对 appKey={} packetId={}", appKey, canonical, error);
-            return ClaimResult.failed();
-        }
     }
     public static boolean commit(String appKey, String messageId, ClaimIdentity claim) {
         return mutate(COMMIT_SCRIPT, appKey, messageId, claim, true);

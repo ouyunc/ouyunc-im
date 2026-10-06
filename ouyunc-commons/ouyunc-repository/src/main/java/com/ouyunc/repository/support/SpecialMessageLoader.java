@@ -2,6 +2,7 @@ package com.ouyunc.repository.support;
 
 import com.alibaba.fastjson2.JSON;
 import com.ouyunc.base.constant.enums.MessageIndexScopeEnum;
+import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.model.Metadata;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.base.packet.message.Message;
@@ -71,7 +72,7 @@ public final class SpecialMessageLoader {
         String expectedAppKey = metadata.getIngress().getAppKey();
         return messagePacketQuery.fetchPacketsReactive(expectedAppKey, packetIds)
                 .flatMap(packets -> validateLoadedPackets(
-                        scopeId, scope, packetIds, packets, function, extraPredicate))
+                        packet.getMessageType(), scopeId, scope, packetIds, packets, function, extraPredicate))
                 .onErrorResume(e -> {
                     log.error("消息处理异常 | scope={} scopeId={}", scope, scopeId, e);
                     return Mono.empty();
@@ -87,7 +88,7 @@ public final class SpecialMessageLoader {
                 packet, sessionId, MessageIndexScopeEnum.CHANNEL_SESSION, maxCount, function, extraPredicate);
     }
 
-    private Mono<List<Packet>> validateLoadedPackets(String scopeId, MessageIndexScopeEnum scope,
+    private Mono<List<Packet>> validateLoadedPackets(byte expectedType, String scopeId, MessageIndexScopeEnum scope,
                                                      List<Long> packetIds, List<Packet> packets,
                                                      Function<List<Packet>, Mono<Boolean>> function,
                                                      Predicate<List<Packet>> extraPredicate) {
@@ -105,7 +106,8 @@ public final class SpecialMessageLoader {
             return Mono.empty();
         }
         for (Packet targetPacket : packets) {
-            if (!belongsToScope(targetPacket, scopeId, scope)) {
+            // 操作和目标必须属于同一种业务，不能仅凭接收方或 correlationId 相等跨类型操作。
+            if (targetPacket.getMessageType() != expectedType || !belongsToScope(targetPacket, scopeId, scope)) {
                 log.error("消息归属校验失败 | scope={} scopeId={} packetId={}", scope, scopeId, targetPacket.getPacketId());
                 return Mono.empty();
             }
@@ -132,17 +134,22 @@ public final class SpecialMessageLoader {
         if (targetPacket == null || targetPacket.getMessage() == null || StringUtils.isBlank(ticketId)) {
             return false;
         }
-        return StringUtils.equals(ticketId.trim(), targetPacket.getMessage().getCorrelationId());
+        return targetPacket.getMessageType() == MessageTypeEnum.CUSTOMER_SERVICE.getType()
+                && StringUtils.equals(ticketId.trim(), targetPacket.getMessage().getCorrelationId());
     }
 
     static boolean belongsToSession(Packet targetPacket, String sessionId) {
+        if (targetPacket == null) {
+            return false;
+        }
         Message targetMessage = targetPacket.getMessage();
         if (targetMessage == null || StringUtils.isAnyBlank(targetMessage.getFrom(), targetMessage.getTo(), sessionId)) {
             return false;
         }
-        if (sessionId.equals(IdentityUtil.sessionId(targetMessage.getFrom(), targetMessage.getTo()))) {
-            return true;
+        if (targetPacket.getMessageType() == MessageTypeEnum.ONE_2_ONE.getType()) {
+            return sessionId.equals(IdentityUtil.sessionId(targetMessage.getFrom(), targetMessage.getTo()));
         }
-        return sessionId.equals(targetMessage.getTo());
+        return targetPacket.getMessageType() == MessageTypeEnum.GROUP.getType()
+                && sessionId.equals(targetMessage.getTo());
     }
 }

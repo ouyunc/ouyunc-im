@@ -100,11 +100,6 @@ public class MessageServerProperties extends MessageProperties {
     @Key(value = "ouyunc.message.http-push.enabled", defaultValue = "true")
     boolean httpPushEnabled;
 
-    /**
-     * HTTP 推送幂等键 TTL，单位秒。
-     */
-    @Key(value = "ouyunc.message.http-push.idempotent-ttl-seconds", defaultValue = "86400")
-    long httpPushIdempotentTtlSeconds;
 
     /**
      * 客服 ticket 消息保存后是否投递 CS ticket-activity MQ。
@@ -634,13 +629,6 @@ public class MessageServerProperties extends MessageProperties {
         this.httpPushEnabled = httpPushEnabled;
     }
 
-    public long getHttpPushIdempotentTtlSeconds() {
-        return httpPushIdempotentTtlSeconds;
-    }
-
-    public void setHttpPushIdempotentTtlSeconds(long httpPushIdempotentTtlSeconds) {
-        this.httpPushIdempotentTtlSeconds = httpPushIdempotentTtlSeconds;
-    }
 
     public boolean isCsTicketActivityEnabled() {
         return csTicketActivityEnabled;
@@ -1328,7 +1316,7 @@ public class MessageServerProperties extends MessageProperties {
                 ", httpBusinessExecutorThreads=" + httpBusinessExecutorThreads +
                 ", httpUploadLocalDirectory='" + httpUploadLocalDirectory + '\'' +
                 ", httpPushEnabled=" + httpPushEnabled +
-                ", httpPushIdempotentTtlSeconds=" + httpPushIdempotentTtlSeconds +
+                ", httpPushIdempotentTtlSeconds=" + getHttpPushIdempotentTtlSeconds() +
                 ", httpPushSkipFriendCheckForSystem=" + httpPushSkipFriendCheckForSystem +
                 ", httpPushJwtEnabled=" + httpPushJwtEnabled +
                 ", httpPushJwtSecret='" + httpPushJwtSecret + '\'' +

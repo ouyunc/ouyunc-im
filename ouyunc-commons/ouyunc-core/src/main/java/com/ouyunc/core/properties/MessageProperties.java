@@ -17,6 +17,22 @@ public class MessageProperties {
     @Key(value = "ouyunc.message.storage.hot-data-ttl-seconds", defaultValue = "7200")
     private long hotDataTtlSeconds;
 
+    /** HTTP 幂等窗口由仓储完成记录共同使用，避免投递证明早于入口幂等记录过期。 */
+    @Key(value = "ouyunc.message.http-push.idempotent-ttl-seconds", defaultValue = "86400")
+    private long httpPushIdempotentTtlSeconds;
+
+    /** 非法或无法安全换算为毫秒的配置回退到默认 QoS 窗口。 */
+    public long getHttpPushIdempotentTtlSeconds() {
+        return httpPushIdempotentTtlSeconds > 0L
+                && httpPushIdempotentTtlSeconds <= (Long.MAX_VALUE - MessageConstant.HOUR_TIMESTAMP) / MILLIS_PER_SECOND
+                ? httpPushIdempotentTtlSeconds
+                : MessageConstant.CACHE_QOS_IDEM_CLIENT_EXPIRE_TIMESTAMP / MILLIS_PER_SECOND;
+    }
+
+    public void setHttpPushIdempotentTtlSeconds(long seconds) {
+        this.httpPushIdempotentTtlSeconds = seconds;
+    }
+
     /***
      * 端口地址, 如如果是服务端则代表绑定端口，如果是客户端则代表是链接端口
      */

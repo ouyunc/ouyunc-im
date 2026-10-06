@@ -77,6 +77,18 @@ public class MessageContext {
     }
 
     /**
+     * 完成证明及操作快照覆盖长连接/HTTP 的最大幂等窗口，并预留一小时提交时间差。
+     * 与正文热缓存分离，不能因正文淘汰而把已完成投递当作首次投递。
+     */
+    public static long messageRecoveryTtlMillis() {
+        long httpTtl = messageProperties == null ? MessageConstant.CACHE_QOS_IDEM_CLIENT_EXPIRE_TIMESTAMP
+                : java.util.concurrent.TimeUnit.SECONDS.toMillis(messageProperties.getHttpPushIdempotentTtlSeconds());
+        return Math.max(messageHotDataTtlMillis(),
+                Math.max(httpTtl, MessageConstant.CACHE_QOS_IDEM_CLIENT_EXPIRE_TIMESTAMP)
+                        + MessageConstant.HOUR_TIMESTAMP);
+    }
+
+    /**
      * QoS 是否开启（仓库与处理器统一入口）
      */
     public static boolean isQosEnable() {

@@ -136,7 +136,7 @@ public final class SessionMessagePersistenceSupport {
             // 请求命令依赖首次 Packet 中的 RequestEventContext 恢复；正文必须活过 QoS 判重窗口。
             if (MqArchiveRouting.isFriendRequestType(packet.getMessageType())
                     || MqArchiveRouting.isGroupRequestType(packet.getMessageType())) {
-                expireTime = Math.max(expireTime, MessageConstant.CACHE_REQUEST_DELIVERY_EXPIRE_TIMESTAMP);
+                expireTime = Math.max(expireTime, MessageContext.messageRecoveryTtlMillis());
             }
 
             appKey = metadata.getIngress().getAppKey();

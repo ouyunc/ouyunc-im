@@ -4,7 +4,6 @@ import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.HttpResponseCodeEnum;
 import com.ouyunc.base.constant.enums.MessageSubmissionStatusEnum;
-import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.model.ContentSafetyResult;
 import com.ouyunc.base.model.HttpResponseResult;
@@ -13,12 +12,8 @@ import com.ouyunc.base.model.MessagePushResponse;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.message.http.HttpContext;
 import com.ouyunc.message.http.HttpPipelineException;
-import com.ouyunc.message.helper.CsHelper;
-import com.ouyunc.message.helper.CsHelper.PrepareOutcome;
 import com.ouyunc.message.processor.http.push.delivery.HttpPushDeliverySupport;
 import com.ouyunc.message.safety.ContentSafetyFacade;
-import com.ouyunc.repository.DefaultRepository;
-import com.ouyunc.repository.cs.CsImSessionRoute;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -32,11 +27,11 @@ import java.util.concurrent.CompletionStage;
 
 /**
  * HTTP 推送入口：校验通过后同步完成 MQ confirm + Redis，在线扇出提交后再 COMMITTED。
- * <p>{@code ACCEPTED}＝已提交且本次在线扇出已交给写出；同一 messageId 再次进入会补投在线端。
+ * <p>{@code ACCEPTED}＝已提交且本次在线扇出已交给写出；同一 messageId 再次进入只确认历史结果。
  * {@code REJECTED}＝业务明确拒绝；{@code RETRY_LATER}＝当前占位仍在处理；
  * {@code UNKNOWN}＝提交或在线扇出结果不确定，须用同一 messageId 重试。
  * 多接收人用 {@code messageId:to} 分键，避免局部成功被整键清掉。
- * 顺序：preProcess（权限/规范化）→ 内容安全 → 幂等占位 → MQ+Redis；
+ * 顺序：鉴权 → 历史结果查询 → preProcess（权限/规范化）→ 内容安全 → 幂等占位 → MQ+Redis；
  * preProcess 与管线均在 {@link ThreadPoolManager#httpPushVerifyExecutor()} 执行。</p>
  */
 public final class InternalPacketIngressService {
@@ -139,7 +134,7 @@ public final class InternalPacketIngressService {
             throw new HttpPipelineException(HttpResponseStatus.UNAUTHORIZED, HttpResponseCodeEnum.UNAUTHORIZED,
                     "HTTP 推送鉴权失败");
         }
-        return acceptAfterPreProcess(packet, httpContext.getAppKey(), request.getMessageId(),
+        return acceptAuthenticated(packet, httpContext.getAppKey(), request.getMessageId(),
                 String.valueOf(packet.getPacketId()));
     }
 
@@ -149,7 +144,7 @@ public final class InternalPacketIngressService {
         try {
             ThreadPoolManager.httpPushVerifyExecutor().execute(() -> {
                 try {
-                    future.complete(acceptAfterPreProcess(packet, appKey, messageId, packetIdStr));
+                    future.complete(acceptAuthenticated(packet, appKey, messageId, packetIdStr));
                 } catch (HttpPipelineException ex) {
                     future.completeExceptionally(ex);
                 } catch (Throwable t) {
@@ -185,12 +180,18 @@ public final class InternalPacketIngressService {
         return new ArrayList<>(ids);
     }
 
-    private static HttpResponseResult<MessagePushResponse> acceptAfterPreProcess(
+    private static HttpResponseResult<MessagePushResponse> acceptAuthenticated(
             Packet packet, String appKey, String messageId, String packetIdStr) throws HttpPipelineException {
         // HTTP 已完成身份鉴权；在 ref/@、客服身份和内容安全改写前固定原始请求指纹。
         packet.getMessage().ensureMetadata().ensureHttpPushClaim().setHttpPushPayloadHash(
                 com.ouyunc.repository.support.QosIdempotencyHelper.payloadHash(packet.getMessage()));
-        // 业务校验与规范化后执行内容安全，再建立幂等占位与归档。
+        // 历史 HTTP COMMITTED 仅在整个管线及投递成功后写入，可直接确认。
+        // 此时身份鉴权已完成；只读查询不会为未通过业务校验的新请求留下占位。
+        HttpResponseResult<MessagePushResponse> previous = resolveHistoricalResult(packet, appKey, messageId);
+        if (previous != null) {
+            return previous;
+        }
+        // 首次请求与未完成请求仍须通过当前业务校验。
         try {
             HttpPushProcessorDelegate.preProcessOrThrow(packet);
             applyContentSafetyOrThrow(packet);
@@ -200,13 +201,40 @@ public final class InternalPacketIngressService {
             if (ex.getStatus().code() == HttpResponseStatus.UNAUTHORIZED.code()) {
                 throw ex;
             }
+            // 前次执行可能在本次查询之后刚完成，业务校验拒绝前再确认一次，避免并发关单误报。
+            HttpResponseResult<MessagePushResponse> completed = resolveHistoricalResult(packet, appKey, messageId);
+            if (completed != null) {
+                return completed;
+            }
             MessageSubmissionStatusEnum rejectedStatus = ex.getStatus().code() >= HttpResponseStatus.INTERNAL_SERVER_ERROR.code()
                     ? MessageSubmissionStatusEnum.RETRY_LATER : MessageSubmissionStatusEnum.REJECTED;
             return HttpResponseResult.success(buildResponse(messageId, null, rejectedStatus, ex.getMessage()));
         }
 
+        return claimAndExecute(packet, appKey, messageId, packetIdStr);
+    }
+
+    /** 返回 null 表示未完成，必须继续业务校验；读取故障不能当作首次请求继续执行。 */
+    private static HttpResponseResult<MessagePushResponse> resolveHistoricalResult(
+            Packet packet, String appKey, String messageId) {
+        PushIdempotencySupport.ClaimResult previous = PushIdempotencySupport.lookup(
+                appKey, messageId, packet.getMessage(), packet.getMessageType());
+        return switch (previous.state()) {
+            case PushIdempotencySupport.CLAIM_COMMITTED -> HttpResponseResult.success(buildResponse(
+                    messageId, previous.canonicalPacketId(), MessageSubmissionStatusEnum.ACCEPTED, null));
+            case PushIdempotencySupport.CLAIM_CONFLICT -> HttpResponseResult.success(buildResponse(
+                    messageId, null, MessageSubmissionStatusEnum.REJECTED, ExceptionCodeEnum.MESSAGE_ID_CONFLICT.getMessage()));
+            case PushIdempotencySupport.CLAIM_FAILED -> HttpResponseResult.success(buildResponse(
+                    messageId, null, MessageSubmissionStatusEnum.UNKNOWN, "历史受理结果暂不可确认，请使用同一 messageId 重试"));
+            default -> null;
+        };
+    }
+
+    /** 校验通过后才原子抢占；只读历史查询和当前执行之间的竞争由脚本再次裁决。 */
+    private static HttpResponseResult<MessagePushResponse> claimAndExecute(
+            Packet packet, String appKey, String messageId, String packetIdStr) {
         PushIdempotencySupport.ClaimResult claim = PushIdempotencySupport.tryClaim(
-                appKey, messageId, packetIdStr, packet.getMessage());
+                appKey, messageId, packetIdStr, packet.getMessage(), packet.getMessageType());
         if (claim.state() == PushIdempotencySupport.CLAIM_CONFLICT) {
             HttpPushDeliverySupport.discardStashed(packet);
             return HttpResponseResult.success(buildResponse(messageId, null,
@@ -215,11 +243,6 @@ public final class InternalPacketIngressService {
         if (claim.state() == PushIdempotencySupport.CLAIM_COMMITTED) {
             String committedId = claim.canonicalPacketId();
             alignCommittedPacketId(packet, committedId);
-            if (!repairUnreadOnHttpCommitted(packet)) {
-                HttpPushDeliverySupport.discardStashed(packet);
-                return HttpResponseResult.success(buildResponse(messageId, committedId,
-                        MessageSubmissionStatusEnum.UNKNOWN, "消息已提交但未读索引待修复，请使用同一 messageId 重试"));
-            }
             HttpPushDeliverySupport.discardStashed(packet);
             return HttpResponseResult.success(buildResponse(messageId, committedId,
                     MessageSubmissionStatusEnum.ACCEPTED, null));
@@ -239,6 +262,12 @@ public final class InternalPacketIngressService {
         packet.getMessage().ensureMetadata().ensureHttpPushClaim().setHttpPushPayloadHash(claim.payloadHash());
         packet.getMessage().ensureMetadata().ensureHttpPushClaim().setHttpPushOwnerToken(claim.ownerToken());
 
+        return executeClaimed(packet, messageId, packetIdStr);
+    }
+
+    /** 仅当前 owner 执行受理管线，成功后才写入 HTTP COMMITTED。 */
+    private static HttpResponseResult<MessagePushResponse> executeClaimed(
+            Packet packet, String messageId, String packetIdStr) {
         try {
             boolean ok = HttpPushProcessorDelegate.runPipeline(packet);
             if (!ok) {
@@ -266,7 +295,7 @@ public final class InternalPacketIngressService {
 
     /**
      * 内容安全拒绝时返回 HTTP 400；MASK 已原地改写 packet.content，继续受理。
-     * 检查异常时放行，避免误杀整条推送。
+     * 检查异常遵循租户 ingressFailOpen 策略，暂缓时返回可重试结果。
      *
      * @param packet 已组装的协议包
      */
@@ -275,9 +304,11 @@ public final class InternalPacketIngressService {
         try {
             result = ContentSafetyFacade.check(packet);
         } catch (Exception e) {
-            log.error("HTTP 推送内容安全检查异常，放行以免误杀 message packetId={}",
-                    packet == null ? null : packet.getPacketId(), e);
-            return;
+            if (ContentSafetyFacade.allowOnFailure(packet, e)) {
+                return;
+            }
+            throw new HttpPipelineException(HttpResponseStatus.SERVICE_UNAVAILABLE,
+                    HttpResponseCodeEnum.INTERNAL_SERVER_ERROR, "内容安全检查暂不可用，请使用同一 messageId 重试");
         }
         if (result != null && !result.isPassed()) {
             throw new HttpPipelineException(HttpResponseStatus.BAD_REQUEST, HttpResponseCodeEnum.BAD_REQUEST,
@@ -293,56 +324,6 @@ public final class InternalPacketIngressService {
             packet.setPacketId(Long.parseLong(committedId));
         } catch (NumberFormatException ex) {
             log.warn("HTTP COMMITTED packetId 无法解析, packetId={}", committedId);
-        }
-    }
-
-    /**
-     * HTTP 幂等已 COMMITTED 时不再走热写，必须在此补未读；失败返回 UNKNOWN 让调用方重试。
-     */
-    private static boolean repairUnreadOnHttpCommitted(Packet packet) {
-        if (packet == null) {
-            return true;
-        }
-        Packet committed = loadCommittedPacket(packet);
-        if (committed == null) {
-            return false;
-        }
-        byte messageType = committed.getMessageType();
-        if (messageType == MessageTypeEnum.ONE_2_ONE.getType()) {
-            return DefaultRepository.INSTANCE.repairOne2OneUnread(committed);
-        }
-        if (messageType == MessageTypeEnum.CUSTOMER_SERVICE.getType()) {
-            if (DefaultRepository.INSTANCE.isDeliveryFinished(committed)) {
-                return true;
-            }
-            PrepareOutcome prepared = CsHelper.prepareCommittedRecovery(committed);
-            if (!prepared.accepted() || prepared.route() == null) {
-                return false;
-            }
-            return DefaultRepository.INSTANCE.repairCsTicketUnread(committed, prepared.route());
-        }
-        return true;
-    }
-
-    /** HTTP COMMITTED 重试同样只使用首次正式快照，不能拿重新规范化前的请求包修复派生索引。 */
-    private static Packet loadCommittedPacket(Packet retry) {
-        if (retry.getMessage() == null || retry.getMessage().getMetadata() == null) {
-            return null;
-        }
-        try {
-            String appKey = retry.getMessage().getMetadata().getIngress().getAppKey();
-            List<Packet> packets = DefaultRepository.INSTANCE.getPackets(appKey, List.of(retry.getPacketId()));
-            if (packets == null || packets.isEmpty() || packets.getFirst() == null) {
-                return null;
-            }
-            Packet committed = packets.getFirst();
-            return committed.getPacketId() == retry.getPacketId()
-                    && committed.getMessage() != null
-                    && StringUtils.equals(committed.getMessage().getId(), retry.getMessage().getId())
-                    ? committed : null;
-        } catch (RuntimeException error) {
-            log.error("HTTP COMMITTED 重试读取首次正式快照失败, packetId={}", retry.getPacketId(), error);
-            return null;
         }
     }
 

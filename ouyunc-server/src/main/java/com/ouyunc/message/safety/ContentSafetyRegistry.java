@@ -35,7 +35,7 @@ public final class ContentSafetyRegistry {
     /** 进程内单例。 */
     private static final ContentSafetyRegistry INSTANCE = new ContentSafetyRegistry();
 
-    /** 冷 miss 共用空自动机，避免每次 new。 */
+    /** 内容安全关闭时共用空自动机，避免每次 new。 */
     private static final SensitiveWordAcAutomaton EMPTY_AUTOMATON = new SensitiveWordAcAutomaton(List.of());
 
     /** 读 Redis Hash / String。 */
@@ -45,14 +45,8 @@ public final class ContentSafetyRegistry {
     /** 正在异步加载的 appKey，避免同一租户打爆线程池。 */
     private final Set<String> reloadInFlight = ConcurrentHashMap.newKeySet();
 
-    /** appKey → 词库快照；不 Loading，miss 不阻塞。 */
-    private final Cache<String, CachedDict> dictCache = Caffeine.newBuilder()
-            .maximumSize(2_000)
-            .expireAfterAccess(Duration.ofMinutes(30))
-            .build();
-
-    /** appKey → 策略快照；不 Loading，miss 不阻塞。 */
-    private final Cache<String, ContentSafetyPolicy> policyCache = Caffeine.newBuilder()
+    /** 词库和策略一起发布，避免加载失败时半更新；不 Loading，miss 异步加载。 */
+    private final Cache<String, CachedSafety> safetyCache = Caffeine.newBuilder()
             .maximumSize(2_000)
             .expireAfterAccess(Duration.ofMinutes(30))
             .build();
@@ -90,8 +84,7 @@ public final class ContentSafetyRegistry {
         if (StringUtils.isBlank(appKeyOrAll)
                 || CacheConstant.CONTENT_SAFETY_RELOAD_ALL.equalsIgnoreCase(appKeyOrAll.trim())) {
             Set<String> keys = new HashSet<>();
-            keys.addAll(dictCache.asMap().keySet());
-            keys.addAll(policyCache.asMap().keySet());
+            keys.addAll(safetyCache.asMap().keySet());
             if (keys.isEmpty()) {
                 log.info("内容安全缓存全部重载：当前无快照");
                 return;
@@ -105,7 +98,7 @@ public final class ContentSafetyRegistry {
     }
 
     /**
-     * 取租户策略；无快照时回退 YAML 默认并异步加载。
+     * 取租户策略；无快照时异步加载并暂缓受理，不能把尚未读到的租户拒绝策略当作默认 MASK。
      *
      * @param appKey 租户
      * @return 非空策略
@@ -114,30 +107,30 @@ public final class ContentSafetyRegistry {
         if (!isEnabled() || StringUtils.isBlank(appKey)) {
             return defaultPolicy();
         }
-        ContentSafetyPolicy policy = policyCache.getIfPresent(appKey);
-        if (policy == null) {
+        CachedSafety snapshot = safetyCache.getIfPresent(appKey);
+        if (snapshot == null) {
             scheduleReload(appKey);
-            return defaultPolicy();
+            throw new IllegalStateException("内容安全策略尚未就绪");
         }
-        return policy;
+        return snapshot.policy();
     }
 
     /**
      * 取合并后的敏感词自动机。
      *
      * @param appKey 租户
-     * @return 非空自动机（冷 miss 为空机，异步补齐）
+     * @return 非空自动机；冷 miss 异步加载并抛出暂不可用，交给统一异常策略处理
      */
     public SensitiveWordAcAutomaton matcher(String appKey) {
         if (!isEnabled() || StringUtils.isBlank(appKey)) {
             return EMPTY_AUTOMATON;
         }
-        CachedDict dict = dictCache.getIfPresent(appKey);
-        if (dict == null) {
+        CachedSafety snapshot = safetyCache.getIfPresent(appKey);
+        if (snapshot == null) {
             scheduleReload(appKey);
-            return EMPTY_AUTOMATON;
+            throw new IllegalStateException("内容安全词库尚未就绪");
         }
-        return dict.automaton();
+        return snapshot.dict().automaton();
     }
 
     /**
@@ -175,16 +168,24 @@ public final class ContentSafetyRegistry {
         if (StringUtils.isBlank(appKey) || !reloadInFlight.add(appKey)) {
             return;
         }
-        ThreadPoolManager.messageProcessorExecutor().execute(() -> {
-            try {
-                dictCache.put(appKey, loadDict(appKey));
-                policyCache.put(appKey, loadPolicy(appKey));
-            } catch (Exception e) {
-                log.warn("异步加载内容安全失败 appKey={}", appKey, e);
-            } finally {
-                reloadInFlight.remove(appKey);
-            }
-        });
+        try {
+            ThreadPoolManager.messageProcessorExecutor().execute(() -> {
+                try {
+                    // 全部读取成功后才发布，Redis 故障时保留旧快照，禁止用空词库覆盖。
+                    CachedDict dict = loadDict(appKey);
+                    ContentSafetyPolicy policy = loadPolicy(appKey);
+                    safetyCache.put(appKey, new CachedSafety(dict, policy));
+                } catch (Exception e) {
+                    log.warn("异步加载内容安全失败，保留已有快照 appKey={}", appKey, e);
+                } finally {
+                    reloadInFlight.remove(appKey);
+                }
+            });
+        } catch (RuntimeException rejected) {
+            // execute 被拒绝时任务不会执行 finally，必须在提交端释放，允许下次重试加载。
+            reloadInFlight.remove(appKey);
+            log.warn("内容安全重载任务提交失败 appKey={}", appKey, rejected);
+        }
     }
 
     /**
@@ -202,8 +203,7 @@ public final class ContentSafetyRegistry {
             ContentSafetyPolicy policy = JSON.parseObject(json, ContentSafetyPolicy.class);
             return policy == null ? defaultPolicy() : policy;
         } catch (Exception e) {
-            log.warn("加载内容安全策略失败 appKey={}，使用默认", appKey, e);
-            return defaultPolicy();
+            throw new IllegalStateException("加载内容安全策略失败 appKey=" + appKey, e);
         }
     }
 
@@ -244,7 +244,7 @@ public final class ContentSafetyRegistry {
                 }
             }
         } catch (Exception e) {
-            log.warn("加载敏感词失败 appKey={}", appKey, e);
+            throw new IllegalStateException("加载敏感词失败 appKey=" + appKey, e);
         }
     }
 
@@ -273,5 +273,9 @@ public final class ContentSafetyRegistry {
      * @param automaton AC 自动机
      */
     private record CachedDict(long version, SensitiveWordAcAutomaton automaton) {
+    }
+
+    /** 一次完整加载的词库与策略，发布后不再修改。 */
+    private record CachedSafety(CachedDict dict, ContentSafetyPolicy policy) {
     }
 }

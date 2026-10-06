@@ -171,6 +171,6 @@ public final class ReactiveMessageOperationSupport {
     }
 
     private static long ttlMillis() {
-        return Math.max(MessageContext.messageHotDataTtlMillis(), MessageConstant.CACHE_QOS_IDEM_CLIENT_EXPIRE_TIMESTAMP);
+        return MessageContext.messageRecoveryTtlMillis();
     }
 }

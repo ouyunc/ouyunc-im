@@ -37,6 +37,23 @@ public final class ContentSafetyFacade {
     }
 
     /**
+     * HTTP 与长连接共用检查异常策略。策略本身不可读取时暂缓受理，不能把检查故障当成检查通过。
+     * 降级结果记录于日志，不记录消息原文；与内容命中 REJECT 明确区分。
+     */
+    public static boolean allowOnFailure(Packet packet, Exception failure) {
+        boolean failOpen = false;
+        try {
+            String appKey = packet.getMessage().getMetadata().getIngress().getAppKey();
+            failOpen = ContentSafetyRegistry.getInstance().policy(appKey).isIngressFailOpen();
+        } catch (RuntimeException policyFailure) {
+            log.warn("内容安全异常策略不可用，暂缓受理 packetId={}", packet.getPacketId(), policyFailure);
+        }
+        log.error("内容安全检查异常 packetId={} messageId={} failOpen={}",
+                packet.getPacketId(), packet.getMessage().getId(), failOpen, failure);
+        return failOpen;
+    }
+
+    /**
      * 检查并可能原地改写 {@code message.content}（MASK）。
      *
      * @param packet 协议包
@@ -46,6 +63,14 @@ public final class ContentSafetyFacade {
         if (packet == null || packet.getMessage() == null) {
             return ContentSafetyResult.pass();
         }
+        int contentType = packet.getMessage().getContentType();
+        // 已读、撤回等控制命令无需审核正文，不应被词库冷启动或审核故障阻断。
+        if (contentType != MessageContentTypeEnum.TEXT_CONTENT.getType()
+                && contentType != MessageContentTypeEnum.IMAGE_TEXT_CONTENT.getType()
+                && contentType != MessageContentTypeEnum.IMAGE_CONTENT.getType()
+                && contentType != MessageContentTypeEnum.VIDEO_CONTENT.getType()) {
+            return ContentSafetyResult.pass();
+        }
         ContentSafetyRegistry registry = ContentSafetyRegistry.getInstance();
         if (!registry.isEnabled()) {
             return ContentSafetyResult.pass();
@@ -53,7 +78,6 @@ public final class ContentSafetyFacade {
         Message message = packet.getMessage();
         Metadata metadata = message.getMetadata();
         String appKey = metadata == null ? null : metadata.getIngress().getAppKey();
-        int contentType = message.getContentType();
         if (StringUtils.isBlank(appKey)) {
             if (contentType == MessageContentTypeEnum.TEXT_CONTENT.getType()
                     || contentType == MessageContentTypeEnum.IMAGE_TEXT_CONTENT.getType()) {
