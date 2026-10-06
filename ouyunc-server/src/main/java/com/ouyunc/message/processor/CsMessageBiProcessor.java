@@ -20,6 +20,7 @@ import com.ouyunc.message.helper.MessageContentNormalizer;
 import com.ouyunc.message.helper.MessageSubmissionResponseHelper;
 import com.ouyunc.message.helper.CsHelper.PrepareOutcome;
 import com.ouyunc.message.validator.AuthValidator;
+import com.ouyunc.repository.DefaultRepository;
 import com.ouyunc.repository.cs.CsImSessionRoute;
 import com.ouyunc.base.constant.enums.MessageIndexScopeEnum;
 import com.ouyunc.base.constant.enums.SaveMessageOutcomeEnum;
@@ -72,7 +73,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
     @Override
     public boolean qosPreHandle(ChannelHandlerContext ctx, Packet packet) {
         return QosCommittedDeliverySupport.handle(ctx, packet,
-                com.ouyunc.repository.DefaultRepository.INSTANCE, this::completeCommittedDelivery);
+                DefaultRepository.INSTANCE, this::completeCommittedDelivery);
     }
 
     @Override
