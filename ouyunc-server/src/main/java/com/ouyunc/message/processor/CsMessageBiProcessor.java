@@ -57,7 +57,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
             ctx.close();
             return Mono.just(false);
         }
-        // 客服坐席的 from 会改写为入口身份，必须在改写前固定真实发送请求的指纹。
+        // 在引用规范化及内容安全处理前，固定真实发送者提交的原始请求指纹。
         QosRequestFingerprintSupport.captureIfAbsent(packet);
         if (qosPreHandle(ctx, packet)) {
             return Mono.just(false);
@@ -104,9 +104,8 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
             MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.CS_SESSION_ROUTE_ERROR);
             return Mono.empty();
         }
-        // 可信路由固定会话归属；from 保留已认证的真实访客、坐席或机器人身份。
+        // 消息以 correlationId 归属咨询单；from 保留已认证的真实发送者。
         CsImSessionRoute route = live.route();
-        com.ouyunc.message.helper.MessageSessionIdentitySupport.bindCustomerService(packet, route);
         return MessageAcceptPipelineHelper.archiveAfterAuth(packet)
                 // 插件也必须通过工单、当前坐席和归档校验，不能在路由检查前短路。
                 .then(Mono.defer(() -> content != null ? content.process(ctx, packet)

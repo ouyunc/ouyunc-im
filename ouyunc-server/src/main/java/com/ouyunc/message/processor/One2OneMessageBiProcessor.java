@@ -88,7 +88,6 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
      */
     @Override
     public Mono<Void> process(ChannelHandlerContext ctx, Packet packet) {
-        com.ouyunc.message.helper.MessageSessionIdentitySupport.bindOne2One(packet);
         log.debug("Processing one-to-one message...");
         AbstractBaseBiProcessor<Mono<Void>, ? extends Number> content = MessageServerContext.messageContentProcessorCache.get(packet.getMessage().getContentType());
         if (content != null) {

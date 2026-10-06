@@ -210,7 +210,6 @@ public final class MessagePacketQuerySupport {
                                         entity.getServerAddress(), entity.getServerArrivalTime()))
                 )
         );
-        packet.getMessage().setSessionId(entity.getSessionId());
         return packet;
     }
 

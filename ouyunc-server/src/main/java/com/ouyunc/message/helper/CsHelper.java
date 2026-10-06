@@ -181,9 +181,6 @@ public final class CsHelper {
                 route.serviceIdentity(), route.sessionId()) || !route.hasRequiredDeliveryFields()) {
             return PrepareOutcome.reject("已提交客服消息缺少可恢复路由");
         }
-        if (!StringUtils.equals(message.getSessionId(), route.sessionId())) {
-            return PrepareOutcome.reject("已提交客服消息会话归属与咨询单不一致");
-        }
         int fromType = message.getFromType();
         if (fromType == MessageFromToTypeEnum.CS_VISITOR.getType()) {
             if (!StringUtils.equals(message.getFrom(), route.userId())
