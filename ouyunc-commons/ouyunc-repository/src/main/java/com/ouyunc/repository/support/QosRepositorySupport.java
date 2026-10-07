@@ -29,6 +29,22 @@ public final class QosRepositorySupport {
         return QosIdempotencyHelper.isDuplicate(infra.redisTemplate, packet, channelLoginIdentity);
     }
 
+    /** 恢复入口必须区分未提交与读取故障，防止故障回退到当前业务校验并误报拒绝。 */
+    @SuppressWarnings("unchecked")
+    public boolean checkCommittedForRecovery(Packet packet, String identity) {
+        QosIdempotencyHelper.ClaimResult state = QosIdempotencyHelper.checkStateResult(
+                infra.redisTemplate, packet, identity);
+        if (state.state() == QosIdempotencyHelper.CLAIM_FAILED
+                || state.state() == QosIdempotencyHelper.CLAIM_CONFLICT) {
+            throw new IllegalStateException("QoS 历史提交身份暂不可确认");
+        }
+        if (!state.isCommittedWithCanonical()) {
+            return false;
+        }
+        packet.setPacketId(state.canonicalPacketId());
+        return true;
+    }
+
     /**
      * 归档前抢占 QoS，把 packetId 收敛为首次正式 ID。已占位则不再换令牌。
      *

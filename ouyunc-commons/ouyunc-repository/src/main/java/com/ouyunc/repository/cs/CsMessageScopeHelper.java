@@ -17,7 +17,7 @@ public final class CsMessageScopeHelper {
     }
 
     /**
-     * 已读 offset / 未读归属的真实用户 id（坐席用 assigneeId，访客用 userId）。
+     * 已读 offset / 未读归属的真实用户 id。坐席使用消息原始 from，不能在转接重入时改用当前接待人。
      */
     public static String resolveReaderId(Message message, CsImSessionRoute route) {
         if (message == null || route == null) {

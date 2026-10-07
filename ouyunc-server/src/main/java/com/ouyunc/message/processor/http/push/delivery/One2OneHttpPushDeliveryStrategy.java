@@ -1,6 +1,7 @@
 package com.ouyunc.message.processor.http.push.delivery;
 
 import com.ouyunc.core.context.MessageContext;
+import com.ouyunc.message.helper.SenderReadCompletionSupport;
 
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
@@ -90,11 +91,7 @@ public final class One2OneHttpPushDeliveryStrategy implements HttpProcessor {
                     } catch (Exception e) {
                         log.warn("HTTP 推送更新单聊最后消息失败，继续投递 packetId={}", packet.getPacketId(), e);
                     }
-                    DefaultRepository.INSTANCE.reactiveAdvanceSenderReadOffsetOnSend(packet, IdentityType.ONE_2_ONE,
-                                    MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
-                            .subscribe(ignored -> { }, e -> log.warn(
-                                    "HTTP 推送更新单聊已读 offset 失败, packetId={}", packet.getPacketId(), e));
-                    CommittedDelivery.run(packet, () -> MessageDeliveryPlanner.deliverPeerMessage(packet, false));
+                    completeChatDelivery(packet);
                     return Mono.just(true);
                 })
                 .onErrorResume(error -> {
@@ -152,9 +149,17 @@ public final class One2OneHttpPushDeliveryStrategy implements HttpProcessor {
             } else if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
                 MessageDeliveryPlanner.deliverPeerMessage(packet, true);
             } else {
-                CommittedDelivery.run(packet, () -> MessageDeliveryPlanner.deliverPeerMessage(packet, false));
+                completeChatDelivery(packet);
             }
             return Boolean.TRUE;
+        });
+    }
+
+    /** 首次写入和重入都先确认水位，失败不会写首次投递完成标记。 */
+    private static void completeChatDelivery(Packet packet) {
+        CommittedDelivery.run(packet, () -> {
+            SenderReadCompletionSupport.complete(packet, IdentityType.ONE_2_ONE);
+            MessageDeliveryPlanner.deliverPeerMessage(packet, false);
         });
     }
 

@@ -88,12 +88,18 @@ public final class ReadReceiptSupport {
      * 发送方在本会话发出聊天消息后，静默将本端已读 offset 推进到该消息 packetId（不投递已读回执）。
      */
     public Mono<Boolean> reactiveAdvanceSenderReadOffsetOnSend(Packet packet, IdentityType identityType, long expireTime) {
+        return Mono.fromCallable(() -> advanceSenderReadOffsetOnSend(packet, identityType, expireTime))
+                .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    /** 已提交消息完成器调用；在业务工作线程同步确认 Redis，失败不得落首次投递完成标记。 */
+    public boolean advanceSenderReadOffsetOnSend(Packet packet, IdentityType identityType, long expireTime) {
         Message message = packet.getMessage();
         if (message == null || message.getMetadata() == null) {
             log.warn("发送消息静默更新 offset 失败，消息或元数据为空 | packet={}", packet);
-            return Mono.just(false);
+            return false;
         }
-        return reactiveUpdateSessionReadOffset(
+        return updateSessionReadOffset(
                 message.getMetadata().getIngress().getAppKey(),
                 identityType,
                 message.getFrom(),
@@ -142,26 +148,30 @@ public final class ReadReceiptSupport {
     private Mono<Boolean> reactiveUpdateSessionReadOffset(String appKey, IdentityType identityType, String from,
                                                           Byte deviceType, String to, long incomingOffset,
                                                           long expireTime) {
+        return Mono.fromCallable(() -> updateSessionReadOffset(appKey, identityType, from, deviceType,
+                        to, incomingOffset, expireTime))
+                .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    /** 单调更新底层实现；Reactive 与已提交完成器共用，避免另起订阅丢失失败结果。 */
+    private boolean updateSessionReadOffset(String appKey, IdentityType identityType, String from,
+                                            Byte deviceType, String to, long incomingOffset, long expireTime) {
         if (identityType == IdentityType.ONE_2_ONE) {
-            return Mono.fromCallable(() -> unreadIndexSupport.clearOne2OneOnRead(
-                            appKey, from, deviceType, to, incomingOffset, expireTime))
-                    .doOnError(e -> log.error("单聊已读 offset+未读 更新失败 | reader={}, peer={}, incomingOffset={}",
-                            from, to, incomingOffset, e))
-                    .subscribeOn(Schedulers.boundedElastic());
+            return unreadIndexSupport.clearOne2OneOnRead(appKey, from, deviceType, to, incomingOffset, expireTime);
         }
         String offsetKey = CacheConstant.buildSessionReadMessageOffsetCacheKey(
                 appKey, identityType.value(), from, deviceType, to);
-        return Mono.fromCallable(() -> {
+        try {
                     DefaultRedisScript<String> readOffsetScript = new DefaultRedisScript<>(
                             LuaScriptEnum.READ_OFFSET_MAX_SCRIPT.getScript(), String.class);
                     String confirmed = stringRedisTemplate.execute(readOffsetScript, List.of(offsetKey),
                             String.valueOf(incomingOffset), String.valueOf(expireTime));
                     // 脚本无确认值时结果未知，不得把客户端 ACK 当成持久化成功。
                     return confirmed != null && !confirmed.isBlank();
-                })
-                .doOnError(e -> log.error("会话已读 offset Redis 更新失败 | offsetKey={}, incomingOffset={}, expireTime={}",
-                        offsetKey, incomingOffset, expireTime, e))
-                .subscribeOn(Schedulers.boundedElastic());
+        } catch (RuntimeException e) {
+            log.error("会话已读 offset Redis 更新失败 | offsetKey={}", offsetKey, e);
+            throw e;
+        }
     }
 
     private Long getSessionMaxReadPackageId(String appKey, IdentityType identityType, String from, Byte deviceType, String to) {

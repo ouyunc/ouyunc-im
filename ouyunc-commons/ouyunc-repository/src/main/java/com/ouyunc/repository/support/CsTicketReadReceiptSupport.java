@@ -128,23 +128,29 @@ public final class CsTicketReadReceiptSupport {
 
     public Mono<Boolean> reactiveAdvanceCsSenderReadOffsetOnSend(Packet packet, CsImSessionRoute route, byte deviceType,
                                                                  long expireTime) {
+        return Mono.fromCallable(() -> advanceCsSenderReadOffsetOnSend(packet, route, deviceType, expireTime))
+                .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    /** 完成器在工作线程确认水位成功，再允许首次投递完成和 ACK。 */
+    public boolean advanceCsSenderReadOffsetOnSend(Packet packet, CsImSessionRoute route, byte deviceType,
+                                                   long expireTime) {
         if (route == null || packet == null || packet.getMessage() == null
                 || packet.getMessage().getMetadata() == null || StringUtils.isBlank(route.ticketId())) {
-            return Mono.just(false);
+            return false;
         }
         Message message = packet.getMessage();
         String readerId = CsMessageScopeHelper.resolveReaderId(message, route);
         if (StringUtils.isBlank(readerId)) {
-            return Mono.just(false);
+            return false;
         }
-        return Mono.fromCallable(() -> ticketUnread.clearOnRead(
+        return ticketUnread.clearOnRead(
                         message.getMetadata().getIngress().getAppKey(),
                         route.ticketId().trim(),
                         readerId,
                         deviceType,
                         packet.getPacketId(),
-                        expireTime))
-                .subscribeOn(Schedulers.boundedElastic());
+                        expireTime);
     }
 
     long getTicketReadOffset(String appKey, String ticketId, String readerId, byte deviceType) {

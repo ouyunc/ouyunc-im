@@ -71,7 +71,7 @@ public final class QosCommittedDeliverySupport {
      * 客户端重试包仍是原始内容，可能尚未经过 MASK、引用/@ 规范化或客服入口身份改写，
      * 直接拿它恢复会让热数据与投递内容不一致。
      */
-    private static Packet loadCommittedPacket(DefaultRepository repository, Packet retry) {
+    public static Packet loadCommittedPacket(DefaultRepository repository, Packet retry) {
         if (retry == null || retry.getMessage() == null || retry.getMessage().getMetadata() == null) {
             throw new ExternalDeliveryConfirmException("已提交消息重入缺少正式身份", null);
         }
@@ -84,6 +84,7 @@ public final class QosCommittedDeliverySupport {
             }
             Packet committed = packets.getFirst();
             if (committed.getPacketId() != retry.getPacketId()
+                    || committed.getMessageType() != retry.getMessageType()
                     || committed.getMessage() == null
                     || !StringUtils.equals(committed.getMessage().getId(), retry.getMessage().getId())) {
                 throw new ExternalDeliveryConfirmException("已提交消息正文与幂等身份不一致, packetId="

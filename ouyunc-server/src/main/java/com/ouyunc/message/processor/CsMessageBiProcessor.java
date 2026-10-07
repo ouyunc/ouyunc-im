@@ -1,6 +1,7 @@
 package com.ouyunc.message.processor;
 
 import com.ouyunc.core.context.MessageContext;
+import com.ouyunc.message.helper.SenderReadCompletionSupport;
 
 import com.ouyunc.core.exception.ExceptionReporter;
 
@@ -174,13 +175,7 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
             log.warn("更新客服会话最后消息失败，继续投递 packetId={}", packet.getPacketId(), e);
         }
         CsHelper.notifyAfterSave(packet, route);
-        repository().reactiveAdvanceCsSenderReadOffsetOnSend(
-                        packet, route, packet.getDeviceType(),
-                        MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
-                .subscribe(
-                        ignored -> {
-                        },
-                        e -> log.warn("客服发消息静默更新 ticket 已读 offset 失败, packetId={}", packet.getPacketId(), e));
+        SenderReadCompletionSupport.completeCs(packet, route);
         CsHelper.deliverMessage(packet, route, false);
     }
 

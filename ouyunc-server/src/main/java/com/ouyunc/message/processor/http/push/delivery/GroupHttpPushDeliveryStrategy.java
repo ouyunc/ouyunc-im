@@ -1,6 +1,7 @@
 package com.ouyunc.message.processor.http.push.delivery;
 
 import com.ouyunc.core.context.MessageContext;
+import com.ouyunc.message.helper.SenderReadCompletionSupport;
 
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqConstant;
@@ -97,11 +98,7 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
                     } catch (Exception e) {
                         log.warn("HTTP 推送更新群聊最后消息失败，继续投递 packetId={}", packet.getPacketId(), e);
                     }
-                    DefaultRepository.INSTANCE.reactiveAdvanceSenderReadOffsetOnSend(packet, IdentityType.GROUP,
-                                    MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
-                            .subscribe(ignored -> { }, e -> log.warn(
-                                    "HTTP 推送更新群聊已读 offset 失败, packetId={}", packet.getPacketId(), e));
-                    CommittedDelivery.run(packet, lease -> pushGroupOnline(packet, lease));
+                    completeChatDelivery(packet);
                     return Mono.just(true);
                 })
                 .onErrorResume(error -> {
@@ -167,9 +164,17 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
             } else if (MessageContentTypeEnum.WITHDRAW_CONTENT.getType() == contentType) {
                 deliverWithdraw(packet);
             } else {
-                CommittedDelivery.run(packet, lease -> pushGroupOnline(packet, lease));
+                completeChatDelivery(packet);
             }
             return Boolean.TRUE;
+        });
+    }
+
+    /** 群聊首次写入与重入共用水位确认和扇出完成边界。 */
+    private static void completeChatDelivery(Packet packet) {
+        CommittedDelivery.run(packet, lease -> {
+            SenderReadCompletionSupport.complete(packet, IdentityType.GROUP);
+            pushGroupOnline(packet, lease);
         });
     }
 

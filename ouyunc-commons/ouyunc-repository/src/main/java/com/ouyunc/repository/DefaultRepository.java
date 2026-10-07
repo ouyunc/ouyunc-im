@@ -46,6 +46,11 @@ public enum DefaultRepository implements Repository {
         return RepositorySupports.QOS.checkDup(packet, channelLoginIdentity);
     }
 
+    /** 历史恢复检查：存储故障抛出，不能按首次请求处理。 */
+    public boolean checkCommittedForRecovery(Packet packet, String identity) {
+        return RepositorySupports.QOS.checkCommittedForRecovery(packet, identity);
+    }
+
 
     /**
      * 确认投递协议包：等 broker ACK，失败由客户端 QoS 重试。
@@ -60,6 +65,30 @@ public enum DefaultRepository implements Repository {
      */
     public void publishJsonAsync(String topic, String key, String jsonBody, String failureContext) {
         RepositorySupports.MQ.publishJsonAsync(topic, key, jsonBody, failureContext);
+    }
+
+    /** 关键业务通知必须检查 broker 确认结果，失败由首次完成链路重试。 */
+    public CompletableFuture<?> publishJsonConfirmed(String topic, String key, String jsonBody, String failureContext) {
+        return RepositorySupports.MQ.publishJsonConfirmed(topic, key, jsonBody, failureContext);
+    }
+
+    public boolean isCsActivityConfirmed(Packet packet) {
+        return RepositorySupports.DELIVERY_COMPLETION.isCsActivityConfirmed(packet);
+    }
+
+    public void confirmCsActivity(Packet packet) {
+        RepositorySupports.DELIVERY_COMPLETION.confirmCsActivity(packet);
+    }
+
+    /** 在业务工作线程确认发送方水位，禁止在 Netty EventLoop 调用。 */
+    public boolean advanceSenderReadOffsetOnSend(Packet packet, IdentityType type, long ttl) {
+        return RepositorySupports.READ_RECEIPT.advanceSenderReadOffsetOnSend(packet, type, ttl);
+    }
+
+    /** 客服发送方按真实作者和咨询单推进水位，供可重入完成器使用。 */
+    public boolean advanceCsSenderReadOffsetOnSend(Packet packet, CsImSessionRoute route, long ttl) {
+        return RepositorySupports.CS_TICKET_READ_RECEIPT.advanceCsSenderReadOffsetOnSend(
+                packet, route, packet.getDeviceType(), ttl);
     }
 
 

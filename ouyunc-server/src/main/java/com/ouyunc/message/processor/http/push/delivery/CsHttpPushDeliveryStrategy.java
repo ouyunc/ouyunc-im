@@ -1,6 +1,7 @@
 package com.ouyunc.message.processor.http.push.delivery;
 
 import com.ouyunc.core.context.MessageContext;
+import com.ouyunc.message.helper.SenderReadCompletionSupport;
 
 import com.ouyunc.base.constant.MessageConstant;
 import com.ouyunc.base.constant.MqArchiveRouting;
@@ -82,20 +83,19 @@ public final class CsHttpPushDeliveryStrategy implements HttpProcessor {
     @Override
     public Mono<Boolean> replayOnline(Packet packet) {
         return Mono.fromCallable(() -> {
+            // 已完成消息只确认历史结果，不能再受当前关单、转接状态影响。
+            if (DefaultRepository.INSTANCE.isDeliveryFinished(packet)) {
+                return Boolean.TRUE;
+            }
             CsImSessionRoute route = HttpPushDeliverySupport.takeCsRoute(packet);
             if (route == null) {
-                PrepareOutcome prepared = CsHelper.prepare(packet);
+                PrepareOutcome prepared = CsHelper.prepareCommittedRecovery(packet);
                 if (!prepared.accepted()) {
                     return Boolean.FALSE;
                 }
                 route = prepared.route();
             }
-            PrepareOutcome live = CsHelper.refreshDelivery(packet, route);
-            if (!live.accepted()) {
-                return Boolean.FALSE;
-            }
-            CsImSessionRoute deliveryRoute = live.route();
-            CommittedDelivery.run(packet, () -> CsHelper.deliverMessage(packet, deliveryRoute, false));
+            completeChatDelivery(packet, route);
             return Boolean.TRUE;
         });
     }
@@ -131,13 +131,7 @@ public final class CsHttpPushDeliveryStrategy implements HttpProcessor {
                     } catch (Exception e) {
                         log.warn("HTTP 推送更新客服最后消息失败，继续投递 packetId={}", packet.getPacketId(), e);
                     }
-                    CsHelper.notifyAfterSave(packet, route);
-                    DefaultRepository.INSTANCE.reactiveAdvanceCsSenderReadOffsetOnSend(
-                                    packet, route, packet.getDeviceType(),
-                                    MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
-                            .subscribe(ignored -> { }, e -> log.warn(
-                                    "HTTP 推送更新客服 ticket 已读 offset 失败, packetId={}", packet.getPacketId(), e));
-                    CommittedDelivery.run(packet, () -> CsHelper.deliverMessage(packet, route, false));
+                    completeChatDelivery(packet, route);
                     return Mono.just(true);
                 })
                 .onErrorResume(error -> {
@@ -147,6 +141,15 @@ public final class CsHttpPushDeliveryStrategy implements HttpProcessor {
                             "CsHttpPushDeliveryStrategy.process", packet, error);
                     return Mono.just(false);
                 });
+    }
+
+    /** 活动通知、水位与投递均纳入可重入完成器，任一失败都不得提前标记完成。 */
+    private static void completeChatDelivery(Packet packet, CsImSessionRoute route) {
+        CommittedDelivery.run(packet, () -> {
+            CsHelper.notifyAfterSave(packet, route);
+            SenderReadCompletionSupport.completeCs(packet, route);
+            CsHelper.deliverMessage(packet, route, false);
+        });
     }
 
     private Mono<Boolean> handleWithdraw(Packet packet, CsImSessionRoute route) {

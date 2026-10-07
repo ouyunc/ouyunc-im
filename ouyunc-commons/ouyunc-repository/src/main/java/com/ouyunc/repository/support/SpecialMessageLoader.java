@@ -74,10 +74,8 @@ public final class SpecialMessageLoader {
                 .flatMap(packets -> validateLoadedPackets(
                         packet.getMessageType(), scopeId, scope,
                         packetIds, packets, function, extraPredicate))
-                .onErrorResume(e -> {
-                    log.error("消息处理异常 | scope={} scopeId={}", scope, scopeId, e);
-                    return Mono.empty();
-                });
+                // 查询失败保留 error 信号，不能被控制操作当成目标不合法并释放首次身份。
+                .doOnError(e -> log.error("消息查询或校验执行失败 | scope={} scopeId={}", scope, scopeId, e));
     }
 
     /** @deprecated 使用 {@link #reactiveLoadValidatedSpecialPackets(Packet, String, MessageIndexScopeEnum, int, Function, Predicate)} */

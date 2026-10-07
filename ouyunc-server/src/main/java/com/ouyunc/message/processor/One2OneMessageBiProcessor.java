@@ -1,6 +1,7 @@
 package com.ouyunc.message.processor;
 
 import com.ouyunc.core.context.MessageContext;
+import com.ouyunc.message.helper.SenderReadCompletionSupport;
 
 import com.ouyunc.core.exception.ExceptionReporter;
 import com.ouyunc.base.exception.ExternalDeliveryConfirmException;
@@ -150,11 +151,7 @@ public final class One2OneMessageBiProcessor extends AbstractMessageBiProcessor<
                 // 最后消息是可重建派生索引，失败不能阻断已提交消息的实时投递。
                 log.warn("更新单聊最后消息失败，继续投递 packetId={}", packet.getPacketId(), e);
             }
-            repository().reactiveAdvanceSenderReadOffsetOnSend(
-                            packet, IdentityType.ONE_2_ONE, MessageConstant.CACHE_MESSAGE_READ_RECEIPT_KEY_EXPIRE_TIMESTAMP)
-                    .subscribe(
-                            ignored -> { },
-                            e -> log.warn("发送消息静默更新本端已读 offset 失败, packetId={}", packet.getPacketId(), e));
+            SenderReadCompletionSupport.complete(packet, IdentityType.ONE_2_ONE);
             deliver(packet, false);
         });
     }

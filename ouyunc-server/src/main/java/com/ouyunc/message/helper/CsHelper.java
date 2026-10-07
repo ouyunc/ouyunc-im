@@ -390,6 +390,9 @@ public final class CsHelper {
         if (props == null || !props.isCsTicketActivityEnabled()) {
             return;
         }
+        if (DefaultRepository.INSTANCE.isCsActivityConfirmed(packet)) {
+            return;
+        }
         Long ticketId = parseTicketId(route);
         if (ticketId == null) {
             return;
@@ -411,7 +414,19 @@ public final class CsHelper {
         String topic = MqConstant.MQ_CS_TICKET_ACTIVITY_TOPIC;
         String key = CsTicketActivityNotifyPayload.messageKey(appKey, ticketId);
         String json = JSON.toJSONString(body);
-        DefaultRepository.INSTANCE.publishJsonAsync(topic, key, json, "CS ticket-activity MQ, ticketId=" + ticketId);
+        // 业务活动驱动机器人与托管，必须先获得 broker 确认，再允许聊天完成并 ACK。
+        // 超时或确认标记写入失败时抛出，首次完成器保留可重入状态；消费端按 packetId 去重。
+        try {
+            DefaultRepository.INSTANCE.publishJsonConfirmed(topic, key, json,
+                    "CS ticket-activity MQ, ticketId=" + ticketId)
+                    .get(MessageConstant.EXTERNAL_CHANNEL_CONFIRM_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+            DefaultRepository.INSTANCE.confirmCsActivity(packet);
+        } catch (InterruptedException error) {
+            Thread.currentThread().interrupt();
+            throw new ExternalDeliveryConfirmException("客服活动 broker 确认被中断", error);
+        } catch (Exception error) {
+            throw new ExternalDeliveryConfirmException("客服活动 broker 尚未确认", error);
+        }
         if (log.isDebugEnabled()) {
             log.debug("CS ticket-activity 已投递 MQ, topic={}, ticketId={}, packetId={}",
                     topic, ticketId, packet.getPacketId());

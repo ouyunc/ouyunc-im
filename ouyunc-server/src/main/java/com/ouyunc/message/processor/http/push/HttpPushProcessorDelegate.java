@@ -76,6 +76,12 @@ public final class HttpPushProcessorDelegate {
         }
     }
 
+    /** 调用方已验证 QoS COMMITTED 并读取正式正文；只补完成，不重复归档或当前业务准入。 */
+    public static boolean replayCommitted(Packet packet) {
+        HttpProcessor strategy = HttpPushProcessorStrategies.get(packet.getMessageType());
+        return strategy != null && Boolean.TRUE.equals(strategy.replayOnline(packet).block(PIPELINE_BLOCK_TIMEOUT));
+    }
+
     private static Mono<Boolean> pipelineMono(Packet packet, HttpProcessor strategy) {
         // 客服在策略内改写 from 后再归档；已读/撤回/译文就绪/群操作 overlay 不打 SAVE。
         boolean skipSave = packet.getMessageType() == MessageTypeEnum.CUSTOMER_SERVICE.getType()

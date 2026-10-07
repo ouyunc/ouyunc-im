@@ -1,6 +1,8 @@
 package com.ouyunc.message.processor.http.push;
 
 import com.ouyunc.base.constant.MessageConstant;
+import com.ouyunc.base.constant.MqArchiveRouting;
+import com.ouyunc.base.constant.enums.MessageTypeEnum;
 import com.ouyunc.base.constant.enums.ExceptionCodeEnum;
 import com.ouyunc.base.constant.enums.HttpResponseCodeEnum;
 import com.ouyunc.base.constant.enums.MessageSubmissionStatusEnum;
@@ -11,6 +13,8 @@ import com.ouyunc.base.model.MessagePushRequest;
 import com.ouyunc.base.model.MessagePushResponse;
 import com.ouyunc.base.packet.Packet;
 import com.ouyunc.message.http.HttpContext;
+import com.ouyunc.message.helper.QosCommittedDeliverySupport;
+import com.ouyunc.repository.DefaultRepository;
 import com.ouyunc.message.http.HttpPipelineException;
 import com.ouyunc.message.processor.http.push.delivery.HttpPushDeliverySupport;
 import com.ouyunc.message.safety.ContentSafetyFacade;
@@ -214,7 +218,7 @@ public final class InternalPacketIngressService {
         return claimAndExecute(packet, appKey, messageId, packetIdStr);
     }
 
-    /** 返回 null 表示未完成，必须继续业务校验；读取故障不能当作首次请求继续执行。 */
+    /** 先确认历史完成或恢复已提交客服消息；返回 null 才进入当前业务校验。 */
     private static HttpResponseResult<MessagePushResponse> resolveHistoricalResult(
             Packet packet, String appKey, String messageId) {
         PushIdempotencySupport.ClaimResult previous = PushIdempotencySupport.lookup(
@@ -226,13 +230,46 @@ public final class InternalPacketIngressService {
                     messageId, null, MessageSubmissionStatusEnum.REJECTED, ExceptionCodeEnum.MESSAGE_ID_CONFLICT.getMessage()));
             case PushIdempotencySupport.CLAIM_FAILED -> HttpResponseResult.success(buildResponse(
                     messageId, null, MessageSubmissionStatusEnum.UNKNOWN, "历史受理结果暂不可确认，请使用同一 messageId 重试"));
-            default -> null;
+            default -> recoverCommittedCustomerService(packet, appKey, messageId);
         };
+    }
+
+    /**
+     * HTTP 尚未完成但 QoS 已提交时，只恢复首次持久化的客服普通消息。
+     * 判重同时校验原始指纹和消息类型；归档存在本身不能证明业务提交。
+     * 控制消息仍走各自的目标快照恢复，禁止当作普通聊天再次投递。
+     */
+    private static HttpResponseResult<MessagePushResponse> recoverCommittedCustomerService(
+            Packet packet, String appKey, String messageId) {
+        if (packet.getMessageType() != MessageTypeEnum.CUSTOMER_SERVICE.getType()
+                || MqArchiveRouting.skipsSaveArchive(packet)) {
+            return null;
+        }
+        try {
+            if (!DefaultRepository.INSTANCE.checkCommittedForRecovery(packet, packet.getMessage().getFrom())) {
+                return null;
+            }
+            Packet committed = QosCommittedDeliverySupport.loadCommittedPacket(DefaultRepository.INSTANCE, packet);
+            // 沿用本次已鉴权请求的原始指纹；旧归档中的 HTTP owner 不得复用。
+            committed.getMessage().ensureMetadata().ensureHttpPushClaim().setHttpPushPayloadHash(
+                    packet.getMessage().getMetadata().getHttpPushClaim().getHttpPushPayloadHash());
+            return claimAndExecute(committed, appKey, messageId, String.valueOf(committed.getPacketId()), true);
+        } catch (RuntimeException error) {
+            log.error("HTTP 已提交客服消息恢复失败, messageId={}", messageId, error);
+            return HttpResponseResult.success(buildResponse(messageId, null,
+                    MessageSubmissionStatusEnum.UNKNOWN, "已提交消息恢复暂不可确认，请使用同一 messageId 重试"));
+        }
     }
 
     /** 校验通过后才原子抢占；只读历史查询和当前执行之间的竞争由脚本再次裁决。 */
     private static HttpResponseResult<MessagePushResponse> claimAndExecute(
             Packet packet, String appKey, String messageId, String packetIdStr) {
+        return claimAndExecute(packet, appKey, messageId, packetIdStr, false);
+    }
+
+    /** 恢复也必须取得 HTTP owner，避免与尚在执行的首次请求并发完成。 */
+    private static HttpResponseResult<MessagePushResponse> claimAndExecute(
+            Packet packet, String appKey, String messageId, String packetIdStr, boolean committedRecovery) {
         PushIdempotencySupport.ClaimResult claim = PushIdempotencySupport.tryClaim(
                 appKey, messageId, packetIdStr, packet.getMessage(), packet.getMessageType());
         if (claim.state() == PushIdempotencySupport.CLAIM_CONFLICT) {
@@ -262,14 +299,15 @@ public final class InternalPacketIngressService {
         packet.getMessage().ensureMetadata().ensureHttpPushClaim().setHttpPushPayloadHash(claim.payloadHash());
         packet.getMessage().ensureMetadata().ensureHttpPushClaim().setHttpPushOwnerToken(claim.ownerToken());
 
-        return executeClaimed(packet, messageId, packetIdStr);
+        return executeClaimed(packet, messageId, packetIdStr, committedRecovery);
     }
 
     /** 仅当前 owner 执行受理管线，成功后才写入 HTTP COMMITTED。 */
     private static HttpResponseResult<MessagePushResponse> executeClaimed(
-            Packet packet, String messageId, String packetIdStr) {
+            Packet packet, String messageId, String packetIdStr, boolean committedRecovery) {
         try {
-            boolean ok = HttpPushProcessorDelegate.runPipeline(packet);
+            boolean ok = committedRecovery ? HttpPushProcessorDelegate.replayCommitted(packet)
+                    : HttpPushProcessorDelegate.runPipeline(packet);
             if (!ok) {
                 HttpPushDeliverySupport.discardStashed(packet);
                 HttpPushDeliverySupport.markRetryableFailed(packet);

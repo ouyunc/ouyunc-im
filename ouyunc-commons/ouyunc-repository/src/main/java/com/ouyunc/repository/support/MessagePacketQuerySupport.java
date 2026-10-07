@@ -175,8 +175,13 @@ public final class MessagePacketQuerySupport {
             }
         } catch (Exception e) {
             log.error("获取消息实体异常, remainingIds: {}, 原因：{}", remainingIds, e.getMessage());
+            throw new IllegalStateException("消息冷库查询失败，不能确认目标是否存在", e);
         }
 
+        // Mongo 故障且 MySQL 未补齐时，不能把可能仍在归档中的消息认定为不存在。
+        if (mongoFailed && dbPackets.stream().map(Packet::getPacketId).distinct().count() < missingIds.size()) {
+            throw new IllegalStateException("消息回源未完成，等待存储恢复后重试");
+        }
         return dbPackets;
     }
 

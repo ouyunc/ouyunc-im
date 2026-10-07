@@ -296,6 +296,8 @@ public class CacheConstant {
 
     /** 请求领域命令的 MQ 确认标记；与聚合前缀直接拼接，不包含前导分隔符。 */
     private static final String REQUEST_COMMAND_CONFIRMED = "request-command-confirmed";
+    /** 客服活动业务通知的 broker 确认证明，与聊天投递证明独立。 */
+    private static final String CS_ACTIVITY_CONFIRMED = "cs-activity-confirmed";
 
 
     // ============================================ 集群优化方法 ============================================
@@ -663,6 +665,10 @@ public class CacheConstant {
     /** 请求领域命令已获 broker 确认；通知重试不再次发布已确认命令。 */
     public static String buildRequestCommandConfirmedKey(String appKey, long packetId) {
         return buildAggregateCacheKey(appKey, String.valueOf(packetId)) + REQUEST_COMMAND_CONFIRMED;
+    }
+
+    public static String buildCsActivityConfirmedKey(String appKey, long packetId) {
+        return buildAggregateCacheKey(appKey, String.valueOf(packetId)) + CS_ACTIVITY_CONFIRMED;
     }
 
     /** 任务字段：收件人与渠道，不含客户端 messageId。 */

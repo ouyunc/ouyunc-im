@@ -106,6 +106,23 @@ public final class DeliveryCompletionSupport {
                 CacheConstant.buildRequestCommandConfirmedKey(identity.appKey, identity.packetId)));
     }
 
+    /** 完成器重入时跳过已经进入 broker 的客服活动通知。 */
+    public boolean isCsActivityConfirmed(Packet packet) {
+        Identity identity = identity(packet);
+        return identity != null && Boolean.TRUE.equals(redis.hasKey(
+                CacheConstant.buildCsActivityConfirmedKey(identity.appKey, identity.packetId)));
+    }
+
+    /** 必须在 broker 确认后写入；失败传播，重复发布由消费端按 packetId 幂等处理。 */
+    public void confirmCsActivity(Packet packet) {
+        Identity identity = identity(packet);
+        if (identity == null) {
+            throw new IllegalArgumentException("客服活动缺少正式消息身份");
+        }
+        redis.opsForValue().set(CacheConstant.buildCsActivityConfirmedKey(identity.appKey, identity.packetId),
+                TASK_CONFIRMED, java.time.Duration.ofMillis(deliveryTtlMillis(packet)));
+    }
+
     /** 写入单调确认标记；写失败必须传播，不能把未知确认误判为已完成。 */
     public void confirmRequestCommand(Packet packet) {
         Identity identity = identity(packet);

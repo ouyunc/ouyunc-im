@@ -58,6 +58,8 @@ public final class QosIdempotencyHelper {
     public static final int CLAIM_CONFLICT = 4;
     /** 无可用幂等维度或 Redis 失败。 */
     public static final int CLAIM_FAILED = 0;
+    /** 只读查询确认记录不存在，与 Redis 查询失败严格区分。 */
+    public static final int CLAIM_NOT_FOUND = 5;
 
     /** QoS 提交结果；UNKNOWN 表示 Redis 可能已执行脚本但响应未返回。 */
     public enum CommitOutcome {
@@ -147,7 +149,7 @@ public final class QosIdempotencyHelper {
             local hash = ARGV[1]
             local messageType = ARGV[2]
             local raw = redis.call('GET', KEYS[1])
-            if not raw then return {0, ''} end
+            if not raw then return {5, ''} end
             local f = parse(raw)
             if hash ~= '' and f[3] ~= hash then return {4, ''} end
             if f[7] ~= nil and f[7] ~= '' and messageType ~= '' and f[7] ~= messageType then return {4, ''} end
@@ -453,6 +455,7 @@ public final class QosIdempotencyHelper {
             case 2 -> CLAIM_COMMITTED;
             case 3 -> CLAIM_PENDING;
             case 4 -> CLAIM_CONFLICT;
+            case 5 -> CLAIM_NOT_FOUND;
             default -> CLAIM_FAILED;
         };
     }
