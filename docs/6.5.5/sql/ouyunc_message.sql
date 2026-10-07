@@ -159,7 +159,10 @@ CREATE TABLE `ouyunc_im_message` (
                                      KEY `idx_client_send_time` (`client_send_time`) USING BTREE COMMENT '客户端发送时间索引',
                                      KEY `idx_server_arrival_time` (`server_arrival_time`) USING BTREE COMMENT '服务端到达时间索引',
                                      KEY `idx_message_content_type` (`content_type`) USING BTREE COMMENT '消息内容类型索引',
-                                     KEY `idx_app_key_from_to` (`app_key`,`from`,`to`,`from_type`,`to_type`) USING BTREE COMMENT 'from_to组合索引'
+                                     KEY `idx_app_key_from_to` (`app_key`,`from`,`to`,`from_type`,`to_type`) USING BTREE COMMENT 'from_to组合索引',
+                                     KEY `idx_app_type_from_to_id` (`app_key`,`message_type`,`from`,`to`,`id`) USING BTREE COMMENT '私聊双向历史',
+                                     KEY `idx_app_type_to_id` (`app_key`,`message_type`,`to`,`id`) USING BTREE COMMENT '群聊历史',
+                                     KEY `idx_app_type_corr_id` (`app_key`,`message_type`,`correlation_id`,`id`) USING BTREE COMMENT '客服咨询单历史'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci ROW_FORMAT=DYNAMIC COMMENT='im 消息业务全量存储表';
 
 -- ----------------------------

@@ -6,8 +6,6 @@ import com.ouyunc.repository.cs.CsImSessionRoute;
 import com.ouyunc.repository.cs.CsImSessionRouteFields;
 import com.ouyunc.repository.cs.CsImSessionRouteReader;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 import java.util.List;
@@ -16,8 +14,6 @@ import java.util.List;
  * IM 只读 CS 会话路由：主键 {@code ticketId}。
  */
 public final class CsImSessionRouteSupport {
-
-    private static final Logger log = LoggerFactory.getLogger(CsImSessionRouteSupport.class);
 
     private final StringRedisTemplate stringRedisTemplate;
 
@@ -36,8 +32,8 @@ public final class CsImSessionRouteSupport {
             List<Object> values = stringRedisTemplate.opsForHash().multiGet(key, List.copyOf(fields));
             return CsImSessionRouteReader.read(fields, values);
         } catch (Exception e) {
-            log.warn("读取客服会话路由 Hash 失败 appKey={} ticketId={}: {}", appKey, ticketId, e.getMessage());
-            return null;
+            // Redis 故障与路由不存在不是同一业务事实，保留异常供入口返回可重试结果。
+            throw new IllegalStateException("客服会话路由读取失败，等待同一消息重试: ticketId=" + ticketId, e);
         }
     }
 
@@ -81,9 +77,9 @@ public final class CsImSessionRouteSupport {
                     agentType,
                     epoch);
         } catch (Exception e) {
-            log.warn("读取客服路由投递热字段失败 appKey={} ticketId={}: {}",
-                    appKey, snapshot.ticketId(), e.getMessage());
-            return snapshot;
+            // 路由刷新是关单和转接后的权限边界；读取失败时不能沿用旧坐席快照。
+            throw new IllegalStateException("客服投递路由读取失败，等待同一消息重试: ticketId="
+                    + snapshot.ticketId(), e);
         }
     }
 
