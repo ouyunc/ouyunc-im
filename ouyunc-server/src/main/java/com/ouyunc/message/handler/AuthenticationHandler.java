@@ -74,7 +74,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         // 非登录消息，已经登录放行
         if (loginInfo == null) {
             log.warn("请先登录!");
-            ctx.close();
+            failLogin(ctx, packet, "请先登录");
             return;
         }
         ctx.fireChannelRead(packet);
@@ -107,14 +107,14 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
         Message loginMessage = packet.getMessage();
         if (loginMessage.getContentType() != MessageContentTypeEnum.LOGIN_REQUEST_CONTENT.getType()) {
             log.warn("客户端id: {} 登录内容类型: {}，校验未通过！", ctx.channel().id().asShortText(), loginMessage.getContentType());
-            ctx.close();
+            failLogin(ctx, packet, "登录内容类型不正确");
             return;
         }
         // 摘流 / 拒绝新连接：滚动升级窗口内不再接受新登录
         if (!MessageServerContext.isAcceptingNewConnections()) {
             log.warn("客户端id: {} 登录被拒绝：服务尚未就绪或正在摘流", ctx.channel().id().asShortText());
             ExceptionReporter.reportBusiness(ExceptionCodeEnum.LOGIN_REFUSED_DRAIN, "服务尚未就绪或正在摘流，拒绝登录", "AuthenticationHandler", packet);
-            ctx.close();
+            failLogin(ctx, packet, "服务尚未就绪或正在摘流");
             return;
         }
         byte deviceType = packet.getDeviceType();
@@ -128,8 +128,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                     authenticateAndBind(ctx, packet, deviceType, loginTimestamp));
         } catch (RejectedExecutionException ex) {
             log.error("登录任务提交被拒绝 channelId={}", ctx.channel().id().asShortText(), ex);
-            ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, null);
-            ctx.close();
+            failLogin(ctx, packet, "登录任务繁忙，请重试");
         }
     }
 
@@ -150,7 +149,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
             loginContent = JSON.parseObject(loginMessage.getContent(), LoginContent.class);
             if (loginContent == null) {
                 log.warn("客户端id: {} 登录内容无法解析", ctx.channel().id().asShortText());
-                failLoginOnEventLoop(ctx);
+                failLogin(ctx, packet, "登录内容无法解析");
                 return;
             }
             loginContent.setScope(LoginScopeEnum.normalizeScope(loginContent.getScope()));
@@ -163,14 +162,14 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                         ctx.channel().id().asShortText(), Serializer.JSON.serializeToString(loginContent));
                 ExceptionReporter.reportBusiness(ExceptionCodeEnum.LOGIN_VERIFY_ERROR, "登录校验未通过", "AuthenticationHandler", packet);
                 AppKeyValidator.releaseReservedIfNeeded(loginContent.getAppKey(), ctx);
-                failLoginOnEventLoop(ctx);
+                failLogin(ctx, packet, "登录校验未通过", loginContent.getIdentity());
                 return;
             }
             Protocol protocol = ctx.channel().attr(NativePacketProtocol.protocolAttrKey).get();
             if (protocol == null) {
                 log.warn("Protocol not set on channel, closing connection: {}", ctx.channel().id().asShortText());
                 AppKeyValidator.releaseReservedIfNeeded(loginContent.getAppKey(), ctx);
-                failLoginOnEventLoop(ctx);
+                failLogin(ctx, packet, "连接协议未就绪", loginContent.getIdentity());
                 return;
             }
             LoginClientInfo loginClientInfo = new LoginClientInfo(
@@ -188,14 +187,14 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
             } catch (RejectedExecutionException scheduleError) {
                 log.error("登录绑定回调投递 EventLoop 被拒绝 channelId={}", ctx.channel().id().asShortText(), scheduleError);
                 AppKeyValidator.releaseReservedIfNeeded(loginContent.getAppKey(), ctx);
-                failLoginOnEventLoop(ctx);
+                failLogin(ctx, packet, "登录任务繁忙，请重试", loginContent.getIdentity());
             }
         } catch (Exception e) {
             log.error("登录校验异常 channelId={}", ctx.channel().id().asShortText(), e);
             if (loginContent != null) {
                 AppKeyValidator.releaseReservedIfNeeded(loginContent.getAppKey(), ctx);
             }
-            failLoginOnEventLoop(ctx);
+            failLogin(ctx, packet, "登录校验异常", loginContent == null ? null : loginContent.getIdentity());
         }
     }
 
@@ -227,9 +226,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                 log.error("登录 fencing 投递业务线程被拒绝 channelId={}", ctx.channel().id().asShortText(), scheduleError);
                 ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, null);
                 AppKeyValidator.releaseReservedIfNeeded(loginClientInfo.getAppKey(), ctx);
-                if (ctx.channel().isActive()) {
-                    ctx.channel().close();
-                }
+                failLogin(ctx, packet, "登录任务繁忙，请重试", loginClientInfo.getIdentity());
             }
         });
     }
@@ -256,23 +253,74 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
             log.error("登录完成回调投递 EventLoop 被拒绝 channelId={}", ctx.channel().id().asShortText(), scheduleError);
             ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, null);
             AppKeyValidator.releaseReservedIfNeeded(loginClientInfo.getAppKey(), ctx);
-            if (ctx.channel().isActive()) {
-                ctx.channel().close();
-            }
+            failLogin(ctx, packet, "登录任务繁忙，请重试", loginClientInfo.getIdentity());
         }
     }
 
-    private void failLoginOnEventLoop(ChannelHandlerContext ctx) {
-        Runnable fail = () -> {
-            ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, null);
-            ctx.close();
-        };
+    /**
+     * 业务登录失败：先回 LOGIN + 失败内容，写出结束后再关连接。
+     * 通道已失效、重复登录忽略不走这里。回包失败时直接关闭，避免登录超时前一直占着连接。
+     */
+    private void failLogin(ChannelHandlerContext ctx, Packet packet, String reason) {
+        failLogin(ctx, packet, reason, null);
+    }
+
+    private void failLogin(ChannelHandlerContext ctx, Packet packet, String reason, String toIdentity) {
+        Runnable fail = () -> closeWithLoginFail(ctx, packet, reason, toIdentity);
+        if (ctx.executor().inEventLoop()) {
+            fail.run();
+            return;
+        }
         try {
             ctx.executor().execute(fail);
         } catch (RejectedExecutionException scheduleError) {
             log.error("登录失败回调投递 EventLoop 被拒绝 channelId={}", ctx.channel().id().asShortText(), scheduleError);
-            fail.run();
+            ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, null);
+            ctx.close();
         }
+    }
+
+    private void closeWithLoginFail(ChannelHandlerContext ctx, Packet packet, String reason, String toIdentity) {
+        ChannelAttrUtil.setChannelAttribute(ctx, MessageConstant.CHANNEL_ATTR_KEY_LOGIN_IN_FLIGHT, null);
+        if (!ctx.channel().isActive()) {
+            return;
+        }
+        try {
+            MessageSender.sendControl(ctx, buildLoginFailPacket(packet, reason, toIdentity))
+                    .whenComplete((result, error) -> ctx.close());
+        } catch (Exception e) {
+            log.warn("登录失败回包异常，直接关闭 channelId={}", ctx.channel().id().asShortText(), e);
+            ctx.close();
+        }
+    }
+
+    /**
+     * 失败原因放在内容里，协议和加密与入站登录包一致，便于客户端解密。
+     * {@code to} 优先用已解析的登录身份，与成功回包一致。
+     */
+    private Packet buildLoginFailPacket(Packet packet, String reason, String toIdentity) {
+        Message inbound = packet.getMessage();
+        String to = StringUtils.isNotBlank(toIdentity)
+                ? toIdentity
+                : (inbound == null ? null : inbound.getFrom());
+        Message failMessage = new Message(
+                MessageContext.idGenerator().generateIdStr(),
+                null,
+                to,
+                MessageContentTypeEnum.LOGIN_RESPONSE_FAIL_CONTENT.getType(),
+                reason,
+                TimeUtil.currentTimeMillis(),
+                inbound == null ? null : inbound.getMetadata());
+        return new Packet(
+                packet.getProtocol(),
+                packet.getProtocolVersion(),
+                MessageContext.idGenerator().generateId(),
+                packet.getDeviceType(),
+                packet.getNetworkType(),
+                packet.getEncryptType(),
+                packet.getSerializeAlgorithm(),
+                MessageTypeEnum.LOGIN.getType(),
+                failMessage);
     }
 
     /**
@@ -474,7 +522,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                     "AuthenticationHandler.finishLoginBind", packet, bindError);
             ClientHelper.unbindLocalRegisterTable(loginClientInfo, ctx);
             AppKeyValidator.releaseReservedIfNeeded(loginClientInfo.getAppKey(), ctx);
-            ctx.close();
+            closeWithLoginFail(ctx, packet, "登录绑定失败", loginClientInfo.getIdentity());
             return;
         }
         if (!directoryOwned) {
@@ -482,7 +530,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
             ExceptionReporter.reportBusiness(ExceptionCodeEnum.LOGIN_VERIFY_ERROR, "登录绑定失败：会话已被更新连接顶替", "AuthenticationHandler", packet);
             ClientHelper.unbindLocalRegisterTable(loginClientInfo, ctx);
             AppKeyValidator.releaseReservedIfNeeded(loginClientInfo.getAppKey(), ctx);
-            ctx.close();
+            closeWithLoginFail(ctx, packet, "登录绑定失败：会话已被更新连接顶替", loginClientInfo.getIdentity());
             return;
         }
         installLoginIdlePipeline(ctx, loginClientInfo);
@@ -532,6 +580,7 @@ public class AuthenticationHandler extends SimpleChannelInboundHandler<Packet> {
                         }
                     });
         } catch (RejectedExecutionException rejected) {
+            // 成功回包已经写出，这里只关连接，不再补一条登录失败。
             log.error("登录事件提交被拒绝，关闭连接等待客户端重试 identity={}, channelId={}",
                     loginClientInfo.getIdentity(), ctx.channel().id().asShortText(), rejected);
             ctx.close();

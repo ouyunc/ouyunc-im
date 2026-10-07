@@ -333,7 +333,7 @@ public class MessageServerProperties extends MessageProperties {
 
 
     /***
-     * 服务端群消息推送模式，PUSH-推送模式，PULL-拉取模式 PULL_PUSH-拉取推送模式
+     * 服务端群消息推送模式。PUSH 全员推，PULL 只推 @，PULL_PUSH 小群全员推、超过 threshold 只推 @。
      */
     @Key(value = "ouyunc.message.server.group-message.mode", defaultValue = "PULL_PUSH")
     GroupMessagePushModeEnum groupMessagePushMode;

@@ -18,6 +18,7 @@ import com.ouyunc.message.helper.MessageAcceptPipelineHelper;
 import com.ouyunc.message.helper.QosCommittedDeliverySupport;
 import com.ouyunc.message.helper.QosRequestFingerprintSupport;
 import com.ouyunc.message.helper.MessageContentNormalizer;
+import com.ouyunc.message.safety.ContentSafetyIngress;
 import com.ouyunc.message.helper.MessageSubmissionResponseHelper;
 import com.ouyunc.message.helper.CsHelper.PrepareOutcome;
 import com.ouyunc.message.validator.AuthValidator;
@@ -37,7 +38,7 @@ import reactor.core.publisher.Mono;
  * <p>路由主键 = {@code ticketId}（消息 {@code correlationId}）。</p>
  * <p>通道语义 sessionId = {@code sessionId(userId, serviceIdentity)}，存在路由 Hash 字段中。</p>
  * <p>消息 scope：{@code ticketMessageScopeId = ticketId}，用于 msgs ZSet / 撤回 / 已读 / lm。</p>
- * <p>覆写门闸：路由校验与改写 from 后再 MQ，再 Redis；仍遵守「MQ → Redis → ACK → 投递」。</p>
+ * <p>门闸：路由校验通过后做内容安全，再 MQ，再 Redis；仍遵守「MQ → Redis → ACK → 投递」。from 保持真实发送者。</p>
  */
 public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte> {
     private static final Logger log = LoggerFactory.getLogger(CsMessageBiProcessor.class);
@@ -104,6 +105,11 @@ public final class CsMessageBiProcessor extends AbstractMessageBiProcessor<Byte>
             CsHelper.publishReject(packet, live.rejectReason());
             MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
             MessageSubmissionResponseHelper.rejected(ctx, packet, ExceptionCodeEnum.CS_SESSION_ROUTE_ERROR);
+            return Mono.empty();
+        }
+        // 引用和路由都通过后再做内容安全，与单聊/群聊一致；拒绝时不再归档。
+        if (!ContentSafetyIngress.applyOnWorker(ctx, packet)) {
+            MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
             return Mono.empty();
         }
         // 消息以 correlationId 归属咨询单；from 保留已认证的真实发送者。

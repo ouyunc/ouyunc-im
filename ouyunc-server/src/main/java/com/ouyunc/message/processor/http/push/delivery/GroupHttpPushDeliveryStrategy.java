@@ -186,7 +186,8 @@ public final class GroupHttpPushDeliveryStrategy implements HttpProcessor {
     private static void pushGroupOnline(Packet packet, CommittedDelivery.DeliveryLease lease) {
         Message message = packet.getMessage();
         HttpPushDeliverySupport.syncSenderOnlineDevices(packet, message.getFrom());
-        GroupMessagePushModeEnum mode = MessageServerContext.serverProperties().getGroupMessagePushMode();
+        GroupMessagePushModeEnum mode = GroupMessagePushModeEnum.orDefault(
+                MessageServerContext.serverProperties().getGroupMessagePushMode());
         if (GroupMessagePushModeEnum.PUSH.equals(mode)) {
             deliverToAllGroupMembers(packet, loadFullMembersOrEmpty(packet), lease);
             return;

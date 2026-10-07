@@ -178,7 +178,7 @@ public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
                     if (!Boolean.TRUE.equals(passed)) {
                         return Mono.empty();
                     }
-                    // 单聊/群聊：规范化 → 内容安全 → 归档 在 process 内完成，此处跳过以免二次 MASK/提前 REJECT
+                    // 单聊/群聊/客服：规范化 → 内容安全 → 归档 在 process 内完成，此处跳过以免二次 MASK/提前 REJECT
                     if (!defersContentSafetyToProcess(packet)
                             && !ContentSafetyIngress.applyOnWorker(ctx, packet)) {
                         MessageAcceptPipelineHelper.releaseQosOnFailure(packet);
@@ -206,7 +206,8 @@ public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
     }
 
     /**
-     * 单聊/群聊在各自 process 内做内容安全（位于 ref/@ 规范化之后、SAVE 归档之前）。
+     * 单聊/群聊/客服在各自 process 内做内容安全（位于引用规范化之后、归档之前）。
+     * 客服若提前检查，会在引用被拒绝之前先打码或拒绝。
      */
     private static boolean defersContentSafetyToProcess(Packet packet) {
         if (packet == null) {
@@ -214,7 +215,8 @@ public class PacketHandler extends SimpleChannelInboundHandler<Packet> {
         }
         byte messageType = packet.getMessageType();
         return messageType == MessageTypeEnum.ONE_2_ONE.getType()
-                || messageType == MessageTypeEnum.GROUP.getType();
+                || messageType == MessageTypeEnum.GROUP.getType()
+                || messageType == MessageTypeEnum.CUSTOMER_SERVICE.getType();
     }
 
     /**

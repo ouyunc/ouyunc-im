@@ -9,6 +9,7 @@ import com.ouyunc.base.constant.enums.MessageSubmissionStatusEnum;
 import com.ouyunc.base.executor.ThreadPoolManager;
 import com.ouyunc.base.model.ContentSafetyResult;
 import com.ouyunc.base.model.HttpResponseResult;
+import com.ouyunc.base.model.MessagePushExtra;
 import com.ouyunc.base.model.MessagePushRequest;
 import com.ouyunc.base.model.MessagePushResponse;
 import com.ouyunc.base.packet.Packet;
@@ -24,23 +25,29 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ExecutorService;
 
 /**
  * HTTP 推送入口：校验通过后同步完成 MQ confirm + Redis，在线扇出提交后再 COMMITTED。
  * <p>{@code ACCEPTED}＝已提交且本次在线扇出已交给写出；同一 messageId 再次进入只确认历史结果。
  * {@code REJECTED}＝业务明确拒绝；{@code RETRY_LATER}＝当前占位仍在处理；
  * {@code UNKNOWN}＝提交或在线扇出结果不确定，须用同一 messageId 重试。
- * 多接收人用 {@code messageId:to} 分键，避免局部成功被整键清掉。
+ * 多接收人用 {@code messageId:to} 分键，按接收人复制请求后最多 16 路并行，避免局部成功被整键清掉，
+ * 也不共享可变的 to / messageId。
  * 顺序：鉴权 → 历史结果查询 → preProcess（权限/规范化）→ 内容安全 → 幂等占位 → MQ+Redis；
  * preProcess 与管线均在 {@link ThreadPoolManager#httpPushVerifyExecutor()} 执行。</p>
  */
 public final class InternalPacketIngressService {
 
     private static final Logger log = LoggerFactory.getLogger(InternalPacketIngressService.class);
+
+    /** 同一批 toList 的并行度。虚拟线程池上分窗执行，避免 256 路同时打归档。 */
+    private static final int HTTP_PUSH_FANOUT_PARALLELISM = 16;
 
     private InternalPacketIngressService() {
     }
@@ -69,35 +76,20 @@ public final class InternalPacketIngressService {
         try {
             ThreadPoolManager.httpPushVerifyExecutor().execute(() -> {
                 try {
-                    List<MessagePushResponse> items = new ArrayList<>(recipients.size());
+                    List<MessagePushResponse> items = pushRecipients(request, httpContext, recipients, baseMessageId);
                     String worstStatus = MessageSubmissionStatusEnum.ACCEPTED.name();
                     MessagePushResponse worstItem = null;
                     String lastPacketId = null;
-                    for (String to : recipients) {
-                        String itemMessageId = baseMessageId + ':' + to;
-                        MessagePushResponse body;
-                        try {
-                            request.setTo(to);
-                            request.setMessageId(itemMessageId);
-                            HttpResponseResult<MessagePushResponse> one = pushSingleSync(request, httpContext);
-                            body = one != null ? one.getData() : null;
-                        } catch (Throwable itemError) {
-                            // 批量请求允许局部成功；单项异常必须转成逐项结果，不能丢弃此前已完成项。
-                            log.error("HTTP 批量推送单项异常, baseMessageId={} itemMessageId={} to={}",
-                                    baseMessageId, itemMessageId, to, itemError);
-                            body = buildResponse(itemMessageId, null, MessageSubmissionStatusEnum.UNKNOWN,
-                                    "单项受理结果未知，请使用该 item messageId 重试");
+                    for (MessagePushResponse body : items) {
+                        if (body == null) {
+                            continue;
                         }
-                        if (body != null) {
-                            items.add(body);
-                            lastPacketId = body.getPacketId();
-                            if (worstItem == null || rankPushStatus(body.getStatus()) > rankPushStatus(worstItem.getStatus())) {
-                                worstItem = body;
-                            }
-                            worstStatus = worsePushStatus(worstStatus, body.getStatus());
+                        lastPacketId = body.getPacketId();
+                        if (worstItem == null || rankPushStatus(body.getStatus()) > rankPushStatus(worstItem.getStatus())) {
+                            worstItem = body;
                         }
+                        worstStatus = worsePushStatus(worstStatus, body.getStatus());
                     }
-                    request.setMessageId(baseMessageId);
                     MessagePushResponse aggregate = new MessagePushResponse();
                     aggregate.setMessageId(baseMessageId);
                     aggregate.setPacketId(MessageSubmissionStatusEnum.ACCEPTED.name().equals(worstStatus) ? lastPacketId : null);
@@ -112,8 +104,6 @@ public final class InternalPacketIngressService {
                     log.error("HTTP 推送 toList 扇出异常, messageId={}", baseMessageId, t);
                     future.completeExceptionally(new HttpPipelineException(HttpResponseStatus.INTERNAL_SERVER_ERROR,
                             HttpResponseCodeEnum.INTERNAL_SERVER_ERROR, "HTTP 推送受理失败"));
-                } finally {
-                    request.setMessageId(baseMessageId);
                 }
             });
         } catch (RuntimeException ex) {
@@ -121,6 +111,102 @@ public final class InternalPacketIngressService {
                     HttpResponseCodeEnum.INTERNAL_SERVER_ERROR, "HTTP 推送受理失败：verify 任务提交异常");
         }
         return future;
+    }
+
+    /**
+     * 按接收人顺序分窗受理。每项使用独立请求副本，单项失败记 UNKNOWN，不改原始请求。
+     * 父任务已经占着 verify 池的一个准入名额，子任务再申请；申请失败立即记 UNKNOWN，不会在池里阻塞等待。
+     */
+    private static List<MessagePushResponse> pushRecipients(
+            MessagePushRequest request, HttpContext httpContext, List<String> recipients, String baseMessageId) {
+        List<MessagePushResponse> items = new ArrayList<>(recipients.size());
+        ExecutorService executor = ThreadPoolManager.httpPushVerifyExecutor();
+        for (int start = 0; start < recipients.size(); start += HTTP_PUSH_FANOUT_PARALLELISM) {
+            int end = Math.min(recipients.size(), start + HTTP_PUSH_FANOUT_PARALLELISM);
+            List<CompletableFuture<MessagePushResponse>> window = new ArrayList<>(end - start);
+            for (int i = start; i < end; i++) {
+                String to = recipients.get(i);
+                String itemMessageId = baseMessageId + ':' + to;
+                window.add(submitFanoutItem(executor, request, httpContext, baseMessageId, to, itemMessageId));
+            }
+            CompletableFuture.allOf(window.toArray(CompletableFuture[]::new)).join();
+            for (CompletableFuture<MessagePushResponse> one : window) {
+                items.add(one.join());
+            }
+        }
+        return items;
+    }
+
+    private static CompletableFuture<MessagePushResponse> submitFanoutItem(
+            ExecutorService executor, MessagePushRequest request, HttpContext httpContext,
+            String baseMessageId, String to, String itemMessageId) {
+        try {
+            return CompletableFuture.supplyAsync(
+                    () -> pushFanoutItem(request, httpContext, baseMessageId, to, itemMessageId), executor);
+        } catch (Throwable submitError) {
+            log.error("HTTP 批量推送单项提交失败, baseMessageId={} itemMessageId={} to={}",
+                    baseMessageId, itemMessageId, to, submitError);
+            return CompletableFuture.completedFuture(buildResponse(itemMessageId, null,
+                    MessageSubmissionStatusEnum.UNKNOWN, "单项受理结果未知，请使用该 item messageId 重试"));
+        }
+    }
+
+    private static MessagePushResponse pushFanoutItem(
+            MessagePushRequest request, HttpContext httpContext,
+            String baseMessageId, String to, String itemMessageId) {
+        try {
+            MessagePushRequest itemRequest = copyForRecipient(request, to, itemMessageId);
+            HttpResponseResult<MessagePushResponse> one = pushSingleSync(itemRequest, httpContext);
+            MessagePushResponse body = one != null ? one.getData() : null;
+            if (body == null) {
+                return buildResponse(itemMessageId, null, MessageSubmissionStatusEnum.UNKNOWN,
+                        "单项受理结果未知，请使用该 item messageId 重试");
+            }
+            return body;
+        } catch (Throwable itemError) {
+            // 批量请求允许局部成功；单项异常必须转成逐项结果，不能丢弃此前已完成项。
+            log.error("HTTP 批量推送单项异常, baseMessageId={} itemMessageId={} to={}",
+                    baseMessageId, itemMessageId, to, itemError);
+            return buildResponse(itemMessageId, null, MessageSubmissionStatusEnum.UNKNOWN,
+                    "单项受理结果未知，请使用该 item messageId 重试");
+        }
+    }
+
+    /** 扇出项不共享原请求。extra 的列表和扩展表各自复制，避免并行改写同一份 @/引用。 */
+    private static MessagePushRequest copyForRecipient(MessagePushRequest source, String to, String itemMessageId) {
+        MessagePushRequest copy = new MessagePushRequest();
+        copy.setPushType(source.getPushType());
+        copy.setPushChannel(source.getPushChannel());
+        copy.setMessageId(itemMessageId);
+        copy.setFrom(source.getFrom());
+        copy.setFromType(source.getFromType());
+        copy.setTo(to);
+        copy.setToType(source.getToType());
+        copy.setContent(source.getContent());
+        copy.setContentType(source.getContentType());
+        copy.setCorrelationId(source.getCorrelationId());
+        copy.setDeviceType(source.getDeviceType());
+        copy.setCreateTime(source.getCreateTime());
+        copy.setExtra(copyExtra(source.getExtra()));
+        return copy;
+    }
+
+    private static MessagePushExtra copyExtra(MessagePushExtra source) {
+        if (source == null) {
+            return null;
+        }
+        MessagePushExtra copy = new MessagePushExtra();
+        if (source.getAt() != null) {
+            copy.setAt(new ArrayList<>(source.getAt()));
+        }
+        if (source.getRef() != null) {
+            copy.setRef(new ArrayList<>(source.getRef()));
+        }
+        copy.setQos(source.getQos());
+        if (source.getExtensions() != null) {
+            copy.setExtensions(new HashMap<>(source.getExtensions()));
+        }
+        return copy;
     }
 
     private static CompletionStage<HttpResponseResult<MessagePushResponse>> pushSingle(

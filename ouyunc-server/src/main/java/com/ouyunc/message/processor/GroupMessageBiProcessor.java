@@ -49,6 +49,8 @@ import java.util.concurrent.RejectedExecutionException;
  * 群聊消息处理器。
  * <p>标准管线：身份权限 → 成员/@ /ref 规范化 → 内容安全 → MQ 归档 → Redis 热写 → 仅成功/重复时 ACK → 新写入才扇出。
  * 已读/撤回在对应操作成功后再 ACK（不走 SAVE）。</p>
+ * <p>群角标不用未读条数。客户端比较会话最后一条 packetId 与本设备已读水位：大于水位显示红点。
+ * 成员谁读到哪，看各设备的 session_message_offset，packetId 不超过水位即为已读。服务端不维护群未读计数。</p>
  */
 public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<Byte> {
     private static final Logger log = LoggerFactory.getLogger(GroupMessageBiProcessor.class);
@@ -270,7 +272,8 @@ public final class GroupMessageBiProcessor extends AbstractMessageBiProcessor<By
         if (clientInfo != null && clientInfo.getSelfSync()) {
             deliver2Self(packet);
         }
-        GroupMessagePushModeEnum mode = MessageServerContext.serverProperties().getGroupMessagePushMode();
+        GroupMessagePushModeEnum mode = GroupMessagePushModeEnum.orDefault(
+                MessageServerContext.serverProperties().getGroupMessagePushMode());
         if (GroupMessagePushModeEnum.PUSH.equals(mode)) {
             deliver2AllGroupMembers(packet, loadFullMembersOrEmpty(packet), lease);
             return;
