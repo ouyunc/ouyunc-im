@@ -5,43 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="f5e04433-bce4-4c4c-925d-8bad5c9272b8" name="Changes" comment="增加客户端packet 协议">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/MessageConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/MessageConstant.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/QosControlConstant.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/QosControlConstant.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/enums/ProtocolTypeEnum.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/enums/ProtocolTypeEnum.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/enums/QosModeEnum.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/constant/enums/QosModeEnum.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/executor/ThreadPoolConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/executor/ThreadPoolConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/executor/ThreadPoolId.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/executor/ThreadPoolId.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/executor/ThreadPoolManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-base/src/main/java/com/ouyunc/base/executor/ThreadPoolManager.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-core/src/main/java/com/ouyunc/core/relation/RelationLocalCache.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-core/src/main/java/com/ouyunc/core/relation/RelationLocalCache.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-domain/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/DefaultRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/DefaultRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/DeliveryChannelSupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/DeliveryChannelSupport.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/DeliveryCompletionSupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/DeliveryCompletionSupport.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/GroupMembershipSupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/GroupMembershipSupport.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/QosIdempotencyHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/QosIdempotencyHelper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/ReadReceiptSupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/ReadReceiptSupport.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/RepositorySupports.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/RepositorySupports.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/SessionIndexSupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/SessionIndexSupport.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/SessionLastMessageSupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/SessionLastMessageSupport.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/SessionMessagePersistenceSupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/SessionMessagePersistenceSupport.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/SpecialMessageLoader.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-repository/src/main/java/com/ouyunc/repository/support/SpecialMessageLoader.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/cluster/lease/NodeLeaseKeeper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/cluster/lease/NodeLeaseKeeper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/CommittedDelivery.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/CommittedDelivery.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/CsHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/CsHelper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/MessageAcceptPipelineHelper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/MessageAcceptPipelineHelper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/MessageDeliveryPlanner.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/MessageDeliveryPlanner.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/QosCommittedDeliverySupport.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/helper/QosCommittedDeliverySupport.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/monitor/QosRetryCancelMetrics.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/monitor/QosRetryCancelMetrics.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/monitor/ResourceMonitor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/monitor/ResourceMonitor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/CsMessageBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/CsMessageBiProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupMessageBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/GroupMessageBiProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneMessageBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/One2OneMessageBiProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/QosC2SMessageBiProcessor.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/processor/QosC2SMessageBiProcessor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/schedule/QosAckValidation.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/schedule/QosAckValidation.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/schedule/QosRetryScheduler.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/schedule/QosRetryScheduler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/schedule/QosRetryTaskIds.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/java/com/ouyunc/message/schedule/QosRetryTaskIds.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-server/src/main/resources/ouyunc-server.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-cache/src/main/java/com/ouyunc/cache/config/redis/RedisCacheObjectMapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-cache/src/main/java/com/ouyunc/cache/config/redis/RedisCacheObjectMapper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ouyunc-commons/ouyunc-cache/src/main/java/com/ouyunc/cache/config/redis/builder/RedisTemplateBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/ouyunc-commons/ouyunc-cache/src/main/java/com/ouyunc/cache/config/redis/builder/RedisTemplateBuilder.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -263,15 +228,7 @@
       <workItem from="1790514949006" duration="2013000" />
       <workItem from="1790769925349" duration="8761000" />
       <workItem from="1790842152197" duration="8040000" />
-      <workItem from="1791423679856" duration="1798000" />
-    </task>
-    <task id="LOCAL-00133" summary="增加客户端packet 协议">
-      <option name="closed" value="true" />
-      <created>1790511196308</created>
-      <option name="number" value="00133" />
-      <option name="presentableId" value="LOCAL-00133" />
-      <option name="project" value="LOCAL" />
-      <updated>1790511196308</updated>
+      <workItem from="1791423679856" duration="5606000" />
     </task>
     <task id="LOCAL-00134" summary="增加客户端packet 协议">
       <option name="closed" value="true" />
@@ -657,7 +614,15 @@
       <option name="project" value="LOCAL" />
       <updated>1791356897983</updated>
     </task>
-    <option name="localTasksCounter" value="182" />
+    <task id="LOCAL-00182" summary="增加客户端packet 协议">
+      <option name="closed" value="true" />
+      <created>1791457209744</created>
+      <option name="number" value="00182" />
+      <option name="presentableId" value="LOCAL-00182" />
+      <option name="project" value="LOCAL" />
+      <updated>1791457209744</updated>
+    </task>
+    <option name="localTasksCounter" value="183" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

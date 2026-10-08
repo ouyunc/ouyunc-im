@@ -1,6 +1,7 @@
 package com.ouyunc.base.utils;
 
 import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONReader;
 import com.alibaba.ttl.TransmittableThreadLocal;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -140,8 +141,7 @@ public class YmlUtil {
      */
     public static<T> T getValue(String fileName , String key, Class<T> tClass){
         Object value = getValue(key, fileName);
-        // 目标类型已由调用方传入，不再打开 SupportClassForName（按 JSON 里的类名实例化任意类）。
-        return JSON.parseObject(JSON.toJSONString(value), tClass);
+        return JSON.parseObject(JSON.toJSONString(value), tClass, JSONReader.Feature.SupportClassForName);
     }
 
     /**
@@ -172,7 +172,7 @@ public class YmlUtil {
         logProfileResolutionOnce(activeProfile, fileName, activeProfileFileName);
         if (StringUtils.isNotBlank(activeProfileFileName)) {
             Object value = getValue(key, activeProfileFileName, fileName);
-            return JSON.parseObject(JSON.toJSONString(value), tClass);
+            return JSON.parseObject(JSON.toJSONString(value), tClass, JSONReader.Feature.SupportClassForName);
         }
         return getValue(fileName, key, tClass);
     }
