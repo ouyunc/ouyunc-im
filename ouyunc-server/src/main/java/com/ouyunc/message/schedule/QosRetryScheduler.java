@@ -44,7 +44,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * SERVER QoS 下行重试：任务只挂在始发节点。落地节点只写出；C2S ACK 若打到落地机，再转回始发节点取消。
  * <p>内部取消是 QoS0，发送失败仅有界重试；丢失后依赖客户端再次 ACK。取消成功仍可能有一条已在途的重复下行，
- * 客户端须按消息 ID 去重。始发进程宕机则内存 timer 丢失。把重试外置 Redis 会引入双发/抢占，当前不改投递语义。</p>
+ * 客户端须按消息 ID 去重。始发进程宕机则内存 timer 丢失。重连后由客户端主动拉取会话历史补齐，服务端不持久化或跨节点接管重试任务。</p>
  */
 public final class QosRetryScheduler {
 
@@ -65,6 +65,8 @@ public final class QosRetryScheduler {
     public static boolean retryEnabled() {
         return MessageContext.isQosEnable()
                 && MessageServerContext.serverProperties().isQosRetryEnable()
+                // 0 表示关闭重试，连空定时任务也不登记，避免扇出时占用时间轮和缓存。
+                && MessageServerContext.serverProperties().getQosRetryMaxLoops() > 0
                 && QosModeEnum.SERVER.equals(MessageServerContext.serverProperties().getQosMode());
     }
 
@@ -298,8 +300,8 @@ public final class QosRetryScheduler {
         }
         Packet schedulePackage = loadRetryPacket(retryContext);
         if (schedulePackage == null) {
-            log.warn("QoS 重试加载消息失败，取消任务: taskId={}", taskId);
-            taskWrapper.cancel();
+            // 热正文暂时不可读时跳过本轮。取消任务会把后续重试也丢掉，恢复只能再靠历史补拉。
+            log.warn("QoS 重试加载消息失败，跳过本轮: taskId={}", taskId);
             return;
         }
         if (!taskStillActive(taskId, taskWrapper)) {

@@ -1,6 +1,7 @@
 package com.ouyunc.message.properties;
 
 import com.ouyunc.base.constant.enums.GroupMessagePushModeEnum;
+import com.ouyunc.base.constant.QosControlConstant;
 import com.ouyunc.core.properties.MessageProperties;
 import com.ouyunc.core.properties.annotation.Key;
 import com.ouyunc.core.properties.annotation.LoadProperties;
@@ -394,7 +395,7 @@ public class MessageServerProperties extends MessageProperties {
     long qosRetryPeriod;
 
     /***
-     * 最大循环次数，默认3次，每次循环间隔时间是period, -1 代表一致循环
+     * 最大循环次数，默认 3 次；0 表示不重试，负数回落到默认次数，不支持无限循环。
      */
     @Key(value = "ouyunc.message.qos.retry.max-loops", defaultValue = "3")
     int qosRetryMaxLoops;
@@ -759,7 +760,7 @@ public class MessageServerProperties extends MessageProperties {
     }
 
     public int getQosRetryMaxLoops() {
-        return qosRetryMaxLoops;
+        return qosRetryMaxLoops < 0 ? QosControlConstant.DEFAULT_DOWNLINK_RETRY_ATTEMPTS : qosRetryMaxLoops;
     }
 
     public void setQosRetryMaxLoops(int qosRetryMaxLoops) {

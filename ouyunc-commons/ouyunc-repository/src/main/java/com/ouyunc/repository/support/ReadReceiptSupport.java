@@ -25,7 +25,6 @@ import reactor.core.scheduler.Schedulers;
 
 import java.util.Comparator;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 已读回执校验与 readOffset 更新。
@@ -206,11 +205,8 @@ public final class ReadReceiptSupport {
                     .query(SessionMessageOffsetEntity.class)
                     .single();
             Long maxSessionMessageOffset = sessionMessageOffsetEntity.getSessionMessageOffset();
-            if (maxSessionMessageOffset != null) {
-                stringRedisTemplate.opsForValue().set(sessionMessageOffsetKey,
-                        Long.toString(maxSessionMessageOffset),
-                        MessageConstant.CACHE_ENTITY_KEY_EXPIRE_TIMESTAMP, TimeUnit.MILLISECONDS);
-            }
+            // 冷库只提供合并下限；调用方统一通过单调更新写回 Redis。
+            // 此处不能普通 SET：回源期间可能已有新回执推进水位，旧结果会将其覆盖。
             return maxSessionMessageOffset;
         } catch (EmptyResultDataAccessException e) {
             log.debug("sessionMessageOffsetEntity 不存在, appKey={}, from: {}, to: {}, type: {}",

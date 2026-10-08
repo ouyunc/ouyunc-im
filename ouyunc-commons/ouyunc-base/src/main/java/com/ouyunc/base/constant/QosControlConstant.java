@@ -3,6 +3,9 @@ package com.ouyunc.base.constant;
 /** QoS 控制通道的容量和超时；与下行重发执行器隔离。 */
 public final class QosControlConstant {
 
+    /** 下行重试默认次数；负数配置也回落到该值，避免无限定时任务持续读取消息。 */
+    public static final int DEFAULT_DOWNLINK_RETRY_ATTEMPTS = 3;
+
     /**
      * 全节点允许同时处理的客户端 QoS ACK 上限。
      * <p>许可覆盖 ACK 的身份校验、原消息查询以及重试任务取消等完整异步处理链，

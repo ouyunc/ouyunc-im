@@ -1,15 +1,7 @@
 package com.ouyunc.cache.config.redis.builder;
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.PropertyAccessor;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
-import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import com.ouyunc.cache.config.constant.ModeEnum;
+import com.ouyunc.cache.config.redis.RedisCacheObjectMapper;
 import com.ouyunc.cache.config.redis.strategy.RedisStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,9 +12,6 @@ import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSeriali
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-
 /**
  * @author fzx
  * @description 相应式 ReactiveRedisTemplateBuilder 的构建类
@@ -30,11 +19,6 @@ import java.time.format.DateTimeFormatter;
 public class ReactiveRedisTemplateBuilder extends AbstractRedisBuilder<ReactiveRedisTemplate<?,?>> {
 
     private static final Logger logger = LoggerFactory.getLogger(ReactiveRedisTemplateBuilder.class);
-
-    /**
-     * 日期格式
-     */
-    public static String yyyy_MM_dd_HH_mm_ss ="yyyy-MM-dd HH:mm:ss";
 
     /**
      * @author fzx
@@ -48,20 +32,8 @@ public class ReactiveRedisTemplateBuilder extends AbstractRedisBuilder<ReactiveR
         //这里使用lettuceConnectionFactory连接工厂
         RedisConnectionFactory redisConnectionFactory = redisStrategy.buildRedisConnectionFactory(database,redisProperties);
         if (redisConnectionFactory instanceof LettuceConnectionFactory lettuceConnectionFactory) {
-            //使用jackson序列化
-            ObjectMapper objectMapper = new ObjectMapper();
-            //针对于Date类型，文本格式化
-            JavaTimeModule javaTimeModule = new JavaTimeModule();
-            javaTimeModule.addSerializer(LocalDateTime.class,new LocalDateTimeSerializer(DateTimeFormatter.ofPattern(yyyy_MM_dd_HH_mm_ss)));
-            javaTimeModule.addDeserializer(LocalDateTime.class,new LocalDateTimeDeserializer(DateTimeFormatter.ofPattern(yyyy_MM_dd_HH_mm_ss)));
-            objectMapper.registerModule(javaTimeModule);
-            objectMapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
-            objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-            objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-            objectMapper.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
-            objectMapper.activateDefaultTyping(LaissezFaireSubTypeValidator.instance, ObjectMapper.DefaultTyping.NON_FINAL);
-            // 设置序列化
-            GenericJackson2JsonRedisSerializer jackson2JsonRedisSerializer = new GenericJackson2JsonRedisSerializer(objectMapper);
+            GenericJackson2JsonRedisSerializer jackson2JsonRedisSerializer =
+                    new GenericJackson2JsonRedisSerializer(RedisCacheObjectMapper.create());
             StringRedisSerializer stringRedisSerializer = new StringRedisSerializer();
             return new ReactiveRedisTemplate<>(lettuceConnectionFactory, RedisSerializationContext
                     .<String, Object>newSerializationContext()

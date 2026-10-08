@@ -60,7 +60,7 @@ public final class SessionMessagePersistenceSupport {
 
     /**
      * 单聊/客服消息持久化，并在成功后对收件人维护 ur 未读 Hash。
-     * <p>DUPLICATE 不累加未读、不视为新写入（未读重放使用已收敛的正式 packetId）；调用方只应 ACK，禁止二次扇出。</p>
+     * <p>SUCCESS/DUPLICATE 均按正式正文幂等补未读；后续由完成器判断是否还需投递。</p>
      */
     public Mono<SaveMessageOutcomeEnum> reactiveSaveOne2OneMessage(Packet packet, String sessionId, long expireTime,
                                                                    UnreadIndexSupport unreadIndexSupport) {
@@ -116,7 +116,6 @@ public final class SessionMessagePersistenceSupport {
 
         RedisConnectionFactory connectionFactory = infra.redisTemplate.getConnectionFactory();
         RedisSerializer<String> stringSerializer = infra.stringSerializer;
-        RedisSerializer<Object> valueSerializer = infra.valueSerializer;
         boolean qosSave = false;
         String qosOwnerToken = null;
         String appKey = null;
@@ -170,6 +169,10 @@ public final class SessionMessagePersistenceSupport {
                     }
                     packet.setPacketId(claim.canonicalPacketId());
                     clearQosClaimMarks(metadata);
+                    // 并发请求可能在热写入口才命中 COMMITTED，不能绕过正式正文恢复。
+                    // 此处只读：正文暂不可用时返回失败，禁止用本次重试包重新创建已提交正文。
+                    restoreStoredMessage(conn, packet, serializeOrThrow(stringSerializer,
+                            CacheConstant.buildMessageCacheKey(appKey, packet.getPacketId()), "messageKey"));
                     return SaveMessageOutcomeEnum.DUPLICATE;
                 }
                 if (claim.state() == QosIdempotencyHelper.CLAIM_CONFLICT) {
@@ -187,27 +190,19 @@ public final class SessionMessagePersistenceSupport {
                 }
             }
 
-            // canonical 对齐之后再建正文 key，保证正文、会话 ZSET、ACK、归档用同一个 packetId
-            String messageKey = CacheConstant.buildMessageCacheKey(appKey, packet.getPacketId());
+            // 正文首次写入后不可被迟到的旧 owner 覆盖；重入复用已存正文继续维护派生索引。
+            // 独立于 Pipeline 执行，以便后续索引和投递使用同一份正文，而不是本次重试包。
+            retainFirstMessage(conn, packet, expireTime);
+            message = packet.getMessage();
+            metadata = message.getMetadata();
 
             // 必需字段先序列化；失败直接上抛，避免只写索引、无主体后仍判定成功
             String formatPacketId = MessageContext.idGenerator().formatLongId19Str(packet.getPacketId());
             byte[] packetIdBytes = serializeOrThrow(stringSerializer, formatPacketId, "PacketId");
-            byte[] msgKeyBytes = serializeOrThrow(stringSerializer, messageKey, "messageKey");
-            byte[] packetBytes = serializeOrThrow(valueSerializer, packet, "packet");
             byte[] sessionKeyBytes = serializeOrThrow(stringSerializer, sessionKey, "sessionKey");
 
             conn.openPipeline();
             log.debug("Pipeline 已开启");
-
-            if (expireTime > 0) {
-                // SET PX 一条命令同时写入正文和 TTL，避免每条消息额外执行 PEXPIRE。
-                conn.stringCommands().set(msgKeyBytes, packetBytes, Expiration.milliseconds(expireTime),
-                        RedisStringCommands.SetOption.UPSERT);
-            } else {
-                conn.stringCommands().set(msgKeyBytes, packetBytes);
-            }
-            log.debug("消息主体命令入队: {}", messageKey);
 
             conn.zAdd(sessionKeyBytes, NumberConstant.NUMBER_0, packetIdBytes);
             long sessionZSetExpireMs = MessageConstant.CACHE_SESSION_LAST_MESSAGE_KEY_EXPIRE_TIMESTAMP;
@@ -265,7 +260,7 @@ public final class SessionMessagePersistenceSupport {
             if (commitOutcome == QosIdempotencyHelper.CommitOutcome.REJECTED) {
                 // REJECTED = 已失去幂等所有权（被接管 / 他人 PENDING / 已 COMMITTED）。
                 // 禁止删 canonical 正文和会话成员：接管方可能已用同一 packetId 写完热数据。
-                // 只 compare-and-delete 自己的 PENDING；热写留给当前 owner 覆盖或 TTL。
+                // 只 compare-and-delete 自己的 PENDING；首次正文保留供当前 owner 复用。
                 log.warn("QoS 提交被拒绝，保留热写以免误删接管方数据: appKey={} packetId={}",
                         appKey, packet.getPacketId());
                 releaseQosClaimQuietly(true, appKey, packet.getPacketId(), qosClaimIdentity,
@@ -283,6 +278,57 @@ public final class SessionMessagePersistenceSupport {
                     clientMessageId, qosOwnerToken, metadataFromPacket(packet));
             return SaveMessageOutcomeEnum.FAILED;
         }
+    }
+
+    /**
+     * 同一 packetId 的热正文只允许首次写入，避免超时接管后旧请求恢复并覆盖已提交数据。
+     * 首次写入仍是一条 SET NX PX，不增加持久化键；仅重入命中时读取原正文。
+     * 正文已存在不代表业务已提交，调用方仍须完成索引写入和 owner 校验，不能直接 ACK。
+     */
+    private void retainFirstMessage(RedisConnection conn, Packet packet, long expireTime) {
+        Message incoming = packet.getMessage();
+        Metadata currentMetadata = incoming.getMetadata();
+        String appKey = currentMetadata.getIngress().getAppKey();
+        byte[] key = serializeOrThrow(infra.stringSerializer,
+                CacheConstant.buildMessageCacheKey(appKey, packet.getPacketId()), "messageKey");
+        byte[] value = serializeOrThrow(infra.valueSerializer, packet, "packet");
+        Boolean inserted = conn.stringCommands().set(key, value,
+                expireTime > 0 ? Expiration.milliseconds(expireTime) : Expiration.persistent(),
+                RedisStringCommands.SetOption.SET_IF_ABSENT);
+        if (Boolean.TRUE.equals(inserted)) {
+            return;
+        }
+        restoreStoredMessage(conn, packet, key);
+    }
+
+    /** 热写碰撞及 COMMITTED 提前返回共用；只读恢复正式正文，不补写、不延长 TTL。 */
+    private void restoreStoredMessage(RedisConnection conn, Packet packet, byte[] key) {
+        Message incoming = packet.getMessage();
+        Metadata currentMetadata = incoming.getMetadata();
+        String appKey = currentMetadata.getIngress().getAppKey();
+        byte[] existing = conn.stringCommands().get(key);
+        Object decoded = existing == null ? null : infra.valueSerializer.deserialize(existing);
+        if (!(decoded instanceof Packet stored) || stored.getPacketId() != packet.getPacketId()
+                || stored.getMessageType() != packet.getMessageType() || stored.getMessage() == null) {
+            throw new IllegalStateException("首次消息正文暂不可用或身份不匹配");
+        }
+        Message original = stored.getMessage();
+        Metadata originalMetadata = original.getMetadata();
+        // 会话 key 由调用方生成，身份/会话变化时禁止用旧正文写入另一个会话索引。
+        if (originalMetadata == null
+                || !StringUtils.equals(appKey, originalMetadata.getIngress().getAppKey())
+                || !StringUtils.equals(incoming.getId(), original.getId())
+                || !StringUtils.equals(incoming.getFrom(), original.getFrom())
+                || !StringUtils.equals(incoming.getTo(), original.getTo())
+                || !StringUtils.equals(incoming.getCorrelationId(), original.getCorrelationId())) {
+            throw new IllegalStateException("首次消息正文与当前会话不匹配");
+        }
+        // owner 属于本轮执行，不能从缓存恢复旧令牌；其余正式正文和发送端属性沿用首次值。
+        originalMetadata.setQosClaim(currentMetadata.getQosClaim());
+        packet.setMessage(original);
+        packet.setDeviceType(stored.getDeviceType());
+        // 已撤回的缓存不能在重入时变回可见消息。
+        packet.setRetain(stored.getRetain());
     }
 
     @SuppressWarnings("unchecked")
