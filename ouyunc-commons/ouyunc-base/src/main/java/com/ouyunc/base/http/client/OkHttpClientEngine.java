@@ -21,6 +21,8 @@ import java.util.concurrent.TimeUnit;
 public final class OkHttpClientEngine implements HttpClientEngine {
 
     private final OkHttpClient client;
+    /** 写请求共享连接池，但不能由传输层在结果未知时自动重发。 */
+    private final OkHttpClient writeClient;
 
     public OkHttpClientEngine(HttpClientConfig config) {
         this.client = new OkHttpClient.Builder()
@@ -33,11 +35,13 @@ public final class OkHttpClientEngine implements HttpClientEngine {
                         config.keepAliveDuration().toMillis(),
                         TimeUnit.MILLISECONDS))
                 .build();
+        this.writeClient = client.newBuilder().retryOnConnectionFailure(false)
+                .followRedirects(false).followSslRedirects(false).build();
     }
 
     @Override
     public HttpClientResponse execute(HttpRequestSpec spec) {
-        try (Response response = client.newCall(toRequest(spec)).execute()) {
+        try (Response response = clientFor(spec).newCall(toRequest(spec)).execute()) {
             return toResponse(response);
         } catch (HttpClientException ex) {
             throw ex;
@@ -49,7 +53,7 @@ public final class OkHttpClientEngine implements HttpClientEngine {
     @Override
     public CompletableFuture<HttpClientResponse> executeAsync(HttpRequestSpec spec) {
         CompletableFuture<HttpClientResponse> future = new CompletableFuture<>();
-        client.newCall(toRequest(spec)).enqueue(new okhttp3.Callback() {
+        clientFor(spec).newCall(toRequest(spec)).enqueue(new okhttp3.Callback() {
             @Override
             public void onFailure(okhttp3.Call call, IOException e) {
                 future.completeExceptionally(new HttpClientException("OkHttp 异步请求失败: " + e.getMessage(), 0, true, e));
@@ -73,8 +77,15 @@ public final class OkHttpClientEngine implements HttpClientEngine {
         client.connectionPool().evictAll();
     }
 
+    private OkHttpClient clientFor(HttpRequestSpec spec) {
+        return spec.method() == HttpMethod.GET || spec.method() == HttpMethod.HEAD ? client : writeClient;
+    }
+
     private Request toRequest(HttpRequestSpec spec) {
         RequestBody requestBody = buildRequestBody(spec);
+        if (requestBody != null) {
+            requestBody = singleAttemptBody(requestBody);
+        }
         Request.Builder builder = new Request.Builder().url(spec.url());
         spec.headers().forEach(builder::addHeader);
 
@@ -95,6 +106,23 @@ public final class OkHttpClientEngine implements HttpClientEngine {
             default -> builder.method(spec.method().name(), requestBody == null ? emptyBody() : requestBody);
         }
         return builder.build();
+    }
+
+    /**
+     * 写请求体只能发送一次，阻止 OkHttp 对 408/503 等响应自动重放业务写入。
+     * 连接失败和重定向也由 writeClient 禁止重发；上层根据业务幂等能力决定如何恢复。
+     */
+    private static RequestBody singleAttemptBody(RequestBody body) {
+        return new RequestBody() {
+            @Override
+            public MediaType contentType() { return body.contentType(); }
+            @Override
+            public long contentLength() throws IOException { return body.contentLength(); }
+            @Override
+            public boolean isOneShot() { return true; }
+            @Override
+            public void writeTo(okio.BufferedSink sink) throws IOException { body.writeTo(sink); }
+        };
     }
 
     private RequestBody buildRequestBody(HttpRequestSpec spec) {

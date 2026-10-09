@@ -76,8 +76,7 @@ public final class MessagePacketQuerySupport {
                 .collect(Collectors.toList());
         List<Packet> cachedPackets = RedisPipelineSupport.getValues(redisTemplate, redisKeys);
         if (cachedPackets == null) {
-            log.warn("cachedPackets 为空, appKey={}", appKey);
-            return Collections.emptyList();
+            throw new IllegalStateException("消息缓存读取结果未知，禁止当作空结果");
         }
         Map<Long, Packet> cachedPacketMap = cachedPackets.stream()
                 .filter(packet -> belongsToApp(packet, appKey))
@@ -112,15 +111,14 @@ public final class MessagePacketQuerySupport {
     }
 
     /**
-     * 公共入口 ID 上限；超出截断并打日志，避免单次超大批量打爆 Mongo/MySQL。
+     * 公共入口 ID 上限；超限明确拒绝，禁止静默截断导致调用方误判正文缺失。
      */
     private static List<Long> capPacketIds(List<Long> packetIds) {
         int max = MessageConstant.MESSAGE_PACKET_QUERY_MAX_IDS;
         if (packetIds.size() <= max) {
             return packetIds;
         }
-        log.warn("消息批量查询 ID 数 {} 超过上限 {}，已截断", packetIds.size(), max);
-        return packetIds.subList(0, max);
+        throw new IllegalArgumentException("消息批量查询超过上限 " + max + "，请分批查询");
     }
 
     /**

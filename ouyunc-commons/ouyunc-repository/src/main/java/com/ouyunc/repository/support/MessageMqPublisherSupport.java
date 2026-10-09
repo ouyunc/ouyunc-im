@@ -53,7 +53,7 @@ public final class MessageMqPublisherSupport {
      */
     public CompletableFuture<?> publishPacketConfirmed(String topic, String key, Packet packet) {
         if (packet == null) {
-            return CompletableFuture.completedFuture(null);
+            return CompletableFuture.failedFuture(new IllegalArgumentException("确认发布的 Packet 不能为空"));
         }
         Packet snapshot = packet.clone();
         if (snapshot.getMessage() != null && snapshot.getMessage().getMetadata() != null) {

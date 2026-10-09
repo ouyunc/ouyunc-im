@@ -156,7 +156,9 @@ public class MqConstant {
                 || MQ_WITHDRAW_MESSAGE_TOPIC.equals(logical)
                 || MQ_READ_RECEIPT_MESSAGE_TOPIC.equals(logical)
                 || MQ_FRIEND_REQUEST_TOPIC.equals(logical)
-                || MQ_GROUP_REQUEST_TOPIC.equals(logical);
+                || MQ_GROUP_REQUEST_TOPIC.equals(logical)
+                || MQ_EXTERNAL_CHANNEL_OUTBOUND_TOPIC.equals(logical)
+                || MQ_CS_TICKET_ACTIVITY_TOPIC.equals(logical);
     }
 
 }

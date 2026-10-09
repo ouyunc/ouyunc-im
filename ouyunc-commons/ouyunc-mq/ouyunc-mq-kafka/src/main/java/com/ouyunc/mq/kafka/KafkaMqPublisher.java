@@ -49,7 +49,16 @@ public class KafkaMqPublisher implements MqPublisher {
             kafkaHeaders.put(KafkaHeaders.KEY, key);
         }
         kafkaHeaders.put(KafkaHeaders.TOPIC, topic);
-        return kafkaTemplate.send(MessageBuilder.withPayload(payload).copyHeadersIfAbsent(kafkaHeaders).build());
+        // Future 正常完成仍需有 broker 位点；禁止把空结果或 acks=0 的无位点结果当作可靠确认。
+        boolean confirmationRequired = MqConstant.requiresBrokerAcksAll(topic);
+        return kafkaTemplate.send(MessageBuilder.withPayload(payload).copyHeadersIfAbsent(kafkaHeaders).build())
+                .thenApply(result -> {
+                    if (confirmationRequired && (result == null || result.getRecordMetadata() == null
+                            || !result.getRecordMetadata().hasOffset())) {
+                        throw new IllegalStateException("MQ 未取得 broker 位点，受理结果未知");
+                    }
+                    return result;
+                });
     }
 
     private static void mapHeader(Map<String, Object> kafkaHeaders, String name, Object value) {
